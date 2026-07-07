@@ -224,7 +224,13 @@ import {
   readRuntimeResultBrief,
   safeTail,
 } from "./codex-goal-mcp-runtime-result";
-import { readCodexGoalLifecycleMarkers } from "./codex-goal-mcp-lifecycle-markers";
+import {
+  readCodexGoalLifecycleMarkers,
+  writeCodexGoalMaintenancePauseEvent,
+  writeCodexGoalReviewMarker,
+  writeCodexGoalStopEvent,
+  writeCodexGoalStoppedProgress,
+} from "./codex-goal-mcp-lifecycle-markers";
 import {
   matchesProjectControlPrefix,
   nodeErrorCode,
@@ -2790,10 +2796,13 @@ function codexProjectControlPorts(input: {
         if (!input.reviewLaunch) {
           throw new Error("project_control_review_launch_required");
         }
+        const status = await collectCodexGoalStatus(statusInput(input.reviewLaunch));
         const reviewPath = await writeCodexGoalReviewMarker({
           jobId: marker.jobId,
-          launch: input.reviewLaunch,
+          taskId: input.reviewLaunch.config.taskId,
+          jobRootDir: input.reviewLaunch.config.jobRootDir,
           note: input.reviewNote ?? marker.note ?? "project_control_reviewed",
+          status,
         });
         return operationResult(reviewPath);
       },
@@ -4841,32 +4850,6 @@ async function projectControlMarkReviewed(args: ProjectControlMcpArgs) {
   });
 }
 
-async function writeCodexGoalReviewMarker(input: {
-  readonly jobId: string;
-  readonly launch: CodexGoalLaunchInput;
-  readonly note: string;
-}): Promise<string> {
-  await mkdir(input.launch.config.jobRootDir, { recursive: true, mode: 0o700 });
-  const reviewPath = join(
-    input.launch.config.jobRootDir,
-    `${input.launch.config.taskId}.review.json`,
-  );
-  const status = await collectCodexGoalStatus(statusInput(input.launch));
-  await writeFile(
-    reviewPath,
-    `${JSON.stringify({
-      schemaVersion: 1,
-      jobId: input.jobId,
-      taskId: input.launch.config.taskId,
-      reviewedAt: new Date().toISOString(),
-      note: input.note,
-      status,
-    }, null, 2)}\n`,
-    { encoding: "utf8", mode: 0o600 },
-  );
-  return reviewPath;
-}
-
 function codexGoalWorkerControlService(
   launch: CodexGoalLaunchInput,
 ): WorkerControlService {
@@ -5352,116 +5335,6 @@ async function maintenancePauseStoredJob(args: JobLifecycleMcpArgs) {
     safeMessage:
       "Worker paused for planned maintenance. No failure result was reconciled; codex_goal_continue can resume after maintenance.",
   });
-}
-
-async function writeCodexGoalStopEvent(input: {
-  readonly jobId: string;
-  readonly taskId: string;
-  readonly jobRootDir: string;
-  readonly tmuxSession?: string;
-  readonly stopCommand: string;
-  readonly forceStop: boolean;
-  readonly statusBefore: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
-  readonly statusAfter: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
-  readonly brief: Awaited<ReturnType<typeof buildCodexGoalBrief>>;
-}): Promise<string> {
-  await mkdir(input.jobRootDir, { recursive: true, mode: 0o700 });
-  const path = join(input.jobRootDir, `${input.taskId}.stop-event.json`);
-  await writeFile(
-    path,
-    `${JSON.stringify({
-      schemaVersion: 1,
-      jobId: input.jobId,
-      taskId: input.taskId,
-      stoppedAt: new Date().toISOString(),
-      ...(input.tmuxSession === undefined ? {} : { tmuxSession: input.tmuxSession }),
-      stopCommand: input.stopCommand,
-      forceStop: input.forceStop,
-      reason: input.brief.silentStale
-        ? "silent_stale_worker"
-        : input.brief.heartbeatOnlyNoOutput
-        ? "heartbeat_only_no_output"
-        : "manual_force_stop",
-      brief: {
-        silentStale: input.brief.silentStale,
-        heartbeatOnlyNoOutput: input.brief.heartbeatOnlyNoOutput,
-        lastProgressAt: input.brief.lastProgressAt,
-        lastProgressAgeMs: input.brief.lastProgressAgeMs,
-        staleAfterMs: input.brief.staleAfterMs,
-        logByteLength: input.brief.logByteLength,
-        workspaceDirty: input.statusBefore.workspaceDirty,
-        changedFiles: input.statusBefore.changedFiles ?? [],
-      },
-      statusBefore: input.statusBefore,
-      statusAfter: input.statusAfter,
-    }, null, 2)}\n`,
-    { encoding: "utf8", mode: 0o600 },
-  );
-  return path;
-}
-
-async function writeCodexGoalMaintenancePauseEvent(input: {
-  readonly jobId: string;
-  readonly taskId: string;
-  readonly jobRootDir: string;
-  readonly tmuxSession: string;
-  readonly stopCommand: string;
-  readonly reason: string;
-  readonly forcePause: boolean;
-  readonly statusBefore: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
-  readonly statusAfter: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
-  readonly brief: Awaited<ReturnType<typeof buildCodexGoalBrief>>;
-}): Promise<string> {
-  await mkdir(input.jobRootDir, { recursive: true, mode: 0o700 });
-  const path = join(input.jobRootDir, `${input.taskId}.maintenance-pause.json`);
-  await writeFile(
-    path,
-    `${JSON.stringify({
-      schemaVersion: 1,
-      jobId: input.jobId,
-      taskId: input.taskId,
-      pausedAt: new Date().toISOString(),
-      tmuxSession: input.tmuxSession,
-      stopCommand: input.stopCommand,
-      forcePause: input.forcePause,
-      reason: input.reason,
-      brief: {
-        lastProgressAt: input.brief.lastProgressAt,
-        lastProgressAgeMs: input.brief.lastProgressAgeMs,
-        staleAfterMs: input.brief.staleAfterMs,
-        logByteLength: input.brief.logByteLength,
-        workspaceDirty: input.statusBefore.workspaceDirty,
-        changedFiles: input.statusBefore.changedFiles ?? [],
-      },
-      statusBefore: input.statusBefore,
-      statusAfter: input.statusAfter,
-    }, null, 2)}\n`,
-    { encoding: "utf8", mode: 0o600 },
-  );
-  return path;
-}
-
-async function writeCodexGoalStoppedProgress(input: {
-  readonly progressPath: string;
-  readonly taskId: string;
-  readonly status: "stopped" | "maintenance_paused";
-  readonly reason?: string;
-}): Promise<void> {
-  await mkdir(dirname(input.progressPath), { recursive: true, mode: 0o700 });
-  const tempPath = `${input.progressPath}.${process.pid}.${Date.now()}.tmp`;
-  await writeFile(
-    tempPath,
-    `${JSON.stringify({
-      schemaVersion: 1,
-      taskId: input.taskId,
-      updatedAt: new Date().toISOString(),
-      pid: process.pid,
-      status: input.status,
-      ...(input.reason ? { reason: input.reason } : {}),
-    }, null, 2)}\n`,
-    { encoding: "utf8", mode: 0o600 },
-  );
-  await rename(tempPath, input.progressPath);
 }
 
 async function buildCodexGoalOverview(args: JobOverviewMcpArgs): Promise<JsonObject> {

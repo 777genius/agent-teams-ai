@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { appendFile, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readdir, readFile, realpath, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import { hostname } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { execPath } from "node:process";
@@ -31,7 +31,7 @@ import { accountNames, booleanValue, dateValue, numberValue, positiveIntegerValu
 import { jobIdInputSchema, jobRegistryInputSchema, optionalRunEventProviderKind, registryRootFromArgs, runEventRetentionPolicyFromArgs, runEventRootFromArgs, runEventTypeFilter, } from "./codex-goal-mcp-inputs.js";
 import { accountAuthRootFromArgs, accountPoolRootFromArgs, availableCodexGoalAccountSlots, codexAccountReloginInstructions, codexAccountStatusPayload, defaultCodexGoalAuthRoot, dedupeCodexGoalAccountSlots, duplicateAccountGroups, listAccountPools, } from "./codex-goal-mcp-accounts.js";
 import { readRuntimeResultBrief, safeTail, } from "./codex-goal-mcp-runtime-result.js";
-import { readCodexGoalLifecycleMarkers } from "./codex-goal-mcp-lifecycle-markers.js";
+import { readCodexGoalLifecycleMarkers, writeCodexGoalMaintenancePauseEvent, writeCodexGoalReviewMarker, writeCodexGoalStopEvent, writeCodexGoalStoppedProgress, } from "./codex-goal-mcp-lifecycle-markers.js";
 import { matchesProjectControlPrefix, nodeErrorCode, pathInsideAnyProjectRoot, stringArrayArg, uniqueProjectControlStrings, } from "./codex-goal-mcp-project-utils.js";
 import { buildCodexProjectAdmissionSnapshot, codexProjectAdmissionGate, projectAdmissionDetailView, projectAdmissionOperation, projectAdmissionWorkerRoleArg, } from "./codex-goal-mcp-project-admission.js";
 import { jobIdsFromValue, parseIsoDate, signalIdList, workerControlCallerArgs, workerControlDecisionJson, workerControlReceiptJson, workerControlSignalJson, workerControlSignalViewJson, } from "./codex-goal-mcp-worker-control-view.js";
@@ -1900,10 +1900,13 @@ function codexProjectControlPorts(input) {
                 if (!input.reviewLaunch) {
                     throw new Error("project_control_review_launch_required");
                 }
+                const status = await collectCodexGoalStatus(statusInput(input.reviewLaunch));
                 const reviewPath = await writeCodexGoalReviewMarker({
                     jobId: marker.jobId,
-                    launch: input.reviewLaunch,
+                    taskId: input.reviewLaunch.config.taskId,
+                    jobRootDir: input.reviewLaunch.config.jobRootDir,
                     note: input.reviewNote ?? marker.note ?? "project_control_reviewed",
+                    status,
                 });
                 return operationResult(reviewPath);
             },
@@ -3635,20 +3638,6 @@ async function projectControlMarkReviewed(args) {
         result: result,
     });
 }
-async function writeCodexGoalReviewMarker(input) {
-    await mkdir(input.launch.config.jobRootDir, { recursive: true, mode: 0o700 });
-    const reviewPath = join(input.launch.config.jobRootDir, `${input.launch.config.taskId}.review.json`);
-    const status = await collectCodexGoalStatus(statusInput(input.launch));
-    await writeFile(reviewPath, `${JSON.stringify({
-        schemaVersion: 1,
-        jobId: input.jobId,
-        taskId: input.launch.config.taskId,
-        reviewedAt: new Date().toISOString(),
-        note: input.note,
-        status,
-    }, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-    return reviewPath;
-}
 function codexGoalWorkerControlService(launch) {
     return new WorkerControlService({
         store: new LocalFileWorkerControlInboxStore({
@@ -4101,75 +4090,6 @@ async function maintenancePauseStoredJob(args) {
         brief,
         safeMessage: "Worker paused for planned maintenance. No failure result was reconciled; codex_goal_continue can resume after maintenance.",
     });
-}
-async function writeCodexGoalStopEvent(input) {
-    await mkdir(input.jobRootDir, { recursive: true, mode: 0o700 });
-    const path = join(input.jobRootDir, `${input.taskId}.stop-event.json`);
-    await writeFile(path, `${JSON.stringify({
-        schemaVersion: 1,
-        jobId: input.jobId,
-        taskId: input.taskId,
-        stoppedAt: new Date().toISOString(),
-        ...(input.tmuxSession === undefined ? {} : { tmuxSession: input.tmuxSession }),
-        stopCommand: input.stopCommand,
-        forceStop: input.forceStop,
-        reason: input.brief.silentStale
-            ? "silent_stale_worker"
-            : input.brief.heartbeatOnlyNoOutput
-                ? "heartbeat_only_no_output"
-                : "manual_force_stop",
-        brief: {
-            silentStale: input.brief.silentStale,
-            heartbeatOnlyNoOutput: input.brief.heartbeatOnlyNoOutput,
-            lastProgressAt: input.brief.lastProgressAt,
-            lastProgressAgeMs: input.brief.lastProgressAgeMs,
-            staleAfterMs: input.brief.staleAfterMs,
-            logByteLength: input.brief.logByteLength,
-            workspaceDirty: input.statusBefore.workspaceDirty,
-            changedFiles: input.statusBefore.changedFiles ?? [],
-        },
-        statusBefore: input.statusBefore,
-        statusAfter: input.statusAfter,
-    }, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-    return path;
-}
-async function writeCodexGoalMaintenancePauseEvent(input) {
-    await mkdir(input.jobRootDir, { recursive: true, mode: 0o700 });
-    const path = join(input.jobRootDir, `${input.taskId}.maintenance-pause.json`);
-    await writeFile(path, `${JSON.stringify({
-        schemaVersion: 1,
-        jobId: input.jobId,
-        taskId: input.taskId,
-        pausedAt: new Date().toISOString(),
-        tmuxSession: input.tmuxSession,
-        stopCommand: input.stopCommand,
-        forcePause: input.forcePause,
-        reason: input.reason,
-        brief: {
-            lastProgressAt: input.brief.lastProgressAt,
-            lastProgressAgeMs: input.brief.lastProgressAgeMs,
-            staleAfterMs: input.brief.staleAfterMs,
-            logByteLength: input.brief.logByteLength,
-            workspaceDirty: input.statusBefore.workspaceDirty,
-            changedFiles: input.statusBefore.changedFiles ?? [],
-        },
-        statusBefore: input.statusBefore,
-        statusAfter: input.statusAfter,
-    }, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-    return path;
-}
-async function writeCodexGoalStoppedProgress(input) {
-    await mkdir(dirname(input.progressPath), { recursive: true, mode: 0o700 });
-    const tempPath = `${input.progressPath}.${process.pid}.${Date.now()}.tmp`;
-    await writeFile(tempPath, `${JSON.stringify({
-        schemaVersion: 1,
-        taskId: input.taskId,
-        updatedAt: new Date().toISOString(),
-        pid: process.pid,
-        status: input.status,
-        ...(input.reason ? { reason: input.reason } : {}),
-    }, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
-    await rename(tempPath, input.progressPath);
 }
 async function buildCodexGoalOverview(args) {
     const registryRootDir = registryRootFromArgs(args);
