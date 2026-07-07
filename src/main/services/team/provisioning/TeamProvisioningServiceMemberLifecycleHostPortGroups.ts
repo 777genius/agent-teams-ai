@@ -9,19 +9,21 @@ export type TeamProvisioningServiceMemberLifecycleHostPortGroups =
     MixedSecondaryRuntimeLaneState
   >;
 
-type PortGroups = TeamProvisioningServiceMemberLifecycleHostPortGroups;
-type MemberMcpLaunchConfigPorts = PortGroups['memberMcpLaunchConfig'];
-type OpenCodeRuntimePorts = PortGroups['openCodeRuntime'];
-type MixedSecondaryRuntimePorts = PortGroups['mixedSecondaryRuntime'];
+type MemberMcpLaunchConfigPorts =
+  TeamProvisioningServiceMemberLifecycleHostPortGroups['memberMcpLaunchConfig'];
+type OpenCodeRuntimePorts = TeamProvisioningServiceMemberLifecycleHostPortGroups['openCodeRuntime'];
+type MixedSecondaryRuntimePorts =
+  TeamProvisioningServiceMemberLifecycleHostPortGroups['mixedSecondaryRuntime'];
 type FailedOpenCodeSecondaryRetryInFlightByTeam =
-  PortGroups['sharedState']['failedOpenCodeSecondaryRetryInFlightByTeam'];
+  TeamProvisioningServiceMemberLifecycleHostPortGroups['sharedState']['failedOpenCodeSecondaryRetryInFlightByTeam'];
 type ResolveOpenCodeMemberWorkspacesForRuntime =
   OpenCodeRuntimePorts['resolveOpenCodeMemberWorkspacesForRuntime'];
 type CreateMixedSecondaryLaneStateForMember =
   MixedSecondaryRuntimePorts['createMixedSecondaryLaneStateForMember'];
 type StopSingleMixedSecondaryRuntimeLane =
   MixedSecondaryRuntimePorts['stopSingleMixedSecondaryRuntimeLane'];
-type ServiceMemberLifecycleUseCases = PortGroups['useCases'];
+type ServiceMemberLifecycleUseCases =
+  TeamProvisioningServiceMemberLifecycleHostPortGroups['useCases'];
 
 export interface TeamProvisioningServiceMemberLifecycleHostPortGroupPorts {
   runs: unknown;
@@ -29,44 +31,52 @@ export interface TeamProvisioningServiceMemberLifecycleHostPortGroupPorts {
   failedOpenCodeSecondaryRetryInFlightByTeam: unknown;
   mcpConfigBuilder: {
     writeConfigFile(
-      projectPath: Parameters<PortGroups['stores']['mcpConfigBuilder']['writeConfigFile']>[0],
+      projectPath: Parameters<
+        TeamProvisioningServiceMemberLifecycleHostPortGroups['stores']['mcpConfigBuilder']['writeConfigFile']
+      >[0],
       options: never
-    ): ReturnType<PortGroups['stores']['mcpConfigBuilder']['writeConfigFile']>;
+    ): ReturnType<
+      TeamProvisioningServiceMemberLifecycleHostPortGroups['stores']['mcpConfigBuilder']['writeConfigFile']
+    >;
   };
-  membersMetaStore: PortGroups['stores']['membersMetaStore'];
+  membersMetaStore: TeamProvisioningServiceMemberLifecycleHostPortGroups['stores']['membersMetaStore'];
   teamMetaStore: {
     getMeta(teamName: string): Promise<unknown>;
   };
-  readConfigForStrictDecision: PortGroups['stores']['readConfigForStrictDecision'];
-  readPersistedRuntimeMembers: PortGroups['stores']['readPersistedRuntimeMembers'];
-  readPersistedTeamProjectPath: PortGroups['stores']['readPersistedTeamProjectPath'];
+  readConfigForStrictDecision: TeamProvisioningServiceMemberLifecycleHostPortGroups['stores']['readConfigForStrictDecision'];
+  readPersistedRuntimeMembers: TeamProvisioningServiceMemberLifecycleHostPortGroups['stores']['readPersistedRuntimeMembers'];
+  readPersistedTeamProjectPath: TeamProvisioningServiceMemberLifecycleHostPortGroups['stores']['readPersistedTeamProjectPath'];
   materializeEffectiveTeamMemberSpecs(
     input: never
-  ): ReturnType<PortGroups['memberSpec']['materializeEffectiveTeamMemberSpecs']>;
-  buildProvisioningEnv: PortGroups['runtimeLaunch']['buildProvisioningEnv'];
+  ): ReturnType<
+    TeamProvisioningServiceMemberLifecycleHostPortGroups['memberSpec']['materializeEffectiveTeamMemberSpecs']
+  >;
+  buildProvisioningEnv: TeamProvisioningServiceMemberLifecycleHostPortGroups['runtimeLaunch']['buildProvisioningEnv'];
   resolveDirectMemberLaunchIdentity(
     input: never
-  ): ReturnType<PortGroups['runtimeLaunch']['resolveDirectMemberLaunchIdentity']>;
-  buildTeamRuntimeLaunchArgsPlan: PortGroups['runtimeLaunch']['buildTeamRuntimeLaunchArgsPlan'];
-  sendMessageToRun: PortGroups['runtimeLaunch']['sendMessageToRun'];
+  ): ReturnType<
+    TeamProvisioningServiceMemberLifecycleHostPortGroups['runtimeLaunch']['resolveDirectMemberLaunchIdentity']
+  >;
+  buildTeamRuntimeLaunchArgsPlan: TeamProvisioningServiceMemberLifecycleHostPortGroups['runtimeLaunch']['buildTeamRuntimeLaunchArgsPlan'];
+  sendMessageToRun: TeamProvisioningServiceMemberLifecycleHostPortGroups['runtimeLaunch']['sendMessageToRun'];
   memberMcpLaunchConfigProvisioner: MemberMcpLaunchConfigPorts['memberMcpLaunchConfigProvisioner'];
-  launchStateStore: PortGroups['launchState']['launchStateStore'];
-  persistLaunchStateSnapshot: PortGroups['launchState']['persistLaunchStateSnapshot'];
-  writeLaunchStateSnapshot: PortGroups['launchState']['writeLaunchStateSnapshot'];
-  runTracking: PortGroups['runTracking'];
-  getRunTrackedCwd: PortGroups['runState']['getRunTrackedCwd'];
-  appendMemberBootstrapDiagnostic: PortGroups['runState']['appendMemberBootstrapDiagnostic'];
-  setMemberSpawnStatus: PortGroups['runState']['setMemberSpawnStatus'];
-  upsertRunAllEffectiveMember: PortGroups['runState']['upsertRunAllEffectiveMember'];
-  removeRunAllEffectiveMember: PortGroups['runState']['removeRunAllEffectiveMember'];
-  invalidateRuntimeSnapshotCaches: PortGroups['runState']['invalidateRuntimeSnapshotCaches'];
-  resetRuntimeToolActivity: PortGroups['runState']['resetRuntimeToolActivity'];
-  clearMemberSpawnToolTracking: PortGroups['runState']['clearMemberSpawnToolTracking'];
-  isCurrentTrackedRun: PortGroups['runState']['isCurrentTrackedRun'];
-  getLiveTeamAgentRuntimeMetadata: PortGroups['runState']['getLiveTeamAgentRuntimeMetadata'];
+  launchStateStore: TeamProvisioningServiceMemberLifecycleHostPortGroups['launchState']['launchStateStore'];
+  persistLaunchStateSnapshot: TeamProvisioningServiceMemberLifecycleHostPortGroups['launchState']['persistLaunchStateSnapshot'];
+  writeLaunchStateSnapshot: TeamProvisioningServiceMemberLifecycleHostPortGroups['launchState']['writeLaunchStateSnapshot'];
+  runTracking: TeamProvisioningServiceMemberLifecycleHostPortGroups['runTracking'];
+  getRunTrackedCwd: TeamProvisioningServiceMemberLifecycleHostPortGroups['runState']['getRunTrackedCwd'];
+  appendMemberBootstrapDiagnostic: TeamProvisioningServiceMemberLifecycleHostPortGroups['runState']['appendMemberBootstrapDiagnostic'];
+  setMemberSpawnStatus: TeamProvisioningServiceMemberLifecycleHostPortGroups['runState']['setMemberSpawnStatus'];
+  upsertRunAllEffectiveMember: TeamProvisioningServiceMemberLifecycleHostPortGroups['runState']['upsertRunAllEffectiveMember'];
+  removeRunAllEffectiveMember: TeamProvisioningServiceMemberLifecycleHostPortGroups['runState']['removeRunAllEffectiveMember'];
+  invalidateRuntimeSnapshotCaches: TeamProvisioningServiceMemberLifecycleHostPortGroups['runState']['invalidateRuntimeSnapshotCaches'];
+  resetRuntimeToolActivity: TeamProvisioningServiceMemberLifecycleHostPortGroups['runState']['resetRuntimeToolActivity'];
+  clearMemberSpawnToolTracking: TeamProvisioningServiceMemberLifecycleHostPortGroups['runState']['clearMemberSpawnToolTracking'];
+  isCurrentTrackedRun: TeamProvisioningServiceMemberLifecycleHostPortGroups['runState']['isCurrentTrackedRun'];
+  getLiveTeamAgentRuntimeMetadata: TeamProvisioningServiceMemberLifecycleHostPortGroups['runState']['getLiveTeamAgentRuntimeMetadata'];
   persistInboxMessage(teamName: string, memberName: string, message: InboxMessage): void;
   persistSentMessage(teamName: string, message: InboxMessage): void;
-  getOpenCodeRuntimeAdapter: PortGroups['openCodeRuntime']['getOpenCodeRuntimeAdapter'];
+  getOpenCodeRuntimeAdapter: TeamProvisioningServiceMemberLifecycleHostPortGroups['openCodeRuntime']['getOpenCodeRuntimeAdapter'];
   resolveOpenCodeMemberWorkspacesForRuntime: ResolveOpenCodeMemberWorkspacesForRuntime;
   runOpenCodeTeamRuntimeAdapterLaunch: OpenCodeRuntimePorts['runOpenCodeTeamRuntimeAdapterLaunch'];
   createMixedSecondaryLaneStateForMember: CreateMixedSecondaryLaneStateForMember;
@@ -82,9 +92,9 @@ export function createTeamProvisioningServiceMemberLifecycleHostPortGroups(
 ): TeamProvisioningServiceMemberLifecycleHostPortGroups {
   return {
     sharedState: {
-      runs: service.runs as PortGroups['sharedState']['runs'],
+      runs: service.runs as TeamProvisioningServiceMemberLifecycleHostPortGroups['sharedState']['runs'],
       runtimeAdapterRunByTeam:
-        service.runtimeAdapterRunByTeam as PortGroups['sharedState']['runtimeAdapterRunByTeam'],
+        service.runtimeAdapterRunByTeam as TeamProvisioningServiceMemberLifecycleHostPortGroups['sharedState']['runtimeAdapterRunByTeam'],
       failedOpenCodeSecondaryRetryInFlightByTeam:
         service.failedOpenCodeSecondaryRetryInFlightByTeam as FailedOpenCodeSecondaryRetryInFlightByTeam,
     },
@@ -99,7 +109,7 @@ export function createTeamProvisioningServiceMemberLifecycleHostPortGroups(
       teamMetaStore: {
         getMeta: (teamName) =>
           service.teamMetaStore.getMeta(teamName) as ReturnType<
-            PortGroups['stores']['teamMetaStore']['getMeta']
+            TeamProvisioningServiceMemberLifecycleHostPortGroups['stores']['teamMetaStore']['getMeta']
           >,
       },
       readConfigForStrictDecision: (teamName) => service.readConfigForStrictDecision(teamName),

@@ -34,8 +34,8 @@ import {
   type RuntimeToolMetadata,
 } from './TeamProvisioningRuntimeMetadata';
 
-import type { OpenCodeRuntimeControlAck } from '../runtime-control';
 import type { TeamRuntimeLaunchResult, TeamRuntimeMemberLaunchEvidence } from '../runtime';
+import type { OpenCodeRuntimeControlAck } from '../runtime-control';
 import type {
   OpenCodeTaskLogAttributionRecord,
   OpenCodeTaskLogAttributionWriteResult,

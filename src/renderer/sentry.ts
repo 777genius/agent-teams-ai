@@ -102,7 +102,7 @@ export function syncRendererTelemetry(enabled: boolean): void {
 export function initSentryRenderer(): void {
   if (initialized || !telemetryAllowed) return;
 
-  const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
+  const dsn = import.meta.env.VITE_SENTRY_DSN;
   if (!isValidDsn(dsn)) return;
 
   const baseOptions = {

@@ -67,7 +67,7 @@ function runtimeRun(
     request: {
       teamName,
       members: [],
-      cwd: '/tmp/test-team',
+      cwd: '/safe-test-workspace/test-team',
     },
     ...options,
   };

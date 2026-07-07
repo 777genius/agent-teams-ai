@@ -20,10 +20,10 @@ export interface TeamProvisioningClaudeLogsPorts {
   readPersistedTranscriptClaudeLogs(teamName: string): Promise<RetainedClaudeLogsSnapshot | null>;
 }
 
-export type TeamProvisioningClaudeLogsQuery = {
+export interface TeamProvisioningClaudeLogsQuery {
   offset?: number;
   limit?: number;
-};
+}
 
 export type TeamProvisioningClaudeLogsResult = ReturnType<typeof sliceClaudeLogs>;
 

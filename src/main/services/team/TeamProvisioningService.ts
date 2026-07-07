@@ -120,8 +120,8 @@ import {
 import { createTeamProvisioningCleanupRunPorts } from './provisioning/TeamProvisioningCleanupRunPortsFactory';
 import { getCliHelpOutputWithProvisioningPorts } from './provisioning/TeamProvisioningCliHelpOutputPortsFactory';
 import {
-  TeamProvisioningCompatibilityFacade,
   type TeamProvisioningCompatibilityDelegation,
+  TeamProvisioningCompatibilityFacade,
 } from './provisioning/TeamProvisioningCompatibilityFacade';
 import { TeamProvisioningConfigFacade } from './provisioning/TeamProvisioningConfigFacade';
 import {

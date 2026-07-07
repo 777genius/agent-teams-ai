@@ -4,25 +4,25 @@ import type { TeamLaunchRuntimeAdapter, TeamRuntimeAdapterRegistry } from '../ru
 import type { TeamProvisioningCancellationBoundary } from './TeamProvisioningCancellationBoundary';
 import type { TeamProvisioningConfigFacade } from './TeamProvisioningConfigFacade';
 import type { TeamProvisioningConfigTaskActivityBoundary } from './TeamProvisioningConfigTaskActivityBoundary';
-import type { TeamProvisioningTaskActivityRepairBoundaryRun } from './TeamProvisioningTaskActivityRepairBoundary';
 import type {
   MemberWorkSyncAcceptedReportChecker,
   MemberWorkSyncProofMissingRecoveryScheduler,
 } from './TeamProvisioningMemberWorkSyncProof';
-import type { TeamProvisioningProviderRuntimeCompatibility } from './TeamProvisioningProviderRuntimeFacade';
 import type {
   RetainedProvisioningProgressRunLike,
   TeamProvisioningRetainedProgressState,
 } from './TeamProvisioningProgressState';
-import type {
-  TeamProvisioningSendMessageToRunBoundary,
-  TeamProvisioningSendMessageToRunRun,
-} from './TeamProvisioningSendMessageToRunBoundaryFactory';
+import type { TeamProvisioningProviderRuntimeCompatibility } from './TeamProvisioningProviderRuntimeFacade';
 import type { TeamProvisioningRuntimeSnapshotFacade } from './TeamProvisioningRuntimeSnapshotFacade';
 import type {
   RuntimeTurnSettledEnvironmentProvider,
   RuntimeTurnSettledHookSettingsProvider,
 } from './TeamProvisioningRuntimeTurnSettledPlanning';
+import type {
+  TeamProvisioningSendMessageToRunBoundary,
+  TeamProvisioningSendMessageToRunRun,
+} from './TeamProvisioningSendMessageToRunBoundaryFactory';
+import type { TeamProvisioningTaskActivityRepairBoundaryRun } from './TeamProvisioningTaskActivityRepairBoundary';
 import type { WorkspaceTrustCoordinator } from '@features/workspace-trust/main';
 import type {
   CrossTeamSendRequest,
@@ -238,7 +238,7 @@ export abstract class TeamProvisioningCompatibilityFacade<
   ): ReturnType<
     TeamProvisioningConfigTaskActivityBoundary<TRun>['writeLaunchFailureArtifactPackBestEffort']
   > {
-    return this.compatibilityDelegation.configTaskActivityBoundary.writeLaunchFailureArtifactPackBestEffort(
+    return void this.compatibilityDelegation.configTaskActivityBoundary.writeLaunchFailureArtifactPackBestEffort(
       ...args
     );
   }
