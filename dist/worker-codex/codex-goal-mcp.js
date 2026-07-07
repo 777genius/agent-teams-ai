@@ -36,6 +36,7 @@ import { readRuntimeResultBrief, safeTail, } from "./codex-goal-mcp-runtime-resu
 import { readCodexGoalLifecycleMarkers } from "./codex-goal-mcp-lifecycle-markers.js";
 import { matchesProjectControlPrefix, nodeErrorCode, pathInsideAnyProjectRoot, pathInsideOrEqual, stringArrayArg, uniqueProjectControlStrings, } from "./codex-goal-mcp-project-utils.js";
 import { buildCodexProjectAdmissionSnapshot, codexProjectAdmissionGate, optionalRealPathForAdmission, projectAdmissionDetailView, projectAdmissionOperation, projectAdmissionWorkerRoleArg, } from "./codex-goal-mcp-project-admission.js";
+import { jobIdsFromValue, parseIsoDate, signalIdList, workerControlCallerArgs, workerControlDecisionJson, workerControlReceiptJson, workerControlSignalJson, workerControlSignalViewJson, } from "./codex-goal-mcp-worker-control-view.js";
 export { availableCodexGoalAccountSlots, dedupeCodexGoalAccountSlots, visibleCodexGoalAccountPoolSlots, } from "./codex-goal-mcp-accounts.js";
 const serverVersion = "0.1.0-main.2";
 const defaultAuthRoot = "~/.cache/subscription-runtime/live-codex-auth";
@@ -6792,93 +6793,6 @@ async function projectControlRefillAccountNames(input) {
     return ready.size > 0
         ? scopedAccounts.filter((account) => ready.has(account))
         : scopedAccounts;
-}
-function signalIdList(value) {
-    return accountNames(value);
-}
-function workerControlCallerArgs(args) {
-    const callerKind = (stringValue(args.callerKind) ?? stringValue(args.callerActor));
-    const callerId = stringValue(args.callerId);
-    if (!callerKind && !callerId)
-        return {};
-    const createdBy = stringValue(args.createdBy);
-    return {
-        caller: {
-            kind: callerKind ?? createdBy ?? "operator",
-            ...(callerId ? { id: callerId } : {}),
-        },
-    };
-}
-function parseIsoDate(value, name) {
-    const date = new Date(value);
-    if (!Number.isFinite(date.getTime())) {
-        throw new Error(`${name} must be an ISO date string`);
-    }
-    return date;
-}
-function workerControlDecisionJson(decision, includeBodies) {
-    return {
-        target: decision.target,
-        safeToContinue: decision.safeToContinue,
-        pendingCount: decision.pendingSignals.length,
-        deliverableCount: decision.deliverableSignals.length,
-        blockedCount: decision.blockedSignals.length,
-        recordOnlyCount: decision.recordOnlySignals.length,
-        warnings: decision.warnings,
-        pendingSignals: decision.pendingSignals.map((view) => workerControlSignalViewJson(view, includeBodies)),
-        deliverableSignalIds: decision.deliverableSignals.map((view) => view.signal.signalId),
-        blockedSignals: decision.blockedSignals.map((view) => workerControlSignalViewJson(view, includeBodies)),
-    };
-}
-function workerControlSignalViewJson(view, includeBody) {
-    return {
-        signal: workerControlSignalJson(view.signal, includeBody),
-        state: view.state,
-        expired: view.expired,
-        deliverable: view.deliverable,
-        ...(view.blockedReason ? { blockedReason: view.blockedReason } : {}),
-        ...(view.latestReceipt
-            ? { latestReceipt: workerControlReceiptJson(view.latestReceipt) }
-            : {}),
-    };
-}
-function workerControlSignalJson(signal, includeBody) {
-    return {
-        signalId: signal.signalId,
-        idempotencyKey: signal.idempotencyKey,
-        target: signal.target,
-        intent: signal.intent,
-        deliveryMode: signal.deliveryMode,
-        createdAt: signal.createdAt.toISOString(),
-        createdBy: signal.createdBy,
-        priority: signal.priority,
-        ...(signal.expiresAt ? { expiresAt: signal.expiresAt.toISOString() } : {}),
-        supersedesSignalIds: signal.supersedesSignalIds,
-        metadata: signal.metadata,
-        ...(includeBody ? { body: signal.body } : {}),
-    };
-}
-function workerControlReceiptJson(receipt) {
-    return {
-        receiptId: receipt.receiptId,
-        signalId: receipt.signalId,
-        target: receipt.target,
-        state: receipt.state,
-        createdAt: receipt.createdAt.toISOString(),
-        ...(receipt.deliveryAttemptId
-            ? { deliveryAttemptId: receipt.deliveryAttemptId }
-            : {}),
-        ...(receipt.deliveredAt
-            ? { deliveredAt: receipt.deliveredAt.toISOString() }
-            : {}),
-        ...(receipt.appliedAt ? { appliedAt: receipt.appliedAt.toISOString() } : {}),
-        ...(receipt.rejectedReason ? { rejectedReason: receipt.rejectedReason } : {}),
-        ...(receipt.failure ? { failure: receipt.failure } : {}),
-        metadata: receipt.metadata,
-    };
-}
-function jobIdsFromValue(value) {
-    return accountNames(value);
 }
 function mcpJson(value) {
     return {
