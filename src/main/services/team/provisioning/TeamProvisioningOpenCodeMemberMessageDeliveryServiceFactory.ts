@@ -68,6 +68,15 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryHost {
   observeOpenCodeDirectUserDeliveryInlineIfNeeded: OpenCodeMemberMessageDeliveryFactoryPorts['observeOpenCodeDirectUserDeliveryInlineIfNeeded'];
 }
 
+export type TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost = Omit<
+  TeamProvisioningOpenCodeMemberMessageDeliveryHost,
+  'getOpenCodeRuntimeMessageAdapter'
+> & {
+  appShellBoundary: {
+    getOpenCodeRuntimeMessageAdapter: TeamProvisioningOpenCodeMemberMessageDeliveryHost['getOpenCodeRuntimeMessageAdapter'];
+  };
+};
+
 export function createOpenCodeRuntimeBootstrapEvidencePorts(
   input: OpenCodeRuntimeBootstrapEvidencePortsFactoryInput
 ): OpenCodeRuntimeBootstrapEvidencePorts {
@@ -154,6 +163,77 @@ export function createOpenCodeMemberMessageDeliveryServiceFromHost(
     observeOpenCodeDirectUserDeliveryInlineIfNeeded: (input) =>
       host.observeOpenCodeDirectUserDeliveryInlineIfNeeded(input),
   });
+}
+
+export function createTeamProvisioningOpenCodeMemberMessageDeliveryHostFromService(
+  service: TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost
+): TeamProvisioningOpenCodeMemberMessageDeliveryHost {
+  return {
+    getOpenCodeRuntimeMessageAdapter: () =>
+      service.appShellBoundary.getOpenCodeRuntimeMessageAdapter(),
+    readOpenCodeMemberDirectory: (teamName) => service.readOpenCodeMemberDirectory(teamName),
+    resolveOpenCodeMemberIdentityFromDirectory: (teamName, memberName, directory) =>
+      service.resolveOpenCodeMemberIdentityFromDirectory(teamName, memberName, directory),
+    stoppingSecondaryRuntimeTeams: service.stoppingSecondaryRuntimeTeams,
+    readPersistedTeamProjectPath: (teamName) => service.readPersistedTeamProjectPath(teamName),
+    runTracking: {
+      resolveDeliverableTrackedRuntimeRunId: (teamName) =>
+        service.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName),
+    },
+    runs: service.runs,
+    getCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
+      service.getCurrentOpenCodeRuntimeRunId(teamName, laneId),
+    openCodeRuntimeRecoveryIdentity: {
+      resolveCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
+        service.openCodeRuntimeRecoveryIdentity.resolveCurrentOpenCodeRuntimeRunId(
+          teamName,
+          laneId
+        ),
+      isOpenCodeRuntimeLaneIndexActive: (teamName, laneId) =>
+        service.openCodeRuntimeRecoveryIdentity.isOpenCodeRuntimeLaneIndexActive(teamName, laneId),
+    },
+    tryRecoverOpenCodeRuntimeLaneBeforeDelivery: (input) =>
+      service.tryRecoverOpenCodeRuntimeLaneBeforeDelivery(input),
+    tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery: (input) =>
+      service.tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery(input),
+    deleteSecondaryRuntimeRun: (teamName, laneId) =>
+      service.deleteSecondaryRuntimeRun(teamName, laneId),
+    cleanupStoppedTeamOpenCodeRuntimeLanesInBackground: (teamName) =>
+      service.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName),
+    createOpenCodeRuntimeBootstrapEvidencePorts: () =>
+      service.createOpenCodeRuntimeBootstrapEvidencePorts(),
+    providerRuntime: {
+      resolveControlApiBaseUrl: () => service.providerRuntime.resolveControlApiBaseUrl(),
+    },
+    sendOpenCodeMemberMessageToRuntimeSerialized: (input) =>
+      service.sendOpenCodeMemberMessageToRuntimeSerialized(input),
+    rememberOpenCodeRuntimePidFromBridge: (input) =>
+      service.rememberOpenCodeRuntimePidFromBridge(input),
+    maybeSyncOpenCodeRuntimePermissionsAfterDelivery: (input) =>
+      service.maybeSyncOpenCodeRuntimePermissionsAfterDelivery(input),
+    isLegacyOpenCodeMemberWorkSyncReadCommitAllowed: (input) =>
+      service.isLegacyOpenCodeMemberWorkSyncReadCommitAllowed(input),
+    createOpenCodePromptDeliveryLedger: (teamName, laneId) =>
+      service.createOpenCodePromptDeliveryLedger(teamName, laneId),
+    openCodeVisibleReplyProofService: service.openCodeVisibleReplyProofService,
+    openCodePromptDeliveryWatchdogScheduler: service.openCodePromptDeliveryWatchdogScheduler,
+    openCodePromptDeliveryFollowUpPolicy: service.openCodePromptDeliveryFollowUpPolicy,
+    isOpenCodeDeliveryResponseReadCommitAllowed: (input) =>
+      service.isOpenCodeDeliveryResponseReadCommitAllowed(input),
+    getOpenCodeDeliveryPendingReason: (input) => service.getOpenCodeDeliveryPendingReason(input),
+    markOpenCodeAcceptedDeliveryMissingPromptProofForRetry: (input) =>
+      service.markOpenCodeAcceptedDeliveryMissingPromptProofForRetry(input),
+    scheduleOpenCodePromptDeliveryWatchdog: (input) =>
+      service.scheduleOpenCodePromptDeliveryWatchdog(input),
+    logOpenCodePromptDeliveryEvent: (event, record, extra) =>
+      service.logOpenCodePromptDeliveryEvent(event, record, extra),
+    requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded: (input) =>
+      service.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded(input),
+    emitOpenCodePromptDeliveryTaskLogChange: (record, detail) =>
+      service.emitOpenCodePromptDeliveryTaskLogChange(record, detail),
+    observeOpenCodeDirectUserDeliveryInlineIfNeeded: (input) =>
+      service.observeOpenCodeDirectUserDeliveryInlineIfNeeded(input),
+  };
 }
 
 export async function deliverOpenCodeMemberMessage(

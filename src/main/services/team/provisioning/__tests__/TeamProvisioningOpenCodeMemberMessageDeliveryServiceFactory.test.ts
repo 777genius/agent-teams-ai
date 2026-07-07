@@ -5,9 +5,11 @@ import {
   createOpenCodeMemberMessageDeliveryService,
   createOpenCodeMemberMessageDeliveryServiceFromHost,
   createOpenCodeRuntimeBootstrapEvidencePorts,
+  createTeamProvisioningOpenCodeMemberMessageDeliveryHostFromService,
   deliverOpenCodeMemberMessage,
   type OpenCodeMemberMessageDeliveryFactoryPorts,
   type TeamProvisioningOpenCodeMemberMessageDeliveryHost,
+  type TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost,
 } from '../TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory';
 
 describe('TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory', () => {
@@ -65,5 +67,64 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory', () => {
     });
     expect(host.getOpenCodeRuntimeMessageAdapter).toHaveBeenCalledTimes(1);
     expect(host.createOpenCodeRuntimeBootstrapEvidencePorts).not.toHaveBeenCalled();
+  });
+
+  it('builds the delivery host from service-shaped ports without freezing mutable seams', async () => {
+    const firstAdapterGetter = vi.fn(() => null);
+    const secondAdapterGetter = vi.fn(() => null);
+    const service = {
+      appShellBoundary: {
+        getOpenCodeRuntimeMessageAdapter: firstAdapterGetter,
+      },
+      readOpenCodeMemberDirectory: vi.fn(async () => ({ members: [] })),
+      resolveOpenCodeMemberIdentityFromDirectory: vi.fn(async () => null),
+      stoppingSecondaryRuntimeTeams: new Set<string>(),
+      readPersistedTeamProjectPath: vi.fn(async () => '/tmp/team-a'),
+      runTracking: {
+        resolveDeliverableTrackedRuntimeRunId: vi.fn(() => 'run-1'),
+      },
+      runs: new Map(),
+      getCurrentOpenCodeRuntimeRunId: vi.fn(() => 'runtime-run-1'),
+      openCodeRuntimeRecoveryIdentity: {
+        resolveCurrentOpenCodeRuntimeRunId: vi.fn(() => 'runtime-run-2'),
+        isOpenCodeRuntimeLaneIndexActive: vi.fn(() => true),
+      },
+      providerRuntime: {
+        resolveControlApiBaseUrl: vi.fn(() => 'http://127.0.0.1:1234'),
+      },
+      createOpenCodeRuntimeBootstrapEvidencePorts: vi.fn(),
+      sendOpenCodeMemberMessageToRuntimeSerialized: vi.fn(),
+      rememberOpenCodeRuntimePidFromBridge: vi.fn(),
+      maybeSyncOpenCodeRuntimePermissionsAfterDelivery: vi.fn(),
+      isLegacyOpenCodeMemberWorkSyncReadCommitAllowed: vi.fn(),
+      createOpenCodePromptDeliveryLedger: vi.fn(),
+      isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(),
+      getOpenCodeDeliveryPendingReason: vi.fn(),
+      markOpenCodeAcceptedDeliveryMissingPromptProofForRetry: vi.fn(),
+      scheduleOpenCodePromptDeliveryWatchdog: vi.fn(),
+      logOpenCodePromptDeliveryEvent: vi.fn(),
+      requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded: vi.fn(),
+      emitOpenCodePromptDeliveryTaskLogChange: vi.fn(),
+      observeOpenCodeDirectUserDeliveryInlineIfNeeded: vi.fn(),
+      tryRecoverOpenCodeRuntimeLaneBeforeDelivery: vi.fn(),
+      tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDelivery: vi.fn(),
+      deleteSecondaryRuntimeRun: vi.fn(),
+      cleanupStoppedTeamOpenCodeRuntimeLanesInBackground: vi.fn(),
+    } as unknown as TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost;
+
+    const host = createTeamProvisioningOpenCodeMemberMessageDeliveryHostFromService(service);
+
+    expect(host.getOpenCodeRuntimeMessageAdapter()).toBeNull();
+    service.appShellBoundary.getOpenCodeRuntimeMessageAdapter = secondAdapterGetter;
+
+    expect(host.getOpenCodeRuntimeMessageAdapter()).toBeNull();
+    expect(firstAdapterGetter).toHaveBeenCalledTimes(1);
+    expect(secondAdapterGetter).toHaveBeenCalledTimes(1);
+    expect(await host.readPersistedTeamProjectPath('team-a')).toBe('/tmp/team-a');
+    expect(host.runTracking.resolveDeliverableTrackedRuntimeRunId('team-a')).toBe('run-1');
+    expect(
+      host.openCodeRuntimeRecoveryIdentity.isOpenCodeRuntimeLaneIndexActive('team-a', 'lane-a')
+    ).toBe(true);
+    expect(host.providerRuntime.resolveControlApiBaseUrl()).toBe('http://127.0.0.1:1234');
   });
 });
