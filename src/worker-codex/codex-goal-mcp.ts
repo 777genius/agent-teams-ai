@@ -2347,7 +2347,7 @@ async function goalLaunchInput(args: GoalMcpArgs): Promise<CodexGoalLaunchInput>
     reasoningEffort:
       (stringValue(merged.reasoningEffort) ?? "high") as NonNullable<CodexGoalRunConfig["reasoningEffort"]>,
     serviceTier:
-      (stringValue(merged.serviceTier) ?? "fast") as NonNullable<CodexGoalRunConfig["serviceTier"]>,
+      (stringValue(merged.serviceTier) ?? "default") as NonNullable<CodexGoalRunConfig["serviceTier"]>,
     executionEngine:
       (stringValue(merged.executionEngine) ?? "app-server-goal") as NonNullable<CodexGoalRunConfig["executionEngine"]>,
     codexBinaryPath: stringValue(merged.codexBinaryPath) ?? "codex",
@@ -4130,7 +4130,7 @@ async function projectControlRefillWorker(args: ProjectControlMcpArgs) {
     allowDangerFullAccess: false,
     networkAccess: requested.networkAccess ?? NetworkAccessMode.Restricted,
     reasoningEffort: requested.reasoningEffort ?? "high",
-    serviceTier: requested.serviceTier ?? "fast",
+    serviceTier: requested.serviceTier ?? "default",
   };
   assertProjectControlCreateManifestPaths({
     scope: controller.scope,
@@ -6992,7 +6992,7 @@ function jobManifestInputFromArgs(args: JobCreateMcpArgs): CodexGoalJobManifestI
     ...(args.codexBinaryPath ? { codexBinaryPath: args.codexBinaryPath } : {}),
     model: args.model ?? "gpt-5.5",
     reasoningEffort: args.reasoningEffort ?? "high",
-    serviceTier: args.serviceTier ?? "fast",
+    serviceTier: args.serviceTier ?? "default",
     executionEngine: args.executionEngine ?? "app-server-goal",
     taskTimeoutMs: args.taskTimeoutMs ?? defaultTimeoutMs,
     ...(args.appServerStartupTimeoutMs
@@ -7539,7 +7539,7 @@ function codexGoalPromptText(name: string, jobId: string | undefined): string {
     "Never print auth.json or tokens. Do not run two writer workers in the same worktree. " +
     "Treat codex_goal_overview as the registry monitor, codex_goal_brief as the single-job monitor, and codex_goal_decision as the read-only action gate for safeToContinue, blockers, evidence and nextBestCommand.";
   if (name === "start_codex_goal_worker") {
-    return `${shared} First call codex_goal_decision. Start or continue only when decision.safeToContinue is true, otherwise follow decision.checklist and decision.nextBestCommand. If no job exists yet, create one with model gpt-5.5, reasoningEffort high, serviceTier fast, app-server-goal behavior and 72h timeout.`;
+    return `${shared} First call codex_goal_decision. Start or continue only when decision.safeToContinue is true, otherwise follow decision.checklist and decision.nextBestCommand. If no job exists yet, create one with model gpt-5.5, reasoningEffort high, serviceTier default, app-server-goal behavior and 72h timeout.`;
   }
   if (name === "monitor_codex_goal_worker") {
     return `${shared} Call codex_goal_overview for pool-level status, codex_goal_brief for monitoring, and codex_goal_decision before taking action. If worker is alive and silentStale is false, keep monitoring instead of starting another worker. If silentStale is true, verify progress heartbeat, tmux, runner process, app-server process, recent log tail and git status before stopping or recovery.`;

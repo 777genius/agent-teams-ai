@@ -1820,7 +1820,7 @@ describe("codex goal MCP server", () => {
         manifest: {
           accessBoundary: AccessBoundary.IsolatedWorkspaceWrite,
           reasoningEffort: "high",
-          serviceTier: "fast",
+          serviceTier: "default",
           networkAccess: NetworkAccessMode.Restricted,
           tags: expect.arrayContaining([
             "project-control-refill",
