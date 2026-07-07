@@ -1,11 +1,9 @@
 #!/usr/bin/env node
-import { execFile } from "node:child_process";
 import { appendFile, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import { hostname } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { execPath } from "node:process";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 import {
   McpServer,
   ResourceTemplate,
@@ -19,17 +17,12 @@ import {
 } from "@vioxen/subscription-runtime/core";
 import { sessionArtifactFromCodexAuthJson } from "@vioxen/subscription-runtime/provider-codex";
 import {
-  LocalIntegrationAttemptStore,
   LocalFileRunEventProjectionStateStore,
   LocalFileRunEventStore,
   LocalFileWorkerControlInboxStore,
   LocalControlledAgentStateStore,
 } from "@vioxen/subscription-runtime/store-local-file";
 import {
-  LocalGitIntegrationAdapter,
-  LocalProjectCheckRunner,
-  LocalWorkspaceIntegrationLock,
-  SimpleSecretScanner,
   buildLocalClaudeControlledAgentProfile,
   createLocalClaudeControlledAgentProvider,
   loadScopedClaudeSessionArtifact,
@@ -60,8 +53,6 @@ import {
   evaluateProjectAdmission,
   projectRunObservationEvents,
   projectRunReadModelsFromEvents,
-  pushApprovedCommit,
-  rejectIntegrationAttempt,
   reconcileRunPreview,
   readTargetRevision,
   runEventProviderKindFromString,
@@ -70,7 +61,6 @@ import {
   type RunEventReadResult,
   type RunObservationSnapshot,
   type ProjectAccessScope,
-  type ProjectIntegrationPolicy,
   type ProjectControlBrokerEvent,
   type ProjectControlBrokerPorts,
   type ProjectControlOperationResult,
@@ -298,6 +288,9 @@ import {
   projectControlWorkerRole,
   projectScopeFieldFingerprint,
 } from "./codex-goal-mcp-project-scope";
+import {
+  projectIntegrationPushApprovedCommitWithConsumedLedger,
+} from "./codex-goal-mcp-project-integration-ledger";
 export {
   availableCodexGoalAccountSlots,
   dedupeCodexGoalAccountSlots,
@@ -307,7 +300,6 @@ export {
 const serverVersion = "0.1.0-main.2";
 const defaultAuthRoot = defaultCodexGoalAuthRoot;
 const defaultTimeoutMs = 72 * 60 * 60 * 1000;
-const execFileAsync = promisify(execFile);
 const controlledAgentProcessOwner = buildControlledAgentProcessOwner({
   runtimeVersion: serverVersion,
   ...(process.env.SUBSCRIPTION_RUNTIME_RELEASE_SHA === undefined
@@ -2080,10 +2072,11 @@ export function createCodexGoalMcpServer(
       projectIntegrationHandlers.commitApprovedChanges(args),
     ),
     pushApprovedCommit: (args) => withMcpErrors(async () =>
-      projectIntegrationPushApprovedCommitWithConsumedLedger(
+      projectIntegrationPushApprovedCommitWithConsumedLedger({
         args,
-        projectIntegrationHandlers.pushApprovedCommit,
-      ),
+        loadController: loadProjectControlController,
+        pushApprovedCommitHandler: projectIntegrationHandlers.pushApprovedCommit,
+      }),
     ),
     rejectAttempt: (args) => withMcpErrors(async () =>
       projectIntegrationHandlers.rejectAttempt(args),
@@ -3965,44 +3958,6 @@ async function controlledAgentClaudeSessionArtifact(input: {
   });
 }
 
-function projectIntegrationDeps(controller: {
-  readonly controller: CodexGoalJobManifest;
-}) {
-  const rootDir = join(controller.controller.jobRootDir, "project-integration");
-  return {
-    store: new LocalIntegrationAttemptStore({ rootDir }),
-    git: new LocalGitIntegrationAdapter({
-      allowedPatchRoots: controller.controller.projectAccessScope?.workspaceRoots ?? [],
-    }),
-    checks: new LocalProjectCheckRunner(),
-    scanner: new SimpleSecretScanner(),
-    locks: new LocalWorkspaceIntegrationLock({
-      rootDir: join(rootDir, "locks"),
-      staleLockMs: 30 * 60_000,
-    }),
-  };
-}
-
-function projectIntegrationPolicy(
-  controller: {
-    readonly scope: ProjectAccessScope;
-  },
-  args: ProjectIntegrationMcpArgs,
-): ProjectIntegrationPolicy {
-  const allowedPathPrefixes = stringArrayArg(args.allowedPathPrefixes);
-  const requiredCheckIds = stringArrayArg(args.requiredCheckIds);
-  return {
-    access: {
-      boundary: AccessBoundary.ProjectScopedControl,
-      scope: controller.scope,
-    },
-    ...(allowedPathPrefixes.length ? { allowedPathPrefixes } : {}),
-    ...(requiredCheckIds.length ? { requiredCheckIds } : {}),
-    ...(controller.scope.allowForcePush === true ? { allowForcePush: true } : {}),
-    ...(args.allowStaleBase === true ? { allowStaleBase: true } : {}),
-  };
-}
-
 async function projectControlCreateCodexGoalJob(args: ProjectControlMcpArgs) {
   const controller = await loadProjectControlController(args);
   if (args.projectAccessScope !== undefined) {
@@ -4730,192 +4685,6 @@ async function projectControlPushBranch(args: ProjectControlMcpArgs) {
     registryRootDir: controller.registryRootDir,
     auditPath: projectControlAuditPath(controller.controller),
     result: result as unknown as JsonObject,
-  });
-}
-
-async function projectIntegrationPushApprovedCommitWithConsumedLedger(
-  args: unknown,
-  pushApprovedCommitHandler: (args: unknown) => Promise<CallToolResult>,
-): Promise<CallToolResult> {
-  const controller = await loadProjectControlController(args as ProjectControlMcpArgs);
-  const response = await pushApprovedCommitHandler(args);
-  const payload = callToolResultJson(response);
-  if (payload?.ok !== true) return response;
-  const attempt = isRecord(payload.attempt) ? payload.attempt : undefined;
-  if (!attempt) return response;
-
-  const consumedOutputLedger = await recordConsumedOutputAfterPush(
-    controller,
-    attempt as Awaited<ReturnType<typeof pushApprovedCommit>>,
-  );
-  if (!consumedOutputLedger) return response;
-  return mcpJson({
-    ...payload,
-    consumedOutputLedger,
-  });
-}
-
-function callToolResultJson(result: CallToolResult): JsonObject | undefined {
-  if (isRecord(result.structuredContent)) {
-    return result.structuredContent as unknown as JsonObject;
-  }
-  return undefined;
-}
-
-async function projectIntegrationPushApprovedCommit(args: ProjectIntegrationMcpArgs) {
-  const controller = await loadProjectControlController(args);
-  const attemptId = requiredRawString(args.attemptId, "attemptId");
-  const branch = stringValue(args.branch);
-  const remote = stringValue(args.remote);
-  if (branch) assertSafeGitRefName(branch, "branch");
-  if (remote) assertSafeGitRemoteName(remote, "remote");
-  if (!args.confirmPush) {
-    return mcpJson({
-      ok: false,
-      reason: "confirm_push_required",
-      mode: "project_integration_push_approved_commit",
-      controllerJobId: controller.controller.jobId,
-      attemptId,
-      ...(branch ? { branch } : {}),
-      ...(remote ? { remote } : {}),
-      force: booleanValue(args.force) ?? false,
-    });
-  }
-  const attempt = await pushApprovedCommit(projectIntegrationDeps(controller), {
-    attemptId,
-    ...(remote ? { remote } : {}),
-    ...(branch ? { branch } : {}),
-    force: booleanValue(args.force) ?? false,
-    policy: projectIntegrationPolicy(controller, args),
-  });
-  const consumedOutputLedger = await recordConsumedOutputAfterPush(controller, attempt);
-  return mcpJson({
-    ok: true,
-    mode: "project_integration_push_approved_commit",
-    controllerJobId: controller.controller.jobId,
-    attempt: attempt as unknown as JsonObject,
-    ...(consumedOutputLedger ? { consumedOutputLedger } : {}),
-  });
-}
-
-async function recordConsumedOutputAfterPush(
-  controller: Awaited<ReturnType<typeof loadProjectControlController>>,
-  attempt: Awaited<ReturnType<typeof pushApprovedCommit>>,
-): Promise<JsonObject | undefined> {
-  const ledgerRoot = controller.scope.consumedOutputLedgerRoots?.[0];
-  const commitSha = attempt.pushAttempt?.commitSha ?? attempt.commitCandidate?.commitSha;
-  if (!ledgerRoot || !commitSha) return undefined;
-  const archiveRoot = join(dirname(controller.registryRootDir), "archives");
-  const archivePath = join(
-    archiveRoot,
-    `${safeArchiveName(attempt.workerOutput.workerJobId)}-integrated-${commitSha.slice(0, 8)}-${timestampForPath()}`,
-  );
-  await mkdir(archivePath, { recursive: true });
-  const statusPath = join(archivePath, "git-status.txt");
-  const patchPath = join(archivePath, "tracked.diff");
-  const numstatPath = join(archivePath, "tracked.numstat");
-  await writeFile(statusPath, await safeGitOutput(attempt.workerOutput.workspacePath, [
-    "status",
-    "--short",
-  ]));
-  await writeFile(patchPath, await safeGitOutput(attempt.workerOutput.workspacePath, [
-    "diff",
-    "--",
-    ...attempt.workerOutput.changedFiles,
-  ]));
-  await writeFile(numstatPath, await safeGitOutput(attempt.workerOutput.workspacePath, [
-    "diff",
-    "--numstat",
-    "--",
-    ...attempt.workerOutput.changedFiles,
-  ]));
-  const closedAt = new Date().toISOString();
-  const ledgerPath = join(ledgerRoot, "items", `${safeArchiveName(attempt.workerOutput.workerJobId)}.json`);
-  const record = {
-    schemaVersion: 1,
-    jobId: attempt.workerOutput.workerJobId,
-    status: "integrated",
-    closedAt,
-    consumedAt: closedAt,
-    integratedCommitSha: commitSha,
-    commitSha,
-    commit: commitSha,
-    archivePath,
-    note: `Integrated reviewed worker output via project lifecycle attempt ${attempt.attemptId}.`,
-    backup: {
-      workspace: attempt.workerOutput.workspacePath,
-      statusPath,
-      patchPath,
-      numstatPath,
-    },
-    notes: [{
-      status: "integrated",
-      text: `Integrated reviewed worker output via project lifecycle attempt ${attempt.attemptId}.`,
-      commit: commitSha,
-    }],
-  };
-  await mkdir(dirname(ledgerPath), { recursive: true });
-  await writeJsonAtomic(ledgerPath, record);
-  return {
-    ledgerPath,
-    archivePath,
-    status: "integrated",
-    commitSha,
-  };
-}
-
-async function safeGitOutput(
-  cwd: string,
-  args: readonly string[],
-): Promise<string> {
-  try {
-    const result = await execFileAsync("git", args, {
-      cwd,
-      maxBuffer: 10 * 1024 * 1024,
-      timeout: 60_000,
-    });
-    return result.stdout;
-  } catch (error) {
-    return `git ${args.join(" ")} failed: ${error instanceof Error ? error.message : String(error)}\n`;
-  }
-}
-
-async function writeJsonAtomic(path: string, value: unknown): Promise<void> {
-  const tmpPath = `${path}.${process.pid}.${Date.now()}.tmp`;
-  await writeFile(tmpPath, `${JSON.stringify(value, null, 2)}\n`);
-  await rename(tmpPath, path);
-}
-
-function safeArchiveName(value: string): string {
-  return value.replace(/[^a-zA-Z0-9._-]/g, "_");
-}
-
-function timestampForPath(): string {
-  return new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-}
-
-async function projectIntegrationRejectAttempt(args: ProjectIntegrationMcpArgs) {
-  const controller = await loadProjectControlController(args);
-  const attemptId = requiredRawString(args.attemptId, "attemptId");
-  const reason = requiredRawString(args.reason, "reason");
-  if (!args.confirmReject) {
-    return mcpJson({
-      ok: false,
-      reason: "confirm_reject_required",
-      mode: "project_integration_reject_attempt",
-      controllerJobId: controller.controller.jobId,
-      attemptId,
-    });
-  }
-  const attempt = await rejectIntegrationAttempt(projectIntegrationDeps(controller), {
-    attemptId,
-    reason,
-  });
-  return mcpJson({
-    ok: true,
-    mode: "project_integration_reject_attempt",
-    controllerJobId: controller.controller.jobId,
-    attempt: attempt as unknown as JsonObject,
   });
 }
 
