@@ -207,14 +207,15 @@ export function buildMixedSecondaryLaunchSnapshotForRun<
             }
           : finishedWithoutRuntimeEvidence
             ? {
-                launchState: 'runtime_pending_bootstrap' as const,
-                agentToolAccepted: false,
+                launchState: 'failed_to_start' as const,
+                agentToolAccepted: true,
                 runtimeAlive: false,
                 bootstrapConfirmed: false,
-                hardFailure: false,
+                hardFailure: true,
+                hardFailureReason: 'opencode_runtime_evidence_missing',
                 runtimeDiagnostic:
                   'OpenCode secondary lane finished without committed runtime evidence.',
-                runtimeDiagnosticSeverity: 'warning' as const,
+                runtimeDiagnosticSeverity: 'error' as const,
                 bootstrapStalled: currentSpawnStatus?.bootstrapStalled === true ? true : undefined,
                 diagnostics: missingEvidenceDiagnostics,
               }

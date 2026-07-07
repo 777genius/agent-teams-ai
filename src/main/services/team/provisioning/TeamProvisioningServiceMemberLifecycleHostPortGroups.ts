@@ -21,8 +21,7 @@ type CreateMixedSecondaryLaneStateForMember =
   MixedSecondaryRuntimePorts['createMixedSecondaryLaneStateForMember'];
 type StopSingleMixedSecondaryRuntimeLane =
   MixedSecondaryRuntimePorts['stopSingleMixedSecondaryRuntimeLane'];
-type ServiceMemberLifecycleUseCases = PortGroups['useCases'] &
-  Pick<PortGroups['openCodeRetryUseCases'], 'readOpenCodeSecondaryRetryOutcome'>;
+type ServiceMemberLifecycleUseCases = PortGroups['useCases'];
 
 export interface TeamProvisioningServiceMemberLifecycleHostPortGroupPorts {
   runs: unknown;
@@ -194,9 +193,6 @@ export function createTeamProvisioningServiceMemberLifecycleHostPortGroups(
       preparePrimaryOwnedMemberRestartRuntime:
         service.memberLifecycleUseCases.preparePrimaryOwnedMemberRestartRuntime,
     },
-    openCodeRetryUseCases: {
-      readOpenCodeSecondaryRetryOutcome:
-        service.memberLifecycleUseCases.readOpenCodeSecondaryRetryOutcome,
-    },
+    openCodeRetryUseCases: {},
   };
 }
