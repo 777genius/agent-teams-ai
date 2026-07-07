@@ -260,6 +260,7 @@ import {
   codexGoalWorkerControlService,
   codexGoalWorkerControlTarget,
 } from "./codex-goal-mcp-worker-control";
+import { codexGoalAccountCapacityFacts } from "./codex-goal-mcp-account-capacity-facts";
 import {
   CODEX_GOAL_CONTROL_SURFACE_SCHEMA,
   CODEX_GOAL_EXECUTION_ENGINE_SCHEMA,
@@ -4246,7 +4247,11 @@ async function projectControlRefillWorker(args: ProjectControlMcpArgs) {
     throw error;
   }
 
-  const accountCapacityFacts = await codexGoalAccountCapacityFacts(manifest);
+  const accountCapacityFacts = await codexGoalAccountCapacityFacts({
+    manifest,
+    loadLaunch: async (jobManifest) =>
+      goalLaunchInput(codexGoalJobToArgs(jobManifest)),
+  });
   let start: ProjectControlOperationResult | undefined;
   if (booleanValue(args.startWorker) !== false) {
     await assertReadablePrompt({ promptPath: manifest.promptPath });
@@ -4851,38 +4856,6 @@ async function projectControlMarkReviewed(args: ProjectControlMcpArgs) {
     jobId: loaded.manifest.jobId,
     result: result as unknown as JsonObject,
   });
-}
-
-async function codexGoalAccountCapacityFacts(
-  manifest: CodexGoalJobManifest,
-): Promise<JsonObject> {
-  try {
-    const launch = await goalLaunchInput(codexGoalJobToArgs(manifest));
-    const payload = await codexGoalAccountStatusPayload(launch, {
-      liveCheck: false,
-    });
-    const capacityBlockedAccounts = payload.accounts.filter((slot) =>
-      slot.capacityAvailability && slot.capacityAvailability !== "available"
-    );
-    return {
-      ok: true,
-      capacityAware: payload.capacityAware,
-      summary: payload.summary,
-      capacityBlockedAccounts: capacityBlockedAccounts.map((slot) => ({
-        name: slot.name,
-        availability: slot.capacityAvailability,
-        reason: slot.capacityReason,
-        cooldownUntil: slot.capacityCooldownUntil,
-      })),
-      availableDedupedAccountNames: payload.availableDedupedAccountNames,
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      reason: "account_capacity_facts_unavailable",
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
 }
 
 async function continueStoredJob(
