@@ -4,7 +4,6 @@ import {
   OPEN_CODE_SOLO_MEMBER_ROLE,
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
-import { execCli as defaultExecCli } from '@main/utils/childProcess';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { randomUUID } from 'crypto';
@@ -13,12 +12,10 @@ import * as path from 'path';
 
 import { buildProviderControlPlaneCliCommandArgs } from '../../runtime/providerCliCommandArgs';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
-import { ClaudeBinaryResolver } from '../ClaudeBinaryResolver';
 
 import { pushUniqueSupportDiagnostics } from './TeamProvisioningDiagnosticsHelpers';
 import {
   isAnthropicDirectCredentialAuthSource,
-  type ProvisioningAuthSource,
   type ProvisioningEnvResolution,
   type TeamRuntimeAuthContext,
 } from './TeamProvisioningEnvBuilder';
@@ -54,6 +51,11 @@ import {
 
 import type { TeamLaunchRuntimeAdapter } from '../runtime';
 import type {
+  CachedProbeResult,
+  ProbeResult,
+  ProviderProbeCachePort,
+} from './TeamProvisioningProviderProbeCache';
+import type {
   EffortLevel,
   TeamCreateRequest,
   TeamLaunchRequest,
@@ -65,75 +67,13 @@ import type {
   TeamProvisioningSupportDiagnostic,
 } from '@shared/types';
 
-const PROBE_CACHE_TTL_MS = 36 * 60 * 60 * 1000;
-
-export interface CachedProbeResult {
-  cacheKey: string;
-  claudePath: string;
-  authSource: ProvisioningAuthSource;
-  warning?: string;
-  cachedAtMs: number;
-}
-
-export interface ProbeResult {
-  claudePath: string;
-  authSource: ProvisioningAuthSource;
-  warning?: string;
-}
-
-export interface ProviderProbeCachePort {
-  get(cacheKey: string): CachedProbeResult | null;
-  set(cacheKey: string, result: ProbeResult): void;
-  delete(cacheKey: string): void;
-  getOrCreateInFlight(
-    cacheKey: string,
-    create: () => Promise<ProbeResult | null>
-  ): Promise<ProbeResult | null>;
-}
-
-export function createInMemoryProviderProbeCachePort({
-  ttlMs = PROBE_CACHE_TTL_MS,
-  now = Date.now,
-}: {
-  ttlMs?: number;
-  now?: () => number;
-} = {}): ProviderProbeCachePort {
-  const cachedProbeResults = new Map<string, CachedProbeResult>();
-  const probeInFlightByKey = new Map<string, Promise<ProbeResult | null>>();
-
-  return {
-    get(cacheKey) {
-      const cached = cachedProbeResults.get(cacheKey);
-      if (!cached) return null;
-      const ageMs = now() - cached.cachedAtMs;
-      if (ageMs >= ttlMs) {
-        cachedProbeResults.delete(cacheKey);
-        return null;
-      }
-      return cached;
-    },
-    set(cacheKey, result) {
-      cachedProbeResults.set(cacheKey, { cacheKey, ...result, cachedAtMs: now() });
-    },
-    delete(cacheKey) {
-      cachedProbeResults.delete(cacheKey);
-    },
-    getOrCreateInFlight(cacheKey, create) {
-      const existingProbe = probeInFlightByKey.get(cacheKey);
-      if (existingProbe) {
-        return existingProbe;
-      }
-
-      const probePromise = create().finally(() => {
-        if (probeInFlightByKey.get(cacheKey) === probePromise) {
-          probeInFlightByKey.delete(cacheKey);
-        }
-      });
-      probeInFlightByKey.set(cacheKey, probePromise);
-      return probePromise;
-    },
-  };
-}
+export { createDefaultTeamProvisioningPrepareCoordinatorPorts } from './TeamProvisioningPrepareCoordinatorDefaults';
+export type {
+  CachedProbeResult,
+  ProbeResult,
+  ProviderProbeCachePort,
+} from './TeamProvisioningProviderProbeCache';
+export { createInMemoryProviderProbeCachePort } from './TeamProvisioningProviderProbeCache';
 
 export interface PrepareForProvisioningOptions {
   forceFresh?: boolean;
@@ -1040,35 +980,4 @@ export class TeamProvisioningPrepareCoordinator {
       return result;
     });
   }
-}
-
-export function createDefaultTeamProvisioningPrepareCoordinatorPorts(
-  overrides: Partial<TeamProvisioningPrepareCoordinatorPorts>
-): TeamProvisioningPrepareCoordinatorPorts {
-  return {
-    providerProbeCache: createInMemoryProviderProbeCachePort(),
-    getOpenCodeRuntimeAdapter: () => null,
-    buildProvisioningEnv: async () => ({
-      env: process.env,
-      authSource: 'none',
-      geminiRuntimeAuth: null,
-      providerArgs: [],
-    }),
-    runProviderOneShotDiagnostic: async () => ({}),
-    readRuntimeProviderLaunchFacts: async () => ({
-      defaultModel: null,
-      modelIds: new Set(),
-      runtimeCapabilities: null,
-      modelCatalog: null,
-    }),
-    resolveClaudeBinaryPath: () => ClaudeBinaryResolver.resolve(),
-    probeClaudeRuntime: async () => ({}),
-    ensureMemberWorktree: async ({ baseCwd, memberName }) => ({
-      worktreePath: path.join(baseCwd, memberName),
-    }),
-    execCli: defaultExecCli,
-    info: () => undefined,
-    warn: () => undefined,
-    ...overrides,
-  };
 }
