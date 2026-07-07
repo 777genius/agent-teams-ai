@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   createTeamProvisioningOpenCodeLaunchWiring,
+  createTeamProvisioningOpenCodeLaunchWiringHostFromService,
   type OpenCodeAggregateProvisioningRun,
   type TeamProvisioningOpenCodeLaunchWiringHost,
+  type TeamProvisioningOpenCodeLaunchWiringServiceHost,
 } from '../TeamProvisioningOpenCodeLaunchWiring';
 
 import type { TeamLaunchRuntimeAdapter, TeamRuntimeLaunchResult } from '../../runtime';
@@ -199,6 +201,81 @@ function createHost(
 }
 
 describe('TeamProvisioningOpenCodeLaunchWiring', () => {
+  it('builds launch wiring host from service-shaped dependencies', async () => {
+    const calls: string[] = [];
+    const adapter = {} as TeamLaunchRuntimeAdapter;
+    const baseHost = createHost(calls, adapter);
+    const serviceHost = {
+      runtimeAdapterRunByTeam: baseHost.runtimeAdapterRunByTeam,
+      provisioningRunByTeam: baseHost.provisioningRunByTeam,
+      runtimeAdapterProgressByRunId: baseHost.runtimeAdapterProgressByRunId,
+      cancelledRuntimeAdapterRunIds: baseHost.cancelledRuntimeAdapterRunIds,
+      runs: baseHost.runs,
+      runtimeAdapterProgressState: baseHost.runtimeAdapterProgressState,
+      runTracking: baseHost.runTracking,
+      stopAllTeamsGeneration: 42,
+      appShellBoundary: {
+        getOpenCodeRuntimeAdapter: baseHost.getOpenCodeRuntimeAdapter,
+      },
+      launchStateStore: {
+        read: baseHost.readLaunchState,
+      },
+      cancellationBoundary: {
+        isCancellableRuntimeAdapterProgress: baseHost.isCancellableRuntimeAdapterProgress,
+        cancelRuntimeAdapterProvisioning: baseHost.cancelRuntimeAdapterProvisioning,
+        recordCancelledOpenCodeRuntimeAdapterLaunch:
+          baseHost.recordCancelledOpenCodeRuntimeAdapterLaunch,
+        clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned:
+          baseHost.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned,
+      },
+      prepareFacade: {
+        getOpenCodeRuntimeLaunchCwd: baseHost.getOpenCodeRuntimeLaunchCwd,
+      },
+      toolApprovalFacade: {
+        syncOpenCodeRuntimeToolApprovals: baseHost.syncOpenCodeRuntimeToolApprovals,
+      },
+      teamChangeEmitter: baseHost.emitTeamChange,
+      stopOpenCodeRuntimeAdapterTeam: baseHost.stopOpenCodeRuntimeAdapterTeam,
+      hasSecondaryRuntimeRuns: baseHost.hasSecondaryRuntimeRuns,
+      stopMixedSecondaryRuntimeLanes: baseHost.stopMixedSecondaryRuntimeLanes,
+      resetTeamScopedTransientStateForNewRun: baseHost.resetTeamScopedTransientStateForNewRun,
+      clearPersistedLaunchState: baseHost.clearPersistedLaunchState,
+      invalidateRuntimeSnapshotCaches: baseHost.invalidateRuntimeSnapshotCaches,
+      launchOpenCodeAggregatePrimaryLane: baseHost.launchOpenCodeAggregatePrimaryLane,
+      launchSingleMixedSecondaryLane: baseHost.launchSingleMixedSecondaryLane,
+      summarizeOpenCodeAggregateLaunchState: baseHost.summarizeOpenCodeAggregateLaunchState,
+      persistLaunchStateSnapshot: baseHost.persistLaunchStateSnapshot,
+      syncRunMemberSpawnStatusesFromSnapshot: baseHost.syncRunMemberSpawnStatusesFromSnapshot,
+      deleteSecondaryRuntimeRun: baseHost.deleteSecondaryRuntimeRun,
+      persistOpenCodeRuntimeAdapterLaunchResult: baseHost.persistOpenCodeRuntimeAdapterLaunchResult,
+    } satisfies TeamProvisioningOpenCodeLaunchWiringServiceHost<OpenCodeAggregateProvisioningRun>;
+    const host = createTeamProvisioningOpenCodeLaunchWiringHostFromService(serviceHost);
+
+    expect(host.runtimeAdapterRunByTeam).toBe(baseHost.runtimeAdapterRunByTeam);
+    expect(host.getOpenCodeRuntimeAdapter()).toBe(adapter);
+    expect(host.getStopAllTeamsGeneration()).toBe(42);
+    await host.readLaunchState('team-a');
+    host.getOpenCodeRuntimeLaunchCwd('/repo', []);
+    await host.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned('team-a', 'runtime-run');
+    host.syncOpenCodeRuntimeToolApprovals({
+      teamName: 'team-a',
+      runId: 'runtime-run',
+      laneId: 'primary',
+      cwd: '/repo',
+      members: runtimeResult().members,
+      expectedMembers: [],
+    });
+    host.emitTeamChange({ type: 'process', teamName: 'team-a', detail: 'ready' });
+
+    expect(calls).toEqual([
+      'readLaunchState',
+      'getLaunchCwd',
+      'clearPrimaryIfOwned',
+      'syncApprovals',
+      'emit:process:ready',
+    ]);
+  });
+
   it('throws the same missing OpenCode adapter error before launch side effects', async () => {
     const calls: string[] = [];
     const host = createHost(calls, null);

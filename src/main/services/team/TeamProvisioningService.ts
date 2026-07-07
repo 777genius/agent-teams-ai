@@ -310,7 +310,11 @@ import {
   scheduleOpenCodeBootstrapStallReevaluation as scheduleOpenCodeBootstrapStallReevaluationHelper,
 } from './provisioning/TeamProvisioningOpenCodeBootstrapStall';
 import { createTeamProvisioningOpenCodeInboxAttachmentPayloadBoundary } from './provisioning/TeamProvisioningOpenCodeInboxAttachmentPayloadBoundaryFactory';
-import { createTeamProvisioningOpenCodeLaunchWiring } from './provisioning/TeamProvisioningOpenCodeLaunchWiring';
+import {
+  createTeamProvisioningOpenCodeLaunchWiring,
+  createTeamProvisioningOpenCodeLaunchWiringHostFromService,
+  type TeamProvisioningOpenCodeLaunchWiringServiceHost,
+} from './provisioning/TeamProvisioningOpenCodeLaunchWiring';
 import {
   createTeamProvisioningOpenCodeMemberIdentityBoundary,
   type TeamProvisioningOpenCodeMemberIdentityBoundary,
@@ -1373,57 +1377,11 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       )
     );
   private readonly openCodeLaunchWiring =
-    createTeamProvisioningOpenCodeLaunchWiring<ProvisioningRun>({
-      runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
-      provisioningRunByTeam: this.provisioningRunByTeam,
-      runtimeAdapterProgressByRunId: this.runtimeAdapterProgressByRunId,
-      cancelledRuntimeAdapterRunIds: this.cancelledRuntimeAdapterRunIds,
-      runs: this.runs,
-      runtimeAdapterProgressState: this.runtimeAdapterProgressState,
-      runTracking: this.runTracking,
-      getOpenCodeRuntimeAdapter: () => this.appShellBoundary.getOpenCodeRuntimeAdapter(),
-      getStopAllTeamsGeneration: () => this.stopAllTeamsGeneration,
-      stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>
-        this.stopOpenCodeRuntimeAdapterTeam(teamName, runId),
-      hasSecondaryRuntimeRuns: (teamName) => this.hasSecondaryRuntimeRuns(teamName),
-      stopMixedSecondaryRuntimeLanes: (teamName) => this.stopMixedSecondaryRuntimeLanes(teamName),
-      isCancellableRuntimeAdapterProgress: (progress) =>
-        this.cancellationBoundary.isCancellableRuntimeAdapterProgress(progress),
-      cancelRuntimeAdapterProvisioning: (runId, progress) =>
-        this.cancellationBoundary.cancelRuntimeAdapterProvisioning(runId, progress),
-      recordCancelledOpenCodeRuntimeAdapterLaunch: (teamName, sourceWarning, onProgress) =>
-        this.cancellationBoundary.recordCancelledOpenCodeRuntimeAdapterLaunch(
-          teamName,
-          sourceWarning,
-          onProgress
-        ),
-      resetTeamScopedTransientStateForNewRun: (teamName) =>
-        this.resetTeamScopedTransientStateForNewRun(teamName),
-      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
-      clearPersistedLaunchState: (teamName) => this.clearPersistedLaunchState(teamName),
-      invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
-      launchOpenCodeAggregatePrimaryLane: (input) => this.launchOpenCodeAggregatePrimaryLane(input),
-      launchSingleMixedSecondaryLane: (run, lane) => this.launchSingleMixedSecondaryLane(run, lane),
-      summarizeOpenCodeAggregateLaunchState: (input) =>
-        this.summarizeOpenCodeAggregateLaunchState(input),
-      persistLaunchStateSnapshot: (run, launchPhase) =>
-        this.persistLaunchStateSnapshot(run, launchPhase),
-      syncRunMemberSpawnStatusesFromSnapshot: (run, snapshot) =>
-        this.syncRunMemberSpawnStatusesFromSnapshot(run, snapshot),
-      deleteSecondaryRuntimeRun: (teamName, laneId) =>
-        this.deleteSecondaryRuntimeRun(teamName, laneId),
-      getOpenCodeRuntimeLaunchCwd: (baseCwd, members) =>
-        this.prepareFacade.getOpenCodeRuntimeLaunchCwd(baseCwd, members),
-      clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: (teamName, runId) =>
-        this.cancellationBoundary.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName, runId),
-      persistOpenCodeRuntimeAdapterLaunchResult: (result, launchInput) =>
-        this.persistOpenCodeRuntimeAdapterLaunchResult(result, launchInput),
-      syncOpenCodeRuntimeToolApprovals: (syncInput) =>
-        this.toolApprovalFacade.syncOpenCodeRuntimeToolApprovals(syncInput),
-      emitTeamChange: (event) => {
-        this.teamChangeEmitter?.(event);
-      },
-    });
+    createTeamProvisioningOpenCodeLaunchWiring<ProvisioningRun>(
+      createTeamProvisioningOpenCodeLaunchWiringHostFromService(
+        this as unknown as TeamProvisioningOpenCodeLaunchWiringServiceHost<ProvisioningRun>
+      )
+    );
   private readonly openCodeRuntimeDeliveryBoundaryHost: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<ProvisioningRun>;
   private readonly openCodeRuntimeControlApi = createTeamRuntimeControlCompatibilityApi({
     openCode: {

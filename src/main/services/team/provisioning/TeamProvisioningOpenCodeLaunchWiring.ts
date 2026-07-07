@@ -129,6 +129,50 @@ export interface TeamProvisioningOpenCodeLaunchWiring {
   ): Promise<TeamLaunchResponse>;
 }
 
+export interface TeamProvisioningOpenCodeLaunchWiringServiceHost<Run> {
+  runtimeAdapterRunByTeam: TeamProvisioningOpenCodeLaunchWiringHost<Run>['runtimeAdapterRunByTeam'];
+  provisioningRunByTeam: TeamProvisioningOpenCodeLaunchWiringHost<Run>['provisioningRunByTeam'];
+  runtimeAdapterProgressByRunId: TeamProvisioningOpenCodeLaunchWiringHost<Run>['runtimeAdapterProgressByRunId'];
+  cancelledRuntimeAdapterRunIds: TeamProvisioningOpenCodeLaunchWiringHost<Run>['cancelledRuntimeAdapterRunIds'];
+  runs: TeamProvisioningOpenCodeLaunchWiringHost<Run>['runs'];
+  runtimeAdapterProgressState: TeamProvisioningOpenCodeLaunchWiringHost<Run>['runtimeAdapterProgressState'];
+  runTracking: TeamProvisioningOpenCodeLaunchWiringHost<Run>['runTracking'];
+  stopAllTeamsGeneration: number;
+  appShellBoundary: {
+    getOpenCodeRuntimeAdapter: TeamProvisioningOpenCodeLaunchWiringHost<Run>['getOpenCodeRuntimeAdapter'];
+  };
+  launchStateStore: {
+    read: TeamProvisioningOpenCodeLaunchWiringHost<Run>['readLaunchState'];
+  };
+  cancellationBoundary: Pick<
+    TeamProvisioningOpenCodeLaunchWiringHost<Run>,
+    | 'isCancellableRuntimeAdapterProgress'
+    | 'cancelRuntimeAdapterProvisioning'
+    | 'recordCancelledOpenCodeRuntimeAdapterLaunch'
+    | 'clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned'
+  >;
+  prepareFacade: {
+    getOpenCodeRuntimeLaunchCwd: TeamProvisioningOpenCodeLaunchWiringHost<Run>['getOpenCodeRuntimeLaunchCwd'];
+  };
+  toolApprovalFacade: {
+    syncOpenCodeRuntimeToolApprovals: TeamProvisioningOpenCodeLaunchWiringHost<Run>['syncOpenCodeRuntimeToolApprovals'];
+  };
+  teamChangeEmitter?: (event: TeamChangeEvent) => void;
+  stopOpenCodeRuntimeAdapterTeam: TeamProvisioningOpenCodeLaunchWiringHost<Run>['stopOpenCodeRuntimeAdapterTeam'];
+  hasSecondaryRuntimeRuns: TeamProvisioningOpenCodeLaunchWiringHost<Run>['hasSecondaryRuntimeRuns'];
+  stopMixedSecondaryRuntimeLanes: TeamProvisioningOpenCodeLaunchWiringHost<Run>['stopMixedSecondaryRuntimeLanes'];
+  resetTeamScopedTransientStateForNewRun: TeamProvisioningOpenCodeLaunchWiringHost<Run>['resetTeamScopedTransientStateForNewRun'];
+  clearPersistedLaunchState: TeamProvisioningOpenCodeLaunchWiringHost<Run>['clearPersistedLaunchState'];
+  invalidateRuntimeSnapshotCaches: TeamProvisioningOpenCodeLaunchWiringHost<Run>['invalidateRuntimeSnapshotCaches'];
+  launchOpenCodeAggregatePrimaryLane: TeamProvisioningOpenCodeLaunchWiringHost<Run>['launchOpenCodeAggregatePrimaryLane'];
+  launchSingleMixedSecondaryLane: TeamProvisioningOpenCodeLaunchWiringHost<Run>['launchSingleMixedSecondaryLane'];
+  summarizeOpenCodeAggregateLaunchState: TeamProvisioningOpenCodeLaunchWiringHost<Run>['summarizeOpenCodeAggregateLaunchState'];
+  persistLaunchStateSnapshot: TeamProvisioningOpenCodeLaunchWiringHost<Run>['persistLaunchStateSnapshot'];
+  syncRunMemberSpawnStatusesFromSnapshot: TeamProvisioningOpenCodeLaunchWiringHost<Run>['syncRunMemberSpawnStatusesFromSnapshot'];
+  deleteSecondaryRuntimeRun: TeamProvisioningOpenCodeLaunchWiringHost<Run>['deleteSecondaryRuntimeRun'];
+  persistOpenCodeRuntimeAdapterLaunchResult: TeamProvisioningOpenCodeLaunchWiringHost<Run>['persistOpenCodeRuntimeAdapterLaunchResult'];
+}
+
 function getRequiredOpenCodeRuntimeAdapter(host: {
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
 }): TeamLaunchRuntimeAdapter {
@@ -137,6 +181,65 @@ function getRequiredOpenCodeRuntimeAdapter(host: {
     throw new Error('OpenCode runtime adapter is not registered');
   }
   return adapter;
+}
+
+export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
+  service: TeamProvisioningOpenCodeLaunchWiringServiceHost<Run>
+): TeamProvisioningOpenCodeLaunchWiringHost<Run> {
+  return {
+    runtimeAdapterRunByTeam: service.runtimeAdapterRunByTeam,
+    provisioningRunByTeam: service.provisioningRunByTeam,
+    runtimeAdapterProgressByRunId: service.runtimeAdapterProgressByRunId,
+    cancelledRuntimeAdapterRunIds: service.cancelledRuntimeAdapterRunIds,
+    runs: service.runs,
+    runtimeAdapterProgressState: service.runtimeAdapterProgressState,
+    runTracking: service.runTracking,
+    getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
+    getStopAllTeamsGeneration: () => service.stopAllTeamsGeneration,
+    stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>
+      service.stopOpenCodeRuntimeAdapterTeam(teamName, runId),
+    hasSecondaryRuntimeRuns: (teamName) => service.hasSecondaryRuntimeRuns(teamName),
+    stopMixedSecondaryRuntimeLanes: (teamName) => service.stopMixedSecondaryRuntimeLanes(teamName),
+    isCancellableRuntimeAdapterProgress: (progress) =>
+      service.cancellationBoundary.isCancellableRuntimeAdapterProgress(progress),
+    cancelRuntimeAdapterProvisioning: (runId, progress) =>
+      service.cancellationBoundary.cancelRuntimeAdapterProvisioning(runId, progress),
+    recordCancelledOpenCodeRuntimeAdapterLaunch: (teamName, sourceWarning, onProgress) =>
+      service.cancellationBoundary.recordCancelledOpenCodeRuntimeAdapterLaunch(
+        teamName,
+        sourceWarning,
+        onProgress
+      ),
+    resetTeamScopedTransientStateForNewRun: (teamName) =>
+      service.resetTeamScopedTransientStateForNewRun(teamName),
+    readLaunchState: (teamName) => service.launchStateStore.read(teamName),
+    clearPersistedLaunchState: (teamName) => service.clearPersistedLaunchState(teamName),
+    invalidateRuntimeSnapshotCaches: (teamName) =>
+      service.invalidateRuntimeSnapshotCaches(teamName),
+    launchOpenCodeAggregatePrimaryLane: (input) =>
+      service.launchOpenCodeAggregatePrimaryLane(input),
+    launchSingleMixedSecondaryLane: (run, lane) =>
+      service.launchSingleMixedSecondaryLane(run, lane),
+    summarizeOpenCodeAggregateLaunchState: (input) =>
+      service.summarizeOpenCodeAggregateLaunchState(input),
+    persistLaunchStateSnapshot: (run, launchPhase) =>
+      service.persistLaunchStateSnapshot(run, launchPhase),
+    syncRunMemberSpawnStatusesFromSnapshot: (run, snapshot) =>
+      service.syncRunMemberSpawnStatusesFromSnapshot(run, snapshot),
+    deleteSecondaryRuntimeRun: (teamName, laneId) =>
+      service.deleteSecondaryRuntimeRun(teamName, laneId),
+    getOpenCodeRuntimeLaunchCwd: (baseCwd, members) =>
+      service.prepareFacade.getOpenCodeRuntimeLaunchCwd(baseCwd, members),
+    clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: (teamName, runId) =>
+      service.cancellationBoundary.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName, runId),
+    persistOpenCodeRuntimeAdapterLaunchResult: (result, launchInput) =>
+      service.persistOpenCodeRuntimeAdapterLaunchResult(result, launchInput),
+    syncOpenCodeRuntimeToolApprovals: (syncInput) =>
+      service.toolApprovalFacade.syncOpenCodeRuntimeToolApprovals(syncInput),
+    emitTeamChange: (event) => {
+      service.teamChangeEmitter?.(event);
+    },
+  };
 }
 
 export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
