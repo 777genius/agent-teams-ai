@@ -14,6 +14,7 @@ import {
   commitApprovedChanges,
   openProjectIntegrationAttempt,
   pushApprovedCommit,
+  rollupCheckRuns,
   runRequiredChecks,
   type CheckRun,
   type CheckRunnerPort,
@@ -141,6 +142,37 @@ describe("project integration use cases", () => {
     });
   });
 
+  it("rolls timed-out required checks into failed integration status", async () => {
+    const fixture = createFixture({
+      checkStatus: CheckRunStatus.TimedOut,
+    });
+    const opened = await openProjectIntegrationAttempt(fixture.deps(), input());
+    const applied = await applyWorkerOutput(fixture.deps(), {
+      attemptId: opened.attemptId,
+    });
+
+    const checked = await runRequiredChecks(fixture.deps(), {
+      attemptId: applied.attemptId,
+    });
+
+    expect(checked).toMatchObject({
+      status: IntegrationAttemptStatus.ChecksFailed,
+      checkRuns: [
+        {
+          checkId: "test:memory",
+          status: CheckRunStatus.TimedOut,
+        },
+      ],
+    });
+    expect(rollupCheckRuns(checked.checkRuns)).toEqual({
+      status: IntegrationAttemptStatus.ChecksFailed,
+      failedCheckIds: ["test:memory"],
+    });
+    expect(fixture.events.at(-1)?.type).toBe(
+      IntegrationAuditEventType.ChecksFailed,
+    );
+  });
+
   it("blocks commit when secret scan fails", async () => {
     const fixture = createFixture({
       secretScanStatus: SecretScanStatus.Failed,
@@ -175,6 +207,36 @@ describe("project integration use cases", () => {
       ...input(),
       targetBranch: "feature/outside",
     })).rejects.toBeInstanceOf(IntegrationError);
+  });
+
+  it("opens an attempt when an allowed path prefix has a trailing slash", async () => {
+    const fixture = createFixture();
+    const base = input();
+    const approvedFile = "src/worker-codex/codex-goal-runner.ts";
+
+    const opened = await openProjectIntegrationAttempt(fixture.deps(), {
+      ...base,
+      policy: {
+        ...policy(),
+        allowedPathPrefixes: ["src/worker-codex/"],
+      },
+      workerOutput: {
+        ...base.workerOutput,
+        changedFiles: [approvedFile],
+      },
+      reviewDecision: {
+        ...base.reviewDecision,
+        approvedFiles: [approvedFile],
+      },
+    });
+
+    expect(opened.expectedFiles).toEqual([approvedFile]);
+    expect(fixture.events).toMatchObject([
+      {
+        type: IntegrationAuditEventType.AttemptOpened,
+        files: [approvedFile],
+      },
+    ]);
   });
 
   it("blocks stale worker output until review policy allows a rebase check", async () => {

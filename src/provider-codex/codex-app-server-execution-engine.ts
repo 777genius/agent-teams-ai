@@ -1,11 +1,8 @@
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { spawn } from "node:child_process";
 import { EventEmitter, once as onceEvent } from "node:events";
 import type {
   AgentUsage,
   ManagedRunInputRequest,
-  ManagedRunRecord,
   ManagedRunResumeHandle,
   ManagedRunStorePort,
   ProviderFailure,
@@ -29,6 +26,35 @@ import type {
 } from "./codex-json-execution-engine";
 import { codexOutputSchemaPayload } from "./codex-json-execution-engine";
 import { parseCodexStructuredOutput } from "./structured-output";
+import { InMemoryManagedRunStore } from "./codex-app-server-managed-run-store";
+import {
+  type CodexAppServerChildProcess,
+  type CodexAppServerProcessFactory,
+  spawnCodexAppServerProcess,
+} from "./codex-app-server-process";
+import {
+  type CodexAppServerCommandApprovalDecision,
+  type CodexAppServerCommandApprovalInput,
+  type CodexAppServerCommandApprovalPolicy,
+  type CodexAppServerNativeToolSurface,
+  type CodexAppServerSandboxPolicy,
+  codexAppServerSandboxPolicy,
+  codexAppServerThreadRuntimePolicy,
+} from "./codex-app-server-policy";
+import {
+  type CodexAppServerJsonRpcResponse,
+} from "./codex-app-server-protocol";
+
+export type {
+  CodexAppServerChildProcess,
+  CodexAppServerProcessFactory,
+} from "./codex-app-server-process";
+export type {
+  CodexAppServerCommandApprovalDecision,
+  CodexAppServerCommandApprovalInput,
+  CodexAppServerCommandApprovalPolicy,
+  CodexAppServerNativeToolSurface,
+} from "./codex-app-server-policy";
 
 export type CodexAppServerExecutionEngineOptions = {
   readonly codexBinaryPath: string;
@@ -47,70 +73,6 @@ export type CodexAppServerExecutionEngineOptions = {
   readonly runStore?: ManagedRunStorePort;
   readonly commandApprovalPolicy?: CodexAppServerCommandApprovalPolicy;
   readonly nativeToolSurface?: CodexAppServerNativeToolSurface;
-};
-
-export type CodexAppServerNativeToolSurface = "default" | "disabled";
-
-export type CodexAppServerCommandApprovalInput = {
-  readonly source:
-    | "command_execution"
-    | "legacy_exec"
-    | "thread_shell_command";
-  readonly command?: readonly string[];
-  readonly commandText?: string;
-  readonly cwd?: string;
-};
-
-export type CodexAppServerCommandApprovalDecision = {
-  readonly approved: boolean;
-  readonly reason?: string;
-};
-
-export type CodexAppServerCommandApprovalPolicy = {
-  readonly reviewCommand: (
-    input: CodexAppServerCommandApprovalInput,
-  ) => CodexAppServerCommandApprovalDecision;
-};
-
-type CodexAppServerSandboxPolicy =
-  | { readonly type: "dangerFullAccess" }
-  | { readonly type: "readOnly"; readonly networkAccess: false }
-  | {
-      readonly type: "workspaceWrite";
-      readonly writableRoots: readonly string[];
-      readonly networkAccess: false;
-      readonly excludeSlashTmp: true;
-      readonly excludeTmpdirEnvVar: true;
-    };
-
-export type CodexAppServerProcessFactory = (input: {
-  readonly command: string;
-  readonly args: readonly string[];
-  readonly cwd: string;
-  readonly env: Readonly<Record<string, string>>;
-}) => CodexAppServerChildProcess;
-
-export type CodexAppServerChildProcess = {
-  readonly pid?: number | undefined;
-  readonly stdin: {
-    write(chunk: string | Uint8Array): boolean;
-    end(): void;
-    on?(event: "error", listener: (error: Error) => void): unknown;
-  };
-  readonly stdout: {
-    on(event: "data", listener: (chunk: unknown) => void): unknown;
-    setEncoding(encoding: BufferEncoding): unknown;
-  };
-  readonly stderr: {
-    on(event: "data", listener: (chunk: unknown) => void): unknown;
-    setEncoding(encoding: BufferEncoding): unknown;
-  };
-  on(
-    event: "exit",
-    listener: (code: number | null, signal: string | null) => void,
-  ): unknown;
-  on(event: "error", listener: (error: Error) => void): unknown;
-  kill(signal?: NodeJS.Signals): boolean;
 };
 
 type AppServerSlot = {
@@ -630,12 +592,6 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
   }
 }
 
-type JsonRpcResponse = {
-  readonly id?: number;
-  readonly result?: Record<string, unknown>;
-  readonly error?: { readonly message?: string };
-};
-
 type TurnState = {
   outputText: string;
   usage: AgentUsage | undefined;
@@ -647,7 +603,7 @@ type TurnState = {
 
 type PendingRequest = {
   readonly method: string;
-  readonly resolve: (value: JsonRpcResponse) => void;
+  readonly resolve: (value: CodexAppServerJsonRpcResponse) => void;
   readonly reject: (error: Error) => void;
   readonly timer: NodeJS.Timeout;
 };
@@ -1220,7 +1176,23 @@ class CodexAppServerClient {
     readonly goalMode?: boolean;
   }): Promise<string> {
     const disableTools = this.disableAllTools(input.goalMode);
-    const disableNativeEnvironments = this.disableNativeEnvironments(input.goalMode);
+    const disableNativeEnvironments = this.disableNativeEnvironments(
+      input.goalMode,
+    );
+    const threadPolicy = codexAppServerThreadRuntimePolicy({
+      workspacePath: input.workspacePath,
+      ...(input.sandboxMode === undefined
+        ? {}
+        : { sandboxMode: input.sandboxMode }),
+      ...(this.options.sourceEnv === undefined
+        ? {}
+        : { sourceEnv: this.options.sourceEnv }),
+      baseDeveloperInstructions:
+        this.options.executionProfile.developerInstructions,
+      ...(input.systemPrompt === undefined
+        ? {}
+        : { systemPrompt: input.systemPrompt }),
+    });
     const features = {
       apps: false,
       hooks: false,
@@ -1234,17 +1206,14 @@ class CodexAppServerClient {
     const response = await this.send(
       "thread/start",
       {
-        runtimeWorkspaceRoots: uniqueNonEmptyStrings([
-          input.workspacePath,
-          ...codexExtraWritableRootsFromEnv(this.options.sourceEnv),
-        ]),
+        runtimeWorkspaceRoots: threadPolicy.runtimeWorkspaceRoots,
         model: input.model,
         modelProvider: null,
         serviceTier: input.serviceTier ?? null,
         cwd: input.workspacePath,
         approvalPolicy: this.approvalPolicyForThread(),
         approvalsReviewer: null,
-        sandbox: input.sandboxMode ?? "read-only",
+        sandbox: threadPolicy.sandboxMode,
         config: {
           model_reasoning_effort: input.reasoningEffort,
           model_verbosity: "low",
@@ -1253,7 +1222,7 @@ class CodexAppServerClient {
             : { service_tier: input.serviceTier }),
           approval_policy:
             this.options.commandApprovalPolicy === undefined ? "never" : "on-request",
-          sandbox_mode: input.sandboxMode ?? "read-only",
+          sandbox_mode: threadPolicy.sandboxMode,
           web_search: "disabled",
           features,
           apps: {
@@ -1266,13 +1235,7 @@ class CodexAppServerClient {
         },
         serviceName: "subscription-runtime",
         baseInstructions: this.options.executionProfile.baseInstructions,
-        developerInstructions:
-          mergeDeveloperInstructions({
-            base: this.options.executionProfile.developerInstructions,
-            ...(input.systemPrompt !== undefined
-              ? { systemPrompt: input.systemPrompt }
-              : {}),
-          }),
+        developerInstructions: threadPolicy.developerInstructions,
         personality: null,
         ephemeral: input.goalMode ? false : true,
         sessionStartSource: "startup",
@@ -1416,7 +1379,7 @@ class CodexAppServerClient {
       readonly timeoutMs?: number;
       readonly abortSignal?: AbortSignal;
     } = {},
-  ): Promise<JsonRpcResponse> {
+  ): Promise<CodexAppServerJsonRpcResponse> {
     if (!this.child) throw new Error("codex_app_server_not_started");
     throwIfAborted(input.abortSignal);
     if (this.terminalError) throw this.terminalError;
@@ -1489,23 +1452,12 @@ class CodexAppServerClient {
     readonly sandboxMode?: CodexSandboxMode;
     readonly workspacePath: string;
   }): CodexAppServerSandboxPolicy {
-    const sandboxMode = input.sandboxMode ?? "read-only";
-    if (sandboxMode === "danger-full-access") {
-      return { type: "dangerFullAccess" };
-    }
-    if (sandboxMode === "workspace-write") {
-      return {
-        type: "workspaceWrite",
-        writableRoots: uniqueNonEmptyStrings([
-          input.workspacePath,
-          ...codexExtraWritableRootsFromEnv(this.options.sourceEnv),
-        ]),
-        networkAccess: false,
-        excludeSlashTmp: true,
-        excludeTmpdirEnvVar: true,
-      };
-    }
-    return { type: "readOnly", networkAccess: false };
+    return codexAppServerSandboxPolicy({
+      ...input,
+      ...(this.options.sourceEnv === undefined
+        ? {}
+        : { sourceEnv: this.options.sourceEnv }),
+    });
   }
 
   private waitForTurn(
@@ -1585,7 +1537,7 @@ class CodexAppServerClient {
       if (!pending) return;
       clearTimeout(pending.timer);
       this.pending.delete(record.id);
-      pending.resolve(record as JsonRpcResponse);
+      pending.resolve(record as CodexAppServerJsonRpcResponse);
       return;
     }
 
@@ -1942,21 +1894,6 @@ class CodexAppServerClient {
   }
 }
 
-function spawnCodexAppServerProcess(input: {
-  readonly command: string;
-  readonly args: readonly string[];
-  readonly cwd: string;
-  readonly env: Readonly<Record<string, string>>;
-}): CodexAppServerChildProcess {
-  const child = spawn(input.command, input.args, {
-    cwd: input.cwd,
-    env: input.env,
-    stdio: ["pipe", "pipe", "pipe"],
-    detached: process.platform !== "win32",
-  }) as ChildProcessWithoutNullStreams;
-  return child;
-}
-
 function createTurnState(): TurnState {
   return {
     outputText: "",
@@ -1988,135 +1925,6 @@ function appServerOutputSchemaNotNativeWarning(): AppServerWarning {
     safeMessage:
       "Codex app-server used final-text structured output parsing because no native JSON schema was registered.",
   };
-}
-
-class InMemoryManagedRunStore implements ManagedRunStorePort {
-  private readonly records = new Map<string, ManagedRunRecord>();
-
-  async get(input: { readonly runId: string }): Promise<ManagedRunRecord | null> {
-    return this.records.get(input.runId) ?? null;
-  }
-
-  async saveWaitingInput(input: {
-    readonly runId: string;
-    readonly request: ManagedRunInputRequest;
-    readonly resumeHandle: ManagedRunResumeHandle;
-    readonly recoveryPacket?: ManagedRunRecord["recoveryPacket"];
-    readonly taskId?: string;
-    readonly assignedWorkerId?: string;
-    readonly providerInstanceId?: string;
-    readonly workspacePath?: string;
-    readonly outputText?: string;
-    readonly now: Date;
-  }): Promise<ManagedRunRecord> {
-    const current = this.records.get(input.runId);
-    const record: ManagedRunRecord = {
-      runId: input.runId,
-      status: "waiting_for_input",
-      request: input.request,
-      resumeHandle: input.resumeHandle,
-      ...(input.recoveryPacket === undefined
-        ? current?.recoveryPacket === undefined
-          ? {}
-          : { recoveryPacket: current.recoveryPacket }
-        : { recoveryPacket: input.recoveryPacket }),
-      ...(input.taskId === undefined
-        ? current?.taskId === undefined
-          ? {}
-          : { taskId: current.taskId }
-        : { taskId: input.taskId }),
-      ...(input.assignedWorkerId === undefined
-        ? current?.assignedWorkerId === undefined
-          ? {}
-          : { assignedWorkerId: current.assignedWorkerId }
-        : { assignedWorkerId: input.assignedWorkerId }),
-      ...(input.providerInstanceId === undefined
-        ? current?.providerInstanceId === undefined
-          ? {}
-          : { providerInstanceId: current.providerInstanceId }
-        : { providerInstanceId: input.providerInstanceId }),
-      ...(input.workspacePath === undefined
-        ? current?.workspacePath === undefined
-          ? {}
-          : { workspacePath: current.workspacePath }
-        : { workspacePath: input.workspacePath }),
-      ...(input.outputText === undefined ? {} : { outputText: input.outputText }),
-      updatedAt: input.now,
-    };
-    this.records.set(input.runId, record);
-    return record;
-  }
-
-  async resume(input: {
-    readonly runId: string;
-    readonly requestId: string;
-    readonly answer: string;
-    readonly now: Date;
-  }): Promise<ManagedRunRecord> {
-    const current = this.records.get(input.runId);
-    if (
-      !current ||
-      current.status !== "waiting_for_input" ||
-      current.request?.id !== input.requestId
-    ) {
-      throw new Error("managed_run_request_mismatch");
-    }
-    const record: ManagedRunRecord = {
-      runId: input.runId,
-      status: "active",
-      ...(current.recoveryPacket === undefined
-        ? {}
-        : { recoveryPacket: current.recoveryPacket }),
-      ...(current.taskId === undefined ? {} : { taskId: current.taskId }),
-      ...(current.assignedWorkerId === undefined
-        ? {}
-        : { assignedWorkerId: current.assignedWorkerId }),
-      ...(current.providerInstanceId === undefined
-        ? {}
-        : { providerInstanceId: current.providerInstanceId }),
-      ...(current.workspacePath === undefined
-        ? {}
-        : { workspacePath: current.workspacePath }),
-      ...(current.outputText === undefined
-        ? {}
-        : { outputText: current.outputText }),
-      updatedAt: input.now,
-    };
-    this.records.set(input.runId, record);
-    return record;
-  }
-
-  async complete(input: {
-    readonly runId: string;
-    readonly outputText: string;
-    readonly now: Date;
-  }): Promise<ManagedRunRecord> {
-    const current = this.records.get(input.runId);
-    const record: ManagedRunRecord = {
-      ...(current ?? { runId: input.runId }),
-      runId: input.runId,
-      status: "completed",
-      outputText: input.outputText,
-      updatedAt: input.now,
-    };
-    this.records.set(input.runId, record);
-    return record;
-  }
-
-  async fail(
-    input: Parameters<ManagedRunStorePort["fail"]>[0],
-  ): Promise<ManagedRunRecord> {
-    const current = this.records.get(input.runId);
-    const record: ManagedRunRecord = {
-      ...(current ?? { runId: input.runId }),
-      runId: input.runId,
-      status: "failed",
-      failure: input.failure,
-      updatedAt: input.now,
-    };
-    this.records.set(input.runId, record);
-    return record;
-  }
 }
 
 function isAppServerWaitingForInputResult(

@@ -2,6 +2,8 @@ import { constants } from "node:fs";
 import { access } from "node:fs/promises";
 import { delimiter, isAbsolute, join } from "node:path";
 
+export * from "./host-command/safe-command-policy";
+
 export type HostExecutableResolutionSource =
   | "env"
   | "path"

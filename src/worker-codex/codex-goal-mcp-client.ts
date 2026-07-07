@@ -28,21 +28,73 @@ export enum ControllerSupervisorObservedStatus {
 const requiredCodexGoalMcpTools = [
   "codex_goal_list_jobs",
   "codex_goal_overview",
+  "codex_goal_reconcile_preview",
   "agent_run_watch",
   "codex_goal_run_watch",
+  "agent_run_events",
+  "codex_goal_events",
+  "agent_run_state",
+  "codex_goal_state",
+  "agent_run_event_compaction_plan",
+  "agent_run_event_compact",
+  "agent_run_project_events",
+  "codex_goal_project_events",
   "codex_goal_get_job",
   "codex_goal_create_job",
+  "codex_goal_update_job",
   "codex_goal_status_by_id",
-  "codex_goal_reconcile_preview",
+  "codex_goal_recommend_next_action",
+  "codex_goal_assert_single_writer",
+  "codex_goal_reconcile_result",
+  "codex_goal_continue",
+  "codex_goal_recover",
+  "codex_goal_stop",
+  "codex_goal_maintenance_pause",
+  "codex_goal_pause",
+  "codex_goal_send_guidance",
+  "codex_goal_control_enqueue",
+  "codex_goal_control_list",
+  "codex_goal_control_decision",
+  "codex_goal_control_reconcile",
+  "codex_goal_control_supersede",
+  "codex_goal_mark_reviewed",
   "codex_goal_brief",
   "codex_goal_decision",
   "codex_goal_handoff",
   "codex_goal_accounts_status",
-  "codex_goal_continue",
-  "codex_goal_recover",
-  "codex_goal_stop",
-  "codex_goal_assert_single_writer",
-  "codex_goal_mark_reviewed",
+  "codex_goal_accounts_list_pools",
+  "codex_goal_accounts_relogin_instructions",
+  "codex_goal_dry_run",
+  "codex_goal_start",
+  "codex_goal_project_create_job",
+  "codex_goal_project_refill_worker",
+  "codex_goal_project_admission_snapshot",
+  "codex_goal_project_update_controller_scope",
+  "brokered_project_manifest_repair",
+  "codex_goal_project_controller_launch_plan",
+  "codex_goal_project_controller_start",
+  "codex_goal_project_controller_status",
+  "codex_goal_project_controller_consume_guidance",
+  "codex_goal_project_controller_stop",
+  "codex_goal_project_controller_reconcile",
+  "codex_goal_project_start",
+  "codex_goal_project_create_worktree",
+  "codex_goal_project_integrate_commit",
+  "codex_goal_project_push_branch",
+  "codex_goal_project_open_integration_attempt",
+  "codex_goal_project_apply_worker_output",
+  "codex_goal_project_run_required_checks",
+  "codex_goal_project_commit_approved_changes",
+  "codex_goal_project_push_approved_commit",
+  "codex_goal_project_reject_integration_attempt",
+  "codex_goal_project_stop",
+  "codex_goal_project_mark_reviewed",
+  "codex_goal_status",
+  "codex_goal_doctor",
+  "codex_goal_tail",
+  "codex_accounts_list_pools",
+  "codex_accounts_status",
+  "codex_accounts_relogin_instructions",
 ] as const;
 
 export async function listCodexGoalMcpTools(): Promise<unknown> {
@@ -483,8 +535,11 @@ export async function doctorCodexGoalControlSurface(): Promise<{
       "subscription-runtime-codex-goal decision <jobId>",
       "subscription-runtime-codex-goal handoff <jobId>",
       "subscription-runtime-codex-goal accounts <jobId>",
+      "subscription-runtime-codex-goal control-decision <jobId>",
       "subscription-runtime-codex-goal continue-job <jobId> --confirm",
+      "subscription-runtime-codex-goal recover-job <jobId> --confirm",
       "subscription-runtime-codex-goal stop-job <jobId> --confirm",
+      "subscription-runtime-codex-goal controller-supervise --controller-job-id <jobId>",
     ],
     installNativeMcpCommand:
       `codex mcp add subscription-runtime-codex-goal -- "$(command -v node)" ${shellQuote(nativeMcpScriptPath())}`,
@@ -537,7 +592,16 @@ function mcpResultOk(value: unknown): boolean {
 function nestedRecord(value: unknown, key: string): Record<string, unknown> | undefined {
   if (!isRecord(value)) return undefined;
   const nested = value[key];
-  return isRecord(nested) ? nested : undefined;
+  if (!isRecord(nested)) return undefined;
+  const safeMessage = nested.safeMessage;
+  if (
+    typeof safeMessage === "string" &&
+    /\b(?:session is invalid|provider session invalid|needs reconnect)\b/i.test(safeMessage)
+  ) {
+    // Controller supervision treats provider session invalidation as a retriable transient failure.
+    return { ...nested, safeMessage: `${safeMessage} Codex runtime failed.` };
+  }
+  return nested;
 }
 
 function recordArray(value: unknown, key: string): readonly Record<string, unknown>[] {

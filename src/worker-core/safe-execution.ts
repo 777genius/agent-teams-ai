@@ -14,355 +14,105 @@ import {
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import type {
-  ActiveAttemptRegistry,
-  RuntimeInterruptReason,
   WorkerControlContinuationBatch,
-  WorkerControlContinuationSource,
   WorkerControlTarget,
 } from "./control";
-import { isSubscriptionWorkerError } from "./errors";
-import type { WorkerPoolRunOptions } from "./types";
+import {
+  SafeExecutionError,
+  attemptFailureReasons,
+  defaultSafeExecutionErrorClassifier,
+  failureDetailsFromUnknown,
+  normalizeSafeExecutionPolicy,
+  prefixFailureDetails,
+  runtimeInterruptClassification,
+  safeExecutionAttemptMetadataFromError,
+  safeExecutionDetailTail,
+  safeExecutionErrorMessage,
+  safeExecutionFinalStatusForFailure,
+  safeExecutionWaitingStatusForBlockedFailure,
+  safeExecutionWaitingStatusForFailure,
+  shouldContinueSafeExecutionAfterFailure,
+  shouldDeliverSafeExecutionControlForContinuation,
+  shouldReplaceSafeExecutionWorkspaceLock,
+  withFailureDetails,
+  type AttemptFailureReason,
+  type ContinuationMode,
+  type SafeExecutionFailureClassification,
+  type SafeExecutionPolicy,
+  type TaskEffectMode,
+} from "./safe-execution/domain/safe-execution-policy";
+import type {
+  AttemptPatchStats,
+  AttemptPatchStatsSource,
+  AttemptRecord,
+  AttemptStatus,
+  AttemptUsage,
+  AttemptUsageSource,
+  ContinuationPacket,
+  SafeExecutionTaskRecord,
+  SafeExecutionTaskStatus,
+  TaskRunId,
+  WorkspaceDiffFileStat,
+  WorkspaceLockHandle,
+  WorkspaceLockRecord,
+  WorkspaceRunId,
+  WorkspaceSnapshot,
+} from "./safe-execution/domain/safe-execution-task";
+import type {
+  AttemptJournal,
+  ContinuationPacketBuilder,
+  SafeExecutionRunInput,
+  SafeExecutionRunnerOptions,
+  SafeExecutionRunResult,
+  WorkspaceLockStore,
+  WorkspaceSnapshotter,
+} from "./safe-execution/ports/safe-execution-ports";
+
+export {
+  SafeExecutionError,
+  attemptFailureReasons,
+  defaultSafeExecutionErrorClassifier,
+  isSafeExecutionError,
+  shouldReplaceSafeExecutionWorkspaceLock,
+  type AttemptFailureReason,
+  type ContinuationMode,
+  type SafeExecutionErrorCode,
+  type SafeExecutionFailureClassification,
+  type SafeExecutionPolicy,
+  type TaskEffectMode,
+} from "./safe-execution/domain/safe-execution-policy";
+export type {
+  AttemptPatchStats,
+  AttemptPatchStatsSource,
+  AttemptRecord,
+  AttemptStatus,
+  AttemptUsage,
+  AttemptUsageSource,
+  ContinuationPacket,
+  ExistingLockedWorkspaceStrategy,
+  SafeExecutionTaskRecord,
+  SafeExecutionTaskStatus,
+  TaskRunId,
+  WorkspaceDiffFileStat,
+  WorkspaceLockHandle,
+  WorkspaceLockRecord,
+  WorkspaceRunId,
+  WorkspaceSnapshot,
+  WorkspaceSnapshotMode,
+  WorkspaceStrategy,
+} from "./safe-execution/domain/safe-execution-task";
+export type {
+  AttemptJournal,
+  ContinuationPacketBuilder,
+  SafeExecutionRunInput,
+  SafeExecutionRunnerOptions,
+  SafeExecutionRunResult,
+  SafeExecutionWorkerPool,
+  WorkspaceLockStore,
+  WorkspaceSnapshotter,
+} from "./safe-execution/ports/safe-execution-ports";
 
 const execFileAsync = promisify(execFile);
-
-export type TaskRunId = string;
-export type WorkspaceRunId = string;
-
-export type TaskEffectMode =
-  | "read_only"
-  | "workspace_patch"
-  | "external_side_effects";
-
-export type ExistingLockedWorkspaceStrategy = {
-  readonly mode: "existing_locked";
-  readonly path: string;
-  readonly staleLockMs?: number;
-  readonly requireGitWorkspace?: boolean;
-};
-
-export type WorkspaceStrategy = ExistingLockedWorkspaceStrategy;
-
-export type ContinuationMode = "packet_first" | "disabled";
-
-export type SafeExecutionPolicy = {
-  readonly retryOnCapacity?: boolean;
-  readonly retryOnAccountUnavailable?: boolean;
-  readonly retryOnReconnectRequired?: boolean;
-  readonly retryUnknownCleanWorkspace?: boolean;
-  readonly retryUnknownChangedWorkspace?: boolean;
-  readonly maxAttempts?: number;
-  readonly continuationMode?: ContinuationMode;
-};
-
-export const attemptFailureReasons = [
-  "quota_limited",
-  "capacity_unavailable",
-  "account_unavailable",
-  "reconnect_required",
-  "permission_required",
-  "task_timeout",
-  "provider_output_invalid",
-  "runtime_interrupted",
-  "goal_slice_exhausted",
-  "user_abort",
-  "unknown_error",
-] as const;
-
-export type AttemptFailureReason = (typeof attemptFailureReasons)[number];
-
-export type AttemptStatus = "running" | "completed" | "blocked" | "failed";
-
-export type SafeExecutionTaskStatus =
-  | "running"
-  | "completed"
-  | "waiting_capacity"
-  | "partial"
-  | "failed"
-  | "aborted";
-
-export type WorkspaceSnapshotMode = "git" | "filesystem" | "unavailable";
-
-export type WorkspaceSnapshot = {
-  readonly mode: WorkspaceSnapshotMode;
-  readonly workspacePath: string;
-  readonly capturedAt: Date;
-  readonly dirty: boolean;
-  readonly changedFiles: readonly string[];
-  readonly diffNumstat?: readonly WorkspaceDiffFileStat[];
-  readonly fingerprint: string;
-  readonly summary: string;
-  readonly diffStat?: string;
-  readonly shortDiff?: string;
-  readonly truncated?: boolean;
-  readonly warnings?: readonly string[];
-};
-
-export type WorkspaceDiffFileStat = {
-  readonly path: string;
-  readonly additions: number;
-  readonly deletions: number;
-  readonly binary?: boolean;
-};
-
-export type AttemptUsageSource =
-  | "provider_structured"
-  | "legacy_text_reported"
-  | "unavailable";
-
-export type AttemptUsage = {
-  readonly inputTokens?: number;
-  readonly outputTokens?: number;
-  readonly totalTokens?: number;
-};
-
-export type AttemptPatchStatsSource =
-  | "git_numstat_delta"
-  | "git_numstat_delta_dirty_baseline"
-  | "unavailable";
-
-export type AttemptPatchStats = {
-  readonly additions: number;
-  readonly deletions: number;
-  readonly source: AttemptPatchStatsSource;
-};
-
-export type AttemptRecord = {
-  readonly taskId: TaskRunId;
-  readonly attemptNumber: number;
-  readonly workerId?: string;
-  readonly accountId?: string;
-  readonly provider: string;
-  readonly startedAt: Date;
-  readonly finishedAt?: Date;
-  readonly status: AttemptStatus;
-  readonly failureReason?: AttemptFailureReason;
-  readonly failureMessage?: string;
-  readonly failureDetails?: Readonly<Record<string, string>>;
-  readonly workspaceDirtyBefore: boolean;
-  readonly workspaceDirtyAfter?: boolean;
-  readonly changedFiles: readonly string[];
-  readonly usage?: AttemptUsage;
-  readonly usageSource?: AttemptUsageSource;
-  readonly patch?: AttemptPatchStats;
-  readonly lastOutputSummary?: string;
-};
-
-export type ContinuationPacket = {
-  readonly taskId: TaskRunId;
-  readonly attemptNumber: number;
-  readonly provider: string;
-  readonly workspacePath: string;
-  readonly originalPrompt: string;
-  readonly previousFailureReason: AttemptFailureReason;
-  readonly changedFiles: readonly string[];
-  readonly workspaceSummary: string;
-  readonly previousOutputSummary?: string;
-  readonly workerControlSignalIds?: readonly string[];
-  readonly message: string;
-};
-
-export type SafeExecutionTaskRecord = {
-  readonly taskId: TaskRunId;
-  readonly workspaceRunId: WorkspaceRunId;
-  readonly workspacePath: string;
-  readonly effectMode: TaskEffectMode;
-  readonly provider: string;
-  readonly status: SafeExecutionTaskStatus;
-  readonly startedAt: Date;
-  readonly updatedAt: Date;
-  readonly attempts: readonly AttemptRecord[];
-  readonly completedAt?: Date;
-  readonly result?: unknown;
-  readonly outputSummary?: string;
-  readonly lastFailureReason?: AttemptFailureReason;
-  readonly lastFailureMessage?: string;
-  readonly lastFailureDetails?: Readonly<Record<string, string>>;
-};
-
-export type WorkspaceLockRecord = {
-  readonly taskId: TaskRunId;
-  readonly workspacePath: string;
-  readonly ownerId: string;
-  readonly ownerPid?: number;
-  readonly acquiredAt: Date;
-  readonly staleLockMs?: number;
-};
-
-export type WorkspaceLockHandle = WorkspaceLockRecord & {
-  release(): Promise<void>;
-};
-
-export interface WorkspaceLockStore {
-  acquire(input: {
-    readonly taskId: TaskRunId;
-    readonly workspacePath: string;
-    readonly ownerId: string;
-    readonly ownerPid?: number;
-    readonly staleLockMs?: number;
-    readonly now?: Date;
-  }): Promise<WorkspaceLockHandle>;
-}
-
-export interface AttemptJournal {
-  readTask(input: { readonly taskId: TaskRunId }): Promise<SafeExecutionTaskRecord | null>;
-  startTask(input: {
-    readonly taskId: TaskRunId;
-    readonly workspaceRunId: WorkspaceRunId;
-    readonly workspacePath: string;
-    readonly effectMode: TaskEffectMode;
-    readonly provider: string;
-    readonly now: Date;
-  }): Promise<SafeExecutionTaskRecord>;
-  appendAttempt(input: {
-    readonly taskId: TaskRunId;
-    readonly attempt: AttemptRecord;
-    readonly now: Date;
-  }): Promise<SafeExecutionTaskRecord>;
-  completeTask(input: {
-    readonly taskId: TaskRunId;
-    readonly result: unknown;
-    readonly outputSummary?: string;
-    readonly now: Date;
-  }): Promise<SafeExecutionTaskRecord>;
-  markPartial(input: {
-    readonly taskId: TaskRunId;
-    readonly status: Exclude<SafeExecutionTaskStatus, "running" | "completed">;
-    readonly reason: AttemptFailureReason;
-    readonly message?: string;
-    readonly details?: Readonly<Record<string, string>>;
-    readonly now: Date;
-  }): Promise<SafeExecutionTaskRecord>;
-}
-
-export interface WorkspaceSnapshotter {
-  capture(input: {
-    readonly workspacePath: string;
-    readonly includeDiff?: boolean;
-    readonly abortSignal?: AbortSignal;
-  }): Promise<WorkspaceSnapshot>;
-}
-
-export interface ContinuationPacketBuilder {
-  build(input: {
-    readonly taskId: TaskRunId;
-    readonly attemptNumber: number;
-    readonly provider: string;
-    readonly workspacePath: string;
-    readonly originalPrompt: string;
-    readonly previousFailureReason: AttemptFailureReason;
-    readonly snapshot: WorkspaceSnapshot;
-    readonly previousOutputSummary?: string;
-    readonly controlBatch?: WorkerControlContinuationBatch;
-  }): ContinuationPacket;
-}
-
-export type SafeExecutionErrorCode =
-  | "safe_execution_invalid_task"
-  | "safe_execution_workspace_locked"
-  | "safe_execution_workspace_not_git"
-  | "safe_execution_external_retry_disabled"
-  | "safe_execution_continuation_disabled"
-  | "safe_execution_attempts_exhausted";
-
-export class SafeExecutionError extends Error {
-  constructor(
-    readonly code: SafeExecutionErrorCode,
-    message: string,
-    options: {
-      readonly cause?: unknown;
-      readonly details?: Readonly<Record<string, string>>;
-    } = {},
-  ) {
-    super(
-      message,
-      options.cause === undefined ? undefined : { cause: options.cause },
-    );
-    this.name = "SafeExecutionError";
-    this.details = options.details ?? {};
-  }
-
-  readonly details: Readonly<Record<string, string>>;
-}
-
-export function isSafeExecutionError(
-  error: unknown,
-): error is SafeExecutionError {
-  return error instanceof SafeExecutionError;
-}
-
-export type SafeExecutionFailureClassification = {
-  readonly reason: AttemptFailureReason;
-  readonly safeMessage: string;
-  readonly retryable: boolean;
-  readonly details?: Readonly<Record<string, string>>;
-};
-
-export type SafeExecutionWorkerPool<Job, Result> = {
-  run(job: Job, options?: WorkerPoolRunOptions): Promise<Result>;
-};
-
-export type SafeExecutionRunInput<Job, Result> = {
-  readonly taskId: TaskRunId;
-  readonly workspace: WorkspaceStrategy;
-  readonly effectMode: TaskEffectMode;
-  readonly provider: string;
-  readonly pool: SafeExecutionWorkerPool<Job, Result>;
-  readonly job: Job;
-  readonly originalPrompt: string;
-  readonly continuationMode?: ContinuationMode;
-  readonly policy?: SafeExecutionPolicy;
-  readonly continuationJobFactory?: (input: {
-    readonly job: Job;
-    readonly continuationPacket: ContinuationPacket;
-    readonly attemptNumber: number;
-  }) => Job;
-  readonly attemptMetadata?: (input: {
-    readonly result?: Result;
-    readonly error?: unknown;
-  }) => {
-    readonly workerId?: string;
-    readonly accountId?: string;
-  };
-  readonly classifyError?: (
-    error: unknown,
-  ) => SafeExecutionFailureClassification;
-  readonly summarizeResult?: (result: Result) => string | undefined;
-  readonly attemptUsage?: (result: Result) => AttemptUsage | undefined;
-  readonly summarizeError?: (error: unknown) => string | undefined;
-  readonly summarizeErrorOutput?: (error: unknown) => string | undefined;
-  readonly controlTarget?: WorkerControlTarget;
-  readonly abortSignal?: AbortSignal;
-};
-
-export type SafeExecutionRunResult<Result> =
-  | {
-      readonly status: "completed";
-      readonly task: SafeExecutionTaskRecord;
-      readonly result: Result;
-      readonly attempts: readonly AttemptRecord[];
-      readonly replayed: boolean;
-    }
-  | {
-      readonly status: "waiting_capacity" | "partial" | "failed" | "aborted";
-      readonly task: SafeExecutionTaskRecord;
-      readonly attempts: readonly AttemptRecord[];
-      readonly reason: AttemptFailureReason;
-      readonly safeMessage: string;
-      readonly failureDetails?: Readonly<Record<string, string>>;
-      readonly error?: unknown;
-    };
-
-export type SafeExecutionRunnerOptions = {
-  readonly lockStore: WorkspaceLockStore;
-  readonly journal: AttemptJournal;
-  readonly snapshotter?: WorkspaceSnapshotter;
-  readonly continuationPacketBuilder?: ContinuationPacketBuilder;
-  readonly controlInbox?: WorkerControlContinuationSource;
-  readonly activeAttemptRegistry?: ActiveAttemptRegistry;
-  readonly ownerId?: string;
-  readonly ownerPid?: number;
-  readonly clock?: { now(): Date };
-};
 
 export class InMemoryWorkspaceLockStore implements WorkspaceLockStore {
   private readonly locks = new Map<string, WorkspaceLockRecord>();
@@ -1156,7 +906,7 @@ export class SafeExecutionRunner {
         }
       }
 
-      const policy = normalizePolicy(input);
+      const policy = normalizeSafeExecutionPolicy(input);
       let job = input.job;
       let previousOutputSummary = task.outputSummary;
       const firstAttemptNumber = task.attempts.length + 1;
@@ -1360,7 +1110,7 @@ export class SafeExecutionRunner {
             classification,
             failureMessage,
             metadata: input.attemptMetadata?.({ error }) ??
-              attemptMetadataFromError(error),
+              safeExecutionAttemptMetadataFromError(error),
           });
           task = await this.options.journal.appendAttempt({
             taskId: input.taskId,
@@ -1369,7 +1119,7 @@ export class SafeExecutionRunner {
           });
 
           const changed = workspaceChanged(before, after);
-          const canContinue = shouldContinueAfterFailure({
+          const canContinue = shouldContinueSafeExecutionAfterFailure({
             classification,
             policy,
             effectMode: input.effectMode,
@@ -1379,10 +1129,10 @@ export class SafeExecutionRunner {
 
           if (!canContinue.allowed) {
             const status =
-              waitingStatusForBlockedFailure({
+              safeExecutionWaitingStatusForBlockedFailure({
                 reason: classification.reason,
                 workspaceChanged: changed,
-              }) ?? finalStatusForFailure(classification.reason);
+              }) ?? safeExecutionFinalStatusForFailure(classification.reason);
             task = await this.options.journal.markPartial({
               taskId: input.taskId,
               status,
@@ -1466,7 +1216,8 @@ export class SafeExecutionRunner {
 
       const exhausted = await this.options.journal.markPartial({
         taskId: input.taskId,
-        status: waitingStatusForFailure(task.lastFailureReason) ?? "partial",
+        status:
+          safeExecutionWaitingStatusForFailure(task.lastFailureReason) ?? "partial",
         reason: task.lastFailureReason ?? "unknown_error",
         message: "Safe execution exhausted all configured attempts.",
         ...(task.lastFailureDetails === undefined
@@ -1475,7 +1226,9 @@ export class SafeExecutionRunner {
         now: this.clock.now(),
       });
       return {
-        status: waitingStatusForFailure(exhausted.lastFailureReason) ?? "partial",
+        status:
+          safeExecutionWaitingStatusForFailure(exhausted.lastFailureReason) ??
+          "partial",
         task: exhausted,
         attempts: exhausted.attempts,
         reason: exhausted.lastFailureReason ?? "unknown_error",
@@ -1496,7 +1249,7 @@ export class SafeExecutionRunner {
     const classification = defaultSafeExecutionErrorClassifier(input.error);
     const failureMessage =
       input.input.summarizeError?.(input.error) ?? classification.safeMessage;
-    const status = finalStatusForFailure(classification.reason);
+    const status = safeExecutionFinalStatusForFailure(classification.reason);
     const task = await this.options.journal.markPartial({
       taskId: input.input.taskId,
       status,
@@ -1532,7 +1285,7 @@ export class SafeExecutionRunner {
     readonly controlTarget?: WorkerControlTarget;
   }): Promise<ContinuationPacket> {
     const controlBatch = this.options.controlInbox &&
-      shouldDeliverControlForContinuation(input.previousFailureReason)
+      shouldDeliverSafeExecutionControlForContinuation(input.previousFailureReason)
       ? await this.options.controlInbox.consumeForContinuation({
           target: input.controlTarget ?? {
             jobId: input.taskId,
@@ -1556,15 +1309,6 @@ export class SafeExecutionRunner {
       ...(controlBatch === undefined ? {} : { controlBatch }),
     });
   }
-}
-
-function shouldDeliverControlForContinuation(
-  previousFailureReason: AttemptFailureReason,
-): boolean {
-  return (
-    previousFailureReason !== "account_unavailable" &&
-    previousFailureReason !== "reconnect_required"
-  );
 }
 
 function attemptControlTarget<Job, Result>(input: {
@@ -1608,35 +1352,6 @@ function createAttemptAbortController(
   };
 }
 
-function runtimeInterruptClassification(
-  reason: unknown,
-): SafeExecutionFailureClassification | null {
-  if (!isRuntimeInterruptReason(reason)) return null;
-  return {
-    reason: "runtime_interrupted",
-    safeMessage: reason.safeMessage,
-    retryable: true,
-    details: {
-      runtimeControl: "interrupt_then_continue",
-      ...(reason.signalId === undefined ? {} : { signalId: reason.signalId }),
-      ...(reason.requestedBy === undefined
-        ? {}
-        : { requestedBy: reason.requestedBy }),
-    },
-  };
-}
-
-function isRuntimeInterruptReason(
-  value: unknown,
-): value is RuntimeInterruptReason {
-  if (!value || typeof value !== "object") return false;
-  const record = value as Record<string, unknown>;
-  return (
-    record.code === "runtime_controlled_interrupt" &&
-    typeof record.safeMessage === "string"
-  );
-}
-
 export function promptContinuationJobFactory<Job extends { readonly prompt: string }>(
   input: {
     readonly job: Job;
@@ -1647,220 +1362,6 @@ export function promptContinuationJobFactory<Job extends { readonly prompt: stri
     ...input.job,
     prompt: input.continuationPacket.message,
   };
-}
-
-export function defaultSafeExecutionErrorClassifier(
-  error: unknown,
-): SafeExecutionFailureClassification {
-  const chain = errorChain(error);
-  for (const item of chain) {
-    if (!isSubscriptionWorkerError(item)) continue;
-    if (item.code === "subscription_worker_pool_run_aborted") {
-      return {
-        reason: "user_abort",
-        safeMessage: item.message,
-        retryable: false,
-      };
-    }
-    if (item.code === "subscription_worker_pool_capacity_unavailable") {
-      return {
-        reason: "capacity_unavailable",
-        safeMessage: item.message,
-        retryable: true,
-        details: item.details,
-      };
-    }
-    if (item.code === "subscription_worker_account_unavailable") {
-      return {
-        reason: "account_unavailable",
-        safeMessage: item.message,
-        retryable: true,
-        details: item.details,
-      };
-    }
-    const classified = classifyWorkerFailureCode(
-      item.details.reason ?? item.details.code,
-      item.message,
-      unknownFailureDetails(chain, item.details),
-    );
-    if (classified) return classified;
-  }
-
-  const messages = chain.map(errorMessage);
-  const message = messages.find((candidate) => candidate.trim()) ?? "";
-  const authInvalidMessage = messages.find((candidate) =>
-    /refresh_token_invalidated|token_invalidated|refresh token (?:was )?revoked|session has ended|log (?:out|in) and sign in again|access token could not be refreshed|401 unauthorized/i.test(
-      candidate,
-    ),
-  );
-  if (authInvalidMessage) {
-    return {
-      reason: "account_unavailable",
-      safeMessage: "Provider account session is unavailable.",
-      retryable: true,
-    };
-  }
-  if (messages.some((candidate) => /abort/i.test(candidate))) {
-    return {
-      reason: "user_abort",
-      safeMessage: message,
-      retryable: false,
-    };
-  }
-  const quotaMessage = messages.find((candidate) =>
-    /quota|rate limit|allowance/i.test(candidate),
-  );
-  if (quotaMessage) {
-    return {
-      reason: "quota_limited",
-      safeMessage: quotaMessage,
-      retryable: true,
-    };
-  }
-  const timeoutMessage = messages.find((candidate) =>
-    /\btimeout\b|\btimed out\b/i.test(candidate),
-  );
-  if (timeoutMessage) {
-    return {
-      reason: "task_timeout",
-      safeMessage: timeoutMessage,
-      retryable: true,
-    };
-  }
-  const rawDetails = unknownFailureDetails(chain);
-  const backendUnavailableMessage = [
-    ...messages,
-    rawDetails?.rawCause,
-    rawDetails?.stderrTail,
-    rawDetails?.stdoutTail,
-  ].find((candidate) => isBackendUnavailableMessage(candidate));
-  if (backendUnavailableMessage) {
-    return {
-      reason: "capacity_unavailable",
-      safeMessage: "Codex app-server goal backend is temporarily blocked.",
-      retryable: true,
-      ...optionalFailureDetails(rawDetails),
-    };
-  }
-  const invalidOutputMessage = messages.find((candidate) =>
-    /final_message_missing|structured_output_invalid|output_too_large|provider output was invalid/i.test(
-      candidate,
-    ),
-  );
-  if (invalidOutputMessage) {
-    return {
-      reason: "provider_output_invalid",
-      safeMessage: invalidOutputMessage,
-      retryable: true,
-    };
-  }
-  const goalSliceMessage = messages.find((candidate) =>
-    /goal slice exhausted/i.test(candidate),
-  );
-  if (goalSliceMessage) {
-    return {
-      reason: "goal_slice_exhausted",
-      safeMessage: goalSliceMessage,
-      retryable: true,
-    };
-  }
-  return {
-    reason: "unknown_error",
-    safeMessage: message,
-    retryable: false,
-    ...optionalFailureDetails(rawDetails),
-  };
-}
-
-function isBackendUnavailableMessage(value: string | undefined): boolean {
-  return (
-    value !== undefined &&
-    /codex_app_server_goal_blocked|app-server goal backend is temporarily blocked/i.test(
-      value,
-    )
-  );
-}
-
-function classifyWorkerFailureCode(
-  code: string | undefined,
-  safeMessage: string,
-  details?: Readonly<Record<string, string>>,
-): SafeExecutionFailureClassification | null {
-  switch (code) {
-    case "quota_limited":
-      return {
-        reason: "quota_limited",
-        safeMessage,
-        retryable: true,
-      };
-    case "provider_reconnect_required":
-    case "needs_reconnect":
-      return {
-        reason: "reconnect_required",
-        safeMessage,
-        retryable: true,
-      };
-    case "provider_session_invalid":
-      return {
-        reason: "account_unavailable",
-        safeMessage,
-        retryable: true,
-      };
-    case "backend_unavailable":
-      return {
-        reason: "capacity_unavailable",
-        safeMessage,
-        retryable: true,
-        ...optionalFailureDetails(details),
-      };
-    case "permission_required":
-      return {
-        reason: "permission_required",
-        safeMessage,
-        retryable: false,
-      };
-    case "task_cancelled":
-      return {
-        reason: "user_abort",
-        safeMessage,
-        retryable: false,
-      };
-    case "runtime_interrupted":
-      return {
-        reason: "runtime_interrupted",
-        safeMessage,
-        retryable: true,
-        ...optionalFailureDetails(details),
-      };
-    case "goal_slice_exhausted":
-      return {
-        reason: "goal_slice_exhausted",
-        safeMessage,
-        retryable: true,
-        ...optionalFailureDetails(details),
-      };
-    case "task_timeout":
-      return {
-        reason: "task_timeout",
-        safeMessage,
-        retryable: true,
-      };
-    case "provider_output_invalid":
-      return {
-        reason: "provider_output_invalid",
-        safeMessage,
-        retryable: true,
-      };
-    case "unknown_runtime_failure":
-      return {
-        reason: "unknown_error",
-        safeMessage,
-        retryable: true,
-        ...optionalFailureDetails(details),
-      };
-    default:
-      return null;
-  }
 }
 
 function validateRunInput<Job, Result>(
@@ -1886,99 +1387,12 @@ function validateRunInput<Job, Result>(
   }
   if (
     input.effectMode === "external_side_effects" &&
-    normalizePolicy(input).maxAttempts > 1
+    normalizeSafeExecutionPolicy(input).maxAttempts > 1
   ) {
     throw new SafeExecutionError(
       "safe_execution_external_retry_disabled",
       "Safe execution does not retry external side effects by default.",
     );
-  }
-}
-
-function normalizePolicy<Job, Result>(
-  input: SafeExecutionRunInput<Job, Result>,
-): Required<SafeExecutionPolicy> {
-  const policy = input.policy ?? {};
-  return {
-    retryOnCapacity: policy.retryOnCapacity ?? true,
-    retryOnAccountUnavailable: policy.retryOnAccountUnavailable ?? true,
-    retryOnReconnectRequired: policy.retryOnReconnectRequired ?? true,
-    retryUnknownCleanWorkspace: policy.retryUnknownCleanWorkspace ?? true,
-    retryUnknownChangedWorkspace:
-      policy.retryUnknownChangedWorkspace ?? false,
-    maxAttempts: Math.max(1, policy.maxAttempts ?? 1),
-    continuationMode:
-      input.continuationMode ?? policy.continuationMode ?? "packet_first",
-  };
-}
-
-function shouldContinueAfterFailure(input: {
-  readonly classification: SafeExecutionFailureClassification;
-  readonly policy: Required<SafeExecutionPolicy>;
-  readonly effectMode: TaskEffectMode;
-  readonly workspaceChanged: boolean;
-  readonly attemptsRemaining: boolean;
-}): { readonly allowed: boolean; readonly safeMessage?: string } {
-  if (!input.attemptsRemaining) {
-    return {
-      allowed: false,
-      safeMessage: "Safe execution has no attempts remaining.",
-    };
-  }
-  if (input.policy.continuationMode === "disabled") {
-    return {
-      allowed: false,
-      safeMessage: "Safe execution continuation is disabled.",
-    };
-  }
-  if (input.effectMode === "external_side_effects") {
-    return {
-      allowed: false,
-      safeMessage: "Safe execution will not retry external side effects.",
-    };
-  }
-  switch (input.classification.reason) {
-    case "runtime_interrupted":
-    case "goal_slice_exhausted":
-      return { allowed: true };
-    case "quota_limited":
-    case "capacity_unavailable":
-      return { allowed: input.policy.retryOnCapacity };
-    case "account_unavailable":
-      return { allowed: input.policy.retryOnAccountUnavailable };
-    case "reconnect_required":
-      return { allowed: input.policy.retryOnReconnectRequired };
-    case "unknown_error":
-    case "task_timeout":
-    case "provider_output_invalid":
-      if (input.workspaceChanged) {
-        return {
-          allowed:
-            input.classification.reason === "unknown_error"
-              ? input.policy.retryUnknownChangedWorkspace
-              : false,
-          ...(input.classification.reason !== "unknown_error"
-            ? {
-                safeMessage:
-                  `Safe execution stopped after ${input.classification.reason} changed the workspace.`,
-              }
-            : input.policy.retryUnknownChangedWorkspace
-            ? {}
-            : {
-                safeMessage:
-                  "Safe execution stopped after an unknown error changed the workspace.",
-              }),
-        };
-      }
-      return {
-        allowed:
-          input.classification.reason === "unknown_error"
-            ? input.policy.retryUnknownCleanWorkspace
-            : true,
-      };
-    case "permission_required":
-    case "user_abort":
-      return { allowed: false };
   }
 }
 
@@ -2093,39 +1507,6 @@ function failedAttemptRecord<Job, Result>(input: {
   };
 }
 
-function finalStatusForFailure(
-  reason: AttemptFailureReason,
-): Exclude<SafeExecutionTaskStatus, "running" | "completed"> {
-  if (reason === "user_abort") return "aborted";
-  if (
-    reason === "unknown_error" ||
-    reason === "permission_required" ||
-    reason === "provider_output_invalid"
-  ) {
-    return "failed";
-  }
-  return "partial";
-}
-
-function waitingStatusForFailure(
-  reason: AttemptFailureReason | undefined,
-): "waiting_capacity" | null {
-  return reason === "quota_limited" ||
-    reason === "capacity_unavailable" ||
-    reason === "account_unavailable" ||
-    reason === "reconnect_required"
-    ? "waiting_capacity"
-    : null;
-}
-
-function waitingStatusForBlockedFailure(input: {
-  readonly reason: AttemptFailureReason;
-  readonly workspaceChanged: boolean;
-}): "waiting_capacity" | null {
-  if (input.workspaceChanged) return null;
-  return waitingStatusForFailure(input.reason);
-}
-
 function workspaceChanged(
   before: WorkspaceSnapshot,
   after: WorkspaceSnapshot,
@@ -2210,144 +1591,12 @@ function requireTaskRecord(
   );
 }
 
-function errorChain(error: unknown): readonly unknown[] {
-  const chain: unknown[] = [];
-  let current: unknown = error;
-  const seen = new Set<unknown>();
-  while (current && !seen.has(current)) {
-    chain.push(current);
-    seen.add(current);
-    current =
-      current instanceof Error
-        ? (current as Error & { cause?: unknown }).cause
-        : undefined;
-  }
-  return chain;
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-function failureDetailsFromUnknown(
-  error: unknown,
-): Readonly<Record<string, string>> | undefined {
-  return unknownFailureDetails(errorChain(error));
-}
-
-function unknownFailureDetails(
-  chain: readonly unknown[],
-  baseDetails?: Readonly<Record<string, string>>,
-): Readonly<Record<string, string>> | undefined {
-  const details: Record<string, string> = {};
-  mergeStringDetails(details, baseDetails);
-
-  const messages: string[] = [];
-  for (const item of chain) {
-    const message = errorMessage(item);
-    if (message.trim()) messages.push(message);
-    if (isSafeExecutionError(item)) {
-      details.safeExecutionCode = item.code;
-      mergeStringDetails(details, item.details);
-    }
-    if (isSubscriptionWorkerError(item)) {
-      details.subscriptionWorkerCode ??= item.code;
-      mergeStringDetails(details, item.details);
-    }
-    mergeStringDetails(details, processFailureDetails(item, message));
-  }
-
-  if (details.rawCause === undefined && messages.length > 0) {
-    details.rawCause = safeDetailTail(messages.join(" <- "));
-  }
-  return Object.keys(details).length === 0 ? undefined : details;
-}
-
-function processFailureDetails(
-  error: unknown,
-  message: string,
-): Readonly<Record<string, string>> | undefined {
-  const details: Record<string, string> = {};
-  if (typeof error === "object" && error !== null) {
-    const record = error as {
-      readonly exitCode?: unknown;
-      readonly stdout?: unknown;
-      readonly stderr?: unknown;
-    };
-    if (typeof record.exitCode === "number" && Number.isInteger(record.exitCode)) {
-      details.exitCode = String(record.exitCode);
-    }
-    if (typeof record.stderr === "string" && record.stderr.trim()) {
-      details.stderrTail = safeDetailTail(record.stderr);
-    }
-    if (typeof record.stdout === "string" && record.stdout.trim()) {
-      details.stdoutTail = safeDetailTail(record.stdout);
-    }
-  }
-
-  const match =
-    /\b(?:node_process_runner_failed|codex_json_exec_failed|codex_cli_exec_failed):(\d+):(.*)$/s.exec(
-      message,
-    );
-  if (match) {
-    details.exitCode ??= match[1]!;
-    if (match[2]?.trim()) details.stderrTail ??= safeDetailTail(match[2]);
-  }
-  return Object.keys(details).length === 0 ? undefined : details;
-}
-
-function mergeStringDetails(
-  target: Record<string, string>,
-  source: Readonly<Record<string, string>> | undefined,
-): void {
-  if (!source) return;
-  for (const [key, value] of Object.entries(source)) {
-    target[key] ??= safeDetailTail(value);
-  }
-}
-
-function withFailureDetails(
-  classification: SafeExecutionFailureClassification,
-  details: Readonly<Record<string, string>> | undefined,
-): SafeExecutionFailureClassification {
-  const merged = mergeFailureDetails(classification.details, details);
-  return merged === undefined ? classification : { ...classification, details: merged };
-}
-
-function mergeFailureDetails(
-  left: Readonly<Record<string, string>> | undefined,
-  right: Readonly<Record<string, string>> | undefined,
-): Readonly<Record<string, string>> | undefined {
-  const merged: Record<string, string> = {};
-  mergeStringDetails(merged, left);
-  mergeStringDetails(merged, right);
-  return Object.keys(merged).length === 0 ? undefined : merged;
-}
-
-function prefixFailureDetails(
-  prefix: string,
-  details: Readonly<Record<string, string>> | undefined,
-): Readonly<Record<string, string>> | undefined {
-  if (!details) return undefined;
-  return Object.fromEntries(
-    Object.entries(details).map(([key, value]) => [`${prefix}.${key}`, value]),
-  );
-}
-
-function optionalFailureDetails(
-  details: Readonly<Record<string, string>> | undefined,
-): { readonly details?: Readonly<Record<string, string>> } {
-  return details === undefined || Object.keys(details).length === 0
-    ? {}
-    : { details };
-}
-
 function unavailableWorkspaceSnapshot(input: {
   readonly workspacePath: string;
   readonly error: unknown;
 }): WorkspaceSnapshot {
   const capturedAt = new Date();
-  const message = errorMessage(input.error);
+  const message = safeExecutionErrorMessage(input.error);
   return {
     mode: "unavailable",
     workspacePath: input.workspacePath,
@@ -2357,32 +1606,10 @@ function unavailableWorkspaceSnapshot(input: {
     fingerprint: `unavailable:${hashText(
       `${input.workspacePath}:${capturedAt.toISOString()}:${message}`,
     )}`,
-    summary: `Workspace snapshot unavailable: ${safeDetailTail(
+    summary: `Workspace snapshot unavailable: ${safeExecutionDetailTail(
       message || "unknown error",
     )}`,
     warnings: ["workspace_snapshot_unavailable"],
-  };
-}
-
-function safeDetailTail(value: string): string {
-  const compact = value.replace(/\s+/g, " ").trim();
-  return compact.length > 1000 ? compact.slice(-1000) : compact;
-}
-
-function attemptMetadataFromError(error: unknown): {
-  readonly workerId?: string;
-  readonly accountId?: string;
-} {
-  let workerId: string | undefined;
-  let accountId: string | undefined;
-  for (const item of errorChain(error)) {
-    if (!isSubscriptionWorkerError(item)) continue;
-    workerId = workerId ?? item.details.workerId;
-    accountId = accountId ?? item.details.accountId;
-  }
-  return {
-    ...(workerId === undefined ? {} : { workerId }),
-    ...(accountId === undefined ? {} : { accountId }),
   };
 }
 
@@ -2486,15 +1713,17 @@ function workspaceLockKey(workspacePath: string): string {
 }
 
 function canReplaceLock(record: WorkspaceLockRecord, now: Date): boolean {
-  if (record.ownerPid !== undefined && !isProcessAlive(record.ownerPid)) {
-    return true;
-  }
-  if (record.staleLockMs === undefined) return false;
-  if (now.getTime() - record.acquiredAt.getTime() < record.staleLockMs) {
-    return false;
-  }
-  if (record.ownerPid === undefined) return false;
-  return !isProcessAlive(record.ownerPid);
+  const ownerProcessAlive =
+    record.ownerPid === undefined ? undefined : isProcessAlive(record.ownerPid);
+  return shouldReplaceSafeExecutionWorkspaceLock({
+    acquiredAt: record.acquiredAt,
+    now,
+    ...(record.staleLockMs === undefined
+      ? {}
+      : { staleLockMs: record.staleLockMs }),
+    ...(record.ownerPid === undefined ? {} : { ownerPid: record.ownerPid }),
+    ...(ownerProcessAlive === undefined ? {} : { ownerProcessAlive }),
+  });
 }
 
 function isProcessAlive(pid: number): boolean {

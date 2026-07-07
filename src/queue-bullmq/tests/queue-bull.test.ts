@@ -3,8 +3,88 @@ import {
   createBullSubscriptionProcessor,
   BullSubscriptionTaskQueue,
 } from "../index";
+import {
+  buildBullSubscriptionQueueAddRequest,
+  defaultBullSubscriptionTaskJobName,
+} from "../subscription-task-queue";
+import { resolveBullSubscriptionProcessorTask } from "../processor-adapter";
+import {
+  decodeBullSubscriptionRuntimeJob,
+  encodeBullSubscriptionRuntimeJob,
+  isBullSubscriptionRuntimeEnvelope,
+} from "../bull-runtime-envelope";
 
 describe("Bull subscription queue adapter", () => {
+  it("keeps envelope compatibility behind the runtime-envelope slice", () => {
+    const encoded = encodeBullSubscriptionRuntimeJob({
+      job: { value: "work" },
+      idempotencyKey: "idem-1",
+    });
+
+    expect(isBullSubscriptionRuntimeEnvelope(encoded)).toBe(true);
+    expect(decodeBullSubscriptionRuntimeJob(encoded)).toEqual({
+      job: { value: "work" },
+      idempotencyKey: "idem-1",
+      isEnvelope: true,
+    });
+    expect(decodeBullSubscriptionRuntimeJob("legacy-job")).toEqual({
+      job: "legacy-job",
+      isEnvelope: false,
+    });
+  });
+
+  it("builds Bull add requests at the subscription task queue boundary", () => {
+    const request = buildBullSubscriptionQueueAddRequest({
+      input: {
+        job: "work",
+        taskId: "task-1",
+        idempotencyKey: "idem-1",
+        runAfter: new Date("2026-01-01T00:00:01.000Z"),
+      },
+      retryPolicy: {
+        maxAttempts: 4,
+        baseDelayMs: 500,
+        maxDelayMs: 30_000,
+      },
+      now: new Date("2026-01-01T00:00:00.000Z"),
+    });
+
+    expect(request).toEqual({
+      name: defaultBullSubscriptionTaskJobName,
+      data: {
+        __subscriptionRuntime: {
+          version: 1,
+          job: "work",
+          idempotencyKey: "idem-1",
+        },
+      },
+      options: {
+        jobId: "task-1",
+        attempts: 4,
+        delay: 1000,
+        backoff: { type: "exponential", delay: 500 },
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    });
+  });
+
+  it("rejects invalid enqueue input before handing work to Bull", async () => {
+    const queue = new BullSubscriptionTaskQueue<string>({
+      queue: {
+        async add() {
+          throw new Error("add should not be called");
+        },
+      },
+    });
+
+    await expect(
+      queue.enqueue({ job: "work", taskId: "   " }),
+    ).rejects.toMatchObject({
+      code: "subscription_queue_invalid_input",
+    });
+  });
+
   it("maps enqueue to a host-provided Bull-compatible queue", async () => {
     const calls: unknown[] = [];
     const queue = new BullSubscriptionTaskQueue<string>({
@@ -225,5 +305,24 @@ describe("Bull subscription queue adapter", () => {
       }),
     ).resolves.toBe("ok:mapped:work");
     expect(mappedData).toEqual([{ value: "work" }]);
+  });
+
+  it("resolves processor task data without depending on the Bull adapter", () => {
+    const resolved = resolveBullSubscriptionProcessorTask({
+      job: {
+        id: "task-1",
+        data: encodeBullSubscriptionRuntimeJob({
+          job: { value: "work" },
+          idempotencyKey: "idem-1",
+        }) as { readonly value: string },
+      },
+      mapJob: (job) => ({ value: `mapped:${job.data.value}` }),
+      getIdempotencyKey: (job) => `custom:${job.data.value}`,
+    });
+
+    expect(resolved).toEqual({
+      task: { value: "mapped:work" },
+      idempotencyKey: "custom:work",
+    });
   });
 });

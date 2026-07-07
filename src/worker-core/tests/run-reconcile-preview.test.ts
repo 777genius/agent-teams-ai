@@ -113,6 +113,33 @@ describe("reconcileRunPreview", () => {
     });
   });
 
+  it("preserves manual-review guidance for app-server blocked runs", async () => {
+    const continued: string[] = [];
+    const backend = fakeBackend([
+      run({
+        runId: "blocked-controller",
+        safeToContinue: true,
+        requiresManualReview: true,
+        manualReviewReason: "app_server_goal_blocked",
+      }),
+    ], continued);
+
+    const result = await reconcileRunPreview({
+      backend,
+      policy: {
+        continueSafeRuns: true,
+      },
+    });
+
+    expect(result.continued).toBe(0);
+    expect(continued).toEqual([]);
+    expect(result.decisions[0]).toMatchObject({
+      runId: "blocked-controller",
+      action: "manual_review",
+      reason: "app_server_goal_blocked",
+    });
+  });
+
   it("keeps the old job-watch API as a deprecated compatibility shim", async () => {
     const result = await reconcileWatchableJobs({
       backend: {
@@ -170,6 +197,8 @@ function run(input: {
   readonly safeToContinue?: boolean;
   readonly workspaceKey?: string;
   readonly workspaceDirty?: boolean;
+  readonly requiresManualReview?: boolean;
+  readonly manualReviewReason?: string;
   readonly continueAfter?: Date;
 }): RunReconcilePreviewStatus {
   return {
@@ -180,6 +209,12 @@ function run(input: {
     ...(input.workspaceDirty === undefined
       ? {}
       : { workspaceDirty: input.workspaceDirty }),
+    ...(input.requiresManualReview === undefined
+      ? {}
+      : { requiresManualReview: input.requiresManualReview }),
+    ...(input.manualReviewReason === undefined
+      ? {}
+      : { manualReviewReason: input.manualReviewReason }),
     ...(input.continueAfter === undefined
       ? {}
       : { continueAfter: input.continueAfter }),

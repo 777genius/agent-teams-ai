@@ -1,5 +1,6 @@
 import {
   ControlledAgentRunStatus,
+  controlledAgentStatusAllowsLiveController,
   type ControlledAgentProcessOwner,
   type ControlledAgentSession,
 } from "../domain/controlled-agent";
@@ -11,6 +12,7 @@ export type ControlledAgentLiveControllerState = {
   readonly currentOwner: ControlledAgentProcessOwner;
   readonly persistedOwner?: ControlledAgentProcessOwner;
   readonly persistedStatus?: ControlledAgentRunStatus;
+  readonly persistedRunStatus?: ControlledAgentRunStatus;
   readonly providerObservedStatus?: ControlledAgentRunStatus;
   readonly ownerMatches: boolean;
   readonly safeMessage: string;
@@ -20,6 +22,7 @@ export type BuildControlledAgentLiveControllerStateInput = {
   readonly session?: ControlledAgentSession | undefined;
   readonly providerAttached: boolean;
   readonly currentOwner: ControlledAgentProcessOwner;
+  readonly persistedRunStatus?: ControlledAgentRunStatus | undefined;
   readonly providerObservedStatus?: ControlledAgentRunStatus | undefined;
   readonly providerStatusFailed?: boolean | undefined;
 };
@@ -31,12 +34,19 @@ export function buildControlledAgentLiveControllerState(
   const persistedStatus = input.session?.status;
   const ownerMatches = persistedOwner?.ownerId === input.currentOwner.ownerId;
   const providerStatusFailed = input.providerStatusFailed === true;
-  const observedStatusAllowsLive = input.providerObservedStatus === undefined ||
-    input.providerObservedStatus === ControlledAgentRunStatus.Running;
+  const observedStatusAllowsLive = controlledAgentStatusAllowsLiveController(
+    input.providerObservedStatus,
+  );
+  const sessionStatusAllowsLive = controlledAgentStatusAllowsLiveController(
+    persistedStatus,
+  );
+  const runStatusAllowsLive = input.persistedRunStatus === undefined ||
+    controlledAgentStatusAllowsLiveController(input.persistedRunStatus);
   const live = input.providerAttached &&
     !providerStatusFailed &&
     ownerMatches &&
-    persistedStatus === ControlledAgentRunStatus.Running &&
+    sessionStatusAllowsLive &&
+    runStatusAllowsLive &&
     observedStatusAllowsLive;
 
   return {
@@ -46,6 +56,9 @@ export function buildControlledAgentLiveControllerState(
     currentOwner: input.currentOwner,
     ...(persistedOwner === undefined ? {} : { persistedOwner }),
     ...(persistedStatus === undefined ? {} : { persistedStatus }),
+    ...(input.persistedRunStatus === undefined ? {} : {
+      persistedRunStatus: input.persistedRunStatus,
+    }),
     ...(input.providerObservedStatus === undefined ? {} : {
       providerObservedStatus: input.providerObservedStatus,
     }),
@@ -56,6 +69,7 @@ export function buildControlledAgentLiveControllerState(
       live,
       persistedOwner,
       persistedStatus,
+      persistedRunStatus: input.persistedRunStatus,
       ownerMatches,
       providerObservedStatus: input.providerObservedStatus,
     }),
@@ -68,6 +82,7 @@ function controlledAgentLiveControllerSafeMessage(input: {
   readonly live: boolean;
   readonly persistedOwner?: ControlledAgentProcessOwner | undefined;
   readonly persistedStatus?: ControlledAgentRunStatus | undefined;
+  readonly persistedRunStatus?: ControlledAgentRunStatus | undefined;
   readonly ownerMatches: boolean;
   readonly providerObservedStatus?: ControlledAgentRunStatus | undefined;
 }): string {
@@ -89,10 +104,17 @@ function controlledAgentLiveControllerSafeMessage(input: {
     return "Provider runner is attached, but persisted controller status is not running.";
   }
   if (
-    input.providerObservedStatus !== undefined &&
+    input.persistedRunStatus !== undefined &&
+    input.persistedRunStatus !== ControlledAgentRunStatus.Running
+  ) {
+    return "Provider runner is attached, but persisted controller run status is not running.";
+  }
+  if (
     input.providerObservedStatus !== ControlledAgentRunStatus.Running
   ) {
-    return "Provider runner is attached, but observed provider status is not running.";
+    return input.providerObservedStatus === undefined
+      ? "Provider runner is attached, but provider status has not confirmed running."
+      : "Provider runner is attached, but observed provider status is not running.";
   }
   return "Provider runner is attached, but live controller ownership is not proven.";
 }

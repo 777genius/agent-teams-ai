@@ -64,6 +64,22 @@ export enum ControlledAgentRunStatus {
   Stale = "stale",
 }
 
+export function controlledAgentStatusAllowsLiveController(
+  status: ControlledAgentRunStatus | undefined,
+): boolean {
+  return status === ControlledAgentRunStatus.Running;
+}
+
+export function isControlledAgentTerminalStatus(
+  status: ControlledAgentRunStatus,
+): boolean {
+  return status === ControlledAgentRunStatus.Completed ||
+    status === ControlledAgentRunStatus.Stopped ||
+    status === ControlledAgentRunStatus.Blocked ||
+    status === ControlledAgentRunStatus.Failed ||
+    status === ControlledAgentRunStatus.Stale;
+}
+
 export enum ControlledAgentProcessOwnerKind {
   DurableMcp = "durable_mcp",
   HostSupervisor = "host_supervisor",

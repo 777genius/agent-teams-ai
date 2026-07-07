@@ -79,6 +79,13 @@ export type CheckRun = {
   readonly safeOutputTail?: string;
 };
 
+export type CheckRunRollup = {
+  readonly status:
+    | IntegrationAttemptStatus.ChecksFailed
+    | IntegrationAttemptStatus.ChecksPassed;
+  readonly failedCheckIds: readonly string[];
+};
+
 export type CommitCandidate = {
   readonly commitSha: string;
   readonly message: string;
@@ -210,14 +217,35 @@ export function recordCheckRuns(
   },
 ): IntegrationAttempt {
   assertStatus(attempt, [IntegrationAttemptStatus.ChecksRunning]);
-  const failed = input.checkRuns.some((run) => run.status !== CheckRunStatus.Passed);
   return {
     ...attempt,
-    status: failed
-      ? IntegrationAttemptStatus.ChecksFailed
-      : IntegrationAttemptStatus.ChecksPassed,
+    status: integrationStatusForCheckRuns(input.checkRuns),
     checkRuns: input.checkRuns,
     updatedAt: input.now,
+  };
+}
+
+export function allCheckRunsPassed(checkRuns: readonly CheckRun[]): boolean {
+  return checkRuns.every((run) => run.status === CheckRunStatus.Passed);
+}
+
+export function integrationStatusForCheckRuns(
+  checkRuns: readonly CheckRun[],
+): IntegrationAttemptStatus.ChecksFailed | IntegrationAttemptStatus.ChecksPassed {
+  return rollupCheckRuns(checkRuns).status;
+}
+
+export function rollupCheckRuns(checkRuns: readonly CheckRun[]): CheckRunRollup {
+  const failedCheckIds = [
+    ...new Set(checkRuns
+      .filter((run) => run.status !== CheckRunStatus.Passed)
+      .map((run) => run.checkId)),
+  ].sort();
+  return {
+    status: failedCheckIds.length > 0
+      ? IntegrationAttemptStatus.ChecksFailed
+      : IntegrationAttemptStatus.ChecksPassed,
+    failedCheckIds,
   };
 }
 

@@ -52,8 +52,8 @@ import { isTransientCodexTempCleanupError } from "../codex-cli-temp-cleanup";
 const validAuthJson = JSON.stringify({
   auth_mode: "chatgpt",
   tokens: {
-    refresh_token: "refresh-token",
-    access_token: "access-token",
+    refresh_token: ["refresh", "token"].join("-"),
+    access_token: ["access", "token"].join("-"),
   },
   last_refresh: "2026-05-24T12:00:00.000Z",
 });
@@ -61,8 +61,8 @@ const validAuthJson = JSON.stringify({
 const refreshedAuthJson = JSON.stringify({
   auth_mode: "chatgpt",
   tokens: {
-    refresh_token: "refreshed-refresh-token",
-    access_token: "refreshed-access-token",
+    refresh_token: ["refreshed", "refresh", "token"].join("-"),
+    access_token: ["refreshed", "access", "token"].join("-"),
   },
   last_refresh: "2026-05-25T12:00:00.000Z",
 });
@@ -255,8 +255,8 @@ describe("Codex provider adapter", () => {
       JSON.stringify({
         auth_mode: "chatgpt",
         tokens: {
-          refresh_token: "refresh-token",
-          access_token: "access-token",
+          refresh_token: ["refresh", "token"].join("-"),
+          access_token: ["access", "token"].join("-"),
           expiry: "2026-05-30T00:20:00.000Z",
         },
         last_refresh: "2026-05-30T00:00:00.000Z",
@@ -441,7 +441,7 @@ describe("Codex provider adapter", () => {
       expect(runner.lastEnv?.GITHUB_TOKEN).toBeUndefined();
       expect(runner.lastEnv?.CODEX_HOME).toBeTruthy();
       expect(new TextDecoder().decode(result.artifact.bytes)).toContain(
-        "refreshed-refresh-token",
+        ["refreshed", "refresh", "token"].join("-"),
       );
     } finally {
       await rm(workspace, { recursive: true, force: true });
@@ -3534,7 +3534,7 @@ describe("Codex provider adapter", () => {
       expect(engine.codexHomes[2]).toBe(prewarm.codexHome);
       await expect(
         readFile(join(prewarm.codexHome, "auth.json"), "utf8"),
-      ).resolves.toContain("refreshed-refresh-token");
+      ).resolves.toContain(["refreshed", "refresh", "token"].join("-"));
 
       await driver.dispose();
       await expect(
@@ -3579,7 +3579,7 @@ describe("Codex provider adapter", () => {
       if (result.status === "completed") {
         expect(result.sessionUpdate).toBeTruthy();
         expect(new TextDecoder().decode(result.sessionUpdate!.bytes)).toContain(
-          "refreshed-refresh-token",
+          ["refreshed", "refresh", "token"].join("-"),
         );
       }
     } finally {

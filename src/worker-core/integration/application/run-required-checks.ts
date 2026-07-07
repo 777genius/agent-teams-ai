@@ -1,8 +1,9 @@
 import {
-  CheckRunStatus,
   IntegrationAttemptStatus,
+  allCheckRunsPassed,
   markChecksRunning,
   recordCheckRuns,
+  type CheckRun,
   type IntegrationAttempt,
 } from "../domain/integration-attempt";
 import { IntegrationAuditEventType } from "../domain/integration-events";
@@ -27,10 +28,7 @@ export async function runRequiredChecks(
   input: RunRequiredChecksInput,
 ): Promise<IntegrationAttempt> {
   const attempt = await loadIntegrationAttempt(deps.store, input.attemptId);
-  if (
-    attempt.status === IntegrationAttemptStatus.ChecksRunning ||
-    attempt.status === IntegrationAttemptStatus.ChecksPassed
-  ) {
+  if (requiredChecksAlreadyInProgressOrPassed(attempt)) {
     return attempt;
   }
   const startedAt = nowIso(deps.clock);
@@ -41,14 +39,7 @@ export async function runRequiredChecks(
     occurredAt: startedAt,
   });
 
-  const checkRuns = [];
-  for (const check of running.reviewDecision.requiredChecks) {
-    checkRuns.push(await deps.checks.runCheck({
-      workspacePath: running.targetWorkspacePath,
-      check,
-      startedAt: nowIso(deps.clock),
-    }));
-  }
+  const checkRuns = await runDeclaredRequiredChecks(deps, running);
 
   const completedAt = nowIso(deps.clock);
   const updated = recordCheckRuns(running, {
@@ -57,10 +48,38 @@ export async function runRequiredChecks(
   });
   await deps.store.update(updated);
   await recordIntegrationAudit(deps, updated, {
-    type: updated.checkRuns.some((run) => run.status !== CheckRunStatus.Passed)
-      ? IntegrationAuditEventType.ChecksFailed
-      : IntegrationAuditEventType.ChecksPassed,
+    type: auditEventTypeForCheckRuns(updated.checkRuns),
     occurredAt: completedAt,
   });
   return updated;
+}
+
+function requiredChecksAlreadyInProgressOrPassed(
+  attempt: IntegrationAttempt,
+): boolean {
+  return attempt.status === IntegrationAttemptStatus.ChecksRunning ||
+    attempt.status === IntegrationAttemptStatus.ChecksPassed;
+}
+
+async function runDeclaredRequiredChecks(
+  deps: RunRequiredChecksDeps,
+  attempt: IntegrationAttempt,
+): Promise<readonly CheckRun[]> {
+  const checkRuns: CheckRun[] = [];
+  for (const check of attempt.reviewDecision.requiredChecks) {
+    checkRuns.push(await deps.checks.runCheck({
+      workspacePath: attempt.targetWorkspacePath,
+      check,
+      startedAt: nowIso(deps.clock),
+    }));
+  }
+  return checkRuns;
+}
+
+function auditEventTypeForCheckRuns(
+  checkRuns: readonly CheckRun[],
+): IntegrationAuditEventType.ChecksFailed | IntegrationAuditEventType.ChecksPassed {
+  return allCheckRunsPassed(checkRuns)
+    ? IntegrationAuditEventType.ChecksPassed
+    : IntegrationAuditEventType.ChecksFailed;
 }

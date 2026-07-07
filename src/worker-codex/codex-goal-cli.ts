@@ -1,24 +1,27 @@
 #!/usr/bin/env node
 import { readFile, realpath } from "node:fs/promises";
-import { homedir } from "node:os";
-import { isAbsolute, join, resolve } from "node:path";
+import { join } from "node:path";
 import { execPath } from "node:process";
 import { fileURLToPath } from "node:url";
+import { AccessBoundary } from "@vioxen/subscription-runtime/worker-core";
 import {
-  LocalFileRunEventDeliveryCursorStore,
-  LocalFileRunEventStore,
-} from "@vioxen/subscription-runtime/store-local-file";
-import {
-  AccessBoundary,
-  RunEventCompactionSafetyMode,
-  RunEventRelayService,
-  RunEventType,
-  isRunEventType,
-} from "@vioxen/subscription-runtime/worker-core";
-import {
-  StdoutNdjsonRunEventPublisher,
-  WebhookRunEventPublisher,
-} from "@vioxen/subscription-runtime/worker-local";
+  type CodexGoalCliIo,
+  type OutputFormat,
+  type ParsedFlags,
+  flag,
+  option,
+  outputFormat,
+  outputFormatFromFlags,
+  parseFlags,
+  parseOptionalPositiveInteger,
+  parsePositiveInteger,
+  requiredOption,
+  resolvePath,
+  writeJsonOrText,
+} from "./codex-goal-cli-support";
+
+export type { CodexGoalCliIo } from "./codex-goal-cli-support";
+
 import {
   codexGoalAccountSlots,
   runCodexGoal,
@@ -57,6 +60,15 @@ import {
   type CodexGoalLaunchManifestMetadata,
 } from "./codex-goal-launch-manifest";
 import {
+  parseCodexGoalRelayEventsCommand,
+  runCodexGoalRelayEventsCommand,
+  type RelayEventsCommand,
+} from "./run-event-relay";
+import {
+  oneShotCodexGoalMcpToolGuard,
+  parseCodexGoalCliMcpShortcut,
+} from "./codex-goal-cli-shortcuts";
+import {
   projectControlGenericScopeDenial,
   projectControlGenericToolDenial,
 } from "./project-control-scope-guard";
@@ -64,7 +76,6 @@ import {
   runProjectControlOperationFile,
 } from "./project-control-operation-lifecycle";
 
-type OutputFormat = "text" | "json";
 type CodexGoalCliCommand =
   | RunCommand
   | StatusCommand
@@ -116,21 +127,6 @@ type TailCommand = {
   readonly kind: "tail";
   readonly logPath: string;
   readonly lines: number;
-};
-
-type RelayEventsPublisherKind = "stdout" | "webhook";
-
-type RelayEventsCommand = {
-  readonly kind: "relay-events";
-  readonly eventRootDir: string;
-  readonly consumerId: string;
-  readonly publisherKind: RelayEventsPublisherKind;
-  readonly webhookUrl?: string;
-  readonly webhookTimeoutMs?: number;
-  readonly limit?: number;
-  readonly runId?: string;
-  readonly types?: readonly RunEventType[];
-  readonly format: OutputFormat;
 };
 
 type McpToolsCommand = {
@@ -192,13 +188,6 @@ type HelpCommand = {
   readonly kind: "help";
 };
 
-export type CodexGoalCliIo = {
-  writeStdout(chunk: string): void;
-  writeStderr(chunk: string): void;
-  cwd(): string;
-  env(): Readonly<Record<string, string | undefined>>;
-};
-
 type CodexGoalRunConfigWithAppServerStartupTimeout = CodexGoalRunConfig & {
   readonly appServerStartupTimeoutMs?: number;
 };
@@ -214,32 +203,27 @@ export async function runCodexGoalCli(
       return 0;
     }
     if (command.kind === "status") {
-      await printStatus(command, io);
+      writeJsonOrText(command.format, await collectCodexGoalStatus(command), io);
       return 0;
     }
     if (command.kind === "doctor") {
-      const result = await doctor(command);
+      const result = await doctorCodexGoal(command);
       writeJsonOrText(command.format, result, io);
       return result.ok ? 0 : 1;
     }
     if (command.kind === "tail") {
-      io.writeStdout(await tailFile(command.logPath, command.lines));
+      io.writeStdout(await tailCodexGoalLog(command.logPath, command.lines));
       return 0;
     }
     if (command.kind === "relay-events") {
-      const result = await relayEvents(command, io);
-      if (command.publisherKind === "stdout" && command.format === "text") {
-        return 0;
-      }
-      writeJsonOrText(command.format, result, io);
-      return 0;
+      return runCodexGoalRelayEventsCommand(command, io);
     }
     if (command.kind === "mcp-tools") {
       writeJsonOrText(command.format, await listCodexGoalMcpTools(), io);
       return 0;
     }
     if (command.kind === "mcp-tool") {
-      const oneShotGuard = oneShotMcpToolGuard(command.name);
+      const oneShotGuard = oneShotCodexGoalMcpToolGuard(command.name);
       if (oneShotGuard !== undefined) {
         writeJsonOrText(command.format, oneShotGuard, io);
         return 1;
@@ -400,7 +384,7 @@ export function parseCodexGoalCliArgs(
     return parseTail(rest, io);
   }
   if (commandName === "relay-events") {
-    return parseRelayEvents(rest, io);
+    return parseCodexGoalRelayEventsCommand(rest, io);
   }
   if (commandName === "tools") {
     return parseMcpTools(rest, io);
@@ -616,61 +600,6 @@ function parseTail(
   };
 }
 
-function parseRelayEvents(
-  argv: readonly string[],
-  io: CodexGoalCliIo,
-): RelayEventsCommand {
-  const env = io.env();
-  const values = parseFlags(argv);
-  const publisherKind = relayEventsPublisherKind(
-    option(values, env, "--publisher", [
-      "SUBSCRIPTION_RUNTIME_RUN_EVENT_PUBLISHER",
-    ]) ?? "stdout",
-  );
-  const eventRootDir = resolvePath(
-    io.cwd(),
-    requiredOption(values, env, "--event-root", [
-      "SUBSCRIPTION_RUNTIME_RUN_EVENT_ROOT",
-    ]),
-  );
-  const webhookUrl = option(values, env, "--webhook-url", [
-    "SUBSCRIPTION_RUNTIME_RUN_EVENT_WEBHOOK_URL",
-  ]);
-  if (publisherKind === "webhook" && !webhookUrl) {
-    throw new Error("--webhook-url is required for webhook publisher");
-  }
-  const format = outputFormatFromFlags(values, env, "text");
-  if (publisherKind === "stdout" && format === "json") {
-    throw new Error("stdout relay publisher writes NDJSON events; use --text");
-  }
-  const webhookTimeoutMs = parseOptionalPositiveInteger(
-    option(values, env, "--webhook-timeout-ms", [
-      "SUBSCRIPTION_RUNTIME_RUN_EVENT_WEBHOOK_TIMEOUT_MS",
-    ]),
-    "--webhook-timeout-ms",
-  );
-  const limit = parseOptionalPositiveInteger(
-    option(values, env, "--limit", []),
-    "--limit",
-  );
-  const runId = option(values, env, "--run-id", []);
-  const types = relayEventTypes(option(values, env, "--type", []));
-  return {
-    kind: "relay-events",
-    eventRootDir,
-    consumerId: requiredOption(values, env, "--consumer-id", [
-      "SUBSCRIPTION_RUNTIME_RUN_EVENT_CONSUMER_ID",
-    ]),
-    publisherKind,
-    ...(webhookUrl === undefined ? {} : { webhookUrl }),
-    ...(webhookTimeoutMs === undefined ? {} : { webhookTimeoutMs }),
-    ...(limit === undefined ? {} : { limit }),
-    ...(runId === undefined ? {} : { runId }),
-    ...(types === undefined ? {} : { types }),
-    format,
-  };
-}
-
 function parseMcpTools(
   argv: readonly string[],
   io: CodexGoalCliIo,
@@ -836,465 +765,7 @@ function parseMcpShortcut(
   argv: readonly string[],
   io: CodexGoalCliIo,
 ): McpToolCommand | undefined {
-  if (commandName === "overview") {
-    const values = parseFlags(argv);
-    return {
-      kind: "mcp-tool",
-      name: "codex_goal_overview",
-      argsJson: JSON.stringify({
-        ...registryArg(values),
-        ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
-        ...optionalNumberArg(values, "--tail-lines", "tailLines"),
-        ...optionalNumberArg(values, "--limit", "limit"),
-        ...optionalStringArg(values, "--job-prefix", "jobIdPrefix"),
-      }),
-      format: outputFormatFromFlags(values, io.env()),
-    };
-  }
-  if (commandName === "run-watch" || commandName === "agent-run-watch") {
-    const jobId = argv[0]?.startsWith("--") ? undefined : argv[0];
-    const values = parseFlags(jobId ? argv.slice(1) : argv);
-    return {
-      kind: "mcp-tool",
-      name: "agent_run_watch",
-      argsJson: JSON.stringify({
-        providerKind: values.values.get("--provider") ??
-          values.values.get("--provider-kind") ??
-          "codex",
-        ...(jobId ? { jobId } : {}),
-        ...registryArg(values),
-        ...(values.values.get("--state-root")
-          ? { stateRootDir: values.values.get("--state-root") }
-          : {}),
-        ...(values.values.get("--run-artifacts-root")
-          ? { runArtifactsRootDir: values.values.get("--run-artifacts-root") }
-          : {}),
-        ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
-        ...optionalNumberArg(values, "--tail-lines", "tailLines"),
-        ...optionalNumberArg(values, "--limit", "limit"),
-        ...(flag(values, "--include-changed-files") || flag(values, "--changed-files")
-          ? { includeChangedFiles: true }
-          : {}),
-        ...(flag(values, "--include-log-tail") || flag(values, "--log-tail")
-          ? { includeLogTail: true }
-          : {}),
-      }),
-      format: outputFormatFromFlags(values, io.env()),
-    };
-  }
-  if (
-    commandName === "events" ||
-    commandName === "run-events" ||
-    commandName === "agent-run-events"
-  ) {
-    const jobId = argv[0]?.startsWith("--") ? undefined : argv[0];
-    const values = parseFlags(jobId ? argv.slice(1) : argv);
-    return {
-      kind: "mcp-tool",
-      name: "agent_run_events",
-      argsJson: JSON.stringify({
-        providerKind: values.values.get("--provider") ??
-          values.values.get("--provider-kind") ??
-          "codex",
-        ...(jobId ? { jobId } : {}),
-        ...registryArg(values),
-        ...optionalStringArg(values, "--event-root", "eventRootDir"),
-        ...optionalStringArg(values, "--cursor", "cursor"),
-        ...optionalStringArg(values, "--type", "type"),
-        ...optionalNumberArg(values, "--limit", "limit"),
-      }),
-      format: outputFormatFromFlags(values, io.env()),
-    };
-  }
-  if (
-    commandName === "state" ||
-    commandName === "run-state" ||
-    commandName === "agent-run-state"
-  ) {
-    const jobId = argv[0]?.startsWith("--") ? undefined : argv[0];
-    const values = parseFlags(jobId ? argv.slice(1) : argv);
-    return {
-      kind: "mcp-tool",
-      name: "agent_run_state",
-      argsJson: JSON.stringify({
-        providerKind: values.values.get("--provider") ??
-          values.values.get("--provider-kind") ??
-          "codex",
-        ...(jobId ? { jobId } : {}),
-        ...registryArg(values),
-        ...optionalStringArg(values, "--event-root", "eventRootDir"),
-      }),
-      format: outputFormatFromFlags(values, io.env()),
-    };
-  }
-  if (
-    commandName === "event-compaction-plan" ||
-    commandName === "events-compaction-plan" ||
-    commandName === "run-event-compaction-plan"
-  ) {
-    const values = parseFlags(argv);
-    return {
-      kind: "mcp-tool",
-      name: "agent_run_event_compaction_plan",
-      argsJson: JSON.stringify({
-        ...registryArg(values),
-        ...optionalStringArg(values, "--event-root", "eventRootDir"),
-        ...runEventRetentionPolicyArgs(values),
-      }),
-      format: outputFormatFromFlags(values, io.env()),
-    };
-  }
-  if (
-    commandName === "event-compact" ||
-    commandName === "events-compact" ||
-    commandName === "run-event-compact"
-  ) {
-    const values = parseFlags(argv);
-    return {
-      kind: "mcp-tool",
-      name: "agent_run_event_compact",
-      argsJson: JSON.stringify({
-        ...registryArg(values),
-        ...optionalStringArg(values, "--event-root", "eventRootDir"),
-        ...runEventRetentionPolicyArgs(values),
-        ...(flag(values, "--confirm") ? { confirmCompact: true } : {}),
-      }),
-      format: outputFormatFromFlags(values, io.env()),
-    };
-  }
-  if (
-    commandName === "project-events" ||
-    commandName === "run-project-events" ||
-    commandName === "agent-run-project-events"
-  ) {
-    const jobId = argv[0]?.startsWith("--") ? undefined : argv[0];
-    const values = parseFlags(jobId ? argv.slice(1) : argv);
-    return {
-      kind: "mcp-tool",
-      name: "agent_run_project_events",
-      argsJson: JSON.stringify({
-        providerKind: values.values.get("--provider") ??
-          values.values.get("--provider-kind") ??
-          "codex",
-        ...(jobId ? { jobId } : {}),
-        ...registryArg(values),
-        ...optionalStringArg(values, "--event-root", "eventRootDir"),
-        ...optionalStringArg(values, "--host-id", "hostId"),
-        ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
-        ...optionalNumberArg(values, "--tail-lines", "tailLines"),
-        ...optionalNumberArg(values, "--limit", "limit"),
-        ...(flag(values, "--include-changed-files") || flag(values, "--changed-files")
-          ? { includeChangedFiles: true }
-          : {}),
-      }),
-      format: outputFormatFromFlags(values, io.env()),
-    };
-  }
-  if (commandName === "reconcile-preview") {
-    const values = parseFlags(argv);
-    return {
-      kind: "mcp-tool",
-      name: "codex_goal_reconcile_preview",
-      argsJson: JSON.stringify({
-        ...registryArg(values),
-        ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
-        ...optionalNumberArg(values, "--tail-lines", "tailLines"),
-        ...optionalNumberArg(values, "--max-continues", "maxContinuesPerRun"),
-        ...(flag(values, "--continue-safe-jobs")
-          ? { continueSafeJobs: true }
-          : {}),
-        ...(flag(values, "--skip-doctor") ? { skipDoctor: true } : {}),
-      }),
-      format: outputFormatFromFlags(values, io.env()),
-    };
-  }
-  if (commandName === "brief") {
-    return parseJobShortcut({
-      kind: "brief",
-      tool: "codex_goal_brief",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
-        ...optionalNumberArg(values, "--tail-lines", "tailLines"),
-      }),
-    });
-  }
-  if (commandName === "decision") {
-    return parseJobShortcut({
-      kind: "decision",
-      tool: "codex_goal_decision",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
-        ...optionalNumberArg(values, "--tail-lines", "tailLines"),
-        ...(flag(values, "--no-registry-conflicts")
-          ? { includeRegistryConflicts: false }
-          : {}),
-      }),
-    });
-  }
-  if (commandName === "handoff") {
-    return parseJobShortcut({
-      kind: "handoff",
-      tool: "codex_goal_handoff",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        includeCliFallback: !flag(values, "--no-cli-fallback"),
-        ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
-        ...optionalNumberArg(values, "--tail-lines", "tailLines"),
-      }),
-    });
-  }
-  if (commandName === "accounts") {
-    return parseJobShortcut({
-      kind: "accounts",
-      tool: "codex_goal_accounts_status",
-      argv,
-      io,
-    });
-  }
-  if (commandName === "send-guidance" || commandName === "guidance") {
-    return parseJobShortcut({
-      kind: "send-guidance",
-      tool: "codex_goal_send_guidance",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        message: requiredFlagValue(values, "--message"),
-        ...callerArgs(values),
-        ...(values.values.get("--caller-id")
-          ? { callerId: values.values.get("--caller-id") }
-          : {}),
-        ...(values.values.get("--priority")
-          ? { priority: values.values.get("--priority") }
-          : {}),
-        ...(values.values.get("--idempotency-key")
-          ? { idempotencyKey: values.values.get("--idempotency-key") }
-          : {}),
-        ...(values.values.get("--expires-at")
-          ? { expiresAt: values.values.get("--expires-at") }
-          : {}),
-      }),
-    });
-  }
-  if (commandName === "control-enqueue" || commandName === "inbox-enqueue") {
-    return parseJobShortcut({
-      kind: "control-enqueue",
-      tool: "codex_goal_control_enqueue",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        intent: values.values.get("--intent") ?? "guidance",
-        body: requiredFlagValue(values, "--body"),
-        ...(values.values.get("--delivery-mode")
-          ? { deliveryMode: values.values.get("--delivery-mode") }
-          : {}),
-        ...(values.values.get("--created-by")
-          ? { createdBy: values.values.get("--created-by") }
-          : {}),
-        ...callerArgs(values),
-        ...(values.values.get("--caller-id")
-          ? { callerId: values.values.get("--caller-id") }
-          : {}),
-        ...(values.values.get("--priority")
-          ? { priority: values.values.get("--priority") }
-          : {}),
-        ...(values.values.get("--idempotency-key")
-          ? { idempotencyKey: values.values.get("--idempotency-key") }
-          : {}),
-        ...(values.values.get("--expires-at")
-          ? { expiresAt: values.values.get("--expires-at") }
-          : {}),
-        ...(values.values.get("--supersedes")
-          ? { supersedesSignalIds: values.values.get("--supersedes") }
-          : {}),
-      }),
-    });
-  }
-  if (commandName === "control-list" || commandName === "inbox-list") {
-    return parseJobShortcut({
-      kind: "control-list",
-      tool: "codex_goal_control_list",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        ...(flag(values, "--include-bodies") ? { includeBodies: true } : {}),
-      }),
-    });
-  }
-  if (commandName === "control-decision" || commandName === "inbox-decision") {
-    return parseJobShortcut({
-      kind: "control-decision",
-      tool: "codex_goal_control_decision",
-      argv,
-      io,
-    });
-  }
-  if (commandName === "control-reconcile" || commandName === "inbox-reconcile") {
-    return parseJobShortcut({
-      kind: "control-reconcile",
-      tool: "codex_goal_control_reconcile",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        ...(flag(values, "--repair") ? { repair: true } : {}),
-        ...positiveIntegerArg(values, "--accepted-stale-after-ms"),
-      }),
-    });
-  }
-  if (commandName === "control-supersede" || commandName === "inbox-supersede") {
-    return parseJobShortcut({
-      kind: "control-supersede",
-      tool: "codex_goal_control_supersede",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        signalId: requiredFlagValue(values, "--signal-id"),
-        ...(values.values.get("--superseded-by")
-          ? { supersededBySignalId: values.values.get("--superseded-by") }
-          : {}),
-        ...(values.values.get("--reason")
-          ? { reason: values.values.get("--reason") }
-          : {}),
-        ...callerArgs(values),
-        ...(values.values.get("--caller-id")
-          ? { callerId: values.values.get("--caller-id") }
-          : {}),
-      }),
-    });
-  }
-  if (commandName === "reconcile-result") {
-    return parseJobShortcut({
-      kind: "reconcile-result",
-      tool: "codex_goal_reconcile_result",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        ...(flag(values, "--force") ? { forceWrite: true } : {}),
-        ...(flag(values, "--no-preserve-patch") ? { preservePatch: false } : {}),
-        ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
-        ...optionalNumberArg(values, "--tail-lines", "tailLines"),
-      }),
-    });
-  }
-  if (commandName === "continue-job") {
-    return parseJobShortcut({
-      kind: "continue-job",
-      tool: "codex_goal_continue",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        ...(flag(values, "--confirm") ? { confirmContinue: true } : {}),
-        ...(flag(values, "--force") ? { forceStart: true } : {}),
-        ...(flag(values, "--skip-doctor") ? { skipDoctor: true } : {}),
-      }),
-    });
-  }
-  if (commandName === "recover-job") {
-    return parseJobShortcut({
-      kind: "recover-job",
-      tool: "codex_goal_recover",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        ...(flag(values, "--confirm") ? { confirmRecover: true } : {}),
-        ...(flag(values, "--force") ? { forceStart: true } : {}),
-        ...(flag(values, "--skip-doctor") ? { skipDoctor: true } : {}),
-      }),
-    });
-  }
-  if (commandName === "stop-job") {
-    return parseJobShortcut({
-      kind: "stop-job",
-      tool: "codex_goal_stop",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        ...(flag(values, "--confirm") ? { confirmStop: true } : {}),
-        ...(flag(values, "--force") ? { forceStop: true } : {}),
-        ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
-        ...optionalNumberArg(values, "--tail-lines", "tailLines"),
-      }),
-    });
-  }
-  if (commandName === "maintenance-pause-job") {
-    return parseJobShortcut({
-      kind: "maintenance-pause-job",
-      tool: "codex_goal_maintenance_pause",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        ...(flag(values, "--confirm") ? { confirmPause: true } : {}),
-        ...(flag(values, "--force") ? { forcePause: true } : {}),
-        ...(values.values.get("--reason")
-          ? { reason: values.values.get("--reason") as string }
-          : {}),
-        ...optionalNumberArg(values, "--stale-after-ms", "staleAfterMs"),
-        ...optionalNumberArg(values, "--tail-lines", "tailLines"),
-      }),
-    });
-  }
-  if (commandName === "mark-reviewed") {
-    return parseJobShortcut({
-      kind: "mark-reviewed",
-      tool: "codex_goal_mark_reviewed",
-      argv,
-      io,
-      extraArgs: (values) => ({
-        ...(values.values.get("--note")
-          ? { note: values.values.get("--note") as string }
-          : {}),
-      }),
-    });
-  }
-  if (commandName === "relogin") {
-    const jobId = argv[0];
-    if (!jobId || jobId.startsWith("--")) throw new Error("jobId is required");
-    const account = argv[1]?.startsWith("--") ? undefined : argv[1];
-    const flagArgs = account ? argv.slice(2) : argv.slice(1);
-    const values = parseFlags(flagArgs);
-    return {
-      kind: "mcp-tool",
-      name: "codex_goal_accounts_relogin_instructions",
-      argsJson: JSON.stringify({
-        jobId,
-        ...registryArg(values),
-        ...(account ? { account } : {}),
-      }),
-      format: outputFormatFromFlags(values, io.env()),
-    };
-  }
-  return undefined;
-}
-
-function parseJobShortcut(input: {
-  readonly kind: string;
-  readonly tool: string;
-  readonly argv: readonly string[];
-  readonly io: CodexGoalCliIo;
-  readonly extraArgs?: (values: ParsedFlags) => Record<string, unknown>;
-}): McpToolCommand {
-  const jobId = input.argv[0];
-  if (!jobId || jobId.startsWith("--")) throw new Error("jobId is required");
-  const values = parseFlags(input.argv.slice(1));
-  return {
-    kind: "mcp-tool",
-    name: input.tool,
-    argsJson: JSON.stringify({
-      jobId,
-      ...registryArg(values),
-      ...(input.extraArgs?.(values) ?? {}),
-    }),
-    format: outputFormatFromFlags(values, input.io.env()),
-  };
-}
-
-function registryArg(values: ParsedFlags): Record<string, unknown> {
-  const registryRootDir = values.values.get("--registry-root");
-  return registryRootDir ? { registryRootDir } : {};
+  return parseCodexGoalCliMcpShortcut(commandName, argv, io);
 }
 
 function registryMetadataFromFlags(
@@ -1312,31 +783,6 @@ function registryMetadataFromFlags(
   };
 }
 
-function callerArgs(values: ParsedFlags): Record<string, unknown> {
-  const callerKind =
-    values.values.get("--caller-kind") ?? values.values.get("--caller-actor");
-  const callerId = values.values.get("--caller-id");
-  return {
-    ...(callerKind ? { callerKind } : {}),
-    ...(callerId ? { callerId } : {}),
-  };
-}
-
-function positiveIntegerArg(
-  values: ParsedFlags,
-  name: string,
-): Record<string, unknown> {
-  const value = values.values.get(name);
-  if (value === undefined) return {};
-  return { [camelCaseFlagName(name)]: parsePositiveInteger(value, name) };
-}
-
-function camelCaseFlagName(name: string): string {
-  return name
-    .replace(/^--/, "")
-    .replace(/-([a-z])/g, (_, character: string) => character.toUpperCase());
-}
-
 function optionalNumberArg(
   values: ParsedFlags,
   flagName: string,
@@ -1346,33 +792,6 @@ function optionalNumberArg(
   return value === undefined
     ? {}
     : { [key]: parsePositiveInteger(value, flagName) };
-}
-
-function optionalStringArg(
-  values: ParsedFlags,
-  flagName: string,
-  key: string,
-): Record<string, unknown> {
-  const value = values.values.get(flagName);
-  return value === undefined || value.trim() === "" ? {} : { [key]: value };
-}
-
-function runEventRetentionPolicyArgs(values: ParsedFlags): Record<string, unknown> {
-  return {
-    ...optionalStringArg(values, "--keep-after", "keepEventsAfter"),
-    ...optionalNumberArg(values, "--keep-latest-per-run", "keepLatestEventsPerRun"),
-    ...(flag(values, "--compact-delivered") ? { compactDeliveredEvents: true } : {}),
-    ...(flag(values, "--drop-invalid-lines") ? { dropInvalidLines: true } : {}),
-    ...(flag(values, "--force")
-      ? { safetyMode: RunEventCompactionSafetyMode.Force }
-      : {}),
-  };
-}
-
-function requiredFlagValue(values: ParsedFlags, flagName: string): string {
-  const value = values.values.get(flagName);
-  if (!value) throw new Error(`${flagName} is required`);
-  return value;
 }
 
 function jsonArgsSource(values: ParsedFlags): {
@@ -1591,181 +1010,6 @@ function runConfigFromFlags(
     : config;
 }
 
-async function printStatus(
-  command: StatusCommand,
-  io: CodexGoalCliIo,
-): Promise<void> {
-  const status = await collectStatus(command);
-  writeJsonOrText(command.format, status, io);
-}
-
-async function collectStatus(command: StatusCommand): Promise<{
-  readonly tmuxAlive?: boolean;
-  readonly resultExists?: boolean;
-  readonly resultStatus?: string;
-  readonly workspaceDirty?: boolean;
-  readonly warnings: readonly string[];
-}> {
-  return collectCodexGoalStatus(command);
-}
-
-async function doctor(command: DoctorCommand): Promise<{
-  readonly ok: boolean;
-  readonly checks: readonly { readonly name: string; readonly ok: boolean; readonly message: string }[];
-}> {
-  return doctorCodexGoal(command);
-}
-
-async function tailFile(path: string, lines: number): Promise<string> {
-  return tailCodexGoalLog(path, lines);
-}
-
-async function relayEvents(command: RelayEventsCommand, io: CodexGoalCliIo) {
-  const eventStore = new LocalFileRunEventStore({
-    rootDir: command.eventRootDir,
-  });
-  const cursorStore = new LocalFileRunEventDeliveryCursorStore({
-    rootDir: command.eventRootDir,
-  });
-  const publisher = command.publisherKind === "stdout"
-    ? new StdoutNdjsonRunEventPublisher({
-        write: (chunk) => io.writeStdout(chunk),
-      })
-    : new WebhookRunEventPublisher({
-        endpointUrl: command.webhookUrl as string,
-        ...(command.webhookTimeoutMs === undefined
-          ? {}
-          : { timeoutMs: command.webhookTimeoutMs }),
-      });
-  const service = new RunEventRelayService({
-    eventStore,
-    cursorStore,
-    publisher,
-  });
-  const result = await service.relay({
-    consumerId: command.consumerId,
-    ...(command.limit === undefined ? {} : { limit: command.limit }),
-    ...(command.runId === undefined ? {} : { runId: command.runId }),
-    ...(command.types === undefined ? {} : { types: command.types }),
-  });
-  return {
-    ok: result.warnings.length === 0,
-    mode: "relay_events",
-    eventRootDir: command.eventRootDir,
-    publisherKind: command.publisherKind,
-    ...result,
-  };
-}
-
-type ParsedFlags = {
-  readonly flags: ReadonlySet<string>;
-  readonly values: ReadonlyMap<string, string>;
-};
-
-function parseFlags(argv: readonly string[]): ParsedFlags {
-  const flags = new Set<string>();
-  const values = new Map<string, string>();
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (!arg) continue;
-    if (arg === "--help" || arg === "-h") throw new Error(usage());
-    if (!arg.startsWith("--")) throw new Error(`unknown argument: ${arg}`);
-    const next = argv[index + 1];
-    if (!next || next.startsWith("--")) {
-      flags.add(arg);
-      continue;
-    }
-    values.set(arg, next);
-    index += 1;
-  }
-  return { flags, values };
-}
-
-function requiredOption(
-  flags: ParsedFlags,
-  env: Readonly<Record<string, string | undefined>>,
-  name: string,
-  envNames: readonly string[],
-): string {
-  const value = option(flags, env, name, envNames);
-  if (!value) throw new Error(`${name} is required`);
-  return value;
-}
-
-function option(
-  flags: ParsedFlags,
-  env: Readonly<Record<string, string | undefined>>,
-  name: string,
-  envNames: readonly string[],
-): string | undefined {
-  const value = flags.values.get(name);
-  if (value !== undefined) return value;
-  for (const envName of envNames) {
-    const envValue = env[envName];
-    if (envValue?.trim()) return envValue;
-  }
-  return undefined;
-}
-
-function flag(flags: ParsedFlags, name: string): boolean {
-  return flags.flags.has(name);
-}
-
-function outputFormatFromFlags(
-  flags: ParsedFlags,
-  env: Readonly<Record<string, string | undefined>>,
-  defaultFormat: OutputFormat = "json",
-): OutputFormat {
-  const explicitFormat = option(flags, env, "--format", []);
-  const json = flag(flags, "--json");
-  const text = flag(flags, "--text");
-  if (json && text) throw new Error("use only one of --json or --text");
-  if (explicitFormat && json && explicitFormat !== "json") {
-    throw new Error("use only one of --format text or --json");
-  }
-  if (explicitFormat && text && explicitFormat !== "text") {
-    throw new Error("use only one of --format json or --text");
-  }
-  if (json) return "json";
-  if (text) return "text";
-  return outputFormat(explicitFormat ?? defaultFormat);
-}
-
-function outputFormat(value: string): OutputFormat {
-  if (value === "text" || value === "json") return value;
-  throw new Error("--format must be text or json");
-}
-
-function relayEventsPublisherKind(value: string): RelayEventsPublisherKind {
-  if (value === "stdout" || value === "webhook") return value;
-  throw new Error("--publisher must be stdout or webhook");
-}
-
-function relayEventTypes(value: string | undefined): readonly RunEventType[] | undefined {
-  if (value === undefined) return undefined;
-  const types = value.split(",").map((item) => item.trim()).filter(Boolean);
-  if (types.length === 0) return undefined;
-  return types.map((type) => {
-    if (isRunEventType(type)) return type;
-    throw new Error(`unsupported run event type: ${type}`);
-  });
-}
-
-function parseOptionalPositiveInteger(
-  value: string | undefined,
-  label: string,
-): number | undefined {
-  return value === undefined ? undefined : parsePositiveInteger(value, label);
-}
-
-function parsePositiveInteger(value: string, label: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${label} must be a positive integer`);
-  }
-  return parsed;
-}
-
 function parseDurationMs(value: string): number {
   const match = value.match(/^(\d+)(ms|s|m|h)$/);
   if (!match) throw new Error("--timeout must look like 72h, 30m, 10s or 1000ms");
@@ -1786,66 +1030,6 @@ function parseCodexGoalWorkerReportMode(
 
 function splitCsv(value: string): readonly string[] {
   return value.split(",").map((item) => item.trim()).filter(Boolean);
-}
-
-function resolvePath(cwd: string, value: string): string {
-  const expanded = value.startsWith("~/")
-    ? join(homedir(), value.slice(2))
-    : value;
-  return isAbsolute(expanded) ? expanded : resolve(cwd, expanded);
-}
-
-function pushOptional(args: string[], flagName: string, value: string | undefined): void {
-  if (value === undefined) return;
-  args.push(flagName, value);
-}
-
-function pushOptionalNumber(
-  args: string[],
-  flagName: string,
-  value: number | undefined,
-): void {
-  if (value === undefined) return;
-  args.push(flagName, String(value));
-}
-
-function shellQuote(value: string): string {
-  if (/^[A-Za-z0-9_/:=.,@%+-]+$/.test(value)) return value;
-  return `'${value.replace(/'/g, "'\\''")}'`;
-}
-
-function writeJsonOrText(
-  format: OutputFormat,
-  value: unknown,
-  io: CodexGoalCliIo,
-): void {
-  if (format === "json") {
-    io.writeStdout(`${JSON.stringify(value, null, 2)}\n`);
-    return;
-  }
-  if (isRecord(value) && "checks" in value && Array.isArray(value.checks)) {
-    for (const check of value.checks) {
-      if (!isRecord(check)) continue;
-      io.writeStdout(
-        `${check.ok ? "ok" : "fail"} ${String(check.name)} ${String(check.message)}\n`,
-      );
-    }
-    return;
-  }
-  io.writeStdout(`${JSON.stringify(value)}\n`);
-}
-
-function oneShotMcpToolGuard(name: string): Record<string, unknown> | undefined {
-  if (name !== "codex_goal_project_controller_start") return undefined;
-  return {
-    ok: false,
-    mode: "mcp_tool_guard",
-    sideEffects: [],
-    tool: name,
-    reason: "durable_controller_process_required",
-    safeMessage:
-      "codex_goal_project_controller_start must run through a durable MCP/supervisor process that keeps the provider runner attached. The one-shot CLI fallback exits after the tool call and cannot safely own live controller liveness. Start subscription-runtime-codex-goal-mcp under the host supervisor or use an in-process MCP client owned by that supervisor.",
-  };
 }
 
 function currentCliPath(): string {

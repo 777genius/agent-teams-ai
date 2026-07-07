@@ -3,8 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  CommandValidationDecisionReason,
   hostExecutableNotFoundMessage,
   resolveHostExecutable,
+  validateCommandAgainstPolicy,
 } from "../index";
 
 describe("resolveHostExecutable", () => {
@@ -46,5 +48,40 @@ describe("resolveHostExecutable", () => {
     );
     expect(hostExecutableNotFoundMessage(resolution)).toContain("/no/such/bin");
     expect(hostExecutableNotFoundMessage(resolution)).toContain("/also/missing");
+  });
+});
+
+describe("validateCommandAgainstPolicy", () => {
+  it("keeps command validation available from the host-command seam", () => {
+    const policy = {
+      validateCommands: true,
+      deniedExecutableNames: ["tmux"],
+      deniedGitSubcommands: ["push"],
+      deniedPathPrefixes: ["/var/data/worker-jobs/registry"],
+      deniedInlineCodeExecutables: ["python3", "node"],
+      deniedScriptExecutables: ["sh", "bash"],
+    };
+
+    expect(validateCommandAgainstPolicy({
+      command: ["git", "status"],
+      policy,
+    })).toMatchObject({
+      allowed: true,
+      reason: CommandValidationDecisionReason.Allowed,
+    });
+    expect(validateCommandAgainstPolicy({
+      command: ["/usr/bin/git", "push", "origin", "main"],
+      policy,
+    })).toMatchObject({
+      allowed: false,
+      reason: CommandValidationDecisionReason.DeniedGitSubcommand,
+    });
+    expect(validateCommandAgainstPolicy({
+      command: "python3 -c print(1)",
+      policy,
+    })).toMatchObject({
+      allowed: false,
+      reason: CommandValidationDecisionReason.InlineCodeDenied,
+    });
   });
 });

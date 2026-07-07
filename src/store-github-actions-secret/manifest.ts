@@ -1,5 +1,7 @@
 import type { RuntimeAdapterManifest } from "@vioxen/subscription-runtime/core";
-import { githubActionsSecretStoreCapabilities } from "./github-actions-secret-store";
+import {
+  githubActionsSecretStoreCapabilities,
+} from "./domain/github-actions-secret-store-policy";
 
 export const githubActionsSecretStoreManifest = {
   adapterId: "store.github-actions-secret",

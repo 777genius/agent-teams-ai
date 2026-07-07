@@ -99,7 +99,7 @@ export function assertExpectedFilesAllowed(
   files: readonly string[],
 ): void {
   const normalized = normalizeExpectedFiles(files);
-  const allowedPrefixes = policy.allowedPathPrefixes?.map(normalizeProjectRelativePath);
+  const allowedPrefixes = policy.allowedPathPrefixes?.map(normalizeAllowedPathPrefix);
   if (!allowedPrefixes || allowedPrefixes.length === 0) return;
   const outside = normalized.filter((file) =>
     !allowedPrefixes.some((prefix) => file === prefix || file.startsWith(`${prefix}/`))
@@ -110,6 +110,10 @@ export function assertExpectedFilesAllowed(
       evidence: outside,
     });
   }
+}
+
+function normalizeAllowedPathPrefix(prefix: string): string {
+  return normalizeProjectRelativePath(prefix).replace(/\/+$/, "");
 }
 
 export function assertRequiredChecksSatisfied(

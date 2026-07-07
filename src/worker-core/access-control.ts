@@ -1,4 +1,23 @@
-import { isAbsolute, resolve, sep } from "node:path";
+import {
+  matchesAnyPattern,
+  matchesAnyPrefix,
+  normalizePath,
+  normalizePathOrNull,
+  parseRemoteTrackingBranch,
+  pathInsideAnyRoot,
+  sensitiveAccessPathDecision,
+  uniqueStrings,
+} from "./access-control/domain/access-control-path-policy";
+import type { CommandPolicy } from "./host-command/safe-command-policy";
+
+export {
+  CommandValidationDecisionReason,
+  validateCommandAgainstPolicy,
+} from "./host-command/safe-command-policy";
+export type {
+  CommandPolicy,
+  CommandValidationDecision,
+} from "./host-command/safe-command-policy";
 
 export enum AccessBoundary {
   ReadOnly = "read_only",
@@ -212,33 +231,6 @@ export type EnvironmentPolicy = {
   readonly exposeAuthRoot: boolean;
 };
 
-export type CommandPolicy = {
-  readonly validateCommands: boolean;
-  readonly deniedExecutableNames: readonly string[];
-  readonly deniedGitSubcommands: readonly string[];
-  readonly deniedPathPrefixes: readonly string[];
-  readonly deniedInlineCodeExecutables: readonly string[];
-  readonly deniedScriptExecutables: readonly string[];
-};
-
-export enum CommandValidationDecisionReason {
-  Allowed = "allowed",
-  ValidationDisabled = "validation_disabled",
-  EmptyCommand = "empty_command",
-  DeniedExecutable = "denied_executable",
-  DeniedGitSubcommand = "denied_git_subcommand",
-  DeniedPathPrefix = "denied_path_prefix",
-  InlineCodeDenied = "inline_code_denied",
-  ScriptInterpreterDenied = "script_interpreter_denied",
-}
-
-export type CommandValidationDecision = {
-  readonly allowed: boolean;
-  readonly reason: CommandValidationDecisionReason;
-  readonly executableName?: string;
-  readonly evidence: readonly string[];
-};
-
 export type BrokerTokenScope = {
   readonly projectId: string;
   readonly boundary: AccessBoundary.ProjectScopedControl;
@@ -365,66 +357,6 @@ export function buildLaunchPlan(input: LaunchPlanInput): LaunchPlan {
         }
       : {}),
   };
-}
-
-export function validateCommandAgainstPolicy(input: {
-  readonly command: readonly string[] | string;
-  readonly policy: CommandPolicy;
-}): CommandValidationDecision {
-  if (!input.policy.validateCommands) {
-    return commandAllowed(CommandValidationDecisionReason.ValidationDisabled);
-  }
-  const args = typeof input.command === "string"
-    ? simpleCommandTokens(input.command)
-    : input.command;
-  if (args.length === 0 || !args[0]?.trim()) {
-    return commandDenied(CommandValidationDecisionReason.EmptyCommand);
-  }
-  const executableName = executableBaseName(args[0] as string);
-  if (input.policy.deniedExecutableNames.includes(executableName)) {
-    return commandDenied(CommandValidationDecisionReason.DeniedExecutable, {
-      executableName,
-      evidence: [`${executableName} is denied by command policy`],
-    });
-  }
-  if (
-    executableName === "git" &&
-    input.policy.deniedGitSubcommands.includes(args[1] ?? "")
-  ) {
-    return commandDenied(CommandValidationDecisionReason.DeniedGitSubcommand, {
-      executableName,
-      evidence: [`git ${args[1] ?? ""} is denied by command policy`],
-    });
-  }
-  if (
-    input.policy.deniedInlineCodeExecutables.includes(executableName) &&
-    (args[1] === "-c" || args[1] === "-e")
-  ) {
-    return commandDenied(CommandValidationDecisionReason.InlineCodeDenied, {
-      executableName,
-      evidence: [`${executableName} inline code execution is denied`],
-    });
-  }
-  if (
-    input.policy.deniedScriptExecutables.includes(executableName) &&
-    args.length > 1
-  ) {
-    return commandDenied(CommandValidationDecisionReason.ScriptInterpreterDenied, {
-      executableName,
-      evidence: [`${executableName} script execution is denied`],
-    });
-  }
-  const commandText = args.join(" ");
-  const deniedPath = input.policy.deniedPathPrefixes.find((prefix) =>
-    commandText.includes(prefix)
-  );
-  if (deniedPath) {
-    return commandDenied(CommandValidationDecisionReason.DeniedPathPrefix, {
-      executableName,
-      evidence: [`command references denied path prefix ${deniedPath}`],
-    });
-  }
-  return commandAllowed(CommandValidationDecisionReason.Allowed, executableName);
 }
 
 class DefaultAccessPolicyService implements AccessPolicyService {
@@ -843,42 +775,6 @@ function blockedLaunch(
   };
 }
 
-function commandAllowed(
-  reason: CommandValidationDecisionReason,
-  executableName?: string,
-): CommandValidationDecision {
-  return {
-    allowed: true,
-    reason,
-    ...(executableName ? { executableName } : {}),
-    evidence: [],
-  };
-}
-
-function commandDenied(
-  reason: CommandValidationDecisionReason,
-  options: {
-    readonly executableName?: string;
-    readonly evidence?: readonly string[];
-  } = {},
-): CommandValidationDecision {
-  return {
-    allowed: false,
-    reason,
-    ...(options.executableName ? { executableName: options.executableName } : {}),
-    evidence: options.evidence ?? [],
-  };
-}
-
-function executableBaseName(value: string): string {
-  const normalized = value.replaceAll("\\", "/");
-  return normalized.split("/").filter(Boolean).at(-1) ?? value;
-}
-
-function simpleCommandTokens(command: string): readonly string[] {
-  return command.trim().split(/\s+/).filter(Boolean);
-}
-
 function filesystemPolicyFor(
   boundary: AccessBoundary,
   scope: ProjectAccessScope | undefined,
@@ -989,89 +885,18 @@ function sensitivePathDecision(input: {
   readonly scope: ProjectAccessScope;
   readonly denyRegistryRawWrite: boolean;
 }): { readonly reason: AccessDecisionReason; readonly evidence: readonly string[] } | null {
-  if (pathInsideAnyRoot(input.path, deniedRootsFor(input.scope))) {
-    return {
-      reason: dockerSocketPath(input.path)
-        ? AccessDecisionReason.DockerSocketDenied
-        : AccessDecisionReason.AuthPathDenied,
-      evidence: ["path is in a denied root"],
-    };
-  }
-  if (hasPathSegment(input.path, ".git")) {
-    return {
-      reason: AccessDecisionReason.GitInternalPathDenied,
-      evidence: ["direct .git internals access is not allowed"],
-    };
-  }
-  if (
-    input.denyRegistryRawWrite &&
-    input.scope.registryRoot &&
-    pathInside(input.path, input.scope.registryRoot)
-  ) {
-    return {
-      reason: AccessDecisionReason.RegistryRawWriteDenied,
-      evidence: ["registry writes must go through project control broker operations"],
-    };
-  }
-  return null;
-}
-
-function normalizePathOrNull(path: string): string | null {
-  if (!path.trim() || !isAbsolute(path)) return null;
-  return normalizePath(path);
-}
-
-function normalizePath(path: string): string {
-  return stripTrailingSeparator(resolve(path));
-}
-
-function pathInsideAnyRoot(path: string, roots: readonly string[]): boolean {
-  return roots.some((root) => pathInside(path, root));
-}
-
-function pathInside(path: string, root: string): boolean {
-  const normalizedPath = normalizePath(path);
-  const normalizedRoot = normalizePath(root);
-  return (
-    normalizedPath === normalizedRoot ||
-    normalizedPath.startsWith(`${normalizedRoot}${sep}`)
-  );
-}
-
-function stripTrailingSeparator(path: string): string {
-  return path.length > 1 && path.endsWith(sep) ? path.slice(0, -1) : path;
-}
-
-function hasPathSegment(path: string, segment: string): boolean {
-  return normalizePath(path).split(/[\\/]+/).includes(segment);
-}
-
-function dockerSocketPath(path: string): boolean {
-  return normalizePath(path).endsWith(`${sep}docker.sock`);
-}
-
-function matchesAnyPrefix(value: string, prefixes: readonly string[]): boolean {
-  return prefixes.length > 0 && prefixes.some((prefix) => value.startsWith(prefix));
-}
-
-function matchesAnyPattern(value: string, patterns: readonly string[]): boolean {
-  return patterns.length > 0 && patterns.some((pattern) => {
-    if (pattern.endsWith("*")) return value.startsWith(pattern.slice(0, -1));
-    return value === pattern;
+  return sensitiveAccessPathDecision({
+    path: input.path,
+    deniedRoots: deniedRootsFor(input.scope),
+    denyRegistryRawWrite: input.denyRegistryRawWrite,
+    ...(input.scope.registryRoot === undefined
+      ? {}
+      : { registryRoot: input.scope.registryRoot }),
+    reasons: {
+      authPathDenied: AccessDecisionReason.AuthPathDenied,
+      dockerSocketDenied: AccessDecisionReason.DockerSocketDenied,
+      gitInternalPathDenied: AccessDecisionReason.GitInternalPathDenied,
+      registryRawWriteDenied: AccessDecisionReason.RegistryRawWriteDenied,
+    },
   });
-}
-
-function parseRemoteTrackingBranch(
-  value: string,
-): { readonly remote: string; readonly branch: string } | null {
-  const slash = value.indexOf("/");
-  if (slash <= 0 || slash === value.length - 1) return null;
-  return {
-    remote: value.slice(0, slash),
-    branch: value.slice(slash + 1),
-  };
-}
-
-function uniqueStrings(values: readonly string[]): readonly string[] {
-  return [...new Set(values.filter((value) => value.trim().length > 0))];
 }

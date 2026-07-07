@@ -4,25 +4,25 @@ import type {
   ProviderTaskResult,
 } from "@vioxen/subscription-runtime/core";
 import {
+  AgentTaskProtocolError,
+  agentTaskProtocolVersion,
+  makeAgentTaskFailure,
   parseAgentTaskEvent,
   parseAgentTaskRequest,
   parseAgentTaskResult,
   providerTaskEventToAgentTaskEvent,
   providerTaskResultToAgentTaskResult,
-} from "./codec";
-import {
-  agentTaskProtocolVersion,
-  AgentTaskProtocolError,
-  makeAgentTaskFailure,
   type AgentTaskBridgeRunResult,
   type AgentTaskEvent,
-  type AgentTaskHandler,
-  type AgentTaskHandlerContext,
   type AgentTaskRequest,
   type AgentTaskResult,
+} from "./task-codec";
+import {
+  type AgentTaskHandler,
+  type AgentTaskHandlerContext,
   type AgentTaskRunFunction,
   type AgentTaskStreamFunction,
-} from "./types";
+} from "./task-codec/ports";
 
 export type AgentTaskBridgeOptions = {
   readonly abortSignal?: AbortSignal;

@@ -11,6 +11,7 @@ import {
   controllerSupervisorStatusIsTerminal,
   controllerSupervisorStatusRequiresControlDecision,
   controllerSupervisorTerminalStatusCanRetry,
+  doctorCodexGoalControlSurface,
 } from "../codex-goal-mcp-client";
 
 describe("codex goal MCP client supervisor helpers", () => {
@@ -98,7 +99,24 @@ describe("codex goal MCP client supervisor helpers", () => {
     expect(controllerSupervisorTerminalStatusCanRetry(
       ControllerSupervisorObservedStatus.Failed,
       { ok: true, run: { safeMessage: "Codex session is invalid." } },
-    )).toBe(false);
+    )).toBe(true);
+    expect(controllerSupervisorTerminalStatusCanRetry(
+      ControllerSupervisorObservedStatus.Failed,
+      { ok: true, run: { safeMessage: "Codex provider output was invalid." } },
+    )).toBe(true);
+    expect(controllerSupervisorTerminalStatusCanRetry(
+      ControllerSupervisorObservedStatus.Failed,
+      { ok: true, run: { safeMessage: "Codex runtime failed." } },
+    )).toBe(true);
+    expect(controllerSupervisorTerminalStatusCanRetry(
+      ControllerSupervisorObservedStatus.Failed,
+      {
+        ok: true,
+        session: {
+          safeMessage: "Codex app-server goal backend is temporarily blocked.",
+        },
+      },
+    )).toBe(true);
     expect(controllerSupervisorTerminalStatusCanRetry(
       ControllerSupervisorObservedStatus.Blocked,
       { ok: true, run: { safeMessage: "Codex quota or billing limit was reached." } },
@@ -196,5 +214,35 @@ describe("codex goal MCP client supervisor helpers", () => {
         { name: "account-a", capacityCooldownUntil: "2026-07-06T01:20:00.000Z" },
       ],
     }, Date.parse("2026-07-06T01:30:00.000Z"))).toBeUndefined();
+  });
+
+  it("doctors the residual MCP control and project-controller surface", async () => {
+    const doctor = await doctorCodexGoalControlSurface();
+
+    expect(doctor).toMatchObject({
+      ok: true,
+      mode: "sdk-in-process",
+      missingTools: [],
+    });
+    expect(doctor.requiredTools).toEqual(expect.arrayContaining([
+      "agent_run_events",
+      "codex_goal_reconcile_result",
+      "codex_goal_control_decision",
+      "codex_goal_control_reconcile",
+      "codex_goal_project_controller_launch_plan",
+      "codex_goal_project_controller_start",
+      "codex_goal_project_controller_status",
+      "codex_goal_project_controller_consume_guidance",
+      "codex_goal_project_controller_stop",
+      "codex_goal_project_controller_reconcile",
+      "codex_goal_project_open_integration_attempt",
+      "codex_goal_project_commit_approved_changes",
+      "codex_accounts_relogin_instructions",
+    ]));
+    expect(doctor.fallbackExamples).toEqual(expect.arrayContaining([
+      "subscription-runtime-codex-goal control-decision <jobId>",
+      "subscription-runtime-codex-goal recover-job <jobId> --confirm",
+      "subscription-runtime-codex-goal controller-supervise --controller-job-id <jobId>",
+    ]));
   });
 });

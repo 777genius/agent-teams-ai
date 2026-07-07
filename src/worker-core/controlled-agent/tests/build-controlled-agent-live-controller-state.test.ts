@@ -47,6 +47,20 @@ describe("buildControlledAgentLiveControllerState", () => {
       providerObservedStatus: "completed",
     });
     expect(completed.safeMessage).toContain("observed provider status is not running");
+
+    const unconfirmed = buildControlledAgentLiveControllerState({
+      session,
+      providerAttached: true,
+      currentOwner: owner,
+    });
+
+    expect(unconfirmed).toMatchObject({
+      providerRunnerAttached: true,
+      live: false,
+      ownerMatches: true,
+      persistedStatus: "running",
+    });
+    expect(unconfirmed.safeMessage).toContain("provider status has not confirmed running");
   });
 
   it("does not treat persisted state or mismatched owner as live ownership", () => {
@@ -78,6 +92,30 @@ describe("buildControlledAgentLiveControllerState", () => {
       live: false,
       ownerMatches: false,
     });
+  });
+
+  it("does not count stopped persisted runs as live even when the session still says running", () => {
+    const owner = processOwner("owner-1");
+    const stoppedRun = buildControlledAgentLiveControllerState({
+      session: controlledSession({
+        owner,
+        status: ControlledAgentRunStatus.Running,
+      }),
+      persistedRunStatus: ControlledAgentRunStatus.Stopped,
+      providerAttached: true,
+      currentOwner: owner,
+      providerObservedStatus: ControlledAgentRunStatus.Running,
+    });
+
+    expect(stoppedRun).toMatchObject({
+      providerRunnerAttached: true,
+      live: false,
+      ownerMatches: true,
+      persistedStatus: "running",
+      persistedRunStatus: "stopped",
+      providerObservedStatus: "running",
+    });
+    expect(stoppedRun.safeMessage).toContain("persisted controller run status is not running");
   });
 
   it("does not report live ownership when provider status probing fails", () => {

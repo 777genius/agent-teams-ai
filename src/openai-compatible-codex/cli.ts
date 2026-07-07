@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-import { CodexOpenAiBridgeBackend } from "./codex-backend.js";
-import { OpenAiBridgeChatCompletionUseCase } from "./chat-completion-use-case.js";
 import { loadOpenAiCompatibleCodexBridgeConfigFromEnv } from "./config.js";
-import { startOpenAiBridgeHttpServer } from "./http-server.js";
+import {
+  CodexOpenAiBridgeBackend,
+  OpenAiBridgeChatCompletionUseCase,
+  startOpenAiBridgeHttpServer,
+} from "./chat-completions/index.js";
 
 async function main(): Promise<void> {
   const command = process.argv[2] ?? "serve";

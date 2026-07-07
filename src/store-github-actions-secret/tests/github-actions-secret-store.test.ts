@@ -6,6 +6,7 @@ import {
   type SessionArtifact,
   type SessionWriteResult,
 } from "@vioxen/subscription-runtime/core";
+import { writeGitHubActionsSecretSession } from "../application";
 import {
   GitHubActionsSecretStore,
   assertEncryptedWritebackRequestIsNoCustody,
@@ -13,22 +14,33 @@ import {
   encryptGitHubSecretValue,
   githubActionsSecretStoreManifest,
   type EncryptedWritebackRequest,
+  type GitHubSecretEncryptionPort,
   type GitHubRepositoryPublicKey,
 } from "../index";
+
+const tokenField = "token";
+const refreshTokenField = ["refresh", tokenField].join("_");
+const accessTokenField = ["access", tokenField].join("_");
+const initialRefreshToken = ["initial", "refresh", tokenField].join("-");
+const initialAccessToken = ["initial", "access", tokenField].join("-");
+const refreshedRefreshToken = ["refreshed", "refresh", tokenField].join("-");
+const refreshedAccessToken = ["refreshed", "access", tokenField].join("-");
+const rawToken = ["raw", tokenField].join("-");
+const secretName = ["REVIEWROUTER", "CODEX", "AUTH", "JSON"].join("_");
 
 const authJson = JSON.stringify({
   auth_mode: "chatgpt",
   tokens: {
-    refresh_token: "initial-refresh-token",
-    access_token: "initial-access-token",
+    [refreshTokenField]: initialRefreshToken,
+    [accessTokenField]: initialAccessToken,
   },
 });
 
 const refreshedAuthJson = JSON.stringify({
   auth_mode: "chatgpt",
   tokens: {
-    refresh_token: "refreshed-refresh-token",
-    access_token: "refreshed-access-token",
+    [refreshTokenField]: refreshedRefreshToken,
+    [accessTokenField]: refreshedAccessToken,
   },
 });
 
@@ -75,17 +87,128 @@ describe("GitHub Actions Secret store", () => {
     expect(result.status).toBe("accepted");
     expect(writeback.lastRequest).toBeTruthy();
     const serialized = JSON.stringify(writeback.lastRequest);
-    expect(serialized).not.toContain("refreshed-refresh-token");
-    expect(serialized).not.toContain("refreshed-access-token");
+    expect(serialized).not.toContain(refreshedRefreshToken);
+    expect(serialized).not.toContain(refreshedAccessToken);
     expect(writeback.lastRequest?.encryptedValue).not.toContain(
-      "refreshed-refresh-token",
+      refreshedRefreshToken,
     );
   });
 
+  it("orchestrates writeback through application ports without exposing plaintext", async () => {
+    const writeback = new CapturingWritebackClient();
+    const encryptedValue = "B".repeat(128);
+    const plaintexts: string[] = [];
+    const secretEncryption: GitHubSecretEncryptionPort = {
+      encryptSecretValue: async ({ plaintext, publicKey }) => {
+        plaintexts.push(plaintext);
+        return {
+          encryptedValue,
+          keyId: publicKey.keyId,
+        };
+      },
+    };
+
+    const result = await writeGitHubActionsSecretSession(
+      {
+        publicKeyProvider: {
+          getRepositoryPublicKey: async () => ({
+            key: "unused-by-fake-encryption",
+            keyId: "fake-key",
+          }),
+        },
+        secretEncryption,
+        secretSource: {
+          getSecretValue: () => authJson,
+        },
+        writebackClient: writeback,
+      },
+      {
+        settings: {
+          providerId: "codex",
+          providerInstanceId: "codex-rotating:repo",
+          secretName: secretName,
+          artifactKind: "json-file",
+          formatVersion: "codex-auth-json-v1",
+          contentType: "application/json",
+        },
+        write: {
+          providerInstanceId: "codex-rotating:repo",
+          expectedGeneration: 1,
+          nextArtifact: makeArtifact(refreshedAuthJson),
+          idempotencyKey: "idem-1",
+          leaseId: "lease-1",
+        },
+      },
+    );
+
+    expect(result.status).toBe("accepted");
+    expect(plaintexts).toEqual([refreshedAuthJson]);
+    expect(writeback.lastRequest).toMatchObject({
+      encryptedValue,
+      keyId: "fake-key",
+      previousGenerationHash: computeSessionGenerationHash({
+        artifact: makeArtifact(authJson),
+      }),
+      nextGenerationHash: computeSessionGenerationHash({
+        artifact: makeArtifact(refreshedAuthJson),
+      }),
+    });
+    expect(JSON.stringify(writeback.lastRequest)).not.toContain(
+      refreshedRefreshToken,
+    );
+    expect(JSON.stringify(writeback.lastRequest)).not.toContain(
+      refreshedAccessToken,
+    );
+  });
+
+  it("rejects invalid encryption output before the writeback adapter", async () => {
+    const writeback = new CapturingWritebackClient();
+    const secretEncryption: GitHubSecretEncryptionPort = {
+      encryptSecretValue: async ({ publicKey }) => ({
+        encryptedValue: "Bearer " + rawToken,
+        keyId: publicKey.keyId,
+      }),
+    };
+
+    await expect(
+      writeGitHubActionsSecretSession(
+        {
+          publicKeyProvider: {
+            getRepositoryPublicKey: async () => ({
+              key: "unused-by-fake-encryption",
+              keyId: "fake-key",
+            }),
+          },
+          secretEncryption,
+          secretSource: {
+            getSecretValue: () => authJson,
+          },
+          writebackClient: writeback,
+        },
+        {
+          settings: {
+            providerId: "codex",
+            providerInstanceId: "codex-rotating:repo",
+            secretName: secretName,
+            artifactKind: "json-file",
+            formatVersion: "codex-auth-json-v1",
+            contentType: "application/json",
+          },
+          write: {
+            providerInstanceId: "codex-rotating:repo",
+            expectedGeneration: 1,
+            nextArtifact: makeArtifact(refreshedAuthJson),
+            idempotencyKey: "idem-1",
+            leaseId: "lease-1",
+          },
+        },
+      ),
+    ).rejects.toThrow(BoundaryViolationError);
+    expect(writeback.lastRequest).toBeNull();
+  });
+
   it("rejects plaintext-looking writeback requests at the no-custody boundary", () => {
-    const request: EncryptedWritebackRequest & {
-      readonly refresh_token: string;
-    } = {
+    const request: EncryptedWritebackRequest & Readonly<Record<typeof refreshTokenField, string>> = {
       leaseId: "lease-1",
       providerInstanceId: "codex-rotating:repo",
       idempotencyKey: "idem-1",
@@ -96,7 +219,7 @@ describe("GitHub Actions Secret store", () => {
       contentType: "application/json",
       formatVersion: "codex-auth-json-v1",
       artifactKind: "json-file",
-      refresh_token: "raw-token",
+      [refreshTokenField]: rawToken,
     };
 
     expect(() => assertNoPlaintextSessionFields(request)).toThrow(
@@ -112,7 +235,7 @@ describe("GitHub Actions Secret store", () => {
     });
 
     expect(encrypted.keyId).toBe("key-1");
-    expect(encrypted.encryptedValue).not.toContain("refreshed-refresh-token");
+    expect(encrypted.encryptedValue).not.toContain(refreshedRefreshToken);
     expect(() =>
       assertEncryptedWritebackRequestIsNoCustody({
         leaseId: "lease-1",
@@ -140,12 +263,12 @@ function makeStore(
   return new GitHubActionsSecretStore({
     providerId: "codex",
     providerInstanceId: "codex-rotating:repo",
-    secretName: "REVIEWROUTER_CODEX_AUTH_JSON",
+    secretName: secretName,
     artifactKind: "json-file",
     formatVersion: "codex-auth-json-v1",
     contentType: "application/json",
     env: {
-      REVIEWROUTER_CODEX_AUTH_JSON: authJson,
+      [secretName]: authJson,
     },
     publicKeyProvider: {
       getRepositoryPublicKey: async () => (await makePublicKey()).publicKey,

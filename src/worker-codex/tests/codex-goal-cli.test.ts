@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { LocalFileRunEventStore } from "@vioxen/subscription-runtime/store-local-file";
 import {
@@ -494,6 +495,18 @@ describe("codex goal cli", () => {
     });
   });
 
+  it("keeps MCP shortcut parsing out of runtime ops adapters", async () => {
+    const shortcutSource = await readFile(
+      join(dirname(fileURLToPath(import.meta.url)), "..", "codex-goal-cli-shortcuts.ts"),
+      "utf8",
+    );
+
+    expect(shortcutSource).not.toContain("./codex-goal-ops");
+    expect(shortcutSource).not.toContain("./codex-goal-runner");
+    expect(shortcutSource).not.toContain("./codex-goal-mcp-client");
+    expect(shortcutSource).not.toContain("node:child_process");
+  });
+
   it("builds shortcut commands for common agent operations", () => {
     const overview = parseCodexGoalCliArgs([
       "overview",
@@ -966,6 +979,62 @@ describe("codex goal cli", () => {
     expect(JSON.parse(relogin.argsJson ?? "{}")).toEqual({
       jobId: "job-a",
       account: "account-c",
+    });
+  });
+
+  it("keeps agent shortcut aliases mapped at the CLI boundary", () => {
+    const runWatch = parseCodexGoalCliArgs([
+      "agent-run-watch",
+      "run-a",
+      "--provider-kind",
+      "agent-task",
+      "--limit",
+      "4",
+    ], fakeIo());
+    expect(runWatch).toMatchObject({
+      kind: "mcp-tool",
+      name: "agent_run_watch",
+    });
+    if (runWatch.kind !== "mcp-tool") return;
+    expect(JSON.parse(runWatch.argsJson ?? "{}")).toEqual({
+      providerKind: "agent-task",
+      jobId: "run-a",
+      limit: 4,
+    });
+
+    const runEvents = parseCodexGoalCliArgs([
+      "run-events",
+      "run-a",
+      "--provider-kind",
+      "local",
+      "--type",
+      "run.completed",
+    ], fakeIo());
+    expect(runEvents).toMatchObject({
+      kind: "mcp-tool",
+      name: "agent_run_events",
+    });
+    if (runEvents.kind !== "mcp-tool") return;
+    expect(JSON.parse(runEvents.argsJson ?? "{}")).toEqual({
+      providerKind: "local",
+      jobId: "run-a",
+      type: "run.completed",
+    });
+
+    const runState = parseCodexGoalCliArgs([
+      "run-state",
+      "run-a",
+      "--provider-kind",
+      "claude",
+    ], fakeIo());
+    expect(runState).toMatchObject({
+      kind: "mcp-tool",
+      name: "agent_run_state",
+    });
+    if (runState.kind !== "mcp-tool") return;
+    expect(JSON.parse(runState.argsJson ?? "{}")).toEqual({
+      providerKind: "claude",
+      jobId: "run-a",
     });
   });
 

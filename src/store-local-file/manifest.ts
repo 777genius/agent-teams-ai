@@ -1,6 +1,10 @@
 import type { RuntimeAdapterManifest } from "@vioxen/subscription-runtime/core";
-import { localFileLeaseStoreCapabilities } from "./local-file-lease-store";
-import { localEncryptedFileStoreCapabilities } from "./local-encrypted-file-store";
+import {
+  localEncryptedFileStoreCapabilities,
+} from "./session-custody/domain/local-encrypted-file-store-policy";
+import {
+  localFileLeaseStoreCapabilities,
+} from "./session-leases/domain/local-file-lease-store-policy";
 
 export const localEncryptedFileStoreManifest = {
   adapterId: "store.local-encrypted-file",

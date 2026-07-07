@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import {
   ControlledAgentEventType,
   ControlledAgentRunStatus,
+  controlledAgentStatusAllowsLiveController,
+  isControlledAgentTerminalStatus,
 } from "../domain/controlled-agent";
 import type {
   ControlledAgentRun,
@@ -20,6 +22,7 @@ export enum ReconcileControlledAgentRunReason {
   ProviderStillRunning = "provider_still_running",
   ProviderTerminalStatus = "provider_terminal_status",
   ProviderStatusFailed = "provider_status_failed",
+  ProviderCleanupFailed = "provider_cleanup_failed",
 }
 
 export type ReconcileControlledAgentRunResult =
@@ -36,7 +39,8 @@ export type ReconcileControlledAgentRunResult =
       readonly reason:
         | ReconcileControlledAgentRunReason.SessionMissing
         | ReconcileControlledAgentRunReason.RunMissing
-        | ReconcileControlledAgentRunReason.ProviderStatusFailed;
+        | ReconcileControlledAgentRunReason.ProviderStatusFailed
+        | ReconcileControlledAgentRunReason.ProviderCleanupFailed;
       readonly session?: ControlledAgentSession;
       readonly run?: ControlledAgentRun;
       readonly safeMessage?: string;
@@ -85,7 +89,11 @@ export class ReconcileControlledAgentRunUseCase {
       };
     }
 
-    if (observed.status === ControlledAgentRunStatus.Running) {
+    const persistedStateAllowsLive =
+      controlledAgentStatusAllowsLiveController(session.status) &&
+      controlledAgentStatusAllowsLiveController(run.status);
+
+    if (observed.status === ControlledAgentRunStatus.Running && persistedStateAllowsLive) {
       await this.appendEvent(session, run, ControlledAgentEventType.RunStatusObserved, {
         status: observed.status,
         providerRunId: observed.providerRunId ?? null,
@@ -99,19 +107,61 @@ export class ReconcileControlledAgentRunUseCase {
     }
 
     const now = observed.observedAt ?? (this.deps.clock?.now() ?? new Date()).toISOString();
+    const reconcileStatus = observed.status === ControlledAgentRunStatus.Running
+      ? terminalPersistedStatus(session, run) ?? ControlledAgentRunStatus.Failed
+      : observed.status;
+    if (
+      isControlledAgentTerminalStatus(observed.status) ||
+      observed.status === ControlledAgentRunStatus.Running
+    ) {
+      try {
+        const cleanup = await this.deps.provider.stop({
+          session,
+          run,
+          reason: observed.status === ControlledAgentRunStatus.Running
+            ? `controlled_agent_reconcile_persisted_terminal:${reconcileStatus}`
+            : `controlled_agent_reconcile_terminal:${observed.status}`,
+        });
+        if (
+          observed.providerAttached === true &&
+          cleanup.status === ControlledAgentRunStatus.Failed
+        ) {
+          return {
+            ok: false,
+            reason: ReconcileControlledAgentRunReason.ProviderCleanupFailed,
+            session,
+            run,
+            safeMessage: cleanup.safeMessage ??
+              "Provider reported failed cleanup for an attached controlled-agent run.",
+          };
+        }
+      } catch (error) {
+        return {
+          ok: false,
+          reason: ReconcileControlledAgentRunReason.ProviderCleanupFailed,
+          session,
+          run,
+          safeMessage: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
+    const safeMessage = safeMessageForReconciledRun({
+      observedSafeMessage: observed.safeMessage,
+      existingSafeMessage: run.safeMessage,
+      observedStatus: observed.status,
+      reconcileStatus,
+    });
     const reconciledRun: ControlledAgentRun = {
       ...run,
-      status: observed.status,
-      ...(observed.safeMessage === undefined ? {} : {
-        safeMessage: observed.safeMessage,
-      }),
-      ...(isTerminalStatus(observed.status) ? { stoppedAt: now } : {}),
+      status: reconcileStatus,
+      ...(safeMessage === undefined ? {} : { safeMessage }),
+      ...(isControlledAgentTerminalStatus(reconcileStatus) ? { stoppedAt: now } : {}),
       updatedAt: now,
     };
     const { activeRunId: _activeRunId, ...sessionWithoutActiveRun } = session;
     const reconciledSession: ControlledAgentSession = {
       ...sessionWithoutActiveRun,
-      status: observed.status,
+      status: reconcileStatus,
       updatedAt: now,
     };
     await this.deps.stateStore.saveRun(reconciledRun);
@@ -121,7 +171,7 @@ export class ReconcileControlledAgentRunUseCase {
       reconciledRun,
       ControlledAgentEventType.RunReconciled,
       {
-        status: observed.status,
+        status: reconcileStatus,
         providerRunId: observed.providerRunId ?? null,
       },
     );
@@ -159,10 +209,25 @@ export async function reconcileControlledAgentRun(
   return new ReconcileControlledAgentRunUseCase(deps).reconcile(sessionId);
 }
 
-function isTerminalStatus(status: ControlledAgentRunStatus): boolean {
-  return status === ControlledAgentRunStatus.Completed ||
-    status === ControlledAgentRunStatus.Stopped ||
-    status === ControlledAgentRunStatus.Blocked ||
-    status === ControlledAgentRunStatus.Failed ||
-    status === ControlledAgentRunStatus.Stale;
+function terminalPersistedStatus(
+  session: ControlledAgentSession,
+  run: ControlledAgentRun,
+): ControlledAgentRunStatus | undefined {
+  if (isControlledAgentTerminalStatus(run.status)) return run.status;
+  if (isControlledAgentTerminalStatus(session.status)) return session.status;
+  return undefined;
+}
+
+function safeMessageForReconciledRun(input: {
+  readonly observedSafeMessage?: string | undefined;
+  readonly existingSafeMessage?: string | undefined;
+  readonly observedStatus: ControlledAgentRunStatus;
+  readonly reconcileStatus: ControlledAgentRunStatus;
+}): string | undefined {
+  if (input.observedSafeMessage !== undefined) return input.observedSafeMessage;
+  if (input.existingSafeMessage !== undefined) return input.existingSafeMessage;
+  if (input.observedStatus === ControlledAgentRunStatus.Running) {
+    return `Controlled-agent persisted state is ${input.reconcileStatus}; attached provider run was stopped during reconcile.`;
+  }
+  return undefined;
 }

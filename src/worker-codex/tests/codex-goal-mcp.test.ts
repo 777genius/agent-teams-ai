@@ -174,6 +174,66 @@ describe("codex goal MCP server", () => {
     }
   });
 
+  it("registers the project integration tool surface from its feature module", async () => {
+    const server = createCodexGoalMcpServer();
+    const client = new Client({
+      name: "subscription-runtime-test",
+      version: "0.0.0",
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+    try {
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+
+      const toolResult = await client.listTools();
+      const tools = (toolResult as {
+        readonly tools?: readonly {
+          readonly name?: string;
+          readonly inputSchema?: {
+            readonly properties?: Record<string, unknown>;
+          };
+        }[];
+      }).tools ?? [];
+      const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
+
+      for (const name of [
+        "codex_goal_project_open_integration_attempt",
+        "codex_goal_project_apply_worker_output",
+        "codex_goal_project_run_required_checks",
+        "codex_goal_project_commit_approved_changes",
+        "codex_goal_project_push_approved_commit",
+        "codex_goal_project_reject_integration_attempt",
+      ]) {
+        expect(toolsByName.has(name)).toBe(true);
+      }
+
+      expect(
+        toolsByName.get("codex_goal_project_open_integration_attempt")
+          ?.inputSchema?.properties,
+      ).toMatchObject({
+        registryRootDir: expect.any(Object),
+        controllerJobId: expect.any(Object),
+        requiredChecks: expect.any(Object),
+        confirmOpen: expect.any(Object),
+      });
+      expect(
+        toolsByName.get("codex_goal_project_commit_approved_changes")
+          ?.inputSchema?.properties,
+      ).toMatchObject({
+        message: expect.any(Object),
+        allowedPathPrefixes: expect.any(Object),
+        requiredCheckIds: expect.any(Object),
+        confirmCommit: expect.any(Object),
+      });
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
   it("flags alive heartbeat-only workers with no output for manual review", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-heartbeat-only-"));
     const promptPath = join(root, "prompt.md");
@@ -1500,7 +1560,18 @@ describe("codex goal MCP server", () => {
       await mkdir(sourceWorkspacePath, { recursive: true });
       await gitInitRepository(sourceWorkspacePath);
       await writeFile(join(sourceWorkspacePath, "README.md"), "base\n");
-      await git(sourceWorkspacePath, ["add", "README.md"]);
+      await writeFile(join(sourceWorkspacePath, "package.json"), JSON.stringify({
+        packageManager: "npm@11.0.0",
+        scripts: {
+          test: "vitest run",
+          lint: "eslint .",
+        },
+      }));
+      await writeFile(join(sourceWorkspacePath, "package-lock.json"), JSON.stringify({
+        lockfileVersion: 3,
+        packages: {},
+      }));
+      await git(sourceWorkspacePath, ["add", "README.md", "package.json", "package-lock.json"]);
       await git(sourceWorkspacePath, ["commit", "-m", "test: base"]);
       await mkdir(childWorkspace, { recursive: true });
       await gitInitRepository(childWorkspace);

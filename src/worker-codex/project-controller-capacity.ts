@@ -3,6 +3,14 @@ import { join } from "node:path";
 import { LocalFileWorkerAccountCapacityStore } from "@vioxen/subscription-runtime/store-local-file";
 import type { WorkerRuntimeDemand } from "@vioxen/subscription-runtime/worker-core";
 
+export function isProjectControllerProviderSessionInvalid(
+  safeMessage: string | undefined,
+): boolean {
+  return /\b(?:session is invalid|provider session invalid|needs reconnect|provider account session is unavailable)\b/i.test(
+    safeMessage ?? "",
+  );
+}
+
 export type ProjectControllerRuntimeConfig = {
   readonly model?: string;
   readonly reasoningEffort?: string;

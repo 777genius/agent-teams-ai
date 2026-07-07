@@ -191,6 +191,26 @@ describe("SelectRuntimeAccountUseCase", () => {
     });
   });
 
+  it("normalizes the last selected account before rotating", async () => {
+    const now = new Date("2026-06-01T00:00:00.000Z");
+
+    await expect(
+      new SelectRuntimeAccountUseCase().execute({
+        allowedAccounts: ["account-a", "account-b", "account-c"],
+        demand,
+        ownerId: "worker-1",
+        leaseTtlMs: 60_000,
+        capacityStore: new InMemoryWorkerAccountCapacityStore(),
+        leaseStore: new InMemoryWorkerAccountLeaseStore(),
+        now,
+        lastSelectedAccountId: " account-a ",
+      }),
+    ).resolves.toMatchObject({
+      type: "selected",
+      accountId: "account-b",
+    });
+  });
+
   it("ignores expired leases and selects the released account", async () => {
     const now = new Date("2026-06-01T00:02:00.000Z");
     const leaseStore = new InMemoryWorkerAccountLeaseStore();
@@ -260,6 +280,45 @@ describe("SelectRuntimeAccountUseCase", () => {
     ).resolves.toMatchObject({
       type: "selected",
       accountId: "account-b",
+    });
+  });
+
+  it("normalizes account ids and runtime demand at the lease boundary", async () => {
+    const now = new Date("2026-06-01T00:00:00.000Z");
+    const leaseStore = new InMemoryWorkerAccountLeaseStore();
+
+    const first = await leaseStore.acquire({
+      accountId: " account-a ",
+      demand: {
+        provider: " codex ",
+        model: " gpt-5.5 ",
+        reasoningEffort: " xhigh ",
+        serviceTier: " fast ",
+      },
+      ownerId: " worker-1 ",
+      ttlMs: 60_000,
+      now,
+    });
+    if (first.status !== "granted") throw new Error("lease_not_granted");
+
+    expect(first.lease).toMatchObject({
+      leaseId: "worker-1:1",
+      accountId: "account-a",
+      demand,
+      ownerId: "worker-1",
+    });
+    await expect(
+      leaseStore.acquire({
+        accountId: "account-a",
+        demand,
+        ownerId: "worker-2",
+        ttlMs: 60_000,
+        now,
+      }),
+    ).resolves.toMatchObject({
+      status: "denied",
+      reason: "leased",
+      currentLeaseExpiresAt: new Date("2026-06-01T00:01:00.000Z"),
     });
   });
 

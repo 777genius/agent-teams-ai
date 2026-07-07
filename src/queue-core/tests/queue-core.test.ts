@@ -1,19 +1,38 @@
 import { describe, expect, it } from "vitest";
-import { BoundedSubscriptionWorkerPool } from "@vioxen/subscription-runtime/worker-core";
 import {
+  buildSubscriptionQueueTaskEnvelope,
   InMemorySubscriptionTaskQueue,
+  QueueProcessorStateKind,
   SubscriptionQueueProcessor,
+  SubscriptionQueueEnvelopeKind,
+  SubscriptionQueueEnqueueStatus,
+  SubscriptionQueueError,
+  SubscriptionQueueErrorCodeKind,
+  SubscriptionQueueFailureStatus,
+  SubscriptionTaskStatusKind,
+  assertSubscriptionQueueTaskEnvelope,
+  assertRetryPolicy,
   computeBackoffDelayMs,
   type SubscriptionQueueClaim,
+  type SubscriptionQueueWorkerPoolPort,
+  type SubscriptionQueueWorkerRunOptions,
   type SubscriptionTaskQueuePort,
 } from "../index";
-import type {
-  SubscriptionWorker,
-  SubscriptionWorkerRunOptions,
-  SubscriptionWorkerState,
-} from "@vioxen/subscription-runtime/worker-core";
 
 describe("subscription queue core", () => {
+  it("keeps queue discriminators string-compatible through exported enums", () => {
+    expect(SubscriptionTaskStatusKind.Queued).toBe("queued");
+    expect(SubscriptionQueueEnqueueStatus.Accepted).toBe("accepted");
+    expect(SubscriptionQueueFailureStatus.RetryScheduled).toBe(
+      "retry_scheduled",
+    );
+    expect(QueueProcessorStateKind.Stopped).toBe("stopped");
+    expect(SubscriptionQueueEnvelopeKind.Task).toBe("subscription_queue_task");
+    expect(SubscriptionQueueErrorCodeKind.Duplicate).toBe(
+      "subscription_queue_duplicate",
+    );
+  });
+
   it("deduplicates enqueue by idempotency key", async () => {
     const queue = new InMemorySubscriptionTaskQueue<string, string>({
       queueId: "test",
@@ -38,8 +57,16 @@ describe("subscription queue core", () => {
     const queue = new InMemorySubscriptionTaskQueue<string, string>({
       queueId: "test",
     });
-    await queue.enqueue({ taskId: "task-1", job: "job", maxAttempts: 2 });
-    const claim = await queue.claim({ leaseTtlMs: 60_000 });
+    await queue.enqueue({
+      taskId: "task-1",
+      job: "job",
+      maxAttempts: 2,
+      runAfter: new Date("2026-05-31T00:00:00.000Z"),
+    });
+    const claim = await queue.claim({
+      leaseTtlMs: 60_000,
+      now: new Date("2026-05-31T00:00:00.000Z"),
+    });
     expect(claim?.task.taskId).toBe("task-1");
     if (!claim) throw new Error("missing_claim");
 
@@ -75,18 +102,93 @@ describe("subscription queue core", () => {
     await expect(queue.size({ includeDelayed: true })).resolves.toBe(0);
   });
 
-  it("processes queued work through a bounded worker pool", async () => {
+  it("rejects invalid enqueue input before mutating in-memory state", async () => {
+    const queue = new InMemorySubscriptionTaskQueue<string, string>({
+      queueId: "validation",
+    });
+
+    await expect(
+      queue.enqueue({
+        taskId: " ",
+        job: "job",
+      }),
+    ).rejects.toMatchObject({
+      code: "subscription_queue_invalid_input",
+    });
+    await expect(queue.size({ includeDelayed: true })).resolves.toBe(0);
+  });
+
+  it("wraps queue tasks in a validated domain envelope", async () => {
+    const queue = new InMemorySubscriptionTaskQueue<string, string>({
+      queueId: "envelope",
+    });
+    await queue.enqueue({
+      taskId: "task-1",
+      job: "job",
+      idempotencyKey: "idem-1",
+      metadata: { source: "test" },
+    });
+    const claim = await queue.claim({ leaseTtlMs: 60_000 });
+    if (!claim) throw new Error("missing_claim");
+
+    const envelope = buildSubscriptionQueueTaskEnvelope({
+      queueId: queue.queueId,
+      task: claim.task,
+    });
+
+    expect(envelope).toMatchObject({
+      kind: "subscription_queue_task",
+      version: 1,
+      queueId: "envelope",
+      task: {
+        taskId: "task-1",
+        idempotencyKey: "idem-1",
+        metadata: { source: "test" },
+      },
+    });
+    expect(() => assertSubscriptionQueueTaskEnvelope(envelope)).not.toThrow();
+  });
+
+  it("reclaims expired in-memory leases without consuming attempts", async () => {
+    const queue = new InMemorySubscriptionTaskQueue<string, string>({
+      queueId: "lease-expiry",
+    });
+    await queue.enqueue({
+      taskId: "task-1",
+      job: "job",
+      maxAttempts: 2,
+      runAfter: new Date("2026-05-31T00:00:00.000Z"),
+    });
+
+    const first = await queue.claim({
+      leaseTtlMs: 10,
+      now: new Date("2026-05-31T00:00:00.000Z"),
+    });
+    if (!first) throw new Error("missing_first_claim");
+
+    await expect(
+      queue.claim({
+        leaseTtlMs: 10,
+        now: new Date("2026-05-31T00:00:00.009Z"),
+      }),
+    ).resolves.toBeNull();
+
+    const reclaimed = await queue.claim({
+      leaseTtlMs: 10,
+      now: new Date("2026-05-31T00:00:00.010Z"),
+    });
+    expect(reclaimed?.task.taskId).toBe("task-1");
+    expect(reclaimed?.task.attempt).toBe(1);
+    expect(reclaimed?.leaseId).not.toBe(first.leaseId);
+  });
+
+  it("processes queued work through the processor worker-pool port", async () => {
     const queue = new InMemorySubscriptionTaskQueue<string, string>({
       queueId: "test",
     });
     await queue.enqueue({ job: "a" });
     await queue.enqueue({ job: "b" });
-    const pool = new BoundedSubscriptionWorkerPool<string, string>({
-      poolId: "pool",
-      slots: 2,
-      workerFactory: ({ workerId }) => new EchoWorker(workerId),
-    });
-    await pool.start();
+    const pool = new EchoWorkerPool();
     const processor = new SubscriptionQueueProcessor({
       queue,
       workerPool: pool,
@@ -98,7 +200,7 @@ describe("subscription queue core", () => {
       expect(processor.stats().completed).toBe(2);
     });
     await processor.stop();
-    await pool.dispose();
+    expect(pool.runs).toEqual(["a", "b"]);
   });
 
   it("drains in-flight work on stop without consuming attempts", async () => {
@@ -106,13 +208,7 @@ describe("subscription queue core", () => {
       queueId: "graceful-stop",
     });
     await queue.enqueue({ taskId: "task-1", job: "job", maxAttempts: 1 });
-    const worker = new BlockingWorker("blocking");
-    const pool = new BoundedSubscriptionWorkerPool<string, string>({
-      poolId: "pool",
-      slots: 1,
-      workerFactory: () => worker,
-    });
-    await pool.start();
+    const pool = new BlockingWorkerPool();
     const processor = new SubscriptionQueueProcessor({
       queue,
       workerPool: pool,
@@ -120,7 +216,7 @@ describe("subscription queue core", () => {
     });
     processor.start();
 
-    await worker.started.promise;
+    await pool.started.promise;
     const stopping = processor.stop();
     await delay(20);
     expect(processor.stats()).toMatchObject({
@@ -129,9 +225,8 @@ describe("subscription queue core", () => {
       failed: 0,
     });
 
-    worker.resolve("ok:job");
+    pool.resolve("ok:job");
     await stopping;
-    await pool.dispose();
 
     expect(processor.stats()).toMatchObject({
       state: "stopped",
@@ -148,13 +243,7 @@ describe("subscription queue core", () => {
       queueId: "grace-timeout",
     });
     await queue.enqueue({ taskId: "task-1", job: "job", maxAttempts: 2 });
-    const worker = new BlockingWorker("blocking");
-    const pool = new BoundedSubscriptionWorkerPool<string, string>({
-      poolId: "pool",
-      slots: 1,
-      workerFactory: () => worker,
-    });
-    await pool.start();
+    const pool = new BlockingWorkerPool();
     const processor = new SubscriptionQueueProcessor({
       queue,
       workerPool: pool,
@@ -169,9 +258,8 @@ describe("subscription queue core", () => {
     });
     processor.start();
 
-    await worker.started.promise;
+    await pool.started.promise;
     await processor.stop();
-    await pool.dispose();
 
     expect(processor.stats()).toMatchObject({
       state: "stopped",
@@ -181,6 +269,41 @@ describe("subscription queue core", () => {
       deadLettered: 0,
     });
     await expect(queue.size({ includeDelayed: true })).resolves.toBe(1);
+  });
+
+  it("passes idempotency and abort context through the queue processor port", async () => {
+    const queue = new InMemorySubscriptionTaskQueue<string, string>({
+      queueId: "processor-port",
+    });
+    await queue.enqueue({
+      taskId: "task-1",
+      job: "job",
+      idempotencyKey: "idem-1",
+    });
+    const runOptions: unknown[] = [];
+    const processor = new SubscriptionQueueProcessor<string, string>({
+      queue,
+      workerPool: {
+        stats: () => ({}),
+        run: async (_job, options) => {
+          runOptions.push(options);
+          return "ok";
+        },
+      },
+      idleDelayMs: 5,
+    });
+    processor.start();
+
+    await eventually(async () => {
+      expect(processor.stats().completed).toBe(1);
+    });
+    await processor.stop();
+
+    expect(runOptions).toHaveLength(1);
+    expect(runOptions[0]).toMatchObject({ idempotencyKey: "idem-1" });
+    expect(
+      (runOptions[0] as { abortSignal?: AbortSignal }).abortSignal?.aborted,
+    ).toBe(false);
   });
 
   it("releases claims that resolve after stop without starting new work", async () => {
@@ -238,6 +361,16 @@ describe("subscription queue core", () => {
       }),
     ).toBe(250);
   });
+
+  it("rejects invalid retry policies with a queue-domain error", () => {
+    expect(() =>
+      assertRetryPolicy({
+        maxAttempts: 0,
+        baseDelayMs: 100,
+        maxDelayMs: 100,
+      }),
+    ).toThrowError(SubscriptionQueueError);
+  });
 });
 
 class DeferredClaimQueue implements SubscriptionTaskQueuePort<string, string> {
@@ -289,54 +422,31 @@ class DeferredClaimQueue implements SubscriptionTaskQueuePort<string, string> {
   }
 }
 
-class EchoWorker implements SubscriptionWorker<string, string> {
-  state = "created" as const;
-
-  constructor(readonly workerId: string) {}
-
-  async start(): Promise<void> {}
-
-  async prewarm() {
-    return { status: "ready" as const, warmedAt: new Date(), warnings: [] };
-  }
+class EchoWorkerPool implements SubscriptionQueueWorkerPoolPort<string, string> {
+  readonly runs: string[] = [];
 
   async run(job: string): Promise<string> {
+    this.runs.push(job);
     return `ok:${job}`;
   }
 
-  async health() {
-    return {
-      status: "healthy" as const,
-      state: this.state,
-      checkedAt: new Date(),
-      warnings: [],
-    };
+  stats(): unknown {
+    return { poolId: "echo", completed: this.runs.length };
   }
-
-  async dispose(): Promise<void> {}
 }
 
-class BlockingWorker implements SubscriptionWorker<string, string> {
-  state: SubscriptionWorkerState = "created";
+class BlockingWorkerPool
+  implements SubscriptionQueueWorkerPoolPort<string, string>
+{
   readonly started = deferred<void>();
   private finish: {
     readonly resolve: (result: string) => void;
     readonly reject: (error: unknown) => void;
   } | null = null;
 
-  constructor(readonly workerId: string) {}
-
-  async start(): Promise<void> {
-    this.state = "started";
-  }
-
-  async prewarm() {
-    return { status: "ready" as const, warmedAt: new Date(), warnings: [] };
-  }
-
   async run(
     job: string,
-    options: SubscriptionWorkerRunOptions = {},
+    options: SubscriptionQueueWorkerRunOptions = {},
   ): Promise<string> {
     this.started.resolve();
     return new Promise<string>((resolve, reject) => {
@@ -360,17 +470,8 @@ class BlockingWorker implements SubscriptionWorker<string, string> {
     this.finish?.resolve(result);
   }
 
-  async health() {
-    return {
-      status: "healthy" as const,
-      state: this.state,
-      checkedAt: new Date(),
-      warnings: [],
-    };
-  }
-
-  async dispose(): Promise<void> {
-    this.state = "disposed";
+  stats(): unknown {
+    return { poolId: "blocking" };
   }
 }
 

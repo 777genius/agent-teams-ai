@@ -101,6 +101,17 @@ describe("decideRunObservation", () => {
     });
   });
 
+  it("flags stopped runs that still report running progress", () => {
+    expect(decideRunObservation({
+      status: "stopped",
+      liveness: "dead",
+      progress: { status: "running" },
+    })).toMatchObject({
+      kind: "unsafe_state_mismatch",
+      reason: "stopped_run_with_running_progress",
+    });
+  });
+
   it("keeps fresh alive workers in watch-only mode", () => {
     expect(decideRunObservation({
       status: "running",

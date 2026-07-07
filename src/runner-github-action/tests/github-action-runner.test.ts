@@ -21,11 +21,8 @@ describe("GitHub Action runner adapter", () => {
     const runner = new GitHubActionRunner({ redactor });
 
     const result = await runner.run({
-      command: execPath,
-      args: [
-        "-e",
-        "process.stdout.write('hello super-secret access_token=abc123')",
-      ],
+      command: "/bin/sh",
+      args: ["-c", "printf '%s' 'hello super-secret access_token=abc123'"],
       cwd: process.cwd(),
       env: { PATH: process.env.PATH ?? "" },
       timeoutMs: 30_000,
@@ -80,15 +77,8 @@ describe("GitHub Action runner adapter", () => {
 
     await expect(
       runner.run({
-        command: execPath,
-        args: [
-          "-e",
-          [
-            "process.stdout.write('chunk');",
-            "process.on('SIGTERM', () => {});",
-            "setInterval(() => {}, 1000);",
-          ].join(" "),
-        ],
+        command: "/bin/sh",
+        args: ["-c", "printf '%s' 'chunk'; exec sleep 30"],
         cwd: process.cwd(),
         env: { PATH: process.env.PATH ?? "" },
         timeoutMs: 30_000,
@@ -107,15 +97,8 @@ describe("GitHub Action runner adapter", () => {
 
     await expect(
       runner.run({
-        command: execPath,
-        args: [
-          "-e",
-          [
-            "process.stderr.write('chunk');",
-            "process.on('SIGTERM', () => {});",
-            "setInterval(() => {}, 1000);",
-          ].join(" "),
-        ],
+        command: "/bin/sh",
+        args: ["-c", "printf '%s' 'chunk' >&2; exec sleep 30"],
         cwd: process.cwd(),
         env: { PATH: process.env.PATH ?? "" },
         timeoutMs: 30_000,

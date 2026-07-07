@@ -4,6 +4,8 @@ import { LaunchPlanStatus } from "../../access-control";
 import {
   ControlledAgentEventType,
   ControlledAgentRunStatus,
+  controlledAgentStatusAllowsLiveController,
+  isControlledAgentTerminalStatus,
 } from "../domain/controlled-agent";
 import type {
   ControlledAgentLaunchPlan,
@@ -52,9 +54,12 @@ export type StartControlledAgentRunResult =
     }
   | {
       readonly ok: false;
-      readonly reason: StartControlledAgentRunBlockReason.ExistingActiveRun;
+      readonly reason:
+        | StartControlledAgentRunBlockReason.ExistingActiveRun
+        | StartControlledAgentRunBlockReason.ExistingActiveRunCleanupFailed;
       readonly session: ControlledAgentSession;
       readonly run: ControlledAgentRun;
+      readonly safeMessage?: string;
     }
   | {
       readonly ok: false;
@@ -66,6 +71,7 @@ export type StartControlledAgentRunResult =
 
 export enum StartControlledAgentRunBlockReason {
   ExistingActiveRun = "existing_active_run",
+  ExistingActiveRunCleanupFailed = "existing_active_run_cleanup_failed",
 }
 
 export class StartControlledAgentRunUseCase {
@@ -85,7 +91,10 @@ export class StartControlledAgentRunUseCase {
       existingRun &&
       existingRun.status === ControlledAgentRunStatus.Running
     ) {
-      if (await this.existingRunOwnerIsLive(existingRun)) {
+      if (
+        controlledAgentStatusAllowsLiveController(existingSession.status) &&
+        await this.existingRunOwnerIsLive(existingRun)
+      ) {
         return {
           ok: false,
           reason: StartControlledAgentRunBlockReason.ExistingActiveRun,
@@ -97,6 +106,24 @@ export class StartControlledAgentRunUseCase {
         ? "Controlled-agent active run has no owner metadata and exceeded the ownerless recovery threshold."
         : "Controlled-agent owner process is no longer live.";
       const now = (this.deps.clock?.now() ?? new Date()).toISOString();
+      try {
+        await this.deps.provider.stop({
+          session: existingSession,
+          run: existingRun,
+          reason: existingActiveRunRecoverySafeMessage(
+            existingSession,
+            staleSafeMessage,
+          ),
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          reason: StartControlledAgentRunBlockReason.ExistingActiveRunCleanupFailed,
+          session: existingSession,
+          run: existingRun,
+          safeMessage: error instanceof Error ? error.message : String(error),
+        };
+      }
       await this.deps.stateStore?.saveRun({
         ...existingRun,
         status: ControlledAgentRunStatus.Failed,
@@ -104,9 +131,21 @@ export class StartControlledAgentRunUseCase {
         stoppedAt: now,
         updatedAt: now,
       });
+      if (!controlledAgentStatusAllowsLiveController(existingSession.status)) {
+        await this.deps.stateStore?.saveRun({
+          ...existingRun,
+          status: existingActiveRunRecoveryStatus(existingSession),
+          safeMessage: existingActiveRunRecoverySafeMessage(
+            existingSession,
+            staleSafeMessage,
+          ),
+          stoppedAt: now,
+          updatedAt: now,
+        });
+      }
       await this.deps.stateStore?.saveSession({
         ...existingSession,
-        status: ControlledAgentRunStatus.Failed,
+        status: existingActiveRunRecoveryStatus(existingSession),
         updatedAt: now,
       });
     }
@@ -197,4 +236,37 @@ export async function startControlledAgentRun(
   deps: StartControlledAgentRunDeps,
 ): Promise<StartControlledAgentRunResult> {
   return new StartControlledAgentRunUseCase(deps).start(input);
+}
+
+function runRecoveryForExistingActiveRun(
+  session: ControlledAgentSession,
+): {
+  readonly status?: ControlledAgentRunStatus;
+  readonly safeMessage?: string;
+} {
+  if (!controlledAgentStatusAllowsLiveController(session.status)) {
+    const status = isControlledAgentTerminalStatus(session.status)
+      ? session.status
+      : ControlledAgentRunStatus.Failed;
+    return {
+      status,
+      safeMessage:
+        `Controlled-agent persisted session status is ${session.status}; active provider run must be recovered.`,
+    };
+  }
+  return {};
+}
+
+function existingActiveRunRecoveryStatus(
+  session: ControlledAgentSession,
+): ControlledAgentRunStatus {
+  return runRecoveryForExistingActiveRun(session).status ??
+    ControlledAgentRunStatus.Failed;
+}
+
+function existingActiveRunRecoverySafeMessage(
+  session: ControlledAgentSession,
+  staleSafeMessage: string,
+): string {
+  return runRecoveryForExistingActiveRun(session).safeMessage ?? staleSafeMessage;
 }
