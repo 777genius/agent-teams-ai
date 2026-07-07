@@ -123,6 +123,10 @@ import { createTeamProvisioningCleanupRunPorts } from './provisioning/TeamProvis
 import { getCliHelpOutputWithProvisioningPorts } from './provisioning/TeamProvisioningCliHelpOutputPortsFactory';
 import { TeamProvisioningConfigFacade } from './provisioning/TeamProvisioningConfigFacade';
 import {
+  createTeamProvisioningConfigTaskActivityBoundary,
+  type TeamProvisioningConfigTaskActivityBoundary,
+} from './provisioning/TeamProvisioningConfigTaskActivityBoundary';
+import {
   createDefaultDeterministicCreateRunFlowPorts,
   type DeterministicCreateRunFlowPorts,
   runDeterministicCreateRunFlow,
@@ -502,7 +506,6 @@ import {
   type TeamProvisioningStreamEventPorts,
 } from './provisioning/TeamProvisioningStreamEvents';
 import { captureTeamSpawnEvents as captureTeamSpawnEventsHelper } from './provisioning/TeamProvisioningStreamSpawnEvents';
-import { TeamProvisioningTaskActivityRepairBoundary } from './provisioning/TeamProvisioningTaskActivityRepairBoundary';
 import { TeamProvisioningToolApprovalFacade } from './provisioning/TeamProvisioningToolApprovalFacade';
 import {
   createTeamProvisioningTransientRunStatePorts,
@@ -535,7 +538,6 @@ import { boundLaunchDiagnostics } from './progressPayload';
 import { createTeamRuntimeControlCompatibilityApi } from './runtime-control';
 import { TeamAttachmentStore } from './TeamAttachmentStore';
 import {
-  choosePreferredLaunchSnapshot,
   clearBootstrapState,
   readBootstrapLaunchSnapshot,
   readBootstrapRuntimeState,
@@ -543,7 +545,6 @@ import {
 import { TeamConfigReader } from './TeamConfigReader';
 import { TeamInboxReader } from './TeamInboxReader';
 import { TeamInboxWriter } from './TeamInboxWriter';
-import { writeTeamLaunchFailureArtifactPack } from './TeamLaunchFailureArtifactPack';
 import { TeamLaunchStateStore } from './TeamLaunchStateStore';
 import { TeamMcpConfigBuilder } from './TeamMcpConfigBuilder';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
@@ -1277,7 +1278,7 @@ export class TeamProvisioningService {
     });
   private readonly launchStateWrittenRunIdByTeam = new Map<string, string>();
   private readonly launchStateStoreBoundary: TeamProvisioningLaunchStateStoreBoundary;
-  private readonly taskActivityRepairBoundary!: TeamProvisioningTaskActivityRepairBoundary<ProvisioningRun>;
+  private readonly configTaskActivityBoundary!: TeamProvisioningConfigTaskActivityBoundary<ProvisioningRun>;
   private readonly failedOpenCodeSecondaryRetryInFlightByTeam = new Map<
     string,
     Promise<RetryFailedOpenCodeSecondaryLanesResult>
@@ -1680,22 +1681,15 @@ export class TeamProvisioningService {
       noopRefreshMs: TeamProvisioningService.LAUNCH_STATE_NOOP_REFRESH_MS,
       writtenRunIdByTeam: this.launchStateWrittenRunIdByTeam,
     });
-    this.taskActivityRepairBoundary =
-      new TeamProvisioningTaskActivityRepairBoundary<ProvisioningRun>({
-        taskActivityIntervalService: this.taskActivityIntervalService,
-        runTracking: this.runTracking,
-        runs: this.runs,
-        readBootstrapLaunchSnapshot,
-        readLaunchState: (teamName) => this.launchStateStore.read(teamName),
-        choosePreferredLaunchSnapshot,
-        artifactWriter: {
-          write: writeTeamLaunchFailureArtifactPack,
-        },
-        buildLaunchDiagnosticsFromRun,
-        extractCliLogsFromRun,
-        getRuntimeAdapterTraceLines: (runId) => this.runtimeAdapterTraceLinesByRunId.get(runId),
-        warn: (message) => logger.warn(message),
-      });
+    this.configTaskActivityBoundary = createTeamProvisioningConfigTaskActivityBoundary({
+      config: this.configFacade,
+      taskActivityIntervalService: this.taskActivityIntervalService,
+      runTracking: this.runTracking,
+      runs: this.runs,
+      launchStateStore: this.launchStateStore,
+      runtimeAdapterTraceLinesByRunId: this.runtimeAdapterTraceLinesByRunId,
+      logger,
+    });
     this.liveRuntimeMetadataPorts = createTeamProvisioningLiveRuntimeMetadataPorts({
       runs: this.runs,
       runtimeAdapterRunByTeam: this.runtimeAdapterRunByTeam,
@@ -2137,7 +2131,7 @@ export class TeamProvisioningService {
         this.markIncompleteLaunchStateFinalized(run, cleanupReason),
       persistLaunchStateSnapshot: (run, phase) => this.persistLaunchStateSnapshot(run, phase),
       writeLaunchFailureArtifactPackBestEffort: (run, options) =>
-        this.writeLaunchFailureArtifactPackBestEffort(run, options),
+        this.configTaskActivityBoundary.writeLaunchFailureArtifactPackBestEffort(run, options),
       resetRuntimeToolActivity: (run) => this.resetRuntimeToolActivity(run),
       setLeadActivity: (run, state) => this.setLeadActivity(run, state),
       stopStallWatchdog: (run) => this.outputRecoveryFacade.stopStallWatchdog(run),
@@ -2215,22 +2209,6 @@ export class TeamProvisioningService {
     this.scheduleStaleAnthropicTeamApiKeyHelperCleanup();
   }
 
-  private repairStaleTaskActivityIntervalsOnce(
-    teamName: string,
-    launchSnapshot?: PersistedTeamLaunchSnapshot | null
-  ): boolean {
-    return this.taskActivityRepairBoundary.repairStaleTaskActivityIntervalsOnce(
-      teamName,
-      launchSnapshot
-    );
-  }
-
-  private async readTaskActivityRepairLaunchSnapshot(
-    teamName: string
-  ): Promise<PersistedTeamLaunchSnapshot | null> {
-    return this.taskActivityRepairBoundary.readTaskActivityRepairLaunchSnapshot(teamName);
-  }
-
   private writeLaunchFailureArtifactPackBestEffort(
     run: ProvisioningRun,
     options: {
@@ -2238,11 +2216,11 @@ export class TeamProvisioningService {
       launchSnapshot?: PersistedTeamLaunchSnapshot | null;
     }
   ): void {
-    this.taskActivityRepairBoundary.writeLaunchFailureArtifactPackBestEffort(run, options);
+    this.configTaskActivityBoundary.writeLaunchFailureArtifactPackBestEffort(run, options);
   }
 
   async repairStaleTaskActivityIntervalsBeforeSnapshot(teamName: string): Promise<void> {
-    return this.taskActivityRepairBoundary.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
+    return this.configTaskActivityBoundary.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
   }
 
   private scheduleStaleAnthropicTeamApiKeyHelperCleanup(): void {
@@ -2268,17 +2246,11 @@ export class TeamProvisioningService {
   }
 
   private readConfigSnapshot(teamName: string): Promise<TeamConfig | null> {
-    const reader = this.configReader as {
-      getConfig(teamName: string): Promise<TeamConfig | null>;
-      getConfigSnapshot?: (teamName: string) => Promise<TeamConfig | null>;
-    };
-    return typeof reader.getConfigSnapshot === 'function'
-      ? reader.getConfigSnapshot(teamName)
-      : reader.getConfig(teamName);
+    return this.configTaskActivityBoundary.readConfigSnapshot(teamName);
   }
 
   private readConfigForStrictDecision(teamName: string): Promise<TeamConfig | null> {
-    return this.configReader.getConfig(teamName);
+    return this.configTaskActivityBoundary.readConfigForStrictDecision(teamName);
   }
 
   private async resolveOpenCodeMemberDeliveryIdentity(
@@ -2338,9 +2310,12 @@ export class TeamProvisioningService {
           TeamProvisioningService.PERSISTED_MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS,
       },
       readTaskActivityRepairLaunchSnapshot: (teamName) =>
-        this.readTaskActivityRepairLaunchSnapshot(teamName),
+        this.configTaskActivityBoundary.readTaskActivityRepairLaunchSnapshot(teamName),
       repairStaleTaskActivityIntervalsOnce: (teamName, launchSnapshot) =>
-        this.repairStaleTaskActivityIntervalsOnce(teamName, launchSnapshot),
+        this.configTaskActivityBoundary.repairStaleTaskActivityIntervalsOnce(
+          teamName,
+          launchSnapshot
+        ),
       reconcilePersistedLaunchState: (teamName) => this.reconcilePersistedLaunchState(teamName),
       attachLiveRuntimeMetadataToStatuses: (teamName, statuses, options) =>
         this.attachLiveRuntimeMetadataToStatuses(teamName, statuses, options),
@@ -2498,15 +2473,15 @@ export class TeamProvisioningService {
   }
 
   private updateConfigProjectPath(teamName: string, cwd: string): Promise<void> {
-    return this.configFacade.updateConfigProjectPath(teamName, cwd);
+    return this.configTaskActivityBoundary.updateConfigProjectPath(teamName, cwd);
   }
 
   private restorePrelaunchConfig(teamName: string): Promise<void> {
-    return this.configFacade.restorePrelaunchConfig(teamName);
+    return this.configTaskActivityBoundary.restorePrelaunchConfig(teamName);
   }
 
   cleanupPrelaunchBackup(teamName: string): Promise<void> {
-    return this.configFacade.cleanupPrelaunchBackup(teamName);
+    return this.configTaskActivityBoundary.cleanupPrelaunchBackup(teamName);
   }
 
   private persistMembersMeta(teamName: string, request: TeamCreateRequest): Promise<void> {
@@ -4234,10 +4209,12 @@ export class TeamProvisioningService {
         alreadyLaunching: true,
       };
     }
-    const previousLaunchSnapshot = await this.readTaskActivityRepairLaunchSnapshot(
-      request.teamName
+    const previousLaunchSnapshot =
+      await this.configTaskActivityBoundary.readTaskActivityRepairLaunchSnapshot(request.teamName);
+    this.configTaskActivityBoundary.repairStaleTaskActivityIntervalsOnce(
+      request.teamName,
+      previousLaunchSnapshot
     );
-    this.repairStaleTaskActivityIntervalsOnce(request.teamName, previousLaunchSnapshot);
     const stopAllGenerationAtStart = this.stopAllTeamsGeneration;
     assertAppDeterministicBootstrapEnabled();
     if (this.shouldRouteOpenCodeToRuntimeAdapter(request)) {
