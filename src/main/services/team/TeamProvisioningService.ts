@@ -77,6 +77,7 @@ import {
   upsertOpenCodeRuntimeLaneIndexEntry,
 } from './opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { getSystemLocale } from './provisioning/TeamProvisioningAgentLanguage';
+import { TeamProvisioningAppShellBoundary } from './provisioning/TeamProvisioningAppShellBoundary';
 import {
   createAppendDirectProcessRuntimeEventUseCase,
   createNodeAppendDirectProcessRuntimeEventUseCasePorts,
@@ -264,7 +265,10 @@ import {
   buildRuntimeSpawnStatusRecord as buildRuntimeSpawnStatusRecordHelper,
   filterRemovedMembersFromLaunchSnapshot,
 } from './provisioning/TeamProvisioningMemberStatusProjection';
-import { type MemberWorkSyncAcceptedReportChecker } from './provisioning/TeamProvisioningMemberWorkSyncProof';
+import {
+  type MemberWorkSyncAcceptedReportChecker,
+  type MemberWorkSyncProofMissingRecoveryScheduler,
+} from './provisioning/TeamProvisioningMemberWorkSyncProof';
 import { createTeamProvisioningMemberWorkSyncProofBoundary } from './provisioning/TeamProvisioningMemberWorkSyncProofBoundaryFactory';
 import {
   persistTeamProvisioningInboxMessage,
@@ -321,10 +325,7 @@ import {
   getOpenCodeMemberDeliveryBusyStatus as getOpenCodeMemberDeliveryBusyStatusWithPorts,
   tryGetActiveOpenCodePromptDeliveryRecord as tryGetActiveOpenCodePromptDeliveryRecordWithPorts,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeDelivery';
-import {
-  type MemberWorkSyncProofMissingRecoveryScheduler,
-  TeamProvisioningOpenCodeRuntimeDeliveryAdvisory,
-} from './provisioning/TeamProvisioningOpenCodeRuntimeDeliveryAdvisory';
+import { TeamProvisioningOpenCodeRuntimeDeliveryAdvisory } from './provisioning/TeamProvisioningOpenCodeRuntimeDeliveryAdvisory';
 import {
   createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost,
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost,
@@ -346,7 +347,6 @@ import {
 import { TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade } from './provisioning/TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade';
 import {
   type OpenCodeRuntimePendingPermissionsPersistencePorts,
-  type OpenCodeRuntimePermissionListingAdapter,
   type OpenCodeRuntimePermissionSpawnStatusPorts,
   type OpenCodeRuntimePermissionSyncInput,
   persistOpenCodeRuntimePendingPermissions,
@@ -441,9 +441,6 @@ import {
 import { mergeRuntimeDiagnostics } from './provisioning/TeamProvisioningRuntimeMetadata';
 import { type LiveTeamAgentRuntimeMetadata } from './provisioning/TeamProvisioningRuntimeMetadataPolicy';
 import {
-  getOpenCodeRuntimeAdapter as getOpenCodeRuntimeAdapterHelper,
-  getOpenCodeRuntimeMessageAdapter as getOpenCodeRuntimeMessageAdapterHelper,
-  getOpenCodeRuntimePermissionListingAdapter as getOpenCodeRuntimePermissionListingAdapterHelper,
   isOpenCodeRuntimeRecipient as isOpenCodeRuntimeRecipientHelper,
   isOpenCodeRuntimeRecipientFromSources,
   resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
@@ -641,6 +638,7 @@ function getRunRuntimeFailureLabel(run: ProvisioningRun): string {
 
 export class TeamProvisioningService {
   private readonly runtimeLaneCoordinator = createTeamRuntimeLaneCoordinator();
+  private readonly appShellBoundary = new TeamProvisioningAppShellBoundary();
   private readonly providerConnectionService = ProviderConnectionService.getInstance();
   private readonly launchIdentityBoundary: TeamProvisioningLaunchIdentityBoundary =
     createTeamProvisioningLaunchIdentityBoundary({
@@ -764,7 +762,7 @@ export class TeamProvisioningService {
         this.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress, onProgress),
       emitTeamChange: (event) => this.teamChangeEmitter?.(event),
       readLaunchState: (teamName) => this.launchStateStore.read(teamName),
-      getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+      getOpenCodeRuntimeAdapter: () => this.appShellBoundary.getOpenCodeRuntimeAdapter(),
       readPersistedTeamProjectPath: (teamName) => this.readPersistedTeamProjectPath(teamName),
       logWarning: (message) => logger.warn(message),
     });
@@ -894,8 +892,9 @@ export class TeamProvisioningService {
       getAttachmentStore: () => this.attachmentStore,
     });
   private readonly memberWorkSyncProofBoundary = createTeamProvisioningMemberWorkSyncProofBoundary({
-    getAcceptedReportChecker: () => this.memberWorkSyncAcceptedReportChecker,
-    getProofMissingRecoveryScheduler: () => this.memberWorkSyncProofMissingRecoveryScheduler,
+    getAcceptedReportChecker: () => this.appShellBoundary.getMemberWorkSyncAcceptedReportChecker(),
+    getProofMissingRecoveryScheduler: () =>
+      this.appShellBoundary.getMemberWorkSyncProofMissingRecoveryScheduler(),
     logger,
     getErrorMessage,
   });
@@ -913,10 +912,10 @@ export class TeamProvisioningService {
         this.teamChangeEmitter?.(event);
       },
       invalidateMemberRuntimeAdvisory: (teamName, memberName) => {
-        this.memberRuntimeAdvisoryInvalidator?.(teamName, memberName);
+        this.appShellBoundary.getMemberRuntimeAdvisoryInvalidator()?.(teamName, memberName);
       },
       scheduleProofMissingWorkSyncRecovery: (input) =>
-        this.memberWorkSyncProofMissingRecoveryScheduler?.(input),
+        this.appShellBoundary.getMemberWorkSyncProofMissingRecoveryScheduler()?.(input),
       getLeadNoticeSink: (teamName) => {
         const runId = this.runTracking.getAliveRunId(teamName);
         const run = runId ? this.runs.get(runId) : null;
@@ -1002,7 +1001,7 @@ export class TeamProvisioningService {
     createTeamProvisioningOpenCodeRuntimeRecoveryBoundary({
       teamsBasePath: getTeamsBasePath(),
       logger,
-      getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+      getOpenCodeRuntimeAdapter: () => this.appShellBoundary.getOpenCodeRuntimeAdapter(),
       createRunId: randomUUID,
       getErrorMessage,
     });
@@ -1182,7 +1181,7 @@ export class TeamProvisioningService {
       getAliveRunId: (teamName) => this.runTracking.getAliveRunId(teamName),
       getRun: (runId) => this.runs.get(runId),
       getRunLeadName: (run) => this.getRunLeadName(run),
-      getCrossTeamSender: () => this.crossTeamSender,
+      getCrossTeamSender: () => this.appShellBoundary.getCrossTeamSender(),
       persistSentMessage: (teamName, message) => this.persistSentMessage(teamName, message),
       persistInboxMessage: (teamName, recipient, message) =>
         this.persistInboxMessage(teamName, recipient, message),
@@ -1317,12 +1316,6 @@ export class TeamProvisioningService {
     this.memberLifecycleOperationUseCases
   );
   private readonly memberMcpLaunchConfigProvisioner: TeamProvisioningMemberMcpLaunchConfigProvisioner<ProvisioningRun>;
-  private memberRuntimeAdvisoryInvalidator:
-    | ((teamName: string, memberName: string) => void)
-    | null = null;
-  private memberWorkSyncProofMissingRecoveryScheduler: MemberWorkSyncProofMissingRecoveryScheduler | null =
-    null;
-  private memberWorkSyncAcceptedReportChecker: MemberWorkSyncAcceptedReportChecker | null = null;
   private readonly taskActivityIntervalService = new TeamTaskActivityIntervalService();
   private readonly runtimeToolActivity = createRuntimeToolActivityHandlers<ProvisioningRun>({
     isCurrentTrackedRun: (run) => this.isCurrentTrackedRun(run),
@@ -1357,15 +1350,17 @@ export class TeamProvisioningService {
   private readonly prepareFacade!: TeamProvisioningPrepareFacade;
   private readonly verificationProbePorts: TeamProvisioningVerificationProbePorts<ProvisioningRun>;
   private readonly processExitPorts: TeamProvisioningProcessExitPorts<ProvisioningRun>;
-  private runtimeAdapterRegistry: TeamRuntimeAdapterRegistry | null = null;
-  private controlApiBaseUrlResolver: (() => Promise<string | null>) | null = null;
-  private workspaceTrustCoordinator: WorkspaceTrustCoordinator | null = null;
   private readonly workspaceTrustWorkspaceCollectionPorts =
     createNodeWorkspaceTrustWorkspaceCollectionPorts();
-  private runtimeTurnSettledHookSettingsProvider: RuntimeTurnSettledHookSettingsProvider | null =
-    null;
-  private runtimeTurnSettledEnvironmentProvider: RuntimeTurnSettledEnvironmentProvider | null =
-    null;
+
+  private get runtimeTurnSettledHookSettingsProvider(): RuntimeTurnSettledHookSettingsProvider | null {
+    return this.appShellBoundary.getRuntimeTurnSettledHookSettingsProvider();
+  }
+
+  private get runtimeTurnSettledEnvironmentProvider(): RuntimeTurnSettledEnvironmentProvider | null {
+    return this.appShellBoundary.getRuntimeTurnSettledEnvironmentProvider();
+  }
+
   private readonly stoppedTeamOpenCodeRuntimeCleanupInFlight = new Map<string, Promise<number>>();
   private readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
   private readonly openCodeMemberInboxRelayHost: TeamProvisioningOpenCodeMemberInboxRelayHost = {
@@ -1409,7 +1404,7 @@ export class TeamProvisioningService {
     getTeamsBasePath,
     getSecondaryRuntimeRuns: (teamName) => this.getSecondaryRuntimeRuns(teamName),
     stoppingSecondaryRuntimeTeams: this.stoppingSecondaryRuntimeTeams,
-    getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+    getOpenCodeRuntimeAdapter: () => this.appShellBoundary.getOpenCodeRuntimeAdapter(),
     readLaunchState: (teamName) => this.launchStateStore.read(teamName),
     writeLaunchStateSnapshot: (teamName, snapshot) =>
       this.writeLaunchStateSnapshot(teamName, snapshot),
@@ -1495,7 +1490,7 @@ export class TeamProvisioningService {
           this.stoppingSecondaryRuntimeTeams.has(teamName),
         deleteSecondaryRuntimeRun: (teamName, laneId) =>
           this.deleteSecondaryRuntimeRun(teamName, laneId),
-        getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+        getOpenCodeRuntimeAdapter: () => this.appShellBoundary.getOpenCodeRuntimeAdapter(),
         publishMixedSecondaryLaneStatusChange: (run, lane) =>
           this.publishMixedSecondaryLaneStatusChange(run, lane),
         readLaunchState: (teamName) => this.launchStateStore.read(teamName),
@@ -1544,7 +1539,7 @@ export class TeamProvisioningService {
       runs: this.runs,
       runtimeAdapterProgressState: this.runtimeAdapterProgressState,
       runTracking: this.runTracking,
-      getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+      getOpenCodeRuntimeAdapter: () => this.appShellBoundary.getOpenCodeRuntimeAdapter(),
       getStopAllTeamsGeneration: () => this.stopAllTeamsGeneration,
       stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>
         this.stopOpenCodeRuntimeAdapterTeam(teamName, runId),
@@ -1587,9 +1582,6 @@ export class TeamProvisioningService {
         this.teamChangeEmitter?.(event);
       },
     });
-  private crossTeamSender:
-    | ((request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>)
-    | null = null;
   private readonly openCodeRuntimeDeliveryBoundaryHost: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<ProvisioningRun>;
   private readonly openCodeRuntimeControlApi = createTeamRuntimeControlCompatibilityApi({
     openCode: {
@@ -1768,7 +1760,7 @@ export class TeamProvisioningService {
       getRuns: () => this.runs.values(),
       getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName) ?? undefined,
       getRun: (runId) => this.runs.get(runId),
-      getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+      getOpenCodeRuntimeAdapter: () => this.appShellBoundary.getOpenCodeRuntimeAdapter(),
       readLaunchState: (teamName) => this.launchStateStore.read(teamName),
       persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
         this.persistOpenCodeRuntimeAdapterLaunchResult(result, input),
@@ -1819,7 +1811,7 @@ export class TeamProvisioningService {
       },
       envRuntimePorts: createTeamProvisioningEnvRuntimePorts({
         providerConnectionService: this.providerConnectionService,
-        getControlApiBaseUrlResolver: () => this.controlApiBaseUrlResolver,
+        getControlApiBaseUrlResolver: () => this.appShellBoundary.getControlApiBaseUrlResolver(),
         getRuntimeTurnSettledEnvironmentProvider: () => this.runtimeTurnSettledEnvironmentProvider,
         getRuntimeTurnSettledHookSettingsProvider: () =>
           this.runtimeTurnSettledHookSettingsProvider,
@@ -1863,7 +1855,7 @@ export class TeamProvisioningService {
       provisioningRunByTeam: this.provisioningRunByTeam,
       getStopAllTeamsGeneration: () => this.stopAllTeamsGeneration,
       providerRuntime: this.providerRuntimeCompatibility,
-      getWorkspaceTrustCoordinator: () => this.workspaceTrustCoordinator,
+      getWorkspaceTrustCoordinator: () => this.appShellBoundary.getWorkspaceTrustCoordinator(),
       workspaceTrustWorkspaceCollectionPorts: this.workspaceTrustWorkspaceCollectionPorts,
       getRuntimeTurnSettledEnvironmentProvider: () => this.runtimeTurnSettledEnvironmentProvider,
       mcpConfigBuilder: this.mcpConfigBuilder,
@@ -2014,7 +2006,7 @@ export class TeamProvisioningService {
       logsSuggestShutdownOrCleanup,
     });
     this.prepareFacade = new TeamProvisioningPrepareFacade({
-      getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+      getOpenCodeRuntimeAdapter: () => this.appShellBoundary.getOpenCodeRuntimeAdapter(),
       buildProvisioningEnv: (providerId, providerBackendId, options) =>
         this.providerRuntime.buildProvisioningEnv(providerId, providerBackendId, options),
       runProviderOneShotDiagnostic: (claudePath, cwd, env, providerId, providerArgs) =>
@@ -2392,39 +2384,39 @@ export class TeamProvisioningService {
   }
 
   setRuntimeAdapterRegistry(registry: TeamRuntimeAdapterRegistry | null): void {
-    this.runtimeAdapterRegistry = registry;
+    this.appShellBoundary.setRuntimeAdapterRegistry(registry);
   }
 
   setMemberRuntimeAdvisoryInvalidator(
     invalidator: ((teamName: string, memberName: string) => void) | null
   ): void {
-    this.memberRuntimeAdvisoryInvalidator = invalidator;
+    this.appShellBoundary.setMemberRuntimeAdvisoryInvalidator(invalidator);
   }
 
   setMemberWorkSyncProofMissingRecoveryScheduler(
     scheduler: MemberWorkSyncProofMissingRecoveryScheduler | null
   ): void {
-    this.memberWorkSyncProofMissingRecoveryScheduler = scheduler;
+    this.appShellBoundary.setMemberWorkSyncProofMissingRecoveryScheduler(scheduler);
   }
 
   setMemberWorkSyncAcceptedReportChecker(
     checker: MemberWorkSyncAcceptedReportChecker | null
   ): void {
-    this.memberWorkSyncAcceptedReportChecker = checker;
+    this.appShellBoundary.setMemberWorkSyncAcceptedReportChecker(checker);
   }
 
   setCrossTeamSender(
     sender: ((request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>) | null
   ): void {
-    this.crossTeamSender = sender;
+    this.appShellBoundary.setCrossTeamSender(sender);
   }
 
   setControlApiBaseUrlResolver(resolver: (() => Promise<string | null>) | null): void {
-    this.controlApiBaseUrlResolver = resolver;
+    this.appShellBoundary.setControlApiBaseUrlResolver(resolver);
   }
 
   setWorkspaceTrustCoordinator(coordinator: WorkspaceTrustCoordinator | null): void {
-    this.workspaceTrustCoordinator = coordinator;
+    this.appShellBoundary.setWorkspaceTrustCoordinator(coordinator);
   }
 
   private collectWorkspaceTrustProviders(input: {
@@ -2448,7 +2440,7 @@ export class TeamProvisioningService {
     request: WorkspaceTrustArgsOnlyPlanRequest
   ): Promise<WorkspaceTrustArgsOnlyPlanResult> {
     return planWorkspaceTrustArgsOnlySafelyHelper({
-      coordinator: this.workspaceTrustCoordinator,
+      coordinator: this.appShellBoundary.getWorkspaceTrustCoordinator(),
       request,
       logger,
     });
@@ -2458,7 +2450,7 @@ export class TeamProvisioningService {
     request: WorkspaceTrustFullPlanRequest
   ): Promise<WorkspaceTrustFullPlanResult | null> {
     return planWorkspaceTrustFullSafelyHelper({
-      coordinator: this.workspaceTrustCoordinator,
+      coordinator: this.appShellBoundary.getWorkspaceTrustCoordinator(),
       request,
       logger,
     });
@@ -2467,13 +2459,13 @@ export class TeamProvisioningService {
   setRuntimeTurnSettledHookSettingsProvider(
     provider: RuntimeTurnSettledHookSettingsProvider | null
   ): void {
-    this.runtimeTurnSettledHookSettingsProvider = provider;
+    this.appShellBoundary.setRuntimeTurnSettledHookSettingsProvider(provider);
   }
 
   setRuntimeTurnSettledEnvironmentProvider(
     provider: RuntimeTurnSettledEnvironmentProvider | null
   ): void {
-    this.runtimeTurnSettledEnvironmentProvider = provider;
+    this.appShellBoundary.setRuntimeTurnSettledEnvironmentProvider(provider);
   }
 
   private isLaunchRunStillCurrent(run: ProvisioningRun): boolean {
@@ -2619,7 +2611,7 @@ export class TeamProvisioningService {
     provisioningEnv: ProvisioningEnvResolution;
   }): Promise<void> {
     await prepareWorkspaceTrustForDeterministicRunHelper(input, {
-      workspaceTrustCoordinator: this.workspaceTrustCoordinator,
+      workspaceTrustCoordinator: this.appShellBoundary.getWorkspaceTrustCoordinator(),
       stopAllTeamsGeneration: this.stopAllTeamsGeneration,
       updateProgress,
       boundLaunchDiagnostics,
@@ -2810,7 +2802,7 @@ export class TeamProvisioningService {
       ports: {
         canDeliverToOpenCodeRuntimeForTeam: (candidateTeamName) =>
           this.runTracking.canDeliverToOpenCodeRuntimeForTeam(candidateTeamName),
-        getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
+        getOpenCodeRuntimeAdapter: () => this.appShellBoundary.getOpenCodeRuntimeAdapter(),
         readPreviousLaunchState: (candidateTeamName) =>
           this.launchStateStore.read(candidateTeamName),
         readConfigForObservation: (candidateTeamName) =>
@@ -2840,18 +2832,6 @@ export class TeamProvisioningService {
         logWarning: (message) => logger.warn(message),
       },
     });
-  }
-
-  private getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null {
-    return getOpenCodeRuntimeAdapterHelper(this.runtimeAdapterRegistry);
-  }
-
-  private getOpenCodeRuntimeMessageAdapter(): OpenCodeRuntimeMessageAdapter | null {
-    return getOpenCodeRuntimeMessageAdapterHelper(this.getOpenCodeRuntimeAdapter());
-  }
-
-  private getOpenCodeRuntimePermissionListingAdapter(): OpenCodeRuntimePermissionListingAdapter | null {
-    return getOpenCodeRuntimePermissionListingAdapterHelper(this.getOpenCodeRuntimeAdapter());
   }
 
   async resolveRuntimeRecipientProviderId(
@@ -3019,7 +2999,8 @@ export class TeamProvisioningService {
   ): Promise<void> {
     await syncOpenCodeRuntimePermissionsAfterDelivery(input, {
       getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
-      getPermissionListingAdapter: () => this.getOpenCodeRuntimePermissionListingAdapter(),
+      getPermissionListingAdapter: () =>
+        this.appShellBoundary.getOpenCodeRuntimePermissionListingAdapter(),
       readLaunchState: (teamName) => this.launchStateStore.read(teamName).catch(() => null),
       getTrackedRun: (teamName) => {
         const trackedRunId = this.runTracking.getTrackedRunId(teamName);
@@ -3094,7 +3075,8 @@ export class TeamProvisioningService {
 
   private createOpenCodeMemberMessageDeliveryService() {
     const host: TeamProvisioningOpenCodeMemberMessageDeliveryHost = {
-      getOpenCodeRuntimeMessageAdapter: () => this.getOpenCodeRuntimeMessageAdapter(),
+      getOpenCodeRuntimeMessageAdapter: () =>
+        this.appShellBoundary.getOpenCodeRuntimeMessageAdapter(),
       readOpenCodeMemberDirectory: (teamName) => this.readOpenCodeMemberDirectory(teamName),
       resolveOpenCodeMemberIdentityFromDirectory: (teamName, memberName, directory) =>
         this.resolveOpenCodeMemberIdentityFromDirectory(teamName, memberName, directory),
@@ -3171,7 +3153,7 @@ export class TeamProvisioningService {
   }): boolean {
     return shouldRouteOpenCodeToRuntimeAdapterHelper(
       request,
-      this.getOpenCodeRuntimeAdapter() !== null
+      this.appShellBoundary.getOpenCodeRuntimeAdapter() !== null
     );
   }
 
@@ -3184,7 +3166,7 @@ export class TeamProvisioningService {
       leadProviderId,
       members,
       baseCwd,
-      hasOpenCodeRuntimeAdapter: this.getOpenCodeRuntimeAdapter() !== null,
+      hasOpenCodeRuntimeAdapter: this.appShellBoundary.getOpenCodeRuntimeAdapter() !== null,
     });
   }
 
@@ -3626,7 +3608,7 @@ export class TeamProvisioningService {
       sentMessagesStore: this.sentMessagesStore,
       inboxReader: this.inboxReader,
       inboxWriter: this.inboxWriter,
-      getCrossTeamSender: () => this.crossTeamSender,
+      getCrossTeamSender: () => this.appShellBoundary.getCrossTeamSender(),
       isOpenCodeRuntimeRecipient: (teamName, memberName) =>
         this.isOpenCodeRuntimeRecipient(teamName, memberName),
       getOpenCodeAgendaSyncRecoveryBypassMessageIds: (input) =>
@@ -4076,7 +4058,8 @@ export class TeamProvisioningService {
       getOpenCodeBootstrapStallStatusPorts: () => this.getOpenCodeBootstrapStallStatusPorts(),
       findBootstrapTranscriptOutcome: (teamName, memberName, acceptedAtMs) =>
         this.findBootstrapTranscriptOutcome(teamName, memberName, acceptedAtMs),
-      getOpenCodeRuntimeMessageAdapter: () => this.getOpenCodeRuntimeMessageAdapter(),
+      getOpenCodeRuntimeMessageAdapter: () =>
+        this.appShellBoundary.getOpenCodeRuntimeMessageAdapter(),
       sendOpenCodeMemberMessageToRuntimeSerialized: (sendInput) =>
         this.sendOpenCodeMemberMessageToRuntimeSerialized(sendInput),
       appendMemberBootstrapDiagnostic: (targetRun, targetMember, text) =>
@@ -4300,7 +4283,7 @@ export class TeamProvisioningService {
             this.resolveAndValidateLaunchIdentity(params),
           createMixedSecondaryLaneStates: (lanePlan) =>
             this.createMixedSecondaryLaneStates(lanePlan),
-          workspaceTrustCoordinator: this.workspaceTrustCoordinator,
+          workspaceTrustCoordinator: this.appShellBoundary.getWorkspaceTrustCoordinator(),
           workspaceTrustWorkspaceCollectionPorts: this.workspaceTrustWorkspaceCollectionPorts,
           runtimeTurnSettledEnvironmentProvider: this.runtimeTurnSettledEnvironmentProvider,
           logger,
