@@ -4257,12 +4257,98 @@ async function projectIntegrationPushApprovedCommit(args) {
         force: booleanValue(args.force) ?? false,
         policy: projectIntegrationPolicy(controller, args),
     });
+    const consumedOutputLedger = await recordConsumedOutputAfterPush(controller, attempt);
     return mcpJson({
         ok: true,
         mode: "project_integration_push_approved_commit",
         controllerJobId: controller.controller.jobId,
         attempt: attempt,
+        ...(consumedOutputLedger ? { consumedOutputLedger } : {}),
     });
+}
+async function recordConsumedOutputAfterPush(controller, attempt) {
+    const ledgerRoot = controller.scope.consumedOutputLedgerRoots?.[0];
+    const commitSha = attempt.pushAttempt?.commitSha ?? attempt.commitCandidate?.commitSha;
+    if (!ledgerRoot || !commitSha)
+        return undefined;
+    const archiveRoot = join(dirname(controller.registryRootDir), "archives");
+    const archivePath = join(archiveRoot, `${safeArchiveName(attempt.workerOutput.workerJobId)}-integrated-${commitSha.slice(0, 8)}-${timestampForPath()}`);
+    await mkdir(archivePath, { recursive: true });
+    const statusPath = join(archivePath, "git-status.txt");
+    const patchPath = join(archivePath, "tracked.diff");
+    const numstatPath = join(archivePath, "tracked.numstat");
+    await writeFile(statusPath, await safeGitOutput(attempt.workerOutput.workspacePath, [
+        "status",
+        "--short",
+    ]));
+    await writeFile(patchPath, await safeGitOutput(attempt.workerOutput.workspacePath, [
+        "diff",
+        "--",
+        ...attempt.workerOutput.changedFiles,
+    ]));
+    await writeFile(numstatPath, await safeGitOutput(attempt.workerOutput.workspacePath, [
+        "diff",
+        "--numstat",
+        "--",
+        ...attempt.workerOutput.changedFiles,
+    ]));
+    const closedAt = new Date().toISOString();
+    const ledgerPath = join(ledgerRoot, "items", `${safeArchiveName(attempt.workerOutput.workerJobId)}.json`);
+    const record = {
+        schemaVersion: 1,
+        jobId: attempt.workerOutput.workerJobId,
+        status: "integrated",
+        closedAt,
+        consumedAt: closedAt,
+        integratedCommitSha: commitSha,
+        commitSha,
+        commit: commitSha,
+        archivePath,
+        note: `Integrated reviewed worker output via project lifecycle attempt ${attempt.attemptId}.`,
+        backup: {
+            workspace: attempt.workerOutput.workspacePath,
+            statusPath,
+            patchPath,
+            numstatPath,
+        },
+        notes: [{
+                status: "integrated",
+                text: `Integrated reviewed worker output via project lifecycle attempt ${attempt.attemptId}.`,
+                commit: commitSha,
+            }],
+    };
+    await mkdir(dirname(ledgerPath), { recursive: true });
+    await writeJsonAtomic(ledgerPath, record);
+    return {
+        ledgerPath,
+        archivePath,
+        status: "integrated",
+        commitSha,
+    };
+}
+async function safeGitOutput(cwd, args) {
+    try {
+        const result = await execFileAsync("git", args, {
+            cwd,
+            maxBuffer: 10 * 1024 * 1024,
+            timeout: 60_000,
+        });
+        return result.stdout;
+    }
+    catch (error) {
+        return `git ${args.join(" ")} failed: ${error instanceof Error ? error.message : String(error)}\n`;
+    }
+}
+async function writeJsonAtomic(path, value) {
+    const tmpPath = `${path}.${process.pid}.${Date.now()}.tmp`;
+    await writeFile(tmpPath, `${JSON.stringify(value, null, 2)}\n`);
+    await rename(tmpPath, path);
+}
+function safeArchiveName(value) {
+    return value.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+function timestampForPath() {
+    return new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
 }
 async function projectIntegrationRejectAttempt(args) {
     const controller = await loadProjectControlController(args);

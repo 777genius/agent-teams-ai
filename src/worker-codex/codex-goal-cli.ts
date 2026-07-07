@@ -19,6 +19,9 @@ import {
   resolvePath,
   writeJsonOrText,
 } from "./codex-goal-cli-support";
+
+export type { CodexGoalCliIo } from "./codex-goal-cli-support";
+
 import {
   codexGoalAccountSlots,
   runCodexGoal,
@@ -57,10 +60,6 @@ import {
   type CodexGoalLaunchManifestMetadata,
 } from "./codex-goal-launch-manifest";
 import {
-  projectControlGenericScopeDenial,
-  projectControlGenericToolDenial,
-} from "./project-control-scope-guard";
-import {
   parseCodexGoalRelayEventsCommand,
   runCodexGoalRelayEventsCommand,
   type RelayEventsCommand,
@@ -69,8 +68,13 @@ import {
   oneShotCodexGoalMcpToolGuard,
   parseCodexGoalCliMcpShortcut,
 } from "./codex-goal-cli-shortcuts";
-
-export type { CodexGoalCliIo } from "./codex-goal-cli-support";
+import {
+  projectControlGenericScopeDenial,
+  projectControlGenericToolDenial,
+} from "./project-control-scope-guard";
+import {
+  runProjectControlOperationFile,
+} from "./project-control-operation-lifecycle";
 
 type CodexGoalCliCommand =
   | RunCommand
@@ -86,6 +90,7 @@ type CodexGoalCliCommand =
   | McpPromptCommand
   | ControlDoctorCommand
   | ControllerSuperviseCommand
+  | ProjectControlOperationRunCommand
   | HelpCommand;
 
 export type RunCommand = {
@@ -170,6 +175,12 @@ type ControllerSuperviseCommand = {
   readonly kind: "controller-supervise";
   readonly args: Record<string, unknown>;
   readonly statusIntervalMs: number;
+  readonly format: OutputFormat;
+};
+
+type ProjectControlOperationRunCommand = {
+  readonly kind: "project-control-operation-run";
+  readonly operationFilePath: string;
   readonly format: OutputFormat;
 };
 
@@ -283,6 +294,18 @@ export async function runCodexGoalCli(
         process.off("SIGTERM", onSignal);
       }
     }
+    if (command.kind === "project-control-operation-run") {
+      const result = await runProjectControlOperationFile({
+        operationFilePath: command.operationFilePath,
+        invokeTool: (name, args) =>
+          callCodexGoalMcpTool({
+            name,
+            args: args as Record<string, unknown>,
+          }),
+      });
+      writeJsonOrText(command.format, result, io);
+      return result.ok ? 0 : 1;
+    }
     if (command.tmuxSession) {
       const tmuxCommand = buildTmuxCommand(command);
       if (command.dryRun || command.printCommand) {
@@ -390,7 +413,10 @@ export function parseCodexGoalCliArgs(
   ) {
     return parseControllerSupervise(rest, io);
   }
-  const shortcut = parseCodexGoalCliMcpShortcut(commandName, rest, io);
+  if (commandName === "project-control-operation-run") {
+    return parseProjectControlOperationRun(rest, io);
+  }
+  const shortcut = parseMcpShortcut(commandName, rest, io);
   if (shortcut) return shortcut;
   throw new Error(`unknown command: ${commandName}`);
 }
@@ -717,6 +743,31 @@ function parseControllerSupervise(
   };
 }
 
+function parseProjectControlOperationRun(
+  argv: readonly string[],
+  io: CodexGoalCliIo,
+): ProjectControlOperationRunCommand {
+  const values = parseFlags(argv);
+  return {
+    kind: "project-control-operation-run",
+    operationFilePath: resolvePath(
+      io.cwd(),
+      requiredOption(values, io.env(), "--operation-file", [
+        "SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_OPERATION_FILE",
+      ]),
+    ),
+    format: outputFormatFromFlags(values, io.env()),
+  };
+}
+
+function parseMcpShortcut(
+  commandName: string,
+  argv: readonly string[],
+  io: CodexGoalCliIo,
+): McpToolCommand | undefined {
+  return parseCodexGoalCliMcpShortcut(commandName, argv, io);
+}
+
 function registryMetadataFromFlags(
   values: ParsedFlags,
 ): CodexGoalLaunchManifestMetadata | undefined {
@@ -992,6 +1043,7 @@ function usage(): string {
   subscription-runtime-codex-goal doctor --job-root <dir> --workspace <dir> --prompt <file> --task-id <id> --accounts account-a,account-b
   subscription-runtime-codex-goal tail --job-root <dir> --task-id <id> [--lines 100]
   subscription-runtime-codex-goal doctor-control
+  subscription-runtime-codex-goal project-control-operation-run --operation-file <file> [--json|--text]
   subscription-runtime-codex-goal overview [--registry-root <dir>] [--job-prefix <prefix>]
   subscription-runtime-codex-goal run-watch [jobId] [--provider codex|claude|agent-task] [--registry-root <dir>] [--state-root <dir>] [--include-log-tail] [--include-changed-files] [--json|--text]
   subscription-runtime-codex-goal events [jobId] [--provider codex|claude|local|agent-task|unknown] [--registry-root <dir>] [--event-root <dir>] [--cursor <cursor>] [--type <event-type>] [--limit 100]
