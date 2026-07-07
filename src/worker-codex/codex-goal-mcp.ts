@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { execFile } from "node:child_process";
-import { appendFile, lstat, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import { homedir, hostname } from "node:os";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { execPath } from "node:process";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -41,13 +41,10 @@ import {
   LaunchPlanStatus,
   NetworkAccessMode,
   ProjectAdmissionWorkerRole,
-  ProjectDebtReason,
   RunObservationService,
   InterruptAndContinueWorkerUseCase,
   ProjectControlBroker,
-  RunEventCompactionSafetyMode,
   RunEventProviderKind,
-  RunEventType,
   WorkerControlService,
   assessBaseRevision,
   assessWorkerHealth,
@@ -60,11 +57,7 @@ import {
   stopControlledAgentRun,
   buildWorkerStatusView,
   decideRunObservation,
-  describeProjectControlSurface,
   evaluateProjectAdmission,
-  isRunEventCompactionSafetyMode,
-  isRunEventProviderKind,
-  isRunEventType,
   projectRunObservationEvents,
   projectRunReadModelsFromEvents,
   pushApprovedCommit,
@@ -72,22 +65,11 @@ import {
   reconcileRunPreview,
   readTargetRevision,
   runEventProviderKindFromString,
-  buildHandoffManifest,
   ProjectOperation,
-  consumedDebt,
-  consumedOutputRecordFor,
-  projectAdmissionDebtCounts,
-  readConsumedOutputLedgers,
   type BaseRevisionStatus,
-  type ConsumedOutputLedger,
-  type RuntimeResultArtifact,
   type RunEventReadResult,
-  type RunEventRetentionPolicy,
   type RunObservationSnapshot,
   type ProjectAccessScope,
-  type ProjectAdmissionGate,
-  type ProjectAdmissionSnapshot,
-  type ProjectDebtItem,
   type ProjectIntegrationPolicy,
   type ProjectControlBrokerEvent,
   type ProjectControlBrokerPorts,
@@ -95,15 +77,10 @@ import {
   type RunReconcilePreviewDecision,
   type RunReconcilePreviewStatus,
   type ActiveAttemptRegistry,
-  type WorkerControlDecision,
   type WorkerControlActor,
-  type WorkerControlCaller,
   type WorkerControlDeliveryMode,
-  type WorkerControlDeliveryReceipt,
   type WorkerControlIntent,
   type WorkerControlPriority,
-  type WorkerControlSignal,
-  type WorkerControlSignalView,
   type WorkerControlTarget,
   type ControlledAgentProcessOwner,
   type ControlledAgentProviderPort,
@@ -122,7 +99,6 @@ import {
   type CodexGoalJobManifest,
   type CodexGoalJobManifestInput,
   type CodexGoalJobManifestPatch,
-  type CodexGoalJobSummary,
 } from "./codex-goal-jobs";
 import { upsertCodexGoalLaunchManifest } from "./codex-goal-launch-manifest";
 import {
@@ -151,7 +127,6 @@ import {
   prepareCodexGoalLaunchPaths,
   reconcileCodexGoalRuntimeResult,
   resolveCodexGoalWorkerLiveness,
-  shellQuote,
   startCodexGoalTmux,
   stopCodexGoalDirectProcess,
   stopCodexGoalTmux,
@@ -195,6 +170,113 @@ import {
   startProjectControlOperationRunner,
   type JsonRecord as ProjectControlOperationJsonRecord,
 } from "./project-control-operation-lifecycle";
+import {
+  accountNames,
+  booleanValue,
+  dateValue,
+  numberValue,
+  positiveIntegerValue,
+  putIfDefined,
+  requiredRawString,
+  requiredString,
+  resolvePath,
+  stringValue,
+  stringsFromValue,
+  tagValues,
+  workerReportModeValue,
+} from "./codex-goal-mcp-values";
+import {
+  jobIdInputSchema,
+  jobRegistryInputSchema,
+  optionalRunEventProviderKind,
+  registryRootFromArgs,
+  runEventRetentionPolicyFromArgs,
+  runEventRootFromArgs,
+  runEventTypeFilter,
+  type AccountPoolMcpArgs,
+  type AgentRunEventCompactionMcpArgs,
+  type AgentRunEventsMcpArgs,
+  type AgentRunProjectEventsMcpArgs,
+  type AgentRunStateMcpArgs,
+  type AgentRunWatchMcpArgs,
+  type GoalMcpArgs,
+  type JobAccountPoolMcpArgs,
+  type JobBriefMcpArgs,
+  type JobCreateMcpArgs,
+  type JobDecisionMcpArgs,
+  type JobHandoffMcpArgs,
+  type JobIdMcpArgs,
+  type JobLifecycleMcpArgs,
+  type JobOverviewMcpArgs,
+  type JobRegistryMcpArgs,
+  type JobResultReconcileMcpArgs,
+  type JobUpdateMcpArgs,
+  type JobWatchMcpArgs,
+  type ProjectControllerLaunchPlanMcpArgs,
+  type ProjectControlMcpArgs,
+  type StartMcpArgs,
+  type WorkerControlMcpArgs,
+} from "./codex-goal-mcp-inputs";
+import {
+  accountOperatorLabel,
+  availableCodexGoalAccountSlots,
+  codexAccountReloginInstructions,
+  codexAccountStatusPayload,
+  dedupeCodexGoalAccountSlots,
+  duplicateAccountGroups,
+  visibleCodexGoalAccountPoolSlots,
+} from "./codex-goal-mcp-accounts";
+import {
+  readRuntimeResultBrief,
+  safeTail,
+} from "./codex-goal-mcp-runtime-result";
+import { readCodexGoalLifecycleMarkers } from "./codex-goal-mcp-lifecycle-markers";
+import {
+  matchesProjectControlPrefix,
+  nodeErrorCode,
+  pathInsideAnyProjectRoot,
+  pathInsideOrEqual,
+  stringArrayArg,
+  uniqueProjectControlStrings,
+} from "./codex-goal-mcp-project-utils";
+import {
+  buildCodexProjectAdmissionSnapshot,
+  codexProjectAdmissionGate,
+  optionalRealPathForAdmission,
+  projectAdmissionDetailView,
+  projectAdmissionOperation,
+  projectAdmissionWorkerRoleArg,
+  type CodexProjectAdmissionDeps,
+} from "./codex-goal-mcp-project-admission";
+import {
+  jobIdsFromValue,
+  parseIsoDate,
+  signalIdList,
+  workerControlCallerArgs,
+  workerControlDecisionJson,
+  workerControlReceiptJson,
+  workerControlSignalJson,
+  workerControlSignalViewJson,
+} from "./codex-goal-mcp-worker-control-view";
+import {
+  CODEX_GOAL_CONTROL_SURFACE_SCHEMA,
+  CODEX_GOAL_EXECUTION_ENGINE_SCHEMA,
+  buildCodexGoalDecision,
+  buildCodexGoalHandoff,
+  codexGoalBriefHealthStatus,
+  isHeartbeatOnlyNoOutputBrief,
+  isSafeStartAction,
+  latestIsoDate,
+  nextActionForStatus,
+  nextBestCommand,
+  redactText,
+  truncateText,
+} from "./codex-goal-mcp-decision";
+export {
+  availableCodexGoalAccountSlots,
+  dedupeCodexGoalAccountSlots,
+  visibleCodexGoalAccountPoolSlots,
+} from "./codex-goal-mcp-accounts";
 
 const serverVersion = "0.1.0-main.2";
 const defaultAuthRoot = "~/.cache/subscription-runtime/live-codex-auth";
@@ -210,268 +292,6 @@ const controlledAgentProcessOwner = buildControlledAgentProcessOwner({
 const controlledAgentProviders = new Map<string, ControlledAgentProviderPort>();
 
 type JsonObject = Readonly<Record<string, unknown>>;
-
-type GoalMcpArgs = {
-  readonly jobId?: string;
-  readonly configPath?: string;
-  readonly jobRootDir?: string;
-  readonly authRootDir?: string;
-  readonly stateRootDir?: string;
-  readonly workspacePath?: string;
-  readonly promptPath?: string;
-  readonly codexGoalObjective?: string;
-  readonly taskId?: string;
-  readonly accounts?: string | readonly string[];
-  readonly outputPath?: string;
-  readonly progressPath?: string;
-  readonly progressHeartbeatMs?: number;
-  readonly codexBinaryPath?: string;
-  readonly model?: string;
-  readonly reasoningEffort?: CodexGoalRunConfig["reasoningEffort"];
-  readonly serviceTier?: CodexGoalRunConfig["serviceTier"];
-  readonly executionEngine?: CodexGoalRunConfig["executionEngine"];
-  readonly taskTimeoutMs?: number;
-  readonly appServerStartupTimeoutMs?: number;
-  readonly staleLockMs?: number;
-  readonly maxAccountCycles?: number;
-  readonly editMode?: CodexGoalRunConfig["editMode"];
-  readonly providerSandboxMode?: CodexGoalRunConfig["providerSandboxMode"];
-  readonly accessBoundary?: CodexGoalRunConfig["accessBoundary"];
-  readonly projectAccessScope?: CodexGoalRunConfig["projectAccessScope"];
-  readonly allowDangerFullAccess?: boolean;
-  readonly networkAccess?: CodexGoalRunConfig["networkAccess"];
-  readonly allowDuplicateAccountIdentities?: boolean;
-  readonly requireGitWorkspace?: boolean;
-  readonly prewarmOnStart?: boolean;
-  readonly workerReportMode?: CodexGoalRunConfig["workerReportMode"];
-  readonly tmuxSession?: string;
-  readonly cwd?: string;
-  readonly logPath?: string;
-  readonly outputFormat?: CodexGoalOutputFormat;
-};
-
-type StartMcpArgs = GoalMcpArgs & {
-  readonly registryRootDir?: string;
-  readonly confirmStart?: boolean;
-  readonly skipDoctor?: boolean;
-  readonly forceStart?: boolean;
-};
-
-type JobRegistryMcpArgs = {
-  readonly registryRootDir?: string;
-  readonly cwd?: string;
-};
-
-type JobOverviewMcpArgs = JobRegistryMcpArgs & {
-  readonly staleAfterMs?: number;
-  readonly tailLines?: number;
-  readonly limit?: number;
-  readonly jobIdPrefix?: string;
-};
-
-type JobWatchMcpArgs = JobOverviewMcpArgs & {
-  readonly jobIds?: string | readonly string[];
-  readonly continueSafeJobs?: boolean;
-  readonly maxContinuesPerRun?: number;
-  readonly skipDoctor?: boolean;
-};
-
-type AgentRunWatchMcpArgs = JobOverviewMcpArgs & {
-  readonly providerKind?: string;
-  readonly jobId?: string;
-  readonly jobIds?: string | readonly string[];
-  readonly stateRootDir?: string;
-  readonly runArtifactsRootDir?: string;
-  readonly includeChangedFiles?: boolean;
-  readonly includeLogTail?: boolean;
-};
-
-type AgentRunEventsMcpArgs = AgentRunWatchMcpArgs & {
-  readonly eventRootDir?: string;
-  readonly cursor?: string;
-  readonly type?: string | readonly string[];
-  readonly types?: string | readonly string[];
-};
-
-type AgentRunStateMcpArgs = AgentRunWatchMcpArgs & {
-  readonly eventRootDir?: string;
-};
-
-type AgentRunEventCompactionMcpArgs = JobRegistryMcpArgs & {
-  readonly eventRootDir?: string;
-  readonly keepEventsAfter?: string;
-  readonly keepLatestEventsPerRun?: number;
-  readonly compactDeliveredEvents?: boolean;
-  readonly dropInvalidLines?: boolean;
-  readonly safetyMode?: string;
-  readonly confirmCompact?: boolean;
-};
-
-type AgentRunProjectEventsMcpArgs = AgentRunEventsMcpArgs & {
-  readonly hostId?: string;
-};
-
-type JobIdMcpArgs = JobRegistryMcpArgs & {
-  readonly jobId?: string;
-};
-
-type JobCreateMcpArgs = GoalMcpArgs & JobIdMcpArgs & {
-  readonly description?: string;
-  readonly tags?: readonly string[] | string;
-  readonly overwrite?: boolean;
-};
-
-type JobUpdateMcpArgs = JobIdMcpArgs & Partial<JobCreateMcpArgs>;
-
-type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
-  readonly controllerJobId?: string;
-  readonly path?: string;
-  readonly sourceWorkspacePath?: string;
-  readonly baseBranch?: string;
-  readonly sourceRef?: string;
-  readonly newBranch?: string;
-  readonly workspacePath?: string;
-  readonly branch?: string;
-  readonly remote?: string;
-  readonly force?: boolean;
-  readonly commitSha?: string;
-  readonly confirmCreate?: boolean;
-  readonly confirmCreateWorktree?: boolean;
-  readonly confirmIntegrate?: boolean;
-  readonly confirmUpdate?: boolean;
-  readonly confirmPush?: boolean;
-  readonly confirmStart?: boolean;
-  readonly confirmStop?: boolean;
-  readonly forceStart?: boolean;
-  readonly forceStop?: boolean;
-  readonly skipDoctor?: boolean;
-  readonly note?: string;
-  readonly overwrite?: boolean;
-  readonly promptBody?: string;
-  readonly confirmRefill?: boolean;
-  readonly confirmRepair?: boolean;
-  readonly startWorker?: boolean;
-  readonly workerRole?: string;
-  readonly dependencyBootstrap?: string;
-  readonly confirmDependencyBootstrap?: boolean;
-  readonly operation?: string;
-  readonly includeDetails?: boolean;
-  readonly maxDebtItems?: number;
-  readonly executionMode?: string;
-  readonly operationId?: string;
-  readonly includeResult?: boolean;
-};
-
-type ProjectControllerLaunchPlanMcpArgs = ProjectControlMcpArgs & {
-  readonly providerKind?: string;
-  readonly stateDir?: string;
-  readonly sessionArtifactPath?: string;
-  readonly claudePath?: string;
-  readonly mcpServerName?: string;
-  readonly mcpCommand?: string;
-  readonly mcpArgs?: readonly string[] | string;
-  readonly mcpCwd?: string;
-  readonly rawShellMode?: "disabled-by-provider" | "sandboxed-deny-rules-only";
-  readonly maxGoalTurns?: number;
-  readonly reason?: string;
-  readonly deliveryAttemptId?: string;
-};
-
-type JobLifecycleMcpArgs = JobIdMcpArgs & {
-  readonly confirmContinue?: boolean;
-  readonly confirmRecover?: boolean;
-  readonly confirmStop?: boolean;
-  readonly confirmPause?: boolean;
-  readonly forceStart?: boolean;
-  readonly forceStop?: boolean;
-  readonly forcePause?: boolean;
-  readonly skipDoctor?: boolean;
-  readonly staleAfterMs?: number;
-  readonly tailLines?: number;
-  readonly reason?: string;
-};
-
-type JobResultReconcileMcpArgs = JobBriefMcpArgs & {
-  readonly forceWrite?: boolean;
-  readonly preservePatch?: boolean;
-};
-
-type JobBriefMcpArgs = JobIdMcpArgs & {
-  readonly staleAfterMs?: number;
-  readonly tailLines?: number;
-  readonly targetCommit?: string;
-  readonly targetWorkspacePath?: string;
-};
-
-type JobDecisionMcpArgs = JobBriefMcpArgs & {
-  readonly includeRegistryConflicts?: boolean;
-};
-
-type JobHandoffMcpArgs = JobBriefMcpArgs & {
-  readonly includeCliFallback?: boolean;
-};
-
-type JobAccountPoolMcpArgs = JobIdMcpArgs & {
-  readonly poolRootDir?: string;
-  readonly account?: string;
-};
-
-type WorkerControlMcpArgs = JobIdMcpArgs & {
-  readonly intent?: WorkerControlIntent;
-  readonly deliveryMode?: WorkerControlDeliveryMode;
-  readonly body?: string;
-  readonly createdBy?: WorkerControlActor;
-  readonly callerKind?: WorkerControlActor;
-  readonly callerActor?: WorkerControlActor;
-  readonly callerId?: string;
-  readonly priority?: WorkerControlPriority;
-  readonly idempotencyKey?: string;
-  readonly expiresAt?: string;
-  readonly supersedesSignalIds?: string | readonly string[];
-  readonly signalId?: string;
-  readonly supersededBySignalId?: string;
-  readonly reason?: string;
-  readonly includeBodies?: boolean;
-  readonly repair?: boolean;
-  readonly acceptedStaleAfterMs?: number;
-};
-
-type AccountPoolMcpArgs = {
-  readonly poolRootDir?: string;
-  readonly pool?: string;
-  readonly authRootDir?: string;
-  readonly stateRootDir?: string;
-  readonly accounts?: string | readonly string[];
-};
-
-type CodexGoalLifecycleMarkerSpec = {
-  readonly type: "pause_request" | "maintenance_pause" | "review" | "stop_event";
-  readonly suffix: string;
-  readonly timestampKeys: readonly string[];
-};
-
-const lifecycleMarkerSpecs: readonly CodexGoalLifecycleMarkerSpec[] = [
-  {
-    type: "pause_request",
-    suffix: "pause-request.json",
-    timestampKeys: ["requestedAt"],
-  },
-  {
-    type: "maintenance_pause",
-    suffix: "maintenance-pause.json",
-    timestampKeys: ["pausedAt"],
-  },
-  {
-    type: "review",
-    suffix: "review.json",
-    timestampKeys: ["reviewedAt"],
-  },
-  {
-    type: "stop_event",
-    suffix: "stop-event.json",
-    timestampKeys: ["stoppedAt"],
-  },
-];
 
 export type CodexGoalMcpServerOptions = {
   readonly activeAttemptRegistry?: ActiveAttemptRegistry;
@@ -2636,6 +2456,12 @@ async function loadProjectControlController(args: ProjectControlMcpArgs): Promis
   };
 }
 
+const codexProjectAdmissionDeps: CodexProjectAdmissionDeps = {
+  listJobs: listCodexGoalJobs,
+  buildOverviewItem: (input) =>
+    buildCodexGoalOverviewItem(input),
+};
+
 async function projectControlAdmissionSnapshot(
   args: ProjectControlMcpArgs,
 ) {
@@ -2643,6 +2469,7 @@ async function projectControlAdmissionSnapshot(
   const snapshot = await buildCodexProjectAdmissionSnapshot({
     registryRootDir: controller.registryRootDir,
     scope: controller.scope,
+    deps: codexProjectAdmissionDeps,
   });
   const operation = projectAdmissionOperation(args.operation);
   const workerRole = projectAdmissionWorkerRoleArg(args.workerRole);
@@ -2670,57 +2497,6 @@ async function projectControlAdmissionSnapshot(
     snapshot: detailView.snapshot,
     ...(detailView.decision ? { decision: detailView.decision } : {}),
   });
-}
-
-function projectAdmissionDetailView(input: {
-  readonly snapshot: ProjectAdmissionSnapshot;
-  readonly decision?: ReturnType<typeof evaluateProjectAdmission>;
-  readonly includeDetails: boolean;
-  readonly maxDebtItems?: number;
-}): {
-  readonly snapshot: JsonObject;
-  readonly decision?: JsonObject;
-} {
-  const debtLimit = projectAdmissionDebtLimit(input.maxDebtItems);
-  const snapshotDebt = input.includeDetails
-    ? limitedProjectDebt(input.snapshot.debt, debtLimit)
-    : [];
-  const decisionDebt = input.decision && input.includeDetails
-    ? limitedProjectDebt(input.decision.debt, debtLimit)
-    : [];
-  return {
-    snapshot: {
-      ...input.snapshot,
-      debt: snapshotDebt,
-      debtCount: input.snapshot.debt.length,
-      debtOmittedCount: input.snapshot.debt.length - snapshotDebt.length,
-      detailsIncluded: input.includeDetails,
-    } as unknown as JsonObject,
-    ...(input.decision
-      ? {
-          decision: {
-            ...input.decision,
-            debt: decisionDebt,
-            debtCount: input.decision.debt.length,
-            debtOmittedCount: input.decision.debt.length - decisionDebt.length,
-            detailsIncluded: input.includeDetails,
-          } as unknown as JsonObject,
-        }
-      : {}),
-  };
-}
-
-function projectAdmissionDebtLimit(value: number | undefined): number | undefined {
-  if (value === undefined) return undefined;
-  if (!Number.isFinite(value)) return undefined;
-  return Math.max(0, Math.floor(value));
-}
-
-function limitedProjectDebt(
-  debt: readonly ProjectDebtItem[],
-  limit: number | undefined,
-): readonly ProjectDebtItem[] {
-  return limit === undefined ? debt : debt.slice(0, limit);
 }
 
 async function projectControlUpdateControllerScope(
@@ -2905,441 +2681,6 @@ function assertProjectControlRepairAccountsAllowed(input: {
   }
 }
 
-const projectAdmissionSnapshotCache = new Map<
-  string,
-  { readonly expiresAtMs: number; readonly snapshot: ProjectAdmissionSnapshot }
->();
-
-function projectAdmissionCacheTtlMs(): number {
-  const raw = Number(process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_CACHE_TTL_MS ?? "0");
-  if (!Number.isFinite(raw) || raw <= 0) return 0;
-  return Math.min(raw, 120_000);
-}
-
-function projectAdmissionMaxJobSummaries(): number {
-  const raw = Number(process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_MAX_JOB_SUMMARIES ?? "0");
-  if (!Number.isFinite(raw) || raw <= 0) return 0;
-  return Math.floor(raw);
-}
-
-function projectAdmissionCacheKey(input: {
-  readonly registryRootDir: string;
-  readonly scope: ProjectAccessScope;
-}): string {
-  return JSON.stringify({
-    registryRootDir: input.registryRootDir,
-    projectId: input.scope.projectId,
-    jobIdPrefixes: input.scope.jobIdPrefixes ?? [],
-    workspaceRoots: input.scope.workspaceRoots ?? [],
-    worktreeRoots: input.scope.worktreeRoots ?? [],
-    observedWorkspaceRoots: input.scope.observedWorkspaceRoots ?? [],
-    consumedOutputLedgerRoots: input.scope.consumedOutputLedgerRoots ?? [],
-  });
-}
-
-async function readCodexProjectAdmissionSnapshot(input: {
-  readonly registryRootDir: string;
-  readonly scope: ProjectAccessScope;
-}): Promise<ProjectAdmissionSnapshot> {
-  const ttlMs = projectAdmissionCacheTtlMs();
-  if (ttlMs <= 0) return buildCodexProjectAdmissionSnapshot(input);
-  const key = projectAdmissionCacheKey(input);
-  const now = Date.now();
-  const cached = projectAdmissionSnapshotCache.get(key);
-  if (cached && cached.expiresAtMs > now) return cached.snapshot;
-  const snapshot = await buildCodexProjectAdmissionSnapshot(input);
-  projectAdmissionSnapshotCache.set(key, {
-    expiresAtMs: now + ttlMs,
-    snapshot,
-  });
-  return snapshot;
-}
-
-function limitCodexProjectSummaries(
-  summaries: readonly CodexGoalJobSummary[],
-): readonly CodexGoalJobSummary[] {
-  const max = projectAdmissionMaxJobSummaries();
-  if (max <= 0 || summaries.length <= max) return summaries;
-  return [...summaries]
-    .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
-    .slice(-max);
-}
-
-function codexProjectAdmissionGate(input: {
-  readonly registryRootDir: string;
-  readonly scope: ProjectAccessScope;
-}): ProjectAdmissionGate {
-  return {
-    async evaluate(request) {
-      const snapshot = await readCodexProjectAdmissionSnapshot(input);
-      return evaluateProjectAdmission({
-        request: {
-          ...request,
-          projectId: request.projectId ?? input.scope.projectId,
-        },
-        snapshot,
-      });
-    },
-  };
-}
-
-async function buildCodexProjectAdmissionSnapshot(input: {
-  readonly registryRootDir: string;
-  readonly scope: ProjectAccessScope;
-}): Promise<ProjectAdmissionSnapshot> {
-  const debt: ProjectDebtItem[] = [];
-  const knownWorkspacePaths = new Set<string>();
-  const prefixes = input.scope.jobIdPrefixes ?? [];
-  const staleAfterMs = 10 * 60_000;
-  const consumedOutput = await readConsumedOutputLedgers({
-    roots: input.scope.consumedOutputLedgerRoots ?? [],
-  });
-  debt.push(...consumedOutput.debt);
-  let summaries;
-  try {
-    summaries = await listCodexGoalJobs({ registryRootDir: input.registryRootDir });
-  } catch (error) {
-    debt.push({
-      reason: ProjectDebtReason.UnreadableRoot,
-      subject: input.registryRootDir,
-      severity: "blocking",
-      evidence: [
-        `registry unreadable: ${error instanceof Error ? error.message : String(error)}`,
-      ],
-    });
-    summaries = [];
-  }
-  const projectSummaries = limitCodexProjectSummaries(
-    summaries.filter((summary) => matchesProjectControlPrefix(summary.jobId, prefixes)),
-  );
-  const overviewSummaries: CodexGoalJobSummary[] = [];
-  for (const summary of projectSummaries) {
-    const consumed = await debtFromConsumedJobSummary({
-      summary,
-      consumedOutput,
-      knownWorkspacePaths,
-    });
-    if (consumed) {
-      debt.push(...consumed);
-      continue;
-    }
-    overviewSummaries.push(summary);
-  }
-  const overviewItems = await Promise.all(
-    overviewSummaries.map((summary) =>
-      buildCodexGoalOverviewItem({
-        registryRootDir: input.registryRootDir,
-        jobId: summary.jobId,
-        staleAfterMs,
-        tailLines: 0,
-      })
-    ),
-  );
-  for (const item of overviewItems) {
-    if (typeof item.workspacePath === "string") {
-      await rememberKnownWorkspacePath(knownWorkspacePaths, item.workspacePath);
-    }
-    debt.push(...await debtFromOverviewItem({
-      item,
-      consumedOutput,
-    }));
-  }
-  const roots = uniqueProjectControlStrings([
-    ...(input.scope.workspaceRoots ?? []),
-    ...(input.scope.worktreeRoots ?? []),
-    ...(input.scope.observedWorkspaceRoots ?? []),
-  ]);
-  for (const root of roots) {
-    debt.push(...await orphanDirtyWorkspaceDebt({
-      root,
-      prefixes,
-      knownWorkspacePaths,
-      consumedOutput,
-    }));
-    debt.push(...await diskPressureDebt(root));
-  }
-  return {
-    schemaVersion: 1,
-    projectId: input.scope.projectId,
-    observedAt: new Date().toISOString(),
-    debt,
-    counts: projectAdmissionDebtCounts(debt),
-  };
-}
-
-async function debtFromConsumedJobSummary(input: {
-  readonly summary: CodexGoalJobSummary;
-  readonly consumedOutput: ConsumedOutputLedger;
-  readonly knownWorkspacePaths: Set<string>;
-}): Promise<readonly ProjectDebtItem[] | undefined> {
-  const resolvedWorkspacePath = await optionalRealPathForAdmission(
-    input.summary.workspacePath,
-  );
-  const consumed = consumedOutputRecordFor({
-    ledger: input.consumedOutput,
-    jobId: input.summary.jobId,
-    workspacePath: input.summary.workspacePath,
-    ...(resolvedWorkspacePath ? { resolvedWorkspacePath } : {}),
-  });
-  if (!consumed) return undefined;
-  await rememberKnownWorkspacePath(
-    input.knownWorkspacePaths,
-    input.summary.workspacePath,
-  );
-  return consumedDebt(consumed);
-}
-
-async function debtFromOverviewItem(input: {
-  readonly item: JsonObject;
-  readonly consumedOutput: ConsumedOutputLedger;
-}): Promise<ProjectDebtItem[]> {
-  const { item } = input;
-  const jobId = stringValue(item.jobId) ?? "unknown-job";
-  const workspacePath = stringValue(item.workspacePath);
-  if (item.ok !== true) {
-    return [{
-      reason: ProjectDebtReason.UnreadableRoot,
-      subject: jobId,
-      severity: "blocking",
-      evidence: [stringValue(item.safeMessage) ?? "job overview unavailable"],
-    }];
-  }
-  const debt: ProjectDebtItem[] = [];
-  if (item.activeWriterRisk === true || item.workspaceConflict === true) {
-    debt.push({
-      reason: ProjectDebtReason.ActiveWriterConflict,
-      subject: jobId,
-      severity: "blocking",
-      evidence: safeStringArray(item.activeWriterRiskReasons)
-        .concat(["active writer conflict risk"]),
-    });
-  }
-  if (item.workspaceDirty !== true) return debt;
-  const subject = workspacePath ?? jobId;
-  const resolvedWorkspacePath = workspacePath
-    ? await optionalRealPathForAdmission(workspacePath)
-    : undefined;
-  const consumed = consumedOutputRecordFor({
-    ledger: input.consumedOutput,
-    jobId,
-    ...(workspacePath ? { workspacePath } : {}),
-    ...(resolvedWorkspacePath ? { resolvedWorkspacePath } : {}),
-  });
-  if (consumed) {
-    debt.push(...consumedDebt(consumed));
-    return debt;
-  }
-  const workerAlive = item.workerAlive === true;
-  const stale = item.silentStale === true || item.workerFreshProgressAlive === false;
-  if (workerAlive && stale) {
-    debt.push({
-      reason: ProjectDebtReason.StaleDirtyWorker,
-      subject,
-      severity: "blocking",
-      evidence: [`${jobId} is alive/stale with dirty workspace`],
-    });
-    return debt;
-  }
-  if (workerAlive) return debt;
-  const markerTypes = safeStringArray(item.lifecycleMarkerTypes);
-  const recommendedAction = stringValue(item.recommendedAction);
-  const resultStatus = stringValue(item.resultStatus);
-  const completedOrReviewed = resultStatus === "completed" ||
-    recommendedAction === "review_completed" ||
-    markerTypes.includes("review");
-  debt.push({
-    reason: completedOrReviewed
-      ? ProjectDebtReason.UnconsumedCompletedJob
-      : ProjectDebtReason.InactiveDirtyWorkspace,
-    subject,
-    severity: "blocking",
-    evidence: [
-      `${jobId} is inactive with dirty workspace`,
-      `reviewed marker present: ${String(markerTypes.includes("review"))}`,
-      "reviewed is not consumed; output must be integrated/rejected/archived",
-    ],
-  });
-  return debt;
-}
-
-async function rememberKnownWorkspacePath(
-  target: Set<string>,
-  workspacePath: string,
-): Promise<void> {
-  target.add(resolve(workspacePath));
-  try {
-    target.add(await realpath(workspacePath));
-  } catch {
-    // Missing workspaces are handled by overview debt; keep the raw path.
-  }
-}
-
-async function orphanDirtyWorkspaceDebt(input: {
-  readonly root: string;
-  readonly prefixes: readonly string[];
-  readonly knownWorkspacePaths: ReadonlySet<string>;
-  readonly consumedOutput: ConsumedOutputLedger;
-}): Promise<readonly ProjectDebtItem[]> {
-  const root = resolve(input.root);
-  let entries;
-  try {
-    entries = await readdir(root, { withFileTypes: true });
-  } catch (error) {
-    if (nodeErrorCode(error) === "ENOENT") return [];
-    return [{
-      reason: ProjectDebtReason.UnreadableRoot,
-      subject: root,
-      severity: "blocking",
-      evidence: [
-        `workspace root unreadable: ${error instanceof Error ? error.message : String(error)}`,
-      ],
-    }];
-  }
-  const debt: ProjectDebtItem[] = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory() && !entry.isSymbolicLink()) continue;
-    if (!matchesProjectControlPrefix(entry.name, input.prefixes)) continue;
-    const workspacePath = join(root, entry.name);
-    if (!await pathLooksLikeGitWorkspace(workspacePath)) continue;
-    const resolved = await optionalRealPathForAdmission(workspacePath);
-    if (
-      input.knownWorkspacePaths.has(resolve(workspacePath)) ||
-      (resolved && input.knownWorkspacePaths.has(resolved))
-    ) {
-      continue;
-    }
-    const consumed = consumedOutputRecordFor({
-      ledger: input.consumedOutput,
-      jobId: entry.name,
-      workspacePath,
-      ...(resolved ? { resolvedWorkspacePath: resolved } : {}),
-    });
-    if (consumed) {
-      debt.push(...consumedDebt(consumed));
-      continue;
-    }
-    const status = await gitStatusShort(workspacePath);
-    if (status.ok && status.lines.length === 0) continue;
-    debt.push({
-      reason: status.ok
-        ? ProjectDebtReason.OrphanLegacyWorkspace
-        : ProjectDebtReason.UnreadableWorkspace,
-      subject: workspacePath,
-      severity: "blocking",
-      evidence: status.ok
-        ? [
-            "dirty project workspace is not represented by the controller registry",
-            ...status.lines.slice(0, 5),
-          ]
-        : [`git status failed: ${status.error}`],
-    });
-  }
-  return debt;
-}
-
-async function diskPressureDebt(root: string): Promise<readonly ProjectDebtItem[]> {
-  const minFreeKb = Number(process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_MIN_FREE_KB ?? "0");
-  if (!Number.isFinite(minFreeKb) || minFreeKb <= 0) return [];
-  try {
-    const result = await execFileAsync("df", ["-Pk", root], {
-      timeout: 8_000,
-      maxBuffer: 256 * 1024,
-    });
-    const [, line] = result.stdout.trim().split(/\n/);
-    const availableKb = Number(line?.trim().split(/\s+/)[3]);
-    if (Number.isFinite(availableKb) && availableKb < minFreeKb) {
-      return [{
-        reason: ProjectDebtReason.DiskPressure,
-        subject: root,
-        severity: "blocking",
-        evidence: [`availableKb=${availableKb} minFreeKb=${minFreeKb}`],
-      }];
-    }
-    return [];
-  } catch (error) {
-    return [{
-      reason: ProjectDebtReason.UnreadableRoot,
-      subject: root,
-      severity: "blocking",
-      evidence: [
-        `disk pressure check failed: ${error instanceof Error ? error.message : String(error)}`,
-      ],
-    }];
-  }
-}
-
-async function pathLooksLikeGitWorkspace(path: string): Promise<boolean> {
-  try {
-    await lstat(join(path, ".git"));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function optionalRealPathForAdmission(path: string): Promise<string | undefined> {
-  try {
-    return await realpath(path);
-  } catch {
-    return undefined;
-  }
-}
-
-async function gitStatusShort(path: string): Promise<
-  | { readonly ok: true; readonly lines: readonly string[] }
-  | { readonly ok: false; readonly error: string }
-> {
-  try {
-    const result = await execFileAsync("git", [
-      "-C",
-      path,
-      "status",
-      "--short",
-      "--untracked-files=all",
-    ], {
-      timeout: 8_000,
-      maxBuffer: 1024 * 1024,
-    });
-    return {
-      ok: true,
-      lines: result.stdout.split(/\n/).filter((line) => line.length > 0),
-    };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
-
-function safeStringArray(value: unknown): readonly string[] {
-  try {
-    return stringArrayArg(value);
-  } catch {
-    return [];
-  }
-}
-
-function projectAdmissionOperation(value: unknown): ProjectOperation | undefined {
-  const operation = stringValue(value);
-  if (operation === undefined) return undefined;
-  if (operation === ProjectOperation.CreateJob) return ProjectOperation.CreateJob;
-  if (operation === ProjectOperation.StartWorker) return ProjectOperation.StartWorker;
-  if (operation === ProjectOperation.CreateWorktree) return ProjectOperation.CreateWorktree;
-  throw new Error("project_admission_operation_invalid");
-}
-
-function projectAdmissionWorkerRoleArg(
-  value: unknown,
-): ProjectAdmissionWorkerRole | undefined {
-  const role = stringValue(value);
-  if (role === undefined) return undefined;
-  if ((Object.values(ProjectAdmissionWorkerRole) as readonly string[]).includes(role)) {
-    return role as ProjectAdmissionWorkerRole;
-  }
-  throw new Error("project_admission_worker_role_invalid");
-}
-
 type CodexGoalProjectCreateWorktreeInput = {
   readonly sourceWorkspacePath: string;
   readonly realSourceWorkspacePath?: string;
@@ -3389,6 +2730,7 @@ function codexProjectControlBroker(input: {
     admission: codexProjectAdmissionGate({
       registryRootDir: input.registryRootDir,
       scope: input.scope,
+      deps: codexProjectAdmissionDeps,
     }),
   });
 }
@@ -3626,14 +2968,6 @@ async function pathExists(path: string): Promise<boolean> {
     if (nodeErrorCode(error) === "ENOENT") return false;
     throw error;
   }
-}
-
-function nodeErrorCode(error: unknown): string | undefined {
-  return typeof error === "object" && error !== null &&
-      "code" in error &&
-      typeof (error as { readonly code?: unknown }).code === "string"
-    ? (error as { readonly code: string }).code
-    : undefined;
 }
 
 async function readTextFileIfExists(path: string): Promise<string | null> {
@@ -4602,18 +3936,6 @@ async function controlledAgentClaudeSessionArtifact(input: {
     sessionArtifactPath: rawPath,
     authRoot: input.controller.scope.authRoot,
     cwd: input.state.cwd,
-  });
-}
-
-function stringArrayArg(value: unknown): readonly string[] {
-  if (value === undefined) return [];
-  const values = typeof value === "string" ? [value] : value;
-  if (!Array.isArray(values)) throw new Error("string_array_arg_invalid");
-  return values.map((item) => {
-    if (typeof item !== "string" || item.length === 0) {
-      throw new Error("string_array_arg_invalid");
-    }
-    return item;
   });
 }
 
@@ -5805,10 +5127,6 @@ function projectScopeFieldFingerprint(value: unknown): string {
   return JSON.stringify(value ?? null);
 }
 
-function uniqueProjectControlStrings(values: readonly string[]): readonly string[] {
-  return [...new Set(values.filter((value) => value.length > 0))];
-}
-
 function projectControlWorkerRole(value: unknown): "producer" | "fastgate" | "reviewer" {
   const role = stringValue(value) ?? "producer";
   if (role === "producer" || role === "fastgate" || role === "reviewer") {
@@ -5888,13 +5206,6 @@ function assertProjectControlCreateManifestPaths(input: {
   }
 }
 
-function pathInsideAnyProjectRoot(
-  path: string,
-  roots: readonly string[],
-): boolean {
-  return roots.some((root) => pathInsideOrEqual(path, root));
-}
-
 async function projectControlRealPathOutsideWorkspaceScope(
   path: string,
   scope: ProjectAccessScope,
@@ -5918,21 +5229,6 @@ function projectControlWorkspaceRoots(scope: ProjectAccessScope): readonly strin
     ...(scope.worktreeRoots ?? []),
     ...(scope.isolatedWorkspaceRoot ? [scope.isolatedWorkspaceRoot] : []),
   ]);
-}
-
-function pathInsideOrEqual(path: string, root: string): boolean {
-  const normalizedPath = resolve(path);
-  const normalizedRoot = resolve(root);
-  return normalizedPath === normalizedRoot ||
-    normalizedPath.startsWith(`${normalizedRoot}/`);
-}
-
-function matchesProjectControlPrefix(
-  value: string,
-  prefixes: readonly string[],
-): boolean {
-  return prefixes.length === 0 ||
-    prefixes.some((prefix) => value.startsWith(prefix));
 }
 
 function projectControlPathArg(
@@ -6135,77 +5431,6 @@ async function codexGoalAccountCapacityFacts(
       error: error instanceof Error ? error.message : String(error),
     };
   }
-}
-
-async function codexAccountStatusPayload(input: {
-  readonly authRootDir: string;
-  readonly stateRootDir?: string;
-  readonly accounts?: readonly string[];
-  readonly liveCheck?: boolean;
-  readonly codexBinaryPath?: string;
-  readonly liveCheckTimeoutMs?: number;
-}) {
-  const slots = await listCodexGoalAccountStatuses({
-    authRootDir: input.authRootDir,
-    ...(input.accounts?.length ? { accounts: input.accounts } : {}),
-    ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
-    ...(input.liveCheck ? { liveCheck: input.liveCheck } : {}),
-    ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
-    ...(input.liveCheckTimeoutMs ? { liveCheckTimeoutMs: input.liveCheckTimeoutMs } : {}),
-  });
-  const duplicates = duplicateAccountGroups(slots);
-  const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
-  const availableDedupedSlots = availableCodexGoalAccountSlots(dedupedSlots);
-  const readySlots = slots.filter((slot) => slot.status === "ready");
-  const missingSlots = slots.filter((slot) => slot.status === "auth_missing");
-  const invalidSlots = slots.filter((slot) => slot.status === "auth_invalid");
-  const capacityBlockedSlots = slots.filter((slot) =>
-    slot.capacityAvailability && slot.capacityAvailability !== "available"
-  );
-  return {
-    ok: availableDedupedSlots.length > 0,
-    authRootDir: input.authRootDir,
-    capacityAware: Boolean(input.stateRootDir),
-    liveCheck: Boolean(input.liveCheck),
-    ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
-    count: slots.length,
-    available: availableDedupedSlots.length,
-    hasAvailableAccount: availableDedupedSlots.length > 0,
-    summary: {
-      configured: slots.length,
-      ready: readySlots.length,
-      missing: missingSlots.length,
-      invalid: invalidSlots.length,
-      deduped: dedupedSlots.length,
-      availableDeduped: availableDedupedSlots.length,
-      capacityBlocked: capacityBlockedSlots.length,
-      duplicateGroups: duplicates.length,
-    },
-    accounts: slots,
-    slots,
-    duplicates,
-    dedupedAccountNames: dedupedSlots.map((slot) => slot.name),
-    availableDedupedAccountNames: availableDedupedSlots.map((slot) => slot.name),
-    dedupedAccountLabels: dedupedSlots.map(accountOperatorLabel),
-    availableDedupedAccountLabels: availableDedupedSlots.map(accountOperatorLabel),
-    dedupeRecommendation: duplicates.length
-      ? "Use dedupedAccountNames for worker pools. It keeps the newest ready slot per identity group."
-      : "No duplicate identity groups detected.",
-  };
-}
-
-function codexAccountReloginInstructions(input: {
-  readonly authRootDir: string;
-  readonly account: string;
-  readonly afterLoginInstruction: string;
-}): readonly string[] {
-  return [
-    "This is a manual relogin flow. It does not automate browser login.",
-    `mkdir -p ${shellText(join(input.authRootDir, input.account))}`,
-    `test ! -f ${shellText(join(input.authRootDir, input.account, "auth.json"))} || cp ${shellText(join(input.authRootDir, input.account, "auth.json"))} ${shellText(join(input.authRootDir, input.account, "auth.json.bak.$(date +%Y%m%d-%H%M%S).before-relogin"))}`,
-    `CODEX_HOME=${shellText(join(input.authRootDir, input.account))} codex login --device-auth`,
-    input.afterLoginInstruction,
-  ];
 }
 
 async function continueStoredJob(
@@ -7734,90 +6959,6 @@ async function buildCodexGoalOverviewItem(input: {
   }
 }
 
-function jobRegistryInputSchema(): Record<string, z.ZodTypeAny> {
-  return {
-    registryRootDir: z.string().optional(),
-    cwd: z.string().optional(),
-  };
-}
-
-function jobIdInputSchema(): Record<string, z.ZodTypeAny> {
-  return {
-    ...jobRegistryInputSchema(),
-    jobId: z.string().optional(),
-  };
-}
-
-function registryRootFromArgs(args: JobRegistryMcpArgs): string {
-  return resolveCodexGoalJobRegistryRoot({
-    ...(args.registryRootDir ? { registryRootDir: args.registryRootDir } : {}),
-    ...(args.cwd ? { cwd: args.cwd } : {}),
-  });
-}
-
-function runEventRootFromArgs(
-  args: AgentRunEventsMcpArgs,
-  registryRootDir: string,
-): string {
-  const cwd = resolvePath(process.cwd(), stringValue(args.cwd) ?? process.cwd());
-  return stringValue(args.eventRootDir)
-    ? resolvePath(cwd, stringValue(args.eventRootDir) as string)
-    : join(registryRootDir, ".run-events");
-}
-
-function optionalRunEventProviderKind(
-  value: unknown,
-): RunEventProviderKind | undefined {
-  const text = stringValue(value);
-  if (text === undefined) return undefined;
-  if (isRunEventProviderKind(text)) return text;
-  throw new Error(`unsupported run event provider kind: ${text}`);
-}
-
-function runEventTypeFilter(args: AgentRunEventsMcpArgs): {
-  readonly types?: readonly RunEventType[];
-} {
-  const values = [
-    ...stringsFromValue(args.type),
-    ...stringsFromValue(args.types),
-  ];
-  if (values.length === 0) return {};
-  return {
-    types: values.map((value) => {
-      if (!isRunEventType(value)) {
-        throw new Error(`unsupported run event type: ${value}`);
-      }
-      return value;
-    }),
-  };
-}
-
-function runEventRetentionPolicyFromArgs(
-  args: AgentRunEventCompactionMcpArgs,
-): RunEventRetentionPolicy {
-  const safetyMode = optionalRunEventCompactionSafetyMode(args.safetyMode);
-  const keepEventsAfter = stringValue(args.keepEventsAfter);
-  const keepLatestEventsPerRun = numberValue(args.keepLatestEventsPerRun);
-  const compactDeliveredEvents = booleanValue(args.compactDeliveredEvents);
-  const dropInvalidLines = booleanValue(args.dropInvalidLines);
-  return {
-    ...(safetyMode === undefined ? {} : { safetyMode }),
-    ...(keepEventsAfter === undefined ? {} : { keepEventsAfter }),
-    ...(keepLatestEventsPerRun === undefined ? {} : { keepLatestEventsPerRun }),
-    ...(compactDeliveredEvents === undefined ? {} : { compactDeliveredEvents }),
-    ...(dropInvalidLines === undefined ? {} : { dropInvalidLines }),
-  };
-}
-
-function optionalRunEventCompactionSafetyMode(
-  value: unknown,
-): RunEventCompactionSafetyMode | undefined {
-  const text = stringValue(value);
-  if (text === undefined) return undefined;
-  if (isRunEventCompactionSafetyMode(text)) return text;
-  throw new Error(`unsupported run event compaction safety mode: ${text}`);
-}
-
 function jobManifestInputFromArgs(args: JobCreateMcpArgs): CodexGoalJobManifestInput {
   const cwd = resolvePath(process.cwd(), args.cwd ?? process.cwd());
   const jobId = requiredRawString(args.jobId, "jobId");
@@ -8256,369 +7397,6 @@ export async function buildCodexGoalBrief(input: {
   };
 }
 
-function codexGoalBriefHealthStatus(input: {
-  readonly status: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
-  readonly workerAlive: boolean;
-}): "running" | "stopped" | "completed" | "blocked" | "failed" | "unknown" {
-  if (input.workerAlive && input.status.progressStatus === "running") {
-    return "running";
-  }
-  if (
-    input.status.resultStatus === "done" ||
-    input.status.resultStatus === "completed"
-  ) {
-    return "completed";
-  }
-  if (
-    input.status.resultStatus === "waiting_capacity" ||
-    input.status.progressStatus === "blocked"
-  ) {
-    return "blocked";
-  }
-  if (input.workerAlive) return "running";
-  if (
-    input.status.resultStatus === "failed" ||
-    input.status.resultStatus === "partial" ||
-    input.status.resultStatus === "blocked" ||
-    input.status.resultStatus === "aborted"
-  ) {
-    return "failed";
-  }
-  if (input.status.resultExists === false && input.status.tmuxAlive === false) {
-    return "stopped";
-  }
-  return "unknown";
-}
-
-function isHeartbeatOnlyNoOutputBrief(input: {
-  readonly status: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
-  readonly staleAfterMs: number;
-}): boolean {
-  const status = input.status;
-  const heartbeatOnlyNoOutputAfterMs = Math.min(input.staleAfterMs, 2 * 60_000);
-  const logUpdatedAgeMs = isoAgeMs(status.logUpdatedAt);
-  const noOutputAgeMs = logUpdatedAgeMs ?? status.progressHeartbeatAgeMs;
-  const progressStale = status.progressHeartbeatAgeMs !== undefined &&
-    status.progressHeartbeatAgeMs > input.staleAfterMs;
-  const workerLiveness = resolveCodexGoalWorkerLiveness({
-    status,
-    progressStale,
-  });
-  const executorStartedOnlyNoOutput = Boolean(
-    status.lastRuntimeEvent === "executor_started" &&
-      status.resultExists === false &&
-      (status.logExists === false || status.logByteLength === 0),
-  );
-  const noOutputIsNotUsefulProgress = status.progressCpuActive !== true ||
-    executorStartedOnlyNoOutput;
-  return Boolean(
-    workerLiveness.alive &&
-      status.progressExists &&
-      status.progressStatus === "running" &&
-      noOutputAgeMs !== undefined &&
-      noOutputAgeMs >= heartbeatOnlyNoOutputAfterMs &&
-      status.progressHeartbeatAgeMs !== undefined &&
-      status.progressHeartbeatAgeMs <= input.staleAfterMs &&
-      noOutputIsNotUsefulProgress &&
-      status.resultExists === false &&
-      (status.logExists === false || status.logByteLength === 0) &&
-      status.workspaceDirty === false &&
-      (status.changedFiles ?? []).length === 0,
-  );
-}
-
-function buildCodexGoalDecision(input: {
-  readonly registryRootDir: string;
-  readonly manifest: CodexGoalJobManifest;
-  readonly launch: CodexGoalLaunchInput;
-  readonly status: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
-  readonly accounts: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>;
-  readonly brief: Awaited<ReturnType<typeof buildCodexGoalBrief>>;
-  readonly overview?: JsonObject;
-}): JsonObject {
-  const registryArgs = {
-    registryRootDir: input.registryRootDir,
-    jobId: input.manifest.jobId,
-  };
-  const workspaceConflict = findWorkspaceConflictForJob(
-    input.overview,
-    input.manifest.jobId,
-  );
-  const blockedBySingleWriter = workspaceConflict !== undefined;
-  const safeToContinue = input.brief.safeToContinue && !blockedBySingleWriter;
-  const blockers: JsonObject[] = [];
-  const warnings: JsonObject[] = [];
-  const evidence: JsonObject[] = [
-    {
-      code: "worker_state",
-      workerAlive: Boolean(input.brief.workerAlive),
-      workerSupervisorKind: input.brief.workerSupervisorKind,
-      workerAliveReason: input.brief.workerAliveReason,
-      workerProcessAlive: input.brief.workerProcessAlive,
-      workerFreshProgressAlive: input.brief.workerFreshProgressAlive,
-      activeWriterRisk: input.brief.activeWriterRisk,
-      activeWriterRiskReasons: input.brief.activeWriterRiskReasons,
-      baseRevisionStatus: input.brief.baseRevisionStatus,
-      baseRevisionReasons: input.brief.baseRevisionReasons,
-      recommendedAction: input.status.recommendedAction,
-      resultStatus: input.status.resultStatus,
-      resultReason: redactOptional(input.status.resultReason),
-    },
-    {
-      code: "workspace_state",
-      workspacePath: input.launch.config.workspacePath,
-      workspaceDirty: input.status.workspaceDirty,
-      changedFilesCount: (input.status.changedFiles ?? []).length,
-    },
-    {
-      code: "progress_state",
-      lastProgressAt: input.brief.lastProgressAt,
-      lastProgressAgeMs: input.brief.lastProgressAgeMs,
-      staleAfterMs: input.brief.staleAfterMs,
-      progressUpdatedAt: input.brief.progressUpdatedAt,
-      progressHeartbeatAgeMs: input.brief.progressHeartbeatAgeMs,
-      progressStatus: input.brief.progressStatus,
-      appServerProcessAlive: input.brief.appServerProcessAlive,
-      appServerProcessPid: input.brief.appServerProcessPid,
-      logByteLength: input.brief.logByteLength,
-      silentStale: input.brief.silentStale,
-      heartbeatOnlyNoOutput: input.brief.heartbeatOnlyNoOutput,
-      runtimeEventsPath: input.brief.runtimeEventsPath,
-      lastRuntimeEvent: input.brief.lastRuntimeEvent,
-      lastRuntimeEventAt: input.brief.lastRuntimeEventAt,
-      lastRuntimeEventLevel: input.brief.lastRuntimeEventLevel,
-    },
-    {
-      code: "status_view",
-      statusView: input.brief.statusView,
-    },
-    {
-      code: "base_revision",
-      baseRevision: input.brief.baseRevision,
-    },
-    {
-      code: "account_state",
-      configuredAccounts: input.brief.configuredAccounts,
-      dedupedAccounts: input.brief.dedupedAccounts,
-      availableDedupedAccounts: input.brief.availableDedupedAccounts,
-      invalidAccounts: input.brief.invalidAccounts,
-      hasAvailableAccount: input.brief.hasAvailableAccount,
-    },
-  ];
-  if (input.brief.lifecycleMarkerTypes.length) {
-    evidence.push({
-      code: "lifecycle_markers",
-      lifecycleMarkerTypes: input.brief.lifecycleMarkerTypes,
-      lifecycleMarkers: input.brief.lifecycleMarkers,
-    });
-  }
-  if (workspaceConflict) {
-    blockers.push({
-      code: "single_writer_workspace_conflict",
-      severity: "critical",
-      message:
-        "Multiple stored jobs can write to the same workspace. Do not continue this job until one writer is selected.",
-      conflict: workspaceConflict,
-    });
-  }
-  if (input.brief.silentStale) {
-    blockers.push({
-      code: "silent_stale_worker",
-      severity: "blocked",
-      message:
-        "The worker process appears alive but observable progress is stale. Inspect process, app-server, log and worktree before stopping or recovery.",
-    });
-  }
-  if (input.brief.heartbeatOnlyNoOutput) {
-    blockers.push({
-      code: "heartbeat_only_no_output",
-      severity: "blocked",
-      message:
-        "The worker heartbeat is fresh, but there is no result, log output or workspace change. Inspect process, app-server, log and worktree before stopping or recovery.",
-    });
-  }
-  if (
-    input.brief.lifecycleMarkerTypes.includes("stop_event") &&
-    !input.status.resultExists &&
-    !input.brief.workerAlive
-  ) {
-    blockers.push({
-      code: "stopped_worker_requires_review",
-      severity: "blocked",
-      message:
-        "The worker was explicitly stopped before producing a result. Review the stop reason and workspace before starting a replacement worker.",
-    });
-  }
-  if (input.status.workspaceDirty && !input.brief.workerAlive) {
-    blockers.push({
-      code: "dirty_worktree_requires_review",
-      severity: "blocked",
-      message:
-        "The workspace has uncommitted changes and no active worker. Review changes before starting another writer.",
-      changedFiles: input.status.changedFiles ?? [],
-    });
-  }
-  if (
-    !input.brief.lifecycleMarkerTypes.includes("stop_event") &&
-    !input.brief.hasAvailableAccount &&
-    isSafeStartAction(input.status.recommendedAction)
-  ) {
-    blockers.push({
-      code: "no_available_accounts",
-      severity: "blocked",
-      message:
-        "The job is otherwise continuable, but no deduped account slot is currently available.",
-      invalidAccounts: input.brief.invalidAccounts,
-      capacityBlockedAccounts: input.brief.capacityBlockedAccounts,
-    });
-  }
-  if (input.brief.needsHumanRelogin && input.brief.hasAvailableAccount) {
-    warnings.push({
-      code: "some_accounts_need_relogin",
-      severity: "warning",
-      message:
-        "Some configured accounts are invalid, but at least one deduped account is still available.",
-      invalidAccounts: input.brief.invalidAccounts,
-    });
-  }
-  if (input.brief.duplicateAccounts.length) {
-    warnings.push({
-      code: "duplicate_account_identity",
-      severity: "warning",
-      message:
-        "Multiple slots appear to share one account identity. Deduped availability is lower than configured slot count.",
-      duplicateAccounts: input.brief.duplicateAccounts,
-    });
-  }
-  const decision = codexGoalDecisionKind({
-    blockedBySingleWriter,
-    brief: input.brief,
-    status: input.status,
-    safeToContinue,
-  });
-  const severity = codexGoalDecisionSeverity(decision, blockers, warnings);
-  const commands = codexGoalDecisionCommands({
-    registryArgs,
-    safeToContinue,
-    silentStale: input.brief.silentStale,
-    heartbeatOnlyNoOutput: input.brief.heartbeatOnlyNoOutput,
-    hasInvalidAccounts: input.brief.invalidAccounts.length > 0,
-  });
-  return {
-    action: decision,
-    decision,
-    severity,
-    safeToContinue,
-    safeToOperate: !blockedBySingleWriter,
-    jobId: input.manifest.jobId,
-    taskId: input.launch.config.taskId,
-    workspacePath: input.launch.config.workspacePath,
-    tmuxSession: input.launch.tmuxSession,
-    controlSurface: codexGoalControlSurface(input.launch),
-    nextBestTool: blockedBySingleWriter
-      ? "manual_review"
-      : input.brief.nextBestTool,
-    nextBestReason: blockedBySingleWriter
-      ? "single_writer_workspace_conflict"
-      : input.brief.nextBestReason,
-    nextBestCommand: blockedBySingleWriter
-      ? "manual_review_single_writer_workspace_conflict"
-      : safeToContinue
-      ? commands.continue
-      : input.brief.nextBestCommand,
-    blockers,
-    warnings,
-    evidence,
-    checklist: codexGoalDecisionChecklist({
-      decision,
-      commands,
-      invalidAccounts: input.brief.invalidAccounts,
-    }),
-    commands,
-    recentCommands: input.brief.recentCommands,
-  };
-}
-
-function codexGoalDecisionKind(input: {
-  readonly blockedBySingleWriter: boolean;
-  readonly brief: Awaited<ReturnType<typeof buildCodexGoalBrief>>;
-  readonly status: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
-  readonly safeToContinue: boolean;
-}): string {
-  if (input.blockedBySingleWriter) return "manual_review_single_writer_conflict";
-  if (input.brief.silentStale) return "manual_review_silent_stale";
-  if (input.brief.heartbeatOnlyNoOutput) return "manual_review_heartbeat_only_no_output";
-  if (input.brief.workerAlive) return "wait_for_worker";
-  if (input.status.recommendedAction === "review_completed") return "review_completed";
-  if (
-    input.brief.lifecycleMarkerTypes.includes("stop_event") &&
-    !input.status.resultExists &&
-    !input.brief.workerAlive
-  ) {
-    return "manual_review_stopped_worker";
-  }
-  if (!input.brief.hasAvailableAccount && isSafeStartAction(input.status.recommendedAction)) {
-    return "fix_accounts";
-  }
-  if (input.safeToContinue) return "continue";
-  if (input.status.workspaceDirty) return "manual_review_dirty_worktree";
-  return "manual_review";
-}
-
-function codexGoalDecisionSeverity(
-  decision: string,
-  blockers: readonly JsonObject[],
-  warnings: readonly JsonObject[],
-): string {
-  if (blockers.some((blocker) => blocker.severity === "critical")) return "critical";
-  if (blockers.length) return "blocked";
-  if (decision.startsWith("manual_review")) return "blocked";
-  if (warnings.length) return "warning";
-  return "info";
-}
-
-function codexGoalDecisionCommands(input: {
-  readonly registryArgs: JsonObject;
-  readonly safeToContinue: boolean;
-  readonly silentStale: boolean;
-  readonly heartbeatOnlyNoOutput: boolean;
-  readonly hasInvalidAccounts: boolean;
-}): JsonObject {
-  return {
-    overview: `codex_goal_overview(${JSON.stringify({
-      registryRootDir: input.registryArgs.registryRootDir,
-    })})`,
-    decision: `codex_goal_decision(${JSON.stringify(input.registryArgs)})`,
-    brief: `codex_goal_brief(${JSON.stringify(input.registryArgs)})`,
-    handoff: `codex_goal_handoff(${JSON.stringify(input.registryArgs)})`,
-    accounts: `codex_goal_accounts_status(${JSON.stringify(input.registryArgs)})`,
-    ...(input.safeToContinue
-      ? {
-          continue:
-            `codex_goal_continue(${JSON.stringify({ ...input.registryArgs, confirmContinue: true })})`,
-        }
-      : {}),
-    ...(input.silentStale
-      ? {
-          stopAfterManualReview:
-            `codex_goal_stop(${JSON.stringify({ ...input.registryArgs, confirmStop: true })})`,
-        }
-      : {}),
-    ...(input.heartbeatOnlyNoOutput
-      ? {
-          stopAfterManualReview:
-            `codex_goal_stop(${JSON.stringify({ ...input.registryArgs, confirmStop: true })})`,
-        }
-      : {}),
-    ...(input.hasInvalidAccounts
-      ? {
-          reloginInstructions:
-            `codex_goal_accounts_relogin_instructions(${JSON.stringify(input.registryArgs)})`,
-        }
-      : {}),
-  };
-}
-
 async function targetCommitFromArgs(
   args: Pick<JobBriefMcpArgs, "cwd" | "targetCommit" | "targetWorkspacePath">,
 ): Promise<string | undefined> {
@@ -8640,607 +7418,6 @@ function optionalTargetCommit(
   targetCommit: string | undefined,
 ): { readonly targetCommit?: string } {
   return targetCommit === undefined ? {} : { targetCommit };
-}
-
-function codexGoalDecisionChecklist(input: {
-  readonly decision: string;
-  readonly commands: JsonObject;
-  readonly invalidAccounts: readonly string[];
-}): readonly string[] {
-  if (input.decision === "continue") {
-    return [
-      `Call ${String(input.commands.continue)}.`,
-      "Monitor with codex_goal_brief and do not start another writer in the same worktree.",
-    ];
-  }
-  if (input.decision === "wait_for_worker") {
-    return [
-      "Keep monitoring with codex_goal_brief.",
-      "Do not start or recover another writer while the worker is alive and not silent-stale.",
-    ];
-  }
-  if (input.decision === "fix_accounts") {
-    return [
-      `Call ${String(input.commands.accounts)}.`,
-      input.invalidAccounts.length
-        ? `Relogin invalid slots with ${String(input.commands.reloginInstructions)}.`
-        : "Wait for account capacity cooldown or add a valid account slot.",
-      "Re-run codex_goal_decision before continuing.",
-    ];
-  }
-  if (input.decision === "manual_review_silent_stale") {
-    return [
-      "Inspect process tree, app-server, log tail and git status.",
-      `If stale is confirmed, call ${String(input.commands.stopAfterManualReview)}.`,
-      "After stop, re-run codex_goal_decision before continuing.",
-    ];
-  }
-  if (input.decision === "manual_review_heartbeat_only_no_output") {
-    return [
-      "Inspect process tree, app-server, log tail and git status.",
-      `If heartbeat-only no-output is confirmed, call ${String(input.commands.stopAfterManualReview)}.`,
-      "After stop, re-run codex_goal_decision before continuing.",
-    ];
-  }
-  if (input.decision === "manual_review_single_writer_conflict") {
-    return [
-      `Call ${String(input.commands.overview)}.`,
-      "Choose exactly one writer job for the shared workspace.",
-      "Do not continue any conflicted job until the conflict is resolved.",
-    ];
-  }
-  if (input.decision === "review_completed") {
-    return [
-      "Review the result, workspace diff and project checks.",
-      "If accepted, call codex_goal_mark_reviewed for this job.",
-    ];
-  }
-  return [
-    "Inspect brief, status, recent log tail and workspace diff manually.",
-    "Do not continue until the blocking state is understood.",
-  ];
-}
-
-interface CodexGoalControlSurface {
-  readonly executionEngine: NonNullable<CodexGoalRunConfig["executionEngine"]>;
-  readonly childWorkerSpawn: string;
-  readonly hostAuthSurfaces: readonly string[];
-  readonly guidance: string;
-  readonly projectControlSurface: ReturnType<typeof describeProjectControlSurface>;
-}
-
-const CODEX_GOAL_EXECUTION_ENGINE_SCHEMA = z.enum([
-  "app-server",
-  "app-server-goal",
-  "packaged-exec",
-  "plain-exec",
-]);
-
-const CODEX_GOAL_CONTROL_SURFACE_SCHEMA = z.object({
-  executionEngine: CODEX_GOAL_EXECUTION_ENGINE_SCHEMA,
-  childWorkerSpawn: z.string(),
-  hostAuthSurfaces: z.array(z.string()),
-  guidance: z.string(),
-  projectControlSurface: z.unknown().optional(),
-});
-
-const DEFAULT_CODEX_GOAL_EXECUTION_ENGINE: NonNullable<CodexGoalRunConfig["executionEngine"]> = "app-server-goal";
-
-function codexGoalControlSurface(launch: CodexGoalLaunchInput): CodexGoalControlSurface {
-  // Keep this default aligned with create/load launch config defaults above.
-  const parsedExecutionEngine = CODEX_GOAL_EXECUTION_ENGINE_SCHEMA.safeParse(
-    launch.config.executionEngine ?? DEFAULT_CODEX_GOAL_EXECUTION_ENGINE,
-  );
-  const executionEngine = parsedExecutionEngine.success
-    ? parsedExecutionEngine.data
-    : DEFAULT_CODEX_GOAL_EXECUTION_ENGINE;
-  const appServerGoal = executionEngine === "app-server-goal";
-  return {
-    executionEngine,
-    childWorkerSpawn: appServerGoal
-      ? "host_control_surface_required"
-      : "runtime_adapter_owned",
-    hostAuthSurfaces: appServerGoal
-      ? [
-          "github_tokens_not_inherited",
-          "codex_auth_root_host_owned",
-        ]
-      : ["provider_environment_policy_applies"],
-    guidance: appServerGoal
-      ? "Lane orchestrators running inside app-server-goal should not spawn child workers or depend on host GH/auth surfaces. Request child worker, continue, stop and account actions through host-side subscription-runtime MCP or CLI controls."
-      : "Use the runtime adapter control surface for worker lifecycle and account actions.",
-    projectControlSurface: describeProjectControlSurface(),
-  };
-}
-
-function findWorkspaceConflictForJob(
-  overview: JsonObject | undefined,
-  jobId: string,
-): JsonObject | undefined {
-  const conflicts = Array.isArray(overview?.workspaceConflicts)
-    ? overview.workspaceConflicts
-    : [];
-  return conflicts.find((conflict): conflict is JsonObject =>
-    isRecord(conflict) &&
-      Array.isArray(conflict.jobIds) &&
-      conflict.jobIds.includes(jobId)
-  );
-}
-
-function redactOptional(value: string | undefined): string | undefined {
-  return value ? redactText(value) : undefined;
-}
-
-function buildCodexGoalHandoff(input: {
-  readonly registryRootDir: string;
-  readonly manifest: CodexGoalJobManifest;
-  readonly launch: CodexGoalLaunchInput;
-  readonly brief: Awaited<ReturnType<typeof buildCodexGoalBrief>>;
-  readonly status: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
-  readonly accounts: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>;
-  readonly includeCliFallback: boolean;
-}): JsonObject {
-  const registryArgs = {
-    registryRootDir: input.registryRootDir,
-    jobId: input.manifest.jobId,
-  };
-  const cliFallbackCommands = input.includeCliFallback
-    ? [
-        cliFallbackToolCommand("codex_goal_get_job", registryArgs),
-        cliFallbackToolCommand("codex_goal_brief", registryArgs),
-        cliFallbackToolCommand("codex_goal_accounts_status", registryArgs),
-        cliFallbackToolCommand("codex_goal_continue", {
-          ...registryArgs,
-          confirmContinue: true,
-        }),
-        cliFallbackToolCommand("codex_goal_handoff", registryArgs),
-      ]
-    : [];
-  const stopArgs = { ...registryArgs, confirmStop: true };
-  const controlSurface = codexGoalControlSurface(input.launch);
-  const reviewCommands = input.brief.silentStale
-    ? [
-        `codex_goal_stop(${JSON.stringify(stopArgs)})`,
-        `subscription-runtime-codex-goal stop-job ${shellText(input.manifest.jobId)} --registry-root ${shellText(input.registryRootDir)} --confirm`,
-      ]
-    : [];
-  const handoffContract = buildHandoffManifest({
-    workerJobId: input.manifest.jobId,
-    workspacePath: input.launch.config.workspacePath,
-    createdAt: new Date().toISOString(),
-    changedFiles: input.status.changedFiles ?? [],
-    ...(input.brief.handoffBaseCommit === undefined
-      ? {}
-      : { baseCommit: input.brief.handoffBaseCommit }),
-    ...(input.brief.handoffPatchPath === undefined
-      ? {}
-      : { patchPath: input.brief.handoffPatchPath }),
-    ...(input.brief.handoffSummaryPath === undefined
-      ? {}
-      : { summaryPath: input.brief.handoffSummaryPath }),
-    ...(input.status.workspaceDirty === undefined
-      ? {}
-      : { workspaceDirty: input.status.workspaceDirty }),
-  });
-  const mcpCommands = [
-    `codex_goal_get_job(${JSON.stringify(registryArgs)})`,
-    `codex_goal_brief(${JSON.stringify(registryArgs)})`,
-    `codex_goal_accounts_status(${JSON.stringify(registryArgs)})`,
-    input.brief.safeToContinue
-      ? `codex_goal_continue(${JSON.stringify({ ...registryArgs, confirmContinue: true })})`
-      : String(input.brief.nextBestCommand),
-  ];
-  const text = [
-    `# Codex goal handoff: ${input.manifest.jobId}`,
-    "",
-    "Use subscription-runtime Codex goal controls. Native MCP is preferred; CLI fallback calls the same MCP server through the SDK.",
-    "",
-    "## Job",
-    `- registryRootDir: ${input.registryRootDir}`,
-    `- workspacePath: ${input.launch.config.workspacePath}`,
-    `- jobRootDir: ${input.launch.config.jobRootDir}`,
-    `- stateRootDir: ${codexGoalStateRootDir(input.launch)}`,
-    `- taskId: ${input.launch.config.taskId}`,
-    `- tmuxSession: ${input.launch.tmuxSession ?? ""}`,
-    `- model: ${input.launch.config.model ?? ""}`,
-    `- reasoningEffort: ${input.launch.config.reasoningEffort ?? ""}`,
-    `- serviceTier: ${input.launch.config.serviceTier ?? ""}`,
-    `- taskTimeoutMs: ${input.launch.config.taskTimeoutMs}`,
-    `- maxAccountCycles: ${input.launch.config.maxAccountCycles}`,
-    `- accounts: ${input.launch.config.accounts.map((account) => account.name).join(", ")}`,
-    `- executionEngine: ${String(controlSurface.executionEngine)}`,
-    "",
-    "## Current State",
-    `- worker: ${input.brief.workerAlive ? "alive" : "not running"}`,
-    `- workerSupervisorKind: ${String(input.brief.workerSupervisorKind ?? "")}`,
-    `- workerAliveReason: ${String(input.brief.workerAliveReason ?? "")}`,
-    `- recommendedAction: ${input.status.recommendedAction}`,
-    `- resultStatus: ${input.status.resultStatus ?? ""}`,
-    `- resultReason: ${input.status.resultReason ?? ""}`,
-    `- workspaceDirty: ${String(input.status.workspaceDirty)}`,
-    `- changedFiles: ${(input.status.changedFiles ?? []).length}`,
-    `- silentStale: ${String(input.brief.silentStale)}`,
-    `- lastProgressAt: ${String(input.brief.lastProgressAt ?? "")}`,
-    `- progressStatus: ${String(input.brief.progressStatus ?? "")}`,
-    `- progressUpdatedAt: ${String(input.brief.progressUpdatedAt ?? "")}`,
-    `- progressHeartbeatAgeMs: ${String(input.brief.progressHeartbeatAgeMs ?? "")}`,
-    `- logByteLength: ${String(input.brief.logByteLength ?? "")}`,
-    `- lifecycleMarkers: ${input.brief.lifecycleMarkerTypes.join(", ") || "none"}`,
-    `- safeToContinue: ${String(input.brief.safeToContinue)}`,
-    `- hasAvailableAccount: ${String(input.brief.hasAvailableAccount)}`,
-    `- availableDedupedAccounts: ${input.brief.availableDedupedAccounts.join(", ")}`,
-    `- invalidAccounts: ${input.brief.invalidAccounts.join(", ")}`,
-    `- nextBestTool: ${String(input.brief.nextBestTool)}`,
-    `- nextBestCommand: ${String(input.brief.nextBestCommand)}`,
-    "",
-    "## Native MCP",
-    ...mcpCommands.map((command) => `- ${command}`),
-    ...(reviewCommands.length
-      ? [
-          "",
-          "## After Manual Review",
-          ...reviewCommands.map((command) => `- ${command}`),
-        ]
-      : []),
-    ...(cliFallbackCommands.length
-      ? [
-          "",
-          "## CLI Fallback",
-          ...cliFallbackCommands.map((command) => `- ${command}`),
-        ]
-      : []),
-    "",
-    "## Control Surface",
-    `- childWorkerSpawn: ${String(controlSurface.childWorkerSpawn)}`,
-    `- hostAuthSurfaces: ${controlSurface.hostAuthSurfaces.join(", ")}`,
-    `- guidance: ${String(controlSurface.guidance)}`,
-    "",
-    "## Safety Rules",
-    "- Do not run two writer workers in the same worktree.",
-    "- Continue only when brief.safeToContinue is true.",
-    "- If hasAvailableAccount is false, inspect accounts before continuing.",
-    "- Dirty, provider output invalid, unknown runtime, test and benchmark failures require manual review.",
-    "- Never print auth.json, access tokens, refresh tokens, id tokens or raw provider payloads.",
-  ].join("\n");
-  return {
-    text,
-    mcpCommands,
-    reviewCommands,
-    cliFallbackCommands,
-    controlSurface,
-    handoffContract,
-    summary: {
-      jobId: input.manifest.jobId,
-      registryRootDir: input.registryRootDir,
-      workspacePath: input.launch.config.workspacePath,
-      taskId: input.launch.config.taskId,
-      tmuxSession: input.launch.tmuxSession,
-      recommendedAction: input.status.recommendedAction,
-      resultStatus: input.status.resultStatus,
-      resultReason: input.status.resultReason,
-      workspaceDirty: input.status.workspaceDirty,
-      changedFiles: input.status.changedFiles ?? [],
-      handoffStatus: handoffContract.status,
-      handoffIssues: handoffContract.issues,
-      baseRevision: input.brief.baseRevision,
-      silentStale: input.brief.silentStale,
-      lastProgressAt: input.brief.lastProgressAt,
-      lastProgressAgeMs: input.brief.lastProgressAgeMs,
-      staleAfterMs: input.brief.staleAfterMs,
-      logExists: input.brief.logExists,
-      logByteLength: input.brief.logByteLength,
-      progressPath: input.brief.progressPath,
-      progressExists: input.brief.progressExists,
-      progressStatus: input.brief.progressStatus,
-      progressUpdatedAt: input.brief.progressUpdatedAt,
-      progressHeartbeatAgeMs: input.brief.progressHeartbeatAgeMs,
-      progressPid: input.brief.progressPid,
-      appServerProcessAlive: input.brief.appServerProcessAlive,
-      appServerProcessPid: input.brief.appServerProcessPid,
-      lifecycleMarkers: input.brief.lifecycleMarkers,
-      lifecycleMarkerTypes: input.brief.lifecycleMarkerTypes,
-      safeToContinue: input.brief.safeToContinue,
-      hasAvailableAccount: input.brief.hasAvailableAccount,
-      availableDedupedAccounts: input.brief.availableDedupedAccounts,
-      invalidAccounts: input.brief.invalidAccounts,
-      nextBestTool: input.brief.nextBestTool,
-      nextBestCommand: input.brief.nextBestCommand,
-    },
-    accounts: input.accounts.map((account) => ({
-      name: account.name,
-      status: account.status,
-      availability: account.availability,
-      schedulerEligible: account.schedulerEligible,
-      recommendedAction: account.recommendedAction,
-      limitResetAt: account.limitResetAt,
-      capacityAvailability: account.capacityAvailability,
-      capacityReason: account.capacityReason,
-      capacityCooldownUntil: account.capacityCooldownUntil,
-      identityHashPrefix: account.identityHashPrefix,
-      safeMessage: account.safeMessage,
-    })),
-  };
-}
-
-async function readCodexGoalLifecycleMarkers(input: {
-  readonly jobRootDir: string;
-  readonly taskId: string;
-}): Promise<readonly JsonObject[]> {
-  const markers = await Promise.all(
-    lifecycleMarkerSpecs.map((spec) =>
-      readCodexGoalLifecycleMarker({
-        ...input,
-        spec,
-      }),
-    ),
-  );
-  return markers
-    .filter((marker): marker is JsonObject => marker !== undefined)
-    .sort((left, right) =>
-      Date.parse(String(right.timestamp ?? right.updatedAt ?? "0")) -
-      Date.parse(String(left.timestamp ?? left.updatedAt ?? "0"))
-    );
-}
-
-async function readCodexGoalLifecycleMarker(input: {
-  readonly jobRootDir: string;
-  readonly taskId: string;
-  readonly spec: CodexGoalLifecycleMarkerSpec;
-}): Promise<JsonObject | undefined> {
-  const markerPath = join(input.jobRootDir, `${input.taskId}.${input.spec.suffix}`);
-  try {
-    const [metadata, raw] = await Promise.all([
-      stat(markerPath),
-      readFile(markerPath, "utf8"),
-    ]);
-    const parsed = parseLifecycleMarker(raw);
-    const timestamp = firstStringKey(parsed, input.spec.timestampKeys);
-    const brief = isRecord(parsed.brief) ? parsed.brief : {};
-    return {
-      type: input.spec.type,
-      markerPath,
-      updatedAt: metadata.mtime.toISOString(),
-      ...(timestamp ? { timestamp } : {}),
-      ...(typeof parsed.reason === "string" ? { reason: redactText(parsed.reason) } : {}),
-      ...(typeof parsed.mode === "string" ? { mode: redactText(parsed.mode) } : {}),
-      ...(typeof parsed.note === "string" ? { note: truncateText(redactText(parsed.note), 300) } : {}),
-      ...(typeof parsed.forceStop === "boolean" ? { forceStop: parsed.forceStop } : {}),
-      ...(typeof parsed.forcePause === "boolean" ? { forcePause: parsed.forcePause } : {}),
-      ...(typeof brief.silentStale === "boolean" ? { silentStale: brief.silentStale } : {}),
-      ...(typeof brief.lastProgressAt === "string"
-        ? { lastProgressAt: brief.lastProgressAt }
-        : {}),
-      ...(typeof brief.lastProgressAgeMs === "number"
-        ? { lastProgressAgeMs: brief.lastProgressAgeMs }
-        : {}),
-      ...(typeof brief.logByteLength === "number"
-        ? { logByteLength: brief.logByteLength }
-        : {}),
-      ...(typeof parsed.schemaVersion === "number" ? { schemaVersion: parsed.schemaVersion } : {}),
-    };
-  } catch {
-    return undefined;
-  }
-}
-
-function parseLifecycleMarker(raw: string): Record<string, unknown> {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return isRecord(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function latestIsoDate(values: readonly (string | undefined)[]): string | undefined {
-  const latest = values
-    .map((value) => value ? { value, time: Date.parse(value) } : undefined)
-    .filter((value): value is { readonly value: string; readonly time: number } =>
-      value !== undefined && Number.isFinite(value.time)
-    )
-    .sort((left, right) => right.time - left.time)[0];
-  return latest?.value;
-}
-
-function isoAgeMs(value: string | undefined): number | undefined {
-  if (!value) return undefined;
-  const time = Date.parse(value);
-  return Number.isFinite(time) ? Date.now() - time : undefined;
-}
-
-function firstStringKey(
-  record: Record<string, unknown>,
-  keys: readonly string[],
-): string | undefined {
-  for (const key of keys) {
-    const value = record[key];
-    if (typeof value === "string" && value.trim()) return redactText(value.trim());
-  }
-  return undefined;
-}
-
-function redactText(value: string): string {
-  return new DefaultRedactor().redact(value);
-}
-
-function truncateText(value: string, maxLength: number): string {
-  if (value.length <= maxLength) return value;
-  return `${value.slice(0, Math.max(0, maxLength - 3))}...`;
-}
-
-function cliFallbackToolCommand(tool: string, args: JsonObject): string {
-  return `subscription-runtime-codex-goal tool ${tool} --args-json ${shellText(JSON.stringify(args))}`;
-}
-
-async function readRuntimeResultBrief(path: string): Promise<{
-  readonly currentAccount?: string;
-  readonly lastFailureReason?: string;
-  readonly updatedAt?: string;
-  readonly strict?: boolean;
-  readonly baseCommit?: string;
-  readonly patchPath?: string;
-  readonly summaryPath?: string;
-  readonly artifacts?: readonly RuntimeResultArtifact[];
-}> {
-  try {
-    const parsed: unknown = JSON.parse(await readFile(path, "utf8"));
-    if (!isRecord(parsed)) return {};
-    const attempts = Array.isArray(parsed.attempts) ? parsed.attempts : [];
-    const lastAttempt = lastRecord(attempts);
-    const artifacts = runtimeResultArtifacts(parsed.artifacts);
-    const patchPath = runtimeResultArtifactPath(artifacts, "patch");
-    const summaryPath = runtimeResultArtifactPath(artifacts, "summary");
-    const baseCommit = runtimeResultBaseCommit(parsed);
-    return {
-      ...(isRecord(lastAttempt) && typeof lastAttempt.accountId === "string"
-        ? { currentAccount: lastAttempt.accountId }
-        : {}),
-      ...(typeof parsed.reason === "string"
-        ? { lastFailureReason: parsed.reason }
-        : {}),
-      ...(typeof parsed.updatedAt === "string"
-        ? { updatedAt: parsed.updatedAt }
-        : isRecord(parsed.task) && typeof parsed.task.updatedAt === "string"
-          ? { updatedAt: parsed.task.updatedAt }
-          : {}),
-      ...(baseCommit === undefined ? {} : { baseCommit }),
-      ...(patchPath === undefined ? {} : { patchPath }),
-      ...(summaryPath === undefined ? {} : { summaryPath }),
-      ...(artifacts.length === 0 ? {} : { artifacts }),
-      strict: isStrictRuntimeResultBrief(parsed),
-    };
-  } catch {
-    return {};
-  }
-}
-
-function runtimeResultArtifacts(value: unknown): readonly RuntimeResultArtifact[] {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item): RuntimeResultArtifact[] => {
-    if (!isRecord(item) || typeof item.kind !== "string") return [];
-    return [{
-      kind: item.kind,
-      ...(typeof item.path === "string" ? { path: item.path } : {}),
-      ...(typeof item.byteLength === "number" ? { byteLength: item.byteLength } : {}),
-    }];
-  });
-}
-
-function runtimeResultArtifactPath(
-  artifacts: readonly RuntimeResultArtifact[],
-  kind: string,
-): string | undefined {
-  return artifacts.find((artifact) =>
-    artifact.kind === kind && typeof artifact.path === "string"
-  )?.path;
-}
-
-function runtimeResultBaseCommit(parsed: Record<string, unknown>): string | undefined {
-  if (typeof parsed.baseCommit === "string" && parsed.baseCommit.trim()) {
-    return parsed.baseCommit.trim();
-  }
-  if (
-    isRecord(parsed.details) &&
-    typeof parsed.details.baseCommit === "string" &&
-    parsed.details.baseCommit.trim()
-  ) {
-    return parsed.details.baseCommit.trim();
-  }
-  return undefined;
-}
-
-function isStrictRuntimeResultBrief(parsed: Record<string, unknown>): boolean {
-  return (
-    typeof parsed.status === "string" &&
-    Array.isArray(parsed.changedFiles) &&
-    parsed.changedFiles.every((item) => typeof item === "string") &&
-    Array.isArray(parsed.evidence) &&
-    parsed.evidence.every((item) => typeof item === "string") &&
-    Array.isArray(parsed.blockers) &&
-    parsed.blockers.every((item) => typeof item === "string") &&
-    typeof parsed.nextAction === "string"
-  );
-}
-
-function lastRecord(values: readonly unknown[]): Record<string, unknown> | undefined {
-  for (let index = values.length - 1; index >= 0; index -= 1) {
-    const value = values[index];
-    if (isRecord(value)) return value;
-  }
-  return undefined;
-}
-
-async function safeTail(path: string, lines: number): Promise<string> {
-  try {
-    return await tailCodexGoalLog(path, lines);
-  } catch {
-    return "";
-  }
-}
-
-function nextActionForStatus(action: string): JsonObject {
-  if (action === "wait_for_worker") {
-    return { tool: "codex_goal_brief", reason: "worker is already running" };
-  }
-  if (action === "start_worker") {
-    return { tool: "codex_goal_continue", reason: "no result exists and workspace is clean" };
-  }
-  if (
-    action === "continue_after_capacity" ||
-    action === "continue_after_timeout" ||
-    action === "continue_after_provider_output"
-  ) {
-    return { tool: "codex_goal_continue", reason: "safe continuation condition" };
-  }
-  if (action === "review_completed") {
-    return { tool: "codex_goal_mark_reviewed", reason: "worker completed" };
-  }
-  if (action === "ask_user") {
-    return {
-      tool: "codex_goal_control_decision",
-      reason: "worker is blocked waiting for operator or inbox input",
-    };
-  }
-  return { tool: "manual_review", reason: "status requires inspection before continuing" };
-}
-
-function nextBestCommand(input: {
-  readonly jobId: string;
-  readonly action: JsonObject;
-  readonly status: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
-  readonly launch: CodexGoalLaunchInput;
-}): string {
-  const tool = typeof input.action.tool === "string"
-    ? input.action.tool
-    : "manual_review";
-  if (tool === "codex_goal_continue") {
-    return `codex_goal_continue({ jobId: ${JSON.stringify(input.jobId)}, confirmContinue: true })`;
-  }
-  if (tool === "codex_goal_mark_reviewed") {
-    return `codex_goal_mark_reviewed({ jobId: ${JSON.stringify(input.jobId)} })`;
-  }
-  if (tool === "codex_goal_brief") {
-    return `codex_goal_brief({ jobId: ${JSON.stringify(input.jobId)} })`;
-  }
-  if (tool === "codex_goal_reconcile_result") {
-    return `codex_goal_reconcile_result({ jobId: ${JSON.stringify(input.jobId)} })`;
-  }
-  if (tool === "codex_goal_control_decision") {
-    return `codex_goal_control_decision({ jobId: ${JSON.stringify(input.jobId)} })`;
-  }
-  if (tool === "codex_goal_accounts_status") {
-    return `codex_goal_accounts_status({ jobId: ${JSON.stringify(input.jobId)} })`;
-  }
-  if (
-    tool === "manual_review" &&
-    input.action.reason === "silent_stale_worker"
-  ) {
-    return "manual_review_silent_stale_worker";
-  }
-  if (input.status.workspaceDirty) {
-    return "manual_review_dirty_worktree";
-  }
-  return "manual_review_status";
 }
 
 function accountPoolRootFromArgs(args: AccountPoolMcpArgs): string {
@@ -9295,126 +7472,6 @@ async function listAccountPools(
   return pools.filter((pool) => (pool.accountCount as number) > 0);
 }
 
-function duplicateAccountGroups(
-  slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
-): readonly JsonObject[] {
-  const groups = new Map<string, typeof slots>();
-  for (const slot of slots) {
-    if (!slot.identityHashPrefix) continue;
-    groups.set(slot.identityHashPrefix, [
-      ...(groups.get(slot.identityHashPrefix) ?? []),
-      slot,
-    ]);
-  }
-  return [...groups.entries()]
-    .filter(([, group]) => group.length > 1)
-    .map(([identityHashPrefix, group]) => ({
-      identityHashPrefix,
-      slots: group.map((slot) => ({
-        name: slot.name,
-        operatorLabel: slot.operatorLabel,
-        displayName: slot.displayName,
-        email: slot.email,
-        shortName: slot.shortName,
-        status: slot.status,
-        lastRefreshAt: slot.lastRefreshAt,
-        expiresAt: slot.expiresAt,
-      })),
-      preferredSlot: preferredAccountSlot(group)?.name,
-      preferredSlotLabel: preferredAccountSlot(group)
-        ? accountOperatorLabel(preferredAccountSlot(group)!)
-        : undefined,
-    }));
-}
-
-function accountOperatorLabel(
-  slot: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>[number],
-): string {
-  return slot.operatorLabel ?? slot.displayName ?? slot.email ?? slot.name;
-}
-
-export function dedupeCodexGoalAccountSlots(
-  slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
-) {
-  const byIdentity = new Map<string, typeof slots[number]>();
-  const uniqueSlots: typeof slots[number][] = [];
-  for (const slot of slots) {
-    const key = slot.identityHashPrefix;
-    if (!key) {
-      uniqueSlots.push(slot);
-      continue;
-    }
-    const existing = byIdentity.get(key);
-    const preferred = existing ? preferredAccountSlot([existing, slot]) : slot;
-    if (preferred) byIdentity.set(key, preferred);
-  }
-  const duplicateIdentities = new Set(
-    duplicateAccountGroups(slots)
-      .map((group) => group.identityHashPrefix)
-      .filter((value): value is string => typeof value === "string"),
-  );
-  for (const slot of slots) {
-    if (!slot.identityHashPrefix || duplicateIdentities.has(slot.identityHashPrefix)) {
-      continue;
-    }
-    uniqueSlots.push(slot);
-  }
-  return [
-    ...uniqueSlots,
-    ...[...byIdentity.entries()]
-      .filter(([identity]) => duplicateIdentities.has(identity))
-      .map(([, slot]) => slot),
-  ];
-}
-
-export function availableCodexGoalAccountSlots(
-  slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
-) {
-  return slots.filter(isAccountSlotAvailable);
-}
-
-export function visibleCodexGoalAccountPoolSlots(
-  poolName: string,
-  slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
-) {
-  const likelyAuthPool = isLikelyAuthPoolName(poolName);
-  return slots.filter((slot) =>
-    slot.status !== "auth_missing" ||
-    likelyAuthPool,
-  );
-}
-
-function preferredAccountSlot(
-  slots: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>,
-) {
-  return [...slots].sort((left, right) => {
-    const leftReady = left.schedulerEligible ? 1 : 0;
-    const rightReady = right.schedulerEligible ? 1 : 0;
-    if (leftReady !== rightReady) return rightReady - leftReady;
-    return Date.parse(right.lastRefreshAt ?? right.expiresAt ?? "0") -
-      Date.parse(left.lastRefreshAt ?? left.expiresAt ?? "0");
-  })[0];
-}
-
-function isAccountSlotAvailable(
-  slot: Awaited<ReturnType<typeof listCodexGoalAccountStatuses>>[number],
-): boolean {
-  return slot.schedulerEligible;
-}
-
-function isLikelyAuthPoolName(name: string): boolean {
-  return /codex/i.test(name) &&
-    /(?:^|[-_])(auth|accounts?)(?:$|[-_])/i.test(name);
-}
-
-function tagValues(value: unknown): readonly string[] {
-  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
-  if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim()).filter(Boolean);
-  }
-  return [];
-}
-
 function extractRecentCommands(logTail: string): readonly string[] {
   const commands: string[] = [];
   for (const line of logTail.split(/\r?\n/)) {
@@ -9445,10 +7502,6 @@ function redactLogTail(logTail: string): string {
     .split(/\r?\n/)
     .map((line) => redactCommand(line))
     .join("\n");
-}
-
-function putIfDefined(target: Record<string, unknown>, key: string, value: unknown): void {
-  if (value !== undefined) target[key] = value;
 }
 
 function registerCodexGoalPrompts(server: McpServer): void {
@@ -9498,10 +7551,6 @@ function codexGoalPromptText(name: string, jobId: string | undefined): string {
     return `${shared} Provide jobId, registryRootDir if non-default, worktree, branch, tmux session, task id, prompt path, accounts, model, effort, service tier, decision.action, decision.safeToContinue, decision.nextBestCommand and any dirty files.`;
   }
   return `${shared} Inspect git diff, result JSON, recent commands and test evidence before merging. Use codex_goal_mark_reviewed only after the worker output has been reviewed.`;
-}
-
-function shellText(value: string): string {
-  return shellQuote(value);
 }
 
 function goalInputSchema(): Record<string, z.ZodTypeAny> {
@@ -9575,15 +7624,6 @@ function statusInput(launch: CodexGoalLaunchInput) {
   };
 }
 
-function isSafeStartAction(action: string): boolean {
-  return (
-    action === "start_worker" ||
-    action === "continue_after_capacity" ||
-    action === "continue_after_timeout" ||
-    action === "continue_after_provider_output"
-  );
-}
-
 function launchSummary(launch: CodexGoalLaunchInput): JsonObject {
   return {
     ...(launch.config.jobId ? { jobId: launch.config.jobId } : {}),
@@ -9626,16 +7666,6 @@ function mergeDefined(...items: readonly JsonObject[]): JsonObject {
     }
   }
   return merged;
-}
-
-function accountNames(value: unknown): readonly string[] {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean);
-  }
-  if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim()).filter(Boolean);
-  }
-  return [];
 }
 
 async function projectControlDefaultAccountNames(input: {
@@ -9683,176 +7713,6 @@ async function projectControlRefillAccountNames(input: {
   return ready.size > 0
     ? scopedAccounts.filter((account) => ready.has(account))
     : scopedAccounts;
-}
-
-function signalIdList(value: unknown): readonly string[] {
-  return accountNames(value);
-}
-
-function workerControlCallerArgs(
-  args: WorkerControlMcpArgs,
-): { readonly caller?: WorkerControlCaller } {
-  const callerKind = (
-    stringValue(args.callerKind) ?? stringValue(args.callerActor)
-  ) as WorkerControlActor | undefined;
-  const callerId = stringValue(args.callerId);
-  if (!callerKind && !callerId) return {};
-  const createdBy = stringValue(args.createdBy) as WorkerControlActor | undefined;
-  return {
-    caller: {
-      kind: callerKind ?? createdBy ?? "operator",
-      ...(callerId ? { id: callerId } : {}),
-    },
-  };
-}
-
-function parseIsoDate(value: string, name: string): Date {
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) {
-    throw new Error(`${name} must be an ISO date string`);
-  }
-  return date;
-}
-
-function workerControlDecisionJson(
-  decision: WorkerControlDecision,
-  includeBodies: boolean,
-): JsonObject {
-  return {
-    target: decision.target,
-    safeToContinue: decision.safeToContinue,
-    pendingCount: decision.pendingSignals.length,
-    deliverableCount: decision.deliverableSignals.length,
-    blockedCount: decision.blockedSignals.length,
-    recordOnlyCount: decision.recordOnlySignals.length,
-    warnings: decision.warnings,
-    pendingSignals: decision.pendingSignals.map((view) =>
-      workerControlSignalViewJson(view, includeBodies)
-    ),
-    deliverableSignalIds: decision.deliverableSignals.map((view) =>
-      view.signal.signalId
-    ),
-    blockedSignals: decision.blockedSignals.map((view) =>
-      workerControlSignalViewJson(view, includeBodies)
-    ),
-  };
-}
-
-function workerControlSignalViewJson(
-  view: WorkerControlSignalView,
-  includeBody: boolean,
-): JsonObject {
-  return {
-    signal: workerControlSignalJson(view.signal, includeBody),
-    state: view.state,
-    expired: view.expired,
-    deliverable: view.deliverable,
-    ...(view.blockedReason ? { blockedReason: view.blockedReason } : {}),
-    ...(view.latestReceipt
-      ? { latestReceipt: workerControlReceiptJson(view.latestReceipt) }
-      : {}),
-  };
-}
-
-function workerControlSignalJson(
-  signal: WorkerControlSignal,
-  includeBody: boolean,
-): JsonObject {
-  return {
-    signalId: signal.signalId,
-    idempotencyKey: signal.idempotencyKey,
-    target: signal.target,
-    intent: signal.intent,
-    deliveryMode: signal.deliveryMode,
-    createdAt: signal.createdAt.toISOString(),
-    createdBy: signal.createdBy,
-    priority: signal.priority,
-    ...(signal.expiresAt ? { expiresAt: signal.expiresAt.toISOString() } : {}),
-    supersedesSignalIds: signal.supersedesSignalIds,
-    metadata: signal.metadata,
-    ...(includeBody ? { body: signal.body } : {}),
-  };
-}
-
-function workerControlReceiptJson(
-  receipt: WorkerControlDeliveryReceipt,
-): JsonObject {
-  return {
-    receiptId: receipt.receiptId,
-    signalId: receipt.signalId,
-    target: receipt.target,
-    state: receipt.state,
-    createdAt: receipt.createdAt.toISOString(),
-    ...(receipt.deliveryAttemptId
-      ? { deliveryAttemptId: receipt.deliveryAttemptId }
-      : {}),
-    ...(receipt.deliveredAt
-      ? { deliveredAt: receipt.deliveredAt.toISOString() }
-      : {}),
-    ...(receipt.appliedAt ? { appliedAt: receipt.appliedAt.toISOString() } : {}),
-    ...(receipt.rejectedReason ? { rejectedReason: receipt.rejectedReason } : {}),
-    ...(receipt.failure ? { failure: receipt.failure } : {}),
-    metadata: receipt.metadata,
-  };
-}
-
-function jobIdsFromValue(value: unknown): readonly string[] {
-  return accountNames(value);
-}
-
-function stringsFromValue(value: unknown): readonly string[] {
-  return accountNames(value);
-}
-
-function requiredString(value: unknown, name: string, cwd: string): string {
-  return resolvePath(cwd, requiredRawString(value, name));
-}
-
-function requiredRawString(value: unknown, name: string): string {
-  const text = stringValue(value);
-  if (!text) throw new Error(`${name} is required`);
-  return text;
-}
-
-function stringValue(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value : undefined;
-}
-
-function numberValue(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function dateValue(value: unknown): Date | undefined {
-  if (typeof value !== "string") return undefined;
-  const date = new Date(value);
-  return Number.isFinite(date.getTime()) ? date : undefined;
-}
-
-function positiveIntegerValue(value: unknown, name: string): number | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
-    throw new Error(`${name} must be a positive integer`);
-  }
-  return value;
-}
-
-function booleanValue(value: unknown): boolean | undefined {
-  return typeof value === "boolean" ? value : undefined;
-}
-
-function workerReportModeValue(
-  value: unknown,
-): CodexGoalRunConfig["workerReportMode"] | undefined {
-  if (value === undefined) return undefined;
-  if (value === "runtime-only" || value === "structured-output") return value;
-  throw new Error("workerReportMode must be runtime-only or structured-output");
-}
-
-function resolvePath(cwd: string, value: string): string {
-  const expanded = value.startsWith("~/")
-    ? join(homedir(), value.slice(2))
-    : value;
-  return isAbsolute(expanded) ? expanded : resolve(cwd, expanded);
 }
 
 function mcpJson(value: JsonObject) {

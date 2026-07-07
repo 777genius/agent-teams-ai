@@ -1,0 +1,144 @@
+/// <reference types="node" />
+import { z } from "zod";
+import type { CodexGoalJobManifest } from "./codex-goal-jobs.js";
+import { resolveCodexGoalWorkerLiveness, type CodexGoalLaunchInput } from "./codex-goal-ops.js";
+type JsonObject = Readonly<Record<string, unknown>>;
+type WorkerLivenessStatus = Parameters<typeof resolveCodexGoalWorkerLiveness>[0]["status"];
+type CodexGoalStatusView = WorkerLivenessStatus & {
+    readonly recommendedAction: string;
+    readonly progressStatus?: string;
+    readonly resultStatus?: string;
+    readonly resultReason?: string;
+    readonly resultExists?: boolean;
+    readonly tmuxAlive?: boolean;
+    readonly workspaceDirty?: boolean;
+    readonly changedFiles?: readonly string[];
+    readonly progressHeartbeatAgeMs?: number;
+    readonly logUpdatedAt?: string;
+    readonly lastRuntimeEvent?: string;
+    readonly logExists?: boolean;
+    readonly logByteLength?: number;
+    readonly progressCpuActive?: boolean;
+    readonly progressExists?: boolean;
+};
+type CodexGoalBriefView = {
+    readonly workerAlive: boolean;
+    readonly workerSupervisorKind?: unknown;
+    readonly workerAliveReason?: unknown;
+    readonly workerProcessAlive?: unknown;
+    readonly workerFreshProgressAlive?: unknown;
+    readonly activeWriterRisk?: unknown;
+    readonly activeWriterRiskReasons?: unknown;
+    readonly baseRevisionStatus?: unknown;
+    readonly baseRevisionReasons?: unknown;
+    readonly recommendedAction?: unknown;
+    readonly lastProgressAt?: string | undefined;
+    readonly lastProgressAgeMs?: number | undefined;
+    readonly staleAfterMs?: number | undefined;
+    readonly progressUpdatedAt?: string | undefined;
+    readonly progressHeartbeatAgeMs?: number | undefined;
+    readonly progressStatus?: string | undefined;
+    readonly appServerProcessAlive?: boolean | undefined;
+    readonly appServerProcessPid?: number | undefined;
+    readonly logByteLength?: number | undefined;
+    readonly silentStale: boolean;
+    readonly heartbeatOnlyNoOutput: boolean;
+    readonly runtimeEventsPath?: string | undefined;
+    readonly lastRuntimeEvent?: string | undefined;
+    readonly lastRuntimeEventAt?: string | undefined;
+    readonly lastRuntimeEventLevel?: string | undefined;
+    readonly statusView?: unknown;
+    readonly baseRevision?: unknown;
+    readonly configuredAccounts: readonly string[];
+    readonly dedupedAccounts: readonly string[];
+    readonly availableDedupedAccounts: readonly string[];
+    readonly invalidAccounts: readonly string[];
+    readonly hasAvailableAccount: boolean;
+    readonly lifecycleMarkerTypes: readonly string[];
+    readonly lifecycleMarkers: unknown;
+    readonly safeToContinue: boolean;
+    readonly nextBestTool?: unknown;
+    readonly nextBestReason?: unknown;
+    readonly nextBestCommand?: unknown;
+    readonly needsHumanRelogin: boolean;
+    readonly duplicateAccounts: readonly unknown[];
+    readonly capacityBlockedAccounts: readonly unknown[];
+    readonly handoffBaseCommit?: string | undefined;
+    readonly handoffPatchPath?: string | undefined;
+    readonly handoffSummaryPath?: string | undefined;
+    readonly logExists?: boolean | undefined;
+    readonly progressPath?: string | undefined;
+    readonly progressExists?: boolean | undefined;
+    readonly progressPid?: number | undefined;
+    readonly recentCommands: readonly string[];
+};
+type CodexGoalAccountView = {
+    readonly name: string;
+    readonly status?: unknown;
+    readonly availability?: unknown;
+    readonly schedulerEligible?: unknown;
+    readonly recommendedAction?: unknown;
+    readonly limitResetAt?: unknown;
+    readonly capacityAvailability?: unknown;
+    readonly capacityReason?: unknown;
+    readonly capacityCooldownUntil?: unknown;
+    readonly identityHashPrefix?: unknown;
+    readonly safeMessage?: unknown;
+};
+export declare function codexGoalBriefHealthStatus(input: {
+    readonly status: CodexGoalStatusView;
+    readonly workerAlive: boolean;
+}): "running" | "stopped" | "completed" | "blocked" | "failed" | "unknown";
+export declare function isHeartbeatOnlyNoOutputBrief(input: {
+    readonly status: CodexGoalStatusView;
+    readonly staleAfterMs: number;
+}): boolean;
+export declare function buildCodexGoalDecision(input: {
+    readonly registryRootDir: string;
+    readonly manifest: CodexGoalJobManifest;
+    readonly launch: CodexGoalLaunchInput;
+    readonly status: CodexGoalStatusView;
+    readonly accounts: readonly CodexGoalAccountView[];
+    readonly brief: CodexGoalBriefView;
+    readonly overview?: JsonObject;
+}): JsonObject;
+export declare const CODEX_GOAL_EXECUTION_ENGINE_SCHEMA: z.ZodEnum<{
+    "app-server-goal": "app-server-goal";
+    "app-server": "app-server";
+    "packaged-exec": "packaged-exec";
+    "plain-exec": "plain-exec";
+}>;
+export declare const CODEX_GOAL_CONTROL_SURFACE_SCHEMA: z.ZodObject<{
+    executionEngine: z.ZodEnum<{
+        "app-server-goal": "app-server-goal";
+        "app-server": "app-server";
+        "packaged-exec": "packaged-exec";
+        "plain-exec": "plain-exec";
+    }>;
+    childWorkerSpawn: z.ZodString;
+    hostAuthSurfaces: z.ZodArray<z.ZodString>;
+    guidance: z.ZodString;
+    projectControlSurface: z.ZodOptional<z.ZodUnknown>;
+}, z.core.$strip>;
+export declare function buildCodexGoalHandoff(input: {
+    readonly registryRootDir: string;
+    readonly manifest: CodexGoalJobManifest;
+    readonly launch: CodexGoalLaunchInput;
+    readonly brief: CodexGoalBriefView;
+    readonly status: CodexGoalStatusView;
+    readonly accounts: readonly CodexGoalAccountView[];
+    readonly includeCliFallback: boolean;
+}): JsonObject;
+export declare function latestIsoDate(values: readonly (string | undefined)[]): string | undefined;
+export declare function redactText(value: string): string;
+export declare function truncateText(value: string, maxLength: number): string;
+export declare function nextActionForStatus(action: string): JsonObject;
+export declare function nextBestCommand(input: {
+    readonly jobId: string;
+    readonly action: JsonObject;
+    readonly status: CodexGoalStatusView;
+    readonly launch: CodexGoalLaunchInput;
+}): string;
+export declare function isSafeStartAction(action: string): boolean;
+export {};
+//# sourceMappingURL=codex-goal-mcp-decision.d.ts.map

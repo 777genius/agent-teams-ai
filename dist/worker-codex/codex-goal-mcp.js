@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { execFile } from "node:child_process";
-import { appendFile, lstat, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import { homedir, hostname } from "node:os";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { execPath } from "node:process";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -13,13 +13,13 @@ import { DefaultRedactor, } from "@vioxen/subscription-runtime/core";
 import { sessionArtifactFromCodexAuthJson } from "@vioxen/subscription-runtime/provider-codex";
 import { LocalIntegrationAttemptStore, LocalFileRunEventProjectionStateStore, LocalFileRunEventStore, LocalFileWorkerControlInboxStore, LocalControlledAgentStateStore, } from "@vioxen/subscription-runtime/store-local-file";
 import { LocalGitIntegrationAdapter, LocalProjectCheckRunner, LocalWorkspaceIntegrationLock, SimpleSecretScanner, buildLocalClaudeControlledAgentProfile, createLocalClaudeControlledAgentProvider, loadScopedClaudeSessionArtifact, watchClaudeRuns, } from "@vioxen/subscription-runtime/worker-local";
-import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, ProjectAdmissionWorkerRole, ProjectDebtReason, RunObservationService, InterruptAndContinueWorkerUseCase, ProjectControlBroker, RunEventProviderKind, WorkerControlService, assessBaseRevision, assessWorkerHealth, buildControlledAgentLaunchPlan, buildControlledAgentLiveControllerState, buildControlledAgentProcessOwner, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, buildWorkerStatusView, decideRunObservation, describeProjectControlSurface, evaluateProjectAdmission, isRunEventCompactionSafetyMode, isRunEventProviderKind, isRunEventType, projectRunObservationEvents, projectRunReadModelsFromEvents, pushApprovedCommit, rejectIntegrationAttempt, reconcileRunPreview, readTargetRevision, runEventProviderKindFromString, buildHandoffManifest, ProjectOperation, consumedDebt, consumedOutputRecordFor, projectAdmissionDebtCounts, readConsumedOutputLedgers, } from "@vioxen/subscription-runtime/worker-core";
+import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, ProjectAdmissionWorkerRole, RunObservationService, InterruptAndContinueWorkerUseCase, ProjectControlBroker, RunEventProviderKind, WorkerControlService, assessBaseRevision, assessWorkerHealth, buildControlledAgentLaunchPlan, buildControlledAgentLiveControllerState, buildControlledAgentProcessOwner, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, buildWorkerStatusView, decideRunObservation, evaluateProjectAdmission, projectRunObservationEvents, projectRunReadModelsFromEvents, pushApprovedCommit, rejectIntegrationAttempt, reconcileRunPreview, readTargetRevision, runEventProviderKindFromString, ProjectOperation, } from "@vioxen/subscription-runtime/worker-core";
 import { codexGoalJobToArgs, codexGoalObjectiveMaxChars, createCodexGoalJob, defaultCodexGoalJobRoot, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
 import { upsertCodexGoalLaunchManifest } from "./codex-goal-launch-manifest.js";
 import { runDependencyBootstrap, } from "./dependency-bootstrap.js";
 import { codexGoalAccountSlots, codexGoalProgressPath, } from "./codex-goal-runner.js";
 import { assertCodexGoalProviderSandboxModeAllowed, optionalCodexGoalEditMode, optionalCodexGoalProviderSandboxMode, parseCodexGoalEditMode, } from "./codex-goal-control-modes.js";
-import { buildCodexGoalNoTmuxCommand, buildCodexGoalStopTmuxCommand, buildCodexGoalTmuxCommand, collectCodexGoalStatus, doctorCodexGoal, listCodexGoalAccountStatuses, prepareCodexGoalLaunchPaths, reconcileCodexGoalRuntimeResult, resolveCodexGoalWorkerLiveness, shellQuote, startCodexGoalTmux, stopCodexGoalDirectProcess, stopCodexGoalTmux, tailCodexGoalLog, } from "./codex-goal-ops.js";
+import { buildCodexGoalNoTmuxCommand, buildCodexGoalStopTmuxCommand, buildCodexGoalTmuxCommand, collectCodexGoalStatus, doctorCodexGoal, listCodexGoalAccountStatuses, prepareCodexGoalLaunchPaths, reconcileCodexGoalRuntimeResult, resolveCodexGoalWorkerLiveness, startCodexGoalTmux, stopCodexGoalDirectProcess, stopCodexGoalTmux, tailCodexGoalLog, } from "./codex-goal-ops.js";
 import { CodexRunObservationAdapter } from "./codex-run-observation.js";
 import { optionalCodexGoalAccessBoundary, optionalCodexGoalNetworkAccess, parseCodexGoalProjectAccessScope, } from "./codex-goal-access-plan.js";
 import { projectControlGenericScopeDenial, projectControlGenericToolDenial, } from "./project-control-scope-guard.js";
@@ -29,6 +29,16 @@ import { LocalGitRevisionReader } from "./codex-goal-git-revision.js";
 import { buildCodexControlledAgentProfile, CodexControlledAgentProvider, } from "./controlled-agent/index.js";
 import { projectControllerCapacityDemand, recordProjectControllerCapacitySignal, } from "./project-controller-capacity.js";
 import { createProjectControlOperation, patchProjectControlOperation, projectControlOperationExecutionMode, projectControlOperationView, projectControlOperationsRoot, readProjectControlOperationById, startProjectControlOperationRunner, } from "./project-control-operation-lifecycle.js";
+import { accountNames, booleanValue, dateValue, numberValue, positiveIntegerValue, putIfDefined, requiredRawString, requiredString, resolvePath, stringValue, tagValues, workerReportModeValue, } from "./codex-goal-mcp-values.js";
+import { jobIdInputSchema, jobRegistryInputSchema, optionalRunEventProviderKind, registryRootFromArgs, runEventRetentionPolicyFromArgs, runEventRootFromArgs, runEventTypeFilter, } from "./codex-goal-mcp-inputs.js";
+import { accountOperatorLabel, availableCodexGoalAccountSlots, codexAccountReloginInstructions, codexAccountStatusPayload, dedupeCodexGoalAccountSlots, duplicateAccountGroups, visibleCodexGoalAccountPoolSlots, } from "./codex-goal-mcp-accounts.js";
+import { readRuntimeResultBrief, safeTail, } from "./codex-goal-mcp-runtime-result.js";
+import { readCodexGoalLifecycleMarkers } from "./codex-goal-mcp-lifecycle-markers.js";
+import { matchesProjectControlPrefix, nodeErrorCode, pathInsideAnyProjectRoot, pathInsideOrEqual, stringArrayArg, uniqueProjectControlStrings, } from "./codex-goal-mcp-project-utils.js";
+import { buildCodexProjectAdmissionSnapshot, codexProjectAdmissionGate, optionalRealPathForAdmission, projectAdmissionDetailView, projectAdmissionOperation, projectAdmissionWorkerRoleArg, } from "./codex-goal-mcp-project-admission.js";
+import { jobIdsFromValue, parseIsoDate, signalIdList, workerControlCallerArgs, workerControlDecisionJson, workerControlReceiptJson, workerControlSignalJson, workerControlSignalViewJson, } from "./codex-goal-mcp-worker-control-view.js";
+import { CODEX_GOAL_CONTROL_SURFACE_SCHEMA, CODEX_GOAL_EXECUTION_ENGINE_SCHEMA, buildCodexGoalDecision, buildCodexGoalHandoff, codexGoalBriefHealthStatus, isHeartbeatOnlyNoOutputBrief, isSafeStartAction, latestIsoDate, nextActionForStatus, nextBestCommand, redactText, truncateText, } from "./codex-goal-mcp-decision.js";
+export { availableCodexGoalAccountSlots, dedupeCodexGoalAccountSlots, visibleCodexGoalAccountPoolSlots, } from "./codex-goal-mcp-accounts.js";
 const serverVersion = "0.1.0-main.2";
 const defaultAuthRoot = "~/.cache/subscription-runtime/live-codex-auth";
 const defaultTimeoutMs = 72 * 60 * 60 * 1000;
@@ -41,28 +51,6 @@ const controlledAgentProcessOwner = buildControlledAgentProcessOwner({
     pid: process.pid,
 });
 const controlledAgentProviders = new Map();
-const lifecycleMarkerSpecs = [
-    {
-        type: "pause_request",
-        suffix: "pause-request.json",
-        timestampKeys: ["requestedAt"],
-    },
-    {
-        type: "maintenance_pause",
-        suffix: "maintenance-pause.json",
-        timestampKeys: ["pausedAt"],
-    },
-    {
-        type: "review",
-        suffix: "review.json",
-        timestampKeys: ["reviewedAt"],
-    },
-    {
-        type: "stop_event",
-        suffix: "stop-event.json",
-        timestampKeys: ["stoppedAt"],
-    },
-];
 export function createCodexGoalMcpServer(options = {}) {
     const server = new McpServer({
         name: "subscription-runtime-codex-goal",
@@ -1682,11 +1670,16 @@ async function loadProjectControlController(args) {
         scope: controller.projectAccessScope,
     };
 }
+const codexProjectAdmissionDeps = {
+    listJobs: listCodexGoalJobs,
+    buildOverviewItem: (input) => buildCodexGoalOverviewItem(input),
+};
 async function projectControlAdmissionSnapshot(args) {
     const controller = await loadProjectControlController(args);
     const snapshot = await buildCodexProjectAdmissionSnapshot({
         registryRootDir: controller.registryRootDir,
         scope: controller.scope,
+        deps: codexProjectAdmissionDeps,
     });
     const operation = projectAdmissionOperation(args.operation);
     const workerRole = projectAdmissionWorkerRoleArg(args.workerRole);
@@ -1714,45 +1707,6 @@ async function projectControlAdmissionSnapshot(args) {
         snapshot: detailView.snapshot,
         ...(detailView.decision ? { decision: detailView.decision } : {}),
     });
-}
-function projectAdmissionDetailView(input) {
-    const debtLimit = projectAdmissionDebtLimit(input.maxDebtItems);
-    const snapshotDebt = input.includeDetails
-        ? limitedProjectDebt(input.snapshot.debt, debtLimit)
-        : [];
-    const decisionDebt = input.decision && input.includeDetails
-        ? limitedProjectDebt(input.decision.debt, debtLimit)
-        : [];
-    return {
-        snapshot: {
-            ...input.snapshot,
-            debt: snapshotDebt,
-            debtCount: input.snapshot.debt.length,
-            debtOmittedCount: input.snapshot.debt.length - snapshotDebt.length,
-            detailsIncluded: input.includeDetails,
-        },
-        ...(input.decision
-            ? {
-                decision: {
-                    ...input.decision,
-                    debt: decisionDebt,
-                    debtCount: input.decision.debt.length,
-                    debtOmittedCount: input.decision.debt.length - decisionDebt.length,
-                    detailsIncluded: input.includeDetails,
-                },
-            }
-            : {}),
-    };
-}
-function projectAdmissionDebtLimit(value) {
-    if (value === undefined)
-        return undefined;
-    if (!Number.isFinite(value))
-        return undefined;
-    return Math.max(0, Math.floor(value));
-}
-function limitedProjectDebt(debt, limit) {
-    return limit === undefined ? debt : debt.slice(0, limit);
 }
 async function projectControlUpdateControllerScope(args) {
     const controller = await loadProjectControlController(args);
@@ -1905,399 +1859,6 @@ function assertProjectControlRepairAccountsAllowed(input) {
         throw new Error("project_control_repair_account_outside_scope");
     }
 }
-const projectAdmissionSnapshotCache = new Map();
-function projectAdmissionCacheTtlMs() {
-    const raw = Number(process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_CACHE_TTL_MS ?? "0");
-    if (!Number.isFinite(raw) || raw <= 0)
-        return 0;
-    return Math.min(raw, 120_000);
-}
-function projectAdmissionMaxJobSummaries() {
-    const raw = Number(process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_MAX_JOB_SUMMARIES ?? "0");
-    if (!Number.isFinite(raw) || raw <= 0)
-        return 0;
-    return Math.floor(raw);
-}
-function projectAdmissionCacheKey(input) {
-    return JSON.stringify({
-        registryRootDir: input.registryRootDir,
-        projectId: input.scope.projectId,
-        jobIdPrefixes: input.scope.jobIdPrefixes ?? [],
-        workspaceRoots: input.scope.workspaceRoots ?? [],
-        worktreeRoots: input.scope.worktreeRoots ?? [],
-        observedWorkspaceRoots: input.scope.observedWorkspaceRoots ?? [],
-        consumedOutputLedgerRoots: input.scope.consumedOutputLedgerRoots ?? [],
-    });
-}
-async function readCodexProjectAdmissionSnapshot(input) {
-    const ttlMs = projectAdmissionCacheTtlMs();
-    if (ttlMs <= 0)
-        return buildCodexProjectAdmissionSnapshot(input);
-    const key = projectAdmissionCacheKey(input);
-    const now = Date.now();
-    const cached = projectAdmissionSnapshotCache.get(key);
-    if (cached && cached.expiresAtMs > now)
-        return cached.snapshot;
-    const snapshot = await buildCodexProjectAdmissionSnapshot(input);
-    projectAdmissionSnapshotCache.set(key, {
-        expiresAtMs: now + ttlMs,
-        snapshot,
-    });
-    return snapshot;
-}
-function limitCodexProjectSummaries(summaries) {
-    const max = projectAdmissionMaxJobSummaries();
-    if (max <= 0 || summaries.length <= max)
-        return summaries;
-    return [...summaries]
-        .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
-        .slice(-max);
-}
-function codexProjectAdmissionGate(input) {
-    return {
-        async evaluate(request) {
-            const snapshot = await readCodexProjectAdmissionSnapshot(input);
-            return evaluateProjectAdmission({
-                request: {
-                    ...request,
-                    projectId: request.projectId ?? input.scope.projectId,
-                },
-                snapshot,
-            });
-        },
-    };
-}
-async function buildCodexProjectAdmissionSnapshot(input) {
-    const debt = [];
-    const knownWorkspacePaths = new Set();
-    const prefixes = input.scope.jobIdPrefixes ?? [];
-    const staleAfterMs = 10 * 60_000;
-    const consumedOutput = await readConsumedOutputLedgers({
-        roots: input.scope.consumedOutputLedgerRoots ?? [],
-    });
-    debt.push(...consumedOutput.debt);
-    let summaries;
-    try {
-        summaries = await listCodexGoalJobs({ registryRootDir: input.registryRootDir });
-    }
-    catch (error) {
-        debt.push({
-            reason: ProjectDebtReason.UnreadableRoot,
-            subject: input.registryRootDir,
-            severity: "blocking",
-            evidence: [
-                `registry unreadable: ${error instanceof Error ? error.message : String(error)}`,
-            ],
-        });
-        summaries = [];
-    }
-    const projectSummaries = limitCodexProjectSummaries(summaries.filter((summary) => matchesProjectControlPrefix(summary.jobId, prefixes)));
-    const overviewSummaries = [];
-    for (const summary of projectSummaries) {
-        const consumed = await debtFromConsumedJobSummary({
-            summary,
-            consumedOutput,
-            knownWorkspacePaths,
-        });
-        if (consumed) {
-            debt.push(...consumed);
-            continue;
-        }
-        overviewSummaries.push(summary);
-    }
-    const overviewItems = await Promise.all(overviewSummaries.map((summary) => buildCodexGoalOverviewItem({
-        registryRootDir: input.registryRootDir,
-        jobId: summary.jobId,
-        staleAfterMs,
-        tailLines: 0,
-    })));
-    for (const item of overviewItems) {
-        if (typeof item.workspacePath === "string") {
-            await rememberKnownWorkspacePath(knownWorkspacePaths, item.workspacePath);
-        }
-        debt.push(...await debtFromOverviewItem({
-            item,
-            consumedOutput,
-        }));
-    }
-    const roots = uniqueProjectControlStrings([
-        ...(input.scope.workspaceRoots ?? []),
-        ...(input.scope.worktreeRoots ?? []),
-        ...(input.scope.observedWorkspaceRoots ?? []),
-    ]);
-    for (const root of roots) {
-        debt.push(...await orphanDirtyWorkspaceDebt({
-            root,
-            prefixes,
-            knownWorkspacePaths,
-            consumedOutput,
-        }));
-        debt.push(...await diskPressureDebt(root));
-    }
-    return {
-        schemaVersion: 1,
-        projectId: input.scope.projectId,
-        observedAt: new Date().toISOString(),
-        debt,
-        counts: projectAdmissionDebtCounts(debt),
-    };
-}
-async function debtFromConsumedJobSummary(input) {
-    const resolvedWorkspacePath = await optionalRealPathForAdmission(input.summary.workspacePath);
-    const consumed = consumedOutputRecordFor({
-        ledger: input.consumedOutput,
-        jobId: input.summary.jobId,
-        workspacePath: input.summary.workspacePath,
-        ...(resolvedWorkspacePath ? { resolvedWorkspacePath } : {}),
-    });
-    if (!consumed)
-        return undefined;
-    await rememberKnownWorkspacePath(input.knownWorkspacePaths, input.summary.workspacePath);
-    return consumedDebt(consumed);
-}
-async function debtFromOverviewItem(input) {
-    const { item } = input;
-    const jobId = stringValue(item.jobId) ?? "unknown-job";
-    const workspacePath = stringValue(item.workspacePath);
-    if (item.ok !== true) {
-        return [{
-                reason: ProjectDebtReason.UnreadableRoot,
-                subject: jobId,
-                severity: "blocking",
-                evidence: [stringValue(item.safeMessage) ?? "job overview unavailable"],
-            }];
-    }
-    const debt = [];
-    if (item.activeWriterRisk === true || item.workspaceConflict === true) {
-        debt.push({
-            reason: ProjectDebtReason.ActiveWriterConflict,
-            subject: jobId,
-            severity: "blocking",
-            evidence: safeStringArray(item.activeWriterRiskReasons)
-                .concat(["active writer conflict risk"]),
-        });
-    }
-    if (item.workspaceDirty !== true)
-        return debt;
-    const subject = workspacePath ?? jobId;
-    const resolvedWorkspacePath = workspacePath
-        ? await optionalRealPathForAdmission(workspacePath)
-        : undefined;
-    const consumed = consumedOutputRecordFor({
-        ledger: input.consumedOutput,
-        jobId,
-        ...(workspacePath ? { workspacePath } : {}),
-        ...(resolvedWorkspacePath ? { resolvedWorkspacePath } : {}),
-    });
-    if (consumed) {
-        debt.push(...consumedDebt(consumed));
-        return debt;
-    }
-    const workerAlive = item.workerAlive === true;
-    const stale = item.silentStale === true || item.workerFreshProgressAlive === false;
-    if (workerAlive && stale) {
-        debt.push({
-            reason: ProjectDebtReason.StaleDirtyWorker,
-            subject,
-            severity: "blocking",
-            evidence: [`${jobId} is alive/stale with dirty workspace`],
-        });
-        return debt;
-    }
-    if (workerAlive)
-        return debt;
-    const markerTypes = safeStringArray(item.lifecycleMarkerTypes);
-    const recommendedAction = stringValue(item.recommendedAction);
-    const resultStatus = stringValue(item.resultStatus);
-    const completedOrReviewed = resultStatus === "completed" ||
-        recommendedAction === "review_completed" ||
-        markerTypes.includes("review");
-    debt.push({
-        reason: completedOrReviewed
-            ? ProjectDebtReason.UnconsumedCompletedJob
-            : ProjectDebtReason.InactiveDirtyWorkspace,
-        subject,
-        severity: "blocking",
-        evidence: [
-            `${jobId} is inactive with dirty workspace`,
-            `reviewed marker present: ${String(markerTypes.includes("review"))}`,
-            "reviewed is not consumed; output must be integrated/rejected/archived",
-        ],
-    });
-    return debt;
-}
-async function rememberKnownWorkspacePath(target, workspacePath) {
-    target.add(resolve(workspacePath));
-    try {
-        target.add(await realpath(workspacePath));
-    }
-    catch {
-        // Missing workspaces are handled by overview debt; keep the raw path.
-    }
-}
-async function orphanDirtyWorkspaceDebt(input) {
-    const root = resolve(input.root);
-    let entries;
-    try {
-        entries = await readdir(root, { withFileTypes: true });
-    }
-    catch (error) {
-        if (nodeErrorCode(error) === "ENOENT")
-            return [];
-        return [{
-                reason: ProjectDebtReason.UnreadableRoot,
-                subject: root,
-                severity: "blocking",
-                evidence: [
-                    `workspace root unreadable: ${error instanceof Error ? error.message : String(error)}`,
-                ],
-            }];
-    }
-    const debt = [];
-    for (const entry of entries) {
-        if (!entry.isDirectory() && !entry.isSymbolicLink())
-            continue;
-        if (!matchesProjectControlPrefix(entry.name, input.prefixes))
-            continue;
-        const workspacePath = join(root, entry.name);
-        if (!await pathLooksLikeGitWorkspace(workspacePath))
-            continue;
-        const resolved = await optionalRealPathForAdmission(workspacePath);
-        if (input.knownWorkspacePaths.has(resolve(workspacePath)) ||
-            (resolved && input.knownWorkspacePaths.has(resolved))) {
-            continue;
-        }
-        const consumed = consumedOutputRecordFor({
-            ledger: input.consumedOutput,
-            jobId: entry.name,
-            workspacePath,
-            ...(resolved ? { resolvedWorkspacePath: resolved } : {}),
-        });
-        if (consumed) {
-            debt.push(...consumedDebt(consumed));
-            continue;
-        }
-        const status = await gitStatusShort(workspacePath);
-        if (status.ok && status.lines.length === 0)
-            continue;
-        debt.push({
-            reason: status.ok
-                ? ProjectDebtReason.OrphanLegacyWorkspace
-                : ProjectDebtReason.UnreadableWorkspace,
-            subject: workspacePath,
-            severity: "blocking",
-            evidence: status.ok
-                ? [
-                    "dirty project workspace is not represented by the controller registry",
-                    ...status.lines.slice(0, 5),
-                ]
-                : [`git status failed: ${status.error}`],
-        });
-    }
-    return debt;
-}
-async function diskPressureDebt(root) {
-    const minFreeKb = Number(process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_MIN_FREE_KB ?? "0");
-    if (!Number.isFinite(minFreeKb) || minFreeKb <= 0)
-        return [];
-    try {
-        const result = await execFileAsync("df", ["-Pk", root], {
-            timeout: 8_000,
-            maxBuffer: 256 * 1024,
-        });
-        const [, line] = result.stdout.trim().split(/\n/);
-        const availableKb = Number(line?.trim().split(/\s+/)[3]);
-        if (Number.isFinite(availableKb) && availableKb < minFreeKb) {
-            return [{
-                    reason: ProjectDebtReason.DiskPressure,
-                    subject: root,
-                    severity: "blocking",
-                    evidence: [`availableKb=${availableKb} minFreeKb=${minFreeKb}`],
-                }];
-        }
-        return [];
-    }
-    catch (error) {
-        return [{
-                reason: ProjectDebtReason.UnreadableRoot,
-                subject: root,
-                severity: "blocking",
-                evidence: [
-                    `disk pressure check failed: ${error instanceof Error ? error.message : String(error)}`,
-                ],
-            }];
-    }
-}
-async function pathLooksLikeGitWorkspace(path) {
-    try {
-        await lstat(join(path, ".git"));
-        return true;
-    }
-    catch {
-        return false;
-    }
-}
-async function optionalRealPathForAdmission(path) {
-    try {
-        return await realpath(path);
-    }
-    catch {
-        return undefined;
-    }
-}
-async function gitStatusShort(path) {
-    try {
-        const result = await execFileAsync("git", [
-            "-C",
-            path,
-            "status",
-            "--short",
-            "--untracked-files=all",
-        ], {
-            timeout: 8_000,
-            maxBuffer: 1024 * 1024,
-        });
-        return {
-            ok: true,
-            lines: result.stdout.split(/\n/).filter((line) => line.length > 0),
-        };
-    }
-    catch (error) {
-        return {
-            ok: false,
-            error: error instanceof Error ? error.message : String(error),
-        };
-    }
-}
-function safeStringArray(value) {
-    try {
-        return stringArrayArg(value);
-    }
-    catch {
-        return [];
-    }
-}
-function projectAdmissionOperation(value) {
-    const operation = stringValue(value);
-    if (operation === undefined)
-        return undefined;
-    if (operation === ProjectOperation.CreateJob)
-        return ProjectOperation.CreateJob;
-    if (operation === ProjectOperation.StartWorker)
-        return ProjectOperation.StartWorker;
-    if (operation === ProjectOperation.CreateWorktree)
-        return ProjectOperation.CreateWorktree;
-    throw new Error("project_admission_operation_invalid");
-}
-function projectAdmissionWorkerRoleArg(value) {
-    const role = stringValue(value);
-    if (role === undefined)
-        return undefined;
-    if (Object.values(ProjectAdmissionWorkerRole).includes(role)) {
-        return role;
-    }
-    throw new Error("project_admission_worker_role_invalid");
-}
 function codexProjectControlBroker(input) {
     return new ProjectControlBroker({
         boundary: AccessBoundary.ProjectScopedControl,
@@ -2307,6 +1868,7 @@ function codexProjectControlBroker(input) {
         admission: codexProjectAdmissionGate({
             registryRootDir: input.registryRootDir,
             scope: input.scope,
+            deps: codexProjectAdmissionDeps,
         }),
     });
 }
@@ -2505,13 +2067,6 @@ async function pathExists(path) {
             return false;
         throw error;
     }
-}
-function nodeErrorCode(error) {
-    return typeof error === "object" && error !== null &&
-        "code" in error &&
-        typeof error.code === "string"
-        ? error.code
-        : undefined;
 }
 async function readTextFileIfExists(path) {
     try {
@@ -3274,19 +2829,6 @@ async function controlledAgentClaudeSessionArtifact(input) {
         sessionArtifactPath: rawPath,
         authRoot: input.controller.scope.authRoot,
         cwd: input.state.cwd,
-    });
-}
-function stringArrayArg(value) {
-    if (value === undefined)
-        return [];
-    const values = typeof value === "string" ? [value] : value;
-    if (!Array.isArray(values))
-        throw new Error("string_array_arg_invalid");
-    return values.map((item) => {
-        if (typeof item !== "string" || item.length === 0) {
-            throw new Error("string_array_arg_invalid");
-        }
-        return item;
     });
 }
 function projectIntegrationDeps(controller) {
@@ -4354,9 +3896,6 @@ function projectScopeFieldFingerprint(value) {
     }
     return JSON.stringify(value ?? null);
 }
-function uniqueProjectControlStrings(values) {
-    return [...new Set(values.filter((value) => value.length > 0))];
-}
 function projectControlWorkerRole(value) {
     const role = stringValue(value) ?? "producer";
     if (role === "producer" || role === "fastgate" || role === "reviewer") {
@@ -4412,9 +3951,6 @@ function assertProjectControlCreateManifestPaths(input) {
         throw new Error("project_control_auth_root_outside_scope");
     }
 }
-function pathInsideAnyProjectRoot(path, roots) {
-    return roots.some((root) => pathInsideOrEqual(path, root));
-}
 async function projectControlRealPathOutsideWorkspaceScope(path, scope) {
     const realPath = await optionalRealPathForAdmission(path);
     if (!realPath)
@@ -4433,16 +3969,6 @@ function projectControlWorkspaceRoots(scope) {
         ...(scope.worktreeRoots ?? []),
         ...(scope.isolatedWorkspaceRoot ? [scope.isolatedWorkspaceRoot] : []),
     ]);
-}
-function pathInsideOrEqual(path, root) {
-    const normalizedPath = resolve(path);
-    const normalizedRoot = resolve(root);
-    return normalizedPath === normalizedRoot ||
-        normalizedPath.startsWith(`${normalizedRoot}/`);
-}
-function matchesProjectControlPrefix(value, prefixes) {
-    return prefixes.length === 0 ||
-        prefixes.some((prefix) => value.startsWith(prefix));
 }
 function projectControlPathArg(args, value, fieldName) {
     const cwd = resolvePath(process.cwd(), stringValue(args.cwd) ?? process.cwd());
@@ -4587,62 +4113,6 @@ async function codexGoalAccountCapacityFacts(manifest) {
             error: error instanceof Error ? error.message : String(error),
         };
     }
-}
-async function codexAccountStatusPayload(input) {
-    const slots = await listCodexGoalAccountStatuses({
-        authRootDir: input.authRootDir,
-        ...(input.accounts?.length ? { accounts: input.accounts } : {}),
-        ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
-        ...(input.liveCheck ? { liveCheck: input.liveCheck } : {}),
-        ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
-        ...(input.liveCheckTimeoutMs ? { liveCheckTimeoutMs: input.liveCheckTimeoutMs } : {}),
-    });
-    const duplicates = duplicateAccountGroups(slots);
-    const dedupedSlots = dedupeCodexGoalAccountSlots(slots);
-    const availableDedupedSlots = availableCodexGoalAccountSlots(dedupedSlots);
-    const readySlots = slots.filter((slot) => slot.status === "ready");
-    const missingSlots = slots.filter((slot) => slot.status === "auth_missing");
-    const invalidSlots = slots.filter((slot) => slot.status === "auth_invalid");
-    const capacityBlockedSlots = slots.filter((slot) => slot.capacityAvailability && slot.capacityAvailability !== "available");
-    return {
-        ok: availableDedupedSlots.length > 0,
-        authRootDir: input.authRootDir,
-        capacityAware: Boolean(input.stateRootDir),
-        liveCheck: Boolean(input.liveCheck),
-        ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
-        count: slots.length,
-        available: availableDedupedSlots.length,
-        hasAvailableAccount: availableDedupedSlots.length > 0,
-        summary: {
-            configured: slots.length,
-            ready: readySlots.length,
-            missing: missingSlots.length,
-            invalid: invalidSlots.length,
-            deduped: dedupedSlots.length,
-            availableDeduped: availableDedupedSlots.length,
-            capacityBlocked: capacityBlockedSlots.length,
-            duplicateGroups: duplicates.length,
-        },
-        accounts: slots,
-        slots,
-        duplicates,
-        dedupedAccountNames: dedupedSlots.map((slot) => slot.name),
-        availableDedupedAccountNames: availableDedupedSlots.map((slot) => slot.name),
-        dedupedAccountLabels: dedupedSlots.map(accountOperatorLabel),
-        availableDedupedAccountLabels: availableDedupedSlots.map(accountOperatorLabel),
-        dedupeRecommendation: duplicates.length
-            ? "Use dedupedAccountNames for worker pools. It keeps the newest ready slot per identity group."
-            : "No duplicate identity groups detected.",
-    };
-}
-function codexAccountReloginInstructions(input) {
-    return [
-        "This is a manual relogin flow. It does not automate browser login.",
-        `mkdir -p ${shellText(join(input.authRootDir, input.account))}`,
-        `test ! -f ${shellText(join(input.authRootDir, input.account, "auth.json"))} || cp ${shellText(join(input.authRootDir, input.account, "auth.json"))} ${shellText(join(input.authRootDir, input.account, "auth.json.bak.$(date +%Y%m%d-%H%M%S).before-relogin"))}`,
-        `CODEX_HOME=${shellText(join(input.authRootDir, input.account))} codex login --device-auth`,
-        input.afterLoginInstruction,
-    ];
 }
 async function continueStoredJob(args, options) {
     const loaded = await loadJobLaunch(args);
@@ -5996,76 +5466,6 @@ async function buildCodexGoalOverviewItem(input) {
         };
     }
 }
-function jobRegistryInputSchema() {
-    return {
-        registryRootDir: z.string().optional(),
-        cwd: z.string().optional(),
-    };
-}
-function jobIdInputSchema() {
-    return {
-        ...jobRegistryInputSchema(),
-        jobId: z.string().optional(),
-    };
-}
-function registryRootFromArgs(args) {
-    return resolveCodexGoalJobRegistryRoot({
-        ...(args.registryRootDir ? { registryRootDir: args.registryRootDir } : {}),
-        ...(args.cwd ? { cwd: args.cwd } : {}),
-    });
-}
-function runEventRootFromArgs(args, registryRootDir) {
-    const cwd = resolvePath(process.cwd(), stringValue(args.cwd) ?? process.cwd());
-    return stringValue(args.eventRootDir)
-        ? resolvePath(cwd, stringValue(args.eventRootDir))
-        : join(registryRootDir, ".run-events");
-}
-function optionalRunEventProviderKind(value) {
-    const text = stringValue(value);
-    if (text === undefined)
-        return undefined;
-    if (isRunEventProviderKind(text))
-        return text;
-    throw new Error(`unsupported run event provider kind: ${text}`);
-}
-function runEventTypeFilter(args) {
-    const values = [
-        ...stringsFromValue(args.type),
-        ...stringsFromValue(args.types),
-    ];
-    if (values.length === 0)
-        return {};
-    return {
-        types: values.map((value) => {
-            if (!isRunEventType(value)) {
-                throw new Error(`unsupported run event type: ${value}`);
-            }
-            return value;
-        }),
-    };
-}
-function runEventRetentionPolicyFromArgs(args) {
-    const safetyMode = optionalRunEventCompactionSafetyMode(args.safetyMode);
-    const keepEventsAfter = stringValue(args.keepEventsAfter);
-    const keepLatestEventsPerRun = numberValue(args.keepLatestEventsPerRun);
-    const compactDeliveredEvents = booleanValue(args.compactDeliveredEvents);
-    const dropInvalidLines = booleanValue(args.dropInvalidLines);
-    return {
-        ...(safetyMode === undefined ? {} : { safetyMode }),
-        ...(keepEventsAfter === undefined ? {} : { keepEventsAfter }),
-        ...(keepLatestEventsPerRun === undefined ? {} : { keepLatestEventsPerRun }),
-        ...(compactDeliveredEvents === undefined ? {} : { compactDeliveredEvents }),
-        ...(dropInvalidLines === undefined ? {} : { dropInvalidLines }),
-    };
-}
-function optionalRunEventCompactionSafetyMode(value) {
-    const text = stringValue(value);
-    if (text === undefined)
-        return undefined;
-    if (isRunEventCompactionSafetyMode(text))
-        return text;
-    throw new Error(`unsupported run event compaction safety mode: ${text}`);
-}
 function jobManifestInputFromArgs(args) {
     const cwd = resolvePath(process.cwd(), args.cwd ?? process.cwd());
     const jobId = requiredRawString(args.jobId, "jobId");
@@ -6439,315 +5839,6 @@ export async function buildCodexGoalBrief(input) {
         recentLogTail,
     };
 }
-function codexGoalBriefHealthStatus(input) {
-    if (input.workerAlive && input.status.progressStatus === "running") {
-        return "running";
-    }
-    if (input.status.resultStatus === "done" ||
-        input.status.resultStatus === "completed") {
-        return "completed";
-    }
-    if (input.status.resultStatus === "waiting_capacity" ||
-        input.status.progressStatus === "blocked") {
-        return "blocked";
-    }
-    if (input.workerAlive)
-        return "running";
-    if (input.status.resultStatus === "failed" ||
-        input.status.resultStatus === "partial" ||
-        input.status.resultStatus === "blocked" ||
-        input.status.resultStatus === "aborted") {
-        return "failed";
-    }
-    if (input.status.resultExists === false && input.status.tmuxAlive === false) {
-        return "stopped";
-    }
-    return "unknown";
-}
-function isHeartbeatOnlyNoOutputBrief(input) {
-    const status = input.status;
-    const heartbeatOnlyNoOutputAfterMs = Math.min(input.staleAfterMs, 2 * 60_000);
-    const logUpdatedAgeMs = isoAgeMs(status.logUpdatedAt);
-    const noOutputAgeMs = logUpdatedAgeMs ?? status.progressHeartbeatAgeMs;
-    const progressStale = status.progressHeartbeatAgeMs !== undefined &&
-        status.progressHeartbeatAgeMs > input.staleAfterMs;
-    const workerLiveness = resolveCodexGoalWorkerLiveness({
-        status,
-        progressStale,
-    });
-    const executorStartedOnlyNoOutput = Boolean(status.lastRuntimeEvent === "executor_started" &&
-        status.resultExists === false &&
-        (status.logExists === false || status.logByteLength === 0));
-    const noOutputIsNotUsefulProgress = status.progressCpuActive !== true ||
-        executorStartedOnlyNoOutput;
-    return Boolean(workerLiveness.alive &&
-        status.progressExists &&
-        status.progressStatus === "running" &&
-        noOutputAgeMs !== undefined &&
-        noOutputAgeMs >= heartbeatOnlyNoOutputAfterMs &&
-        status.progressHeartbeatAgeMs !== undefined &&
-        status.progressHeartbeatAgeMs <= input.staleAfterMs &&
-        noOutputIsNotUsefulProgress &&
-        status.resultExists === false &&
-        (status.logExists === false || status.logByteLength === 0) &&
-        status.workspaceDirty === false &&
-        (status.changedFiles ?? []).length === 0);
-}
-function buildCodexGoalDecision(input) {
-    const registryArgs = {
-        registryRootDir: input.registryRootDir,
-        jobId: input.manifest.jobId,
-    };
-    const workspaceConflict = findWorkspaceConflictForJob(input.overview, input.manifest.jobId);
-    const blockedBySingleWriter = workspaceConflict !== undefined;
-    const safeToContinue = input.brief.safeToContinue && !blockedBySingleWriter;
-    const blockers = [];
-    const warnings = [];
-    const evidence = [
-        {
-            code: "worker_state",
-            workerAlive: Boolean(input.brief.workerAlive),
-            workerSupervisorKind: input.brief.workerSupervisorKind,
-            workerAliveReason: input.brief.workerAliveReason,
-            workerProcessAlive: input.brief.workerProcessAlive,
-            workerFreshProgressAlive: input.brief.workerFreshProgressAlive,
-            activeWriterRisk: input.brief.activeWriterRisk,
-            activeWriterRiskReasons: input.brief.activeWriterRiskReasons,
-            baseRevisionStatus: input.brief.baseRevisionStatus,
-            baseRevisionReasons: input.brief.baseRevisionReasons,
-            recommendedAction: input.status.recommendedAction,
-            resultStatus: input.status.resultStatus,
-            resultReason: redactOptional(input.status.resultReason),
-        },
-        {
-            code: "workspace_state",
-            workspacePath: input.launch.config.workspacePath,
-            workspaceDirty: input.status.workspaceDirty,
-            changedFilesCount: (input.status.changedFiles ?? []).length,
-        },
-        {
-            code: "progress_state",
-            lastProgressAt: input.brief.lastProgressAt,
-            lastProgressAgeMs: input.brief.lastProgressAgeMs,
-            staleAfterMs: input.brief.staleAfterMs,
-            progressUpdatedAt: input.brief.progressUpdatedAt,
-            progressHeartbeatAgeMs: input.brief.progressHeartbeatAgeMs,
-            progressStatus: input.brief.progressStatus,
-            appServerProcessAlive: input.brief.appServerProcessAlive,
-            appServerProcessPid: input.brief.appServerProcessPid,
-            logByteLength: input.brief.logByteLength,
-            silentStale: input.brief.silentStale,
-            heartbeatOnlyNoOutput: input.brief.heartbeatOnlyNoOutput,
-            runtimeEventsPath: input.brief.runtimeEventsPath,
-            lastRuntimeEvent: input.brief.lastRuntimeEvent,
-            lastRuntimeEventAt: input.brief.lastRuntimeEventAt,
-            lastRuntimeEventLevel: input.brief.lastRuntimeEventLevel,
-        },
-        {
-            code: "status_view",
-            statusView: input.brief.statusView,
-        },
-        {
-            code: "base_revision",
-            baseRevision: input.brief.baseRevision,
-        },
-        {
-            code: "account_state",
-            configuredAccounts: input.brief.configuredAccounts,
-            dedupedAccounts: input.brief.dedupedAccounts,
-            availableDedupedAccounts: input.brief.availableDedupedAccounts,
-            invalidAccounts: input.brief.invalidAccounts,
-            hasAvailableAccount: input.brief.hasAvailableAccount,
-        },
-    ];
-    if (input.brief.lifecycleMarkerTypes.length) {
-        evidence.push({
-            code: "lifecycle_markers",
-            lifecycleMarkerTypes: input.brief.lifecycleMarkerTypes,
-            lifecycleMarkers: input.brief.lifecycleMarkers,
-        });
-    }
-    if (workspaceConflict) {
-        blockers.push({
-            code: "single_writer_workspace_conflict",
-            severity: "critical",
-            message: "Multiple stored jobs can write to the same workspace. Do not continue this job until one writer is selected.",
-            conflict: workspaceConflict,
-        });
-    }
-    if (input.brief.silentStale) {
-        blockers.push({
-            code: "silent_stale_worker",
-            severity: "blocked",
-            message: "The worker process appears alive but observable progress is stale. Inspect process, app-server, log and worktree before stopping or recovery.",
-        });
-    }
-    if (input.brief.heartbeatOnlyNoOutput) {
-        blockers.push({
-            code: "heartbeat_only_no_output",
-            severity: "blocked",
-            message: "The worker heartbeat is fresh, but there is no result, log output or workspace change. Inspect process, app-server, log and worktree before stopping or recovery.",
-        });
-    }
-    if (input.brief.lifecycleMarkerTypes.includes("stop_event") &&
-        !input.status.resultExists &&
-        !input.brief.workerAlive) {
-        blockers.push({
-            code: "stopped_worker_requires_review",
-            severity: "blocked",
-            message: "The worker was explicitly stopped before producing a result. Review the stop reason and workspace before starting a replacement worker.",
-        });
-    }
-    if (input.status.workspaceDirty && !input.brief.workerAlive) {
-        blockers.push({
-            code: "dirty_worktree_requires_review",
-            severity: "blocked",
-            message: "The workspace has uncommitted changes and no active worker. Review changes before starting another writer.",
-            changedFiles: input.status.changedFiles ?? [],
-        });
-    }
-    if (!input.brief.lifecycleMarkerTypes.includes("stop_event") &&
-        !input.brief.hasAvailableAccount &&
-        isSafeStartAction(input.status.recommendedAction)) {
-        blockers.push({
-            code: "no_available_accounts",
-            severity: "blocked",
-            message: "The job is otherwise continuable, but no deduped account slot is currently available.",
-            invalidAccounts: input.brief.invalidAccounts,
-            capacityBlockedAccounts: input.brief.capacityBlockedAccounts,
-        });
-    }
-    if (input.brief.needsHumanRelogin && input.brief.hasAvailableAccount) {
-        warnings.push({
-            code: "some_accounts_need_relogin",
-            severity: "warning",
-            message: "Some configured accounts are invalid, but at least one deduped account is still available.",
-            invalidAccounts: input.brief.invalidAccounts,
-        });
-    }
-    if (input.brief.duplicateAccounts.length) {
-        warnings.push({
-            code: "duplicate_account_identity",
-            severity: "warning",
-            message: "Multiple slots appear to share one account identity. Deduped availability is lower than configured slot count.",
-            duplicateAccounts: input.brief.duplicateAccounts,
-        });
-    }
-    const decision = codexGoalDecisionKind({
-        blockedBySingleWriter,
-        brief: input.brief,
-        status: input.status,
-        safeToContinue,
-    });
-    const severity = codexGoalDecisionSeverity(decision, blockers, warnings);
-    const commands = codexGoalDecisionCommands({
-        registryArgs,
-        safeToContinue,
-        silentStale: input.brief.silentStale,
-        heartbeatOnlyNoOutput: input.brief.heartbeatOnlyNoOutput,
-        hasInvalidAccounts: input.brief.invalidAccounts.length > 0,
-    });
-    return {
-        action: decision,
-        decision,
-        severity,
-        safeToContinue,
-        safeToOperate: !blockedBySingleWriter,
-        jobId: input.manifest.jobId,
-        taskId: input.launch.config.taskId,
-        workspacePath: input.launch.config.workspacePath,
-        tmuxSession: input.launch.tmuxSession,
-        controlSurface: codexGoalControlSurface(input.launch),
-        nextBestTool: blockedBySingleWriter
-            ? "manual_review"
-            : input.brief.nextBestTool,
-        nextBestReason: blockedBySingleWriter
-            ? "single_writer_workspace_conflict"
-            : input.brief.nextBestReason,
-        nextBestCommand: blockedBySingleWriter
-            ? "manual_review_single_writer_workspace_conflict"
-            : safeToContinue
-                ? commands.continue
-                : input.brief.nextBestCommand,
-        blockers,
-        warnings,
-        evidence,
-        checklist: codexGoalDecisionChecklist({
-            decision,
-            commands,
-            invalidAccounts: input.brief.invalidAccounts,
-        }),
-        commands,
-        recentCommands: input.brief.recentCommands,
-    };
-}
-function codexGoalDecisionKind(input) {
-    if (input.blockedBySingleWriter)
-        return "manual_review_single_writer_conflict";
-    if (input.brief.silentStale)
-        return "manual_review_silent_stale";
-    if (input.brief.heartbeatOnlyNoOutput)
-        return "manual_review_heartbeat_only_no_output";
-    if (input.brief.workerAlive)
-        return "wait_for_worker";
-    if (input.status.recommendedAction === "review_completed")
-        return "review_completed";
-    if (input.brief.lifecycleMarkerTypes.includes("stop_event") &&
-        !input.status.resultExists &&
-        !input.brief.workerAlive) {
-        return "manual_review_stopped_worker";
-    }
-    if (!input.brief.hasAvailableAccount && isSafeStartAction(input.status.recommendedAction)) {
-        return "fix_accounts";
-    }
-    if (input.safeToContinue)
-        return "continue";
-    if (input.status.workspaceDirty)
-        return "manual_review_dirty_worktree";
-    return "manual_review";
-}
-function codexGoalDecisionSeverity(decision, blockers, warnings) {
-    if (blockers.some((blocker) => blocker.severity === "critical"))
-        return "critical";
-    if (blockers.length)
-        return "blocked";
-    if (decision.startsWith("manual_review"))
-        return "blocked";
-    if (warnings.length)
-        return "warning";
-    return "info";
-}
-function codexGoalDecisionCommands(input) {
-    return {
-        overview: `codex_goal_overview(${JSON.stringify({
-            registryRootDir: input.registryArgs.registryRootDir,
-        })})`,
-        decision: `codex_goal_decision(${JSON.stringify(input.registryArgs)})`,
-        brief: `codex_goal_brief(${JSON.stringify(input.registryArgs)})`,
-        handoff: `codex_goal_handoff(${JSON.stringify(input.registryArgs)})`,
-        accounts: `codex_goal_accounts_status(${JSON.stringify(input.registryArgs)})`,
-        ...(input.safeToContinue
-            ? {
-                continue: `codex_goal_continue(${JSON.stringify({ ...input.registryArgs, confirmContinue: true })})`,
-            }
-            : {}),
-        ...(input.silentStale
-            ? {
-                stopAfterManualReview: `codex_goal_stop(${JSON.stringify({ ...input.registryArgs, confirmStop: true })})`,
-            }
-            : {}),
-        ...(input.heartbeatOnlyNoOutput
-            ? {
-                stopAfterManualReview: `codex_goal_stop(${JSON.stringify({ ...input.registryArgs, confirmStop: true })})`,
-            }
-            : {}),
-        ...(input.hasInvalidAccounts
-            ? {
-                reloginInstructions: `codex_goal_accounts_relogin_instructions(${JSON.stringify(input.registryArgs)})`,
-            }
-            : {}),
-    };
-}
 async function targetCommitFromArgs(args) {
     const commit = stringValue(args.targetCommit);
     if (commit) {
@@ -6765,520 +5856,6 @@ async function targetCommitFromArgs(args) {
 }
 function optionalTargetCommit(targetCommit) {
     return targetCommit === undefined ? {} : { targetCommit };
-}
-function codexGoalDecisionChecklist(input) {
-    if (input.decision === "continue") {
-        return [
-            `Call ${String(input.commands.continue)}.`,
-            "Monitor with codex_goal_brief and do not start another writer in the same worktree.",
-        ];
-    }
-    if (input.decision === "wait_for_worker") {
-        return [
-            "Keep monitoring with codex_goal_brief.",
-            "Do not start or recover another writer while the worker is alive and not silent-stale.",
-        ];
-    }
-    if (input.decision === "fix_accounts") {
-        return [
-            `Call ${String(input.commands.accounts)}.`,
-            input.invalidAccounts.length
-                ? `Relogin invalid slots with ${String(input.commands.reloginInstructions)}.`
-                : "Wait for account capacity cooldown or add a valid account slot.",
-            "Re-run codex_goal_decision before continuing.",
-        ];
-    }
-    if (input.decision === "manual_review_silent_stale") {
-        return [
-            "Inspect process tree, app-server, log tail and git status.",
-            `If stale is confirmed, call ${String(input.commands.stopAfterManualReview)}.`,
-            "After stop, re-run codex_goal_decision before continuing.",
-        ];
-    }
-    if (input.decision === "manual_review_heartbeat_only_no_output") {
-        return [
-            "Inspect process tree, app-server, log tail and git status.",
-            `If heartbeat-only no-output is confirmed, call ${String(input.commands.stopAfterManualReview)}.`,
-            "After stop, re-run codex_goal_decision before continuing.",
-        ];
-    }
-    if (input.decision === "manual_review_single_writer_conflict") {
-        return [
-            `Call ${String(input.commands.overview)}.`,
-            "Choose exactly one writer job for the shared workspace.",
-            "Do not continue any conflicted job until the conflict is resolved.",
-        ];
-    }
-    if (input.decision === "review_completed") {
-        return [
-            "Review the result, workspace diff and project checks.",
-            "If accepted, call codex_goal_mark_reviewed for this job.",
-        ];
-    }
-    return [
-        "Inspect brief, status, recent log tail and workspace diff manually.",
-        "Do not continue until the blocking state is understood.",
-    ];
-}
-const CODEX_GOAL_EXECUTION_ENGINE_SCHEMA = z.enum([
-    "app-server",
-    "app-server-goal",
-    "packaged-exec",
-    "plain-exec",
-]);
-const CODEX_GOAL_CONTROL_SURFACE_SCHEMA = z.object({
-    executionEngine: CODEX_GOAL_EXECUTION_ENGINE_SCHEMA,
-    childWorkerSpawn: z.string(),
-    hostAuthSurfaces: z.array(z.string()),
-    guidance: z.string(),
-    projectControlSurface: z.unknown().optional(),
-});
-const DEFAULT_CODEX_GOAL_EXECUTION_ENGINE = "app-server-goal";
-function codexGoalControlSurface(launch) {
-    // Keep this default aligned with create/load launch config defaults above.
-    const parsedExecutionEngine = CODEX_GOAL_EXECUTION_ENGINE_SCHEMA.safeParse(launch.config.executionEngine ?? DEFAULT_CODEX_GOAL_EXECUTION_ENGINE);
-    const executionEngine = parsedExecutionEngine.success
-        ? parsedExecutionEngine.data
-        : DEFAULT_CODEX_GOAL_EXECUTION_ENGINE;
-    const appServerGoal = executionEngine === "app-server-goal";
-    return {
-        executionEngine,
-        childWorkerSpawn: appServerGoal
-            ? "host_control_surface_required"
-            : "runtime_adapter_owned",
-        hostAuthSurfaces: appServerGoal
-            ? [
-                "github_tokens_not_inherited",
-                "codex_auth_root_host_owned",
-            ]
-            : ["provider_environment_policy_applies"],
-        guidance: appServerGoal
-            ? "Lane orchestrators running inside app-server-goal should not spawn child workers or depend on host GH/auth surfaces. Request child worker, continue, stop and account actions through host-side subscription-runtime MCP or CLI controls."
-            : "Use the runtime adapter control surface for worker lifecycle and account actions.",
-        projectControlSurface: describeProjectControlSurface(),
-    };
-}
-function findWorkspaceConflictForJob(overview, jobId) {
-    const conflicts = Array.isArray(overview?.workspaceConflicts)
-        ? overview.workspaceConflicts
-        : [];
-    return conflicts.find((conflict) => isRecord(conflict) &&
-        Array.isArray(conflict.jobIds) &&
-        conflict.jobIds.includes(jobId));
-}
-function redactOptional(value) {
-    return value ? redactText(value) : undefined;
-}
-function buildCodexGoalHandoff(input) {
-    const registryArgs = {
-        registryRootDir: input.registryRootDir,
-        jobId: input.manifest.jobId,
-    };
-    const cliFallbackCommands = input.includeCliFallback
-        ? [
-            cliFallbackToolCommand("codex_goal_get_job", registryArgs),
-            cliFallbackToolCommand("codex_goal_brief", registryArgs),
-            cliFallbackToolCommand("codex_goal_accounts_status", registryArgs),
-            cliFallbackToolCommand("codex_goal_continue", {
-                ...registryArgs,
-                confirmContinue: true,
-            }),
-            cliFallbackToolCommand("codex_goal_handoff", registryArgs),
-        ]
-        : [];
-    const stopArgs = { ...registryArgs, confirmStop: true };
-    const controlSurface = codexGoalControlSurface(input.launch);
-    const reviewCommands = input.brief.silentStale
-        ? [
-            `codex_goal_stop(${JSON.stringify(stopArgs)})`,
-            `subscription-runtime-codex-goal stop-job ${shellText(input.manifest.jobId)} --registry-root ${shellText(input.registryRootDir)} --confirm`,
-        ]
-        : [];
-    const handoffContract = buildHandoffManifest({
-        workerJobId: input.manifest.jobId,
-        workspacePath: input.launch.config.workspacePath,
-        createdAt: new Date().toISOString(),
-        changedFiles: input.status.changedFiles ?? [],
-        ...(input.brief.handoffBaseCommit === undefined
-            ? {}
-            : { baseCommit: input.brief.handoffBaseCommit }),
-        ...(input.brief.handoffPatchPath === undefined
-            ? {}
-            : { patchPath: input.brief.handoffPatchPath }),
-        ...(input.brief.handoffSummaryPath === undefined
-            ? {}
-            : { summaryPath: input.brief.handoffSummaryPath }),
-        ...(input.status.workspaceDirty === undefined
-            ? {}
-            : { workspaceDirty: input.status.workspaceDirty }),
-    });
-    const mcpCommands = [
-        `codex_goal_get_job(${JSON.stringify(registryArgs)})`,
-        `codex_goal_brief(${JSON.stringify(registryArgs)})`,
-        `codex_goal_accounts_status(${JSON.stringify(registryArgs)})`,
-        input.brief.safeToContinue
-            ? `codex_goal_continue(${JSON.stringify({ ...registryArgs, confirmContinue: true })})`
-            : String(input.brief.nextBestCommand),
-    ];
-    const text = [
-        `# Codex goal handoff: ${input.manifest.jobId}`,
-        "",
-        "Use subscription-runtime Codex goal controls. Native MCP is preferred; CLI fallback calls the same MCP server through the SDK.",
-        "",
-        "## Job",
-        `- registryRootDir: ${input.registryRootDir}`,
-        `- workspacePath: ${input.launch.config.workspacePath}`,
-        `- jobRootDir: ${input.launch.config.jobRootDir}`,
-        `- stateRootDir: ${codexGoalStateRootDir(input.launch)}`,
-        `- taskId: ${input.launch.config.taskId}`,
-        `- tmuxSession: ${input.launch.tmuxSession ?? ""}`,
-        `- model: ${input.launch.config.model ?? ""}`,
-        `- reasoningEffort: ${input.launch.config.reasoningEffort ?? ""}`,
-        `- serviceTier: ${input.launch.config.serviceTier ?? ""}`,
-        `- taskTimeoutMs: ${input.launch.config.taskTimeoutMs}`,
-        `- maxAccountCycles: ${input.launch.config.maxAccountCycles}`,
-        `- accounts: ${input.launch.config.accounts.map((account) => account.name).join(", ")}`,
-        `- executionEngine: ${String(controlSurface.executionEngine)}`,
-        "",
-        "## Current State",
-        `- worker: ${input.brief.workerAlive ? "alive" : "not running"}`,
-        `- workerSupervisorKind: ${String(input.brief.workerSupervisorKind ?? "")}`,
-        `- workerAliveReason: ${String(input.brief.workerAliveReason ?? "")}`,
-        `- recommendedAction: ${input.status.recommendedAction}`,
-        `- resultStatus: ${input.status.resultStatus ?? ""}`,
-        `- resultReason: ${input.status.resultReason ?? ""}`,
-        `- workspaceDirty: ${String(input.status.workspaceDirty)}`,
-        `- changedFiles: ${(input.status.changedFiles ?? []).length}`,
-        `- silentStale: ${String(input.brief.silentStale)}`,
-        `- lastProgressAt: ${String(input.brief.lastProgressAt ?? "")}`,
-        `- progressStatus: ${String(input.brief.progressStatus ?? "")}`,
-        `- progressUpdatedAt: ${String(input.brief.progressUpdatedAt ?? "")}`,
-        `- progressHeartbeatAgeMs: ${String(input.brief.progressHeartbeatAgeMs ?? "")}`,
-        `- logByteLength: ${String(input.brief.logByteLength ?? "")}`,
-        `- lifecycleMarkers: ${input.brief.lifecycleMarkerTypes.join(", ") || "none"}`,
-        `- safeToContinue: ${String(input.brief.safeToContinue)}`,
-        `- hasAvailableAccount: ${String(input.brief.hasAvailableAccount)}`,
-        `- availableDedupedAccounts: ${input.brief.availableDedupedAccounts.join(", ")}`,
-        `- invalidAccounts: ${input.brief.invalidAccounts.join(", ")}`,
-        `- nextBestTool: ${String(input.brief.nextBestTool)}`,
-        `- nextBestCommand: ${String(input.brief.nextBestCommand)}`,
-        "",
-        "## Native MCP",
-        ...mcpCommands.map((command) => `- ${command}`),
-        ...(reviewCommands.length
-            ? [
-                "",
-                "## After Manual Review",
-                ...reviewCommands.map((command) => `- ${command}`),
-            ]
-            : []),
-        ...(cliFallbackCommands.length
-            ? [
-                "",
-                "## CLI Fallback",
-                ...cliFallbackCommands.map((command) => `- ${command}`),
-            ]
-            : []),
-        "",
-        "## Control Surface",
-        `- childWorkerSpawn: ${String(controlSurface.childWorkerSpawn)}`,
-        `- hostAuthSurfaces: ${controlSurface.hostAuthSurfaces.join(", ")}`,
-        `- guidance: ${String(controlSurface.guidance)}`,
-        "",
-        "## Safety Rules",
-        "- Do not run two writer workers in the same worktree.",
-        "- Continue only when brief.safeToContinue is true.",
-        "- If hasAvailableAccount is false, inspect accounts before continuing.",
-        "- Dirty, provider output invalid, unknown runtime, test and benchmark failures require manual review.",
-        "- Never print auth.json, access tokens, refresh tokens, id tokens or raw provider payloads.",
-    ].join("\n");
-    return {
-        text,
-        mcpCommands,
-        reviewCommands,
-        cliFallbackCommands,
-        controlSurface,
-        handoffContract,
-        summary: {
-            jobId: input.manifest.jobId,
-            registryRootDir: input.registryRootDir,
-            workspacePath: input.launch.config.workspacePath,
-            taskId: input.launch.config.taskId,
-            tmuxSession: input.launch.tmuxSession,
-            recommendedAction: input.status.recommendedAction,
-            resultStatus: input.status.resultStatus,
-            resultReason: input.status.resultReason,
-            workspaceDirty: input.status.workspaceDirty,
-            changedFiles: input.status.changedFiles ?? [],
-            handoffStatus: handoffContract.status,
-            handoffIssues: handoffContract.issues,
-            baseRevision: input.brief.baseRevision,
-            silentStale: input.brief.silentStale,
-            lastProgressAt: input.brief.lastProgressAt,
-            lastProgressAgeMs: input.brief.lastProgressAgeMs,
-            staleAfterMs: input.brief.staleAfterMs,
-            logExists: input.brief.logExists,
-            logByteLength: input.brief.logByteLength,
-            progressPath: input.brief.progressPath,
-            progressExists: input.brief.progressExists,
-            progressStatus: input.brief.progressStatus,
-            progressUpdatedAt: input.brief.progressUpdatedAt,
-            progressHeartbeatAgeMs: input.brief.progressHeartbeatAgeMs,
-            progressPid: input.brief.progressPid,
-            appServerProcessAlive: input.brief.appServerProcessAlive,
-            appServerProcessPid: input.brief.appServerProcessPid,
-            lifecycleMarkers: input.brief.lifecycleMarkers,
-            lifecycleMarkerTypes: input.brief.lifecycleMarkerTypes,
-            safeToContinue: input.brief.safeToContinue,
-            hasAvailableAccount: input.brief.hasAvailableAccount,
-            availableDedupedAccounts: input.brief.availableDedupedAccounts,
-            invalidAccounts: input.brief.invalidAccounts,
-            nextBestTool: input.brief.nextBestTool,
-            nextBestCommand: input.brief.nextBestCommand,
-        },
-        accounts: input.accounts.map((account) => ({
-            name: account.name,
-            status: account.status,
-            availability: account.availability,
-            schedulerEligible: account.schedulerEligible,
-            recommendedAction: account.recommendedAction,
-            limitResetAt: account.limitResetAt,
-            capacityAvailability: account.capacityAvailability,
-            capacityReason: account.capacityReason,
-            capacityCooldownUntil: account.capacityCooldownUntil,
-            identityHashPrefix: account.identityHashPrefix,
-            safeMessage: account.safeMessage,
-        })),
-    };
-}
-async function readCodexGoalLifecycleMarkers(input) {
-    const markers = await Promise.all(lifecycleMarkerSpecs.map((spec) => readCodexGoalLifecycleMarker({
-        ...input,
-        spec,
-    })));
-    return markers
-        .filter((marker) => marker !== undefined)
-        .sort((left, right) => Date.parse(String(right.timestamp ?? right.updatedAt ?? "0")) -
-        Date.parse(String(left.timestamp ?? left.updatedAt ?? "0")));
-}
-async function readCodexGoalLifecycleMarker(input) {
-    const markerPath = join(input.jobRootDir, `${input.taskId}.${input.spec.suffix}`);
-    try {
-        const [metadata, raw] = await Promise.all([
-            stat(markerPath),
-            readFile(markerPath, "utf8"),
-        ]);
-        const parsed = parseLifecycleMarker(raw);
-        const timestamp = firstStringKey(parsed, input.spec.timestampKeys);
-        const brief = isRecord(parsed.brief) ? parsed.brief : {};
-        return {
-            type: input.spec.type,
-            markerPath,
-            updatedAt: metadata.mtime.toISOString(),
-            ...(timestamp ? { timestamp } : {}),
-            ...(typeof parsed.reason === "string" ? { reason: redactText(parsed.reason) } : {}),
-            ...(typeof parsed.mode === "string" ? { mode: redactText(parsed.mode) } : {}),
-            ...(typeof parsed.note === "string" ? { note: truncateText(redactText(parsed.note), 300) } : {}),
-            ...(typeof parsed.forceStop === "boolean" ? { forceStop: parsed.forceStop } : {}),
-            ...(typeof parsed.forcePause === "boolean" ? { forcePause: parsed.forcePause } : {}),
-            ...(typeof brief.silentStale === "boolean" ? { silentStale: brief.silentStale } : {}),
-            ...(typeof brief.lastProgressAt === "string"
-                ? { lastProgressAt: brief.lastProgressAt }
-                : {}),
-            ...(typeof brief.lastProgressAgeMs === "number"
-                ? { lastProgressAgeMs: brief.lastProgressAgeMs }
-                : {}),
-            ...(typeof brief.logByteLength === "number"
-                ? { logByteLength: brief.logByteLength }
-                : {}),
-            ...(typeof parsed.schemaVersion === "number" ? { schemaVersion: parsed.schemaVersion } : {}),
-        };
-    }
-    catch {
-        return undefined;
-    }
-}
-function parseLifecycleMarker(raw) {
-    try {
-        const parsed = JSON.parse(raw);
-        return isRecord(parsed) ? parsed : {};
-    }
-    catch {
-        return {};
-    }
-}
-function latestIsoDate(values) {
-    const latest = values
-        .map((value) => value ? { value, time: Date.parse(value) } : undefined)
-        .filter((value) => value !== undefined && Number.isFinite(value.time))
-        .sort((left, right) => right.time - left.time)[0];
-    return latest?.value;
-}
-function isoAgeMs(value) {
-    if (!value)
-        return undefined;
-    const time = Date.parse(value);
-    return Number.isFinite(time) ? Date.now() - time : undefined;
-}
-function firstStringKey(record, keys) {
-    for (const key of keys) {
-        const value = record[key];
-        if (typeof value === "string" && value.trim())
-            return redactText(value.trim());
-    }
-    return undefined;
-}
-function redactText(value) {
-    return new DefaultRedactor().redact(value);
-}
-function truncateText(value, maxLength) {
-    if (value.length <= maxLength)
-        return value;
-    return `${value.slice(0, Math.max(0, maxLength - 3))}...`;
-}
-function cliFallbackToolCommand(tool, args) {
-    return `subscription-runtime-codex-goal tool ${tool} --args-json ${shellText(JSON.stringify(args))}`;
-}
-async function readRuntimeResultBrief(path) {
-    try {
-        const parsed = JSON.parse(await readFile(path, "utf8"));
-        if (!isRecord(parsed))
-            return {};
-        const attempts = Array.isArray(parsed.attempts) ? parsed.attempts : [];
-        const lastAttempt = lastRecord(attempts);
-        const artifacts = runtimeResultArtifacts(parsed.artifacts);
-        const patchPath = runtimeResultArtifactPath(artifacts, "patch");
-        const summaryPath = runtimeResultArtifactPath(artifacts, "summary");
-        const baseCommit = runtimeResultBaseCommit(parsed);
-        return {
-            ...(isRecord(lastAttempt) && typeof lastAttempt.accountId === "string"
-                ? { currentAccount: lastAttempt.accountId }
-                : {}),
-            ...(typeof parsed.reason === "string"
-                ? { lastFailureReason: parsed.reason }
-                : {}),
-            ...(typeof parsed.updatedAt === "string"
-                ? { updatedAt: parsed.updatedAt }
-                : isRecord(parsed.task) && typeof parsed.task.updatedAt === "string"
-                    ? { updatedAt: parsed.task.updatedAt }
-                    : {}),
-            ...(baseCommit === undefined ? {} : { baseCommit }),
-            ...(patchPath === undefined ? {} : { patchPath }),
-            ...(summaryPath === undefined ? {} : { summaryPath }),
-            ...(artifacts.length === 0 ? {} : { artifacts }),
-            strict: isStrictRuntimeResultBrief(parsed),
-        };
-    }
-    catch {
-        return {};
-    }
-}
-function runtimeResultArtifacts(value) {
-    if (!Array.isArray(value))
-        return [];
-    return value.flatMap((item) => {
-        if (!isRecord(item) || typeof item.kind !== "string")
-            return [];
-        return [{
-                kind: item.kind,
-                ...(typeof item.path === "string" ? { path: item.path } : {}),
-                ...(typeof item.byteLength === "number" ? { byteLength: item.byteLength } : {}),
-            }];
-    });
-}
-function runtimeResultArtifactPath(artifacts, kind) {
-    return artifacts.find((artifact) => artifact.kind === kind && typeof artifact.path === "string")?.path;
-}
-function runtimeResultBaseCommit(parsed) {
-    if (typeof parsed.baseCommit === "string" && parsed.baseCommit.trim()) {
-        return parsed.baseCommit.trim();
-    }
-    if (isRecord(parsed.details) &&
-        typeof parsed.details.baseCommit === "string" &&
-        parsed.details.baseCommit.trim()) {
-        return parsed.details.baseCommit.trim();
-    }
-    return undefined;
-}
-function isStrictRuntimeResultBrief(parsed) {
-    return (typeof parsed.status === "string" &&
-        Array.isArray(parsed.changedFiles) &&
-        parsed.changedFiles.every((item) => typeof item === "string") &&
-        Array.isArray(parsed.evidence) &&
-        parsed.evidence.every((item) => typeof item === "string") &&
-        Array.isArray(parsed.blockers) &&
-        parsed.blockers.every((item) => typeof item === "string") &&
-        typeof parsed.nextAction === "string");
-}
-function lastRecord(values) {
-    for (let index = values.length - 1; index >= 0; index -= 1) {
-        const value = values[index];
-        if (isRecord(value))
-            return value;
-    }
-    return undefined;
-}
-async function safeTail(path, lines) {
-    try {
-        return await tailCodexGoalLog(path, lines);
-    }
-    catch {
-        return "";
-    }
-}
-function nextActionForStatus(action) {
-    if (action === "wait_for_worker") {
-        return { tool: "codex_goal_brief", reason: "worker is already running" };
-    }
-    if (action === "start_worker") {
-        return { tool: "codex_goal_continue", reason: "no result exists and workspace is clean" };
-    }
-    if (action === "continue_after_capacity" ||
-        action === "continue_after_timeout" ||
-        action === "continue_after_provider_output") {
-        return { tool: "codex_goal_continue", reason: "safe continuation condition" };
-    }
-    if (action === "review_completed") {
-        return { tool: "codex_goal_mark_reviewed", reason: "worker completed" };
-    }
-    if (action === "ask_user") {
-        return {
-            tool: "codex_goal_control_decision",
-            reason: "worker is blocked waiting for operator or inbox input",
-        };
-    }
-    return { tool: "manual_review", reason: "status requires inspection before continuing" };
-}
-function nextBestCommand(input) {
-    const tool = typeof input.action.tool === "string"
-        ? input.action.tool
-        : "manual_review";
-    if (tool === "codex_goal_continue") {
-        return `codex_goal_continue({ jobId: ${JSON.stringify(input.jobId)}, confirmContinue: true })`;
-    }
-    if (tool === "codex_goal_mark_reviewed") {
-        return `codex_goal_mark_reviewed({ jobId: ${JSON.stringify(input.jobId)} })`;
-    }
-    if (tool === "codex_goal_brief") {
-        return `codex_goal_brief({ jobId: ${JSON.stringify(input.jobId)} })`;
-    }
-    if (tool === "codex_goal_reconcile_result") {
-        return `codex_goal_reconcile_result({ jobId: ${JSON.stringify(input.jobId)} })`;
-    }
-    if (tool === "codex_goal_control_decision") {
-        return `codex_goal_control_decision({ jobId: ${JSON.stringify(input.jobId)} })`;
-    }
-    if (tool === "codex_goal_accounts_status") {
-        return `codex_goal_accounts_status({ jobId: ${JSON.stringify(input.jobId)} })`;
-    }
-    if (tool === "manual_review" &&
-        input.action.reason === "silent_stale_worker") {
-        return "manual_review_silent_stale_worker";
-    }
-    if (input.status.workspaceDirty) {
-        return "manual_review_dirty_worktree";
-    }
-    return "manual_review_status";
 }
 function accountPoolRootFromArgs(args) {
     return resolvePath(process.cwd(), args.poolRootDir ?? join(homedir(), ".cache", "subscription-runtime"));
@@ -7324,102 +5901,6 @@ async function listAccountPools(poolRootDir, stateRootDir) {
     }));
     return pools.filter((pool) => pool.accountCount > 0);
 }
-function duplicateAccountGroups(slots) {
-    const groups = new Map();
-    for (const slot of slots) {
-        if (!slot.identityHashPrefix)
-            continue;
-        groups.set(slot.identityHashPrefix, [
-            ...(groups.get(slot.identityHashPrefix) ?? []),
-            slot,
-        ]);
-    }
-    return [...groups.entries()]
-        .filter(([, group]) => group.length > 1)
-        .map(([identityHashPrefix, group]) => ({
-        identityHashPrefix,
-        slots: group.map((slot) => ({
-            name: slot.name,
-            operatorLabel: slot.operatorLabel,
-            displayName: slot.displayName,
-            email: slot.email,
-            shortName: slot.shortName,
-            status: slot.status,
-            lastRefreshAt: slot.lastRefreshAt,
-            expiresAt: slot.expiresAt,
-        })),
-        preferredSlot: preferredAccountSlot(group)?.name,
-        preferredSlotLabel: preferredAccountSlot(group)
-            ? accountOperatorLabel(preferredAccountSlot(group))
-            : undefined,
-    }));
-}
-function accountOperatorLabel(slot) {
-    return slot.operatorLabel ?? slot.displayName ?? slot.email ?? slot.name;
-}
-export function dedupeCodexGoalAccountSlots(slots) {
-    const byIdentity = new Map();
-    const uniqueSlots = [];
-    for (const slot of slots) {
-        const key = slot.identityHashPrefix;
-        if (!key) {
-            uniqueSlots.push(slot);
-            continue;
-        }
-        const existing = byIdentity.get(key);
-        const preferred = existing ? preferredAccountSlot([existing, slot]) : slot;
-        if (preferred)
-            byIdentity.set(key, preferred);
-    }
-    const duplicateIdentities = new Set(duplicateAccountGroups(slots)
-        .map((group) => group.identityHashPrefix)
-        .filter((value) => typeof value === "string"));
-    for (const slot of slots) {
-        if (!slot.identityHashPrefix || duplicateIdentities.has(slot.identityHashPrefix)) {
-            continue;
-        }
-        uniqueSlots.push(slot);
-    }
-    return [
-        ...uniqueSlots,
-        ...[...byIdentity.entries()]
-            .filter(([identity]) => duplicateIdentities.has(identity))
-            .map(([, slot]) => slot),
-    ];
-}
-export function availableCodexGoalAccountSlots(slots) {
-    return slots.filter(isAccountSlotAvailable);
-}
-export function visibleCodexGoalAccountPoolSlots(poolName, slots) {
-    const likelyAuthPool = isLikelyAuthPoolName(poolName);
-    return slots.filter((slot) => slot.status !== "auth_missing" ||
-        likelyAuthPool);
-}
-function preferredAccountSlot(slots) {
-    return [...slots].sort((left, right) => {
-        const leftReady = left.schedulerEligible ? 1 : 0;
-        const rightReady = right.schedulerEligible ? 1 : 0;
-        if (leftReady !== rightReady)
-            return rightReady - leftReady;
-        return Date.parse(right.lastRefreshAt ?? right.expiresAt ?? "0") -
-            Date.parse(left.lastRefreshAt ?? left.expiresAt ?? "0");
-    })[0];
-}
-function isAccountSlotAvailable(slot) {
-    return slot.schedulerEligible;
-}
-function isLikelyAuthPoolName(name) {
-    return /codex/i.test(name) &&
-        /(?:^|[-_])(auth|accounts?)(?:$|[-_])/i.test(name);
-}
-function tagValues(value) {
-    if (Array.isArray(value))
-        return value.map((item) => String(item).trim()).filter(Boolean);
-    if (typeof value === "string") {
-        return value.split(",").map((item) => item.trim()).filter(Boolean);
-    }
-    return [];
-}
 function extractRecentCommands(logTail) {
     const commands = [];
     for (const line of logTail.split(/\r?\n/)) {
@@ -7450,10 +5931,6 @@ function redactLogTail(logTail) {
         .split(/\r?\n/)
         .map((line) => redactCommand(line))
         .join("\n");
-}
-function putIfDefined(target, key, value) {
-    if (value !== undefined)
-        target[key] = value;
 }
 function registerCodexGoalPrompts(server) {
     for (const prompt of [
@@ -7496,9 +5973,6 @@ function codexGoalPromptText(name, jobId) {
         return `${shared} Provide jobId, registryRootDir if non-default, worktree, branch, tmux session, task id, prompt path, accounts, model, effort, service tier, decision.action, decision.safeToContinue, decision.nextBestCommand and any dirty files.`;
     }
     return `${shared} Inspect git diff, result JSON, recent commands and test evidence before merging. Use codex_goal_mark_reviewed only after the worker output has been reviewed.`;
-}
-function shellText(value) {
-    return shellQuote(value);
 }
 function goalInputSchema() {
     return {
@@ -7566,12 +6040,6 @@ function statusInput(launch) {
             : { accessBoundary: launch.config.accessBoundary }),
     };
 }
-function isSafeStartAction(action) {
-    return (action === "start_worker" ||
-        action === "continue_after_capacity" ||
-        action === "continue_after_timeout" ||
-        action === "continue_after_provider_output");
-}
 function launchSummary(launch) {
     return {
         ...(launch.config.jobId ? { jobId: launch.config.jobId } : {}),
@@ -7614,15 +6082,6 @@ function mergeDefined(...items) {
     }
     return merged;
 }
-function accountNames(value) {
-    if (Array.isArray(value)) {
-        return value.map((item) => String(item).trim()).filter(Boolean);
-    }
-    if (typeof value === "string") {
-        return value.split(",").map((item) => item.trim()).filter(Boolean);
-    }
-    return [];
-}
 async function projectControlDefaultAccountNames(input) {
     if (!input.authRootDir)
         return input.requestedAccounts;
@@ -7654,141 +6113,6 @@ async function projectControlRefillAccountNames(input) {
     return ready.size > 0
         ? scopedAccounts.filter((account) => ready.has(account))
         : scopedAccounts;
-}
-function signalIdList(value) {
-    return accountNames(value);
-}
-function workerControlCallerArgs(args) {
-    const callerKind = (stringValue(args.callerKind) ?? stringValue(args.callerActor));
-    const callerId = stringValue(args.callerId);
-    if (!callerKind && !callerId)
-        return {};
-    const createdBy = stringValue(args.createdBy);
-    return {
-        caller: {
-            kind: callerKind ?? createdBy ?? "operator",
-            ...(callerId ? { id: callerId } : {}),
-        },
-    };
-}
-function parseIsoDate(value, name) {
-    const date = new Date(value);
-    if (!Number.isFinite(date.getTime())) {
-        throw new Error(`${name} must be an ISO date string`);
-    }
-    return date;
-}
-function workerControlDecisionJson(decision, includeBodies) {
-    return {
-        target: decision.target,
-        safeToContinue: decision.safeToContinue,
-        pendingCount: decision.pendingSignals.length,
-        deliverableCount: decision.deliverableSignals.length,
-        blockedCount: decision.blockedSignals.length,
-        recordOnlyCount: decision.recordOnlySignals.length,
-        warnings: decision.warnings,
-        pendingSignals: decision.pendingSignals.map((view) => workerControlSignalViewJson(view, includeBodies)),
-        deliverableSignalIds: decision.deliverableSignals.map((view) => view.signal.signalId),
-        blockedSignals: decision.blockedSignals.map((view) => workerControlSignalViewJson(view, includeBodies)),
-    };
-}
-function workerControlSignalViewJson(view, includeBody) {
-    return {
-        signal: workerControlSignalJson(view.signal, includeBody),
-        state: view.state,
-        expired: view.expired,
-        deliverable: view.deliverable,
-        ...(view.blockedReason ? { blockedReason: view.blockedReason } : {}),
-        ...(view.latestReceipt
-            ? { latestReceipt: workerControlReceiptJson(view.latestReceipt) }
-            : {}),
-    };
-}
-function workerControlSignalJson(signal, includeBody) {
-    return {
-        signalId: signal.signalId,
-        idempotencyKey: signal.idempotencyKey,
-        target: signal.target,
-        intent: signal.intent,
-        deliveryMode: signal.deliveryMode,
-        createdAt: signal.createdAt.toISOString(),
-        createdBy: signal.createdBy,
-        priority: signal.priority,
-        ...(signal.expiresAt ? { expiresAt: signal.expiresAt.toISOString() } : {}),
-        supersedesSignalIds: signal.supersedesSignalIds,
-        metadata: signal.metadata,
-        ...(includeBody ? { body: signal.body } : {}),
-    };
-}
-function workerControlReceiptJson(receipt) {
-    return {
-        receiptId: receipt.receiptId,
-        signalId: receipt.signalId,
-        target: receipt.target,
-        state: receipt.state,
-        createdAt: receipt.createdAt.toISOString(),
-        ...(receipt.deliveryAttemptId
-            ? { deliveryAttemptId: receipt.deliveryAttemptId }
-            : {}),
-        ...(receipt.deliveredAt
-            ? { deliveredAt: receipt.deliveredAt.toISOString() }
-            : {}),
-        ...(receipt.appliedAt ? { appliedAt: receipt.appliedAt.toISOString() } : {}),
-        ...(receipt.rejectedReason ? { rejectedReason: receipt.rejectedReason } : {}),
-        ...(receipt.failure ? { failure: receipt.failure } : {}),
-        metadata: receipt.metadata,
-    };
-}
-function jobIdsFromValue(value) {
-    return accountNames(value);
-}
-function stringsFromValue(value) {
-    return accountNames(value);
-}
-function requiredString(value, name, cwd) {
-    return resolvePath(cwd, requiredRawString(value, name));
-}
-function requiredRawString(value, name) {
-    const text = stringValue(value);
-    if (!text)
-        throw new Error(`${name} is required`);
-    return text;
-}
-function stringValue(value) {
-    return typeof value === "string" && value.trim() ? value : undefined;
-}
-function numberValue(value) {
-    return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-function dateValue(value) {
-    if (typeof value !== "string")
-        return undefined;
-    const date = new Date(value);
-    return Number.isFinite(date.getTime()) ? date : undefined;
-}
-function positiveIntegerValue(value, name) {
-    if (value === undefined)
-        return undefined;
-    if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
-        throw new Error(`${name} must be a positive integer`);
-    }
-    return value;
-}
-function booleanValue(value) {
-    return typeof value === "boolean" ? value : undefined;
-}
-function workerReportModeValue(value) {
-    if (value === undefined)
-        return undefined;
-    if (value === "runtime-only" || value === "structured-output")
-        return value;
-    throw new Error("workerReportMode must be runtime-only or structured-output");
-}
-function resolvePath(cwd, value) {
-    const expanded = value.startsWith("~/")
-        ? join(homedir(), value.slice(2))
-        : value;
-    return isAbsolute(expanded) ? expanded : resolve(cwd, expanded);
 }
 function mcpJson(value) {
     return {

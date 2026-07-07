@@ -3,6 +3,8 @@ import { defineConfig } from "vitest/config";
 const alias = {
   "@vioxen/subscription-runtime/core": "/src/core/index.ts",
   "@vioxen/subscription-runtime/agent-task": "/src/agent-task/index.ts",
+  "@vioxen/subscription-runtime/account-diagnostics":
+    "/src/account-diagnostics/index.ts",
   "@vioxen/subscription-runtime/provider-codex":
     "/src/provider-codex/index.ts",
   "@vioxen/subscription-runtime/provider-claude":
