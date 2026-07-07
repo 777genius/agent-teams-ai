@@ -40,6 +40,9 @@ export async function pushApprovedCommit(
   input: PushApprovedCommitInput,
 ): Promise<IntegrationAttempt> {
   const attempt = await loadIntegrationAttempt(deps.store, input.attemptId);
+  if (attempt.status === IntegrationAttemptStatus.Pushed) {
+    return attempt;
+  }
   assertStatus(attempt, [IntegrationAttemptStatus.CommitCreated]);
   if (!attempt.commitCandidate) {
     throw new IntegrationError({

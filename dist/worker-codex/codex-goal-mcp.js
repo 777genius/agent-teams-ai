@@ -13,7 +13,7 @@ import { DefaultRedactor, } from "@vioxen/subscription-runtime/core";
 import { sessionArtifactFromCodexAuthJson } from "@vioxen/subscription-runtime/provider-codex";
 import { LocalIntegrationAttemptStore, LocalFileRunEventProjectionStateStore, LocalFileRunEventStore, LocalFileWorkerControlInboxStore, LocalControlledAgentStateStore, } from "@vioxen/subscription-runtime/store-local-file";
 import { LocalGitIntegrationAdapter, LocalProjectCheckRunner, LocalWorkspaceIntegrationLock, SimpleSecretScanner, buildLocalClaudeControlledAgentProfile, createLocalClaudeControlledAgentProvider, loadScopedClaudeSessionArtifact, watchClaudeRuns, } from "@vioxen/subscription-runtime/worker-local";
-import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, ProjectAdmissionWorkerRole, ProjectDebtReason, RunObservationService, InterruptAndContinueWorkerUseCase, ProjectControlBroker, ReviewDecisionStatus, RunEventProviderKind, WorkerControlService, assessBaseRevision, assessWorkerHealth, buildControlledAgentLaunchPlan, buildControlledAgentLiveControllerState, buildControlledAgentProcessOwner, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, applyWorkerOutput, buildWorkerStatusView, commitApprovedChanges, decideRunObservation, describeProjectControlSurface, evaluateProjectAdmission, isRunEventCompactionSafetyMode, isRunEventProviderKind, isRunEventType, openProjectIntegrationAttempt, projectRunObservationEvents, projectRunReadModelsFromEvents, pushApprovedCommit, rejectIntegrationAttempt, reconcileRunPreview, runRequiredChecks, readTargetRevision, runEventProviderKindFromString, buildHandoffManifest, ProjectOperation, consumedDebt, consumedOutputRecordFor, projectAdmissionDebtCounts, readConsumedOutputLedgers, } from "@vioxen/subscription-runtime/worker-core";
+import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, ProjectAdmissionWorkerRole, ProjectDebtReason, RunObservationService, InterruptAndContinueWorkerUseCase, ProjectControlBroker, RunEventProviderKind, WorkerControlService, assessBaseRevision, assessWorkerHealth, buildControlledAgentLaunchPlan, buildControlledAgentLiveControllerState, buildControlledAgentProcessOwner, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, buildWorkerStatusView, decideRunObservation, describeProjectControlSurface, evaluateProjectAdmission, isRunEventCompactionSafetyMode, isRunEventProviderKind, isRunEventType, projectRunObservationEvents, projectRunReadModelsFromEvents, pushApprovedCommit, rejectIntegrationAttempt, reconcileRunPreview, readTargetRevision, runEventProviderKindFromString, buildHandoffManifest, ProjectOperation, consumedDebt, consumedOutputRecordFor, projectAdmissionDebtCounts, readConsumedOutputLedgers, } from "@vioxen/subscription-runtime/worker-core";
 import { codexGoalJobToArgs, codexGoalObjectiveMaxChars, createCodexGoalJob, defaultCodexGoalJobRoot, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
 import { upsertCodexGoalLaunchManifest } from "./codex-goal-launch-manifest.js";
 import { runDependencyBootstrap, } from "./dependency-bootstrap.js";
@@ -23,6 +23,8 @@ import { buildCodexGoalNoTmuxCommand, buildCodexGoalStopTmuxCommand, buildCodexG
 import { CodexRunObservationAdapter } from "./codex-run-observation.js";
 import { optionalCodexGoalAccessBoundary, optionalCodexGoalNetworkAccess, parseCodexGoalProjectAccessScope, } from "./codex-goal-access-plan.js";
 import { projectControlGenericScopeDenial, projectControlGenericToolDenial, } from "./project-control-scope-guard.js";
+import { registerProjectIntegrationMcpTools, } from "./project-integration-mcp/index.js";
+import { createLocalProjectIntegrationMcpToolHandlers, } from "./project-integration-mcp/adapters/local-project-integration-mcp-tool-handlers.js";
 import { LocalGitRevisionReader } from "./codex-goal-git-revision.js";
 import { buildCodexControlledAgentProfile, CodexControlledAgentProvider, } from "./controlled-agent/index.js";
 import { projectControllerCapacityDemand, recordProjectControllerCapacitySignal, } from "./project-controller-capacity.js";
@@ -1386,94 +1388,18 @@ export function createCodexGoalMcpServer(options = {}) {
             confirmPush: z.boolean().optional(),
         },
     }, async (args) => withMcpErrors(async () => projectControlPushBranch(args)));
-    server.registerTool("codex_goal_project_open_integration_attempt", {
-        title: "Project Integration Open Attempt",
-        description: "Open a policy-controlled integration attempt for reviewed worker output.",
-        inputSchema: {
-            ...jobRegistryInputSchema(),
-            controllerJobId: z.string().optional(),
-            attemptId: z.string().optional(),
-            workerJobId: z.string().optional(),
-            workerWorkspacePath: z.string().optional(),
-            workerCommitSha: z.string().optional(),
-            workerPatchPath: z.string().optional(),
-            workerSummaryPath: z.string().optional(),
-            workerBaseCommit: z.string().optional(),
-            targetWorkspacePath: z.string().optional(),
-            targetCommit: z.string().optional(),
-            baseStatus: z.string().optional(),
-            baseRevisionReasons: z.union([z.string(), z.array(z.string())]).optional(),
-            targetBranch: z.string().optional(),
-            targetRemote: z.string().optional(),
-            changedFiles: z.union([z.string(), z.array(z.string())]).optional(),
-            approvedFiles: z.union([z.string(), z.array(z.string())]).optional(),
-            allowedPathPrefixes: z.union([z.string(), z.array(z.string())]).optional(),
-            requiredCheckIds: z.union([z.string(), z.array(z.string())]).optional(),
-            requiredChecks: z.array(projectIntegrationCheckSchema()).optional(),
-            reviewedBy: z.string().optional(),
-            reviewReason: z.string().optional(),
-            allowStaleBase: z.boolean().optional(),
-            confirmOpen: z.boolean().optional(),
-        },
-    }, async (args) => withMcpErrors(async () => projectIntegrationOpenAttempt(args)));
-    server.registerTool("codex_goal_project_apply_worker_output", {
-        title: "Project Integration Apply Worker Output",
-        description: "Apply reviewed worker output into the target workspace through the integration lifecycle.",
-        inputSchema: {
-            ...jobRegistryInputSchema(),
-            controllerJobId: z.string().optional(),
-            attemptId: z.string().optional(),
-            allowedPreExistingDirtyFiles: z.union([z.string(), z.array(z.string())]).optional(),
-            confirmApply: z.boolean().optional(),
-        },
-    }, async (args) => withMcpErrors(async () => projectIntegrationApplyWorkerOutput(args)));
-    server.registerTool("codex_goal_project_run_required_checks", {
-        title: "Project Integration Run Required Checks",
-        description: "Run declared integration checks for an applied integration attempt.",
-        inputSchema: {
-            ...jobRegistryInputSchema(),
-            controllerJobId: z.string().optional(),
-            attemptId: z.string().optional(),
-            confirmRunChecks: z.boolean().optional(),
-        },
-    }, async (args) => withMcpErrors(async () => projectIntegrationRunRequiredChecks(args)));
-    server.registerTool("codex_goal_project_commit_approved_changes", {
-        title: "Project Integration Commit Approved Changes",
-        description: "Create a commit candidate after required checks and secret scan pass.",
-        inputSchema: {
-            ...jobRegistryInputSchema(),
-            controllerJobId: z.string().optional(),
-            attemptId: z.string().optional(),
-            message: z.string().optional(),
-            allowedPathPrefixes: z.union([z.string(), z.array(z.string())]).optional(),
-            requiredCheckIds: z.union([z.string(), z.array(z.string())]).optional(),
-            confirmCommit: z.boolean().optional(),
-        },
-    }, async (args) => withMcpErrors(async () => projectIntegrationCommitApprovedChanges(args)));
-    server.registerTool("codex_goal_project_push_approved_commit", {
-        title: "Project Integration Push Approved Commit",
-        description: "Push an approved integration commit candidate through policy-controlled branch rules.",
-        inputSchema: {
-            ...jobRegistryInputSchema(),
-            controllerJobId: z.string().optional(),
-            attemptId: z.string().optional(),
-            branch: z.string().optional(),
-            remote: z.string().optional(),
-            force: z.boolean().optional(),
-            confirmPush: z.boolean().optional(),
-        },
-    }, async (args) => withMcpErrors(async () => projectIntegrationPushApprovedCommit(args)));
-    server.registerTool("codex_goal_project_reject_integration_attempt", {
-        title: "Project Integration Reject Attempt",
-        description: "Reject an integration attempt with an audited safe reason.",
-        inputSchema: {
-            ...jobRegistryInputSchema(),
-            controllerJobId: z.string().optional(),
-            attemptId: z.string().optional(),
-            reason: z.string().optional(),
-            confirmReject: z.boolean().optional(),
-        },
-    }, async (args) => withMcpErrors(async () => projectIntegrationRejectAttempt(args)));
+    const projectIntegrationHandlers = createLocalProjectIntegrationMcpToolHandlers({
+        loadController: loadProjectControlController,
+        resolvePathArg: projectControlPathArg,
+    });
+    registerProjectIntegrationMcpTools(server, {
+        openAttempt: (args) => withMcpErrors(async () => projectIntegrationHandlers.openAttempt(args)),
+        applyWorkerOutput: (args) => withMcpErrors(async () => projectIntegrationHandlers.applyWorkerOutput(args)),
+        runRequiredChecks: (args) => withMcpErrors(async () => projectIntegrationHandlers.runRequiredChecks(args)),
+        commitApprovedChanges: (args) => withMcpErrors(async () => projectIntegrationHandlers.commitApprovedChanges(args)),
+        pushApprovedCommit: (args) => withMcpErrors(async () => projectIntegrationPushApprovedCommitWithConsumedLedger(args, projectIntegrationHandlers.pushApprovedCommit)),
+        rejectAttempt: (args) => withMcpErrors(async () => projectIntegrationHandlers.rejectAttempt(args)),
+    });
     server.registerTool("codex_goal_project_stop", {
         title: "Project Control Stop Codex Goal Worker",
         description: "Stop a stored Codex goal worker through a ProjectScopedControl controller manifest and broker policy.",
@@ -3350,6 +3276,19 @@ async function controlledAgentClaudeSessionArtifact(input) {
         cwd: input.state.cwd,
     });
 }
+function stringArrayArg(value) {
+    if (value === undefined)
+        return [];
+    const values = typeof value === "string" ? [value] : value;
+    if (!Array.isArray(values))
+        throw new Error("string_array_arg_invalid");
+    return values.map((item) => {
+        if (typeof item !== "string" || item.length === 0) {
+            throw new Error("string_array_arg_invalid");
+        }
+        return item;
+    });
+}
 function projectIntegrationDeps(controller) {
     const rootDir = join(controller.controller.jobRootDir, "project-integration");
     return {
@@ -3378,52 +3317,6 @@ function projectIntegrationPolicy(controller, args) {
         ...(controller.scope.allowForcePush === true ? { allowForcePush: true } : {}),
         ...(args.allowStaleBase === true ? { allowStaleBase: true } : {}),
     };
-}
-function projectIntegrationCheckSchema() {
-    return z.object({
-        checkId: z.string(),
-        command: z.array(z.string()),
-        cwd: z.string().optional(),
-        timeoutMs: z.number().int().positive().optional(),
-    });
-}
-function parseProjectIntegrationChecks(value) {
-    if (value === undefined)
-        return [];
-    return value.map((item, index) => {
-        if (!item || typeof item !== "object" || Array.isArray(item)) {
-            throw new Error(`requiredChecks.${index}_invalid`);
-        }
-        const record = item;
-        const timeoutMs = numberValue(record.timeoutMs);
-        return {
-            checkId: requiredRawString(record.checkId, `requiredChecks.${index}.checkId`),
-            command: requiredStringArrayArg(record.command, `requiredChecks.${index}.command`),
-            ...(record.cwd === undefined
-                ? {}
-                : { cwd: requiredRawString(record.cwd, `requiredChecks.${index}.cwd`) }),
-            ...(timeoutMs === undefined ? {} : { timeoutMs }),
-        };
-    });
-}
-function requiredStringArrayArg(value, fieldName) {
-    const values = stringArrayArg(value);
-    if (values.length === 0)
-        throw new Error(`${fieldName}_required`);
-    return values;
-}
-function stringArrayArg(value) {
-    if (value === undefined)
-        return [];
-    const values = typeof value === "string" ? [value] : value;
-    if (!Array.isArray(values))
-        throw new Error("string_array_arg_invalid");
-    return values.map((item) => {
-        if (typeof item !== "string" || item.length === 0) {
-            throw new Error("string_array_arg_invalid");
-        }
-        return item;
-    });
 }
 async function projectControlCreateCodexGoalJob(args) {
     const controller = await loadProjectControlController(args);
@@ -4082,152 +3975,28 @@ async function projectControlPushBranch(args) {
         result: result,
     });
 }
-async function projectIntegrationOpenAttempt(args) {
+async function projectIntegrationPushApprovedCommitWithConsumedLedger(args, pushApprovedCommitHandler) {
     const controller = await loadProjectControlController(args);
-    const attemptId = requiredRawString(args.attemptId, "attemptId");
-    const workerJobId = requiredRawString(args.workerJobId, "workerJobId");
-    const workerWorkspacePath = projectControlPathArg(args, args.workerWorkspacePath ?? args.sourceWorkspacePath, "workerWorkspacePath");
-    const targetWorkspacePath = projectControlPathArg(args, args.targetWorkspacePath ?? args.workspacePath, "targetWorkspacePath");
-    const targetBranch = requiredRawString(args.targetBranch ?? args.branch, "targetBranch");
-    const targetRemote = stringValue(args.targetRemote ?? args.remote) ?? "origin";
-    assertSafeGitRefName(targetBranch, "targetBranch");
-    assertSafeGitRemoteName(targetRemote, "targetRemote");
-    const commitSha = stringValue(args.workerCommitSha ?? args.commitSha);
-    if (commitSha)
-        assertSafeGitCommitSha(commitSha);
-    const patchPath = stringValue(args.workerPatchPath);
-    const summaryPath = stringValue(args.workerSummaryPath);
-    const baseCommit = stringValue(args.workerBaseCommit);
-    if (baseCommit)
-        assertSafeGitCommitSha(baseCommit);
-    const targetCommit = stringValue(args.targetCommit);
-    if (targetCommit)
-        assertSafeGitCommitSha(targetCommit);
-    const baseStatus = optionalBaseRevisionStatus(args.baseStatus);
-    const baseRevisionReasons = stringArrayArg(args.baseRevisionReasons);
-    if (!commitSha && !patchPath) {
-        throw new Error("project_integration_worker_output_source_required");
-    }
-    const changedFiles = requiredStringArrayArg(args.changedFiles, "changedFiles");
-    const approvedFiles = stringArrayArg(args.approvedFiles);
-    const requiredChecks = parseProjectIntegrationChecks(args.requiredChecks);
-    const input = {
-        policy: projectIntegrationPolicy(controller, args),
-        attemptId,
-        projectId: controller.scope.projectId,
-        controllerJobId: controller.controller.jobId,
-        sourceWorkspacePath: workerWorkspacePath,
-        targetWorkspacePath,
-        targetBranch,
-        targetRemote,
-        workerOutput: {
-            workerJobId,
-            workspacePath: workerWorkspacePath,
-            ...(commitSha ? { commitSha } : {}),
-            ...(patchPath ? { patchPath } : {}),
-            ...(summaryPath ? { summaryPath } : {}),
-            ...(baseCommit ? { baseCommit } : {}),
-            ...(targetCommit ? { targetCommit } : {}),
-            ...(baseStatus ? { baseStatus } : {}),
-            ...(baseRevisionReasons.length ? { baseRevisionReasons } : {}),
-            changedFiles,
-        },
-        reviewDecision: {
-            reviewedBy: stringValue(args.reviewedBy) ?? controller.controller.jobId,
-            decision: ReviewDecisionStatus.Approved,
-            reason: stringValue(args.reviewReason) ?? "project_integration_reviewed",
-            approvedFiles: approvedFiles.length ? approvedFiles : changedFiles,
-            requiredChecks,
-        },
-    };
-    if (!args.confirmOpen) {
-        return mcpJson({
-            ok: false,
-            reason: "confirm_open_required",
-            mode: "project_integration_open_attempt",
-            controllerJobId: controller.controller.jobId,
-            attemptId,
-            attemptPreview: input,
-        });
-    }
-    const attempt = await openProjectIntegrationAttempt(projectIntegrationDeps(controller), input);
+    const response = await pushApprovedCommitHandler(args);
+    const payload = callToolResultJson(response);
+    if (payload?.ok !== true)
+        return response;
+    const attempt = isRecord(payload.attempt) ? payload.attempt : undefined;
+    if (!attempt)
+        return response;
+    const consumedOutputLedger = await recordConsumedOutputAfterPush(controller, attempt);
+    if (!consumedOutputLedger)
+        return response;
     return mcpJson({
-        ok: true,
-        mode: "project_integration_open_attempt",
-        controllerJobId: controller.controller.jobId,
-        attempt: attempt,
+        ...payload,
+        consumedOutputLedger,
     });
 }
-async function projectIntegrationApplyWorkerOutput(args) {
-    const controller = await loadProjectControlController(args);
-    const attemptId = requiredRawString(args.attemptId, "attemptId");
-    if (!args.confirmApply) {
-        return mcpJson({
-            ok: false,
-            reason: "confirm_apply_required",
-            mode: "project_integration_apply_worker_output",
-            controllerJobId: controller.controller.jobId,
-            attemptId,
-        });
+function callToolResultJson(result) {
+    if (isRecord(result.structuredContent)) {
+        return result.structuredContent;
     }
-    const attempt = await applyWorkerOutput(projectIntegrationDeps(controller), {
-        attemptId,
-        allowedPreExistingDirtyFiles: stringArrayArg(args.allowedPreExistingDirtyFiles),
-    });
-    return mcpJson({
-        ok: true,
-        mode: "project_integration_apply_worker_output",
-        controllerJobId: controller.controller.jobId,
-        attempt: attempt,
-    });
-}
-async function projectIntegrationRunRequiredChecks(args) {
-    const controller = await loadProjectControlController(args);
-    const attemptId = requiredRawString(args.attemptId, "attemptId");
-    if (!args.confirmRunChecks) {
-        return mcpJson({
-            ok: false,
-            reason: "confirm_run_checks_required",
-            mode: "project_integration_run_required_checks",
-            controllerJobId: controller.controller.jobId,
-            attemptId,
-        });
-    }
-    const attempt = await runRequiredChecks(projectIntegrationDeps(controller), {
-        attemptId,
-    });
-    return mcpJson({
-        ok: true,
-        mode: "project_integration_run_required_checks",
-        controllerJobId: controller.controller.jobId,
-        attempt: attempt,
-    });
-}
-async function projectIntegrationCommitApprovedChanges(args) {
-    const controller = await loadProjectControlController(args);
-    const attemptId = requiredRawString(args.attemptId, "attemptId");
-    const message = requiredRawString(args.message, "message");
-    if (!args.confirmCommit) {
-        return mcpJson({
-            ok: false,
-            reason: "confirm_commit_required",
-            mode: "project_integration_commit_approved_changes",
-            controllerJobId: controller.controller.jobId,
-            attemptId,
-            message,
-        });
-    }
-    const attempt = await commitApprovedChanges(projectIntegrationDeps(controller), {
-        attemptId,
-        message,
-        policy: projectIntegrationPolicy(controller, args),
-    });
-    return mcpJson({
-        ok: true,
-        mode: "project_integration_commit_approved_changes",
-        controllerJobId: controller.controller.jobId,
-        attempt: attempt,
-    });
+    return undefined;
 }
 async function projectIntegrationPushApprovedCommit(args) {
     const controller = await loadProjectControlController(args);
@@ -6996,17 +6765,6 @@ async function targetCommitFromArgs(args) {
 }
 function optionalTargetCommit(targetCommit) {
     return targetCommit === undefined ? {} : { targetCommit };
-}
-function optionalBaseRevisionStatus(value) {
-    if (value === undefined)
-        return undefined;
-    if (value === "current" ||
-        value === "stale" ||
-        value === "needs_rebase_check" ||
-        value === "unknown") {
-        return value;
-    }
-    throw new Error("project_integration_base_status_invalid");
 }
 function codexGoalDecisionChecklist(input) {
     if (input.decision === "continue") {

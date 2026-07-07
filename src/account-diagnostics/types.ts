@@ -58,6 +58,10 @@ export type ProviderAccountIdentityReadResult = {
 export type ProviderAccountDiagnostic = {
   readonly provider: ProviderAccountProviderId;
   readonly slotId: string;
+  readonly displayName?: string;
+  readonly email?: string;
+  readonly shortName?: string;
+  readonly operatorLabel?: string;
   readonly providerInstanceId?: string;
   readonly model?: string;
   readonly safeIdentity: string;
@@ -79,6 +83,7 @@ export type ProviderAccountDiagnostic = {
 export type ListProviderAccountDiagnosticsResult = {
   readonly checkedAt: Date;
   readonly diagnostics: readonly ProviderAccountDiagnostic[];
+  readonly summary?: import("./pool-availability").ProviderAccountPoolAvailabilitySummary;
 };
 
 export interface ProviderAccountRegistryPort<

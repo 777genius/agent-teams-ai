@@ -14,6 +14,11 @@ export const projectScopedControllerToolGrants: readonly ControlledAgentToolGran
   grant(ControlledAgentToolName.GoalGetJob, ControlledAgentToolGroup.Diagnostics, "read"),
   grant(ControlledAgentToolName.ProjectEvents, ControlledAgentToolGroup.Diagnostics, "read"),
   grant(
+    ControlledAgentToolName.ProjectOperationStatus,
+    ControlledAgentToolGroup.Diagnostics,
+    "read",
+  ),
+  grant(
     ControlledAgentToolName.ProjectControllerConsumeGuidance,
     ControlledAgentToolGroup.ControllerLifecycle,
     "write",

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -125,6 +125,36 @@ describe("local project integration adapters", () => {
       status: CheckRunStatus.Failed,
       exitCode: 1,
       safeOutputTail: "\nOPENAI_API_KEY=<redacted>\n",
+    });
+  });
+
+  it("runs pnpm checks through corepack when pnpm is not directly installed", async () => {
+    const fixture = await createGitFixture();
+    const binDir = join(fixture.rootDir, "bin");
+    await mkdir(binDir);
+    const corepackPath = join(binDir, "corepack");
+    await writeFile(
+      corepackPath,
+      "#!/bin/sh\nprintf '%s' \"$*\"\n",
+      "utf8",
+    );
+    await chmod(corepackPath, 0o755);
+    const runner = new LocalProjectCheckRunner({
+      env: { PATH: binDir },
+    });
+
+    await expect(runner.runCheck({
+      workspacePath: fixture.workspacePath,
+      startedAt: "2026-01-01T00:00:00.000Z",
+      check: {
+        checkId: "pnpm-check",
+        command: ["pnpm", "exec", "vitest", "run", "unit.test.ts"],
+      },
+    })).resolves.toMatchObject({
+      checkId: "pnpm-check",
+      status: CheckRunStatus.Passed,
+      exitCode: 0,
+      safeOutputTail: "pnpm exec vitest run unit.test.ts\n",
     });
   });
 

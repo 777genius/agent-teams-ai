@@ -3,6 +3,7 @@ import {
   isSchedulerEligible,
   recommendedActionForAvailability,
 } from "./policy";
+import { summarizeProviderAccountPoolAvailability } from "./pool-availability";
 import { sanitizeDiagnosticDetails } from "./details";
 import type {
   ListProviderAccountDiagnosticsDependencies,
@@ -54,6 +55,10 @@ export class ListProviderAccountDiagnostics<
     return {
       checkedAt,
       diagnostics: filtered,
+      summary: summarizeProviderAccountPoolAvailability({
+        diagnostics: filtered,
+        checkedAt,
+      }),
     };
   }
 
@@ -98,9 +103,11 @@ export class ListProviderAccountDiagnostics<
     });
     const warnings = identityResult.identity.warnings;
     const details = sanitizeDiagnosticDetails(selected.details);
+    const display = displayFields(input.account.metadata);
     return {
       provider: input.account.provider,
       slotId: input.account.slotId,
+      ...display,
       ...(input.account.providerInstanceId
         ? { providerInstanceId: input.account.providerInstanceId }
         : {}),
@@ -186,6 +193,19 @@ async function mapWithConcurrency<Input, Output>(
     Array.from({ length: Math.min(concurrency, values.length) }, () => worker()),
   );
   return outputs;
+}
+
+function displayFields(
+  metadata: Readonly<Record<string, string>> | undefined,
+): Readonly<Record<string, string>> {
+  if (!metadata) return {};
+  return Object.fromEntries(
+    ["displayName", "email", "shortName", "operatorLabel"]
+      .map((key) => [key, metadata[key]] as const)
+      .filter((entry): entry is readonly [string, string] =>
+        typeof entry[1] === "string" && entry[1].trim().length > 0,
+      ),
+  );
 }
 
 function probeCacheKey(

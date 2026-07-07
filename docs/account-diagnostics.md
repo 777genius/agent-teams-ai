@@ -67,10 +67,36 @@ Recommended actions:
 - `relogin` - auth has been revoked or invalidated.
 - `inspect` - the runtime cannot prove the account is usable.
 
+The list use-case also returns a provider-neutral pool summary:
+
+- `safeToSchedule` - at least one returned slot is scheduler-eligible now.
+- `schedulerEligibleSlotIds` - slots a scheduler may use immediately.
+- `limitedSlotIds` - slots blocked by usage or quota limits.
+- `reconnectRequiredSlotIds` - slots that need human relogin.
+- `nextAvailableAt` and `nextAvailableSlotIds` - earliest known limit reset.
+- `decision` - `schedule`, `wait`, `relogin` or `inspect`.
+
 `accountKeyHash` is a provider-scoped SHA-256 hash of a stable provider account
 id. Raw tokens and raw OAuth material are never returned. If the provider does
 not expose a stable non-secret account id, duplicate detection is skipped for
 that slot.
+
+Operator-facing displays may include optional `displayName`, `email`,
+`shortName` and `operatorLabel` fields. These are labels only. The stable slot
+id, such as `account-a`, remains the scheduler key, auth directory name and
+capacity key.
+
+For Codex pools, labels can be stored next to the auth slots:
+
+```json
+{
+  "account-a": { "email": "operator@example.com" },
+  "account-g": { "displayName": "usa18303530342" }
+}
+```
+
+Supported file names are `account-labels.json`, `account-metadata.json` and
+`accounts.metadata.json` under the Codex auth root.
 
 ## Architecture
 

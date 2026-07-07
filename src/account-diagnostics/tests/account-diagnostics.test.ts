@@ -229,6 +229,38 @@ describe("ListProviderAccountDiagnostics", () => {
     expect(JSON.stringify(result.diagnostics)).not.toContain("codex-account-b");
   });
 
+  it("preserves operator display metadata separately from stable slot ids", async () => {
+    const result = await new ListProviderAccountDiagnostics(
+      fakeDependencies({
+        accounts: [
+          {
+            ...testAccount("account-a", "codex-account-a"),
+            metadata: {
+              displayName: "operator@example.com",
+              email: "operator@example.com",
+              shortName: "a",
+              operatorLabel: "operator@example.com - a",
+            },
+          },
+        ],
+        identities: {
+          "account-a": {
+            safeIdentity: "codex:a",
+            providerAccountId: "codex-account-a",
+          },
+        },
+      }),
+    ).execute();
+
+    expect(result.diagnostics[0]).toMatchObject({
+      slotId: "account-a",
+      displayName: "operator@example.com",
+      email: "operator@example.com",
+      shortName: "a",
+      operatorLabel: "operator@example.com - a",
+    });
+  });
+
   it("prefers auth_unknown over cached limits because wait would be misleading", async () => {
     const account = testAccount("account-a", "codex-account-a");
     const store = new InMemoryWorkerAccountCapacityStore();
@@ -302,6 +334,63 @@ describe("ListProviderAccountDiagnostics", () => {
     expect(JSON.stringify(result.diagnostics)).not.toContain("raw-account-id");
     expect(JSON.stringify(result.diagnostics)).not.toContain("person@example.com");
     expect(JSON.stringify(result.diagnostics)).not.toContain("refresh-token-secret");
+  });
+
+  it("summarizes scheduler availability without provider-specific coupling", async () => {
+    const resetAt = new Date("2026-06-01T02:00:00.000Z");
+    const store = new InMemoryWorkerAccountCapacityStore();
+    store.observe({
+      accountId: "codex-account-b",
+      observedAt: fixedNow,
+      capacity: {
+        availability: "cooldown",
+        reason: "quota_limited",
+        cooldownUntil: resetAt,
+      },
+    });
+
+    const result = await new ListProviderAccountDiagnostics(
+      fakeDependencies({
+        accounts: [
+          testAccount("account-a", "codex-account-a"),
+          testAccount("account-b", "codex-account-b"),
+          testAccount("account-c", "codex-account-c"),
+        ],
+        identities: {
+          "account-a": {
+            safeIdentity: "codex:a",
+            providerAccountId: "codex-account-a",
+          },
+          "account-b": {
+            safeIdentity: "codex:b",
+            providerAccountId: "codex-account-b",
+          },
+          "account-c": {
+            safeIdentity: "codex:c",
+            providerAccountId: "codex-account-c",
+          },
+        },
+        identitySignals: {
+          "account-c": {
+            availability: "reconnect_required",
+            source: "cached",
+            reason: "refresh_token_invalidated",
+          },
+        },
+        capacityReader: createWorkerAccountCapacityReader({ store }),
+      }),
+    ).execute();
+
+    expect(result.summary).toMatchObject({
+      safeToSchedule: true,
+      decision: "schedule",
+      recommendedAction: "schedule",
+      schedulerEligibleSlotIds: ["account-a"],
+      limitedSlotIds: ["account-b"],
+      reconnectRequiredSlotIds: ["account-c"],
+      nextAvailableAt: resetAt,
+      nextAvailableSlotIds: ["account-b"],
+    });
   });
 });
 

@@ -4070,6 +4070,7 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-project-integration-"));
     const registryRootDir = join(root, "worker-jobs", "registry");
     const controllerJobRoot = join(root, "worker-jobs", "infinity-context-controller-v1");
+    const ledgerRoot = join(root, "worker-jobs", "consumed-output-ledger");
     const workspacePath = join(root, "workspaces", "infinity-context-main");
     const remotePath = join(root, "remote.git");
     const server = createCodexGoalMcpServer();
@@ -4118,6 +4119,7 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
           tmuxSessionPrefixes: ["infinity-context-"],
           allowedBranches: ["main"],
           allowedGitRemotes: ["origin"],
+          consumedOutputLedgerRoots: [ledgerRoot],
         },
       });
 
@@ -4215,6 +4217,30 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
         "refs/heads/main",
       ]);
       expect(pushedSha.stdout.trim()).toBe(commitSha);
+      await expect(readFile(
+        join(ledgerRoot, "items", "infinity-context-worker-v1.json"),
+        "utf8",
+      ).then((contents) => JSON.parse(contents) as Record<string, unknown>))
+        .resolves.toMatchObject({
+          jobId: "infinity-context-worker-v1",
+          status: "integrated",
+          commitSha,
+          backup: {
+            workspace: workspacePath,
+          },
+        });
+      await expect(callToolJson(client, "codex_goal_project_push_approved_commit", {
+        registryRootDir,
+        controllerJobId: "infinity-context-controller-v1",
+        attemptId: "attempt-1",
+        confirmPush: true,
+      })).resolves.toMatchObject({
+        ok: true,
+        mode: "project_integration_push_approved_commit",
+        attempt: {
+          status: "pushed",
+        },
+      });
     } finally {
       await client.close();
       await server.close();

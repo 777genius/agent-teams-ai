@@ -31,6 +31,7 @@ export enum ControlledAgentToolName {
   GoalListJobs = "codex_goal_list_jobs",
   GoalGetJob = "codex_goal_get_job",
   ProjectEvents = "codex_goal_project_events",
+  ProjectOperationStatus = "codex_goal_project_operation_status",
   ProjectControllerConsumeGuidance = "codex_goal_project_controller_consume_guidance",
   ProjectCreateWorktree = "codex_goal_project_create_worktree",
   ProjectCreateJob = "codex_goal_project_create_job",

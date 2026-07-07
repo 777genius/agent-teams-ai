@@ -27,6 +27,11 @@ import {
   readCodexAuthJsonFreshness,
   validateCodexAuthJsonBytes,
 } from "../provider-codex";
+import {
+  codexAccountDisplayRecord,
+  readCodexAccountDisplayMetadata,
+  type CodexAccountDisplayMetadata,
+} from "./account-display-metadata";
 
 export type CodexDiagnosticAccount =
   ProviderAccountInventoryItem<"codex"> & {
@@ -75,6 +80,7 @@ export async function discoverCodexAuthJsonAccounts(input: {
   if (!input.rootDir) return explicit;
 
   const rootDir = resolve(input.rootDir);
+  const displayMetadata = await readCodexAccountDisplayMetadata(rootDir);
   const discovered: CodexDiagnosticAccount[] = [];
   const rootAuthPath = join(rootDir, "auth.json");
   if (await fileExists(rootAuthPath)) {
@@ -84,6 +90,9 @@ export async function discoverCodexAuthJsonAccounts(input: {
       slotId,
       authJsonPath: rootAuthPath,
       codexHome: rootDir,
+      ...(displayMetadata[slotId]
+        ? { displayMetadata: displayMetadata[slotId] }
+        : {}),
       ...(capacityAccountId ? { capacityAccountId } : {}),
       ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
     }));
@@ -107,6 +116,9 @@ export async function discoverCodexAuthJsonAccounts(input: {
         slotId: entry.name,
         authJsonPath,
         codexHome,
+        ...(displayMetadata[entry.name]
+          ? { displayMetadata: displayMetadata[entry.name] }
+          : {}),
         ...(capacityAccountId ? { capacityAccountId } : {}),
         ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
       }),
@@ -299,11 +311,13 @@ function accountFromAuthPath(input: {
   readonly codexHome?: string;
   readonly capacityAccountId?: string;
   readonly codexBinaryPath?: string;
+  readonly displayMetadata?: CodexAccountDisplayMetadata;
 }): CodexDiagnosticAccount {
   return {
     provider: "codex",
     slotId: input.slotId,
     providerInstanceId: `codex:${input.slotId}`,
+    metadata: codexAccountDisplayRecord(input.slotId, input.displayMetadata),
     authJsonPath: input.authJsonPath,
     ...(input.codexHome ? { codexHome: input.codexHome } : {}),
     ...(input.capacityAccountId

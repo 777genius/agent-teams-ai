@@ -219,9 +219,10 @@ export class LocalProjectCheckRunner implements CheckRunnerPort {
         safeOutputTail: "check_cwd_outside_workspace",
       };
     }
-    const [command, ...args] = input.check.command;
+    const [rawCommand, ...rawArgs] = input.check.command;
+    const { command, args } = resolveCheckCommand(rawCommand ?? "", rawArgs);
     const result = await runCommand({
-      command: command ?? "",
+      command,
       args,
       cwd,
       ...(this.options.env === undefined ? {} : { env: this.options.env }),
@@ -242,6 +243,19 @@ export class LocalProjectCheckRunner implements CheckRunnerPort {
       safeOutputTail: safeTail(`${result.stdout}\n${result.stderr}`),
     };
   }
+}
+
+function resolveCheckCommand(
+  command: string,
+  args: readonly string[],
+): { readonly command: string; readonly args: readonly string[] } {
+  if (command === "pnpm" || command === "yarn") {
+    return {
+      command: "corepack",
+      args: [command, ...args],
+    };
+  }
+  return { command, args };
 }
 
 export type SimpleSecretScannerOptions = {

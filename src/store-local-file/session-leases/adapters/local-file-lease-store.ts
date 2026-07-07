@@ -12,6 +12,7 @@ import {
 import type {
   FinalizedLease,
   LeaseAcquireResult,
+  LeaseStoreCapabilities,
   LeaseStorePort,
   WritebackCommitResult,
 } from "../ports/lease-store-contracts";
@@ -64,7 +65,7 @@ type PersistedLockRecord = {
 
 export class LocalFileLeaseStore implements LeaseStorePort {
   readonly leaseStoreId = localFileLeaseStoreCapabilities.leaseStoreId;
-  readonly capabilities = localFileLeaseStoreCapabilities;
+  readonly capabilities: LeaseStoreCapabilities = localFileLeaseStoreCapabilities;
 
   constructor(private readonly options: LocalFileLeaseStoreOptions) {}
 

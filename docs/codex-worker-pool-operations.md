@@ -99,6 +99,7 @@ Defaults:
 - reasoning effort: `high`;
 - service tier: `fast`;
 - task timeout: `72h`;
+- app-server startup timeout: `2m`;
 - max account cycles: `5`;
 - execution engine: `app-server-goal`;
 - edit mode: `allow-edits`.
@@ -601,6 +602,7 @@ Minimal `codex_goal_create_job` input:
   "serviceTier": "fast",
   "executionEngine": "app-server-goal",
   "taskTimeoutMs": 259200000,
+  "appServerStartupTimeoutMs": 120000,
   "maxAccountCycles": 5
 }
 ```
@@ -704,6 +706,17 @@ Prefer the `codex_goal_accounts_*` tools when a `jobId` exists. Use the raw
 `codex_accounts_*` tools only for pool discovery, manual cleanup or operating
 outside a stored job.
 
+Account status has two layers:
+
+- `status` is auth-file status: `ready`, `auth_missing` or `auth_invalid`.
+- `availability` is scheduler status: `available`, `limited`,
+  `reconnect_required`, `auth_unknown`, `unhealthy` or `unknown`.
+- `schedulerEligible` is the field schedulers and agents should use before
+  assigning work.
+- `recommendedAction` tells the operator to do nothing, wait, relogin or
+  inspect.
+- `limitResetAt` is the normalized reset time when a limit is known.
+
 `agent_run_watch` should be the default read-only monitor when an agent needs
 to see what workers are doing. It returns normalized `RunObservationSnapshot`
 objects and read-only recommendations. `codex_goal_overview` is still useful
@@ -729,6 +742,8 @@ agents. It returns:
 - `workerAliveReason`
 - `workerProcessAlive`
 - `workerFreshProgressAlive`
+- `appServerProcessAlive`
+- `appServerProcessPid`
 - `logByteLength`
 - `runtimeEventsPath`
 - `lastRuntimeEvent`
@@ -834,6 +849,7 @@ Minimal MCP `codex_goal_start` input:
   "reasoningEffort": "high",
   "serviceTier": "fast",
   "taskTimeoutMs": 259200000,
+  "appServerStartupTimeoutMs": 120000,
   "maxAccountCycles": 5,
   "confirmStart": true
 }
@@ -953,6 +969,9 @@ Recommended agent loop:
    jobRootDir manually.
    Also check `brief.progressUpdatedAt` and `brief.progressHeartbeatAgeMs`.
    Fresh progress means a quiet stdout/log is not enough evidence to stop.
+   If `brief.appServerProcessAlive` is false while the runner heartbeat is
+   fresh, treat it as app-server startup/materialization trouble rather than a
+   productive Codex turn.
 4. If `brief.hasAvailableAccount` is false, do not continue. Use
    `codex_goal_accounts_status`, then ask for relogin or wait for cooldown.
 5. If `recommendedAction` is `start_worker`, use `codex_goal_continue` for
@@ -1038,6 +1057,7 @@ Keep auth slots outside the job cache:
 
 ```txt
 ~/.cache/subscription-runtime/live-codex-auth/
+  account-labels.json
   account-a/auth.json
   account-b/auth.json
   account-c/auth.json
@@ -1054,6 +1074,20 @@ Each slot is a separate Codex `CODEX_HOME`:
 CODEX_HOME="$HOME/.cache/subscription-runtime/live-codex-auth/account-a" \
   codex login --device-auth
 ```
+
+Do not rename slot directories to emails. Keep `account-a`, `account-b` and
+similar slot ids stable for registry, capacity and running-job compatibility.
+Use `account-labels.json` for operator-facing labels:
+
+```json
+{
+  "account-a": { "email": "operator@example.com" },
+  "account-g": { "displayName": "usa18303530342" }
+}
+```
+
+Status tools may then show both the stable slot and label, for example
+`operator@example.com - a - limited`.
 
 Device auth is preferred for handoff because it gives a short-lived code and
 does not depend on a specific browser callback window.
