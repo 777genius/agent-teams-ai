@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { HttpServices } from '@main/http';
 import type {
   OpenCodeRuntimeControlAck,
+  TeamHttpDataApi,
   TeamHttpRuntimeApi,
   TeamLaunchApi,
   TeamRuntimeControlCompatibilityApi,
@@ -77,15 +78,15 @@ describe('HTTP team runtime routes', () => {
       recordOpenCodeRuntimeTaskEvent,
       recordOpenCodeRuntimeHeartbeat,
     } satisfies TeamRuntimeControlCompatibilityApi;
-    const teamDataService = {
+    const teamDataApi = {
       listTeams,
       getTeamData,
       getSavedRequest,
       createTeamConfig,
     } as Pick<
-      NonNullable<HttpServices['teamDataService']>,
+      TeamHttpDataApi,
       'listTeams' | 'getTeamData' | 'getSavedRequest' | 'createTeamConfig'
-    > as HttpServices['teamDataService'];
+    > as HttpServices['teamDataApi'];
 
     const services = {
       projectScanner: {} as HttpServices['projectScanner'],
@@ -95,7 +96,7 @@ describe('HTTP team runtime routes', () => {
       dataCache: {} as HttpServices['dataCache'],
       updaterService: {} as HttpServices['updaterService'],
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
-      teamDataService,
+      teamDataApi,
       teamProvisioningApis: {
         launch: teamLaunchApi,
         taskActivity: teamTaskActivityRepairApi,

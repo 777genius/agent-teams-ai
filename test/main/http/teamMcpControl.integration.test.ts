@@ -304,7 +304,7 @@ function createServices(claudeRoot: string): {
       dataCache: {} as HttpServices['dataCache'],
       updaterService: {} as HttpServices['updaterService'],
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
-      teamDataService,
+      teamDataApi: teamDataService,
       teamProvisioningApis: {
         launch: teamLaunchApi,
         runtime: teamRuntimeApi,

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   bindTeamClaudeLogsApi,
   bindTeamDiagnosticsApi,
+  bindTeamHttpDataApi,
   bindTeamHttpRuntimeApi,
   bindTeamLaunchApi,
   bindTeamMemberLifecycleApi,
@@ -19,6 +20,7 @@ import type {
   OpenCodeRuntimeControlAck,
   TeamClaudeLogsApi,
   TeamDiagnosticsApi,
+  TeamHttpDataApi,
   TeamLaunchApi,
   TeamMemberLifecycleApi,
   TeamMessagingApi,
@@ -37,11 +39,15 @@ import type {
   MemberSpawnStatusesSnapshot,
   RetryFailedOpenCodeSecondaryLanesResult,
   TeamAgentRuntimeSnapshot,
+  TeamCreateConfigRequest,
+  TeamCreateRequest,
   TeamCreateResponse,
   TeamLaunchResponse,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamRuntimeState,
+  TeamSummary,
+  TeamViewSnapshot,
   ToolApprovalSettings,
 } from '@shared/types/team';
 
@@ -194,6 +200,67 @@ describe('TeamProvisioning API binders', () => {
 
     await repairStaleTaskActivityIntervalsBeforeSnapshot('team-bound');
     expect(source.repairedTeamName).toBe('team-bound');
+  });
+
+  it('binds HTTP team data methods to the source object', async () => {
+    interface TeamDataSource extends TeamHttpDataApi {
+      readonly suffix: string;
+      createdTeamName: string | null;
+    }
+
+    const source: TeamDataSource = {
+      suffix: 'bound',
+      createdTeamName: null,
+      listTeams(this: TeamDataSource): Promise<TeamSummary[]> {
+        return Promise.resolve([
+          {
+            teamName: `team-${this.suffix}`,
+            displayName: 'Bound Team',
+            memberCount: 0,
+            taskCount: 0,
+            lastActivity: null,
+          } as TeamSummary,
+        ]);
+      },
+      getTeamData(this: TeamDataSource, teamName: string): Promise<TeamViewSnapshot> {
+        return Promise.resolve({
+          teamName: `${teamName}-${this.suffix}`,
+          config: null,
+          tasks: [],
+          messages: [],
+          processes: [],
+          kanban: null,
+        } as unknown as TeamViewSnapshot);
+      },
+      getSavedRequest(teamName: string): Promise<TeamCreateRequest | null> {
+        return Promise.resolve({ teamName, cwd: TEST_TEAM_CWD, members: [] });
+      },
+      createTeamConfig(this: TeamDataSource, request: TeamCreateConfigRequest): Promise<void> {
+        this.createdTeamName = request.teamName;
+        return Promise.resolve();
+      },
+    };
+
+    const api = bindTeamHttpDataApi(source);
+    const listTeams = api.listTeams.bind(undefined);
+    const getTeamData = api.getTeamData.bind(undefined);
+    const getSavedRequest = api.getSavedRequest.bind(undefined);
+    const createTeamConfig = api.createTeamConfig.bind(undefined);
+
+    await expect(listTeams()).resolves.toEqual([
+      expect.objectContaining({ teamName: 'team-bound' }),
+    ]);
+    await expect(getTeamData('demo')).resolves.toMatchObject({ teamName: 'demo-bound' });
+    await expect(getSavedRequest('draft-team')).resolves.toMatchObject({
+      teamName: 'draft-team',
+      cwd: TEST_TEAM_CWD,
+    });
+    await createTeamConfig({
+      teamName: 'created-team',
+      cwd: TEST_TEAM_CWD,
+      members: [],
+    } as TeamCreateConfigRequest);
+    expect(source.createdTeamName).toBe('created-team');
   });
 
   it('binds runtime control methods to the source object', async () => {

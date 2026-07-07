@@ -13,6 +13,7 @@ import type {
   TeamAgentRuntimeSnapshot,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
+  TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamLaunchRequest,
@@ -23,6 +24,8 @@ import type {
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamRuntimeState,
+  TeamSummary,
+  TeamViewSnapshot,
   ToolApprovalSettings,
 } from '@shared/types/team';
 
@@ -95,6 +98,13 @@ export interface TeamHttpProvisioningApis {
   taskActivity?: TeamTaskActivityRepairApi;
   runtime?: TeamHttpRuntimeApi;
   runtimeControl?: TeamRuntimeControlCompatibilityApi;
+}
+
+export interface TeamHttpDataApi {
+  listTeams(): Promise<TeamSummary[]>;
+  getTeamData(teamName: string): Promise<TeamViewSnapshot>;
+  getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
+  createTeamConfig(request: TeamCreateConfigRequest): Promise<void>;
 }
 
 export interface TeamIpcProvisioningApis {
@@ -295,6 +305,15 @@ export function bindTeamHttpProvisioningApis(
     taskActivity: bindTeamTaskActivityRepairApi(source),
     runtime: bindTeamHttpRuntimeApi(source),
     runtimeControl: bindTeamRuntimeControlCompatibilityApi(source),
+  };
+}
+
+export function bindTeamHttpDataApi(source: TeamHttpDataApi): TeamHttpDataApi {
+  return {
+    listTeams: source.listTeams.bind(source),
+    getTeamData: source.getTeamData.bind(source),
+    getSavedRequest: source.getSavedRequest.bind(source),
+    createTeamConfig: source.createTeamConfig.bind(source),
   };
 }
 

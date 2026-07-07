@@ -111,6 +111,7 @@ import {
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import {
+  bindTeamHttpDataApi,
   bindTeamHttpProvisioningApis,
   bindTeamIpcProvisioningApis,
   type TeamHttpProvisioningApis,
@@ -2711,7 +2712,7 @@ async function startHttpServer(
         memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
         updaterService,
         sshConnectionManager,
-        teamDataService,
+        teamDataApi: bindTeamHttpDataApi(teamDataService),
         teamProvisioningApis: teamHttpProvisioningApis,
       },
       modeSwitchHandler,

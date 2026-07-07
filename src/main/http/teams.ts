@@ -61,11 +61,11 @@ function getTeamRuntimeControlApi(services: HttpServices): TeamRuntimeControlCom
   return services.teamProvisioningApis.runtimeControl;
 }
 
-function getTeamDataService(services: HttpServices): NonNullable<HttpServices['teamDataService']> {
-  if (!services.teamDataService) {
+function getTeamDataApi(services: HttpServices): NonNullable<HttpServices['teamDataApi']> {
+  if (!services.teamDataApi) {
     throw new HttpFeatureUnavailableError('Team data control is not available in this mode');
   }
-  return services.teamDataService;
+  return services.teamDataApi;
 }
 
 function getStatusCode(error: unknown, fallback: number = 500): number {
@@ -100,7 +100,7 @@ async function getDraftSavedRequest(
   services: HttpServices,
   teamName: string
 ): Promise<TeamCreateRequest | null> {
-  if (!services.teamDataService) {
+  if (!services.teamDataApi) {
     return null;
   }
 
@@ -114,7 +114,7 @@ async function getDraftSavedRequest(
     }
   }
 
-  return getTeamDataService(services).getSavedRequest(teamName);
+  return getTeamDataApi(services).getSavedRequest(teamName);
 }
 
 function getMemberWorkSyncFeature(
@@ -129,8 +129,8 @@ function getMemberWorkSyncFeature(
 async function getTeamDataWithRuntimeOverlay(
   services: HttpServices,
   teamName: string
-): Promise<Awaited<ReturnType<NonNullable<HttpServices['teamDataService']>['getTeamData']>>> {
-  const data = await getTeamDataService(services).getTeamData(teamName);
+): Promise<Awaited<ReturnType<NonNullable<HttpServices['teamDataApi']>['getTeamData']>>> {
+  const data = await getTeamDataApi(services).getTeamData(teamName);
   let runtimeState: Awaited<ReturnType<TeamHttpRuntimeApi['getRuntimeState']>> | null = null;
   try {
     const runtimeApi = services.teamProvisioningApis?.runtime;
@@ -147,7 +147,7 @@ async function getTeamDataWithRuntimeOverlay(
 export function registerTeamRoutes(app: FastifyInstance, services: HttpServices): void {
   app.get('/api/teams', async (_request, reply) => {
     try {
-      return reply.send(await getTeamDataService(services).listTeams());
+      return reply.send(await getTeamDataApi(services).listTeams());
     } catch (error) {
       if (shouldLogError(error)) {
         logger.error('Error in GET /api/teams:', getErrorMessage(error));
@@ -159,7 +159,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
   app.post<{ Body: CreateTeamBody }>('/api/teams', async (request, reply) => {
     try {
       const createRequest = parseCreateTeamRequest(request.body);
-      await getTeamDataService(services).createTeamConfig(createRequest);
+      await getTeamDataApi(services).createTeamConfig(createRequest);
       return reply.status(201).send({ teamName: createRequest.teamName });
     } catch (error) {
       if (shouldLogError(error)) {
