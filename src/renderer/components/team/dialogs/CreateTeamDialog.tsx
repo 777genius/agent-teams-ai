@@ -547,6 +547,15 @@ export const CreateTeamDialog = ({
     codexAccount.loading &&
     Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')) &&
     !codexAccount.snapshot;
+  const runtimeProviderStatusById = useMemo(
+    () =>
+      new Map(
+        (effectiveCliStatus?.providers ?? []).map(
+          (provider) => [provider.providerId, provider] as const
+        )
+      ),
+    [effectiveCliStatus?.providers]
+  );
 
   // ── Persisted draft state (survives tab navigation) ──────────────────
   const {
@@ -792,10 +801,14 @@ export const CreateTeamDialog = ({
     }
   }, [open, clearProvisioningError, dialogTeamNameKey]);
 
-  const effectiveMemberDrafts = useMemo(
-    () => (syncModelsWithLead ? members.map(clearMemberModelOverrides) : members),
-    [members, syncModelsWithLead]
-  );
+  const effectiveMemberDrafts = useMemo(() => {
+    const scopedMembers = syncModelsWithLead ? members.map(clearMemberModelOverrides) : members;
+    return clearInheritedMemberModelsUnavailableForProvider({
+      members: scopedMembers,
+      selectedProviderId,
+      runtimeProviderStatusById,
+    }).members;
+  }, [members, runtimeProviderStatusById, selectedProviderId, syncModelsWithLead]);
   const hasSelectedWorktreeIsolation =
     !soloTeam &&
     effectiveMemberDrafts.some((member) => !member.removedAt && member.isolation === 'worktree');
@@ -843,16 +856,6 @@ export const CreateTeamDialog = ({
     );
     return new Map<TeamProviderId, string | null>(entries);
   }, [effectiveCliStatus?.providers]);
-  const runtimeProviderStatusById = useMemo(
-    () =>
-      new Map(
-        (effectiveCliStatus?.providers ?? []).map(
-          (provider) => [provider.providerId, provider] as const
-        )
-      ),
-    [effectiveCliStatus?.providers]
-  );
-
   const setSelectedModel = useCallback(
     (value: string): void => {
       const normalizedValue = normalizeExplicitTeamModelForUi(selectedProviderId, value);
@@ -1990,12 +1993,6 @@ export const CreateTeamDialog = ({
     [request, launchTeam, t]
   );
   const modelValidationError = useMemo(() => {
-    if (selectedProviderId === 'opencode') {
-      if (!selectedModel.trim()) {
-        return t('create.validation.openCodeLeadModelRequired');
-      }
-    }
-
     if (!runtimeProviderLoadingById.get(selectedProviderId)) {
       const leadError = getTeamModelSelectionError(
         selectedProviderId,
@@ -2036,7 +2033,6 @@ export const CreateTeamDialog = ({
     runtimeProviderLoadingById,
     selectedModel,
     selectedProviderId,
-    t,
   ]);
   const leadModelIssueText = useMemo(() => {
     const issue = getProvisioningModelIssue(

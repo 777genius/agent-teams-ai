@@ -3,7 +3,7 @@
  */
 
 import { api } from '@renderer/api';
-import { syncRendererTelemetry } from '@renderer/sentry';
+import { syncRendererTelemetry } from '@renderer/telemetry';
 import { createLogger } from '@shared/utils/logger';
 
 import type { AppState } from '../types';

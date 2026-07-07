@@ -16,6 +16,7 @@ import {
   getSentryAnonymousUserId,
 } from '@main/services/identity/AgentTeamsIdentityStore';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
+import { getSharedTelemetryBuildProperties } from '@shared/utils/buildMetadata';
 import {
   filterSafeSentryIntegrations,
   isValidDsn,
@@ -84,9 +85,9 @@ export function getSafeSentryTelemetryTags(
   identitySource: AgentTeamsIdentitySource
 ): Record<string, string> {
   return {
+    ...getSharedTelemetryBuildProperties(),
     platform: process.platform,
     arch: process.arch,
-    app_version: SENTRY_RELEASE ?? 'unknown',
     identity_source: identitySource,
   };
 }

@@ -36,10 +36,21 @@ vi.mock('@features/member-work-sync/preload', () => ({
   createMemberWorkSyncBridge: mocks.createMemberWorkSyncBridge,
 }));
 
+function getExposedValue<TValue>(name: string): TValue {
+  const call = mocks.contextBridge.exposeInMainWorld.mock.calls.find(([exposedName]) => {
+    return exposedName === name;
+  });
+  if (!call) {
+    throw new Error(`Expected ${name} to be exposed in preload`);
+  }
+  return call[1] as TValue;
+}
+
 describe('preload electronAPI memberWorkSync wiring', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.useFakeTimers();
+    delete (window as Window & { __SENTRY_IPC__?: unknown }).__SENTRY_IPC__;
     mocks.contextBridge.exposeInMainWorld.mockClear();
     mocks.ipcRenderer.invoke.mockClear();
     mocks.createMemberWorkSyncBridge.mockClear();
@@ -55,24 +66,34 @@ describe('preload electronAPI memberWorkSync wiring', () => {
     await import('../../src/preload/index');
 
     expect(mocks.createMemberWorkSyncBridge).toHaveBeenCalledWith(mocks.ipcRenderer);
-    expect(mocks.contextBridge.exposeInMainWorld).toHaveBeenCalledTimes(1);
 
-    const [apiName, electronAPI] = mocks.contextBridge.exposeInMainWorld.mock.calls[0] as [
-      string,
-      ElectronAPI,
-    ];
-
-    expect(apiName).toBe('electronAPI');
+    const electronAPI = getExposedValue<ElectronAPI>('electronAPI');
     expect(electronAPI.memberWorkSync).toBe(mocks.memberWorkSyncBridge);
+  });
+
+  it('exposes Sentry renderer IPC without relying on package subpath exports', async () => {
+    await import('../../src/preload/index');
+
+    const sentryIpc = getExposedValue<Record<string, { sendRendererStart: () => void }>>(
+      '__SENTRY_IPC__'
+    );
+
+    expect(sentryIpc['sentry-ipc']).toEqual(
+      expect.objectContaining({
+        sendRendererStart: expect.any(Function),
+        sendEnvelope: expect.any(Function),
+        sendScope: expect.any(Function),
+      })
+    );
+
+    sentryIpc['sentry-ipc'].sendRendererStart();
+    expect(mocks.ipcRenderer.send).toHaveBeenCalledWith('sentry-ipc.start');
   });
 
   it('wires the Windows elevation status API to the app IPC channel', async () => {
     await import('../../src/preload/index');
 
-    const [, electronAPI] = mocks.contextBridge.exposeInMainWorld.mock.calls[0] as [
-      string,
-      ElectronAPI,
-    ];
+    const electronAPI = getExposedValue<ElectronAPI>('electronAPI');
     const expectedStatus = {
       platform: 'win32',
       isWindows: true,

@@ -4,6 +4,14 @@
 > Цель: публичная таблица `Agent Teams | Gastown | Paperclip | Cursor | Claude Code CLI` без угадываний по конкурентам.
 > Метод: `gh repo view`, `gh release list`, `gh api` по первичным GitHub-файлам, официальные docs Cursor и Claude Code, страница Claude pricing.
 
+## Локальная корректировка Agent Teams на 2026-07-06
+
+- `Org chart / governance` для Agent Teams обновлено с `⚠️ Roles + approvals, no org chart` на `✅ Organization map + approvals`.
+- Причина: в текущем коде есть полноценная `features/organizations` slice: configurable organization tree, organizations/units/relations DTO, Organization Map tab, edit mode, team placement and manual relations.
+- `Budget controls` для Agent Teams обновлено с `⚠️ Cost/token visibility, no hard caps` на `✅ Usage budgets + scheduled hard caps`.
+- Причина: token usage budgets поддерживают monthly token/API-equivalent cost limits на global/team/project scopes, а scheduled runs прокидывают `--max-budget-usd` как жёсткий лимит запуска.
+- Важно: это не утверждает Paperclip-style per-agent monthly hard stop для всех runtime. Поэтому формулировка намеренно `Usage budgets + scheduled hard caps`, а не `Per-agent budgets + hard stops`.
+
 ## Snapshot
 
 | Проект | Позиционирование | Статус на 2026-06-25 | Лицензия |
@@ -89,6 +97,10 @@
 
 ## Источники
 
+- Agent Teams organizations feature: `src/features/organizations/README.md`
+- Agent Teams organizations DTOs: `src/features/organizations/contracts/dto.ts`
+- Agent Teams token usage budget DTOs: `src/features/token-usage/contracts/dto.ts`
+- Agent Teams scheduled budget cap: `src/main/services/schedule/ScheduledTaskExecutor.ts`
 - Gastown repo: <https://github.com/gastownhall/gastown>
 - Gastown v1.2.1: <https://github.com/gastownhall/gastown/releases/tag/v1.2.1>
 - Gastown provider guide: <https://github.com/gastownhall/gastown/blob/main/docs/agent-provider-integration.md>

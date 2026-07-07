@@ -2357,6 +2357,10 @@ export class TeamProvisioningService {
     this.appShellBoundary.setRuntimeAdapterRegistry(registry);
   }
 
+  getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null {
+    return this.appShellBoundary.getOpenCodeRuntimeAdapter();
+  }
+
   setMemberRuntimeAdvisoryInvalidator(
     invalidator: ((teamName: string, memberName: string) => void) | null
   ): void {

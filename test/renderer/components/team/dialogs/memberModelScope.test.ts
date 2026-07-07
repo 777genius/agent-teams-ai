@@ -1,9 +1,8 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   resolveProviderScopedMemberModel,
 } from '@renderer/components/team/dialogs/memberModelScope';
+import { describe, expect, it } from 'vitest';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
@@ -62,6 +61,65 @@ describe('memberModelScope', () => {
     ]);
   });
 
+  it('clears explicit OpenCode member models when the runtime exposes only Default', () => {
+    const explicitOpenCode = draft({
+      id: 'explicit-opencode',
+      providerId: 'opencode',
+      model: 'opencode/big-pickle',
+    });
+
+    const result = clearInheritedMemberModelsUnavailableForProvider({
+      members: [explicitOpenCode],
+      selectedProviderId: 'anthropic',
+      runtimeProviderStatusById: providerStatuses([
+        providerStatus('opencode', [], {
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-05-12T00:00:00.000Z',
+            staleAt: '2026-05-12T00:10:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+            },
+          },
+        }),
+      ]),
+    });
+
+    expect(result.changed).toBe(true);
+    expect(result.members).toMatchObject([
+      { id: 'explicit-opencode', providerId: 'opencode', model: '' },
+    ]);
+  });
+
+  it('preserves explicit OpenCode member models while the catalog is still loading', () => {
+    const explicitOpenCode = draft({
+      id: 'explicit-opencode',
+      providerId: 'opencode',
+      model: 'opencode/big-pickle',
+    });
+
+    const result = clearInheritedMemberModelsUnavailableForProvider({
+      members: [explicitOpenCode],
+      selectedProviderId: 'anthropic',
+      runtimeProviderStatusById: providerStatuses([
+        providerStatus('opencode', [], {
+          modelCatalogRefreshState: 'loading',
+        }),
+      ]),
+    });
+
+    expect(result.changed).toBe(false);
+    expect(result.members[0]).toBe(explicitOpenCode);
+  });
+
   it('waits for non-Anthropic runtime status before mutating inherited models', () => {
     const member = draft({ model: 'opencode/minimax-m2.5-free' });
 
@@ -82,7 +140,11 @@ function providerStatuses(
   return new Map(statuses.map((status) => [status.providerId as TeamProviderId, status]));
 }
 
-function providerStatus(providerId: TeamProviderId, models: string[]): CliProviderStatus {
+function providerStatus(
+  providerId: TeamProviderId,
+  models: string[],
+  overrides: Partial<CliProviderStatus> = {}
+): CliProviderStatus {
   return {
     providerId,
     displayName: providerId,
@@ -109,6 +171,7 @@ function providerStatus(providerId: TeamProviderId, models: string[]): CliProvid
     externalRuntimeDiagnostics: [],
     models,
     modelAvailability: [],
+    ...overrides,
   };
 }
 

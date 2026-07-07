@@ -418,6 +418,42 @@ describe('teamModelAvailability', () => {
     ).toEqual(['', 'opencode/big-pickle', 'openai/gpt-5.4']);
   });
 
+  it('does not reject stale OpenCode selections when the runtime exposes only Default', () => {
+    const providerStatus = createOpenCodeProviderStatus([], {
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-05-12T00:00:00.000Z',
+        staleAt: '2026-05-12T00:10:00.000Z',
+        defaultModelId: null,
+        defaultLaunchModel: null,
+        models: [],
+        diagnostics: {
+          configReadState: 'ready',
+          appServerState: 'healthy',
+        },
+      },
+      modelAvailability: [
+        {
+          modelId: 'opencode/big-pickle',
+          status: 'unavailable',
+          reason: 'Selected model was not found in the live OpenCode catalog',
+          checkedAt: null,
+        },
+      ],
+    });
+
+    expect(getAvailableTeamProviderModelOptions('opencode', providerStatus)).toEqual([
+      { value: '', label: 'Default', badgeLabel: 'Default' },
+    ]);
+    expect(
+      getTeamModelSelectionError('opencode', 'opencode/big-pickle', providerStatus)
+    ).toBeNull();
+  });
+
   it('reports OpenCode openai routes unavailable when OpenAI auth is invalid', () => {
     const providerStatus = createOpenCodeProviderStatus(['openai/gpt-5.4', 'opencode/big-pickle'], {
       statusMessage: 'OpenAI token invalid',

@@ -1,3 +1,5 @@
+import * as path from 'node:path';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
@@ -86,6 +88,29 @@ describe('TeamFsWorkerClient', () => {
       op: 'warmup',
       payload: {},
     });
+  });
+
+  it('includes the packaged main output worker when the client is bundled into chunks', async () => {
+    const { buildTeamFsWorkerPathCandidates } =
+      await import('../../../../src/main/services/team/TeamFsWorkerClient');
+    const baseDir = path.join(
+      '/Applications/Agent Teams AI.app/Contents/Resources/app.asar',
+      'dist-electron',
+      'main',
+      'chunks'
+    );
+
+    const candidates = buildTeamFsWorkerPathCandidates(baseDir);
+
+    expect(candidates).toContain(path.join(baseDir, 'team-fs-worker.cjs'));
+    expect(candidates).toContain(
+      path.join(
+        '/Applications/Agent Teams AI.app/Contents/Resources/app.asar',
+        'dist-electron',
+        'main',
+        'team-fs-worker.cjs'
+      )
+    );
   });
 
   it('does not queue warmup behind an already running worker', async () => {

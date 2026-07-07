@@ -908,6 +908,9 @@ export function getTeamModelSelectionError(
   }
 
   const visibleModels = getVisibleRuntimeModels(providerId, providerStatus);
+  if (providerId === 'opencode' && visibleModels.length === 0) {
+    return null;
+  }
   if (!visibleModels.includes(trimmed)) {
     return `Model "${trimmed}" is not available for the current ${getTeamProviderLabel(providerId) ?? providerId} runtime. Pick one of the listed models or use Default.`;
   }

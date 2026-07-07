@@ -1,4 +1,5 @@
 import {
+  getAvailableTeamProviderModels,
   isTeamModelAvailableForUi,
   normalizeExplicitTeamModelForUi,
   type TeamModelRuntimeProviderStatus,
@@ -45,6 +46,22 @@ export function resolveProviderScopedMemberModel(input: {
   return { providerId, model: normalizedModel };
 }
 
+function shouldClearOpenCodeModelToDefault(
+  providerId: TeamProviderId,
+  providerStatus: TeamModelRuntimeProviderStatus | null | undefined
+): boolean {
+  if (providerId !== 'opencode' || !providerStatus) {
+    return false;
+  }
+  if (
+    providerStatus.modelCatalogRefreshState === 'loading' ||
+    providerStatus.modelVerificationState === 'verifying'
+  ) {
+    return false;
+  }
+  return getAvailableTeamProviderModels('opencode', providerStatus).length === 0;
+}
+
 export function clearInheritedMemberModelsUnavailableForProvider(input: {
   members: MemberDraft[];
   selectedProviderId: TeamProviderId;
@@ -52,7 +69,22 @@ export function clearInheritedMemberModelsUnavailableForProvider(input: {
 }): { members: MemberDraft[]; changed: boolean } {
   let changed = false;
   const members = input.members.map((member) => {
-    if (member.removedAt || member.providerId || !member.model?.trim()) {
+    if (member.removedAt || !member.model?.trim()) {
+      return member;
+    }
+    const providerId = resolveMemberProviderForModelScope({
+      memberProviderId: member.providerId,
+      selectedProviderId: input.selectedProviderId,
+    });
+    const providerStatus = input.runtimeProviderStatusById.get(providerId) ?? null;
+    if (shouldClearOpenCodeModelToDefault(providerId, providerStatus)) {
+      changed = true;
+      return {
+        ...member,
+        model: '',
+      };
+    }
+    if (member.providerId) {
       return member;
     }
     if (

@@ -84,6 +84,13 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: node ./scripts/ci/verify-sentry-release.cjs prebuild
 
+      - name: Verify PostHog release env
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: https://eu.i.posthog.com
+        run: node ./scripts/ci/verify-posthog-release.cjs prebuild
+
       - name: Build app
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
@@ -91,6 +98,8 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_AUTH_TOKEN || '' }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          POSTHOG_KEY: ${{ github.event_name == 'workflow_dispatch' && secrets.POSTHOG_KEY || '' }}
+          POSTHOG_HOST: https://eu.i.posthog.com
         run: pnpm build
 
       - name: Verify Sentry source map upload
@@ -101,6 +110,13 @@ jobs:
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: node ./scripts/ci/verify-sentry-release.cjs postbuild
+
+      - name: Verify PostHog renderer bundle
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: https://eu.i.posthog.com
+        run: node ./scripts/ci/verify-posthog-release.cjs postbuild
 
       - name: Create GitHub Release
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}
@@ -527,6 +543,13 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: node ./scripts/ci/verify-sentry-release.cjs prebuild
 
+      - name: Verify PostHog release env (macOS ${{ matrix.arch }})
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: https://eu.i.posthog.com
+        run: node ./scripts/ci/verify-posthog-release.cjs prebuild
+
       - name: Build app (macOS ${{ matrix.arch }})
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
@@ -534,6 +557,8 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_AUTH_TOKEN || '' }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          POSTHOG_KEY: ${{ github.event_name == 'workflow_dispatch' && secrets.POSTHOG_KEY || '' }}
+          POSTHOG_HOST: https://eu.i.posthog.com
         run: pnpm build
 
       - name: Verify Sentry source map upload (macOS ${{ matrix.arch }})
@@ -544,6 +569,13 @@ jobs:
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: node ./scripts/ci/verify-sentry-release.cjs postbuild
+
+      - name: Verify PostHog renderer bundle (macOS ${{ matrix.arch }})
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: https://eu.i.posthog.com
+        run: node ./scripts/ci/verify-posthog-release.cjs postbuild
 
       - name: Verify packaged inputs (macOS ${{ matrix.arch }})
         run: |
@@ -655,6 +687,13 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: node ./scripts/ci/verify-sentry-release.cjs prebuild
 
+      - name: Verify PostHog release env (Windows)
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: https://eu.i.posthog.com
+        run: node ./scripts/ci/verify-posthog-release.cjs prebuild
+
       - name: Build app (Windows)
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
@@ -662,6 +701,8 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_AUTH_TOKEN || '' }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          POSTHOG_KEY: ${{ github.event_name == 'workflow_dispatch' && secrets.POSTHOG_KEY || '' }}
+          POSTHOG_HOST: https://eu.i.posthog.com
         run: pnpm build
 
       - name: Verify Sentry source map upload (Windows)
@@ -672,6 +713,13 @@ jobs:
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: node ./scripts/ci/verify-sentry-release.cjs postbuild
+
+      - name: Verify PostHog renderer bundle (Windows)
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: https://eu.i.posthog.com
+        run: node ./scripts/ci/verify-posthog-release.cjs postbuild
 
       - name: Verify packaged inputs (Windows)
         shell: bash
@@ -785,6 +833,13 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: node ./scripts/ci/verify-sentry-release.cjs prebuild
 
+      - name: Verify PostHog release env (Linux)
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: https://eu.i.posthog.com
+        run: node ./scripts/ci/verify-posthog-release.cjs prebuild
+
       - name: Build app (Linux)
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
@@ -792,6 +847,8 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_AUTH_TOKEN || '' }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          POSTHOG_KEY: ${{ github.event_name == 'workflow_dispatch' && secrets.POSTHOG_KEY || '' }}
+          POSTHOG_HOST: https://eu.i.posthog.com
         run: pnpm build
 
       - name: Verify Sentry source map upload (Linux)
@@ -802,6 +859,13 @@ jobs:
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: node ./scripts/ci/verify-sentry-release.cjs postbuild
+
+      - name: Verify PostHog renderer bundle (Linux)
+        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        env:
+          POSTHOG_KEY: ${{ secrets.POSTHOG_KEY }}
+          POSTHOG_HOST: https://eu.i.posthog.com
+        run: node ./scripts/ci/verify-posthog-release.cjs postbuild
 
       - name: Verify packaged inputs (Linux)
         run: |

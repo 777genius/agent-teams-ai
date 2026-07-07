@@ -101,10 +101,12 @@ const ruNotes: Record<string, string> = {
   'Session health, less clear message status': 'Здоровье сессии, менее ясный статус сообщений',
   'Run status, not live teammate status': 'Статус запуска, не live-статус участника',
   'CLI mailbox, no visual status': 'CLI mailbox, без визуального статуса',
+  'Organization map + approvals': 'Оргкарта и подтверждения',
   'Roles + approvals, no org chart': 'Роли и подтверждения, без оргструктуры',
   'Roles + escalation': 'Роли и эскалация',
   'Org chart + board governance': 'Оргструктура и управление доской',
   'Team admin only': 'Только администрирование команды',
+  'Usage budgets + scheduled hard caps': 'Бюджеты расхода и жёсткие лимиты запусков',
   'Cost/token visibility, no hard caps': 'Видимость стоимости/токенов, без жёстких лимитов',
   'Cost tiers + digest, no hard caps': 'Тарифные уровни и дайджест, без жёстких лимитов',
   'Per-agent budgets + hard stops': 'Бюджеты на агента и жёсткие остановки',
@@ -123,11 +125,14 @@ function note(text: string): string {
 
 const sourcesPrefix = computed(() => (
   locale.value === 'ru'
-    ? 'Источники фактов проверены 25 июня 2026:'
-    : 'Fact sources checked on June 25, 2026:'
+    ? 'Факты Agent Teams проверены по локальному исходному коду 6 июля 2026; источники конкурентов проверены 25 июня 2026:'
+    : 'Agent Teams product facts checked in local source on July 6, 2026; competitor sources checked on June 25, 2026:'
 ))
 
 const ruSourceLabels: Record<string, string> = {
+  'Agent Teams organizations feature': 'фича организаций Agent Teams',
+  'Agent Teams token usage budgets': 'бюджеты расхода токенов Agent Teams',
+  'Agent Teams scheduled budget cap': 'лимит бюджета scheduled runs Agent Teams',
   'detailed research notes': 'подробные заметки исследования',
   'Gastown provider guide': 'гайд по провайдерам Gastown',
   'Gastown scheduler': 'планировщик Gastown',
@@ -361,7 +366,7 @@ const rows = computed<ComparisonRow[]>(() => [
   },
   {
     feature: t('comparison.features.orgGovernance'),
-    us: { status: 'partial', note: note('Roles + approvals, no org chart') },
+    us: { status: 'yes', note: note('Organization map + approvals') },
     gastown: { status: 'partial', note: note('Roles + escalation') },
     paperclip: { status: 'yes', note: note('Org chart + board governance') },
     cursor: { status: 'partial', note: note('Team admin only') },
@@ -369,7 +374,7 @@ const rows = computed<ComparisonRow[]>(() => [
   },
   {
     feature: t('comparison.features.budgetControls'),
-    us: { status: 'partial', note: note('Cost/token visibility, no hard caps') },
+    us: { status: 'yes', note: note('Usage budgets + scheduled hard caps') },
     gastown: { status: 'partial', note: note('Cost tiers + digest, no hard caps') },
     paperclip: { status: 'yes', note: note('Per-agent budgets + hard stops') },
     cursor: { status: 'partial', note: note('Usage + cloud spend limits') },
@@ -394,6 +399,18 @@ const competitors = [
 ]
 
 const sourceLinks = [
+  {
+    label: 'Agent Teams organizations feature',
+    href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/organizations/README.md',
+  },
+  {
+    label: 'Agent Teams token usage budgets',
+    href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/token-usage/contracts/dto.ts',
+  },
+  {
+    label: 'Agent Teams scheduled budget cap',
+    href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/main/services/schedule/ScheduledTaskExecutor.ts',
+  },
   {
     label: 'detailed research notes',
     href: 'https://github.com/777genius/agent-teams-ai/blob/main/docs/research/gastown-paperclip-comparison-2026-06-25.md',

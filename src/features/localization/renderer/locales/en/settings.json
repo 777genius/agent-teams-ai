@@ -221,8 +221,8 @@
     },
     "privacy": {
       "telemetry": {
-        "description": "Help improve the app by sending anonymous crash and performance data",
-        "label": "Send crash reports"
+        "description": "Help improve the app by sending anonymous crash, performance, and product usage data. Session replay is not recorded.",
+        "label": "Send anonymous telemetry"
       },
       "title": "Privacy"
     },

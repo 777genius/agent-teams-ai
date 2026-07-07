@@ -6,12 +6,10 @@
  * (main: process.env, renderer: import.meta.env).
  */
 
-// eslint-disable-next-line @typescript-eslint/naming-convention -- Vite `define` injects this global
-declare const __APP_VERSION__: string;
+import { APP_RELEASE } from './buildMetadata';
 
 /** Release identifier injected at build time via Vite `define`. */
-export const SENTRY_RELEASE =
-  typeof __APP_VERSION__ === 'string' ? `agent-teams-ai@${__APP_VERSION__}` : undefined;
+export const SENTRY_RELEASE = APP_RELEASE;
 
 /** Environment derived from Node/Vite mode. */
 export const SENTRY_ENVIRONMENT =
