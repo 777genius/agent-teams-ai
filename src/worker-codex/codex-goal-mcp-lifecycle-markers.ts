@@ -1,8 +1,17 @@
-import { readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
 
 type JsonObject = Readonly<Record<string, unknown>>;
+
+type CodexGoalLifecycleBrief = {
+  readonly silentStale?: boolean | undefined;
+  readonly heartbeatOnlyNoOutput?: boolean | undefined;
+  readonly lastProgressAt?: string | undefined;
+  readonly lastProgressAgeMs?: number | undefined;
+  readonly staleAfterMs?: number | undefined;
+  readonly logByteLength?: number | undefined;
+};
 
 type CodexGoalLifecycleMarkerSpec = {
   readonly type: "pause_request" | "maintenance_pause" | "review" | "stop_event";
@@ -51,6 +60,140 @@ export async function readCodexGoalLifecycleMarkers(input: {
       Date.parse(String(right.timestamp ?? right.updatedAt ?? "0")) -
       Date.parse(String(left.timestamp ?? left.updatedAt ?? "0"))
     );
+}
+
+export async function writeCodexGoalReviewMarker(input: {
+  readonly jobId: string;
+  readonly taskId: string;
+  readonly jobRootDir: string;
+  readonly note: string;
+  readonly status: unknown;
+}): Promise<string> {
+  await mkdir(input.jobRootDir, { recursive: true, mode: 0o700 });
+  const reviewPath = join(input.jobRootDir, `${input.taskId}.review.json`);
+  await writeFile(
+    reviewPath,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      jobId: input.jobId,
+      taskId: input.taskId,
+      reviewedAt: new Date().toISOString(),
+      note: input.note,
+      status: input.status,
+    }, null, 2)}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
+  return reviewPath;
+}
+
+export async function writeCodexGoalStopEvent(input: {
+  readonly jobId: string;
+  readonly taskId: string;
+  readonly jobRootDir: string;
+  readonly tmuxSession?: string;
+  readonly stopCommand: string;
+  readonly forceStop: boolean;
+  readonly statusBefore: unknown;
+  readonly statusAfter: unknown;
+  readonly brief: CodexGoalLifecycleBrief;
+}): Promise<string> {
+  await mkdir(input.jobRootDir, { recursive: true, mode: 0o700 });
+  const path = join(input.jobRootDir, `${input.taskId}.stop-event.json`);
+  await writeFile(
+    path,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      jobId: input.jobId,
+      taskId: input.taskId,
+      stoppedAt: new Date().toISOString(),
+      ...(input.tmuxSession === undefined ? {} : { tmuxSession: input.tmuxSession }),
+      stopCommand: input.stopCommand,
+      forceStop: input.forceStop,
+      reason: input.brief.silentStale
+        ? "silent_stale_worker"
+        : input.brief.heartbeatOnlyNoOutput
+        ? "heartbeat_only_no_output"
+        : "manual_force_stop",
+      brief: {
+        silentStale: input.brief.silentStale,
+        heartbeatOnlyNoOutput: input.brief.heartbeatOnlyNoOutput,
+        lastProgressAt: input.brief.lastProgressAt,
+        lastProgressAgeMs: input.brief.lastProgressAgeMs,
+        staleAfterMs: input.brief.staleAfterMs,
+        logByteLength: input.brief.logByteLength,
+        workspaceDirty: statusField(input.statusBefore, "workspaceDirty"),
+        changedFiles: changedFilesFromStatus(input.statusBefore),
+      },
+      statusBefore: input.statusBefore,
+      statusAfter: input.statusAfter,
+    }, null, 2)}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
+  return path;
+}
+
+export async function writeCodexGoalMaintenancePauseEvent(input: {
+  readonly jobId: string;
+  readonly taskId: string;
+  readonly jobRootDir: string;
+  readonly tmuxSession: string;
+  readonly stopCommand: string;
+  readonly reason: string;
+  readonly forcePause: boolean;
+  readonly statusBefore: unknown;
+  readonly statusAfter: unknown;
+  readonly brief: CodexGoalLifecycleBrief;
+}): Promise<string> {
+  await mkdir(input.jobRootDir, { recursive: true, mode: 0o700 });
+  const path = join(input.jobRootDir, `${input.taskId}.maintenance-pause.json`);
+  await writeFile(
+    path,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      jobId: input.jobId,
+      taskId: input.taskId,
+      pausedAt: new Date().toISOString(),
+      tmuxSession: input.tmuxSession,
+      stopCommand: input.stopCommand,
+      forcePause: input.forcePause,
+      reason: input.reason,
+      brief: {
+        lastProgressAt: input.brief.lastProgressAt,
+        lastProgressAgeMs: input.brief.lastProgressAgeMs,
+        staleAfterMs: input.brief.staleAfterMs,
+        logByteLength: input.brief.logByteLength,
+        workspaceDirty: statusField(input.statusBefore, "workspaceDirty"),
+        changedFiles: changedFilesFromStatus(input.statusBefore),
+      },
+      statusBefore: input.statusBefore,
+      statusAfter: input.statusAfter,
+    }, null, 2)}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
+  return path;
+}
+
+export async function writeCodexGoalStoppedProgress(input: {
+  readonly progressPath: string;
+  readonly taskId: string;
+  readonly status: "stopped" | "maintenance_paused";
+  readonly reason?: string;
+}): Promise<void> {
+  await mkdir(dirname(input.progressPath), { recursive: true, mode: 0o700 });
+  const tempPath = `${input.progressPath}.${process.pid}.${Date.now()}.tmp`;
+  await writeFile(
+    tempPath,
+    `${JSON.stringify({
+      schemaVersion: 1,
+      taskId: input.taskId,
+      updatedAt: new Date().toISOString(),
+      pid: process.pid,
+      status: input.status,
+      ...(input.reason ? { reason: input.reason } : {}),
+    }, null, 2)}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
+  await rename(tempPath, input.progressPath);
 }
 
 async function readCodexGoalLifecycleMarker(input: {
@@ -112,6 +255,15 @@ function firstStringKey(
     if (typeof value === "string" && value.trim()) return redactText(value.trim());
   }
   return undefined;
+}
+
+function statusField(status: unknown, key: string): unknown {
+  return isRecord(status) ? status[key] : undefined;
+}
+
+function changedFilesFromStatus(status: unknown): readonly unknown[] {
+  const changedFiles = statusField(status, "changedFiles");
+  return Array.isArray(changedFiles) ? changedFiles : [];
 }
 
 function redactText(value: string): string {
