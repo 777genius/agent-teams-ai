@@ -194,6 +194,9 @@ type HostLaunchDirectProcessMemberRestart = NonNullable<
 type HostStopPrimaryOwnedRosterRuntime = NonNullable<
   TeamProvisioningMemberLifecycleHost['stopPrimaryOwnedRosterRuntime']
 >;
+type HostPreparePrimaryOwnedMemberRestartRuntime = NonNullable<
+  TeamProvisioningMemberLifecycleHost['preparePrimaryOwnedMemberRestartRuntime']
+>;
 type HostCollectFailedOpenCodeSecondaryRetryCandidates = NonNullable<
   TeamProvisioningMemberLifecycleHost['collectFailedOpenCodeSecondaryRetryCandidates']
 >;
@@ -219,6 +222,7 @@ export interface TeamProvisioningMemberLifecycleHostFactoryUseCasePorts<
   ) => ReturnType<HostLaunchDirectProcessMemberRestart>;
   appendDirectProcessRuntimeEvent?: AppendDirectProcessRuntimeEventUseCase;
   stopPrimaryOwnedRosterRuntime?: HostStopPrimaryOwnedRosterRuntime;
+  preparePrimaryOwnedMemberRestartRuntime?: HostPreparePrimaryOwnedMemberRestartRuntime;
   collectFailedOpenCodeSecondaryRetryCandidates?: (
     run: TRun
   ) => ReturnType<HostCollectFailedOpenCodeSecondaryRetryCandidates>;
@@ -334,6 +338,7 @@ export const TEAM_PROVISIONING_MEMBER_LIFECYCLE_HOST_FACTORY_PORT_KEYS = {
     'launchDirectProcessMemberRestart',
     'appendDirectProcessRuntimeEvent',
     'stopPrimaryOwnedRosterRuntime',
+    'preparePrimaryOwnedMemberRestartRuntime',
     'collectFailedOpenCodeSecondaryRetryCandidates',
     'readOpenCodeSecondaryRetryOutcome',
     'notifyLeadAboutConfirmedOpenCodeRetries',
@@ -434,6 +439,8 @@ export function createTeamProvisioningMemberLifecycleHostFromPortGroups<
   const launchDirectProcessMemberRestartSeam = useCases.launchDirectProcessMemberRestart;
   const appendDirectProcessRuntimeEventSeam = useCases.appendDirectProcessRuntimeEvent;
   const stopPrimaryOwnedRosterRuntimeSeam = useCases.stopPrimaryOwnedRosterRuntime;
+  const preparePrimaryOwnedMemberRestartRuntimeSeam =
+    useCases.preparePrimaryOwnedMemberRestartRuntime;
   const collectFailedOpenCodeSecondaryRetryCandidatesSeam =
     useCases.collectFailedOpenCodeSecondaryRetryCandidates;
   const readOpenCodeSecondaryRetryOutcomeSeam = useCases.readOpenCodeSecondaryRetryOutcome;
@@ -582,6 +589,9 @@ export function createTeamProvisioningMemberLifecycleHostFromPortGroups<
       : undefined,
     stopPrimaryOwnedRosterRuntime: stopPrimaryOwnedRosterRuntimeSeam
       ? (input) => stopPrimaryOwnedRosterRuntimeSeam.call(useCases, input)
+      : undefined,
+    preparePrimaryOwnedMemberRestartRuntime: preparePrimaryOwnedMemberRestartRuntimeSeam
+      ? (input) => preparePrimaryOwnedMemberRestartRuntimeSeam.call(useCases, input)
       : undefined,
     collectFailedOpenCodeSecondaryRetryCandidates: collectFailedOpenCodeSecondaryRetryCandidatesSeam
       ? (run) =>

@@ -397,6 +397,13 @@ describe('TeamProvisioningMemberLifecycleHostFactory', () => {
       async stopPrimaryOwnedRosterRuntime(this: { marker: string }, input) {
         useCaseEvents.push(`${this.marker}:stop-primary:${input.memberName}`);
       },
+      async preparePrimaryOwnedMemberRestartRuntime(this: { marker: string }, input) {
+        useCaseEvents.push(`${this.marker}:prepare-restart:${input.memberName}`);
+        return {
+          directTmuxRestartPaneId: 'pane-1',
+          shouldDirectProcessRestart: false,
+        };
+      },
       async collectFailedOpenCodeSecondaryRetryCandidates(this: { marker: string }, run) {
         useCaseEvents.push(`${this.marker}:collect:${run.id}`);
         return [{ memberName: 'Worker', laneId: 'secondary:opencode:worker' }];
@@ -466,6 +473,18 @@ describe('TeamProvisioningMemberLifecycleHostFactory', () => {
       liveRuntimeByMember: new Map(),
       actionLabel: 'Stop Worker',
     });
+    await expect(
+      host.preparePrimaryOwnedMemberRestartRuntime!({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        persistedRuntimeMembers: [],
+        invalidateRuntimeSnapshotCaches: () => undefined,
+        loadLiveRuntimeByMember: async () => new Map(),
+      })
+    ).resolves.toEqual({
+      directTmuxRestartPaneId: 'pane-1',
+      shouldDirectProcessRestart: false,
+    });
     await expect(host.collectFailedOpenCodeSecondaryRetryCandidates!(run)).resolves.toEqual([
       { memberName: 'Worker', laneId: 'secondary:opencode:worker' },
     ]);
@@ -483,6 +502,7 @@ describe('TeamProvisioningMemberLifecycleHostFactory', () => {
       'use-case:launch-process:run-use-case',
       'use-case:runtime-event:process_spawned',
       'use-case:stop-primary:Worker',
+      'use-case:prepare-restart:Worker',
       'use-case:collect:run-use-case',
       'use-case:outcome:run-use-case:Worker:secondary:opencode:worker',
       'use-case:notify:run-use-case:Worker',

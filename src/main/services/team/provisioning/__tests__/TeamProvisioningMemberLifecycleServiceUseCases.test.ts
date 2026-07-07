@@ -9,6 +9,7 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
     const sentMessages: Array<{ teamName: string; message: Record<string, unknown> }> = [];
     const runtimeEvents: DirectProcessRuntimeEventInput[] = [];
     const stoppedMembers: string[] = [];
+    const preparedRestartMembers: string[] = [];
 
     const useCases = createTeamProvisioningMemberLifecycleServiceUseCases({
       persistSentMessage: (teamName, message) => {
@@ -20,6 +21,13 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
       stopPrimaryOwnedRosterRuntime: async (input) => {
         stoppedMembers.push(`${input.teamName}:${input.memberName}`);
       },
+      preparePrimaryOwnedMemberRestartRuntime: async (input) => {
+        preparedRestartMembers.push(`${input.teamName}:${input.memberName}`);
+        return {
+          directTmuxRestartPaneId: null,
+          shouldDirectProcessRestart: true,
+        };
+      },
       nowIso: () => '2026-07-06T17:00:00.000Z',
       randomUUID: () => 'uuid-1',
     });
@@ -27,6 +35,7 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
     expect(Object.keys(useCases).sort()).toEqual([
       'appendDirectProcessRuntimeEvent',
       'persistOpenCodeMemberRestartSystemMessage',
+      'preparePrimaryOwnedMemberRestartRuntime',
       'stopPrimaryOwnedRosterRuntime',
     ]);
 
@@ -56,6 +65,18 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
       persistedRuntimeMembers: [],
       liveRuntimeByMember: new Map(),
     });
+    await expect(
+      useCases.preparePrimaryOwnedMemberRestartRuntime({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        persistedRuntimeMembers: [],
+        invalidateRuntimeSnapshotCaches: () => undefined,
+        loadLiveRuntimeByMember: async () => new Map(),
+      })
+    ).resolves.toEqual({
+      directTmuxRestartPaneId: null,
+      shouldDirectProcessRestart: true,
+    });
     expect(sentMessages).toHaveLength(1);
     expect(sentMessages[0]?.message).toMatchObject({
       from: 'Lead',
@@ -73,5 +94,6 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
       }),
     ]);
     expect(stoppedMembers).toEqual(['team-a:Worker']);
+    expect(preparedRestartMembers).toEqual(['team-a:Worker']);
   });
 });

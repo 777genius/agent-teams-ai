@@ -1,14 +1,11 @@
 import { buildPlannedMemberLaneIdentity } from '@features/team-runtime-lanes';
 import {
-  killTmuxPaneForCurrentPlatformSync,
-  listTmuxPanePidsForCurrentPlatform,
   listTmuxPaneRuntimeInfoForCurrentPlatform,
   sendKeysToTmuxPaneForCurrentPlatform,
 } from '@features/tmux-installer/main';
 import { spawnCli } from '@main/utils/childProcess';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
@@ -64,6 +61,11 @@ import {
   hasOpenCodeRuntimeLivenessMarker,
   MEMBER_BOOTSTRAP_STALL_MS,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import {
+  createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase,
+  type PreparePrimaryOwnedMemberRestartRuntimeInput,
+  type PreparePrimaryOwnedMemberRestartRuntimeResult,
+} from './TeamProvisioningPreparePrimaryOwnedMemberRestartRuntimeUseCase';
 import {
   buildMemberSpawnPrompt,
   buildRestartMemberSpawnMessage,
@@ -164,67 +166,6 @@ function applyAppManagedRuntimeSettingsPathEnv(
   } else {
     delete env[CLAUDE_TEAM_RUNTIME_SETTINGS_PATH_ENV];
   }
-}
-
-async function waitForPidsToExit(
-  pids: readonly number[],
-  options: { timeoutMs: number; pollMs: number }
-): Promise<number[]> {
-  const uniquePids = [...new Set(pids.filter((pid) => Number.isFinite(pid) && pid > 0))];
-  if (uniquePids.length === 0) {
-    return [];
-  }
-  const deadline = Date.now() + options.timeoutMs;
-  while (Date.now() < deadline) {
-    const alive = uniquePids.filter((pid) => isProcessAlive(pid));
-    if (alive.length === 0) {
-      return [];
-    }
-    await new Promise((resolve) => setTimeout(resolve, options.pollMs));
-  }
-  return uniquePids.filter((pid) => isProcessAlive(pid));
-}
-
-async function waitForTmuxPanesToExit(
-  paneIds: readonly string[],
-  options: { timeoutMs: number; pollMs: number }
-): Promise<string[]> {
-  const uniquePaneIds = [...new Set(paneIds.map((paneId) => paneId.trim()).filter(Boolean))];
-  if (uniquePaneIds.length === 0) {
-    return [];
-  }
-  const deadline = Date.now() + options.timeoutMs;
-  while (Date.now() < deadline) {
-    let paneInfo: Map<string, number>;
-    try {
-      paneInfo = await listTmuxPanePidsForCurrentPlatform(uniquePaneIds);
-    } catch (error) {
-      if (isTmuxServerUnavailableError(error)) {
-        return [];
-      }
-      throw error;
-    }
-    const alive = uniquePaneIds.filter((paneId) => paneInfo.has(paneId));
-    if (alive.length === 0) {
-      return [];
-    }
-    await new Promise((resolve) => setTimeout(resolve, options.pollMs));
-  }
-  let finalPaneInfo: Map<string, number>;
-  try {
-    finalPaneInfo = await listTmuxPanePidsForCurrentPlatform(uniquePaneIds);
-  } catch (error) {
-    if (isTmuxServerUnavailableError(error)) {
-      return [];
-    }
-    throw error;
-  }
-  return uniquePaneIds.filter((paneId) => finalPaneInfo.has(paneId));
-}
-
-function isTmuxServerUnavailableError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return /error connecting to .*tmux.*No such file or directory/i.test(message);
 }
 
 async function ensureCwdExists(cwd: string): Promise<void> {
@@ -580,6 +521,9 @@ export interface TeamProvisioningMemberLifecycleUseCasePorts {
   launchDirectProcessMemberRestart?(input: DirectProcessMemberRestartInput): Promise<void>;
   appendDirectProcessRuntimeEvent?: AppendDirectProcessRuntimeEventUseCase;
   stopPrimaryOwnedRosterRuntime?(input: StopPrimaryOwnedRosterRuntimeInput): Promise<void>;
+  preparePrimaryOwnedMemberRestartRuntime?(
+    input: PreparePrimaryOwnedMemberRestartRuntimeInput
+  ): Promise<PreparePrimaryOwnedMemberRestartRuntimeResult>;
   collectFailedOpenCodeSecondaryRetryCandidates?(
     run: ProvisioningRun
   ): Promise<OpenCodeSecondaryRetryCandidate[]>;
@@ -625,6 +569,8 @@ export class TeamProvisioningMemberLifecycleController {
     createAppendDirectProcessRuntimeEventUseCase();
   private readonly stopPrimaryOwnedRosterRuntimeFallback =
     createNodeStopPrimaryOwnedRosterRuntimeUseCase();
+  private readonly preparePrimaryOwnedMemberRestartRuntimeFallback =
+    createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase();
 
   constructor(
     private readonly host: TeamProvisioningMemberLifecycleHost,
@@ -882,29 +828,6 @@ export class TeamProvisioningMemberLifecycleController {
 
   private readPersistedTeamProjectPath(teamName: string): string | null {
     return this.host.readPersistedTeamProjectPath(teamName);
-  }
-
-  private getDirectTmuxRestartPaneId(
-    persistedRuntimeMembers: readonly PersistedRuntimeMemberLike[],
-    memberName: string
-  ): string | null {
-    for (const persistedRuntimeMember of persistedRuntimeMembers) {
-      const backendType = persistedRuntimeMember.backendType?.trim().toLowerCase();
-      const paneId =
-        typeof persistedRuntimeMember.tmuxPaneId === 'string'
-          ? persistedRuntimeMember.tmuxPaneId.trim()
-          : '';
-      const runtimeMemberName =
-        typeof persistedRuntimeMember.name === 'string' ? persistedRuntimeMember.name : '';
-      if (
-        backendType === 'tmux' &&
-        paneId &&
-        matchesMemberNameOrBase(runtimeMemberName, memberName)
-      ) {
-        return paneId;
-      }
-    }
-    return null;
   }
 
   private resolveDirectRestartRuntimeCwd(params: {
@@ -1721,6 +1644,22 @@ export class TeamProvisioningMemberLifecycleController {
     await this.stopPrimaryOwnedRosterRuntimeFallback(input);
   }
 
+  private async preparePrimaryOwnedMemberRestartRuntime(
+    input: PreparePrimaryOwnedMemberRestartRuntimeInput
+  ): Promise<PreparePrimaryOwnedMemberRestartRuntimeResult> {
+    const seam = this.host.preparePrimaryOwnedMemberRestartRuntime;
+    if (seam) {
+      return await seam(input);
+    }
+    return await this.preparePrimaryOwnedMemberRestartRuntimeInternal(input);
+  }
+
+  async preparePrimaryOwnedMemberRestartRuntimeInternal(
+    input: PreparePrimaryOwnedMemberRestartRuntimeInput
+  ): Promise<PreparePrimaryOwnedMemberRestartRuntimeResult> {
+    return await this.preparePrimaryOwnedMemberRestartRuntimeFallback(input);
+  }
+
   private async attachLiveRosterMemberUnlocked(
     teamName: string,
     memberName: string,
@@ -2021,134 +1960,15 @@ export class TeamProvisioningMemberLifecycleController {
       const candidateName = typeof member.name === 'string' ? member.name.trim() : '';
       return candidateName.length > 0 && matchesMemberNameOrBase(candidateName, memberName);
     });
-    const directTmuxRestartCandidatePaneId = this.getDirectTmuxRestartPaneId(
+
+    const restartRuntimePreparation = await this.preparePrimaryOwnedMemberRestartRuntime({
+      teamName,
+      memberName,
       persistedRuntimeMembers,
-      memberName
-    );
-
-    const backendTypes = new Set(
-      persistedRuntimeMembers
-        .map((member) => member.backendType?.trim().toLowerCase())
-        .filter((value): value is string => Boolean(value))
-    );
-    if (backendTypes.has('in-process')) {
-      throw new Error(
-        `Member "${memberName}" uses an in-process runtime and cannot be restarted here`
-      );
-    }
-
-    this.invalidateRuntimeSnapshotCaches(teamName);
-    const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(teamName);
-    const livePids = new Set<number>();
-    let hasAliveRuntimeWithoutPid = false;
-    for (const [candidateName, metadata] of liveRuntimeByMember.entries()) {
-      if (!matchesMemberNameOrBase(candidateName, memberName)) {
-        continue;
-      }
-      if (metadata.pid) {
-        livePids.add(metadata.pid);
-        continue;
-      }
-      if (metadata.alive && metadata.backendType !== 'in-process') {
-        hasAliveRuntimeWithoutPid = true;
-      }
-    }
-
-    if (hasAliveRuntimeWithoutPid) {
-      throw new Error(
-        `Member "${memberName}" is running, but its backend does not expose a restartable pid yet`
-      );
-    }
-
-    let directTmuxRestartPaneId: string | null = null;
-    if (directTmuxRestartCandidatePaneId) {
-      try {
-        const paneInfo = (
-          await listTmuxPaneRuntimeInfoForCurrentPlatform([directTmuxRestartCandidatePaneId])
-        ).get(directTmuxRestartCandidatePaneId);
-        if (paneInfo && isInteractiveShellCommand(paneInfo.currentCommand)) {
-          directTmuxRestartPaneId = directTmuxRestartCandidatePaneId;
-        }
-      } catch (error) {
-        logger.debug(
-          `[${teamName}] Direct tmux restart probe failed for ${memberName}: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    const tmuxPaneIdsToVerify: string[] = [];
-    if (!directTmuxRestartPaneId) {
-      for (const persistedRuntimeMember of persistedRuntimeMembers) {
-        const paneId =
-          typeof persistedRuntimeMember.tmuxPaneId === 'string'
-            ? persistedRuntimeMember.tmuxPaneId.trim()
-            : '';
-        const backendType = persistedRuntimeMember.backendType?.trim().toLowerCase();
-        if (!paneId || backendType !== 'tmux') {
-          continue;
-        }
-        tmuxPaneIdsToVerify.push(paneId);
-        try {
-          killTmuxPaneForCurrentPlatformSync(paneId);
-          logger.info(
-            `[${teamName}] Killed teammate pane ${memberName} (${paneId}) for manual restart`
-          );
-        } catch (error) {
-          logger.debug(
-            `[${teamName}] Failed to kill teammate pane ${memberName} (${paneId}) for manual restart: ${
-              error instanceof Error ? error.message : String(error)
-            }`
-          );
-        }
-      }
-    }
-
-    for (const pid of livePids) {
-      try {
-        killProcessByPid(pid);
-      } catch (error) {
-        logger.debug(
-          `[${teamName}] Failed to kill teammate process ${memberName} pid=${pid} for manual restart: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    if (livePids.size > 0) {
-      const lingeringPids = await waitForPidsToExit(Array.from(livePids), {
-        timeoutMs: 1_500,
-        pollMs: 100,
-      });
-      if (lingeringPids.length > 0) {
-        throw new Error(
-          `Restart for teammate "${memberName}" is still waiting for the previous process to exit (${lingeringPids.join(', ')}).`
-        );
-      }
-    }
-
-    if (tmuxPaneIdsToVerify.length > 0) {
-      let lingeringPaneIds: string[];
-      try {
-        lingeringPaneIds = await waitForTmuxPanesToExit(tmuxPaneIdsToVerify, {
-          timeoutMs: 1_500,
-          pollMs: 100,
-        });
-      } catch (error) {
-        throw new Error(
-          `Restart for teammate "${memberName}" could not verify that the previous tmux pane exited: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-      if (lingeringPaneIds.length > 0) {
-        throw new Error(
-          `Restart for teammate "${memberName}" is still waiting for the previous tmux pane to exit (${lingeringPaneIds.join(', ')}).`
-        );
-      }
-    }
+      invalidateRuntimeSnapshotCaches: () => this.invalidateRuntimeSnapshotCaches(teamName),
+      loadLiveRuntimeByMember: () => this.getLiveTeamAgentRuntimeMetadata(teamName),
+    });
+    const { directTmuxRestartPaneId, shouldDirectProcessRestart } = restartRuntimePreparation;
 
     this.setMemberSpawnStatus(run, memberName, 'offline');
 
@@ -2236,7 +2056,6 @@ export class TeamProvisioningMemberLifecycleController {
       }
     }
 
-    const shouldDirectProcessRestart = backendTypes.has('process') || livePids.size > 0;
     if (shouldDirectProcessRestart) {
       try {
         await this.launchDirectProcessMemberRestart({

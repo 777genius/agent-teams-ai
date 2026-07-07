@@ -365,6 +365,7 @@ import { TeamProvisioningOutputRecoveryFacade } from './provisioning/TeamProvisi
 import { reconcilePersistedLaunchStateWithTeamProvisioningPorts } from './provisioning/TeamProvisioningPersistedLaunchReconcilePorts';
 import { type PersistedTeamConfigCacheEntry } from './provisioning/TeamProvisioningPersistedTeamConfigAccess';
 import { TeamProvisioningPrepareFacade } from './provisioning/TeamProvisioningPrepareFacade';
+import { createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase } from './provisioning/TeamProvisioningPreparePrimaryOwnedMemberRestartRuntimeUseCase';
 import { createTeamProvisioningPrimaryBootstrapTruthReportingBoundary } from './provisioning/TeamProvisioningPrimaryBootstrapTruthReportingPortsFactory';
 import {
   handleProvisioningProcessExit,
@@ -1279,6 +1280,8 @@ export class TeamProvisioningService {
       createNodeAppendDirectProcessRuntimeEventUseCasePorts({ nowIso })
     ),
     stopPrimaryOwnedRosterRuntime: createNodeStopPrimaryOwnedRosterRuntimeUseCase(),
+    preparePrimaryOwnedMemberRestartRuntime:
+      createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase(),
     nowIso,
     randomUUID,
   });
