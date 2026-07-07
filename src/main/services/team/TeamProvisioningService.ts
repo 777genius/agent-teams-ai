@@ -463,6 +463,7 @@ import {
 } from './provisioning/TeamProvisioningRuntimeTurnSettledPlanning';
 import { TeamProvisioningRunTrackingDeliveryHelper } from './provisioning/TeamProvisioningRunTrackingDelivery';
 import {
+  createDefaultTeamProvisioningSameTeamNativeDelivery,
   createTeamProvisioningSameTeamNativeDeliveryPorts,
   TeamProvisioningSameTeamNativeDelivery,
 } from './provisioning/TeamProvisioningSameTeamNativeDelivery';
@@ -652,12 +653,6 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       createController: (input) => createController(input),
       getClaudeBasePath,
     });
-  private static readonly RECENT_CROSS_TEAM_DELIVERY_TTL_MS = 10 * 60 * 1000;
-  private static readonly SAME_TEAM_NATIVE_DELIVERY_GRACE_MS = 15_000;
-  private static readonly SAME_TEAM_NATIVE_FINGERPRINT_TTL_MS = 60_000;
-  private static readonly SAME_TEAM_MATCH_WINDOW_MS = 30_000;
-  private static readonly SAME_TEAM_RUN_START_SKEW_MS = 1_000;
-  private static readonly SAME_TEAM_PERSIST_RETRY_MS = 2_000;
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly provisioningRunByTeam = new Map<string, string>();
   private readonly aliveRunByTeam = new Map<string, string>();
@@ -794,8 +789,7 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       this.recentCrossTeamLeadDeliveryMessageIds,
       teamName,
       messageIds,
-      Date.now(),
-      TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS
+      Date.now()
     );
   }
 
@@ -1115,9 +1109,6 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       trimRelayedSet: (relayedIds) => this.trimRelayedSet(relayedIds),
       pendingCrossTeamFirstReplies: this.pendingCrossTeamFirstReplies,
       recentCrossTeamLeadDeliveryMessageIds: this.recentCrossTeamLeadDeliveryMessageIds,
-      sameTeamRunStartSkewMs: TeamProvisioningService.SAME_TEAM_RUN_START_SKEW_MS,
-      sameTeamNativeDeliveryGraceMs: TeamProvisioningService.SAME_TEAM_NATIVE_DELIVERY_GRACE_MS,
-      recentCrossTeamDeliveryTtlMs: TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS,
       logger,
       getErrorMessage,
       nowIso,
@@ -2070,13 +2061,7 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       membersMetaStore: this.membersMetaStore,
       readConfigSnapshot: (teamName) => this.configFacade.readConfigSnapshot(teamName),
     });
-    this.sameTeamNativeDelivery = new TeamProvisioningSameTeamNativeDelivery(
-      {
-        fingerprintTtlMs: TeamProvisioningService.SAME_TEAM_NATIVE_FINGERPRINT_TTL_MS,
-        matchWindowMs: TeamProvisioningService.SAME_TEAM_MATCH_WINDOW_MS,
-        nativeDeliveryGraceMs: TeamProvisioningService.SAME_TEAM_NATIVE_DELIVERY_GRACE_MS,
-        persistRetryMs: TeamProvisioningService.SAME_TEAM_PERSIST_RETRY_MS,
-      },
+    this.sameTeamNativeDelivery = createDefaultTeamProvisioningSameTeamNativeDelivery(
       createTeamProvisioningSameTeamNativeDeliveryPorts({
         inboxReader: this.inboxReader,
         relayedLeadInboxMessageIds: this.relayedLeadInboxMessageIds,
@@ -3203,8 +3188,7 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     return getPendingCrossTeamReplyExpectationKeysFromState(
       this.pendingCrossTeamFirstReplies,
       teamName,
-      Date.now(),
-      TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS
+      Date.now()
     );
   }
 
@@ -3240,7 +3224,6 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
   ): void {
     handleNativeTeammateUserMessageHelper(run, msg, {
       recentCrossTeamLeadDeliveryMessageIds: this.recentCrossTeamLeadDeliveryMessageIds,
-      recentCrossTeamLeadDeliveryTtlMs: TeamProvisioningService.RECENT_CROSS_TEAM_DELIVERY_TTL_MS,
       nowMs: () => Date.now(),
       nowIso,
       getRunLeadName: (run) => this.getRunLeadName(run),

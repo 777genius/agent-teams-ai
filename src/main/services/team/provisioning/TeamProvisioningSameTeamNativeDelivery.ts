@@ -36,6 +36,13 @@ export interface TeamProvisioningSameTeamNativeDeliveryConfig {
   persistRetryMs: number;
 }
 
+const DEFAULT_SAME_TEAM_NATIVE_DELIVERY_CONFIG = {
+  fingerprintTtlMs: 60_000,
+  matchWindowMs: 30_000,
+  nativeDeliveryGraceMs: 15_000,
+  persistRetryMs: 2_000,
+} satisfies TeamProvisioningSameTeamNativeDeliveryConfig;
+
 export function createTeamProvisioningSameTeamNativeDeliveryPorts(
   ports: Omit<TeamProvisioningSameTeamNativeDeliveryPorts, 'nowMs' | 'randomId' | 'setTimeout'> &
     Partial<Pick<TeamProvisioningSameTeamNativeDeliveryPorts, 'nowMs' | 'randomId' | 'setTimeout'>>
@@ -46,6 +53,17 @@ export function createTeamProvisioningSameTeamNativeDeliveryPorts(
     randomId: ports.randomId ?? (() => randomUUID()),
     setTimeout: ports.setTimeout ?? ((handler, ms) => setTimeout(handler, ms)),
   };
+}
+
+export function createDefaultTeamProvisioningSameTeamNativeDelivery(
+  ports: TeamProvisioningSameTeamNativeDeliveryPorts,
+  recentFingerprints?: Map<string, NativeSameTeamFingerprint[]>
+): TeamProvisioningSameTeamNativeDelivery {
+  return new TeamProvisioningSameTeamNativeDelivery(
+    DEFAULT_SAME_TEAM_NATIVE_DELIVERY_CONFIG,
+    ports,
+    recentFingerprints
+  );
 }
 
 export class TeamProvisioningSameTeamNativeDelivery {

@@ -31,7 +31,7 @@ export interface TeamProvisioningNativeTeammateMessagePorts<
   TRun extends TeamProvisioningNativeTeammateRun,
 > {
   recentCrossTeamLeadDeliveryMessageIds: Map<string, Map<string, number>>;
-  recentCrossTeamLeadDeliveryTtlMs: number;
+  recentCrossTeamLeadDeliveryTtlMs?: number;
   nowMs(): number;
   nowIso(): string;
   getRunLeadName(run: TRun): string;
@@ -57,16 +57,11 @@ export interface TeamProvisioningNativeTeammateMessagePorts<
     error?: string,
     source?: 'heartbeat'
   ): void;
-  rememberSameTeamNativeFingerprints(
-    teamName: string,
-    blocks: ParsedTeammateContent[]
-  ): void;
+  rememberSameTeamNativeFingerprints(teamName: string, blocks: ParsedTeammateContent[]): void;
   reconcileSameTeamNativeDeliveries(teamName: string, leadName: string): Promise<unknown>;
 }
 
-export function handleNativeTeammateUserMessage<
-  TRun extends TeamProvisioningNativeTeammateRun,
->(
+export function handleNativeTeammateUserMessage<TRun extends TeamProvisioningNativeTeammateRun>(
   run: TRun,
   msg: Record<string, unknown>,
   ports: TeamProvisioningNativeTeammateMessagePorts<TRun>
@@ -87,8 +82,7 @@ export function handleNativeTeammateUserMessage<
   const crossTeamBlocks = blocks.flatMap((block) => {
     const origin = parseCrossTeamPrefix(block.content);
     const sourceTeam = origin?.from.includes('.') ? origin.from.split('.', 1)[0] : null;
-    const conversationId =
-      origin?.conversationId?.trim() || origin?.replyToConversationId?.trim();
+    const conversationId = origin?.conversationId?.trim() || origin?.replyToConversationId?.trim();
     if (!sourceTeam || !conversationId) return [];
     return [
       {

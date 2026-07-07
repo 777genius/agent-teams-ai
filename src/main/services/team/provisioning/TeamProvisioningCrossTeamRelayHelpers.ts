@@ -49,6 +49,7 @@ export interface LeadCrossTeamReplyHint {
 }
 
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
+const DEFAULT_RECENT_CROSS_TEAM_DELIVERY_TTL_MS = 10 * 60 * 1000;
 
 const CROSS_TEAM_TOOL_RECIPIENT_NAMES = new Set([
   'cross_team_send',
@@ -172,7 +173,7 @@ export function getPendingCrossTeamReplyExpectationKeys(
   pendingReplies: Map<string, Map<string, number>>,
   teamName: string,
   now: number,
-  ttlMs: number
+  ttlMs: number = DEFAULT_RECENT_CROSS_TEAM_DELIVERY_TTL_MS
 ): Set<string> {
   const normalizedTeam = teamName.trim();
   const teamMap = pendingReplies.get(normalizedTeam);
@@ -191,7 +192,7 @@ export function rememberRecentCrossTeamLeadDeliveryMessageIds(
   teamName: string,
   messageIds: readonly string[],
   now: number,
-  ttlMs: number
+  ttlMs: number = DEFAULT_RECENT_CROSS_TEAM_DELIVERY_TTL_MS
 ): void {
   const normalizedIds = messageIds.map((id) => id.trim()).filter((id) => id.length > 0);
   if (normalizedIds.length === 0) return;
@@ -212,7 +213,7 @@ export function wasRecentlyDeliveredToLead(
   teamName: string,
   messageId: string,
   now: number,
-  ttlMs: number
+  ttlMs: number = DEFAULT_RECENT_CROSS_TEAM_DELIVERY_TTL_MS
 ): boolean {
   const normalizedMessageId = messageId.trim();
   if (!normalizedMessageId) return false;
@@ -234,7 +235,7 @@ export function createCrossTeamLeadSuppressionState(input: {
   pendingReplies: Map<string, Map<string, number>>;
   teamName: string;
   now: number;
-  ttlMs: number;
+  ttlMs?: number;
 }): CrossTeamLeadSuppressionState {
   const latestOutboundByConversation = new Map<string, number>();
   const latestReadInboundByConversation = new Map<string, number>();
@@ -274,7 +275,7 @@ export function createCrossTeamLeadSuppressionState(input: {
       input.pendingReplies,
       input.teamName,
       input.now,
-      input.ttlMs
+      input.ttlMs ?? DEFAULT_RECENT_CROSS_TEAM_DELIVERY_TTL_MS
     ),
     matchedTransientReplyKeys: new Set<string>(),
   };
@@ -305,7 +306,7 @@ export function wasRecentlyDeliveredCrossTeamLeadMessage(input: {
   recentMessageIds: Map<string, Map<string, number>>;
   teamName: string;
   now: number;
-  ttlMs: number;
+  ttlMs?: number;
 }): boolean {
   if (input.message.source !== CROSS_TEAM_SOURCE) return false;
   if (!hasStableInboxMessageId(input.message)) return false;
@@ -314,7 +315,7 @@ export function wasRecentlyDeliveredCrossTeamLeadMessage(input: {
     input.teamName,
     input.message.messageId,
     input.now,
-    input.ttlMs
+    input.ttlMs ?? DEFAULT_RECENT_CROSS_TEAM_DELIVERY_TTL_MS
   );
 }
 

@@ -13,9 +13,10 @@ export interface TeamProvisioningLeadInboxRelayPortsFactoryLogger {
   warn(message: string): void;
 }
 
-export type TeamProvisioningLeadInboxRelayFlowRunner<
-  TRun extends LeadInboxRelayFlowRun,
-> = (teamName: string, ports: LeadInboxRelayFlowPorts<TRun>) => Promise<number>;
+export type TeamProvisioningLeadInboxRelayFlowRunner<TRun extends LeadInboxRelayFlowRun> = (
+  teamName: string,
+  ports: LeadInboxRelayFlowPorts<TRun>
+) => Promise<number>;
 
 export type TeamProvisioningLeadInboxRelayInFlightWaiter = <T>(input: {
   promise: Promise<T>;
@@ -24,23 +25,33 @@ export type TeamProvisioningLeadInboxRelayInFlightWaiter = <T>(input: {
   timeoutMs?: number;
 }) => Promise<T>;
 
+const DEFAULT_SAME_TEAM_RUN_START_SKEW_MS = 1_000;
+const DEFAULT_SAME_TEAM_NATIVE_DELIVERY_GRACE_MS = 15_000;
+const DEFAULT_RECENT_CROSS_TEAM_DELIVERY_TTL_MS = 10 * 60 * 1000;
+
+type LeadInboxRelayTimingKeys =
+  | 'sameTeamRunStartSkewMs'
+  | 'sameTeamNativeDeliveryGraceMs'
+  | 'recentCrossTeamDeliveryTtlMs';
+
 export interface TeamProvisioningLeadInboxRelayPortsFactoryDeps<
   TRun extends LeadInboxRelayFlowRun,
-> extends Omit<LeadInboxRelayFlowPorts<TRun>, 'logger'> {
+> extends Omit<LeadInboxRelayFlowPorts<TRun>, 'logger' | LeadInboxRelayTimingKeys> {
   leadInboxRelayInFlight: Map<string, Promise<number>>;
   logger: TeamProvisioningLeadInboxRelayPortsFactoryLogger;
   getErrorMessage(error: unknown): string;
   relayLeadInboxMessagesForTeam?: TeamProvisioningLeadInboxRelayFlowRunner<TRun>;
   waitForInboxRelayInFlight?: TeamProvisioningLeadInboxRelayInFlightWaiter;
+  sameTeamRunStartSkewMs?: number;
+  sameTeamNativeDeliveryGraceMs?: number;
+  recentCrossTeamDeliveryTtlMs?: number;
 }
 
 export interface TeamProvisioningLeadInboxRelayPortsBoundary {
   relayLeadInboxMessages(teamName: string): Promise<number>;
 }
 
-export function createTeamProvisioningLeadInboxRelayFlowPorts<
-  TRun extends LeadInboxRelayFlowRun,
->(
+export function createTeamProvisioningLeadInboxRelayFlowPorts<TRun extends LeadInboxRelayFlowRun>(
   deps: Omit<
     TeamProvisioningLeadInboxRelayPortsFactoryDeps<TRun>,
     | 'getErrorMessage'
@@ -82,9 +93,11 @@ export function createTeamProvisioningLeadInboxRelayFlowPorts<
     trimRelayedSet: (relayedIds) => deps.trimRelayedSet(relayedIds),
     pendingCrossTeamFirstReplies: deps.pendingCrossTeamFirstReplies,
     recentCrossTeamLeadDeliveryMessageIds: deps.recentCrossTeamLeadDeliveryMessageIds,
-    sameTeamRunStartSkewMs: deps.sameTeamRunStartSkewMs,
-    sameTeamNativeDeliveryGraceMs: deps.sameTeamNativeDeliveryGraceMs,
-    recentCrossTeamDeliveryTtlMs: deps.recentCrossTeamDeliveryTtlMs,
+    sameTeamRunStartSkewMs: deps.sameTeamRunStartSkewMs ?? DEFAULT_SAME_TEAM_RUN_START_SKEW_MS,
+    sameTeamNativeDeliveryGraceMs:
+      deps.sameTeamNativeDeliveryGraceMs ?? DEFAULT_SAME_TEAM_NATIVE_DELIVERY_GRACE_MS,
+    recentCrossTeamDeliveryTtlMs:
+      deps.recentCrossTeamDeliveryTtlMs ?? DEFAULT_RECENT_CROSS_TEAM_DELIVERY_TTL_MS,
     logger: deps.logger,
     nowIso: deps.nowIso,
     nowMs: deps.nowMs,
@@ -115,7 +128,9 @@ export function createTeamProvisioningLeadInboxRelayPortsBoundary<
           if (!isInboxRelayInFlightTimeoutError(error)) {
             throw error;
           }
-          deps.logger.warn(`[${teamName}] lead_inbox_relay_timed_out: ${deps.getErrorMessage(error)}`);
+          deps.logger.warn(
+            `[${teamName}] lead_inbox_relay_timed_out: ${deps.getErrorMessage(error)}`
+          );
           return 0;
         } finally {
           if (deps.leadInboxRelayInFlight.get(teamName) === existing) {
@@ -137,7 +152,9 @@ export function createTeamProvisioningLeadInboxRelayPortsBoundary<
         if (!isInboxRelayInFlightTimeoutError(error)) {
           throw error;
         }
-        deps.logger.warn(`[${teamName}] lead_inbox_relay_timed_out: ${deps.getErrorMessage(error)}`);
+        deps.logger.warn(
+          `[${teamName}] lead_inbox_relay_timed_out: ${deps.getErrorMessage(error)}`
+        );
         return 0;
       } finally {
         if (deps.leadInboxRelayInFlight.get(teamName) === work) {
