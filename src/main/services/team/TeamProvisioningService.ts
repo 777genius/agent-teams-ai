@@ -144,10 +144,7 @@ import {
   resolveCrossTeamLeadName,
 } from './provisioning/TeamProvisioningCrossTeamRelayHelpers';
 import { recoverDeterministicBootstrapCompletion as recoverDeterministicBootstrapCompletionHelper } from './provisioning/TeamProvisioningDeterministicBootstrapCompletionRecovery';
-import {
-  type BuildProvisioningEnvOptions,
-  type ProvisioningEnvResolution,
-} from './provisioning/TeamProvisioningEnvBuilder';
+import { type ProvisioningEnvResolution } from './provisioning/TeamProvisioningEnvBuilder';
 import { assertAppDeterministicBootstrapEnabled } from './provisioning/TeamProvisioningEnvGuards';
 import { createTeamProvisioningEnvRuntimePorts } from './provisioning/TeamProvisioningEnvRuntimePorts';
 import {
@@ -387,7 +384,9 @@ import {
   getCanonicalSendMessageToolRule,
 } from './provisioning/TeamProvisioningPromptBuilders';
 import {
+  createTeamProvisioningProviderRuntimeCompatibility,
   createTeamProvisioningProviderRuntimeFacade,
+  type TeamProvisioningProviderRuntimeCompatibility,
   type TeamProvisioningProviderRuntimeFacade,
 } from './provisioning/TeamProvisioningProviderRuntimeFacade';
 import { createTeamProvisioningReevaluateMemberLaunchStatusBoundary } from './provisioning/TeamProvisioningReevaluateMemberLaunchStatusPortsFactory';
@@ -812,50 +811,6 @@ export class TeamProvisioningService {
         memberLogsFinder: TeamProvisioningBootstrapTranscriptMemberLogsPort;
       }
     ).memberLogsFinder = value;
-  }
-
-  private buildProvisioningEnv(
-    providerId: TeamProviderId | undefined = 'anthropic',
-    providerBackendId?: string | null,
-    options?: BuildProvisioningEnvOptions
-  ): Promise<ProvisioningEnvResolution> {
-    return this.providerRuntime.buildProvisioningEnv(providerId, providerBackendId, options);
-  }
-
-  private validateAgentTeamsMcpRuntime(
-    claudePath: string,
-    cwd: string,
-    env: NodeJS.ProcessEnv,
-    mcpConfigPath: string,
-    options: { isCancelled?: () => boolean } = {}
-  ): Promise<void> {
-    return this.providerRuntime.validateAgentTeamsMcpRuntime(
-      claudePath,
-      cwd,
-      env,
-      mcpConfigPath,
-      options
-    );
-  }
-
-  private get providerRuntimeCompatibility() {
-    const buildProvisioningEnv: TeamProvisioningProviderRuntimeFacade['buildProvisioningEnv'] = (
-      ...args
-    ) => this.buildProvisioningEnv(...args);
-    const buildCrossProviderMemberArgs: TeamProvisioningProviderRuntimeFacade['buildCrossProviderMemberArgs'] =
-      (...args) => this.providerRuntime.buildCrossProviderMemberArgs(...args);
-
-    return {
-      buildProvisioningEnv,
-      buildCrossProviderMemberArgs,
-      validateAgentTeamsMcpRuntime: (
-        claudePath: string,
-        cwd: string,
-        env: NodeJS.ProcessEnv,
-        mcpConfigPath: string,
-        options?: { isCancelled?: () => boolean }
-      ) => this.validateAgentTeamsMcpRuntime(claudePath, cwd, env, mcpConfigPath, options),
-    };
   }
 
   private rememberRecentCrossTeamLeadDeliveryMessageIds(
@@ -1374,6 +1329,7 @@ export class TeamProvisioningService {
   private readonly cleanupRunPorts: TeamProvisioningCleanupPorts<ProvisioningRun>;
   private readonly idlePromptInjectionBoundary: TeamProvisioningIdlePromptInjectionBoundary<ProvisioningRun>;
   private readonly providerRuntime: TeamProvisioningProviderRuntimeFacade;
+  private readonly providerRuntimeCompatibility: TeamProvisioningProviderRuntimeCompatibility;
   private readonly outputRecoveryFacade: TeamProvisioningOutputRecoveryFacade<ProvisioningRun>;
   private readonly deterministicCreateSpawnFlowBoundary: TeamProvisioningCreateDeterministicSpawnFlowBoundary<ProvisioningRun>;
   private readonly deterministicLaunchFlowBoundary: TeamProvisioningLaunchDeterministicFlowBoundary<MixedSecondaryRuntimeLaneState>;
@@ -1658,7 +1614,7 @@ export class TeamProvisioningService {
       },
       runtimeLaunch: {
         buildProvisioningEnv: (providerId, providerBackendId, options) =>
-          this.buildProvisioningEnv(providerId, providerBackendId, options),
+          this.providerRuntime.buildProvisioningEnv(providerId, providerBackendId, options),
         resolveDirectMemberLaunchIdentity: (input) =>
           this.resolveDirectMemberLaunchIdentity(input as never),
         buildTeamRuntimeLaunchArgsPlan: (input) => this.buildTeamRuntimeLaunchArgsPlan(input),
@@ -1948,6 +1904,9 @@ export class TeamProvisioningService {
         logger,
       }),
     });
+    this.providerRuntimeCompatibility = createTeamProvisioningProviderRuntimeCompatibility(
+      this.providerRuntime
+    );
     this.outputRecoveryFacade = new TeamProvisioningOutputRecoveryFacade<ProvisioningRun>({
       service: {
         updateProgress,
@@ -2055,7 +2014,13 @@ export class TeamProvisioningService {
         buildMemberMcpLaunchConfigs: (input) =>
           this.buildRuntimeBootstrapMemberMcpLaunchConfigs(input),
         validateAgentTeamsMcpRuntime: ({ claudePath, cwd, shellEnv, mcpConfigPath, options }) =>
-          this.validateAgentTeamsMcpRuntime(claudePath, cwd, shellEnv, mcpConfigPath, options),
+          this.providerRuntime.validateAgentTeamsMcpRuntime(
+            claudePath,
+            cwd,
+            shellEnv,
+            mcpConfigPath,
+            options
+          ),
         buildTeamRuntimeLaunchArgsPlan: (input) => this.buildTeamRuntimeLaunchArgsPlan(input),
         seedLeadBootstrapPermissionRules: (teamName, cwd) =>
           this.seedLeadBootstrapPermissionRules(teamName, cwd),
@@ -2129,7 +2094,7 @@ export class TeamProvisioningService {
     this.prepareFacade = new TeamProvisioningPrepareFacade({
       getOpenCodeRuntimeAdapter: () => this.getOpenCodeRuntimeAdapter(),
       buildProvisioningEnv: (providerId, providerBackendId, options) =>
-        this.buildProvisioningEnv(providerId, providerBackendId, options),
+        this.providerRuntime.buildProvisioningEnv(providerId, providerBackendId, options),
       runProviderOneShotDiagnostic: (claudePath, cwd, env, providerId, providerArgs) =>
         this.providerRuntime.runProviderOneShotDiagnostic(
           claudePath,
@@ -4396,7 +4361,7 @@ export class TeamProvisioningService {
           resolveClaudePath: () => ClaudeBinaryResolver.resolve(),
           buildMissingCliError,
           buildProvisioningEnv: (providerId, providerBackendId, options) =>
-            this.buildProvisioningEnv(providerId, providerBackendId, options),
+            this.providerRuntime.buildProvisioningEnv(providerId, providerBackendId, options),
           materializeEffectiveTeamMemberSpecs: (params) =>
             this.materializeEffectiveTeamMemberSpecs(params),
           resolveOpenCodeMemberWorkspacesForRuntime: (params) =>

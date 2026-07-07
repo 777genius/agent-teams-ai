@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  createTeamProvisioningProviderRuntimeCompatibility,
   createTeamProvisioningProviderRuntimeFacade,
   type TeamProvisioningProviderRuntimeFacadeDeps,
 } from '../TeamProvisioningProviderRuntimeFacade';
@@ -175,5 +176,47 @@ describe('TeamProvisioningProviderRuntimeFacade', () => {
       { teamRuntimeAuth }
     );
     expect(envRuntimePorts.resolveControlApiBaseUrl).toHaveBeenCalledOnce();
+  });
+
+  it('binds compatibility delegates for provisioning ports', async () => {
+    const envRuntimePorts = createEnvRuntimePorts();
+    const diagnosticsRuntime = createDiagnosticsRuntime();
+    const facade = createTeamProvisioningProviderRuntimeFacade(
+      createFacadeDeps({
+        envRuntimePorts,
+        createDiagnosticsRuntime: vi.fn(() => diagnosticsRuntime),
+      })
+    );
+    const { buildProvisioningEnv, buildCrossProviderMemberArgs, validateAgentTeamsMcpRuntime } =
+      createTeamProvisioningProviderRuntimeCompatibility(facade);
+    const env = { PATH: '/bin' };
+
+    await expect(buildProvisioningEnv('codex', 'openai')).resolves.toMatchObject({
+      env: { PATH: '/bin' },
+    });
+    await expect(
+      buildCrossProviderMemberArgs('codex', [
+        { name: 'Claude', providerId: 'anthropic', role: 'reviewer' },
+      ])
+    ).resolves.toMatchObject({
+      args: ['--provider', 'codex'],
+    });
+    await expect(
+      validateAgentTeamsMcpRuntime('/bin/claude', '/repo', env, '/repo/mcp.json')
+    ).resolves.toBeUndefined();
+
+    expect(envRuntimePorts.buildProvisioningEnv).toHaveBeenCalledWith('codex', 'openai', undefined);
+    expect(envRuntimePorts.buildCrossProviderMemberArgs).toHaveBeenCalledWith(
+      'codex',
+      [{ name: 'Claude', providerId: 'anthropic', role: 'reviewer' }],
+      undefined
+    );
+    expect(diagnosticsRuntime.validateAgentTeamsMcpRuntime).toHaveBeenCalledWith(
+      '/bin/claude',
+      '/repo',
+      env,
+      '/repo/mcp.json',
+      {}
+    );
   });
 });

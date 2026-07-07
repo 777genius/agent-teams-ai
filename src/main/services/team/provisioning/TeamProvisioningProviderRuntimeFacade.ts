@@ -127,6 +127,21 @@ export class TeamProvisioningProviderRuntimeFacade {
   }
 }
 
+export type TeamProvisioningProviderRuntimeCompatibility = Pick<
+  TeamProvisioningProviderRuntimeFacade,
+  'buildProvisioningEnv' | 'buildCrossProviderMemberArgs' | 'validateAgentTeamsMcpRuntime'
+>;
+
+export function createTeamProvisioningProviderRuntimeCompatibility(
+  facade: TeamProvisioningProviderRuntimeFacade
+): TeamProvisioningProviderRuntimeCompatibility {
+  return {
+    buildProvisioningEnv: (...args) => facade.buildProvisioningEnv(...args),
+    buildCrossProviderMemberArgs: (...args) => facade.buildCrossProviderMemberArgs(...args),
+    validateAgentTeamsMcpRuntime: (...args) => facade.validateAgentTeamsMcpRuntime(...args),
+  };
+}
+
 export function createTeamProvisioningProviderRuntimeFacade(
   deps: TeamProvisioningProviderRuntimeFacadeDeps
 ): TeamProvisioningProviderRuntimeFacade {
