@@ -36,6 +36,7 @@ import { matchesProjectControlPrefix, nodeErrorCode, pathInsideAnyProjectRoot, s
 import { buildCodexProjectAdmissionSnapshot, codexProjectAdmissionGate, projectAdmissionDetailView, projectAdmissionOperation, projectAdmissionWorkerRoleArg, } from "./codex-goal-mcp-project-admission.js";
 import { jobIdsFromValue, parseIsoDate, signalIdList, workerControlCallerArgs, workerControlDecisionJson, workerControlReceiptJson, workerControlSignalJson, workerControlSignalViewJson, } from "./codex-goal-mcp-worker-control-view.js";
 import { codexGoalAccountStatusPayload, codexGoalStateRootDir, codexGoalWorkerControlService, codexGoalWorkerControlTarget, } from "./codex-goal-mcp-worker-control.js";
+import { codexGoalAccountCapacityFacts } from "./codex-goal-mcp-account-capacity-facts.js";
 import { CODEX_GOAL_CONTROL_SURFACE_SCHEMA, CODEX_GOAL_EXECUTION_ENGINE_SCHEMA, buildCodexGoalDecision, buildCodexGoalHandoff, codexGoalBriefHealthStatus, isHeartbeatOnlyNoOutputBrief, isSafeStartAction, latestIsoDate, nextActionForStatus, nextBestCommand, redactText, truncateText, } from "./codex-goal-mcp-decision.js";
 import { extractRecentCommands, redactLogTail, } from "./codex-goal-mcp-log-view.js";
 import { assertGitCurrentBranch, assertSafeGitCommitSha, assertSafeGitRefName, assertSafeGitRemoteName, execGit, execGitStdout, } from "./codex-goal-mcp-project-git.js";
@@ -3086,7 +3087,10 @@ async function projectControlRefillWorker(args) {
         }
         throw error;
     }
-    const accountCapacityFacts = await codexGoalAccountCapacityFacts(manifest);
+    const accountCapacityFacts = await codexGoalAccountCapacityFacts({
+        manifest,
+        loadLaunch: async (jobManifest) => goalLaunchInput(codexGoalJobToArgs(jobManifest)),
+    });
     let start;
     if (booleanValue(args.startWorker) !== false) {
         await assertReadablePrompt({ promptPath: manifest.promptPath });
@@ -3638,34 +3642,6 @@ async function projectControlMarkReviewed(args) {
         jobId: loaded.manifest.jobId,
         result: result,
     });
-}
-async function codexGoalAccountCapacityFacts(manifest) {
-    try {
-        const launch = await goalLaunchInput(codexGoalJobToArgs(manifest));
-        const payload = await codexGoalAccountStatusPayload(launch, {
-            liveCheck: false,
-        });
-        const capacityBlockedAccounts = payload.accounts.filter((slot) => slot.capacityAvailability && slot.capacityAvailability !== "available");
-        return {
-            ok: true,
-            capacityAware: payload.capacityAware,
-            summary: payload.summary,
-            capacityBlockedAccounts: capacityBlockedAccounts.map((slot) => ({
-                name: slot.name,
-                availability: slot.capacityAvailability,
-                reason: slot.capacityReason,
-                cooldownUntil: slot.capacityCooldownUntil,
-            })),
-            availableDedupedAccountNames: payload.availableDedupedAccountNames,
-        };
-    }
-    catch (error) {
-        return {
-            ok: false,
-            reason: "account_capacity_facts_unavailable",
-            error: error instanceof Error ? error.message : String(error),
-        };
-    }
 }
 async function continueStoredJob(args, options) {
     const loaded = await loadJobLaunch(args);
