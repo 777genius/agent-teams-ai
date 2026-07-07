@@ -16,6 +16,9 @@ type TeamProvisioningMemberSpawnStatusesMetaMembers = Awaited<
   ReturnType<TeamMembersMetaStore['getMembers']>
 >;
 
+const DEFAULT_LIVE_MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS = 500;
+const DEFAULT_PERSISTED_MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS = 5_000;
+
 export interface TeamProvisioningMemberSpawnStatusesSnapshotPortsFactoryDeps<
   TRun extends MemberSpawnStatusRun,
 > {
@@ -44,9 +47,8 @@ export interface TeamProvisioningMemberSpawnStatusesSnapshotPortsHost<
   runTracking: {
     getTrackedRunId(teamName: string): string | null;
   };
-  ttl: Pick<
-    MemberSpawnStatusesSnapshotPorts<TRun>['cache'],
-    'liveCacheTtlMs' | 'persistedCacheTtlMs'
+  ttl?: Partial<
+    Pick<MemberSpawnStatusesSnapshotPorts<TRun>['cache'], 'liveCacheTtlMs' | 'persistedCacheTtlMs'>
   >;
   readTaskActivityRepairLaunchSnapshot: MemberSpawnStatusesSnapshotPorts<TRun>['persisted']['readTaskActivityRepairLaunchSnapshot'];
   repairStaleTaskActivityIntervalsOnce: MemberSpawnStatusesSnapshotPorts<TRun>['persisted']['repairStaleTaskActivityIntervalsOnce'];
@@ -148,8 +150,11 @@ export function createTeamProvisioningMemberSpawnStatusesSnapshotPortsBoundary<
       getCacheGeneration: (teamName) => host.getCacheGeneration(teamName),
       getTrackedRunId: (teamName) => host.runTracking.getTrackedRunId(teamName),
       nowMs: () => host.nowMs(),
-      liveCacheTtlMs: host.ttl.liveCacheTtlMs,
-      persistedCacheTtlMs: host.ttl.persistedCacheTtlMs,
+      liveCacheTtlMs:
+        host.ttl?.liveCacheTtlMs ?? DEFAULT_LIVE_MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS,
+      persistedCacheTtlMs:
+        host.ttl?.persistedCacheTtlMs ??
+        DEFAULT_PERSISTED_MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS,
     },
     persisted: {
       readTaskActivityRepairLaunchSnapshot: (teamName) =>

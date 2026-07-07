@@ -1,5 +1,7 @@
 import type { PersistedTeamLaunchSnapshot, TeamMember } from '@shared/types';
 
+const DEFAULT_LAUNCH_STATE_NOOP_REFRESH_MS = 15_000;
+
 export interface LaunchStateWriteResult {
   snapshot: PersistedTeamLaunchSnapshot;
   wrote: boolean;
@@ -32,7 +34,7 @@ export interface TeamProvisioningLaunchStateStoreBoundaryPorts {
   invalidateRuntimeSnapshotCaches(teamName: string): void;
   logDebug(message: string): void;
   nowMs(): number;
-  noopRefreshMs: number;
+  noopRefreshMs?: number;
   writtenRunIdByTeam?: Map<string, string>;
 }
 
@@ -135,7 +137,9 @@ export class TeamProvisioningLaunchStateStoreBoundary {
   isLaunchStateNoopRefreshDue(snapshot: PersistedTeamLaunchSnapshot): boolean {
     const updatedAtMs = Date.parse(snapshot.updatedAt);
     return (
-      !Number.isFinite(updatedAtMs) || this.ports.nowMs() - updatedAtMs >= this.ports.noopRefreshMs
+      !Number.isFinite(updatedAtMs) ||
+      this.ports.nowMs() - updatedAtMs >=
+        (this.ports.noopRefreshMs ?? DEFAULT_LAUNCH_STATE_NOOP_REFRESH_MS)
     );
   }
 

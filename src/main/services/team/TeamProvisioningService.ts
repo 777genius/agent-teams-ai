@@ -447,7 +447,7 @@ import {
   isOpenCodeRuntimeRecipientFromSources,
   resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
 } from './provisioning/TeamProvisioningRuntimeRecipientResolution';
-import { TeamProvisioningRuntimeResourceSampling } from './provisioning/TeamProvisioningRuntimeResourceSampling';
+import { createDefaultTeamProvisioningRuntimeResourceSampling } from './provisioning/TeamProvisioningRuntimeResourceSamplingFactory';
 import {
   attachLiveRuntimeMetadataToStatuses as attachLiveRuntimeMetadataToStatusesHelper,
   type PersistedRuntimeMemberLike,
@@ -658,24 +658,6 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
   private static readonly SAME_TEAM_MATCH_WINDOW_MS = 30_000;
   private static readonly SAME_TEAM_RUN_START_SKEW_MS = 1_000;
   private static readonly SAME_TEAM_PERSIST_RETRY_MS = 2_000;
-  private static readonly RUNTIME_RESOURCE_TELEMETRY_CACHE_TTL_MS = 60_000;
-  private static readonly RUNTIME_RESOURCE_TELEMETRY_FAILURE_CACHE_TTL_MS = 10_000;
-  private static readonly RUNTIME_RESOURCE_SAMPLE_MIN_INTERVAL_MS = 30_000;
-  private static readonly AGENT_RUNTIME_RESOURCE_HISTORY_LIMIT = 60;
-  private static readonly MAX_RUNTIME_TREE_PIDS_PER_ROOT = 64;
-  private static readonly MAX_RUNTIME_USAGE_PIDS_PER_SNAPSHOT = 512;
-  private static readonly RUNTIME_PROCESS_TABLE_TIMEOUT_MS = 1_500;
-  private static readonly RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS = 1_500;
-  private static readonly RUNTIME_LIVENESS_PROCESS_TABLE_CACHE_TTL_MS = 5_000;
-  private static readonly RUNTIME_LIVENESS_PROCESS_TABLE_FAILURE_CACHE_TTL_MS = 2_000;
-  private static readonly RUNTIME_PROCESS_USAGE_CACHE_TTL_MS = 30_000;
-  private static readonly RUNTIME_PROCESS_USAGE_CACHE_MAX_ENTRIES = 4_096;
-  private static readonly RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS = 2_000;
-  private static readonly RUNTIME_PIDUSAGE_SINGLE_TIMEOUT_MS = 750;
-  private static readonly RUNTIME_PIDUSAGE_FALLBACK_CONCURRENCY = 16;
-  private static readonly MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS = 500;
-  private static readonly PERSISTED_MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS = 5_000;
-  private static readonly LAUNCH_STATE_NOOP_REFRESH_MS = 15_000;
   private readonly runs = new Map<string, ProvisioningRun>();
   private readonly provisioningRunByTeam = new Map<string, string>();
   private readonly aliveRunByTeam = new Map<string, string>();
@@ -1171,28 +1153,7 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     string,
     { expiresAtMs: number; snapshot: TeamAgentRuntimeSnapshot }
   >();
-  private readonly runtimeResourceSampling = new TeamProvisioningRuntimeResourceSampling(
-    {
-      processTableTimeoutMs: TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS,
-      windowsProcessTableTimeoutMs:
-        TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS,
-      livenessProcessTableCacheTtlMs:
-        TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_CACHE_TTL_MS,
-      livenessProcessTableFailureCacheTtlMs:
-        TeamProvisioningService.RUNTIME_LIVENESS_PROCESS_TABLE_FAILURE_CACHE_TTL_MS,
-      resourceTelemetryCacheTtlMs: TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_CACHE_TTL_MS,
-      resourceTelemetryFailureCacheTtlMs:
-        TeamProvisioningService.RUNTIME_RESOURCE_TELEMETRY_FAILURE_CACHE_TTL_MS,
-      processUsageCacheTtlMs: TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_TTL_MS,
-      processUsageCacheMaxEntries: TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_MAX_ENTRIES,
-      pidusageBatchTimeoutMs: TeamProvisioningService.RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS,
-      pidusageSingleTimeoutMs: TeamProvisioningService.RUNTIME_PIDUSAGE_SINGLE_TIMEOUT_MS,
-      pidusageFallbackConcurrency: TeamProvisioningService.RUNTIME_PIDUSAGE_FALLBACK_CONCURRENCY,
-      maxRuntimeTreePidsPerRoot: TeamProvisioningService.MAX_RUNTIME_TREE_PIDS_PER_ROOT,
-      maxRuntimeUsagePidsPerSnapshot: TeamProvisioningService.MAX_RUNTIME_USAGE_PIDS_PER_SNAPSHOT,
-      historyLimit: TeamProvisioningService.AGENT_RUNTIME_RESOURCE_HISTORY_LIMIT,
-      minSampleIntervalMs: TeamProvisioningService.RUNTIME_RESOURCE_SAMPLE_MIN_INTERVAL_MS,
-    },
+  private readonly runtimeResourceSampling = createDefaultTeamProvisioningRuntimeResourceSampling(
     {
       getRuntimeSnapshotCacheGeneration: (teamName) =>
         this.getRuntimeSnapshotCacheGeneration(teamName),
@@ -1701,7 +1662,6 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
       logDebug: (message) => logger.debug(message),
       nowMs: () => Date.now(),
-      noopRefreshMs: TeamProvisioningService.LAUNCH_STATE_NOOP_REFRESH_MS,
       writtenRunIdByTeam: this.launchStateWrittenRunIdByTeam,
     });
     this.configTaskActivityBoundary = createTeamProvisioningConfigTaskActivityBoundary({
@@ -2280,11 +2240,6 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       },
       getCacheGeneration: (teamName) => this.getMemberSpawnStatusesCacheGeneration(teamName),
       runTracking: this.runTracking,
-      ttl: {
-        liveCacheTtlMs: TeamProvisioningService.MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS,
-        persistedCacheTtlMs:
-          TeamProvisioningService.PERSISTED_MEMBER_SPAWN_STATUS_SNAPSHOT_CACHE_TTL_MS,
-      },
       readTaskActivityRepairLaunchSnapshot: (teamName) =>
         this.configTaskActivityBoundary.readTaskActivityRepairLaunchSnapshot(teamName),
       repairStaleTaskActivityIntervalsOnce: (teamName, launchSnapshot) =>
