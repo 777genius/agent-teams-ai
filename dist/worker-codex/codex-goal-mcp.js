@@ -39,6 +39,7 @@ import { codexOverviewItemToWatchStatus } from "./codex-goal-mcp-watch-status.js
 import { failedRunObservationSnapshot, observeOrphanCodexRun, safeObservationErrorMessage, summarizeRunObservationSnapshots, } from "./codex-goal-mcp-observation-projection.js";
 import { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
 export { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
+import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item.js";
 import { CODEX_GOAL_MCP_DEFAULT_TIMEOUT_MS, goalControlModesFromRecord, goalLaunchInput, } from "./codex-goal-mcp-launch-input.js";
 import { CODEX_GOAL_CONTROL_SURFACE_SCHEMA, CODEX_GOAL_EXECUTION_ENGINE_SCHEMA, buildCodexGoalDecision, buildCodexGoalHandoff, isSafeStartAction, nextActionForStatus, redactText, truncateText, } from "./codex-goal-mcp-decision.js";
 import { assertGitCurrentBranch, assertSafeGitCommitSha, assertSafeGitRefName, assertSafeGitRemoteName, execGit, execGitStdout, } from "./codex-goal-mcp-project-git.js";
@@ -4402,110 +4403,6 @@ async function projectAgentRunEvents(args) {
         nextCursor: readBack.nextCursor?.value,
         events: readBack.events,
     };
-}
-async function buildCodexGoalOverviewItem(input) {
-    try {
-        const manifest = await readCodexGoalJob({
-            registryRootDir: input.registryRootDir,
-            jobId: input.jobId,
-        });
-        const launch = await goalLaunchInput(codexGoalJobToArgs(manifest));
-        const status = await collectCodexGoalStatus(statusInput(launch));
-        const accounts = await listCodexGoalAccountStatuses({
-            authRootDir: launch.config.authRootDir,
-            accounts: launch.config.accounts.map((account) => account.name),
-            stateRootDir: codexGoalStateRootDir(launch),
-        });
-        const brief = await buildCodexGoalBrief({
-            jobId: manifest.jobId,
-            launch,
-            status,
-            accounts,
-            staleAfterMs: input.staleAfterMs,
-            tailLines: input.tailLines,
-        });
-        const registryArgs = {
-            registryRootDir: input.registryRootDir,
-            jobId: manifest.jobId,
-        };
-        const recommendedAction = brief.lifecycleMarkerTypes.includes("review") &&
-            !status.resultExists &&
-            !brief.workerAlive
-            ? "review_completed"
-            : status.recommendedAction;
-        return {
-            ok: true,
-            jobId: manifest.jobId,
-            description: manifest.description,
-            tags: manifest.tags ?? [],
-            workspacePath: launch.config.workspacePath,
-            taskId: launch.config.taskId,
-            tmuxSession: launch.tmuxSession,
-            workerAlive: Boolean(brief.workerAlive),
-            workerSupervisorKind: brief.workerSupervisorKind,
-            workerAliveReason: brief.workerAliveReason,
-            workerProcessAlive: brief.workerProcessAlive,
-            workerFreshProgressAlive: brief.workerFreshProgressAlive,
-            workerHealth: brief.workerHealth,
-            activeWriterRisk: brief.activeWriterRisk,
-            activeWriterRiskReasons: brief.activeWriterRiskReasons,
-            statusView: brief.statusView,
-            baseRevision: brief.baseRevision,
-            baseRevisionStatus: brief.baseRevisionStatus,
-            baseRevisionReasons: brief.baseRevisionReasons,
-            recommendedAction,
-            resultStatus: status.resultStatus,
-            resultReason: status.resultReason,
-            progressPath: status.progressPath,
-            progressExists: status.progressExists,
-            progressStatus: status.progressStatus,
-            progressUpdatedAt: status.progressUpdatedAt,
-            progressHeartbeatAgeMs: status.progressHeartbeatAgeMs,
-            progressPid: status.progressPid,
-            progressProcessAlive: status.progressProcessAlive,
-            workspaceDirty: status.workspaceDirty,
-            changedFilesCount: (status.changedFiles ?? []).length,
-            changedFiles: status.changedFiles ?? [],
-            lastProgressAt: brief.lastProgressAt,
-            lastProgressAgeMs: brief.lastProgressAgeMs,
-            isStale: brief.isStale,
-            silentStale: brief.silentStale,
-            heartbeatOnlyNoOutput: brief.heartbeatOnlyNoOutput,
-            safeToContinue: brief.safeToContinue,
-            hasAvailableAccount: brief.hasAvailableAccount,
-            needsHumanRelogin: brief.needsHumanRelogin,
-            capacityBlockedAccounts: brief.capacityBlockedAccounts,
-            availableDedupedAccounts: brief.availableDedupedAccounts,
-            invalidAccounts: brief.invalidAccounts,
-            lifecycleMarkers: brief.lifecycleMarkers,
-            lifecycleMarkerTypes: brief.lifecycleMarkerTypes,
-            nextBestTool: brief.nextBestTool,
-            nextBestReason: brief.nextBestReason,
-            nextBestCommand: brief.nextBestCommand,
-            commands: {
-                brief: `codex_goal_brief(${JSON.stringify(registryArgs)})`,
-                handoff: `codex_goal_handoff(${JSON.stringify(registryArgs)})`,
-                accounts: `codex_goal_accounts_status(${JSON.stringify(registryArgs)})`,
-                ...(brief.safeToContinue
-                    ? {
-                        continue: `codex_goal_continue(${JSON.stringify({ ...registryArgs, confirmContinue: true })})`,
-                    }
-                    : {}),
-                ...(brief.silentStale
-                    ? {
-                        stop: `codex_goal_stop(${JSON.stringify({ ...registryArgs, confirmStop: true })})`,
-                    }
-                    : {}),
-            },
-        };
-    }
-    catch (error) {
-        return {
-            ok: false,
-            jobId: input.jobId,
-            safeMessage: error instanceof Error ? error.message : String(error),
-        };
-    }
 }
 function jobManifestInputFromArgs(args) {
     const cwd = resolvePath(process.cwd(), args.cwd ?? process.cwd());
