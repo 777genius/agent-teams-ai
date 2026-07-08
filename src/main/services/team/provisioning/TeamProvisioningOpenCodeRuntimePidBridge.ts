@@ -39,6 +39,47 @@ export interface RememberOpenCodeRuntimePidFromBridgePorts {
   logDebug: (message: string) => void;
 }
 
+export interface RememberOpenCodeRuntimePidFromBridgeServiceHost {
+  launchStateStore: {
+    read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
+  };
+  enqueueLaunchStateStoreOperation: RememberOpenCodeRuntimePidFromBridgePorts['enqueueLaunchStateStoreOperation'];
+  writeLaunchStateSnapshotNow(
+    teamName: string,
+    snapshot: PersistedTeamLaunchSnapshot
+  ): Promise<unknown>;
+  invalidateRuntimeSnapshotCaches(teamName: string): void;
+  teamChangeEmitter?: ((event: TeamChangeEvent) => void) | null;
+}
+
+export interface RememberOpenCodeRuntimePidFromBridgePortsFactoryDeps {
+  nowIso: RememberOpenCodeRuntimePidFromBridgePorts['nowIso'];
+  readProcessCommandByPid: RememberOpenCodeRuntimePidFromBridgePorts['readProcessCommandByPid'];
+  isOpenCodeServeCommand: RememberOpenCodeRuntimePidFromBridgePorts['isOpenCodeServeCommand'];
+  logDebug: RememberOpenCodeRuntimePidFromBridgePorts['logDebug'];
+}
+
+export function createRememberOpenCodeRuntimePidFromBridgePortsFromService(
+  service: RememberOpenCodeRuntimePidFromBridgeServiceHost,
+  deps: RememberOpenCodeRuntimePidFromBridgePortsFactoryDeps
+): RememberOpenCodeRuntimePidFromBridgePorts {
+  return {
+    nowIso: deps.nowIso,
+    readProcessCommandByPid: deps.readProcessCommandByPid,
+    isOpenCodeServeCommand: deps.isOpenCodeServeCommand,
+    enqueueLaunchStateStoreOperation: (teamName, operation) =>
+      service.enqueueLaunchStateStoreOperation(teamName, operation),
+    readLaunchState: (teamName) => service.launchStateStore.read(teamName),
+    writeLaunchStateSnapshot: async (teamName, snapshot) => {
+      await service.writeLaunchStateSnapshotNow(teamName, snapshot);
+    },
+    invalidateRuntimeSnapshotCaches: (teamName) =>
+      service.invalidateRuntimeSnapshotCaches(teamName),
+    emitTeamChange: (event) => service.teamChangeEmitter?.(event),
+    logDebug: deps.logDebug,
+  };
+}
+
 export async function rememberOpenCodeRuntimePidFromBridge(
   input: RememberOpenCodeRuntimePidFromBridgeInput,
   ports: RememberOpenCodeRuntimePidFromBridgePorts

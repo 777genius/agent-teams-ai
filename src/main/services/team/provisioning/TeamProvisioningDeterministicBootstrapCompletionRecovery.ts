@@ -91,12 +91,105 @@ export interface DeterministicBootstrapCompletionRecoveryPorts<
   warn(message: string): void;
 }
 
-export async function recoverDeterministicBootstrapCompletion<
+export interface DeterministicBootstrapCompletionRecoveryServiceHost<
+  TRun extends DeterministicBootstrapCompletionRecoveryRun,
+> {
+  isProvisioningRunPromotedToAlive(run: TRun): boolean;
+  hasPendingDeterministicFirstRealTurn(run: TRun): boolean;
+  isProvisioningRunStillPromotable(run: TRun): boolean;
+  provisioningRunByTeam: {
+    get(teamName: string): string | null | undefined;
+    delete(teamName: string): unknown;
+  };
+  syncRunMemberSpawnStatusesFromSnapshot(run: TRun, snapshot: PersistedTeamLaunchSnapshot): void;
+  writeLaunchStateSnapshot(
+    teamName: string,
+    snapshot: PersistedTeamLaunchSnapshot
+  ): Promise<PersistedTeamLaunchSnapshot>;
+  hasPendingLaunchMembers(
+    run: TRun,
+    launchSummary: LaunchSummaryLike,
+    snapshot: PersistedTeamLaunchSnapshot
+  ): boolean;
+  runTracking: {
+    setAliveRunId(teamName: string, runId: string): void;
+  };
+  teamChangeEmitter?: ((event: TeamChangeEvent) => void) | null;
+  fireTeamLaunchedNotification(run: TRun): Promise<unknown>;
+  fireTeamLaunchIncompleteNotification(
+    run: TRun,
+    failedMembers: readonly FailedSpawnMember[],
+    launchSummary: LaunchSummaryLike,
+    snapshot: PersistedTeamLaunchSnapshot
+  ): Promise<unknown>;
+}
+
+export type DeterministicBootstrapCompletionRecoveryServiceDeps<
+  TRun extends DeterministicBootstrapCompletionRecoveryRun,
+> = Pick<
+  DeterministicBootstrapCompletionRecoveryPorts<TRun>,
+  | 'readBootstrapLaunchSnapshot'
+  | 'nowIso'
+  | 'getMemberLaunchSummary'
+  | 'buildAggregatePendingLaunchMessage'
+  | 'updateProgress'
+  | 'extractCliLogsFromRun'
+  | 'warn'
+>;
+
+export function createDeterministicBootstrapCompletionRecoveryPortsFromService<
+  TRun extends DeterministicBootstrapCompletionRecoveryRun,
+>(
+  service: DeterministicBootstrapCompletionRecoveryServiceHost<TRun>,
+  deps: DeterministicBootstrapCompletionRecoveryServiceDeps<TRun>
+): DeterministicBootstrapCompletionRecoveryPorts<TRun> {
+  return {
+    isProvisioningRunPromotedToAlive: (run) => service.isProvisioningRunPromotedToAlive(run),
+    hasPendingDeterministicFirstRealTurn: (run) =>
+      service.hasPendingDeterministicFirstRealTurn(run),
+    isProvisioningRunStillPromotable: (run) => service.isProvisioningRunStillPromotable(run),
+    isCurrentProvisioningRun: (run) =>
+      service.provisioningRunByTeam.get(run.teamName) === run.runId,
+    readBootstrapLaunchSnapshot: deps.readBootstrapLaunchSnapshot,
+    syncRunMemberSpawnStatusesFromSnapshot: (run, snapshot) =>
+      service.syncRunMemberSpawnStatusesFromSnapshot(run, snapshot),
+    writeLaunchStateSnapshot: (teamName, snapshot) =>
+      service.writeLaunchStateSnapshot(teamName, snapshot),
+    nowIso: deps.nowIso,
+    getMemberLaunchSummary: deps.getMemberLaunchSummary,
+    hasPendingLaunchMembers: (run, launchSummary, snapshot) =>
+      service.hasPendingLaunchMembers(run, launchSummary, snapshot),
+    buildAggregatePendingLaunchMessage: deps.buildAggregatePendingLaunchMessage,
+    updateProgress: deps.updateProgress,
+    extractCliLogsFromRun: deps.extractCliLogsFromRun,
+    deleteProvisioningRun: (teamName) => {
+      service.provisioningRunByTeam.delete(teamName);
+    },
+    setAliveRunId: (teamName, runId) => service.runTracking.setAliveRunId(teamName, runId),
+    emitTeamChange: (event) => service.teamChangeEmitter?.(event),
+    fireTeamLaunchedNotification: (run) => service.fireTeamLaunchedNotification(run),
+    fireTeamLaunchIncompleteNotification: (run, failedMembers, launchSummary, snapshot) =>
+      service.fireTeamLaunchIncompleteNotification(run, failedMembers, launchSummary, snapshot),
+    warn: deps.warn,
+  };
+}
+
+export async function recoverDeterministicBootstrapCompletionWithService<
   TRun extends DeterministicBootstrapCompletionRecoveryRun,
 >(
   run: TRun,
-  ports: DeterministicBootstrapCompletionRecoveryPorts<TRun>
+  service: DeterministicBootstrapCompletionRecoveryServiceHost<TRun>,
+  deps: DeterministicBootstrapCompletionRecoveryServiceDeps<TRun>
 ): Promise<void> {
+  return recoverDeterministicBootstrapCompletion(
+    run,
+    createDeterministicBootstrapCompletionRecoveryPortsFromService(service, deps)
+  );
+}
+
+export async function recoverDeterministicBootstrapCompletion<
+  TRun extends DeterministicBootstrapCompletionRecoveryRun,
+>(run: TRun, ports: DeterministicBootstrapCompletionRecoveryPorts<TRun>): Promise<void> {
   if (
     !run.provisioningComplete ||
     run.cancelRequested ||

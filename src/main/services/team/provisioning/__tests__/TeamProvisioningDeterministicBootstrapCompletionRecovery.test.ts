@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
 import {
+  createDeterministicBootstrapCompletionRecoveryPortsFromService,
   type DeterministicBootstrapCompletionRecoveryPorts,
   type DeterministicBootstrapCompletionRecoveryRun,
+  type DeterministicBootstrapCompletionRecoveryServiceHost,
   recoverDeterministicBootstrapCompletion,
 } from '../TeamProvisioningDeterministicBootstrapCompletionRecovery';
 
@@ -108,7 +110,9 @@ function ports(
     hasPendingDeterministicFirstRealTurn: vi.fn(
       (target) => target.deterministicBootstrap === true && target.requiresFirstRealTurnSuccess
     ),
-    isProvisioningRunStillPromotable: vi.fn((target) => promotable && currentRunId === target.runId),
+    isProvisioningRunStillPromotable: vi.fn(
+      (target) => promotable && currentRunId === target.runId
+    ),
     isCurrentProvisioningRun: vi.fn((target) => currentRunId === target.runId),
     readBootstrapLaunchSnapshot: vi.fn(async () => bootstrapSnapshot),
     syncRunMemberSpawnStatusesFromSnapshot: vi.fn((target, recoveredSnapshot) => {
@@ -155,6 +159,70 @@ function ports(
 }
 
 describe('recoverDeterministicBootstrapCompletion', () => {
+  it('builds recovery ports from service dependencies', async () => {
+    const targetRun = run();
+    const recoveredSnapshot = snapshot({});
+    const provisioningRunByTeam = new Map([['demo', 'run-1']]);
+    const service: DeterministicBootstrapCompletionRecoveryServiceHost<TestRun> = {
+      isProvisioningRunPromotedToAlive: vi.fn(() => false),
+      hasPendingDeterministicFirstRealTurn: vi.fn(() => false),
+      isProvisioningRunStillPromotable: vi.fn(() => true),
+      provisioningRunByTeam,
+      syncRunMemberSpawnStatusesFromSnapshot: vi.fn(),
+      writeLaunchStateSnapshot: vi.fn(async (_teamName, nextSnapshot) => nextSnapshot),
+      hasPendingLaunchMembers: vi.fn(() => false),
+      runTracking: {
+        setAliveRunId: vi.fn(),
+      },
+      teamChangeEmitter: vi.fn(),
+      fireTeamLaunchedNotification: vi.fn(async () => undefined),
+      fireTeamLaunchIncompleteNotification: vi.fn(async () => undefined),
+    };
+
+    const recoveryPorts = createDeterministicBootstrapCompletionRecoveryPortsFromService(service, {
+      readBootstrapLaunchSnapshot: vi.fn(async () => recoveredSnapshot),
+      nowIso: vi.fn(() => now),
+      getMemberLaunchSummary: vi.fn(() => ({
+        confirmedCount: 1,
+        pendingCount: 0,
+        failedCount: 0,
+        runtimeAlivePendingCount: 0,
+      })),
+      buildAggregatePendingLaunchMessage: vi.fn(() => 'pending launch'),
+      updateProgress: vi.fn((run, state, message) => ({ ...run.progress, state, message })),
+      extractCliLogsFromRun: vi.fn(() => 'logs tail'),
+      warn: vi.fn(),
+    });
+
+    expect(recoveryPorts.isCurrentProvisioningRun(targetRun)).toBe(true);
+    recoveryPorts.syncRunMemberSpawnStatusesFromSnapshot(targetRun, recoveredSnapshot);
+    await expect(recoveryPorts.writeLaunchStateSnapshot('demo', recoveredSnapshot)).resolves.toBe(
+      recoveredSnapshot
+    );
+    recoveryPorts.deleteProvisioningRun('demo');
+    recoveryPorts.setAliveRunId('demo', 'run-1');
+    recoveryPorts.emitTeamChange({
+      type: 'lead-message',
+      teamName: 'demo',
+      runId: 'run-1',
+      detail: 'lead-session-sync',
+    });
+
+    expect(service.syncRunMemberSpawnStatusesFromSnapshot).toHaveBeenCalledWith(
+      targetRun,
+      recoveredSnapshot
+    );
+    expect(service.writeLaunchStateSnapshot).toHaveBeenCalledWith('demo', recoveredSnapshot);
+    expect(provisioningRunByTeam.has('demo')).toBe(false);
+    expect(service.runTracking.setAliveRunId).toHaveBeenCalledWith('demo', 'run-1');
+    expect(service.teamChangeEmitter).toHaveBeenCalledWith({
+      type: 'lead-message',
+      teamName: 'demo',
+      runId: 'run-1',
+      detail: 'lead-session-sync',
+    });
+  });
+
   it('does nothing when the run is not current or the bootstrap snapshot is not a completed launch', async () => {
     let targetRun = run();
     const stalePorts = ports(snapshot({}), { currentRunId: 'other-run' });

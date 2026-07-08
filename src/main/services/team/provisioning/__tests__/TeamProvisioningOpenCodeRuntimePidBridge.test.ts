@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
 import {
+  createRememberOpenCodeRuntimePidFromBridgePortsFromService,
   rememberOpenCodeRuntimePidFromBridge,
   type RememberOpenCodeRuntimePidFromBridgeInput,
   type RememberOpenCodeRuntimePidFromBridgePorts,
+  type RememberOpenCodeRuntimePidFromBridgeServiceHost,
 } from '../TeamProvisioningOpenCodeRuntimePidBridge';
 
 import type { PersistedTeamLaunchMemberState, PersistedTeamLaunchSnapshot } from '@shared/types';
@@ -89,6 +91,46 @@ function createPorts(
 }
 
 describe('TeamProvisioningOpenCodeRuntimePidBridge', () => {
+  it('builds bridge persistence ports from service dependencies', async () => {
+    const snapshot = launchSnapshot({ alice: secondaryMember() });
+    const service: RememberOpenCodeRuntimePidFromBridgeServiceHost = {
+      launchStateStore: {
+        read: vi.fn(async () => snapshot),
+      },
+      enqueueLaunchStateStoreOperation: vi.fn(async (_teamName, operation) => operation()),
+      writeLaunchStateSnapshotNow: vi.fn(async () => undefined),
+      invalidateRuntimeSnapshotCaches: vi.fn(),
+      teamChangeEmitter: vi.fn(),
+    };
+
+    const ports = createRememberOpenCodeRuntimePidFromBridgePortsFromService(service, {
+      nowIso: () => OBSERVED_AT,
+      readProcessCommandByPid: () => 'opencode serve --hostname 127.0.0.1',
+      isOpenCodeServeCommand: () => true,
+      logDebug: vi.fn(),
+    });
+
+    expect(ports.nowIso()).toBe(OBSERVED_AT);
+    await expect(ports.readLaunchState('team-a')).resolves.toBe(snapshot);
+    await ports.enqueueLaunchStateStoreOperation('team-a', async () => 'done');
+    await ports.writeLaunchStateSnapshot('team-a', snapshot);
+    ports.invalidateRuntimeSnapshotCaches('team-a');
+    ports.emitTeamChange({ type: 'member-spawn', teamName: 'team-a', detail: 'alice' });
+
+    expect(service.launchStateStore.read).toHaveBeenCalledWith('team-a');
+    expect(service.enqueueLaunchStateStoreOperation).toHaveBeenCalledWith(
+      'team-a',
+      expect.any(Function)
+    );
+    expect(service.writeLaunchStateSnapshotNow).toHaveBeenCalledWith('team-a', snapshot);
+    expect(service.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('team-a');
+    expect(service.teamChangeEmitter).toHaveBeenCalledWith({
+      type: 'member-spawn',
+      teamName: 'team-a',
+      detail: 'alice',
+    });
+  });
+
   it('ignores missing and invalid runtime pids before process lookup', async () => {
     const { ports } = createPorts();
 

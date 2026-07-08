@@ -167,7 +167,10 @@ import {
   rememberRecentCrossTeamLeadDeliveryMessageIds as rememberRecentCrossTeamLeadDeliveryMessageIdsHelper,
   resolveCrossTeamLeadName,
 } from './provisioning/TeamProvisioningCrossTeamRelayHelpers';
-import { recoverDeterministicBootstrapCompletion as recoverDeterministicBootstrapCompletionHelper } from './provisioning/TeamProvisioningDeterministicBootstrapCompletionRecovery';
+import {
+  type DeterministicBootstrapCompletionRecoveryServiceHost,
+  recoverDeterministicBootstrapCompletionWithService,
+} from './provisioning/TeamProvisioningDeterministicBootstrapCompletionRecovery';
 import { type ProvisioningEnvResolution } from './provisioning/TeamProvisioningEnvBuilder';
 import { assertAppDeterministicBootstrapEnabled } from './provisioning/TeamProvisioningEnvGuards';
 import {
@@ -343,6 +346,10 @@ import {
 } from './provisioning/TeamProvisioningOpenCodeBootstrapStall';
 import { createTeamProvisioningOpenCodeInboxAttachmentPayloadBoundary } from './provisioning/TeamProvisioningOpenCodeInboxAttachmentPayloadBoundaryFactory';
 import {
+  createTeamProvisioningOpenCodeLaunchPersistencePortsFromService,
+  type TeamProvisioningOpenCodeLaunchPersistenceServiceHost,
+} from './provisioning/TeamProvisioningOpenCodeLaunchPersistencePortsFactory';
+import {
   createTeamProvisioningOpenCodeLaunchWiring,
   createTeamProvisioningOpenCodeLaunchWiringHostFromService,
   type TeamProvisioningOpenCodeLaunchWiringServiceHost,
@@ -420,7 +427,11 @@ import {
   syncOpenCodeRuntimePermissionsAfterDelivery,
   syncOpenCodeRuntimePermissionSpawnStatusesForTrackedRun,
 } from './provisioning/TeamProvisioningOpenCodeRuntimePermissions';
-import { rememberOpenCodeRuntimePidFromBridge as rememberOpenCodeRuntimePidFromBridgeHelper } from './provisioning/TeamProvisioningOpenCodeRuntimePidBridge';
+import {
+  createRememberOpenCodeRuntimePidFromBridgePortsFromService,
+  rememberOpenCodeRuntimePidFromBridge as rememberOpenCodeRuntimePidFromBridgeHelper,
+  type RememberOpenCodeRuntimePidFromBridgeServiceHost,
+} from './provisioning/TeamProvisioningOpenCodeRuntimePidBridge';
 import { createTeamProvisioningOpenCodeRuntimeRecoveryBoundary } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryBoundaryFactory';
 import { resolveOpenCodeRuntimeLaneId as resolveOpenCodeRuntimeLaneIdHelper } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import { createOpenCodeRuntimeRecoveryIdentityHelpers } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryIdentity';
@@ -1060,6 +1071,16 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
         nowIso,
         getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
         getRun: (runId) => this.runs.get(runId) ?? null,
+      }
+    );
+  private readonly openCodeRuntimePidBridgePorts =
+    createRememberOpenCodeRuntimePidFromBridgePortsFromService(
+      this as unknown as RememberOpenCodeRuntimePidFromBridgeServiceHost,
+      {
+        nowIso,
+        readProcessCommandByPid: readOpenCodeRuntimeLaneProcessCommandByPid,
+        isOpenCodeServeCommand,
+        logDebug: (message) => logger.debug(message),
       }
     );
   private readonly memberSpawnStatusMutationPorts: MemberSpawnStatusMutationPorts<ProvisioningRun> =
@@ -2168,20 +2189,7 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     runtimePid?: number;
     reason: string;
   }): Promise<void> {
-    await rememberOpenCodeRuntimePidFromBridgeHelper(input, {
-      nowIso,
-      readProcessCommandByPid: readOpenCodeRuntimeLaneProcessCommandByPid,
-      isOpenCodeServeCommand,
-      enqueueLaunchStateStoreOperation: (teamName, operation) =>
-        this.enqueueLaunchStateStoreOperation(teamName, operation),
-      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
-      writeLaunchStateSnapshot: async (teamName, snapshot) => {
-        await this.writeLaunchStateSnapshotNow(teamName, snapshot);
-      },
-      invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
-      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
-      logDebug: (message) => logger.debug(message),
-    });
+    await rememberOpenCodeRuntimePidFromBridgeHelper(input, this.openCodeRuntimePidBridgePorts);
   }
 
   private async maybeSyncOpenCodeRuntimePermissionsAfterDelivery(
@@ -3361,6 +3369,13 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     return this.openCodeLaunchWiring.runOpenCodeTeamRuntimeAdapterLaunch(input);
   }
 
+  private createOpenCodeLaunchPersistencePorts() {
+    return createTeamProvisioningOpenCodeLaunchPersistencePortsFromService(
+      this as unknown as TeamProvisioningOpenCodeLaunchPersistenceServiceHost,
+      { nowIso }
+    );
+  }
+
   private async persistOpenCodeRuntimeAdapterLaunchResult(
     result: TeamRuntimeLaunchResult,
     input: TeamRuntimeLaunchInput
@@ -3368,13 +3383,11 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     snapshot: PersistedTeamLaunchSnapshot;
     result: TeamRuntimeLaunchResult;
   }> {
-    return persistOpenCodeRuntimeAdapterLaunchResultHelper(result, input, {
-      createOpenCodeRuntimeBootstrapEvidencePorts: () =>
-        this.createOpenCodeRuntimeBootstrapEvidencePorts(),
-      nowIso,
-      writeLaunchStateSnapshot: (teamName, snapshot) =>
-        this.writeLaunchStateSnapshot(teamName, snapshot),
-    });
+    return persistOpenCodeRuntimeAdapterLaunchResultHelper(
+      result,
+      input,
+      this.createOpenCodeLaunchPersistencePorts()
+    );
   }
 
   private async commitOpenCodeRuntimeAdapterLaunchSessionEvidence(params: {
@@ -3382,11 +3395,10 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     laneId: string;
     result: TeamRuntimeLaunchResult;
   }): Promise<TeamRuntimeLaunchResult> {
-    return commitOpenCodeRuntimeAdapterLaunchSessionEvidenceHelper(params, {
-      createOpenCodeRuntimeBootstrapEvidencePorts: () =>
-        this.createOpenCodeRuntimeBootstrapEvidencePorts(),
-      nowIso,
-    });
+    return commitOpenCodeRuntimeAdapterLaunchSessionEvidenceHelper(
+      params,
+      this.createOpenCodeLaunchPersistencePorts()
+    );
   }
 
   async launchTeam(
@@ -3919,48 +3931,25 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
   }
 
   private async recoverDeterministicBootstrapCompletion(run: ProvisioningRun): Promise<void> {
-    await recoverDeterministicBootstrapCompletionHelper<ProvisioningRun>(run, {
-      isProvisioningRunPromotedToAlive: (targetRun) =>
-        this.isProvisioningRunPromotedToAlive(targetRun),
-      hasPendingDeterministicFirstRealTurn: (targetRun) =>
-        this.hasPendingDeterministicFirstRealTurn(targetRun),
-      isProvisioningRunStillPromotable: (targetRun) =>
-        this.isProvisioningRunStillPromotable(targetRun),
-      isCurrentProvisioningRun: (targetRun) =>
-        this.provisioningRunByTeam.get(targetRun.teamName) === targetRun.runId,
-      readBootstrapLaunchSnapshot,
-      syncRunMemberSpawnStatusesFromSnapshot: (targetRun, snapshot) =>
-        this.syncRunMemberSpawnStatusesFromSnapshot(targetRun, snapshot),
-      writeLaunchStateSnapshot: (teamName, snapshot) =>
-        this.writeLaunchStateSnapshot(teamName, snapshot),
-      nowIso,
-      getMemberLaunchSummary: getMemberLaunchSummaryHelper,
-      hasPendingLaunchMembers: (targetRun, launchSummary, snapshot) =>
-        this.hasPendingLaunchMembers(targetRun, launchSummary, snapshot),
-      buildAggregatePendingLaunchMessage: (prefix, targetRun, launchSummary, snapshot) =>
-        buildAggregatePendingLaunchMessageHelper({
-          prefix,
-          run: targetRun,
-          launchSummary,
-          snapshot,
-        }),
-      updateProgress,
-      extractCliLogsFromRun,
-      deleteProvisioningRun: (teamName) => {
-        this.provisioningRunByTeam.delete(teamName);
-      },
-      setAliveRunId: (teamName, runId) => this.runTracking.setAliveRunId(teamName, runId),
-      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
-      fireTeamLaunchedNotification: (targetRun) => this.fireTeamLaunchedNotification(targetRun),
-      fireTeamLaunchIncompleteNotification: (targetRun, failedMembers, launchSummary, snapshot) =>
-        this.fireTeamLaunchIncompleteNotification(
-          targetRun,
-          failedMembers,
-          launchSummary,
-          snapshot
-        ),
-      warn: (message) => logger.warn(message),
-    });
+    await recoverDeterministicBootstrapCompletionWithService<ProvisioningRun>(
+      run,
+      this as unknown as DeterministicBootstrapCompletionRecoveryServiceHost<ProvisioningRun>,
+      {
+        readBootstrapLaunchSnapshot,
+        nowIso,
+        getMemberLaunchSummary: getMemberLaunchSummaryHelper,
+        buildAggregatePendingLaunchMessage: (prefix, targetRun, launchSummary, snapshot) =>
+          buildAggregatePendingLaunchMessageHelper({
+            prefix,
+            run: targetRun,
+            launchSummary,
+            snapshot,
+          }),
+        updateProgress,
+        extractCliLogsFromRun,
+        warn: (message) => logger.warn(message),
+      }
+    );
   }
 
   private isProvisioningRunPromotedToAlive(run: ProvisioningRun): boolean {
