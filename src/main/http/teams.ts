@@ -9,8 +9,8 @@ import {
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
-import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
+import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { isAbsolute, join } from 'path';
