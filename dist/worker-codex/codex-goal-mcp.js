@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { McpServer, ResourceTemplate, } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { AccessBoundary, ProjectAdmissionWorkerRole, InterruptAndContinueWorkerUseCase, RunEventProviderKind, ProjectOperation, } from "@vioxen/subscription-runtime/worker-core";
+import { ProjectAdmissionWorkerRole, InterruptAndContinueWorkerUseCase, RunEventProviderKind, ProjectOperation, } from "@vioxen/subscription-runtime/worker-core";
 import { codexGoalJobToArgs, createCodexGoalJob, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
 import { upsertCodexGoalLaunchManifest } from "./codex-goal-launch-manifest.js";
 import { buildCodexGoalNoTmuxCommand, buildCodexGoalTmuxCommand, collectCodexGoalStatus, doctorCodexGoal, listCodexGoalAccountStatuses, prepareCodexGoalLaunchPaths, resolveCodexGoalWorkerLiveness, startCodexGoalTmux, tailCodexGoalLog, } from "./codex-goal-ops.js";
@@ -25,9 +25,8 @@ import { optionalTargetCommit, targetCommitFromArgs, } from "./codex-goal-mcp-ta
 import { goalInputSchema, statusInputSchema, } from "./codex-goal-mcp-input-schemas.js";
 export { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
 import { buildCodexGoalOverviewView, reconcilePreviewCodexGoalJobsView, } from "./codex-goal-mcp-overview.js";
-import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item.js";
 import { codexGoalStatusInputFromLaunch as statusInput, } from "./codex-goal-mcp-status-input.js";
-import { createCodexProjectControlBroker, } from "./codex-goal-mcp-project-broker.js";
+import { codexProjectAdmissionDeps, codexProjectControlBroker, loadJobLaunch, loadProjectControlController, } from "./codex-goal-mcp-project-control-deps.js";
 import { projectControlAdmissionSnapshotView, projectControlRepairJobManifestView, projectControlUpdateControllerScopeView, } from "./codex-goal-mcp-project-control-admin.js";
 import { projectControlCreateWorktreeView, projectControlIntegrateCommitView, projectControlMarkReviewedView, projectControlPushBranchView, projectControlStartStoredJobView, projectControlStopStoredJobView, } from "./codex-goal-mcp-project-control-actions.js";
 import { projectControlCreateCodexGoalJobView, projectControlOperationStatusView, projectControlRefillWorkerView, } from "./codex-goal-mcp-project-control-jobs.js";
@@ -1539,40 +1538,6 @@ export function createCodexGoalMcpServer(options = {}) {
     }));
     return server;
 }
-async function loadJobLaunch(args) {
-    const registryRootDir = registryRootFromArgs(args);
-    const manifest = await readCodexGoalJob({
-        registryRootDir,
-        jobId: requiredRawString(args.jobId, "jobId"),
-    });
-    return {
-        registryRootDir,
-        manifest,
-        launch: await goalLaunchInput(codexGoalJobToArgs(manifest)),
-    };
-}
-async function loadProjectControlController(args) {
-    const registryRootDir = registryRootFromArgs(args);
-    const controller = await readCodexGoalJob({
-        registryRootDir,
-        jobId: requiredRawString(args.controllerJobId, "controllerJobId"),
-    });
-    if (controller.accessBoundary !== AccessBoundary.ProjectScopedControl) {
-        throw new Error("project_control_controller_boundary_required");
-    }
-    if (!controller.projectAccessScope) {
-        throw new Error("project_control_controller_scope_required");
-    }
-    return {
-        registryRootDir,
-        controller,
-        scope: controller.projectAccessScope,
-    };
-}
-const codexProjectAdmissionDeps = {
-    listJobs: listCodexGoalJobs,
-    buildOverviewItem: (input) => buildCodexGoalOverviewItem(input),
-};
 function projectControlAdminDeps() {
     return {
         loadProjectControlController,
@@ -1587,12 +1552,6 @@ async function projectControlUpdateControllerScope(args) {
 }
 async function projectControlRepairJobManifest(args) {
     return mcpJson(await projectControlRepairJobManifestView(args, projectControlAdminDeps()));
-}
-function codexProjectControlBroker(input) {
-    return createCodexProjectControlBroker({
-        ...input,
-        admissionDeps: codexProjectAdmissionDeps,
-    });
 }
 function projectControllerDeps() {
     return {
