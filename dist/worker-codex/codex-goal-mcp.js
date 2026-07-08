@@ -10,23 +10,22 @@ import { sessionArtifactFromCodexAuthJson } from "@vioxen/subscription-runtime/p
 import { LocalFileRunEventProjectionStateStore, LocalFileRunEventStore, LocalControlledAgentStateStore, } from "@vioxen/subscription-runtime/store-local-file";
 import { buildLocalClaudeControlledAgentProfile, createLocalClaudeControlledAgentProvider, loadScopedClaudeSessionArtifact, watchClaudeRuns, } from "@vioxen/subscription-runtime/worker-local";
 import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, ProjectAdmissionWorkerRole, RunObservationService, InterruptAndContinueWorkerUseCase, ProjectControlBroker, RunEventProviderKind, buildControlledAgentLaunchPlan, buildControlledAgentLiveControllerState, buildControlledAgentProcessOwner, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, evaluateProjectAdmission, projectRunObservationEvents, projectRunReadModelsFromEvents, reconcileRunPreview, runEventProviderKindFromString, ProjectOperation, } from "@vioxen/subscription-runtime/worker-core";
-import { codexGoalJobToArgs, createCodexGoalJob, defaultCodexGoalJobRoot, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
+import { codexGoalJobToArgs, createCodexGoalJob, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
 import { upsertCodexGoalLaunchManifest } from "./codex-goal-launch-manifest.js";
 import { runDependencyBootstrap, } from "./dependency-bootstrap.js";
 import { codexGoalProgressPath, } from "./codex-goal-runner.js";
-import { optionalCodexGoalEditMode, optionalCodexGoalProviderSandboxMode, } from "./codex-goal-control-modes.js";
 import { buildCodexGoalNoTmuxCommand, buildCodexGoalStopTmuxCommand, buildCodexGoalTmuxCommand, collectCodexGoalStatus, doctorCodexGoal, listCodexGoalAccountStatuses, prepareCodexGoalLaunchPaths, reconcileCodexGoalRuntimeResult, resolveCodexGoalWorkerLiveness, startCodexGoalTmux, stopCodexGoalDirectProcess, stopCodexGoalTmux, tailCodexGoalLog, } from "./codex-goal-ops.js";
 import { CodexRunObservationAdapter } from "./codex-run-observation.js";
-import { optionalCodexGoalAccessBoundary, optionalCodexGoalNetworkAccess, parseCodexGoalProjectAccessScope, } from "./codex-goal-access-plan.js";
+import { parseCodexGoalProjectAccessScope, } from "./codex-goal-access-plan.js";
 import { projectControlGenericScopeDenial, projectControlGenericToolDenial, } from "./project-control-scope-guard.js";
 import { registerProjectIntegrationMcpTools, } from "./project-integration-mcp/index.js";
 import { createLocalProjectIntegrationMcpToolHandlers, } from "./project-integration-mcp/adapters/local-project-integration-mcp-tool-handlers.js";
 import { buildCodexControlledAgentProfile, CodexControlledAgentProvider, } from "./controlled-agent/index.js";
 import { projectControllerCapacityDemand, recordProjectControllerCapacitySignal, } from "./project-controller-capacity.js";
 import { createProjectControlOperation, patchProjectControlOperation, projectControlOperationExecutionMode, projectControlOperationView, projectControlOperationsRoot, readProjectControlOperationById, startProjectControlOperationRunner, } from "./project-control-operation-lifecycle.js";
-import { accountNames, booleanValue, numberValue, putIfDefined, requiredRawString, requiredString, resolvePath, stringValue, tagValues, workerReportModeValue, } from "./codex-goal-mcp-values.js";
+import { accountNames, booleanValue, numberValue, requiredRawString, resolvePath, stringValue, tagValues, } from "./codex-goal-mcp-values.js";
 import { jobIdInputSchema, jobRegistryInputSchema, optionalRunEventProviderKind, registryRootFromArgs, runEventRetentionPolicyFromArgs, runEventRootFromArgs, runEventTypeFilter, } from "./codex-goal-mcp-inputs.js";
-import { accountAuthRootFromArgs, accountPoolRootFromArgs, availableCodexGoalAccountSlots, codexAccountReloginInstructions, codexAccountStatusPayload, defaultCodexGoalAuthRoot, dedupeCodexGoalAccountSlots, listAccountPools, } from "./codex-goal-mcp-accounts.js";
+import { accountAuthRootFromArgs, accountPoolRootFromArgs, availableCodexGoalAccountSlots, codexAccountReloginInstructions, codexAccountStatusPayload, dedupeCodexGoalAccountSlots, listAccountPools, } from "./codex-goal-mcp-accounts.js";
 import { writeCodexGoalMaintenancePauseEvent, writeCodexGoalReviewMarker, writeCodexGoalStopEvent, writeCodexGoalStoppedProgress, } from "./codex-goal-mcp-lifecycle-markers.js";
 import { matchesProjectControlPrefix, nodeErrorCode, pathInsideAnyProjectRoot, stringArrayArg, uniqueProjectControlStrings, } from "./codex-goal-mcp-project-utils.js";
 import { projectControlDefaultAccountNames, projectControlRefillAccountNames, } from "./codex-goal-mcp-project-accounts.js";
@@ -38,6 +37,7 @@ import { applyWorkspaceConflictToOverviewJob, buildCodexGoalWorkspaceConflicts, 
 import { codexOverviewItemToWatchStatus } from "./codex-goal-mcp-watch-status.js";
 import { failedRunObservationSnapshot, observeOrphanCodexRun, safeObservationErrorMessage, summarizeRunObservationSnapshots, } from "./codex-goal-mcp-observation-projection.js";
 import { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
+import { jobManifestInputFromArgs, jobManifestPatchFromArgs, } from "./codex-goal-mcp-manifest-args.js";
 import { mcpJson, withMcpErrors, } from "./codex-goal-mcp-response.js";
 import { registerCodexGoalPrompts } from "./codex-goal-mcp-prompts.js";
 import { optionalTargetCommit, targetCommitFromArgs, } from "./codex-goal-mcp-target-commit.js";
@@ -45,7 +45,7 @@ import { goalInputSchema, statusInputSchema, } from "./codex-goal-mcp-input-sche
 export { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
 import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item.js";
 import { codexGoalStatusInputFromLaunch as statusInput, } from "./codex-goal-mcp-status-input.js";
-import { CODEX_GOAL_MCP_DEFAULT_TIMEOUT_MS, goalControlModesFromRecord, goalLaunchInput, } from "./codex-goal-mcp-launch-input.js";
+import { goalLaunchInput, } from "./codex-goal-mcp-launch-input.js";
 import { codexGoalLaunchSummary as launchSummary, } from "./codex-goal-mcp-launch-summary.js";
 import { CODEX_GOAL_CONTROL_SURFACE_SCHEMA, buildCodexGoalDecision, buildCodexGoalHandoff, isSafeStartAction, nextActionForStatus, redactText, truncateText, } from "./codex-goal-mcp-decision.js";
 import { assertGitCurrentBranch, assertSafeGitCommitSha, assertSafeGitRefName, assertSafeGitRemoteName, execGit, execGitStdout, } from "./codex-goal-mcp-project-git.js";
@@ -53,8 +53,6 @@ import { assertProjectControlCreateManifestPaths, assertProjectControlDependency
 import { projectIntegrationPushApprovedCommitWithConsumedLedger, } from "./codex-goal-mcp-project-integration-ledger.js";
 export { availableCodexGoalAccountSlots, dedupeCodexGoalAccountSlots, visibleCodexGoalAccountPoolSlots, } from "./codex-goal-mcp-accounts.js";
 const serverVersion = "0.1.0-main.2";
-const defaultAuthRoot = defaultCodexGoalAuthRoot;
-const defaultTimeoutMs = CODEX_GOAL_MCP_DEFAULT_TIMEOUT_MS;
 const controlledAgentProcessOwner = buildControlledAgentProcessOwner({
     runtimeVersion: serverVersion,
     ...(process.env.SUBSCRIPTION_RUNTIME_RELEASE_SHA === undefined
@@ -4409,103 +4407,6 @@ async function projectAgentRunEvents(args) {
         nextCursor: readBack.nextCursor?.value,
         events: readBack.events,
     };
-}
-function jobManifestInputFromArgs(args) {
-    const cwd = resolvePath(process.cwd(), args.cwd ?? process.cwd());
-    const jobId = requiredRawString(args.jobId, "jobId");
-    const jobRootDir = resolvePath(cwd, args.jobRootDir ?? defaultCodexGoalJobRoot(jobId));
-    const controlModes = goalControlModesFromRecord(args);
-    const accessBoundary = optionalCodexGoalAccessBoundary(args.accessBoundary);
-    const projectAccessScope = parseCodexGoalProjectAccessScope(args.projectAccessScope);
-    const networkAccess = optionalCodexGoalNetworkAccess(args.networkAccess);
-    return {
-        jobId,
-        ...(stringValue(args.description) ? { description: stringValue(args.description) } : {}),
-        ...(tagValues(args.tags).length ? { tags: tagValues(args.tags) } : {}),
-        jobRootDir,
-        authRootDir: resolvePath(cwd, args.authRootDir ?? defaultAuthRoot),
-        ...(args.stateRootDir ? { stateRootDir: resolvePath(cwd, args.stateRootDir) } : {}),
-        workspacePath: requiredString(args.workspacePath, "workspacePath", cwd),
-        promptPath: resolvePath(cwd, args.promptPath ?? join(jobRootDir, "prompt.md")),
-        ...(stringValue(args.codexGoalObjective)
-            ? { codexGoalObjective: stringValue(args.codexGoalObjective) }
-            : {}),
-        taskId: args.taskId ?? jobId,
-        accounts: accountNames(args.accounts),
-        ...(args.outputPath ? { outputPath: resolvePath(cwd, args.outputPath) } : {}),
-        ...(args.progressPath ? { progressPath: resolvePath(cwd, args.progressPath) } : {}),
-        progressHeartbeatMs: args.progressHeartbeatMs ?? 60_000,
-        ...(args.codexBinaryPath ? { codexBinaryPath: args.codexBinaryPath } : {}),
-        model: args.model ?? "gpt-5.5",
-        reasoningEffort: args.reasoningEffort ?? "high",
-        serviceTier: args.serviceTier ?? "default",
-        executionEngine: args.executionEngine ?? "app-server-goal",
-        taskTimeoutMs: args.taskTimeoutMs ?? defaultTimeoutMs,
-        ...(args.appServerStartupTimeoutMs
-            ? { appServerStartupTimeoutMs: args.appServerStartupTimeoutMs }
-            : {}),
-        ...(args.staleLockMs ? { staleLockMs: args.staleLockMs } : {}),
-        maxAccountCycles: args.maxAccountCycles ?? 5,
-        ...controlModes,
-        ...(accessBoundary === undefined ? {} : { accessBoundary }),
-        ...(projectAccessScope === undefined ? {} : { projectAccessScope }),
-        ...(args.allowDangerFullAccess === undefined
-            ? {}
-            : { allowDangerFullAccess: args.allowDangerFullAccess }),
-        ...(networkAccess === undefined ? {} : { networkAccess }),
-        allowDuplicateAccountIdentities: args.allowDuplicateAccountIdentities ?? false,
-        requireGitWorkspace: args.requireGitWorkspace ?? true,
-        prewarmOnStart: args.prewarmOnStart ?? false,
-        ...(args.workerReportMode ? { workerReportMode: args.workerReportMode } : {}),
-        tmuxSession: args.tmuxSession ?? jobId,
-        ...(args.cwd ? { cwd } : {}),
-        ...(args.logPath ? { logPath: resolvePath(cwd, args.logPath) } : {}),
-        outputFormat: args.outputFormat ?? "json",
-    };
-}
-function jobManifestPatchFromArgs(args) {
-    const cwd = resolvePath(process.cwd(), args.cwd ?? process.cwd());
-    const patch = {};
-    putIfDefined(patch, "description", stringValue(args.description));
-    const tags = tagValues(args.tags);
-    if (args.tags !== undefined)
-        patch.tags = tags;
-    putIfDefined(patch, "jobRootDir", args.jobRootDir && resolvePath(cwd, args.jobRootDir));
-    putIfDefined(patch, "authRootDir", args.authRootDir && resolvePath(cwd, args.authRootDir));
-    putIfDefined(patch, "stateRootDir", args.stateRootDir && resolvePath(cwd, args.stateRootDir));
-    putIfDefined(patch, "workspacePath", args.workspacePath && resolvePath(cwd, args.workspacePath));
-    putIfDefined(patch, "promptPath", args.promptPath && resolvePath(cwd, args.promptPath));
-    putIfDefined(patch, "codexGoalObjective", stringValue(args.codexGoalObjective));
-    putIfDefined(patch, "taskId", stringValue(args.taskId));
-    if (args.accounts !== undefined)
-        patch.accounts = accountNames(args.accounts);
-    putIfDefined(patch, "outputPath", args.outputPath && resolvePath(cwd, args.outputPath));
-    putIfDefined(patch, "progressPath", args.progressPath && resolvePath(cwd, args.progressPath));
-    putIfDefined(patch, "progressHeartbeatMs", numberValue(args.progressHeartbeatMs));
-    putIfDefined(patch, "codexBinaryPath", stringValue(args.codexBinaryPath));
-    putIfDefined(patch, "model", stringValue(args.model));
-    putIfDefined(patch, "reasoningEffort", stringValue(args.reasoningEffort));
-    putIfDefined(patch, "serviceTier", stringValue(args.serviceTier));
-    putIfDefined(patch, "executionEngine", stringValue(args.executionEngine));
-    putIfDefined(patch, "taskTimeoutMs", numberValue(args.taskTimeoutMs));
-    putIfDefined(patch, "appServerStartupTimeoutMs", numberValue(args.appServerStartupTimeoutMs));
-    putIfDefined(patch, "staleLockMs", numberValue(args.staleLockMs));
-    putIfDefined(patch, "maxAccountCycles", numberValue(args.maxAccountCycles));
-    putIfDefined(patch, "editMode", optionalCodexGoalEditMode(stringValue(args.editMode), "editMode"));
-    putIfDefined(patch, "providerSandboxMode", optionalCodexGoalProviderSandboxMode(stringValue(args.providerSandboxMode), "providerSandboxMode"));
-    putIfDefined(patch, "accessBoundary", optionalCodexGoalAccessBoundary(args.accessBoundary));
-    putIfDefined(patch, "projectAccessScope", parseCodexGoalProjectAccessScope(args.projectAccessScope));
-    putIfDefined(patch, "allowDangerFullAccess", booleanValue(args.allowDangerFullAccess));
-    putIfDefined(patch, "networkAccess", optionalCodexGoalNetworkAccess(args.networkAccess));
-    putIfDefined(patch, "allowDuplicateAccountIdentities", booleanValue(args.allowDuplicateAccountIdentities));
-    putIfDefined(patch, "requireGitWorkspace", booleanValue(args.requireGitWorkspace));
-    putIfDefined(patch, "prewarmOnStart", booleanValue(args.prewarmOnStart));
-    putIfDefined(patch, "workerReportMode", workerReportModeValue(args.workerReportMode));
-    putIfDefined(patch, "tmuxSession", stringValue(args.tmuxSession));
-    putIfDefined(patch, "cwd", args.cwd && cwd);
-    putIfDefined(patch, "logPath", args.logPath && resolvePath(cwd, args.logPath));
-    putIfDefined(patch, "outputFormat", stringValue(args.outputFormat));
-    return patch;
 }
 function jsonRecordFromProjectControlArgs(args) {
     return JSON.parse(JSON.stringify(args));
