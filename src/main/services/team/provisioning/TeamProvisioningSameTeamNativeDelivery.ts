@@ -66,6 +66,44 @@ export function createDefaultTeamProvisioningSameTeamNativeDelivery(
   );
 }
 
+export interface TeamProvisioningSameTeamNativeDeliveryServiceHost {
+  inboxReader: TeamProvisioningSameTeamNativeDeliveryPorts['inboxReader'];
+  relayedLeadInboxMessageIds: TeamProvisioningSameTeamNativeDeliveryPorts['relayedLeadInboxMessageIds'];
+  pendingTimeouts: TeamProvisioningSameTeamNativeDeliveryPorts['pendingTimeouts'];
+  markInboxMessagesRead: TeamProvisioningSameTeamNativeDeliveryPorts['markInboxMessagesRead'];
+  relayLeadInboxMessages: TeamProvisioningSameTeamNativeDeliveryPorts['relayLeadInboxMessages'];
+  trimRelayedSet: TeamProvisioningSameTeamNativeDeliveryPorts['trimRelayedSet'];
+  recentSameTeamNativeFingerprints: Map<string, NativeSameTeamFingerprint[]>;
+}
+
+export interface TeamProvisioningSameTeamNativeDeliveryServiceHostOptions extends Partial<
+  Pick<TeamProvisioningSameTeamNativeDeliveryPorts, 'nowMs' | 'randomId' | 'setTimeout'>
+> {
+  warn: TeamProvisioningSameTeamNativeDeliveryPorts['warn'];
+}
+
+export function createDefaultTeamProvisioningSameTeamNativeDeliveryFromService(
+  service: TeamProvisioningSameTeamNativeDeliveryServiceHost,
+  options: TeamProvisioningSameTeamNativeDeliveryServiceHostOptions
+): TeamProvisioningSameTeamNativeDelivery {
+  return createDefaultTeamProvisioningSameTeamNativeDelivery(
+    createTeamProvisioningSameTeamNativeDeliveryPorts({
+      inboxReader: service.inboxReader,
+      relayedLeadInboxMessageIds: service.relayedLeadInboxMessageIds,
+      pendingTimeouts: service.pendingTimeouts,
+      markInboxMessagesRead: (teamName, leadName, messages) =>
+        service.markInboxMessagesRead(teamName, leadName, messages),
+      relayLeadInboxMessages: (teamName) => service.relayLeadInboxMessages(teamName),
+      trimRelayedSet: (set) => service.trimRelayedSet(set),
+      warn: options.warn,
+      nowMs: options.nowMs,
+      randomId: options.randomId,
+      setTimeout: options.setTimeout,
+    }),
+    service.recentSameTeamNativeFingerprints
+  );
+}
+
 export class TeamProvisioningSameTeamNativeDelivery {
   constructor(
     private readonly config: TeamProvisioningSameTeamNativeDeliveryConfig,

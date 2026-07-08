@@ -510,9 +510,9 @@ import {
 } from './provisioning/TeamProvisioningRuntimeTurnSettledPlanning';
 import { TeamProvisioningRunTrackingDeliveryHelper } from './provisioning/TeamProvisioningRunTrackingDelivery';
 import {
-  createDefaultTeamProvisioningSameTeamNativeDelivery,
-  createTeamProvisioningSameTeamNativeDeliveryPorts,
+  createDefaultTeamProvisioningSameTeamNativeDeliveryFromService,
   TeamProvisioningSameTeamNativeDelivery,
+  type TeamProvisioningSameTeamNativeDeliveryServiceHost,
 } from './provisioning/TeamProvisioningSameTeamNativeDelivery';
 import {
   createMixedSecondaryLaneStateForMember as buildMixedSecondaryLaneStateForMember,
@@ -1817,18 +1817,9 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       membersMetaStore: this.membersMetaStore,
       readConfigSnapshot: (teamName) => this.configFacade.readConfigSnapshot(teamName),
     });
-    this.sameTeamNativeDelivery = createDefaultTeamProvisioningSameTeamNativeDelivery(
-      createTeamProvisioningSameTeamNativeDeliveryPorts({
-        inboxReader: this.inboxReader,
-        relayedLeadInboxMessageIds: this.relayedLeadInboxMessageIds,
-        pendingTimeouts: this.pendingTimeouts,
-        markInboxMessagesRead: (teamName, leadName, messages) =>
-          this.markInboxMessagesRead(teamName, leadName, messages),
-        relayLeadInboxMessages: (teamName) => this.relayLeadInboxMessages(teamName),
-        trimRelayedSet: (set) => this.trimRelayedSet(set),
-        warn: (message) => logger.warn(message),
-      }),
-      this.recentSameTeamNativeFingerprints
+    this.sameTeamNativeDelivery = createDefaultTeamProvisioningSameTeamNativeDeliveryFromService(
+      this as unknown as TeamProvisioningSameTeamNativeDeliveryServiceHost,
+      { warn: (message) => logger.warn(message) }
     );
     this.cleanupRunPorts = createTeamProvisioningCleanupRunPorts<ProvisioningRun>(
       createTeamProvisioningCleanupRunPortsDepsFromService(

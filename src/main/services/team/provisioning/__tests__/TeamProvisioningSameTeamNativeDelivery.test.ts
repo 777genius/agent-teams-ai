@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  createDefaultTeamProvisioningSameTeamNativeDeliveryFromService,
   createTeamProvisioningSameTeamNativeDeliveryPorts,
   TeamProvisioningSameTeamNativeDelivery,
   type TeamProvisioningSameTeamNativeDeliveryPorts,
+  type TeamProvisioningSameTeamNativeDeliveryServiceHost,
 } from '../TeamProvisioningSameTeamNativeDelivery';
 
 import type { InboxMessage } from '@shared/types';
@@ -91,6 +93,40 @@ function createHarness(
 }
 
 describe('TeamProvisioningSameTeamNativeDelivery', () => {
+  it('builds default delivery from service-shaped dependencies', async () => {
+    const relayedLeadInboxMessageIds = new Map<string, Set<string>>();
+    const pendingTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+    const recentSameTeamNativeFingerprints = new Map();
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined) as MarkInboxMessagesReadMock;
+    const relayLeadInboxMessages = vi.fn().mockResolvedValue(undefined);
+    const trimRelayedSet = vi.fn((set: Set<string>) => set);
+    const serviceHost = {
+      inboxReader: {
+        getMessagesFor: vi.fn().mockResolvedValue([inboxMessage()]),
+      },
+      relayedLeadInboxMessageIds,
+      pendingTimeouts,
+      markInboxMessagesRead,
+      relayLeadInboxMessages,
+      trimRelayedSet,
+      recentSameTeamNativeFingerprints,
+    } satisfies TeamProvisioningSameTeamNativeDeliveryServiceHost;
+    const delivery = createDefaultTeamProvisioningSameTeamNativeDeliveryFromService(serviceHost, {
+      warn: vi.fn(),
+      nowMs: () => 1_000,
+      randomId: () => 'fp-1',
+    });
+
+    delivery.rememberSameTeamNativeFingerprints('alpha', [teammateBlock()]);
+    await delivery.reconcileSameTeamNativeDeliveries('alpha', 'lead');
+
+    expect(serviceHost.inboxReader.getMessagesFor).toHaveBeenCalledWith('alpha', 'lead');
+    expect(markInboxMessagesRead).toHaveBeenCalledWith('alpha', 'lead', [{ messageId: 'msg-1' }]);
+    expect(relayedLeadInboxMessageIds.get('alpha')?.has('msg-1')).toBe(true);
+    expect(trimRelayedSet).toHaveBeenCalledWith(expect.any(Set));
+    expect(recentSameTeamNativeFingerprints.get('alpha')).toBeUndefined();
+  });
+
   it('remembers normalized same-team fingerprints and drops expired entries', () => {
     let now = 1_000;
     const { service } = createHarness({ nowMs: () => now });
