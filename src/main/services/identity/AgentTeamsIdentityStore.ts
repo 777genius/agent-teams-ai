@@ -14,6 +14,13 @@ export const AGENT_TEAMS_IDENTITY_SCHEMA_VERSION = 1;
 const SENTRY_ANONYMOUS_USER_PREFIX = 'agent-teams-sentry-v1:';
 const IDENTITY_DIR_MODE = 0o700;
 const IDENTITY_FILE_MODE = 0o600;
+const IDENTITY_LOCK_MAX_ATTEMPTS = 80;
+const IDENTITY_LOCK_RETRY_BASE_DELAY_MS = 25;
+const IDENTITY_LOCK_RETRY_MAX_DELAY_MS = 250;
+const IDENTITY_LOCK_STALE_MS = 30_000;
+const pendingIdentityByStorePath = new Map<string, Promise<AgentTeamsClientIdentity>>();
+
+type IdentityStoreLockHandle = Awaited<ReturnType<typeof fs.promises.open>>;
 
 type ParsedJson = null | boolean | number | string | ParsedJson[] | { [key: string]: ParsedJson };
 
@@ -40,6 +47,12 @@ interface LegacyAgentTeamsState {
   capabilities?: Record<string, unknown>;
 }
 
+interface IdentityStoreLock {
+  handle: IdentityStoreLockHandle;
+  lockPath: string;
+  token: string;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -55,6 +68,14 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getIdentityLockRetryDelayMs(attempt: number): number {
+  return Math.min(IDENTITY_LOCK_RETRY_BASE_DELAY_MS * attempt, IDENTITY_LOCK_RETRY_MAX_DELAY_MS);
+}
+
 function pickObjectField(
   record: Record<string, unknown>,
   key: string
@@ -65,6 +86,10 @@ function pickObjectField(
 
 export function getAgentTeamsIdentityStorePath(): string {
   return path.join(getAppDataPath(), 'identity', 'agent-teams-client.json');
+}
+
+function getAgentTeamsIdentityStoreLockPath(storePath: string): string {
+  return `${storePath}.lock`;
 }
 
 export function applyAgentTeamsIdentityEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
@@ -187,10 +212,77 @@ async function loadAppDataIdentity(storePath: string): Promise<AgentTeamsIdentit
   return normalizeStoreRecord(await readJsonFile(storePath));
 }
 
-export async function ensureAgentTeamsClientIdentity(options?: {
-  storePath?: string;
-}): Promise<AgentTeamsClientIdentity> {
-  const storePath = options?.storePath ?? getAgentTeamsIdentityStorePath();
+async function removeStaleIdentityStoreLock(lockPath: string): Promise<void> {
+  try {
+    const stat = await fs.promises.stat(lockPath);
+    if (Date.now() - stat.mtimeMs > IDENTITY_LOCK_STALE_MS) {
+      await fs.promises.unlink(lockPath).catch(() => undefined);
+    }
+  } catch {
+    // Lock disappeared between attempts.
+  }
+}
+
+async function acquireIdentityStoreLock(storePath: string): Promise<IdentityStoreLock> {
+  const dir = path.dirname(storePath);
+  const lockPath = getAgentTeamsIdentityStoreLockPath(storePath);
+  await fs.promises.mkdir(dir, { recursive: true, mode: IDENTITY_DIR_MODE });
+  await fs.promises.chmod(dir, IDENTITY_DIR_MODE).catch(() => undefined);
+
+  for (let attempt = 1; attempt <= IDENTITY_LOCK_MAX_ATTEMPTS; attempt++) {
+    try {
+      const token = randomUUID();
+      const handle = await fs.promises.open(lockPath, 'wx', IDENTITY_FILE_MODE);
+      try {
+        await handle.writeFile(
+          `${JSON.stringify({ pid: process.pid, token, createdAt: new Date().toISOString() })}\n`
+        );
+        return { handle, lockPath, token };
+      } catch (writeError) {
+        await handle.close().catch(() => undefined);
+        await fs.promises.unlink(lockPath).catch(() => undefined);
+        throw writeError;
+      }
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== 'EEXIST' || attempt === IDENTITY_LOCK_MAX_ATTEMPTS) {
+        throw error;
+      }
+
+      await removeStaleIdentityStoreLock(lockPath);
+      await sleep(getIdentityLockRetryDelayMs(attempt));
+    }
+  }
+
+  throw new Error('Unable to acquire Agent Teams identity store lock');
+}
+
+async function releaseIdentityStoreLock(lock: IdentityStoreLock): Promise<void> {
+  await lock.handle.close().catch(() => undefined);
+
+  try {
+    const raw = await fs.promises.readFile(lock.lockPath, 'utf8');
+    const parsed = JSON.parse(raw) as unknown;
+    if (isRecord(parsed) && parsed.token === lock.token) {
+      await fs.promises.unlink(lock.lockPath).catch(() => undefined);
+    }
+  } catch {
+    // A stale-lock cleanup or another process may already have removed it.
+  }
+}
+
+async function withIdentityStoreLock<T>(storePath: string, fn: () => Promise<T>): Promise<T> {
+  const lock = await acquireIdentityStoreLock(storePath);
+  try {
+    return await fn();
+  } finally {
+    await releaseIdentityStoreLock(lock);
+  }
+}
+
+async function ensureAgentTeamsClientIdentityOnce(
+  storePath: string
+): Promise<AgentTeamsClientIdentity> {
   const existing = await loadAppDataIdentity(storePath);
   if (existing) {
     return {
@@ -200,15 +292,42 @@ export async function ensureAgentTeamsClientIdentity(options?: {
     };
   }
 
-  const legacy = !(await pathExists(storePath)) ? await readLegacyAgentTeamsState() : null;
-  const record = buildStoreRecord(legacy);
-  await writeStoreRecord(storePath, record);
+  return withIdentityStoreLock(storePath, async () => {
+    const existingAfterLock = await loadAppDataIdentity(storePath);
+    if (existingAfterLock) {
+      return {
+        clientId: existingAfterLock.clientId,
+        source: 'app-data',
+        storePath,
+      };
+    }
 
-  return {
-    clientId: record.clientId,
-    source: legacy ? 'legacy-global-config' : 'created',
-    storePath,
-  };
+    const legacy = !(await pathExists(storePath)) ? await readLegacyAgentTeamsState() : null;
+    const record = buildStoreRecord(legacy);
+    await writeStoreRecord(storePath, record);
+
+    return {
+      clientId: record.clientId,
+      source: legacy ? 'legacy-global-config' : 'created',
+      storePath,
+    };
+  });
+}
+
+export async function ensureAgentTeamsClientIdentity(options?: {
+  storePath?: string;
+}): Promise<AgentTeamsClientIdentity> {
+  const storePath = options?.storePath ?? getAgentTeamsIdentityStorePath();
+  const pending = pendingIdentityByStorePath.get(storePath);
+  if (pending) {
+    return pending;
+  }
+
+  const next = ensureAgentTeamsClientIdentityOnce(storePath).finally(() => {
+    pendingIdentityByStorePath.delete(storePath);
+  });
+  pendingIdentityByStorePath.set(storePath, next);
+  return next;
 }
 
 export async function readAgentTeamsIdentityStore(options?: {

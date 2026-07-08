@@ -1,7 +1,3 @@
-import * as fs from 'fs/promises';
-import * as os from 'os';
-import * as path from 'path';
-
 import {
   AGENT_TEAMS_IDENTITY_STORE_PATH_ENV,
   applyAgentTeamsIdentityEnv,
@@ -11,6 +7,9 @@ import {
   readAgentTeamsIdentityStore,
 } from '@main/services/identity/AgentTeamsIdentityStore';
 import { setAppDataBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 
 const LEGACY_CLIENT_ID = '22222222-2222-4222-8222-222222222222';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -54,6 +53,46 @@ describe('AgentTeamsIdentityStore', () => {
     expect(second.source).toBe('app-data');
     expect(persisted?.schemaVersion).toBe(1);
     expect(persisted?.clientId).toBe(first.clientId);
+  });
+
+  it('deduplicates concurrent first-run identity creation', async () => {
+    const results = await Promise.all([
+      ensureAgentTeamsClientIdentity(),
+      ensureAgentTeamsClientIdentity(),
+      ensureAgentTeamsClientIdentity(),
+      ensureAgentTeamsClientIdentity(),
+    ]);
+    const persisted = await readAgentTeamsIdentityStore();
+    const clientIds = new Set(results.map((result) => result.clientId));
+
+    expect(clientIds.size).toBe(1);
+    expect([...clientIds][0]).toBe(persisted?.clientId);
+    expect(results[0]?.source).toBe('created');
+    expect(results.slice(1).every((result) => result.clientId === results[0]?.clientId)).toBe(true);
+  });
+
+  it('recovers from a stale cross-process identity creation lock', async () => {
+    const storePath = getAgentTeamsIdentityStorePath();
+    const lockPath = `${storePath}.lock`;
+    await fs.mkdir(path.dirname(storePath), { recursive: true });
+    await fs.writeFile(
+      lockPath,
+      `${JSON.stringify({
+        pid: 123,
+        token: 'stale-lock',
+        createdAt: new Date(Date.now() - 60_000).toISOString(),
+      })}\n`,
+      'utf8'
+    );
+    const staleTime = new Date(Date.now() - 60_000);
+    await fs.utimes(lockPath, staleTime, staleTime);
+
+    const identity = await ensureAgentTeamsClientIdentity();
+    const persisted = await readAgentTeamsIdentityStore();
+
+    expect(identity.clientId).toMatch(UUID_PATTERN);
+    expect(identity.clientId).toBe(persisted?.clientId);
+    await expect(fs.stat(lockPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('falls back safely when app-data JSON or UUID is invalid', async () => {
