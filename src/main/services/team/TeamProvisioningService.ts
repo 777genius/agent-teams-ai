@@ -438,7 +438,10 @@ import {
   type RememberOpenCodeRuntimePidFromBridgeServiceHost,
 } from './provisioning/TeamProvisioningOpenCodeRuntimePidBridge';
 import { createTeamProvisioningOpenCodeRuntimeRecoveryBoundary } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryBoundaryFactory';
-import { resolveOpenCodeRuntimeLaneId as resolveOpenCodeRuntimeLaneIdHelper } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryFlow';
+import {
+  type OpenCodeRuntimeLaneIdResolutionServiceHost,
+  resolveOpenCodeRuntimeLaneIdWithService,
+} from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import { createOpenCodeRuntimeRecoveryIdentityHelpers } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryIdentity';
 import { createTeamProvisioningOpenCodeSecondaryBriefingBuilder } from './provisioning/TeamProvisioningOpenCodeSecondaryBriefingBuilder';
 import { createTeamProvisioningOpenCodeSecondaryEvidenceOverlayPorts } from './provisioning/TeamProvisioningOpenCodeSecondaryEvidenceOverlayPortsFactory';
@@ -502,8 +505,9 @@ import {
   type TeamProvisioningReevaluateMemberLaunchStatusServiceHost,
 } from './provisioning/TeamProvisioningReevaluateMemberLaunchStatusPortsFactory';
 import {
-  auditRegisteredMemberSpawnStatuses as auditRegisteredMemberSpawnStatusesHelper,
-  readRegisteredTeamMemberNamesFromConfig,
+  auditRegisteredMemberSpawnStatusesWithService,
+  type AuditRegisteredMemberSpawnStatusServiceHost,
+  readRegisteredTeamMemberNamesFromConfigDefaults,
 } from './provisioning/TeamProvisioningRegisteredMemberAudit';
 import { tryReadRegularFileUtf8 } from './provisioning/TeamProvisioningRegularFileRead';
 import {
@@ -2403,13 +2407,10 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     runId: string;
     memberName?: string;
   }): Promise<string> {
-    return resolveOpenCodeRuntimeLaneIdHelper(params, {
-      getRuntimeAdapterRun: (teamName) => this.runtimeAdapterRunByTeam.get(teamName),
-      getSecondaryRuntimeRuns: (teamName) => this.getSecondaryRuntimeRuns(teamName),
-      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
-      getRun: (runId) => this.runs.get(runId) ?? null,
-      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
-    });
+    return resolveOpenCodeRuntimeLaneIdWithService(
+      params,
+      this as unknown as OpenCodeRuntimeLaneIdResolutionServiceHost
+    );
   }
 
   private async buildRuntimeBootstrapMemberMcpLaunchConfigs(input: {
@@ -3638,40 +3639,18 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
    * one-shot subagent instead of a persistent teammate.
    */
   private async getRegisteredTeamMemberNames(teamName: string): Promise<Set<string> | null> {
-    const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-    return readRegisteredTeamMemberNamesFromConfig({
-      configPath,
-      timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-      maxBytes: TEAM_CONFIG_MAX_BYTES,
-      ports: {
-        readRegularFileUtf8: tryReadRegularFileUtf8,
-      },
-    });
+    return readRegisteredTeamMemberNamesFromConfigDefaults(teamName);
   }
 
   private async auditMemberSpawnStatuses(run: ProvisioningRun): Promise<void> {
-    await auditRegisteredMemberSpawnStatusesHelper<ProvisioningRun>(run, {
-      nowMs: () => Date.now(),
-      getRegisteredTeamMemberNames: (teamName) => this.getRegisteredTeamMemberNames(teamName),
-      hasTeamDirectory: async (teamName) => {
-        try {
-          await fs.promises.access(path.join(getTeamsBasePath(), teamName));
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      getLiveTeamAgentNames: (teamName) => this.getLiveTeamAgentNames(teamName),
-      isOpenCodeSecondaryLaneMemberInRun,
-      isOpenCodeBootstrapStallWindowElapsed: (firstSpawnAcceptedAt) =>
-        this.isOpenCodeBootstrapStallWindowElapsed(firstSpawnAcceptedAt),
-      getOpenCodeBootstrapStallReconciliationPorts: () =>
-        this.getOpenCodeBootstrapStallReconciliationPorts(),
-      setMemberSpawnStatus: (targetRun, memberName, status, error, livenessSource) =>
-        this.setMemberSpawnStatus(targetRun, memberName, status, error, livenessSource),
-      debug: (message) => logger.debug(message),
-      warn: (message) => logger.warn(message),
-    });
+    await auditRegisteredMemberSpawnStatusesWithService<ProvisioningRun>(
+      run,
+      this as unknown as AuditRegisteredMemberSpawnStatusServiceHost<ProvisioningRun>,
+      {
+        debug: (message) => logger.debug(message),
+        warn: (message) => logger.warn(message),
+      }
+    );
   }
 
   private async finalizeMissingRegisteredMembersAsFailed(run: ProvisioningRun): Promise<void> {

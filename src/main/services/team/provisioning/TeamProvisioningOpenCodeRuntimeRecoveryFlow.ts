@@ -82,8 +82,43 @@ export interface OpenCodeRuntimeLaneIdResolutionPorts {
   getRuntimeAdapterRun(teamName: string): { runId: string; providerId: string } | undefined;
   getSecondaryRuntimeRuns(teamName: string): readonly { runId: string; laneId: string }[];
   getTrackedRunId(teamName: string): string | null;
-  getRun(runId: string): { mixedSecondaryLanes?: readonly { laneId: string; member: { name: string } }[] } | null;
+  getRun(
+    runId: string
+  ): { mixedSecondaryLanes?: readonly { laneId: string; member: { name: string } }[] } | null;
   readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
+}
+
+export interface OpenCodeRuntimeLaneIdResolutionServiceHost {
+  runtimeAdapterRunByTeam: {
+    get(teamName: string): { runId: string; providerId: string } | undefined;
+  };
+  getSecondaryRuntimeRuns(teamName: string): readonly { runId: string; laneId: string }[];
+  runTracking: {
+    getTrackedRunId(teamName: string): string | null;
+  };
+  runs: {
+    get(
+      runId: string
+    ):
+      | { mixedSecondaryLanes?: readonly { laneId: string; member: { name: string } }[] }
+      | null
+      | undefined;
+  };
+  launchStateStore: {
+    read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
+  };
+}
+
+export function createOpenCodeRuntimeLaneIdResolutionPortsFromService(
+  service: OpenCodeRuntimeLaneIdResolutionServiceHost
+): OpenCodeRuntimeLaneIdResolutionPorts {
+  return {
+    getRuntimeAdapterRun: (teamName) => service.runtimeAdapterRunByTeam.get(teamName),
+    getSecondaryRuntimeRuns: (teamName) => service.getSecondaryRuntimeRuns(teamName),
+    getTrackedRunId: (teamName) => service.runTracking.getTrackedRunId(teamName),
+    getRun: (runId) => service.runs.get(runId) ?? null,
+    readLaunchState: (teamName) => service.launchStateStore.read(teamName),
+  };
 }
 
 export function buildOpenCodeRecoveryMember(input: {
@@ -145,7 +180,9 @@ export function buildCommittedOpenCodeRecoveryDiagnostics(input: {
   );
 }
 
-export function getConfiguredOpenCodeRecoveryMemberNames(directory: OpenCodeMemberDirectory): string[] {
+export function getConfiguredOpenCodeRecoveryMemberNames(
+  directory: OpenCodeMemberDirectory
+): string[] {
   const configuredNames = new Set<string>();
   for (const member of directory.config?.members ?? []) {
     if (member.name?.trim()) {
@@ -177,7 +214,8 @@ export function planOpenCodeDeliveryWatchdogRuntimeRecovery(input: {
     proceed: true,
     recoverPersistedMembers: input.canDeliverToTeamRuntime,
     recoverCommittedSessions:
-      input.canDeliverToTeamRuntime || input.allowCommittedSessionRecoveryWithoutTeamRuntime === true,
+      input.canDeliverToTeamRuntime ||
+      input.allowCommittedSessionRecoveryWithoutTeamRuntime === true,
   };
 }
 
@@ -234,7 +272,9 @@ export async function tryRecoverOpenCodeRuntimeLaneFromCommittedSessionBeforeDel
     return false;
   }
   const readLaneIndex = ports.readOpenCodeRuntimeLaneIndex ?? readOpenCodeRuntimeLaneIndex;
-  const currentLaneIndex = await readLaneIndex(ports.teamsBasePath, input.teamName).catch(() => null);
+  const currentLaneIndex = await readLaneIndex(ports.teamsBasePath, input.teamName).catch(
+    () => null
+  );
   const currentEntry = currentLaneIndex?.lanes[input.laneId];
   if (currentEntry?.state === 'active') {
     return true;
@@ -454,7 +494,11 @@ export async function tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdog(
 
   const directory: OpenCodeMemberDirectory = { config, teamMeta, metaMembers };
   for (const memberName of getConfiguredOpenCodeRecoveryMemberNames(directory)) {
-    const identity = ports.resolveOpenCodeMemberIdentityFromDirectory(teamName, memberName, directory);
+    const identity = ports.resolveOpenCodeMemberIdentityFromDirectory(
+      teamName,
+      memberName,
+      directory
+    );
     if (!identity.ok) {
       continue;
     }
@@ -522,4 +566,14 @@ export async function resolveOpenCodeRuntimeLaneId(
   }
 
   return 'primary';
+}
+
+export function resolveOpenCodeRuntimeLaneIdWithService(
+  params: Parameters<typeof resolveOpenCodeRuntimeLaneId>[0],
+  service: OpenCodeRuntimeLaneIdResolutionServiceHost
+): Promise<string> {
+  return resolveOpenCodeRuntimeLaneId(
+    params,
+    createOpenCodeRuntimeLaneIdResolutionPortsFromService(service)
+  );
 }

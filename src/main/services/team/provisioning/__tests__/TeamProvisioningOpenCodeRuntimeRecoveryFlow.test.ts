@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildCommittedOpenCodeRecoveryDiagnostics,
   buildOpenCodeRecoveryMember,
+  createOpenCodeRuntimeLaneIdResolutionPortsFromService,
+  type OpenCodeRuntimeLaneIdResolutionServiceHost,
   type OpenCodeRuntimeLaneRecoveryPorts,
   planOpenCodeDeliveryWatchdogRuntimeRecovery,
   resolveOpenCodeRuntimeLaneId,
@@ -324,5 +326,42 @@ describe('TeamProvisioningOpenCodeRuntimeRecoveryFlow', () => {
     await expect(
       resolveOpenCodeRuntimeLaneId({ teamName: 'fallback-team', runId: 'unknown' }, ports)
     ).resolves.toBe('primary');
+  });
+
+  it('builds lane id resolution ports from service dependencies', async () => {
+    const service: OpenCodeRuntimeLaneIdResolutionServiceHost = {
+      runtimeAdapterRunByTeam: {
+        get: vi.fn(() => ({ runId: 'run-primary', providerId: 'opencode' })),
+      },
+      getSecondaryRuntimeRuns: vi.fn(() => [{ runId: 'run-secondary', laneId: 'lane-secondary' }]),
+      runTracking: {
+        getTrackedRunId: vi.fn(() => 'tracked-run'),
+      },
+      runs: {
+        get: vi.fn(() => ({ mixedSecondaryLanes: [] })),
+      },
+      launchStateStore: {
+        read: vi.fn(async () => null),
+      },
+    };
+
+    const ports = createOpenCodeRuntimeLaneIdResolutionPortsFromService(service);
+
+    expect(ports.getRuntimeAdapterRun('team-a')).toEqual({
+      runId: 'run-primary',
+      providerId: 'opencode',
+    });
+    expect(ports.getSecondaryRuntimeRuns('team-a')).toEqual([
+      { runId: 'run-secondary', laneId: 'lane-secondary' },
+    ]);
+    expect(ports.getTrackedRunId('team-a')).toBe('tracked-run');
+    expect(ports.getRun('tracked-run')).toEqual({ mixedSecondaryLanes: [] });
+    await expect(ports.readLaunchState('team-a')).resolves.toBeNull();
+
+    expect(service.runtimeAdapterRunByTeam.get).toHaveBeenCalledWith('team-a');
+    expect(service.getSecondaryRuntimeRuns).toHaveBeenCalledWith('team-a');
+    expect(service.runTracking.getTrackedRunId).toHaveBeenCalledWith('team-a');
+    expect(service.runs.get).toHaveBeenCalledWith('tracked-run');
+    expect(service.launchStateStore.read).toHaveBeenCalledWith('team-a');
   });
 });

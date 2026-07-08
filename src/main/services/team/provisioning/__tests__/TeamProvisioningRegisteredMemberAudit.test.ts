@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   auditRegisteredMemberSpawnStatuses,
   type AuditRegisteredMemberSpawnStatusPorts,
+  type AuditRegisteredMemberSpawnStatusServiceHost,
+  createAuditRegisteredMemberSpawnStatusPortsFromService,
   parseRegisteredTeamMemberNamesFromConfigJson,
   readRegisteredTeamMemberNamesFromConfig,
   type RegisteredMemberAuditRun,
@@ -79,6 +81,49 @@ function createPorts(
 }
 
 describe('registered member audit helpers', () => {
+  it('builds audit ports from service dependencies', async () => {
+    const reconciliationPorts = {} as ReconcileOpenCodeRuntimeProcessBootstrapPorts &
+      MarkOpenCodeSecondaryBootstrapStalledPorts;
+    const service: AuditRegisteredMemberSpawnStatusServiceHost<RegisteredMemberAuditRun> = {
+      getRegisteredTeamMemberNames: vi.fn(async () => new Set(['dev'])),
+      getLiveTeamAgentNames: vi.fn(async () => new Set(['dev'])),
+      isOpenCodeBootstrapStallWindowElapsed: vi.fn(() => false),
+      getOpenCodeBootstrapStallReconciliationPorts: vi.fn(() => reconciliationPorts),
+      setMemberSpawnStatus: vi.fn(),
+    };
+    const options = {
+      debug: vi.fn(),
+      warn: vi.fn(),
+    };
+
+    const ports = createAuditRegisteredMemberSpawnStatusPortsFromService(service, options);
+    const run = createRun();
+
+    expect(typeof ports.nowMs()).toBe('number');
+    await expect(ports.getRegisteredTeamMemberNames('alpha')).resolves.toEqual(new Set(['dev']));
+    await expect(ports.getLiveTeamAgentNames('alpha')).resolves.toEqual(new Set(['dev']));
+    expect(ports.isOpenCodeSecondaryLaneMemberInRun(run, 'dev')).toBe(false);
+    expect(ports.isOpenCodeBootstrapStallWindowElapsed(ISO)).toBe(false);
+    expect(ports.getOpenCodeBootstrapStallReconciliationPorts()).toBe(reconciliationPorts);
+    ports.setMemberSpawnStatus(run, 'dev', 'online', undefined, 'heartbeat');
+    ports.debug('debug message');
+    ports.warn('warn message');
+
+    expect(service.getRegisteredTeamMemberNames).toHaveBeenCalledWith('alpha');
+    expect(service.getLiveTeamAgentNames).toHaveBeenCalledWith('alpha');
+    expect(service.isOpenCodeBootstrapStallWindowElapsed).toHaveBeenCalledWith(ISO);
+    expect(service.getOpenCodeBootstrapStallReconciliationPorts).toHaveBeenCalledOnce();
+    expect(service.setMemberSpawnStatus).toHaveBeenCalledWith(
+      run,
+      'dev',
+      'online',
+      undefined,
+      'heartbeat'
+    );
+    expect(options.debug).toHaveBeenCalledWith('debug message');
+    expect(options.warn).toHaveBeenCalledWith('warn message');
+  });
+
   it('parses config.json member names with the same trim and fallback behavior', async () => {
     expect(
       parseRegisteredTeamMemberNamesFromConfigJson(

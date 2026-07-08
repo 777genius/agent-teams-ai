@@ -1,4 +1,7 @@
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
+import fs from 'fs';
+import * as path from 'path';
 
 import {
   createInitialMemberSpawnStatusEntry,
@@ -13,6 +16,9 @@ import {
   type ReconcileOpenCodeRuntimeProcessBootstrapPorts,
   reconcileOpenCodeRuntimeProcessBootstrapStatus,
 } from './TeamProvisioningOpenCodeBootstrapStall';
+import { tryReadRegularFileUtf8 } from './TeamProvisioningRegularFileRead';
+import { TEAM_CONFIG_MAX_BYTES, TEAM_JSON_READ_TIMEOUT_MS } from './TeamProvisioningRunModel';
+import { isOpenCodeSecondaryLaneMemberInRun } from './TeamProvisioningSecondaryRuntimeRuns';
 
 import type {
   MemberSpawnLivenessSource,
@@ -85,9 +91,88 @@ export async function readRegisteredTeamMemberNamesFromConfig(input: {
   }
 }
 
-export async function auditRegisteredMemberSpawnStatuses<
+export function readRegisteredTeamMemberNamesFromConfigDefaults(
+  teamName: string
+): Promise<Set<string> | null> {
+  return readRegisteredTeamMemberNamesFromConfig({
+    configPath: path.join(getTeamsBasePath(), teamName, 'config.json'),
+    timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
+    maxBytes: TEAM_CONFIG_MAX_BYTES,
+    ports: {
+      readRegularFileUtf8: tryReadRegularFileUtf8,
+    },
+  });
+}
+
+export interface AuditRegisteredMemberSpawnStatusServiceHost<
   TRun extends RegisteredMemberAuditRun,
->(run: TRun, ports: AuditRegisteredMemberSpawnStatusPorts<TRun>): Promise<void> {
+> {
+  getRegisteredTeamMemberNames(teamName: string): Promise<ReadonlySet<string> | null>;
+  getLiveTeamAgentNames(teamName: string): Promise<ReadonlySet<string>>;
+  isOpenCodeBootstrapStallWindowElapsed(firstSpawnAcceptedAt: string | undefined): boolean;
+  getOpenCodeBootstrapStallReconciliationPorts(): ReconcileOpenCodeRuntimeProcessBootstrapPorts &
+    MarkOpenCodeSecondaryBootstrapStalledPorts;
+  setMemberSpawnStatus(
+    run: TRun,
+    memberName: string,
+    status: MemberSpawnStatus,
+    error?: string,
+    livenessSource?: MemberSpawnLivenessSource
+  ): void;
+}
+
+export interface AuditRegisteredMemberSpawnStatusServiceOptions {
+  debug(message: string): void;
+  warn(message: string): void;
+}
+
+export function createAuditRegisteredMemberSpawnStatusPortsFromService<
+  TRun extends RegisteredMemberAuditRun,
+>(
+  service: AuditRegisteredMemberSpawnStatusServiceHost<TRun>,
+  options: AuditRegisteredMemberSpawnStatusServiceOptions
+): AuditRegisteredMemberSpawnStatusPorts<TRun> {
+  return {
+    nowMs: () => Date.now(),
+    getRegisteredTeamMemberNames: (teamName) => service.getRegisteredTeamMemberNames(teamName),
+    hasTeamDirectory: async (teamName) => {
+      try {
+        await fs.promises.access(path.join(getTeamsBasePath(), teamName));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    getLiveTeamAgentNames: (teamName) => service.getLiveTeamAgentNames(teamName),
+    isOpenCodeSecondaryLaneMemberInRun,
+    isOpenCodeBootstrapStallWindowElapsed: (firstSpawnAcceptedAt) =>
+      service.isOpenCodeBootstrapStallWindowElapsed(firstSpawnAcceptedAt),
+    getOpenCodeBootstrapStallReconciliationPorts: () =>
+      service.getOpenCodeBootstrapStallReconciliationPorts(),
+    setMemberSpawnStatus: (run, memberName, status, error, livenessSource) =>
+      service.setMemberSpawnStatus(run, memberName, status, error, livenessSource),
+    debug: options.debug,
+    warn: options.warn,
+  };
+}
+
+export function auditRegisteredMemberSpawnStatusesWithService<
+  TRun extends RegisteredMemberAuditRun,
+>(
+  run: TRun,
+  service: AuditRegisteredMemberSpawnStatusServiceHost<TRun>,
+  options: AuditRegisteredMemberSpawnStatusServiceOptions
+): Promise<void> {
+  return auditRegisteredMemberSpawnStatuses(
+    run,
+    createAuditRegisteredMemberSpawnStatusPortsFromService(service, options)
+  );
+}
+
+export async function auditRegisteredMemberSpawnStatuses<TRun extends RegisteredMemberAuditRun>(
+  run: TRun,
+  ports: AuditRegisteredMemberSpawnStatusPorts<TRun>
+): Promise<void> {
   if (!run.expectedMembers || run.expectedMembers.length === 0) return;
 
   const registeredNames = await ports.getRegisteredTeamMemberNames(run.teamName);
