@@ -4,6 +4,7 @@ import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
 import { decideRunObservation, } from "@vioxen/subscription-runtime/worker-core";
 import { collectCodexGoalStatus, resolveCodexGoalWorkerLiveness, tailCodexGoalLog, } from "./codex-goal-ops.js";
 import { booleanValue, resolvePath, stringValue, } from "./codex-goal-mcp-values.js";
+import { codexGoalOrphanLiveness, codexGoalOrphanManualReviewReasons, codexGoalOrphanRunStatus, } from "./application/codex-goal-orphan-observation-policy.js";
 export async function observeOrphanCodexRun(input) {
     if (!isMissingCodexGoalManifestError(input.error))
         return null;
@@ -60,22 +61,15 @@ export async function observeOrphanCodexRun(input) {
                 }]
             : []),
     ];
-    const runStatus = status.resultStatus === "done" || status.resultStatus === "completed"
-        ? "completed"
-        : status.resultStatus === "failed"
-            ? "failed"
-            : workerAlive && status.progressStatus === "running"
-                ? "running"
-                : workerAlive
-                    ? "running"
-                    : "unknown";
-    const liveness = workerAlive
-        ? (progressStale || logStale ? "stale" : "alive")
-        : "dead";
-    const manualReviewReasons = [
-        "missing_job_manifest",
-        ...(heartbeatOnlyNoOutput ? ["heartbeat_only_no_output"] : []),
-    ];
+    const runStatus = codexGoalOrphanRunStatus({ status, workerAlive });
+    const liveness = codexGoalOrphanLiveness({
+        workerAlive,
+        progressStale,
+        logStale,
+    });
+    const manualReviewReasons = codexGoalOrphanManualReviewReasons({
+        heartbeatOnlyNoOutput,
+    });
     const snapshotBase = {
         runId: input.runId,
         providerKind: input.providerKind,

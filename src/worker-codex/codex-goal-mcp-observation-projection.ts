@@ -17,6 +17,11 @@ import {
   resolvePath,
   stringValue,
 } from "./codex-goal-mcp-values";
+import {
+  codexGoalOrphanLiveness,
+  codexGoalOrphanManualReviewReasons,
+  codexGoalOrphanRunStatus,
+} from "./application/codex-goal-orphan-observation-policy";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 
@@ -89,22 +94,15 @@ export async function observeOrphanCodexRun(input: {
         }]
       : []),
   ];
-  const runStatus = status.resultStatus === "done" || status.resultStatus === "completed"
-    ? "completed"
-    : status.resultStatus === "failed"
-    ? "failed"
-    : workerAlive && status.progressStatus === "running"
-    ? "running"
-    : workerAlive
-    ? "running"
-    : "unknown";
-  const liveness = workerAlive
-    ? (progressStale || logStale ? "stale" : "alive")
-    : "dead";
-  const manualReviewReasons = [
-    "missing_job_manifest",
-    ...(heartbeatOnlyNoOutput ? ["heartbeat_only_no_output"] : []),
-  ];
+  const runStatus = codexGoalOrphanRunStatus({ status, workerAlive });
+  const liveness = codexGoalOrphanLiveness({
+    workerAlive,
+    progressStale,
+    logStale,
+  });
+  const manualReviewReasons = codexGoalOrphanManualReviewReasons({
+    heartbeatOnlyNoOutput,
+  });
   const snapshotBase = {
     runId: input.runId,
     providerKind: input.providerKind,

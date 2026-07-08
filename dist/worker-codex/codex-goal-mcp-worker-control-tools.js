@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { InterruptAndContinueWorkerUseCase, } from "@vioxen/subscription-runtime/worker-core";
-import { collectCodexGoalStatus, resolveCodexGoalWorkerLiveness, } from "./codex-goal-ops.js";
+import { collectCodexGoalStatus, } from "./codex-goal-ops.js";
 import { jobIdInputSchema, } from "./codex-goal-mcp-inputs.js";
 import { mcpJson, withMcpErrors, } from "./codex-goal-mcp-response.js";
 import { codexGoalWorkerControlService, codexGoalWorkerControlTarget, } from "./codex-goal-mcp-worker-control.js";
@@ -10,6 +10,7 @@ import { parseIsoDate, signalIdList, workerControlCallerArgs, workerControlDecis
 import { booleanValue, requiredRawString, stringValue, } from "./codex-goal-mcp-values.js";
 import { codexGoalStatusInputFromLaunch as statusInput, } from "./codex-goal-mcp-status-input.js";
 import { loadJobLaunch, } from "./codex-goal-mcp-project-control-deps.js";
+import { codexGoalControlDeliveryDiagnostic, } from "./application/codex-goal-control-delivery-diagnostic.js";
 export function registerCodexGoalWorkerControlTools(server, options = {}) {
     server.registerTool("codex_goal_pause", {
         title: "Soft Pause Codex Goal",
@@ -162,7 +163,6 @@ export function registerCodexGoalWorkerControlTools(server, options = {}) {
         const decision = await control.getDecision({
             target: codexGoalWorkerControlTarget(loaded),
         });
-        const status = await collectCodexGoalStatus(statusInput(loaded.launch));
         return mcpJson({
             ok: true,
             registryRootDir: loaded.registryRootDir,
@@ -170,7 +170,11 @@ export function registerCodexGoalWorkerControlTools(server, options = {}) {
             taskId: loaded.launch.config.taskId,
             signal: workerControlSignalJson(signal, false),
             decision: workerControlDecisionJson(decision, false),
-            deliveryDiagnostic: controlDeliveryDiagnostic({ decision, status, signal }),
+            deliveryDiagnostic: await codexGoalControlDeliveryDiagnostic({
+                launch: loaded.launch,
+                decision,
+                signal,
+            }),
         });
     }));
     server.registerTool("codex_goal_control_list", {
@@ -278,33 +282,5 @@ export function registerCodexGoalWorkerControlTools(server, options = {}) {
             receipt: workerControlReceiptJson(receipt),
         });
     }));
-}
-function controlDeliveryDiagnostic(input) {
-    const progressStale = input.status.progressHeartbeatAgeMs !== undefined &&
-        input.status.progressHeartbeatAgeMs > 10 * 60_000;
-    const workerLiveness = resolveCodexGoalWorkerLiveness({
-        status: input.status,
-        progressStale,
-    });
-    const pendingSignal = input.decision.pendingSignals.find((view) => view.signal.signalId === input.signal.signalId);
-    const base = {
-        workerAlive: workerLiveness.alive,
-        workerSupervisorKind: workerLiveness.supervisorKind,
-        workerAliveReason: workerLiveness.aliveReason,
-        signalState: pendingSignal?.state ?? "unknown",
-        deliveryMode: input.signal.deliveryMode,
-        deliverable: pendingSignal?.deliverable ?? false,
-    };
-    if (workerLiveness.alive &&
-        pendingSignal?.state === "pending" &&
-        input.signal.deliveryMode === "next_safe_point") {
-        return {
-            ...base,
-            reason: "pending_until_next_safe_point",
-            recommendedTool: "codex_goal_send_guidance",
-            safeMessage: "Worker appears alive and the signal is pending until the next safe continuation point. Use codex_goal_send_guidance when immediate guidance delivery is required.",
-        };
-    }
-    return base;
 }
 //# sourceMappingURL=codex-goal-mcp-worker-control-tools.js.map
