@@ -3,7 +3,7 @@ import { readCodexGoalJob, summarizeCodexGoalJob, updateCodexGoalJob, } from "./
 import { parseCodexGoalProjectAccessScope, } from "./codex-goal-access-plan.js";
 import { accountNames, booleanValue, requiredRawString, stringValue, tagValues, } from "./codex-goal-mcp-values.js";
 import { projectControlAuditPath, } from "./codex-goal-mcp-project-broker.js";
-import { buildCodexProjectAdmissionSnapshot, projectAdmissionDetailView, projectAdmissionOperation, projectAdmissionWorkerRoleArg, } from "./codex-goal-mcp-project-admission.js";
+import { buildCodexProjectAdmissionSnapshot, projectAdmissionDetailView, projectAdmissionOperation, projectAdmissionWorkerRoleArg, } from "./application/project-control/codex-goal-project-admission.js";
 import { assertProjectControlScopeRepairAllowed, projectScopeFieldFingerprint, } from "./codex-goal-mcp-project-scope.js";
 import { projectControlDefaultAccountNames, } from "./codex-goal-mcp-project-accounts.js";
 import { matchesProjectControlPrefix, pathInsideAnyProjectRoot, } from "./codex-goal-mcp-project-utils.js";

@@ -41,7 +41,7 @@ import {
 } from "./codex-goal-mcp-project-accounts";
 import {
   projectAdmissionWorkerRoleArg,
-} from "./codex-goal-mcp-project-admission";
+} from "./application/project-control/codex-goal-project-admission";
 import {
   assertProjectControlCreateManifestPaths,
   assertProjectControlDependencyBootstrapReady,
@@ -64,7 +64,7 @@ import {
   createOrReuseProjectWorktree,
   readTextFileIfExists,
   rollbackProjectRefillPartial,
-} from "./codex-goal-mcp-project-refill";
+} from "./application/project-control/codex-goal-project-refill";
 import {
   jobManifestInputFromArgs,
 } from "./codex-goal-mcp-manifest-args";

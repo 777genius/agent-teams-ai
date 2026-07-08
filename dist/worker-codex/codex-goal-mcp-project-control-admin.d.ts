@@ -2,7 +2,7 @@
 import { type ProjectAccessScope } from "@vioxen/subscription-runtime/worker-core";
 import { type CodexGoalJobManifest } from "./codex-goal-jobs.js";
 import type { JobUpdateMcpArgs, ProjectControlMcpArgs } from "./codex-goal-mcp-inputs.js";
-import { type CodexProjectAdmissionDeps } from "./codex-goal-mcp-project-admission.js";
+import { type CodexProjectAdmissionDeps } from "./application/project-control/codex-goal-project-admission.js";
 type JsonObject = Readonly<Record<string, unknown>>;
 type LoadedProjectControlController = {
     readonly registryRootDir: string;

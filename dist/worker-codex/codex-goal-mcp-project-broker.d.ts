@@ -2,7 +2,7 @@
 import { ProjectControlBroker, type ProjectAccessScope } from "@vioxen/subscription-runtime/worker-core";
 import { type CodexGoalJobManifest, type CodexGoalJobManifestInput } from "./codex-goal-jobs.js";
 import { type CodexGoalLaunchInput } from "./codex-goal-ops.js";
-import { type CodexProjectAdmissionDeps } from "./codex-goal-mcp-project-admission.js";
+import { type CodexProjectAdmissionDeps } from "./application/project-control/codex-goal-project-admission.js";
 import { type CodexGoalProjectCreateWorktreeInput } from "./application/project-control/codex-goal-project-control-contracts.js";
 export type { CodexGoalProjectCreateWorktreeInput, } from "./application/project-control/codex-goal-project-control-contracts.js";
 export type CodexGoalProjectIntegrateCommitInput = {

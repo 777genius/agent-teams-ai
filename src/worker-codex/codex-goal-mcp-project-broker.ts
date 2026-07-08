@@ -30,7 +30,7 @@ import {
 import {
   codexProjectAdmissionGate,
   type CodexProjectAdmissionDeps,
-} from "./codex-goal-mcp-project-admission";
+} from "./application/project-control/codex-goal-project-admission";
 import {
   noopOperationResult,
   type CodexGoalProjectCreateWorktreeInput,

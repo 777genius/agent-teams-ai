@@ -3,8 +3,8 @@ import { buildCodexGoalNoTmuxCommand, buildCodexGoalStopTmuxCommand, buildCodexG
 import { codexGoalProgressPath } from "./codex-goal-runner.js";
 import { runDependencyBootstrap, } from "./dependency-bootstrap.js";
 import { projectControlAuditPath, } from "./codex-goal-mcp-project-broker.js";
-import { assertReadablePrompt, } from "./codex-goal-mcp-project-refill.js";
-import { projectAdmissionWorkerRoleArg, } from "./codex-goal-mcp-project-admission.js";
+import { assertReadablePrompt, } from "./application/project-control/codex-goal-project-refill.js";
+import { projectAdmissionWorkerRoleArg, } from "./application/project-control/codex-goal-project-admission.js";
 import { assertProjectControlDependencyBootstrapReady, projectControlDependencyBootstrapMode, projectControlPathArg, projectControlRealPathOutsideWorkspaceScope, } from "./codex-goal-mcp-project-scope.js";
 import { assertSafeGitCommitSha, assertSafeGitRefName, assertSafeGitRemoteName, } from "./codex-goal-mcp-project-git.js";
 import { writeCodexGoalStopEvent, writeCodexGoalStoppedProgress, } from "./codex-goal-mcp-lifecycle-markers.js";

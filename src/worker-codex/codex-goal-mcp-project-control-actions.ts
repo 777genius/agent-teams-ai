@@ -29,10 +29,10 @@ import {
 } from "./codex-goal-mcp-project-broker";
 import {
   assertReadablePrompt,
-} from "./codex-goal-mcp-project-refill";
+} from "./application/project-control/codex-goal-project-refill";
 import {
   projectAdmissionWorkerRoleArg,
-} from "./codex-goal-mcp-project-admission";
+} from "./application/project-control/codex-goal-project-admission";
 import {
   assertProjectControlDependencyBootstrapReady,
   projectControlDependencyBootstrapMode,

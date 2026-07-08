@@ -17,7 +17,7 @@ import {
   createCodexProjectControlBroker,
   type CodexProjectControlBrokerInput,
 } from "./codex-goal-mcp-project-broker";
-import type { CodexProjectAdmissionDeps } from "./codex-goal-mcp-project-admission";
+import type { CodexProjectAdmissionDeps } from "./application/project-control/codex-goal-project-admission";
 import { requiredRawString } from "./codex-goal-mcp-values";
 export {
   loadJobLaunch,

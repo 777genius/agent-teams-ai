@@ -33,7 +33,7 @@ import {
   projectAdmissionOperation,
   projectAdmissionWorkerRoleArg,
   type CodexProjectAdmissionDeps,
-} from "./codex-goal-mcp-project-admission";
+} from "./application/project-control/codex-goal-project-admission";
 import {
   assertProjectControlScopeRepairAllowed,
   projectScopeFieldFingerprint,

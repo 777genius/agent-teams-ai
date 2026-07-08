@@ -5,7 +5,7 @@ import { createCodexGoalJob, } from "./codex-goal-jobs.js";
 import { buildCodexGoalStopTmuxCommand, collectCodexGoalStatus, doctorCodexGoal, prepareCodexGoalLaunchPaths, startCodexGoalTmux, stopCodexGoalDirectProcess, stopCodexGoalTmux, } from "./codex-goal-ops.js";
 import { writeCodexGoalReviewMarker } from "./codex-goal-mcp-lifecycle-markers.js";
 import { codexGoalStatusInputFromLaunch as statusInput, } from "./codex-goal-mcp-status-input.js";
-import { codexProjectAdmissionGate, } from "./codex-goal-mcp-project-admission.js";
+import { codexProjectAdmissionGate, } from "./application/project-control/codex-goal-project-admission.js";
 import { noopOperationResult, } from "./application/project-control/codex-goal-project-control-contracts.js";
 import { assertGitCurrentBranch, execGit } from "./codex-goal-mcp-project-git.js";
 export function createCodexProjectControlBroker(input) {
