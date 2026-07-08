@@ -251,6 +251,45 @@ describe("CodexRunObservationAdapter", () => {
     }
   });
 
+  it("flags a terminal result that still has live direct progress as an unsafe mismatch", async () => {
+    const fixture = await createObservationFixture();
+
+    try {
+      await writeFile(fixture.manifest.outputPath!, `${JSON.stringify({
+        status: "completed",
+        task: { updatedAt: new Date().toISOString() },
+      })}\n`);
+      await writeFile(fixture.manifest.progressPath!, `${JSON.stringify({
+        schemaVersion: 1,
+        taskId: fixture.manifest.taskId,
+        status: "running",
+        updatedAt: new Date().toISOString(),
+        pid: process.pid,
+      })}\n`);
+
+      const snapshot = await new RunObservationService(new CodexRunObservationAdapter({
+        registryRootDir: fixture.registryRootDir,
+        staleAfterMs: 600_000,
+      })).observeRun({ runId: "job-a" });
+
+      expect(snapshot).toMatchObject({
+        status: "completed",
+        liveness: "alive",
+        process: {
+          alive: true,
+          aliveReason: RunProcessAliveReason.Pid,
+          pid: process.pid,
+        },
+        readOnlyDecision: {
+          kind: "unsafe_state_mismatch",
+          reason: "completed_result_with_live_process",
+        },
+      });
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
   it("surfaces invalid progress and missing workspace warnings read-only", async () => {
     const fixture = await createObservationFixture();
 

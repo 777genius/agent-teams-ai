@@ -539,13 +539,13 @@ function codexRunStatus(input: {
   readonly status: CodexGoalStatus;
   readonly workerAlive: boolean;
 }): RunObservationStatus {
-  if (input.workerAlive && input.status.progressStatus === "running") return "running";
   if (
     input.status.resultStatus === "done" ||
     input.status.resultStatus === "completed"
   ) {
     return "completed";
   }
+  if (input.workerAlive && input.status.progressStatus === "running") return "running";
   if (
     input.status.resultStatus === "waiting_capacity" ||
     input.status.progressStatus === "blocked"

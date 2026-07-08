@@ -8,10 +8,13 @@ import {
   type WorkerControlActor,
   type WorkerControlDeliveryMode,
   type WorkerControlIntent,
+  type WorkerControlDecision,
   type WorkerControlPriority,
+  type WorkerControlSignal,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
   collectCodexGoalStatus,
+  resolveCodexGoalWorkerLiveness,
 } from "./codex-goal-ops";
 import {
   jobIdInputSchema,
@@ -234,6 +237,7 @@ export function registerCodexGoalWorkerControlTools(
       const decision = await control.getDecision({
         target: codexGoalWorkerControlTarget(loaded),
       });
+      const status = await collectCodexGoalStatus(statusInput(loaded.launch));
       return mcpJson({
         ok: true,
         registryRootDir: loaded.registryRootDir,
@@ -241,6 +245,7 @@ export function registerCodexGoalWorkerControlTools(
         taskId: loaded.launch.config.taskId,
         signal: workerControlSignalJson(signal, false),
         decision: workerControlDecisionJson(decision, false),
+        deliveryDiagnostic: controlDeliveryDiagnostic({ decision, status, signal }),
       });
     }),
   );
@@ -375,4 +380,42 @@ export function registerCodexGoalWorkerControlTools(
     }),
   );
 
+}
+
+function controlDeliveryDiagnostic(input: {
+  readonly decision: WorkerControlDecision;
+  readonly status: Awaited<ReturnType<typeof collectCodexGoalStatus>>;
+  readonly signal: WorkerControlSignal;
+}): Readonly<Record<string, unknown>> {
+  const progressStale = input.status.progressHeartbeatAgeMs !== undefined &&
+    input.status.progressHeartbeatAgeMs > 10 * 60_000;
+  const workerLiveness = resolveCodexGoalWorkerLiveness({
+    status: input.status,
+    progressStale,
+  });
+  const pendingSignal = input.decision.pendingSignals.find(
+    (view) => view.signal.signalId === input.signal.signalId,
+  );
+  const base = {
+    workerAlive: workerLiveness.alive,
+    workerSupervisorKind: workerLiveness.supervisorKind,
+    workerAliveReason: workerLiveness.aliveReason,
+    signalState: pendingSignal?.state ?? "unknown",
+    deliveryMode: input.signal.deliveryMode,
+    deliverable: pendingSignal?.deliverable ?? false,
+  };
+  if (
+    workerLiveness.alive &&
+    pendingSignal?.state === "pending" &&
+    input.signal.deliveryMode === "next_safe_point"
+  ) {
+    return {
+      ...base,
+      reason: "pending_until_next_safe_point",
+      recommendedTool: "codex_goal_send_guidance",
+      safeMessage:
+        "Worker appears alive and the signal is pending until the next safe continuation point. Use codex_goal_send_guidance when immediate guidance delivery is required.",
+    };
+  }
+  return base;
 }

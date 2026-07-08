@@ -61,7 +61,7 @@ export async function observeOrphanCodexRun(input: {
     status,
     progressStale,
   });
-  const workerAlive = false;
+  const workerAlive = workerLiveness.alive;
   const heartbeatOnlyNoOutput = Boolean(
     workerAlive &&
       status.progressExists &&
@@ -89,12 +89,12 @@ export async function observeOrphanCodexRun(input: {
         }]
       : []),
   ];
-  const runStatus = workerAlive && status.progressStatus === "running"
-    ? "running"
-    : status.resultStatus === "completed"
+  const runStatus = status.resultStatus === "done" || status.resultStatus === "completed"
     ? "completed"
     : status.resultStatus === "failed"
     ? "failed"
+    : workerAlive && status.progressStatus === "running"
+    ? "running"
     : workerAlive
     ? "running"
     : "unknown";
