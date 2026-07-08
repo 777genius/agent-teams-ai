@@ -1,13 +1,8 @@
-import { TeamProvisioningAppShellBoundary } from './TeamProvisioningAppShellBoundary';
+import { TeamProvisioningAppShellFacade } from './TeamProvisioningAppShellFacade';
 
-import type { TeamLaunchRuntimeAdapter, TeamRuntimeAdapterRegistry } from '../runtime';
 import type { TeamProvisioningCancellationBoundary } from './TeamProvisioningCancellationBoundary';
 import type { TeamProvisioningConfigFacade } from './TeamProvisioningConfigFacade';
 import type { TeamProvisioningConfigTaskActivityBoundary } from './TeamProvisioningConfigTaskActivityBoundary';
-import type {
-  MemberWorkSyncAcceptedReportChecker,
-  MemberWorkSyncProofMissingRecoveryScheduler,
-} from './TeamProvisioningMemberWorkSyncProof';
 import type {
   RetainedProvisioningProgressRunLike,
   TeamProvisioningRetainedProgressState,
@@ -15,20 +10,11 @@ import type {
 import type { TeamProvisioningProviderRuntimeCompatibility } from './TeamProvisioningProviderRuntimeFacade';
 import type { TeamProvisioningRuntimeSnapshotFacade } from './TeamProvisioningRuntimeSnapshotFacade';
 import type {
-  RuntimeTurnSettledEnvironmentProvider,
-  RuntimeTurnSettledHookSettingsProvider,
-} from './TeamProvisioningRuntimeTurnSettledPlanning';
-import type {
   TeamProvisioningSendMessageToRunBoundary,
   TeamProvisioningSendMessageToRunRun,
 } from './TeamProvisioningSendMessageToRunBoundaryFactory';
 import type { TeamProvisioningTaskActivityRepairBoundaryRun } from './TeamProvisioningTaskActivityRepairBoundary';
-import type { WorkspaceTrustCoordinator } from '@features/workspace-trust/main';
-import type {
-  CrossTeamSendRequest,
-  CrossTeamSendResult,
-  TeamProvisioningProgress,
-} from '@shared/types';
+import type { TeamProvisioningProgress } from '@shared/types';
 
 export type TeamProvisioningCompatibilityDelegationRun = TeamProvisioningSendMessageToRunRun &
   RetainedProvisioningProgressRunLike &
@@ -77,61 +63,8 @@ export interface TeamProvisioningCompatibilityDelegation<
 export abstract class TeamProvisioningCompatibilityFacade<
   TRun extends TeamProvisioningCompatibilityDelegationRun =
     TeamProvisioningCompatibilityDelegationRun,
-> {
-  protected readonly appShellBoundary = new TeamProvisioningAppShellBoundary();
+> extends TeamProvisioningAppShellFacade {
   protected abstract readonly compatibilityDelegation: TeamProvisioningCompatibilityDelegation<TRun>;
-
-  setRuntimeAdapterRegistry(registry: TeamRuntimeAdapterRegistry | null): void {
-    this.appShellBoundary.setRuntimeAdapterRegistry(registry);
-  }
-
-  getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null {
-    return this.appShellBoundary.getOpenCodeRuntimeAdapter();
-  }
-
-  setMemberRuntimeAdvisoryInvalidator(
-    invalidator: ((teamName: string, memberName: string) => void) | null
-  ): void {
-    this.appShellBoundary.setMemberRuntimeAdvisoryInvalidator(invalidator);
-  }
-
-  setMemberWorkSyncProofMissingRecoveryScheduler(
-    scheduler: MemberWorkSyncProofMissingRecoveryScheduler | null
-  ): void {
-    this.appShellBoundary.setMemberWorkSyncProofMissingRecoveryScheduler(scheduler);
-  }
-
-  setMemberWorkSyncAcceptedReportChecker(
-    checker: MemberWorkSyncAcceptedReportChecker | null
-  ): void {
-    this.appShellBoundary.setMemberWorkSyncAcceptedReportChecker(checker);
-  }
-
-  setCrossTeamSender(
-    sender: ((request: CrossTeamSendRequest) => Promise<CrossTeamSendResult>) | null
-  ): void {
-    this.appShellBoundary.setCrossTeamSender(sender);
-  }
-
-  setControlApiBaseUrlResolver(resolver: (() => Promise<string | null>) | null): void {
-    this.appShellBoundary.setControlApiBaseUrlResolver(resolver);
-  }
-
-  setWorkspaceTrustCoordinator(coordinator: WorkspaceTrustCoordinator | null): void {
-    this.appShellBoundary.setWorkspaceTrustCoordinator(coordinator);
-  }
-
-  setRuntimeTurnSettledHookSettingsProvider(
-    provider: RuntimeTurnSettledHookSettingsProvider | null
-  ): void {
-    this.appShellBoundary.setRuntimeTurnSettledHookSettingsProvider(provider);
-  }
-
-  setRuntimeTurnSettledEnvironmentProvider(
-    provider: RuntimeTurnSettledEnvironmentProvider | null
-  ): void {
-    this.appShellBoundary.setRuntimeTurnSettledEnvironmentProvider(provider);
-  }
 
   buildProvisioningEnv(
     ...args: Parameters<TeamProvisioningProviderRuntimeCompatibility['buildProvisioningEnv']>
