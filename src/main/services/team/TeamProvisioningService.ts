@@ -61,7 +61,6 @@ import {
   createOpenCodePromptDeliveryWatchdogCoordinator,
   type OpenCodePromptDeliveryWatchdogCoordinator,
 } from './opencode/delivery/OpenCodePromptDeliveryWatchdogCoordinator';
-import { OpenCodePromptDeliveryWatchdogScheduler } from './opencode/delivery/OpenCodePromptDeliveryWatchdogScheduler';
 import { type OpenCodeRuntimeDeliveryAdvisoryDecision } from './opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { openCodeTaskRefsIncludeAll as openCodeTaskRefsIncludeAllValue } from './opencode/delivery/OpenCodeRuntimeDeliveryProofMatching';
 import { OpenCodeRuntimeDeliveryProofReader } from './opencode/delivery/OpenCodeRuntimeDeliveryProofReader';
@@ -359,6 +358,10 @@ import {
   type TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost,
 } from './provisioning/TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory';
 import { OpenCodeMemberSendSerializer } from './provisioning/TeamProvisioningOpenCodeMemberSendSerialization';
+import {
+  createOpenCodePromptDeliveryWatchdogSchedulerFromService,
+  type TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceHost,
+} from './provisioning/TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory';
 import {
   createOpenCodeTeamThroughRuntimeAdapterFlow,
   launchOpenCodeTeamThroughRuntimeAdapterFlow,
@@ -1112,35 +1115,13 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     nowIso,
   });
   private readonly openCodePromptDeliveryWatchdogScheduler =
-    new OpenCodePromptDeliveryWatchdogScheduler({
-      canDeliverToTeamRuntime: (teamName) => this.canDeliverToOpenCodeRuntimeForTeam(teamName),
-      recoverBeforeDelivery: (input) =>
-        this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(input),
-      relay: async (input) => {
-        await this.relayOpenCodeMemberInboxMessages(input.teamName, input.memberName, {
-          onlyMessageId: input.messageId,
-          source: 'watchdog',
-        });
-      },
-      getInboxMessages: (input) =>
-        this.inboxReader.getMessagesFor(input.teamName, input.memberName),
-      resolveIdentity: (input) =>
-        this.openCodeRuntimeRecoveryIdentity.resolveOpenCodeMemberDeliveryIdentity(
-          input.teamName,
-          input.memberName
-        ),
-      isLaneActive: (input) =>
-        this.openCodeRuntimeRecoveryIdentity.isOpenCodeRuntimeLaneIndexActive(
-          input.teamName,
-          input.laneId
-        ),
-      isRecordNotFoundError: (error) =>
-        getErrorMessage(error).startsWith('OpenCode prompt delivery record not found:'),
-      info: (message) => logger.info(message),
-      warn: (message) => logger.warn(message),
-      debug: (message) => logger.debug(message),
-      getErrorMessage,
-    });
+    createOpenCodePromptDeliveryWatchdogSchedulerFromService(
+      this as unknown as TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceHost,
+      {
+        logger,
+        getErrorMessage,
+      }
+    );
   private readonly relayedMemberInboxMessageIds = new Map<string, Set<string>>();
   private readonly pendingCrossTeamFirstReplies = new Map<string, Map<string, number>>();
   private readonly recentCrossTeamLeadDeliveryMessageIds = new Map<string, Map<string, number>>();
