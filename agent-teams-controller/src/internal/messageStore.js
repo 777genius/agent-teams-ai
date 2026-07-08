@@ -349,7 +349,12 @@ function lookupMessage(paths, messageId) {
   }
 
   for (const file of inboxFiles) {
-    const rows = readJson(path.join(inboxDir, file), []);
+    let rows;
+    try {
+      rows = readJson(path.join(inboxDir, file), []);
+    } catch {
+      continue;
+    }
     if (!Array.isArray(rows)) continue;
     for (const row of rows) {
       if (row && row.messageId === id) {

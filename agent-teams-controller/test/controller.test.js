@@ -3190,6 +3190,27 @@ describe('agent-teams-controller API', () => {
       expect(result.store).toBe('inbox:bob');
     });
 
+    it('skips corrupt inbox files while looking up valid inbox messages', () => {
+      const claudeDir = makeClaudeDir();
+      const controller = createController({ teamName: 'my-team', claudeDir });
+
+      const delivered = controller.messages.sendMessage({
+        to: 'bob',
+        from: 'user',
+        text: 'Deploy to staging',
+        source: 'inbox',
+      });
+      const inboxDir = path.join(claudeDir, 'teams', 'my-team', 'inboxes');
+      const corruptPath = path.join(inboxDir, 'alice.json');
+      fs.writeFileSync(corruptPath, '{not json', 'utf8');
+
+      const result = controller.messages.lookupMessage(delivered.messageId);
+
+      expect(result.message.messageId).toBe(delivered.messageId);
+      expect(result.store).toBe('inbox:bob');
+      expect(fs.readFileSync(corruptPath, 'utf8')).toBe('{not json');
+    });
+
     it('throws on unknown messageId', () => {
       const claudeDir = makeClaudeDir();
       const controller = createController({ teamName: 'my-team', claudeDir });
