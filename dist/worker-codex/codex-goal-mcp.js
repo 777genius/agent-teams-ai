@@ -10,7 +10,7 @@ import { sessionArtifactFromCodexAuthJson } from "@vioxen/subscription-runtime/p
 import { LocalFileRunEventProjectionStateStore, LocalFileRunEventStore, LocalControlledAgentStateStore, } from "@vioxen/subscription-runtime/store-local-file";
 import { buildLocalClaudeControlledAgentProfile, createLocalClaudeControlledAgentProvider, loadScopedClaudeSessionArtifact, watchClaudeRuns, } from "@vioxen/subscription-runtime/worker-local";
 import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, ProjectAdmissionWorkerRole, RunObservationService, InterruptAndContinueWorkerUseCase, ProjectControlBroker, RunEventProviderKind, buildControlledAgentLaunchPlan, buildControlledAgentLiveControllerState, buildControlledAgentProcessOwner, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, evaluateProjectAdmission, projectRunObservationEvents, projectRunReadModelsFromEvents, reconcileRunPreview, readTargetRevision, runEventProviderKindFromString, ProjectOperation, } from "@vioxen/subscription-runtime/worker-core";
-import { codexGoalJobToArgs, codexGoalObjectiveMaxChars, createCodexGoalJob, defaultCodexGoalJobRoot, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
+import { codexGoalJobToArgs, createCodexGoalJob, defaultCodexGoalJobRoot, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
 import { upsertCodexGoalLaunchManifest } from "./codex-goal-launch-manifest.js";
 import { runDependencyBootstrap, } from "./dependency-bootstrap.js";
 import { codexGoalProgressPath, } from "./codex-goal-runner.js";
@@ -40,12 +40,13 @@ import { codexOverviewItemToWatchStatus } from "./codex-goal-mcp-watch-status.js
 import { failedRunObservationSnapshot, observeOrphanCodexRun, safeObservationErrorMessage, summarizeRunObservationSnapshots, } from "./codex-goal-mcp-observation-projection.js";
 import { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
 import { registerCodexGoalPrompts } from "./codex-goal-mcp-prompts.js";
+import { goalInputSchema, statusInputSchema, } from "./codex-goal-mcp-input-schemas.js";
 export { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
 import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item.js";
 import { codexGoalStatusInputFromLaunch as statusInput, } from "./codex-goal-mcp-status-input.js";
 import { CODEX_GOAL_MCP_DEFAULT_TIMEOUT_MS, goalControlModesFromRecord, goalLaunchInput, } from "./codex-goal-mcp-launch-input.js";
 import { codexGoalLaunchSummary as launchSummary, } from "./codex-goal-mcp-launch-summary.js";
-import { CODEX_GOAL_CONTROL_SURFACE_SCHEMA, CODEX_GOAL_EXECUTION_ENGINE_SCHEMA, buildCodexGoalDecision, buildCodexGoalHandoff, isSafeStartAction, nextActionForStatus, redactText, truncateText, } from "./codex-goal-mcp-decision.js";
+import { CODEX_GOAL_CONTROL_SURFACE_SCHEMA, buildCodexGoalDecision, buildCodexGoalHandoff, isSafeStartAction, nextActionForStatus, redactText, truncateText, } from "./codex-goal-mcp-decision.js";
 import { assertGitCurrentBranch, assertSafeGitCommitSha, assertSafeGitRefName, assertSafeGitRemoteName, execGit, execGitStdout, } from "./codex-goal-mcp-project-git.js";
 import { assertProjectControlCreateManifestPaths, assertProjectControlDependencyBootstrapReady, assertProjectControlScopeRepairAllowed, projectControlChildScope, projectControlDependencyBootstrapMode, projectControlPathArg, projectControlRealPathOutsideWorkspaceScope, projectControlWorkerRole, projectScopeFieldFingerprint, } from "./codex-goal-mcp-project-scope.js";
 import { projectIntegrationPushApprovedCommitWithConsumedLedger, } from "./codex-goal-mcp-project-integration-ledger.js";
@@ -4522,58 +4523,6 @@ async function targetCommitFromArgs(args) {
 }
 function optionalTargetCommit(targetCommit) {
     return targetCommit === undefined ? {} : { targetCommit };
-}
-function goalInputSchema() {
-    return {
-        jobId: z.string().optional(),
-        configPath: z.string().optional(),
-        jobRootDir: z.string().optional(),
-        authRootDir: z.string().optional(),
-        stateRootDir: z.string().optional(),
-        workspacePath: z.string().optional(),
-        promptPath: z.string().optional(),
-        codexGoalObjective: z.string().max(codexGoalObjectiveMaxChars).describe("Short app-server goal objective, max 4000 characters. For long instructions, keep the full task in promptPath and reference docs/files here.").optional(),
-        taskId: z.string().optional(),
-        accounts: z.union([z.string(), z.array(z.string())]).optional(),
-        outputPath: z.string().optional(),
-        progressPath: z.string().optional(),
-        progressHeartbeatMs: z.number().int().positive().optional(),
-        codexBinaryPath: z.string().optional(),
-        model: z.string().optional(),
-        reasoningEffort: z.string().optional(),
-        serviceTier: z.string().optional(),
-        executionEngine: CODEX_GOAL_EXECUTION_ENGINE_SCHEMA.optional(),
-        taskTimeoutMs: z.number().int().positive().optional(),
-        appServerStartupTimeoutMs: z.number().int().positive().optional(),
-        staleLockMs: z.number().int().positive().optional(),
-        maxAccountCycles: z.number().int().positive().optional(),
-        editMode: z.string().optional(),
-        providerSandboxMode: z.string().optional(),
-        accessBoundary: z.string().optional(),
-        projectAccessScope: z.record(z.string(), z.unknown()).optional(),
-        allowDangerFullAccess: z.boolean().optional(),
-        networkAccess: z.string().optional(),
-        allowDuplicateAccountIdentities: z.boolean().optional(),
-        requireGitWorkspace: z.boolean().optional(),
-        prewarmOnStart: z.boolean().optional(),
-        workerReportMode: z.enum(["runtime-only", "structured-output"]).optional(),
-        tmuxSession: z.string().optional(),
-        cwd: z.string().optional(),
-        logPath: z.string().optional(),
-        outputFormat: z.enum(["text", "json"]).optional(),
-    };
-}
-function statusInputSchema() {
-    return {
-        jobRootDir: z.string().optional(),
-        taskId: z.string().optional(),
-        workspacePath: z.string().optional(),
-        tmuxSession: z.string().optional(),
-        logPath: z.string().optional(),
-        progressPath: z.string().optional(),
-        accessBoundary: z.string().optional(),
-        cwd: z.string().optional(),
-    };
 }
 function mcpJson(value) {
     return {

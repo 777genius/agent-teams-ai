@@ -65,7 +65,6 @@ import {
 } from "@vioxen/subscription-runtime/worker-core";
 import {
   codexGoalJobToArgs,
-  codexGoalObjectiveMaxChars,
   createCodexGoalJob,
   defaultCodexGoalJobRoot,
   listCodexGoalJobs,
@@ -258,6 +257,10 @@ import {
 } from "./codex-goal-mcp-observation-projection";
 import { buildCodexGoalBrief } from "./codex-goal-mcp-brief";
 import { registerCodexGoalPrompts } from "./codex-goal-mcp-prompts";
+import {
+  goalInputSchema,
+  statusInputSchema,
+} from "./codex-goal-mcp-input-schemas";
 export { buildCodexGoalBrief } from "./codex-goal-mcp-brief";
 import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item";
 import {
@@ -273,7 +276,6 @@ import {
 } from "./codex-goal-mcp-launch-summary";
 import {
   CODEX_GOAL_CONTROL_SURFACE_SCHEMA,
-  CODEX_GOAL_EXECUTION_ENGINE_SCHEMA,
   buildCodexGoalDecision,
   buildCodexGoalHandoff,
   isSafeStartAction,
@@ -5792,62 +5794,6 @@ function optionalTargetCommit(
   targetCommit: string | undefined,
 ): { readonly targetCommit?: string } {
   return targetCommit === undefined ? {} : { targetCommit };
-}
-
-function goalInputSchema(): Record<string, z.ZodTypeAny> {
-  return {
-    jobId: z.string().optional(),
-    configPath: z.string().optional(),
-    jobRootDir: z.string().optional(),
-    authRootDir: z.string().optional(),
-    stateRootDir: z.string().optional(),
-    workspacePath: z.string().optional(),
-    promptPath: z.string().optional(),
-    codexGoalObjective: z.string().max(codexGoalObjectiveMaxChars).describe(
-      "Short app-server goal objective, max 4000 characters. For long instructions, keep the full task in promptPath and reference docs/files here.",
-    ).optional(),
-    taskId: z.string().optional(),
-    accounts: z.union([z.string(), z.array(z.string())]).optional(),
-    outputPath: z.string().optional(),
-    progressPath: z.string().optional(),
-    progressHeartbeatMs: z.number().int().positive().optional(),
-    codexBinaryPath: z.string().optional(),
-    model: z.string().optional(),
-    reasoningEffort: z.string().optional(),
-    serviceTier: z.string().optional(),
-    executionEngine: CODEX_GOAL_EXECUTION_ENGINE_SCHEMA.optional(),
-    taskTimeoutMs: z.number().int().positive().optional(),
-    appServerStartupTimeoutMs: z.number().int().positive().optional(),
-    staleLockMs: z.number().int().positive().optional(),
-    maxAccountCycles: z.number().int().positive().optional(),
-    editMode: z.string().optional(),
-    providerSandboxMode: z.string().optional(),
-    accessBoundary: z.string().optional(),
-    projectAccessScope: z.record(z.string(), z.unknown()).optional(),
-    allowDangerFullAccess: z.boolean().optional(),
-    networkAccess: z.string().optional(),
-    allowDuplicateAccountIdentities: z.boolean().optional(),
-    requireGitWorkspace: z.boolean().optional(),
-    prewarmOnStart: z.boolean().optional(),
-    workerReportMode: z.enum(["runtime-only", "structured-output"]).optional(),
-    tmuxSession: z.string().optional(),
-    cwd: z.string().optional(),
-    logPath: z.string().optional(),
-    outputFormat: z.enum(["text", "json"]).optional(),
-  };
-}
-
-function statusInputSchema(): Record<string, z.ZodTypeAny> {
-  return {
-    jobRootDir: z.string().optional(),
-    taskId: z.string().optional(),
-    workspacePath: z.string().optional(),
-    tmuxSession: z.string().optional(),
-    logPath: z.string().optional(),
-    progressPath: z.string().optional(),
-    accessBoundary: z.string().optional(),
-    cwd: z.string().optional(),
-  };
 }
 
 function mcpJson(value: JsonObject) {
