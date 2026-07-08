@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  PROGRESS_RETAINED_LOG_CHARS,
+  PROGRESS_RETAINED_LOG_LINE_CHARS,
+  PROGRESS_RETAINED_LOG_LINES,
+} from '../../progressPayload';
+import {
   createTeamProvisioningTransientRunStatePorts,
   createTeamProvisioningTransientRunStatePortsFromService,
   type TeamProvisioningCliLogRun,
@@ -29,6 +34,10 @@ function makeLogRun(): TeamProvisioningCliLogRun {
     stdoutLogLineBuf: '',
     stderrLogLineBuf: '',
   };
+}
+
+function totalStringChars(values: readonly string[]): number {
+  return values.reduce((sum, value) => sum + value.length, 0);
 }
 
 function makePorts(
@@ -266,6 +275,40 @@ describe('TeamProvisioningTransientRunState', () => {
     expect(run.claudeLogLines).toEqual(['[stdout]', 'hello', '[stderr]', 'err', '[stdout]']);
     expect(run.stdoutLogLineBuf).toContain('...[truncated pending line]');
     expect(run.stdoutLogLineBuf.length).toBeLessThan(256 * 1024);
+  });
+
+  it('bounds retained CLI log lines as stdout is appended', () => {
+    const run = makeLogRun();
+    const state = new TeamProvisioningTransientRunState(makePorts());
+    const lines = Array.from(
+      { length: PROGRESS_RETAINED_LOG_LINES + 600 },
+      (_, index) => `line-${index}-${'x'.repeat(700)}`
+    );
+    const hugeLine = `huge-${'h'.repeat(PROGRESS_RETAINED_LOG_LINE_CHARS + 1_000)}`;
+    const latestLine = 'latest-marker';
+    const text = [...lines, hugeLine, latestLine].join('\n') + '\n';
+
+    state.appendCliLogs(run, 'stdout', text);
+
+    expect(run.claudeLogLines.length).toBeLessThanOrEqual(PROGRESS_RETAINED_LOG_LINES);
+    expect(totalStringChars(run.claudeLogLines)).toBeLessThanOrEqual(PROGRESS_RETAINED_LOG_CHARS);
+    expect(run.claudeLogLines.at(-1)).toBe(latestLine);
+    expect(run.claudeLogLines.some((line) => line.includes('[truncated]'))).toBe(true);
+    expect(run.claudeLogLines.join('\n')).not.toContain('line-0-');
+  });
+
+  it('bounds pending CLI line carry buffers before newline arrives', () => {
+    const run = makeLogRun();
+    const state = new TeamProvisioningTransientRunState(makePorts());
+    const hugePendingLine = 'x'.repeat(PROGRESS_RETAINED_LOG_LINE_CHARS + 5_000);
+
+    state.appendCliLogs(run, 'stdout', hugePendingLine);
+    state.appendCliLogs(run, 'stderr', hugePendingLine);
+
+    expect(run.stdoutLogLineBuf.length).toBeLessThanOrEqual(PROGRESS_RETAINED_LOG_LINE_CHARS);
+    expect(run.stderrLogLineBuf.length).toBeLessThanOrEqual(PROGRESS_RETAINED_LOG_LINE_CHARS);
+    expect(run.stdoutLogLineBuf).toContain('[truncated pending line]');
+    expect(run.stderrLogLineBuf).toContain('[truncated pending line]');
   });
 
   it('serializes concurrent operations by team and releases the lock', async () => {

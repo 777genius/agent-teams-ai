@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  PROGRESS_RETAINED_OUTPUT_CHARS,
+  PROGRESS_RETAINED_OUTPUT_PART_CHARS,
+  PROGRESS_RETAINED_OUTPUT_PARTS,
+} from '../../progressPayload';
+import {
   appendProvisioningAssistantText,
   getCurrentLeadSessionId,
   getLiveLeadProcessMessages,
@@ -25,6 +30,10 @@ function createLeadTextRun(overrides: Partial<TeamProvisioningLeadTextRun> = {})
     lastLeadTextEmitMs: 0,
     ...overrides,
   };
+}
+
+function totalStringChars(values: readonly string[]): number {
+  return values.reduce((sum, value) => sum + value.length, 0);
 }
 
 describe('lead process message helpers', () => {
@@ -52,6 +61,49 @@ describe('lead process message helpers', () => {
     expect(run.provisioningOutputParts).toEqual(['updated']);
     expect(run.provisioningOutputIndexByMessageId.get('lead-thought-u1')).toBe(0);
     expect(run.provisioningOutputIndexByMessageId.has('lead-thought-u2')).toBe(false);
+  });
+
+  it('bounds retained provisioning output parts and keeps stable message indexes valid', () => {
+    const run = {
+      provisioningOutputParts: [] as string[],
+      provisioningOutputIndexByMessageId: new Map<string, number>(),
+      stallWarningIndex: null,
+      apiRetryWarningIndex: null,
+    };
+    const partCount = PROGRESS_RETAINED_OUTPUT_PARTS + 80;
+
+    for (let index = 0; index < partCount; index += 1) {
+      const text =
+        index === partCount - 2
+          ? `huge-${'z'.repeat(PROGRESS_RETAINED_OUTPUT_PART_CHARS + 1_000)}`
+          : `part-${index}-${'y'.repeat(4_000)}`;
+      appendProvisioningAssistantText(run, { uuid: `msg-${index}` }, text);
+    }
+
+    expect(run.provisioningOutputParts.length).toBeLessThanOrEqual(PROGRESS_RETAINED_OUTPUT_PARTS);
+    expect(totalStringChars(run.provisioningOutputParts)).toBeLessThanOrEqual(
+      PROGRESS_RETAINED_OUTPUT_CHARS
+    );
+    expect(run.provisioningOutputParts.at(-1)).toContain(`part-${partCount - 1}-`);
+    expect(run.provisioningOutputParts.some((part) => part.includes('[truncated]'))).toBe(true);
+    expect(run.provisioningOutputParts.join('\n')).not.toContain('part-0-');
+
+    for (const index of run.provisioningOutputIndexByMessageId.values()) {
+      expect(index).toBeGreaterThanOrEqual(0);
+      expect(index).toBeLessThan(run.provisioningOutputParts.length);
+    }
+
+    const latestMessageId = `msg-${partCount - 1}`;
+    appendProvisioningAssistantText(
+      run,
+      { uuid: latestMessageId },
+      `updated-${'u'.repeat(PROGRESS_RETAINED_OUTPUT_PART_CHARS + 1_000)}`
+    );
+
+    expect(run.provisioningOutputParts.at(-1)).toContain('updated-');
+    expect(totalStringChars(run.provisioningOutputParts)).toBeLessThanOrEqual(
+      PROGRESS_RETAINED_OUTPUT_CHARS
+    );
   });
 
   it('shifts stable assistant output indexes after a removed part', () => {
@@ -101,6 +153,32 @@ describe('lead process message helpers', () => {
         leadSessionId: 'session-1',
       }),
     ]);
+  });
+
+  it('bounds live lead cache text without mutating the original message', () => {
+    const liveLeadProcessMessages = new Map<string, InboxMessage[]>();
+    const hugeText = `start-${'x'.repeat(300_000)}-end`;
+    const message: InboxMessage = {
+      from: 'team-lead',
+      text: hugeText,
+      timestamp: '2026-04-19T10:00:01.000Z',
+      read: true,
+      messageId: 'huge-live-message',
+      source: 'lead_process',
+    };
+
+    pushLiveLeadProcessMessage('live-cache-team', message, {
+      liveLeadProcessMessages,
+      getTrackedRunId: () => null,
+      getRun: () => undefined,
+      cacheLimit: 10,
+    });
+
+    const [cached] = liveLeadProcessMessages.get('live-cache-team') ?? [];
+    expect(cached?.text.length).toBeLessThan(hugeText.length);
+    expect(cached?.text.length).toBeLessThanOrEqual(32 * 1024);
+    expect(cached?.text).toContain('[truncated live message]');
+    expect(message.text).toBe(hugeText);
   });
 
   it('returns cloned live lead process messages enriched with the current session id', () => {
@@ -244,5 +322,44 @@ describe('lead process message helpers', () => {
 
     resetLiveLeadTextBuffer(run);
     expect(run.liveLeadTextBuffer).toBeNull();
+  });
+
+  it('bounds coalesced synthetic live lead text buffers', () => {
+    const pushed: InboxMessage[] = [];
+    const run = createLeadTextRun({
+      teamName: 'live-buffer-team',
+    });
+    const ports = {
+      nowMs: () => 5_000,
+      nowIso: () => '2026-04-19T10:00:01.000Z',
+      getRunLeadName: () => 'team-lead',
+      pushLiveLeadProcessMessage: (_teamName: string, message: InboxMessage) =>
+        pushed.push(message),
+      emitTeamChange: vi.fn(),
+      leadTextEmitThrottleMs: 2_000,
+    };
+    const hugeChunk = 's'.repeat(180_000);
+
+    pushLiveLeadTextMessage(
+      run,
+      hugeChunk,
+      undefined,
+      undefined,
+      { coalesceStreamChunk: true },
+      ports
+    );
+    pushLiveLeadTextMessage(
+      run,
+      hugeChunk,
+      undefined,
+      undefined,
+      { coalesceStreamChunk: true },
+      ports
+    );
+
+    expect(run.liveLeadTextBuffer?.text.length).toBeLessThan(hugeChunk.length * 2);
+    expect(run.liveLeadTextBuffer?.text.length).toBeLessThanOrEqual(32 * 1024);
+    expect(run.liveLeadTextBuffer?.text).toContain('[truncated live message]');
+    expect(pushed.at(-1)?.text.length).toBeLessThanOrEqual(32 * 1024);
   });
 });
