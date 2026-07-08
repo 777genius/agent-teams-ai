@@ -332,6 +332,7 @@ function createPorts(
       canonicalMemberName: 'Builder',
       laneId: 'lane-1',
     })),
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: vi.fn(async () => true),
     tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: vi.fn(async () => true),
     decideOpenCodeRuntimeDeliveryUserFacingAdvisory: vi.fn(async (record) => ({
       record,
@@ -413,6 +414,7 @@ function createHost(options: {
     getCrossTeamSender: vi.fn(() => 'cross-team-sender' as never),
     isOpenCodeRuntimeRecipient: vi.fn(async () => true),
     getOpenCodeAgendaSyncRecoveryBypassMessageIds: vi.fn(async () => new Set<string>()),
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: vi.fn(async () => true),
     tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: vi.fn(async () => true),
     decideOpenCodeRuntimeDeliveryUserFacingAdvisory: vi.fn(async (record) => ({
       record,
@@ -460,6 +462,8 @@ function createService(options: {
     isOpenCodeRuntimeRecipient: host.isOpenCodeRuntimeRecipient,
     getOpenCodeAgendaSyncRecoveryBypassMessageIds:
       host.getOpenCodeAgendaSyncRecoveryBypassMessageIds,
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery:
+      host.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery,
     tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive:
       host.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive,
     decideOpenCodeRuntimeDeliveryUserFacingAdvisory:

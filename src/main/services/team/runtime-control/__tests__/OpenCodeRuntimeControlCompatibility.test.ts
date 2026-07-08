@@ -201,6 +201,7 @@ function createBoundaryPorts(
       canonicalMemberName: 'Builder',
       laneId: 'lane-1',
     })),
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: vi.fn(async () => true),
     tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: vi.fn(async () => true),
     decideOpenCodeRuntimeDeliveryUserFacingAdvisory: vi.fn(async (record) => ({
       record,

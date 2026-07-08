@@ -270,7 +270,16 @@ describe('TeamProvisioningOpenCodeRuntimeDeliveryAdvisory', () => {
     >[0]);
     ports.emitTeamChange({ type: 'member-advisory', teamName: 'team-a' } as TeamChangeEvent);
     ports.invalidateMemberRuntimeAdvisory('team-a', 'builder');
-    expect(ports.scheduleProofMissingWorkSyncRecovery).toBe(proofRecoveryScheduler);
+    await ports.scheduleProofMissingWorkSyncRecovery?.({
+      teamName: 'team-a',
+      memberName: 'builder',
+      originalMessageId: 'message-a',
+    });
+    expect(proofRecoveryScheduler).toHaveBeenCalledWith({
+      teamName: 'team-a',
+      memberName: 'builder',
+      originalMessageId: 'message-a',
+    });
 
     const sink = ports.getLeadNoticeSink('team-a');
     await sink?.send('check delivery');

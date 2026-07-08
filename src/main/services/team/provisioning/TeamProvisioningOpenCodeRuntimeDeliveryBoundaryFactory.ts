@@ -41,6 +41,7 @@ export interface TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactoryPorts<
   isOpenCodeRuntimeRecipient: DeliveryBoundaryPorts<Run>['isOpenCodeRuntimeRecipient'];
   getOpenCodeAgendaSyncRecoveryBypassMessageIds: DeliveryBoundaryPorts<Run>['getOpenCodeAgendaSyncRecoveryBypassMessageIds'];
   resolveOpenCodeMemberDeliveryIdentity: DeliveryBoundaryPorts<Run>['resolveOpenCodeMemberDeliveryIdentity'];
+  tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: DeliveryBoundaryPorts<Run>['tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery'];
   tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: DeliveryBoundaryPorts<Run>['tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive'];
   decideOpenCodeRuntimeDeliveryUserFacingAdvisory: DeliveryBoundaryPorts<Run>['decideOpenCodeRuntimeDeliveryUserFacingAdvisory'];
   isOpenCodePromptDeliveryWatchdogEnabled: DeliveryBoundaryPorts<Run>['isOpenCodePromptDeliveryWatchdogEnabled'];
@@ -97,6 +98,7 @@ export interface TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<
   getCrossTeamSender: DeliveryBoundaryPorts<Run>['getCrossTeamSender'];
   isOpenCodeRuntimeRecipient: DeliveryBoundaryPorts<Run>['isOpenCodeRuntimeRecipient'];
   getOpenCodeAgendaSyncRecoveryBypassMessageIds: DeliveryBoundaryPorts<Run>['getOpenCodeAgendaSyncRecoveryBypassMessageIds'];
+  tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: DeliveryBoundaryPorts<Run>['tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery'];
   tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: DeliveryBoundaryPorts<Run>['tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive'];
   decideOpenCodeRuntimeDeliveryUserFacingAdvisory: DeliveryBoundaryPorts<Run>['decideOpenCodeRuntimeDeliveryUserFacingAdvisory'];
   openCodePromptDeliveryWatchdogScheduler: {
@@ -132,6 +134,7 @@ export interface TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFactoryServi
   getCrossTeamSender: DeliveryBoundaryPorts<Run>['getCrossTeamSender'];
   isOpenCodeRuntimeRecipient: DeliveryBoundaryPorts<Run>['isOpenCodeRuntimeRecipient'];
   getOpenCodeAgendaSyncRecoveryBypassMessageIds: DeliveryBoundaryPorts<Run>['getOpenCodeAgendaSyncRecoveryBypassMessageIds'];
+  tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: DeliveryBoundaryPorts<Run>['tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery'];
   tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: DeliveryBoundaryPorts<Run>['tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive'];
   decideOpenCodeRuntimeDeliveryUserFacingAdvisory: DeliveryBoundaryPorts<Run>['decideOpenCodeRuntimeDeliveryUserFacingAdvisory'];
   openCodePromptDeliveryWatchdogScheduler: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['openCodePromptDeliveryWatchdogScheduler'];
@@ -167,6 +170,7 @@ export interface TeamProvisioningOpenCodeRuntimeDeliveryBoundaryServiceHost<
   };
   isOpenCodeRuntimeRecipient: DeliveryBoundaryPorts<Run>['isOpenCodeRuntimeRecipient'];
   getOpenCodeAgendaSyncRecoveryBypassMessageIds: DeliveryBoundaryPorts<Run>['getOpenCodeAgendaSyncRecoveryBypassMessageIds'];
+  tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: DeliveryBoundaryPorts<Run>['tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery'];
   tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: DeliveryBoundaryPorts<Run>['tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive'];
   decideOpenCodeRuntimeDeliveryUserFacingAdvisory: DeliveryBoundaryPorts<Run>['decideOpenCodeRuntimeDeliveryUserFacingAdvisory'];
   openCodePromptDeliveryWatchdogScheduler: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<Run>['openCodePromptDeliveryWatchdogScheduler'];
@@ -247,6 +251,8 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<
       service.isOpenCodeRuntimeRecipient(teamName, memberName),
     getOpenCodeAgendaSyncRecoveryBypassMessageIds: (input) =>
       service.getOpenCodeAgendaSyncRecoveryBypassMessageIds(input),
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: (input) =>
+      service.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(input),
     tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (input) =>
       service.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(input),
     decideOpenCodeRuntimeDeliveryUserFacingAdvisory: (record) =>
@@ -331,6 +337,8 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFromSer
       service.isOpenCodeRuntimeRecipient(teamName, memberName),
     getOpenCodeAgendaSyncRecoveryBypassMessageIds: (input) =>
       service.getOpenCodeAgendaSyncRecoveryBypassMessageIds(input),
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: (input) =>
+      service.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(input),
     tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (input) =>
       service.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(input),
     decideOpenCodeRuntimeDeliveryUserFacingAdvisory: (record) =>
@@ -399,6 +407,8 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost<
         teamName,
         memberName
       ),
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: (recoverInput) =>
+      host.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(recoverInput),
     tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (recoverInput) =>
       host.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(recoverInput),
     decideOpenCodeRuntimeDeliveryUserFacingAdvisory: (record) =>
@@ -469,6 +479,8 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromPorts<
       ports.getOpenCodeAgendaSyncRecoveryBypassMessageIds(bypassInput),
     resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
       ports.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName),
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: (recoverInput) =>
+      ports.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(recoverInput),
     tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (recoverInput) =>
       ports.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(recoverInput),
     decideOpenCodeRuntimeDeliveryUserFacingAdvisory: (record) =>

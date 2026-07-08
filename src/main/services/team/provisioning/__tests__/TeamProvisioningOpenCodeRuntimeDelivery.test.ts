@@ -294,6 +294,7 @@ function createBoundary(
       canonicalMemberName: 'Builder',
       laneId: 'primary',
     }),
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: async () => true,
     tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: async () => true,
     decideOpenCodeRuntimeDeliveryUserFacingAdvisory: async (record) => ({
       record,

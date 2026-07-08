@@ -2738,6 +2738,8 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
         this.scheduleOpenCodeMemberInboxDeliveryWake(wakeInput),
       resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
         this.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName),
+      tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: (recoveryInput) =>
+        this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(recoveryInput),
       tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (recoveryInput) =>
         this.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(recoveryInput),
       createOpenCodePromptDeliveryLedger: (teamName, laneId) =>

@@ -144,6 +144,10 @@ export interface OpenCodeMemberDeliveryBusyStatusPorts extends OpenCodeRuntimeDe
     teamName: string,
     memberName: string
   ): Promise<OpenCodeDeliveryIdentityResolution>;
+  tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(input: {
+    teamName: string;
+    memberName: string;
+  }): Promise<boolean>;
   tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(input: {
     teamName: string;
     memberName: string;
@@ -187,6 +191,10 @@ export type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts<
       teamName: string,
       memberName: string
     ): Promise<OpenCodeDeliveryIdentityResolution>;
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(input: {
+      teamName: string;
+      memberName: string;
+    }): Promise<boolean>;
     tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(input: {
       teamName: string;
       memberName: string;
@@ -398,6 +406,8 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<
         scheduleOpenCodeMemberInboxDeliveryWake: scheduleMemberInboxDeliveryWake,
         resolveOpenCodeMemberDeliveryIdentity: (teamName, memberName) =>
           ports.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName),
+        tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: (recoverInput) =>
+          ports.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(recoverInput),
         tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: (recoverInput) =>
           ports.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive(recoverInput),
         createOpenCodePromptDeliveryLedger: createPromptDeliveryLedger,
@@ -549,6 +559,32 @@ export async function getOpenCodeMemberDeliveryBusyStatus(
     (Number.isFinite(nowMs) ? nowMs : Date.now()) + 60_000
   ).toISOString();
 
+  const identity = await ports.resolveOpenCodeMemberDeliveryIdentity(
+    input.teamName,
+    input.memberName
+  );
+  if (!identity.ok) {
+    return { busy: true, reason: identity.reason, retryAfterIso };
+  }
+
+  let laneIndex = await readOpenCodeRuntimeLaneIndex(ports.teamsBasePath, input.teamName).catch(
+    () => null
+  );
+  if (laneIndex?.lanes[identity.laneId]?.state !== 'active') {
+    const recovered = await ports
+      .tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery({
+        teamName: input.teamName,
+        memberName: identity.canonicalMemberName,
+      })
+      .catch(() => false);
+    if (recovered) {
+      laneIndex = await readOpenCodeRuntimeLaneIndex(ports.teamsBasePath, input.teamName).catch(
+        () => laneIndex
+      );
+    }
+  }
+  const hasActiveLane = laneIndex?.lanes[identity.laneId]?.state === 'active';
+
   let inboxMessages: Awaited<ReturnType<TeamInboxReader['getMessagesFor']>>;
   try {
     inboxMessages = await ports.inboxReader.getMessagesFor(input.teamName, input.memberName);
@@ -587,19 +623,21 @@ export async function getOpenCodeMemberDeliveryBusyStatus(
       hasStableInboxMessageId(message)
   );
   if (unreadForeground?.messageId) {
-    const activeRecord = await ports.tryGetActiveOpenCodePromptDeliveryRecord({
-      teamName: input.teamName,
-      memberName: input.memberName,
-    });
-    if (activeRecord) {
-      return buildOpenCodePromptDeliveryActiveBusyStatus({
+    if (hasActiveLane) {
+      const activeRecord = await ports.tryGetActiveOpenCodePromptDeliveryRecord({
         teamName: input.teamName,
         memberName: input.memberName,
-        retryAfterIso,
-        nowMs: Number.isFinite(nowMs) ? nowMs : undefined,
-        activeRecord,
-        scheduleWake: (wakeInput) => ports.scheduleOpenCodeMemberInboxDeliveryWake(wakeInput),
       });
+      if (activeRecord) {
+        return buildOpenCodePromptDeliveryActiveBusyStatus({
+          teamName: input.teamName,
+          memberName: input.memberName,
+          retryAfterIso,
+          nowMs: Number.isFinite(nowMs) ? nowMs : undefined,
+          activeRecord,
+          scheduleWake: (wakeInput) => ports.scheduleOpenCodeMemberInboxDeliveryWake(wakeInput),
+        });
+      }
     }
     ports.scheduleOpenCodeMemberInboxDeliveryWake({
       teamName: input.teamName,
@@ -630,30 +668,10 @@ export async function getOpenCodeMemberDeliveryBusyStatus(
     };
   }
 
-  const identity = await ports.resolveOpenCodeMemberDeliveryIdentity(
-    input.teamName,
-    input.memberName
-  );
-  if (!identity.ok) {
-    return { busy: true, reason: identity.reason, retryAfterIso };
-  }
-
-  const laneIndex = await readOpenCodeRuntimeLaneIndex(ports.teamsBasePath, input.teamName).catch(
-    () => null
-  );
   if (!laneIndex) {
     return { busy: true, reason: 'opencode_lane_index_unavailable', retryAfterIso };
   }
-  if (
-    laneIndex.lanes[identity.laneId]?.state !== 'active' &&
-    !(await ports
-      .tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive({
-        teamName: input.teamName,
-        memberName: identity.canonicalMemberName,
-        laneId: identity.laneId,
-      })
-      .catch(() => false))
-  ) {
+  if (!hasActiveLane) {
     return { busy: true, reason: 'opencode_no_active_lane', retryAfterIso };
   }
 

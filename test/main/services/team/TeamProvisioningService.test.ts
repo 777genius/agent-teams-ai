@@ -965,6 +965,7 @@ function createOpenCodeRuntimeDeliveryBoundaryForTest(
       canonicalMemberName: memberName,
       laneId: `secondary:opencode:${memberName}`,
     }),
+    tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: async () => true,
     tryRecoverOpenCodeRuntimeLaneForConfiguredMemberAndVerifyActive: async () => true,
     decideOpenCodeRuntimeDeliveryUserFacingAdvisory: async (record) => ({
       record,

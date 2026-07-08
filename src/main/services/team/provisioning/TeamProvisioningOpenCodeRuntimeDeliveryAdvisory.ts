@@ -144,8 +144,12 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryAdvisoryPortsFromSe
     invalidateMemberRuntimeAdvisory: (teamName, memberName) => {
       service.appShellBoundary.getMemberRuntimeAdvisoryInvalidator()?.(teamName, memberName);
     },
-    scheduleProofMissingWorkSyncRecovery:
-      service.appShellBoundary.getMemberWorkSyncProofMissingRecoveryScheduler() ?? null,
+    scheduleProofMissingWorkSyncRecovery: async (input) => {
+      const scheduler = service.appShellBoundary.getMemberWorkSyncProofMissingRecoveryScheduler();
+      if (scheduler) {
+        await scheduler(input);
+      }
+    },
     getLeadNoticeSink: (teamName) => {
       const runId = service.runTracking.getAliveRunId(teamName);
       const run = runId ? service.runs.get(runId) : null;
