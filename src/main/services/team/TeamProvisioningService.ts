@@ -423,9 +423,8 @@ import {
   type OpenCodeRuntimePermissionSpawnStatusPorts,
   type OpenCodeRuntimePermissionSpawnStatusServiceHost,
   type OpenCodeRuntimePermissionSyncInput,
-  persistOpenCodeRuntimePendingPermissions,
-  syncOpenCodeRuntimePermissionsAfterDelivery,
-  syncOpenCodeRuntimePermissionSpawnStatusesForTrackedRun,
+  type OpenCodeRuntimePermissionSyncServiceHost,
+  syncOpenCodeRuntimePermissionsAfterDeliveryWithService,
 } from './provisioning/TeamProvisioningOpenCodeRuntimePermissions';
 import {
   createRememberOpenCodeRuntimePidFromBridgePortsFromService,
@@ -2198,30 +2197,11 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
   private async maybeSyncOpenCodeRuntimePermissionsAfterDelivery(
     input: OpenCodeRuntimePermissionSyncInput
   ): Promise<void> {
-    await syncOpenCodeRuntimePermissionsAfterDelivery(input, {
-      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
-      getPermissionListingAdapter: () =>
-        this.appShellBoundary.getOpenCodeRuntimePermissionListingAdapter(),
-      readLaunchState: (teamName) => this.launchStateStore.read(teamName).catch(() => null),
-      getTrackedRun: (teamName) => {
-        const trackedRunId = this.runTracking.getTrackedRunId(teamName);
-        return trackedRunId ? (this.runs.get(trackedRunId) ?? null) : null;
-      },
-      getRuntimeAdapterRun: (teamName) => this.runtimeAdapterRunByTeam.get(teamName) ?? null,
-      persistPendingPermissions: (params) =>
-        persistOpenCodeRuntimePendingPermissions(
-          params,
-          this.openCodeRuntimePermissionPersistencePorts
-        ),
-      syncSpawnStatuses: (params) =>
-        syncOpenCodeRuntimePermissionSpawnStatusesForTrackedRun(
-          params,
-          this.openCodeRuntimePermissionSpawnStatusPorts
-        ),
-      syncToolApprovals: (params) =>
-        this.toolApprovalFacade.syncOpenCodeRuntimeToolApprovals(params),
-      logWarning: (message) => logger.warn(message),
-    });
+    await syncOpenCodeRuntimePermissionsAfterDeliveryWithService(
+      input,
+      this as unknown as OpenCodeRuntimePermissionSyncServiceHost<ProvisioningRun>,
+      { logWarning: (message) => logger.warn(message) }
+    );
   }
 
   private logOpenCodePromptDeliveryEvent(

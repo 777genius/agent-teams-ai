@@ -221,6 +221,80 @@ export function createOpenCodeRuntimePermissionSpawnStatusPortsFromService<
   };
 }
 
+export interface OpenCodeRuntimePermissionSyncServiceHost<
+  TRun extends OpenCodeRuntimePermissionTrackedRunLike,
+> {
+  runTracking: {
+    getTrackedRunId(teamName: string): string | null;
+  };
+  appShellBoundary: {
+    getOpenCodeRuntimePermissionListingAdapter(): OpenCodeRuntimePermissionListingAdapter | null;
+  };
+  launchStateStore: {
+    read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
+  };
+  runs: {
+    get(runId: string): TRun | null | undefined;
+  };
+  runtimeAdapterRunByTeam: {
+    get(teamName: string): OpenCodeRuntimePermissionRuntimeRunLike | null | undefined;
+  };
+  openCodeRuntimePermissionPersistencePorts: OpenCodeRuntimePendingPermissionsPersistencePorts;
+  openCodeRuntimePermissionSpawnStatusPorts: OpenCodeRuntimePermissionSpawnStatusPorts<TRun>;
+  toolApprovalFacade: {
+    syncOpenCodeRuntimeToolApprovals(input: OpenCodeRuntimePermissionToolApprovalSyncInput): void;
+  };
+}
+
+export interface OpenCodeRuntimePermissionSyncServiceHostOptions {
+  logWarning: OpenCodeRuntimePermissionSyncPorts['logWarning'];
+}
+
+export function createOpenCodeRuntimePermissionSyncPortsFromService<
+  TRun extends OpenCodeRuntimePermissionTrackedRunLike,
+>(
+  service: OpenCodeRuntimePermissionSyncServiceHost<TRun>,
+  options: OpenCodeRuntimePermissionSyncServiceHostOptions
+): OpenCodeRuntimePermissionSyncPorts {
+  return {
+    getTrackedRunId: (teamName) => service.runTracking.getTrackedRunId(teamName),
+    getPermissionListingAdapter: () =>
+      service.appShellBoundary.getOpenCodeRuntimePermissionListingAdapter(),
+    readLaunchState: (teamName) => service.launchStateStore.read(teamName).catch(() => null),
+    getTrackedRun: (teamName) => {
+      const trackedRunId = service.runTracking.getTrackedRunId(teamName);
+      return trackedRunId ? (service.runs.get(trackedRunId) ?? null) : null;
+    },
+    getRuntimeAdapterRun: (teamName) => service.runtimeAdapterRunByTeam.get(teamName) ?? null,
+    persistPendingPermissions: (params) =>
+      persistOpenCodeRuntimePendingPermissions(
+        params,
+        service.openCodeRuntimePermissionPersistencePorts
+      ),
+    syncSpawnStatuses: (params) =>
+      syncOpenCodeRuntimePermissionSpawnStatusesForTrackedRun(
+        params,
+        service.openCodeRuntimePermissionSpawnStatusPorts
+      ),
+    syncToolApprovals: (params) =>
+      service.toolApprovalFacade.syncOpenCodeRuntimeToolApprovals(params),
+    logWarning: (message) => options.logWarning(message),
+  };
+}
+
+export function syncOpenCodeRuntimePermissionsAfterDeliveryWithService<
+  TRun extends OpenCodeRuntimePermissionTrackedRunLike,
+>(
+  input: OpenCodeRuntimePermissionSyncInput,
+  service: OpenCodeRuntimePermissionSyncServiceHost<TRun>,
+  options: OpenCodeRuntimePermissionSyncServiceHostOptions
+): Promise<void> {
+  return syncOpenCodeRuntimePermissionsAfterDelivery(
+    input,
+    createOpenCodeRuntimePermissionSyncPortsFromService(service, options)
+  );
+}
+
 export const OPENCODE_PENDING_PERMISSION_REQUEST_PATTERN =
   /\b(?:pending permission request(?:\(s\)|s)?|permission[_ -]blocked)\b/i;
 
