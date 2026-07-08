@@ -43,6 +43,50 @@ export interface TeamProvisioningBootstrapTranscriptFacadeDeps {
   ) => TeamProvisioningBootstrapTranscriptOutcomePorts;
 }
 
+export interface TeamProvisioningBootstrapTranscriptFacadeServiceHost {
+  runTracking: {
+    getTrackedRunId(teamName: string): string | null;
+  };
+  runtimeAdapterRunByTeam: {
+    has(teamName: string): boolean;
+  };
+  configReader: TeamConfigReader;
+  inboxReader: TeamInboxReader;
+  membersMetaStore: TeamMembersMetaStore;
+  configFacade: {
+    readConfigSnapshot(teamName: string): Promise<TeamConfig | null>;
+  };
+}
+
+export interface TeamProvisioningBootstrapTranscriptFacadeServiceHostOptions {
+  nowIso: TeamProvisioningBootstrapTranscriptFacadeDeps['nowIso'];
+}
+
+export function createTeamProvisioningBootstrapTranscriptFacadeDepsFromService(
+  service: TeamProvisioningBootstrapTranscriptFacadeServiceHost,
+  options: TeamProvisioningBootstrapTranscriptFacadeServiceHostOptions
+): TeamProvisioningBootstrapTranscriptFacadeDeps {
+  return {
+    nowIso: options.nowIso,
+    isLookupCacheEnabled: (teamName) =>
+      !service.runTracking.getTrackedRunId(teamName) &&
+      !service.runtimeAdapterRunByTeam.has(teamName),
+    configReader: service.configReader,
+    inboxReader: service.inboxReader,
+    membersMetaStore: service.membersMetaStore,
+    readConfigSnapshot: (teamName) => service.configFacade.readConfigSnapshot(teamName),
+  };
+}
+
+export function createTeamProvisioningBootstrapTranscriptFacadeFromService(
+  service: TeamProvisioningBootstrapTranscriptFacadeServiceHost,
+  options: TeamProvisioningBootstrapTranscriptFacadeServiceHostOptions
+): TeamProvisioningBootstrapTranscriptFacade {
+  return new TeamProvisioningBootstrapTranscriptFacade(
+    createTeamProvisioningBootstrapTranscriptFacadeDepsFromService(service, options)
+  );
+}
+
 function requireBootstrapTranscriptFacadeDependency<T>(
   dependency: T | null | undefined,
   name: string

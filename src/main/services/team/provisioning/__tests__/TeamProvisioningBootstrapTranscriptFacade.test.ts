@@ -3,7 +3,11 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { TeamProvisioningBootstrapTranscriptFacade } from '../TeamProvisioningBootstrapTranscriptFacade';
+import {
+  createTeamProvisioningBootstrapTranscriptFacadeDepsFromService,
+  TeamProvisioningBootstrapTranscriptFacade,
+  type TeamProvisioningBootstrapTranscriptFacadeServiceHost,
+} from '../TeamProvisioningBootstrapTranscriptFacade';
 
 const NOW = '2026-01-01T00:00:00.000Z';
 
@@ -23,6 +27,45 @@ describe('TeamProvisioningBootstrapTranscriptFacade', () => {
       await fs.rm(tmpDir, { recursive: true, force: true });
       tmpDir = null;
     }
+  });
+
+  it('builds facade deps from service-shaped dependencies', async () => {
+    const runtimeAdapterRunByTeam = new Map<string, unknown>();
+    const getTrackedRunId = vi.fn((): string | null => null);
+    const configReader = {} as TeamProvisioningBootstrapTranscriptFacadeServiceHost['configReader'];
+    const inboxReader = {} as TeamProvisioningBootstrapTranscriptFacadeServiceHost['inboxReader'];
+    const membersMetaStore =
+      {} as TeamProvisioningBootstrapTranscriptFacadeServiceHost['membersMetaStore'];
+    const readConfigSnapshot = vi.fn(async () => null);
+    const service = {
+      runTracking: {
+        getTrackedRunId,
+      },
+      runtimeAdapterRunByTeam,
+      configReader,
+      inboxReader,
+      membersMetaStore,
+      configFacade: {
+        readConfigSnapshot,
+      },
+    } satisfies TeamProvisioningBootstrapTranscriptFacadeServiceHost;
+    const deps = createTeamProvisioningBootstrapTranscriptFacadeDepsFromService(service, {
+      nowIso: () => NOW,
+    });
+
+    expect(deps.nowIso()).toBe(NOW);
+    expect(deps.configReader).toBe(configReader);
+    expect(deps.inboxReader).toBe(inboxReader);
+    expect(deps.membersMetaStore).toBe(membersMetaStore);
+    expect(deps.isLookupCacheEnabled('alpha')).toBe(true);
+    runtimeAdapterRunByTeam.set('alpha', {});
+    expect(deps.isLookupCacheEnabled('alpha')).toBe(false);
+    runtimeAdapterRunByTeam.clear();
+    getTrackedRunId.mockReturnValue('run-1');
+    expect(deps.isLookupCacheEnabled('alpha')).toBe(false);
+    await deps.readConfigSnapshot('alpha');
+
+    expect(readConfigSnapshot).toHaveBeenCalledWith('alpha');
   });
 
   it('owns transcript outcome lookup ports and exposes their parsed tail cache', async () => {

@@ -102,7 +102,9 @@ import {
   type ParsedBootstrapTranscriptTailCacheEntry,
 } from './provisioning/TeamProvisioningBootstrapTranscript';
 import {
+  createTeamProvisioningBootstrapTranscriptFacadeFromService,
   TeamProvisioningBootstrapTranscriptFacade,
+  type TeamProvisioningBootstrapTranscriptFacadeServiceHost,
   type TeamProvisioningBootstrapTranscriptMemberLogsPort,
 } from './provisioning/TeamProvisioningBootstrapTranscriptFacade';
 import {
@@ -1792,15 +1794,10 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
         sleep,
         getErrorMessage,
       });
-    this.bootstrapTranscriptFacade = new TeamProvisioningBootstrapTranscriptFacade({
-      nowIso,
-      isLookupCacheEnabled: (teamName) =>
-        !this.runTracking.getTrackedRunId(teamName) && !this.runtimeAdapterRunByTeam.has(teamName),
-      configReader: this.configReader,
-      inboxReader: this.inboxReader,
-      membersMetaStore: this.membersMetaStore,
-      readConfigSnapshot: (teamName) => this.configFacade.readConfigSnapshot(teamName),
-    });
+    this.bootstrapTranscriptFacade = createTeamProvisioningBootstrapTranscriptFacadeFromService(
+      this as unknown as TeamProvisioningBootstrapTranscriptFacadeServiceHost,
+      { nowIso }
+    );
     this.sameTeamNativeDelivery = createDefaultTeamProvisioningSameTeamNativeDeliveryFromService(
       this as unknown as TeamProvisioningSameTeamNativeDeliveryServiceHost,
       { warn: (message) => logger.warn(message) }
