@@ -754,12 +754,12 @@ function getRunRuntimeFailureLabel(run: ProvisioningRun): string {
   return getRuntimeFailureLabelForRequest(run.request);
 }
 
-type RuntimeAdapterRunByTeamEntry = {
+interface RuntimeAdapterRunByTeamEntry {
   runId: string;
   providerId: TeamProviderId;
   cwd?: string;
   members?: Record<string, TeamRuntimeMemberLaunchEvidence>;
-};
+}
 
 export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade<ProvisioningRun> {
   private static runtimeProcessTableTimeoutMs =

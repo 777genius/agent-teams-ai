@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createOpenCodeVisibleReplyProofServiceFromHost,
   OpenCodeVisibleReplyProofService,
-  type OpenCodeVisibleReplyProofServiceHost,
   type OpenCodeVisibleReplyProofServiceDependencies,
+  type OpenCodeVisibleReplyProofServiceHost,
 } from '../OpenCodeVisibleReplyProofService';
 
 import type { InboxMessage } from '@shared/types/team';

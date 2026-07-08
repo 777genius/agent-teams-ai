@@ -64,9 +64,9 @@ export interface TeamProvisioningProcessExitServiceHost<
   cleanupRun(run: TRun): void;
 }
 
-export interface TeamProvisioningProcessExitServiceHostOptions<
+export type TeamProvisioningProcessExitServiceHostOptions<
   TRun extends TeamProvisioningProcessExitRun,
-> extends Omit<TeamProvisioningProcessExitPortsFactoryDeps<TRun>, 'service'> {}
+> = Omit<TeamProvisioningProcessExitPortsFactoryDeps<TRun>, 'service'>;
 
 export function createTeamProvisioningProcessExitPortsDepsFromService<
   TRun extends TeamProvisioningProcessExitRun,

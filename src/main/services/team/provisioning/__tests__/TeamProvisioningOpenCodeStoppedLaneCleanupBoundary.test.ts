@@ -76,7 +76,7 @@ describe('TeamProvisioningOpenCodeStoppedLaneCleanupBoundary', () => {
   });
 
   it('dedupes concurrent stopped lane cleanup for the same team', async () => {
-    let resolveCleanup: (value: number) => void = () => undefined;
+    let resolveCleanup!: (value: number | PromiseLike<number>) => void;
     const cleanupPromise = new Promise<number>((resolve) => {
       resolveCleanup = resolve;
     });
@@ -91,7 +91,7 @@ describe('TeamProvisioningOpenCodeStoppedLaneCleanupBoundary', () => {
 
     await expect(first).resolves.toBe(2);
     await expect(second).resolves.toBe(2);
-    expect(helpers.stopOpenCodeRuntimeLanesForStoppedTeam).toHaveBeenCalledOnce();
+    expect(helpers.stopOpenCodeRuntimeLanesForStoppedTeam).toHaveBeenCalledTimes(1);
   });
 
   it('wires stopped lane pid cleanup through injected safety helpers', async () => {

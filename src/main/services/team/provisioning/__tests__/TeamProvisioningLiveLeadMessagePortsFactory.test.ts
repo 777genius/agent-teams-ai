@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createTeamProvisioningLiveLeadMessagePortsBoundary,
   createTeamProvisioningLiveLeadMessagePortsDepsFromService,
-  type TeamProvisioningLiveLeadMessageServiceHost,
   type TeamProvisioningLiveLeadMessagePortsFactoryRun,
+  type TeamProvisioningLiveLeadMessageServiceHost,
 } from '../TeamProvisioningLiveLeadMessagePortsFactory';
 
 import type { InboxMessage, TeamChangeEvent } from '@shared/types';
@@ -151,7 +151,7 @@ describe('TeamProvisioningLiveLeadMessagePortsFactory', () => {
     const runs = new Map([[run.runId, run]]);
     const liveLeadProcessMessages = new Map<string, InboxMessage[]>();
     const sent: InboxMessage[] = [];
-    const inbox: Array<{ recipient: string; message: InboxMessage }> = [];
+    const inbox: { recipient: string; message: InboxMessage }[] = [];
     const emitted: TeamChangeEvent[] = [];
     const crossTeamSender = vi.fn().mockResolvedValue({ messageId: 'cross-1' });
     let nowMs = 5_000;

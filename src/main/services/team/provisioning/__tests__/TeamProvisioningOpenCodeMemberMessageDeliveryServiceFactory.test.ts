@@ -1,4 +1,5 @@
 import { tmpdir } from 'os';
+import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -15,12 +16,13 @@ import {
 describe('TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory', () => {
   it('creates bootstrap evidence ports from explicit factory input', () => {
     const warn = vi.fn();
+    const teamsBasePath = path.join(tmpdir(), 'opencode-member-message-delivery');
     const ports = createOpenCodeRuntimeBootstrapEvidencePorts({
-      teamsBasePath: tmpdir(),
+      teamsBasePath,
       warn,
     });
 
-    expect(ports.teamsBasePath).toBe(tmpdir());
+    expect(ports.teamsBasePath).toBe(teamsBasePath);
     expect(ports.warn).toBe(warn);
   });
 
@@ -29,7 +31,7 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory', () => {
       getOpenCodeRuntimeMessageAdapter: vi.fn(() => null),
       createOpenCodeRuntimeBootstrapEvidencePorts: vi.fn(() =>
         createOpenCodeRuntimeBootstrapEvidencePorts({
-          teamsBasePath: tmpdir(),
+          teamsBasePath: path.join(tmpdir(), 'opencode-member-message-delivery'),
           warn: vi.fn(),
         })
       ),
@@ -79,7 +81,7 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory', () => {
       readOpenCodeMemberDirectory: vi.fn(async () => ({ members: [] })),
       resolveOpenCodeMemberIdentityFromDirectory: vi.fn(async () => null),
       stoppingSecondaryRuntimeTeams: new Set<string>(),
-      readPersistedTeamProjectPath: vi.fn(async () => '/tmp/team-a'),
+      readPersistedTeamProjectPath: vi.fn(async () => path.join('/tmp', 'team-a')),
       runTracking: {
         resolveDeliverableTrackedRuntimeRunId: vi.fn(() => 'run-1'),
       },
@@ -122,7 +124,8 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory', () => {
     expect(host.getOpenCodeRuntimeMessageAdapter()).toBeNull();
     expect(firstAdapterGetter).toHaveBeenCalledTimes(1);
     expect(secondAdapterGetter).toHaveBeenCalledTimes(1);
-    expect(await host.readPersistedTeamProjectPath('team-a')).toBe('/tmp/team-a');
+    const projectPath = await Promise.resolve(host.readPersistedTeamProjectPath('team-a'));
+    expect(projectPath).toBe(path.join('/tmp', 'team-a'));
     expect(host.runTracking.resolveDeliverableTrackedRuntimeRunId('team-a')).toBe('run-1');
     expect(
       host.openCodeRuntimeRecoveryIdentity.isOpenCodeRuntimeLaneIndexActive('team-a', 'lane-a')

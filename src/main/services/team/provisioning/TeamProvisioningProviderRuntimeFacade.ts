@@ -1,3 +1,8 @@
+import {
+  createTeamProvisioningEnvRuntimePorts,
+  type TeamProvisioningEnvRuntimePorts,
+  type TeamProvisioningEnvRuntimePortsDeps,
+} from './TeamProvisioningEnvRuntimePorts';
 import { createTeamProvisioningProviderDiagnosticsRuntime } from './TeamProvisioningProviderDiagnosticsPorts';
 
 import type {
@@ -6,11 +11,6 @@ import type {
   ProvisioningEnvResolution,
   TeamRuntimeAuthContext,
 } from './TeamProvisioningEnvBuilder';
-import {
-  createTeamProvisioningEnvRuntimePorts,
-  type TeamProvisioningEnvRuntimePorts,
-  type TeamProvisioningEnvRuntimePortsDeps,
-} from './TeamProvisioningEnvRuntimePorts';
 import type { SpawnProbeOptions, SpawnProbeResult } from './TeamProvisioningProviderDiagnostics';
 import type {
   TeamProvisioningProviderDiagnosticsRuntime,

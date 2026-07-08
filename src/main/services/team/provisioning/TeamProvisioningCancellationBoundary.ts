@@ -1,6 +1,11 @@
 import { randomUUID } from 'crypto';
 
 import {
+  killTeamProcess as killTeamProcessDefault,
+  nowIso as nowIsoDefault,
+  updateProgress as updateProgressDefault,
+} from './TeamProvisioningRunProgress';
+import {
   cancelRuntimeAdapterProvisioning as cancelRuntimeAdapterProvisioningHelper,
   clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned as clearOpenCodeRuntimeAdapterPrimaryLaneIfOwnedHelper,
   isCancellableRuntimeAdapterProgress as isCancellableRuntimeAdapterProgressHelper,
@@ -9,11 +14,6 @@ import {
   type RuntimeAdapterRunEntry,
 } from './TeamProvisioningRuntimeAdapterCancellation';
 import { createTeamProvisioningRuntimeAdapterCancellationPorts } from './TeamProvisioningRuntimeAdapterCancellationPortsFactory';
-import {
-  killTeamProcess as killTeamProcessDefault,
-  nowIso as nowIsoDefault,
-  updateProgress as updateProgressDefault,
-} from './TeamProvisioningRunProgress';
 
 import type { TeamLaunchRuntimeAdapter } from '../runtime';
 import type {

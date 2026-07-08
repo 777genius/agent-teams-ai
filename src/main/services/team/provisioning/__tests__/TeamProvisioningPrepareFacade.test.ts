@@ -6,8 +6,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createTeamProvisioningPrepareFacadeFromService,
   TeamProvisioningPrepareFacade,
-  type TeamProvisioningPrepareFacadeServiceHost,
   type TeamProvisioningPrepareFacadePorts,
+  type TeamProvisioningPrepareFacadeServiceHost,
 } from '../TeamProvisioningPrepareFacade';
 
 import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';

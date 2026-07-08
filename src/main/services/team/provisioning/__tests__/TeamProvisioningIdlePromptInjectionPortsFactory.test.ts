@@ -6,8 +6,8 @@ import {
   createTeamProvisioningIdlePromptInjectionDepsFromService,
   createTeamProvisioningIdlePromptInjectionPorts,
   type TeamProvisioningIdlePromptInjectionPortsFactoryRun,
-  type TeamProvisioningIdlePromptInjectionServiceHost,
   type TeamProvisioningIdlePromptInjectionServiceAdapter,
+  type TeamProvisioningIdlePromptInjectionServiceHost,
 } from '../TeamProvisioningIdlePromptInjectionPortsFactory';
 
 import type { LeadActivityState } from '../TeamProvisioningLeadActivity';
@@ -189,7 +189,7 @@ describe('TeamProvisioningIdlePromptInjectionPortsFactory', () => {
     const postCompactPayload = JSON.parse(
       postCompactRun.child.stdin.write.mock.calls[0][0].trim()
     ) as {
-      message: { content: Array<{ text: string }> };
+      message: { content: { text: string }[] };
     };
     expect(postCompactPayload.message.content[0].text).toContain('persistent context');
     expect(postCompactPayload.message.content[0].text).toContain('task board snapshot');

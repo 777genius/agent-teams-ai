@@ -1,3 +1,5 @@
+import { isLeadMember } from '@shared/utils/leadDetection';
+
 import {
   canMaterializeOpenCodePlainTextReply,
   hasOpenCodeObservedMessageSendToolCall,
@@ -21,8 +23,6 @@ import type {
   OpenCodePromptDeliveryLedgerRecord,
   OpenCodePromptDeliveryLedgerStore,
 } from './OpenCodePromptDeliveryLedger';
-import { isLeadMember } from '@shared/utils/leadDetection';
-
 import type { InboxMessage, TeamCreateRequest } from '@shared/types/team';
 
 type OpenCodeVisibleReplyCorrelation = NonNullable<

@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -89,7 +91,7 @@ describe('TeamProvisioningOpenCodeRuntimePermissions', () => {
       teamName: 'team-a',
       runId: 'run-1',
       laneId: 'lane-1',
-      cwd: '/tmp/team-a',
+      cwd: path.join('/tmp', 'team-a'),
       members: {},
       expectedMembers: [],
     });
