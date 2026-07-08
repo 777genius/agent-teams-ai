@@ -9,7 +9,7 @@ import { z } from "zod";
 import { sessionArtifactFromCodexAuthJson } from "@vioxen/subscription-runtime/provider-codex";
 import { LocalFileRunEventProjectionStateStore, LocalFileRunEventStore, LocalControlledAgentStateStore, } from "@vioxen/subscription-runtime/store-local-file";
 import { buildLocalClaudeControlledAgentProfile, createLocalClaudeControlledAgentProvider, loadScopedClaudeSessionArtifact, watchClaudeRuns, } from "@vioxen/subscription-runtime/worker-local";
-import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, ProjectAdmissionWorkerRole, RunObservationService, InterruptAndContinueWorkerUseCase, ProjectControlBroker, RunEventProviderKind, buildControlledAgentLaunchPlan, buildControlledAgentLiveControllerState, buildControlledAgentProcessOwner, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, evaluateProjectAdmission, projectRunObservationEvents, projectRunReadModelsFromEvents, reconcileRunPreview, readTargetRevision, runEventProviderKindFromString, ProjectOperation, } from "@vioxen/subscription-runtime/worker-core";
+import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, ProjectAdmissionWorkerRole, RunObservationService, InterruptAndContinueWorkerUseCase, ProjectControlBroker, RunEventProviderKind, buildControlledAgentLaunchPlan, buildControlledAgentLiveControllerState, buildControlledAgentProcessOwner, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, evaluateProjectAdmission, projectRunObservationEvents, projectRunReadModelsFromEvents, reconcileRunPreview, runEventProviderKindFromString, ProjectOperation, } from "@vioxen/subscription-runtime/worker-core";
 import { codexGoalJobToArgs, createCodexGoalJob, defaultCodexGoalJobRoot, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
 import { upsertCodexGoalLaunchManifest } from "./codex-goal-launch-manifest.js";
 import { runDependencyBootstrap, } from "./dependency-bootstrap.js";
@@ -21,7 +21,6 @@ import { optionalCodexGoalAccessBoundary, optionalCodexGoalNetworkAccess, parseC
 import { projectControlGenericScopeDenial, projectControlGenericToolDenial, } from "./project-control-scope-guard.js";
 import { registerProjectIntegrationMcpTools, } from "./project-integration-mcp/index.js";
 import { createLocalProjectIntegrationMcpToolHandlers, } from "./project-integration-mcp/adapters/local-project-integration-mcp-tool-handlers.js";
-import { LocalGitRevisionReader } from "./codex-goal-git-revision.js";
 import { buildCodexControlledAgentProfile, CodexControlledAgentProvider, } from "./controlled-agent/index.js";
 import { projectControllerCapacityDemand, recordProjectControllerCapacitySignal, } from "./project-controller-capacity.js";
 import { createProjectControlOperation, patchProjectControlOperation, projectControlOperationExecutionMode, projectControlOperationView, projectControlOperationsRoot, readProjectControlOperationById, startProjectControlOperationRunner, } from "./project-control-operation-lifecycle.js";
@@ -40,6 +39,7 @@ import { codexOverviewItemToWatchStatus } from "./codex-goal-mcp-watch-status.js
 import { failedRunObservationSnapshot, observeOrphanCodexRun, safeObservationErrorMessage, summarizeRunObservationSnapshots, } from "./codex-goal-mcp-observation-projection.js";
 import { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
 import { registerCodexGoalPrompts } from "./codex-goal-mcp-prompts.js";
+import { optionalTargetCommit, targetCommitFromArgs, } from "./codex-goal-mcp-target-commit.js";
 import { goalInputSchema, statusInputSchema, } from "./codex-goal-mcp-input-schemas.js";
 export { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
 import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item.js";
@@ -4505,24 +4505,6 @@ function jobManifestPatchFromArgs(args) {
     putIfDefined(patch, "logPath", args.logPath && resolvePath(cwd, args.logPath));
     putIfDefined(patch, "outputFormat", stringValue(args.outputFormat));
     return patch;
-}
-async function targetCommitFromArgs(args) {
-    const commit = stringValue(args.targetCommit);
-    if (commit) {
-        assertSafeGitCommitSha(commit);
-        return commit;
-    }
-    const workspacePath = stringValue(args.targetWorkspacePath);
-    if (!workspacePath)
-        return undefined;
-    const cwd = resolvePath(process.cwd(), args.cwd ?? process.cwd());
-    const target = await readTargetRevision(new LocalGitRevisionReader(), {
-        workspacePath: resolvePath(cwd, workspacePath),
-    });
-    return target.commit;
-}
-function optionalTargetCommit(targetCommit) {
-    return targetCommit === undefined ? {} : { targetCommit };
 }
 function mcpJson(value) {
     return {

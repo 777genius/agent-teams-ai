@@ -44,7 +44,6 @@ import {
   projectRunObservationEvents,
   projectRunReadModelsFromEvents,
   reconcileRunPreview,
-  readTargetRevision,
   runEventProviderKindFromString,
   ProjectOperation,
   type RunEventReadResult,
@@ -122,7 +121,6 @@ import {
 import {
   createLocalProjectIntegrationMcpToolHandlers,
 } from "./project-integration-mcp/adapters/local-project-integration-mcp-tool-handlers";
-import { LocalGitRevisionReader } from "./codex-goal-git-revision";
 import {
   buildCodexControlledAgentProfile,
   CodexControlledAgentProvider,
@@ -257,6 +255,10 @@ import {
 } from "./codex-goal-mcp-observation-projection";
 import { buildCodexGoalBrief } from "./codex-goal-mcp-brief";
 import { registerCodexGoalPrompts } from "./codex-goal-mcp-prompts";
+import {
+  optionalTargetCommit,
+  targetCommitFromArgs,
+} from "./codex-goal-mcp-target-commit";
 import {
   goalInputSchema,
   statusInputSchema,
@@ -5771,29 +5773,6 @@ function jobManifestPatchFromArgs(args: JobUpdateMcpArgs): CodexGoalJobManifestP
   putIfDefined(patch, "logPath", args.logPath && resolvePath(cwd, args.logPath));
   putIfDefined(patch, "outputFormat", stringValue(args.outputFormat));
   return patch as CodexGoalJobManifestPatch;
-}
-
-async function targetCommitFromArgs(
-  args: Pick<JobBriefMcpArgs, "cwd" | "targetCommit" | "targetWorkspacePath">,
-): Promise<string | undefined> {
-  const commit = stringValue(args.targetCommit);
-  if (commit) {
-    assertSafeGitCommitSha(commit);
-    return commit;
-  }
-  const workspacePath = stringValue(args.targetWorkspacePath);
-  if (!workspacePath) return undefined;
-  const cwd = resolvePath(process.cwd(), args.cwd ?? process.cwd());
-  const target = await readTargetRevision(new LocalGitRevisionReader(), {
-    workspacePath: resolvePath(cwd, workspacePath),
-  });
-  return target.commit;
-}
-
-function optionalTargetCommit(
-  targetCommit: string | undefined,
-): { readonly targetCommit?: string } {
-  return targetCommit === undefined ? {} : { targetCommit };
 }
 
 function mcpJson(value: JsonObject) {
