@@ -30,6 +30,7 @@ import { jobIdInputSchema, jobRegistryInputSchema, optionalRunEventProviderKind,
 import { accountAuthRootFromArgs, accountPoolRootFromArgs, availableCodexGoalAccountSlots, codexAccountReloginInstructions, codexAccountStatusPayload, defaultCodexGoalAuthRoot, dedupeCodexGoalAccountSlots, listAccountPools, } from "./codex-goal-mcp-accounts.js";
 import { writeCodexGoalMaintenancePauseEvent, writeCodexGoalReviewMarker, writeCodexGoalStopEvent, writeCodexGoalStoppedProgress, } from "./codex-goal-mcp-lifecycle-markers.js";
 import { matchesProjectControlPrefix, nodeErrorCode, pathInsideAnyProjectRoot, stringArrayArg, uniqueProjectControlStrings, } from "./codex-goal-mcp-project-utils.js";
+import { projectControlDefaultAccountNames, projectControlRefillAccountNames, } from "./codex-goal-mcp-project-accounts.js";
 import { buildCodexProjectAdmissionSnapshot, codexProjectAdmissionGate, projectAdmissionDetailView, projectAdmissionOperation, projectAdmissionWorkerRoleArg, } from "./codex-goal-mcp-project-admission.js";
 import { jobIdsFromValue, parseIsoDate, signalIdList, workerControlCallerArgs, workerControlDecisionJson, workerControlReceiptJson, workerControlSignalJson, workerControlSignalViewJson, } from "./codex-goal-mcp-worker-control-view.js";
 import { codexGoalAccountStatusPayload, codexGoalStateRootDir, codexGoalWorkerControlService, codexGoalWorkerControlTarget, } from "./codex-goal-mcp-worker-control.js";
@@ -4633,38 +4634,6 @@ function launchSummary(launch) {
         tmuxSession: launch.tmuxSession,
         logPath: launch.logPath,
     };
-}
-async function projectControlDefaultAccountNames(input) {
-    if (!input.authRootDir)
-        return input.requestedAccounts;
-    const allowed = new Set(input.allowedAccountIds);
-    const slots = await listCodexGoalAccountStatuses({
-        authRootDir: input.authRootDir,
-    });
-    const readyAccounts = slots
-        .filter((slot) => slot.status === "ready" &&
-        (allowed.size === 0 || allowed.has(slot.name)))
-        .map((slot) => slot.name);
-    return readyAccounts.length > 0 ? readyAccounts : input.requestedAccounts;
-}
-async function projectControlRefillAccountNames(input) {
-    const requestedAccounts = input.requestedAccounts.length
-        ? uniqueProjectControlStrings(input.requestedAccounts)
-        : await projectControlDefaultAccountNames(input);
-    const allowed = new Set(input.allowedAccountIds);
-    const scopedAccounts = requestedAccounts.filter((account) => allowed.size === 0 || allowed.has(account));
-    if (!input.authRootDir || scopedAccounts.length === 0)
-        return scopedAccounts;
-    const slots = await listCodexGoalAccountStatuses({
-        authRootDir: input.authRootDir,
-        accounts: scopedAccounts,
-    });
-    const ready = new Set(slots
-        .filter((slot) => slot.status === "ready")
-        .map((slot) => slot.name));
-    return ready.size > 0
-        ? scopedAccounts.filter((account) => ready.has(account))
-        : scopedAccounts;
 }
 function mcpJson(value) {
     return {
