@@ -1,21 +1,16 @@
-import { execFile } from "node:child_process";
-import { readdir, stat } from "node:fs/promises";
-import { basename, join, relative } from "node:path";
-import { promisify } from "node:util";
+import { createHash } from "node:crypto";
+import { readdir, realpath, stat } from "node:fs/promises";
+import { basename, join, relative, resolve, sep } from "node:path";
 import type {
+  SafeExecutionCommandRunner,
   WorkspaceDiffFileStat,
   WorkspaceSnapshot,
-} from "../domain/safe-execution-task";
-import type { WorkspaceSnapshotter } from "../ports/safe-execution-ports";
-import {
-  canonicalWorkspacePath,
-  hashText,
-  normalizeRelativePath,
-} from "../application/safe-execution-workspace";
-
-const execFileAsync = promisify(execFile);
+  WorkspaceSnapshotter,
+} from "@vioxen/subscription-runtime/worker-core";
+import { NodeSafeExecutionCommandRunner } from "./node-safe-execution-command-runner";
 
 export type DefaultWorkspaceSnapshotterOptions = {
+  readonly commandRunner?: SafeExecutionCommandRunner;
   readonly gitBinaryPath?: string;
   readonly commandTimeoutMs?: number;
   readonly maxDiffBytes?: number;
@@ -24,6 +19,7 @@ export type DefaultWorkspaceSnapshotterOptions = {
 };
 
 export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
+  private readonly commandRunner: SafeExecutionCommandRunner;
   private readonly gitBinaryPath: string;
   private readonly commandTimeoutMs: number;
   private readonly maxDiffBytes: number;
@@ -31,6 +27,8 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
   private readonly ignoredDirectories: readonly string[];
 
   constructor(options: DefaultWorkspaceSnapshotterOptions = {}) {
+    this.commandRunner =
+      options.commandRunner ?? new NodeSafeExecutionCommandRunner();
     this.gitBinaryPath = options.gitBinaryPath ?? "git";
     this.commandTimeoutMs = options.commandTimeoutMs ?? 5_000;
     this.maxDiffBytes = options.maxDiffBytes ?? 24_000;
@@ -52,7 +50,10 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
   }): Promise<WorkspaceSnapshot> {
     const workspacePath = await canonicalWorkspacePath(input.workspacePath);
     const capturedAt = new Date();
-    const gitWorkspace = await this.gitWorkspaceInfo(workspacePath);
+    const gitWorkspace = await this.gitWorkspaceInfo(
+      workspacePath,
+      input.abortSignal,
+    );
     if (gitWorkspace) {
       return this.captureGit({
         ...input,
@@ -73,27 +74,31 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
     readonly workspaceRelativePrefix: string;
     readonly gitRootPath: string;
   }): Promise<WorkspaceSnapshot> {
-    const status = await this.git(input.workspacePath, [
-      "status",
-      "--porcelain=v1",
-      "-z",
-      "--untracked-files=all",
-      "--",
-      ".",
-    ]);
+    const status = await this.git(
+      input.workspacePath,
+      ["status", "--porcelain=v1", "-z", "--untracked-files=all", "--", "."],
+      input.abortSignal,
+    );
     const statusEntries = status.stdout.split("\0").filter(Boolean);
     const headTree = await this.gitHeadTree(
       input.gitRootPath,
       input.workspaceRelativePrefix,
+      input.abortSignal,
     );
     const changedFiles = mergeChangedFiles(
       gitStatusChangedFiles(statusEntries, input.workspaceRelativePrefix),
-      await this.gitDiffNameOnly(input.workspacePath),
+      await this.gitDiffNameOnly(input.workspacePath, input.abortSignal),
     );
-    const diffStat = await this.gitDiffStat(input.workspacePath);
-    const diffNumstat = await this.gitDiffNumstat(input.workspacePath);
+    const diffStat = await this.gitDiffStat(
+      input.workspacePath,
+      input.abortSignal,
+    );
+    const diffNumstat = await this.gitDiffNumstat(
+      input.workspacePath,
+      input.abortSignal,
+    );
     const shortDiff = input.includeDiff
-      ? await this.shortGitDiff(input.workspacePath)
+      ? await this.shortGitDiff(input.workspacePath, input.abortSignal)
       : undefined;
     return {
       mode: "git",
@@ -102,10 +107,13 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
       dirty: changedFiles.length > 0,
       changedFiles,
       ...(diffNumstat.length === 0 ? {} : { diffNumstat }),
-      fingerprint: hashText([`head-tree:${headTree}`, ...statusEntries].join("\n")),
-      summary: changedFiles.length === 0
-        ? "Git workspace is clean."
-        : `Git workspace has ${changedFiles.length} changed file(s).`,
+      fingerprint: hashText(
+        [`head-tree:${headTree}`, ...statusEntries].join("\n"),
+      ),
+      summary:
+        changedFiles.length === 0
+          ? "Git workspace is clean."
+          : `Git workspace has ${changedFiles.length} changed file(s).`,
       ...(diffStat ? { diffStat } : {}),
       ...(shortDiff === undefined ? {} : { shortDiff: shortDiff.value }),
       ...(shortDiff?.truncated ? { truncated: true } : {}),
@@ -124,7 +132,9 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
       dirty: false,
       changedFiles: files.map((file) => file.path),
       fingerprint: hashText(
-        files.map((file) => `${file.path}:${file.size}:${file.mtimeMs}`).join("\n"),
+        files
+          .map((file) => `${file.path}:${file.size}:${file.mtimeMs}`)
+          .join("\n"),
       ),
       summary: `Filesystem snapshot captured ${files.length} entries.`,
       ...(files.length >= this.maxFilesystemEntries
@@ -138,17 +148,23 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
 
   private async gitWorkspaceInfo(
     workspacePath: string,
+    abortSignal?: AbortSignal,
   ): Promise<{
     readonly relativePrefix: string;
     readonly rootPath: string;
   } | null> {
-    const result = await this.git(workspacePath, [
-      "rev-parse",
-      "--is-inside-work-tree",
-      "--show-prefix",
-      "--show-toplevel",
-    ]).catch(() => null);
-    const lines = result?.stdout.split("\n").map((line) => line.trimEnd()) ?? [];
+    const result = await this.git(
+      workspacePath,
+      [
+        "rev-parse",
+        "--is-inside-work-tree",
+        "--show-prefix",
+        "--show-toplevel",
+      ],
+      abortSignal,
+    ).catch(() => null);
+    const lines =
+      result?.stdout.split("\n").map((line) => line.trimEnd()) ?? [];
     if (lines[0] !== "true") return null;
     const prefix = normalizeRelativePath(lines[1] ?? "").replace(/\/$/, "");
     return { relativePrefix: prefix, rootPath: lines[2] || workspacePath };
@@ -157,22 +173,23 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
   private async git(
     cwd: string,
     args: readonly string[],
+    abortSignal?: AbortSignal,
   ): Promise<{ readonly stdout: string; readonly stderr: string }> {
-    const result = await execFileAsync(this.gitBinaryPath, [...args], {
+    return this.commandRunner.run({
+      command: this.gitBinaryPath,
+      args,
       cwd,
-      timeout: this.commandTimeoutMs,
-      maxBuffer: Math.max(1024 * 1024, this.maxDiffBytes * 2),
+      timeoutMs: this.commandTimeoutMs,
+      maxBufferBytes: Math.max(1024 * 1024, this.maxDiffBytes * 2),
+      ...(abortSignal === undefined ? {} : { abortSignal }),
     });
-    return {
-      stdout: String(result.stdout),
-      stderr: String(result.stderr),
-    };
   }
 
   private async shortGitDiff(
     workspacePath: string,
+    abortSignal?: AbortSignal,
   ): Promise<{ readonly value: string; readonly truncated: boolean }> {
-    const value = await this.gitDiffOutputs(workspacePath, []);
+    const value = await this.gitDiffOutputs(workspacePath, [], abortSignal);
     if (value.length <= this.maxDiffBytes) {
       return { value, truncated: false };
     }
@@ -182,8 +199,15 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
     };
   }
 
-  private async gitDiffNameOnly(workspacePath: string): Promise<readonly string[]> {
-    const value = await this.gitDiffOutputs(workspacePath, ["--name-only"]);
+  private async gitDiffNameOnly(
+    workspacePath: string,
+    abortSignal?: AbortSignal,
+  ): Promise<readonly string[]> {
+    const value = await this.gitDiffOutputs(
+      workspacePath,
+      ["--name-only"],
+      abortSignal,
+    );
     return value
       .split("\n")
       .map((line) => normalizeRelativePath(line.trim()))
@@ -193,45 +217,53 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
 
   private async gitDiffNumstat(
     workspacePath: string,
+    abortSignal?: AbortSignal,
   ): Promise<readonly WorkspaceDiffFileStat[]> {
     return parseGitNumstat(
-      await this.gitDiffOutputs(workspacePath, ["--numstat"]),
+      await this.gitDiffOutputs(workspacePath, ["--numstat"], abortSignal),
     );
   }
 
   private async gitHeadTree(
     workspacePath: string,
     workspaceRelativePrefix: string,
+    abortSignal?: AbortSignal,
   ): Promise<string> {
     if (!workspaceRelativePrefix) {
-      const result = await this.git(workspacePath, [
-        "rev-parse",
-        "HEAD^{tree}",
-      ]).catch(() => ({ stdout: "", stderr: "" }));
+      const result = await this.git(
+        workspacePath,
+        ["rev-parse", "HEAD^{tree}"],
+        abortSignal,
+      ).catch(() => ({ stdout: "", stderr: "" }));
       return result.stdout.trim();
     }
 
-    const result = await this.git(workspacePath, [
-      "ls-tree",
-      "HEAD",
-      "--",
-      workspaceRelativePrefix,
-    ]).catch(() => ({ stdout: "", stderr: "" }));
+    const result = await this.git(
+      workspacePath,
+      ["ls-tree", "HEAD", "--", workspaceRelativePrefix],
+      abortSignal,
+    ).catch(() => ({ stdout: "", stderr: "" }));
     const match = result.stdout.match(/\s([0-9a-f]{40,64})\t/);
     return match?.[1] ?? "";
   }
 
-  private async gitDiffStat(workspacePath: string): Promise<string> {
-    return (await this.gitDiffOutputs(workspacePath, ["--stat"])).trim();
+  private async gitDiffStat(
+    workspacePath: string,
+    abortSignal?: AbortSignal,
+  ): Promise<string> {
+    return (
+      await this.gitDiffOutputs(workspacePath, ["--stat"], abortSignal)
+    ).trim();
   }
 
   private async gitDiffOutputs(
     workspacePath: string,
     args: readonly string[],
+    abortSignal?: AbortSignal,
   ): Promise<string> {
     const outputs = [
-      await this.gitDiffOutput(workspacePath, args, false),
-      await this.gitDiffOutput(workspacePath, args, true),
+      await this.gitDiffOutput(workspacePath, args, false, abortSignal),
+      await this.gitDiffOutput(workspacePath, args, true, abortSignal),
     ];
     return outputs.filter(Boolean).join("\n");
   }
@@ -240,26 +272,39 @@ export class DefaultWorkspaceSnapshotter implements WorkspaceSnapshotter {
     workspacePath: string,
     args: readonly string[],
     cached: boolean,
+    abortSignal?: AbortSignal,
   ): Promise<string> {
-    const result = await this.git(workspacePath, [
-      "diff",
-      "--relative",
-      ...(cached ? ["--cached"] : []),
-      ...args,
-      "--no-ext-diff",
-      "--",
-      ".",
-    ]).catch(() => ({ stdout: "", stderr: "" }));
+    const result = await this.git(
+      workspacePath,
+      [
+        "diff",
+        "--relative",
+        ...(cached ? ["--cached"] : []),
+        ...args,
+        "--no-ext-diff",
+        "--",
+        ".",
+      ],
+      abortSignal,
+    ).catch(() => ({ stdout: "", stderr: "" }));
     return result.stdout;
   }
 
   private async scanFilesystem(
     workspacePath: string,
-  ): Promise<readonly { readonly path: string; readonly size: number; readonly mtimeMs: number }[]> {
+  ): Promise<
+    readonly {
+      readonly path: string;
+      readonly size: number;
+      readonly mtimeMs: number;
+    }[]
+  > {
     const files: { path: string; size: number; mtimeMs: number }[] = [];
     const visit = async (dir: string): Promise<void> => {
       if (files.length >= this.maxFilesystemEntries) return;
-      const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+      const entries = await readdir(dir, { withFileTypes: true }).catch(
+        () => [],
+      );
       for (const entry of entries) {
         if (files.length >= this.maxFilesystemEntries) return;
         if (entry.isSymbolicLink()) continue;
@@ -353,4 +398,17 @@ function parseGitNumstat(value: string): readonly WorkspaceDiffFileStat[] {
   return [...byPath.values()].sort((left, right) =>
     left.path.localeCompare(right.path),
   );
+}
+
+async function canonicalWorkspacePath(path: string): Promise<string> {
+  const resolved = resolve(path);
+  return realpath(resolved).catch(() => resolved);
+}
+
+function hashText(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function normalizeRelativePath(path: string): string {
+  return path.split(sep).join("/");
 }

@@ -21,6 +21,8 @@ import {
   type AttemptJournal,
   type SafeExecutionPolicy,
   type SafeExecutionRunResult,
+  type SafeExecutionRuntime,
+  type SafeExecutionWorkspaceAccess,
   type TaskEffectMode,
   type WorkerAccountCapacityStore,
   type WorkerControlContinuationSource,
@@ -29,7 +31,13 @@ import {
   type WorkerPoolSlotSnapshot,
   type WorkerPoolStats,
   type WorkspaceLockStore,
+  type WorkspaceSnapshotter,
 } from "@vioxen/subscription-runtime/worker-core";
+import {
+  DefaultWorkspaceSnapshotter,
+  NodeSafeExecutionRuntime,
+  NodeSafeExecutionWorkspaceAccess,
+} from "../worker-local/safe-execution";
 import {
   FileBackendCodexWorker,
   type FileBackendCodexWorkerJob,
@@ -61,6 +69,9 @@ export type FileBackendCodexSafeExecutorOptions = {
   readonly activeAttemptRegistry?: ActiveAttemptRegistry;
   readonly lockStore?: WorkspaceLockStore;
   readonly journal?: AttemptJournal;
+  readonly snapshotter?: WorkspaceSnapshotter;
+  readonly workspaceAccess?: SafeExecutionWorkspaceAccess;
+  readonly runtime?: SafeExecutionRuntime;
   readonly safeExecutionPolicy?: SafeExecutionPolicy;
   /**
    * Defaults to true: the borrowed workspace must be an existing git worktree.
@@ -182,6 +193,10 @@ export class FileBackendCodexSafeExecutor {
       ...(options.activeAttemptRegistry === undefined
         ? {}
         : { activeAttemptRegistry: options.activeAttemptRegistry }),
+      snapshotter: options.snapshotter ?? new DefaultWorkspaceSnapshotter(),
+      workspaceAccess:
+        options.workspaceAccess ?? new NodeSafeExecutionWorkspaceAccess(),
+      runtime: options.runtime ?? new NodeSafeExecutionRuntime(),
       ...(options.clock ? { clock: options.clock } : {}),
       ownerId: this.executorId,
     });

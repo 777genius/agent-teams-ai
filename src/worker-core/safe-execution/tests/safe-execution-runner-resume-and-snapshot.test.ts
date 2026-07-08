@@ -1,8 +1,12 @@
 import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
 import {
   DefaultWorkspaceSnapshotter,
+  NodeSafeExecutionRuntime,
+  NodeSafeExecutionWorkspaceAccess,
+} from "../../../worker-local/safe-execution";
+import { afterEach, describe, expect, it } from "vitest";
+import {
   InMemoryAttemptJournal,
   InMemoryWorkspaceLockStore,
   SafeExecutionRunner,
@@ -33,6 +37,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
     );
     const journal = new InMemoryAttemptJournal();
     const firstRunner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal,
     });
@@ -68,6 +73,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
 
     let resumedPrompt = "";
     const secondRunner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal,
     });
@@ -177,6 +183,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
     const journal = new InMemoryAttemptJournal();
     let runs = 0;
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal,
     });
@@ -222,6 +229,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
     );
     const journal = new InMemoryAttemptJournal();
     const firstRunner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal,
     });
@@ -247,6 +255,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
 
     let resumedRuns = 0;
     const secondRunner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal,
     });
@@ -292,6 +301,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
 
     let runs = 0;
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal,
     });
@@ -331,6 +341,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
     );
     const journal = new InMemoryAttemptJournal();
     const firstRunner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal,
     });
@@ -356,6 +367,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
 
     let resumedPrompt = "";
     const secondRunner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal,
     });
@@ -481,6 +493,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
     let captureCount = 0;
 
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
       snapshotter: {
@@ -537,6 +550,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
     let captureCount = 0;
 
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
       snapshotter: {
@@ -598,6 +612,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
     let captureCount = 0;
 
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
       snapshotter: {
@@ -680,6 +695,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
     let captureCount = 0;
 
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
       snapshotter: {
@@ -873,3 +889,11 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
     expect(afterInsideCommit.fingerprint).not.toBe(before.fingerprint);
   }, 15_000);
 });
+
+function nodeSafeExecutionAdapters() {
+  return {
+    snapshotter: new DefaultWorkspaceSnapshotter(),
+    workspaceAccess: new NodeSafeExecutionWorkspaceAccess(),
+    runtime: new NodeSafeExecutionRuntime(),
+  };
+}

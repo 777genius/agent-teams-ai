@@ -1,6 +1,11 @@
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  DefaultWorkspaceSnapshotter,
+  NodeSafeExecutionRuntime,
+  NodeSafeExecutionWorkspaceAccess,
+} from "../../../worker-local/safe-execution";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   BoundedSubscriptionWorkerPool,
@@ -83,6 +88,7 @@ describe("SafeExecutionRunner", () => {
 
     const journal = new InMemoryAttemptJournal();
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal,
     });
@@ -141,6 +147,7 @@ describe("SafeExecutionRunner", () => {
       },
     };
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
       controlInbox: {
@@ -231,6 +238,7 @@ describe("SafeExecutionRunner", () => {
       },
     };
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
       controlInbox: control,
@@ -299,6 +307,7 @@ describe("SafeExecutionRunner", () => {
       },
     };
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
     });
@@ -360,6 +369,7 @@ describe("SafeExecutionRunner", () => {
       },
     };
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
       controlInbox: {
@@ -412,6 +422,7 @@ describe("SafeExecutionRunner", () => {
       },
     };
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
     });
@@ -485,6 +496,7 @@ describe("SafeExecutionRunner", () => {
       },
     };
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
     });
@@ -523,6 +535,7 @@ describe("SafeExecutionRunner", () => {
       },
     };
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
     });
@@ -570,6 +583,7 @@ describe("SafeExecutionRunner", () => {
     const journal = new InMemoryAttemptJournal();
     let runs = 0;
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal,
       snapshotter: {
@@ -633,6 +647,7 @@ describe("SafeExecutionRunner", () => {
       },
     };
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
     });
@@ -672,6 +687,7 @@ describe("SafeExecutionRunner", () => {
       },
     };
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
     });
@@ -728,6 +744,7 @@ describe("SafeExecutionRunner", () => {
       },
     };
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
     });
@@ -775,6 +792,7 @@ describe("SafeExecutionRunner", () => {
       },
     };
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal: new InMemoryAttemptJournal(),
     });
@@ -906,6 +924,7 @@ describe("SafeExecutionRunner", () => {
     );
     const journal = new InMemoryAttemptJournal();
     const runner = new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
       lockStore: new InMemoryWorkspaceLockStore(),
       journal,
     });
@@ -950,3 +969,11 @@ describe("SafeExecutionRunner", () => {
     ).toBe("waiting_capacity");
   }, 15_000);
 });
+
+function nodeSafeExecutionAdapters() {
+  return {
+    snapshotter: new DefaultWorkspaceSnapshotter(),
+    workspaceAccess: new NodeSafeExecutionWorkspaceAccess(),
+    runtime: new NodeSafeExecutionRuntime(),
+  };
+}

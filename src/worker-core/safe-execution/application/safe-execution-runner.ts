@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { WorkerControlTarget } from "../../control";
 import {
   defaultSafeExecutionErrorClassifier,
@@ -21,9 +20,10 @@ import type {
   TaskRunId,
   WorkspaceSnapshot,
 } from "../domain/safe-execution-task";
-import { DefaultWorkspaceSnapshotter } from "../adapters/default-workspace-snapshotter";
 import type {
   ContinuationPacketBuilder,
+  SafeExecutionRuntime,
+  SafeExecutionWorkspaceAccess,
   WorkspaceSnapshotter,
 } from "../ports/safe-execution-ports";
 import { continuationJobFor } from "./continuation-job";
@@ -40,26 +40,26 @@ import type {
   SafeExecutionRunnerOptions,
   SafeExecutionRunResult,
 } from "./safe-execution-runner-contracts";
-import {
-  assertGitWorkspace,
-  canonicalWorkspacePath,
-  systemClock,
-  workspaceRunId,
-} from "./safe-execution-workspace";
+import { systemClock, workspaceRunId } from "./safe-execution-workspace";
 
 export class SafeExecutionRunner {
   private readonly snapshotter: WorkspaceSnapshotter;
+  private readonly workspaceAccess: SafeExecutionWorkspaceAccess;
+  private readonly runtime: SafeExecutionRuntime;
   private readonly continuationPacketBuilder: ContinuationPacketBuilder;
   private readonly ownerId: string;
-  private readonly ownerPid: number;
+  private readonly ownerPid: number | undefined;
   private readonly clock: { now(): Date };
 
   constructor(private readonly options: SafeExecutionRunnerOptions) {
-    this.snapshotter = options.snapshotter ?? new DefaultWorkspaceSnapshotter();
+    this.snapshotter = options.snapshotter ?? defaultSnapshotter;
+    this.workspaceAccess = options.workspaceAccess ?? defaultWorkspaceAccess;
+    this.runtime = options.runtime ?? defaultRuntime;
     this.continuationPacketBuilder =
-      options.continuationPacketBuilder ?? new DefaultContinuationPacketBuilder();
-    this.ownerId = options.ownerId ?? `safe-execution:${randomUUID()}`;
-    this.ownerPid = options.ownerPid ?? process.pid;
+      options.continuationPacketBuilder ??
+      new DefaultContinuationPacketBuilder();
+    this.ownerId = options.ownerId ?? this.runtime.createOwnerId();
+    this.ownerPid = options.ownerPid ?? this.runtime.currentPid();
     this.clock = options.clock ?? systemClock;
   }
 
@@ -67,7 +67,9 @@ export class SafeExecutionRunner {
     input: SafeExecutionRunInput<Job, Result>,
   ): Promise<SafeExecutionRunResult<Result>> {
     validateRunInput(input);
-    const workspacePath = await canonicalWorkspacePath(input.workspace.path);
+    const workspacePath = await this.workspaceAccess.canonicalizePath({
+      path: input.workspace.path,
+    });
     const existing = await this.options.journal.readTask({
       taskId: input.taskId,
     });
@@ -85,7 +87,7 @@ export class SafeExecutionRunner {
       taskId: input.taskId,
       workspacePath,
       ownerId: this.ownerId,
-      ownerPid: this.ownerPid,
+      ...(this.ownerPid === undefined ? {} : { ownerPid: this.ownerPid }),
       ...(input.workspace.staleLockMs === undefined
         ? {}
         : { staleLockMs: input.workspace.staleLockMs }),
@@ -112,7 +114,10 @@ export class SafeExecutionRunner {
       }
       if (input.workspace.requireGitWorkspace) {
         try {
-          await assertGitWorkspace(workspacePath);
+          await this.workspaceAccess.assertGitWorkspace({
+            workspacePath,
+            ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+          });
         } catch (error) {
           return this.failStartedTask({ input, error });
         }
@@ -276,12 +281,14 @@ export class SafeExecutionRunner {
               retryOnSlotCapacityUnavailable: false,
             },
           });
-          const after = await this.snapshotter.capture({
-            workspacePath,
-            ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
-          }).catch((error) =>
-            unavailableWorkspaceSnapshot({ workspacePath, error }),
-          );
+          const after = await this.snapshotter
+            .capture({
+              workspacePath,
+              ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+            })
+            .catch((error) =>
+              unavailableWorkspaceSnapshot({ workspacePath, error }),
+            );
           previousOutputSummary = input.summarizeResult?.(result);
           const usage = input.attemptUsage?.(result);
           const metadata = input.attemptMetadata?.({ result });
@@ -320,14 +327,16 @@ export class SafeExecutionRunner {
           };
         } catch (error) {
           let afterCaptureError: unknown;
-          const after = await this.snapshotter.capture({
-            workspacePath,
-            includeDiff: true,
-            ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
-          }).catch((error) => {
-            afterCaptureError = error;
-            return unavailableWorkspaceSnapshot({ workspacePath, error });
-          });
+          const after = await this.snapshotter
+            .capture({
+              workspacePath,
+              includeDiff: true,
+              ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+            })
+            .catch((error) => {
+              afterCaptureError = error;
+              return unavailableWorkspaceSnapshot({ workspacePath, error });
+            });
           const runtimeInterrupt = runtimeInterruptClassification(
             attemptAbort.controller.signal.reason,
           );
@@ -354,7 +363,8 @@ export class SafeExecutionRunner {
             after,
             classification,
             failureMessage,
-            metadata: input.attemptMetadata?.({ error }) ??
+            metadata:
+              input.attemptMetadata?.({ error }) ??
               safeExecutionAttemptMetadataFromError(error),
           });
           task = await this.options.journal.appendAttempt({
@@ -462,7 +472,8 @@ export class SafeExecutionRunner {
       const exhausted = await this.options.journal.markPartial({
         taskId: input.taskId,
         status:
-          safeExecutionWaitingStatusForFailure(task.lastFailureReason) ?? "partial",
+          safeExecutionWaitingStatusForFailure(task.lastFailureReason) ??
+          "partial",
         reason: task.lastFailureReason ?? "unknown_error",
         message: "Safe execution exhausted all configured attempts.",
         ...(task.lastFailureDetails === undefined
@@ -529,17 +540,20 @@ export class SafeExecutionRunner {
     readonly previousOutputSummary?: string;
     readonly controlTarget?: WorkerControlTarget;
   }): Promise<ContinuationPacket> {
-    const controlBatch = this.options.controlInbox &&
-      shouldDeliverSafeExecutionControlForContinuation(input.previousFailureReason)
-      ? await this.options.controlInbox.consumeForContinuation({
-          target: input.controlTarget ?? {
-            jobId: input.taskId,
-            workspaceId: input.workspacePath,
-          },
-          deliveryAttemptId: `${input.taskId}:attempt-${input.attemptNumber}`,
-          now: this.clock.now(),
-        })
-      : undefined;
+    const controlBatch =
+      this.options.controlInbox &&
+      shouldDeliverSafeExecutionControlForContinuation(
+        input.previousFailureReason,
+      )
+        ? await this.options.controlInbox.consumeForContinuation({
+            target: input.controlTarget ?? {
+              jobId: input.taskId,
+              workspaceId: input.workspacePath,
+            },
+            deliveryAttemptId: `${input.taskId}:attempt-${input.attemptNumber}`,
+            now: this.clock.now(),
+          })
+        : undefined;
     return this.continuationPacketBuilder.build({
       taskId: input.taskId,
       attemptNumber: input.attemptNumber,
@@ -569,13 +583,12 @@ function attemptControlTarget<Job, Result>(input: {
     ...base,
     taskId: base.taskId ?? input.input.taskId,
     workspaceId: base.workspaceId ?? input.workspacePath,
-    attemptId: base.attemptId ?? `${input.input.taskId}:attempt-${input.attemptNumber}`,
+    attemptId:
+      base.attemptId ?? `${input.input.taskId}:attempt-${input.attemptNumber}`,
   };
 }
 
-function createAttemptAbortController(
-  parent: AbortSignal | undefined,
-): {
+function createAttemptAbortController(parent: AbortSignal | undefined): {
   readonly controller: AbortController;
   dispose(): void;
 } {
@@ -628,3 +641,41 @@ function validateRunInput<Job, Result>(
     );
   }
 }
+
+const defaultWorkspaceAccess: SafeExecutionWorkspaceAccess = {
+  async canonicalizePath(input): Promise<string> {
+    return input.path;
+  },
+  async assertGitWorkspace(input): Promise<void> {
+    throw new SafeExecutionError(
+      "safe_execution_workspace_not_git",
+      "Safe execution requires a git worktree workspace.",
+      { details: { workspacePath: input.workspacePath } },
+    );
+  },
+};
+
+const defaultRuntime: SafeExecutionRuntime = {
+  createOwnerId(): string {
+    return `safe-execution:${Date.now().toString(36)}`;
+  },
+  currentPid(): number | undefined {
+    return undefined;
+  },
+};
+
+const defaultSnapshotter: WorkspaceSnapshotter = {
+  async capture(input): Promise<WorkspaceSnapshot> {
+    const capturedAt = new Date();
+    return {
+      mode: "unavailable",
+      workspacePath: input.workspacePath,
+      capturedAt,
+      dirty: false,
+      changedFiles: [],
+      fingerprint: `unconfigured:${input.workspacePath}:${capturedAt.toISOString()}`,
+      summary: "Workspace snapshotter was not configured.",
+      warnings: ["workspace_snapshotter_unconfigured"],
+    };
+  },
+};

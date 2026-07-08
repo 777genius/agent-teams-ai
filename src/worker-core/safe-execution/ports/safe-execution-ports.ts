@@ -27,7 +27,9 @@ export interface WorkspaceLockStore {
 }
 
 export interface AttemptJournal {
-  readTask(input: { readonly taskId: TaskRunId }): Promise<SafeExecutionTaskRecord | null>;
+  readTask(input: {
+    readonly taskId: TaskRunId;
+  }): Promise<SafeExecutionTaskRecord | null>;
   startTask(input: {
     readonly taskId: TaskRunId;
     readonly workspaceRunId: WorkspaceRunId;
@@ -63,6 +65,33 @@ export interface WorkspaceSnapshotter {
     readonly includeDiff?: boolean;
     readonly abortSignal?: AbortSignal;
   }): Promise<WorkspaceSnapshot>;
+}
+
+export interface SafeExecutionWorkspaceAccess {
+  canonicalizePath(input: { readonly path: string }): Promise<string>;
+  assertGitWorkspace(input: {
+    readonly workspacePath: string;
+    readonly abortSignal?: AbortSignal;
+  }): Promise<void>;
+}
+
+export interface SafeExecutionRuntime {
+  createOwnerId(): string;
+  currentPid(): number | undefined;
+}
+
+export interface SafeExecutionCommandRunner {
+  run(input: {
+    readonly command: string;
+    readonly args: readonly string[];
+    readonly cwd: string;
+    readonly timeoutMs?: number;
+    readonly maxBufferBytes?: number;
+    readonly abortSignal?: AbortSignal;
+  }): Promise<{
+    readonly stdout: string;
+    readonly stderr: string;
+  }>;
 }
 
 export interface ContinuationPacketBuilder {

@@ -22,7 +22,9 @@ import type {
 import type {
   AttemptJournal,
   ContinuationPacketBuilder,
+  SafeExecutionRuntime,
   SafeExecutionWorkerPool,
+  SafeExecutionWorkspaceAccess,
   WorkspaceLockStore,
   WorkspaceSnapshotter,
 } from "../ports/safe-execution-ports";
@@ -82,6 +84,8 @@ export type SafeExecutionRunnerOptions = {
   readonly lockStore: WorkspaceLockStore;
   readonly journal: AttemptJournal;
   readonly snapshotter?: WorkspaceSnapshotter;
+  readonly workspaceAccess?: SafeExecutionWorkspaceAccess;
+  readonly runtime?: SafeExecutionRuntime;
   readonly continuationPacketBuilder?: ContinuationPacketBuilder;
   readonly controlInbox?: WorkerControlContinuationSource;
   readonly activeAttemptRegistry?: ActiveAttemptRegistry;
