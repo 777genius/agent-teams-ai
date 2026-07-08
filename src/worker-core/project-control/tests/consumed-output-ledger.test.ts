@@ -181,6 +181,49 @@ describe("consumed output ledger", () => {
         `ledger workspace ${realWorkspace} does not match dirty workspace ${otherWorkspace}`,
       ]),
     });
+
+    const sharedLedgerRoot = join(root, "shared-ledger");
+    const sharedWorkspace = join(root, "shared-control");
+    await mkdir(join(sharedLedgerRoot, "items"), { recursive: true });
+    await mkdir(sharedWorkspace, { recursive: true });
+    await writeFile(
+      join(sharedLedgerRoot, "items", "infinity-context-controller-a.json"),
+      `${JSON.stringify({
+        jobId: "infinity-context-controller-a",
+        status: "superseded",
+        closedAt: "2026-07-06T00:00:00.000Z",
+        backup: await createBackupEvidence(root, "infinity-context-controller-a", sharedWorkspace),
+      }, null, 2)}\n`,
+    );
+    await writeFile(
+      join(sharedLedgerRoot, "items", "infinity-context-controller-b.json"),
+      `${JSON.stringify({
+        jobId: "infinity-context-controller-b",
+        status: "superseded",
+        closedAt: "2026-07-06T00:00:00.000Z",
+        backup: await createBackupEvidence(root, "infinity-context-controller-b", sharedWorkspace),
+      }, null, 2)}\n`,
+    );
+
+    const sharedLedger = await readConsumedOutputLedgers({ roots: [sharedLedgerRoot] });
+    expect(consumedOutputRecordFor({
+      ledger: sharedLedger,
+      jobId: "infinity-context-controller-a",
+      workspacePath: sharedWorkspace,
+      resolvedWorkspacePath: sharedWorkspace,
+    })).toMatchObject({
+      jobId: "infinity-context-controller-a",
+      valid: true,
+    });
+    expect(consumedOutputRecordFor({
+      ledger: sharedLedger,
+      jobId: "infinity-context-controller-b",
+      workspacePath: sharedWorkspace,
+      resolvedWorkspacePath: sharedWorkspace,
+    })).toMatchObject({
+      jobId: "infinity-context-controller-b",
+      valid: true,
+    });
   });
 });
 

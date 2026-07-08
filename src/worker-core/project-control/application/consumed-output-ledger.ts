@@ -167,6 +167,28 @@ export function consumedOutputRecordFor(input: {
   const resolvedWorkspace = input.resolvedWorkspacePath
     ? resolve(input.resolvedWorkspacePath)
     : undefined;
+  const byJob = input.ledger.byJobId.get(input.jobId);
+  if (byJob) {
+    if (
+      workspace &&
+      byJob.workspace &&
+      resolve(byJob.workspace) !== workspace &&
+      resolve(byJob.workspace) !== resolvedWorkspace &&
+      byJob.resolvedWorkspace !== workspace &&
+      byJob.resolvedWorkspace !== resolvedWorkspace
+    ) {
+      return {
+        ...byJob,
+        valid: false,
+        evidence: [
+          ...byJob.evidence,
+          `ledger workspace ${byJob.workspace} does not match dirty workspace ${workspace}`,
+        ],
+      };
+    }
+    return byJob;
+  }
+
   const byWorkspace = workspace
     ? input.ledger.byWorkspace.get(workspace)
     : undefined;
@@ -187,26 +209,7 @@ export function consumedOutputRecordFor(input: {
     }
     return workspaceRecord;
   }
-  const byJob = input.ledger.byJobId.get(input.jobId);
-  if (!byJob) return undefined;
-  if (
-    workspace &&
-    byJob.workspace &&
-    resolve(byJob.workspace) !== workspace &&
-    resolve(byJob.workspace) !== resolvedWorkspace &&
-    byJob.resolvedWorkspace !== workspace &&
-    byJob.resolvedWorkspace !== resolvedWorkspace
-  ) {
-    return {
-      ...byJob,
-      valid: false,
-      evidence: [
-        ...byJob.evidence,
-        `ledger workspace ${byJob.workspace} does not match dirty workspace ${workspace}`,
-      ],
-    };
-  }
-  return byJob;
+  return undefined;
 }
 
 export function consumedDebt(record: ConsumedOutputRecord): readonly ProjectDebtItem[] {
