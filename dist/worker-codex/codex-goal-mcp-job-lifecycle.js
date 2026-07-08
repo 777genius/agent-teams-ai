@@ -7,6 +7,7 @@ import { codexGoalStateRootDir } from "./codex-goal-mcp-worker-control.js";
 import { codexGoalStatusInputFromLaunch as statusInput } from "./codex-goal-mcp-status-input.js";
 import { booleanValue, numberValue, stringValue, } from "./codex-goal-mcp-values.js";
 import { projectControlGenericScopeDenial, projectControlGenericToolDenial, } from "./project-control-scope-guard.js";
+import { stopDirectCodexGoalRun, } from "./application/codex-goal-direct-run-stop-use-case.js";
 export async function continueStoredJobLifecycle(args, options, deps) {
     const loaded = await deps.loadJobLaunch(args);
     const projectControlDenial = projectControlGenericToolDenial({
@@ -202,63 +203,13 @@ export async function stopStoredJobLifecycle(args, deps) {
         tailLines: numberValue(args.tailLines) ?? 20,
     });
     if (!loaded.launch.tmuxSession) {
-        if (!args.confirmStop) {
-            return {
-                ok: false,
-                reason: "confirm_stop_required",
-                jobId: loaded.manifest.jobId,
-                requiredOverride: "confirmStop",
-                noTmuxCommand: buildCodexGoalNoTmuxCommand(loaded.launch),
-                status,
-                brief,
-            };
-        }
-        if (status.resultStatus === "done" || status.resultStatus === "completed") {
-            return {
-                ok: true,
-                mode: "stop",
-                reason: "terminal_result_already_present",
-                jobId: loaded.manifest.jobId,
-                taskId: loaded.launch.config.taskId,
-                statusBefore: status,
-                brief,
-                resultReconciliation: null,
-                safeMessage: "Direct-run job already has a terminal result. Review workspace/log/result before continuing or recovery.",
-            };
-        }
-        if (brief.workerAlive) {
-            return {
-                ok: false,
-                reason: "direct_run_stop_not_supported",
-                jobId: loaded.manifest.jobId,
-                taskId: loaded.launch.config.taskId,
-                status,
-                brief,
-                workerSupervisorKind: brief.workerSupervisorKind,
-                workerAliveReason: brief.workerAliveReason,
-                ...(status.progressPid === undefined ? {} : { pid: status.progressPid }),
-                safeMessage: "Direct-run worker appears alive without a tmux session. Use a provider-safe control signal or stop the owning process outside this tool, then reconcile.",
-            };
-        }
-        const resultReconciliation = await reconcileCodexGoalRuntimeResult({
-            config: loaded.launch.config,
+        return stopDirectCodexGoalRun({
+            manifest: loaded.manifest,
+            launch: loaded.launch,
             status,
-            reason: "direct_run_not_alive",
-            preservePatch: true,
-            silentStale: brief.silentStale,
-            heartbeatOnlyNoOutput: brief.heartbeatOnlyNoOutput,
-        });
-        return {
-            ok: true,
-            mode: "stop",
-            reason: "direct_run_not_alive_reconciled",
-            jobId: loaded.manifest.jobId,
-            taskId: loaded.launch.config.taskId,
-            statusBefore: status,
             brief,
-            resultReconciliation,
-            safeMessage: "Direct-run job has no live worker and no tmux session. Reconciled runtime result; review workspace/log/result before continuing or recovery.",
-        };
+            confirmStop: Boolean(args.confirmStop),
+        });
     }
     const stopCommand = buildCodexGoalStopTmuxCommand(loaded.launch.tmuxSession);
     if (!status.tmuxAlive) {
