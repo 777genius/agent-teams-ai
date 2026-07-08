@@ -1,18 +1,5 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import {
-  InterruptAndContinueWorkerUseCase,
-  type ActiveAttemptRegistry,
-  type WorkerControlActor,
-  type WorkerControlDeliveryMode,
-  type WorkerControlIntent,
-  type WorkerControlPriority,
-} from "@vioxen/subscription-runtime/worker-core";
-import {
-  collectCodexGoalStatus,
-} from "./codex-goal-ops";
 import {
   jobIdInputSchema,
   type JobIdMcpArgs,
@@ -23,37 +10,17 @@ import {
   withMcpErrors,
 } from "./codex-goal-mcp-response";
 import {
-  codexGoalWorkerControlService,
-  codexGoalWorkerControlTarget,
-} from "./codex-goal-mcp-worker-control";
-import {
-  parseIsoDate,
-  signalIdList,
-  workerControlCallerArgs,
-  workerControlDecisionJson,
-  workerControlReceiptJson,
-  workerControlSignalJson,
-  workerControlSignalViewJson,
-} from "./codex-goal-mcp-worker-control-view";
-import {
-  booleanValue,
-  numberValue,
-  requiredRawString,
-  stringValue,
-} from "./codex-goal-mcp-values";
-import {
-  codexGoalStatusInputFromLaunch as statusInput,
-} from "./codex-goal-mcp-status-input";
-import {
-  loadJobLaunch,
-} from "./codex-goal-mcp-project-control-deps";
-import {
-  codexGoalControlDeliveryDiagnostic,
-} from "./application/codex-goal-control-delivery-diagnostic";
+  enqueueCodexGoalControlSignal,
+  inspectCodexGoalControlDecision,
+  listCodexGoalControlSignals,
+  pauseCodexGoalWorker,
+  reconcileCodexGoalControlInbox,
+  sendCodexGoalGuidance,
+  supersedeCodexGoalControlSignal,
+  type CodexGoalWorkerControlUseCaseOptions,
+} from "./application/codex-goal-worker-control-use-cases";
 
-type CodexGoalWorkerControlToolOptions = {
-  readonly activeAttemptRegistry?: ActiveAttemptRegistry;
-};
+type CodexGoalWorkerControlToolOptions = CodexGoalWorkerControlUseCaseOptions;
 
 export function registerCodexGoalWorkerControlTools(
   server: McpServer,
@@ -67,46 +34,9 @@ export function registerCodexGoalWorkerControlTools(
         "Write a soft pause request marker. This never kills a running worker.",
       inputSchema: jobIdInputSchema(),
     },
-    async (args) => withMcpErrors(async () => {
-      const loaded = await loadJobLaunch(args as JobIdMcpArgs);
-      await mkdir(loaded.launch.config.jobRootDir, { recursive: true, mode: 0o700 });
-      const pausePath = join(
-        loaded.launch.config.jobRootDir,
-        `${loaded.launch.config.taskId}.pause-request.json`,
-      );
-      const status = await collectCodexGoalStatus(statusInput(loaded.launch));
-      const controlSignal = await codexGoalWorkerControlService(loaded.launch)
-        .enqueueSignal({
-          target: codexGoalWorkerControlTarget(loaded),
-          intent: "pause_requested",
-          deliveryMode: "next_safe_point",
-          body:
-            "Soft pause was requested by the operator. Pause at the next safe point if the provider/session supports it; otherwise preserve this request in the continuation context.",
-          createdBy: "operator",
-          priority: "normal",
-        });
-      await writeFile(
-        pausePath,
-        `${JSON.stringify({
-          schemaVersion: 1,
-          jobId: loaded.manifest.jobId,
-          taskId: loaded.launch.config.taskId,
-          requestedAt: new Date().toISOString(),
-          mode: "soft_pause_only",
-          note: "The running worker is not terminated by this marker.",
-        }, null, 2)}\n`,
-        { encoding: "utf8", mode: 0o600 },
-      );
-      return mcpJson({
-        ok: true,
-        jobId: loaded.manifest.jobId,
-        pausePath,
-        controlSignal: workerControlSignalJson(controlSignal, false),
-        status,
-        safeMessage:
-          "Soft pause marker written. No tmux session or worker process was killed.",
-      });
-    }),
+    async (args) => withMcpErrors(async () =>
+      mcpJson(await pauseCodexGoalWorker(args as JobIdMcpArgs)),
+    ),
   );
 
   server.registerTool(
@@ -126,46 +56,12 @@ export function registerCodexGoalWorkerControlTools(
         expiresAt: z.string().optional(),
       },
     },
-    async (args) => withMcpErrors(async () => {
-      const controlArgs = args as WorkerControlMcpArgs & {
-        readonly message?: string;
-      };
-      const loaded = await loadJobLaunch(controlArgs);
-      const control = codexGoalWorkerControlService(loaded.launch);
-      const useCase = new InterruptAndContinueWorkerUseCase({
-        control,
-        ...(options.activeAttemptRegistry === undefined
-          ? {}
-          : { activeAttemptRegistry: options.activeAttemptRegistry }),
-      });
-      const result = await useCase.execute({
-        target: codexGoalWorkerControlTarget(loaded),
-        message: requiredRawString(controlArgs.message, "message"),
-        ...workerControlCallerArgs(controlArgs),
-        ...(stringValue(controlArgs.priority)
-          ? { priority: stringValue(controlArgs.priority) as WorkerControlPriority }
-          : {}),
-        ...(stringValue(controlArgs.idempotencyKey)
-          ? { idempotencyKey: stringValue(controlArgs.idempotencyKey) as string }
-          : {}),
-        ...(stringValue(controlArgs.expiresAt)
-          ? { expiresAt: parseIsoDate(stringValue(controlArgs.expiresAt) as string, "expiresAt") }
-          : {}),
-      });
-      const decision = await control.getDecision({
-        target: codexGoalWorkerControlTarget(loaded),
-      });
-      return mcpJson({
-        ok: true,
-        registryRootDir: loaded.registryRootDir,
-        jobId: loaded.manifest.jobId,
-        taskId: loaded.launch.config.taskId,
-        status: result.status,
-        signal: workerControlSignalJson(result.signal, false),
-        decision: workerControlDecisionJson(decision, false),
-        safeMessage: result.safeMessage,
-      });
-    }),
+    async (args) => withMcpErrors(async () =>
+      mcpJson(await sendCodexGoalGuidance(
+        args as WorkerControlMcpArgs & { readonly message?: string },
+        options,
+      )),
+    ),
   );
 
   server.registerTool(
@@ -205,52 +101,9 @@ export function registerCodexGoalWorkerControlTools(
         supersedesSignalIds: z.union([z.string(), z.array(z.string())]).optional(),
       },
     },
-    async (args) => withMcpErrors(async () => {
-      const loaded = await loadJobLaunch(args as WorkerControlMcpArgs);
-      const control = codexGoalWorkerControlService(loaded.launch);
-      const controlArgs = args as WorkerControlMcpArgs;
-      const enqueueInput = {
-        target: codexGoalWorkerControlTarget(loaded),
-        intent: requiredRawString(controlArgs.intent, "intent") as WorkerControlIntent,
-        ...(stringValue(controlArgs.deliveryMode)
-          ? {
-              deliveryMode: stringValue(controlArgs.deliveryMode) as WorkerControlDeliveryMode,
-            }
-          : {}),
-        body: requiredRawString(controlArgs.body, "body"),
-        ...(stringValue(controlArgs.createdBy)
-          ? { createdBy: stringValue(controlArgs.createdBy) as WorkerControlActor }
-          : {}),
-        ...workerControlCallerArgs(controlArgs),
-        ...(stringValue(controlArgs.priority)
-          ? { priority: stringValue(controlArgs.priority) as WorkerControlPriority }
-          : {}),
-        ...(stringValue(controlArgs.idempotencyKey)
-          ? { idempotencyKey: stringValue(controlArgs.idempotencyKey) as string }
-          : {}),
-        ...(stringValue(controlArgs.expiresAt)
-          ? { expiresAt: parseIsoDate(stringValue(controlArgs.expiresAt) as string, "expiresAt") }
-          : {}),
-        supersedesSignalIds: signalIdList(controlArgs.supersedesSignalIds),
-      };
-      const signal = await control.enqueueSignal(enqueueInput);
-      const decision = await control.getDecision({
-        target: codexGoalWorkerControlTarget(loaded),
-      });
-      return mcpJson({
-        ok: true,
-        registryRootDir: loaded.registryRootDir,
-        jobId: loaded.manifest.jobId,
-        taskId: loaded.launch.config.taskId,
-        signal: workerControlSignalJson(signal, false),
-        decision: workerControlDecisionJson(decision, false),
-        deliveryDiagnostic: await codexGoalControlDeliveryDiagnostic({
-          launch: loaded.launch,
-          decision,
-          signal,
-        }),
-      });
-    }),
+    async (args) => withMcpErrors(async () =>
+      mcpJson(await enqueueCodexGoalControlSignal(args as WorkerControlMcpArgs)),
+    ),
   );
 
   server.registerTool(
@@ -264,24 +117,9 @@ export function registerCodexGoalWorkerControlTools(
         includeBodies: z.boolean().optional(),
       },
     },
-    async (args) => withMcpErrors(async () => {
-      const loaded = await loadJobLaunch(args as WorkerControlMcpArgs);
-      const control = codexGoalWorkerControlService(loaded.launch);
-      const includeBodies =
-        booleanValue((args as WorkerControlMcpArgs).includeBodies) ?? false;
-      const signals = await control.listSignals({
-        target: codexGoalWorkerControlTarget(loaded),
-        includeBodies,
-        includeExpired: true,
-      });
-      return mcpJson({
-        ok: true,
-        registryRootDir: loaded.registryRootDir,
-        jobId: loaded.manifest.jobId,
-        taskId: loaded.launch.config.taskId,
-        signals: signals.map((view) => workerControlSignalViewJson(view, includeBodies)),
-      });
-    }),
+    async (args) => withMcpErrors(async () =>
+      mcpJson(await listCodexGoalControlSignals(args as WorkerControlMcpArgs)),
+    ),
   );
 
   server.registerTool(
@@ -292,20 +130,9 @@ export function registerCodexGoalWorkerControlTools(
         "Inspect pending control inbox signals and whether they are safe for next continuation.",
       inputSchema: jobIdInputSchema(),
     },
-    async (args) => withMcpErrors(async () => {
-      const loaded = await loadJobLaunch(args as WorkerControlMcpArgs);
-      const control = codexGoalWorkerControlService(loaded.launch);
-      const decision = await control.getDecision({
-        target: codexGoalWorkerControlTarget(loaded),
-      });
-      return mcpJson({
-        ok: true,
-        registryRootDir: loaded.registryRootDir,
-        jobId: loaded.manifest.jobId,
-        taskId: loaded.launch.config.taskId,
-        decision: workerControlDecisionJson(decision, false),
-      });
-    }),
+    async (args) => withMcpErrors(async () =>
+      mcpJson(await inspectCodexGoalControlDecision(args as WorkerControlMcpArgs)),
+    ),
   );
 
   server.registerTool(
@@ -320,25 +147,9 @@ export function registerCodexGoalWorkerControlTools(
         acceptedStaleAfterMs: z.number().int().positive().optional(),
       },
     },
-    async (args) => withMcpErrors(async () => {
-      const controlArgs = args as WorkerControlMcpArgs;
-      const loaded = await loadJobLaunch(controlArgs);
-      const control = codexGoalWorkerControlService(loaded.launch);
-      const report = await control.reconcile({
-        target: codexGoalWorkerControlTarget(loaded),
-        ...(controlArgs.repair === undefined ? {} : { repair: controlArgs.repair }),
-        ...(controlArgs.acceptedStaleAfterMs === undefined
-          ? {}
-          : { acceptedStaleAfterMs: controlArgs.acceptedStaleAfterMs }),
-      });
-      return mcpJson({
-        ok: true,
-        registryRootDir: loaded.registryRootDir,
-        jobId: loaded.manifest.jobId,
-        taskId: loaded.launch.config.taskId,
-        report,
-      });
-    }),
+    async (args) => withMcpErrors(async () =>
+      mcpJson(await reconcileCodexGoalControlInbox(args as WorkerControlMcpArgs)),
+    ),
   );
 
   server.registerTool(
@@ -357,30 +168,8 @@ export function registerCodexGoalWorkerControlTools(
         callerId: z.string().optional(),
       },
     },
-    async (args) => withMcpErrors(async () => {
-      const loaded = await loadJobLaunch(args as WorkerControlMcpArgs);
-      const control = codexGoalWorkerControlService(loaded.launch);
-      const receipt = await control.markSuperseded({
-        target: codexGoalWorkerControlTarget(loaded),
-        signalId: requiredRawString((args as WorkerControlMcpArgs).signalId, "signalId"),
-        ...(stringValue((args as WorkerControlMcpArgs).supersededBySignalId)
-          ? {
-              supersededBySignalId: stringValue((args as WorkerControlMcpArgs).supersededBySignalId) as string,
-            }
-          : {}),
-        ...(stringValue((args as WorkerControlMcpArgs).reason)
-          ? { reason: stringValue((args as WorkerControlMcpArgs).reason) as string }
-          : {}),
-        ...workerControlCallerArgs(args as WorkerControlMcpArgs),
-      });
-      return mcpJson({
-        ok: true,
-        registryRootDir: loaded.registryRootDir,
-        jobId: loaded.manifest.jobId,
-        taskId: loaded.launch.config.taskId,
-        receipt: workerControlReceiptJson(receipt),
-      });
-    }),
+    async (args) => withMcpErrors(async () =>
+      mcpJson(await supersedeCodexGoalControlSignal(args as WorkerControlMcpArgs)),
+    ),
   );
-
 }
