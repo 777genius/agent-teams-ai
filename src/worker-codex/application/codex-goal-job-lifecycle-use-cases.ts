@@ -14,7 +14,7 @@ import {
   type CodexGoalLaunchInput,
 } from "../codex-goal-ops";
 import { codexGoalProgressPath } from "../codex-goal-runner";
-import { buildCodexGoalBrief } from "../codex-goal-mcp-brief";
+import { buildCodexGoalBrief } from "./codex-goal-brief";
 import {
   isSafeStartAction,
   nextActionForStatus,
@@ -28,7 +28,7 @@ import {
   writeCodexGoalMaintenancePauseEvent,
   writeCodexGoalStopEvent,
   writeCodexGoalStoppedProgress,
-} from "../codex-goal-mcp-lifecycle-markers";
+} from "./codex-goal-lifecycle-markers";
 import { codexGoalStateRootDir } from "../codex-goal-mcp-worker-control";
 import { codexGoalStatusInputFromLaunch as statusInput } from "./codex-goal-status-input";
 import {

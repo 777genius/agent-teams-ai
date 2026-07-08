@@ -33,7 +33,7 @@ import {
   workerControlReceiptJson,
   workerControlSignalJson,
   workerControlSignalViewJson,
-} from "../codex-goal-mcp-worker-control-view";
+} from "./codex-goal-worker-control-view";
 import {
   booleanValue,
   requiredRawString,

@@ -59,10 +59,10 @@ import {
 import {
   buildCodexGoalOverviewView,
   reconcilePreviewCodexGoalJobsView,
-} from "../codex-goal-mcp-overview";
+} from "./codex-goal-overview";
 import {
   buildCodexGoalBrief,
-} from "../codex-goal-mcp-brief";
+} from "./codex-goal-brief";
 import {
   codexGoalStateRootDir,
 } from "../codex-goal-mcp-worker-control";

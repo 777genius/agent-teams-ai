@@ -1,4 +1,3 @@
 /// <reference types="node" />
-export declare function extractRecentCommands(logTail: string): readonly string[];
-export declare function redactLogTail(logTail: string): string;
+export * from "./application/codex-goal-log-view.js";
 //# sourceMappingURL=codex-goal-mcp-log-view.d.ts.map

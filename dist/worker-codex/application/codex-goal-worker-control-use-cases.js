@@ -5,7 +5,7 @@ import { collectCodexGoalStatus, } from "../codex-goal-ops.js";
 import { codexGoalStatusInputFromLaunch as statusInput, } from "./codex-goal-status-input.js";
 import { loadJobLaunch, } from "../codex-goal-mcp-project-control-deps.js";
 import { codexGoalWorkerControlService, codexGoalWorkerControlTarget, } from "../codex-goal-mcp-worker-control.js";
-import { parseIsoDate, signalIdList, workerControlCallerArgs, workerControlDecisionJson, workerControlReceiptJson, workerControlSignalJson, workerControlSignalViewJson, } from "../codex-goal-mcp-worker-control-view.js";
+import { parseIsoDate, signalIdList, workerControlCallerArgs, workerControlDecisionJson, workerControlReceiptJson, workerControlSignalJson, workerControlSignalViewJson, } from "./codex-goal-worker-control-view.js";
 import { booleanValue, requiredRawString, stringValue, } from "./codex-goal-input-values.js";
 import { codexGoalControlDeliveryDiagnostic, } from "./codex-goal-control-delivery-diagnostic.js";
 export async function pauseCodexGoalWorker(args) {

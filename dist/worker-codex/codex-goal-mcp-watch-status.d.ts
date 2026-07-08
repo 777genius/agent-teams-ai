@@ -1,6 +1,3 @@
 /// <reference types="node" />
-import type { RunReconcilePreviewStatus } from "@vioxen/subscription-runtime/worker-core";
-type JsonObject = Readonly<Record<string, unknown>>;
-export declare function codexOverviewItemToWatchStatus(item: JsonObject): Promise<RunReconcilePreviewStatus>;
-export {};
+export { codexOverviewItemToWatchStatus } from "./application/codex-goal-watch-status.js";
 //# sourceMappingURL=codex-goal-mcp-watch-status.d.ts.map
