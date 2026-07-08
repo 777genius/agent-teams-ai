@@ -29,7 +29,7 @@ import {
   writeCodexGoalStopEvent,
   writeCodexGoalStoppedProgress,
 } from "./codex-goal-lifecycle-markers";
-import { codexGoalStateRootDir } from "../codex-goal-mcp-worker-control";
+import { codexGoalStateRootDir } from "./codex-goal-worker-control";
 import { codexGoalStatusInputFromLaunch as statusInput } from "./codex-goal-status-input";
 import {
   booleanValue,

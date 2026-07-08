@@ -1,22 +1,10 @@
 import { AccessBoundary, } from "@vioxen/subscription-runtime/worker-core";
-import { codexGoalJobToArgs, listCodexGoalJobs, readCodexGoalJob, } from "./codex-goal-jobs.js";
+import { listCodexGoalJobs, readCodexGoalJob, } from "./codex-goal-jobs.js";
 import { registryRootFromArgs, } from "./codex-goal-mcp-inputs.js";
-import { goalLaunchInput } from "./codex-goal-mcp-launch-input.js";
 import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item.js";
 import { createCodexProjectControlBroker, } from "./codex-goal-mcp-project-broker.js";
 import { requiredRawString } from "./codex-goal-mcp-values.js";
-export async function loadJobLaunch(args) {
-    const registryRootDir = registryRootFromArgs(args);
-    const manifest = await readCodexGoalJob({
-        registryRootDir,
-        jobId: requiredRawString(args.jobId, "jobId"),
-    });
-    return {
-        registryRootDir,
-        manifest,
-        launch: await goalLaunchInput(codexGoalJobToArgs(manifest)),
-    };
-}
+export { loadJobLaunch, } from "./application/codex-goal-job-launch-loader.js";
 export async function loadProjectControlController(args) {
     const registryRootDir = registryRootFromArgs(args);
     const controller = await readCodexGoalJob({

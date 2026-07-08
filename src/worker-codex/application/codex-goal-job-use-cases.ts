@@ -43,7 +43,7 @@ import {
 } from "./codex-goal-manifest-input";
 import {
   loadJobLaunch,
-} from "../codex-goal-mcp-project-control-deps";
+} from "./codex-goal-job-launch-loader";
 import {
   goalLaunchInput,
 } from "./codex-goal-launch-input";
@@ -65,7 +65,7 @@ import {
 } from "./codex-goal-brief";
 import {
   codexGoalStateRootDir,
-} from "../codex-goal-mcp-worker-control";
+} from "./codex-goal-worker-control";
 import {
   optionalTargetCommit,
   targetCommitFromArgs,

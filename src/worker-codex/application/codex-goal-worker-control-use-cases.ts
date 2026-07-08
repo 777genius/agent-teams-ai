@@ -20,11 +20,11 @@ import {
 } from "./codex-goal-status-input";
 import {
   loadJobLaunch,
-} from "../codex-goal-mcp-project-control-deps";
+} from "./codex-goal-job-launch-loader";
 import {
   codexGoalWorkerControlService,
   codexGoalWorkerControlTarget,
-} from "../codex-goal-mcp-worker-control";
+} from "./codex-goal-worker-control";
 import {
   parseIsoDate,
   signalIdList,

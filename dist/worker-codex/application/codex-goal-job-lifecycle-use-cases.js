@@ -3,7 +3,7 @@ import { codexGoalProgressPath } from "../codex-goal-runner.js";
 import { buildCodexGoalBrief } from "./codex-goal-brief.js";
 import { isSafeStartAction, nextActionForStatus, } from "./codex-goal-decision.js";
 import { writeCodexGoalMaintenancePauseEvent, writeCodexGoalStopEvent, writeCodexGoalStoppedProgress, } from "./codex-goal-lifecycle-markers.js";
-import { codexGoalStateRootDir } from "../codex-goal-mcp-worker-control.js";
+import { codexGoalStateRootDir } from "./codex-goal-worker-control.js";
 import { codexGoalStatusInputFromLaunch as statusInput } from "./codex-goal-status-input.js";
 import { booleanValue, numberValue, stringValue, } from "./codex-goal-input-values.js";
 import { projectControlGenericScopeDenial, projectControlGenericToolDenial, } from "../project-control-scope-guard.js";

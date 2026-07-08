@@ -4,18 +4,14 @@ import {
   type ProjectControlBroker,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
-  codexGoalJobToArgs,
   listCodexGoalJobs,
   readCodexGoalJob,
   type CodexGoalJobManifest,
 } from "./codex-goal-jobs";
-import type { CodexGoalLaunchInput } from "./codex-goal-ops";
 import {
   registryRootFromArgs,
-  type JobIdMcpArgs,
   type ProjectControlMcpArgs,
 } from "./codex-goal-mcp-inputs";
-import { goalLaunchInput } from "./codex-goal-mcp-launch-input";
 import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item";
 import {
   createCodexProjectControlBroker,
@@ -23,33 +19,16 @@ import {
 } from "./codex-goal-mcp-project-broker";
 import type { CodexProjectAdmissionDeps } from "./codex-goal-mcp-project-admission";
 import { requiredRawString } from "./codex-goal-mcp-values";
-
-export type LoadedCodexGoalJobLaunch = {
-  readonly registryRootDir: string;
-  readonly manifest: CodexGoalJobManifest;
-  readonly launch: CodexGoalLaunchInput;
-};
+export {
+  loadJobLaunch,
+  type LoadedCodexGoalJobLaunch,
+} from "./application/codex-goal-job-launch-loader";
 
 export type LoadedProjectControlController = {
   readonly registryRootDir: string;
   readonly controller: CodexGoalJobManifest;
   readonly scope: ProjectAccessScope;
 };
-
-export async function loadJobLaunch(
-  args: JobIdMcpArgs,
-): Promise<LoadedCodexGoalJobLaunch> {
-  const registryRootDir = registryRootFromArgs(args);
-  const manifest = await readCodexGoalJob({
-    registryRootDir,
-    jobId: requiredRawString(args.jobId, "jobId"),
-  });
-  return {
-    registryRootDir,
-    manifest,
-    launch: await goalLaunchInput(codexGoalJobToArgs(manifest)),
-  };
-}
 
 export async function loadProjectControlController(
   args: ProjectControlMcpArgs,
