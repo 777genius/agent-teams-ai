@@ -51,8 +51,8 @@ function buildCreateTaskPayload(params: {
   blockedBy?: string[];
   related?: string[];
   prompt?: string;
-  descriptionTaskRefs?: Array<z.infer<typeof taskRefSchema>>;
-  promptTaskRefs?: Array<z.infer<typeof taskRefSchema>>;
+  descriptionTaskRefs?: z.infer<typeof taskRefSchema>[];
+  promptTaskRefs?: z.infer<typeof taskRefSchema>[];
   startImmediately?: boolean;
   sourceMessageId?: string;
   sourceMessage?: Record<string, unknown>;

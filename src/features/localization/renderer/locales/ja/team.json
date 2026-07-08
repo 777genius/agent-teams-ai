@@ -418,10 +418,10 @@
         "saveFileTooltip": "ファイルをディスクに保存する"
       },
       "badges": {
-        "deleted": "DELETEDの特長",
+        "deleted": "DELETED",
         "manualReview": "MANUAL REVIEW",
-        "new": "NEWの特長",
-        "worktree": "WORKTREEの特長"
+        "new": "NEW",
+        "worktree": "WORKTREE"
       },
       "contentSource": {
         "disk-current": "現在のディスク",
@@ -598,7 +598,7 @@
       "description": "このファイルの完全なエディタの差分を準備します。"
     },
     "loading": {
-      "diff": "DIFFの特長",
+      "diff": "DIFF",
       "ledgerObjectsProcessed": "{{count}}のレジャーオブジェクト処理",
       "ledgerObjectsProcessed_one": "{{count}}のレジャーオブジェクト処理",
       "ledgerObjectsProcessed_other": "{{count}}のレジャーオブジェクト処理",
@@ -612,7 +612,7 @@
       }
     },
     "progress": {
-      "viewed": "{{viewed}}/{{total}}の特長 インタビュー"
+      "viewed": "{{viewed}}/{{total}} viewed"
     },
     "scope": {
       "readMore": "もっと読む",
