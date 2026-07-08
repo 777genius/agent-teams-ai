@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   createTeamProvisioningCleanupRunPorts,
+  createTeamProvisioningCleanupRunPortsDepsFromService,
+  type TeamProvisioningCleanupRunServiceHost,
   type TeamProvisioningCleanupRunPortsFactoryDeps,
 } from '../TeamProvisioningCleanupRunPortsFactory';
 
@@ -101,6 +103,111 @@ function makeDeps(): TeamProvisioningCleanupRunPortsFactoryDeps<CleanupRunWithLo
 }
 
 describe('createTeamProvisioningCleanupRunPorts', () => {
+  it('builds cleanup deps from service-shaped dependencies', async () => {
+    const deps = makeDeps();
+    const run = cleanupRun();
+    const runtimeAdapterProgressByRunId = new Map<string, unknown>();
+    const runTracking = {
+      getTrackedRunId: vi.fn(() => 'run-1'),
+      deleteAliveRunId: vi.fn(),
+    };
+    const service = {
+      runTracking,
+      runs: deps.runs as TeamProvisioningCleanupRunServiceHost<CleanupRunWithLogs>['runs'],
+      runtimeAdapterProgressByRunId,
+      markIncompleteLaunchStateFinalized: deps.markIncompleteLaunchStateFinalized,
+      persistLaunchStateSnapshot: deps.persistLaunchStateSnapshot,
+      configTaskActivityBoundary: {
+        writeLaunchFailureArtifactPackBestEffort: deps.writeLaunchFailureArtifactPackBestEffort,
+      },
+      resetRuntimeToolActivity: deps.resetRuntimeToolActivity,
+      setLeadActivity: deps.setLeadActivity,
+      outputRecoveryFacade: {
+        stopStallWatchdog: deps.stopStallWatchdog,
+      },
+      stopFilesystemMonitor: deps.stopFilesystemMonitor,
+      provisioningRunByTeam: deps.provisioningRunByTeam,
+      aliveRunByTeam: deps.aliveRunByTeam,
+      clearSecondaryRuntimeRuns: deps.clearSecondaryRuntimeRuns,
+      invalidateRuntimeSnapshotCaches: deps.invalidateRuntimeSnapshotCaches,
+      invalidateMemberSpawnStatusesCache: deps.invalidateMemberSpawnStatusesCache,
+      leadInboxRelayInFlight: deps.leadInboxRelayInFlight,
+      relayedLeadInboxMessageIds: deps.relayedLeadInboxMessageIds,
+      pendingCrossTeamFirstReplies: deps.pendingCrossTeamFirstReplies,
+      recentCrossTeamLeadDeliveryMessageIds: deps.recentCrossTeamLeadDeliveryMessageIds,
+      sameTeamNativeDelivery: deps.recentSameTeamNativeFingerprints,
+      clearSameTeamRetryTimers: deps.clearSameTeamRetryTimers,
+      clearLeadInboxFollowUpRelayTimer: deps.clearLeadInboxFollowUpRelayTimer,
+      getMemberLaunchGraceKey: deps.getMemberLaunchGraceKey,
+      pendingTimeouts: deps.pendingTimeouts,
+      memberInboxRelayInFlight: deps.memberInboxRelayInFlight,
+      openCodeMemberInboxRelayInFlight: deps.openCodeMemberInboxRelayInFlight,
+      openCodeMemberSendInFlightByLane: deps.openCodeMemberSendInFlightByLane,
+      openCodePromptDeliveryWatchdogScheduler: deps.openCodePromptDeliveryWatchdogScheduler,
+      openCodeRuntimeDeliveryAdvisory: deps.openCodeRuntimeDeliveryAdvisory,
+      relayedMemberInboxMessageIds: deps.relayedMemberInboxMessageIds,
+      liveLeadProcessMessages: deps.liveLeadProcessMessages,
+      pruneLiveLeadMessagesForCleanedRun: deps.pruneLiveLeadMessagesForCleanedRun,
+      toolApprovalFacade: {
+        clearApprovalTimeout: deps.clearApprovalTimeout,
+        inFlightResponsesForCleanup: deps.inFlightResponses,
+        dismissApprovalNotification: deps.dismissApprovalNotification,
+        emitToolApprovalEvent: deps.emitToolApprovalEvent,
+      },
+      mcpConfigBuilder: deps.mcpConfigBuilder,
+      removeRunMemberMcpConfigFilesLater: deps.removeRunMemberMcpConfigFilesLater,
+      retainedClaudeLogsByTeam: deps.retainedClaudeLogsByTeam,
+      retainProvisioningProgress: deps.retainProvisioningProgress,
+    } satisfies TeamProvisioningCleanupRunServiceHost<CleanupRunWithLogs>;
+    const builtDeps = createTeamProvisioningCleanupRunPortsDepsFromService(service);
+
+    expect(builtDeps.getTrackedRunId('team-a')).toBe('run-1');
+    expect(builtDeps.isRunIdTracked('run-1')).toBe(false);
+    runtimeAdapterProgressByRunId.set('runtime-run', {});
+    expect(builtDeps.isRunIdTracked('runtime-run')).toBe(true);
+    builtDeps.markIncompleteLaunchStateFinalized(run, 'cleanup');
+    await builtDeps.persistLaunchStateSnapshot(run, 'finished');
+    builtDeps.writeLaunchFailureArtifactPackBestEffort(run, {
+      reason: 'launch_progress_failed',
+    });
+    builtDeps.resetRuntimeToolActivity(run);
+    builtDeps.setLeadActivity(run, 'offline');
+    builtDeps.stopStallWatchdog(run);
+    builtDeps.stopFilesystemMonitor(run);
+    builtDeps.deleteAliveRunId('team-a');
+    builtDeps.clearSecondaryRuntimeRuns('team-a');
+    builtDeps.invalidateRuntimeSnapshotCaches('team-a');
+    builtDeps.invalidateMemberSpawnStatusesCache('team-a');
+    builtDeps.clearSameTeamRetryTimers('team-a');
+    builtDeps.clearLeadInboxFollowUpRelayTimer('team-a');
+    expect(builtDeps.getMemberLaunchGraceKey(run, 'Lead')).toBe('run-1:Lead');
+    builtDeps.pruneLiveLeadMessagesForCleanedRun(run);
+    builtDeps.clearApprovalTimeout('approval-1');
+    builtDeps.dismissApprovalNotification('approval-1');
+    builtDeps.emitToolApprovalEvent({ dismissed: true, teamName: 'team-a', runId: 'run-1' });
+    builtDeps.removeRunMemberMcpConfigFilesLater(run);
+    builtDeps.retainProvisioningProgress('run-1', run.progress);
+
+    expect(runTracking.getTrackedRunId).toHaveBeenCalledWith('team-a');
+    expect(deps.markIncompleteLaunchStateFinalized).toHaveBeenCalledWith(run, 'cleanup');
+    expect(deps.writeLaunchFailureArtifactPackBestEffort).toHaveBeenCalledWith(run, {
+      reason: 'launch_progress_failed',
+    });
+    expect(deps.stopStallWatchdog).toHaveBeenCalledWith(run);
+    expect(runTracking.deleteAliveRunId).toHaveBeenCalledWith('team-a');
+    expect(deps.clearSecondaryRuntimeRuns).toHaveBeenCalledWith('team-a');
+    expect(deps.clearApprovalTimeout).toHaveBeenCalledWith('approval-1');
+    expect(deps.emitToolApprovalEvent).toHaveBeenCalledWith({
+      dismissed: true,
+      teamName: 'team-a',
+      runId: 'run-1',
+    });
+    expect(builtDeps.provisioningRunByTeam).toBe(deps.provisioningRunByTeam);
+    expect(builtDeps.recentSameTeamNativeFingerprints).toBe(deps.recentSameTeamNativeFingerprints);
+    expect(builtDeps.inFlightResponses).toBe(deps.inFlightResponses);
+    expect(builtDeps.runs).toBe(deps.runs);
+  });
+
   it('adds the cleanup policy helpers while preserving explicit dependency ports', () => {
     const deps = makeDeps();
     const ports = createTeamProvisioningCleanupRunPorts(deps);

@@ -119,7 +119,11 @@ import {
   finalizeIncompleteLaunchStateBeforeCleanup as finalizeIncompleteLaunchStateBeforeCleanupHelper,
   type TeamProvisioningCleanupPorts,
 } from './provisioning/TeamProvisioningCleanup';
-import { createTeamProvisioningCleanupRunPorts } from './provisioning/TeamProvisioningCleanupRunPortsFactory';
+import {
+  createTeamProvisioningCleanupRunPorts,
+  createTeamProvisioningCleanupRunPortsDepsFromService,
+  type TeamProvisioningCleanupRunServiceHost,
+} from './provisioning/TeamProvisioningCleanupRunPortsFactory';
 import { getCliHelpOutputWithProvisioningPorts } from './provisioning/TeamProvisioningCliHelpOutputPortsFactory';
 import {
   type TeamProvisioningCompatibilityDelegation,
@@ -1825,56 +1829,11 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       }),
       this.recentSameTeamNativeFingerprints
     );
-    this.cleanupRunPorts = createTeamProvisioningCleanupRunPorts({
-      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
-      isRunIdTracked: (runId) =>
-        this.runs.has(runId) || this.runtimeAdapterProgressByRunId.has(runId),
-      markIncompleteLaunchStateFinalized: (run, cleanupReason) =>
-        this.markIncompleteLaunchStateFinalized(run, cleanupReason),
-      persistLaunchStateSnapshot: (run, phase) => this.persistLaunchStateSnapshot(run, phase),
-      writeLaunchFailureArtifactPackBestEffort: (run, options) =>
-        this.configTaskActivityBoundary.writeLaunchFailureArtifactPackBestEffort(run, options),
-      resetRuntimeToolActivity: (run) => this.resetRuntimeToolActivity(run),
-      setLeadActivity: (run, state) => this.setLeadActivity(run, state),
-      stopStallWatchdog: (run) => this.outputRecoveryFacade.stopStallWatchdog(run),
-      stopFilesystemMonitor: (run) => this.stopFilesystemMonitor(run),
-      provisioningRunByTeam: this.provisioningRunByTeam,
-      aliveRunByTeam: this.aliveRunByTeam,
-      deleteAliveRunId: (teamName) => this.runTracking.deleteAliveRunId(teamName),
-      clearSecondaryRuntimeRuns: (teamName) => this.clearSecondaryRuntimeRuns(teamName),
-      invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
-      invalidateMemberSpawnStatusesCache: (teamName) =>
-        this.invalidateMemberSpawnStatusesCache(teamName),
-      leadInboxRelayInFlight: this.leadInboxRelayInFlight,
-      relayedLeadInboxMessageIds: this.relayedLeadInboxMessageIds,
-      pendingCrossTeamFirstReplies: this.pendingCrossTeamFirstReplies,
-      recentCrossTeamLeadDeliveryMessageIds: this.recentCrossTeamLeadDeliveryMessageIds,
-      recentSameTeamNativeFingerprints: this.sameTeamNativeDelivery,
-      clearSameTeamRetryTimers: (teamName) => this.clearSameTeamRetryTimers(teamName),
-      clearLeadInboxFollowUpRelayTimer: (teamName) =>
-        this.clearLeadInboxFollowUpRelayTimer(teamName),
-      getMemberLaunchGraceKey: (run, memberName) => this.getMemberLaunchGraceKey(run, memberName),
-      pendingTimeouts: this.pendingTimeouts,
-      memberInboxRelayInFlight: this.memberInboxRelayInFlight,
-      openCodeMemberInboxRelayInFlight: this.openCodeMemberInboxRelayInFlight,
-      openCodeMemberSendInFlightByLane: this.openCodeMemberSendInFlightByLane,
-      openCodePromptDeliveryWatchdogScheduler: this.openCodePromptDeliveryWatchdogScheduler,
-      openCodeRuntimeDeliveryAdvisory: this.openCodeRuntimeDeliveryAdvisory,
-      relayedMemberInboxMessageIds: this.relayedMemberInboxMessageIds,
-      liveLeadProcessMessages: this.liveLeadProcessMessages,
-      pruneLiveLeadMessagesForCleanedRun: (run) => this.pruneLiveLeadMessagesForCleanedRun(run),
-      clearApprovalTimeout: (requestId) => this.toolApprovalFacade.clearApprovalTimeout(requestId),
-      inFlightResponses: this.toolApprovalFacade.inFlightResponsesForCleanup,
-      dismissApprovalNotification: (requestId) =>
-        this.toolApprovalFacade.dismissApprovalNotification(requestId),
-      emitToolApprovalEvent: (event) => this.toolApprovalFacade.emitToolApprovalEvent(event),
-      mcpConfigBuilder: this.mcpConfigBuilder,
-      removeRunMemberMcpConfigFilesLater: (run) => this.removeRunMemberMcpConfigFilesLater(run),
-      retainedClaudeLogsByTeam: this.retainedClaudeLogsByTeam,
-      retainProvisioningProgress: (runId, progress) =>
-        this.retainProvisioningProgress(runId, progress),
-      runs: this.runs,
-    });
+    this.cleanupRunPorts = createTeamProvisioningCleanupRunPorts<ProvisioningRun>(
+      createTeamProvisioningCleanupRunPortsDepsFromService(
+        this as unknown as TeamProvisioningCleanupRunServiceHost<ProvisioningRun>
+      )
+    );
     this.transientRunState = new TeamProvisioningTransientRunState(
       createTeamProvisioningTransientRunStatePorts({
         pendingTimeouts: this.pendingTimeouts,
