@@ -4,7 +4,9 @@ import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  createTeamProvisioningMemberMcpLaunchConfigProvisionerFromService,
   TeamProvisioningMemberMcpLaunchConfigProvisioner,
+  type TeamProvisioningMemberMcpLaunchConfigServiceHost,
   type TeamProvisioningMemberMcpRun,
 } from '../TeamProvisioningMemberMcpLaunchConfig';
 
@@ -78,6 +80,40 @@ describe('TeamProvisioningMemberMcpLaunchConfigProvisioner', () => {
 
   afterEach(async () => {
     await rm(tempDir, { recursive: true, force: true });
+  });
+
+  it('builds provisioner ports from service-shaped dependencies', async () => {
+    const run = createRun({ request: { cwd: path.join(tempDir, 'project') } });
+    const runs = new Map([['run-1', run]]);
+    const ensureCwdExists = vi.fn(async (cwd: string) => {
+      ensuredCwds.push(cwd);
+    });
+    const service = {
+      mcpConfigBuilder: builder,
+      providerRuntime: {
+        resolveControlApiBaseUrl,
+      },
+      runTracking: {
+        getAliveRunId: vi.fn(() => 'run-1'),
+      },
+      runs,
+    } satisfies TeamProvisioningMemberMcpLaunchConfigServiceHost<TeamProvisioningMemberMcpRun>;
+    const builtProvisioner = createTeamProvisioningMemberMcpLaunchConfigProvisionerFromService(
+      service,
+      { ensureCwdExists }
+    );
+
+    const config = await builtProvisioner.prepareLiveMemberMcpLaunchConfig({
+      teamName: 'alpha',
+      mcpPolicy: { mode: 'appOnly' },
+    });
+
+    expect(config?.mcpConfigPath).toBe(path.join(tempDir, 'member-mcp-1.json'));
+    expect(service.runTracking.getAliveRunId).toHaveBeenCalledWith('alpha');
+    expect(ensureCwdExists).toHaveBeenCalledWith(path.join(tempDir, 'project'));
+    expect(resolveControlApiBaseUrl).toHaveBeenCalled();
+    expect(builder.writes[0]?.options?.controlApiBaseUrl).toBe('http://127.0.0.1:4567');
+    expect(run.memberMcpConfigPaths).toEqual([path.join(tempDir, 'member-mcp-1.json')]);
   });
 
   it('builds runtime bootstrap configs only for members with MCP policy and tracks generated paths', async () => {

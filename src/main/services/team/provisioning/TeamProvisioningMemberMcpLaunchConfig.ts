@@ -31,6 +31,42 @@ export interface TeamProvisioningMemberMcpLaunchConfigPorts<
   getAliveRun(teamName: string): TRun | null | undefined;
 }
 
+export interface TeamProvisioningMemberMcpLaunchConfigServiceHost<
+  TRun extends TeamProvisioningMemberMcpRun,
+> {
+  mcpConfigBuilder: TeamProvisioningMemberMcpConfigBuilderPort;
+  providerRuntime: {
+    resolveControlApiBaseUrl(): Promise<string | null>;
+  };
+  runTracking: {
+    getAliveRunId(teamName: string): string | null;
+  };
+  runs: {
+    get(runId: string): TRun | undefined;
+  };
+}
+
+export interface TeamProvisioningMemberMcpLaunchConfigServiceHostOptions {
+  ensureCwdExists: TeamProvisioningMemberMcpLaunchConfigPorts<TeamProvisioningMemberMcpRun>['ensureCwdExists'];
+}
+
+export function createTeamProvisioningMemberMcpLaunchConfigProvisionerFromService<
+  TRun extends TeamProvisioningMemberMcpRun,
+>(
+  service: TeamProvisioningMemberMcpLaunchConfigServiceHost<TRun>,
+  options: TeamProvisioningMemberMcpLaunchConfigServiceHostOptions
+): TeamProvisioningMemberMcpLaunchConfigProvisioner<TRun> {
+  return new TeamProvisioningMemberMcpLaunchConfigProvisioner({
+    mcpConfigBuilder: service.mcpConfigBuilder,
+    ensureCwdExists: (cwd) => options.ensureCwdExists(cwd),
+    resolveControlApiBaseUrl: () => service.providerRuntime.resolveControlApiBaseUrl(),
+    getAliveRun: (teamName) => {
+      const runId = service.runTracking.getAliveRunId(teamName);
+      return runId ? service.runs.get(runId) : undefined;
+    },
+  });
+}
+
 export class TeamProvisioningMemberMcpLaunchConfigProvisioner<
   TRun extends TeamProvisioningMemberMcpRun,
 > {

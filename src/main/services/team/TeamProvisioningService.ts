@@ -260,7 +260,11 @@ import { createTeamProvisioningMemberLifecycleHostFromPortGroups } from './provi
 import { createTeamProvisioningMemberLifecycleOperationRunner } from './provisioning/TeamProvisioningMemberLifecycleOperationRunner';
 import { createTeamProvisioningMemberLifecycleOperationUseCases } from './provisioning/TeamProvisioningMemberLifecycleOperationUseCases';
 import { createTeamProvisioningMemberLifecycleServiceUseCases } from './provisioning/TeamProvisioningMemberLifecycleServiceUseCases';
-import { TeamProvisioningMemberMcpLaunchConfigProvisioner } from './provisioning/TeamProvisioningMemberMcpLaunchConfig';
+import {
+  createTeamProvisioningMemberMcpLaunchConfigProvisionerFromService,
+  TeamProvisioningMemberMcpLaunchConfigProvisioner,
+  type TeamProvisioningMemberMcpLaunchConfigServiceHost,
+} from './provisioning/TeamProvisioningMemberMcpLaunchConfig';
 import {
   refreshMemberSpawnStatusesFromLeadInbox as refreshMemberSpawnStatusesFromLeadInboxHelper,
   resolveExpectedLaunchMemberName as resolveExpectedLaunchMemberNameHelper,
@@ -1723,15 +1727,11 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
         warn: (message) => logger.warn(message),
       }
     );
-    this.memberMcpLaunchConfigProvisioner = new TeamProvisioningMemberMcpLaunchConfigProvisioner({
-      mcpConfigBuilder: this.mcpConfigBuilder,
-      ensureCwdExists,
-      resolveControlApiBaseUrl: () => this.providerRuntime.resolveControlApiBaseUrl(),
-      getAliveRun: (teamName) => {
-        const runId = this.runTracking.getAliveRunId(teamName);
-        return runId ? this.runs.get(runId) : undefined;
-      },
-    });
+    this.memberMcpLaunchConfigProvisioner =
+      createTeamProvisioningMemberMcpLaunchConfigProvisionerFromService(
+        this as unknown as TeamProvisioningMemberMcpLaunchConfigServiceHost<ProvisioningRun>,
+        { ensureCwdExists }
+      );
     this.openCodeVisibleReplyProofService = new OpenCodeVisibleReplyProofService({
       inboxReader: this.inboxReader,
       inboxWriter: this.inboxWriter,
