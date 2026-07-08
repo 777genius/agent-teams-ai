@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { appendFile, mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import { hostname } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,7 +30,6 @@ import {
   ProjectAdmissionWorkerRole,
   RunObservationService,
   InterruptAndContinueWorkerUseCase,
-  ProjectControlBroker,
   RunEventProviderKind,
   buildControlledAgentLaunchPlan,
   buildControlledAgentLiveControllerState,
@@ -48,8 +47,7 @@ import {
   type RunEventReadResult,
   type RunObservationSnapshot,
   type ProjectAccessScope,
-  type ProjectControlBrokerEvent,
-  type ProjectControlBrokerPorts,
+  type ProjectControlBroker,
   type ProjectControlOperationResult,
   type RunReconcilePreviewDecision,
   type ActiveAttemptRegistry,
@@ -93,7 +91,6 @@ import {
   reconcileCodexGoalRuntimeResult,
   resolveCodexGoalWorkerLiveness,
   startCodexGoalTmux,
-  stopCodexGoalDirectProcess,
   stopCodexGoalTmux,
   tailCodexGoalLog,
   type CodexGoalLaunchInput,
@@ -191,7 +188,6 @@ import {
 } from "./codex-goal-mcp-accounts";
 import {
   writeCodexGoalMaintenancePauseEvent,
-  writeCodexGoalReviewMarker,
   writeCodexGoalStopEvent,
   writeCodexGoalStoppedProgress,
 } from "./codex-goal-mcp-lifecycle-markers";
@@ -268,6 +264,15 @@ import {
   codexGoalStatusInputFromLaunch as statusInput,
 } from "./codex-goal-mcp-status-input";
 import {
+  createCodexProjectControlBroker,
+  noopOperationResult,
+  projectControlAuditPath,
+  type CodexGoalProjectCreateWorktreeInput,
+  type CodexGoalProjectIntegrateCommitInput,
+  type CodexGoalProjectPushBranchInput,
+  type CodexProjectControlBrokerInput,
+} from "./codex-goal-mcp-project-broker";
+import {
   goalControlModesFromRecord,
   goalLaunchInput,
 } from "./codex-goal-mcp-launch-input";
@@ -284,7 +289,6 @@ import {
   truncateText,
 } from "./codex-goal-mcp-decision";
 import {
-  assertGitCurrentBranch,
   assertSafeGitCommitSha,
   assertSafeGitRefName,
   assertSafeGitRemoteName,
@@ -2580,286 +2584,13 @@ function assertProjectControlRepairAccountsAllowed(input: {
   }
 }
 
-type CodexGoalProjectCreateWorktreeInput = {
-  readonly sourceWorkspacePath: string;
-  readonly realSourceWorkspacePath?: string;
-  readonly path: string;
-  readonly baseBranch?: string;
-  readonly sourceRef?: string;
-  readonly newBranch?: string;
-  readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
-  readonly tags?: readonly string[];
-};
-
-type CodexGoalProjectIntegrateCommitInput = {
-  readonly workspacePath: string;
-  readonly realWorkspacePath?: string;
-  readonly branch: string;
-  readonly commitSha: string;
-};
-
-type CodexGoalProjectPushBranchInput = {
-  readonly workspacePath: string;
-  readonly realWorkspacePath?: string;
-  readonly branch: string;
-  readonly remote: string;
-  readonly force: boolean;
-};
-
-function codexProjectControlBroker(input: {
-  readonly registryRootDir: string;
-  readonly controller: CodexGoalJobManifest;
-  readonly scope: ProjectAccessScope;
-  readonly createManifest?: CodexGoalJobManifestInput;
-  readonly createOverwrite?: boolean;
-  readonly createWorktreeInput?: CodexGoalProjectCreateWorktreeInput;
-  readonly integrateCommitInput?: CodexGoalProjectIntegrateCommitInput;
-  readonly pushBranchInput?: CodexGoalProjectPushBranchInput;
-  readonly startLaunch?: CodexGoalLaunchInput;
-  readonly startSkipDoctor?: boolean;
-  readonly stopLaunch?: CodexGoalLaunchInput;
-  readonly reviewLaunch?: CodexGoalLaunchInput;
-  readonly reviewNote?: string;
-}): ProjectControlBroker {
-  return new ProjectControlBroker({
-    boundary: AccessBoundary.ProjectScopedControl,
-    scope: input.scope,
-  }, {
-    ...codexProjectControlPorts(input),
-    admission: codexProjectAdmissionGate({
-      registryRootDir: input.registryRootDir,
-      scope: input.scope,
-      deps: codexProjectAdmissionDeps,
-    }),
+function codexProjectControlBroker(
+  input: Omit<CodexProjectControlBrokerInput, "admissionDeps">,
+): ProjectControlBroker {
+  return createCodexProjectControlBroker({
+    ...input,
+    admissionDeps: codexProjectAdmissionDeps,
   });
-}
-
-function codexProjectControlPorts(input: {
-  readonly registryRootDir: string;
-  readonly controller: CodexGoalJobManifest;
-  readonly createManifest?: CodexGoalJobManifestInput;
-  readonly createOverwrite?: boolean;
-  readonly createWorktreeInput?: CodexGoalProjectCreateWorktreeInput;
-  readonly integrateCommitInput?: CodexGoalProjectIntegrateCommitInput;
-  readonly pushBranchInput?: CodexGoalProjectPushBranchInput;
-  readonly startLaunch?: CodexGoalLaunchInput;
-  readonly startSkipDoctor?: boolean;
-  readonly stopLaunch?: CodexGoalLaunchInput;
-  readonly reviewLaunch?: CodexGoalLaunchInput;
-  readonly reviewNote?: string;
-}): ProjectControlBrokerPorts {
-  return {
-    audit: {
-      async record(event) {
-        await appendProjectControlAuditEvent(input.controller, event);
-      },
-    },
-    registry: {
-      async createJob() {
-        if (!input.createManifest) {
-          throw new Error("project_control_create_manifest_required");
-        }
-        const created = await createCodexGoalJob({
-          registryRootDir: input.registryRootDir,
-          manifest: input.createManifest,
-          overwrite: input.createOverwrite ?? false,
-        });
-        return operationResult(created.jobId);
-      },
-      async writeReviewMarker(marker) {
-        if (!input.reviewLaunch) {
-          throw new Error("project_control_review_launch_required");
-        }
-        const status = await collectCodexGoalStatus(statusInput(input.reviewLaunch));
-        const reviewPath = await writeCodexGoalReviewMarker({
-          jobId: marker.jobId,
-          taskId: input.reviewLaunch.config.taskId,
-          jobRootDir: input.reviewLaunch.config.jobRootDir,
-          note: input.reviewNote ?? marker.note ?? "project_control_reviewed",
-          status,
-        });
-        return operationResult(reviewPath);
-      },
-    },
-    supervisor: {
-      async startWorker() {
-        if (!input.startLaunch) {
-          throw new Error("project_control_start_launch_required");
-        }
-        await prepareCodexGoalLaunchPaths(input.startLaunch);
-        if (!input.startSkipDoctor) {
-          const doctor = await doctorCodexGoal({
-            config: input.startLaunch.config,
-            ...(input.startLaunch.tmuxSession
-              ? { tmuxSession: input.startLaunch.tmuxSession }
-              : {}),
-          });
-          if (!doctor.ok) {
-            throw new Error(`project_control_doctor_failed:${JSON.stringify(doctor)}`);
-          }
-        }
-        const previousBrokeredStart =
-          process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START;
-        process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START = "1";
-        let command: Awaited<ReturnType<typeof startCodexGoalTmux>>;
-        try {
-          command = await startCodexGoalTmux(input.startLaunch);
-        } finally {
-          if (previousBrokeredStart === undefined) {
-            delete process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START;
-          } else {
-            process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START = previousBrokeredStart;
-          }
-        }
-        return operationResult(command.preview);
-      },
-      async stopWorker() {
-        if (!input.stopLaunch) {
-          throw new Error("project_control_stop_launch_required");
-        }
-        const status = await collectCodexGoalStatus(statusInput(input.stopLaunch));
-        if (input.stopLaunch.tmuxSession) {
-          if (status.tmuxAlive === false) {
-            return noopOperationResult(
-              buildCodexGoalStopTmuxCommand(input.stopLaunch.tmuxSession).preview,
-              "Worker tmux session is already gone.",
-            );
-          }
-          try {
-            const command = await stopCodexGoalTmux(input.stopLaunch.tmuxSession);
-            return operationResult(command.preview);
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            if (/can't find session|no server running/i.test(message)) {
-              return noopOperationResult(
-                buildCodexGoalStopTmuxCommand(input.stopLaunch.tmuxSession).preview,
-                "Worker tmux session is already gone.",
-              );
-            }
-            throw error;
-          }
-        }
-        const command = stopCodexGoalDirectProcess(status);
-        if (command.status === "terminated") {
-          return operationResult(command.preview);
-        }
-        if (command.status === "process_gone" || command.status === "pid_missing") {
-          return noopOperationResult(
-            command.preview,
-            command.status === "process_gone"
-              ? "Worker process is already gone."
-              : "Worker has no direct process pid to stop.",
-          );
-        }
-        throw new Error("project_control_stop_untrusted_process");
-      },
-    },
-    workspace: {
-      async createWorktree() {
-        if (!input.createWorktreeInput) {
-          throw new Error("project_control_worktree_input_required");
-        }
-        await mkdir(dirname(input.createWorktreeInput.path), {
-          recursive: true,
-          mode: 0o700,
-        });
-        const sourceRef =
-          input.createWorktreeInput.sourceRef ?? input.createWorktreeInput.baseBranch;
-        const args = [
-          "-C",
-          input.createWorktreeInput.sourceWorkspacePath,
-          "worktree",
-          "add",
-          ...(input.createWorktreeInput.newBranch
-            ? ["-b", input.createWorktreeInput.newBranch]
-            : []),
-          input.createWorktreeInput.path,
-          ...(sourceRef ? [sourceRef] : []),
-        ];
-        await execGit(args);
-        return operationResult(input.createWorktreeInput.path);
-      },
-    },
-    git: {
-      async integrateCommit() {
-        if (!input.integrateCommitInput) {
-          throw new Error("project_control_integrate_commit_input_required");
-        }
-        await assertGitCurrentBranch({
-          workspacePath: input.integrateCommitInput.workspacePath,
-          branch: input.integrateCommitInput.branch,
-        });
-        await execGit([
-          "-C",
-          input.integrateCommitInput.workspacePath,
-          "cherry-pick",
-          "--ff",
-          input.integrateCommitInput.commitSha,
-        ]);
-        return operationResult(input.integrateCommitInput.commitSha);
-      },
-      async pushBranch() {
-        if (!input.pushBranchInput) {
-          throw new Error("project_control_push_branch_input_required");
-        }
-        await assertGitCurrentBranch({
-          workspacePath: input.pushBranchInput.workspacePath,
-          branch: input.pushBranchInput.branch,
-        });
-        await execGit([
-          "-C",
-          input.pushBranchInput.workspacePath,
-          "push",
-          ...(input.pushBranchInput.force ? ["--force-with-lease"] : []),
-          input.pushBranchInput.remote,
-          input.pushBranchInput.branch,
-        ]);
-        return operationResult(
-          `${input.pushBranchInput.remote}/${input.pushBranchInput.branch}`,
-        );
-      },
-    },
-  };
-}
-
-async function appendProjectControlAuditEvent(
-  controller: CodexGoalJobManifest,
-  event: ProjectControlBrokerEvent,
-): Promise<void> {
-  const auditPath = join(
-    controller.jobRootDir,
-    `${controller.taskId}.project-control-events.jsonl`,
-  );
-  await mkdir(dirname(auditPath), { recursive: true, mode: 0o700 });
-  await appendFile(auditPath, `${JSON.stringify(event)}\n`, {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-}
-
-function projectControlAuditPath(controller: CodexGoalJobManifest): string {
-  return join(
-    controller.jobRootDir,
-    `${controller.taskId}.project-control-events.jsonl`,
-  );
-}
-
-function operationResult(resourceId: string): ProjectControlOperationResult {
-  return {
-    status: "applied",
-    resourceId,
-  };
-}
-
-function noopOperationResult(
-  resourceId: string,
-  safeMessage: string,
-): ProjectControlOperationResult {
-  return {
-    status: "noop",
-    resourceId,
-    safeMessage,
-  };
 }
 
 async function pathExists(path: string): Promise<boolean> {
