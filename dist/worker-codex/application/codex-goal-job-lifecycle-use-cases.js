@@ -1,7 +1,7 @@
 import { buildCodexGoalNoTmuxCommand, buildCodexGoalStopTmuxCommand, buildCodexGoalTmuxCommand, collectCodexGoalStatus, doctorCodexGoal, listCodexGoalAccountStatuses, prepareCodexGoalLaunchPaths, reconcileCodexGoalRuntimeResult, resolveCodexGoalWorkerLiveness, startCodexGoalTmux, stopCodexGoalTmux, } from "../codex-goal-ops.js";
 import { codexGoalProgressPath } from "../codex-goal-runner.js";
 import { buildCodexGoalBrief } from "../codex-goal-mcp-brief.js";
-import { isSafeStartAction, nextActionForStatus, } from "../codex-goal-mcp-decision.js";
+import { isSafeStartAction, nextActionForStatus, } from "./codex-goal-decision.js";
 import { writeCodexGoalMaintenancePauseEvent, writeCodexGoalStopEvent, writeCodexGoalStoppedProgress, } from "../codex-goal-mcp-lifecycle-markers.js";
 import { codexGoalStateRootDir } from "../codex-goal-mcp-worker-control.js";
 import { codexGoalStatusInputFromLaunch as statusInput } from "./codex-goal-status-input.js";

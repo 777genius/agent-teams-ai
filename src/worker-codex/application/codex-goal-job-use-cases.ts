@@ -75,7 +75,7 @@ import {
   buildCodexGoalHandoff,
   isSafeStartAction,
   nextActionForStatus,
-} from "../codex-goal-mcp-decision";
+} from "./codex-goal-decision";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 

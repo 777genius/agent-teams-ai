@@ -14,7 +14,7 @@ import { buildCodexGoalOverviewView, reconcilePreviewCodexGoalJobsView, } from "
 import { buildCodexGoalBrief, } from "../codex-goal-mcp-brief.js";
 import { codexGoalStateRootDir, } from "../codex-goal-mcp-worker-control.js";
 import { optionalTargetCommit, targetCommitFromArgs, } from "../codex-goal-mcp-target-commit.js";
-import { buildCodexGoalDecision, buildCodexGoalHandoff, isSafeStartAction, nextActionForStatus, } from "../codex-goal-mcp-decision.js";
+import { buildCodexGoalDecision, buildCodexGoalHandoff, isSafeStartAction, nextActionForStatus, } from "./codex-goal-decision.js";
 export async function listCodexGoalJobsUseCase(args) {
     const registryRootDir = registryRootFromInput(args);
     const jobs = await listCodexGoalJobs({ registryRootDir });

@@ -18,7 +18,7 @@ import { buildCodexGoalBrief } from "../codex-goal-mcp-brief";
 import {
   isSafeStartAction,
   nextActionForStatus,
-} from "../codex-goal-mcp-decision";
+} from "./codex-goal-decision";
 import {
   type CodexGoalJobIdInput,
   type CodexGoalJobLifecycleInput,
