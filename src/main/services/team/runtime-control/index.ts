@@ -21,8 +21,14 @@ export {
   RuntimeControlProviderRegistry,
   RuntimeControlProviderRoutingError,
 } from './application/RuntimeControlProviderRegistry';
-export type { TeamRuntimeControlCompatibilityApiPorts } from './application/TeamRuntimeControlCompatibility';
-export { createTeamRuntimeControlCompatibilityApi } from './application/TeamRuntimeControlCompatibility';
+export type {
+  TeamRuntimeControlCompatibilityApiPorts,
+  TeamRuntimeControlCompatibilityServiceHost,
+} from './application/TeamRuntimeControlCompatibility';
+export {
+  createTeamRuntimeControlCompatibilityApi,
+  createTeamRuntimeControlCompatibilityApiFromService,
+} from './application/TeamRuntimeControlCompatibility';
 export type {
   OpenCodeRuntimeControlAck,
   RuntimeControlAck,

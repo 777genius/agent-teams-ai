@@ -637,7 +637,10 @@ import { peekAutoResumeService } from './AutoResumeService';
 import { ClaudeBinaryResolver } from './ClaudeBinaryResolver';
 import { getConfiguredCliCommandLabel } from './cliFlavor';
 import { boundLaunchDiagnostics } from './progressPayload';
-import { createTeamRuntimeControlCompatibilityApi } from './runtime-control';
+import {
+  createTeamRuntimeControlCompatibilityApiFromService,
+  type TeamRuntimeControlCompatibilityServiceHost,
+} from './runtime-control';
 import { TeamAttachmentStore } from './TeamAttachmentStore';
 import {
   clearBootstrapState,
@@ -1341,19 +1344,9 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       )
     );
   private readonly openCodeRuntimeDeliveryBoundaryHost: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<ProvisioningRun>;
-  private readonly openCodeRuntimeControlApi = createTeamRuntimeControlCompatibilityApi({
-    openCode: {
-      recordOpenCodeRuntimeBootstrapCheckin: (raw) =>
-        this.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeBootstrapCheckin(raw),
-      deliverOpenCodeRuntimeMessage: (raw) =>
-        this.createOpenCodeRuntimeDeliveryBoundary().deliverOpenCodeRuntimeMessage(raw),
-      recordOpenCodeRuntimeTaskEvent: (raw) =>
-        this.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeTaskEvent(raw),
-      recordOpenCodeRuntimeHeartbeat: (raw) =>
-        this.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeHeartbeat(raw),
-    },
-    resolveOpenCodeRuntimeLaneId: (input) => this.resolveOpenCodeRuntimeLaneId(input),
-  });
+  private readonly openCodeRuntimeControlApi = createTeamRuntimeControlCompatibilityApiFromService(
+    this as unknown as TeamRuntimeControlCompatibilityServiceHost
+  );
 
   private createMemberLifecycleHostPortGroups(): TeamProvisioningServiceMemberLifecycleHostPortGroups {
     return createTeamProvisioningServiceMemberLifecycleHostPortGroups(

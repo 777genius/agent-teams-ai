@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createTeamRuntimeControlCompatibilityApi } from '../index';
+import {
+  createTeamRuntimeControlCompatibilityApi,
+  createTeamRuntimeControlCompatibilityApiFromService,
+} from '../index';
 
 import type {
   OpenCodeRuntimeControlAck,
@@ -237,6 +240,41 @@ describe('TeamRuntimeControlCompatibility', () => {
       laneId: 'lane-1',
       memberName: 'Builder',
       runtimeSessionId: 'session-1',
+    });
+  });
+
+  it('builds the compatibility API from a service-shaped host', async () => {
+    const ack = createOpenCodeAck('accepted');
+    const openCode = createOpenCodePort(ack);
+    const resolveOpenCodeRuntimeLaneId = vi.fn(async () => 'lane-1');
+    const service = {
+      createOpenCodeRuntimeDeliveryBoundary: vi.fn(() => openCode),
+      resolveOpenCodeRuntimeLaneId,
+    };
+    const api = createTeamRuntimeControlCompatibilityApiFromService(service);
+
+    await expect(
+      api.recordOpenCodeRuntimeHeartbeat({
+        teamName: 'Team',
+        runId: 'run-1',
+        memberName: 'Builder',
+        runtimeSessionId: 'session-1',
+        observedAt: OBSERVED_AT,
+      })
+    ).resolves.toBe(ack);
+
+    expect(service.createOpenCodeRuntimeDeliveryBoundary).toHaveBeenCalledTimes(1);
+    expect(openCode.recordOpenCodeRuntimeHeartbeat).toHaveBeenCalledWith({
+      teamName: 'Team',
+      runId: 'run-1',
+      memberName: 'Builder',
+      runtimeSessionId: 'session-1',
+      observedAt: OBSERVED_AT,
+    });
+    expect(resolveOpenCodeRuntimeLaneId).toHaveBeenCalledWith({
+      teamName: 'Team',
+      runId: 'run-1',
+      memberName: 'Builder',
     });
   });
 });

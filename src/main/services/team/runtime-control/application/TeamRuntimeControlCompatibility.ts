@@ -26,3 +26,26 @@ export function createTeamRuntimeControlCompatibilityApi(
     resolveOpenCodeRuntimeLaneId: ports.resolveOpenCodeRuntimeLaneId,
   });
 }
+
+export interface TeamRuntimeControlCompatibilityServiceHost {
+  createOpenCodeRuntimeDeliveryBoundary(): OpenCodeRuntimeControlPort;
+  resolveOpenCodeRuntimeLaneId: TeamRuntimeControlCompatibilityApiPorts['resolveOpenCodeRuntimeLaneId'];
+}
+
+export function createTeamRuntimeControlCompatibilityApiFromService(
+  service: TeamRuntimeControlCompatibilityServiceHost
+): OpenCodeRuntimeControlApi {
+  return createTeamRuntimeControlCompatibilityApi({
+    openCode: {
+      recordOpenCodeRuntimeBootstrapCheckin: (raw) =>
+        service.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeBootstrapCheckin(raw),
+      deliverOpenCodeRuntimeMessage: (raw) =>
+        service.createOpenCodeRuntimeDeliveryBoundary().deliverOpenCodeRuntimeMessage(raw),
+      recordOpenCodeRuntimeTaskEvent: (raw) =>
+        service.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeTaskEvent(raw),
+      recordOpenCodeRuntimeHeartbeat: (raw) =>
+        service.createOpenCodeRuntimeDeliveryBoundary().recordOpenCodeRuntimeHeartbeat(raw),
+    },
+    resolveOpenCodeRuntimeLaneId: (input) => service.resolveOpenCodeRuntimeLaneId(input),
+  });
+}
