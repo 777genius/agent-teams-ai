@@ -70,7 +70,7 @@ https://github.com/user-attachments/assets/35e27989-726d-4059-8662-bae610e46b42
 
 ## Installation
 
-No prerequisites - the app can detect supported runtimes/providers and guide setup from the UI.
+No prerequisites - the app can detect and use installed claude/codex/opencode and you can configure from the UI.
 
 <table align="center">
 <tr>
@@ -394,7 +394,7 @@ local packaging.
 
 ---
 
-## Roadmap
+## Ideas
 
 - [ ] Planning mode to organize agent plans before execution
 - [ ] Visual workflow editor ([@xyflow/react](https://github.com/xyflow/xyflow)) for building and orchestrating agent pipelines with drag & drop
@@ -407,11 +407,12 @@ local packaging.
 - [ ] `createTasksBatch` — IPC/service API to create many team tasks in one call (playbooks, markdown checklist import, scripts); complements single `createTask`
 - [ ] Command palette — extend Cmd/Ctrl+K beyond project/session search to runnable actions (quick commands, navigation shortcuts, team/task operations) in a keyboard-first flow
 - [ ] Custom kanban columns
-- [ ] Run terminal commands
+- [x] Run terminal commands
 - [x] Monitor agents processes/stats
 - [ ] Reusable agents with SOUL.md
 - [ ] Сommunicate via messenger
 - [ ] SDK to programmatically launch agents
+...
 
 ---
 
