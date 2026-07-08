@@ -10,15 +10,12 @@ import {
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import {
-  AccessBoundary,
   NetworkAccessMode,
   ProjectAdmissionWorkerRole,
   InterruptAndContinueWorkerUseCase,
   RunEventProviderKind,
   evaluateProjectAdmission,
   ProjectOperation,
-  type ProjectAccessScope,
-  type ProjectControlBroker,
   type ProjectControlOperationResult,
   type ActiveAttemptRegistry,
   type WorkerControlActor,
@@ -35,7 +32,6 @@ import {
   resolveCodexGoalJobRegistryRoot,
   summarizeCodexGoalJob,
   updateCodexGoalJob,
-  type CodexGoalJobManifest,
   type CodexGoalJobManifestInput,
   type CodexGoalJobManifestPatch,
 } from "./codex-goal-jobs";
@@ -61,7 +57,6 @@ import {
   startCodexGoalTmux,
   stopCodexGoalTmux,
   tailCodexGoalLog,
-  type CodexGoalLaunchInput,
 } from "./codex-goal-ops";
 import {
   optionalCodexGoalAccessBoundary,
@@ -162,7 +157,6 @@ import {
   projectAdmissionDetailView,
   projectAdmissionOperation,
   projectAdmissionWorkerRoleArg,
-  type CodexProjectAdmissionDeps,
 } from "./codex-goal-mcp-project-admission";
 import {
   jobIdsFromValue,
@@ -210,19 +204,22 @@ import {
   buildCodexGoalOverviewView,
   reconcilePreviewCodexGoalJobsView,
 } from "./codex-goal-mcp-overview";
-import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item";
 import {
   codexGoalStatusInputFromLaunch as statusInput,
 } from "./codex-goal-mcp-status-input";
 import {
-  createCodexProjectControlBroker,
   noopOperationResult,
   projectControlAuditPath,
   type CodexGoalProjectCreateWorktreeInput,
   type CodexGoalProjectIntegrateCommitInput,
   type CodexGoalProjectPushBranchInput,
-  type CodexProjectControlBrokerInput,
 } from "./codex-goal-mcp-project-broker";
+import {
+  codexProjectAdmissionDeps,
+  codexProjectControlBroker,
+  loadJobLaunch,
+  loadProjectControlController,
+} from "./codex-goal-mcp-project-control-deps";
 import {
   assertReadablePrompt,
   createOrReuseProjectJob,
@@ -2310,52 +2307,6 @@ export function createCodexGoalMcpServer(
   return server;
 }
 
-async function loadJobLaunch(args: JobIdMcpArgs): Promise<{
-  readonly registryRootDir: string;
-  readonly manifest: Awaited<ReturnType<typeof readCodexGoalJob>>;
-  readonly launch: CodexGoalLaunchInput;
-}> {
-  const registryRootDir = registryRootFromArgs(args);
-  const manifest = await readCodexGoalJob({
-    registryRootDir,
-    jobId: requiredRawString(args.jobId, "jobId"),
-  });
-  return {
-    registryRootDir,
-    manifest,
-    launch: await goalLaunchInput(codexGoalJobToArgs(manifest)),
-  };
-}
-
-async function loadProjectControlController(args: ProjectControlMcpArgs): Promise<{
-  readonly registryRootDir: string;
-  readonly controller: CodexGoalJobManifest;
-  readonly scope: ProjectAccessScope;
-}> {
-  const registryRootDir = registryRootFromArgs(args);
-  const controller = await readCodexGoalJob({
-    registryRootDir,
-    jobId: requiredRawString(args.controllerJobId, "controllerJobId"),
-  });
-  if (controller.accessBoundary !== AccessBoundary.ProjectScopedControl) {
-    throw new Error("project_control_controller_boundary_required");
-  }
-  if (!controller.projectAccessScope) {
-    throw new Error("project_control_controller_scope_required");
-  }
-  return {
-    registryRootDir,
-    controller,
-    scope: controller.projectAccessScope,
-  };
-}
-
-const codexProjectAdmissionDeps: CodexProjectAdmissionDeps = {
-  listJobs: listCodexGoalJobs,
-  buildOverviewItem: (input) =>
-    buildCodexGoalOverviewItem(input),
-};
-
 function projectControlAdminDeps() {
   return {
     loadProjectControlController,
@@ -2377,15 +2328,6 @@ async function projectControlRepairJobManifest(
   args: ProjectControlMcpArgs & JobUpdateMcpArgs,
 ) {
   return mcpJson(await projectControlRepairJobManifestView(args, projectControlAdminDeps()));
-}
-
-function codexProjectControlBroker(
-  input: Omit<CodexProjectControlBrokerInput, "admissionDeps">,
-): ProjectControlBroker {
-  return createCodexProjectControlBroker({
-    ...input,
-    admissionDeps: codexProjectAdmissionDeps,
-  });
 }
 
 function projectControllerDeps() {
