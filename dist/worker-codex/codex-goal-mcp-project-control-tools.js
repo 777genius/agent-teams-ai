@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { ProjectAdmissionWorkerRole, ProjectOperation, RunEventProviderKind, } from "@vioxen/subscription-runtime/worker-core";
 import { registerProjectIntegrationMcpTools, } from "./project-integration-mcp/index.js";
 import { createLocalProjectIntegrationMcpToolHandlers, } from "./project-integration-mcp/adapters/local-project-integration-mcp-tool-handlers.js";
 import { jobIdInputSchema, jobRegistryInputSchema, } from "./codex-goal-mcp-inputs.js";
@@ -13,6 +12,28 @@ import { codexProjectAdmissionDeps, codexProjectControlBroker, loadJobLaunch, lo
 import { projectControlPathArg, } from "./codex-goal-mcp-project-scope.js";
 import { projectIntegrationPushApprovedCommitWithConsumedLedger, } from "./codex-goal-mcp-project-integration-ledger.js";
 const serverVersion = process.env.npm_package_version ?? "0.0.0";
+const projectAdmissionWorkerRoleSchemaValues = [
+    "producer",
+    "fastgate",
+    "reviewer",
+    "integration",
+    "adoption",
+    "read_only",
+];
+const projectAdmissionRefillWorkerRoleSchemaValues = [
+    "producer",
+    "fastgate",
+    "reviewer",
+];
+const projectAdmissionOperationSchemaValues = [
+    "create_job",
+    "start_worker",
+    "create_worktree",
+];
+const controllerProviderKindSchemaValues = [
+    "codex",
+    "claude",
+];
 export function registerCodexGoalProjectControlTools(server) {
     server.registerTool("codex_goal_project_create_job", {
         title: "Project Control Create Codex Goal Job",
@@ -23,14 +44,7 @@ export function registerCodexGoalProjectControlTools(server) {
             controllerJobId: z.string().optional(),
             description: z.string().optional(),
             tags: z.union([z.string(), z.array(z.string())]).optional(),
-            workerRole: z.enum([
-                ProjectAdmissionWorkerRole.Producer,
-                ProjectAdmissionWorkerRole.Fastgate,
-                ProjectAdmissionWorkerRole.Reviewer,
-                ProjectAdmissionWorkerRole.Integration,
-                ProjectAdmissionWorkerRole.Adoption,
-                ProjectAdmissionWorkerRole.ReadOnly,
-            ]).optional(),
+            workerRole: z.enum(projectAdmissionWorkerRoleSchemaValues).optional(),
             overwrite: z.boolean().optional(),
             confirmCreate: z.boolean().optional(),
         },
@@ -45,7 +59,7 @@ export function registerCodexGoalProjectControlTools(server) {
             sourceWorkspacePath: z.string().optional(),
             baseBranch: z.string().optional(),
             promptBody: z.string().optional(),
-            workerRole: z.enum(["producer", "fastgate", "reviewer"]).optional(),
+            workerRole: z.enum(projectAdmissionRefillWorkerRoleSchemaValues).optional(),
             description: z.string().optional(),
             tags: z.union([z.string(), z.array(z.string())]).optional(),
             overwrite: z.boolean().optional(),
@@ -73,19 +87,8 @@ export function registerCodexGoalProjectControlTools(server) {
         inputSchema: {
             ...jobRegistryInputSchema(),
             controllerJobId: z.string().optional(),
-            operation: z.enum([
-                ProjectOperation.CreateJob,
-                ProjectOperation.StartWorker,
-                ProjectOperation.CreateWorktree,
-            ]).optional(),
-            workerRole: z.enum([
-                ProjectAdmissionWorkerRole.Producer,
-                ProjectAdmissionWorkerRole.Fastgate,
-                ProjectAdmissionWorkerRole.Reviewer,
-                ProjectAdmissionWorkerRole.Integration,
-                ProjectAdmissionWorkerRole.Adoption,
-                ProjectAdmissionWorkerRole.ReadOnly,
-            ]).optional(),
+            operation: z.enum(projectAdmissionOperationSchemaValues).optional(),
+            workerRole: z.enum(projectAdmissionWorkerRoleSchemaValues).optional(),
             includeDetails: z.boolean().optional(),
             maxDebtItems: z.number().int().min(0).optional(),
         },
@@ -118,7 +121,7 @@ export function registerCodexGoalProjectControlTools(server) {
         inputSchema: {
             ...jobRegistryInputSchema(),
             controllerJobId: z.string().optional(),
-            providerKind: z.enum([RunEventProviderKind.Codex, RunEventProviderKind.Claude]).optional(),
+            providerKind: z.enum(controllerProviderKindSchemaValues).optional(),
             stateDir: z.string().optional(),
             sessionArtifactPath: z.string().optional(),
             claudePath: z.string().optional(),
@@ -139,7 +142,7 @@ export function registerCodexGoalProjectControlTools(server) {
         inputSchema: {
             ...jobRegistryInputSchema(),
             controllerJobId: z.string().optional(),
-            providerKind: z.enum([RunEventProviderKind.Codex, RunEventProviderKind.Claude]).optional(),
+            providerKind: z.enum(controllerProviderKindSchemaValues).optional(),
             stateDir: z.string().optional(),
             sessionArtifactPath: z.string().optional(),
             claudePath: z.string().optional(),
@@ -160,7 +163,7 @@ export function registerCodexGoalProjectControlTools(server) {
         inputSchema: {
             ...jobRegistryInputSchema(),
             controllerJobId: z.string().optional(),
-            providerKind: z.enum([RunEventProviderKind.Codex, RunEventProviderKind.Claude]).optional(),
+            providerKind: z.enum(controllerProviderKindSchemaValues).optional(),
             stateDir: z.string().optional(),
         },
     }, async (args) => withMcpErrors(async () => projectControllerStatus(args)));
@@ -179,7 +182,7 @@ export function registerCodexGoalProjectControlTools(server) {
         inputSchema: {
             ...jobRegistryInputSchema(),
             controllerJobId: z.string().optional(),
-            providerKind: z.enum([RunEventProviderKind.Codex, RunEventProviderKind.Claude]).optional(),
+            providerKind: z.enum(controllerProviderKindSchemaValues).optional(),
             stateDir: z.string().optional(),
             reason: z.string().optional(),
         },
@@ -190,7 +193,7 @@ export function registerCodexGoalProjectControlTools(server) {
         inputSchema: {
             ...jobRegistryInputSchema(),
             controllerJobId: z.string().optional(),
-            providerKind: z.enum([RunEventProviderKind.Codex, RunEventProviderKind.Claude]).optional(),
+            providerKind: z.enum(controllerProviderKindSchemaValues).optional(),
             stateDir: z.string().optional(),
         },
     }, async (args) => withMcpErrors(async () => projectControllerReconcile(args)));
@@ -219,14 +222,7 @@ export function registerCodexGoalProjectControlTools(server) {
             baseBranch: z.string().optional(),
             sourceRef: z.string().optional(),
             newBranch: z.string().optional(),
-            workerRole: z.enum([
-                ProjectAdmissionWorkerRole.Producer,
-                ProjectAdmissionWorkerRole.Fastgate,
-                ProjectAdmissionWorkerRole.Reviewer,
-                ProjectAdmissionWorkerRole.Integration,
-                ProjectAdmissionWorkerRole.Adoption,
-                ProjectAdmissionWorkerRole.ReadOnly,
-            ]).optional(),
+            workerRole: z.enum(projectAdmissionWorkerRoleSchemaValues).optional(),
             dependencyBootstrap: z.enum(["off", "preflight", "install"]).optional(),
             confirmDependencyBootstrap: z.boolean().optional(),
             confirmCreateWorktree: z.boolean().optional(),

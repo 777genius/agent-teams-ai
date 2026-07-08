@@ -39,9 +39,6 @@ const allowedMcpRestrictedImports = {
     "./codex-goal-mcp-decision",
     "./codex-goal-mcp-job-lifecycle",
   ],
-  "src/worker-codex/codex-goal-mcp-project-control-tools.ts": [
-    "@vioxen/subscription-runtime/worker-core",
-  ],
 };
 
 const staticImportPattern =
