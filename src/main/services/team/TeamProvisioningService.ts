@@ -387,7 +387,11 @@ import {
   stopOpenCodeRuntimeLanesForStoppedTeamOnce,
   tryStopPersistedOpenCodeRuntimePidForStoppedLane as tryStopPersistedOpenCodeRuntimePidForStoppedLaneHelper,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeLaneCleanup';
-import { TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade } from './provisioning/TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade';
+import {
+  createTeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeFromService,
+  TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade,
+  type TeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeServiceHost,
+} from './provisioning/TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade';
 import {
   type OpenCodeRuntimePendingPermissionsPersistencePorts,
   type OpenCodeRuntimePermissionSpawnStatusPorts,
@@ -1497,28 +1501,14 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     });
     this.liveRuntimeMetadataPorts = runtimeProjection.liveRuntimeMetadataPorts;
     this.runtimeSnapshotFacade = runtimeProjection.runtimeSnapshotFacade;
-    this.openCodeRuntimeLaneRecoveryFacade = new TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade(
-      {
-        runTracking: this.runTracking,
-        cleanupStoppedTeamOpenCodeRuntimeLanesInBackground: (teamName) =>
-          this.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName),
-        launchStateStore: this.launchStateStore,
-        openCodeRuntimeRecoveryBoundary: this.openCodeRuntimeRecoveryBoundary,
-        readOpenCodeMemberDirectory: (teamName) => this.readOpenCodeMemberDirectory(teamName),
-        resolveOpenCodeMemberIdentityFromDirectory: (teamName, memberName, directory) =>
-          this.resolveOpenCodeMemberIdentityFromDirectory(teamName, memberName, directory),
-        readConfigForObservation: (teamName) =>
-          this.configFacade.readConfigForObservation(teamName),
-        teamMetaStore: this.teamMetaStore,
-        membersMetaStore: this.membersMetaStore,
-        readPersistedTeamProjectPath: (teamName) => this.readPersistedTeamProjectPath(teamName),
-        openCodeRuntimeRecoveryIdentity: this.openCodeRuntimeRecoveryIdentity,
-      },
-      {
-        getTeamsBasePath,
-        logger,
-      }
-    );
+    this.openCodeRuntimeLaneRecoveryFacade =
+      createTeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeFromService(
+        this as unknown as TeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeServiceHost,
+        {
+          getTeamsBasePath,
+          logger,
+        }
+      );
     this.openCodeRuntimeDeliveryBoundaryHost = this.createOpenCodeRuntimeDeliveryBoundaryHost();
     this.launchStateStoreBoundary = createTeamProvisioningLaunchStateStoreBoundaryFromService(
       this as unknown as TeamProvisioningLaunchStateStoreBoundaryServiceHost,

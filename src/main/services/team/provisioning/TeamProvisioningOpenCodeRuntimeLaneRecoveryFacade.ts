@@ -16,6 +16,15 @@ import {
 export type TeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeHost =
   TeamProvisioningOpenCodeRuntimeLaneRecoveryPortsFactoryHost;
 
+export interface TeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeServiceHost extends Omit<
+  TeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeHost,
+  'readConfigForObservation'
+> {
+  configFacade: {
+    readConfigForObservation: TeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeHost['readConfigForObservation'];
+  };
+}
+
 export type OpenCodeRuntimeLaneBeforeDeliveryRecoveryInput = Parameters<
   typeof tryRecoverOpenCodeRuntimeLaneBeforeDeliveryHelper
 >[0];
@@ -121,4 +130,34 @@ export class TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade {
       logger: this.deps.logger,
     });
   }
+}
+
+export function createTeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeHostFromService(
+  service: TeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeServiceHost
+): TeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeHost {
+  return {
+    runTracking: service.runTracking,
+    cleanupStoppedTeamOpenCodeRuntimeLanesInBackground: (teamName) =>
+      service.cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName),
+    launchStateStore: service.launchStateStore,
+    openCodeRuntimeRecoveryBoundary: service.openCodeRuntimeRecoveryBoundary,
+    readOpenCodeMemberDirectory: (teamName) => service.readOpenCodeMemberDirectory(teamName),
+    resolveOpenCodeMemberIdentityFromDirectory: (teamName, memberName, directory) =>
+      service.resolveOpenCodeMemberIdentityFromDirectory(teamName, memberName, directory),
+    readConfigForObservation: (teamName) => service.configFacade.readConfigForObservation(teamName),
+    teamMetaStore: service.teamMetaStore,
+    membersMetaStore: service.membersMetaStore,
+    readPersistedTeamProjectPath: (teamName) => service.readPersistedTeamProjectPath(teamName),
+    openCodeRuntimeRecoveryIdentity: service.openCodeRuntimeRecoveryIdentity,
+  };
+}
+
+export function createTeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeFromService(
+  service: TeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeServiceHost,
+  deps: TeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeDeps = {}
+): TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade {
+  return new TeamProvisioningOpenCodeRuntimeLaneRecoveryFacade(
+    createTeamProvisioningOpenCodeRuntimeLaneRecoveryFacadeHostFromService(service),
+    deps
+  );
 }
