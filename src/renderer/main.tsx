@@ -9,6 +9,7 @@ import { registerDynamicImportRecovery } from './utils/dynamicImportRecovery';
 import { App } from './App';
 import { initSentryRenderer } from './sentry';
 import { initializeNotificationListeners } from './store';
+import { bootstrapRendererTelemetryFromConfig } from './telemetry';
 
 import type { SplashSceneHandle } from './components/splash/splashScene';
 import type { AppStartupStatus, AppStartupStep } from '@shared/types/api';
@@ -25,6 +26,7 @@ declare global {
 
 // Prepare Sentry before React renders. Actual init waits for telemetry config.
 initSentryRenderer();
+void bootstrapRendererTelemetryFromConfig();
 registerDynamicImportRecovery();
 
 let root: ReactDOM.Root | null = null;
