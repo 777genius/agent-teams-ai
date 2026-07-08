@@ -37,14 +37,12 @@ const allowedApplicationMcpImports = {
   "src/worker-codex/application/codex-goal-job-lifecycle-use-cases.ts": [
     "../codex-goal-mcp-brief",
     "../codex-goal-mcp-decision",
-    "../codex-goal-mcp-inputs",
     "../codex-goal-mcp-lifecycle-markers",
     "../codex-goal-mcp-worker-control",
   ],
   "src/worker-codex/application/codex-goal-job-use-cases.ts": [
     "../codex-goal-mcp-brief",
     "../codex-goal-mcp-decision",
-    "../codex-goal-mcp-inputs",
     "../codex-goal-mcp-launch-input",
     "../codex-goal-mcp-manifest-args",
     "../codex-goal-mcp-overview",
@@ -53,7 +51,6 @@ const allowedApplicationMcpImports = {
     "../codex-goal-mcp-worker-control",
   ],
   "src/worker-codex/application/codex-goal-worker-control-use-cases.ts": [
-    "../codex-goal-mcp-inputs",
     "../codex-goal-mcp-project-control-deps",
     "../codex-goal-mcp-worker-control",
     "../codex-goal-mcp-worker-control-view",

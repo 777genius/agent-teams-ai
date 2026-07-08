@@ -24,19 +24,19 @@ import {
   stringValue,
 } from "./codex-goal-input-values";
 import {
-  registryRootFromArgs,
-  type JobBriefMcpArgs,
-  type JobCreateMcpArgs,
-  type JobDecisionMcpArgs,
-  type JobHandoffMcpArgs,
-  type JobIdMcpArgs,
-  type JobLifecycleMcpArgs,
-  type JobOverviewMcpArgs,
-  type JobRegistryMcpArgs,
-  type JobResultReconcileMcpArgs,
-  type JobUpdateMcpArgs,
-  type JobWatchMcpArgs,
-} from "../codex-goal-mcp-inputs";
+  registryRootFromInput,
+  type CodexGoalJobBriefInput,
+  type CodexGoalJobCreateInput,
+  type CodexGoalJobDecisionInput,
+  type CodexGoalJobHandoffInput,
+  type CodexGoalJobIdInput,
+  type CodexGoalJobLifecycleInput,
+  type CodexGoalJobOverviewInput,
+  type CodexGoalJobRegistryInput,
+  type CodexGoalJobResultReconcileInput,
+  type CodexGoalJobUpdateInput,
+  type CodexGoalJobWatchInput,
+} from "./codex-goal-use-case-inputs";
 import {
   jobManifestInputFromArgs,
   jobManifestPatchFromArgs,
@@ -80,21 +80,21 @@ import {
 type JsonObject = Readonly<Record<string, unknown>>;
 
 export async function listCodexGoalJobsUseCase(
-  args: JobRegistryMcpArgs,
+  args: CodexGoalJobRegistryInput,
 ): Promise<JsonObject> {
-  const registryRootDir = registryRootFromArgs(args);
+  const registryRootDir = registryRootFromInput(args);
   const jobs = await listCodexGoalJobs({ registryRootDir });
   return { ok: true, registryRootDir, jobs };
 }
 
 export async function buildCodexGoalOverviewUseCase(
-  args: JobOverviewMcpArgs,
+  args: CodexGoalJobOverviewInput,
 ): Promise<JsonObject> {
   return buildCodexGoalOverviewView(args);
 }
 
 export async function reconcilePreviewCodexGoalJobsUseCase(
-  args: JobWatchMcpArgs,
+  args: CodexGoalJobWatchInput,
 ): Promise<JsonObject> {
   return reconcilePreviewCodexGoalJobsView(args, {
     continueStoredJob: continueStoredJobUseCase,
@@ -102,9 +102,9 @@ export async function reconcilePreviewCodexGoalJobsUseCase(
 }
 
 export async function getCodexGoalJobUseCase(
-  args: JobIdMcpArgs,
+  args: CodexGoalJobIdInput,
 ): Promise<JsonObject> {
-  const registryRootDir = registryRootFromArgs(args);
+  const registryRootDir = registryRootFromInput(args);
   const manifest = await readCodexGoalJob({
     registryRootDir,
     jobId: requiredRawString(args.jobId, "jobId"),
@@ -118,9 +118,9 @@ export async function getCodexGoalJobUseCase(
 }
 
 export async function createCodexGoalJobUseCase(
-  args: JobCreateMcpArgs,
+  args: CodexGoalJobCreateInput,
 ): Promise<JsonObject> {
-  const registryRootDir = registryRootFromArgs(args);
+  const registryRootDir = registryRootFromInput(args);
   const createManifest = jobManifestInputFromArgs(args);
   const projectControlDenial = await projectControlGenericScopeDenial({
     registryRootDir,
@@ -147,9 +147,9 @@ export async function createCodexGoalJobUseCase(
 }
 
 export async function updateCodexGoalJobUseCase(
-  args: JobUpdateMcpArgs,
+  args: CodexGoalJobUpdateInput,
 ): Promise<JsonObject> {
-  const registryRootDir = registryRootFromArgs(args);
+  const registryRootDir = registryRootFromInput(args);
   const existing = await readCodexGoalJob({
     registryRootDir,
     jobId: requiredRawString(args.jobId, "jobId"),
@@ -181,9 +181,9 @@ export async function updateCodexGoalJobUseCase(
 }
 
 export async function getCodexGoalStatusByIdUseCase(
-  args: JobIdMcpArgs,
+  args: CodexGoalJobIdInput,
 ): Promise<JsonObject> {
-  const registryRootDir = registryRootFromArgs(args);
+  const registryRootDir = registryRootFromInput(args);
   const manifest = await readCodexGoalJob({
     registryRootDir,
     jobId: requiredRawString(args.jobId, "jobId"),
@@ -200,7 +200,7 @@ export async function getCodexGoalStatusByIdUseCase(
 }
 
 export async function recommendCodexGoalNextActionUseCase(
-  args: JobIdMcpArgs,
+  args: CodexGoalJobIdInput,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
   const status = await collectCodexGoalStatus(statusInput(loaded.launch));
@@ -215,7 +215,7 @@ export async function recommendCodexGoalNextActionUseCase(
 }
 
 export async function assertSingleCodexWriterUseCase(
-  args: JobIdMcpArgs & Readonly<Record<string, unknown>>,
+  args: CodexGoalJobIdInput & Readonly<Record<string, unknown>>,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
   const status = await collectCodexGoalStatus(statusInput(loaded.launch));
@@ -240,13 +240,13 @@ export async function assertSingleCodexWriterUseCase(
 }
 
 export async function reconcileStoredJobRuntimeResultUseCase(
-  args: JobResultReconcileMcpArgs,
+  args: CodexGoalJobResultReconcileInput,
 ): Promise<JsonObject> {
   return reconcileStoredJobRuntimeResultLifecycle(args, { loadJobLaunch });
 }
 
 export async function continueStoredJobUseCase(
-  args: JobLifecycleMcpArgs,
+  args: CodexGoalJobLifecycleInput,
   options: {
     readonly mode: "continue" | "recover";
     readonly confirmKey: "confirmContinue" | "confirmRecover";
@@ -256,19 +256,19 @@ export async function continueStoredJobUseCase(
 }
 
 export async function stopStoredJobUseCase(
-  args: JobLifecycleMcpArgs,
+  args: CodexGoalJobLifecycleInput,
 ): Promise<JsonObject> {
   return stopStoredJobLifecycle(args, { loadJobLaunch });
 }
 
 export async function maintenancePauseStoredJobUseCase(
-  args: JobLifecycleMcpArgs,
+  args: CodexGoalJobLifecycleInput,
 ): Promise<JsonObject> {
   return maintenancePauseStoredJobLifecycle(args, { loadJobLaunch });
 }
 
 export async function markCodexGoalReviewedUseCase(
-  args: JobIdMcpArgs & Readonly<{ note?: unknown }>,
+  args: CodexGoalJobIdInput & Readonly<{ note?: unknown }>,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
   const projectControlDenial = projectControlGenericToolDenial({
@@ -305,7 +305,7 @@ export async function markCodexGoalReviewedUseCase(
 }
 
 export async function buildCodexGoalBriefUseCase(
-  args: JobBriefMcpArgs,
+  args: CodexGoalJobBriefInput,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
   const status = await collectCodexGoalStatus(statusInput(loaded.launch));
@@ -334,7 +334,7 @@ export async function buildCodexGoalBriefUseCase(
 }
 
 export async function buildCodexGoalDecisionUseCase(
-  args: JobDecisionMcpArgs,
+  args: CodexGoalJobDecisionInput,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
   const status = await collectCodexGoalStatus(statusInput(loaded.launch));
@@ -381,7 +381,7 @@ export async function buildCodexGoalDecisionUseCase(
 }
 
 export async function buildCodexGoalHandoffUseCase(
-  args: JobHandoffMcpArgs,
+  args: CodexGoalJobHandoffInput,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
   const status = await collectCodexGoalStatus(statusInput(loaded.launch));

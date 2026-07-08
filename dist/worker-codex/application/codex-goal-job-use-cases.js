@@ -4,7 +4,7 @@ import { codexGoalJobToArgs, createCodexGoalJob, listCodexGoalJobs, readCodexGoa
 import { collectCodexGoalStatus, listCodexGoalAccountStatuses, resolveCodexGoalWorkerLiveness, } from "../codex-goal-ops.js";
 import { projectControlGenericScopeDenial, projectControlGenericToolDenial, } from "../project-control-scope-guard.js";
 import { booleanValue, numberValue, requiredRawString, stringValue, } from "./codex-goal-input-values.js";
-import { registryRootFromArgs, } from "../codex-goal-mcp-inputs.js";
+import { registryRootFromInput, } from "./codex-goal-use-case-inputs.js";
 import { jobManifestInputFromArgs, jobManifestPatchFromArgs, } from "../codex-goal-mcp-manifest-args.js";
 import { loadJobLaunch, } from "../codex-goal-mcp-project-control-deps.js";
 import { goalLaunchInput, } from "../codex-goal-mcp-launch-input.js";
@@ -16,7 +16,7 @@ import { codexGoalStateRootDir, } from "../codex-goal-mcp-worker-control.js";
 import { optionalTargetCommit, targetCommitFromArgs, } from "../codex-goal-mcp-target-commit.js";
 import { buildCodexGoalDecision, buildCodexGoalHandoff, isSafeStartAction, nextActionForStatus, } from "../codex-goal-mcp-decision.js";
 export async function listCodexGoalJobsUseCase(args) {
-    const registryRootDir = registryRootFromArgs(args);
+    const registryRootDir = registryRootFromInput(args);
     const jobs = await listCodexGoalJobs({ registryRootDir });
     return { ok: true, registryRootDir, jobs };
 }
@@ -29,7 +29,7 @@ export async function reconcilePreviewCodexGoalJobsUseCase(args) {
     });
 }
 export async function getCodexGoalJobUseCase(args) {
-    const registryRootDir = registryRootFromArgs(args);
+    const registryRootDir = registryRootFromInput(args);
     const manifest = await readCodexGoalJob({
         registryRootDir,
         jobId: requiredRawString(args.jobId, "jobId"),
@@ -42,7 +42,7 @@ export async function getCodexGoalJobUseCase(args) {
     };
 }
 export async function createCodexGoalJobUseCase(args) {
-    const registryRootDir = registryRootFromArgs(args);
+    const registryRootDir = registryRootFromInput(args);
     const createManifest = jobManifestInputFromArgs(args);
     const projectControlDenial = await projectControlGenericScopeDenial({
         registryRootDir,
@@ -69,7 +69,7 @@ export async function createCodexGoalJobUseCase(args) {
     };
 }
 export async function updateCodexGoalJobUseCase(args) {
-    const registryRootDir = registryRootFromArgs(args);
+    const registryRootDir = registryRootFromInput(args);
     const existing = await readCodexGoalJob({
         registryRootDir,
         jobId: requiredRawString(args.jobId, "jobId"),
@@ -101,7 +101,7 @@ export async function updateCodexGoalJobUseCase(args) {
     };
 }
 export async function getCodexGoalStatusByIdUseCase(args) {
-    const registryRootDir = registryRootFromArgs(args);
+    const registryRootDir = registryRootFromInput(args);
     const manifest = await readCodexGoalJob({
         registryRootDir,
         jobId: requiredRawString(args.jobId, "jobId"),

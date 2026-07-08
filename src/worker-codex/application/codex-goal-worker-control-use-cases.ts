@@ -12,9 +12,9 @@ import {
   collectCodexGoalStatus,
 } from "../codex-goal-ops";
 import type {
-  JobIdMcpArgs,
-  WorkerControlMcpArgs,
-} from "../codex-goal-mcp-inputs";
+  CodexGoalJobIdInput,
+  CodexGoalWorkerControlInput,
+} from "./codex-goal-use-case-inputs";
 import {
   codexGoalStatusInputFromLaunch as statusInput,
 } from "./codex-goal-status-input";
@@ -50,7 +50,7 @@ export type CodexGoalWorkerControlUseCaseOptions = {
 };
 
 export async function pauseCodexGoalWorker(
-  args: JobIdMcpArgs,
+  args: CodexGoalJobIdInput,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
   await mkdir(loaded.launch.config.jobRootDir, { recursive: true, mode: 0o700 });
@@ -94,7 +94,7 @@ export async function pauseCodexGoalWorker(
 }
 
 export async function sendCodexGoalGuidance(
-  args: WorkerControlMcpArgs & { readonly message?: string },
+  args: CodexGoalWorkerControlInput & { readonly message?: string },
   options: CodexGoalWorkerControlUseCaseOptions = {},
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
@@ -135,7 +135,7 @@ export async function sendCodexGoalGuidance(
 }
 
 export async function enqueueCodexGoalControlSignal(
-  args: WorkerControlMcpArgs,
+  args: CodexGoalWorkerControlInput,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
   const control = codexGoalWorkerControlService(loaded.launch);
@@ -181,7 +181,7 @@ export async function enqueueCodexGoalControlSignal(
 }
 
 export async function listCodexGoalControlSignals(
-  args: WorkerControlMcpArgs,
+  args: CodexGoalWorkerControlInput,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
   const control = codexGoalWorkerControlService(loaded.launch);
@@ -201,7 +201,7 @@ export async function listCodexGoalControlSignals(
 }
 
 export async function inspectCodexGoalControlDecision(
-  args: WorkerControlMcpArgs,
+  args: CodexGoalWorkerControlInput,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
   const control = codexGoalWorkerControlService(loaded.launch);
@@ -218,7 +218,7 @@ export async function inspectCodexGoalControlDecision(
 }
 
 export async function reconcileCodexGoalControlInbox(
-  args: WorkerControlMcpArgs,
+  args: CodexGoalWorkerControlInput,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
   const control = codexGoalWorkerControlService(loaded.launch);
@@ -239,7 +239,7 @@ export async function reconcileCodexGoalControlInbox(
 }
 
 export async function supersedeCodexGoalControlSignal(
-  args: WorkerControlMcpArgs,
+  args: CodexGoalWorkerControlInput,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
   const control = codexGoalWorkerControlService(loaded.launch);

@@ -20,10 +20,10 @@ import {
   nextActionForStatus,
 } from "../codex-goal-mcp-decision";
 import {
-  type JobIdMcpArgs,
-  type JobLifecycleMcpArgs,
-  type JobResultReconcileMcpArgs,
-} from "../codex-goal-mcp-inputs";
+  type CodexGoalJobIdInput,
+  type CodexGoalJobLifecycleInput,
+  type CodexGoalJobResultReconcileInput,
+} from "./codex-goal-use-case-inputs";
 import {
   writeCodexGoalMaintenancePauseEvent,
   writeCodexGoalStopEvent,
@@ -53,11 +53,11 @@ type LoadedCodexGoalJobLaunch = {
 };
 
 export type CodexGoalMcpJobLifecycleDeps = {
-  readonly loadJobLaunch: (args: JobIdMcpArgs) => Promise<LoadedCodexGoalJobLaunch>;
+  readonly loadJobLaunch: (args: CodexGoalJobIdInput) => Promise<LoadedCodexGoalJobLaunch>;
 };
 
 export async function continueStoredJobLifecycle(
-  args: JobLifecycleMcpArgs,
+  args: CodexGoalJobLifecycleInput,
   options: {
     readonly mode: "continue" | "recover";
     readonly confirmKey: "confirmContinue" | "confirmRecover";
@@ -184,7 +184,7 @@ function shouldReconcileResultBeforeStart(
 }
 
 export async function reconcileStoredJobRuntimeResultLifecycle(
-  args: JobResultReconcileMcpArgs,
+  args: CodexGoalJobResultReconcileInput,
   deps: CodexGoalMcpJobLifecycleDeps,
 ): Promise<JsonObject> {
   const loaded = await deps.loadJobLaunch(args);
@@ -239,7 +239,7 @@ export async function reconcileStoredJobRuntimeResultLifecycle(
 }
 
 export async function stopStoredJobLifecycle(
-  args: JobLifecycleMcpArgs,
+  args: CodexGoalJobLifecycleInput,
   deps: CodexGoalMcpJobLifecycleDeps,
 ): Promise<JsonObject> {
   const loaded = await deps.loadJobLaunch(args);
@@ -364,7 +364,7 @@ export async function stopStoredJobLifecycle(
 }
 
 export async function maintenancePauseStoredJobLifecycle(
-  args: JobLifecycleMcpArgs,
+  args: CodexGoalJobLifecycleInput,
   deps: CodexGoalMcpJobLifecycleDeps,
 ): Promise<JsonObject> {
   const loaded = await deps.loadJobLaunch(args);
