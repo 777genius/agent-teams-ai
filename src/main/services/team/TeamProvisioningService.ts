@@ -145,7 +145,14 @@ import {
   createTeamProvisioningCreateDeterministicRunFlowPortsFromService,
   type TeamProvisioningCreateDeterministicRunFlowServiceHost,
 } from './provisioning/TeamProvisioningCreateDeterministicRunFlowPortsFactory';
-import { prepareDeterministicCreateSetupFlow } from './provisioning/TeamProvisioningCreateDeterministicSetupFlow';
+import {
+  type DeterministicCreateSetupFlowPorts,
+  prepareDeterministicCreateSetupFlow,
+} from './provisioning/TeamProvisioningCreateDeterministicSetupFlow';
+import {
+  createTeamProvisioningCreateDeterministicSetupFlowPortsFromService,
+  type TeamProvisioningCreateDeterministicSetupFlowServiceHost,
+} from './provisioning/TeamProvisioningCreateDeterministicSetupFlowPortsFactory';
 import { type DeterministicCreateSpawnFlowPorts } from './provisioning/TeamProvisioningCreateDeterministicSpawnFlow';
 import {
   createTeamProvisioningCreateDeterministicSpawnFlowBoundary,
@@ -509,10 +516,7 @@ import {
   getAnthropicFastModeDefault,
   getTeamProviderLabel,
 } from './provisioning/TeamProvisioningRuntimeDiagnostics';
-import {
-  buildMissingCliError,
-  getRuntimeFailureLabelForRequest,
-} from './provisioning/TeamProvisioningRuntimeFailureLabels';
+import { getRuntimeFailureLabelForRequest } from './provisioning/TeamProvisioningRuntimeFailureLabels';
 import {
   buildTeamRuntimeLaunchArgsPlan as buildTeamRuntimeLaunchArgsPlanHelper,
   type BuildTeamRuntimeLaunchArgsPlanInput,
@@ -3192,6 +3196,13 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     );
   }
 
+  private createDeterministicCreateSetupFlowPorts(): DeterministicCreateSetupFlowPorts<MixedSecondaryRuntimeLaneState> {
+    return createTeamProvisioningCreateDeterministicSetupFlowPortsFromService(
+      this as unknown as TeamProvisioningCreateDeterministicSetupFlowServiceHost,
+      { logger }
+    );
+  }
+
   private createDeterministicCreateRunFlowPorts(): DeterministicCreateRunFlowPorts<
     ProvisioningRun,
     MixedSecondaryRuntimeLaneState
@@ -3255,29 +3266,7 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       const createSetup = await prepareDeterministicCreateSetupFlow({
         request,
         runtimeAuthMaterialId,
-        ports: {
-          pathExists: (filePath) => this.pathExists(filePath),
-          resolveClaudePath: () => ClaudeBinaryResolver.resolve(),
-          buildMissingCliError,
-          buildProvisioningEnv: (providerId, providerBackendId, options) =>
-            this.buildProvisioningEnv(providerId, providerBackendId, options),
-          materializeEffectiveTeamMemberSpecs: (params) =>
-            this.materializeEffectiveTeamMemberSpecs(params),
-          resolveOpenCodeMemberWorkspacesForRuntime: (params) =>
-            this.resolveOpenCodeMemberWorkspacesForRuntime(params),
-          planRuntimeLanesOrThrow: (leadProviderId, members, cwd) =>
-            this.planRuntimeLanesOrThrow(leadProviderId, members, cwd),
-          buildCrossProviderMemberArgs: (primaryProviderId, memberSpecs, options) =>
-            this.buildCrossProviderMemberArgs(primaryProviderId, memberSpecs, options),
-          resolveAndValidateLaunchIdentity: (params) =>
-            this.resolveAndValidateLaunchIdentity(params),
-          createMixedSecondaryLaneStates: (lanePlan) =>
-            this.createMixedSecondaryLaneStates(lanePlan),
-          workspaceTrustCoordinator: this.appShellBoundary.getWorkspaceTrustCoordinator(),
-          workspaceTrustWorkspaceCollectionPorts: this.workspaceTrustWorkspaceCollectionPorts,
-          runtimeTurnSettledEnvironmentProvider: this.runtimeTurnSettledEnvironmentProvider,
-          logger,
-        },
+        ports: this.createDeterministicCreateSetupFlowPorts(),
       });
       return await runDeterministicCreateRunFlow({
         request,
