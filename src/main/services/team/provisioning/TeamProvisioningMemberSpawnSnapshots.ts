@@ -187,6 +187,46 @@ export interface MemberSpawnStatusAuditPorts<TRun extends MemberSpawnStatusAudit
   isOpenCodeSecondaryLaneMemberInRun(run: TRun, memberName: string): boolean;
 }
 
+export interface MemberSpawnStatusAuditServiceHost<TRun extends MemberSpawnStatusAuditRun> {
+  auditMemberSpawnStatuses: MemberSpawnStatusAuditPorts<TRun>['auditMemberSpawnStatuses'];
+  findBootstrapTranscriptFailureReason: MemberSpawnStatusAuditPorts<TRun>['findBootstrapTranscriptFailureReason'];
+  findBootstrapRuntimeProofObservedAt: MemberSpawnStatusAuditPorts<TRun>['findBootstrapRuntimeProofObservedAt'];
+  findBootstrapTranscriptOutcome: MemberSpawnStatusAuditPorts<TRun>['findBootstrapTranscriptOutcome'];
+  setMemberSpawnStatus: MemberSpawnStatusAuditPorts<TRun>['setMemberSpawnStatus'];
+  confirmMemberSpawnStatusFromTranscript: MemberSpawnStatusAuditPorts<TRun>['confirmMemberSpawnStatusFromTranscript'];
+}
+
+export interface MemberSpawnStatusAuditServiceHostOptions<TRun extends MemberSpawnStatusAuditRun> {
+  nowMs: MemberSpawnStatusAuditPorts<TRun>['nowMs'];
+  minAuditIntervalMs: MemberSpawnStatusAuditPorts<TRun>['minAuditIntervalMs'];
+  isOpenCodeSecondaryLaneMemberInRun: MemberSpawnStatusAuditPorts<TRun>['isOpenCodeSecondaryLaneMemberInRun'];
+}
+
+export function createMemberSpawnStatusAuditPortsFromService<
+  TRun extends MemberSpawnStatusAuditRun,
+>(
+  service: MemberSpawnStatusAuditServiceHost<TRun>,
+  options: MemberSpawnStatusAuditServiceHostOptions<TRun>
+): MemberSpawnStatusAuditPorts<TRun> {
+  return {
+    nowMs: options.nowMs,
+    minAuditIntervalMs: options.minAuditIntervalMs,
+    auditMemberSpawnStatuses: (run) => service.auditMemberSpawnStatuses(run),
+    findBootstrapTranscriptFailureReason: (teamName, memberName, sinceMs) =>
+      service.findBootstrapTranscriptFailureReason(teamName, memberName, sinceMs),
+    findBootstrapRuntimeProofObservedAt: (teamName, memberName, current) =>
+      service.findBootstrapRuntimeProofObservedAt(teamName, memberName, current),
+    findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
+      service.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
+    setMemberSpawnStatus: (run, memberName, status, error) =>
+      service.setMemberSpawnStatus(run, memberName, status, error),
+    confirmMemberSpawnStatusFromTranscript: (run, memberName, observedAt, source) =>
+      service.confirmMemberSpawnStatusFromTranscript(run, memberName, observedAt, source),
+    isOpenCodeSecondaryLaneMemberInRun: (run, memberName) =>
+      options.isOpenCodeSecondaryLaneMemberInRun(run, memberName),
+  };
+}
+
 export function cloneMemberSpawnStatusesSnapshot(
   snapshot: MemberSpawnStatusesSnapshot
 ): MemberSpawnStatusesSnapshot {

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  createMemberSpawnStatusAuditPortsFromService,
+  type MemberSpawnStatusAuditRun,
+  type MemberSpawnStatusAuditServiceHost,
   type MemberSpawnStatusMutationPorts,
   type MemberSpawnStatusRun,
   setMemberSpawnStatusForRun,
@@ -43,6 +46,60 @@ const createPorts = (): MemberSpawnStatusMutationPorts<MemberSpawnStatusRun> => 
 });
 
 describe('member spawn snapshot mutations', () => {
+  it('builds audit ports from service-shaped host wiring', async () => {
+    const run = { ...createRun(), lastMemberSpawnAuditAt: 0 } as MemberSpawnStatusAuditRun;
+    const current = baseStatus();
+    const service = {
+      auditMemberSpawnStatuses: vi.fn(async () => undefined),
+      findBootstrapTranscriptFailureReason: vi.fn(async () => 'failed'),
+      findBootstrapRuntimeProofObservedAt: vi.fn(async () => '2026-01-01T00:02:00.000Z'),
+      findBootstrapTranscriptOutcome: vi.fn(async () => ({
+        kind: 'success',
+        observedAt: '2026-01-01T00:02:00.000Z',
+      })),
+      setMemberSpawnStatus: vi.fn(),
+      confirmMemberSpawnStatusFromTranscript: vi.fn(),
+    } satisfies MemberSpawnStatusAuditServiceHost<MemberSpawnStatusAuditRun>;
+    const isOpenCodeSecondaryLaneMemberInRun = vi.fn(() => true);
+
+    const ports = createMemberSpawnStatusAuditPortsFromService(service, {
+      nowMs: () => 123,
+      minAuditIntervalMs: 456,
+      isOpenCodeSecondaryLaneMemberInRun,
+    });
+
+    expect(ports.nowMs()).toBe(123);
+    expect(ports.minAuditIntervalMs).toBe(456);
+    await ports.auditMemberSpawnStatuses(run);
+    await expect(ports.findBootstrapTranscriptFailureReason('team-a', 'api', 1)).resolves.toBe(
+      'failed'
+    );
+    await expect(ports.findBootstrapRuntimeProofObservedAt('team-a', 'api', current)).resolves.toBe(
+      '2026-01-01T00:02:00.000Z'
+    );
+    await expect(ports.findBootstrapTranscriptOutcome('team-a', 'api', 1)).resolves.toMatchObject({
+      kind: 'success',
+    });
+    ports.setMemberSpawnStatus(run, 'api', 'error', 'error');
+    ports.confirmMemberSpawnStatusFromTranscript(run, 'api', '2026-01-01T00:02:00.000Z');
+    expect(ports.isOpenCodeSecondaryLaneMemberInRun(run, 'api')).toBe(true);
+
+    expect(service.auditMemberSpawnStatuses).toHaveBeenCalledWith(run);
+    expect(service.findBootstrapRuntimeProofObservedAt).toHaveBeenCalledWith(
+      'team-a',
+      'api',
+      current
+    );
+    expect(service.setMemberSpawnStatus).toHaveBeenCalledWith(run, 'api', 'error', 'error');
+    expect(service.confirmMemberSpawnStatusFromTranscript).toHaveBeenCalledWith(
+      run,
+      'api',
+      '2026-01-01T00:02:00.000Z',
+      undefined
+    );
+    expect(isOpenCodeSecondaryLaneMemberInRun).toHaveBeenCalledWith(run, 'api');
+  });
+
   it('emits and persists changed online transitions without diagnostic text', () => {
     const run = createRun();
     const ports = createPorts();

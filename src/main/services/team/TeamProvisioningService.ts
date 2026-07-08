@@ -281,9 +281,11 @@ import {
 } from './provisioning/TeamProvisioningMemberSpawnLeadInbox';
 import {
   confirmMemberSpawnStatusFromTranscriptForRun,
+  createMemberSpawnStatusAuditPortsFromService,
   getMemberSpawnStatusesSnapshot,
   maybeAuditMemberSpawnStatusesForRun,
   type MemberSpawnStatusAuditPorts,
+  type MemberSpawnStatusAuditServiceHost,
   type MemberSpawnStatusMutationPorts,
   reconcileBootstrapTranscriptFailuresForRun,
   reconcileBootstrapTranscriptSuccessesForRun,
@@ -1092,22 +1094,19 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
       emitMemberSpawnChange: (run, memberName) => this.emitMemberSpawnChange(run, memberName),
       persistLaunchStateSnapshot: (run, phase) => this.persistLaunchStateSnapshot(run, phase),
     };
-  private readonly memberSpawnStatusAuditPorts: MemberSpawnStatusAuditPorts<ProvisioningRun> = {
-    nowMs: () => Date.now(),
-    minAuditIntervalMs: MEMBER_SPAWN_AUDIT_MIN_INTERVAL_MS,
-    auditMemberSpawnStatuses: (run) => this.auditMemberSpawnStatuses(run),
-    findBootstrapTranscriptFailureReason: (teamName, memberName, sinceMs) =>
-      this.findBootstrapTranscriptFailureReason(teamName, memberName, sinceMs),
-    findBootstrapRuntimeProofObservedAt: (teamName, memberName, current) =>
-      this.findBootstrapRuntimeProofObservedAt(teamName, memberName, current),
-    findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
-      this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
-    setMemberSpawnStatus: (run, memberName, status, error) =>
-      this.setMemberSpawnStatus(run, memberName, status, error),
-    confirmMemberSpawnStatusFromTranscript: (run, memberName, observedAt, source) =>
-      this.confirmMemberSpawnStatusFromTranscript(run, memberName, observedAt, source),
-    isOpenCodeSecondaryLaneMemberInRun,
-  };
+  private readonly memberSpawnStatusAuditPorts: MemberSpawnStatusAuditPorts<ProvisioningRun> =
+    createMemberSpawnStatusAuditPortsFromService(
+      this as unknown as MemberSpawnStatusAuditServiceHost<ProvisioningRun>,
+      {
+        nowMs: () => Date.now(),
+        minAuditIntervalMs: MEMBER_SPAWN_AUDIT_MIN_INTERVAL_MS,
+        isOpenCodeSecondaryLaneMemberInRun: (run, memberName) =>
+          isOpenCodeSecondaryLaneMemberInRun(
+            run as Parameters<typeof isOpenCodeSecondaryLaneMemberInRun>[0],
+            memberName
+          ),
+      }
+    );
   private readonly openCodePromptDeliveryFollowUpPolicy = new OpenCodePromptDeliveryFollowUpPolicy({
     markFailedTerminal: (input) => this.markOpenCodePromptLedgerFailedTerminal(input),
     logEvent: (event, record, extra) => this.logOpenCodePromptDeliveryEvent(event, record, extra),
