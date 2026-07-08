@@ -38,6 +38,7 @@ import { applyWorkspaceConflictToOverviewJob, buildCodexGoalWorkspaceConflicts, 
 import { codexOverviewItemToWatchStatus } from "./codex-goal-mcp-watch-status.js";
 import { failedRunObservationSnapshot, observeOrphanCodexRun, safeObservationErrorMessage, summarizeRunObservationSnapshots, } from "./codex-goal-mcp-observation-projection.js";
 import { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
+import { mcpJson, withMcpErrors, } from "./codex-goal-mcp-response.js";
 import { registerCodexGoalPrompts } from "./codex-goal-mcp-prompts.js";
 import { optionalTargetCommit, targetCommitFromArgs, } from "./codex-goal-mcp-target-commit.js";
 import { goalInputSchema, statusInputSchema, } from "./codex-goal-mcp-input-schemas.js";
@@ -4506,12 +4507,6 @@ function jobManifestPatchFromArgs(args) {
     putIfDefined(patch, "outputFormat", stringValue(args.outputFormat));
     return patch;
 }
-function mcpJson(value) {
-    return {
-        content: [{ type: "text", text: JSON.stringify(value, null, 2) }],
-        structuredContent: value,
-    };
-}
 function jsonRecordFromProjectControlArgs(args) {
     return JSON.parse(JSON.stringify(args));
 }
@@ -4527,24 +4522,6 @@ function controlledAgentOwnerIsLive(owner) {
     catch {
         return false;
     }
-}
-async function withMcpErrors(action) {
-    try {
-        return await action();
-    }
-    catch (error) {
-        const value = {
-            ok: false,
-            error: error instanceof Error ? error.message : "codex_goal_mcp_error",
-        };
-        return {
-            ...mcpJson(value),
-            isError: true,
-        };
-    }
-}
-function isRecord(value) {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 if (await isMainModule()) {
     try {

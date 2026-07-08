@@ -8,7 +8,6 @@ import {
   ResourceTemplate,
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { SessionArtifact } from "@vioxen/subscription-runtime/core";
 import { sessionArtifactFromCodexAuthJson } from "@vioxen/subscription-runtime/provider-codex";
@@ -254,6 +253,10 @@ import {
   summarizeRunObservationSnapshots,
 } from "./codex-goal-mcp-observation-projection";
 import { buildCodexGoalBrief } from "./codex-goal-mcp-brief";
+import {
+  mcpJson,
+  withMcpErrors,
+} from "./codex-goal-mcp-response";
 import { registerCodexGoalPrompts } from "./codex-goal-mcp-prompts";
 import {
   optionalTargetCommit,
@@ -5775,13 +5778,6 @@ function jobManifestPatchFromArgs(args: JobUpdateMcpArgs): CodexGoalJobManifestP
   return patch as CodexGoalJobManifestPatch;
 }
 
-function mcpJson(value: JsonObject) {
-  return {
-    content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }],
-    structuredContent: value,
-  };
-}
-
 function jsonRecordFromProjectControlArgs(
   args: ProjectControlMcpArgs,
 ): ProjectControlOperationJsonRecord {
@@ -5797,27 +5793,6 @@ function controlledAgentOwnerIsLive(owner: ControlledAgentProcessOwner): boolean
   } catch {
     return false;
   }
-}
-
-async function withMcpErrors(
-  action: () => Promise<CallToolResult>,
-): Promise<CallToolResult> {
-  try {
-    return await action();
-  } catch (error) {
-    const value = {
-      ok: false,
-      error: error instanceof Error ? error.message : "codex_goal_mcp_error",
-    };
-    return {
-      ...mcpJson(value),
-      isError: true,
-    };
-  }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 if (await isMainModule()) {
