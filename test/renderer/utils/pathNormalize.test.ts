@@ -1,8 +1,42 @@
+import {
+  buildTaskCountsByOwner,
+  buildTaskCountsByProject,
+  normalizePath,
+} from '@renderer/utils/pathNormalize';
 import { describe, expect, it } from 'vitest';
 
-import { buildTaskCountsByOwner } from '@renderer/utils/pathNormalize';
-
 describe('pathNormalize task counts', () => {
+  it('normalizes Windows paths case-insensitively but keeps POSIX casing', () => {
+    expect(normalizePath('C:\\Users\\Alice\\Repo\\')).toBe('c:/users/alice/repo');
+    expect(normalizePath('/Users/Alice/Repo/')).toBe('/Users/Alice/Repo');
+    expect(normalizePath('/Users/Alice/repo/')).toBe('/Users/Alice/repo');
+  });
+
+  it('keeps project counts separate for POSIX paths that differ only by case', () => {
+    const counts = buildTaskCountsByProject([
+      {
+        projectPath: '/Users/Alice/Repo',
+        status: 'pending',
+      },
+      {
+        projectPath: '/Users/Alice/repo',
+        status: 'completed',
+      },
+    ] as Parameters<typeof buildTaskCountsByProject>[0]);
+
+    expect(counts.size).toBe(2);
+    expect(counts.get('/Users/Alice/Repo')).toEqual({
+      pending: 1,
+      inProgress: 0,
+      completed: 0,
+    });
+    expect(counts.get('/Users/Alice/repo')).toEqual({
+      pending: 0,
+      inProgress: 0,
+      completed: 1,
+    });
+  });
+
   it('counts approved tasks as completed instead of in-progress', () => {
     const counts = buildTaskCountsByOwner([
       {

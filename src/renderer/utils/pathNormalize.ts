@@ -1,3 +1,4 @@
+import { normalizePathForComparison, stripTrailingSeparators } from '@shared/utils/platformPath';
 import {
   getTeamTaskWorkflowColumn,
   isTeamTaskDeleted,
@@ -8,12 +9,7 @@ import {
 import type { GlobalTask } from '@shared/types';
 
 export function normalizePath(p: string): string {
-  let s = p.replace(/\\/g, '/');
-  // Preserve root paths like "/" or "C:/"
-  if (s !== '/' && !/^[A-Za-z]:\/$/.test(s)) {
-    while (s.endsWith('/')) s = s.slice(0, -1);
-  }
-  return s.toLowerCase();
+  return stripTrailingSeparators(normalizePathForComparison(p));
 }
 
 export interface TaskStatusCounts {
