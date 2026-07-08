@@ -43,6 +43,7 @@ export { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
 import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item.js";
 import { codexGoalStatusInputFromLaunch as statusInput, } from "./codex-goal-mcp-status-input.js";
 import { CODEX_GOAL_MCP_DEFAULT_TIMEOUT_MS, goalControlModesFromRecord, goalLaunchInput, } from "./codex-goal-mcp-launch-input.js";
+import { codexGoalLaunchSummary as launchSummary, } from "./codex-goal-mcp-launch-summary.js";
 import { CODEX_GOAL_CONTROL_SURFACE_SCHEMA, CODEX_GOAL_EXECUTION_ENGINE_SCHEMA, buildCodexGoalDecision, buildCodexGoalHandoff, isSafeStartAction, nextActionForStatus, redactText, truncateText, } from "./codex-goal-mcp-decision.js";
 import { assertGitCurrentBranch, assertSafeGitCommitSha, assertSafeGitRefName, assertSafeGitRemoteName, execGit, execGitStdout, } from "./codex-goal-mcp-project-git.js";
 import { assertProjectControlCreateManifestPaths, assertProjectControlDependencyBootstrapReady, assertProjectControlScopeRepairAllowed, projectControlChildScope, projectControlDependencyBootstrapMode, projectControlPathArg, projectControlRealPathOutsideWorkspaceScope, projectControlWorkerRole, projectScopeFieldFingerprint, } from "./codex-goal-mcp-project-scope.js";
@@ -4613,26 +4614,6 @@ function statusInputSchema() {
         progressPath: z.string().optional(),
         accessBoundary: z.string().optional(),
         cwd: z.string().optional(),
-    };
-}
-function launchSummary(launch) {
-    return {
-        ...(launch.config.jobId ? { jobId: launch.config.jobId } : {}),
-        taskId: launch.config.taskId,
-        workspacePath: launch.config.workspacePath,
-        promptPath: launch.config.promptPath,
-        accountNames: launch.config.accounts.map((account) => account.name),
-        model: launch.config.model,
-        reasoningEffort: launch.config.reasoningEffort,
-        serviceTier: launch.config.serviceTier,
-        executionEngine: launch.config.executionEngine ?? "app-server-goal",
-        taskTimeoutMs: launch.config.taskTimeoutMs,
-        appServerStartupTimeoutMs: launch.config.appServerStartupTimeoutMs,
-        progressPath: launch.config.progressPath,
-        progressHeartbeatMs: launch.config.progressHeartbeatMs,
-        maxAccountCycles: launch.config.maxAccountCycles,
-        tmuxSession: launch.tmuxSession,
-        logPath: launch.logPath,
     };
 }
 function mcpJson(value) {
