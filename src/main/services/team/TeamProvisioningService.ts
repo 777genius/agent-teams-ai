@@ -230,7 +230,10 @@ import {
   type SetLeadActivityPorts,
   syncLeadTaskActivityForState as syncLeadTaskActivityForStateHelper,
 } from './provisioning/TeamProvisioningLeadActivity';
-import { createTeamProvisioningLeadActivityPorts } from './provisioning/TeamProvisioningLeadActivityPortsFactory';
+import {
+  createTeamProvisioningLeadActivityPortsFromService,
+  type TeamProvisioningLeadActivityPortsServiceHost,
+} from './provisioning/TeamProvisioningLeadActivityPortsFactory';
 import {
   emitLeadContextUsageForRun,
   getLeadContextUsageForTeam,
@@ -2831,14 +2834,10 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
   }
 
   private createLeadActivityPorts(): SetLeadActivityPorts<ProvisioningRun> {
-    return createTeamProvisioningLeadActivityPorts({
-      syncedRunKeys: this.leadTaskActivitySyncedRunKeys,
-      getRunLeadName: (run) => this.getRunLeadName(run),
-      taskActivityIntervalService: this.taskActivityIntervalService,
-      isCurrentTrackedRun: (run) => this.isCurrentTrackedRun(run),
-      nowIso,
-      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
-    });
+    return createTeamProvisioningLeadActivityPortsFromService(
+      this as unknown as TeamProvisioningLeadActivityPortsServiceHost<ProvisioningRun>,
+      { nowIso }
+    );
   }
 
   private startRuntimeToolActivity(

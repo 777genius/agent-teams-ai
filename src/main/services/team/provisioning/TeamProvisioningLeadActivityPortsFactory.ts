@@ -23,6 +23,14 @@ export interface TeamProvisioningLeadActivityPortsFactoryDeps<TRun extends LeadA
   emitTeamChange(event: TeamChangeEvent): void;
 }
 
+export interface TeamProvisioningLeadActivityPortsServiceHost<TRun extends LeadActivityRunLike> {
+  leadTaskActivitySyncedRunKeys: Set<string>;
+  taskActivityIntervalService: TeamProvisioningLeadActivityIntervalService;
+  getRunLeadName(run: TRun): string;
+  isCurrentTrackedRun(run: TRun): boolean;
+  teamChangeEmitter?: (event: TeamChangeEvent) => void;
+}
+
 export function createTeamProvisioningLeadActivityPorts<TRun extends LeadActivityRunLike>(
   deps: TeamProvisioningLeadActivityPortsFactoryDeps<TRun>
 ): SetLeadActivityPorts<TRun> {
@@ -37,4 +45,20 @@ export function createTeamProvisioningLeadActivityPorts<TRun extends LeadActivit
     nowIso: deps.nowIso,
     emitTeamChange: (event) => deps.emitTeamChange(event),
   };
+}
+
+export function createTeamProvisioningLeadActivityPortsFromService<
+  TRun extends LeadActivityRunLike,
+>(
+  service: TeamProvisioningLeadActivityPortsServiceHost<TRun>,
+  deps: { nowIso(): string }
+): SetLeadActivityPorts<TRun> {
+  return createTeamProvisioningLeadActivityPorts({
+    syncedRunKeys: service.leadTaskActivitySyncedRunKeys,
+    getRunLeadName: (run) => service.getRunLeadName(run),
+    taskActivityIntervalService: service.taskActivityIntervalService,
+    isCurrentTrackedRun: (run) => service.isCurrentTrackedRun(run),
+    nowIso: deps.nowIso,
+    emitTeamChange: (event) => service.teamChangeEmitter?.(event),
+  });
 }
