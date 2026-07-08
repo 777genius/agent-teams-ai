@@ -6,6 +6,7 @@ import { Worker } from 'node:worker_threads';
 import { createLogger } from '@shared/utils/logger';
 
 import type {
+  CommentJournalEntryRecord,
   InternalStorageBackendInfo,
   StallJournalEntryRecord,
 } from '../../contracts/internalStorageContracts';
@@ -109,6 +110,27 @@ export class InternalStorageWorkerClient implements InternalStorageGateway {
     entries: StallJournalEntryRecord[]
   ): Promise<void> {
     await this.call('stallJournal.replace', { teamName, entries });
+  }
+
+  async loadCommentJournalEntries(teamName: string): Promise<CommentJournalEntryRecord[]> {
+    const result = await this.call('commentJournal.load', { teamName });
+    return result as CommentJournalEntryRecord[];
+  }
+
+  async replaceCommentJournalEntries(
+    teamName: string,
+    entries: CommentJournalEntryRecord[]
+  ): Promise<void> {
+    await this.call('commentJournal.replace', { teamName, entries });
+  }
+
+  async commentJournalExists(teamName: string): Promise<boolean> {
+    const result = await this.call('commentJournal.exists', { teamName });
+    return result === true;
+  }
+
+  async ensureCommentJournalInitialized(teamName: string): Promise<void> {
+    await this.call('commentJournal.ensureInitialized', { teamName });
   }
 
   async recordStoreImport(storeId: string, teamName: string, entryCount: number): Promise<void> {

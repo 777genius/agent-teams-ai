@@ -1,4 +1,7 @@
-import type { StallJournalEntryRecord } from '../../../contracts/internalStorageContracts';
+import type {
+  CommentJournalEntryRecord,
+  StallJournalEntryRecord,
+} from '../../../contracts/internalStorageContracts';
 
 export interface InternalStorageWorkerData {
   databasePath: string;
@@ -12,6 +15,14 @@ export type InternalStorageWorkerRequest =
       op: 'stallJournal.replace';
       payload: { teamName: string; entries: StallJournalEntryRecord[] };
     }
+  | { id: string; op: 'commentJournal.load'; payload: { teamName: string } }
+  | {
+      id: string;
+      op: 'commentJournal.replace';
+      payload: { teamName: string; entries: CommentJournalEntryRecord[] };
+    }
+  | { id: string; op: 'commentJournal.exists'; payload: { teamName: string } }
+  | { id: string; op: 'commentJournal.ensureInitialized'; payload: { teamName: string } }
   | {
       id: string;
       op: 'storeImports.record';

@@ -191,4 +191,91 @@ describe('InternalStorageWorkerCore', () => {
     const core = track(makeCore(dbPath));
     expect(() => core.handle('nope' as never, {} as never)).toThrow(/Unknown internal-storage op/);
   });
+
+  it('migrates a v1 database (pilot release) to the current schema in place', async () => {
+    const dbPath = await makeTmpDbPath();
+    await fs.mkdir(path.dirname(dbPath), { recursive: true });
+
+    // Reproduce the exact on-disk state the pilot release left behind.
+    const legacyDb = new Database(dbPath);
+    legacyDb.exec(`CREATE TABLE stall_journal_entries (
+      team_name TEXT NOT NULL,
+      epoch_key TEXT NOT NULL,
+      task_id TEXT NOT NULL,
+      member_name TEXT,
+      branch TEXT NOT NULL,
+      signal TEXT NOT NULL,
+      state TEXT NOT NULL,
+      consecutive_scans INTEGER NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      alerted_at TEXT,
+      PRIMARY KEY (team_name, epoch_key)
+    )`);
+    legacyDb.exec(`CREATE TABLE store_imports (
+      store_id TEXT NOT NULL,
+      team_name TEXT NOT NULL,
+      imported_at TEXT NOT NULL,
+      entry_count INTEGER NOT NULL,
+      PRIMARY KEY (store_id, team_name)
+    )`);
+    legacyDb
+      .prepare(`INSERT INTO stall_journal_entries VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      .run(
+        'demo',
+        'task-a:epoch-1',
+        'task-a',
+        null,
+        'work',
+        'turn_ended_after_touch',
+        'suspected',
+        1,
+        '2026-07-07T10:00:00.000Z',
+        '2026-07-07T10:00:00.000Z',
+        null
+      );
+    legacyDb.pragma('user_version = 1');
+    legacyDb.close();
+
+    const core = track(makeCore(dbPath));
+    const info = core.handle('ping', {}) as InternalStorageBackendInfo;
+    expect(info.schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
+    expect(info.integrity).toBe('ok');
+
+    // Existing v1 data survives, and the new v2 tables are usable.
+    expect(core.handle('stallJournal.load', { teamName: 'demo' })).toHaveLength(1);
+    expect(core.handle('commentJournal.exists', { teamName: 'demo' })).toBe(false);
+    core.handle('commentJournal.ensureInitialized', { teamName: 'demo' });
+    expect(core.handle('commentJournal.exists', { teamName: 'demo' })).toBe(true);
+  });
+
+  it('comment journal replace round-trips records and marks the team initialized', async () => {
+    const dbPath = await makeTmpDbPath();
+    const core = track(makeCore(dbPath));
+    const record = {
+      key: 'task-a:comment-1',
+      teamName: 'команда-демо',
+      taskId: 'task-a',
+      commentId: 'comment-1',
+      author: 'алиса',
+      commentCreatedAt: null,
+      messageId: 'msg-1',
+      state: 'sent',
+      createdAt: '2026-07-07T10:00:00.000Z',
+      updatedAt: '2026-07-07T10:00:00.000Z',
+      sentAt: '2026-07-07T10:01:00.000Z',
+    };
+
+    expect(core.handle('commentJournal.exists', { teamName: record.teamName })).toBe(false);
+    core.handle('commentJournal.replace', { teamName: record.teamName, entries: [record] });
+
+    expect(core.handle('commentJournal.load', { teamName: record.teamName })).toEqual([record]);
+    expect(core.handle('commentJournal.exists', { teamName: record.teamName })).toBe(true);
+    expect(core.handle('commentJournal.load', { teamName: 'other' })).toEqual([]);
+
+    // Replacing with an empty set keeps the initialization marker.
+    core.handle('commentJournal.replace', { teamName: record.teamName, entries: [] });
+    expect(core.handle('commentJournal.load', { teamName: record.teamName })).toEqual([]);
+    expect(core.handle('commentJournal.exists', { teamName: record.teamName })).toBe(true);
+  });
 });

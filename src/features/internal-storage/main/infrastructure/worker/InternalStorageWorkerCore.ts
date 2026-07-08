@@ -9,9 +9,15 @@ import {
   readSchemaVersion,
   runInternalStorageMigrations,
 } from './internalStorageMigrations';
-import { stallJournalEntries, storeImports } from './internalStorageSchema';
+import {
+  commentJournalEntries,
+  commentJournalTeams,
+  stallJournalEntries,
+  storeImports,
+} from './internalStorageSchema';
 
 import type {
+  CommentJournalEntryRecord,
   InternalStorageBackendInfo,
   StallJournalEntryRecord,
 } from '../../../contracts/internalStorageContracts';
@@ -60,6 +66,18 @@ export class InternalStorageWorkerCore {
         this.replaceStallJournalEntries(typed.teamName, typed.entries);
         return null;
       }
+      case 'commentJournal.load':
+        return this.loadCommentJournalEntries((payload as { teamName: string }).teamName);
+      case 'commentJournal.replace': {
+        const typed = payload as { teamName: string; entries: CommentJournalEntryRecord[] };
+        this.replaceCommentJournalEntries(typed.teamName, typed.entries);
+        return null;
+      }
+      case 'commentJournal.exists':
+        return this.commentJournalExists((payload as { teamName: string }).teamName);
+      case 'commentJournal.ensureInitialized':
+        this.ensureCommentJournalInitialized((payload as { teamName: string }).teamName);
+        return null;
       case 'storeImports.record': {
         const typed = payload as { storeId: string; teamName: string; entryCount: number };
         this.recordStoreImport(typed.storeId, typed.teamName, typed.entryCount);
@@ -102,6 +120,57 @@ export class InternalStorageWorkerCore {
           .run();
       }
     });
+  }
+
+  private loadCommentJournalEntries(teamName: string): CommentJournalEntryRecord[] {
+    const { orm } = this.open();
+    return orm
+      .select()
+      .from(commentJournalEntries)
+      .where(eq(commentJournalEntries.teamName, teamName))
+      .all();
+  }
+
+  /**
+   * Replaces the team's journal rows AND marks the team as initialized in the
+   * same transaction — a journal that was written (even with zero entries)
+   * must report exists()=true, otherwise the seeding baseline re-runs and the
+   * lead gets re-notified about historical comments.
+   */
+  private replaceCommentJournalEntries(
+    teamName: string,
+    entries: CommentJournalEntryRecord[]
+  ): void {
+    const { orm } = this.open();
+    const initializedAt = (this.options.now?.() ?? new Date()).toISOString();
+    orm.transaction((tx) => {
+      tx.delete(commentJournalEntries).where(eq(commentJournalEntries.teamName, teamName)).run();
+      for (let start = 0; start < entries.length; start += INSERT_CHUNK_SIZE) {
+        tx.insert(commentJournalEntries)
+          .values(entries.slice(start, start + INSERT_CHUNK_SIZE))
+          .run();
+      }
+      tx.insert(commentJournalTeams)
+        .values({ teamName, initializedAt })
+        .onConflictDoNothing()
+        .run();
+    });
+  }
+
+  private commentJournalExists(teamName: string): boolean {
+    const { orm } = this.open();
+    const rows = orm
+      .select({ teamName: commentJournalTeams.teamName })
+      .from(commentJournalTeams)
+      .where(eq(commentJournalTeams.teamName, teamName))
+      .all();
+    return rows.length > 0;
+  }
+
+  private ensureCommentJournalInitialized(teamName: string): void {
+    const { orm } = this.open();
+    const initializedAt = (this.options.now?.() ?? new Date()).toISOString();
+    orm.insert(commentJournalTeams).values({ teamName, initializedAt }).onConflictDoNothing().run();
   }
 
   private recordStoreImport(storeId: string, teamName: string, entryCount: number): void {

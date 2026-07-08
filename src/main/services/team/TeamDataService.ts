@@ -60,6 +60,7 @@ import { TeamTranscriptProjectResolver } from './TeamTranscriptProjectResolver';
 
 import type { PersistedTaskChangePresenceIndex } from './cache/taskChangePresenceCacheTypes';
 import type { TaskChangePresenceRepository } from './cache/TaskChangePresenceRepository';
+import type { TaskCommentNotificationJournalStore } from './TaskCommentNotificationJournalStore';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMetaFile } from './TeamMetaStore';
 import type {
@@ -651,6 +652,11 @@ export class TeamDataService {
 
   setMemberRuntimeAdvisoryService(service: TeamMemberRuntimeAdvisoryService): void {
     this.memberRuntimeAdvisoryService = service;
+  }
+
+  /** Composition-time backend swap; must run before notification processing starts. */
+  setTaskCommentNotificationJournalStore(store: TaskCommentNotificationJournalStore): void {
+    this.taskCommentNotificationJournal.setStore(store);
   }
 
   invalidateMemberRuntimeAdvisory(teamName: string, memberName: string): void {
@@ -3231,8 +3237,7 @@ export class TeamDataService {
     const generation = this.getNotificationContextGeneration(teamName);
     const cached = this.notificationContextCache.get(teamName);
     if (
-      cached &&
-      cached.generation === generation &&
+      cached?.generation === generation &&
       now - cached.cachedAt < TEAM_NOTIFICATION_CONTEXT_CACHE_MAX_AGE_MS
     ) {
       return cached.value;

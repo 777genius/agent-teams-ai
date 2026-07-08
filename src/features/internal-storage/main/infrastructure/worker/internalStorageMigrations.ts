@@ -39,6 +39,31 @@ const MIGRATIONS: InternalStorageMigration[] = [
       )`,
     ],
   },
+  {
+    version: 2,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS comment_journal_entries (
+        team_name TEXT NOT NULL,
+        key TEXT NOT NULL,
+        task_id TEXT NOT NULL,
+        comment_id TEXT NOT NULL,
+        author TEXT NOT NULL,
+        comment_created_at TEXT,
+        message_id TEXT,
+        state TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        sent_at TEXT,
+        PRIMARY KEY (team_name, key)
+      )`,
+      // exists() is an initialization marker with zero-entry semantics, so it
+      // needs its own table instead of counting journal rows.
+      `CREATE TABLE IF NOT EXISTS comment_journal_teams (
+        team_name TEXT PRIMARY KEY,
+        initialized_at TEXT NOT NULL
+      )`,
+    ],
+  },
 ];
 
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

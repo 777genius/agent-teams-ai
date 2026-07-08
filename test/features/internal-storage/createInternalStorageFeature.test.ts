@@ -3,10 +3,9 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  BackendSelectingTaskStallJournalStore,
-  createInternalStorageFeature,
-} from '@features/internal-storage/main/composition/createInternalStorageFeature';
+import { BackendSelectingTaskStallJournalStore } from '@features/internal-storage/main/composition/BackendSelectingTaskStallJournalStore';
+import { createInternalStorageFeature } from '@features/internal-storage/main/composition/createInternalStorageFeature';
+import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { getStallMonitorJournalPath } from '../../../src/main/services/team/stallMonitor/JsonTaskStallJournalStore';
 import { setClaudeBasePathOverride } from '../../../src/main/utils/pathDecoder';
 
@@ -32,45 +31,52 @@ class RecordingStore implements TaskStallJournalStore {
 const backendInfo: InternalStorageBackendInfo = {
   driver: 'better-sqlite3',
   databasePath: '/fake/user-data/storage/app.db',
-  schemaVersion: 1,
+  schemaVersion: 2,
   integrity: 'ok',
 };
 
-describe('BackendSelectingTaskStallJournalStore', () => {
-  it('uses the sqlite store when the initial ping succeeds', async () => {
-    const sqlite = new RecordingStore();
-    const json = new RecordingStore();
-    const store = new BackendSelectingTaskStallJournalStore(
-      { ping: () => Promise.resolve(backendInfo) },
-      sqlite,
-      json
-    );
+describe('InternalStorageBackendSelector', () => {
+  it('picks the sqlite backend when the initial ping succeeds and pings only once', async () => {
+    let pings = 0;
+    const selector = new InternalStorageBackendSelector(() => {
+      pings += 1;
+      return Promise.resolve(backendInfo);
+    });
 
-    await store.update('demo', (entries) => ({ entries, result: undefined }));
-    await store.update('demo', (entries) => ({ entries, result: undefined }));
-
-    expect(store.getBackendKind()).toBe('sqlite');
-    expect(sqlite.calls).toBe(2);
-    expect(json.calls).toBe(0);
+    expect(await selector.select('sqlite-store', 'json-store')).toBe('sqlite-store');
+    expect(await selector.select('sqlite-store', 'json-store')).toBe('sqlite-store');
+    expect(pings).toBe(1);
+    expect(selector.getBackendKind()).toBe('sqlite');
   });
 
-  it('falls back to the JSON store for the whole session when ping fails', async () => {
+  it('falls back to the JSON backend for the whole session when ping fails', async () => {
     // The fallback path logs an expected error; keep the global guard quiet.
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let pings = 0;
+    const selector = new InternalStorageBackendSelector(() => {
+      pings += 1;
+      return Promise.reject(new Error('native module ABI mismatch'));
+    });
+
+    expect(await selector.select('sqlite-store', 'json-store')).toBe('json-store');
+    expect(await selector.select('sqlite-store', 'json-store')).toBe('json-store');
+    expect(pings).toBe(1);
+    expect(selector.getBackendKind()).toBe('json-fallback');
+  });
+});
+
+describe('BackendSelectingTaskStallJournalStore', () => {
+  it('routes updates to the backend the selector picked', async () => {
     const sqlite = new RecordingStore();
     const json = new RecordingStore();
-    const store = new BackendSelectingTaskStallJournalStore(
-      { ping: () => Promise.reject(new Error('native module ABI mismatch')) },
-      sqlite,
-      json
-    );
+    const selector = new InternalStorageBackendSelector(() => Promise.resolve(backendInfo));
+    const store = new BackendSelectingTaskStallJournalStore(selector, sqlite, json);
 
     await store.update('demo', (entries) => ({ entries, result: undefined }));
     await store.update('demo', (entries) => ({ entries, result: undefined }));
 
-    expect(store.getBackendKind()).toBe('json-fallback');
-    expect(sqlite.calls).toBe(0);
-    expect(json.calls).toBe(2);
+    expect(sqlite.calls).toBe(2);
+    expect(json.calls).toBe(0);
   });
 });
 
@@ -85,13 +91,13 @@ describe('createInternalStorageFeature', () => {
     }
   });
 
-  it('keeps the stall journal working via JSON when sqlite is unavailable in this environment', async () => {
+  it('keeps both journals working via JSON when sqlite is unavailable in this environment', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'internal-storage-feature-'));
     setClaudeBasePathOverride(tmpDir);
     await fs.mkdir(path.join(tmpDir, 'teams', 'demo'), { recursive: true });
 
     // Under vitest either the worker bundle is missing or the native module
-    // has the Electron ABI, so the feature must degrade to the JSON store.
+    // has the Electron ABI, so the feature must degrade to the JSON stores.
     // Both degradation paths log expected warnings/errors.
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -120,6 +126,11 @@ describe('createInternalStorageFeature', () => {
       await fs.readFile(getStallMonitorJournalPath('demo'), 'utf8')
     ) as TaskStallJournalEntry[];
     expect(persisted).toEqual([entry]);
+
+    // The comment journal degrades through the same session decision.
+    expect(await feature.taskCommentNotificationJournalStore.exists('demo')).toBe(false);
+    await feature.taskCommentNotificationJournalStore.ensureInitialized('demo');
+    expect(await feature.taskCommentNotificationJournalStore.exists('demo')).toBe(true);
 
     await feature.dispose();
   });

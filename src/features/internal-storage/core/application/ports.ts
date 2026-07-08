@@ -1,4 +1,5 @@
 import type {
+  CommentJournalEntryRecord,
   InternalStorageBackendInfo,
   StallJournalEntryRecord,
 } from '../../contracts/internalStorageContracts';
@@ -15,6 +16,18 @@ export interface InternalStorageGateway {
   loadStallJournalEntries(teamName: string): Promise<StallJournalEntryRecord[]>;
   /** Atomically replaces all journal rows of the team in one transaction. */
   replaceStallJournalEntries(teamName: string, entries: StallJournalEntryRecord[]): Promise<void>;
+  loadCommentJournalEntries(teamName: string): Promise<CommentJournalEntryRecord[]>;
+  /**
+   * Atomically replaces the team's journal rows and marks the team as
+   * initialized in the same transaction (exists() must become true even for
+   * an empty journal — see TaskCommentNotificationJournalStore semantics).
+   */
+  replaceCommentJournalEntries(
+    teamName: string,
+    entries: CommentJournalEntryRecord[]
+  ): Promise<void>;
+  commentJournalExists(teamName: string): Promise<boolean>;
+  ensureCommentJournalInitialized(teamName: string): Promise<void>;
   /** Audit trail: records a completed legacy-JSON import. */
   recordStoreImport(storeId: string, teamName: string, entryCount: number): Promise<void>;
   /** WAL checkpoint + close; the worker is terminated afterwards. */

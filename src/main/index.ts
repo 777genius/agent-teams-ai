@@ -1846,8 +1846,14 @@ async function initializeServices(): Promise<void> {
   const teamMemberRuntimeAdvisoryService = new TeamMemberRuntimeAdvisoryService(
     teamMemberLogsFinder
   );
+  internalStorageFeature = createInternalStorageFeature({
+    userDataPath: app.getPath('userData'),
+  });
   teamDataService = new TeamDataService();
   teamDataService.setMemberRuntimeAdvisoryService(teamMemberRuntimeAdvisoryService);
+  teamDataService.setTaskCommentNotificationJournalStore(
+    internalStorageFeature.taskCommentNotificationJournalStore
+  );
   teamProvisioningService = new TeamProvisioningService();
   const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
   const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
@@ -1912,9 +1918,6 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setCrossTeamSender((request) => crossTeamService.send(request));
 
   const taskChangePresenceRepository = new JsonTaskChangePresenceRepository();
-  internalStorageFeature = createInternalStorageFeature({
-    userDataPath: app.getPath('userData'),
-  });
   teamTaskStallMonitor = new TeamTaskStallMonitor(
     new ActiveTeamRegistry(teamDataService, teamLogSourceTracker),
     new TeamTaskStallSnapshotSource(teamTranscriptSourceLocator),

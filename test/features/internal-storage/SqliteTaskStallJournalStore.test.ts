@@ -14,43 +14,9 @@ import { InternalStorageWorkerCore } from '@features/internal-storage/main/infra
 import { getStallMonitorJournalPath } from '../../../src/main/services/team/stallMonitor/JsonTaskStallJournalStore';
 import { TeamTaskStallJournal } from '../../../src/main/services/team/stallMonitor/TeamTaskStallJournal';
 import { setClaudeBasePathOverride } from '../../../src/main/utils/pathDecoder';
+import { InProcessGateway } from './helpers/InProcessGateway';
 
-import type {
-  InternalStorageBackendInfo,
-  StallJournalEntryRecord,
-} from '@features/internal-storage/contracts/internalStorageContracts';
-import type { InternalStorageGateway } from '@features/internal-storage/core/application/ports';
 import type { TaskStallJournalEntry } from '../../../src/main/services/team/stallMonitor/TeamTaskStallTypes';
-
-/** In-process gateway: same op handlers the worker uses, minus the thread hop. */
-class InProcessGateway implements InternalStorageGateway {
-  constructor(private readonly core: InternalStorageWorkerCore) {}
-
-  ping(): Promise<InternalStorageBackendInfo> {
-    return Promise.resolve(this.core.handle('ping', {}) as InternalStorageBackendInfo);
-  }
-
-  loadStallJournalEntries(teamName: string): Promise<StallJournalEntryRecord[]> {
-    return Promise.resolve(
-      this.core.handle('stallJournal.load', { teamName }) as StallJournalEntryRecord[]
-    );
-  }
-
-  replaceStallJournalEntries(teamName: string, entries: StallJournalEntryRecord[]): Promise<void> {
-    this.core.handle('stallJournal.replace', { teamName, entries });
-    return Promise.resolve();
-  }
-
-  recordStoreImport(storeId: string, teamName: string, entryCount: number): Promise<void> {
-    this.core.handle('storeImports.record', { storeId, teamName, entryCount });
-    return Promise.resolve();
-  }
-
-  close(): Promise<void> {
-    this.core.close();
-    return Promise.resolve();
-  }
-}
 
 function makeJournalEntry(overrides: Partial<TaskStallJournalEntry> = {}): TaskStallJournalEntry {
   return {

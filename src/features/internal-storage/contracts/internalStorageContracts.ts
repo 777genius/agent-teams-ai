@@ -2,6 +2,7 @@ export const INTERNAL_STORAGE_DIRNAME = 'storage';
 export const INTERNAL_STORAGE_DATABASE_FILENAME = 'app.db';
 
 export const STALL_JOURNAL_STORE_ID = 'stall-monitor-journal';
+export const COMMENT_JOURNAL_STORE_ID = 'comment-notification-journal';
 
 export type InternalStorageBackendKind = 'sqlite' | 'json-fallback';
 
@@ -22,6 +23,21 @@ export interface StallJournalEntryRecord {
   createdAt: string;
   updatedAt: string;
   alertedAt: string | null;
+}
+
+/** Wire-safe row shape for comment-notification journal entries. */
+export interface CommentJournalEntryRecord {
+  key: string;
+  teamName: string;
+  taskId: string;
+  commentId: string;
+  author: string;
+  commentCreatedAt: string | null;
+  messageId: string | null;
+  state: string;
+  createdAt: string;
+  updatedAt: string;
+  sentAt: string | null;
 }
 
 export interface InternalStorageBackendInfo {
