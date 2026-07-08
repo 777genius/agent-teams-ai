@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   createTeamProvisioningLaunchDeterministicFlowBoundary,
+  createTeamProvisioningLaunchDeterministicFlowHostFromService,
   type TeamProvisioningLaunchDeterministicFlowBoundaryDeps,
   type TeamProvisioningLaunchDeterministicFlowHost,
+  type TeamProvisioningLaunchDeterministicFlowServiceHost,
 } from '../TeamProvisioningLaunchDeterministicFlowPortsFactory';
 
 import type {
@@ -242,6 +244,118 @@ function createDeps(
 }
 
 describe('createTeamProvisioningLaunchDeterministicFlowBoundary', () => {
+  it('builds deterministic launch host from service-shaped dependencies', async () => {
+    const boundHost = new BoundCallbackHost();
+    const targetRun = createRun();
+    const serviceHost = {
+      runTracking: boundHost.runTracking,
+      runs: boundHost.runs,
+      provisioningRunByTeam: boundHost.provisioningRunByTeam,
+      stopAllTeamsGeneration: boundHost.stopAllTeamsGeneration,
+      appShellBoundary: {
+        getWorkspaceTrustCoordinator:
+          boundHost.getWorkspaceTrustCoordinator as TeamProvisioningLaunchDeterministicFlowServiceHost<
+            TestRun,
+            TestLane
+          >['appShellBoundary']['getWorkspaceTrustCoordinator'],
+      },
+      workspaceTrustWorkspaceCollectionPorts:
+        boundHost.workspaceTrustWorkspaceCollectionPorts as TeamProvisioningLaunchDeterministicFlowServiceHost<
+          TestRun,
+          TestLane
+        >['workspaceTrustWorkspaceCollectionPorts'],
+      runtimeTurnSettledEnvironmentProvider: null,
+      mcpConfigBuilder:
+        boundHost.mcpConfigBuilder as TeamProvisioningLaunchDeterministicFlowServiceHost<
+          TestRun,
+          TestLane
+        >['mcpConfigBuilder'],
+      teamMetaStore: boundHost.teamMetaStore as TeamProvisioningLaunchDeterministicFlowServiceHost<
+        TestRun,
+        TestLane
+      >['teamMetaStore'],
+      membersMetaStore:
+        boundHost.membersMetaStore as TeamProvisioningLaunchDeterministicFlowServiceHost<
+          TestRun,
+          TestLane
+        >['membersMetaStore'],
+      configFacade: {
+        materializeLaunchCompatibilityRepair: () =>
+          boundHost.materializeLaunchCompatibilityRepair(),
+      },
+      outputRecoveryFacade: {
+        attachStdoutHandler: (run) => boundHost.attachStdoutHandler(run),
+        attachStderrHandler: (run) => boundHost.attachStderrHandler(run),
+        startStallWatchdog: (run) => boundHost.startStallWatchdog(run),
+      },
+      buildProvisioningEnv: boundHost.providerRuntime
+        .buildProvisioningEnv as unknown as TeamProvisioningLaunchDeterministicFlowServiceHost<
+        TestRun,
+        TestLane
+      >['buildProvisioningEnv'],
+      buildCrossProviderMemberArgs: boundHost.providerRuntime
+        .buildCrossProviderMemberArgs as unknown as TeamProvisioningLaunchDeterministicFlowServiceHost<
+        TestRun,
+        TestLane
+      >['buildCrossProviderMemberArgs'],
+      validateAgentTeamsMcpRuntime: boundHost.providerRuntime.validateAgentTeamsMcpRuntime,
+      getRunTrackedCwd: (run) => boundHost.getRunTrackedCwd(run),
+      normalizeTeamConfigForLaunch: () => boundHost.normalizeTeamConfigForLaunch(),
+      assertConfigLeadOnlyForLaunch: () => boundHost.assertConfigLeadOnlyForLaunch(),
+      updateConfigProjectPath: () => boundHost.updateConfigProjectPath(),
+      restorePrelaunchConfig: () => boundHost.restorePrelaunchConfig(),
+      materializeEffectiveTeamMemberSpecs: () => boundHost.materializeEffectiveTeamMemberSpecs(),
+      resolveOpenCodeMemberWorkspacesForRuntime: () =>
+        boundHost.resolveOpenCodeMemberWorkspacesForRuntime(),
+      planRuntimeLanesOrThrow: (() =>
+        boundHost.planRuntimeLanesOrThrow()) as unknown as TeamProvisioningLaunchDeterministicFlowServiceHost<
+        TestRun,
+        TestLane
+      >['planRuntimeLanesOrThrow'],
+      createMixedSecondaryLaneStates: () => boundHost.createMixedSecondaryLaneStates(),
+      resolveAndValidateLaunchIdentity: (() =>
+        boundHost.resolveAndValidateLaunchIdentity()) as unknown as TeamProvisioningLaunchDeterministicFlowServiceHost<
+        TestRun,
+        TestLane
+      >['resolveAndValidateLaunchIdentity'],
+      prepareWorkspaceTrustForDeterministicRun: (...args) =>
+        boundHost.prepareWorkspaceTrustForDeterministicRun(...args),
+      resetTeamScopedTransientStateForNewRun: (...args) =>
+        boundHost.resetTeamScopedTransientStateForNewRun(...args),
+      clearPersistedLaunchState: (teamName) => boundHost.clearPersistedLaunchState(teamName),
+      publishMixedSecondaryLaneStatusChange: (...args) =>
+        boundHost.publishMixedSecondaryLaneStatusChange(...args),
+      buildRuntimeBootstrapMemberMcpLaunchConfigs: (...args) =>
+        boundHost.buildRuntimeBootstrapMemberMcpLaunchConfigs(...args),
+      buildTeamRuntimeLaunchArgsPlan: () => boundHost.buildTeamRuntimeLaunchArgsPlan(),
+      seedLeadBootstrapPermissionRules: () => boundHost.seedLeadBootstrapPermissionRules(),
+      tryCompleteAfterTimeout: (...args) => boundHost.tryCompleteAfterTimeout(...args),
+      cleanupRun: (...args) => boundHost.cleanupRun(...args),
+      handleProcessExit: (...args) => boundHost.handleProcessExit(...args),
+      removeRunMemberMcpConfigFiles: (...args) => boundHost.removeRunMemberMcpConfigFiles(...args),
+    } satisfies TeamProvisioningLaunchDeterministicFlowServiceHost<TestRun, TestLane>;
+    const host = createTeamProvisioningLaunchDeterministicFlowHostFromService(serviceHost);
+
+    expect(host.getStopAllTeamsGeneration()).toBe(7);
+    expect(host.getWorkspaceTrustCoordinator()).toBeNull();
+    expect(host.getRuntimeTurnSettledEnvironmentProvider()).toBeNull();
+    expect(host.getRunTrackedCwd(targetRun)).toBe('/repo');
+    await host.materializeLaunchCompatibilityRepair(request, {} as never);
+    host.attachStdoutHandler(targetRun);
+    host.attachStderrHandler(targetRun);
+    host.startStallWatchdog(targetRun);
+    await host.seedLeadBootstrapPermissionRules('demo', '/repo');
+
+    expect(boundHost.calls).toEqual([
+      'host-context:cwd:run-1',
+      'host-context:repair',
+      'host-context:stdout:run-1',
+      'host-context:stderr:run-1',
+      'host-context:watchdog:run-1',
+      'host-context:seed',
+    ]);
+  });
+
   it('creates deterministic launch setup and run ports from bound service adapters', async () => {
     const host = new BoundCallbackHost();
     const deps = createDeps(host);

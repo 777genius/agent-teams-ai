@@ -117,6 +117,151 @@ export interface TeamProvisioningLaunchDeterministicFlowBoundaryDeps<
   killTeamProcess(child: ChildProcess | null | undefined): void;
 }
 
+export interface TeamProvisioningLaunchDeterministicFlowServiceHost<
+  TRun extends DeterministicLaunchRunFlowRun<TMixedSecondaryLane>,
+  TMixedSecondaryLane,
+> {
+  runTracking: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['runTracking'];
+  runs: TeamProvisioningLaunchDeterministicFlowHost<TRun, TMixedSecondaryLane>['runs'];
+  provisioningRunByTeam: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['provisioningRunByTeam'];
+  stopAllTeamsGeneration: number;
+  appShellBoundary: {
+    getWorkspaceTrustCoordinator: TeamProvisioningLaunchDeterministicFlowHost<
+      TRun,
+      TMixedSecondaryLane
+    >['getWorkspaceTrustCoordinator'];
+  };
+  workspaceTrustWorkspaceCollectionPorts: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['workspaceTrustWorkspaceCollectionPorts'];
+  runtimeTurnSettledEnvironmentProvider: ReturnType<
+    TeamProvisioningLaunchDeterministicFlowHost<
+      TRun,
+      TMixedSecondaryLane
+    >['getRuntimeTurnSettledEnvironmentProvider']
+  >;
+  mcpConfigBuilder: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['mcpConfigBuilder'];
+  teamMetaStore: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['teamMetaStore'];
+  membersMetaStore: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['membersMetaStore'];
+  configFacade: Pick<
+    TeamProvisioningLaunchDeterministicFlowHost<TRun, TMixedSecondaryLane>,
+    'materializeLaunchCompatibilityRepair'
+  >;
+  outputRecoveryFacade: Pick<
+    TeamProvisioningLaunchDeterministicFlowHost<TRun, TMixedSecondaryLane>,
+    'attachStdoutHandler' | 'attachStderrHandler' | 'startStallWatchdog'
+  >;
+  buildProvisioningEnv: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['providerRuntime']['buildProvisioningEnv'];
+  buildCrossProviderMemberArgs: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['providerRuntime']['buildCrossProviderMemberArgs'];
+  validateAgentTeamsMcpRuntime: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['providerRuntime']['validateAgentTeamsMcpRuntime'];
+  getRunTrackedCwd: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['getRunTrackedCwd'];
+  normalizeTeamConfigForLaunch: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['normalizeTeamConfigForLaunch'];
+  assertConfigLeadOnlyForLaunch: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['assertConfigLeadOnlyForLaunch'];
+  updateConfigProjectPath: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['updateConfigProjectPath'];
+  restorePrelaunchConfig: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['restorePrelaunchConfig'];
+  materializeEffectiveTeamMemberSpecs: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['materializeEffectiveTeamMemberSpecs'];
+  resolveOpenCodeMemberWorkspacesForRuntime: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['resolveOpenCodeMemberWorkspacesForRuntime'];
+  planRuntimeLanesOrThrow: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['planRuntimeLanesOrThrow'];
+  createMixedSecondaryLaneStates: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['createMixedSecondaryLaneStates'];
+  resolveAndValidateLaunchIdentity: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['resolveAndValidateLaunchIdentity'];
+  prepareWorkspaceTrustForDeterministicRun: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['prepareWorkspaceTrustForDeterministicRun'];
+  resetTeamScopedTransientStateForNewRun: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['resetTeamScopedTransientStateForNewRun'];
+  clearPersistedLaunchState: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['clearPersistedLaunchState'];
+  publishMixedSecondaryLaneStatusChange: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['publishMixedSecondaryLaneStatusChange'];
+  buildRuntimeBootstrapMemberMcpLaunchConfigs: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['buildRuntimeBootstrapMemberMcpLaunchConfigs'];
+  buildTeamRuntimeLaunchArgsPlan: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['buildTeamRuntimeLaunchArgsPlan'];
+  seedLeadBootstrapPermissionRules: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['seedLeadBootstrapPermissionRules'];
+  tryCompleteAfterTimeout: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['tryCompleteAfterTimeout'];
+  cleanupRun: TeamProvisioningLaunchDeterministicFlowHost<TRun, TMixedSecondaryLane>['cleanupRun'];
+  handleProcessExit: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['handleProcessExit'];
+  removeRunMemberMcpConfigFiles: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['removeRunMemberMcpConfigFiles'];
+}
+
 export interface TeamProvisioningLaunchDeterministicFlowBoundary<TMixedSecondaryLane> {
   createSetupPorts(): DeterministicLaunchSetupPorts<TMixedSecondaryLane>;
   createRunFlowPorts(input: {
@@ -131,6 +276,69 @@ function assertPreparedSetup<TMixedSecondaryLane>(
   if (setup.kind !== 'prepared') {
     throw new Error('Expected prepared deterministic launch setup');
   }
+}
+
+export function createTeamProvisioningLaunchDeterministicFlowHostFromService<
+  TRun extends DeterministicLaunchRunFlowRun<TMixedSecondaryLane>,
+  TMixedSecondaryLane,
+>(
+  service: TeamProvisioningLaunchDeterministicFlowServiceHost<TRun, TMixedSecondaryLane>
+): TeamProvisioningLaunchDeterministicFlowHost<TRun, TMixedSecondaryLane> {
+  return {
+    runTracking: {
+      getAliveRunId: (teamName) => service.runTracking.getAliveRunId(teamName),
+    },
+    runs: service.runs,
+    provisioningRunByTeam: service.provisioningRunByTeam,
+    getStopAllTeamsGeneration: () => service.stopAllTeamsGeneration,
+    providerRuntime: {
+      buildProvisioningEnv: (...args) => service.buildProvisioningEnv(...args),
+      buildCrossProviderMemberArgs: (...args) => service.buildCrossProviderMemberArgs(...args),
+      validateAgentTeamsMcpRuntime: (...args) => service.validateAgentTeamsMcpRuntime(...args),
+    },
+    getWorkspaceTrustCoordinator: () => service.appShellBoundary.getWorkspaceTrustCoordinator(),
+    workspaceTrustWorkspaceCollectionPorts: service.workspaceTrustWorkspaceCollectionPorts,
+    getRuntimeTurnSettledEnvironmentProvider: () => service.runtimeTurnSettledEnvironmentProvider,
+    mcpConfigBuilder: service.mcpConfigBuilder,
+    teamMetaStore: service.teamMetaStore,
+    membersMetaStore: service.membersMetaStore,
+    getRunTrackedCwd: (run) => service.getRunTrackedCwd(run),
+    materializeLaunchCompatibilityRepair: (launchRequest, report) =>
+      service.configFacade.materializeLaunchCompatibilityRepair(launchRequest, report),
+    normalizeTeamConfigForLaunch: (teamName, configRaw) =>
+      service.normalizeTeamConfigForLaunch(teamName, configRaw),
+    assertConfigLeadOnlyForLaunch: (teamName) => service.assertConfigLeadOnlyForLaunch(teamName),
+    updateConfigProjectPath: (teamName, cwd) => service.updateConfigProjectPath(teamName, cwd),
+    restorePrelaunchConfig: (teamName) => service.restorePrelaunchConfig(teamName),
+    materializeEffectiveTeamMemberSpecs: (params) =>
+      service.materializeEffectiveTeamMemberSpecs(params),
+    resolveOpenCodeMemberWorkspacesForRuntime: (params) =>
+      service.resolveOpenCodeMemberWorkspacesForRuntime(params),
+    planRuntimeLanesOrThrow: (leadProviderId, members, baseCwd) =>
+      service.planRuntimeLanesOrThrow(leadProviderId, members, baseCwd),
+    createMixedSecondaryLaneStates: (lanePlan) => service.createMixedSecondaryLaneStates(lanePlan),
+    resolveAndValidateLaunchIdentity: (params) => service.resolveAndValidateLaunchIdentity(params),
+    prepareWorkspaceTrustForDeterministicRun: (input) =>
+      service.prepareWorkspaceTrustForDeterministicRun(input),
+    resetTeamScopedTransientStateForNewRun: (teamName) =>
+      service.resetTeamScopedTransientStateForNewRun(teamName),
+    clearPersistedLaunchState: (teamName, options) =>
+      service.clearPersistedLaunchState(teamName, options),
+    publishMixedSecondaryLaneStatusChange: (run, lane) =>
+      service.publishMixedSecondaryLaneStatusChange(run, lane),
+    buildRuntimeBootstrapMemberMcpLaunchConfigs: (input) =>
+      service.buildRuntimeBootstrapMemberMcpLaunchConfigs(input),
+    buildTeamRuntimeLaunchArgsPlan: (input) => service.buildTeamRuntimeLaunchArgsPlan(input),
+    seedLeadBootstrapPermissionRules: (teamName, cwd) =>
+      service.seedLeadBootstrapPermissionRules(teamName, cwd),
+    attachStdoutHandler: (run) => service.outputRecoveryFacade.attachStdoutHandler(run),
+    attachStderrHandler: (run) => service.outputRecoveryFacade.attachStderrHandler(run),
+    startStallWatchdog: (run) => service.outputRecoveryFacade.startStallWatchdog(run),
+    tryCompleteAfterTimeout: (run) => service.tryCompleteAfterTimeout(run),
+    cleanupRun: (run) => service.cleanupRun(run),
+    handleProcessExit: (run, code) => service.handleProcessExit(run, code),
+    removeRunMemberMcpConfigFiles: (run) => service.removeRunMemberMcpConfigFiles(run),
+  };
 }
 
 export function createTeamProvisioningLaunchDeterministicFlowBoundary<
