@@ -45,12 +45,95 @@ export interface TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<
   getStopAllTeamsGeneration: DeterministicCreateSpawnFlowPorts<TRun>['getStopAllTeamsGeneration'];
 }
 
+export interface TeamProvisioningCreateDeterministicSpawnFlowServiceHost<
+  TRun extends DeterministicCreateSpawnFlowRun,
+> {
+  teamMetaStore: DeterministicCreateSpawnFlowTeamMetaStore<TRun>;
+  membersMetaStore: DeterministicCreateSpawnFlowPorts<TRun>['membersMetaStore'];
+  mcpConfigBuilder: DeterministicCreateSpawnFlowPorts<TRun>['mcpConfigBuilder'];
+  outputRecoveryFacade: Pick<
+    TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>,
+    'attachStdoutHandler' | 'attachStderrHandler' | 'startStallWatchdog'
+  >;
+  runs: Map<string, TRun>;
+  provisioningRunByTeam: Map<string, string>;
+  stopAllTeamsGeneration: number;
+  buildRuntimeBootstrapMemberMcpLaunchConfigs: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['buildMemberMcpLaunchConfigs'];
+  validateAgentTeamsMcpRuntime(
+    claudePath: string,
+    cwd: string,
+    shellEnv: NodeJS.ProcessEnv,
+    mcpConfigPath: string,
+    options: { isCancelled(): boolean }
+  ): Promise<void>;
+  buildTeamRuntimeLaunchArgsPlan: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['buildTeamRuntimeLaunchArgsPlan'];
+  seedLeadBootstrapPermissionRules: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['seedLeadBootstrapPermissionRules'];
+  startFilesystemMonitor: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['startFilesystemMonitor'];
+  tryCompleteAfterTimeout: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['tryCompleteAfterTimeout'];
+  handleProcessExit: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['handleProcessExit'];
+  cleanupRun: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['cleanupRun'];
+  removeRunMemberMcpConfigFiles: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['removeRunMemberMcpConfigFiles'];
+}
+
+export interface TeamProvisioningCreateDeterministicSpawnFlowServiceHostOptions<
+  TRun extends DeterministicCreateSpawnFlowRun,
+> {
+  spawnCli: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['spawnCli'];
+  updateProgress: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['updateProgress'];
+  killTeamProcess: TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun>['killTeamProcess'];
+}
+
 export interface TeamProvisioningCreateDeterministicSpawnFlowBoundary<
   TRun extends DeterministicCreateSpawnFlowRun,
 > {
   createSpawnFlowPorts(
     input: TeamProvisioningCreateDeterministicSpawnFlowBoundaryInput
   ): DeterministicCreateSpawnFlowPorts<TRun>;
+}
+
+export function createTeamProvisioningCreateDeterministicSpawnFlowDepsFromService<
+  TRun extends DeterministicCreateSpawnFlowRun,
+>(
+  service: TeamProvisioningCreateDeterministicSpawnFlowServiceHost<TRun>,
+  options: TeamProvisioningCreateDeterministicSpawnFlowServiceHostOptions<TRun>
+): TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps<TRun> {
+  return {
+    teamMetaStore: {
+      writeMeta: (teamName, payload) =>
+        service.teamMetaStore.writeMeta(teamName, {
+          ...payload,
+          launchIdentity: payload.launchIdentity ?? undefined,
+        } as unknown as Parameters<typeof service.teamMetaStore.writeMeta>[1]),
+      deleteMeta: (teamName) => service.teamMetaStore.deleteMeta(teamName),
+    },
+    membersMetaStore: service.membersMetaStore,
+    mcpConfigBuilder: service.mcpConfigBuilder,
+    buildMemberMcpLaunchConfigs: (input) =>
+      service.buildRuntimeBootstrapMemberMcpLaunchConfigs(input),
+    validateAgentTeamsMcpRuntime: ({ claudePath, cwd, shellEnv, mcpConfigPath, options }) =>
+      service.validateAgentTeamsMcpRuntime(claudePath, cwd, shellEnv, mcpConfigPath, options),
+    buildTeamRuntimeLaunchArgsPlan: (input) => service.buildTeamRuntimeLaunchArgsPlan(input),
+    seedLeadBootstrapPermissionRules: (teamName, cwd) =>
+      service.seedLeadBootstrapPermissionRules(teamName, cwd),
+    spawnCli: options.spawnCli,
+    updateProgress: options.updateProgress,
+    attachStdoutHandler: (run) => service.outputRecoveryFacade.attachStdoutHandler(run),
+    attachStderrHandler: (run) => service.outputRecoveryFacade.attachStderrHandler(run),
+    startStallWatchdog: (run) => service.outputRecoveryFacade.startStallWatchdog(run),
+    startFilesystemMonitor: (run, request) => service.startFilesystemMonitor(run, request),
+    tryCompleteAfterTimeout: (run) => service.tryCompleteAfterTimeout(run),
+    handleProcessExit: (run, code) => service.handleProcessExit(run, code),
+    killTeamProcess: options.killTeamProcess,
+    cleanupRun: (run) => service.cleanupRun(run),
+    removeRunMemberMcpConfigFiles: (run) => service.removeRunMemberMcpConfigFiles(run),
+    deleteRun: (runId) => {
+      service.runs.delete(runId);
+    },
+    deleteProvisioningRunByTeam: (teamName) => {
+      service.provisioningRunByTeam.delete(teamName);
+    },
+    getStopAllTeamsGeneration: () => service.stopAllTeamsGeneration,
+  };
 }
 
 export function createTeamProvisioningCreateDeterministicSpawnFlowBoundary<

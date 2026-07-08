@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   createTeamProvisioningCreateDeterministicSpawnFlowBoundary,
+  createTeamProvisioningCreateDeterministicSpawnFlowDepsFromService,
   type TeamProvisioningCreateDeterministicSpawnFlowBoundaryDeps,
+  type TeamProvisioningCreateDeterministicSpawnFlowServiceHost,
 } from '../TeamProvisioningCreateDeterministicSpawnFlowPortsFactory';
 import { buildCreateTeamMetaPayload } from '../TeamProvisioningCreateTeamFlow';
 
@@ -145,6 +147,69 @@ function createDeps(host: BoundCallbackHost): {
 }
 
 describe('createTeamProvisioningCreateDeterministicSpawnFlowBoundary', () => {
+  it('builds create spawn flow deps from service-shaped dependencies', async () => {
+    const host = new BoundCallbackHost();
+    const { deps, shellEnv } = createDeps(host);
+    const runs = new Map<string, TestRun>([['run-1', createRun()]]);
+    const provisioningRunByTeam = new Map<string, string>([['demo', 'run-1']]);
+    const service = {
+      teamMetaStore: deps.teamMetaStore,
+      membersMetaStore: deps.membersMetaStore,
+      mcpConfigBuilder: deps.mcpConfigBuilder,
+      outputRecoveryFacade: {
+        attachStdoutHandler: deps.attachStdoutHandler,
+        attachStderrHandler: deps.attachStderrHandler,
+        startStallWatchdog: deps.startStallWatchdog,
+      },
+      runs,
+      provisioningRunByTeam,
+      stopAllTeamsGeneration: 7,
+      buildRuntimeBootstrapMemberMcpLaunchConfigs: deps.buildMemberMcpLaunchConfigs,
+      validateAgentTeamsMcpRuntime: vi.fn(async () => undefined),
+      buildTeamRuntimeLaunchArgsPlan: deps.buildTeamRuntimeLaunchArgsPlan,
+      seedLeadBootstrapPermissionRules: deps.seedLeadBootstrapPermissionRules,
+      startFilesystemMonitor: deps.startFilesystemMonitor,
+      tryCompleteAfterTimeout: deps.tryCompleteAfterTimeout,
+      handleProcessExit: deps.handleProcessExit,
+      cleanupRun: deps.cleanupRun,
+      removeRunMemberMcpConfigFiles: deps.removeRunMemberMcpConfigFiles,
+    } satisfies TeamProvisioningCreateDeterministicSpawnFlowServiceHost<TestRun>;
+    const builtDeps = createTeamProvisioningCreateDeterministicSpawnFlowDepsFromService(service, {
+      spawnCli: deps.spawnCli,
+      updateProgress: deps.updateProgress,
+      killTeamProcess: deps.killTeamProcess,
+    });
+    const boundary = createTeamProvisioningCreateDeterministicSpawnFlowBoundary(builtDeps);
+    const ports = boundary.createSpawnFlowPorts({
+      request,
+      claudePath: '/bin/claude',
+      shellEnv,
+    });
+    const run = createRun();
+    const metaPayload = buildCreateTeamMetaPayload(request, null, 123);
+
+    await ports.teamMetaStore.writeMeta(request.teamName, metaPayload);
+    await ports.validateAgentTeamsMcpRuntime(TEST_MCP_CONFIG_PATH, { isCancelled: () => false });
+    ports.attachStdoutHandler(run);
+    ports.unregisterRun(run.runId, request.teamName);
+
+    expect(deps.teamMetaStore.writeMeta).toHaveBeenCalledWith(request.teamName, {
+      ...metaPayload,
+      launchIdentity: undefined,
+    });
+    expect(service.validateAgentTeamsMcpRuntime).toHaveBeenCalledWith(
+      '/bin/claude',
+      request.cwd,
+      shellEnv,
+      TEST_MCP_CONFIG_PATH,
+      { isCancelled: expect.any(Function) }
+    );
+    expect(host.calls).toEqual(['host-context:stdout:run-1']);
+    expect(runs.has('run-1')).toBe(false);
+    expect(provisioningRunByTeam.has('demo')).toBe(false);
+    expect(ports.getStopAllTeamsGeneration()).toBe(7);
+  });
+
   it('creates deterministic create spawn ports from bound service adapters', async () => {
     const host = new BoundCallbackHost();
     const { deps, deletedRunIds, deletedTeamNames, shellEnv } = createDeps(host);
