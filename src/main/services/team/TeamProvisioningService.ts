@@ -28,7 +28,6 @@ import { killProcessByPid } from '@main/utils/processKill';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { type ParsedPermissionRequest, type PermissionSuggestion } from '@shared/utils/inboxNoise';
-import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { type ParsedTeammateContent } from '@shared/utils/teammateMessageParser';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
@@ -66,7 +65,11 @@ import { OpenCodePromptDeliveryWatchdogScheduler } from './opencode/delivery/Ope
 import { type OpenCodeRuntimeDeliveryAdvisoryDecision } from './opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { openCodeTaskRefsIncludeAll as openCodeTaskRefsIncludeAllValue } from './opencode/delivery/OpenCodeRuntimeDeliveryProofMatching';
 import { OpenCodeRuntimeDeliveryProofReader } from './opencode/delivery/OpenCodeRuntimeDeliveryProofReader';
-import { OpenCodeVisibleReplyProofService } from './opencode/delivery/OpenCodeVisibleReplyProofService';
+import {
+  createOpenCodeVisibleReplyProofServiceFromHost,
+  OpenCodeVisibleReplyProofService,
+  type OpenCodeVisibleReplyProofServiceHost,
+} from './opencode/delivery/OpenCodeVisibleReplyProofService';
 import {
   clearOpenCodeRuntimeLaneStorage,
   inspectOpenCodeRuntimeLaneStorage,
@@ -1732,23 +1735,14 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
         this as unknown as TeamProvisioningMemberMcpLaunchConfigServiceHost<ProvisioningRun>,
         { ensureCwdExists }
       );
-    this.openCodeVisibleReplyProofService = new OpenCodeVisibleReplyProofService({
-      inboxReader: this.inboxReader,
-      inboxWriter: this.inboxWriter,
-      getConfiguredLeadName: async (teamName) =>
-        this.configFacade
-          .readConfigForObservation(teamName)
-          .then(
-            (config) =>
-              config?.members?.find((member) => isLeadMember(member))?.name?.trim() || null
-          )
-          .catch(() => null),
-      emitRuntimeDeliveryReplyAdvisoryRefresh: (teamName, message) =>
-        this.emitRuntimeDeliveryReplyAdvisoryRefresh(teamName, message),
-      warn: (message) => logger.warn(message),
-      getErrorMessage,
-      nowIso,
-    });
+    this.openCodeVisibleReplyProofService = createOpenCodeVisibleReplyProofServiceFromHost(
+      this as unknown as OpenCodeVisibleReplyProofServiceHost,
+      {
+        warn: (message) => logger.warn(message),
+        getErrorMessage,
+        nowIso,
+      }
+    );
     this.openCodePromptDeliveryWatchdogCoordinator =
       createOpenCodePromptDeliveryWatchdogCoordinator({
         hasAcceptedMemberWorkSyncReport: (input) =>

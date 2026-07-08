@@ -21,7 +21,9 @@ import type {
   OpenCodePromptDeliveryLedgerRecord,
   OpenCodePromptDeliveryLedgerStore,
 } from './OpenCodePromptDeliveryLedger';
-import type { InboxMessage } from '@shared/types/team';
+import { isLeadMember } from '@shared/utils/leadDetection';
+
+import type { InboxMessage, TeamCreateRequest } from '@shared/types/team';
 
 type OpenCodeVisibleReplyCorrelation = NonNullable<
   OpenCodePromptDeliveryLedgerRecord['visibleReplyCorrelation']
@@ -44,6 +46,44 @@ export interface OpenCodeVisibleReplyProofServiceDependencies {
   warn: (message: string) => void;
   getErrorMessage: (error: unknown) => string;
   nowIso?: () => string;
+}
+
+export interface OpenCodeVisibleReplyProofServiceHost {
+  inboxReader: OpenCodeVisibleReplyProofServiceDependencies['inboxReader'];
+  inboxWriter: OpenCodeVisibleReplyProofServiceDependencies['inboxWriter'];
+  configFacade: {
+    readConfigForObservation(teamName: string): Promise<{
+      members?: TeamCreateRequest['members'];
+    } | null>;
+  };
+  emitRuntimeDeliveryReplyAdvisoryRefresh: OpenCodeVisibleReplyProofServiceDependencies['emitRuntimeDeliveryReplyAdvisoryRefresh'];
+}
+
+export interface OpenCodeVisibleReplyProofServiceHostOptions
+  extends
+    Pick<OpenCodeVisibleReplyProofServiceDependencies, 'warn' | 'getErrorMessage'>,
+    Partial<Pick<OpenCodeVisibleReplyProofServiceDependencies, 'nowIso'>> {}
+
+export function createOpenCodeVisibleReplyProofServiceFromHost(
+  service: OpenCodeVisibleReplyProofServiceHost,
+  options: OpenCodeVisibleReplyProofServiceHostOptions
+): OpenCodeVisibleReplyProofService {
+  return new OpenCodeVisibleReplyProofService({
+    inboxReader: service.inboxReader,
+    inboxWriter: service.inboxWriter,
+    getConfiguredLeadName: async (teamName) =>
+      service.configFacade
+        .readConfigForObservation(teamName)
+        .then(
+          (config) => config?.members?.find((member) => isLeadMember(member))?.name?.trim() || null
+        )
+        .catch(() => null),
+    emitRuntimeDeliveryReplyAdvisoryRefresh: (teamName, message) =>
+      service.emitRuntimeDeliveryReplyAdvisoryRefresh(teamName, message),
+    warn: options.warn,
+    getErrorMessage: options.getErrorMessage,
+    nowIso: options.nowIso,
+  });
 }
 
 export class OpenCodeVisibleReplyProofService {

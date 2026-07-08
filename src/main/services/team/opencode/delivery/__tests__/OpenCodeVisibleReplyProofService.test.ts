@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  createOpenCodeVisibleReplyProofServiceFromHost,
   OpenCodeVisibleReplyProofService,
+  type OpenCodeVisibleReplyProofServiceHost,
   type OpenCodeVisibleReplyProofServiceDependencies,
 } from '../OpenCodeVisibleReplyProofService';
 
@@ -56,6 +58,55 @@ function makeService(
 }
 
 describe('OpenCodeVisibleReplyProofService', () => {
+  it('builds service from host dependencies and resolves configured lead inboxes', async () => {
+    const getMessagesFor = vi.fn(async (_teamName: string, inboxName: string) =>
+      inboxName === 'captain'
+        ? [
+            runtimeReply({
+              messageId: 'reply-captain',
+              relayOfMessageId: 'msg-lead',
+              to: 'captain',
+            }),
+          ]
+        : []
+    );
+    const serviceHost = {
+      inboxReader: {
+        getMessagesFor,
+      },
+      inboxWriter: {
+        correlateRuntimeDeliveryReply: vi.fn(async () =>
+          unexpected('correlateRuntimeDeliveryReply')
+        ),
+        mergeRuntimeDeliveryTaskRefs: vi.fn(async () => unexpected('mergeRuntimeDeliveryTaskRefs')),
+        sendMessage: vi.fn(async () => unexpected('sendMessage')),
+      },
+      configFacade: {
+        readConfigForObservation: vi.fn(async () => ({
+          members: [{ name: 'captain', agentType: 'lead' }],
+        })),
+      },
+      emitRuntimeDeliveryReplyAdvisoryRefresh: vi.fn(),
+    } satisfies OpenCodeVisibleReplyProofServiceHost;
+    const service = createOpenCodeVisibleReplyProofServiceFromHost(serviceHost, {
+      warn: vi.fn(),
+      getErrorMessage: (error) => (error instanceof Error ? error.message : String(error)),
+      nowIso: () => ISO,
+    });
+
+    const proof = await service.findByRelayOfMessageId({
+      teamName: 'team-a',
+      replyRecipient: 'lead',
+      from: 'bob',
+      relayOfMessageId: 'msg-lead',
+    });
+
+    expect(serviceHost.configFacade.readConfigForObservation).toHaveBeenCalledWith('team-a');
+    expect(getMessagesFor).toHaveBeenCalledWith('team-a', 'captain');
+    expect(proof?.inboxName).toBe('captain');
+    expect(proof?.message.messageId).toBe('reply-captain');
+  });
+
   describe('findByRelayOfMessageId', () => {
     it('accepts exact observed OpenCode user replies for custom configured lead recipients', async () => {
       const service = makeService({
