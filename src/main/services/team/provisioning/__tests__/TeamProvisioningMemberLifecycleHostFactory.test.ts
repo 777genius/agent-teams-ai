@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { TeamProvisioningMemberLifecycleController } from '../TeamProvisioningMemberLifecycle';
 import {
   createTeamProvisioningMemberLifecycleHost,
   createTeamProvisioningMemberLifecycleHostFromPortGroups,
@@ -8,8 +9,6 @@ import {
   TEAM_PROVISIONING_MEMBER_LIFECYCLE_HOST_FACTORY_PORT_KEYS_COVER_HOST,
   type TeamProvisioningMemberLifecycleHostFactoryService,
 } from '../TeamProvisioningMemberLifecycleHostFactory';
-
-import { TeamProvisioningMemberLifecycleController } from '../TeamProvisioningMemberLifecycle';
 import { type TeamProvisioningMemberLifecycleHost } from '../TeamProvisioningMemberLifecycleHostPorts';
 import { type TeamProvisioningMemberLifecycleActionUseCaseSeams } from '../TeamProvisioningMemberLifecycleUseCaseSeams';
 
