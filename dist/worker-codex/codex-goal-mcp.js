@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { McpServer, ResourceTemplate, } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { AccessBoundary, ProjectAdmissionWorkerRole, InterruptAndContinueWorkerUseCase, RunEventProviderKind, reconcileRunPreview, ProjectOperation, } from "@vioxen/subscription-runtime/worker-core";
+import { AccessBoundary, ProjectAdmissionWorkerRole, InterruptAndContinueWorkerUseCase, RunEventProviderKind, ProjectOperation, } from "@vioxen/subscription-runtime/worker-core";
 import { codexGoalJobToArgs, createCodexGoalJob, listCodexGoalJobs, readCodexGoalJob, resolveCodexGoalJobRegistryRoot, summarizeCodexGoalJob, updateCodexGoalJob, } from "./codex-goal-jobs.js";
 import { upsertCodexGoalLaunchManifest } from "./codex-goal-launch-manifest.js";
 import { buildCodexGoalNoTmuxCommand, buildCodexGoalTmuxCommand, collectCodexGoalStatus, doctorCodexGoal, listCodexGoalAccountStatuses, prepareCodexGoalLaunchPaths, resolveCodexGoalWorkerLiveness, startCodexGoalTmux, tailCodexGoalLog, } from "./codex-goal-ops.js";
@@ -15,10 +15,8 @@ import { createLocalProjectIntegrationMcpToolHandlers, } from "./project-integra
 import { accountNames, booleanValue, numberValue, requiredRawString, resolvePath, stringValue, } from "./codex-goal-mcp-values.js";
 import { jobIdInputSchema, jobRegistryInputSchema, registryRootFromArgs, } from "./codex-goal-mcp-inputs.js";
 import { accountAuthRootFromArgs, accountPoolRootFromArgs, codexAccountReloginInstructions, codexAccountStatusPayload, listAccountPools, } from "./codex-goal-mcp-accounts.js";
-import { jobIdsFromValue, parseIsoDate, signalIdList, workerControlCallerArgs, workerControlDecisionJson, workerControlReceiptJson, workerControlSignalJson, workerControlSignalViewJson, } from "./codex-goal-mcp-worker-control-view.js";
+import { parseIsoDate, signalIdList, workerControlCallerArgs, workerControlDecisionJson, workerControlReceiptJson, workerControlSignalJson, workerControlSignalViewJson, } from "./codex-goal-mcp-worker-control-view.js";
 import { codexGoalAccountStatusPayload, codexGoalStateRootDir, codexGoalWorkerControlService, codexGoalWorkerControlTarget, } from "./codex-goal-mcp-worker-control.js";
-import { applyWorkspaceConflictToOverviewJob, buildCodexGoalWorkspaceConflicts, workspaceConflictJobIds, } from "./codex-goal-mcp-workspace-conflicts.js";
-import { codexOverviewItemToWatchStatus } from "./codex-goal-mcp-watch-status.js";
 import { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
 import { jobManifestInputFromArgs, jobManifestPatchFromArgs, } from "./codex-goal-mcp-manifest-args.js";
 import { mcpJson, withMcpErrors, } from "./codex-goal-mcp-response.js";
@@ -26,6 +24,7 @@ import { registerCodexGoalPrompts } from "./codex-goal-mcp-prompts.js";
 import { optionalTargetCommit, targetCommitFromArgs, } from "./codex-goal-mcp-target-commit.js";
 import { goalInputSchema, statusInputSchema, } from "./codex-goal-mcp-input-schemas.js";
 export { buildCodexGoalBrief } from "./codex-goal-mcp-brief.js";
+import { buildCodexGoalOverviewView, reconcilePreviewCodexGoalJobsView, } from "./codex-goal-mcp-overview.js";
 import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item.js";
 import { codexGoalStatusInputFromLaunch as statusInput, } from "./codex-goal-mcp-status-input.js";
 import { createCodexProjectControlBroker, } from "./codex-goal-mcp-project-broker.js";
@@ -1672,124 +1671,18 @@ async function maintenancePauseStoredJob(args) {
     return mcpJson(await maintenancePauseStoredJobLifecycle(args, { loadJobLaunch }));
 }
 async function buildCodexGoalOverview(args) {
-    const registryRootDir = registryRootFromArgs(args);
-    const summaries = await listCodexGoalJobs({ registryRootDir });
-    const jobIdPrefix = stringValue(args.jobIdPrefix);
-    const matchingSummaries = jobIdPrefix
-        ? summaries.filter((summary) => summary.jobId.startsWith(jobIdPrefix))
-        : summaries;
-    const limit = numberValue(args.limit);
-    const selectedSummaries = limit ? matchingSummaries.slice(0, limit) : matchingSummaries;
-    const staleAfterMs = numberValue(args.staleAfterMs) ?? 10 * 60_000;
-    const tailLines = numberValue(args.tailLines) ?? 5;
-    const rawJobs = await Promise.all(selectedSummaries.map((summary) => buildCodexGoalOverviewItem({
-        registryRootDir,
-        jobId: summary.jobId,
-        staleAfterMs,
-        tailLines,
-    })));
-    const workspaceConflicts = await buildCodexGoalWorkspaceConflicts(rawJobs);
-    const conflictJobIds = workspaceConflictJobIds(workspaceConflicts);
-    const jobs = rawJobs.map((job) => applyWorkspaceConflictToOverviewJob({
-        job,
-        conflictJobIds,
-    }));
-    const okJobs = jobs.filter((job) => job.ok);
+    return buildCodexGoalOverviewView(args);
+}
+function codexGoalOverviewDeps() {
     return {
-        ok: jobs.every((job) => job.ok),
-        safeToOperate: workspaceConflicts.length === 0,
-        registryRootDir,
-        ...(jobIdPrefix ? { jobIdPrefix } : {}),
-        totalJobs: summaries.length,
-        ...(jobIdPrefix ? { matchedJobs: matchingSummaries.length } : {}),
-        returnedJobs: jobs.length,
-        truncated: selectedSummaries.length < matchingSummaries.length,
-        summary: {
-            running: okJobs.filter((job) => job.workerAlive).length,
-            silentStale: okJobs.filter((job) => job.silentStale).length,
-            safeToContinue: okJobs.filter((job) => job.safeToContinue).length,
-            needsHumanRelogin: okJobs.filter((job) => job.needsHumanRelogin).length,
-            manualReview: okJobs.filter((job) => job.nextBestTool === "manual_review").length,
-            completed: okJobs.filter((job) => job.resultStatus === "completed").length,
-            workspaceConflicts: workspaceConflicts.length,
-            blockedBySingleWriter: okJobs.filter((job) => job.blockedBySingleWriter).length,
-            unavailable: jobs.filter((job) => !job.ok).length,
+        continueStoredJob: async (args, options) => {
+            const response = await continueStoredJob(args, options);
+            return response.structuredContent;
         },
-        workspaceConflicts,
-        jobs,
     };
 }
 async function reconcilePreviewCodexGoalJobs(args) {
-    const registryRootDir = registryRootFromArgs(args);
-    const staleAfterMs = numberValue(args.staleAfterMs) ?? 10 * 60_000;
-    const tailLines = numberValue(args.tailLines) ?? 5;
-    const explicitJobIds = jobIdsFromValue(args.jobIds);
-    const result = await reconcileRunPreview({
-        ...(explicitJobIds.length ? { runIds: explicitJobIds } : {}),
-        policy: {
-            continueSafeRuns: booleanValue(args.continueSafeJobs) === true,
-            maxContinuesPerRun: numberValue(args.maxContinuesPerRun) ?? 1,
-        },
-        backend: {
-            async listRunIds() {
-                return (await listCodexGoalJobs({ registryRootDir }))
-                    .map((summary) => summary.jobId);
-            },
-            async inspectRun(jobId) {
-                const item = await buildCodexGoalOverviewItem({
-                    registryRootDir,
-                    jobId,
-                    staleAfterMs,
-                    tailLines,
-                });
-                return codexOverviewItemToWatchStatus(item);
-            },
-            async continueRun(jobId) {
-                const response = await continueStoredJob({
-                    registryRootDir,
-                    jobId,
-                    confirmContinue: true,
-                    ...(booleanValue(args.skipDoctor) === true ? { skipDoctor: true } : {}),
-                }, {
-                    confirmKey: "confirmContinue",
-                    mode: "continue",
-                });
-                const summary = response.structuredContent;
-                return {
-                    ok: summary.ok === true,
-                    ...(typeof summary.reason === "string" ? { reason: summary.reason } : {}),
-                    summary,
-                };
-            },
-        },
-    });
-    return {
-        ok: true,
-        safeToOperate: result.ok,
-        registryRootDir,
-        mode: booleanValue(args.continueSafeJobs) === true
-            ? "continue_safe_jobs"
-            : "dry_run",
-        checked: result.checked,
-        continued: result.continued,
-        decisions: result.decisions.map(reconcilePreviewDecisionJson),
-    };
-}
-function reconcilePreviewDecisionJson(decision) {
-    if ("status" in decision) {
-        return {
-            ...decision,
-            jobId: decision.runId,
-            status: {
-                ...decision.status,
-                jobId: decision.runId,
-            },
-        };
-    }
-    return {
-        ...decision,
-        jobId: decision.runId,
-    };
+    return reconcilePreviewCodexGoalJobsView(args, codexGoalOverviewDeps());
 }
 if (await isMainModule()) {
     try {

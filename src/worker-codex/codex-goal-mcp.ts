@@ -16,12 +16,10 @@ import {
   InterruptAndContinueWorkerUseCase,
   RunEventProviderKind,
   evaluateProjectAdmission,
-  reconcileRunPreview,
   ProjectOperation,
   type ProjectAccessScope,
   type ProjectControlBroker,
   type ProjectControlOperationResult,
-  type RunReconcilePreviewDecision,
   type ActiveAttemptRegistry,
   type WorkerControlActor,
   type WorkerControlDeliveryMode,
@@ -208,6 +206,10 @@ import {
   statusInputSchema,
 } from "./codex-goal-mcp-input-schemas";
 export { buildCodexGoalBrief } from "./codex-goal-mcp-brief";
+import {
+  buildCodexGoalOverviewView,
+  reconcilePreviewCodexGoalJobsView,
+} from "./codex-goal-mcp-overview";
 import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item";
 import {
   codexGoalStatusInputFromLaunch as statusInput,
@@ -2491,132 +2493,26 @@ async function maintenancePauseStoredJob(args: JobLifecycleMcpArgs) {
 }
 
 async function buildCodexGoalOverview(args: JobOverviewMcpArgs): Promise<JsonObject> {
-  const registryRootDir = registryRootFromArgs(args);
-  const summaries = await listCodexGoalJobs({ registryRootDir });
-  const jobIdPrefix = stringValue(args.jobIdPrefix);
-  const matchingSummaries = jobIdPrefix
-    ? summaries.filter((summary) => summary.jobId.startsWith(jobIdPrefix))
-    : summaries;
-  const limit = numberValue(args.limit);
-  const selectedSummaries = limit ? matchingSummaries.slice(0, limit) : matchingSummaries;
-  const staleAfterMs = numberValue(args.staleAfterMs) ?? 10 * 60_000;
-  const tailLines = numberValue(args.tailLines) ?? 5;
-  const rawJobs = await Promise.all(
-    selectedSummaries.map((summary) =>
-      buildCodexGoalOverviewItem({
-        registryRootDir,
-        jobId: summary.jobId,
-        staleAfterMs,
-        tailLines,
-      }),
-    ),
-  );
-  const workspaceConflicts = await buildCodexGoalWorkspaceConflicts(rawJobs);
-  const conflictJobIds = workspaceConflictJobIds(workspaceConflicts);
-  const jobs = rawJobs.map((job) => applyWorkspaceConflictToOverviewJob({
-    job,
-    conflictJobIds,
-  }));
-  const okJobs = jobs.filter((job) => job.ok);
+  return buildCodexGoalOverviewView(args);
+}
+
+function codexGoalOverviewDeps() {
   return {
-    ok: jobs.every((job) => job.ok),
-    safeToOperate: workspaceConflicts.length === 0,
-    registryRootDir,
-    ...(jobIdPrefix ? { jobIdPrefix } : {}),
-    totalJobs: summaries.length,
-    ...(jobIdPrefix ? { matchedJobs: matchingSummaries.length } : {}),
-    returnedJobs: jobs.length,
-    truncated: selectedSummaries.length < matchingSummaries.length,
-    summary: {
-      running: okJobs.filter((job) => job.workerAlive).length,
-      silentStale: okJobs.filter((job) => job.silentStale).length,
-      safeToContinue: okJobs.filter((job) => job.safeToContinue).length,
-      needsHumanRelogin: okJobs.filter((job) => job.needsHumanRelogin).length,
-      manualReview: okJobs.filter((job) => job.nextBestTool === "manual_review").length,
-      completed: okJobs.filter((job) => job.resultStatus === "completed").length,
-      workspaceConflicts: workspaceConflicts.length,
-      blockedBySingleWriter: okJobs.filter((job) => job.blockedBySingleWriter).length,
-      unavailable: jobs.filter((job) => !job.ok).length,
+    continueStoredJob: async (
+      args: JobLifecycleMcpArgs,
+      options: {
+        readonly mode: "continue" | "recover";
+        readonly confirmKey: "confirmContinue" | "confirmRecover";
+      },
+    ) => {
+      const response = await continueStoredJob(args, options);
+      return response.structuredContent as JsonObject;
     },
-    workspaceConflicts,
-    jobs,
   };
 }
 
 async function reconcilePreviewCodexGoalJobs(args: JobWatchMcpArgs): Promise<JsonObject> {
-  const registryRootDir = registryRootFromArgs(args);
-  const staleAfterMs = numberValue(args.staleAfterMs) ?? 10 * 60_000;
-  const tailLines = numberValue(args.tailLines) ?? 5;
-  const explicitJobIds = jobIdsFromValue(args.jobIds);
-  const result = await reconcileRunPreview({
-    ...(explicitJobIds.length ? { runIds: explicitJobIds } : {}),
-    policy: {
-      continueSafeRuns: booleanValue(args.continueSafeJobs) === true,
-      maxContinuesPerRun: numberValue(args.maxContinuesPerRun) ?? 1,
-    },
-    backend: {
-      async listRunIds() {
-        return (await listCodexGoalJobs({ registryRootDir }))
-          .map((summary) => summary.jobId);
-      },
-      async inspectRun(jobId) {
-        const item = await buildCodexGoalOverviewItem({
-          registryRootDir,
-          jobId,
-          staleAfterMs,
-          tailLines,
-        });
-        return codexOverviewItemToWatchStatus(item);
-      },
-      async continueRun(jobId) {
-        const response = await continueStoredJob({
-          registryRootDir,
-          jobId,
-          confirmContinue: true,
-          ...(booleanValue(args.skipDoctor) === true ? { skipDoctor: true } : {}),
-        }, {
-          confirmKey: "confirmContinue",
-          mode: "continue",
-        });
-        const summary = response.structuredContent;
-        return {
-          ok: summary.ok === true,
-          ...(typeof summary.reason === "string" ? { reason: summary.reason } : {}),
-          summary,
-        };
-      },
-    },
-  });
-  return {
-    ok: true,
-    safeToOperate: result.ok,
-    registryRootDir,
-    mode: booleanValue(args.continueSafeJobs) === true
-      ? "continue_safe_jobs"
-      : "dry_run",
-    checked: result.checked,
-    continued: result.continued,
-    decisions: result.decisions.map(reconcilePreviewDecisionJson),
-  };
-}
-
-function reconcilePreviewDecisionJson(
-  decision: RunReconcilePreviewDecision,
-): JsonObject {
-  if ("status" in decision) {
-    return {
-      ...decision,
-      jobId: decision.runId,
-      status: {
-        ...decision.status,
-        jobId: decision.runId,
-      },
-    };
-  }
-  return {
-    ...decision,
-    jobId: decision.runId,
-  };
+  return reconcilePreviewCodexGoalJobsView(args, codexGoalOverviewDeps());
 }
 
 if (await isMainModule()) {
