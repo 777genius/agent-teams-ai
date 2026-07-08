@@ -4700,7 +4700,14 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
       expect(snapshots[0]).toMatchObject({
         runId: jobId,
         providerKind: "codex",
-        liveness: "dead",
+        status: "running",
+        liveness: "alive",
+        process: {
+          supervisor: "direct",
+          alive: true,
+          aliveReason: "pid",
+          pid: process.pid,
+        },
         logs: {
           exists: true,
           path: join(jobRootDir, "worker.log"),
