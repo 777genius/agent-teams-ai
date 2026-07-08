@@ -136,6 +136,37 @@ describe('agent-teams-mcp tools', () => {
     expect(parsed?.success).toBe(true);
   });
 
+  it('accepts structured task refs on MCP task and review write schemas', () => {
+    const taskRefs = [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'alpha' }];
+
+    expect(
+      getTool('task_create').parameters?.safeParse({
+        teamName: 'alpha',
+        subject: 'Wire references',
+        descriptionTaskRefs: taskRefs,
+        promptTaskRefs: taskRefs,
+      }).success
+    ).toBe(true);
+    expect(
+      getTool('task_add_comment').parameters?.safeParse({
+        teamName: 'alpha',
+        taskId: 'task-1',
+        text: 'See related work',
+        from: 'lead',
+        taskRefs,
+      }).success
+    ).toBe(true);
+    expect(
+      getTool('review_request_changes').parameters?.safeParse({
+        teamName: 'alpha',
+        taskId: 'task-1',
+        from: 'lead',
+        comment: 'Needs follow-up',
+        taskRefs,
+      }).success
+    ).toBe(true);
+  });
+
   it('launches and stops teams through the runtime MCP tools', async () => {
     const claudeDir = makeClaudeDir();
     writeTeamConfig(claudeDir, 'alpha', {
@@ -191,6 +222,7 @@ describe('agent-teams-mcp tools', () => {
           teamName: 'alpha',
           cwd: '/tmp/project',
           controlUrl: server.baseUrl,
+          limitContext: true,
         })
       );
       expect(launched.runId).toBe('run-555');
@@ -210,7 +242,7 @@ describe('agent-teams-mcp tools', () => {
         {
           method: 'POST',
           url: '/api/teams/alpha/launch',
-          body: { cwd: '/tmp/project' },
+          body: { cwd: '/tmp/project', limitContext: true },
         },
         {
           method: 'GET',
@@ -294,12 +326,24 @@ describe('agent-teams-mcp tools', () => {
           teamName: 'alpha',
           controlUrl: server.baseUrl,
           displayName: 'Alpha',
-          members: [{ name: 'builder', role: 'Engineer', providerId: 'codex' }],
+          members: [
+            {
+              name: 'builder',
+              role: 'Engineer',
+              providerId: 'codex',
+              mcpPolicy: {
+                mode: 'strictAllowlist',
+                scopes: { project: true, user: false, local: false },
+                serverNames: ['agent-teams'],
+              },
+            },
+          ],
           cwd: '/tmp/project',
           providerId: 'codex',
           model: 'gpt-5.2',
           effort: 'high',
           fastMode: 'on',
+          limitContext: true,
         })
       );
       expect(created.teamName).toBe('alpha');
@@ -321,12 +365,24 @@ describe('agent-teams-mcp tools', () => {
           body: {
             teamName: 'alpha',
             displayName: 'Alpha',
-            members: [{ name: 'builder', role: 'Engineer', providerId: 'codex' }],
+            members: [
+              {
+                name: 'builder',
+                role: 'Engineer',
+                providerId: 'codex',
+                mcpPolicy: {
+                  mode: 'strictAllowlist',
+                  scopes: { project: true, user: false, local: false },
+                  serverNames: ['agent-teams'],
+                },
+              },
+            ],
             cwd: '/tmp/project',
             providerId: 'codex',
             model: 'gpt-5.2',
             effort: 'high',
             fastMode: 'on',
+            limitContext: true,
           },
         },
       ]);
@@ -453,6 +509,7 @@ describe('agent-teams-mcp tools', () => {
           claudeDir,
           teamName: 'alpha',
           controlUrl: server.baseUrl,
+          waitTimeoutMs: 90000,
           from: 'alice',
         })
       );
@@ -464,6 +521,7 @@ describe('agent-teams-mcp tools', () => {
           teamName: 'alpha',
           memberName: 'alice',
           controlUrl: server.baseUrl,
+          waitTimeoutMs: 90000,
           state: 'caught_up',
           agendaFingerprint: 'agenda:v1:abc',
           reportToken: 'wrs:v1.test.token',
@@ -753,6 +811,11 @@ describe('agent-teams-mcp tools', () => {
         subject: 'Dependency',
       })
     );
+    const dependencyRef = {
+      taskId: dependencyTask.id,
+      displayId: dependencyTask.displayId,
+      teamName,
+    };
 
     const createdTask = parseJsonToolResult(
       await getTool('task_create').execute({
@@ -761,10 +824,14 @@ describe('agent-teams-mcp tools', () => {
         subject: 'Review MCP adapter',
         owner: 'alice',
         createdBy: 'ui-fixer',
+        descriptionTaskRefs: [dependencyRef],
+        promptTaskRefs: [dependencyRef],
       })
     );
     expect(createdTask.status).toBe('pending');
     expect(createdTask.historyEvents?.[0]?.actor).toBe('ui-fixer');
+    expect(createdTask.descriptionTaskRefs).toEqual([dependencyRef]);
+    expect(createdTask.promptTaskRefs).toEqual([dependencyRef]);
 
     const listedTasks = parseJsonToolResult(
       await getTool('task_list').execute({
@@ -834,11 +901,13 @@ describe('agent-teams-mcp tools', () => {
         taskId: createdTask.id,
         text: 'Need one more check',
         from: 'lead',
+        taskRefs: [dependencyRef],
       })
     );
 
     const commentId = commented.commentId;
     expect(commentId).toBeTruthy();
+    expect(commented.comment.taskRefs).toEqual([dependencyRef]);
 
     const ownerInboxPath = path.join(claudeDir, 'teams', teamName, 'inboxes', 'alice.json');
     const ownerInbox = JSON.parse(fs.readFileSync(ownerInboxPath, 'utf8'));
@@ -1015,9 +1084,8 @@ describe('agent-teams-mcp tools', () => {
       memberName: 'alice',
       runtimeProvider: 'codex',
     });
-    const codexMemberBriefingText = (
-      codexMemberBriefing as { content: Array<{ text: string }> }
-    ).content[0]?.text;
+    const codexMemberBriefingText = (codexMemberBriefing as { content: Array<{ text: string }> })
+      .content[0]?.text;
     expect(codexMemberBriefingText).toContain('agent-teams_message_send');
     expect(codexMemberBriefingText).toContain('Codex Native visible messaging rule');
     expect(codexMemberBriefingText).toContain('mcp__agent-teams__task_get');
@@ -1676,7 +1744,15 @@ describe('agent-teams-mcp tools', () => {
         source: 'system_notification',
         relayOfMessageId: 'msg-original-1',
         leadSessionId: 'session-42',
-        attachments: [{ id: 'att-1', filename: 'note.txt', mimeType: 'text/plain', size: 4 }],
+        attachments: [
+          {
+            id: 'att-1',
+            filename: 'note.txt',
+            mimeType: 'text/plain',
+            size: 4,
+            filePath: '/tmp/note.txt',
+          },
+        ],
         taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName }],
       })
     );
@@ -1689,6 +1765,7 @@ describe('agent-teams-mcp tools', () => {
     expect(rows[0].relayOfMessageId).toBe('msg-original-1');
     expect(rows[0].leadSessionId).toBe('session-42');
     expect(rows[0].attachments[0].filename).toBe('note.txt');
+    expect(rows[0].attachments[0].filePath).toBe('/tmp/note.txt');
     expect(rows[0].taskRefs).toEqual([{ taskId: 'task-1', displayId: 'abcd1234', teamName }]);
   });
 

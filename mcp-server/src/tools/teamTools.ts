@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { getController } from '../controller';
 import { jsonTextContent } from '../utils/format';
+import { teamMemberMcpPolicySchema } from '../utils/schemas';
 
 const controlContextSchema = {
   claudeDir: z.string().min(1).optional(),
@@ -29,6 +30,7 @@ const memberSchema = z.object({
   model: z.string().min(1).optional(),
   effort: effortSchema.optional(),
   fastMode: fastModeSchema.optional(),
+  mcpPolicy: teamMemberMcpPolicySchema.optional(),
 });
 
 function controlFlags(args: {

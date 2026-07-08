@@ -147,7 +147,18 @@ describe('HTTP team runtime routes', () => {
         payload: {
           teamName: 'new-team',
           displayName: 'New Team',
-          members: [{ name: 'builder', role: 'Engineer', providerId: 'codex' }],
+          members: [
+            {
+              name: 'builder',
+              role: 'Engineer',
+              providerId: 'codex',
+              mcpPolicy: {
+                mode: 'strictAllowlist',
+                scopes: { project: true, user: false },
+                serverNames: ['agent-teams'],
+              },
+            },
+          ],
           cwd: '/Users/test/project',
           providerId: 'codex',
           model: 'gpt-5.2',
@@ -167,6 +178,11 @@ describe('HTTP team runtime routes', () => {
             role: 'Engineer',
             providerId: 'codex',
             providerBackendId: 'codex-native',
+            mcpPolicy: {
+              mode: 'strictAllowlist',
+              scopes: { project: true, user: false },
+              serverNames: ['agent-teams'],
+            },
           },
         ],
         cwd: '/Users/test/project',
@@ -239,6 +255,7 @@ describe('HTTP team runtime routes', () => {
           prompt: 'Resume work',
           skipPermissions: false,
           clearContext: true,
+          limitContext: true,
         },
       });
 
@@ -252,6 +269,7 @@ describe('HTTP team runtime routes', () => {
           providerId: 'anthropic',
           skipPermissions: false,
           clearContext: true,
+          limitContext: true,
         },
         expect.any(Function)
       );
