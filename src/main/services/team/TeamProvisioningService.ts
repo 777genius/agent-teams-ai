@@ -95,10 +95,7 @@ import {
   type TeamProvisioningCleanupPorts,
 } from './provisioning/TeamProvisioningCleanup';
 import { getCliHelpOutputWithProvisioningPorts } from './provisioning/TeamProvisioningCliHelpOutputPortsFactory';
-import {
-  type TeamProvisioningCompatibilityDelegation,
-  TeamProvisioningCompatibilityFacade,
-} from './provisioning/TeamProvisioningCompatibilityFacade';
+import { type TeamProvisioningCompatibilityDelegation } from './provisioning/TeamProvisioningCompatibilityFacade';
 import { TeamProvisioningConfigFacade } from './provisioning/TeamProvisioningConfigFacade';
 import { type TeamProvisioningConfigTaskActivityBoundary } from './provisioning/TeamProvisioningConfigTaskActivityBoundary';
 import { type DeterministicCreateRunFlowPorts } from './provisioning/TeamProvisioningCreateDeterministicRunFlow';
@@ -469,9 +466,9 @@ import {
   resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
 } from './provisioning/TeamProvisioningRuntimeRecipientResolution';
 import {
-  createDefaultTeamProvisioningRuntimeResourceSampling,
-  DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS,
-} from './provisioning/TeamProvisioningRuntimeResourceSamplingFactory';
+  createTeamProvisioningRuntimeResourceSamplingForService,
+  TeamProvisioningRuntimeResourceSamplingCompatibilityFacade,
+} from './provisioning/TeamProvisioningRuntimeResourceSamplingCompatibilityFacade';
 import { attachLiveRuntimeMetadataToStatuses as attachLiveRuntimeMetadataToStatusesHelper } from './provisioning/TeamProvisioningRuntimeSnapshot';
 import { TeamProvisioningRuntimeSnapshotCacheBoundary } from './provisioning/TeamProvisioningRuntimeSnapshotCache';
 import {
@@ -637,48 +634,7 @@ const claudePermissionSettingsFilePorts: ClaudePermissionSettingsFilePorts = {
   writeFileUtf8: (filePath, contents) => atomicWriteAsync(filePath, contents),
 };
 
-export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade<ProvisioningRun> {
-  private static runtimeProcessTableTimeoutMs =
-    DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS.processTableTimeoutMs;
-  private static runtimeWindowsProcessTableTimeoutMs =
-    DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS.windowsProcessTableTimeoutMs;
-  private static runtimePidusageBatchTimeoutMs =
-    DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS.pidusageBatchTimeoutMs;
-  private static runtimeProcessUsageCacheMaxEntries =
-    DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS.processUsageCacheMaxEntries;
-
-  static get RUNTIME_PROCESS_TABLE_TIMEOUT_MS(): number {
-    return TeamProvisioningService.runtimeProcessTableTimeoutMs;
-  }
-
-  static set RUNTIME_PROCESS_TABLE_TIMEOUT_MS(value: number) {
-    TeamProvisioningService.runtimeProcessTableTimeoutMs = value;
-  }
-
-  static get RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS(): number {
-    return TeamProvisioningService.runtimeWindowsProcessTableTimeoutMs;
-  }
-
-  static set RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS(value: number) {
-    TeamProvisioningService.runtimeWindowsProcessTableTimeoutMs = value;
-  }
-
-  static get RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS(): number {
-    return TeamProvisioningService.runtimePidusageBatchTimeoutMs;
-  }
-
-  static set RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS(value: number) {
-    TeamProvisioningService.runtimePidusageBatchTimeoutMs = value;
-  }
-
-  static get RUNTIME_PROCESS_USAGE_CACHE_MAX_ENTRIES(): number {
-    return TeamProvisioningService.runtimeProcessUsageCacheMaxEntries;
-  }
-
-  static set RUNTIME_PROCESS_USAGE_CACHE_MAX_ENTRIES(value: number) {
-    TeamProvisioningService.runtimeProcessUsageCacheMaxEntries = value;
-  }
-
+export class TeamProvisioningService extends TeamProvisioningRuntimeResourceSamplingCompatibilityFacade<ProvisioningRun> {
   private readonly runtimeLaneCoordinator = createTeamRuntimeLaneCoordinator();
   private readonly providerConnectionService = ProviderConnectionService.getInstance();
   private readonly launchIdentityBoundary: TeamProvisioningLaunchIdentityBoundary =
@@ -1053,29 +1009,15 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     string,
     { expiresAtMs: number; snapshot: TeamAgentRuntimeSnapshot }
   >();
-  private readonly runtimeResourceSampling = createDefaultTeamProvisioningRuntimeResourceSampling(
-    {
-      getRuntimeSnapshotCacheGeneration: (teamName) =>
-        this.getRuntimeSnapshotCacheGeneration(teamName),
-      getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
-    },
-    { logDebug: (message) => logger.debug(message) },
-    {
-      ...DEFAULT_RUNTIME_RESOURCE_SAMPLING_OPTIONS,
-      get processTableTimeoutMs() {
-        return TeamProvisioningService.RUNTIME_PROCESS_TABLE_TIMEOUT_MS;
+  private readonly runtimeResourceSampling =
+    createTeamProvisioningRuntimeResourceSamplingForService(
+      {
+        getRuntimeSnapshotCacheGeneration: (teamName) =>
+          this.getRuntimeSnapshotCacheGeneration(teamName),
+        getTrackedRunId: (teamName) => this.runTracking.getTrackedRunId(teamName),
       },
-      get windowsProcessTableTimeoutMs() {
-        return TeamProvisioningService.RUNTIME_WINDOWS_PROCESS_TABLE_TIMEOUT_MS;
-      },
-      get pidusageBatchTimeoutMs() {
-        return TeamProvisioningService.RUNTIME_PIDUSAGE_BATCH_TIMEOUT_MS;
-      },
-      get processUsageCacheMaxEntries() {
-        return TeamProvisioningService.RUNTIME_PROCESS_USAGE_CACHE_MAX_ENTRIES;
-      },
-    }
-  );
+      { logDebug: (message) => logger.debug(message) }
+    );
   private readonly persistedTeamConfigCache = new Map<string, PersistedTeamConfigCacheEntry>();
   private readonly runtimeSnapshotFacade!: TeamProvisioningRuntimeProjection['runtimeSnapshotFacade'];
   private readonly liveTeamAgentRuntimeMetadataCache = new Map<
