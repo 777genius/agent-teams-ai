@@ -455,7 +455,10 @@ import {
   TeamProvisioningOutputRecoveryFacade,
   type TeamProvisioningOutputRecoveryFacadeServiceHost,
 } from './provisioning/TeamProvisioningOutputRecoveryFacade';
-import { reconcilePersistedLaunchStateWithTeamProvisioningPorts } from './provisioning/TeamProvisioningPersistedLaunchReconcilePorts';
+import {
+  reconcilePersistedLaunchStateWithTeamProvisioningService,
+  type TeamProvisioningPersistedLaunchReconcileServiceHost,
+} from './provisioning/TeamProvisioningPersistedLaunchReconcilePorts';
 import { type PersistedTeamConfigCacheEntry } from './provisioning/TeamProvisioningPersistedTeamConfigAccess';
 import { createTeamProvisioningPersistentRuntimeCleanup } from './provisioning/TeamProvisioningPersistentRuntimeCleanup';
 import {
@@ -4241,31 +4244,10 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     snapshot: ReturnType<typeof createPersistedLaunchSnapshot> | null;
     statuses: Record<string, MemberSpawnStatusEntry>;
   }> {
-    return reconcilePersistedLaunchStateWithTeamProvisioningPorts(teamName, {
-      readLaunchState: (teamName) => this.launchStateStore.read(teamName),
-      readMembersMeta: (teamName) => this.membersMetaStore.getMembers(teamName),
-      recoverStaleMixedSecondaryLaunchSnapshot: (teamName, bootstrapSnapshot, persistedSnapshot) =>
-        this.recoverStaleMixedSecondaryLaunchSnapshot(
-          teamName,
-          bootstrapSnapshot,
-          persistedSnapshot
-        ),
-      applyOpenCodeSecondaryEvidenceOverlay: (input) =>
-        this.applyOpenCodeSecondaryEvidenceOverlay(input),
-      applyOpenCodeSecondaryBootstrapStallOverlay: (snapshot) =>
-        this.applyOpenCodeSecondaryBootstrapStallOverlay(snapshot),
-      writeLaunchStateSnapshot: (teamName, snapshot) =>
-        this.writeLaunchStateSnapshot(teamName, snapshot),
-      clearPersistedLaunchState: (teamName) => this.clearPersistedLaunchState(teamName),
-      getLiveTeamAgentRuntimeMetadata: (teamName) => this.getLiveTeamAgentRuntimeMetadata(teamName),
-      resolveExpectedLaunchMemberName: (members, candidateName) =>
-        this.resolveExpectedLaunchMemberName(members, candidateName),
-      findBootstrapRuntimeProofObservedAt: (teamName, memberName, member) =>
-        this.findBootstrapRuntimeProofObservedAt(teamName, memberName, member),
-      findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
-        this.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
-      readPersistedRuntimeMembers: (teamName) => this.readPersistedRuntimeMembers(teamName),
-    });
+    return reconcilePersistedLaunchStateWithTeamProvisioningService(
+      teamName,
+      this as unknown as TeamProvisioningPersistedLaunchReconcileServiceHost
+    );
   }
 
   private async findBootstrapTranscriptFailureReason(

@@ -62,6 +62,27 @@ export interface TeamProvisioningPersistedLaunchReconcilePortsInput extends Pick
   findBootstrapTranscriptOutcome: ReconcilePersistedLaunchMemberPorts['findBootstrapTranscriptOutcome'];
 }
 
+export interface TeamProvisioningPersistedLaunchReconcileServiceHost extends Pick<
+  TeamProvisioningPersistedLaunchReconcilePortsInput,
+  | 'recoverStaleMixedSecondaryLaunchSnapshot'
+  | 'applyOpenCodeSecondaryEvidenceOverlay'
+  | 'applyOpenCodeSecondaryBootstrapStallOverlay'
+  | 'writeLaunchStateSnapshot'
+  | 'clearPersistedLaunchState'
+  | 'getLiveTeamAgentRuntimeMetadata'
+  | 'resolveExpectedLaunchMemberName'
+  | 'findBootstrapRuntimeProofObservedAt'
+  | 'findBootstrapTranscriptOutcome'
+  | 'readPersistedRuntimeMembers'
+> {
+  launchStateStore: {
+    read: TeamProvisioningPersistedLaunchReconcilePortsInput['readLaunchState'];
+  };
+  membersMetaStore: {
+    getMembers: TeamProvisioningPersistedLaunchReconcilePortsInput['readMembersMeta'];
+  };
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -181,5 +202,46 @@ export function reconcilePersistedLaunchStateWithTeamProvisioningPorts(
   return reconcilePersistedLaunchStateWithPorts(
     teamName,
     createTeamProvisioningPersistedLaunchReconcilePorts(input)
+  );
+}
+
+export function createTeamProvisioningPersistedLaunchReconcilePortsFromService(
+  service: TeamProvisioningPersistedLaunchReconcileServiceHost
+): ReconcilePersistedLaunchStatePorts {
+  return createTeamProvisioningPersistedLaunchReconcilePorts({
+    readLaunchState: (teamName) => service.launchStateStore.read(teamName),
+    readMembersMeta: (teamName) => service.membersMetaStore.getMembers(teamName),
+    recoverStaleMixedSecondaryLaunchSnapshot: (teamName, bootstrapSnapshot, persistedSnapshot) =>
+      service.recoverStaleMixedSecondaryLaunchSnapshot(
+        teamName,
+        bootstrapSnapshot,
+        persistedSnapshot
+      ),
+    applyOpenCodeSecondaryEvidenceOverlay: (input) =>
+      service.applyOpenCodeSecondaryEvidenceOverlay(input),
+    applyOpenCodeSecondaryBootstrapStallOverlay: (snapshot) =>
+      service.applyOpenCodeSecondaryBootstrapStallOverlay(snapshot),
+    writeLaunchStateSnapshot: (teamName, snapshot) =>
+      service.writeLaunchStateSnapshot(teamName, snapshot),
+    clearPersistedLaunchState: (teamName) => service.clearPersistedLaunchState(teamName),
+    getLiveTeamAgentRuntimeMetadata: (teamName) =>
+      service.getLiveTeamAgentRuntimeMetadata(teamName),
+    resolveExpectedLaunchMemberName: (members, candidateName) =>
+      service.resolveExpectedLaunchMemberName(members, candidateName),
+    findBootstrapRuntimeProofObservedAt: (teamName, memberName, member) =>
+      service.findBootstrapRuntimeProofObservedAt(teamName, memberName, member),
+    findBootstrapTranscriptOutcome: (teamName, memberName, sinceMs) =>
+      service.findBootstrapTranscriptOutcome(teamName, memberName, sinceMs),
+    readPersistedRuntimeMembers: (teamName) => service.readPersistedRuntimeMembers(teamName),
+  });
+}
+
+export function reconcilePersistedLaunchStateWithTeamProvisioningService(
+  teamName: string,
+  service: TeamProvisioningPersistedLaunchReconcileServiceHost
+): Promise<PersistedLaunchReconciliationResult> {
+  return reconcilePersistedLaunchStateWithPorts(
+    teamName,
+    createTeamProvisioningPersistedLaunchReconcilePortsFromService(service)
   );
 }
