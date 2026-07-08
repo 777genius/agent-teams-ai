@@ -133,18 +133,12 @@ import {
   type TeamProvisioningConfigTaskActivityBoundary,
   type TeamProvisioningConfigTaskActivityBoundaryServiceHost,
 } from './provisioning/TeamProvisioningConfigTaskActivityBoundary';
-import {
-  type DeterministicCreateRunFlowPorts,
-  runDeterministicCreateRunFlow,
-} from './provisioning/TeamProvisioningCreateDeterministicRunFlow';
+import { type DeterministicCreateRunFlowPorts } from './provisioning/TeamProvisioningCreateDeterministicRunFlow';
 import {
   createTeamProvisioningCreateDeterministicRunFlowPortsFromService,
   type TeamProvisioningCreateDeterministicRunFlowServiceHost,
 } from './provisioning/TeamProvisioningCreateDeterministicRunFlowPortsFactory';
-import {
-  type DeterministicCreateSetupFlowPorts,
-  prepareDeterministicCreateSetupFlow,
-} from './provisioning/TeamProvisioningCreateDeterministicSetupFlow';
+import { type DeterministicCreateSetupFlowPorts } from './provisioning/TeamProvisioningCreateDeterministicSetupFlow';
 import {
   createTeamProvisioningCreateDeterministicSetupFlowPortsFromService,
   type TeamProvisioningCreateDeterministicSetupFlowServiceHost,
@@ -156,6 +150,11 @@ import {
   type TeamProvisioningCreateDeterministicSpawnFlowBoundary,
   type TeamProvisioningCreateDeterministicSpawnFlowServiceHost,
 } from './provisioning/TeamProvisioningCreateDeterministicSpawnFlowPortsFactory';
+import {
+  createTeamInnerWithService,
+  launchTeamInnerWithService,
+  type TeamProvisioningCreateLaunchOrchestrationServiceHost,
+} from './provisioning/TeamProvisioningCreateLaunchOrchestration';
 import {
   clearPendingCrossTeamReplyExpectation as clearPendingCrossTeamReplyExpectationInState,
   type CrossTeamDeliveredLeadBlock,
@@ -172,7 +171,6 @@ import {
   recoverDeterministicBootstrapCompletionWithService,
 } from './provisioning/TeamProvisioningDeterministicBootstrapCompletionRecovery';
 import { type ProvisioningEnvResolution } from './provisioning/TeamProvisioningEnvBuilder';
-import { assertAppDeterministicBootstrapEnabled } from './provisioning/TeamProvisioningEnvGuards';
 import {
   startProvisioningFilesystemMonitor,
   stopProvisioningFilesystemMonitor,
@@ -193,15 +191,12 @@ import {
   notifyAliveTeamsAboutLanguageChangeWithService,
   type TeamProvisioningLanguageChangeNotificationServiceHost,
 } from './provisioning/TeamProvisioningLanguageChangeNotification';
-import { assertOpenCodeNotLaunchedThroughLegacyProvisioning } from './provisioning/TeamProvisioningLaunchCompatibility';
 import {
   createTeamProvisioningLaunchDeterministicFlowBoundary,
   createTeamProvisioningLaunchDeterministicFlowHostFromService,
   type TeamProvisioningLaunchDeterministicFlowBoundary,
   type TeamProvisioningLaunchDeterministicFlowServiceHost,
 } from './provisioning/TeamProvisioningLaunchDeterministicFlowPortsFactory';
-import { runDeterministicLaunchRunFlow } from './provisioning/TeamProvisioningLaunchDeterministicRunFlow';
-import { prepareDeterministicLaunchSetup } from './provisioning/TeamProvisioningLaunchDeterministicSetupFlow';
 import { buildLaunchDiagnosticsFromRun } from './provisioning/TeamProvisioningLaunchDiagnostics';
 import {
   createTeamProvisioningLaunchIdentityBoundary,
@@ -515,7 +510,6 @@ import {
   type RetainedClaudeLogsSnapshot,
 } from './provisioning/TeamProvisioningRetainedLogs';
 import {
-  APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
   DETERMINISTIC_BOOTSTRAP_COMPLETION_RECOVERY_MS,
   LEAD_TEXT_EMIT_THROTTLE_MS,
   LIVE_LEAD_PROCESS_MESSAGE_CACHE_LIMIT,
@@ -3226,64 +3220,11 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamCreateResponse> {
-    this.cleanedStoppedTeamOpenCodeRuntimeLanes.delete(request.teamName);
-    const existingProvisioningRunId = this.runTracking.getResolvableProvisioningRunId(
-      request.teamName
+    return createTeamInnerWithService(
+      this as unknown as TeamProvisioningCreateLaunchOrchestrationServiceHost,
+      request,
+      onProgress
     );
-    if (existingProvisioningRunId) {
-      return {
-        runId: existingProvisioningRunId,
-        launchStatus: 'already_launching',
-        alreadyLaunching: true,
-      };
-    }
-    const previousLaunchSnapshot =
-      await this.configTaskActivityBoundary.readTaskActivityRepairLaunchSnapshot(request.teamName);
-    this.configTaskActivityBoundary.repairStaleTaskActivityIntervalsOnce(
-      request.teamName,
-      previousLaunchSnapshot
-    );
-    const stopAllGenerationAtStart = this.stopAllTeamsGeneration;
-    assertAppDeterministicBootstrapEnabled();
-    if (this.shouldRouteOpenCodeToRuntimeAdapter(request)) {
-      return this.createOpenCodeTeamThroughRuntimeAdapter(request, onProgress);
-    }
-    assertOpenCodeNotLaunchedThroughLegacyProvisioning(request);
-
-    // Set immediately to prevent TOCTOU (defense in depth alongside withTeamLock)
-    const pendingKey = `pending-${randomUUID()}`;
-    this.provisioningRunByTeam.set(request.teamName, pendingKey);
-
-    try {
-      const runtimeAuthMaterialId = randomUUID();
-      const createSetup = await prepareDeterministicCreateSetupFlow({
-        request,
-        runtimeAuthMaterialId,
-        ports: this.createDeterministicCreateSetupFlowPorts(),
-      });
-      return await runDeterministicCreateRunFlow({
-        request,
-        onProgress,
-        createSetup,
-        runId: randomUUID(),
-        startedAt: nowIso(),
-        stopAllGenerationAtStart,
-        disallowedTools: APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
-        logger,
-        spawnPorts: this.createDeterministicCreateSpawnFlowPorts({
-          request,
-          claudePath: createSetup.claudePath,
-          shellEnv: createSetup.shellEnv,
-        }),
-        ports: this.createDeterministicCreateRunFlowPorts(),
-      });
-    } catch (error) {
-      // Ensure the per-team lock doesn't get stuck on failures.
-      if (this.provisioningRunByTeam.get(request.teamName) === pendingKey) {
-        this.provisioningRunByTeam.delete(request.teamName);
-      }
-      throw error;
-    }
   }
 
   private async createOpenCodeTeamThroughRuntimeAdapter(
@@ -3395,57 +3336,11 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
-    const existingProvisioningRunId = this.runTracking.getResolvableProvisioningRunId(
-      request.teamName
+    return launchTeamInnerWithService(
+      this as unknown as TeamProvisioningCreateLaunchOrchestrationServiceHost,
+      request,
+      onProgress
     );
-    if (existingProvisioningRunId) {
-      return {
-        runId: existingProvisioningRunId,
-        launchStatus: 'already_launching',
-        alreadyLaunching: true,
-      };
-    }
-    const stopAllGenerationAtStart = this.stopAllTeamsGeneration;
-    assertAppDeterministicBootstrapEnabled();
-    if (this.shouldRouteOpenCodeToRuntimeAdapter(request)) {
-      return this.launchOpenCodeTeamThroughRuntimeAdapter(request, onProgress);
-    }
-    assertOpenCodeNotLaunchedThroughLegacyProvisioning(request);
-
-    // Set immediately to prevent TOCTOU (defense in depth alongside withTeamLock)
-    const pendingKey = `pending-${randomUUID()}`;
-    this.provisioningRunByTeam.set(request.teamName, pendingKey);
-
-    try {
-      const setup = await prepareDeterministicLaunchSetup(
-        request,
-        this.deterministicLaunchFlowBoundary.createSetupPorts()
-      );
-      if (setup.kind === 'reuse') {
-        return {
-          runId: setup.runId,
-          launchStatus: 'already_running',
-          alreadyRunning: true,
-        };
-      }
-
-      return runDeterministicLaunchRunFlow(
-        {
-          request,
-          setup,
-          stopAllGenerationAtStart,
-          onProgress,
-          teammateRuntimeDisallowedTools: APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
-        },
-        this.deterministicLaunchFlowBoundary.createRunFlowPorts({ request, setup })
-      );
-    } catch (error) {
-      // Clean up pending key if failure occurred before runId was set
-      if (this.provisioningRunByTeam.get(request.teamName) === pendingKey) {
-        this.provisioningRunByTeam.delete(request.teamName);
-      }
-      throw error;
-    }
   }
 
   /**
