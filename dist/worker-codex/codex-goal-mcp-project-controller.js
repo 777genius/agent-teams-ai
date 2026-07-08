@@ -1,13 +1,14 @@
-import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, buildControlledAgentLiveControllerState, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, } from "@vioxen/subscription-runtime/worker-core";
+import { AccessBoundary, LaunchPlanStatus, NetworkAccessMode, getControlledAgentStatus, reconcileControlledAgentRun, startControlledAgentRun, stopControlledAgentRun, } from "@vioxen/subscription-runtime/worker-core";
 import { projectControllerCapacityDemand, recordProjectControllerCapacitySignal, } from "./project-controller-capacity.js";
 import { codexGoalJobToArgs, } from "./codex-goal-jobs.js";
 import { goalLaunchInput, } from "./codex-goal-mcp-launch-input.js";
 import { safeObservationErrorMessage, } from "./codex-goal-mcp-observation-projection.js";
 import { projectControllerOptionsFromMcpArgs, } from "./codex-goal-mcp-project-controller-profile.js";
-import { projectControllerAllowedTools, projectControllerLaunchInput, projectControllerProfile, projectControllerProfileReadyJson, projectControllerState, } from "./application/project-control/codex-goal-project-controller-profile.js";
+import { projectControllerLaunchInput, projectControllerProfile, projectControllerState, } from "./application/project-control/codex-goal-project-controller-profile.js";
 import { projectControllerProviderKind, } from "./application/project-control/codex-goal-project-controller-options.js";
 import { projectControllerProvider, } from "./codex-goal-mcp-project-controller-provider.js";
 import { projectControllerOwnerIsLive, projectControllerProcessOwner, } from "./application/project-control/codex-goal-project-controller-runtime.js";
+import { projectControllerLaunchPlanViewJson, projectControllerReconcileDisconnectedViewJson, projectControllerReconcileProviderResultViewJson, projectControllerStartExistingRunViewJson, projectControllerStartLaunchBlockedViewJson, projectControllerStartReadyViewJson, projectControllerStartUseCaseBlockedViewJson, projectControllerStatusViewJson, projectControllerStopDisconnectedViewJson, projectControllerStopProviderResultViewJson, projectControllerViewBase, } from "./application/project-control/codex-goal-project-controller-view.js";
 import { stringValue, } from "./codex-goal-mcp-values.js";
 import { workerControlDecisionJson, } from "./codex-goal-mcp-worker-control-view.js";
 import { codexGoalStateRootDir, codexGoalWorkerControlService, codexGoalWorkerControlTarget, } from "./codex-goal-mcp-worker-control.js";
@@ -17,53 +18,22 @@ export async function projectControllerLaunchPlanView(args, deps) {
     const state = projectControllerState(options, controller);
     const profile = projectControllerProfile(options, state);
     const plan = projectControllerLaunchInput(controller, state, profile);
-    const ready = plan.status === LaunchPlanStatus.Ready;
-    return {
-        ok: ready,
-        mode: "project_controller_launch_plan",
-        controllerJobId: controller.controller.jobId,
-        providerKind: profile.providerKind,
-        registryRootDir: controller.registryRootDir,
-        stateDir: state.stateDir,
-        sessionId: state.sessionId,
-        rawShellMode: options.rawShellMode ?? "disabled-by-provider",
-        status: plan.status,
-        ...(ready
-            ? {
-                session: plan.session,
-                ...projectControllerProfileReadyJson(profile),
-                evidence: plan.evidence,
-            }
-            : {
-                reason: plan.reason,
-                accessReason: plan.accessReason,
-                evidence: plan.evidence,
-                allowedTools: projectControllerAllowedTools(profile),
-                safeMessage: "Controlled LLM controller launch is blocked until the provider can enforce broker-only tools without raw shell.",
-            }),
-    };
+    return projectControllerLaunchPlanViewJson({
+        base: controllerViewBase(controller, state, profile.providerKind),
+        rawShellMode: options.rawShellMode,
+        profile,
+        plan,
+    });
 }
 export async function projectControllerStartView(args, deps) {
     const controller = await deps.loadProjectControlController(args);
     const options = projectControllerOptionsFromMcpArgs(args);
     const state = projectControllerState(options, controller);
     const profile = projectControllerProfile(options, state);
+    const base = controllerViewBase(controller, state, profile.providerKind);
     const plan = projectControllerLaunchInput(controller, state, profile);
     if (plan.status === LaunchPlanStatus.Blocked) {
-        return {
-            ok: false,
-            mode: "project_controller_start",
-            controllerJobId: controller.controller.jobId,
-            providerKind: profile.providerKind,
-            registryRootDir: controller.registryRootDir,
-            stateDir: state.stateDir,
-            sessionId: state.sessionId,
-            status: plan.status,
-            reason: plan.reason,
-            accessReason: plan.accessReason,
-            evidence: plan.evidence,
-            safeMessage: "Controlled LLM controller start is blocked by the fail-closed launch plan.",
-        };
+        return projectControllerStartLaunchBlockedViewJson({ base, plan });
     }
     const launch = await goalLaunchInput(codexGoalJobToArgs(controller.controller));
     const providerInput = await projectControllerProvider({
@@ -99,59 +69,23 @@ export async function projectControllerStartView(args, deps) {
     });
     if (!result.ok) {
         if ("reason" in result) {
-            return {
-                ok: false,
-                mode: "project_controller_start",
-                controllerJobId: controller.controller.jobId,
-                providerKind: profile.providerKind,
-                registryRootDir: controller.registryRootDir,
-                stateDir: state.stateDir,
-                sessionId: state.sessionId,
-                reason: result.reason,
-                session: result.session,
-                run: result.run,
-                safeMessage: "Controlled LLM controller already has an active run. Use status, stop or reconcile before starting another run.",
-            };
+            return projectControllerStartExistingRunViewJson({ base, result });
         }
-        return {
-            ok: false,
-            mode: "project_controller_start",
-            controllerJobId: controller.controller.jobId,
-            providerKind: profile.providerKind,
-            registryRootDir: controller.registryRootDir,
-            stateDir: state.stateDir,
-            sessionId: state.sessionId,
-            status: result.plan.status,
-            reason: result.plan.reason,
-            evidence: result.plan.evidence,
-            safeMessage: "Controlled LLM controller start was blocked by the controlled-agent use case.",
-        };
+        return projectControllerStartUseCaseBlockedViewJson({ base, result });
     }
     deps.providerRegistry.set(state.sessionId, providerInput.provider);
-    return {
-        ok: true,
-        mode: "project_controller_start",
-        controllerJobId: controller.controller.jobId,
-        providerKind: profile.providerKind,
-        registryRootDir: controller.registryRootDir,
-        stateDir: state.stateDir,
-        sessionId: state.sessionId,
-        status: result.run.status,
-        run: result.run,
-        provider: result.provider,
-        liveController: buildControlledAgentLiveControllerState({
-            session: result.session,
-            providerAttached: true,
-            currentOwner: owner,
-        }),
-        ...(providerInput.account === undefined ? {} : { account: providerInput.account }),
-        ...(providerInput.sessionArtifact === undefined
-            ? {}
-            : { sessionArtifact: providerInput.sessionArtifact }),
-        allowedTools: projectControllerAllowedTools(profile),
-        safeMessage: providerInput.safeMessage,
-        evidence: plan.evidence,
-    };
+    return projectControllerStartReadyViewJson({
+        base,
+        profile,
+        plan,
+        result,
+        owner,
+        providerEvidence: {
+            account: providerInput.account,
+            sessionArtifact: providerInput.sessionArtifact,
+            safeMessage: providerInput.safeMessage,
+        },
+    });
 }
 export async function projectControllerStatusView(args, deps) {
     const controller = await deps.loadProjectControlController(args);
@@ -171,43 +105,14 @@ export async function projectControllerStatusView(args, deps) {
             providerStatusError = safeObservationErrorMessage(error);
         }
     }
-    const owner = projectControllerProcessOwner(deps.runtimeVersion);
-    const liveController = result.ok
-        ? buildControlledAgentLiveControllerState({
-            session: result.session,
-            providerAttached: provider !== undefined,
-            currentOwner: owner,
-            providerObservedStatus: observed?.status,
-            providerStatusFailed: providerStatusError !== undefined,
-        })
-        : buildControlledAgentLiveControllerState({
-            providerAttached: false,
-            currentOwner: owner,
-        });
-    return {
-        ok: result.ok,
-        mode: "project_controller_status",
-        controllerJobId: controller.controller.jobId,
-        providerKind: projectControllerProviderKind(options),
-        registryRootDir: controller.registryRootDir,
-        stateDir: state.stateDir,
-        sessionId: state.sessionId,
-        reason: providerStatusError === undefined ? result.reason : "provider_status_failed",
-        ...(result.session === undefined ? {} : { session: result.session }),
-        ...(result.ok && "run" in result ? { run: result.run } : {}),
-        ...(observed === undefined ? {} : { providerObserved: observed }),
-        ...(providerStatusError === undefined
-            ? {}
-            : { providerObservedError: { safeMessage: providerStatusError } }),
-        liveController,
-        safeMessage: providerStatusError !== undefined
-            ? "Controller state is persisted, but provider status failed in this MCP process."
-            : result.ok
-                ? provider
-                    ? "Controller state is persisted and provider liveness was observed in this MCP process."
-                    : "Controller state is persisted, but provider liveness is unavailable in this MCP process."
-                : "No persisted controlled-agent session/run exists for this controller.",
-    };
+    return projectControllerStatusViewJson({
+        base: controllerViewBase(controller, state, projectControllerProviderKind(options)),
+        result,
+        providerAttached: provider !== undefined,
+        observed,
+        providerStatusError,
+        owner: projectControllerProcessOwner(deps.runtimeVersion),
+    });
 }
 export async function projectControllerConsumeGuidanceView(args, deps) {
     const controller = await deps.loadProjectControlController(args);
@@ -244,6 +149,7 @@ export async function projectControllerStopView(args, deps) {
     const result = await getControlledAgentStatus(state.sessionId, {
         stateStore: state.store,
     });
+    const base = controllerViewBase(controller, state, projectControllerProviderKind(options));
     const provider = deps.providerRegistry.get(state.sessionId);
     const owner = projectControllerProcessOwner(deps.runtimeVersion);
     if (result.ok && provider) {
@@ -257,47 +163,14 @@ export async function projectControllerStopView(args, deps) {
         });
         if (stopped.ok)
             deps.providerRegistry.delete(state.sessionId);
-        return {
-            ok: stopped.ok,
-            mode: "project_controller_stop",
-            controllerJobId: controller.controller.jobId,
-            providerKind: projectControllerProviderKind(options),
-            registryRootDir: controller.registryRootDir,
-            stateDir: state.stateDir,
-            sessionId: state.sessionId,
-            reason: stopped.reason,
-            ...(stopped.ok ? { session: stopped.session, run: stopped.run } : {}),
-            liveController: buildControlledAgentLiveControllerState({
-                session: stopped.ok ? stopped.session : result.session,
-                providerAttached: false,
-                currentOwner: owner,
-            }),
-            safeMessage: stopped.ok
-                ? "Controlled-agent provider stopped through the safe provider adapter."
-                : "Controlled-agent stop failed before reaching provider stop.",
-        };
+        return projectControllerStopProviderResultViewJson({
+            base,
+            statusResult: result,
+            stopped,
+            owner,
+        });
     }
-    return {
-        ok: false,
-        mode: "project_controller_stop",
-        controllerJobId: controller.controller.jobId,
-        providerKind: projectControllerProviderKind(options),
-        registryRootDir: controller.registryRootDir,
-        stateDir: state.stateDir,
-        sessionId: state.sessionId,
-        reason: result.ok
-            ? "controlled_agent_provider_runner_not_connected"
-            : result.reason,
-        ...(result.ok ? { session: result.session, run: result.run } : {}),
-        liveController: buildControlledAgentLiveControllerState({
-            session: result.ok ? result.session : undefined,
-            providerAttached: false,
-            currentOwner: owner,
-        }),
-        safeMessage: result.ok
-            ? "A safe provider runner is required to stop a live controlled-agent controller. Do not kill unrelated processes or use danger_full_access from this tool."
-            : "No persisted controlled-agent run exists to stop.",
-    };
+    return projectControllerStopDisconnectedViewJson({ base, result, owner });
 }
 export async function projectControllerReconcileView(args, deps) {
     const controller = await deps.loadProjectControlController(args);
@@ -306,6 +179,7 @@ export async function projectControllerReconcileView(args, deps) {
     const result = await getControlledAgentStatus(state.sessionId, {
         stateStore: state.store,
     });
+    const base = controllerViewBase(controller, state, projectControllerProviderKind(options));
     const provider = deps.providerRegistry.get(state.sessionId);
     const owner = projectControllerProcessOwner(deps.runtimeVersion);
     if (result.ok && provider) {
@@ -322,48 +196,22 @@ export async function projectControllerReconcileView(args, deps) {
                 run: reconciled.run,
             });
         }
-        return {
-            ok: reconciled.ok,
-            mode: "project_controller_reconcile",
-            controllerJobId: controller.controller.jobId,
-            providerKind: projectControllerProviderKind(options),
-            registryRootDir: controller.registryRootDir,
-            stateDir: state.stateDir,
-            sessionId: state.sessionId,
-            reason: reconciled.reason,
-            ...(reconciled.session === undefined ? {} : { session: reconciled.session }),
-            ...(reconciled.run === undefined ? {} : { run: reconciled.run }),
-            liveController: buildControlledAgentLiveControllerState({
-                session: reconciled.session,
-                providerAttached: true,
-                currentOwner: owner,
-            }),
-            ...(reconciled.ok || reconciled.safeMessage === undefined ? {} : {
-                safeMessage: reconciled.safeMessage,
-            }),
-        };
+        return projectControllerReconcileProviderResultViewJson({
+            base,
+            reconciled,
+            owner,
+        });
     }
-    return {
-        ok: false,
-        mode: "project_controller_reconcile",
+    return projectControllerReconcileDisconnectedViewJson({ base, result, owner });
+}
+function controllerViewBase(controller, state, providerKind) {
+    return projectControllerViewBase({
         controllerJobId: controller.controller.jobId,
-        providerKind: projectControllerProviderKind(options),
+        providerKind,
         registryRootDir: controller.registryRootDir,
         stateDir: state.stateDir,
         sessionId: state.sessionId,
-        reason: result.ok
-            ? "controlled_agent_provider_runner_not_connected"
-            : result.reason,
-        ...(result.ok ? { session: result.session, run: result.run } : {}),
-        liveController: buildControlledAgentLiveControllerState({
-            session: result.ok ? result.session : undefined,
-            providerAttached: false,
-            currentOwner: owner,
-        }),
-        safeMessage: result.ok
-            ? "A safe provider runner is required to reconcile provider liveness. Persisted state is available, but runtime liveness cannot be asserted."
-            : "No persisted controlled-agent run exists to reconcile.",
-    };
+    });
 }
 function recordControllerCapacitySignal(input) {
     recordProjectControllerCapacitySignal({
