@@ -267,6 +267,7 @@ import pidusage from 'pidusage';
 import {
   memberLifecycleControllerHarness,
   memberLifecycleHostHarness,
+  memberLifecycleUseCasesHarness,
   outputRecoveryFacadeHarness,
   privateHarness,
   providerRuntimeHarness,
@@ -6469,7 +6470,7 @@ describe('TeamProvisioningService', () => {
           }))
       );
       const persistRestartMessage = vi.fn();
-      memberLifecycleHostHarness(svc).persistOpenCodeMemberRestartSystemMessage =
+      memberLifecycleUseCasesHarness(svc).persistOpenCodeMemberRestartSystemMessage =
         persistRestartMessage;
       const runtimeRelaunch = vi
         .spyOn(svc as any, 'runOpenCodeTeamRuntimeAdapterLaunch')

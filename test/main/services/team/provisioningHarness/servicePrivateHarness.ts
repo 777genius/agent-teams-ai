@@ -1,10 +1,9 @@
 import { vi } from 'vitest';
 
 import type { TeamProvisioningConfigFacade } from '@main/services/team/provisioning/TeamProvisioningConfigFacade';
-import type {
-  TeamProvisioningMemberLifecycleController,
-  TeamProvisioningMemberLifecycleHost,
-} from '@main/services/team/provisioning/TeamProvisioningMemberLifecycle';
+import type { TeamProvisioningMemberLifecycleController } from '@main/services/team/provisioning/TeamProvisioningMemberLifecycle';
+import type { TeamProvisioningMemberLifecycleHost } from '@main/services/team/provisioning/TeamProvisioningMemberLifecycleHostPorts';
+import type { TeamProvisioningMemberLifecycleServiceUseCases } from '@main/services/team/provisioning/TeamProvisioningMemberLifecycleServiceUseCases';
 import type { TeamProvisioningRuntimeResourceSampling } from '@main/services/team/provisioning/TeamProvisioningRuntimeResourceSampling';
 import type { OpenCodeTeamRuntimeMessageResult } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import type { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
@@ -230,6 +229,16 @@ export function memberLifecycleHostHarness(
       memberLifecycleHost: TeamProvisioningMemberLifecycleHost;
     }
   ).memberLifecycleHost;
+}
+
+export function memberLifecycleUseCasesHarness(
+  svc: TeamProvisioningService
+): TeamProvisioningMemberLifecycleServiceUseCases {
+  return (
+    svc as unknown as {
+      memberLifecycleUseCases: TeamProvisioningMemberLifecycleServiceUseCases;
+    }
+  ).memberLifecycleUseCases;
 }
 
 type MutableMemberLifecycleHostOptionalSeam =
