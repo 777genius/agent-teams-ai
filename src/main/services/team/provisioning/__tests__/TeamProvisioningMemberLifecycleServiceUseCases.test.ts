@@ -58,7 +58,7 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
     });
     await useCases.appendDirectProcessRuntimeEvent({
       type: 'process_spawned',
-      eventsPath: '/tmp/team-a/runtime/events.jsonl',
+      eventsPath: 'team-a/runtime/events.jsonl',
       pid: 123,
       teamName: 'team-a',
       agentName: 'Worker',
