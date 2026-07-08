@@ -6,7 +6,11 @@ import type {
   ProvisioningEnvResolution,
   TeamRuntimeAuthContext,
 } from './TeamProvisioningEnvBuilder';
-import type { TeamProvisioningEnvRuntimePorts } from './TeamProvisioningEnvRuntimePorts';
+import {
+  createTeamProvisioningEnvRuntimePorts,
+  type TeamProvisioningEnvRuntimePorts,
+  type TeamProvisioningEnvRuntimePortsDeps,
+} from './TeamProvisioningEnvRuntimePorts';
 import type { SpawnProbeOptions, SpawnProbeResult } from './TeamProvisioningProviderDiagnostics';
 import type {
   TeamProvisioningProviderDiagnosticsRuntime,
@@ -20,6 +24,30 @@ export interface TeamProvisioningProviderRuntimeFacadeDeps {
   createDiagnosticsRuntime?: (
     input: TeamProvisioningProviderDiagnosticsRuntimeInput
   ) => TeamProvisioningProviderDiagnosticsRuntime;
+}
+
+export interface TeamProvisioningProviderRuntimeFacadeServiceHost {
+  providerConnectionService: TeamProvisioningProviderDiagnosticsRuntimeInput['providerConnectionService'] &
+    TeamProvisioningEnvRuntimePortsDeps['providerConnectionService'];
+  appShellBoundary: {
+    getControlApiBaseUrlResolver(): ReturnType<
+      TeamProvisioningEnvRuntimePortsDeps['getControlApiBaseUrlResolver']
+    >;
+    getRuntimeTurnSettledEnvironmentProvider(): ReturnType<
+      TeamProvisioningEnvRuntimePortsDeps['getRuntimeTurnSettledEnvironmentProvider']
+    >;
+    getRuntimeTurnSettledHookSettingsProvider(): ReturnType<
+      TeamProvisioningEnvRuntimePortsDeps['getRuntimeTurnSettledHookSettingsProvider']
+    >;
+  };
+}
+
+export interface TeamProvisioningProviderRuntimeFacadeServiceHostOptions {
+  transientProbeProcesses: TeamProvisioningProviderDiagnosticsRuntimeInput['transientProbeProcesses'];
+  logger: TeamProvisioningProviderDiagnosticsRuntimeInput['logger'] &
+    TeamProvisioningEnvRuntimePortsDeps['logger'];
+  isAuthFailureWarning: TeamProvisioningProviderDiagnosticsRuntimeInput['isAuthFailureWarning'];
+  normalizeApiRetryErrorMessage: TeamProvisioningProviderDiagnosticsRuntimeInput['normalizeApiRetryErrorMessage'];
 }
 
 export class TeamProvisioningProviderRuntimeFacade {
@@ -146,4 +174,37 @@ export function createTeamProvisioningProviderRuntimeFacade(
   deps: TeamProvisioningProviderRuntimeFacadeDeps
 ): TeamProvisioningProviderRuntimeFacade {
   return new TeamProvisioningProviderRuntimeFacade(deps);
+}
+
+export function createTeamProvisioningProviderRuntimeFacadeDepsFromService(
+  service: TeamProvisioningProviderRuntimeFacadeServiceHost,
+  options: TeamProvisioningProviderRuntimeFacadeServiceHostOptions
+): TeamProvisioningProviderRuntimeFacadeDeps {
+  return {
+    diagnosticsRuntimeInput: {
+      transientProbeProcesses: options.transientProbeProcesses,
+      providerConnectionService: service.providerConnectionService,
+      logger: options.logger,
+      isAuthFailureWarning: options.isAuthFailureWarning,
+      normalizeApiRetryErrorMessage: options.normalizeApiRetryErrorMessage,
+    },
+    envRuntimePorts: createTeamProvisioningEnvRuntimePorts({
+      providerConnectionService: service.providerConnectionService,
+      getControlApiBaseUrlResolver: () => service.appShellBoundary.getControlApiBaseUrlResolver(),
+      getRuntimeTurnSettledEnvironmentProvider: () =>
+        service.appShellBoundary.getRuntimeTurnSettledEnvironmentProvider(),
+      getRuntimeTurnSettledHookSettingsProvider: () =>
+        service.appShellBoundary.getRuntimeTurnSettledHookSettingsProvider(),
+      logger: options.logger,
+    }),
+  };
+}
+
+export function createTeamProvisioningProviderRuntimeFacadeFromService(
+  service: TeamProvisioningProviderRuntimeFacadeServiceHost,
+  options: TeamProvisioningProviderRuntimeFacadeServiceHostOptions
+): TeamProvisioningProviderRuntimeFacade {
+  return createTeamProvisioningProviderRuntimeFacade(
+    createTeamProvisioningProviderRuntimeFacadeDepsFromService(service, options)
+  );
 }

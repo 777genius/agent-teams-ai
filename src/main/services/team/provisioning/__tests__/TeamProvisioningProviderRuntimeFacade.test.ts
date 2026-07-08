@@ -3,7 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createTeamProvisioningProviderRuntimeCompatibility,
   createTeamProvisioningProviderRuntimeFacade,
+  createTeamProvisioningProviderRuntimeFacadeDepsFromService,
+  createTeamProvisioningProviderRuntimeFacadeFromService,
+  TeamProvisioningProviderRuntimeFacade,
   type TeamProvisioningProviderRuntimeFacadeDeps,
+  type TeamProvisioningProviderRuntimeFacadeServiceHost,
 } from '../TeamProvisioningProviderRuntimeFacade';
 
 import type { TeamProvisioningEnvRuntimePorts } from '../TeamProvisioningEnvRuntimePorts';
@@ -75,6 +79,58 @@ function createFacadeDeps(
 }
 
 describe('TeamProvisioningProviderRuntimeFacade', () => {
+  it('builds facade deps from service-shaped runtime dependencies', async () => {
+    const transientProbeProcesses = new Set<TeamProvisioningProbeChild>();
+    const providerConnectionService = {
+      augmentConfiguredConnectionEnv: vi.fn(async (env: NodeJS.ProcessEnv) => env),
+      getConfiguredAnthropicApiKeyForTeamRuntime: vi.fn(async () => null),
+      getConfiguredCodexCustomProviderModel: vi.fn(() => null),
+    };
+    const appShellBoundary = {
+      getControlApiBaseUrlResolver: vi.fn(() => null),
+      getRuntimeTurnSettledEnvironmentProvider: vi.fn(() => null),
+      getRuntimeTurnSettledHookSettingsProvider: vi.fn(() => null),
+    };
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const isAuthFailureWarning = vi.fn(() => false);
+    const normalizeApiRetryErrorMessage = vi.fn((text: string) => text);
+    const service = {
+      providerConnectionService,
+      appShellBoundary,
+    } satisfies TeamProvisioningProviderRuntimeFacadeServiceHost;
+
+    const deps = createTeamProvisioningProviderRuntimeFacadeDepsFromService(service, {
+      transientProbeProcesses,
+      logger,
+      isAuthFailureWarning,
+      normalizeApiRetryErrorMessage,
+    });
+    const envBuilderPorts = deps.envRuntimePorts.getProvisioningEnvBuilderPorts();
+    const facade = createTeamProvisioningProviderRuntimeFacadeFromService(service, {
+      transientProbeProcesses,
+      logger,
+      isAuthFailureWarning,
+      normalizeApiRetryErrorMessage,
+    });
+
+    expect(deps.diagnosticsRuntimeInput.transientProbeProcesses).toBe(transientProbeProcesses);
+    expect(deps.diagnosticsRuntimeInput.providerConnectionService).toBe(providerConnectionService);
+    expect(deps.diagnosticsRuntimeInput.logger).toBe(logger);
+    expect(deps.diagnosticsRuntimeInput.isAuthFailureWarning).toBe(isAuthFailureWarning);
+    expect(deps.diagnosticsRuntimeInput.normalizeApiRetryErrorMessage).toBe(
+      normalizeApiRetryErrorMessage
+    );
+    expect(envBuilderPorts.providerConnectionService).toBe(providerConnectionService);
+    expect(envBuilderPorts.logger).toBe(logger);
+    await expect(deps.envRuntimePorts.resolveControlApiBaseUrl()).resolves.toBeNull();
+    expect(appShellBoundary.getControlApiBaseUrlResolver).toHaveBeenCalledOnce();
+    expect(facade).toBeInstanceOf(TeamProvisioningProviderRuntimeFacade);
+  });
+
   it('creates a fresh diagnostics runtime for each diagnostics operation', async () => {
     const runtimes: TeamProvisioningProviderDiagnosticsRuntime[] = [];
     const diagnosticsRuntimeInput = createDiagnosticsInput();

@@ -170,7 +170,6 @@ import {
 import { recoverDeterministicBootstrapCompletion as recoverDeterministicBootstrapCompletionHelper } from './provisioning/TeamProvisioningDeterministicBootstrapCompletionRecovery';
 import { type ProvisioningEnvResolution } from './provisioning/TeamProvisioningEnvBuilder';
 import { assertAppDeterministicBootstrapEnabled } from './provisioning/TeamProvisioningEnvGuards';
-import { createTeamProvisioningEnvRuntimePorts } from './provisioning/TeamProvisioningEnvRuntimePorts';
 import {
   startProvisioningFilesystemMonitor,
   stopProvisioningFilesystemMonitor,
@@ -430,9 +429,10 @@ import {
 import { buildDeterministicLaunchHydrationPrompt } from './provisioning/TeamProvisioningPromptBuilders';
 import {
   createTeamProvisioningProviderRuntimeCompatibility,
-  createTeamProvisioningProviderRuntimeFacade,
+  createTeamProvisioningProviderRuntimeFacadeFromService,
   type TeamProvisioningProviderRuntimeCompatibility,
   type TeamProvisioningProviderRuntimeFacade,
+  type TeamProvisioningProviderRuntimeFacadeServiceHost,
 } from './provisioning/TeamProvisioningProviderRuntimeFacade';
 import {
   createTeamProvisioningReevaluateMemberLaunchStatusBoundary,
@@ -1601,23 +1601,15 @@ export class TeamProvisioningService extends TeamProvisioningCompatibilityFacade
           getRunLeadName: (run) => this.getRunLeadName(run),
         },
       });
-    this.providerRuntime = createTeamProvisioningProviderRuntimeFacade({
-      diagnosticsRuntimeInput: {
+    this.providerRuntime = createTeamProvisioningProviderRuntimeFacadeFromService(
+      this as unknown as TeamProvisioningProviderRuntimeFacadeServiceHost,
+      {
         transientProbeProcesses: this.transientProbeProcesses,
-        providerConnectionService: this.providerConnectionService,
         logger,
         isAuthFailureWarning,
         normalizeApiRetryErrorMessage,
-      },
-      envRuntimePorts: createTeamProvisioningEnvRuntimePorts({
-        providerConnectionService: this.providerConnectionService,
-        getControlApiBaseUrlResolver: () => this.appShellBoundary.getControlApiBaseUrlResolver(),
-        getRuntimeTurnSettledEnvironmentProvider: () => this.runtimeTurnSettledEnvironmentProvider,
-        getRuntimeTurnSettledHookSettingsProvider: () =>
-          this.runtimeTurnSettledHookSettingsProvider,
-        logger,
-      }),
-    });
+      }
+    );
     this.providerRuntimeCompatibility = createTeamProvisioningProviderRuntimeCompatibility(
       this.providerRuntime
     );
