@@ -236,7 +236,7 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
         runs,
         runtimeAdapterRunByTeam: new Map(),
         teamMetaStore: {
-          getMeta: vi.fn(async () => ({ providerId: 'opencode' })),
+          getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
         },
         membersMetaStore: {
           getMembers: vi.fn(async () => []),
@@ -295,7 +295,7 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
         runs: new Map([[RUN_ID, run()]]),
         runtimeAdapterRunByTeam: new Map([[TEAM_NAME, runtimeAdapterRun()]]),
         teamMetaStore: {
-          getMeta: vi.fn(async () => ({ providerId: 'opencode' })),
+          getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
         },
         membersMetaStore: {
           getMembers: vi.fn(async () => []),
@@ -371,7 +371,7 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
           ],
         ]),
         teamMetaStore: {
-          getMeta: vi.fn(async () => ({ providerId: 'opencode' })),
+          getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
         },
         membersMetaStore: {
           getMembers: vi.fn(async () => []),
@@ -437,7 +437,7 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
         runs: new Map([[RUN_ID, run()]]),
         runtimeAdapterRunByTeam: new Map(),
         teamMetaStore: {
-          getMeta: vi.fn(async () => ({ providerId: 'opencode' })),
+          getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
         },
         membersMetaStore: {
           getMembers: vi.fn(async () => []),
