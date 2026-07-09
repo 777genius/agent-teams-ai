@@ -135,11 +135,6 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   protected abstract readonly inboxReader: OpenCodeMemberDeliveryBusyStatusPorts['inboxReader'];
   protected abstract readonly openCodePromptDeliveryWatchdogScheduler: OpenCodeMemberInboxDeliveryWakePorts['watchdogScheduler'];
 
-  protected abstract syncLeadTaskActivityForState(
-    run: TRun,
-    state: 'active' | 'idle' | 'offline',
-    previousState: 'active' | 'idle' | 'offline'
-  ): void;
   protected abstract scheduleOpenCodePromptDeliveryWatchdog(input: {
     teamName: string;
     memberName: string;

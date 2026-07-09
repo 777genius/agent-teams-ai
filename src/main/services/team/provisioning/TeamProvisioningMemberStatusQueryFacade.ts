@@ -9,7 +9,6 @@ import {
 import { type BootstrapTranscriptOutcome } from './TeamProvisioningBootstrapTranscript';
 import { buildLaunchDiagnosticsFromRun } from './TeamProvisioningLaunchDiagnostics';
 import { getMemberSpawnStatusesSnapshot } from './TeamProvisioningMemberSpawnSnapshots';
-import { TeamProvisioningMemberSpawnStatusCompatibilityFacade } from './TeamProvisioningMemberSpawnStatusCompatibilityFacade';
 import { MEMBER_LAUNCH_GRACE_MS } from './TeamProvisioningMemberSpawnStatusPolicy';
 import {
   createTeamProvisioningMemberSpawnStatusesSnapshotHostFromService,
@@ -30,8 +29,8 @@ import {
   resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
 } from './TeamProvisioningRuntimeRecipientResolution';
 import { type TeamProvisioningRuntimeSnapshotFacade } from './TeamProvisioningRuntimeSnapshotFacade';
-import { type RuntimeToolActivityHandlers } from './TeamProvisioningRuntimeToolActivity';
 import { type TeamProvisioningRunTrackingDeliveryHelper } from './TeamProvisioningRunTrackingDelivery';
+import { TeamProvisioningTaskActivityCompatibilityFacade } from './TeamProvisioningTaskActivityCompatibilityFacade';
 
 import type {
   MemberSpawnStatusEntry,
@@ -42,14 +41,13 @@ import type {
 
 export abstract class TeamProvisioningMemberStatusQueryFacade<
   TRun extends ProvisioningRun = ProvisioningRun,
-> extends TeamProvisioningMemberSpawnStatusCompatibilityFacade<TRun> {
+> extends TeamProvisioningTaskActivityCompatibilityFacade<TRun> {
   protected abstract readonly runTracking: Pick<
     TeamProvisioningRunTrackingDeliveryHelper<TRun>,
     'getTrackedRunId'
   >;
   protected abstract readonly runs: ReadonlyMap<string, TRun>;
   protected abstract readonly membersMetaStore: Pick<TeamMembersMetaStore, 'getMembers'>;
-  protected abstract readonly runtimeToolActivity: RuntimeToolActivityHandlers<TRun>;
   protected abstract readonly runtimeSnapshotFacade: Pick<
     TeamProvisioningRuntimeSnapshotFacade,
     'getTeamAgentRuntimeSnapshot'

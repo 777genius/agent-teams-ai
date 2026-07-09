@@ -113,16 +113,6 @@ import {
 import { getPersistedLaunchMemberNames } from './provisioning/TeamProvisioningLaunchStateProjection';
 import { guardCommittedOpenCodeSecondaryLaneEvidence as guardCommittedOpenCodeSecondaryLaneEvidenceHelper } from './provisioning/TeamProvisioningLaunchStateReconciliation';
 import { TeamProvisioningLaunchStateStoreBoundary } from './provisioning/TeamProvisioningLaunchStateStoreBoundary';
-import {
-  setLeadActivity as setLeadActivityHelper,
-  type SetLeadActivityPorts,
-  syncLeadTaskActivityForState as syncLeadTaskActivityForStateHelper,
-} from './provisioning/TeamProvisioningLeadActivity';
-import {
-  createTeamProvisioningLeadActivityPortsFromService,
-  type TeamProvisioningLeadActivityPortsServiceHost,
-} from './provisioning/TeamProvisioningLeadActivityPortsFactory';
-import { emitLeadContextUsageForRun } from './provisioning/TeamProvisioningLeadContextUsage';
 import { type TeamProvisioningLeadInboxRelayCompatibilityFacade } from './provisioning/TeamProvisioningLeadInboxRelayCompatibilityFacade';
 import { getRunTrackedCwdFromRun } from './provisioning/TeamProvisioningLeadRunDerivation';
 import { type LiveInboxRelayResult } from './provisioning/TeamProvisioningLiveInboxRelayRouting';
@@ -299,11 +289,6 @@ import {
 } from './provisioning/TeamProvisioningRuntimeDiagnostics';
 import { type TeamProvisioningRuntimeProjection } from './provisioning/TeamProvisioningRuntimeProjectionFactory';
 import { createTeamProvisioningRuntimeResourceCacheBoundary } from './provisioning/TeamProvisioningRuntimeResourceCacheBoundary';
-import {
-  createRuntimeToolActivityHandlerPortsFromService,
-  createRuntimeToolActivityHandlers,
-  type RuntimeToolActivityServiceHost,
-} from './provisioning/TeamProvisioningRuntimeToolActivity';
 import { TeamProvisioningRunTrackingDeliveryHelper } from './provisioning/TeamProvisioningRunTrackingDelivery';
 import { TeamProvisioningSameTeamNativeDelivery } from './provisioning/TeamProvisioningSameTeamNativeDelivery';
 import {
@@ -353,7 +338,6 @@ import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMemberWorktreeManager } from './TeamMemberWorktreeManager';
 import { TeamMetaStore } from './TeamMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
-import { TeamTaskActivityIntervalService } from './TeamTaskActivityIntervalService';
 
 import type {
   OpenCodeTeamRuntimeMessageResult,
@@ -832,19 +816,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchStateCompatib
   );
   protected readonly memberLifecycleFacade: TeamProvisioningMemberLifecyclePublicFacade =
     this.memberLifecycleController;
-  private readonly taskActivityIntervalService = new TeamTaskActivityIntervalService();
-  protected readonly runtimeToolActivity = createRuntimeToolActivityHandlers<ProvisioningRun>(
-    createRuntimeToolActivityHandlerPortsFromService(
-      this as unknown as RuntimeToolActivityServiceHost<ProvisioningRun>,
-      {
-        nowIso,
-        logInfo: (message) => logger.info(message),
-        logWarn: (message) => logger.warn(message),
-        updateProgress,
-      }
-    )
-  );
-  private readonly leadTaskActivitySyncedRunKeys = new Set<string>();
   protected teamChangeEmitter: ((event: TeamChangeEvent) => void) | null = null;
   protected readonly helpOutputCache = { output: null as string | null, cachedAtMs: 0 };
   protected readonly pendingTimeouts = new Map<string, NodeJS.Timeout>();
@@ -1285,41 +1256,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchStateCompatib
 
   private getRunTrackedCwd(run: ProvisioningRun | null | undefined): string | null {
     return getRunTrackedCwdFromRun(run, path.resolve);
-  }
-
-  protected syncLeadTaskActivityForState(
-    run: ProvisioningRun,
-    state: 'active' | 'idle' | 'offline',
-    previousState: 'active' | 'idle' | 'offline',
-    at = nowIso()
-  ): void {
-    syncLeadTaskActivityForStateHelper(
-      run,
-      state,
-      previousState,
-      this.createLeadActivityPorts(),
-      at
-    );
-  }
-
-  private setLeadActivity(run: ProvisioningRun, state: 'active' | 'idle' | 'offline'): void {
-    setLeadActivityHelper(run, state, this.createLeadActivityPorts());
-  }
-
-  private createLeadActivityPorts(): SetLeadActivityPorts<ProvisioningRun> {
-    return createTeamProvisioningLeadActivityPortsFromService(
-      this as unknown as TeamProvisioningLeadActivityPortsServiceHost<ProvisioningRun>,
-      { nowIso }
-    );
-  }
-
-  private emitLeadContextUsage(run: ProvisioningRun): void {
-    emitLeadContextUsageForRun(run, {
-      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun),
-      nowMs: () => Date.now(),
-      nowIso: () => new Date().toISOString(),
-      emitTeamChange: (event) => this.teamChangeEmitter?.(event),
-    });
   }
 
   private createOpenCodeRuntimeAdapterTeamFlowPorts(): OpenCodeRuntimeAdapterTeamFlowPorts {
