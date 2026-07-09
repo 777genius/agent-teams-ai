@@ -73,7 +73,7 @@ describe('CrossTeamOutbox', () => {
     });
     await outbox.append('test-team', existing);
 
-    const onBeforeAppend = vi.fn(async () => {});
+    const onBeforeAppend = vi.fn(() => Promise.resolve());
     const result = await outbox.appendIfNotRecent(
       'test-team',
       makeMessage({
@@ -89,5 +89,33 @@ describe('CrossTeamOutbox', () => {
 
     const list = await outbox.read('test-team');
     expect(list).toHaveLength(1);
+  });
+
+  it('does not deduplicate equivalent messages sent to different target members', async () => {
+    await outbox.append(
+      'test-team',
+      makeMessage({
+        messageId: 'msg-lead',
+        toMember: 'team-lead',
+        text: 'Please review this API',
+      })
+    );
+
+    const onBeforeAppend = vi.fn(() => Promise.resolve());
+    const result = await outbox.appendIfNotRecent(
+      'test-team',
+      makeMessage({
+        messageId: 'msg-worker',
+        toMember: 'worker',
+        text: 'please review this api',
+      }),
+      onBeforeAppend
+    );
+
+    expect(result.duplicate).toBeNull();
+    expect(onBeforeAppend).toHaveBeenCalledTimes(1);
+
+    const list = await outbox.read('test-team');
+    expect(list.map((message) => message.messageId)).toEqual(['msg-lead', 'msg-worker']);
   });
 });

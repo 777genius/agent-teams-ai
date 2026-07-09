@@ -25,6 +25,7 @@ function buildCrossTeamDedupeKey(message: CrossTeamMessage): string {
     normalizeForDedupe(message.fromTeam),
     normalizeForDedupe(message.fromMember),
     normalizeForDedupe(message.toTeam),
+    normalizeForDedupe(message.toMember),
     normalizeForDedupe(message.summary),
     normalizeForDedupe(message.text),
     normalizeTaskRefsForDedupe(message),

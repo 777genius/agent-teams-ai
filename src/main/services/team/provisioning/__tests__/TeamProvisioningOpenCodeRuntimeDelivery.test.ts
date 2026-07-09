@@ -37,6 +37,57 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
       ]);
     });
 
+    it('verifies cross-team delivery against the requested target member', async () => {
+      const sentMessages: InboxMessage[] = [
+        {
+          from: 'Runtime',
+          to: 'other-team.team-lead',
+          text: 'delivered elsewhere',
+          timestamp: '2026-01-01T00:00:00.000Z',
+          messageId: 'cross-message-1',
+        },
+      ];
+      const ports = createOpenCodeRuntimeDeliveryPorts({
+        sentMessagesStore: {
+          appendMessage: vi.fn(),
+          readMessages: vi.fn(async () => sentMessages),
+        },
+        inboxReader: {
+          getMessagesFor: vi.fn(async () => []),
+        },
+        inboxWriter: {
+          sendMessage: vi.fn(),
+        },
+        getCrossTeamSender: () => vi.fn(),
+      });
+      const crossTeamPort = ports.find((port) => port.kind === 'cross_team_outbox');
+      expect(crossTeamPort).toBeDefined();
+      if (!crossTeamPort) {
+        return;
+      }
+
+      const destination = {
+        kind: 'cross_team_outbox' as const,
+        fromTeamName: 'team-alpha',
+        toTeamName: 'other-team',
+        toMemberName: 'Reviewer',
+        messageId: 'cross-message-1',
+      };
+
+      await expect(
+        crossTeamPort.verify({ destination, destinationMessageId: 'cross-message-1' })
+      ).resolves.toMatchObject({ found: false, location: null });
+
+      sentMessages[0] = { ...sentMessages[0], to: 'other-team.Reviewer' };
+
+      await expect(
+        crossTeamPort.verify({ destination, destinationMessageId: 'cross-message-1' })
+      ).resolves.toMatchObject({
+        found: true,
+        location: destination,
+      });
+    });
+
     it('preserves structured task refs in sent, inbox, and cross-team messages', async () => {
       const taskRefs = [{ taskId: 'task-1', displayId: '#1', teamName: 'Team' }];
       const sentMessages: InboxMessage[] = [];

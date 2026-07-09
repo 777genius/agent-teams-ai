@@ -179,7 +179,10 @@ export function createOpenCodeRuntimeDeliveryPorts(
         return { found: false, location: null, diagnostics: ['destination kind mismatch'] };
       }
       const messages = await deps.sentMessagesStore.readMessages(destination.fromTeamName);
-      const found = messages.some((message) => message.messageId === destinationMessageId);
+      const expectedRecipient = `${destination.toTeamName}.${destination.toMemberName}`;
+      const found = messages.some(
+        (message) => message.messageId === destinationMessageId && message.to === expectedRecipient
+      );
       return {
         found,
         location: found
