@@ -246,6 +246,16 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     });
 
     expect(cache.get('probe-key')).toMatchObject({ cachedAtMs: 1_000 });
+    const cached = cache.get('probe-key');
+    if (!cached) {
+      throw new Error('Expected cached probe result.');
+    }
+    cached.claudePath = '/mutated';
+    cached.cachedAtMs = 0;
+    expect(cache.get('probe-key')).toMatchObject({
+      claudePath: '/fake/claude',
+      cachedAtMs: 1_000,
+    });
     now = 1_009;
     expect(cache.get('probe-key')).not.toBeNull();
     now = 1_010;

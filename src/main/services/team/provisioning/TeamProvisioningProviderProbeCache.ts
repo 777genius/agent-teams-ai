@@ -45,7 +45,7 @@ export function createInMemoryProviderProbeCachePort({
         cachedProbeResults.delete(cacheKey);
         return null;
       }
-      return cached;
+      return { ...cached };
     },
     set(cacheKey, result) {
       cachedProbeResults.set(cacheKey, { cacheKey, ...result, cachedAtMs: now() });
