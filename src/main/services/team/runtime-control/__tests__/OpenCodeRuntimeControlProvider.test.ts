@@ -5,6 +5,7 @@ import {
   buildRuntimeControlCommandEventId,
   buildRuntimeDeliverMessageCommandId,
   buildRuntimeHeartbeatCommandId,
+  buildRuntimePermissionAnswerCommandId,
   buildRuntimeTaskEventCommandId,
   createOpenCodeRuntimeControlProvider,
   createOpenCodeRuntimeControlRouter,
@@ -16,6 +17,7 @@ import type {
   RuntimeBootstrapCheckinCommand,
   RuntimeDeliverMessageCommand,
   RuntimeHeartbeatCommand,
+  RuntimePermissionAnswerCommand,
   RuntimeTaskEventCommand,
 } from '../index';
 
@@ -30,11 +32,13 @@ describe('OpenCodeRuntimeControlProvider', () => {
     const deliveryCommand = createDeliveryCommand();
     const taskEventCommand = createTaskEventCommand();
     const heartbeatCommand = createHeartbeatCommand();
+    const permissionAnswerCommand = createPermissionAnswerCommand();
 
     await expect(provider.recordBootstrapCheckin?.(bootstrapCommand)).resolves.toBe(ack);
     await expect(provider.deliverMessage?.(deliveryCommand)).resolves.toBe(ack);
     await expect(provider.recordTaskEvent?.(taskEventCommand)).resolves.toBe(ack);
     await expect(provider.recordHeartbeat?.(heartbeatCommand)).resolves.toBe(ack);
+    await expect(provider.answerPermission?.(permissionAnswerCommand)).resolves.toBe(ack);
 
     expect(port.recordOpenCodeRuntimeBootstrapCheckin).toHaveBeenCalledWith({
       teamName: 'Team',
@@ -70,6 +74,17 @@ describe('OpenCodeRuntimeControlProvider', () => {
       memberName: 'Builder',
       runtimeSessionId: 'session-1',
       observedAt: OBSERVED_AT,
+    });
+    expect(port.answerOpenCodeRuntimePermission).toHaveBeenCalledWith({
+      teamName: 'Team',
+      runId: 'run-1',
+      laneId: 'lane-1',
+      cwd: '/repo',
+      memberName: 'Builder',
+      requestId: 'provider-request-1',
+      decision: 'reject',
+      expectedMembers: [{ name: 'Builder', providerId: 'opencode', cwd: '/repo' }],
+      previousLaunchState: null,
     });
   });
 
@@ -117,6 +132,7 @@ function createPort(ack: OpenCodeRuntimeControlAck): OpenCodeRuntimeControlPort 
     deliverOpenCodeRuntimeMessage: vi.fn(async () => ack),
     recordOpenCodeRuntimeTaskEvent: vi.fn(async () => ack),
     recordOpenCodeRuntimeHeartbeat: vi.fn(async () => ack),
+    answerOpenCodeRuntimePermission: vi.fn(async () => ack),
   };
 }
 
@@ -207,6 +223,30 @@ function createHeartbeatCommand(): RuntimeHeartbeatCommand {
     memberName: 'Builder',
     runtimeSessionId: 'session-1',
     observedAt: OBSERVED_AT,
+  };
+}
+
+function createPermissionAnswerCommand(): RuntimePermissionAnswerCommand {
+  return {
+    commandId: buildRuntimePermissionAnswerCommandId({
+      providerId: 'opencode',
+      teamName: 'Team',
+      laneId: 'lane-1',
+      runId: 'run-1',
+      requestId: 'provider-request-1',
+      decision: 'reject',
+    }),
+    kind: 'runtime.permission-answer',
+    providerId: 'opencode',
+    teamName: 'Team',
+    runId: 'run-1',
+    laneId: 'lane-1',
+    cwd: '/repo',
+    memberName: 'Builder',
+    requestId: 'provider-request-1',
+    decision: 'reject',
+    expectedMembers: [{ name: 'Builder', providerId: 'opencode', cwd: '/repo' }],
+    previousLaunchState: null,
   };
 }
 

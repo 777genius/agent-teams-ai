@@ -223,7 +223,7 @@ export function createTeamProvisioningOpenCodeRuntimeDeliveryBoundary<
   Run extends OpenCodeRuntimeCheckinRun,
 >(
   ports: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts<Run>
-): OpenCodeRuntimeControlPort & {
+): Omit<OpenCodeRuntimeControlPort, 'answerOpenCodeRuntimePermission'> & {
   createOpenCodeRuntimeCheckinPorts(): OpenCodeRuntimeCheckinPorts<Run>;
   createOpenCodeRuntimeDeliveryService(teamName: string, laneId: string): RuntimeDeliveryService;
   createOpenCodePromptDeliveryLedger(

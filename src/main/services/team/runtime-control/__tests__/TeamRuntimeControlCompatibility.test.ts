@@ -104,8 +104,17 @@ describe('TeamRuntimeControlCompatibility', () => {
       runtimeSessionId: 'session-1',
       observedAt: OBSERVED_AT,
     });
+    await api.answerOpenCodeRuntimePermission({
+      teamName: 'Team',
+      runId: 'run-1',
+      memberName: 'Builder',
+      requestId: 'provider-request-1',
+      decision: 'allow',
+      cwd: '/repo',
+      expectedMembers: [],
+    });
 
-    expect(resolveOpenCodeRuntimeLaneId).toHaveBeenCalledTimes(4);
+    expect(resolveOpenCodeRuntimeLaneId).toHaveBeenCalledTimes(5);
     expect(openCode.recordOpenCodeRuntimeBootstrapCheckin).toHaveBeenCalledWith({
       teamName: 'Team',
       runId: 'run-1',
@@ -142,6 +151,17 @@ describe('TeamRuntimeControlCompatibility', () => {
       runtimeSessionId: 'session-1',
       observedAt: OBSERVED_AT,
     });
+    expect(openCode.answerOpenCodeRuntimePermission).toHaveBeenCalledWith({
+      teamName: 'Team',
+      runId: 'run-1',
+      laneId: 'lane-1',
+      cwd: '/repo',
+      memberName: 'Builder',
+      requestId: 'provider-request-1',
+      decision: 'allow',
+      expectedMembers: [],
+      previousLaunchState: null,
+    });
   });
 
   it('wires the event sink through compatibility API composition for every OpenCode operation', async () => {
@@ -154,6 +174,7 @@ describe('TeamRuntimeControlCompatibility', () => {
       deliverOpenCodeRuntimeMessage: vi.fn(async () => createOpenCodeAck('delivered')),
       recordOpenCodeRuntimeTaskEvent: vi.fn(async () => createOpenCodeAck('recorded')),
       recordOpenCodeRuntimeHeartbeat: vi.fn(async () => createOpenCodeAck('accepted')),
+      answerOpenCodeRuntimePermission: vi.fn(async () => createOpenCodeAck('accepted')),
     };
     const api = createTeamRuntimeControlCompatibilityApi({
       openCode,
@@ -195,13 +216,23 @@ describe('TeamRuntimeControlCompatibility', () => {
       runtimeSessionId: 'session-1',
       observedAt: OBSERVED_AT,
     });
+    await api.answerOpenCodeRuntimePermission({
+      teamName: 'Team',
+      runId: 'run-1',
+      memberName: 'Builder',
+      requestId: 'provider-request-1',
+      decision: 'reject',
+      cwd: '/repo',
+      expectedMembers: [],
+    });
 
-    expect(record).toHaveBeenCalledTimes(4);
+    expect(record).toHaveBeenCalledTimes(5);
     expect(events.map((event) => event.type)).toEqual([
       'RuntimeBootstrapAccepted',
       'RuntimeMessageDelivered',
       'RuntimeTaskEventRecorded',
       'RuntimeHeartbeatAccepted',
+      'RuntimePermissionAnswered',
     ]);
     expect(events[0]).toMatchObject({
       type: 'RuntimeBootstrapAccepted',
@@ -241,6 +272,16 @@ describe('TeamRuntimeControlCompatibility', () => {
       memberName: 'Builder',
       runtimeSessionId: 'session-1',
     });
+    expect(events[4]).toMatchObject({
+      type: 'RuntimePermissionAnswered',
+      providerId: 'opencode',
+      teamName: 'Team',
+      runId: 'run-1',
+      laneId: 'lane-1',
+      memberName: 'Builder',
+      requestId: 'provider-request-1',
+      decision: 'reject',
+    });
   });
 
   it('builds the compatibility API from a service-shaped host', async () => {
@@ -249,6 +290,7 @@ describe('TeamRuntimeControlCompatibility', () => {
     const resolveOpenCodeRuntimeLaneId = vi.fn(async () => 'lane-1');
     const service = {
       createOpenCodeRuntimeDeliveryBoundary: vi.fn(() => openCode),
+      createOpenCodeRuntimePermissionAnswerBoundary: vi.fn(() => openCode),
       resolveOpenCodeRuntimeLaneId,
     };
     const api = createTeamRuntimeControlCompatibilityApiFromService(service);
@@ -285,6 +327,7 @@ function createOpenCodePort(ack: OpenCodeRuntimeControlAck): OpenCodeRuntimeCont
     deliverOpenCodeRuntimeMessage: vi.fn(async () => ack),
     recordOpenCodeRuntimeTaskEvent: vi.fn(async () => ack),
     recordOpenCodeRuntimeHeartbeat: vi.fn(async () => ack),
+    answerOpenCodeRuntimePermission: vi.fn(async () => ack),
   };
 }
 

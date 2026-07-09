@@ -300,6 +300,7 @@ export function bindTeamRuntimeControlCompatibilityApi(
     deliverOpenCodeRuntimeMessage: source.deliverOpenCodeRuntimeMessage.bind(source),
     recordOpenCodeRuntimeTaskEvent: source.recordOpenCodeRuntimeTaskEvent.bind(source),
     recordOpenCodeRuntimeHeartbeat: source.recordOpenCodeRuntimeHeartbeat.bind(source),
+    answerOpenCodeRuntimePermission: source.answerOpenCodeRuntimePermission.bind(source),
   };
 }
 

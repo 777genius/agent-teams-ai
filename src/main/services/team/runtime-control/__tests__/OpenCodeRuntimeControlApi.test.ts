@@ -172,6 +172,60 @@ describe('OpenCodeRuntimeControlApi', () => {
       })
     );
   });
+
+  it('maps OpenCode permission answers onto the runtime-control answer command', async () => {
+    const ack = createAck('accepted');
+    const ports = createPorts(ack);
+    const api = createOpenCodeRuntimeControlApi(ports);
+    const previousLaunchState = { teamName: 'Team', runId: 'run-1' };
+
+    await expect(
+      api.answerOpenCodeRuntimePermission({
+        teamName: 'Team',
+        runId: 'run-1',
+        memberName: 'Builder',
+        requestId: 'opencode:run-1:provider-request-1',
+        decision: 'allow',
+        cwd: '/repo',
+        expectedMembers: [
+          {
+            name: ' Builder ',
+            role: ' Build ',
+            providerId: 'opencode',
+            cwd: ' /repo ',
+          },
+        ],
+        previousLaunchState,
+      })
+    ).resolves.toBe(ack);
+
+    expect(ports.resolveOpenCodeRuntimeLaneId).toHaveBeenCalledWith({
+      teamName: 'Team',
+      runId: 'run-1',
+      memberName: 'Builder',
+    });
+    expect(ports.runtimeControl.answerPermission).toHaveBeenCalledWith({
+      commandId: 'opencode:permission-answer:Team:lane-1:run-1:provider-request-1:allow',
+      kind: 'runtime.permission-answer',
+      providerId: 'opencode',
+      teamName: 'Team',
+      runId: 'run-1',
+      laneId: 'lane-1',
+      cwd: '/repo',
+      memberName: 'Builder',
+      requestId: 'provider-request-1',
+      decision: 'allow',
+      expectedMembers: [
+        {
+          name: 'Builder',
+          role: 'Build',
+          providerId: 'opencode',
+          cwd: '/repo',
+        },
+      ],
+      previousLaunchState,
+    });
+  });
 });
 
 function createPorts(ack: OpenCodeRuntimeControlAck): OpenCodeRuntimeControlApiPorts {
@@ -181,6 +235,7 @@ function createPorts(ack: OpenCodeRuntimeControlAck): OpenCodeRuntimeControlApiP
       deliverMessage: vi.fn(async () => ack),
       recordTaskEvent: vi.fn(async () => ack),
       recordHeartbeat: vi.fn(async () => ack),
+      answerPermission: vi.fn(async () => ack),
     } satisfies OpenCodeRuntimeControlRouter,
     resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'lane-1'),
   };

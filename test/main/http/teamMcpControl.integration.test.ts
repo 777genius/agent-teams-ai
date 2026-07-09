@@ -104,7 +104,7 @@ async function readInjectedFetchBody(
   if (body instanceof Blob) {
     return Buffer.from(await body.arrayBuffer());
   }
-  return String(body);
+  return typeof body === 'string' ? body : JSON.stringify(body);
 }
 
 function responseHeadersFromInject(
@@ -127,7 +127,10 @@ function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () =
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
     const request = input instanceof Request ? input : null;
-    const url = new URL(request?.url ?? String(input));
+    if (!request && typeof input !== 'string' && !(input instanceof URL)) {
+      return originalFetch(input, init);
+    }
+    const url = new URL(request?.url ?? (input instanceof URL ? input.href : input));
     if (url.origin !== baseUrl) {
       return originalFetch(input, init);
     }
@@ -292,6 +295,8 @@ function createServices(claudeRoot: string): {
       Promise.resolve(runtimeAck('recorded')),
     recordOpenCodeRuntimeHeartbeat: (): Promise<OpenCodeRuntimeControlAck> =>
       Promise.resolve(runtimeAck('recorded')),
+    answerOpenCodeRuntimePermission: (): Promise<OpenCodeRuntimeControlAck> =>
+      Promise.resolve(runtimeAck('accepted')),
   } satisfies TeamRuntimeControlCompatibilityApi;
 
   return {

@@ -385,6 +385,10 @@ describe('TeamProvisioning API binders', () => {
         this.compatibilityCalls += 1;
         return Promise.resolve(ack(this));
       },
+      answerOpenCodeRuntimePermission(this: RuntimeSource): Promise<OpenCodeRuntimeControlAck> {
+        this.compatibilityCalls += 1;
+        return Promise.resolve(ack(this));
+      },
     };
 
     const api = bindTeamRuntimeApi(source);
@@ -396,6 +400,8 @@ describe('TeamProvisioning API binders', () => {
       controlCompatibilityApi.deliverOpenCodeRuntimeMessage.bind(undefined);
     const recordOpenCodeRuntimeHeartbeat =
       controlCompatibilityApi.recordOpenCodeRuntimeHeartbeat.bind(undefined);
+    const answerOpenCodeRuntimePermission =
+      controlCompatibilityApi.answerOpenCodeRuntimePermission.bind(undefined);
 
     await expect(getRuntimeState('team-bound')).resolves.toMatchObject({
       teamName: 'team-bound',
@@ -411,7 +417,11 @@ describe('TeamProvisioning API binders', () => {
       teamName: 'team-bound',
       state: 'recorded',
     });
-    expect(source.compatibilityCalls).toBe(2);
+    await expect(answerOpenCodeRuntimePermission({})).resolves.toMatchObject({
+      teamName: 'team-bound',
+      state: 'recorded',
+    });
+    expect(source.compatibilityCalls).toBe(3);
   });
 
   it('keeps runtime, runtime-control, task activity, and member lifecycle APIs as separate control surfaces', () => {
@@ -442,6 +452,7 @@ describe('TeamProvisioning API binders', () => {
       deliverOpenCodeRuntimeMessage: () => Promise.resolve({ ...ack, state: 'delivered' }),
       recordOpenCodeRuntimeTaskEvent: () => Promise.resolve(ack),
       recordOpenCodeRuntimeHeartbeat: () => Promise.resolve(ack),
+      answerOpenCodeRuntimePermission: () => Promise.resolve(ack),
     };
     const taskActivitySource: TeamTaskActivityRepairApi = {
       repairStaleTaskActivityIntervalsBeforeSnapshot: () => Promise.resolve(),
@@ -481,6 +492,7 @@ describe('TeamProvisioning API binders', () => {
       'stopTeam',
     ]);
     expect(Object.keys(runtimeControlApi).sort()).toEqual([
+      'answerOpenCodeRuntimePermission',
       'deliverOpenCodeRuntimeMessage',
       'recordOpenCodeRuntimeBootstrapCheckin',
       'recordOpenCodeRuntimeHeartbeat',

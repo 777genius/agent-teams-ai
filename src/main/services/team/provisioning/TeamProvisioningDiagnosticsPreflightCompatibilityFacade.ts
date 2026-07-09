@@ -34,6 +34,10 @@ import {
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost,
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryServiceHost,
 } from './TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory';
+import {
+  createTeamProvisioningOpenCodeRuntimePermissionAnswerBoundary,
+  type TeamProvisioningOpenCodeRuntimePermissionAnswerBoundary,
+} from './TeamProvisioningOpenCodeRuntimePermissionAnswerBoundary';
 import { type TeamProvisioningPrepareFacade } from './TeamProvisioningPrepareFacade';
 import { type TeamProvisioningProviderRuntimeFacade } from './TeamProvisioningProviderRuntimeFacade';
 import { type RetainedClaudeLogsSnapshot } from './TeamProvisioningRetainedLogs';
@@ -109,6 +113,7 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   protected abstract readonly toolApprovalFacade: Pick<
     TeamProvisioningToolApprovalFacade<TRun>,
     | 'dismissApprovalNotification'
+    | 'answerRuntimeToolApproval'
     | 'respondToToolApproval'
     | 'setMainWindow'
     | 'setToolApprovalEventEmitter'
@@ -123,6 +128,7 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     deliverOpenCodeRuntimeMessage(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
     recordOpenCodeRuntimeTaskEvent(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
     recordOpenCodeRuntimeHeartbeat(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
+    answerOpenCodeRuntimePermission(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
   };
   protected abstract readonly openCodeRuntimeDeliveryBoundaryHost: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<TRun>;
   protected abstract readonly inboxReader: OpenCodeMemberDeliveryBusyStatusPorts['inboxReader'];
@@ -378,6 +384,10 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     return this.openCodeRuntimeControlApi.recordOpenCodeRuntimeHeartbeat(raw);
   }
 
+  async answerOpenCodeRuntimePermission(raw: unknown): Promise<OpenCodeRuntimeControlAck> {
+    return this.openCodeRuntimeControlApi.answerOpenCodeRuntimePermission(raw);
+  }
+
   protected createOpenCodeRuntimeDeliveryBoundaryHost(): TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<TRun> {
     return createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryHostFromService<TRun>(
       this as unknown as TeamProvisioningOpenCodeRuntimeDeliveryBoundaryServiceHost<TRun>
@@ -393,6 +403,14 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
         logger,
       }
     );
+  }
+
+  protected createOpenCodeRuntimePermissionAnswerBoundary(): TeamProvisioningOpenCodeRuntimePermissionAnswerBoundary {
+    return createTeamProvisioningOpenCodeRuntimePermissionAnswerBoundary({
+      answerRuntimeToolApproval: (entry, allow, message) =>
+        this.toolApprovalFacade.answerRuntimeToolApproval(entry, allow, message),
+      nowIso,
+    });
   }
 
   protected createOpenCodePromptDeliveryLedger(

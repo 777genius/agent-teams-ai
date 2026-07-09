@@ -35,8 +35,9 @@ describe('HTTP team runtime routes', () => {
       >();
     const getRuntimeState = vi.fn<(teamName: string) => Promise<TeamRuntimeState>>();
     const getProvisioningStatus = vi.fn<(runId: string) => Promise<TeamProvisioningProgress>>();
-    const repairStaleTaskActivityIntervalsBeforeSnapshot =
-      vi.fn<(teamName: string) => Promise<void>>(() => Promise.resolve());
+    const repairStaleTaskActivityIntervalsBeforeSnapshot = vi.fn<
+      (teamName: string) => Promise<void>
+    >(() => Promise.resolve());
     const stopTeam = vi.fn<(teamName: string) => Promise<void>>(() => Promise.resolve());
     const getAliveTeams = vi.fn<() => string[]>();
     const recordOpenCodeRuntimeBootstrapCheckin =
@@ -46,6 +47,8 @@ describe('HTTP team runtime routes', () => {
     const recordOpenCodeRuntimeTaskEvent =
       vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
     const recordOpenCodeRuntimeHeartbeat =
+      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
+    const answerOpenCodeRuntimePermission =
       vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
     const createTeam =
       vi.fn<
@@ -80,6 +83,7 @@ describe('HTTP team runtime routes', () => {
       deliverOpenCodeRuntimeMessage,
       recordOpenCodeRuntimeTaskEvent,
       recordOpenCodeRuntimeHeartbeat,
+      answerOpenCodeRuntimePermission,
     } satisfies TeamRuntimeControlCompatibilityApi;
     const teamDataApi = {
       listTeams,
@@ -119,6 +123,7 @@ describe('HTTP team runtime routes', () => {
       deliverOpenCodeRuntimeMessage,
       recordOpenCodeRuntimeTaskEvent,
       recordOpenCodeRuntimeHeartbeat,
+      answerOpenCodeRuntimePermission,
       createTeam,
       listTeams,
       getTeamData,
@@ -784,6 +789,7 @@ describe('HTTP team runtime routes', () => {
       deliverOpenCodeRuntimeMessage,
       recordOpenCodeRuntimeTaskEvent,
       recordOpenCodeRuntimeHeartbeat,
+      answerOpenCodeRuntimePermission,
     } = await createApp();
     const callbackPayload = {
       runId: 'run-opencode',
@@ -810,6 +816,11 @@ describe('HTTP team runtime routes', () => {
         url: '/api/teams/demo-team/opencode/runtime/heartbeat',
         handler: recordOpenCodeRuntimeHeartbeat,
         state: 'recorded',
+      },
+      {
+        url: '/api/teams/demo-team/opencode/runtime/permission-answer',
+        handler: answerOpenCodeRuntimePermission,
+        state: 'accepted',
       },
     ] as const;
 
@@ -1020,14 +1031,16 @@ describe('HTTP team runtime routes', () => {
     };
     const memberWorkSyncFeature = {
       getStatus: vi.fn(),
-      refreshStatus: vi.fn(async () => refreshedStatus),
-      getMetrics: vi.fn(async () => metrics),
-      report: vi.fn(async () => ({
-        accepted: true,
-        code: 'accepted',
-        message: 'ok',
-        status: refreshedStatus,
-      })),
+      refreshStatus: vi.fn(() => Promise.resolve(refreshedStatus)),
+      getMetrics: vi.fn(() => Promise.resolve(metrics)),
+      report: vi.fn(() =>
+        Promise.resolve({
+          accepted: true,
+          code: 'accepted',
+          message: 'ok',
+          status: refreshedStatus,
+        })
+      ),
       noteTeamChange: vi.fn(),
       enqueueStartupScan: vi.fn(),
       replayPendingReports: vi.fn(),

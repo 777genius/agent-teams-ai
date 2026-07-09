@@ -11,6 +11,7 @@ import {
 import { createOpenCodeRuntimeControlApi, createOpenCodeRuntimeControlRouter } from '../index';
 
 import type { OpenCodeRuntimeCheckinRun } from '../../provisioning/TeamProvisioningOpenCodeRuntimeCheckin';
+import type { OpenCodeRuntimeControlAck } from '../index';
 import type { InboxMessage } from '@shared/types';
 
 const OBSERVED_AT = '2026-01-01T00:00:00.000Z';
@@ -143,7 +144,20 @@ function createHarness(
   });
   const boundary = createTeamProvisioningOpenCodeRuntimeDeliveryBoundary(ports);
   const api = createOpenCodeRuntimeControlApi({
-    runtimeControl: createOpenCodeRuntimeControlRouter(boundary),
+    runtimeControl: createOpenCodeRuntimeControlRouter({
+      ...boundary,
+      answerOpenCodeRuntimePermission: vi.fn(
+        async (): Promise<OpenCodeRuntimeControlAck> => ({
+          ok: true,
+          providerId: 'opencode',
+          teamName: 'Team',
+          runId: 'run-1',
+          state: 'accepted',
+          diagnostics: [],
+          observedAt: OBSERVED_AT,
+        })
+      ),
+    }),
     resolveOpenCodeRuntimeLaneId: (input) => ports.resolveOpenCodeRuntimeLaneId(input),
   });
 

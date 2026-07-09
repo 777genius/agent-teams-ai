@@ -5,6 +5,7 @@ import type {
   RuntimeBootstrapCheckinCommand,
   RuntimeDeliverMessageCommand,
   RuntimeHeartbeatCommand,
+  RuntimePermissionAnswerCommand,
   RuntimeTaskEventCommand,
 } from '../domain/RuntimeControlCommand';
 import type { RuntimeControlProviderHandler } from '../domain/RuntimeControlProvider';
@@ -17,6 +18,7 @@ export interface OpenCodeRuntimeControlPort {
   deliverOpenCodeRuntimeMessage(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
   recordOpenCodeRuntimeTaskEvent(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
   recordOpenCodeRuntimeHeartbeat(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
+  answerOpenCodeRuntimePermission(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
 }
 
 export interface OpenCodeRuntimeControlRouterOptions {
@@ -36,6 +38,8 @@ export function createOpenCodeRuntimeControlProvider(
       port.recordOpenCodeRuntimeTaskEvent(toOpenCodeTaskEventPayload(command)),
     recordHeartbeat: (command) =>
       port.recordOpenCodeRuntimeHeartbeat(toOpenCodeHeartbeatPayload(command)),
+    answerPermission: (command) =>
+      port.answerOpenCodeRuntimePermission(toOpenCodePermissionAnswerPayload(command)),
   };
 }
 
@@ -56,6 +60,8 @@ export function createOpenCodeRuntimeControlRouter(
       toOpenCodeRuntimeControlAck(await service.recordTaskEvent(command)),
     recordHeartbeat: async (command) =>
       toOpenCodeRuntimeControlAck(await service.recordHeartbeat(command)),
+    answerPermission: async (command) =>
+      toOpenCodeRuntimeControlAck(await service.answerPermission(command)),
   };
 }
 
@@ -110,6 +116,20 @@ function toOpenCodeHeartbeatPayload(command: RuntimeHeartbeatCommand) {
     observedAt: command.observedAt,
     ...(command.status ? { status: command.status } : {}),
     ...(command.metadata ? { metadata: command.metadata } : {}),
+  };
+}
+
+function toOpenCodePermissionAnswerPayload(command: RuntimePermissionAnswerCommand) {
+  return {
+    teamName: command.teamName,
+    runId: command.runId,
+    laneId: command.laneId,
+    cwd: command.cwd,
+    memberName: command.memberName,
+    requestId: command.requestId,
+    decision: command.decision,
+    expectedMembers: command.expectedMembers,
+    previousLaunchState: command.previousLaunchState,
   };
 }
 

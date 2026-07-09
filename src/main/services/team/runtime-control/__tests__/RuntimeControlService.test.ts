@@ -4,6 +4,7 @@ import {
   buildRuntimeBootstrapCheckinCommandId,
   buildRuntimeControlCommandEventId,
   buildRuntimeControlCommandId,
+  buildRuntimePermissionAnswerCommandId,
   RuntimeControlProviderRegistry,
   RuntimeControlProviderRoutingError,
   RuntimeControlService,
@@ -13,6 +14,7 @@ import type {
   RuntimeBootstrapCheckinCommand,
   RuntimeControlAck,
   RuntimeDeliverMessageCommand,
+  RuntimePermissionAnswerCommand,
 } from '../index';
 
 const OBSERVED_AT = '2026-01-01T00:00:00.000Z';
@@ -160,6 +162,32 @@ describe('RuntimeControlService', () => {
       })
     );
   });
+
+  it('routes permission answers and records the answer event', async () => {
+    const command = createPermissionAnswerCommand();
+    const ack = createAck({ state: 'accepted' });
+    const answerPermission = vi.fn(async () => ack);
+    const record = vi.fn();
+    const service = new RuntimeControlService({
+      providers: [{ providerId: 'opencode', answerPermission }],
+      eventSink: { record },
+    });
+
+    await expect(service.answerPermission(command)).resolves.toBe(ack);
+
+    expect(answerPermission).toHaveBeenCalledWith(command);
+    expect(record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'RuntimePermissionAnswered',
+        providerId: 'opencode',
+        teamName: 'Team',
+        runId: 'run-1',
+        laneId: 'lane-1',
+        requestId: 'provider-request-1',
+        decision: 'allow',
+      })
+    );
+  });
 });
 
 function createBootstrapCommand(
@@ -222,5 +250,29 @@ function createAck(overrides: Partial<RuntimeControlAck> = {}): RuntimeControlAc
     diagnostics: [],
     observedAt: OBSERVED_AT,
     ...overrides,
+  };
+}
+
+function createPermissionAnswerCommand(): RuntimePermissionAnswerCommand {
+  return {
+    commandId: buildRuntimePermissionAnswerCommandId({
+      providerId: 'opencode',
+      teamName: 'Team',
+      laneId: 'lane-1',
+      runId: 'run-1',
+      requestId: 'provider-request-1',
+      decision: 'allow',
+    }),
+    kind: 'runtime.permission-answer',
+    providerId: 'opencode',
+    teamName: 'Team',
+    runId: 'run-1',
+    laneId: 'lane-1',
+    cwd: '/repo',
+    memberName: 'Builder',
+    requestId: 'provider-request-1',
+    decision: 'allow',
+    expectedMembers: [{ name: 'Builder', providerId: 'opencode', cwd: '/repo' }],
+    previousLaunchState: null,
   };
 }

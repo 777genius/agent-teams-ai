@@ -2,6 +2,7 @@ import {
   buildRuntimeBootstrapCheckinCommandId,
   buildRuntimeDeliverMessageCommandId,
   buildRuntimeHeartbeatCommandId,
+  buildRuntimePermissionAnswerCommandId,
   buildRuntimeTaskEventCommandId,
 } from '../domain/RuntimeControlIds';
 
@@ -12,10 +13,13 @@ import type {
   RuntimeDeliverMessageCommand,
   RuntimeDeliverMessageTarget,
   RuntimeHeartbeatCommand,
+  RuntimePermissionAnswerCommand,
+  RuntimePermissionAnswerDecision,
+  RuntimePermissionExpectedMember,
   RuntimeTaskEventCommand,
 } from '../domain/RuntimeControlCommand';
 import type { RuntimeControlLaneId } from '../domain/RuntimeControlIds';
-import type { TaskRef } from '@shared/types';
+import type { PersistedTeamLaunchSnapshot, TaskRef, TeamProviderId } from '@shared/types';
 
 export interface OpenCodeRuntimeControlRouter {
   recordBootstrapCheckin(
@@ -24,6 +28,7 @@ export interface OpenCodeRuntimeControlRouter {
   deliverMessage(command: RuntimeDeliverMessageCommand): Promise<OpenCodeRuntimeControlAck>;
   recordTaskEvent(command: RuntimeTaskEventCommand): Promise<OpenCodeRuntimeControlAck>;
   recordHeartbeat(command: RuntimeHeartbeatCommand): Promise<OpenCodeRuntimeControlAck>;
+  answerPermission(command: RuntimePermissionAnswerCommand): Promise<OpenCodeRuntimeControlAck>;
 }
 
 export interface OpenCodeRuntimeControlApiPorts {
@@ -40,6 +45,7 @@ export interface OpenCodeRuntimeControlApi {
   deliverOpenCodeRuntimeMessage(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
   recordOpenCodeRuntimeTaskEvent(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
   recordOpenCodeRuntimeHeartbeat(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
+  answerOpenCodeRuntimePermission(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
 }
 
 export function createOpenCodeRuntimeControlApi(
@@ -185,6 +191,43 @@ export function createOpenCodeRuntimeControlApi(
         ...(metadata ? { metadata } : {}),
       });
     },
+    answerOpenCodeRuntimePermission: async (raw) => {
+      const payload = asOpenCodeRuntimeRecord(raw);
+      const teamName = requireRuntimeString(payload.teamName, 'teamName');
+      const runId = requireRuntimeString(payload.runId, 'runId');
+      const memberName = requireRuntimeString(payload.memberName, 'memberName');
+      const cwd = requireRuntimeString(payload.cwd ?? payload.projectPath, 'cwd');
+      const requestId = normalizeOpenCodeRuntimePermissionRequestId(
+        requireRuntimeString(payload.providerRequestId ?? payload.requestId, 'requestId'),
+        runId
+      );
+      const decision = normalizeRuntimePermissionAnswerDecision(payload.decision);
+      const laneId = await resolveLaneId(ports, { teamName, runId, memberName });
+
+      return ports.runtimeControl.answerPermission({
+        commandId: buildRuntimePermissionAnswerCommandId({
+          providerId: 'opencode',
+          teamName,
+          laneId,
+          runId,
+          requestId,
+          decision,
+        }),
+        kind: 'runtime.permission-answer',
+        providerId: 'opencode',
+        teamName,
+        runId,
+        laneId,
+        cwd,
+        memberName,
+        requestId,
+        decision,
+        expectedMembers: normalizeRuntimePermissionExpectedMembers(payload.expectedMembers),
+        previousLaunchState: normalizeRuntimePermissionPreviousLaunchState(
+          payload.previousLaunchState
+        ),
+      });
+    },
   };
 }
 
@@ -251,6 +294,83 @@ function normalizeRuntimeSafeMetadata(value: unknown): RuntimeControlSafeMetadat
       entry[1] === null
   );
   return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+function normalizeRuntimePermissionAnswerDecision(value: unknown): RuntimePermissionAnswerDecision {
+  if (value === 'allow' || value === 'reject') {
+    return value;
+  }
+  throw new Error('OpenCode runtime permission answer decision must be allow or reject');
+}
+
+function normalizeOpenCodeRuntimePermissionRequestId(value: string, runId: string): string {
+  const prefix = `opencode:${runId}:`;
+  const normalized = value.startsWith(prefix) ? value.slice(prefix.length) : value;
+  if (!normalized.trim()) {
+    throw new Error('OpenCode runtime payload missing requestId');
+  }
+  return normalized;
+}
+
+function normalizeRuntimePermissionExpectedMembers(
+  value: unknown
+): readonly RuntimePermissionExpectedMember[] {
+  if (value === undefined || value === null) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    throw new Error('OpenCode runtime permission expectedMembers must be an array');
+  }
+  return value.map(normalizeRuntimePermissionExpectedMember);
+}
+
+function normalizeRuntimePermissionExpectedMember(
+  value: unknown,
+  index: number
+): RuntimePermissionExpectedMember {
+  if (!isRecord(value)) {
+    throw new Error(`OpenCode runtime permission expectedMembers[${index}] must be an object`);
+  }
+  const name = requireRuntimeString(value.name, `expectedMembers[${index}].name`);
+  const role = optionalRuntimeString(value.role);
+  const workflow = optionalRuntimeString(value.workflow);
+  const providerId = normalizeOptionalRuntimePermissionProviderId(
+    value.providerId,
+    `expectedMembers[${index}].providerId`
+  );
+  const cwd = optionalRuntimeString(value.cwd);
+  return {
+    name,
+    ...(role ? { role } : {}),
+    ...(workflow ? { workflow } : {}),
+    ...(providerId ? { providerId } : {}),
+    ...(cwd ? { cwd } : {}),
+  };
+}
+
+function normalizeOptionalRuntimePermissionProviderId(
+  value: unknown,
+  fieldName: string
+): TeamProviderId | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  if (value === 'anthropic' || value === 'codex' || value === 'gemini' || value === 'opencode') {
+    return value;
+  }
+  throw new Error(`OpenCode runtime permission ${fieldName} is invalid`);
+}
+
+function normalizeRuntimePermissionPreviousLaunchState(
+  value: unknown
+): PersistedTeamLaunchSnapshot | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (!isRecord(value)) {
+    throw new Error('OpenCode runtime permission previousLaunchState must be an object');
+  }
+  return value as unknown as PersistedTeamLaunchSnapshot;
 }
 
 function normalizeRuntimeDeliveryTarget(value: unknown): RuntimeDeliverMessageTarget {

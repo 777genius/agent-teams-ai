@@ -121,6 +121,7 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
   protected readonly pendingTimeouts = new Map<string, NodeJS.Timeout>();
   protected readonly helpOutputCache = { output: null as string | null, cachedAtMs: 0 };
   protected readonly toolApprovalFacade = {
+    answerRuntimeToolApproval: vi.fn(),
     dismissApprovalNotification: vi.fn(),
     respondToToolApproval: vi.fn(),
     setMainWindow: vi.fn(),
@@ -133,6 +134,7 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
     pruneLiveLeadMessagesForCleanedRun: vi.fn(),
   } as never;
   protected readonly openCodeRuntimeControlApi = {
+    answerOpenCodeRuntimePermission: vi.fn(),
     deliverOpenCodeRuntimeMessage: vi.fn(),
     recordOpenCodeRuntimeBootstrapCheckin: vi.fn(),
     recordOpenCodeRuntimeHeartbeat: vi.fn(),
@@ -337,14 +339,14 @@ describe('TeamProvisioningDiagnosticsPreflightCompatibilityFacade', () => {
     await expect(facade.waitForTeamInListForTest('alpha', run)).resolves.toBe(true);
     await expect(facade.waitForMissingInboxesForTest(run)).resolves.toEqual(['Worker']);
     await expect(facade.tryCompleteAfterTimeoutForTest(run)).resolves.toBe(false);
-    await expect(facade.pathExistsForTest('/tmp/config.json')).resolves.toBe(true);
+    await expect(facade.pathExistsForTest('/repo/config.json')).resolves.toBe(true);
 
     expect(facade.transientRunState.appendCliLogs).toHaveBeenCalledWith(run, 'stdout', 'hello');
     expect(facade.verificationProbePorts.waitForValidConfig).toHaveBeenCalledWith(run, 123);
     expect(facade.verificationProbePorts.waitForTeamInList).toHaveBeenCalledWith('alpha', run);
     expect(facade.verificationProbePorts.waitForMissingInboxes).toHaveBeenCalledWith(run);
     expect(facade.verificationProbePorts.tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
-    expect(facade.verificationProbePorts.pathExists).toHaveBeenCalledWith('/tmp/config.json');
+    expect(facade.verificationProbePorts.pathExists).toHaveBeenCalledWith('/repo/config.json');
   });
 
   it('keeps language-change config maintenance routed through the diagnostics facade', async () => {
