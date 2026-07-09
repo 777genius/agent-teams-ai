@@ -356,6 +356,51 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
+  it('launches through the grouped HTTP facade when legacy facade fields are absent', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    mocks.launchTeam.mockResolvedValue({ runId: 'run-grouped-http' });
+    registerTeamRoutes(app, {
+      ...mocks.services,
+      teamApis: {
+        provisioningStart: mocks.services.teamProvisioningStartApi!,
+        provisioningStatus: mocks.services.teamProvisioningStatusApi!,
+        taskActivity: mocks.services.teamTaskActivityApi!,
+        runtime: mocks.services.teamRuntimeApi!,
+        runtimeControl: mocks.services.teamRuntimeControlApi!,
+      },
+      teamProvisioningStartApi: undefined,
+      teamProvisioningStatusApi: undefined,
+      teamTaskActivityApi: undefined,
+      teamRuntimeApi: undefined,
+      teamRuntimeControlApi: undefined,
+    });
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ runId: 'run-grouped-http' });
+      expect(mocks.launchTeam).toHaveBeenCalledWith(
+        {
+          teamName: 'demo-team',
+          cwd: '/Users/test/project',
+          providerId: 'anthropic',
+        },
+        expect.any(Function)
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
   it('validates top-level create effort against the default Anthropic provider over HTTP', async () => {
     const { app, createTeamConfig } = await createApp();
 

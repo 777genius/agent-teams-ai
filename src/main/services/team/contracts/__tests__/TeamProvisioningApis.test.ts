@@ -5,6 +5,7 @@ import {
   bindTeamCrossTeamMessagingApi,
   bindTeamDiagnosticsApi,
   bindTeamHttpDataApi,
+  bindTeamHttpHandlerApis,
   bindTeamHttpRuntimeApi,
   bindTeamMemberLifecycleApi,
   bindTeamMessagingApi,
@@ -276,6 +277,97 @@ describe('TeamProvisioning API binders', () => {
       members: [],
     } as TeamCreateConfigRequest);
     expect(source.createdTeamName).toBe('created-team');
+  });
+
+  it('groups HTTP route controls behind narrow facade ports', async () => {
+    const ack: OpenCodeRuntimeControlAck = {
+      ok: true,
+      providerId: 'opencode',
+      teamName: 'team-http',
+      runId: 'run-http',
+      state: 'recorded',
+      diagnostics: [],
+      observedAt: '2026-01-01T00:00:00.000Z',
+    };
+    const source = {
+      runId: 'run-http',
+      createTeam(this: { runId: string }): Promise<TeamCreateResponse> {
+        return Promise.resolve({ runId: `${this.runId}:create` });
+      },
+      launchTeam(this: { runId: string }): Promise<TeamLaunchResponse> {
+        return Promise.resolve({ runId: `${this.runId}:launch` });
+      },
+      getProvisioningStatus(this: { runId: string }): Promise<TeamProvisioningProgress> {
+        return Promise.resolve({
+          runId: this.runId,
+          teamName: 'team-http',
+          state: 'ready',
+          message: 'ready',
+          startedAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:01.000Z',
+        });
+      },
+      repairStaleTaskActivityIntervalsBeforeSnapshot: () => Promise.resolve(),
+      getRuntimeState(this: { runId: string }): Promise<TeamRuntimeState> {
+        return Promise.resolve({
+          teamName: 'team-http',
+          isAlive: true,
+          runId: this.runId,
+          progress: null,
+        });
+      },
+      stopTeam: () => Promise.resolve(),
+      getAliveTeams: () => ['team-http'],
+      isTeamAlive: () => true,
+      getCurrentRunId: () => 'run-http',
+      recordOpenCodeRuntimeBootstrapCheckin: (): Promise<OpenCodeRuntimeControlAck> =>
+        Promise.resolve(ack),
+      deliverOpenCodeRuntimeMessage: (): Promise<OpenCodeRuntimeControlAck> =>
+        Promise.resolve({ ...ack, state: 'delivered' }),
+      recordOpenCodeRuntimeTaskEvent: (): Promise<OpenCodeRuntimeControlAck> =>
+        Promise.resolve(ack),
+      recordOpenCodeRuntimeHeartbeat: (): Promise<OpenCodeRuntimeControlAck> =>
+        Promise.resolve(ack),
+      answerOpenCodeRuntimePermission: (): Promise<OpenCodeRuntimeControlAck> =>
+        Promise.resolve(ack),
+    };
+
+    const api = bindTeamHttpHandlerApis(source);
+    const createTeam = api.provisioningStart.createTeam.bind(undefined);
+    const launchTeam = api.provisioningStart.launchTeam.bind(undefined);
+    const getRuntimeState = api.runtime.getRuntimeState.bind(undefined);
+    const deliverOpenCodeRuntimeMessage =
+      api.runtimeControl.deliverOpenCodeRuntimeMessage.bind(undefined);
+
+    expect(Object.keys(api).sort()).toEqual([
+      'provisioningStart',
+      'provisioningStatus',
+      'runtime',
+      'runtimeControl',
+      'taskActivity',
+    ]);
+    expect(Object.keys(api.runtime).sort()).toEqual([
+      'getAliveTeams',
+      'getRuntimeState',
+      'stopTeam',
+    ]);
+    expect((api.runtime as unknown as Record<string, unknown>).isTeamAlive).toBeUndefined();
+    expect((api.runtime as unknown as Record<string, unknown>).getCurrentRunId).toBeUndefined();
+    await expect(createTeam({} as never, () => undefined)).resolves.toEqual({
+      runId: 'run-http:create',
+    });
+    await expect(
+      launchTeam({ teamName: 'team-http', cwd: TEST_TEAM_CWD }, () => undefined)
+    ).resolves.toEqual({ runId: 'run-http:launch' });
+    await expect(api.provisioningStatus.getProvisioningStatus('run-http')).resolves.toMatchObject({
+      runId: 'run-http',
+      teamName: 'team-http',
+    });
+    await expect(getRuntimeState('team-http')).resolves.toMatchObject({ runId: 'run-http' });
+    await expect(deliverOpenCodeRuntimeMessage({})).resolves.toMatchObject({
+      runId: 'run-http',
+      state: 'delivered',
+    });
   });
 
   it('binds runtime control methods to the source object', async () => {

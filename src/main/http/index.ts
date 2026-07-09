@@ -40,6 +40,7 @@ import type {
 import type { SshConnectionManager } from '../services/infrastructure/SshConnectionManager';
 import type {
   TeamHttpDataApi,
+  TeamHttpHandlerApis,
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
@@ -63,6 +64,7 @@ export interface HttpServices {
   memberWorkSyncFeature?: MemberWorkSyncFeatureFacade;
   updaterService: UpdaterService;
   sshConnectionManager: SshConnectionManager;
+  teamApis?: TeamHttpHandlerApis;
   teamDataApi?: TeamHttpDataApi;
   teamProvisioningStartApi?: TeamProvisioningStartApi;
   teamProvisioningStatusApi?: TeamProvisioningStatusApi;
@@ -82,6 +84,7 @@ export function registerHttpRoutes(
   registerSubagentRoutes(app, services);
   if (
     services.teamDataApi ||
+    services.teamApis ||
     services.teamProvisioningStartApi ||
     services.teamProvisioningStatusApi ||
     services.teamTaskActivityApi ||

@@ -42,31 +42,35 @@ function isMemberWorkSyncReportState(value: string): value is MemberWorkSyncRepo
 }
 
 function getTeamProvisioningStartApi(services: HttpServices): TeamProvisioningStartApi {
-  if (!services.teamProvisioningStartApi) {
+  const api = services.teamApis?.provisioningStart ?? services.teamProvisioningStartApi;
+  if (!api) {
     throw new HttpFeatureUnavailableError('Team launch control is not available in this mode');
   }
-  return services.teamProvisioningStartApi;
+  return api;
 }
 
 function getTeamProvisioningStatusApi(services: HttpServices): TeamProvisioningStatusApi {
-  if (!services.teamProvisioningStatusApi) {
+  const api = services.teamApis?.provisioningStatus ?? services.teamProvisioningStatusApi;
+  if (!api) {
     throw new HttpFeatureUnavailableError('Team provisioning status is not available in this mode');
   }
-  return services.teamProvisioningStatusApi;
+  return api;
 }
 
 function getTeamRuntimeApi(services: HttpServices): TeamHttpRuntimeApi {
-  if (!services.teamRuntimeApi) {
+  const api = services.teamApis?.runtime ?? services.teamRuntimeApi;
+  if (!api) {
     throw new HttpFeatureUnavailableError('Team runtime control is not available in this mode');
   }
-  return services.teamRuntimeApi;
+  return api;
 }
 
 function getTeamRuntimeControlApi(services: HttpServices): TeamRuntimeControlCompatibilityApi {
-  if (!services.teamRuntimeControlApi) {
+  const api = services.teamApis?.runtimeControl ?? services.teamRuntimeControlApi;
+  if (!api) {
     throw new HttpFeatureUnavailableError('Team runtime callbacks are not available in this mode');
   }
-  return services.teamRuntimeControlApi;
+  return api;
 }
 
 function getTeamDataApi(services: HttpServices): NonNullable<HttpServices['teamDataApi']> {
@@ -141,7 +145,7 @@ async function getTeamDataWithRuntimeOverlay(
   const data = await getTeamDataApi(services).getTeamData(teamName);
   let runtimeState: Awaited<ReturnType<TeamHttpRuntimeApi['getRuntimeState']>> | null = null;
   try {
-    const runtimeApi = services.teamRuntimeApi;
+    const runtimeApi = services.teamApis?.runtime ?? services.teamRuntimeApi;
     runtimeState = (await runtimeApi?.getRuntimeState(teamName)) ?? null;
   } catch {
     runtimeState = null;
@@ -194,7 +198,8 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         });
       }
 
-      await services.teamTaskActivityApi?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
+      const taskActivityApi = services.teamApis?.taskActivity ?? services.teamTaskActivityApi;
+      await taskActivityApi?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
       return reply.send(await getTeamDataWithRuntimeOverlay(services, teamName));
     } catch (error) {
       if (shouldLogError(error)) {

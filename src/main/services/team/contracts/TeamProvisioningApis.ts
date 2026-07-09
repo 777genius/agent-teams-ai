@@ -96,6 +96,14 @@ export interface TeamHttpDataApi {
   createTeamConfig(request: TeamCreateConfigRequest): Promise<void>;
 }
 
+export interface TeamHttpHandlerApis {
+  provisioningStart: TeamProvisioningStartApi;
+  provisioningStatus: TeamProvisioningStatusApi;
+  taskActivity: TeamTaskActivityRepairApi;
+  runtime: TeamHttpRuntimeApi;
+  runtimeControl: TeamRuntimeControlCompatibilityApi;
+}
+
 export interface TeamIpcHandlerApis {
   provisioningStart: TeamProvisioningStartApi;
   provisioningStatus: TeamProvisioningStatusApi;
@@ -329,6 +337,22 @@ export function bindTeamHttpDataApi(source: TeamHttpDataApi): TeamHttpDataApi {
     getTeamData: source.getTeamData.bind(source),
     getSavedRequest: source.getSavedRequest.bind(source),
     createTeamConfig: source.createTeamConfig.bind(source),
+  };
+}
+
+export function bindTeamHttpHandlerApis(
+  source: TeamProvisioningStartApi &
+    TeamProvisioningStatusApi &
+    TeamTaskActivityRepairApi &
+    TeamHttpRuntimeApi &
+    TeamRuntimeControlCompatibilityApi
+): TeamHttpHandlerApis {
+  return {
+    provisioningStart: bindTeamProvisioningStartApi(source),
+    provisioningStatus: bindTeamProvisioningStatusApi(source),
+    taskActivity: bindTeamTaskActivityRepairApi(source),
+    runtime: bindTeamHttpRuntimeApi(source),
+    runtimeControl: bindTeamRuntimeControlCompatibilityApi(source),
   };
 }
 

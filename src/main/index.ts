@@ -117,19 +117,11 @@ import {
 import {
   bindTeamCrossTeamMessagingApi,
   bindTeamHttpDataApi,
-  bindTeamHttpRuntimeApi,
+  bindTeamHttpHandlerApis,
   bindTeamIpcHandlerApis,
-  bindTeamProvisioningStartApi,
-  bindTeamProvisioningStatusApi,
-  bindTeamRuntimeControlCompatibilityApi,
-  bindTeamTaskActivityRepairApi,
   type TeamDiagnosticsApi,
-  type TeamHttpRuntimeApi,
+  type TeamHttpHandlerApis,
   type TeamIpcHandlerApis,
-  type TeamProvisioningStartApi,
-  type TeamProvisioningStatusApi,
-  type TeamRuntimeControlCompatibilityApi,
-  type TeamTaskActivityRepairApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
 import { TeamBackupService } from '@main/services/team/TeamBackupService';
@@ -1067,11 +1059,7 @@ let tokenUsageFeature: TokenUsageFeatureFacade | null = null;
 let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
-let teamHttpProvisioningStartApi: TeamProvisioningStartApi | null = null;
-let teamHttpProvisioningStatusApi: TeamProvisioningStatusApi | null = null;
-let teamHttpTaskActivityApi: TeamTaskActivityRepairApi | null = null;
-let teamHttpRuntimeApi: TeamHttpRuntimeApi | null = null;
-let teamHttpRuntimeControlApi: TeamRuntimeControlCompatibilityApi | null = null;
+let teamHttpHandlerApis: TeamHttpHandlerApis | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 let cliInstallerService: CliInstallerService;
 let openCodeRuntimeInstallerService: OpenCodeRuntimeInstallerService;
@@ -2606,11 +2594,7 @@ async function initializeServices(): Promise<void> {
     message: 'Wiring app actions...',
   });
 
-  teamHttpProvisioningStartApi = bindTeamProvisioningStartApi(teamProvisioningService);
-  teamHttpProvisioningStatusApi = bindTeamProvisioningStatusApi(teamProvisioningService);
-  teamHttpTaskActivityApi = bindTeamTaskActivityRepairApi(teamProvisioningService);
-  teamHttpRuntimeApi = bindTeamHttpRuntimeApi(teamProvisioningService);
-  teamHttpRuntimeControlApi = bindTeamRuntimeControlCompatibilityApi(teamProvisioningService);
+  teamHttpHandlerApis = bindTeamHttpHandlerApis(teamProvisioningService);
 
   // Initialize IPC handlers with registry
   initializeIpcHandlers(
@@ -2726,13 +2710,7 @@ async function startHttpServer(
 
     const config = configManager.getConfig();
     const activeContext = contextRegistry.getActive();
-    if (
-      !teamHttpProvisioningStartApi ||
-      !teamHttpProvisioningStatusApi ||
-      !teamHttpTaskActivityApi ||
-      !teamHttpRuntimeApi ||
-      !teamHttpRuntimeControlApi
-    ) {
+    if (!teamHttpHandlerApis) {
       throw new Error('Team HTTP APIs are not initialized');
     }
     const port = await httpServer.start(
@@ -2749,11 +2727,7 @@ async function startHttpServer(
         updaterService,
         sshConnectionManager,
         teamDataApi: bindTeamHttpDataApi(teamDataService),
-        teamProvisioningStartApi: teamHttpProvisioningStartApi,
-        teamProvisioningStatusApi: teamHttpProvisioningStatusApi,
-        teamTaskActivityApi: teamHttpTaskActivityApi,
-        teamRuntimeApi: teamHttpRuntimeApi,
-        teamRuntimeControlApi: teamHttpRuntimeControlApi,
+        teamApis: teamHttpHandlerApis,
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456
