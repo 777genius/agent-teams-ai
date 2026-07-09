@@ -6,7 +6,6 @@ import type { TeamProvisioningCompatibilityDelegation } from '../TeamProvisionin
 import type { TeamProvisioningMemberLifecyclePublicFacade } from '../TeamProvisioningMemberLifecycleCompatibilityFacade';
 import type { TeamProvisioningPrepareFacade } from '../TeamProvisioningPrepareFacade';
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
-import type { MemberSpawnStatusEntry } from '@shared/types';
 
 class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagnosticsPreflightCompatibilityFacade<ProvisioningRun> {
   readonly prepareResult = { prepared: true };
@@ -103,14 +102,6 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
     return this.canDeliverToOpenCodeRuntimeForTeam(teamName);
   }
 
-  getGraceKey(run: ProvisioningRun, memberName: string): string {
-    return this.getMemberLaunchGraceKey(run, memberName);
-  }
-
-  syncGrace(run: ProvisioningRun, memberName: string, entry: MemberSpawnStatusEntry): void {
-    this.syncMemberLaunchGraceCheck(run, memberName, entry);
-  }
-
   waitForValidConfigForTest(run: ProvisioningRun, timeoutMs: number) {
     return this.waitForValidConfig(run, timeoutMs);
   }
@@ -129,10 +120,6 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
 
   pathExistsForTest(filePath: string) {
     return this.pathExists(filePath);
-  }
-
-  pendingTimeoutCount(): number {
-    return this.pendingTimeouts.size;
   }
 
   protected async findBootstrapTranscriptOutcome() {
@@ -209,18 +196,5 @@ describe('TeamProvisioningDiagnosticsPreflightCompatibilityFacade', () => {
     expect(facade.verificationProbePorts.waitForMissingInboxes).toHaveBeenCalledWith(run);
     expect(facade.verificationProbePorts.tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
     expect(facade.verificationProbePorts.pathExists).toHaveBeenCalledWith('/tmp/config.json');
-  });
-
-  it('keeps member launch grace keys stable', () => {
-    const facade = new TestDiagnosticsPreflightCompatibilityFacade();
-    const run = { runId: 'run-1', teamName: 'alpha' } as ProvisioningRun;
-
-    expect(facade.getGraceKey(run, 'Worker')).toBe('member-launch-grace:run-1:Worker');
-    facade.syncGrace(run, 'Worker', {
-      launchState: 'failed_to_start',
-      firstSpawnAcceptedAt: new Date().toISOString(),
-    } as MemberSpawnStatusEntry);
-
-    expect(facade.pendingTimeoutCount()).toBe(0);
   });
 });

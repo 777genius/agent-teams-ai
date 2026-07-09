@@ -2,44 +2,15 @@ import { createLogger } from '@shared/utils/logger';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 import { type OpenCodePromptDeliveryLedgerRecord } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
-import { boundLaunchDiagnostics } from '../progressPayload';
-import { type TeamMembersMetaStore } from '../TeamMembersMetaStore';
 
-import {
-  createTeamProvisioningOpenCodeBootstrapStallReconciliationPorts,
-  createTeamProvisioningOpenCodeBootstrapStallStatusPorts,
-  type TeamProvisioningOpenCodeBootstrapStallReconciliationPorts,
-} from './TeamProvisioningBootstrapStallPortsFactory';
-import { type BootstrapTranscriptOutcome } from './TeamProvisioningBootstrapTranscript';
 import { type TeamProvisioningBootstrapTranscriptFacade } from './TeamProvisioningBootstrapTranscriptFacade';
 import { readTeamProvisioningClaudeLogs } from './TeamProvisioningClaudeLogs';
 import { getCliHelpOutputWithProvisioningPorts } from './TeamProvisioningCliHelpOutputPortsFactory';
-import { buildLaunchDiagnosticsFromRun } from './TeamProvisioningLaunchDiagnostics';
 import { type TeamProvisioningLaunchIdentityBoundary } from './TeamProvisioningLaunchIdentityBoundaryFactory';
 import { getLeadActivityStateForTeam } from './TeamProvisioningLeadActivity';
 import { getLeadContextUsageForTeam } from './TeamProvisioningLeadContextUsage';
 import { type TeamProvisioningLiveLeadMessagePortsBoundary } from './TeamProvisioningLiveLeadMessagePortsFactory';
-import { TeamProvisioningMemberLifecycleCompatibilityFacade } from './TeamProvisioningMemberLifecycleCompatibilityFacade';
-import {
-  confirmMemberSpawnStatusFromTranscriptForRun,
-  getMemberSpawnStatusesSnapshot,
-  maybeAuditMemberSpawnStatusesForRun,
-  type MemberSpawnStatusAuditPorts,
-  type MemberSpawnStatusMutationPorts,
-  setMemberSpawnStatusForRun,
-} from './TeamProvisioningMemberSpawnSnapshots';
-import { MEMBER_LAUNCH_GRACE_MS } from './TeamProvisioningMemberSpawnStatusPolicy';
-import {
-  createTeamProvisioningMemberSpawnStatusesSnapshotHostFromService,
-  createTeamProvisioningMemberSpawnStatusesSnapshotPortsBoundary,
-  type TeamProvisioningMemberSpawnStatusesSnapshotServiceHost,
-} from './TeamProvisioningMemberSpawnStatusSnapshotPortsFactory';
-import {
-  isOpenCodeBootstrapStallWindowElapsed as isOpenCodeBootstrapStallWindowElapsedHelper,
-  type OpenCodeBootstrapStallRetryPromptPorts,
-  type OpenCodeBootstrapStallStatusPorts,
-  scheduleOpenCodeBootstrapStallReevaluation as scheduleOpenCodeBootstrapStallReevaluationHelper,
-} from './TeamProvisioningOpenCodeBootstrapStall';
+import { TeamProvisioningMemberStatusQueryFacade } from './TeamProvisioningMemberStatusQueryFacade';
 import {
   scheduleOpenCodeMemberInboxDeliveryWakeWithPorts,
   type OpenCodeMemberInboxDeliveryWakePorts,
@@ -60,7 +31,6 @@ import {
 } from './TeamProvisioningOpenCodeRuntimeDeliveryBoundaryFactory';
 import { type TeamProvisioningPrepareFacade } from './TeamProvisioningPrepareFacade';
 import { type TeamProvisioningProviderRuntimeFacade } from './TeamProvisioningProviderRuntimeFacade';
-import { type TeamProvisioningReevaluateMemberLaunchStatusBoundary } from './TeamProvisioningReevaluateMemberLaunchStatusPortsFactory';
 import { type RetainedClaudeLogsSnapshot } from './TeamProvisioningRetainedLogs';
 import { type ProvisioningRun, VERIFY_TIMEOUT_MS } from './TeamProvisioningRunModel';
 import { nowIso } from './TeamProvisioningRunProgress';
@@ -71,12 +41,6 @@ import {
   type TeamRuntimeLaunchArgsPlan,
   type ValidConfigProbeResult,
 } from './TeamProvisioningRuntimeLaunchSelection';
-import {
-  isOpenCodeRuntimeRecipient as isOpenCodeRuntimeRecipientHelper,
-  resolveRuntimeRecipientProviderId as resolveRuntimeRecipientProviderIdHelper,
-} from './TeamProvisioningRuntimeRecipientResolution';
-import { type TeamProvisioningRuntimeSnapshotFacade } from './TeamProvisioningRuntimeSnapshotFacade';
-import { type RuntimeToolActivityHandlers } from './TeamProvisioningRuntimeToolActivity';
 import {
   buildRuntimeTurnSettledHookSettingsArgs as buildRuntimeTurnSettledHookSettingsArgsHelper,
   buildRuntimeTurnSettledHookSettingsObject as buildRuntimeTurnSettledHookSettingsObjectHelper,
@@ -91,15 +55,10 @@ import { type TeamProvisioningVerificationProbePorts } from './TeamProvisioningV
 
 import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
 import type {
-  MemberSpawnLivenessSource,
-  MemberSpawnStatus,
-  MemberSpawnStatusEntry,
-  MemberSpawnStatusesSnapshot,
   ProviderModelLaunchIdentity,
   InboxMessage,
   LeadContextUsage,
   TaskRef,
-  TeamAgentRuntimeSnapshot,
   TeamCreateRequest,
   TeamProviderBackendId,
   TeamProviderId,
@@ -115,7 +74,7 @@ const logger = createLogger('Service:TeamProvisioning');
 
 export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   TRun extends ProvisioningRun = ProvisioningRun,
-> extends TeamProvisioningMemberLifecycleCompatibilityFacade<TRun> {
+> extends TeamProvisioningMemberStatusQueryFacade<TRun> {
   protected abstract readonly launchIdentityBoundary: TeamProvisioningLaunchIdentityBoundary;
   protected abstract readonly runTracking: Pick<
     TeamProvisioningRunTrackingDeliveryHelper<TRun>,
@@ -127,23 +86,13 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     TeamProvisioningBootstrapTranscriptFacade,
     'getPersistedTranscriptClaudeLogs'
   >;
-  protected abstract readonly membersMetaStore: Pick<TeamMembersMetaStore, 'getMembers'>;
-  protected abstract readonly runtimeToolActivity: RuntimeToolActivityHandlers<TRun>;
-  protected abstract readonly memberSpawnStatusMutationPorts: MemberSpawnStatusMutationPorts<TRun>;
-  protected abstract readonly memberSpawnStatusAuditPorts: MemberSpawnStatusAuditPorts<TRun>;
-  protected abstract readonly runtimeSnapshotFacade: Pick<
-    TeamProvisioningRuntimeSnapshotFacade,
-    'getTeamAgentRuntimeSnapshot'
-  >;
   protected abstract readonly prepareFacade: TeamProvisioningPrepareFacade;
   protected abstract readonly providerRuntime: TeamProvisioningProviderRuntimeFacade;
   protected abstract readonly verificationProbePorts: TeamProvisioningVerificationProbePorts<TRun>;
-  protected abstract readonly reevaluateMemberLaunchStatusBoundary: TeamProvisioningReevaluateMemberLaunchStatusBoundary<TRun>;
   protected abstract readonly transientRunState: Pick<
     TeamProvisioningTransientRunState,
     'appendCliLogs'
   >;
-  protected abstract readonly pendingTimeouts: Map<string, NodeJS.Timeout>;
   protected abstract readonly helpOutputCache: { output: string | null; cachedAtMs: number };
   protected abstract readonly shutdownCoordination: { getShutdownTrackedTeamNames(): string[] };
   protected abstract readonly toolApprovalFacade: Pick<
@@ -176,23 +125,6 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   protected abstract readonly inboxReader: OpenCodeMemberDeliveryBusyStatusPorts['inboxReader'];
   protected abstract readonly openCodePromptDeliveryWatchdogScheduler: OpenCodeMemberInboxDeliveryWakePorts['watchdogScheduler'];
 
-  protected abstract findBootstrapTranscriptOutcome(
-    teamName: string,
-    memberName: string,
-    sinceMs: number | null
-  ): Promise<BootstrapTranscriptOutcome | null>;
-  protected abstract sendOpenCodeMemberMessageToRuntimeSerialized(
-    input: Parameters<
-      OpenCodeBootstrapStallRetryPromptPorts['sendOpenCodeMemberMessageToRuntimeSerialized']
-    >[0]
-  ): ReturnType<
-    OpenCodeBootstrapStallRetryPromptPorts['sendOpenCodeMemberMessageToRuntimeSerialized']
-  >;
-  protected abstract emitMemberSpawnChange(run: TRun, memberName: string): void;
-  protected abstract persistLaunchStateSnapshot(
-    run: TRun,
-    phase: 'active' | 'finished'
-  ): Promise<unknown>;
   protected abstract syncLeadTaskActivityForState(
     run: TRun,
     state: 'active' | 'idle' | 'offline',
@@ -313,33 +245,6 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     return this.runTracking.getAliveTeamNames();
   }
 
-  async resolveRuntimeRecipientProviderId(
-    teamName: string,
-    memberName: string
-  ): Promise<TeamProviderId | undefined> {
-    return resolveRuntimeRecipientProviderIdHelper(
-      { teamName, memberName },
-      {
-        readConfigSnapshot: (candidateTeamName) => this.readConfigSnapshot(candidateTeamName),
-        readMembersMeta: (candidateTeamName) => this.membersMetaStore.getMembers(candidateTeamName),
-      }
-    );
-  }
-
-  async isOpenCodeRuntimeRecipient(teamName: string, memberName: string): Promise<boolean> {
-    return isOpenCodeRuntimeRecipientHelper(
-      { teamName, memberName },
-      {
-        readConfigSnapshot: (candidateTeamName) => this.readConfigSnapshot(candidateTeamName),
-        readMembersMeta: (candidateTeamName) => this.membersMetaStore.getMembers(candidateTeamName),
-      }
-    );
-  }
-
-  protected isCurrentTrackedRun(run: TRun): boolean {
-    return this.runTracking.getTrackedRunId(run.teamName) === run.runId;
-  }
-
   protected getPersistedTranscriptClaudeLogs(
     teamName: string
   ): Promise<RetainedClaudeLogsSnapshot | null> {
@@ -348,260 +253,6 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
 
   protected appendCliLogs(run: TRun, stream: 'stdout' | 'stderr', text: string): void {
     this.transientRunState.appendCliLogs(run, stream, text);
-  }
-
-  protected startRuntimeToolActivity(
-    run: TRun,
-    memberName: string,
-    block: Record<string, unknown>
-  ): void {
-    this.runtimeToolActivity.startRuntimeToolActivity(run, memberName, block);
-  }
-
-  protected finishRuntimeToolActivity(
-    run: TRun,
-    toolUseId: string,
-    resultContent: unknown,
-    isError: boolean
-  ): void {
-    this.runtimeToolActivity.finishRuntimeToolActivity(run, toolUseId, resultContent, isError);
-  }
-
-  protected appendMemberBootstrapDiagnostic(run: TRun, memberName: string, text: string): void {
-    this.runtimeToolActivity.appendMemberBootstrapDiagnostic(run, memberName, text);
-  }
-
-  protected updateLaunchDiagnosticsForRun(run: TRun, observedAt: string): void {
-    const launchDiagnostics = boundLaunchDiagnostics(
-      buildLaunchDiagnosticsFromRun(run, { nowIso: () => observedAt })
-    );
-    if (!launchDiagnostics) {
-      return;
-    }
-    run.progress = {
-      ...run.progress,
-      updatedAt: observedAt,
-      launchDiagnostics,
-    };
-    run.onProgress(run.progress);
-  }
-
-  protected resetRuntimeToolActivity(run: TRun, memberName?: string): void {
-    this.runtimeToolActivity.resetRuntimeToolActivity(run, memberName);
-  }
-
-  protected clearMemberSpawnToolTracking(run: TRun, memberName: string): void {
-    this.runtimeToolActivity.clearMemberSpawnToolTracking(run, memberName);
-  }
-
-  protected pauseMemberTaskActivityForRuntimeLoss(
-    run: TRun,
-    memberName: string,
-    previous: MemberSpawnStatusEntry,
-    observedAt: string
-  ): void {
-    this.runtimeToolActivity.pauseMemberTaskActivityForRuntimeLoss(
-      run,
-      memberName,
-      previous,
-      observedAt
-    );
-  }
-
-  protected syncMemberTaskActivityForRuntimeTransition(
-    run: TRun,
-    memberName: string,
-    previous: MemberSpawnStatusEntry,
-    next: MemberSpawnStatusEntry,
-    observedAt: string
-  ): void {
-    this.runtimeToolActivity.syncMemberTaskActivityForRuntimeTransition(
-      run,
-      memberName,
-      previous,
-      next,
-      observedAt
-    );
-  }
-
-  protected setMemberSpawnStatus(
-    run: TRun,
-    memberName: string,
-    status: MemberSpawnStatus,
-    error?: string,
-    livenessSource?: MemberSpawnLivenessSource,
-    heartbeatAt?: string
-  ): void {
-    setMemberSpawnStatusForRun(
-      {
-        run,
-        memberName,
-        status,
-        error,
-        livenessSource,
-        heartbeatAt,
-      },
-      this.memberSpawnStatusMutationPorts
-    );
-  }
-
-  protected confirmMemberSpawnStatusFromTranscript(
-    run: TRun,
-    memberName: string,
-    observedAt: string,
-    source: 'transcript' | 'runtime-proof' = 'transcript'
-  ): void {
-    confirmMemberSpawnStatusFromTranscriptForRun(
-      {
-        run,
-        memberName,
-        observedAt,
-        source,
-      },
-      this.memberSpawnStatusMutationPorts
-    );
-  }
-
-  protected createMemberSpawnStatusesSnapshotPorts() {
-    return createTeamProvisioningMemberSpawnStatusesSnapshotPortsBoundary<TRun>(
-      createTeamProvisioningMemberSpawnStatusesSnapshotHostFromService(
-        this as unknown as TeamProvisioningMemberSpawnStatusesSnapshotServiceHost<TRun>
-      )
-    );
-  }
-
-  async getMemberSpawnStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot> {
-    return getMemberSpawnStatusesSnapshot(teamName, this.createMemberSpawnStatusesSnapshotPorts());
-  }
-
-  async getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot> {
-    return this.runtimeSnapshotFacade.getTeamAgentRuntimeSnapshot(teamName);
-  }
-
-  protected getMemberLaunchGraceKey(run: TRun, memberName: string): string {
-    return `member-launch-grace:${run.runId}:${memberName}`;
-  }
-
-  protected syncMemberLaunchGraceCheck(
-    run: TRun,
-    memberName: string,
-    entry: MemberSpawnStatusEntry
-  ): void {
-    const key = this.getMemberLaunchGraceKey(run, memberName);
-    const existing = this.pendingTimeouts.get(key);
-    if (entry.launchState === 'failed_to_start' || entry.launchState === 'confirmed_alive') {
-      if (existing) {
-        clearTimeout(existing);
-        this.pendingTimeouts.delete(key);
-      }
-      return;
-    }
-    if (!entry.firstSpawnAcceptedAt) {
-      if (existing) {
-        clearTimeout(existing);
-        this.pendingTimeouts.delete(key);
-      }
-      return;
-    }
-    const remainingMs =
-      Date.parse(entry.firstSpawnAcceptedAt) + MEMBER_LAUNCH_GRACE_MS - Date.now();
-    if (remainingMs <= 0) {
-      if (existing) {
-        clearTimeout(existing);
-        this.pendingTimeouts.delete(key);
-      }
-      void this.reevaluateMemberLaunchStatus(run, memberName);
-      return;
-    }
-    if (existing) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      this.pendingTimeouts.delete(key);
-      void this.reevaluateMemberLaunchStatus(run, memberName);
-    }, remainingMs);
-    timer.unref?.();
-    this.pendingTimeouts.set(key, timer);
-  }
-
-  protected async reevaluateMemberLaunchStatus(run: TRun, memberName: string): Promise<void> {
-    await this.reevaluateMemberLaunchStatusBoundary.reevaluateMemberLaunchStatus(run, memberName);
-  }
-
-  protected getOpenCodeBootstrapStallStatusPorts(): OpenCodeBootstrapStallStatusPorts {
-    return createTeamProvisioningOpenCodeBootstrapStallStatusPorts<TRun>({
-      nowIso,
-      syncMemberTaskActivityForRuntimeTransition: (targetRun, targetMember, previous, next, at) =>
-        this.syncMemberTaskActivityForRuntimeTransition(
-          targetRun,
-          targetMember,
-          previous,
-          next,
-          at
-        ),
-      updateLaunchDiagnostics: (targetRun, observedAt) =>
-        this.updateLaunchDiagnosticsForRun(targetRun, observedAt),
-      appendMemberBootstrapDiagnostic: (targetRun, targetMember, text) =>
-        this.appendMemberBootstrapDiagnostic(targetRun, targetMember, text),
-      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun),
-      emitMemberSpawnChange: (targetRun, targetMember) =>
-        this.emitMemberSpawnChange(targetRun, targetMember),
-      persistLaunchStateSnapshot: (targetRun, phase) => {
-        void this.persistLaunchStateSnapshot(targetRun, phase);
-      },
-    });
-  }
-
-  protected getOpenCodeBootstrapStallReconciliationPorts(): TeamProvisioningOpenCodeBootstrapStallReconciliationPorts {
-    return createTeamProvisioningOpenCodeBootstrapStallReconciliationPorts<TRun>({
-      getOpenCodeBootstrapStallStatusPorts: () => this.getOpenCodeBootstrapStallStatusPorts(),
-      findBootstrapTranscriptOutcome: (teamName, memberName, acceptedAtMs) =>
-        this.findBootstrapTranscriptOutcome(teamName, memberName, acceptedAtMs),
-      getOpenCodeRuntimeMessageAdapter: () =>
-        this.appShellBoundary.getOpenCodeRuntimeMessageAdapter(),
-      sendOpenCodeMemberMessageToRuntimeSerialized: (sendInput) =>
-        this.sendOpenCodeMemberMessageToRuntimeSerialized(sendInput),
-      appendMemberBootstrapDiagnostic: (targetRun, targetMember, text) =>
-        this.appendMemberBootstrapDiagnostic(targetRun, targetMember, text),
-      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun),
-      scheduleOpenCodeBootstrapStallReevaluation: (targetRun, targetMember, firstSpawnAcceptedAt) =>
-        this.scheduleOpenCodeBootstrapStallReevaluation(
-          targetRun,
-          targetMember,
-          firstSpawnAcceptedAt
-        ),
-    });
-  }
-
-  protected scheduleOpenCodeBootstrapStallReevaluation(
-    run: TRun,
-    memberName: string,
-    firstSpawnAcceptedAt: string
-  ): void {
-    scheduleOpenCodeBootstrapStallReevaluationHelper(run, memberName, firstSpawnAcceptedAt, {
-      nowMs: () => Date.now(),
-      getMemberLaunchGraceKey: (targetRun, targetMember) =>
-        this.getMemberLaunchGraceKey(targetRun as TRun, targetMember),
-      hasPendingTimeout: (key) => this.pendingTimeouts.has(key),
-      setPendingTimeout: (key, timer) => this.pendingTimeouts.set(key, timer),
-      deletePendingTimeout: (key) => this.pendingTimeouts.delete(key),
-      setTimeout: (callback, delayMs) => setTimeout(callback, delayMs),
-      reevaluateMemberLaunchStatus: (targetRun, targetMember) =>
-        this.reevaluateMemberLaunchStatus(targetRun as TRun, targetMember),
-    });
-  }
-
-  protected isOpenCodeBootstrapStallWindowElapsed(
-    firstSpawnAcceptedAt: string | undefined
-  ): boolean {
-    return isOpenCodeBootstrapStallWindowElapsedHelper(firstSpawnAcceptedAt, Date.now());
-  }
-
-  protected async maybeAuditMemberSpawnStatuses(
-    run: TRun,
-    options?: { force?: boolean }
-  ): Promise<void> {
-    await maybeAuditMemberSpawnStatusesForRun(run, this.memberSpawnStatusAuditPorts, options);
   }
 
   async warmup(): Promise<void> {
