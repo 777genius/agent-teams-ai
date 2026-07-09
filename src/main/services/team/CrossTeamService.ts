@@ -196,6 +196,8 @@ export class CrossTeamService {
         messageId: duplicate.messageId,
         deliveredToInbox: true,
         deduplicated: true,
+        toTeam,
+        toMember: duplicate.toMember,
       };
       if (request.requireRuntimeDelivery) {
         await this.requireCrossTeamRuntimeDelivery({
@@ -238,7 +240,7 @@ export class CrossTeamService {
         memberName: targetMemberName,
         messageId,
       });
-      return { messageId, deliveredToInbox: true };
+      return { messageId, deliveredToInbox: true, toTeam, toMember: targetMemberName };
     }
 
     // 7. Best-effort relay (if online)
@@ -248,7 +250,7 @@ export class CrossTeamService {
       });
     }
 
-    return { messageId, deliveredToInbox: true };
+    return { messageId, deliveredToInbox: true, toTeam, toMember: targetMemberName };
   }
 
   async listAvailableTargets(excludeTeam?: string): Promise<CrossTeamTarget[]> {

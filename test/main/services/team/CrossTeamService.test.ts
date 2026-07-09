@@ -273,6 +273,8 @@ describe('CrossTeamService', () => {
       const result = await service.send(makeRequest({ requireRuntimeDelivery: true }));
 
       expect(result.deliveredToInbox).toBe(true);
+      expect(result.toTeam).toBe('team-b');
+      expect(result.toMember).toBe('team-lead');
       expect(provisioning.relayInboxFileToLiveRecipient).toHaveBeenCalledWith(
         'team-b',
         'team-lead',

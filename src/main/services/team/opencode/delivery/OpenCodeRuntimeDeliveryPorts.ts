@@ -1,3 +1,5 @@
+import { CROSS_TEAM_SENT_SOURCE } from '@shared/constants/crossTeam';
+
 import type { TeamInboxReader } from '../../TeamInboxReader';
 import type { TeamInboxWriter } from '../../TeamInboxWriter';
 import type { TeamSentMessagesStore } from '../../TeamSentMessagesStore';
@@ -61,10 +63,39 @@ function parseCrossTeamRecipient(
   return { teamName: fallbackTeamName, memberName: fallbackMemberName?.trim() || 'team-lead' };
 }
 
+function getCrossTeamSendResultTarget(
+  value: unknown
+): { teamName: string | undefined; memberName: string | undefined } {
+  if (!value || typeof value !== 'object') {
+    return { teamName: undefined, memberName: undefined };
+  }
+  const result = value as { toTeam?: unknown; toMember?: unknown };
+  return {
+    teamName:
+      typeof result.toTeam === 'string' && result.toTeam.trim().length > 0
+        ? result.toTeam.trim()
+        : undefined,
+    memberName:
+      typeof result.toMember === 'string' && result.toMember.trim().length > 0
+        ? result.toMember.trim()
+        : undefined,
+  };
+}
+
 function isCrossTeamLocation(
   location: RuntimeDeliveryLocation | undefined
 ): location is Extract<RuntimeDeliveryLocation, { kind: 'cross_team_outbox' }> {
   return location?.kind === 'cross_team_outbox';
+}
+
+function findCrossTeamSenderCopy(
+  messages: InboxMessage[],
+  location: Extract<RuntimeDeliveryLocation, { kind: 'cross_team_outbox' }>
+): InboxMessage | undefined {
+  const expectedRecipient = `${location.toTeamName}.${location.toMemberName}`;
+  return messages.find(
+    (message) => message.messageId === location.messageId && message.to === expectedRecipient
+  );
 }
 
 export function createOpenCodeRuntimeDeliveryPorts(
@@ -205,41 +236,57 @@ export function createOpenCodeRuntimeDeliveryPorts(
       const senderCopy =
         senderMessages.find((message) => message.messageId === deliveredMessageId) ??
         senderMessages.find((message) => message.messageId === destinationMessageId);
+      const resultTarget = getCrossTeamSendResultTarget(result);
       const recipient = parseCrossTeamRecipient(
         senderCopy?.to,
-        envelope.to.teamName,
-        envelope.to.memberName
+        resultTarget.teamName ?? envelope.to.teamName,
+        resultTarget.memberName ?? envelope.to.memberName
       );
-      return {
+      const location: Extract<RuntimeDeliveryLocation, { kind: 'cross_team_outbox' }> = {
         kind: 'cross_team_outbox',
         fromTeamName: envelope.teamName,
         toTeamName: recipient.teamName,
         toMemberName: recipient.memberName,
         messageId: deliveredMessageId,
       };
+
+      if (!findCrossTeamSenderCopy(senderMessages, location)) {
+        await deps.sentMessagesStore.appendMessage(envelope.teamName, {
+          from: envelope.fromMemberName,
+          to: `${location.toTeamName}.${location.toMemberName}`,
+          text: envelope.text,
+          timestamp: envelope.createdAt,
+          read: true,
+          messageId: location.messageId,
+          source: CROSS_TEAM_SENT_SOURCE,
+          summary: envelope.summary ?? `Cross-team message to ${location.toTeamName}`,
+          leadSessionId: envelope.runtimeSessionId,
+          taskRefs: runtimeTaskRefs(envelope.taskRefs),
+          conversationId: envelope.idempotencyKey,
+        });
+      }
+
+      return location;
     },
-    verify: async ({ destination, location }) => {
+    verify: async ({ destination, destinationMessageId, location }) => {
       if (destination.kind !== 'cross_team_outbox') {
         return { found: false, location: null, diagnostics: ['destination kind mismatch'] };
       }
-      if (!isCrossTeamLocation(location)) {
-        return {
-          found: false,
-          location: null,
-          diagnostics: ['cross-team runtime delivery requires committed write proof'],
-        };
-      }
-      const expectedLocation = location;
+      const expectedLocation = isCrossTeamLocation(location)
+        ? location
+        : {
+            kind: 'cross_team_outbox' as const,
+            fromTeamName: destination.fromTeamName,
+            toTeamName: destination.toTeamName,
+            toMemberName: destination.toMemberName,
+            messageId: destinationMessageId,
+          };
       const messages = await deps.sentMessagesStore.readMessages(expectedLocation.fromTeamName);
-      const expectedRecipient = `${expectedLocation.toTeamName}.${expectedLocation.toMemberName}`;
-      const found = messages.some(
-        (message) =>
-          message.messageId === expectedLocation.messageId && message.to === expectedRecipient
-      );
+      const found = Boolean(findCrossTeamSenderCopy(messages, expectedLocation));
       return {
         found,
         location: found ? expectedLocation : null,
-        diagnostics: [],
+        diagnostics: found ? [] : ['cross-team sender copy proof missing'],
       };
     },
     buildChangeEvent: ({ teamName }) => ({

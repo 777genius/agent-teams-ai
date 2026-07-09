@@ -83,10 +83,72 @@ describe('OpenCodeRuntimeDeliveryPorts', () => {
         },
         destinationMessageId: 'runtime-delivery-message',
       })
-    ).resolves.toMatchObject({
-      found: false,
-      diagnostics: ['cross-team runtime delivery requires committed write proof'],
+    ).resolves.toMatchObject({ found: true });
+    await expect(
+      port.verify({
+        destination: {
+          kind: 'cross_team_outbox',
+          fromTeamName: 'team-a',
+          toTeamName: 'team-b',
+          toMemberName: 'Reviewer',
+        },
+        destinationMessageId: 'runtime-delivery-message',
+        location,
+      })
+    ).resolves.toMatchObject({ found: true });
+  });
+
+  it('repairs missing sender-copy proof after live cross-team delivery succeeds', async () => {
+    const sentMessages: InboxMessage[] = [];
+    const appendMessage = vi.fn((_teamName: string, message: InboxMessage) => {
+      sentMessages.push(message);
+      return Promise.resolve();
     });
+    const crossTeamSender = vi.fn(
+      (request: Parameters<OpenCodeRuntimeDeliveryCrossTeamSender>[0]) =>
+        Promise.resolve({
+          messageId: request.messageId ?? 'runtime-delivery-message',
+          deliveredToInbox: true,
+          toTeam: request.toTeam,
+          toMember: request.toMember,
+        })
+    );
+    const port = getCrossTeamPort(
+      createOpenCodeRuntimeDeliveryPorts({
+        sentMessagesStore: {
+          appendMessage,
+          readMessages: vi.fn(() => Promise.resolve(sentMessages)),
+        },
+        inboxReader: {
+          getMessagesFor: vi.fn(() => Promise.resolve([])),
+        },
+        inboxWriter: {
+          sendMessage: vi.fn(() =>
+            Promise.resolve({
+              deliveredToInbox: true,
+              messageId: 'unused',
+            })
+          ),
+        },
+        getCrossTeamSender: () => crossTeamSender,
+      })
+    );
+
+    const location = await port.write({
+      envelope: envelope(),
+      destinationMessageId: 'runtime-delivery-message',
+    });
+
+    expect(appendMessage).toHaveBeenCalledWith(
+      'team-a',
+      expect.objectContaining({
+        from: 'Builder',
+        to: 'team-b.Reviewer',
+        text: 'Please review this',
+        messageId: 'runtime-delivery-message',
+        source: CROSS_TEAM_SENT_SOURCE,
+      })
+    );
     await expect(
       port.verify({
         destination: {

@@ -1791,6 +1791,8 @@ export interface CrossTeamSendResult {
   messageId: string;
   deliveredToInbox: boolean;
   deduplicated?: boolean;
+  toTeam?: string;
+  toMember?: string;
 }
 
 // =============================================================================
