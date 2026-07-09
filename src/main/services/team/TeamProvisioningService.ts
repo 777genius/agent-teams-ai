@@ -104,10 +104,9 @@ import {
 import { type DeterministicCreateSpawnFlowPorts } from './provisioning/TeamProvisioningCreateDeterministicSpawnFlow';
 import { type TeamProvisioningCreateDeterministicSpawnFlowBoundary } from './provisioning/TeamProvisioningCreateDeterministicSpawnFlowPortsFactory';
 import {
-  createTeamInnerWithService,
-  launchTeamInnerWithService,
-  type TeamProvisioningCreateLaunchOrchestrationServiceHost,
-} from './provisioning/TeamProvisioningCreateLaunchOrchestration';
+  createTeamProvisioningRequestAdmissionBoundary,
+  type TeamProvisioningRequestAdmissionServiceHost,
+} from './provisioning/TeamProvisioningRequestAdmission';
 import {
   clearPendingCrossTeamReplyExpectation as clearPendingCrossTeamReplyExpectationInState,
   type CrossTeamDeliveredLeadBlock,
@@ -1149,6 +1148,9 @@ export class TeamProvisioningService extends TeamProvisioningDiagnosticsPrefligh
         this as unknown as TeamProvisioningOpenCodeLaunchWiringServiceHost<ProvisioningRun>
       )
     );
+  private readonly requestAdmissionBoundary = createTeamProvisioningRequestAdmissionBoundary(
+    this as unknown as TeamProvisioningRequestAdmissionServiceHost
+  );
   protected readonly openCodeRuntimeDeliveryBoundaryHost!: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<ProvisioningRun>;
   protected readonly openCodeRuntimeControlApi =
     createTeamRuntimeControlCompatibilityApiFromService(
@@ -2041,20 +2043,7 @@ export class TeamProvisioningService extends TeamProvisioningDiagnosticsPrefligh
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamCreateResponse> {
-    return this.withTeamLock(request.teamName, async () => {
-      return this._createTeamInner(request, onProgress);
-    });
-  }
-
-  private async _createTeamInner(
-    request: TeamCreateRequest,
-    onProgress: (progress: TeamProvisioningProgress) => void
-  ): Promise<TeamCreateResponse> {
-    return createTeamInnerWithService(
-      this as unknown as TeamProvisioningCreateLaunchOrchestrationServiceHost,
-      request,
-      onProgress
-    );
+    return this.requestAdmissionBoundary.createTeam(request, onProgress);
   }
 
   private async createOpenCodeTeamThroughRuntimeAdapter(
@@ -2157,20 +2146,7 @@ export class TeamProvisioningService extends TeamProvisioningDiagnosticsPrefligh
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
-    return this.withTeamLock(request.teamName, async () => {
-      return this._launchTeamInner(request, onProgress);
-    });
-  }
-
-  private async _launchTeamInner(
-    request: TeamLaunchRequest,
-    onProgress: (progress: TeamProvisioningProgress) => void
-  ): Promise<TeamLaunchResponse> {
-    return launchTeamInnerWithService(
-      this as unknown as TeamProvisioningCreateLaunchOrchestrationServiceHost,
-      request,
-      onProgress
-    );
+    return this.requestAdmissionBoundary.launchTeam(request, onProgress);
   }
 
   /**
