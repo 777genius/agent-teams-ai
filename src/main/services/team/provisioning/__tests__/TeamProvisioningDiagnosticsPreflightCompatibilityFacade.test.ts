@@ -190,6 +190,10 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
     return {} as never;
   }
 
+  protected getRunLeadName(): string {
+    return 'Lead';
+  }
+
   protected emitMemberSpawnChange(): void {}
 
   protected async persistLaunchStateSnapshot(): Promise<unknown> {}

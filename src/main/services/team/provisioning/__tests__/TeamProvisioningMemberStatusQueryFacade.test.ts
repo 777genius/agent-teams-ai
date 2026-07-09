@@ -6,6 +6,7 @@ import type { TeamProvisioningCompatibilityDelegation } from '../TeamProvisionin
 import type { TeamProvisioningMemberLifecyclePublicFacade } from '../TeamProvisioningMemberLifecycleCompatibilityFacade';
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
 import type {
+  InboxMessage,
   MemberSpawnStatus,
   MemberSpawnStatusEntry,
   TeamAgentRuntimeSnapshot,
@@ -23,6 +24,9 @@ class TestMemberStatusQueryFacade extends TeamProvisioningMemberStatusQueryFacad
   readonly getTeamAgentRuntimeSnapshotMock = vi.fn(async () => {
     return { teamName: 'alpha' } as unknown as TeamAgentRuntimeSnapshot;
   });
+  readonly getMessagesForMock = vi.fn<
+    (teamName: string, memberName: string) => Promise<InboxMessage[]>
+  >(async () => []);
   readonly reevaluateMemberLaunchStatusMock = vi.fn(async () => undefined);
   readonly mutationPorts = {
     syncMemberTaskActivityForRuntimeTransition: vi.fn(),
@@ -45,6 +49,9 @@ class TestMemberStatusQueryFacade extends TeamProvisioningMemberStatusQueryFacad
   protected readonly runs = new Map<string, ProvisioningRun>();
   protected readonly membersMetaStore = {
     getMembers: this.getMembersMock,
+  };
+  protected readonly inboxReader = {
+    getMessagesFor: this.getMessagesForMock,
   };
   protected readonly runtimeToolActivity = {
     startRuntimeToolActivity: vi.fn(),
@@ -93,6 +100,21 @@ class TestMemberStatusQueryFacade extends TeamProvisioningMemberStatusQueryFacad
     this.setMemberSpawnStatus(run, memberName, status);
   }
 
+  refreshFromLeadInbox(run: ProvisioningRun): Promise<void> {
+    return this.refreshMemberSpawnStatusesFromLeadInbox(run);
+  }
+
+  resolveExpected(
+    expectedMembers: readonly string[] | undefined,
+    candidateName: string
+  ): string | null {
+    return this.resolveExpectedLaunchMemberName(expectedMembers, candidateName);
+  }
+
+  protected getRunLeadName(): string {
+    return 'Lead';
+  }
+
   protected async findBootstrapTranscriptOutcome() {
     return null;
   }
@@ -112,6 +134,7 @@ function createRun(): ProvisioningRun {
   return {
     runId: 'run-1',
     teamName: 'alpha',
+    startedAt: '2026-07-08T00:00:00.000Z',
     progress: {
       runId: 'run-1',
       teamName: 'alpha',
@@ -125,6 +148,7 @@ function createRun(): ProvisioningRun {
     isLaunch: false,
     provisioningComplete: false,
     memberSpawnStatuses: new Map(),
+    memberSpawnLeadInboxCursorByMember: new Map(),
     lastMemberSpawnAuditAt: 0,
   } as ProvisioningRun;
 }
@@ -180,6 +204,34 @@ describe('TeamProvisioningMemberStatusQueryFacade', () => {
       expect.objectContaining({ status: 'spawning' })
     );
     expect(facade.mutationPorts.updateLaunchDiagnostics).toHaveBeenCalledWith(run);
+    expect(facade.mutationPorts.emitMemberSpawnChange).toHaveBeenCalledWith(run, 'Worker');
+  });
+
+  it('keeps lead-inbox spawn refresh and expected-name resolution behind the status facade', async () => {
+    const facade = new TestMemberStatusQueryFacade();
+    const run = createRun();
+    facade.getMessagesForMock.mockResolvedValue([
+      {
+        messageId: 'msg-1',
+        from: 'Worker',
+        to: 'Lead',
+        timestamp: '2026-07-08T00:00:05.000Z',
+        text: 'heartbeat 2026-07-08T00:00:04.000Z',
+        read: false,
+      },
+    ]);
+
+    expect(facade.resolveExpected(['Worker'], 'Worker-2')).toBe('Worker');
+
+    await facade.refreshFromLeadInbox(run);
+
+    expect(facade.getMessagesForMock).toHaveBeenCalledWith('alpha', 'Lead');
+    expect(run.memberSpawnStatuses.get('Worker')).toMatchObject({
+      status: 'online',
+      bootstrapConfirmed: true,
+      runtimeAlive: true,
+      lastHeartbeatAt: '2026-07-08T00:00:05.000Z',
+    });
     expect(facade.mutationPorts.emitMemberSpawnChange).toHaveBeenCalledWith(run, 'Worker');
   });
 });

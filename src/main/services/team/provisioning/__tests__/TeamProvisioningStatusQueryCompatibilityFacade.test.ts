@@ -41,6 +41,9 @@ class TestStatusQueryCompatibilityFacade extends TeamProvisioningStatusQueryComp
   protected readonly membersMetaStore = {
     getMembers: this.getMembersMock,
   };
+  protected readonly inboxReader = {
+    getMessagesFor: vi.fn(async () => []),
+  };
   protected readonly runtimeToolActivity = {
     startRuntimeToolActivity: vi.fn(),
     finishRuntimeToolActivity: vi.fn(),
@@ -96,6 +99,10 @@ class TestStatusQueryCompatibilityFacade extends TeamProvisioningStatusQueryComp
 
   protected async sendOpenCodeMemberMessageToRuntimeSerialized() {
     return {} as never;
+  }
+
+  protected getRunLeadName(): string {
+    return 'Lead';
   }
 
   protected emitMemberSpawnChange(): void {}

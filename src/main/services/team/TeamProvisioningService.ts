@@ -145,18 +145,12 @@ import { createTeamProvisioningMemberLifecycleOperationRunner } from './provisio
 import { createTeamProvisioningMemberLifecycleOperationUseCases } from './provisioning/TeamProvisioningMemberLifecycleOperationUseCases';
 import { createTeamProvisioningMemberLifecycleServiceUseCases } from './provisioning/TeamProvisioningMemberLifecycleServiceUseCases';
 import {
-  refreshMemberSpawnStatusesFromLeadInbox as refreshMemberSpawnStatusesFromLeadInboxHelper,
-  resolveExpectedLaunchMemberName as resolveExpectedLaunchMemberNameHelper,
-} from './provisioning/TeamProvisioningMemberSpawnLeadInbox';
-import {
   createMemberSpawnStatusAuditPortsFromService,
   createMemberSpawnStatusMutationPortsFromService,
   type MemberSpawnStatusAuditPorts,
   type MemberSpawnStatusAuditServiceHost,
   type MemberSpawnStatusMutationPorts,
   type MemberSpawnStatusMutationServiceHost,
-  reconcileBootstrapTranscriptFailuresForRun,
-  reconcileBootstrapTranscriptSuccessesForRun,
 } from './provisioning/TeamProvisioningMemberSpawnSnapshots';
 import { createInitialMemberSpawnStatusEntry } from './provisioning/TeamProvisioningMemberSpawnStatusPolicy';
 import { createTeamProvisioningMemberWorkSyncProofBoundary } from './provisioning/TeamProvisioningMemberWorkSyncProofBoundaryFactory';
@@ -1244,7 +1238,7 @@ export class TeamProvisioningService extends TeamProvisioningLaunchStateCompatib
     return this.leadInboxRelayFacade.getPendingCrossTeamReplyExpectationKeys(teamName);
   }
 
-  private getRunLeadName(run: ProvisioningRun): string {
+  protected getRunLeadName(run: ProvisioningRun): string {
     return this.leadInboxRelayFacade.getRunLeadName(run);
   }
 
@@ -1253,23 +1247,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchStateCompatib
     msg: Record<string, unknown>
   ): void {
     this.leadInboxRelayFacade.handleNativeTeammateUserMessage(run, msg);
-  }
-
-  private async refreshMemberSpawnStatusesFromLeadInbox(run: ProvisioningRun): Promise<void> {
-    await refreshMemberSpawnStatusesFromLeadInboxHelper(run, {
-      getRunLeadName: (run) => this.getRunLeadName(run),
-      readLeadInboxMessages: (teamName, leadName) =>
-        this.inboxReader.getMessagesFor(teamName, leadName),
-      setMemberSpawnStatus: (run, memberName, status, error, source, heartbeatTimestamp) =>
-        this.setMemberSpawnStatus(run, memberName, status, error, source, heartbeatTimestamp),
-    });
-  }
-
-  private resolveExpectedLaunchMemberName(
-    expectedMembers: readonly string[] | undefined,
-    candidateName: string
-  ): string | null {
-    return resolveExpectedLaunchMemberNameHelper(expectedMembers, candidateName);
   }
 
   private persistSentMessage(teamName: string, message: InboxMessage): void {
@@ -1858,14 +1835,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchStateCompatib
     snapshot: PersistedTeamLaunchSnapshot | null
   ): Promise<PersistedTeamLaunchSnapshot | null> {
     return this.bootstrapEvidenceFacade.applyBootstrapTranscriptEvidenceOverlay(snapshot);
-  }
-
-  private async reconcileBootstrapTranscriptFailures(run: ProvisioningRun): Promise<void> {
-    await reconcileBootstrapTranscriptFailuresForRun(run, this.memberSpawnStatusAuditPorts);
-  }
-
-  private async reconcileBootstrapTranscriptSuccesses(run: ProvisioningRun): Promise<void> {
-    await reconcileBootstrapTranscriptSuccessesForRun(run, this.memberSpawnStatusAuditPorts);
   }
 
   /**

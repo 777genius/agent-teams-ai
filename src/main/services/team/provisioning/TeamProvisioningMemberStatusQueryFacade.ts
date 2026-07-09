@@ -8,15 +8,8 @@ import {
 } from './TeamProvisioningBootstrapStallPortsFactory';
 import { type BootstrapTranscriptOutcome } from './TeamProvisioningBootstrapTranscript';
 import { buildLaunchDiagnosticsFromRun } from './TeamProvisioningLaunchDiagnostics';
-import { TeamProvisioningMemberLifecycleCompatibilityFacade } from './TeamProvisioningMemberLifecycleCompatibilityFacade';
-import {
-  confirmMemberSpawnStatusFromTranscriptForRun,
-  getMemberSpawnStatusesSnapshot,
-  maybeAuditMemberSpawnStatusesForRun,
-  type MemberSpawnStatusAuditPorts,
-  type MemberSpawnStatusMutationPorts,
-  setMemberSpawnStatusForRun,
-} from './TeamProvisioningMemberSpawnSnapshots';
+import { getMemberSpawnStatusesSnapshot } from './TeamProvisioningMemberSpawnSnapshots';
+import { TeamProvisioningMemberSpawnStatusCompatibilityFacade } from './TeamProvisioningMemberSpawnStatusCompatibilityFacade';
 import { MEMBER_LAUNCH_GRACE_MS } from './TeamProvisioningMemberSpawnStatusPolicy';
 import {
   createTeamProvisioningMemberSpawnStatusesSnapshotHostFromService,
@@ -41,8 +34,6 @@ import { type RuntimeToolActivityHandlers } from './TeamProvisioningRuntimeToolA
 import { type TeamProvisioningRunTrackingDeliveryHelper } from './TeamProvisioningRunTrackingDelivery';
 
 import type {
-  MemberSpawnLivenessSource,
-  MemberSpawnStatus,
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
   TeamAgentRuntimeSnapshot,
@@ -51,7 +42,7 @@ import type {
 
 export abstract class TeamProvisioningMemberStatusQueryFacade<
   TRun extends ProvisioningRun = ProvisioningRun,
-> extends TeamProvisioningMemberLifecycleCompatibilityFacade<TRun> {
+> extends TeamProvisioningMemberSpawnStatusCompatibilityFacade<TRun> {
   protected abstract readonly runTracking: Pick<
     TeamProvisioningRunTrackingDeliveryHelper<TRun>,
     'getTrackedRunId'
@@ -59,8 +50,6 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
   protected abstract readonly runs: ReadonlyMap<string, TRun>;
   protected abstract readonly membersMetaStore: Pick<TeamMembersMetaStore, 'getMembers'>;
   protected abstract readonly runtimeToolActivity: RuntimeToolActivityHandlers<TRun>;
-  protected abstract readonly memberSpawnStatusMutationPorts: MemberSpawnStatusMutationPorts<TRun>;
-  protected abstract readonly memberSpawnStatusAuditPorts: MemberSpawnStatusAuditPorts<TRun>;
   protected abstract readonly runtimeSnapshotFacade: Pick<
     TeamProvisioningRuntimeSnapshotFacade,
     'getTeamAgentRuntimeSnapshot'
@@ -184,44 +173,6 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
       previous,
       next,
       observedAt
-    );
-  }
-
-  protected setMemberSpawnStatus(
-    run: TRun,
-    memberName: string,
-    status: MemberSpawnStatus,
-    error?: string,
-    livenessSource?: MemberSpawnLivenessSource,
-    heartbeatAt?: string
-  ): void {
-    setMemberSpawnStatusForRun(
-      {
-        run,
-        memberName,
-        status,
-        error,
-        livenessSource,
-        heartbeatAt,
-      },
-      this.memberSpawnStatusMutationPorts
-    );
-  }
-
-  protected confirmMemberSpawnStatusFromTranscript(
-    run: TRun,
-    memberName: string,
-    observedAt: string,
-    source: 'transcript' | 'runtime-proof' = 'transcript'
-  ): void {
-    confirmMemberSpawnStatusFromTranscriptForRun(
-      {
-        run,
-        memberName,
-        observedAt,
-        source,
-      },
-      this.memberSpawnStatusMutationPorts
     );
   }
 
@@ -358,12 +309,5 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
     firstSpawnAcceptedAt: string | undefined
   ): boolean {
     return isOpenCodeBootstrapStallWindowElapsedHelper(firstSpawnAcceptedAt, Date.now());
-  }
-
-  protected async maybeAuditMemberSpawnStatuses(
-    run: TRun,
-    options?: { force?: boolean }
-  ): Promise<void> {
-    await maybeAuditMemberSpawnStatusesForRun(run, this.memberSpawnStatusAuditPorts, options);
   }
 }
