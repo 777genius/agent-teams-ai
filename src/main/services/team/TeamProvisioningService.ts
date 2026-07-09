@@ -11,7 +11,6 @@ import { createLogger } from '@shared/utils/logger';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { type spawn } from 'child_process';
 import { randomUUID } from 'crypto';
-import * as fs from 'fs';
 import * as path from 'path';
 
 import {
@@ -40,11 +39,7 @@ import {
   type TeamProvisioningCancellationBoundary,
   type TeamProvisioningCancellationBoundaryServiceHost,
 } from './provisioning/TeamProvisioningCancellationBoundary';
-import {
-  addPermissionRulesToSettings as addClaudePermissionRulesToSettings,
-  type ClaudePermissionSettingsFilePorts,
-  seedLeadBootstrapPermissionRules as seedLeadBootstrapPermissionRulesHelper,
-} from './provisioning/TeamProvisioningClaudePermissionSettings';
+import { createTeamProvisioningClaudePermissionSettingsDelegation } from './provisioning/TeamProvisioningClaudePermissionSettingsDelegation';
 import { type TeamProvisioningCompatibilityDelegation } from './provisioning/TeamProvisioningCompatibilityFacade';
 import { TeamProvisioningConfigFacade } from './provisioning/TeamProvisioningConfigFacade';
 import { type TeamProvisioningConfigTaskActivityBoundary } from './provisioning/TeamProvisioningConfigTaskActivityBoundary';
@@ -231,7 +226,6 @@ import { TeamProvisioningTransientRunState } from './provisioning/TeamProvisioni
 import { type TeamProvisioningVerificationProbePorts } from './provisioning/TeamProvisioningVerificationProbePortsFactory';
 import { createTeamProvisioningWorkspaceTrustPreSpawnBoundary } from './provisioning/TeamProvisioningWorkspaceTrustPreSpawnBoundary';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
-import { atomicWriteAsync } from './atomicWrite';
 import { boundLaunchDiagnostics } from './progressPayload';
 import {
   createTeamRuntimeControlCompatibilityApiFromService,
@@ -282,13 +276,6 @@ import type {
 const logger = createLogger('Service:TeamProvisioning');
 const { AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES, createController } =
   agentTeamsControllerModule;
-const claudePermissionSettingsFilePorts: ClaudePermissionSettingsFilePorts = {
-  mkdirRecursive: async (directoryPath) => {
-    await fs.promises.mkdir(directoryPath, { recursive: true });
-  },
-  readFileUtf8: (filePath) => fs.promises.readFile(filePath, 'utf-8'),
-  writeFileUtf8: (filePath, contents) => atomicWriteAsync(filePath, contents),
-};
 
 export class TeamProvisioningService extends TeamProvisioningBootstrapEvidenceCompatibilityFacade<ProvisioningRun> {
   protected readonly runtimeLaneCoordinator = createTeamRuntimeLaneCoordinator();
@@ -305,6 +292,11 @@ export class TeamProvisioningService extends TeamProvisioningBootstrapEvidenceCo
     createTeamProvisioningOpenCodeSecondaryBriefingBuilder({
       createController: (input) => createController(input),
       getClaudeBasePath,
+    });
+  private readonly claudePermissionSettingsDelegation =
+    createTeamProvisioningClaudePermissionSettingsDelegation({
+      bootstrapToolNames: AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES,
+      logger,
     });
   protected readonly runs = new Map<string, ProvisioningRun>();
   protected readonly provisioningRunByTeam = new Map<string, string>();
@@ -756,8 +748,8 @@ export class TeamProvisioningService extends TeamProvisioningBootstrapEvidenceCo
   private async injectGeminiPostLaunchHydration(run: ProvisioningRun): Promise<void> { await this.idlePromptInjectionBoundary.injectGeminiPostLaunchHydration(run); }
   private handleControlRequest(run: ProvisioningRun, msg: Record<string, unknown>): void { this.toolApprovalFacade.handleControlRequest(run, msg); }
   private handleTeammatePermissionRequest(run: ProvisioningRun, perm: ParsedPermissionRequest, messageTimestamp: string): void { this.toolApprovalFacade.handleTeammatePermissionRequest(run, perm, messageTimestamp); }
-  private async addPermissionRulesToSettings(settingsPath: string, toolNames: string[], behavior: string): Promise<number> { return addClaudePermissionRulesToSettings({ settingsPath, toolNames, behavior }, claudePermissionSettingsFilePorts); }
-  private async seedLeadBootstrapPermissionRules(teamName: string, projectCwd: string): Promise<void> { await seedLeadBootstrapPermissionRulesHelper({ teamName, projectCwd, bootstrapToolNames: AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES }, { ...claudePermissionSettingsFilePorts, logger }); }
+  private async addPermissionRulesToSettings(settingsPath: string, toolNames: string[], behavior: string): Promise<number> { return this.claudePermissionSettingsDelegation.addPermissionRulesToSettings(settingsPath, toolNames, behavior); }
+  private async seedLeadBootstrapPermissionRules(teamName: string, projectCwd: string): Promise<void> { await this.claudePermissionSettingsDelegation.seedLeadBootstrapPermissionRules(teamName, projectCwd); }
   private startFilesystemMonitor(run: ProvisioningRun, request: TeamCreateRequest): void { startProvisioningFilesystemMonitor(run, request, { updateProgress, getRegisteredTeamMemberNames: (teamName) => this.getRegisteredTeamMemberNames(teamName), handleProvisioningTurnComplete: (run) => this.handleProvisioningTurnComplete(run) }); }
   private stopFilesystemMonitor(run: ProvisioningRun): void { stopProvisioningFilesystemMonitor(run); }
   private async handleProcessExit(run: ProvisioningRun, code: number | null): Promise<void> { await handleProvisioningProcessExit(run, code, this.processExitPorts); }
