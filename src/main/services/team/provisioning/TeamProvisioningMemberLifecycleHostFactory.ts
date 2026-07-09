@@ -332,18 +332,116 @@ export function createTeamProvisioningMemberLifecycleHostPortGroups<
 >(
   service: TeamProvisioningMemberLifecycleHostFactoryService<TRun, TMixedSecondaryLane>
 ): TeamProvisioningMemberLifecycleHostFactoryPortGroups<TRun, TMixedSecondaryLane> {
+  const runtimeLaunch: TeamProvisioningMemberLifecycleHostFactoryRuntimeLaunchPorts<TRun> = {
+    buildProvisioningEnv: (providerId, providerBackendId, options) =>
+      service.buildProvisioningEnv(providerId, providerBackendId, options),
+    resolveDirectMemberLaunchIdentity: (input) => service.resolveDirectMemberLaunchIdentity(input),
+    buildTeamRuntimeLaunchArgsPlan: (input) => service.buildTeamRuntimeLaunchArgsPlan(input),
+    sendMessageToRun: (run, message) => service.sendMessageToRun(run, message),
+  };
+  const updateDirectTmuxRestartMemberConfig = service.updateDirectTmuxRestartMemberConfig;
+  if (updateDirectTmuxRestartMemberConfig) {
+    runtimeLaunch.updateDirectTmuxRestartMemberConfig = (input) =>
+      updateDirectTmuxRestartMemberConfig.call(service, input);
+  }
+
+  const messaging: TeamProvisioningMemberLifecycleHostFactoryMessagingPorts = {
+    persistInboxMessage: (teamName, memberName, message) =>
+      service.persistInboxMessage(teamName, memberName, message),
+    persistSentMessage: (teamName, message) => service.persistSentMessage(teamName, message),
+  };
+  const enqueueDirectRestartPrompt = service.enqueueDirectRestartPrompt;
+  if (enqueueDirectRestartPrompt) {
+    messaging.enqueueDirectRestartPrompt = (input) =>
+      enqueueDirectRestartPrompt.call(service, input);
+  }
+
   return {
-    sharedState: service,
-    stores: service,
-    memberSpec: service,
-    runtimeLaunch: service,
-    memberMcpLaunchConfig: service,
-    launchState: service,
-    runTracking: service,
-    runState: service,
-    messaging: service,
-    openCodeRuntime: service,
-    mixedSecondaryRuntime: service,
+    sharedState: {
+      runs: service.runs,
+      runtimeAdapterRunByTeam: service.runtimeAdapterRunByTeam,
+      failedOpenCodeSecondaryRetryInFlightByTeam:
+        service.failedOpenCodeSecondaryRetryInFlightByTeam,
+    },
+    stores: {
+      mcpConfigBuilder: {
+        writeConfigFile: (projectPath, options) =>
+          service.mcpConfigBuilder.writeConfigFile(projectPath, options as never),
+      },
+      membersMetaStore: {
+        getMembers: (teamName) => service.membersMetaStore.getMembers(teamName),
+      },
+      teamMetaStore: {
+        getMeta: (teamName) => service.teamMetaStore.getMeta(teamName),
+      },
+      readConfigForStrictDecision: (teamName) => service.readConfigForStrictDecision(teamName),
+      readPersistedRuntimeMembers: (teamName) => service.readPersistedRuntimeMembers(teamName),
+      readPersistedTeamProjectPath: (teamName) => service.readPersistedTeamProjectPath(teamName),
+    },
+    memberSpec: {
+      materializeEffectiveTeamMemberSpecs: (input) =>
+        service.materializeEffectiveTeamMemberSpecs(input),
+    },
+    runtimeLaunch,
+    memberMcpLaunchConfig: {
+      memberMcpLaunchConfigProvisioner: {
+        buildTrackedMemberMcpLaunchConfig: (input) =>
+          service.memberMcpLaunchConfigProvisioner.buildTrackedMemberMcpLaunchConfig(input),
+        removeTrackedMemberMcpLaunchConfig: (run, config) =>
+          service.memberMcpLaunchConfigProvisioner.removeTrackedMemberMcpLaunchConfig(run, config),
+      },
+    },
+    launchState: {
+      launchStateStore: {
+        read: (teamName) => service.launchStateStore.read(teamName),
+      },
+      persistLaunchStateSnapshot: (run, phase) => service.persistLaunchStateSnapshot(run, phase),
+      writeLaunchStateSnapshot: (teamName, snapshot) =>
+        service.writeLaunchStateSnapshot(teamName, snapshot),
+    },
+    runTracking: {
+      getAliveRunId: (teamName) => service.getAliveRunId(teamName),
+      getTrackedRunId: (teamName) => service.getTrackedRunId(teamName),
+      getProvisioningRunId: (teamName) => service.getProvisioningRunId(teamName),
+    },
+    runState: {
+      getRunTrackedCwd: (run) => service.getRunTrackedCwd(run),
+      appendMemberBootstrapDiagnostic: (run, memberName, text) =>
+        service.appendMemberBootstrapDiagnostic(run, memberName, text),
+      setMemberSpawnStatus: (run, memberName, status, error, livenessSource, heartbeatAt) =>
+        service.setMemberSpawnStatus(run, memberName, status, error, livenessSource, heartbeatAt),
+      upsertRunAllEffectiveMember: (run, member) =>
+        service.upsertRunAllEffectiveMember(run, member),
+      removeRunAllEffectiveMember: (run, memberName) =>
+        service.removeRunAllEffectiveMember(run, memberName),
+      invalidateRuntimeSnapshotCaches: (teamName) =>
+        service.invalidateRuntimeSnapshotCaches(teamName),
+      resetRuntimeToolActivity: (run, memberName) =>
+        service.resetRuntimeToolActivity(run, memberName),
+      clearMemberSpawnToolTracking: (run, memberName) =>
+        service.clearMemberSpawnToolTracking(run, memberName),
+      isCurrentTrackedRun: (run) => service.isCurrentTrackedRun(run),
+      getLiveTeamAgentRuntimeMetadata: (teamName) =>
+        service.getLiveTeamAgentRuntimeMetadata(teamName),
+    },
+    messaging,
+    openCodeRuntime: {
+      getOpenCodeRuntimeAdapter: () => service.getOpenCodeRuntimeAdapter(),
+      resolveOpenCodeMemberWorkspacesForRuntime: (input) =>
+        service.resolveOpenCodeMemberWorkspacesForRuntime(input),
+      runOpenCodeTeamRuntimeAdapterLaunch: (input) =>
+        service.runOpenCodeTeamRuntimeAdapterLaunch(input),
+    },
+    mixedSecondaryRuntime: {
+      createMixedSecondaryLaneStateForMember: (run, member) =>
+        service.createMixedSecondaryLaneStateForMember(run, member),
+      stopSingleMixedSecondaryRuntimeLane: (run, lane, reason) =>
+        service.stopSingleMixedSecondaryRuntimeLane(run, lane, reason),
+      getRunLeadName: (run) => service.getRunLeadName(run),
+      launchSingleMixedSecondaryLane: (run, lane) =>
+        service.launchSingleMixedSecondaryLane(run, lane),
+      getMixedSecondaryLaunchPhase: (run) => service.getMixedSecondaryLaunchPhase(run),
+    },
   };
 }
 

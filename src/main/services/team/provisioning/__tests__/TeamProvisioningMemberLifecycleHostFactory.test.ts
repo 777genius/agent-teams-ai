@@ -246,6 +246,66 @@ describe('TeamProvisioningMemberLifecycleHostFactory', () => {
     );
   });
 
+  it('projects the service into narrow lifecycle host port groups', () => {
+    const service = createService();
+
+    const portGroups = createTeamProvisioningMemberLifecycleHostPortGroups(service);
+
+    expect(portGroups.sharedState).not.toBe(service);
+    expect(portGroups.runState).not.toBe(service);
+    expect(portGroups.runtimeLaunch).not.toBe(service);
+    expect(portGroups.memberMcpLaunchConfig).not.toBe(service);
+    expect(portGroups.sharedState.runs).toBe(service.runs);
+    expect(portGroups.sharedState.runtimeAdapterRunByTeam).toBe(service.runtimeAdapterRunByTeam);
+    expect(portGroups.sharedState.failedOpenCodeSecondaryRetryInFlightByTeam).toBe(
+      service.failedOpenCodeSecondaryRetryInFlightByTeam
+    );
+    expect('getAliveRunId' in portGroups.runState).toBe(false);
+    expect('memberMcpLaunchConfigProvisioner' in portGroups.runtimeLaunch).toBe(false);
+    expect('sendMessageToRun' in portGroups.memberMcpLaunchConfig).toBe(false);
+  });
+
+  it('preserves the service receiver for optional direct restart seams', async () => {
+    const service = createService();
+    service.updateDirectTmuxRestartMemberConfig = async function (
+      this: ReceiverBoundService,
+      input
+    ) {
+      this.events.push(`service:update-restart:${input.memberName}`);
+    };
+    service.enqueueDirectRestartPrompt = function (this: ReceiverBoundService, input) {
+      this.events.push(`service:enqueue-restart:${input.memberName}`);
+    };
+    const portGroups = createTeamProvisioningMemberLifecycleHostPortGroups(service);
+    const host = createTeamProvisioningMemberLifecycleHostFromPortGroups(portGroups);
+
+    await host.updateDirectTmuxRestartMemberConfig?.({
+      teamName: 'team-a',
+      memberName: 'Worker',
+      member: { name: 'Worker' },
+      agentId: 'agent-1',
+      color: 'blue',
+      prompt: 'prompt',
+      paneId: 'pane-1',
+      cwd: '/project',
+      providerId: 'codex',
+      joinedAt: 1,
+      bootstrapExpectedAfter: '2026-07-09T00:00:00.000Z',
+    });
+    host.enqueueDirectRestartPrompt?.({
+      teamName: 'team-a',
+      memberName: 'Worker',
+      leadName: 'Lead',
+      leadSessionId: 'lead-session',
+      prompt: 'restart',
+    });
+
+    expect(service.events).toEqual([
+      'service:update-restart:Worker',
+      'service:enqueue-restart:Worker',
+    ]);
+  });
+
   it('groups every lifecycle host member exactly once', () => {
     const service = createService();
     const host = createTeamProvisioningMemberLifecycleHost(service);
