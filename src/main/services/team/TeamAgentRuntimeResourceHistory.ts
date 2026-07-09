@@ -13,6 +13,7 @@ export interface TeamAgentRuntimeResourceHistoryRecordInput {
   teamName: string;
   memberName: string;
   timestamp: string;
+  runId?: string;
   cpuPercent?: number;
   rssBytes?: number;
   primaryCpuPercent?: number;
@@ -47,6 +48,7 @@ export class TeamAgentRuntimeResourceHistory {
 
   buildKey(params: {
     memberName: string;
+    runId?: string;
     pid?: number;
     runtimePid?: number;
     pidSource?: TeamAgentRuntimePidSource;
@@ -56,7 +58,8 @@ export class TeamAgentRuntimeResourceHistory {
     if (!memberName || usagePid == null) {
       return null;
     }
-    return [memberName, usagePid, params.pidSource ?? 'unknown'].join('\0');
+    const runId = params.runId?.trim() || 'unknown-run';
+    return [runId, memberName, usagePid, params.pidSource ?? 'unknown'].join('\0');
   }
 
   record(
