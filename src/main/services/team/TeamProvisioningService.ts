@@ -313,7 +313,6 @@ import {
 import { type LiveTeamAgentRuntimeMetadata } from './provisioning/TeamProvisioningRuntimeMetadataPolicy';
 import { type TeamProvisioningRuntimeProjection } from './provisioning/TeamProvisioningRuntimeProjectionFactory';
 import { createTeamProvisioningRuntimeResourceSamplingForService } from './provisioning/TeamProvisioningRuntimeResourceSamplingCompatibilityFacade';
-import { attachLiveRuntimeMetadataToStatuses as attachLiveRuntimeMetadataToStatusesHelper } from './provisioning/TeamProvisioningRuntimeSnapshot';
 import { TeamProvisioningRuntimeSnapshotCacheBoundary } from './provisioning/TeamProvisioningRuntimeSnapshotCache';
 import {
   createRuntimeToolActivityHandlerPortsFromService,
@@ -395,7 +394,6 @@ export {
 
 import type {
   InboxMessage,
-  MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
   PersistedTeamLaunchMemberState,
   PersistedTeamLaunchPhase,
@@ -834,18 +832,19 @@ export class TeamProvisioningService extends TeamProvisioningLaunchStateCompatib
       promise: Promise<MemberSpawnStatusesSnapshot>;
     }
   >();
-  private readonly runtimeSnapshotCacheBoundary = new TeamProvisioningRuntimeSnapshotCacheBoundary<
-    TeamAgentRuntimeSnapshot,
-    Map<string, LiveTeamAgentRuntimeMetadata>,
-    MemberSpawnStatusesSnapshot,
-    PersistedTeamConfigCacheEntry
-  >({
-    agentRuntimeSnapshotCache: this.agentRuntimeSnapshotCache,
-    liveTeamAgentRuntimeMetadataCache: this.liveTeamAgentRuntimeMetadataCache,
-    persistedTeamConfigCache: this.persistedTeamConfigCache,
-    memberSpawnStatusesSnapshotCache: this.memberSpawnStatusesSnapshotCache,
-    memberSpawnStatusesInFlightByTeam: this.memberSpawnStatusesInFlightByTeam,
-  });
+  protected readonly runtimeSnapshotCacheBoundary =
+    new TeamProvisioningRuntimeSnapshotCacheBoundary<
+      TeamAgentRuntimeSnapshot,
+      Map<string, LiveTeamAgentRuntimeMetadata>,
+      MemberSpawnStatusesSnapshot,
+      PersistedTeamConfigCacheEntry
+    >({
+      agentRuntimeSnapshotCache: this.agentRuntimeSnapshotCache,
+      liveTeamAgentRuntimeMetadataCache: this.liveTeamAgentRuntimeMetadataCache,
+      persistedTeamConfigCache: this.persistedTeamConfigCache,
+      memberSpawnStatusesSnapshotCache: this.memberSpawnStatusesSnapshotCache,
+      memberSpawnStatusesInFlightByTeam: this.memberSpawnStatusesInFlightByTeam,
+    });
   private readonly launchStateStore = new TeamLaunchStateStore();
   private readonly defaultLaunchStateStore = this.launchStateStore;
   private readonly configFacade!: TeamProvisioningConfigFacade;
@@ -1035,14 +1034,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchStateCompatib
       teamName,
       memberName
     );
-  }
-
-  private getTrackedRunId(teamName: string): string | null {
-    return this.runTracking.getTrackedRunId(teamName);
-  }
-
-  private getRuntimeSnapshotCacheGeneration(teamName: string): number {
-    return this.runtimeSnapshotCacheBoundary.getRuntimeSnapshotCacheGeneration(teamName);
   }
 
   private invalidateRuntimeSnapshotCaches(teamName: string): void {
@@ -1726,23 +1717,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchStateCompatib
     options?: { cleanupRequested?: boolean; preserveExistingFailure?: boolean }
   ): void {
     this.createBootstrapFailureMarker().markUnconfirmedBootstrapMembersFailed(run, reason, options);
-  }
-
-  private async attachLiveRuntimeMetadataToStatuses(
-    teamName: string,
-    statuses: Record<string, MemberSpawnStatusEntry>,
-    options?: {
-      openCodeSecondaryBootstrapPendingMembers?: ReadonlySet<string>;
-    }
-  ): Promise<Record<string, MemberSpawnStatusEntry>> {
-    const runtimeByMember = await this.getLiveTeamAgentRuntimeMetadata(teamName);
-    return attachLiveRuntimeMetadataToStatusesHelper({
-      statuses,
-      runtimeByMember,
-      openCodeSecondaryBootstrapPendingMembers: options?.openCodeSecondaryBootstrapPendingMembers,
-      isOpenCodeBootstrapStallWindowElapsed: (firstSpawnAcceptedAt) =>
-        this.isOpenCodeBootstrapStallWindowElapsed(firstSpawnAcceptedAt),
-    });
   }
 
   private scheduleDeterministicBootstrapCompletionRecovery(run: ProvisioningRun): void {

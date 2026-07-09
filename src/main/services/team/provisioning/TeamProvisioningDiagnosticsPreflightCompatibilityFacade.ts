@@ -1,5 +1,5 @@
-import { createLogger } from '@shared/utils/logger';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { createLogger } from '@shared/utils/logger';
 
 import { type OpenCodePromptDeliveryLedgerRecord } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 
@@ -10,17 +10,16 @@ import { type TeamProvisioningLaunchIdentityBoundary } from './TeamProvisioningL
 import { getLeadActivityStateForTeam } from './TeamProvisioningLeadActivity';
 import { getLeadContextUsageForTeam } from './TeamProvisioningLeadContextUsage';
 import { type TeamProvisioningLiveLeadMessagePortsBoundary } from './TeamProvisioningLiveLeadMessagePortsFactory';
-import { TeamProvisioningMemberStatusQueryFacade } from './TeamProvisioningMemberStatusQueryFacade';
 import {
-  scheduleOpenCodeMemberInboxDeliveryWakeWithPorts,
   type OpenCodeMemberInboxDeliveryWakePorts,
+  scheduleOpenCodeMemberInboxDeliveryWakeWithPorts,
 } from './TeamProvisioningOpenCodeMemberInboxRelay';
 import { type OpenCodeRuntimeControlAck } from './TeamProvisioningOpenCodeRuntimeCheckin';
 import {
   getOpenCodeMemberDeliveryBusyStatus as getOpenCodeMemberDeliveryBusyStatusWithPorts,
-  tryGetActiveOpenCodePromptDeliveryRecord as tryGetActiveOpenCodePromptDeliveryRecordWithPorts,
   type OpenCodeDeliveryIdentityResolution,
   type OpenCodeMemberDeliveryBusyStatusPorts,
+  tryGetActiveOpenCodePromptDeliveryRecord as tryGetActiveOpenCodePromptDeliveryRecordWithPorts,
 } from './TeamProvisioningOpenCodeRuntimeDelivery';
 import {
   createTeamProvisioningOpenCodeRuntimeDeliveryBoundaryFromHost,
@@ -55,17 +54,17 @@ import { type TeamProvisioningVerificationProbePorts } from './TeamProvisioningV
 
 import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
 import type {
-  ProviderModelLaunchIdentity,
   InboxMessage,
   LeadContextUsage,
+  ProviderModelLaunchIdentity,
   TaskRef,
   TeamCreateRequest,
   TeamProviderBackendId,
   TeamProviderId,
-  TeamProvisioningProgress,
   TeamProvisioningModelCheckRequest,
   TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareResult,
+  TeamProvisioningProgress,
   ToolApprovalEvent,
   ToolApprovalSettings,
 } from '@shared/types';
@@ -74,7 +73,7 @@ const logger = createLogger('Service:TeamProvisioning');
 
 export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   TRun extends ProvisioningRun = ProvisioningRun,
-> extends TeamProvisioningMemberStatusQueryFacade<TRun> {
+> extends TeamProvisioningStatusQueryCompatibilityFacade<TRun> {
   protected abstract readonly launchIdentityBoundary: TeamProvisioningLaunchIdentityBoundary;
   protected abstract readonly runTracking: Pick<
     TeamProvisioningRunTrackingDeliveryHelper<TRun>,
