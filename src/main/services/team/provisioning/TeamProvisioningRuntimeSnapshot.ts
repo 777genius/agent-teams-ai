@@ -171,6 +171,19 @@ function getPersistedLaunchMemberNames(snapshot: PersistedTeamLaunchSnapshot): s
   return Array.from(new Set([...snapshot.expectedMembers, ...Object.keys(snapshot.members)]));
 }
 
+function shouldUseLaunchMemberBootstrapEvidence(
+  member: PersistedTeamLaunchMemberState | undefined,
+  activeRuntimeRunId: string
+): boolean {
+  if (!member) {
+    return false;
+  }
+  if (activeRuntimeRunId.length === 0) {
+    return true;
+  }
+  return isLaunchMemberStatusRelevantToRuntimeRun(member, activeRuntimeRunId);
+}
+
 function normalizeRuntimePositiveInteger(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value > 0
     ? Math.trunc(value)
@@ -959,10 +972,12 @@ export async function buildTeamAgentRuntimeSnapshot(
         ? false
         : backendType !== 'in-process';
     const historicalBootstrapConfirmed = hasRuntimeProjectionSnapshotBootstrapConfirmationEvidence({
-      launch: {
-        bootstrapConfirmed: launchMember?.bootstrapConfirmed,
-        launchState: launchMember?.launchState,
-      },
+      launch: shouldUseLaunchMemberBootstrapEvidence(launchMember, activeRuntimeRunId)
+        ? {
+            bootstrapConfirmed: launchMember?.bootstrapConfirmed,
+            launchState: launchMember?.launchState,
+          }
+        : undefined,
       runtimeAdapter: {
         bootstrapConfirmed: runtimeAdapterEvidence?.bootstrapConfirmed,
         launchState: runtimeAdapterEvidence?.launchState,
