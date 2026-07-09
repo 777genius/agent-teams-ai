@@ -84,7 +84,7 @@ function getStatusCode(error: unknown, fallback: number = 500): number {
   if (error instanceof HttpBadRequestError) {
     return 400;
   }
-  if (isOpenCodeRuntimePayloadError(error)) {
+  if (isOpenCodeRuntimeValidationError(error)) {
     return 400;
   }
   if (error instanceof HttpFeatureUnavailableError) {
@@ -105,8 +105,12 @@ function getStatusCode(error: unknown, fallback: number = 500): number {
   return fallback;
 }
 
-function isOpenCodeRuntimePayloadError(error: unknown): boolean {
-  return error instanceof Error && error.message.startsWith('OpenCode runtime payload ');
+function isOpenCodeRuntimeValidationError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.startsWith('OpenCode runtime payload ') ||
+      error.message.startsWith('OpenCode runtime permission '))
+  );
 }
 
 function isRuntimeControlProviderRoutingError(error: unknown): boolean {
