@@ -407,11 +407,6 @@ import {
 } from './provisioning/TeamProvisioningStopProcessCleanup';
 import { TeamProvisioningToolApprovalFacade } from './provisioning/TeamProvisioningToolApprovalFacade';
 import { TeamProvisioningTransientRunState } from './provisioning/TeamProvisioningTransientRunState';
-import { handleTeamProvisioningTurnComplete } from './provisioning/TeamProvisioningTurnComplete';
-import {
-  createTeamProvisioningTurnCompletePorts,
-  type TeamProvisioningTurnCompleteServiceAdapter,
-} from './provisioning/TeamProvisioningTurnCompletePortsFactory';
 import { type TeamProvisioningVerificationProbePorts } from './provisioning/TeamProvisioningVerificationProbePortsFactory';
 import { createTeamProvisioningWorkspaceTrustPreSpawnBoundary } from './provisioning/TeamProvisioningWorkspaceTrustPreSpawnBoundary';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
