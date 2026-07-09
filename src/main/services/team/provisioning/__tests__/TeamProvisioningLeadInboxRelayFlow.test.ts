@@ -160,4 +160,21 @@ describe('lead inbox relay flow', () => {
     ]);
     expect(run.leadRelayCapture).toBeNull();
   });
+  it('relays only the requested native lead inbox message when scoped by message id', async () => {
+    const run = createRun();
+    const ports = createPorts(run, [
+      createMessage({ messageId: 'msg-1', text: 'Do not relay this yet.' }),
+      createMessage({ messageId: 'msg-2', text: 'Relay only this.' }),
+    ]);
+
+    const relayed = await relayLeadInboxMessagesForTeam('alpha', ports, {
+      onlyMessageId: 'msg-2',
+    });
+
+    expect(relayed).toBe(1);
+    expect(ports.sentMessages[0]).toContain('Relay only this.');
+    expect(ports.sentMessages[0]).not.toContain('Do not relay this yet.');
+    expect(ports.relayedLeadInboxMessageIds.get('alpha')?.has('msg-2')).toBe(true);
+    expect(ports.relayedLeadInboxMessageIds.get('alpha')?.has('msg-1')).toBe(false);
+  });
 });

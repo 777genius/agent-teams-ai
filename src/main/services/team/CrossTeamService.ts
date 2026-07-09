@@ -112,6 +112,9 @@ export class CrossTeamService {
       inferredReplyMeta?.conversationId ||
       replyToConversationId ||
       randomUUID();
+    const stableDedupeIdentity = Boolean(
+      request.messageId?.trim() || request.conversationId?.trim()
+    );
 
     // 1. Validate
     if (!TEAM_NAME_PATTERN.test(fromTeam)) {
@@ -171,26 +174,32 @@ export class CrossTeamService {
       timestamp,
     };
 
-    const { duplicate } = await this.outbox.appendIfNotRecent(fromTeam, outboxMessage, async () => {
-      // 4. Cascade check only for real new deliveries
-      this.cascadeGuard.check(fromTeam, toTeam, chainDepth);
-      this.cascadeGuard.record(fromTeam, toTeam);
-      this.messaging?.registerPendingCrossTeamReplyExpectation(fromTeam, toTeam, conversationId);
+    const { duplicate } = await this.outbox.appendIfNotRecent(
+      fromTeam,
+      outboxMessage,
+      async () => {
+        // 4. Cascade check only for real new deliveries
+        this.cascadeGuard.check(fromTeam, toTeam, chainDepth);
+        this.cascadeGuard.record(fromTeam, toTeam);
+        this.messaging?.registerPendingCrossTeamReplyExpectation(fromTeam, toTeam, conversationId);
 
-      // 5. Inbox write to TARGET team (TeamInboxWriter handles file lock + in-process lock internally)
-      await this.inboxWriter.sendMessage(toTeam, {
-        member: targetMemberName,
-        text: formattedText,
-        from,
-        timestamp,
-        messageId,
-        summary: summary ?? `Cross-team message from ${fromTeam}`,
-        source: CROSS_TEAM_SOURCE,
-        conversationId,
-        replyToConversationId,
-        taskRefs,
-      });
-    });
+        // 5. Inbox write to TARGET team (TeamInboxWriter handles file lock + in-process lock internally)
+        await this.inboxWriter.sendMessage(toTeam, {
+          member: targetMemberName,
+          text: formattedText,
+          from,
+          timestamp,
+          messageId,
+          summary: summary ?? `Cross-team message from ${fromTeam}`,
+          source: CROSS_TEAM_SOURCE,
+          conversationId,
+          replyToConversationId,
+          taskRefs,
+        });
+      },
+      undefined,
+      { stableIdentity: stableDedupeIdentity }
+    );
 
     if (duplicate) {
       const duplicateTargetMemberName = duplicate.toMember ?? targetMemberName;

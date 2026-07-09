@@ -56,6 +56,27 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     expect(onBeforeAppend).toHaveBeenCalledTimes(1);
   });
 
+  it('dedupes body-identical messages when stable identity is not requested', async () => {
+    const outbox = new CrossTeamOutbox();
+    const onBeforeAppend = vi.fn(async () => {});
+    const first = makeMessage({
+      messageId: 'generated-message-1',
+      conversationId: 'generated-conversation-1',
+    });
+    const second = makeMessage({
+      messageId: 'generated-message-2',
+      conversationId: 'generated-conversation-2',
+    });
+
+    await expect(outbox.appendIfNotRecent('source-team', first, onBeforeAppend)).resolves.toEqual({
+      duplicate: null,
+    });
+    await expect(outbox.appendIfNotRecent('source-team', second, onBeforeAppend)).resolves.toEqual({
+      duplicate: first,
+    });
+    expect(onBeforeAppend).toHaveBeenCalledTimes(1);
+  });
+
   it('does not dedupe distinct runtime deliveries that reuse the same body', async () => {
     const outbox = new CrossTeamOutbox();
     const onBeforeAppend = vi.fn(async () => {});
@@ -71,9 +92,11 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     await expect(outbox.appendIfNotRecent('source-team', first, onBeforeAppend)).resolves.toEqual({
       duplicate: null,
     });
-    await expect(outbox.appendIfNotRecent('source-team', second, onBeforeAppend)).resolves.toEqual({
-      duplicate: null,
-    });
+    await expect(
+      outbox.appendIfNotRecent('source-team', second, onBeforeAppend, undefined, {
+        stableIdentity: true,
+      })
+    ).resolves.toEqual({ duplicate: null });
 
     await expect(outbox.read('source-team')).resolves.toEqual([first, second]);
     expect(onBeforeAppend).toHaveBeenCalledTimes(2);

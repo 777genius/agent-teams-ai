@@ -125,9 +125,14 @@ export interface LeadInboxRelayFlowPorts<TRun extends LeadInboxRelayFlowRun> {
   clearTimeout(handle: NodeJS.Timeout): void;
 }
 
+export interface LeadInboxRelayOptions {
+  onlyMessageId?: string;
+}
+
 export async function relayLeadInboxMessagesForTeam<TRun extends LeadInboxRelayFlowRun>(
   teamName: string,
-  ports: LeadInboxRelayFlowPorts<TRun>
+  ports: LeadInboxRelayFlowPorts<TRun>,
+  options: LeadInboxRelayOptions = {}
 ): Promise<number> {
   const runId = ports.getAliveRunId(teamName) ?? ports.getProvisioningRunId(teamName);
   if (!runId) return 0;
@@ -288,12 +293,16 @@ export async function relayLeadInboxMessagesForTeam<TRun extends LeadInboxRelayF
       .map((m) => m.messageId)
   );
 
-  const actionableUnread = selectActionableLeadRelayUnread({
+  let actionableUnread = selectActionableLeadRelayUnread({
     remainingUnread,
     nativeMatchedMessageIds,
     deferredIds,
     permissionRequestIds,
   });
+  const onlyMessageId = options.onlyMessageId?.trim();
+  if (onlyMessageId) {
+    actionableUnread = actionableUnread.filter((message) => message.messageId === onlyMessageId);
+  }
 
   if (nativeMatchedMessageIds.size > 0 && !sameTeamPersisted) {
     ports.scheduleSameTeamPersistRetry(teamName);

@@ -82,6 +82,22 @@ describe('TeamProvisioningLiveInboxRelayRouting', () => {
     });
   });
 
+  it('scopes native lead runtime relay to the requested message id', async () => {
+    const relayLeadInboxMessages = vi.fn().mockResolvedValue(1);
+    const ports = createPorts({ relayLeadInboxMessages });
+
+    await expect(
+      relayInboxFileToLiveRecipientWithPorts(
+        { teamName: 'team-a', inboxName: 'team-lead', options: { onlyMessageId: 'message-1' } },
+        ports
+      )
+    ).resolves.toEqual({
+      kind: LiveInboxRelayKind.NativeLead,
+      relayed: 1,
+    });
+    expect(relayLeadInboxMessages).toHaveBeenCalledWith('team-a', { onlyMessageId: 'message-1' });
+  });
+
   it('routes OpenCode lead inbox files through OpenCode member delivery', async () => {
     const relayOpenCodeMemberInboxMessages = vi.fn().mockResolvedValue({
       relayed: 1,

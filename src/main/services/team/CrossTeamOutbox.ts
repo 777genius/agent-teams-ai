@@ -9,6 +9,10 @@ import type { CrossTeamMessage } from '@shared/types';
 
 const CROSS_TEAM_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 
+export interface CrossTeamDedupeOptions {
+  stableIdentity?: boolean;
+}
+
 function normalizeForDedupe(value: string | undefined): string {
   return String(value ?? '')
     .trim()
@@ -20,10 +24,13 @@ function normalizeTaskRefsForDedupe(message: CrossTeamMessage): string {
   return message.taskRefs?.length ? JSON.stringify(message.taskRefs) : '';
 }
 
-function buildCrossTeamDedupeKey(message: CrossTeamMessage): string {
+function buildCrossTeamDedupeKey(
+  message: CrossTeamMessage,
+  options: CrossTeamDedupeOptions
+): string {
   return [
-    String(message.messageId ?? '').trim(),
-    String(message.conversationId ?? '').trim(),
+    options.stableIdentity ? String(message.messageId ?? '').trim() : '',
+    options.stableIdentity ? String(message.conversationId ?? '').trim() : '',
     normalizeForDedupe(message.fromTeam),
     normalizeForDedupe(message.fromMember),
     normalizeForDedupe(message.toTeam),
@@ -37,9 +44,10 @@ function buildCrossTeamDedupeKey(message: CrossTeamMessage): string {
 function findRecentDuplicate(
   list: CrossTeamMessage[],
   message: CrossTeamMessage,
-  windowMs: number
+  windowMs: number,
+  options: CrossTeamDedupeOptions
 ): CrossTeamMessage | null {
-  const dedupeKey = buildCrossTeamDedupeKey(message);
+  const dedupeKey = buildCrossTeamDedupeKey(message, options);
   const cutoff = Date.now() - windowMs;
 
   for (let i = list.length - 1; i >= 0; i -= 1) {
@@ -48,7 +56,7 @@ function findRecentDuplicate(
     if (!Number.isFinite(ts) || ts < cutoff) {
       break;
     }
-    if (buildCrossTeamDedupeKey(entry) === dedupeKey) {
+    if (buildCrossTeamDedupeKey(entry, options) === dedupeKey) {
       return entry;
     }
   }
@@ -85,14 +93,15 @@ export class CrossTeamOutbox {
     teamName: string,
     message: CrossTeamMessage,
     onBeforeAppend: () => Promise<void>,
-    windowMs = CROSS_TEAM_DEDUPE_WINDOW_MS
+    windowMs = CROSS_TEAM_DEDUPE_WINDOW_MS,
+    options: CrossTeamDedupeOptions = {}
   ): Promise<{ duplicate: CrossTeamMessage | null }> {
     const outboxPath = this.getOutboxPath(teamName);
     let duplicate: CrossTeamMessage | null = null;
 
     await withFileLock(outboxPath, async () => {
       const list = await this.readUnlocked(outboxPath);
-      duplicate = findRecentDuplicate(list, message, windowMs);
+      duplicate = findRecentDuplicate(list, message, windowMs, options);
       if (duplicate) return;
 
       await onBeforeAppend();

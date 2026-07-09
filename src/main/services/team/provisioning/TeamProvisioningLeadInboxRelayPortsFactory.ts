@@ -5,6 +5,7 @@ import {
 import {
   type LeadInboxRelayFlowPorts,
   type LeadInboxRelayFlowRun,
+  type LeadInboxRelayOptions,
   relayLeadInboxMessagesForTeam,
 } from './TeamProvisioningLeadInboxRelayFlow';
 
@@ -15,7 +16,8 @@ export interface TeamProvisioningLeadInboxRelayPortsFactoryLogger {
 
 export type TeamProvisioningLeadInboxRelayFlowRunner<TRun extends LeadInboxRelayFlowRun> = (
   teamName: string,
-  ports: LeadInboxRelayFlowPorts<TRun>
+  ports: LeadInboxRelayFlowPorts<TRun>,
+  options?: LeadInboxRelayOptions
 ) => Promise<number>;
 
 export type TeamProvisioningLeadInboxRelayInFlightWaiter = <T>(input: {
@@ -48,7 +50,7 @@ export interface TeamProvisioningLeadInboxRelayPortsFactoryDeps<
 }
 
 export interface TeamProvisioningLeadInboxRelayPortsBoundary {
-  relayLeadInboxMessages(teamName: string): Promise<number>;
+  relayLeadInboxMessages(teamName: string, options?: LeadInboxRelayOptions): Promise<number>;
 }
 
 export interface TeamProvisioningLeadInboxRelayServiceHost<TRun extends LeadInboxRelayFlowRun> {
@@ -217,14 +219,19 @@ export function createTeamProvisioningLeadInboxRelayPortsBoundary<
   const waitForInFlight = deps.waitForInboxRelayInFlight ?? waitForInboxRelayInFlight;
 
   return {
-    async relayLeadInboxMessages(teamName: string): Promise<number> {
-      const existing = deps.leadInboxRelayInFlight.get(teamName);
+    async relayLeadInboxMessages(
+      teamName: string,
+      options?: LeadInboxRelayOptions
+    ): Promise<number> {
+      const onlyMessageId = options?.onlyMessageId?.trim();
+      const relayKey = onlyMessageId ? `${teamName}::${onlyMessageId}` : teamName;
+      const existing = deps.leadInboxRelayInFlight.get(relayKey);
       if (existing) {
         try {
           return await waitForInFlight({
             promise: existing,
             relayName: 'lead_inbox_relay',
-            relayKey: teamName,
+            relayKey,
           });
         } catch (error) {
           if (!isInboxRelayInFlightTimeoutError(error)) {
@@ -235,20 +242,21 @@ export function createTeamProvisioningLeadInboxRelayPortsBoundary<
           );
           return 0;
         } finally {
-          if (deps.leadInboxRelayInFlight.get(teamName) === existing) {
-            deps.leadInboxRelayInFlight.delete(teamName);
+          if (deps.leadInboxRelayInFlight.get(relayKey) === existing) {
+            deps.leadInboxRelayInFlight.delete(relayKey);
           }
         }
       }
 
-      const work = runRelay(teamName, createTeamProvisioningLeadInboxRelayFlowPorts(deps));
+      const ports = createTeamProvisioningLeadInboxRelayFlowPorts(deps);
+      const work = options ? runRelay(teamName, ports, options) : runRelay(teamName, ports);
 
-      deps.leadInboxRelayInFlight.set(teamName, work);
+      deps.leadInboxRelayInFlight.set(relayKey, work);
       try {
         return await waitForInFlight({
           promise: work,
           relayName: 'lead_inbox_relay',
-          relayKey: teamName,
+          relayKey,
         });
       } catch (error) {
         if (!isInboxRelayInFlightTimeoutError(error)) {
@@ -259,8 +267,8 @@ export function createTeamProvisioningLeadInboxRelayPortsBoundary<
         );
         return 0;
       } finally {
-        if (deps.leadInboxRelayInFlight.get(teamName) === work) {
-          deps.leadInboxRelayInFlight.delete(teamName);
+        if (deps.leadInboxRelayInFlight.get(relayKey) === work) {
+          deps.leadInboxRelayInFlight.delete(relayKey);
         }
       }
     },

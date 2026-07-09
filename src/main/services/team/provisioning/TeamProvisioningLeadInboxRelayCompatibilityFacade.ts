@@ -15,7 +15,10 @@ import {
   resolveCrossTeamLeadName,
 } from './TeamProvisioningCrossTeamRelayHelpers';
 import { type NativeSameTeamFingerprint } from './TeamProvisioningInboxRelayPolicy';
-import { type LeadInboxRelayFlowRun } from './TeamProvisioningLeadInboxRelayFlow';
+import {
+  type LeadInboxRelayFlowRun,
+  type LeadInboxRelayOptions,
+} from './TeamProvisioningLeadInboxRelayFlow';
 import {
   createTeamProvisioningLeadInboxRelayPortsBoundary,
   type TeamProvisioningLeadInboxRelayPortsBoundary,
@@ -504,7 +507,8 @@ export class TeamProvisioningLeadInboxRelayCompatibilityFacade<
           isOpenCodeRuntimeRecipientFromSources({ memberName, config, metaMembers }),
         relayOpenCodeMemberInboxMessages: (teamName, memberName, relayOptions) =>
           this.relayOpenCodeMemberInboxMessages(teamName, memberName, relayOptions),
-        relayLeadInboxMessages: (teamName) => this.relayLeadInboxMessages(teamName),
+        relayLeadInboxMessages: (teamName, leadOptions) =>
+          this.relayLeadInboxMessages(teamName, leadOptions),
         isTeamAlive: (teamName) => this.host.isTeamAlive(teamName),
       }
     );
@@ -518,7 +522,7 @@ export class TeamProvisioningLeadInboxRelayCompatibilityFacade<
     return this.host.relayOpenCodeMemberInboxMessages(teamName, memberName, options);
   }
 
-  async relayLeadInboxMessages(teamName: string): Promise<number> {
-    return this.leadInboxRelayBoundary.relayLeadInboxMessages(teamName);
+  async relayLeadInboxMessages(teamName: string, options?: LeadInboxRelayOptions): Promise<number> {
+    return this.leadInboxRelayBoundary.relayLeadInboxMessages(teamName, options);
   }
 }

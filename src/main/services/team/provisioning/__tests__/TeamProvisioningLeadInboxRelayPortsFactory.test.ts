@@ -195,6 +195,21 @@ describe('TeamProvisioningLeadInboxRelayPortsFactory', () => {
     expect(ports.recentCrossTeamDeliveryTtlMs).toBe(600_000);
   });
 
+  it('passes scoped native lead relay options into the flow runner', async () => {
+    const deps = createDeps({
+      relayLeadInboxMessagesForTeam: vi.fn().mockResolvedValue(1),
+    });
+    const boundary = createTeamProvisioningLeadInboxRelayPortsBoundary(deps);
+
+    await expect(
+      boundary.relayLeadInboxMessages('alpha', { onlyMessageId: 'message-1' })
+    ).resolves.toBe(1);
+
+    expect(deps.relayLeadInboxMessagesForTeam).toHaveBeenCalledWith('alpha', expect.any(Object), {
+      onlyMessageId: 'message-1',
+    });
+  });
+
   it('shares existing in-flight relay work and clears the matching entry', async () => {
     const existing = Promise.resolve(3);
     const deps = createDeps({

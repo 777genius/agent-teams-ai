@@ -135,6 +135,32 @@ describe('CrossTeamService runtime delivery dedupe', () => {
     );
   });
 
+  it('keeps body-based dedupe for normal callers without stable ids', async () => {
+    vi.useFakeTimers({ now: new Date('2026-07-09T00:00:00.000Z') });
+    const { service, inboxWriter, messaging, sentToInbox } = createService();
+    const request: CrossTeamSendRequest = {
+      fromTeam: 'source-team',
+      fromMember: 'team-lead',
+      toTeam: 'target-team',
+      toMember: 'team-lead',
+      text: 'Ship the same payload',
+      summary: 'Runtime delivery',
+      taskRefs: [{ taskId: 'task-1', displayId: '#1', teamName: 'source-team' }],
+      timestamp: '2026-07-09T00:00:00.000Z',
+    };
+
+    const first = await service.send(request);
+    await expect(service.send(request)).resolves.toMatchObject({
+      deliveredToInbox: true,
+      deduplicated: true,
+      messageId: first.messageId,
+    });
+
+    expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+    expect(sentToInbox).toHaveLength(1);
+    expect(messaging.relayInboxFileToLiveRecipient).not.toHaveBeenCalled();
+  });
+
   it('delivers distinct runtime messages with identical text and task refs', async () => {
     vi.useFakeTimers({ now: new Date('2026-07-09T00:00:00.000Z') });
     const { service, inboxWriter, messaging, sentToInbox } = createService();

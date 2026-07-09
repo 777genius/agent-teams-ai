@@ -32,6 +32,10 @@ export interface RelayInboxFileToLiveRecipientInput {
   options?: OpenCodeMemberInboxRelayOptions;
 }
 
+export interface NativeLeadInboxRelayOptions {
+  onlyMessageId?: string;
+}
+
 export interface RelayInboxFileToLiveRecipientPorts {
   readConfigSnapshot(teamName: string): Promise<TeamConfig | null>;
   readMetaMembers(teamName: string): Promise<readonly TeamMember[]>;
@@ -45,7 +49,7 @@ export interface RelayInboxFileToLiveRecipientPorts {
     memberName: string,
     options: OpenCodeMemberInboxRelayOptions
   ): Promise<OpenCodeMemberInboxRelayResult>;
-  relayLeadInboxMessages(teamName: string): Promise<number>;
+  relayLeadInboxMessages(teamName: string, options?: NativeLeadInboxRelayOptions): Promise<number>;
   isTeamAlive(teamName: string): boolean;
 }
 
@@ -81,9 +85,15 @@ export async function relayInboxFileToLiveRecipientWithPorts(
         )
       );
     }
+    const leadOptions = buildNativeLeadRelayOptions(options);
+    const relayed = ports.isTeamAlive(teamName)
+      ? leadOptions
+        ? await ports.relayLeadInboxMessages(teamName, leadOptions)
+        : await ports.relayLeadInboxMessages(teamName)
+      : 0;
     return {
       kind: LiveInboxRelayKind.NativeLead,
-      relayed: ports.isTeamAlive(teamName) ? await ports.relayLeadInboxMessages(teamName) : 0,
+      relayed,
     };
   }
 
@@ -116,6 +126,13 @@ function buildOpenCodeRelayOptions(
     ...(options.onlyMessageId ? { onlyMessageId: options.onlyMessageId } : {}),
     ...(options.deliveryMetadata ? { deliveryMetadata: options.deliveryMetadata } : {}),
   };
+}
+
+function buildNativeLeadRelayOptions(
+  options: OpenCodeMemberInboxRelayOptions
+): NativeLeadInboxRelayOptions | undefined {
+  const onlyMessageId = options.onlyMessageId?.trim();
+  return onlyMessageId ? { onlyMessageId } : undefined;
 }
 
 function projectOpenCodeMemberRelay(relay: OpenCodeMemberInboxRelayResult): LiveInboxRelayResult {
