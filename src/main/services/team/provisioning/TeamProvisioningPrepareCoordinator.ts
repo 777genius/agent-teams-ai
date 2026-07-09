@@ -29,6 +29,10 @@ import {
 } from './TeamProvisioningOpenCodeDiagnosticsPolicy';
 import { prepareSelectedOpenCodeModelsForProvisioning } from './TeamProvisioningOpenCodeModelPreparation';
 import { isAuthFailureWarning } from './TeamProvisioningOutputErrorPolicy';
+import {
+  createPrepareForProvisioningInFlightKey as buildPrepareForProvisioningInFlightKey,
+  createProbeInFlightKey,
+} from './TeamProvisioningPrepareCachePolicy';
 import { isBinaryProbeWarning, isTransientProbeWarning } from './TeamProvisioningProbeWarnings';
 import {
   appendPreflightDebugLog,
@@ -157,6 +161,7 @@ export class TeamProvisioningPrepareCoordinator {
     string,
     Promise<TeamProvisioningPrepareResult>
   >();
+  private readonly probeCacheGenerationByKey = new Map<string, number>();
 
   constructor(private readonly ports: TeamProvisioningPrepareCoordinatorPorts) {}
 
@@ -200,37 +205,7 @@ export class TeamProvisioningPrepareCoordinator {
     cwd?: string,
     opts?: PrepareForProvisioningOptions
   ): string {
-    const providerIds = Array.from(
-      new Set(
-        [opts?.providerId, ...(opts?.providerIds ?? [])]
-          .map((providerId) => resolveTeamProviderId(providerId))
-          .filter((providerId): providerId is TeamProviderId => Boolean(providerId))
-      )
-    );
-    const modelIds = Array.from(
-      new Set((opts?.modelIds ?? []).map((modelId) => modelId.trim()).filter(Boolean))
-    );
-    const modelChecks = normalizeProvisioningModelCheckRequests(opts?.modelChecks)
-      .map((check) => ({
-        providerId: check.providerId,
-        model: check.model,
-        effort: check.effort ?? null,
-      }))
-      .sort(
-        (left, right) =>
-          left.providerId.localeCompare(right.providerId) ||
-          left.model.localeCompare(right.model) ||
-          (left.effort ?? '').localeCompare(right.effort ?? '')
-      );
-    return JSON.stringify({
-      cwd: cwd?.trim() || process.cwd(),
-      forceFresh: opts?.forceFresh === true,
-      providerIds,
-      modelIds,
-      modelChecks,
-      limitContext: opts?.limitContext === true,
-      modelVerificationMode: opts?.modelVerificationMode ?? null,
-    });
+    return buildPrepareForProvisioningInFlightKey(cwd, opts);
   }
 
   clonePrepareForProvisioningResult(
@@ -913,7 +888,9 @@ export class TeamProvisioningPrepareCoordinator {
   }
 
   clearProbeCache(cwd: string, providerId: TeamProviderId | undefined): void {
-    this.ports.providerProbeCache.delete(createProbeCacheKey(cwd, providerId));
+    const cacheKey = createProbeCacheKey(cwd, providerId);
+    this.ports.providerProbeCache.delete(cacheKey);
+    this.bumpProbeCacheGeneration(cacheKey);
   }
 
   async validatePrepareCwd(cwd: string): Promise<void> {
@@ -934,7 +911,9 @@ export class TeamProvisioningPrepareCoordinator {
       };
     }
 
-    return this.ports.providerProbeCache.getOrCreateInFlight(cacheKey, async () => {
+    const cacheGeneration = this.getProbeCacheGeneration(cacheKey);
+    const inFlightKey = createProbeInFlightKey(cacheKey, cacheGeneration);
+    return this.ports.providerProbeCache.getOrCreateInFlight(inFlightKey, async () => {
       const claudePath = await this.ports.resolveClaudeBinaryPath();
       if (!claudePath) return null;
 
@@ -971,6 +950,10 @@ export class TeamProvisioningPrepareCoordinator {
           !isTransientProbeWarning(probe.warning) &&
           !isBinaryProbeWarning(probe.warning));
 
+      if (this.getProbeCacheGeneration(cacheKey) !== cacheGeneration) {
+        return result;
+      }
+
       if (shouldCache) {
         this.ports.providerProbeCache.set(cacheKey, result);
       } else {
@@ -979,5 +962,13 @@ export class TeamProvisioningPrepareCoordinator {
 
       return result;
     });
+  }
+
+  private getProbeCacheGeneration(cacheKey: string): number {
+    return this.probeCacheGenerationByKey.get(cacheKey) ?? 0;
+  }
+
+  private bumpProbeCacheGeneration(cacheKey: string): void {
+    this.probeCacheGenerationByKey.set(cacheKey, this.getProbeCacheGeneration(cacheKey) + 1);
   }
 }

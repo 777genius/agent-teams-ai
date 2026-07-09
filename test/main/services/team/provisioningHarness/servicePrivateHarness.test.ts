@@ -34,9 +34,11 @@ vi.mock('@main/services/runtime/anthropicTeamApiKeyHelper', async (importOrigina
 
 const MEMBER_LIFECYCLE_SERVICE_USE_CASE_KEYS = [
   'appendDirectProcessRuntimeEvent',
+  'hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch',
   'persistOpenCodeMemberRestartSystemMessage',
   'preparePrimaryOwnedMemberRestartRuntime',
   'readOpenCodeSecondaryRetryOutcome',
+  'resolveDirectRestartRuntimeCwd',
   'stopPrimaryOwnedRosterRuntime',
   'updateDirectTmuxRestartMemberConfig',
 ] as const satisfies readonly (keyof TeamProvisioningMemberLifecycleServiceUseCases)[];

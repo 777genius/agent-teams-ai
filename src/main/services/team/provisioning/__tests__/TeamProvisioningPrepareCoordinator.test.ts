@@ -87,6 +87,40 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     expect(secondResult.warnings).toEqual(['diagnostic note']);
   });
 
+  it('normalizes prepare in-flight keys for set-like provider and model options', () => {
+    const coordinator = createCoordinator();
+
+    const firstKey = coordinator.createPrepareForProvisioningInFlightKey('/workspace/order-key', {
+      providerId: 'codex',
+      providerIds: ['anthropic', 'codex'],
+      modelIds: [' zed ', 'alpha'],
+      modelChecks: [
+        { providerId: 'codex', model: 'gpt-5', effort: 'high' },
+        { providerId: 'anthropic', model: 'claude-sonnet-4-5', effort: 'low' },
+      ],
+      limitContext: true,
+      modelVerificationMode: 'deep',
+    });
+    const secondKey = coordinator.createPrepareForProvisioningInFlightKey('/workspace/order-key', {
+      providerId: 'anthropic',
+      providerIds: ['codex', 'anthropic'],
+      modelIds: ['alpha', 'zed'],
+      modelChecks: [
+        { providerId: 'anthropic', model: 'claude-sonnet-4-5', effort: 'low' },
+        { providerId: 'codex', model: 'gpt-5', effort: 'high' },
+      ],
+      limitContext: true,
+      modelVerificationMode: 'deep',
+    });
+
+    expect(firstKey).toBe(secondKey);
+    expect(coordinator.createPrepareForProvisioningInFlightKey('/workspace/order-key')).toBe(
+      coordinator.createPrepareForProvisioningInFlightKey('/workspace/order-key', {
+        providerId: 'anthropic',
+      })
+    );
+  });
+
   it('clears one probe cache entry per requested provider when forceFresh is set', async () => {
     const cachedResult = (cacheKey: string): CachedProbeResult => ({
       cacheKey,
@@ -328,5 +362,61 @@ describe('TeamProvisioningPrepareCoordinator', () => {
       { claudePath: '/fake/claude', authSource: 'codex_runtime' },
     ]);
     expect(probeClaudeRuntime).toHaveBeenCalledOnce();
+  });
+
+  it('does not let stale in-flight provider probes satisfy or overwrite a cleared cache key', async () => {
+    const cwd = '/workspace/probe-cache-clear-race';
+    const probeReleases: ((value: { warning?: string }) => void)[] = [];
+    const probeClaudeRuntime = vi.fn(
+      () =>
+        new Promise<{ warning?: string }>((resolve) => {
+          probeReleases.push(resolve);
+        })
+    );
+    const buildProvisioningEnv = vi.fn().mockResolvedValue({
+      env: { PATH: '/bin' },
+      authSource: 'codex_runtime',
+      geminiRuntimeAuth: null,
+      providerArgs: ['--codex'],
+    });
+    const coordinator = createCoordinator({
+      resolveClaudeBinaryPath: vi.fn().mockResolvedValue('/fake/claude'),
+      buildProvisioningEnv,
+      probeClaudeRuntime,
+    });
+    const releaseProbe = (index: number, value: { warning?: string }): void => {
+      const release = probeReleases[index];
+      if (!release) {
+        throw new Error(`Expected provider probe release callback ${index}.`);
+      }
+      release(value);
+    };
+
+    const staleProbe = coordinator.getCachedOrProbeResult(cwd, 'codex');
+    await vi.waitFor(() => expect(probeReleases).toHaveLength(1));
+
+    coordinator.clearProbeCache(cwd, 'codex');
+    const freshProbe = coordinator.getCachedOrProbeResult(cwd, 'codex');
+    await vi.waitFor(() => expect(probeReleases).toHaveLength(2));
+
+    releaseProbe(1, {});
+    await expect(freshProbe).resolves.toEqual({
+      claudePath: '/fake/claude',
+      authSource: 'codex_runtime',
+    });
+
+    releaseProbe(0, { warning: 'stale provider note' });
+    await expect(staleProbe).resolves.toEqual({
+      claudePath: '/fake/claude',
+      authSource: 'codex_runtime',
+      warning: 'stale provider note',
+    });
+    expect(coordinator.getFreshCachedProbeResult(cwd, 'codex')).toMatchObject({
+      claudePath: '/fake/claude',
+      authSource: 'codex_runtime',
+    });
+    expect(coordinator.getFreshCachedProbeResult(cwd, 'codex')?.warning).toBeUndefined();
+    expect(buildProvisioningEnv).toHaveBeenCalledTimes(2);
+    expect(probeClaudeRuntime).toHaveBeenCalledTimes(2);
   });
 });
