@@ -350,6 +350,12 @@ describe('teamSlice actions', () => {
     hoisted.restartMember.mockResolvedValue(undefined);
     hoisted.skipMemberForLaunch.mockResolvedValue(undefined);
     window.localStorage.removeItem('team:messagesPanelMode');
+    for (let i = window.localStorage.length - 1; i >= 0; i--) {
+      const key = window.localStorage.key(i);
+      if (key?.startsWith('team:launchParams:')) {
+        window.localStorage.removeItem(key);
+      }
+    }
   });
 
   afterEach(() => {
@@ -5237,6 +5243,35 @@ describe('teamSlice actions', () => {
   });
 
   describe('provisioning run scoping', () => {
+    it('restores valid launch params when another persisted entry is malformed', () => {
+      window.localStorage.setItem('team:launchParams:broken-team', '{bad json');
+      window.localStorage.setItem(
+        'team:launchParams:my-team',
+        JSON.stringify({
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'medium',
+          limitContext: true,
+        })
+      );
+
+      const store = createSliceStore();
+
+      expect(store.getState().launchParamsByTeam).toEqual({
+        'my-team': {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'medium',
+          limitContext: true,
+        },
+      });
+
+      window.localStorage.removeItem('team:launchParams:broken-team');
+      window.localStorage.removeItem('team:launchParams:my-team');
+    });
+
     it('persists providerBackendId into createTeam launch params', async () => {
       const store = createSliceStore();
 

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getController } from '../controller';
 import { assertConfiguredTeam } from '../utils/teamConfig';
 import { jsonTextContent } from '../utils/format';
+import { taskRefSchema } from '../utils/schemas';
 
 const toolContextSchema = {
   teamName: z.string().min(1),
@@ -31,18 +32,11 @@ export function registerMessageTools(server: Pick<FastMCP, 'addTool'>) {
             filename: z.string().min(1),
             mimeType: z.string().min(1),
             size: z.number().nonnegative(),
+            filePath: z.string().min(1).optional(),
           })
         )
         .optional(),
-      taskRefs: z
-        .array(
-          z.object({
-            taskId: z.string().min(1),
-            displayId: z.string().min(1),
-            teamName: z.string().min(1),
-          })
-        )
-        .optional(),
+      taskRefs: z.array(taskRefSchema).optional(),
     }),
     execute: async ({
       teamName,

@@ -26,6 +26,7 @@ function buildRequiredReportFollowUp(input: {
   memberName?: string;
   from?: string;
   controlUrl?: string;
+  waitTimeoutMs?: number;
 }) {
   const status = asRecord(input.status);
   const agenda = asRecord(status?.agenda);
@@ -70,6 +71,7 @@ function buildRequiredReportFollowUp(input: {
         teamName: input.teamName,
         ...(memberName ? { memberName } : {}),
         ...(input.controlUrl ? { controlUrl: input.controlUrl } : {}),
+        ...(input.waitTimeoutMs ? { waitTimeoutMs: input.waitTimeoutMs } : {}),
         state,
         agendaFingerprint,
         reportToken,
@@ -114,6 +116,7 @@ export function registerWorkSyncTools(server: Pick<FastMCP, 'addTool'>) {
           ...(memberName ? { memberName } : {}),
           ...(from ? { from } : {}),
           ...(controlUrl ? { controlUrl } : {}),
+          ...(waitTimeoutMs ? { waitTimeoutMs } : {}),
         })
       );
     },

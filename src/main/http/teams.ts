@@ -9,6 +9,7 @@ import {
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
@@ -276,6 +277,7 @@ function parseCreateMembers(
     const model = assertOptionalString(rawMember.model, 'member model');
     const effort = assertOptionalEffort(rawMember.effort, providerId ?? defaultProviderId);
     const fastMode = assertOptionalFastMode(rawMember.fastMode);
+    const mcpPolicy = normalizeTeamMemberMcpPolicy(rawMember.mcpPolicy);
 
     return {
       name,
@@ -287,6 +289,7 @@ function parseCreateMembers(
       ...(model ? { model } : {}),
       ...(effort ? { effort } : {}),
       ...(fastMode ? { fastMode } : {}),
+      ...(mcpPolicy ? { mcpPolicy } : {}),
     };
   });
 }
@@ -299,6 +302,7 @@ function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchRequest 
   const model = assertOptionalString(payload.model, 'model');
   const effort = assertOptionalEffort(payload.effort, providerId ?? 'anthropic');
   const fastMode = assertOptionalFastMode(payload.fastMode);
+  const limitContext = assertOptionalBoolean(payload.limitContext, 'limitContext');
   const clearContext = assertOptionalBoolean(payload.clearContext, 'clearContext');
   const skipPermissions = assertOptionalBoolean(payload.skipPermissions, 'skipPermissions');
   const worktree = assertOptionalString(payload.worktree, 'worktree');
@@ -322,6 +326,9 @@ function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchRequest 
     }),
     ...(fastMode && {
       fastMode,
+    }),
+    ...(limitContext !== undefined && {
+      limitContext,
     }),
     ...(clearContext !== undefined && {
       clearContext,

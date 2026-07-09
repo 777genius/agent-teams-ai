@@ -736,12 +736,12 @@
       "read": "採用情報"
     },
     "statusOptions": {
-      "todo": "TODOの特長",
-      "inProgress": "PROGRESSで",
-      "needsFix": "NEEDS FIXESの特長",
-      "done": "DONEの特長",
-      "review": "REVIEWの特長",
-      "approved": "APPROVEDの特長"
+      "todo": "TODO",
+      "inProgress": "IN PROGRESS",
+      "needsFix": "NEEDS FIXES",
+      "done": "DONE",
+      "review": "REVIEW",
+      "approved": "APPROVED"
     }
   },
   "sessionItem": {

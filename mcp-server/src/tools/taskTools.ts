@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { agentBlocks, getController } from '../controller';
 import { assertConfiguredTeam } from '../utils/teamConfig';
 import { jsonTextContent, taskWriteResult, slimTask } from '../utils/format';
+import { taskRefSchema } from '../utils/schemas';
 
 /** stripAgentBlocks from canonical agentBlocks module — single source of truth for the tag format. */
 const stripAgentBlocksFn = (text: string): string => agentBlocks.stripAgentBlocks(text);
@@ -50,6 +51,8 @@ function buildCreateTaskPayload(params: {
   blockedBy?: string[];
   related?: string[];
   prompt?: string;
+  descriptionTaskRefs?: z.infer<typeof taskRefSchema>[];
+  promptTaskRefs?: z.infer<typeof taskRefSchema>[];
   startImmediately?: boolean;
   sourceMessageId?: string;
   sourceMessage?: Record<string, unknown>;
@@ -63,6 +66,10 @@ function buildCreateTaskPayload(params: {
     ...(params.blockedBy?.length ? { 'blocked-by': params.blockedBy.join(',') } : {}),
     ...(params.related?.length ? { related: params.related.join(',') } : {}),
     ...(params.prompt ? { prompt: params.prompt } : {}),
+    ...(params.descriptionTaskRefs?.length
+      ? { descriptionTaskRefs: params.descriptionTaskRefs }
+      : {}),
+    ...(params.promptTaskRefs?.length ? { promptTaskRefs: params.promptTaskRefs } : {}),
     ...(params.startImmediately !== undefined ? { startImmediately: params.startImmediately } : {}),
     ...(params.sourceMessageId ? { sourceMessageId: params.sourceMessageId } : {}),
     ...(params.sourceMessage ? { sourceMessage: params.sourceMessage } : {}),
@@ -83,6 +90,8 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       blockedBy: z.array(z.string().min(1)).optional(),
       related: z.array(z.string().min(1)).optional(),
       prompt: z.string().optional(),
+      descriptionTaskRefs: z.array(taskRefSchema).optional(),
+      promptTaskRefs: z.array(taskRefSchema).optional(),
       startImmediately: z.boolean().optional(),
     }),
     execute: async ({
@@ -96,6 +105,8 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       blockedBy,
       related,
       prompt,
+      descriptionTaskRefs,
+      promptTaskRefs,
       startImmediately,
     }) => {
       assertConfiguredTeam(teamName, claudeDir);
@@ -112,6 +123,8 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
               blockedBy,
               related,
               prompt,
+              descriptionTaskRefs,
+              promptTaskRefs,
               startImmediately,
             })
           )
@@ -142,6 +155,8 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       blockedBy: z.array(z.string().min(1)).optional(),
       related: z.array(z.string().min(1)).optional(),
       prompt: z.string().optional(),
+      descriptionTaskRefs: z.array(taskRefSchema).optional(),
+      promptTaskRefs: z.array(taskRefSchema).optional(),
       startImmediately: z.boolean().optional(),
     }),
     execute: async ({
@@ -155,6 +170,8 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       blockedBy,
       related,
       prompt,
+      descriptionTaskRefs,
+      promptTaskRefs,
       startImmediately,
     }) => {
       assertConfiguredTeam(teamName, claudeDir);
@@ -230,6 +247,8 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
               blockedBy,
               related,
               prompt,
+              descriptionTaskRefs,
+              promptTaskRefs,
               startImmediately,
               sourceMessageId: messageId,
               sourceMessage,
@@ -444,8 +463,9 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       taskId: z.string().min(1),
       text: z.string().min(1),
       from: z.string().min(1),
+      taskRefs: z.array(taskRefSchema).optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, text, from }) => {
+    execute: async ({ teamName, claudeDir, taskId, text, from, taskRefs }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
@@ -453,6 +473,7 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
             getController(teamName, claudeDir).tasks.addTaskComment(taskId, {
               text,
               ...(from ? { from } : {}),
+              ...(taskRefs?.length ? { taskRefs } : {}),
             }) as Record<string, unknown>
           )
         )
