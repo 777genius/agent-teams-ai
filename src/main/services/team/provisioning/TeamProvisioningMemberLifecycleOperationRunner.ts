@@ -5,6 +5,7 @@ import {
 
 export type MemberLifecycleOperationKind =
   | 'manual_restart'
+  | 'skip_for_launch'
   | 'opencode_retry'
   | 'opencode_member_added'
   | 'opencode_member_updated'

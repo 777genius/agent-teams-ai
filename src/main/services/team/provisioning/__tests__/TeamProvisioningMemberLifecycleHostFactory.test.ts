@@ -481,6 +481,7 @@ describe('TeamProvisioningMemberLifecycleHostFactory', () => {
       'primary_member_updated:team-a:Worker',
       'primary_member_removed:team-a:Worker',
       'manual_restart:team-a:Worker',
+      'skip_for_launch:team-a:Worker',
     ]);
     expect(seamEvents).toEqual([
       'attach:team-a:Worker:member_updated',

@@ -2012,11 +2012,9 @@ export class TeamProvisioningMemberLifecycleController {
 
   async skipMemberForLaunch(teamName: string, memberName: string): Promise<void> {
     const seam = this.actionUseCases.skipMemberForLaunch;
-    if (seam) {
-      await seam(teamName, memberName);
-      return;
-    }
-    await this.skipMemberForLaunchInternal(teamName, memberName);
+    return this.runMemberLifecycleOperation(teamName, memberName, 'skip_for_launch', () =>
+      seam ? seam(teamName, memberName) : this.skipMemberForLaunchInternal(teamName, memberName)
+    );
   }
 
   private async skipMemberForLaunchInternal(teamName: string, memberName: string): Promise<void> {

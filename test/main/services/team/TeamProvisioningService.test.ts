@@ -30418,6 +30418,48 @@ describe('TeamProvisioningService', () => {
     await firstRestart;
   });
 
+  it('runs skip through the lifecycle operation runner while it is in flight', async () => {
+    const configReady = createDeferred<unknown>();
+    const svc = createServiceWithConfigReader({
+      getConfig: vi.fn(() => configReady.promise),
+      getConfigSnapshot: vi.fn(() => configReady.promise),
+    } as unknown as ConstructorParameters<typeof TeamProvisioningService>[0]);
+
+    const skipOperation = svc.skipMemberForLaunch('skip-serialized-team', 'bob');
+
+    await expect(svc.restartMember('skip-serialized-team', 'bob')).rejects.toThrow(
+      'Lifecycle operation for teammate "bob" is already in progress'
+    );
+
+    configReady.resolve({
+      name: 'Skip Serialized Team',
+      members: [
+        { name: 'team-lead', agentType: 'team-lead' },
+        { name: 'bob', role: 'Developer' },
+      ],
+    });
+    await expect(skipOperation).rejects.toThrow('Member "bob" has not failed this launch');
+  });
+
+  it('blocks skip while another lifecycle operation is active for the same teammate', async () => {
+    const svc = new TeamProvisioningService();
+    const lifecycleController = memberLifecycleControllerHarness(svc);
+    const restartDone = createDeferred<void>();
+    const restartOperation = lifecycleController.runMemberLifecycleOperationInternal(
+      'skip-race-team',
+      'bob',
+      'manual_restart',
+      () => restartDone.promise
+    );
+
+    await expect(svc.skipMemberForLaunch('skip-race-team', 'bob')).rejects.toThrow(
+      'Lifecycle operation for teammate "bob" is already in progress'
+    );
+
+    restartDone.resolve();
+    await restartOperation;
+  });
+
   it('does not let one teammate lifecycle operation block another teammate or team', async () => {
     const svc = new TeamProvisioningService();
     const lifecycleController = memberLifecycleControllerHarness(svc);
