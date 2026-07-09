@@ -21,6 +21,9 @@ import {
   type TeamRefreshFanoutSnapshot,
 } from '../../../src/renderer/store/teamRefreshFanoutDiagnostics';
 
+import type { TeamSlice } from '../../../src/renderer/store/slices/teamSlice';
+import type { TeamAgentRuntimeResourceSample } from '../../../src/shared/types';
+
 const hoisted = vi.hoisted(() => ({
   list: vi.fn(),
   getData: vi.fn(),
@@ -105,28 +108,30 @@ vi.mock('../../../src/renderer/utils/unwrapIpc', async (importOriginal) => {
 });
 
 function createSliceStore() {
-  return create<any>()((set, get, store) => ({
-    ...createTeamSlice(set as never, get as never, store as never),
-    paneLayout: {
-      focusedPaneId: 'pane-default',
-      panes: [
-        {
-          id: 'pane-default',
-          widthFraction: 1,
-          tabs: [],
-          activeTabId: null,
-        },
-      ],
-    },
-    openTab: vi.fn(),
-    setActiveTab: vi.fn(),
-    updateTabLabel: vi.fn(),
-    getAllPaneTabs: vi.fn(() => []),
-    warmTaskChangeSummaries: vi.fn(async () => undefined),
-    invalidateTaskChangePresence: vi.fn(),
-    fetchTeams: vi.fn(async () => undefined),
-    fetchAllTasks: vi.fn(async () => undefined),
-  }));
+  return create<TeamSlice>()((set, get, store) =>
+    ({
+      ...createTeamSlice(set as never, get as never, store as never),
+      paneLayout: {
+        focusedPaneId: 'pane-default',
+        panes: [
+          {
+            id: 'pane-default',
+            widthFraction: 1,
+            tabs: [],
+            activeTabId: null,
+          },
+        ],
+      },
+      openTab: vi.fn(),
+      setActiveTab: vi.fn(),
+      updateTabLabel: vi.fn(),
+      getAllPaneTabs: vi.fn(() => []),
+      warmTaskChangeSummaries: vi.fn(async () => undefined),
+      invalidateTaskChangePresence: vi.fn(),
+      fetchTeams: vi.fn(async () => undefined),
+      fetchAllTasks: vi.fn(async () => undefined),
+    }) as unknown as TeamSlice
+  );
 }
 
 function createTeamSnapshot(overrides: Record<string, unknown> = {}): {
@@ -2965,7 +2970,7 @@ describe('teamSlice actions', () => {
 
     const p1 = store.getState().refreshMemberActivityMeta('my-team');
 
-    store.setState((state: any) => ({
+    store.setState((state: TeamSlice) => ({
       teamMessagesByName: {
         ...state.teamMessagesByName,
         'my-team': {
@@ -4464,6 +4469,68 @@ describe('teamSlice actions', () => {
     expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(expiredOfflineSnapshot);
   });
 
+  it('does not reuse freshness memory after runtime state resets for the same team and run id', async () => {
+    vi.useFakeTimers();
+    const store = createSliceStore();
+    const firstLiveSnapshot = createRuntimeSnapshot({
+      updatedAt: '2026-03-12T10:00:00.000Z',
+      members: {
+        alice: {
+          ...createRuntimeSnapshot().members.alice,
+          livenessKind: 'runtime_process',
+          runtimeLastSeenAt: '2026-03-12T10:00:00.000Z',
+          updatedAt: '2026-03-12T10:00:00.000Z',
+        },
+      },
+    });
+    vi.setSystemTime(new Date('2026-03-12T10:00:00.000Z'));
+    hoisted.getTeamAgentRuntime.mockResolvedValue(firstLiveSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+    const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
+
+    const refreshedLiveSnapshot = createRuntimeSnapshot({
+      updatedAt: '2026-03-12T10:00:10.000Z',
+      members: {
+        alice: {
+          ...firstLiveSnapshot.members.alice,
+          runtimeLastSeenAt: '2026-03-12T10:00:10.000Z',
+          updatedAt: '2026-03-12T10:00:10.000Z',
+        },
+      },
+    });
+    vi.setSystemTime(new Date('2026-03-12T10:00:10.000Z'));
+    hoisted.getTeamAgentRuntime.mockResolvedValue(refreshedLiveSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toBe(firstSnapshot);
+
+    store.setState({ teamAgentRuntimeByTeam: {} });
+
+    const offlineSnapshotAfterReset = createRuntimeSnapshot({
+      updatedAt: '2026-03-12T10:00:12.000Z',
+      members: {
+        alice: {
+          ...firstLiveSnapshot.members.alice,
+          alive: false,
+          livenessKind: 'registered_only',
+          runtimeDiagnostic: 'registered runtime metadata without live process',
+          runtimeDiagnosticSeverity: 'warning',
+          runtimeLastSeenAt: undefined,
+          updatedAt: '2026-03-12T10:00:12.000Z',
+        },
+      },
+    });
+    vi.setSystemTime(new Date('2026-03-12T10:00:12.000Z'));
+    hoisted.getTeamAgentRuntime.mockResolvedValue(offlineSnapshotAfterReset);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toEqual(offlineSnapshotAfterReset);
+    expect(store.getState().teamAgentRuntimeByTeam['my-team'].members.alice.alive).toBe(false);
+  });
+
   it('updates runtime snapshots when liveness diagnostics change', async () => {
     const store = createSliceStore();
     const snapshot = createRuntimeSnapshot();
@@ -4554,7 +4621,7 @@ describe('teamSlice actions', () => {
         alice: {
           ...createRuntimeSnapshot().members.alice,
           cpuPercent: 4,
-          resourceHistory: [null, validSample] as any,
+          resourceHistory: [null, validSample] as unknown as TeamAgentRuntimeResourceSample[],
         },
       },
     });
@@ -4567,7 +4634,10 @@ describe('teamSlice actions', () => {
       members: {
         alice: {
           ...snapshot.members.alice,
-          resourceHistory: [null, { ...validSample }] as any,
+          resourceHistory: [
+            null,
+            { ...validSample },
+          ] as unknown as TeamAgentRuntimeResourceSample[],
         },
       },
     });
@@ -4924,8 +4994,12 @@ describe('teamSlice actions', () => {
 
       hoisted.getData.mockResolvedValue({
         ...existingData,
-        tasks: existingData.tasks.map((task: any) => ({ ...task })),
-        members: existingData.members.map((member: any) => ({ ...member })),
+        tasks: existingData.tasks.map((task: unknown) => ({
+          ...(task as Record<string, unknown>),
+        })),
+        members: existingData.members.map((member: unknown) => ({
+          ...(member as Record<string, unknown>),
+        })),
         kanbanState: {
           ...existingData.kanbanState,
           reviewers: [...existingData.kanbanState.reviewers],
@@ -5032,8 +5106,12 @@ describe('teamSlice actions', () => {
 
       hoisted.getData.mockResolvedValue({
         ...existingData,
-        tasks: existingData.tasks.map((task: any) => ({ ...task })),
-        members: existingData.members.map((member: any) => ({ ...member })),
+        tasks: existingData.tasks.map((task: unknown) => ({
+          ...(task as Record<string, unknown>),
+        })),
+        members: existingData.members.map((member: unknown) => ({
+          ...(member as Record<string, unknown>),
+        })),
         kanbanState: {
           ...existingData.kanbanState,
           reviewers: [...existingData.kanbanState.reviewers],

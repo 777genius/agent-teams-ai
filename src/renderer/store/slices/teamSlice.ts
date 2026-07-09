@@ -266,7 +266,10 @@ let pendingFreshGlobalTasksRefresh = false;
 const reportedTaskEndKeys = new Set<string>();
 const reportedTeamLaunchEndRunIds = new Set<string>();
 const teamLaunchAnalyticsByRunId = new Map<string, TeamLaunchAnalyticsContext>();
-const teamAgentRuntimeFreshnessSnapshotByTeam = new Map<string, TeamAgentRuntimeSnapshot>();
+const teamAgentRuntimeFreshnessSnapshotsByTeamAndRun = new Map<
+  string,
+  Map<string | null, TeamAgentRuntimeSnapshot>
+>();
 
 type GlobalTaskNotificationParams = Parameters<typeof processGlobalTaskNotifications>[0];
 
@@ -301,11 +304,23 @@ function getTeamAgentRuntimeFreshnessSnapshot(
   visibleSnapshot: TeamAgentRuntimeSnapshot | undefined,
   incomingSnapshot: TeamAgentRuntimeSnapshot
 ): TeamAgentRuntimeSnapshot | undefined {
-  const cachedSnapshot = teamAgentRuntimeFreshnessSnapshotByTeam.get(teamName);
+  if (
+    !visibleSnapshot ||
+    visibleSnapshot.teamName !== incomingSnapshot.teamName ||
+    visibleSnapshot.runId !== incomingSnapshot.runId
+  ) {
+    return visibleSnapshot;
+  }
+
+  const cachedSnapshot = teamAgentRuntimeFreshnessSnapshotsByTeamAndRun
+    .get(teamName)
+    ?.get(incomingSnapshot.runId);
+  // The module cache may only extend the visible snapshot's freshness, never seed a reset scope.
   if (
     !cachedSnapshot ||
     cachedSnapshot.teamName !== incomingSnapshot.teamName ||
-    cachedSnapshot.runId !== incomingSnapshot.runId
+    cachedSnapshot.runId !== incomingSnapshot.runId ||
+    !areTeamAgentRuntimeSnapshotsEqual(visibleSnapshot, cachedSnapshot)
   ) {
     return visibleSnapshot;
   }
@@ -316,11 +331,16 @@ function rememberTeamAgentRuntimeFreshnessSnapshot(
   teamName: string,
   snapshot: TeamAgentRuntimeSnapshot
 ): void {
-  teamAgentRuntimeFreshnessSnapshotByTeam.set(teamName, snapshot);
+  let snapshotsByRun = teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.get(teamName);
+  if (!snapshotsByRun) {
+    snapshotsByRun = new Map<string | null, TeamAgentRuntimeSnapshot>();
+    teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.set(teamName, snapshotsByRun);
+  }
+  snapshotsByRun.set(snapshot.runId, snapshot);
 }
 
 function clearTeamAgentRuntimeFreshnessSnapshot(teamName: string): void {
-  teamAgentRuntimeFreshnessSnapshotByTeam.delete(teamName);
+  teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.delete(teamName);
 }
 
 export function isTeamDataRefreshPending(teamName: string): boolean {
@@ -357,7 +377,7 @@ export function __resetTeamSliceModuleStateForTests(): void {
   reportedTaskEndKeys.clear();
   reportedTeamLaunchEndRunIds.clear();
   teamLaunchAnalyticsByRunId.clear();
-  teamAgentRuntimeFreshnessSnapshotByTeam.clear();
+  teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.clear();
   clearAllPendingReplyRefreshWaits();
   clearAllLastResolvedTeamDataRefreshes();
   clearAllTeamLocalStateEpochs();
@@ -2849,7 +2869,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     }
 
     const requestScope = captureTeamRequestScope(get, teamName);
-    const refreshToken = beginInFlightTeamDataRefresh(teamName);
+    const refreshHandle = beginInFlightTeamDataRefresh(teamName);
     // Silent refresh — update data without showing loading skeleton.
     // Only selectTeam() sets loading: true (for initial load).
     noteTeamRefreshBurst(teamName, TEAM_REFRESH_BURST_WINDOW_MS);
@@ -2989,7 +3009,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       }
       set({ selectedTeamError: msg });
     } finally {
-      endInFlightTeamDataRefresh(teamName, refreshToken);
+      endInFlightTeamDataRefresh(teamName, refreshHandle);
       if (
         reusedInFlightRequest &&
         pendingFreshTeamDataRefreshes.delete(teamName) &&
