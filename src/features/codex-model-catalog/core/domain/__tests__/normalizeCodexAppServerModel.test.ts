@@ -69,25 +69,6 @@ describe('normalizeCodexAppServerModels', () => {
     expect(result.models[0]?.defaultReasoningEffort).toBe('medium');
   });
 
-  it('preserves the GPT-5.6 Sol max reasoning effort', () => {
-    const result = normalizeCodexAppServerModels([
-      {
-        id: 'gpt-5.6-sol',
-        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'],
-        defaultReasoningEffort: 'max',
-      },
-    ]);
-
-    expect(result.models[0]?.supportedReasoningEfforts).toEqual([
-      'low',
-      'medium',
-      'high',
-      'xhigh',
-      'max',
-    ]);
-    expect(result.models[0]?.defaultReasoningEffort).toBe('max');
-  });
-
   it('preserves Codex Fast support from app-server speed-tier metadata', () => {
     const result = normalizeCodexAppServerModels([
       {

@@ -22,7 +22,6 @@ export const CODEX_TEAM_EFFORT_LEVELS = [
   'medium',
   'high',
   'xhigh',
-  'max',
 ] as const satisfies readonly EffortLevel[];
 
 export const ANTHROPIC_TEAM_EFFORT_LEVELS = [
