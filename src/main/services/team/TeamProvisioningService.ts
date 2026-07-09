@@ -1,14 +1,5 @@
 import { type TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
-import {
-  type WorkspaceTrustArgsOnlyPlanRequest,
-  type WorkspaceTrustArgsOnlyPlanResult,
-  type WorkspaceTrustFeatureFlags,
-  type WorkspaceTrustFullPlanRequest,
-  type WorkspaceTrustFullPlanResult,
-  type WorkspaceTrustProvider,
-  type WorkspaceTrustWorkspace,
-} from '@features/workspace-trust/main';
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
 import { notifyTeamWatchScopeChanged } from '@main/services/infrastructure/teamWatchScope';
@@ -440,14 +431,7 @@ import { TeamProvisioningToolApprovalFacade } from './provisioning/TeamProvision
 import { TeamProvisioningTransientRunState } from './provisioning/TeamProvisioningTransientRunState';
 import { forwardUserDmToTeammateWithPorts } from './provisioning/TeamProvisioningUserDmRelay';
 import { type TeamProvisioningVerificationProbePorts } from './provisioning/TeamProvisioningVerificationProbePortsFactory';
-import {
-  collectWorkspaceTrustProviders as collectWorkspaceTrustProvidersHelper,
-  collectWorkspaceTrustWorkspaces as collectWorkspaceTrustWorkspacesHelper,
-  planWorkspaceTrustArgsOnlySafely as planWorkspaceTrustArgsOnlySafelyHelper,
-  planWorkspaceTrustFullSafely as planWorkspaceTrustFullSafelyHelper,
-  prepareWorkspaceTrustForDeterministicRun as prepareWorkspaceTrustForDeterministicRunHelper,
-} from './provisioning/TeamProvisioningWorkspaceTrust';
-import { createNodeWorkspaceTrustWorkspaceCollectionPorts } from './provisioning/TeamProvisioningWorkspaceTrustNodePorts';
+import { createTeamProvisioningWorkspaceTrustPreSpawnBoundary } from './provisioning/TeamProvisioningWorkspaceTrustPreSpawnBoundary';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { atomicWriteAsync } from './atomicWrite';
 import { boundLaunchDiagnostics } from './progressPayload';
@@ -504,7 +488,6 @@ import type {
   TeamChangeEvent,
   TeamCreateRequest,
   TeamCreateResponse,
-  TeamLaunchDiagnosticItem,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamMember,
@@ -1025,8 +1008,22 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodePromptDeliv
   protected readonly prepareFacade!: TeamProvisioningPrepareFacade;
   protected readonly verificationProbePorts!: TeamProvisioningVerificationProbePorts<ProvisioningRun>;
   private readonly processExitPorts!: TeamProvisioningProcessExitPorts<ProvisioningRun>;
-  private readonly workspaceTrustWorkspaceCollectionPorts =
-    createNodeWorkspaceTrustWorkspaceCollectionPorts();
+  private readonly workspaceTrustPreSpawnBoundary =
+    createTeamProvisioningWorkspaceTrustPreSpawnBoundary<
+      ProvisioningRun,
+      ProvisioningEnvResolution
+    >({
+      getWorkspaceTrustCoordinator: () => this.appShellBoundary.getWorkspaceTrustCoordinator(),
+      getStopAllTeamsGeneration: () => this.stopAllTeamsGeneration,
+      updateProgress,
+      boundLaunchDiagnostics,
+      isLaunchRunStillCurrent: (run) => this.isLaunchRunStillCurrent(run),
+      isRunStillTracked: (run) => this.runs.get(run.runId) === run,
+      cleanupAnthropicApiKeyHelperMaterial: cleanupAnthropicTeamApiKeyHelperMaterial,
+      restorePrelaunchConfig: (teamName) => this.restorePrelaunchConfig(teamName),
+      cleanupRun: (run) => this.cleanupRun(run),
+      logger,
+    });
 
   private readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
   private readonly openCodeStoppedLaneCleanup: TeamProvisioningOpenCodeStoppedLaneCleanupBoundary =
@@ -1198,43 +1195,6 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodePromptDeliv
     );
   }
 
-  private collectWorkspaceTrustProviders(input: {
-    leadProviderId?: TeamProviderId;
-    members: TeamCreateRequest['members'];
-  }): WorkspaceTrustProvider[] {
-    return collectWorkspaceTrustProvidersHelper(input);
-  }
-
-  private async collectWorkspaceTrustWorkspaces(input: {
-    cwd: string;
-    members: TeamCreateRequest['members'];
-  }): Promise<WorkspaceTrustWorkspace[]> {
-    return collectWorkspaceTrustWorkspacesHelper({
-      ...input,
-      ports: this.workspaceTrustWorkspaceCollectionPorts,
-    });
-  }
-
-  private async planWorkspaceTrustArgsOnlySafely(
-    request: WorkspaceTrustArgsOnlyPlanRequest
-  ): Promise<WorkspaceTrustArgsOnlyPlanResult> {
-    return planWorkspaceTrustArgsOnlySafelyHelper({
-      coordinator: this.appShellBoundary.getWorkspaceTrustCoordinator(),
-      request,
-      logger,
-    });
-  }
-
-  private async planWorkspaceTrustFullSafely(
-    request: WorkspaceTrustFullPlanRequest
-  ): Promise<WorkspaceTrustFullPlanResult | null> {
-    return planWorkspaceTrustFullSafelyHelper({
-      coordinator: this.appShellBoundary.getWorkspaceTrustCoordinator(),
-      request,
-      logger,
-    });
-  }
-
   private isLaunchRunStillCurrent(run: ProvisioningRun): boolean {
     return (
       this.runs.get(run.runId) === run &&
@@ -1317,84 +1277,6 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodePromptDeliv
       scheduleLeadProofMissingWorkSyncRecovery: (recoveryInput) =>
         this.scheduleLeadProofMissingWorkSyncRecovery(recoveryInput),
     });
-  }
-
-  private async prepareWorkspaceTrustForDeterministicRun(input: {
-    mode: 'create' | 'launch';
-    run: ProvisioningRun;
-    claudePath: string;
-    shellEnv: NodeJS.ProcessEnv;
-    stopAllGenerationAtStart: number;
-    workspaceTrustPlan: WorkspaceTrustFullPlanResult | null;
-    featureFlags: WorkspaceTrustFeatureFlags;
-    provisioningEnv: ProvisioningEnvResolution;
-  }): Promise<void> {
-    await prepareWorkspaceTrustForDeterministicRunHelper(input, {
-      workspaceTrustCoordinator: this.appShellBoundary.getWorkspaceTrustCoordinator(),
-      stopAllTeamsGeneration: this.stopAllTeamsGeneration,
-      updateProgress,
-      boundLaunchDiagnostics,
-      isLaunchRunStillCurrent: (run) => this.isLaunchRunStillCurrent(run),
-      isRunStillTracked: (run) => this.runs.get(run.runId) === run,
-      cancelDeterministicRunBeforeSpawn: (run, cancelInput) =>
-        this.cancelDeterministicRunBeforeSpawn(run, cancelInput),
-      failDeterministicRunBeforeSpawn: (run, failInput) =>
-        this.failDeterministicRunBeforeSpawn(run, failInput),
-    });
-  }
-
-  private async failDeterministicRunBeforeSpawn(
-    run: ProvisioningRun,
-    input: {
-      mode: 'create' | 'launch';
-      message: string;
-      error: string;
-      launchDiagnostics?: TeamLaunchDiagnosticItem[];
-      provisioningEnv: ProvisioningEnvResolution;
-    }
-  ): Promise<never> {
-    updateProgress(run, 'failed', input.message, {
-      error: input.error,
-      warnings: run.progress.warnings,
-      launchDiagnostics: input.launchDiagnostics,
-    });
-    run.onProgress(run.progress);
-
-    if (input.provisioningEnv.anthropicApiKeyHelper) {
-      await cleanupAnthropicTeamApiKeyHelperMaterial({
-        directory: input.provisioningEnv.anthropicApiKeyHelper.directory,
-      }).catch(() => undefined);
-    }
-    if (input.mode === 'launch') {
-      await this.restorePrelaunchConfig(run.teamName).catch(() => undefined);
-    }
-    this.cleanupRun(run);
-    throw new Error(input.error);
-  }
-
-  private async cancelDeterministicRunBeforeSpawn(
-    run: ProvisioningRun,
-    input: {
-      mode: 'create' | 'launch';
-      provisioningEnv: ProvisioningEnvResolution;
-    }
-  ): Promise<never> {
-    updateProgress(run, 'cancelled', 'Team launch cancelled', {
-      warnings: run.progress.warnings,
-    });
-    run.cancelRequested = true;
-    run.onProgress(run.progress);
-
-    if (input.provisioningEnv.anthropicApiKeyHelper) {
-      await cleanupAnthropicTeamApiKeyHelperMaterial({
-        directory: input.provisioningEnv.anthropicApiKeyHelper.directory,
-      }).catch(() => undefined);
-    }
-    if (input.mode === 'launch') {
-      await this.restorePrelaunchConfig(run.teamName).catch(() => undefined);
-    }
-    this.cleanupRun(run);
-    throw new Error('Team launch cancelled by app shutdown');
   }
 
   private createOpenCodeRuntimeBootstrapEvidencePorts(): OpenCodeRuntimeBootstrapEvidencePorts {

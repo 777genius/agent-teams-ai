@@ -26,15 +26,15 @@ function createHost(): TeamProvisioningCreateDeterministicSetupFlowServiceHost {
     })),
     resolveAndValidateLaunchIdentity: vi.fn(async () => null),
     createMixedSecondaryLaneStates: vi.fn(() => []),
-    appShellBoundary: {
+    workspaceTrustPreSpawnBoundary: {
       getWorkspaceTrustCoordinator: vi.fn(() => null),
-    },
-    workspaceTrustWorkspaceCollectionPorts: {
-      getHomeDir: () => '/home/tester',
-      realpath: vi.fn(async () => null),
-      resolveGitRoot: vi.fn(async () => null),
-      resolveCanonicalGitRoot: vi.fn(async (gitRoot) => gitRoot),
-      platform: 'posix',
+      workspaceTrustWorkspaceCollectionPorts: {
+        getHomeDir: () => '/home/tester',
+        realpath: vi.fn(async () => null),
+        resolveGitRoot: vi.fn(async () => null),
+        resolveCanonicalGitRoot: vi.fn(async (gitRoot) => gitRoot),
+        platform: 'posix',
+      },
     },
     runtimeTurnSettledEnvironmentProvider: null,
   };
@@ -78,7 +78,7 @@ describe('TeamProvisioningCreateDeterministicSetupFlowPortsFactory', () => {
 
     expect(ports.workspaceTrustCoordinator).toBeNull();
     expect(ports.workspaceTrustWorkspaceCollectionPorts).toBe(
-      host.workspaceTrustWorkspaceCollectionPorts
+      host.workspaceTrustPreSpawnBoundary.workspaceTrustWorkspaceCollectionPorts
     );
     expect(ports.runtimeTurnSettledEnvironmentProvider).toBeNull();
     expect(ports.logger).toBe(logger);

@@ -252,18 +252,20 @@ describe('createTeamProvisioningLaunchDeterministicFlowBoundary', () => {
       runs: boundHost.runs,
       provisioningRunByTeam: boundHost.provisioningRunByTeam,
       stopAllTeamsGeneration: boundHost.stopAllTeamsGeneration,
-      appShellBoundary: {
+      workspaceTrustPreSpawnBoundary: {
         getWorkspaceTrustCoordinator:
           boundHost.getWorkspaceTrustCoordinator as TeamProvisioningLaunchDeterministicFlowServiceHost<
             TestRun,
             TestLane
-          >['appShellBoundary']['getWorkspaceTrustCoordinator'],
+          >['workspaceTrustPreSpawnBoundary']['getWorkspaceTrustCoordinator'],
+        workspaceTrustWorkspaceCollectionPorts:
+          boundHost.workspaceTrustWorkspaceCollectionPorts as TeamProvisioningLaunchDeterministicFlowServiceHost<
+            TestRun,
+            TestLane
+          >['workspaceTrustPreSpawnBoundary']['workspaceTrustWorkspaceCollectionPorts'],
+        prepareWorkspaceTrustForDeterministicRun: (...args) =>
+          boundHost.prepareWorkspaceTrustForDeterministicRun(...args),
       },
-      workspaceTrustWorkspaceCollectionPorts:
-        boundHost.workspaceTrustWorkspaceCollectionPorts as TeamProvisioningLaunchDeterministicFlowServiceHost<
-          TestRun,
-          TestLane
-        >['workspaceTrustWorkspaceCollectionPorts'],
       runtimeTurnSettledEnvironmentProvider: null,
       mcpConfigBuilder:
         boundHost.mcpConfigBuilder as TeamProvisioningLaunchDeterministicFlowServiceHost<
@@ -318,8 +320,6 @@ describe('createTeamProvisioningLaunchDeterministicFlowBoundary', () => {
         TestRun,
         TestLane
       >['resolveAndValidateLaunchIdentity'],
-      prepareWorkspaceTrustForDeterministicRun: (...args) =>
-        boundHost.prepareWorkspaceTrustForDeterministicRun(...args),
       resetTeamScopedTransientStateForNewRun: (...args) =>
         boundHost.resetTeamScopedTransientStateForNewRun(...args),
       clearPersistedLaunchState: (teamName) => boundHost.clearPersistedLaunchState(teamName),

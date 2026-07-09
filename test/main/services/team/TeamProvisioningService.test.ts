@@ -25324,7 +25324,7 @@ describe('TeamProvisioningService', () => {
     const svc = new TeamProvisioningService();
 
     expect(
-      (svc as any).collectWorkspaceTrustProviders({
+      (svc as any).workspaceTrustPreSpawnBoundary.collectWorkspaceTrustProviders({
         leadProviderId: 'anthropic',
         members: [{ name: 'alice', provider: 'codex' }],
       })
@@ -25335,7 +25335,7 @@ describe('TeamProvisioningService', () => {
     const svc = new TeamProvisioningService();
 
     expect(
-      (svc as any).collectWorkspaceTrustProviders({
+      (svc as any).workspaceTrustPreSpawnBoundary.collectWorkspaceTrustProviders({
         leadProviderId: 'codex',
         members: [
           { name: 'alice', providerId: 'anthropic' },
@@ -25351,7 +25351,7 @@ describe('TeamProvisioningService', () => {
     const svc = new TeamProvisioningService();
 
     expect(
-      (svc as any).collectWorkspaceTrustProviders({
+      (svc as any).workspaceTrustPreSpawnBoundary.collectWorkspaceTrustProviders({
         leadProviderId: 'codex',
         members: [
           { name: 'alice', providerId: 'codex' },
@@ -25396,7 +25396,7 @@ describe('TeamProvisioningService', () => {
     const svc = new TeamProvisioningService();
 
     expect(
-      (svc as any).collectWorkspaceTrustProviders({
+      (svc as any).workspaceTrustPreSpawnBoundary.collectWorkspaceTrustProviders({
         leadProviderId: input.leadProviderId,
         members: input.members,
       })
@@ -25407,7 +25407,7 @@ describe('TeamProvisioningService', () => {
     const svc = new TeamProvisioningService();
 
     expect(
-      (svc as any).collectWorkspaceTrustProviders({
+      (svc as any).workspaceTrustPreSpawnBoundary.collectWorkspaceTrustProviders({
         leadProviderId: undefined,
         members: [{}],
       })
@@ -25416,7 +25416,7 @@ describe('TeamProvisioningService', () => {
 
   it('uses the canonical repository root for workspace trust git worktree candidates', async () => {
     const svc = new TeamProvisioningService();
-    const harness = svc as unknown as {
+    const harness = (svc as any).workspaceTrustPreSpawnBoundary as {
       collectWorkspaceTrustWorkspaces(input: {
         cwd: string;
         members: Array<{ name: string; cwd: string; isolation: 'worktree' }>;
@@ -25475,7 +25475,7 @@ describe('TeamProvisioningService', () => {
     } as any);
 
     await expect(
-      (svc as any).planWorkspaceTrustArgsOnlySafely({
+      (svc as any).workspaceTrustPreSpawnBoundary.planWorkspaceTrustArgsOnlySafely({
         providers: ['claude', 'codex'],
         workspaces,
         featureFlags: {
@@ -25489,7 +25489,7 @@ describe('TeamProvisioningService', () => {
     ).resolves.toEqual({ launchArgPatches: [] });
 
     await expect(
-      (svc as any).planWorkspaceTrustFullSafely({
+      (svc as any).workspaceTrustPreSpawnBoundary.planWorkspaceTrustFullSafely({
         providers: ['claude', 'codex'],
         workspaces,
         featureFlags: {
@@ -25551,7 +25551,7 @@ describe('TeamProvisioningService', () => {
     (svc as any).runs.set(run.runId, run);
     (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
 
-    await (svc as any).prepareWorkspaceTrustForDeterministicRun({
+    await (svc as any).workspaceTrustPreSpawnBoundary.prepareWorkspaceTrustForDeterministicRun({
       mode: 'create',
       run,
       claudePath: '/usr/local/bin/claude',
@@ -25630,7 +25630,7 @@ describe('TeamProvisioningService', () => {
     (svc as any).runs.set(run.runId, run);
     (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
 
-    await (svc as any).prepareWorkspaceTrustForDeterministicRun({
+    await (svc as any).workspaceTrustPreSpawnBoundary.prepareWorkspaceTrustForDeterministicRun({
       mode: 'create',
       run,
       claudePath: '/usr/local/bin/claude',
@@ -25703,7 +25703,7 @@ describe('TeamProvisioningService', () => {
     (svc as any).runs.set(run.runId, run);
     (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
 
-    await (svc as any).prepareWorkspaceTrustForDeterministicRun({
+    await (svc as any).workspaceTrustPreSpawnBoundary.prepareWorkspaceTrustForDeterministicRun({
       mode: 'create',
       run,
       claudePath: '/usr/local/bin/claude',
@@ -25804,7 +25804,7 @@ describe('TeamProvisioningService', () => {
     (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
 
     await expect(
-      (svc as any).prepareWorkspaceTrustForDeterministicRun({
+      (svc as any).workspaceTrustPreSpawnBoundary.prepareWorkspaceTrustForDeterministicRun({
         mode: 'create',
         run,
         claudePath: '/usr/local/bin/claude',
@@ -25886,7 +25886,7 @@ describe('TeamProvisioningService', () => {
     (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
 
     await expect(
-      (svc as any).prepareWorkspaceTrustForDeterministicRun({
+      (svc as any).workspaceTrustPreSpawnBoundary.prepareWorkspaceTrustForDeterministicRun({
         mode: 'create',
         run,
         claudePath: '/usr/local/bin/claude',
@@ -25952,7 +25952,7 @@ describe('TeamProvisioningService', () => {
       execute,
     } as any);
 
-    await (svc as any).prepareWorkspaceTrustForDeterministicRun({
+    await (svc as any).workspaceTrustPreSpawnBoundary.prepareWorkspaceTrustForDeterministicRun({
       mode: 'create',
       run,
       claudePath: '/usr/local/bin/claude',

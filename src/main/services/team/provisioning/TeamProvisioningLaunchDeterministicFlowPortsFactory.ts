@@ -131,16 +131,12 @@ export interface TeamProvisioningLaunchDeterministicFlowServiceHost<
     TMixedSecondaryLane
   >['provisioningRunByTeam'];
   stopAllTeamsGeneration: number;
-  appShellBoundary: {
-    getWorkspaceTrustCoordinator: TeamProvisioningLaunchDeterministicFlowHost<
-      TRun,
-      TMixedSecondaryLane
-    >['getWorkspaceTrustCoordinator'];
-  };
-  workspaceTrustWorkspaceCollectionPorts: TeamProvisioningLaunchDeterministicFlowHost<
-    TRun,
-    TMixedSecondaryLane
-  >['workspaceTrustWorkspaceCollectionPorts'];
+  workspaceTrustPreSpawnBoundary: Pick<
+    TeamProvisioningLaunchDeterministicFlowHost<TRun, TMixedSecondaryLane>,
+    | 'getWorkspaceTrustCoordinator'
+    | 'workspaceTrustWorkspaceCollectionPorts'
+    | 'prepareWorkspaceTrustForDeterministicRun'
+  >;
   runtimeTurnSettledEnvironmentProvider: ReturnType<
     TeamProvisioningLaunchDeterministicFlowHost<
       TRun,
@@ -219,10 +215,6 @@ export interface TeamProvisioningLaunchDeterministicFlowServiceHost<
     TRun,
     TMixedSecondaryLane
   >['resolveAndValidateLaunchIdentity'];
-  prepareWorkspaceTrustForDeterministicRun: TeamProvisioningLaunchDeterministicFlowHost<
-    TRun,
-    TMixedSecondaryLane
-  >['prepareWorkspaceTrustForDeterministicRun'];
   resetTeamScopedTransientStateForNewRun: TeamProvisioningLaunchDeterministicFlowHost<
     TRun,
     TMixedSecondaryLane
@@ -296,8 +288,10 @@ export function createTeamProvisioningLaunchDeterministicFlowHostFromService<
       buildCrossProviderMemberArgs: (...args) => service.buildCrossProviderMemberArgs(...args),
       validateAgentTeamsMcpRuntime: (...args) => service.validateAgentTeamsMcpRuntime(...args),
     },
-    getWorkspaceTrustCoordinator: () => service.appShellBoundary.getWorkspaceTrustCoordinator(),
-    workspaceTrustWorkspaceCollectionPorts: service.workspaceTrustWorkspaceCollectionPorts,
+    getWorkspaceTrustCoordinator: () =>
+      service.workspaceTrustPreSpawnBoundary.getWorkspaceTrustCoordinator(),
+    workspaceTrustWorkspaceCollectionPorts:
+      service.workspaceTrustPreSpawnBoundary.workspaceTrustWorkspaceCollectionPorts,
     getRuntimeTurnSettledEnvironmentProvider: () => service.runtimeTurnSettledEnvironmentProvider,
     mcpConfigBuilder: service.mcpConfigBuilder,
     teamMetaStore: service.teamMetaStore,
@@ -319,7 +313,7 @@ export function createTeamProvisioningLaunchDeterministicFlowHostFromService<
     createMixedSecondaryLaneStates: (lanePlan) => service.createMixedSecondaryLaneStates(lanePlan),
     resolveAndValidateLaunchIdentity: (params) => service.resolveAndValidateLaunchIdentity(params),
     prepareWorkspaceTrustForDeterministicRun: (input) =>
-      service.prepareWorkspaceTrustForDeterministicRun(input),
+      service.workspaceTrustPreSpawnBoundary.prepareWorkspaceTrustForDeterministicRun(input),
     resetTeamScopedTransientStateForNewRun: (teamName) =>
       service.resetTeamScopedTransientStateForNewRun(teamName),
     clearPersistedLaunchState: (teamName, options) =>

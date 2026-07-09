@@ -13,7 +13,9 @@ function createHost(): TeamProvisioningCreateDeterministicRunFlowServiceHost {
     runs: new Map(),
     provisioningRunByTeam: new Map(),
     resetTeamScopedTransientStateForNewRun: vi.fn(),
-    prepareWorkspaceTrustForDeterministicRun: vi.fn(async () => undefined),
+    workspaceTrustPreSpawnBoundary: {
+      prepareWorkspaceTrustForDeterministicRun: vi.fn(async () => undefined),
+    },
     clearPersistedLaunchState: vi.fn(async () => undefined),
   };
 }
@@ -90,7 +92,9 @@ describe('TeamProvisioningCreateDeterministicRunFlowPortsFactory', () => {
     expect(host.clearPersistedLaunchState).toHaveBeenCalledWith('alpha', {
       expectedRunId: 'run-1',
     });
-    expect(host.prepareWorkspaceTrustForDeterministicRun).toHaveBeenCalledWith(
+    expect(
+      host.workspaceTrustPreSpawnBoundary.prepareWorkspaceTrustForDeterministicRun
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         mode: 'create',
         run,

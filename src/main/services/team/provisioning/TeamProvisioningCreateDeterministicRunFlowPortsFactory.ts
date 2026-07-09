@@ -13,9 +13,11 @@ export interface TeamProvisioningCreateDeterministicRunFlowServiceHost {
   runs: Map<string, ProvisioningRun>;
   provisioningRunByTeam: Map<string, string>;
   resetTeamScopedTransientStateForNewRun(teamName: string): void;
-  prepareWorkspaceTrustForDeterministicRun(
-    input: DeterministicCreateWorkspaceTrustPreparationInput<ProvisioningRun>
-  ): Promise<void>;
+  workspaceTrustPreSpawnBoundary: {
+    prepareWorkspaceTrustForDeterministicRun(
+      input: DeterministicCreateWorkspaceTrustPreparationInput<ProvisioningRun>
+    ): Promise<void>;
+  };
   clearPersistedLaunchState(teamName: string, options: { expectedRunId: string }): Promise<void>;
 }
 
@@ -41,7 +43,7 @@ export function createTeamProvisioningCreateDeterministicRunFlowPortsFromService
       service.provisioningRunByTeam.set(teamName, runId);
     },
     prepareWorkspaceTrustForDeterministicRun: (input) =>
-      service.prepareWorkspaceTrustForDeterministicRun(input),
+      service.workspaceTrustPreSpawnBoundary.prepareWorkspaceTrustForDeterministicRun(input),
     clearPersistedLaunchState: (teamName, options) =>
       service.clearPersistedLaunchState(teamName, options),
     runDeterministicCreateSpawnFlow,

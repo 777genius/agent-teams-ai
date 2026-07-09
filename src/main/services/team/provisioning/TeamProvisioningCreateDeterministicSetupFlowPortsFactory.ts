@@ -17,10 +17,10 @@ export interface TeamProvisioningCreateDeterministicSetupFlowServiceHost {
   buildCrossProviderMemberArgs: CreateSetupPorts['buildCrossProviderMemberArgs'];
   resolveAndValidateLaunchIdentity: CreateSetupPorts['resolveAndValidateLaunchIdentity'];
   createMixedSecondaryLaneStates: CreateSetupPorts['createMixedSecondaryLaneStates'];
-  appShellBoundary: {
+  workspaceTrustPreSpawnBoundary: {
     getWorkspaceTrustCoordinator(): CreateSetupPorts['workspaceTrustCoordinator'];
+    workspaceTrustWorkspaceCollectionPorts: CreateSetupPorts['workspaceTrustWorkspaceCollectionPorts'];
   };
-  workspaceTrustWorkspaceCollectionPorts: CreateSetupPorts['workspaceTrustWorkspaceCollectionPorts'];
   runtimeTurnSettledEnvironmentProvider: CreateSetupPorts['runtimeTurnSettledEnvironmentProvider'];
 }
 
@@ -50,8 +50,10 @@ export function createTeamProvisioningCreateDeterministicSetupFlowPortsFromServi
       service.buildCrossProviderMemberArgs(primaryProviderId, memberSpecs, options),
     resolveAndValidateLaunchIdentity: (params) => service.resolveAndValidateLaunchIdentity(params),
     createMixedSecondaryLaneStates: (lanePlan) => service.createMixedSecondaryLaneStates(lanePlan),
-    workspaceTrustCoordinator: service.appShellBoundary.getWorkspaceTrustCoordinator(),
-    workspaceTrustWorkspaceCollectionPorts: service.workspaceTrustWorkspaceCollectionPorts,
+    workspaceTrustCoordinator:
+      service.workspaceTrustPreSpawnBoundary.getWorkspaceTrustCoordinator(),
+    workspaceTrustWorkspaceCollectionPorts:
+      service.workspaceTrustPreSpawnBoundary.workspaceTrustWorkspaceCollectionPorts,
     runtimeTurnSettledEnvironmentProvider: service.runtimeTurnSettledEnvironmentProvider,
     logger: deps.logger,
   };
