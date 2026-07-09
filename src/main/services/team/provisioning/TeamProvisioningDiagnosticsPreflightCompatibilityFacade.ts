@@ -1,3 +1,5 @@
+import { type TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
+import { type TeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
@@ -33,6 +35,10 @@ import { type TeamProvisioningProviderRuntimeFacade } from './TeamProvisioningPr
 import { type RetainedClaudeLogsSnapshot } from './TeamProvisioningRetainedLogs';
 import { type ProvisioningRun, VERIFY_TIMEOUT_MS } from './TeamProvisioningRunModel';
 import { nowIso } from './TeamProvisioningRunProgress';
+import {
+  planRuntimeLanesOrThrow as planRuntimeLanesOrThrowHelper,
+  shouldRouteOpenCodeToRuntimeAdapter as shouldRouteOpenCodeToRuntimeAdapterHelper,
+} from './TeamProvisioningRuntimeBootstrapDelivery';
 import {
   buildTeamRuntimeLaunchArgsPlan as buildTeamRuntimeLaunchArgsPlanHelper,
   type BuildTeamRuntimeLaunchArgsPlanInput,
@@ -76,6 +82,10 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   TRun extends ProvisioningRun = ProvisioningRun,
 > extends TeamProvisioningStatusQueryCompatibilityFacade<TRun> {
   protected abstract readonly launchIdentityBoundary: TeamProvisioningLaunchIdentityBoundary;
+  protected abstract readonly runtimeLaneCoordinator: Pick<
+    TeamRuntimeLaneCoordinator,
+    'planProvisioningMembers'
+  >;
   protected abstract readonly runTracking: Pick<
     TeamProvisioningRunTrackingDeliveryHelper<TRun>,
     'canDeliverToOpenCodeRuntimeForTeam' | 'getAliveRunId' | 'getAliveTeamNames' | 'getTrackedRunId'
@@ -272,6 +282,43 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     }
   ): Promise<TeamProvisioningPrepareResult> {
     return this.prepareFacade.prepareForProvisioning(cwd, opts);
+  }
+
+  protected materializeEffectiveTeamMemberSpecs(
+    params: Parameters<TeamProvisioningPrepareFacade['materializeEffectiveTeamMemberSpecs']>[0]
+  ): ReturnType<TeamProvisioningPrepareFacade['materializeEffectiveTeamMemberSpecs']> {
+    return this.prepareFacade.materializeEffectiveTeamMemberSpecs(params);
+  }
+
+  protected resolveOpenCodeMemberWorkspacesForRuntime(
+    params: Parameters<
+      TeamProvisioningPrepareFacade['resolveOpenCodeMemberWorkspacesForRuntime']
+    >[0]
+  ): ReturnType<TeamProvisioningPrepareFacade['resolveOpenCodeMemberWorkspacesForRuntime']> {
+    return this.prepareFacade.resolveOpenCodeMemberWorkspacesForRuntime(params);
+  }
+
+  protected shouldRouteOpenCodeToRuntimeAdapter(request: {
+    providerId?: TeamProviderId;
+    members?: readonly { providerId?: TeamProviderId; provider?: TeamProviderId }[];
+  }): boolean {
+    return shouldRouteOpenCodeToRuntimeAdapterHelper(
+      request,
+      this.appShellBoundary.getOpenCodeRuntimeAdapter() !== null
+    );
+  }
+
+  protected planRuntimeLanesOrThrow(
+    leadProviderId: TeamProviderId | undefined,
+    members: TeamCreateRequest['members'],
+    baseCwd?: string
+  ): TeamRuntimeLanePlan {
+    return planRuntimeLanesOrThrowHelper(this.runtimeLaneCoordinator, {
+      leadProviderId,
+      members,
+      baseCwd,
+      hasOpenCodeRuntimeAdapter: this.appShellBoundary.getOpenCodeRuntimeAdapter() !== null,
+    });
   }
 
   getCurrentRunId(teamName: string): string | null {

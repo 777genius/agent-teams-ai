@@ -1,4 +1,3 @@
-import { type TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import { createTeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
@@ -303,10 +302,6 @@ import {
 import { nowIso, updateProgress } from './provisioning/TeamProvisioningRunProgress';
 import { TeamProvisioningRuntimeAdapterProgressState } from './provisioning/TeamProvisioningRuntimeAdapterProgressState';
 import {
-  planRuntimeLanesOrThrow as planRuntimeLanesOrThrowHelper,
-  shouldRouteOpenCodeToRuntimeAdapter as shouldRouteOpenCodeToRuntimeAdapterHelper,
-} from './provisioning/TeamProvisioningRuntimeBootstrapDelivery';
-import {
   getAnthropicFastModeDefault,
   getTeamProviderLabel,
 } from './provisioning/TeamProvisioningRuntimeDiagnostics';
@@ -407,7 +402,6 @@ import type {
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamMember,
-  TeamProviderId,
   TeamProvisioningProgress,
 } from '@shared/types';
 
@@ -424,7 +418,7 @@ const claudePermissionSettingsFilePorts: ClaudePermissionSettingsFilePorts = {
 };
 
 export class TeamProvisioningService extends TeamProvisioningLaunchStateCompatibilityFacade<ProvisioningRun> {
-  private readonly runtimeLaneCoordinator = createTeamRuntimeLaneCoordinator();
+  protected readonly runtimeLaneCoordinator = createTeamRuntimeLaneCoordinator();
   private readonly providerConnectionService = ProviderConnectionService.getInstance();
   protected readonly launchIdentityBoundary: TeamProvisioningLaunchIdentityBoundary =
     createTeamProvisioningLaunchIdentityBoundary({
@@ -1049,20 +1043,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchStateCompatib
     );
   }
 
-  private materializeEffectiveTeamMemberSpecs(
-    params: Parameters<TeamProvisioningPrepareFacade['materializeEffectiveTeamMemberSpecs']>[0]
-  ): ReturnType<TeamProvisioningPrepareFacade['materializeEffectiveTeamMemberSpecs']> {
-    return this.prepareFacade.materializeEffectiveTeamMemberSpecs(params);
-  }
-
-  private resolveOpenCodeMemberWorkspacesForRuntime(
-    params: Parameters<
-      TeamProvisioningPrepareFacade['resolveOpenCodeMemberWorkspacesForRuntime']
-    >[0]
-  ): ReturnType<TeamProvisioningPrepareFacade['resolveOpenCodeMemberWorkspacesForRuntime']> {
-    return this.prepareFacade.resolveOpenCodeMemberWorkspacesForRuntime(params);
-  }
-
   private writeOpenCodeTeamConfig(
     launchRequest: Parameters<typeof writeOpenCodeTeamConfig>[0],
     members: Parameters<typeof writeOpenCodeTeamConfig>[1]
@@ -1145,29 +1125,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchStateCompatib
       teamName,
       input
     );
-  }
-
-  private shouldRouteOpenCodeToRuntimeAdapter(request: {
-    providerId?: TeamProviderId;
-    members?: readonly { providerId?: TeamProviderId; provider?: TeamProviderId }[];
-  }): boolean {
-    return shouldRouteOpenCodeToRuntimeAdapterHelper(
-      request,
-      this.appShellBoundary.getOpenCodeRuntimeAdapter() !== null
-    );
-  }
-
-  private planRuntimeLanesOrThrow(
-    leadProviderId: TeamProviderId | undefined,
-    members: TeamCreateRequest['members'],
-    baseCwd?: string
-  ): TeamRuntimeLanePlan {
-    return planRuntimeLanesOrThrowHelper(this.runtimeLaneCoordinator, {
-      leadProviderId,
-      members,
-      baseCwd,
-      hasOpenCodeRuntimeAdapter: this.appShellBoundary.getOpenCodeRuntimeAdapter() !== null,
-    });
   }
 
   private createMixedSecondaryLaneStates(

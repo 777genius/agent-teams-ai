@@ -1,15 +1,44 @@
+import { type TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import { describe, expect, it, vi } from 'vitest';
 
+import { TeamRuntimeAdapterRegistry } from '../../runtime';
 import { TeamProvisioningDiagnosticsPreflightCompatibilityFacade } from '../TeamProvisioningDiagnosticsPreflightCompatibilityFacade';
 
+import type { TeamLaunchRuntimeAdapter, TeamRuntimeProviderId } from '../../runtime';
 import type { TeamProvisioningCompatibilityDelegation } from '../TeamProvisioningCompatibilityFacade';
 import type { TeamProvisioningMemberLifecyclePublicFacade } from '../TeamProvisioningMemberLifecycleCompatibilityFacade';
 import type { TeamProvisioningPrepareFacade } from '../TeamProvisioningPrepareFacade';
 import type { ProvisioningRun } from '../TeamProvisioningRunModel';
+import type { TeamCreateRequest, TeamProviderId } from '@shared/types';
+
+function createRuntimeAdapter(providerId: TeamRuntimeProviderId): TeamLaunchRuntimeAdapter {
+  return {
+    providerId,
+    prepare: vi.fn(),
+    launch: vi.fn(),
+    reconcile: vi.fn(),
+    stop: vi.fn(),
+  } as unknown as TeamLaunchRuntimeAdapter;
+}
 
 class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagnosticsPreflightCompatibilityFacade<ProvisioningRun> {
   readonly prepareResult = { prepared: true };
+  readonly materializedMembers = [
+    { name: 'Worker', role: 'Build' },
+  ] as TeamCreateRequest['members'];
+  readonly workspaceMembers = [
+    { name: 'OpenCode', role: 'Review', providerId: 'opencode', cwd: '/repo/opencode' },
+  ] as TeamCreateRequest['members'];
   readonly validConfigResult = { ok: false } as const;
+  readonly lanePlan = {
+    mode: 'primary_only',
+    primaryMembers: [],
+    allMembers: [],
+    sideLanes: [],
+  } as TeamRuntimeLanePlan;
+  readonly runtimeLaneCoordinator = {
+    planProvisioningMembers: vi.fn(() => this.lanePlan),
+  };
   readonly runTracking = {
     canDeliverToOpenCodeRuntimeForTeam: vi.fn(() => true),
     getAliveRunId: vi.fn(() => 'run-alive'),
@@ -29,6 +58,8 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
   readonly prepareFacadeMock = {
     warmup: vi.fn(async () => undefined),
     prepareForProvisioning: vi.fn(async () => this.prepareResult),
+    materializeEffectiveTeamMemberSpecs: vi.fn(async () => this.materializedMembers),
+    resolveOpenCodeMemberWorkspacesForRuntime: vi.fn(async () => this.workspaceMembers),
   };
   readonly shutdownCoordination = {
     getShutdownTrackedTeamNames: vi.fn(() => ['alpha']),
@@ -122,6 +153,35 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
     return this.pathExists(filePath);
   }
 
+  materializeEffectiveTeamMemberSpecsForTest(
+    params: Parameters<TeamProvisioningPrepareFacade['materializeEffectiveTeamMemberSpecs']>[0]
+  ) {
+    return this.materializeEffectiveTeamMemberSpecs(params);
+  }
+
+  resolveOpenCodeMemberWorkspacesForRuntimeForTest(
+    params: Parameters<
+      TeamProvisioningPrepareFacade['resolveOpenCodeMemberWorkspacesForRuntime']
+    >[0]
+  ) {
+    return this.resolveOpenCodeMemberWorkspacesForRuntime(params);
+  }
+
+  shouldRouteOpenCodeToRuntimeAdapterForTest(request: {
+    providerId?: TeamProviderId;
+    members?: readonly { providerId?: TeamProviderId; provider?: TeamProviderId }[];
+  }) {
+    return this.shouldRouteOpenCodeToRuntimeAdapter(request);
+  }
+
+  planRuntimeLanesOrThrowForTest(
+    leadProviderId: TeamProviderId | undefined,
+    members: TeamCreateRequest['members'],
+    baseCwd?: string
+  ) {
+    return this.planRuntimeLanesOrThrow(leadProviderId, members, baseCwd);
+  }
+
   protected async findBootstrapTranscriptOutcome() {
     return null;
   }
@@ -174,6 +234,62 @@ describe('TeamProvisioningDiagnosticsPreflightCompatibilityFacade', () => {
     expect(facade.prepareFacadeMock.warmup).toHaveBeenCalled();
     expect(facade.prepareFacadeMock.prepareForProvisioning).toHaveBeenCalledWith('/repo', {
       forceFresh: true,
+    });
+  });
+
+  it('keeps prepare and runtime lane preflight wrappers outside the service facade', async () => {
+    const facade = new TestDiagnosticsPreflightCompatibilityFacade();
+    const members = [
+      { name: 'Worker', role: 'Build', providerId: 'opencode' },
+    ] as TeamCreateRequest['members'];
+    const materializeParams = {
+      claudePath: '/fake/claude',
+      cwd: '/repo',
+      members,
+      defaults: { providerId: 'codex' },
+    } as Parameters<TeamProvisioningPrepareFacade['materializeEffectiveTeamMemberSpecs']>[0];
+    const workspaceParams = {
+      teamName: 'alpha',
+      baseCwd: '/repo',
+      leadProviderId: 'codex',
+      members,
+    } as Parameters<TeamProvisioningPrepareFacade['resolveOpenCodeMemberWorkspacesForRuntime']>[0];
+
+    await expect(
+      facade.materializeEffectiveTeamMemberSpecsForTest(materializeParams)
+    ).resolves.toBe(facade.materializedMembers);
+    await expect(
+      facade.resolveOpenCodeMemberWorkspacesForRuntimeForTest(workspaceParams)
+    ).resolves.toBe(facade.workspaceMembers);
+
+    expect(
+      facade.shouldRouteOpenCodeToRuntimeAdapterForTest({
+        providerId: 'opencode',
+        members,
+      })
+    ).toBe(false);
+    facade.setRuntimeAdapterRegistry(
+      new TeamRuntimeAdapterRegistry([createRuntimeAdapter('opencode')])
+    );
+    expect(
+      facade.shouldRouteOpenCodeToRuntimeAdapterForTest({
+        providerId: 'opencode',
+        members,
+      })
+    ).toBe(true);
+    expect(facade.planRuntimeLanesOrThrowForTest('codex', members, '/repo')).toBe(facade.lanePlan);
+
+    expect(facade.prepareFacadeMock.materializeEffectiveTeamMemberSpecs).toHaveBeenCalledWith(
+      materializeParams
+    );
+    expect(facade.prepareFacadeMock.resolveOpenCodeMemberWorkspacesForRuntime).toHaveBeenCalledWith(
+      workspaceParams
+    );
+    expect(facade.runtimeLaneCoordinator.planProvisioningMembers).toHaveBeenCalledWith({
+      leadProviderId: 'codex',
+      members,
+      baseCwd: '/repo',
+      hasOpenCodeRuntimeAdapter: true,
     });
   });
 
