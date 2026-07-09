@@ -5,11 +5,11 @@ import {
   coerceSearchMaxResults,
   validateFromField,
   validateMemberName,
-  validateTeammateName,
   validateProjectId,
   validateSearchQuery,
   validateSessionId,
   validateTaskId,
+  validateTeammateName,
   validateTeamName,
 } from '../../../src/main/ipc/guards';
 
@@ -81,5 +81,10 @@ describe('ipc guards', () => {
     expect(validateTaskId('NUL').valid).toBe(false);
     expect(validateMemberName('com1').valid).toBe(false);
     expect(validateMemberName('lpt9.txt').valid).toBe(false);
+  });
+
+  it('rejects member names that are unsafe as inbox file names', () => {
+    expect(validateMemberName('alice.').valid).toBe(false);
+    expect(validateTeammateName('reviewer.').valid).toBe(false);
   });
 });

@@ -8,6 +8,41 @@ export function parseNumericSuffixName(name: string): { base: string; suffix: nu
   return { base: match[1], suffix };
 }
 
+const WINDOWS_RESERVED_MEMBER_FILE_STEMS = new Set([
+  'con',
+  'prn',
+  'aux',
+  'nul',
+  'com1',
+  'com2',
+  'com3',
+  'com4',
+  'com5',
+  'com6',
+  'com7',
+  'com8',
+  'com9',
+  'lpt1',
+  'lpt2',
+  'lpt3',
+  'lpt4',
+  'lpt5',
+  'lpt6',
+  'lpt7',
+  'lpt8',
+  'lpt9',
+]);
+
+function isWindowsReservedMemberFileSegment(name: string): boolean {
+  const normalized = name
+    .trim()
+    .replace(/[. ]+$/g, '')
+    .toLowerCase();
+  if (!normalized) return false;
+  const stem = normalized.split('.')[0] || normalized;
+  return WINDOWS_RESERVED_MEMBER_FILE_STEMS.has(stem);
+}
+
 export function validateTeamMemberNameFormat(name: string): string | null {
   const trimmed = name.trim();
   if (!trimmed) return null;
@@ -19,6 +54,12 @@ export function validateTeamMemberNameFormat(name: string): string | null {
   }
   if (!/^[a-zA-Z0-9._-]+$/.test(trimmed)) {
     return 'Start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars';
+  }
+  if (/[. ]$/.test(trimmed)) {
+    return 'Member name cannot end with a space or period';
+  }
+  if (isWindowsReservedMemberFileSegment(trimmed)) {
+    return 'Member name is reserved on Windows';
   }
   return null;
 }

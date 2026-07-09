@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   const files = new Map<string, string>();
+  const realpaths = new Map<string, string>();
   let idCounter = 0;
   let dropWrites = 0;
 
@@ -27,10 +28,22 @@ const hoisted = vi.hoisted(() => {
     files.set(norm(filePath), data);
   });
 
+  const realpathSync = vi.fn((filePath: string) => {
+    const data = realpaths.get(norm(filePath));
+    if (data === undefined) {
+      const error = new Error('ENOENT') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    }
+    return data;
+  });
+
   return {
     files,
+    realpaths,
     readFile,
     atomicWrite,
+    realpathSync,
     nextId: () => `msg-${++idCounter}`,
     resetCounter: () => {
       idCounter = 0;
@@ -53,6 +66,7 @@ vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>();
   return {
     ...actual,
+    realpathSync: Object.assign(hoisted.realpathSync, { native: hoisted.realpathSync }),
     promises: {
       ...actual.promises,
       readFile: hoisted.readFile,
@@ -85,8 +99,10 @@ describe('TeamInboxWriter', () => {
 
   beforeEach(() => {
     hoisted.files.clear();
+    hoisted.realpaths.clear();
     hoisted.readFile.mockClear();
     hoisted.atomicWrite.mockClear();
+    hoisted.realpathSync.mockClear();
     hoisted.resetCounter();
     hoisted.setDropWrites(0);
   });
@@ -122,6 +138,21 @@ describe('TeamInboxWriter', () => {
 
     expect(hoisted.atomicWrite).not.toHaveBeenCalled();
     expect(hoisted.files.has('/mock/teams/my-team/config.json')).toBe(false);
+  });
+
+  it('rejects symlinked inbox directories outside the teams root before writing', async () => {
+    hoisted.realpaths.set('/mock/teams', '/mock/teams');
+    hoisted.realpaths.set('/mock/teams/my-team', '/mock/teams/my-team');
+    hoisted.realpaths.set('/mock/teams/my-team/inboxes', '/tmp/outside-inboxes');
+
+    await expect(
+      writer.sendMessage('my-team', {
+        member: 'alice',
+        text: 'should not follow symlinked inbox dir',
+      })
+    ).rejects.toThrow('Invalid inbox path');
+
+    expect(hoisted.atomicWrite).not.toHaveBeenCalled();
   });
 
   it('retries write when verify cannot find messageId', async () => {

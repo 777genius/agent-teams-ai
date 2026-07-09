@@ -1,16 +1,25 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   createCliAutoSuffixNameGuard,
   createCliProvisionerNameGuard,
   parseNumericSuffixName,
+  validateTeamMemberNameFormat,
 } from '@shared/utils/teamMemberName';
+import { describe, expect, it } from 'vitest';
 
 describe('teamMemberName helpers', () => {
   it('parses numeric suffix names', () => {
     expect(parseNumericSuffixName('alice-2')).toEqual({ base: 'alice', suffix: 2 });
     expect(parseNumericSuffixName('alice')).toBeNull();
     expect(parseNumericSuffixName('')).toBeNull();
+  });
+
+  it('rejects member names that are unsafe as inbox file segments', () => {
+    expect(validateTeamMemberNameFormat('alice')).toBeNull();
+    expect(validateTeamMemberNameFormat('alice.')).toBe(
+      'Member name cannot end with a space or period'
+    );
+    expect(validateTeamMemberNameFormat('con')).toBe('Member name is reserved on Windows');
+    expect(validateTeamMemberNameFormat('lpt9.txt')).toBe('Member name is reserved on Windows');
   });
 
   it('drops cli auto-suffixed names only when the base name also exists', () => {
