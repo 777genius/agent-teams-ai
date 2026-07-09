@@ -84,6 +84,18 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
       await expect(
         crossTeamPort.verify({ destination, destinationMessageId: 'cross-message-1' })
       ).resolves.toMatchObject({
+        found: false,
+        location: null,
+        diagnostics: ['cross-team target runtime proof required'],
+      });
+
+      await expect(
+        crossTeamPort.verify({
+          destination,
+          destinationMessageId: 'cross-message-1',
+          location: destination,
+        })
+      ).resolves.toMatchObject({
         found: true,
         location: destination,
       });

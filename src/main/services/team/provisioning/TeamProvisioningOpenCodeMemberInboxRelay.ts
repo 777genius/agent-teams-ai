@@ -243,7 +243,13 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
         });
         return buildOpenCodeMemberWorkSyncReadWaitingResult(onlyMessageId);
       }
-      return buildOpenCodeMemberInboxAlreadyReadResult();
+      const alreadyReadRecord = await readOpenCodeAlreadyReadProofRecord({
+        teamName,
+        memberName,
+        messageId: onlyMessageId,
+        ports,
+      });
+      return buildOpenCodeMemberInboxAlreadyReadResult(alreadyReadRecord);
     }
     if (!targetMessage) {
       return buildOpenCodeMemberInboxMessageMissingResult({
@@ -287,6 +293,36 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
   }
 }
 
+async function readOpenCodeAlreadyReadProofRecord(input: {
+  teamName: string;
+  memberName: string;
+  messageId: string;
+  ports: RelayOpenCodeMemberInboxMessagesPorts;
+}): Promise<OpenCodePromptDeliveryLedgerRecord | null> {
+  try {
+    if (!(await input.ports.isOpenCodeRuntimeRecipient(input.teamName, input.memberName))) {
+      return null;
+    }
+    const memberIdentity = await input.ports.resolveOpenCodeMemberDeliveryIdentity(
+      input.teamName,
+      input.memberName
+    );
+    if (!memberIdentity.ok) {
+      return null;
+    }
+    return await input.ports
+      .createOpenCodePromptDeliveryLedger(input.teamName, memberIdentity.laneId)
+      .getByInboxMessage({
+        teamName: input.teamName,
+        memberName: memberIdentity.canonicalMemberName,
+        laneId: memberIdentity.laneId,
+        inboxMessageId: input.messageId,
+      });
+  } catch {
+    return null;
+  }
+}
+
 async function runOpenCodeMemberInboxRelayWork(
   input: RelayOpenCodeMemberInboxMessagesInput,
   ports: RelayOpenCodeMemberInboxMessagesPorts
@@ -317,7 +353,15 @@ async function runOpenCodeMemberInboxRelayWork(
   if (onlyMessageId) {
     const targetMessage = inboxMessages.find((message) => message.messageId === onlyMessageId);
     if (targetMessage?.read && targetMessage.messageKind !== 'member_work_sync_nudge') {
-      return buildOpenCodeMemberInboxAlreadyReadResult();
+      const alreadyReadRecord = await promptLedger
+        .getByInboxMessage({
+          teamName,
+          memberName: memberIdentity.canonicalMemberName,
+          laneId: memberIdentity.laneId,
+          inboxMessageId: onlyMessageId,
+        })
+        .catch(() => null);
+      return buildOpenCodeMemberInboxAlreadyReadResult(alreadyReadRecord);
     }
     if (!targetMessage) {
       return buildOpenCodeMemberInboxMessageMissingResult({
@@ -599,11 +643,33 @@ export function buildOpenCodeMemberInboxRelayTimeoutResult(input: {
   });
 }
 
-export function buildOpenCodeMemberInboxAlreadyReadResult(): OpenCodeMemberInboxRelayResult {
+export function buildOpenCodeMemberInboxAlreadyReadResult(
+  record?: OpenCodePromptDeliveryLedgerRecord | null
+): OpenCodeMemberInboxRelayResult {
+  const committed = Boolean(record?.inboxReadCommittedAt);
+  const diagnostics = [
+    committed ? 'opencode_inbox_read_already_committed' : 'opencode_inbox_message_already_read',
+  ];
   return createOpenCodeMemberInboxRelayResult({
     attempted: 1,
     delivered: 1,
-    lastDelivery: { delivered: true },
+    lastDelivery: {
+      delivered: true,
+      ...(committed ? { accepted: true, responsePending: false } : {}),
+      ...(record?.responseState ? { responseState: record.responseState } : {}),
+      ...(record?.status ? { ledgerStatus: record.status } : {}),
+      ...(record?.id ? { ledgerRecordId: record.id } : {}),
+      ...(record?.laneId ? { laneId: record.laneId } : {}),
+      ...(record?.visibleReplyMessageId
+        ? { visibleReplyMessageId: record.visibleReplyMessageId }
+        : {}),
+      ...(record?.visibleReplyCorrelation
+        ? { visibleReplyCorrelation: record.visibleReplyCorrelation }
+        : {}),
+      reason: diagnostics[0],
+      diagnostics,
+    },
+    diagnostics,
   });
 }
 

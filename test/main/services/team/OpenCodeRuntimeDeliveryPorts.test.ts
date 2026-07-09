@@ -83,7 +83,10 @@ describe('OpenCodeRuntimeDeliveryPorts', () => {
         },
         destinationMessageId: 'runtime-delivery-message',
       })
-    ).resolves.toMatchObject({ found: true });
+    ).resolves.toMatchObject({
+      found: false,
+      diagnostics: ['cross-team target runtime proof required'],
+    });
     await expect(
       port.verify({
         destination: {
@@ -96,6 +99,56 @@ describe('OpenCodeRuntimeDeliveryPorts', () => {
         location,
       })
     ).resolves.toMatchObject({ found: true });
+  });
+
+  it('does not treat a sender copy as cross-team runtime proof without a write result', async () => {
+    const sentMessages: InboxMessage[] = [
+      {
+        from: 'Builder',
+        to: 'team-b.Reviewer',
+        text: 'Please review this',
+        timestamp: '2026-04-21T12:00:00.000Z',
+        read: true,
+        messageId: 'runtime-delivery-message',
+        source: CROSS_TEAM_SENT_SOURCE,
+      },
+    ];
+    const port = getCrossTeamPort(
+      createOpenCodeRuntimeDeliveryPorts({
+        sentMessagesStore: {
+          appendMessage: vi.fn(() => Promise.resolve()),
+          readMessages: vi.fn(() => Promise.resolve(sentMessages)),
+        },
+        inboxReader: {
+          getMessagesFor: vi.fn(() => Promise.resolve([])),
+        },
+        inboxWriter: {
+          sendMessage: vi.fn(() =>
+            Promise.resolve({
+              deliveredToInbox: true,
+              messageId: 'unused',
+            })
+          ),
+        },
+        getCrossTeamSender: () => vi.fn(),
+      })
+    );
+
+    await expect(
+      port.verify({
+        destination: {
+          kind: 'cross_team_outbox',
+          fromTeamName: 'team-a',
+          toTeamName: 'team-b',
+          toMemberName: 'Reviewer',
+        },
+        destinationMessageId: 'runtime-delivery-message',
+      })
+    ).resolves.toMatchObject({
+      found: false,
+      location: null,
+      diagnostics: ['cross-team target runtime proof required'],
+    });
   });
 
   it('repairs missing sender-copy proof after live cross-team delivery succeeds', async () => {

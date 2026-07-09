@@ -323,6 +323,63 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     });
   });
 
+  it('projects already-read rows with committed ledger proof as explicit accepted delivery', async () => {
+    const committed = ledgerRecord({
+      id: 'committed-record',
+      status: 'responded',
+      responseState: 'responded_visible_message',
+      inboxReadCommittedAt: '2026-01-01T00:00:01.000Z',
+      visibleReplyMessageId: 'reply-1',
+      visibleReplyCorrelation: 'relayOfMessageId',
+    });
+    const getByInboxMessage = vi.fn().mockResolvedValue(committed);
+    const deliverOpenCodeMemberMessage = vi.fn();
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      {
+        teamName: 'team',
+        memberName: 'worker',
+        relayKey: 'team/worker',
+        options: { onlyMessageId: 'message-1' },
+      },
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([message({ read: true })]),
+        createOpenCodePromptDeliveryLedger: vi.fn(
+          () =>
+            ({
+              getByInboxMessage,
+            }) as unknown as OpenCodePromptDeliveryLedgerStore
+        ),
+        deliverOpenCodeMemberMessage,
+      })
+    );
+
+    expect(getByInboxMessage).toHaveBeenCalledWith({
+      teamName: 'team',
+      memberName: 'worker',
+      laneId: 'lane-worker',
+      inboxMessageId: 'message-1',
+    });
+    expect(deliverOpenCodeMemberMessage).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      attempted: 1,
+      delivered: 1,
+      failed: 0,
+      lastDelivery: {
+        delivered: true,
+        accepted: true,
+        responsePending: false,
+        responseState: 'responded_visible_message',
+        ledgerStatus: 'responded',
+        ledgerRecordId: 'committed-record',
+        laneId: 'lane-worker',
+        visibleReplyMessageId: 'reply-1',
+        visibleReplyCorrelation: 'relayOfMessageId',
+        reason: 'opencode_inbox_read_already_committed',
+      },
+    });
+  });
+
   it('selects deliverable unread rows while preserving work-sync read retry semantics', () => {
     const rows = [
       message({ messageId: 'read-normal', read: true }),

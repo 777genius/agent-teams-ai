@@ -349,12 +349,7 @@ async function startLiveTeamControlApi(
   close: () => Promise<void>;
 }> {
   const app = Fastify({ logger: false });
-  registerTeamRoutes(app, {
-    teamProvisioningStartApi: svc,
-    teamProvisioningStatusApi: svc,
-    teamRuntimeApi: svc,
-    ...extraServices,
-  } as HttpServices);
+  registerTeamRoutes(app, buildLiveTeamControlApiServices(svc, extraServices) as HttpServices);
   await app.listen({ host: '127.0.0.1', port: 0 });
   const address = app.server.address();
   if (!address || typeof address === 'string') {
@@ -367,6 +362,19 @@ async function startLiveTeamControlApi(
     close: async () => {
       await app.close();
     },
+  };
+}
+
+export function buildLiveTeamControlApiServices(
+  svc: TeamProvisioningService,
+  extraServices: Partial<HttpServices> = {}
+): Partial<HttpServices> {
+  return {
+    teamProvisioningStartApi: svc,
+    teamProvisioningStatusApi: svc,
+    teamRuntimeApi: svc,
+    teamRuntimeControlApi: svc,
+    ...extraServices,
   };
 }
 

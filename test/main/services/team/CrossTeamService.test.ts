@@ -1,12 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as fs from 'fs';
-
 import { CrossTeamService } from '@main/services/team/CrossTeamService';
 import {
   CROSS_TEAM_SENT_SOURCE,
   CROSS_TEAM_SOURCE,
   parseCrossTeamPrefix,
 } from '@shared/constants/crossTeam';
+import * as fs from 'fs';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import type { TeamDataService } from '@main/services/team/TeamDataService';
@@ -292,6 +291,23 @@ describe('CrossTeamService', () => {
       await expect(
         service.send(makeRequest({ requireRuntimeDelivery: true }))
       ).rejects.toThrow('Cross-team runtime delivery was not confirmed for team-b.team-lead');
+      expect(fs.existsSync(`${MOCK_TEAMS_BASE_PATH}/teams/team-a/sentMessages.json`)).toBe(false);
+    });
+
+    it('writes runtime-required sender copy only after live runtime proof', async () => {
+      const sentMessagesPath = `${MOCK_TEAMS_BASE_PATH}/teams/team-a/sentMessages.json`;
+      provisioning.relayInboxFileToLiveRecipient.mockImplementation(async () => {
+        expect(fs.existsSync(sentMessagesPath)).toBe(false);
+        return {
+          kind: 'native_lead',
+          relayed: 1,
+        };
+      });
+
+      const result = await service.send(makeRequest({ requireRuntimeDelivery: true }));
+
+      expect(result.deliveredToInbox).toBe(true);
+      expect(fs.existsSync(sentMessagesPath)).toBe(true);
     });
 
     it('accepts OpenCode runtime proof when the target runtime accepted the prompt', async () => {

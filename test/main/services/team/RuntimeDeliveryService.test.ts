@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createOpenCodeRuntimeDeliveryPorts } from '../../../../src/main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryPorts';
 import {
   buildRuntimeDestinationMessageId,
   createRuntimeDeliveryJournalStore,
@@ -12,7 +13,6 @@ import {
   type RuntimeDeliveryEnvelope,
   type RuntimeDeliveryLocation,
 } from '../../../../src/main/services/team/opencode/delivery/RuntimeDeliveryJournal';
-import { createOpenCodeRuntimeDeliveryPorts } from '../../../../src/main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryPorts';
 import {
   type RuntimeDeliveryDestinationPort,
   RuntimeDeliveryDestinationRegistry,
@@ -281,7 +281,6 @@ describe('RuntimeDeliveryService', () => {
     const crossTeamEnvelope = envelope({
       to: { teamName: 'team-b', memberName: 'Reviewer' },
     });
-    const destinationMessageId = buildRuntimeDestinationMessageId(crossTeamEnvelope);
     const deliveredMessageId = 'deduplicated-runtime-cross-team-message';
     const crossTeamSender = vi.fn(() =>
       Promise.resolve({
@@ -347,6 +346,70 @@ describe('RuntimeDeliveryService', () => {
       }),
     });
     expect(diagnostics.append).not.toHaveBeenCalled();
+  });
+
+  it('does not commit cross-team retry from sender-copy proof without target runtime proof', async () => {
+    const crossTeamEnvelope = envelope({
+      to: { teamName: 'team-b', memberName: 'Reviewer' },
+    });
+    const destinationMessageId = buildRuntimeDestinationMessageId(crossTeamEnvelope);
+    const sentMessages: InboxMessage[] = [
+      {
+        from: 'Builder',
+        to: 'team-b.Reviewer',
+        text: 'Please review this',
+        timestamp: '2026-04-21T12:00:00.000Z',
+        read: true,
+        messageId: destinationMessageId,
+        source: CROSS_TEAM_SENT_SOURCE,
+      },
+    ];
+    const crossTeamSender = vi.fn(() =>
+      Promise.resolve({
+        messageId: destinationMessageId,
+        deliveredToInbox: true,
+        toTeam: 'team-b',
+        toMember: 'Reviewer',
+      })
+    );
+    const service = new RuntimeDeliveryService(
+      runState,
+      journal,
+      new RuntimeDeliveryDestinationRegistry(
+        createOpenCodeRuntimeDeliveryPorts({
+          sentMessagesStore: {
+            appendMessage: vi.fn(),
+            readMessages: vi.fn(() => Promise.resolve(sentMessages)),
+          },
+          inboxReader: {
+            getMessagesFor: vi.fn(() => Promise.resolve([])),
+          },
+          inboxWriter: {
+            sendMessage: vi.fn(),
+          },
+          getCrossTeamSender: () => crossTeamSender,
+        })
+      ),
+      diagnostics,
+      emitter,
+      () => now
+    );
+
+    const ack = await service.deliver(crossTeamEnvelope);
+
+    expect(ack).toMatchObject({
+      ok: true,
+      delivered: true,
+      reason: null,
+    });
+    expect(crossTeamSender).toHaveBeenCalledTimes(1);
+    await expect(journal.get(crossTeamEnvelope.idempotencyKey)).resolves.toMatchObject({
+      status: 'committed',
+      committedLocation: expect.objectContaining({
+        kind: 'cross_team_outbox',
+        messageId: destinationMessageId,
+      }),
+    });
   });
 });
 

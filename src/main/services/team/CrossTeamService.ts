@@ -209,39 +209,43 @@ export class CrossTeamService {
       return result;
     }
 
-    // 6. Write a non-actionable sender copy so the message appears in activity without
-    // waking the local lead through their inbox controller.
-    try {
-      createController({
-        teamName: fromTeam,
-        claudeDir: getClaudeBasePath(),
-      }).messages.appendSentMessage({
-        from: fromMember,
-        to: `${toTeam}.${targetMemberName}`,
-        text,
-        taskRefs,
-        timestamp,
-        messageId,
-        summary: summary ?? `Cross-team message to ${toTeam}`,
-        source: CROSS_TEAM_SENT_SOURCE,
-        conversationId,
-        replyToConversationId,
-      });
-      this.messaging?.clearPendingCrossTeamReplyExpectation(fromTeam, toTeam, conversationId);
-    } catch (e: unknown) {
-      logger.warn(
-        `Failed to write sender copy for ${fromTeam}: ${e instanceof Error ? e.message : String(e)}`
-      );
-    }
-
     if (request.requireRuntimeDelivery) {
       await this.requireCrossTeamRuntimeDelivery({
         teamName: toTeam,
         memberName: targetMemberName,
         messageId,
       });
+      this.appendSenderCopy({
+        fromTeam,
+        fromMember,
+        toTeam,
+        targetMemberName,
+        text,
+        taskRefs,
+        timestamp,
+        messageId,
+        summary,
+        conversationId,
+        replyToConversationId,
+      });
       return { messageId, deliveredToInbox: true, toTeam, toMember: targetMemberName };
     }
+
+    // 6. Write a non-actionable sender copy so the message appears in activity without
+    // waking the local lead through their inbox controller.
+    this.appendSenderCopy({
+      fromTeam,
+      fromMember,
+      toTeam,
+      targetMemberName,
+      text,
+      taskRefs,
+      timestamp,
+      messageId,
+      summary,
+      conversationId,
+      replyToConversationId,
+    });
 
     // 7. Best-effort relay (if online)
     if (this.messaging?.isTeamAlive(toTeam)) {
@@ -317,6 +321,49 @@ export class CrossTeamService {
         describeRuntimeDeliveryRelay(relay)
     );
   }
+
+  private appendSenderCopy(input: {
+    fromTeam: string;
+    fromMember: string;
+    toTeam: string;
+    targetMemberName: string;
+    text: string;
+    taskRefs: CrossTeamSendRequest['taskRefs'];
+    timestamp: string;
+    messageId: string;
+    summary: CrossTeamSendRequest['summary'];
+    conversationId: string;
+    replyToConversationId: string | undefined;
+  }): void {
+    try {
+      createController({
+        teamName: input.fromTeam,
+        claudeDir: getClaudeBasePath(),
+      }).messages.appendSentMessage({
+        from: input.fromMember,
+        to: `${input.toTeam}.${input.targetMemberName}`,
+        text: input.text,
+        taskRefs: input.taskRefs,
+        timestamp: input.timestamp,
+        messageId: input.messageId,
+        summary: input.summary ?? `Cross-team message to ${input.toTeam}`,
+        source: CROSS_TEAM_SENT_SOURCE,
+        conversationId: input.conversationId,
+        replyToConversationId: input.replyToConversationId,
+      });
+      this.messaging?.clearPendingCrossTeamReplyExpectation(
+        input.fromTeam,
+        input.toTeam,
+        input.conversationId
+      );
+    } catch (e: unknown) {
+      logger.warn(
+        `Failed to write sender copy for ${input.fromTeam}: ${
+          e instanceof Error ? e.message : String(e)
+        }`
+      );
+    }
+  }
 }
 
 function hasRuntimeDeliveryProof(
@@ -337,9 +384,9 @@ function hasRuntimeDeliveryProof(
   const delivery = relay.lastDelivery;
   return Boolean(
     delivery?.delivered &&
-      delivery.accepted === true &&
-      !delivery.acceptanceUnknown &&
-      !delivery.queuedBehindMessageId
+    delivery.accepted === true &&
+    !delivery.acceptanceUnknown &&
+    !delivery.queuedBehindMessageId
   );
 }
 
