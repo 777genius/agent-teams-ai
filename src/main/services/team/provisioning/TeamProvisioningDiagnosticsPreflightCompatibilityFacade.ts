@@ -48,6 +48,7 @@ import {
 } from './TeamProvisioningRuntimeTurnSettledPlanning';
 import { type TeamProvisioningRunTrackingDeliveryHelper } from './TeamProvisioningRunTrackingDelivery';
 import { type RuntimeAdapterRunByTeamEntry } from './TeamProvisioningServiceComposition';
+import { TeamProvisioningStatusQueryCompatibilityFacade } from './TeamProvisioningStatusQueryCompatibilityFacade';
 import { type TeamProvisioningToolApprovalFacade } from './TeamProvisioningToolApprovalFacade';
 import { type TeamProvisioningTransientRunState } from './TeamProvisioningTransientRunState';
 import { type TeamProvisioningVerificationProbePorts } from './TeamProvisioningVerificationProbePortsFactory';
