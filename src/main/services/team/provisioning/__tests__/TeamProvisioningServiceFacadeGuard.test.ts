@@ -27,6 +27,95 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'launchTeam',
   'setTeamChangeEmitter',
 ] as const;
+const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
+  'answerOpenCodeRuntimePermission',
+  'attachLiveRosterMember',
+  'buildCrossProviderMemberArgs',
+  'buildProvisioningEnv',
+  'cancelProvisioning',
+  'cleanupPrelaunchBackup',
+  'clearPendingCrossTeamReplyExpectation',
+  'createTeam',
+  'deliverOpenCodeMemberMessage',
+  'deliverOpenCodeRuntimeMessage',
+  'detachLiveRosterMember',
+  'detachOpenCodeOwnedMemberLane',
+  'discardLiveMemberMcpLaunchConfig',
+  'dismissApprovalNotification',
+  'forwardUserDmToTeammate',
+  'getAliveTeamNames',
+  'getAliveTeams',
+  'getClaudeLogs',
+  'getCliHelpOutput',
+  'getCurrentLeadSessionId',
+  'getCurrentRunId',
+  'getLeadActivityState',
+  'getLeadContextUsage',
+  'getLiveLeadProcessMessages',
+  'getMemberSpawnStatuses',
+  'getOpenCodeMemberDeliveryBusyStatus',
+  'getOpenCodeRuntimeAdapter',
+  'getOpenCodeRuntimeDeliveryStatus',
+  'getProvisioningStatus',
+  'getRuntimeState',
+  'getTeamAgentRuntimeSnapshot',
+  'hasActiveTeamRuntimes',
+  'hasProvisioningRun',
+  'isOpenCodeRuntimeRecipient',
+  'isTeamAlive',
+  'launchTeam',
+  'notifyLanguageChange',
+  'prepareForProvisioning',
+  'prepareLiveMemberMcpLaunchConfig',
+  'pushLiveLeadProcessMessage',
+  'reattachOpenCodeOwnedMemberLane',
+  'recordOpenCodeRuntimeBootstrapCheckin',
+  'recordOpenCodeRuntimeHeartbeat',
+  'recordOpenCodeRuntimeTaskEvent',
+  'recoverOpenCodeRuntimeDeliveryJournal',
+  'registerPendingCrossTeamReplyExpectation',
+  'relayInboxFileToLiveRecipient',
+  'relayLeadInboxMessages',
+  'relayMemberInboxMessages',
+  'relayOpenCodeMemberInboxMessages',
+  'repairStaleTaskActivityIntervalsBeforeSnapshot',
+  'resolveCrossTeamReplyMetadata',
+  'resolveRuntimeRecipientProviderId',
+  'respondToToolApproval',
+  'restartMember',
+  'retryFailedOpenCodeSecondaryLanes',
+  'scanOpenCodePromptDeliveryWatchdog',
+  'scheduleOpenCodeMemberInboxDeliveryWake',
+  'sendMessageToTeam',
+  'setControlApiBaseUrlResolver',
+  'setCrossTeamSender',
+  'setMainWindow',
+  'setMemberRuntimeAdvisoryInvalidator',
+  'setMemberWorkSyncAcceptedReportChecker',
+  'setMemberWorkSyncProofMissingRecoveryScheduler',
+  'setRuntimeAdapterRegistry',
+  'setRuntimeTurnSettledEnvironmentProvider',
+  'setRuntimeTurnSettledHookSettingsProvider',
+  'setTeamChangeEmitter',
+  'setToolApprovalEventEmitter',
+  'setWorkspaceTrustCoordinator',
+  'skipMemberForLaunch',
+  'stopAllTeams',
+  'stopTeam',
+  'updateToolApprovalSettings',
+  'validateAgentTeamsMcpRuntime',
+  'warmup',
+] as const;
+const PUBLIC_SURFACE_TYPE_ALIAS_NAME = 'TeamProvisioningServicePublicSurface';
+const PUBLIC_SURFACE_VIRTUAL_FILE_PATH = resolve(
+  process.cwd(),
+  '__teamProvisioningServicePublicSurfaceGuard.ts'
+);
+const PUBLIC_SURFACE_VIRTUAL_SOURCE = `
+import { TeamProvisioningService } from './src/main/services/team/TeamProvisioningService';
+
+type ${PUBLIC_SURFACE_TYPE_ALIAS_NAME} = keyof TeamProvisioningService;
+`;
 type ServiceEntryPointMember =
   | ts.GetAccessorDeclaration
   | ts.MethodDeclaration
@@ -129,6 +218,132 @@ function parseTypeScriptSource(filePath: string, source: string): ts.SourceFile 
 
 function parseTeamProvisioningServiceSource(source: string): ts.SourceFile {
   return parseTypeScriptSource(TEAM_PROVISIONING_SERVICE_PATH, source);
+}
+
+function formatTypeScriptDiagnostics(diagnostics: readonly ts.Diagnostic[]): string {
+  return ts.formatDiagnosticsWithColorAndContext(diagnostics, {
+    getCanonicalFileName: (fileName) => fileName,
+    getCurrentDirectory: () => process.cwd(),
+    getNewLine: () => '\n',
+  });
+}
+
+function readTsConfigCompilerOptions(): ts.CompilerOptions {
+  const configPath = resolve(process.cwd(), 'tsconfig.json');
+  const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
+  if (configFile.error) {
+    throw new Error(formatTypeScriptDiagnostics([configFile.error]));
+  }
+
+  const parsedConfig = ts.parseJsonConfigFileContent(
+    configFile.config,
+    ts.sys,
+    dirname(configPath),
+    {
+      noEmit: true,
+      skipLibCheck: true,
+    },
+    configPath
+  );
+  if (parsedConfig.errors.length > 0) {
+    throw new Error(formatTypeScriptDiagnostics(parsedConfig.errors));
+  }
+
+  return parsedConfig.options;
+}
+
+function createPublicSurfaceTypeProgram(): ts.Program {
+  const options = readTsConfigCompilerOptions();
+  const host = ts.createCompilerHost(options, true);
+  const originalGetSourceFile = host.getSourceFile.bind(host);
+  const originalFileExists = host.fileExists.bind(host);
+  const originalReadFile = host.readFile.bind(host);
+  const isVirtualFile = (fileName: string) =>
+    resolve(fileName) === PUBLIC_SURFACE_VIRTUAL_FILE_PATH;
+
+  host.getSourceFile = (fileName, languageVersion, onError, shouldCreateNewSourceFile) => {
+    if (isVirtualFile(fileName)) {
+      return ts.createSourceFile(
+        fileName,
+        PUBLIC_SURFACE_VIRTUAL_SOURCE,
+        languageVersion,
+        true,
+        ts.ScriptKind.TS
+      );
+    }
+
+    return originalGetSourceFile(fileName, languageVersion, onError, shouldCreateNewSourceFile);
+  };
+  host.fileExists = (fileName) => isVirtualFile(fileName) || originalFileExists(fileName);
+  host.readFile = (fileName) =>
+    isVirtualFile(fileName) ? PUBLIC_SURFACE_VIRTUAL_SOURCE : originalReadFile(fileName);
+
+  return ts.createProgram({
+    rootNames: [PUBLIC_SURFACE_VIRTUAL_FILE_PATH],
+    options,
+    host,
+  });
+}
+
+function findTypeAliasDeclaration(
+  sourceFile: ts.SourceFile,
+  aliasName: string
+): ts.TypeAliasDeclaration {
+  const typeAlias = sourceFile.statements.find(
+    (statement): statement is ts.TypeAliasDeclaration =>
+      ts.isTypeAliasDeclaration(statement) && statement.name.text === aliasName
+  );
+
+  if (!typeAlias) {
+    throw new Error(`Missing ${aliasName} type alias in ${sourceFile.fileName}`);
+  }
+
+  return typeAlias;
+}
+
+function getStringLiteralUnionValues(checker: ts.TypeChecker, type: ts.Type): string[] {
+  const values: string[] = [];
+
+  const collect = (currentType: ts.Type): void => {
+    if (currentType.isUnion()) {
+      currentType.types.forEach(collect);
+      return;
+    }
+
+    if ((currentType.flags & ts.TypeFlags.StringLiteral) !== 0) {
+      values.push((currentType as ts.StringLiteralType).value);
+      return;
+    }
+
+    throw new Error(
+      `Expected string literal public surface member, got ${checker.typeToString(currentType)}`
+    );
+  };
+
+  collect(type);
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+
+function getEffectivePublicServiceInstanceMemberNames(): string[] {
+  const program = createPublicSurfaceTypeProgram();
+  const sourceFile = program.getSourceFile(PUBLIC_SURFACE_VIRTUAL_FILE_PATH);
+  if (!sourceFile) {
+    throw new Error(`Missing ${PUBLIC_SURFACE_VIRTUAL_FILE_PATH}`);
+  }
+
+  const diagnostics = [
+    ...program.getSyntacticDiagnostics(sourceFile),
+    ...program.getSemanticDiagnostics(sourceFile),
+  ];
+  if (diagnostics.length > 0) {
+    throw new Error(formatTypeScriptDiagnostics(diagnostics));
+  }
+
+  const checker = program.getTypeChecker();
+  const typeAlias = findTypeAliasDeclaration(sourceFile, PUBLIC_SURFACE_TYPE_ALIAS_NAME);
+  const surfaceType = checker.getTypeFromTypeNode(typeAlias.type);
+
+  return getStringLiteralUnionValues(checker, surfaceType);
 }
 
 function projectRelativePath(filePath: string): string {
@@ -472,6 +687,16 @@ describe('TeamProvisioningService facade guard', () => {
     expect(getDeclaredPublicServiceEntryPointNames(sourceFile, serviceClass)).toEqual(
       [...DECLARED_PUBLIC_SERVICE_ENTRYPOINTS].sort((a, b) => a.localeCompare(b))
     );
+  });
+
+  it('keeps the effective public service instance surface documented and bounded', () => {
+    const publicMemberNames = getEffectivePublicServiceInstanceMemberNames();
+    const declaredEntryPoints = new Set<string>(DECLARED_PUBLIC_SERVICE_ENTRYPOINTS);
+
+    expect(publicMemberNames).toEqual(
+      [...DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS].sort((a, b) => a.localeCompare(b))
+    );
+    expect(publicMemberNames.some((memberName) => !declaredEntryPoints.has(memberName))).toBe(true);
   });
 
   it('keeps the constructor dependency surface explicit and bounded', () => {
