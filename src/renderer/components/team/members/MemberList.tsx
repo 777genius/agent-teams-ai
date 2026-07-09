@@ -306,6 +306,39 @@ function isRuntimeResourceSampleLike(value: unknown): value is TeamAgentRuntimeR
   return Boolean(value) && typeof value === 'object';
 }
 
+function buildRuntimeResourceHistorySignature(
+  history: TeamAgentRuntimeEntry['resourceHistory']
+): string {
+  if (!Array.isArray(history)) return '';
+  return history
+    .map((sample) => {
+      if (!isRuntimeResourceSampleLike(sample)) return '';
+      return [
+        sample.timestamp,
+        sample.cpuPercent,
+        sample.rssBytes,
+        sample.primaryCpuPercent,
+        sample.primaryRssBytes,
+        sample.childCpuPercent,
+        sample.childRssBytes,
+        sample.processCount,
+        sample.runtimeLoadScope,
+        sample.runtimeLoadTruncated,
+        sample.pidSource,
+        sample.pid,
+        sample.runtimePid,
+      ].join('\u001d');
+    })
+    .join('\u001c');
+}
+
+function areRuntimeResourceHistoriesEquivalent(
+  left: TeamAgentRuntimeEntry['resourceHistory'],
+  right: TeamAgentRuntimeEntry['resourceHistory']
+): boolean {
+  return buildRuntimeResourceHistorySignature(left) === buildRuntimeResourceHistorySignature(right);
+}
+
 function areMemberRuntimeEntriesEquivalent(
   left: Map<string, TeamAgentRuntimeEntry> | undefined,
   right: Map<string, TeamAgentRuntimeEntry> | undefined
@@ -328,6 +361,7 @@ function areMemberRuntimeEntriesEquivalent(
       leftEntry.laneKind !== rightEntry?.laneKind ||
       leftEntry.pid !== rightEntry?.pid ||
       leftEntry.runtimeModel !== rightEntry?.runtimeModel ||
+      leftEntry.cwd !== rightEntry?.cwd ||
       leftEntry.rssBytes !== rightEntry?.rssBytes ||
       leftEntry.cpuPercent !== rightEntry?.cpuPercent ||
       leftEntry.primaryCpuPercent !== rightEntry?.primaryCpuPercent ||
@@ -345,10 +379,16 @@ function areMemberRuntimeEntriesEquivalent(
       leftEntry.paneCurrentCommand !== rightEntry?.paneCurrentCommand ||
       leftEntry.runtimePid !== rightEntry?.runtimePid ||
       leftEntry.runtimeSessionId !== rightEntry?.runtimeSessionId ||
+      leftEntry.runtimeLeaseExpiresAt !== rightEntry?.runtimeLeaseExpiresAt ||
       leftEntry.runtimeDiagnostic !== rightEntry?.runtimeDiagnostic ||
       leftEntry.runtimeDiagnosticSeverity !== rightEntry?.runtimeDiagnosticSeverity ||
       leftEntry.runtimeLastSeenAt !== rightEntry?.runtimeLastSeenAt ||
+      leftEntry.updatedAt !== rightEntry?.updatedAt ||
       leftEntry.historicalBootstrapConfirmed !== rightEntry?.historicalBootstrapConfirmed ||
+      !areRuntimeResourceHistoriesEquivalent(
+        leftEntry.resourceHistory,
+        rightEntry?.resourceHistory
+      ) ||
       leftDiagnostics.length !== rightDiagnostics.length ||
       !leftDiagnostics.every((value, index) => value === rightDiagnostics[index])
     ) {
@@ -379,6 +419,13 @@ function buildMemberRuntimeCardSignature(entry: TeamAgentRuntimeEntry): string {
     entry.laneKind,
     entry.pid,
     entry.runtimeModel,
+    entry.cwd,
+    entry.rssBytes,
+    entry.cpuPercent,
+    entry.primaryCpuPercent,
+    entry.primaryRssBytes,
+    entry.childCpuPercent,
+    entry.childRssBytes,
     entry.processCount,
     entry.runtimeLoadScope,
     entry.runtimeLoadTruncated,
@@ -390,10 +437,13 @@ function buildMemberRuntimeCardSignature(entry: TeamAgentRuntimeEntry): string {
     entry.paneCurrentCommand,
     entry.runtimePid,
     entry.runtimeSessionId,
+    entry.runtimeLeaseExpiresAt,
     entry.runtimeDiagnostic,
     entry.runtimeDiagnosticSeverity,
     entry.runtimeLastSeenAt,
+    entry.updatedAt,
     entry.historicalBootstrapConfirmed,
+    buildRuntimeResourceHistorySignature(entry.resourceHistory),
     diagnostics.join('\u001f'),
   ].join('\u001e');
 }

@@ -110,15 +110,19 @@ describe('CrossTeamService runtime delivery dedupe', () => {
     }
   });
 
-  it('keeps runtime retries idempotent when message id and conversation id match', async () => {
+  it('keeps runtime retries idempotent when trimmed message id and conversation id match', async () => {
     const { service, inboxWriter, messaging, sentToInbox } = createService();
     const request = runtimeRequest();
+    const retry = runtimeRequest({
+      messageId: ' runtime-message-1 ',
+      conversationId: '\truntime-idempotency-1\n',
+    });
 
     await expect(service.send(request)).resolves.toMatchObject({
       messageId: 'runtime-message-1',
       deliveredToInbox: true,
     });
-    await expect(service.send(runtimeRequest())).resolves.toMatchObject({
+    await expect(service.send(retry)).resolves.toMatchObject({
       messageId: 'runtime-message-1',
       deliveredToInbox: true,
       deduplicated: true,

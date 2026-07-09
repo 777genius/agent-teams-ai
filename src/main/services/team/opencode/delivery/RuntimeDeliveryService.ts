@@ -57,7 +57,8 @@ export interface RuntimeDeliveryDiagnosticEvent {
   type:
     | 'runtime_delivery_conflict'
     | 'runtime_delivery_failed'
-    | 'runtime_delivery_recovery_needed';
+    | 'runtime_delivery_recovery_needed'
+    | 'runtime_delivery_change_emit_failed';
   providerId: 'opencode';
   teamName: string;
   runId: string;
@@ -217,13 +218,7 @@ export class RuntimeDeliveryService {
         committedAt: this.clock().toISOString(),
       });
 
-      const change = port.buildChangeEvent({
-        teamName: envelope.teamName,
-        location: committedLocation,
-      });
-      if (change) {
-        this.teamChangeEmitter.emit(change);
-      }
+      await this.emitChangeEventBestEffort(port, envelope, committedLocation);
 
       return {
         ok: true,
@@ -254,6 +249,41 @@ export class RuntimeDeliveryService {
         createdAt: this.clock().toISOString(),
       });
       throw error;
+    }
+  }
+
+  private async emitChangeEventBestEffort(
+    port: RuntimeDeliveryDestinationPort,
+    envelope: RuntimeDeliveryEnvelope,
+    location: RuntimeDeliveryLocation
+  ): Promise<void> {
+    try {
+      const change = port.buildChangeEvent({
+        teamName: envelope.teamName,
+        location,
+      });
+      if (change) {
+        this.teamChangeEmitter.emit(change);
+      }
+    } catch (error) {
+      try {
+        await this.diagnostics.append({
+          type: 'runtime_delivery_change_emit_failed',
+          providerId: 'opencode',
+          teamName: envelope.teamName,
+          runId: envelope.runId,
+          severity: 'warning',
+          message: 'Runtime delivery committed but change event emission failed',
+          data: {
+            idempotencyKey: envelope.idempotencyKey,
+            location,
+            error: stringifyError(error),
+          },
+          createdAt: this.clock().toISOString(),
+        });
+      } catch {
+        // Delivery is already committed; diagnostics emission is also best-effort here.
+      }
     }
   }
 }
