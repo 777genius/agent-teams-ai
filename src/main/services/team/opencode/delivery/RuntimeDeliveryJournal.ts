@@ -65,6 +65,12 @@ export interface RuntimeDeliveryJournalBeginInput {
   now: string;
 }
 
+export interface RuntimeDeliveryJournalKeyInput {
+  idempotencyKey: string;
+  runId: string;
+  teamName: string;
+}
+
 export type RuntimeDeliveryJournalBeginResult =
   | { state: 'new'; record: RuntimeDeliveryJournalRecord }
   | { state: 'already_committed'; record: RuntimeDeliveryJournalRecord }
@@ -77,7 +83,7 @@ export class RuntimeDeliveryJournalStore {
   async begin(input: RuntimeDeliveryJournalBeginInput): Promise<RuntimeDeliveryJournalBeginResult> {
     let result: RuntimeDeliveryJournalBeginResult | null = null;
     await this.store.updateLocked((records) => {
-      const existing = records.find((record) => record.idempotencyKey === input.idempotencyKey);
+      const existing = records.find((record) => matchesRuntimeDeliveryJournalKey(record, input));
       if (existing) {
         const hasCompatiblePayloadHash =
           existing.payloadHash === input.payloadHash ||
@@ -101,7 +107,7 @@ export class RuntimeDeliveryJournalStore {
         } satisfies RuntimeDeliveryJournalRecord;
         result = { state: 'resume_pending', record: resumed };
         return records.map((record) =>
-          record.idempotencyKey === input.idempotencyKey ? resumed : record
+          matchesRuntimeDeliveryJournalKey(record, input) ? resumed : record
         );
       }
 
@@ -135,10 +141,12 @@ export class RuntimeDeliveryJournalStore {
 
   async markCommitted(input: {
     idempotencyKey: string;
+    runId: string;
+    teamName: string;
     location: RuntimeDeliveryLocation;
     committedAt: string;
   }): Promise<void> {
-    await this.updateExisting(input.idempotencyKey, (record) => ({
+    await this.updateExisting(input, (record) => ({
       ...record,
       committedLocation: input.location,
       status: 'committed',
@@ -150,11 +158,13 @@ export class RuntimeDeliveryJournalStore {
 
   async markFailed(input: {
     idempotencyKey: string;
+    runId: string;
+    teamName: string;
     status: 'failed_retryable' | 'failed_terminal';
     error: string;
     updatedAt: string;
   }): Promise<void> {
-    await this.updateExisting(input.idempotencyKey, (record) => ({
+    await this.updateExisting(input, (record) => ({
       ...record,
       status: input.status,
       updatedAt: input.updatedAt,
@@ -162,9 +172,9 @@ export class RuntimeDeliveryJournalStore {
     }));
   }
 
-  async get(idempotencyKey: string): Promise<RuntimeDeliveryJournalRecord | null> {
+  async get(input: RuntimeDeliveryJournalKeyInput): Promise<RuntimeDeliveryJournalRecord | null> {
     const records = await this.readRequired();
-    return records.find((record) => record.idempotencyKey === idempotencyKey) ?? null;
+    return records.find((record) => matchesRuntimeDeliveryJournalKey(record, input)) ?? null;
   }
 
   async listRecoverable(teamName: string): Promise<RuntimeDeliveryJournalRecord[]> {
@@ -200,13 +210,13 @@ export class RuntimeDeliveryJournalStore {
   }
 
   private async updateExisting(
-    idempotencyKey: string,
+    input: RuntimeDeliveryJournalKeyInput,
     updater: (record: RuntimeDeliveryJournalRecord) => RuntimeDeliveryJournalRecord
   ): Promise<void> {
     let found = false;
     await this.store.updateLocked((records) =>
       records.map((record) => {
-        if (record.idempotencyKey !== idempotencyKey) {
+        if (!matchesRuntimeDeliveryJournalKey(record, input)) {
           return record;
         }
         found = true;
@@ -215,7 +225,9 @@ export class RuntimeDeliveryJournalStore {
     );
 
     if (!found) {
-      throw new Error(`Runtime delivery journal record not found: ${idempotencyKey}`);
+      throw new Error(
+        `Runtime delivery journal record not found: ${input.teamName}/${input.runId}/${input.idempotencyKey}`
+      );
     }
   }
 
@@ -226,6 +238,17 @@ export class RuntimeDeliveryJournalStore {
     }
     return result.data;
   }
+}
+
+function matchesRuntimeDeliveryJournalKey(
+  record: RuntimeDeliveryJournalRecord,
+  input: RuntimeDeliveryJournalKeyInput
+): boolean {
+  return (
+    record.idempotencyKey === input.idempotencyKey &&
+    record.runId === input.runId &&
+    record.teamName === input.teamName
+  );
 }
 
 export function createRuntimeDeliveryJournalStore(options: {
@@ -255,12 +278,19 @@ export function validateRuntimeDeliveryJournalRecords(
     if (!isRuntimeDeliveryJournalRecord(record)) {
       throw new Error(`Invalid runtime delivery journal record at index ${index}`);
     }
-    if (seen.has(record.idempotencyKey)) {
-      throw new Error(`Duplicate runtime delivery idempotency key: ${record.idempotencyKey}`);
+    const key = buildRuntimeDeliveryJournalKey(record);
+    if (seen.has(key)) {
+      throw new Error(
+        `Duplicate runtime delivery idempotency key for run: ${record.teamName}/${record.runId}/${record.idempotencyKey}`
+      );
     }
-    seen.add(record.idempotencyKey);
+    seen.add(key);
     return record;
   });
+}
+
+function buildRuntimeDeliveryJournalKey(record: RuntimeDeliveryJournalRecord): string {
+  return `${record.teamName}\u0000${record.runId}\u0000${record.idempotencyKey}`;
 }
 
 export function hashRuntimeDeliveryEnvelope(envelope: RuntimeDeliveryEnvelope): string {

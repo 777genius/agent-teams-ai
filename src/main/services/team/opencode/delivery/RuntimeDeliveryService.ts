@@ -190,6 +190,8 @@ export class RuntimeDeliveryService {
     if (preExisting.found && preExisting.location) {
       await this.journal.markCommitted({
         idempotencyKey: envelope.idempotencyKey,
+        runId: envelope.runId,
+        teamName: envelope.teamName,
         location: preExisting.location,
         committedAt: now,
       });
@@ -214,6 +216,8 @@ export class RuntimeDeliveryService {
       const committedLocation = verified.location ?? location;
       await this.journal.markCommitted({
         idempotencyKey: envelope.idempotencyKey,
+        runId: envelope.runId,
+        teamName: envelope.teamName,
         location: committedLocation,
         committedAt: this.clock().toISOString(),
       });
@@ -230,6 +234,8 @@ export class RuntimeDeliveryService {
     } catch (error) {
       await this.journal.markFailed({
         idempotencyKey: envelope.idempotencyKey,
+        runId: envelope.runId,
+        teamName: envelope.teamName,
         status: 'failed_retryable',
         error: stringifyError(error),
         updatedAt: this.clock().toISOString(),
@@ -313,6 +319,8 @@ export class RuntimeDeliveryReconciler {
     if (verified.found && verified.location) {
       await this.journal.markCommitted({
         idempotencyKey: record.idempotencyKey,
+        runId: record.runId,
+        teamName: record.teamName,
         location: verified.location,
         committedAt: this.clock().toISOString(),
       });
