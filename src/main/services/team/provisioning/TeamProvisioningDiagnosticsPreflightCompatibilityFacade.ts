@@ -1,16 +1,20 @@
 import { type TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import { type TeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { createLogger } from '@shared/utils/logger';
 
 import { type OpenCodePromptDeliveryLedgerRecord } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 
+import { getSystemLocale } from './TeamProvisioningAgentLanguage';
 import { type TeamProvisioningBootstrapTranscriptFacade } from './TeamProvisioningBootstrapTranscriptFacade';
 import { readTeamProvisioningClaudeLogs } from './TeamProvisioningClaudeLogs';
 import { getCliHelpOutputWithProvisioningPorts } from './TeamProvisioningCliHelpOutputPortsFactory';
+import {
+  notifyAliveTeamsAboutLanguageChangeWithService,
+  type TeamProvisioningLanguageChangeNotificationServiceHost,
+} from './TeamProvisioningLanguageChangeNotification';
 import { type TeamProvisioningLaunchIdentityBoundary } from './TeamProvisioningLaunchIdentityBoundaryFactory';
-import { getLeadActivityStateForTeam } from './TeamProvisioningLeadActivity';
-import { getLeadContextUsageForTeam } from './TeamProvisioningLeadContextUsage';
 import { type TeamProvisioningLiveLeadMessagePortsBoundary } from './TeamProvisioningLiveLeadMessagePortsFactory';
 import {
   type OpenCodeMemberInboxDeliveryWakePorts,
@@ -53,7 +57,6 @@ import {
   type RuntimeTurnSettledHookSettingsProvider,
 } from './TeamProvisioningRuntimeTurnSettledPlanning';
 import { type TeamProvisioningRunTrackingDeliveryHelper } from './TeamProvisioningRunTrackingDelivery';
-import { type RuntimeAdapterRunByTeamEntry } from './TeamProvisioningServiceComposition';
 import { TeamProvisioningStatusQueryCompatibilityFacade } from './TeamProvisioningStatusQueryCompatibilityFacade';
 import { type TeamProvisioningToolApprovalFacade } from './TeamProvisioningToolApprovalFacade';
 import { type TeamProvisioningTransientRunState } from './TeamProvisioningTransientRunState';
@@ -62,7 +65,6 @@ import { type TeamProvisioningVerificationProbePorts } from './TeamProvisioningV
 import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
 import type {
   InboxMessage,
-  LeadContextUsage,
   ProviderModelLaunchIdentity,
   TaskRef,
   TeamCreateRequest,
@@ -71,7 +73,6 @@ import type {
   TeamProvisioningModelCheckRequest,
   TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareResult,
-  TeamProvisioningProgress,
   ToolApprovalEvent,
   ToolApprovalSettings,
 } from '@shared/types';
@@ -123,17 +124,11 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     recordOpenCodeRuntimeTaskEvent(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
     recordOpenCodeRuntimeHeartbeat(raw: unknown): Promise<OpenCodeRuntimeControlAck>;
   };
-  protected abstract readonly runtimeAdapterRunByTeam: ReadonlyMap<
-    string,
-    RuntimeAdapterRunByTeamEntry
-  >;
-  protected abstract readonly runtimeAdapterProgressByRunId: ReadonlyMap<
-    string,
-    TeamProvisioningProgress
-  >;
   protected abstract readonly openCodeRuntimeDeliveryBoundaryHost: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<TRun>;
   protected abstract readonly inboxReader: OpenCodeMemberDeliveryBusyStatusPorts['inboxReader'];
   protected abstract readonly openCodePromptDeliveryWatchdogScheduler: OpenCodeMemberInboxDeliveryWakePorts['watchdogScheduler'];
+
+  private languageChangeInFlight: Promise<void> = Promise.resolve();
 
   protected abstract scheduleOpenCodePromptDeliveryWatchdog(input: {
     teamName: string;
@@ -328,6 +323,21 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     return this.shutdownCoordination.getShutdownTrackedTeamNames().length > 0;
   }
 
+  async notifyLanguageChange(newLangCode: string): Promise<void> {
+    this.languageChangeInFlight = this.languageChangeInFlight.then(() =>
+      notifyAliveTeamsAboutLanguageChangeWithService(
+        newLangCode,
+        this as unknown as TeamProvisioningLanguageChangeNotificationServiceHost,
+        {
+          getSystemLocale,
+          resolveLanguageName,
+          logger,
+        }
+      )
+    );
+    return this.languageChangeInFlight;
+  }
+
   setToolApprovalEventEmitter(emitter: (event: ToolApprovalEvent) => void): void {
     this.toolApprovalFacade.setToolApprovalEventEmitter(emitter);
   }
@@ -485,31 +495,6 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     return this.createOpenCodeRuntimeDeliveryBoundary().recoverOpenCodeRuntimeDeliveryJournal(
       teamName
     );
-  }
-
-  getLeadActivityState(teamName: string): {
-    state: 'active' | 'idle' | 'offline';
-    runId: string | null;
-  } {
-    return getLeadActivityStateForTeam(teamName, {
-      getTrackedRunId: (targetTeamName) => this.runTracking.getTrackedRunId(targetTeamName),
-      getRun: (runId) => this.runs.get(runId),
-      getRuntimeAdapterRun: (targetTeamName) =>
-        this.runtimeAdapterRunByTeam.get(targetTeamName) ?? null,
-      getRuntimeAdapterProgress: (runId) => this.runtimeAdapterProgressByRunId.get(runId) ?? null,
-      // Read-repair active lead task intervals for runs that were already active
-      // before interval tracking was introduced or before the renderer polled state.
-      syncLeadTaskActivityForState: (run, state, previousState) =>
-        this.syncLeadTaskActivityForState(run, state, previousState),
-    });
-  }
-
-  getLeadContextUsage(teamName: string): { usage: LeadContextUsage | null; runId: string | null } {
-    return getLeadContextUsageForTeam(teamName, {
-      getTrackedRunId: (targetTeamName) => this.runTracking.getTrackedRunId(targetTeamName),
-      getRun: (runId) => this.runs.get(runId),
-      nowIso: () => new Date().toISOString(),
-    });
   }
 
   /** Dismiss the OS notification for a resolved/dismissed approval. */

@@ -64,6 +64,19 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
   readonly shutdownCoordination = {
     getShutdownTrackedTeamNames: vi.fn(() => ['alpha']),
   };
+  readonly readConfigForStrictDecisionMock = vi.fn(async (_teamName: string) => ({
+    language: 'ru',
+  }));
+  readonly updateConfigMock = vi.fn(
+    async (_teamName: string, _update: { language?: string }) => undefined
+  );
+  readonly sendMessageToTeamMock = vi.fn(async (_teamName: string, _message: string) => undefined);
+  readonly configFacade = {
+    readConfigForStrictDecision: this.readConfigForStrictDecisionMock,
+  };
+  readonly configReader = {
+    updateConfig: this.updateConfigMock,
+  };
 
   protected readonly compatibilityDelegation =
     {} as TeamProvisioningCompatibilityDelegation<ProvisioningRun>;
@@ -137,6 +150,14 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
 
   canDeliver(teamName: string): boolean {
     return this.canDeliverToOpenCodeRuntimeForTeam(teamName);
+  }
+
+  getAliveTeams(): string[] {
+    return ['alpha'];
+  }
+
+  async sendMessageToTeam(teamName: string, message: string): Promise<void> {
+    await this.sendMessageToTeamMock(teamName, message);
   }
 
   waitForValidConfigForTest(run: ProvisioningRun, timeoutMs: number) {
@@ -324,5 +345,19 @@ describe('TeamProvisioningDiagnosticsPreflightCompatibilityFacade', () => {
     expect(facade.verificationProbePorts.waitForMissingInboxes).toHaveBeenCalledWith(run);
     expect(facade.verificationProbePorts.tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
     expect(facade.verificationProbePorts.pathExists).toHaveBeenCalledWith('/tmp/config.json');
+  });
+
+  it('keeps language-change config maintenance routed through the diagnostics facade', async () => {
+    const facade = new TestDiagnosticsPreflightCompatibilityFacade();
+
+    await facade.notifyLanguageChange('fr');
+
+    expect(facade.readConfigForStrictDecisionMock).toHaveBeenCalledWith('alpha');
+    expect(facade.sendMessageToTeamMock).toHaveBeenCalledTimes(1);
+    expect(facade.sendMessageToTeamMock.mock.calls[0]?.[0]).toBe('alpha');
+    expect(facade.sendMessageToTeamMock.mock.calls[0]?.[1]).toContain(
+      'preferred communication language'
+    );
+    expect(facade.updateConfigMock).toHaveBeenCalledWith('alpha', { language: 'fr' });
   });
 });

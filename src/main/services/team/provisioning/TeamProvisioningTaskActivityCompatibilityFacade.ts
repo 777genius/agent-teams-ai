@@ -3,6 +3,7 @@ import { createLogger } from '@shared/utils/logger';
 import { TeamTaskActivityIntervalService } from '../TeamTaskActivityIntervalService';
 
 import {
+  getLeadActivityStateForTeam,
   type LeadActivityState,
   setLeadActivity as setLeadActivityHelper,
   type SetLeadActivityPorts,
@@ -12,7 +13,10 @@ import {
   createTeamProvisioningLeadActivityPortsFromService,
   type TeamProvisioningLeadActivityPortsServiceHost,
 } from './TeamProvisioningLeadActivityPortsFactory';
-import { emitLeadContextUsageForRun } from './TeamProvisioningLeadContextUsage';
+import {
+  emitLeadContextUsageForRun,
+  getLeadContextUsageForTeam,
+} from './TeamProvisioningLeadContextUsage';
 import { TeamProvisioningMemberSpawnStatusCompatibilityFacade } from './TeamProvisioningMemberSpawnStatusCompatibilityFacade';
 import { type ProvisioningRun } from './TeamProvisioningRunModel';
 import { nowIso, updateProgress } from './TeamProvisioningRunProgress';
@@ -22,7 +26,7 @@ import {
   type RuntimeToolActivityServiceHost,
 } from './TeamProvisioningRuntimeToolActivity';
 
-import type { TeamChangeEvent } from '@shared/types';
+import type { LeadContextUsage, TeamChangeEvent } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
 
@@ -67,6 +71,42 @@ export abstract class TeamProvisioningTaskActivityCompatibilityFacade<
       this as unknown as TeamProvisioningLeadActivityPortsServiceHost<TRun>,
       { nowIso }
     );
+  }
+
+  getLeadActivityState(teamName: string): {
+    state: 'active' | 'idle' | 'offline';
+    runId: string | null;
+  } {
+    const service = this as unknown as {
+      runTracking: { getTrackedRunId(targetTeamName: string): string | null };
+      runs: ReadonlyMap<string, TRun>;
+      runtimeAdapterRunByTeam: ReadonlyMap<string, { runId: string }>;
+      runtimeAdapterProgressByRunId: ReadonlyMap<string, { state?: string }>;
+    };
+    return getLeadActivityStateForTeam(teamName, {
+      getTrackedRunId: (targetTeamName) => service.runTracking.getTrackedRunId(targetTeamName),
+      getRun: (runId) => service.runs.get(runId),
+      getRuntimeAdapterRun: (targetTeamName) =>
+        service.runtimeAdapterRunByTeam.get(targetTeamName) ?? null,
+      getRuntimeAdapterProgress: (runId) =>
+        service.runtimeAdapterProgressByRunId.get(runId) ?? null,
+      // Read-repair active lead task intervals for runs that were already active
+      // before interval tracking was introduced or before the renderer polled state.
+      syncLeadTaskActivityForState: (run, state, previousState) =>
+        this.syncLeadTaskActivityForState(run, state, previousState),
+    });
+  }
+
+  getLeadContextUsage(teamName: string): { usage: LeadContextUsage | null; runId: string | null } {
+    const service = this as unknown as {
+      runTracking: { getTrackedRunId(targetTeamName: string): string | null };
+      runs: ReadonlyMap<string, TRun>;
+    };
+    return getLeadContextUsageForTeam(teamName, {
+      getTrackedRunId: (targetTeamName) => service.runTracking.getTrackedRunId(targetTeamName),
+      getRun: (runId) => service.runs.get(runId),
+      nowIso: () => new Date().toISOString(),
+    });
   }
 
   protected emitLeadContextUsage(run: TRun): void {

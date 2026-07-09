@@ -5,7 +5,6 @@ import { NotificationManager } from '@main/services/infrastructure/NotificationM
 import { notifyTeamWatchScopeChanged } from '@main/services/infrastructure/teamWatchScope';
 import { execCli, killProcessTree } from '@main/utils/childProcess';
 import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
-import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { type ParsedPermissionRequest, type PermissionSuggestion } from '@shared/utils/inboxNoise';
 import { createLogger } from '@shared/utils/logger';
@@ -28,7 +27,6 @@ import { OpenCodePromptDeliveryFollowUpPolicy } from './opencode/delivery/OpenCo
 import { type OpenCodePromptDeliveryWatchdogCoordinator } from './opencode/delivery/OpenCodePromptDeliveryWatchdogCoordinator';
 import { OpenCodeRuntimeDeliveryProofReader } from './opencode/delivery/OpenCodeRuntimeDeliveryProofReader';
 import { type OpenCodeVisibleReplyProofService } from './opencode/delivery/OpenCodeVisibleReplyProofService';
-import { getSystemLocale } from './provisioning/TeamProvisioningAgentLanguage';
 import {
   createAppendDirectProcessRuntimeEventUseCase,
   createNodeAppendDirectProcessRuntimeEventUseCasePorts,
@@ -79,10 +77,6 @@ import {
 import { type TeamProvisioningIdlePromptInjectionBoundary } from './provisioning/TeamProvisioningIdlePromptInjectionPortsFactory';
 import { markTeamInboxMessagesReadWithDefaults } from './provisioning/TeamProvisioningInboxPersistence';
 import { getLeadRelayReadCommitBatch as getLeadRelayReadCommitBatchHelper } from './provisioning/TeamProvisioningInboxRelayPolicy';
-import {
-  notifyAliveTeamsAboutLanguageChangeWithService,
-  type TeamProvisioningLanguageChangeNotificationServiceHost,
-} from './provisioning/TeamProvisioningLanguageChangeNotification';
 import { type TeamProvisioningLaunchDeterministicFlowBoundary } from './provisioning/TeamProvisioningLaunchDeterministicFlowPortsFactory';
 import { buildLaunchDiagnosticsFromRun } from './provisioning/TeamProvisioningLaunchDiagnostics';
 import {
@@ -1052,31 +1046,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchRuntimeStatus
       input,
       this as unknown as OpenCodeAgendaSyncRecoveryBypassServiceHost
     );
-  }
-
-  private languageChangeInFlight: Promise<void> = Promise.resolve();
-
-  /**
-   * Notify alive teams when the agent language setting changes.
-   * Compares each team's stored `config.language` with the new code and sends
-   * a message to the team lead if they differ.
-   *
-   * Serialised: rapid language switches (e.g. ru → en → ru) are queued so that
-   * only the latest value is applied to each team.
-   */
-  async notifyLanguageChange(newLangCode: string): Promise<void> {
-    this.languageChangeInFlight = this.languageChangeInFlight.then(() =>
-      notifyAliveTeamsAboutLanguageChangeWithService(
-        newLangCode,
-        this as unknown as TeamProvisioningLanguageChangeNotificationServiceHost,
-        {
-          getSystemLocale,
-          resolveLanguageName,
-          logger,
-        }
-      )
-    );
-    return this.languageChangeInFlight;
   }
 
   private async markInboxMessagesRead(

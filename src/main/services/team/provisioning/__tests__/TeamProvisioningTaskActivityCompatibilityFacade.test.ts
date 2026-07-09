@@ -14,6 +14,12 @@ class TestTaskActivityCompatibilityFacade extends TeamProvisioningTaskActivityCo
   readonly events: TeamChangeEvent[] = [];
   currentRunId = 'run-1';
 
+  protected readonly runTracking = {
+    getTrackedRunId: vi.fn((teamName: string) => (teamName === 'alpha' ? this.currentRunId : null)),
+  };
+  protected readonly runs = new Map<string, ProvisioningRun>();
+  protected readonly runtimeAdapterRunByTeam = new Map<string, { runId: string }>();
+  protected readonly runtimeAdapterProgressByRunId = new Map<string, { state?: string }>();
   protected readonly compatibilityDelegation =
     {} as TeamProvisioningCompatibilityDelegation<ProvisioningRun>;
   protected readonly memberLifecycleFacade = {} as TeamProvisioningMemberLifecyclePublicFacade;
@@ -45,6 +51,10 @@ class TestTaskActivityCompatibilityFacade extends TeamProvisioningTaskActivityCo
 
   emitLeadContext(run: ProvisioningRun): void {
     this.emitLeadContextUsage(run);
+  }
+
+  trackRun(run: ProvisioningRun): void {
+    this.runs.set(run.runId, run);
   }
 
   protected isCurrentTrackedRun(run: ProvisioningRun): boolean {
@@ -139,6 +149,44 @@ describe('TeamProvisioningTaskActivityCompatibilityFacade', () => {
       promptInputTokens: 100,
       contextUsedPercent: 12,
       updatedAt: '2026-07-09T12:00:05.000Z',
+    });
+    vi.useRealTimers();
+  });
+
+  it('keeps lead activity and context query wrappers with task-activity compatibility wiring', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-09T12:00:06.000Z'));
+    const facade = new TestTaskActivityCompatibilityFacade();
+    const run = createRun({
+      leadActivityState: 'active',
+      leadContextUsage: {
+        promptInputTokens: 30,
+        outputTokens: 5,
+        contextUsedTokens: 90,
+        contextWindowTokens: 300,
+        promptInputSource: 'anthropic_usage',
+        lastUsageMessageId: 'msg-2',
+        lastEmittedAt: 0,
+      },
+    });
+    facade.trackRun(run);
+
+    expect(facade.getLeadActivityState('alpha')).toEqual({
+      state: 'active',
+      runId: 'run-1',
+    });
+    expect(facade.resumeActiveIntervalsForMember).toHaveBeenCalledWith(
+      'alpha',
+      'Lead',
+      '2026-07-09T12:00:06.000Z'
+    );
+    expect(facade.getLeadContextUsage('alpha')).toMatchObject({
+      runId: 'run-1',
+      usage: {
+        promptInputTokens: 30,
+        contextUsedPercent: 30,
+        updatedAt: '2026-07-09T12:00:06.000Z',
+      },
     });
     vi.useRealTimers();
   });

@@ -6,11 +6,6 @@ import { readBootstrapLaunchSnapshot } from '../TeamBootstrapStateReader';
 
 import { TeamProvisioningLaunchStateCompatibilityFacade } from './TeamProvisioningLaunchStateCompatibilityFacade';
 import {
-  createTeamProvisioningBootstrapFailureMarker,
-  type MarkUnconfirmedBootstrapMembersFailedOptions,
-  type TeamProvisioningBootstrapFailureMarker,
-} from './TeamProvisioningBootstrapFailureMarking';
-import {
   type DeterministicBootstrapCompletionRecoveryServiceHost,
   recoverDeterministicBootstrapCompletionWithService,
 } from './TeamProvisioningDeterministicBootstrapCompletionRecovery';
@@ -34,7 +29,6 @@ import {
   type TeamProvisioningOpenCodeSecondaryLaneEvidenceServiceHost,
 } from './TeamProvisioningOpenCodeSecondaryLaneEvidencePortsFactory';
 import { guardCommittedOpenCodeSecondaryLaneEvidence as guardCommittedOpenCodeSecondaryLaneEvidenceHelper } from './TeamProvisioningLaunchStateReconciliation';
-import { createInitialMemberSpawnStatusEntry } from './TeamProvisioningMemberSpawnStatusPolicy';
 import { isTerminalFailureProvisioningState } from './TeamProvisioningProgressState';
 import {
   DETERMINISTIC_BOOTSTRAP_COMPLETION_RECOVERY_MS,
@@ -305,30 +299,6 @@ export abstract class TeamProvisioningLaunchRuntimeStatusCompatibilityFacade<
       this.syncRunMemberSpawnStatusesFromSnapshot(run, snapshot);
     }
     this.emitMemberSpawnChange(run, lane.member.name);
-  }
-
-  private createBootstrapFailureMarker(): TeamProvisioningBootstrapFailureMarker<TRun> {
-    return createTeamProvisioningBootstrapFailureMarker<TRun>({
-      nowIso,
-      createInitialMemberSpawnStatusEntry,
-      isMemberLifecycleOperationActive: (teamName, memberName) =>
-        this.isMemberLifecycleOperationActive(teamName, memberName),
-      syncMemberTaskActivityForRuntimeTransition: (targetRun, memberName, previous, next, at) =>
-        this.syncMemberTaskActivityForRuntimeTransition(targetRun, memberName, previous, next, at),
-      appendMemberBootstrapDiagnostic: (targetRun, memberName, detail) =>
-        this.appendMemberBootstrapDiagnostic(targetRun, memberName, detail),
-      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun),
-      emitMemberSpawnChange: (targetRun, memberName) =>
-        this.emitMemberSpawnChange(targetRun, memberName),
-    });
-  }
-
-  protected markUnconfirmedBootstrapMembersFailed(
-    run: TRun,
-    reason: string,
-    options?: MarkUnconfirmedBootstrapMembersFailedOptions
-  ): void {
-    this.createBootstrapFailureMarker().markUnconfirmedBootstrapMembersFailed(run, reason, options);
   }
 
   protected scheduleDeterministicBootstrapCompletionRecovery(run: TRun): void {

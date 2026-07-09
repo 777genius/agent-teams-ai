@@ -2,6 +2,10 @@ import { boundLaunchDiagnostics } from '../progressPayload';
 import { type TeamMembersMetaStore } from '../TeamMembersMetaStore';
 
 import {
+  createTeamProvisioningBootstrapFailureMarker,
+  type TeamProvisioningBootstrapFailureMarker,
+} from './TeamProvisioningBootstrapFailureMarking';
+import {
   createTeamProvisioningOpenCodeBootstrapStallReconciliationPorts,
   createTeamProvisioningOpenCodeBootstrapStallStatusPorts,
   type TeamProvisioningOpenCodeBootstrapStallReconciliationPorts,
@@ -9,7 +13,10 @@ import {
 import { type BootstrapTranscriptOutcome } from './TeamProvisioningBootstrapTranscript';
 import { buildLaunchDiagnosticsFromRun } from './TeamProvisioningLaunchDiagnostics';
 import { getMemberSpawnStatusesSnapshot } from './TeamProvisioningMemberSpawnSnapshots';
-import { MEMBER_LAUNCH_GRACE_MS } from './TeamProvisioningMemberSpawnStatusPolicy';
+import {
+  createInitialMemberSpawnStatusEntry,
+  MEMBER_LAUNCH_GRACE_MS,
+} from './TeamProvisioningMemberSpawnStatusPolicy';
 import {
   createTeamProvisioningMemberSpawnStatusesSnapshotHostFromService,
   createTeamProvisioningMemberSpawnStatusesSnapshotPortsBoundary,
@@ -98,6 +105,30 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
 
   protected isCurrentTrackedRun(run: TRun): boolean {
     return this.runTracking.getTrackedRunId(run.teamName) === run.runId;
+  }
+
+  private createBootstrapFailureMarker(): TeamProvisioningBootstrapFailureMarker<TRun> {
+    return createTeamProvisioningBootstrapFailureMarker<TRun>({
+      nowIso,
+      createInitialMemberSpawnStatusEntry,
+      isMemberLifecycleOperationActive: (teamName, memberName) =>
+        this.isMemberLifecycleOperationActive(teamName, memberName),
+      syncMemberTaskActivityForRuntimeTransition: (targetRun, memberName, previous, next, at) =>
+        this.syncMemberTaskActivityForRuntimeTransition(targetRun, memberName, previous, next, at),
+      appendMemberBootstrapDiagnostic: (targetRun, memberName, detail) =>
+        this.appendMemberBootstrapDiagnostic(targetRun, memberName, detail),
+      isCurrentTrackedRun: (targetRun) => this.isCurrentTrackedRun(targetRun),
+      emitMemberSpawnChange: (targetRun, memberName) =>
+        this.emitMemberSpawnChange(targetRun, memberName),
+    });
+  }
+
+  protected markUnconfirmedBootstrapMembersFailed(
+    run: TRun,
+    reason: string,
+    options?: { cleanupRequested?: boolean; preserveExistingFailure?: boolean }
+  ): void {
+    this.createBootstrapFailureMarker().markUnconfirmedBootstrapMembersFailed(run, reason, options);
   }
 
   protected startRuntimeToolActivity(

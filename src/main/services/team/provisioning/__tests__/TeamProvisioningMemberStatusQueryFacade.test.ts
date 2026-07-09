@@ -42,7 +42,9 @@ class TestMemberStatusQueryFacade extends TeamProvisioningMemberStatusQueryFacad
       readConfigSnapshot: this.readConfigSnapshotMock,
     },
   } as unknown as TeamProvisioningCompatibilityDelegation<ProvisioningRun>;
-  protected readonly memberLifecycleFacade = {} as TeamProvisioningMemberLifecyclePublicFacade;
+  protected readonly memberLifecycleFacade = {
+    isMemberLifecycleOperationActive: vi.fn(() => false),
+  } as unknown as TeamProvisioningMemberLifecyclePublicFacade;
   protected readonly runTracking = {
     getTrackedRunId: vi.fn((teamName: string) => (teamName === 'alpha' ? 'run-1' : null)),
   };
@@ -98,6 +100,10 @@ class TestMemberStatusQueryFacade extends TeamProvisioningMemberStatusQueryFacad
 
   setSpawn(run: ProvisioningRun, memberName: string, status: MemberSpawnStatus): void {
     this.setMemberSpawnStatus(run, memberName, status);
+  }
+
+  failUnconfirmedBootstrapMembers(run: ProvisioningRun, reason: string): void {
+    this.markUnconfirmedBootstrapMembersFailed(run, reason);
   }
 
   refreshFromLeadInbox(run: ProvisioningRun): Promise<void> {
@@ -206,6 +212,21 @@ describe('TeamProvisioningMemberStatusQueryFacade', () => {
       expect.objectContaining({ status: 'spawning' })
     );
     expect(facade.mutationPorts.updateLaunchDiagnostics).toHaveBeenCalledWith(run);
+    expect(facade.mutationPorts.emitMemberSpawnChange).toHaveBeenCalledWith(run, 'Worker');
+  });
+
+  it('keeps unconfirmed bootstrap failure marking behind the status facade', () => {
+    const facade = new TestMemberStatusQueryFacade();
+    const run = createRun();
+
+    facade.failUnconfirmedBootstrapMembers(run, 'bootstrap timed out');
+
+    expect(run.memberSpawnStatuses.get('Worker')).toMatchObject({
+      status: 'error',
+      launchState: 'failed_to_start',
+      hardFailure: true,
+      hardFailureReason: 'bootstrap timed out',
+    });
     expect(facade.mutationPorts.emitMemberSpawnChange).toHaveBeenCalledWith(run, 'Worker');
   });
 
