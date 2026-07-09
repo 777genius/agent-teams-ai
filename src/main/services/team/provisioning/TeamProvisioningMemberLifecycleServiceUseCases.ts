@@ -7,6 +7,10 @@ import {
   type ReadOpenCodeSecondaryRetryOutcomeUseCase,
 } from './TeamProvisioningReadOpenCodeSecondaryRetryOutcomeUseCase';
 import {
+  createNodeResolveDirectRestartRuntimeCwdUseCase,
+  type ResolveDirectRestartRuntimeCwdUseCase,
+} from './TeamProvisioningResolveDirectRestartRuntimeCwdUseCase';
+import {
   createNodeUpdateDirectTmuxRestartMemberConfigUseCase,
   type UpdateDirectTmuxRestartMemberConfigUseCase,
 } from './TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase';
@@ -43,6 +47,7 @@ export interface TeamProvisioningMemberLifecycleServiceUseCases
   updateDirectTmuxRestartMemberConfig: UpdateDirectTmuxRestartMemberConfigUseCase;
   stopPrimaryOwnedRosterRuntime: StopPrimaryOwnedRosterRuntimeUseCase;
   preparePrimaryOwnedMemberRestartRuntime: PreparePrimaryOwnedMemberRestartRuntimeUseCase;
+  resolveDirectRestartRuntimeCwd: ResolveDirectRestartRuntimeCwdUseCase;
 }
 
 export function createTeamProvisioningMemberLifecycleServiceUseCases(
@@ -62,5 +67,6 @@ export function createTeamProvisioningMemberLifecycleServiceUseCases(
     updateDirectTmuxRestartMemberConfig: createNodeUpdateDirectTmuxRestartMemberConfigUseCase(),
     stopPrimaryOwnedRosterRuntime: ports.stopPrimaryOwnedRosterRuntime,
     preparePrimaryOwnedMemberRestartRuntime: ports.preparePrimaryOwnedMemberRestartRuntime,
+    resolveDirectRestartRuntimeCwd: createNodeResolveDirectRestartRuntimeCwdUseCase(),
   };
 }

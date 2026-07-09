@@ -12,6 +12,7 @@ import type {
   PreparePrimaryOwnedMemberRestartRuntimeResult,
 } from './TeamProvisioningPreparePrimaryOwnedMemberRestartRuntimeUseCase';
 import type { OpenCodeSecondaryRetryOutcome } from './TeamProvisioningReadOpenCodeSecondaryRetryOutcomeUseCase';
+import type { ResolveDirectRestartRuntimeCwdUseCase } from './TeamProvisioningResolveDirectRestartRuntimeCwdUseCase';
 import type { StopPrimaryOwnedRosterRuntimeInput } from './TeamProvisioningStopPrimaryOwnedRosterRuntimeUseCase';
 import type { UpdateDirectTmuxRestartMemberConfigUseCase } from './TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase';
 import type { RetryFailedOpenCodeSecondaryLanesResult } from '@shared/types';
@@ -39,6 +40,7 @@ export interface TeamProvisioningMemberLifecycleRestartUseCaseSeams {
   preparePrimaryOwnedMemberRestartRuntime?(
     input: PreparePrimaryOwnedMemberRestartRuntimeInput
   ): Promise<PreparePrimaryOwnedMemberRestartRuntimeResult>;
+  resolveDirectRestartRuntimeCwd?: ResolveDirectRestartRuntimeCwdUseCase;
 }
 
 export interface TeamProvisioningMemberLifecycleOpenCodeRetryUseCaseSeams {

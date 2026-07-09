@@ -66,6 +66,7 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
       'persistOpenCodeMemberRestartSystemMessage',
       'preparePrimaryOwnedMemberRestartRuntime',
       'readOpenCodeSecondaryRetryOutcome',
+      'resolveDirectRestartRuntimeCwd',
       'stopPrimaryOwnedRosterRuntime',
       'updateDirectTmuxRestartMemberConfig',
     ]);
@@ -119,6 +120,14 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
         'secondary:opencode:worker'
       )
     ).resolves.toEqual({ launchState: 'confirmed_alive' });
+    expect(
+      useCases.resolveDirectRestartRuntimeCwd({
+        configuredMember: {},
+        persistedRuntimeMembers: [{ cwd: ' ' }],
+        projectPath: '/safe-test-workspace/team-a',
+        runTrackedCwd: '/safe-test-workspace/fallback',
+      })
+    ).toBe('/safe-test-workspace/team-a');
     expect(sentMessages).toHaveLength(1);
     expect(sentMessages[0]?.message).toMatchObject({
       from: 'Lead',

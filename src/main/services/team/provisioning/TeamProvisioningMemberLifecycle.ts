@@ -73,6 +73,7 @@ import {
   createReadOpenCodeSecondaryRetryOutcomeUseCase,
   type OpenCodeSecondaryRetryOutcome,
 } from './TeamProvisioningReadOpenCodeSecondaryRetryOutcomeUseCase';
+import { createNodeResolveDirectRestartRuntimeCwdUseCase } from './TeamProvisioningResolveDirectRestartRuntimeCwdUseCase';
 import {
   createNodeStopPrimaryOwnedRosterRuntimeUseCase,
   type StopPrimaryOwnedRosterRuntimeInput,
@@ -201,6 +202,8 @@ export class TeamProvisioningMemberLifecycleController {
     createNodeStopPrimaryOwnedRosterRuntimeUseCase();
   private readonly preparePrimaryOwnedMemberRestartRuntimeFallback =
     createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase();
+  private readonly resolveDirectRestartRuntimeCwdFallback =
+    createNodeResolveDirectRestartRuntimeCwdUseCase();
   private readonly readOpenCodeSecondaryRetryOutcomeFallback =
     createReadOpenCodeSecondaryRetryOutcomeUseCase({
       readLaunchStateSnapshot: (teamName) => this.launchStateStore.read(teamName),
@@ -484,29 +487,13 @@ export class TeamProvisioningMemberLifecycleController {
     config: TeamConfig;
     run: ProvisioningRun;
   }): string {
-    const configuredCwd = params.configuredMember.cwd?.trim();
-    if (configuredCwd) {
-      return path.resolve(configuredCwd);
-    }
-
-    for (const runtimeMember of params.persistedRuntimeMembers) {
-      const cwd = typeof runtimeMember.cwd === 'string' ? runtimeMember.cwd.trim() : '';
-      if (cwd) {
-        return path.resolve(cwd);
-      }
-    }
-
-    const projectPath = params.config.projectPath?.trim();
-    if (projectPath) {
-      return path.resolve(projectPath);
-    }
-
-    const runCwd = this.getRunTrackedCwd(params.run);
-    if (runCwd) {
-      return path.resolve(runCwd);
-    }
-
-    throw new Error('Cannot restart teammate because its runtime cwd is unavailable');
+    const seam = this.restartUseCases.resolveDirectRestartRuntimeCwd;
+    return (seam ?? this.resolveDirectRestartRuntimeCwdFallback)({
+      configuredMember: params.configuredMember,
+      persistedRuntimeMembers: params.persistedRuntimeMembers,
+      projectPath: params.config.projectPath,
+      runTrackedCwd: this.getRunTrackedCwd(params.run),
+    });
   }
 
   private async updateDirectTmuxRestartMemberConfig(
