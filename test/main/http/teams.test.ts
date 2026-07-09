@@ -948,6 +948,59 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
+  it('maps OpenCode runtime callback payload validation failures to 400', async () => {
+    const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
+    recordOpenCodeRuntimeHeartbeat.mockRejectedValueOnce(
+      new Error('OpenCode runtime payload missing runId')
+    );
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+        payload: {
+          teamName: 'demo-team',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        error: 'OpenCode runtime payload missing runId',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('maps runtime-control provider routing failures to 501', async () => {
+    const { app, answerOpenCodeRuntimePermission } = await createApp();
+    const error = new Error(
+      'Runtime control provider opencode does not support answerPermission'
+    );
+    error.name = 'RuntimeControlProviderRoutingError';
+    answerOpenCodeRuntimePermission.mockRejectedValueOnce(error);
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/permission-answer',
+        payload: {
+          teamName: 'demo-team',
+          runId: 'run-opencode',
+          requestId: 'approval-1',
+          answer: { allow: true },
+        },
+      });
+
+      expect(response.statusCode).toBe(501);
+      expect(response.json()).toEqual({
+        error: 'Runtime control provider opencode does not support answerPermission',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
   it('returns 501 for provisioning status without the status facade', async () => {
     const app = Fastify();
     const mocks = createServicesMock();

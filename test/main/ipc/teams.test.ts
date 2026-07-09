@@ -5682,6 +5682,20 @@ describe('ipc teams handlers', () => {
       expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
     });
 
+    it('rejects invalid launch limitContext before dispatching', async () => {
+      const handler = handlers.get(TEAM_LAUNCH)!;
+      const result = (await handler({ sender: { send: vi.fn() } } as never, {
+        teamName: 'my-team',
+        cwd: os.tmpdir(),
+        limitContext: 'true',
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('limitContext must be a boolean');
+      expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
+    });
+
     it('launchTeam preserves top-level OpenCode provider and backend', async () => {
       const handler = handlers.get(TEAM_LAUNCH)!;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {

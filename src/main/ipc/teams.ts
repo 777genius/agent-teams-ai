@@ -2382,6 +2382,9 @@ async function handleLaunchTeam(
   if (payload.model !== undefined && typeof payload.model !== 'string') {
     return { success: false, error: 'model must be a string' };
   }
+  if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
+    return { success: false, error: 'limitContext must be a boolean' };
+  }
   const providerValidation = parseOptionalTeamProviderId(payload.providerId);
   if (!providerValidation.valid) {
     return { success: false, error: providerValidation.error };
