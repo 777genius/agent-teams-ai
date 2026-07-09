@@ -38,16 +38,9 @@ import {
   type OpenCodeMemberIdentityResolution,
   type OpenCodeMemberInboxDelivery,
   type OpenCodeMemberMessageDeliveryInput,
-  type OpenCodeRuntimeMessageAdapter,
 } from './opencode/delivery/OpenCodeMemberMessageDeliveryService';
 import { OpenCodePromptDeliveryFollowUpPolicy } from './opencode/delivery/OpenCodePromptDeliveryFollowUpPolicy';
-import {
-  type OpenCodePromptDeliveryLedgerRecord,
-  type OpenCodePromptDeliveryLedgerStore,
-} from './opencode/delivery/OpenCodePromptDeliveryLedger';
-import { type OpenCodeVisibleReplyProof } from './opencode/delivery/OpenCodePromptDeliveryWatchdog';
 import { type OpenCodePromptDeliveryWatchdogCoordinator } from './opencode/delivery/OpenCodePromptDeliveryWatchdogCoordinator';
-import { type OpenCodeRuntimeDeliveryAdvisoryDecision } from './opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 import { OpenCodeRuntimeDeliveryProofReader } from './opencode/delivery/OpenCodeRuntimeDeliveryProofReader';
 import { type OpenCodeVisibleReplyProofService } from './opencode/delivery/OpenCodeVisibleReplyProofService';
 import { clearOpenCodeRuntimeLaneStorage } from './opencode/store/OpenCodeRuntimeManifestEvidenceReader';
@@ -118,6 +111,7 @@ import {
   recoverDeterministicBootstrapCompletionWithService,
 } from './provisioning/TeamProvisioningDeterministicBootstrapCompletionRecovery';
 import { TeamProvisioningMemberMcpLaunchConfigCompatibilityFacade } from './provisioning/TeamProvisioningMemberMcpLaunchConfigCompatibilityFacade';
+import { TeamProvisioningOpenCodePromptDeliveryCompatibilityFacade } from './provisioning/TeamProvisioningOpenCodePromptDeliveryCompatibilityFacade';
 import { type ProvisioningEnvResolution } from './provisioning/TeamProvisioningEnvBuilder';
 import {
   startProvisioningFilesystemMonitor,
@@ -314,13 +308,9 @@ import {
   type OpenCodeRuntimePendingPermissionsPersistenceServiceHost,
   type OpenCodeRuntimePermissionSpawnStatusPorts,
   type OpenCodeRuntimePermissionSpawnStatusServiceHost,
-  type OpenCodeRuntimePermissionSyncInput,
-  type OpenCodeRuntimePermissionSyncServiceHost,
-  syncOpenCodeRuntimePermissionsAfterDeliveryWithService,
 } from './provisioning/TeamProvisioningOpenCodeRuntimePermissions';
 import {
   createRememberOpenCodeRuntimePidFromBridgePortsFromService,
-  rememberOpenCodeRuntimePidFromBridge as rememberOpenCodeRuntimePidFromBridgeHelper,
   type RememberOpenCodeRuntimePidFromBridgeServiceHost,
 } from './provisioning/TeamProvisioningOpenCodeRuntimePidBridge';
 import { createTeamProvisioningOpenCodeRuntimeRecoveryBoundary } from './provisioning/TeamProvisioningOpenCodeRuntimeRecoveryBoundaryFactory';
@@ -479,7 +469,6 @@ import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { TeamTaskActivityIntervalService } from './TeamTaskActivityIntervalService';
 
 import type {
-  OpenCodeTeamRuntimeMessageInput,
   OpenCodeTeamRuntimeMessageResult,
   TeamLaunchRuntimeAdapter,
   TeamRuntimeLaunchInput,
@@ -503,7 +492,6 @@ export {
 } from './provisioning/TeamProvisioningPromptBuilders';
 
 import type {
-  AgentActionMode,
   InboxMessage,
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
@@ -536,7 +524,7 @@ const claudePermissionSettingsFilePorts: ClaudePermissionSettingsFilePorts = {
   writeFileUtf8: (filePath, contents) => atomicWriteAsync(filePath, contents),
 };
 
-export class TeamProvisioningService extends TeamProvisioningMemberMcpLaunchConfigCompatibilityFacade<ProvisioningRun> {
+export class TeamProvisioningService extends TeamProvisioningOpenCodePromptDeliveryCompatibilityFacade<ProvisioningRun> {
   private readonly runtimeLaneCoordinator = createTeamRuntimeLaneCoordinator();
   private readonly providerConnectionService = ProviderConnectionService.getInstance();
   protected readonly launchIdentityBoundary: TeamProvisioningLaunchIdentityBoundary =
@@ -673,12 +661,6 @@ export class TeamProvisioningService extends TeamProvisioningMemberMcpLaunchConf
     );
   }
 
-  private async handleOpenCodeRuntimeDeliveryUserFacingSideEffects(
-    record: OpenCodePromptDeliveryLedgerRecord
-  ): Promise<void> {
-    await this.openCodeRuntimeDeliveryAdvisory.handleUserFacingSideEffects(record);
-  }
-
   private readonly teamOpLocks = new Map<string, Promise<void>>();
   protected readonly shutdownCoordination = createTeamProvisioningShutdownCoordination(
     {
@@ -731,7 +713,7 @@ export class TeamProvisioningService extends TeamProvisioningMemberMcpLaunchConf
     getErrorMessage,
   });
   private readonly openCodeRuntimeDeliveryProofReader = new OpenCodeRuntimeDeliveryProofReader();
-  private readonly openCodeRuntimeDeliveryAdvisory =
+  protected readonly openCodeRuntimeDeliveryAdvisory =
     createTeamProvisioningOpenCodeRuntimeDeliveryAdvisoryFromService<ProvisioningRun>(
       this as unknown as TeamProvisioningOpenCodeRuntimeDeliveryAdvisoryServiceHost<ProvisioningRun>,
       {
@@ -775,7 +757,7 @@ export class TeamProvisioningService extends TeamProvisioningMemberMcpLaunchConf
       }
     );
   private readonly openCodeVisibleReplyProofService!: OpenCodeVisibleReplyProofService;
-  private readonly openCodePromptDeliveryWatchdogCoordinator!: OpenCodePromptDeliveryWatchdogCoordinator;
+  protected readonly openCodePromptDeliveryWatchdogCoordinator!: OpenCodePromptDeliveryWatchdogCoordinator;
   private readonly openCodeRuntimeRecoveryIdentity = createOpenCodeRuntimeRecoveryIdentityHelpers({
     getTeamsBasePath,
     getCurrentOpenCodeRuntimeRunId: (teamName, laneId) =>
@@ -812,7 +794,7 @@ export class TeamProvisioningService extends TeamProvisioningMemberMcpLaunchConf
         getRun: (runId) => this.runs.get(runId) ?? null,
       }
     );
-  private readonly openCodeRuntimePidBridgePorts =
+  protected readonly openCodeRuntimePidBridgePorts =
     createRememberOpenCodeRuntimePidFromBridgePortsFromService(
       this as unknown as RememberOpenCodeRuntimePidFromBridgeServiceHost,
       {
@@ -1413,178 +1395,6 @@ export class TeamProvisioningService extends TeamProvisioningMemberMcpLaunchConf
     }
     this.cleanupRun(run);
     throw new Error('Team launch cancelled by app shutdown');
-  }
-
-  private async isOpenCodeDeliveryResponseReadCommitAllowed(input: {
-    teamName?: string;
-    memberName?: string;
-    responseState?: NonNullable<OpenCodeTeamRuntimeMessageResult['responseObservation']>['state'];
-    actionMode?: AgentActionMode;
-    taskRefs?: TaskRef[];
-    visibleReply?: OpenCodeVisibleReplyProof | null;
-    ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null;
-  }): Promise<boolean> {
-    return this.openCodePromptDeliveryWatchdogCoordinator.isDeliveryResponseReadCommitAllowed(
-      input
-    );
-  }
-
-  private async isLegacyOpenCodeMemberWorkSyncReadCommitAllowed(input: {
-    teamName: string;
-    memberName: string;
-    workSyncIntent?: OpenCodeTeamRuntimeMessageInput['workSyncIntent'];
-    responseObservation?: NonNullable<OpenCodeTeamRuntimeMessageResult['responseObservation']>;
-  }): Promise<boolean> {
-    return this.openCodePromptDeliveryWatchdogCoordinator.isLegacyMemberWorkSyncReadCommitAllowed(
-      input
-    );
-  }
-
-  private getOpenCodeDeliveryPendingReason(input: {
-    responseState?: NonNullable<OpenCodeTeamRuntimeMessageResult['responseObservation']>['state'];
-    actionMode?: AgentActionMode | null;
-    taskRefs?: TaskRef[];
-    visibleReply?: OpenCodeVisibleReplyProof | null;
-    ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null;
-  }): string {
-    return this.openCodePromptDeliveryWatchdogCoordinator.getDeliveryPendingReason(input);
-  }
-
-  private async markOpenCodeAcceptedDeliveryMissingPromptProofForRetry(input: {
-    ledger: OpenCodePromptDeliveryLedgerStore;
-    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
-    eventContext?: Record<string, unknown>;
-  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
-    return this.openCodePromptDeliveryWatchdogCoordinator.markAcceptedDeliveryMissingPromptProofForRetry(
-      input
-    );
-  }
-
-  private async requeueOpenCodeNoAssistantTerminalDeliveryIfNeeded(input: {
-    ledger: OpenCodePromptDeliveryLedgerStore;
-    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
-  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
-    return this.openCodePromptDeliveryWatchdogCoordinator.requeueNoAssistantTerminalDeliveryIfNeeded(
-      input
-    );
-  }
-
-  private async requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded(input: {
-    ledger: OpenCodePromptDeliveryLedgerStore;
-    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
-  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
-    return this.openCodePromptDeliveryWatchdogCoordinator.requeueRuntimeManifestWatermarkDeliveryIfNeeded(
-      input
-    );
-  }
-
-  private async markOpenCodePromptLedgerFailedTerminal(input: {
-    ledger: OpenCodePromptDeliveryLedgerStore;
-    id: string;
-    reason: string;
-    diagnostics?: string[];
-    failedAt: string;
-    eventContext?: Record<string, unknown>;
-  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
-    return this.openCodePromptDeliveryWatchdogCoordinator.markLedgerFailedTerminal(input);
-  }
-
-  private async observeOpenCodeDirectUserDeliveryInlineIfNeeded(input: {
-    adapter: OpenCodeRuntimeMessageAdapter;
-    ledger: OpenCodePromptDeliveryLedgerStore;
-    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
-    teamName: string;
-    memberName: string;
-    laneId: string;
-    cwd: string;
-    text: string;
-    messageId: string;
-    runtimeRunId?: string | null;
-    replyRecipient?: string | null;
-    actionMode?: AgentActionMode;
-    messageKind?: OpenCodeTeamRuntimeMessageInput['messageKind'];
-    workSyncIntent?: OpenCodeTeamRuntimeMessageInput['workSyncIntent'];
-    workSyncReviewRequestEventIds?: string[];
-    taskRefs?: TaskRef[];
-    promptAccepted: boolean;
-    visibleReply?: OpenCodeVisibleReplyProof | null;
-  }): Promise<{
-    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
-    visibleReply: OpenCodeVisibleReplyProof | null;
-  }> {
-    return this.openCodePromptDeliveryWatchdogCoordinator.observeDirectUserDeliveryInlineIfNeeded(
-      input
-    );
-  }
-
-  protected scheduleOpenCodePromptDeliveryWatchdog(input: {
-    teamName: string;
-    memberName: string;
-    messageId?: string | null;
-    delayMs: number;
-  }): void {
-    this.openCodePromptDeliveryWatchdogScheduler.schedule(input);
-  }
-
-  private async rememberOpenCodeRuntimePidFromBridge(input: {
-    teamName: string;
-    memberName: string;
-    laneId: string;
-    runId?: string | null;
-    runtimeSessionId?: string | null;
-    runtimePid?: number;
-    reason: string;
-  }): Promise<void> {
-    await rememberOpenCodeRuntimePidFromBridgeHelper(input, this.openCodeRuntimePidBridgePorts);
-  }
-
-  private async maybeSyncOpenCodeRuntimePermissionsAfterDelivery(
-    input: OpenCodeRuntimePermissionSyncInput
-  ): Promise<void> {
-    await syncOpenCodeRuntimePermissionsAfterDeliveryWithService(
-      input,
-      this as unknown as OpenCodeRuntimePermissionSyncServiceHost<ProvisioningRun>,
-      { logWarning: (message) => logger.warn(message) }
-    );
-  }
-
-  private logOpenCodePromptDeliveryEvent(
-    event: string,
-    record: OpenCodePromptDeliveryLedgerRecord,
-    extra: Record<string, unknown> = {}
-  ): void {
-    this.openCodeRuntimeDeliveryAdvisory.logPromptDeliveryEvent(event, record, extra);
-  }
-
-  private emitOpenCodePromptDeliveryTaskLogChange(
-    record: OpenCodePromptDeliveryLedgerRecord,
-    detail: string
-  ): void {
-    this.openCodeRuntimeDeliveryAdvisory.emitPromptDeliveryTaskLogChange(record, detail);
-  }
-
-  private async decideOpenCodeRuntimeDeliveryUserFacingAdvisory(
-    record: OpenCodePromptDeliveryLedgerRecord
-  ): Promise<{
-    record: OpenCodePromptDeliveryLedgerRecord;
-    decision: OpenCodeRuntimeDeliveryAdvisoryDecision;
-  }> {
-    return await this.openCodeRuntimeDeliveryAdvisory.decideUserFacingAdvisory(record);
-  }
-
-  private emitRuntimeDeliveryReplyAdvisoryRefresh(teamName: string, message: InboxMessage): void {
-    this.openCodeRuntimeDeliveryAdvisory.emitRuntimeDeliveryReplyAdvisoryRefresh(teamName, message);
-  }
-
-  async scanOpenCodePromptDeliveryWatchdog(teamName: string): Promise<number> {
-    return await this.openCodePromptDeliveryWatchdogCoordinator.scan(teamName);
-  }
-
-  private async scanOpenCodePromptDeliveryWatchdogForActiveLanes(
-    teamName: string,
-    laneIds: string[]
-  ): Promise<number> {
-    return await this.openCodePromptDeliveryWatchdogCoordinator.scanActiveLanes(teamName, laneIds);
   }
 
   private createOpenCodeRuntimeBootstrapEvidencePorts(): OpenCodeRuntimeBootstrapEvidencePorts {
