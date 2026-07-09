@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildLiveTeamAgentRuntimeMetadata,
   buildTeamAgentRuntimeSnapshot,
+  type PersistedRuntimeMemberLike,
   type RuntimeAdapterRunSnapshotSource,
   type TeamProvisioningRuntimeSnapshotRun,
 } from '../TeamProvisioningRuntimeSnapshot';
@@ -155,25 +156,34 @@ function pendingSpawnStatus(
   };
 }
 
-function runtimeAdapterRun(): RuntimeAdapterRunSnapshotSource {
+function runtimeAdapterRun(
+  overrides: {
+    runId?: string;
+    model?: string;
+    runtimePid?: number;
+    sessionId?: string;
+    runtimeDiagnostic?: string;
+  } = {}
+): RuntimeAdapterRunSnapshotSource {
   return {
-    runId: RUN_ID,
+    runId: overrides.runId ?? RUN_ID,
     providerId: 'opencode',
     cwd: WORKDIR,
     members: {
       Worker: {
         memberName: 'Worker',
         providerId: 'opencode',
-        model: 'gpt-current',
+        model: overrides.model ?? 'gpt-current',
         launchState: 'confirmed_alive',
         agentToolAccepted: true,
         runtimeAlive: true,
         bootstrapConfirmed: true,
         hardFailure: false,
-        runtimePid: CURRENT_PID,
-        sessionId: 'session-current',
+        runtimePid: overrides.runtimePid ?? CURRENT_PID,
+        sessionId: overrides.sessionId ?? 'session-current',
         livenessKind: 'confirmed_bootstrap',
         pidSource: 'opencode_bridge',
+        ...(overrides.runtimeDiagnostic ? { runtimeDiagnostic: overrides.runtimeDiagnostic } : {}),
         diagnostics: ['current runtime adapter evidence'],
       },
     },
@@ -294,16 +304,20 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
           read: vi.fn(async () => launchSnapshot(confirmedOldLaunchMember())),
         },
         readConfigSnapshot: vi.fn(async () => config()),
-        readPersistedRuntimeMembers: vi.fn(() => [
-          {
-            name: 'Worker',
-            backendType: 'process',
-            providerId: 'opencode',
-            runtimePid: OLD_PID,
-            runtimeSessionId: 'session-old',
-            cwd: '/safe-test-workspace/old-runtime',
-          },
-        ]),
+        readPersistedRuntimeMembers: vi.fn(
+          () =>
+            [
+              {
+                name: 'Worker',
+                backendType: 'process',
+                providerId: 'opencode',
+                bootstrapRunId: OLD_RUN_ID,
+                runtimePid: OLD_PID,
+                runtimeSessionId: 'session-old',
+                cwd: '/safe-test-workspace/old-runtime',
+              },
+            ] satisfies PersistedRuntimeMemberLike[]
+        ),
         readRuntimeProcessRowsForLiveRuntimeMetadata: vi.fn(async () => ({
           rows: processRows(),
           processTableAvailable: true,
@@ -330,6 +344,148 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
         runtimeSessionId: 'session-current',
         runtimeDiagnostic: 'OpenCode runtime process detected after bootstrap confirmation',
       });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ignores stale runtime adapter run evidence when resolving the active run', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(UPDATED_AT));
+    try {
+      const metadata = await buildLiveTeamAgentRuntimeMetadata({
+        teamName: TEAM_NAME,
+        runId: RUN_ID,
+        generationAtStart: 0,
+        runs: new Map([[RUN_ID, run()]]),
+        runtimeAdapterRunByTeam: new Map([
+          [
+            TEAM_NAME,
+            runtimeAdapterRun({
+              runId: OLD_RUN_ID,
+              model: 'gpt-old',
+              runtimePid: OLD_PID,
+              sessionId: 'session-old',
+              runtimeDiagnostic: 'stale adapter evidence',
+            }),
+          ],
+        ]),
+        teamMetaStore: {
+          getMeta: vi.fn(async () => ({ providerId: 'opencode' })),
+        },
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        },
+        launchStateStore: {
+          read: vi.fn(async () =>
+            launchSnapshot(
+              confirmedOldLaunchMember({
+                model: 'gpt-current',
+                runtimePid: CURRENT_PID,
+                runtimeRunId: RUN_ID,
+                runtimeSessionId: 'session-current',
+                runtimeDiagnostic: 'current launch confirmed',
+              })
+            )
+          ),
+        },
+        readConfigSnapshot: vi.fn(async () => config()),
+        readPersistedRuntimeMembers: vi.fn(() => [] satisfies PersistedRuntimeMemberLike[]),
+        readRuntimeProcessRowsForLiveRuntimeMetadata: vi.fn(async () => ({
+          rows: processRows(),
+          processTableAvailable: true,
+        })),
+        readWindowsHostProcessRowsForLiveRuntimeMetadata: vi.fn(async () => ({
+          rows: [],
+          processTableAvailable: false,
+        })),
+        getRuntimeSnapshotCacheGeneration: vi.fn(() => 0),
+        getTrackedRunId: vi.fn(() => RUN_ID),
+        getAgentRuntimeSnapshotCacheTtlMs: vi.fn(() => 1_000),
+        liveRuntimeMetadataCache: {
+          rememberLiveTeamAgentRuntimeMetadata: vi.fn(),
+        },
+        logDebug: vi.fn(),
+      });
+
+      expect(metadata.get('Worker')).toMatchObject({
+        alive: true,
+        model: 'gpt-current',
+        pid: CURRENT_PID,
+        metricsPid: CURRENT_PID,
+        pidSource: 'opencode_bridge',
+        runtimeSessionId: 'session-current',
+      });
+      expect(metadata.get('Worker')).not.toMatchObject({
+        pid: OLD_PID,
+        metricsPid: OLD_PID,
+        runtimeSessionId: 'session-old',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not project stale persisted runtime pid or session metadata onto an active run', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(UPDATED_AT));
+    try {
+      const metadata = await buildLiveTeamAgentRuntimeMetadata({
+        teamName: TEAM_NAME,
+        runId: RUN_ID,
+        generationAtStart: 0,
+        runs: new Map([[RUN_ID, run()]]),
+        runtimeAdapterRunByTeam: new Map(),
+        teamMetaStore: {
+          getMeta: vi.fn(async () => ({ providerId: 'opencode' })),
+        },
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        },
+        launchStateStore: {
+          read: vi.fn(async () => null),
+        },
+        readConfigSnapshot: vi.fn(async () => config()),
+        readPersistedRuntimeMembers: vi.fn(
+          () =>
+            [
+              {
+                name: 'Worker',
+                backendType: 'process',
+                providerId: 'opencode',
+                bootstrapRunId: OLD_RUN_ID,
+                runtimePid: OLD_PID,
+                runtimeSessionId: 'session-old',
+                cwd: '/safe-test-workspace/old-runtime',
+              },
+            ] satisfies PersistedRuntimeMemberLike[]
+        ),
+        readRuntimeProcessRowsForLiveRuntimeMetadata: vi.fn(async () => ({
+          rows: processRows(),
+          processTableAvailable: true,
+        })),
+        readWindowsHostProcessRowsForLiveRuntimeMetadata: vi.fn(async () => ({
+          rows: [],
+          processTableAvailable: false,
+        })),
+        getRuntimeSnapshotCacheGeneration: vi.fn(() => 0),
+        getTrackedRunId: vi.fn(() => RUN_ID),
+        getAgentRuntimeSnapshotCacheTtlMs: vi.fn(() => 1_000),
+        liveRuntimeMetadataCache: {
+          rememberLiveTeamAgentRuntimeMetadata: vi.fn(),
+        },
+        logDebug: vi.fn(),
+      });
+
+      expect(metadata.get('Worker')).toMatchObject({
+        alive: false,
+        model: 'gpt-current',
+        livenessKind: 'not_found',
+        runtimeDiagnostic: 'runtime process not found',
+      });
+      expect(metadata.get('Worker')?.pid).toBeUndefined();
+      expect(metadata.get('Worker')?.metricsPid).toBeUndefined();
+      expect(metadata.get('Worker')?.runtimeSessionId).toBeUndefined();
     } finally {
       vi.useRealTimers();
     }

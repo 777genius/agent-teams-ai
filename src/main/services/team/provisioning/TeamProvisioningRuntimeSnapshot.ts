@@ -171,7 +171,7 @@ function getPersistedLaunchMemberNames(snapshot: PersistedTeamLaunchSnapshot): s
   return Array.from(new Set([...snapshot.expectedMembers, ...Object.keys(snapshot.members)]));
 }
 
-function shouldUseLaunchMemberBootstrapEvidence(
+function shouldUseLaunchMemberRuntimeEvidence(
   member: PersistedTeamLaunchMemberState | undefined,
   activeRuntimeRunId: string
 ): boolean {
@@ -182,6 +182,39 @@ function shouldUseLaunchMemberBootstrapEvidence(
     return true;
   }
   return isLaunchMemberStatusRelevantToRuntimeRun(member, activeRuntimeRunId);
+}
+
+function resolveActiveRuntimeRunId(
+  run: { runId?: string } | null | undefined,
+  paramsRunId: string | null | undefined,
+  runtimeAdapterRun: RuntimeAdapterRunSnapshotSource | undefined
+): string {
+  return run?.runId?.trim() || paramsRunId?.trim() || runtimeAdapterRun?.runId?.trim() || '';
+}
+
+function shouldUseRuntimeAdapterRunEvidence(
+  runtimeAdapterRun: RuntimeAdapterRunSnapshotSource | undefined,
+  activeRuntimeRunId: string
+): runtimeAdapterRun is RuntimeAdapterRunSnapshotSource {
+  if (!runtimeAdapterRun) {
+    return false;
+  }
+  const adapterRunId = runtimeAdapterRun.runId.trim();
+  if (activeRuntimeRunId.length === 0) {
+    return true;
+  }
+  return adapterRunId.length > 0 && adapterRunId === activeRuntimeRunId;
+}
+
+function shouldUsePersistedRuntimeMemberRuntimeEvidence(
+  member: PersistedRuntimeMemberLike,
+  activeRuntimeRunId: string
+): boolean {
+  if (activeRuntimeRunId.length === 0) {
+    return true;
+  }
+  const bootstrapRunId = member.bootstrapRunId?.trim() ?? '';
+  return bootstrapRunId.length > 0 && bootstrapRunId === activeRuntimeRunId;
 }
 
 function normalizeRuntimePositiveInteger(value: unknown): number | undefined {
@@ -618,7 +651,14 @@ export async function buildTeamAgentRuntimeSnapshot(
 ): Promise<TeamAgentRuntimeSnapshot> {
   const updatedAt = nowIso();
   const run = params.runId ? (params.runs.get(params.runId) ?? null) : null;
-  const currentRuntimeAdapterRun = params.runtimeAdapterRunByTeam.get(params.teamName);
+  const runtimeAdapterRun = params.runtimeAdapterRunByTeam.get(params.teamName);
+  const activeRuntimeRunId = resolveActiveRuntimeRunId(run, params.runId, runtimeAdapterRun);
+  const currentRuntimeAdapterRun = shouldUseRuntimeAdapterRunEvidence(
+    runtimeAdapterRun,
+    activeRuntimeRunId
+  )
+    ? runtimeAdapterRun
+    : undefined;
   const persistedTeamMeta = await params.teamMetaStore.getMeta(params.teamName).catch(() => null);
 
   let configuredMembers: TeamConfig['members'] = [];
@@ -638,9 +678,10 @@ export async function buildTeamAgentRuntimeSnapshot(
     .getMemberSpawnStatuses(params.teamName)
     .catch(() => null);
   const liveRuntimeByMember = await params.getLiveTeamAgentRuntimeMetadata(params.teamName);
-  const activeRuntimeRunId =
-    run?.runId?.trim() || currentRuntimeAdapterRun?.runId?.trim() || params.runId?.trim() || '';
   const spawnStatusRunId = spawnStatusSnapshot?.runId?.trim() ?? '';
+  const canUseSpawnStatusEvidence =
+    spawnStatusSnapshot != null &&
+    (activeRuntimeRunId.length === 0 || spawnStatusRunId === activeRuntimeRunId);
   const canUseLiveSpawnStatusRuntimeTruth =
     spawnStatusSnapshot?.source === 'live' &&
     activeRuntimeRunId.length > 0 &&
@@ -756,6 +797,9 @@ export async function buildTeamAgentRuntimeSnapshot(
     return fallback;
   };
   const getSpawnStatusMember = (memberName: string): MemberSpawnStatusEntry | undefined => {
+    if (!canUseSpawnStatusEvidence) {
+      return undefined;
+    }
     const statuses = spawnStatusSnapshot?.statuses;
     if (!statuses) {
       return undefined;
@@ -799,6 +843,9 @@ export async function buildTeamAgentRuntimeSnapshot(
       continue;
     }
     const launchMember = launchSnapshot?.members[memberName];
+    if (!shouldUseLaunchMemberRuntimeEvidence(launchMember, activeRuntimeRunId)) {
+      continue;
+    }
     candidateMembers.set(memberName, {
       name: memberName,
       agentType: 'general-purpose',
@@ -807,6 +854,18 @@ export async function buildTeamAgentRuntimeSnapshot(
       model: launchMember?.model,
       effort: launchMember?.effort,
       fastMode: launchMember?.selectedFastMode,
+    });
+  }
+  for (const memberName of Object.keys(currentRuntimeAdapterRun?.members ?? {})) {
+    if (candidateMembers.has(memberName) || isMemberRemovedInMeta(metaMembers, memberName)) {
+      continue;
+    }
+    const adapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
+    candidateMembers.set(memberName, {
+      name: memberName,
+      agentType: 'general-purpose',
+      providerId: normalizeOptionalTeamProviderId(adapterEvidence?.providerId),
+      model: adapterEvidence?.model,
     });
   }
   for (const member of activeRunMemberByName.values()) {
@@ -820,7 +879,12 @@ export async function buildTeamAgentRuntimeSnapshot(
     if (!memberName) continue;
 
     const isLead = isLeadMember({ name: memberName, agentType: member.agentType });
-    const candidateLaunchMember = launchSnapshot?.members[memberName];
+    const candidateLaunchMember = shouldUseLaunchMemberRuntimeEvidence(
+      launchSnapshot?.members[memberName],
+      activeRuntimeRunId
+    )
+      ? launchSnapshot?.members[memberName]
+      : undefined;
     const candidateRuntimeAdapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
     const leadRuntimeProviderId =
       normalizeOptionalTeamProviderId(candidateRuntimeAdapterEvidence?.providerId) ??
@@ -894,9 +958,19 @@ export async function buildTeamAgentRuntimeSnapshot(
     }
 
     const persistedRuntimeMember = getPersistedRuntimeMember(memberName);
+    const persistedRuntimeMemberRuntimeEvidence =
+      persistedRuntimeMember &&
+      shouldUsePersistedRuntimeMemberRuntimeEvidence(persistedRuntimeMember, activeRuntimeRunId)
+        ? persistedRuntimeMember
+        : undefined;
     const liveRuntimeMember = getLiveRuntimeMember(memberName);
     const spawnStatusMember = getSpawnStatusMember(memberName);
-    const launchMember = launchSnapshot?.members[memberName];
+    const launchMember = shouldUseLaunchMemberRuntimeEvidence(
+      launchSnapshot?.members[memberName],
+      activeRuntimeRunId
+    )
+      ? launchSnapshot?.members[memberName]
+      : undefined;
     const runtimeAdapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
     const activeRunMember = activeRunMemberByName.get(memberName);
     const activeRunModel = activeRunMember?.model?.trim();
@@ -916,7 +990,10 @@ export async function buildTeamAgentRuntimeSnapshot(
     const canUseLiveRuntimeModel = !!liveRuntimeModel && !liveRuntimeProviderConflictsWithActive;
     const backendType =
       liveRuntimeMember?.backendType ??
-      normalizeTeamAgentRuntimeBackendType(persistedRuntimeMember?.backendType, false);
+      normalizeTeamAgentRuntimeBackendType(
+        persistedRuntimeMemberRuntimeEvidence?.backendType,
+        false
+      );
     const runtimeModel =
       (canUseLiveRuntimeModel ? liveRuntimeModel : undefined) ??
       activeRunModel ??
@@ -972,7 +1049,7 @@ export async function buildTeamAgentRuntimeSnapshot(
         ? false
         : backendType !== 'in-process';
     const historicalBootstrapConfirmed = hasRuntimeProjectionSnapshotBootstrapConfirmationEvidence({
-      launch: shouldUseLaunchMemberBootstrapEvidence(launchMember, activeRuntimeRunId)
+      launch: shouldUseLaunchMemberRuntimeEvidence(launchMember, activeRuntimeRunId)
         ? {
             bootstrapConfirmed: launchMember?.bootstrapConfirmed,
             launchState: launchMember?.launchState,
@@ -1198,6 +1275,14 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     } & RuntimeSnapshotLogging
 ): Promise<Map<string, LiveTeamAgentRuntimeMetadata>> {
   const run = params.runId ? (params.runs.get(params.runId) ?? null) : null;
+  const runtimeAdapterRun = params.runtimeAdapterRunByTeam.get(params.teamName);
+  const activeRuntimeRunId = resolveActiveRuntimeRunId(run, params.runId, runtimeAdapterRun);
+  const currentRuntimeAdapterRun = shouldUseRuntimeAdapterRunEvidence(
+    runtimeAdapterRun,
+    activeRuntimeRunId
+  )
+    ? runtimeAdapterRun
+    : undefined;
 
   let configuredMembers: TeamConfig['members'] = [];
   try {
@@ -1240,17 +1325,28 @@ export async function buildLiveTeamAgentRuntimeMetadata(
       findEffectiveRunMemberModel(run, memberName) ??
       findConfiguredMemberModel(configuredMembers, memberName) ??
       findMetaMemberModel(metaMembers, memberName);
+    const canUseRuntimeEvidence = shouldUsePersistedRuntimeMemberRuntimeEvidence(
+      member,
+      activeRuntimeRunId
+    );
     upsertMetadata(memberName, {
-      backendType: normalizeTeamAgentRuntimeBackendType(member.backendType, false),
       providerId: normalizeOptionalTeamProviderId(member.providerId),
-      agentId: typeof member.agentId === 'string' ? member.agentId.trim() || undefined : undefined,
-      tmuxPaneId:
-        typeof member.tmuxPaneId === 'string' ? member.tmuxPaneId.trim() || undefined : undefined,
-      ...(normalizeRuntimePositiveInteger(member.runtimePid)
-        ? { metricsPid: normalizeRuntimePositiveInteger(member.runtimePid) }
-        : {}),
-      ...(typeof member.runtimeSessionId === 'string' && member.runtimeSessionId.trim()
-        ? { runtimeSessionId: member.runtimeSessionId.trim() }
+      ...(canUseRuntimeEvidence
+        ? {
+            backendType: normalizeTeamAgentRuntimeBackendType(member.backendType, false),
+            agentId:
+              typeof member.agentId === 'string' ? member.agentId.trim() || undefined : undefined,
+            tmuxPaneId:
+              typeof member.tmuxPaneId === 'string'
+                ? member.tmuxPaneId.trim() || undefined
+                : undefined,
+            ...(normalizeRuntimePositiveInteger(member.runtimePid)
+              ? { metricsPid: normalizeRuntimePositiveInteger(member.runtimePid) }
+              : {}),
+            ...(typeof member.runtimeSessionId === 'string' && member.runtimeSessionId.trim()
+              ? { runtimeSessionId: member.runtimeSessionId.trim() }
+              : {}),
+          }
         : {}),
       ...(typeof member.cwd === 'string' && member.cwd.trim() ? { cwd: member.cwd.trim() } : {}),
       ...(runtimeModel ? { model: runtimeModel } : {}),
@@ -1364,19 +1460,20 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     });
   }
 
-  const currentRuntimeAdapterRun = params.runtimeAdapterRunByTeam.get(params.teamName);
   const persistedLaunchSnapshot: PersistedTeamLaunchSnapshot | null = choosePreferredLaunchSnapshot(
     await readBootstrapLaunchSnapshot(params.teamName).catch(() => null),
     await params.launchStateStore.read(params.teamName).catch(() => null)
   );
-  const activeRuntimeRunId =
-    run?.runId?.trim() || currentRuntimeAdapterRun?.runId?.trim() || params.runId?.trim() || '';
   const persistedMembers: PersistedTeamLaunchMemberState[] = persistedLaunchSnapshot
     ? Object.values(persistedLaunchSnapshot.members)
     : [];
   for (const persistedMember of persistedMembers) {
     const memberName = persistedMember.name?.trim() ?? '';
-    if (!memberName || isMemberRemovedInMeta(metaMembers, memberName)) {
+    if (
+      !memberName ||
+      isMemberRemovedInMeta(metaMembers, memberName) ||
+      !shouldUseLaunchMemberRuntimeEvidence(persistedMember, activeRuntimeRunId)
+    ) {
       continue;
     }
     const activeRunMember = findEffectiveRunMember(run, memberName);
@@ -1386,7 +1483,6 @@ export async function buildLiveTeamAgentRuntimeMetadata(
       normalizeOptionalTeamProviderId(activeRunMember?.providerId) ??
       inferTeamProviderIdFromModel(activeRunModel ?? evidenceModel);
     const effectiveProviderId = activeRunProviderId ?? persistedMember.providerId;
-    const currentRuntimeAdapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
     upsertMetadata(memberName, {
       backendType:
         effectiveProviderId === 'opencode'
@@ -1394,10 +1490,9 @@ export async function buildLiveTeamAgentRuntimeMetadata(
           : metadataByMember.get(memberName)?.backendType,
       providerId: effectiveProviderId,
       alive: false,
-      livenessKind: currentRuntimeAdapterEvidence?.livenessKind ?? persistedMember.livenessKind,
-      pidSource: currentRuntimeAdapterEvidence?.pidSource ?? persistedMember.pidSource,
-      runtimeDiagnostic:
-        currentRuntimeAdapterEvidence?.runtimeDiagnostic ?? persistedMember.runtimeDiagnostic,
+      livenessKind: persistedMember.livenessKind,
+      pidSource: persistedMember.pidSource,
+      runtimeDiagnostic: persistedMember.runtimeDiagnostic,
       runtimeDiagnosticSeverity: persistedMember.runtimeDiagnosticSeverity,
       runtimeLastSeenAt:
         persistedMember.runtimeLastSeenAt ??
@@ -1410,17 +1505,49 @@ export async function buildLiveTeamAgentRuntimeMetadata(
           : persistedMember.model?.trim()
             ? { model: persistedMember.model.trim() }
             : {}),
-      ...(typeof currentRuntimeAdapterEvidence?.runtimePid === 'number' &&
-      currentRuntimeAdapterEvidence.runtimePid > 0
-        ? { metricsPid: currentRuntimeAdapterEvidence.runtimePid }
-        : typeof persistedMember.runtimePid === 'number' && persistedMember.runtimePid > 0
-          ? { metricsPid: persistedMember.runtimePid }
+      ...(typeof persistedMember.runtimePid === 'number' && persistedMember.runtimePid > 0
+        ? { metricsPid: persistedMember.runtimePid }
+        : {}),
+      ...(persistedMember.runtimeSessionId
+        ? { runtimeSessionId: persistedMember.runtimeSessionId }
+        : {}),
+    });
+  }
+  for (const [memberName, evidence] of Object.entries(currentRuntimeAdapterRun?.members ?? {})) {
+    const normalizedMemberName = evidence.memberName?.trim() || memberName.trim();
+    if (!normalizedMemberName || isMemberRemovedInMeta(metaMembers, normalizedMemberName)) {
+      continue;
+    }
+    const activeRunMember = findEffectiveRunMember(run, normalizedMemberName);
+    const activeRunModel = activeRunMember?.model?.trim();
+    const evidenceModel = evidence.model?.trim();
+    const activeRunProviderId =
+      normalizeOptionalTeamProviderId(activeRunMember?.providerId) ??
+      normalizeOptionalTeamProviderId(evidence.providerId) ??
+      inferTeamProviderIdFromModel(activeRunModel ?? evidenceModel);
+    upsertMetadata(normalizedMemberName, {
+      alive: false,
+      ...(activeRunProviderId === 'opencode'
+        ? { backendType: 'process' as const }
+        : evidence.backendType
+          ? { backendType: evidence.backendType }
           : {}),
-      ...(currentRuntimeAdapterEvidence?.sessionId
-        ? { runtimeSessionId: currentRuntimeAdapterEvidence.sessionId }
-        : persistedMember.runtimeSessionId
-          ? { runtimeSessionId: persistedMember.runtimeSessionId }
+      ...(activeRunProviderId ? { providerId: activeRunProviderId } : {}),
+      ...(evidence.livenessKind ? { livenessKind: evidence.livenessKind } : {}),
+      ...(evidence.pidSource ? { pidSource: evidence.pidSource } : {}),
+      ...(evidence.runtimeDiagnostic ? { runtimeDiagnostic: evidence.runtimeDiagnostic } : {}),
+      ...(evidence.runtimeDiagnosticSeverity
+        ? { runtimeDiagnosticSeverity: evidence.runtimeDiagnosticSeverity }
+        : {}),
+      ...(activeRunModel
+        ? { model: activeRunModel }
+        : evidenceModel
+          ? { model: evidenceModel }
           : {}),
+      ...(typeof evidence.runtimePid === 'number' && evidence.runtimePid > 0
+        ? { metricsPid: evidence.runtimePid }
+        : {}),
+      ...(evidence.sessionId ? { runtimeSessionId: evidence.sessionId } : {}),
     });
   }
 
@@ -1471,7 +1598,12 @@ export async function buildLiveTeamAgentRuntimeMetadata(
 
   for (const [memberName, metadata] of metadataByMember.entries()) {
     const paneId = metadata.tmuxPaneId?.trim() ?? '';
-    const launchMember = persistedLaunchSnapshot?.members[memberName];
+    const launchMember = shouldUseLaunchMemberRuntimeEvidence(
+      persistedLaunchSnapshot?.members[memberName],
+      activeRuntimeRunId
+    )
+      ? persistedLaunchSnapshot?.members[memberName]
+      : undefined;
     const adapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
     const adapterStatus: MemberSpawnStatusEntry | undefined = adapterEvidence
       ? {
