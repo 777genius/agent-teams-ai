@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* global __dirname, console, process, require, URL */
 
 const fs = require('node:fs');
@@ -8,6 +9,9 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const RENDERER_OUTPUT_DIR = 'out/renderer';
 const DEFAULT_POSTHOG_HOST = 'https://eu.i.posthog.com';
 const REQUIRED_RENDERER_SNIPPETS = [
+  'autocapture: false',
+  'capture_pageview: false',
+  'capture_pageleave: false',
   'advanced_disable_flags: true',
   'advanced_disable_feature_flags: true',
   'advanced_disable_feature_flags_on_first_load: true',
@@ -16,6 +20,10 @@ const REQUIRED_RENDERER_SNIPPETS = [
   'disable_product_tours: true',
   'disable_surveys: true',
   'disable_surveys_automatic_display: true',
+  'disable_session_recording: true',
+  'opt_out_capturing_by_default: true',
+  'persistence_name:',
+  'before_send:',
 ];
 
 function fail(message) {

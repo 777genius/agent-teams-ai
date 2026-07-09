@@ -125,8 +125,8 @@ function note(text: string): string {
 
 const sourcesPrefix = computed(() => (
   locale.value === 'ru'
-    ? 'Факты Agent Teams проверены по локальному исходному коду 6 июля 2026; источники конкурентов проверены 25 июня 2026:'
-    : 'Agent Teams product facts checked in local source on July 6, 2026; competitor sources checked on June 25, 2026:'
+    ? 'Факты Agent Teams проверены по локальному исходному коду 9 июля 2026; источники конкурентов проверены 9 июля 2026:'
+    : 'Agent Teams product facts checked in local source on July 9, 2026; competitor sources checked on July 9, 2026:'
 ))
 
 const ruSourceLabels: Record<string, string> = {
@@ -459,7 +459,7 @@ const sourceLinks = [
     label: 'Paperclip work products',
     href: 'https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/validators/work-product.ts',
   },
-  { label: 'Paperclip release', href: 'https://github.com/paperclipai/paperclip/releases/tag/v2026.618.0' },
+  { label: 'Paperclip release', href: 'https://github.com/paperclipai/paperclip/releases/tag/v2026.707.0' },
   { label: 'Cursor Cloud Agents', href: 'https://cursor.com/docs/cloud-agent' },
   { label: 'Cursor Agent Review', href: 'https://cursor.com/docs/agent/agent-review' },
   { label: 'Cursor Bugbot', href: 'https://cursor.com/docs/bugbot' },

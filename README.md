@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/latest"><img src="https://img.shields.io/badge/version-v2.5.0-007ec6?style=flat-square" alt="Latest Release" /></a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/latest"><img src="https://img.shields.io/github/v/release/777genius/agent-teams-ai?style=flat-square&label=version&color=007ec6" alt="Latest Release" /></a>&nbsp;
   <a href="https://github.com/777genius/agent-teams-ai/actions/workflows/ci.yml"><img src="https://github.com/777genius/agent-teams-ai/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>&nbsp;
   <a href="https://discord.gg/qtqSZSyuEc"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv10%2Finvites%2FqtqSZSyuEc%3Fwith_counts%3Dtrue&query=%24.approximate_member_count&label=Discord&logo=discord&logoColor=white&color=5865F2&style=flat-square&suffix=%20members" alt="Discord" /></a>
 </p>
@@ -75,16 +75,16 @@ No prerequisites - the app can detect supported runtimes/providers and guide set
 <table align="center">
 <tr>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/Agent.Teams.AI-arm64.dmg">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/Agent.Teams.AI-2.7.0-arm64.dmg">
     <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/Agent.Teams.AI-x64.dmg">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/Agent.Teams.AI-2.7.0-x64.dmg">
     <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
   </a>
 </td>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/Agent.Teams.AI.Setup.exe">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/Agent.Teams.AI.Setup.2.7.0.exe">
     <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
   </a>
   <br />
@@ -93,17 +93,17 @@ No prerequisites - the app can detect supported runtimes/providers and guide set
   <sub><strong>Windows required:</strong> launch Agent Teams AI as Administrator, especially when using OpenCode runtimes.</sub>
 </td>
 <td align="center">
-  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/Agent.Teams.AI.AppImage">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/Agent.Teams.AI-2.7.0.AppImage">
     <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
   </a>
   <br />
-  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/agent-teams-ai-amd64.deb">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/agent-teams-ai_2.7.0_amd64.deb">
     <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
   </a>&nbsp;
-  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/agent-teams-ai-x86_64.rpm">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/agent-teams-ai-2.7.0.x86_64.rpm">
     <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
   </a>&nbsp;
-  <a href="https://github.com/777genius/agent-teams-ai/releases/latest/download/agent-teams-ai.pacman">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/agent-teams-ai-2.7.0.pacman">
     <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
   </a>
 </td>
@@ -217,7 +217,7 @@ An orchestration layer for AI agent teams across Claude, Codex, and OpenCode.
 | **Budget controls** | ✅ Usage budgets + scheduled hard caps | ⚠️ Cost tiers + digest, no hard caps | ✅ Per-agent budgets + hard stops | ⚠️ Usage + cloud spend limits | ⚠️ `/usage` + workspace limits |
 | **Price** | **Free OSS UI + free model with no auth**, paid providers optional | Free OSS, runtime plans needed | Free OSS, self-hosted + infra | Free + paid usage | Claude plan or API usage |
 
-Agent Teams product evidence checked in local source on July 6, 2026: [organizations feature](src/features/organizations/README.md), [token usage budgets](src/features/token-usage/contracts/dto.ts), [scheduled run budget cap](src/main/services/schedule/ScheduledTaskExecutor.ts). Competitor fact sources checked on June 25, 2026: [detailed research notes](docs/research/gastown-paperclip-comparison-2026-06-25.md), [Gastown README](https://github.com/gastownhall/gastown), [Gastown provider guide](https://github.com/gastownhall/gastown/blob/main/docs/agent-provider-integration.md), [Gastown scheduler](https://github.com/gastownhall/gastown/blob/main/docs/design/scheduler.md), [Gastown dashboard source](https://github.com/gastownhall/gastown/blob/main/internal/web/templates/convoy.html), [Gastown release](https://github.com/gastownhall/gastown/releases/tag/v1.2.1), [Paperclip README](https://github.com/paperclipai/paperclip), [Paperclip adapters](https://github.com/paperclipai/paperclip/blob/master/docs/adapters/overview.md), [Paperclip heartbeat protocol](https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/heartbeat-protocol.md), [Paperclip org chart](https://paperclip.inc/docs/guides/board-operator/org-structure/), [Paperclip OrgChart source](https://github.com/paperclipai/paperclip/blob/master/ui/src/pages/OrgChart.tsx), [Paperclip budgets](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/costs-and-budgets.md), [Paperclip runtime services](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/execution-workspaces-and-runtime-services.md), [Paperclip Kanban source](https://github.com/paperclipai/paperclip/blob/master/ui/src/components/KanbanBoard.tsx), [Paperclip work products](https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/validators/work-product.ts), [Paperclip release](https://github.com/paperclipai/paperclip/releases/tag/v2026.618.0), [Cursor Cloud Agents](https://cursor.com/docs/cloud-agent), [Cursor Agent Review](https://cursor.com/docs/agent/agent-review), [Cursor Bugbot](https://cursor.com/docs/bugbot), [Cursor worktrees](https://cursor.com/docs/configuration/worktrees), [Cursor Models & Pricing](https://cursor.com/docs/models-and-pricing), [Cursor Team Pricing](https://cursor.com/docs/account/teams/pricing), [Claude Code agent teams](https://code.claude.com/docs/en/agent-teams), [Claude Code subagents](https://code.claude.com/docs/en/sub-agents), [Claude Code workflows](https://code.claude.com/docs/en/common-workflows), [Claude Code costs](https://code.claude.com/docs/en/costs), [Claude pricing](https://claude.com/pricing).
+Agent Teams product evidence checked in local source on July 9, 2026: [organizations feature](src/features/organizations/README.md), [token usage budgets](src/features/token-usage/contracts/dto.ts), [scheduled run budget cap](src/main/services/schedule/ScheduledTaskExecutor.ts). Competitor fact sources checked on July 9, 2026: [detailed research notes](docs/research/gastown-paperclip-comparison-2026-06-25.md), [Gastown README](https://github.com/gastownhall/gastown), [Gastown provider guide](https://github.com/gastownhall/gastown/blob/main/docs/agent-provider-integration.md), [Gastown scheduler](https://github.com/gastownhall/gastown/blob/main/docs/design/scheduler.md), [Gastown dashboard source](https://github.com/gastownhall/gastown/blob/main/internal/web/templates/convoy.html), [Gastown release](https://github.com/gastownhall/gastown/releases/tag/v1.2.1), [Paperclip README](https://github.com/paperclipai/paperclip), [Paperclip adapters](https://github.com/paperclipai/paperclip/blob/master/docs/adapters/overview.md), [Paperclip heartbeat protocol](https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/heartbeat-protocol.md), [Paperclip org chart](https://paperclip.inc/docs/guides/board-operator/org-structure/), [Paperclip OrgChart source](https://github.com/paperclipai/paperclip/blob/master/ui/src/pages/OrgChart.tsx), [Paperclip budgets](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/costs-and-budgets.md), [Paperclip runtime services](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/execution-workspaces-and-runtime-services.md), [Paperclip Kanban source](https://github.com/paperclipai/paperclip/blob/master/ui/src/components/KanbanBoard.tsx), [Paperclip work products](https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/validators/work-product.ts), [Paperclip release](https://github.com/paperclipai/paperclip/releases/tag/v2026.707.0), [Cursor Cloud Agents](https://cursor.com/docs/cloud-agent), [Cursor Agent Review](https://cursor.com/docs/agent/agent-review), [Cursor Bugbot](https://cursor.com/docs/bugbot), [Cursor worktrees](https://cursor.com/docs/configuration/worktrees), [Cursor Models & Pricing](https://cursor.com/docs/models-and-pricing), [Cursor Team Pricing](https://cursor.com/docs/account/teams/pricing), [Claude Code agent teams](https://code.claude.com/docs/en/agent-teams), [Claude Code subagents](https://code.claude.com/docs/en/sub-agents), [Claude Code workflows](https://code.claude.com/docs/en/common-workflows), [Claude Code costs](https://code.claude.com/docs/en/costs), [Claude pricing](https://claude.com/pricing).
 
 ---
 
@@ -234,18 +234,6 @@ Use the desktop app as the primary product. The browser/web path is not needed f
 ---
 
 ## FAQ
-
-<details>
-<summary><strong>Do I need to install a runtime before using this app?</strong></summary>
-<br />
-No. You can start with the free model with no auth right away. If you want Claude, Codex, OpenCode/OpenRouter, or other provider-backed models, the app guides runtime detection/setup and provider authentication from the UI.
-</details>
-
-<details>
-<summary><strong>What if the Linux app freezes or shows a blank window over RDP?</strong></summary>
-<br />
-Some RDP (Remote Desktop Protocol) sessions expose virtual GPU drivers that can break Electron rendering. Launch with `AGENT_TEAMS_DISABLE_GPU=1` to disable Electron hardware acceleration for that run, for example `AGENT_TEAMS_DISABLE_GPU=1 pnpm dev` from source or `AGENT_TEAMS_DISABLE_GPU=1 ./Agent.Teams.AI.AppImage` for AppImage builds.
-</details>
 
 <details>
 <summary><strong>Does it read or upload my code?</strong></summary>
@@ -281,6 +269,12 @@ Send a direct message to course-correct, or stop and restart from the process da
 <summary><strong>Does it support multiple projects and teams?</strong></summary>
 <br />
 Yes. Run multiple teams in one project or across different projects, even simultaneously. To avoid Git conflicts, enable git worktree isolation for selected teammates when launching the team, and use the provisioning prompt for any extra branch or merge rules.
+</details>
+
+<details>
+<summary><strong>What if the Linux app freezes or shows a blank window over RDP?</strong></summary>
+<br />
+Some RDP (Remote Desktop Protocol) sessions expose virtual GPU drivers that can break Electron rendering. Launch with `AGENT_TEAMS_DISABLE_GPU=1` to disable Electron hardware acceleration for that run, for example `AGENT_TEAMS_DISABLE_GPU=1 pnpm dev` from source or `AGENT_TEAMS_DISABLE_GPU=1 ./Agent.Teams.AI.AppImage` for AppImage builds.
 </details>
 
 ---

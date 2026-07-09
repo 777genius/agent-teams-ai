@@ -834,6 +834,7 @@
       "extensions": "扩展",
       "search": "搜索",
       "schedules": "计划任务",
+      "usage": "Usage",
       "docs": "文档",
       "exportMarkdown": "导出为 Markdown",
       "exportJson": "导出为 JSON",

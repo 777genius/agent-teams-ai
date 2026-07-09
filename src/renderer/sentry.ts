@@ -28,6 +28,9 @@ import type { ElectronAPI } from '@shared/types/api';
 let telemetryAllowed = false;
 let initialized = false;
 let telemetryIdentitySyncToken = 0;
+const TELEMETRY_IDENTITY_RETRY_DELAYS_MS = [250, 1_000, 2_500] as const;
+let telemetryIdentityRetryTimer: ReturnType<typeof setTimeout> | null = null;
+let telemetryIdentityRetryAttempt = 0;
 
 function getElectronApi(): ElectronAPI | undefined {
   return (window as Window & { electronAPI?: ElectronAPI }).electronAPI;
@@ -38,14 +41,50 @@ function clearRendererSentryUser(): void {
   SentryElectron.setUser?.(null);
 }
 
+function clearRendererTelemetryIdentityRetry(): void {
+  if (!telemetryIdentityRetryTimer) {
+    return;
+  }
+  clearTimeout(telemetryIdentityRetryTimer);
+  telemetryIdentityRetryTimer = null;
+}
+
+function resetRendererTelemetryIdentityRetry(): void {
+  clearRendererTelemetryIdentityRetry();
+  telemetryIdentityRetryAttempt = 0;
+}
+
+function scheduleRendererTelemetryIdentityRetry(syncToken: number): void {
+  if (!initialized || !telemetryAllowed || telemetryIdentityRetryTimer) {
+    return;
+  }
+
+  const delayMs = TELEMETRY_IDENTITY_RETRY_DELAYS_MS[telemetryIdentityRetryAttempt];
+  if (delayMs === undefined) {
+    return;
+  }
+  telemetryIdentityRetryAttempt++;
+
+  telemetryIdentityRetryTimer = setTimeout(() => {
+    telemetryIdentityRetryTimer = null;
+    if (syncToken === telemetryIdentitySyncToken && initialized && telemetryAllowed) {
+      void syncRendererTelemetryIdentity();
+    }
+  }, delayMs);
+}
+
 async function syncRendererTelemetryIdentity(): Promise<void> {
   const syncToken = ++telemetryIdentitySyncToken;
+  clearRendererTelemetryIdentityRetry();
   if (!initialized || !telemetryAllowed) {
     return;
   }
 
   const getSentryContext = getElectronApi()?.telemetry?.getSentryContext;
   if (!getSentryContext) {
+    if (getElectronApi()) {
+      scheduleRendererTelemetryIdentityRetry(syncToken);
+    }
     return;
   }
 
@@ -56,15 +95,18 @@ async function syncRendererTelemetryIdentity(): Promise<void> {
     }
 
     if (!context) {
+      resetRendererTelemetryIdentityRetry();
       SentryElectron.setUser?.(null);
       return;
     }
 
+    resetRendererTelemetryIdentityRetry();
     SentryElectron.setUser?.({ id: context.userId });
     SentryElectron.setTags?.(context.tags);
   } catch {
     if (syncToken === telemetryIdentitySyncToken) {
       SentryElectron.setUser?.(null);
+      scheduleRendererTelemetryIdentityRetry(syncToken);
     }
   }
 }
@@ -91,10 +133,12 @@ export function syncRendererTelemetry(enabled: boolean): void {
   telemetryAllowed = enabled;
   if (!enabled) {
     telemetryIdentitySyncToken++;
+    resetRendererTelemetryIdentityRetry();
     clearRendererSentryUser();
     return;
   }
 
+  telemetryIdentityRetryAttempt = 0;
   initSentryRenderer();
   void syncRendererTelemetryIdentity();
 }
@@ -146,7 +190,6 @@ export function initSentryRenderer(): void {
   }
 
   initialized = true;
-  void syncRendererTelemetryIdentity();
 }
 
 /** Whether the renderer SDK was successfully initialised. */

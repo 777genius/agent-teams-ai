@@ -3,6 +3,18 @@ import * as os from 'os';
 import * as path from 'path';
 import { vi } from 'vitest';
 
+const EXPECTED_SAFE_TAG_KEYS = [
+  'app_name',
+  'app_namespace',
+  'app_version',
+  'arch',
+  'git_repository',
+  'identity_source',
+  'platform',
+  'release',
+  'release_channel',
+];
+
 describe('main Sentry telemetry gate', () => {
   let previousDsn: string | undefined;
 
@@ -69,17 +81,9 @@ describe('main Sentry telemetry gate', () => {
     const context = await sentry.getCurrentSentryTelemetryContext();
 
     expect(context?.userId).toMatch(/^[a-f0-9]{64}$/);
-    expect(Object.keys(context?.tags ?? {}).sort((a, b) => a.localeCompare(b))).toEqual([
-      'app_name',
-      'app_namespace',
-      'app_version',
-      'arch',
-      'git_repository',
-      'identity_source',
-      'platform',
-      'release',
-      'release_channel',
-    ]);
+    expect(Object.keys(context?.tags ?? {}).sort((a, b) => a.localeCompare(b))).toEqual(
+      EXPECTED_SAFE_TAG_KEYS
+    );
   });
 
   it('does not attach high-cardinality breadcrumb data', async () => {
@@ -124,16 +128,6 @@ describe('main Sentry telemetry gate', () => {
 
     expect(
       Object.keys(getSafeSentryTelemetryTags('app-data')).sort((a, b) => a.localeCompare(b))
-    ).toEqual([
-      'app_name',
-      'app_namespace',
-      'app_version',
-      'arch',
-      'git_repository',
-      'identity_source',
-      'platform',
-      'release',
-      'release_channel',
-    ]);
+    ).toEqual(EXPECTED_SAFE_TAG_KEYS);
   });
 });

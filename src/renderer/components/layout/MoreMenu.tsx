@@ -175,10 +175,10 @@ export const MoreMenu = ({
     },
     {
       id: 'token-usage',
-      label: 'Usage',
+      label: t('layout.menu.usage'),
       icon: Gauge,
       onClick: () => {
-        openTab({ type: 'token-usage', label: 'Usage' });
+        openTab({ type: 'token-usage', label: t('layout.menu.usage') });
         setIsOpen(false);
       },
     },

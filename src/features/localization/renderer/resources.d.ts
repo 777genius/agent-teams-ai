@@ -280,6 +280,7 @@ export default interface Resources {
         search: 'Search';
         settings: 'Settings';
         teams: 'Teams';
+        usage: 'Usage';
       };
       newTab: 'New tab';
       newTabDashboard: 'New tab (Dashboard)';
