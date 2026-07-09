@@ -132,7 +132,7 @@ function getDeclaredPublicMethodNames(serviceClass: ts.ClassDeclaration): string
         !hasModifier(member, ts.SyntaxKind.ProtectedKeyword) &&
         ts.isIdentifier(member.name)
     )
-    .map((member) => member.name.text)
+    .map((member) => (member.name as ts.Identifier).text)
     .sort((a, b) => a.localeCompare(b));
 }
 
