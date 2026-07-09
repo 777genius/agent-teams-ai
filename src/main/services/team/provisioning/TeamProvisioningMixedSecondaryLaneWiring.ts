@@ -1,6 +1,7 @@
 import {
   buildOpenCodeSecondaryLaneId,
   buildPlannedMemberLaneIdentity,
+  type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isLeadMember } from '@shared/utils/leadDetection';
@@ -38,13 +39,23 @@ import {
   stopSingleMixedSecondaryRuntimeLane as stopSingleMixedSecondaryRuntimeLaneHelper,
 } from './TeamProvisioningOpenCodeRuntimeStopFlow';
 import {
+  createMixedSecondaryLaneStateForMember as createMixedSecondaryLaneStateForMemberFromRun,
+  createMixedSecondaryLaneStates as createMixedSecondaryLaneStatesFromPlan,
+  getMixedSecondaryLaunchPhase as getMixedSecondaryLaunchPhaseFromRun,
+  type MixedSecondaryRuntimeLaneState,
+  type SecondaryRuntimeRunProvisioningRun,
+} from './TeamProvisioningSecondaryRuntimeRuns';
+import {
   recoverStaleMixedSecondaryLaunchSnapshotWithPorts,
   type StaleMixedSecondaryRecoveryPorts,
 } from './TeamProvisioningStaleMixedSecondaryRecovery';
 
 import type { TeamRuntimeStopInput } from '../runtime';
-import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
-import type { PersistedTeamLaunchSnapshot } from '@shared/types';
+import type {
+  PersistedTeamLaunchPhase,
+  PersistedTeamLaunchSnapshot,
+  TeamCreateRequest,
+} from '@shared/types';
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -71,8 +82,7 @@ type LaunchQueueServicePortKey =
   | 'publishMixedSecondaryLaneStatusChange'
   | 'persistLaunchStateSnapshot'
   | 'readLaunchState'
-  | 'getOpenCodeRuntimeAdapter'
-  | 'getMixedSecondaryLaunchPhase';
+  | 'getOpenCodeRuntimeAdapter';
 
 type StopServicePortKey =
   | 'getOpenCodeRuntimeAdapter'
@@ -143,7 +153,6 @@ export interface TeamProvisioningMixedSecondaryLaneWiringServiceHost<
   guardCommittedOpenCodeSecondaryLaneEvidence: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['guardCommittedOpenCodeSecondaryLaneEvidence'];
   launchSingleMixedSecondaryLane: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['launchSingleMixedSecondaryLane'];
   persistLaunchStateSnapshot: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['persistLaunchStateSnapshot'];
-  getMixedSecondaryLaunchPhase: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['getMixedSecondaryLaunchPhase'];
   hasMixedSecondaryLaunchMetadata: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['hasMixedSecondaryLaunchMetadata'];
   shouldRecoverStalePersistedMixedLaunchSnapshot: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['shouldRecoverStalePersistedMixedLaunchSnapshot'];
   readPersistedTeamProjectPath: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['readPersistedTeamProjectPath'];
@@ -159,6 +168,14 @@ export interface TeamProvisioningMixedSecondaryLaneWiringServiceHostOptions<
 export interface TeamProvisioningMixedSecondaryLaneWiring<
   TRun extends TeamProvisioningMixedSecondaryLaneWiringRun,
 > {
+  createMixedSecondaryLaneStates(plan: TeamRuntimeLanePlan): MixedSecondaryRuntimeLaneState[];
+  createMixedSecondaryLaneStateForMember(
+    run: Pick<SecondaryRuntimeRunProvisioningRun, 'request' | 'mixedSecondaryLanes'>,
+    member: TeamCreateRequest['members'][number]
+  ): MixedSecondaryRuntimeLaneState;
+  getMixedSecondaryLaunchPhase(
+    run: Pick<SecondaryRuntimeRunProvisioningRun, 'mixedSecondaryLanes'>
+  ): PersistedTeamLaunchPhase;
   launchSingleMixedSecondaryLane(run: TRun, lane: MixedSecondaryRuntimeLaneState): Promise<void>;
   stopSingleMixedSecondaryRuntimeLane(
     run: TRun,
@@ -245,7 +262,7 @@ export function createMixedSecondaryLaunchQueuePorts<
       deps.service.persistLaunchStateSnapshot(run, launchPhase),
     readLaunchState: (teamName) => deps.service.readLaunchState(teamName),
     getOpenCodeRuntimeAdapter: () => deps.service.getOpenCodeRuntimeAdapter(),
-    getMixedSecondaryLaunchPhase: (run) => deps.service.getMixedSecondaryLaunchPhase(run),
+    getMixedSecondaryLaunchPhase: (run) => getMixedSecondaryLaunchPhaseFromRun(run),
     createUnexpectedMixedSecondaryLaneFailureResult,
     logger: deps.logger,
   };
@@ -310,7 +327,6 @@ export function createTeamProvisioningMixedSecondaryLaneWiringDepsFromService<
         service.launchSingleMixedSecondaryLane(run, lane),
       persistLaunchStateSnapshot: (run, launchPhase) =>
         service.persistLaunchStateSnapshot(run, launchPhase),
-      getMixedSecondaryLaunchPhase: (run) => service.getMixedSecondaryLaunchPhase(run),
       hasMixedSecondaryLaunchMetadata: (snapshot) =>
         service.hasMixedSecondaryLaunchMetadata(snapshot),
       shouldRecoverStalePersistedMixedLaunchSnapshot: (snapshot) =>
@@ -346,6 +362,10 @@ export function createTeamProvisioningMixedSecondaryLaneWiring<
   deps: TeamProvisioningMixedSecondaryLaneWiringDeps<TRun>
 ): TeamProvisioningMixedSecondaryLaneWiring<TRun> {
   return {
+    createMixedSecondaryLaneStates: (plan) => createMixedSecondaryLaneStatesFromPlan(plan),
+    createMixedSecondaryLaneStateForMember: (run, member) =>
+      createMixedSecondaryLaneStateForMemberFromRun(run, member),
+    getMixedSecondaryLaunchPhase: (run) => getMixedSecondaryLaunchPhaseFromRun(run),
     launchSingleMixedSecondaryLane: (run, lane) =>
       launchSingleMixedSecondaryLaneWithPorts(
         run,

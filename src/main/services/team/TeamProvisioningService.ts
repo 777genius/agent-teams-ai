@@ -103,10 +103,6 @@ import {
 import { type DeterministicCreateSpawnFlowPorts } from './provisioning/TeamProvisioningCreateDeterministicSpawnFlow';
 import { type TeamProvisioningCreateDeterministicSpawnFlowBoundary } from './provisioning/TeamProvisioningCreateDeterministicSpawnFlowPortsFactory';
 import {
-  createTeamProvisioningRequestAdmissionBoundary,
-  type TeamProvisioningRequestAdmissionServiceHost,
-} from './provisioning/TeamProvisioningRequestAdmission';
-import {
   clearPendingCrossTeamReplyExpectation as clearPendingCrossTeamReplyExpectationInState,
   type CrossTeamDeliveredLeadBlock,
   getPendingCrossTeamReplyExpectationKeys as getPendingCrossTeamReplyExpectationKeysFromState,
@@ -377,6 +373,10 @@ import {
   readRegisteredTeamMemberNamesFromConfigDefaults,
 } from './provisioning/TeamProvisioningRegisteredMemberAudit';
 import {
+  createTeamProvisioningRequestAdmissionBoundary,
+  type TeamProvisioningRequestAdmissionServiceHost,
+} from './provisioning/TeamProvisioningRequestAdmission';
+import {
   extractCliLogsFromRun,
   type RetainedClaudeLogsSnapshot,
 } from './provisioning/TeamProvisioningRetainedLogs';
@@ -394,7 +394,6 @@ import {
 } from './provisioning/TeamProvisioningRunProgress';
 import { TeamProvisioningRuntimeAdapterProgressState } from './provisioning/TeamProvisioningRuntimeAdapterProgressState';
 import {
-  createMixedSecondaryLaneStates as createMixedSecondaryLaneStatesHelper,
   planRuntimeLanesOrThrow as planRuntimeLanesOrThrowHelper,
   shouldRouteOpenCodeToRuntimeAdapter as shouldRouteOpenCodeToRuntimeAdapterHelper,
 } from './provisioning/TeamProvisioningRuntimeBootstrapDelivery';
@@ -417,10 +416,8 @@ import {
 import { TeamProvisioningRunTrackingDeliveryHelper } from './provisioning/TeamProvisioningRunTrackingDelivery';
 import { TeamProvisioningSameTeamNativeDelivery } from './provisioning/TeamProvisioningSameTeamNativeDelivery';
 import {
-  createMixedSecondaryLaneStateForMember as buildMixedSecondaryLaneStateForMember,
   createSecondaryRuntimeRunStore,
   getCurrentOpenCodeRuntimeRunId as resolveOpenCodeRuntimeRunIdFromMaps,
-  getMixedSecondaryLaunchPhase as getMixedSecondaryLaunchPhaseFromRun,
   isOpenCodeSecondaryLaneMemberInRun,
   type MixedSecondaryRuntimeLaneState,
   removeRunAllEffectiveMember as removeRunAllEffectiveMemberFromRun,
@@ -1642,18 +1639,18 @@ export class TeamProvisioningService extends TeamProvisioningMemberMcpLaunchConf
   private createMixedSecondaryLaneStates(
     plan: TeamRuntimeLanePlan
   ): MixedSecondaryRuntimeLaneState[] {
-    return createMixedSecondaryLaneStatesHelper(plan);
+    return this.mixedSecondaryLaneWiring.createMixedSecondaryLaneStates(plan);
   }
 
   private createMixedSecondaryLaneStateForMember(
     run: Pick<ProvisioningRun, 'request' | 'mixedSecondaryLanes'>,
     member: TeamCreateRequest['members'][number]
   ): MixedSecondaryRuntimeLaneState {
-    return buildMixedSecondaryLaneStateForMember(run, member);
+    return this.mixedSecondaryLaneWiring.createMixedSecondaryLaneStateForMember(run, member);
   }
 
   private getMixedSecondaryLaunchPhase(run: ProvisioningRun): PersistedTeamLaunchPhase {
-    return getMixedSecondaryLaunchPhaseFromRun(run);
+    return this.mixedSecondaryLaneWiring.getMixedSecondaryLaunchPhase(run);
   }
 
   private upsertRunAllEffectiveMember(

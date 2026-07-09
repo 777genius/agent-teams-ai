@@ -14,6 +14,7 @@ import {
 
 import type { TeamRuntimeLaunchResult } from '../../runtime/TeamRuntimeAdapter';
 import type { MixedSecondaryRuntimeLaneState } from '../TeamProvisioningSecondaryRuntimeRuns';
+import type { PlannedRuntimeMember, TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import type { PersistedTeamLaunchSnapshot, TeamCreateRequest, TeamMember } from '@shared/types';
 
 interface TestRun {
@@ -102,7 +103,6 @@ function createService(
     syncOpenCodeRuntimeToolApprovals: vi.fn(),
     launchSingleMixedSecondaryLane: vi.fn(async () => undefined),
     persistLaunchStateSnapshot: vi.fn(async () => createSnapshot()),
-    getMixedSecondaryLaunchPhase: vi.fn(() => 'active' as const),
     hasMixedSecondaryLaunchMetadata: vi.fn(() => true),
     shouldRecoverStalePersistedMixedLaunchSnapshot: vi.fn(() => false),
     readTeamMeta: vi.fn(async () => null),
@@ -188,8 +188,8 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
     const deps = createDeps();
     const queuePorts = createMixedSecondaryLaunchQueuePorts(deps);
     const stopPorts = createSingleMixedSecondaryRuntimeLaneStopPorts(deps);
-    const run = createRun();
     const lane = createLane();
+    const run = createRun({ mixedSecondaryLanes: [lane] });
 
     await queuePorts.launchSingleMixedSecondaryLane(run, lane);
     await queuePorts.publishMixedSecondaryLaneStatusChange(run, lane);
@@ -201,7 +201,6 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
     expect(deps.service.launchSingleMixedSecondaryLane).toHaveBeenCalledWith(run, lane);
     expect(deps.service.publishMixedSecondaryLaneStatusChange).toHaveBeenCalledWith(run, lane);
     expect(deps.service.persistLaunchStateSnapshot).toHaveBeenCalledWith(run, 'active');
-    expect(deps.service.getMixedSecondaryLaunchPhase).toHaveBeenCalledWith(run);
     expect(deps.service.deleteSecondaryRuntimeRun).toHaveBeenCalledWith('atlas-hq', lane.laneId);
     expect(stopPorts.logger).toBe(deps.logger);
   });
@@ -302,7 +301,6 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
         service.guardCommittedOpenCodeSecondaryLaneEvidence,
       launchSingleMixedSecondaryLane: service.launchSingleMixedSecondaryLane,
       persistLaunchStateSnapshot: service.persistLaunchStateSnapshot,
-      getMixedSecondaryLaunchPhase: service.getMixedSecondaryLaunchPhase,
       hasMixedSecondaryLaunchMetadata: service.hasMixedSecondaryLaunchMetadata,
       shouldRecoverStalePersistedMixedLaunchSnapshot:
         service.shouldRecoverStalePersistedMixedLaunchSnapshot,
@@ -354,6 +352,70 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
     );
     expect(service.buildAggregateLaunchSnapshot).toHaveBeenCalledTimes(1);
     expect(service.writeLaunchStateSnapshot).toHaveBeenCalledWith('atlas-hq', snapshot);
+  });
+
+  it('exposes mixed secondary lane state helpers on the boundary', () => {
+    const deps = createDeps();
+    const boundary = createTeamProvisioningMixedSecondaryLaneWiring(deps);
+    const member = {
+      name: 'Builder',
+      role: 'Build changes',
+      providerId: 'opencode',
+      cwd: `${TEST_PROJECT_PATH}/builder`,
+    } as PlannedRuntimeMember;
+    const plan: TeamRuntimeLanePlan = {
+      mode: 'mixed_opencode_side_lanes',
+      primaryMembers: [
+        {
+          name: 'Lead',
+          role: 'Lead work',
+          providerId: 'codex',
+        } as PlannedRuntimeMember,
+      ],
+      allMembers: [member],
+      sideLanes: [
+        {
+          laneId: 'secondary:opencode:Builder',
+          providerId: 'opencode',
+          member,
+        },
+      ],
+    };
+
+    expect(boundary.createMixedSecondaryLaneStates(plan)).toEqual([
+      {
+        laneId: 'secondary:opencode:Builder',
+        providerId: 'opencode',
+        member,
+        runId: null,
+        state: 'queued',
+        result: null,
+        warnings: [],
+        diagnostics: [],
+      },
+    ]);
+    expect(
+      boundary.createMixedSecondaryLaneStateForMember(
+        {
+          request: {
+            teamName: 'atlas-hq',
+            cwd: TEST_PROJECT_PATH,
+            providerId: 'opencode',
+            members: [],
+          } as unknown as TeamCreateRequest,
+          mixedSecondaryLanes: [],
+        },
+        member as TeamMember
+      )
+    ).toMatchObject({
+      providerId: 'opencode',
+      member,
+      state: 'queued',
+      result: null,
+    });
+    expect(boundary.getMixedSecondaryLaunchPhase({ mixedSecondaryLanes: [createLane()] })).toBe(
+      'active'
+    );
   });
 
   it('exposes a small lane boundary that delegates launch and recovery flows', async () => {
