@@ -39,9 +39,7 @@ function normalizeForStableJson(value: unknown, seen: WeakSet<object>): unknown 
     seen.add(value);
     try {
       const normalized: Record<string, unknown> = {};
-      for (const key of Object.keys(value as Record<string, unknown>).sort((a, b) =>
-        a.localeCompare(b)
-      )) {
+      for (const key of Object.keys(value as Record<string, unknown>).sort(compareCodeUnit)) {
         const raw = (value as Record<string, unknown>)[key];
         if (raw === undefined || typeof raw === 'function' || typeof raw === 'symbol') {
           continue;
@@ -59,4 +57,8 @@ function normalizeForStableJson(value: unknown, seen: WeakSet<object>): unknown 
 
 export function stableJsonStringify(value: unknown): string {
   return JSON.stringify(normalizeForStableJson(value, new WeakSet<object>()));
+}
+
+function compareCodeUnit(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }

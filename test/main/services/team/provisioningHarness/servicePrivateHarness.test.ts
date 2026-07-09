@@ -37,6 +37,7 @@ const MEMBER_LIFECYCLE_SERVICE_USE_CASE_KEYS = [
   'persistOpenCodeMemberRestartSystemMessage',
   'preparePrimaryOwnedMemberRestartRuntime',
   'readOpenCodeSecondaryRetryOutcome',
+  'resolveDirectRestartRuntimeCwd',
   'stopPrimaryOwnedRosterRuntime',
   'updateDirectTmuxRestartMemberConfig',
 ] as const satisfies readonly (keyof TeamProvisioningMemberLifecycleServiceUseCases)[];

@@ -117,6 +117,13 @@ const MAX_MESSAGES_PAGE_LIVE_OVERLAY_PAYLOAD = 200;
 const MIXED_TEAM_LIVE_MUTATION_BLOCK_MESSAGE =
   'Live roster mutation on a running mixed team is not supported in V1. Stop the team, edit the roster, then relaunch.';
 
+type RuntimeAgentTeamsController = Omit<AgentTeamsController, 'tasks' | 'kanban' | 'review' | 'taskBoard'> & {
+  tasks?: Partial<AgentTeamsController['tasks']>;
+  kanban?: Partial<AgentTeamsController['kanban']>;
+  review?: Partial<AgentTeamsController['review']>;
+  taskBoard?: AgentTeamsController['taskBoard'];
+};
+
 interface TeamNotificationContext {
   displayName: string;
   projectPath?: string;
@@ -589,6 +596,28 @@ export class TeamDataService {
     return this.controllerFactory(teamName);
   }
 
+  private getTaskBoard(teamName: string): AgentTeamsController['taskBoard'] {
+    const controller = this.getController(teamName) as RuntimeAgentTeamsController;
+    const taskBoard = controller.taskBoard ?? this.buildLegacyTaskBoard(controller);
+    if (!taskBoard) {
+      throw new Error('Agent teams controller taskBoard API is unavailable');
+    }
+    return taskBoard;
+  }
+
+  private buildLegacyTaskBoard(
+    controller: RuntimeAgentTeamsController
+  ): AgentTeamsController['taskBoard'] | null {
+    if (!controller.tasks && !controller.kanban && !controller.review) {
+      return null;
+    }
+    return {
+      ...(controller.tasks ?? {}),
+      ...(controller.kanban ?? {}),
+      ...(controller.review ?? {}),
+    } as AgentTeamsController['taskBoard'];
+  }
+
   private async readTeamLaneMutationContext(teamName: string): Promise<{
     leadProviderId: TeamProviderId | undefined;
     activeMembers: ReturnType<typeof toProvisioningMemberShape>;
@@ -839,8 +868,8 @@ export class TeamDataService {
   }
 
   async getTask(teamName: string, taskId: string): Promise<TeamTaskWithKanban | null> {
-    const controller = this.getController(teamName);
-    const task = controller.taskBoard?.getTask?.(taskId) as TeamTask | null | undefined;
+    const taskBoard = this.getTaskBoard(teamName);
+    const task = taskBoard.getTask?.(taskId) as TeamTask | null | undefined;
     if (!task) {
       return null;
     }
@@ -2147,7 +2176,7 @@ export class TeamDataService {
   }
 
   async createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask> {
-    const controller = this.getController(teamName);
+    const taskBoard = this.getTaskBoard(teamName);
     const blockedBy = request.blockedBy?.filter((id) => id.length > 0) ?? [];
     const related = request.related?.filter((id) => id.length > 0) ?? [];
 
@@ -2160,7 +2189,7 @@ export class TeamDataService {
     }
 
     const shouldStart = request.owner && request.startImmediately === true;
-    const task = controller.taskBoard.createTask({
+    const task = taskBoard.createTask({
       subject: request.subject,
       ...(request.description?.trim() ? { description: request.description.trim() } : {}),
       ...(request.descriptionTaskRefs?.length
@@ -2203,7 +2232,7 @@ export class TeamDataService {
       throw new Error(`Task #${taskId} is not pending (current: ${task.status})`);
     }
 
-    this.getController(teamName).taskBoard.startTask(taskId, 'user');
+    this.getTaskBoard(teamName).startTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
 
     if (task.owner) {
@@ -2259,7 +2288,7 @@ export class TeamDataService {
       throw new Error(`Task #${taskId} is not pending (current: ${task.status})`);
     }
 
-    this.getController(teamName).taskBoard.startTask(taskId, 'user');
+    this.getTaskBoard(teamName).startTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
 
     if (task.owner) {
@@ -2315,7 +2344,7 @@ export class TeamDataService {
     status: TeamTaskStatus,
     actor?: string
   ): Promise<void> {
-    this.getController(teamName).taskBoard.setTaskStatus(taskId, status, actor);
+    this.getTaskBoard(teamName).setTaskStatus(taskId, status, actor);
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2375,12 +2404,12 @@ export class TeamDataService {
   }
 
   async softDeleteTask(teamName: string, taskId: string): Promise<void> {
-    this.getController(teamName).taskBoard.softDeleteTask(taskId, 'user');
+    this.getTaskBoard(teamName).softDeleteTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
   }
 
   async restoreTask(teamName: string, taskId: string): Promise<void> {
-    this.getController(teamName).taskBoard.restoreTask(taskId, 'user');
+    this.getTaskBoard(teamName).restoreTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2389,7 +2418,7 @@ export class TeamDataService {
   }
 
   async updateTaskOwner(teamName: string, taskId: string, owner: string | null): Promise<void> {
-    this.getController(teamName).taskBoard.setTaskOwner(taskId, owner, 'user');
+    this.getTaskBoard(teamName).setTaskOwner(taskId, owner, 'user');
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2398,7 +2427,7 @@ export class TeamDataService {
     taskId: string,
     fields: { subject?: string; description?: string }
   ): Promise<void> {
-    this.getController(teamName).taskBoard.updateTaskFields(taskId, fields);
+    this.getTaskBoard(teamName).updateTaskFields(taskId, fields);
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2407,7 +2436,7 @@ export class TeamDataService {
     taskId: string,
     meta: TaskAttachmentMeta
   ): Promise<void> {
-    this.getController(teamName).taskBoard.addTaskAttachmentMeta(
+    this.getTaskBoard(teamName).addTaskAttachmentMeta(
       taskId,
       meta as unknown as Record<string, unknown>
     );
@@ -2419,7 +2448,7 @@ export class TeamDataService {
     taskId: string,
     attachmentId: string
   ): Promise<void> {
-    this.getController(teamName).taskBoard.removeTaskAttachment(taskId, attachmentId);
+    this.getTaskBoard(teamName).removeTaskAttachment(taskId, attachmentId);
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2428,7 +2457,7 @@ export class TeamDataService {
     taskId: string,
     value: 'lead' | 'user' | null
   ): Promise<void> {
-    this.getController(teamName).taskBoard.setNeedsClarification(taskId, value);
+    this.getTaskBoard(teamName).setNeedsClarification(taskId, value);
     this.invalidateGlobalTaskProjectionCache();
   }
 
@@ -2438,7 +2467,7 @@ export class TeamDataService {
     targetId: string,
     type: 'blockedBy' | 'blocks' | 'related'
   ): Promise<void> {
-    this.getController(teamName).taskBoard.linkTask(
+    this.getTaskBoard(teamName).linkTask(
       taskId,
       targetId,
       type === 'blockedBy' ? 'blocked-by' : type
@@ -2452,7 +2481,7 @@ export class TeamDataService {
     targetId: string,
     type: 'blockedBy' | 'blocks' | 'related'
   ): Promise<void> {
-    this.getController(teamName).taskBoard.unlinkTask(
+    this.getTaskBoard(teamName).unlinkTask(
       taskId,
       targetId,
       type === 'blockedBy' ? 'blocked-by' : type
@@ -2467,8 +2496,8 @@ export class TeamDataService {
     attachments?: TaskAttachmentMeta[],
     taskRefs?: TaskRef[]
   ): Promise<TaskComment> {
-    const controller = this.getController(teamName);
-    const addResult = controller.taskBoard.addTaskComment(taskId, {
+    const taskBoard = this.getTaskBoard(teamName);
+    const addResult = taskBoard.addTaskComment(taskId, {
       from: 'user',
       text,
       attachments,
@@ -3295,26 +3324,26 @@ export class TeamDataService {
 
   async requestReview(teamName: string, taskId: string): Promise<void> {
     const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-    this.getController(teamName).taskBoard.requestReview(taskId, {
+    this.getTaskBoard(teamName).requestReview(taskId, {
       from: leadName,
       ...(leadSessionId ? { leadSessionId } : {}),
     });
   }
 
   private getControllerTaskWorkflowColumn(
-    controller: AgentTeamsController,
+    taskBoard: AgentTeamsController['taskBoard'],
     taskId: string
   ): 'review' | 'approved' | undefined | null {
-    if (!controller.taskBoard?.getTask || !controller.taskBoard?.getKanbanState) {
+    if (!taskBoard.getTask || !taskBoard.getKanbanState) {
       return null;
     }
 
-    const task = controller.taskBoard.getTask(taskId) as TeamTask | null | undefined;
+    const task = taskBoard.getTask(taskId) as TeamTask | null | undefined;
     if (!task || typeof task.status !== 'string') {
       return null;
     }
 
-    const kanbanState = controller.taskBoard.getKanbanState() as KanbanState | null | undefined;
+    const kanbanState = taskBoard.getKanbanState() as KanbanState | null | undefined;
     const kanbanColumn = kanbanState?.tasks?.[task.id]?.column;
     const kanbanWorkflowColumn = kanbanColumn
       ? getTeamTaskWorkflowColumn({
@@ -3878,29 +3907,29 @@ export class TeamDataService {
   }
 
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
-    const controller = this.getController(teamName);
+    const taskBoard = this.getTaskBoard(teamName);
 
     if (patch.op === 'remove') {
-      controller.taskBoard.clearKanban(taskId);
+      taskBoard.clearKanban(taskId);
       return;
     }
 
     if (patch.op === 'set_column') {
       if (patch.column === 'review') {
         const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-        controller.taskBoard.requestReview(taskId, {
+        taskBoard.requestReview(taskId, {
           from: leadName,
           ...(leadSessionId ? { leadSessionId } : {}),
         });
       } else {
         const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-        const workflowColumn = this.getControllerTaskWorkflowColumn(controller, taskId);
+        const workflowColumn = this.getControllerTaskWorkflowColumn(taskBoard, taskId);
         if (workflowColumn === undefined) {
-          controller.taskBoard.setKanbanColumn(taskId, 'approved', {
+          taskBoard.setKanbanColumn(taskId, 'approved', {
             transition: 'manual_approve',
           });
         } else {
-          controller.taskBoard.approveReview(taskId, {
+          taskBoard.approveReview(taskId, {
             from: leadName,
             suppressTaskComment: true,
             'notify-owner': true,
@@ -3912,7 +3941,7 @@ export class TeamDataService {
     }
 
     const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-    controller.taskBoard.requestChanges(taskId, {
+    taskBoard.requestChanges(taskId, {
       from: leadName,
       comment: patch.comment?.trim() || 'Reviewer requested changes.',
       ...(patch.op === 'request_changes' && patch.taskRefs?.length
@@ -3927,6 +3956,6 @@ export class TeamDataService {
     columnId: KanbanColumnId,
     orderedTaskIds: string[]
   ): Promise<void> {
-    this.getController(teamName).taskBoard.updateColumnOrder(columnId, orderedTaskIds);
+    this.getTaskBoard(teamName).updateColumnOrder(columnId, orderedTaskIds);
   }
 }

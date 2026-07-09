@@ -172,8 +172,8 @@ vi.mock('agent-teams-controller', () => ({
 
 import { buildLegacyInboxMessageId } from '../../../../src/main/services/team/inboxMessageIdentity';
 import { isOpenCodePromptAcceptedByObservation } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryReadCommitPolicy';
-import { inferOpenCodeInboxMessageTaskRefs } from '../../../../src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy';
 import * as OpenCodeRuntimeStore from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { inferOpenCodeInboxMessageTaskRefs } from '../../../../src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy';
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
@@ -2952,10 +2952,10 @@ Messages:
       ])
     );
     vi.spyOn(service as any, 'getCurrentOpenCodeRuntimeRunId').mockReturnValue('opencode-run-1');
-    const createDeliveryService = (service as any).createOpenCodeMemberMessageDeliveryService.bind(
-      service
-    );
-    vi.spyOn(service as any, 'createOpenCodeMemberMessageDeliveryService').mockImplementation(
+    const deliveryCompatibility = (service as any).openCodeMemberMessageDeliveryCompatibility;
+    const createDeliveryService =
+      deliveryCompatibility.createOpenCodeMemberMessageDeliveryService.bind(deliveryCompatibility);
+    vi.spyOn(deliveryCompatibility, 'createOpenCodeMemberMessageDeliveryService').mockImplementation(
       () => {
         const deliveryService = createDeliveryService();
         const deps = (deliveryService as any).deps;

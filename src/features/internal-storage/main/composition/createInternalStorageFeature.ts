@@ -25,7 +25,10 @@ import { BackendSelectingTaskStallJournalStore } from './BackendSelectingTaskSta
 import { InternalStorageBackendSelector } from './InternalStorageBackendSelector';
 
 import type { InternalStorageBackendKind } from '../../contracts/internalStorageContracts';
-import type { MemberWorkSyncStorageGateway } from '../../core/application/ports';
+import type {
+  ApplicationCommandLedgerStorageGateway,
+  MemberWorkSyncStorageGateway,
+} from '../../core/application/ports';
 import type { TaskStallJournalStore } from '@main/services/team/stallMonitor/TaskStallJournalStore';
 import type { TaskCommentNotificationJournalStore } from '@main/services/team/TaskCommentNotificationJournalStore';
 
@@ -41,6 +44,11 @@ export interface InternalStorageMemberWorkSyncBackend {
   selector: InternalStorageBackendSelector;
 }
 
+export interface InternalStorageApplicationCommandLedgerBackend {
+  gateway: ApplicationCommandLedgerStorageGateway;
+  selector: InternalStorageBackendSelector;
+}
+
 export interface InternalStorageFeature {
   taskStallJournalStore: TaskStallJournalStore;
   taskCommentNotificationJournalStore: TaskCommentNotificationJournalStore;
@@ -50,6 +58,7 @@ export interface InternalStorageFeature {
    * worker bundle is unavailable — the caller stays on its JSON store.
    */
   memberWorkSyncBackend: InternalStorageMemberWorkSyncBackend | null;
+  applicationCommandLedgerBackend: InternalStorageApplicationCommandLedgerBackend | null;
   getBackendKind(): InternalStorageBackendKind;
   dispose(): Promise<void>;
 }
@@ -76,6 +85,7 @@ export function createInternalStorageFeature(
       taskStallJournalStore: jsonStallStore,
       taskCommentNotificationJournalStore: jsonCommentStore,
       memberWorkSyncBackend: null,
+      applicationCommandLedgerBackend: null,
       getBackendKind: () => 'json-fallback',
       dispose: async () => undefined,
     };
@@ -125,6 +135,7 @@ export function createInternalStorageFeature(
       jsonCommentStore
     ),
     memberWorkSyncBackend: { gateway: client, selector },
+    applicationCommandLedgerBackend: { gateway: client, selector },
     getBackendKind: () => selector.getBackendKind(),
     dispose: () => client.close(),
   };

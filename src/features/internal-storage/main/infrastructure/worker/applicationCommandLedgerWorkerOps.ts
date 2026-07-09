@@ -62,12 +62,7 @@ export class ApplicationCommandLedgerWorkerOps {
 
       const currentByIdempotencyKey = this.readByIdempotencyKey(input);
       if (currentByIdempotencyKey) {
-        return {
-          outcome: ApplicationCommandBeginOutcome.Conflict,
-          reason: ApplicationCommandConflictReason.IdempotencyKeyReused,
-          existing: currentByIdempotencyKey,
-          requested: input,
-        };
+        return this.beginExistingIdempotencyKey(currentByIdempotencyKey, input);
       }
 
       const created: AppCommandRecord = {
@@ -177,7 +172,10 @@ export class ApplicationCommandLedgerWorkerOps {
     current: AppCommandRecord,
     input: AppCommandBeginRequest
   ): AppCommandBeginResult {
-    const conflict = this.findConflict(current, input);
+    const conflict =
+      current.idempotencyKey !== input.idempotencyKey
+        ? ApplicationCommandConflictReason.CommandIdReused
+        : this.findSemanticConflict(current, input);
     if (conflict) {
       return {
         outcome: ApplicationCommandBeginOutcome.Conflict,
@@ -187,6 +185,30 @@ export class ApplicationCommandLedgerWorkerOps {
       };
     }
 
+    return this.beginExistingMatchingCommand(current, input);
+  }
+
+  private beginExistingIdempotencyKey(
+    current: AppCommandRecord,
+    input: AppCommandBeginRequest
+  ): AppCommandBeginResult {
+    const conflict = this.findSemanticConflict(current, input);
+    if (conflict) {
+      return {
+        outcome: ApplicationCommandBeginOutcome.Conflict,
+        reason: conflict,
+        existing: current,
+        requested: input,
+      };
+    }
+
+    return this.beginExistingMatchingCommand(current, input);
+  }
+
+  private beginExistingMatchingCommand(
+    current: AppCommandRecord,
+    input: AppCommandBeginRequest
+  ): AppCommandBeginResult {
     switch (current.status) {
       case ApplicationCommandLedgerStatus.Started:
         return { outcome: ApplicationCommandBeginOutcome.AlreadyStarted, record: current };
@@ -231,13 +253,10 @@ export class ApplicationCommandLedgerWorkerOps {
     return { outcome: ApplicationCommandBeginOutcome.RetryStarted, record: next };
   }
 
-  private findConflict(
+  private findSemanticConflict(
     current: AppCommandRecord,
     input: AppCommandBeginRequest
   ): ApplicationCommandConflictReason | null {
-    if (current.idempotencyKey !== input.idempotencyKey) {
-      return ApplicationCommandConflictReason.CommandIdReused;
-    }
     if (current.operation !== input.operation) {
       return ApplicationCommandConflictReason.OperationMismatch;
     }

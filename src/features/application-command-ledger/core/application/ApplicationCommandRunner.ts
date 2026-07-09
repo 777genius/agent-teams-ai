@@ -90,15 +90,19 @@ export class ApplicationCommandRunner {
       throw this.toBeginError(begin);
     }
 
+    const activeIdentity = {
+      namespace: begin.record.namespace,
+      scopeKey: begin.record.scopeKey,
+      commandId: begin.record.commandId,
+    };
+
     let result: TResult;
     try {
       result = await execute();
     } catch (error) {
       const classification = input.classifyError(error);
       await this.ledger.markFailed({
-        namespace: input.namespace,
-        scopeKey: input.scopeKey,
-        commandId: input.commandId,
+        ...activeIdentity,
         failureKind: classification.failureKind,
         errorMessage: classification.message ?? this.stringifyError(error),
         completedAtIso: this.clock().toISOString(),
@@ -111,9 +115,7 @@ export class ApplicationCommandRunner {
       resultJson = stableJsonStringify(result);
     } catch (error) {
       await this.ledger.markFailed({
-        namespace: input.namespace,
-        scopeKey: input.scopeKey,
-        commandId: input.commandId,
+        ...activeIdentity,
         failureKind: ApplicationCommandFailureKind.UnknownAfterTimeout,
         errorMessage: `Application command completed but result serialization failed: ${this.stringifyError(error)}`,
         completedAtIso: this.clock().toISOString(),
@@ -122,14 +124,12 @@ export class ApplicationCommandRunner {
     }
 
     await this.ledger.markCompleted({
-      namespace: input.namespace,
-      scopeKey: input.scopeKey,
-      commandId: input.commandId,
+      ...activeIdentity,
       resultHash: this.hasher.hashString(resultJson),
       resultJson,
       completedAtIso: this.clock().toISOString(),
     });
-    const record = await this.readCommittedRecord<TOperation>(input);
+    const record = await this.readCommittedRecord<TOperation>(activeIdentity);
     return {
       outcome:
         begin.outcome === ApplicationCommandBeginOutcome.RetryStarted

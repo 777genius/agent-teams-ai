@@ -73,6 +73,30 @@ describe('ApplicationCommandRunner', () => {
     expect(executions).toBe(1);
   });
 
+  it('replays a completed command by idempotency key when command id changes', async () => {
+    const store = new InMemoryLedgerStore();
+    const runner = new ApplicationCommandRunner({
+      ledger: store,
+      hasher,
+      clock: fixedClock(),
+    });
+    let executions = 0;
+
+    await runner.run(makeInput({ commandId: 'cmd-1' }), async () => {
+      executions += 1;
+      return { ok: true, id: 'task-1' };
+    });
+    const replay = await runner.run(makeInput({ commandId: 'cmd-2' }), async () => {
+      executions += 1;
+      return { ok: false };
+    });
+
+    expect(replay.outcome).toBe(ApplicationCommandRunOutcome.Replayed);
+    expect(replay.record.commandId).toBe('cmd-1');
+    expect(replay.result).toEqual({ ok: true, id: 'task-1' });
+    expect(executions).toBe(1);
+  });
+
   it('blocks same command id with a different payload hash', async () => {
     const runner = new ApplicationCommandRunner({
       ledger: new InMemoryLedgerStore(),
@@ -112,6 +136,39 @@ describe('ApplicationCommandRunner', () => {
     expect(second.outcome).toBe(ApplicationCommandRunOutcome.Retried);
     expect(second.record.attemptCount).toBe(2);
     expect(second.record.status).toBe(ApplicationCommandLedgerStatus.Completed);
+  });
+
+  it('retries a retryable command by idempotency key and commits the original record', async () => {
+    const store = new InMemoryLedgerStore();
+    const runner = new ApplicationCommandRunner({
+      ledger: store,
+      hasher,
+      clock: fixedClock(),
+    });
+
+    await expect(
+      runner.run(
+        makeInput({
+          commandId: 'cmd-1',
+          classifyError: () => ({ failureKind: ApplicationCommandFailureKind.Retryable }),
+        }),
+        async () => {
+          throw new Error('temporary');
+        }
+      )
+    ).rejects.toThrow('temporary');
+
+    const retry = await runner.run(makeInput({ commandId: 'cmd-2' }), async () => ({
+      ok: true,
+    }));
+
+    expect(retry.outcome).toBe(ApplicationCommandRunOutcome.Retried);
+    expect(retry.record.commandId).toBe('cmd-1');
+    expect(retry.record.attemptCount).toBe(2);
+    expect(retry.record.status).toBe(ApplicationCommandLedgerStatus.Completed);
+    await expect(
+      store.getByCommandId({ namespace: 'task-board', scopeKey: 'team-a', commandId: 'cmd-2' })
+    ).resolves.toBeNull();
   });
 
   it('blocks retry after unknown outcome until reconciliation', async () => {
@@ -208,12 +265,11 @@ class InMemoryLedgerStore implements ApplicationCommandLedgerStore {
       (record) => idempotencyKey(record) === idempotencyKey(request)
     );
     if (existingByIdempotencyKey) {
-      return {
-        outcome: ApplicationCommandBeginOutcome.Conflict,
-        reason: ApplicationCommandConflictReason.IdempotencyKeyReused,
-        existing: existingByIdempotencyKey as ApplicationCommandLedgerRecord<TOperation>,
-        requested: request,
-      };
+      return this.beginExisting(
+        existingByIdempotencyKey as ApplicationCommandLedgerRecord<TOperation>,
+        request,
+        false
+      );
     }
     const created: ApplicationCommandLedgerRecord<TOperation> = {
       ...request,
@@ -291,9 +347,10 @@ class InMemoryLedgerStore implements ApplicationCommandLedgerStore {
 
   private beginExisting<TOperation extends string>(
     existing: ApplicationCommandLedgerRecord<TOperation>,
-    request: ApplicationCommandLedgerBeginRequest<TOperation>
+    request: ApplicationCommandLedgerBeginRequest<TOperation>,
+    requireSameIdempotencyKey = true
   ): ApplicationCommandLedgerBeginResult<TOperation> {
-    if (existing.idempotencyKey !== request.idempotencyKey) {
+    if (requireSameIdempotencyKey && existing.idempotencyKey !== request.idempotencyKey) {
       return {
         outcome: ApplicationCommandBeginOutcome.Conflict,
         reason: ApplicationCommandConflictReason.CommandIdReused,

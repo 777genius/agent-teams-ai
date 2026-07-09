@@ -53,7 +53,34 @@ describe('InternalStorageApplicationCommandLedgerStore', () => {
     expect(replay.record.status).toBe(ApplicationCommandLedgerStatus.Completed);
   });
 
-  it('rejects idempotency key reuse by a different command id', async () => {
+  it('replays idempotency key reuse by a different command id when payload matches', async () => {
+    const store = await makeStore();
+
+    await store.begin(makeBeginRequest());
+    await store.markCompleted({
+      namespace: 'task-board',
+      scopeKey: 'team-a',
+      commandId: 'cmd-1',
+      resultHash: 'hash:result',
+      resultJson: '{"ok":true}',
+      completedAtIso: '2026-07-09T10:01:00.000Z',
+    });
+
+    const replay = await store.begin(
+      makeBeginRequest({ commandId: 'cmd-2', nowIso: '2026-07-09T10:02:00.000Z' })
+    );
+
+    expect(replay).toMatchObject({
+      outcome: ApplicationCommandBeginOutcome.DuplicateCompleted,
+      record: {
+        commandId: 'cmd-1',
+        idempotencyKey: 'idem-1',
+        resultJson: '{"ok":true}',
+      },
+    });
+  });
+
+  it('rejects idempotency key reuse when payload changes', async () => {
     const store = await makeStore();
 
     await store.begin(makeBeginRequest());
@@ -63,7 +90,7 @@ describe('InternalStorageApplicationCommandLedgerStore', () => {
 
     expect(conflict).toMatchObject({
       outcome: ApplicationCommandBeginOutcome.Conflict,
-      reason: ApplicationCommandConflictReason.IdempotencyKeyReused,
+      reason: ApplicationCommandConflictReason.PayloadHashMismatch,
     });
   });
 
