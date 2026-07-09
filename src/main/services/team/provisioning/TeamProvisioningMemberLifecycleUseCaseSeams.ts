@@ -1,5 +1,6 @@
 import type { AppendDirectProcessRuntimeEventUseCase } from './TeamProvisioningAppendDirectProcessRuntimeEventUseCase';
 import type { OpenCodeSecondaryRetryCandidate } from './TeamProvisioningCollectFailedOpenCodeSecondaryRetryCandidatesUseCase';
+import type { HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase } from './TeamProvisioningHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase';
 import type {
   DirectProcessMemberRestartInput,
   LiveRosterAttachReason,
@@ -61,6 +62,7 @@ export interface TeamProvisioningMemberLifecycleOpenCodeRetryUseCaseSeams {
     memberName: string,
     options?: ReattachOpenCodeOwnedMemberLaneOptions
   ): Promise<void>;
+  hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch?: HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase;
   detachOpenCodeOwnedMemberLaneUnlocked?(teamName: string, memberName: string): Promise<void>;
 }
 

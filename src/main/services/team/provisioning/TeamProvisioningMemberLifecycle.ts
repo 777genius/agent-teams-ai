@@ -42,6 +42,10 @@ import {
   isInteractiveShellCommand,
 } from './TeamProvisioningDirectRestart';
 import {
+  createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase,
+  type HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchInput,
+} from './TeamProvisioningHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase';
+import {
   matchesExactTeamMemberName,
   matchesMemberNameOrBase,
   matchesObservedMemberNameForExpected,
@@ -54,12 +58,7 @@ import {
   createPersistOpenCodeMemberRestartSystemMessageUseCase,
   type OpenCodeMemberRestartSystemMessageInput,
 } from './TeamProvisioningOpenCodeMemberRestartSystemMessageUseCase';
-import {
-  hasOpenCodeRuntimeEntryHandle,
-  hasOpenCodeRuntimeHandle,
-  hasOpenCodeRuntimeLivenessMarker,
-  MEMBER_BOOTSTRAP_STALL_MS,
-} from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import { MEMBER_BOOTSTRAP_STALL_MS } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
   createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase,
   type PreparePrimaryOwnedMemberRestartRuntimeInput,
@@ -115,7 +114,6 @@ import type {
   PersistedTeamLaunchSnapshot,
   ProviderModelLaunchIdentity,
   RetryFailedOpenCodeSecondaryLanesResult,
-  TeamAgentRuntimeEntry,
   TeamConfig,
   TeamCreateRequest,
   TeamProviderBackendId,
@@ -216,6 +214,11 @@ export class TeamProvisioningMemberLifecycleController {
       readLaunchStateSnapshot: (teamName) => this.launchStateStore.read(teamName),
       resolveEffectiveConfiguredMember: (configMembers, metaMembers, memberName) =>
         this.resolveEffectiveConfiguredMember(configMembers, metaMembers, memberName),
+    });
+  private readonly hasOpenCodeMemberRuntimeEvidenceForControlledRelaunchFallback =
+    createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase({
+      readLaunchStateSnapshot: (teamName) => this.launchStateStore.read(teamName),
+      getLiveTeamAgentRuntimeMetadata: (teamName) => this.getLiveTeamAgentRuntimeMetadata(teamName),
     });
 
   constructor(
@@ -2309,43 +2312,13 @@ export class TeamProvisioningMemberLifecycleController {
     await this.launchSingleMixedSecondaryLane(run, laneState);
   }
 
-  private async hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch(params: {
-    teamName: string;
-    memberName: string;
-    laneId: string;
-    existingLane: MixedSecondaryRuntimeLaneState | null;
-  }): Promise<boolean> {
-    const laneResultMember =
-      params.existingLane?.result?.members[params.memberName] ??
-      Object.values(params.existingLane?.result?.members ?? {}).find(
-        (member) => member.memberName?.trim() === params.memberName
-      );
-    if (hasOpenCodeRuntimeHandle(laneResultMember)) {
-      return true;
-    }
-
-    const persistedSnapshot = await this.launchStateStore.read(params.teamName).catch(() => null);
-    const persistedMember =
-      persistedSnapshot?.members[params.memberName] ??
-      Object.values(persistedSnapshot?.members ?? {}).find(
-        (member) => member.laneId === params.laneId
-      );
-    if (
-      hasOpenCodeRuntimeHandle(persistedMember) ||
-      hasOpenCodeRuntimeLivenessMarker(persistedMember)
-    ) {
-      return true;
-    }
-
-    const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(params.teamName).catch(
-      () => new Map<string, TeamAgentRuntimeEntry>()
+  private async hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch(
+    input: HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchInput
+  ): Promise<boolean> {
+    const seam = this.openCodeRetryUseCases.hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch;
+    return await (seam ?? this.hasOpenCodeMemberRuntimeEvidenceForControlledRelaunchFallback)(
+      input
     );
-    const liveRuntimeMember =
-      liveRuntimeByMember.get(params.memberName) ??
-      [...liveRuntimeByMember.entries()].find(([candidateName]) =>
-        matchesObservedMemberNameForExpected(candidateName, params.memberName)
-      )?.[1];
-    return hasOpenCodeRuntimeEntryHandle(liveRuntimeMember);
   }
 
   async detachOpenCodeOwnedMemberLane(teamName: string, memberName: string): Promise<void> {

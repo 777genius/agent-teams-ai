@@ -537,6 +537,7 @@ export class TeamProvisioningService extends TeamProvisioningServiceFacadeDelega
     persistSentMessage: (teamName, message) =>
       this.persistSentMessage(teamName, message as unknown as InboxMessage),
     readLaunchStateSnapshot: (teamName) => this.launchStateStore.read(teamName),
+    getLiveTeamAgentRuntimeMetadata: (teamName) => this.getLiveTeamAgentRuntimeMetadata(teamName),
     appendDirectProcessRuntimeEvent: createAppendDirectProcessRuntimeEventUseCase(
       createNodeAppendDirectProcessRuntimeEventUseCasePorts({ nowIso })
     ),

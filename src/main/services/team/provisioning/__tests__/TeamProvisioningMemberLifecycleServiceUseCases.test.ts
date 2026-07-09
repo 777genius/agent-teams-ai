@@ -11,6 +11,7 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
     const stoppedMembers: string[] = [];
     const preparedRestartMembers: string[] = [];
     const launchStateReads: string[] = [];
+    const liveRuntimeReads: string[] = [];
 
     const useCases = createTeamProvisioningMemberLifecycleServiceUseCases({
       persistSentMessage: (teamName, message) => {
@@ -32,6 +33,7 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
               runtimeAlive: true,
               bootstrapConfirmed: true,
               hardFailure: false,
+              livenessKind: 'runtime_process',
               lastEvaluatedAt: '2026-07-06T17:00:00.000Z',
             },
           },
@@ -43,6 +45,10 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
           },
           teamLaunchState: 'clean_success',
         };
+      },
+      getLiveTeamAgentRuntimeMetadata: async (teamName) => {
+        liveRuntimeReads.push(teamName);
+        return new Map();
       },
       appendDirectProcessRuntimeEvent: async (input) => {
         runtimeEvents.push(input);
@@ -63,6 +69,7 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
 
     expect(Object.keys(useCases).sort()).toEqual([
       'appendDirectProcessRuntimeEvent',
+      'hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch',
       'persistOpenCodeMemberRestartSystemMessage',
       'preparePrimaryOwnedMemberRestartRuntime',
       'readOpenCodeSecondaryRetryOutcome',
@@ -120,6 +127,14 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
         'secondary:opencode:worker'
       )
     ).resolves.toEqual({ launchState: 'confirmed_alive' });
+    await expect(
+      useCases.hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        laneId: 'secondary:opencode:worker',
+        existingLane: null,
+      })
+    ).resolves.toBe(true);
     expect(
       useCases.resolveDirectRestartRuntimeCwd({
         configuredMember: {},
@@ -146,6 +161,7 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
     ]);
     expect(stoppedMembers).toEqual(['team-a:Worker']);
     expect(preparedRestartMembers).toEqual(['team-a:Worker']);
-    expect(launchStateReads).toEqual(['team-a']);
+    expect(launchStateReads).toEqual(['team-a', 'team-a']);
+    expect(liveRuntimeReads).toEqual([]);
   });
 });
