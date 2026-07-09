@@ -10,6 +10,16 @@ import type {
   MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
 } from '../../contracts/internalStorageContracts';
+import type {
+  ApplicationCommandLedgerBeginRequest,
+  ApplicationCommandLedgerBeginResult,
+  ApplicationCommandLedgerCompleteRequest,
+  ApplicationCommandLedgerFailRequest,
+  ApplicationCommandLedgerListScopeRequest,
+  ApplicationCommandLedgerReadByCommandIdRequest,
+  ApplicationCommandLedgerReadByIdempotencyKeyRequest,
+  ApplicationCommandLedgerRecord,
+} from '@features/application-command-ledger/contracts';
 
 /**
  * Async gateway to the SQLite database that lives in a dedicated worker
@@ -122,6 +132,31 @@ export interface MemberWorkSyncStorageGateway {
   listTeamSnapshot(teamName: string): Promise<MemberWorkSyncTeamSnapshotRecords>;
   importTeam(teamName: string, snapshot: MemberWorkSyncTeamSnapshotRecords): Promise<void>;
   recordStoreImport(storeId: string, teamName: string, entryCount: number): Promise<void>;
+}
+
+/**
+ * Universal application-command persistence over the same internal SQLite
+ * worker. The semantic runner lives in application-command-ledger; this port
+ * only exposes atomic storage transitions.
+ */
+export interface ApplicationCommandLedgerStorageGateway {
+  ping(): Promise<InternalStorageBackendInfo>;
+  applicationCommandLedgerBegin<TOperation extends string>(
+    request: ApplicationCommandLedgerBeginRequest<TOperation>
+  ): Promise<ApplicationCommandLedgerBeginResult<TOperation>>;
+  applicationCommandLedgerMarkCompleted(
+    request: ApplicationCommandLedgerCompleteRequest
+  ): Promise<void>;
+  applicationCommandLedgerMarkFailed(request: ApplicationCommandLedgerFailRequest): Promise<void>;
+  applicationCommandLedgerGetByCommandId<TOperation extends string>(
+    request: ApplicationCommandLedgerReadByCommandIdRequest
+  ): Promise<ApplicationCommandLedgerRecord<TOperation> | null>;
+  applicationCommandLedgerGetByIdempotencyKey<TOperation extends string>(
+    request: ApplicationCommandLedgerReadByIdempotencyKeyRequest
+  ): Promise<ApplicationCommandLedgerRecord<TOperation> | null>;
+  applicationCommandLedgerListByScope<TOperation extends string>(
+    request: ApplicationCommandLedgerListScopeRequest
+  ): Promise<ApplicationCommandLedgerRecord<TOperation>[]>;
 }
 
 /**
