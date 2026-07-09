@@ -4531,6 +4531,144 @@ describe('teamSlice actions', () => {
     expect(store.getState().teamAgentRuntimeByTeam['my-team'].members.alice.alive).toBe(false);
   });
 
+  it('does not reuse older freshness memory over a newer visible runtime snapshot', async () => {
+    vi.useFakeTimers();
+    const store = createSliceStore();
+    const firstLiveSnapshot = createRuntimeSnapshot({
+      updatedAt: '2026-03-12T10:00:00.000Z',
+      members: {
+        alice: {
+          ...createRuntimeSnapshot().members.alice,
+          livenessKind: 'runtime_process',
+          runtimeLastSeenAt: '2026-03-12T10:00:00.000Z',
+          updatedAt: '2026-03-12T10:00:00.000Z',
+        },
+      },
+    });
+    vi.setSystemTime(new Date('2026-03-12T10:00:00.000Z'));
+    hoisted.getTeamAgentRuntime.mockResolvedValue(firstLiveSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    const newerVisibleSnapshot = createRuntimeSnapshot({
+      updatedAt: '2026-03-12T10:00:20.000Z',
+      members: {
+        alice: {
+          ...firstLiveSnapshot.members.alice,
+          runtimeLastSeenAt: '2026-03-12T10:00:20.000Z',
+          updatedAt: '2026-03-12T10:00:20.000Z',
+        },
+      },
+    });
+    store.setState({
+      teamAgentRuntimeByTeam: {
+        'my-team': newerVisibleSnapshot,
+      },
+    });
+
+    const offlineSnapshot = createRuntimeSnapshot({
+      updatedAt: '2026-03-12T10:00:30.000Z',
+      members: {
+        alice: {
+          ...firstLiveSnapshot.members.alice,
+          alive: false,
+          livenessKind: 'registered_only',
+          runtimeDiagnostic: 'registered runtime metadata without live process',
+          runtimeDiagnosticSeverity: 'warning',
+          runtimeLastSeenAt: undefined,
+          updatedAt: '2026-03-12T10:00:30.000Z',
+        },
+      },
+    });
+    vi.setSystemTime(new Date('2026-03-12T10:00:30.000Z'));
+    hoisted.getTeamAgentRuntime.mockResolvedValue(offlineSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toBe(newerVisibleSnapshot);
+    expect(store.getState().teamAgentRuntimeByTeam['my-team'].members.alice.alive).toBe(true);
+  });
+
+  it('keeps runtime freshness memory scoped by team name when run ids collide', async () => {
+    vi.useFakeTimers();
+    const store = createSliceStore();
+    const firstLiveSnapshot = createRuntimeSnapshot({
+      runId: 'shared-run',
+      updatedAt: '2026-03-12T10:00:00.000Z',
+      members: {
+        alice: {
+          ...createRuntimeSnapshot().members.alice,
+          livenessKind: 'runtime_process',
+          runtimeLastSeenAt: '2026-03-12T10:00:00.000Z',
+          updatedAt: '2026-03-12T10:00:00.000Z',
+        },
+      },
+    });
+    vi.setSystemTime(new Date('2026-03-12T10:00:00.000Z'));
+    hoisted.getTeamAgentRuntime.mockResolvedValue(firstLiveSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+    const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
+
+    const refreshedLiveSnapshot = createRuntimeSnapshot({
+      runId: 'shared-run',
+      updatedAt: '2026-03-12T10:00:10.000Z',
+      members: {
+        alice: {
+          ...firstLiveSnapshot.members.alice,
+          runtimeLastSeenAt: '2026-03-12T10:00:10.000Z',
+          updatedAt: '2026-03-12T10:00:10.000Z',
+        },
+      },
+    });
+    vi.setSystemTime(new Date('2026-03-12T10:00:10.000Z'));
+    hoisted.getTeamAgentRuntime.mockResolvedValue(refreshedLiveSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toBe(firstSnapshot);
+
+    const otherTeamSnapshot = createRuntimeSnapshot({
+      teamName: 'other-team',
+      runId: 'shared-run',
+      updatedAt: '2026-03-12T10:00:11.000Z',
+      members: {
+        alice: {
+          ...firstLiveSnapshot.members.alice,
+          runtimeLastSeenAt: '2026-03-12T10:00:11.000Z',
+          updatedAt: '2026-03-12T10:00:11.000Z',
+        },
+      },
+    });
+    vi.setSystemTime(new Date('2026-03-12T10:00:11.000Z'));
+    hoisted.getTeamAgentRuntime.mockResolvedValue(otherTeamSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('other-team');
+
+    const transientOfflineSnapshot = createRuntimeSnapshot({
+      runId: 'shared-run',
+      updatedAt: '2026-03-12T10:00:20.000Z',
+      members: {
+        alice: {
+          ...firstLiveSnapshot.members.alice,
+          alive: false,
+          livenessKind: 'registered_only',
+          runtimeDiagnostic: 'registered runtime metadata without live process',
+          runtimeDiagnosticSeverity: 'warning',
+          runtimeLastSeenAt: undefined,
+          updatedAt: '2026-03-12T10:00:20.000Z',
+        },
+      },
+    });
+    vi.setSystemTime(new Date('2026-03-12T10:00:20.000Z'));
+    hoisted.getTeamAgentRuntime.mockResolvedValue(transientOfflineSnapshot);
+
+    await store.getState().fetchTeamAgentRuntime('my-team');
+
+    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toBe(firstSnapshot);
+    expect(store.getState().teamAgentRuntimeByTeam['my-team'].members.alice.alive).toBe(true);
+  });
+
   it('updates runtime snapshots when liveness diagnostics change', async () => {
     const store = createSliceStore();
     const snapshot = createRuntimeSnapshot();

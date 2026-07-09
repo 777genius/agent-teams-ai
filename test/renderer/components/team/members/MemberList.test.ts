@@ -491,7 +491,7 @@ describe('MemberList spawn-status memoization', () => {
     });
   });
 
-  it('does not rerender cards when only cached runtime telemetry changes', async () => {
+  it('rerenders cards when runtime telemetry or diagnostics change', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -541,7 +541,7 @@ describe('MemberList spawn-status memoization', () => {
       await Promise.resolve();
     });
 
-    expect(memberCardRenderSpy).not.toHaveBeenCalled();
+    expect(memberCardRenderSpy).toHaveBeenCalledTimes(1);
     memberCardRenderSpy.mockClear();
 
     await act(async () => {
@@ -569,7 +569,7 @@ describe('MemberList spawn-status memoization', () => {
       await Promise.resolve();
     });
 
-    expect(memberCardRenderSpy).not.toHaveBeenCalled();
+    expect(memberCardRenderSpy).toHaveBeenCalledTimes(1);
     memberCardRenderSpy.mockClear();
 
     await act(async () => {
@@ -599,7 +599,63 @@ describe('MemberList spawn-status memoization', () => {
     });
   });
 
-  it('keeps hovered runtime telemetry preview on cached snapshots', async () => {
+  it('rerenders cards when runtime cwd or lease fields change', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const members = [member];
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members,
+          isTeamAlive: true,
+          memberRuntimeEntries: new Map([
+            [
+              'bob',
+              liveRuntimeEntry({
+                cwd: '/tmp/project-a',
+                runtimeLeaseExpiresAt: '2026-05-31T10:05:00.000Z',
+              }),
+            ],
+          ]),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(memberCardRenderSpy).toHaveBeenCalledTimes(1);
+    memberCardRenderSpy.mockClear();
+
+    await act(async () => {
+      root.render(
+        React.createElement(MemberList, {
+          members,
+          isTeamAlive: true,
+          memberRuntimeEntries: new Map([
+            [
+              'bob',
+              liveRuntimeEntry({
+                cwd: '/tmp/project-b',
+                runtimeLeaseExpiresAt: '2026-05-31T10:10:00.000Z',
+              }),
+            ],
+          ]),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(memberCardRenderSpy).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('updates hovered runtime telemetry preview when snapshot telemetry changes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -659,7 +715,7 @@ describe('MemberList spawn-status memoization', () => {
       await Promise.resolve();
     });
 
-    expect(memberCardRenderSpy).not.toHaveBeenCalled();
+    expect(memberCardRenderSpy).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.unmount();

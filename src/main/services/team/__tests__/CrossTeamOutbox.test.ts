@@ -40,17 +40,21 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     }
   });
 
-  it('dedupes a retry with the same message id and conversation id', async () => {
+  it('dedupes a retry with the same trimmed message id and conversation id', async () => {
     const outbox = new CrossTeamOutbox();
     const onBeforeAppend = vi.fn(async () => {});
     const message = makeMessage();
+    const retry = makeMessage({
+      messageId: ' runtime-message-1 ',
+      conversationId: '\truntime-idempotency-1\n',
+    });
 
     await expect(outbox.appendIfNotRecent('source-team', message, onBeforeAppend)).resolves.toEqual(
       { duplicate: null }
     );
-    await expect(
-      outbox.appendIfNotRecent('source-team', makeMessage(), onBeforeAppend)
-    ).resolves.toEqual({ duplicate: message });
+    await expect(outbox.appendIfNotRecent('source-team', retry, onBeforeAppend)).resolves.toEqual({
+      duplicate: message,
+    });
 
     await expect(outbox.read('source-team')).resolves.toEqual([message]);
     expect(onBeforeAppend).toHaveBeenCalledTimes(1);

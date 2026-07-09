@@ -84,6 +84,39 @@ describe('RuntimeDeliveryService', () => {
     expect(destination.messages).toHaveLength(1);
   });
 
+
+  it('keeps committed delivery successful when change event emission fails', async () => {
+    vi.spyOn(emitter, 'emit').mockImplementation(() => {
+      throw new Error('emitter unavailable after commit');
+    });
+    const service = createService();
+
+    await expect(service.deliver(envelope())).resolves.toMatchObject({
+      ok: true,
+      delivered: true,
+      reason: null,
+    });
+
+    await expect(journal.get('delivery-1')).resolves.toMatchObject({
+      status: 'committed',
+      attempts: 1,
+      committedLocation: expect.objectContaining({
+        kind: 'member_inbox',
+        memberName: 'Reviewer',
+      }),
+    });
+    expect(diagnostics.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'runtime_delivery_change_emit_failed',
+        severity: 'warning',
+        data: expect.objectContaining({
+          idempotencyKey: 'delivery-1',
+          error: 'emitter unavailable after commit',
+        }),
+      })
+    );
+  });
+
   it('commits pending journal when destination already contains deterministic message id', async () => {
     const message = envelope();
     const destinationRef = resolveRuntimeDeliveryDestination(message);
