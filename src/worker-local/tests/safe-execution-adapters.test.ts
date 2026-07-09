@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SafeExecutionCommandRunner } from "@vioxen/subscription-runtime/worker-core";
@@ -137,6 +137,7 @@ describe("worker-local safe execution adapters", () => {
 
   it("checks git workspace access through the command port", async () => {
     const workspacePath = await tempPath("safe-execution-adapter-access-");
+    const canonicalWorkspacePath = await realpath(workspacePath);
     const commandRunner = new FakeGitCommandRunner((input) => {
       if (input.args.join(" ") === "rev-parse --is-inside-work-tree") {
         return { stdout: "true\n", stderr: "" };
@@ -147,7 +148,7 @@ describe("worker-local safe execution adapters", () => {
 
     await expect(
       access.canonicalizePath({ path: workspacePath }),
-    ).resolves.toBe(workspacePath);
+    ).resolves.toBe(canonicalWorkspacePath);
     await expect(
       access.assertGitWorkspace({ workspacePath }),
     ).resolves.toBeUndefined();

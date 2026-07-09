@@ -146,9 +146,10 @@
     "smoke:worker-claude-thread": "npm run build && CLAUDE_WORKER_SMOKE_MODE=thread node scripts/smoke-claude-worker.mjs",
     "check:boundaries": "node scripts/check-boundaries.mjs && node scripts/check-boundaries-self-test.mjs && npm run check:architecture-guardrails",
     "check:diff": "node scripts/check-git-diff.mjs",
+    "check:dist-policy": "node scripts/check-dist-policy.mjs && node scripts/check-dist-policy-self-test.mjs",
     "check:dist": "node scripts/check-dist.mjs",
     "check:packed-consumer": "node scripts/check-packed-consumer.mjs",
-    "check": "npm run check:diff && npm run typecheck && npm run build && npm run check:dist && npm test && npm run check:boundaries && npm pack --dry-run && npm run check:packed-consumer",
+    "check": "npm run check:diff && npm run check:dist-policy && npm run typecheck && npm run build && npm run check:dist && npm test && npm run check:boundaries && npm pack --dry-run && npm run check:packed-consumer",
     "check:architecture-guardrails": "node scripts/check-architecture-guardrails.mjs && node scripts/check-architecture-guardrails-self-test.mjs"
   },
   "dependencies": {

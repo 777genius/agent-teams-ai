@@ -56,11 +56,19 @@ function rewriteFile(filePath) {
   ) {
     after = `/// <reference types="node" />\n${after}`;
   }
+  if (filePath.endsWith(".d.ts") && !hasModuleSyntax(after)) {
+    after = `${after.replace(/\s*$/, "\n")}export {};\n`;
+  }
 
   if (after !== before) {
     writeFileSync(filePath, after);
     rewritten += 1;
   }
+}
+
+function hasModuleSyntax(text) {
+  const withoutReferences = text.replace(/^\/\/\/ <reference [^\n]+>\n/gm, "");
+  return /^\s*(?:import|export)\b/m.test(withoutReferences);
 }
 
 function rewriteSpecifier(filePath, specifier) {

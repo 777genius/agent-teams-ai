@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { mkdir, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import {
@@ -7,14 +7,11 @@ import {
   DeterministicIdGenerator,
   type ClockPort,
   type ObservabilityPort,
-  type ProviderFailure,
   type ProviderTask,
   type ProviderTaskTelemetry,
   type RedactorPort,
   type RefreshThenRunResult,
   type RuntimeDeps,
-  type SessionEnvelope,
-  type SessionArtifact,
   assertProviderTaskSystemPrompt,
 } from "@vioxen/subscription-runtime/core";
 import {
@@ -52,7 +49,6 @@ import { StableWorkerWorkspace } from "../worker-local/temp-workspace";
 import {
   FileClaudeRateLimitTelemetry,
   type ClaudeRateLimitTelemetrySource,
-  type ClaudeRateLimitWindowName,
 } from "./rate-limit-telemetry";
 import {
   FileClaudeRunArtifactStore,
@@ -65,16 +61,16 @@ import {
   type ClaudeLogicalThreadStore,
   type ClaudeTranscriptBundleStore,
 } from "./thread-handoff";
+import {
+  FileBackendClaudeCapacityState,
+  claudeCapacityAccountIdMetadataKey,
+  hashText,
+  isSevereCapacity,
+  normalizeCapacityAccountId,
+  type ClaudeWorkerCapacityPolicy,
+} from "./file-backend-claude-capacity";
 
-const claudeCapacityAccountIdMetadataKey = "capacityAccountId";
-
-export type ClaudeWorkerCapacityPolicy = {
-  readonly softMaxRunsPerWindow?: number;
-  readonly windowMs?: number;
-  readonly quotaCooldownMs?: number;
-  readonly rateLimitMinRemainingPercent?: number;
-  readonly rateLimitWindows?: readonly ClaudeRateLimitWindowName[];
-};
+export type { ClaudeWorkerCapacityPolicy } from "./file-backend-claude-capacity";
 
 export type FileBackendClaudeWorkerOptions = {
   readonly workerId?: string;
@@ -168,11 +164,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
   private readonly transcriptBundleStore: ClaudeTranscriptBundleStore;
   private readonly runArtifacts: FileClaudeRunArtifactStore;
   private readonly runArtifactHeartbeatMs: number;
-  private capacityState: WorkerCapacitySnapshot = { availability: "available" };
-  private windowStartedAtMs: number;
-  private runsInWindow = 0;
-  private quotaGroup: string | null = null;
-  private capacityAccountId: string | null = null;
+  private readonly capacityTracker: FileBackendClaudeCapacityState;
 
   constructor(private readonly options: FileBackendClaudeWorkerOptions) {
     this.workerId =
@@ -207,7 +199,6 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
         }),
         ...(options.clock ? { clock: options.clock } : {}),
       });
-    this.windowStartedAtMs = this.clock.now().getTime();
     this.rateLimitTelemetry =
       options.rateLimitTelemetry ??
       (options.engine === undefined
@@ -240,6 +231,19 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       metadata: { adapter: "file-backend-claude-worker" },
     });
     this.sessionStore = sessionStore;
+    this.capacityTracker = new FileBackendClaudeCapacityState({
+      providerInstanceId: options.providerInstanceId,
+      configDir: this.configDir,
+      ...(options.capacityAccountId === undefined
+        ? {}
+        : { configuredCapacityAccountId: options.capacityAccountId }),
+      ...(options.capacityPolicy === undefined
+        ? {}
+        : { capacityPolicy: options.capacityPolicy }),
+      rateLimitTelemetry: this.rateLimitTelemetry,
+      sessionStore: () => this.sessionStore,
+      clock: this.clock,
+    });
 
     this.agentDriver = new ClaudeTaskAgentDriver({
       engine:
@@ -333,7 +337,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
     }
     await mkdir(this.configDir, { recursive: true, mode: 0o700 });
     await this.rateLimitTelemetry?.prepare?.();
-    this.capacityState = { availability: "available" };
+    this.capacityTracker.reset();
     this.workerState = "started";
   }
 
@@ -354,11 +358,11 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       purpose: "health-check",
     });
     if (existing) {
-      const capacityArtifact = await this.persistStoredCapacityAccountId(
+      const capacityArtifact = await this.capacityTracker.persistStoredCapacityAccountId(
         existing,
         capacityAccountId,
       );
-      this.rememberQuotaGroup(capacityArtifact, capacityAccountId);
+      this.capacityTracker.rememberQuotaGroup(capacityArtifact, capacityAccountId);
       return;
     }
 
@@ -382,7 +386,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       idempotencyKey: `seed:${hashText(input.oauthToken)}`,
       leaseId: "seed-local-file-backend",
     });
-    this.rememberQuotaGroup(artifact);
+    this.capacityTracker.rememberQuotaGroup(artifact);
   }
 
   async prewarm(): Promise<SubscriptionWorkerPrewarmResult> {
@@ -493,8 +497,11 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       ...(workspaceId === undefined ? {} : { workspacePath: workspaceId }),
       ...(job.jobId === undefined ? {} : { jobId: job.jobId }),
       ...(isThreadJob(job) ? { threadId: job.threadId } : {}),
-      ...(this.capacityAccountId ?? this.options.capacityAccountId
-        ? { capacityAccountId: this.capacityAccountId ?? this.options.capacityAccountId }
+      ...(this.capacityTracker.accountId ?? this.options.capacityAccountId
+        ? {
+            capacityAccountId:
+              this.capacityTracker.accountId ?? this.options.capacityAccountId,
+          }
         : {}),
       workerState: this.workerState,
       capacity: this.capacity(),
@@ -545,7 +552,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       });
 
       if (result.status === "blocked") {
-        this.recordBlocked(result.reason);
+        this.capacityTracker.recordBlocked(result.reason);
         terminalRecorded = true;
         heartbeat.stop();
         await this.runArtifacts.failRun({
@@ -565,7 +572,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       }
 
       if (result.task.status === "failed") {
-        this.recordFailure(result.task.failure);
+        this.capacityTracker.recordFailure(result.task.failure);
         terminalRecorded = true;
         heartbeat.stop();
         await this.runArtifacts.failRun({
@@ -714,49 +721,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
   }
 
   capacity(): WorkerCapacitySnapshot {
-    if (this.workerState === "created" || this.workerState === "starting") {
-      return this.withCapacityDetails({
-        availability: "disabled",
-        reason: "not_started",
-      });
-    }
-    if (this.workerState === "prewarming") {
-      return this.withCapacityDetails({ availability: "warming" });
-    }
-    if (this.workerState === "disposed") {
-      return this.withCapacityDetails({
-        availability: "disabled",
-        reason: "disposed",
-      });
-    }
-    if (this.workerState === "failed") {
-      return this.withCapacityDetails({
-        availability: "degraded",
-        reason: "worker_failed",
-      });
-    }
-
-    this.rollCapacityWindow();
-    this.capacityState = normalizeResettableCapacity(
-      this.capacityState,
-      this.clock.now(),
-    );
-    const capacity = {
-      ...this.capacityState,
-      recentRuns: this.runsInWindow,
-      ...(this.options.capacityPolicy?.softMaxRunsPerWindow === undefined
-        ? {}
-        : {
-            softLimitRemainingRuns: Math.max(
-              0,
-              this.options.capacityPolicy.softMaxRunsPerWindow -
-              this.runsInWindow,
-            ),
-          }),
-    };
-    return this.withCapacityDetails(
-      mergeCapacity(capacity, this.rateLimitCapacity()),
-    );
+    return this.capacityTracker.capacity(this.workerState);
   }
 
   async health(): Promise<SubscriptionWorkerHealth> {
@@ -838,7 +803,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
     workerControlSignalIds: readonly string[] = [],
   ): FileBackendClaudeWorkerResult {
     if (result.task.status === "failed") {
-      this.recordFailure(result.task.failure);
+      this.capacityTracker.recordFailure(result.task.failure);
       throw new SubscriptionWorkerError(
         "subscription_worker_run_failed",
         result.task.failure.safeMessage,
@@ -846,7 +811,7 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       );
     }
 
-    this.recordSuccessfulRun();
+    this.capacityTracker.recordSuccessfulRun();
     return {
       outputText: result.task.outputText,
       structuredOutput: result.task.structuredOutput,
@@ -888,249 +853,6 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
     );
   }
 
-  private recordSuccessfulRun(): void {
-    this.rollCapacityWindow();
-    this.runsInWindow += 1;
-    const maxRuns = this.options.capacityPolicy?.softMaxRunsPerWindow;
-    if (maxRuns === undefined || this.runsInWindow < maxRuns) return;
-    const cooldownUntil = new Date(
-      this.windowStartedAtMs + capacityWindowMs(this.options.capacityPolicy),
-    );
-    this.capacityState = {
-      availability: "cooldown",
-      reason: "soft_run_limit",
-      cooldownUntil,
-    };
-  }
-
-  private recordFailure(failure: ProviderFailure): void {
-    if (failure.code === "quota_limited") {
-      this.capacityState = {
-        availability: "cooldown",
-        reason: "quota_limited",
-        cooldownUntil: new Date(
-          this.clock.now().getTime() +
-            (this.options.capacityPolicy?.quotaCooldownMs ?? 15 * 60 * 1000),
-        ),
-      };
-      return;
-    }
-    if (failure.reconnectRequired) {
-      this.capacityState = {
-        availability: "disabled",
-        reason: failure.code,
-      };
-      return;
-    }
-    if (!failure.retryable) {
-      this.capacityState = {
-        availability: "degraded",
-        reason: failure.code,
-      };
-    }
-  }
-
-  private recordBlocked(reason: string): void {
-    if (reason === "quota_limited") {
-      this.capacityState = {
-        availability: "cooldown",
-        reason,
-        cooldownUntil: new Date(
-          this.clock.now().getTime() +
-            (this.options.capacityPolicy?.quotaCooldownMs ?? 15 * 60 * 1000),
-        ),
-      };
-      return;
-    }
-    if (reason === "provider_reconnect_required") {
-      this.capacityState = {
-        availability: "disabled",
-        reason,
-      };
-    }
-  }
-
-  private rateLimitCapacity(): WorkerCapacitySnapshot | null {
-    const minRemaining =
-      this.options.capacityPolicy?.rateLimitMinRemainingPercent;
-    if (minRemaining === undefined || this.rateLimitTelemetry === null) {
-      return null;
-    }
-
-    const snapshot = this.rateLimitTelemetry.latest();
-    if (!snapshot) return null;
-
-    const windows =
-      this.options.capacityPolicy?.rateLimitWindows ??
-      (["five_hour", "seven_day"] as const);
-    const nowMs = this.clock.now().getTime();
-    let selected:
-      | {
-          readonly name: ClaudeRateLimitWindowName;
-          readonly usedPercentage: number;
-          readonly remainingPercentage: number;
-          readonly resetsAt: Date;
-        }
-      | null = null;
-
-    for (const name of windows) {
-      const window = snapshot.windows[name];
-      if (!window || window.resetsAt.getTime() <= nowMs) continue;
-      if (window.remainingPercentage > minRemaining) continue;
-      if (!selected || window.resetsAt.getTime() > selected.resetsAt.getTime()) {
-        selected = {
-          name,
-          usedPercentage: window.usedPercentage,
-          remainingPercentage: window.remainingPercentage,
-          resetsAt: window.resetsAt,
-        };
-      }
-    }
-
-    if (!selected) return null;
-
-    return {
-      availability: "cooldown",
-      reason: "rate_limit_threshold",
-      cooldownUntil: selected.resetsAt,
-      lastLimitSignalAt: snapshot.observedAt,
-      details: {
-        rateLimitWindow: selected.name,
-        rateLimitMinRemainingPercent: String(minRemaining),
-        rateLimitRemainingPercent: String(selected.remainingPercentage),
-        rateLimitResetAt: selected.resetsAt.toISOString(),
-        rateLimitUsedPercentage: String(selected.usedPercentage),
-        ...(snapshot.model ? { rateLimitModel: snapshot.model } : {}),
-        rateLimitObservedAt: snapshot.observedAt.toISOString(),
-      },
-    };
-  }
-
-  private rollCapacityWindow(): void {
-    const nowMs = this.clock.now().getTime();
-    const windowMs = capacityWindowMs(this.options.capacityPolicy);
-    if (nowMs - this.windowStartedAtMs < windowMs) return;
-    this.windowStartedAtMs = nowMs;
-    this.runsInWindow = 0;
-    if (this.capacityState.availability === "cooldown") {
-      this.capacityState = { availability: "available" };
-    }
-  }
-
-  private rememberQuotaGroup(
-    session: SessionArtifact,
-    capacityAccountIdOverride?: string | null,
-  ): void {
-    try {
-      const validation = validateClaudeSessionArtifact(session);
-      this.quotaGroup = `claude-oauth:${hashText(
-        validation.session.oauthToken,
-      ).slice(0, 16)}`;
-      this.capacityAccountId =
-        normalizeCapacityAccountId(capacityAccountIdOverride) ??
-        normalizeCapacityAccountId(this.options.capacityAccountId) ??
-        normalizeCapacityAccountId(
-          validation.session.metadata?.[claudeCapacityAccountIdMetadataKey],
-        ) ??
-        this.quotaGroup;
-    } catch {
-      this.quotaGroup = null;
-      this.capacityAccountId = null;
-    }
-  }
-
-  private async persistStoredCapacityAccountId(
-    session: SessionEnvelope,
-    capacityAccountId: string | null,
-  ): Promise<SessionArtifact> {
-    if (!capacityAccountId) return session.artifact;
-
-    let current = session;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const updatedArtifact = this.withStoredCapacityAccountId(
-        current.artifact,
-        capacityAccountId,
-      );
-      if (!updatedArtifact) return current.artifact;
-
-      const write = await this.sessionStore.write({
-        providerInstanceId: this.options.providerInstanceId,
-        expectedGeneration: current.generation,
-        nextArtifact: updatedArtifact,
-        idempotencyKey: `seed-capacity-account:${hashText(
-          `${capacityAccountId}:${current.generationHash}`,
-        )}`,
-        leaseId: "seed-local-file-backend",
-      });
-      if (
-        write.status === "accepted" ||
-        write.status === "idempotent_replay"
-      ) {
-        return updatedArtifact;
-      }
-
-      const latest = await this.sessionStore.read({
-        providerInstanceId: this.options.providerInstanceId,
-        expectedProviderId: "claude",
-        purpose: "health-check",
-      });
-      if (!latest) break;
-      current = latest;
-    }
-
-    throw new Error("claude_capacity_account_update_conflict");
-  }
-
-  private withStoredCapacityAccountId(
-    session: SessionArtifact,
-    capacityAccountId: string | null,
-  ): SessionArtifact | null {
-    if (!capacityAccountId) return null;
-    let validation;
-    try {
-      validation = validateClaudeSessionArtifact(session);
-    } catch {
-      return null;
-    }
-    const storedCapacityAccountId = normalizeCapacityAccountId(
-      validation.session.metadata?.[claudeCapacityAccountIdMetadataKey],
-    );
-    if (storedCapacityAccountId === capacityAccountId) return null;
-    return sessionArtifactFromClaudeOAuth({
-      oauthToken: validation.session.oauthToken,
-      ...(validation.session.configDir
-        ? { configDir: validation.session.configDir }
-        : {}),
-      ...(validation.session.refreshedAt
-        ? { refreshedAt: validation.session.refreshedAt }
-        : {}),
-      ...(validation.session.expiresAt
-        ? { expiresAt: validation.session.expiresAt }
-        : {}),
-      metadata: {
-        ...(validation.session.metadata ?? {}),
-        [claudeCapacityAccountIdMetadataKey]: capacityAccountId,
-      },
-    });
-  }
-
-  private withCapacityDetails(
-    capacity: WorkerCapacitySnapshot,
-  ): WorkerCapacitySnapshot {
-    return {
-      ...capacity,
-      details: {
-        ...(capacity.details ?? {}),
-        providerInstanceId: this.options.providerInstanceId,
-        configDir: this.configDir,
-        ...(this.capacityAccountId
-          ? { accountId: this.capacityAccountId }
-          : {}),
-        ...(this.quotaGroup ? { quotaGroup: this.quotaGroup } : {}),
-      },
-    };
-  }
-
   private async assertStoredSessionHasConfigDir(): Promise<void> {
     const session = await this.sessionStore.read({
       providerInstanceId: this.options.providerInstanceId,
@@ -1166,76 +888,6 @@ export class FileBackendClaudeWorker implements CapacityAwareSubscriptionWorker<
       );
     }
   }
-}
-
-function capacityWindowMs(policy: ClaudeWorkerCapacityPolicy | undefined): number {
-  return policy?.windowMs ?? 5 * 60 * 60 * 1000;
-}
-
-function mergeCapacity(
-  base: WorkerCapacitySnapshot,
-  telemetry: WorkerCapacitySnapshot | null,
-): WorkerCapacitySnapshot {
-  if (telemetry === null) return base;
-  if (base.availability === "available") {
-    return telemetry;
-  }
-  if (
-    base.availability === "cooldown" &&
-    telemetry.availability === "cooldown"
-  ) {
-    const baseUntil = base.cooldownUntil?.getTime() ?? 0;
-    const telemetryUntil = telemetry.cooldownUntil?.getTime() ?? 0;
-    return telemetryUntil > baseUntil
-      ? {
-          ...telemetry,
-          details: { ...(base.details ?? {}), ...(telemetry.details ?? {}) },
-        }
-      : {
-          ...base,
-          details: { ...(telemetry.details ?? {}), ...(base.details ?? {}) },
-        };
-  }
-  return base;
-}
-
-function normalizeResettableCapacity(
-  capacity: WorkerCapacitySnapshot,
-  now: Date,
-): WorkerCapacitySnapshot {
-  if (
-    !isResettableCapacity(capacity) ||
-    !capacity.cooldownUntil ||
-    capacity.cooldownUntil.getTime() > now.getTime()
-  ) {
-    return capacity;
-  }
-
-  const {
-    cooldownUntil: _cooldownUntil,
-    lastLimitSignalAt: _lastLimitSignalAt,
-    reason: _reason,
-    ...rest
-  } = capacity;
-  return {
-    ...rest,
-    availability: "available",
-  };
-}
-
-function isSevereCapacity(capacity: WorkerCapacitySnapshot): boolean {
-  return (
-    capacity.availability === "quota_exhausted" ||
-    capacity.availability === "degraded" ||
-    capacity.availability === "disabled"
-  );
-}
-
-function isResettableCapacity(capacity: WorkerCapacitySnapshot): boolean {
-  return (
-    capacity.availability === "cooldown" ||
-    capacity.availability === "quota_exhausted"
-  );
 }
 
 function assertWorkerOptions(options: FileBackendClaudeWorkerOptions): void {
@@ -1335,17 +987,6 @@ async function canonicalPath(path: string): Promise<string> {
   } catch {
     return path;
   }
-}
-
-function hashText(value: string): string {
-  return createHash("sha256").update(value).digest("hex");
-}
-
-function normalizeCapacityAccountId(
-  value: string | null | undefined,
-): string | null {
-  const normalized = value?.trim();
-  return normalized ? normalized : null;
 }
 
 const systemClock: ClockPort = {

@@ -26,6 +26,14 @@ const cases = [
     expectText: "exceeds hard cap",
   },
   {
+    name: "split files over tightened cap fail",
+    files: {
+      "src/worker-codex/file-backend-codex-worker.ts": Array.from({ length: 621 }, (_, index) => `// ${index}`).join("\n") + "\n",
+    },
+    expectPass: false,
+    expectText: "split file regrew",
+  },
+  {
     name: "MCP tool rejects new restricted implementation import",
     files: {
       "src/worker-codex/codex-goal-mcp-bad-tools.ts": "import './codex-goal-ops';\n",

@@ -4,8 +4,6 @@ import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import {
   AccessBoundary,
-  GitPatchPreserver,
-  StrictResultRecorder,
   actionForRuntimeState,
   classifyRuntimeRunState,
   RunProcessAliveReason,
@@ -15,6 +13,10 @@ import {
   type RuntimeResultEnvelope,
   type RuntimeResultStatus,
 } from "@vioxen/subscription-runtime/worker-core";
+import {
+  createCodexGoalResultRecorder,
+  GitPatchPreserver,
+} from "./codex-goal-runtime-result-io";
 import {
   codexGoalOutputPath,
   codexGoalProgressPath,
@@ -716,7 +718,7 @@ export async function reconcileCodexGoalRuntimeResult(
     reason,
     changedFilesCount: changedFiles.length,
   });
-  const result = await new StrictResultRecorder({ outputPath }).record({
+  const result = await createCodexGoalResultRecorder({ outputPath }).record({
     status: runtimeStatus,
     provider: "codex",
     runId: input.config.jobId ?? input.config.taskId,

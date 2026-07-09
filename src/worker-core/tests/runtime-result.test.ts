@@ -1,18 +1,11 @@
-import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import {
-  GitPatchPreserver,
   StrictResultRecorder,
   buildRuntimeResultEnvelope,
   classifyRuntimeRunState,
   normalizeWorkerReport,
+  type RuntimeResultEnvelope,
 } from "../index";
-
-const execFileAsync = promisify(execFile);
 
 describe("runtime result protocol", () => {
   it("builds an authoritative envelope from runtime and worker-report evidence", () => {
@@ -59,55 +52,35 @@ describe("runtime result protocol", () => {
     });
   });
 
-  it("writes latest-result atomically through the strict recorder", async () => {
-    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-result-"));
-    const outputPath = join(root, "latest-result.json");
-    try {
-      const recorder = new StrictResultRecorder({
-        outputPath,
-        clock: { now: () => new Date("2026-07-01T00:00:00.000Z") },
-      });
+  it("records latest-result through an injected writer port", async () => {
+    const writes: RuntimeResultEnvelope[] = [];
+    const recorder = new StrictResultRecorder({
+      outputPath: "latest-result.json",
+      writer: {
+        async writeResult(input) {
+          expect(input.path).toBe("latest-result.json");
+          writes.push(input.result);
+        },
+      },
+      clock: { now: () => new Date("2026-07-01T00:00:00.000Z") },
+    });
 
-      await recorder.record({
-        status: "failed",
-        reason: "runner_exception",
-        evidence: ["runner threw"],
-        blockers: ["runner_exception"],
-      });
+    await recorder.record({
+      status: "failed",
+      reason: "runner_exception",
+      evidence: ["runner threw"],
+      blockers: ["runner_exception"],
+    });
 
-      expect(JSON.parse(await readFile(outputPath, "utf8"))).toMatchObject({
-        status: "failed",
-        changedFiles: [],
-        evidence: ["runner threw"],
-        blockers: ["runner_exception"],
-        nextAction: "recover",
-        updatedAt: "2026-07-01T00:00:00.000Z",
-      });
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("preserves untracked files in a git worktree without an initial commit", async () => {
-    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-patch-unborn-"));
-    const outputPath = join(root, "preserved.patch");
-    try {
-      await execFileAsync("git", ["init"], { cwd: root });
-      await writeFile(join(root, "new.txt"), "new file\n");
-
-      const artifact = await new GitPatchPreserver().preserve({
-        workspacePath: root,
-        outputPath,
-      });
-
-      expect(artifact).toMatchObject({
-        kind: "patch",
-        path: outputPath,
-      });
-      expect(await readFile(outputPath, "utf8")).toContain("new file");
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toMatchObject({
+      status: "failed",
+      changedFiles: [],
+      evidence: ["runner threw"],
+      blockers: ["runner_exception"],
+      nextAction: "recover",
+      updatedAt: "2026-07-01T00:00:00.000Z",
+    });
   });
 
   it("classifies actionable run states without relying on log parsing", () => {

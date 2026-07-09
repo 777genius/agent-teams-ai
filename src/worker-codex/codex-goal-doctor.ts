@@ -4,10 +4,8 @@ import { access, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
-import {
-  hostExecutableNotFoundMessage,
-  resolveHostExecutable,
-} from "@vioxen/subscription-runtime/worker-core";
+import { hostExecutableNotFoundMessage } from "@vioxen/subscription-runtime/worker-core";
+import { resolveHostExecutable } from "../worker-local/host-command";
 import type { CodexGoalRunConfig } from "./codex-goal-runner";
 
 const execFileAsync = promisify(execFile);

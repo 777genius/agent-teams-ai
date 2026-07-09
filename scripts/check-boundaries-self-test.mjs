@@ -53,6 +53,14 @@ const cases = [
     expectText: "worker-core must stay provider and adapter neutral",
   },
   {
+    name: "worker-core production rejects file system",
+    files: {
+      "src/worker-core/project-control/bad.ts": "import { readFile } from 'node:fs/promises';\n",
+    },
+    expectPass: false,
+    expectText: "worker-core production must use ports/adapters",
+  },
+  {
     name: "worker-core event kernel rejects file system",
     files: {
       "src/worker-core/run-events.ts": "import { readFile } from 'node:fs/promises';\n",

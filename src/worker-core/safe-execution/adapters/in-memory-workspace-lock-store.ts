@@ -4,7 +4,6 @@ import type {
   WorkspaceLockRecord,
 } from "../domain/safe-execution-task";
 import type { WorkspaceLockStore } from "../ports/safe-execution-ports";
-import { canonicalWorkspacePath } from "../application/safe-execution-workspace";
 import {
   canReplaceLock,
   workspaceLockedError,
@@ -22,7 +21,7 @@ export class InMemoryWorkspaceLockStore implements WorkspaceLockStore {
     readonly staleLockMs?: number;
     readonly now?: Date;
   }): Promise<WorkspaceLockHandle> {
-    const workspacePath = await canonicalWorkspacePath(input.workspacePath);
+    const workspacePath = input.workspacePath;
     const key = workspaceLockKey(workspacePath);
     const now = input.now ?? new Date();
     const existing = this.locks.get(key);

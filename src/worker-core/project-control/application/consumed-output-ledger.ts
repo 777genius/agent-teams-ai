@@ -1,5 +1,4 @@
-import { readdir, readFile, realpath, stat } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { basename, resolve } from "node:path";
 
 import {
   ProjectDebtReason,
@@ -33,60 +32,53 @@ export type ConsumedOutputLedger = {
   readonly debt: readonly ProjectDebtItem[];
 };
 
+export type ConsumedOutputLedgerEntry = {
+  readonly ledgerPath: string;
+  readonly value: unknown;
+};
+
+export type ConsumedOutputLedgerReadFailure = {
+  readonly subject: string;
+  readonly evidence: readonly string[];
+};
+
+export type ConsumedOutputLedgerSourcePort = {
+  readEntries(input: {
+    readonly roots: readonly string[];
+  }): Promise<{
+    readonly entries: readonly ConsumedOutputLedgerEntry[];
+    readonly failures: readonly ConsumedOutputLedgerReadFailure[];
+  }>;
+  pathExists(path: string): Promise<boolean>;
+  resolveWorkspacePath(path: string): Promise<string | undefined>;
+};
+
 export async function readConsumedOutputLedgers(input: {
   readonly roots: readonly string[];
+  readonly source: ConsumedOutputLedgerSourcePort;
 }): Promise<ConsumedOutputLedger> {
   const byJobId = new Map<string, ConsumedOutputRecord>();
   const byWorkspace = new Map<string, ConsumedOutputRecord>();
-  const debt: ProjectDebtItem[] = [];
-  for (const rootInput of uniqueStrings(input.roots)) {
-    const root = resolve(rootInput);
-    const itemsDir = join(root, "items");
-    let entries;
-    try {
-      entries = await readdir(itemsDir, { withFileTypes: true });
-    } catch (error) {
-      debt.push({
-        reason: ProjectDebtReason.UnreadableRoot,
-        subject: itemsDir,
-        severity: "blocking",
-        evidence: [
-          `consumed output ledger unreadable: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        ],
-      });
-      continue;
-    }
-    for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
-      const ledgerPath = join(itemsDir, entry.name);
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(await readFile(ledgerPath, "utf8"));
-      } catch (error) {
-        debt.push({
-          reason: ProjectDebtReason.UnreadableRoot,
-          subject: ledgerPath,
-          severity: "blocking",
-          evidence: [
-            `consumed output ledger record unreadable: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-          ],
-        });
-        continue;
-      }
-      const record = await consumedOutputRecordFromJson({
-        value: parsed,
-        ledgerPath,
-      });
-      if (!record) continue;
-      byJobId.set(record.jobId, record);
-      if (record.workspace) byWorkspace.set(resolve(record.workspace), record);
-      if (record.resolvedWorkspace) {
-        byWorkspace.set(record.resolvedWorkspace, record);
-      }
+  const loaded = await input.source.readEntries({
+    roots: uniqueStrings(input.roots),
+  });
+  const debt: ProjectDebtItem[] = loaded.failures.map((failure) => ({
+    reason: ProjectDebtReason.UnreadableRoot,
+    subject: failure.subject,
+    severity: "blocking",
+    evidence: failure.evidence,
+  }));
+  for (const entry of loaded.entries) {
+    const record = await consumedOutputRecordFromJson({
+      value: entry.value,
+      ledgerPath: entry.ledgerPath,
+      source: input.source,
+    });
+    if (!record) continue;
+    byJobId.set(record.jobId, record);
+    if (record.workspace) byWorkspace.set(resolve(record.workspace), record);
+    if (record.resolvedWorkspace) {
+      byWorkspace.set(record.resolvedWorkspace, record);
     }
   }
   return { byJobId, byWorkspace, debt };
@@ -95,6 +87,10 @@ export async function readConsumedOutputLedgers(input: {
 export async function consumedOutputRecordFromJson(input: {
   readonly value: unknown;
   readonly ledgerPath: string;
+  readonly source: Pick<
+    ConsumedOutputLedgerSourcePort,
+    "pathExists" | "resolveWorkspacePath"
+  >;
 }): Promise<ConsumedOutputRecord | null> {
   if (!isRecord(input.value)) return null;
   const status = stringValue(input.value.status);
@@ -123,21 +119,16 @@ export async function consumedOutputRecordFromJson(input: {
     evidence.push("terminal consumed-output record is still marked active/claimed");
   }
   const backupEvidence = backup
-    ? await consumedOutputBackupEvidence(backup)
+    ? await consumedOutputBackupEvidence(backup, input.source)
     : { ok: false, evidence: ["backup metadata is missing"] };
   evidence.push(...backupEvidence.evidence);
   const commit = integratedOutputCommit(input.value);
   if (status === "integrated" && !commit) {
     evidence.push("integrated consumed-output record is missing commit evidence");
   }
-  let resolvedWorkspace: string | undefined;
-  if (workspace) {
-    try {
-      resolvedWorkspace = await realpath(workspace);
-    } catch {
-      resolvedWorkspace = undefined;
-    }
-  }
+  const resolvedWorkspace = workspace
+    ? await input.source.resolveWorkspacePath(workspace)
+    : undefined;
   return {
     jobId,
     status,
@@ -246,12 +237,13 @@ export function projectAdmissionDebtCounts(
 
 async function consumedOutputBackupEvidence(
   backup: Record<string, unknown>,
+  source: Pick<ConsumedOutputLedgerSourcePort, "pathExists">,
 ): Promise<{ readonly ok: boolean; readonly evidence: readonly string[] }> {
   const evidence: string[] = [];
   const statusPath = stringValue(backup.statusPath);
   if (!statusPath) {
     evidence.push("backup is missing statusPath");
-  } else if (!await pathExists(statusPath)) {
+  } else if (!await source.pathExists(statusPath)) {
     evidence.push(`backup statusPath is missing: ${statusPath}`);
   }
   const payloadPaths = [
@@ -263,7 +255,7 @@ async function consumedOutputBackupEvidence(
     evidence.push("backup is missing patch/numstat/untracked archive evidence");
   } else {
     const existing = await Promise.all(
-      payloadPaths.map(async (path) => await pathExists(path)),
+      payloadPaths.map(async (path) => await source.pathExists(path)),
     );
     if (!existing.some(Boolean)) {
       evidence.push("none of backup patch/numstat/untracked archive paths exists");
@@ -298,15 +290,6 @@ function consumedOutputEvidence(input: {
     `ledger: ${input.ledgerPath}`,
     ...(input.commitSha ? [`commit: ${input.commitSha}`] : []),
   ];
-}
-
-async function pathExists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function uniqueStrings(values: readonly string[]): readonly string[] {

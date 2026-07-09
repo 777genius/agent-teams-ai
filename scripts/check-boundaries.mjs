@@ -110,6 +110,15 @@ const forbidden = [
       "worker-core event kernel must not depend on file system, transports, providers, queues, stores, or orchestrators",
   },
   {
+    from: /^src\/worker-core\/(?!.*\/tests\/)/,
+    imports: [
+      /^node:fs(?:\/promises)?$/,
+      /^node:child_process$/,
+    ],
+    message:
+      "worker-core production must use ports/adapters for file system and process details",
+  },
+  {
     from: /^src\/worker-core\//,
     imports: [
       runtimeSubpathPattern(

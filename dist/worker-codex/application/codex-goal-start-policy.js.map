@@ -1,1 +1,0 @@
-{"version":3,"file":"codex-goal-start-policy.js","sourceRoot":"","sources":["../../../src/worker-codex/application/codex-goal-start-policy.ts"],"names":[],"mappings":"AAAA,MAAM,UAAU,iBAAiB,CAAC,MAAc;IAC9C,OAAO,MAAM,KAAK,cAAc;QAC9B,MAAM,KAAK,yBAAyB;QACpC,MAAM,KAAK,wBAAwB;QACnC,MAAM,KAAK,gCAAgC,CAAC;AAChD,CAAC"}

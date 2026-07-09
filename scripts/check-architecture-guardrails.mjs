@@ -12,23 +12,21 @@ const maxLines = Number(process.env.SUBSCRIPTION_RUNTIME_FILE_MAX_LINES ?? 1000)
 
 const legacyLineCaps = {
   "src/agent-task/task-codec/application/agent-task-codec.ts": 1013,
-  "src/core/application/runtime.ts": 1158,
   "src/provider-claude/tests/claude-provider.test.ts": 1254,
-  "src/provider-codex/codex-app-server-execution-engine.ts": 2405,
-  "src/provider-codex/tests/codex-provider.test.ts": 4345,
-  "src/worker-claude/file-backend-claude-worker.ts": 1354,
-  "src/worker-claude/tests/file-backend-claude-worker.test.ts": 2260,
-  "src/worker-codex/codex-goal-cli.ts": 1128,
-  "src/worker-codex/codex-goal-ops.ts": 1847,
-  "src/worker-codex/file-backend-codex-worker.ts": 1892,
   "src/worker-codex/tests/codex-goal-cli.test.ts": 1145,
-  "src/worker-codex/tests/codex-goal-mcp.test.ts": 6272,
   "src/worker-codex/tests/codex-goal-ops.test.ts": 1526,
-  "src/worker-codex/tests/file-backend-codex-worker.test.ts": 2844,
-  "src/worker-core/safe-execution.ts": 2099,
-  "src/worker-core/tests/safe-execution.test.ts": 1892,
-  "src/worker-core/worker-pool.ts": 1003,
   "src/worker-local/tests/agent-task-runner-cli.test.ts": 1027,
+};
+
+const tightenedLineCaps = {
+  "src/core/application/runtime.ts": 990,
+  "src/provider-codex/codex-app-server-execution-engine.ts": 500,
+  "src/worker-claude/file-backend-claude-worker.ts": 1000,
+  "src/worker-codex/codex-goal-cli.ts": 950,
+  "src/worker-codex/codex-goal-ops.ts": 980,
+  "src/worker-codex/file-backend-codex-worker.ts": 620,
+  "src/worker-core/safe-execution.ts": 25,
+  "src/worker-core/worker-pool.ts": 820,
 };
 
 const allowedMcpRestrictedImports = {};
@@ -63,6 +61,15 @@ console.log("Architecture guardrails OK.");
 
 function checkLineBudget(rel, text) {
   const lines = (text.match(/\n/g) ?? []).length;
+  const tightenedCap = tightenedLineCaps[rel];
+  if (tightenedCap !== undefined) {
+    if (lines > tightenedCap) {
+      violations.push(
+        `${rel}: split file regrew to ${lines} lines; cap is ${tightenedCap}. Keep it decomposed.`,
+      );
+    }
+    return;
+  }
   const legacyCap = legacyLineCaps[rel];
   if (legacyCap !== undefined) {
     if (lines > legacyCap) {

@@ -20,10 +20,8 @@ import type {
   CodexServiceTier,
 } from "@vioxen/subscription-runtime/provider-codex";
 import {
-  GitPatchPreserver,
   LaunchPlanStatus,
   normalizeWorkerReport,
-  StrictResultRecorder,
   type RuntimeRecommendedAction,
   type RuntimeResultArtifact,
   type RuntimeResultEnvelopeInput,
@@ -44,6 +42,10 @@ import {
   codexGoalControlsForAccessBoundary,
 } from "./codex-goal-access-plan";
 import { readLocalGitHeadCommit } from "./codex-goal-git-revision";
+import {
+  createCodexGoalResultRecorder,
+  GitPatchPreserver,
+} from "./codex-goal-runtime-result-io";
 
 const execFileAsync = promisify(execFile);
 const gitStatusTimeoutMs = 5_000;
@@ -198,7 +200,7 @@ export async function runCodexGoal(
   const progressPath = codexGoalProgressPath(config);
   const runtimeEventsPath = codexGoalRuntimeEventsPath(config);
   const outputPath = codexGoalOutputPath(config);
-  const resultRecorder = new StrictResultRecorder({ outputPath });
+  const resultRecorder = createCodexGoalResultRecorder({ outputPath });
   const progressHeartbeat = createCodexGoalProgressHeartbeat({
     progressPath,
     taskId: config.taskId,

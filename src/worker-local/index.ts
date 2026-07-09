@@ -2,6 +2,7 @@ export * from "./account-diagnostics-cli";
 export * from "./agent-run-watch";
 export * from "./claude-run-watch";
 export * from "./claude-controlled-agent-local";
+export * from "./host-command";
 export * from "./node-process-runner";
 export * from "./observability";
 export * from "./project-integration-local-adapters";

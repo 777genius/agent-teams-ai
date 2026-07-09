@@ -1,7 +1,6 @@
 import { computeSessionGenerationHash } from "../domain/generation-hash";
 import type {
   CompiledRuntimePolicy,
-  ProviderFailure,
   ProviderTask,
   ProviderTaskResult,
   RefreshSessionResult,
@@ -13,10 +12,21 @@ import type {
   RuntimeWarning,
   SessionArtifact,
   SessionEnvelope,
-  SessionWriteResult,
 } from "../domain/types";
 import type { RuntimeDeps } from "../ports";
+import { runtimeHealthCheck } from "./runtime-health";
+import {
+  blocked,
+  failedTask,
+  nextEnvelope,
+  sessionForPostRefreshTask,
+  shouldGuardedRefresh,
+  unsupportedTaskFailure,
+} from "./runtime-results";
+import { validateStaticRuntimeSession } from "./runtime-static-session";
 import { negotiateCapabilities } from "./policy";
+
+export { combineSessionAndAgent } from "./runtime-results";
 
 export type SubscriptionRuntime = {
   readonly capabilities: CompiledRuntimePolicy;
@@ -95,7 +105,13 @@ class RuntimeKernel {
     }
 
     if (this.executionPlan.kind === "static-session") {
-      return this.validateStaticSession(input);
+      return validateStaticRuntimeSession({
+        deps: this.deps,
+        executionPlan: this.executionPlan,
+        providerInstanceId: input.providerInstanceId,
+        runContext: input.runContext,
+        emitFailure: (code, runId) => this.emitFailure(code, runId),
+      });
     }
 
     const sessionStore = this.requireSessionStore();
@@ -629,48 +645,11 @@ class RuntimeKernel {
   async healthCheck(input: {
     readonly providerInstanceId: string;
   }): Promise<RuntimeHealthCheckResult> {
-    if (this.executionPlan.kind === "no-session") {
-      return {
-        status: "healthy",
-        failures: [],
-        warnings: [],
-      };
-    }
-
-    const sessionStore = this.requireSessionStore();
-    const sessionDriver = this.requireSessionDriver();
-    const session = await sessionStore.read({
+    return runtimeHealthCheck({
+      deps: this.deps,
+      executionPlan: this.executionPlan,
       providerInstanceId: input.providerInstanceId,
-      expectedProviderId: sessionDriver.providerId,
-      purpose: "health-check",
     });
-
-    if (!session) {
-      return {
-        status: "unhealthy",
-        failures: [missingSessionFailure()],
-        warnings: [],
-      };
-    }
-
-    const validation = await sessionDriver.validateSession({
-      session: session.artifact,
-      redactor: this.deps.redactor,
-    });
-
-    if (validation.status === "invalid") {
-      return {
-        status: "unhealthy",
-        failures: [validation.failure],
-        warnings: [],
-      };
-    }
-
-    return {
-      status: "healthy",
-      failures: [],
-      warnings: validation.warnings,
-    };
   }
 
   private async runTaskWithSession(input: {
@@ -959,64 +938,10 @@ class RuntimeKernel {
   private unsupportedTaskFailure(
     task: ProviderTask,
   ): Extract<ProviderTaskResult, { readonly status: "failed" }> | null {
-    if (this.deps.agentDriver.capabilities.taskModes.includes(task.kind)) {
-      return null;
-    }
-
-    return failedTask(
-      "task_mode_unsupported",
-      "Selected agent does not support the requested task mode.",
-    ) as Extract<ProviderTaskResult, { readonly status: "failed" }>;
-  }
-
-  private async validateStaticSession(input: {
-    readonly providerInstanceId: string;
-    readonly runContext: RunContext;
-  }): Promise<RefreshSessionResult> {
-    const sessionStore = this.requireSessionStore();
-    const sessionDriver = this.requireSessionDriver();
-    const session = await sessionStore.read({
-      providerInstanceId: input.providerInstanceId,
-      expectedProviderId: sessionDriver.providerId,
-      purpose: "refresh",
+    return unsupportedTaskFailure({
+      agentDriver: this.deps.agentDriver,
+      task,
     });
-
-    if (!session) {
-      this.emitFailure("provider_reconnect_required", input.runContext.runId);
-      return blocked(
-        "provider_reconnect_required",
-        "Provider session is missing.",
-      );
-    }
-
-    if (this.executionPlan.refresh === "validate-only") {
-      const validation = await sessionDriver.validateSession({
-        session: session.artifact,
-        redactor: this.deps.redactor,
-      });
-      if (validation.status === "invalid") {
-        this.emitFailure(validation.failure.code, input.runContext.runId);
-        return blocked(
-          validation.failure.reconnectRequired
-            ? "provider_reconnect_required"
-            : "permission_required",
-          validation.failure.safeMessage,
-        );
-      }
-      return {
-        status: "skipped",
-        reason: "refresh_not_required",
-        session,
-        warnings: validation.warnings,
-      };
-    }
-
-    return {
-      status: "skipped",
-      reason: "refresh_not_required",
-      session,
-      warnings: [],
-    };
   }
 
   private requireSessionStore(): NonNullable<RuntimeDeps["sessionStore"]> {
@@ -1053,106 +978,4 @@ class RuntimeKernel {
     }
     return sessionDriver;
   }
-}
-
-export function combineSessionAndAgent(input: {
-  readonly sessionDriver: RuntimeDeps["sessionDriver"];
-  readonly agentDriver: RuntimeDeps["agentDriver"];
-}): RuntimeDeps["sessionDriver"] & {
-  readonly agentId: string;
-  readonly agentCapabilities: RuntimeDeps["agentDriver"]["capabilities"];
-  runTask: RuntimeDeps["agentDriver"]["runTask"];
-  classifyRunFailure: RuntimeDeps["agentDriver"]["classifyRunFailure"];
-} {
-  if (input.sessionDriver.providerId !== input.agentDriver.providerId) {
-    throw new Error("agent_provider_mismatch");
-  }
-
-  return {
-    ...input.sessionDriver,
-    agentId: input.agentDriver.agentId,
-    agentCapabilities: input.agentDriver.capabilities,
-    runTask: (runInput) => input.agentDriver.runTask(runInput),
-    classifyRunFailure: (error) => input.agentDriver.classifyRunFailure(error),
-  };
-}
-
-function nextEnvelope(
-  previous: SessionEnvelope,
-  artifact: SessionEnvelope["artifact"],
-  writeback: Extract<
-    SessionWriteResult,
-    { readonly status: "accepted" | "idempotent_replay" }
-  >,
-): SessionEnvelope {
-  return {
-    ...previous,
-    artifact,
-    generation: writeback.generation,
-    generationHash: writeback.generationHash,
-  };
-}
-
-function sessionForPostRefreshTask(
-  refresh: RefreshSessionResult,
-): SessionEnvelope | null {
-  if (refresh.status === "ready") {
-    return refresh.session;
-  }
-  if (
-    refresh.status === "skipped" &&
-    (refresh.reason === "session_unchanged" ||
-      refresh.reason === "refresh_not_required")
-  ) {
-    return refresh.session ?? null;
-  }
-  return null;
-}
-
-function shouldGuardedRefresh(failure: ProviderFailure): boolean {
-  return (
-    failure.code === "needs_reconnect" ||
-    failure.causeCategory === "needs_reconnect"
-  );
-}
-
-function blocked(
-  reason:
-    | "provider_reconnect_required"
-    | "permission_required"
-    | "quota_limited",
-  safeMessage: string,
-  warnings: readonly RuntimeWarning[] = [],
-): RefreshSessionResult {
-  return {
-    status: "blocked",
-    reason,
-    safeMessage,
-    warnings,
-  };
-}
-
-function failedTask(
-  code: ProviderFailure["code"],
-  safeMessage: string,
-): ProviderTaskResult {
-  return {
-    status: "failed",
-    failure: {
-      code,
-      retryable: false,
-      reconnectRequired: code === "needs_reconnect",
-      safeMessage,
-    },
-    warnings: [],
-  };
-}
-
-function missingSessionFailure(): ProviderFailure {
-  return {
-    code: "needs_reconnect",
-    retryable: false,
-    reconnectRequired: true,
-    safeMessage: "Provider session is missing.",
-  };
 }

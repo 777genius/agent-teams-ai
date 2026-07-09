@@ -10,7 +10,6 @@ import {
   consumedOutputRecordFor,
   evaluateProjectAdmission,
   projectAdmissionDebtCounts,
-  readConsumedOutputLedgers,
   type ConsumedOutputLedger,
   type ProjectAccessScope,
   type ProjectAdmissionGate,
@@ -19,6 +18,7 @@ import {
 } from "@vioxen/subscription-runtime/worker-core";
 import type { CodexGoalJobSummary } from "../../codex-goal-jobs";
 import { stringValue } from "../codex-goal-input-values";
+import { readCodexGoalConsumedOutputLedgers } from "./codex-goal-consumed-output-ledger-io";
 import {
   matchesProjectControlPrefix,
   nodeErrorCode,
@@ -127,7 +127,7 @@ export async function buildCodexProjectAdmissionSnapshot(
   const knownWorkspacePaths = new Set<string>();
   const prefixes = input.scope.jobIdPrefixes ?? [];
   const staleAfterMs = 10 * 60_000;
-  const consumedOutput = await readConsumedOutputLedgers({
+  const consumedOutput = await readCodexGoalConsumedOutputLedgers({
     roots: input.scope.consumedOutputLedgerRoots ?? [],
   });
   debt.push(...consumedOutput.debt);

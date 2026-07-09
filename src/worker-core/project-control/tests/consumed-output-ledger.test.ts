@@ -1,6 +1,15 @@
-import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  realpath,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -10,6 +19,9 @@ import {
   consumedOutputRecordFor,
   consumedOutputRecordFromJson,
   readConsumedOutputLedgers,
+  type ConsumedOutputLedgerEntry,
+  type ConsumedOutputLedgerReadFailure,
+  type ConsumedOutputLedgerSourcePort,
 } from "../index";
 
 describe("consumed output ledger", () => {
@@ -21,6 +33,7 @@ describe("consumed output ledger", () => {
     for (const status of ["duplicate", "superseded", "rejected", "archived"]) {
       const record = await consumedOutputRecordFromJson({
         ledgerPath: join(root, `${status}.json`),
+        source: localConsumedOutputLedgerSource(),
         value: {
           jobId: `infinity-context-memory-${status}`,
           status,
@@ -49,6 +62,7 @@ describe("consumed output ledger", () => {
 
     await expect(consumedOutputRecordFromJson({
       ledgerPath: join(root, "integrated.json"),
+      source: localConsumedOutputLedgerSource(),
       value: {
         jobId: "infinity-context-memory-v1",
         status: "integrated",
@@ -63,6 +77,7 @@ describe("consumed output ledger", () => {
 
     const missingCommit = await consumedOutputRecordFromJson({
       ledgerPath: join(root, "integrated-missing-commit.json"),
+      source: localConsumedOutputLedgerSource(),
       value: {
         jobId: "infinity-context-memory-v1",
         status: "integrated",
@@ -92,6 +107,7 @@ describe("consumed output ledger", () => {
 
     const missingBackup = await consumedOutputRecordFromJson({
       ledgerPath: join(root, "missing-backup.json"),
+      source: localConsumedOutputLedgerSource(),
       value: {
         jobId: "infinity-context-memory-v1",
         status: "duplicate",
@@ -108,6 +124,7 @@ describe("consumed output ledger", () => {
     const backup = await createBackupEvidence(root, "infinity-context-memory-v1", workspace);
     const claimed = await consumedOutputRecordFromJson({
       ledgerPath: join(root, "claimed.json"),
+      source: localConsumedOutputLedgerSource(),
       value: {
         jobId: "infinity-context-memory-v1",
         status: "duplicate",
@@ -147,7 +164,10 @@ describe("consumed output ledger", () => {
       }, null, 2)}\n`,
     );
 
-    const ledger = await readConsumedOutputLedgers({ roots: [ledgerRoot] });
+    const ledger = await readConsumedOutputLedgers({
+      roots: [ledgerRoot],
+      source: localConsumedOutputLedgerSource(),
+    });
     expect(consumedOutputRecordFor({
       ledger,
       jobId: "infinity-context-memory-v1",
@@ -205,7 +225,10 @@ describe("consumed output ledger", () => {
       }, null, 2)}\n`,
     );
 
-    const sharedLedger = await readConsumedOutputLedgers({ roots: [sharedLedgerRoot] });
+    const sharedLedger = await readConsumedOutputLedgers({
+      roots: [sharedLedgerRoot],
+      source: localConsumedOutputLedgerSource(),
+    });
     expect(consumedOutputRecordFor({
       ledger: sharedLedger,
       jobId: "infinity-context-controller-a",
@@ -247,4 +270,63 @@ async function createBackupEvidence(
     patchPath,
     numstatPath,
   };
+}
+
+function localConsumedOutputLedgerSource(): ConsumedOutputLedgerSourcePort {
+  return {
+    async readEntries(input) {
+      const entries: ConsumedOutputLedgerEntry[] = [];
+      const failures: ConsumedOutputLedgerReadFailure[] = [];
+      for (const rootInput of input.roots) {
+        const itemsDir = join(resolve(rootInput), "items");
+        let dirEntries;
+        try {
+          dirEntries = await readdir(itemsDir, { withFileTypes: true });
+        } catch (error) {
+          failures.push({
+            subject: itemsDir,
+            evidence: [`consumed output ledger unreadable: ${errorMessage(error)}`],
+          });
+          continue;
+        }
+        for (const entry of dirEntries) {
+          if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+          const ledgerPath = join(itemsDir, entry.name);
+          try {
+            entries.push({
+              ledgerPath,
+              value: JSON.parse(await readFile(ledgerPath, "utf8")),
+            });
+          } catch (error) {
+            failures.push({
+              subject: ledgerPath,
+              evidence: [
+                `consumed output ledger record unreadable: ${errorMessage(error)}`,
+              ],
+            });
+          }
+        }
+      }
+      return { entries, failures };
+    },
+    async pathExists(path) {
+      try {
+        await stat(path);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    async resolveWorkspacePath(path) {
+      try {
+        return await realpath(path);
+      } catch {
+        return undefined;
+      }
+    },
+  };
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

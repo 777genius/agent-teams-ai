@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -37,6 +37,7 @@ describe("local safe execution state stores", () => {
 
   it("replaces a workspace lock owned by a dead process without requiring staleLockMs", async () => {
     const workspacePath = await tempDir("local-safe-execution-workspace-");
+    const canonicalWorkspacePath = await realpath(workspacePath);
     const lockRoot = await tempDir("local-safe-execution-lock-store-");
     const lockStore = new LocalFileWorkspaceLockStore(lockRoot);
     const deadOwner = await lockStore.acquire({
@@ -54,7 +55,7 @@ describe("local safe execution state stores", () => {
     });
 
     expect(replacement.taskId).toBe("task-dead-lock-replacement");
-    expect(replacement.workspacePath).toBe(workspacePath);
+    expect(replacement.workspacePath).toBe(canonicalWorkspacePath);
     await replacement.release();
     await deadOwner.release();
   });
