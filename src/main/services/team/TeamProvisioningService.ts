@@ -23,11 +23,7 @@ import {
 import { ProviderConnectionService } from '../runtime/ProviderConnectionService';
 
 import { isOpenCodeServeCommand } from './opencode/bridge/OpenCodeManagedHostProcessCleanup';
-import {
-  type OpenCodeMemberIdentityResolution,
-  type OpenCodeMemberInboxDelivery,
-  type OpenCodeMemberMessageDeliveryInput,
-} from './opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import { type OpenCodeMemberIdentityResolution } from './opencode/delivery/OpenCodeMemberMessageDeliveryService';
 import { OpenCodePromptDeliveryFollowUpPolicy } from './opencode/delivery/OpenCodePromptDeliveryFollowUpPolicy';
 import { type OpenCodePromptDeliveryWatchdogCoordinator } from './opencode/delivery/OpenCodePromptDeliveryWatchdogCoordinator';
 import { OpenCodeRuntimeDeliveryProofReader } from './opencode/delivery/OpenCodeRuntimeDeliveryProofReader';
@@ -136,25 +132,12 @@ import {
   getOpenCodeAgendaSyncRecoveryBypassMessageIdsWithService,
   type OpenCodeAgendaSyncRecoveryBypassServiceHost,
 } from './provisioning/TeamProvisioningOpenCodeAgendaSyncRecovery';
-import { createTeamProvisioningOpenCodeInboxAttachmentPayloadBoundary } from './provisioning/TeamProvisioningOpenCodeInboxAttachmentPayloadBoundaryFactory';
+
 import {
   createTeamProvisioningOpenCodeLaunchWiring,
   createTeamProvisioningOpenCodeLaunchWiringHostFromService,
   type TeamProvisioningOpenCodeLaunchWiringServiceHost,
 } from './provisioning/TeamProvisioningOpenCodeLaunchWiring';
-import { type OpenCodeMemberInboxRelayResult } from './provisioning/TeamProvisioningOpenCodeMemberInboxRelay';
-import {
-  createTeamProvisioningOpenCodeMemberInboxRelayBoundary,
-  createTeamProvisioningOpenCodeMemberInboxRelayHostFromService,
-  type TeamProvisioningOpenCodeMemberInboxRelayServiceHost,
-} from './provisioning/TeamProvisioningOpenCodeMemberInboxRelayBoundaryFactory';
-import {
-  createOpenCodeMemberMessageDeliveryServiceFromHost,
-  createTeamProvisioningOpenCodeMemberMessageDeliveryHostFromService,
-  deliverOpenCodeMemberMessage as deliverOpenCodeMemberMessageHelper,
-  type TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost,
-} from './provisioning/TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory';
-import { OpenCodeMemberSendSerializer } from './provisioning/TeamProvisioningOpenCodeMemberSendSerialization';
 import {
   createOpenCodePromptDeliveryWatchdogSchedulerFromService,
   type TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceHost,
@@ -245,7 +228,6 @@ import {
   type MixedSecondaryRuntimeLaneState,
   type SecondaryRuntimeRunEntry,
 } from './provisioning/TeamProvisioningSecondaryRuntimeRuns';
-import { createTeamProvisioningSendMessageToRunBoundary } from './provisioning/TeamProvisioningSendMessageToRunBoundaryFactory';
 import {
   createTeamProvisioningServiceComposition,
   type RuntimeAdapterRunByTeamEntry,
@@ -284,11 +266,7 @@ import { TeamMemberWorktreeManager } from './TeamMemberWorktreeManager';
 import { TeamMetaStore } from './TeamMetaStore';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 
-import type {
-  OpenCodeTeamRuntimeMessageResult,
-  TeamRuntimeLaunchResult,
-  TeamRuntimeStopInput,
-} from './runtime';
+import type { TeamRuntimeLaunchResult, TeamRuntimeStopInput } from './runtime';
 export type { RuntimeBootstrapMemberMcpLaunchConfig } from './provisioning/TeamProvisioningBootstrapSpec';
 export { buildDirectTmuxRestartEnvAssignments } from './provisioning/TeamProvisioningDirectRestart';
 export {
@@ -463,26 +441,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchRuntimeStatus
       logger,
     }
   );
-  private readonly sendMessageToRunBoundary =
-    createTeamProvisioningSendMessageToRunBoundary<ProvisioningRun>({
-      isCurrentTrackedRun: (run) => this.isCurrentTrackedRun(run),
-      setLeadActivity: (run, state) => this.setLeadActivity(run, state),
-    });
-  private readonly openCodeMemberInboxRelayInFlight = new Map<
-    string,
-    Promise<OpenCodeMemberInboxRelayResult>
-  >();
-  private readonly openCodeMemberSendInFlightByLane = new Map<
-    string,
-    Promise<OpenCodeTeamRuntimeMessageResult>
-  >();
-  private readonly openCodeMemberSendSerializer = new OpenCodeMemberSendSerializer({
-    inFlightByLane: this.openCodeMemberSendInFlightByLane,
-  });
-  private readonly openCodeInboxAttachmentPayloadBoundary =
-    createTeamProvisioningOpenCodeInboxAttachmentPayloadBoundary({
-      getAttachmentStore: () => this.attachmentStore,
-    });
   private readonly memberWorkSyncProofBoundary = createTeamProvisioningMemberWorkSyncProofBoundary({
     getAcceptedReportChecker: () => this.appShellBoundary.getMemberWorkSyncAcceptedReportChecker(),
     getProofMissingRecoveryScheduler: () =>
@@ -737,23 +695,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchRuntimeStatus
       cleanupRun: (run) => this.cleanupRun(run),
       logger,
     });
-  private readonly openCodeMemberInboxRelayHost =
-    createTeamProvisioningOpenCodeMemberInboxRelayHostFromService(
-      this as unknown as TeamProvisioningOpenCodeMemberInboxRelayServiceHost
-    );
-  private readonly openCodeMemberInboxRelayBoundary =
-    createTeamProvisioningOpenCodeMemberInboxRelayBoundary({
-      host: this.openCodeMemberInboxRelayHost,
-      inFlight: this.openCodeMemberInboxRelayInFlight,
-      getInboxReader: () => this.inboxReader,
-      openCodeRuntimeRecoveryIdentity: this.openCodeRuntimeRecoveryIdentity,
-      getOpenCodeVisibleReplyProofService: () => this.openCodeVisibleReplyProofService,
-      openCodeInboxAttachmentPayloadBoundary: this.openCodeInboxAttachmentPayloadBoundary,
-      cleanedStoppedTeamOpenCodeRuntimeLanes: this.cleanedStoppedTeamOpenCodeRuntimeLanes,
-      logger,
-      nowIso,
-      getErrorMessage,
-    });
   protected readonly reevaluateMemberLaunchStatusBoundary =
     createTeamProvisioningReevaluateMemberLaunchStatusBoundary<ProvisioningRun>(
       createTeamProvisioningReevaluateMemberLaunchStatusDepsFromService(
@@ -894,25 +835,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchRuntimeStatus
     });
   }
 
-  private createOpenCodeMemberMessageDeliveryService() {
-    return createOpenCodeMemberMessageDeliveryServiceFromHost(
-      createTeamProvisioningOpenCodeMemberMessageDeliveryHostFromService(
-        this as unknown as TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost
-      )
-    );
-  }
-
-  async deliverOpenCodeMemberMessage(
-    teamName: string,
-    input: OpenCodeMemberMessageDeliveryInput
-  ): Promise<OpenCodeMemberInboxDelivery> {
-    return await deliverOpenCodeMemberMessageHelper(
-      this.createOpenCodeMemberMessageDeliveryService(),
-      teamName,
-      input
-    );
-  }
-
   private async tryRecoverOpenCodeRuntimeLaneBeforeDelivery(input: {
     teamName: string;
     laneId: string;
@@ -1021,14 +943,6 @@ export class TeamProvisioningService extends TeamProvisioningLaunchRuntimeStatus
       emitRuntimeDeliveryReplyAdvisoryRefresh: (teamName, message) =>
         this.emitRuntimeDeliveryReplyAdvisoryRefresh(teamName, message),
     });
-  }
-
-  protected async sendOpenCodeMemberMessageToRuntimeSerialized(input: {
-    teamName: string;
-    laneId: string;
-    send: () => Promise<OpenCodeTeamRuntimeMessageResult>;
-  }): Promise<OpenCodeTeamRuntimeMessageResult> {
-    return this.openCodeMemberSendSerializer.sendSerialized(input);
   }
 
   private getRunTrackedCwd(run: ProvisioningRun | null | undefined): string | null {

@@ -9,7 +9,7 @@ import {
   finalizeIncompleteLaunchStateBeforeCleanup as finalizeIncompleteLaunchStateBeforeCleanupHelper,
   type TeamProvisioningCleanupPorts,
 } from './TeamProvisioningCleanup';
-import { TeamProvisioningOpenCodePromptDeliveryCompatibilityFacade } from './TeamProvisioningOpenCodePromptDeliveryCompatibilityFacade';
+import { TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityFacade } from './TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityFacade';
 import {
   createTeamProvisioningOpenCodeStoppedLaneCleanupBoundary,
   type TeamProvisioningOpenCodeStoppedLaneCleanupBoundary,
@@ -67,7 +67,7 @@ export interface TeamProvisioningStopCleanupCompatibilityServiceHost<
 
 export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   TRun extends ProvisioningRun = ProvisioningRun,
-> extends TeamProvisioningOpenCodePromptDeliveryCompatibilityFacade<TRun> {
+> extends TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityFacade<TRun> {
   protected stopAllTeamsGeneration = 0;
   protected readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
   protected readonly cleanupRunPorts!: TeamProvisioningCleanupPorts<TRun>;
