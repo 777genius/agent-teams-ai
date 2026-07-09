@@ -4861,15 +4861,19 @@ describe('ipc teams handlers', () => {
             model: 'gpt-5.4',
             effort: 'high',
             fastMode: 'on',
+            mcpPolicy: { mode: 'appOnly' },
           },
         ],
         cwd: os.tmpdir(),
         providerId: 'codex',
         providerBackendId: 'codex-native',
+        limitContext: true,
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(teamHandlerMocks.createTeam.mock.calls[0][0].members).toEqual([
+      const createRequest = teamHandlerMocks.createTeam.mock.calls[0][0];
+      expect(createRequest.limitContext).toBe(true);
+      expect(createRequest.members).toEqual([
         {
           name: 'builder',
           role: 'Engineer',
@@ -4880,6 +4884,7 @@ describe('ipc teams handlers', () => {
           model: 'gpt-5.4',
           effort: 'high',
           fastMode: 'on',
+          mcpPolicy: { mode: 'appOnly' },
         },
       ]);
     });
@@ -4977,6 +4982,11 @@ describe('ipc teams handlers', () => {
             model: ' gpt-5.2 ',
             effort: 'high',
             fastMode: 'on',
+            mcpPolicy: {
+              mode: 'strictAllowlist',
+              scopes: { project: true, user: false },
+              serverNames: ['agent-teams'],
+            },
           },
         ],
         cwd: '/Users/test/project',
@@ -5008,6 +5018,11 @@ describe('ipc teams handlers', () => {
             model: 'gpt-5.2',
             effort: 'high',
             fastMode: 'on',
+            mcpPolicy: {
+              mode: 'strictAllowlist',
+              scopes: { project: true, user: false },
+              serverNames: ['agent-teams'],
+            },
           },
         ],
         cwd: '/Users/test/project',

@@ -2181,6 +2181,9 @@ async function validateProvisioningRequest(
   if (!fastModeValidation.valid) {
     return { valid: false, error: fastModeValidation.error };
   }
+  if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
+    return { valid: false, error: 'limitContext must be a boolean' };
+  }
 
   try {
     await fs.promises.mkdir(cwd, { recursive: true });
@@ -2237,6 +2240,7 @@ async function validateProvisioningRequest(
       model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
       effort: effortValidation.value,
       fastMode: fastModeValidation.value,
+      limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
       skipPermissions:
         typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
       worktree:
@@ -4124,6 +4128,7 @@ async function handleCreateConfig(
       model: typeof model === 'string' ? model.trim() || undefined : undefined,
       effort: effortValidation.value,
       fastMode: fastModeValidation.value,
+      mcpPolicy: normalizeTeamMemberMcpPolicy((member as { mcpPolicy?: unknown }).mcpPolicy),
     });
   }
 
