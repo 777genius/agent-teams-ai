@@ -24,6 +24,11 @@ import {
 } from '../opencode/delivery/OpenCodeVisibleReplyProofService';
 import { readOpenCodeRuntimeLaneIndex } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
+  createTeamRuntimeControlCompatibilityApiFromService,
+  type OpenCodeRuntimeControlApi,
+  type TeamRuntimeControlCompatibilityServiceHost,
+} from '../runtime-control';
+import {
   clearBootstrapState,
   readBootstrapLaunchSnapshot,
   readBootstrapRuntimeState,
@@ -142,6 +147,11 @@ import {
   type TeamProvisioningProviderRuntimeFacadeServiceHost,
 } from './TeamProvisioningProviderRuntimeFacade';
 import { tryReadRegularFileUtf8 } from './TeamProvisioningRegularFileRead';
+import {
+  createTeamProvisioningRequestAdmissionBoundary,
+  type TeamProvisioningRequestAdmissionBoundary,
+  type TeamProvisioningRequestAdmissionServiceHost,
+} from './TeamProvisioningRequestAdmission';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 import {
   type ProvisioningRun,
@@ -263,6 +273,8 @@ export interface TeamProvisioningServiceComposition {
   leadInboxRelayFacade: TeamProvisioningLeadInboxRelayCompatibilityFacade<ProvisioningRun>;
   cleanupRunPorts: TeamProvisioningCleanupPorts<ProvisioningRun>;
   transientRunState: TeamProvisioningTransientRunState;
+  requestAdmissionBoundary: TeamProvisioningRequestAdmissionBoundary;
+  openCodeRuntimeControlApi: OpenCodeRuntimeControlApi;
 }
 
 type TeamProvisioningServiceCompositionInstallTarget = {
@@ -296,7 +308,9 @@ type TeamProvisioningServiceCompositionSource = ServiceCompositionPorts &
   TeamProvisioningBootstrapEvidenceFacadeServiceHost &
   TeamProvisioningLeadInboxRelayCompatibilityServiceHost<ProvisioningRun> &
   TeamProvisioningCleanupRunServiceHost<ProvisioningRun> &
-  TeamProvisioningTransientRunStateServiceHost;
+  TeamProvisioningTransientRunStateServiceHost &
+  TeamProvisioningRequestAdmissionServiceHost &
+  TeamRuntimeControlCompatibilityServiceHost;
 
 type TeamProvisioningServiceCompositionHost = TeamProvisioningServiceCompositionSource &
   TeamProvisioningServiceCompositionInstallTarget;
@@ -605,6 +619,10 @@ export function createTeamProvisioningServiceComposition(
     })
   );
   assignCompositionPart(host, 'transientRunState', transientRunState);
+  const requestAdmissionBoundary = createTeamProvisioningRequestAdmissionBoundary(host);
+  assignCompositionPart(host, 'requestAdmissionBoundary', requestAdmissionBoundary);
+  const openCodeRuntimeControlApi = createTeamRuntimeControlCompatibilityApiFromService(host);
+  assignCompositionPart(host, 'openCodeRuntimeControlApi', openCodeRuntimeControlApi);
 
   return {
     configFacade,
@@ -636,5 +654,7 @@ export function createTeamProvisioningServiceComposition(
     leadInboxRelayFacade,
     cleanupRunPorts,
     transientRunState,
+    requestAdmissionBoundary,
+    openCodeRuntimeControlApi,
   };
 }

@@ -125,10 +125,6 @@ import {
   createTeamProvisioningReevaluateMemberLaunchStatusDepsFromService,
   type TeamProvisioningReevaluateMemberLaunchStatusServiceHost,
 } from './provisioning/TeamProvisioningReevaluateMemberLaunchStatusPortsFactory';
-import {
-  createTeamProvisioningRequestAdmissionBoundary,
-  type TeamProvisioningRequestAdmissionServiceHost,
-} from './provisioning/TeamProvisioningRequestAdmission';
 import { type RetainedClaudeLogsSnapshot } from './provisioning/TeamProvisioningRetainedLogs';
 import {
   MEMBER_SPAWN_AUDIT_MIN_INTERVAL_MS,
@@ -152,6 +148,7 @@ import {
 import {
   createTeamProvisioningServiceComposition,
   type RuntimeAdapterRunByTeamEntry,
+  type TeamProvisioningServiceComposition,
 } from './provisioning/TeamProvisioningServiceComposition';
 import { TeamProvisioningServiceFacadeDelegates } from './provisioning/TeamProvisioningServiceFacadeDelegates';
 import {
@@ -171,10 +168,6 @@ import { type TeamProvisioningVerificationProbePorts } from './provisioning/Team
 import { createTeamProvisioningWorkspaceTrustPreSpawnBoundary } from './provisioning/TeamProvisioningWorkspaceTrustPreSpawnBoundary';
 import { OpenCodeTaskLogAttributionStore } from './taskLogs/stream/OpenCodeTaskLogAttributionStore';
 import { boundLaunchDiagnostics } from './progressPayload';
-import {
-  createTeamRuntimeControlCompatibilityApiFromService,
-  type TeamRuntimeControlCompatibilityServiceHost,
-} from './runtime-control';
 import { TeamAttachmentStore } from './TeamAttachmentStore';
 import { readBootstrapLaunchSnapshot } from './TeamBootstrapStateReader';
 import { TeamConfigReader } from './TeamConfigReader';
@@ -599,14 +592,9 @@ export class TeamProvisioningService extends TeamProvisioningServiceFacadeDelega
         this as unknown as TeamProvisioningOpenCodeLaunchWiringServiceHost<ProvisioningRun>
       )
     );
-  private readonly requestAdmissionBoundary = createTeamProvisioningRequestAdmissionBoundary(
-    this as unknown as TeamProvisioningRequestAdmissionServiceHost
-  );
+  private readonly requestAdmissionBoundary!: TeamProvisioningServiceComposition['requestAdmissionBoundary'];
   protected readonly openCodeRuntimeDeliveryBoundaryHost!: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<ProvisioningRun>;
-  protected readonly openCodeRuntimeControlApi =
-    createTeamRuntimeControlCompatibilityApiFromService(
-      this as unknown as TeamRuntimeControlCompatibilityServiceHost
-    );
+  protected readonly openCodeRuntimeControlApi!: TeamProvisioningServiceComposition['openCodeRuntimeControlApi'];
 
   private createMemberLifecycleHostPortGroups(): TeamProvisioningServiceMemberLifecycleHostPortGroups {
     return createTeamProvisioningServiceMemberLifecycleHostPortGroups(
