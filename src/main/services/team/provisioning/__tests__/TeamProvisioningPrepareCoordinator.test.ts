@@ -77,6 +77,35 @@ function deferredProbe(): {
   };
 }
 
+function deferredPublication(): {
+  promise: Promise<ProviderProbePublication>;
+  resolve(value: ProviderProbePublication): void;
+  reject(error: Error): void;
+} {
+  let resolvePublication: ((value: ProviderProbePublication) => void) | null = null;
+  let rejectPublication: ((error: Error) => void) | null = null;
+  const promise = new Promise<ProviderProbePublication>((resolve, reject) => {
+    resolvePublication = resolve;
+    rejectPublication = reject;
+  });
+
+  return {
+    promise,
+    resolve(value) {
+      if (!resolvePublication) {
+        throw new Error('Expected deferred publication resolve callback.');
+      }
+      resolvePublication(value);
+    },
+    reject(error) {
+      if (!rejectPublication) {
+        throw new Error('Expected deferred publication reject callback.');
+      }
+      rejectPublication(error);
+    },
+  };
+}
+
 describe('TeamProvisioningPrepareCoordinator', () => {
   it('coalesces matching prepare requests and returns cloned results', async () => {
     let releaseProbe: ((value: { warning?: string }) => void) | null = null;
@@ -328,26 +357,125 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     expect(cache.get('probe-key')).toBeNull();
   });
 
-  it('clears in-flight probe ownership when probes reject', async () => {
+  it('shares rejected probe attempts and permits a later retry', async () => {
     const cache = createInMemoryProviderProbeCachePort();
-    let rejectProbe = (_error: Error): void => {
-      throw new Error('Expected deferred probe reject callback.');
-    };
-    const probePromise = new Promise<ProviderProbePublication>((_resolve, reject) => {
-      rejectProbe = reject;
-    });
-    const request = cache.getOrCreate('probe-key', () => probePromise);
-
-    rejectProbe(new Error('probe failed'));
-
-    await expect(request).rejects.toThrow('probe failed');
-    await expect(
-      cache.getOrCreate('probe-key', async () => ({
-        result: { claudePath: '/fake/claude', authSource: 'none' },
+    const rejectedAttempt = deferredPublication();
+    const create = vi
+      .fn<() => Promise<ProviderProbePublication>>()
+      .mockImplementationOnce(() => rejectedAttempt.promise)
+      .mockResolvedValueOnce({
+        result: { claudePath: '/retry/claude', authSource: 'none' },
         cacheable: true,
-      }))
-    ).resolves.toEqual({ claudePath: '/fake/claude', authSource: 'none' });
+      });
+    const first = cache.getOrCreate('probe-key', create);
+    const second = cache.getOrCreate('probe-key', create);
+    const sharedError = new Error('probe failed');
+
+    await vi.waitFor(() => expect(create).toHaveBeenCalledOnce());
+    rejectedAttempt.reject(sharedError);
+
+    await expect(Promise.allSettled([first, second])).resolves.toEqual([
+      { status: 'rejected', reason: sharedError },
+      { status: 'rejected', reason: sharedError },
+    ]);
+    expect(create).toHaveBeenCalledOnce();
+    await expect(cache.getOrCreate('probe-key', create)).resolves.toEqual({
+      claudePath: '/retry/claude',
+      authSource: 'none',
+    });
+    expect(create).toHaveBeenCalledTimes(2);
   });
+
+  it('delivers the current epoch rejection to a superseded caller', async () => {
+    const cache = createInMemoryProviderProbeCachePort();
+    const staleAttempt = deferredPublication();
+    const freshAttempt = deferredPublication();
+    const staleCreate = vi.fn(() => staleAttempt.promise);
+    const freshCreate = vi.fn(() => freshAttempt.promise);
+    const staleCaller = cache.getOrCreate('probe-key', staleCreate);
+
+    await vi.waitFor(() => expect(staleCreate).toHaveBeenCalledOnce());
+    cache.invalidate('probe-key');
+
+    const freshCaller = cache.getOrCreate('probe-key', freshCreate);
+    await vi.waitFor(() => expect(freshCreate).toHaveBeenCalledOnce());
+    const freshError = new Error('fresh probe failed');
+    freshAttempt.reject(freshError);
+    await expect(freshCaller).rejects.toBe(freshError);
+
+    staleAttempt.resolve({
+      result: { claudePath: '/stale/claude', authSource: 'none' },
+      cacheable: true,
+    });
+    await expect(staleCaller).rejects.toBe(freshError);
+
+    expect(staleCreate).toHaveBeenCalledOnce();
+    expect(freshCreate).toHaveBeenCalledOnce();
+    expect(cache.get('probe-key')).toBeNull();
+  });
+
+  it.each(['success', 'rejection'] as const)(
+    'starts a fresh probe after TTL while a superseded %s remains pending',
+    async (staleOutcome) => {
+      let now = 1_000;
+      const cache = createInMemoryProviderProbeCachePort({ ttlMs: 10, now: () => now });
+      const staleAttempt = deferredPublication();
+      const beforeTtlAttempt = deferredPublication();
+      const afterTtlAttempt = deferredPublication();
+      const staleCreate = vi.fn(() => staleAttempt.promise);
+      const beforeTtlCreate = vi.fn(() => beforeTtlAttempt.promise);
+      const afterTtlCreate = vi.fn(() => afterTtlAttempt.promise);
+      const staleCaller = cache.getOrCreate('probe-key', staleCreate);
+
+      await vi.waitFor(() => expect(staleCreate).toHaveBeenCalledOnce());
+      cache.invalidate('probe-key');
+
+      const beforeTtlCaller = cache.getOrCreate('probe-key', beforeTtlCreate);
+      await vi.waitFor(() => expect(beforeTtlCreate).toHaveBeenCalledOnce());
+      beforeTtlAttempt.resolve({
+        result: { claudePath: '/before-ttl/claude', authSource: 'none' },
+        cacheable: true,
+      });
+      await expect(beforeTtlCaller).resolves.toEqual({
+        claudePath: '/before-ttl/claude',
+        authSource: 'none',
+      });
+
+      now = 1_010;
+      const afterTtlCaller = cache.getOrCreate('probe-key', afterTtlCreate);
+      await vi.waitFor(() => expect(afterTtlCreate).toHaveBeenCalledOnce());
+      afterTtlAttempt.resolve({
+        result: { claudePath: '/after-ttl/claude', authSource: 'none' },
+        cacheable: true,
+      });
+      await expect(afterTtlCaller).resolves.toEqual({
+        claudePath: '/after-ttl/claude',
+        authSource: 'none',
+      });
+
+      if (staleOutcome === 'success') {
+        staleAttempt.resolve({
+          result: { claudePath: '/stale/claude', authSource: 'none' },
+          cacheable: true,
+        });
+      } else {
+        staleAttempt.reject(new Error('stale probe failed'));
+      }
+
+      await expect(staleCaller).resolves.toEqual({
+        claudePath: '/after-ttl/claude',
+        authSource: 'none',
+      });
+      expect(cache.get('probe-key')).toMatchObject({
+        claudePath: '/after-ttl/claude',
+        authSource: 'none',
+      });
+      expect(staleCreate).toHaveBeenCalledOnce();
+      expect(beforeTtlCreate).toHaveBeenCalledOnce();
+      expect(afterTtlCreate).toHaveBeenCalledOnce();
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+  );
 
   it('isolates default provider probe caches per coordinator instance', async () => {
     const cwd = '/workspace/probe-cache-isolated';

@@ -43,6 +43,8 @@ interface ProviderProbeCacheState {
   epoch: number;
   cached: CachedProbeResult | null;
   inFlight: ProviderProbeInFlight | null;
+  // New callers ignore this; it only carries the current epoch outcome to superseded callers.
+  settledAttempt: ProviderProbeAttempt | null;
 }
 
 export function createInMemoryProviderProbeCachePort({
@@ -113,15 +115,17 @@ export function createInMemoryProviderProbeCachePort({
         epoch: state.epoch + 1,
         cached: null,
         inFlight: null,
+        settledAttempt: null,
       });
     },
     async getOrCreate(cacheKey, create) {
       incrementActiveCallCount(cacheKey);
       try {
+        let crossedEpoch = false;
         while (true) {
           let state = stateByCacheKey.get(cacheKey);
           if (!state) {
-            state = { epoch: 0, cached: null, inFlight: null };
+            state = { epoch: 0, cached: null, inFlight: null, settledAttempt: null };
             stateByCacheKey.set(cacheKey, state);
           }
 
@@ -135,10 +139,17 @@ export function createInMemoryProviderProbeCachePort({
           }
 
           let inFlight = state.inFlight;
+          if (!inFlight && crossedEpoch && state.settledAttempt) {
+            const attempt = state.settledAttempt;
+            if ('error' in attempt) {
+              throw attempt.error;
+            }
+            return attempt.result ?? null;
+          }
           if (!inFlight) {
             const promise: Promise<ProviderProbeAttempt> = Promise.resolve()
               .then(create)
-              .then<ProviderProbeAttempt>(
+              .then<ProviderProbeAttempt, ProviderProbeAttempt>(
                 (publication) => {
                   if (stateByCacheKey.get(cacheKey) === state) {
                     state.cached =
@@ -156,6 +167,7 @@ export function createInMemoryProviderProbeCachePort({
               )
               .then((attempt) => {
                 if (state.inFlight?.promise === promise) {
+                  state.settledAttempt = attempt;
                   state.inFlight = null;
                 }
                 return attempt;
@@ -167,6 +179,7 @@ export function createInMemoryProviderProbeCachePort({
 
           const attempt = await inFlight.promise;
           if (stateByCacheKey.get(cacheKey) !== state) {
+            crossedEpoch = true;
             continue;
           }
           if ('error' in attempt) {
