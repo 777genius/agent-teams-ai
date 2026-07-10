@@ -97,6 +97,15 @@ describe('OpenCodeRuntimeControlProvider', () => {
     await expect(router.deliverMessage(createDeliveryCommand())).resolves.toBe(ack);
   });
 
+  it('rejects an impossible delivery status returned by the OpenCode provider boundary', async () => {
+    const port = createPort(createAck('accepted'));
+    const router = createOpenCodeRuntimeControlRouter(port);
+
+    await expect(router.deliverMessage(createDeliveryCommand())).rejects.toThrow(
+      'Runtime control ack state mismatch for runtime.deliver-message: expected delivered or duplicate, received accepted'
+    );
+  });
+
   it('passes the event sink through the OpenCode router into RuntimeControlService', async () => {
     const ack = createAck('delivered');
     const record = vi.fn();

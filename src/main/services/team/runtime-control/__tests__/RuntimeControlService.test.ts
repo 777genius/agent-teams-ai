@@ -165,6 +165,32 @@ describe('RuntimeControlService', () => {
     );
   });
 
+  it('rejects a provider delivery status that does not match the routed operation without an event sink', async () => {
+    const deliverMessage = vi.fn(async () => createAck({ state: 'accepted' }));
+    const service = new RuntimeControlService([{ providerId: 'opencode', deliverMessage }]);
+
+    await expect(service.deliverMessage(createDeliverCommand())).rejects.toThrow(
+      'Runtime control ack state mismatch for runtime.deliver-message: expected delivered or duplicate, received accepted'
+    );
+
+    expect(deliverMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects stale provider acknowledgement identity without depending on event recording', async () => {
+    const deliverMessage = vi.fn(async () =>
+      createAck({
+        runId: 'stale-run',
+        state: 'delivered',
+        idempotencyKey: 'message-key-1',
+      })
+    );
+    const service = new RuntimeControlService([{ providerId: 'opencode', deliverMessage }]);
+
+    await expect(service.deliverMessage(createDeliverCommand())).rejects.toThrow(
+      'Runtime control ack run mismatch: expected run-1, received stale-run'
+    );
+  });
+
   it('holds exactly one fence only around the provider delivery commit', async () => {
     const command = createDeliverCommand();
     const ack = createAck({ state: 'delivered', idempotencyKey: command.idempotencyKey });

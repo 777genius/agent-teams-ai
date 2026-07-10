@@ -53,16 +53,13 @@ describe('TeamRuntimeControlCompatibility', () => {
   });
 
   it('delegates every runtime control compatibility operation through OpenCode ports', async () => {
-    const ack: OpenCodeRuntimeControlAck = {
-      ok: true,
-      providerId: 'opencode',
-      teamName: 'Team',
-      runId: 'run-1',
-      state: 'recorded',
-      diagnostics: [],
-      observedAt: OBSERVED_AT,
+    const openCode: OpenCodeRuntimeControlPort = {
+      recordOpenCodeRuntimeBootstrapCheckin: vi.fn(async () => createOpenCodeAck('accepted')),
+      deliverOpenCodeRuntimeMessage: vi.fn(async () => createOpenCodeAck('delivered')),
+      recordOpenCodeRuntimeTaskEvent: vi.fn(async () => createOpenCodeAck('recorded')),
+      recordOpenCodeRuntimeHeartbeat: vi.fn(async () => createOpenCodeAck('accepted')),
+      answerOpenCodeRuntimePermission: vi.fn(async () => createOpenCodeAck('accepted')),
     };
-    const openCode = createOpenCodePort(ack);
     const resolveOpenCodeRuntimeLaneId = vi.fn(async () => 'lane-1');
     const api = createTeamRuntimeControlCompatibilityApi({
       openCode,

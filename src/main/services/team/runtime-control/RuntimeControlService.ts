@@ -1,7 +1,10 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { RuntimeControlProviderRegistry } from './application/RuntimeControlProviderRegistry';
-import { createRuntimeControlEventFromAck } from './domain/RuntimeControlEventFactory';
+import {
+  assertRuntimeControlAckMatchesCommand,
+  createRuntimeControlEventFromAck,
+} from './domain/RuntimeControlEventFactory';
 import { canonicalizeRuntimeIdempotencyKey } from './domain/RuntimeIdempotencyKey';
 
 import type { RuntimeControlEventSink } from './application/RuntimeControlPorts';
@@ -149,6 +152,7 @@ export class RuntimeControlService {
     action: () => Promise<RuntimeControlAck>
   ): Promise<RuntimeControlAck> {
     const ack = await action();
+    assertRuntimeControlAckMatchesCommand(command, ack);
     if (this.eventSink) {
       await this.eventSink.record(createRuntimeControlEventFromAck(command, ack));
     }
