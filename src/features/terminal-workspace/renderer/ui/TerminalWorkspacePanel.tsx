@@ -81,6 +81,7 @@ import type {
   TerminalWorkspaceBootstrap,
   TerminalWorkspaceBootstrapRequest,
 } from '../../contracts';
+import type { ScreenLine, ScreenLineSemanticMark } from '@terminal-platform/runtime-types';
 
 export interface TerminalWorkspacePanelProps {
   teamName: string;
@@ -199,6 +200,15 @@ interface TerminalCommandContextMenuState {
   x: number;
   y: number;
 }
+
+type TerminalCommandScreenLine =
+  | string
+  | (Pick<ScreenLine, 'semantic_marks' | 'text'> & {
+      isActiveCursorLine?: boolean;
+      historyCapturedAtMs?: bigint;
+      isHistoryTailLine?: boolean;
+      source?: 'history' | 'live';
+    });
 
 export interface TerminalCommandRunPresentation extends TerminalCommandPresentationMetadata {
   clientEventId: string;
@@ -592,6 +602,29 @@ const TerminalWorkspaceKernelView = ({
   const showTerminalContentSkeleton =
     terminalContentPending || terminalConnectionBootstrapping || terminalScreenPending;
   const activeScreenLines = activeScreen?.surface.lines;
+  const activeScreenHistory = activeScreen
+    ? snapshot.historicalPanes?.[activeScreen.pane_id]
+    : undefined;
+  const activeScreenCommandLines = useMemo(() => {
+    const historyLines = activeScreenHistory?.lines ?? [];
+    let historyTailIndex = historyLines.length - 1;
+    while (historyTailIndex >= 0 && !historyLines[historyTailIndex]?.trim()) {
+      historyTailIndex -= 1;
+    }
+
+    return [
+      ...createTerminalCommandScreenLines(
+        activeScreenLines ?? [],
+        activeScreen?.surface.cursor?.row ?? null
+      ),
+      ...historyLines.map((text, index) => ({
+        historyCapturedAtMs: activeScreenHistory?.capturedAtMs,
+        ...(index === historyTailIndex ? { isHistoryTailLine: true } : {}),
+        source: 'history' as const,
+        text,
+      })),
+    ];
+  }, [activeScreen?.surface.cursor?.row, activeScreenHistory, activeScreenLines]);
   const activeCommandSessionId =
     snapshot.selection.activeSessionId ?? snapshot.catalog.sessions[0]?.session_id ?? null;
   const activeCommandPaneId = activeScreen?.pane_id ?? null;
@@ -733,7 +766,7 @@ const TerminalWorkspaceKernelView = ({
             closeSupersededTerminalCommandRuns(
               current,
               detail,
-              activeScreenLines?.map((line) => line.text) ?? [],
+              activeScreenCommandLines,
               Date.now()
             ),
             detail,
@@ -754,12 +787,7 @@ const TerminalWorkspaceKernelView = ({
       setDismissedAutocompleteDraft(null);
       setCommandRuns((current) =>
         upsertTerminalCommandRun(
-          closeSupersededTerminalCommandRuns(
-            current,
-            detail,
-            activeScreenLines?.map((line) => line.text) ?? [],
-            Date.now()
-          ),
+          closeSupersededTerminalCommandRuns(current, detail, activeScreenCommandLines, Date.now()),
           detail,
           'running'
         )
@@ -797,7 +825,7 @@ const TerminalWorkspaceKernelView = ({
       commandDockElement.removeEventListener('tp-terminal-command-failed', handleCommandFailed);
       commandDockElement.removeEventListener('tp-terminal-paste-submitted', handleCommandSubmitted);
     };
-  }, [activeScreenLines, commandDockElement, scrollTerminalToLatest]);
+  }, [activeScreenCommandLines, commandDockElement, scrollTerminalToLatest]);
 
   useEffect(() => {
     if (!commandDockElement) {
@@ -880,7 +908,7 @@ const TerminalWorkspaceKernelView = ({
   ]);
 
   useEffect(() => {
-    const screenLines = activeScreenLines?.map((line) => line.text) ?? [];
+    const screenLines = activeScreenCommandLines;
     if (screenLines.length === 0) {
       return;
     }
@@ -895,14 +923,19 @@ const TerminalWorkspaceKernelView = ({
         false
       )
     );
-  }, [activeCommandPaneId, activeCommandSessionId, activeScreen?.sequence, activeScreenLines]);
+  }, [
+    activeCommandPaneId,
+    activeCommandSessionId,
+    activeScreen?.sequence,
+    activeScreenCommandLines,
+  ]);
 
   useEffect(() => {
     if (!activeCommandRuns.some((run) => run.status === 'running' || run.status === 'unknown')) {
       return undefined;
     }
 
-    const screenLines = activeScreenLines?.map((line) => line.text) ?? [];
+    const screenLines = activeScreenCommandLines;
     if (screenLines.length === 0) {
       return undefined;
     }
@@ -926,7 +959,7 @@ const TerminalWorkspaceKernelView = ({
     activeCommandRuns,
     activeCommandSessionId,
     activeScreen?.sequence,
-    activeScreenLines,
+    activeScreenCommandLines,
   ]);
 
   useEffect(() => {
@@ -3405,7 +3438,10 @@ function normalizeStoredTerminalCommandRun(value: unknown): TerminalCommandRunPr
     typeof value.startedAtMs === 'number' && Number.isFinite(value.startedAtMs)
       ? value.startedAtMs
       : 0;
-  const status = isTerminalCommandRunPresentationStatus(value.status) ? value.status : 'unknown';
+  const storedStatus = isTerminalCommandRunPresentationStatus(value.status)
+    ? value.status
+    : 'unknown';
+  const status = storedStatus === 'running' ? 'unknown' : storedStatus;
 
   if (!clientEventId || !command || !paneId || !sessionId) {
     return null;
@@ -4013,16 +4049,17 @@ function capTerminalCommandRuns(
 
 export function settleTerminalCommandRuns(
   runs: TerminalCommandRunPresentation[],
-  screenLines: readonly string[],
+  screenLines: readonly TerminalCommandScreenLine[],
   nowMs: number,
   allowEmptyCompletion: boolean
 ): TerminalCommandRunPresentation[] {
   let changed = false;
   const next = runs.map((run) => {
-    const completion = inferTerminalCommandCompletion(screenLines, run.command);
+    const applicableScreenLines = getTerminalCommandScreenLinesForRun(screenLines, run.startedAtMs);
+    const completion = inferTerminalCommandCompletion(applicableScreenLines, run.command);
     const failureWithoutPrompt = completion.completed
       ? null
-      : inferTerminalCommandFailureWithoutPrompt(screenLines, run.command);
+      : inferTerminalCommandFailureWithoutPrompt(applicableScreenLines, run.command);
     if (failureWithoutPrompt) {
       if (run.status === 'failed') {
         return run;
@@ -4040,20 +4077,31 @@ export function settleTerminalCommandRuns(
       return run;
     }
 
-    const inferredStatus = inferTerminalCommandOutputStatus(completion.outputLines);
+    const inferredStatus = inferTerminalCommandCompletionStatus(completion);
+    const hasAuthoritativeExitCode = typeof completion.exitCode === 'number';
     if (run.status !== 'running') {
-      if (run.status !== 'failed' && inferredStatus === 'failed') {
+      const shouldApplyAuthoritativeStatus =
+        hasAuthoritativeExitCode && run.status !== inferredStatus;
+      const shouldSettleRecoveredUnknown =
+        run.status === 'unknown' && completion.outputLines.length > 0;
+      const shouldPromoteInferredFailure = run.status !== 'failed' && inferredStatus === 'failed';
+      if (
+        shouldApplyAuthoritativeStatus ||
+        shouldSettleRecoveredUnknown ||
+        shouldPromoteInferredFailure
+      ) {
         changed = true;
         return {
           ...run,
-          status: 'failed' as const,
+          ...(hasAuthoritativeExitCode ? { exitCode: completion.exitCode } : {}),
+          status: inferredStatus,
         };
       }
 
       return run;
     }
 
-    if (completion.outputLines.length === 0 && !allowEmptyCompletion) {
+    if (completion.outputLines.length === 0 && !hasAuthoritativeExitCode && !allowEmptyCompletion) {
       return run;
     }
 
@@ -4061,7 +4109,9 @@ export function settleTerminalCommandRuns(
     return {
       ...run,
       durationMs: Math.max(0, nowMs - run.startedAtMs),
-      status: completion.outputLines.length > 0 ? inferredStatus : 'unknown',
+      ...(hasAuthoritativeExitCode ? { exitCode: completion.exitCode } : {}),
+      status:
+        completion.outputLines.length > 0 || hasAuthoritativeExitCode ? inferredStatus : 'unknown',
     };
   });
 
@@ -4072,7 +4122,7 @@ function settleScopedTerminalCommandRuns(
   runs: TerminalCommandRunPresentation[],
   sessionId: string | null,
   paneId: string | null,
-  screenLines: readonly string[],
+  screenLines: readonly TerminalCommandScreenLine[],
   nowMs: number,
   allowEmptyCompletion: boolean
 ): TerminalCommandRunPresentation[] {
@@ -4110,7 +4160,7 @@ function settleScopedTerminalCommandRuns(
 export function closeSupersededTerminalCommandRuns(
   runs: TerminalCommandRunPresentation[],
   nextRun: TerminalCommandRunPresentation,
-  screenLines: readonly string[],
+  screenLines: readonly TerminalCommandScreenLine[],
   nowMs: number
 ): TerminalCommandRunPresentation[] {
   const settledRuns = settleTerminalCommandRuns(runs, screenLines, nowMs, true);
@@ -4128,19 +4178,22 @@ export function closeSupersededTerminalCommandRuns(
     }
 
     changed = true;
-    const completion = inferTerminalCommandCompletion(screenLines, run.command);
+    const applicableScreenLines = getTerminalCommandScreenLinesForRun(screenLines, run.startedAtMs);
+    const completion = inferTerminalCommandCompletion(applicableScreenLines, run.command);
     const failureWithoutPrompt = completion.completed
       ? null
-      : inferTerminalCommandFailureWithoutPrompt(screenLines, run.command);
+      : inferTerminalCommandFailureWithoutPrompt(applicableScreenLines, run.command);
     const inferredStatus = failureWithoutPrompt
       ? 'failed'
-      : completion.completed && completion.outputLines.length > 0
-        ? inferTerminalCommandOutputStatus(completion.outputLines)
+      : completion.completed &&
+          (completion.outputLines.length > 0 || typeof completion.exitCode === 'number')
+        ? inferTerminalCommandCompletionStatus(completion)
         : 'unknown';
 
     return {
       ...run,
       durationMs: run.durationMs ?? Math.max(0, nextRun.startedAtMs - run.startedAtMs),
+      ...(typeof completion.exitCode === 'number' ? { exitCode: completion.exitCode } : {}),
       status: inferredStatus,
     };
   });
@@ -4149,23 +4202,32 @@ export function closeSupersededTerminalCommandRuns(
 }
 
 export function inferTerminalCommandCompletion(
-  lines: readonly string[],
+  lines: readonly TerminalCommandScreenLine[],
   command: string
-): { completed: boolean; outputLines: string[] } {
+): { completed: boolean; exitCode?: number | null; outputLines: string[] } {
   const commandLineIndex = findLatestTerminalCommandLineIndex(lines, command);
   if (commandLineIndex === -1) {
     return { completed: false, outputLines: [] };
   }
 
   for (let index = commandLineIndex + 1; index < lines.length; index += 1) {
-    const text = lines[index] ?? '';
-    if (isTerminalPromptOnlyLine(text) || isTerminalPromptCommandLine(text)) {
+    const line = lines[index];
+    const commandFinishedMark = getTerminalCommandFinishedMark(line);
+    if (commandFinishedMark) {
+      const exitCode = commandFinishedMark.exit_code;
       return {
         completed: true,
-        outputLines: lines
-          .slice(commandLineIndex + 1, index)
-          .map((line) => line.trimEnd())
-          .filter((line) => line.trim().length > 0),
+        ...(typeof exitCode === 'number' && Number.isFinite(exitCode)
+          ? { exitCode: Math.trunc(exitCode) }
+          : { exitCode: null }),
+        outputLines: collectTerminalCommandOutputLines(lines, commandLineIndex + 1, index),
+      };
+    }
+
+    if (isTerminalPromptBoundaryLine(line)) {
+      return {
+        completed: true,
+        outputLines: collectTerminalCommandOutputLines(lines, commandLineIndex + 1, index),
       };
     }
   }
@@ -4174,7 +4236,7 @@ export function inferTerminalCommandCompletion(
 }
 
 function inferTerminalCommandFailureWithoutPrompt(
-  lines: readonly string[],
+  lines: readonly TerminalCommandScreenLine[],
   command: string
 ): { outputLines: string[] } | null {
   const commandLineIndex = findLatestTerminalCommandLineIndex(lines, command);
@@ -4184,7 +4246,7 @@ function inferTerminalCommandFailureWithoutPrompt(
 
   const outputLines = lines
     .slice(commandLineIndex + 1)
-    .map((line) => line.trimEnd())
+    .map((line) => getTerminalCommandScreenLineText(line).trimEnd())
     .filter((line) => line.trim().length > 0);
   if (outputLines.length === 0) {
     return null;
@@ -4193,20 +4255,138 @@ function inferTerminalCommandFailureWithoutPrompt(
   return inferTerminalCommandOutputStatus(outputLines) === 'failed' ? { outputLines } : null;
 }
 
-function findLatestTerminalCommandLineIndex(lines: readonly string[], command: string): number {
+function findLatestTerminalCommandLineIndex(
+  lines: readonly TerminalCommandScreenLine[],
+  command: string
+): number {
   const normalizedCommand = normalizeCommandForPromptMatch(command);
+  let rawCommandLineIndex = -1;
   for (let index = lines.length - 1; index >= 0; index -= 1) {
-    const line = lines[index] ?? '';
-    if (!isTerminalPromptCommandLine(line)) {
+    const screenLine = lines[index];
+    const line = getTerminalCommandScreenLineText(screenLine);
+    const promptCommands = extractCommandCandidatesFromPromptLine(line);
+    const normalizedLine = normalizeCommandForPromptMatch(line);
+
+    if (
+      promptCommands.some(
+        (promptCommand) =>
+          isTerminalCommandFragmentMatch(promptCommand, normalizedCommand) ||
+          (isTerminalHistoryScreenLine(screenLine) &&
+            isDuplicatedLeadingTerminalCommandEcho(promptCommand, normalizedCommand))
+      ) ||
+      (hasTerminalCommandScreenLineMark(screenLine, 'input_start') &&
+        normalizedLine.endsWith(normalizedCommand))
+    ) {
+      return rawCommandLineIndex === -1 ? index : rawCommandLineIndex;
+    }
+
+    if (
+      normalizedLine === normalizedCommand ||
+      (isTerminalHistoryScreenLine(screenLine) &&
+        isDuplicatedLeadingTerminalCommandEcho(normalizedLine, normalizedCommand))
+    ) {
+      rawCommandLineIndex = index;
       continue;
     }
 
-    if (isTerminalCommandFragmentMatch(extractCommandFromPromptLine(line), normalizedCommand)) {
-      return index;
+    if (rawCommandLineIndex !== -1 && isTerminalPromptBoundaryLine(screenLine)) {
+      return rawCommandLineIndex;
     }
   }
 
-  return -1;
+  return rawCommandLineIndex;
+}
+
+function createTerminalCommandScreenLines(
+  lines: readonly Pick<ScreenLine, 'semantic_marks' | 'text'>[],
+  cursorRow: number | null
+): TerminalCommandScreenLine[] {
+  return lines.map((line, index) => ({
+    ...line,
+    source: 'live',
+    ...(index === cursorRow ? { isActiveCursorLine: true } : {}),
+  }));
+}
+
+function collectTerminalCommandOutputLines(
+  lines: readonly TerminalCommandScreenLine[],
+  startIndex: number,
+  endIndex: number
+): string[] {
+  return lines
+    .slice(startIndex, endIndex)
+    .map((line) => getTerminalCommandScreenLineText(line).trimEnd())
+    .filter((line) => line.trim().length > 0);
+}
+
+function getTerminalCommandScreenLineText(line: TerminalCommandScreenLine | undefined): string {
+  return typeof line === 'string' ? line : (line?.text ?? '');
+}
+
+function getTerminalCommandFinishedMark(
+  line: TerminalCommandScreenLine | undefined
+): ScreenLineSemanticMark | null {
+  if (typeof line === 'string' || !line) {
+    return null;
+  }
+
+  return line.semantic_marks?.find((mark) => mark.kind === 'command_finished') ?? null;
+}
+
+function hasTerminalCommandScreenLineMark(
+  line: TerminalCommandScreenLine | undefined,
+  kind: ScreenLineSemanticMark['kind']
+): boolean {
+  return (
+    typeof line !== 'string' && Boolean(line?.semantic_marks?.some((mark) => mark.kind === kind))
+  );
+}
+
+function isTerminalPromptBoundaryLine(line: TerminalCommandScreenLine | undefined): boolean {
+  const text = getTerminalCommandScreenLineText(line);
+  if (isTerminalPromptCommandLine(text)) {
+    return true;
+  }
+
+  if (!isTerminalPromptOnlyLine(text)) {
+    return false;
+  }
+
+  return (
+    typeof line === 'string' ||
+    (line?.source === 'history' && line.isHistoryTailLine === true) ||
+    line?.isActiveCursorLine === true
+  );
+}
+
+function isTerminalHistoryScreenLine(
+  line: TerminalCommandScreenLine | undefined
+): line is Exclude<TerminalCommandScreenLine, string> & { source: 'history' } {
+  return typeof line !== 'string' && line?.source === 'history';
+}
+
+function getTerminalCommandScreenLinesForRun(
+  lines: readonly TerminalCommandScreenLine[],
+  startedAtMs: number
+): TerminalCommandScreenLine[] {
+  const startedAt = BigInt(Math.max(0, Math.trunc(startedAtMs)));
+  return lines.filter(
+    (line) =>
+      !isTerminalHistoryScreenLine(line) ||
+      line.historyCapturedAtMs === undefined ||
+      line.historyCapturedAtMs >= startedAt
+  );
+}
+
+function inferTerminalCommandCompletionStatus(completion: {
+  exitCode?: number | null;
+  outputLines: readonly string[];
+}): TerminalCommandRunPresentation['status'] {
+  if (typeof completion.exitCode === 'number') {
+    return completion.exitCode === 0 ? 'succeeded' : 'failed';
+  }
+
+  return inferTerminalCommandOutputStatus(completion.outputLines);
 }
 
 function isTerminalPromptOnlyLine(line: string): boolean {
@@ -4227,23 +4407,30 @@ function isTerminalPromptCommandLine(line: string): boolean {
 }
 
 function extractCommandFromPromptLine(line: string): string {
+  return extractCommandCandidatesFromPromptLine(line).at(-1) ?? '';
+}
+
+function extractCommandCandidatesFromPromptLine(line: string): string[] {
   const trimmed = line.trimEnd();
   const wrappedPromptCommand = /^<\s{2,}(.+)$/u.exec(trimmed);
   if (wrappedPromptCommand?.[1]) {
-    return wrappedPromptCommand[1].trim();
+    return [wrappedPromptCommand[1].trim()];
   }
 
-  for (let index = trimmed.length - 1; index >= 0; index -= 1) {
+  const candidates: string[] = [];
+  for (let index = 0; index < trimmed.length; index += 1) {
     const marker = trimmed[index] ?? '';
     if (marker !== '%' && marker !== '$' && marker !== '#') {
       continue;
     }
 
     const command = trimmed.slice(index + 1);
-    return command.startsWith(' ') ? command.trim() : '';
+    if (command.startsWith(' ')) {
+      candidates.push(command.trim());
+    }
   }
 
-  return '';
+  return candidates;
 }
 
 function normalizeCommandForPromptMatch(command: string): string {
@@ -4265,6 +4452,19 @@ function isTerminalCommandFragmentMatch(fragment: string, normalizedCommand: str
   }
 
   return normalizedFragment.length >= 8 && normalizedCommand.includes(normalizedFragment);
+}
+
+function isDuplicatedLeadingTerminalCommandEcho(
+  candidate: string,
+  normalizedCommand: string
+): boolean {
+  const normalizedCandidate = normalizeCommandForPromptMatch(candidate);
+  return (
+    normalizedCommand.length > 0 &&
+    normalizedCandidate.length === normalizedCommand.length + 1 &&
+    normalizedCandidate[0] === normalizedCommand[0] &&
+    normalizedCandidate.slice(1) === normalizedCommand
+  );
 }
 
 export function inferTerminalCommandOutputStatus(

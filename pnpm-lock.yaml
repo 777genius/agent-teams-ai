@@ -98,6 +98,9 @@ patchedDependencies:
   '@radix-ui/react-tooltip@1.2.8':
     hash: 92cb648a695f616d3b7222b90053cb36e162bab4303abf0fe39b517e1d9dd6b8
     path: patches/@radix-ui__react-tooltip@1.2.8.patch
+  '@terminal-platform/workspace-elements@0.1.0':
+    hash: 9dab4c3c4aa6144145ec423cd386313f7ea85fb0938626dacb7c2581b3750d7d
+    path: patches/@terminal-platform__workspace-elements@0.1.0.patch
   fastmcp@3.35.0:
     hash: 7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df
     path: patches/fastmcp@3.35.0.patch
@@ -279,7 +282,7 @@ importers:
         version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz
       '@terminal-platform/workspace-elements':
         specifier: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz
-        version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz
+        version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz(patch_hash=9dab4c3c4aa6144145ec423cd386313f7ea85fb0938626dacb7c2581b3750d7d)
       '@terminal-platform/workspace-gateway-node':
         specifier: file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz
         version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz
@@ -14925,7 +14928,7 @@ snapshots:
       '@terminal-platform/runtime-types': file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
       '@terminal-platform/workspace-contracts': file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz
 
-  '@terminal-platform/workspace-elements@file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz':
+  '@terminal-platform/workspace-elements@file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz(patch_hash=9dab4c3c4aa6144145ec423cd386313f7ea85fb0938626dacb7c2581b3750d7d)':
     dependencies:
       '@terminal-platform/design-tokens': file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz
       '@terminal-platform/runtime-types': file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
@@ -14946,7 +14949,7 @@ snapshots:
     dependencies:
       '@lit/react': 1.0.8(@types/react@19.2.14)
       '@terminal-platform/workspace-core': file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz
-      '@terminal-platform/workspace-elements': file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz
+      '@terminal-platform/workspace-elements': file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz(patch_hash=9dab4c3c4aa6144145ec423cd386313f7ea85fb0938626dacb7c2581b3750d7d)
       react: 19.2.4
     transitivePeerDependencies:
       - '@types/react'

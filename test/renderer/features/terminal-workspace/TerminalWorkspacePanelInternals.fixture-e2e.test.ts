@@ -15,7 +15,9 @@ import { describe, expect, it } from 'vitest';
 describe('terminal workspace panel internals fixture-e2e', () => {
   it('formats working directories for compact terminal chrome', () => {
     expect(formatWorkingDirectory(null, 'Shell default directory')).toBe('Shell default directory');
-    expect(formatWorkingDirectory('   ', 'Shell default directory')).toBe('Shell default directory');
+    expect(formatWorkingDirectory('   ', 'Shell default directory')).toBe(
+      'Shell default directory'
+    );
     expect(formatWorkingDirectory('/Users/belief/dev/projects/claude_team///')).toBe(
       '~/dev/projects/claude_team'
     );
@@ -224,6 +226,200 @@ describe('terminal workspace panel internals fixture-e2e', () => {
     expect(next[0]).toMatchObject({
       durationMs: 375,
       status: 'succeeded',
+    });
+  });
+
+  it('settles a plain command echo when the shell prompt is rendered on the following line', () => {
+    const next = settleTerminalCommandRuns(
+      [createRun({ command: "print 'fdfd'", startedAtMs: 1000 })],
+      ["print 'fdfd'", 'fdfd', '~/dev/projects/claude/claude_team %'],
+      1350,
+      false
+    );
+
+    expect(next[0]).toMatchObject({
+      durationMs: 350,
+      status: 'succeeded',
+    });
+  });
+
+  it('settles from restored history when the live screen lags and duplicates the first input character', () => {
+    const next = settleTerminalCommandRuns(
+      [createRun({ command: 'not_a_real_command', startedAtMs: 1000 })],
+      [
+        { source: 'live', text: 'shell % not_a_real_command' },
+        { source: 'history', text: 'shell % nnot_a_real_command' },
+        { source: 'history', text: 'zsh: command not found: not_a_real_command' },
+        { source: 'history', text: 'shell %' },
+      ],
+      1420,
+      false
+    );
+
+    expect(next[0]).toMatchObject({
+      durationMs: 420,
+      status: 'failed',
+    });
+  });
+
+  it('ignores restored history captured before the current command started', () => {
+    const run = createRun({ command: 'echo ok', startedAtMs: 2000 });
+    const runs = [run];
+    const next = settleTerminalCommandRuns(
+      runs,
+      [
+        { source: 'live', text: 'shell % echo ok' },
+        { historyCapturedAtMs: 1500n, source: 'history', text: 'shell % eecho ok' },
+        { historyCapturedAtMs: 1500n, source: 'history', text: 'old output' },
+        { historyCapturedAtMs: 1500n, source: 'history', text: 'shell %' },
+      ],
+      2400,
+      false
+    );
+
+    expect(next).toBe(runs);
+    expect(next[0]).toBe(run);
+  });
+
+  it('uses shell integration completion marks and exit codes instead of output heuristics', () => {
+    const succeeded = settleTerminalCommandRuns(
+      [createRun({ command: 'true', startedAtMs: 1000 })],
+      [
+        {
+          text: 'shell % true',
+          semantic_marks: [{ kind: 'input_start', col: 8 }],
+        },
+        {
+          text: '',
+          semantic_marks: [{ kind: 'command_finished', col: 0, exit_code: 0 }],
+        },
+      ],
+      1125,
+      false
+    );
+    const failed = settleTerminalCommandRuns(
+      [createRun({ command: 'custom-command', startedAtMs: 2000 })],
+      [
+        {
+          text: 'λ custom-command',
+          semantic_marks: [{ kind: 'input_start', col: 2 }],
+        },
+        { text: 'ordinary output' },
+        {
+          text: '',
+          semantic_marks: [{ kind: 'command_finished', col: 0, exit_code: 7 }],
+        },
+      ],
+      2400,
+      false
+    );
+
+    expect(succeeded[0]).toMatchObject({ durationMs: 125, exitCode: 0, status: 'succeeded' });
+    expect(failed[0]).toMatchObject({ durationMs: 400, exitCode: 7, status: 'failed' });
+  });
+
+  it('lets an authoritative successful exit correct an earlier heuristic failure', () => {
+    const next = settleTerminalCommandRuns(
+      [
+        createRun({
+          command: 'build-with-warning',
+          durationMs: 180,
+          status: 'failed',
+        }),
+      ],
+      [
+        { text: 'shell % build-with-warning' },
+        { text: 'error: recovered by fallback' },
+        {
+          text: '',
+          semantic_marks: [{ kind: 'command_finished', col: 0, exit_code: 0 }],
+        },
+      ],
+      2500,
+      false
+    );
+
+    expect(next[0]).toMatchObject({
+      durationMs: 180,
+      exitCode: 0,
+      status: 'succeeded',
+    });
+  });
+
+  it('settles recovered unknown metadata when completed output is still visible', () => {
+    const next = settleTerminalCommandRuns(
+      [
+        createRun({
+          command: 'echo recovered',
+          durationMs: 90,
+          status: 'unknown',
+        }),
+      ],
+      ['shell % echo recovered', 'recovered', 'shell %'],
+      3000,
+      false
+    );
+
+    expect(next[0]).toMatchObject({
+      durationMs: 90,
+      status: 'succeeded',
+    });
+  });
+
+  it('requires the active cursor before treating prompt-like output as a prompt boundary', () => {
+    expect(
+      inferTerminalCommandCompletion(
+        [
+          { text: 'shell % stream-prices' },
+          { text: 'total $' },
+          { text: 'still streaming', isActiveCursorLine: true },
+        ],
+        'stream-prices'
+      )
+    ).toEqual({ completed: false, outputLines: [] });
+
+    expect(
+      inferTerminalCommandCompletion(
+        [
+          { text: 'shell % stream-prices' },
+          { text: 'total $' },
+          { text: 'done' },
+          { text: '~/sandbox $', isActiveCursorLine: true },
+        ],
+        'stream-prices'
+      )
+    ).toEqual({
+      completed: true,
+      outputLines: ['total $', 'done'],
+    });
+  });
+
+  it('only treats the restored history tail as a prompt-only completion boundary', () => {
+    expect(
+      inferTerminalCommandCompletion(
+        [
+          { source: 'history', text: "shell % printf 'total $\\nstill ok\\n'" },
+          { source: 'history', text: 'total $' },
+          { source: 'history', text: 'still ok' },
+          { isHistoryTailLine: true, source: 'history', text: 'shell %' },
+        ],
+        "printf 'total $\\nstill ok\\n'"
+      )
+    ).toEqual({
+      completed: true,
+      outputLines: ['total $', 'still ok'],
+    });
+  });
+
+  it('uses the first raw echo in a prompt segment when output repeats the full command', () => {
+    expect(
+      inferTerminalCommandCompletion(
+        ['shell %', "print 'same'", "print 'same'", 'shell %'],
+        "print 'same'"
+      )
+    ).toEqual({
+      completed: true,
+      outputLines: ["print 'same'"],
     });
   });
 

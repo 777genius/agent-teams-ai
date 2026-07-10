@@ -83,6 +83,7 @@ onlyBuiltDependencies:
   - node-pty
   - cpu-features
 patchedDependencies:
+  '@terminal-platform/workspace-elements@0.1.0': 'patches/@terminal-platform__workspace-elements@0.1.0.patch'
   '@radix-ui/react-presence@1.1.5': 'patches/@radix-ui__react-presence@1.1.5.patch'
   '@radix-ui/react-focus-scope@1.1.7': 'patches/@radix-ui__react-focus-scope@1.1.7.patch'
   '@radix-ui/react-dismissable-layer@1.1.11': 'patches/@radix-ui__react-dismissable-layer@1.1.11.patch'

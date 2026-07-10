@@ -1129,6 +1129,83 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(metadata[0]?.durationMs).toBeGreaterThanOrEqual(0);
   });
 
+  it('settles plain command echoes instead of leaving their timer running', async () => {
+    const tabs = [
+      createTab('tab-1', 'Terminal UI Smoke', 'pane-1'),
+      createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+    ];
+    nextSnapshot = createWorkspaceSnapshot({ tabs });
+    await renderPanel();
+
+    await dispatchCommandDockEvent('tp-terminal-command-started', {
+      clientEventId: 'plain-command',
+      command: "print 'fdfd'",
+      paneId: 'pane-1',
+      sessionId: 'session-1',
+      startedAtMs: Date.now() - 120,
+    });
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      focusedLines: [
+        { text: "print 'fdfd'" },
+        { text: 'fdfd' },
+        { text: '~/dev/projects/claude/claude_team %' },
+      ],
+      sequence: 43,
+      tabs,
+    });
+    await renderPanel();
+
+    expect(getLatestScreenCommandMetadata()[0]).toMatchObject({
+      clientEventId: 'plain-command',
+      command: "print 'fdfd'",
+      status: 'succeeded',
+    });
+    expect(getLatestScreenCommandMetadata()[0]?.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('settles from restored history when the focused screen is stale', async () => {
+    const tabs = [
+      createTab('tab-1', 'Terminal UI Smoke', 'pane-1'),
+      createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+    ];
+    nextSnapshot = createWorkspaceSnapshot({ tabs });
+    await renderPanel();
+    const startedAtMs = Date.now() - 220;
+
+    await dispatchCommandDockEvent('tp-terminal-command-started', {
+      clientEventId: 'stale-live-command',
+      command: 'not_a_real_command',
+      paneId: 'pane-1',
+      sessionId: 'session-1',
+      startedAtMs,
+    });
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      focusedLines: [{ text: 'shell % not_a_real_command' }],
+      historicalPanes: {
+        'pane-1': {
+          capturedAtMs: BigInt(startedAtMs + 100),
+          lines: [
+            'shell % nnot_a_real_command',
+            'zsh: command not found: not_a_real_command',
+            'shell %',
+          ],
+        },
+      },
+      sequence: 44,
+      tabs,
+    });
+    await renderPanel();
+
+    expect(getLatestScreenCommandMetadata()[0]).toMatchObject({
+      clientEventId: 'stale-live-command',
+      command: 'not_a_real_command',
+      status: 'failed',
+    });
+    expect(getLatestScreenCommandMetadata()[0]?.durationMs).toBeGreaterThanOrEqual(0);
+  });
+
   it('opens a command history context menu and copies command block text', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
@@ -1397,6 +1474,39 @@ describe('terminal workspace panel fixture-e2e', () => {
         command: 'pnpm build',
         paneId: 'pane-build',
         status: 'succeeded',
+      }),
+    ]);
+  });
+
+  it('rehydrates interrupted running metadata as unknown instead of restarting its timer', async () => {
+    window.localStorage.setItem(
+      storageKey('command-runs'),
+      JSON.stringify([
+        {
+          clientEventId: 'interrupted-command',
+          command: 'sleep 30',
+          paneId: 'pane-1',
+          sessionId: 'session-1',
+          startedAtMs: Date.now() - 60_000,
+          status: 'running',
+        },
+      ])
+    );
+
+    await renderPanel();
+
+    expect(getLatestScreenCommandMetadata()).toEqual([
+      expect.objectContaining({
+        clientEventId: 'interrupted-command',
+        command: 'sleep 30',
+        status: 'unknown',
+      }),
+    ]);
+    expect(getLatestScreenCommandMetadata()[0]?.durationMs).toBeUndefined();
+    expect(JSON.parse(window.localStorage.getItem(storageKey('command-runs')) ?? '[]')).toEqual([
+      expect.objectContaining({
+        clientEventId: 'interrupted-command',
+        status: 'unknown',
       }),
     ]);
   });
@@ -1680,6 +1790,7 @@ interface MockWorkspaceSnapshot {
       pane_id: string;
       sequence: number;
       surface: {
+        cursor: { col: number; row: number } | null;
         lines: Array<{ text: string }>;
       };
     } | null;
@@ -1698,7 +1809,7 @@ interface MockWorkspaceSnapshot {
   connection: {
     state: 'idle' | 'bootstrapping' | 'ready' | 'error' | 'disposed';
   };
-  historicalPanes: Record<string, { lines: string[] }>;
+  historicalPanes: Record<string, { capturedAtMs?: bigint; lines: string[] }>;
   selection: {
     activeSessionId: string | null;
   };
@@ -1787,6 +1898,7 @@ function createWorkspaceSnapshot({
   focusedScreenReady = true,
   fontScale = 'default',
   focusedLines = [],
+  cursorRow = focusedLines.length > 0 ? focusedLines.length - 1 : null,
   historicalPanes = {},
   lineWrap = false,
   sequence = 1,
@@ -1801,11 +1913,12 @@ function createWorkspaceSnapshot({
       activeTab: MockTab | null;
     }
   >;
+  cursorRow?: number | null;
   focusedTabId?: string;
   focusedScreenReady?: boolean;
   fontScale?: string;
   focusedLines?: Array<{ text: string }>;
-  historicalPanes?: Record<string, { lines: string[] }>;
+  historicalPanes?: Record<string, { capturedAtMs?: bigint; lines: string[] }>;
   lineWrap?: boolean;
   sequence?: number;
   tabs?: MockTab[];
@@ -1830,6 +1943,13 @@ function createWorkspaceSnapshot({
             pane_id: activePaneId,
             sequence,
             surface: {
+              cursor:
+                cursorRow === null
+                  ? null
+                  : {
+                      col: focusedLines[cursorRow]?.text.length ?? 0,
+                      row: cursorRow,
+                    },
               lines: focusedLines,
             },
           }
