@@ -418,10 +418,10 @@
         "saveFileTooltip": "ファイルをディスクに保存する"
       },
       "badges": {
-        "deleted": "DELETEDの特長",
-        "manualReview": "MANUAL REVIEWの特長",
-        "new": "NEWの特長",
-        "worktree": "WORKTREEの特長"
+        "deleted": "DELETED",
+        "manualReview": "MANUAL REVIEW",
+        "new": "NEW",
+        "worktree": "WORKTREE"
       },
       "contentSource": {
         "disk-current": "現在のディスク",
@@ -598,7 +598,7 @@
       "description": "このファイルの完全なエディタの差分を準備します。"
     },
     "loading": {
-      "diff": "DIFFの特長",
+      "diff": "DIFF",
       "ledgerObjectsProcessed": "{{count}}のレジャーオブジェクト処理",
       "ledgerObjectsProcessed_one": "{{count}}のレジャーオブジェクト処理",
       "ledgerObjectsProcessed_other": "{{count}}のレジャーオブジェクト処理",
@@ -612,7 +612,7 @@
       }
     },
     "progress": {
-      "viewed": "{{viewed}}/{{total}}の特長 インタビュー"
+      "viewed": "{{viewed}}/{{total}} viewed"
     },
     "scope": {
       "readMore": "もっと読む",
@@ -1084,7 +1084,7 @@
       "subject": "コンテンツ",
       "subjectPlaceholder": "何をすべきか?",
       "title": "タスクの作成",
-      "todo": "TODOの特長"
+      "todo": "TODO"
     },
     "list": {
       "columns": {
@@ -2305,11 +2305,11 @@
     },
     "title": "カンバン",
     "columns": {
-      "todo": "TODOの特長",
-      "inProgress": "PROGRESSで",
-      "review": "REVIEWの特長",
-      "done": "DONEの特長",
-      "approved": "APPROVEDの特長"
+      "todo": "TODO",
+      "inProgress": "IN PROGRESS",
+      "review": "REVIEW",
+      "done": "DONE",
+      "approved": "APPROVED"
     }
   },
   "worktreeGitReadiness": {

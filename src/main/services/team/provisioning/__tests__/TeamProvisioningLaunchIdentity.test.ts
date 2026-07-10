@@ -14,9 +14,7 @@ import {
 import type { RuntimeProviderLaunchFacts } from '../TeamProvisioningRuntimeLaunchSelection';
 import type { CliProviderModelCatalog, ProviderModelLaunchIdentity } from '@shared/types';
 
-function buildCatalog(
-  overrides: Partial<CliProviderModelCatalog> = {}
-): CliProviderModelCatalog {
+function buildCatalog(overrides: Partial<CliProviderModelCatalog> = {}): CliProviderModelCatalog {
   return {
     schemaVersion: 1,
     providerId: 'codex',
@@ -49,7 +47,9 @@ function buildCatalog(
   };
 }
 
-function buildFacts(overrides: Partial<RuntimeProviderLaunchFacts> = {}): RuntimeProviderLaunchFacts {
+function buildFacts(
+  overrides: Partial<RuntimeProviderLaunchFacts> = {}
+): RuntimeProviderLaunchFacts {
   return {
     defaultModel: 'default-model',
     modelIds: new Set(['default-model']),
@@ -140,6 +140,24 @@ describe('team provisioning launch identity facts', () => {
     expect(warnings).toEqual([
       '[gemini] Failed to parse runtime capabilities for launch validation: No JSON object found in CLI output',
     ]);
+  });
+
+  it('treats blank runtime fact output as unavailable without warnings', () => {
+    const warnings: string[] = [];
+
+    const facts = buildRuntimeProviderLaunchFacts({
+      providerId: 'anthropic',
+      modelListStdout: '  \n',
+      runtimeStatusStdout: '',
+      warn: (message) => warnings.push(message),
+    });
+
+    expect(facts.modelIds).toEqual(new Set());
+    expect(facts.modelListParsed).toBe(false);
+    expect(facts.modelCatalog).toBeNull();
+    expect(facts.runtimeCapabilities).toBeNull();
+    expect(facts.providerStatus).toBeNull();
+    expect(warnings).toEqual([]);
   });
 
   it('augments dynamic Codex launch facts with the app-server catalog', async () => {

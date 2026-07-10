@@ -2,6 +2,7 @@ import {
   isRuntimeControlProviderId,
   type RuntimeControlProviderId,
 } from './RuntimeControlProvider';
+import { canonicalizeRuntimeIdempotencyKey } from './RuntimeIdempotencyKey';
 
 declare const runtimeControlCommandIdBrand: unique symbol;
 declare const runtimeControlEventIdBrand: unique symbol;
@@ -142,7 +143,11 @@ export function buildRuntimeTaskEventCommandId(
   return buildRuntimeControlCommandId({
     ...input,
     verb: 'task-event',
-    parts: [input.idempotencyKey],
+    parts: [
+      canonicalizeRuntimeIdempotencyKey(input.idempotencyKey, {
+        errorPrefix: 'Runtime control id',
+      }),
+    ],
   });
 }
 
@@ -152,7 +157,11 @@ export function buildRuntimeDeliverMessageCommandId(
   return buildRuntimeControlCommandId({
     ...input,
     verb: 'deliver-message',
-    parts: [input.idempotencyKey],
+    parts: [
+      canonicalizeRuntimeIdempotencyKey(input.idempotencyKey, {
+        errorPrefix: 'Runtime control id',
+      }),
+    ],
   });
 }
 

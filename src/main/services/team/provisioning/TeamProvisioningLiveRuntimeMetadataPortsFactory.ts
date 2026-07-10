@@ -80,7 +80,10 @@ export function createTeamProvisioningLiveRuntimeMetadataPorts(
 
       const generationAtStart = buildDeps.getRuntimeSnapshotCacheGeneration(teamName);
       const existingRequest = liveTeamAgentRuntimeMetadataInFlightByTeam.get(teamName);
-      if (existingRequest?.runIdAtStart === runId) {
+      if (
+        existingRequest?.runIdAtStart === runId &&
+        existingRequest.generationAtStart === generationAtStart
+      ) {
         return cloneLiveTeamAgentRuntimeMetadata(await existingRequest.promise);
       }
 

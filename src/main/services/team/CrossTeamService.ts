@@ -113,7 +113,8 @@ export class CrossTeamService {
       replyToConversationId ||
       randomUUID();
     const stableDedupeIdentity = Boolean(
-      request.messageId?.trim() || request.conversationId?.trim()
+      request.requireRuntimeDelivery &&
+      (request.messageId?.trim() || request.conversationId?.trim())
     );
 
     // 1. Validate

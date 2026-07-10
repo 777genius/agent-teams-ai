@@ -15,6 +15,7 @@ import {
   registerAliveRun,
   registerProvisioningRun,
   runtimeResourceSamplingHarness,
+  stubMemberLifecycleHostOptionalSeam,
   stubMemberLifecyclePersistedRuntimeMembers,
   stubProvisioningConfigProjectPath,
   verificationProbePortsHarness,
@@ -34,6 +35,7 @@ vi.mock('@main/services/runtime/anthropicTeamApiKeyHelper', async (importOrigina
 
 const MEMBER_LIFECYCLE_SERVICE_USE_CASE_KEYS = [
   'appendDirectProcessRuntimeEvent',
+  'hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch',
   'persistOpenCodeMemberRestartSystemMessage',
   'preparePrimaryOwnedMemberRestartRuntime',
   'readOpenCodeSecondaryRetryOutcome',
@@ -146,6 +148,37 @@ describe('team provisioning private harness seams', () => {
     expect(
       vi.isMockFunction(provisioningConfigFacadeHarness(service).readPersistedTeamProjectPath)
     ).toBe(true);
+  });
+
+  it('stubs current lifecycle optional seams on their owning facade surface', () => {
+    const enqueueDirectRestartPrompt = vi.fn();
+    const updateDirectTmuxRestartMemberConfig = vi.fn(() => Promise.resolve());
+    const service = {
+      memberLifecycleHost: {},
+      memberLifecycleUseCases: {},
+    } as unknown as TeamProvisioningService;
+
+    expect(
+      stubMemberLifecycleHostOptionalSeam(
+        service,
+        'enqueueDirectRestartPrompt',
+        enqueueDirectRestartPrompt
+      )
+    ).toBe(enqueueDirectRestartPrompt);
+    expect(
+      stubMemberLifecycleHostOptionalSeam(
+        service,
+        'updateDirectTmuxRestartMemberConfig',
+        updateDirectTmuxRestartMemberConfig
+      )
+    ).toBe(updateDirectTmuxRestartMemberConfig);
+
+    expect(memberLifecycleHostHarness(service).enqueueDirectRestartPrompt).toBe(
+      enqueueDirectRestartPrompt
+    );
+    expect(memberLifecycleUseCasesHarness(service).updateDirectTmuxRestartMemberConfig).toBe(
+      updateDirectTmuxRestartMemberConfig
+    );
   });
 
   it('exposes the service-owned lifecycle use cases wired into restart and retry controller seams', () => {

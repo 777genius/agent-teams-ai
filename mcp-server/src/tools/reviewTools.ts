@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getController } from '../controller';
 import { jsonTextContent, slimTask } from '../utils/format';
 import { assertConfiguredTeam } from '../utils/teamConfig';
+import { taskRefSchema } from '../utils/schemas';
 
 const toolContextSchema = {
   teamName: z.string().min(1),
@@ -94,8 +95,9 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
       from: z.string().optional(),
       comment: z.string().optional(),
       leadSessionId: z.string().optional(),
+      taskRefs: z.array(taskRefSchema).optional(),
     }),
-    execute: async ({ teamName, claudeDir, taskId, from, comment, leadSessionId }) => {
+    execute: async ({ teamName, claudeDir, taskId, from, comment, leadSessionId, taskRefs }) => {
       assertConfiguredTeam(teamName, claudeDir);
       return await Promise.resolve(
         jsonTextContent(
@@ -104,6 +106,7 @@ export function registerReviewTools(server: Pick<FastMCP, 'addTool'>) {
               ...(from ? { from } : {}),
               ...(comment ? { comment } : {}),
               ...(leadSessionId ? { leadSessionId } : {}),
+              ...(taskRefs?.length ? { taskRefs } : {}),
             }) as Record<string, unknown>
           )
         )

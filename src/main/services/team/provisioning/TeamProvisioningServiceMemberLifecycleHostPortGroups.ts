@@ -11,6 +11,7 @@ export type TeamProvisioningServiceMemberLifecycleHostPortGroups =
 
 type MemberMcpLaunchConfigPorts =
   TeamProvisioningServiceMemberLifecycleHostPortGroups['memberMcpLaunchConfig'];
+type MessagingPorts = TeamProvisioningServiceMemberLifecycleHostPortGroups['messaging'];
 type OpenCodeRuntimePorts = TeamProvisioningServiceMemberLifecycleHostPortGroups['openCodeRuntime'];
 type MixedSecondaryRuntimePorts =
   TeamProvisioningServiceMemberLifecycleHostPortGroups['mixedSecondaryRuntime'];
@@ -74,6 +75,7 @@ export interface TeamProvisioningServiceMemberLifecycleHostPortGroupPorts {
   getLiveTeamAgentRuntimeMetadata: TeamProvisioningServiceMemberLifecycleHostPortGroups['runState']['getLiveTeamAgentRuntimeMetadata'];
   persistInboxMessage(teamName: string, memberName: string, message: InboxMessage): void;
   persistSentMessage(teamName: string, message: InboxMessage): void;
+  enqueueDirectRestartPrompt?: NonNullable<MessagingPorts['enqueueDirectRestartPrompt']>;
   getOpenCodeRuntimeAdapter: TeamProvisioningServiceMemberLifecycleHostPortGroups['openCodeRuntime']['getOpenCodeRuntimeAdapter'];
   resolveOpenCodeMemberWorkspacesForRuntime: ResolveOpenCodeMemberWorkspacesForRuntime;
   runOpenCodeTeamRuntimeAdapterLaunch: OpenCodeRuntimePorts['runOpenCodeTeamRuntimeAdapterLaunch'];
@@ -87,6 +89,18 @@ export interface TeamProvisioningServiceMemberLifecycleHostPortGroupPorts {
 export function createTeamProvisioningServiceMemberLifecycleHostPortGroups(
   service: TeamProvisioningServiceMemberLifecycleHostPortGroupPorts
 ): TeamProvisioningServiceMemberLifecycleHostPortGroups {
+  const messaging: MessagingPorts = {
+    persistInboxMessage: (teamName, memberName, message) =>
+      service.persistInboxMessage(teamName, memberName, message as unknown as InboxMessage),
+    persistSentMessage: (teamName, message) =>
+      service.persistSentMessage(teamName, message as unknown as InboxMessage),
+  };
+  const enqueueDirectRestartPrompt = service.enqueueDirectRestartPrompt;
+  if (enqueueDirectRestartPrompt) {
+    messaging.enqueueDirectRestartPrompt = (input) =>
+      enqueueDirectRestartPrompt.call(service, input);
+  }
+
   return {
     sharedState: {
       runs: service.runs as TeamProvisioningServiceMemberLifecycleHostPortGroups['sharedState']['runs'],
@@ -166,12 +180,7 @@ export function createTeamProvisioningServiceMemberLifecycleHostPortGroups(
       getLiveTeamAgentRuntimeMetadata: (teamName) =>
         service.getLiveTeamAgentRuntimeMetadata(teamName),
     },
-    messaging: {
-      persistInboxMessage: (teamName, memberName, message) =>
-        service.persistInboxMessage(teamName, memberName, message as unknown as InboxMessage),
-      persistSentMessage: (teamName, message) =>
-        service.persistSentMessage(teamName, message as unknown as InboxMessage),
-    },
+    messaging,
     openCodeRuntime: {
       getOpenCodeRuntimeAdapter: () => service.getOpenCodeRuntimeAdapter(),
       resolveOpenCodeMemberWorkspacesForRuntime: (input) =>

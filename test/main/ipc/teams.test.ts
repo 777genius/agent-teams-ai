@@ -4861,15 +4861,19 @@ describe('ipc teams handlers', () => {
             model: 'gpt-5.4',
             effort: 'high',
             fastMode: 'on',
+            mcpPolicy: { mode: 'appOnly' },
           },
         ],
         cwd: os.tmpdir(),
         providerId: 'codex',
         providerBackendId: 'codex-native',
+        limitContext: true,
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(teamHandlerMocks.createTeam.mock.calls[0][0].members).toEqual([
+      const createRequest = teamHandlerMocks.createTeam.mock.calls[0][0];
+      expect(createRequest.limitContext).toBe(true);
+      expect(createRequest.members).toEqual([
         {
           name: 'builder',
           role: 'Engineer',
@@ -4880,6 +4884,7 @@ describe('ipc teams handlers', () => {
           model: 'gpt-5.4',
           effort: 'high',
           fastMode: 'on',
+          mcpPolicy: { mode: 'appOnly' },
         },
       ]);
     });
@@ -4977,6 +4982,11 @@ describe('ipc teams handlers', () => {
             model: ' gpt-5.2 ',
             effort: 'high',
             fastMode: 'on',
+            mcpPolicy: {
+              mode: 'strictAllowlist',
+              scopes: { project: true, user: false },
+              serverNames: ['agent-teams'],
+            },
           },
         ],
         cwd: '/Users/test/project',
@@ -5008,6 +5018,11 @@ describe('ipc teams handlers', () => {
             model: 'gpt-5.2',
             effort: 'high',
             fastMode: 'on',
+            mcpPolicy: {
+              mode: 'strictAllowlist',
+              scopes: { project: true, user: false },
+              serverNames: ['agent-teams'],
+            },
           },
         ],
         cwd: '/Users/test/project',
@@ -5665,6 +5680,20 @@ describe('ipc teams handlers', () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain('providerBackendId must be valid');
       expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+    });
+
+    it('rejects invalid launch limitContext before dispatching', async () => {
+      const handler = handlers.get(TEAM_LAUNCH)!;
+      const result = (await handler({ sender: { send: vi.fn() } } as never, {
+        teamName: 'my-team',
+        cwd: os.tmpdir(),
+        limitContext: 'true',
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('limitContext must be a boolean');
+      expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.createTeam).not.toHaveBeenCalled();
     });
 
     it('launchTeam preserves top-level OpenCode provider and backend', async () => {

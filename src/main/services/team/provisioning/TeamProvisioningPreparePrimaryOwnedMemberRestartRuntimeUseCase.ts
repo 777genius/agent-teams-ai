@@ -28,6 +28,7 @@ export interface PreparePrimaryOwnedMemberRestartRuntimeInput {
   teamName: string;
   memberName: string;
   persistedRuntimeMembers: readonly PrimaryOwnedMemberRestartPersistedRuntimeMember[];
+  assertStillCurrent?(): void;
   invalidateRuntimeSnapshotCaches(): void;
   loadLiveRuntimeByMember(): Promise<
     ReadonlyMap<string, PrimaryOwnedMemberRestartLiveRuntimeMetadata>
@@ -88,8 +89,10 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
       );
     }
 
+    input.assertStillCurrent?.();
     input.invalidateRuntimeSnapshotCaches();
     const liveRuntimeByMember = await input.loadLiveRuntimeByMember();
+    input.assertStillCurrent?.();
 
     const livePids = new Set<number>();
     let hasAliveRuntimeWithoutPid = false;
@@ -133,6 +136,7 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
         );
       }
     }
+    input.assertStillCurrent?.();
 
     const tmuxPaneIdsToVerify: string[] = [];
     if (!directTmuxRestartPaneId) {

@@ -205,4 +205,36 @@ describe('TeamProvisioningPreparePrimaryOwnedMemberRestartRuntimeUseCase', () =>
     expect(noPidPorts.calls.killedPanes).toEqual([]);
     expect(noPidPorts.calls.killedPids).toEqual([]);
   });
+
+  it('honors stale-run guards after live runtime loading before stop attempts', async () => {
+    const { calls, ports } = createPorts({
+      paneRuntimeInfo: new Map([['pane-a', { currentCommand: 'node' }]]),
+    });
+    const prepareRestartRuntime = createPreparePrimaryOwnedMemberRestartRuntimeUseCase(ports);
+    let current = true;
+
+    await expect(
+      prepareRestartRuntime({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        persistedRuntimeMembers: [{ name: 'Worker', backendType: 'tmux', tmuxPaneId: 'pane-a' }],
+        assertStillCurrent: () => {
+          if (!current) {
+            throw new Error('stale run');
+          }
+        },
+        invalidateRuntimeSnapshotCaches: () => undefined,
+        loadLiveRuntimeByMember: async () => {
+          current = false;
+          return new Map([['Worker', { alive: true, backendType: 'process', pid: 222 }]]);
+        },
+      })
+    ).rejects.toThrow('stale run');
+
+    expect(calls.listedPaneIds).toEqual([]);
+    expect(calls.killedPanes).toEqual([]);
+    expect(calls.killedPids).toEqual([]);
+    expect(calls.waitPidCalls).toEqual([]);
+    expect(calls.waitPaneCalls).toEqual([]);
+  });
 });

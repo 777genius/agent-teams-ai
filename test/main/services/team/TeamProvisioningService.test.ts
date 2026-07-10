@@ -2792,6 +2792,7 @@ describe('TeamProvisioningService', () => {
       > = [
         {
           name: 'alice',
+          bootstrapRunId: 'run-1',
           agentId: 'alice@runtime-team',
           tmuxPaneId: '%1',
           backendType: 'tmux',
@@ -3091,6 +3092,7 @@ describe('TeamProvisioningService', () => {
       (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
         {
           name: 'alice',
+          bootstrapRunId: 'run-1',
           agentId: 'alice@runtime-team',
           tmuxPaneId: '%1',
           backendType: 'tmux',
@@ -3152,6 +3154,7 @@ describe('TeamProvisioningService', () => {
       (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
         {
           name: 'alice',
+          bootstrapRunId: 'run-1',
           agentId: 'alice@runtime-team',
           tmuxPaneId: '%1',
           backendType: 'tmux',
@@ -3290,6 +3293,7 @@ describe('TeamProvisioningService', () => {
         (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
           {
             name: 'alice',
+            bootstrapRunId: 'run-1',
             agentId: 'alice@runtime-team',
             tmuxPaneId: '%1',
             backendType: 'tmux',
@@ -3350,6 +3354,7 @@ describe('TeamProvisioningService', () => {
       (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
         {
           name: 'alice',
+          bootstrapRunId: 'run-1',
           agentId: 'alice@runtime-team',
           tmuxPaneId: '%1',
           backendType: 'tmux',
@@ -4623,6 +4628,7 @@ describe('TeamProvisioningService', () => {
       (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
         {
           name: 'alice',
+          bootstrapRunId: 'run-1',
           agentId: 'alice@runtime-team',
           tmuxPaneId: '%1',
           backendType: 'tmux',
@@ -4753,6 +4759,7 @@ describe('TeamProvisioningService', () => {
       (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
         {
           name: 'alice',
+          bootstrapRunId: 'run-1',
           agentId: 'alice@nice-team',
           tmuxPaneId: '%0',
           backendType: 'tmux',
@@ -4807,6 +4814,7 @@ describe('TeamProvisioningService', () => {
       (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
         {
           name: 'alice',
+          bootstrapRunId: 'run-member-spawn-1',
           agentId: 'alice@nice-team',
           backendType: 'tmux',
         },
@@ -4872,6 +4880,7 @@ describe('TeamProvisioningService', () => {
       (svc as any).readPersistedRuntimeMembers = vi.fn(() => [
         {
           name: 'alice',
+          bootstrapRunId: 'run-1',
           agentId: 'alice@nice-team',
           tmuxPaneId: '%0',
           backendType: 'tmux',
@@ -4957,6 +4966,7 @@ describe('TeamProvisioningService', () => {
           bootstrapConfirmed: true,
           hardFailure: false,
           hardFailureReason: undefined,
+          runtimeRunId: 'opencode-runtime-run',
         },
       });
 
@@ -5142,6 +5152,7 @@ describe('TeamProvisioningService', () => {
           hardFailure: false,
           hardFailureReason: undefined,
           runtimePid: 333,
+          runtimeRunId: 'opencode-runtime-run',
           runtimeSessionId: 'session-alice',
         },
       });
@@ -8024,6 +8035,10 @@ describe('TeamProvisioningService', () => {
         runtimeSessionId: 'oc-session-bob',
       });
 
+      const provisioningRuns = svc as unknown as {
+        provisioningRunByTeam: Map<string, string>;
+      };
+      provisioningRuns.provisioningRunByTeam.delete('team-a');
       const snapshot = await svc.getTeamAgentRuntimeSnapshot('team-a');
       expect(snapshot.members.bob).toMatchObject({
         memberName: 'bob',
@@ -16137,6 +16152,7 @@ describe('TeamProvisioningService', () => {
       > = [
         {
           name: 'forge',
+          bootstrapRunId: run.runId,
           agentId: 'forge@process-team',
           backendType: 'process',
         },
@@ -16582,6 +16598,12 @@ describe('TeamProvisioningService', () => {
       );
       stubMemberLifecycleHostOptionalSeam(svc, 'enqueueDirectRestartPrompt', vi.fn());
       hostSeams.appendDirectProcessRuntimeEvent = vi.fn(async () => {});
+      const runState = svc as unknown as {
+        aliveRunByTeam: Map<string, string>;
+        runs: Map<string, typeof run>;
+      };
+      runState.aliveRunByTeam.set(teamName, run.runId);
+      runState.runs.set(run.runId, run);
 
       await memberLifecycleControllerHarness(svc).launchDirectProcessMemberRestartInternal({
         run,
@@ -16705,6 +16727,12 @@ describe('TeamProvisioningService', () => {
       memberLifecycleUseCasesHarness(svc).appendDirectProcessRuntimeEvent = vi
         .fn()
         .mockRejectedValueOnce(new Error('event write failed'));
+      const runState = svc as unknown as {
+        aliveRunByTeam: Map<string, string>;
+        runs: Map<string, typeof run>;
+      };
+      runState.aliveRunByTeam.set(teamName, run.runId);
+      runState.runs.set(run.runId, run);
 
       await expect(
         memberLifecycleControllerHarness(svc).launchDirectProcessMemberRestartInternal({
@@ -16806,6 +16834,12 @@ describe('TeamProvisioningService', () => {
       );
       stubMemberLifecycleHostOptionalSeam(svc, 'enqueueDirectRestartPrompt', vi.fn());
       hostSeams.appendDirectProcessRuntimeEvent = vi.fn(async () => {});
+      const runState = svc as unknown as {
+        aliveRunByTeam: Map<string, string>;
+        runs: Map<string, typeof run>;
+      };
+      runState.aliveRunByTeam.set(teamName, run.runId);
+      runState.runs.set(run.runId, run);
 
       await memberLifecycleControllerHarness(svc).launchDirectProcessMemberRestartInternal({
         run,

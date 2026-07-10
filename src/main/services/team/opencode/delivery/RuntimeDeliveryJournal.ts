@@ -1,3 +1,4 @@
+import { canonicalizeRuntimeIdempotencyKey } from '../../runtime-control/domain/RuntimeIdempotencyKey';
 import { stableHash, stableJsonStringify } from '../bridge/OpenCodeBridgeCommandContract';
 import { VersionedJsonStore, VersionedJsonStoreError } from '../store/VersionedJsonStore';
 
@@ -65,6 +66,12 @@ export interface RuntimeDeliveryJournalBeginInput {
   now: string;
 }
 
+export interface RuntimeDeliveryJournalKeyInput {
+  idempotencyKey: string;
+  runId: string;
+  teamName: string;
+}
+
 export type RuntimeDeliveryJournalBeginResult =
   | { state: 'new'; record: RuntimeDeliveryJournalRecord }
   | { state: 'already_committed'; record: RuntimeDeliveryJournalRecord }
@@ -75,13 +82,16 @@ export class RuntimeDeliveryJournalStore {
   constructor(private readonly store: VersionedJsonStore<RuntimeDeliveryJournalRecord[]>) {}
 
   async begin(input: RuntimeDeliveryJournalBeginInput): Promise<RuntimeDeliveryJournalBeginResult> {
+    const canonicalInput = canonicalizeRuntimeDeliveryJournalInput(input);
     let result: RuntimeDeliveryJournalBeginResult | null = null;
     await this.store.updateLocked((records) => {
-      const existing = records.find((record) => record.idempotencyKey === input.idempotencyKey);
+      const existing = records.find((record) =>
+        matchesRuntimeDeliveryJournalKey(record, canonicalInput)
+      );
       if (existing) {
         const hasCompatiblePayloadHash =
-          existing.payloadHash === input.payloadHash ||
-          input.compatiblePayloadHashes?.includes(existing.payloadHash) === true;
+          existing.payloadHash === canonicalInput.payloadHash ||
+          canonicalInput.compatiblePayloadHashes?.includes(existing.payloadHash) === true;
         if (!hasCompatiblePayloadHash) {
           result = { state: 'payload_conflict', record: existing };
           return records;
@@ -94,32 +104,32 @@ export class RuntimeDeliveryJournalStore {
 
         const resumed = {
           ...existing,
-          payloadHash: input.payloadHash,
+          payloadHash: canonicalInput.payloadHash,
           attempts: existing.attempts + 1,
           status: existing.status === 'failed_terminal' ? existing.status : 'pending',
-          updatedAt: input.now,
+          updatedAt: canonicalInput.now,
         } satisfies RuntimeDeliveryJournalRecord;
         result = { state: 'resume_pending', record: resumed };
         return records.map((record) =>
-          record.idempotencyKey === input.idempotencyKey ? resumed : record
+          matchesRuntimeDeliveryJournalKey(record, canonicalInput) ? resumed : record
         );
       }
 
       const created: RuntimeDeliveryJournalRecord = {
-        idempotencyKey: input.idempotencyKey,
-        runId: input.runId,
-        teamName: input.teamName,
-        fromMemberName: input.fromMemberName,
-        providerId: input.providerId,
-        runtimeSessionId: input.runtimeSessionId,
-        payloadHash: input.payloadHash,
-        destination: input.destination,
-        destinationMessageId: input.destinationMessageId,
+        idempotencyKey: canonicalInput.idempotencyKey,
+        runId: canonicalInput.runId,
+        teamName: canonicalInput.teamName,
+        fromMemberName: canonicalInput.fromMemberName,
+        providerId: canonicalInput.providerId,
+        runtimeSessionId: canonicalInput.runtimeSessionId,
+        payloadHash: canonicalInput.payloadHash,
+        destination: canonicalInput.destination,
+        destinationMessageId: canonicalInput.destinationMessageId,
         committedLocation: null,
         status: 'pending',
         attempts: 1,
-        createdAt: input.now,
-        updatedAt: input.now,
+        createdAt: canonicalInput.now,
+        updatedAt: canonicalInput.now,
         committedAt: null,
         lastError: null,
       };
@@ -135,36 +145,45 @@ export class RuntimeDeliveryJournalStore {
 
   async markCommitted(input: {
     idempotencyKey: string;
+    runId: string;
+    teamName: string;
     location: RuntimeDeliveryLocation;
     committedAt: string;
   }): Promise<void> {
-    await this.updateExisting(input.idempotencyKey, (record) => ({
+    const canonicalInput = canonicalizeRuntimeDeliveryJournalInput(input);
+    await this.updateExisting(canonicalInput, (record) => ({
       ...record,
-      committedLocation: input.location,
+      committedLocation: canonicalInput.location,
       status: 'committed',
-      updatedAt: input.committedAt,
-      committedAt: input.committedAt,
+      updatedAt: canonicalInput.committedAt,
+      committedAt: canonicalInput.committedAt,
       lastError: null,
     }));
   }
 
   async markFailed(input: {
     idempotencyKey: string;
+    runId: string;
+    teamName: string;
     status: 'failed_retryable' | 'failed_terminal';
     error: string;
     updatedAt: string;
   }): Promise<void> {
-    await this.updateExisting(input.idempotencyKey, (record) => ({
+    const canonicalInput = canonicalizeRuntimeDeliveryJournalInput(input);
+    await this.updateExisting(canonicalInput, (record) => ({
       ...record,
-      status: input.status,
-      updatedAt: input.updatedAt,
-      lastError: input.error,
+      status: canonicalInput.status,
+      updatedAt: canonicalInput.updatedAt,
+      lastError: canonicalInput.error,
     }));
   }
 
-  async get(idempotencyKey: string): Promise<RuntimeDeliveryJournalRecord | null> {
+  async get(input: RuntimeDeliveryJournalKeyInput): Promise<RuntimeDeliveryJournalRecord | null> {
+    const canonicalInput = canonicalizeRuntimeDeliveryJournalInput(input);
     const records = await this.readRequired();
-    return records.find((record) => record.idempotencyKey === idempotencyKey) ?? null;
+    return (
+      records.find((record) => matchesRuntimeDeliveryJournalKey(record, canonicalInput)) ?? null
+    );
   }
 
   async listRecoverable(teamName: string): Promise<RuntimeDeliveryJournalRecord[]> {
@@ -200,13 +219,13 @@ export class RuntimeDeliveryJournalStore {
   }
 
   private async updateExisting(
-    idempotencyKey: string,
+    input: RuntimeDeliveryJournalKeyInput,
     updater: (record: RuntimeDeliveryJournalRecord) => RuntimeDeliveryJournalRecord
   ): Promise<void> {
     let found = false;
     await this.store.updateLocked((records) =>
       records.map((record) => {
-        if (record.idempotencyKey !== idempotencyKey) {
+        if (!matchesRuntimeDeliveryJournalKey(record, input)) {
           return record;
         }
         found = true;
@@ -215,7 +234,9 @@ export class RuntimeDeliveryJournalStore {
     );
 
     if (!found) {
-      throw new Error(`Runtime delivery journal record not found: ${idempotencyKey}`);
+      throw new Error(
+        `Runtime delivery journal record not found: ${input.teamName}/${input.runId}/${input.idempotencyKey}`
+      );
     }
   }
 
@@ -226,6 +247,17 @@ export class RuntimeDeliveryJournalStore {
     }
     return result.data;
   }
+}
+
+function matchesRuntimeDeliveryJournalKey(
+  record: RuntimeDeliveryJournalRecord,
+  input: RuntimeDeliveryJournalKeyInput
+): boolean {
+  return (
+    record.idempotencyKey === input.idempotencyKey &&
+    record.runId === input.runId &&
+    record.teamName === input.teamName
+  );
 }
 
 export function createRuntimeDeliveryJournalStore(options: {
@@ -255,12 +287,25 @@ export function validateRuntimeDeliveryJournalRecords(
     if (!isRuntimeDeliveryJournalRecord(record)) {
       throw new Error(`Invalid runtime delivery journal record at index ${index}`);
     }
-    if (seen.has(record.idempotencyKey)) {
-      throw new Error(`Duplicate runtime delivery idempotency key: ${record.idempotencyKey}`);
+    const normalizedRecord = {
+      ...record,
+      idempotencyKey: canonicalizeRuntimeIdempotencyKey(record.idempotencyKey, {
+        errorPrefix: 'Runtime delivery journal record',
+      }),
+    };
+    const key = buildRuntimeDeliveryJournalKey(normalizedRecord);
+    if (seen.has(key)) {
+      throw new Error(
+        `Duplicate runtime delivery idempotency key for run: ${normalizedRecord.teamName}/${normalizedRecord.runId}/${normalizedRecord.idempotencyKey}`
+      );
     }
-    seen.add(record.idempotencyKey);
-    return record;
+    seen.add(key);
+    return normalizedRecord;
   });
+}
+
+function buildRuntimeDeliveryJournalKey(record: RuntimeDeliveryJournalRecord): string {
+  return `${record.teamName}\u0000${record.runId}\u0000${record.idempotencyKey}`;
 }
 
 export function hashRuntimeDeliveryEnvelope(envelope: RuntimeDeliveryEnvelope): string {
@@ -299,7 +344,9 @@ function hashRuntimeDeliveryEnvelopeWithTaskRefs(
 
 export function buildRuntimeDestinationMessageId(envelope: RuntimeDeliveryEnvelope): string {
   return `runtime-delivery-${stableHash({
-    idempotencyKey: envelope.idempotencyKey,
+    idempotencyKey: canonicalizeRuntimeIdempotencyKey(envelope.idempotencyKey, {
+      errorPrefix: 'Runtime delivery envelope',
+    }),
     runId: envelope.runId,
     teamName: envelope.teamName,
   }).slice(0, 32)}`;
@@ -331,7 +378,9 @@ export function normalizeRuntimeDeliveryEnvelope(value: unknown): RuntimeDeliver
 
   const taskRefs = normalizeRuntimeDeliveryTaskRefs(value.taskRefs);
   const envelope: RuntimeDeliveryEnvelope = {
-    idempotencyKey: requireNonEmptyString(value.idempotencyKey, 'idempotencyKey'),
+    idempotencyKey: canonicalizeRuntimeIdempotencyKey(value.idempotencyKey, {
+      errorPrefix: 'Runtime delivery envelope',
+    }),
     runId: requireNonEmptyString(value.runId, 'runId'),
     teamName: requireNonEmptyString(value.teamName, 'teamName'),
     fromMemberName: requireNonEmptyString(value.fromMemberName, 'fromMemberName'),
@@ -531,6 +580,17 @@ function requireNonEmptyString(value: unknown, field: string): string {
     throw new Error(`Runtime delivery envelope missing ${field}`);
   }
   return value;
+}
+
+function canonicalizeRuntimeDeliveryJournalInput<T extends RuntimeDeliveryJournalKeyInput>(
+  input: T
+): Omit<T, 'idempotencyKey'> & RuntimeDeliveryJournalKeyInput {
+  return {
+    ...input,
+    idempotencyKey: canonicalizeRuntimeIdempotencyKey(input.idempotencyKey, {
+      errorPrefix: 'Runtime delivery envelope',
+    }),
+  };
 }
 
 function requireRuntimeDeliveryIso(value: unknown, field: string): string {

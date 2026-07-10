@@ -464,21 +464,70 @@ describe('runtime projection foundation', () => {
     });
   });
 
-  it('projects runtime snapshot liveness overrides from bootstrap evidence', () => {
+  it('projects runtime snapshot liveness overrides from provider-agnostic bootstrap evidence', () => {
+    const genericBootstrapProjection = projectRuntimeSnapshotMemberLivenessFields({
+      liveAlive: false,
+      liveLivenessKind: 'runtime_process_candidate',
+      livePidSource: 'agent_process_table',
+      liveRuntimeDiagnostic: 'candidate only',
+      liveRuntimeDiagnosticSeverity: 'warning',
+      confirmedRuntimeBootstrapAlive: true,
+    });
+
+    expect(genericBootstrapProjection).toEqual({
+      alive: true,
+      livenessKind: 'confirmed_bootstrap',
+      pidSource: 'agent_process_table',
+      runtimeDiagnostic: 'bootstrap confirmed; runtime host/session evidence present.',
+      runtimeDiagnosticSeverity: 'info',
+    });
+    expect(genericBootstrapProjection.runtimeDiagnostic).not.toContain('OpenCode');
+
     expect(
       projectRuntimeSnapshotMemberLivenessFields({
         liveAlive: false,
         liveLivenessKind: 'runtime_process_candidate',
-        livePidSource: 'opencode_bridge',
+        livePidSource: 'agent_process_table',
         liveRuntimeDiagnostic: 'candidate only',
         liveRuntimeDiagnosticSeverity: 'warning',
-        confirmedOpenCodeRuntimeAlive: true,
+        confirmedRuntimeBootstrapAlive: true,
+        confirmedRuntimeBootstrapDiagnostic: 'provider bootstrap confirmed',
       })
     ).toEqual({
       alive: true,
       livenessKind: 'confirmed_bootstrap',
+      pidSource: 'agent_process_table',
+      runtimeDiagnostic: 'provider bootstrap confirmed',
+      runtimeDiagnosticSeverity: 'info',
+    });
+    expect(
+      projectRuntimeSnapshotMemberLivenessFields({
+        liveAlive: true,
+        liveLivenessKind: 'runtime_process',
+        livePidSource: 'opencode_bridge',
+        liveRuntimeDiagnostic: 'runtime process detected',
+        liveRuntimeDiagnosticSeverity: 'info',
+        confirmedRuntimeBootstrapAlive: true,
+      })
+    ).toEqual({
+      alive: true,
+      livenessKind: 'runtime_process',
       pidSource: 'opencode_bridge',
-      runtimeDiagnostic: 'OpenCode bootstrap confirmed; runtime host/session evidence present.',
+      runtimeDiagnostic: 'runtime process detected',
+      runtimeDiagnosticSeverity: 'info',
+    });
+    expect(
+      projectRuntimeSnapshotMemberLivenessFields({
+        liveAlive: false,
+        liveLivenessKind: 'registered_only',
+        confirmedRuntimeBootstrapAlive: true,
+        confirmedRuntimeBootstrapDiagnostic: 'runtime adapter confirmed bootstrap',
+      })
+    ).toEqual({
+      alive: true,
+      livenessKind: 'confirmed_bootstrap',
+      pidSource: 'runtime_bootstrap',
+      runtimeDiagnostic: 'runtime adapter confirmed bootstrap',
       runtimeDiagnosticSeverity: 'info',
     });
 
@@ -508,13 +557,13 @@ describe('runtime projection foundation', () => {
         livePidSource: 'persisted_metadata',
         liveRuntimeDiagnostic: 'registered runtime metadata without live process',
         liveRuntimeDiagnosticSeverity: 'warning',
-        confirmedOpenCodeRuntimeAdapterAlive: true,
+        confirmedRuntimeBootstrapAlive: true,
       })
     ).toEqual({
       alive: true,
       livenessKind: 'confirmed_bootstrap',
       pidSource: 'runtime_bootstrap',
-      runtimeDiagnostic: 'OpenCode bootstrap confirmed; runtime host/session evidence present.',
+      runtimeDiagnostic: 'bootstrap confirmed; runtime host/session evidence present.',
       runtimeDiagnosticSeverity: 'info',
     });
 
@@ -522,13 +571,13 @@ describe('runtime projection foundation', () => {
       projectRuntimeSnapshotMemberLivenessFields({
         liveAlive: false,
         liveLivenessKind: 'not_found',
-        confirmedOpenCodeRuntimeAdapterAlive: true,
+        confirmedRuntimeBootstrapAlive: true,
       })
     ).toEqual({
       alive: true,
       livenessKind: 'confirmed_bootstrap',
       pidSource: 'runtime_bootstrap',
-      runtimeDiagnostic: 'OpenCode bootstrap confirmed; runtime host/session evidence present.',
+      runtimeDiagnostic: 'bootstrap confirmed; runtime host/session evidence present.',
       runtimeDiagnosticSeverity: 'info',
     });
   });

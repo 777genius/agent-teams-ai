@@ -40,19 +40,28 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     }
   });
 
-  it('dedupes a retry with the same trimmed message id and conversation id', async () => {
+  it('dedupes a runtime retry with the same trimmed idempotency key', async () => {
     const outbox = new CrossTeamOutbox();
     const onBeforeAppend = vi.fn(async () => {});
     const message = makeMessage();
     const retry = makeMessage({
-      messageId: ' runtime-message-1 ',
+      messageId: 'runtime-message-retry-with-same-idempotency-key',
       conversationId: '\truntime-idempotency-1\n',
+      text: 'Retry payload changed after the runtime key was already recorded',
+      summary: 'Retry summary changed',
+      taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'source-team' }],
     });
 
-    await expect(outbox.appendIfNotRecent('source-team', message, onBeforeAppend)).resolves.toEqual(
-      { duplicate: null }
-    );
-    await expect(outbox.appendIfNotRecent('source-team', retry, onBeforeAppend)).resolves.toEqual({
+    await expect(
+      outbox.appendIfNotRecent('source-team', message, onBeforeAppend, undefined, {
+        stableIdentity: true,
+      })
+    ).resolves.toEqual({ duplicate: null });
+    await expect(
+      outbox.appendIfNotRecent('source-team', retry, onBeforeAppend, undefined, {
+        stableIdentity: true,
+      })
+    ).resolves.toEqual({
       duplicate: message,
     });
 

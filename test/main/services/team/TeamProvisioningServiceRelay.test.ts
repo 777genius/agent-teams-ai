@@ -2951,36 +2951,35 @@ Messages:
         } as any,
       ])
     );
+    (service as any).setSecondaryRuntimeRun({
+      teamName,
+      runId: 'opencode-run-1',
+      providerId: 'opencode',
+      laneId,
+      memberName: 'jack',
+      cwd: '/tmp/my-team',
+    });
     vi.spyOn(service as any, 'getCurrentOpenCodeRuntimeRunId').mockReturnValue('opencode-run-1');
-    const deliveryCompatibility = (service as any).openCodeMemberMessageDeliveryCompatibility;
-    const createDeliveryService =
-      deliveryCompatibility.createOpenCodeMemberMessageDeliveryService.bind(deliveryCompatibility);
-    vi.spyOn(deliveryCompatibility, 'createOpenCodeMemberMessageDeliveryService').mockImplementation(
-      () => {
-        const deliveryService = createDeliveryService();
-        const deps = (deliveryService as any).deps;
-        deps.findDeliverableOpenCodeRuntimeBootstrapSessionEvidence = vi.fn(async () => ({
+    vi.spyOn(
+      OpenCodeRuntimeStore,
+      'readCommittedOpenCodeBootstrapSessionEvidence'
+    ).mockResolvedValue({
+      state: 'healthy',
+      committed: true,
+      activeRunId: 'opencode-run-1',
+      sessions: [
+        {
           id: 'session-jack',
           teamName,
           memberName: 'jack',
           laneId,
           runId: 'opencode-run-1',
+          observedAt: '2026-02-23T17:00:00.000Z',
           source: 'runtime_bootstrap_checkin',
-        }));
-        deps.openCodeVisibleReplyProofService = {
-          ...deps.openCodeVisibleReplyProofService,
-          applyDestinationProof: vi.fn(async (input: any) => ({
-            ledgerRecord: input.ledgerRecord,
-            visibleReply: null,
-          })),
-          materializePlainTextReplyIfNeeded: vi.fn(async (input: any) => ({
-            ledgerRecord: input.ledgerRecord,
-            visibleReply: null,
-          })),
-        };
-        return deliveryService;
-      }
-    );
+        },
+      ],
+      diagnostics: [],
+    });
     const watchdogSpy = vi
       .spyOn(service as any, 'scheduleOpenCodePromptDeliveryWatchdog')
       .mockImplementation(() => undefined);

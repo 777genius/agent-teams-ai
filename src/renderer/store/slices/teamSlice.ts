@@ -1559,12 +1559,23 @@ function loadAllLaunchParams(): Record<string, TeamLaunchParams> {
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key?.startsWith(LAUNCH_PARAMS_PREFIX)) {
+      if (!key?.startsWith(LAUNCH_PARAMS_PREFIX)) {
+        continue;
+      }
+
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) {
+          continue;
+        }
+
         const teamName = key.slice(LAUNCH_PARAMS_PREFIX.length);
-        const parsed = JSON.parse(localStorage.getItem(key)!) as TeamLaunchParams;
+        const parsed = JSON.parse(raw) as TeamLaunchParams;
         if (parsed && typeof parsed === 'object') {
           result[teamName] = parsed;
         }
+      } catch {
+        // ignore this entry - best-effort restore
       }
     }
   } catch {

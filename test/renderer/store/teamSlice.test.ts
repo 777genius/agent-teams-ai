@@ -21,15 +21,20 @@ import {
   type TeamRefreshFanoutSnapshot,
 } from '../../../src/renderer/store/teamRefreshFanoutDiagnostics';
 
-import type { TeamLaunchParams, TeamSlice } from '../../../src/renderer/store/slices/teamSlice';
+import type { TeamSlice } from '../../../src/renderer/store/slices/teamSlice';
+import type { TeamLaunchParams } from '../../../src/renderer/store/team/teamLaunchParams';
+import type { AppState } from '../../../src/renderer/store/types';
 import type {
   GlobalTask,
   InboxMessage,
+  KanbanState,
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,
   TeamAgentRuntimeResourceSample,
   TeamAgentRuntimeSnapshot,
+  TeamConfig,
   TeamMemberSnapshot,
+  TeamTaskWithKanban,
   TeamViewSnapshot,
 } from '../../../src/shared/types';
 
@@ -116,34 +121,92 @@ vi.mock('../../../src/renderer/utils/unwrapIpc', async (importOriginal) => {
   };
 });
 
-type TeamSliceTestTab = {
-  id: string;
-  type: string;
-  teamName?: string;
-  label?: string;
+type TeamSliceHarnessState = TeamSlice &
+  Pick<
+    AppState,
+    | 'getAllPaneTabs'
+    | 'invalidateTaskChangePresence'
+    | 'openTab'
+    | 'paneLayout'
+    | 'setActiveTab'
+    | 'updateTabLabel'
+    | 'warmTaskChangeSummaries'
+  >;
+
+type TestTabInput = Omit<AppState['paneLayout']['panes'][number]['tabs'][number], 'createdAt'> & {
+  createdAt?: number;
 };
 
-type TeamSliceTestState = TeamSlice &
-  Record<string, unknown> & {
-    getAllPaneTabs: () => TeamSliceTestTab[];
-    warmTaskChangeSummaries: (...args: unknown[]) => Promise<void>;
+type TestTab = AppState['paneLayout']['panes'][number]['tabs'][number];
+
+type TeamTaskFixture = Omit<Partial<TeamTaskWithKanban>, 'id'> &
+  Pick<TeamTaskWithKanban, 'id'>;
+
+type GlobalTaskFixture = Omit<Partial<GlobalTask>, 'id' | 'teamName'> &
+  Pick<GlobalTask, 'id' | 'teamName'>;
+
+type TeamMemberSnapshotFixture = Omit<Partial<TeamMemberSnapshot>, 'name'> &
+  Pick<TeamMemberSnapshot, 'name'>;
+
+type TeamSnapshotFixtureOverrides = Omit<
+  Partial<TeamViewSnapshot>,
+  'config' | 'kanbanState' | 'members' | 'tasks'
+> & {
+  config?: Partial<TeamConfig>;
+  kanbanState?: Partial<KanbanState>;
+  members?: TeamMemberSnapshotFixture[];
+  tasks?: TeamTaskFixture[];
+};
+
+function createTestTab(tab: TestTabInput): TestTab {
+  return { createdAt: 0, ...tab };
+}
+
+function createPaneLayout(tabs: TestTabInput[] = []): AppState['paneLayout'] {
+  return {
+    focusedPaneId: 'pane-default',
+    panes: [
+      {
+        id: 'pane-default',
+        widthFraction: 1,
+        tabs: tabs.map(createTestTab),
+        activeTabId: tabs[0]?.id ?? null,
+        selectedTabIds: [],
+      },
+    ],
   };
+}
+
+function createTeamTaskFixture(task: TeamTaskFixture): TeamTaskWithKanban {
+  return {
+    ...task,
+    subject: task.subject ?? task.id,
+    status: task.status ?? 'pending',
+  };
+}
+
+function createGlobalTaskFixture(task: GlobalTaskFixture): GlobalTask {
+  return {
+    ...task,
+    subject: task.subject ?? task.id,
+    status: task.status ?? 'pending',
+    teamDisplayName: task.teamDisplayName ?? task.teamName,
+  };
+}
+
+function createTeamMemberSnapshotFixture(member: TeamMemberSnapshotFixture): TeamMemberSnapshot {
+  return {
+    currentTaskId: null,
+    taskCount: 0,
+    ...member,
+  };
+}
 
 function createSliceStore() {
-  return create<TeamSliceTestState>()((set, get, store) =>
+  return create<TeamSliceHarnessState>()((set, get, store) =>
     ({
       ...createTeamSlice(set as never, get as never, store as never),
-      paneLayout: {
-        focusedPaneId: 'pane-default',
-        panes: [
-          {
-            id: 'pane-default',
-            widthFraction: 1,
-            tabs: [],
-            activeTabId: null,
-          },
-        ],
-      },
+      paneLayout: createPaneLayout(),
       openTab: vi.fn(),
       setActiveTab: vi.fn(),
       updateTabLabel: vi.fn(),
@@ -152,41 +215,22 @@ function createSliceStore() {
       invalidateTaskChangePresence: vi.fn(),
       fetchTeams: vi.fn(async () => undefined),
       fetchAllTasks: vi.fn(async () => undefined),
-    }) as unknown as TeamSliceTestState
+    }) satisfies TeamSliceHarnessState
   );
 }
 
-function createTeamSnapshot(overrides: Record<string, unknown> = {}): TeamViewSnapshot {
+function createTeamSnapshot(overrides: TeamSnapshotFixtureOverrides = {}): TeamViewSnapshot {
+  const { config, kanbanState, members, tasks, ...rest } = overrides;
+  const teamName = rest.teamName ?? 'my-team';
+
   return {
-    teamName: 'my-team',
-    config: { name: 'My Team' },
-    tasks: [],
-    members: [],
-    kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
+    teamName,
+    config: { name: 'My Team', ...config },
+    tasks: tasks?.map(createTeamTaskFixture) ?? [],
+    members: members?.map(createTeamMemberSnapshotFixture) ?? [],
+    kanbanState: { teamName, reviewers: [], tasks: {}, ...kanbanState },
     processes: [],
-    ...overrides,
-  } as TeamViewSnapshot;
-}
-
-function createTeamMemberSnapshot(overrides: Partial<TeamMemberSnapshot> = {}): TeamMemberSnapshot {
-  return {
-    name: 'alice',
-    agentId: 'agent-alice',
-    currentTaskId: null,
-    taskCount: 0,
-    ...overrides,
-  };
-}
-
-function createGlobalTask(overrides: Partial<GlobalTask> = {}): GlobalTask {
-  return {
-    teamName: 'my-team',
-    teamDisplayName: 'My Team',
-    id: 'task-1',
-    subject: 'Task',
-    status: 'pending',
-    changePresence: 'unknown',
-    ...overrides,
+    ...rest,
   };
 }
 
@@ -318,7 +362,9 @@ async function flushAsyncWork(): Promise<void> {
   await flushMicrotasks();
 }
 
-function createRuntimeSnapshot(overrides: Record<string, unknown> = {}): TeamAgentRuntimeSnapshot {
+function createRuntimeSnapshot(
+  overrides: Partial<TeamAgentRuntimeSnapshot> = {}
+): TeamAgentRuntimeSnapshot {
   return {
     teamName: 'my-team',
     updatedAt: '2026-03-12T10:00:00.000Z',
@@ -336,7 +382,7 @@ function createRuntimeSnapshot(overrides: Record<string, unknown> = {}): TeamAge
       },
     },
     ...overrides,
-  } as TeamAgentRuntimeSnapshot;
+  };
 }
 
 describe('teamSlice actions', () => {
@@ -392,6 +438,12 @@ describe('teamSlice actions', () => {
     hoisted.restartMember.mockResolvedValue(undefined);
     hoisted.skipMemberForLaunch.mockResolvedValue(undefined);
     window.localStorage.removeItem('team:messagesPanelMode');
+    for (let i = window.localStorage.length - 1; i >= 0; i--) {
+      const key = window.localStorage.key(i);
+      if (key?.startsWith('team:launchParams:')) {
+        window.localStorage.removeItem(key);
+      }
+    }
   });
 
   afterEach(() => {
@@ -438,9 +490,13 @@ describe('teamSlice actions', () => {
       selectedTeamData: existingData,
       teamDataCacheByName: { 'my-team': existingData },
       globalTasks: [
-        createGlobalTask({ teamName: 'my-team', id: 'task-1', changePresence: 'unknown' }),
-        createGlobalTask({ teamName: 'my-team', id: 'task-2', changePresence: 'unknown' }),
-        createGlobalTask({ teamName: 'other-team', id: 'task-1', changePresence: 'unknown' }),
+        createGlobalTaskFixture({ teamName: 'my-team', id: 'task-1', changePresence: 'unknown' }),
+        createGlobalTaskFixture({ teamName: 'my-team', id: 'task-2', changePresence: 'unknown' }),
+        createGlobalTaskFixture({
+          teamName: 'other-team',
+          id: 'task-1',
+          changePresence: 'unknown',
+        }),
       ],
     });
 
@@ -452,7 +508,7 @@ describe('teamSlice actions', () => {
     expect(
       store
         .getState()
-        .selectedTeamData!.tasks.map((task: { changePresence?: string }) => task.changePresence)
+        .selectedTeamData?.tasks.map((task: { changePresence?: string }) => task.changePresence)
     ).toEqual(['no_changes', 'has_changes']);
     expect(
       store
@@ -478,17 +534,9 @@ describe('teamSlice actions', () => {
         teamName: 'other-team',
         config: { name: 'Other Team' },
       }),
-      paneLayout: {
-        focusedPaneId: 'pane-default',
-        panes: [
-          {
-            id: 'pane-default',
-            widthFraction: 1,
-            tabs: [{ id: 'graph-my-team', type: 'graph', teamName: 'my-team', label: 'Graph' }],
-            activeTabId: 'graph-my-team',
-          },
-        ],
-      },
+      paneLayout: createPaneLayout([
+        { id: 'graph-my-team', type: 'graph', teamName: 'my-team', label: 'Graph' },
+      ]),
     });
 
     store.getState().onProvisioningProgress({
@@ -1234,19 +1282,14 @@ describe('teamSlice actions', () => {
     const store = createSliceStore();
     store.setState({
       teamDataCacheByName: {
-        'my-team': {
-          teamName: 'my-team',
-          config: { name: 'My Team' },
-          tasks: [],
+        'my-team': createTeamSnapshot({
           members: [
-            createTeamMemberSnapshot({ name: 'alice', agentId: 'agent-alice' }),
-            createTeamMemberSnapshot({ name: 'bob', agentId: 'agent-bob' }),
-            createTeamMemberSnapshot({ name: 'tom', agentId: 'agent-tom' }),
-            createTeamMemberSnapshot({ name: 'jack', agentId: 'agent-jack' }),
+            { name: 'alice', agentId: 'agent-alice' },
+            { name: 'bob', agentId: 'agent-bob' },
+            { name: 'tom', agentId: 'agent-tom' },
+            { name: 'jack', agentId: 'agent-jack' },
           ],
-          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
-          processes: [],
-        },
+        }),
       },
     });
 
@@ -1284,8 +1327,13 @@ describe('teamSlice actions', () => {
   it('syncs both team and graph tab labels when the team display name changes', async () => {
     const store = createSliceStore();
     const getAllPaneTabs = vi.fn(() => [
-      { id: 'team-tab', type: 'team', teamName: 'my-team', label: 'my-team' },
-      { id: 'graph-tab', type: 'graph', teamName: 'my-team', label: 'my-team Graph' },
+      createTestTab({ id: 'team-tab', type: 'team', teamName: 'my-team', label: 'my-team' }),
+      createTestTab({
+        id: 'graph-tab',
+        type: 'graph',
+        teamName: 'my-team',
+        label: 'my-team Graph',
+      }),
     ]);
     const updateTabLabel = vi.fn();
 
@@ -2397,7 +2445,7 @@ describe('teamSlice actions', () => {
 
     store.setState({
       getAllPaneTabs: vi.fn(() => [
-        { id: 'tab-1', type: 'team', teamName: 'my-team', label: 'Old Team' },
+        createTestTab({ id: 'tab-1', type: 'team', teamName: 'my-team', label: 'Old Team' }),
       ]),
       updateTabLabel,
     });
@@ -3572,8 +3620,8 @@ describe('teamSlice actions', () => {
       text: 'hello',
       timestamp: '2026-03-12T10:00:00.000Z',
       messageId: 'm-1',
+      read: false,
       source: 'inbox' as const,
-      read: true,
     };
 
     store.setState({
@@ -4840,7 +4888,7 @@ describe('teamSlice actions', () => {
       processCount: 1,
       runtimeLoadScope: 'single-process',
       pid: 4242,
-    };
+    } satisfies TeamAgentRuntimeResourceSample;
     const snapshot = createRuntimeSnapshot({
       members: {
         alice: {
@@ -5097,14 +5145,7 @@ describe('teamSlice actions', () => {
       // First, select a team so selectedTeamName is set
       store.setState({
         selectedTeamName: 'my-team',
-        selectedTeamData: {
-          teamName: 'my-team',
-          config: { name: 'My Team' },
-          tasks: [],
-          members: [],
-          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
-          processes: [],
-        },
+        selectedTeamData: createTeamSnapshot(),
         selectedTeamError: null,
       });
 
@@ -5122,14 +5163,7 @@ describe('teamSlice actions', () => {
     it('preserves existing data on transient refresh error', async () => {
       vi.spyOn(console, 'warn').mockImplementation(() => {});
       const store = createSliceStore();
-      const existingData = {
-        teamName: 'my-team',
-        config: { name: 'My Team' },
-        tasks: [],
-        members: [],
-        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
-        processes: [],
-      };
+      const existingData = createTeamSnapshot();
       store.setState({
         selectedTeamName: 'my-team',
         selectedTeamData: existingData,
@@ -5377,14 +5411,7 @@ describe('teamSlice actions', () => {
       const store = createSliceStore();
       store.setState({
         selectedTeamName: 'my-team',
-        selectedTeamData: {
-          teamName: 'my-team',
-          config: { name: 'My Team' },
-          tasks: [],
-          members: [],
-          kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
-          processes: [],
-        },
+        selectedTeamData: createTeamSnapshot(),
         selectedTeamError: 'Previous failure',
       });
 
@@ -5400,14 +5427,7 @@ describe('teamSlice actions', () => {
     it('clears stale selectedTeamError on transient error when data exists', async () => {
       vi.spyOn(console, 'warn').mockImplementation(() => {});
       const store = createSliceStore();
-      const existingData = {
-        teamName: 'my-team',
-        config: { name: 'My Team' },
-        tasks: [],
-        members: [],
-        kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
-        processes: [],
-      };
+      const existingData = createTeamSnapshot();
       store.setState({
         selectedTeamName: 'my-team',
         selectedTeamData: existingData,
@@ -5526,7 +5546,6 @@ describe('teamSlice actions', () => {
               {
                 id: 'evt-approved',
                 type: 'review_approved',
-                from: 'review',
                 to: 'approved',
                 timestamp: '2026-03-01T10:10:00.000Z',
               },
@@ -5635,6 +5654,35 @@ describe('teamSlice actions', () => {
   });
 
   describe('provisioning run scoping', () => {
+    it('restores valid launch params when another persisted entry is malformed', () => {
+      window.localStorage.setItem('team:launchParams:broken-team', '{bad json');
+      window.localStorage.setItem(
+        'team:launchParams:my-team',
+        JSON.stringify({
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'medium',
+          limitContext: true,
+        })
+      );
+
+      const store = createSliceStore();
+
+      expect(store.getState().launchParamsByTeam).toEqual({
+        'my-team': {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'medium',
+          limitContext: true,
+        },
+      });
+
+      window.localStorage.removeItem('team:launchParams:broken-team');
+      window.localStorage.removeItem('team:launchParams:my-team');
+    });
+
     it('persists providerBackendId into createTeam launch params', async () => {
       const store = createSliceStore();
 
@@ -5833,13 +5881,13 @@ describe('teamSlice actions', () => {
 
     it('keeps previous launch params while a metadata-only relaunch request is pending', async () => {
       const store = createSliceStore();
-      const previousParams: TeamLaunchParams = {
+      const previousParams = {
         providerId: 'codex',
         providerBackendId: 'codex-native',
         model: 'gpt-5.5',
         effort: 'medium',
         limitContext: false,
-      };
+      } satisfies TeamLaunchParams;
       store.setState({
         launchParamsByTeam: {
           'my-team': previousParams,
@@ -5864,13 +5912,13 @@ describe('teamSlice actions', () => {
 
     it('rolls back staged launch params when launchTeam fails before provisioning starts', async () => {
       const store = createSliceStore();
-      const previousParams: TeamLaunchParams = {
+      const previousParams = {
         providerId: 'codex',
         providerBackendId: 'codex-native',
         model: 'gpt-5.5',
         effort: 'medium',
         limitContext: false,
-      };
+      } satisfies TeamLaunchParams;
       store.setState({
         launchParamsByTeam: {
           'my-team': previousParams,
@@ -5893,13 +5941,13 @@ describe('teamSlice actions', () => {
 
     it('rolls back optimistic pending run on early createTeam failure', async () => {
       const store = createSliceStore();
-      const previousParams: TeamLaunchParams = {
+      const previousParams = {
         providerId: 'codex',
         providerBackendId: 'codex-native',
         model: 'gpt-5.5',
         effort: 'medium',
         limitContext: false,
-      };
+      } satisfies TeamLaunchParams;
       store.setState({
         launchParamsByTeam: {
           'my-team': previousParams,
@@ -5936,17 +5984,9 @@ describe('teamSlice actions', () => {
           kanbanState: { teamName: 'other-team', reviewers: [], tasks: {} },
           processes: [],
         },
-        paneLayout: {
-          focusedPaneId: 'pane-default',
-          panes: [
-            {
-              id: 'pane-default',
-              widthFraction: 1,
-              tabs: [{ id: 'graph-1', type: 'graph', teamName: 'my-team', label: 'My Team' }],
-              activeTabId: 'graph-1',
-            },
-          ],
-        },
+        paneLayout: createPaneLayout([
+          { id: 'graph-1', type: 'graph', teamName: 'my-team', label: 'My Team' },
+        ]),
         currentProvisioningRunIdByTeam: {
           'my-team': 'run-current',
         },
@@ -5981,17 +6021,9 @@ describe('teamSlice actions', () => {
           kanbanState: { teamName: 'other-team', reviewers: [], tasks: {} },
           processes: [],
         },
-        paneLayout: {
-          focusedPaneId: 'pane-default',
-          panes: [
-            {
-              id: 'pane-default',
-              widthFraction: 1,
-              tabs: [{ id: 'graph-1', type: 'graph', teamName: 'my-team', label: 'My Team' }],
-              activeTabId: 'graph-1',
-            },
-          ],
-        },
+        paneLayout: createPaneLayout([
+          { id: 'graph-1', type: 'graph', teamName: 'my-team', label: 'My Team' },
+        ]),
         currentProvisioningRunIdByTeam: {
           'my-team': 'run-current',
         },
@@ -6149,7 +6181,12 @@ describe('teamSlice actions', () => {
         },
         memberSpawnStatusesByTeam: {
           'my-team': {
-            alice: { status: 'spawning', launchState: 'starting', updatedAt: '2026-03-12T10:00:00.000Z' },
+            alice: createMemberSpawnStatus({
+              status: 'spawning',
+              launchState: 'starting',
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+            }),
           },
         },
       });
@@ -6206,7 +6243,7 @@ describe('teamSlice actions', () => {
       hoisted.getMemberSpawnStatuses.mockResolvedValue({
         runId: 'runtime-run',
         statuses: {
-          alice: { status: 'spawning', launchState: 'starting', updatedAt: '2026-03-12T10:00:00.000Z' },
+          alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
         },
       });
 
@@ -6215,7 +6252,7 @@ describe('teamSlice actions', () => {
       expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('provisioning-run');
       expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('runtime-run');
       expect(store.getState().memberSpawnStatusesByTeam['my-team']).toEqual({
-        alice: { status: 'spawning', launchState: 'starting', updatedAt: '2026-03-12T10:00:00.000Z' },
+        alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
       });
     });
 
@@ -6654,7 +6691,7 @@ describe('teamSlice actions', () => {
       hoisted.getMemberSpawnStatuses.mockResolvedValue({
         runId: 'old-runtime-run',
         statuses: {
-          alice: { status: 'spawning', launchState: 'starting', updatedAt: '2026-03-12T10:00:00.000Z' },
+          alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
         },
       });
 
@@ -6800,7 +6837,7 @@ describe('teamSlice actions', () => {
       hoisted.getMemberSpawnStatuses.mockResolvedValue({
         runId: 'runtime-old',
         statuses: {
-          alice: { status: 'spawning', launchState: 'starting', updatedAt: '2026-03-12T10:00:00.000Z' },
+          alice: { status: 'spawning', updatedAt: '2026-03-12T10:00:00.000Z' },
         },
       });
 
@@ -6812,6 +6849,12 @@ describe('teamSlice actions', () => {
 
     it('preserves current spawn statuses when clearing a non-canonical missing run', () => {
       const store = createSliceStore();
+      const spawningStatus = createMemberSpawnStatus({
+        status: 'spawning',
+        launchState: 'starting',
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+      });
       store.setState({
         provisioningRuns: {
           'run-current': {
@@ -6836,7 +6879,7 @@ describe('teamSlice actions', () => {
         },
         memberSpawnStatusesByTeam: {
           'my-team': {
-            alice: { status: 'spawning', launchState: 'starting', updatedAt: '2026-03-12T10:00:00.000Z' },
+            alice: spawningStatus,
           },
         },
       });
@@ -6845,7 +6888,7 @@ describe('teamSlice actions', () => {
 
       expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-current');
       expect(store.getState().memberSpawnStatusesByTeam['my-team']).toEqual({
-        alice: { status: 'spawning', launchState: 'starting', updatedAt: '2026-03-12T10:00:00.000Z' },
+        alice: spawningStatus,
       });
     });
 
@@ -6902,17 +6945,9 @@ describe('teamSlice actions', () => {
       store.setState({
         selectedTeamName: 'my-team',
         selectedTeamData: createTeamSnapshot(),
-        paneLayout: {
-          focusedPaneId: 'pane-default',
-          panes: [
-            {
-              id: 'pane-default',
-              widthFraction: 1,
-              tabs: [{ id: 'team-my-team', type: 'team', teamName: 'my-team', label: 'My Team' }],
-              activeTabId: 'team-my-team',
-            },
-          ],
-        },
+        paneLayout: createPaneLayout([
+          { id: 'team-my-team', type: 'team', teamName: 'my-team', label: 'My Team' },
+        ]),
         currentProvisioningRunIdByTeam: {
           'my-team': 'run-current',
         },

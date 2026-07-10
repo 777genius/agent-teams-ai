@@ -22,7 +22,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nickchernyy/agent-teams-mcp"
+    "url": "https://github.com/777genius/agent-teams-ai.git",
+    "directory": "mcp-server"
   },
   "scripts": {
     "build": "tsup",

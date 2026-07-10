@@ -84,7 +84,13 @@ function getStatusCode(error: unknown, fallback: number = 500): number {
   if (error instanceof HttpBadRequestError) {
     return 400;
   }
+  if (isOpenCodeRuntimeValidationError(error)) {
+    return 400;
+  }
   if (error instanceof HttpFeatureUnavailableError) {
+    return 501;
+  }
+  if (isRuntimeControlProviderRoutingError(error)) {
     return 501;
   }
   if (error instanceof Error && error.name === 'RuntimeStaleEvidenceError') {
@@ -99,12 +105,25 @@ function getStatusCode(error: unknown, fallback: number = 500): number {
   return fallback;
 }
 
+function isOpenCodeRuntimeValidationError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.startsWith('OpenCode runtime payload ') ||
+      error.message.startsWith('OpenCode runtime permission '))
+  );
+}
+
+function isRuntimeControlProviderRoutingError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'RuntimeControlProviderRoutingError';
+}
+
 function shouldLogError(error: unknown): boolean {
   const statusCode = getStatusCode(error);
   return (
     statusCode >= 500 &&
     !(error instanceof HttpBadRequestError) &&
-    !(error instanceof HttpFeatureUnavailableError)
+    !(error instanceof HttpFeatureUnavailableError) &&
+    !isRuntimeControlProviderRoutingError(error)
   );
 }
 

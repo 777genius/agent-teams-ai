@@ -24,21 +24,61 @@ function normalizeTaskRefsForDedupe(message: CrossTeamMessage): string {
   return message.taskRefs?.length ? JSON.stringify(message.taskRefs) : '';
 }
 
-function buildCrossTeamDedupeKey(
-  message: CrossTeamMessage,
-  options: CrossTeamDedupeOptions
-): string {
+function buildCrossTeamRouteKey(message: CrossTeamMessage): string[] {
   return [
-    options.stableIdentity ? String(message.messageId ?? '').trim() : '',
-    options.stableIdentity ? String(message.conversationId ?? '').trim() : '',
     normalizeForDedupe(message.fromTeam),
     normalizeForDedupe(message.fromMember),
     normalizeForDedupe(message.toTeam),
     normalizeForDedupe(message.toMember),
+  ];
+}
+
+function stableMessageId(message: CrossTeamMessage): string {
+  return String(message.messageId ?? '').trim();
+}
+
+function stableConversationId(message: CrossTeamMessage): string {
+  return String(message.conversationId ?? '').trim();
+}
+
+function buildCrossTeamDedupeKey(message: CrossTeamMessage): string {
+  return [
+    ...buildCrossTeamRouteKey(message),
     normalizeForDedupe(message.summary),
     normalizeForDedupe(message.text),
     normalizeTaskRefsForDedupe(message),
   ].join('||');
+}
+
+function hasSameRoute(left: CrossTeamMessage, right: CrossTeamMessage): boolean {
+  return buildCrossTeamRouteKey(left).join('||') === buildCrossTeamRouteKey(right).join('||');
+}
+
+function hasMatchingStableIdentity(left: CrossTeamMessage, right: CrossTeamMessage): boolean {
+  const leftMessageId = stableMessageId(left);
+  const rightMessageId = stableMessageId(right);
+  if (leftMessageId && rightMessageId && leftMessageId === rightMessageId) {
+    return true;
+  }
+
+  const leftConversationId = stableConversationId(left);
+  const rightConversationId = stableConversationId(right);
+  return Boolean(
+    leftConversationId && rightConversationId && leftConversationId === rightConversationId
+  );
+}
+
+function isDuplicateCrossTeamMessage(
+  entry: CrossTeamMessage,
+  message: CrossTeamMessage,
+  dedupeKey: string,
+  options: CrossTeamDedupeOptions
+): boolean {
+  if (options.stableIdentity && hasSameRoute(entry, message)) {
+    return hasMatchingStableIdentity(entry, message);
+  }
+
+  return buildCrossTeamDedupeKey(entry) === dedupeKey;
 }
 
 function findRecentDuplicate(
@@ -47,7 +87,7 @@ function findRecentDuplicate(
   windowMs: number,
   options: CrossTeamDedupeOptions
 ): CrossTeamMessage | null {
-  const dedupeKey = buildCrossTeamDedupeKey(message, options);
+  const dedupeKey = buildCrossTeamDedupeKey(message);
   const cutoff = Date.now() - windowMs;
 
   for (let i = list.length - 1; i >= 0; i -= 1) {
@@ -56,7 +96,7 @@ function findRecentDuplicate(
     if (!Number.isFinite(ts) || ts < cutoff) {
       break;
     }
-    if (buildCrossTeamDedupeKey(entry, options) === dedupeKey) {
+    if (isDuplicateCrossTeamMessage(entry, message, dedupeKey, options)) {
       return entry;
     }
   }

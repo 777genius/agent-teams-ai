@@ -118,6 +118,10 @@ function warnLaunchFactsParseError(params: {
   );
 }
 
+function hasRuntimeFactsJsonCandidate(raw: string | null | undefined): raw is string {
+  return typeof raw === 'string' && raw.trim().length > 0;
+}
+
 export function buildRuntimeProviderLaunchFacts(
   input: BuildRuntimeProviderLaunchFactsInput
 ): RuntimeProviderLaunchFacts {
@@ -126,7 +130,7 @@ export function buildRuntimeProviderLaunchFacts(
   let modelListParsed = false;
   const warn = input.warn ?? (() => undefined);
 
-  if (typeof input.modelListStdout === 'string') {
+  if (hasRuntimeFactsJsonCandidate(input.modelListStdout)) {
     try {
       const parsed = extractJsonObjectFromCli<ProviderModelListCommandResponse>(
         input.modelListStdout
@@ -152,7 +156,7 @@ export function buildRuntimeProviderLaunchFacts(
   let modelCatalog: CliProviderModelCatalog | null = null;
   let providerStatus: RuntimeProviderLaunchFacts['providerStatus'] = null;
 
-  if (typeof input.runtimeStatusStdout === 'string') {
+  if (hasRuntimeFactsJsonCandidate(input.runtimeStatusStdout)) {
     try {
       const parsed = extractJsonObjectFromCli<RuntimeStatusCommandResponse>(
         input.runtimeStatusStdout
@@ -195,7 +199,8 @@ export function buildRuntimeProviderLaunchFacts(
       input.providerId === 'anthropic'
         ? resolveAnthropicLaunchModel({
             limitContext: input.limitContext === true,
-            availableLaunchModels: modelCatalog?.models.map((model) => model.launchModel) ?? modelIds,
+            availableLaunchModels:
+              modelCatalog?.models.map((model) => model.launchModel) ?? modelIds,
             defaultLaunchModel: defaultModel,
           })
         : defaultModel,

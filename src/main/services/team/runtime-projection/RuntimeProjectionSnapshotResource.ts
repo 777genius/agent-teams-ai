@@ -41,7 +41,7 @@ export function projectRuntimeSnapshotResourceFields(
     pid: input.pid,
     runtimePid: input.runtimePid,
     pidSource: input.pidSource,
-    // Persisted and shared OpenCode hosts can expose resource metrics even when liveness is weak.
+    // Persisted and shared runtime hosts can expose resource metrics even when liveness is weak.
     usage: input.usageStats,
     history: input.resourceHistory,
   });

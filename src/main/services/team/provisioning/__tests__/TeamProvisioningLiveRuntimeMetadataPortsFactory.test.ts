@@ -171,6 +171,47 @@ describe('TeamProvisioningLiveRuntimeMetadataPortsFactory', () => {
     expect(cachedResult.get('Worker')?.cwd).toBe('/repo/team-alpha');
   });
 
+  it('does not reuse an older in-flight metadata build after cache generation advances', async () => {
+    const firstConfigDeferred = createDeferred<null>();
+    const secondConfigDeferred = createDeferred<null>();
+    const inFlightByTeam = new Map<string, TeamProvisioningLiveRuntimeMetadataInFlightEntry>();
+    let generation = 0;
+    let configReadCount = 0;
+    const deps = makeDeps({
+      liveTeamAgentRuntimeMetadataInFlightByTeam: inFlightByTeam,
+      getRuntimeSnapshotCacheGeneration: vi.fn(() => generation),
+      readConfigSnapshot: vi.fn(() => {
+        configReadCount += 1;
+        return configReadCount === 1 ? firstConfigDeferred.promise : secondConfigDeferred.promise;
+      }),
+      readPersistedRuntimeMembers: vi.fn(() => [
+        {
+          name: 'Worker',
+          providerId: 'anthropic',
+          agentId: 'agent-worker',
+          cwd: '/repo/team-alpha',
+        },
+      ]),
+    });
+    const ports = createTeamProvisioningLiveRuntimeMetadataPorts(deps);
+
+    const first = ports.getLiveTeamAgentRuntimeMetadata('alpha');
+    expect(inFlightByTeam.get('alpha')?.generationAtStart).toBe(0);
+
+    generation = 1;
+    const second = ports.getLiveTeamAgentRuntimeMetadata('alpha');
+    expect(inFlightByTeam.get('alpha')?.generationAtStart).toBe(1);
+    expect(deps.readConfigSnapshot).toHaveBeenCalledTimes(2);
+
+    secondConfigDeferred.resolve(null);
+    const secondResult = await second;
+    expect(secondResult.get('Worker')).toMatchObject({ agentId: 'agent-worker' });
+
+    firstConfigDeferred.resolve(null);
+    await first;
+    expect(inFlightByTeam.has('alpha')).toBe(false);
+  });
+
   it('stamps verified live process observations with a last-seen time', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-01T00:00:20.000Z'));

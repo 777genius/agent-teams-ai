@@ -124,14 +124,9 @@ export class RuntimeDeliveryService {
   async deliver(raw: unknown): Promise<RuntimeDeliveryAck> {
     const envelope = normalizeRuntimeDeliveryEnvelope(raw);
     const now = this.clock().toISOString();
-    const currentRunId = await this.runState.getCurrentRunId(envelope.teamName);
-    if (currentRunId !== envelope.runId) {
-      return {
-        ok: false,
-        delivered: false,
-        reason: 'stale_run',
-        idempotencyKey: envelope.idempotencyKey,
-      };
+    const staleRun = await this.rejectIfRunIsStale(envelope);
+    if (staleRun) {
+      return staleRun;
     }
 
     const destination = resolveRuntimeDeliveryDestination(envelope);
@@ -151,6 +146,17 @@ export class RuntimeDeliveryService {
       destinationMessageId,
       now,
     });
+
+    const journalCanBeMarkedTerminal =
+      begin.state === 'new' ||
+      begin.state === 'resume_pending' ||
+      (begin.state === 'payload_conflict' && begin.record.status !== 'committed');
+    const staleRunAfterJournal = await this.rejectIfRunIsStale(envelope, {
+      markJournalRecordTerminal: journalCanBeMarkedTerminal,
+    });
+    if (staleRunAfterJournal) {
+      return staleRunAfterJournal;
+    }
 
     if (begin.state === 'payload_conflict') {
       await this.diagnostics.append({
@@ -190,6 +196,8 @@ export class RuntimeDeliveryService {
     if (preExisting.found && preExisting.location) {
       await this.journal.markCommitted({
         idempotencyKey: envelope.idempotencyKey,
+        runId: envelope.runId,
+        teamName: envelope.teamName,
         location: preExisting.location,
         committedAt: now,
       });
@@ -200,6 +208,13 @@ export class RuntimeDeliveryService {
         idempotencyKey: envelope.idempotencyKey,
         location: preExisting.location,
       };
+    }
+
+    const staleRunBeforeWrite = await this.rejectIfRunIsStale(envelope, {
+      markJournalRecordTerminal: true,
+    });
+    if (staleRunBeforeWrite) {
+      return staleRunBeforeWrite;
     }
 
     try {
@@ -214,6 +229,8 @@ export class RuntimeDeliveryService {
       const committedLocation = verified.location ?? location;
       await this.journal.markCommitted({
         idempotencyKey: envelope.idempotencyKey,
+        runId: envelope.runId,
+        teamName: envelope.teamName,
         location: committedLocation,
         committedAt: this.clock().toISOString(),
       });
@@ -228,8 +245,17 @@ export class RuntimeDeliveryService {
         location: committedLocation,
       };
     } catch (error) {
+      const staleRunAfterDeliveryFailure = await this.rejectIfRunIsStale(envelope, {
+        markJournalRecordTerminal: true,
+      });
+      if (staleRunAfterDeliveryFailure) {
+        return staleRunAfterDeliveryFailure;
+      }
+
       await this.journal.markFailed({
         idempotencyKey: envelope.idempotencyKey,
+        runId: envelope.runId,
+        teamName: envelope.teamName,
         status: 'failed_retryable',
         error: stringifyError(error),
         updatedAt: this.clock().toISOString(),
@@ -250,6 +276,34 @@ export class RuntimeDeliveryService {
       });
       throw error;
     }
+  }
+
+  private async rejectIfRunIsStale(
+    envelope: RuntimeDeliveryEnvelope,
+    options: { markJournalRecordTerminal?: boolean } = {}
+  ): Promise<RuntimeDeliveryAck | null> {
+    const currentRunId = await this.runState.getCurrentRunId(envelope.teamName);
+    if (currentRunId === envelope.runId) {
+      return null;
+    }
+
+    if (options.markJournalRecordTerminal) {
+      await this.journal.markFailed({
+        idempotencyKey: envelope.idempotencyKey,
+        runId: envelope.runId,
+        teamName: envelope.teamName,
+        status: 'failed_terminal',
+        error: 'stale_run',
+        updatedAt: this.clock().toISOString(),
+      });
+    }
+
+    return {
+      ok: false,
+      delivered: false,
+      reason: 'stale_run',
+      idempotencyKey: envelope.idempotencyKey,
+    };
   }
 
   private async emitChangeEventBestEffort(
@@ -313,6 +367,8 @@ export class RuntimeDeliveryReconciler {
     if (verified.found && verified.location) {
       await this.journal.markCommitted({
         idempotencyKey: record.idempotencyKey,
+        runId: record.runId,
+        teamName: record.teamName,
         location: verified.location,
         committedAt: this.clock().toISOString(),
       });

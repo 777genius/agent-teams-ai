@@ -110,12 +110,15 @@ describe('CrossTeamService runtime delivery dedupe', () => {
     }
   });
 
-  it('keeps runtime retries idempotent when trimmed message id and conversation id match', async () => {
+  it('keeps runtime retries idempotent when the trimmed idempotency key matches', async () => {
     const { service, inboxWriter, messaging, sentToInbox } = createService();
     const request = runtimeRequest();
     const retry = runtimeRequest({
-      messageId: ' runtime-message-1 ',
+      messageId: 'runtime-message-retry-with-same-idempotency-key',
       conversationId: '\truntime-idempotency-1\n',
+      text: 'Retry payload changed after the runtime idempotency key was already recorded',
+      summary: 'Retry summary changed',
+      taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'source-team' }],
     });
 
     await expect(service.send(request)).resolves.toMatchObject({
@@ -137,6 +140,25 @@ describe('CrossTeamService runtime delivery dedupe', () => {
       'team-lead',
       { onlyMessageId: 'runtime-message-1' }
     );
+  });
+
+  it('does not accept unrelated native-lead relay work as runtime proof', async () => {
+    const { service, messaging } = createService();
+    vi.mocked(messaging.relayInboxFileToLiveRecipient).mockResolvedValue({
+      kind: 'native_lead',
+      relayed: 0,
+      diagnostics: ['unrelated native lead relay completed for another message'],
+    });
+
+    await expect(service.send(runtimeRequest())).rejects.toThrow(
+      'unrelated native lead relay completed for another message'
+    );
+    expect(messaging.relayInboxFileToLiveRecipient).toHaveBeenCalledWith(
+      'target-team',
+      'team-lead',
+      { onlyMessageId: 'runtime-message-1' }
+    );
+    expect(controllerMocks.appendSentMessage).not.toHaveBeenCalled();
   });
 
   it('keeps body-based dedupe for normal callers without stable ids', async () => {
@@ -162,6 +184,40 @@ describe('CrossTeamService runtime delivery dedupe', () => {
 
     expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
     expect(sentToInbox).toHaveLength(1);
+    expect(messaging.relayInboxFileToLiveRecipient).not.toHaveBeenCalled();
+  });
+
+  it('does not runtime-dedupe normal follow-ups in the same conversation', async () => {
+    vi.useFakeTimers({ now: new Date('2026-07-09T00:00:00.000Z') });
+    const { service, inboxWriter, messaging, sentToInbox } = createService();
+    const request: CrossTeamSendRequest = {
+      fromTeam: 'source-team',
+      fromMember: 'team-lead',
+      toTeam: 'target-team',
+      toMember: 'team-lead',
+      text: 'First follow-up',
+      summary: 'Conversation follow-up',
+      conversationId: 'shared-conversation',
+      timestamp: '2026-07-09T00:00:00.000Z',
+    };
+
+    const first = await service.send(request);
+    vi.advanceTimersByTime(3_001);
+    const second = await service.send({
+      ...request,
+      text: 'Second follow-up',
+      timestamp: '2026-07-09T00:00:01.000Z',
+    });
+
+    expect(first).toMatchObject({ deliveredToInbox: true });
+    expect(second).toMatchObject({ deliveredToInbox: true });
+    expect(first.deduplicated).toBeUndefined();
+    expect(second.deduplicated).toBeUndefined();
+    expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(2);
+    expect(sentToInbox.map((entry) => entry.message.text)).toEqual([
+      expect.stringContaining('First follow-up'),
+      expect.stringContaining('Second follow-up'),
+    ]);
     expect(messaging.relayInboxFileToLiveRecipient).not.toHaveBeenCalled();
   });
 

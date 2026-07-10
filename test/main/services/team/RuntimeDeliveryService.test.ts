@@ -60,7 +60,7 @@ describe('RuntimeDeliveryService', () => {
     const service = createService();
 
     await expect(service.deliver(envelope())).rejects.toThrow('simulated crash before write');
-    await expect(journal.get('delivery-1')).resolves.toMatchObject({
+    await expect(journal.get(journalKey())).resolves.toMatchObject({
       status: 'failed_retryable',
       attempts: 1,
     });
@@ -73,7 +73,7 @@ describe('RuntimeDeliveryService', () => {
       delivered: true,
       reason: null,
     });
-    await expect(journal.get('delivery-1')).resolves.toMatchObject({
+    await expect(journal.get(journalKey())).resolves.toMatchObject({
       status: 'committed',
       attempts: 2,
       committedLocation: expect.objectContaining({
@@ -97,7 +97,7 @@ describe('RuntimeDeliveryService', () => {
       reason: null,
     });
 
-    await expect(journal.get('delivery-1')).resolves.toMatchObject({
+    await expect(journal.get(journalKey())).resolves.toMatchObject({
       status: 'committed',
       attempts: 1,
       committedLocation: expect.objectContaining({
@@ -148,7 +148,7 @@ describe('RuntimeDeliveryService', () => {
     );
     await reconciler.reconcileTeam('team-a');
 
-    await expect(journal.get(message.idempotencyKey)).resolves.toMatchObject({
+    await expect(journal.get(journalKey(message))).resolves.toMatchObject({
       status: 'committed',
       committedLocation: expect.objectContaining({
         messageId: destinationMessageId,
@@ -178,7 +178,7 @@ describe('RuntimeDeliveryService', () => {
       location: canonicalLocation,
     });
     expect(destination.verifyInputs.at(-1)?.location).toEqual(canonicalLocation);
-    await expect(journal.get('delivery-1')).resolves.toMatchObject({
+    await expect(journal.get(journalKey())).resolves.toMatchObject({
       status: 'committed',
       committedLocation: canonicalLocation,
     });
@@ -203,9 +203,126 @@ describe('RuntimeDeliveryService', () => {
       reason: 'duplicate_destination_found',
     });
     expect(destination.writeCalls).toBe(0);
-    await expect(journal.get(message.idempotencyKey)).resolves.toMatchObject({
+    await expect(journal.get(journalKey(message))).resolves.toMatchObject({
       status: 'committed',
     });
+  });
+
+  it('uses the canonical idempotency key for journal identity and destination ids', async () => {
+    const message = envelope({ idempotencyKey: ' delivery-1 ' });
+    const canonicalMessage = envelope({ idempotencyKey: 'delivery-1' });
+    const canonicalDestinationMessageId = buildRuntimeDestinationMessageId(canonicalMessage);
+    const service = createService();
+
+    await expect(service.deliver(message)).resolves.toMatchObject({
+      ok: true,
+      delivered: true,
+      reason: null,
+      idempotencyKey: 'delivery-1',
+    });
+
+    const records = await journal.list();
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      idempotencyKey: 'delivery-1',
+      destinationMessageId: canonicalDestinationMessageId,
+    });
+    expect(destination.messages.has(canonicalDestinationMessageId)).toBe(true);
+    await expect(journal.get(journalKey(message))).resolves.toMatchObject({
+      idempotencyKey: 'delivery-1',
+    });
+  });
+
+  it('dedupes whitespace-equivalent delivery retries with a single destination write', async () => {
+    const service = createService();
+
+    await expect(
+      service.deliver(envelope({ idempotencyKey: ' delivery-1 ' }))
+    ).resolves.toMatchObject({
+      ok: true,
+      delivered: true,
+      reason: null,
+      idempotencyKey: 'delivery-1',
+    });
+    await expect(
+      service.deliver(envelope({ idempotencyKey: 'delivery-1' }))
+    ).resolves.toMatchObject({
+      ok: true,
+      delivered: false,
+      reason: 'duplicate',
+      idempotencyKey: 'delivery-1',
+    });
+
+    expect(destination.writeCalls).toBe(1);
+    await expect(journal.list()).resolves.toHaveLength(1);
+  });
+
+  it('canonicalizes direct journal keys before persisting or looking up records', async () => {
+    const message = envelope({ idempotencyKey: 'delivery-1' });
+    await journal.begin({
+      idempotencyKey: ' delivery-1 ',
+      payloadHash: hashRuntimeDeliveryEnvelope(message),
+      runId: message.runId,
+      teamName: message.teamName,
+      fromMemberName: message.fromMemberName,
+      providerId: message.providerId,
+      runtimeSessionId: message.runtimeSessionId,
+      destination: resolveRuntimeDeliveryDestination(message),
+      destinationMessageId: buildRuntimeDestinationMessageId(message),
+      now: now.toISOString(),
+    });
+
+    await expect(journal.list()).resolves.toMatchObject([
+      {
+        idempotencyKey: 'delivery-1',
+      },
+    ]);
+    await expect(
+      journal.get({
+        idempotencyKey: ' delivery-1 ',
+        runId: 'run-1',
+        teamName: 'team-a',
+      })
+    ).resolves.toMatchObject({
+      idempotencyKey: 'delivery-1',
+    });
+  });
+
+  it('scopes idempotency records to the current run while preserving same-run retry dedupe', async () => {
+    const service = createService();
+
+    await expect(
+      service.deliver(envelope({ idempotencyKey: 'shared-delivery', runId: 'run-1' }))
+    ).resolves.toMatchObject({
+      ok: true,
+      delivered: true,
+      reason: null,
+    });
+
+    runState.currentRunId = 'run-2';
+    const secondRunMessage = envelope({
+      idempotencyKey: 'shared-delivery',
+      runId: 'run-2',
+    });
+    await expect(service.deliver(secondRunMessage)).resolves.toMatchObject({
+      ok: true,
+      delivered: true,
+      reason: null,
+    });
+    await expect(service.deliver(secondRunMessage)).resolves.toMatchObject({
+      ok: true,
+      delivered: false,
+      reason: 'duplicate',
+    });
+
+    expect(destination.writeCalls).toBe(2);
+    const records = await journal.list();
+    const sharedRecords = records.filter((record) => record.idempotencyKey === 'shared-delivery');
+    expect(sharedRecords).toMatchObject([
+      { runId: 'run-1', status: 'committed' },
+      { runId: 'run-2', status: 'committed' },
+    ]);
+    expect(new Set(sharedRecords.map((record) => record.destinationMessageId)).size).toBe(2);
   });
 
   it.each(['pending', 'failed_retryable'] as const)(
@@ -231,6 +348,8 @@ describe('RuntimeDeliveryService', () => {
       if (status === 'failed_retryable') {
         await journal.markFailed({
           idempotencyKey: message.idempotencyKey,
+          runId: message.runId,
+          teamName: message.teamName,
           status,
           error: 'simulated retryable failure',
           updatedAt: now.toISOString(),
@@ -244,7 +363,7 @@ describe('RuntimeDeliveryService', () => {
         reason: null,
       });
 
-      await expect(journal.get(message.idempotencyKey)).resolves.toMatchObject({
+      await expect(journal.get(journalKey(message))).resolves.toMatchObject({
         status: 'committed',
         attempts: 2,
         payloadHash: hashRuntimeDeliveryEnvelope(message),
@@ -292,6 +411,50 @@ describe('RuntimeDeliveryService', () => {
     });
     await expect(journal.list()).resolves.toEqual([]);
     expect(destination.writeCalls).toBe(0);
+  });
+
+  it('commits verified output when the run changes after destination write', async () => {
+    destination.writeImpl = async (input) => {
+      const location: RuntimeDeliveryLocation = {
+        kind: 'member_inbox',
+        teamName: input.envelope.teamName,
+        memberName:
+          typeof input.envelope.to === 'object' && 'memberName' in input.envelope.to
+            ? input.envelope.to.memberName
+            : 'unknown',
+        messageId: input.destinationMessageId,
+      };
+      destination.messages.set(input.destinationMessageId, location);
+      runState.currentRunId = 'run-2';
+      return location;
+    };
+    const service = createService();
+
+    const ack = await service.deliver(envelope());
+
+    expect(ack).toMatchObject({
+      ok: true,
+      delivered: true,
+      reason: null,
+    });
+    await expect(journal.get(journalKey())).resolves.toMatchObject({
+      status: 'committed',
+      committedLocation: expect.objectContaining({
+        kind: 'member_inbox',
+        memberName: 'Reviewer',
+      }),
+      lastError: null,
+    });
+    expect(emitter.events).toEqual([
+      {
+        type: 'runtime-delivery',
+        teamName: 'team-a',
+        data: {
+          kind: 'member_inbox',
+        },
+      },
+    ]);
+    expect(diagnostics.append).not.toHaveBeenCalled();
   });
 
   it('emits a bounded change event after verified commit', async () => {
@@ -372,7 +535,7 @@ describe('RuntimeDeliveryService', () => {
         source: CROSS_TEAM_SENT_SOURCE,
       }),
     ]);
-    await expect(journal.get(crossTeamEnvelope.idempotencyKey)).resolves.toMatchObject({
+    await expect(journal.get(journalKey(crossTeamEnvelope))).resolves.toMatchObject({
       status: 'committed',
       committedLocation: expect.objectContaining({
         kind: 'cross_team_outbox',
@@ -437,7 +600,7 @@ describe('RuntimeDeliveryService', () => {
       reason: null,
     });
     expect(crossTeamSender).toHaveBeenCalledTimes(1);
-    await expect(journal.get(crossTeamEnvelope.idempotencyKey)).resolves.toMatchObject({
+    await expect(journal.get(journalKey(crossTeamEnvelope))).resolves.toMatchObject({
       status: 'committed',
       committedLocation: expect.objectContaining({
         kind: 'cross_team_outbox',
@@ -546,6 +709,14 @@ function envelope(overrides: Partial<RuntimeDeliveryEnvelope> = {}): RuntimeDeli
     createdAt: '2026-04-21T12:00:00.000Z',
     taskRefs: [{ taskId: 'task-1', displayId: '#1', teamName: 'team-a' }],
     ...overrides,
+  };
+}
+
+function journalKey(message: RuntimeDeliveryEnvelope = envelope()) {
+  return {
+    idempotencyKey: message.idempotencyKey,
+    runId: message.runId,
+    teamName: message.teamName,
   };
 }
 

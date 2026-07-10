@@ -421,7 +421,7 @@ describe('TeamDataService task projection cache invalidation', () => {
       {} as never,
       { getMembers: vi.fn(async () => []) } as never,
       { readMessages: vi.fn(async () => []) } as never,
-      (() => ({ tasks: taskController })) as never
+      (() => ({ taskBoard: taskController })) as never
     );
     const invalidateSpy = vi.spyOn(TeamTaskReader, 'invalidateAllTasksCache');
 
@@ -820,7 +820,7 @@ function createGetTeamDataHarness(
     sentMessagesStore as never,
     (() =>
       ({
-        tasks: {
+        taskBoard: {
           getTask: options.getTask ?? (() => null),
         },
         processes: {
@@ -1661,7 +1661,7 @@ describe('TeamDataService', () => {
       {} as never,
       () =>
         ({
-          tasks: {
+          taskBoard: {
             addTaskComment,
             setNeedsClarification: vi.fn(),
           },
@@ -1719,7 +1719,7 @@ describe('TeamDataService', () => {
       {} as never,
       (_teamName: string) =>
         ({
-          tasks: {
+          taskBoard: {
             createTask: createTaskMock,
           },
         }) as never
@@ -1852,7 +1852,7 @@ describe('TeamDataService', () => {
       {} as never,
       (_teamName: string) =>
         ({
-          tasks: {
+          taskBoard: {
             createTask: createTaskMock,
           },
         }) as never
@@ -1905,7 +1905,7 @@ describe('TeamDataService', () => {
       {} as never,
       (_teamName: string) =>
         ({
-          tasks: {
+          taskBoard: {
             createTask: createTaskMock,
           },
         }) as never
@@ -1964,7 +1964,7 @@ describe('TeamDataService', () => {
       {} as never,
       (_teamName: string) =>
         ({
-          tasks: {
+          taskBoard: {
             createTask: createTaskMock,
           },
         }) as never
@@ -2048,7 +2048,7 @@ describe('TeamDataService', () => {
       {} as never,
       () =>
         ({
-          review: {
+          taskBoard: {
             requestReview: requestReviewMock,
           },
         }) as never
@@ -2088,7 +2088,7 @@ describe('TeamDataService', () => {
       {} as never,
       () =>
         ({
-          review: {
+          taskBoard: {
             requestReview: requestReviewMock,
           },
         }) as never
@@ -2681,14 +2681,12 @@ describe('TeamDataService', () => {
       {} as never,
       () =>
         ({
-          tasks: {
+          taskBoard: {
             getTask: vi.fn(() => ({
               id: 'task-1',
               status: 'completed',
               reviewState: 'none',
             })),
-          },
-          kanban: {
             getKanbanState: vi.fn(() => ({
               teamName: 'my-team',
               reviewers: [],
@@ -2699,8 +2697,6 @@ describe('TeamDataService', () => {
                 },
               },
             })),
-          },
-          review: {
             requestReview: requestReviewMock,
             approveReview: approveReviewMock,
             requestChanges: requestChangesMock,
@@ -2756,23 +2752,19 @@ describe('TeamDataService', () => {
       {} as never,
       () =>
         ({
-          tasks: {
+          taskBoard: {
             getTask: vi.fn(() => ({
               id: 'task-1',
               status: 'completed',
               reviewState: 'none',
               historyEvents: [],
             })),
-          },
-          kanban: {
             getKanbanState: vi.fn(() => ({
               teamName: 'my-team',
               reviewers: [],
               tasks: {},
             })),
             setKanbanColumn: setKanbanColumnMock,
-          },
-          review: {
             approveReview: approveReviewMock,
           },
         }) as never

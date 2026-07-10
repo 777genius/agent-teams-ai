@@ -42,6 +42,10 @@ import {
   isInteractiveShellCommand,
 } from './TeamProvisioningDirectRestart';
 import {
+  createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase,
+  type HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchInput,
+} from './TeamProvisioningHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase';
+import {
   matchesExactTeamMemberName,
   matchesMemberNameOrBase,
   matchesObservedMemberNameForExpected,
@@ -54,12 +58,7 @@ import {
   createPersistOpenCodeMemberRestartSystemMessageUseCase,
   type OpenCodeMemberRestartSystemMessageInput,
 } from './TeamProvisioningOpenCodeMemberRestartSystemMessageUseCase';
-import {
-  hasOpenCodeRuntimeEntryHandle,
-  hasOpenCodeRuntimeHandle,
-  hasOpenCodeRuntimeLivenessMarker,
-  MEMBER_BOOTSTRAP_STALL_MS,
-} from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import { MEMBER_BOOTSTRAP_STALL_MS } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
   createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase,
   type PreparePrimaryOwnedMemberRestartRuntimeInput,
@@ -115,7 +114,6 @@ import type {
   PersistedTeamLaunchSnapshot,
   ProviderModelLaunchIdentity,
   RetryFailedOpenCodeSecondaryLanesResult,
-  TeamAgentRuntimeEntry,
   TeamConfig,
   TeamCreateRequest,
   TeamProviderBackendId,
@@ -131,6 +129,10 @@ const NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_ENV =
   'CLAUDE_CODE_NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_PATH';
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS =
   'TeamDelete,TodoWrite,TaskCreate,TaskUpdate,mcp__agent-teams__team_launch,mcp__agent-teams__team_stop';
+
+type RuntimeAdapterRunEntry = NonNullable<
+  ReturnType<TeamProvisioningMemberLifecycleHost['runtimeAdapterRunByTeam']['get']>
+>;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -216,6 +218,11 @@ export class TeamProvisioningMemberLifecycleController {
       readLaunchStateSnapshot: (teamName) => this.launchStateStore.read(teamName),
       resolveEffectiveConfiguredMember: (configMembers, metaMembers, memberName) =>
         this.resolveEffectiveConfiguredMember(configMembers, metaMembers, memberName),
+    });
+  private readonly hasOpenCodeMemberRuntimeEvidenceForControlledRelaunchFallback =
+    createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase({
+      readLaunchStateSnapshot: (teamName) => this.launchStateStore.read(teamName),
+      getLiveTeamAgentRuntimeMetadata: (teamName) => this.getLiveTeamAgentRuntimeMetadata(teamName),
     });
 
   constructor(
@@ -634,11 +641,13 @@ export class TeamProvisioningMemberLifecycleController {
       memberSpec,
       run: input.run,
     });
+    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
     const memberMcpPolicy = normalizeTeamMemberMcpPolicy(memberSpec.mcpPolicy);
     const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(cwd, {
       mcpPolicy: memberMcpPolicy,
       controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
     });
+    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
     const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
     input.run.memberMcpConfigPaths = memberMcpConfigPaths;
     memberMcpConfigPaths.push(mcpConfigPath);
@@ -712,6 +721,7 @@ export class TeamProvisioningMemberLifecycleController {
       args: runtimeArgs,
     });
 
+    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
     await this.updateDirectTmuxRestartMemberConfig({
       teamName: input.teamName,
       memberName: input.memberName,
@@ -724,7 +734,9 @@ export class TeamProvisioningMemberLifecycleController {
       providerId,
       joinedAt: Date.now(),
       bootstrapExpectedAfter,
+      assertStillCurrent: this.createRunStillCurrentGuard(input.run, input.teamName),
     });
+    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
     this.enqueueDirectRestartPrompt({
       teamName: input.teamName,
       memberName: input.configuredMember.name,
@@ -817,11 +829,13 @@ export class TeamProvisioningMemberLifecycleController {
       memberSpec,
       run: input.run,
     });
+    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
     const memberMcpPolicy = normalizeTeamMemberMcpPolicy(memberSpec.mcpPolicy);
     const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(cwd, {
       mcpPolicy: memberMcpPolicy,
       controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
     });
+    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
     const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
     input.run.memberMcpConfigPaths = memberMcpConfigPaths;
     memberMcpConfigPaths.push(mcpConfigPath);
@@ -915,6 +929,7 @@ export class TeamProvisioningMemberLifecycleController {
       ...runtimeArgsPlan.settingsArgs,
     ]);
 
+    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
     const stdoutLog = fs.createWriteStream(runtimePaths.stdoutPath, { flags: 'a', mode: 0o600 });
     const stderrLog = fs.createWriteStream(runtimePaths.stderrPath, { flags: 'a', mode: 0o600 });
     const child = spawnCli(claudePath, runtimeArgs, {
@@ -986,6 +1001,7 @@ export class TeamProvisioningMemberLifecycleController {
     child.unref();
 
     try {
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
       await this.appendDirectProcessRuntimeEvent({
         type: 'process_spawned',
         eventsPath: runtimePaths.eventsPath,
@@ -1010,6 +1026,7 @@ export class TeamProvisioningMemberLifecycleController {
         source: runtimeEventSource,
         detail: 'stdout and stderr attached',
       });
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
       await this.updateDirectTmuxRestartMemberConfig({
         teamName: input.teamName,
         memberName: input.memberName,
@@ -1033,7 +1050,9 @@ export class TeamProvisioningMemberLifecycleController {
               bootstrapBriefingHash: nativeBootstrapSpec.briefingHash,
             }
           : {}),
+        assertStillCurrent: this.createRunStillCurrentGuard(input.run, input.teamName),
       });
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
       this.enqueueDirectRestartPrompt({
         teamName: input.teamName,
         memberName: input.configuredMember.name,
@@ -1177,6 +1196,57 @@ export class TeamProvisioningMemberLifecycleController {
     return 'primary_member_added';
   }
 
+  private isRunStillCurrentAndAlive(run: ProvisioningRun, teamName: string): boolean {
+    return (
+      this.getAliveRunId(teamName) === run.runId &&
+      this.runs.get(run.runId) === run &&
+      this.isCurrentTrackedRun(run) &&
+      !run.processKilled &&
+      !run.cancelRequested
+    );
+  }
+
+  private assertRunStillCurrentAndAlive(run: ProvisioningRun, teamName: string): void {
+    if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+      throw new Error(`Team "${teamName}" is not currently running`);
+    }
+  }
+
+  private createRunStillCurrentGuard(run: ProvisioningRun, teamName: string): () => void {
+    return () => this.assertRunStillCurrentAndAlive(run, teamName);
+  }
+
+  private createRuntimeAdapterRunStillCurrentGuard(
+    teamName: string,
+    runtimeRun: RuntimeAdapterRunEntry
+  ): () => void {
+    const expectedRunId = runtimeRun.runId;
+    const expectedProviderId = runtimeRun.providerId;
+    const expectedCwd = runtimeRun.cwd;
+
+    return () => {
+      const currentRuntimeRun = this.runtimeAdapterRunByTeam.get(teamName);
+      if (currentRuntimeRun !== runtimeRun) {
+        throw new Error(`Team "${teamName}" is not currently running`);
+      }
+      if (
+        currentRuntimeRun.runId !== expectedRunId ||
+        currentRuntimeRun.providerId !== expectedProviderId ||
+        currentRuntimeRun.cwd !== expectedCwd
+      ) {
+        throw new Error(`Team "${teamName}" is not currently running`);
+      }
+    };
+  }
+
+  private async persistLaunchStateSnapshotForCurrentRun(
+    run: ProvisioningRun,
+    phase: PersistedTeamLaunchPhase
+  ): Promise<PersistedTeamLaunchSnapshot | null> {
+    this.assertRunStillCurrentAndAlive(run, run.teamName);
+    return this.persistLaunchStateSnapshot(run, phase);
+  }
+
   async attachLiveRosterMember(
     teamName: string,
     memberName: string,
@@ -1238,6 +1308,7 @@ export class TeamProvisioningMemberLifecycleController {
       throw new Error(`Team "${teamName}" configuration is no longer available`);
     }
     const metaMembers = await this.membersMetaStore.getMembers(teamName).catch(() => []);
+    this.assertRunStillCurrentAndAlive(run, teamName);
     const configuredMember = this.resolveEffectiveConfiguredMember(
       config.members ?? [],
       metaMembers,
@@ -1287,6 +1358,7 @@ export class TeamProvisioningMemberLifecycleController {
       [...liveRuntimeByMember.entries()].find(([candidateName]) =>
         matchesObservedMemberNameForExpected(candidateName, memberName)
       )?.[1];
+    this.assertRunStillCurrentAndAlive(run, teamName);
     if (
       !replaceExistingRuntime &&
       liveRuntimeMember?.alive &&
@@ -1326,6 +1398,7 @@ export class TeamProvisioningMemberLifecycleController {
         `Member "${memberName}" uses an in-process runtime and cannot be attached here`
       );
     }
+    this.assertRunStillCurrentAndAlive(run, teamName);
     if (replaceExistingRuntime) {
       await this.stopPrimaryOwnedRosterRuntime({
         teamName,
@@ -1334,6 +1407,7 @@ export class TeamProvisioningMemberLifecycleController {
         liveRuntimeByMember,
         actionLabel: `Update for teammate "${memberName}"`,
       });
+      this.assertRunStillCurrentAndAlive(run, teamName);
       this.setMemberSpawnStatus(run, memberName, 'offline');
     }
 
@@ -1368,6 +1442,9 @@ export class TeamProvisioningMemberLifecycleController {
         operation: options?.reason ?? 'member_added',
       });
     } catch (error) {
+      if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+        throw error;
+      }
       this.setMemberSpawnStatus(
         run,
         memberName,
@@ -1399,6 +1476,7 @@ export class TeamProvisioningMemberLifecycleController {
     const leadProviderId = resolveTeamProviderId(run.request.providerId);
     const config = await this.readConfigForStrictDecision(teamName);
     const metaMembers = await this.membersMetaStore.getMembers(teamName).catch(() => []);
+    this.assertRunStillCurrentAndAlive(run, teamName);
     const configuredMember = this.resolveEffectiveConfiguredMember(
       config?.members ?? [],
       metaMembers,
@@ -1423,6 +1501,7 @@ export class TeamProvisioningMemberLifecycleController {
     const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(teamName).catch(
       () => new Map<string, LiveTeamAgentRuntimeMetadata>()
     );
+    this.assertRunStillCurrentAndAlive(run, teamName);
     await this.stopPrimaryOwnedRosterRuntime({
       teamName,
       memberName,
@@ -1430,6 +1509,7 @@ export class TeamProvisioningMemberLifecycleController {
       liveRuntimeByMember,
       actionLabel: `Detach for teammate "${memberName}"`,
     });
+    this.assertRunStillCurrentAndAlive(run, teamName);
 
     this.removeRunAllEffectiveMember(run, memberName);
     this.invalidateRuntimeSnapshotCaches(teamName);
@@ -1493,6 +1573,7 @@ export class TeamProvisioningMemberLifecycleController {
     };
 
     let currentConfiguredMemberState = await readCurrentConfiguredMember();
+    this.assertRunStillCurrentAndAlive(run, teamName);
     let config = currentConfiguredMemberState.config;
     let configuredMember = currentConfiguredMemberState.configuredMember;
     if (!config) {
@@ -1530,15 +1611,18 @@ export class TeamProvisioningMemberLifecycleController {
       return candidateName.length > 0 && matchesMemberNameOrBase(candidateName, memberName);
     });
 
+    this.assertRunStillCurrentAndAlive(run, teamName);
     const restartRuntimePreparation = await this.preparePrimaryOwnedMemberRestartRuntime({
       teamName,
       memberName,
       persistedRuntimeMembers,
+      assertStillCurrent: () => this.assertRunStillCurrentAndAlive(run, teamName),
       invalidateRuntimeSnapshotCaches: () => this.invalidateRuntimeSnapshotCaches(teamName),
       loadLiveRuntimeByMember: () => this.getLiveTeamAgentRuntimeMetadata(teamName),
     });
     const { directTmuxRestartPaneId, shouldDirectProcessRestart } = restartRuntimePreparation;
 
+    this.assertRunStillCurrentAndAlive(run, teamName);
     this.setMemberSpawnStatus(run, memberName, 'offline');
 
     const latestRunId = this.getAliveRunId(teamName);
@@ -1554,6 +1638,7 @@ export class TeamProvisioningMemberLifecycleController {
     }
 
     currentConfiguredMemberState = await readCurrentConfiguredMember();
+    this.assertRunStillCurrentAndAlive(run, teamName);
     config = currentConfiguredMemberState.config;
     configuredMember = currentConfiguredMemberState.configuredMember;
     if (!config) {
@@ -1608,6 +1693,9 @@ export class TeamProvisioningMemberLifecycleController {
         });
         return;
       } catch (error) {
+        if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+          throw error;
+        }
         run.pendingMemberRestarts.delete(memberName);
         this.setMemberSpawnStatus(
           run,
@@ -1616,7 +1704,7 @@ export class TeamProvisioningMemberLifecycleController {
           error instanceof Error ? error.message : String(error)
         );
         if (run.isLaunch) {
-          await this.persistLaunchStateSnapshot(
+          await this.persistLaunchStateSnapshotForCurrentRun(
             run,
             run.provisioningComplete ? 'finished' : 'active'
           );
@@ -1639,6 +1727,9 @@ export class TeamProvisioningMemberLifecycleController {
         });
         return;
       } catch (error) {
+        if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+          throw error;
+        }
         run.pendingMemberRestarts.delete(memberName);
         this.setMemberSpawnStatus(
           run,
@@ -1647,7 +1738,7 @@ export class TeamProvisioningMemberLifecycleController {
           error instanceof Error ? error.message : String(error)
         );
         if (run.isLaunch) {
-          await this.persistLaunchStateSnapshot(
+          await this.persistLaunchStateSnapshotForCurrentRun(
             run,
             run.provisioningComplete ? 'finished' : 'active'
           );
@@ -1663,6 +1754,7 @@ export class TeamProvisioningMemberLifecycleController {
         mcpPolicy: configuredMember.mcpPolicy,
         run,
       });
+      this.assertRunStillCurrentAndAlive(run, teamName);
       const restartMessage = buildRestartMemberSpawnMessage(
         teamName,
         config?.name?.trim() || teamName,
@@ -1681,6 +1773,9 @@ export class TeamProvisioningMemberLifecycleController {
       await this.sendMessageToRun(run, restartMessage);
     } catch (error) {
       await this.removeTrackedMemberMcpLaunchConfig(run, restartMcpLaunchConfig).catch(() => {});
+      if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+        throw error;
+      }
       run.pendingMemberRestarts.delete(memberName);
       this.setMemberSpawnStatus(
         run,
@@ -1689,7 +1784,7 @@ export class TeamProvisioningMemberLifecycleController {
         error instanceof Error ? error.message : String(error)
       );
       if (run.isLaunch) {
-        await this.persistLaunchStateSnapshot(
+        await this.persistLaunchStateSnapshotForCurrentRun(
           run,
           run.provisioningComplete ? 'finished' : 'active'
         );
@@ -1706,6 +1801,10 @@ export class TeamProvisioningMemberLifecycleController {
     if (runtimeRun?.providerId !== 'opencode') {
       return false;
     }
+    const assertRuntimeAdapterRunStillCurrent = this.createRuntimeAdapterRunStillCurrentGuard(
+      teamName,
+      runtimeRun
+    );
 
     const adapter = this.getOpenCodeRuntimeAdapter();
     if (!adapter) {
@@ -1799,6 +1898,7 @@ export class TeamProvisioningMemberLifecycleController {
       leadProviderId: 'opencode',
       members: activeMembers.map((member) => this.buildConfiguredProvisioningMember(member)),
     });
+    assertRuntimeAdapterRunStillCurrent();
     const targetRuntimeMember = effectiveMembers.find((member) =>
       matchesExactTeamMemberName(member.name, targetMember.name)
     );
@@ -1806,6 +1906,7 @@ export class TeamProvisioningMemberLifecycleController {
       throw new Error(`Member "${memberName}" could not be resolved for OpenCode restart`);
     }
 
+    assertRuntimeAdapterRunStillCurrent();
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.persistOpenCodeMemberRestartSystemMessage({
       teamName,
@@ -1814,8 +1915,10 @@ export class TeamProvisioningMemberLifecycleController {
       displayName: config.description?.trim() || config.name,
       member: targetRuntimeMember,
       reason: 'manual_restart',
+      assertStillCurrent: assertRuntimeAdapterRunStillCurrent,
     });
 
+    assertRuntimeAdapterRunStillCurrent();
     await this.runOpenCodeTeamRuntimeAdapterLaunch({
       request: {
         teamName,
@@ -2216,6 +2319,7 @@ export class TeamProvisioningMemberLifecycleController {
     } catch {
       metaMembers = [];
     }
+    this.assertRunStillCurrentAndAlive(run, teamName);
     const configuredMember = this.resolveEffectiveConfiguredMember(
       config.members ?? [],
       metaMembers,
@@ -2247,6 +2351,7 @@ export class TeamProvisioningMemberLifecycleController {
     if (!memberSpec) {
       throw new Error(`Member "${memberName}" could not be resolved for OpenCode lane reattach.`);
     }
+    this.assertRunStillCurrentAndAlive(run, teamName);
     const nextLane = this.createMixedSecondaryLaneStateForMember(run, memberSpec);
     const existingLaneIndex = run.mixedSecondaryLanes.findIndex(
       (lane) => lane.laneId === nextLane.laneId || lane.member.name.trim() === memberName
@@ -2266,9 +2371,11 @@ export class TeamProvisioningMemberLifecycleController {
       laneId: nextLane.laneId,
       existingLane,
     });
+    this.assertRunStillCurrentAndAlive(run, teamName);
 
     if (existingLane) {
       await this.stopSingleMixedSecondaryRuntimeLane(run, existingLane, 'relaunch');
+      this.assertRunStillCurrentAndAlive(run, teamName);
     }
 
     const laneState = existingLane ?? nextLane;
@@ -2309,43 +2416,13 @@ export class TeamProvisioningMemberLifecycleController {
     await this.launchSingleMixedSecondaryLane(run, laneState);
   }
 
-  private async hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch(params: {
-    teamName: string;
-    memberName: string;
-    laneId: string;
-    existingLane: MixedSecondaryRuntimeLaneState | null;
-  }): Promise<boolean> {
-    const laneResultMember =
-      params.existingLane?.result?.members[params.memberName] ??
-      Object.values(params.existingLane?.result?.members ?? {}).find(
-        (member) => member.memberName?.trim() === params.memberName
-      );
-    if (hasOpenCodeRuntimeHandle(laneResultMember)) {
-      return true;
-    }
-
-    const persistedSnapshot = await this.launchStateStore.read(params.teamName).catch(() => null);
-    const persistedMember =
-      persistedSnapshot?.members[params.memberName] ??
-      Object.values(persistedSnapshot?.members ?? {}).find(
-        (member) => member.laneId === params.laneId
-      );
-    if (
-      hasOpenCodeRuntimeHandle(persistedMember) ||
-      hasOpenCodeRuntimeLivenessMarker(persistedMember)
-    ) {
-      return true;
-    }
-
-    const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(params.teamName).catch(
-      () => new Map<string, TeamAgentRuntimeEntry>()
+  private async hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch(
+    input: HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchInput
+  ): Promise<boolean> {
+    const seam = this.openCodeRetryUseCases.hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch;
+    return await (seam ?? this.hasOpenCodeMemberRuntimeEvidenceForControlledRelaunchFallback)(
+      input
     );
-    const liveRuntimeMember =
-      liveRuntimeByMember.get(params.memberName) ??
-      [...liveRuntimeByMember.entries()].find(([candidateName]) =>
-        matchesObservedMemberNameForExpected(candidateName, params.memberName)
-      )?.[1];
-    return hasOpenCodeRuntimeEntryHandle(liveRuntimeMember);
   }
 
   async detachOpenCodeOwnedMemberLane(teamName: string, memberName: string): Promise<void> {
@@ -2381,8 +2458,10 @@ export class TeamProvisioningMemberLifecycleController {
       return;
     }
 
-    const [lane] = run.mixedSecondaryLanes.splice(laneIndex, 1);
+    const lane = run.mixedSecondaryLanes[laneIndex];
     await this.stopSingleMixedSecondaryRuntimeLane(run, lane, 'cleanup');
+    this.assertRunStillCurrentAndAlive(run, teamName);
+    run.mixedSecondaryLanes.splice(laneIndex, 1);
     this.removeRunAllEffectiveMember(run, memberName);
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.resetRuntimeToolActivity(run, memberName);

@@ -9,6 +9,7 @@ export interface OpenCodeMemberRestartSystemMessageInput {
   displayName: string;
   member: TeamCreateRequest['members'][number];
   reason: 'manual_restart' | 'member_updated';
+  assertStillCurrent?: () => void;
 }
 
 export interface PersistOpenCodeMemberRestartSystemMessagePorts {
@@ -36,6 +37,7 @@ export function createPersistOpenCodeMemberRestartSystemMessageUseCase(
     const reasonSummary =
       input.reason === 'member_updated' ? 'after member settings update' : 'by user request';
 
+    input.assertStillCurrent?.();
     ports.persistSentMessage(input.teamName, {
       from: input.leadName,
       to: input.member.name,

@@ -220,6 +220,30 @@ function createService(events: string[]): TeamProvisioningServiceMemberLifecycle
 }
 
 describe('TeamProvisioningServiceMemberLifecycleHostPortGroups', () => {
+  it('forwards optional direct restart prompt seams through the messaging group', () => {
+    const events: string[] = [];
+    const service = createService(
+      events
+    ) as TeamProvisioningServiceMemberLifecycleHostPortGroupPorts & {
+      marker: string;
+    };
+    service.marker = 'service-bound';
+    service.enqueueDirectRestartPrompt = function (this: typeof service, input) {
+      events.push(`${this.marker}:enqueue:${input.teamName}:${input.memberName}`);
+    };
+    const portGroups = createTeamProvisioningServiceMemberLifecycleHostPortGroups(service);
+
+    portGroups.messaging.enqueueDirectRestartPrompt?.({
+      teamName: 'team-a',
+      memberName: 'Worker',
+      leadName: 'Lead',
+      leadSessionId: null,
+      prompt: 'restart',
+    });
+
+    expect(events).toEqual(['service-bound:enqueue:team-a:Worker']);
+  });
+
   it('assembles the TeamProvisioningService lifecycle host ports into focused groups', async () => {
     const events: string[] = [];
     const service = createService(events);

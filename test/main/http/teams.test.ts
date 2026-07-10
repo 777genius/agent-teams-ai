@@ -186,7 +186,18 @@ describe('HTTP team runtime routes', () => {
         payload: {
           teamName: 'new-team',
           displayName: 'New Team',
-          members: [{ name: 'builder', role: 'Engineer', providerId: 'codex' }],
+          members: [
+            {
+              name: 'builder',
+              role: 'Engineer',
+              providerId: 'codex',
+              mcpPolicy: {
+                mode: 'strictAllowlist',
+                scopes: { project: true, user: false },
+                serverNames: ['agent-teams'],
+              },
+            },
+          ],
           cwd: '/Users/test/project',
           providerId: 'codex',
           model: 'gpt-5.2',
@@ -206,6 +217,11 @@ describe('HTTP team runtime routes', () => {
             role: 'Engineer',
             providerId: 'codex',
             providerBackendId: 'codex-native',
+            mcpPolicy: {
+              mode: 'strictAllowlist',
+              scopes: { project: true, user: false },
+              serverNames: ['agent-teams'],
+            },
           },
         ],
         cwd: '/Users/test/project',
@@ -306,6 +322,7 @@ describe('HTTP team runtime routes', () => {
           prompt: 'Resume work',
           skipPermissions: false,
           clearContext: true,
+          limitContext: true,
         },
       });
 
@@ -319,6 +336,7 @@ describe('HTTP team runtime routes', () => {
           providerId: 'anthropic',
           skipPermissions: false,
           clearContext: true,
+          limitContext: true,
         },
         expect.any(Function)
       );
@@ -925,6 +943,59 @@ describe('HTTP team runtime routes', () => {
           teamName: 'demo-team',
         });
       }
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('maps OpenCode runtime callback payload validation failures to 400', async () => {
+    const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
+    recordOpenCodeRuntimeHeartbeat.mockRejectedValueOnce(
+      new Error('OpenCode runtime payload missing runId')
+    );
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+        payload: {
+          teamName: 'demo-team',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        error: 'OpenCode runtime payload missing runId',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('maps runtime-control provider routing failures to 501', async () => {
+    const { app, answerOpenCodeRuntimePermission } = await createApp();
+    const error = new Error(
+      'Runtime control provider opencode does not support answerPermission'
+    );
+    error.name = 'RuntimeControlProviderRoutingError';
+    answerOpenCodeRuntimePermission.mockRejectedValueOnce(error);
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/permission-answer',
+        payload: {
+          teamName: 'demo-team',
+          runId: 'run-opencode',
+          requestId: 'approval-1',
+          answer: { allow: true },
+        },
+      });
+
+      expect(response.statusCode).toBe(501);
+      expect(response.json()).toEqual({
+        error: 'Runtime control provider opencode does not support answerPermission',
+      });
     } finally {
       await app.close();
     }

@@ -1,4 +1,8 @@
 import {
+  createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase,
+  type HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase,
+} from './TeamProvisioningHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase';
+import {
   createPersistOpenCodeMemberRestartSystemMessageUseCase,
   type PersistOpenCodeMemberRestartSystemMessageUseCase,
 } from './TeamProvisioningOpenCodeMemberRestartSystemMessageUseCase';
@@ -21,12 +25,16 @@ import type {
   TeamProvisioningMemberLifecycleRestartUseCaseSeams,
 } from './TeamProvisioningMemberLifecycleUseCaseSeams';
 import type { PreparePrimaryOwnedMemberRestartRuntimeUseCase } from './TeamProvisioningPreparePrimaryOwnedMemberRestartRuntimeUseCase';
+import type { LiveTeamAgentRuntimeMetadata } from './TeamProvisioningRuntimeMetadataPolicy';
 import type { StopPrimaryOwnedRosterRuntimeUseCase } from './TeamProvisioningStopPrimaryOwnedRosterRuntimeUseCase';
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 export interface TeamProvisioningMemberLifecycleServiceUseCasePorts {
   persistSentMessage(teamName: string, message: Record<string, unknown>): void;
   readLaunchStateSnapshot(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
+  getLiveTeamAgentRuntimeMetadata(
+    teamName: string
+  ): Promise<ReadonlyMap<string, LiveTeamAgentRuntimeMetadata>>;
   appendDirectProcessRuntimeEvent: AppendDirectProcessRuntimeEventUseCase;
   stopPrimaryOwnedRosterRuntime: StopPrimaryOwnedRosterRuntimeUseCase;
   preparePrimaryOwnedMemberRestartRuntime: PreparePrimaryOwnedMemberRestartRuntimeUseCase;
@@ -39,10 +47,11 @@ export interface TeamProvisioningMemberLifecycleServiceUseCases
     TeamProvisioningMemberLifecycleRestartUseCaseSeams,
     Pick<
       TeamProvisioningMemberLifecycleOpenCodeRetryUseCaseSeams,
-      'readOpenCodeSecondaryRetryOutcome'
+      'readOpenCodeSecondaryRetryOutcome' | 'hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch'
     > {
   persistOpenCodeMemberRestartSystemMessage: PersistOpenCodeMemberRestartSystemMessageUseCase;
   readOpenCodeSecondaryRetryOutcome: ReadOpenCodeSecondaryRetryOutcomeUseCase;
+  hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch: HasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase;
   appendDirectProcessRuntimeEvent: AppendDirectProcessRuntimeEventUseCase;
   updateDirectTmuxRestartMemberConfig: UpdateDirectTmuxRestartMemberConfigUseCase;
   stopPrimaryOwnedRosterRuntime: StopPrimaryOwnedRosterRuntimeUseCase;
@@ -63,6 +72,11 @@ export function createTeamProvisioningMemberLifecycleServiceUseCases(
     readOpenCodeSecondaryRetryOutcome: createReadOpenCodeSecondaryRetryOutcomeUseCase({
       readLaunchStateSnapshot: ports.readLaunchStateSnapshot,
     }),
+    hasOpenCodeMemberRuntimeEvidenceForControlledRelaunch:
+      createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCase({
+        readLaunchStateSnapshot: ports.readLaunchStateSnapshot,
+        getLiveTeamAgentRuntimeMetadata: ports.getLiveTeamAgentRuntimeMetadata,
+      }),
     appendDirectProcessRuntimeEvent: ports.appendDirectProcessRuntimeEvent,
     updateDirectTmuxRestartMemberConfig: createNodeUpdateDirectTmuxRestartMemberConfigUseCase(),
     stopPrimaryOwnedRosterRuntime: ports.stopPrimaryOwnedRosterRuntime,

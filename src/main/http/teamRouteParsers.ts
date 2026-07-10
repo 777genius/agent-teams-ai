@@ -8,6 +8,7 @@ import {
   isTeamEffortLevelForProvider,
 } from '@shared/utils/effortLevels';
 import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { isAbsolute } from 'path';
 
@@ -216,6 +217,7 @@ export function parseCreateMembers(
     const model = assertOptionalString(rawMember.model, 'member model');
     const effort = assertOptionalEffort(rawMember.effort, providerId ?? defaultProviderId);
     const fastMode = assertOptionalFastMode(rawMember.fastMode);
+    const mcpPolicy = normalizeTeamMemberMcpPolicy(rawMember.mcpPolicy);
 
     return {
       name,
@@ -227,6 +229,7 @@ export function parseCreateMembers(
       ...(model ? { model } : {}),
       ...(effort ? { effort } : {}),
       ...(fastMode ? { fastMode } : {}),
+      ...(mcpPolicy ? { mcpPolicy } : {}),
     };
   });
 }
@@ -239,6 +242,7 @@ export function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchR
   const model = assertOptionalString(payload.model, 'model');
   const effort = assertOptionalEffort(payload.effort, providerId ?? 'anthropic');
   const fastMode = assertOptionalFastMode(payload.fastMode);
+  const limitContext = assertOptionalBoolean(payload.limitContext, 'limitContext');
   const clearContext = assertOptionalBoolean(payload.clearContext, 'clearContext');
   const skipPermissions = assertOptionalBoolean(payload.skipPermissions, 'skipPermissions');
   const worktree = assertOptionalString(payload.worktree, 'worktree');
@@ -262,6 +266,9 @@ export function parseLaunchRequest(teamName: string, body: unknown): TeamLaunchR
     }),
     ...(fastMode && {
       fastMode,
+    }),
+    ...(limitContext !== undefined && {
+      limitContext,
     }),
     ...(clearContext !== undefined && {
       clearContext,
