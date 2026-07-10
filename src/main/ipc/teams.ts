@@ -2,6 +2,10 @@ import {
   estimateAgentAttachmentSerializedPayloadBytes,
   MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES,
 } from '@features/agent-attachments/contracts';
+import {
+  createTeamApplicationFacade,
+  type TeamApplicationFacade,
+} from '@features/team-application/main';
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
@@ -773,6 +777,7 @@ let boardTaskActivityDetailService: BoardTaskActivityDetailService | null = null
 let boardTaskLogStreamService: BoardTaskLogStreamService | null = null;
 let boardTaskExactLogsService: BoardTaskExactLogsService | null = null;
 let boardTaskExactLogDetailService: BoardTaskExactLogDetailService | null = null;
+let teamApplicationFacade: TeamApplicationFacade | null = null;
 
 const attachmentStore = new TeamAttachmentStore();
 const taskAttachmentStore = new TeamTaskAttachmentStore();
@@ -852,6 +857,7 @@ export function initializeTeamHandlers(
   boardTaskLogStreamService = taskLogStreamService ?? null;
   boardTaskExactLogsService = taskExactLogsService ?? null;
   boardTaskExactLogDetailService = taskExactLogDetailService ?? null;
+  teamApplicationFacade = createTeamApplicationFacade({ teamDataService: service });
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
@@ -1166,6 +1172,13 @@ function getBoardTaskExactLogDetailService(): BoardTaskExactLogDetailService {
     throw new Error('Board task exact log detail service is not initialized');
   }
   return boardTaskExactLogDetailService;
+}
+
+function getTeamApplicationFacade(): TeamApplicationFacade {
+  if (!teamApplicationFacade) {
+    throw new Error('Team application facade is not initialized');
+  }
+  return teamApplicationFacade;
 }
 
 async function wrapTeamHandler<T>(
@@ -5738,14 +5751,6 @@ async function handleDeleteDraft(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('deleteDraft', async () => {
-    // Only allow deleting draft teams (no config.json)
-    const configPath = path.join(getTeamsBasePath(), validated.value!, 'config.json');
-    try {
-      await fs.promises.access(configPath, fs.constants.F_OK);
-      throw new Error('Cannot delete draft: team has config.json (use deleteTeam instead)');
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    }
-    await getTeamDataService().permanentlyDeleteTeam(validated.value!);
+    await getTeamApplicationFacade().deleteDraftTeam(validated.value!);
   });
 }
