@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
@@ -12,6 +11,7 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { normalizeVersion } from '@shared/utils/version';
+import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
 import { getCodexRuntimeProgressPercent } from '../utils/codexRuntimeProgress';
 
