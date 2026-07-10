@@ -91,7 +91,7 @@ function createHost(
     },
     resolveEffectiveConfiguredMember(configMembers, _metaMembers, memberName) {
       return (
-        configMembers.find(
+        (configMembers ?? []).find(
           (candidate) => candidate.name.trim().toLowerCase() === memberName.trim().toLowerCase()
         ) ?? null
       );
