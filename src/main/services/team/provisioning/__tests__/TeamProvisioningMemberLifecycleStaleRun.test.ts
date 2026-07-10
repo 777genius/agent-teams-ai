@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ClaudeBinaryResolver } from '../../ClaudeBinaryResolver';
 import { TeamProvisioningMemberLifecycleController } from '../TeamProvisioningMemberLifecycle';
+import { createUpdateDirectTmuxRestartMemberConfigUseCase } from '../TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase';
 
 import type { TeamProvisioningMemberLifecycleHost } from '../TeamProvisioningMemberLifecycleHostPorts';
 import type { TeamProvisioningMemberLifecycleOperationUseCases } from '../TeamProvisioningMemberLifecycleOperationUseCases';
@@ -83,6 +84,26 @@ function createConfig(member: TeamCreateRequest['members'][number]): TeamConfig 
     projectPath: '/safe-test-project',
     members: [member],
   } as TeamConfig;
+}
+
+function createPureOpenCodeConfig(worker: TeamCreateRequest['members'][number]): {
+  config: TeamConfig;
+  lead: TeamCreateRequest['members'][number];
+} {
+  const lead: TeamCreateRequest['members'][number] = {
+    name: 'team-lead',
+    role: 'Lead',
+    providerId: 'opencode',
+  };
+  return {
+    lead,
+    config: {
+      name: 'Team A',
+      description: 'Pure OpenCode team',
+      projectPath: '/safe-test-project',
+      members: [lead, worker],
+    } as TeamConfig,
+  };
 }
 
 function createHost(
@@ -887,5 +908,267 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     expect(promptEnqueued).toBe(false);
     expect(sendKeysToTmuxPaneForCurrentPlatform).not.toHaveBeenCalled();
     expect(spawnStatuses).toEqual(['offline', 'spawning']);
+  });
+
+  it('does not persist direct restart config, launch state, messages, or tmux relaunch after run replacement before config write', async () => {
+    const member: TeamCreateRequest['members'][number] = {
+      name: 'Worker',
+      role: 'Developer',
+      providerId: 'codex',
+    };
+    const run = createRun(member);
+    const replacementRun = createRunWithId(member, 'run-2');
+    let aliveRunId: string | null = run.runId;
+    let writtenConfig: string | null = null;
+    let invalidatedConfig = false;
+    let promptEnqueued = false;
+    const launchSnapshots: string[] = [];
+    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
+      new Map([['pane-1', { currentCommand: 'bash' }]]) as Awaited<
+        ReturnType<typeof listTmuxPaneRuntimeInfoForCurrentPlatform>
+      >
+    );
+    const updateDirectTmuxRestartMemberConfig = createUpdateDirectTmuxRestartMemberConfigUseCase({
+      async readTeamConfigJson() {
+        aliveRunId = replacementRun.runId;
+        return `${JSON.stringify(createConfig(member), null, 2)}\n`;
+      },
+      async writeTeamConfigJson(_teamName, contents) {
+        writtenConfig = contents;
+      },
+      invalidateTeamConfig() {
+        invalidatedConfig = true;
+      },
+    });
+    const host = createHost(run, {
+      runs: new Map([
+        [run.runId, run],
+        [replacementRun.runId, replacementRun],
+      ]),
+      getAliveRunId: () => aliveRunId,
+      getTrackedRunId: () => aliveRunId,
+      isCurrentTrackedRun: (candidateRun) => aliveRunId === candidateRun.runId,
+      persistInboxMessage() {
+        promptEnqueued = true;
+      },
+      async persistLaunchStateSnapshot(targetRun) {
+        launchSnapshots.push(targetRun.runId);
+        return null;
+      },
+    });
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      immediateOperationUseCases,
+      {
+        restart: {
+          resolveDirectRestartRuntimeCwd: () => process.cwd(),
+          async preparePrimaryOwnedMemberRestartRuntime() {
+            return { directTmuxRestartPaneId: 'pane-1', shouldDirectProcessRestart: false };
+          },
+          updateDirectTmuxRestartMemberConfig,
+        },
+      }
+    );
+
+    await expect(controller.restartMember('team-a', 'Worker')).rejects.toThrow(
+      'Team "team-a" is not currently running'
+    );
+
+    expect(writtenConfig).toBeNull();
+    expect(invalidatedConfig).toBe(false);
+    expect(launchSnapshots).toEqual([]);
+    expect(promptEnqueued).toBe(false);
+    expect(sendKeysToTmuxPaneForCurrentPlatform).not.toHaveBeenCalled();
+  });
+
+  it('persists direct restart config and relaunches when the admitted run remains current', async () => {
+    const member: TeamCreateRequest['members'][number] = {
+      name: 'Worker',
+      role: 'Developer',
+      providerId: 'codex',
+    };
+    const run = createRun(member);
+    let writtenConfig: string | null = null;
+    let invalidatedConfig = false;
+    let promptEnqueued = false;
+    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
+      new Map([['pane-1', { currentCommand: 'bash' }]]) as Awaited<
+        ReturnType<typeof listTmuxPaneRuntimeInfoForCurrentPlatform>
+      >
+    );
+    const updateDirectTmuxRestartMemberConfig = createUpdateDirectTmuxRestartMemberConfigUseCase({
+      async readTeamConfigJson() {
+        return `${JSON.stringify(createConfig(member), null, 2)}\n`;
+      },
+      async writeTeamConfigJson(_teamName, contents) {
+        writtenConfig = contents;
+      },
+      invalidateTeamConfig() {
+        invalidatedConfig = true;
+      },
+    });
+    const host = createHost(run, {
+      getAliveRunId: () => run.runId,
+      getTrackedRunId: () => run.runId,
+      isCurrentTrackedRun: (candidateRun) => candidateRun === run,
+      persistInboxMessage() {
+        promptEnqueued = true;
+      },
+    });
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      immediateOperationUseCases,
+      {
+        restart: {
+          resolveDirectRestartRuntimeCwd: () => process.cwd(),
+          async preparePrimaryOwnedMemberRestartRuntime() {
+            return { directTmuxRestartPaneId: 'pane-1', shouldDirectProcessRestart: false };
+          },
+          updateDirectTmuxRestartMemberConfig,
+        },
+      }
+    );
+
+    await controller.restartMember('team-a', 'Worker');
+
+    expect(writtenConfig).not.toBeNull();
+    expect(JSON.parse(writtenConfig ?? '{}')).toMatchObject({
+      members: [
+        expect.objectContaining({
+          name: 'Worker',
+          providerId: 'codex',
+          tmuxPaneId: 'pane-1',
+          backendType: 'tmux',
+        }),
+      ],
+    });
+    expect(invalidatedConfig).toBe(true);
+    expect(promptEnqueued).toBe(true);
+    expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not persist pure OpenCode restart messages or relaunch after adapter generation replacement before persistence', async () => {
+    const member: TeamCreateRequest['members'][number] = {
+      name: 'Worker',
+      role: 'Developer',
+      providerId: 'opencode',
+    };
+    const run = createRun(member);
+    const { config } = createPureOpenCodeConfig(member);
+    const runtimeAdapterRunByTeam = new Map([
+      [
+        'team-a',
+        { providerId: 'opencode' as const, runId: 'adapter-run-1', cwd: '/safe-test-project' },
+      ],
+    ]);
+    const sentMessages: Record<string, unknown>[] = [];
+    const adapterLaunches: unknown[] = [];
+    const launchSnapshots: string[] = [];
+    const host = createHost(run, {
+      runtimeAdapterRunByTeam,
+      getAliveRunId: () => null,
+      getTrackedRunId: () => runtimeAdapterRunByTeam.get('team-a')?.runId ?? null,
+      getOpenCodeRuntimeAdapter: () => ({ providerId: 'opencode' }),
+      async readConfigForStrictDecision() {
+        return config;
+      },
+      teamMetaStore: {
+        async getMeta() {
+          return { providerId: 'opencode', cwd: '/safe-test-project', prompt: 'Continue' };
+        },
+      },
+      async resolveOpenCodeMemberWorkspacesForRuntime(input) {
+        runtimeAdapterRunByTeam.set('team-a', {
+          providerId: 'opencode',
+          runId: 'adapter-run-2',
+          cwd: '/safe-test-project',
+        });
+        return input.members;
+      },
+      persistSentMessage(_teamName, message) {
+        sentMessages.push(message);
+      },
+      async runOpenCodeTeamRuntimeAdapterLaunch(input) {
+        adapterLaunches.push(input);
+        return { runId: 'new-run' };
+      },
+      async persistLaunchStateSnapshot(targetRun) {
+        launchSnapshots.push(targetRun.runId);
+        return null;
+      },
+    });
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      immediateOperationUseCases
+    );
+
+    await expect(controller.restartMember('team-a', 'Worker')).rejects.toThrow(
+      'Team "team-a" is not currently running'
+    );
+
+    expect(sentMessages).toEqual([]);
+    expect(adapterLaunches).toEqual([]);
+    expect(launchSnapshots).toEqual([]);
+  });
+
+  it('persists pure OpenCode restart message and relaunches when the adapter generation remains current', async () => {
+    const member: TeamCreateRequest['members'][number] = {
+      name: 'Worker',
+      role: 'Developer',
+      providerId: 'opencode',
+    };
+    const run = createRun(member);
+    const { config } = createPureOpenCodeConfig(member);
+    const runtimeAdapterRunByTeam = new Map([
+      [
+        'team-a',
+        { providerId: 'opencode' as const, runId: 'adapter-run-1', cwd: '/safe-test-project' },
+      ],
+    ]);
+    const sentMessages: Record<string, unknown>[] = [];
+    const adapterLaunches: unknown[] = [];
+    const host = createHost(run, {
+      runtimeAdapterRunByTeam,
+      getAliveRunId: () => null,
+      getTrackedRunId: () => runtimeAdapterRunByTeam.get('team-a')?.runId ?? null,
+      getOpenCodeRuntimeAdapter: () => ({ providerId: 'opencode' }),
+      async readConfigForStrictDecision() {
+        return config;
+      },
+      teamMetaStore: {
+        async getMeta() {
+          return { providerId: 'opencode', cwd: '/safe-test-project', prompt: 'Continue' };
+        },
+      },
+      persistSentMessage(_teamName, message) {
+        sentMessages.push(message);
+      },
+      async runOpenCodeTeamRuntimeAdapterLaunch(input) {
+        adapterLaunches.push(input);
+        return { runId: 'new-run' };
+      },
+    });
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      immediateOperationUseCases
+    );
+
+    await controller.restartMember('team-a', 'Worker');
+
+    expect(sentMessages).toHaveLength(1);
+    expect(sentMessages[0]).toMatchObject({
+      from: 'team-lead',
+      to: 'Worker',
+      source: 'system_notification',
+      summary: 'Restarting Worker by user request',
+    });
+    expect(adapterLaunches).toHaveLength(1);
+    expect(adapterLaunches[0]).toMatchObject({
+      request: expect.objectContaining({
+        teamName: 'team-a',
+        providerId: 'opencode',
+      }),
+      members: [expect.objectContaining({ name: 'Worker', providerId: 'opencode' })],
+    });
   });
 });

@@ -130,6 +130,10 @@ const NATIVE_APP_MANAGED_BOOTSTRAP_CONTEXT_ENV =
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS =
   'TeamDelete,TodoWrite,TaskCreate,TaskUpdate,mcp__agent-teams__team_launch,mcp__agent-teams__team_stop';
 
+type RuntimeAdapterRunEntry = NonNullable<
+  ReturnType<TeamProvisioningMemberLifecycleHost['runtimeAdapterRunByTeam']['get']>
+>;
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -730,6 +734,7 @@ export class TeamProvisioningMemberLifecycleController {
       providerId,
       joinedAt: Date.now(),
       bootstrapExpectedAfter,
+      assertStillCurrent: this.createRunStillCurrentGuard(input.run, input.teamName),
     });
     this.assertRunStillCurrentAndAlive(input.run, input.teamName);
     this.enqueueDirectRestartPrompt({
@@ -1045,6 +1050,7 @@ export class TeamProvisioningMemberLifecycleController {
               bootstrapBriefingHash: nativeBootstrapSpec.briefingHash,
             }
           : {}),
+        assertStillCurrent: this.createRunStillCurrentGuard(input.run, input.teamName),
       });
       this.assertRunStillCurrentAndAlive(input.run, input.teamName);
       this.enqueueDirectRestartPrompt({
@@ -1204,6 +1210,41 @@ export class TeamProvisioningMemberLifecycleController {
     if (!this.isRunStillCurrentAndAlive(run, teamName)) {
       throw new Error(`Team "${teamName}" is not currently running`);
     }
+  }
+
+  private createRunStillCurrentGuard(run: ProvisioningRun, teamName: string): () => void {
+    return () => this.assertRunStillCurrentAndAlive(run, teamName);
+  }
+
+  private createRuntimeAdapterRunStillCurrentGuard(
+    teamName: string,
+    runtimeRun: RuntimeAdapterRunEntry
+  ): () => void {
+    const expectedRunId = runtimeRun.runId;
+    const expectedProviderId = runtimeRun.providerId;
+    const expectedCwd = runtimeRun.cwd;
+
+    return () => {
+      const currentRuntimeRun = this.runtimeAdapterRunByTeam.get(teamName);
+      if (currentRuntimeRun !== runtimeRun) {
+        throw new Error(`Team "${teamName}" is not currently running`);
+      }
+      if (
+        currentRuntimeRun.runId !== expectedRunId ||
+        currentRuntimeRun.providerId !== expectedProviderId ||
+        currentRuntimeRun.cwd !== expectedCwd
+      ) {
+        throw new Error(`Team "${teamName}" is not currently running`);
+      }
+    };
+  }
+
+  private async persistLaunchStateSnapshotForCurrentRun(
+    run: ProvisioningRun,
+    phase: PersistedTeamLaunchPhase
+  ): Promise<PersistedTeamLaunchSnapshot | null> {
+    this.assertRunStillCurrentAndAlive(run, run.teamName);
+    return this.persistLaunchStateSnapshot(run, phase);
   }
 
   async attachLiveRosterMember(
@@ -1663,7 +1704,7 @@ export class TeamProvisioningMemberLifecycleController {
           error instanceof Error ? error.message : String(error)
         );
         if (run.isLaunch) {
-          await this.persistLaunchStateSnapshot(
+          await this.persistLaunchStateSnapshotForCurrentRun(
             run,
             run.provisioningComplete ? 'finished' : 'active'
           );
@@ -1697,7 +1738,7 @@ export class TeamProvisioningMemberLifecycleController {
           error instanceof Error ? error.message : String(error)
         );
         if (run.isLaunch) {
-          await this.persistLaunchStateSnapshot(
+          await this.persistLaunchStateSnapshotForCurrentRun(
             run,
             run.provisioningComplete ? 'finished' : 'active'
           );
@@ -1743,7 +1784,7 @@ export class TeamProvisioningMemberLifecycleController {
         error instanceof Error ? error.message : String(error)
       );
       if (run.isLaunch) {
-        await this.persistLaunchStateSnapshot(
+        await this.persistLaunchStateSnapshotForCurrentRun(
           run,
           run.provisioningComplete ? 'finished' : 'active'
         );
@@ -1760,6 +1801,10 @@ export class TeamProvisioningMemberLifecycleController {
     if (runtimeRun?.providerId !== 'opencode') {
       return false;
     }
+    const assertRuntimeAdapterRunStillCurrent = this.createRuntimeAdapterRunStillCurrentGuard(
+      teamName,
+      runtimeRun
+    );
 
     const adapter = this.getOpenCodeRuntimeAdapter();
     if (!adapter) {
@@ -1853,6 +1898,7 @@ export class TeamProvisioningMemberLifecycleController {
       leadProviderId: 'opencode',
       members: activeMembers.map((member) => this.buildConfiguredProvisioningMember(member)),
     });
+    assertRuntimeAdapterRunStillCurrent();
     const targetRuntimeMember = effectiveMembers.find((member) =>
       matchesExactTeamMemberName(member.name, targetMember.name)
     );
@@ -1860,6 +1906,7 @@ export class TeamProvisioningMemberLifecycleController {
       throw new Error(`Member "${memberName}" could not be resolved for OpenCode restart`);
     }
 
+    assertRuntimeAdapterRunStillCurrent();
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.persistOpenCodeMemberRestartSystemMessage({
       teamName,
@@ -1868,8 +1915,10 @@ export class TeamProvisioningMemberLifecycleController {
       displayName: config.description?.trim() || config.name,
       member: targetRuntimeMember,
       reason: 'manual_restart',
+      assertStillCurrent: assertRuntimeAdapterRunStillCurrent,
     });
 
+    assertRuntimeAdapterRunStillCurrent();
     await this.runOpenCodeTeamRuntimeAdapterLaunch({
       request: {
         teamName,

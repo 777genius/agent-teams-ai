@@ -32,6 +32,7 @@ export interface DirectTmuxRestartMemberConfigInput {
   bootstrapRunId?: string;
   bootstrapContextHash?: string;
   bootstrapBriefingHash?: string;
+  assertStillCurrent?: () => void;
 }
 
 export type UpdateDirectTmuxRestartMemberConfigUseCase = (
@@ -133,6 +134,7 @@ export function createUpdateDirectTmuxRestartMemberConfigUseCase(
       members.push(nextMember);
     }
     parsed.members = members;
+    input.assertStillCurrent?.();
     await ports.writeTeamConfigJson(input.teamName, `${JSON.stringify(parsed, null, 2)}\n`);
     ports.invalidateTeamConfig(input.teamName);
   };
