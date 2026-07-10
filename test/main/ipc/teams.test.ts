@@ -145,11 +145,15 @@ import {
   TEAM_CANCEL_PROVISIONING,
   TEAM_CREATE,
   TEAM_CREATE_CONFIG,
+  TEAM_CREATE_INITIAL_GIT_COMMIT,
   TEAM_CREATE_TASK,
+  TEAM_DELETE_DRAFT,
   TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
+  TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
+  TEAM_GET_CLAUDE_LOGS,
   TEAM_GET_DATA,
   TEAM_GET_DELETED_TASKS,
   TEAM_GET_LOGS_FOR_TASK,
@@ -157,7 +161,10 @@ import {
   TEAM_GET_MEMBER_LOGS,
   TEAM_GET_MEMBER_STATS,
   TEAM_GET_MESSAGES_PAGE,
+  TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
   TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_SAVED_REQUEST,
+  TEAM_GET_TASK,
   TEAM_GET_TASK_ACTIVITY,
   TEAM_GET_TASK_ACTIVITY_DETAIL,
   TEAM_GET_TASK_ATTACHMENT,
@@ -165,11 +172,16 @@ import {
   TEAM_GET_TASK_EXACT_LOG_DETAIL,
   TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
   TEAM_GET_TASK_LOG_STREAM,
+  TEAM_GET_TASK_LOG_STREAM_SUMMARY,
+  TEAM_GET_WORKTREE_GIT_STATUS,
+  TEAM_INITIALIZE_GIT_REPOSITORY,
   TEAM_KILL_PROCESS,
   TEAM_LAUNCH,
+  TEAM_LAUNCH_FAILURE_DIAGNOSTICS,
   TEAM_LEAD_ACTIVITY,
   TEAM_LEAD_CONTEXT,
   TEAM_LIST,
+  TEAM_MEMBER_SPAWN_STATUSES,
   TEAM_PERMANENTLY_DELETE,
   TEAM_PREPARE_PROVISIONING,
   TEAM_PROCESS_ALIVE,
@@ -179,17 +191,27 @@ import {
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REPLACE_MEMBERS,
   TEAM_REQUEST_REVIEW,
+  TEAM_RESTART_MEMBER,
   TEAM_RESTORE,
   TEAM_RESTORE_MEMBER,
   TEAM_RESTORE_TASK,
+  TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
   TEAM_SAVE_TASK_ATTACHMENT,
   TEAM_SEND_MESSAGE,
   TEAM_SET_CHANGE_PRESENCE_TRACKING,
+  TEAM_SET_PROJECT_BRANCH_TRACKING,
   TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SET_TASK_LOG_STREAM_TRACKING,
+  TEAM_SET_TOOL_ACTIVITY_TRACKING,
   TEAM_SHOW_MESSAGE_NOTIFICATION,
+  TEAM_SKIP_MEMBER_FOR_LAUNCH,
   TEAM_SOFT_DELETE_TASK,
   TEAM_START_TASK,
+  TEAM_START_TASK_BY_USER,
   TEAM_STOP,
+  TEAM_TOOL_APPROVAL_READ_FILE,
+  TEAM_TOOL_APPROVAL_RESPOND,
+  TEAM_TOOL_APPROVAL_SETTINGS,
   TEAM_UPDATE_CONFIG,
   TEAM_UPDATE_KANBAN,
   TEAM_UPDATE_KANBAN_COLUMN_ORDER,
@@ -197,6 +219,7 @@ import {
   TEAM_UPDATE_TASK_FIELDS,
   TEAM_UPDATE_TASK_OWNER,
   TEAM_UPDATE_TASK_STATUS,
+  TEAM_VALIDATE_CLI_ARGS,
 } from '../../../src/preload/constants/ipcChannels';
 
 import type { TeamIpcHandlerApis } from '../../../src/main/services/team/contracts/TeamProvisioningApis';
@@ -205,6 +228,91 @@ type CreateTeamMock = (
   request: TeamCreateRequest,
   onProgress: (progress: TeamProvisioningProgress) => void
 ) => Promise<{ runId: string }>;
+
+const TEAM_HANDLER_KEYS = [
+  TEAM_ADD_MEMBER,
+  TEAM_ADD_TASK_COMMENT,
+  TEAM_ADD_TASK_RELATIONSHIP,
+  TEAM_ALIVE_LIST,
+  TEAM_CANCEL_PROVISIONING,
+  TEAM_CREATE,
+  TEAM_CREATE_CONFIG,
+  TEAM_CREATE_INITIAL_GIT_COMMIT,
+  TEAM_CREATE_TASK,
+  TEAM_DELETE_DRAFT,
+  TEAM_DELETE_TASK_ATTACHMENT,
+  TEAM_DELETE_TEAM,
+  TEAM_GET_AGENT_RUNTIME,
+  TEAM_GET_ALL_TASKS,
+  TEAM_GET_ATTACHMENTS,
+  TEAM_GET_CLAUDE_LOGS,
+  TEAM_GET_DATA,
+  TEAM_GET_DELETED_TASKS,
+  TEAM_GET_LOGS_FOR_TASK,
+  TEAM_GET_MEMBER_ACTIVITY_META,
+  TEAM_GET_MEMBER_LOGS,
+  TEAM_GET_MEMBER_STATS,
+  TEAM_GET_MESSAGES_PAGE,
+  TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
+  TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_SAVED_REQUEST,
+  TEAM_GET_TASK,
+  TEAM_GET_TASK_ACTIVITY,
+  TEAM_GET_TASK_ACTIVITY_DETAIL,
+  TEAM_GET_TASK_ATTACHMENT,
+  TEAM_GET_TASK_CHANGE_PRESENCE,
+  TEAM_GET_TASK_EXACT_LOG_DETAIL,
+  TEAM_GET_TASK_EXACT_LOG_SUMMARIES,
+  TEAM_GET_TASK_LOG_STREAM,
+  TEAM_GET_TASK_LOG_STREAM_SUMMARY,
+  TEAM_GET_WORKTREE_GIT_STATUS,
+  TEAM_INITIALIZE_GIT_REPOSITORY,
+  TEAM_KILL_PROCESS,
+  TEAM_LAUNCH,
+  TEAM_LAUNCH_FAILURE_DIAGNOSTICS,
+  TEAM_LEAD_ACTIVITY,
+  TEAM_LEAD_CONTEXT,
+  TEAM_LIST,
+  TEAM_MEMBER_SPAWN_STATUSES,
+  TEAM_PERMANENTLY_DELETE,
+  TEAM_PREPARE_PROVISIONING,
+  TEAM_PROCESS_ALIVE,
+  TEAM_PROCESS_SEND,
+  TEAM_PROVISIONING_STATUS,
+  TEAM_REMOVE_MEMBER,
+  TEAM_REMOVE_TASK_RELATIONSHIP,
+  TEAM_REPLACE_MEMBERS,
+  TEAM_REQUEST_REVIEW,
+  TEAM_RESTART_MEMBER,
+  TEAM_RESTORE,
+  TEAM_RESTORE_MEMBER,
+  TEAM_RESTORE_TASK,
+  TEAM_RETRY_FAILED_OPENCODE_SECONDARY_LANES,
+  TEAM_SAVE_TASK_ATTACHMENT,
+  TEAM_SEND_MESSAGE,
+  TEAM_SET_CHANGE_PRESENCE_TRACKING,
+  TEAM_SET_PROJECT_BRANCH_TRACKING,
+  TEAM_SET_TASK_CLARIFICATION,
+  TEAM_SET_TASK_LOG_STREAM_TRACKING,
+  TEAM_SET_TOOL_ACTIVITY_TRACKING,
+  TEAM_SHOW_MESSAGE_NOTIFICATION,
+  TEAM_SKIP_MEMBER_FOR_LAUNCH,
+  TEAM_SOFT_DELETE_TASK,
+  TEAM_START_TASK,
+  TEAM_START_TASK_BY_USER,
+  TEAM_STOP,
+  TEAM_TOOL_APPROVAL_READ_FILE,
+  TEAM_TOOL_APPROVAL_RESPOND,
+  TEAM_TOOL_APPROVAL_SETTINGS,
+  TEAM_UPDATE_CONFIG,
+  TEAM_UPDATE_KANBAN,
+  TEAM_UPDATE_KANBAN_COLUMN_ORDER,
+  TEAM_UPDATE_MEMBER_ROLE,
+  TEAM_UPDATE_TASK_FIELDS,
+  TEAM_UPDATE_TASK_OWNER,
+  TEAM_UPDATE_TASK_STATUS,
+  TEAM_VALIDATE_CLI_ARGS,
+] as const;
 
 describe('ipc teams handlers', () => {
   const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
@@ -349,7 +457,7 @@ describe('ipc teams handlers', () => {
     getProvisioningStatus: vi.fn(() => resolved({
       runId: 'run-1',
       teamName: 'my-team',
-      state: 'spawning',
+      state: 'spawning' as const,
       message: 'Starting',
       startedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -402,7 +510,7 @@ describe('ipc teams handlers', () => {
     getLiveLeadProcessMessages: vi.fn(() => [] as InboxMessage[]),
     getCurrentLeadSessionId: vi.fn(() => null as string | null),
     getAliveTeams: vi.fn(() => ['my-team']),
-    getLeadActivityState: vi.fn(() => ({ state: 'idle', runId: 'run-2' })),
+    getLeadActivityState: vi.fn(() => ({ state: 'idle' as const, runId: 'run-2' })),
     getLeadContextUsage: vi.fn(() => ({ usage: null, runId: 'run-2' })),
     getTeamAgentRuntimeSnapshot: vi.fn(() => resolved({
       teamName: 'my-team',
@@ -486,7 +594,7 @@ describe('ipc teams handlers', () => {
       respondToToolApproval: teamHandlerMocks.respondToToolApproval,
       updateToolApprovalSettings: teamHandlerMocks.updateToolApprovalSettings,
     },
-  } as TeamIpcHandlerApis;
+  } satisfies TeamIpcHandlerApis;
   const boardTaskActivityService = {
     getTaskActivity: vi.fn<() => Promise<BoardTaskActivityEntry[]>>(() => resolved([])),
   };
@@ -604,64 +712,8 @@ describe('ipc teams handlers', () => {
   });
 
   it('registers all expected handlers', () => {
-    expect(handlers.has(TEAM_LIST)).toBe(true);
-    expect(handlers.has(TEAM_GET_DATA)).toBe(true);
-    expect(handlers.has(TEAM_GET_MESSAGES_PAGE)).toBe(true);
-    expect(handlers.has(TEAM_GET_MEMBER_ACTIVITY_META)).toBe(true);
-    expect(handlers.has(TEAM_GET_TASK_CHANGE_PRESENCE)).toBe(true);
-    expect(handlers.has(TEAM_SET_CHANGE_PRESENCE_TRACKING)).toBe(true);
-    expect(handlers.has(TEAM_DELETE_TEAM)).toBe(true);
-    expect(handlers.has(TEAM_PREPARE_PROVISIONING)).toBe(true);
-    expect(handlers.has(TEAM_CREATE)).toBe(true);
-    expect(handlers.has(TEAM_LAUNCH)).toBe(true);
-    expect(handlers.has(TEAM_CREATE_TASK)).toBe(true);
-    expect(handlers.has(TEAM_PROVISIONING_STATUS)).toBe(true);
-    expect(handlers.has(TEAM_CANCEL_PROVISIONING)).toBe(true);
-    expect(handlers.has(TEAM_SEND_MESSAGE)).toBe(true);
-    expect(handlers.has(TEAM_REQUEST_REVIEW)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_KANBAN)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_KANBAN_COLUMN_ORDER)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_TASK_STATUS)).toBe(true);
-    expect(handlers.has(TEAM_START_TASK)).toBe(true);
-    expect(handlers.has(TEAM_PROCESS_SEND)).toBe(true);
-    expect(handlers.has(TEAM_PROCESS_ALIVE)).toBe(true);
-    expect(handlers.has(TEAM_ALIVE_LIST)).toBe(true);
-    expect(handlers.has(TEAM_STOP)).toBe(true);
-    expect(handlers.has(TEAM_CREATE_CONFIG)).toBe(true);
-    expect(handlers.has(TEAM_GET_MEMBER_LOGS)).toBe(true);
-    expect(handlers.has(TEAM_GET_LOGS_FOR_TASK)).toBe(true);
-    expect(handlers.has(TEAM_GET_TASK_ACTIVITY)).toBe(true);
-    expect(handlers.has(TEAM_GET_TASK_LOG_STREAM)).toBe(true);
-    expect(handlers.has(TEAM_GET_TASK_EXACT_LOG_SUMMARIES)).toBe(true);
-    expect(handlers.has(TEAM_GET_TASK_EXACT_LOG_DETAIL)).toBe(true);
-    expect(handlers.has(TEAM_GET_MEMBER_STATS)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_CONFIG)).toBe(true);
-    expect(handlers.has(TEAM_GET_ALL_TASKS)).toBe(true);
-    expect(handlers.has(TEAM_ADD_TASK_COMMENT)).toBe(true);
-    expect(handlers.has(TEAM_ADD_MEMBER)).toBe(true);
-    expect(handlers.has(TEAM_REMOVE_MEMBER)).toBe(true);
-    expect(handlers.has(TEAM_RESTORE_MEMBER)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_MEMBER_ROLE)).toBe(true);
-    expect(handlers.has(TEAM_KILL_PROCESS)).toBe(true);
-    expect(handlers.has(TEAM_LEAD_ACTIVITY)).toBe(true);
-    expect(handlers.has(TEAM_SOFT_DELETE_TASK)).toBe(true);
-    expect(handlers.has(TEAM_GET_DELETED_TASKS)).toBe(true);
-    expect(handlers.has(TEAM_SET_TASK_CLARIFICATION)).toBe(true);
-    expect(handlers.has(TEAM_RESTORE)).toBe(true);
-    expect(handlers.has(TEAM_PERMANENTLY_DELETE)).toBe(true);
-    expect(handlers.has(TEAM_ADD_TASK_RELATIONSHIP)).toBe(true);
-    expect(handlers.has(TEAM_REMOVE_TASK_RELATIONSHIP)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_TASK_OWNER)).toBe(true);
-    expect(handlers.has(TEAM_UPDATE_TASK_FIELDS)).toBe(true);
-    expect(handlers.has(TEAM_REPLACE_MEMBERS)).toBe(true);
-    expect(handlers.has(TEAM_GET_PROJECT_BRANCH)).toBe(true);
-    expect(handlers.has(TEAM_GET_ATTACHMENTS)).toBe(true);
-    expect(handlers.has(TEAM_LEAD_CONTEXT)).toBe(true);
-    expect(handlers.has(TEAM_RESTORE_TASK)).toBe(true);
-    expect(handlers.has(TEAM_SHOW_MESSAGE_NOTIFICATION)).toBe(true);
-    expect(handlers.has(TEAM_SAVE_TASK_ATTACHMENT)).toBe(true);
-    expect(handlers.has(TEAM_GET_TASK_ATTACHMENT)).toBe(true);
-    expect(handlers.has(TEAM_DELETE_TASK_ATTACHMENT)).toBe(true);
+    expect(ipcMain.handle).toHaveBeenCalledTimes(TEAM_HANDLER_KEYS.length);
+    expect(new Set(handlers.keys())).toEqual(new Set(TEAM_HANDLER_KEYS));
   });
 
   it('forwards selected model checks with effort to prepareProvisioning', async () => {
@@ -4638,60 +4690,13 @@ describe('ipc teams handlers', () => {
     });
   });
 
-  it('removes handlers', () => {
+  it('removes all expected handlers', () => {
     removeTeamHandlers(ipcMain as never);
-    expect(handlers.has(TEAM_LIST)).toBe(false);
-    expect(handlers.has(TEAM_GET_DATA)).toBe(false);
-    expect(handlers.has(TEAM_DELETE_TEAM)).toBe(false);
-    expect(handlers.has(TEAM_PREPARE_PROVISIONING)).toBe(false);
-    expect(handlers.has(TEAM_CREATE)).toBe(false);
-    expect(handlers.has(TEAM_LAUNCH)).toBe(false);
-    expect(handlers.has(TEAM_CREATE_TASK)).toBe(false);
-    expect(handlers.has(TEAM_PROVISIONING_STATUS)).toBe(false);
-    expect(handlers.has(TEAM_CANCEL_PROVISIONING)).toBe(false);
-    expect(handlers.has(TEAM_SEND_MESSAGE)).toBe(false);
-    expect(handlers.has(TEAM_REQUEST_REVIEW)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_KANBAN)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_KANBAN_COLUMN_ORDER)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_TASK_STATUS)).toBe(false);
-    expect(handlers.has(TEAM_START_TASK)).toBe(false);
-    expect(handlers.has(TEAM_PROCESS_SEND)).toBe(false);
-    expect(handlers.has(TEAM_PROCESS_ALIVE)).toBe(false);
-    expect(handlers.has(TEAM_ALIVE_LIST)).toBe(false);
-    expect(handlers.has(TEAM_STOP)).toBe(false);
-    expect(handlers.has(TEAM_CREATE_CONFIG)).toBe(false);
-    expect(handlers.has(TEAM_GET_MEMBER_LOGS)).toBe(false);
-    expect(handlers.has(TEAM_GET_LOGS_FOR_TASK)).toBe(false);
-    expect(handlers.has(TEAM_GET_TASK_ACTIVITY)).toBe(false);
-    expect(handlers.has(TEAM_GET_TASK_LOG_STREAM)).toBe(false);
-    expect(handlers.has(TEAM_GET_MEMBER_STATS)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_CONFIG)).toBe(false);
-    expect(handlers.has(TEAM_GET_ALL_TASKS)).toBe(false);
-    expect(handlers.has(TEAM_ADD_TASK_COMMENT)).toBe(false);
-    expect(handlers.has(TEAM_ADD_MEMBER)).toBe(false);
-    expect(handlers.has(TEAM_REMOVE_MEMBER)).toBe(false);
-    expect(handlers.has(TEAM_RESTORE_MEMBER)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_MEMBER_ROLE)).toBe(false);
-    expect(handlers.has(TEAM_GET_PROJECT_BRANCH)).toBe(false);
-    expect(handlers.has(TEAM_GET_ATTACHMENTS)).toBe(false);
-    expect(handlers.has(TEAM_KILL_PROCESS)).toBe(false);
-    expect(handlers.has(TEAM_LEAD_ACTIVITY)).toBe(false);
-    expect(handlers.has(TEAM_SOFT_DELETE_TASK)).toBe(false);
-    expect(handlers.has(TEAM_GET_DELETED_TASKS)).toBe(false);
-    expect(handlers.has(TEAM_SET_TASK_CLARIFICATION)).toBe(false);
-    expect(handlers.has(TEAM_RESTORE)).toBe(false);
-    expect(handlers.has(TEAM_PERMANENTLY_DELETE)).toBe(false);
-    expect(handlers.has(TEAM_ADD_TASK_RELATIONSHIP)).toBe(false);
-    expect(handlers.has(TEAM_REMOVE_TASK_RELATIONSHIP)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_TASK_OWNER)).toBe(false);
-    expect(handlers.has(TEAM_UPDATE_TASK_FIELDS)).toBe(false);
-    expect(handlers.has(TEAM_REPLACE_MEMBERS)).toBe(false);
-    expect(handlers.has(TEAM_LEAD_CONTEXT)).toBe(false);
-    expect(handlers.has(TEAM_RESTORE_TASK)).toBe(false);
-    expect(handlers.has(TEAM_SHOW_MESSAGE_NOTIFICATION)).toBe(false);
-    expect(handlers.has(TEAM_SAVE_TASK_ATTACHMENT)).toBe(false);
-    expect(handlers.has(TEAM_GET_TASK_ATTACHMENT)).toBe(false);
-    expect(handlers.has(TEAM_DELETE_TASK_ATTACHMENT)).toBe(false);
+    expect(ipcMain.removeHandler).toHaveBeenCalledTimes(TEAM_HANDLER_KEYS.length);
+    expect(new Set(ipcMain.removeHandler.mock.calls.map(([channel]) => channel))).toEqual(
+      new Set(TEAM_HANDLER_KEYS)
+    );
+    expect(handlers.size).toBe(0);
   });
 
   it('returns explicit task activity rows', async () => {
