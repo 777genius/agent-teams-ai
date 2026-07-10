@@ -21,9 +21,11 @@ export interface ProviderProbeCachePort {
   set(cacheKey: string, result: ProbeResult): void;
   delete(cacheKey: string): void;
   getOrCreateInFlight(
-    cacheKey: string,
-    create: () => Promise<ProbeResult | null>
+    inFlightKey: string,
+    create: () => Promise<ProbeResult | null>,
+    options?: { probeCacheKey?: string }
   ): Promise<ProbeResult | null>;
+  hasInFlightForProbeCacheKey(probeCacheKey: string): boolean;
 }
 
 export function createInMemoryProviderProbeCachePort({
@@ -35,6 +37,25 @@ export function createInMemoryProviderProbeCachePort({
 } = {}): ProviderProbeCachePort {
   const cachedProbeResults = new Map<string, CachedProbeResult>();
   const probeInFlightByKey = new Map<string, Promise<ProbeResult | null>>();
+  const inFlightCountByProbeCacheKey = new Map<string, number>();
+
+  const incrementInFlightCount = (probeCacheKey: string | undefined): void => {
+    if (!probeCacheKey) return;
+    inFlightCountByProbeCacheKey.set(
+      probeCacheKey,
+      (inFlightCountByProbeCacheKey.get(probeCacheKey) ?? 0) + 1
+    );
+  };
+
+  const decrementInFlightCount = (probeCacheKey: string | undefined): void => {
+    if (!probeCacheKey) return;
+    const nextCount = (inFlightCountByProbeCacheKey.get(probeCacheKey) ?? 0) - 1;
+    if (nextCount > 0) {
+      inFlightCountByProbeCacheKey.set(probeCacheKey, nextCount);
+      return;
+    }
+    inFlightCountByProbeCacheKey.delete(probeCacheKey);
+  };
 
   return {
     get(cacheKey) {
@@ -53,19 +74,25 @@ export function createInMemoryProviderProbeCachePort({
     delete(cacheKey) {
       cachedProbeResults.delete(cacheKey);
     },
-    getOrCreateInFlight(cacheKey, create) {
-      const existingProbe = probeInFlightByKey.get(cacheKey);
+    getOrCreateInFlight(inFlightKey, create, options) {
+      const existingProbe = probeInFlightByKey.get(inFlightKey);
       if (existingProbe) {
         return existingProbe;
       }
 
+      const probeCacheKey = options?.probeCacheKey;
       const probePromise = create().finally(() => {
-        if (probeInFlightByKey.get(cacheKey) === probePromise) {
-          probeInFlightByKey.delete(cacheKey);
+        if (probeInFlightByKey.get(inFlightKey) === probePromise) {
+          probeInFlightByKey.delete(inFlightKey);
+          decrementInFlightCount(probeCacheKey);
         }
       });
-      probeInFlightByKey.set(cacheKey, probePromise);
+      probeInFlightByKey.set(inFlightKey, probePromise);
+      incrementInFlightCount(probeCacheKey);
       return probePromise;
+    },
+    hasInFlightForProbeCacheKey(probeCacheKey) {
+      return (inFlightCountByProbeCacheKey.get(probeCacheKey) ?? 0) > 0;
     },
   };
 }

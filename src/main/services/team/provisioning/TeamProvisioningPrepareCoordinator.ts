@@ -890,7 +890,11 @@ export class TeamProvisioningPrepareCoordinator {
   clearProbeCache(cwd: string, providerId: TeamProviderId | undefined): void {
     const cacheKey = createProbeCacheKey(cwd, providerId);
     this.ports.providerProbeCache.delete(cacheKey);
-    this.bumpProbeCacheGeneration(cacheKey);
+    if (this.ports.providerProbeCache.hasInFlightForProbeCacheKey(cacheKey)) {
+      this.bumpProbeCacheGeneration(cacheKey);
+      return;
+    }
+    this.pruneProbeCacheGeneration(cacheKey);
   }
 
   async validatePrepareCwd(cwd: string): Promise<void> {
@@ -913,55 +917,63 @@ export class TeamProvisioningPrepareCoordinator {
 
     const cacheGeneration = this.getProbeCacheGeneration(cacheKey);
     const inFlightKey = createProbeInFlightKey(cacheKey, cacheGeneration);
-    return this.ports.providerProbeCache.getOrCreateInFlight(inFlightKey, async () => {
-      const claudePath = await this.ports.resolveClaudeBinaryPath();
-      if (!claudePath) return null;
+    try {
+      return await this.ports.providerProbeCache.getOrCreateInFlight(
+        inFlightKey,
+        async () => {
+          const claudePath = await this.ports.resolveClaudeBinaryPath();
+          if (!claudePath) return null;
 
-      const {
-        env,
-        authSource,
-        providerArgs = [],
-        warning,
-      } = await this.ports.buildProvisioningEnv(providerId);
-      if (warning) {
-        return {
-          claudePath,
-          authSource,
-          warning,
-        };
-      }
+          const {
+            env,
+            authSource,
+            providerArgs = [],
+            warning,
+          } = await this.ports.buildProvisioningEnv(providerId);
+          if (warning) {
+            return {
+              claudePath,
+              authSource,
+              warning,
+            };
+          }
 
-      const probe = await this.ports.probeClaudeRuntime(
-        claudePath,
-        cwd,
-        env,
-        providerId,
-        providerArgs
+          const probe = await this.ports.probeClaudeRuntime(
+            claudePath,
+            cwd,
+            env,
+            providerId,
+            providerArgs
+          );
+          const result = {
+            claudePath,
+            authSource,
+            ...(probe.warning ? { warning: probe.warning } : {}),
+          };
+
+          const shouldCache =
+            !probe.warning ||
+            (!isAuthFailureWarning(probe.warning, 'probe') &&
+              !isTransientProbeWarning(probe.warning) &&
+              !isBinaryProbeWarning(probe.warning));
+
+          if (this.getProbeCacheGeneration(cacheKey) !== cacheGeneration) {
+            return result;
+          }
+
+          if (shouldCache) {
+            this.ports.providerProbeCache.set(cacheKey, result);
+          } else {
+            this.ports.providerProbeCache.delete(cacheKey);
+          }
+
+          return result;
+        },
+        { probeCacheKey: cacheKey }
       );
-      const result = {
-        claudePath,
-        authSource,
-        ...(probe.warning ? { warning: probe.warning } : {}),
-      };
-
-      const shouldCache =
-        !probe.warning ||
-        (!isAuthFailureWarning(probe.warning, 'probe') &&
-          !isTransientProbeWarning(probe.warning) &&
-          !isBinaryProbeWarning(probe.warning));
-
-      if (this.getProbeCacheGeneration(cacheKey) !== cacheGeneration) {
-        return result;
-      }
-
-      if (shouldCache) {
-        this.ports.providerProbeCache.set(cacheKey, result);
-      } else {
-        this.ports.providerProbeCache.delete(cacheKey);
-      }
-
-      return result;
-    });
+    } finally {
+      this.pruneProbeCacheGeneration(cacheKey);
+    }
   }
 
   private getProbeCacheGeneration(cacheKey: string): number {
@@ -970,5 +982,11 @@ export class TeamProvisioningPrepareCoordinator {
 
   private bumpProbeCacheGeneration(cacheKey: string): void {
     this.probeCacheGenerationByKey.set(cacheKey, this.getProbeCacheGeneration(cacheKey) + 1);
+  }
+
+  private pruneProbeCacheGeneration(cacheKey: string): void {
+    if (!this.ports.providerProbeCache.hasInFlightForProbeCacheKey(cacheKey)) {
+      this.probeCacheGenerationByKey.delete(cacheKey);
+    }
   }
 }
