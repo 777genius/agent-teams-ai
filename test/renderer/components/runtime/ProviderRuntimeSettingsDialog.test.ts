@@ -2058,6 +2058,8 @@ describe('ProviderRuntimeSettingsDialog', () => {
           initialProviderId: 'codex',
           codexRuntimeStatus: {
             installed: false,
+            latestVersion: null,
+            updateAvailable: false,
             source: 'missing',
             state: 'idle',
           },

@@ -6,6 +6,8 @@ export const CODEX_REASONING_EFFORTS = [
   'medium',
   'high',
   'xhigh',
+  'max',
+  'ultra',
 ] as const satisfies readonly CliProviderReasoningEffort[];
 
 const CODEX_REASONING_EFFORT_SET = new Set<string>(CODEX_REASONING_EFFORTS);

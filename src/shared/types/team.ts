@@ -970,7 +970,15 @@ export interface TeamViewSnapshot {
   isAlive?: boolean;
 }
 
-export type EffortLevel = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+export type EffortLevel =
+  | 'none'
+  | 'minimal'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'xhigh'
+  | 'max'
+  | 'ultra';
 export type TeamProviderId = 'anthropic' | 'codex' | 'gemini' | 'opencode';
 export type TeamProviderBackendId =
   | 'auto'

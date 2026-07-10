@@ -992,8 +992,78 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
+    expect(storeState.installCodexRuntime).not.toHaveBeenCalled();
+    const dialog = document.body.querySelector('[role="dialog"]');
+    const dialogInstallButton = Array.from(dialog?.querySelectorAll('button') ?? []).find(
+      (button) => button.textContent?.trim() === 'Install'
+    );
+    await act(async () => {
+      dialogInstallButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
     expect(storeState.installCodexRuntime).toHaveBeenCalledTimes(1);
 
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('opens the shared Codex update dialog for an installed stale runtime', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.codexRuntimeStatus = {
+      installed: true,
+      binaryPath: '/usr/local/bin/codex',
+      version: 'codex-cli 0.139.0',
+      latestVersion: '0.144.1',
+      updateAvailable: true,
+      source: 'path',
+      state: 'ready',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [createCodexNativeRolloutProvider({ state: 'ready', available: true })],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    const dashboardUpdateButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Update to v0.144.1')
+    );
+    expect(dashboardUpdateButton).toBeDefined();
+
+    await act(async () => {
+      dashboardUpdateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(storeState.installCodexRuntime).not.toHaveBeenCalled();
+    const dialog = document.body.querySelector('[role="dialog"]');
+    expect(dialog?.textContent).toContain('v0.139.0 -> v0.144.1');
+    const dialogUpdateButton = Array.from(dialog?.querySelectorAll('button') ?? []).find((button) =>
+      button.textContent?.includes('Update to v0.144.1')
+    );
+
+    await act(async () => {
+      dialogUpdateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(storeState.installCodexRuntime).toHaveBeenCalledTimes(1);
     await act(async () => {
       root.unmount();
       await Promise.resolve();
@@ -3113,9 +3183,7 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).not.toContain(
       'Reconnect ChatGPT to refresh the current Codex subscription session.'
     );
-    expect(host.textContent).not.toContain(
-      'Models unavailable for this runtime build'
-    );
+    expect(host.textContent).not.toContain('Models unavailable for this runtime build');
 
     await act(async () => {
       root.unmount();

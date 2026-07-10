@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 
 vi.mock('@renderer/components/ui/tabs', () => {
   let currentValue = '';
@@ -63,6 +64,11 @@ const storeState = {
   cliProviderStatusLoading: {} as Record<string, boolean>,
   appConfig: { general: { multimodelEnabled: true } },
   fetchCliProviderStatus: vi.fn().mockResolvedValue(undefined),
+  codexRuntimeStatus: null as CodexRuntimeStatus | null,
+  codexRuntimeStatusLoading: false,
+  codexRuntimeError: null as string | null,
+  fetchCodexRuntimeStatus: vi.fn().mockResolvedValue(undefined),
+  installCodexRuntime: vi.fn().mockResolvedValue(undefined),
 };
 const codexAccountHookState = {
   snapshot: null as CodexAccountSnapshotDto | null,
@@ -115,6 +121,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     storeState.cliStatusLoading = false;
     storeState.cliProviderStatusLoading = {};
     storeState.fetchCliProviderStatus.mockClear();
+    storeState.codexRuntimeStatus = null;
+    storeState.codexRuntimeStatusLoading = false;
+    storeState.codexRuntimeError = null;
+    storeState.fetchCodexRuntimeStatus.mockClear();
+    storeState.installCodexRuntime.mockClear();
     codexAccountHookState.snapshot = null;
     codexAccountHookState.loading = false;
     codexAccountHookState.error = null;
@@ -160,6 +171,58 @@ describe('TeamModelSelector disabled Codex models', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('shows the Codex update notice and reuses the shared update dialog', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.codexRuntimeStatus = {
+      installed: true,
+      binaryPath: '/usr/local/bin/codex',
+      version: 'codex-cli 0.139.0',
+      latestVersion: '0.144.1',
+      updateAvailable: true,
+      source: 'path',
+      state: 'ready',
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'codex',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const notice = host.querySelector('[data-testid="codex-runtime-update-notice"]');
+    expect(notice?.textContent).toContain('Update available');
+    const noticeButton = Array.from(notice?.querySelectorAll('button') ?? []).find((button) =>
+      button.textContent?.includes('Update to v0.144.1')
+    );
+
+    await act(async () => {
+      noticeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    const dialog = document.body.querySelector('[role="dialog"]');
+    expect(dialog).not.toBeNull();
+    const updateButton = Array.from(dialog?.querySelectorAll('button') ?? []).find((button) =>
+      button.textContent?.includes('Update to v0.144.1')
+    );
+    await act(async () => {
+      updateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(storeState.installCodexRuntime).toHaveBeenCalledTimes(1);
+    await act(async () => root.unmount());
   });
 
   it('normalizes a stale disabled selection back to default', async () => {

@@ -70,14 +70,16 @@ describe('TeamProvisioningRuntimeLaunchSelection', () => {
     expect(hasPathBasedSettingsArgs(['--settings={"fastMode":false}'])).toBe(false);
   });
 
-  it('treats xhigh Codex effort as supported only when runtime capabilities pass it through', () => {
+  it('treats extended Codex efforts as supported only when runtime capabilities pass them through', () => {
     expect(isCodexEffortRuntimeSupported('high', null)).toBe(true);
     expect(isCodexEffortRuntimeSupported('xhigh', null)).toBe(false);
+    expect(isCodexEffortRuntimeSupported('max', null)).toBe(false);
+    expect(isCodexEffortRuntimeSupported('ultra', null)).toBe(false);
     expect(
-      isCodexEffortRuntimeSupported('xhigh', {
+      isCodexEffortRuntimeSupported('ultra', {
         reasoningEffort: {
           supported: true,
-          values: ['low', 'medium', 'high', 'xhigh'],
+          values: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
           configPassthrough: true,
         },
       })

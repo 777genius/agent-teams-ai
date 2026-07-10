@@ -11,6 +11,7 @@ import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
+import { isVersionOlder, normalizeVersion } from '@shared/utils/version';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fsp, readFileSync } from 'fs';
 import path from 'path';
@@ -32,6 +33,7 @@ const CURRENT_MANIFEST_SCHEMA_VERSION = 1;
 const MAX_TARBALL_BYTES = 160 * 1024 * 1024;
 const MAX_UNPACKED_BYTES = 650 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
+const LATEST_VERSION_TIMEOUT_MS = 8_000;
 const VERSION_TIMEOUT_MS = 10_000;
 
 interface NpmPackageMetadata {
@@ -232,9 +234,9 @@ export function getCodexRuntimePlatformCandidates(
   throw new Error(`Codex app install is not supported on ${platform}/${arch}`);
 }
 
-async function fetchText(url: string): Promise<string> {
+async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<string> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, { signal: controller.signal });
     if (!response.ok) {
@@ -248,15 +250,29 @@ async function fetchText(url: string): Promise<string> {
 
 async function fetchPackageMetadata(
   packageName: string,
-  version = 'latest'
+  version = 'latest',
+  timeoutMs = FETCH_TIMEOUT_MS
 ): Promise<NpmPackageMetadata> {
   const url = `${NPM_REGISTRY_BASE_URL}/${encodeURIComponent(packageName)}/${encodeURIComponent(version)}`;
-  const raw = await fetchText(url);
+  const raw = await fetchText(url, timeoutMs);
   const parsed = JSON.parse(raw) as NpmPackageMetadata;
   if (!parsed.version || !parsed.dist?.tarball || !parsed.dist.integrity) {
     throw new Error(`Invalid npm metadata for ${packageName}@${version}`);
   }
   return parsed;
+}
+
+async function resolveLatestCodexVersion(): Promise<string | null> {
+  const metadata = await fetchPackageMetadata(
+    ROOT_PACKAGE_NAME,
+    'latest',
+    LATEST_VERSION_TIMEOUT_MS
+  );
+  return metadata.version ? normalizeVersion(metadata.version) : null;
+}
+
+export interface CodexRuntimeInstallerServiceDependencies {
+  resolveLatestVersion?: () => Promise<string | null>;
 }
 
 export function verifyCodexRuntimePackageIntegrity(buffer: Buffer, integrity: string): void {
@@ -473,6 +489,8 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
   private installPromise: Promise<CodexRuntimeStatus> | null = null;
   private latestStatus: CodexRuntimeStatus | null = null;
 
+  constructor(private readonly dependencies: CodexRuntimeInstallerServiceDependencies = {}) {}
+
   setMainWindow(win: BrowserWindow | null): void {
     this.mainWindow = win;
   }
@@ -488,8 +506,9 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
 
     const appManagedStatus = await this.getAppManagedStatus();
     if (appManagedStatus.installed) {
-      this.latestStatus = appManagedStatus;
-      return appManagedStatus;
+      const status = await this.withLatestVersion(appManagedStatus);
+      this.latestStatus = status;
+      return status;
     }
 
     const pathStatus = await this.getPathStatus();
@@ -499,8 +518,9 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
       appManagedStatus.state !== 'failed'
         ? pathStatus
         : appManagedStatus;
-    this.latestStatus = status;
-    return status;
+    const versionAwareStatus = await this.withLatestVersion(status);
+    this.latestStatus = versionAwareStatus;
+    return versionAwareStatus;
   }
 
   async install(): Promise<CodexRuntimeStatus> {
@@ -519,18 +539,54 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
   }
 
   private publishProgress(progress: CodexRuntimeInstallProgress): void {
+    const currentStatus = this.latestStatus;
     this.publish({
-      installed: false,
-      source: 'missing',
+      installed: currentStatus?.installed ?? false,
+      ...(currentStatus?.binaryPath ? { binaryPath: currentStatus.binaryPath } : {}),
+      ...(currentStatus?.version ? { version: currentStatus.version } : {}),
+      latestVersion: currentStatus?.latestVersion ?? null,
+      updateAvailable: currentStatus?.updateAvailable ?? false,
+      source: currentStatus?.source ?? 'missing',
       state: progress.phase,
       progress,
     });
   }
 
+  private async withLatestVersion(status: CodexRuntimeStatus): Promise<CodexRuntimeStatus> {
+    try {
+      const latestVersion = await (
+        this.dependencies.resolveLatestVersion ?? resolveLatestCodexVersion
+      )();
+      return {
+        ...status,
+        latestVersion,
+        updateAvailable: Boolean(
+          status.installed &&
+          status.version &&
+          latestVersion &&
+          isVersionOlder(status.version, latestVersion)
+        ),
+      };
+    } catch (error) {
+      logger.warn('Failed to resolve latest Codex version:', getErrorMessage(error));
+      return {
+        ...status,
+        latestVersion: null,
+        updateAvailable: false,
+      };
+    }
+  }
+
   private async getAppManagedStatus(): Promise<CodexRuntimeStatus> {
     const manifest = await readCurrentManifest();
     if (!isAbsoluteExistingFile(manifest?.binaryPath)) {
-      return { installed: false, source: 'missing', state: 'idle' };
+      return {
+        installed: false,
+        latestVersion: null,
+        updateAvailable: false,
+        source: 'missing',
+        state: 'idle',
+      };
     }
     try {
       const { stdout } = await execCli(manifest.binaryPath, ['--version'], {
@@ -541,6 +597,8 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         installed: true,
         binaryPath: manifest.binaryPath,
         version: stdout.trim() || manifest.platformVersion,
+        latestVersion: null,
+        updateAvailable: false,
         source: 'app-managed',
         state: 'ready',
       };
@@ -549,6 +607,8 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         installed: false,
         binaryPath: manifest.binaryPath,
         version: manifest.platformVersion,
+        latestVersion: null,
+        updateAvailable: false,
         source: 'app-managed',
         state: 'failed',
         error: getErrorMessage(error),
@@ -559,7 +619,13 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
   private async getPathStatus(): Promise<CodexRuntimeStatus> {
     const binaryPath = await resolvePathCodexBinaryWithBestEffortEnv();
     if (!binaryPath) {
-      return { installed: false, source: 'missing', state: 'idle' };
+      return {
+        installed: false,
+        latestVersion: null,
+        updateAvailable: false,
+        source: 'missing',
+        state: 'idle',
+      };
     }
     try {
       const { stdout } = await execCli(binaryPath, ['--version'], {
@@ -570,6 +636,8 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         installed: true,
         binaryPath,
         version: stdout.trim() || undefined,
+        latestVersion: null,
+        updateAvailable: false,
         source: 'path',
         state: 'ready',
       };
@@ -577,6 +645,8 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
       return {
         installed: false,
         binaryPath,
+        latestVersion: null,
+        updateAvailable: false,
         source: 'path',
         state: 'failed',
         error: getErrorMessage(error),
@@ -586,6 +656,7 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
 
   private async installInternal(): Promise<CodexRuntimeStatus> {
     let tempDir: string | null = null;
+    const previousStatus = this.latestStatus?.installed ? this.latestStatus : null;
     try {
       this.publishProgress({ phase: 'checking', detail: 'Resolving latest Codex package...' });
       const rootMetadata = await fetchPackageMetadata(ROOT_PACKAGE_NAME);
@@ -662,6 +733,8 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         installed: true,
         binaryPath,
         version: stdout.trim() || manifest.platformVersion,
+        latestVersion: normalizeVersion(rootMetadata.version!),
+        updateAvailable: false,
         source: 'app-managed',
         state: 'ready',
         progress: {
@@ -677,8 +750,12 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
         await fsp.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
       }
       const status: CodexRuntimeStatus = {
-        installed: false,
-        source: 'missing',
+        ...(previousStatus ?? {
+          installed: false,
+          latestVersion: null,
+          updateAvailable: false,
+          source: 'missing' as const,
+        }),
         state: 'failed',
         error: getErrorMessage(error),
         progress: {

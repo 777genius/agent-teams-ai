@@ -8,6 +8,7 @@ export const TEAM_EFFORT_LEVELS = [
   'high',
   'xhigh',
   'max',
+  'ultra',
 ] as const satisfies readonly EffortLevel[];
 
 export const LEGACY_TEAM_EFFORT_LEVELS = [
@@ -22,6 +23,8 @@ export const CODEX_TEAM_EFFORT_LEVELS = [
   'medium',
   'high',
   'xhigh',
+  'max',
+  'ultra',
 ] as const satisfies readonly EffortLevel[];
 
 export const ANTHROPIC_TEAM_EFFORT_LEVELS = [
