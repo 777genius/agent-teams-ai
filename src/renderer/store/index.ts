@@ -3,8 +3,8 @@
  */
 
 import { api } from '@renderer/api';
-import { syncRendererTelemetry } from '@renderer/sentry';
 import { cleanupStale as cleanupCommentReadState } from '@renderer/services/commentReadStorage';
+import { syncRendererTelemetry } from '@renderer/telemetry';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { scheduleStartupIdleTask } from '@renderer/utils/startupIdleTask';
@@ -242,7 +242,7 @@ export function initializeNotificationListeners(): () => void {
     // Config: fast (in-memory read) — needed for theme before first paint.
     await useStore.getState().fetchConfig();
 
-    // Sync Sentry renderer telemetry gate from loaded config
+    // Sync renderer telemetry gate from loaded config
     const loadedConfig = useStore.getState().appConfig;
     syncRendererTelemetry(loadedConfig?.general?.telemetryEnabled ?? true);
 

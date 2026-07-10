@@ -199,6 +199,7 @@
     "node-pty": "^1.1.0",
     "pica": "9.0.1",
     "pidusage": "4.0.1",
+    "posthog-js": "^1.396.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-grid-layout": "^2.2.2",

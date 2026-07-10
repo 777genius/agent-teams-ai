@@ -2,6 +2,12 @@
  * CLI Installer slice — manages CLI installation status and install/update progress.
  */
 
+import {
+  classifyAnalyticsError,
+  elapsedMsSince,
+  recordProviderConnectionEnd,
+  recordRuntimeInstallEnd,
+} from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import {
@@ -554,6 +560,32 @@ export function mergeCliStatusPreservingHydratedProviders(
   return merged;
 }
 
+function shouldRecordProviderConnectionOutcome(
+  previousProvider: CliProviderStatus | undefined,
+  nextProvider: CliProviderStatus | null
+): boolean {
+  if (!nextProvider) {
+    return true;
+  }
+
+  if (!previousProvider || !isHydratedMultimodelProviderStatus(previousProvider)) {
+    return true;
+  }
+
+  return (
+    previousProvider.authenticated !== nextProvider.authenticated ||
+    previousProvider.authMethod !== nextProvider.authMethod ||
+    (previousProvider.verificationState !== nextProvider.verificationState &&
+      nextProvider.verificationState === 'error')
+  );
+}
+
+function shouldRecordProviderConnectionError(
+  previousProvider: CliProviderStatus | undefined
+): boolean {
+  return !previousProvider || previousProvider.verificationState !== 'error';
+}
+
 export async function refreshOpenCodeProviderStatusAfterRuntimeInstall(
   get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>
 ): Promise<void> {
@@ -1050,6 +1082,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     const requestEpoch = options?.epoch ?? cliStatusEpoch;
     const requestSeq = (cliProviderStatusSeq.get(providerId) ?? 0) + 1;
     const silent = options?.silent === true;
+    const requestStartedAtMs = Date.now();
+    const previousProviderStatus = getProviderStatus(get().cliStatus, providerId);
     cliProviderStatusSeq.set(providerId, requestSeq);
 
     const request = (async () => {
@@ -1081,6 +1115,24 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         const providerStatus = verifyModels
           ? await api.cliInstaller.verifyProviderModels(providerId)
           : await api.cliInstaller.getProviderStatus(providerId);
+        if (
+          !silent &&
+          !verifyModels &&
+          shouldRecordProviderConnectionOutcome(previousProviderStatus, providerStatus)
+        ) {
+          const providerErrorClass = providerStatus?.authenticated
+            ? 'none'
+            : classifyAnalyticsError(
+                `${providerStatus?.statusMessage ?? ''} ${providerStatus?.detailMessage ?? ''}`
+              );
+          recordProviderConnectionEnd({
+            provider: providerStatus?.providerId ?? providerId,
+            authMethod: providerStatus?.authMethod,
+            success: providerStatus?.authenticated === true,
+            errorClass: providerErrorClass,
+            durationMs: elapsedMsSince(requestStartedAtMs),
+          });
+        }
         set((state) => {
           const currentCliStatus = state.cliStatus;
           const nextLoading = silent
@@ -1152,6 +1204,18 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         });
         scheduleCodexCatalogLoadingRefresh(get, providerId);
       } catch (error) {
+        if (
+          !silent &&
+          !verifyModels &&
+          shouldRecordProviderConnectionError(previousProviderStatus)
+        ) {
+          recordProviderConnectionEnd({
+            provider: providerId,
+            success: false,
+            errorClass: classifyAnalyticsError(error),
+            durationMs: elapsedMsSince(requestStartedAtMs),
+          });
+        }
         const message =
           error instanceof Error ? error.message : `Failed to refresh ${providerId} status`;
         logger.error(`Failed to fetch ${providerId} CLI status:`, error);
@@ -1297,6 +1361,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
   installOpenCodeRuntime: async () => {
     if (!api.openCodeRuntime) return;
+    const installStartedAtMs = Date.now();
     set({
       openCodeRuntimeStatusLoading: true,
       openCodeRuntimeError: null,
@@ -1313,6 +1378,13 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     try {
       const status = await api.openCodeRuntime.install();
       set({ openCodeRuntimeStatus: status, openCodeRuntimeError: status.error ?? null });
+      recordRuntimeInstallEnd({
+        runtime: 'opencode',
+        success: status.installed,
+        source: status.source,
+        errorClass: status.installed ? 'none' : classifyAnalyticsError(status.error),
+        durationMs: elapsedMsSince(installStartedAtMs),
+      });
       if (status.installed) {
         await api.openCodeRuntime.invalidateStatus();
         await refreshOpenCodeProviderStatusAfterRuntimeInstall(get);
@@ -1321,6 +1393,13 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       const message = error instanceof Error ? error.message : 'Failed to install OpenCode runtime';
       logger.error('Failed to install OpenCode runtime:', error);
       set({ openCodeRuntimeError: message });
+      recordRuntimeInstallEnd({
+        runtime: 'opencode',
+        success: false,
+        source: 'unknown',
+        errorClass: classifyAnalyticsError(error),
+        durationMs: elapsedMsSince(installStartedAtMs),
+      });
     } finally {
       set({ openCodeRuntimeStatusLoading: false });
     }
@@ -1356,6 +1435,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
   installCodexRuntime: async () => {
     if (!api.codexRuntime) return;
+    const installStartedAtMs = Date.now();
     set({
       codexRuntimeStatusLoading: true,
       codexRuntimeError: null,
@@ -1374,6 +1454,13 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     try {
       const status = await api.codexRuntime.install();
       set({ codexRuntimeStatus: status, codexRuntimeError: status.error ?? null });
+      recordRuntimeInstallEnd({
+        runtime: 'codex',
+        success: status.installed,
+        source: status.source,
+        errorClass: status.installed ? 'none' : classifyAnalyticsError(status.error),
+        durationMs: elapsedMsSince(installStartedAtMs),
+      });
       if (status.installed) {
         await api.codexRuntime.invalidateStatus();
         await refreshCodexProviderStatusAfterRuntimeInstall(get);
@@ -1382,6 +1469,13 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       const message = error instanceof Error ? error.message : 'Failed to install Codex runtime';
       logger.error('Failed to install Codex runtime:', error);
       set({ codexRuntimeError: message });
+      recordRuntimeInstallEnd({
+        runtime: 'codex',
+        success: false,
+        source: 'unknown',
+        errorClass: classifyAnalyticsError(error),
+        durationMs: elapsedMsSince(installStartedAtMs),
+      });
     } finally {
       set({ codexRuntimeStatusLoading: false });
     }

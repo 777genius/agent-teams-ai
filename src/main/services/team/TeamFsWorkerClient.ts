@@ -93,6 +93,18 @@ function makeId(): string {
   return `${Date.now()}-${crypto.randomUUID().slice(0, 12)}`;
 }
 
+export function buildTeamFsWorkerPathCandidates(baseDir: string): string[] {
+  const candidates = [path.join(baseDir, 'team-fs-worker.cjs')];
+  if (path.basename(baseDir) === 'chunks') {
+    candidates.push(path.join(path.dirname(baseDir), 'team-fs-worker.cjs'));
+  }
+  candidates.push(
+    path.join(process.cwd(), 'dist-electron', 'main', 'team-fs-worker.cjs'),
+    path.join(process.cwd(), 'dist-electron', 'main', 'team-fs-worker.js')
+  );
+  return candidates;
+}
+
 function resolveWorkerPath(): string | null {
   // We try multiple locations because dev/prod/test environments differ.
   // Priority: co-located with bundled main output, then workspace dist folder.
@@ -101,11 +113,7 @@ function resolveWorkerPath(): string | null {
       ? __dirname
       : path.dirname(fileURLToPath(import.meta.url));
 
-  const candidates = [
-    path.join(baseDir, 'team-fs-worker.cjs'),
-    path.join(process.cwd(), 'dist-electron', 'main', 'team-fs-worker.cjs'),
-    path.join(process.cwd(), 'dist-electron', 'main', 'team-fs-worker.js'),
-  ];
+  const candidates = buildTeamFsWorkerPathCandidates(baseDir);
 
   for (const candidate of candidates) {
     try {
@@ -158,10 +166,7 @@ export class TeamFsWorkerClient {
         typeof __dirname === 'string' && __dirname.length > 0
           ? __dirname
           : path.dirname(fileURLToPath(import.meta.url));
-      const expected = [
-        path.join(baseDir, 'team-fs-worker.cjs'),
-        path.join(process.cwd(), 'dist-electron', 'main', 'team-fs-worker.cjs'),
-      ];
+      const expected = buildTeamFsWorkerPathCandidates(baseDir);
       logger.warn(
         `team-fs-worker not found; falling back to main-thread scanning. expectedOneOf=${expected.join(',')}`
       );

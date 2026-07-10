@@ -834,6 +834,7 @@
       "extensions": "Extensions",
       "search": "Search",
       "schedules": "Schedules",
+      "usage": "Usage",
       "docs": "Docs",
       "exportMarkdown": "Export as Markdown",
       "exportJson": "Export as JSON",

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global __dirname, console, process, require */
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -8,6 +9,10 @@ const pkg = require(path.join(repoRoot, 'package.json'));
 
 const REQUIRED_ENV = ['SENTRY_DSN', 'SENTRY_AUTH_TOKEN', 'SENTRY_ORG', 'SENTRY_PROJECT'];
 const OUTPUT_DIRS = ['dist-electron/main', 'out/renderer'];
+const MAIN_OUTPUT_DIR = 'dist-electron/main';
+const PRELOAD_OUTPUT_DIR = 'dist-electron/preload';
+const RENDERER_OUTPUT_DIR = 'out/renderer';
+const RENDERER_INDEX_HTML = path.join(RENDERER_OUTPUT_DIR, 'index.html');
 const SENTRY_DEBUG_ID_RE = /\/\/# debugId=[a-fA-F0-9-]+/;
 
 function fail(message) {
@@ -15,14 +20,30 @@ function fail(message) {
   process.exit(1);
 }
 
-function isTaggedRelease() {
-  return /^refs\/tags\/v/.test(process.env.GITHUB_REF ?? '');
+function firstNonEmptyEnv(...names) {
+  return names.map((name) => String(process.env[name] ?? '').trim()).find(Boolean) ?? '';
 }
 
-function assertTaggedReleaseEnv() {
-  if (!isTaggedRelease()) {
-    console.log('[sentry-release] skipped: not a tag release');
-    return false;
+function getReleaseTag() {
+  const explicitTag = firstNonEmptyEnv('RELEASE_TAG');
+  if (explicitTag) return explicitTag;
+
+  const ref = String(process.env.GITHUB_REF ?? '');
+  return ref.startsWith('refs/tags/') ? ref.slice('refs/tags/'.length) : '';
+}
+
+function isReleaseBuild() {
+  return (
+    String(process.env.IS_RELEASE_BUILD ?? '').toLowerCase() === 'true' ||
+    Boolean(getReleaseTag()) ||
+    process.env.GITHUB_EVENT_NAME === 'workflow_dispatch'
+  );
+}
+
+function assertReleaseEnv() {
+  if (!isReleaseBuild()) {
+    console.log('[sentry-release] skipped: not a release build');
+    return null;
   }
 
   const missing = REQUIRED_ENV.filter((name) => !String(process.env[name] ?? '').trim());
@@ -34,12 +55,20 @@ function assertTaggedReleaseEnv() {
     fail('SENTRY_DSN must be an https DSN');
   }
 
-  const tagVersion = String(process.env.GITHUB_REF).replace(/^refs\/tags\/v/, '');
+  const releaseTag = getReleaseTag();
+  if (!/^v[0-9]/.test(releaseTag)) {
+    fail(`release tag must start with v and include a numeric version, got '${releaseTag || '<empty>'}'`);
+  }
+
+  const tagVersion = releaseTag.replace(/^v/, '');
   if (pkg.version !== tagVersion) {
     fail(`package version ${pkg.version} does not match release tag v${tagVersion}`);
   }
 
-  return true;
+  return {
+    dsn: String(process.env.SENTRY_DSN).trim(),
+    releaseTag,
+  };
 }
 
 function walkFiles(relativeDir) {
@@ -65,7 +94,7 @@ function walkFiles(relativeDir) {
 }
 
 function prebuild() {
-  if (!assertTaggedReleaseEnv()) return;
+  if (!assertReleaseEnv()) return;
 
   console.log(
     `[sentry-release] prebuild ok: release=agent-teams-ai@${pkg.version}, project=${process.env.SENTRY_ORG}/${process.env.SENTRY_PROJECT}`
@@ -73,7 +102,8 @@ function prebuild() {
 }
 
 function postbuild() {
-  if (!assertTaggedReleaseEnv()) return;
+  const env = assertReleaseEnv();
+  if (!env) return;
 
   const jsFilesByOutputDir = new Map();
   for (const outputDir of OUTPUT_DIRS) {
@@ -106,6 +136,39 @@ function postbuild() {
     );
   }
 
+  const mainBundleText = walkFiles(MAIN_OUTPUT_DIR)
+    .filter((file) => /\.(?:js|cjs|mjs)$/.test(file))
+    .map((file) => fs.readFileSync(file, 'utf8'))
+    .join('\n');
+  if (!mainBundleText.includes(env.dsn)) {
+    fail('SENTRY_DSN was not baked into the main process bundle');
+  }
+
+  const rendererBundleText = walkFiles(RENDERER_OUTPUT_DIR)
+    .filter((file) => /\.(?:js|cjs|mjs)$/.test(file))
+    .map((file) => fs.readFileSync(file, 'utf8'))
+    .join('\n');
+  if (!rendererBundleText.includes(env.dsn)) {
+    fail('SENTRY_DSN was not baked into the renderer bundle');
+  }
+
+  const preloadBundleText = walkFiles(PRELOAD_OUTPUT_DIR)
+    .filter((file) => /\.(?:js|cjs|mjs)$/.test(file))
+    .map((file) => fs.readFileSync(file, 'utf8'))
+    .join('\n');
+  if (!preloadBundleText.includes('__SENTRY_IPC__') || !preloadBundleText.includes('sentry-ipc')) {
+    fail('Sentry Electron IPC preload bridge was not baked into the preload bundle');
+  }
+
+  const rendererIndexHtmlPath = path.join(repoRoot, RENDERER_INDEX_HTML);
+  if (!fs.existsSync(rendererIndexHtmlPath)) {
+    fail(`renderer index.html was not found at ${RENDERER_INDEX_HTML}`);
+  }
+  const rendererIndexHtml = fs.readFileSync(rendererIndexHtmlPath, 'utf8');
+  if (!rendererIndexHtml.includes('sentry-ipc:')) {
+    fail('renderer CSP is missing sentry-ipc: connect-src');
+  }
+
   const mapFiles = OUTPUT_DIRS.flatMap(walkFiles).filter((file) => file.endsWith('.map'));
   if (mapFiles.length > 0) {
     fail(
@@ -117,7 +180,7 @@ function postbuild() {
   }
 
   console.log(
-    `[sentry-release] postbuild ok: ${jsFiles.length} JS artifacts built and source maps were removed after upload`
+    `[sentry-release] postbuild ok: ${jsFiles.length} JS artifacts include Sentry release config and source maps were removed after upload`
   );
 }
 

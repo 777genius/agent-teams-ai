@@ -720,8 +720,8 @@ export const GeneralSection = ({
         </>
       )}
 
-      {/* Privacy / Telemetry — only visible when Sentry DSN is baked into the build */}
-      {import.meta.env.VITE_SENTRY_DSN && (
+      {/* Privacy / Telemetry - only visible when telemetry is baked into the build */}
+      {(import.meta.env.VITE_SENTRY_DSN || import.meta.env.VITE_POSTHOG_KEY) && (
         <>
           <SettingsSectionHeader title={t('general.privacy.title')} />
           <SettingRow

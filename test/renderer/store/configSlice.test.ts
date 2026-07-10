@@ -11,7 +11,7 @@ vi.mock('../../../src/renderer/api', () => ({
   },
 }));
 
-vi.mock('../../../src/renderer/sentry', () => ({
+vi.mock('../../../src/renderer/telemetry', () => ({
   syncRendererTelemetry: vi.fn(),
 }));
 

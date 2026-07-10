@@ -1,3 +1,4 @@
+import { recordReviewSubmit } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import {
   getReviewChangeSetIdentityToken,
@@ -1134,6 +1135,9 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         }
 
         const decisions: FileReviewDecision[] = [];
+        let acceptedCount = 0;
+        let rejectedCount = 0;
+        let requestChangesCount = 0;
 
         for (const file of activeChangeSet.files) {
           const reviewKey = getFileReviewKey(file);
@@ -1148,10 +1152,22 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
             hunkDecs[i] = hunkDecisions[key] ?? 'pending';
           }
 
+          if (fileDecision === 'accepted') {
+            acceptedCount += count;
+          } else if (fileDecision === 'rejected') {
+            rejectedCount += count;
+          } else {
+            for (const decision of Object.values(hunkDecs)) {
+              if (decision === 'accepted') acceptedCount++;
+              if (decision === 'rejected') rejectedCount++;
+            }
+          }
+
           // Only include files that have at least one rejected hunk
           const hasRejected =
             fileDecision === 'rejected' || Object.values(hunkDecs).some((d) => d === 'rejected');
           if (hasRejected) {
+            requestChangesCount++;
             const content = fileContents[file.filePath];
             const hunkContextHashes =
               maxIdx < baseCount
@@ -1177,6 +1193,15 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         }
 
         if (decisions.length === 0) {
+          if (acceptedCount > 0) {
+            recordReviewSubmit({
+              decision: 'approve',
+              filesCount: activeChangeSet.files.length,
+              acceptedCount,
+              rejectedCount,
+              requestChangesCount,
+            });
+          }
           set({ applying: false });
           return;
         }
@@ -1189,6 +1214,13 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         };
 
         await api.review.applyDecisions(request);
+        recordReviewSubmit({
+          decision: acceptedCount > 0 && rejectedCount > 0 ? 'mixed' : 'request_changes',
+          filesCount: activeChangeSet.files.length,
+          acceptedCount,
+          rejectedCount,
+          requestChangesCount,
+        });
 
         set({ applying: false });
       } catch (error) {
