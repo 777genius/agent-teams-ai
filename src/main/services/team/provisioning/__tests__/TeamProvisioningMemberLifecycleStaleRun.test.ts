@@ -89,7 +89,7 @@ function createHost(
   run: ProvisioningRun,
   overrides: Partial<TeamProvisioningMemberLifecycleHost> = {}
 ): TeamProvisioningMemberLifecycleHost {
-  const member = run.request.members[0]!;
+  const member = run.request.members[0];
   const host: TeamProvisioningMemberLifecycleHost = {
     runs: new Map([[run.runId, run]]),
     runtimeAdapterRunByTeam: new Map(),

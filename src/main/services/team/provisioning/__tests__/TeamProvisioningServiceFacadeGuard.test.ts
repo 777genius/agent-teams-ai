@@ -121,12 +121,12 @@ type ServiceEntryPointMember =
   | ts.MethodDeclaration
   | ts.PropertyDeclaration
   | ts.SetAccessorDeclaration;
-type GuardedFacadeSource = {
+interface GuardedFacadeSource {
   filePath: string;
   projectPath: string;
   source: string;
   sourceFile: ts.SourceFile;
-};
+}
 const CONSTRUCTOR_DEPENDENCIES = [
   {
     accessibility: 'private',
