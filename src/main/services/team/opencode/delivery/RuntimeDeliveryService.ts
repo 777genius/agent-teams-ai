@@ -147,7 +147,10 @@ export class RuntimeDeliveryService {
       now,
     });
 
-    const journalCanBeMarkedTerminal = begin.state === 'new' || begin.state === 'resume_pending';
+    const journalCanBeMarkedTerminal =
+      begin.state === 'new' ||
+      begin.state === 'resume_pending' ||
+      (begin.state === 'payload_conflict' && begin.record.status !== 'committed');
     const staleRunAfterJournal = await this.rejectIfRunIsStale(envelope, {
       markJournalRecordTerminal: journalCanBeMarkedTerminal,
     });
@@ -256,6 +259,13 @@ export class RuntimeDeliveryService {
         location: committedLocation,
       };
     } catch (error) {
+      const staleRunAfterDeliveryFailure = await this.rejectIfRunIsStale(envelope, {
+        markJournalRecordTerminal: true,
+      });
+      if (staleRunAfterDeliveryFailure) {
+        return staleRunAfterDeliveryFailure;
+      }
+
       await this.journal.markFailed({
         idempotencyKey: envelope.idempotencyKey,
         runId: envelope.runId,

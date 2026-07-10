@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   type RuntimeDeliveryDestinationPort,
   RuntimeDeliveryDestinationRegistry,
+  type RuntimeDeliveryDiagnosticsSink,
   type RuntimeDeliveryRunStateReader,
   RuntimeDeliveryService,
   type RuntimeDeliveryVerifyResult,
@@ -175,19 +176,154 @@ describe('RuntimeDeliveryService stale run guard', () => {
       })
     );
   });
+
+  it('does not publish retryable failure diagnostics when a destination failure races with a stale run', async () => {
+    const location: RuntimeDeliveryLocation = {
+      kind: 'member_inbox',
+      teamName: 'Team',
+      memberName: 'Reviewer',
+      messageId: 'message-1',
+    };
+    const { runState } = createRunState(['run-1', 'run-1', 'run-1', 'run-2']);
+    const journal = createJournal();
+    const destination = createDestinationPort('member_inbox', location);
+    const diagnostics: RuntimeDeliveryDiagnosticsSink = {
+      append: vi.fn(async () => {}),
+    };
+    destination.write.mockRejectedValueOnce(new Error('destination unavailable'));
+    const service = createService({
+      runState,
+      journal: journal.store,
+      port: destination.port,
+      diagnostics,
+    });
+
+    const ack = await service.deliver(envelope({ to: { memberName: 'Reviewer' } }));
+
+    expect(ack).toEqual({
+      ok: false,
+      delivered: false,
+      reason: 'stale_run',
+      idempotencyKey: 'runtime-key-1',
+    });
+    expect(destination.write).toHaveBeenCalledOnce();
+    expect(journal.markCommitted).not.toHaveBeenCalled();
+    expect(journal.markFailed).toHaveBeenCalledTimes(1);
+    expect(journal.markFailed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'failed_terminal',
+        error: 'stale_run',
+      })
+    );
+    expect(journal.markFailed).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'failed_retryable',
+      })
+    );
+    expect(diagnostics.append).not.toHaveBeenCalled();
+  });
+
+  it('preserves retryable failure semantics while the run remains current', async () => {
+    const location: RuntimeDeliveryLocation = {
+      kind: 'member_inbox',
+      teamName: 'Team',
+      memberName: 'Reviewer',
+      messageId: 'message-1',
+    };
+    const { runState } = createRunState(['run-1']);
+    const journal = createJournal();
+    const destination = createDestinationPort('member_inbox', location);
+    const diagnostics: RuntimeDeliveryDiagnosticsSink = {
+      append: vi.fn(async () => {}),
+    };
+    destination.write.mockRejectedValueOnce(new Error('destination unavailable'));
+    const service = createService({
+      runState,
+      journal: journal.store,
+      port: destination.port,
+      diagnostics,
+    });
+
+    await expect(service.deliver(envelope({ to: { memberName: 'Reviewer' } }))).rejects.toThrow(
+      'destination unavailable'
+    );
+
+    expect(destination.write).toHaveBeenCalledOnce();
+    expect(journal.markCommitted).not.toHaveBeenCalled();
+    expect(journal.markFailed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'failed_retryable',
+        error: 'destination unavailable',
+      })
+    );
+    expect(diagnostics.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'runtime_delivery_failed',
+        severity: 'warning',
+      })
+    );
+  });
+
+  it('marks an existing recoverable payload-conflict journal terminal when the run is stale', async () => {
+    const { runState } = createRunState(['run-1', 'run-2']);
+    const journal = createJournal({
+      begin: (input) => ({
+        state: 'payload_conflict',
+        record: {
+          ...recordFromBegin(input),
+          payloadHash: 'sha256:existing-payload',
+          status: 'pending',
+        },
+      }),
+    });
+    const location: RuntimeDeliveryLocation = {
+      kind: 'user_sent_messages',
+      teamName: 'Team',
+      messageId: 'message-1',
+    };
+    const destination = createDestinationPort('user_sent_messages', location);
+    const diagnostics: RuntimeDeliveryDiagnosticsSink = {
+      append: vi.fn(async () => {}),
+    };
+    const service = createService({
+      runState,
+      journal: journal.store,
+      port: destination.port,
+      diagnostics,
+    });
+
+    const ack = await service.deliver(envelope({ to: 'user' }));
+
+    expect(ack).toEqual({
+      ok: false,
+      delivered: false,
+      reason: 'stale_run',
+      idempotencyKey: 'runtime-key-1',
+    });
+    expect(journal.markFailed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'failed_terminal',
+        error: 'stale_run',
+      })
+    );
+    expect(diagnostics.append).not.toHaveBeenCalled();
+    expect(destination.verify).not.toHaveBeenCalled();
+    expect(journal.markCommitted).not.toHaveBeenCalled();
+  });
 });
 
 function createService(input: {
   runState: RuntimeDeliveryRunStateReader;
   journal: RuntimeDeliveryJournalStore;
   port: RuntimeDeliveryDestinationPort;
+  diagnostics?: RuntimeDeliveryDiagnosticsSink;
   emit?: (event: { type: string; teamName: string; data?: Record<string, unknown> }) => void;
 }): RuntimeDeliveryService {
   return new RuntimeDeliveryService(
     input.runState,
     input.journal,
     new RuntimeDeliveryDestinationRegistry([input.port]),
-    { append: vi.fn(async () => {}) },
+    input.diagnostics ?? { append: vi.fn(async () => {}) },
     { emit: input.emit ?? vi.fn() },
     () => new Date(NOW)
   );
@@ -232,19 +368,24 @@ function createDestinationPort(
   };
 }
 
-function createJournal(): {
+function createJournal(
+  options: {
+    begin?: (
+      input: RuntimeDeliveryJournalBeginInput
+    ) => Promise<RuntimeDeliveryJournalBeginResult> | RuntimeDeliveryJournalBeginResult;
+  } = {}
+): {
   store: RuntimeDeliveryJournalStore;
   begin: ReturnType<typeof vi.fn>;
   markCommitted: ReturnType<typeof vi.fn>;
   markFailed: ReturnType<typeof vi.fn>;
 } {
   const begin = vi.fn(
-    async (
-      input: RuntimeDeliveryJournalBeginInput
-    ): Promise<RuntimeDeliveryJournalBeginResult> => ({
-      state: 'new',
-      record: recordFromBegin(input),
-    })
+    async (input: RuntimeDeliveryJournalBeginInput): Promise<RuntimeDeliveryJournalBeginResult> =>
+      options.begin?.(input) ?? {
+        state: 'new',
+        record: recordFromBegin(input),
+      }
   );
   const markCommitted = vi.fn(async () => {});
   const markFailed = vi.fn(async () => {});
