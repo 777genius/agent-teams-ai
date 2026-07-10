@@ -53,8 +53,92 @@ describe('TeamProvisioningHarnessBuilder fake stores and facade ports', () => {
     await expect(
       harness.stores.membersMetaStore.getMembers(HARNESS_DEFAULT_TEAM_NAME)
     ).resolves.toEqual([
-      expect.objectContaining({ name: 'Builder', providerBackendId: 'codex-native' }),
-      expect.objectContaining({ name: 'Lead', providerBackendId: 'codex-native' }),
+      expect.objectContaining({
+        name: 'Builder',
+        agentType: 'general-purpose',
+        providerBackendId: 'codex-native',
+      }),
+    ]);
+  });
+
+  it('normalizes direct builder fixtures before persisting config and members metadata', async () => {
+    const teamName = 'topology-normalization-team';
+    const harness = await track(
+      TeamProvisioningHarnessBuilder.create()
+        .withTeam(teamName, {
+          name: teamName,
+          projectPath: '/tmp/agent-teams-harness/topology',
+          members: [
+            {
+              name: 'Captain',
+              agentType: 'team-lead',
+              providerId: 'codex',
+              providerBackendId: 'adapter',
+            },
+            {
+              name: 'Duplicate Captain',
+              agentType: 'orchestrator',
+              providerId: 'opencode',
+              providerBackendId: 'opencode-cli',
+            },
+            { name: 'Builder', providerId: 'codex', providerBackendId: 'adapter' },
+            { name: 'Runtime', providerId: 'opencode', providerBackendId: 'codex-native' },
+          ],
+        })
+        .withTeamMeta(teamName, {
+          cwd: '/tmp/agent-teams-harness/topology',
+          providerId: 'codex',
+          providerBackendId: 'opencode-cli',
+          createdAt: Date.parse(HARNESS_DEFAULT_NOW_ISO),
+        })
+        .withMembersMeta(
+          teamName,
+          [
+            memberFixture.lead(),
+            { name: 'Meta Lead', agentType: 'lead', providerId: 'opencode' },
+            { name: 'Builder', providerId: 'codex', providerBackendId: 'adapter' },
+            { name: 'Runtime', providerId: 'opencode', providerBackendId: 'codex-native' },
+          ],
+          { providerBackendId: 'opencode-cli' }
+        )
+        .build()
+    );
+
+    const config = await harness.stores.configReader.getConfigSnapshot(teamName);
+    expect(config?.members).toEqual([
+      expect.objectContaining({
+        name: 'Captain',
+        agentType: 'team-lead',
+        providerBackendId: 'codex-native',
+      }),
+      expect.objectContaining({
+        name: 'Builder',
+        agentType: 'general-purpose',
+        providerBackendId: 'codex-native',
+      }),
+      expect.objectContaining({
+        name: 'Runtime',
+        agentType: 'general-purpose',
+      }),
+    ]);
+    expect(config?.members?.[2]).not.toHaveProperty('providerBackendId');
+    const persistedTeamMeta = await harness.stores.teamMetaStore.getMeta(teamName);
+    expect(persistedTeamMeta).toMatchObject({ providerId: 'codex' });
+    expect(persistedTeamMeta).not.toHaveProperty('providerBackendId');
+    await expect(harness.stores.membersMetaStore.getMeta(teamName)).resolves.toMatchObject({
+      providerBackendId: undefined,
+      members: [
+        expect.objectContaining({ name: 'Builder', agentType: 'general-purpose' }),
+        expect.objectContaining({ name: 'Runtime', agentType: 'general-purpose' }),
+      ],
+    });
+
+    const persistedMembersMeta = JSON.parse(
+      await readFile(harness.paths.membersMetaPath(teamName), 'utf8')
+    ) as { members: { name: string; agentType?: string }[] };
+    expect(persistedMembersMeta.members).toEqual([
+      expect.objectContaining({ name: 'Builder', agentType: 'general-purpose' }),
+      expect.objectContaining({ name: 'Runtime', agentType: 'general-purpose' }),
     ]);
   });
 
@@ -98,6 +182,7 @@ describe('TeamProvisioningHarnessBuilder fake stores and facade ports', () => {
     await membersMetaPort.writeMembers(
       'port-team',
       [
+        memberFixture.lead(),
         memberFixture.codex(' beta ', { role: ' Builder ' }),
         memberFixture.codex('alpha'),
         memberFixture.codex('alpha-2'),
@@ -111,7 +196,7 @@ describe('TeamProvisioningHarnessBuilder fake stores and facade ports', () => {
       expect.objectContaining({ name: 'beta', role: 'Builder' }),
     ]);
     await expect(harness.stores.membersMetaStore.getMeta('port-team')).resolves.toMatchObject({
-      providerBackendId: 'adapter',
+      providerBackendId: 'codex-native',
     });
   });
 

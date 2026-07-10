@@ -4,11 +4,16 @@ export {
   HARNESS_INERT_MODEL,
   HARNESS_INERT_PROJECT_PATH,
   HARNESS_INERT_PROVIDER_BACKEND_ID,
+  HARNESS_LEAD_AGENT_TYPE,
+  HARNESS_TEAMMATE_AGENT_TYPE,
 } from './fixtureConstants';
 export {
   makeTeamCreateRequest,
   memberFixture,
   type MemberFixtureOptions,
+  normalizeMembersMetaFixture,
+  normalizeTeamConfigFixture,
+  normalizeTeamCreateRequestFixture,
   teamConfigFixture,
   type TeamConfigFixtureOptions,
   type TeamCreateRequestFixtureOptions,
@@ -16,10 +21,7 @@ export {
   type TeamMetaFixtureOptions,
   toMetaMembers,
 } from './fixtureMembers';
-export {
-  makeProvisioningRun,
-  type ProvisioningRunFixtureOptions,
-} from './fixtureProvisioningRun';
+export { makeProvisioningRun, type ProvisioningRunFixtureOptions } from './fixtureProvisioningRun';
 export {
   type LaunchStateFixtureOptions,
   makeLaunchState,

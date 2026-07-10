@@ -4,6 +4,8 @@ import {
   type TeamProvisioningConfigFacadeReader,
 } from '@main/services/team/provisioning/TeamProvisioningConfigFacade';
 import { type TeamProvisioningLaunchExpectedMembersPorts } from '@main/services/team/provisioning/TeamProvisioningLaunchExpectedMembers';
+import { isLeadMember } from '@shared/utils/leadDetection';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { rm } from 'fs/promises';
 
 import { createHarnessFacades, createHarnessStores, HarnessLogger } from './fakes';
@@ -12,6 +14,8 @@ import {
   HARNESS_DEFAULT_NOW_ISO,
   HARNESS_DEFAULT_TEAM_NAME,
   memberFixture,
+  normalizeMembersMetaFixture,
+  normalizeTeamConfigFixture,
   teamConfigFixture,
   teamMetaFixture,
 } from './fixtures';
@@ -216,9 +220,7 @@ export class TeamProvisioningHarnessBuilder {
     this.validateInputsBeforeSideEffects();
 
     const paths = await createTempWorkspace(this.tempWorkspaceOptions);
-    const cleanupFns: HarnessCleanupFn[] = [
-      () => rm(paths.root, { recursive: true, force: true }),
-    ];
+    const cleanupFns: HarnessCleanupFn[] = [() => rm(paths.root, { recursive: true, force: true })];
 
     try {
       if (this.tempWorkspaceOptions.applyPathOverride !== false) {
@@ -227,7 +229,7 @@ export class TeamProvisioningHarnessBuilder {
 
       const configs = this.createConfigFixtures(paths);
       const teamMeta = this.createTeamMetaFixtures(configs, paths);
-      const membersMeta = this.createMembersMetaFixtures(configs);
+      const membersMeta = this.createMembersMetaFixtures(configs, teamMeta);
 
       await writeHarnessFiles(paths, configs, teamMeta, membersMeta);
       await writeHarnessStateFiles(paths, {
@@ -238,6 +240,19 @@ export class TeamProvisioningHarnessBuilder {
       });
 
       const stores = createHarnessStores(paths, configs, teamMeta, membersMeta);
+      const writeMembers = stores.membersMetaStore.writeMembers;
+      stores.membersMetaStore.writeMembers = (teamName, members, options) => {
+        const teammates = normalizeMembersMetaFixture(members);
+        const providerId =
+          teamMeta.get(teamName)?.providerId ??
+          configs.get(teamName)?.members?.find((memberValue) => isLeadMember(memberValue))
+            ?.providerId ??
+          configs.get(teamName)?.members?.[0]?.providerId ??
+          teammates[0]?.providerId;
+        return writeMembers(teamName, teammates, {
+          providerBackendId: migrateProviderBackendId(providerId, options?.providerBackendId),
+        });
+      };
       const harnessLogger = new HarnessLogger();
 
       return new TeamProvisioningHarnessImpl(
@@ -308,13 +323,14 @@ export class TeamProvisioningHarnessBuilder {
     const configs = new Map<string, TeamConfig>();
 
     for (const [teamName, config] of configInputs) {
-      const resolvedConfig =
+      const resolvedConfig = normalizeTeamConfigFixture(
         config ??
-        teamConfigFixture.basic({
-          teamName,
-          projectPath: paths.projectPath,
-          members: [memberFixture.lead(), memberFixture.codex('Builder')],
-        });
+          teamConfigFixture.basic({
+            teamName,
+            projectPath: paths.projectPath,
+            members: [memberFixture.lead(), memberFixture.codex('Builder')],
+          })
+      );
       assertNoSecretLikeFixtureValues({ teamName, config: resolvedConfig });
       configs.set(teamName, cloneFixture(resolvedConfig));
     }
@@ -329,15 +345,22 @@ export class TeamProvisioningHarnessBuilder {
     const metaByTeam = new Map<string, TeamMetaFile>();
 
     for (const [teamName, config] of configs) {
-      const meta =
+      const rawMeta =
         this.teamMeta.get(teamName) ??
         teamMetaFixture.basic({
           displayName: config.name,
           description: config.description,
           color: config.color,
           cwd: config.projectPath ?? paths.projectPath,
-          providerId: config.members?.[0]?.providerId ?? 'codex',
+          providerId:
+            config.members?.find((memberValue) => isLeadMember(memberValue))?.providerId ??
+            config.members?.[0]?.providerId ??
+            'codex',
         });
+      const meta: TeamMetaFile = {
+        ...rawMeta,
+        providerBackendId: migrateProviderBackendId(rawMeta.providerId, rawMeta.providerBackendId),
+      };
       assertNoSecretLikeFixtureValues({ teamName, meta });
       metaByTeam.set(teamName, cloneFixture(meta));
     }
@@ -346,17 +369,29 @@ export class TeamProvisioningHarnessBuilder {
   }
 
   private createMembersMetaFixtures(
-    configs: ReadonlyMap<string, TeamConfig>
+    configs: ReadonlyMap<string, TeamConfig>,
+    teamMeta: ReadonlyMap<string, TeamMetaFile>
   ): Map<string, TeamMembersMetaFile> {
     const metaByTeam = new Map<string, TeamMembersMetaFile>();
 
     for (const [teamName, config] of configs) {
-      const meta =
+      const rawMeta =
         this.membersMeta.get(teamName) ??
         ({
           version: 1,
           members: config.members ?? [],
         } satisfies TeamMembersMetaFile);
+      const teammates = normalizeMembersMetaFixture(rawMeta.members);
+      const providerId =
+        teamMeta.get(teamName)?.providerId ??
+        config.members?.find((memberValue) => isLeadMember(memberValue))?.providerId ??
+        config.members?.[0]?.providerId ??
+        teammates[0]?.providerId;
+      const meta: TeamMembersMetaFile = {
+        version: 1,
+        providerBackendId: migrateProviderBackendId(providerId, rawMeta.providerBackendId),
+        members: teammates,
+      };
       assertNoSecretLikeFixtureValues({ teamName, meta });
       metaByTeam.set(teamName, cloneFixture(meta));
     }

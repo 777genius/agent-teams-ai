@@ -1,8 +1,5 @@
-import {
-  HARNESS_DEFAULT_NOW_ISO,
-  HARNESS_DEFAULT_TEAM_NAME,
-} from './fixtureConstants';
-import { makeTeamCreateRequest } from './fixtureMembers';
+import { HARNESS_DEFAULT_NOW_ISO, HARNESS_DEFAULT_TEAM_NAME } from './fixtureConstants';
+import { makeTeamCreateRequest, normalizeTeamCreateRequestFixture } from './fixtureMembers';
 import { assertNoSecretLikeFixtureValues } from './fixtureSecrets';
 import { cloneFixture } from './harnessData';
 
@@ -41,9 +38,14 @@ export function makeProvisioningRun(options: ProvisioningRunFixtureOptions = {})
   const runId = options.runId ?? 'harness-run-id';
   const teamName = options.teamName ?? options.request?.teamName ?? HARNESS_DEFAULT_TEAM_NAME;
   const startedAt = options.startedAt ?? HARNESS_DEFAULT_NOW_ISO;
-  const request = cloneFixture(options.request ?? makeTeamCreateRequest({ teamName }));
-  const allEffectiveMembers = cloneFixture(options.effectiveMembers ?? request.members);
-  const effectiveMembers = cloneFixture(options.effectiveMembers ?? request.members);
+  const request = normalizeTeamCreateRequestFixture(
+    cloneFixture(options.request ?? makeTeamCreateRequest({ teamName }))
+  );
+  const allEffectiveMembers = normalizeTeamCreateRequestFixture({
+    ...request,
+    members: cloneFixture(options.effectiveMembers ?? request.members),
+  }).members;
+  const effectiveMembers = cloneFixture(allEffectiveMembers);
   const expectedMembers =
     options.expectedMembers ?? effectiveMembers.map((memberValue) => memberValue.name);
   const progress = makeProvisioningProgress(runId, teamName, startedAt, options.progress);
@@ -140,6 +142,27 @@ export function makeProvisioningRun(options: ProvisioningRunFixtureOptions = {})
     lastMemberSpawnAuditMissingWarningAt: new Map(),
     ...cloneFixture(options.overrides ?? {}),
   } as ProvisioningRun;
+
+  run.request = normalizeTeamCreateRequestFixture({
+    ...run.request,
+    teamName: run.teamName,
+  });
+  run.allEffectiveMembers = normalizeTeamCreateRequestFixture({
+    ...run.request,
+    members: run.allEffectiveMembers,
+  }).members;
+  run.effectiveMembers = normalizeTeamCreateRequestFixture({
+    ...run.request,
+    members: run.effectiveMembers,
+  }).members;
+  const effectiveMemberNames = new Set(run.effectiveMembers.map((memberValue) => memberValue.name));
+  run.expectedMembers = Array.from(
+    new Set(
+      run.expectedMembers
+        .map((memberName) => memberName.trim())
+        .filter((memberName) => effectiveMemberNames.has(memberName))
+    )
+  );
   assertNoSecretLikeFixtureValues({
     runId: run.runId,
     teamName: run.teamName,

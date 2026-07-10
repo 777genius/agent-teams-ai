@@ -13,9 +13,10 @@ import {
   teamConfigFixture,
   teamMetaFixture,
   TeamProvisioningHarnessBuilder,
+  toMetaMembers,
 } from './index';
 
-import type { ToolApprovalRequest } from '@shared/types';
+import type { TeamCreateRequest, TeamMember, ToolApprovalRequest } from '@shared/types';
 
 describe('TeamProvisioningHarnessBuilder fixture isolation', () => {
   it('clones domain fixture inputs so caller mutation cannot leak between fake snapshots', () => {
@@ -30,12 +31,10 @@ describe('TeamProvisioningHarnessBuilder fixture isolation', () => {
     request.members[1]!.name = 'Mutated request';
     run.request.members[1]!.name = 'Mutated run request';
     expect(run.effectiveMembers.map((member) => member.name)).toEqual([
-      'Lead',
       'Mutated input',
       'Added later',
     ]);
     expect(run.allEffectiveMembers.map((member) => member.name)).toEqual([
-      'Lead',
       'Mutated input',
       'Added later',
     ]);
@@ -82,13 +81,122 @@ describe('TeamProvisioningHarnessBuilder fixture isolation', () => {
 
     const firstRequest = makeTeamCreateRequest();
     const secondRequest = makeTeamCreateRequest();
-    firstRequest.members[1]!.name = 'Mutated default request';
-    expect(secondRequest.members.map((member) => member.name)).toEqual(['Lead', 'Builder']);
+    firstRequest.members[0]!.name = 'Mutated default request';
+    expect(secondRequest.members.map((member) => member.name)).toEqual(['Builder']);
 
     const firstRuntime = makeRuntimeSnapshot();
     const secondRuntime = makeRuntimeSnapshot();
     firstRuntime.members.Builder!.alive = false;
     expect(secondRuntime.members.Builder?.alive).toBe(true);
+  });
+
+  it('normalizes lead topology, teammate agent types, and provider/backend pairs', () => {
+    const lead = memberFixture.lead({
+      name: 'ignored-lead-override',
+      agentType: 'general-purpose',
+      providerBackendId: 'adapter',
+    });
+    const builder = memberFixture.codex('Builder', {
+      agentType: 'orchestrator',
+      providerBackendId: 'adapter',
+    });
+    const reviewer: TeamMember = {
+      name: 'Reviewer',
+      providerId: 'anthropic',
+      providerBackendId: 'codex-native',
+    };
+    const config = teamConfigFixture.basic({
+      members: [
+        lead,
+        { name: 'Duplicate Lead', agentType: 'lead', providerId: 'opencode' },
+        builder,
+        reviewer,
+      ],
+    });
+
+    expect(lead).toMatchObject({
+      name: 'Lead',
+      agentType: 'team-lead',
+      providerBackendId: 'codex-native',
+    });
+    expect(builder).toMatchObject({
+      agentType: 'general-purpose',
+      providerBackendId: 'codex-native',
+    });
+    expect(config.members).toEqual([
+      expect.objectContaining({ name: 'Lead', agentType: 'team-lead' }),
+      expect.objectContaining({
+        name: 'Builder',
+        agentType: 'general-purpose',
+        providerBackendId: 'codex-native',
+      }),
+      expect.objectContaining({
+        name: 'Reviewer',
+        agentType: 'general-purpose',
+        providerBackendId: undefined,
+      }),
+    ]);
+
+    const request = makeTeamCreateRequest({
+      providerId: 'anthropic',
+      providerBackendId: 'opencode-cli',
+      members: [
+        memberFixture.lead(),
+        { name: 'Hidden Lead', agentType: 'orchestrator', providerId: 'opencode' },
+        builder,
+      ],
+    });
+    expect(request).toMatchObject({
+      providerId: 'anthropic',
+      providerBackendId: undefined,
+      members: [expect.objectContaining({ name: 'Builder', providerBackendId: 'codex-native' })],
+    });
+    expect(toMetaMembers(request.members)).toEqual([
+      expect.objectContaining({ name: 'Builder', agentType: 'general-purpose' }),
+    ]);
+  });
+
+  it('re-normalizes final provisioning run overrides against effective topology', () => {
+    const impossibleRequest = {
+      ...makeTeamCreateRequest({ teamName: 'wrong-team' }),
+      providerId: 'codex',
+      providerBackendId: 'opencode-cli',
+      members: [
+        { name: 'team-lead', providerId: 'codex', providerBackendId: 'adapter' },
+        { name: 'Runtime', providerId: 'opencode', providerBackendId: 'codex-native' },
+      ],
+    } as TeamCreateRequest;
+    const run = makeProvisioningRun({
+      teamName: 'override-run-team',
+      overrides: {
+        request: impossibleRequest,
+        allEffectiveMembers: [
+          { name: 'team-lead', providerId: 'codex', providerBackendId: 'adapter' },
+          { name: 'Runtime', providerId: 'opencode', providerBackendId: 'codex-native' },
+          { name: 'Archive', providerId: 'anthropic', providerBackendId: 'adapter' },
+        ],
+        effectiveMembers: [
+          { name: 'team-lead', providerId: 'codex', providerBackendId: 'adapter' },
+          { name: 'Runtime', providerId: 'opencode', providerBackendId: 'codex-native' },
+        ],
+        expectedMembers: ['team-lead', 'Ghost', 'Runtime', 'Runtime'],
+      },
+    });
+
+    expect(run.request).toMatchObject({
+      teamName: 'override-run-team',
+      providerId: 'codex',
+      providerBackendId: undefined,
+      members: [expect.objectContaining({ name: 'Runtime', providerBackendId: undefined })],
+    });
+    expect(run.allEffectiveMembers).toEqual([
+      expect.objectContaining({ name: 'Runtime', providerBackendId: undefined }),
+      expect.objectContaining({ name: 'Archive', providerBackendId: undefined }),
+    ]);
+    expect(run.effectiveMembers).toEqual([
+      expect.objectContaining({ name: 'Runtime', providerBackendId: undefined }),
+    ]);
+    expect(run.expectedMembers).toEqual(['Runtime']);
   });
 
   it('returns fresh fake store snapshots after callers mutate prior reads', async () => {
@@ -122,10 +230,11 @@ describe('TeamProvisioningHarnessBuilder fixture isolation', () => {
     firstMembersMeta!.members[0]!.name = 'Mutated members meta read';
     await expect(harness.stores.membersMetaStore.getMembers(teamName)).resolves.toEqual([
       expect.objectContaining({ name: 'Builder' }),
-      expect.objectContaining({ name: 'Lead' }),
     ]);
 
-    const firstLaunch = (await harness.stores.launchStateStore.read(teamName)) as typeof launchState;
+    const firstLaunch = (await harness.stores.launchStateStore.read(
+      teamName
+    )) as typeof launchState;
     firstLaunch.nested.state = 'mutated';
     await expect(harness.stores.launchStateStore.read(teamName)).resolves.toEqual(launchState);
 
@@ -177,16 +286,16 @@ describe('TeamProvisioningHarnessBuilder fixture isolation', () => {
     expect(nestedKeyFinding[0]?.path).not.toContain('nested');
     expect(nestedKeyFinding[0]?.path).not.toContain('authToken');
     expect(collectSecretLikeFixtureValues({ value: 'Bearer [defanged fixture]' })).toEqual([]);
-    expect(
-      collectSecretLikeFixtureValues({ value: `Bearer ${'fixtureToken'.repeat(2)}` })
-    ).toEqual([
-      expect.objectContaining({
-        path: '$[key#0:safe]',
-        patternName: 'bearer-token',
-        stringLength: 31,
-        redactedValue: '<redacted>',
-      }),
-    ]);
+    expect(collectSecretLikeFixtureValues({ value: `Bearer ${'fixtureToken'.repeat(2)}` })).toEqual(
+      [
+        expect.objectContaining({
+          path: '$[key#0:safe]',
+          patternName: 'bearer-token',
+          stringLength: 31,
+          redactedValue: '<redacted>',
+        }),
+      ]
+    );
     expect(
       collectSecretLikeFixtureValues(new Set([`Bearer ${'setFixtureToken'.repeat(2)}`]))
     ).toEqual([
@@ -220,10 +329,7 @@ describe('TeamProvisioningHarnessBuilder fixture isolation', () => {
       expect(finding.reason).not.toContain(nestedSecretKey);
     }
     expect(findings.map((finding) => finding.path)).toEqual(
-      expect.arrayContaining([
-        '$[key#0:redacted]',
-        '$[key#0:redacted][key#0:redacted]',
-      ])
+      expect.arrayContaining(['$[key#0:redacted]', '$[key#0:redacted][key#0:redacted]'])
     );
 
     let thrown: unknown;
