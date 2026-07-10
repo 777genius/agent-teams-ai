@@ -517,6 +517,36 @@ describe('terminal workspace panel internals fixture-e2e', () => {
     });
   });
 
+  it('settles a final ANSI command from durable wrapped history without another command', () => {
+    const command = "printf '\\033[31mRED_V032\\033[0m\\n'";
+    const next = settleTerminalCommandRuns(
+      [createRun({ command, startedAtMs: 1000 })],
+      [
+        {
+          source: 'history',
+          text: "shell % printf '\\033",
+        },
+        {
+          source: 'history',
+          text: "[31mRED_V032\\033[0m\\n'",
+        },
+        { source: 'history', text: 'RED_V032' },
+        {
+          isHistoryTailLine: true,
+          source: 'history',
+          text: 'shell %',
+        },
+      ],
+      2400,
+      true
+    );
+
+    expect(next[0]).toMatchObject({
+      durationMs: 1400,
+      status: 'succeeded',
+    });
+  });
+
   it('marks visible shell failures as failed before the next prompt is visible', () => {
     const next = settleTerminalCommandRuns(
       [createRun({ command: 'ls __tp_missing_1781452725003', startedAtMs: 1000 })],

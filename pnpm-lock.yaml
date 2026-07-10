@@ -98,9 +98,6 @@ patchedDependencies:
   '@radix-ui/react-tooltip@1.2.8':
     hash: 92cb648a695f616d3b7222b90053cb36e162bab4303abf0fe39b517e1d9dd6b8
     path: patches/@radix-ui__react-tooltip@1.2.8.patch
-  '@terminal-platform/workspace-elements@0.1.0':
-    hash: 9dab4c3c4aa6144145ec423cd386313f7ea85fb0938626dacb7c2581b3750d7d
-    path: patches/@terminal-platform__workspace-elements@0.1.0.patch
   fastmcp@3.35.0:
     hash: 7175182f509e3d149c517648f2b8e6d04a023a3c8fe126ca4ec58426b9d606df
     path: patches/fastmcp@3.35.0.patch
@@ -282,7 +279,7 @@ importers:
         version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz
       '@terminal-platform/workspace-elements':
         specifier: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz
-        version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz(patch_hash=9dab4c3c4aa6144145ec423cd386313f7ea85fb0938626dacb7c2581b3750d7d)
+        version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz
       '@terminal-platform/workspace-gateway-node':
         specifier: file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz
         version: file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz
@@ -4040,7 +4037,7 @@ packages:
     version: 0.1.0
 
   '@terminal-platform/runtime-types@file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz':
-    resolution: {integrity: sha512-l4JUyJ2WHox+NxEayWkegWVSHn+qnTpCaTXfLVRy8EobV3/UwjJ21xoi6Acm0WdCDUqsUyPIOAiJjD9M2GaV/Q==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz}
+    resolution: {integrity: sha512-q3BAz3OBU/rXWC1c361S4ozecUGQbMO+B4UPNzOTHzckChSKgi1jbc3nZ4VXiSDLYR0ot6+cs8zVuNNN0eIdkQ==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz}
     version: 0.1.0
 
   '@terminal-platform/workspace-adapter-websocket@file:vendor/terminal-platform/sdk/terminal-platform-workspace-adapter-websocket-0.1.0.tgz':
@@ -4048,15 +4045,15 @@ packages:
     version: 0.1.0
 
   '@terminal-platform/workspace-contracts@file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz':
-    resolution: {integrity: sha512-w6ojDcjApCSoAfiNEYGjCZ9QmBZRejDncagEkNoxFh8/eUCaxIbpchALFpKLcTQ0fxnDi3LxFOkQ/E1lZc9kVQ==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz}
+    resolution: {integrity: sha512-PwB/oE7xB4i5pzgD5J6F89Pfi1hdUE+sz4PzavvviDYa3YN2TvyODuEzgGtDz4cwgAiYOtoJxAWVs3cArp6i/g==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz}
     version: 0.1.0
 
   '@terminal-platform/workspace-core@file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz':
-    resolution: {integrity: sha512-3MkYLnMxfJFiscX2QnDByBKs5wWnfJI/Txs6DrRaZwjyMFUt5Es/Hvn62TtafYnxdoDpscletAkAT9bYlfeNmQ==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz}
+    resolution: {integrity: sha512-L42CvD6P7nda+EfVIJL4gldK2+ABMcrOpKExAwZa0ljVvNzX3BNNA9IT0EQVJbKYiDeGxPcE3hrT2gl0zk5eCA==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz}
     version: 0.1.0
 
   '@terminal-platform/workspace-elements@file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz':
-    resolution: {integrity: sha512-ksGejh9J/THvoZVdXkjDcYGmAlni+cK5agWMJdYylQPlJLMkcvpQL/YbMQZmn7Bu4Iu3KzHijj5W5jEscVREoA==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz}
+    resolution: {integrity: sha512-hNcRBJN0HDCU+x6MLihZAy05VE6sdVeJbyfrZk4LvcouPzAy7Oc297WEPeS/yI3UaoThNMcYujK8EkUR75a3SQ==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz}
     version: 0.1.0
 
   '@terminal-platform/workspace-gateway-node@file:vendor/terminal-platform/sdk/terminal-platform-workspace-gateway-node-0.1.0.tgz':
@@ -4064,7 +4061,7 @@ packages:
     version: 0.1.0
 
   '@terminal-platform/workspace-react@file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz':
-    resolution: {integrity: sha512-DtcWxD1L3cdD0wIQlMvjyzw3gGI6E4z/iMbm3i/qtfz5oGxd2Kc8vVmPNZ8lnX5lYtNY2XylbpGOXavn2HuQQg==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz}
+    resolution: {integrity: sha512-ZOi4EOQIA7OW6PZns50/xJEcPGh1bS9uKD/ikaPrAC/T05ZUeMCzsByZfp76lQCaYtAp8xaXl6qTISqiou5Kqw==, tarball: file:vendor/terminal-platform/sdk/terminal-platform-workspace-react-0.1.0.tgz}
     version: 0.1.0
     peerDependencies:
       react: '>=19.0.0 <20'
@@ -14928,7 +14925,7 @@ snapshots:
       '@terminal-platform/runtime-types': file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
       '@terminal-platform/workspace-contracts': file:vendor/terminal-platform/sdk/terminal-platform-workspace-contracts-0.1.0.tgz
 
-  '@terminal-platform/workspace-elements@file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz(patch_hash=9dab4c3c4aa6144145ec423cd386313f7ea85fb0938626dacb7c2581b3750d7d)':
+  '@terminal-platform/workspace-elements@file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz':
     dependencies:
       '@terminal-platform/design-tokens': file:vendor/terminal-platform/sdk/terminal-platform-design-tokens-0.1.0.tgz
       '@terminal-platform/runtime-types': file:vendor/terminal-platform/sdk/terminal-platform-runtime-types-0.1.0.tgz
@@ -14949,7 +14946,7 @@ snapshots:
     dependencies:
       '@lit/react': 1.0.8(@types/react@19.2.14)
       '@terminal-platform/workspace-core': file:vendor/terminal-platform/sdk/terminal-platform-workspace-core-0.1.0.tgz
-      '@terminal-platform/workspace-elements': file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz(patch_hash=9dab4c3c4aa6144145ec423cd386313f7ea85fb0938626dacb7c2581b3750d7d)
+      '@terminal-platform/workspace-elements': file:vendor/terminal-platform/sdk/terminal-platform-workspace-elements-0.1.0.tgz
       react: 19.2.4
     transitivePeerDependencies:
       - '@types/react'

@@ -580,6 +580,11 @@ const TerminalWorkspaceKernelView = ({
   const [commandRuns, setCommandRuns] = useState<TerminalCommandRunPresentation[]>(() =>
     readStoredTerminalCommandRuns(teamName)
   );
+  const commandRunSettlementContextRef = useRef<{
+    paneId: string | null;
+    screenLines: readonly TerminalCommandScreenLine[];
+    sessionId: string | null;
+  }>({ paneId: null, screenLines: [], sessionId: null });
   const [commandDraft, setCommandDraft] = useState('');
   const [autocompleteSuggestion, setAutocompleteSuggestion] = useState<string | null>(null);
   const [dismissedAutocompleteDraft, setDismissedAutocompleteDraft] = useState<string | null>(null);
@@ -628,6 +633,11 @@ const TerminalWorkspaceKernelView = ({
   const activeCommandSessionId =
     snapshot.selection.activeSessionId ?? snapshot.catalog.sessions[0]?.session_id ?? null;
   const activeCommandPaneId = activeScreen?.pane_id ?? null;
+  commandRunSettlementContextRef.current = {
+    paneId: activeCommandPaneId,
+    screenLines: activeScreenCommandLines,
+    sessionId: activeCommandSessionId,
+  };
   const activeCommandRuns = useMemo(
     () =>
       commandRuns.filter(
@@ -931,36 +941,34 @@ const TerminalWorkspaceKernelView = ({
   ]);
 
   useEffect(() => {
-    if (!activeCommandRuns.some((run) => run.status === 'running' || run.status === 'unknown')) {
-      return undefined;
-    }
+    const timer = window.setInterval(() => {
+      const context = commandRunSettlementContextRef.current;
+      if (!context.sessionId || !context.paneId || context.screenLines.length === 0) {
+        return;
+      }
 
-    const screenLines = activeScreenCommandLines;
-    if (screenLines.length === 0) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => {
-      setCommandRuns((current) =>
-        settleScopedTerminalCommandRuns(
-          current,
-          activeCommandSessionId,
-          activeCommandPaneId,
-          screenLines,
-          Date.now(),
-          true
-        )
-      );
+      setCommandRuns((current) => {
+        const hasPendingScopedRun = current.some(
+          (run) =>
+            run.sessionId === context.sessionId &&
+            run.paneId === context.paneId &&
+            (run.status === 'running' || run.status === 'unknown')
+        );
+        return hasPendingScopedRun
+          ? settleScopedTerminalCommandRuns(
+              current,
+              context.sessionId,
+              context.paneId,
+              context.screenLines,
+              Date.now(),
+              true
+            )
+          : current;
+      });
     }, 900);
 
-    return () => window.clearTimeout(timer);
-  }, [
-    activeCommandPaneId,
-    activeCommandRuns,
-    activeCommandSessionId,
-    activeScreen?.sequence,
-    activeScreenCommandLines,
-  ]);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     setCommandRuns(readStoredTerminalCommandRuns(teamName));
