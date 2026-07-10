@@ -5,6 +5,7 @@ import {
   buildRuntimePermissionAnswerCommandId,
   buildRuntimeTaskEventCommandId,
 } from '../domain/RuntimeControlIds';
+import { canonicalizeRuntimeIdempotencyKey } from '../domain/RuntimeIdempotencyKey';
 
 import type { OpenCodeRuntimeControlAck } from '../domain/RuntimeControlAck';
 import type {
@@ -93,7 +94,9 @@ export function createOpenCodeRuntimeControlApi(
         runId,
         memberName: fromMemberName,
       });
-      const idempotencyKey = requireRuntimeDeliveryString(payload.idempotencyKey, 'idempotencyKey');
+      const idempotencyKey = canonicalizeRuntimeIdempotencyKey(payload.idempotencyKey, {
+        errorPrefix: 'Runtime delivery envelope',
+      });
       const taskRefs = normalizeOpenCodeRuntimeIngressTaskRefs(teamName, payload.taskRefs);
 
       return ports.runtimeControl.deliverMessage({
@@ -132,7 +135,9 @@ export function createOpenCodeRuntimeControlApi(
       const memberName = requireRuntimeString(payload.memberName, 'memberName');
       const taskId = requireRuntimeString(payload.taskId, 'taskId');
       const event = requireRuntimeString(payload.event, 'event');
-      const idempotencyKey = requireRuntimeString(payload.idempotencyKey, 'idempotencyKey');
+      const idempotencyKey = canonicalizeRuntimeIdempotencyKey(payload.idempotencyKey, {
+        errorPrefix: 'OpenCode runtime payload',
+      });
       const runtimeSessionId = optionalRuntimeString(payload.runtimeSessionId);
       const createdAt = requireRuntimeIso(payload.createdAt, 'createdAt');
       const laneId = await resolveLaneId(ports, { teamName, runId, memberName });

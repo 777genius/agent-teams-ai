@@ -208,6 +208,86 @@ describe('RuntimeDeliveryService', () => {
     });
   });
 
+  it('uses the canonical idempotency key for journal identity and destination ids', async () => {
+    const message = envelope({ idempotencyKey: ' delivery-1 ' });
+    const canonicalMessage = envelope({ idempotencyKey: 'delivery-1' });
+    const canonicalDestinationMessageId = buildRuntimeDestinationMessageId(canonicalMessage);
+    const service = createService();
+
+    await expect(service.deliver(message)).resolves.toMatchObject({
+      ok: true,
+      delivered: true,
+      reason: null,
+      idempotencyKey: 'delivery-1',
+    });
+
+    const records = await journal.list();
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      idempotencyKey: 'delivery-1',
+      destinationMessageId: canonicalDestinationMessageId,
+    });
+    expect(destination.messages.has(canonicalDestinationMessageId)).toBe(true);
+    await expect(journal.get(journalKey(message))).resolves.toMatchObject({
+      idempotencyKey: 'delivery-1',
+    });
+  });
+
+  it('dedupes whitespace-equivalent delivery retries with a single destination write', async () => {
+    const service = createService();
+
+    await expect(
+      service.deliver(envelope({ idempotencyKey: ' delivery-1 ' }))
+    ).resolves.toMatchObject({
+      ok: true,
+      delivered: true,
+      reason: null,
+      idempotencyKey: 'delivery-1',
+    });
+    await expect(
+      service.deliver(envelope({ idempotencyKey: 'delivery-1' }))
+    ).resolves.toMatchObject({
+      ok: true,
+      delivered: false,
+      reason: 'duplicate',
+      idempotencyKey: 'delivery-1',
+    });
+
+    expect(destination.writeCalls).toBe(1);
+    await expect(journal.list()).resolves.toHaveLength(1);
+  });
+
+  it('canonicalizes direct journal keys before persisting or looking up records', async () => {
+    const message = envelope({ idempotencyKey: 'delivery-1' });
+    await journal.begin({
+      idempotencyKey: ' delivery-1 ',
+      payloadHash: hashRuntimeDeliveryEnvelope(message),
+      runId: message.runId,
+      teamName: message.teamName,
+      fromMemberName: message.fromMemberName,
+      providerId: message.providerId,
+      runtimeSessionId: message.runtimeSessionId,
+      destination: resolveRuntimeDeliveryDestination(message),
+      destinationMessageId: buildRuntimeDestinationMessageId(message),
+      now: now.toISOString(),
+    });
+
+    await expect(journal.list()).resolves.toMatchObject([
+      {
+        idempotencyKey: 'delivery-1',
+      },
+    ]);
+    await expect(
+      journal.get({
+        idempotencyKey: ' delivery-1 ',
+        runId: 'run-1',
+        teamName: 'team-a',
+      })
+    ).resolves.toMatchObject({
+      idempotencyKey: 'delivery-1',
+    });
+  });
+
   it('scopes idempotency records to the current run while preserving same-run retry dedupe', async () => {
     const service = createService();
 

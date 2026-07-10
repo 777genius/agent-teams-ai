@@ -104,5 +104,6 @@ export {
   isRuntimeControlProviderId,
   RUNTIME_CONTROL_PROVIDER_IDS,
 } from './domain/RuntimeControlProvider';
+export { canonicalizeRuntimeIdempotencyKey } from './domain/RuntimeIdempotencyKey';
 export type { RuntimeControlServiceOptions } from './RuntimeControlService';
 export { RuntimeControlService } from './RuntimeControlService';

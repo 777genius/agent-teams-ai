@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildRuntimeDestinationMessageId,
+  normalizeRuntimeDeliveryEnvelope,
   type RuntimeDeliveryEnvelope,
 } from '../RuntimeDeliveryJournal';
 
@@ -27,6 +28,31 @@ describe('RuntimeDeliveryJournal runtime identity', () => {
     expect(buildRuntimeDestinationMessageId(distinct)).not.toBe(
       buildRuntimeDestinationMessageId(first)
     );
+  });
+
+  it('canonicalizes idempotency keys before hashing destination message ids', () => {
+    const padded = normalizeRuntimeDeliveryEnvelope(
+      envelope({
+        idempotencyKey: ' runtime-key-1 ',
+      })
+    );
+    const canonical = normalizeRuntimeDeliveryEnvelope(
+      envelope({
+        idempotencyKey: 'runtime-key-1',
+      })
+    );
+
+    expect(padded.idempotencyKey).toBe('runtime-key-1');
+    expect(buildRuntimeDestinationMessageId(padded)).toBe(
+      buildRuntimeDestinationMessageId(canonical)
+    );
+    expect(
+      buildRuntimeDestinationMessageId(
+        envelope({
+          idempotencyKey: ' runtime-key-1 ',
+        })
+      )
+    ).toBe(buildRuntimeDestinationMessageId(canonical));
   });
 });
 

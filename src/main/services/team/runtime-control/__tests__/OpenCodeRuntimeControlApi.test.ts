@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createOpenCodeRuntimeControlApi } from '../index';
+import {
+  buildRuntimeControlCommandEventId,
+  createOpenCodeRuntimeControlApi,
+  createRuntimeControlEventFromAck,
+} from '../index';
 
 import type {
   OpenCodeRuntimeControlAck,
@@ -92,6 +96,73 @@ describe('OpenCodeRuntimeControlApi', () => {
     expect(ports.runtimeControl.deliverMessage).toHaveBeenNthCalledWith(2, firstCommand);
   });
 
+  it('canonicalizes delivery idempotency keys before command and event identity', async () => {
+    const ack = createAck('delivered');
+    const ports = createPorts(ack);
+    const api = createOpenCodeRuntimeControlApi(ports);
+
+    await expect(
+      api.deliverOpenCodeRuntimeMessage({
+        teamName: 'Team',
+        runId: 'run-1',
+        fromMemberName: 'Builder',
+        idempotencyKey: ' message-key-1 ',
+        runtimeSessionId: 'session-1',
+        to: 'user',
+        text: 'Delivered text',
+        createdAt: '2026-01-01T00:00:00Z',
+      })
+    ).resolves.toBe(ack);
+
+    const command = vi.mocked(ports.runtimeControl.deliverMessage).mock.calls[0]?.[0];
+    expect(command).toBeDefined();
+    if (!command) {
+      throw new Error('Expected delivery command');
+    }
+    expect(command).toEqual(
+      expect.objectContaining({
+        commandId: 'opencode:deliver-message:Team:lane-1:run-1:message-key-1',
+        idempotencyKey: 'message-key-1',
+      })
+    );
+    expect(
+      createRuntimeControlEventFromAck(command, {
+        ...ack,
+        idempotencyKey: command.idempotencyKey,
+      })
+    ).toEqual(
+      expect.objectContaining({
+        eventId: buildRuntimeControlCommandEventId({
+          providerId: 'opencode',
+          eventType: 'RuntimeMessageDelivered',
+          commandId: command.commandId,
+        }),
+        commandId: command.commandId,
+        idempotencyKey: 'message-key-1',
+      })
+    );
+  });
+
+  it('keeps blank delivery idempotency keys invalid after canonicalization', async () => {
+    const ack = createAck('delivered');
+    const ports = createPorts(ack);
+    const api = createOpenCodeRuntimeControlApi(ports);
+
+    await expect(
+      api.deliverOpenCodeRuntimeMessage({
+        teamName: 'Team',
+        runId: 'run-1',
+        fromMemberName: 'Builder',
+        idempotencyKey: '   ',
+        runtimeSessionId: 'session-1',
+        to: 'user',
+        text: 'Delivered text',
+        createdAt: '2026-01-01T00:00:00Z',
+      })
+    ).rejects.toThrow('Runtime delivery envelope missing idempotencyKey');
+    expect(ports.runtimeControl.deliverMessage).not.toHaveBeenCalled();
+  });
+
   it('rejects malformed task refs before they enter runtime control', async () => {
     const ack = createAck('delivered');
     const ports = createPorts(ack);
@@ -149,7 +220,7 @@ describe('OpenCodeRuntimeControlApi', () => {
       memberName: 'Builder',
       taskId: 'task-1',
       event: 'started',
-      idempotencyKey: 'task-key-1',
+      idempotencyKey: ' task-key-1 ',
       runtimeSessionId: 'session-1',
       createdAt: '2026-01-01T00:00:00Z',
     });
