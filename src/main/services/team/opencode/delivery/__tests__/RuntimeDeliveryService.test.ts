@@ -95,22 +95,27 @@ describe('RuntimeDeliveryService stale run guard', () => {
     });
   }
 
-  it('does not commit a duplicate destination when the run changes after destination verify', async () => {
+  it('commits a duplicate destination already found when the run changes after destination verify', async () => {
     const location: RuntimeDeliveryLocation = {
       kind: 'member_inbox',
       teamName: 'Team',
       memberName: 'Reviewer',
       messageId: 'message-1',
     };
-    const { runState } = createRunState(['run-1', 'run-1', 'run-2']);
+    let currentRunId = 'run-1';
+    const getCurrentRunId = vi.fn(async () => currentRunId);
     const journal = createJournal();
     const destination = createDestinationPort('member_inbox', location, {
       found: true,
       location,
       diagnostics: [],
     });
+    destination.verify.mockImplementationOnce(async () => {
+      currentRunId = 'run-2';
+      return { found: true, location, diagnostics: [] };
+    });
     const service = createService({
-      runState,
+      runState: { getCurrentRunId },
       journal: journal.store,
       port: destination.port,
     });
@@ -118,29 +123,34 @@ describe('RuntimeDeliveryService stale run guard', () => {
     const ack = await service.deliver(envelope({ to: { memberName: 'Reviewer' } }));
 
     expect(ack).toEqual({
-      ok: false,
+      ok: true,
       delivered: false,
-      reason: 'stale_run',
+      reason: 'duplicate_destination_found',
       idempotencyKey: 'runtime-key-1',
+      location,
     });
+    expect(getCurrentRunId).toHaveBeenCalledTimes(2);
     expect(destination.verify).toHaveBeenCalledOnce();
     expect(destination.write).not.toHaveBeenCalled();
-    expect(journal.markCommitted).not.toHaveBeenCalled();
-    expect(journal.markFailed).toHaveBeenCalledWith(
+    expect(journal.markCommitted).toHaveBeenCalledWith(
       expect.objectContaining({
-        status: 'failed_terminal',
-        error: 'stale_run',
+        idempotencyKey: 'runtime-key-1',
+        runId: 'run-1',
+        teamName: 'Team',
+        location,
       })
     );
+    expect(journal.markFailed).not.toHaveBeenCalled();
   });
 
-  it('does not mark committed or emit after a destination write if the run changed before commit', async () => {
+  it('commits and emits after a verified destination write when the run changes before commit', async () => {
     const location: RuntimeDeliveryLocation = {
       kind: 'user_sent_messages',
       teamName: 'Team',
       messageId: 'message-1',
     };
-    const { runState } = createRunState(['run-1', 'run-1', 'run-1', 'run-2']);
+    let currentRunId = 'run-1';
+    const getCurrentRunId = vi.fn(async () => currentRunId);
     const journal = createJournal();
     const destination = createDestinationPort('user_sent_messages', location, {
       found: false,
@@ -149,10 +159,13 @@ describe('RuntimeDeliveryService stale run guard', () => {
     });
     destination.verify
       .mockResolvedValueOnce({ found: false, location: null, diagnostics: [] })
-      .mockResolvedValueOnce({ found: true, location, diagnostics: [] });
+      .mockImplementationOnce(async () => {
+        currentRunId = 'run-2';
+        return { found: true, location, diagnostics: [] };
+      });
     const emit = vi.fn();
     const service = createService({
-      runState,
+      runState: { getCurrentRunId },
       journal: journal.store,
       port: destination.port,
       emit,
@@ -161,20 +174,27 @@ describe('RuntimeDeliveryService stale run guard', () => {
     const ack = await service.deliver(envelope({ to: 'user' }));
 
     expect(ack).toEqual({
-      ok: false,
-      delivered: false,
-      reason: 'stale_run',
+      ok: true,
+      delivered: true,
+      reason: null,
       idempotencyKey: 'runtime-key-1',
+      location,
     });
+    expect(getCurrentRunId).toHaveBeenCalledTimes(3);
     expect(destination.write).toHaveBeenCalledOnce();
-    expect(journal.markCommitted).not.toHaveBeenCalled();
-    expect(emit).not.toHaveBeenCalled();
-    expect(journal.markFailed).toHaveBeenCalledWith(
+    expect(journal.markCommitted).toHaveBeenCalledWith(
       expect.objectContaining({
-        status: 'failed_terminal',
-        error: 'stale_run',
+        idempotencyKey: 'runtime-key-1',
+        runId: 'run-1',
+        teamName: 'Team',
+        location,
       })
     );
+    expect(emit).toHaveBeenCalledWith({
+      type: 'runtime-delivery-test',
+      teamName: 'Team',
+    });
+    expect(journal.markFailed).not.toHaveBeenCalled();
   });
 
   it('does not publish retryable failure diagnostics when a destination failure races with a stale run', async () => {

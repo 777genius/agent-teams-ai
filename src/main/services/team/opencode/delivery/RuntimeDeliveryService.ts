@@ -194,13 +194,6 @@ export class RuntimeDeliveryService {
     const port = this.destinations.get(destination.kind);
     const preExisting = await port.verify({ destination, destinationMessageId });
     if (preExisting.found && preExisting.location) {
-      const staleRunBeforeDuplicateCommit = await this.rejectIfRunIsStale(envelope, {
-        markJournalRecordTerminal: true,
-      });
-      if (staleRunBeforeDuplicateCommit) {
-        return staleRunBeforeDuplicateCommit;
-      }
-
       await this.journal.markCommitted({
         idempotencyKey: envelope.idempotencyKey,
         runId: envelope.runId,
@@ -234,13 +227,6 @@ export class RuntimeDeliveryService {
       }
 
       const committedLocation = verified.location ?? location;
-      const staleRunBeforeCommit = await this.rejectIfRunIsStale(envelope, {
-        markJournalRecordTerminal: true,
-      });
-      if (staleRunBeforeCommit) {
-        return staleRunBeforeCommit;
-      }
-
       await this.journal.markCommitted({
         idempotencyKey: envelope.idempotencyKey,
         runId: envelope.runId,

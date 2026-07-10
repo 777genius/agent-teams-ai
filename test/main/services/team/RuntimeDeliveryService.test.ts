@@ -333,6 +333,50 @@ describe('RuntimeDeliveryService', () => {
     expect(destination.writeCalls).toBe(0);
   });
 
+  it('commits verified output when the run changes after destination write', async () => {
+    destination.writeImpl = async (input) => {
+      const location: RuntimeDeliveryLocation = {
+        kind: 'member_inbox',
+        teamName: input.envelope.teamName,
+        memberName:
+          typeof input.envelope.to === 'object' && 'memberName' in input.envelope.to
+            ? input.envelope.to.memberName
+            : 'unknown',
+        messageId: input.destinationMessageId,
+      };
+      destination.messages.set(input.destinationMessageId, location);
+      runState.currentRunId = 'run-2';
+      return location;
+    };
+    const service = createService();
+
+    const ack = await service.deliver(envelope());
+
+    expect(ack).toMatchObject({
+      ok: true,
+      delivered: true,
+      reason: null,
+    });
+    await expect(journal.get(journalKey())).resolves.toMatchObject({
+      status: 'committed',
+      committedLocation: expect.objectContaining({
+        kind: 'member_inbox',
+        memberName: 'Reviewer',
+      }),
+      lastError: null,
+    });
+    expect(emitter.events).toEqual([
+      {
+        type: 'runtime-delivery',
+        teamName: 'team-a',
+        data: {
+          kind: 'member_inbox',
+        },
+      },
+    ]);
+    expect(diagnostics.append).not.toHaveBeenCalled();
+  });
+
   it('emits a bounded change event after verified commit', async () => {
     const service = createService();
 
