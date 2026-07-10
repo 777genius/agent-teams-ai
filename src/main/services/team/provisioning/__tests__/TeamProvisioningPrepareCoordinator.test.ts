@@ -335,14 +335,19 @@ describe('TeamProvisioningPrepareCoordinator', () => {
 
   it('tracks and clears in-flight probe ownership when probes reject', async () => {
     const cache = createInMemoryProviderProbeCachePort();
-    const probe = deferredProbe();
-    const request = cache.getOrCreateInFlight('in-flight-key', () => probe.promise, {
+    let rejectProbe = (_error: Error): void => {
+      throw new Error('Expected deferred probe reject callback.');
+    };
+    const probePromise = new Promise<ProbeResult | null>((_resolve, reject) => {
+      rejectProbe = reject;
+    });
+    const request = cache.getOrCreateInFlight('in-flight-key', () => probePromise, {
       probeCacheKey: 'probe-key',
     });
 
     expect(cache.hasInFlightForProbeCacheKey('probe-key')).toBe(true);
 
-    probe.reject(new Error('probe failed'));
+    rejectProbe(new Error('probe failed'));
 
     await expect(request).rejects.toThrow('probe failed');
     expect(cache.hasInFlightForProbeCacheKey('probe-key')).toBe(false);
