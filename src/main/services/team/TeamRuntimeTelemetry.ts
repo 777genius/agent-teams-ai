@@ -45,6 +45,10 @@ export class RuntimeTelemetryTimeoutError extends Error {
   }
 }
 
+interface RuntimePidusageTelemetryEnv {
+  CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED?: string | undefined;
+}
+
 export async function withRuntimeTelemetryTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -69,7 +73,7 @@ export async function withRuntimeTelemetryTimeout<T>(
 }
 
 export function isRuntimePidusageTelemetryEnabled(
-  env: Partial<Pick<NodeJS.ProcessEnv, 'CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED'>> = process.env
+  env: RuntimePidusageTelemetryEnv = process.env
 ): boolean {
   const value = env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED?.trim().toLowerCase();
   return value === '1' || value === 'true' || value === 'yes';
