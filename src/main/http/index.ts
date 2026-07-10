@@ -41,11 +41,6 @@ import type { SshConnectionManager } from '../services/infrastructure/SshConnect
 import type {
   TeamHttpDataApi,
   TeamHttpHandlerApis,
-  TeamHttpRuntimeApi,
-  TeamProvisioningStartApi,
-  TeamProvisioningStatusApi,
-  TeamRuntimeControlCompatibilityApi,
-  TeamTaskActivityRepairApi,
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
 import type { FastifyInstance } from 'fastify';
@@ -66,11 +61,6 @@ export interface HttpServices {
   sshConnectionManager: SshConnectionManager;
   teamApis?: TeamHttpHandlerApis;
   teamDataApi?: TeamHttpDataApi;
-  teamProvisioningStartApi?: TeamProvisioningStartApi;
-  teamProvisioningStatusApi?: TeamProvisioningStatusApi;
-  teamTaskActivityApi?: TeamTaskActivityRepairApi;
-  teamRuntimeApi?: TeamHttpRuntimeApi;
-  teamRuntimeControlApi?: TeamRuntimeControlCompatibilityApi;
 }
 
 export function registerHttpRoutes(
@@ -82,15 +72,7 @@ export function registerHttpRoutes(
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);
   registerSubagentRoutes(app, services);
-  if (
-    services.teamDataApi ||
-    services.teamApis ||
-    services.teamProvisioningStartApi ||
-    services.teamProvisioningStatusApi ||
-    services.teamTaskActivityApi ||
-    services.teamRuntimeApi ||
-    services.teamRuntimeControlApi
-  ) {
+  if (services.teamDataApi || services.teamApis) {
     registerTeamRoutes(app, services);
   }
   registerNotificationRoutes(app);

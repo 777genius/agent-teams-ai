@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { HttpServices } from '@main/http';
 import type {
   OpenCodeRuntimeControlAck,
+  TeamHttpHandlerApis,
   TeamRuntimeControlCompatibilityApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 
@@ -19,7 +20,9 @@ function createHttpServices(
     dataCache: {} as HttpServices['dataCache'],
     updaterService: {} as HttpServices['updaterService'],
     sshConnectionManager: {} as HttpServices['sshConnectionManager'],
-    teamRuntimeControlApi,
+    teamApis: {
+      runtimeControl: teamRuntimeControlApi,
+    } satisfies TeamHttpHandlerApis,
   };
 }
 

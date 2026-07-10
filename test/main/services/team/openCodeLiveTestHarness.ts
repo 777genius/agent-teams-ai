@@ -6,6 +6,7 @@ import * as path from 'path';
 import { buildMemberWorkSyncRuntimeTurnSettledEnvironment } from '../../../../src/features/member-work-sync/main';
 import { registerTeamRoutes } from '../../../../src/main/http/teams';
 import { applyOpenCodeAutoUpdatePolicy } from '../../../../src/main/services/runtime/openCodeAutoUpdatePolicy';
+import { bindTeamHttpHandlerApis } from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
 import { OpenCodeBridgeCommandClient } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import {
   createOpenCodeBridgeCommandLeaseStore,
@@ -369,12 +370,13 @@ export function buildLiveTeamControlApiServices(
   svc: TeamProvisioningService,
   extraServices: Partial<HttpServices> = {}
 ): Partial<HttpServices> {
+  const { teamApis: overrideTeamApis, ...restServices } = extraServices;
   return {
-    teamProvisioningStartApi: svc,
-    teamProvisioningStatusApi: svc,
-    teamRuntimeApi: svc,
-    teamRuntimeControlApi: svc,
-    ...extraServices,
+    teamApis: {
+      ...bindTeamHttpHandlerApis(svc),
+      ...overrideTeamApis,
+    },
+    ...restServices,
   };
 }
 

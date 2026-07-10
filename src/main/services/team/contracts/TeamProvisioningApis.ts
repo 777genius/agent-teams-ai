@@ -97,11 +97,11 @@ export interface TeamHttpDataApi {
 }
 
 export interface TeamHttpHandlerApis {
-  provisioningStart: TeamProvisioningStartApi;
-  provisioningStatus: TeamProvisioningStatusApi;
-  taskActivity: TeamTaskActivityRepairApi;
-  runtime: TeamHttpRuntimeApi;
-  runtimeControl: TeamRuntimeControlCompatibilityApi;
+  provisioningStart?: TeamProvisioningStartApi;
+  provisioningStatus?: TeamProvisioningStatusApi;
+  taskActivity?: TeamTaskActivityRepairApi;
+  runtime?: TeamHttpRuntimeApi;
+  runtimeControl?: TeamRuntimeControlCompatibilityApi;
 }
 
 export interface TeamIpcHandlerApis {

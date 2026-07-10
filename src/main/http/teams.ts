@@ -18,10 +18,8 @@ import {
 import type { HttpServices } from './index';
 import type { MemberWorkSyncReportState } from '@features/member-work-sync/contracts';
 import type {
+  TeamHttpHandlerApis,
   TeamHttpRuntimeApi,
-  TeamProvisioningStartApi,
-  TeamProvisioningStatusApi,
-  TeamRuntimeControlCompatibilityApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import type {
   TeamCreateConfigRequest,
@@ -37,20 +35,24 @@ type CreateTeamBody = TeamCreateConfigRequest;
 
 class HttpFeatureUnavailableError extends Error {}
 
+type TeamHttpProvisioningStartApi = NonNullable<TeamHttpHandlerApis['provisioningStart']>;
+type TeamHttpProvisioningStatusApi = NonNullable<TeamHttpHandlerApis['provisioningStatus']>;
+type TeamHttpRuntimeControlApi = NonNullable<TeamHttpHandlerApis['runtimeControl']>;
+
 function isMemberWorkSyncReportState(value: string): value is MemberWorkSyncReportState {
   return value === 'still_working' || value === 'blocked' || value === 'caught_up';
 }
 
-function getTeamProvisioningStartApi(services: HttpServices): TeamProvisioningStartApi {
-  const api = services.teamApis?.provisioningStart ?? services.teamProvisioningStartApi;
+function getTeamProvisioningStartApi(services: HttpServices): TeamHttpProvisioningStartApi {
+  const api = services.teamApis?.provisioningStart;
   if (!api) {
     throw new HttpFeatureUnavailableError('Team launch control is not available in this mode');
   }
   return api;
 }
 
-function getTeamProvisioningStatusApi(services: HttpServices): TeamProvisioningStatusApi {
-  const api = services.teamApis?.provisioningStatus ?? services.teamProvisioningStatusApi;
+function getTeamProvisioningStatusApi(services: HttpServices): TeamHttpProvisioningStatusApi {
+  const api = services.teamApis?.provisioningStatus;
   if (!api) {
     throw new HttpFeatureUnavailableError('Team provisioning status is not available in this mode');
   }
@@ -58,15 +60,15 @@ function getTeamProvisioningStatusApi(services: HttpServices): TeamProvisioningS
 }
 
 function getTeamRuntimeApi(services: HttpServices): TeamHttpRuntimeApi {
-  const api = services.teamApis?.runtime ?? services.teamRuntimeApi;
+  const api = services.teamApis?.runtime;
   if (!api) {
     throw new HttpFeatureUnavailableError('Team runtime control is not available in this mode');
   }
   return api;
 }
 
-function getTeamRuntimeControlApi(services: HttpServices): TeamRuntimeControlCompatibilityApi {
-  const api = services.teamApis?.runtimeControl ?? services.teamRuntimeControlApi;
+function getTeamRuntimeControlApi(services: HttpServices): TeamHttpRuntimeControlApi {
+  const api = services.teamApis?.runtimeControl;
   if (!api) {
     throw new HttpFeatureUnavailableError('Team runtime callbacks are not available in this mode');
   }
@@ -164,7 +166,7 @@ async function getTeamDataWithRuntimeOverlay(
   const data = await getTeamDataApi(services).getTeamData(teamName);
   let runtimeState: Awaited<ReturnType<TeamHttpRuntimeApi['getRuntimeState']>> | null = null;
   try {
-    const runtimeApi = services.teamApis?.runtime ?? services.teamRuntimeApi;
+    const runtimeApi = services.teamApis?.runtime;
     runtimeState = (await runtimeApi?.getRuntimeState(teamName)) ?? null;
   } catch {
     runtimeState = null;
@@ -217,7 +219,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         });
       }
 
-      const taskActivityApi = services.teamApis?.taskActivity ?? services.teamTaskActivityApi;
+      const taskActivityApi = services.teamApis?.taskActivity;
       await taskActivityApi?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
       return reply.send(await getTeamDataWithRuntimeOverlay(services, teamName));
     } catch (error) {

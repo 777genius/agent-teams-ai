@@ -333,11 +333,15 @@ describe('TeamProvisioning API binders', () => {
     };
 
     const api = bindTeamHttpHandlerApis(source);
-    const createTeam = api.provisioningStart.createTeam.bind(undefined);
-    const launchTeam = api.provisioningStart.launchTeam.bind(undefined);
-    const getRuntimeState = api.runtime.getRuntimeState.bind(undefined);
+    const provisioningStart = api.provisioningStart!;
+    const provisioningStatus = api.provisioningStatus!;
+    const runtime = api.runtime!;
+    const runtimeControl = api.runtimeControl!;
+    const createTeam = provisioningStart.createTeam.bind(undefined);
+    const launchTeam = provisioningStart.launchTeam.bind(undefined);
+    const getRuntimeState = runtime.getRuntimeState.bind(undefined);
     const deliverOpenCodeRuntimeMessage =
-      api.runtimeControl.deliverOpenCodeRuntimeMessage.bind(undefined);
+      runtimeControl.deliverOpenCodeRuntimeMessage.bind(undefined);
 
     expect(Object.keys(api).sort()).toEqual([
       'provisioningStart',
@@ -346,20 +350,16 @@ describe('TeamProvisioning API binders', () => {
       'runtimeControl',
       'taskActivity',
     ]);
-    expect(Object.keys(api.runtime).sort()).toEqual([
-      'getAliveTeams',
-      'getRuntimeState',
-      'stopTeam',
-    ]);
-    expect((api.runtime as unknown as Record<string, unknown>).isTeamAlive).toBeUndefined();
-    expect((api.runtime as unknown as Record<string, unknown>).getCurrentRunId).toBeUndefined();
+    expect(Object.keys(runtime).sort()).toEqual(['getAliveTeams', 'getRuntimeState', 'stopTeam']);
+    expect((runtime as unknown as Record<string, unknown>).isTeamAlive).toBeUndefined();
+    expect((runtime as unknown as Record<string, unknown>).getCurrentRunId).toBeUndefined();
     await expect(createTeam({} as never, () => undefined)).resolves.toEqual({
       runId: 'run-http:create',
     });
     await expect(
       launchTeam({ teamName: 'team-http', cwd: TEST_TEAM_CWD }, () => undefined)
     ).resolves.toEqual({ runId: 'run-http:launch' });
-    await expect(api.provisioningStatus.getProvisioningStatus('run-http')).resolves.toMatchObject({
+    await expect(provisioningStatus.getProvisioningStatus('run-http')).resolves.toMatchObject({
       runId: 'run-http',
       teamName: 'team-http',
     });
