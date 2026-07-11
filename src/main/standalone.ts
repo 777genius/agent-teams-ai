@@ -24,6 +24,7 @@ import {
 import { createLogger } from '@shared/utils/logger';
 
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
+import { buildTeamControlApiBaseUrl } from './services/team/TeamControlApiState';
 import {
   getProjectsBasePath,
   getTodosBasePath,
@@ -99,6 +100,14 @@ let standaloneTeamServices: StandaloneTeamServices | null = null;
 // Lifecycle
 // =============================================================================
 
+function getStandaloneTeamControlApiBaseUrl(): string | null {
+  if (!httpServer?.isRunning()) {
+    return null;
+  }
+
+  return buildTeamControlApiBaseUrl(httpServer.getPort(), HOST);
+}
+
 async function start(): Promise<void> {
   logger.info('Starting standalone server...');
 
@@ -148,7 +157,9 @@ async function start(): Promise<void> {
     getLocalContext: () => localContext,
     logger: createLogger('Feature:RecentProjects'),
   });
-  standaloneTeamServices = createStandaloneTeamServices();
+  standaloneTeamServices = createStandaloneTeamServices({
+    controlApiBaseUrlResolver: async () => getStandaloneTeamControlApiBaseUrl(),
+  });
   const runtimeCoreFeature = createRuntimeCoreFeature({
     providerJsonParsing: createRuntimeCoreProviderJsonParsingServices(localContext),
     teams: standaloneTeamServices.runtimeCoreTeamSources,
@@ -201,6 +212,9 @@ async function start(): Promise<void> {
 async function shutdown(): Promise<void> {
   logger.info('Shutting down...');
 
+  await standaloneTeamServices?.dispose();
+  standaloneTeamServices = null;
+
   if (httpServer?.isRunning()) {
     await httpServer.stop();
   }
@@ -208,9 +222,6 @@ async function shutdown(): Promise<void> {
   if (localContext) {
     localContext.dispose();
   }
-
-  await standaloneTeamServices?.dispose();
-  standaloneTeamServices = null;
 
   logger.info('Shutdown complete');
   process.exit(0);

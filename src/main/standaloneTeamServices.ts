@@ -50,6 +50,8 @@ export interface StandaloneTeamServices {
   dispose(): Promise<void>;
 }
 
+type StandaloneControlApiBaseUrlResolver = () => Promise<string | null>;
+
 export function buildStandaloneTeamHttpServiceSlice(input: {
   teamDataService: TeamHttpDataApi;
   teamProvisioningService: StandaloneTeamProvisioningHttpApi;
@@ -72,7 +74,44 @@ export function createStandaloneRuntimeCoreTeamSources(input: {
   };
 }
 
-export function createStandaloneTeamServices(): StandaloneTeamServices {
+export function buildStandaloneTeamServices(input: {
+  teamDataService: TeamDataService;
+  teamProvisioningService: TeamProvisioningService;
+  memberWorkSyncFeature: MemberWorkSyncFeatureFacade;
+  controlApiBaseUrlResolver?: StandaloneControlApiBaseUrlResolver;
+}): StandaloneTeamServices {
+  if (input.controlApiBaseUrlResolver) {
+    input.teamProvisioningService.setControlApiBaseUrlResolver(input.controlApiBaseUrlResolver);
+  }
+
+  return {
+    teamDataService: input.teamDataService,
+    teamProvisioningService: input.teamProvisioningService,
+    memberWorkSyncFeature: input.memberWorkSyncFeature,
+    httpServices: buildStandaloneTeamHttpServiceSlice({
+      teamDataService: input.teamDataService,
+      teamProvisioningService: input.teamProvisioningService,
+      memberWorkSyncFeature: input.memberWorkSyncFeature,
+    }),
+    runtimeCoreTeamSources: createStandaloneRuntimeCoreTeamSources({
+      teamDataService: input.teamDataService,
+      teamProvisioningService: input.teamProvisioningService,
+    }),
+    dispose: async () => {
+      try {
+        await input.teamProvisioningService.stopAllTeams();
+      } finally {
+        await input.memberWorkSyncFeature.dispose();
+      }
+    },
+  };
+}
+
+export function createStandaloneTeamServices(
+  input: {
+    controlApiBaseUrlResolver?: StandaloneControlApiBaseUrlResolver;
+  } = {}
+): StandaloneTeamServices {
   const teamDataService = new TeamDataService();
   const teamProvisioningService = new TeamProvisioningService();
   const memberWorkSyncFeature = createMemberWorkSyncFeature({
@@ -88,6 +127,7 @@ export function createStandaloneTeamServices(): StandaloneTeamServices {
       (await teamDataService.listTeams())
         .map((team) => team.teamName)
         .filter((teamName) => teamProvisioningService.isTeamAlive(teamName)),
+    resolveControlUrl: input.controlApiBaseUrlResolver,
     logger: createLogger('Feature:MemberWorkSync'),
   });
 
@@ -113,21 +153,12 @@ export function createStandaloneTeamServices(): StandaloneTeamServices {
     return Number.isFinite(expiresAtMs) && expiresAtMs > Date.now();
   });
 
-  return {
+  return buildStandaloneTeamServices({
     teamDataService,
     teamProvisioningService,
     memberWorkSyncFeature,
-    httpServices: buildStandaloneTeamHttpServiceSlice({
-      teamDataService,
-      teamProvisioningService,
-      memberWorkSyncFeature,
-    }),
-    runtimeCoreTeamSources: createStandaloneRuntimeCoreTeamSources({
-      teamDataService,
-      teamProvisioningService,
-    }),
-    dispose: () => memberWorkSyncFeature.dispose(),
-  };
+    controlApiBaseUrlResolver: input.controlApiBaseUrlResolver,
+  });
 }
 
 export function attachStandaloneTeamHttpServices(

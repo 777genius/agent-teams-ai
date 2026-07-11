@@ -216,10 +216,11 @@ export class HttpServer {
       const tryPort = preferredPort + attempt;
       try {
         await this.app.listen({ host, port: tryPort });
-        this.port = tryPort;
+        const address = this.app.server.address();
+        this.port = address && typeof address !== 'string' ? address.port : tryPort;
         this.running = true;
-        logger.info(`HTTP server started on http://${host}:${tryPort}`);
-        return tryPort;
+        logger.info(`HTTP server started on http://${host}:${this.port}`);
+        return this.port;
       } catch (err: unknown) {
         const error = err as NodeJS.ErrnoException;
         if (error.code === 'EADDRINUSE') {

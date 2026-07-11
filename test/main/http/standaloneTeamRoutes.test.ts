@@ -3,6 +3,7 @@ import { registerHttpRoutes } from '@main/http';
 import {
   attachStandaloneTeamHttpServices,
   buildStandaloneTeamHttpServiceSlice,
+  buildStandaloneTeamServices,
 } from '@main/standaloneTeamServices';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
@@ -14,6 +15,8 @@ import type {
   OpenCodeRuntimeControlAck,
   TeamHttpDataApi,
 } from '@main/services/team/contracts/TeamProvisioningApis';
+import type { TeamDataService } from '@main/services/team/TeamDataService';
+import type { TeamProvisioningService } from '@main/services/team/TeamProvisioningService';
 import type { StandaloneTeamProvisioningHttpApi } from '@main/standaloneTeamServices';
 import type {
   TeamCreateConfigRequest,
@@ -202,6 +205,44 @@ describe('standalone team HTTP route registration', () => {
     } finally {
       await app.close();
     }
+  });
+
+  it('wires standalone control URL resolver and stops teams before member-work-sync disposal', async () => {
+    const order: string[] = [];
+    const controlApiBaseUrlResolver = vi.fn(async () => 'http://127.0.0.1:43123');
+    const teamProvisioningService = {
+      ...createTeamProvisioningService(),
+      setControlApiBaseUrlResolver: vi.fn(),
+      stopAllTeams: vi.fn(async () => {
+        order.push('stopAllTeams');
+      }),
+    };
+    const memberWorkSyncFeature = {
+      ...createMemberWorkSyncFeature(),
+      dispose: vi.fn(async () => {
+        order.push('memberWorkSync.dispose');
+      }),
+    };
+
+    const services = buildStandaloneTeamServices({
+      teamDataService: createTeamDataApi() as unknown as TeamDataService,
+      teamProvisioningService: teamProvisioningService as unknown as TeamProvisioningService,
+      memberWorkSyncFeature,
+      controlApiBaseUrlResolver,
+    });
+
+    expect(teamProvisioningService.setControlApiBaseUrlResolver).toHaveBeenCalledWith(
+      controlApiBaseUrlResolver
+    );
+    await expect(
+      teamProvisioningService.setControlApiBaseUrlResolver.mock.calls[0]?.[0]?.()
+    ).resolves.toBe('http://127.0.0.1:43123');
+
+    await services.dispose();
+
+    expect(teamProvisioningService.stopAllTeams).toHaveBeenCalledOnce();
+    expect(memberWorkSyncFeature.dispose).toHaveBeenCalledOnce();
+    expect(order).toEqual(['stopAllTeams', 'memberWorkSync.dispose']);
   });
 
   it('registers team routes from runtimeCore team use cases without legacy team service fields', async () => {
