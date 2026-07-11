@@ -2698,14 +2698,10 @@ async function handlePrepareProvisioning(
     if (!Array.isArray(selectedModels)) {
       return { success: false, error: 'selectedModels must be an array when provided' };
     }
-    const normalized = Array.from(
-      new Set(
-        selectedModels
-          .filter((entry): entry is string => typeof entry === 'string')
-          .map((entry) => entry.trim())
-          .filter((entry) => entry.length > 0)
-      )
-    );
+    if (selectedModels.some((entry) => typeof entry !== 'string' || entry.trim().length === 0)) {
+      return { success: false, error: 'selectedModels entries must be non-empty strings' };
+    }
+    const normalized = Array.from(new Set(selectedModels.map((entry) => entry.trim())));
     validatedSelectedModels = normalized;
   }
   if (limitContext !== undefined) {

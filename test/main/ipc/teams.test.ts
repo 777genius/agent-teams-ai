@@ -775,6 +775,29 @@ describe('ipc teams handlers', () => {
     expect(result.error).toContain('selectedModelChecks effort must be one of');
   });
 
+  it.each([
+    { kind: 'non-string', selectedModels: ['claude-opus-4-6', 42] },
+    { kind: 'empty', selectedModels: ['claude-opus-4-6', '   '] },
+  ])(
+    'rejects $kind selected model entries before preflight dispatch',
+    async ({ selectedModels }) => {
+      const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+      const result = (await handler(
+        { sender: { send: vi.fn() } } as never,
+        os.tmpdir(),
+        'anthropic',
+        ['anthropic'],
+        selectedModels
+      )) as { success: boolean; error: string };
+
+      expect(result).toEqual({
+        success: false,
+        error: 'selectedModels entries must be non-empty strings',
+      });
+      expect(teamHandlerMocks.prepareForProvisioning).not.toHaveBeenCalled();
+    }
+  );
+
   it('updates change presence tracking for a team', async () => {
     const handler = handlers.get(TEAM_SET_CHANGE_PRESENCE_TRACKING);
     expect(handler).toBeDefined();
