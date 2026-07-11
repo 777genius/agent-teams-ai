@@ -71,6 +71,14 @@ class LocalConsumedOutputLedgerSource implements ConsumedOutputLedgerSourcePort 
     }
   }
 
+  async pathSize(path: string): Promise<number | undefined> {
+    try {
+      return (await stat(path)).size;
+    } catch {
+      return undefined;
+    }
+  }
+
   async resolveWorkspacePath(path: string): Promise<string | undefined> {
     try {
       return await realpath(path);

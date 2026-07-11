@@ -55,6 +55,71 @@ describe("consumed output ledger", () => {
     }
   });
 
+  it("distinguishes infrastructure failures without output from rejected patches", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-no-output-ledger-"));
+    const workspace = join(root, "workspaces", "runtime-review-v1");
+    const backup = await createBackupEvidence(root, "runtime-review-v1", workspace, false);
+    const source = localConsumedOutputLedgerSource();
+
+    const failed = await consumedOutputRecordFromJson({
+      ledgerPath: join(root, "failed-no-output.json"),
+      source,
+      value: {
+        jobId: "runtime-review-v1",
+        status: "failed_no_output",
+        closedAt: "2026-07-11T00:00:00.000Z",
+        failure: {
+          category: "infrastructure",
+          code: "model_requires_newer_version",
+        },
+        output: {
+          authoredChanges: false,
+          workspaceDirty: false,
+        },
+        backup,
+      },
+    });
+
+    expect(failed).toMatchObject({
+      status: "failed_no_output",
+      hasAuthoredOutput: false,
+      valid: true,
+    });
+    expect(consumedDebt(failed!)).toEqual([]);
+
+    const ledger = await readConsumedOutputLedgers({
+      roots: [],
+      source,
+    });
+    const withFailedRecord = {
+      ...ledger,
+      byJobId: new Map([[failed!.jobId, failed!]]),
+    };
+    expect(consumedOutputRecordFor({
+      ledger: withFailedRecord,
+      jobId: failed!.jobId,
+      workspacePath: workspace,
+    })).toBeUndefined();
+
+    const mislabeled = await consumedOutputRecordFromJson({
+      ledgerPath: join(root, "mislabeled-rejected.json"),
+      source,
+      value: {
+        jobId: "runtime-review-v1",
+        status: "rejected",
+        closedAt: "2026-07-11T00:00:00.000Z",
+        backup,
+      },
+    });
+    expect(mislabeled).toMatchObject({
+      hasAuthoredOutput: false,
+      valid: false,
+      evidence: expect.arrayContaining([
+        "terminal output status rejected has no authored output evidence; use failed_no_output for infrastructure failures",
+      ]),
+    });
+  });
+
   it("requires commit evidence for integrated records", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-integrated-ledger-"));
     const workspace = join(root, "workspaces", "infinity-context-memory-v1");
@@ -254,6 +319,7 @@ async function createBackupEvidence(
   root: string,
   jobId: string,
   workspace: string,
+  hasAuthoredOutput = true,
 ): Promise<Record<string, string>> {
   await mkdir(workspace, { recursive: true });
   const backupRoot = join(root, "backups", jobId);
@@ -262,8 +328,11 @@ async function createBackupEvidence(
   const patchPath = join(backupRoot, "tracked.patch");
   const numstatPath = join(backupRoot, "numstat.txt");
   await writeFile(statusPath, " M memory.py\n");
-  await writeFile(patchPath, "diff --git a/memory.py b/memory.py\n");
-  await writeFile(numstatPath, "1\t1\tmemory.py\n");
+  await writeFile(
+    patchPath,
+    hasAuthoredOutput ? "diff --git a/memory.py b/memory.py\n" : "",
+  );
+  await writeFile(numstatPath, hasAuthoredOutput ? "1\t1\tmemory.py\n" : "");
   return {
     workspace,
     statusPath,
@@ -315,6 +384,13 @@ function localConsumedOutputLedgerSource(): ConsumedOutputLedgerSourcePort {
         return true;
       } catch {
         return false;
+      }
+    },
+    async pathSize(path) {
+      try {
+        return (await stat(path)).size;
+      } catch {
+        return undefined;
       }
     },
     async resolveWorkspacePath(path) {

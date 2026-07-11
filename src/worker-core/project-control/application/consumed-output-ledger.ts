@@ -12,7 +12,10 @@ const CONSUMED_OUTPUT_TERMINAL_STATUSES = new Set([
   "duplicate",
   "superseded",
   "archived",
+  "failed_no_output",
 ]);
+
+const NO_OUTPUT_STATUS = "failed_no_output";
 
 export type ConsumedOutputRecord = {
   readonly jobId: string;
@@ -22,6 +25,7 @@ export type ConsumedOutputRecord = {
   readonly workspace?: string;
   readonly resolvedWorkspace?: string;
   readonly commitSha?: string;
+  readonly hasAuthoredOutput: boolean;
   readonly valid: boolean;
   readonly evidence: readonly string[];
 };
@@ -50,6 +54,7 @@ export type ConsumedOutputLedgerSourcePort = {
     readonly failures: readonly ConsumedOutputLedgerReadFailure[];
   }>;
   pathExists(path: string): Promise<boolean>;
+  pathSize(path: string): Promise<number | undefined>;
   resolveWorkspacePath(path: string): Promise<string | undefined>;
 };
 
@@ -76,8 +81,10 @@ export async function readConsumedOutputLedgers(input: {
     });
     if (!record) continue;
     byJobId.set(record.jobId, record);
-    if (record.workspace) byWorkspace.set(resolve(record.workspace), record);
-    if (record.resolvedWorkspace) {
+    if (record.status !== NO_OUTPUT_STATUS && record.workspace) {
+      byWorkspace.set(resolve(record.workspace), record);
+    }
+    if (record.status !== NO_OUTPUT_STATUS && record.resolvedWorkspace) {
       byWorkspace.set(record.resolvedWorkspace, record);
     }
   }
@@ -89,7 +96,7 @@ export async function consumedOutputRecordFromJson(input: {
   readonly ledgerPath: string;
   readonly source: Pick<
     ConsumedOutputLedgerSourcePort,
-    "pathExists" | "resolveWorkspacePath"
+    "pathExists" | "pathSize" | "resolveWorkspacePath"
   >;
 }): Promise<ConsumedOutputRecord | null> {
   if (!isRecord(input.value)) return null;
@@ -101,6 +108,7 @@ export async function consumedOutputRecordFromJson(input: {
       jobId: basename(input.ledgerPath).replace(/\.json$/, ""),
       status,
       ledgerPath: input.ledgerPath,
+      hasAuthoredOutput: false,
       valid: false,
       evidence: ["terminal consumed-output record is missing jobId"],
     };
@@ -120,8 +128,19 @@ export async function consumedOutputRecordFromJson(input: {
   }
   const backupEvidence = backup
     ? await consumedOutputBackupEvidence(backup, input.source)
-    : { ok: false, evidence: ["backup metadata is missing"] };
+    : {
+      ok: false,
+      hasAuthoredOutput: false,
+      evidence: ["backup metadata is missing"],
+    };
   evidence.push(...backupEvidence.evidence);
+  if (status === NO_OUTPUT_STATUS) {
+    evidence.push(...failedNoOutputEvidence(input.value, backupEvidence.hasAuthoredOutput));
+  } else if (!backupEvidence.hasAuthoredOutput) {
+    evidence.push(
+      `terminal output status ${status} has no authored output evidence; use failed_no_output for infrastructure failures`,
+    );
+  }
   const commit = integratedOutputCommit(input.value);
   if (status === "integrated" && !commit) {
     evidence.push("integrated consumed-output record is missing commit evidence");
@@ -137,6 +156,7 @@ export async function consumedOutputRecordFromJson(input: {
     ...(workspace ? { workspace } : {}),
     ...(resolvedWorkspace ? { resolvedWorkspace } : {}),
     ...(commit ? { commitSha: commit } : {}),
+    hasAuthoredOutput: backupEvidence.hasAuthoredOutput,
     valid: evidence.length === 0,
     evidence: evidence.length === 0
       ? consumedOutputEvidence({
@@ -159,6 +179,7 @@ export function consumedOutputRecordFor(input: {
     ? resolve(input.resolvedWorkspacePath)
     : undefined;
   const byJob = input.ledger.byJobId.get(input.jobId);
+  if (byJob?.status === NO_OUTPUT_STATUS) return undefined;
   if (byJob) {
     if (
       workspace &&
@@ -204,6 +225,7 @@ export function consumedOutputRecordFor(input: {
 }
 
 export function consumedDebt(record: ConsumedOutputRecord): readonly ProjectDebtItem[] {
+  if (record.status === NO_OUTPUT_STATUS && record.valid) return [];
   return [{
     reason: record.valid
       ? ProjectDebtReason.ConsumedDirtyWorkspace
@@ -237,8 +259,12 @@ export function projectAdmissionDebtCounts(
 
 async function consumedOutputBackupEvidence(
   backup: Record<string, unknown>,
-  source: Pick<ConsumedOutputLedgerSourcePort, "pathExists">,
-): Promise<{ readonly ok: boolean; readonly evidence: readonly string[] }> {
+  source: Pick<ConsumedOutputLedgerSourcePort, "pathExists" | "pathSize">,
+): Promise<{
+  readonly ok: boolean;
+  readonly hasAuthoredOutput: boolean;
+  readonly evidence: readonly string[];
+}> {
   const evidence: string[] = [];
   const statusPath = stringValue(backup.statusPath);
   if (!statusPath) {
@@ -253,15 +279,39 @@ async function consumedOutputBackupEvidence(
   ].filter((path): path is string => typeof path === "string");
   if (payloadPaths.length === 0) {
     evidence.push("backup is missing patch/numstat/untracked archive evidence");
-  } else {
-    const existing = await Promise.all(
-      payloadPaths.map(async (path) => await source.pathExists(path)),
-    );
-    if (!existing.some(Boolean)) {
-      evidence.push("none of backup patch/numstat/untracked archive paths exists");
-    }
   }
-  return { ok: evidence.length === 0, evidence };
+  const payloadSizes = await Promise.all(
+    payloadPaths.map(async (path) => await source.pathSize(path)),
+  );
+  if (payloadPaths.length > 0 && payloadSizes.every((size) => size === undefined)) {
+      evidence.push("none of backup patch/numstat/untracked archive paths exists");
+  }
+  return {
+    ok: evidence.length === 0,
+    hasAuthoredOutput: payloadSizes.some((size) => size !== undefined && size > 0),
+    evidence,
+  };
+}
+
+function failedNoOutputEvidence(
+  value: Record<string, unknown>,
+  hasAuthoredOutput: boolean,
+): readonly string[] {
+  const evidence: string[] = [];
+  const failure = isRecord(value.failure) ? value.failure : undefined;
+  const output = isRecord(value.output) ? value.output : undefined;
+  if (!failure || !stringValue(failure.code) || !stringValue(failure.category)) {
+    evidence.push("failed_no_output record requires failure.code and failure.category");
+  }
+  if (!output || output.authoredChanges !== false || output.workspaceDirty !== false) {
+    evidence.push(
+      "failed_no_output record requires output.authoredChanges=false and output.workspaceDirty=false",
+    );
+  }
+  if (hasAuthoredOutput) {
+    evidence.push("failed_no_output record contradicts non-empty authored output evidence");
+  }
+  return evidence;
 }
 
 function integratedOutputCommit(value: Record<string, unknown>): string | undefined {
@@ -285,6 +335,12 @@ function consumedOutputEvidence(input: {
   readonly ledgerPath: string;
   readonly commitSha?: string;
 }): readonly string[] {
+  if (input.status === NO_OUTPUT_STATUS) {
+    return [
+      "terminal job recorded with no authored output",
+      `ledger: ${input.ledgerPath}`,
+    ];
+  }
   return [
     `dirty output consumed by terminal ledger status: ${input.status}`,
     `ledger: ${input.ledgerPath}`,
