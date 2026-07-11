@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "recordType": "w6-observed-artifact-scan",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "source": {
+    "standaloneInput": "src/main/standalone.ts",
+    "rendererOutput": "out/renderer",
+    "externalPackages": ["fastify", "@fastify/cors", "@fastify/static", "agent-teams-controller"],
+    "nativeCatchAllEmptyStub": true,
+    "broadElectronStub": true,
+    "standaloneServiceStubs": true,
+    "terminalNodeInstallStub": true,
+    "terminalRuntimeArtifactPresent": false,
+    "standaloneWorkerEntry": false,
+    "electronWorkerEntry": true,
+    "internalWorkerRuntimeFilename": "internal-storage-worker.cjs",
+    "defaultWildcardCors": true,
+    "directHttpPublished": true,
+    "productionNodeModulesCopiedWhole": true,
+    "terminalPackages": [
+      "@terminal-platform/design-tokens",
+      "@terminal-platform/foundation",
+      "@terminal-platform/runtime-types",
+      "@terminal-platform/workspace-adapter-websocket",
+      "@terminal-platform/workspace-contracts",
+      "@terminal-platform/workspace-core",
+      "@terminal-platform/workspace-elements",
+      "@terminal-platform/workspace-gateway-node",
+      "@terminal-platform/workspace-react",
+      "terminal-platform-node"
+    ],
+    "cookiePlugin": null,
+    "versions": {
+      "fastify": "^5.8.5",
+      "fastifyCors": "^11.2.0",
+      "betterSqlite3": "^12.11.1",
+      "electron": "^40.10.0",
+      "node": ">=24.15.0 <25"
+    },
+    "terminalHttpRegistration": false,
+    "terminalMigration": false
+  },
+  "emitted": {
+    "observed": true,
+    "files": [
+      {
+        "path": "dist-standalone/assets/HttpServer-Cf8B_DEn.cjs",
+        "bytes": 360000,
+        "sha256": "6371eac58590a1e53edf1a9c002aa63dcbbeb6da7686b7a39575b991143739b7"
+      },
+      {
+        "path": "dist-standalone/assets/NotificationManager-B8_AtzLu.cjs",
+        "bytes": 270694,
+        "sha256": "88f99fc01f244cc2f8b06271c57918967142968140d9316985337011bed5105b"
+      },
+      {
+        "path": "dist-standalone/assets/ProjectPathResolver-BI-xT66r.cjs",
+        "bytes": 246320,
+        "sha256": "23e747f08c84f1f98b0805371f26d5c64800addf5b6fdf0a48b686723d5a957a"
+      },
+      {
+        "path": "dist-standalone/assets/ServiceContext--qE6X1hf.cjs",
+        "bytes": 332256,
+        "sha256": "1d7d7c485d872c43cfad44ec8906db84dd613fb7b85e9a51b5ca9881d59fcef0"
+      },
+      {
+        "path": "dist-standalone/assets/index-8jS93jLd.cjs",
+        "bytes": 5171304,
+        "sha256": "a529e409a2b425f795ecc5593c7ec9d5174031486ec007e532f24b1d86b64c8e"
+      },
+      {
+        "path": "dist-standalone/assets/tokenizer-BIjeYPC0.cjs",
+        "bytes": 9831,
+        "sha256": "a305b186e2d2a77295626771702f76505d93888b2dfc5c2523b2e9f2c92f709a"
+      },
+      {
+        "path": "dist-standalone/index.cjs",
+        "bytes": 97537,
+        "sha256": "e8dfb38913cc8e5a54f8dfa22f7598534d9d6790fbcb26bff9aea7c3b08c9aba"
+      }
+    ],
+    "internalStorageWorkerPresent": false,
+    "electronEmptyStubPresent": true,
+    "terminalServiceMarkerPresent": true,
+    "terminalPlatformMarkerPresent": false
+  },
+  "terminalAbsence": {
+    "passes": false,
+    "violations": [
+      "terminal_sdk_dependencies_in_production_manifest",
+      "terminal_node_install_stub",
+      "unpruned_production_node_modules",
+      "terminal_service_in_server_bundle"
+    ]
+  }
+}

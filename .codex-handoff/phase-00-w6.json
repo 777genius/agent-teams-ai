@@ -1,0 +1,246 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "laneId": "w6",
+  "taskId": "agent-teams-hosted-web-refactor-phase-00-remediation-w6-v3",
+  "packetRevision": "phase-00-r2",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "baseSha": "648bebed68f5a64c984e83b441e14dd7c587c403",
+  "headVerifiedBeforeEdits": true,
+  "status": "ready_for_focused_re_review",
+  "preservedSource": {
+    "worktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w6-v1",
+    "salvagedFiles": 11,
+    "note": "All W6-owned remediation files were materialized from the preserved read-only source, then corrected in this clean worktree."
+  },
+  "reviews": [
+    {
+      "id": "P0.R46.RECIPROCAL_REVIEW",
+      "path": "docs/research/hosted-web/phase-0/reciprocal-review-w4-w6.md",
+      "dispositionBeforeRemediation": "rejected_pending_correction"
+    },
+    {
+      "id": "P0.R46.REMEDIATION_REVIEW.V2",
+      "externalSource": "phase-00-remediation-review-w4-w6-v2/docs/research/hosted-web/phase-0/remediation-review-w4-w6.md",
+      "dispositionBeforeRemediation": "remediate"
+    },
+    {
+      "id": "P0.AUDIT.CROSS_LANE.V2",
+      "path": "docs/research/hosted-web/phase-0/audits/cross-lane-v2/README.md",
+      "dispositionBeforeRemediation": "hold_w6_bundle"
+    }
+  ],
+  "requirementsAuditDisposition": [
+    {
+      "id": "P0.REQ.W6.001",
+      "disposition": "fixture_reverified",
+      "note": "Pairing, durable device/session authority, forward rotation, response loss, two-tab convergence, replay-family revoke, logout and forget-device remain server-authoritative."
+    },
+    {
+      "id": "P0.REQ.W6.002",
+      "disposition": "corrected_and_reverified",
+      "note": "Expiry, logout, forget-device, replay-family revocation and every reset stage remain mutation-closed across restart."
+    },
+    {
+      "id": "P0.REQ.W6.003",
+      "disposition": "fixture_reverified_final_https_target_pending",
+      "note": "Direct HTTP, untrusted forwarding, ambiguous forwarding, wildcard CORS, sibling authority, cross Origin and missing Origin reject before cookie/body/idempotency work."
+    },
+    {
+      "id": "P0.REQ.W6.004",
+      "disposition": "fixture_reverified_durable_storage_target_pending",
+      "note": "The model keeps authority in symbolic server rows and never emits a credential; real SQLite/keyring crash recovery remains a target gate."
+    },
+    {
+      "id": "P0.REQ.W6.005",
+      "disposition": "contract_reconciled_final_image_pending",
+      "note": "The proposed inventory now matches W4 native paths and protocol/source hashes and requires build/image identity, ABI, UID/GID/mode, strip/no-source, init, seccomp and load evidence."
+    },
+    {
+      "id": "P0.REQ.W6.006",
+      "disposition": "negative_gate_reverified_final_image_pending",
+      "note": "Every required image surface must be enumerated and terminal-free; the current standalone artifact still fails and is not represented as available."
+    },
+    {
+      "id": "P0.REQ.W6.007",
+      "disposition": "fail_closed_no_dependency_adoption",
+      "note": "@fastify/cookie remains absent; no network-derived compatibility or fake availability claim was introduced."
+    },
+    {
+      "id": "P0.REQ.W6.008",
+      "disposition": "controller_input_overlap_explicit",
+      "note": "W6 estimates hosted composition/packaging only; W4 owns native implementation/probes and the controller must deduplicate shared image-readiness work."
+    }
+  ],
+  "findingResolutions": [
+    {
+      "id": "R46-01",
+      "status": "resolved_by_owner_fixture",
+      "result": "Restart admission requires a ready keyring, unrevoked device and active unrevoked session; focused restart schedules pass."
+    },
+    {
+      "id": "R46-02",
+      "status": "w6_consumer_reconciled_w4_executable_emission_pending",
+      "result": "W6 consumes exact W4 ready/drained records with current trusted control-channel provenance; stale, malformed, residual and unclassified evidence fails closed. W4 must still emit the production protocol."
+    },
+    {
+      "id": "R46-06",
+      "status": "w6_contract_reconciled_w4_production_and_final_target_pending",
+      "result": "Native paths/hashes/recipe match W4 and omission negatives cover every required metadata class; null/pending final facts keep releasePasses=false."
+    },
+    {
+      "id": "R46-07",
+      "status": "resolved_by_owned_probe",
+      "result": "Owned Node ABI 137, Electron ABI 143 lookup and two SQLite write/read/reopen probes pass; final-image/Electron loads remain unverified."
+    },
+    {
+      "id": "R46-08",
+      "status": "resolved_by_materialized_diff_checks",
+      "result": "All 11 handoff-listed untracked additions are covered by no-index whitespace checks in this worktree."
+    }
+  ],
+  "evidence": [
+    {
+      "id": "P0.W6.AUTH_TRANSITIONS",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W6.PROXY_ORIGIN_THREAT_MATRIX",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W6.COOKIE_VERSION_EVIDENCE",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "proofLevel": "source_observed"
+    },
+    {
+      "id": "P0.W6.ARTIFACT_INVENTORY",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W6.ABI_STUB_REPORT",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W6.TERMINAL_ABSENCE_REPORT",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+      "proofLevel": "fixture_characterized"
+    },
+    {
+      "id": "P0.W6.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json",
+      "proofLevel": "source_observed"
+    }
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-00-w6.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/evidence.schema.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/finding-resolution.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/proposed-hosted-artifact-manifest.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/report.md",
+    "scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs",
+    "scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs",
+    "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts"
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec vite build --config docker/vite.standalone.config.ts",
+      "exitCode": 0,
+      "result": "1183 modules transformed; seven CJS artifacts emitted"
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs",
+      "exitCode": 0,
+      "result": "schema, ownership, finding set, native omission negatives, handoff completeness, ABI smoke, scan freshness and secret/path checks pass"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "exitCode": 0,
+      "result": "42 focused tests passed"
+    },
+    {
+      "command": "pnpm exec eslint --config eslint.fast.config.js --no-cache <three owned code/test files>",
+      "exitCode": 0,
+      "result": "focused fast lint passed without cache"
+    },
+    {
+      "command": "pnpm exec prettier --check <all 11 handoff-listed files>",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --no-index --check /dev/null <each of 11 handoff-listed files>",
+      "exitCode": 0,
+      "result": "all untracked additions checked; zero whitespace findings"
+    }
+  ],
+  "dependencyFacts": [
+    {
+      "package": "fastify",
+      "version": "5.8.5",
+      "source": "installed package metadata and pnpm lock"
+    },
+    {
+      "package": "@fastify/cors",
+      "version": "11.2.0",
+      "source": "installed package metadata and pnpm lock"
+    },
+    {
+      "package": "@fastify/cookie",
+      "version": "11.0.2",
+      "source": "ADR-7 plan-time official reference; absent locally and not adopted"
+    },
+    {
+      "package": "better-sqlite3",
+      "version": "12.11.1",
+      "source": "installed production package metadata and pnpm lock"
+    },
+    {
+      "package": "better-sqlite3-node",
+      "version": "12.10.1",
+      "source": "installed Node-test alias metadata and pnpm lock"
+    },
+    {
+      "package": "electron",
+      "version": "40.10.0",
+      "source": "installed package metadata and pnpm lock"
+    }
+  ],
+  "scopeExclusions": {
+    "broadCiRun": false,
+    "phase1Implemented": false,
+    "authOrCorsEnabled": false,
+    "dependencyInstalled": false,
+    "terminalImplemented": false,
+    "finalImageBuilt": false,
+    "otherLaneModified": false,
+    "committed": false,
+    "pushed": false
+  },
+  "unverifiedClaims": [
+    "W4 production process-anchor emission and final stable-target behavior remain outside W6.",
+    "Exact auth timers and real SQLite/keyring/browser crash schedules are not target-verified.",
+    "No admitted final hosted image exists for native/helper/worker startup, ABI, init, seccomp, strip/no-source or terminal-absence proof.",
+    "No accepted edge product, trusted CIDRs, private listener or dedicated production hostname was supplied.",
+    "Current online @fastify/cookie compatibility metadata was not queried."
+  ],
+  "blockers": [
+    {
+      "class": "paired_lane_dependency",
+      "finding": "W6 now consumes the W4 protocol exactly, but the reviewed W4 C spike does not yet emit the accepted versioned drain record.",
+      "controllerAction": "Have W4 emit and verify the shared ready/drained protocol before paired adoption."
+    },
+    {
+      "class": "final_topology",
+      "finding": "The current standalone artifact lacks the required worker/native manifest and contains forbidden fake/terminal surfaces; all final native build/image metadata remains null or pending.",
+      "controllerAction": "Build the exact allowlisted image, populate the manifest from measured facts, rerun W4 probes and repeat focused reciprocal review."
+    }
+  ],
+  "nextAction": "focused_w4_w6_re_review"
+}

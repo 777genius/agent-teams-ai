@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "recordType": "w6-estimate-input",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "bucketId": "EST-HOSTED-OPS",
+  "packages": [
+    "hosted-access",
+    "hosted composition/build",
+    "internal-storage worker packaging",
+    "Docker/edge fixtures"
+  ],
+  "lines": {
+    "production": { "low": 2200, "high": 3300 },
+    "test": { "low": 1000, "high": 1600 },
+    "deleted": { "low": 100, "high": 250 }
+  },
+  "excludedGeneratedVendor": [
+    "generated bundles and manifests",
+    "vendor terminal SDK archives",
+    "W4 host primitive implementation",
+    "W2 runtime ingress",
+    "controller-owned generic RouteCatalog work"
+  ],
+  "overlap": "Auth/proxy and build fixtures are counted once in W6; W2 owns runtime ingress and W4 owns lease/process probes.",
+  "confidence": "medium",
+  "assumptions": [
+    "one TLS edge topology",
+    "one active device family",
+    "no OIDC/passkey in v1",
+    "no hosted terminal in v1",
+    "existing standalone build evolves in place"
+  ],
+  "evidenceRefs": [
+    "P0.W6.AUTH_TRANSITIONS",
+    "P0.W6.PROXY_ORIGIN_THREAT_MATRIX",
+    "P0.W6.ARTIFACT_INVENTORY",
+    "P0.W6.ABI_STUB_REPORT",
+    "P0.W6.TERMINAL_ABSENCE_REPORT"
+  ]
+}

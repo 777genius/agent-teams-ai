@@ -1,0 +1,369 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-teams-ai.invalid/schemas/phase-00-w6-evidence.json",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "phaseId",
+        "laneId",
+        "packetRevision",
+        "phaseStartSha",
+        "evidence"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": { "const": "w6-evidence" },
+        "phaseId": { "const": "phase-00" },
+        "laneId": { "const": "w6" },
+        "packetRevision": { "const": "phase-00-r2" },
+        "phaseStartSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "evidence": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "owner",
+              "proofLevel",
+              "status",
+              "requirementIds",
+              "reviewFindingIds",
+              "assertions",
+              "reproduction",
+              "facts",
+              "uncertainty"
+            ],
+            "properties": {
+              "id": { "type": "string", "pattern": "^P0\\.W6\\." },
+              "owner": { "const": "w6" },
+              "proofLevel": {
+                "enum": [
+                  "source_observed",
+                  "fixture_characterized",
+                  "target_verified",
+                  "unverified"
+                ]
+              },
+              "status": { "type": "string", "minLength": 1 },
+              "requirementIds": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "pattern": "^P0\\.REQ\\.W6\\.00[1-8]$" }
+              },
+              "reviewFindingIds": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^R46-0[12678]$" }
+              },
+              "assertions": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+              "reproduction": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string" }
+              },
+              "facts": { "type": "object" },
+              "uncertainty": { "type": "array", "items": { "type": "string" } }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "phaseStartSha",
+        "source",
+        "emitted",
+        "terminalAbsence"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": { "const": "w6-observed-artifact-scan" },
+        "phaseStartSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "source": {
+          "type": "object",
+          "required": ["standaloneInput", "standaloneWorkerEntry", "terminalPackages"]
+        },
+        "emitted": {
+          "type": "object",
+          "required": [
+            "observed",
+            "files",
+            "internalStorageWorkerPresent",
+            "electronEmptyStubPresent",
+            "terminalServiceMarkerPresent"
+          ],
+          "properties": {
+            "observed": { "type": "boolean" },
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["path", "bytes", "sha256"],
+                "properties": {
+                  "path": { "type": "string" },
+                  "bytes": { "type": "integer", "minimum": 1 },
+                  "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "terminalAbsence": { "type": "object", "required": ["passes", "violations"] }
+      },
+      "additionalProperties": true
+    },
+    {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "phaseStartSha",
+        "bucketId",
+        "packages",
+        "lines",
+        "excludedGeneratedVendor",
+        "overlap",
+        "confidence",
+        "assumptions",
+        "evidenceRefs"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": { "const": "w6-estimate-input" },
+        "phaseStartSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "bucketId": { "const": "EST-HOSTED-OPS" },
+        "packages": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "lines": {
+          "type": "object",
+          "required": ["production", "test", "deleted"],
+          "additionalProperties": {
+            "type": "object",
+            "required": ["low", "high"],
+            "properties": { "low": { "type": "integer" }, "high": { "type": "integer" } },
+            "additionalProperties": false
+          }
+        },
+        "excludedGeneratedVendor": { "type": "array", "items": { "type": "string" } },
+        "overlap": { "type": "string" },
+        "confidence": { "enum": ["low", "medium", "high"] },
+        "assumptions": { "type": "array", "items": { "type": "string" } },
+        "evidenceRefs": { "type": "array", "items": { "type": "string", "pattern": "^P0\\.W6\\." } }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "phaseStartSha",
+        "proofLevel",
+        "status",
+        "ownership",
+        "target",
+        "nativeBuildContract",
+        "finalImageEvidence",
+        "artifacts",
+        "forbiddenV1Surfaces",
+        "releaseRule"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": { "const": "w6-hosted-artifact-contract" },
+        "phaseStartSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "proofLevel": { "const": "source_observed" },
+        "status": { "const": "interface_reconciled_final_artifacts_not_emitted" },
+        "ownership": {
+          "type": "object",
+          "required": ["w6", "w4", "controller"],
+          "properties": {
+            "w6": { "type": "string" },
+            "w4": { "type": "string" },
+            "controller": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "target": {
+          "type": "object",
+          "required": [
+            "runtime",
+            "nodeModuleAbi",
+            "nonRoot",
+            "uid",
+            "gid",
+            "minimalInit",
+            "finalSeccomp",
+            "seccompProfileSha256",
+            "imageDigest",
+            "initOrder",
+            "readOnlyRoot",
+            "privateApplicationListener",
+            "onlyTlsEdgePublished",
+            "sharedProvisionedVolumeContenders"
+          ],
+          "properties": {
+            "runtime": { "const": "node24-linux-x64" },
+            "nodeModuleAbi": { "type": "integer" },
+            "nonRoot": { "const": true },
+            "uid": { "type": ["integer", "null"] },
+            "gid": { "type": ["integer", "null"] },
+            "minimalInit": { "const": true },
+            "finalSeccomp": { "const": true },
+            "seccompProfileSha256": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "imageDigest": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+            "initOrder": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+            "readOnlyRoot": { "const": true },
+            "privateApplicationListener": { "const": true },
+            "onlyTlsEdgePublished": { "const": true },
+            "sharedProvisionedVolumeContenders": {
+              "type": "array",
+              "minItems": 3,
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "nativeBuildContract": {
+          "type": "object",
+          "required": [
+            "recipeId",
+            "builderImageDigest",
+            "compilerIdentity",
+            "targetAbi",
+            "compileFlags",
+            "deterministicBuildsRequired"
+          ],
+          "properties": {
+            "recipeId": { "const": "w4-native-c17-v1" },
+            "builderImageDigest": {
+              "type": ["string", "null"],
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "compilerIdentity": { "type": ["string", "null"] },
+            "targetAbi": { "const": "linux-x64-gnu" },
+            "compileFlags": { "type": "array", "minItems": 6, "items": { "type": "string" } },
+            "deterministicBuildsRequired": { "const": 2 }
+          },
+          "additionalProperties": false
+        },
+        "finalImageEvidence": {
+          "type": "object",
+          "required": [
+            "compilerPresent",
+            "sourcePresent",
+            "headersPresent",
+            "objectFilesPresent",
+            "buildCachePresent"
+          ],
+          "properties": {
+            "compilerPresent": { "type": ["boolean", "null"] },
+            "sourcePresent": { "type": ["boolean", "null"] },
+            "headersPresent": { "type": ["boolean", "null"] },
+            "objectFilesPresent": { "type": ["boolean", "null"] },
+            "buildCachePresent": { "type": ["boolean", "null"] }
+          },
+          "additionalProperties": false
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "producerOwner",
+              "packagingOwner",
+              "targetPath",
+              "runtime",
+              "emitted",
+              "sha256",
+              "executable",
+              "probe"
+            ],
+            "properties": {
+              "id": { "type": "string" },
+              "producerOwner": { "enum": ["w4", "w6"] },
+              "packagingOwner": { "const": "w6" },
+              "targetPath": { "type": "string", "pattern": "^/(app|opt/agent-teams)/" },
+              "runtime": { "type": "string" },
+              "emitted": { "const": false },
+              "sha256": { "type": "null" },
+              "executable": { "type": "boolean" },
+              "probe": { "type": "string", "pattern": "^required:" },
+              "protocolManifestPath": { "type": "string" },
+              "protocolSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "spikeSourcePath": { "type": "string" },
+              "spikeSourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+              "buildRecipeId": { "const": "w4-native-c17-v1" },
+              "builderImageDigest": {
+                "type": ["string", "null"],
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "compilerIdentity": { "type": ["string", "null"] },
+              "targetAbi": { "const": "linux-x64-gnu" },
+              "uid": { "type": ["integer", "null"] },
+              "gid": { "type": ["integer", "null"] },
+              "mode": { "type": ["string", "null"], "pattern": "^0[0-7]{3}$" },
+              "stripped": { "type": ["boolean", "null"] },
+              "twoCleanBuildsMatch": { "type": ["boolean", "null"] },
+              "imageOrder": { "type": "string" },
+              "seccompProbe": { "enum": ["pending", "passed", "failed"] },
+              "abiLoadProbe": { "enum": ["pending", "passed", "failed"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "forbiddenV1Surfaces": { "type": "array", "minItems": 1 },
+        "releaseRule": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "phaseStartSha",
+        "owner",
+        "reviewFindings",
+        "requirements",
+        "ownership"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": { "const": "w6-finding-resolution" },
+        "phaseStartSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "owner": { "const": "w6" },
+        "reviewFindings": { "type": "array", "minItems": 5, "maxItems": 5 },
+        "requirements": { "type": "array", "minItems": 8, "maxItems": 8 },
+        "ownership": {
+          "type": "object",
+          "required": ["w6", "w2", "w4", "controller"],
+          "properties": {
+            "w6": { "type": "array", "items": { "type": "string" } },
+            "w2": { "type": "array", "items": { "type": "string" } },
+            "w4": { "type": "array", "items": { "type": "string" } },
+            "controller": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  ]
+}
