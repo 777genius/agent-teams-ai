@@ -55,6 +55,20 @@ function parseIsoMs(value: string | undefined): number | undefined {
   return Number.isFinite(timestampMs) ? timestampMs : undefined;
 }
 
+function normalizedIsoTimestamp(value: string | undefined): string | undefined {
+  const trimmed = nonEmptyString(value);
+  return parseIsoMs(trimmed) === undefined ? undefined : trimmed;
+}
+
+function heartbeatTimestamp(
+  heartbeat: RuntimeProjectionLivenessEvidence['heartbeat']
+): string | undefined {
+  return (
+    normalizedIsoTimestamp(heartbeat?.lastSeenAt) ??
+    normalizedIsoTimestamp(heartbeat?.lastHeartbeatAt)
+  );
+}
+
 export function sanitizeRuntimeProjectionProcessCommand(
   command: string | undefined
 ): string | undefined {
@@ -79,7 +93,7 @@ function isHeartbeatStale(
   options: RuntimeProjectionLivenessOptions
 ): boolean {
   const heartbeat = evidence.heartbeat;
-  const lastSeenMs = parseIsoMs(heartbeat?.lastSeenAt ?? heartbeat?.lastHeartbeatAt);
+  const lastSeenMs = parseIsoMs(heartbeatTimestamp(heartbeat));
   const nowMs = options.nowMs;
   if (lastSeenMs === undefined || nowMs === undefined || !Number.isFinite(nowMs)) {
     return false;
@@ -166,9 +180,7 @@ export function projectRuntimeLiveness(
   const runtimeSessionId =
     nonEmptyString(evidence.heartbeat?.runtimeSessionId) ??
     nonEmptyString(evidence.registration?.runtimeSessionId);
-  const runtimeLastSeenAt =
-    nonEmptyString(evidence.heartbeat?.lastSeenAt) ??
-    nonEmptyString(evidence.heartbeat?.lastHeartbeatAt);
+  const runtimeLastSeenAt = heartbeatTimestamp(evidence.heartbeat);
   const permissionBlocked =
     evidence.permission?.blocked === true ||
     (evidence.permission?.pendingPermissionRequestIds?.length ?? 0) > 0;

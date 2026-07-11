@@ -79,6 +79,31 @@ describe('runtime projection foundation', () => {
     expect(liveness.diagnostics).toContain('bootstrap evidence exists, but the heartbeat is stale');
   });
 
+  it('falls back to a valid heartbeat timestamp when last-seen evidence is malformed', () => {
+    const liveness = projectRuntimeLiveness(
+      {
+        heartbeat: {
+          bootstrapConfirmed: true,
+          lastSeenAt: 'not-a-timestamp',
+          lastHeartbeatAt: '2026-01-01T00:00:00.000Z',
+          runtimeSessionId: 'session-stale',
+        },
+      },
+      {
+        nowMs: NOW_MS,
+        heartbeatStaleAfterMs: 60_000,
+      }
+    );
+
+    expect(liveness).toMatchObject({
+      alive: false,
+      livenessKind: 'registered_only',
+      runtimeLastSeenAt: '2026-01-01T00:00:00.000Z',
+      runtimeDiagnostic: 'runtime heartbeat is stale',
+      runtimeDiagnosticSeverity: 'warning',
+    });
+  });
+
   it('classifies only verified process and bootstrap liveness as strong evidence', () => {
     expect(isStrongRuntimeEvidence({ livenessKind: 'runtime_process' })).toBe(true);
     expect(isStrongRuntimeEvidence({ livenessKind: 'confirmed_bootstrap' })).toBe(true);
