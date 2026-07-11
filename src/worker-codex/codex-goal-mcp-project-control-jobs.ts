@@ -36,7 +36,9 @@ import {
 } from "./project-control-operation-lifecycle";
 import { codexGoalAccountCapacityFacts } from "./codex-goal-mcp-account-capacity-facts";
 import {
+  projectControlDefaultAccountNames,
   projectControlRefillAccountNames,
+  rotateProjectControlAccountNames,
 } from "./codex-goal-mcp-project-accounts";
 import {
   projectAdmissionWorkerRoleArg,
@@ -120,12 +122,14 @@ export async function projectControlCreateCodexGoalJobView(
   const accessBoundary =
     requested.accessBoundary ?? AccessBoundary.IsolatedWorkspaceWrite;
   const workerRole = projectAdmissionWorkerRoleArg(args.workerRole);
-  const accounts = await projectControlRefillAccountNames({
-    ...(requested.authRootDir ? { authRootDir: requested.authRootDir } : {}),
-    requestedAccounts: requested.accounts,
-    allowedAccountIds: controller.scope.allowedAccountIds ?? [],
-    rotationKey: requested.jobId,
-  });
+  const accounts = rotateProjectControlAccountNames(
+    await projectControlDefaultAccountNames({
+      ...(requested.authRootDir ? { authRootDir: requested.authRootDir } : {}),
+      requestedAccounts: requested.accounts,
+      allowedAccountIds: controller.scope.allowedAccountIds ?? [],
+    }),
+    requested.jobId,
+  );
   const createManifest: CodexGoalJobManifestInput = {
     ...requested,
     accounts,
@@ -362,6 +366,7 @@ export async function projectControlRefillWorkerView(
     dependencyPreflight = await runDependencyBootstrap({
       workspacePath: manifest.workspacePath,
       jobRootDir: manifest.jobRootDir,
+      cacheNamespace: controller.scope.projectId,
       mode: projectControlDependencyBootstrapMode(args.dependencyBootstrap),
       confirmInstall: booleanValue(args.confirmDependencyBootstrap) === true,
     });

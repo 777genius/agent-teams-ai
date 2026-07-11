@@ -172,6 +172,7 @@ export async function projectControlStartStoredJobView(
   const dependencyPreflight = await runDependencyBootstrap({
     workspacePath: loaded.manifest.workspacePath,
     jobRootDir: loaded.manifest.jobRootDir,
+    cacheNamespace: controller.scope.projectId,
     mode: projectControlDependencyBootstrapMode(args.dependencyBootstrap),
     confirmInstall: booleanValue(args.confirmDependencyBootstrap) === true,
   });
@@ -273,6 +274,7 @@ export async function projectControlCreateWorktreeView(
   const result = await broker.createWorktree(createWorktreeInput);
   const dependencyPreflight = await runDependencyBootstrap({
     workspacePath: path,
+    cacheNamespace: controller.scope.projectId,
     mode: projectControlDependencyBootstrapMode(args.dependencyBootstrap),
     confirmInstall: booleanValue(args.confirmDependencyBootstrap) === true,
   });

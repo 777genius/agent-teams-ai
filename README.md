@@ -53,6 +53,9 @@ subscription-runtime-account-status --provider codex --only reconnect_required
 See [docs/account-diagnostics.md](docs/account-diagnostics.md) for account
 sources, cached capacity and optional probe behavior.
 
+See [docs/dependency-bootstrap.md](docs/dependency-bootstrap.md) for isolated
+worktree environments backed by shared pnpm, npm, Yarn, Bun and uv caches.
+
 ## Modules
 
 - `core` - provider-neutral ports, policy, state machines and redaction.

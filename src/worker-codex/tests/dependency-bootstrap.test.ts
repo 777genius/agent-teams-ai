@@ -3,6 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  defaultDependencyCacheRoot,
+  dependencyCacheNamespace,
   inspectDependencyBootstrap,
   runDependencyBootstrap,
 } from "../dependency-bootstrap";
@@ -122,6 +124,141 @@ describe("dependency bootstrap", () => {
         warnings: expect.arrayContaining([
           "dependency_install_requires_confirmDependencyBootstrap",
         ]),
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("detects and materializes a locked uv environment through the shared cache", async () => {
+    const root = await mkTestWorkspace("subscription-runtime-deps-uv-");
+    const cacheRoot = join(root, "cache");
+    try {
+      await writeFile(join(root, "pyproject.toml"), "[project]\nname='fixture'\n");
+      await writeFile(join(root, "uv.lock"), "version = 1\n");
+      await writeFile(join(root, ".python-version"), "3.13\n");
+
+      const result = await runDependencyBootstrap({
+        workspacePath: root,
+        cacheRoot,
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async (command, args) => {
+          expect([command, ...args]).toEqual([
+            "uv",
+            "sync",
+            "--locked",
+            "--cache-dir",
+            join(cacheRoot, "uv-cache"),
+          ]);
+          const bin = join(root, ".venv", "bin");
+          await mkdir(bin, { recursive: true });
+          for (const name of ["python", "pytest", "ruff"]) {
+            await symlink(process.execPath, join(bin, name));
+          }
+        },
+      });
+
+      expect(result).toMatchObject({
+        ecosystem: "python",
+        status: "installed",
+        environmentPath: join(root, ".venv"),
+        environmentExists: true,
+        packageManager: {
+          name: "uv",
+          source: "lockfile",
+          lockfilePath: join(root, "uv.lock"),
+        },
+        cacheRoot,
+      });
+      expect(result.cacheLockPath).toContain(join(cacheRoot, ".locks"));
+      expect(result.warnings).not.toContain("python_environment_missing");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("namespaces an operator-owned cache root without trusting project path text", () => {
+    const previous = process.env.SUBSCRIPTION_RUNTIME_DEPENDENCY_CACHE_ROOT;
+    process.env.SUBSCRIPTION_RUNTIME_DEPENDENCY_CACHE_ROOT = "/var/cache/agents";
+    try {
+      const namespace = dependencyCacheNamespace("777genius/infinity-context");
+      expect(namespace).toMatch(/^777genius-infinity-context-[a-f0-9]{12}$/);
+      expect(defaultDependencyCacheRoot({
+        workspacePath: "/tmp/workspace",
+        cacheNamespace: "777genius/infinity-context",
+      })).toBe(join("/var/cache/agents", namespace));
+    } finally {
+      if (previous === undefined) {
+        delete process.env.SUBSCRIPTION_RUNTIME_DEPENDENCY_CACHE_ROOT;
+      } else {
+        process.env.SUBSCRIPTION_RUNTIME_DEPENDENCY_CACHE_ROOT = previous;
+      }
+    }
+  });
+
+  it("rejects a relative operator-owned cache root", () => {
+    const previous = process.env.SUBSCRIPTION_RUNTIME_DEPENDENCY_CACHE_ROOT;
+    process.env.SUBSCRIPTION_RUNTIME_DEPENDENCY_CACHE_ROOT = "relative/cache";
+    try {
+      expect(() => defaultDependencyCacheRoot({
+        workspacePath: "/tmp/workspace",
+      })).toThrowError("dependency_cache_root_must_be_absolute");
+    } finally {
+      if (previous === undefined) {
+        delete process.env.SUBSCRIPTION_RUNTIME_DEPENDENCY_CACHE_ROOT;
+      } else {
+        process.env.SUBSCRIPTION_RUNTIME_DEPENDENCY_CACHE_ROOT = previous;
+      }
+    }
+  });
+
+  it("rejects a relative explicit cache root", () => {
+    expect(() => defaultDependencyCacheRoot({
+      workspacePath: "/tmp/workspace",
+      cacheRoot: "relative/cache",
+    })).toThrowError("dependency_cache_root_must_be_absolute");
+  });
+
+  it("fails before installation when the explicit cache root is relative", async () => {
+    const root = await mkTestWorkspace("subscription-runtime-deps-relative-cache-");
+    try {
+      await writeFile(join(root, "package.json"), JSON.stringify({}));
+      await writeFile(join(root, "package-lock.json"), JSON.stringify({
+        lockfileVersion: 3,
+        packages: {},
+      }));
+
+      await expect(runDependencyBootstrap({
+        workspacePath: root,
+        cacheRoot: "relative/cache",
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async () => {
+          throw new Error("install must not run");
+        },
+      })).rejects.toThrowError("dependency_cache_root_must_be_absolute");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not allow a Node packageManager field to select the Python adapter", async () => {
+    const root = await mkTestWorkspace("subscription-runtime-deps-node-manager-");
+    try {
+      await writeFile(join(root, "package.json"), JSON.stringify({
+        packageManager: "uv@0.8.0",
+      }));
+      await writeFile(join(root, "package-lock.json"), JSON.stringify({
+        lockfileVersion: 3,
+        packages: {},
+      }));
+
+      const result = await inspectDependencyBootstrap(root);
+
+      expect(result).toMatchObject({
+        ecosystem: "node",
+        packageManager: { name: "npm", source: "lockfile" },
       });
     } finally {
       await rm(root, { recursive: true, force: true });
