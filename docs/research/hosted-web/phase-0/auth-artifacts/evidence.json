@@ -1,0 +1,380 @@
+{
+  "schemaVersion": 1,
+  "recordType": "w6-evidence",
+  "phaseId": "phase-00",
+  "laneId": "w6",
+  "packetRevision": "phase-00-r3",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "evidence": [
+    {
+      "id": "P0.W6.AUTH_TRANSITIONS",
+      "owner": "w6",
+      "proofLevel": "fixture_characterized",
+      "status": "characterized_contract_only_no_remote_auth_or_mutation_admission",
+      "requirementIds": ["P0.REQ.W6.001", "P0.REQ.W6.002", "P0.REQ.W6.004"],
+      "reviewFindingIds": ["R46-01", "R46-02"],
+      "assertions": [
+        "AUTH.RESTART.REVOCATION",
+        "AUTH.DRAIN.TYPED",
+        "AUTH.DRAIN.STALE",
+        "AUTH.DRAIN.UNCLASSIFIED",
+        "AUTH.COOKIE.TRANSITIONS"
+      ],
+      "reproduction": [
+        "pnpm exec vitest run test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts"
+      ],
+      "facts": {
+        "authority": "server-side keyed-hash rows only; cookies are opaque selectors",
+        "records": [
+          "PairingChallenge",
+          "OperatorDeviceGrant",
+          "OperatorSession",
+          "AuthResetIntent"
+        ],
+        "schedules": [
+          "pairing consumes the challenge and creates one durable device family plus a short session",
+          "ordinary restart reloads the device/session family and creates no new challenge",
+          "idle and absolute session expiry renew through the durable device and rotate forward",
+          "lost renewal response accepts one bounded predecessor and never restores an older generation",
+          "two-tab contention converges through the current shared cookie or bounded predecessor grace",
+          "predecessor replay outside grace revokes the device family and all sessions",
+          "logout revokes one server session; forget-device revokes the family; neither can regain mutation admission on restart",
+          "missing/corrupt keyring with auth rows closes readiness and cannot issue a challenge",
+          "initial pairing and host reset consume W4's exact ready and drained field sets; purpose, resetGeneration, deploymentGeneration and processAnchorGeneration are equality-fenced, and mismatches, residuals, malformed shapes or unclassified outcomes fail closed",
+          "while resetIntent exists, bootstrap, pair and renew reject with reset_in_progress and every other transition preserves mutationAdmission=false",
+          "reset revokes old authority before activating the replacement key and issuing a challenge"
+        ],
+        "cookieTransitions": "Pair sets both opaque cookies, renew rotates both, logout clears only __Host-ats and forget-device clears both with the exact Secure/HttpOnly/SameSite/Path/no-Domain contract.",
+        "secretHandling": "The executable model uses symbolic record references and emits no credential values."
+      },
+      "uncertainty": [
+        "Exact idle, absolute, rotation and predecessor-grace durations are not frozen.",
+        "SQLite/keyring fsync crash points and a real multi-tab HTTPS browser schedule remain target verification."
+      ]
+    },
+    {
+      "id": "P0.W6.PROXY_ORIGIN_THREAT_MATRIX",
+      "owner": "w6",
+      "proofLevel": "fixture_characterized",
+      "status": "characterized_negative_contract_not_remote_proxy_readiness",
+      "requirementIds": ["P0.REQ.W6.003"],
+      "reviewFindingIds": [],
+      "assertions": ["PROXY.ORDERING.NEGATIVE", "PROXY.BROWSER.RUNTIME.DISJOINT"],
+      "reproduction": [
+        "pnpm exec vitest run test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts"
+      ],
+      "facts": {
+        "authoritySource": "one normalized immutable HTTPS PUBLIC_ORIGIN plus exact trusted proxy peers/CIDRs",
+        "ordering": "transport -> authority -> Origin -> session/CSRF -> body -> idempotency",
+        "cases": [
+          {
+            "case": "trusted edge, exact forwarded proto/host and Origin",
+            "result": "accept_to_auth",
+            "stage": "auth_next"
+          },
+          { "case": "direct production HTTP", "result": "reject", "stage": "transport" },
+          {
+            "case": "forwarding headers from an untrusted peer",
+            "result": "reject",
+            "stage": "transport"
+          },
+          {
+            "case": "ambiguous comma-separated forwarding values",
+            "result": "reject",
+            "stage": "transport"
+          },
+          { "case": "wildcard CORS", "result": "reject", "stage": "readiness" },
+          {
+            "case": "dedicated hostname on a sibling port/authority",
+            "result": "reject",
+            "stage": "authority"
+          },
+          { "case": "cross-origin browser request", "result": "reject", "stage": "origin" },
+          {
+            "case": "missing Origin on browser auth/mutation",
+            "result": "reject",
+            "stage": "origin"
+          }
+        ],
+        "negativeInvariant": "Every rejected fixture reports cookieLookup=false, bodyParsed=false and idempotencyClaimed=false.",
+        "ownershipBoundary": "W6 owns browser PUBLIC_ORIGIN/cookie/CSRF policy; W2 owns machine runtime ingress. A runtime-surface request is rejected before browser cookie lookup."
+      },
+      "uncertainty": [
+        "Accepted production proxy CIDRs, edge product, private listener and direct-TLS-vs-edge termination are deployment inputs.",
+        "The sandbox denied TCP listen (EPERM), so no live edge/container request is relabeled target_verified."
+      ]
+    },
+    {
+      "id": "P0.W6.COOKIE_VERSION_EVIDENCE",
+      "owner": "w6",
+      "proofLevel": "source_observed",
+      "status": "fail_closed_no_dependency_adoption",
+      "requirementIds": ["P0.REQ.W6.007"],
+      "reviewFindingIds": [],
+      "assertions": ["COOKIE.DEPENDENCY.ABSENT", "COOKIE.SHAPE.PRELOOKUP"],
+      "reproduction": ["node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs"],
+      "facts": {
+        "installed": [
+          {
+            "package": "fastify",
+            "version": "5.8.5",
+            "source": "installed package metadata and pnpm lock"
+          },
+          {
+            "package": "@fastify/cors",
+            "version": "11.2.0",
+            "source": "installed package metadata and pnpm lock"
+          }
+        ],
+        "candidate": {
+          "package": "@fastify/cookie",
+          "version": "11.0.2",
+          "source": "ADR-7 plan-time official package reference",
+          "installed": false,
+          "gate": "No package is approved or installed from this evidence. Network-restricted remediation could not query current npm metadata; dependency adoption remains mechanically blocked until an authorized run captures the official dist-tag and Fastify-5 compatibility, pins it exactly, and runs parser integration tests."
+        },
+        "cookies": [
+          {
+            "name": "__Secure-atd",
+            "purpose": "durable device selector",
+            "attributes": "Secure; HttpOnly; SameSite=Strict; no Domain; renew-route Path"
+          },
+          {
+            "name": "__Host-ats",
+            "purpose": "short session selector",
+            "attributes": "Secure; HttpOnly; SameSite=Strict; Path=/; no Domain"
+          }
+        ],
+        "forbidden": [
+          "plugin-signed stateless session authority",
+          "cookie identity/role/state",
+          "body/header/query credential alternatives"
+        ],
+        "prelookupFixtures": [
+          "malformed parser result",
+          "duplicate authority cookie",
+          "oversized header"
+        ]
+      },
+      "uncertainty": [
+        "Current online package metadata remains unavailable because network access is restricted; this is recorded as a fail-closed dependency-adoption gate, not as a compatibility claim."
+      ]
+    },
+    {
+      "id": "P0.W6.ARTIFACT_INVENTORY",
+      "owner": "w6",
+      "proofLevel": "fixture_characterized",
+      "status": "current_standalone_rejected_for_hosted_v1",
+      "requirementIds": ["P0.REQ.W6.005"],
+      "reviewFindingIds": ["R46-06"],
+      "assertions": [
+        "ARTIFACT.CONTRACT.W4_ROWS",
+        "ARTIFACT.CONTRACT.FAIL_CLOSED",
+        "ARTIFACT.CONTRACT.OMISSION_NEGATIVES"
+      ],
+      "reproduction": ["node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs"],
+      "facts": {
+        "buildCommand": "pnpm exec vite build --config docker/vite.standalone.config.ts",
+        "buildResult": "canonical integration candidate emitted seven CJS files; the rejected gate archive is the characterization authority for its exact paths, byte counts and SHA-256 hashes",
+        "topology": [
+          {
+            "artifact": "standalone server",
+            "source": "src/main/standalone.ts",
+            "target": "dist-standalone/index.cjs",
+            "state": "emitted"
+          },
+          {
+            "artifact": "renderer",
+            "source": "Electron renderer build",
+            "target": "out/renderer",
+            "state": "required by Docker; not rebuilt by the targeted server-only command"
+          },
+          {
+            "artifact": "internal-storage worker",
+            "source": "internalStorageWorkerEntry.ts",
+            "target": "internal-storage-worker.cjs",
+            "state": "missing from standalone inputs and emitted artifact"
+          },
+          {
+            "artifact": "production modules",
+            "source": "pnpm --prod tree",
+            "target": "image /app/node_modules",
+            "state": "copied wholesale, not manifest-pruned"
+          },
+          {
+            "artifact": "controller helper",
+            "source": "agent-teams-controller directory",
+            "target": "image /app/agent-teams-controller",
+            "state": "copied without a W6-owned startup manifest/probe"
+          }
+        ],
+        "characterizationAuthority": {
+          "authorityPath": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+          "authorityRecordType": "w6-observed-artifact-scan",
+          "authoritySha256": "50b954be77896963e5e32c5fc9e7785349ecff6bfb5455162671c751551fd3b4",
+          "disposition": "rejected_for_hosted_v1"
+        },
+        "emittedManifest": "observed-artifact-scan.json is the sole standalone characterization authority; all other W6 records carry only its checked semantic-hash projection.",
+        "artifactContract": "The Phase 0 controller owns one schema/path/hash source at docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.json. W4 and W6 carry byte-equivalent read-only projections using artifactId, finalImagePath and binarySha256. Missing, extra, renamed, stale-path and stale-hash projections fail closed.",
+        "r3Narrowing": "The current standalone artifact is rejected for hosted v1. This record makes no remote-auth, remote-mutation or production-composition readiness claim."
+      },
+      "uncertainty": [
+        "The full standalone:build alias was intentionally not run because it also performs the broad Electron build.",
+        "No final hosted image/profile, pinned builder/compiler identity, final UID/GID/mode, binary hashes, executable-bit inventory, two-build comparison or startup/seccomp/load probe exists yet."
+      ]
+    },
+    {
+      "id": "P0.W6.ABI_STUB_REPORT",
+      "owner": "w6",
+      "proofLevel": "fixture_characterized",
+      "status": "current_host_characterization_only_no_production_abi_claim",
+      "requirementIds": ["P0.REQ.W6.005"],
+      "reviewFindingIds": ["R46-07"],
+      "assertions": ["ABI.NODE.SQLITE.REOPEN", "ABI.ELECTRON.LOOKUP"],
+      "reproduction": ["node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs"],
+      "facts": {
+        "abis": [
+          {
+            "runtime": "Node 24.16.0",
+            "moduleAbi": "137",
+            "napi": "10",
+            "source": "safe Linux process.versions probe"
+          },
+          {
+            "runtime": "Electron 40.10.0",
+            "moduleAbi": "143",
+            "source": "locked node-abi 3.94.0 and 4.26.0 lookup"
+          }
+        ],
+        "nativePackages": [
+          {
+            "package": "better-sqlite3",
+            "version": "12.11.1",
+            "use": "production internal-storage worker",
+            "nodeSmoke": "Owned probe writes, reads, closes and reopens SQLite 3.53.2 under Node ABI 137",
+            "risk": "standalone worker is not emitted; Electron and Node ABI resolution is not split"
+          },
+          {
+            "package": "better-sqlite3-node",
+            "version": "12.10.1",
+            "use": "Node-ABI test alias only",
+            "nodeSmoke": "Owned probe writes, reads, closes and reopens SQLite 3.53.2 under Node ABI 137",
+            "risk": "not used by production worker"
+          }
+        ],
+        "stubs": [
+          {
+            "kind": "native catch-all",
+            "behavior": "every .node import becomes export default {}",
+            "result": "forbidden for canonical hosted artifact"
+          },
+          {
+            "kind": "Electron catch-all",
+            "behavior": "electron/electron-updater imports become broad fake exports",
+            "result": "fake safeStorage code observed in emitted standalone chunks"
+          },
+          {
+            "kind": "optional internal storage",
+            "behavior": "missing worker silently selects JSON stores",
+            "result": "not valid when SQLite is required by hosted composition"
+          },
+          {
+            "kind": "terminal-platform-node install-time stub",
+            "behavior": "client surface exists but native operations throw unavailable",
+            "result": "copied via the whole production dependency tree and forbidden from v1"
+          },
+          {
+            "kind": "standalone updater/SSH service stubs",
+            "behavior": "no-op updater and explicitly unavailable SSH adapter",
+            "result": "must be omitted from hosted composition/capabilities rather than advertised as functional"
+          }
+        ]
+      },
+      "uncertainty": [
+        "No final-image native smoke load or Electron-runtime better-sqlite3 load was run."
+      ]
+    },
+    {
+      "id": "P0.W6.TERMINAL_ABSENCE_REPORT",
+      "owner": "w6",
+      "proofLevel": "fixture_characterized",
+      "status": "rule_only_current_standalone_rejected_absence_not_achieved",
+      "requirementIds": ["P0.REQ.W6.006"],
+      "reviewFindingIds": [],
+      "assertions": ["TERMINAL.CURRENT.REJECT", "TERMINAL.FINAL.ALL_SURFACES"],
+      "reproduction": ["node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs"],
+      "facts": {
+        "absenceGate": "The scanner rejects any terminal SDK dependency, unpruned production tree, terminal HTTP registration, terminal migration, terminal service marker or terminal-platform marker.",
+        "current": [
+          {
+            "surface": "terminal daemon/runtime binary under resources/terminal-platform",
+            "absent": true
+          },
+          { "surface": "HTTP terminal route", "absent": true },
+          { "surface": "terminal migration in internal-storage migrations", "absent": true },
+          { "surface": "terminal-platform marker in server CJS", "absent": true },
+          { "surface": "PtyTerminalService marker in server CJS", "absent": false },
+          {
+            "surface": "terminal SDK/gateway packages in production dependencies copied into image",
+            "absent": false
+          }
+        ],
+        "finalImageSurfaces": [
+          "packages",
+          "files",
+          "routes",
+          "migrations",
+          "capabilities",
+          "processes",
+          "renderer chunks",
+          "ports",
+          "volumes"
+        ],
+        "verdict": "Current standalone output is rejected as the v1 hosted artifact. Terminal absence remains a rule; it is not claimed achieved."
+      },
+      "uncertainty": [
+        "No proposed final v1 image exists to scan target_verified; absence is a fail-closed build prerequisite."
+      ]
+    },
+    {
+      "id": "P0.W6.ESTIMATE",
+      "owner": "w6",
+      "proofLevel": "source_observed",
+      "status": "estimate_input",
+      "requirementIds": ["P0.REQ.W6.008"],
+      "reviewFindingIds": [],
+      "assertions": ["ESTIMATE.CANONICAL.ID", "ESTIMATE.OVERLAP.OWNERS"],
+      "reproduction": ["node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs"],
+      "facts": {
+        "bucketId": "EST-HOSTED-OPS",
+        "packages": [
+          "hosted-access",
+          "hosted composition/build",
+          "internal-storage worker packaging",
+          "Docker/edge fixtures"
+        ],
+        "productionLines": { "low": 2200, "high": 3300 },
+        "testLines": { "low": 1000, "high": 1600 },
+        "deletedLines": { "low": 100, "high": 250 },
+        "excluded": [
+          "generated bundles",
+          "vendor terminal SDK",
+          "W4 host primitive implementation",
+          "generic RouteCatalog/controller work"
+        ],
+        "overlap": "Auth/proxy fixtures and build fixtures counted here once; provider/runtime ingress belongs to W2 and host lease/process probes to W4.",
+        "confidence": "medium",
+        "assumptions": [
+          "one edge topology",
+          "one active device family",
+          "no OIDC/passkey",
+          "no hosted terminal",
+          "existing standalone build evolves in place"
+        ]
+      },
+      "uncertainty": [
+        "Proxy product choice and final image/helper manifest can move this bucket; >20% variation requires controller scope review."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,208 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-teams-ai.invalid/schemas/phase-00-w6-evidence.json",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "phaseId",
+        "laneId",
+        "packetRevision",
+        "phaseStartSha",
+        "evidence"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": { "const": "w6-evidence" },
+        "phaseId": { "const": "phase-00" },
+        "laneId": { "const": "w6" },
+        "packetRevision": { "const": "phase-00-r3" },
+        "phaseStartSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "evidence": {
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "owner",
+              "proofLevel",
+              "status",
+              "requirementIds",
+              "reviewFindingIds",
+              "assertions",
+              "reproduction",
+              "facts",
+              "uncertainty"
+            ],
+            "properties": {
+              "id": { "type": "string", "pattern": "^P0\\.W6\\." },
+              "owner": { "const": "w6" },
+              "proofLevel": {
+                "enum": ["source_observed", "fixture_characterized", "unverified"]
+              },
+              "status": { "type": "string", "minLength": 1 },
+              "requirementIds": { "type": "array", "minItems": 1 },
+              "reviewFindingIds": { "type": "array" },
+              "assertions": { "type": "array", "minItems": 1 },
+              "reproduction": { "type": "array", "minItems": 1 },
+              "facts": { "type": "object" },
+              "uncertainty": { "type": "array" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "phaseStartSha",
+        "characterizationScope",
+        "provenance",
+        "source",
+        "emitted",
+        "terminalAbsence"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": { "const": "w6-observed-artifact-scan" },
+        "phaseStartSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "characterizationScope": {
+          "const": "canonical_integration_candidate_rejected_gate"
+        },
+        "provenance": {
+          "type": "object",
+          "required": [
+            "integrationAttemptId",
+            "archivePath",
+            "producerTaskId",
+            "canonicalBaseSha",
+            "disposition"
+          ]
+        },
+        "source": { "type": "object" },
+        "emitted": { "type": "object" },
+        "terminalAbsence": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "phaseStartSha",
+        "bucketId",
+        "packages",
+        "lines",
+        "excludedGeneratedVendor",
+        "overlap",
+        "confidence",
+        "assumptions",
+        "evidenceRefs"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": { "const": "w6-estimate-input" },
+        "phaseStartSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "bucketId": { "const": "EST-HOSTED-OPS" },
+        "packages": { "type": "array" },
+        "lines": { "type": "object" },
+        "excludedGeneratedVendor": { "type": "array" },
+        "overlap": { "type": "string" },
+        "confidence": { "enum": ["low", "medium", "high"] },
+        "assumptions": { "type": "array" },
+        "evidenceRefs": { "type": "array" }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "phaseStartSha",
+        "canonicalBaseSha",
+        "proofLevel",
+        "status",
+        "controllerContractPath",
+        "controllerContractSha256",
+        "artifacts",
+        "currentStandalone",
+        "capabilityClaims",
+        "rejectionReasons"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": { "const": "w6-standalone-artifact-characterization" },
+        "phaseStartSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "canonicalBaseSha": { "const": "f7d98790eb868714e536f77bd796072ea706911a" },
+        "proofLevel": { "const": "source_observed" },
+        "status": { "const": "rejected_for_hosted_v1" },
+        "controllerContractPath": { "type": "string" },
+        "controllerContractSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "artifacts": { "type": "array", "minItems": 3, "maxItems": 3 },
+        "currentStandalone": {
+          "type": "object",
+          "required": ["authorityPath", "authorityRecordType", "authoritySha256", "disposition"],
+          "properties": {
+            "authorityPath": {
+              "const": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json"
+            },
+            "authorityRecordType": { "const": "w6-observed-artifact-scan" },
+            "authoritySha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+            "disposition": { "const": "rejected_for_hosted_v1" }
+          },
+          "additionalProperties": false
+        },
+        "capabilityClaims": {
+          "type": "object",
+          "properties": {
+            "remoteAuthReady": { "const": false },
+            "remoteMutationReady": { "const": false },
+            "productionCompositionReady": { "const": false },
+            "terminalAbsenceAchieved": { "const": false }
+          },
+          "required": [
+            "remoteAuthReady",
+            "remoteMutationReady",
+            "productionCompositionReady",
+            "terminalAbsenceAchieved"
+          ],
+          "additionalProperties": false
+        },
+        "rejectionReasons": { "type": "array", "minItems": 1 }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "phaseStartSha",
+        "owner",
+        "reviewFindings",
+        "requirements",
+        "ownership"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": { "const": "w6-finding-resolution" },
+        "phaseStartSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "owner": { "const": "w6" },
+        "reviewFindings": { "type": "array" },
+        "requirements": { "type": "array" },
+        "ownership": { "type": "object" }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

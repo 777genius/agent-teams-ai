@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "recordType": "w6-observed-artifact-scan",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "characterizationScope": "canonical_integration_candidate_rejected_gate",
+  "provenance": {
+    "integrationAttemptId": "a8405fd56102c02a0319e197c5b1b892d612616e39e5e871167cdb42798d5767",
+    "archivePath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-controller-v2/project-integration/integration-attempts/a8405fd56102c02a0319e197c5b1b892d612616e39e5e871167cdb42798d5767/attempt.json",
+    "producerTaskId": "agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v6",
+    "canonicalBaseSha": "f7d98790eb868714e536f77bd796072ea706911a",
+    "disposition": "rejected_non_integrable_stale_characterization"
+  },
+  "source": {
+    "standaloneInput": "src/main/standalone.ts",
+    "rendererOutput": "out/renderer",
+    "externalPackages": ["fastify", "@fastify/cors", "@fastify/static", "agent-teams-controller"],
+    "nativeCatchAllEmptyStub": true,
+    "broadElectronStub": true,
+    "standaloneServiceStubs": true,
+    "terminalNodeInstallStub": true,
+    "terminalRuntimeArtifactPresent": false,
+    "standaloneWorkerEntry": false,
+    "electronWorkerEntry": true,
+    "internalWorkerRuntimeFilename": "internal-storage-worker.cjs",
+    "defaultWildcardCors": true,
+    "directHttpPublished": true,
+    "productionNodeModulesCopiedWhole": true,
+    "terminalPackages": [
+      "@terminal-platform/design-tokens",
+      "@terminal-platform/foundation",
+      "@terminal-platform/runtime-types",
+      "@terminal-platform/workspace-adapter-websocket",
+      "@terminal-platform/workspace-contracts",
+      "@terminal-platform/workspace-core",
+      "@terminal-platform/workspace-elements",
+      "@terminal-platform/workspace-gateway-node",
+      "@terminal-platform/workspace-react",
+      "terminal-platform-node"
+    ],
+    "cookiePlugin": null,
+    "versions": {
+      "fastify": "^5.8.5",
+      "fastifyCors": "^11.2.0",
+      "betterSqlite3": "^12.11.1",
+      "electron": "^40.10.0",
+      "node": ">=24.15.0 <25"
+    },
+    "terminalHttpRegistration": false,
+    "terminalMigration": false
+  },
+  "emitted": {
+    "observed": true,
+    "files": [
+      {
+        "path": "dist-standalone/assets/HttpServer-CgGq0m_Y.cjs",
+        "bytes": 360000,
+        "sha256": "d5b478c03fe44a83008264927ab56395e7e533ef85b9a13ef63cd838786ab0b1"
+      },
+      {
+        "path": "dist-standalone/assets/NotificationManager-B8_AtzLu.cjs",
+        "bytes": 270694,
+        "sha256": "88f99fc01f244cc2f8b06271c57918967142968140d9316985337011bed5105b"
+      },
+      {
+        "path": "dist-standalone/assets/ProjectPathResolver-BI-xT66r.cjs",
+        "bytes": 246320,
+        "sha256": "23e747f08c84f1f98b0805371f26d5c64800addf5b6fdf0a48b686723d5a957a"
+      },
+      {
+        "path": "dist-standalone/assets/ServiceContext--qE6X1hf.cjs",
+        "bytes": 332256,
+        "sha256": "1d7d7c485d872c43cfad44ec8906db84dd613fb7b85e9a51b5ca9881d59fcef0"
+      },
+      {
+        "path": "dist-standalone/assets/index-Ds6Ihcda.cjs",
+        "bytes": 5171299,
+        "sha256": "749f6b1304e14a1cb5b39ffc6738cf8e525f5dd3a38777182ab3cecb03d7840d"
+      },
+      {
+        "path": "dist-standalone/assets/tokenizer-BIjeYPC0.cjs",
+        "bytes": 9831,
+        "sha256": "a305b186e2d2a77295626771702f76505d93888b2dfc5c2523b2e9f2c92f709a"
+      },
+      {
+        "path": "dist-standalone/index.cjs",
+        "bytes": 97537,
+        "sha256": "2b0e9fbfbb3cd7c63e4fa3d7041b6dae0c83e701604b804c41e45f51e1adb062"
+      }
+    ],
+    "internalStorageWorkerPresent": false,
+    "electronEmptyStubPresent": true,
+    "terminalServiceMarkerPresent": true,
+    "terminalPlatformMarkerPresent": false
+  },
+  "terminalAbsence": {
+    "passes": false,
+    "violations": [
+      "terminal_sdk_dependencies_in_production_manifest",
+      "terminal_node_install_stub",
+      "unpruned_production_node_modules",
+      "terminal_service_in_server_bundle"
+    ]
+  }
+}

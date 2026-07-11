@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "laneIds": ["w4", "w6"],
+  "taskId": "agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v7",
+  "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v7",
+  "packetRevision": "phase-00-r3",
+  "status": "remediation_complete_pending_re_review",
+  "canonicalBaseSha": "f7d98790eb868714e536f77bd796072ea706911a",
+  "sourceWorktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w4-w6-v7",
+  "provenance": {
+    "approvedV6Review": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w4-w6-v6/.codex-handoff/phase-00-review-w4-w6-v6.json",
+    "approvedV6ReviewSha256": "5c4c0ed2792df575dfd74c3a197ff00af6ed2abcc001dd815c39e70a87f7ed7a",
+    "supersedingReviewRecord": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v6/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v6.review.json",
+    "supersedingReviewRecordSha256": "b68ad9f064e622edc64e96194bd00bea42b5c31467a0503b58b8e826911eaa8b",
+    "rejectedIntegrationArchive": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-controller-v2/project-integration/integration-attempts/a8405fd56102c02a0319e197c5b1b892d612616e39e5e871167cdb42798d5767/attempt.json",
+    "rejectedIntegrationArchiveSha256": "1b49a4f0745b5e67fe8d56c97174ae55af4d9c5edb006112440b467bc9cea1dc",
+    "v6PreservedPatch": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v6/agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v6.preserved.patch",
+    "v6PreservedPatchSha256": "479f78a3a89a7e132899ede39a7606c59ce9b201ebe04d97df281e3a4825f690"
+  },
+  "reproducedCanonicalFailure": {
+    "focusedTests": "1 failed, 49 passed: ambient canonical integration output used HttpServer-CgGq0m_Y.cjs and index-Ds6Ihcda.cjs while V6 committed isolated-output rows",
+    "verifyEvidence": "failed with committed standalone characterization is stale",
+    "archiveCheckIds": ["w4-w6-focused-tests", "w6-evidence-verify"]
+  },
+  "rootCause": "The source characterization implicitly scanned mutable ambient dist-standalone output, while emitted facts were duplicated across standalone records. An isolated V6 artifact snapshot therefore became stale when canonical integration contained the other admitted Phase 0 source changes.",
+  "fix": {
+    "authority": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+    "authoritySemanticSha256": "50b954be77896963e5e32c5fc9e7785349ecff6bfb5455162671c751551fd3b4",
+    "description": "Regenerated emitted rows from the rejected canonical archive, made the observed scan the sole standalone authority, replaced duplicate manifest/evidence facts with checked semantic-hash projections, and made source scans independent of ambient dist output.",
+    "regression": "auth-artifacts-spike.test.ts mutates one emitted SHA-256 and proves the stale projection is rejected."
+  },
+  "preservedContracts": {
+    "readyDrainedDto": "docs/research/hosted-web/phase-0/host-primitives/process-anchor.protocol.json",
+    "controllerArtifactContract": "docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.json",
+    "controllerArtifactContractSha256": "4e8f2b43f47f94586692530cba2f5198f6de3740225b51dfba627f36fc82812f",
+    "artifactProjectionAbi": "artifactId/finalImagePath/binarySha256 arrays remain byte-equivalent across W4 and W6",
+    "terminalImplemented": false
+  },
+  "changedPaths": [
+    ".codex-handoff/phase-00-w4-w6.json",
+    ".codex-handoff/phase-00-w4.json",
+    ".codex-handoff/phase-00-w6.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/evidence.schema.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/finding-resolution.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/proposed-hosted-artifact-manifest.json",
+    "docs/research/hosted-web/phase-0/auth-artifacts/report.md",
+    "docs/research/hosted-web/phase-0/host-primitives/current-host-probe-results.json",
+    "docs/research/hosted-web/phase-0/host-primitives/estimate-input.json",
+    "docs/research/hosted-web/phase-0/host-primitives/instance-lease-spike.md",
+    "docs/research/hosted-web/phase-0/host-primitives/instance-lock.protocol.json",
+    "docs/research/hosted-web/phase-0/host-primitives/native-artifact-contract.json",
+    "docs/research/hosted-web/phase-0/host-primitives/native-artifact-proposal.md",
+    "docs/research/hosted-web/phase-0/host-primitives/native-protocol.schema.json",
+    "docs/research/hosted-web/phase-0/host-primitives/probe-results.schema.json",
+    "docs/research/hosted-web/phase-0/host-primitives/process-anchor-spike.md",
+    "docs/research/hosted-web/phase-0/host-primitives/process-anchor.protocol.json",
+    "docs/research/hosted-web/phase-0/host-primitives/target-host-envelope.md",
+    "docs/research/hosted-web/phase-0/host-primitives/workspace-guard-spike.md",
+    "docs/research/hosted-web/phase-0/host-primitives/workspace-guard.protocol.json",
+    "docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.json",
+    "docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.schema.json",
+    "scripts/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.mjs",
+    "scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs",
+    "scripts/hosted-web/phase-0/host-primitives/instance-lock/instance_lock_spike.c",
+    "scripts/hosted-web/phase-0/host-primitives/process-anchor/process_anchor_spike.c",
+    "scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+    "scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs",
+    "scripts/hosted-web/phase-0/host-primitives/workspace-guard/workspace_guard_spike.c",
+    "scripts/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.mjs",
+    "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+    "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+    "test/architecture/hosted-web/phase-0/host-primitives/native-probes.test.ts",
+    "test/architecture/hosted-web/phase-0/w4-w6-contract/artifact-contract.test.ts"
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec vitest run <four focused W4/W6 files> --maxWorkers=1 --minWorkers=1",
+      "exitCode": 0,
+      "result": "4 files and 51 tests passed"
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs",
+      "exitCode": 0,
+      "result": "single authority, W4 DTO consumption, reset closure, standalone rejection, terminal rule, ABI and V7 provenance passed"
+    },
+    {
+      "command": "scanStandalone with rejected canonical candidate dist-standalone as explicit buildRoot",
+      "exitCode": 0,
+      "result": "all seven emitted paths, byte counts, SHA-256 hashes and marker facts matched the sole committed authority"
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs",
+      "exitCode": 0,
+      "result": "host-primitives evidence scan passed"
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.mjs",
+      "exitCode": 0,
+      "result": "controller artifact contract passed"
+    },
+    {
+      "command": "/usr/bin/python3 scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+      "exitCode": 0,
+      "result": "ready/drained, pidfd, cleanup, high-FD and negative current-host probes passed with zero residuals"
+    },
+    {
+      "command": "pnpm lint:fast:files -- <8 exact W4/W6 JS/TS files>",
+      "exitCode": 0,
+      "result": "focused fast lint passed"
+    },
+    {
+      "command": "pnpm exec prettier --check <33 supported V7 additions>",
+      "exitCode": 0,
+      "result": "all matched files use Prettier code style"
+    },
+    {
+      "command": "JSON.parse over all 19 V7 JSON additions plus checked-in schema validation",
+      "exitCode": 0,
+      "result": "all JSON parsed; W6 and controller schemas passed"
+    },
+    {
+      "command": "PYTHONPYCACHEPREFIX=<temporary> /usr/bin/python3 -m py_compile scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+      "exitCode": 0,
+      "result": "Python syntax passed without a worktree cache artifact"
+    },
+    {
+      "command": "git diff --no-index --check /dev/null <each of 37 V7 additions>",
+      "exitCode": 0,
+      "result": "zero whitespace diagnostics"
+    },
+    {
+      "command": "joint changedPaths versus git status --porcelain=v1 -uall",
+      "exitCode": 0,
+      "result": "37 exact individual paths matched"
+    },
+    {
+      "command": "bounded private-key, Bearer-value, provider-token and absolute-home scan over all 37 additions",
+      "exitCode": 0,
+      "result": "no findings"
+    },
+    {
+      "command": "sha256sum approved V6 review, superseding review record, rejected integration archive and V6 preserved patch",
+      "exitCode": 0,
+      "result": "all four exact external provenance hashes matched the recorded values"
+    }
+  ],
+  "blockers": [],
+  "nextAction": "independent_paired_w4_w6_v7_re_review"
+}

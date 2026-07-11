@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "contractId": "P0.W4.NATIVE_ARTIFACT_PROJECTION.V1",
+  "owner": "w4",
+  "status": "read_only_projection_current_host_characterized",
+  "controllerContractPath": "docs/research/hosted-web/phase-0/w4-w6-contract/controller-artifact-contract.json",
+  "controllerContractSha256": "4e8f2b43f47f94586692530cba2f5198f6de3740225b51dfba627f36fc82812f",
+  "artifacts": [
+    {
+      "artifactId": "agent-teams-instance-lock",
+      "finalImagePath": "/app/bin/agent-teams-instance-lock",
+      "binarySha256": null,
+      "protocolManifestPath": "docs/research/hosted-web/phase-0/host-primitives/instance-lock.protocol.json",
+      "protocolSha256": "ded8949371646d490ba5175cf2992cb308df6fdca44537d91d728345be3b139f",
+      "spikeSourcePath": "scripts/hosted-web/phase-0/host-primitives/instance-lock/instance_lock_spike.c",
+      "spikeSourceSha256": "d9cc83ae82e3a1c11e654db39ecf6ddceea78f23f455db707cb5876652118c57",
+      "buildRecipeId": "w4-native-c17-v1",
+      "builderImageDigest": null,
+      "compilerIdentity": null,
+      "targetAbi": "linux-x64-gnu",
+      "uid": null,
+      "gid": null,
+      "mode": null,
+      "imageOrder": "pre_node_contract_only"
+    },
+    {
+      "artifactId": "agent-teams-process-anchor",
+      "finalImagePath": "/app/bin/agent-teams-process-anchor",
+      "binarySha256": null,
+      "protocolManifestPath": "docs/research/hosted-web/phase-0/host-primitives/process-anchor.protocol.json",
+      "protocolSha256": "17e8b63b294a88959b7907cb931ea828a23b139abbbb3959b36ff77966cf41de",
+      "spikeSourcePath": "scripts/hosted-web/phase-0/host-primitives/process-anchor/process_anchor_spike.c",
+      "spikeSourceSha256": "8fd3414ca172a2947eb2545457417f42b16b76612e91162f74a51e8728ebff20",
+      "buildRecipeId": "w4-native-c17-v1",
+      "builderImageDigest": null,
+      "compilerIdentity": null,
+      "targetAbi": "linux-x64-gnu",
+      "uid": null,
+      "gid": null,
+      "mode": null,
+      "imageOrder": "after_lease_contract_only"
+    },
+    {
+      "artifactId": "agent-teams-workspace-guard",
+      "finalImagePath": "/app/bin/agent-teams-workspace-guard",
+      "binarySha256": null,
+      "protocolManifestPath": "docs/research/hosted-web/phase-0/host-primitives/workspace-guard.protocol.json",
+      "protocolSha256": "d73abe4570fb87f42824c22e84a184fd617bd42384f097e4fae341c1d33b02c3",
+      "spikeSourcePath": "scripts/hosted-web/phase-0/host-primitives/workspace-guard/workspace_guard_spike.c",
+      "spikeSourceSha256": "66f7c58d1188fd8d4be09bdd890458002dbbe40bf94b153155f1f9a54366ab43",
+      "buildRecipeId": "w4-native-c17-v1",
+      "builderImageDigest": null,
+      "compilerIdentity": null,
+      "targetAbi": "linux-x64-gnu",
+      "uid": null,
+      "gid": null,
+      "mode": null,
+      "imageOrder": "per_effect_contract_only"
+    }
+  ],
+  "capabilityClaims": {
+    "hostedMutationReady": false,
+    "workspaceEffectsReady": false,
+    "providerLaunchReady": false,
+    "productionArtifactReady": false
+  }
+}
