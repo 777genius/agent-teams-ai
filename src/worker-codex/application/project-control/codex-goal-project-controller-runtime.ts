@@ -14,6 +14,8 @@ export type ProjectControllerProviderRegistry = {
   readonly delete: (sessionId: string) => void;
 };
 
+let processOwner: ControlledAgentProcessOwner | undefined;
+
 export function createInMemoryProjectControllerProviderRegistry():
   ProjectControllerProviderRegistry {
   const providers = new Map<string, ControlledAgentProviderPort>();
@@ -33,13 +35,14 @@ export function createInMemoryProjectControllerProviderRegistry():
 export function projectControllerProcessOwner(
   runtimeVersion: string,
 ): ControlledAgentProcessOwner {
-  return buildControlledAgentProcessOwner({
+  processOwner ??= buildControlledAgentProcessOwner({
     runtimeVersion,
     ...(process.env.SUBSCRIPTION_RUNTIME_RELEASE_SHA === undefined
       ? {}
       : { runtimeSha: process.env.SUBSCRIPTION_RUNTIME_RELEASE_SHA }),
     pid: process.pid,
   });
+  return processOwner;
 }
 
 export function projectControllerOwnerIsLive(
