@@ -323,6 +323,58 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     });
   });
 
+  it('does not let a batch-sized prefix of terminal rows starve later delivery', async () => {
+    const terminalMessages = Array.from({ length: 10 }, (_, index) =>
+      message({ messageId: `terminal-${String(index).padStart(2, '0')}` })
+    );
+    const deliverableMessage = message({ messageId: 'zz-deliverable' });
+    const getByInboxMessage = vi.fn(({ inboxMessageId }: { inboxMessageId: string }) =>
+      Promise.resolve(
+        inboxMessageId.startsWith('terminal-')
+          ? ledgerRecord({
+              id: `record-${inboxMessageId}`,
+              inboxMessageId,
+              status: 'failed_terminal',
+              lastReason: 'opencode_prompt_delivery_failed_terminal',
+              diagnostics: ['terminal'],
+            })
+          : null
+      )
+    );
+    const deliverOpenCodeMemberMessage = vi.fn().mockResolvedValue({ delivered: true });
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      {
+        teamName: 'team',
+        memberName: 'worker',
+        relayKey: 'team/worker',
+      },
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([...terminalMessages, deliverableMessage]),
+        createOpenCodePromptDeliveryLedger: vi.fn(
+          () => ({ getByInboxMessage }) as unknown as OpenCodePromptDeliveryLedgerStore
+        ),
+        deliverOpenCodeMemberMessage,
+        markInboxMessagesRead,
+      })
+    );
+
+    expect(getByInboxMessage).toHaveBeenCalledTimes(11);
+    expect(deliverOpenCodeMemberMessage).toHaveBeenCalledOnce();
+    expect(deliverOpenCodeMemberMessage).toHaveBeenCalledWith(
+      'team',
+      expect.objectContaining({ messageId: 'zz-deliverable' })
+    );
+    expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'worker', [deliverableMessage]);
+    expect(result).toMatchObject({
+      attempted: 1,
+      delivered: 1,
+      relayed: 1,
+      failed: 0,
+    });
+  });
+
   it('projects already-read rows with committed ledger proof as explicit accepted delivery', async () => {
     const committed = ledgerRecord({
       id: 'committed-record',

@@ -373,7 +373,10 @@ async function runOpenCodeMemberInboxRelayWork(
   const unread = selectOpenCodeMemberInboxRelayUnreadMessages({
     inboxMessages,
     onlyMessageId,
-    maxRelay: DEFAULT_INBOX_RELAY_BATCH_SIZE,
+    // Terminal ledger rows remain unread so they can be recovered later. Scan the
+    // full ordered inbox here; otherwise a batch-sized prefix of terminal rows
+    // permanently starves every deliverable message behind it.
+    maxRelay: inboxMessages.length,
   });
 
   let taskRefInferenceTasks: Promise<readonly TeamTask[]> | null = null;
