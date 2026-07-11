@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "evidenceId": "P0.W4.ESTIMATE",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "status": "characterized",
+  "canonicalBucketId": "EST-LIFECYCLE-RUNTIME",
+  "canonicalBucketBaseline": { "lowNetLines": 5000, "highNetLines": 8000 },
+  "ownerContribution": "W4",
+  "ranges": {
+    "productionLines": { "low": 7400, "high": 12200 },
+    "testLines": { "low": 5000, "high": 8400 },
+    "deletedLines": { "low": 230, "high": 800 },
+    "netChangedLines": { "low": 11600, "high": 20370 }
+  },
+  "subcomponents": [
+    {
+      "id": "instance-lease",
+      "confidence": "medium",
+      "packages": ["native/instance-lock", "hosted composition", "container image"],
+      "productionLines": { "low": 1400, "high": 2200 },
+      "testLines": { "low": 900, "high": 1600 },
+      "deletedLines": { "low": 50, "high": 150 },
+      "evidenceRefs": ["P0.W4.INSTANCE_LEASE_SPIKE", "ADR-16"]
+    },
+    {
+      "id": "workspace-guard",
+      "confidence": "medium-low",
+      "packages": ["native/workspace-guard", "workspace adapters", "Git adapters"],
+      "productionLines": { "low": 2800, "high": 4600 },
+      "testLines": { "low": 1800, "high": 3000 },
+      "deletedLines": { "low": 100, "high": 300 },
+      "evidenceRefs": ["P0.W4.WORKSPACE_GUARD_SPIKE", "ADR-28"]
+    },
+    {
+      "id": "process-anchor",
+      "confidence": "medium-low",
+      "packages": ["native/process-anchor", "runtime-control adapter", "provider launch adapters"],
+      "productionLines": { "low": 2400, "high": 4000 },
+      "testLines": { "low": 1600, "high": 2600 },
+      "deletedLines": { "low": 80, "high": 250 },
+      "evidenceRefs": ["P0.W4.PROCESS_ANCHOR_SPIKE", "ADR-31"]
+    },
+    {
+      "id": "native-packaging-readiness",
+      "confidence": "medium-low",
+      "packages": ["container image", "native manifests", "readiness composition"],
+      "productionLines": { "low": 800, "high": 1400 },
+      "testLines": { "low": 700, "high": 1200 },
+      "deletedLines": { "low": 0, "high": 100 },
+      "evidenceRefs": ["P0.W4.NATIVE_ARTIFACT_PROPOSAL", "P0.W4.TARGET_HOST_ENVELOPE"]
+    }
+  ],
+  "w2Reconciliation": {
+    "sharedCanonicalBucket": "EST-LIFECYCLE-RUNTIME",
+    "w4Includes": [
+      "instance lease",
+      "workspace guard",
+      "process anchor",
+      "native helper build and final-image probes"
+    ],
+    "w4ExcludesAsW2Owned": [
+      "provider topology",
+      "runtime ingress protocol",
+      "lane relay",
+      "provider environment and credential policy",
+      "provider conformance fixtures"
+    ],
+    "overlapRule": "W2 and W4 are owner contributions to one canonical bucket. The controller must replace and reconcile the canonical range, never add either contribution or the four W4 subcomponents to the baseline."
+  },
+  "assumptions": [
+    "Shared native syscall and framing code is counted once inside the combined W4 range.",
+    "The estimate includes manifests, image stages and final-topology readiness probes.",
+    "Distributed locking, terminal ownership and provider-domain policy remain excluded."
+  ],
+  "uncertainty": [
+    "Final topology is unavailable, so packaging and seccomp integration ranges are low confidence.",
+    "The controller has not yet reconciled the W2 and W4 contributions into a replacement canonical range.",
+    "Portable-pty inherited-FD work remains excluded with hosted terminal."
+  ]
+}

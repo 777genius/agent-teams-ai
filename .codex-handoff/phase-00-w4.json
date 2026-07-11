@@ -1,0 +1,206 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "laneId": "w4",
+  "taskId": "agent-teams-hosted-web-refactor-phase-00-remediation-w4-v3",
+  "packetRevision": "phase-00-r2",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "baseSha": "648bebed68f5a64c984e83b441e14dd7c587c403",
+  "baseShaVerifiedDuringRemediation": true,
+  "status": "ready_for_focused_w4_w6_re_review",
+  "preservedSource": {
+    "worktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w4-v1",
+    "auditTreeDigest": "a82271568e79de8e053c7333f2d4b8017a9ab6eb4b4e2b408af1f4026f356fe6",
+    "salvagedFileCount": 21,
+    "sourceModified": false
+  },
+  "reviewAuthorities": [
+    "docs/research/hosted-web/phase-0/reciprocal-review-w4-w6.md",
+    "docs/research/hosted-web/phase-0/audits/cross-lane-v2/README.md",
+    "docs/research/hosted-web/phase-0/audits/cross-lane-v2/approved-files-conflict-risk-manifest.json",
+    "docs/research/hosted-web/phase-0/audits/oom-adoption-v2/README.md",
+    "docs/research/hosted-web/phase-0/audits/oom-adoption-v2/candidate-manifest.json"
+  ],
+  "findingResolutions": [
+    {
+      "id": "R46-03",
+      "status": "resolved_current_host",
+      "resolution": "The anchor no longer invokes kill(pid) or kill(-pgid). Every descendant is discovered only beneath the owned subreaper, opened as a pidfd, verified against the same pre/post start-time identity, and signaled with pidfd_send_signal. Process groups classify escape only; ambiguity or escape yields unclassified plus required container replacement."
+    },
+    {
+      "id": "R46-04",
+      "status": "resolved_current_host",
+      "resolution": "The runner calls OwnedResources.cleanup before stdout emission, propagates removal errors, measures tracked identities/groups/mounts and zero residuals, and executes positive-live-process, negative-live-residual, and negative-marker-removal cleanup schedules through the real cleanup method."
+    },
+    {
+      "id": "R46-05",
+      "status": "resolved_current_host",
+      "resolution": "The salvaged close_range plus /proc/self/fd implementations and descriptors duplicated above 4096 are retained and rerun for workspace and anchor children."
+    },
+    {
+      "id": "P0.V2.RISK.W4_PGID_REUSE",
+      "status": "resolved_by_targeting_semantics",
+      "resolution": "No second numeric process-group signal exists. PID/PGID churn cannot retarget a pidfd; deterministic numeric reuse is therefore not claimed or required as a safety premise."
+    },
+    {
+      "id": "P0.V2.RISK.W4_FOCUSED_TEST",
+      "status": "resolved",
+      "resolution": "The native probe test now asserts the complete measured cleanup record with toMatchObject plus positive counts and negative cleanup schedules."
+    },
+    {
+      "id": "P0.V2.RISK.W4_SCHEMA_COVERAGE",
+      "status": "resolved",
+      "resolution": "The scanner requires and validates all three protocol manifests, three schemas and the native artifact contract; parameterized negative tests remove each of the seven artifacts."
+    },
+    {
+      "id": "P0.V2.CONFLICT.W4_W6.DRAIN_SCHEMA",
+      "status": "resolved_on_w4_producer_surface",
+      "resolution": "W4 emits and records the exact W6 process_drain_outcome_v1 field names: kind, outcome, purpose, resetGeneration, deploymentGeneration, processAnchorGeneration, classificationId and residuals. Drained requires an empty residual list; unclassified is non-empty and fail-closed."
+    },
+    {
+      "id": "P0.V2.CONFLICT.W4_W6.ARTIFACT_CONTRACT",
+      "status": "reconciled_on_w4_surface_w6_verifier_followup_required",
+      "resolution": "W4 now uses W6's /app/bin layout and retains required protocol/build/compiler/ABI/UID/GID/mode acceptance fields. W6 must import and compare this contract in its own lane; no W6 file was edited."
+    },
+    {
+      "id": "P0.V2.CONFLICT.W2_W4.ESTIMATE",
+      "status": "resolved_as_controller_input",
+      "resolution": "W4 maps its contribution to EST-LIFECYCLE-RUNTIME, explicitly excludes W2-owned provider/ingress work and requires controller replacement/reconciliation rather than addition."
+    }
+  ],
+  "evidence": [
+    {
+      "id": "P0.W4.TARGET_HOST_ENVELOPE",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/target-host-envelope.md",
+      "proofLevel": "current_host_characterized"
+    },
+    {
+      "id": "P0.W4.INSTANCE_LEASE_SPIKE",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/instance-lease-spike.md",
+      "proofLevel": "current_host_characterized"
+    },
+    {
+      "id": "P0.W4.WORKSPACE_GUARD_SPIKE",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/workspace-guard-spike.md",
+      "proofLevel": "current_host_characterized"
+    },
+    {
+      "id": "P0.W4.PROCESS_ANCHOR_SPIKE",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/process-anchor-spike.md",
+      "proofLevel": "current_host_characterized"
+    },
+    {
+      "id": "P0.W4.NATIVE_ARTIFACT_PROPOSAL",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/native-artifact-proposal.md",
+      "proofLevel": "interface_characterized_target_unverified"
+    },
+    {
+      "id": "P0.W4.ESTIMATE",
+      "path": "docs/research/hosted-web/phase-0/host-primitives/estimate-input.json",
+      "proofLevel": "controller_input"
+    }
+  ],
+  "currentHostResults": {
+    "status": "characterized",
+    "finalShapeContainer": false,
+    "numericPidSignals": 0,
+    "numericPgidSignals": 0,
+    "pidfdDescendantSignals": true,
+    "typedDrainKind": "process_drain_outcome_v1",
+    "cleanupPerformedBeforeEmission": true,
+    "cleanupNegativeResidualsObserved": 1,
+    "ownedResidualProcesses": 0,
+    "ownedResidualMounts": 0,
+    "outsideMarkerEffects": 0,
+    "unrelatedProcessesSignaled": 0,
+    "controlDescriptorLeaks": 0,
+    "highFdCanariesClosed": true,
+    "pidReuseDeterministicallyForced": false
+  },
+  "ownershipAudit": {
+    "changedPathCount": 22,
+    "ownedRoots": [
+      "docs/research/hosted-web/phase-0/host-primitives/**",
+      "scripts/hosted-web/phase-0/host-primitives/**",
+      "test/architecture/hosted-web/phase-0/host-primitives/**",
+      ".codex-handoff/phase-00-w4.json"
+    ],
+    "outOfScopePaths": [],
+    "w6FilesModified": false,
+    "productionSourceModified": false
+  },
+  "changedPaths": [
+    ".codex-handoff/phase-00-w4.json",
+    "docs/research/hosted-web/phase-0/host-primitives/current-host-probe-results.json",
+    "docs/research/hosted-web/phase-0/host-primitives/estimate-input.json",
+    "docs/research/hosted-web/phase-0/host-primitives/instance-lease-spike.md",
+    "docs/research/hosted-web/phase-0/host-primitives/instance-lock.protocol.json",
+    "docs/research/hosted-web/phase-0/host-primitives/native-artifact-contract.json",
+    "docs/research/hosted-web/phase-0/host-primitives/native-artifact-contract.schema.json",
+    "docs/research/hosted-web/phase-0/host-primitives/native-artifact-proposal.md",
+    "docs/research/hosted-web/phase-0/host-primitives/native-protocol.schema.json",
+    "docs/research/hosted-web/phase-0/host-primitives/probe-results.schema.json",
+    "docs/research/hosted-web/phase-0/host-primitives/process-anchor-spike.md",
+    "docs/research/hosted-web/phase-0/host-primitives/process-anchor.protocol.json",
+    "docs/research/hosted-web/phase-0/host-primitives/target-host-envelope.md",
+    "docs/research/hosted-web/phase-0/host-primitives/workspace-guard-spike.md",
+    "docs/research/hosted-web/phase-0/host-primitives/workspace-guard.protocol.json",
+    "scripts/hosted-web/phase-0/host-primitives/instance-lock/instance_lock_spike.c",
+    "scripts/hosted-web/phase-0/host-primitives/process-anchor/process_anchor_spike.c",
+    "scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+    "scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs",
+    "scripts/hosted-web/phase-0/host-primitives/workspace-guard/workspace_guard_spike.c",
+    "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+    "test/architecture/hosted-web/phase-0/host-primitives/native-probes.test.ts"
+  ],
+  "checks": [
+    {
+      "command": "/usr/bin/python3 scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+      "exitCode": 0,
+      "result": "current host characterized; pidfd-only descendant signaling; exact shared drain DTO samples; three cleanup probe executions; finalShapeContainer=false"
+    },
+    {
+      "command": "node scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs",
+      "exitCode": 0,
+      "result": "host-primitives evidence scan passed"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-0/host-primitives/native-probes.test.ts test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+      "exitCode": 0,
+      "result": "2 files passed; 10 tests passed"
+    },
+    {
+      "command": "pnpm lint:fast:files -- scripts/hosted-web/phase-0/host-primitives/scan-evidence.mjs test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts test/architecture/hosted-web/phase-0/host-primitives/native-probes.test.ts",
+      "exitCode": 0,
+      "result": "targeted fast lint passed"
+    },
+    {
+      "command": "pnpm exec prettier --check <W4 JSON/Markdown/MJS/TS files>",
+      "exitCode": 0,
+      "result": "all formatter-supported W4 files passed"
+    },
+    {
+      "command": "git diff --no-index --check /dev/null <each of 22 handoff-listed files>",
+      "exitCode": 0,
+      "result": "all untracked W4 additions checked; zero whitespace diagnostics"
+    }
+  ],
+  "scopeExclusions": {
+    "broadCiRun": false,
+    "finalImageRun": false,
+    "phase1Implemented": false,
+    "terminalImplemented": false,
+    "integrationPerformed": false,
+    "w6Modified": false,
+    "committed": false,
+    "pushed": false
+  },
+  "unverifiedClaims": [
+    "The admitted final Debian-slim non-root image, final UID/GID, init/PID namespace, seccomp profile, stop grace, two-container lease race and whole-container replacement remain unverified.",
+    "Kernel PID or PGID reuse was not deterministically forced; safety no longer depends on numeric PID/PGID signaling because the process-anchor spike uses pidfds only.",
+    "The W6 verifier has not yet imported the W4 native artifact contract or supplied final binary/build/compiler/ABI/ownership metadata.",
+    "The C programs remain feasibility spikes and are not production artifacts."
+  ],
+  "blockers": [],
+  "nextAction": "focused_w4_w6_re_review_then_final_image_gate"
+}

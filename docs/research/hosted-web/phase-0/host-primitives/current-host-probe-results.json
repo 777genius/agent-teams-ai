@@ -1,0 +1,134 @@
+{
+  "$schema": "./probe-results.schema.json",
+  "cleanup": {
+    "markerRemoved": true,
+    "ownedProcessGroupsTracked": 106,
+    "ownedProcessIdentitiesTracked": 146,
+    "ownedResidualMounts": 0,
+    "ownedResidualProcesses": 0,
+    "performedBeforeEmission": true
+  },
+  "cleanupProbes": {
+    "actualOwnedResourcesCleanupExecutions": 3,
+    "liveOwnedProcessTerminated": true,
+    "negativeMarkerRemovalRejected": true,
+    "negativeResidualProcessRejected": true,
+    "negativeResidualsObserved": 1,
+    "positiveCleanup": {
+      "markerRemoved": true,
+      "ownedProcessGroupsTracked": 1,
+      "ownedProcessIdentitiesTracked": 1,
+      "ownedResidualMounts": 0,
+      "ownedResidualProcesses": 0,
+      "performedBeforeEmission": true
+    }
+  },
+  "host": {
+    "architecture": "x86_64",
+    "dockerDaemonReachable": false,
+    "filesystem": "ext4",
+    "finalShapeContainer": false,
+    "kernel": "6.8.0-124-generic",
+    "noNewPrivs": 1,
+    "node": "v24.16.0",
+    "osRelease": "PRETTY_NAME=\"Ubuntu 24.04.4 LTS\"",
+    "seccompMode": 2,
+    "uid": 0
+  },
+  "instanceLease": {
+    "duplicateCloseOrdering": true,
+    "killedOwnerCleanHandoff": true,
+    "mutualExclusion": true,
+    "outsideEffects": 0,
+    "pathReplacementRejectedByIdentity": true,
+    "pausedOwnerNotStealable": true,
+    "status": "passed_current_host"
+  },
+  "markerOwnership": "all fixture paths, mounts, process identities, and process groups are invocation-owned and tracked before use",
+  "nativeArtifactFeasibility": {
+    "artifacts": [
+      {
+        "artifactId": "agent-teams-instance-lock",
+        "currentHostUnstrippedBinarySha256": "d58f8efb668aa6e9e171780068f9e04099b6976d77869158405c71c19d3763ab",
+        "protocolSha256": "ded8949371646d490ba5175cf2992cb308df6fdca44537d91d728345be3b139f",
+        "sourceSha256": "d9cc83ae82e3a1c11e654db39ecf6ddceea78f23f455db707cb5876652118c57"
+      },
+      {
+        "artifactId": "agent-teams-process-anchor",
+        "currentHostUnstrippedBinarySha256": "2ac28447e49710815da367cfcda6ec06eaec6f499c7f60a1322e4b8789c4af46",
+        "protocolSha256": "13cbcb756515ae565eef1abfeb8386c38d9857bed3f8e308de33d3e9b751c55b",
+        "sourceSha256": "4cb28efb87c9a7fa50a1c083219c0b5095d850223c95348ca19d94ac62207e95"
+      },
+      {
+        "artifactId": "agent-teams-workspace-guard",
+        "currentHostUnstrippedBinarySha256": "8fbefcea19270edf420b06cb4f53ca79d5605d87e0cfaff5cf0439975f30c7e1",
+        "protocolSha256": "d73abe4570fb87f42824c22e84a184fd617bd42384f097e4fae341c1d33b02c3",
+        "sourceSha256": "66f7c58d1188fd8d4be09bdd890458002dbbe40bf94b153155f1f9a54366ab43"
+      }
+    ],
+    "buildRecipeId": "w4-native-c17-v1",
+    "status": "passed_current_host_target_unverified"
+  },
+  "probeCommand": "/usr/bin/python3 scripts/hosted-web/phase-0/host-primitives/run-native-probes.py",
+  "processAnchor": {
+    "controlDescriptorLeaks": 0,
+    "controllerEofDrained": true,
+    "drainDtoGenerationBound": true,
+    "drainDtoKind": "process_drain_outcome_v1",
+    "drainDtoSamples": {
+      "drained": {
+        "classificationId": "anchor-process-anchor-generation-normal-80",
+        "deploymentGeneration": "deployment-generation-fixture",
+        "kind": "process_drain_outcome_v1",
+        "outcome": "drained",
+        "processAnchorGeneration": "process-anchor-generation-normal",
+        "purpose": "host_reset",
+        "resetGeneration": 7,
+        "residuals": []
+      },
+      "unclassified": {
+        "classificationId": "anchor-process-anchor-generation-escape-163",
+        "deploymentGeneration": "deployment-generation-fixture",
+        "kind": "process_drain_outcome_v1",
+        "outcome": "unclassified",
+        "processAnchorGeneration": "process-anchor-generation-escape",
+        "purpose": "host_reset",
+        "resetGeneration": 7,
+        "residuals": ["escaped_group"]
+      }
+    },
+    "highFdCanariesClosed": true,
+    "nonceReadyBound": true,
+    "numericPgidSignals": 0,
+    "numericPidSignals": 0,
+    "ownedProcessGroupSignals": false,
+    "pidReuseDeterministicallyForced": false,
+    "pidfd": true,
+    "pidfdDescendantSignals": true,
+    "rapidPidPgidReuseNegativeSchedule": true,
+    "status": "passed_current_host",
+    "subreaperDoubleFork": true,
+    "termKillEscalation": true,
+    "typedStopDrained": true,
+    "typedUnclassified": true,
+    "unrelatedProcessesSignaled": 0
+  },
+  "recordId": "P0.W4.CURRENT_HOST_PROBE_RESULTS",
+  "schemaVersion": 1,
+  "status": "characterized",
+  "workspaceGuard": {
+    "bindMount": "rejected_zero_effect",
+    "execDescriptorLeaks": 0,
+    "fakeProviderCwdBound": true,
+    "finalSymlinkOutsideEffects": 0,
+    "gitHookDisabled": true,
+    "highFdCanariesClosed": true,
+    "openat2": true,
+    "parentSymlinkOutsideEffects": 0,
+    "rawNodeNegativeControlOutsideEffects": 1,
+    "rootRenameOutsideEffects": 0,
+    "staleGenerationOutsideEffects": 0,
+    "status": "passed_current_host",
+    "statxMountId": 1258
+  }
+}

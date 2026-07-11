@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "P0.W4.NATIVE_PROTOCOL_SCHEMA.V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "artifactId",
+    "owner",
+    "status",
+    "protocolVersion",
+    "request",
+    "responses",
+    "failClosed"
+  ],
+  "properties": {
+    "$schema": { "const": "./native-protocol.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "artifactId": { "type": "string", "minLength": 1 },
+    "owner": { "const": "w4" },
+    "status": { "const": "proposed_characterized" },
+    "protocolVersion": { "const": 1 },
+    "request": { "type": "object" },
+    "responses": { "type": "array", "minItems": 1 },
+    "failClosed": { "type": "array", "minItems": 1 },
+    "sharedDrainDto": { "type": "object" },
+    "signalSemantics": { "type": "object" }
+  }
+}
