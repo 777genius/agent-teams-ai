@@ -217,6 +217,35 @@ describe("consumed output ledger", () => {
       }),
     ]);
 
+    const ledgerRoot = join(root, "reviewed-ledger");
+    await mkdir(join(ledgerRoot, "items"), { recursive: true });
+    await writeFile(
+      join(ledgerRoot, "items", "contracts-review-v1.json"),
+      `${JSON.stringify({
+        jobId: "contracts-review-v1",
+        status: "reviewed_no_change",
+        outcome: "reviewed_no_change",
+        closedAt: "2026-07-11T00:00:00.000Z",
+        backup,
+      }, null, 2)}\n`,
+    );
+    const ledger = await readConsumedOutputLedgers({
+      roots: [ledgerRoot],
+      source,
+    });
+
+    expect(ledger.byJobId.get("contracts-review-v1")).toMatchObject({
+      status: "reviewed_no_change",
+      valid: true,
+    });
+    expect(ledger.byWorkspace.has(resolve(workspace))).toBe(false);
+    expect(consumedOutputRecordFor({
+      ledger,
+      jobId: "contracts-producer-v1",
+      workspacePath: workspace,
+      resolvedWorkspacePath: workspace,
+    })).toBeUndefined();
+
     const missingOutcome = await consumedOutputRecordFromJson({
       ledgerPath: join(root, "reviewed-no-change-missing-outcome.json"),
       source,

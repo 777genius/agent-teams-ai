@@ -83,10 +83,18 @@ export async function readConsumedOutputLedgers(input: {
     });
     if (!record) continue;
     byJobId.set(record.jobId, record);
-    if (record.status !== NO_OUTPUT_STATUS && record.workspace) {
+    if (
+      record.status !== NO_OUTPUT_STATUS &&
+      record.status !== REVIEWED_NO_CHANGE_STATUS &&
+      record.workspace
+    ) {
       byWorkspace.set(resolve(record.workspace), record);
     }
-    if (record.status !== NO_OUTPUT_STATUS && record.resolvedWorkspace) {
+    if (
+      record.status !== NO_OUTPUT_STATUS &&
+      record.status !== REVIEWED_NO_CHANGE_STATUS &&
+      record.resolvedWorkspace
+    ) {
       byWorkspace.set(record.resolvedWorkspace, record);
     }
   }
