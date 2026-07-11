@@ -1,20 +1,21 @@
+import { BackendSelectingTaskStallJournalStore } from '@features/internal-storage/main/composition/BackendSelectingTaskStallJournalStore';
+import { createInternalStorageFeature } from '@features/internal-storage/main/composition/createInternalStorageFeature';
+import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
+import { InternalStorageWorkerClient } from '@features/internal-storage/main/infrastructure/InternalStorageWorkerClient';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { BackendSelectingTaskStallJournalStore } from '@features/internal-storage/main/composition/BackendSelectingTaskStallJournalStore';
-import { createInternalStorageFeature } from '@features/internal-storage/main/composition/createInternalStorageFeature';
-import { InternalStorageBackendSelector } from '@features/internal-storage/main/composition/InternalStorageBackendSelector';
 import { getStallMonitorJournalPath } from '../../../src/main/services/team/stallMonitor/JsonTaskStallJournalStore';
 import { setClaudeBasePathOverride } from '../../../src/main/utils/pathDecoder';
 
-import type { InternalStorageBackendInfo } from '@features/internal-storage/contracts/internalStorageContracts';
 import type {
   TaskStallJournalMutation,
   TaskStallJournalStore,
 } from '../../../src/main/services/team/stallMonitor/TaskStallJournalStore';
 import type { TaskStallJournalEntry } from '../../../src/main/services/team/stallMonitor/TeamTaskStallTypes';
+import type { InternalStorageBackendInfo } from '@features/internal-storage/contracts/internalStorageContracts';
 
 class RecordingStore implements TaskStallJournalStore {
   calls = 0;
@@ -91,14 +92,21 @@ describe('createInternalStorageFeature', () => {
     }
   });
 
-  it('keeps both journals working via JSON when sqlite is unavailable in this environment', async () => {
+  it('keeps both journals working via JSON when the native sqlite module is unavailable', async () => {
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'internal-storage-feature-'));
     setClaudeBasePathOverride(tmpDir);
     await fs.mkdir(path.join(tmpDir, 'teams', 'demo'), { recursive: true });
 
-    // Under vitest either the worker bundle is missing or the native module
-    // has the Electron ABI, so the feature must degrade to the JSON stores.
-    // Both degradation paths log expected warnings/errors.
+    // Keep the worker bundle available and inject the native-module load
+    // failure so this fallback scenario is independent of host artifacts.
+    const workerAvailable = vi
+      .spyOn(InternalStorageWorkerClient.prototype, 'isAvailable')
+      .mockReturnValue(true);
+    const nativeModuleUnavailable = vi
+      .spyOn(InternalStorageWorkerClient.prototype, 'ping')
+      .mockRejectedValue(
+        new Error('better-sqlite3 native module failed to load: test-injected unavailable binding')
+      );
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const feature = createInternalStorageFeature({
@@ -131,7 +139,11 @@ describe('createInternalStorageFeature', () => {
     expect(await feature.taskCommentNotificationJournalStore.exists('demo')).toBe(false);
     await feature.taskCommentNotificationJournalStore.ensureInitialized('demo');
     expect(await feature.taskCommentNotificationJournalStore.exists('demo')).toBe(true);
+    expect(workerAvailable).toHaveBeenCalledOnce();
+    expect(nativeModuleUnavailable).toHaveBeenCalledOnce();
 
     await feature.dispose();
+    nativeModuleUnavailable.mockRestore();
+    workerAvailable.mockRestore();
   });
 });
