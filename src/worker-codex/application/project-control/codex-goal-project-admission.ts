@@ -283,6 +283,10 @@ async function debtFromConsumedJobSummary(input: {
   readonly consumedOutput: ConsumedOutputLedger;
   readonly knownWorkspacePaths: Set<string>;
 }): Promise<readonly ProjectDebtItem[] | undefined> {
+  // Workspace-level fallback is only safe once worker liveness is known. A live
+  // verifier can intentionally share a dirty producer workspace whose output
+  // was already consumed under the producer job id.
+  if (!input.consumedOutput.byJobId.has(input.summary.jobId)) return undefined;
   const resolvedWorkspacePath = await optionalRealPathForAdmission(
     input.summary.workspacePath,
   );
@@ -327,6 +331,18 @@ async function debtFromOverviewItem(input: {
   }
   if (item.workspaceDirty !== true) return debt;
   const subject = workspacePath ?? jobId;
+  const workerAlive = item.workerAlive === true;
+  const stale = item.silentStale === true || item.workerFreshProgressAlive === false;
+  if (workerAlive && stale) {
+    debt.push({
+      reason: ProjectDebtReason.StaleDirtyWorker,
+      subject,
+      severity: "blocking",
+      evidence: [`${jobId} is alive/stale with dirty workspace`],
+    });
+    return debt;
+  }
+  if (workerAlive) return debt;
   const resolvedWorkspacePath = workspacePath
     ? await optionalRealPathForAdmission(workspacePath)
     : undefined;
@@ -340,18 +356,6 @@ async function debtFromOverviewItem(input: {
     debt.push(...consumedDebt(consumed));
     return debt;
   }
-  const workerAlive = item.workerAlive === true;
-  const stale = item.silentStale === true || item.workerFreshProgressAlive === false;
-  if (workerAlive && stale) {
-    debt.push({
-      reason: ProjectDebtReason.StaleDirtyWorker,
-      subject,
-      severity: "blocking",
-      evidence: [`${jobId} is alive/stale with dirty workspace`],
-    });
-    return debt;
-  }
-  if (workerAlive) return debt;
   const markerTypes = safeStringArray(item.lifecycleMarkerTypes);
   const recommendedAction = stringValue(item.recommendedAction);
   const resultStatus = stringValue(item.resultStatus);

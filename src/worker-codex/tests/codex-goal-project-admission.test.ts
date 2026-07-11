@@ -1,0 +1,99 @@
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import {
+  ProjectDebtReason,
+  type ProjectAccessScope,
+} from "@vioxen/subscription-runtime/worker-core";
+import {
+  buildCodexProjectAdmissionSnapshot,
+  type CodexProjectAdmissionDeps,
+} from "../application/project-control/codex-goal-project-admission";
+
+describe("Codex project admission snapshot", () => {
+  it("does not assign consumed producer output to a live reviewer sharing its workspace", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-live-reviewer-admission-"));
+    const workspacePath = join(root, "worktrees", "project-producer-v1");
+    const ledgerRoot = join(root, "consumed-output");
+    const backupRoot = join(root, "backups");
+    const statusPath = join(backupRoot, "producer.status.txt");
+    const patchPath = join(backupRoot, "producer.patch");
+    const scope: ProjectAccessScope = {
+      projectId: "project",
+      worktreeRoots: [join(root, "worktrees")],
+      consumedOutputLedgerRoots: [ledgerRoot],
+      jobIdPrefixes: ["project-"],
+    };
+
+    try {
+      await mkdir(workspacePath, { recursive: true });
+      await mkdir(join(ledgerRoot, "items"), { recursive: true });
+      await mkdir(backupRoot, { recursive: true });
+      await writeFile(statusPath, " M src/example.ts\n");
+      await writeFile(patchPath, "diff --git a/src/example.ts b/src/example.ts\n");
+      await writeFile(
+        join(ledgerRoot, "items", "project-producer-v1.json"),
+        `${JSON.stringify({
+          jobId: "project-producer-v1",
+          status: "archived",
+          closedAt: "2026-07-11T00:00:00.000Z",
+          backup: { workspace: workspacePath, statusPath, patchPath },
+        })}\n`,
+      );
+
+      const reviewer = {
+        jobId: "project-reviewer-v1",
+        tags: ["worker-role-reviewer"],
+        taskId: "project-reviewer-v1",
+        workspacePath,
+        promptPath: join(root, "reviewer.md"),
+        accountNames: ["account-a"],
+        updatedAt: "2026-07-11T00:01:00.000Z",
+        manifestPath: join(root, "reviewer.json"),
+      };
+      const overview = {
+        ok: true,
+        jobId: reviewer.jobId,
+        workspacePath,
+        workspaceDirty: true,
+        workerAlive: true,
+        silentStale: false,
+        workerFreshProgressAlive: true,
+      };
+      const deps: CodexProjectAdmissionDeps = {
+        listJobs: async () => [reviewer],
+        buildOverviewItem: async () => overview,
+      };
+
+      const liveSnapshot = await buildCodexProjectAdmissionSnapshot({
+        registryRootDir: join(root, "registry"),
+        scope,
+        deps,
+      });
+      expect(liveSnapshot.debt).toEqual([]);
+
+      const staleSnapshot = await buildCodexProjectAdmissionSnapshot({
+        registryRootDir: join(root, "registry"),
+        scope,
+        deps: {
+          ...deps,
+          buildOverviewItem: async () => ({
+            ...overview,
+            silentStale: true,
+            workerFreshProgressAlive: false,
+          }),
+        },
+      });
+      expect(staleSnapshot.debt).toEqual([
+        expect.objectContaining({
+          reason: ProjectDebtReason.StaleDirtyWorker,
+          subject: workspacePath,
+          severity: "blocking",
+        }),
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
