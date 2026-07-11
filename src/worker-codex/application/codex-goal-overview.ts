@@ -19,7 +19,10 @@ import {
 import {
   jobIdsFromValue,
 } from "./codex-goal-worker-control-view";
-import { buildCodexGoalOverviewItem } from "./codex-goal-overview-item";
+import {
+  buildCodexGoalOverviewItem,
+  buildCodexGoalOverviewItems,
+} from "./codex-goal-overview-item";
 import {
   codexOverviewItemToWatchStatus,
 } from "./codex-goal-watch-status";
@@ -56,15 +59,13 @@ export async function buildCodexGoalOverviewView(
   const selectedSummaries = limit ? matchingSummaries.slice(0, limit) : matchingSummaries;
   const staleAfterMs = numberValue(args.staleAfterMs) ?? 10 * 60_000;
   const tailLines = numberValue(args.tailLines) ?? 5;
-  const rawJobs = await Promise.all(
-    selectedSummaries.map((summary) =>
-      buildCodexGoalOverviewItem({
-        registryRootDir,
-        jobId: summary.jobId,
-        staleAfterMs,
-        tailLines,
-      })
-    ),
+  const rawJobs = await buildCodexGoalOverviewItems(
+    selectedSummaries.map((summary) => ({
+      registryRootDir,
+      jobId: summary.jobId,
+      staleAfterMs,
+      tailLines,
+    })),
   );
   const workspaceConflicts = await buildCodexGoalWorkspaceConflicts(rawJobs);
   const conflictJobIds = workspaceConflictJobIds(workspaceConflicts);

@@ -63,7 +63,7 @@ describe("Codex project admission snapshot", () => {
       };
       const deps: CodexProjectAdmissionDeps = {
         listJobs: async () => [reviewer],
-        buildOverviewItem: async () => overview,
+        buildOverviewItems: async () => [overview],
       };
 
       const liveSnapshot = await buildCodexProjectAdmissionSnapshot({
@@ -78,11 +78,11 @@ describe("Codex project admission snapshot", () => {
         scope,
         deps: {
           ...deps,
-          buildOverviewItem: async () => ({
+          buildOverviewItems: async () => [{
             ...overview,
             silentStale: true,
             workerFreshProgressAlive: false,
-          }),
+          }],
         },
       });
       expect(staleSnapshot.debt).toEqual([

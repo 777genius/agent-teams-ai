@@ -21,17 +21,30 @@ export type CodexGoalProcessSnapshot = {
   readonly appServerPid?: number;
 };
 
+export async function readCodexGoalProcessSnapshotRows(): Promise<
+  readonly CodexGoalProcessSnapshotRow[]
+> {
+  const { stdout } = await execFileAsync("ps", [
+    "-axo",
+    "pid=,ppid=,stat=,%cpu=,command=",
+  ], { timeout: 1_000 });
+  return parseProcessSnapshotRows(stdout);
+}
+
+export function inspectCodexGoalProcessSnapshotRows(
+  pid: number,
+  rows: readonly CodexGoalProcessSnapshotRow[],
+): CodexGoalProcessSnapshot {
+  return redactProcessSnapshot(summarizeCodexGoalProcessTree(pid, rows));
+}
+
 export async function inspectCodexGoalProcessSnapshot(
   pid: number,
 ): Promise<CodexGoalProcessSnapshot> {
   try {
-    const { stdout } = await execFileAsync("ps", [
-      "-axo",
-      "pid=,ppid=,stat=,%cpu=,command=",
-    ], { timeout: 1_000 });
-    const summary = summarizeCodexGoalProcessTree(
+    const summary = inspectCodexGoalProcessSnapshotRows(
       pid,
-      parseProcessSnapshotRows(stdout),
+      await readCodexGoalProcessSnapshotRows(),
     );
     if (
       summary.alive !== undefined ||
@@ -40,17 +53,7 @@ export async function inspectCodexGoalProcessSnapshot(
       summary.appServerAlive !== undefined ||
       summary.appServerPid !== undefined
     ) {
-      return {
-        ...(summary.alive === undefined ? {} : { alive: summary.alive }),
-        ...(summary.cpuActive === undefined ? {} : { cpuActive: summary.cpuActive }),
-        ...(summary.command === undefined ? {} : { command: redactStatusText(summary.command) }),
-        ...(summary.appServerAlive === undefined
-          ? {}
-          : { appServerAlive: summary.appServerAlive }),
-        ...(summary.appServerPid === undefined
-          ? {}
-          : { appServerPid: summary.appServerPid }),
-      };
+      return summary;
     }
   } catch {
     // Fall back to direct pid inspection below.
@@ -88,6 +91,24 @@ export async function inspectCodexGoalProcessSnapshot(
   } catch {
     return {};
   }
+}
+
+function redactProcessSnapshot(
+  summary: CodexGoalProcessSnapshot,
+): CodexGoalProcessSnapshot {
+  return {
+    ...(summary.alive === undefined ? {} : { alive: summary.alive }),
+    ...(summary.cpuActive === undefined ? {} : { cpuActive: summary.cpuActive }),
+    ...(summary.command === undefined
+      ? {}
+      : { command: redactStatusText(summary.command) }),
+    ...(summary.appServerAlive === undefined
+      ? {}
+      : { appServerAlive: summary.appServerAlive }),
+    ...(summary.appServerPid === undefined
+      ? {}
+      : { appServerPid: summary.appServerPid }),
+  };
 }
 
 export function summarizeCodexGoalProcessTree(

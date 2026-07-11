@@ -12,7 +12,7 @@ import {
   registryRootFromArgs,
   type ProjectControlMcpArgs,
 } from "./codex-goal-mcp-inputs";
-import { buildCodexGoalOverviewItem } from "./codex-goal-mcp-overview-item";
+import { buildCodexGoalOverviewItems } from "./codex-goal-mcp-overview-item";
 import {
   createCodexProjectControlBroker,
   type CodexProjectControlBrokerInput,
@@ -53,7 +53,7 @@ export async function loadProjectControlController(
 
 export const codexProjectAdmissionDeps: CodexProjectAdmissionDeps = {
   listJobs: listCodexGoalJobs,
-  buildOverviewItem: (input) => buildCodexGoalOverviewItem(input),
+  buildOverviewItems: (inputs) => buildCodexGoalOverviewItems(inputs),
 };
 
 export function codexProjectControlBroker(

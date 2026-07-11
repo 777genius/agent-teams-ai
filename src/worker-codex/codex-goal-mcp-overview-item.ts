@@ -1,1 +1,4 @@
-export { buildCodexGoalOverviewItem } from "./application/codex-goal-overview-item";
+export {
+  buildCodexGoalOverviewItem,
+  buildCodexGoalOverviewItems,
+} from "./application/codex-goal-overview-item";

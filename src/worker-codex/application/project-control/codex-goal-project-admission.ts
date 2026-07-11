@@ -34,12 +34,12 @@ export type CodexProjectAdmissionDeps = {
   readonly listJobs: (input: {
     readonly registryRootDir: string;
   }) => Promise<readonly CodexGoalJobSummary[]>;
-  readonly buildOverviewItem: (input: {
+  readonly buildOverviewItems: (inputs: readonly {
     readonly registryRootDir: string;
     readonly jobId: string;
     readonly staleAfterMs: number;
     readonly tailLines: number;
-  }) => Promise<JsonObject>;
+  }[]) => Promise<readonly JsonObject[]>;
 };
 
 type CodexProjectAdmissionInput = {
@@ -161,15 +161,13 @@ export async function buildCodexProjectAdmissionSnapshot(
     }
     overviewSummaries.push(summary);
   }
-  const overviewItems = await Promise.all(
-    overviewSummaries.map((summary) =>
-      input.deps.buildOverviewItem({
-        registryRootDir: input.registryRootDir,
-        jobId: summary.jobId,
-        staleAfterMs,
-        tailLines: 0,
-      })
-    ),
+  const overviewItems = await input.deps.buildOverviewItems(
+    overviewSummaries.map((summary) => ({
+      registryRootDir: input.registryRootDir,
+      jobId: summary.jobId,
+      staleAfterMs,
+      tailLines: 0,
+    })),
   );
   for (const item of overviewItems) {
     if (typeof item.workspacePath === "string") {

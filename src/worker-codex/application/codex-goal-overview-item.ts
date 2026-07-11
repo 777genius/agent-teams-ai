@@ -12,22 +12,45 @@ import { goalLaunchInput } from "./codex-goal-launch-input";
 import {
   codexGoalStatusInputFromLaunch as statusInput,
 } from "./codex-goal-status-input";
+import { mapCodexGoalObservations } from "./codex-goal-bounded-map";
+import {
+  createCodexGoalObservationContext,
+  type CodexGoalObservationContext,
+} from "./codex-goal-observation-context";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 
-export async function buildCodexGoalOverviewItem(input: {
+export type CodexGoalOverviewItemInput = {
   readonly registryRootDir: string;
   readonly jobId: string;
   readonly staleAfterMs: number;
   readonly tailLines: number;
-}): Promise<JsonObject> {
+  readonly observation?: CodexGoalObservationContext;
+};
+
+export async function buildCodexGoalOverviewItems(
+  inputs: readonly CodexGoalOverviewItemInput[],
+): Promise<readonly JsonObject[]> {
+  const observation = createCodexGoalObservationContext();
+  return mapCodexGoalObservations(
+    inputs,
+    (input) => buildCodexGoalOverviewItem({ ...input, observation }),
+  );
+}
+
+export async function buildCodexGoalOverviewItem(
+  input: CodexGoalOverviewItemInput,
+): Promise<JsonObject> {
   try {
     const manifest = await readCodexGoalJob({
       registryRootDir: input.registryRootDir,
       jobId: input.jobId,
     });
     const launch = await goalLaunchInput(codexGoalJobToArgs(manifest));
-    const status = await collectCodexGoalStatus(statusInput(launch));
+    const status = await collectCodexGoalStatus(
+      statusInput(launch),
+      input.observation,
+    );
     const accounts = await listCodexGoalAccountStatuses({
       authRootDir: launch.config.authRootDir,
       accounts: launch.config.accounts.map((account) => account.name),

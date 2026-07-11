@@ -33,6 +33,7 @@ import {
   tmuxCodexGoalStartFailedMessage,
 } from "./codex-goal-doctor";
 import { inspectCodexGoalProcessSnapshot } from "./codex-goal-process-snapshot";
+import type { CodexGoalObservationContext } from "./application/codex-goal-observation-context";
 import {
   fileExists,
   gitWorkspaceStatus,
@@ -403,6 +404,7 @@ export function stopCodexGoalDirectProcess(
 
 export async function collectCodexGoalStatus(
   input: CodexGoalStatusInput,
+  observation?: CodexGoalObservationContext,
 ): Promise<CodexGoalStatus> {
   const warnings: string[] = [];
   const resultPath = input.resultPath ?? (input.jobRootDir && input.taskId
@@ -424,7 +426,9 @@ export async function collectCodexGoalStatus(
     if (tmux.warning) warnings.push(tmux.warning);
   }
   const workspace = input.workspacePath
-    ? await gitWorkspaceStatus(input.workspacePath)
+    ? await (observation
+      ? observation.workspaceStatus(input.workspacePath)
+      : gitWorkspaceStatus(input.workspacePath))
     : {};
   if (workspace.warning) warnings.push(workspace.warning);
   const log = input.logPath ?? (input.jobRootDir && input.taskId
@@ -440,7 +444,9 @@ export async function collectCodexGoalStatus(
   const progress = progressPath ? await readCodexGoalProgressSummary(progressPath) : {};
   const progressProcess = progress.pid === undefined
     ? {}
-    : await inspectCodexGoalProcessSnapshot(progress.pid);
+    : await (observation
+      ? observation.processSnapshot(progress.pid)
+      : inspectCodexGoalProcessSnapshot(progress.pid));
   if (progress.warning) warnings.push(progress.warning);
   const runtimeEventsPath = input.jobRootDir && input.taskId
     ? codexGoalRuntimeEventsPath({

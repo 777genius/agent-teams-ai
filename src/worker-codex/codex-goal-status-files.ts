@@ -94,12 +94,16 @@ export async function readLastCodexGoalRuntimeEvent(path: string): Promise<{
   }
 }
 
-export async function gitWorkspaceStatus(path: string): Promise<{
+export type CodexGoalWorkspaceStatus = {
   readonly exists?: boolean;
   readonly dirty?: boolean;
   readonly changedFiles?: readonly string[];
   readonly warning?: string;
-}> {
+};
+
+export async function gitWorkspaceStatus(
+  path: string,
+): Promise<CodexGoalWorkspaceStatus> {
   try {
     const { stdout } = await execFileAsync("git", [
       "-C",
