@@ -1,6 +1,9 @@
 import { createRuntimeCoreProviderJsonParsingServices } from '@features/runtime-core/main';
 import { registerHttpRoutes } from '@main/http';
 import {
+  StandaloneOpenCodeRuntimeAdapterUnavailableError,
+} from '@main/services/team/provisioning/TeamProvisioningStandaloneOpenCodeBoundary';
+import {
   attachStandaloneTeamHttpServices,
   buildStandaloneTeamHttpServiceSlice,
   buildStandaloneTeamServices,
@@ -243,6 +246,50 @@ describe('standalone team HTTP route registration', () => {
     expect(teamProvisioningService.stopAllTeams).toHaveBeenCalledOnce();
     expect(memberWorkSyncFeature.dispose).toHaveBeenCalledOnce();
     expect(order).toEqual(['stopAllTeams', 'memberWorkSync.dispose']);
+  });
+
+  it('maps standalone OpenCode runtime-adapter boundary errors to HTTP 501', async () => {
+    const app = Fastify();
+    const launchTeam = vi.fn(async () => {
+      throw new StandaloneOpenCodeRuntimeAdapterUnavailableError();
+    });
+    const memberWorkSyncFeature = createMemberWorkSyncFeature();
+    const standaloneServices = {
+      httpServices: buildStandaloneTeamHttpServiceSlice({
+        teamDataService: createTeamDataApi(),
+        teamProvisioningService: {
+          ...createTeamProvisioningService(),
+          launchTeam,
+        },
+        memberWorkSyncFeature,
+      }),
+    };
+    const services = attachStandaloneTeamHttpServices(createBaseServices(), standaloneServices);
+    registerHttpRoutes(app, services, async () => undefined);
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/alpha/launch',
+        payload: {
+          cwd: '/repo',
+          providerId: 'opencode',
+        },
+      });
+
+      expect(response.statusCode).toBe(501);
+      expect(response.json()).toEqual({
+        error:
+          'OpenCode team launch is not available in standalone mode because the OpenCode runtime adapter is unavailable outside Electron.',
+      });
+      expect(launchTeam).toHaveBeenCalledWith(
+        expect.objectContaining({ teamName: 'alpha', providerId: 'opencode' }),
+        expect.any(Function)
+      );
+    } finally {
+      await app.close();
+    }
   });
 
   it('registers team routes from runtimeCore team use cases without legacy team service fields', async () => {

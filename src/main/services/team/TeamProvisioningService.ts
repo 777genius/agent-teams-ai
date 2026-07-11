@@ -157,6 +157,7 @@ import {
   type TeamProvisioningServiceMemberLifecycleHostPortGroups,
 } from './provisioning/TeamProvisioningServiceMemberLifecycleHostPortGroups';
 import { createTeamProvisioningShutdownCoordination } from './provisioning/TeamProvisioningShutdownCoordination';
+import { assertStandaloneOpenCodeRuntimeAdapterAvailableForServiceRequest } from './provisioning/TeamProvisioningStandaloneOpenCodeBoundary';
 import { createNodeStopPrimaryOwnedRosterRuntimeUseCase } from './provisioning/TeamProvisioningStopPrimaryOwnedRosterRuntimeUseCase';
 import {
   killOrphanedTeamAgentProcesses,
@@ -623,10 +624,18 @@ export class TeamProvisioningService extends TeamProvisioningServiceFacadeDelega
     this.teamChangeEmitter = emitter;
   }
 
+  private assertStandaloneOpenCodeRuntimeAdapterBoundary(request: {
+    providerId?: TeamCreateRequest['providerId'];
+    members?: TeamCreateRequest['members'];
+  }): void {
+    assertStandaloneOpenCodeRuntimeAdapterAvailableForServiceRequest(this, request);
+  }
+
   async createTeam(
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamCreateResponse> {
+    this.assertStandaloneOpenCodeRuntimeAdapterBoundary(request);
     return this.requestAdmissionBoundary.createTeam(request, onProgress);
   }
 
@@ -634,6 +643,7 @@ export class TeamProvisioningService extends TeamProvisioningServiceFacadeDelega
     request: TeamLaunchRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
+    this.assertStandaloneOpenCodeRuntimeAdapterBoundary(request);
     return this.requestAdmissionBoundary.launchTeam(request, onProgress);
   }
 }

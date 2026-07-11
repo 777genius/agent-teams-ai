@@ -1,3 +1,4 @@
+import { isStandaloneOpenCodeRuntimeAdapterUnavailableError } from '@main/services/team/provisioning/TeamProvisioningStandaloneOpenCodeBoundary';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -97,6 +98,9 @@ function getStatusCode(error: unknown, fallback: number = 500): number {
   if (error instanceof HttpFeatureUnavailableError) {
     return 501;
   }
+  if (isStandaloneOpenCodeRuntimeAdapterUnavailableError(error)) {
+    return 501;
+  }
   if (isRuntimeControlProviderRoutingError(error)) {
     return 501;
   }
@@ -130,6 +134,7 @@ function shouldLogError(error: unknown): boolean {
     statusCode >= 500 &&
     !(error instanceof HttpBadRequestError) &&
     !(error instanceof HttpFeatureUnavailableError) &&
+    !isStandaloneOpenCodeRuntimeAdapterUnavailableError(error) &&
     !isRuntimeControlProviderRoutingError(error)
   );
 }

@@ -5,6 +5,7 @@ import {
   bindTeamHttpDataApi,
   bindTeamHttpHandlerApis,
 } from './services/team/contracts/TeamProvisioningApis';
+import { enableStandaloneOpenCodeRuntimeAdapterBoundary } from './services/team/provisioning/TeamProvisioningStandaloneOpenCodeBoundary';
 import { TeamConfigReader } from './services/team/TeamConfigReader';
 import { TeamDataService } from './services/team/TeamDataService';
 import { TeamKanbanManager } from './services/team/TeamKanbanManager';
@@ -114,6 +115,7 @@ export function createStandaloneTeamServices(
 ): StandaloneTeamServices {
   const teamDataService = new TeamDataService();
   const teamProvisioningService = new TeamProvisioningService();
+  enableStandaloneOpenCodeRuntimeAdapterBoundary(teamProvisioningService);
   const memberWorkSyncFeature = createMemberWorkSyncFeature({
     teamsBasePath: getTeamsBasePath(),
     configReader: new TeamConfigReader(),

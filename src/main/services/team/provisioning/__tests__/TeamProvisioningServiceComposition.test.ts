@@ -8,6 +8,10 @@ import {
   TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS,
   TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS_ARE_EXHAUSTIVE,
 } from '../TeamProvisioningServiceComposition';
+import {
+  enableStandaloneOpenCodeRuntimeAdapterBoundary,
+  STANDALONE_OPENCODE_RUNTIME_ADAPTER_UNAVAILABLE_ERROR_NAME,
+} from '../TeamProvisioningStandaloneOpenCodeBoundary';
 
 const { cleanupStaleAnthropicTeamApiKeyHelpersMock } = vi.hoisted(() => ({
   cleanupStaleAnthropicTeamApiKeyHelpersMock: vi.fn(async () => undefined),
@@ -96,6 +100,58 @@ describe('TeamProvisioningServiceComposition', () => {
       alreadyLaunching: true,
     });
     expect(onProgress).not.toHaveBeenCalled();
+  });
+
+  it('rejects standalone OpenCode create and launch requests before admission', async () => {
+    const service = new TeamProvisioningService();
+    enableStandaloneOpenCodeRuntimeAdapterBoundary(service);
+    const onProgress = vi.fn();
+    const createRequest = {
+      teamName: 'alpha',
+      cwd: '/repo',
+      providerId: 'opencode',
+      members: [{ name: 'Lead', providerId: 'opencode' }],
+    } as CreateTeamRequestInput;
+    const launchRequest = {
+      teamName: 'alpha',
+      cwd: '/repo',
+      providerId: 'opencode',
+    } as LaunchTeamRequestInput;
+
+    await expect(service.createTeam(createRequest, onProgress)).rejects.toMatchObject({
+      name: STANDALONE_OPENCODE_RUNTIME_ADAPTER_UNAVAILABLE_ERROR_NAME,
+      statusCode: 501,
+    });
+    await expect(service.launchTeam(launchRequest, onProgress)).rejects.toMatchObject({
+      name: STANDALONE_OPENCODE_RUNTIME_ADAPTER_UNAVAILABLE_ERROR_NAME,
+      statusCode: 501,
+    });
+    expect(onProgress).not.toHaveBeenCalled();
+  });
+
+  it('does not change non-OpenCode admission behavior when standalone boundary is enabled', async () => {
+    const service = new TeamProvisioningService();
+    enableStandaloneOpenCodeRuntimeAdapterBoundary(service);
+    const onProgress = vi.fn();
+    const existingRunId = 'existing-run';
+    const provisioningRunByTeam = Reflect.get(service, 'provisioningRunByTeam') as Map<
+      string,
+      string
+    >;
+    const runs = Reflect.get(service, 'runs') as Map<string, object>;
+    provisioningRunByTeam.set('alpha', existingRunId);
+    runs.set(existingRunId, {});
+
+    await expect(
+      service.launchTeam(
+        { teamName: 'alpha', cwd: '/repo', providerId: 'codex' } as LaunchTeamRequestInput,
+        onProgress
+      )
+    ).resolves.toEqual({
+      runId: existingRunId,
+      launchStatus: 'already_launching',
+      alreadyLaunching: true,
+    });
   });
 
   it('runs the production runtime-control closure and validates its ingress payload', async () => {
