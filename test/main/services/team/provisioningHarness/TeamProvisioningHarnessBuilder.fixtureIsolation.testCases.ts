@@ -5,6 +5,7 @@ import {
   assertNoSecretLikeFixtureValues,
   collectSecretLikeFixtureValues,
   HARNESS_DEFAULT_NOW_ISO,
+  makeLaunchState,
   makeOpenCodeEvidence,
   makeProvisioningRun,
   makeRuntimeSnapshot,
@@ -88,6 +89,32 @@ describe('TeamProvisioningHarnessBuilder fixture isolation', () => {
     const secondRuntime = makeRuntimeSnapshot();
     firstRuntime.members.Builder!.alive = false;
     expect(secondRuntime.members.Builder?.alive).toBe(true);
+  });
+
+  it('does not mutate caller-owned launch-state members while filling expected defaults', () => {
+    const members = {
+      Existing: {
+        name: 'Existing',
+        launchState: 'confirmed_alive' as const,
+        agentToolAccepted: true,
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        hardFailure: false,
+        lastEvaluatedAt: HARNESS_DEFAULT_NOW_ISO,
+        diagnostics: [],
+      },
+    };
+
+    const snapshot = makeLaunchState({
+      expectedMembers: ['Builder'],
+      members,
+    });
+
+    expect(snapshot.members).toHaveProperty('Builder');
+    expect(members).toEqual({
+      Existing: expect.objectContaining({ name: 'Existing' }),
+    });
+    expect(members).not.toHaveProperty('Builder');
   });
 
   it('does not leak confirmed runtime defaults into non-confirmed OpenCode evidence', () => {

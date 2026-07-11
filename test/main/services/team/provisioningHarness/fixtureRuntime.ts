@@ -42,7 +42,7 @@ export function makeLaunchState(
     includeLeadMembers: options.includeLeadMembers,
     leadSessionId: options.leadSessionId ?? 'harness-lead-session',
     launchPhase: options.launchPhase,
-    members: options.members,
+    members: cloneFixture(options.members),
     updatedAt: options.updatedAt ?? HARNESS_DEFAULT_NOW_ISO,
   });
   assertNoSecretLikeFixtureValues(snapshot);
