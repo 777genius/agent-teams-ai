@@ -80,6 +80,13 @@ describe('createHostedWebTransportClient', () => {
           task: { taskId: 'task-1', subject: 'Ship it', status: 'pending' },
         });
       }
+      if (url.endsWith('/teams/team%2F1/terminal/sessions')) {
+        return jsonResponse({
+          terminalSessionId: 'session-1',
+          webSocketUrl: 'wss://hosted.example/api/hosted/v1/terminal/session-1',
+          expiresAt: '2026-07-10T00:00:00.000Z',
+        });
+      }
       return jsonResponse(
         { error: { code: '/api/hosted/v1/errors/not_found', message: 'not found' } },
         false,
@@ -106,12 +113,17 @@ describe('createHostedWebTransportClient', () => {
     await expect(client.createTask('team/1', { subject: 'Ship it' })).resolves.toMatchObject({
       task: { taskId: 'task-1' },
     });
+    await expect(client.createTerminalSession('team/1', {})).resolves.toMatchObject({
+      terminalSessionId: 'session-1',
+      webSocketUrl: 'wss://hosted.example/api/hosted/v1/terminal/session-1',
+    });
 
     expect(calls.map((call) => call.url)).toEqual([
       'https://hosted.example/api/hosted/v1/teams',
       'https://hosted.example/api/hosted/v1/teams/team%2F1',
       'https://hosted.example/api/hosted/v1/teams/team%2F1/launch',
       'https://hosted.example/api/hosted/v1/teams/team%2F1/tasks',
+      'https://hosted.example/api/hosted/v1/teams/team%2F1/terminal/sessions',
     ]);
     expect(calls[2].init?.body).toBe(
       JSON.stringify({
@@ -177,7 +189,10 @@ describe('createHostedWebTransportClient', () => {
       'event-2'
     );
     expect(onParseError).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'sse_parse', code: '/api/hosted/v1/errors/sse_parse_failed' })
+      expect.objectContaining({
+        kind: 'sse_parse',
+        code: '/api/hosted/v1/errors/sse_parse_failed',
+      })
     );
 
     MockEventSource.instances[0]?.emit('error', '');
@@ -193,6 +208,7 @@ describe('createHostedWebTransportClient', () => {
     MockEventSource.instances = [];
     MockWebSocket.instances = [];
     const client = createHostedWebTransportClient({
+      baseUrl: 'https://hosted.example',
       fetch: vi.fn() as HostedWebFetch,
       EventSource: MockEventSource as unknown as HostedWebEventSourceConstructor,
       WebSocket: MockWebSocket as unknown as HostedWebSocketConstructor,
@@ -203,7 +219,7 @@ describe('createHostedWebTransportClient', () => {
     expect(MockEventSource.instances[0]?.listeners.has('hosted.terminal.bytes')).toBe(false);
 
     client.openTerminalStream({
-      webSocketUrl: 'wss://hosted.example/api/hosted/v1/terminal/session-1',
+      terminalSessionId: 'session-1',
       protocols: 'agent-teams-terminal.v1',
     });
     expect(MockWebSocket.instances).toHaveLength(1);
@@ -215,7 +231,9 @@ describe('createHostedWebTransportClient', () => {
 
   it('normalizes hosted HTTP error codes under /api/hosted/v1', async () => {
     const client = createHostedWebTransportClient({
-      fetch: vi.fn(async () => jsonResponse({ error: { code: 'not_found', message: 'No' } }, false, 404)),
+      fetch: vi.fn(async () =>
+        jsonResponse({ error: { code: 'not_found', message: 'No' } }, false, 404)
+      ),
     });
 
     await expect(client.listTeams()).rejects.toMatchObject({
@@ -225,6 +243,119 @@ describe('createHostedWebTransportClient', () => {
       code: '/api/hosted/v1/errors/not_found',
     });
     await expect(client.listTeams()).rejects.toBeInstanceOf(HostedWebTransportError);
+  });
+
+  it('rejects successful HTTP JSON that does not match the expected response shape', async () => {
+    const client = createHostedWebTransportClient({
+      fetch: vi.fn(async () => jsonResponse({ teams: [{ teamId: 'team-1' }] })),
+    });
+
+    await expect(client.listTeams()).rejects.toMatchObject({
+      name: 'HostedWebTransportError',
+      kind: 'response_validation',
+      status: 200,
+      route: '/api/hosted/v1/teams',
+      code: '/api/hosted/v1/errors/invalid_response',
+      message: 'Hosted web response did not match the expected schema',
+    });
+  });
+
+  it('reads error bodies once and does not expose backend text in renderer errors', async () => {
+    const text = vi.fn(async () =>
+      JSON.stringify({
+        error: {
+          code: '../../../Users/name/project/provider_payload',
+          message: 'Provider failed at /Users/name/project with token sk-secret',
+        },
+      })
+    );
+    const json = vi.fn(async () => {
+      throw new Error('json() must not be used for error bodies');
+    });
+    const client = createHostedWebTransportClient({
+      fetch: vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        json,
+        text,
+      })),
+    });
+
+    let error: unknown;
+    try {
+      await client.listTeams();
+    } catch (caught) {
+      error = caught;
+    }
+
+    expect(error).toMatchObject({
+      name: 'HostedWebTransportError',
+      kind: 'http',
+      status: 500,
+      route: '/api/hosted/v1/teams',
+      code: '/api/hosted/v1/errors/http_500',
+      message: 'Hosted web request failed with status 500',
+    });
+    expect(error).toBeInstanceOf(HostedWebTransportError);
+    expect(error instanceof Error ? error.message : String(error)).not.toContain(
+      '/Users/name/project'
+    );
+    expect(text).toHaveBeenCalledTimes(1);
+    expect(json).not.toHaveBeenCalled();
+  });
+
+  it('rejects unsafe terminal WebSocket targets from session responses and stream calls', async () => {
+    MockWebSocket.instances = [];
+    const client = createHostedWebTransportClient({
+      baseUrl: 'https://hosted.example',
+      fetch: vi.fn(async () =>
+        jsonResponse({
+          terminalSessionId: 'session-1',
+          webSocketUrl: 'wss://evil.example/api/hosted/v1/terminal/session-1',
+          expiresAt: '2026-07-10T00:00:00.000Z',
+        })
+      ),
+      WebSocket: MockWebSocket as unknown as HostedWebSocketConstructor,
+    });
+
+    await expect(client.createTerminalSession('team-1', {})).rejects.toMatchObject({
+      name: 'HostedWebTransportError',
+      kind: 'response_validation',
+      code: '/api/hosted/v1/errors/invalid_response',
+      message: 'Hosted web response did not match the expected schema',
+    });
+
+    expect(() =>
+      client.openTerminalStream({
+        webSocketUrl: 'https://hosted.example/api/hosted/v1/terminal/session-1',
+      })
+    ).toThrow(/terminal stream target is not allowed/);
+    expect(() =>
+      client.openTerminalStream({
+        webSocketUrl: 'wss://hosted.example/api/hosted/v1/teams/team-1/terminal/sessions',
+      })
+    ).toThrow(/terminal stream target is not allowed/);
+    expect(() =>
+      client.openTerminalStream({
+        webSocketUrl: 'api/hosted/v1/terminal/session-1',
+      })
+    ).toThrow(/terminal stream target is not allowed/);
+    expect(() =>
+      client.openTerminalStream({
+        webSocketUrl: '//evil.example/api/hosted/v1/terminal/session-1',
+      })
+    ).toThrow(/terminal stream target is not allowed/);
+    expect(() =>
+      client.openTerminalStream({
+        webSocketUrl: 'wss://hosted.example/api/hosted/v1/terminal/session-1?token=secret',
+      })
+    ).toThrow(/terminal stream target is not allowed/);
+    expect(() =>
+      client.openTerminalStream({
+        webSocketUrl: 'wss://hosted.example/api/hosted/v1/terminal/session-1#token',
+      })
+    ).toThrow(/terminal stream target is not allowed/);
+    expect(MockWebSocket.instances).toHaveLength(0);
   });
 });
 

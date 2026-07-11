@@ -1,10 +1,10 @@
 import type {
-  EffortLevel,
-  TeamFastMode,
-  TeamProviderId,
-  TeamReviewState,
-  TeamTaskStatus,
-} from '@shared/types/team';
+  HostedWebEffortLevel,
+  HostedWebTeamFastMode,
+  HostedWebTeamProviderId,
+  HostedWebTeamReviewState,
+  HostedWebTeamTaskStatus,
+} from './primitives';
 
 export const HOSTED_WEB_API_BASE = '/api/hosted/v1';
 export const HOSTED_WEB_ERROR_CODE_PREFIX = `${HOSTED_WEB_API_BASE}/errors/` as const;
@@ -39,10 +39,10 @@ export interface HostedWebProjectSummary {
 }
 
 export interface HostedWebProviderSelection {
-  providerId: TeamProviderId;
+  providerId: HostedWebTeamProviderId;
   modelId?: string;
-  effort?: EffortLevel;
-  fastMode?: TeamFastMode;
+  effort?: HostedWebEffortLevel;
+  fastMode?: HostedWebTeamFastMode;
 }
 
 export interface HostedWebTeamMemberSummary {
@@ -60,9 +60,9 @@ export interface HostedWebTaskSummary {
   taskId: HostedWebTaskId;
   displayId?: string;
   subject: string;
-  status: TeamTaskStatus;
+  status: HostedWebTeamTaskStatus;
   ownerMemberId?: HostedWebMemberId;
-  reviewState?: TeamReviewState;
+  reviewState?: HostedWebTeamReviewState;
   blockedBy?: HostedWebTaskId[];
   related?: HostedWebTaskId[];
   createdAt?: string;
@@ -96,7 +96,7 @@ export interface HostedWebTeamsListResponse {
 }
 
 export interface HostedWebKanbanColumn {
-  status: TeamTaskStatus | 'review' | 'approved';
+  status: HostedWebTeamTaskStatus | 'review' | 'approved';
   taskIds: HostedWebTaskId[];
 }
 

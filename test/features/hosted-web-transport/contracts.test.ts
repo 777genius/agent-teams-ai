@@ -111,6 +111,85 @@ describe('hosted web transport contracts', () => {
     ).toThrow(/cursor mismatch/);
   });
 
+  it('validates nested SSE team, task, and member payload fields', () => {
+    const snapshotEvent: HostedWebEvent = {
+      type: 'hosted.team.snapshot',
+      eventId: 'event-snapshot',
+      teamId: 'demo-team',
+      emittedAt: '2026-07-10T00:00:00.000Z',
+      payload: {
+        team: {
+          teamId: 'demo-team',
+          displayName: 'Demo Team',
+          description: '',
+          project: null,
+          members: [
+            {
+              memberId: 'lead',
+              displayName: 'Lead',
+              provider: { providerId: 'codex', modelId: 'gpt-5.2', effort: 'high' },
+              currentTaskId: null,
+              taskCount: 1,
+            },
+          ],
+          taskCount: 1,
+          lastActivity: null,
+          runtime: { isAlive: true, terminalAvailable: true, activeProcessCount: 1 },
+        },
+        tasks: [{ taskId: 'task-1', subject: 'Validate payloads', status: 'pending' }],
+        kanban: [{ status: 'pending', taskIds: ['task-1'] }],
+        revision: 'rev-1',
+      },
+    };
+    expect(parseHostedWebSseEvent('hosted.team.snapshot', JSON.stringify(snapshotEvent))).toEqual(
+      snapshotEvent
+    );
+
+    expect(() =>
+      parseHostedWebSseEvent(
+        'hosted.team.snapshot',
+        JSON.stringify({
+          ...snapshotEvent,
+          payload: {
+            ...snapshotEvent.payload,
+            team: {
+              ...snapshotEvent.payload.team,
+              members: [
+                {
+                  ...snapshotEvent.payload.team.members[0],
+                  provider: { providerId: 'unsafe-provider' },
+                },
+              ],
+            },
+          },
+        })
+      )
+    ).toThrow(/provider\.providerId/);
+
+    const memberMessageEvent: HostedWebEvent = {
+      type: 'hosted.member.message',
+      eventId: 'event-message',
+      teamId: 'demo-team',
+      emittedAt: '2026-07-10T00:00:00.000Z',
+      payload: {
+        messageId: 'message-1',
+        fromMemberId: 'lead',
+        summary: 'Done',
+        body: 'Task finished',
+        createdAt: '2026-07-10T00:00:00.000Z',
+      },
+    };
+    expect(() =>
+      parseHostedWebSseEvent(
+        'hosted.member.message',
+        JSON.stringify({
+          ...memberMessageEvent,
+          payload: { ...memberMessageEvent.payload, summary: 42 },
+        })
+      )
+    ).toThrow(/payload\.summary/);
+  });
+
   it('keeps hosted error payloads namespaced under /api/hosted/v1', () => {
     const namespaced = hostedWebErrorCode('not_found');
     expect(namespaced).toBe(`${HOSTED_WEB_ERROR_CODE_PREFIX}not_found`);
