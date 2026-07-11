@@ -119,36 +119,42 @@ export class RuntimeControlService {
   }
 
   recordBootstrapCheckin(command: RuntimeBootstrapCheckinCommand): Promise<RuntimeControlAck> {
-    const handler = this.providers.requireOperation(command.providerId, 'recordBootstrapCheckin');
-    return this.withRecordedEvent(command, () => handler.recordBootstrapCheckin!(command));
+    return this.withRecordedEvent(command, () => {
+      const handler = this.providers.requireOperation(command.providerId, 'recordBootstrapCheckin');
+      return handler.recordBootstrapCheckin!(command);
+    });
   }
 
   deliverMessage(command: RuntimeDeliverMessageCommand): Promise<RuntimeControlAck> {
-    const handler = this.providers.requireOperation(command.providerId, 'deliverMessage');
-    return this.withRecordedEvent(command, () =>
-      this.deliveryWriteFence.runExclusive(buildDeliveryWriteFenceKey(command), () =>
+    return this.withRecordedEvent(command, () => {
+      const handler = this.providers.requireOperation(command.providerId, 'deliverMessage');
+      return this.deliveryWriteFence.runExclusive(buildDeliveryWriteFenceKey(command), () =>
         handler.deliverMessage!(command)
-      )
-    );
+      );
+    });
   }
 
   recordTaskEvent(command: RuntimeTaskEventCommand): Promise<RuntimeControlAck> {
-    const handler = this.providers.requireOperation(command.providerId, 'recordTaskEvent');
-    return this.withRecordedEvent(command, () => handler.recordTaskEvent!(command));
+    return this.withRecordedEvent(command, () => {
+      const handler = this.providers.requireOperation(command.providerId, 'recordTaskEvent');
+      return handler.recordTaskEvent!(command);
+    });
   }
 
   recordHeartbeat(command: RuntimeHeartbeatCommand): Promise<RuntimeControlAck> {
-    const handler = this.providers.requireOperation(command.providerId, 'recordHeartbeat');
-    return this.withRecordedEvent(command, () => handler.recordHeartbeat!(command));
+    return this.withRecordedEvent(command, () => {
+      const handler = this.providers.requireOperation(command.providerId, 'recordHeartbeat');
+      return handler.recordHeartbeat!(command);
+    });
   }
 
   answerPermission(command: RuntimePermissionAnswerCommand): Promise<RuntimeControlAck> {
-    const handler = this.providers.requireOperation(command.providerId, 'answerPermission');
-    return this.withRecordedEvent(command, () =>
-      this.deliveryWriteFence.runExclusive(buildPermissionAnswerWriteFenceKey(command), () =>
+    return this.withRecordedEvent(command, () => {
+      const handler = this.providers.requireOperation(command.providerId, 'answerPermission');
+      return this.deliveryWriteFence.runExclusive(buildPermissionAnswerWriteFenceKey(command), () =>
         handler.answerPermission!(command)
-      )
-    );
+      );
+    });
   }
 
   private async withRecordedEvent(

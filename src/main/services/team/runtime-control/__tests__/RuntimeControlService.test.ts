@@ -69,8 +69,12 @@ describe('RuntimeControlService', () => {
 
     const messages: string[] = [];
     for (let attempt = 0; attempt < 2; attempt += 1) {
+      let result!: Promise<RuntimeControlAck>;
+      expect(() => {
+        result = service.recordBootstrapCheckin(command);
+      }).not.toThrow();
       try {
-        await service.recordBootstrapCheckin(command);
+        await result;
       } catch (error) {
         expect(error).toBeInstanceOf(RuntimeControlProviderRoutingError);
         expect(error).toMatchObject({
@@ -95,8 +99,12 @@ describe('RuntimeControlService', () => {
 
     const messages: string[] = [];
     for (let attempt = 0; attempt < 2; attempt += 1) {
+      let result!: Promise<RuntimeControlAck>;
+      expect(() => {
+        result = service.deliverMessage(command);
+      }).not.toThrow();
       try {
-        await service.deliverMessage(command);
+        await result;
       } catch (error) {
         expect(error).toBeInstanceOf(RuntimeControlProviderRoutingError);
         expect(error).toMatchObject({
