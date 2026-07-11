@@ -201,24 +201,24 @@ An orchestration layer for AI agent teams across Claude, Codex, and OpenCode.
 
 | Feature | Agent Teams | Gas Town | Paperclip | Cursor | Claude Code CLI |
 |---|---|---|---|---|---|
+| **Live team collaboration** | ✅ █████████░ 9/10 · Agents plan, delegate, work, and review together | ✅ ████████░░ 8/10 · Persistent teams with coordination and recovery | ⚠️ ███████░░░ 7/10 · Durable scheduled agents, less live peer teamwork | ⚠️ ██████░░░░ 6/10 · Parallel agents coordinated by one parent | ⚠️ ███████░░░ 7/10 · Experimental teams with recovery limits |
+| **Human control and approvals** | ✅ Per-action approvals, roles, and notifications | ✅ Gates, roles, escalation, recovery | ✅ Board approvals, roles, pause, stop | ⚠️ Command controls and admin policies | ✅ Permissions + hooks |
+| **Visual team progress** | ✅ Teammates, tasks, blockers, handoffs, activity, logs | ⚠️ Agent tree + feed panels | ⚠️ Org chart and run status, not a task/log map | ⚠️ Agents Window, no shared peer-team map | ⚠️ Terminal team panel, no graphical UI |
+| **Team workspace** | ✅ Tasks, code, terminal, review, and teammates in one app | ⚠️ Mail/feed/dashboard across tools | ⚠️ Board + transcripts, less live teammate view | ⚠️ IDE chats/tasks, not team view | ❌ No desktop UI |
+| **Easy setup** | ✅ Start free, no signup or API key | ❌ Manual CLI stack | ⚠️ One `npx` terminal command, less convenient than an app | ⚠️ App install + account | ⚠️ CLI + env flag |
+| **Agent readiness and recovery** | ✅ Clear ready/stuck status with launch diagnostics | ✅ Working/stalled/failed health with recovery controls | ⚠️ Run status and orphan recovery | ⚠️ Agent status in Agents Window | ⚠️ Statuses in terminal, no graphical UI |
+| **Kanban board** | ✅ 5 columns, real-time | ❌ Dashboard, not Kanban | ✅ 7 columns, drag-and-drop | ❌ | ❌ |
+| **Code review** | ✅ Agent review plus accept, reject, and comment in the app | ⚠️ Merge queue, no diff UI | ⚠️ Approvals, but code review happens elsewhere | ✅ Accept / reject individual changes | ⚠️ Agent review, no review UI |
 | **Cross-team communication** | ✅ Direct agent messages and shared task links across teams | ⚠️ Mailboxes + handoffs | ⚠️ Comments + @mentions | N/A | ❌ |
 | **Linked tasks** | ✅ Tasks can link to and block each other | ✅ Task deps + grouped work | ✅ Goals, parent tasks, blockers | ❌ | ✅ Shared task list |
 | **Agent activity and history** | ✅ Messages, tool calls, timeline, token use, and cost | ⚠️ Session recall, feed, metrics | ⚠️ Run transcripts + cost audit | ⚠️ Agent chat + terminal | ⚠️ CLI transcripts + background logs |
-| **Task attachments** | ✅ Auto-attach, agents read & attach files | ❌ Not task-level | ✅ Docs, attachments, work products | ⚠️ Chat session only | ⚠️ Chat images only |
-| **Code review** | ✅ Agent review plus accept, reject, and comment in the app | ⚠️ Merge queue, no diff UI | ⚠️ Approvals, but code review happens elsewhere | ✅ Accept / reject individual changes | ⚠️ Agent review, no review UI |
-| **Built-in code editor** | ✅ With Git support | ❌ | ❌ Control plane, not editor | ✅ Full IDE | ❌ |
-| **Terminal** | ✅ Built-in visual terminal for team and local commands | ⚠️ Terminal-based workflow, no built-in terminal | ⚠️ Runs commands, no interactive terminal | ✅ Built-in IDE terminal | ⚠️ Runs in your terminal |
-| **Live team collaboration** | ✅ █████████░ 9/10 · Agents plan, delegate, work, and review together | ✅ ████████░░ 8/10 · Persistent teams with coordination and recovery | ⚠️ ███████░░░ 7/10 · Durable scheduled agents, less live peer teamwork | ⚠️ ██████░░░░ 6/10 · Parallel agents coordinated by one parent | ⚠️ ███████░░░ 7/10 · Experimental teams with recovery limits |
-| **Easy setup** | ✅ Start free, no signup or API key | ❌ Manual CLI stack | ⚠️ One `npx` terminal command, less convenient than an app | ⚠️ App install + account | ⚠️ CLI + env flag |
-| **Kanban board** | ✅ 5 columns, real-time | ❌ Dashboard, not Kanban | ✅ 7 columns, drag-and-drop | ❌ | ❌ |
-| **Human control and approvals** | ✅ Per-action approvals, roles, and notifications | ✅ Gates, roles, escalation, recovery | ✅ Board approvals, roles, pause, stop | ⚠️ Command controls and admin policies | ✅ Permissions + hooks |
-| **Separate agent workspaces** | ✅ Optional workspace per teammate | ✅ Core primitive | ✅ Worktrees / branches | ✅ Agents Window worktrees | ✅ Built-in for sessions and subagents |
-| **Mixed AI teammates** | ✅ Claude, Codex, and OpenCode in one team | ✅ Many providers, terminal-first | ✅ Bring your own agents/runtimes | ⚠️ Multi-model agents, no shared team | ⚠️ Claude-only experimental teams |
-| **Visual team progress** | ✅ Teammates, tasks, blockers, handoffs, activity, logs | ⚠️ Agent tree + feed panels | ⚠️ Org chart and run status, not a task/log map | ⚠️ Agents Window, no shared peer-team map | ⚠️ Terminal team panel, no graphical UI |
 | **Organizations & global overview** | ✅ Nested groups, live team/task status, relations, cross-team activity | ⚠️ Coordination hierarchy, no editable org map | ✅ Org chart + board governance | ⚠️ Team admin, no live org map | ❌ |
-| **Team workspace** | ✅ Tasks, code, terminal, review, and teammates in one app | ⚠️ Mail/feed/dashboard across tools | ⚠️ Board + transcripts, less live teammate view | ⚠️ IDE chats/tasks, not team view | ❌ No desktop UI |
-| **Agent readiness and recovery** | ✅ Clear ready/stuck status with launch diagnostics | ✅ Working/stalled/failed health with recovery controls | ⚠️ Run status and orphan recovery | ⚠️ Agent status in Agents Window | ⚠️ Statuses in terminal, no graphical UI |
+| **Mixed AI teammates** | ✅ Claude, Codex, and OpenCode in one team | ✅ Many providers, terminal-first | ✅ Bring your own agents/runtimes | ⚠️ Multi-model agents, no shared team | ⚠️ Claude-only experimental teams |
 | **Budget controls** | ✅ Budget alerts + hard caps for scheduled runs | ⚠️ Cost tiers + digest, no hard caps | ✅ Per-agent budgets + hard stops | ⚠️ Usage + cloud spend limits | ⚠️ `/usage` + workspace limits |
+| **Separate agent workspaces** | ✅ Optional workspace per teammate | ✅ Core primitive | ✅ Worktrees / branches | ✅ Agents Window worktrees | ✅ Built-in for sessions and subagents |
+| **Terminal** | ✅ Built-in visual terminal for team and local commands | ⚠️ Terminal-based workflow, no built-in terminal | ⚠️ Runs commands, no interactive terminal | ✅ Built-in IDE terminal | ⚠️ Runs in your terminal |
+| **Built-in code editor** | ✅ With Git support | ❌ | ❌ Control plane, not editor | ✅ Full IDE | ❌ |
+| **Task attachments** | ✅ Auto-attach, agents read & attach files | ❌ Not task-level | ✅ Docs, attachments, work products | ⚠️ Chat session only | ⚠️ Chat images only |
 | **Price** | **Free OSS UI + free model with no auth**, paid providers optional | Free OSS, runtime plans needed | Free OSS, self-hosted + infra | Free + paid usage | Claude plan or API usage |
 
 *Live collaboration scores measure how well agents communicate, divide work, and complete complex tasks together.*
