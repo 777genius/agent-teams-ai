@@ -111,7 +111,8 @@ function isOpenCodeRuntimeValidationError(error: unknown): boolean {
   return (
     error instanceof Error &&
     (error.message.startsWith('OpenCode runtime payload ') ||
-      error.message.startsWith('OpenCode runtime permission '))
+      error.message.startsWith('OpenCode runtime permission ') ||
+      error.message.startsWith('Runtime delivery envelope '))
   );
 }
 

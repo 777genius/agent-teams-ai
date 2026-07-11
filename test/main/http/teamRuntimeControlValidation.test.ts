@@ -60,6 +60,37 @@ function createRuntimeControlApi(overrides: Partial<TeamRuntimeControlCompatibil
 }
 
 describe('HTTP team runtime-control validation', () => {
+  it('maps missing runtime delivery idempotency identifiers to 400', async () => {
+    const deliverOpenCodeRuntimeMessage =
+      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
+    deliverOpenCodeRuntimeMessage.mockRejectedValueOnce(
+      new Error('Runtime delivery envelope missing idempotencyKey')
+    );
+    const app = Fastify();
+    registerTeamRoutes(
+      app,
+      createHttpServices(createRuntimeControlApi({ deliverOpenCodeRuntimeMessage }))
+    );
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/deliver-message',
+        payload: {
+          runId: 'run-opencode',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        error: 'Runtime delivery envelope missing idempotencyKey',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
   it('maps OpenCode runtime permission validation failures to 400', async () => {
     const answerOpenCodeRuntimePermission =
       vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
