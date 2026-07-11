@@ -161,6 +161,27 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
   });
 
+  it('requires execution proof when a runtime-only caller starts a real launch', async () => {
+    const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-authless-launch')),
+      launchOpenCodeTeam: vi.fn(async () => successfulOpenCodeLaunchData()),
+    });
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
+
+    await adapter.launch(
+      launchInput({
+        model: 'cursor-acp/auto',
+        runtimeOnly: true,
+      })
+    );
+
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith({
+      projectPath: '/repo',
+      selectedModel: 'cursor-acp/auto',
+      requireExecutionProbe: true,
+    });
+  });
+
   it('launches isolated worktrees with the member worktree as the OpenCode project path', async () => {
     const worktreePath = '/tmp/generated-worktrees/alice';
     const launchOpenCodeTeam = vi.fn<

@@ -268,7 +268,11 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     let selectedModel = input.model?.trim() ?? '';
     let launchWarnings: string[] = [];
     if (!skipReadinessPreflight) {
-      const prepared = await this.prepare(input);
+      // A state-changing launch must never inherit a caller's compatibility-only
+      // preflight. Authless subscription bridges such as Cursor ACP are present
+      // in the catalog without an OpenCode credential and therefore require a
+      // real execution proof before launch, including controlled retries.
+      const prepared = await this.prepare({ ...input, runtimeOnly: false });
       if (!prepared.ok) {
         return blockedLaunchResult(input, prepared.reason, prepared.diagnostics, prepared.warnings);
       }
