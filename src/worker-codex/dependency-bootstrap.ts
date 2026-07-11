@@ -1,13 +1,18 @@
 import { createHash } from "node:crypto";
 import { access, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { arch, platform } from "node:os";
-import { basename, dirname, isAbsolute, join } from "node:path";
+import { basename, join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import {
   type DependencyBootstrapLockResult,
   withDependencyBootstrapLock,
 } from "./dependency-bootstrap-lock";
+import {
+  resolveDependencyCacheRoot,
+} from "./dependency-cache-placement";
+
+export { defaultDependencyCacheRoot, dependencyCacheNamespace } from "./dependency-cache-placement";
 
 const execFileAsync = promisify(execFile);
 
@@ -80,7 +85,7 @@ export async function runDependencyBootstrap(
 ): Promise<DependencyPreflightResult> {
   const mode = input.mode ?? "preflight";
   const preflight = await inspectDependencyBootstrap(input.workspacePath, mode);
-  const cacheRoot = defaultDependencyCacheRoot(input);
+  const cacheRoot = await resolveDependencyCacheRoot(input);
   let withCommand = attachInstallCommand(preflight, cacheRoot);
 
   if (input.jobRootDir) {
@@ -193,41 +198,6 @@ export async function inspectDependencyBootstrap(
     status: nodeModulesExists ? "ready" : "deps_missing",
     warnings: nodeModulesExists ? [] : ["node_modules_missing"],
   };
-}
-
-export function defaultDependencyCacheRoot(input: {
-  readonly workspacePath: string;
-  readonly jobRootDir?: string;
-  readonly cacheRoot?: string;
-  readonly cacheNamespace?: string;
-}): string | undefined {
-  if (input.cacheRoot) {
-    if (!isAbsolute(input.cacheRoot)) {
-      throw new Error("dependency_cache_root_must_be_absolute");
-    }
-    return input.cacheRoot;
-  }
-  const configuredRoot = process.env.SUBSCRIPTION_RUNTIME_DEPENDENCY_CACHE_ROOT?.trim();
-  if (configuredRoot) {
-    if (!isAbsolute(configuredRoot)) {
-      throw new Error("dependency_cache_root_must_be_absolute");
-    }
-    return join(
-      configuredRoot,
-      dependencyCacheNamespace(input.cacheNamespace ?? input.workspacePath),
-    );
-  }
-  if (!input.jobRootDir) return undefined;
-  return join(dirname(input.jobRootDir), ".dependency-cache");
-}
-
-export function dependencyCacheNamespace(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48) || "project";
-  return `${slug}-${hashStrings([value]).slice(0, 12)}`;
 }
 
 async function runPackageManagerInstall(input: {

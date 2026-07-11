@@ -46,6 +46,28 @@ Operators configure one absolute host path:
 export SUBSCRIPTION_RUNTIME_DEPENDENCY_CACHE_ROOT=/mnt/worker-volume/agent-dependency-cache
 ```
 
+On hosts with worktrees on multiple filesystems, configure an operator-owned
+placement file instead:
+
+```bash
+export SUBSCRIPTION_RUNTIME_DEPENDENCY_CACHE_CONFIG=/etc/hosted-agent-ops/dependency-cache-placements.json
+```
+
+```json
+{
+  "schemaVersion": 1,
+  "placements": [
+    { "workspaceRoot": "/var/data/workspaces", "cacheRoot": "/var/data/agent-dependency-cache" },
+    { "workspaceRoot": "/mnt/worker-volume/worktrees", "cacheRoot": "/mnt/worker-volume/agent-dependency-cache" }
+  ]
+}
+```
+
+The most specific matching workspace root wins. The runtime rejects symlinked,
+group-writable or world-writable config files and fails closed when no placement
+matches. The legacy single-root variable remains suitable for one-filesystem
+hosts.
+
 The runtime adds a stable project namespace so unrelated projects do not share
 lock or lifecycle state. Workers cannot choose this environment variable.
 
