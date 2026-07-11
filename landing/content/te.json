@@ -20,6 +20,21 @@
       "description": "ప్రతి task కి diff view, accept, reject, comment. Git support తో built-in code editor."
     },
     {
+      "id": "tokenUsage",
+      "title": "టోకెన్ విశ్లేషణ & బడ్జెట్లు",
+      "description": "టీమ్‌లు, ఏజెంట్లు, టాస్క్‌లు, ప్రాజెక్ట్‌లు, మోడల్‌లు మరియు రన్‌లలో టోకెన్లు, అంచనా ఖర్చు ఎక్కడ వినియోగమవుతున్నాయో చూడండి. ఖరీదైన పనిని గుర్తించండి, ట్రెండ్‌లు మరియు అంచనాలను ట్రాక్ చేయండి, నెలవారీ బడ్జెట్లు సెట్ చేసి 80% మరియు 100% వద్ద అలర్ట్‌లు పొందండి."
+    },
+    {
+      "id": "organizations",
+      "title": "సంస్థలు & గ్లోబల్ అవలోకనం",
+      "description": "టీమ్‌లను విభాగాలు, స్క్వాడ్లు లేదా ఏ నెస్టెడ్ నిర్మాణంలోనైనా ఏర్పాటు చేయండి. ఒకే లైవ్ మ్యాప్‌లో అన్ని సంస్థలు, టీమ్ మరియు ఏజెంట్ స్థితులు, టాస్క్ పురోగతి, డిపెండెన్సీలు, డెలిగేషన్ మరియు టీమ్‌ల మధ్య కమ్యూనికేషన్‌ను చూడండి."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Team మరియు local shells, history, autocomplete, settings ఉన్న visual terminal workspace లో commands run చేయండి."
+    },
+    {
       "id": "crossTeam",
       "title": "టీమ్‌ల మధ్య కమ్యూనికేషన్",
       "description": "Agents ఒకే టీమ్‌లోనూ, టీమ్‌ల మధ్యనూ message చేస్తాయి. Direct messages, task comments, quick actions."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Solo mode",
       "description": "తన tasks తానే నిర్వహించే ఒక agent తో ప్రారంభించండి. మరింత power కావాలంటే full team గా విస్తరించండి."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Live processes",
-      "description": "Running agents చూడండి, URLs ను browser లో open చేయండి, token usage మరియు session context realtime లో monitor చేయండి."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Agent Teams అంటే ఏమిటి?",
-      "answer": "మా local coordination layer తో AI agent teams ని orchestrate చేసే desktop app. Agents కు roles ఉంటాయి, autonomous గా పని చేస్తాయి, kanban board ద్వారా collaborate చేస్తాయి, Anthropic లేదా Codex మీద run అవుతాయి."
+      "answer": "మా local coordination layer తో AI agent teams ని orchestrate చేసే desktop app. Agents కు roles ఉంటాయి, autonomous గా పని చేస్తాయి, kanban board ద్వారా collaborate చేస్తాయి, Claude, Codex లేదా OpenCode మీద run అవుతాయి."
     },
     {
       "id": "isFree",

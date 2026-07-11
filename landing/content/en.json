@@ -20,6 +20,21 @@
       "description": "Diff view per task with accept, reject, and comment. Built-in code editor with Git support."
     },
     {
+      "id": "tokenUsage",
+      "title": "Token Analytics & Budgets",
+      "description": "See where tokens and estimated costs go across teams, agents, tasks, projects, models, and runs. Spot expensive work, track trends and forecasts, set monthly token or cost budgets, and get alerts at 80% and 100%."
+    },
+    {
+      "id": "organizations",
+      "title": "Organizations & Global Overview",
+      "description": "Organize teams into departments, squads, or any nested structure. See every organization on one live map with team and agent statuses, task progress, dependencies, delegation, and cross-team communication."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Run commands in a visual terminal workspace with team and local shells, persistent history, autocomplete, and terminal settings."
+    },
+    {
       "id": "crossTeam",
       "title": "Cross-Team Communication",
       "description": "Agents message each other within and across teams. Direct messaging, task comments, and quick actions."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Solo Mode",
       "description": "Start with a single agent that self-manages tasks. Expand to a full team whenever you need more power."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Live Processes",
-      "description": "See running agents, open URLs in browser, monitor token usage and session context in real-time."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "What is Agent Teams?",
-      "answer": "A desktop app for orchestrating AI agent teams with our own local coordination layer. Agents have roles, work autonomously, collaborate through a kanban board, and can run on Anthropic or Codex."
+      "answer": "A desktop app for orchestrating AI agent teams with our own local coordination layer. Agents have roles, work autonomously, collaborate through a kanban board, and can run on Claude, Codex, or OpenCode."
     },
     {
       "id": "isFree",

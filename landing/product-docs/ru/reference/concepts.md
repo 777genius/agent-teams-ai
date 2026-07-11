@@ -62,7 +62,7 @@ Runtime отвечает за model execution behavior, auth details, tool execu
 
 ## Provider
 
-Provider - путь доступа к модели за runtime. Текущие provider ids: Anthropic, Codex, Gemini и OpenCode. OpenCode может маршрутизировать к множеству model providers через собственную конфигурацию.
+Provider - путь доступа к модели за runtime. Текущие provider ids: Anthropic, Codex и OpenCode. OpenCode может маршрутизировать к множеству model providers через собственную конфигурацию.
 
 Agent Teams orchestrates tasks and messages, но не заменяет provider authentication или provider policy.
 

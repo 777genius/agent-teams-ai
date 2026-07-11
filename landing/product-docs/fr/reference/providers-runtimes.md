@@ -39,7 +39,6 @@ Le runtime fournit :
 | Codex | Codex / modèles adossés à OpenAI | Flux de travail natifs Codex | Utilise l'intégration du runtime Codex et l'état d'authentification/de compte Codex lorsqu'ils sont disponibles. Certains diagnostics diffèrent des transcriptions Claude. |
 | OpenCode | Routage de modèles géré par OpenCode | Équipes multi-fournisseurs et large couverture de modèles | OpenCode peut router à travers de nombreux fournisseurs de modèles. Agent Teams traite les voies OpenCode comme des preuves spécifiques au runtime et évite de deviner lorsque l'identité de la voie est ambiguë. |
 
-Gemini est disponible comme chemin de fournisseur pris en charge avec l'authentification Google ADC (gcloud auth), l'OAuth de Gemini CLI et par clé API. Il apparaît aux côtés des autres fournisseurs dans l'interface de création d'équipe et de configuration du runtime lorsque le runtime le signale comme disponible.
 
 ## Identifiants de fournisseur
 
@@ -49,7 +48,6 @@ L'application reconnaît actuellement ces identifiants de fournisseur dans la co
 | --- | --- |
 | `anthropic` | Chemin Anthropic / Claude Code |
 | `codex` | Chemin Codex |
-| `gemini` | Chemin du fournisseur Gemini (Google ADC, Gemini CLI ou clé API) |
 | `opencode` | Chemin OpenCode, y compris le routage de fournisseur géré par OpenCode |
 
 Ne considérez pas ce tableau comme une garantie que chaque fournisseur est authentifié, installé ou disponible pour chaque modèle sur chaque machine. L'état du runtime et les vérifications de capacités font foi pour un lancement donné.

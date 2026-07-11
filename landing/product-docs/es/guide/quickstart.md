@@ -89,9 +89,6 @@ El flujo de configuración detecta automáticamente los runtimes instalados en t
 | Codex    | Flujos de trabajo nativos de Codex y acceso a OpenAI        |
 | OpenCode | Modelo gratuito sin autenticación, equipos multimodelo y muchos backends de proveedores |
 
-::: info
-Gemini está disponible como un camino de proveedor compatible. Consulta [Proveedores y runtimes](/es/reference/providers-runtimes) para ver las opciones de autenticación y el estado actual de los proveedores.
-:::
 
 Consulta [Configuración del runtime](/es/guide/runtime-setup) para una configuración detallada por proveedor.
 

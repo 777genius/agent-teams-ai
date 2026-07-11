@@ -89,9 +89,6 @@ Der Einrichtungsablauf erkennt installierte Runtimes auf Ihrem Rechner automatis
 | Codex    | Codex-native Workflows und OpenAI-Zugang        |
 | OpenCode | Kostenloses Modell ohne Authentifizierung, Multimodell-Teams und viele Anbieter-Backends |
 
-::: info
-Gemini ist als unterstützter Anbieterpfad verfügbar. Siehe [Anbieter und Runtimes](/de/reference/providers-runtimes) für Authentifizierungsoptionen und den aktuellen Anbieterstatus.
-:::
 
 Siehe [Runtime-Einrichtung](/de/guide/runtime-setup) für eine detaillierte Konfiguration pro Anbieter.
 

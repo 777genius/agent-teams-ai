@@ -20,6 +20,21 @@
       "description": "Visualização de diff por tarefa com aprovar, rejeitar e comentar. Editor de código integrado com suporte a Git."
     },
     {
+      "id": "tokenUsage",
+      "title": "Análise de tokens e orçamentos",
+      "description": "Veja onde tokens e custos estimados são consumidos por equipes, agentes, tarefas, projetos, modelos e execuções. Identifique trabalhos caros, acompanhe tendências e previsões, defina orçamentos mensais e receba alertas em 80% e 100%."
+    },
+    {
+      "id": "organizations",
+      "title": "Organizações e visão global",
+      "description": "Organize equipes em departamentos, squads ou qualquer estrutura aninhada. Veja todas as organizações em um mapa ao vivo com status de equipes e agentes, progresso das tarefas, dependências, delegação e comunicação entre equipes."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Execute comandos em um terminal visual com shells da equipe e local, histórico, preenchimento automático e configurações."
+    },
+    {
       "id": "crossTeam",
       "title": "Comunicação entre equipes",
       "description": "Agentes trocam mensagens dentro e entre equipes. Mensagens diretas, comentários em tarefas e ações rápidas."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Modo solo",
       "description": "Comece com um único agente que gerencia suas próprias tarefas. Expanda para uma equipe completa quando precisar de mais poder."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Processos ao vivo",
-      "description": "Veja agentes em execução, abra URLs no navegador, monitore uso de tokens e contexto de sessão em tempo real."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "O que é Agent Teams?",
-      "answer": "Um app desktop para orquestrar equipes de agentes IA com nossa própria camada local de coordenação. Os agentes têm papéis, trabalham de forma autônoma, colaboram em um quadro kanban e podem rodar com Anthropic ou Codex."
+      "answer": "Um app desktop para orquestrar equipes de agentes IA com nossa própria camada local de coordenação. Os agentes têm papéis, trabalham de forma autônoma, colaboram em um quadro kanban e podem rodar com Claude, Codex ou OpenCode."
     },
     {
       "id": "isFree",

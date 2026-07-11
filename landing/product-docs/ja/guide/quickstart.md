@@ -89,9 +89,6 @@ git status --short
 | Codex    | Codex ネイティブのワークフローや OpenAI アクセス        |
 | OpenCode | 認証なしの無料モデル、マルチモデルチーム、多数のプロバイダーバックエンド |
 
-::: info
-Gemini はサポートされているプロバイダーパスとして利用できます。認証オプションと現在のプロバイダーの状況については、[プロバイダーとランタイム](/ja/reference/providers-runtimes)を参照してください。
-:::
 
 各プロバイダーの詳細な設定については、[ランタイムの設定](/ja/guide/runtime-setup)を参照してください。
 

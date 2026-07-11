@@ -12,24 +12,24 @@
 </p>
 
 <p align="center">
-  <sub>Free desktop app for AI agent teams. Start with a free model with no auth - no signup, API key, or card - or connect Claude/Codex/OpenCode provider access for more models. Not just coding agents.</sub>
+  <sub>Free desktop app for AI agent teams. Start with a free model with no auth - no signup, API key, or card - or connect Claude/Codex/OpenCode provider access for more models. For coding and broader project work.</sub>
 </p>
 
 <table>
 <tr>
 <td width="33.33%">
-  <img src="docs/screenshots/8.png" alt="Task details and comments" width="100%" />
+  <img src="docs/screenshots/8.png" alt="Task details, attachments, and execution logs" width="100%" />
 </td>
 <td width="33.33%">
-  <img src="docs/screenshots/9.png" alt="Built-in code editor" width="100%" />
+  <img src="docs/screenshots/9.png" alt="Agent execution log with tool calls" width="100%" />
 </td>
 <td width="33.33%">
-  <img src="docs/screenshots/7.png" alt="Cross-team messaging" width="100%" />
+  <img src="docs/screenshots/7.png" alt="Code review with hunk-level controls" width="100%" />
 </td>
 </tr>
 <tr>
 <td width="33.33%">
-  <img src="docs/screenshots/4.png" alt="Team management dashboard" width="100%" />
+  <img src="docs/screenshots/4.png" alt="Create an AI team with roles and models" width="100%" />
 </td>
 <td width="33.33%">
   <img src="docs/screenshots/1.jpg" alt="Kanban board with agent tasks" width="100%" />
@@ -49,7 +49,10 @@
 
 [demo_new_15s.webm](https://github.com/user-attachments/assets/d78cf5a4-80fe-4a8b-a1db-fb272e18029c)
 
-Old videos:
+<details>
+<summary>Older demos</summary>
+
+<br />
 
 <table>
 <tr>
@@ -65,6 +68,8 @@ https://github.com/user-attachments/assets/35e27989-726d-4059-8662-bae610e46b42
 </td>
 </tr>
 </table>
+
+</details>
 
 <br />
 
@@ -90,7 +95,7 @@ No prerequisites - the app can detect and use installed claude/codex/opencode an
   <br />
   <sub>May trigger SmartScreen - click "More info" -> "Run anyway"</sub>
   <br />
-  <sub><strong>Windows required:</strong> launch Agent Teams AI as Administrator, especially when using OpenCode runtimes.</sub>
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
 </td>
 <td align="center">
   <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.7.0/Agent.Teams.AI-2.7.0.AppImage">
@@ -134,37 +139,43 @@ No prerequisites - the app can detect and use installed claude/codex/opencode an
 
 An orchestration layer for AI agent teams across Claude, Codex, and OpenCode.
 
-- **Claude + Codex + OpenCode orchestration** — start with a free model with no auth immediately, or auto-detect available Claude/Codex/OpenCode runtimes and use the provider access you already have - subscriptions or API keys
 - **Assemble your team** — create agent teams with different roles that work autonomously in parallel
-- **Agents talk to each other** — they communicate, create and manage their own tasks, review, leave comments
-- **Cross-team communication** — agents can fully communicate across different teams; you can configure or prompt them to collaborate and message each other between teams
 - **Sit back and watch** — tasks change status on the kanban board while agents handle everything on their own
+- **Agents talk to each other** — they communicate, create and manage their own tasks, review, leave comments
 - **Review changes like in Cursor** — see what code each task changed, then approve, reject, or comment
 - **Built-in review workflow** — easily see how agents review each other's tasks to make sure everything went exactly as planned
-- **Task-specific logs and messages** — clearly see agent/runtime logs (tools), actions and messages in isolation for each individual task, making it easy to trace what happened for any assignment
-- **Live process section** — see which agents are running processes and open URLs directly in the browser
+- **Token analytics and budgets** — see input, output, cache, and reasoning usage across teams, agents, tasks, projects, models, runtimes, sessions, commands, and runs. Spot expensive work, track trends and forecasts, set monthly token or estimated-cost budgets, and get alerts at 80% and 100%
+- **Organizations and global overview** — group teams into departments, squads, or any nested structure. Track every organization on one live map with team and agent status, task progress, dependencies, delegation, and cross-team communication
+- **Cross-team communication** — agents can fully communicate across different teams; you can configure or prompt them to collaborate and message each other between teams
 - **Stay in control** — send a direct message to any agent, drop a comment on a task, or pick a quick action right on the kanban card whenever you want to clarify something or add new work
-- **Flexible autonomy** — let agents run fully autonomous, or review and approve each action one by one (you'll get a notification) — configure the level of control that fits your security needs
+- **Flexible autonomy** — let agents run fully autonomous, or review and approve supported tool actions one by one (you'll get a notification) — configure the level of control that fits your security needs
+- **Task-specific logs and messages** — clearly see agent/runtime logs (tools), actions and messages in isolation for each individual task, making it easy to trace what happened for any assignment
+- **Integrated terminal workspace** — run commands in a visual PTY, switch between the team runtime and local shell, and use persistent history, autocomplete, and terminal settings without leaving the app
 - **Solo mode** — one-member team: a single agent that creates its own tasks and shows live progress. Saves tokens; can expand to a full team anytime
+- **Claude + Codex + OpenCode orchestration** — start with a free model with no auth immediately, or auto-detect available Claude/Codex/OpenCode runtimes and use the provider access you already have - subscriptions or API keys
 
 <details>
 <summary><strong>More features</strong></summary>
+
+- **Live process section** — see registered background services, stop them, and open their URLs directly in the browser
+
+- **Per-agent CPU/RAM history** — see how many local resources each live teammate uses over time
 
 - **Task creation with attachments** — send a message to the team lead with any attached images. The lead will automatically create a fully described task and attach your files directly to the task for complete context.
 
 - **Auto-resume after rate limits** — when the lead hits a Claude rate limit and the reset time is known, the app can automatically nudge the lead to continue once the cooldown has passed
 
-- **Deep session analysis** — detailed breakdown of what happened in each agent session: bash commands, reasoning, subprocesses
+- **Deep session analysis** — detailed breakdown of each agent session: agent output, tool calls, bash commands, and subprocesses
 
 - **Smart task-to-log/changes matching** — automatically links session logs/changes to specific tasks
 
-- **Advanced context monitoring system** — comprehensive breakdown of what consumes tokens at every step: user messages, Claude.md instructions, tool outputs, thinking text, and team coordination. Token usage, percentage of context window, and session cost are displayed for each category, with detailed views by category or size.
+- **Advanced context monitoring system** — see what consumes context: user messages, project instructions, tool outputs, available thinking summaries, and team coordination. View token usage, context-window share, and estimated cost by category.
 
 - **Recent tasks across projects** — browse the latest completed tasks from all your projects in one place
 
 - **Zero-setup onboarding** — start with the free model with no auth, then connect paid/account providers only when you need them
 
-- **Multi-language support** - choose the app language and preferred agent communication language. Current UI languages: Arabic, Bengali, Chinese, English, French, German, Hindi, Indonesian, Japanese, Korean, Portuguese, Russian, Spanish, Urdu.
+- **29 interface languages** - choose the app language and preferred agent communication language. Includes English, Chinese, Spanish, Hindi, Portuguese, French, Arabic, German, Japanese, Korean, Russian, Ukrainian, and 17 more.
 
 - **Built-in code editor** — edit project files with Git support without leaving the app
 
@@ -188,36 +199,38 @@ An orchestration layer for AI agent teams across Claude, Codex, and OpenCode.
 
 ## Comparison
 
-| Feature | Agent Teams | Gastown | Paperclip | Cursor | Claude Code CLI |
+| Feature | Agent Teams | Gas Town | Paperclip | Cursor | Claude Code CLI |
 |---|---|---|---|---|---|
-| **Cross-team communication** | ✅ Messages between separate teams | ⚠️ Coordination across groups | ⚠️ Company-scoped org work | N/A | ❌ |
-| **Agent-to-agent messaging** | ✅ Native real-time mailbox | ✅ Mailboxes + handoffs | ⚠️ Comments + @mentions | ❌ | ✅ Team mailbox, no UI |
-| **Linked tasks** | ✅ Tasks can link to and block each other | ⚠️ Task deps + grouped work | ✅ Goals, parent tasks, blockers | ❌ | ✅ Shared task list |
-| **Session analysis** | ✅ Task logs + token usage | ⚠️ Session recall, feed, metrics | ⚠️ Run transcripts + cost audit | ❌ | ⚠️ Usage command, no UI |
+| **Cross-team communication** | ✅ Direct agent messages and shared task links across teams | ⚠️ Mailboxes + handoffs | ⚠️ Comments + @mentions | N/A | ❌ |
+| **Linked tasks** | ✅ Tasks can link to and block each other | ✅ Task deps + grouped work | ✅ Goals, parent tasks, blockers | ❌ | ✅ Shared task list |
+| **Agent activity and history** | ✅ Messages, tool calls, timeline, token use, and cost | ⚠️ Session recall, feed, metrics | ⚠️ Run transcripts + cost audit | ⚠️ Agent chat + terminal | ⚠️ CLI transcripts + background logs |
 | **Task attachments** | ✅ Auto-attach, agents read & attach files | ❌ Not task-level | ✅ Docs, attachments, work products | ⚠️ Chat session only | ⚠️ Chat images only |
-| **Hunk-level review** | ✅ Accept / reject individual hunks | ❌ | ❌ Bring your own review | ✅ | ❌ |
+| **Code review** | ✅ Agent review plus accept, reject, and comment in the app | ⚠️ Merge queue, no diff UI | ⚠️ Approvals, but code review happens elsewhere | ✅ Accept / reject individual changes | ⚠️ Agent review, no review UI |
 | **Built-in code editor** | ✅ With Git support | ❌ | ❌ Control plane, not editor | ✅ Full IDE | ❌ |
-| **Full autonomy** | ✅ Agents plan, assign, work, and review | ✅ Coordinator, grouped work, recovery | ✅ Wake-up runs + governance | ⚠️ Cloud agents, not teams | ✅ Experimental CLI teams |
-| **Task dependencies** | ✅ Tasks wait for blockers automatically | ✅ Dependency waves | ✅ Blockers + execution locks | ❌ | ✅ Team task deps, no UI |
-| **Review workflow** | ✅ Agents review each other + human review UI | ⚠️ Merge queue | ✅ Approvals + governance | ⚠️ PR/BugBot only | ✅ Team review, no UI |
-| **Zero setup** | ✅ Guided runtime setup | ❌ Manual CLI stack | ⚠️ `npx` + local database | ✅ | ⚠️ CLI + env flag |
+| **Terminal** | ✅ Built-in visual terminal for team and local commands | ⚠️ Terminal-based workflow, no built-in terminal | ⚠️ Runs commands, no interactive terminal | ✅ Built-in IDE terminal | ⚠️ Runs in your terminal |
+| **Live team collaboration** | ✅ █████████░ 9/10 · Agents plan, delegate, work, and review together | ✅ ████████░░ 8/10 · Persistent teams with coordination and recovery | ⚠️ ███████░░░ 7/10 · Durable scheduled agents, less live peer teamwork | ⚠️ ██████░░░░ 6/10 · Parallel agents coordinated by one parent | ⚠️ ███████░░░ 7/10 · Experimental teams with recovery limits |
+| **Easy setup** | ✅ Start free, no signup or API key | ❌ Manual CLI stack | ⚠️ One `npx` terminal command, less convenient than an app | ⚠️ App install + account | ⚠️ CLI + env flag |
 | **Kanban board** | ✅ 5 columns, real-time | ❌ Dashboard, not Kanban | ✅ 7 columns, drag-and-drop | ❌ | ❌ |
-| **Execution logs** | ✅ Tool calls, reasoning, timeline | ⚠️ Feed, metrics, dashboard | ✅ Run transcripts + audit log | ⚠️ Agent chat + terminal | ❌ |
-| **Live processes** | ✅ View, stop, open URLs in browser | ⚠️ Agent health dashboard | ⚠️ Manual services + previews | ⚠️ Native terminal only | ❌ |
-| **CPU/RAM per teammate** | ✅ See CPU/RAM history for each live teammate | ⚠️ Shows activity/health, not CPU/RAM | ⚠️ Shows run status/cost, not CPU/RAM | ❌ Remote agent/terminal only | ❌ |
-| **Per-task code review** | ✅ Accept / reject / comment | ⚠️ Merge queue, no diff UI | ⚠️ PR/work products, no inline diff | ✅ BugBot on PRs | ❌ |
-| **Flexible autonomy** | ✅ Per-action approvals + notifications | ✅ Gates, escalation, recovery | ✅ Board approvals, pause, terminate | ⚠️ Cloud agents run commands | ✅ Permissions + hooks |
-| **Git worktree isolation** | ✅ Optional | ✅ Core primitive | ✅ Worktrees / branches | ✅ Agents Window worktrees | ⚠️ Manual worktrees |
+| **Human control and approvals** | ✅ Per-action approvals, roles, and notifications | ✅ Gates, roles, escalation, recovery | ✅ Board approvals, roles, pause, stop | ⚠️ Command controls and admin policies | ✅ Permissions + hooks |
+| **Separate agent workspaces** | ✅ Optional workspace per teammate | ✅ Core primitive | ✅ Worktrees / branches | ✅ Agents Window worktrees | ✅ Built-in for sessions and subagents |
 | **Mixed AI teammates** | ✅ Claude, Codex, and OpenCode in one team | ✅ Many providers, terminal-first | ✅ Bring your own agents/runtimes | ⚠️ Multi-model agents, no shared team | ⚠️ Claude-only experimental teams |
-| **Live team map** | ✅ Map of teammates, tasks, blockers, handoffs, activity, logs | ⚠️ Agent tree + feed panels | ⚠️ Org chart/status, not a task/log map | ❌ | ❌ |
-| **Live teammates** | ✅ Watch teammates work and message them directly | ⚠️ Terminal-based agent sessions | ⚠️ Agents wake up for runs, then sleep | ⚠️ Cloud agents per task | ⚠️ CLI teams, no desktop view |
-| **Team workspace** | ✅ Tasks, logs, Kanban, review, and teammates in one app | ⚠️ Mail/feed/dashboard across tools | ⚠️ Board + transcripts, less live teammate view | ⚠️ IDE chats/tasks, not team view | ❌ No desktop UI |
-| **Teammate launch status** | ✅ Know who started, who is stuck, and who replied | ⚠️ Session health, less clear message status | ⚠️ Run status, not live teammate status | ❌ | ⚠️ CLI mailbox, no visual status |
-| **Org chart / governance** | ✅ Organization map + approvals | ⚠️ Roles + escalation | ✅ Org chart + board governance | ⚠️ Team admin only | ❌ |
-| **Budget controls** | ✅ Usage budgets + scheduled hard caps | ⚠️ Cost tiers + digest, no hard caps | ✅ Per-agent budgets + hard stops | ⚠️ Usage + cloud spend limits | ⚠️ `/usage` + workspace limits |
+| **Visual team progress** | ✅ Teammates, tasks, blockers, handoffs, activity, logs | ⚠️ Agent tree + feed panels | ⚠️ Org chart and run status, not a task/log map | ⚠️ Agents Window, no shared peer-team map | ⚠️ Terminal team panel, no graphical UI |
+| **Organizations & global overview** | ✅ Nested groups, live team/task status, relations, cross-team activity | ⚠️ Coordination hierarchy, no editable org map | ✅ Org chart + board governance | ⚠️ Team admin, no live org map | ❌ |
+| **Team workspace** | ✅ Tasks, code, terminal, review, and teammates in one app | ⚠️ Mail/feed/dashboard across tools | ⚠️ Board + transcripts, less live teammate view | ⚠️ IDE chats/tasks, not team view | ❌ No desktop UI |
+| **Agent readiness and recovery** | ✅ Clear ready/stuck status with launch diagnostics | ✅ Working/stalled/failed health with recovery controls | ⚠️ Run status and orphan recovery | ⚠️ Agent status in Agents Window | ⚠️ Statuses in terminal, no graphical UI |
+| **Budget controls** | ✅ Budget alerts + hard caps for scheduled runs | ⚠️ Cost tiers + digest, no hard caps | ✅ Per-agent budgets + hard stops | ⚠️ Usage + cloud spend limits | ⚠️ `/usage` + workspace limits |
 | **Price** | **Free OSS UI + free model with no auth**, paid providers optional | Free OSS, runtime plans needed | Free OSS, self-hosted + infra | Free + paid usage | Claude plan or API usage |
 
-Agent Teams product evidence checked in local source on July 9, 2026: [organizations feature](src/features/organizations/README.md), [token usage budgets](src/features/token-usage/contracts/dto.ts), [scheduled run budget cap](src/main/services/schedule/ScheduledTaskExecutor.ts). Competitor fact sources checked on July 9, 2026: [detailed research notes](docs/research/gastown-paperclip-comparison-2026-06-25.md), [Gastown README](https://github.com/gastownhall/gastown), [Gastown provider guide](https://github.com/gastownhall/gastown/blob/main/docs/agent-provider-integration.md), [Gastown scheduler](https://github.com/gastownhall/gastown/blob/main/docs/design/scheduler.md), [Gastown dashboard source](https://github.com/gastownhall/gastown/blob/main/internal/web/templates/convoy.html), [Gastown release](https://github.com/gastownhall/gastown/releases/tag/v1.2.1), [Paperclip README](https://github.com/paperclipai/paperclip), [Paperclip adapters](https://github.com/paperclipai/paperclip/blob/master/docs/adapters/overview.md), [Paperclip heartbeat protocol](https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/heartbeat-protocol.md), [Paperclip org chart](https://paperclip.inc/docs/guides/board-operator/org-structure/), [Paperclip OrgChart source](https://github.com/paperclipai/paperclip/blob/master/ui/src/pages/OrgChart.tsx), [Paperclip budgets](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/costs-and-budgets.md), [Paperclip runtime services](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/execution-workspaces-and-runtime-services.md), [Paperclip Kanban source](https://github.com/paperclipai/paperclip/blob/master/ui/src/components/KanbanBoard.tsx), [Paperclip work products](https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/validators/work-product.ts), [Paperclip release](https://github.com/paperclipai/paperclip/releases/tag/v2026.707.0), [Cursor Cloud Agents](https://cursor.com/docs/cloud-agent), [Cursor Agent Review](https://cursor.com/docs/agent/agent-review), [Cursor Bugbot](https://cursor.com/docs/bugbot), [Cursor worktrees](https://cursor.com/docs/configuration/worktrees), [Cursor Models & Pricing](https://cursor.com/docs/models-and-pricing), [Cursor Team Pricing](https://cursor.com/docs/account/teams/pricing), [Claude Code agent teams](https://code.claude.com/docs/en/agent-teams), [Claude Code subagents](https://code.claude.com/docs/en/sub-agents), [Claude Code workflows](https://code.claude.com/docs/en/common-workflows), [Claude Code costs](https://code.claude.com/docs/en/costs), [Claude pricing](https://claude.com/pricing).
+*Live collaboration scores measure how well agents communicate, divide work, and complete complex tasks together.*
+
+<details>
+<summary><strong>Sources and methodology</strong></summary>
+
+<br />
+
+Agent Teams product evidence checked in local source on July 11, 2026: [organizations feature](src/features/organizations/README.md), [terminal workspace](src/features/terminal-workspace/renderer/ui/TerminalWorkspacePanel.tsx), [token usage budgets](src/features/token-usage/contracts/dto.ts), [scheduled run budget cap](src/main/services/schedule/ScheduledTaskExecutor.ts). Competitor fact sources checked on July 11, 2026: [detailed research notes](docs/research/gastown-paperclip-comparison-2026-06-25.md), [Gas Town README](https://github.com/gastownhall/gastown), [Gas Town provider guide](https://github.com/gastownhall/gastown/blob/main/docs/agent-provider-integration.md), [Gas Town scheduler](https://github.com/gastownhall/gastown/blob/main/docs/design/scheduler.md), [Gas Town dashboard source](https://github.com/gastownhall/gastown/blob/main/internal/web/templates/convoy.html), [Gas Town release](https://github.com/gastownhall/gastown/releases/tag/v1.2.1), [Paperclip README](https://github.com/paperclipai/paperclip), [Paperclip adapters](https://github.com/paperclipai/paperclip/blob/master/docs/adapters/overview.md), [Paperclip heartbeat protocol](https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/heartbeat-protocol.md), [Paperclip org chart](https://github.com/paperclipai/paperclip#the-systems), [Paperclip OrgChart source](https://github.com/paperclipai/paperclip/blob/master/ui/src/pages/OrgChart.tsx), [Paperclip budgets](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/costs-and-budgets.md), [Paperclip runtime services](https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/execution-workspaces-and-runtime-services.md), [Paperclip Kanban source](https://github.com/paperclipai/paperclip/blob/master/ui/src/components/KanbanBoard.tsx), [Paperclip work products](https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/validators/work-product.ts), [Paperclip release](https://github.com/paperclipai/paperclip/releases/tag/v2026.707.0), [Cursor terminal](https://cursor.com/docs/agent/terminal), [Cursor Cloud Agents](https://cursor.com/docs/cloud-agent), [Cursor Agent Review](https://cursor.com/docs/agent/agent-review), [Cursor Bugbot](https://cursor.com/docs/bugbot), [Cursor worktrees](https://cursor.com/docs/configuration/worktrees), [Cursor multitask agents](https://cursor.com/changelog/04-24-26), [Cursor cloud subagents](https://cursor.com/changelog/cloud-in-agents-window), [Cursor Models & Pricing](https://cursor.com/docs/models-and-pricing), [Cursor Team Pricing](https://cursor.com/docs/account/teams/pricing), [Claude Code CLI](https://code.claude.com/docs/en/cli-usage), [Claude Code agent teams](https://code.claude.com/docs/en/agent-teams), [Claude Code worktrees](https://code.claude.com/docs/en/worktrees), [Claude Code subagents](https://code.claude.com/docs/en/sub-agents), [Claude Code workflows](https://code.claude.com/docs/en/common-workflows), [Claude Code costs](https://code.claude.com/docs/en/costs), [Claude pricing](https://claude.com/pricing).
+
+</details>
 
 ---
 
@@ -238,7 +251,7 @@ Use the desktop app as the primary product. The browser/web path is not needed f
 <details>
 <summary><strong>Does it read or upload my code?</strong></summary>
 <br />
-The app is not a cloud code-sync service. It reads local runtime/session data to power the UI, and your project stays on your machine unless you choose a provider/runtime path that sends data to that provider. In `multimodel` mode, startup may also perform runtime access and capability checks before launch.
+The app is not a cloud code-sync service. It reads local runtime/session data to power the UI, and your project stays on your machine unless you choose a provider/runtime path that sends data to that provider. During setup, the app may perform provider access and capability checks before launch.
 </details>
 
 <details>
@@ -256,13 +269,13 @@ Yes. The app is free and open source, and you can start with a free model with n
 <details>
 <summary><strong>Can I review code changes before they're applied?</strong></summary>
 <br />
-Yes. Every task shows a full diff view where you can accept, reject, or comment on individual code hunks — similar to Cursor's review flow.
+Yes. Tasks with detected code changes include a full diff view where you can accept, reject, or comment on individual code hunks — similar to Cursor's review flow.
 </details>
 
 <details>
 <summary><strong>What happens if an agent gets stuck?</strong></summary>
 <br />
-Send a direct message to course-correct, or stop and restart from the process dashboard. Agent Teams also has a nudge system: the app can send a short control message when there is a clear reason to wake an agent up, such as after a known rate-limit cooldown, when a teammate has not synced with its current task or review, or when progress appears stalled. Nudges are guarded and rate limited, so they are meant to help the agent continue, not spam it. If an agent needs your input, you'll get a notification and the task will show a distinct badge on the board.
+Send a direct message to course-correct, or open the teammate status to inspect diagnostics and restart the agent. Agent Teams also has a nudge system: the app can send a short control message when there is a clear reason to wake an agent up, such as after a known rate-limit cooldown, when a teammate has not synced with its current task or review, or when progress appears stalled. Nudges are guarded and rate limited, so they are meant to help the agent continue, not spam it. If an agent needs your input, you'll get a notification and the task will show a distinct badge on the board.
 </details>
 
 <details>
@@ -292,7 +305,7 @@ For feature architecture and implementation guidance:
 
 ## Tech stack
 
-Electron 40, React 19, TypeScript 5, Tailwind CSS 3, Zustand 4. Data from `~/.claude/` (session logs, todos, tasks). The desktop app works with local runtime/session state, while some runtime modes may also use provider or startup capability services when required.
+Electron 40, React 19, TypeScript 5, Tailwind CSS 3, Zustand 4. The desktop app reads local project, app, and runtime/session data. Claude Code data under `~/.claude/` is one of the supported local sources.
 
 <details>
 <summary><strong>Build from source</strong></summary>
@@ -393,7 +406,8 @@ local packaging.
 - [ ] Planning mode to organize agent plans before execution
 - [ ] Visual workflow editor ([@xyflow/react](https://github.com/xyflow/xyflow)) for building and orchestrating agent pipelines with drag & drop
 - [ ] Remote agent execution via SSH: launch and manage agent teams on remote machines over SSH (stream-json protocol over SSH channel, SFTP-based file monitoring for tasks/inboxes/config)
-- [x] CLI runtime: Run not only on a local PC but in any headless/console environment (web UI), e.g. VPS, remote server, etc.
+- [ ] Generic ACP runtime: connect Agent Client Protocol-compatible agents through one reusable runtime integration
+- [x] Limited standalone dashboard for local or trusted-network use. It does not provide the full desktop runtime and should not be exposed directly to the internet without authentication and a reverse proxy.
 - [ ] 2 modes: current (agent teams), and a new mode: regular subagents (no communication between them)
 - [ ] Curate what context each agent sees (files, docs, MCP servers, skills)
 - [x] Slash commands
@@ -404,7 +418,7 @@ local packaging.
 - [x] Run terminal commands
 - [x] Monitor agents processes/stats
 - [ ] Reusable agents with SOUL.md
-- [ ] Сommunicate via messenger
+- [ ] Messenger integrations
 - [ ] SDK to programmatically launch agents
 ...
 
@@ -424,7 +438,9 @@ Contact: [quantjumppro@gmail.com](mailto:quantjumppro@gmail.com)
 
 IPC and standalone HTTP handlers validate IDs, paths, and payload shape at the boundary. Project editing and write operations are constrained to the selected project root, while read-only discovery also accesses local Claude data under `~/.claude/` and app-owned state paths when required. Path traversal and sensitive config/credential targets are blocked. See [SECURITY.md](.github/SECURITY.md) for details.
 
-GitHub Dependabot monitors dependencies for known vulnerabilities, so security updates are surfaced quickly and applied in time.
+The standalone HTTP dashboard is intended for local or trusted-network use and does not include built-in authentication for public deployment. Do not expose it directly to the internet without an authenticated reverse proxy.
+
+GitHub Dependabot helps surface dependencies with known vulnerabilities and available security updates.
 
 ## License
 

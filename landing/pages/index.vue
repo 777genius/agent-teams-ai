@@ -9,8 +9,10 @@ const { containerRef } = useParallaxSections();
     <PageBackground />
     <HeroSection />
     <SectionDivider />
-    <LazyScreenshotsSection />
+    <LazyFeaturesSection />
     <SectionDivider :flip="true" />
+    <LazyScreenshotsSection />
+    <SectionDivider />
     <LazyDownloadSection />
     <SectionDivider />
     <LazyComparisonSection />
@@ -18,7 +20,6 @@ const { containerRef } = useParallaxSections();
     <LazyPricingSection />
     <SectionDivider />
     <LazyFAQSection />
-    <!-- <LazyFeaturesSection /> -->
     <!-- <LazyTestimonialsSection /> -->
   </div>
 </template>

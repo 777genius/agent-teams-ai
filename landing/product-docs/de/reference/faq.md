@@ -16,7 +16,7 @@ Nein. Agent Teams ist die lokale Orchestrierungs- und UI-Schicht. Der Modellzugr
 
 ## Welche Runtimes werden unterstützt?
 
-Die unterstützten Runtime-Pfade sind Claude Code, Codex und OpenCode. Die App erfasst außerdem Anbieter-IDs wie Anthropic, Codex, Gemini und OpenCode, sofern die Runtime sie bereitstellt.
+Die unterstützten Runtime-Pfade sind Claude Code, Codex und OpenCode. Die App erfasst außerdem Anbieter-IDs wie Anthropic, Codex und OpenCode, sofern die Runtime sie bereitstellt.
 
 ## Muss ich zuerst Claude Code oder Codex installieren?
 

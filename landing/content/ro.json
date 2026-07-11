@@ -20,6 +20,21 @@
       "description": "Diff view pentru fiecare task cu accept, reject si comentarii. Editor de cod integrat cu suport Git."
     },
     {
+      "id": "tokenUsage",
+      "title": "Analiza tokenurilor și bugete",
+      "description": "Vezi unde sunt consumate tokenurile și costurile estimate pe echipe, agenți, sarcini, proiecte, modele și rulări. Identifică lucrările costisitoare, urmărește tendințe și prognoze, setează bugete lunare și primește alerte la 80% și 100%."
+    },
+    {
+      "id": "organizations",
+      "title": "Organizații și vedere globală",
+      "description": "Grupează echipele în departamente, squad-uri sau orice structură imbricată. Vezi toate organizațiile pe o singură hartă live, cu starea echipelor și agenților, progresul sarcinilor, dependențe, delegare și comunicare între echipe."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Rulezi comenzi intr-un terminal vizual cu shell de echipa si local, istoric, autocompletare si setari."
+    },
+    {
       "id": "crossTeam",
       "title": "Comunicare intre echipe",
       "description": "Agentii isi trimit mesaje in aceeasi echipa si intre echipe. Mesaje directe, comentarii pe taskuri si actiuni rapide."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Mod solo",
       "description": "Incepe cu un singur agent care isi gestioneaza taskurile. Extinde la o echipa completa cand ai nevoie de mai multa putere."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Procese live",
-      "description": "Vezi agentii care ruleaza, deschizi URL-uri in browser si monitorizezi token usage si session context in timp real."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Ce este Agent Teams?",
-      "answer": "O aplicatie desktop pentru orchestrarea echipelor de agenti AI cu propriul nostru strat local de coordonare. Agentii au roluri, lucreaza autonom, colaboreaza prin kanban si pot rula pe Anthropic sau Codex."
+      "answer": "O aplicatie desktop pentru orchestrarea echipelor de agenti AI cu propriul nostru strat local de coordonare. Agentii au roluri, lucreaza autonom, colaboreaza prin kanban si pot rula cu Claude, Codex sau OpenCode."
     },
     {
       "id": "isFree",

@@ -39,12 +39,8 @@ Para modelos de pago o respaldados por una cuenta, conecta al menos un proveedor
 | ------------------ | ------------------------------------------------- |
 | Claude (Anthropic) | Inicio de sesión de Claude Code CLI o clave de API |
 | Codex (OpenAI)     | Inicio de sesión de Codex CLI o clave de API       |
-| Gemini (Google)    | Google ADC, Gemini CLI o clave de API              |
 | OpenCode           | Modelo gratuito incluido sin autenticación, o clave de API para un backend compatible (p. ej. OpenRouter) |
 
-::: info
-Gemini está disponible como una ruta de proveedor compatible. Consulta [Proveedores y runtimes](/es/reference/providers-runtimes) para conocer las opciones de autenticación y el estado actual de todos los proveedores.
-:::
 
 Para el desarrollo desde el código fuente, también necesitas:
 

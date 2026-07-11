@@ -20,6 +20,21 @@
       "description": "Vista diff per ogni task con accetta, rifiuta e commenta. Editor di codice integrato con supporto Git."
     },
     {
+      "id": "tokenUsage",
+      "title": "Analisi dei token e budget",
+      "description": "Scopri dove vengono usati token e costi stimati tra team, agenti, attività, progetti, modelli ed esecuzioni. Individua i lavori costosi, segui trend e previsioni, imposta budget mensili e ricevi avvisi all’80% e al 100%."
+    },
+    {
+      "id": "organizations",
+      "title": "Organizzazioni e panoramica globale",
+      "description": "Organizza i team in reparti, squad o qualsiasi struttura annidata. Visualizza tutte le organizzazioni su una mappa live con stato di team e agenti, avanzamento delle attività, dipendenze, deleghe e comunicazione tra team."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminale",
+      "description": "Esegui comandi in un terminale visuale con shell del team e locale, cronologia, completamento automatico e impostazioni."
+    },
+    {
       "id": "crossTeam",
       "title": "Comunicazione tra team",
       "description": "Gli agenti si scrivono dentro lo stesso team e tra team diversi. Messaggi diretti, commenti ai task e azioni rapide."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Modalita solo",
       "description": "Parti con un solo agente che si gestisce i task. Quando serve piu potenza, espandi a un team completo."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Processi live",
-      "description": "Vedi gli agenti in esecuzione, apri URL nel browser e monitora token e contesto della sessione in tempo reale."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Cos'e Agent Teams?",
-      "answer": "Un'app desktop per orchestrare team di agenti AI con un livello locale di coordinamento. Gli agenti hanno ruoli, lavorano in autonomia, collaborano tramite kanban board e possono usare Anthropic o Codex."
+      "answer": "Un'app desktop per orchestrare team di agenti AI con un livello locale di coordinamento. Gli agenti hanno ruoli, lavorano in autonomia, collaborano tramite kanban board e possono usare Claude, Codex o OpenCode."
     },
     {
       "id": "isFree",

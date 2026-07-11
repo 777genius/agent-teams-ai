@@ -16,7 +16,7 @@ No. Agent Teams es la capa local de orquestación e interfaz de usuario. El acce
 
 ## ¿Qué runtimes son compatibles?
 
-Las rutas de runtime compatibles son Claude Code, Codex y OpenCode. La aplicación también rastrea ids de proveedor como Anthropic, Codex, Gemini y OpenCode cuando el runtime los expone.
+Las rutas de runtime compatibles son Claude Code, Codex y OpenCode. La aplicación también rastrea ids de proveedor como Anthropic, Codex y OpenCode cuando el runtime los expone.
 
 ## ¿Necesito instalar primero Claude Code o Codex?
 

@@ -88,9 +88,6 @@ The setup flow auto-detects installed runtimes on your machine. A common first s
 | Codex    | Codex-native workflows and OpenAI access        |
 | OpenCode | Free model with no auth, multi-model teams, and many provider backends |
 
-::: info
-Gemini is available as a supported provider path. See [Providers and runtimes](/reference/providers-runtimes) for auth options and current provider status.
-:::
 
 See [Runtime setup](/guide/runtime-setup) for detailed configuration per provider.
 

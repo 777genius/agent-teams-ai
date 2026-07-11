@@ -16,7 +16,7 @@ lang: zh-Hans
 
 ## 支持哪些运行时？
 
-支持的运行时路径为 Claude Code、Codex 和 OpenCode。当运行时暴露相应信息时，该应用还会跟踪提供方 id，例如 Anthropic、Codex、Gemini 和 OpenCode。
+支持的运行时路径为 Claude Code、Codex 和 OpenCode。当运行时暴露相应信息时，该应用还会跟踪提供方 id，例如 Anthropic、Codex 和 OpenCode。
 
 ## 我需要先安装 Claude Code 或 Codex 吗？
 

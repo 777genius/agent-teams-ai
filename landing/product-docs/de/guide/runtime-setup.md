@@ -53,7 +53,6 @@ Führen Sie den Befehl für die Runtime aus, die Sie verwenden möchten. Wenn ni
 
 Die App erkennt unterstützte Runtimes und leitet die Einrichtung nach Möglichkeit über die Oberfläche an.
 
-Gemini ist als unterstützter Anbieterpfad mit Google ADC (`gcloud auth`), Gemini CLI OAuth und API-Schlüssel-Authentifizierung verfügbar. Konfigurieren Sie es über die Oberfläche zur Runtime-Einrichtung, wenn das Gemini-Backend erkannt wird.
 
 ## Anbieterzugriff
 
@@ -121,16 +120,6 @@ Beispiele für Modell-Strings:
 | `anthropic/claude-sonnet-4-6` | `anthropic` |
 
 Wenn OpenCode startet, ein Teammitglied aber nie zustellbar wird, prüfen Sie die Lane-Belege, bevor Sie annehmen, dass das Modell den Prompt ignoriert hat. Siehe [Fehlerbehebung](/de/guide/troubleshooting#opencode-registered-but-bootstrap-unconfirmed).
-
-### Gemini
-
-Gemini unterstützt drei Authentifizierungsmethoden:
-
-- **Google ADC** — führen Sie `gcloud auth application-default login` aus, um sich über Google Application Default Credentials zu authentifizieren.
-- **Gemini CLI** — führen Sie `gemini login` aus, wenn die Gemini CLI installiert ist.
-- **API-Schlüssel** — setzen Sie `GEMINI_API_KEY` in Ihrer Umgebung oder konfigurieren Sie ihn über die Oberfläche „Manage Providers“ der App.
-
-Die App erkennt automatisch, welche Authentifizierungsmethode verfügbar ist, und zeigt den Gemini-Anbieter in der Oberfläche zur Runtime-Einrichtung und Teamerstellung an, wenn das Backend erreichbar ist.
 
 ## Multimodell-Modus
 

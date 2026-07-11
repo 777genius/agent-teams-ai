@@ -29,9 +29,6 @@ Each team member runs on a provider backend. In the team editor, pick a provider
 
 Mixing providers in one team is supported — for example, a Claude lead with OpenCode builders.
 
-::: info
-Gemini is available as a supported provider path. See [Providers and runtimes](/reference/providers-runtimes) for auth options and current provider status.
-:::
 
 ## Write a good team brief
 
