@@ -9,7 +9,22 @@
   "roots": [
     "src/renderer/components/team/TeamListView.tsx",
     "src/renderer/components/team/TeamDetailView.tsx",
+    "src/renderer/components/team/ToolApprovalSheet.tsx",
+    "src/renderer/components/team/dialogs/GlobalTaskDetailDialog.tsx",
     "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx"
+  ],
+  "mountProofs": [
+    {
+      "root": "src/renderer/components/team/ToolApprovalSheet.tsx",
+      "mountChain": ["src/renderer/App.tsx#ToolApprovalSheet"]
+    },
+    {
+      "root": "src/renderer/components/team/dialogs/GlobalTaskDetailDialog.tsx",
+      "mountChain": [
+        "src/renderer/components/layout/TabbedLayout.tsx#GlobalTaskDetailDialogSlot",
+        "src/renderer/components/layout/GlobalTaskDetailDialogSlot.tsx#GlobalTaskDetailDialog"
+      ]
+    }
   ],
   "sourceFiles": [
     {
@@ -141,6 +156,16 @@
       "path": "src/renderer/components/team/TeamTaskStatusSummary.tsx",
       "sha256": "sha256:b7c56388d1315598155a3f7cf1b626d4afe75a4e6400a55d717ebd6a79e969c4",
       "interactionSiteCount": 0
+    },
+    {
+      "path": "src/renderer/components/team/ToolApprovalDiffPreview.tsx",
+      "sha256": "sha256:16adbc01901746897fadd5c567461cd7922268de75e762ae5f5a0b662e6a2076",
+      "interactionSiteCount": 1
+    },
+    {
+      "path": "src/renderer/components/team/ToolApprovalSheet.tsx",
+      "sha256": "sha256:d7ccadb65f8a43919f9b12630f68f72edcf33e461ba44f629cc10451cc5e1448",
+      "interactionSiteCount": 4
     },
     {
       "path": "src/renderer/components/team/UnreadCommentsBadge.tsx",
@@ -283,6 +308,11 @@
       "interactionSiteCount": 1
     },
     {
+      "path": "src/renderer/components/team/dialogs/GlobalTaskDetailDialog.tsx",
+      "sha256": "sha256:447eb5ef2617c09c2f96db727db85d659a1c08a430ff9a40065bd43dc5dc021a",
+      "interactionSiteCount": 1
+    },
+    {
       "path": "src/renderer/components/team/dialogs/LaunchTeamDialog.tsx",
       "sha256": "sha256:2e4ca8b15bd7f65c74e3983a4b0c1264b098830ba1c4580cfdd41e51da637f15",
       "interactionSiteCount": 20
@@ -381,6 +411,11 @@
       "path": "src/renderer/components/team/dialogs/TeammateRuntimeCompatibilityNotice.tsx",
       "sha256": "sha256:9d366041a60ab19a86b5558213e380f2890a073cb2822c99ed7edd773434d10f",
       "interactionSiteCount": 1
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+      "sha256": "sha256:8d194a4c2c0dd70994dbf1924f5af5032e8ee7392903e14f060a14d03c81efe0",
+      "interactionSiteCount": 11
     },
     {
       "path": "src/renderer/components/team/dialogs/WorktreeGitReadinessBanner.tsx",
@@ -849,26 +884,6 @@
     }
   ],
   "excludedSourceFiles": [
-    {
-      "path": "src/renderer/components/team/ToolApprovalDiffPreview.tsx",
-      "reason": "No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.",
-      "interactionSiteCount": 1
-    },
-    {
-      "path": "src/renderer/components/team/ToolApprovalSheet.tsx",
-      "reason": "No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.",
-      "interactionSiteCount": 4
-    },
-    {
-      "path": "src/renderer/components/team/dialogs/GlobalTaskDetailDialog.tsx",
-      "reason": "No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.",
-      "interactionSiteCount": 1
-    },
-    {
-      "path": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
-      "reason": "No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.",
-      "interactionSiteCount": 11
-    },
     {
       "path": "src/renderer/components/team/editor/EditorBreadcrumb.tsx",
       "reason": "No relative or renderer-alias static/dynamic import path exists from the mounted W1 team roots; the file is absent from this mount closure.",
@@ -1643,6 +1658,95 @@
       ]
     },
     {
+      "id": "team.approval.respond-to-tool-approval",
+      "owner": "team-approvals",
+      "disposition": "decomposed",
+      "securityClass": "approval-policy",
+      "target": "WP-9-APPROVALS",
+      "evidence": [
+        "Reviewed mounted approval response control; the direct TeamsAPI action and owner are pinned by P0.W1.API_PARITY_LEDGER."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/ToolApprovalSheet.tsx",
+          "sourceHash": "sha256:bc7f650e270a2b3a",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/ToolApprovalSheet.tsx",
+          "sourceHash": "sha256:f619abd9d2f06a2b",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.approval.update-tool-approval-settings",
+      "owner": "team-approvals",
+      "disposition": "decomposed",
+      "securityClass": "approval-policy",
+      "target": "WP-9-APPROVALS",
+      "evidence": [
+        "Reviewed mounted approval policy control; the direct TeamsAPI action and owner are pinned by P0.W1.API_PARITY_LEDGER."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+          "sourceHash": "sha256:14b1fad488bf44d0",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+          "sourceHash": "sha256:38304436e7d56f95",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+          "sourceHash": "sha256:5d82cf9b106c6afe",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+          "sourceHash": "sha256:7fe8a34c246e2291",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+          "sourceHash": "sha256:85f56bd2ce48476a",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+          "sourceHash": "sha256:979be4ab3421ec63",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+          "sourceHash": "sha256:99c4c86dfa822b94",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+          "sourceHash": "sha256:a7fe6352ba186223",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+          "sourceHash": "sha256:c8d1ffc5278c260d",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+          "sourceHash": "sha256:cf3ee774403f7d17",
+          "siteCount": 1
+        },
+        {
+          "file": "src/renderer/components/team/ToolApprovalSheet.tsx",
+          "sourceHash": "sha256:9d3a55a830af01c7",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
       "id": "team.legacy-control.activity.active.tasks.block.on-member-click",
       "owner": "team-task-board",
       "disposition": "decomposed",
@@ -2174,12 +2278,12 @@
     },
     {
       "id": "team.legacy-control.dialogs.add.member.dialog.handle-submit",
-      "owner": "team-runtime-control",
+      "owner": "team-lifecycle",
       "disposition": "decomposed",
-      "securityClass": "runtime-operator",
-      "target": "WP-5-RUNTIME-CONTROL",
+      "securityClass": "team-resource",
+      "target": "WP-7-TEAM-LIFECYCLE",
       "evidence": [
-        "Reviewed renderer control; exact source expression is pinned by the mapping hash and direct IPC semantics remain bound by P0.W1.API_PARITY_LEDGER."
+        "Reviewed add-member submission; the scanner maps this legacy child ID to team.lifecycle.add-member and enforces the API owner."
       ],
       "sourceRefs": [
         {
@@ -2191,12 +2295,12 @@
     },
     {
       "id": "team.legacy-control.dialogs.add.member.dialog.on-close",
-      "owner": "team-runtime-control",
+      "owner": "team-lifecycle",
       "disposition": "decomposed",
-      "securityClass": "runtime-operator",
-      "target": "WP-5-RUNTIME-CONTROL",
+      "securityClass": "team-resource",
+      "target": "WP-7-TEAM-LIFECYCLE",
       "evidence": [
-        "Reviewed renderer control; exact source expression is pinned by the mapping hash and direct IPC semantics remain bound by P0.W1.API_PARITY_LEDGER."
+        "Reviewed add-member dialog control; ownership follows the team lifecycle operation composed by this child."
       ],
       "sourceRefs": [
         {
@@ -2208,12 +2312,12 @@
     },
     {
       "id": "team.legacy-control.dialogs.add.member.dialog.set-members",
-      "owner": "team-runtime-control",
+      "owner": "team-lifecycle",
       "disposition": "decomposed",
-      "securityClass": "runtime-operator",
-      "target": "WP-5-RUNTIME-CONTROL",
+      "securityClass": "team-resource",
+      "target": "WP-7-TEAM-LIFECYCLE",
       "evidence": [
-        "Reviewed renderer control; exact source expression is pinned by the mapping hash and direct IPC semantics remain bound by P0.W1.API_PARITY_LEDGER."
+        "Reviewed add-member draft control; ownership follows the team lifecycle operation composed by this child."
       ],
       "sourceRefs": [
         {
@@ -2691,6 +2795,23 @@
         {
           "file": "src/renderer/components/team/dialogs/EffortLevelSelector.tsx",
           "sourceHash": "sha256:864641f3781829a5",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.dialogs.global.task.detail.open-team",
+      "owner": "team-console",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-7-TEAM-CONSOLE",
+      "evidence": [
+        "Reviewed globally mounted task-detail navigation control; no remote mutation is implied."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/GlobalTaskDetailDialog.tsx",
+          "sourceHash": "sha256:159ec492291198df",
           "siteCount": 1
         }
       ]
@@ -6070,12 +6191,12 @@
     },
     {
       "id": "team.legacy-control.members.member.card.handle-restart-member",
-      "owner": "team-runtime-control",
+      "owner": "team-lifecycle",
       "disposition": "decomposed",
-      "securityClass": "runtime-operator",
-      "target": "WP-5-RUNTIME-CONTROL",
+      "securityClass": "team-resource",
+      "target": "WP-7-TEAM-LIFECYCLE",
       "evidence": [
-        "Reviewed renderer control; exact source expression is pinned by the mapping hash and direct IPC semantics remain bound by P0.W1.API_PARITY_LEDGER."
+        "Reviewed member restart control; the scanner maps this legacy child ID to team.lifecycle.restart-member and enforces the API owner."
       ],
       "sourceRefs": [
         {
@@ -6087,12 +6208,12 @@
     },
     {
       "id": "team.legacy-control.members.member.card.handle-restore-member",
-      "owner": "team-runtime-control",
+      "owner": "team-lifecycle",
       "disposition": "decomposed",
-      "securityClass": "runtime-operator",
-      "target": "WP-5-RUNTIME-CONTROL",
+      "securityClass": "team-resource",
+      "target": "WP-7-TEAM-LIFECYCLE",
       "evidence": [
-        "Reviewed renderer control; exact source expression is pinned by the mapping hash and direct IPC semantics remain bound by P0.W1.API_PARITY_LEDGER."
+        "Reviewed member restore control; the scanner maps this legacy child ID to team.lifecycle.restore-member and enforces the API owner."
       ],
       "sourceRefs": [
         {
@@ -6909,12 +7030,12 @@
     },
     {
       "id": "team.legacy-control.members.members.editor.section.add-member",
-      "owner": "team-runtime-control",
+      "owner": "team-lifecycle",
       "disposition": "decomposed",
-      "securityClass": "runtime-operator",
-      "target": "WP-5-RUNTIME-CONTROL",
+      "securityClass": "team-resource",
+      "target": "WP-7-TEAM-LIFECYCLE",
       "evidence": [
-        "Reviewed renderer control; exact source expression is pinned by the mapping hash and direct IPC semantics remain bound by P0.W1.API_PARITY_LEDGER."
+        "Reviewed add-member entry control; ownership follows the team lifecycle operation opened by this child."
       ],
       "sourceRefs": [
         {
@@ -8803,6 +8924,57 @@
           "siteCount": 1
         }
       ]
+    },
+    {
+      "id": "team.legacy-control.tool.approval.diff.preview.toggle-expanded",
+      "owner": "team-approvals",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-9-APPROVALS",
+      "evidence": [
+        "Reviewed mounted approval diff disclosure control; it changes only renderer presentation state."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/ToolApprovalDiffPreview.tsx",
+          "sourceHash": "sha256:2b22549ddb269e8f",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.tool.approval.settings.toggle-expanded",
+      "owner": "team-approvals",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-9-APPROVALS",
+      "evidence": [
+        "Reviewed mounted approval settings disclosure control; it changes only renderer presentation state."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx",
+          "sourceHash": "sha256:2646e344df8b7d3a",
+          "siteCount": 1
+        }
+      ]
+    },
+    {
+      "id": "team.legacy-control.tool.approval.sheet.select-question-option",
+      "owner": "team-approvals",
+      "disposition": "direct",
+      "securityClass": "renderer-local",
+      "target": "WP-9-APPROVALS",
+      "evidence": [
+        "Reviewed mounted approval-question selection control; the selected value is submitted only through the approval response action."
+      ],
+      "sourceRefs": [
+        {
+          "file": "src/renderer/components/team/ToolApprovalSheet.tsx",
+          "sourceHash": "sha256:20e8f7899e0f12da",
+          "siteCount": 1
+        }
+      ]
     }
   ],
   "apiActionBindings": [
@@ -9524,6 +9696,23 @@
       "source": "CrossTeamAPI",
       "sourceMember": "listTargets",
       "rendererCallers": ["src/renderer/store/slices/teamSlice.ts"]
+    }
+  ],
+  "legacyChildApiActionBindings": [
+    {
+      "childActionId": "team.legacy-control.dialogs.add.member.dialog.handle-submit",
+      "apiActionId": "team.lifecycle.add-member",
+      "owner": "team-lifecycle"
+    },
+    {
+      "childActionId": "team.legacy-control.members.member.card.handle-restart-member",
+      "apiActionId": "team.lifecycle.restart-member",
+      "owner": "team-lifecycle"
+    },
+    {
+      "childActionId": "team.legacy-control.members.member.card.handle-restore-member",
+      "apiActionId": "team.lifecycle.restore-member",
+      "owner": "team-lifecycle"
     }
   ],
   "deliberateAbsences": [

@@ -15,7 +15,7 @@
     "format": "deterministically sorted compact JSON",
     "recordCount": 610,
     "sha256": "sha256:2ea065639675df126935790d86578cfdae9cf9feb60371826b03f1f877c5f497",
-    "externalPath": "/tmp/agent-teams-hosted-web-refactor-phase-00-remediation-w1-v7-artifacts/legacy-bypass-raw.json"
+    "externalPath": "/tmp/agent-teams-hosted-web-refactor-phase-00-remediation-w1-v9-artifacts/legacy-bypass-raw.json"
   },
   "requiredDisposition": "Supported hosted actions use a real feature facet; unavailable and desktop-only controls are absent before mount. No optional-method check or fabricated success is capability proof."
 }

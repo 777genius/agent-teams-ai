@@ -11,14 +11,18 @@ The checked-in evidence is intentionally compact:
   one explicit owner, disposition, security class, semantic evidence obligation, action ID, and work
   package. Renderer caller paths omit source line numbers.
 - `renderer-child-control-catalog.json` is the reviewed, omission-sensitive catalog for the complete
-  relative/renderer-alias import closure rooted at `TeamListView`, `TeamDetailView`, and the provider
-  management panel. Its 167 declared source files must exactly equal the recursively discovered
-  closure; 576 stable source keys cover every non-root child control occurrence.
-- `renderer-action-inventory.json` maps all 726 scanner-visible sites in that closure to 436 semantic
+  relative/renderer-alias import closure rooted at `TeamListView`, `TeamDetailView`, the globally
+  mounted approval sheet and task-detail dialog, and the provider management panel. Its 171 declared
+  source files must exactly equal the recursively discovered closure; 593 stable source keys cover
+  every non-root child control occurrence. The scanner also proves the `App` and `TabbedLayout` mount
+  chains for the two global roots.
+- `renderer-action-inventory.json` maps all 743 scanner-visible sites in that closure to 442 semantic
   actions or five deliberate absence classes. Multiple AST sites for keyboard/click parity or a Select
-  trigger/item/change widget may map to one action. Event-containment and dialog-state handlers are
-  explicit non-actions. All 11 other production team TSX files are recorded with their 28 interaction
-  sites and excluded only because no import path from a mounted W1 root exists.
+  trigger/item/change widget may map to one action. The 17 newly covered sites are in
+  `ToolApprovalSheet`, `ToolApprovalDiffPreview`, `ToolApprovalSettingsPanel`, and
+  `GlobalTaskDetailDialog`. Event-containment and dialog-state handlers are explicit non-actions. All
+  seven other production team TSX files are recorded with their 11 interaction sites and excluded only
+  because no import path from a mounted W1 root exists.
 - `legacy-bypass-inventory.json` retains counts and a hash of the deterministic raw projection. The raw
   rows are generated outside Git at the recorded `/tmp` path so the adoption remains focused.
 - `selection-reconciliation-invariants.md` records the already-approved selection/race constraints.
@@ -31,9 +35,10 @@ node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-action
 pnpm exec vitest run test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts
 ```
 
-The scanner fails closed for missing/extra closure files, omitted immediate-child mappings,
-missing/duplicate API dispositions, missing/duplicate semantic mappings, stale source references, and
-unannotated dynamic API dispatch. The focused fixture mutates the real
+The scanner fails closed for missing/extra closure files, broken global mount chains, omitted
+immediate-child mappings, missing/duplicate API dispositions, missing/duplicate semantic mappings,
+stale source references, legacy-child/API owner conflicts, and unannotated dynamic API dispatch. The
+focused fixture mutates the real
 `TeamListFilterPopover.tsx` closure and mapping, and also covers an event-containment handler, provider
 credential input, multi-part Select, semantic missing/duplicate mappings, and root/child line-shift ID
 stability.

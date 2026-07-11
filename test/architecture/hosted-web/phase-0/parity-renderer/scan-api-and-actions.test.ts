@@ -8,6 +8,7 @@ import {
   CONTROL_ROOTS,
   discoverControlClosure,
   findDynamicDispatch,
+  LEGACY_CHILD_API_ACTION_IDS,
   scanApiInterfaces,
   scanControls,
   type SemanticRow,
@@ -15,6 +16,8 @@ import {
   validateChildControlCatalog,
   validateControlClosure,
   validateJsonSchema,
+  validateLegacyChildApiActionMappings,
+  validateMountedControlRoots,
   validateSemanticCatalog,
 } from '../../../../../scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions';
 
@@ -156,6 +159,119 @@ describe('Phase 0 W1 semantic scanner', () => {
     expect(() => validateChildControlCatalog(sites, { ...catalog, mappings })).toThrow(
       /Missing child control mapping.*TeamListFilterPopover/
     );
+  });
+
+  it('includes every separately mounted approval/global-task control and all 17 sites', () => {
+    const root = process.cwd();
+    const readSource = (sourceFile: string): string | undefined => {
+      const absolute = join(root, sourceFile);
+      return existsSync(absolute) && statSync(absolute).isFile()
+        ? readFileSync(absolute, 'utf8')
+        : undefined;
+    };
+    const mountedFiles = [
+      'src/renderer/components/team/ToolApprovalSheet.tsx',
+      'src/renderer/components/team/ToolApprovalDiffPreview.tsx',
+      'src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx',
+      'src/renderer/components/team/dialogs/GlobalTaskDetailDialog.tsx',
+    ];
+    const discovered = discoverControlClosure(CONTROL_ROOTS, readSource);
+    expect(validateMountedControlRoots(readSource)).toEqual([
+      {
+        root: 'src/renderer/components/team/ToolApprovalSheet.tsx',
+        mountChain: ['src/renderer/App.tsx#ToolApprovalSheet'],
+      },
+      {
+        root: 'src/renderer/components/team/dialogs/GlobalTaskDetailDialog.tsx',
+        mountChain: [
+          'src/renderer/components/layout/TabbedLayout.tsx#GlobalTaskDetailDialogSlot',
+          'src/renderer/components/layout/GlobalTaskDetailDialogSlot.tsx#GlobalTaskDetailDialog',
+        ],
+      },
+    ]);
+    expect(() =>
+      validateMountedControlRoots((sourceFile) => {
+        const contents = readSource(sourceFile);
+        return sourceFile === 'src/renderer/App.tsx'
+          ? contents?.replace('<ToolApprovalSheet />', '')
+          : contents;
+      })
+    ).toThrow(/Mounted control root is not reachable/);
+    expect(mountedFiles.every((sourceFile) => discovered.includes(sourceFile))).toBe(true);
+    expect(
+      Object.fromEntries(
+        mountedFiles.map((sourceFile) => [
+          sourceFile,
+          scanControls(readSource(sourceFile)!, sourceFile).length,
+        ])
+      )
+    ).toEqual({
+      'src/renderer/components/team/ToolApprovalSheet.tsx': 4,
+      'src/renderer/components/team/ToolApprovalDiffPreview.tsx': 1,
+      'src/renderer/components/team/dialogs/ToolApprovalSettingsPanel.tsx': 11,
+      'src/renderer/components/team/dialogs/GlobalTaskDetailDialog.tsx': 1,
+    });
+  });
+
+  it('maps API-linked legacy child IDs to canonical API action owners', () => {
+    const root = process.cwd();
+    const catalog = JSON.parse(
+      readFileSync(
+        join(
+          root,
+          'docs/research/hosted-web/phase-0/parity-renderer/renderer-child-control-catalog.json'
+        ),
+        'utf8'
+      )
+    ) as ChildControlCatalog;
+    const apiLedger = JSON.parse(
+      readFileSync(
+        join(root, 'docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json'),
+        'utf8'
+      )
+    ) as { members: Array<{ actionId: string; owningFeature: string }> };
+    const linkedChildActions = Object.keys(LEGACY_CHILD_API_ACTION_IDS).map((id) => {
+      const [owner, disposition, securityClass, target, ...evidence] =
+        catalog.actions[id].split('|');
+      return {
+        id,
+        owner,
+        disposition: disposition as SemanticRow['disposition'],
+        securityClass,
+        target,
+        evidence,
+        sourceRefs: [],
+      };
+    });
+
+    expect(validateLegacyChildApiActionMappings(linkedChildActions, apiLedger.members)).toEqual([
+      {
+        childActionId: 'team.legacy-control.dialogs.add.member.dialog.handle-submit',
+        apiActionId: 'team.lifecycle.add-member',
+        owner: 'team-lifecycle',
+      },
+      {
+        childActionId: 'team.legacy-control.members.member.card.handle-restart-member',
+        apiActionId: 'team.lifecycle.restart-member',
+        owner: 'team-lifecycle',
+      },
+      {
+        childActionId: 'team.legacy-control.members.member.card.handle-restore-member',
+        apiActionId: 'team.lifecycle.restore-member',
+        owner: 'team-lifecycle',
+      },
+    ]);
+    expect(() =>
+      validateLegacyChildApiActionMappings(
+        linkedChildActions.map((row, index) =>
+          index === 0 ? { ...row, owner: 'team-runtime-control' } : row
+        ),
+        apiLedger.members
+      )
+    ).toThrow(/Child\/API ownership conflict/);
+    expect(() =>
+      validateLegacyChildApiActionMappings(linkedChildActions.slice(1), apiLedger.members)
+    ).toThrow(/Missing API-linked child action/);
   });
 
   it('fails an unannotated dynamic dispatch and accepts an annotation', () => {

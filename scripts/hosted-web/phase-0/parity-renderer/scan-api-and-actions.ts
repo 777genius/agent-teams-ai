@@ -23,6 +23,8 @@ const REVIEWED_CONTROL_FILES = {
 export const CONTROL_ROOTS = [
   REVIEWED_CONTROL_FILES.list,
   REVIEWED_CONTROL_FILES.detail,
+  'src/renderer/components/team/ToolApprovalSheet.tsx',
+  'src/renderer/components/team/dialogs/GlobalTaskDetailDialog.tsx',
   REVIEWED_CONTROL_FILES.providers,
 ] as const;
 const CONTROL_SCOPE_PREFIXES = [
@@ -51,6 +53,40 @@ const IMPLICIT_CONTROLS = new Set([
   'a',
   'button',
 ]);
+
+export const LEGACY_CHILD_API_ACTION_IDS = {
+  'team.legacy-control.dialogs.add.member.dialog.handle-submit': 'team.lifecycle.add-member',
+  'team.legacy-control.members.member.card.handle-restart-member': 'team.lifecycle.restart-member',
+  'team.legacy-control.members.member.card.handle-restore-member': 'team.lifecycle.restore-member',
+} as const;
+
+const MOUNT_CHAINS = [
+  {
+    root: 'src/renderer/components/team/ToolApprovalSheet.tsx',
+    edges: [
+      {
+        from: 'src/renderer/App.tsx',
+        to: 'src/renderer/components/team/ToolApprovalSheet.tsx',
+        component: 'ToolApprovalSheet',
+      },
+    ],
+  },
+  {
+    root: 'src/renderer/components/team/dialogs/GlobalTaskDetailDialog.tsx',
+    edges: [
+      {
+        from: 'src/renderer/components/layout/TabbedLayout.tsx',
+        to: 'src/renderer/components/layout/GlobalTaskDetailDialogSlot.tsx',
+        component: 'GlobalTaskDetailDialogSlot',
+      },
+      {
+        from: 'src/renderer/components/layout/GlobalTaskDetailDialogSlot.tsx',
+        to: 'src/renderer/components/team/dialogs/GlobalTaskDetailDialog.tsx',
+        component: 'GlobalTaskDetailDialog',
+      },
+    ],
+  },
+] as const;
 
 type ApiSurface = (typeof API_SURFACES)[number];
 type SourceRef = { file: string; sourceHash: string; siteCount: number };
@@ -870,6 +906,26 @@ export function discoverControlClosure(
   return [...visited].filter((file) => file.endsWith('.tsx')).sort();
 }
 
+export function validateMountedControlRoots(
+  readSource: (path: string) => string | undefined
+): Array<{ root: string; mountChain: string[] }> {
+  return MOUNT_CHAINS.map(({ root, edges }) => {
+    for (const edge of edges) {
+      const source = readSource(edge.from);
+      if (source === undefined) throw new Error(`Missing mount module: ${edge.from}`);
+      const importsTarget = importedModuleSpecifiers(source, edge.from).some(
+        (specifier) => resolveImportedModule(edge.from, specifier, readSource) === edge.to
+      );
+      if (!importsTarget || !source.includes(`<${edge.component}`)) {
+        throw new Error(
+          `Mounted control root is not reachable through ${edge.from} -> ${edge.to} (${edge.component})`
+        );
+      }
+    }
+    return { root, mountChain: edges.map((edge) => `${edge.from}#${edge.component}`) };
+  });
+}
+
 export function validateControlClosure(discovered: string[], declared: string[]): void {
   const expected = [...new Set(discovered)].sort();
   const actual = [...new Set(declared)].sort();
@@ -986,6 +1042,27 @@ function childCatalogAbsences(catalog: ChildControlCatalog): AbsenceRow[] {
         ),
       };
     });
+}
+
+export function validateLegacyChildApiActionMappings(
+  actions: SemanticRow[],
+  apiActions: Array<{ actionId: string; owningFeature: string }>
+): Array<{ childActionId: string; apiActionId: string; owner: string }> {
+  const childActions = new Map(actions.map((action) => [action.id, action]));
+  const apiOwners = new Map(apiActions.map((action) => [action.actionId, action.owningFeature]));
+
+  return Object.entries(LEGACY_CHILD_API_ACTION_IDS).map(([childActionId, apiActionId]) => {
+    const childAction = childActions.get(childActionId);
+    if (!childAction) throw new Error(`Missing API-linked child action: ${childActionId}`);
+    const apiOwner = apiOwners.get(apiActionId);
+    if (!apiOwner) throw new Error(`Missing API action for child mapping: ${apiActionId}`);
+    if (childAction.owner !== apiOwner) {
+      throw new Error(
+        `Child/API ownership conflict: ${childActionId} (${childAction.owner}) -> ${apiActionId} (${apiOwner})`
+      );
+    }
+    return { childActionId, apiActionId, owner: apiOwner };
+  });
 }
 
 function refsFor(
@@ -1226,14 +1303,20 @@ function evidenceSchemas(outputRoot: string): void {
       required: [
         ...base.required,
         'roots',
+        'mountProofs',
         'sourceFiles',
         'excludedSourceFiles',
         'actions',
         'apiActionBindings',
+        'legacyChildApiActionBindings',
         'deliberateAbsences',
       ],
       properties: {
         roots: { type: 'array', items: { type: 'string' } },
+        mountProofs: {
+          type: 'array',
+          items: { type: 'object', required: ['root', 'mountChain'] },
+        },
         sourceFiles: {
           type: 'array',
           items: { type: 'object', required: ['path', 'sha256', 'interactionSiteCount'] },
@@ -1262,6 +1345,13 @@ function evidenceSchemas(outputRoot: string): void {
           items: {
             type: 'object',
             required: ['actionId', 'owner', 'source', 'sourceMember', 'rendererCallers'],
+          },
+        },
+        legacyChildApiActionBindings: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['childActionId', 'apiActionId', 'owner'],
           },
         },
         deliberateAbsences: {
@@ -1332,7 +1422,7 @@ function evidenceSchemas(outputRoot: string): void {
 
 export function generateEvidence(
   repoRoot: string,
-  rawRoot = '/tmp/agent-teams-hosted-web-refactor-phase-00-remediation-w1-v7-artifacts'
+  rawRoot = '/tmp/agent-teams-hosted-web-refactor-phase-00-remediation-w1-v9-artifacts'
 ): { rawPath: string; rawHash: string; apiCount: number; controlCount: number } {
   const outputRoot = join(repoRoot, 'docs/research/hosted-web/phase-0/parity-renderer');
   const apiRows = scanApiInterfaces(
@@ -1372,6 +1462,7 @@ export function generateEvidence(
       ? readFileSync(absolute, 'utf8')
       : undefined;
   };
+  const mountProofs = validateMountedControlRoots(readRepoSource);
   const controlFiles = discoverControlClosure(CONTROL_ROOTS, readRepoSource);
   const teamControlCandidates = walk(join(repoRoot, 'src/renderer/components/team'))
     .filter((absolute) => absolute.endsWith('.tsx') && !/\.(?:test|stories)\.tsx$/.test(absolute))
@@ -1422,6 +1513,7 @@ export function generateEvidence(
     'runtime-provider-management'
   )
     throw new Error('Provider credential controls must remain provider-management owned');
+  const legacyChildApiActionBindings = validateLegacyChildApiActionMappings(actions, dispositions);
   const apiActionBindings = dispositions
     .filter((row) => row.rendererCallers.length)
     .map((row) => ({
@@ -1464,6 +1556,7 @@ export function generateEvidence(
     identityRule:
       'Semantic IDs are reviewed contract identifiers; source hashes, handler text, counts, file paths, and line positions are refreshable references and never enter identity.',
     roots: [...CONTROL_ROOTS],
+    mountProofs,
     sourceFiles: controlFiles.map((file) => ({
       path: file,
       sha256: `sha256:${sha(readRepoSource(file)!)}`,
@@ -1479,6 +1572,7 @@ export function generateEvidence(
       'The checked-in child-control catalog exactly matches the recursively discovered team/provider renderer closure. Every scanner-visible site maps once to a reviewed semantic action or deliberate absence; direct renderer IPC callers remain bound to the 109-member parity ledger. Every other production team TSX file is listed as excluded and rechecked as unreachable from these roots.',
     actions,
     apiActionBindings,
+    legacyChildApiActionBindings,
     deliberateAbsences,
     dynamicDispatch: {
       unannotatedCount: 0,

@@ -1,22 +1,34 @@
 {
   "schemaVersion": 3,
   "phaseId": "phase-00",
-  "laneId": "w1-remediation",
+  "laneId": "w1-remediation-v9",
   "packetRevision": "phase-00-r2",
-  "baseSha": "648bebed68f5a64c984e83b441e14dd7c587c403",
-  "canonicalBaseSha": "cbe501ad0f1fa0e51a038e832ad35fce4120321b",
+  "jobId": "agent-teams-hosted-web-refactor-phase-00-remediation-w1-v9",
+  "worktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w1-v9",
+  "baseSha": "f7d98790eb868714e536f77bd796072ea706911a",
+  "canonicalBaseSha": "f7d98790eb868714e536f77bd796072ea706911a",
   "status": "characterized",
   "provenance": {
-    "preservedSourceWorktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w1-v1",
-    "salvagedDirtyPaths": 13,
+    "startingHead": "f7d98790eb868714e536f77bd796072ea706911a",
+    "supersededJob": "agent-teams-hosted-web-refactor-phase-00-remediation-w1-v8",
+    "salvageWorktree": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-remediation-w1-v8",
+    "salvageArchive": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/archives/agent-teams-hosted-web-refactor-phase-00-remediation-w1-v8-rejected-20260711T213521Z",
+    "salvagePatchSha256": "sha256:14b1630460e6161b64766d34bd531c1197549603025093ac074986598e3fa774",
+    "salvageBaseSha": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8",
+    "reproductionReason": "The reviewed W1 v8 output was rejected only because the canonical target was contaminated by a failed W2 apply; v9 reproduces that W1 output on the clean canonical base.",
+    "rejectingReviewJob": "agent-teams-hosted-web-refactor-phase-00-w1-rereview-v1",
     "approvedInvariantSource": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w1-parity-renderer-v1/docs/research/hosted-web/phase-0/parity-renderer/selection-reconciliation-invariants.md",
-    "approvedInvariantSha256": "sha256:b9f9a3b24720fbac112a1b97e40725ecf484e18c15f1d7b6596d2446b4f4eefe"
+    "approvedInvariantSha256": "sha256:b9f9a3b24720fbac112a1b97e40725ecf484e18c15f1d7b6596d2446b4f4eefe",
+    "preservedApiLedgerSha256": "sha256:a11f469d9c981c3e05be57fed7a6303772349a79297a0f1887db97d54e84c0a3",
+    "preservedEstimateInputSha256": "sha256:af3fe8edc17ac5f3ca77533a949625b5b97c61c3ebab111726f72ebdc9adf669"
   },
   "remediates": {
-    "producerJob": "agent-teams-hosted-web-refactor-phase-00-remediation-w1-v1",
+    "producerJob": "agent-teams-hosted-web-refactor-phase-00-remediation-w1-v9",
+    "supersedesProducerJob": "agent-teams-hosted-web-refactor-phase-00-remediation-w1-v8",
     "reviewJobs": [
       "agent-teams-hosted-web-refactor-phase-00-remediation-review-w1-w2-v3",
-      "agent-teams-hosted-web-refactor-phase-00-audit-cross-lane-v2"
+      "agent-teams-hosted-web-refactor-phase-00-audit-cross-lane-v2",
+      "agent-teams-hosted-web-refactor-phase-00-w1-rereview-v1"
     ],
     "findingIds": [
       "R12-W1-001",
@@ -27,7 +39,9 @@
       "R12R-W1-001",
       "R12R-W1-002",
       "P0.V2.CONFLICT.W1.EXHAUSTIVENESS",
-      "P0.V2.CONFLICT.W1.APPROVED_FILE_REGRESSION"
+      "P0.V2.CONFLICT.W1.APPROVED_FILE_REGRESSION",
+      "P0.W1.V7.MOUNTED_CLOSURE",
+      "P0.W1.V7.CHILD_API_OWNERSHIP"
     ]
   },
   "evidence": [
@@ -69,12 +83,20 @@
   ],
   "findingResolutions": [
     {
+      "id": "P0.W1.V7.MOUNTED_CLOSURE",
+      "resolution": "The mounted closure now proves the App -> ToolApprovalSheet and TabbedLayout -> GlobalTaskDetailDialogSlot -> GlobalTaskDetailDialog chains. ToolApprovalSheet, ToolApprovalDiffPreview, ToolApprovalSettingsPanel and GlobalTaskDetailDialog are included with their exact 4/1/11/1 scanner-visible sites, expanding the closure from 167 files/726 sites to 171 files/743 sites. A broken real mount chain is a failing negative mutation."
+    },
+    {
+      "id": "P0.W1.V7.CHILD_API_OWNERSHIP",
+      "resolution": "AddMember dialog controls, the member restart/restore controls and the AddMember entry control are team-lifecycle-owned. The scanner explicitly maps the three API-reaching legacy child IDs to team.lifecycle.add-member, team.lifecycle.restart-member and team.lifecycle.restore-member, rejects owner disagreement, and rejects a missing required legacy-child mapping."
+    },
+    {
       "id": "R12R-W1-001",
-      "resolution": "The scanner now recursively follows relative and renderer-alias imports from the mounted TeamListView, TeamDetailView, and provider-management roots. The checked-in catalog declares all 167 reachable TSX files and maps all 726 scanner-visible occurrences exactly once. Eleven other production team TSX files and their 28 sites are omission-sensitive excludedSourceFiles because no import path exists from these roots. The real TeamListFilterPopover immediate-child omission and one of its mapping omissions are both failing negative mutations."
+      "resolution": "The scanner recursively follows relative and renderer-alias imports from five mounted team/provider roots. The checked-in catalog declares all 171 reachable TSX files and maps all 743 scanner-visible occurrences exactly once. Seven other production team TSX files and their 11 sites are omission-sensitive excludedSourceFiles because no import path exists from these roots. The real TeamListFilterPopover immediate-child omission and one of its mapping omissions are both failing negative mutations."
     },
     {
       "id": "P0.V2.CONFLICT.W1.EXHAUSTIVENESS",
-      "resolution": "Replaced the four-file claim with a source-derived 167-file reachable closure, an explicit child-control catalog, exact missing/extra closure diagnostics, exact site-count/hash validation, repository-backed omission fixtures, and a regenerated excluded-file manifest."
+      "resolution": "The source-derived closure now includes 171 files, explicit shell-mount proofs for global controls, an explicit child-control catalog, exact missing/extra closure diagnostics, exact site-count/hash validation, repository-backed omission fixtures, and a regenerated excluded-file manifest."
     },
     {
       "id": "R12R-W1-002",
@@ -94,7 +116,7 @@
     },
     {
       "id": "R12-X-001",
-      "resolution": "team.lifecycle.stop remains team-lifecycle-owned; provider credential/auth controls remain runtime-provider-management-owned; repository-wide renderer callers stay bound to their exact TeamsAPI, ReviewAPI, or CrossTeamAPI member and canonical owner."
+      "resolution": "team.lifecycle.stop, addMember, restartMember and restoreMember remain team-lifecycle-owned; provider credential/auth controls remain runtime-provider-management-owned; repository-wide renderer callers and API-linked legacy child IDs stay bound to their exact TeamsAPI, ReviewAPI, or CrossTeamAPI action and canonical owner."
     },
     {
       "id": "R12-W1-003",
@@ -119,7 +141,7 @@
     {
       "id": "P0.REQ.W1.003",
       "status": "satisfied",
-      "proof": "The recursively derived 167-file mounted closure has 726 mapped sites; every non-reachable production team TSX file is explicitly regenerated as excluded."
+      "proof": "The recursively derived 171-file mounted closure has 743 mapped sites. Real App/TabbedLayout mount chains prove the four formerly excluded files, their 17 sites are fixture-pinned, and every non-reachable production team TSX file is explicitly regenerated as excluded."
     },
     {
       "id": "P0.REQ.W1.004",
@@ -139,7 +161,7 @@
     {
       "id": "P0.REQ.W1.007",
       "status": "satisfied",
-      "proof": "Tests reject missing and duplicate API/semantic mappings, an actual omitted immediate child, and an actual omitted child-control mapping while proving root and child line-shift stability."
+      "proof": "Tests reject missing and duplicate API/semantic mappings, an actual omitted immediate child, an actual omitted child-control mapping, a broken global mount chain, legacy-child/API owner disagreement and a missing required child/API mapping while proving root and child line-shift stability."
     },
     {
       "id": "P0.REQ.W1.008",
@@ -155,12 +177,12 @@
       "total": 109
     },
     "directRendererApiActionBindings": 95,
-    "reachableControlFiles": 167,
-    "reachableInteractionSites": 726,
-    "semanticActions": 436,
+    "reachableControlFiles": 171,
+    "reachableInteractionSites": 743,
+    "semanticActions": 442,
     "deliberateAbsenceClasses": 5,
-    "excludedUnreachableTeamFiles": 11,
-    "excludedUnreachableInteractionSites": 28,
+    "excludedUnreachableTeamFiles": 7,
+    "excludedUnreachableInteractionSites": 11,
     "legacyBypassRawRows": 610,
     "legacyBypassRawSha256": "sha256:2ea065639675df126935790d86578cfdae9cf9feb60371826b03f1f877c5f497"
   },
@@ -193,30 +215,28 @@
   "changedPaths": [
     ".codex-handoff/phase-00-w1.json",
     "docs/research/hosted-web/phase-0/parity-renderer/README.md",
-    "docs/research/hosted-web/phase-0/parity-renderer/api-parity-ledger.json",
-    "docs/research/hosted-web/phase-0/parity-renderer/estimate-input.json",
     "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
     "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json",
     "docs/research/hosted-web/phase-0/parity-renderer/renderer-child-control-catalog.json",
-    "docs/research/hosted-web/phase-0/parity-renderer/schemas/api-parity-ledger.schema.json",
-    "docs/research/hosted-web/phase-0/parity-renderer/schemas/estimate-input.schema.json",
-    "docs/research/hosted-web/phase-0/parity-renderer/schemas/legacy-bypass-inventory.schema.json",
     "docs/research/hosted-web/phase-0/parity-renderer/schemas/renderer-action-inventory.schema.json",
-    "docs/research/hosted-web/phase-0/parity-renderer/schemas/renderer-child-control-catalog.schema.json",
-    "docs/research/hosted-web/phase-0/parity-renderer/selection-reconciliation-invariants.md",
     "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
     "test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts"
   ],
   "checks": [
     {
-      "command": "node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
+      "command": "git diff --exit-code -- api-parity-ledger.json estimate-input.json selection-reconciliation-invariants.md",
       "exitCode": 0,
-      "result": "109 API members, 167 reachable files, 726 mapped control sites, schemas valid, raw bypass hash reproduced"
+      "result": "verified API ledger, estimate input and invariant record are byte-preserved at their recorded SHA-256 values"
     },
     {
-      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts",
+      "command": "W1_RAW_EVIDENCE_ROOT=/tmp/agent-teams-hosted-web-refactor-phase-00-remediation-w1-v9-artifacts node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
       "exitCode": 0,
-      "result": "1 file, 9 tests passed"
+      "result": "109 API members, 171 reachable files, 743 mapped control sites, schemas valid, 4/1/11/1 mounted sites and all three legacy child/API bindings asserted, raw bypass hash reproduced"
+    },
+    {
+      "command": "pnpm exec vitest run --config /tmp/agent-teams-hosted-web-refactor-phase-00-remediation-w1-v9-artifacts/vitest.config.mjs test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts",
+      "exitCode": 0,
+      "result": "1 file, 11 tests passed"
     },
     {
       "command": "pnpm lint:fast:files -- scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts test/architecture/hosted-web/phase-0/parity-renderer/scan-api-and-actions.test.ts",
@@ -224,19 +244,14 @@
       "result": "0 errors, 0 warnings"
     },
     {
-      "command": "pnpm typecheck",
-      "exitCode": 0,
-      "result": "no TypeScript diagnostics"
-    },
-    {
-      "command": "pnpm exec prettier --check <all 15 W1-owned paths>",
+      "command": "pnpm exec prettier --check <all 8 changed W1-owned paths>",
       "exitCode": 0,
       "result": "all matched files use Prettier code style"
     },
     {
-      "command": "git diff --check plus per-untracked-file git diff --no-index --check",
+      "command": "focused v8-to-v9 reproduction comparison, exact 8-path scope, preserved-input diff and git diff --check",
       "exitCode": 0,
-      "result": "no whitespace diagnostics"
+      "result": "five files byte-identical to approved v8, scanner and legacy inventory differ only by v9 artifact provenance, handoff differs only by v9 provenance and verification/adoption metadata, archive and preserved patch both sha256:14b1630460e6161b64766d34bd531c1197549603025093ac074986598e3fa774, no whitespace diagnostics"
     },
     {
       "command": "bounded secret, credential-pattern and prohibited real-project-path scan over all W1-owned paths",
@@ -245,7 +260,7 @@
     }
   ],
   "externalRawEvidence": {
-    "path": "/tmp/agent-teams-hosted-web-refactor-phase-00-remediation-w1-v7-artifacts/legacy-bypass-raw.json",
+    "path": "/tmp/agent-teams-hosted-web-refactor-phase-00-remediation-w1-v9-artifacts/legacy-bypass-raw.json",
     "sha256": "sha256:2ea065639675df126935790d86578cfdae9cf9feb60371826b03f1f877c5f497",
     "recordCount": 610,
     "ephemeral": true
@@ -253,8 +268,8 @@
   "unverifiedClaims": [
     "No hosted transport, browser mount, provider, runtime, terminal, Phase 1, broad CI, build or standalone smoke behavior was executed.",
     "The two greater-than-20-percent estimate changes require controller scope review before the shared estimate can freeze.",
-    "This owner-authored terminal handoff requires a fresh focused W1 reciprocal re-review before controller adoption."
+    "No fresh broad reciprocal review was run because v9 is a clean-base reproduction of the reviewed W1 v8 output with provenance-only substitutions."
   ],
   "blockers": [],
-  "nextAction": "focused-w1-rereview-then-controller-estimate-scope-review"
+  "nextAction": "controller-adoption-then-estimate-scope-review"
 }

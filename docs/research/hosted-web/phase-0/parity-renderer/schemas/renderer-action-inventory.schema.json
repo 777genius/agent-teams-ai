@@ -9,10 +9,12 @@
     "pinnedBaseSha",
     "phaseStartSha",
     "roots",
+    "mountProofs",
     "sourceFiles",
     "excludedSourceFiles",
     "actions",
     "apiActionBindings",
+    "legacyChildApiActionBindings",
     "deliberateAbsences"
   ],
   "properties": {
@@ -20,6 +22,13 @@
       "type": "array",
       "items": {
         "type": "string"
+      }
+    },
+    "mountProofs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["root", "mountChain"]
       }
     },
     "sourceFiles": {
@@ -56,6 +65,13 @@
       "items": {
         "type": "object",
         "required": ["actionId", "owner", "source", "sourceMember", "rendererCallers"]
+      }
+    },
+    "legacyChildApiActionBindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["childActionId", "apiActionId", "owner"]
       }
     },
     "deliberateAbsences": {
