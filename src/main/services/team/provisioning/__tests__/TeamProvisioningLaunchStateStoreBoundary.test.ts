@@ -145,7 +145,7 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     });
 
     await boundary.writeLaunchStateSnapshotNow('demo', nextSnapshot, { runId: 'run-1' });
-    await boundary.clearPersistedLaunchStateNow('demo', { expectedRunId: 'run-1' });
+    await boundary.clearPersistedLaunchStateNow('demo');
 
     expect(launchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot);
     expect(defaultLaunchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot);
@@ -169,18 +169,58 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     );
   });
 
-  it('clears persisted state, last-written state, bootstrap state, and runtime caches', async () => {
+  it('clears run-scoped persisted state, last-written state, and runtime caches', async () => {
     const { boundary, ports, setTrackedRunId } = createBoundary();
 
     await boundary.writeLaunchStateSnapshotNow('demo', snapshot(), { runId: 'run-1' });
     await boundary.clearPersistedLaunchStateNow('demo', { expectedRunId: 'run-1' });
 
     expect(ports.launchStateStore.clear).toHaveBeenCalledWith('demo');
-    expect(ports.clearBootstrapState).toHaveBeenCalledWith('demo');
+    expect(ports.clearBootstrapState).not.toHaveBeenCalled();
     expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
 
     setTrackedRunId('run-2');
     expect(boundary.canClearPersistedLaunchStateForRun('demo', 'run-2')).toBe(true);
+  });
+
+  it('preserves successor bootstrap state when a run-scoped clear loses authority', async () => {
+    const launchClearStarted = deferred();
+    const launchClearGate = deferred();
+    let bootstrapRunId: string | null = 'run-1';
+    const clearBootstrapState = vi.fn(async () => {
+      bootstrapRunId = null;
+    });
+    const launchStateStore = {
+      read: vi.fn(async () => null),
+      write: vi.fn(async () => undefined),
+      clear: vi.fn(async () => {
+        launchClearStarted.resolve();
+        await launchClearGate.promise;
+      }),
+    };
+    const { boundary, ports, setTrackedRunId } = createBoundary({
+      clearBootstrapState,
+      launchStateStore,
+    });
+
+    const clearing = boundary.clearPersistedLaunchStateNow('demo', { expectedRunId: 'run-1' });
+    await launchClearStarted.promise;
+
+    setTrackedRunId('run-2');
+    bootstrapRunId = 'run-2';
+    launchClearGate.resolve();
+    await clearing;
+
+    expect(bootstrapRunId).toBe('run-2');
+    expect(ports.clearBootstrapState).not.toHaveBeenCalled();
+  });
+
+  it('keeps team-scoped bootstrap clearing for compatibility with unscoped clears', async () => {
+    const { boundary, ports } = createBoundary();
+
+    await boundary.clearPersistedLaunchStateNow('demo');
+
+    expect(ports.clearBootstrapState).toHaveBeenCalledWith('demo');
   });
 
   it('applies both write overlays and updates the last-written run id', async () => {
@@ -258,6 +298,35 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
 
     expect(result).toEqual({ snapshot: next, wrote: true });
     expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', next);
+  });
+
+  it('removes a snapshot whose run loses authority while its write is pending', async () => {
+    const writeStarted = deferred();
+    const writeGate = deferred();
+    let persistedSnapshot: PersistedTeamLaunchSnapshot | null = null;
+    const launchStateStore = {
+      read: vi.fn(async () => persistedSnapshot),
+      write: vi.fn(async (_teamName: string, nextSnapshot: PersistedTeamLaunchSnapshot) => {
+        writeStarted.resolve();
+        await writeGate.promise;
+        persistedSnapshot = nextSnapshot;
+      }),
+      clear: vi.fn(async () => {
+        persistedSnapshot = null;
+      }),
+    };
+    const { boundary, ports, setTrackedRunId } = createBoundary({ launchStateStore });
+
+    const writing = boundary.writeLaunchStateSnapshotNow('demo', snapshot(), { runId: 'run-1' });
+    await writeStarted.promise;
+    setTrackedRunId('run-2');
+    writeGate.resolve();
+
+    await expect(writing).resolves.toMatchObject({ wrote: false });
+    expect(persistedSnapshot).toBeNull();
+    expect(ports.launchStateStore.clear).toHaveBeenCalledWith('demo');
+    expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
+    expect(boundary.getWrittenRunIdByTeam().has('demo')).toBe(false);
   });
 
   it('serializes queued operations and only removes the current queue entry', async () => {

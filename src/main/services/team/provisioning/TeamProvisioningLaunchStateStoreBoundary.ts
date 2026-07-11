@@ -107,9 +107,16 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       );
       return;
     }
+    const writtenRunIdBeforeClear = this.writtenRunIdByTeam.get(teamName);
     await this.ports.launchStateStore.clear(teamName);
-    this.writtenRunIdByTeam.delete(teamName);
-    await this.ports.clearBootstrapState(teamName);
+    if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeClear) {
+      this.writtenRunIdByTeam.delete(teamName);
+    }
+    // Bootstrap state is team-scoped and written outside this queue. A run-scoped delete could
+    // remove a successor run's state after the authority check has already passed.
+    if (!options?.expectedRunId) {
+      await this.ports.clearBootstrapState(teamName);
+    }
     this.ports.invalidateRuntimeSnapshotCaches(teamName);
   }
 
@@ -152,7 +159,22 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     ) {
       return { snapshot: previousSnapshot, wrote: false };
     }
+    const writtenRunIdBeforeWrite = this.writtenRunIdByTeam.get(teamName);
     await this.ports.launchStateStore.write(teamName, normalizedSnapshot);
+    if (
+      typeof options?.runId === 'string' &&
+      this.ports.getTrackedRunId(teamName) !== options.runId
+    ) {
+      await this.ports.launchStateStore.clear(teamName);
+      if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeWrite) {
+        this.writtenRunIdByTeam.delete(teamName);
+      }
+      this.ports.invalidateRuntimeSnapshotCaches(teamName);
+      this.ports.logDebug(
+        `[${teamName}] Removed stale launch-state write for run ${options.runId}`
+      );
+      return { snapshot: normalizedSnapshot, wrote: false };
+    }
     if (typeof options?.runId === 'string') {
       this.writtenRunIdByTeam.set(teamName, options.runId);
     }
