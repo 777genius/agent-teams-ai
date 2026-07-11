@@ -7,6 +7,7 @@ import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { join } from 'path';
 
+import { getHttpTeamUseCases } from './runtimeCore';
 import {
   HttpBadRequestError,
   parseCreateTeamRequest,
@@ -44,7 +45,8 @@ function isMemberWorkSyncReportState(value: string): value is MemberWorkSyncRepo
 }
 
 function getTeamProvisioningStartApi(services: HttpServices): TeamHttpProvisioningStartApi {
-  const api = services.teamApis?.provisioningStart;
+  const api =
+    getHttpTeamUseCases(services)?.http.provisioningStart ?? services.teamApis?.provisioningStart;
   if (!api) {
     throw new HttpFeatureUnavailableError('Team launch control is not available in this mode');
   }
@@ -52,7 +54,8 @@ function getTeamProvisioningStartApi(services: HttpServices): TeamHttpProvisioni
 }
 
 function getTeamProvisioningStatusApi(services: HttpServices): TeamHttpProvisioningStatusApi {
-  const api = services.teamApis?.provisioningStatus;
+  const api =
+    getHttpTeamUseCases(services)?.http.provisioningStatus ?? services.teamApis?.provisioningStatus;
   if (!api) {
     throw new HttpFeatureUnavailableError('Team provisioning status is not available in this mode');
   }
@@ -60,7 +63,7 @@ function getTeamProvisioningStatusApi(services: HttpServices): TeamHttpProvision
 }
 
 function getTeamRuntimeApi(services: HttpServices): TeamHttpRuntimeApi {
-  const api = services.teamApis?.runtime;
+  const api = getHttpTeamUseCases(services)?.http.runtime ?? services.teamApis?.runtime;
   if (!api) {
     throw new HttpFeatureUnavailableError('Team runtime control is not available in this mode');
   }
@@ -68,7 +71,8 @@ function getTeamRuntimeApi(services: HttpServices): TeamHttpRuntimeApi {
 }
 
 function getTeamRuntimeControlApi(services: HttpServices): TeamHttpRuntimeControlApi {
-  const api = services.teamApis?.runtimeControl;
+  const api =
+    getHttpTeamUseCases(services)?.http.runtimeControl ?? services.teamApis?.runtimeControl;
   if (!api) {
     throw new HttpFeatureUnavailableError('Team runtime callbacks are not available in this mode');
   }
@@ -76,10 +80,11 @@ function getTeamRuntimeControlApi(services: HttpServices): TeamHttpRuntimeContro
 }
 
 function getTeamDataApi(services: HttpServices): NonNullable<HttpServices['teamDataApi']> {
-  if (!services.teamDataApi) {
+  const api = getHttpTeamUseCases(services)?.data ?? services.teamDataApi;
+  if (!api) {
     throw new HttpFeatureUnavailableError('Team data control is not available in this mode');
   }
-  return services.teamDataApi;
+  return api;
 }
 
 function getStatusCode(error: unknown, fallback: number = 500): number {
@@ -133,7 +138,7 @@ async function getDraftSavedRequest(
   services: HttpServices,
   teamName: string
 ): Promise<TeamCreateRequest | null> {
-  if (!services.teamDataApi) {
+  if (!getHttpTeamUseCases(services)?.data && !services.teamDataApi) {
     return null;
   }
 
@@ -166,7 +171,7 @@ async function getTeamDataWithRuntimeOverlay(
   const data = await getTeamDataApi(services).getTeamData(teamName);
   let runtimeState: Awaited<ReturnType<TeamHttpRuntimeApi['getRuntimeState']>> | null = null;
   try {
-    const runtimeApi = services.teamApis?.runtime;
+    const runtimeApi = getHttpTeamUseCases(services)?.http.runtime ?? services.teamApis?.runtime;
     runtimeState = (await runtimeApi?.getRuntimeState(teamName)) ?? null;
   } catch {
     runtimeState = null;
@@ -219,7 +224,8 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         });
       }
 
-      const taskActivityApi = services.teamApis?.taskActivity;
+      const taskActivityApi =
+        getHttpTeamUseCases(services)?.http.taskActivity ?? services.teamApis?.taskActivity;
       await taskActivityApi?.repairStaleTaskActivityIntervalsBeforeSnapshot(teamName);
       return reply.send(await getTeamDataWithRuntimeOverlay(services, teamName));
     } catch (error) {

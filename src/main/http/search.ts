@@ -9,12 +9,16 @@ import { createLogger } from '@shared/utils/logger';
 
 import { coerceSearchMaxResults, validateProjectId, validateSearchQuery } from '../ipc/guards';
 
+import { getHttpProviderJsonParsingServices } from './runtimeCore';
+
 import type { HttpServices } from './index';
 import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:search');
 
 export function registerSearchRoutes(app: FastifyInstance, services: HttpServices): void {
+  const runtimeCore = getHttpProviderJsonParsingServices(services);
+
   app.get<{
     Params: { projectId: string };
     Querystring: { q?: string; maxResults?: string };
@@ -36,7 +40,7 @@ export function registerSearchRoutes(app: FastifyInstance, services: HttpService
         50
       );
 
-      const result = await services.projectScanner.searchSessions(
+      const result = await runtimeCore.projectScanner.searchSessions(
         validatedProject.value!,
         validatedQuery.value!,
         maxResults
@@ -65,7 +69,7 @@ export function registerSearchRoutes(app: FastifyInstance, services: HttpService
         50
       );
 
-      const result = await services.projectScanner.searchAllProjects(
+      const result = await runtimeCore.projectScanner.searchAllProjects(
         validatedQuery.value!,
         maxResults
       );

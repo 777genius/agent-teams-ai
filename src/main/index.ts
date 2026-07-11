@@ -68,6 +68,11 @@ import {
   removeRecentProjectsIpc,
 } from '@features/recent-projects/main';
 import {
+  createRuntimeCoreFeature,
+  createRuntimeCoreProviderJsonParsingServices,
+  type RuntimeCoreFeatureFacade,
+} from '@features/runtime-core/main';
+import {
   createRuntimeProviderManagementFeature,
   registerRuntimeProviderManagementIpc,
   removeRuntimeProviderManagementIpc,
@@ -116,11 +121,7 @@ import {
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import {
   bindTeamCrossTeamMessagingApi,
-  bindTeamHttpDataApi,
-  bindTeamHttpHandlerApis,
-  bindTeamIpcHandlerApis,
   type TeamDiagnosticsApi,
-  type TeamHttpHandlerApis,
   type TeamIpcHandlerApis,
 } from '@main/services/team/contracts/TeamProvisioningApis';
 import { ReviewApplierService } from '@main/services/team/ReviewApplierService';
@@ -1059,7 +1060,7 @@ let tokenUsageFeature: TokenUsageFeatureFacade | null = null;
 let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
-let teamHttpHandlerApis: TeamHttpHandlerApis | null = null;
+let runtimeCoreFeature: RuntimeCoreFeatureFacade | null = null;
 let launchIoGovernor: LaunchIoGovernor | null = null;
 let cliInstallerService: CliInstallerService;
 let openCodeRuntimeInstallerService: OpenCodeRuntimeInstallerService;
@@ -1846,7 +1847,18 @@ async function initializeServices(): Promise<void> {
     internalStorageFeature.taskCommentNotificationJournalStore
   );
   teamProvisioningService = new TeamProvisioningService();
-  const teamIpcHandlerApis: TeamIpcHandlerApis = bindTeamIpcHandlerApis(teamProvisioningService);
+  runtimeCoreFeature = createRuntimeCoreFeature({
+    providerJsonParsing: createRuntimeCoreProviderJsonParsingServices(localContext),
+    teams: {
+      data: teamDataService,
+      orchestration: teamProvisioningService,
+    },
+  });
+  const teamRuntimeCoreUseCases = runtimeCoreFeature.teams;
+  if (!teamRuntimeCoreUseCases) {
+    throw new Error('Runtime core team use cases are not initialized');
+  }
+  const teamIpcHandlerApis: TeamIpcHandlerApis = teamRuntimeCoreUseCases.ipc;
   const teamDiagnosticsApi = teamIpcHandlerApis.diagnostics;
   const teamMessagingApi = teamIpcHandlerApis.messaging;
   const teamProvisioningRunApi = teamIpcHandlerApis.provisioningRun;
@@ -2594,8 +2606,6 @@ async function initializeServices(): Promise<void> {
     message: 'Wiring app actions...',
   });
 
-  teamHttpHandlerApis = bindTeamHttpHandlerApis(teamProvisioningService);
-
   // Initialize IPC handlers with registry
   initializeIpcHandlers(
     contextRegistry,
@@ -2710,9 +2720,16 @@ async function startHttpServer(
 
     const config = configManager.getConfig();
     const activeContext = contextRegistry.getActive();
-    if (!teamHttpHandlerApis) {
-      throw new Error('Team HTTP APIs are not initialized');
+    if (!runtimeCoreFeature?.teams) {
+      throw new Error('Runtime core team use cases are not initialized');
     }
+    const runtimeCoreForActiveContext = createRuntimeCoreFeature({
+      providerJsonParsing: createRuntimeCoreProviderJsonParsingServices(activeContext),
+      teams: {
+        data: runtimeCoreFeature.teams.data,
+        orchestration: teamProvisioningService,
+      },
+    });
     const port = await httpServer.start(
       {
         projectScanner: activeContext.projectScanner,
@@ -2726,8 +2743,7 @@ async function startHttpServer(
         memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
         updaterService,
         sshConnectionManager,
-        teamDataApi: bindTeamHttpDataApi(teamDataService),
-        teamApis: teamHttpHandlerApis,
+        runtimeCore: runtimeCoreForActiveContext,
       },
       modeSwitchHandler,
       config.httpServer?.port ?? 3456

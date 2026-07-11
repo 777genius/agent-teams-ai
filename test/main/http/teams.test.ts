@@ -269,6 +269,51 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
+  it('uses runtimeCore task activity repair before reading a team snapshot', async () => {
+    const mocks = createServicesMock();
+    const app = Fastify();
+    mocks.getTeamData.mockResolvedValue({
+      teamName: 'demo-team',
+      config: null,
+      tasks: [],
+      members: [],
+      messages: [],
+      processes: [],
+      kanban: null,
+    } as unknown as TeamViewSnapshot);
+    registerTeamRoutes(app, {
+      ...mocks.services,
+      teamApis: undefined,
+      teamDataApi: undefined,
+      runtimeCore: {
+        providerJsonParsing: mocks.services,
+        teams: {
+          data: mocks.services.teamDataApi!,
+          http: mocks.services.teamApis!,
+          ipc: {} as never,
+        },
+      },
+    });
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/demo-team',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(mocks.repairStaleTaskActivityIntervalsBeforeSnapshot).toHaveBeenCalledWith(
+        'demo-team'
+      );
+      expect(
+        mocks.repairStaleTaskActivityIntervalsBeforeSnapshot.mock.invocationCallOrder[0]
+      ).toBeLessThan(mocks.getTeamData.mock.invocationCallOrder[0]);
+    } finally {
+      await app.close();
+    }
+  });
+
   it('overlays team get snapshots with live runtime state', async () => {
     const { app, getTeamData, getRuntimeState } = await createApp();
     getTeamData.mockResolvedValue({

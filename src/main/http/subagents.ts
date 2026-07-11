@@ -9,12 +9,16 @@ import { createLogger } from '@shared/utils/logger';
 
 import { validateProjectId, validateSessionId, validateSubagentId } from '../ipc/guards';
 
+import { getHttpProviderJsonParsingServices } from './runtimeCore';
+
 import type { HttpServices } from './index';
 import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:subagents');
 
 export function registerSubagentRoutes(app: FastifyInstance, services: HttpServices): void {
+  const runtimeCore = getHttpProviderJsonParsingServices(services);
+
   app.get<{
     Params: { projectId: string; sessionId: string; subagentId: string };
     Querystring: { bypassCache?: string };
@@ -43,20 +47,20 @@ export function registerSubagentRoutes(app: FastifyInstance, services: HttpServi
       const cacheKey = `subagent-${safeProjectId}-${safeSessionId}-${safeSubagentId}`;
 
       // Check cache first
-      let subagentDetail = services.dataCache.getSubagent(cacheKey);
+      let subagentDetail = runtimeCore.dataCache.getSubagent(cacheKey);
       if (subagentDetail && !bypassCache) {
         return subagentDetail;
       }
 
-      const fsProvider = services.projectScanner.getFileSystemProvider();
-      const projectsDir = services.projectScanner.getProjectsDir();
+      const fsProvider = runtimeCore.projectScanner.getFileSystemProvider();
+      const projectsDir = runtimeCore.projectScanner.getProjectsDir();
 
-      const builtDetail = await services.chunkBuilder.buildSubagentDetail(
+      const builtDetail = await runtimeCore.chunkBuilder.buildSubagentDetail(
         safeProjectId,
         safeSessionId,
         safeSubagentId,
-        services.sessionParser,
-        services.subagentResolver,
+        runtimeCore.sessionParser,
+        runtimeCore.subagentResolver,
         fsProvider,
         projectsDir
       );
@@ -67,7 +71,7 @@ export function registerSubagentRoutes(app: FastifyInstance, services: HttpServi
       }
 
       subagentDetail = builtDetail;
-      services.dataCache.setSubagent(cacheKey, subagentDetail);
+      runtimeCore.dataCache.setSubagent(cacheKey, subagentDetail);
 
       return subagentDetail;
     } catch (error) {

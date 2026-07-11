@@ -15,6 +15,8 @@ import { createLogger } from '@shared/utils/logger';
 import { coercePageLimit, validateProjectId, validateSessionId } from '../ipc/guards';
 import { DataCache } from '../services/infrastructure/DataCache';
 
+import { getHttpProviderJsonParsingServices } from './runtimeCore';
+
 import type { SessionsByIdsOptions, SessionsPaginationOptions } from '../types';
 import type { HttpServices } from './index';
 import type { FastifyInstance } from 'fastify';
@@ -22,6 +24,8 @@ import type { FastifyInstance } from 'fastify';
 const logger = createLogger('HTTP:sessions');
 
 export function registerSessionRoutes(app: FastifyInstance, services: HttpServices): void {
+  const runtimeCore = getHttpProviderJsonParsingServices(services);
+
   // List sessions
   app.get<{ Params: { projectId: string } }>(
     '/api/projects/:projectId/sessions',
@@ -33,7 +37,7 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
           return [];
         }
 
-        const sessions = await services.projectScanner.listSessions(validated.value!);
+        const sessions = await runtimeCore.projectScanner.listSessions(validated.value!);
         return sessions;
       } catch (error) {
         logger.error(`Error in GET sessions for ${request.params.projectId}:`, error);
@@ -71,7 +75,7 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
         metadataLevel: request.query.metadataLevel,
       };
 
-      const result = await services.projectScanner.listSessionsPaginated(
+      const result = await runtimeCore.projectScanner.listSessionsPaginated(
         validated.value!,
         cursor,
         limit,
@@ -118,11 +122,11 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
           return [];
         }
 
-        const fsType = services.projectScanner.getFileSystemProvider().type;
+        const fsType = runtimeCore.projectScanner.getFileSystemProvider().type;
         const effectiveMetadataLevel = metadataLevel ?? (fsType === 'ssh' ? 'light' : 'deep');
         const results = await Promise.all(
           validIds.map((id) =>
-            services.projectScanner.getSessionWithOptions(validated.value!, id, {
+            runtimeCore.projectScanner.getSessionWithOptions(validated.value!, id, {
               metadataLevel: effectiveMetadataLevel,
             })
           )
@@ -157,14 +161,14 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
       const bypassCache = request.query?.bypassCache === 'true';
 
       // Check cache first
-      let sessionDetail = services.dataCache.get(cacheKey);
+      let sessionDetail = runtimeCore.dataCache.get(cacheKey);
       if (sessionDetail && !bypassCache) {
         return sessionDetail;
       }
 
-      const fsType = services.projectScanner.getFileSystemProvider().type;
+      const fsType = runtimeCore.projectScanner.getFileSystemProvider().type;
       // In SSH mode, avoid an extra deep metadata scan before full parse.
-      const session = await services.projectScanner.getSessionWithOptions(
+      const session = await runtimeCore.projectScanner.getSessionWithOptions(
         safeProjectId,
         safeSessionId,
         {
@@ -177,10 +181,13 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
       }
 
       // Parse session messages
-      const parsedSession = await services.sessionParser.parseSession(safeProjectId, safeSessionId);
+      const parsedSession = await runtimeCore.sessionParser.parseSession(
+        safeProjectId,
+        safeSessionId
+      );
 
       // Resolve subagents
-      const subagents = await services.subagentResolver.resolveSubagents(
+      const subagents = await runtimeCore.subagentResolver.resolveSubagents(
         safeProjectId,
         safeSessionId,
         parsedSession.taskCalls,
@@ -189,14 +196,14 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
       session.hasSubagents = subagents.length > 0;
 
       // Build session detail with chunks
-      sessionDetail = services.chunkBuilder.buildSessionDetail(
+      sessionDetail = runtimeCore.chunkBuilder.buildSessionDetail(
         session,
         parsedSession.messages,
         subagents
       );
 
       // Cache the result
-      services.dataCache.set(cacheKey, sessionDetail);
+      runtimeCore.dataCache.set(cacheKey, sessionDetail);
 
       return sessionDetail;
     } catch (error) {
@@ -225,19 +232,19 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
         const safeProjectId = validatedProject.value!;
         const safeSessionId = validatedSession.value!;
 
-        const parsedSession = await services.sessionParser.parseSession(
+        const parsedSession = await runtimeCore.sessionParser.parseSession(
           safeProjectId,
           safeSessionId
         );
 
-        const subagents = await services.subagentResolver.resolveSubagents(
+        const subagents = await runtimeCore.subagentResolver.resolveSubagents(
           safeProjectId,
           safeSessionId,
           parsedSession.taskCalls,
           parsedSession.messages
         );
 
-        const groups = services.chunkBuilder.buildGroups(parsedSession.messages, subagents);
+        const groups = runtimeCore.chunkBuilder.buildGroups(parsedSession.messages, subagents);
         return groups;
       } catch (error) {
         logger.error(
@@ -265,12 +272,12 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
 
         // Try cache first
         const cacheKey = DataCache.buildKey(safeProjectId, safeSessionId);
-        const cached = services.dataCache.get(cacheKey);
+        const cached = runtimeCore.dataCache.get(cacheKey);
         if (cached) {
           return cached.metrics;
         }
 
-        const parsedSession = await services.sessionParser.parseSession(
+        const parsedSession = await runtimeCore.sessionParser.parseSession(
           safeProjectId,
           safeSessionId
         );
@@ -301,32 +308,32 @@ export function registerSessionRoutes(app: FastifyInstance, services: HttpServic
         const cacheKey = DataCache.buildKey(safeProjectId, safeSessionId);
 
         // Try cache first for session detail
-        let detail = services.dataCache.get(cacheKey);
+        let detail = runtimeCore.dataCache.get(cacheKey);
 
         if (!detail) {
-          const session = await services.projectScanner.getSession(safeProjectId, safeSessionId);
+          const session = await runtimeCore.projectScanner.getSession(safeProjectId, safeSessionId);
           if (!session) return null;
 
-          const parsedSession = await services.sessionParser.parseSession(
+          const parsedSession = await runtimeCore.sessionParser.parseSession(
             safeProjectId,
             safeSessionId
           );
-          const subagents = await services.subagentResolver.resolveSubagents(
+          const subagents = await runtimeCore.subagentResolver.resolveSubagents(
             safeProjectId,
             safeSessionId,
             parsedSession.taskCalls,
             parsedSession.messages
           );
 
-          detail = services.chunkBuilder.buildSessionDetail(
+          detail = runtimeCore.chunkBuilder.buildSessionDetail(
             session,
             parsedSession.messages,
             subagents
           );
-          services.dataCache.set(cacheKey, detail);
+          runtimeCore.dataCache.set(cacheKey, detail);
         }
 
-        return services.chunkBuilder.buildWaterfallData(detail.chunks, detail.processes);
+        return runtimeCore.chunkBuilder.buildWaterfallData(detail.chunks, detail.processes);
       } catch (error) {
         logger.error(
           `Error in GET waterfall for ${request.params.projectId}/${request.params.sessionId}:`,

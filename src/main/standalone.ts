@@ -17,6 +17,10 @@
 // error tracking can be added later with @sentry/node if needed.
 
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
+import {
+  createRuntimeCoreFeature,
+  createRuntimeCoreProviderJsonParsingServices,
+} from '@features/runtime-core/main';
 import { createLogger } from '@shared/utils/logger';
 
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
@@ -32,6 +36,7 @@ import type { NotificationManager } from './services/infrastructure/Notification
 import type { ServiceContext } from './services/infrastructure/ServiceContext';
 import type { SshConnectionManager } from './services/infrastructure/SshConnectionManager';
 import type { UpdaterService } from './services/infrastructure/UpdaterService';
+import type { StandaloneTeamServices } from './standaloneTeamServices';
 
 const logger = createLogger('Standalone');
 
@@ -88,6 +93,7 @@ const sshConnectionManagerStub = {
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
+let standaloneTeamServices: StandaloneTeamServices | null = null;
 
 // =============================================================================
 // Lifecycle
@@ -103,10 +109,16 @@ async function start(): Promise<void> {
   }
 
   // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
-  const [{ HttpServer }, { NotificationManager }, { ServiceContext }] = await Promise.all([
+  const [
+    { HttpServer },
+    { NotificationManager },
+    { ServiceContext },
+    { attachStandaloneTeamHttpServices, createStandaloneTeamServices },
+  ] = await Promise.all([
     import('./services/infrastructure/HttpServer'),
     import('./services/infrastructure/NotificationManager'),
     import('./services/infrastructure/ServiceContext'),
+    import('./standaloneTeamServices'),
   ]);
 
   const projectsDir = getProjectsBasePath();
@@ -136,6 +148,11 @@ async function start(): Promise<void> {
     getLocalContext: () => localContext,
     logger: createLogger('Feature:RecentProjects'),
   });
+  standaloneTeamServices = createStandaloneTeamServices();
+  const runtimeCoreFeature = createRuntimeCoreFeature({
+    providerJsonParsing: createRuntimeCoreProviderJsonParsingServices(localContext),
+    teams: standaloneTeamServices.runtimeCoreTeamSources,
+  });
 
   // Wire file watcher events to SSE broadcast
   localContext.fileWatcher.on('file-change', (event: unknown) => {
@@ -157,16 +174,20 @@ async function start(): Promise<void> {
   });
 
   // Build services for HTTP routes
-  const services: HttpServices = {
-    projectScanner: localContext.projectScanner,
-    sessionParser: localContext.sessionParser,
-    subagentResolver: localContext.subagentResolver,
-    chunkBuilder: localContext.chunkBuilder,
-    dataCache: localContext.dataCache,
-    recentProjectsFeature,
-    updaterService: updaterServiceStub,
-    sshConnectionManager: sshConnectionManagerStub,
-  };
+  const services: HttpServices = attachStandaloneTeamHttpServices(
+    {
+      projectScanner: localContext.projectScanner,
+      sessionParser: localContext.sessionParser,
+      subagentResolver: localContext.subagentResolver,
+      chunkBuilder: localContext.chunkBuilder,
+      dataCache: localContext.dataCache,
+      recentProjectsFeature,
+      runtimeCore: runtimeCoreFeature,
+      updaterService: updaterServiceStub,
+      sshConnectionManager: sshConnectionManagerStub,
+    },
+    standaloneTeamServices
+  );
 
   // No-op mode switch handler (no SSH in standalone)
   const modeSwitchHandler = async (): Promise<void> => {};
@@ -187,6 +208,9 @@ async function shutdown(): Promise<void> {
   if (localContext) {
     localContext.dispose();
   }
+
+  await standaloneTeamServices?.dispose();
+  standaloneTeamServices = null;
 
   logger.info('Shutdown complete');
   process.exit(0);
