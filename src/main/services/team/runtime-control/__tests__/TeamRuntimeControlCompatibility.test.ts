@@ -365,6 +365,42 @@ describe('TeamRuntimeControlCompatibility', () => {
     );
   });
 
+  it('owns one persistent permission fence across per-call production boundary creation', async () => {
+    const firstEntered = createDeferred();
+    const releaseFirst = createDeferred();
+    const enteredRequests: string[] = [];
+    const openCode = createOpenCodePort(createOpenCodeAck('accepted'));
+    openCode.answerOpenCodeRuntimePermission = vi.fn(async (raw) => {
+      const requestId = getPayloadRequestId(raw);
+      enteredRequests.push(requestId);
+      if (enteredRequests.length === 1) {
+        firstEntered.resolve();
+        await releaseFirst.promise;
+      }
+      return createOpenCodeAck('accepted');
+    });
+    const service = {
+      createOpenCodeRuntimeDeliveryBoundary: vi.fn(() => openCode),
+      createOpenCodeRuntimePermissionAnswerBoundary: vi.fn(() => openCode),
+      resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'lane-1'),
+    };
+    const api = createTeamRuntimeControlCompatibilityApiFromService(service);
+
+    const first = api.answerOpenCodeRuntimePermission(createPermissionAnswerPayload());
+    await firstEntered.promise;
+    const second = api.answerOpenCodeRuntimePermission(
+      createPermissionAnswerPayload({ requestId: 'provider-request-2' })
+    );
+
+    expect(service.createOpenCodeRuntimePermissionAnswerBoundary).toHaveBeenCalledTimes(1);
+    expect(openCode.answerOpenCodeRuntimePermission).toHaveBeenCalledTimes(1);
+    releaseFirst.resolve();
+
+    await expect(Promise.all([first, second])).resolves.toHaveLength(2);
+    expect(enteredRequests).toEqual(['provider-request-1', 'provider-request-2']);
+    expect(service.createOpenCodeRuntimePermissionAnswerBoundary).toHaveBeenCalledTimes(2);
+  });
+
   it('lets unrelated production compatibility delivery keys commit concurrently', async () => {
     const release = createDeferred();
     const enteredKeys = new Set<string>();
@@ -441,6 +477,21 @@ function createDeliveryPayload(overrides: Record<string, unknown> = {}): Record<
   };
 }
 
+function createPermissionAnswerPayload(
+  overrides: Record<string, unknown> = {}
+): Record<string, unknown> {
+  return {
+    teamName: 'Team',
+    runId: 'run-1',
+    memberName: 'Builder',
+    requestId: 'provider-request-1',
+    decision: 'allow',
+    cwd: '/repo',
+    expectedMembers: [],
+    ...overrides,
+  };
+}
+
 function createDeferred(): { promise: Promise<void>; resolve: () => void } {
   let resolve!: () => void;
   const promise = new Promise<void>((resolvePromise) => {
@@ -459,4 +510,16 @@ function getPayloadIdempotencyKey(raw: unknown): string {
     throw new Error('Expected delivery idempotency key');
   }
   return raw.idempotencyKey;
+}
+
+function getPayloadRequestId(raw: unknown): string {
+  if (
+    typeof raw !== 'object' ||
+    raw === null ||
+    !('requestId' in raw) ||
+    typeof raw.requestId !== 'string'
+  ) {
+    throw new Error('Expected permission request id');
+  }
+  return raw.requestId;
 }

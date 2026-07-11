@@ -144,7 +144,11 @@ export class RuntimeControlService {
 
   answerPermission(command: RuntimePermissionAnswerCommand): Promise<RuntimeControlAck> {
     const handler = this.providers.requireOperation(command.providerId, 'answerPermission');
-    return this.withRecordedEvent(command, () => handler.answerPermission!(command));
+    return this.withRecordedEvent(command, () =>
+      this.deliveryWriteFence.runExclusive(buildPermissionAnswerWriteFenceKey(command), () =>
+        handler.answerPermission!(command)
+      )
+    );
   }
 
   private async withRecordedEvent(
@@ -162,10 +166,21 @@ export class RuntimeControlService {
 
 function buildDeliveryWriteFenceKey(command: RuntimeDeliverMessageCommand): string {
   return JSON.stringify([
+    command.kind,
     command.providerId,
     command.teamName,
     command.laneId,
     command.runId,
     canonicalizeRuntimeIdempotencyKey(command.idempotencyKey),
+  ]);
+}
+
+function buildPermissionAnswerWriteFenceKey(command: RuntimePermissionAnswerCommand): string {
+  return JSON.stringify([
+    command.kind,
+    command.providerId,
+    command.teamName,
+    command.laneId,
+    command.runId,
   ]);
 }

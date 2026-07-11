@@ -367,6 +367,33 @@ describe('RuntimeControlService', () => {
       })
     );
   });
+
+  it('serializes permission answers that mutate the same runtime lane', async () => {
+    const firstEntered = createDeferred();
+    const releaseFirst = createDeferred();
+    const enteredRequests: string[] = [];
+    const answerPermission = vi.fn(async (command: RuntimePermissionAnswerCommand) => {
+      enteredRequests.push(command.requestId);
+      if (enteredRequests.length === 1) {
+        firstEntered.resolve();
+        await releaseFirst.promise;
+      }
+      return createAck({ state: 'accepted' });
+    });
+    const service = new RuntimeControlService([{ providerId: 'opencode', answerPermission }]);
+
+    const first = service.answerPermission(createPermissionAnswerCommand());
+    await firstEntered.promise;
+    const second = service.answerPermission(
+      createPermissionAnswerCommand({ requestId: 'provider-request-2' })
+    );
+
+    expect(answerPermission).toHaveBeenCalledTimes(1);
+    releaseFirst.resolve();
+
+    await expect(Promise.all([first, second])).resolves.toHaveLength(2);
+    expect(enteredRequests).toEqual(['provider-request-1', 'provider-request-2']);
+  });
 });
 
 function createBootstrapCommand(
@@ -442,27 +469,38 @@ function createAck(overrides: Partial<RuntimeControlAck> = {}): RuntimeControlAc
   };
 }
 
-function createPermissionAnswerCommand(): RuntimePermissionAnswerCommand {
+function createPermissionAnswerCommand(
+  overrides: Partial<RuntimePermissionAnswerCommand> = {}
+): RuntimePermissionAnswerCommand {
+  const providerId = overrides.providerId ?? 'opencode';
+  const teamName = overrides.teamName ?? 'Team';
+  const laneId = overrides.laneId ?? 'lane-1';
+  const runId = overrides.runId ?? 'run-1';
+  const requestId = overrides.requestId ?? 'provider-request-1';
+  const decision = overrides.decision ?? 'allow';
   return {
-    commandId: buildRuntimePermissionAnswerCommandId({
-      providerId: 'opencode',
-      teamName: 'Team',
-      laneId: 'lane-1',
-      runId: 'run-1',
-      requestId: 'provider-request-1',
-      decision: 'allow',
-    }),
+    commandId:
+      overrides.commandId ??
+      buildRuntimePermissionAnswerCommandId({
+        providerId,
+        teamName,
+        laneId,
+        runId,
+        requestId,
+        decision,
+      }),
     kind: 'runtime.permission-answer',
-    providerId: 'opencode',
-    teamName: 'Team',
-    runId: 'run-1',
-    laneId: 'lane-1',
+    providerId,
+    teamName,
+    runId,
+    laneId,
     cwd: '/repo',
     memberName: 'Builder',
-    requestId: 'provider-request-1',
-    decision: 'allow',
+    requestId,
+    decision,
     expectedMembers: [{ name: 'Builder', providerId: 'opencode', cwd: '/repo' }],
     previousLaunchState: null,
+    ...overrides,
   };
 }
 
