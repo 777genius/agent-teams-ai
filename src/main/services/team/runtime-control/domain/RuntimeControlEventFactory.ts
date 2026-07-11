@@ -1,4 +1,5 @@
 import { buildRuntimeControlCommandEventId, type RuntimeControlLaneId } from './RuntimeControlIds';
+import { canonicalizeRuntimeIdempotencyKey } from './RuntimeIdempotencyKey';
 
 import type { RuntimeControlAck } from './RuntimeControlAck';
 import type {
@@ -182,6 +183,21 @@ export function assertRuntimeControlAckMatchesCommand(
     throw new Error(
       `Runtime control ack state mismatch for ${command.kind}: expected ${expectedStates.join(' or ')}, received ${ack.state}`
     );
+  }
+
+  if (
+    (command.kind === 'runtime.deliver-message' || command.kind === 'runtime.task-event') &&
+    ack.idempotencyKey !== undefined
+  ) {
+    const expectedIdempotencyKey = canonicalizeRuntimeIdempotencyKey(command.idempotencyKey);
+    const receivedIdempotencyKey = canonicalizeRuntimeIdempotencyKey(ack.idempotencyKey, {
+      errorPrefix: 'Runtime control ack',
+    });
+    if (receivedIdempotencyKey !== expectedIdempotencyKey) {
+      throw new Error(
+        `Runtime control ack idempotency mismatch: expected ${expectedIdempotencyKey}, received ${receivedIdempotencyKey}`
+      );
+    }
   }
 }
 

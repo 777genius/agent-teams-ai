@@ -191,6 +191,25 @@ describe('RuntimeControlService', () => {
     );
   });
 
+  it.each(['delivered', 'duplicate'] as const)(
+    'rejects a %s acknowledgement for a different idempotency key before recording an event',
+    async (state) => {
+      const deliverMessage = vi.fn(async () =>
+        createAck({ state, idempotencyKey: 'stale-message-key' })
+      );
+      const record = vi.fn();
+      const service = new RuntimeControlService({
+        providers: [{ providerId: 'opencode', deliverMessage }],
+        eventSink: { record },
+      });
+
+      await expect(service.deliverMessage(createDeliverCommand())).rejects.toThrow(
+        'Runtime control ack idempotency mismatch: expected message-key-1, received stale-message-key'
+      );
+      expect(record).not.toHaveBeenCalled();
+    }
+  );
+
   it('holds exactly one fence only around the provider delivery commit', async () => {
     const command = createDeliverCommand();
     const ack = createAck({ state: 'delivered', idempotencyKey: command.idempotencyKey });
