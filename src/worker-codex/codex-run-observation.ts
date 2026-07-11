@@ -609,6 +609,7 @@ function isHeartbeatOnlyNoOutput(input: {
       status.progressExists &&
       status.progressStatus === "running" &&
       !input.progressStale &&
+      status.appServerProcessAlive !== true &&
       status.progressCpuActive !== true &&
       noOutputAgeMs !== undefined &&
       noOutputAgeMs >= heartbeatOnlyNoOutputAfterMs &&

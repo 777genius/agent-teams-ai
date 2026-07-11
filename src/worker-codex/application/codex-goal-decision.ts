@@ -33,6 +33,7 @@ type CodexGoalStatusView = WorkerLivenessStatus & {
   readonly logExists?: boolean;
   readonly logByteLength?: number;
   readonly progressCpuActive?: boolean;
+  readonly appServerProcessAlive?: boolean;
   readonly progressExists?: boolean;
 };
 
@@ -155,8 +156,10 @@ export function isHeartbeatOnlyNoOutputBrief(input: {
       status.resultExists === false &&
       (status.logExists === false || status.logByteLength === 0),
   );
-  const noOutputIsNotUsefulProgress = status.progressCpuActive !== true ||
-    executorStartedOnlyNoOutput;
+  const healthyAppServer = status.progressProcessAlive === true &&
+    status.appServerProcessAlive === true;
+  const noOutputIsNotUsefulProgress = !healthyAppServer &&
+    (status.progressCpuActive !== true || executorStartedOnlyNoOutput);
   return Boolean(
     workerLiveness.alive &&
       status.progressExists &&

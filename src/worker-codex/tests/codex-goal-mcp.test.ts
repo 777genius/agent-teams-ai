@@ -408,7 +408,7 @@ describe("codex goal MCP server", () => {
     }
   });
 
-  it("flags executor-started runners with fresh heartbeat but no output", async () => {
+  it("keeps a healthy app-server runner alive during quiet reasoning", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-executor-started-no-output-"));
     const promptPath = join(root, "prompt.md");
     const progressPath = join(root, "task.progress.json");
@@ -459,6 +459,7 @@ describe("codex goal MCP server", () => {
           progressPid: process.pid,
           progressProcessAlive: true,
           progressCpuActive: true,
+          appServerProcessAlive: true,
           runtimeEventsExists: true,
           runtimeEventsByteLength: 850,
           lastRuntimeEvent: "executor_started",
@@ -483,10 +484,10 @@ describe("codex goal MCP server", () => {
       expect(brief).toMatchObject({
         isStale: false,
         silentStale: false,
-        heartbeatOnlyNoOutput: true,
+        heartbeatOnlyNoOutput: false,
         safeToContinue: false,
-        nextBestTool: "manual_review",
-        nextBestReason: "heartbeat_only_no_output",
+        nextBestTool: "codex_goal_brief",
+        nextBestReason: "worker is already running",
       });
     } finally {
       await rm(root, { recursive: true, force: true });
