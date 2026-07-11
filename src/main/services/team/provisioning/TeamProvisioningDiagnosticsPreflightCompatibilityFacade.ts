@@ -135,6 +135,7 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   protected abstract readonly openCodePromptDeliveryWatchdogScheduler: OpenCodeMemberInboxDeliveryWakePorts['watchdogScheduler'];
 
   private languageChangeInFlight: Promise<void> = Promise.resolve();
+  private cliHelpOutputInFlight: Promise<string> | null = null;
 
   protected abstract scheduleOpenCodePromptDeliveryWatchdog(input: {
     teamName: string;
@@ -558,12 +559,25 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   }
 
   async getCliHelpOutput(cwd?: string): Promise<string> {
-    return getCliHelpOutputWithProvisioningPorts({
+    if (this.cliHelpOutputInFlight) {
+      return this.cliHelpOutputInFlight;
+    }
+
+    const inFlight = getCliHelpOutputWithProvisioningPorts({
       cwd,
       cache: this.helpOutputCache,
       getCachedOrProbeResult: (targetCwd, providerId) =>
         this.prepareFacade.getCachedOrProbeResult(targetCwd, providerId),
       providerRuntime: this.providerRuntime,
     });
+    this.cliHelpOutputInFlight = inFlight;
+
+    try {
+      return await inFlight;
+    } finally {
+      if (this.cliHelpOutputInFlight === inFlight) {
+        this.cliHelpOutputInFlight = null;
+      }
+    }
   }
 }
