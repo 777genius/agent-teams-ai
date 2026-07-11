@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "auditId": "P0.AUDIT.REQUIREMENTS.V1",
+  "observedAt": "2026-07-11T18:21:15Z",
+  "projectRegistryRoot": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "packetRevision": "phase-00-r2",
+  "sources": [
+    {
+      "id": "PACKET",
+      "path": "docs/hosted-web-phase-0-execution-packet.md",
+      "sha256": "71c53d24f3211613dcfba11493bf18a2b6d49ae31e86186fc94c259d21f17fa8"
+    },
+    {
+      "id": "PARENT_PLAN",
+      "path": "docs/hosted-web-e2e-completion-plan.md",
+      "sha256": "4901a37dc4da373efab939b43a406739ed02e1b4e250a7a2e5754ad659fa4080"
+    },
+    {
+      "id": "BASE",
+      "path": "docs/research/hosted-web/phase-0/base.json",
+      "sha256": "1c8e69a8588084825cfd5b181ac8f13c8c02021b75dc23c4557cf7b083c42104"
+    },
+    {
+      "id": "BASELINE",
+      "path": "docs/research/hosted-web/phase-0/baseline.md",
+      "sha256": "7dc7b6b691ae5394ca6dbff759ae155bc421027bca98b567552b4d085fc3481b"
+    },
+    {
+      "id": "LANE_LEDGER",
+      "path": "docs/research/hosted-web/phase-0/lane-ledger.json",
+      "sha256": "133910e497f35d4e8e27080e3304af08991283c737f1c9e856852f00852bc418"
+    },
+    {
+      "id": "ESTIMATE_LEDGER",
+      "path": "docs/research/hosted-web/phase-0/estimate-ledger.md",
+      "sha256": "1b0f45bfdeb17e2ddc6058482c9b190f16b09501561c361370fac5bfad783ab0"
+    },
+    {
+      "id": "DECISION_REGISTER",
+      "path": "docs/research/hosted-web/phase-0/decision-register.md",
+      "sha256": "b26e363fc9c591b4122143eb8777242782b52ad3b443407b09cdf7d5dec0ee81"
+    }
+  ],
+  "producerJobs": [
+    {
+      "laneId": "w1",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w1-v1",
+      "registryPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2/agent-teams-hosted-web-refactor-phase-00-w1-v1/job.json",
+      "workspacePath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w1-parity-renderer-v1",
+      "status": "completed",
+      "resultStatus": "completed",
+      "attemptCount": 1,
+      "producerDisposition": "characterized",
+      "handoffPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w1-parity-renderer-v1/.codex-handoff/phase-00-w1.json",
+      "handoffSha256": "d000ec9d1aae5995f66279ca70fb3d0da80eafcba808b153f3398d1d4c86c110",
+      "latestResultPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-w1-v1/agent-teams-hosted-web-refactor-phase-00-w1-v1.latest-result.json",
+      "latestResultSha256": "35bb9c270cc84c0ad429039c5e1c2b60cfbdcd7fb81ab83ec71339a91973db10"
+    },
+    {
+      "laneId": "w2",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w2-v1",
+      "registryPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2/agent-teams-hosted-web-refactor-phase-00-w2-v1/job.json",
+      "workspacePath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w2-provider-runtime-v1",
+      "status": "completed",
+      "resultStatus": "completed",
+      "attemptCount": 2,
+      "producerDisposition": "characterized",
+      "handoffPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w2-provider-runtime-v1/.codex-handoff/phase-00-w2.json",
+      "handoffSha256": "df2b4edcccad1ffac46091ceca124710cfcf68058eafddadbeaf141808b02b50",
+      "latestResultPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-w2-v1/agent-teams-hosted-web-refactor-phase-00-w2-v1.latest-result.json",
+      "latestResultSha256": "893c1b3ff460367af84fbd45aa5efec0916a2530578ffad6b13c79433fed7701"
+    },
+    {
+      "laneId": "w3",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w3-v1",
+      "registryPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2/agent-teams-hosted-web-refactor-phase-00-w3-v1/job.json",
+      "workspacePath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w3-state-writers-backup-v1",
+      "status": "completed",
+      "resultStatus": "completed",
+      "attemptCount": 3,
+      "producerDisposition": "characterized",
+      "handoffPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w3-state-writers-backup-v1/.codex-handoff/phase-00-w3.json",
+      "handoffSha256": "a0ceff5b4c384e551abe336060922cb278d7a4768344a89663094ddde44308fc",
+      "latestResultPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-w3-v1/agent-teams-hosted-web-refactor-phase-00-w3-v1.latest-result.json",
+      "latestResultSha256": "a07db789611d8d126dbf2ea5a83d1ee57b7a962e099272f8a03f7dded0a71979"
+    },
+    {
+      "laneId": "w4",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w4-v1",
+      "registryPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2/agent-teams-hosted-web-refactor-phase-00-w4-v1/job.json",
+      "workspacePath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w4-lease-guard-process-v1",
+      "status": "completed",
+      "resultStatus": "completed",
+      "attemptCount": 1,
+      "producerDisposition": "characterized",
+      "handoffPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w4-lease-guard-process-v1/.codex-handoff/phase-00-w4.json",
+      "handoffSha256": "4fd9c0bce7717f1947fff64a9cee6edcd8fc1321b0504365d3341bb0786d3e1d",
+      "latestResultPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-w4-v1/agent-teams-hosted-web-refactor-phase-00-w4-v1.latest-result.json",
+      "latestResultSha256": "709ae6bcf548aae73b7df33ef754bdbb3a10c71b72ca5f7775e5a6aa6abf8c4e"
+    },
+    {
+      "laneId": "w5",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w5-v1",
+      "registryPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2/agent-teams-hosted-web-refactor-phase-00-w5-v1/job.json",
+      "workspacePath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w5-events-commands-recovery-v1",
+      "status": "completed",
+      "resultStatus": "completed",
+      "attemptCount": 2,
+      "producerDisposition": "characterized",
+      "handoffPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w5-events-commands-recovery-v1/.codex-handoff/phase-00-w5.json",
+      "handoffSha256": "9f87bbc855161c368da5b4fef16a3d2002f6cdc69acce996555df49b801038e5",
+      "latestResultPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-w5-v1/agent-teams-hosted-web-refactor-phase-00-w5-v1.latest-result.json",
+      "latestResultSha256": "894573155a28a3aea9d9d2978565c243fa71e1327978eadb86e146da833b38be"
+    },
+    {
+      "laneId": "w6",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w6-v1",
+      "registryPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2/agent-teams-hosted-web-refactor-phase-00-w6-v1/job.json",
+      "workspacePath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w6-auth-proxy-artifacts-v1",
+      "status": "completed",
+      "resultStatus": "completed",
+      "attemptCount": 1,
+      "producerDisposition": "characterized",
+      "handoffPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w6-auth-proxy-artifacts-v1/.codex-handoff/phase-00-w6.json",
+      "handoffSha256": "64a053f03111dcd79a7ca05aaff773cbbc6990ec458cd676a21a228233f59d2f",
+      "latestResultPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-w6-v1/agent-teams-hosted-web-refactor-phase-00-w6-v1.latest-result.json",
+      "latestResultSha256": "80f3835108abb9078b53a0da190389c51dbb8c5c98546ddd68a146d54320ebac"
+    }
+  ],
+  "reviewJobs": [
+    {
+      "reviewId": "P0.R12.W1_W2",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w1-w2-v1",
+      "registryPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2/agent-teams-hosted-web-refactor-phase-00-review-w1-w2-v1/job.json",
+      "workspacePath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w1-w2-v1",
+      "status": "completed",
+      "resultStatus": "completed",
+      "attemptCount": 3,
+      "reviewDisposition": "reject",
+      "producerDispositions": {
+        "w1": "reject",
+        "w2": "reject"
+      },
+      "handoffPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w1-w2-v1/.codex-handoff/phase-00-review-w1-w2.json",
+      "handoffSha256": "c12836733a03159b434223b6ffb63d2a561a3ff946dd3704fde6f5d7f88ef48e",
+      "reportPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w1-w2-v1/docs/research/hosted-web/phase-0/reciprocal-reviews/w1-w2.md",
+      "reportSha256": "213836d2c6104318d3e59848a856dea14bfefc9d56840645a76cf821fc918e2b",
+      "latestResultPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-controller-v2/controlled-agent/home/.cache/subscription-runtime/agent-teams-hosted-web-refactor-phase-00-review-w1-w2-v1/agent-teams-hosted-web-refactor-phase-00-review-w1-w2-v1.latest-result.json",
+      "latestResultSha256": "4a3ba6471486c4d8890ab4ff2bc5e2fbd6a5233ec8ba65691c344311c2804fa0"
+    },
+    {
+      "reviewId": "P0.R35.W3_W5",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w3-w5-v1",
+      "registryPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2/agent-teams-hosted-web-refactor-phase-00-review-w3-w5-v1/job.json",
+      "workspacePath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w3-w5-v1",
+      "status": "completed",
+      "resultStatus": "completed",
+      "attemptCount": 1,
+      "reviewDisposition": "reject",
+      "producerDispositions": {
+        "w3": "reject",
+        "w5": "reject"
+      },
+      "handoffPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w3-w5-v1/.codex-handoff/phase-00-review-w3-w5.json",
+      "handoffSha256": "f8d9b40c83ce4d895110162807cd8abafaac25566ef4dd32db0ab5e8afbd8beb",
+      "reportPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w3-w5-v1/docs/research/hosted-web/phase-0/reciprocal-reviews/w3-w5.md",
+      "reportSha256": "8140261ef1cf3a2a37fc25d75f639fa9e20607e7bb1c104fe5a39b1585e38a15",
+      "latestResultPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-controller-v2/controlled-agent/home/.cache/subscription-runtime/agent-teams-hosted-web-refactor-phase-00-review-w3-w5-v1/agent-teams-hosted-web-refactor-phase-00-review-w3-w5-v1.latest-result.json",
+      "latestResultSha256": "5390b196d2fcd1e387169b55a73c006a1e68fcc72e4d0d3eca957072d6eeff67"
+    },
+    {
+      "reviewId": "P0.R46.W4_W6",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v1",
+      "registryPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v1/job.json",
+      "workspacePath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w4-w6-v1",
+      "status": "completed",
+      "resultStatus": "completed",
+      "attemptCount": 5,
+      "reviewDisposition": "reject",
+      "producerDispositions": {
+        "w4": "reject",
+        "w6": "reject"
+      },
+      "handoffPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w4-w6-v1/.codex-handoff/phase-00-review-w4-w6.json",
+      "handoffSha256": "7bf1e3e6f1c02ff352909cead19dd0a344f4277d3bbd7ac4e897dfee2a45a175",
+      "reportPath": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w4-w6-v1/docs/research/hosted-web/phase-0/reciprocal-review-w4-w6.md",
+      "reportSha256": "4a509551fdf2466f1be2f6cc9e9b8c9c1058fb3c5c695f8706f78af42e47e5bf",
+      "latestResultPath": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-controller-v2/controlled-agent/home/.cache/subscription-runtime/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v1/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v1.latest-result.json",
+      "latestResultSha256": "c1bd54a477689d257f44f18fa52142cc893eb2dcc2083a722f61fd241909d14d"
+    }
+  ],
+  "registryConclusion": {
+    "completedProducerJobs": 6,
+    "completedReviewJobs": 3,
+    "approvedProducerLanes": 0,
+    "rejectedProducerLanes": 6,
+    "pendingCorrectionAndRereview": 6
+  }
+}
