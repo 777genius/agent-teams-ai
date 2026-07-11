@@ -144,6 +144,10 @@ export function formatProviderAuthMethodLabel(
         'providerRuntime.connectionUi.authMethod.serviceAccount',
         'service account'
       );
+    case 'kiro-oauth':
+      return 'Kiro subscription account';
+    case 'cursor-oauth':
+      return 'Cursor subscription account';
     default:
       return authMethod
         ? authMethod.replaceAll('_', ' ')

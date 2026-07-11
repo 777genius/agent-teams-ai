@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { CopyButton } from '@renderer/components/common/CopyButton';
 import { Badge } from '@renderer/components/ui/badge';
 import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
@@ -40,12 +41,7 @@ import {
   Trash2,
 } from 'lucide-react';
 
-import {
-  formatProviderState,
-  formatRuntimeState,
-  getProviderAction,
-  getProviderModelsLabel,
-} from '../../core/domain';
+import { formatProviderState, getProviderAction, getProviderModelsLabel } from '../../core/domain';
 
 import { ProviderBrandIcon } from './providerBrandIcons';
 
@@ -55,12 +51,13 @@ import type {
 } from '../hooks/useRuntimeProviderManagement';
 import type {
   RuntimeProviderConnectionDto,
-  RuntimeProviderDefaultModelSourceDto,
   RuntimeProviderDefaultScopeDto,
   RuntimeProviderDirectoryEntryDto,
   RuntimeProviderManagementErrorDiagnosticsDto,
   RuntimeProviderModelDto,
   RuntimeProviderModelTestResultDto,
+  RuntimeProviderSetupAuthOptionDto,
+  RuntimeProviderSetupFormDto,
   RuntimeProviderSetupPromptDto,
 } from '@features/runtime-provider-management/contracts';
 import type { ProjectPathProject } from '@renderer/components/team/dialogs/projectPathProjects';
@@ -110,7 +107,7 @@ const NO_PROJECT_CONTEXT_VALUE = '__runtime-provider-no-project-context__';
 function getDirectoryAction(
   provider: RuntimeProviderDirectoryEntryDto,
   actionId: RuntimeProviderConnectionDto['actions'][number]['id']
-) {
+): RuntimeProviderConnectionDto['actions'][number] | null {
   return provider.actions.find((action) => action.id === actionId) ?? null;
 }
 
@@ -121,6 +118,7 @@ function formatDirectorySetupKind(provider: RuntimeProviderDirectoryEntryDto): s
   switch (provider.setupKind) {
     case 'connected':
       return 'Connected';
+    case 'connect-oauth':
     case 'connect-api-key':
       return 'Connect';
     case 'configure-manually':
@@ -188,23 +186,6 @@ function getContextControlHint(
   return scope === 'all_projects'
     ? t('runtimeProvider.defaults.allProjectsHint', { project: projectName })
     : t('runtimeProvider.defaults.projectHint', { project: projectName });
-}
-
-function getDefaultModelSourceLabel(
-  source: RuntimeProviderDefaultModelSourceDto | null | undefined
-): string | null {
-  switch (source) {
-    case 'project':
-      return 'project override';
-    case 'all_projects':
-      return 'all projects';
-    case 'opencode_config':
-      return 'OpenCode config';
-    case 'fallback':
-      return 'fallback';
-    default:
-      return null;
-  }
 }
 
 function isDefaultForScope(
@@ -276,6 +257,7 @@ function directorySetupKindClassName(provider: RuntimeProviderDirectoryEntryDto)
   switch (provider.setupKind) {
     case 'connected':
       return 'border-emerald-300/70 bg-emerald-600 text-emerald-50';
+    case 'connect-oauth':
     case 'connect-api-key':
     case 'available-readonly':
       return 'border-sky-400/30 bg-sky-400/10 text-sky-200';
@@ -355,12 +337,37 @@ function setupFormCanSubmit(state: RuntimeProviderManagementState, providerId: s
   if (!form?.supported) {
     return false;
   }
-  if (form.secret?.required && !state.apiKeyValue.trim()) {
+  const authOption = resolveSelectedSetupAuthOption(form, state.selectedAuthOptionId);
+  if (authOption && !authOption.supported) {
     return false;
   }
-  return form.prompts
+  const secret = authOption?.secret ?? form.secret;
+  const prompts = authOption?.prompts ?? form.prompts;
+  if (secret?.required && !state.apiKeyValue.trim()) {
+    return false;
+  }
+  return prompts
     .filter((prompt) => setupPromptVisible(prompt, state.setupMetadata))
     .every((prompt) => !prompt.required || Boolean(state.setupMetadata[prompt.key]?.trim()));
+}
+
+function resolveSelectedSetupAuthOption(
+  form: RuntimeProviderSetupFormDto,
+  authOptionId: string | null
+): RuntimeProviderSetupAuthOptionDto | null {
+  if (!form.authOptions?.length) {
+    return null;
+  }
+  return (
+    form.authOptions.find((option) => option.id === authOptionId) ?? form.authOptions[0] ?? null
+  );
+}
+
+function extractOAuthDeviceCode(instructions: string | null | undefined): string | null {
+  if (!instructions) {
+    return null;
+  }
+  return instructions.match(/\b[A-Z0-9]{4}-[A-Z0-9]{4}\b/)?.[0] ?? null;
 }
 
 function eventStartedInInteractiveChild(
@@ -373,14 +380,14 @@ function eventStartedInInteractiveChild(
   return Boolean(target.closest('button, input, select, textarea, a, [role="button"], [tabindex]'));
 }
 
-function ProviderSetupFormPanel({
+export function ProviderSetupFormPanel({
   provider,
   state,
   busy,
   disabled,
   actions,
 }: {
-  readonly provider: RuntimeProviderConnectionDto;
+  readonly provider: Pick<RuntimeProviderConnectionDto, 'providerId' | 'displayName'>;
   readonly state: RuntimeProviderManagementState;
   readonly busy: boolean;
   readonly disabled: boolean;
@@ -396,6 +403,16 @@ function ProviderSetupFormPanel({
   const submitErrorDiagnostics =
     state.activeFormProviderId === provider.providerId ? state.setupSubmitErrorDiagnostics : null;
   const canSubmit = setupFormCanSubmit(state, provider.providerId);
+  const authOption = form ? resolveSelectedSetupAuthOption(form, state.selectedAuthOptionId) : null;
+  const secret = authOption?.secret ?? form?.secret ?? null;
+  const prompts = authOption?.prompts ?? form?.prompts ?? [];
+  const selectedMethod = authOption?.method ?? form?.method ?? null;
+  const oauthInProgress = selectedMethod === 'oauth' && busy;
+  const oauthProgress = oauthInProgress ? state.oauthProgress : null;
+  const oauthDeviceCode =
+    oauthProgress?.providerId === 'xai'
+      ? extractOAuthDeviceCode(oauthProgress.instructions)
+      : null;
 
   return (
     <div
@@ -429,10 +446,37 @@ function ProviderSetupFormPanel({
             ) : null}
           </div>
 
-          {form.secret ? (
+          {form.authOptions && form.authOptions.length > 1 ? (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Sign-in method</Label>
+              <Select
+                value={authOption?.id ?? ''}
+                disabled={disabled || busy}
+                onValueChange={actions.setAuthOption}
+              >
+                <SelectTrigger className="h-9 text-sm" data-testid="runtime-provider-auth-method">
+                  <SelectValue placeholder="Choose a sign-in method" />
+                </SelectTrigger>
+                <SelectContent>
+                  {form.authOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id} disabled={!option.supported}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {authOption?.disabledReason ? (
+                <div className="text-[11px] text-[var(--color-text-muted)]">
+                  {authOption.disabledReason}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {secret ? (
             <div className="space-y-1.5">
               <Label htmlFor={`runtime-provider-key-${provider.providerId}`} className="text-xs">
-                {form.secret.label}
+                {secret.label}
               </Label>
               <Input
                 id={`runtime-provider-key-${provider.providerId}`}
@@ -440,14 +484,14 @@ function ProviderSetupFormPanel({
                 value={state.apiKeyValue}
                 disabled={disabled || busy || !form.supported}
                 onChange={(event) => actions.setApiKeyValue(event.target.value)}
-                placeholder={form.secret.placeholder ?? 'Paste API key'}
+                placeholder={secret.placeholder ?? 'Paste API key'}
                 className="h-9 text-sm"
                 autoFocus
               />
             </div>
           ) : null}
 
-          {form.prompts
+          {prompts
             .filter((prompt) => setupPromptVisible(prompt, state.setupMetadata))
             .map((prompt) => (
               <div key={prompt.key} className="space-y-1.5">
@@ -498,6 +542,59 @@ function ProviderSetupFormPanel({
               {form.disabledReason}
             </div>
           ) : null}
+
+          {oauthInProgress ? (
+            <div
+              className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs"
+              data-testid="runtime-provider-oauth-progress"
+            >
+              <div className="flex items-center gap-2 text-[var(--color-text)]">
+                <Loader2 className="size-3.5 animate-spin" />
+                {oauthProgress?.message ?? 'Preparing secure browser authorization...'}
+              </div>
+              {oauthProgress?.instructions ? (
+                <div className="mt-1.5 text-[11px] text-[var(--color-text-muted)]">
+                  {oauthProgress.instructions}
+                </div>
+              ) : null}
+              {oauthDeviceCode ? (
+                <div
+                  className="mt-3 flex items-center justify-between gap-3 rounded-md border border-sky-400/25 bg-sky-400/[0.06] px-3 py-2"
+                  data-testid="runtime-provider-oauth-device-code"
+                >
+                  <div className="min-w-0">
+                    <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
+                      Enter this code in xAI
+                    </div>
+                    <div className="mt-0.5 font-mono text-base font-semibold tracking-[0.16em] text-sky-200">
+                      {oauthDeviceCode}
+                    </div>
+                  </div>
+                  <CopyButton text={oauthDeviceCode} inline />
+                </div>
+              ) : null}
+              {oauthProgress?.phase === 'waiting-for-code' ? (
+                <div className="mt-3 flex gap-2">
+                  <Input
+                    aria-label="Authorization code"
+                    value={state.oauthCodeValue}
+                    onChange={(event) => actions.setOAuthCodeValue(event.target.value)}
+                    placeholder="Paste authorization code"
+                    className="h-9 text-sm"
+                    autoFocus
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!state.oauthCodeValue.trim()}
+                    onClick={() => void actions.submitOAuthCode()}
+                  >
+                    Continue
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -516,109 +613,22 @@ function ProviderSetupFormPanel({
           type="button"
           size="sm"
           variant="ghost"
-          disabled={busy}
+          disabled={busy && !oauthInProgress}
           onClick={actions.cancelConnect}
         >
           {t('runtimeProvider.actions.cancel')}
         </Button>
-        <Button
-          type="button"
-          size="sm"
-          disabled={disabled || busy || loading || !canSubmit}
-          onClick={() => void actions.submitConnect(provider.providerId)}
-        >
-          {busy ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
-          {form?.submitLabel ?? 'Connect'}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function RuntimeSummary({
-  state,
-  onRefresh,
-  disabled,
-}: Pick<RuntimeProviderManagementPanelViewProps, 'state' | 'disabled'> & {
-  onRefresh: () => void;
-}): JSX.Element {
-  const { t } = useAppTranslation('settings');
-  const runtime = state.view?.runtime;
-  const loadingWithoutRuntime = state.loading && !runtime;
-  const defaultSourceLabel = getDefaultModelSourceLabel(state.view?.defaultModelSource);
-  return (
-    <div
-      className="rounded-lg border p-3"
-      aria-busy={state.loading}
-      style={{
-        borderColor: 'var(--color-border-subtle)',
-        backgroundColor: 'rgba(255, 255, 255, 0.025)',
-      }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-            {t('runtimeProvider.summary.title')}
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-            <Badge
-              variant="outline"
-              className={`border-white/10 ${loadingWithoutRuntime ? 'bg-white/[0.04]' : ''}`}
-            >
-              {runtime
-                ? formatRuntimeState(runtime)
-                : state.loading
-                  ? 'Checking runtime'
-                  : 'Unavailable'}
-            </Badge>
-            {runtime?.version ? (
-              <span style={{ color: 'var(--color-text-secondary)' }}>v{runtime.version}</span>
-            ) : null}
-            {state.view?.defaultModel ? (
-              <span className="break-all" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('runtimeProvider.summary.defaultModel', { model: state.view.defaultModel })}
-              </span>
-            ) : null}
-            {defaultSourceLabel ? (
-              <span style={{ color: 'var(--color-text-muted)' }}>
-                {t('runtimeProvider.summary.source', { source: defaultSourceLabel })}
-              </span>
-            ) : null}
-          </div>
-          {state.loading ? (
-            <div
-              className="mt-2 flex items-center gap-2 text-xs"
-              style={{ color: 'var(--color-text-secondary)' }}
-            >
-              <Loader2 className="size-3.5 animate-spin" />
-              <span>{t('runtimeProvider.summary.loading')}</span>
-            </div>
-          ) : null}
-          {state.view?.diagnostics.length ? (
-            <div
-              className="mt-2 space-y-1 text-[11px]"
-              style={{ color: 'var(--color-text-muted)' }}
-            >
-              {state.view.diagnostics.slice(0, 3).map((diagnostic, index) => (
-                <div key={`diagnostic-${index}`}>{diagnostic}</div>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          disabled={disabled || state.loading}
-          onClick={onRefresh}
-        >
-          {state.loading ? (
-            <Loader2 className="mr-1 size-3.5 animate-spin" />
-          ) : (
-            <RefreshCcw className="mr-1 size-3.5" />
-          )}
-          {state.loading ? 'Checking...' : 'Refresh'}
-        </Button>
+        {!oauthInProgress ? (
+          <Button
+            type="button"
+            size="sm"
+            disabled={disabled || busy || loading || !canSubmit}
+            onClick={() => void actions.submitConnect(provider.providerId)}
+          >
+            {busy ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+            {selectedMethod === 'oauth' ? 'Continue in browser' : (form?.submitLabel ?? 'Connect')}
+          </Button>
+        ) : null}
       </div>
     </div>
   );
@@ -741,7 +751,7 @@ function formatRuntimeProviderDiagnosticsCopyText(
   }
   const hints = diagnostics.hints ?? [];
 
-  const fields: Array<[string, string | number | null]> = [
+  const fields: [string, string | number | null][] = [
     ['Error code', diagnostics.errorCode ?? null],
     ['Summary', diagnostics.summary],
     ['Likely cause', diagnostics.likelyCause],
@@ -773,8 +783,8 @@ function formatRuntimeProviderDiagnosticsCopyText(
 
 function getRuntimeProviderDiagnosticRows(
   diagnostics: RuntimeProviderManagementErrorDiagnosticsDto
-): Array<[string, string]> {
-  const rows: Array<[string, string | number | null]> = [
+): [string, string][] {
+  const rows: [string, string | number | null][] = [
     ['Code', diagnostics.errorCode ?? null],
     ['Binary', diagnostics.binaryPath],
     ['Command', diagnostics.command],
@@ -2316,8 +2326,6 @@ export function RuntimeProviderManagementPanelView({
 
   return (
     <div className="space-y-3">
-      <RuntimeSummary state={state} disabled={disabled} onRefresh={() => void actions.refresh()} />
-
       {state.error ? (
         <RuntimeProviderErrorAlert
           message={state.error}
@@ -2342,9 +2350,15 @@ export function RuntimeProviderManagementPanelView({
 
       <Tabs
         value={activeSection}
-        onValueChange={(value) => setSelectedSection(value as OpenCodeSettingsSection)}
+        onValueChange={(value) => {
+          const section = value as OpenCodeSettingsSection;
+          setSelectedSection(section);
+          if (section === 'models' && !state.view && !state.loading) {
+            void actions.refresh();
+          }
+        }}
       >
-        <div className="border-b border-white/10">
+        <div className="flex items-center justify-between gap-2 border-b border-white/10">
           <TabsList className="gap-1 rounded-b-none">
             <TabsTrigger
               value="models"
@@ -2369,6 +2383,23 @@ export function RuntimeProviderManagementPanelView({
               ) : null}
             </TabsTrigger>
           </TabsList>
+          {activeSection === 'models' ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="mb-1"
+              disabled={disabled || state.loading}
+              onClick={() => void actions.refresh()}
+            >
+              {state.loading ? (
+                <Loader2 className="mr-1 size-3.5 animate-spin" />
+              ) : (
+                <RefreshCcw className="mr-1 size-3.5" />
+              )}
+              {t('providerRuntime.actions.refresh')}
+            </Button>
+          ) : null}
         </div>
 
         <TabsContent value="models" className="mt-3 space-y-3">

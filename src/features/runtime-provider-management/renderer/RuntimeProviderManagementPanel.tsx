@@ -79,6 +79,9 @@ export const RuntimeProviderManagementPanel = ({
   const [state, actions] = useRuntimeProviderManagement({
     runtimeId,
     enabled: open,
+    directoryPageSize: 100,
+    loadViewOnEnable: false,
+    searchDirectoryOnQueryChange: false,
     projectPath: activeProjectPath,
     initialProviderId,
     initialProviderAction,

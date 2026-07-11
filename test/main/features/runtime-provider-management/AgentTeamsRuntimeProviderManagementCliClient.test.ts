@@ -10,9 +10,13 @@ const resolveBinaryMock = vi.fn();
 const clearBinaryCacheMock = vi.fn();
 const execCliMock = vi.fn();
 const spawnCliMock = vi.fn();
+const killProcessTreeMock = vi.fn();
 const resolveInteractiveShellEnvMock = vi.fn();
 
-function createSpawnProcess(stdoutPayload: unknown, exitCode = 0): {
+function createSpawnProcess(
+  stdoutPayload: unknown,
+  exitCode = 0
+): {
   child: {
     stdout: EventEmitter;
     stderr: EventEmitter;
@@ -66,7 +70,7 @@ vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
 vi.mock('@main/utils/childProcess', () => ({
   execCli: (...args: unknown[]) => execCliMock(...args),
   spawnCli: (...args: unknown[]) => spawnCliMock(...args),
-  killProcessTree: vi.fn(),
+  killProcessTree: (...args: unknown[]) => killProcessTreeMock(...args),
 }));
 
 vi.mock('@main/utils/shellEnv', () => ({
@@ -170,9 +174,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.message).not.toContain('logs.example/secret');
     expect(response.error?.message).not.toContain('[31m');
     expect(response.error?.message).not.toContain(']8;;');
-    expect(response.error?.diagnostics?.stderrPreview).toBe(
-      'Authorization: Bearer ...redacted'
-    );
+    expect(response.error?.diagnostics?.stderrPreview).toBe('Authorization: Bearer ...redacted');
   });
 
   it('redacts non-OpenAI provider keys and generic token labels from diagnostics', async () => {
@@ -348,8 +350,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
           diagnostics: {
             summary: 'OpenCode inventory probe timed out',
             likelyCause: 'OpenCode providers list did not finish before the runtime budget.',
-            command:
-              '/repo/cli-dev runtime providers view --runtime opencode --json --compact',
+            command: '/repo/cli-dev runtime providers view --runtime opencode --json --compact',
             stderrPreview: 'provider api_key: sk-secret-value-123456',
             hints: ['Check OpenCode CLI startup and local OpenCode plugins.'],
           },
@@ -370,9 +371,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.diagnostics?.likelyCause).toBe(
       'OpenCode providers list did not finish before the runtime budget.'
     );
-    expect(response.error?.diagnostics?.stderrPreview).toBe(
-      'provider api_key: ...redacted'
-    );
+    expect(response.error?.diagnostics?.stderrPreview).toBe('provider api_key: ...redacted');
     expect(response.error?.diagnostics?.stderrPreview).not.toContain('sk-secret-value-123456');
     expect(response.error?.diagnostics?.hints).toContain(
       'Check OpenCode CLI startup and local OpenCode plugins.'
@@ -388,8 +387,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
         runtimeId: 'opencode',
         error: {
           code: 'runtime-unhealthy',
-          message:
-            'OpenCode inventory probe timed out after 12000ms during opencode agent list',
+          message: 'OpenCode inventory probe timed out after 12000ms during opencode agent list',
           recoverable: true,
           diagnostics: {
             summary: 'OpenCode inventory probe timed out',
@@ -413,9 +411,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.diagnostics?.likelyCause).toBe(
       'OpenCode agent inventory did not finish before the runtime budget.'
     );
-    expect(response.error?.diagnostics?.stderrPreview).toBe(
-      'agent token=...redacted'
-    );
+    expect(response.error?.diagnostics?.stderrPreview).toBe('agent token=...redacted');
     expect(JSON.stringify(response.error?.diagnostics)).not.toContain('sk-secret-value-123456');
   });
 
@@ -435,8 +431,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
           diagnostics: {
             summary: 'OpenCode inventory probe timed out',
             likelyCause: 'OpenCode model inventory did not finish before the runtime budget.',
-            command:
-              '/repo/cli-dev runtime providers view --runtime opencode --json --compact',
+            command: '/repo/cli-dev runtime providers view --runtime opencode --json --compact',
             stdoutPreview: 'model api_key: sk-secret-value-123456',
             hints: ['Check OpenCode model listing and local OpenCode plugins.'],
           },
@@ -458,9 +453,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.diagnostics?.likelyCause).toBe(
       'OpenCode model inventory did not finish before the runtime budget.'
     );
-    expect(response.error?.diagnostics?.stdoutPreview).toBe(
-      'model api_key: ...redacted'
-    );
+    expect(response.error?.diagnostics?.stdoutPreview).toBe('model api_key: ...redacted');
     expect(JSON.stringify(response.error?.diagnostics)).not.toContain('sk-secret-value-123456');
   });
 
@@ -738,12 +731,8 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       'Authorization: Bearer ...redacted was rejected'
     );
     expect(response.error?.diagnostics?.stderrPreview).toBe('api_key: ...redacted');
-    expect(response.error?.diagnostics?.stdoutPreview).toBe(
-      'Authorization: Bearer ...redacted'
-    );
-    expect(response.error?.diagnostics?.hints[0]).toBe(
-      'Remove sk-...redacted from config output.'
-    );
+    expect(response.error?.diagnostics?.stdoutPreview).toBe('Authorization: Bearer ...redacted');
+    expect(response.error?.diagnostics?.hints[0]).toBe('Remove sk-...redacted from config output.');
     expect(serialized).not.toContain('sk-secret-value-123456');
     expect(serialized).not.toContain('live-token-123456789');
   });
@@ -935,7 +924,13 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       view: {
         runtimeId: 'opencode',
         title: 'OpenCode',
-        runtime: { state: 'ready', cliPath: '/repo/cli-dev', version: '1.15.6', managedProfile: 'active', localAuth: 'synced' },
+        runtime: {
+          state: 'ready',
+          cliPath: '/repo/cli-dev',
+          version: '1.15.6',
+          managedProfile: 'active',
+          localAuth: 'synced',
+        },
         providers: [],
         defaultModel: null,
         fallbackModel: null,
@@ -951,13 +946,18 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     Object.defineProperty(process, 'platform', { value: 'win32' });
     (isOpenCodeNodeModulesSymlinkErrorMock as ReturnType<typeof vi.fn>).mockReturnValue(true);
     (extractProfileIdFromSymlinkErrorMock as ReturnType<typeof vi.fn>).mockReturnValue('abc123');
-    (ensureOpenCodeProfileNodeModulesJunctionMock as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (ensureOpenCodeProfileNodeModulesJunctionMock as ReturnType<typeof vi.fn>).mockReturnValue(
+      true
+    );
 
     try {
       const client = new AgentTeamsRuntimeProviderManagementCliClient();
       const response = await client.loadView({ runtimeId: 'opencode' });
 
-      expect(ensureOpenCodeProfileNodeModulesJunctionMock).toHaveBeenCalledWith('abc123', expect.any(String));
+      expect(ensureOpenCodeProfileNodeModulesJunctionMock).toHaveBeenCalledWith(
+        'abc123',
+        expect.any(String)
+      );
       expect(execCliMock).toHaveBeenCalledTimes(2);
       expect(response.error).toBeUndefined();
       expect(response.view?.runtime?.state).toBe('ready');
@@ -991,13 +991,18 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     Object.defineProperty(process, 'platform', { value: 'win32' });
     (isOpenCodeNodeModulesSymlinkErrorMock as ReturnType<typeof vi.fn>).mockReturnValue(true);
     (extractProfileIdFromSymlinkErrorMock as ReturnType<typeof vi.fn>).mockReturnValue('abc123');
-    (ensureOpenCodeProfileNodeModulesJunctionMock as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (ensureOpenCodeProfileNodeModulesJunctionMock as ReturnType<typeof vi.fn>).mockReturnValue(
+      true
+    );
 
     try {
       const client = new AgentTeamsRuntimeProviderManagementCliClient();
       const response = await client.loadView({ runtimeId: 'opencode' });
 
-      expect(ensureOpenCodeProfileNodeModulesJunctionMock).toHaveBeenCalledWith('abc123', expect.any(String));
+      expect(ensureOpenCodeProfileNodeModulesJunctionMock).toHaveBeenCalledWith(
+        'abc123',
+        expect.any(String)
+      );
       expect(execCliMock).toHaveBeenCalledTimes(2);
       expect(response.error?.message).toBe(runtimeMessage);
     } finally {
@@ -1030,13 +1035,18 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     Object.defineProperty(process, 'platform', { value: 'win32' });
     (isOpenCodeNodeModulesSymlinkErrorMock as ReturnType<typeof vi.fn>).mockReturnValue(true);
     (extractProfileIdFromSymlinkErrorMock as ReturnType<typeof vi.fn>).mockReturnValue('abc123');
-    (ensureOpenCodeProfileNodeModulesJunctionMock as ReturnType<typeof vi.fn>).mockReturnValue(false);
+    (ensureOpenCodeProfileNodeModulesJunctionMock as ReturnType<typeof vi.fn>).mockReturnValue(
+      false
+    );
 
     try {
       const client = new AgentTeamsRuntimeProviderManagementCliClient();
       const response = await client.loadView({ runtimeId: 'opencode' });
 
-      expect(ensureOpenCodeProfileNodeModulesJunctionMock).toHaveBeenCalledWith('abc123', expect.any(String));
+      expect(ensureOpenCodeProfileNodeModulesJunctionMock).toHaveBeenCalledWith(
+        'abc123',
+        expect.any(String)
+      );
       expect(execCliMock).toHaveBeenCalledTimes(1);
       expect(response.error?.message).toBe(runtimeMessage);
     } finally {
@@ -1121,13 +1131,18 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     Object.defineProperty(process, 'platform', { value: 'win32' });
     (isOpenCodeNodeModulesSymlinkErrorMock as ReturnType<typeof vi.fn>).mockReturnValue(true);
     (extractProfileIdFromSymlinkErrorMock as ReturnType<typeof vi.fn>).mockReturnValue('def456');
-    (ensureOpenCodeProfileNodeModulesJunctionMock as ReturnType<typeof vi.fn>).mockReturnValue(true);
+    (ensureOpenCodeProfileNodeModulesJunctionMock as ReturnType<typeof vi.fn>).mockReturnValue(
+      true
+    );
 
     try {
       const client = new AgentTeamsRuntimeProviderManagementCliClient();
       const response = await client.loadProviderDirectory({ runtimeId: 'opencode' });
 
-      expect(ensureOpenCodeProfileNodeModulesJunctionMock).toHaveBeenCalledWith('def456', expect.any(String));
+      expect(ensureOpenCodeProfileNodeModulesJunctionMock).toHaveBeenCalledWith(
+        'def456',
+        expect.any(String)
+      );
       expect(execCliMock).toHaveBeenCalledTimes(2);
       expect(response.directory?.entries).toEqual([]);
     } finally {
@@ -1405,9 +1420,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(response.error?.message).toContain(
       'Expected a JSON object from the Agent Teams runtime provider command.'
     );
-    expect(response.error?.message).toContain(
-      'Resolved runtime binary: /repo/cli-dev'
-    );
+    expect(response.error?.message).toContain('Resolved runtime binary: /repo/cli-dev');
     expect(response.error?.message).toContain(
       "Command: /repo/cli-dev runtime providers view --runtime opencode --json --compact --project-path '/Users/test/My Project'"
     );
@@ -1603,9 +1616,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       await vi.advanceTimersByTimeAsync(90_000);
       const response = await responsePromise;
 
-      expect(response.error?.message).toContain(
-        '...[truncated runtime provider command output]'
-      );
+      expect(response.error?.message).toContain('...[truncated runtime provider command output]');
       expect(response.error?.diagnostics?.stdoutPreview).toContain(
         '...[truncated runtime provider command output]'
       );
@@ -1715,6 +1726,48 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     );
     expect(execCliMock.mock.calls[0]?.[2]).toMatchObject({ maxBuffer: 8 * 1024 * 1024 });
     expect(JSON.stringify(execCliMock.mock.calls[0])).not.toContain('undefined');
+  });
+
+  it('reuses a recent provider directory response and bypasses it on explicit refresh', async () => {
+    const directoryResponse = {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      directory: {
+        runtimeId: 'opencode',
+        totalCount: 155,
+        returnedCount: 50,
+        query: null,
+        filter: 'all',
+        limit: 50,
+        cursor: null,
+        nextCursor: '50',
+        fetchedAt: '2026-07-10T00:00:00.000Z',
+        entries: [],
+        diagnostics: [],
+      },
+    };
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify(directoryResponse),
+      stderr: '',
+    });
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const request = {
+      runtimeId: 'opencode' as const,
+      projectPath: '/Users/test/project',
+      limit: 50,
+    };
+
+    const first = await client.loadProviderDirectory(request);
+    const cached = await client.loadProviderDirectory(request);
+
+    expect(first.directory?.totalCount).toBe(155);
+    expect(cached).toBe(first);
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+
+    await client.loadProviderDirectory({ ...request, refresh: true });
+
+    expect(execCliMock).toHaveBeenCalledTimes(2);
   });
 
   it('passes all-projects default scope to the runtime CLI', async () => {
@@ -1877,5 +1930,331 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
         },
       })
     );
+  });
+
+  it('opens a validated generic OAuth authorization URL and keeps it out of renderer progress', async () => {
+    const processEvents = new EventEmitter();
+    const stdinEvents = new EventEmitter();
+    const stdout = new EventEmitter();
+    const stderr = new EventEmitter();
+    const authorizationUrl = 'https://accounts.x.ai/oauth2/authorize?state=secret-state';
+    const provider = {
+      providerId: 'xai',
+      displayName: 'xAI',
+      state: 'connected',
+      ownership: ['managed'],
+      recommended: false,
+      modelCount: 4,
+      defaultModelId: 'xai/grok-code-fast-1',
+      authMethods: ['oauth'],
+      actions: [],
+      detail: null,
+    };
+    const stdinWrite = vi.fn(() => {
+      queueMicrotask(() => {
+        stdout.emit(
+          'data',
+          Buffer.from(
+            `@@agent-teams-runtime-provider-oauth@@${JSON.stringify({
+              schemaVersion: 1,
+              event: 'authorization',
+              operationId: 'oauth-operation-123',
+              providerId: 'xai',
+              displayName: 'xAI',
+              authOptionId: 'oauth:0',
+              methodIndex: 0,
+              authorizationUrl,
+              instructions: `Open ${authorizationUrl} and use access_token=oauth-secret-value-12345`,
+              completionMethod: 'auto',
+            })}\n${JSON.stringify({ schemaVersion: 1, runtimeId: 'opencode', provider })}`
+          )
+        );
+        processEvents.emit('close', 0);
+      });
+    });
+    spawnCliMock.mockReturnValue({
+      stdout,
+      stderr,
+      stdin: {
+        write: stdinWrite,
+        end: vi.fn(),
+        once: stdinEvents.once.bind(stdinEvents),
+      },
+      once: processEvents.once.bind(processEvents),
+    });
+    const openExternal = vi.fn(() => Promise.resolve());
+    const emitOAuthProgress = vi.fn();
+    const client = new AgentTeamsRuntimeProviderManagementCliClient({
+      openExternal,
+      emitOAuthProgress,
+    });
+
+    const response = await client.connectProvider({
+      runtimeId: 'opencode',
+      providerId: 'xai',
+      method: 'oauth',
+      authMethodIndex: 0,
+      authOptionId: 'oauth:0',
+      oauthOperationId: 'oauth-operation-123',
+    });
+
+    expect(response.provider?.providerId).toBe('xai');
+    expect(openExternal).toHaveBeenCalledWith(authorizationUrl);
+    expect(spawnCliMock.mock.calls[0]?.[1]).toContain('--stdin-json-lines');
+    expect(stdinWrite).toHaveBeenCalledWith(
+      `${JSON.stringify({
+        method: 'oauth',
+        apiKey: null,
+        metadata: {},
+        authMethodIndex: 0,
+        authOptionId: 'oauth:0',
+        oauthOperationId: 'oauth-operation-123',
+      })}\n`
+    );
+    expect(JSON.stringify(emitOAuthProgress.mock.calls)).not.toContain(authorizationUrl);
+    expect(JSON.stringify(emitOAuthProgress.mock.calls)).not.toContain('oauth-secret-value-12345');
+    expect(emitOAuthProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        instructions: expect.stringContaining('[authorization link hidden]'),
+      })
+    );
+    expect(emitOAuthProgress).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operationId: 'oauth-operation-123',
+        phase: 'waiting-for-browser',
+        completionMethod: 'auto',
+      })
+    );
+  });
+
+  it('keeps a generic code-completion OAuth process alive until the renderer submits the code', async () => {
+    const processEvents = new EventEmitter();
+    const stdinEvents = new EventEmitter();
+    const stdout = new EventEmitter();
+    const stderr = new EventEmitter();
+    const provider = {
+      providerId: 'future-oauth-provider',
+      displayName: 'Future OAuth Provider',
+      state: 'connected',
+      ownership: ['managed'],
+      recommended: false,
+      modelCount: 1,
+      defaultModelId: null,
+      authMethods: ['oauth'],
+      actions: [],
+      detail: null,
+    };
+    const stdinWrite = vi.fn((raw: string) => {
+      const payload = JSON.parse(raw.trim()) as { type?: string };
+      if (payload.type === 'oauth-code') {
+        queueMicrotask(() => {
+          stdout.emit(
+            'data',
+            Buffer.from(JSON.stringify({ schemaVersion: 1, runtimeId: 'opencode', provider }))
+          );
+          processEvents.emit('close', 0);
+        });
+        return;
+      }
+      queueMicrotask(() => {
+        stdout.emit(
+          'data',
+          Buffer.from(
+            `@@agent-teams-runtime-provider-oauth@@${JSON.stringify({
+              schemaVersion: 1,
+              event: 'authorization',
+              operationId: 'oauth-code-operation-123',
+              providerId: 'future-oauth-provider',
+              displayName: 'Future OAuth Provider',
+              authOptionId: 'oauth:3',
+              methodIndex: 3,
+              authorizationUrl: 'https://login.example.test/authorize?state=opaque',
+              instructions: 'Paste the returned code.',
+              completionMethod: 'code',
+            })}\n`
+          )
+        );
+      });
+    });
+    spawnCliMock.mockReturnValue({
+      stdout,
+      stderr,
+      stdin: {
+        write: stdinWrite,
+        end: vi.fn(),
+        once: stdinEvents.once.bind(stdinEvents),
+      },
+      once: processEvents.once.bind(processEvents),
+    });
+    const emitOAuthProgress = vi.fn();
+    const client = new AgentTeamsRuntimeProviderManagementCliClient({
+      openExternal: vi.fn(() => Promise.resolve()),
+      emitOAuthProgress,
+    });
+
+    const connectPromise = client.connectProvider({
+      runtimeId: 'opencode',
+      providerId: 'future-oauth-provider',
+      method: 'oauth',
+      authMethodIndex: 3,
+      authOptionId: 'oauth:3',
+      oauthOperationId: 'oauth-code-operation-123',
+    });
+    await vi.waitFor(() => {
+      expect(emitOAuthProgress).toHaveBeenCalledWith(
+        expect.objectContaining({ phase: 'waiting-for-code', completionMethod: 'code' })
+      );
+    });
+
+    await expect(
+      client.submitOAuthCode({
+        operationId: 'oauth-code-operation-123',
+        code: 'provider-returned-code',
+      })
+    ).resolves.toEqual({ ok: true });
+    const response = await connectPromise;
+
+    expect(response.provider?.providerId).toBe('future-oauth-provider');
+    expect(stdinWrite).toHaveBeenNthCalledWith(
+      2,
+      `${JSON.stringify({
+        type: 'oauth-code',
+        operationId: 'oauth-code-operation-123',
+        code: 'provider-returned-code',
+      })}\n`
+    );
+    expect(emitOAuthProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ phase: 'completing' })
+    );
+  });
+
+  it('rejects unsafe OAuth authorization URLs before opening a browser', async () => {
+    const processEvents = new EventEmitter();
+    const stdinEvents = new EventEmitter();
+    const stdout = new EventEmitter();
+    const stderr = new EventEmitter();
+    const stdinWrite = vi.fn(() => {
+      queueMicrotask(() => {
+        stdout.emit(
+          'data',
+          Buffer.from(
+            `@@agent-teams-runtime-provider-oauth@@${JSON.stringify({
+              schemaVersion: 1,
+              event: 'authorization',
+              operationId: 'oauth-unsafe-operation-123',
+              providerId: 'future-oauth-provider',
+              displayName: 'Future OAuth Provider',
+              authOptionId: 'oauth:0',
+              methodIndex: 0,
+              authorizationUrl: 'javascript:alert(document.domain)',
+              instructions: 'Unsafe event',
+              completionMethod: 'auto',
+            })}\n`
+          )
+        );
+      });
+    });
+    spawnCliMock.mockReturnValue({
+      stdout,
+      stderr,
+      stdin: {
+        write: stdinWrite,
+        end: vi.fn(),
+        once: stdinEvents.once.bind(stdinEvents),
+      },
+      once: processEvents.once.bind(processEvents),
+    });
+    const openExternal = vi.fn(() => Promise.resolve());
+    const client = new AgentTeamsRuntimeProviderManagementCliClient({ openExternal });
+
+    const response = await client.connectProvider({
+      runtimeId: 'opencode',
+      providerId: 'future-oauth-provider',
+      method: 'oauth',
+      authMethodIndex: 0,
+      authOptionId: 'oauth:0',
+      oauthOperationId: 'oauth-unsafe-operation-123',
+    });
+
+    expect(openExternal).not.toHaveBeenCalled();
+    expect(killProcessTreeMock).toHaveBeenCalledWith(expect.anything(), 'SIGKILL');
+    expect(response.error?.message).toContain('invalid OAuth authorization event');
+  });
+
+  it('cancels only the child process owned by the requested OAuth operation', async () => {
+    const processEvents = new EventEmitter();
+    const stdinEvents = new EventEmitter();
+    const stdout = new EventEmitter();
+    const stderr = new EventEmitter();
+    const stdinWrite = vi.fn(() => {
+      queueMicrotask(() => {
+        stdout.emit(
+          'data',
+          Buffer.from(
+            `@@agent-teams-runtime-provider-oauth@@${JSON.stringify({
+              schemaVersion: 1,
+              event: 'authorization',
+              operationId: 'oauth-cancel-operation-123',
+              providerId: 'xai',
+              displayName: 'xAI',
+              authOptionId: 'oauth:0',
+              methodIndex: 0,
+              authorizationUrl: 'https://accounts.x.ai/oauth2/authorize?state=opaque',
+              instructions: 'Complete authorization in your browser.',
+              completionMethod: 'auto',
+            })}\n`
+          )
+        );
+      });
+    });
+    const child = {
+      stdout,
+      stderr,
+      stdin: {
+        write: stdinWrite,
+        end: vi.fn(),
+        once: stdinEvents.once.bind(stdinEvents),
+      },
+      once: processEvents.once.bind(processEvents),
+    };
+    spawnCliMock.mockReturnValue(child);
+    const emitOAuthProgress = vi.fn();
+    const client = new AgentTeamsRuntimeProviderManagementCliClient({
+      openExternal: vi.fn(() => Promise.resolve()),
+      emitOAuthProgress,
+    });
+    const connectPromise = client.connectProvider({
+      runtimeId: 'opencode',
+      providerId: 'xai',
+      method: 'oauth',
+      authMethodIndex: 0,
+      authOptionId: 'oauth:0',
+      oauthOperationId: 'oauth-cancel-operation-123',
+    });
+    await vi.waitFor(() => {
+      expect(emitOAuthProgress).toHaveBeenCalledWith(
+        expect.objectContaining({ phase: 'waiting-for-browser' })
+      );
+    });
+
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+    await expect(
+      client.cancelOAuth({ operationId: 'oauth-cancel-operation-123' })
+    ).resolves.toEqual({ ok: true });
+    expect(killProcessTreeMock).toHaveBeenCalledWith(child, 'SIGTERM');
+    expect(emitOAuthProgress).toHaveBeenCalledWith(expect.objectContaining({ phase: 'cancelled' }));
+    const forceKillCallback = setTimeoutSpy.mock.calls.find(([, delay]) => delay === 2_000)?.[0] as
+      | (() => void)
+      | undefined;
+    expect(forceKillCallback).toBeTypeOf('function');
+    forceKillCallback?.();
+    expect(killProcessTreeMock).toHaveBeenCalledWith(child, 'SIGKILL');
+    setTimeoutSpy.mockRestore();
+
+    processEvents.emit('close', null);
+    await connectPromise;
+    await expect(
+      client.cancelOAuth({ operationId: 'oauth-cancel-operation-123' })
+    ).resolves.toEqual({ ok: false, error: 'OAuth operation is not running' });
   });
 });

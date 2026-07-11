@@ -70,6 +70,10 @@ import {
   type RuntimeProviderManagementFeatureFacade,
 } from '@features/runtime-provider-management/main';
 import {
+  RUNTIME_PROVIDER_COMPANION_PROGRESS,
+  RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS,
+} from '@features/runtime-provider-management/contracts';
+import {
   createTerminalWorkspaceFeature,
   registerTerminalWorkspaceIpc,
   removeTerminalWorkspaceIpc,
@@ -149,7 +153,7 @@ import { createLogger } from '@shared/utils/logger';
 import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMessages';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import { createHash } from 'crypto';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
@@ -2073,7 +2077,17 @@ async function initializeServices(): Promise<void> {
     crossTeamService,
     logger: createLogger('Feature:Organizations'),
   });
-  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature();
+  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
+    openExternal: async (url) => {
+      await shell.openExternal(url);
+    },
+    emitOAuthProgress: (event) => {
+      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, event);
+    },
+    emitProgress: (event) => {
+      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_COMPANION_PROGRESS, event);
+    },
+  });
   terminalWorkspaceFeature = createTerminalWorkspaceFeature({
     teamsBasePath: getTeamsBasePath(),
     logger: createLogger('Feature:TerminalWorkspace'),

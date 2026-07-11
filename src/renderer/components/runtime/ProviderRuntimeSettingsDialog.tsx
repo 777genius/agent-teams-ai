@@ -179,6 +179,17 @@ function isApiKeyProviderId(providerId: CliProviderId): providerId is ApiKeyProv
   return providerId === 'anthropic' || providerId === 'codex' || providerId === 'gemini';
 }
 
+function getProviderCatalogLabel(provider: CliProviderStatus): string {
+  switch (provider.providerId) {
+    case 'anthropic':
+      return 'Claude';
+    case 'codex':
+      return 'Codex';
+    default:
+      return provider.displayName;
+  }
+}
+
 function isCodexRuntimeInstalling(
   status: CodexRuntimeStatus | null | undefined,
   loading: boolean
@@ -1848,7 +1859,7 @@ export const ProviderRuntimeSettingsDialog = ({
                           providerId={provider.providerId}
                           className="size-4 shrink-0"
                         />
-                        <span>{provider.displayName}</span>
+                        <span>{getProviderCatalogLabel(provider)}</span>
                       </span>
                     </TabsTrigger>
                   ))}

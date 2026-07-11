@@ -47,6 +47,16 @@ const MISTRAL_PATH =
   'M17.143 3.429v3.428h-3.429v3.429h-3.428V6.857H6.857V3.43H3.43v13.714H0v3.428h10.286v-3.428H6.857v-3.429h3.429v3.429h3.429v-3.429h3.428v3.429h-3.428v3.428H24v-3.428h-3.43V3.429z';
 const MINIMAX_PATH =
   'M11.43 3.92a.86.86 0 1 0-1.718 0v14.236a1.999 1.999 0 0 1-3.997 0V9.022a.86.86 0 1 0-1.718 0v3.87a1.999 1.999 0 0 1-3.997 0V11.49a.57.57 0 0 1 1.139 0v1.404a.86.86 0 0 0 1.719 0V9.022a1.999 1.999 0 0 1 3.997 0v9.134a.86.86 0 0 0 1.719 0V3.92a1.998 1.998 0 1 1 3.996 0v11.788a.57.57 0 1 1-1.139 0zm10.572 3.105a2 2 0 0 0-1.999 1.997v7.63a.86.86 0 0 1-1.718 0V3.923a1.999 1.999 0 0 0-3.997 0v16.16a.86.86 0 0 1-1.719 0V18.08a.57.57 0 1 0-1.138 0v2a1.998 1.998 0 0 0 3.996 0V3.92a.86.86 0 0 1 1.719 0v12.73a1.999 1.999 0 0 0 3.996 0V9.023a.86.86 0 1 1 1.72 0v6.686a.57.57 0 0 0 1.138 0V9.022a2 2 0 0 0-1.998-1.997';
+// Official Cursor mark from https://cursor.com/marketing-static/favicon.svg.
+const CURSOR_PATH =
+  'm415.035 156.35-151.503-87.4695c-4.865-2.8094-10.868-2.8094-15.733 0l-151.4969 87.4695c-4.0897 2.362-6.6146 6.729-6.6146 11.459v176.383c0 4.73 2.5249 9.097 6.6146 11.458l151.5039 87.47c4.865 2.809 10.868 2.809 15.733 0l151.504-87.47c4.089-2.361 6.614-6.728 6.614-11.458v-176.383c0-4.73-2.525-9.097-6.614-11.459zm-9.516 18.528-146.255 253.32c-.988 1.707-3.599 1.01-3.599-.967v-165.872c0-3.314-1.771-6.379-4.644-8.044l-143.645-82.932c-1.707-.988-1.01-3.599.968-3.599h292.509c4.154 0 6.75 4.503 4.673 8.101h-.007z';
+// Official Kiro ghost mark from https://kiro.dev/icon.svg.
+const KIRO_GHOST_PATH =
+  'M398.554 818.914C316.315 1001.03 491.477 1046.74 620.672 940.156C658.687 1059.66 801.052 970.473 852.234 877.795C964.787 673.567 919.318 465.357 907.64 422.374C827.637 129.443 427.623 128.946 358.8 423.865C342.651 475.544 342.402 534.18 333.458 595.051C328.986 625.86 325.507 645.488 313.83 677.785C306.873 696.424 297.68 712.819 282.773 740.645C259.915 783.881 269.604 867.113 387.87 823.883L399.051 818.914H398.554Z';
+const KIRO_LEFT_EYE_PATH =
+  'M636.123 549.353C603.328 549.353 598.359 510.097 598.359 486.742C598.359 465.623 602.086 448.977 609.293 438.293C615.504 428.852 624.697 424.131 636.123 424.131C647.555 424.131 657.492 428.852 664.447 438.541C672.398 449.474 676.623 466.12 676.623 486.742C676.623 525.998 661.471 549.353 636.375 549.353H636.123Z';
+const KIRO_RIGHT_EYE_PATH =
+  'M771.24 549.353C738.445 549.353 733.477 510.097 733.477 486.742C733.477 465.623 737.203 448.977 744.41 438.293C750.621 428.852 759.814 424.131 771.24 424.131C782.672 424.131 792.609 428.852 799.564 438.541C807.516 449.474 811.74 466.12 811.74 486.742C811.74 525.998 796.588 549.353 771.492 549.353H771.24Z';
 const NVIDIA_PATH =
   'M8.948 8.798v-1.43a6.7 6.7 0 0 1 .424-.018c3.922-.124 6.493 3.374 6.493 3.374s-2.774 3.851-5.75 3.851c-.398 0-.787-.062-1.158-.185v-4.346c1.528.185 1.837.857 2.747 2.385l2.04-1.714s-1.492-1.952-4-1.952a6.016 6.016 0 0 0-.796.035m0-4.735v2.138l.424-.027c5.45-.185 9.01 4.47 9.01 4.47s-4.08 4.964-8.33 4.964c-.37 0-.733-.035-1.095-.097v1.325c.3.035.61.062.91.062 3.957 0 6.82-2.023 9.593-4.408.459.371 2.34 1.263 2.73 1.652-2.633 2.208-8.772 3.984-12.253 3.984-.335 0-.653-.018-.971-.053v1.864H24V4.063zm0 10.326v1.131c-3.657-.654-4.673-4.46-4.673-4.46s1.758-1.944 4.673-2.262v1.237H8.94c-1.528-.186-2.73 1.245-2.73 1.245s.68 2.412 2.739 3.11M2.456 10.9s2.164-3.197 6.5-3.533V6.201C4.153 6.59 0 10.653 0 10.653s2.35 6.802 8.948 7.42v-1.237c-4.84-.6-6.492-5.936-6.492-5.936z';
 const OPENCODE_PATH =
@@ -59,6 +69,26 @@ const VERCEL_PATH = 'm12 1.608 12 20.784H0Z';
 // 16.17.0 entries whose source URLs point to the provider's official site/press kit.
 // Providers without a verified compact mark use branded initials instead of approximate logos.
 const BRAND_ICONS: Record<string, BrandIconDescriptor> = {
+  kiro: {
+    kind: 'svg',
+    viewBox: '0 0 1200 1200',
+    background: '#9046FF',
+    border: 'rgba(184, 132, 255, 0.72)',
+    color: '#FFFFFF',
+    paths: [
+      { d: KIRO_GHOST_PATH, fill: '#FFFFFF' },
+      { d: KIRO_LEFT_EYE_PATH, fill: '#000000' },
+      { d: KIRO_RIGHT_EYE_PATH, fill: '#000000' },
+    ],
+  },
+  cursor: {
+    kind: 'svg',
+    viewBox: '0 0 512 512',
+    background: '#14120B',
+    border: 'rgba(237, 236, 236, 0.32)',
+    color: '#EDECEC',
+    paths: [{ d: CURSOR_PATH }],
+  },
   'github-models': {
     kind: 'svg',
     viewBox: '0 0 24 24',
@@ -377,6 +407,7 @@ const BRAND_ALIASES: Record<string, string> = {
   'aws-bedrock': 'amazon-bedrock',
   'cloudflare-ai-gateway': 'cloudflare-ai-gateway',
   'cloudflare-workers-ai': 'cloudflare-workers-ai',
+  'cursor-acp': 'cursor',
   'deep-infra': 'deepinfra',
   fireworks: 'fireworks-ai',
   'github-copilot': 'github-copilot',
@@ -384,6 +415,7 @@ const BRAND_ALIASES: Record<string, string> = {
   'gitlab-duo': 'gitlab-duo',
   'google-vertex': 'google-vertex',
   'hugging-face': 'huggingface',
+  'minimax-coding-plan': 'minimax',
   'mistral-ai': 'mistral',
   'ollama-cloud': 'ollama-cloud',
   'opencode-zen': 'opencode',
@@ -616,7 +648,7 @@ function descriptorFor(provider: ProviderBrand): BrandIconDescriptor {
 
   const letterKey = getLetterBrandIconKey(provider);
   if (letterKey) {
-    return LETTER_BRANDS[letterKey] ?? fallbackDescriptor(provider);
+    return BRAND_ICONS[letterKey] ?? LETTER_BRANDS[letterKey] ?? fallbackDescriptor(provider);
   }
 
   return fallbackDescriptor(provider);
@@ -634,8 +666,15 @@ function shellStyle(descriptor: BrandIconDescriptor): CSSProperties {
   return style;
 }
 
-export function ProviderBrandIcon({ provider }: { readonly provider: ProviderBrand }): JSX.Element {
+export function ProviderBrandIcon({
+  provider,
+  size = 'default',
+}: {
+  readonly provider: ProviderBrand;
+  readonly size?: 'default' | 'large';
+}): JSX.Element {
   const descriptor = descriptorFor(provider);
+  const isLarge = size === 'large';
   const [imageFailed, setImageFailed] = useState(false);
   const imageSrc = descriptor.kind === 'image' ? descriptor.src : null;
 
@@ -650,27 +689,43 @@ export function ProviderBrandIcon({ provider }: { readonly provider: ProviderBra
     <span
       data-testid={`runtime-provider-logo-${provider.providerId}`}
       aria-hidden="true"
-      className="runtime-provider-brand-icon inline-flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md border"
+      className={
+        isLarge
+          ? 'runtime-provider-brand-icon inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border'
+          : 'runtime-provider-brand-icon inline-flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md border'
+      }
       style={shellStyle(renderedDescriptor)}
     >
       {renderedDescriptor.kind === 'image' ? (
         <img
           src={renderedDescriptor.src}
           alt=""
-          className="size-5 object-contain"
+          className={isLarge ? 'size-6 object-contain' : 'size-5 object-contain'}
           draggable={false}
           onError={() => setImageFailed(true)}
         />
       ) : null}
       {renderedDescriptor.kind === 'svg' ? (
-        <svg viewBox={renderedDescriptor.viewBox} className="h-[18px] w-[18px]" focusable="false">
+        <svg
+          viewBox={renderedDescriptor.viewBox}
+          className={isLarge ? 'size-[22px]' : 'size-[18px]'}
+          focusable="false"
+        >
           {renderedDescriptor.paths.map((path) => (
             <path key={path.d} d={path.d} fill={path.fill ?? 'currentColor'} />
           ))}
         </svg>
       ) : null}
       {renderedDescriptor.kind === 'letters' ? (
-        <span className="text-[10px] font-semibold leading-none">{renderedDescriptor.label}</span>
+        <span
+          className={
+            isLarge
+              ? 'text-[11px] font-semibold leading-none'
+              : 'text-[10px] font-semibold leading-none'
+          }
+        >
+          {renderedDescriptor.label}
+        </span>
       ) : null}
     </span>
   );

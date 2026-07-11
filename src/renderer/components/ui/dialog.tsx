@@ -37,20 +37,20 @@ const DialogContent = React.forwardRef<
       <DialogOverlay />
       <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="pointer-events-auto relative">
-          <DialogPrimitive.Close className="absolute -right-4 -top-4 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-lg ring-1 ring-[var(--color-border)] transition-opacity hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-border-emphasis)] disabled:pointer-events-none">
-            <X className="size-4 text-[var(--color-text-muted)]" />
-            <span className="sr-only">{t('actions.close')}</span>
-          </DialogPrimitive.Close>
           <DialogPrimitive.Content
             ref={ref}
             className={cn(
-              'grid w-full max-w-lg gap-4 border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
+              'relative grid w-full max-w-lg gap-4 border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg',
               'max-h-[90vh] min-h-0 overflow-y-auto overflow-x-hidden',
               'focus:outline-none',
               className
             )}
             {...props}
           >
+            <DialogPrimitive.Close className="absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--color-border)] transition-opacity hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-[var(--color-border-emphasis)] disabled:pointer-events-none">
+              <X className="size-4 text-[var(--color-text-muted)]" />
+              <span className="sr-only">{t('actions.close')}</span>
+            </DialogPrimitive.Close>
             {children}
           </DialogPrimitive.Content>
         </div>

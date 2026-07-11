@@ -73,6 +73,9 @@ function createState(
     setupSubmitErrorDiagnostics: null,
     setupMetadata: {},
     apiKeyValue: '',
+    selectedAuthOptionId: null,
+    oauthProgress: null,
+    oauthCodeValue: '',
     modelPickerProviderId: null,
     modelPickerMode: null,
     modelQuery: '',
@@ -105,15 +108,27 @@ function createActions(): RuntimeProviderManagementActions {
     startConnect: vi.fn(),
     cancelConnect: vi.fn(),
     setApiKeyValue: vi.fn(),
+    setAuthOption: vi.fn(),
     setSetupMetadataValue: vi.fn(),
-    submitConnect: vi.fn(() => Promise.resolve()),
+    setOAuthCodeValue: vi.fn(),
+    submitOAuthCode: vi.fn(() => Promise.resolve()),
+    submitConnect: vi.fn(() => Promise.resolve(true)),
     forgetProvider: vi.fn(() => Promise.resolve()),
     openModelPicker: vi.fn(),
     closeModelPicker: vi.fn(),
     setModelQuery: vi.fn(),
     selectModel: vi.fn(),
     useModelForNewTeams: vi.fn(),
-    testModel: vi.fn(() => Promise.resolve()),
+    testModel: vi.fn((providerId: string, modelId: string) =>
+      Promise.resolve({
+        providerId,
+        modelId,
+        ok: true,
+        availability: 'available' as const,
+        message: 'Model probe passed',
+        diagnostics: [],
+      })
+    ),
     setDefaultModel: vi.fn(() => Promise.resolve()),
   };
 }
@@ -129,8 +144,8 @@ function setInputValue(input: HTMLInputElement, value: string): void {
 }
 
 async function selectOpenCodeTab(host: HTMLElement, label: 'Models' | 'Providers'): Promise<void> {
-  const trigger = Array.from(host.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find((button) =>
-    button.textContent?.trim().startsWith(label)
+  const trigger = Array.from(host.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find(
+    (button) => button.textContent?.trim().startsWith(label)
   );
   if (!trigger) {
     throw new Error(`${label} tab trigger not found`);
@@ -152,7 +167,7 @@ describe('RuntimeProviderManagementPanelView', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders an explicit loading state while the managed OpenCode view is loading', async () => {
+  it('renders provider loading without a duplicate OpenCode runtime summary', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -173,10 +188,12 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Checking runtime');
-    expect(host.textContent).toContain('Loading managed OpenCode runtime');
+    expect(host.textContent).not.toContain('Checking runtime');
+    expect(host.textContent).not.toContain('Loading managed OpenCode runtime');
     expect(host.textContent).toContain('Loading OpenCode providers');
-    expect(host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')).toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')
+    ).toBeNull();
 
     await selectOpenCodeTab(host, 'Models');
 
@@ -185,13 +202,41 @@ describe('RuntimeProviderManagementPanelView', () => {
       host.querySelector('[data-testid="runtime-provider-model-loading-skeleton"]')
     ).not.toBeNull();
     expect(host.querySelectorAll('.skeleton-shimmer').length).toBeGreaterThanOrEqual(8);
-    expect(host.textContent).toContain('Checking...');
+    expect(host.textContent).toContain('Refresh');
     const refreshButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('Checking...')
+      button.textContent?.includes('Refresh')
     );
     expect(refreshButton?.disabled).toBe(true);
 
     expect(host.textContent).not.toContain('No launchable OpenCode model routes were reported yet');
+  });
+
+  it('requests the full managed view only after the Models tab is opened', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: null,
+            providers: [],
+            directoryLoading: true,
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(actions.refresh).not.toHaveBeenCalled();
+
+    await selectOpenCodeTab(host, 'Models');
+
+    expect(actions.refresh).toHaveBeenCalledTimes(1);
   });
 
   it('renders runtime command errors with a readable headline and multiline details', async () => {
@@ -426,7 +471,9 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(writeText).toHaveBeenCalledTimes(1);
     expect(writeText.mock.calls[0][0]).toContain('OpenCode provider settings diagnostics');
     expect(writeText.mock.calls[0][0]).toContain('Error code: runtime-unhealthy');
-    expect(writeText.mock.calls[0][0]).toContain('Resolved runtime binary: /opt/homebrew/bin/opencode');
+    expect(writeText.mock.calls[0][0]).toContain(
+      'Resolved runtime binary: /opt/homebrew/bin/opencode'
+    );
     expect(writeText.mock.calls[0][0]).toContain('stderr preview:');
     expect(writeText.mock.calls[0][0]).toContain('stdout preview:');
     expect(host.textContent).toContain('Copied');
@@ -581,12 +628,12 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(
       host.querySelector('[data-testid="runtime-provider-setup-submit-error"]')?.textContent
     ).toContain('/opt/homebrew/bin/opencode');
-    expect(host.querySelector('[data-testid="runtime-provider-models-error"]')?.textContent).toContain(
-      'Provider models failed before JSON.'
-    );
-    expect(host.querySelector('[data-testid="runtime-provider-models-error"]')?.textContent).toContain(
-      'opencode providers'
-    );
+    expect(
+      host.querySelector('[data-testid="runtime-provider-models-error"]')?.textContent
+    ).toContain('Provider models failed before JSON.');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-models-error"]')?.textContent
+    ).toContain('opencode providers');
   });
 
   it('renders provider directory errors with preserved multiline details', async () => {
@@ -916,7 +963,9 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     expect(host.textContent).toContain('Providers');
     expect(host.querySelector('[data-testid="runtime-provider-row-openrouter"]')).not.toBeNull();
-    expect(host.querySelector('[data-testid="configured-opencode-model-row-llama.cpp/qwen-test:0.5b"]')).toBeNull();
+    expect(
+      host.querySelector('[data-testid="configured-opencode-model-row-llama.cpp/qwen-test:0.5b"]')
+    ).toBeNull();
 
     await selectOpenCodeTab(host, 'Models');
 
@@ -1007,13 +1056,12 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actions.setDefaultModel).not.toHaveBeenCalled();
   });
 
-  it('renders duplicate runtime diagnostics without React key warnings', async () => {
+  it('does not repeat runtime diagnostics already shown by the outer OpenCode summary', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
     const actions = createActions();
     const baseState = createState();
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     await act(async () => {
       root.render(
@@ -1035,20 +1083,9 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
 
-    const duplicateDiagnostics = host.textContent?.match(
-      /Unable to connect\. Is the computer able to access the url\?/g
+    expect(host.textContent).not.toContain(
+      'Unable to connect. Is the computer able to access the url?'
     );
-    const duplicateKeyWarnings = consoleError.mock.calls.filter((call) =>
-      call.some(
-        (argument) =>
-          typeof argument === 'string' &&
-          argument.includes('Encountered two children with the same key')
-      )
-    );
-    consoleError.mockRestore();
-
-    expect(duplicateDiagnostics).toHaveLength(2);
-    expect(duplicateKeyWarnings).toHaveLength(0);
   });
 
   it('renders duplicate structured diagnostic hints without React key warnings', async () => {
@@ -1228,6 +1265,168 @@ describe('RuntimeProviderManagementPanelView', () => {
       .filter((button) => button.textContent?.trim() === 'Connect')
       .at(-1);
     expect(submitButton?.disabled).toBe(false);
+  });
+
+  it('shows generic OAuth browser progress and keeps cancellation available', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: state.view?.providers ?? [],
+            activeFormProviderId: 'openrouter',
+            savingProviderId: 'openrouter',
+            selectedAuthOptionId: 'oauth:0',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'xAI',
+              method: 'oauth',
+              supported: true,
+              title: 'Connect xAI',
+              description: 'Use a subscription or an API key.',
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'oauth',
+              secret: null,
+              prompts: [],
+              defaultAuthOptionId: 'oauth:0',
+              authOptions: [
+                {
+                  id: 'oauth:0',
+                  method: 'oauth',
+                  methodIndex: 0,
+                  label: 'SuperGrok subscription',
+                  supported: true,
+                  disabledReason: null,
+                  secret: null,
+                  prompts: [],
+                },
+                {
+                  id: 'api:1',
+                  method: 'api',
+                  methodIndex: 1,
+                  label: 'xAI API key',
+                  supported: true,
+                  disabledReason: null,
+                  secret: {
+                    key: 'key',
+                    label: 'API key',
+                    placeholder: 'Paste API key',
+                    required: true,
+                  },
+                  prompts: [],
+                },
+              ],
+            },
+            oauthProgress: {
+              operationId: 'oauth-operation-123',
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'xAI',
+              authOptionId: 'oauth:0',
+              methodIndex: 0,
+              phase: 'waiting-for-browser',
+              completionMethod: 'auto',
+              instructions: 'Approve access in the browser window.',
+              message: 'Your browser was opened. Finish authorization there.',
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('SuperGrok subscription');
+    expect(host.textContent).toContain('Your browser was opened. Finish authorization there.');
+    expect(host.textContent).not.toContain('accounts.x.ai');
+    const cancelButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Cancel'
+    );
+    expect(cancelButton?.disabled).toBe(false);
+  });
+
+  it('shows the SuperGrok device code as a prominent copyable value', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+    const xaiProvider = {
+      ...state.view!.providers[0],
+      providerId: 'xai',
+      displayName: 'SuperGrok',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            view: { ...state.view!, providers: [xaiProvider] },
+            providers: [xaiProvider],
+            activeFormProviderId: 'xai',
+            savingProviderId: 'xai',
+            selectedAuthOptionId: 'oauth:1',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'xai',
+              displayName: 'SuperGrok',
+              method: 'oauth',
+              supported: true,
+              title: 'Connect SuperGrok',
+              description: 'Use the browser device code.',
+              submitLabel: 'Get browser code',
+              disabledReason: null,
+              source: 'oauth',
+              secret: null,
+              prompts: [],
+              defaultAuthOptionId: 'oauth:1',
+              authOptions: [
+                {
+                  id: 'oauth:1',
+                  method: 'oauth',
+                  methodIndex: 1,
+                  label: 'SuperGrok browser code (recommended)',
+                  supported: true,
+                  disabledReason: null,
+                  secret: null,
+                  prompts: [],
+                },
+              ],
+            },
+            oauthProgress: {
+              operationId: 'oauth-operation-device',
+              runtimeId: 'opencode',
+              providerId: 'xai',
+              displayName: 'SuperGrok',
+              authOptionId: 'oauth:1',
+              methodIndex: 1,
+              phase: 'waiting-for-browser',
+              completionMethod: 'auto',
+              instructions: 'Open xAI and enter code C8ZB-RJ9G to finish sign-in.',
+              message: 'Waiting for xAI authorization.',
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const code = host.querySelector('[data-testid="runtime-provider-oauth-device-code"]');
+    expect(code?.textContent).toContain('Enter this code in xAI');
+    expect(code?.textContent).toContain('C8ZB-RJ9G');
+    expect(code?.querySelector('button')).not.toBeNull();
   });
 
   it('renders multiple compact provider actions without hiding forget behind connect', async () => {
@@ -2288,10 +2487,12 @@ describe('RuntimeProviderManagementPanelView', () => {
       { providerId: 'perplexity-agent', displayName: 'Perplexity Agent' },
       { providerId: 'nvidia', displayName: 'Nvidia' },
       { providerId: 'minimax', displayName: 'MiniMax' },
+      { providerId: 'minimax-coding-plan', displayName: 'MiniMax Token Plan (minimax.io)' },
       { providerId: 'cloudflare-ai-gateway', displayName: 'Cloudflare AI Gateway' },
       { providerId: 'cloudflare-workers-ai', displayName: 'Cloudflare Workers AI' },
       { providerId: 'gitlab-duo', displayName: 'GitLab Duo' },
       { providerId: 'poe', displayName: 'Poe' },
+      { providerId: 'cursor-acp', displayName: 'Cursor' },
     ].map((provider) => ({
       ...baseProvider,
       ...provider,

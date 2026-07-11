@@ -9,3 +9,10 @@ export const RUNTIME_PROVIDER_MANAGEMENT_MODELS = 'runtimeProviderManagement:mod
 export const RUNTIME_PROVIDER_MANAGEMENT_TEST_MODEL = 'runtimeProviderManagement:testModel';
 export const RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL =
   'runtimeProviderManagement:setDefaultModel';
+export const RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS = 'runtimeProviderManagement:oauthProgress';
+export const RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CODE = 'runtimeProviderManagement:oauthCode';
+export const RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CANCEL = 'runtimeProviderManagement:oauthCancel';
+export const RUNTIME_PROVIDER_COMPANION_STATUS = 'runtimeProviderManagement:companionStatus';
+export const RUNTIME_PROVIDER_COMPANION_INSTALL = 'runtimeProviderManagement:companionInstall';
+export const RUNTIME_PROVIDER_COMPANION_CONNECT = 'runtimeProviderManagement:companionConnect';
+export const RUNTIME_PROVIDER_COMPANION_PROGRESS = 'runtimeProviderManagement:companionProgress';

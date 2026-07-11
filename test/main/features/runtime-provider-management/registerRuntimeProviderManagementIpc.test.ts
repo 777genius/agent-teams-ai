@@ -21,6 +21,21 @@ import type {
 import type { RuntimeProviderManagementFeatureFacade } from '../../../../src/features/runtime-provider-management/main';
 import type { IpcMain } from 'electron';
 
+function createCompanionFeatureStubs(): Pick<
+  RuntimeProviderManagementFeatureFacade,
+  | 'getCompanionStatus'
+  | 'installAndConnectCompanion'
+  | 'connectCompanion'
+  | 'onCompanionProgress'
+> {
+  return {
+    getCompanionStatus: vi.fn(() => Promise.reject(new Error('Not used by this test'))),
+    installAndConnectCompanion: vi.fn(() => Promise.reject(new Error('Not used by this test'))),
+    connectCompanion: vi.fn(() => Promise.reject(new Error('Not used by this test'))),
+    onCompanionProgress: vi.fn(() => () => {}),
+  };
+}
+
 describe('registerRuntimeProviderManagementIpc', () => {
   it('passes API keys through input only and returns provider DTOs without the raw secret', async () => {
     const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
@@ -145,10 +160,14 @@ describe('registerRuntimeProviderManagementIpc', () => {
       },
     };
     const feature: RuntimeProviderManagementFeatureFacade = {
+      ...createCompanionFeatureStubs(),
       loadView: vi.fn(() => Promise.resolve(viewResponse)),
       loadProviderDirectory: vi.fn(() => Promise.resolve(directoryResponse)),
       loadSetupForm: vi.fn(() => Promise.resolve(setupFormResponse)),
       connectProvider: vi.fn(() => Promise.resolve(connectedResponse)),
+      submitOAuthCode: vi.fn(() => Promise.resolve({ ok: true })),
+      cancelOAuth: vi.fn(() => Promise.resolve({ ok: true })),
+      onOAuthProgress: vi.fn(() => () => {}),
       connectWithApiKey: vi.fn(() => Promise.resolve(connectedResponse)),
       forgetCredential: vi.fn(() => Promise.resolve(forgottenResponse)),
       loadModels: vi.fn(() => Promise.resolve(modelsResponse)),
@@ -245,6 +264,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       removeHandler: vi.fn(),
     } as unknown as IpcMain;
     const feature: RuntimeProviderManagementFeatureFacade = {
+      ...createCompanionFeatureStubs(),
       loadView: vi.fn(() =>
         Promise.reject(
           new Error(
@@ -255,6 +275,9 @@ describe('registerRuntimeProviderManagementIpc', () => {
       loadProviderDirectory: vi.fn(),
       loadSetupForm: vi.fn(),
       connectProvider: vi.fn(),
+      submitOAuthCode: vi.fn(() => Promise.resolve({ ok: true })),
+      cancelOAuth: vi.fn(() => Promise.resolve({ ok: true })),
+      onOAuthProgress: vi.fn(() => () => {}),
       connectWithApiKey: vi.fn(),
       forgetCredential: vi.fn(),
       loadModels: vi.fn(),
@@ -308,10 +331,14 @@ describe('registerRuntimeProviderManagementIpc', () => {
       removeHandler: vi.fn(),
     } as unknown as IpcMain;
     const feature: RuntimeProviderManagementFeatureFacade = {
+      ...createCompanionFeatureStubs(),
       loadView: vi.fn(() => Promise.reject(new Error(`x${'y'.repeat(3_000)}`))),
       loadProviderDirectory: vi.fn(),
       loadSetupForm: vi.fn(),
       connectProvider: vi.fn(),
+      submitOAuthCode: vi.fn(() => Promise.resolve({ ok: true })),
+      cancelOAuth: vi.fn(() => Promise.resolve({ ok: true })),
+      onOAuthProgress: vi.fn(() => () => {}),
       connectWithApiKey: vi.fn(),
       forgetCredential: vi.fn(),
       loadModels: vi.fn(),
@@ -342,6 +369,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       removeHandler: vi.fn(),
     } as unknown as IpcMain;
     const feature: RuntimeProviderManagementFeatureFacade = {
+      ...createCompanionFeatureStubs(),
       loadView: vi.fn(),
       loadProviderDirectory: vi.fn(),
       loadSetupForm: vi.fn(),
@@ -350,6 +378,9 @@ describe('registerRuntimeProviderManagementIpc', () => {
           'Provider failed with api_key: sk-secret-value-123456 and token=provider-token-123456789'
         )
       ),
+      submitOAuthCode: vi.fn(() => Promise.resolve({ ok: true })),
+      cancelOAuth: vi.fn(() => Promise.resolve({ ok: true })),
+      onOAuthProgress: vi.fn(() => () => {}),
       connectWithApiKey: vi.fn(),
       forgetCredential: vi.fn(),
       loadModels: vi.fn(),

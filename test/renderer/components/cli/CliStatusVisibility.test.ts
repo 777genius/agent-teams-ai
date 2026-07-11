@@ -70,6 +70,11 @@ let providerRuntimeSettingsDialogProps: {
   open?: boolean;
   initialProviderId?: string;
 } | null = null;
+let runtimeProviderOnboardingDialogProps: {
+  mode?: 'provider' | 'wizard';
+  providerId?: string | null;
+  onAdvancedSettings?: () => void;
+} | null = null;
 let terminalModalProps: {
   onClose?: () => void;
   onExit?: (exitCode: number) => void;
@@ -98,6 +103,41 @@ vi.mock('@features/codex-account/renderer', async (importOriginal) => {
   return {
     ...actual,
     useCodexAccountSnapshot: () => codexAccountHookState,
+  };
+});
+
+vi.mock('@features/runtime-provider-management/renderer', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@features/runtime-provider-management/renderer')>();
+  return {
+    ...actual,
+    RuntimeProviderQuickConnect: (props: {
+      onOpenCodeProviderAction?: (providerId: string, action: 'connect' | 'select') => void;
+    }) =>
+      React.createElement(
+        'div',
+        { 'data-testid': 'runtime-provider-quick-connect' },
+        React.createElement(
+          'button',
+          {
+            'data-testid': 'quick-connect-supergrok',
+            onClick: () => props.onOpenCodeProviderAction?.('xai', 'connect'),
+          },
+          'Connect SuperGrok'
+        )
+      ),
+    RuntimeProviderOnboardingDialog: (props: {
+      mode?: 'provider' | 'wizard';
+      providerId?: string | null;
+      onAdvancedSettings?: () => void;
+    }) => {
+      runtimeProviderOnboardingDialogProps = props;
+      return React.createElement('div', {
+        'data-testid': 'runtime-provider-onboarding-dialog',
+        'data-mode': props.mode ?? '',
+        'data-provider': props.providerId ?? '',
+      });
+    },
   };
 });
 
@@ -165,7 +205,10 @@ vi.mock('@renderer/components/terminal/TerminalLogPanel', () => ({
 }));
 
 vi.mock('@renderer/components/terminal/TerminalModal', () => ({
-  TerminalModal: (props: { onClose?: () => void; onExit?: (exitCode: number) => void }) => {
+  TerminalModal: (props: {
+    onClose?: () => void;
+    onExit?: (exitCode: number) => void;
+  }) => {
     terminalModalProps = props;
     return React.createElement(
       'div',
@@ -366,6 +409,7 @@ describe('CLI status visibility during completed install state', () => {
 
   beforeEach(() => {
     providerRuntimeSettingsDialogProps = null;
+    runtimeProviderOnboardingDialogProps = null;
     terminalModalProps = null;
     codexAccountHookState.snapshot = null;
     codexAccountHookState.loading = false;
@@ -424,6 +468,60 @@ describe('CLI status visibility during completed install state', () => {
     storeState.updateConfig = vi.fn().mockResolvedValue(undefined);
     storeState.openExtensionsTab = vi.fn();
     window.localStorage.clear();
+  });
+
+  it('opens focused provider onboarding without exposing the removed multi-plan shortcut', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      source: 'app-managed',
+      state: 'ready',
+      version: '1.17.18',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: true,
+      providers: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'managed',
+          verificationState: 'verified',
+          statusMessage: null,
+          models: ['xai/grok-4.3'],
+          canLoginFromUi: false,
+          capabilities: { teamLaunch: true, oneShot: true },
+        },
+      ],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="quick-connect-all-plans"]')).toBeNull();
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="quick-connect-supergrok"]')?.click();
+      await Promise.resolve();
+    });
+    expect(runtimeProviderOnboardingDialogProps?.mode).toBe('provider');
+    expect(runtimeProviderOnboardingDialogProps?.providerId).toBe('xai');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('does not expose the legacy runtime toggle or multimodel banner label', async () => {
@@ -929,6 +1027,62 @@ describe('CLI status visibility during completed install state', () => {
 
     await act(async () => {
       installButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(storeState.installOpenCodeRuntime).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('offers an OpenCode update when the installed runtime predates provider OAuth support', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      source: 'app-managed',
+      state: 'ready',
+      version: '1.15.6',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      providers: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode (200+ models)',
+          supported: true,
+          authenticated: true,
+          authMethod: 'managed',
+          verificationState: 'verified',
+          statusMessage: 'Connected via opencode managed',
+          models: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: true,
+          },
+          backend: null,
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    const updateButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Update'
+    );
+    expect(updateButton).not.toBeUndefined();
+
+    await act(async () => {
+      updateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
 
@@ -3113,9 +3267,7 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).not.toContain(
       'Reconnect ChatGPT to refresh the current Codex subscription session.'
     );
-    expect(host.textContent).not.toContain(
-      'Models unavailable for this runtime build'
-    );
+    expect(host.textContent).not.toContain('Models unavailable for this runtime build');
 
     await act(async () => {
       root.unmount();

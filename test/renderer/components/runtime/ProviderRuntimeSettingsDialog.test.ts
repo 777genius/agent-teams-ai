@@ -193,6 +193,7 @@ vi.mock('@renderer/components/ui/tabs', () => ({
       'button',
       {
         type: 'button',
+        role: 'tab',
         'data-value': value,
         onClick,
       },
@@ -606,6 +607,11 @@ describe('ProviderRuntimeSettingsDialog', () => {
 
     expect(host.querySelector('[data-testid="provider-logo-anthropic"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="provider-logo-codex"]')).not.toBeNull();
+    const providerTabs = [...host.querySelectorAll<HTMLElement>('[role="tab"]')].map((tab) =>
+      tab.textContent?.trim()
+    );
+    expect(providerTabs).toContain('Claude');
+    expect(providerTabs).toContain('Codex');
   });
 
   it('renders anthropic connection cards and can switch to API key mode', async () => {

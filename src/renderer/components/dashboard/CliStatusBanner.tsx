@@ -16,6 +16,12 @@ import {
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import {
+  isOpenCodeProviderOAuthBridgeOutdated,
+  resolveOpenCodeQuickConnectGate,
+  RuntimeProviderOnboardingDialog,
+  RuntimeProviderQuickConnect,
+} from '@features/runtime-provider-management/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import atlasCloudLogo from '@renderer/assets/atlascloud-logo.svg';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
@@ -49,6 +55,7 @@ import {
 } from '@renderer/components/runtime/ProviderRuntimeBackendSelector';
 import {
   getProviderTerminalCommand,
+  getProviderTerminalCommandById,
   getProviderTerminalLogoutCommand,
 } from '@renderer/components/runtime/providerTerminalCommands';
 import { useCliInstaller } from '@renderer/hooks/useCliInstaller';
@@ -422,6 +429,8 @@ interface InstalledBannerProps {
   anthropicRateLimitsRefreshing: boolean;
   openCodeRuntimeStatus: OpenCodeRuntimeStatus | null;
   openCodeRuntimeStatusLoading: boolean;
+  projectPath: string | null;
+  providerQuickConnectRefreshKey: number;
   codexRuntimeStatus: CodexRuntimeStatus | null;
   codexRuntimeStatusLoading: boolean;
   isBusy: boolean;
@@ -434,6 +443,8 @@ interface InstalledBannerProps {
   onProviderLogout: (providerId: CliProviderId) => void;
   onProviderManage: (providerId: CliProviderId) => void;
   onOpenCodeProviderConnect: (providerId: string) => void;
+  onOpenCodeProviderAction: (providerId: string, action: 'connect' | 'select') => void;
+  onBrowseOpenCodeProviders: () => void;
   onProviderRefresh: (providerId: CliProviderId) => void;
   onCodexReconnect: () => void;
   onCodexDeviceCodeLogin: () => void;
@@ -599,8 +610,9 @@ function shouldShowOpenCodeInstallAction(
   return (
     provider.providerId === 'opencode' &&
     !showSkeleton &&
-    !isOpenCodeProviderEffectivelyReady(provider) &&
-    !isOpenCodeRuntimeReady(openCodeRuntimeStatus)
+    ((!isOpenCodeProviderEffectivelyReady(provider) &&
+      !isOpenCodeRuntimeReady(openCodeRuntimeStatus)) ||
+      isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus))
   );
 }
 
@@ -648,6 +660,9 @@ function getRuntimeInstallLabel(
   }
   if (status?.state === 'failed') {
     return t('cliStatus.runtimeInstall.retryInstall');
+  }
+  if (status?.installed) {
+    return t('cliStatus.runtimeInstall.update');
   }
   return t('cliStatus.runtimeInstall.install');
 }
@@ -813,6 +828,8 @@ const InstalledBanner = ({
   anthropicRateLimitsRefreshing,
   openCodeRuntimeStatus,
   openCodeRuntimeStatusLoading,
+  projectPath,
+  providerQuickConnectRefreshKey,
   codexRuntimeStatus,
   codexRuntimeStatusLoading,
   isBusy,
@@ -825,6 +842,8 @@ const InstalledBanner = ({
   onProviderLogout,
   onProviderManage,
   onOpenCodeProviderConnect,
+  onOpenCodeProviderAction,
+  onBrowseOpenCodeProviders,
   onProviderRefresh,
   onCodexReconnect,
   onCodexDeviceCodeLogin,
@@ -844,6 +863,7 @@ const InstalledBanner = ({
     () => filterMainScreenCliProviders(cliStatus.providers),
     [cliStatus.providers]
   );
+  const detailedProviders = visibleProviders;
   const canOpenExtensions = cliStatus.installed;
   const runtimeLabel = formatRuntimeLabel(cliStatus);
   const runtimeAuthSummary = formatRuntimeAuthSummary(cliStatus, visibleProviders, t);
@@ -956,12 +976,26 @@ const InstalledBanner = ({
           {t('cliStatus.errors.refreshFailed')}
         </p>
       )}
-      {showExpandedContent && visibleProviders.length > 0 && (
+      {showExpandedContent && cliStatus.flavor === 'agent_teams_orchestrator' ? (
+        <RuntimeProviderQuickConnect
+          enabled
+          cliStatusLoading={cliStatusLoading}
+          providers={visibleProviders}
+          openCodeRuntimeStatus={openCodeRuntimeStatus}
+          openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
+          projectPath={projectPath}
+          refreshKey={providerQuickConnectRefreshKey}
+          onInstallOpenCode={onOpenCodeInstall}
+          onOpenCodeProviderAction={onOpenCodeProviderAction}
+          onBrowseProviders={onBrowseOpenCodeProviders}
+        />
+      ) : null}
+      {showExpandedContent && detailedProviders.length > 0 && (
         <div
           className="mt-3 space-y-2 border-t pt-3"
           style={{ borderColor: 'var(--color-border-subtle)' }}
         >
-          {visibleProviders.map((provider) => {
+          {detailedProviders.map((provider) => {
             const actionDisabled = isBusy || !cliStatus.binaryPath;
             const runtimeSummary = isConnectionManagedRuntimeProvider(provider)
               ? getProviderCurrentRuntimeSummary(provider, settingsT)
@@ -1374,7 +1408,15 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
   } | null>(null);
   const [manageProviderId, setManageProviderId] = useState<CliProviderId>('anthropic');
   const [manageRuntimeProviderId, setManageRuntimeProviderId] = useState<string | null>(null);
+  const [manageRuntimeProviderAction, setManageRuntimeProviderAction] = useState<
+    'connect' | 'select' | null
+  >(null);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
+  const [providerOnboardingRequest, setProviderOnboardingRequest] = useState<{
+    mode: 'provider' | 'wizard';
+    providerId: string | null;
+  } | null>(null);
+  const [providerQuickConnectRefreshKey, setProviderQuickConnectRefreshKey] = useState(0);
   const [isVerifyingAuth, setIsVerifyingAuth] = useState(false);
   const [showTroubleshoot, setShowTroubleshoot] = useState(false);
   const [providersCollapsed, setProvidersCollapsed] = useState(() =>
@@ -1431,6 +1473,17 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         ])
       ),
     [loadingCliStatus?.providers]
+  );
+  const openCodeQuickConnectGate = useMemo(
+    () =>
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: openCodeRuntimeStatus,
+        runtimeStatusLoading: openCodeRuntimeStatusLoading,
+        provider:
+          visibleCliProviders.find((provider) => provider.providerId === 'opencode') ?? null,
+        cliStatusLoading,
+      }),
+    [cliStatusLoading, openCodeRuntimeStatus, openCodeRuntimeStatusLoading, visibleCliProviders]
   );
   const codexSnapshotPending =
     codexAccount.loading &&
@@ -1629,21 +1682,53 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
   const handleProviderManage = useCallback((providerId: CliProviderId) => {
     setManageProviderId(providerId);
     setManageRuntimeProviderId(null);
+    setManageRuntimeProviderAction(null);
     setManageDialogOpen(true);
   }, []);
 
   const handleOpenCodeProviderConnect = useCallback((providerId: string) => {
     setManageProviderId('opencode');
     setManageRuntimeProviderId(providerId);
+    setManageRuntimeProviderAction('connect');
     setManageDialogOpen(true);
   }, []);
 
-  const handleManageDialogOpenChange = useCallback((open: boolean) => {
-    setManageDialogOpen(open);
-    if (!open) {
-      setManageRuntimeProviderId(null);
-    }
+  const handleOpenCodeProviderAction = useCallback(
+    (providerId: string, _action: 'connect' | 'select') => {
+      setProviderOnboardingRequest({ mode: 'provider', providerId });
+    },
+    []
+  );
+
+  const handleBrowseOpenCodeProviders = useCallback(() => {
+    setManageProviderId('opencode');
+    setManageRuntimeProviderId(null);
+    setManageRuntimeProviderAction(null);
+    setManageDialogOpen(true);
   }, []);
+
+  const handleOnboardingAdvancedSettings = useCallback(() => {
+    const providerId = providerOnboardingRequest?.providerId ?? null;
+    setProviderOnboardingRequest(null);
+    setManageProviderId('opencode');
+    setManageRuntimeProviderId(providerId);
+    setManageRuntimeProviderAction(providerId ? 'select' : null);
+    setManageDialogOpen(true);
+  }, [providerOnboardingRequest?.providerId]);
+
+  const handleManageDialogOpenChange = useCallback(
+    (open: boolean) => {
+      setManageDialogOpen(open);
+      if (!open) {
+        if (manageProviderId === 'opencode') {
+          setProviderQuickConnectRefreshKey((current) => current + 1);
+        }
+        setManageRuntimeProviderId(null);
+        setManageRuntimeProviderAction(null);
+      }
+    },
+    [manageProviderId]
+  );
 
   const handleProviderRefresh = useCallback(
     (providerId: CliProviderId) => {
@@ -1716,14 +1801,43 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
       ) ?? null)
     : null;
   const providerTerminalCommand =
-    providerTerminal && activeTerminalProvider
-      ? providerTerminal.action === 'login'
-        ? getProviderTerminalCommand(activeTerminalProvider)
-        : getProviderTerminalLogoutCommand(activeTerminalProvider)
+    providerTerminal
+      ? activeTerminalProvider
+        ? providerTerminal.action === 'login'
+          ? getProviderTerminalCommand(activeTerminalProvider)
+          : getProviderTerminalLogoutCommand(activeTerminalProvider)
+        : getProviderTerminalCommandById(providerTerminal.providerId, providerTerminal.action)
       : null;
   const installedAuxiliaryUi =
     renderCliStatus !== null ? (
       <>
+        {providerOnboardingRequest ? (
+          <RuntimeProviderOnboardingDialog
+            open
+            onOpenChange={(open) => {
+              if (!open) {
+                setProviderOnboardingRequest(null);
+                setProviderQuickConnectRefreshKey((current) => current + 1);
+              }
+            }}
+            mode={providerOnboardingRequest.mode}
+            providerId={providerOnboardingRequest.providerId}
+            projectPath={selectedProjectPath}
+            runtimeGate={openCodeQuickConnectGate}
+            runtimeUpdateRequired={
+              isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus) &&
+              (providerOnboardingRequest.mode === 'wizard' ||
+                providerOnboardingRequest.providerId === 'xai')
+            }
+            disabled={isBusy || cliStatusLoading}
+            onInstallOrUpdateRuntime={() => installOpenCodeRuntime()}
+            onProviderChanged={() => {
+              setProviderQuickConnectRefreshKey((current) => current + 1);
+              handleProviderRefresh('opencode');
+            }}
+            onAdvancedSettings={handleOnboardingAdvancedSettings}
+          />
+        ) : null}
         {manageDialogOpen && (
           <Suspense fallback={null}>
             <ProviderRuntimeSettingsDialog
@@ -1737,7 +1851,7 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
                   : (visibleCliProviders[0]?.providerId ?? 'anthropic')
               }
               initialRuntimeProviderId={manageRuntimeProviderId}
-              initialRuntimeProviderAction={manageRuntimeProviderId ? 'connect' : null}
+              initialRuntimeProviderAction={manageRuntimeProviderAction}
               providerStatusLoading={cliProviderStatusLoading}
               disabled={isBusy || cliStatusLoading || !renderCliStatus.binaryPath}
               codexRuntimeStatus={codexRuntimeStatus}
@@ -1852,6 +1966,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
           openCodeRuntimeStatus={openCodeRuntimeStatus}
           openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
+          projectPath={selectedProjectPath}
+          providerQuickConnectRefreshKey={providerQuickConnectRefreshKey}
           codexRuntimeStatus={codexRuntimeStatus}
           codexRuntimeStatusLoading={codexRuntimeStatusLoading}
           isBusy={isBusy}
@@ -1864,6 +1980,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           onProviderLogout={handleProviderLogout}
           onProviderManage={handleProviderManage}
           onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
+          onOpenCodeProviderAction={handleOpenCodeProviderAction}
+          onBrowseOpenCodeProviders={handleBrowseOpenCodeProviders}
           onProviderRefresh={handleProviderRefresh}
           onCodexReconnect={handleCodexDashboardLogin}
           onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
@@ -2103,6 +2221,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
             anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
             openCodeRuntimeStatus={openCodeRuntimeStatus}
             openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
+            projectPath={selectedProjectPath}
+            providerQuickConnectRefreshKey={providerQuickConnectRefreshKey}
             codexRuntimeStatus={codexRuntimeStatus}
             codexRuntimeStatusLoading={codexRuntimeStatusLoading}
             isBusy={isBusy}
@@ -2115,6 +2235,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
             onProviderLogout={handleProviderLogout}
             onProviderManage={handleProviderManage}
             onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
+            onOpenCodeProviderAction={handleOpenCodeProviderAction}
+            onBrowseOpenCodeProviders={handleBrowseOpenCodeProviders}
             onProviderRefresh={handleProviderRefresh}
             onCodexReconnect={handleCodexDashboardLogin}
             onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
@@ -2177,6 +2299,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
           openCodeRuntimeStatus={openCodeRuntimeStatus}
           openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
+          projectPath={selectedProjectPath}
+          providerQuickConnectRefreshKey={providerQuickConnectRefreshKey}
           codexRuntimeStatus={codexRuntimeStatus}
           codexRuntimeStatusLoading={codexRuntimeStatusLoading}
           isBusy={isBusy}
@@ -2189,6 +2313,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           onProviderLogout={handleProviderLogout}
           onProviderManage={handleProviderManage}
           onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
+          onOpenCodeProviderAction={handleOpenCodeProviderAction}
+          onBrowseOpenCodeProviders={handleBrowseOpenCodeProviders}
           onProviderRefresh={handleProviderRefresh}
           onCodexReconnect={handleCodexDashboardLogin}
           onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
@@ -2395,6 +2521,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
         openCodeRuntimeStatus={openCodeRuntimeStatus}
         openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
+        projectPath={selectedProjectPath}
+        providerQuickConnectRefreshKey={providerQuickConnectRefreshKey}
         codexRuntimeStatus={codexRuntimeStatus}
         codexRuntimeStatusLoading={codexRuntimeStatusLoading}
         isBusy={isBusy}
@@ -2407,6 +2535,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         onProviderLogout={handleProviderLogout}
         onProviderManage={handleProviderManage}
         onOpenCodeProviderConnect={handleOpenCodeProviderConnect}
+        onOpenCodeProviderAction={handleOpenCodeProviderAction}
+        onBrowseOpenCodeProviders={handleBrowseOpenCodeProviders}
         onProviderRefresh={handleProviderRefresh}
         onCodexReconnect={handleCodexDashboardLogin}
         onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}

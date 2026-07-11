@@ -1,8 +1,17 @@
-import type { CliProviderStatus } from '@shared/types';
+import type { CliProviderId, CliProviderStatus } from '@shared/types';
 
 export interface ProviderTerminalCommand {
   args: string[];
   env?: Record<string, string>;
+}
+
+export function getProviderTerminalCommandById(
+  providerId: CliProviderId,
+  action: 'login' | 'logout'
+): ProviderTerminalCommand {
+  return {
+    args: ['auth', action, '--provider', providerId],
+  };
 }
 
 export function getProviderTerminalCommand(provider: CliProviderStatus): ProviderTerminalCommand {
@@ -25,9 +34,7 @@ export function getProviderTerminalCommand(provider: CliProviderStatus): Provide
     };
   }
 
-  return {
-    args: ['auth', 'login', '--provider', provider.providerId],
-  };
+  return getProviderTerminalCommandById(provider.providerId, 'login');
 }
 
 export function getProviderTerminalLogoutCommand(
@@ -52,7 +59,5 @@ export function getProviderTerminalLogoutCommand(
     };
   }
 
-  return {
-    args: ['auth', 'logout', '--provider', provider.providerId],
-  };
+  return getProviderTerminalCommandById(provider.providerId, 'logout');
 }
