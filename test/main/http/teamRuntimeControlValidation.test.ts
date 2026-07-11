@@ -60,6 +60,38 @@ function createRuntimeControlApi(overrides: Partial<TeamRuntimeControlCompatibil
 }
 
 describe('HTTP team runtime-control validation', () => {
+  it('maps invalid runtime delivery targets to 400', async () => {
+    const deliverOpenCodeRuntimeMessage =
+      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
+    deliverOpenCodeRuntimeMessage.mockRejectedValueOnce(
+      new Error('Runtime delivery target must be user or object')
+    );
+    const app = Fastify();
+    registerTeamRoutes(
+      app,
+      createHttpServices(createRuntimeControlApi({ deliverOpenCodeRuntimeMessage }))
+    );
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/deliver-message',
+        payload: {
+          runId: 'run-opencode',
+          to: 42,
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json()).toEqual({
+        error: 'Runtime delivery target must be user or object',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
   it('maps missing runtime delivery idempotency identifiers to 400', async () => {
     const deliverOpenCodeRuntimeMessage =
       vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
