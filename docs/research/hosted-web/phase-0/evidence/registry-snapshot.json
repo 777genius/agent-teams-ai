@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-00",
+  "packetRevision": "phase-00-r2",
+  "capturedAt": "2026-07-11T18:25:36Z",
+  "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
+  "scope": "documentation-assembly-only",
+  "sourcePolicy": {
+    "registryRoot": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2",
+    "producerResultsRoot": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs",
+    "note": "Registry job records identify the producer, review, and audit worktrees. Worktree-local records are treated as draft evidence until the controller records a successful result and adopts them through integration."
+  },
+  "producerLanes": [
+    {
+      "laneId": "w1",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w1-v1",
+      "registryJobSha256": "8666ccbaa376eae4a3029dcfb2cfe7e301a91403bd3f48a3e7f11867d963b9ed",
+      "latestResultSha256": "35bb9c270cc84c0ad429039c5e1c2b60cfbd7fb81ab83ec71339a91973db10",
+      "resultState": "done",
+      "producerStatus": "characterized",
+      "reviewDisposition": "reject",
+      "evidenceIds": [
+        "P0.W1.API_PARITY_LEDGER",
+        "P0.W1.RENDERER_ACTIONS",
+        "P0.W1.LEGACY_BYPASSES",
+        "P0.W1.SELECTION_INVARIANTS",
+        "P0.W1.SCANNER",
+        "P0.W1.ESTIMATE"
+      ],
+      "supportedSummary": "The producer reports 86 TeamsAPI, 20 ReviewAPI, and 3 CrossTeamAPI members; it classified 833 renderer action mappings and 160 deliberate pre-mount absences with focused scanner checks.",
+      "gap": "The reciprocal review rejects all W1 evidence except the selection invariants. It identifies heuristic/unstable action IDs, cross-lane ownership conflicts, estimate arithmetic errors, and an adoption-size violation."
+    },
+    {
+      "laneId": "w2",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w2-v1",
+      "registryJobSha256": "b37db9c1edd6b49a9465064699f4093661537bd0f50eea2e775e0cf54906eb00",
+      "latestResultSha256": "893c1b3ff460367af84fbd45aa5efec0916a2530578ffad6b13c79433fed7701",
+      "resultState": "done",
+      "producerStatus": "characterized",
+      "reviewDisposition": "reject",
+      "evidenceIds": [
+        "P0.W2.EXECUTION_TOPOLOGY",
+        "P0.W2.RUNTIME_INGRESS_INVENTORY",
+        "P0.W2.ENVIRONMENT_PROVENANCE",
+        "P0.W2.CREDENTIAL_EXPOSURE_MATRIX",
+        "P0.W2.RUNTIME_SCANNER",
+        "P0.W2.ESTIMATE"
+      ],
+      "supportedSummary": "The producer distinguishes four provider identities over two execution backend families and records current runtime-ingress and ambient-environment gaps.",
+      "gap": "The reciprocal review approves only the source-observed execution topology. It rejects the ingress/environment/credential schemas, scanner completeness, estimate bucket IDs, and fake-runtime coverage."
+    },
+    {
+      "laneId": "w3",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w3-v1",
+      "registryJobSha256": "bd0c26451b923367028b6c35c892cdbe81d3adbac4d68b9b20ed742b917676f7",
+      "latestResultSha256": "a07db789611d8d126dbf2ea5a83d1ee57b7a962e099272f8a03f7dded0a71979",
+      "resultState": "done",
+      "producerStatus": "characterized",
+      "reviewDisposition": "reject",
+      "evidenceIds": [
+        "P0.W3.STATE_FAMILY_CATALOG",
+        "P0.W3.WRITER_COORDINATION",
+        "P0.W3.SCHEMA_UNKNOWN_FIELDS",
+        "P0.W3.BACKUP_BEHAVIOR",
+        "P0.W3.SQLITE_ONLINE_BACKUP_SPIKE",
+        "P0.W3.ESTIMATE"
+      ],
+      "supportedSummary": "The reciprocal review accepts the state-family catalog, writer coordination, schema/unknown-field evidence, SQLite backup spike, and estimate as useful at their declared proof levels.",
+      "gap": "P0.W3.BACKUP_BEHAVIOR was rejected because TeamBackupService was not exercised by the required fault-injected fixture."
+    },
+    {
+      "laneId": "w4",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w4-v1",
+      "registryJobSha256": "c7a0dae8ab2b5817abc33e639f86a7268a2fe8435ca21a2b6e58b0e621f7dce2",
+      "latestResultSha256": "709ae6bcf548aae73b7df33ef754bdbb3a10c71b72ca5f7775e5a6aa6abf8c4e",
+      "resultState": "done",
+      "producerStatus": "characterized",
+      "reviewDisposition": "reject",
+      "evidenceIds": [
+        "P0.W4.TARGET_HOST_ENVELOPE",
+        "P0.W4.INSTANCE_LEASE_SPIKE",
+        "P0.W4.WORKSPACE_GUARD_SPIKE",
+        "P0.W4.PROCESS_ANCHOR_SPIKE",
+        "P0.W4.NATIVE_ARTIFACT_PROPOSAL",
+        "P0.W4.ESTIMATE"
+      ],
+      "supportedSummary": "Current-host native probes are useful characterization only; the producer correctly did not claim final-topology verification.",
+      "gap": "Review findings R46-03 through R46-06 identify reusable numeric-PID signaling, unproved cleanup, an incomplete high-FD close rule, and no reconciled final-image artifact contract."
+    },
+    {
+      "laneId": "w5",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w5-v1",
+      "registryJobSha256": "f2f3996db1c8cfdd31e9cc251fcbf03de93e525d9ccee3459ecc6c74c35a6bf2",
+      "latestResultSha256": "894573155a28a3aea9d9d2978565c243fa71e1327978eadb86e146da833b38be",
+      "resultState": "done",
+      "producerStatus": "characterized",
+      "reviewDisposition": "reject",
+      "evidenceIds": [
+        "P0.W5.EVENT_CURSOR_INVENTORY",
+        "P0.W5.SNAPSHOT_HANDOFF_SCHEDULER",
+        "P0.W5.COMMAND_CATALOG",
+        "P0.W5.EFFECT_RECOVERY_MATRIX",
+        "P0.W5.FINGERPRINT_GOLDENS",
+        "P0.W5.ESTIMATE"
+      ],
+      "supportedSummary": "The reciprocal review accepts only the current event/cursor inventory and estimate as useful evidence.",
+      "gap": "The scheduler, command catalog, effect classes, and fingerprint goldens were rejected for simulated rather than real crash transitions, conflict with W3 writer evidence, incomplete version/default vectors, and a circular mutation census."
+    },
+    {
+      "laneId": "w6",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-w6-v1",
+      "registryJobSha256": "e90a9d8f6253833ff170d5b35266aecb700e0f45dd69691aca0df514fde3c62d",
+      "latestResultSha256": "80f3835108abb9078b53a0da190389c51dbb8c5c98546ddd68a146d54320ebac",
+      "resultState": "done",
+      "producerStatus": "characterized",
+      "reviewDisposition": "reject",
+      "evidenceIds": [
+        "P0.W6.AUTH_TRANSITIONS",
+        "P0.W6.PROXY_ORIGIN_THREAT_MATRIX",
+        "P0.W6.COOKIE_VERSION_EVIDENCE",
+        "P0.W6.ARTIFACT_INVENTORY",
+        "P0.W6.ABI_STUB_REPORT",
+        "P0.W6.TERMINAL_ABSENCE_REPORT",
+        "P0.W6.ESTIMATE"
+      ],
+      "supportedSummary": "The artifact scan supports the negative conclusion that the current standalone artifact is not an acceptable v1 hosted artifact.",
+      "gap": "Review findings R46-01, R46-02, R46-06, and R46-07 reject restart auth admission, reset/drain fencing, W4 artifact coverage, and reproducibility of ABI/native smoke claims."
+    }
+  ],
+  "reciprocalReviews": [
+    {
+      "reviewId": "w1-w2",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w1-w2-v1",
+      "registryJobSha256": "6ee28a7e0b42b1289b3272adce900d08e472ec80a1dd497636b09964befe214a",
+      "recordState": "worktree_local_not_registry_final",
+      "disposition": "failed_reject_both",
+      "reviewSha256": "213836d2c6104318d3e59848a856dea14bfefc9d56840645a76cf821fc918e2b",
+      "handoffSha256": "c12836733a03159b434223b6ffb63d2a561a3ff946dd3704fde6f5d7f88ef48e",
+      "findingIds": [
+        "R12-W1-001",
+        "R12-W1-002",
+        "R12-X-001",
+        "R12-W1-003",
+        "R12-W1-004",
+        "R12-W2-001",
+        "R12-W2-002",
+        "R12-W2-003",
+        "R12-W2-004",
+        "R12-W2-005"
+      ]
+    },
+    {
+      "reviewId": "w3-w5",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w3-w5-v1",
+      "registryJobSha256": "97a44fdd4e84e61d59980da8f05609d93704add8e12aceb549a24e6eca9d8b5e",
+      "recordState": "worktree_local_not_registry_final",
+      "disposition": "rejected",
+      "reviewSha256": "8140261ef1cf3a2a37fc25d75f639fa9e20607e7bb1c104fe5a39b1585e38a15",
+      "handoffSha256": "f8d9b40c83ce4d895110162807cd8abafaac25566ef4dd32db0ab5e8afbd8beb",
+      "findingIds": ["RW35-001", "RW35-002", "RW35-003", "RW35-004", "RW35-005", "RW35-006"]
+    },
+    {
+      "reviewId": "w4-w6",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v1",
+      "registryJobSha256": "ba034befb24cc39fce60874758ec39cd5320728f0b3d9e2152341bcddd3d9173",
+      "recordState": "worktree_local_not_registry_final",
+      "disposition": "rejected_pending_correction",
+      "reviewSha256": "4a509551fdf2466f1be2f6cc9e9b8c9c1058fb3c5c695f8706f78af42e47e5bf",
+      "handoffSha256": "7bf1e3e6f1c02ff352909cead19dd0a344f4277d3bbd7ac4e897dfee2a45a175",
+      "findingIds": ["R46-01", "R46-02", "R46-03", "R46-04", "R46-05", "R46-06", "R46-07", "R46-08"]
+    }
+  ],
+  "audits": [
+    {
+      "auditId": "cross-lane",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-audit-cross-lane-v1",
+      "registryJobSha256": "4360a73e424819f01128798272a2a44dcc8cf854353567a4c06b87b96706b024",
+      "recordState": "worktree_local_not_registry_final",
+      "disposition": "hold_all_adoption_pending_owner_correction_and_repeat_review",
+      "reportSha256": "fb7d76e7645f36f400306fb3aea565e653a1fc212b1acd69290475a0dda0019c",
+      "manifestSha256": "d6a727dcc93a9f1df64304a8f136b53bd8f061d99a525a4f52d9dd49d7cbda7b",
+      "handoffSha256": "3480903df109c1a2525f743af1255740e38ac5ea39fc5c73956507372036b1e4",
+      "summary": {
+        "findings": 24,
+        "reviewApprovedFilesHeld": 9,
+        "immediatelyAdoptableFiles": 0
+      },
+      "gap": "The audit identifies controller ledger drift and holds every producer file until correction and repeated reciprocal review; no registry latest-result exists at capture time."
+    },
+    {
+      "auditId": "requirements",
+      "jobId": "agent-teams-hosted-web-refactor-phase-00-audit-requirements-v1",
+      "registryJobSha256": "ec95946743f7b005fdd769ef5fce93059e3f8d93234d477741454578c344e67c",
+      "recordState": "worktree_local_not_registry_final",
+      "disposition": "reject_pending_correction",
+      "reportSha256": "2a4de34d267bda6f7d92988ed863fae390ac70cd6a8d2531eea43e34fe1e4723",
+      "matrixSha256": "406545d7881ee9f09df1068187d1b9e613e0e359f862fbc90a2edffa982424fe",
+      "registrySnapshotSha256": "ff14175a3bd201aa150cc5417201855de06c843462a9434315414f5b6b1c1b9c",
+      "handoffSha256": "df152965944784e32c59d1daa20b7bd9d00654755d5ba303b7c0db50511cab42",
+      "summary": {
+        "requirements": 70,
+        "satisfied": 17,
+        "partial": 14,
+        "failed": 28,
+        "missing": 5,
+        "pending": 6,
+        "completedProducerJobs": 6,
+        "completedReviewJobs": 3,
+        "approvedProducerLanes": 0,
+        "rejectedProducerLanes": 6,
+        "pendingCorrectionAndRereview": 6
+      },
+      "gap": "The full audit rejects Phase 0 acceptance and freeze pending correction/re-review; no registry latest-result exists at capture time."
+    }
+  ],
+  "conclusion": {
+    "phase0State": "not_frozen",
+    "phase1PacketState": "blocked_draft_only",
+    "acceptanceClaim": false,
+    "reasons": [
+      "All three reciprocal review pairs reject producer evidence pending correction.",
+      "The W3/W5 and W4/W6 reciprocal reviews reject producer evidence pending correction.",
+      "The cross-lane audit holds all adoption and the requirements audit rejects acceptance/freeze pending correction and reciprocal re-review.",
+      "No reviewed adoption, regenerated decision/estimate ledgers, final Phase 0 broad gate, completion report, or predecessor integration SHA is available."
+    ]
+  }
+}
