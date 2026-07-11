@@ -38,6 +38,10 @@
     "prebuild": "node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
     "build": "node --max-old-space-size=8192 ./node_modules/electron-vite/bin/electron-vite.js build",
     "postbuild": "node ./scripts/ci/verify-radix-renderer-bundle.mjs",
+    "hosted:build": "pnpm hosted:build:renderer && pnpm hosted:build:server",
+    "hosted:build:renderer": "node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config vite.web.config.ts",
+    "hosted:build:server": "node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build --config docker/vite.hosted-server.config.ts",
+    "hosted:start": "node dist-hosted/server.cjs",
     "stage-runtime": "node ./scripts/stage-runtime.mjs",
     "stage-terminal-platform-runtime": "node ./scripts/stage-terminal-platform-runtime.mjs",
     "ensure-terminal-platform-runtime": "node ./scripts/ensure-terminal-platform-runtime.mjs",
@@ -422,9 +426,12 @@
     "entry": [
       "src/main/index.ts",
       "src/main/standalone.ts",
+      "src/hosted/server.ts",
       "src/preload/index.ts",
       "src/renderer/main.tsx",
       "electron.vite.config.ts",
+      "vite.web.config.ts",
+      "docker/vite.hosted-server.config.ts",
       "docker/vite.standalone.config.ts"
     ],
     "project": [

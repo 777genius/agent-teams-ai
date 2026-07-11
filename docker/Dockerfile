@@ -1,11 +1,14 @@
 # =============================================================================
-# Agent Teams standalone Docker image
+# Agent Teams hosted startup Docker image
 #
-# Runs the HTTP server without Electron, serving the full UI over HTTP.
-# Mount your ~/.claude directory to make session data available.
+# Runs the non-Electron hosted startup shell server and serves the renderer
+# build over HTTP. Desktop/runtime APIs are intentionally not launched here.
 #
-# Build:  docker build -t agent-teams-ai .
-# Run:    docker run -p 3456:3456 -v ~/.claude:/data/.claude:ro agent-teams-ai
+# Build:  docker build -f docker/Dockerfile -t agent-teams-ai-hosted .
+# Local host access:
+#   docker run --rm -e HOST=0.0.0.0 -e HOSTED_ALLOW_REMOTE=1 -p 127.0.0.1:3456:3456 agent-teams-ai-hosted
+# Remote exposure is not the default. To expose beyond host loopback, publish an
+# explicit non-loopback port only on a trusted network.
 # =============================================================================
 
 ARG NODE_VERSION=24.16.0
@@ -24,52 +27,38 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies first (better layer caching)
-COPY package.json pnpm-lock.yaml ./
+# Install dependencies first (better layer caching). Workspace package manifests
+# are copied because the root package pins workspace dependencies.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY agent-teams-controller/package.json ./agent-teams-controller/package.json
+COPY landing/package.json ./landing/package.json
+COPY mcp-server/package.json ./mcp-server/package.json
+COPY packages/agent-graph/package.json ./packages/agent-graph/package.json
+COPY vendor/terminal-platform/manifest.json ./vendor/terminal-platform/manifest.json
+COPY vendor/terminal-platform/sdk ./vendor/terminal-platform/sdk
+COPY vendor/terminal-platform/terminal-platform-node-stub ./vendor/terminal-platform/terminal-platform-node-stub
 COPY patches ./patches
+COPY scripts/ci/enforce-pnpm-install.mjs ./scripts/ci/enforce-pnpm-install.mjs
+COPY scripts/ensure-electron-install.cjs ./scripts/ensure-electron-install.cjs
 RUN pnpm install --frozen-lockfile
 
 # Copy source and build
 COPY . .
-RUN AGENT_TEAMS_DISABLE_SOURCEMAPS=1 pnpm standalone:build
+RUN AGENT_TEAMS_DISABLE_SOURCEMAPS=1 pnpm hosted:build
 
 # =============================================================================
-# Production dependencies stage
-# =============================================================================
-FROM base AS prod-deps
-
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
-
-# Install production-only dependencies
-# (fastify, @fastify/cors, @fastify/static are externalized from the bundle)
-COPY package.json pnpm-lock.yaml ./
-COPY patches ./patches
-RUN pnpm install --frozen-lockfile --prod --ignore-scripts \
-  && pnpm rebuild node-pty cpu-features ssh2
-
-# =============================================================================
-# Production stage - minimal image with only runtime dependencies and built output
+# Production stage - minimal image with only the built hosted startup output
 # =============================================================================
 FROM base
 
-COPY --from=prod-deps /app/package.json /app/pnpm-lock.yaml ./
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=builder /app/agent-teams-controller ./agent-teams-controller
-
-# Copy built standalone server and renderer output
-COPY --from=builder /app/dist-standalone ./dist-standalone
+# Copy built hosted shell server and renderer output
+COPY --from=builder /app/dist-hosted ./dist-hosted
 COPY --from=builder /app/out/renderer ./out/renderer
 
-# Create data directory for Claude session mount
-RUN mkdir -p /data/.claude
-
 ENV NODE_ENV=production
-ENV CLAUDE_ROOT=/data/.claude
-ENV HOST=0.0.0.0
+ENV HOST=127.0.0.1
 ENV PORT=3456
 
 EXPOSE 3456
 
-CMD ["node", "dist-standalone/index.cjs"]
+CMD ["node", "dist-hosted/server.cjs"]

@@ -1,6 +1,7 @@
 node_modules
 dist
 dist-electron
+dist-hosted
 dist-standalone
 out
 release

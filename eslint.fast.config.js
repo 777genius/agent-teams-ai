@@ -203,6 +203,40 @@ export default defineConfig([
   },
 
   {
+    name: 'fast-hosted-composition-boundary',
+    files: ['src/hosted/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: 'electron', message: 'Hosted shell code must stay Electron-free.' },
+            { name: '@renderer/api', message: 'Hosted shell code must not use renderer transport.' },
+            { name: '@renderer/store', message: 'Hosted shell code must not use renderer state.' },
+          ],
+          patterns: [
+            {
+              group: [
+                '@main/**',
+                '!@main/application/hosted',
+                '!@main/application/hosted/**',
+                '@preload/**',
+                '@renderer/**',
+                '@features/*/core/**',
+                '@features/*/main/**',
+                '@features/*/preload/**',
+                '@features/*/renderer/**',
+              ],
+              message:
+                'Hosted shell code may import only an approved hosted application facade, not raw desktop internals.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  {
     name: 'fast-feature-core-guards',
     files: ['src/features/*/core/{domain,application}/**/*.ts'],
     rules: {

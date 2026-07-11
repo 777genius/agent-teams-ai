@@ -23,7 +23,15 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    emptyOutDir: true,
+    outDir: resolve(ROOT, 'out/renderer'),
+    target: 'esnext',
+  },
   optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext',
+    },
     include: ['@codemirror/language-data'],
     exclude: ['@claude-teams/agent-graph'],
   },

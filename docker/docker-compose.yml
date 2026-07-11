@@ -1,15 +1,20 @@
 # =============================================================================
-# Agent Teams - Docker Compose
+# Agent Teams hosted startup - Docker Compose
 #
-# Quick start:
+# Container-only default:
 #   docker compose -f docker/docker-compose.yml up
 #
-# Then open http://localhost:3456 in your browser.
+# Local browser opt-in:
+#   docker compose -f docker/docker-compose.yml --profile local up agent-teams-ai-local
+#   Then open http://127.0.0.1:3456 in your browser.
 #
 # Security note:
-#   The standalone server has zero outbound network calls — no telemetry,
-#   no analytics, no auto-updater. For maximum isolation, uncomment
-#   network_mode below.
+#   This serves a static hosted startup shell only. Desktop-owned runtime APIs
+#   are intentionally not launched in this image. The default service binds to
+#   127.0.0.1 inside the container and publishes no host port. Host access is an
+#   explicit profile with a host-loopback port mapping. Remote exposure requires
+#   changing the host-side address from 127.0.0.1 to a non-loopback address on
+#   purpose.
 # =============================================================================
 
 services:
@@ -17,15 +22,23 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    ports:
-      - "3456:3456"
-    volumes:
-      - ${CLAUDE_DIR:-~/.claude}:/data/.claude:ro
     environment:
       - NODE_ENV=production
-      - CLAUDE_ROOT=/data/.claude
-      - HOST=0.0.0.0
+      - HOST=127.0.0.1
       - PORT=3456
     restart: unless-stopped
-    # Uncomment for maximum network isolation (no outbound connections):
-    # network_mode: "none"
+
+  agent-teams-ai-local:
+    profiles:
+      - local
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - '127.0.0.1:3456:3456'
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - HOSTED_ALLOW_REMOTE=1
+      - PORT=3456
+    restart: unless-stopped

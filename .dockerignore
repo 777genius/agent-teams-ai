@@ -5,6 +5,7 @@ landing/node_modules/
 # Local build output
 dist/
 dist-electron/
+dist-hosted/
 dist-standalone/
 out/
 release/

@@ -372,6 +372,8 @@ local packaging.
 | `pnpm dev`                    | Desktop app development with hot reload                                      |
 | `pnpm dev:mcp`                | Desktop app development with hot reload and local CDP debugging on port 9222 |
 | `pnpm build`                  | Production build                                                             |
+| `pnpm hosted:build`           | Hosted startup shell build for renderer assets and the static shell server   |
+| `pnpm hosted:start`           | Start the static hosted shell from `dist-hosted/server.cjs`                  |
 | `pnpm typecheck`              | TypeScript type checking                                                     |
 | `pnpm lint`                   | Lint (no auto-fix)                                                           |
 | `pnpm lint:fix`               | Lint and auto-fix                                                            |
@@ -385,6 +387,40 @@ local packaging.
 | `pnpm quality`                | Full check + format check + knip                                             |
 
 </details>
+
+---
+
+## Hosted Startup Shell
+
+`pnpm hosted:build` builds the browser renderer and a small static Node server in
+`dist-hosted/`. The hosted server only serves static renderer assets. It does not
+start desktop-owned runtime APIs, agent flows, IPC bridges, filesystem APIs, or
+session data endpoints.
+
+The server binds to `127.0.0.1` by default. Any non-loopback bind requires
+`HOSTED_ALLOW_REMOTE=1` alongside `HOST`, for example:
+
+```bash
+HOST=0.0.0.0 HOSTED_ALLOW_REMOTE=1 pnpm hosted:start
+```
+
+Docker keeps host exposure explicit. The default compose service binds to
+`127.0.0.1` inside the container and publishes no host port:
+
+```bash
+docker compose -f docker/docker-compose.yml up
+```
+
+For local browser access, use the explicit local profile, which maps only host
+loopback:
+
+```bash
+docker compose -f docker/docker-compose.yml --profile local up agent-teams-ai-local
+```
+
+To expose Docker beyond the local host, change that profile's port mapping from
+`127.0.0.1:3456:3456` to the intended non-loopback address only on a trusted
+network.
 
 ---
 
@@ -422,7 +458,7 @@ Contact: [quantjumppro@gmail.com](mailto:quantjumppro@gmail.com)
 
 ## Security
 
-IPC and standalone HTTP handlers validate IDs, paths, and payload shape at the boundary. Project editing and write operations are constrained to the selected project root, while read-only discovery also accesses local Claude data under `~/.claude/` and app-owned state paths when required. Path traversal and sensitive config/credential targets are blocked. See [SECURITY.md](.github/SECURITY.md) for details.
+IPC and standalone HTTP handlers validate IDs, paths, and payload shape at the boundary. Project editing and write operations are constrained to the selected project root, while read-only discovery also accesses local Claude data under `~/.claude/` and app-owned state paths when required. Path traversal and sensitive config/credential targets are blocked. The hosted startup shell serves static assets only and does not expose runtime APIs. See [SECURITY.md](.github/SECURITY.md) for details.
 
 GitHub Dependabot monitors dependencies for known vulnerabilities, so security updates are surfaced quickly and applied in time.
 
