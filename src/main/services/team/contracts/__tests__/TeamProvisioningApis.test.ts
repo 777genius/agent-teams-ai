@@ -333,10 +333,10 @@ describe('TeamProvisioning API binders', () => {
     };
 
     const api = bindTeamHttpHandlerApis(source);
-    const provisioningStart = api.provisioningStart!;
-    const provisioningStatus = api.provisioningStatus!;
-    const runtime = api.runtime!;
-    const runtimeControl = api.runtimeControl!;
+    const provisioningStart = api.provisioningStart;
+    const provisioningStatus = api.provisioningStatus;
+    const runtime = api.runtime;
+    const runtimeControl = api.runtimeControl;
     const createTeam = provisioningStart.createTeam.bind(undefined);
     const launchTeam = provisioningStart.launchTeam.bind(undefined);
     const getRuntimeState = runtime.getRuntimeState.bind(undefined);
