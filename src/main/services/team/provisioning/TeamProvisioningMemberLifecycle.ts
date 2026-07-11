@@ -2461,7 +2461,10 @@ export class TeamProvisioningMemberLifecycleController {
     const lane = run.mixedSecondaryLanes[laneIndex];
     await this.stopSingleMixedSecondaryRuntimeLane(run, lane, 'cleanup');
     this.assertRunStillCurrentAndAlive(run, teamName);
-    run.mixedSecondaryLanes.splice(laneIndex, 1);
+    const ownedLaneIndex = run.mixedSecondaryLanes.indexOf(lane);
+    if (ownedLaneIndex >= 0) {
+      run.mixedSecondaryLanes.splice(ownedLaneIndex, 1);
+    }
     this.removeRunAllEffectiveMember(run, memberName);
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.resetRuntimeToolActivity(run, memberName);

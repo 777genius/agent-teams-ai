@@ -540,6 +540,54 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     expect(removedFromRunId).toBeNull();
   });
 
+  it('removes the correct OpenCode lanes when different members detach concurrently', async () => {
+    const alice: TeamCreateRequest['members'][number] = {
+      name: 'Alice',
+      role: 'Developer',
+      providerId: 'opencode',
+    };
+    const bob: TeamCreateRequest['members'][number] = {
+      name: 'Bob',
+      role: 'Developer',
+      providerId: 'opencode',
+    };
+    const run = createRun(alice);
+    let releaseAliceStop: (() => void) | undefined;
+    let releaseBobStop: (() => void) | undefined;
+    const aliceStop = new Promise<void>((resolve) => {
+      releaseAliceStop = resolve;
+    });
+    const bobStop = new Promise<void>((resolve) => {
+      releaseBobStop = resolve;
+    });
+    const stoppedMembers: string[] = [];
+    const host = createHost(run, {
+      async stopSingleMixedSecondaryRuntimeLane(_targetRun, lane) {
+        stoppedMembers.push(lane.member.name);
+        await (lane.member.name === 'Alice' ? aliceStop : bobStop);
+      },
+    });
+    run.mixedSecondaryLanes = [
+      host.createMixedSecondaryLaneStateForMember(run, alice),
+      host.createMixedSecondaryLaneStateForMember(run, bob),
+    ];
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      immediateOperationUseCases
+    );
+
+    const detachAlice = controller.detachOpenCodeOwnedMemberLane('team-a', 'Alice');
+    const detachBob = controller.detachOpenCodeOwnedMemberLane('team-a', 'Bob');
+
+    expect(stoppedMembers).toEqual(['Alice', 'Bob']);
+    releaseAliceStop?.();
+    await detachAlice;
+    releaseBobStop?.();
+    await detachBob;
+
+    expect(run.mixedSecondaryLanes).toEqual([]);
+  });
+
   it('does not enqueue an OpenCode lane reattach after workspace resolution observes a stale run', async () => {
     const member: TeamCreateRequest['members'][number] = {
       name: 'Worker',
