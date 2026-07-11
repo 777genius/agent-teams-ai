@@ -300,6 +300,28 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', next);
   });
 
+  it('does not overwrite a successor snapshot when a stale write starts after authority changed', async () => {
+    const successorSnapshot = snapshot({ updatedAt: '2026-01-01T00:00:02.000Z' });
+    const writtenRunIdByTeam = new Map([['demo', 'run-2']]);
+    const { boundary, ports, setCurrentSnapshot, setTrackedRunId } = createBoundary({
+      writtenRunIdByTeam,
+    });
+    setCurrentSnapshot(successorSnapshot);
+    setTrackedRunId('run-2');
+
+    const result = await boundary.writeLaunchStateSnapshotNow('demo', snapshot(), {
+      runId: 'run-1',
+    });
+
+    expect(result).toEqual({ snapshot: successorSnapshot, wrote: false });
+    expect(ports.launchStateStore.write).not.toHaveBeenCalled();
+    expect(ports.launchStateStore.clear).not.toHaveBeenCalled();
+    expect(writtenRunIdByTeam.get('demo')).toBe('run-2');
+    expect(ports.logDebug).toHaveBeenCalledWith(
+      '[demo] Skipping stale launch-state write for run run-1'
+    );
+  });
+
   it('removes a snapshot whose run loses authority while its write is pending', async () => {
     const writeStarted = deferred();
     const writeGate = deferred();

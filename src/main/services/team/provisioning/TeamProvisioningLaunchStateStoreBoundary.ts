@@ -140,6 +140,15 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     options?: { allowNoopSkip?: boolean; runId?: string }
   ): Promise<LaunchStateWriteResult> {
     const previousSnapshot = await this.ports.launchStateStore.read(teamName).catch(() => null);
+    if (
+      typeof options?.runId === 'string' &&
+      this.ports.getTrackedRunId(teamName) !== options.runId
+    ) {
+      this.ports.logDebug(
+        `[${teamName}] Skipping stale launch-state write for run ${options.runId}`
+      );
+      return { snapshot: previousSnapshot ?? snapshot, wrote: false };
+    }
     const metaMembers = await this.ports.membersMetaStore.getMembers(teamName).catch(() => []);
     const overlaidSnapshot = await this.ports.applyOpenCodeSecondaryEvidenceOverlay({
       teamName,
