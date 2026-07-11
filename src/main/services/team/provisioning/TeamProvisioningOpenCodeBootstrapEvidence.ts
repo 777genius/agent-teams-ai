@@ -198,7 +198,8 @@ export function mergeOpenCodeRuntimeSessionRecords(
       memberName &&
       runId &&
       laneId &&
-      candidate.memberName === memberName &&
+      typeof candidate.memberName === 'string' &&
+      namesMatchCaseInsensitive(candidate.memberName, memberName) &&
       candidate.runId === runId &&
       candidate.laneId === laneId;
     return !sameMember;
