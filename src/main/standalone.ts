@@ -6,7 +6,7 @@
  * static files over HTTP.
  *
  * Environment variables:
- * - HOST: Bind address (default '0.0.0.0')
+ * - HOST: Bind address (default '127.0.0.1'; non-loopback requires AGENT_TEAMS_HTTP_AUTH_TOKEN)
  * - PORT: Listen port (default 3456)
  * - CLAUDE_ROOT: Path to .claude directory (default ~/.claude)
  * - CORS_ORIGIN: CORS origin policy (default '*')
@@ -44,7 +44,7 @@ const logger = createLogger('Standalone');
 // Configuration
 // =============================================================================
 
-const HOST = process.env.HOST ?? '0.0.0.0';
+const HOST = process.env.HOST ?? '127.0.0.1';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
 

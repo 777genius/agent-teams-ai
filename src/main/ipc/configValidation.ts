@@ -7,6 +7,8 @@ import { isAppLocalePreference } from '@features/localization';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as path from 'path';
 
+import { isLoopbackHttpHost } from '../services/infrastructure/httpServerAuth';
+
 import type {
   AppConfig,
   DisplayConfig,
@@ -864,7 +866,7 @@ function validateHttpServerSection(
     return { valid: false, error: 'httpServer update must be an object' };
   }
 
-  const allowedKeys: (keyof HttpServerConfig)[] = ['enabled', 'port'];
+  const allowedKeys: (keyof HttpServerConfig)[] = ['enabled', 'port', 'host'];
   const result: Partial<HttpServerConfig> = {};
 
   for (const [key, value] of Object.entries(data)) {
@@ -887,6 +889,15 @@ function validateHttpServerSection(
           };
         }
         result.port = value;
+        break;
+      case 'host':
+        if (typeof value !== 'string' || !isLoopbackHttpHost(value)) {
+          return {
+            valid: false,
+            error: 'httpServer.host must be a loopback host',
+          };
+        }
+        result.host = value.trim();
         break;
       default:
         return { valid: false, error: `Unsupported httpServer key: ${key}` };

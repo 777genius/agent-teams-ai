@@ -19,6 +19,7 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { isLoopbackHttpHost } from './httpServerAuth';
 import { DEFAULT_TRIGGERS, TriggerManager } from './TriggerManager';
 
 import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
@@ -340,6 +341,7 @@ export interface SshPersistConfig {
 export interface HttpServerConfig {
   enabled: boolean;
   port: number;
+  host: string;
 }
 
 export interface AppConfig {
@@ -447,6 +449,7 @@ const DEFAULT_CONFIG: AppConfig = {
   httpServer: {
     enabled: false,
     port: 3456,
+    host: '127.0.0.1',
   },
 };
 
@@ -534,6 +537,74 @@ function normalizeCodexCustomProviderConfig(
 
 function shouldPersistNormalizedConfig(loaded: Partial<AppConfig>, normalized: AppConfig): boolean {
   return JSON.stringify(loaded) !== JSON.stringify(normalized);
+}
+
+function normalizeHttpServerConfig(value: unknown): HttpServerConfig {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { ...DEFAULT_CONFIG.httpServer };
+  }
+
+  const raw = value as Partial<HttpServerConfig>;
+  const persistedHost = typeof raw.host === 'string' ? raw.host : null;
+  const hasPersistedHost = persistedHost !== null;
+  const persistedHostIsLoopback = persistedHost !== null && isLoopbackHttpHost(persistedHost);
+  const host =
+    persistedHost !== null && persistedHostIsLoopback
+      ? persistedHost.trim()
+      : DEFAULT_CONFIG.httpServer.host;
+  const persistedHostIsSafe = !hasPersistedHost || persistedHostIsLoopback;
+  const persistedPort =
+    typeof raw.port === 'number' &&
+    Number.isInteger(raw.port) &&
+    raw.port >= 1024 &&
+    raw.port <= 65535
+      ? raw.port
+      : DEFAULT_CONFIG.httpServer.port;
+
+  return {
+    enabled:
+      typeof raw.enabled === 'boolean' && persistedHostIsSafe
+        ? raw.enabled
+        : DEFAULT_CONFIG.httpServer.enabled,
+    port: persistedPort,
+    host,
+  };
+}
+
+function redactSessionProjectKeys<T>(value: Record<string, T>): Record<string, T> {
+  return Object.fromEntries(
+    Object.entries(value).map(([, entries], index) => [`[redacted-project-${index + 1}]`, entries])
+  );
+}
+
+function redactConfigForHttpResponse(config: AppConfig): AppConfig {
+  return {
+    ...config,
+    general: {
+      ...config.general,
+      claudeRootPath: config.general.claudeRootPath ? '[redacted-path]' : null,
+      customProjectPaths: config.general.customProjectPaths.map(() => '[redacted-path]'),
+    },
+    sessions: {
+      pinnedSessions: redactSessionProjectKeys(config.sessions.pinnedSessions),
+      hiddenSessions: redactSessionProjectKeys(config.sessions.hiddenSessions),
+    },
+    ssh: {
+      ...config.ssh,
+      lastConnection: config.ssh.lastConnection
+        ? {
+            ...config.ssh.lastConnection,
+            privateKeyPath: config.ssh.lastConnection.privateKeyPath
+              ? '[redacted-path]'
+              : undefined,
+          }
+        : null,
+      profiles: config.ssh.profiles.map((profile) => ({
+        ...profile,
+        privateKeyPath: profile.privateKeyPath ? '[redacted-path]' : undefined,
+      })),
+    },
+  };
 }
 
 // ===========================================================================
@@ -755,10 +826,7 @@ export class ConfigManager {
         ...DEFAULT_CONFIG.ssh,
         ...(loaded.ssh ?? {}),
       },
-      httpServer: {
-        ...DEFAULT_CONFIG.httpServer,
-        ...(loaded.httpServer ?? {}),
-      },
+      httpServer: normalizeHttpServerConfig(loaded.httpServer),
     };
   }
 
@@ -778,6 +846,10 @@ export class ConfigManager {
    */
   getConfig(): AppConfig {
     return this.deepClone(this.config);
+  }
+
+  getConfigForHttpResponse(): AppConfig {
+    return redactConfigForHttpResponse(this.getConfig());
   }
 
   /**

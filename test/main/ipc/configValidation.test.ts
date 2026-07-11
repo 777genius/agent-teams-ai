@@ -233,6 +233,34 @@ describe('configValidation', () => {
     }
   });
 
+  it('accepts loopback httpServer host updates', () => {
+    const result = validateConfigUpdatePayload('httpServer', {
+      enabled: true,
+      port: 4567,
+      host: '127.0.0.1',
+    });
+
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.data).toEqual({
+        enabled: true,
+        port: 4567,
+        host: '127.0.0.1',
+      });
+    }
+  });
+
+  it('rejects non-loopback httpServer host updates', () => {
+    const result = validateConfigUpdatePayload('httpServer', {
+      host: '0.0.0.0',
+    });
+
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toContain('loopback');
+    }
+  });
+
   it('normalizes legacy Codex provider connection updates to the native-only config shape', () => {
     const result = validateConfigUpdatePayload('providerConnections', {
       codex: {

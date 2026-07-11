@@ -54,7 +54,7 @@ export function registerConfigRoutes(app: FastifyInstance): void {
   // Get full config
   app.get('/api/config', async () => {
     try {
-      const config = configManager.getConfig();
+      const config = configManager.getConfigForHttpResponse();
       return { success: true, data: config };
     } catch (error) {
       logger.error('Error in GET /api/config:', error);
@@ -72,7 +72,7 @@ export function registerConfigRoutes(app: FastifyInstance): void {
       }
 
       configManager.updateConfig(validation.section, validation.data);
-      const updatedConfig = configManager.getConfig();
+      const updatedConfig = configManager.getConfigForHttpResponse();
       return { success: true, data: updatedConfig };
     } catch (error) {
       logger.error('Error in POST /api/config/update:', error);

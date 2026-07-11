@@ -17,6 +17,13 @@ import { existsSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
+import {
+  assertHttpServerBindAllowed,
+  extractBearerAuthToken,
+  getHttpAuthTokenFromEnv,
+  timingSafeHttpAuthTokenEquals,
+} from './httpServerAuth';
+
 const logger = createLogger('Service:HttpServer');
 
 /**
@@ -46,6 +53,87 @@ function resolveRendererPath(): string | null {
   }
 
   return candidates.find((candidate) => existsSync(candidate)) ?? null;
+}
+
+function isCorsPreflightRequest(request: {
+  method: string;
+  headers: Record<string, unknown>;
+}): boolean {
+  return (
+    request.method === 'OPTIONS' &&
+    typeof request.headers.origin === 'string' &&
+    typeof request.headers['access-control-request-method'] === 'string'
+  );
+}
+
+async function registerHttpCors(
+  app: FastifyInstance,
+  corsOrigin: string | undefined
+): Promise<void> {
+  const configuredOrigins = corsOrigin
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  if (configuredOrigins?.includes('*')) {
+    await app.register(cors, {
+      origin: (origin, cb) => {
+        cb(null, origin || false);
+      },
+      credentials: true,
+    });
+  } else if (configuredOrigins && configuredOrigins.length > 0) {
+    await app.register(cors, { origin: configuredOrigins, credentials: true });
+  } else {
+    // eslint-disable-next-line security/detect-unsafe-regex -- anchored, no backtracking risk
+    const localhostPattern = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/;
+    await app.register(cors, {
+      origin: (origin, cb) => {
+        if (!origin) {
+          cb(null, true);
+          return;
+        }
+        if (localhostPattern.test(origin)) {
+          cb(null, true);
+          return;
+        }
+        cb(new Error('Not allowed by CORS'), false);
+      },
+      credentials: true,
+    });
+  }
+}
+
+async function registerHttpAuth(app: FastifyInstance, authToken: string | null): Promise<void> {
+  if (!authToken) {
+    return;
+  }
+
+  app.addHook('onRequest', async (request, reply) => {
+    if (!request.url.startsWith('/api/')) {
+      return;
+    }
+
+    if (isCorsPreflightRequest(request)) {
+      return;
+    }
+
+    const receivedToken = extractBearerAuthToken(request.headers.authorization);
+    if (receivedToken && timingSafeHttpAuthTokenEquals(authToken, receivedToken)) {
+      return;
+    }
+
+    await reply.status(401).send({ success: false, error: 'Unauthorized' });
+  });
+}
+
+export async function registerHttpSecurityMiddleware(
+  app: FastifyInstance,
+  authToken: string | null,
+  corsOrigin: string | undefined = process.env.CORS_ORIGIN
+): Promise<void> {
+  await registerHttpCors(app, corsOrigin);
+  await registerHttpAuth(app, authToken);
 }
 
 export class HttpServer {
@@ -87,36 +175,11 @@ export class HttpServer {
     preferredPort: number,
     host: string
   ): Promise<number> {
-    this.app = Fastify({ logger: false });
+    const authToken = getHttpAuthTokenFromEnv();
+    assertHttpServerBindAllowed(host, authToken);
 
-    // Register CORS
-    const corsOrigin = process.env.CORS_ORIGIN;
-    if (corsOrigin === '*') {
-      // Standalone/Docker mode: allow all origins (Docker network isolation replaces CORS)
-      await this.app.register(cors, { origin: true, credentials: true });
-    } else if (corsOrigin) {
-      // Custom origin(s) from env
-      const origins = corsOrigin.split(',').map((o) => o.trim());
-      await this.app.register(cors, { origin: origins, credentials: true });
-    } else {
-      // Default: allow all localhost origins
-      // eslint-disable-next-line security/detect-unsafe-regex -- anchored, no backtracking risk
-      const localhostPattern = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/;
-      await this.app.register(cors, {
-        origin: (origin, cb) => {
-          if (!origin) {
-            cb(null, true);
-            return;
-          }
-          if (localhostPattern.test(origin)) {
-            cb(null, true);
-            return;
-          }
-          cb(new Error('Not allowed by CORS'), false);
-        },
-        credentials: true,
-      });
-    }
+    this.app = Fastify({ logger: false });
+    await registerHttpSecurityMiddleware(this.app, authToken);
 
     // Register static file serving and SPA fallback when renderer output exists.
     // In dev mode this requires a prior `pnpm build`; in production/standalone it's always present.

@@ -2746,7 +2746,8 @@ async function startHttpServer(
         runtimeCore: runtimeCoreForActiveContext,
       },
       modeSwitchHandler,
-      config.httpServer?.port ?? 3456
+      config.httpServer?.port ?? 3456,
+      config.httpServer?.host ?? '127.0.0.1'
     );
     if (isShutdownStarted()) {
       await httpServer.stop().catch(() => undefined);
