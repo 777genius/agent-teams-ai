@@ -3,8 +3,11 @@
 ## Status and authority
 
 - Status: ready for execution after explicit implementation start
+- Packet revision: `phase-00-r2`
 - Scope: Phase 0 only
 - Parent plan: [Hosted Web Runtime: End-to-End Completion Plan](./hosted-web-e2e-completion-plan.md)
+- Execution router: [Hosted Web Execution Router](./hosted-web-phases/README.md)
+- Packet standard: [Hosted Web Execution Packet Standard](./hosted-web-phases/PACKET_STANDARD.md)
 - Canonical repository: `777genius/agent-teams-ai`
 - Base branch: `refactor/team-provisioning-round2-reapply`
 - Implementation branch: `refactor/hosted-web-feature-boundaries`
@@ -52,7 +55,8 @@ The controller may start 0A only when all conditions below are true:
 - explicit user authorization to begin implementation has been received;
 - canonical remote resolves to `https://github.com/777genius/agent-teams-ai.git`;
 - broker tools and project-scoped controller manifest are available on the chosen execution host;
-- the controller has an isolated project root and integration worktree owned only by this project;
+- the controller has an isolated project root plus empty/reserved integration and worktree roots owned
+  only by this project; creation of the integration worktree is part of 0A;
 - no worker will use the user's current dirty local `dev` checkout;
 - the target host has enough capacity for the admitted worker pool;
 - all test launches use new sandbox/test state and workspaces;
@@ -103,12 +107,20 @@ Use project-scoped broker lifecycle to create:
 
 - one integration worktree at the pinned SHA;
 - branch `refactor/hosted-web-feature-boundaries`;
-- six controller-owned worker worktrees;
 - one registry namespace containing only this project's jobs;
 - one integration-attempt namespace.
 
 The integration worktree is the only writer for shared manifests, package scripts, global docs index,
 RouteCatalog prototypes and final Phase 0 decision records.
+
+Before any child worktree exists, adopt the reviewed plan bundle into the implementation branch through
+the policy integration lifecycle. The bundle contains the parent plan, execution router, packet
+standard, active Phase 0 controller packet and all six lane packets. Record `planBundleCommit`, packet
+revision and file hashes. A controller-side `/control/plans` copy is an operator audit artifact, not a
+substitute for in-worktree packet files.
+
+If the plan bundle cannot be adopted cleanly on the pinned base, stop with `packet_stale`; do not let
+workers read an out-of-worktree path or use a plan commit based on different ancestry without review.
 
 ### 0A.3 - Materialize dependencies without changing them
 
@@ -143,6 +155,23 @@ test. Classify every failure as:
 - `environment_failure`: host/toolchain problem, not repository behavior;
 - `unknown`: blocks dependent worker admission until resolved.
 
+After classification, adopt the 0A base/baseline evidence through the integration lifecycle and record
+the resulting immutable `phaseStartSha`. It must descend from both `baseSha` and `planBundleCommit`.
+
+### 0A.5 - Materialize lane worktrees
+
+Only after 0A.4 passes, create six dedicated controller-owned lane branches/worktrees from the exact
+`phaseStartSha`. Never check out the integration branch itself in a child worktree. Verify in each lane:
+
+- `HEAD == phaseStartSha` before its first lane commit;
+- packet revision `phase-00-r2` and the assigned lane packet are present inside the worktree;
+- writable paths do not overlap another live lane;
+- frozen install succeeds without changing the lockfile;
+- the rendered prompt names the in-worktree lane packet and worktree-local handoff path.
+
+The generic capacity controller remains `dryRun=true` and no capacity timer is enabled until this gate
+passes. Enabling refill before 0A.5 would start evidence workers against an unpinned or packet-less base.
+
 ### 0A outputs
 
 The controller owns these future-branch paths:
@@ -151,27 +180,34 @@ The controller owns these future-branch paths:
 docs/research/hosted-web/phase-0/index.md
 docs/research/hosted-web/phase-0/base.json
 docs/research/hosted-web/phase-0/baseline.md
+docs/research/hosted-web/phase-0/lane-ledger.json
 docs/research/hosted-web/phase-0/estimate-ledger.md
 docs/research/hosted-web/phase-0/salvage-ledger.md
 docs/research/hosted-web/phase-0/decision-register.md
 ```
 
+`base.json` records `baseSha`, `planBundleCommit`, `phaseStartSha`, packet revision, plan/packet hashes,
+toolchain envelope and inherited-failure ledger reference. These three SHAs must not be collapsed into
+one field: they answer different ancestry and reproducibility questions.
+
 0A passes only when the base is immutable for the phase, the baseline is reproducible, every failure
-has one classification and no worker depends on an `unknown` failure.
+has one classification, `phaseStartSha` contains the reviewed plan/evidence bundle, all lane worktrees
+start from that SHA and no worker depends on an `unknown` failure.
 
 ## Execution DAG
 
 ```mermaid
 flowchart TD
-    A1["0A1 Fetch and pin"] --> A2["0A2 Integration and worker worktrees"]
+    A1["0A1 Fetch and pin"] --> A2["0A2 Integration and plan bundle"]
     A2 --> A3["0A3 Frozen dependencies"]
     A3 --> A4["0A4 Baseline classification"]
-    A4 --> W1["W1 Parity and renderer inventory"]
-    A4 --> W2["W2 Provider and runtime-ingress inventory"]
-    A4 --> W3["W3 State, writer and backup evidence"]
-    A4 --> W4["W4 Lease, guard and process-anchor spikes"]
-    A4 --> W5["W5 Snapshot, event and command recovery"]
-    A4 --> W6["W6 Auth, proxy and artifact boundary"]
+    A4 --> A5["0A5 Lane worktrees from phaseStartSha"]
+    A5 --> W1["W1 Parity and renderer inventory"]
+    A5 --> W2["W2 Provider and runtime-ingress inventory"]
+    A5 --> W3["W3 State, writer and backup evidence"]
+    A5 --> W4["W4 Lease, guard and process-anchor spikes"]
+    A5 --> W5["W5 Snapshot, event and command recovery"]
+    A5 --> W6["W6 Auth, proxy and artifact boundary"]
     W1 --> R12["Cross-review W1/W2"]
     W2 --> R12
     W3 --> R35["Cross-review W3/W5"]
@@ -204,9 +240,35 @@ artifact.
   implementation work from later phases.
 - A stale/no-output lane is first inspected for blocker, overlap or oversized scope, then split or
   redirected through broker tools. It is not silently replaced by an invisible worker.
+- The target of six applies only while six unique ready lane/review slots exist. The controller never
+  creates duplicate evidence work merely to preserve a process count, and serialized 0A/0D gates may
+  run below six.
 
 The current hosted-controller policy uses load `<=16` as the admission ceiling unless the host runbook
 or current controller manifest defines a stricter value.
+
+### Capacity epochs and unique lane slots
+
+Phase 0 capacity advances through three explicit epochs:
+
+1. `evidence`: one live slot for each of W1-W6;
+2. `cross_review`: one reciprocal review slot per original lane after paired handoffs exist;
+3. `integration`: serialized correction, adoption and freeze owned by the integration controller.
+
+The controller maintains `docs/research/hosted-web/phase-0/lane-ledger.json`. Each slot records lane ID,
+epoch, attempt, job/worktree IDs, `phaseStartSha`, packet revision, owned evidence IDs, state, last useful
+progress, handoff hash and superseded job ID. Slot states are `unstarted`, `active`, `handoff`, `review`,
+`correction`, `adopted`, `blocked`, `failed` or `superseded`.
+
+Static capacity templates are a catalog, not a refill queue. Automatic refill is allowed only for a
+staged request that names an existing ready slot and either has no prior attempt or records the salvage/
+supersession decision for a stale or failed attempt. If the generic capacity controller cannot enforce
+that identity, keep its producer target at zero and let the broker-only controller launch the exact six
+declared jobs. Never turn `desiredWorkers=6` on against reusable W1-W6 templates without lane-ledger
+deduplication.
+
+After an evidence handoff, the slot transitions to reciprocal review; it is not refilled as another
+producer. After all reviews, capacity may fall below six because 0D is intentionally serialized.
 
 ## Ownership rules
 
@@ -231,6 +293,20 @@ test/architecture/hosted-web/phase-0/<lane>/**
 Workers do not edit `package.json`, `pnpm-lock.yaml`, shared architecture docs, production source,
 Docker entrypoints or another lane's files. If a runnable alias is useful, the worker documents the
 exact command and the controller adds the shared package script after adoption review.
+
+### Worker lane entrypoints
+
+The sections below remain the controller's compact mission and acceptance registry. Each child worker
+receives the corresponding lane packet in full; it does not receive the entire parent plan as a prompt.
+
+| Lane | Autonomous packet                                                                                     | Evidence concern                                              |
+| ---- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| W1   | [`w1-parity-renderer.md`](./hosted-web-phases/phase-00/lanes/w1-parity-renderer.md)                   | API/action parity and renderer reachability                   |
+| W2   | [`w2-provider-runtime.md`](./hosted-web-phases/phase-00/lanes/w2-provider-runtime.md)                 | provider topology, runtime ingress and environment provenance |
+| W3   | [`w3-state-writers-backup.md`](./hosted-web-phases/phase-00/lanes/w3-state-writers-backup.md)         | state authority, external writers and safe backup             |
+| W4   | [`w4-lease-guard-process.md`](./hosted-web-phases/phase-00/lanes/w4-lease-guard-process.md)           | Linux lease, descriptor guard and process ownership           |
+| W5   | [`w5-events-commands-recovery.md`](./hosted-web-phases/phase-00/lanes/w5-events-commands-recovery.md) | snapshot/event and command/effect recovery                    |
+| W6   | [`w6-auth-proxy-artifacts.md`](./hosted-web-phases/phase-00/lanes/w6-auth-proxy-artifacts.md)         | auth, proxy/origin and standalone artifact truth              |
 
 ## W1 - Parity and renderer reachability
 
@@ -431,8 +507,11 @@ The controller renders each worker prompt from this template:
 ```text
 You own Phase 0 package <Wn> only.
 Base SHA/worktree: <sha> / <isolated path>
+Phase start SHA / plan bundle commit: <phaseStartSha> / <planBundleCommit>
 Parent plan: docs/hosted-web-e2e-completion-plan.md
 Execution packet: docs/hosted-web-phase-0-execution-packet.md
+Lane packet: docs/hosted-web-phases/phase-00/lanes/<lane>.md
+Packet revision: phase-00-r2
 Writable paths: <exact lane paths>
 Read-only source surfaces: <listed inputs>
 Deliverables and acceptance: <files and checks>
@@ -443,14 +522,17 @@ Return status, evidence, diff stat, checks, assumptions and ADR recommendation. 
 when a required target-host probe did not run.
 ```
 
+The controller injects immutable runtime facts and the handoff path defined by the packet standard.
 Worker prompts do not contain broad instructions such as “improve architecture”, “finish Phase 0” or
-“help another lane”. Cross-lane questions go through the controller.
+“help another lane”. Cross-lane questions go through the controller. A stale revision, missing heading
+or ownership conflict returns `packet_stale` or `packet_conflict` before edits.
 
 ## Progress monitoring and intervention
 
 Every check records only project state: host admission, controller/timer health, fresh worker count,
 last useful output, lane state/next evidence, overlap/dirty risk, review/adoption queue, red prerequisite
-and estimate burn by unique bucket rather than raw output lines.
+and estimate burn by unique bucket rather than raw output lines. Fresh worker count is reconciled against
+unique active slots in `lane-ledger.json`; duplicate jobs never increase useful capacity.
 
 Intervene when:
 
@@ -611,6 +693,8 @@ Each outcome is `accepted`, `narrowed`, `reopened` or `blocked`; “TBD” is no
 Phase 0 is complete only when:
 
 - 0A base/baseline evidence is reproducible from the pinned SHA;
+- every lane starts at the recorded `phaseStartSha`, which contains `planBundleCommit` and reviewed 0A
+  evidence;
 - all six lanes are reviewed and adopted or explicitly rejected with a decision;
 - every parent-plan Phase 0 exit gate has an evidence reference;
 - native/container claims ran in the supported target topology;
@@ -623,3 +707,5 @@ Phase 0 is complete only when:
 
 Phase 1 workers must not be prestarted. Their owned paths, contract IDs and tasks depend on the Phase 0
 freeze, so creating them earlier would turn just-in-time planning back into speculative architecture.
+The packet is materialized through the execution router and packet standard; a free-form continuation
+prompt is not an acceptable Phase 1 packet.

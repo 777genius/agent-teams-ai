@@ -20,6 +20,10 @@
   process per deployment; provider/CLI agents remain explicit external protocol writers
 - Product parity decision: almost full TeamsAPI parity is required for v1, except hosted terminal,
   which is a separately estimated post-v1 capability
+- Autonomous execution entrypoint: [Hosted Web Execution Router](./hosted-web-phases/README.md)
+- Packet contract: [Hosted Web Execution Packet Standard](./hosted-web-phases/PACKET_STANDARD.md)
+- Packet strategy: materialize one phase just in time; do not treat later phase overviews in this file
+  as executable worker prompts
 
 ## Executive conclusion
 
@@ -4690,8 +4694,16 @@ fixtures; do not simply change tests to whichever boolean the current implementa
 
 ### How an AI team executes a phase
 
-The detailed task lists below are the evidence checklist. The work-package map in this section is the
-execution order. An orchestrator never assigns an entire phase to one vague worker prompt.
+The detailed task lists below are the architecture/evidence checklist. The
+[execution router](./hosted-web-phases/README.md) selects the only executable phase, and its controller
+packet owns the current DAG. A lane packet owns one worker's exact reads, writable paths, evidence IDs,
+checks and handoff. An orchestrator never assigns an entire phase or this whole document to one vague
+worker prompt.
+
+Later phase sections remain non-executable until the predecessor freeze materializes a packet under the
+[packet standard](./hosted-web-phases/PACKET_STANDARD.md). This is intentional: Phase 0 evidence may
+invalidate current assumptions about contracts, native primitives, provider boundaries or estimate
+buckets.
 
 Every work package moves through the same states:
 
@@ -4712,7 +4724,9 @@ authority/bypass must be removed or explicitly quarantined.
 
 Execution packet: [Hosted Web Phase 0 JIT Execution Packet](./hosted-web-phase-0-execution-packet.md).
 It is the normative worker DAG/ownership/checklist for Phase 0; this document remains the architecture
-and exit-gate authority.
+and exit-gate authority. Worker-specific entrypoints are registered in the
+[execution router](./hosted-web-phases/README.md); workers read one lane packet rather than loading this
+entire plan as their prompt.
 
 - **0A - Base and accounting:** fetch/pin the exact base SHA, create the implementation branch, commit
   this plan, classify baseline CI and create the unique-bucket estimate/salvage ledgers.
