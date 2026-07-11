@@ -99,6 +99,14 @@ describe("consumed output ledger", () => {
       ledger: withFailedRecord,
       jobId: failed!.jobId,
       workspacePath: workspace,
+    })).toMatchObject({
+      status: "failed_no_output",
+      valid: true,
+    });
+    expect(consumedOutputRecordFor({
+      ledger: withFailedRecord,
+      jobId: "another-runtime-review",
+      workspacePath: workspace,
     })).toBeUndefined();
 
     const mislabeled = await consumedOutputRecordFromJson({

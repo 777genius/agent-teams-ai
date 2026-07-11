@@ -193,7 +193,6 @@ export function consumedOutputRecordFor(input: {
     ? resolve(input.resolvedWorkspacePath)
     : undefined;
   const byJob = input.ledger.byJobId.get(input.jobId);
-  if (byJob?.status === NO_OUTPUT_STATUS) return undefined;
   if (byJob) {
     if (
       workspace &&
