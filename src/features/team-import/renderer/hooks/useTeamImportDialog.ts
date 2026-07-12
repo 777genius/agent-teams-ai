@@ -10,6 +10,22 @@ interface UseTeamImportDialogInput {
   onImported: (teamName: string) => void;
   inspectErrorFallback: string;
   createErrorFallback: string;
+  resolveValidationError?: (code: string) => string | null;
+}
+
+function resolveRequestError(
+  error: unknown,
+  fallback: string,
+  resolveValidationError?: (code: string) => string | null
+): string {
+  if (!(error instanceof Error)) return fallback;
+  const validationPrefix = 'TEAM_IMPORT_VALIDATION:';
+  const validationIndex = error.message.indexOf(validationPrefix);
+  if (validationIndex === -1) return error.message;
+  const code = error.message
+    .slice(validationIndex + validationPrefix.length)
+    .split(/[^A-Za-z0-9]/, 1)[0];
+  return resolveValidationError?.(code) ?? fallback;
 }
 
 export function useTeamImportDialog(input: UseTeamImportDialogInput) {
@@ -44,11 +60,13 @@ export function useTeamImportDialog(input: UseTeamImportDialogInput) {
       setTeamName(nextPreview?.suggestedTeamName ?? '');
     } catch (nextError) {
       if (requestId !== requestIdRef.current) return;
-      setError(nextError instanceof Error ? nextError.message : input.inspectErrorFallback);
+      setError(
+        resolveRequestError(nextError, input.inspectErrorFallback, input.resolveValidationError)
+      );
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [input.inspectErrorFallback]);
+  }, [input.inspectErrorFallback, input.resolveValidationError]);
 
   const createDraft = useCallback(async () => {
     if (!preview || preview.blockingErrors.length > 0 || importingRef.current) return;
@@ -63,7 +81,9 @@ export function useTeamImportDialog(input: UseTeamImportDialogInput) {
       input.onImported(result.teamName);
       input.onClose();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : input.createErrorFallback);
+      setError(
+        resolveRequestError(nextError, input.createErrorFallback, input.resolveValidationError)
+      );
     } finally {
       importingRef.current = false;
       setImporting(false);

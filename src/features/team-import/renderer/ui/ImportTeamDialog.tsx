@@ -13,6 +13,9 @@ import { FolderOpen, X } from 'lucide-react';
 import { validateTeamImportName } from '../../core/domain/teamImportPolicy';
 import { useTeamImportDialog } from '../hooks/useTeamImportDialog';
 
+import type { TeamImportNameValidationCode } from '../../core/domain/teamImportPolicy';
+import type { TeamImportWarning } from '@features/team-import/contracts';
+
 interface ImportTeamDialogProps {
   open: boolean;
   onClose: () => void;
@@ -25,12 +28,53 @@ export const ImportTeamDialog = ({
   onImported,
 }: ImportTeamDialogProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
+  const formatNameValidation = (code: TeamImportNameValidationCode): string => {
+    switch (code) {
+      case 'teamNameRequired':
+        return t('teamImport.teamNameRequired');
+      case 'teamNameReserved':
+        return t('teamImport.teamNameReserved');
+      case 'teamNameInvalidFormat':
+        return t('teamImport.invalidTeamName');
+    }
+  };
+  const formatWarning = (warning: TeamImportWarning): string => {
+    switch (warning.code) {
+      case 'unsafeTaskCall':
+        return t('teamImport.warningUnsafeTaskCall', { call: warning.call });
+      case 'unknownTaskOwner':
+        return t('teamImport.warningUnknownTaskOwner', {
+          description: warning.description,
+          owner: warning.owner,
+        });
+      case 'memberReserved':
+        return t('teamImport.warningMemberReserved', warning);
+      case 'memberInvalid':
+        return t('teamImport.warningMemberInvalid', warning);
+      case 'memberReservedSuffix':
+        return t('teamImport.warningMemberReservedSuffix', warning);
+      case 'duplicateMember':
+        return t('teamImport.warningDuplicateMember', warning);
+      case 'missingClaudeMd':
+        return t('teamImport.warningMissingClaudeMd');
+    }
+  };
   const state = useTeamImportDialog({
     open,
     onClose,
     onImported,
     inspectErrorFallback: t('teamImport.inspectFailed'),
     createErrorFallback: t('teamImport.createFailed'),
+    resolveValidationError: (code) => {
+      if (
+        code === 'teamNameRequired' ||
+        code === 'teamNameInvalidFormat' ||
+        code === 'teamNameReserved'
+      ) {
+        return formatNameValidation(code);
+      }
+      return null;
+    },
   });
   const teamNameError = validateTeamImportName(state.teamName);
   const canCreate =
@@ -76,7 +120,7 @@ export const ImportTeamDialog = ({
                       disabled={state.importing}
                     />
                     {teamNameError ? (
-                      <p className="text-xs text-red-400">{t('teamImport.invalidTeamName')}</p>
+                      <p className="text-xs text-red-400">{formatNameValidation(teamNameError)}</p>
                     ) : null}
                   </div>
 
@@ -126,8 +170,8 @@ export const ImportTeamDialog = ({
                       role="status"
                       className="rounded-md border border-yellow-500/30 bg-yellow-500/5 p-3 text-sm text-yellow-400"
                     >
-                      {state.preview.warnings.map((warning) => (
-                        <p key={warning}>{warning}</p>
+                      {state.preview.warnings.map((warning, index) => (
+                        <p key={`${warning.code}-${index}`}>{formatWarning(warning)}</p>
                       ))}
                     </div>
                   ) : null}

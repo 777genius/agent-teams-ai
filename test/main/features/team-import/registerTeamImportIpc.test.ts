@@ -37,6 +37,7 @@ describe('team import IPC', () => {
   });
 
   it('validates create requests at the IPC boundary', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const { handlers, ipcMain } = createIpcHarness();
     const feature: TeamImportFeatureFacade = {
       chooseFolderAndPreview: vi.fn(),
@@ -48,6 +49,8 @@ describe('team import IPC', () => {
       handlers.get(TEAM_IMPORT_CREATE_DRAFT)?.({}, { teamName: 'demo' })
     ).rejects.toThrow('review');
     expect(feature.createDraft).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 
   it('maps a valid create request and removes both handlers', async () => {

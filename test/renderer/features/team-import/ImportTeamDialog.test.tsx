@@ -11,7 +11,7 @@ const hookState = vi.hoisted(() => ({
     members: [{ name: 'writer', workflow: 'WORKFLOW_VISIBLE_MARKER' }],
     prompt: 'PROMPT_VISIBLE_MARKER',
     skillsFound: ['editing'],
-    warnings: [],
+    warnings: [{ code: 'memberReserved', fileName: 'reserved.md', name: 'user' }],
     blockingErrors: [],
   },
   teamName: 'demo-team',
@@ -72,6 +72,7 @@ describe('ImportTeamDialog', () => {
     expect(host.textContent).toContain('WORKFLOW_VISIBLE_MARKER');
     expect(host.textContent).toContain('PROMPT_VISIBLE_MARKER');
     expect(host.textContent).toContain('/tmp/demo-team');
+    expect(host.textContent).toContain('teamImport.warningMemberReserved');
     act(() => root.unmount());
   });
 });

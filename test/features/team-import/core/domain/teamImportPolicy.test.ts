@@ -3,6 +3,7 @@ import {
   parseTeamImportFrontmatter,
   rewriteClaudeMdForTeamImport,
   suggestTeamImportName,
+  validateTeamImportName,
 } from '@features/team-import/core/domain/teamImportPolicy';
 import { describe, expect, it } from 'vitest';
 
@@ -47,6 +48,13 @@ describe('teamImportPolicy', () => {
     expect(suggestTeamImportName('a'.repeat(100))).toHaveLength(64);
   });
 
+  it('returns stable team-name validation codes', () => {
+    expect(validateTeamImportName('')).toBe('teamNameRequired');
+    expect(validateTeamImportName('Not Valid')).toBe('teamNameInvalidFormat');
+    expect(validateTeamImportName('con')).toBe('teamNameReserved');
+    expect(validateTeamImportName('valid-team')).toBeNull();
+  });
+
   it('builds a reviewable preview and skips invalid or duplicate members', () => {
     const preview = buildTeamImportPreview({
       projectPath: '/project',
@@ -66,8 +74,16 @@ describe('teamImportPolicy', () => {
     expect(preview.members[0].workflow).toContain('Write carefully.');
     expect(preview.prompt).toContain('owner="writer"');
     expect(preview.skillsFound).toEqual(['editing']);
-    expect(preview.warnings.join('\n')).toContain('duplicate member');
-    expect(preview.warnings.join('\n')).toContain('reserved');
+    expect(preview.warnings).toContainEqual({
+      code: 'duplicateMember',
+      fileName: 'duplicate.md',
+      name: 'WRITER',
+    });
+    expect(preview.warnings).toContainEqual({
+      code: 'memberReserved',
+      fileName: 'reserved.md',
+      name: 'user',
+    });
     expect(preview.blockingErrors).toEqual([]);
   });
 

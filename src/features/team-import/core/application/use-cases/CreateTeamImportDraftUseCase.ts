@@ -19,7 +19,7 @@ export class CreateTeamImportDraftUseCase {
 
     const teamName = request.teamName.trim();
     const teamNameError = validateTeamImportName(teamName);
-    if (teamNameError) throw new Error(teamNameError);
+    if (teamNameError) throw new Error(`TEAM_IMPORT_VALIDATION:${teamNameError}`);
 
     const preview = this.reviewStore.get(reviewId);
     if (!preview) throw new Error('This import preview expired. Choose the folder again.');

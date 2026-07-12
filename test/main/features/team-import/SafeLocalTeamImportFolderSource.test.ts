@@ -99,6 +99,22 @@ describe('SafeLocalTeamImportFolderSource', () => {
     );
   });
 
+  it('enforces the aggregate byte budget across agent definitions', async () => {
+    const root = await createFixture();
+    const agentsDirectory = path.join(root, '.claude', 'agents');
+    await fs.rm(path.join(agentsDirectory, 'writer.md'));
+    const content = 'x'.repeat(TEAM_IMPORT_LIMITS.maxAgentFileBytes);
+    await Promise.all(
+      Array.from({ length: TEAM_IMPORT_LIMITS.maxAgentFiles }, (_, index) =>
+        fs.writeFile(path.join(agentsDirectory, `member-${index}.md`), content, 'utf8')
+      )
+    );
+
+    await expect(new SafeLocalTeamImportFolderSource().inspect(root)).rejects.toThrow(
+      'too large to preview safely'
+    );
+  });
+
   it('rejects a sensitive directory even when it was selected directly', async () => {
     const parent = await fs.mkdtemp(path.join(os.tmpdir(), 'team-import-sensitive-'));
     createdDirectories.push(parent);

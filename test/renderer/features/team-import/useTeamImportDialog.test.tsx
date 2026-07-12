@@ -53,6 +53,8 @@ function HookProbe({
     onImported,
     inspectErrorFallback: 'inspect failed',
     createErrorFallback: 'create failed',
+    resolveValidationError: (code) =>
+      code === 'teamNameReserved' ? 'localized reserved name' : null,
   });
   useEffect(() => onState(state), [onState, state]);
   return null;
@@ -150,6 +152,41 @@ describe('useTeamImportDialog', () => {
     });
     expect(onImported).toHaveBeenCalledWith('demo');
     expect(onClose).toHaveBeenCalledTimes(1);
+    act(() => root.unmount());
+  });
+
+  it('maps stable validation codes at the renderer boundary', async () => {
+    apiMock.teamImport.chooseFolderAndPreview.mockResolvedValue(preview('review-1', 'con'));
+    apiMock.teamImport.createDraft.mockRejectedValue(
+      new Error(
+        "Error invoking remote method 'team-import:create-draft': Error: TEAM_IMPORT_VALIDATION:teamNameReserved"
+      )
+    );
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    let state!: ReturnType<typeof useTeamImportDialog>;
+
+    await act(async () => {
+      root.render(
+        <HookProbe
+          open
+          onState={(next) => {
+            state = next;
+          }}
+          onClose={vi.fn()}
+          onImported={vi.fn()}
+        />
+      );
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await state.chooseFolder();
+    });
+    await act(async () => {
+      await state.createDraft();
+    });
+
+    expect(state.error).toBe('localized reserved name');
     act(() => root.unmount());
   });
 });

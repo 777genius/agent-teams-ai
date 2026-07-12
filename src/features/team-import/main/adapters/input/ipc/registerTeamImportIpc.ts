@@ -31,8 +31,8 @@ export function registerTeamImportIpc(ipcMain: IpcMain, feature: TeamImportFeatu
     }
   });
   ipcMain.handle(TEAM_IMPORT_CREATE_DRAFT, async (_event, request: unknown) => {
-    const parsedRequest = parseCreateDraftRequest(request);
     try {
+      const parsedRequest = parseCreateDraftRequest(request);
       return await feature.createDraft(parsedRequest);
     } catch (error) {
       logger.error('Failed to create imported team draft', error);

@@ -1,7 +1,7 @@
 import { parseNumericSuffixName, validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 
 import type { TeamImportFolderSnapshot } from '../application/models/TeamImportFolderSnapshot';
-import type { TeamImportPreview } from '@features/team-import/contracts';
+import type { TeamImportPreview, TeamImportWarning } from '@features/team-import/contracts';
 
 const MEMBER_PREFIX = `## Team collaboration
 - When the lead assigns this board task, use task_start to mark it in progress.
@@ -25,9 +25,16 @@ interface ParsedFrontmatter {
 
 interface RewrittenClaudeMd {
   content: string;
-  warnings: string[];
+  warnings: TeamImportWarning[];
   blockingErrors: string[];
 }
+
+export type TeamImportNameValidationCode =
+  | 'teamNameRequired'
+  | 'teamNameInvalidFormat'
+  | 'teamNameReserved';
+
+type ImportedMemberValidationCode = 'memberReserved' | 'memberInvalid' | 'memberReservedSuffix';
 
 const WINDOWS_RESERVED_TEAM_NAMES = new Set([
   'con',
@@ -123,28 +130,28 @@ export function suggestTeamImportName(folderName: string): string {
   return WINDOWS_RESERVED_TEAM_NAMES.has(normalized) ? `team-${normalized}` : normalized;
 }
 
-export function validateTeamImportName(teamName: string): string | null {
+export function validateTeamImportName(teamName: string): TeamImportNameValidationCode | null {
   const trimmed = teamName.trim();
-  if (!trimmed) return 'Team name is required.';
+  if (!trimmed) return 'teamNameRequired';
   if (trimmed.length > 64 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(trimmed)) {
-    return 'Use kebab-case letters, numbers, and dashes, up to 64 characters.';
+    return 'teamNameInvalidFormat';
   }
   if (WINDOWS_RESERVED_TEAM_NAMES.has(trimmed)) {
-    return 'This team name is reserved by the operating system.';
+    return 'teamNameReserved';
   }
   return null;
 }
 
-function validateImportedMemberName(name: string): string | null {
+function validateImportedMemberName(name: string): ImportedMemberValidationCode | null {
   const lower = name.toLowerCase();
   if (lower === 'user' || lower === 'team-lead' || lower === 'lead') {
-    return `Member name "${name}" is reserved.`;
+    return 'memberReserved';
   }
   const formatError = validateTeamMemberNameFormat(name);
-  if (formatError) return `Member name "${name}" is invalid: ${formatError}.`;
+  if (formatError) return 'memberInvalid';
   const suffix = parseNumericSuffixName(name);
   if (suffix && suffix.suffix >= 2) {
-    return `Member name "${name}" uses a reserved auto-suffix.`;
+    return 'memberReservedSuffix';
   }
   return null;
 }
@@ -241,7 +248,7 @@ export function rewriteClaudeMdForTeamImport(
   claudeMd: string,
   memberNames: readonly string[]
 ): RewrittenClaudeMd {
-  const warnings: string[] = [];
+  const warnings: TeamImportWarning[] = [];
   const blockingErrors: string[] = [];
   const canonicalMembers = new Map(memberNames.map((name) => [name.toLowerCase(), name]));
   const calls = findTaskCalls(claudeMd);
@@ -252,7 +259,7 @@ export function rewriteClaudeMdForTeamImport(
     const description = typeof args?.description === 'string' ? args.description.trim() : '';
     const prompt = typeof args?.prompt === 'string' ? args.prompt : '';
     if (!args || !description || !prompt) {
-      warnings.push(`Could not safely rewrite Task call: ${call.text.slice(0, 120)}`);
+      warnings.push({ code: 'unsafeTaskCall', call: call.text.slice(0, 120) });
       blockingErrors.push('One or more Task calls could not be converted safely.');
       continue;
     }
@@ -261,9 +268,11 @@ export function rewriteClaudeMdForTeamImport(
       typeof args.subagent_type === 'string' ? args.subagent_type.trim().toLowerCase() : '';
     const owner = requestedOwner ? canonicalMembers.get(requestedOwner) : undefined;
     if (requestedOwner && !owner && requestedOwner !== 'general-purpose') {
-      warnings.push(
-        `Task "${description}" referenced unknown member "${String(args.subagent_type)}" and was imported without an owner.`
-      );
+      warnings.push({
+        code: 'unknownTaskOwner',
+        description,
+        owner: String(args.subagent_type),
+      });
     }
 
     const rewrittenArguments = [
@@ -301,11 +310,11 @@ export function buildTeamImportPreview(
     const validationError = validateImportedMemberName(name);
     const normalized = name.toLowerCase();
     if (validationError) {
-      warnings.push(`${file.fileName}: ${validationError}`);
+      warnings.push({ code: validationError, fileName: file.fileName, name });
       continue;
     }
     if (seenNames.has(normalized)) {
-      warnings.push(`${file.fileName}: duplicate member name "${name}" was skipped.`);
+      warnings.push({ code: 'duplicateMember', fileName: file.fileName, name });
       continue;
     }
     seenNames.add(normalized);
@@ -333,7 +342,7 @@ export function buildTeamImportPreview(
     blockingErrors.push(...rewritten.blockingErrors);
     prompt = `${LEAD_PREFIX}\n\n## Imported orchestration workflow\n\n${rewritten.content}`;
   } else {
-    warnings.push('No .claude/CLAUDE.md or CLAUDE.md was found; the lead prompt will be empty.');
+    warnings.push({ code: 'missingClaudeMd' });
   }
 
   const skillsFound = [

@@ -137,18 +137,17 @@ async function readAgentFiles(input: {
     );
   }
 
-  return Promise.all(
-    markdownFiles.map(async (entry) => ({
-      fileName: entry.name,
-      content:
-        (await readBoundRegularUtf8File({
-          filePath: path.join(input.agentsDirectory, entry.name),
-          realRoot: input.realRoot,
-          maxBytes: TEAM_IMPORT_LIMITS.maxAgentFileBytes,
-          budget: input.budget,
-        })) ?? '',
-    }))
-  );
+  const agentFiles: Array<{ fileName: string; content: string }> = [];
+  for (const entry of markdownFiles) {
+    const content = await readBoundRegularUtf8File({
+      filePath: path.join(input.agentsDirectory, entry.name),
+      realRoot: input.realRoot,
+      maxBytes: TEAM_IMPORT_LIMITS.maxAgentFileBytes,
+      budget: input.budget,
+    });
+    agentFiles.push({ fileName: entry.name, content: content ?? '' });
+  }
+  return agentFiles;
 }
 
 async function readSkillDefinitions(input: {

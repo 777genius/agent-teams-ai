@@ -4143,7 +4143,16 @@ export default interface Resources {
       skills: 'Skills found ({{count}})';
       summary: 'Create {{teamName}} with {{count}} members.';
       teamName: 'Team name';
+      teamNameRequired: 'Team name is required.';
+      teamNameReserved: 'This team name is reserved by the operating system.';
       title: 'Import agent team';
+      warningDuplicateMember: '{{fileName}}: duplicate member name {{name}} was skipped.';
+      warningMemberInvalid: '{{fileName}}: member name {{name}} is invalid.';
+      warningMemberReserved: '{{fileName}}: member name {{name}} is reserved.';
+      warningMemberReservedSuffix: '{{fileName}}: member name {{name}} uses a reserved auto-suffix.';
+      warningMissingClaudeMd: 'No .claude/CLAUDE.md or CLAUDE.md was found; the lead prompt will be empty.';
+      warningUnknownTaskOwner: 'Task {{description}} referenced unknown member {{owner}} and was imported without an owner.';
+      warningUnsafeTaskCall: 'Could not safely rewrite Task call: {{call}}';
     };
     list: {
       actions: {
