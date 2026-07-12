@@ -1041,7 +1041,14 @@ export interface TeamLaunchResponse {
   alreadyRunning?: boolean;
 }
 
+export interface ApplicationCommandRequestIdentity {
+  commandId: string;
+  idempotencyKey: string;
+}
+
 export interface CreateTaskRequest {
+  /** Stable for one user intent so transport retries cannot create a second task. */
+  command?: ApplicationCommandRequestIdentity;
   subject: string;
   description?: string;
   descriptionTaskRefs?: TaskRef[];

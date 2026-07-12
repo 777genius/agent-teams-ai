@@ -1,4 +1,11 @@
-import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 export const stallJournalEntries = sqliteTable(
   'stall_journal_entries',
@@ -132,5 +139,38 @@ export const memberWorkSyncMetricEvents = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.teamName, table.id] }),
     index('idx_mws_metric_events_recent').on(table.teamName, table.recordedAt),
+  ]
+);
+
+export const applicationCommandLedger = sqliteTable(
+  'application_command_ledger',
+  {
+    namespace: text('namespace').notNull(),
+    scopeKey: text('scope_key').notNull(),
+    commandId: text('command_id').notNull(),
+    idempotencyKey: text('idempotency_key').notNull(),
+    operation: text('operation').notNull(),
+    payloadHash: text('payload_hash').notNull(),
+    status: text('status').notNull(),
+    failureKind: text('failure_kind'),
+    retryable: integer('retryable', { mode: 'boolean' }).notNull(),
+    attemptCount: integer('attempt_count').notNull(),
+    resultHash: text('result_hash'),
+    resultJson: text('result_json'),
+    metadataJson: text('metadata_json'),
+    startedAt: text('started_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+    completedAt: text('completed_at'),
+    lastError: text('last_error'),
+  },
+  (table) => [
+    primaryKey({ columns: [table.namespace, table.scopeKey, table.commandId] }),
+    uniqueIndex('idx_app_cmd_ledger_idempotency').on(
+      table.namespace,
+      table.scopeKey,
+      table.idempotencyKey
+    ),
+    index('idx_app_cmd_ledger_status').on(table.namespace, table.scopeKey, table.status),
+    index('idx_app_cmd_ledger_operation').on(table.namespace, table.scopeKey, table.operation),
   ]
 );

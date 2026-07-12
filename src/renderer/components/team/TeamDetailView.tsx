@@ -175,6 +175,7 @@ import type { SessionInjection } from './session-injection-types';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
+  ApplicationCommandRequestIdentity,
   KanbanColumnId,
   KanbanTaskState,
   MemberSpawnStatusEntry,
@@ -1398,6 +1399,10 @@ export const TeamDetailView = memo(function TeamDetailView({
     defaultDescription: '',
     defaultOwner: '',
   });
+  const pendingCreateTaskCommandRef = useRef<{
+    fingerprint: string;
+    identity: ApplicationCommandRequestIdentity;
+  } | null>(null);
   const [creatingTask, setCreatingTask] = useState(false);
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [addingMemberLoading, setAddingMemberLoading] = useState(false);
@@ -2139,6 +2144,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const openCreateTaskDialog = useCallback(
     (subject = '', description = '', owner = '', startImmediately?: boolean): void => {
+      pendingCreateTaskCommandRef.current = null;
       setCreateTaskDialog({
         open: true,
         defaultSubject: subject,
@@ -2151,6 +2157,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   );
 
   const closeCreateTaskDialog = useCallback((): void => {
+    pendingCreateTaskCommandRef.current = null;
     setCreateTaskDialog({
       open: false,
       defaultSubject: '',
@@ -2670,19 +2677,34 @@ export const TeamDetailView = memo(function TeamDetailView({
     descriptionTaskRefs?: TaskRef[],
     promptTaskRefs?: TaskRef[]
   ): void => {
+    const taskRequest = {
+      subject,
+      description: description || undefined,
+      owner,
+      blockedBy,
+      related,
+      prompt,
+      descriptionTaskRefs,
+      promptTaskRefs,
+      startImmediately,
+    };
+    const fingerprint = JSON.stringify(taskRequest);
+    let pendingCommand = pendingCreateTaskCommandRef.current;
+    if (pendingCommand?.fingerprint !== fingerprint) {
+      const commandId = crypto.randomUUID();
+      pendingCommand = {
+        fingerprint,
+        identity: { commandId, idempotencyKey: commandId },
+      };
+      pendingCreateTaskCommandRef.current = pendingCommand;
+    }
+    const command = pendingCommand.identity;
     setCreatingTask(true);
     void (async () => {
       try {
         await createTeamTask(teamName, {
-          subject,
-          description: description || undefined,
-          owner,
-          blockedBy,
-          related,
-          prompt,
-          descriptionTaskRefs,
-          promptTaskRefs,
-          startImmediately,
+          ...taskRequest,
+          command,
         });
 
         if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {

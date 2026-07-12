@@ -1,0 +1,201 @@
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
+
+import {
+  ApplicationCommandBeginOutcome,
+  ApplicationCommandRunOutcome,
+} from '@features/application-command-ledger/contracts';
+import {
+  createApplicationCommandLedgerFeature,
+  NodeApplicationCommandHasher,
+} from '@features/application-command-ledger/main';
+import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import {
+  TaskBoardCommandFacade,
+  type TaskBoardCreateTaskDestination,
+} from '@features/task-board-commands';
+import { type AgentTeamsController, createController } from 'agent-teams-controller';
+import Database from 'better-sqlite3-node';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import { InProcessGateway } from '../internal-storage/helpers/InProcessGateway';
+
+import type { TeamTask } from '@shared/types';
+
+const TEAM_NAME = 'task-command-e2e';
+const CREATE_TASK_OPERATION = 'task.create';
+
+describe('task-board commands E2E', () => {
+  let tmpDir: string | null = null;
+  let core: InternalStorageWorkerCore | null = null;
+
+  afterEach(async () => {
+    core?.close();
+    core = null;
+    if (tmpDir) {
+      await fs.rm(tmpDir, { recursive: true, force: true });
+      tmpDir = null;
+    }
+  });
+
+  it('deduplicates one create intent across SQLite and the real controller taskBoard', async () => {
+    const harness = await makeHarness();
+    const identity = makeIdentity('11111111-1111-4111-8111-111111111111');
+    const command = {
+      teamName: TEAM_NAME,
+      identity,
+      payload: { subject: 'One durable task', createdBy: 'user' },
+      destination: harness.destination,
+    };
+
+    const first = await harness.facade.createTask(command);
+    const replay = await harness.facade.createTask(command);
+
+    expect(first.outcome).toBe(ApplicationCommandRunOutcome.Executed);
+    expect(first.createdInAttempt).toBe(true);
+    expect(replay.outcome).toBe(ApplicationCommandRunOutcome.Replayed);
+    expect(replay.createdInAttempt).toBe(false);
+    expect(replay.task.id).toBe(identity.commandId);
+    expect(harness.controller.taskBoard.listTasks()).toHaveLength(1);
+  });
+
+  it('reconciles a stale started command with an existing destination task', async () => {
+    const harness = await makeHarness();
+    const identity = makeIdentity('22222222-2222-4222-8222-222222222222');
+    const payload = { subject: 'Already persisted task', createdBy: 'user' };
+    await seedStaleStarted(harness, identity, payload);
+    harness.destination.create({ ...payload, id: identity.commandId });
+
+    const result = await harness.facade.createTask({
+      teamName: TEAM_NAME,
+      identity,
+      payload,
+      destination: harness.destination,
+    });
+
+    expect(result.outcome).toBe(ApplicationCommandRunOutcome.Reconciled);
+    expect(result.createdInAttempt).toBe(false);
+    expect(result.task.id).toBe(identity.commandId);
+    expect(harness.controller.taskBoard.listTasks()).toHaveLength(1);
+  });
+
+  it('retries once when stale reconciliation proves the task was not created', async () => {
+    const harness = await makeHarness();
+    const identity = makeIdentity('33333333-3333-4333-8333-333333333333');
+    const payload = { subject: 'Recovered missing task', createdBy: 'user' };
+    await seedStaleStarted(harness, identity, payload);
+
+    const result = await harness.facade.createTask({
+      teamName: TEAM_NAME,
+      identity,
+      payload,
+      destination: harness.destination,
+    });
+
+    expect(result.outcome).toBe(ApplicationCommandRunOutcome.Retried);
+    expect(result.createdInAttempt).toBe(true);
+    expect(result.task.id).toBe(identity.commandId);
+    expect(harness.controller.taskBoard.listTasks()).toHaveLength(1);
+  });
+
+  it('uses the original ledger command id when the same idempotency key is retried', async () => {
+    const harness = await makeHarness();
+    const original = makeIdentity('44444444-4444-4444-8444-444444444444');
+    const retried = {
+      commandId: '55555555-5555-4555-8555-555555555555',
+      idempotencyKey: original.idempotencyKey,
+    };
+    const payload = { subject: 'Original destination identity', createdBy: 'user' };
+    await seedStaleStarted(harness, original, payload);
+    harness.destination.create({ ...payload, id: original.commandId });
+
+    const result = await harness.facade.createTask({
+      teamName: TEAM_NAME,
+      identity: retried,
+      payload,
+      destination: harness.destination,
+    });
+
+    expect(result.outcome).toBe(ApplicationCommandRunOutcome.Reconciled);
+    expect(result.task.id).toBe(original.commandId);
+    expect(harness.destination.findById(retried.commandId)).toBeNull();
+    expect(harness.controller.taskBoard.listTasks()).toHaveLength(1);
+  });
+
+  async function makeHarness(): Promise<{
+    controller: AgentTeamsController;
+    destination: TaskBoardCreateTaskDestination;
+    facade: TaskBoardCommandFacade;
+    ledgerStore: ReturnType<typeof createApplicationCommandLedgerFeature>['ledgerStore'];
+  }> {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-board-command-e2e-'));
+    const claudeDir = path.join(tmpDir, 'claude');
+    await fs.mkdir(path.join(claudeDir, 'teams', TEAM_NAME), { recursive: true });
+    await fs.mkdir(path.join(claudeDir, 'tasks', TEAM_NAME), { recursive: true });
+    await fs.writeFile(
+      path.join(claudeDir, 'teams', TEAM_NAME, 'config.json'),
+      JSON.stringify({
+        name: TEAM_NAME,
+        leadSessionId: 'test-lead-session',
+        members: [{ name: 'lead', role: 'team-lead' }],
+      })
+    );
+
+    core = new InternalStorageWorkerCore({
+      databasePath: path.join(tmpDir, 'storage', 'app.db'),
+      createDatabase: (file) => new Database(file),
+    });
+    const feature = createApplicationCommandLedgerFeature({
+      storageGateway: new InProcessGateway(core),
+    });
+    const controller = createController({ teamName: TEAM_NAME, claudeDir });
+    const destination = makeDestination(controller);
+    return {
+      controller,
+      destination,
+      facade: new TaskBoardCommandFacade(feature.runner),
+      ledgerStore: feature.ledgerStore,
+    };
+  }
+});
+
+function makeDestination(controller: AgentTeamsController): TaskBoardCreateTaskDestination {
+  return {
+    findById: (taskId) => {
+      try {
+        return controller.taskBoard.getTask(taskId) as TeamTask;
+      } catch (error) {
+        if (error instanceof Error && error.message === `Task not found: ${taskId}`) {
+          return null;
+        }
+        throw error;
+      }
+    },
+    create: (input) => controller.taskBoard.createTask(input) as TeamTask,
+  };
+}
+
+function makeIdentity(commandId: string): { commandId: string; idempotencyKey: string } {
+  return { commandId, idempotencyKey: commandId };
+}
+
+async function seedStaleStarted(
+  harness: {
+    ledgerStore: ReturnType<typeof createApplicationCommandLedgerFeature>['ledgerStore'];
+  },
+  identity: { commandId: string; idempotencyKey: string },
+  payload: Record<string, unknown>
+): Promise<void> {
+  const begin = await harness.ledgerStore.begin({
+    namespace: 'task-board',
+    scopeKey: TEAM_NAME,
+    ...identity,
+    operation: CREATE_TASK_OPERATION,
+    payloadHash: new NodeApplicationCommandHasher().hashJson(payload),
+    metadataJson: null,
+    nowIso: '2020-01-01T00:00:00.000Z',
+    startedStaleAfterMs: 60_000,
+  });
+  expect(begin.outcome).toBe(ApplicationCommandBeginOutcome.Started);
+}

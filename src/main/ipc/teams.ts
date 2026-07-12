@@ -119,6 +119,7 @@ import {
   buildStandaloneSlashCommandMeta,
   parseStandaloneSlashCommand,
 } from '@shared/utils/slashCommands';
+import { looksLikeCanonicalTaskId } from '@shared/utils/taskIdentity';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import crypto from 'crypto';
@@ -3610,6 +3611,31 @@ async function handleCreateTask(
   }
 
   const payload = request as Partial<CreateTaskRequest>;
+  let command: CreateTaskRequest['command'];
+  if (payload.command !== undefined) {
+    if (!payload.command || typeof payload.command !== 'object') {
+      return { success: false, error: 'command must be an object' };
+    }
+    const commandId = payload.command.commandId;
+    const idempotencyKey = payload.command.idempotencyKey;
+    if (typeof commandId !== 'string' || !looksLikeCanonicalTaskId(commandId)) {
+      return { success: false, error: 'command.commandId must be a UUID' };
+    }
+    if (
+      typeof idempotencyKey !== 'string' ||
+      idempotencyKey.trim().length === 0 ||
+      idempotencyKey.trim().length > 200
+    ) {
+      return {
+        success: false,
+        error: 'command.idempotencyKey must be a non-empty string up to 200 characters',
+      };
+    }
+    command = {
+      commandId: commandId.trim(),
+      idempotencyKey: idempotencyKey.trim(),
+    };
+  }
   if (typeof payload.subject !== 'string' || payload.subject.trim().length === 0) {
     return { success: false, error: 'subject must be a non-empty string' };
   }
@@ -3666,6 +3692,7 @@ async function handleCreateTask(
 
   return wrapTeamHandler('createTask', () =>
     getTeamDataService().createTask(validatedTeamName.value!, {
+      ...(command ? { command } : {}),
       subject: payload.subject!.trim(),
       description: payload.description?.trim(),
       owner: payload.owner?.trim() || undefined,

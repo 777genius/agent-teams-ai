@@ -80,6 +80,8 @@ import {
   type TerminalWorkspaceFeatureFacade,
 } from '@features/terminal-workspace/main';
 import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
+import { createApplicationCommandLedgerFeature } from '@features/application-command-ledger/main';
+import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import {
   createTokenUsageFeature,
   registerTokenUsageIpc,
@@ -1841,6 +1843,14 @@ async function initializeServices(): Promise<void> {
     userDataPath: app.getPath('userData'),
   });
   teamDataService = new TeamDataService();
+  if (internalStorageFeature.applicationCommandLedgerBackend) {
+    const applicationCommandLedgerFeature = createApplicationCommandLedgerFeature({
+      storageGateway: internalStorageFeature.applicationCommandLedgerBackend.gateway,
+    });
+    teamDataService.setTaskBoardCommandFacade(
+      new TaskBoardCommandFacade(applicationCommandLedgerFeature.runner)
+    );
+  }
   teamDataService.setMemberRuntimeAdvisoryService(teamMemberRuntimeAdvisoryService);
   teamDataService.setTaskCommentNotificationJournalStore(
     internalStorageFeature.taskCommentNotificationJournalStore

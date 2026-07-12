@@ -1,4 +1,15 @@
 import type {
+  ApplicationCommandLedgerBeginRequest,
+  ApplicationCommandLedgerBeginResult,
+  ApplicationCommandLedgerCompleteRequest,
+  ApplicationCommandLedgerFailRequest,
+  ApplicationCommandLedgerListScopeRequest,
+  ApplicationCommandLedgerReadByCommandIdRequest,
+  ApplicationCommandLedgerReadByIdempotencyKeyRequest,
+  ApplicationCommandLedgerRecord,
+} from '@features/application-command-ledger/contracts';
+import type { ApplicationCommandLedgerStorageGateway } from '@features/application-command-ledger/core/application';
+import type {
   CommentJournalEntryRecord,
   InternalStorageBackendInfo,
   MemberWorkSyncMetricEventRecord,
@@ -17,7 +28,12 @@ import type {
 import type { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 
 /** In-process gateway: same op handlers the worker uses, minus the thread hop. */
-export class InProcessGateway implements InternalStorageGateway, MemberWorkSyncStorageGateway {
+export class InProcessGateway
+  implements
+    InternalStorageGateway,
+    MemberWorkSyncStorageGateway,
+    ApplicationCommandLedgerStorageGateway
+{
   constructor(private readonly core: InternalStorageWorkerCore) {}
 
   private op<T>(op: string, payload: unknown): Promise<T> {
@@ -148,6 +164,40 @@ export class InProcessGateway implements InternalStorageGateway, MemberWorkSyncS
 
   importTeam(teamName: string, snapshot: MemberWorkSyncTeamSnapshotRecords): Promise<void> {
     return this.op('mws.importTeam', { teamName, snapshot });
+  }
+
+  applicationCommandLedgerBegin<TOperation extends string>(
+    request: ApplicationCommandLedgerBeginRequest<TOperation>
+  ): Promise<ApplicationCommandLedgerBeginResult<TOperation>> {
+    return this.op('appCommandLedger.begin', request);
+  }
+
+  applicationCommandLedgerMarkCompleted(
+    request: ApplicationCommandLedgerCompleteRequest
+  ): Promise<void> {
+    return this.op('appCommandLedger.markCompleted', request);
+  }
+
+  applicationCommandLedgerMarkFailed(request: ApplicationCommandLedgerFailRequest): Promise<void> {
+    return this.op('appCommandLedger.markFailed', request);
+  }
+
+  applicationCommandLedgerGetByCommandId<TOperation extends string>(
+    request: ApplicationCommandLedgerReadByCommandIdRequest
+  ): Promise<ApplicationCommandLedgerRecord<TOperation> | null> {
+    return this.op('appCommandLedger.getByCommandId', request);
+  }
+
+  applicationCommandLedgerGetByIdempotencyKey<TOperation extends string>(
+    request: ApplicationCommandLedgerReadByIdempotencyKeyRequest
+  ): Promise<ApplicationCommandLedgerRecord<TOperation> | null> {
+    return this.op('appCommandLedger.getByIdempotencyKey', request);
+  }
+
+  applicationCommandLedgerListByScope<TOperation extends string>(
+    request: ApplicationCommandLedgerListScopeRequest
+  ): Promise<ApplicationCommandLedgerRecord<TOperation>[]> {
+    return this.op('appCommandLedger.listByScope', request);
   }
 
   ping(): Promise<InternalStorageBackendInfo> {
