@@ -79,7 +79,6 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamGetDataOptions,
-  TeamImportPreviewResult,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
   TeamLaunchResponse,
@@ -118,6 +117,7 @@ import type {
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { RecentProjectsElectronApi } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
+import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type { TokenUsageElectronApi } from '@features/token-usage/contracts';
 import type {
@@ -557,7 +557,6 @@ export interface TeamsAPI {
   aliveList: () => Promise<string[]>;
   stop: (teamName: string) => Promise<void>;
   createConfig: (request: TeamCreateConfigRequest) => Promise<void>;
-  importFromFolder: (folderPath: string) => Promise<TeamImportPreviewResult>;
   getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
   getLogsForTask: (
     teamName: string,
@@ -964,6 +963,9 @@ export interface ElectronAPI
 
   // Team management API
   teams: TeamsAPI;
+
+  // Desktop-only agent team folder import API
+  teamImport: TeamImportApi;
 
   // Cross-Team Communication API
   crossTeam: CrossTeamAPI;

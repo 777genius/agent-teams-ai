@@ -26,7 +26,7 @@ export const TeamEmptyState = ({
           {onImportTeam ? (
             <Button size="sm" variant="outline" disabled={!canCreate} onClick={onImportTeam}>
               <FolderOpen className="mr-1.5 size-3.5" />
-              Import from Folder
+              {t('list.actions.importTeam')}
             </Button>
           ) : null}
         </div>

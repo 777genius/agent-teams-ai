@@ -1412,8 +1412,28 @@
       "description": "लॉन्च फ्लो प्रकल्प पथावर केंद्रित ठेवा आणि तुम्हाला अतिरिक्त नियंत्रण हवे असेल तेव्हाच हे विस्तृत करा."
     }
   },
+  "teamImport": {
+    "cancel": "Cancel",
+    "chooseFolder": "Choose folder",
+    "createDraft": "Create draft team",
+    "createFailed": "Failed to create the imported team",
+    "creating": "Creating...",
+    "description": "Choose a local agent team folder, then review every imported instruction before creating a draft.",
+    "inspectFailed": "Failed to inspect the selected folder",
+    "invalidTeamName": "Use kebab-case letters, numbers, and dashes, up to 64 characters.",
+    "leadPrompt": "Lead prompt",
+    "members": "Members ({{count}})",
+    "projectPath": "Project path",
+    "scanning": "Scanning...",
+    "selectPrompt": "Choose a folder to preview the imported team.",
+    "skills": "Skills found ({{count}})",
+    "summary": "Create {{teamName}} with {{count}} members.",
+    "teamName": "Team name",
+    "title": "Import agent team"
+  },
   "list": {
     "actions": {
+      "importTeam": "Import from folder",
       "copyTeam": "टीम कॉपी करा",
       "createTeam": "टीम तयार करा",
       "organizationMap": "Org Map",

@@ -1412,8 +1412,28 @@
       "description": "Gardez le flux de lancement concentré sur le chemin du projet et élargissez-le seulement lorsque vous voulez un contrôle supplémentaire."
     }
   },
+  "teamImport": {
+    "cancel": "Cancel",
+    "chooseFolder": "Choose folder",
+    "createDraft": "Create draft team",
+    "createFailed": "Failed to create the imported team",
+    "creating": "Creating...",
+    "description": "Choose a local agent team folder, then review every imported instruction before creating a draft.",
+    "inspectFailed": "Failed to inspect the selected folder",
+    "invalidTeamName": "Use kebab-case letters, numbers, and dashes, up to 64 characters.",
+    "leadPrompt": "Lead prompt",
+    "members": "Members ({{count}})",
+    "projectPath": "Project path",
+    "scanning": "Scanning...",
+    "selectPrompt": "Choose a folder to preview the imported team.",
+    "skills": "Skills found ({{count}})",
+    "summary": "Create {{teamName}} with {{count}} members.",
+    "teamName": "Team name",
+    "title": "Import agent team"
+  },
   "list": {
     "actions": {
+      "importTeam": "Import from folder",
       "copyTeam": "Copier l'équipe",
       "createTeam": "Créer une équipe",
       "organizationMap": "Org Map",

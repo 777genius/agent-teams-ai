@@ -96,7 +96,7 @@ const LaunchTeamDialog = lazy(() =>
   import('./dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
 );
 const ImportTeamDialog = lazy(() =>
-  import('./dialogs/ImportTeamDialog').then((m) => ({ default: m.ImportTeamDialog }))
+  import('@features/team-import/renderer').then((m) => ({ default: m.ImportTeamDialog }))
 );
 
 const TEAM_SECTION_INITIAL_VISIBLE_COUNT = 24;
@@ -1121,7 +1121,13 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   );
 
   const importDialogElement = showImportDialog && (
-    <Suspense fallback={null}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center p-6 text-sm text-text-muted" role="status">
+          {tCommon('states.loading')}
+        </div>
+      }
+    >
       <ImportTeamDialog
         open={showImportDialog}
         onClose={() => setShowImportDialog(false)}
@@ -1195,7 +1201,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             onClick={() => setShowImportDialog(true)}
           >
             <FolderOpen size={13} />
-            Import
+            {t('list.actions.importTeam')}
           </Button>
           <Button
             variant="outline"

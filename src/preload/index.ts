@@ -5,6 +5,7 @@ import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
+import { createTeamImportBridge } from '@features/team-import/preload';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
@@ -162,7 +163,6 @@ import {
   TEAM_GET_TASK_LOG_STREAM,
   TEAM_GET_TASK_LOG_STREAM_SUMMARY,
   TEAM_GET_WORKTREE_GIT_STATUS,
-  TEAM_IMPORT_FROM_FOLDER,
   TEAM_INITIALIZE_GIT_REPOSITORY,
   TEAM_KILL_PROCESS,
   TEAM_LAUNCH,
@@ -334,7 +334,6 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamGetDataOptions,
-  TeamImportPreviewResult,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
   TeamLaunchResponse,
@@ -553,6 +552,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  teamImport: createTeamImportBridge(ipcRenderer),
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),
   memberLogStream: createMemberLogStreamBridge(),
@@ -1121,9 +1121,6 @@ const electronAPI: ElectronAPI = {
     },
     createConfig: async (request: TeamCreateConfigRequest) => {
       return invokeIpcWithResult<void>(TEAM_CREATE_CONFIG, request);
-    },
-    importFromFolder: async (folderPath: string) => {
-      return invokeIpcWithResult<TeamImportPreviewResult>(TEAM_IMPORT_FROM_FOLDER, folderPath);
     },
     getMemberLogs: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<MemberLogSummary[]>(TEAM_GET_MEMBER_LOGS, teamName, memberName);

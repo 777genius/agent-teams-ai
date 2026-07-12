@@ -50,6 +50,7 @@ import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contract
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
 import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
+import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type {
   AppConfig,
@@ -107,7 +108,6 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamGetDataOptions,
-  TeamImportPreviewResult,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
   TeamLaunchResponse,
@@ -163,6 +163,14 @@ export class HttpAPIClient implements ElectronAPI {
   private eventListeners = new Map<string, Set<(...args: any[]) => void>>();
   telemetry = {
     getSentryContext: async () => null,
+  };
+  teamImport: TeamImportApi = {
+    chooseFolderAndPreview: async () => {
+      throw new Error('Team import is only available in the desktop app');
+    },
+    createDraft: async () => {
+      throw new Error('Team import is only available in the desktop app');
+    },
   };
 
   constructor(baseUrl: string) {
@@ -1067,9 +1075,6 @@ export class HttpAPIClient implements ElectronAPI {
     },
     createConfig: async (): Promise<void> => {
       throw new Error('Team config creation is not available in browser mode');
-    },
-    importFromFolder: async (): Promise<TeamImportPreviewResult> => {
-      throw new Error('Team import is not available in browser mode');
     },
     getMemberLogs: async () => {
       console.warn('[HttpAPIClient] getMemberLogs is not available in browser mode');

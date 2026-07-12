@@ -1412,8 +1412,28 @@
       "description": "Giữ luồng khởi chạy tập trung vào đường dẫn dự án và chỉ mở rộng phần này khi bạn muốn kiểm soát thêm."
     }
   },
+  "teamImport": {
+    "cancel": "Cancel",
+    "chooseFolder": "Choose folder",
+    "createDraft": "Create draft team",
+    "createFailed": "Failed to create the imported team",
+    "creating": "Creating...",
+    "description": "Choose a local agent team folder, then review every imported instruction before creating a draft.",
+    "inspectFailed": "Failed to inspect the selected folder",
+    "invalidTeamName": "Use kebab-case letters, numbers, and dashes, up to 64 characters.",
+    "leadPrompt": "Lead prompt",
+    "members": "Members ({{count}})",
+    "projectPath": "Project path",
+    "scanning": "Scanning...",
+    "selectPrompt": "Choose a folder to preview the imported team.",
+    "skills": "Skills found ({{count}})",
+    "summary": "Create {{teamName}} with {{count}} members.",
+    "teamName": "Team name",
+    "title": "Import agent team"
+  },
   "list": {
     "actions": {
+      "importTeam": "Import from folder",
       "copyTeam": "Sao chép đội ngũ",
       "createTeam": "Tạo đội ngũ",
       "organizationMap": "Ban do to chuc",

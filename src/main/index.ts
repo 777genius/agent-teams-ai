@@ -75,6 +75,12 @@ import {
   removeTerminalWorkspaceIpc,
   type TerminalWorkspaceFeatureFacade,
 } from '@features/terminal-workspace/main';
+import {
+  createTeamImportFeature,
+  registerTeamImportIpc,
+  removeTeamImportIpc,
+  type TeamImportFeatureFacade,
+} from '@features/team-import/main';
 import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
 import {
   createTokenUsageFeature,
@@ -1039,6 +1045,7 @@ let sshConnectionManager: SshConnectionManager;
 let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
+let teamImportFeature: TeamImportFeatureFacade;
 let organizationsFeature: OrganizationsFeatureFacade;
 let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
 let terminalWorkspaceFeature: TerminalWorkspaceFeatureFacade | null = null;
@@ -2068,6 +2075,7 @@ async function initializeServices(): Promise<void> {
     getLocalContext: () => contextRegistry.get('local'),
     logger: createLogger('Feature:RecentProjects'),
   });
+  teamImportFeature = createTeamImportFeature(teamDataService);
   organizationsFeature = createOrganizationsFeature({
     teamDataService,
     crossTeamService,
@@ -2622,6 +2630,7 @@ async function initializeServices(): Promise<void> {
   );
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
+  registerTeamImportIpc(ipcMain, teamImportFeature);
   registerOrganizationsIpc(ipcMain, organizationsFeature);
   registerRuntimeProviderManagementIpc(ipcMain, runtimeProviderManagementFeature);
   registerTerminalWorkspaceIpc(ipcMain, terminalWorkspaceFeature);
@@ -2837,6 +2846,7 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
+      removeTeamImportIpc(ipcMain);
       removeOrganizationsIpc(ipcMain);
       removeRuntimeProviderManagementIpc(ipcMain);
       removeTerminalWorkspaceIpc(ipcMain);
