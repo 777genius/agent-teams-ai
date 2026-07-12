@@ -261,6 +261,7 @@ function maybeNotifyTaskOwnerOnComment(context, task, comment, options = {}) {
 }
 
 function createTask(context, input) {
+    assertTaskCreationCommandScope(context, input);
     let taskInput = input;
     if (input && typeof input.owner === 'string' && input.owner.trim()) {
         taskInput = {
@@ -281,6 +282,26 @@ function createTask(context, input) {
         });
     }
     return task;
+}
+
+function reconcileTaskCreation(context, input) {
+    assertTaskCreationCommandScope(context, input);
+    return withTeamBoardLock(context.paths, () =>
+        taskStore.reconcileTaskCreation(context.paths, input)
+    );
+}
+
+function assertTaskCreationCommandScope(context, input) {
+    if (!input || !input.creationCommand) {
+        return;
+    }
+    const scopeKey =
+        typeof input.creationCommand.scopeKey === 'string' ?
+            input.creationCommand.scopeKey.trim() :
+            '';
+    if (scopeKey !== context.teamName) {
+        throw new Error('Task creation command conflict: scope does not match team');
+    }
 }
 
 function getTask(context, taskId) {
@@ -1039,6 +1060,7 @@ module.exports = {
     listTasks,
     leadBriefing,
     removeTaskAttachment,
+    reconcileTaskCreation,
     resolveTaskId,
     restoreTask,
     setNeedsClarification,

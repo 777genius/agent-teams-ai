@@ -15,7 +15,8 @@ type JsonObject = Record<string, ApplicationCommandJsonValue>;
 
 export interface TaskBoardCreateTaskDestination {
   findById(taskId: string): TeamTask | null;
-  create(input: Record<string, unknown>): TeamTask;
+  create(input: Record<string, unknown>): TeamTask | Promise<TeamTask>;
+  reconcile(input: Record<string, unknown>): TeamTask | null | Promise<TeamTask | null>;
 }
 
 export interface TaskBoardCreateTaskCommand {
@@ -48,34 +49,44 @@ export class TaskBoardCommandFacade {
         operation: CREATE_TASK_OPERATION,
         payload,
         classifyError: classifyCreateTaskError,
-        reconcile: (record) => {
+        reconcile: async (record) => {
           const existing = command.destination.findById(record.commandId);
           if (!existing) {
-            return Promise.resolve({
+            return {
               outcome: 'not_applied',
               message: 'Task destination does not contain the command task id',
-            });
+            };
           }
-          assertMatchingTask(existing, record.commandId, payload);
-          return Promise.resolve({
+          let reconciled: TeamTask;
+          try {
+            reconciled = await reconcileDestination(command.destination, record, payload);
+          } catch (error) {
+            if (error instanceof TaskBoardCreateDestinationConflictError) {
+              return {
+                outcome: 'not_applied',
+                message: error.message,
+              };
+            }
+            throw error;
+          }
+          return {
             outcome: 'applied',
-            result: makeStoredResult(existing, false),
-          });
+            result: makeStoredResult(reconciled, false),
+          };
         },
       },
       async (record) => {
         const existing = command.destination.findById(record.commandId);
         if (existing) {
-          assertMatchingTask(existing, record.commandId, payload);
-          return makeStoredResult(existing, false);
+          const reconciled = await reconcileDestination(command.destination, record, payload);
+          return makeStoredResult(reconciled, false);
         }
 
+        const destinationInput = makeDestinationInput(record, payload);
         try {
-          const task = command.destination.create({
-            ...payload,
-            id: record.commandId,
-          });
-          return makeStoredResult(task, true);
+          await command.destination.create(destinationInput);
+          const reconciled = await reconcileDestination(command.destination, record, payload);
+          return makeStoredResult(reconciled, true);
         } catch (error) {
           let recovered: TeamTask | null;
           try {
@@ -84,8 +95,15 @@ export class TaskBoardCommandFacade {
             throw new TaskBoardCreateOutcomeUnknownError(error, reconciliationError);
           }
           if (recovered) {
-            assertMatchingTask(recovered, record.commandId, payload);
-            return makeStoredResult(recovered, true);
+            try {
+              const reconciled = await reconcileDestination(command.destination, record, payload);
+              return makeStoredResult(reconciled, true);
+            } catch (reconciliationError) {
+              if (reconciliationError instanceof TaskBoardCreateDestinationConflictError) {
+                throw reconciliationError;
+              }
+              throw new TaskBoardCreateOutcomeUnknownError(error, reconciliationError);
+            }
           }
           throw error;
         }
@@ -114,9 +132,19 @@ class TaskBoardCreateOutcomeUnknownError extends Error {
   }
 }
 
+class TaskBoardCreateDestinationConflictError extends Error {
+  constructor(readonly destinationError: unknown) {
+    super('Task creation conflicts with an existing destination task');
+    this.name = 'TaskBoardCreateDestinationConflictError';
+  }
+}
+
 function classifyCreateTaskError(error: unknown): { failureKind: ApplicationCommandFailureKind } {
   if (error instanceof TaskBoardCreateOutcomeUnknownError) {
     return { failureKind: ApplicationCommandFailureKind.UnknownAfterTimeout };
+  }
+  if (error instanceof TaskBoardCreateDestinationConflictError) {
+    return { failureKind: ApplicationCommandFailureKind.Terminal };
   }
   if (isTerminalCreateTaskError(error)) {
     return { failureKind: ApplicationCommandFailureKind.Terminal };
@@ -128,26 +156,119 @@ function isTerminalCreateTaskError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return (
     message === 'Missing subject' ||
+    message.startsWith('Task creation command conflict:') ||
     message.startsWith('Circular dependency:') ||
     message.startsWith('Task not found:') ||
     message.includes('task owner')
   );
 }
 
-function assertMatchingTask(task: TeamTask, expectedId: string, payload: JsonObject): void {
-  if (task.id !== expectedId) {
-    throw new Error(`Task command destination id conflict: ${task.id}`);
+async function reconcileDestination(
+  destination: TaskBoardCreateTaskDestination,
+  record: {
+    namespace: string;
+    scopeKey: string;
+    operation: string;
+    commandId: string;
+    payloadHash: string;
+  },
+  payload: JsonObject
+): Promise<TeamTask> {
+  let task: TeamTask | null;
+  try {
+    task = await destination.reconcile(makeDestinationInput(record, payload));
+  } catch (error) {
+    if (isDestinationConflictError(error)) {
+      throw new TaskBoardCreateDestinationConflictError(error);
+    }
+    throw error;
   }
-  if (typeof payload.subject !== 'string' || task.subject !== payload.subject.trim()) {
-    throw new Error(`Task command destination payload conflict: ${task.id}`);
+  if (!task) {
+    throw new Error(`Task disappeared during command reconciliation: ${record.commandId}`);
   }
+  assertMatchingTask(task, record);
+  return task;
+}
+
+function makeDestinationInput(
+  record: {
+    namespace: string;
+    scopeKey: string;
+    operation: string;
+    commandId: string;
+    payloadHash: string;
+  },
+  payload: JsonObject
+): Record<string, unknown> {
+  return {
+    ...payload,
+    id: record.commandId,
+    creationCommand: {
+      namespace: record.namespace,
+      scopeKey: record.scopeKey,
+      operation: record.operation,
+      commandId: record.commandId,
+      payloadHash: record.payloadHash,
+    },
+  };
+}
+
+function assertMatchingTask(
+  task: TeamTask,
+  expected: {
+    namespace: string;
+    scopeKey: string;
+    operation: string;
+    commandId: string;
+    payloadHash: string;
+  }
+): void {
+  const creationCommand = (
+    task as TeamTask & {
+      creationCommand?: {
+        namespace?: unknown;
+        scopeKey?: unknown;
+        operation?: unknown;
+        commandId?: unknown;
+        payloadHash?: unknown;
+      };
+    }
+  ).creationCommand;
+  if (task.id !== expected.commandId) {
+    throw new TaskBoardCreateDestinationConflictError(
+      new Error(`Task command destination id conflict: ${task.id}`)
+    );
+  }
+  if (
+    !creationCommand ||
+    creationCommand.namespace !== expected.namespace ||
+    creationCommand.scopeKey !== expected.scopeKey ||
+    creationCommand.operation !== expected.operation ||
+    creationCommand.commandId !== expected.commandId ||
+    creationCommand.payloadHash !== expected.payloadHash
+  ) {
+    throw new TaskBoardCreateDestinationConflictError(
+      new Error(`Task command destination provenance conflict: ${task.id}`)
+    );
+  }
+}
+
+function isDestinationConflictError(error: unknown): boolean {
+  return error instanceof Error && error.message.startsWith('Task creation command conflict:');
 }
 
 function makeStoredResult(task: TeamTask, created: boolean): JsonObject {
   return {
-    task: toJsonValue(task),
+    task: toJsonValue(toExternalTask(task)),
     created,
   };
+}
+
+function toExternalTask(task: TeamTask): TeamTask {
+  const { creationCommand: _creationCommand, ...externalTask } = task as TeamTask & {
+    creationCommand?: unknown;
+  };
+  return externalTask;
 }
 
 function toJsonValue(value: unknown): ApplicationCommandJsonValue {

@@ -77,6 +77,22 @@ function normalizeTaskReviewState(value) {
   return reviewStateHelpers.normalizeReviewState(value);
 }
 
+function normalizeCreationCommand(value) {
+  if (value == null) return undefined;
+  if (!value || typeof value !== 'object') {
+    throw new Error('Task creation command conflict: invalid provenance');
+  }
+  const namespace = typeof value.namespace === 'string' ? value.namespace.trim() : '';
+  const scopeKey = typeof value.scopeKey === 'string' ? value.scopeKey.trim() : '';
+  const operation = typeof value.operation === 'string' ? value.operation.trim() : '';
+  const commandId = typeof value.commandId === 'string' ? value.commandId.trim() : '';
+  const payloadHash = typeof value.payloadHash === 'string' ? value.payloadHash.trim() : '';
+  if (!namespace || !scopeKey || !operation || !commandId || !payloadHash) {
+    throw new Error('Task creation command conflict: incomplete provenance');
+  }
+  return { namespace, scopeKey, operation, commandId, payloadHash };
+}
+
 function listTaskRows(paths, options = {}) {
   ensureDir(paths.tasksDir);
   const entries = fs.readdirSync(paths.tasksDir);
@@ -225,7 +241,7 @@ function normalizeStatus(status) {
   return TASK_STATUSES.has(normalized) ? normalized : null;
 }
 
-function parseRelationshipList(paths, value) {
+function parseRelationshipList(paths, value, options = {}) {
   const rawValues = Array.isArray(value)
     ? value
     : typeof value === 'string'
@@ -235,7 +251,7 @@ function parseRelationshipList(paths, value) {
           .filter(Boolean)
       : [];
 
-  return rawValues.map((entry) => resolveTaskRef(paths, entry));
+  return rawValues.map((entry) => resolveTaskRef(paths, entry, options));
 }
 
 function normalizeTaskRefs(taskRefs) {
@@ -328,6 +344,12 @@ function createTask(paths, input = {}) {
   if (fs.existsSync(getTaskPath(paths, canonicalId))) {
     throw new Error(`Task already exists: ${canonicalId}`);
   }
+  const creationCommand = input.creationCommand
+    ? normalizeCreationCommand(input.creationCommand)
+    : undefined;
+  if (creationCommand && creationCommand.commandId !== canonicalId) {
+    throw new Error('Task creation command conflict: command id does not match task id');
+  }
 
   const blockedByIds = parseRelationshipList(paths, input['blocked-by'] ?? input.blockedBy);
   const relatedIds = parseRelationshipList(paths, input.related);
@@ -412,6 +434,7 @@ function createTask(paths, input = {}) {
     ...(input.sourceMessage && typeof input.sourceMessage === 'object'
       ? { sourceMessage: input.sourceMessage }
       : {}),
+    ...(creationCommand ? { creationCommand } : {}),
   });
 
   if (!task.subject) {
@@ -441,6 +464,78 @@ function createTask(paths, input = {}) {
   }
 
   return task;
+}
+
+function reconcileTaskCreation(paths, input = {}) {
+  const taskId = String(input.id || '').trim();
+  if (!taskId) {
+    throw new Error('Task creation command conflict: missing task id');
+  }
+  const expectedCommand = normalizeCreationCommand(input.creationCommand);
+  if (!expectedCommand || expectedCommand.commandId !== taskId) {
+    throw new Error('Task creation command conflict: command id does not match task id');
+  }
+
+  const task = readTask(paths, taskId, { includeDeleted: true });
+  const existingCommand = normalizeCreationCommand(task.creationCommand);
+  const blockedByIds = Array.isArray(task.blockedBy) ? task.blockedBy.map(String) : [];
+  const relatedIds = Array.isArray(task.related) ? task.related.map(String) : [];
+
+  if (existingCommand) {
+    if (
+      existingCommand.namespace !== expectedCommand.namespace ||
+      existingCommand.scopeKey !== expectedCommand.scopeKey ||
+      existingCommand.operation !== expectedCommand.operation ||
+      existingCommand.commandId !== expectedCommand.commandId ||
+      existingCommand.payloadHash !== expectedCommand.payloadHash
+    ) {
+      throw new Error(`Task creation command conflict: ${taskId}`);
+    }
+  } else {
+    assertLegacyTaskMatchesCreationInput(task, input);
+  }
+
+  ensureTaskCreationBacklinks(paths, taskId, blockedByIds, relatedIds);
+
+  const reconciled = readTask(paths, taskId, { includeDeleted: true });
+  if (!existingCommand) {
+    reconciled.creationCommand = expectedCommand;
+    writeTask(paths, reconciled);
+  }
+  return readTask(paths, taskId, { includeDeleted: true });
+}
+
+function ensureTaskCreationBacklinks(paths, taskId, blockedByIds, relatedIds) {
+  for (const dependencyId of blockedByIds) {
+    const dependency = readTask(paths, dependencyId, { includeDeleted: true });
+    const blocks = Array.isArray(dependency.blocks) ? dependency.blocks : [];
+    if (!blocks.includes(taskId)) {
+      dependency.blocks = [...blocks, taskId];
+      dependency.updatedAt = nowIso();
+      writeTask(paths, dependency);
+    }
+  }
+  for (const relatedId of relatedIds) {
+    const related = readTask(paths, relatedId, { includeDeleted: true });
+    const relatedIds = Array.isArray(related.related) ? related.related : [];
+    if (!relatedIds.includes(taskId)) {
+      related.related = [...relatedIds, taskId];
+      related.updatedAt = nowIso();
+      writeTask(paths, related);
+    }
+  }
+}
+
+function assertLegacyTaskMatchesCreationInput(task, input) {
+  const expectedCreatedBy =
+    typeof input.from === 'string' && input.from.trim()
+      ? input.from.trim()
+      : typeof input.createdBy === 'string' && input.createdBy.trim()
+        ? input.createdBy.trim()
+        : undefined;
+  if (task.createdBy !== expectedCreatedBy) {
+    throw new Error(`Task creation command conflict: legacy task ${task.id} does not match payload`);
+  }
 }
 
 function updateTask(paths, taskRef, updater, options = {}) {
@@ -896,6 +991,7 @@ module.exports = {
   listTaskRows,
   listTasks,
   readTask,
+  reconcileTaskCreation,
   removeTaskAttachment,
   resolveTaskRef,
   setNeedsClarification,
