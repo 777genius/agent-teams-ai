@@ -156,23 +156,24 @@ export function createInMemoryProviderProbeCachePort({
           if (!inFlight) {
             const promise: Promise<ProviderProbeAttempt> = Promise.resolve()
               .then(create)
+              .then<ProviderProbeAttempt>((publication) => {
+                const result = publication.result
+                  ? cloneProviderProbeResult(publication.result)
+                  : null;
+                if (stateByCacheKey.get(cacheKey) === state) {
+                  state.cached =
+                    publication.cacheable && result
+                      ? {
+                          cacheKey,
+                          cachedAtMs: now(),
+                          result: cloneProviderProbeResult(result),
+                        }
+                      : null;
+                }
+                return { result };
+              })
               .then<ProviderProbeAttempt, ProviderProbeAttempt>(
-                (publication) => {
-                  const result = publication.result
-                    ? cloneProviderProbeResult(publication.result)
-                    : null;
-                  if (stateByCacheKey.get(cacheKey) === state) {
-                    state.cached =
-                      publication.cacheable && result
-                        ? {
-                            cacheKey,
-                            cachedAtMs: now(),
-                            result: cloneProviderProbeResult(result),
-                          }
-                        : null;
-                  }
-                  return { result };
-                },
+                (attempt) => attempt,
                 (error: unknown) => ({ error })
               )
               .then((attempt) => {

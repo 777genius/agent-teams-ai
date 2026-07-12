@@ -516,6 +516,39 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     });
   });
 
+  it('does not pin a failed clone of a future probe result field', async () => {
+    const cache = createInMemoryProviderProbeCachePort();
+    const create = vi
+      .fn<() => Promise<ProviderProbePublication>>()
+      .mockResolvedValueOnce({
+        result: {
+          claudePath: '/uncloneable/claude',
+          authSource: 'none',
+          runtimeFacts: { format: () => 'future field' },
+        },
+        cacheable: true,
+      })
+      .mockResolvedValueOnce({
+        result: { claudePath: '/retry/claude', authSource: 'none' },
+        cacheable: true,
+      });
+    const first = cache.getOrCreate('probe-key', create);
+    const second = cache.getOrCreate('probe-key', create);
+
+    const failedAttempts = await Promise.allSettled([first, second]);
+
+    expect(failedAttempts.map((attempt) => attempt.status)).toEqual(['rejected', 'rejected']);
+    expect(create).toHaveBeenCalledOnce();
+    await expect(cache.getOrCreate('probe-key', create)).resolves.toEqual({
+      claudePath: '/retry/claude',
+      authSource: 'none',
+    });
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(cache.get('probe-key')).toMatchObject({
+      result: { claudePath: '/retry/claude', authSource: 'none' },
+    });
+  });
+
   it('shares rejected probe attempts and permits a later retry', async () => {
     const cache = createInMemoryProviderProbeCachePort();
     const rejectedAttempt = deferredPublication();
