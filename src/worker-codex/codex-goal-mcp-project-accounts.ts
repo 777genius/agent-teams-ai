@@ -8,11 +8,14 @@ export async function projectControlDefaultAccountNames(input: {
 }): Promise<readonly string[]> {
   if (!input.authRootDir) return input.requestedAccounts;
   const allowed = new Set(input.allowedAccountIds);
+  if (
+    allowed.size > 0 &&
+    input.requestedAccounts.some((account) => !allowed.has(account))
+  ) {
+    return input.requestedAccounts;
+  }
   const slots = await listCodexGoalAccountStatuses({
     authRootDir: input.authRootDir,
-    ...(input.requestedAccounts.length > 0
-      ? { accounts: input.requestedAccounts }
-      : {}),
     recheckDueCapacity: true,
   });
   const capacityAllowed = slots.filter(capacityAllowsProjectSelection);
@@ -23,11 +26,13 @@ export async function projectControlDefaultAccountNames(input: {
     )
     .map((slot) => slot.name);
   if (readyAccounts.length > 0) return readyAccounts;
-  const allowedByCapacity = new Set(capacityAllowed.map((slot) => slot.name));
+  const blockedByCapacity = new Set(
+    slots
+      .filter((slot) => !capacityAllowsProjectSelection(slot))
+      .map((slot) => slot.name),
+  );
   return input.requestedAccounts.filter(
-    (account) =>
-      allowedByCapacity.has(account) &&
-      (allowed.size === 0 || allowed.has(account)),
+    (account) => !blockedByCapacity.has(account),
   );
 }
 

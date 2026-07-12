@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { codexAccountCapacityStore } from "../application/codex-account-capacity-store";
 import {
+  projectControlDefaultAccountNames,
   projectControlRefillAccountNames,
   rotateProjectControlAccountNames,
 } from "../codex-goal-mcp-project-accounts";
@@ -76,6 +77,54 @@ describe("project-control refill account rotation", () => {
           allowedAccountIds: ["account-a", "account-b"],
         }),
       ).resolves.toEqual(["account-a"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("excludes durable quota-blocked accounts from the discovered default pool", async () => {
+    const root = await mkdtemp(join(tmpdir(), "project-default-capacity-"));
+    const authRootDir = join(root, "auth");
+    try {
+      await Promise.all([
+        writeFakeAuth(authRootDir, "account-a"),
+        writeFakeAuth(authRootDir, "account-b"),
+      ]);
+      codexAccountCapacityStore(authRootDir).observe({
+        accountId: "account-b",
+        observedAt: new Date(),
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: new Date(Date.now() + 60 * 60_000),
+        },
+      });
+
+      await expect(
+        projectControlDefaultAccountNames({
+          authRootDir,
+          requestedAccounts: ["account-a"],
+          allowedAccountIds: ["account-a", "account-b"],
+        }),
+      ).resolves.toEqual(["account-a"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves out-of-scope requests for project policy validation", async () => {
+    const root = await mkdtemp(join(tmpdir(), "project-default-scope-"));
+    const authRootDir = join(root, "auth");
+    try {
+      await writeFakeAuth(authRootDir, "account-a");
+
+      await expect(
+        projectControlDefaultAccountNames({
+          authRootDir,
+          requestedAccounts: ["account-b"],
+          allowedAccountIds: ["account-a"],
+        }),
+      ).resolves.toEqual(["account-b"]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -766,6 +766,7 @@ describe("AccountCapacityAwareWorker quota rechecks", () => {
       worker: inner,
       accountCapacityStore: store,
       accountId: "account-a",
+      requireCapacityRecheckWhenDue: true,
       clock,
     });
 
@@ -786,6 +787,7 @@ describe("AccountCapacityAwareWorker quota rechecks", () => {
       worker: inner,
       accountCapacityStore: store,
       accountId: "account-a",
+      requireCapacityRecheckWhenDue: true,
       clock,
     });
 

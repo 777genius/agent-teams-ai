@@ -18,6 +18,7 @@ export type JsonRpcLineClientOptions = {
   readonly env: Readonly<Record<string, string>>;
   readonly startupTimeoutMs?: number;
   readonly requestTimeoutMs?: number;
+  readonly spawnProcess?: typeof spawn;
 };
 
 export const DEFAULT_CODEX_APP_SERVER_LAUNCH_MIN_INTERVAL_MS = 10_000;
@@ -42,14 +43,19 @@ export class JsonRpcLineClient implements CodexAppServerClientPort {
   constructor(private readonly options: JsonRpcLineClientOptions) {}
 
   async start(): Promise<void> {
-    this.child = spawn(this.options.command, [...this.options.args], {
-      cwd: this.options.cwd,
-      env: this.options.env,
-      stdio: ["pipe", "pipe", "pipe"],
-    });
+    this.child = (this.options.spawnProcess ?? spawn)(
+      this.options.command,
+      [...this.options.args],
+      {
+        cwd: this.options.cwd,
+        env: this.options.env,
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    );
     this.child.stdout.setEncoding("utf8");
     this.child.stderr.setEncoding("utf8");
     this.child.stdout.on("data", (chunk) => this.onStdout(String(chunk)));
+    this.child.stdin.on("error", (error) => this.rejectAll(error));
     this.child.on("exit", (code, signal) => {
       this.rejectAll(new Error(`json_rpc_process_exited:${code ?? signal}`));
     });
@@ -84,6 +90,14 @@ export class JsonRpcLineClient implements CodexAppServerClientPort {
     readonly timeoutMs?: number;
   }): Promise<unknown> {
     if (!this.child) throw new Error("json_rpc_process_not_started");
+    const child = this.child;
+    if (
+      child.stdin.destroyed ||
+      child.stdin.writableEnded ||
+      !child.stdin.writable
+    ) {
+      return Promise.reject(new Error("json_rpc_stdin_unavailable"));
+    }
     const id = this.nextId;
     this.nextId += 1;
     return new Promise((resolve, reject) => {
@@ -92,13 +106,20 @@ export class JsonRpcLineClient implements CodexAppServerClientPort {
         reject(new Error(`json_rpc_request_timeout:${input.method}`));
       }, input.timeoutMs ?? this.options.requestTimeoutMs ?? 30_000);
       this.pending.set(id, { resolve, reject, timer });
-      this.child!.stdin.write(
-        `${JSON.stringify({
-          id,
-          method: input.method,
-          params: input.params ?? {},
-        })}\n`,
-      );
+      try {
+        child.stdin.write(
+          `${JSON.stringify({
+            id,
+            method: input.method,
+            params: input.params ?? {},
+          })}\n`,
+          (error) => {
+            if (error) this.rejectPending(id, error);
+          },
+        );
+      } catch (error) {
+        this.rejectPending(id, toError(error));
+      }
     });
   }
 
@@ -156,12 +177,20 @@ export class JsonRpcLineClient implements CodexAppServerClientPort {
   }
 
   private rejectAll(error: Error): void {
-    for (const [id, pending] of this.pending.entries()) {
-      this.pending.delete(id);
-      clearTimeout(pending.timer);
-      pending.reject(error);
-    }
+    for (const id of this.pending.keys()) this.rejectPending(id, error);
   }
+
+  private rejectPending(id: number, error: Error): void {
+    const pending = this.pending.get(id);
+    if (!pending) return;
+    this.pending.delete(id);
+    clearTimeout(pending.timer);
+    pending.reject(error);
+  }
+}
+
+function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
 }
 
 function waitForChildExit(
