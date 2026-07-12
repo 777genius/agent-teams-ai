@@ -219,7 +219,53 @@ export function parseCodexGoalProjectAccessScope(
     ...(value.allowForcePush === undefined
       ? {}
       : { allowForcePush: booleanValue(value.allowForcePush, `${fieldName}.allowForcePush`) }),
+    ...(value.preStartAdmission === undefined
+      ? {}
+      : {
+          preStartAdmission: parseProjectPreStartAdmissionScope(
+            value.preStartAdmission,
+            `${fieldName}.preStartAdmission`,
+          ),
+        }),
   };
+}
+
+function parseProjectPreStartAdmissionScope(
+  value: unknown,
+  fieldName: string,
+): NonNullable<ProjectAccessScope["preStartAdmission"]> {
+  if (!isRecord(value)) throw new Error(`${fieldName}_invalid`);
+  if (value.mode !== "serial") throw new Error(`${fieldName}.mode_invalid`);
+  return {
+    required: booleanValue(value.required, `${fieldName}.required`),
+    mode: "serial",
+    validatorBundle: parseProjectPreStartAdmissionValidators(
+      value.validatorBundle,
+      `${fieldName}.validatorBundle`,
+    ),
+  };
+}
+
+function parseProjectPreStartAdmissionValidators(
+  value: unknown,
+  fieldName: string,
+): NonNullable<ProjectAccessScope["preStartAdmission"]>["validatorBundle"] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(`${fieldName}_invalid`);
+  }
+  const validators = value.map((entry, index) => {
+    if (!isRecord(entry)) throw new Error(`${fieldName}.${index}_invalid`);
+    const path = requiredString(entry.path, `${fieldName}.${index}.path`);
+    const sha256 = requiredString(entry.sha256, `${fieldName}.${index}.sha256`);
+    if (!/^[0-9a-f]{64}$/.test(sha256)) {
+      throw new Error(`${fieldName}.${index}.sha256_invalid`);
+    }
+    return { path, sha256 };
+  });
+  if (new Set(validators.map(({ path }) => path)).size !== validators.length) {
+    throw new Error(`${fieldName}_duplicate_path`);
+  }
+  return validators;
 }
 
 function parseCommitIdentity(

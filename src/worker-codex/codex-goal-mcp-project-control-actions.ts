@@ -31,6 +31,10 @@ import {
   assertReadablePrompt,
 } from "./application/project-control/codex-goal-project-refill";
 import {
+  assertProjectPreStartAdmissionLaunchBinding,
+  validateStoredProjectPreStartAdmission,
+} from "./application/project-control/codex-goal-project-pre-start-admission";
+import {
   projectAdmissionWorkerRoleArg,
 } from "./application/project-control/codex-goal-project-admission";
 import {
@@ -177,6 +181,10 @@ export async function projectControlStartStoredJobView(
     confirmInstall: booleanValue(args.confirmDependencyBootstrap) === true,
   });
   assertProjectControlDependencyBootstrapReady(dependencyPreflight);
+  await assertProjectPreStartAdmissionLaunchBinding({
+    manifest: loaded.manifest,
+    scope: controller.scope,
+  });
 
   const broker = deps.codexProjectControlBroker({
     registryRootDir: controller.registryRootDir,
@@ -189,6 +197,10 @@ export async function projectControlStartStoredJobView(
     loaded.launch.config.workspacePath,
     controller.scope,
   );
+  await validateStoredProjectPreStartAdmission({
+    manifest: loaded.manifest,
+    scope: controller.scope,
+  });
   const result = await broker.startWorker({
     jobId: loaded.manifest.jobId,
     registryRoot: controller.registryRootDir,

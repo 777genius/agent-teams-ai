@@ -31,6 +31,15 @@ import {
 export const codexGoalJobManifestSchemaVersion = 1;
 export const codexGoalObjectiveMaxChars = 4000;
 
+export type CodexGoalProjectPreStartAdmission = {
+  readonly schemaVersion: 1;
+  readonly contractValidatorPath: string;
+  readonly admissionValidatorPath: string;
+  readonly contractPath: string;
+  readonly statePath: string;
+  readonly receiptPath: string;
+};
+
 export type CodexGoalJobManifest = {
   readonly schemaVersion: typeof codexGoalJobManifestSchemaVersion;
   readonly jobId: string;
@@ -72,6 +81,7 @@ export type CodexGoalJobManifest = {
   readonly cwd?: string;
   readonly logPath?: string;
   readonly outputFormat?: CodexGoalOutputFormat;
+  readonly projectPreStartAdmission?: CodexGoalProjectPreStartAdmission;
 };
 
 export type CodexGoalJobManifestInput = Omit<
@@ -423,6 +433,13 @@ export function parseCodexGoalJobManifest(
     ...(optionalString(value.logPath) === undefined
       ? {}
       : { logPath: optionalString(value.logPath) as string }),
+    ...(value.projectPreStartAdmission === undefined
+      ? {}
+      : {
+          projectPreStartAdmission: parseProjectPreStartAdmissionManifest(
+            value.projectPreStartAdmission,
+          ),
+        }),
     ...(optionalString(value.outputFormat) === undefined
       ? {}
       : {
@@ -430,6 +447,37 @@ export function parseCodexGoalJobManifest(
         }),
   };
   return manifest;
+}
+
+function parseProjectPreStartAdmissionManifest(
+  value: unknown,
+): CodexGoalProjectPreStartAdmission {
+  if (!isRecord(value) || value.schemaVersion !== 1) {
+    throw new Error("codex_goal_job_projectPreStartAdmission_invalid");
+  }
+  return {
+    schemaVersion: 1,
+    contractValidatorPath: requiredString(
+      value.contractValidatorPath,
+      "projectPreStartAdmission.contractValidatorPath",
+    ),
+    admissionValidatorPath: requiredString(
+      value.admissionValidatorPath,
+      "projectPreStartAdmission.admissionValidatorPath",
+    ),
+    contractPath: requiredString(
+      value.contractPath,
+      "projectPreStartAdmission.contractPath",
+    ),
+    statePath: requiredString(
+      value.statePath,
+      "projectPreStartAdmission.statePath",
+    ),
+    receiptPath: requiredString(
+      value.receiptPath,
+      "projectPreStartAdmission.receiptPath",
+    ),
+  };
 }
 
 async function assertCodexGoalJobManifestAccessConsistency(

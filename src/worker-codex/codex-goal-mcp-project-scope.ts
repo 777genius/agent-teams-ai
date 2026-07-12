@@ -37,6 +37,7 @@ const PROJECT_CONTROL_SCOPE_REPAIR_IMMUTABLE_FIELDS = [
   "allowedGitRemotes",
   "allowedAccountIds",
   "allowForcePush",
+  "preStartAdmission",
 ] as const satisfies readonly (keyof ProjectAccessScope)[];
 
 export function projectControlChildScope(

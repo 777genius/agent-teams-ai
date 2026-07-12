@@ -67,6 +67,13 @@ import {
   rollbackProjectRefillPartial,
 } from "./application/project-control/codex-goal-project-refill";
 import {
+  assertProjectPreStartAdmissionLaunchBinding,
+  planProjectPreStartAdmission,
+  prepareProjectPreStartAdmission,
+  removeProjectPreStartAdmissionPaths,
+  validateStoredProjectPreStartAdmission,
+} from "./application/project-control/codex-goal-project-pre-start-admission";
+import {
   jobManifestInputFromArgs,
 } from "./codex-goal-mcp-manifest-args";
 import {
@@ -110,6 +117,9 @@ export async function projectControlCreateCodexGoalJobView(
   }
   if (args.allowDangerFullAccess === true) {
     throw new Error("project_control_child_danger_full_access_denied");
+  }
+  if (controller.scope.preStartAdmission?.required) {
+    throw new Error("project_control_pre_start_admission_refill_required");
   }
 
   const requested = jobManifestInputFromArgs(args as JobCreateMcpArgs);
@@ -249,7 +259,7 @@ export async function projectControlRefillWorkerView(
   const role = projectControlWorkerRole(args.workerRole);
   const accessBoundary =
     requested.accessBoundary ?? AccessBoundary.IsolatedWorkspaceWrite;
-  const createManifest: CodexGoalJobManifestInput = {
+  const baseCreateManifest: CodexGoalJobManifestInput = {
     ...requested,
     accounts,
     tags: uniqueProjectControlStrings([
@@ -266,6 +276,18 @@ export async function projectControlRefillWorkerView(
     networkAccess: requested.networkAccess ?? NetworkAccessMode.Restricted,
     reasoningEffort: requested.reasoningEffort ?? "high",
     serviceTier: requested.serviceTier ?? "default",
+  };
+  const preStartAdmission = planProjectPreStartAdmission({
+    value: args.preStartAdmission,
+    confirmed: booleanValue(args.confirmPreStartAdmission) === true,
+    scope: controller.scope,
+    manifest: baseCreateManifest,
+  });
+  const createManifest: CodexGoalJobManifestInput = {
+    ...baseCreateManifest,
+    ...(preStartAdmission
+      ? { projectPreStartAdmission: preStartAdmission.descriptor }
+      : {}),
   };
   assertProjectControlCreateManifestPaths({
     scope: controller.scope,
@@ -318,6 +340,7 @@ export async function projectControlRefillWorkerView(
   });
   let worktreeCreated = false;
   let promptWritten = false;
+  let admissionCreatedPaths: readonly string[] = [];
   let worktree: ProjectControlOperationResult;
   let createJob: ProjectControlOperationResult;
   let manifest: CodexGoalJobManifest;
@@ -348,6 +371,15 @@ export async function projectControlRefillWorkerView(
       expectedBody: promptBody,
     });
 
+    if (preStartAdmission) {
+      const prepared = await prepareProjectPreStartAdmission({
+        plan: preStartAdmission,
+        manifest: createManifest,
+        scope: controller.scope,
+      });
+      admissionCreatedPaths = prepared.createdPaths;
+    }
+
     const createBroker = deps.codexProjectControlBroker({
       registryRootDir: controller.registryRootDir,
       controller: controller.controller,
@@ -365,6 +397,10 @@ export async function projectControlRefillWorkerView(
     });
     createJob = createResult.result;
     manifest = createResult.manifest;
+    await assertProjectPreStartAdmissionLaunchBinding({
+      manifest,
+      scope: controller.scope,
+    });
     dependencyPreflight = await runDependencyBootstrap({
       workspacePath: manifest.workspacePath,
       jobRootDir: manifest.jobRootDir,
@@ -374,6 +410,7 @@ export async function projectControlRefillWorkerView(
     });
     assertProjectControlDependencyBootstrapReady(dependencyPreflight);
   } catch (error) {
+    await removeProjectPreStartAdmissionPaths(admissionCreatedPaths);
     const rolledBack = await rollbackProjectRefillPartial({
       sourceWorkspacePath,
       workspacePath: createManifest.workspacePath,
@@ -397,6 +434,10 @@ export async function projectControlRefillWorkerView(
   let start: ProjectControlOperationResult | undefined;
   if (booleanValue(args.startWorker) !== false) {
     await assertReadablePrompt({ promptPath: manifest.promptPath });
+    await validateStoredProjectPreStartAdmission({
+      manifest,
+      scope: controller.scope,
+    });
     const launch = await goalLaunchInput(codexGoalJobToArgs(manifest));
     const startBroker = deps.codexProjectControlBroker({
       registryRootDir: controller.registryRootDir,
@@ -409,6 +450,10 @@ export async function projectControlRefillWorkerView(
       launch.config.workspacePath,
       controller.scope,
     );
+    await validateStoredProjectPreStartAdmission({
+      manifest,
+      scope: controller.scope,
+    });
     start = await startBroker.startWorker({
       jobId: manifest.jobId,
       registryRoot: controller.registryRootDir,
@@ -483,6 +528,12 @@ async function projectControlRefillWorkerBoundedView(
     allowDangerFullAccess: false,
     networkAccess: requested.networkAccess ?? NetworkAccessMode.Restricted,
   };
+  planProjectPreStartAdmission({
+    value: args.preStartAdmission,
+    confirmed: booleanValue(args.confirmPreStartAdmission) === true,
+    scope: controller.scope,
+    manifest: createManifest,
+  });
   assertProjectControlCreateManifestPaths({
     scope: controller.scope,
     registryRootDir: controller.registryRootDir,

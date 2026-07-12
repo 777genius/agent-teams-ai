@@ -243,6 +243,11 @@ function projectRefillJobMismatches(
       existing.allowDangerFullAccess,
       expected.allowDangerFullAccess,
     ],
+    [
+      "projectPreStartAdmission",
+      existing.projectPreStartAdmission,
+      expected.projectPreStartAdmission,
+    ],
     ["accounts", existing.accounts, expected.accounts],
     ["projectAccessScope", existing.projectAccessScope, expected.projectAccessScope],
   ];

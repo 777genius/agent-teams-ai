@@ -162,6 +162,8 @@ export type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly overwrite?: boolean;
   readonly promptBody?: string;
   readonly confirmRefill?: boolean;
+  readonly preStartAdmission?: unknown;
+  readonly confirmPreStartAdmission?: boolean;
   readonly confirmRepair?: boolean;
   readonly startWorker?: boolean;
   readonly workerRole?: string;
