@@ -107,13 +107,16 @@ export async function createTeamInnerWithService(
     };
   }
 
+  const stopAllGenerationAtStart = service.stopAllTeamsGeneration;
   const previousLaunchSnapshot =
     await service.configTaskActivityBoundary.readTaskActivityRepairLaunchSnapshot(request.teamName);
+  if (service.stopAllTeamsGeneration !== stopAllGenerationAtStart) {
+    throw new Error('Team launch cancelled by app shutdown');
+  }
   service.configTaskActivityBoundary.repairStaleTaskActivityIntervalsOnce(
     request.teamName,
     previousLaunchSnapshot
   );
-  const stopAllGenerationAtStart = service.stopAllTeamsGeneration;
   assertAppDeterministicBootstrapEnabled();
   if (service.shouldRouteOpenCodeToRuntimeAdapter(request)) {
     return service.createOpenCodeTeamThroughRuntimeAdapter(request, onProgress);

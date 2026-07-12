@@ -34,6 +34,17 @@ function unexpected(): never {
   throw new Error('unexpected deterministic flow call');
 }
 
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve(value: T): void;
+} {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
 function createHost(
   overrides: Partial<TeamProvisioningCreateLaunchOrchestrationServiceHost> = {}
 ): TeamProvisioningCreateLaunchOrchestrationServiceHost {
@@ -107,6 +118,35 @@ describe('TeamProvisioningCreateLaunchOrchestration', () => {
       createRequest,
       onProgress
     );
+    expect(host.provisioningRunByTeam.has('alpha')).toBe(false);
+  });
+
+  it('cancels create when stop-all occurs during the launch snapshot preflight', async () => {
+    const snapshotRead = deferred<null>();
+    const host = createHost({
+      configTaskActivityBoundary: {
+        readTaskActivityRepairLaunchSnapshot: vi.fn(() => snapshotRead.promise),
+        repairStaleTaskActivityIntervalsOnce: vi.fn(),
+      },
+    });
+    const onProgress = vi.fn<(progress: TeamProvisioningProgress) => void>();
+
+    const create = createTeamInnerWithService(host, createRequest, onProgress);
+    await vi.waitFor(() => {
+      expect(
+        host.configTaskActivityBoundary.readTaskActivityRepairLaunchSnapshot
+      ).toHaveBeenCalledWith('alpha');
+    });
+
+    host.stopAllTeamsGeneration += 1;
+    snapshotRead.resolve(null);
+
+    await expect(create).rejects.toThrow('Team launch cancelled by app shutdown');
+    expect(
+      host.configTaskActivityBoundary.repairStaleTaskActivityIntervalsOnce
+    ).not.toHaveBeenCalled();
+    expect(host.shouldRouteOpenCodeToRuntimeAdapter).not.toHaveBeenCalled();
+    expect(host.createOpenCodeTeamThroughRuntimeAdapter).not.toHaveBeenCalled();
     expect(host.provisioningRunByTeam.has('alpha')).toBe(false);
   });
 
