@@ -17,6 +17,17 @@ describe('teamImportPolicy', () => {
     ).toEqual({ name: 'writer', skills: ['research', 'editing'] });
   });
 
+  it('uses YAML semantics and defaults malformed frontmatter safely', () => {
+    expect(
+      parseTeamImportFrontmatter(
+        '---\nname: >-\n  research-writer\nskills:\n  - research # inline comment\n  - editing\n---\nBody'
+      )
+    ).toEqual({ name: 'research-writer', skills: ['research', 'editing'] });
+    expect(parseTeamImportFrontmatter('---\nname: [unterminated\n---\nBody')).toEqual({
+      skills: [],
+    });
+  });
+
   it('rewrites Task calls with a required subject and an explicitly matched owner', () => {
     const rewritten = rewriteClaudeMdForTeamImport(
       'Task(prompt="Write the full draft", subagent_type="writer", description="Draft post")',

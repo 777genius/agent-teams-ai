@@ -1,4 +1,5 @@
 import { parseNumericSuffixName, validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
+import YAML from 'yaml';
 
 import type { TeamImportFolderSnapshot } from '../application/models/TeamImportFolderSnapshot';
 import type { TeamImportPreview, TeamImportWarning } from '@features/team-import/contracts';
@@ -61,57 +62,25 @@ const WINDOWS_RESERVED_TEAM_NAMES = new Set([
   'lpt9',
 ]);
 
-function stripQuotedScalar(value: string): string {
-  const trimmed = value.trim();
-  if (
-    trimmed.length >= 2 &&
-    ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-      (trimmed.startsWith("'") && trimmed.endsWith("'")))
-  ) {
-    return trimmed.slice(1, -1).trim();
-  }
-  return trimmed;
-}
-
 export function parseTeamImportFrontmatter(content: string): ParsedFrontmatter {
   const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(content);
   if (!match) return { skills: [] };
 
-  let name: string | undefined;
-  const skills: string[] = [];
-  let listKey: string | null = null;
-
-  for (const rawLine of match[1].split(/\r?\n/)) {
-    const listItem = /^\s*-\s+(.+?)\s*$/.exec(rawLine);
-    if (listItem && listKey === 'skills') {
-      const skill = stripQuotedScalar(listItem[1]);
-      if (skill) skills.push(skill);
-      continue;
-    }
-
-    const field = /^\s*([A-Za-z0-9_-]+)\s*:\s*(.*?)\s*$/.exec(rawLine);
-    if (!field) {
-      listKey = null;
-      continue;
-    }
-    const key = field[1];
-    const value = field[2];
-    listKey = value ? null : key;
-    if (key === 'name') {
-      name = stripQuotedScalar(value) || undefined;
-    }
-    if (key === 'skills') {
-      const inline = /^\[(.*)\]$/.exec(value);
-      if (inline) {
-        for (const item of inline[1].split(',')) {
-          const skill = stripQuotedScalar(item);
-          if (skill) skills.push(skill);
-        }
-      }
-    }
+  try {
+    const parsed: unknown = YAML.parse(match[1]);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { skills: [] };
+    const fields = parsed as Record<string, unknown>;
+    const name = typeof fields.name === 'string' ? fields.name.trim() || undefined : undefined;
+    const skills = Array.isArray(fields.skills)
+      ? fields.skills
+          .filter((skill): skill is string => typeof skill === 'string')
+          .map((skill) => skill.trim())
+          .filter(Boolean)
+      : [];
+    return { name, skills: [...new Set(skills)] };
+  } catch {
+    return { skills: [] };
   }
-
-  return { name, skills: [...new Set(skills)] };
 }
 
 export function extractTeamImportMarkdownBody(content: string): string {

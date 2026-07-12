@@ -554,7 +554,7 @@ describe('TeamDataService draft metadata', () => {
     expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
     const members = JSON.parse(
       await fs.readFile(path.join(claudeRoot, 'teams', 'draft-team', 'members.meta.json'), 'utf8')
-    ) as { members: Array<{ name: string }> };
+    ) as { members: { name: string }[] };
     expect([['alpha'], ['beta']]).toContainEqual(members.members.map((member) => member.name));
   });
 

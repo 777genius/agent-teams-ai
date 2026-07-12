@@ -26,7 +26,7 @@ describe('team import IPC', () => {
   it('lets main own folder selection instead of forwarding a renderer path', async () => {
     const { handlers, ipcMain } = createIpcHarness();
     const feature: TeamImportFeatureFacade = {
-      chooseFolderAndPreview: vi.fn(async () => null),
+      chooseFolderAndPreview: vi.fn(() => Promise.resolve(null)),
       createDraft: vi.fn(),
     };
     registerTeamImportIpc(ipcMain, feature);
@@ -57,7 +57,7 @@ describe('team import IPC', () => {
     const { handlers, ipcMain } = createIpcHarness();
     const feature: TeamImportFeatureFacade = {
       chooseFolderAndPreview: vi.fn(),
-      createDraft: vi.fn(async (request) => ({ teamName: request.teamName })),
+      createDraft: vi.fn((request) => Promise.resolve({ teamName: request.teamName })),
     };
     registerTeamImportIpc(ipcMain, feature);
 
