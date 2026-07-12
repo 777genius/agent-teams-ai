@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   AccessBoundary,
   NetworkAccessMode,
+  SubscriptionWorkerError,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
   codexGoalAccountSlots,
@@ -627,6 +628,51 @@ describe("codex goal runner", () => {
         .toContain("after");
       expect(await readFile(join(config.jobRootDir, "task-patch.preserved.patch"), "utf8"))
         .toContain("new file");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("records prewarm failure without misclassifying it as unknown", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-goal-prewarm-"));
+    const promptPath = join(root, "prompt.md");
+    const workspacePath = join(root, "workspace");
+    const outputPath = join(root, "job", "task-prewarm.latest-result.json");
+    const config: CodexGoalRunConfig = {
+      jobRootDir: join(root, "job"),
+      authRootDir: join(root, "auth"),
+      workspacePath,
+      promptPath,
+      taskId: "task-prewarm",
+      accounts: codexGoalAccountSlots(["account-a"]),
+      outputPath,
+    };
+
+    try {
+      await mkdir(config.jobRootDir, { recursive: true });
+      await mkdir(workspacePath, { recursive: true });
+      await writeFile(promptPath, "Do a synthetic task.\n");
+      await expect(runCodexGoal(config, {
+        createExecutor: () => ({
+          async run() {
+            throw new SubscriptionWorkerError(
+              "subscription_worker_prewarm_failed",
+              "Worker pool failed to prewarm.",
+            );
+          },
+          async dispose() {},
+        }),
+      })).rejects.toThrow("Worker pool failed to prewarm");
+
+      expect(JSON.parse(await readFile(outputPath, "utf8"))).toMatchObject({
+        status: "failed",
+        reason: "prewarm_failed",
+        blockers: ["prewarm_failed"],
+        nextAction: "recover",
+        details: {
+          errorCode: "subscription_worker_prewarm_failed",
+        },
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

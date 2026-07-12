@@ -11,6 +11,7 @@ import {
   type IntegrationAttempt,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
+  ConfiguredCommitIdentityAdapter,
   LocalConsumedOutputLedgerWriter,
   LocalGitIntegrationAdapter,
   LocalIntegratedOutputLedgerAdapter,
@@ -102,6 +103,74 @@ describe("local project integration adapters", () => {
         patchPath,
       },
     })).resolves.toEqual({ changedFiles: ["src/memory.ts"] });
+  });
+
+  it("accepts a patch only from the exact canonical worker job root", async () => {
+    const fixture = await createGitFixture();
+    const jobsRoot = join(fixture.rootDir, "worker-jobs");
+    const workerJobRoot = join(jobsRoot, "worker-1");
+    const siblingJobRoot = join(jobsRoot, "worker-2");
+    await mkdir(workerJobRoot, { recursive: true });
+    await mkdir(siblingJobRoot, { recursive: true });
+    const patch = await gitOutput(fixture.workspacePath, [
+      "show",
+      "--format=",
+      fixture.workerCommitSha,
+    ]);
+    const approvedPatch = join(workerJobRoot, "worker-output.patch");
+    const siblingPatch = join(siblingJobRoot, "worker-output.patch");
+    await writeFile(approvedPatch, patch);
+    await writeFile(siblingPatch, patch);
+    const adapter = new LocalGitIntegrationAdapter({
+      workerJobRootParent: jobsRoot,
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+      } as IntegrationAttempt,
+      workerOutput: {
+        workerJobId: "worker-1",
+        workspacePath: fixture.workspacePath,
+        patchPath: siblingPatch,
+      },
+    })).rejects.toThrow("local_project_integration_path_outside_root");
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+      } as IntegrationAttempt,
+      workerOutput: {
+        workerJobId: "worker-1",
+        workspacePath: fixture.workspacePath,
+        patchPath: approvedPatch,
+      },
+    })).resolves.toEqual({ changedFiles: ["src/memory.ts"] });
+  });
+
+  it("uses only repository-local identity when scope identity is absent", async () => {
+    const fixture = await createGitFixture();
+    const adapter = new ConfiguredCommitIdentityAdapter(undefined);
+
+    await expect(adapter.approvedIdentity({
+      projectId: "synthetic-project",
+      workspacePath: fixture.workspacePath,
+    })).resolves.toEqual({
+      name: "Test User",
+      email: "test@example.com",
+    });
+  });
+
+  it("fails closed when repository-local identity is absent", async () => {
+    const fixture = await createGitFixture();
+    await git(fixture.workspacePath, ["config", "--local", "--unset", "user.name"]);
+    await git(fixture.workspacePath, ["config", "--local", "--unset", "user.email"]);
+    const adapter = new ConfiguredCommitIdentityAdapter(undefined);
+
+    await expect(adapter.approvedIdentity({
+      projectId: "synthetic-project",
+      workspacePath: fixture.workspacePath,
+    })).rejects.toThrow("project_integration_commit_identity_required");
   });
 
   it("runs declared checks and redacts unsafe output tails", async () => {

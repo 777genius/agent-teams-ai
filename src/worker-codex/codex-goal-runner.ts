@@ -21,6 +21,7 @@ import type {
 } from "@vioxen/subscription-runtime/provider-codex";
 import {
   LaunchPlanStatus,
+  isSubscriptionWorkerError,
   normalizeWorkerReport,
   type RuntimeRecommendedAction,
   type RuntimeResultArtifact,
@@ -301,6 +302,7 @@ export async function runCodexGoal(
     });
     return result;
   } catch (error) {
+    const failure = codexRunnerExceptionFailure(error);
     await resultRecorder.record(await codexExceptionRuntimeResultInput({
       config,
       error,
@@ -308,12 +310,12 @@ export async function runCodexGoal(
     }));
     await progressHeartbeat.write({
       status: "failed",
-      reason: "runner_exception",
+      reason: failure.reason,
     });
     await runtimeEvents.write("runner_exception", {
       level: "error",
-      reason: "runner_exception",
-      safeMessage: error instanceof Error ? error.message : "unknown_error",
+      reason: failure.reason,
+      safeMessage: failure.safeMessage,
     });
     throw error;
   } finally {
@@ -757,6 +759,7 @@ async function codexExceptionRuntimeResultInput(input: {
   readonly error: unknown;
   readonly baseCommit?: string;
 }): Promise<RuntimeResultEnvelopeInput> {
+  const failure = codexRunnerExceptionFailure(input.error);
   const workspace = await changedFilesFromWorkspace(input.config.workspacePath);
   const changedFiles = workspace.changedFiles;
   const artifacts = changedFiles.length === 0
@@ -765,6 +768,9 @@ async function codexExceptionRuntimeResultInput(input: {
   const details = runtimeResultDetails({
     failureDetails: {
       errorName: input.error instanceof Error ? input.error.name : "unknown",
+      ...(failure.errorCode === undefined
+        ? {}
+        : { errorCode: failure.errorCode }),
     },
     ...(input.baseCommit === undefined ? {} : { baseCommit: input.baseCommit }),
   });
@@ -773,21 +779,70 @@ async function codexExceptionRuntimeResultInput(input: {
     provider: "codex",
     runId: input.config.jobId ?? input.config.taskId,
     taskId: input.config.taskId,
-    reason: "runner_exception",
+    reason: failure.reason,
     changedFiles,
     evidence: [
-      "runner threw before returning a safe execution result",
+      failure.evidence,
       ...(workspace.warning ? [workspace.warning] : []),
       ...artifacts.map((artifact) => `patch_preserved:${artifact.path ?? ""}`),
       ...(changedFiles.length > 0 && artifacts.length === 0
         ? ["patch_preserve_unavailable"]
         : []),
     ],
-    blockers: ["runner_exception"],
+    blockers: [failure.reason],
     nextAction: changedFiles.length > 0 ? "preserve_patch" : "recover",
     ...(artifacts.length === 0 ? {} : { artifacts }),
     ...(details === undefined ? {} : { details }),
   };
+}
+
+function codexRunnerExceptionFailure(error: unknown): {
+  readonly reason: string;
+  readonly safeMessage: string;
+  readonly evidence: string;
+  readonly errorCode?: string;
+} {
+  for (const item of errorCauseChain(error)) {
+    if (!isSubscriptionWorkerError(item)) continue;
+    if (item.code === "subscription_worker_prewarm_failed") {
+      return {
+        reason: "prewarm_failed",
+        safeMessage: "Codex provider prewarm failed before task execution.",
+        evidence: "provider prewarm failed before any task attempt",
+        errorCode: item.code,
+      };
+    }
+    if (
+      item.code === "subscription_worker_start_failed" ||
+      item.code === "subscription_worker_start_timeout"
+    ) {
+      return {
+        reason: "provider_start_failed",
+        safeMessage: "Codex provider failed to start before task execution.",
+        evidence: "provider start failed before any task attempt",
+        errorCode: item.code,
+      };
+    }
+  }
+  return {
+    reason: "runner_exception",
+    safeMessage: error instanceof Error ? error.message : "Runner failed.",
+    evidence: "runner threw before returning a safe execution result",
+  };
+}
+
+function errorCauseChain(error: unknown): readonly unknown[] {
+  const chain: unknown[] = [];
+  let current: unknown = error;
+  const seen = new Set<unknown>();
+  while (current !== undefined && current !== null && !seen.has(current)) {
+    chain.push(current);
+    seen.add(current);
+    current = typeof current === "object" && "cause" in current
+      ? (current as { readonly cause?: unknown }).cause
+      : undefined;
+  }
+  return chain;
 }
 
 function runtimeResultDetails(input: {

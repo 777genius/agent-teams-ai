@@ -1,7 +1,14 @@
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFile, realpath } from "node:fs/promises";
-import { isAbsolute, relative, resolve } from "node:path";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+} from "node:path";
 import { promisify } from "node:util";
 
 import { LocalFileWorkspaceLockStore } from "@vioxen/subscription-runtime/store-local-file";
@@ -32,6 +39,7 @@ export type LocalGitIntegrationAdapterOptions = {
   readonly timeoutMs?: number;
   readonly maxBuffer?: number;
   readonly allowedPatchRoots?: readonly string[];
+  readonly workerJobRootParent?: string;
 };
 
 export class LocalGitIntegrationAdapter implements GitPort {
@@ -62,6 +70,7 @@ export class LocalGitIntegrationAdapter implements GitPort {
 
   async applyWorkerOutput(input: {
     readonly workerOutput: {
+      readonly workerJobId?: string;
       readonly commitSha?: string;
       readonly patchPath?: string;
       readonly workspacePath: string;
@@ -79,10 +88,22 @@ export class LocalGitIntegrationAdapter implements GitPort {
         workspacePath,
       );
     } else if (input.workerOutput.patchPath) {
+      const workerJobRoot =
+        this.options.workerJobRootParent === undefined
+          ? []
+          : [
+              workerJobRootPath(
+                this.options.workerJobRootParent,
+                input.workerOutput.workerJobId ?? "",
+              ),
+            ];
       const patchPath = await canonicalPatchPath({
         workspacePath: input.workerOutput.workspacePath,
         path: input.workerOutput.patchPath,
-        allowedPatchRoots: this.options.allowedPatchRoots ?? [],
+        allowedPatchRoots: [
+          ...(this.options.allowedPatchRoots ?? []),
+          ...workerJobRoot,
+        ],
       });
       await this.git(
         ["apply", "--whitespace=nowarn", patchPath],
@@ -230,10 +251,41 @@ export class LocalGitIntegrationAdapter implements GitPort {
 }
 
 export class ConfiguredCommitIdentityAdapter implements CommitIdentityPort {
-  constructor(private readonly identity: CommitIdentity | undefined) {}
+  constructor(
+    private readonly identity: CommitIdentity | undefined,
+    private readonly gitBinaryPath = "git",
+  ) {}
 
-  approvedIdentity(): CommitIdentity {
-    return assertCommitIdentity(this.identity);
+  async approvedIdentity(input: {
+    readonly projectId: string;
+    readonly workspacePath: string;
+  }): Promise<CommitIdentity> {
+    if (this.identity !== undefined) return assertCommitIdentity(this.identity);
+
+    const workspacePath = await canonicalDirectory(input.workspacePath);
+    const [name, email] = await Promise.all([
+      this.localGitConfig(workspacePath, "user.name"),
+      this.localGitConfig(workspacePath, "user.email"),
+    ]);
+    return assertCommitIdentity(
+      name && email ? { name, email } : undefined,
+    );
+  }
+
+  private async localGitConfig(
+    workspacePath: string,
+    key: string,
+  ): Promise<string | undefined> {
+    const result = await runCommand({
+      command: this.gitBinaryPath,
+      args: ["config", "--local", "--get", key],
+      cwd: workspacePath,
+      timeoutMs: 10_000,
+      maxBuffer: 64 * 1024,
+    });
+    if (result.exitCode !== 0) return undefined;
+    const value = result.stdout.trim();
+    return value.length === 0 ? undefined : value;
   }
 }
 
@@ -488,6 +540,24 @@ async function canonicalPatchPath(input: {
   }
 
   throw new Error("local_project_integration_path_outside_root");
+}
+
+function workerJobRootPath(
+  parentPath: string,
+  workerJobId: string,
+): string {
+  if (
+    basename(workerJobId) !== workerJobId ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(workerJobId)
+  ) {
+    throw new Error("local_project_integration_worker_job_id_invalid");
+  }
+  const parent = resolve(parentPath);
+  const root = join(parent, workerJobId);
+  if (dirname(root) !== parent) {
+    throw new Error("local_project_integration_worker_job_root_outside_parent");
+  }
+  return root;
 }
 
 async function checkCwd(

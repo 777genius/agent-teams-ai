@@ -228,6 +228,9 @@ export class FileBackendCodexSafeExecutor {
   async run(
     input: FileBackendCodexSafeExecutorRunInput,
   ): Promise<SafeExecutionRunResult<FileBackendCodexWorkerResult>> {
+    // Provider setup is not a task attempt. A prewarm failure must surface once
+    // instead of consuming the account-rotation retry budget.
+    if (this.options.prewarmOnStart) await this.start();
     const {
       job,
       jobId,

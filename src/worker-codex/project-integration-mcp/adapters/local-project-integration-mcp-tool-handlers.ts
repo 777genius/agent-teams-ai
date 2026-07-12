@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { LocalIntegrationAttemptStore } from "@vioxen/subscription-runtime/store-local-file";
 import {
   LocalGitIntegrationAdapter,
@@ -41,6 +41,7 @@ function localProjectIntegrationDeps(
     store: new LocalIntegrationAttemptStore({ rootDir }),
     git: new LocalGitIntegrationAdapter({
       allowedPatchRoots: controller.scope.workspaceRoots ?? [],
+      workerJobRootParent: dirname(controller.controller.jobRootDir),
     }),
     commitIdentity: new ConfiguredCommitIdentityAdapter(
       controller.scope.commitIdentity,

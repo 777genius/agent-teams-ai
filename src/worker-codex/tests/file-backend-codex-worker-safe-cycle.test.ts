@@ -19,12 +19,13 @@ import {
   InMemoryWorkerAccountCapacityStore,
   InterruptAndContinueWorkerUseCase,
   LaunchPlanStatus,
+  SubscriptionWorkerError,
   WorkerControlService,
   accountCapacityAwareWorkerFactory,
   buildLaunchPlan,
 } from "@vioxen/subscription-runtime/worker-core";
 import { LocalFileWorkerControlInboxStore } from "@vioxen/subscription-runtime/store-local-file";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   CommandPolicyRunner,
   FileBackendCodexSafeExecutor,
@@ -47,6 +48,47 @@ import {
 } from "./file-backend-codex-worker-test-support";
 
 describe("CommandPolicyRunner", () => {
+  it("surfaces prewarm setup failure before consuming task attempts", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-prewarm-"));
+    const workspacePath = await gitWorkspace("codex-safe-prewarm-workspace-");
+    const appServer = new FakeAppServerFactory();
+    const executor = new FileBackendCodexSafeExecutor({
+      stateRootDir: rootDir,
+      workspacePath,
+      prewarmOnStart: true,
+      maxAccountCycles: 5,
+      accounts: [{
+        codexAuthJson: codexAuthJson("prewarm-account"),
+        worker: {
+          providerInstanceId: "codex-prewarm-account",
+          stateRootDir: rootDir,
+          codexBinaryPath: "codex",
+          encryptionKey: new Uint8Array(32).fill(91),
+          appServerProcessFactory: appServer.create,
+        },
+      }],
+    });
+    const failure = new SubscriptionWorkerError(
+      "subscription_worker_prewarm_failed",
+      "Worker pool failed to prewarm.",
+    );
+    const start = vi.spyOn(executor, "start").mockRejectedValue(failure);
+
+    try {
+      await expect(executor.run({
+        taskId: "codex-safe-prewarm-task",
+        prompt: "Do not execute this synthetic task.",
+        controls: { editMode: "allow-edits" },
+      })).rejects.toBe(failure);
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(appServer.prompts).toEqual([]);
+    } finally {
+      await executor.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(workspacePath, { recursive: true, force: true });
+    }
+  });
+
   it("stops dirty unknown safe Codex work by default", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-unknown-"));
     const workspacePath = await gitWorkspace("codex-safe-unknown-workspace-");
