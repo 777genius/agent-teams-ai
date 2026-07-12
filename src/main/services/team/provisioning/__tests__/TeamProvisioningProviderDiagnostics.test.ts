@@ -11,6 +11,7 @@ import {
   runProviderOneShotDiagnostic,
   type TeamProvisioningProbeChild,
   type TeamProvisioningProviderDiagnosticsPorts,
+  validateAgentTeamsMcpRuntime,
 } from '../TeamProvisioningProviderDiagnostics';
 import {
   buildTeamProvisioningProviderDiagnosticsPorts,
@@ -20,9 +21,15 @@ import {
 function createFakePorts(
   overrides: Partial<TeamProvisioningProviderDiagnosticsPorts> = {}
 ): TeamProvisioningProviderDiagnosticsPorts {
+  const execCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['execCli']>();
+  const spawnCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnCli']>();
+  const spawnProbe = vi
+    .fn<TeamProvisioningProviderDiagnosticsPorts['spawnProbe']>()
+    .mockResolvedValue({ exitCode: 0, stdout: 'PONG', stderr: '' });
+
   return {
-    execCli: vi.fn() as unknown as TeamProvisioningProviderDiagnosticsPorts['execCli'],
-    spawnCli: vi.fn() as unknown as TeamProvisioningProviderDiagnosticsPorts['spawnCli'],
+    execCli,
+    spawnCli,
     killProcessTree: vi.fn(),
     isProcessAlive: vi.fn().mockReturnValue(false),
     addTransientProbeProcess: vi.fn(),
@@ -34,7 +41,7 @@ function createFakePorts(
     writeFileUtf8: vi.fn().mockResolvedValue(undefined),
     removeDirectory: vi.fn().mockResolvedValue(undefined),
     tmpdir: vi.fn().mockReturnValue('/tmp'),
-    spawnProbe: vi.fn().mockResolvedValue({ exitCode: 0, stdout: 'PONG', stderr: '' }),
+    spawnProbe,
     getConfiguredCodexCustomProviderModel: vi.fn().mockReturnValue(null),
     isAuthFailureWarning: vi.fn().mockReturnValue(false),
     normalizeApiRetryErrorMessage: vi.fn((text: string) =>
@@ -116,6 +123,120 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
     ).rejects.toThrow(
       'agent-teams MCP preflight failed before team launch. Details: Failed to read generated MCP config /tmp/mcp.json: EACCES'
     );
+  });
+
+  it('preserves a pre-normalized validation error through runtime validation', async () => {
+    const normalizedError =
+      'agent-teams MCP preflight failed before team launch. Details: generated config is invalid';
+    const makeTempDir = vi.fn<TeamProvisioningProviderDiagnosticsPorts['makeTempDir']>();
+    const spawnCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnCli']>();
+    const ports = createFakePorts({
+      readFileUtf8: vi.fn().mockResolvedValue(JSON.stringify({ mcpServers: {} })),
+      normalizeApiRetryErrorMessage: vi.fn(() => normalizedError),
+      makeTempDir,
+      spawnCli,
+    });
+
+    await expect(
+      validateAgentTeamsMcpRuntime({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        mcpConfigPath: '/tmp/mcp.json',
+        ports,
+      })
+    ).rejects.toThrow(normalizedError);
+
+    expect(makeTempDir).not.toHaveBeenCalled();
+    expect(spawnCli).not.toHaveBeenCalled();
+  });
+
+  it('short-circuits MCP validation when cancellation is already requested', async () => {
+    const readFileUtf8 = vi.fn<TeamProvisioningProviderDiagnosticsPorts['readFileUtf8']>();
+    const makeTempDir = vi.fn<TeamProvisioningProviderDiagnosticsPorts['makeTempDir']>();
+    const spawnCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnCli']>();
+    const ports = createFakePorts({ readFileUtf8, makeTempDir, spawnCli });
+
+    await expect(
+      validateAgentTeamsMcpRuntime({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        mcpConfigPath: '/tmp/mcp.json',
+        options: { isCancelled: () => true },
+        ports,
+      })
+    ).rejects.toThrow('agent-teams MCP preflight cancelled by app shutdown');
+
+    expect(readFileUtf8).not.toHaveBeenCalled();
+    expect(makeTempDir).not.toHaveBeenCalled();
+    expect(spawnCli).not.toHaveBeenCalled();
+  });
+
+  it('honors cancellation after launch-spec and fixture async boundaries', async () => {
+    let cancelled = false;
+    const launchSpecMakeTempDir = vi.fn<TeamProvisioningProviderDiagnosticsPorts['makeTempDir']>();
+    const launchSpecSpawnCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnCli']>();
+    const launchSpecPorts = createFakePorts({
+      readFileUtf8: vi.fn().mockImplementation(async () => {
+        cancelled = true;
+        return JSON.stringify({
+          mcpServers: {
+            'agent-teams': { command: 'node', args: ['server.js'] },
+          },
+        });
+      }),
+      makeTempDir: launchSpecMakeTempDir,
+      spawnCli: launchSpecSpawnCli,
+    });
+
+    await expect(
+      validateAgentTeamsMcpRuntime({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        mcpConfigPath: '/tmp/mcp.json',
+        options: { isCancelled: () => cancelled },
+        ports: launchSpecPorts,
+      })
+    ).rejects.toThrow('agent-teams MCP preflight cancelled by app shutdown');
+
+    expect(launchSpecMakeTempDir).not.toHaveBeenCalled();
+    expect(launchSpecSpawnCli).not.toHaveBeenCalled();
+
+    cancelled = false;
+    const fixtureSpawnCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnCli']>();
+    const removeDirectory = vi
+      .fn<TeamProvisioningProviderDiagnosticsPorts['removeDirectory']>()
+      .mockResolvedValue(undefined);
+    const fixturePorts = createFakePorts({
+      readFileUtf8: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          mcpServers: {
+            'agent-teams': { command: 'node', args: ['server.js'] },
+          },
+        })
+      ),
+      writeFileUtf8: vi.fn().mockImplementation(async () => {
+        cancelled = true;
+      }),
+      spawnCli: fixtureSpawnCli,
+      removeDirectory,
+    });
+
+    await expect(
+      validateAgentTeamsMcpRuntime({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        mcpConfigPath: '/tmp/mcp.json',
+        options: { isCancelled: () => cancelled },
+        ports: fixturePorts,
+      })
+    ).rejects.toThrow('agent-teams MCP preflight cancelled by app shutdown');
+
+    expect(fixtureSpawnCli).not.toHaveBeenCalled();
+    expect(removeDirectory).toHaveBeenCalledWith('/tmp/agent-teams-mcp-validate-test');
   });
 
   it('creates the MCP validation fixture through filesystem ports', async () => {

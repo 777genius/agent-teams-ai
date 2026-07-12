@@ -722,8 +722,7 @@ export async function validateAgentTeamsMcpRuntime({
   };
   ports: TeamProvisioningProviderDiagnosticsPorts;
 }): Promise<void> {
-  const launchSpec = await readAgentTeamsMcpLaunchSpec({ mcpConfigPath, ports });
-  const fixture = await createAgentTeamsMcpValidationFixture({ projectPath: cwd, ports });
+  let fixture: AgentTeamsMcpValidationFixture | null = null;
   let child: TeamProvisioningProbeChild | null = null;
   let stdoutBuffer = '';
   let stderrBuffer = '';
@@ -771,6 +770,10 @@ export async function validateAgentTeamsMcpRuntime({
   };
 
   try {
+    throwIfCancelled();
+    const launchSpec = await readAgentTeamsMcpLaunchSpec({ mcpConfigPath, ports });
+    throwIfCancelled();
+    fixture = await createAgentTeamsMcpValidationFixture({ projectPath: cwd, ports });
     throwIfCancelled();
     child = ports.spawnCli(launchSpec.command, launchSpec.args, {
       cwd: launchSpec.cwd ?? cwd,
@@ -946,6 +949,7 @@ export async function validateAgentTeamsMcpRuntime({
     );
     throwIfCancelled();
     await notify('notifications/initialized');
+    throwIfCancelled();
 
     const toolsList = await request<McpToolsListResult>('tools/list', {});
     throwIfCancelled();
@@ -1014,8 +1018,12 @@ export async function validateAgentTeamsMcpRuntime({
       throw new Error('agent-teams MCP returned empty content for lead_briefing');
     }
   } catch (error) {
-    if (error instanceof Error && error.message === cancellationMessage) {
-      throw error;
+    if (
+      cancellationTriggered ||
+      options.isCancelled?.() ||
+      (error instanceof Error && error.message === cancellationMessage)
+    ) {
+      throw getCancellationError();
     }
     const detail = buildCombinedLogs('', stderrBuffer).trim();
     const errorText =
@@ -1056,7 +1064,9 @@ export async function validateAgentTeamsMcpRuntime({
         await waitForChildProcessToExit(child, MCP_PREFLIGHT_SHUTDOWN_GRACE_MS, ports);
       }
     }
-    await ports.removeDirectory(fixture.claudeDir).catch(() => {});
+    if (fixture) {
+      await ports.removeDirectory(fixture.claudeDir).catch(() => {});
+    }
   }
 }
 
