@@ -60,6 +60,7 @@ function workerContract(state = admitted()) {
     supersedes: record.supersedes,
     registryStatus: 'queued',
     jobRoot: '/tmp/hosted-web-contract-test',
+    workspaceRoot: '/tmp/hosted-web-workspace-test',
     promptPath: '/tmp/hosted-web-contract-test/prompt.md',
     ownedPaths: ['docs/hosted-web-phases/START_HERE.md'],
     mandatoryDocs: [
@@ -68,16 +69,18 @@ function workerContract(state = admitted()) {
       'AGENT_CRITICAL_GUARDRAILS.md',
       'docs/hosted-web-phases/START_HERE.md',
       'docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md',
+      'docs/hosted-web-phases/README.md',
+      'docs/hosted-web-phases/EXECUTION_INDEX.json',
       'docs/hosted-web-phases/ORCHESTRATION_GUARDS.md',
-      'docs/hosted-web-phase-0-execution-packet.md',
-      'docs/hosted-web-phases/phase-00/lanes/w1-parity-renderer.md',
+      record.controllerPacket,
+      record.lanePacket,
     ],
     mandatoryScripts: ['scripts/hosted-web/orchestration/validate-worker-admission.mjs'],
     mandatoryFixtures: ['test/architecture/hosted-web/orchestration/fixtures/input-fixture.json'],
     requiredChecks: [{ id: 'focused', cwd: 'test', command: 'node --test focused.mjs' }],
     executionPolicy: {
       mode: 'sandbox-only',
-      sandboxRoot: '/tmp/hosted-web-contract-test/sandbox',
+      sandboxRoot: '/tmp/hosted-web-workspace-test/sandbox',
       forbiddenRealProjects: ['~/dev/projects/ai/claude-runtime'],
     },
   };
@@ -189,13 +192,33 @@ test('atomic refill rejects launch when another worker consumes the configured c
   assert.throws(() => applyAtomicRefill(state, predecessorKey), /refill capacity exhausted: 1\/1/);
 });
 
+test('combined admission accepts the exact Phase 0 and P1.S0 authorities', () => {
+  const requests = [
+    request,
+    {
+      ...request,
+      jobId: 'hosted-web-p1-s0-test',
+      phaseId: 'phase-01',
+      laneId: 'p1-s0',
+      packetRevision: 'phase-01-s0-bootstrap-r1',
+      controllerPacket: 'docs/hosted-web-phases/phase-01/controller-packet.md',
+      lanePacket: 'docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md',
+    },
+  ];
+
+  for (const admissionRequest of requests) {
+    const state = admitInitialWork(createInitialState(), admissionRequest);
+    const contract = workerContract(state);
+    assert.deepEqual(validateWorkerAdmission(contract, state, { checkFilesystem: false }), {
+      ok: true,
+      issues: [],
+    });
+  }
+});
+
 test('combined admission requires exactly one queued record with exact worker identity', () => {
   const state = admitted();
   const contract = workerContract(state);
-  assert.deepEqual(validateWorkerAdmission(contract, state, { checkFilesystem: false }), {
-    ok: true,
-    issues: [],
-  });
 
   const empty = createInitialState();
   const missing = validateWorkerAdmission(contract, empty, { checkFilesystem: false });

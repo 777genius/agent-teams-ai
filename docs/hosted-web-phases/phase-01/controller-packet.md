@@ -3,10 +3,11 @@
 ## Status and authority
 
 - Status: current execution authority for serial `P1.S0` only
-- Proposed packet revision: `phase-01-proposal-r2`
-- Canonical planning base: `3bc0dfa7c00261785c0c752270cb302a9294e751`
+- Worker-start packet revision: `phase-01-s0-bootstrap-r1`
+- Worker-start canonical/base provenance: `42ec333848e29e97c41699b9fed73ed199740e3f`
+- Preserved proposal planning base: `3bc0dfa7c00261785c0c752270cb302a9294e751`
 - Phase 0 accepted freeze commit: `f4fa24aac9615a4ce10632965a2244a2e11a273e`
-- Plan bundle commit / Phase 1 start SHA: not created
+- Phase 1 start SHA: the isolated worker `workspaceRoot` Git HEAD bound as `phaseStartSha`
 - Required decisions: ADR-15, ADR-19, ADR-20, plus the eventual frozen Phase 0 register
 - Explicit authorization: `P1.S0` bootstrap only
 - Authorized producer target: **one serial S0 worker**
@@ -15,6 +16,11 @@
 All identifiers, paths, ownership, commands, thresholds, and pairings after S0 remain proposed until
 serial bootstrap. This controller plan may render one bounded S0 bootstrap contract. It cannot render
 or admit an S1-or-later worker, and S0 cannot edit product source.
+
+The exact worker-start identity is `phaseId: phase-01`, `laneId: p1-s0`, controller
+`docs/hosted-web-phases/phase-01/controller-packet.md`, lane
+`docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md`, and revision
+`phase-01-s0-bootstrap-r1`. Every cross-product with Phase 0 or a later Phase 1 subphase fails closed.
 
 The accepted `P0.D.TARGET_IMAGE` narrowing in the planning base closes that single Phase 0 gate for
 the Phase 0-to-Phase 1 transition. It does not admit an image or composition: Phase 5 retains the exact

@@ -6,24 +6,33 @@ import path from 'node:path';
 
 export const CANONICAL_SHA = '42ec333848e29e97c41699b9fed73ed199740e3f';
 export const FORBIDDEN_REAL_PROJECT = '~/dev/projects/ai/claude-runtime';
-export const AUTHORIZED_PHASE_ID = 'phase-00';
-export const AUTHORIZED_PACKET_REVISIONS = Object.freeze(['phase-00-r2', 'phase-00-r3']);
-export const PHASE_0_CONTROLLER_PACKET = 'docs/hosted-web-phase-0-execution-packet.md';
-export const PHASE_0_LANE_PACKETS = Object.freeze({
-  w1: 'docs/hosted-web-phases/phase-00/lanes/w1-parity-renderer.md',
-  w2: 'docs/hosted-web-phases/phase-00/lanes/w2-provider-runtime.md',
-  w3: 'docs/hosted-web-phases/phase-00/lanes/w3-state-writers-backup.md',
-  w4: 'docs/hosted-web-phases/phase-00/lanes/w4-lease-guard-process.md',
-  w5: 'docs/hosted-web-phases/phase-00/lanes/w5-events-commands-recovery.md',
-  w6: 'docs/hosted-web-phases/phase-00/lanes/w6-auth-proxy-artifacts.md',
+export const PHASE_AUTHORITY_CATALOG = Object.freeze({
+  'phase-00': Object.freeze({
+    controllerPacket: 'docs/hosted-web-phase-0-execution-packet.md',
+    packetRevisions: Object.freeze(['phase-00-r2', 'phase-00-r3']),
+    lanes: Object.freeze({
+      w1: 'docs/hosted-web-phases/phase-00/lanes/w1-parity-renderer.md',
+      w2: 'docs/hosted-web-phases/phase-00/lanes/w2-provider-runtime.md',
+      w3: 'docs/hosted-web-phases/phase-00/lanes/w3-state-writers-backup.md',
+      w4: 'docs/hosted-web-phases/phase-00/lanes/w4-lease-guard-process.md',
+      w5: 'docs/hosted-web-phases/phase-00/lanes/w5-events-commands-recovery.md',
+      w6: 'docs/hosted-web-phases/phase-00/lanes/w6-auth-proxy-artifacts.md',
+    }),
+  }),
+  'phase-01': Object.freeze({
+    controllerPacket: 'docs/hosted-web-phases/phase-01/controller-packet.md',
+    packetRevisions: Object.freeze(['phase-01-s0-bootstrap-r1']),
+    lanes: Object.freeze({
+      'p1-s0': 'docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md',
+    }),
+  }),
 });
 export const REQUIRED_WORKER_DOCS = Object.freeze([
   'AGENTS.md',
-  'CLAUDE.md',
-  'AGENT_CRITICAL_GUARDRAILS.md',
   'docs/hosted-web-phases/START_HERE.md',
   'docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md',
-  'docs/hosted-web-phases/ORCHESTRATION_GUARDS.md',
+  'docs/hosted-web-phases/README.md',
+  'docs/hosted-web-phases/EXECUTION_INDEX.json',
 ]);
 
 const SHA1 = /^[0-9a-f]{40}$/;
@@ -176,6 +185,7 @@ export function validateWorkerStartContract(contract, options = {}) {
     'supersedes',
     'registryStatus',
     'jobRoot',
+    'workspaceRoot',
     'promptPath',
     'ownedPaths',
     'mandatoryDocs',
@@ -193,20 +203,31 @@ export function validateWorkerStartContract(contract, options = {}) {
     issues.push(`canonicalSha:expected:${CANONICAL_SHA}`);
   if (contract.baseSha !== CANONICAL_SHA) issues.push(`baseSha:expected:${CANONICAL_SHA}`);
   validateString(contract.phaseStartSha, SHA1, 'phaseStartSha:invalid', issues);
-  if (!AUTHORIZED_PACKET_REVISIONS.includes(contract.packetRevision)) {
-    issues.push('packetRevision:not_current_phase_0_revision');
-  }
-  if (contract.phaseId !== AUTHORIZED_PHASE_ID) {
+  const phaseAuthority = Object.hasOwn(PHASE_AUTHORITY_CATALOG, contract.phaseId)
+    ? PHASE_AUTHORITY_CATALOG[contract.phaseId]
+    : null;
+  if (!phaseAuthority) {
     issues.push(`phaseId:not_authorized:${String(contract.phaseId)}`);
-  }
-  if (!Object.hasOwn(PHASE_0_LANE_PACKETS, contract.laneId)) {
-    issues.push(`laneId:not_authorized:${String(contract.laneId)}`);
-  }
-  if (contract.controllerPacket !== PHASE_0_CONTROLLER_PACKET) {
-    issues.push(`controllerPacket:not_authoritative:${String(contract.controllerPacket)}`);
-  }
-  if (contract.lanePacket !== PHASE_0_LANE_PACKETS[contract.laneId]) {
-    issues.push(`lanePacket:not_authoritative_for_lane:${String(contract.laneId)}`);
+  } else {
+    if (!phaseAuthority.packetRevisions.includes(contract.packetRevision)) {
+      issues.push(
+        `packetRevision:not_authorized_for_phase:${String(contract.phaseId)}:${String(contract.packetRevision)}`
+      );
+    }
+    if (contract.controllerPacket !== phaseAuthority.controllerPacket) {
+      issues.push(
+        `controllerPacket:not_authoritative_for_phase:${String(contract.phaseId)}:${String(contract.controllerPacket)}`
+      );
+    }
+    if (!Object.hasOwn(phaseAuthority.lanes, contract.laneId)) {
+      issues.push(
+        `laneId:not_authorized_for_phase:${String(contract.phaseId)}:${String(contract.laneId)}`
+      );
+    } else if (contract.lanePacket !== phaseAuthority.lanes[contract.laneId]) {
+      issues.push(
+        `lanePacket:not_authoritative_for_phase_lane:${String(contract.phaseId)}:${String(contract.laneId)}:${String(contract.lanePacket)}`
+      );
+    }
   }
   validateString(contract.inputPatchHash, SHA256, 'inputPatchHash:invalid', issues);
   if (!['implementation', 'review', 'remediation'].includes(contract.reviewKind)) {
@@ -304,39 +325,104 @@ export function validateWorkerStartContract(contract, options = {}) {
 
   const checkFilesystem = options.checkFilesystem !== false;
   if (!path.isAbsolute(contract.jobRoot ?? '')) issues.push('jobRoot:absolute_path_required');
+  if (!path.isAbsolute(contract.workspaceRoot ?? '')) {
+    issues.push('workspaceRoot:absolute_path_required');
+  }
   if (!path.isAbsolute(contract.promptPath ?? '')) issues.push('promptPath:absolute_path_required');
   if (!path.isAbsolute(contract.executionPolicy?.sandboxRoot ?? '')) {
     issues.push('executionPolicy:sandboxRoot_absolute_path_required');
   }
 
-  if (checkFilesystem && path.isAbsolute(contract.jobRoot ?? '')) {
-    const root = existingRealPath(contract.jobRoot, 'jobRoot', issues, 'directory');
-    const prompt = path.isAbsolute(contract.promptPath ?? '')
-      ? existingRealPath(contract.promptPath, 'promptPath', issues, 'file')
+  const absoluteJobRoot = path.isAbsolute(contract.jobRoot ?? '')
+    ? path.resolve(contract.jobRoot)
+    : null;
+  const absoluteWorkspaceRoot = path.isAbsolute(contract.workspaceRoot ?? '')
+    ? path.resolve(contract.workspaceRoot)
+    : null;
+  const absolutePromptPath = path.isAbsolute(contract.promptPath ?? '')
+    ? path.resolve(contract.promptPath)
+    : null;
+  const absoluteSandboxRoot = path.isAbsolute(contract.executionPolicy?.sandboxRoot ?? '')
+    ? path.resolve(contract.executionPolicy.sandboxRoot)
+    : null;
+
+  if (
+    absoluteJobRoot &&
+    absoluteWorkspaceRoot &&
+    (containedBy(absoluteJobRoot, absoluteWorkspaceRoot) ||
+      containedBy(absoluteWorkspaceRoot, absoluteJobRoot))
+  ) {
+    issues.push('roots:jobRoot_workspaceRoot_must_not_overlap');
+  }
+  if (
+    absolutePromptPath &&
+    absoluteWorkspaceRoot &&
+    containedBy(absoluteWorkspaceRoot, absolutePromptPath)
+  ) {
+    issues.push('promptPath:inside_workspaceRoot');
+  }
+  if (
+    absoluteJobRoot &&
+    absoluteSandboxRoot &&
+    (containedBy(absoluteJobRoot, absoluteSandboxRoot) ||
+      containedBy(absoluteSandboxRoot, absoluteJobRoot))
+  ) {
+    issues.push('executionPolicy:sandboxRoot_overlaps_jobRoot');
+  }
+  if (
+    absoluteWorkspaceRoot &&
+    absoluteSandboxRoot &&
+    !containedBy(absoluteWorkspaceRoot, absoluteSandboxRoot)
+  ) {
+    issues.push('executionPolicy:sandboxRoot_outside_workspaceRoot');
+  }
+
+  if (checkFilesystem) {
+    const jobRoot = absoluteJobRoot
+      ? existingRealPath(absoluteJobRoot, 'jobRoot', issues, 'directory')
       : null;
-    const sandbox = path.isAbsolute(contract.executionPolicy?.sandboxRoot ?? '')
-      ? existingRealPath(
-          contract.executionPolicy.sandboxRoot,
-          'executionPolicy:sandboxRoot',
-          issues,
-          'directory'
-        )
+    const workspaceRoot = absoluteWorkspaceRoot
+      ? existingRealPath(absoluteWorkspaceRoot, 'workspaceRoot', issues, 'directory')
+      : null;
+    const prompt = absolutePromptPath
+      ? existingRealPath(absolutePromptPath, 'promptPath', issues, 'file')
+      : null;
+    const sandbox = absoluteSandboxRoot
+      ? existingRealPath(absoluteSandboxRoot, 'executionPolicy:sandboxRoot', issues, 'directory')
       : null;
 
-    if (root && prompt && !containedBy(root, prompt)) issues.push('promptPath:outside_jobRoot');
-    if (root && sandbox && !containedBy(root, sandbox))
-      issues.push('executionPolicy:sandboxRoot_outside_jobRoot');
-    if (root && options.checkGitHead !== false) {
+    if (jobRoot && prompt && !containedBy(jobRoot, prompt)) {
+      issues.push('promptPath:outside_jobRoot');
+    }
+    if (workspaceRoot && prompt && containedBy(workspaceRoot, prompt)) {
+      issues.push('promptPath:inside_workspaceRoot');
+    }
+    if (
+      jobRoot &&
+      workspaceRoot &&
+      (containedBy(jobRoot, workspaceRoot) || containedBy(workspaceRoot, jobRoot))
+    ) {
+      issues.push('roots:jobRoot_workspaceRoot_must_not_overlap');
+    }
+    if (jobRoot && sandbox && (containedBy(jobRoot, sandbox) || containedBy(sandbox, jobRoot))) {
+      issues.push('executionPolicy:sandboxRoot_overlaps_jobRoot');
+    }
+    if (workspaceRoot && sandbox && !containedBy(workspaceRoot, sandbox)) {
+      issues.push('executionPolicy:sandboxRoot_outside_workspaceRoot');
+    }
+    if (workspaceRoot && options.checkGitHead !== false) {
       try {
         const actualHead =
           options.gitHead ??
           execFileSync('git', ['rev-parse', 'HEAD'], {
-            cwd: root,
+            cwd: workspaceRoot,
             encoding: 'utf8',
             stdio: ['ignore', 'pipe', 'pipe'],
           }).trim();
         if (actualHead !== contract.phaseStartSha) {
-          issues.push(`jobRoot:git_head_expected:${contract.phaseStartSha}:actual:${actualHead}`);
+          issues.push(
+            `workspaceRoot:git_head_expected:${contract.phaseStartSha}:actual:${actualHead}`
+          );
         }
       } catch (error) {
         const recoveredHead =
@@ -345,11 +431,11 @@ export function validateWorkerStartContract(contract, options = {}) {
             : null;
         if (recoveredHead && recoveredHead !== contract.phaseStartSha) {
           issues.push(
-            `jobRoot:git_head_expected:${contract.phaseStartSha}:actual:${recoveredHead}`
+            `workspaceRoot:git_head_expected:${contract.phaseStartSha}:actual:${recoveredHead}`
           );
         } else if (!recoveredHead) {
           issues.push(
-            `jobRoot:git_head_unavailable:${error.status ?? error.code ?? error.message}`
+            `workspaceRoot:git_head_unavailable:${error.status ?? error.code ?? error.message}`
           );
         }
       }
@@ -362,27 +448,29 @@ export function validateWorkerStartContract(contract, options = {}) {
     ]) {
       if (!Array.isArray(values)) continue;
       for (const relative of values) {
-        if (!isNormalizedRelativePath(relative)) continue;
+        if (!workspaceRoot || !isNormalizedRelativePath(relative)) continue;
         const resolved = existingRealPath(
-          path.resolve(contract.jobRoot, relative),
+          path.resolve(contract.workspaceRoot, relative),
           label,
           issues,
           'file'
         );
-        if (root && resolved && !containedBy(root, resolved))
+        if (workspaceRoot && resolved && !containedBy(workspaceRoot, resolved))
           issues.push(`${label}:symlink_escape:${relative}`);
       }
     }
     if (Array.isArray(contract.requiredChecks)) {
       for (const check of contract.requiredChecks) {
-        if (!isPlainObject(check) || !isNormalizedRelativePath(check.cwd)) continue;
+        if (!workspaceRoot || !isPlainObject(check) || !isNormalizedRelativePath(check.cwd)) {
+          continue;
+        }
         const resolved = existingRealPath(
-          path.resolve(contract.jobRoot, check.cwd),
+          path.resolve(contract.workspaceRoot, check.cwd),
           'requiredChecks:cwd',
           issues,
           'directory'
         );
-        if (root && resolved && !containedBy(root, resolved))
+        if (workspaceRoot && resolved && !containedBy(workspaceRoot, resolved))
           issues.push(`requiredChecks:cwd_symlink_escape:${check.cwd}`);
       }
     }
@@ -395,7 +483,8 @@ export function validateWorkerStartContract(contract, options = {}) {
       if (typeof denied !== 'string' || denied.length === 0) continue;
       const deniedPath = path.resolve(expandHome(denied, home));
       for (const [label, candidate] of [
-        ['jobRoot', root],
+        ['jobRoot', jobRoot],
+        ['workspaceRoot', workspaceRoot],
         ['promptPath', prompt],
         ['executionPolicy:sandboxRoot', sandbox],
       ]) {
@@ -409,7 +498,8 @@ export function validateWorkerStartContract(contract, options = {}) {
     }
   }
 
-  return { ok: issues.length === 0, issues };
+  const uniqueIssues = [...new Set(issues)];
+  return { ok: uniqueIssues.length === 0, issues: uniqueIssues };
 }
 
 export function validateSha1(value) {

@@ -38,6 +38,7 @@ function validWorkerContract() {
     'utf8'
   )
     .replaceAll('$JOB_ROOT', '/tmp/hosted-web-schema-fixture')
+    .replaceAll('$WORKSPACE_ROOT', '/tmp/hosted-web-schema-workspace')
     .replaceAll('$PHASE_START_SHA', 'a32f509e6d9bd31ba2135940e336729bf90c3d93');
   const contract = JSON.parse(raw);
   contract.workKey = computeWorkKey(contract);
@@ -105,6 +106,16 @@ test('Draft 2020-12 worker-start schema accepts the positive fixture', () => {
     true,
     JSON.stringify(validateWorkerSchema.errors)
   );
+});
+
+test('Draft 2020-12 worker-start schema requires an absolute workspace root', () => {
+  const missing = validWorkerContract();
+  delete missing.workspaceRoot;
+  assert.equal(validateWorkerSchema(missing), false);
+
+  const relative = validWorkerContract();
+  relative.workspaceRoot = 'relative/workspace';
+  assert.equal(validateWorkerSchema(relative), false);
 });
 
 test('Draft 2020-12 worker-start schema rejects every declared drift fixture', () => {

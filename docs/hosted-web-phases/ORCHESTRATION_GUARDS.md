@@ -8,20 +8,47 @@ creating a runtime process. A valid contract binds the worker to:
 
 - canonical provenance/base SHA `42ec333848e29e97c41699b9fed73ed199740e3f` and a separately
   bound `phaseStartSha` that must equal worktree HEAD;
-- the authorized Phase 0 packet revision, active controller packet, and exactly one matching W1-W6
-  lane packet; both packet paths must also occur in `mandatoryDocs`;
+- one exact row in the fail-closed phase authority catalog below, including its controller, lane,
+  and packet revision; both packet paths must also occur in `mandatoryDocs`;
 - one job, worker, phase, lane, review kind, revision, and deterministic `workKey`;
-- one absolute `jobRoot` and a prompt contained below it;
+- one absolute runtime `jobRoot`, a prompt contained below it, and a distinct absolute
+  `workspaceRoot` for the isolated Git worktree;
 - normalized repository-relative owned paths with no globbing or traversal;
-- the six repository/start/evidence/orchestration guard documents plus non-empty exact lists of
-  lane-specific documents, scripts, fixtures, and checks;
-- `sandbox-only` execution below an explicit sandbox root; and
+- the five compact navigation-baseline documents plus non-empty exact lists of lane-specific
+  documents, scripts, fixtures, and checks;
+- `sandbox-only` execution at or below `workspaceRoot`, never below `jobRoot`; and
 - a forbidden-real-project list that includes `~/dev/projects/ai/claude-runtime`.
 
+`jobRoot` owns runtime job material and contains `promptPath`. `workspaceRoot` owns repository reads,
+required-check working directories, and the Git HEAD compared with `phaseStartSha`. The two roots
+must be distinct and non-overlapping, including after symlink resolution. The prompt must not be in
+the workspace. `sandboxRoot` must equal or be contained by `workspaceRoot` and must not overlap
+`jobRoot`. Forbidden-real-project checks cover both the workspace and sandbox (and also reject a job
+or prompt that resolves into a forbidden project).
+
 Missing paths, resolved symlink target type mismatches, symlink escapes, duplicate entries, path
-aliases such as `./x`, wildcard paths, and a prompt or sandbox outside `jobRoot` fail closed. A
-successful gate does not execute the required checks; it proves that the exact commands and inputs
-were admitted.
+aliases such as `./x`, wildcard paths, escaped repository reads, and any root-boundary violation fail
+closed. A successful gate does not execute the required checks; it proves that the exact commands
+and inputs were admitted.
+
+## Fail-closed phase authority catalog
+
+The contract is authorized only when all values come from the same row. Values cannot be combined
+across rows, phases, lanes, or revisions.
+
+| Phase      | Controller packet                                      | Lane ID | Lane packet                                                            | Packet revisions             |
+| ---------- | ------------------------------------------------------ | ------- | ---------------------------------------------------------------------- | ---------------------------- |
+| `phase-00` | `docs/hosted-web-phase-0-execution-packet.md`          | `w1`    | `docs/hosted-web-phases/phase-00/lanes/w1-parity-renderer.md`          | `phase-00-r2`, `phase-00-r3` |
+| `phase-00` | `docs/hosted-web-phase-0-execution-packet.md`          | `w2`    | `docs/hosted-web-phases/phase-00/lanes/w2-provider-runtime.md`         | `phase-00-r2`, `phase-00-r3` |
+| `phase-00` | `docs/hosted-web-phase-0-execution-packet.md`          | `w3`    | `docs/hosted-web-phases/phase-00/lanes/w3-state-writers-backup.md`     | `phase-00-r2`, `phase-00-r3` |
+| `phase-00` | `docs/hosted-web-phase-0-execution-packet.md`          | `w4`    | `docs/hosted-web-phases/phase-00/lanes/w4-lease-guard-process.md`      | `phase-00-r2`, `phase-00-r3` |
+| `phase-00` | `docs/hosted-web-phase-0-execution-packet.md`          | `w5`    | `docs/hosted-web-phases/phase-00/lanes/w5-events-commands-recovery.md` | `phase-00-r2`, `phase-00-r3` |
+| `phase-00` | `docs/hosted-web-phase-0-execution-packet.md`          | `w6`    | `docs/hosted-web-phases/phase-00/lanes/w6-auth-proxy-artifacts.md`     | `phase-00-r2`, `phase-00-r3` |
+| `phase-01` | `docs/hosted-web-phases/phase-01/controller-packet.md` | `p1-s0` | `docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md`      | `phase-01-s0-bootstrap-r1`   |
+
+There is no `P1.S1` row and no implicit authorization for a syntactically valid phase, lane, packet,
+or revision. Adding authority requires an explicit catalog/schema/runtime revision and focused
+positive and cross-product-negative tests.
 
 The launch gate is `validate-worker-admission.mjs`, not either standalone validator. It requires
 exactly one registry record for the contract `workKey`; the record must be `queued`, have no
@@ -73,9 +100,8 @@ refill when capacity is already consumed, preserves the predecessor's `failed` o
 in `supersededFrom`, and leaves input unchanged on failure. A JSON file or in-process helper still
 cannot provide multi-host serialization.
 
-The current Phase 1 controller document is a blocked proposal, not a launch authority. Until the
-Phase 0 freeze and Phase 1 authorization gates materialize a reviewed packet, no Phase 1 worker
-contract or registry admission is valid.
+The Phase 1 controller authorizes only the exact `phase-01` / `p1-s0` bootstrap row above. `P1.S1`
+and later work remain blocked until S0 integration and an explicit router and catalog revision.
 
 ## Separate shared-runtime hardening requirement
 

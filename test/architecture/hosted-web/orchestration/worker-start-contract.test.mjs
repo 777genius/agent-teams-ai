@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
@@ -9,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import {
   CANONICAL_SHA,
   computeWorkKey,
+  PHASE_AUTHORITY_CATALOG,
 } from '../../../../scripts/hosted-web/orchestration/contract-lib.mjs';
 import {
   MAX_MANDATORY_READS_PER_LIST,
@@ -32,18 +34,47 @@ const workerSchema = JSON.parse(
 );
 const validateWorkerSchema = new Ajv2020({ allErrors: true, strict: false }).compile(workerSchema);
 
+function git(cwd, args) {
+  try {
+    return execFileSync('git', args, { cwd, encoding: 'utf8' });
+  } catch (error) {
+    if (error.status === 0 && typeof error.stdout === 'string') return error.stdout;
+    throw error;
+  }
+}
+
+const sourceHead = git(repoRoot, ['rev-parse', 'HEAD']).trim();
+const defaultJobRoot = mkdtempSync(path.join(tmpdir(), 'hosted-web-worker-job-'));
+writeFileSync(path.join(defaultJobRoot, 'worker-prompt.md'), 'bounded worker prompt\n');
+process.on('exit', () => rmSync(defaultJobRoot, { recursive: true, force: true }));
+
 function validContract() {
   const template = JSON.parse(
     readFileSync(templatePath, 'utf8')
-      .replaceAll('$JOB_ROOT', repoRoot)
-      .replaceAll('$PHASE_START_SHA', CANONICAL_SHA)
+      .replaceAll('$JOB_ROOT', defaultJobRoot)
+      .replaceAll('$WORKSPACE_ROOT', repoRoot)
+      .replaceAll('$PHASE_START_SHA', sourceHead)
   );
   template.workKey = computeWorkKey(template);
   return template;
 }
 
+function setAuthority(contract, phaseId, laneId, packetRevision) {
+  const authority = PHASE_AUTHORITY_CATALOG[phaseId];
+  const priorPackets = new Set([contract.controllerPacket, contract.lanePacket]);
+  contract.mandatoryDocs = contract.mandatoryDocs.filter((item) => !priorPackets.has(item));
+  contract.phaseId = phaseId;
+  contract.laneId = laneId;
+  contract.packetRevision = packetRevision;
+  contract.controllerPacket = authority.controllerPacket;
+  contract.lanePacket = authority.lanes[laneId];
+  contract.mandatoryDocs.push(contract.controllerPacket, contract.lanePacket);
+  contract.workKey = computeWorkKey(contract);
+  return contract;
+}
+
 function validate(contract, options = {}) {
-  return validateWorkerStartContract(contract, { gitHead: CANONICAL_SHA, ...options });
+  return validateWorkerStartContract(contract, { gitHead: sourceHead, ...options });
 }
 
 function currentPhaseNavigationIssues(executionIndex, phaseReadme) {
@@ -131,6 +162,27 @@ test('accepts the exact canonical, sandbox-only worker-start contract', () => {
   assert.deepEqual(result, { ok: true, issues: [] });
 });
 
+test('runtime and schema preserve every exact Phase 0 lane and revision authority', () => {
+  const authority = PHASE_AUTHORITY_CATALOG['phase-00'];
+  for (const revision of authority.packetRevisions) {
+    for (const laneId of Object.keys(authority.lanes)) {
+      const contract = setAuthority(validContract(), 'phase-00', laneId, revision);
+      assert.deepEqual(validate(contract), { ok: true, issues: [] }, `${revision}/${laneId}`);
+      assert.equal(
+        validateWorkerSchema(contract),
+        true,
+        `${revision}/${laneId}: ${JSON.stringify(validateWorkerSchema.errors)}`
+      );
+    }
+  }
+});
+
+test('runtime and schema authorize only the exact P1.S0 bootstrap authority', () => {
+  const contract = setAuthority(validContract(), 'phase-01', 'p1-s0', 'phase-01-s0-bootstrap-r1');
+  assert.deepEqual(validate(contract), { ok: true, issues: [] });
+  assert.equal(validateWorkerSchema(contract), true, JSON.stringify(validateWorkerSchema.errors));
+});
+
 test('separates canonical provenance from the contract-bound phase start', () => {
   const contract = validContract();
   contract.canonicalSha = '0'.repeat(40);
@@ -141,7 +193,19 @@ test('separates canonical provenance from the contract-bound phase start', () =>
   assert.ok(result.issues.includes(`canonicalSha:expected:${CANONICAL_SHA}`));
   assert.ok(result.issues.includes(`baseSha:expected:${CANONICAL_SHA}`));
   assert.ok(result.issues.includes('workKey:mismatch'));
-  assert.ok(result.issues.some((issue) => issue.startsWith('jobRoot:git_head_expected:')));
+  assert.ok(result.issues.some((issue) => issue.startsWith('workspaceRoot:git_head_expected:')));
+});
+
+test('requires workspaceRoot as an absolute broker root', () => {
+  for (const workspaceRoot of [undefined, 'relative/workspace']) {
+    const contract = validContract();
+    if (workspaceRoot === undefined) delete contract.workspaceRoot;
+    else contract.workspaceRoot = workspaceRoot;
+    const result = validate(contract, { checkFilesystem: false });
+    assert.equal(result.ok, false);
+    assert.ok(result.issues.includes('workspaceRoot:absolute_path_required'));
+    assert.equal(validateWorkerSchema(contract), false);
+  }
 });
 
 test('rejects missing mandatory inputs and non-exact paths', () => {
@@ -154,14 +218,16 @@ test('rejects missing mandatory inputs and non-exact paths', () => {
   assert.ok(result.issues.includes('ownedPaths:invalid_exact_path:./docs/hosted-web-phases/*.md'));
 });
 
-test('rejects prompt and sandbox paths outside jobRoot', () => {
+test('rejects a prompt in the workspace and a sandbox in the job root', () => {
   const contract = validContract();
-  contract.promptPath = process.execPath;
-  contract.executionPolicy.sandboxRoot = path.parse(repoRoot).root;
+  contract.promptPath = path.join(repoRoot, 'AGENTS.md');
+  contract.executionPolicy.sandboxRoot = defaultJobRoot;
   const result = validate(contract);
   assert.equal(result.ok, false);
   assert.ok(result.issues.includes('promptPath:outside_jobRoot'));
-  assert.ok(result.issues.includes('executionPolicy:sandboxRoot_outside_jobRoot'));
+  assert.ok(result.issues.includes('promptPath:inside_workspaceRoot'));
+  assert.ok(result.issues.includes('executionPolicy:sandboxRoot_overlaps_jobRoot'));
+  assert.ok(result.issues.includes('executionPolicy:sandboxRoot_outside_workspaceRoot'));
 });
 
 test('rejects a weakened sandbox policy or missing forbidden real-project rule', () => {
@@ -183,7 +249,10 @@ test('rejects a job rooted in any explicitly forbidden real project', () => {
   contract.executionPolicy.forbiddenRealProjects.push(repoRoot);
   const result = validate(contract);
   assert.equal(result.ok, false);
-  assert.ok(result.issues.includes(`jobRoot:forbidden_real_project:${repoRoot}`));
+  assert.ok(result.issues.includes(`workspaceRoot:forbidden_real_project:${repoRoot}`));
+  assert.ok(
+    result.issues.includes(`executionPolicy:sandboxRoot:forbidden_real_project:${repoRoot}`)
+  );
 });
 
 test('rejects incomplete mandatory check contracts', () => {
@@ -285,25 +354,96 @@ test('Draft 2020-12 schema enforces bounded exact mandatory reads', () => {
   }
 });
 
-test('rejects the blocked Phase 1 proposal as worker authority', () => {
-  const contract = validContract();
-  contract.phaseId = 'phase-01';
-  contract.packetRevision = 'phase-01-r1';
-  contract.controllerPacket = 'docs/hosted-web-phases/phase-01/controller-packet.md';
-  contract.lanePacket = 'docs/hosted-web-phases/phase-01/packet-inputs.md';
-  contract.workKey = computeWorkKey(contract);
-  const result = validate(contract);
-  assert.equal(result.ok, false);
-  assert.ok(result.issues.includes('phaseId:not_authorized:phase-01'));
-  assert.ok(
-    result.issues.includes(
-      'controllerPacket:not_authoritative:docs/hosted-web-phases/phase-01/controller-packet.md'
-    )
-  );
+test('runtime and schema reject authority cross-products and P1.S1', () => {
+  const p1 = setAuthority(validContract(), 'phase-01', 'p1-s0', 'phase-01-s0-bootstrap-r1');
+  const cases = [
+    {
+      name: 'Phase 1 with Phase 0 controller',
+      mutate(contract) {
+        contract.controllerPacket = PHASE_AUTHORITY_CATALOG['phase-00'].controllerPacket;
+      },
+      runtimeIssue: 'controllerPacket:not_authoritative_for_phase:phase-01:',
+    },
+    {
+      name: 'Phase 1 with Phase 0 lane',
+      mutate(contract) {
+        contract.laneId = 'w1';
+        contract.lanePacket = PHASE_AUTHORITY_CATALOG['phase-00'].lanes.w1;
+      },
+      runtimeIssue: 'laneId:not_authorized_for_phase:phase-01:w1',
+    },
+    {
+      name: 'Phase 1 with Phase 0 revision',
+      mutate(contract) {
+        contract.packetRevision = 'phase-00-r2';
+      },
+      runtimeIssue: 'packetRevision:not_authorized_for_phase:phase-01:phase-00-r2',
+    },
+    {
+      name: 'blocked P1.S1 lane',
+      mutate(contract) {
+        contract.laneId = 'p1-s1';
+        contract.lanePacket = 'docs/hosted-web-phases/phase-01/lanes/p1-s1-foundations.md';
+      },
+      runtimeIssue: 'laneId:not_authorized_for_phase:phase-01:p1-s1',
+    },
+    {
+      name: 'blocked P1.S1 revision',
+      mutate(contract) {
+        contract.packetRevision = 'phase-01-s1-foundations-r1';
+      },
+      runtimeIssue: 'packetRevision:not_authorized_for_phase:phase-01:phase-01-s1-foundations-r1',
+    },
+    {
+      name: 'Phase 0 with Phase 1 controller',
+      base: 'phase-00',
+      mutate(contract) {
+        contract.controllerPacket = PHASE_AUTHORITY_CATALOG['phase-01'].controllerPacket;
+      },
+      runtimeIssue: 'controllerPacket:not_authoritative_for_phase:phase-00:',
+    },
+    {
+      name: 'Phase 0 with Phase 1 lane',
+      base: 'phase-00',
+      mutate(contract) {
+        contract.laneId = 'p1-s0';
+        contract.lanePacket = PHASE_AUTHORITY_CATALOG['phase-01'].lanes['p1-s0'];
+      },
+      runtimeIssue: 'laneId:not_authorized_for_phase:phase-00:p1-s0',
+    },
+    {
+      name: 'Phase 0 with Phase 1 revision',
+      base: 'phase-00',
+      mutate(contract) {
+        contract.packetRevision = 'phase-01-s0-bootstrap-r1';
+      },
+      runtimeIssue: 'packetRevision:not_authorized_for_phase:phase-00:phase-01-s0-bootstrap-r1',
+    },
+  ];
+
+  for (const testCase of cases) {
+    const contract = JSON.parse(
+      JSON.stringify(testCase.base === 'phase-00' ? validContract() : p1)
+    );
+    testCase.mutate(contract);
+    contract.workKey = computeWorkKey(contract);
+    const result = validate(contract, { checkFilesystem: false });
+    assert.equal(result.ok, false, testCase.name);
+    assert.ok(
+      result.issues.some((issue) => issue.startsWith(testCase.runtimeIssue)),
+      `${testCase.name}: ${result.issues.join('\n')}`
+    );
+    assert.equal(validateWorkerSchema(contract), false, testCase.name);
+  }
 });
 
 function temporaryContractFixture() {
   const root = mkdtempSync(path.join(tmpdir(), 'hosted-web-worker-contract-'));
+  const jobRoot = path.join(root, 'job');
+  const workspaceRoot = path.join(root, 'workspace');
+  mkdirSync(jobRoot);
+  mkdirSync(workspaceRoot);
+  writeFileSync(path.join(jobRoot, 'worker-prompt.md'), 'bounded worker prompt\n');
   for (const relativePath of [
     'AGENTS.md',
     'docs/hosted-web-phases/START_HERE.md',
@@ -313,33 +453,104 @@ function temporaryContractFixture() {
     'docs/hosted-web-phase-0-execution-packet.md',
     'docs/hosted-web-phases/phase-00/lanes/w1-parity-renderer.md',
     'docs/research/hosted-web/phase-0/exact-reference.json',
-    'fixtures/prompt.md',
     'fixtures/input.json',
     'fixtures/required-script.mjs',
   ]) {
-    const absolutePath = path.join(root, relativePath);
+    const absolutePath = path.join(workspaceRoot, relativePath);
     mkdirSync(path.dirname(absolutePath), { recursive: true });
     writeFileSync(absolutePath, 'fixture\n');
   }
+  git(workspaceRoot, ['init', '--quiet']);
+  git(workspaceRoot, ['add', '.']);
+  git(workspaceRoot, [
+    '-c',
+    'user.name=Hosted Web Test',
+    '-c',
+    'user.email=hosted-web-test@example.invalid',
+    'commit',
+    '--quiet',
+    '-m',
+    'fixture',
+  ]);
+  const phaseStartSha = git(workspaceRoot, ['rev-parse', 'HEAD']).trim();
   const contract = validContract();
-  contract.jobRoot = root;
-  contract.promptPath = path.join(root, 'fixtures/prompt.md');
+  contract.jobRoot = jobRoot;
+  contract.workspaceRoot = workspaceRoot;
+  contract.promptPath = path.join(jobRoot, 'worker-prompt.md');
+  contract.phaseStartSha = phaseStartSha;
   contract.mandatoryDocs = [
     ...contract.mandatoryDocs.filter((item) => !item.includes('test/architecture/')),
   ];
   contract.mandatoryScripts = ['fixtures/required-script.mjs'];
   contract.mandatoryFixtures = ['fixtures/input.json'];
   contract.requiredChecks = [{ id: 'fixture', cwd: 'fixtures', command: 'node --test check.mjs' }];
-  contract.executionPolicy.sandboxRoot = path.join(root, 'fixtures');
-  return { contract, root };
+  contract.executionPolicy.sandboxRoot = path.join(workspaceRoot, 'fixtures');
+  contract.workKey = computeWorkKey(contract);
+  return { contract, jobRoot, root, workspaceRoot };
 }
 
-test('accepts an exact research file listed by the lane packet', (t) => {
+test('accepts separate runtime job and prompt roots with a Git workspace root', (t) => {
   const { contract, root } = temporaryContractFixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  assert.deepEqual(validateWorkerStartContract(contract), { ok: true, issues: [] });
+});
+
+test('rejects a prompt inside the Git workspace', (t) => {
+  const { contract, root, workspaceRoot } = temporaryContractFixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  contract.promptPath = path.join(workspaceRoot, 'AGENTS.md');
+  const result = validateWorkerStartContract(contract);
+  assert.equal(result.ok, false);
+  assert.ok(result.issues.includes('promptPath:inside_workspaceRoot'));
+});
+
+test('rejects a sandbox rooted in the runtime job directory', (t) => {
+  const { contract, jobRoot, root } = temporaryContractFixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  contract.executionPolicy.sandboxRoot = jobRoot;
+  const result = validateWorkerStartContract(contract);
+  assert.equal(result.ok, false);
+  assert.ok(result.issues.includes('executionPolicy:sandboxRoot_overlaps_jobRoot'));
+  assert.ok(result.issues.includes('executionPolicy:sandboxRoot_outside_workspaceRoot'));
+});
+
+test('rejects overlapping job and workspace roots', (t) => {
+  const { contract, root, workspaceRoot } = temporaryContractFixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  contract.jobRoot = workspaceRoot;
+  contract.promptPath = path.join(workspaceRoot, 'AGENTS.md');
+  const result = validateWorkerStartContract(contract);
+  assert.equal(result.ok, false);
+  assert.ok(result.issues.includes('roots:jobRoot_workspaceRoot_must_not_overlap'));
+});
+
+test('rejects a phase start SHA that differs from workspace Git HEAD', (t) => {
+  const { contract, root } = temporaryContractFixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  contract.phaseStartSha = '0'.repeat(40);
+  contract.workKey = computeWorkKey(contract);
+  const result = validateWorkerStartContract(contract);
+  assert.equal(result.ok, false);
+  assert.ok(result.issues.some((issue) => issue.startsWith('workspaceRoot:git_head_expected:')));
+});
+
+test('rejects a repository mandatory read that escapes the workspace', (t) => {
+  const { contract, root, workspaceRoot } = temporaryContractFixture();
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  writeFileSync(path.join(root, 'outside.json'), '{}\n');
+  symlinkSync('../../outside.json', path.join(workspaceRoot, 'fixtures/read-escape.json'));
+  contract.mandatoryFixtures = ['fixtures/read-escape.json'];
+  const result = validateWorkerStartContract(contract);
+  assert.equal(result.ok, false);
+  assert.ok(result.issues.includes('mandatoryFixtures:symlink_escape:fixtures/read-escape.json'));
+});
+
+test('accepts an exact research file listed by the lane packet', (t) => {
+  const { contract, root, workspaceRoot } = temporaryContractFixture();
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const exactReference = 'docs/research/hosted-web/phase-0/exact-reference.json';
   contract.mandatoryDocs.push(exactReference);
-  writeFileSync(path.join(root, contract.lanePacket), `- \`${exactReference}\`\n`);
+  writeFileSync(path.join(workspaceRoot, contract.lanePacket), `- \`${exactReference}\`\n`);
   const result = validate(contract, { checkGitHead: false });
   assert.deepEqual(result, { ok: true, issues: [] });
 });
@@ -366,10 +577,10 @@ test('rejects an existing directory as a recursive mandatory read', (t) => {
 });
 
 test('rejects a symlink whose resolved target is a directory where a file is mandatory', (t) => {
-  const { contract, root } = temporaryContractFixture();
+  const { contract, root, workspaceRoot } = temporaryContractFixture();
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  mkdirSync(path.join(root, 'fixtures/script-directory'));
-  symlinkSync('script-directory', path.join(root, 'fixtures/script-link'));
+  mkdirSync(path.join(workspaceRoot, 'fixtures/script-directory'));
+  symlinkSync('script-directory', path.join(workspaceRoot, 'fixtures/script-link'));
   contract.mandatoryScripts = ['fixtures/script-link'];
   const result = validate(contract, { checkGitHead: false });
   assert.equal(result.ok, false);
@@ -377,9 +588,9 @@ test('rejects a symlink whose resolved target is a directory where a file is man
 });
 
 test('rejects a symlink whose resolved target is a file where a directory is mandatory', (t) => {
-  const { contract, root } = temporaryContractFixture();
+  const { contract, root, workspaceRoot } = temporaryContractFixture();
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  symlinkSync('required-script.mjs', path.join(root, 'fixtures/check-cwd-link'));
+  symlinkSync('required-script.mjs', path.join(workspaceRoot, 'fixtures/check-cwd-link'));
   contract.requiredChecks[0].cwd = 'fixtures/check-cwd-link';
   const result = validate(contract, { checkGitHead: false });
   assert.equal(result.ok, false);

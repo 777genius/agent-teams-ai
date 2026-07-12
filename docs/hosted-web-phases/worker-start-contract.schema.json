@@ -24,6 +24,7 @@
     "supersedes",
     "registryStatus",
     "jobRoot",
+    "workspaceRoot",
     "promptPath",
     "ownedPaths",
     "mandatoryDocs",
@@ -39,8 +40,15 @@
     "canonicalSha": { "const": "42ec333848e29e97c41699b9fed73ed199740e3f" },
     "baseSha": { "const": "42ec333848e29e97c41699b9fed73ed199740e3f" },
     "phaseStartSha": { "$ref": "#/$defs/sha1" },
-    "packetRevision": { "enum": ["phase-00-r2", "phase-00-r3"] },
-    "controllerPacket": { "const": "docs/hosted-web-phase-0-execution-packet.md" },
+    "packetRevision": {
+      "enum": ["phase-00-r2", "phase-00-r3", "phase-01-s0-bootstrap-r1"]
+    },
+    "controllerPacket": {
+      "enum": [
+        "docs/hosted-web-phase-0-execution-packet.md",
+        "docs/hosted-web-phases/phase-01/controller-packet.md"
+      ]
+    },
     "lanePacket": {
       "enum": [
         "docs/hosted-web-phases/phase-00/lanes/w1-parity-renderer.md",
@@ -48,11 +56,12 @@
         "docs/hosted-web-phases/phase-00/lanes/w3-state-writers-backup.md",
         "docs/hosted-web-phases/phase-00/lanes/w4-lease-guard-process.md",
         "docs/hosted-web-phases/phase-00/lanes/w5-events-commands-recovery.md",
-        "docs/hosted-web-phases/phase-00/lanes/w6-auth-proxy-artifacts.md"
+        "docs/hosted-web-phases/phase-00/lanes/w6-auth-proxy-artifacts.md",
+        "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md"
       ]
     },
-    "phaseId": { "const": "phase-00" },
-    "laneId": { "enum": ["w1", "w2", "w3", "w4", "w5", "w6"] },
+    "phaseId": { "enum": ["phase-00", "phase-01"] },
+    "laneId": { "enum": ["w1", "w2", "w3", "w4", "w5", "w6", "p1-s0"] },
     "inputPatchHash": { "$ref": "#/$defs/sha256" },
     "reviewKind": { "enum": ["implementation", "review", "remediation"] },
     "revision": { "type": "integer", "minimum": 0 },
@@ -61,6 +70,7 @@
     "supersedes": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
     "registryStatus": { "const": "queued" },
     "jobRoot": { "$ref": "#/$defs/absolutePath" },
+    "workspaceRoot": { "$ref": "#/$defs/absolutePath" },
     "promptPath": { "$ref": "#/$defs/absolutePath" },
     "ownedPaths": { "$ref": "#/$defs/nonEmptyPathList" },
     "mandatoryDocs": {
@@ -70,8 +80,7 @@
         { "contains": { "const": "docs/hosted-web-phases/START_HERE.md" } },
         { "contains": { "const": "docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md" } },
         { "contains": { "const": "docs/hosted-web-phases/README.md" } },
-        { "contains": { "const": "docs/hosted-web-phases/EXECUTION_INDEX.json" } },
-        { "contains": { "const": "docs/hosted-web-phase-0-execution-packet.md" } }
+        { "contains": { "const": "docs/hosted-web-phases/EXECUTION_INDEX.json" } }
       ]
     },
     "mandatoryScripts": { "$ref": "#/$defs/boundedReadPathList" },
@@ -109,6 +118,60 @@
     }
   },
   "allOf": [
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "phaseId": { "const": "phase-00" },
+            "packetRevision": { "enum": ["phase-00-r2", "phase-00-r3"] },
+            "controllerPacket": {
+              "const": "docs/hosted-web-phase-0-execution-packet.md"
+            },
+            "laneId": { "enum": ["w1", "w2", "w3", "w4", "w5", "w6"] },
+            "lanePacket": {
+              "enum": [
+                "docs/hosted-web-phases/phase-00/lanes/w1-parity-renderer.md",
+                "docs/hosted-web-phases/phase-00/lanes/w2-provider-runtime.md",
+                "docs/hosted-web-phases/phase-00/lanes/w3-state-writers-backup.md",
+                "docs/hosted-web-phases/phase-00/lanes/w4-lease-guard-process.md",
+                "docs/hosted-web-phases/phase-00/lanes/w5-events-commands-recovery.md",
+                "docs/hosted-web-phases/phase-00/lanes/w6-auth-proxy-artifacts.md"
+              ]
+            },
+            "mandatoryDocs": {
+              "contains": { "const": "docs/hosted-web-phase-0-execution-packet.md" }
+            }
+          }
+        },
+        {
+          "properties": {
+            "phaseId": { "const": "phase-01" },
+            "packetRevision": { "const": "phase-01-s0-bootstrap-r1" },
+            "controllerPacket": {
+              "const": "docs/hosted-web-phases/phase-01/controller-packet.md"
+            },
+            "laneId": { "const": "p1-s0" },
+            "lanePacket": {
+              "const": "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md"
+            },
+            "mandatoryDocs": {
+              "allOf": [
+                {
+                  "contains": {
+                    "const": "docs/hosted-web-phases/phase-01/controller-packet.md"
+                  }
+                },
+                {
+                  "contains": {
+                    "const": "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
     {
       "if": { "properties": { "revision": { "const": 0 } } },
       "then": {
@@ -209,6 +272,21 @@
           "mandatoryDocs": {
             "contains": {
               "const": "docs/hosted-web-phases/phase-00/lanes/w6-auth-proxy-artifacts.md"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "laneId": { "const": "p1-s0" } } },
+      "then": {
+        "properties": {
+          "lanePacket": {
+            "const": "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md"
+          },
+          "mandatoryDocs": {
+            "contains": {
+              "const": "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md"
             }
           }
         }

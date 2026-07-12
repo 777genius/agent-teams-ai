@@ -8,50 +8,27 @@ import {
   isNormalizedRelativePath,
   parseCliArgs,
   readJsonFile,
+  REQUIRED_WORKER_DOCS,
   validateWorkerStartContract as validateCoreWorkerStartContract,
 } from './contract-lib.mjs';
 
 export const MAX_MANDATORY_READS_PER_LIST = 64;
 
-export const REQUIRED_WORKER_DOCS = Object.freeze([
-  'AGENTS.md',
-  'docs/hosted-web-phases/START_HERE.md',
-  'docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md',
-  'docs/hosted-web-phases/README.md',
-  'docs/hosted-web-phases/EXECUTION_INDEX.json',
-]);
+export { REQUIRED_WORKER_DOCS };
 
 const MANDATORY_READ_LISTS = Object.freeze([
   'mandatoryDocs',
   'mandatoryScripts',
   'mandatoryFixtures',
 ]);
-const UNBOUNDED_READ_ROOTS = new Set([
-  'docs',
-  'docs/research',
-  'docs/research/hosted-web',
-]);
+const UNBOUNDED_READ_ROOTS = new Set(['docs', 'docs/research', 'docs/research/hosted-web']);
 const PRESERVED_RESEARCH_PREFIX = 'docs/research/hosted-web/';
-const RETIRED_BASELINE_ISSUES = new Set([
-  'mandatoryDocs:missing_required:CLAUDE.md',
-  'mandatoryDocs:missing_required:AGENT_CRITICAL_GUARDRAILS.md',
-  'mandatoryDocs:missing_required:docs/hosted-web-phases/ORCHESTRATION_GUARDS.md',
-]);
-
 export function validateWorkerStartContract(contract, options = {}) {
   const coreResult = validateCoreWorkerStartContract(contract, options);
-  const issues = coreResult.issues.filter((issue) => !RETIRED_BASELINE_ISSUES.has(issue));
+  const issues = [...coreResult.issues];
 
   if (contract === null || typeof contract !== 'object' || Array.isArray(contract)) {
     return { ok: false, issues };
-  }
-
-  if (Array.isArray(contract.mandatoryDocs)) {
-    for (const requiredPath of REQUIRED_WORKER_DOCS) {
-      if (!contract.mandatoryDocs.includes(requiredPath)) {
-        issues.push(`mandatoryDocs:missing_required:${requiredPath}`);
-      }
-    }
   }
 
   const researchReferences = new Set();
@@ -59,9 +36,7 @@ export function validateWorkerStartContract(contract, options = {}) {
     const values = contract[listName];
     if (!Array.isArray(values)) continue;
     if (values.length > MAX_MANDATORY_READS_PER_LIST) {
-      issues.push(
-        `${listName}:exceeds_max_items:${values.length}:${MAX_MANDATORY_READS_PER_LIST}`
-      );
+      issues.push(`${listName}:exceeds_max_items:${values.length}:${MAX_MANDATORY_READS_PER_LIST}`);
     }
     for (const value of values) {
       if (isNormalizedRelativePath(value) && UNBOUNDED_READ_ROOTS.has(value)) {
@@ -76,11 +51,14 @@ export function validateWorkerStartContract(contract, options = {}) {
   if (
     researchReferences.size > 0 &&
     options.checkFilesystem !== false &&
-    path.isAbsolute(contract.jobRoot ?? '') &&
+    path.isAbsolute(contract.workspaceRoot ?? '') &&
     isNormalizedRelativePath(contract.lanePacket)
   ) {
     try {
-      const lanePacket = readFileSync(path.resolve(contract.jobRoot, contract.lanePacket), 'utf8');
+      const lanePacket = readFileSync(
+        path.resolve(contract.workspaceRoot, contract.lanePacket),
+        'utf8'
+      );
       const packetTokens = new Set(lanePacket.split(/[\s`"'()[\]{},;:<>]+/u));
       for (const reference of researchReferences) {
         if (!packetTokens.has(reference)) {

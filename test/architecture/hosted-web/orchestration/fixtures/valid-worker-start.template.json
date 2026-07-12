@@ -18,7 +18,8 @@
   "supersedes": null,
   "registryStatus": "queued",
   "jobRoot": "$JOB_ROOT",
-  "promptPath": "$JOB_ROOT/test/architecture/hosted-web/orchestration/fixtures/worker-prompt.md",
+  "workspaceRoot": "$WORKSPACE_ROOT",
+  "promptPath": "$JOB_ROOT/worker-prompt.md",
   "ownedPaths": ["docs/hosted-web-phases/START_HERE.md"],
   "mandatoryDocs": [
     "AGENTS.md",
@@ -41,7 +42,7 @@
   ],
   "executionPolicy": {
     "mode": "sandbox-only",
-    "sandboxRoot": "$JOB_ROOT/test/architecture/hosted-web/orchestration/fixtures",
+    "sandboxRoot": "$WORKSPACE_ROOT/test/architecture/hosted-web/orchestration/fixtures",
     "forbiddenRealProjects": ["~/dev/projects/ai/claude-runtime"]
   }
 }

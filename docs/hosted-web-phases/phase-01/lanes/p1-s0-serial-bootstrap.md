@@ -3,7 +3,9 @@
 ## Authority
 
 - Lane: `P1.S0`
+- Contract phase/lane: `phase-01` / `p1-s0`
 - Controller: `docs/hosted-web-phases/phase-01/controller-packet.md`
+- Worker-start revision: `phase-01-s0-bootstrap-r1`
 - Status: the single current Phase 1 lane, admitted only by a validated worker-start contract and one
   matching `queued` registry record
 - Scope: metadata and evidence serial bootstrap only
@@ -12,6 +14,12 @@
 This packet cannot broaden the accepted Phase 0 freeze. It cannot authorize product implementation or
 advance the router. Completion returns evidence to the controller; `P1.S1` and all later subphases stay
 blocked until a separate reviewed integration and explicit router update.
+
+The worker contract keeps canonical/base provenance at
+`42ec333848e29e97c41699b9fed73ed199740e3f` and binds `phaseStartSha` to the isolated
+`workspaceRoot` Git HEAD. `jobRoot` is a separate, non-overlapping runtime directory containing the
+prompt. Repository reads and check working directories resolve below `workspaceRoot`; `sandboxRoot`
+equals or is contained by that workspace and never overlaps `jobRoot`.
 
 ## Required outcomes
 
