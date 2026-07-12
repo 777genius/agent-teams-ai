@@ -1412,8 +1412,37 @@
       "description": "Halten Sie den Startfluss auf den Projektpfad konzentriert und erweitern Sie diese nur, wenn Sie zusätzliche Kontrolle wünschen."
     }
   },
+  "teamImport": {
+    "cancel": "Abbrechen",
+    "chooseFolder": "Ordner auswählen",
+    "createDraft": "Team-Entwurf erstellen",
+    "createFailed": "Das importierte Team konnte nicht erstellt werden",
+    "creating": "Wird erstellt...",
+    "description": "Wählen Sie den Ordner eines lokalen Agententeams aus und prüfen Sie anschließend alle importierten Anweisungen, bevor Sie einen Entwurf erstellen.",
+    "inspectFailed": "Der ausgewählte Ordner konnte nicht geprüft werden",
+    "invalidTeamName": "Verwenden Sie Kleinbuchstaben, Zahlen und Bindestriche im kebab-case-Format mit maximal 64 Zeichen.",
+    "leadPrompt": "Prompt für die Teamleitung",
+    "members": "Mitglieder ({{count}})",
+    "projectPath": "Projektpfad",
+    "scanning": "Wird geprüft...",
+    "selectPrompt": "Wählen Sie einen Ordner aus, um eine Vorschau des importierten Teams anzuzeigen.",
+    "skills": "Gefundene Skills ({{count}})",
+    "summary": "{{teamName}} mit {{count}} Mitgliedern erstellen.",
+    "teamName": "Teamname",
+    "teamNameRequired": "Ein Teamname ist erforderlich.",
+    "teamNameReserved": "Dieser Teamname ist vom Betriebssystem reserviert.",
+    "title": "Agententeam importieren",
+    "warningDuplicateMember": "{{fileName}}: Der doppelte Mitgliedsname {{name}} wurde übersprungen.",
+    "warningMemberInvalid": "{{fileName}}: Der Mitgliedsname {{name}} ist ungültig.",
+    "warningMemberReserved": "{{fileName}}: Der Mitgliedsname {{name}} ist reserviert.",
+    "warningMemberReservedSuffix": "{{fileName}}: Der Mitgliedsname {{name}} verwendet ein reserviertes automatisches Suffix.",
+    "warningMissingClaudeMd": "Es wurde weder .claude/CLAUDE.md noch CLAUDE.md gefunden; der Prompt für die Teamleitung bleibt leer.",
+    "warningUnknownTaskOwner": "Die Aufgabe {{description}} verwies auf das unbekannte Mitglied {{owner}} und wurde ohne Besitzer importiert.",
+    "warningUnsafeTaskCall": "Der Task-Aufruf konnte nicht sicher umgeschrieben werden: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "Aus Ordner importieren",
       "copyTeam": "Team kopieren",
       "createTeam": "Team erstellen",
       "organizationMap": "Org Map",

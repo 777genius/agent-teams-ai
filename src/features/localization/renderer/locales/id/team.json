@@ -1412,8 +1412,37 @@
       "description": "Menjaga aliran peluncuran fokus pada jalur projek dan hanya memperluas ini ketika Anda ingin ekstra kontrol."
     }
   },
+  "teamImport": {
+    "cancel": "Batal",
+    "chooseFolder": "Pilih folder",
+    "createDraft": "Buat draf tim",
+    "createFailed": "Gagal membuat tim yang diimpor",
+    "creating": "Membuat...",
+    "description": "Pilih folder tim agen lokal, lalu tinjau setiap instruksi yang diimpor sebelum membuat draf.",
+    "inspectFailed": "Gagal memeriksa folder yang dipilih",
+    "invalidTeamName": "Gunakan huruf kecil, angka, dan tanda hubung dalam format kebab-case, maksimal 64 karakter.",
+    "leadPrompt": "Prompt ketua tim",
+    "members": "Anggota ({{count}})",
+    "projectPath": "Jalur proyek",
+    "scanning": "Memindai...",
+    "selectPrompt": "Pilih folder untuk melihat pratinjau tim yang diimpor.",
+    "skills": "Keahlian yang ditemukan ({{count}})",
+    "summary": "Buat {{teamName}} dengan {{count}} anggota.",
+    "teamName": "Nama tim",
+    "teamNameRequired": "Nama tim wajib diisi.",
+    "teamNameReserved": "Nama tim ini dicadangkan oleh sistem operasi.",
+    "title": "Impor tim agen",
+    "warningDuplicateMember": "{{fileName}}: nama anggota duplikat {{name}} dilewati.",
+    "warningMemberInvalid": "{{fileName}}: nama anggota {{name}} tidak valid.",
+    "warningMemberReserved": "{{fileName}}: nama anggota {{name}} dicadangkan.",
+    "warningMemberReservedSuffix": "{{fileName}}: nama anggota {{name}} menggunakan sufiks otomatis yang dicadangkan.",
+    "warningMissingClaudeMd": ".claude/CLAUDE.md atau CLAUDE.md tidak ditemukan; prompt ketua tim akan kosong.",
+    "warningUnknownTaskOwner": "Tugas {{description}} merujuk anggota yang tidak dikenal, {{owner}}, dan diimpor tanpa pemilik.",
+    "warningUnsafeTaskCall": "Panggilan Task tidak dapat ditulis ulang dengan aman: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "Impor dari folder",
       "copyTeam": "Tim copy",
       "createTeam": "Buat Tim",
       "organizationMap": "Org Map",

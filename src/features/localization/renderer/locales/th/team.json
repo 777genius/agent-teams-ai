@@ -1412,8 +1412,37 @@
       "description": "เก็บโฟลว์การเริ่มให้เน้นที่เส้นทางโปรเจกต์ และขยายส่วนนี้เฉพาะเมื่อคุณต้องการควบคุมเพิ่มเติม"
     }
   },
+  "teamImport": {
+    "cancel": "ยกเลิก",
+    "chooseFolder": "เลือกโฟลเดอร์",
+    "createDraft": "สร้างทีมฉบับร่าง",
+    "createFailed": "ไม่สามารถสร้างทีมที่นำเข้าได้",
+    "creating": "กำลังสร้าง...",
+    "description": "เลือกโฟลเดอร์ทีมเอเจนต์ในเครื่อง จากนั้นตรวจสอบคำสั่งที่นำเข้าทั้งหมดก่อนสร้างฉบับร่าง",
+    "inspectFailed": "ไม่สามารถตรวจสอบโฟลเดอร์ที่เลือกได้",
+    "invalidTeamName": "ใช้ตัวอักษรละตินพิมพ์เล็ก ตัวเลข และขีดกลางในรูปแบบ kebab-case ความยาวไม่เกิน 64 อักขระ",
+    "leadPrompt": "พรอมต์ของหัวหน้าทีม",
+    "members": "สมาชิก ({{count}})",
+    "projectPath": "พาธโปรเจกต์",
+    "scanning": "กำลังสแกน...",
+    "selectPrompt": "เลือกโฟลเดอร์เพื่อดูตัวอย่างทีมที่จะนำเข้า",
+    "skills": "ทักษะที่พบ ({{count}})",
+    "summary": "สร้าง {{teamName}} พร้อมสมาชิก {{count}} คน",
+    "teamName": "ชื่อทีม",
+    "teamNameRequired": "ต้องระบุชื่อทีม",
+    "teamNameReserved": "ชื่อทีมนี้สงวนไว้โดยระบบปฏิบัติการ",
+    "title": "นำเข้าทีมเอเจนต์",
+    "warningDuplicateMember": "{{fileName}}: ข้ามชื่อสมาชิก {{name}} ที่ซ้ำกัน",
+    "warningMemberInvalid": "{{fileName}}: ชื่อสมาชิก {{name}} ไม่ถูกต้อง",
+    "warningMemberReserved": "{{fileName}}: ชื่อสมาชิก {{name}} เป็นชื่อสงวน",
+    "warningMemberReservedSuffix": "{{fileName}}: ชื่อสมาชิก {{name}} ใช้ส่วนต่อท้ายอัตโนมัติที่สงวนไว้",
+    "warningMissingClaudeMd": "ไม่พบ .claude/CLAUDE.md หรือ CLAUDE.md พรอมต์ของหัวหน้าทีมจะว่างเปล่า",
+    "warningUnknownTaskOwner": "งาน {{description}} อ้างถึงสมาชิกที่ไม่รู้จัก {{owner}} จึงนำเข้าโดยไม่มีผู้รับผิดชอบ",
+    "warningUnsafeTaskCall": "ไม่สามารถเขียนคำสั่ง Task ใหม่ได้อย่างปลอดภัย: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "นำเข้าจากโฟลเดอร์",
       "copyTeam": "คัดลอกทีม",
       "createTeam": "สร้างทีม",
       "organizationMap": "แผนที่องค์กร",

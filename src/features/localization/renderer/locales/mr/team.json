@@ -1412,8 +1412,37 @@
       "description": "लॉन्च फ्लो प्रकल्प पथावर केंद्रित ठेवा आणि तुम्हाला अतिरिक्त नियंत्रण हवे असेल तेव्हाच हे विस्तृत करा."
     }
   },
+  "teamImport": {
+    "cancel": "रद्द करा",
+    "chooseFolder": "फोल्डर निवडा",
+    "createDraft": "टीमचा मसुदा तयार करा",
+    "createFailed": "इम्पोर्ट केलेली टीम तयार करता आली नाही",
+    "creating": "तयार करत आहे...",
+    "description": "स्थानिक एजंट टीमचे फोल्डर निवडा, त्यानंतर मसुदा तयार करण्यापूर्वी इम्पोर्ट केलेल्या प्रत्येक सूचनेचे पुनरावलोकन करा.",
+    "inspectFailed": "निवडलेल्या फोल्डरची तपासणी करता आली नाही",
+    "invalidTeamName": "kebab-case मध्ये लहान इंग्रजी अक्षरे, अंक आणि हायफन वापरा, कमाल 64 वर्ण.",
+    "leadPrompt": "लीड प्रॉम्प्ट",
+    "members": "सदस्य ({{count}})",
+    "projectPath": "प्रकल्पाचा पथ",
+    "scanning": "स्कॅन करत आहे...",
+    "selectPrompt": "इम्पोर्ट केलेल्या टीमचे पूर्वावलोकन पाहण्यासाठी फोल्डर निवडा.",
+    "skills": "सापडलेली कौशल्ये ({{count}})",
+    "summary": "{{count}} सदस्यांसह {{teamName}} तयार करा.",
+    "teamName": "टीमचे नाव",
+    "teamNameRequired": "टीमचे नाव आवश्यक आहे.",
+    "teamNameReserved": "हे टीमचे नाव ऑपरेटिंग सिस्टमसाठी राखीव आहे.",
+    "title": "एजंट टीम इम्पोर्ट करा",
+    "warningDuplicateMember": "{{fileName}}: {{name}} हे डुप्लिकेट सदस्य नाव वगळले.",
+    "warningMemberInvalid": "{{fileName}}: सदस्य नाव {{name}} अवैध आहे.",
+    "warningMemberReserved": "{{fileName}}: सदस्य नाव {{name}} राखीव आहे.",
+    "warningMemberReservedSuffix": "{{fileName}}: सदस्य नाव {{name}} राखीव स्वयंचलित suffix वापरते.",
+    "warningMissingClaudeMd": ".claude/CLAUDE.md किंवा CLAUDE.md सापडली नाही; लीड प्रॉम्प्ट रिकामा राहील.",
+    "warningUnknownTaskOwner": "{{description}} टास्कमध्ये अज्ञात सदस्य {{owner}} चा संदर्भ होता आणि तो मालकाशिवाय इम्पोर्ट केला.",
+    "warningUnsafeTaskCall": "Task call सुरक्षितपणे पुन्हा लिहिता आला नाही: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "फोल्डरमधून इम्पोर्ट करा",
       "copyTeam": "टीम कॉपी करा",
       "createTeam": "टीम तयार करा",
       "organizationMap": "Org Map",

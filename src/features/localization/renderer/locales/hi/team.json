@@ -1412,8 +1412,37 @@
       "description": "प्रक्षेपण प्रवाह परियोजना पथ पर ध्यान केंद्रित रखें और जब आप अतिरिक्त नियंत्रण चाहते हैं तो इसका विस्तार करें।"
     }
   },
+  "teamImport": {
+    "cancel": "रद्द करें",
+    "chooseFolder": "फ़ोल्डर चुनें",
+    "createDraft": "टीम का ड्राफ़्ट बनाएँ",
+    "createFailed": "इंपोर्ट की गई टीम नहीं बनाई जा सकी",
+    "creating": "बनाया जा रहा है...",
+    "description": "एक लोकल एजेंट टीम फ़ोल्डर चुनें, फिर ड्राफ़्ट बनाने से पहले इंपोर्ट किए गए हर निर्देश की समीक्षा करें।",
+    "inspectFailed": "चुने गए फ़ोल्डर की जाँच नहीं की जा सकी",
+    "invalidTeamName": "kebab-case में छोटे अंग्रेज़ी अक्षर, अंक और हाइफ़न इस्तेमाल करें, अधिकतम 64 वर्ण।",
+    "leadPrompt": "लीड प्रॉम्प्ट",
+    "members": "सदस्य ({{count}})",
+    "projectPath": "प्रोजेक्ट पाथ",
+    "scanning": "जाँच हो रही है...",
+    "selectPrompt": "इंपोर्ट की गई टीम का प्रीव्यू देखने के लिए फ़ोल्डर चुनें।",
+    "skills": "मिली स्किल्स ({{count}})",
+    "summary": "{{count}} सदस्यों के साथ {{teamName}} बनाएँ।",
+    "teamName": "टीम का नाम",
+    "teamNameRequired": "टीम का नाम देना ज़रूरी है।",
+    "teamNameReserved": "यह टीम नाम ऑपरेटिंग सिस्टम के लिए आरक्षित है।",
+    "title": "एजेंट टीम इंपोर्ट करें",
+    "warningDuplicateMember": "{{fileName}}: दोहराया गया सदस्य नाम {{name}} छोड़ दिया गया।",
+    "warningMemberInvalid": "{{fileName}}: सदस्य नाम {{name}} मान्य नहीं है।",
+    "warningMemberReserved": "{{fileName}}: सदस्य नाम {{name}} आरक्षित है।",
+    "warningMemberReservedSuffix": "{{fileName}}: सदस्य नाम {{name}} में आरक्षित ऑटो-सफ़िक्स का इस्तेमाल हुआ है।",
+    "warningMissingClaudeMd": ".claude/CLAUDE.md या CLAUDE.md नहीं मिला; लीड प्रॉम्प्ट खाली रहेगा।",
+    "warningUnknownTaskOwner": "टास्क {{description}} में अनजान सदस्य {{owner}} का संदर्भ था और इसे बिना मालिक के इंपोर्ट किया गया।",
+    "warningUnsafeTaskCall": "Task कॉल को सुरक्षित रूप से दोबारा नहीं लिखा जा सका: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "फ़ोल्डर से इंपोर्ट करें",
       "copyTeam": "कॉपी टीम",
       "createTeam": "टीम बनाएँ",
       "organizationMap": "Org Map",

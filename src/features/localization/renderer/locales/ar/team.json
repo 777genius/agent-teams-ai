@@ -1412,8 +1412,37 @@
       "description": "حافظ على تدفق الإطلاق وركز على مسار المشروع ووسع هذا فقط عندما تريد السيطرة الإضافية"
     }
   },
+  "teamImport": {
+    "cancel": "إلغاء",
+    "chooseFolder": "اختيار مجلد",
+    "createDraft": "إنشاء مسودة فريق",
+    "createFailed": "تعذر إنشاء الفريق المستورد",
+    "creating": "جارٍ الإنشاء...",
+    "description": "اختر مجلد فريق وكلاء محليًا، ثم راجع جميع التعليمات المستوردة قبل إنشاء المسودة.",
+    "inspectFailed": "تعذر فحص المجلد المحدد",
+    "invalidTeamName": "استخدم أحرفًا إنجليزية صغيرة وأرقامًا وشرطات بتنسيق kebab-case، وبحد أقصى 64 حرفًا.",
+    "leadPrompt": "تعليمات قائد الفريق",
+    "members": "الأعضاء ({{count}})",
+    "projectPath": "مسار المشروع",
+    "scanning": "جارٍ الفحص...",
+    "selectPrompt": "اختر مجلدًا لمعاينة الفريق المستورد.",
+    "skills": "المهارات التي تم العثور عليها ({{count}})",
+    "summary": "إنشاء {{teamName}} بعدد أعضاء: {{count}}.",
+    "teamName": "اسم الفريق",
+    "teamNameRequired": "اسم الفريق مطلوب.",
+    "teamNameReserved": "اسم الفريق هذا محجوز من قِبل نظام التشغيل.",
+    "title": "استيراد فريق وكلاء",
+    "warningDuplicateMember": "{{fileName}}: تم تخطي اسم العضو المكرر {{name}}.",
+    "warningMemberInvalid": "{{fileName}}: اسم العضو {{name}} غير صالح.",
+    "warningMemberReserved": "{{fileName}}: اسم العضو {{name}} محجوز.",
+    "warningMemberReservedSuffix": "{{fileName}}: يستخدم اسم العضو {{name}} لاحقة تلقائية محجوزة.",
+    "warningMissingClaudeMd": "لم يتم العثور على .claude/CLAUDE.md أو CLAUDE.md؛ ستكون تعليمات قائد الفريق فارغة.",
+    "warningUnknownTaskOwner": "تشير المهمة {{description}} إلى العضو غير المعروف {{owner}} وتم استيرادها من دون مالك.",
+    "warningUnsafeTaskCall": "تعذر إعادة كتابة استدعاء Task بأمان: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "استيراد من مجلد",
       "copyTeam": "فريق النسخ",
       "createTeam": "فريق الإنشاء",
       "organizationMap": "Org Map",
