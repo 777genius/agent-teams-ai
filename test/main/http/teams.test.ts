@@ -373,6 +373,29 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
+  it('does not expose unexpected launch service errors in HTTP responses', async () => {
+    const { app, launchTeam } = await createApp();
+    launchTeam.mockRejectedValue(new Error('private provider runtime diagnostic'));
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(500);
+      expect(response.json()).toEqual({ error: 'Internal server error' });
+      expect(response.body).not.toContain('private provider runtime diagnostic');
+      expect(console.error).toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    } finally {
+      await app.close();
+    }
+  });
+
   it('returns 501 for launch without the optional team HTTP aggregate', async () => {
     const app = Fastify();
     const mocks = createServicesMock();

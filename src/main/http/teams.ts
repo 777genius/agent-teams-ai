@@ -150,6 +150,20 @@ function shouldLogError(error: unknown): boolean {
   );
 }
 
+function getResponseErrorMessage(
+  error: unknown,
+  statusCode: number = getStatusCode(error)
+): string {
+  if (
+    statusCode >= 500 &&
+    !(error instanceof HttpFeatureUnavailableError) &&
+    !isRuntimeControlProviderRoutingError(error)
+  ) {
+    return 'Internal server error';
+  }
+  return getErrorMessage(error);
+}
+
 async function getDraftSavedRequest(
   services: HttpServices,
   teamName: string
@@ -206,7 +220,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       if (shouldLogError(error)) {
         logger.error('Error in GET /api/teams:', getErrorMessage(error));
       }
-      return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
     }
   });
 
@@ -219,7 +233,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       if (shouldLogError(error)) {
         logger.error('Error in POST /api/teams:', getErrorMessage(error));
       }
-      return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
     }
   });
 
@@ -247,7 +261,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       if (shouldLogError(error)) {
         logger.error(`Error in GET /api/teams/${request.params.teamName}:`, getErrorMessage(error));
       }
-      return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
     }
   });
 
@@ -281,7 +295,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(statusCode).send({ error: getErrorMessage(error) });
+        return reply.status(statusCode).send({ error: getResponseErrorMessage(error, statusCode) });
       }
     }
   );
@@ -305,7 +319,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -329,7 +343,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -352,7 +366,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         if (shouldLogError(error) && statusCode !== 404) {
           logger.error(`Error in GET /api/teams/provisioning/${request.params.runId}:`, message);
         }
-        return reply.status(statusCode).send({ error: message });
+        return reply.status(statusCode).send({ error: getResponseErrorMessage(error, statusCode) });
       }
     }
   );
@@ -368,7 +382,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       if (shouldLogError(error)) {
         logger.error('Error in GET /api/teams/runtime/alive:', getErrorMessage(error));
       }
-      return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
     }
   });
 
@@ -392,7 +406,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -417,7 +431,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -442,7 +456,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -467,7 +481,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -492,7 +506,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -520,7 +534,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -545,7 +559,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -575,7 +589,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -606,7 +620,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
@@ -667,7 +681,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             getErrorMessage(error)
           );
         }
-        return reply.status(getStatusCode(error)).send({ error: getErrorMessage(error) });
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
       }
     }
   );
