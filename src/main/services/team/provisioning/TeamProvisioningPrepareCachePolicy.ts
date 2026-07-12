@@ -66,7 +66,3 @@ export function normalizePrepareModelChecks(
       (left.effort ?? '').localeCompare(right.effort ?? '')
   );
 }
-
-export function createProbeInFlightKey(cacheKey: string, generation: number): string {
-  return JSON.stringify([cacheKey, generation]);
-}

@@ -62,7 +62,7 @@ Die Runtime besitzt das Verhalten der Modellausführung, Authentifizierungsdetai
 
 ## Anbieter
 
-Ein Anbieter ist der Modellzugriffspfad hinter einer Runtime. Aktuelle Anbieter-IDs umfassen Anthropic, Codex, Gemini und OpenCode. OpenCode kann über seine eigene Konfiguration an viele Modellanbieter weiterleiten.
+Ein Anbieter ist der Modellzugriffspfad hinter einer Runtime. Aktuelle Anbieter-IDs umfassen Anthropic, Codex und OpenCode. OpenCode kann über seine eigene Konfiguration an viele Modellanbieter weiterleiten.
 
 Agent Teams orchestriert Aufgaben und Nachrichten, ersetzt aber nicht die Anbieter-Authentifizierung oder die Anbieterrichtlinien.
 

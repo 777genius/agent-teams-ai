@@ -205,7 +205,172 @@ function processRows(): RuntimeTelemetryProcessTableRow[] {
   ];
 }
 
+function claudeConfig(): TeamConfig {
+  return {
+    name: TEAM_NAME,
+    members: [
+      {
+        name: 'Worker',
+        providerId: 'anthropic',
+        model: 'claude-sonnet-4-6',
+        cwd: WORKDIR,
+      },
+    ],
+  };
+}
+
+function claudeRun(): TeamProvisioningRuntimeSnapshotRun {
+  const member = {
+    name: 'Worker',
+    providerId: 'anthropic' as const,
+    model: 'claude-sonnet-4-6',
+    cwd: WORKDIR,
+  };
+  return {
+    runId: RUN_ID,
+    child: null,
+    processKilled: false,
+    cancelRequested: false,
+    request: {
+      teamName: TEAM_NAME,
+      members: [member],
+      cwd: WORKDIR,
+      providerId: 'anthropic',
+      model: 'claude-sonnet-4-6',
+    },
+    effectiveMembers: [member],
+    allEffectiveMembers: [member],
+    memberSpawnStatuses: new Map(),
+  };
+}
+
+async function buildClaudeFinalSnapshot(params: {
+  liveRuntime: LiveTeamAgentRuntimeMetadata;
+  spawnStatus: MemberSpawnStatusEntry;
+}) {
+  return buildTeamAgentRuntimeSnapshot({
+    teamName: TEAM_NAME,
+    runId: RUN_ID,
+    generationAtStart: 0,
+    runs: new Map([[RUN_ID, claudeRun()]]),
+    runtimeAdapterRunByTeam: new Map(),
+    teamMetaStore: {
+      getMeta: vi.fn(async () => ({ providerId: 'anthropic' as const })),
+    },
+    membersMetaStore: {
+      getMembers: vi.fn(async () => []),
+    },
+    launchStateStore: {
+      read: vi.fn(async () => null),
+    },
+    readConfigSnapshot: vi.fn(async () => claudeConfig()),
+    readPersistedRuntimeMembers: vi.fn(() => []),
+    getMemberSpawnStatuses: vi.fn(
+      async (): Promise<MemberSpawnStatusesSnapshot> => ({
+        runId: RUN_ID,
+        source: 'live',
+        statuses: { Worker: params.spawnStatus },
+      })
+    ),
+    getLiveTeamAgentRuntimeMetadata: vi.fn(async () => new Map([['Worker', params.liveRuntime]])),
+    readRuntimeProcessRowsForUsageSnapshot: vi.fn(async () => []),
+    readProcessUsageStatsByPid: vi.fn(async () => new Map()),
+    buildRuntimeUsageProcessTrees: vi.fn(() => new Map()),
+    buildRuntimeProcessLoadStats: vi.fn(() => undefined),
+    agentRuntimeResourceHistory: {
+      record: vi.fn(() => undefined),
+      prune: vi.fn(),
+    },
+    getRuntimeSnapshotCacheGeneration: vi.fn(() => 0),
+    getTrackedRunId: vi.fn(() => RUN_ID),
+    getAgentRuntimeSnapshotCacheTtlMs: vi.fn(() => 1_000),
+    rememberAgentRuntimeSnapshot: vi.fn(),
+    logDebug: vi.fn(),
+  });
+}
+
 describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
+  it('keeps future-dated registered-only live evidence conservative despite raw spawn confirmation', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(UPDATED_AT));
+    try {
+      const futureHeartbeatAt = '2026-01-01T00:00:00.001Z';
+      const snapshot = await buildClaudeFinalSnapshot({
+        liveRuntime: {
+          alive: false,
+          backendType: 'process',
+          providerId: 'anthropic',
+          livenessKind: 'registered_only',
+          pidSource: 'runtime_bootstrap',
+          runtimeLastSeenAt: futureHeartbeatAt,
+          runtimeDiagnostic: 'runtime heartbeat timestamp is in the future',
+          runtimeDiagnosticSeverity: 'warning',
+        },
+        spawnStatus: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          lastHeartbeatAt: futureHeartbeatAt,
+          updatedAt: UPDATED_AT,
+        },
+      });
+
+      expect(snapshot.members.Worker).toMatchObject({
+        alive: false,
+        livenessKind: 'registered_only',
+        pidSource: 'runtime_bootstrap',
+        runtimeLastSeenAt: futureHeartbeatAt,
+        runtimeDiagnostic: 'runtime heartbeat timestamp is in the future',
+        runtimeDiagnosticSeverity: 'warning',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('retains confirmed spawn fallback for a valid current heartbeat', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(UPDATED_AT));
+    try {
+      const snapshot = await buildClaudeFinalSnapshot({
+        liveRuntime: {
+          alive: false,
+          backendType: 'process',
+          providerId: 'anthropic',
+          livenessKind: 'registered_only',
+          pidSource: 'persisted_metadata',
+          runtimeLastSeenAt: UPDATED_AT,
+          runtimeDiagnostic: 'registered runtime metadata without live process',
+          runtimeDiagnosticSeverity: 'warning',
+        },
+        spawnStatus: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          lastHeartbeatAt: UPDATED_AT,
+          updatedAt: UPDATED_AT,
+        },
+      });
+
+      expect(snapshot.members.Worker).toMatchObject({
+        alive: true,
+        livenessKind: 'confirmed_bootstrap',
+        pidSource: 'runtime_bootstrap',
+        runtimeLastSeenAt: UPDATED_AT,
+        runtimeDiagnostic: 'bootstrap confirmed',
+        runtimeDiagnosticSeverity: 'info',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('preserves OpenCode runtime snapshot diagnostic compatibility at the mapper boundary', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(UPDATED_AT));
@@ -273,6 +438,83 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
         runtimeSessionId: 'session-current',
         runtimeDiagnostic: 'OpenCode bootstrap confirmed; runtime host/session evidence present.',
         runtimeDiagnosticSeverity: 'info',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps runtime adapter permission evidence ahead of adapter bootstrap confirmation', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(UPDATED_AT));
+    try {
+      const liveRuntimeByMember = new Map<string, LiveTeamAgentRuntimeMetadata>([
+        [
+          'Worker',
+          {
+            alive: false,
+            backendType: 'process',
+            providerId: 'opencode',
+            livenessKind: 'registered_only',
+            pidSource: 'persisted_metadata',
+            runtimeDiagnostic: 'registered runtime metadata without live process',
+            runtimeDiagnosticSeverity: 'warning',
+          },
+        ],
+      ]);
+      const adapterRun = runtimeAdapterRun();
+      const adapterMember = adapterRun.members?.Worker;
+      if (!adapterMember) {
+        throw new Error('expected runtime adapter member fixture');
+      }
+      adapterMember.launchState = 'runtime_pending_permission';
+      adapterMember.pendingPermissionRequestIds = ['permission-1'];
+
+      const snapshot = await buildTeamAgentRuntimeSnapshot({
+        teamName: TEAM_NAME,
+        runId: RUN_ID,
+        generationAtStart: 0,
+        runs: new Map([[RUN_ID, run()]]),
+        runtimeAdapterRunByTeam: new Map([[TEAM_NAME, adapterRun]]),
+        teamMetaStore: {
+          getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
+        },
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        },
+        launchStateStore: {
+          read: vi.fn(async () => null),
+        },
+        readConfigSnapshot: vi.fn(async () => config()),
+        readPersistedRuntimeMembers: vi.fn(() => []),
+        getMemberSpawnStatuses: vi.fn(
+          async (): Promise<MemberSpawnStatusesSnapshot> => ({
+            runId: RUN_ID,
+            source: 'live',
+            statuses: {},
+          })
+        ),
+        getLiveTeamAgentRuntimeMetadata: vi.fn(async () => liveRuntimeByMember),
+        readRuntimeProcessRowsForUsageSnapshot: vi.fn(async () => []),
+        readProcessUsageStatsByPid: vi.fn(async () => new Map()),
+        buildRuntimeUsageProcessTrees: vi.fn(() => new Map()),
+        buildRuntimeProcessLoadStats: vi.fn(() => undefined),
+        agentRuntimeResourceHistory: {
+          record: vi.fn(() => undefined),
+          prune: vi.fn(),
+        },
+        getRuntimeSnapshotCacheGeneration: vi.fn(() => 0),
+        getTrackedRunId: vi.fn(() => RUN_ID),
+        getAgentRuntimeSnapshotCacheTtlMs: vi.fn(() => 1_000),
+        rememberAgentRuntimeSnapshot: vi.fn(),
+        logDebug: vi.fn(),
+      });
+
+      expect(snapshot.members.Worker).toMatchObject({
+        alive: false,
+        livenessKind: 'permission_blocked',
+        runtimeDiagnostic: 'waiting for permission approval',
+        runtimeDiagnosticSeverity: 'warning',
       });
     } finally {
       vi.useRealTimers();

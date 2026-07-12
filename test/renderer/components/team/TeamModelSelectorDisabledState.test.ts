@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 
 vi.mock('@renderer/components/ui/tabs', () => {
   let currentValue = '';
@@ -63,6 +64,11 @@ const storeState = {
   cliProviderStatusLoading: {} as Record<string, boolean>,
   appConfig: { general: { multimodelEnabled: true } },
   fetchCliProviderStatus: vi.fn().mockResolvedValue(undefined),
+  codexRuntimeStatus: null as CodexRuntimeStatus | null,
+  codexRuntimeStatusLoading: false,
+  codexRuntimeError: null as string | null,
+  fetchCodexRuntimeStatus: vi.fn().mockResolvedValue(undefined),
+  installCodexRuntime: vi.fn().mockResolvedValue(undefined),
 };
 const codexAccountHookState = {
   snapshot: null as CodexAccountSnapshotDto | null,
@@ -115,6 +121,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     storeState.cliStatusLoading = false;
     storeState.cliProviderStatusLoading = {};
     storeState.fetchCliProviderStatus.mockClear();
+    storeState.codexRuntimeStatus = null;
+    storeState.codexRuntimeStatusLoading = false;
+    storeState.codexRuntimeError = null;
+    storeState.fetchCodexRuntimeStatus.mockClear();
+    storeState.installCodexRuntime.mockClear();
     codexAccountHookState.snapshot = null;
     codexAccountHookState.loading = false;
     codexAccountHookState.error = null;
@@ -160,6 +171,140 @@ describe('TeamModelSelector disabled Codex models', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('shows the Codex update notice and reuses the shared update dialog', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.codexRuntimeStatus = {
+      installed: true,
+      binaryPath: '/usr/local/bin/codex',
+      version: 'codex-cli 0.139.0',
+      latestVersion: '0.144.1',
+      updateAvailable: true,
+      source: 'path',
+      state: 'ready',
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'codex',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const notice = host.querySelector('[data-testid="codex-runtime-update-notice"]');
+    expect(notice?.textContent).toContain('Update available');
+    const noticeButton = Array.from(notice?.querySelectorAll('button') ?? []).find((button) =>
+      button.textContent?.includes('Update to v0.144.1')
+    );
+
+    await act(async () => {
+      noticeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    const dialog = document.body.querySelector('[role="dialog"]');
+    expect(dialog).not.toBeNull();
+    const updateButton = Array.from(dialog?.querySelectorAll('button') ?? []).find((button) =>
+      button.textContent?.includes('Update to v0.144.1')
+    );
+    await act(async () => {
+      updateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(storeState.installCodexRuntime).toHaveBeenCalledTimes(1);
+    await act(async () => root.unmount());
+  });
+
+  it('explains static fallback models even when Codex is already current', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.codexRuntimeStatus = {
+      installed: true,
+      binaryPath: '/usr/local/bin/codex',
+      version: 'codex-cli 0.144.1',
+      latestVersion: '0.144.1',
+      updateAvailable: false,
+      source: 'path',
+      state: 'ready',
+    };
+    storeState.cliStatus = {
+      providers: [
+        {
+          providerId: 'codex',
+          models: ['gpt-5.6-sol'],
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'codex',
+            source: 'static-fallback',
+            status: 'degraded',
+            fetchedAt: '2026-07-10T00:00:00.000Z',
+            staleAt: '2026-07-10T00:10:00.000Z',
+            defaultModelId: 'gpt-5.6-sol',
+            defaultLaunchModel: 'gpt-5.6-sol',
+            models: [
+              {
+                id: 'gpt-5.6-sol',
+                launchModel: 'gpt-5.6-sol',
+                displayName: 'GPT-5.6-Sol',
+                hidden: false,
+                supportedReasoningEfforts: ['low', 'medium', 'high'],
+                defaultReasoningEffort: 'low',
+                inputModalities: ['text', 'image'],
+                supportsPersonality: false,
+                isDefault: true,
+                upgrade: false,
+                source: 'static-fallback',
+                badgeLabel: '5.6-sol',
+              },
+            ],
+            diagnostics: {
+              configReadState: 'skipped',
+              appServerState: 'degraded',
+              message: 'model/list timed out',
+              code: null,
+            },
+          },
+          runtimeCapabilities: {
+            modelCatalog: {
+              dynamic: true,
+              source: 'app-server',
+            },
+          },
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'codex',
+          onProviderChange: () => undefined,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const notice = host.querySelector('[data-testid="codex-model-catalog-fallback-notice"]');
+    expect(notice?.textContent).toContain('Live Codex models unavailable');
+    expect(notice?.textContent).toContain('newly released models may be missing');
+    expect(host.querySelector('[data-testid="codex-runtime-update-notice"]')).toBeNull();
+    expect(host.textContent).toContain('5.6-Sol');
+
+    await act(async () => root.unmount());
   });
 
   it('normalizes a stale disabled selection back to default', async () => {

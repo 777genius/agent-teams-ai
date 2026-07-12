@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Orodha mbadala ya miundo inaonyeshwa. Miundo maalum ya akaunti na iliyotolewa hivi karibuni inaweza kukosekana.",
+    "codexCatalogFallbackTitle": "Miundo hai ya Codex haipatikani",
     "badges": {
       "configured": "Imesanidiwa",
       "connected": "Imeunganishwa",

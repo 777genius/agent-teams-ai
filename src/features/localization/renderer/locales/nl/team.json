@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Er wordt een reservemodellenlijst weergegeven. Accountspecifieke en nieuw uitgebrachte modellen kunnen ontbreken.",
+    "codexCatalogFallbackTitle": "Live Codex-modellen niet beschikbaar",
     "badges": {
       "configured": "Geconfigureerd",
       "connected": "Verbonden",

@@ -1,4 +1,4 @@
-import { RuntimeControlService } from '../RuntimeControlService';
+import { KeyedRuntimeDeliveryWriteFence, RuntimeControlService } from '../RuntimeControlService';
 
 import type { OpenCodeRuntimeControlAck, RuntimeControlAck } from '../domain/RuntimeControlAck';
 import type {
@@ -9,6 +9,7 @@ import type {
   RuntimeTaskEventCommand,
 } from '../domain/RuntimeControlCommand';
 import type { RuntimeControlProviderHandler } from '../domain/RuntimeControlProvider';
+import type { RuntimeDeliveryWriteFence } from '../RuntimeControlService';
 import type { OpenCodeRuntimeControlRouter } from './OpenCodeRuntimeControlApi';
 import type { RuntimeControlEventSink } from './RuntimeControlPorts';
 import type { TaskRef } from '@shared/types';
@@ -23,6 +24,7 @@ export interface OpenCodeRuntimeControlPort {
 
 export interface OpenCodeRuntimeControlRouterOptions {
   eventSink?: RuntimeControlEventSink;
+  deliveryWriteFence?: RuntimeDeliveryWriteFence;
 }
 
 export function createOpenCodeRuntimeControlProvider(
@@ -47,9 +49,11 @@ export function createOpenCodeRuntimeControlRouter(
   port: OpenCodeRuntimeControlPort,
   options: OpenCodeRuntimeControlRouterOptions = {}
 ): OpenCodeRuntimeControlRouter {
+  const deliveryWriteFence = options.deliveryWriteFence ?? new KeyedRuntimeDeliveryWriteFence();
   const service = new RuntimeControlService({
     providers: [createOpenCodeRuntimeControlProvider(port)],
     eventSink: options.eventSink,
+    deliveryWriteFence,
   });
   return {
     recordBootstrapCheckin: async (command) =>

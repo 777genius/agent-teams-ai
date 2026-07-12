@@ -13,8 +13,12 @@ import type { CliProviderStatus } from '@shared/types';
 
 function createCodexProviderStatus(
   models: NonNullable<CliProviderStatus['modelCatalog']>['models'],
-  options: { dynamicLaunch?: boolean } = {}
+  options: {
+    dynamicLaunch?: boolean;
+    source?: 'app-server' | 'static-fallback';
+  } = {}
 ): CliProviderStatus {
+  const source = options.source ?? 'app-server';
   return {
     providerId: 'codex',
     displayName: 'Codex',
@@ -26,7 +30,7 @@ function createCodexProviderStatus(
     modelCatalog: {
       schemaVersion: 1,
       providerId: 'codex',
-      source: 'app-server',
+      source,
       status: 'ready',
       fetchedAt: '2026-04-21T00:00:00.000Z',
       staleAt: '2026-04-21T00:01:00.000Z',
@@ -42,7 +46,7 @@ function createCodexProviderStatus(
     runtimeCapabilities: {
       modelCatalog: {
         dynamic: options.dynamicLaunch === true,
-        source: 'app-server',
+        source,
       },
       reasoningEffort: {
         supported: true,
@@ -117,66 +121,68 @@ function createAnthropicProviderStatus(
 }
 
 describe('team model availability Codex catalog integration', () => {
-  it('uses app-server catalog models with runtime-backed labels', () => {
+  it('uses a future app-server catalog model with runtime-backed labels', () => {
     const providerStatus = createCodexProviderStatus(
       [
         {
-          id: 'gpt-5.5',
-          launchModel: 'gpt-5.5',
-          displayName: 'GPT-5.5',
+          id: 'gpt-99-future',
+          launchModel: 'gpt-99-future',
+          displayName: 'GPT-99 Future',
           hidden: false,
-          supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
-          defaultReasoningEffort: 'high',
+          supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+          defaultReasoningEffort: 'ultra',
           inputModalities: ['text', 'image'],
           supportsPersonality: false,
           isDefault: true,
           upgrade: false,
           source: 'app-server',
-          badgeLabel: '5.5',
+          badgeLabel: '99-future',
         },
       ],
       { dynamicLaunch: true }
     );
 
-    expect(getAvailableTeamProviderModels('codex', providerStatus)).toEqual(['gpt-5.5']);
-    expect(getAvailableTeamProviderModelOptions('codex', providerStatus)).toEqual([
-      { value: '', label: 'Default', badgeLabel: 'Default' },
-      {
-        value: 'gpt-5.5',
-        label: '5.5',
-        badgeLabel: '5.5',
-        availabilityStatus: 'available',
-        availabilityReason: null,
-      },
-      {
-        value: 'gpt-5.3-codex-spark',
-        label: '5.3 Codex Spark',
-        badgeLabel: undefined,
-        availabilityStatus: null,
-        availabilityReason: null,
-      },
-      {
-        value: 'gpt-5.2-codex',
-        label: '5.2 Codex',
-        badgeLabel: undefined,
-        availabilityStatus: null,
-        availabilityReason: null,
-      },
-      {
-        value: 'gpt-5.1-codex-mini',
-        label: '5.1 Codex Mini',
-        badgeLabel: undefined,
-        availabilityStatus: null,
-        availabilityReason: null,
-      },
-      {
-        value: 'gpt-5.1-codex-max',
-        label: '5.1 Codex Max',
-        badgeLabel: undefined,
-        availabilityStatus: null,
-        availabilityReason: null,
-      },
-    ]);
+    expect(getAvailableTeamProviderModels('codex', providerStatus)).toEqual(['gpt-99-future']);
+    const options = getAvailableTeamProviderModelOptions('codex', providerStatus);
+    expect(options[0]).toEqual({ value: '', label: 'Default', badgeLabel: 'Default' });
+    expect(options).toContainEqual({
+      value: 'gpt-99-future',
+      label: '99 Future',
+      badgeLabel: '99-future',
+      availabilityStatus: 'available',
+      availabilityReason: null,
+    });
+  });
+
+  it('uses GPT-5.6 metadata from the static fallback without renderer hardcoding', () => {
+    const providerStatus = createCodexProviderStatus(
+      [
+        {
+          id: 'gpt-5.6-sol',
+          launchModel: 'gpt-5.6-sol',
+          displayName: 'GPT-5.6 Sol',
+          hidden: false,
+          supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+          defaultReasoningEffort: 'low',
+          inputModalities: ['text', 'image'],
+          supportsPersonality: false,
+          isDefault: false,
+          upgrade: false,
+          source: 'static-fallback',
+          badgeLabel: '5.6-sol',
+        },
+      ],
+      { source: 'static-fallback' }
+    );
+
+    expect(getAvailableTeamProviderModelOptions('codex', providerStatus)).toContainEqual({
+      value: 'gpt-5.6-sol',
+      label: '5.6 Sol',
+      badgeLabel: '5.6-sol',
+      availabilityStatus: 'available',
+      availabilityReason: null,
+    });
+    expect(getTeamModelSelectionError('codex', 'gpt-5.6-sol', providerStatus)).toBeNull();
   });
 
   it('allows app-server catalog models even when the runtime does not declare dynamic model launch', () => {

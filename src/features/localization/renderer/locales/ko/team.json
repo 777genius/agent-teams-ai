@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "대체 모델 목록을 표시하고 있습니다. 계정별 모델과 새로 출시된 모델이 누락될 수 있습니다.",
+    "codexCatalogFallbackTitle": "실시간 Codex 모델을 사용할 수 없음",
     "badges": {
       "configured": "설정하기",
       "connected": "연결하기",

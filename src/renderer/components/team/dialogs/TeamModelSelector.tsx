@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  CodexRuntimeUpdateDialog,
+  CodexRuntimeUpdateNotice,
+} from '@features/codex-runtime-installer/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
@@ -13,6 +17,7 @@ import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import { isCodexModelCatalogFallbackActive } from '@renderer/utils/codexModelCatalogFallback';
 import {
   GEMINI_UI_DISABLED_BADGE_LABEL,
   GEMINI_UI_DISABLED_REASON,
@@ -57,6 +62,8 @@ import {
   Search,
   Star,
 } from 'lucide-react';
+
+import { CodexModelCatalogFallbackNotice } from './CodexModelCatalogFallbackNotice';
 
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
@@ -860,6 +867,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
   const cliProviderStatusLoading = useStore((s) => s.cliProviderStatusLoading ?? {});
   const fetchCliProviderStatus = useStore((s) => s.fetchCliProviderStatus);
+  const codexRuntimeStatus = useStore((s) => s.codexRuntimeStatus);
+  const codexRuntimeStatusLoading = useStore((s) => s.codexRuntimeStatusLoading);
+  const codexRuntimeError = useStore((s) => s.codexRuntimeError);
+  const fetchCodexRuntimeStatus = useStore((s) => s.fetchCodexRuntimeStatus);
+  const installCodexRuntime = useStore((s) => s.installCodexRuntime);
+  const [codexRuntimeDialogOpen, setCodexRuntimeDialogOpen] = useState(false);
   const multimodelAvailable =
     multimodelEnabled || effectiveCliStatus?.flavor === 'agent_teams_orchestrator';
   const runtimeProviderStatusById = useMemo(
@@ -869,6 +882,18 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       ),
     [effectiveCliStatus?.providers]
   );
+
+  useEffect(() => {
+    if (
+      effectiveProviderId !== 'codex' ||
+      codexRuntimeStatus ||
+      codexRuntimeStatusLoading ||
+      !fetchCodexRuntimeStatus
+    ) {
+      return;
+    }
+    void fetchCodexRuntimeStatus();
+  }, [codexRuntimeStatus, codexRuntimeStatusLoading, effectiveProviderId, fetchCodexRuntimeStatus]);
   const defaultModelTooltip = useMemo(() => {
     if (effectiveProviderId === 'anthropic') {
       if (isAnthropicCompatibleRuntime(runtimeProviderStatus)) {
@@ -1465,6 +1490,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             }
           : null;
   const activeProviderNotice = providerNoticeById?.[effectiveProviderId] ?? null;
+  const codexModelCatalogFallbackActive = isCodexModelCatalogFallbackActive(
+    runtimeProviderStatus?.modelCatalog
+  );
   const getModelAdvisoryBadgeLabel = (reason: string | null): string =>
     reason?.toLowerCase().includes('ping not confirmed')
       ? t('modelSelector.advisory.pingNotConfirmed')
@@ -1816,6 +1844,21 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             ) : null}
 
             <div className="p-3">
+              {effectiveProviderId === 'codex' ? (
+                <>
+                  <CodexModelCatalogFallbackNotice
+                    catalog={runtimeProviderStatus?.modelCatalog}
+                    runtimeStatus={codexRuntimeStatus}
+                    onUpdate={() => setCodexRuntimeDialogOpen(true)}
+                  />
+                  {!codexModelCatalogFallbackActive ? (
+                    <CodexRuntimeUpdateNotice
+                      status={codexRuntimeStatus}
+                      onUpdate={() => setCodexRuntimeDialogOpen(true)}
+                    />
+                  ) : null}
+                </>
+              ) : null}
               {activeProviderNotice ? (
                 <div data-testid="team-model-selector-provider-notice" className="mb-3">
                   {activeProviderNotice}
@@ -2127,6 +2170,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           </div>
         </div>
       </Tabs>
+      <CodexRuntimeUpdateDialog
+        open={codexRuntimeDialogOpen}
+        onOpenChange={setCodexRuntimeDialogOpen}
+        status={codexRuntimeStatus}
+        loading={codexRuntimeStatusLoading}
+        error={codexRuntimeError}
+        onInstall={() => void installCodexRuntime?.()}
+      />
     </div>
   );
 };

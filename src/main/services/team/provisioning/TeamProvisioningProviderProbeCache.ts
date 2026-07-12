@@ -2,30 +2,60 @@ import type { ProvisioningAuthSource } from './TeamProvisioningEnvBuilder';
 
 const PROBE_CACHE_TTL_MS = 36 * 60 * 60 * 1000;
 
-export interface CachedProbeResult {
-  cacheKey: string;
-  claudePath: string;
-  authSource: ProvisioningAuthSource;
-  warning?: string;
-  cachedAtMs: number;
-}
-
 export interface ProbeResult {
   claudePath: string;
   authSource: ProvisioningAuthSource;
   warning?: string;
+  [field: string]: unknown;
+}
+
+export interface CachedProbeResult {
+  cacheKey: string;
+  cachedAtMs: number;
+  result: ProbeResult;
+}
+
+export function cloneProviderProbeResult<T extends ProbeResult>(result: T): T {
+  return structuredClone(result);
+}
+
+export function cloneCachedProviderProbeResult<T extends CachedProbeResult>(cached: T): T {
+  return structuredClone(cached);
+}
+
+export function cachedProviderProbeResultToProbeResult(cached: CachedProbeResult): ProbeResult {
+  return cloneProviderProbeResult(cached.result);
+}
+
+export interface ProviderProbePublication {
+  result: ProbeResult | null;
+  cacheable: boolean;
 }
 
 export interface ProviderProbeCachePort {
   get(cacheKey: string): CachedProbeResult | null;
-  set(cacheKey: string, result: ProbeResult): void;
-  delete(cacheKey: string): void;
-  getOrCreateInFlight(
-    inFlightKey: string,
-    create: () => Promise<ProbeResult | null>,
-    options?: { probeCacheKey?: string }
+  invalidate(cacheKey: string): void;
+  getOrCreate(
+    cacheKey: string,
+    create: () => Promise<ProviderProbePublication>
   ): Promise<ProbeResult | null>;
-  hasInFlightForProbeCacheKey(probeCacheKey: string): boolean;
+}
+
+interface ProviderProbeAttempt {
+  result?: ProbeResult | null;
+  error?: unknown;
+}
+
+interface ProviderProbeInFlight {
+  promise: Promise<ProviderProbeAttempt>;
+}
+
+interface ProviderProbeCacheState {
+  epoch: number;
+  cached: CachedProbeResult | null;
+  inFlight: ProviderProbeInFlight | null;
+  // New callers ignore this; it only carries the current epoch outcome to superseded callers.
+  settledAttempt: ProviderProbeAttempt | null;
 }
 
 export function createInMemoryProviderProbeCachePort({
@@ -35,64 +65,142 @@ export function createInMemoryProviderProbeCachePort({
   ttlMs?: number;
   now?: () => number;
 } = {}): ProviderProbeCachePort {
-  const cachedProbeResults = new Map<string, CachedProbeResult>();
-  const probeInFlightByKey = new Map<string, Promise<ProbeResult | null>>();
-  const inFlightCountByProbeCacheKey = new Map<string, number>();
+  const stateByCacheKey = new Map<string, ProviderProbeCacheState>();
+  const activeCallCountByCacheKey = new Map<string, number>();
 
-  const incrementInFlightCount = (probeCacheKey: string | undefined): void => {
-    if (!probeCacheKey) return;
-    inFlightCountByProbeCacheKey.set(
-      probeCacheKey,
-      (inFlightCountByProbeCacheKey.get(probeCacheKey) ?? 0) + 1
-    );
+  const getCached = (
+    cacheKey: string,
+    state: ProviderProbeCacheState
+  ): CachedProbeResult | null => {
+    const cached = state.cached;
+    if (!cached) return null;
+    const ageMs = now() - cached.cachedAtMs;
+    if (ageMs >= ttlMs) {
+      state.cached = null;
+      if (
+        stateByCacheKey.get(cacheKey) === state &&
+        !state.inFlight &&
+        (activeCallCountByCacheKey.get(cacheKey) ?? 0) === 0
+      ) {
+        stateByCacheKey.delete(cacheKey);
+      }
+      return null;
+    }
+    return cloneCachedProviderProbeResult(cached);
   };
 
-  const decrementInFlightCount = (probeCacheKey: string | undefined): void => {
-    if (!probeCacheKey) return;
-    const nextCount = (inFlightCountByProbeCacheKey.get(probeCacheKey) ?? 0) - 1;
+  const incrementActiveCallCount = (cacheKey: string): void => {
+    activeCallCountByCacheKey.set(cacheKey, (activeCallCountByCacheKey.get(cacheKey) ?? 0) + 1);
+  };
+
+  const decrementActiveCallCount = (cacheKey: string): void => {
+    const nextCount = (activeCallCountByCacheKey.get(cacheKey) ?? 0) - 1;
     if (nextCount > 0) {
-      inFlightCountByProbeCacheKey.set(probeCacheKey, nextCount);
+      activeCallCountByCacheKey.set(cacheKey, nextCount);
       return;
     }
-    inFlightCountByProbeCacheKey.delete(probeCacheKey);
+    activeCallCountByCacheKey.delete(cacheKey);
+
+    const state = stateByCacheKey.get(cacheKey);
+    if (state && !state.cached && !state.inFlight) {
+      stateByCacheKey.delete(cacheKey);
+    }
   };
 
   return {
     get(cacheKey) {
-      const cached = cachedProbeResults.get(cacheKey);
-      if (!cached) return null;
-      const ageMs = now() - cached.cachedAtMs;
-      if (ageMs >= ttlMs) {
-        cachedProbeResults.delete(cacheKey);
-        return null;
-      }
-      return { ...cached };
+      const state = stateByCacheKey.get(cacheKey);
+      return state ? getCached(cacheKey, state) : null;
     },
-    set(cacheKey, result) {
-      cachedProbeResults.set(cacheKey, { cacheKey, ...result, cachedAtMs: now() });
-    },
-    delete(cacheKey) {
-      cachedProbeResults.delete(cacheKey);
-    },
-    getOrCreateInFlight(inFlightKey, create, options) {
-      const existingProbe = probeInFlightByKey.get(inFlightKey);
-      if (existingProbe) {
-        return existingProbe;
+    invalidate(cacheKey) {
+      const state = stateByCacheKey.get(cacheKey);
+      if (!state) return;
+
+      state.cached = null;
+      if ((activeCallCountByCacheKey.get(cacheKey) ?? 0) === 0 && !state.inFlight) {
+        stateByCacheKey.delete(cacheKey);
+        return;
       }
 
-      const probeCacheKey = options?.probeCacheKey;
-      const probePromise = create().finally(() => {
-        if (probeInFlightByKey.get(inFlightKey) === probePromise) {
-          probeInFlightByKey.delete(inFlightKey);
-          decrementInFlightCount(probeCacheKey);
-        }
+      stateByCacheKey.set(cacheKey, {
+        epoch: state.epoch + 1,
+        cached: null,
+        inFlight: null,
+        settledAttempt: null,
       });
-      probeInFlightByKey.set(inFlightKey, probePromise);
-      incrementInFlightCount(probeCacheKey);
-      return probePromise;
     },
-    hasInFlightForProbeCacheKey(probeCacheKey) {
-      return (inFlightCountByProbeCacheKey.get(probeCacheKey) ?? 0) > 0;
+    async getOrCreate(cacheKey, create) {
+      incrementActiveCallCount(cacheKey);
+      try {
+        let supersededAttempt: ProviderProbeAttempt | null = null;
+        while (true) {
+          let state = stateByCacheKey.get(cacheKey);
+          if (!state) {
+            state = { epoch: 0, cached: null, inFlight: null, settledAttempt: null };
+            stateByCacheKey.set(cacheKey, state);
+          }
+
+          const cached = getCached(cacheKey, state);
+          if (cached) {
+            return cachedProviderProbeResultToProbeResult(cached);
+          }
+
+          let inFlight = state.inFlight;
+          if (!inFlight && supersededAttempt) {
+            const attempt = state.settledAttempt ?? supersededAttempt;
+            if ('error' in attempt) {
+              throw attempt.error;
+            }
+            return attempt.result ? cloneProviderProbeResult(attempt.result) : null;
+          }
+          if (!inFlight) {
+            const promise: Promise<ProviderProbeAttempt> = Promise.resolve()
+              .then(create)
+              .then<ProviderProbeAttempt>((publication) => {
+                const result = publication.result
+                  ? cloneProviderProbeResult(publication.result)
+                  : null;
+                if (stateByCacheKey.get(cacheKey) === state) {
+                  state.cached =
+                    publication.cacheable && result
+                      ? {
+                          cacheKey,
+                          cachedAtMs: now(),
+                          result: cloneProviderProbeResult(result),
+                        }
+                      : null;
+                }
+                return { result };
+              })
+              .then<ProviderProbeAttempt, ProviderProbeAttempt>(
+                (attempt) => attempt,
+                (error: unknown) => ({ error })
+              )
+              .then((attempt) => {
+                if (state.inFlight?.promise === promise) {
+                  state.settledAttempt = attempt;
+                  state.inFlight = null;
+                }
+                return attempt;
+              });
+            const createdInFlight = { promise };
+            state.inFlight = createdInFlight;
+            inFlight = createdInFlight;
+          }
+
+          const attempt = await inFlight.promise;
+          if (stateByCacheKey.get(cacheKey) !== state) {
+            supersededAttempt = attempt;
+            continue;
+          }
+          if ('error' in attempt) {
+            throw attempt.error;
+          }
+          return attempt.result ? cloneProviderProbeResult(attempt.result) : null;
+        }
+      } finally {
+        decrementActiveCallCount(cacheKey);
+      }
     },
   };
 }

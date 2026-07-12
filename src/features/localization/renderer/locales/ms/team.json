@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Senarai model sandaran sedang dipaparkan. Model khusus akaun dan model yang baru dikeluarkan mungkin tiada.",
+    "codexCatalogFallbackTitle": "Model Codex langsung tidak tersedia",
     "badges": {
       "configured": "Dikonfigurasi",
       "connected": "Disambung",

@@ -20,6 +20,21 @@
       "description": "Vue diff par tâche avec acceptation, rejet et commentaires. Éditeur de code intégré avec support Git."
     },
     {
+      "id": "tokenUsage",
+      "title": "Analyse des tokens et budgets",
+      "description": "Voyez où sont consommés les tokens et les coûts estimés par équipe, agent, tâche, projet, modèle et exécution. Repérez les travaux coûteux, suivez les tendances et prévisions, définissez des budgets mensuels et recevez des alertes à 80 % et 100 %."
+    },
+    {
+      "id": "organizations",
+      "title": "Organisations et vue globale",
+      "description": "Organisez les équipes en départements, squads ou toute structure imbriquée. Suivez toutes les organisations sur une carte en direct avec les statuts des équipes et agents, la progression des tâches, les dépendances, la délégation et la communication interéquipes."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Exécutez des commandes dans un terminal visuel avec shells d'équipe et local, historique, autocomplétion et réglages."
+    },
+    {
       "id": "crossTeam",
       "title": "Communication inter-équipes",
       "description": "Les agents communiquent entre eux au sein et entre les équipes. Messages directs, commentaires sur les tâches et actions rapides."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Mode solo",
       "description": "Commencez avec un seul agent qui gère ses tâches. Passez à une équipe complète quand vous avez besoin de plus de puissance."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Processus en direct",
-      "description": "Visualisez les agents en cours, ouvrez les URL dans le navigateur, surveillez l'utilisation des tokens et le contexte en temps réel."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Qu'est-ce que Agent Teams ?",
-      "answer": "Une application de bureau pour orchestrer des équipes d'agents IA avec notre propre couche de coordination locale. Les agents ont des rôles, travaillent de façon autonome, collaborent sur un tableau kanban et peuvent s'exécuter avec Anthropic ou Codex."
+      "answer": "Une application de bureau pour orchestrer des équipes d'agents IA avec notre propre couche de coordination locale. Les agents ont des rôles, travaillent de façon autonome, collaborent sur un tableau kanban et peuvent s'exécuter avec Claude, Codex ou OpenCode."
     },
     {
       "id": "isFree",

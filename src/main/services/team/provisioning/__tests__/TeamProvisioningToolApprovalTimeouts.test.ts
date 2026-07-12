@@ -114,6 +114,53 @@ describe('TeamProvisioningToolApprovalTimeouts', () => {
     expect(pendingTimeouts.has('req-wait')).toBe(false);
   });
 
+  it('keeps a timed-out teammate approval pending when the response fails', async () => {
+    settings = buildSettings({ timeoutAction: 'deny', timeoutSeconds: 2 });
+    run.pendingApprovals.set(
+      'req-worker',
+      buildApproval({ requestId: 'req-worker', source: 'Worker' })
+    );
+    vi.mocked(ports.respondToTeammatePermission).mockRejectedValueOnce(
+      new Error('inbox unavailable')
+    );
+
+    timeouts.start(run, 'req-worker');
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(run.pendingApprovals.has('req-worker')).toBe(true);
+    expect(inFlightResponses.has('req-worker')).toBe(false);
+    expect(pendingTimeouts.has('req-worker')).toBe(true);
+    expect(ports.dismissApprovalNotification).not.toHaveBeenCalled();
+    expect(ports.emitToolApprovalEvent).not.toHaveBeenCalled();
+    expect(ports.logInfo).toHaveBeenCalledWith(
+      '[team-a] Failed to auto-resolve teammate approval req-worker: inbox unavailable'
+    );
+  });
+
+  it('restarts a timed-out teammate approval immediately when the response throws', () => {
+    settings = buildSettings({ timeoutAction: 'deny', timeoutSeconds: 2 });
+    run.pendingApprovals.set(
+      'req-worker',
+      buildApproval({ requestId: 'req-worker', source: 'Worker' })
+    );
+    vi.mocked(ports.respondToTeammatePermission).mockImplementationOnce(() => {
+      throw new Error('inbox unavailable synchronously');
+    });
+
+    timeouts.start(run, 'req-worker');
+    vi.advanceTimersByTime(2000);
+
+    expect(ports.respondToTeammatePermission).toHaveBeenCalledTimes(1);
+    expect(run.pendingApprovals.has('req-worker')).toBe(true);
+    expect(inFlightResponses.has('req-worker')).toBe(false);
+    expect(pendingTimeouts.has('req-worker')).toBe(true);
+    expect(ports.dismissApprovalNotification).not.toHaveBeenCalled();
+    expect(ports.emitToolApprovalEvent).not.toHaveBeenCalled();
+    expect(ports.logInfo).toHaveBeenCalledWith(
+      '[team-a] Failed to auto-resolve teammate approval req-worker: inbox unavailable synchronously'
+    );
+  });
+
   it('re-evaluates pending approvals for auto-allow and timeout setting changes', () => {
     settings = buildSettings({ autoAllowAll: true, timeoutAction: 'wait' });
     run.pendingApprovals.set('req-auto', buildApproval({ requestId: 'req-auto' }));
@@ -142,5 +189,35 @@ describe('TeamProvisioningToolApprovalTimeouts', () => {
     timeouts.reEvaluate([run]);
 
     expect(pendingTimeouts.has('req-timer')).toBe(false);
+  });
+
+  it('does not resolve a re-evaluated teammate approval before delivery succeeds', async () => {
+    settings = buildSettings({ autoAllowAll: true, timeoutAction: 'wait' });
+    run.pendingApprovals.set(
+      'req-worker',
+      buildApproval({ requestId: 'req-worker', source: 'Worker' })
+    );
+    let resolveResponse: (() => void) | undefined;
+    vi.mocked(ports.respondToTeammatePermission).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveResponse = resolve;
+        })
+    );
+
+    timeouts.reEvaluate([run]);
+
+    expect(run.pendingApprovals.has('req-worker')).toBe(true);
+    expect(inFlightResponses.has('req-worker')).toBe(true);
+    expect(ports.dismissApprovalNotification).not.toHaveBeenCalled();
+    expect(ports.emitToolApprovalEvent).not.toHaveBeenCalled();
+
+    resolveResponse?.();
+    await Promise.resolve();
+
+    expect(run.pendingApprovals.has('req-worker')).toBe(false);
+    expect(inFlightResponses.has('req-worker')).toBe(false);
+    expect(ports.dismissApprovalNotification).toHaveBeenCalledTimes(1);
+    expect(ports.emitToolApprovalEvent).toHaveBeenCalledTimes(1);
   });
 });

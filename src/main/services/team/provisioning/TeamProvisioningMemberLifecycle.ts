@@ -1985,7 +1985,7 @@ export class TeamProvisioningMemberLifecycleController {
     const candidates = await this.collectFailedOpenCodeSecondaryRetryCandidates(run);
 
     for (const candidate of candidates) {
-      if (!this.isCurrentTrackedRun(run) || run.processKilled || run.cancelRequested) {
+      if (!this.isRunStillCurrentAndAlive(run, teamName)) {
         result.skipped.push({
           memberName: candidate.memberName,
           reason: 'Team stopped during retry',
@@ -2005,11 +2005,26 @@ export class TeamProvisioningMemberLifecycleController {
         );
         result.attempted.push(candidate.memberName);
 
+        if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+          result.skipped.push({
+            memberName: candidate.memberName,
+            reason: 'Team stopped during retry',
+          });
+          continue;
+        }
+
         const outcome = await this.readOpenCodeSecondaryRetryOutcome(
           run,
           candidate.memberName,
           candidate.laneId
         );
+        if (!this.isRunStillCurrentAndAlive(run, teamName)) {
+          result.skipped.push({
+            memberName: candidate.memberName,
+            reason: 'Team stopped during retry',
+          });
+          continue;
+        }
         if (outcome.launchState === 'confirmed_alive') {
           result.confirmed.push(candidate.memberName);
         } else if (outcome.launchState === 'failed_to_start') {
@@ -2040,7 +2055,9 @@ export class TeamProvisioningMemberLifecycleController {
       }
     }
 
-    await this.notifyLeadAboutConfirmedOpenCodeRetries(run, result);
+    if (this.isRunStillCurrentAndAlive(run, teamName)) {
+      await this.notifyLeadAboutConfirmedOpenCodeRetries(run, result);
+    }
     return result;
   }
 
@@ -2461,7 +2478,10 @@ export class TeamProvisioningMemberLifecycleController {
     const lane = run.mixedSecondaryLanes[laneIndex];
     await this.stopSingleMixedSecondaryRuntimeLane(run, lane, 'cleanup');
     this.assertRunStillCurrentAndAlive(run, teamName);
-    run.mixedSecondaryLanes.splice(laneIndex, 1);
+    const ownedLaneIndex = run.mixedSecondaryLanes.indexOf(lane);
+    if (ownedLaneIndex >= 0) {
+      run.mixedSecondaryLanes.splice(ownedLaneIndex, 1);
+    }
     this.removeRunAllEffectiveMember(run, memberName);
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.resetRuntimeToolActivity(run, memberName);

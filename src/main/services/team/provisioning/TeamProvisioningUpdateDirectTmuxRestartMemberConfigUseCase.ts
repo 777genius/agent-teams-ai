@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { atomicWriteAsync } from '../atomicWrite';
+import { withFileLock } from '../fileLock';
 import { TeamConfigReader } from '../TeamConfigReader';
 
 import { matchesExactTeamMemberName } from './TeamProvisioningMemberIdentity';
@@ -43,6 +44,30 @@ export interface UpdateDirectTmuxRestartMemberConfigUseCasePorts {
   readTeamConfigJson(teamName: string): Promise<string | null>;
   writeTeamConfigJson(teamName: string, contents: string): Promise<void>;
   invalidateTeamConfig(teamName: string): void;
+  withTeamConfigLock?<T>(teamName: string, operation: () => Promise<T>): Promise<T>;
+}
+
+const teamConfigMutationQueues = new Map<string, Promise<void>>();
+
+async function withInProcessTeamConfigMutationLock<T>(
+  teamName: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  const previous = teamConfigMutationQueues.get(teamName) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  teamConfigMutationQueues.set(teamName, current);
+  await previous;
+  try {
+    return await operation();
+  } finally {
+    release();
+    if (teamConfigMutationQueues.get(teamName) === current) {
+      teamConfigMutationQueues.delete(teamName);
+    }
+  }
 }
 
 async function tryReadRegularFileUtf8(
@@ -76,7 +101,7 @@ async function tryReadRegularFileUtf8(
 export function createUpdateDirectTmuxRestartMemberConfigUseCase(
   ports: UpdateDirectTmuxRestartMemberConfigUseCasePorts
 ): UpdateDirectTmuxRestartMemberConfigUseCase {
-  return async (input) => {
+  const update: UpdateDirectTmuxRestartMemberConfigUseCase = async (input) => {
     const raw = await ports.readTeamConfigJson(input.teamName);
     if (!raw) {
       throw new Error(`Team "${input.teamName}" configuration is no longer available`);
@@ -138,6 +163,16 @@ export function createUpdateDirectTmuxRestartMemberConfigUseCase(
     await ports.writeTeamConfigJson(input.teamName, `${JSON.stringify(parsed, null, 2)}\n`);
     ports.invalidateTeamConfig(input.teamName);
   };
+
+  return async (input) => {
+    await withInProcessTeamConfigMutationLock(input.teamName, async () => {
+      if (ports.withTeamConfigLock) {
+        await ports.withTeamConfigLock(input.teamName, () => update(input));
+        return;
+      }
+      await update(input);
+    });
+  };
 }
 
 export function createNodeUpdateDirectTmuxRestartMemberConfigUseCase(): UpdateDirectTmuxRestartMemberConfigUseCase {
@@ -152,6 +187,10 @@ export function createNodeUpdateDirectTmuxRestartMemberConfigUseCase(): UpdateDi
     async writeTeamConfigJson(teamName, contents) {
       const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
       await atomicWriteAsync(configPath, contents);
+    },
+    withTeamConfigLock(teamName, operation) {
+      const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
+      return withFileLock(configPath, operation);
     },
     invalidateTeamConfig(teamName) {
       TeamConfigReader.invalidateTeam(teamName);

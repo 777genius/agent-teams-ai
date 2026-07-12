@@ -42,7 +42,7 @@ export function makeLaunchState(
     includeLeadMembers: options.includeLeadMembers,
     leadSessionId: options.leadSessionId ?? 'harness-lead-session',
     launchPhase: options.launchPhase,
-    members: options.members,
+    members: cloneFixture(options.members),
     updatedAt: options.updatedAt ?? HARNESS_DEFAULT_NOW_ISO,
   });
   assertNoSecretLikeFixtureValues(snapshot);
@@ -110,22 +110,50 @@ export interface OpenCodeEvidenceFixtureOptions {
 export function makeOpenCodeEvidence(
   options: OpenCodeEvidenceFixtureOptions = {}
 ): TeamRuntimeMemberLaunchEvidence {
+  const launchState = options.launchState ?? 'confirmed_alive';
+  const runtimeObservedByDefault =
+    launchState === 'confirmed_alive' ||
+    launchState === 'runtime_pending_bootstrap' ||
+    launchState === 'runtime_pending_permission';
+  const agentToolAccepted = options.agentToolAccepted ?? runtimeObservedByDefault;
+  const runtimeAlive = options.runtimeAlive ?? launchState === 'confirmed_alive';
+  const bootstrapConfirmed = options.bootstrapConfirmed ?? launchState === 'confirmed_alive';
+  const hardFailure = options.hardFailure ?? launchState === 'failed_to_start';
+  const sessionId =
+    options.sessionId ?? (runtimeObservedByDefault ? 'harness-opencode-session' : undefined);
+  const runtimePid = options.runtimePid ?? (runtimeObservedByDefault ? 4242 : undefined);
+  const hasRuntimeHandle = sessionId !== undefined || runtimePid !== undefined;
+  const livenessKind = bootstrapConfirmed
+    ? 'confirmed_bootstrap'
+    : launchState === 'runtime_pending_permission'
+      ? 'permission_blocked'
+      : runtimeAlive || agentToolAccepted || hasRuntimeHandle
+        ? 'runtime_process_candidate'
+        : 'registered_only';
   const evidence: TeamRuntimeMemberLaunchEvidence = {
     memberName: options.memberName ?? 'Builder',
     providerId: 'opencode',
     model: options.model ?? HARNESS_INERT_MODEL,
-    launchState: options.launchState ?? 'confirmed_alive',
-    agentToolAccepted: options.agentToolAccepted ?? true,
-    runtimeAlive: options.runtimeAlive ?? true,
-    bootstrapConfirmed: options.bootstrapConfirmed ?? true,
-    hardFailure: options.hardFailure ?? false,
+    launchState,
+    agentToolAccepted,
+    runtimeAlive,
+    bootstrapConfirmed,
+    hardFailure,
     ...(options.hardFailureReason ? { hardFailureReason: options.hardFailureReason } : {}),
-    sessionId: options.sessionId ?? 'harness-opencode-session',
-    bootstrapEvidenceSource: 'runtime_bootstrap_checkin',
-    backendType: 'process',
-    runtimePid: options.runtimePid ?? 4242,
-    livenessKind: 'confirmed_bootstrap',
-    pidSource: 'runtime_bootstrap',
+    ...(sessionId !== undefined ? { sessionId } : {}),
+    ...(bootstrapConfirmed
+      ? { bootstrapEvidenceSource: 'runtime_bootstrap_checkin' as const }
+      : {}),
+    ...(hasRuntimeHandle ? { backendType: 'process' as const } : {}),
+    ...(runtimePid !== undefined ? { runtimePid } : {}),
+    livenessKind,
+    ...(runtimePid !== undefined
+      ? {
+          pidSource: bootstrapConfirmed
+            ? ('runtime_bootstrap' as const)
+            : ('opencode_bridge' as const),
+        }
+      : {}),
     diagnostics: cloneFixture(options.diagnostics ?? []),
   };
   assertNoSecretLikeFixtureValues(evidence);

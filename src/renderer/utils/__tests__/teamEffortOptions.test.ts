@@ -70,7 +70,7 @@ function createProviderStatus(
 }
 
 describe('team effort options', () => {
-  it('keeps Codex xhigh when runtime catalog and passthrough say it is valid', () => {
+  it('keeps extended Codex efforts when runtime catalog and passthrough say they are valid', () => {
     const providerStatus = createProviderStatus(
       'codex',
       {
@@ -78,7 +78,7 @@ describe('team effort options', () => {
         launchModel: 'gpt-5.4',
         displayName: 'GPT-5.4',
         hidden: false,
-        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
+        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
         defaultReasoningEffort: 'medium',
         inputModalities: ['text', 'image'],
         supportsPersonality: false,
@@ -96,6 +96,8 @@ describe('team effort options', () => {
         { value: 'medium', label: 'Medium' },
         { value: 'high', label: 'High' },
         { value: 'xhigh', label: 'XHigh' },
+        { value: 'max', label: 'Max' },
+        { value: 'ultra', label: 'Ultra' },
       ]
     );
   });

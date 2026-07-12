@@ -332,6 +332,102 @@ describe('RuntimeDeliveryService stale run guard', () => {
   });
 });
 
+describe('RuntimeDeliveryService concurrent idempotency', () => {
+  it('serializes the same delivery across service instances before destination verification', async () => {
+    const location: RuntimeDeliveryLocation = {
+      kind: 'user_sent_messages',
+      teamName: 'Team',
+      messageId: 'message-1',
+    };
+    let record: RuntimeDeliveryJournalRecord | null = null;
+    const begin = vi.fn(
+      async (
+        input: RuntimeDeliveryJournalBeginInput
+      ): Promise<RuntimeDeliveryJournalBeginResult> => {
+        if (!record) {
+          record = recordFromBegin(input);
+          return { state: 'new', record };
+        }
+        return record.status === 'committed'
+          ? { state: 'already_committed', record }
+          : { state: 'resume_pending', record };
+      }
+    );
+    const markCommitted = vi.fn(
+      async (input: { location: RuntimeDeliveryLocation; committedAt: string }): Promise<void> => {
+        if (!record) {
+          throw new Error('Expected delivery record before commit');
+        }
+        record = {
+          ...record,
+          committedLocation: input.location,
+          status: 'committed',
+          committedAt: input.committedAt,
+          updatedAt: input.committedAt,
+        };
+      }
+    );
+    const journal = {
+      begin,
+      markCommitted,
+      markFailed: vi.fn(async () => {}),
+    } as unknown as RuntimeDeliveryJournalStore;
+    const destination = createDestinationPort('user_sent_messages', location);
+    let releaseFirstWrite = (): void => {};
+    const firstWriteBlocked = new Promise<void>((resolve) => {
+      releaseFirstWrite = resolve;
+    });
+    let signalFirstWriteStarted = (): void => {};
+    const firstWriteStarted = new Promise<void>((resolve) => {
+      signalFirstWriteStarted = resolve;
+    });
+    let destinationWritten = false;
+    destination.write.mockImplementationOnce(async () => {
+      signalFirstWriteStarted();
+      await firstWriteBlocked;
+      destinationWritten = true;
+      return location;
+    });
+    destination.verify.mockImplementation(async (_input) => ({
+      found: destinationWritten,
+      location: destinationWritten ? location : null,
+      diagnostics: [],
+    }));
+    const runState = createRunState(['run-1']).runState;
+    const firstService = createService({ runState, journal, port: destination.port });
+    const secondService = createService({ runState, journal, port: destination.port });
+
+    const firstDelivery = firstService.deliver(envelope());
+    await firstWriteStarted;
+    const secondDelivery = secondService.deliver(envelope());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(begin).toHaveBeenCalledTimes(1);
+    expect(destination.write).toHaveBeenCalledTimes(1);
+
+    releaseFirstWrite();
+    await expect(Promise.all([firstDelivery, secondDelivery])).resolves.toEqual([
+      {
+        ok: true,
+        delivered: true,
+        reason: null,
+        idempotencyKey: 'runtime-key-1',
+        location,
+      },
+      {
+        ok: true,
+        delivered: false,
+        reason: 'duplicate',
+        idempotencyKey: 'runtime-key-1',
+        location,
+      },
+    ]);
+    expect(begin).toHaveBeenCalledTimes(2);
+    expect(destination.write).toHaveBeenCalledTimes(1);
+    expect(markCommitted).toHaveBeenCalledTimes(1);
+  });
+});
+
 function createService(input: {
   runState: RuntimeDeliveryRunStateReader;
   journal: RuntimeDeliveryJournalStore;

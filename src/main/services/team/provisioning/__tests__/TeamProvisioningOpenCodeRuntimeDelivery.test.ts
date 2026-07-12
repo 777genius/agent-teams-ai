@@ -1,13 +1,20 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { normalizeRuntimeDeliveryEnvelope } from '../../opencode/delivery/RuntimeDeliveryJournal';
+import { writeOpenCodeRuntimeLaneIndex } from '../../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   createOpenCodeRuntimeDeliveryPorts,
   createTeamProvisioningOpenCodeRuntimeDeliveryBoundary,
+  getOpenCodeRuntimeDeliveryStatus,
   getOpenCodeRuntimeRecoveryLaneIds,
   type TeamProvisioningOpenCodeRuntimeDeliveryBoundaryPorts,
 } from '../TeamProvisioningOpenCodeRuntimeDelivery';
 
+import type { OpenCodePromptDeliveryLedgerRecord } from '../../opencode/delivery/OpenCodePromptDeliveryLedger';
 import type { OpenCodeRuntimeDeliveryCrossTeamSender } from '../../opencode/delivery/OpenCodeRuntimeDeliveryPorts';
 import type { RuntimeDeliveryEnvelope } from '../../opencode/delivery/RuntimeDeliveryJournal';
 import type { OpenCodeRuntimeCheckinRun } from '../TeamProvisioningOpenCodeRuntimeCheckin';
@@ -305,6 +312,226 @@ describe('TeamProvisioningOpenCodeRuntimeDelivery', () => {
     });
   });
 
+  describe('getOpenCodeRuntimeDeliveryStatus', () => {
+    it('uses the newest cross-lane record when a delivery was retried after lane migration', async () => {
+      const teamsBasePath = await mkdtemp(join(tmpdir(), 'opencode-delivery-status-'));
+      const staleFailure = createPromptDeliveryRecord({
+        id: 'delivery-old',
+        laneId: 'lane-old',
+        status: 'failed_terminal',
+        responseState: 'tool_error',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      });
+      const successfulRetry = createPromptDeliveryRecord({
+        id: 'delivery-new',
+        laneId: 'lane-new',
+        status: 'responded',
+        responseState: 'responded_visible_message',
+        visibleReplyMessageId: 'reply-1',
+        updatedAt: '2026-01-01T00:01:00.000Z',
+      });
+      const decideOpenCodeRuntimeDeliveryUserFacingAdvisory = vi.fn(async (record) => ({
+        record,
+        decision: { action: 'suppress' as const },
+      }));
+
+      try {
+        await writeOpenCodeRuntimeLaneIndex(teamsBasePath, 'Team', {
+          version: 1,
+          updatedAt: '2026-01-01T00:01:00.000Z',
+          lanes: {
+            'lane-old': {
+              laneId: 'lane-old',
+              state: 'stopped',
+              updatedAt: '2026-01-01T00:00:00.000Z',
+            },
+            'lane-new': {
+              laneId: 'lane-new',
+              state: 'active',
+              updatedAt: '2026-01-01T00:01:00.000Z',
+            },
+          },
+        });
+
+        const status = await getOpenCodeRuntimeDeliveryStatus('Team', 'message-1', {
+          teamsBasePath,
+          createOpenCodePromptDeliveryLedger: (_teamName, laneId) =>
+            ({
+              list: vi.fn(async () => (laneId === 'lane-old' ? [staleFailure] : [successfulRetry])),
+            }) as never,
+          decideOpenCodeRuntimeDeliveryUserFacingAdvisory,
+        });
+
+        expect(decideOpenCodeRuntimeDeliveryUserFacingAdvisory).toHaveBeenCalledTimes(1);
+        expect(decideOpenCodeRuntimeDeliveryUserFacingAdvisory).toHaveBeenCalledWith(
+          successfulRetry
+        );
+        expect(status).toMatchObject({
+          delivered: true,
+          ledgerRecordId: 'delivery-new',
+          ledgerStatus: 'responded',
+          laneId: 'lane-new',
+          responsePending: false,
+        });
+      } finally {
+        await rm(teamsBasePath, { recursive: true, force: true });
+      }
+    });
+
+    it.each([
+      {
+        name: 'candidate valid updatedAt is later than current valid updatedAt',
+        current: {
+          updatedAt: '2026-01-01T00:01:00.000Z',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        candidate: {
+          updatedAt: '2026-01-01T00:02:00.000Z',
+          createdAt: '2026-01-01T00:00:30.000Z',
+        },
+        expectedRecordId: 'delivery-candidate',
+      },
+      {
+        name: 'candidate valid updatedAt is earlier than current valid updatedAt',
+        current: {
+          updatedAt: '2026-01-01T00:02:00.000Z',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        candidate: {
+          updatedAt: '2026-01-01T00:01:00.000Z',
+          createdAt: '2026-01-01T00:03:00.000Z',
+        },
+        expectedRecordId: 'delivery-current',
+      },
+      {
+        name: 'candidate invalid updatedAt falls back to an earlier createdAt',
+        current: {
+          updatedAt: '2026-01-01T00:02:00.000Z',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        candidate: {
+          updatedAt: 'invalid',
+          createdAt: '2026-01-01T00:01:00.000Z',
+        },
+        expectedRecordId: 'delivery-current',
+      },
+      {
+        name: 'current invalid updatedAt falls back to an earlier createdAt',
+        current: {
+          updatedAt: 'invalid',
+          createdAt: '2026-01-01T00:01:00.000Z',
+        },
+        candidate: {
+          updatedAt: '2026-01-01T00:02:00.000Z',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        expectedRecordId: 'delivery-candidate',
+      },
+      {
+        name: 'candidate empty updatedAt falls back to a later createdAt',
+        current: {
+          updatedAt: '2026-01-01T00:01:00.000Z',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        candidate: {
+          updatedAt: '',
+          createdAt: '2026-01-01T00:02:00.000Z',
+        },
+        expectedRecordId: 'delivery-candidate',
+      },
+      {
+        name: 'candidate omitted timestamps cannot replace a valid current timestamp',
+        current: {
+          updatedAt: '2026-01-01T00:01:00.000Z',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        candidate: {},
+        expectedRecordId: 'delivery-current',
+      },
+      {
+        name: 'candidate valid createdAt replaces current empty and omitted timestamps',
+        current: { updatedAt: '' },
+        candidate: {
+          updatedAt: 'invalid',
+          createdAt: '2026-01-01T00:01:00.000Z',
+        },
+        expectedRecordId: 'delivery-candidate',
+      },
+      {
+        name: 'equal effective timestamps retain the current record',
+        current: {
+          updatedAt: '2026-01-01T00:01:00.000Z',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        candidate: {
+          updatedAt: 'invalid',
+          createdAt: '2026-01-01T00:01:00.000Z',
+        },
+        expectedRecordId: 'delivery-current',
+      },
+      {
+        name: 'entirely invalid timestamps retain the current record',
+        current: { updatedAt: 'invalid', createdAt: '' },
+        candidate: {},
+        expectedRecordId: 'delivery-current',
+      },
+    ])('$name', async ({ current, candidate, expectedRecordId }) => {
+      const teamsBasePath = await mkdtemp(join(tmpdir(), 'opencode-delivery-status-ordering-'));
+      const currentRecord = createPromptDeliveryRecordWithTimestamps({
+        id: 'delivery-current',
+        laneId: 'lane-current',
+        timestamps: current,
+      });
+      const candidateRecord = createPromptDeliveryRecordWithTimestamps({
+        id: 'delivery-candidate',
+        laneId: 'lane-candidate',
+        timestamps: candidate,
+      });
+      const decideOpenCodeRuntimeDeliveryUserFacingAdvisory = vi.fn(async (record) => ({
+        record,
+        decision: { action: 'suppress' as const },
+      }));
+
+      try {
+        await writeOpenCodeRuntimeLaneIndex(teamsBasePath, 'Team', {
+          version: 1,
+          updatedAt: '2026-01-01T00:03:00.000Z',
+          lanes: {
+            'lane-current': {
+              laneId: 'lane-current',
+              state: 'stopped',
+              updatedAt: '2026-01-01T00:01:00.000Z',
+            },
+            'lane-candidate': {
+              laneId: 'lane-candidate',
+              state: 'active',
+              updatedAt: '2026-01-01T00:02:00.000Z',
+            },
+          },
+        });
+
+        const status = await getOpenCodeRuntimeDeliveryStatus('Team', 'message-1', {
+          teamsBasePath,
+          createOpenCodePromptDeliveryLedger: (_teamName, laneId) =>
+            ({
+              list: vi.fn(async () =>
+                laneId === 'lane-current' ? [currentRecord] : [candidateRecord]
+              ),
+            }) as never,
+          decideOpenCodeRuntimeDeliveryUserFacingAdvisory,
+        });
+
+        expect(decideOpenCodeRuntimeDeliveryUserFacingAdvisory).toHaveBeenCalledOnce();
+        expect(decideOpenCodeRuntimeDeliveryUserFacingAdvisory).toHaveBeenCalledWith(
+          expectedRecordId === currentRecord.id ? currentRecord : candidateRecord
+        );
+        expect(status?.ledgerRecordId).toBe(expectedRecordId);
+      } finally {
+        await rm(teamsBasePath, { recursive: true, force: true });
+      }
+    });
+  });
+
   describe('getOpenCodeRuntimeRecoveryLaneIds', () => {
     it('prefers lane index keys when the runtime lane index has entries', () => {
       expect(
@@ -375,6 +602,57 @@ function createDeliveryEnvelope(
     createdAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
   };
+}
+
+function createPromptDeliveryRecord(
+  overrides: Partial<OpenCodePromptDeliveryLedgerRecord> = {}
+): OpenCodePromptDeliveryLedgerRecord {
+  return {
+    id: 'delivery-1',
+    teamName: 'Team',
+    memberName: 'Builder',
+    laneId: 'primary',
+    inboxMessageId: 'message-1',
+    status: 'pending',
+    responseState: 'not_observed',
+    acceptanceUnknown: false,
+    runtimePromptMessageIds: [],
+    visibleReplyMessageId: null,
+    visibleReplyCorrelation: null,
+    acceptedAt: null,
+    deliveredUserMessageId: null,
+    runtimePromptMessageId: null,
+    lastRuntimePromptMessageId: null,
+    lastReason: null,
+    diagnostics: [],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    ...overrides,
+  } as OpenCodePromptDeliveryLedgerRecord;
+}
+
+function createPromptDeliveryRecordWithTimestamps(input: {
+  id: string;
+  laneId: string;
+  timestamps: { createdAt?: string; updatedAt?: string };
+}): OpenCodePromptDeliveryLedgerRecord {
+  const record = createPromptDeliveryRecord({
+    id: input.id,
+    laneId: input.laneId,
+    createdAt: input.timestamps.createdAt ?? '',
+    updatedAt: input.timestamps.updatedAt ?? '',
+  });
+  const persistedRecord = record as unknown as {
+    createdAt?: string;
+    updatedAt?: string;
+  };
+  if (input.timestamps.createdAt === undefined) {
+    delete persistedRecord.createdAt;
+  }
+  if (input.timestamps.updatedAt === undefined) {
+    delete persistedRecord.updatedAt;
+  }
+  return record;
 }
 
 function createBoundary(

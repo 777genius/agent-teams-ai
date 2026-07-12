@@ -4557,7 +4557,8 @@ describe('Team agent launch matrix safe e2e', () => {
       providerId: 'opencode',
       laneId: 'secondary:opencode:tom',
       laneKind: 'secondary',
-      alive: true,
+      alive: false,
+      livenessKind: 'permission_blocked',
       restartable: false,
       pid: sharedHostPid,
       runtimeModel: 'opencode/nemotron-3-super-free',
@@ -4657,7 +4658,8 @@ describe('Team agent launch matrix safe e2e', () => {
       providerId: 'opencode',
       laneId: 'secondary:opencode:tom',
       laneKind: 'secondary',
-      alive: true,
+      alive: false,
+      livenessKind: 'permission_blocked',
       restartable: false,
       pid: sharedHostPid,
       runtimeModel: 'opencode/nemotron-3-super-free',
@@ -4784,7 +4786,8 @@ describe('Team agent launch matrix safe e2e', () => {
       providerId: 'opencode',
       laneId: 'secondary:opencode:tom',
       laneKind: 'secondary',
-      alive: true,
+      alive: false,
+      livenessKind: 'permission_blocked',
       restartable: false,
       pid: sharedHostPid,
       runtimeModel: 'opencode/nemotron-3-super-free',
@@ -20140,6 +20143,7 @@ function createMixedLiveRun(input: {
   primaryProviderId?: MixedPrimaryProviderId;
 }): any {
   const now = '2026-04-23T10:00:00.000Z';
+  const freshHeartbeatAt = new Date().toISOString();
   const primary = getMixedPrimaryFixture(input.primaryProviderId);
   return {
     runId: `run-${input.teamName}`,
@@ -20223,7 +20227,7 @@ function createMixedLiveRun(input: {
           runtimeAlive: true,
           bootstrapConfirmed: true,
           hardFailure: false,
-          lastHeartbeatAt: now,
+          lastHeartbeatAt: freshHeartbeatAt,
           lastRuntimeAliveAt: now,
           lastEvaluatedAt: now,
           updatedAt: now,
@@ -20343,6 +20347,7 @@ function removeMixedOpenCodeLaneForTest(run: any, memberName: string): void {
 
 function addGeminiPrimaryToMixedRun(run: any): void {
   const now = '2026-04-23T10:00:00.000Z';
+  const freshHeartbeatAt = new Date().toISOString();
   const reviewer = {
     name: 'reviewer',
     role: 'Reviewer',
@@ -20364,7 +20369,7 @@ function addGeminiPrimaryToMixedRun(run: any): void {
     runtimeAlive: true,
     bootstrapConfirmed: true,
     hardFailure: false,
-    lastHeartbeatAt: now,
+    lastHeartbeatAt: freshHeartbeatAt,
     lastRuntimeAliveAt: now,
     lastEvaluatedAt: now,
     updatedAt: now,
@@ -20374,6 +20379,7 @@ function addGeminiPrimaryToMixedRun(run: any): void {
 
 function createPureAnthropicLiveRun(input: { teamName: string; projectPath: string }): any {
   const now = '2026-04-23T10:00:00.000Z';
+  const freshHeartbeatAt = new Date().toISOString();
   const memberStatus = {
     status: 'online',
     launchState: 'confirmed_alive',
@@ -20381,7 +20387,7 @@ function createPureAnthropicLiveRun(input: { teamName: string; projectPath: stri
     runtimeAlive: true,
     bootstrapConfirmed: true,
     hardFailure: false,
-    lastHeartbeatAt: now,
+    lastHeartbeatAt: freshHeartbeatAt,
     lastRuntimeAliveAt: now,
     lastEvaluatedAt: now,
     updatedAt: now,
@@ -21465,6 +21471,8 @@ function withoutAgentName(record: Record<string, unknown>): Record<string, unkno
 }
 
 function mixedMemberState(overrides: Record<string, unknown>): Record<string, unknown> {
+  const bootstrapConfirmed =
+    overrides.bootstrapConfirmed === true || overrides.launchState === 'confirmed_alive';
   return {
     name: overrides.name,
     launchState: 'starting',
@@ -21473,6 +21481,7 @@ function mixedMemberState(overrides: Record<string, unknown>): Record<string, un
     bootstrapConfirmed: false,
     hardFailure: false,
     lastEvaluatedAt: '2026-04-23T10:00:00.000Z',
+    ...(bootstrapConfirmed ? { lastHeartbeatAt: new Date().toISOString() } : {}),
     ...overrides,
   };
 }

@@ -427,15 +427,8 @@ vi.mock('@renderer/utils/geminiUiFreeze', () => ({
   normalizeCreateLaunchProviderForUi: (providerId: unknown) => providerId ?? 'anthropic',
 }));
 
-vi.mock('@renderer/utils/teamModelAvailability', () => ({
-  getAvailableTeamProviderModels: vi.fn((_providerId: string, providerStatus?: any) => {
-    if (Array.isArray(providerStatus?.models)) {
-      return providerStatus.models;
-    }
-    return Array.isArray(providerStatus?.modelCatalog?.models)
-      ? providerStatus.modelCatalog.models.map((model: { id?: string }) => model.id).filter(Boolean)
-      : [];
-  }),
+vi.mock('@renderer/utils/teamModelAvailability', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@renderer/utils/teamModelAvailability')>()),
   getTeamModelSelectionError: vi.fn(() => null),
   isTeamModelAvailableForUi: vi.fn(() => true),
   isTeamProviderModelVerificationPending: vi.fn(() => false),
@@ -1257,7 +1250,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('allows OpenCode lead launch to use the runtime default when no explicit model is selected', async () => {
+  it('allows OpenCode lead launch with the runtime default model', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',

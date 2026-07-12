@@ -3144,13 +3144,13 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         status: 'ready',
         fetchedAt: '2026-04-24T00:00:00.000Z',
         staleAt: '2026-04-24T00:10:00.000Z',
-        defaultModelId: 'gpt-5.5',
-        defaultLaunchModel: 'gpt-5.5',
+        defaultModelId: 'gpt-99-future',
+        defaultLaunchModel: 'gpt-99-future',
         models: [
           {
-            id: 'gpt-5.5',
-            launchModel: 'gpt-5.5',
-            displayName: 'GPT-5.5',
+            id: 'gpt-99-future',
+            launchModel: 'gpt-99-future',
+            displayName: 'GPT-99 Future',
             hidden: false,
             supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
             defaultReasoningEffort: 'high',
@@ -3159,7 +3159,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
             isDefault: true,
             upgrade: false,
             source: 'app-server',
-            badgeLabel: '5.5',
+            badgeLabel: '99-future',
           },
         ],
         diagnostics: {
@@ -3211,7 +3211,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       claudePath: '/fake/claude',
       cwd: tempRoot,
       providerId: 'codex',
-      modelIds: ['gpt-5.5', 'gpt-5.4-mini', 'gpt-5.3-codex'],
+      modelIds: ['gpt-99-future', 'gpt-5.4-mini', 'gpt-5.3-codex'],
       limitContext: false,
       ports: {
         buildProvisioningEnv: (providerId) =>
@@ -3222,7 +3222,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     });
 
     expect(result.details).toEqual([
-      'Selected model gpt-5.5 is available for launch.',
+      'Selected model gpt-99-future is available for launch.',
       'Selected model gpt-5.4-mini is available for launch.',
       'Selected model gpt-5.3-codex is available for launch.',
     ]);

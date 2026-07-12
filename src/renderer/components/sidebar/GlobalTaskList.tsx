@@ -954,7 +954,7 @@ const ProjectTaskGroup = memo(
     )
 );
 
-export const GlobalTaskList = memo(function GlobalTaskList({
+export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList({
   hideHeader = false,
   filters: externalFilters,
   onFiltersChange: externalOnFiltersChange,

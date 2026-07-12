@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "متبادل ماڈلز کی فہرست دکھائی جا رہی ہے۔ آپ کے اکاؤنٹ کے مخصوص اور حال ہی میں جاری کردہ ماڈلز موجود نہ ہوں۔",
+    "codexCatalogFallbackTitle": "لائیو Codex ماڈلز دستیاب نہیں ہیں",
     "badges": {
       "configured": "اوپر لکھیں",
       "connected": "غیر متصل",

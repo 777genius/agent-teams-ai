@@ -1,5 +1,5 @@
 /* eslint-disable security/detect-non-literal-fs-filename -- Test paths are owned by the harness temp workspace. */
-import { rm, writeFile } from 'fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { describe, expect, it } from 'vitest';
@@ -42,10 +42,7 @@ describe('TeamProvisioningHarnessBuilder path safety', () => {
     const beforeEntries = await listTempWorkspaceNames(prefix);
 
     await expect(
-      TeamProvisioningHarnessBuilder.create()
-        .withTempWorkspace({ prefix })
-        .withTeam(' .. ')
-        .build()
+      TeamProvisioningHarnessBuilder.create().withTempWorkspace({ prefix }).withTeam(' .. ').build()
     ).rejects.toThrow(/Invalid team name/);
 
     expect(await listTempWorkspaceNames(prefix)).toEqual(beforeEntries);
@@ -172,6 +169,30 @@ describe('TeamProvisioningHarnessBuilder path safety', () => {
     expect(await pathExists(outsideFile)).toBe(false);
   });
 
+  it('rejects traversal team names passed through the config facade before deleting files', async () => {
+    const harness = await track(TeamProvisioningHarnessBuilder.create().build());
+    const outsideDir = path.join(
+      os.tmpdir(),
+      `team-provisioning-harness-facade-escape-${process.pid}`
+    );
+    const outsideBackup = path.join(outsideDir, 'config.json.prelaunch.bak');
+    const sentinel = 'outside the harness workspace';
+    await rm(outsideDir, { recursive: true, force: true });
+    await mkdir(outsideDir, { recursive: true });
+    await writeFile(outsideBackup, sentinel, 'utf8');
+
+    try {
+      const traversalTeamName = path.relative(harness.paths.teamsBase, outsideDir);
+
+      await expect(
+        harness.facades.configFacade.cleanupPrelaunchBackup(traversalTeamName)
+      ).rejects.toThrow(/Invalid team name/);
+      await expect(readFile(outsideBackup, 'utf8')).resolves.toBe(sentinel);
+    } finally {
+      await rm(outsideDir, { recursive: true, force: true });
+    }
+  });
+
   it('validates caller fixtures before creating temp dirs or applying path overrides', async () => {
     const prefix = 'team-provisioning-harness-invalid-fixture-test-';
     const teamName = 'invalid-fixture-team';
@@ -223,10 +244,7 @@ describe('TeamProvisioningHarnessBuilder path safety', () => {
             teamName,
             teamConfigFixture.basic({
               teamName,
-              members: [
-                memberFixture.lead(),
-                memberFixture.codex(`bad${reservedChar}member`),
-              ],
+              members: [memberFixture.lead(), memberFixture.codex(`bad${reservedChar}member`)],
             })
           )
           .build()

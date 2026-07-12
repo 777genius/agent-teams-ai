@@ -6,6 +6,7 @@ import type { HttpServices } from '@main/http';
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpDataApi,
+  TeamHttpHandlerApis,
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
@@ -94,6 +95,13 @@ describe('HTTP team runtime routes', () => {
       TeamHttpDataApi,
       'listTeams' | 'getTeamData' | 'getSavedRequest' | 'createTeamConfig'
     > as HttpServices['teamDataApi'];
+    const teamApis = {
+      provisioningStart: teamProvisioningStartApi,
+      provisioningStatus: teamProvisioningStatusApi,
+      taskActivity: teamTaskActivityRepairApi,
+      runtime: teamRuntimeApi,
+      runtimeControl: teamRuntimeControlApi,
+    } satisfies TeamHttpHandlerApis;
 
     const services = {
       projectScanner: {} as HttpServices['projectScanner'],
@@ -104,11 +112,7 @@ describe('HTTP team runtime routes', () => {
       updaterService: {} as HttpServices['updaterService'],
       sshConnectionManager: {} as HttpServices['sshConnectionManager'],
       teamDataApi,
-      teamProvisioningStartApi,
-      teamProvisioningStatusApi,
-      teamTaskActivityApi: teamTaskActivityRepairApi,
-      teamRuntimeApi,
-      teamRuntimeControlApi,
+      teamApis,
     } satisfies HttpServices;
 
     return {
@@ -345,12 +349,59 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('returns 501 for launch without the provisioning start facade', async () => {
+  it('maps provisioning not-found errors with an embedded team name to 404', async () => {
+    const { app, launchTeam } = await createApp();
+    launchTeam.mockRejectedValue(
+      new Error('Team "demo-team" not found — config.json does not exist')
+    );
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toEqual({
+        error: 'Team "demo-team" not found — config.json does not exist',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not expose unexpected launch service errors in HTTP responses', async () => {
+    const { app, launchTeam } = await createApp();
+    launchTeam.mockRejectedValue(new Error('private provider runtime diagnostic'));
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: {
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(500);
+      expect(response.json()).toEqual({ error: 'Internal server error' });
+      expect(response.body).not.toContain('private provider runtime diagnostic');
+      expect(console.error).toHaveBeenCalled();
+      vi.mocked(console.error).mockClear();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('returns 501 for launch without the optional team HTTP aggregate', async () => {
     const app = Fastify();
     const mocks = createServicesMock();
     registerTeamRoutes(app, {
       ...mocks.services,
-      teamProvisioningStartApi: undefined,
+      teamApis: undefined,
     });
     await app.ready();
 
@@ -374,25 +425,13 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('launches through the grouped HTTP facade when legacy facade fields are absent', async () => {
+  it('launches through the grouped HTTP facade exposed to the app shell', async () => {
     const app = Fastify();
     const mocks = createServicesMock();
     mocks.launchTeam.mockResolvedValue({ runId: 'run-grouped-http' });
-    registerTeamRoutes(app, {
-      ...mocks.services,
-      teamApis: {
-        provisioningStart: mocks.services.teamProvisioningStartApi!,
-        provisioningStatus: mocks.services.teamProvisioningStatusApi!,
-        taskActivity: mocks.services.teamTaskActivityApi!,
-        runtime: mocks.services.teamRuntimeApi!,
-        runtimeControl: mocks.services.teamRuntimeControlApi!,
-      },
-      teamProvisioningStartApi: undefined,
-      teamProvisioningStatusApi: undefined,
-      teamTaskActivityApi: undefined,
-      teamRuntimeApi: undefined,
-      teamRuntimeControlApi: undefined,
-    });
+    expect('teamProvisioningStartApi' in mocks.services).toBe(false);
+    expect('teamRuntimeApi' in mocks.services).toBe(false);
+    registerTeamRoutes(app, mocks.services);
     await app.ready();
 
     try {
@@ -886,6 +925,7 @@ describe('HTTP team runtime routes', () => {
     const callbackPayload = {
       runId: 'run-opencode',
       idempotencyKey: 'callback-1',
+      observedAt: '2026-03-12T00:00:02.000Z',
       location: { line: 12 },
     };
     const callbackCases = [
@@ -960,6 +1000,7 @@ describe('HTTP team runtime routes', () => {
         url: '/api/teams/demo-team/opencode/runtime/heartbeat',
         payload: {
           teamName: 'demo-team',
+          observedAt: '2026-03-12T00:00:02.000Z',
         },
       });
 
@@ -972,11 +1013,39 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
+  it('rejects heartbeats without a stable observed-at identifier before delegation', async () => {
+    const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
+
+    try {
+      for (const observedAt of [undefined, 'not-a-date']) {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+          payload: {
+            runId: 'run-opencode',
+            memberName: 'builder',
+            runtimeSessionId: 'session-1',
+            ...(observedAt === undefined ? {} : { observedAt }),
+          },
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json()).toEqual({
+          error:
+            observedAt === undefined
+              ? 'OpenCode runtime payload missing observedAt'
+              : 'OpenCode runtime payload invalid observedAt',
+        });
+      }
+      expect(recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
   it('maps runtime-control provider routing failures to 501', async () => {
     const { app, answerOpenCodeRuntimePermission } = await createApp();
-    const error = new Error(
-      'Runtime control provider opencode does not support answerPermission'
-    );
+    const error = new Error('Runtime control provider opencode does not support answerPermission');
     error.name = 'RuntimeControlProviderRoutingError';
     answerOpenCodeRuntimePermission.mockRejectedValueOnce(error);
 
@@ -1001,12 +1070,12 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('returns 501 for provisioning status without the status facade', async () => {
+  it('returns 501 for provisioning status without the optional team HTTP aggregate', async () => {
     const app = Fastify();
     const mocks = createServicesMock();
     registerTeamRoutes(app, {
       ...mocks.services,
-      teamProvisioningStatusApi: undefined,
+      teamApis: undefined,
     });
     await app.ready();
 
@@ -1049,12 +1118,12 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('returns 501 for OpenCode runtime callbacks without the runtime-control facade', async () => {
+  it('returns 501 for OpenCode runtime callbacks without the optional team HTTP aggregate', async () => {
     const app = Fastify();
     const mocks = createServicesMock();
     registerTeamRoutes(app, {
       ...mocks.services,
-      teamRuntimeControlApi: undefined,
+      teamApis: undefined,
     });
     await app.ready();
 

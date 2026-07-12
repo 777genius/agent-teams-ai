@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "पर्यायी मॉडेल सूची दाखवली जात आहे. तुमच्या खात्यासाठी खास आणि नुकतीच प्रसिद्ध झालेली मॉडेल यात नसू शकतात.",
+    "codexCatalogFallbackTitle": "लाइव्ह Codex मॉडेल उपलब्ध नाहीत",
     "badges": {
       "configured": "कॉन्फिगर केले",
       "connected": "कनेक्ट केले",

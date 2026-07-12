@@ -51,6 +51,14 @@ describe('RuntimeControlEventFactory', () => {
       })
     ).toThrow('Runtime control ack provider mismatch: expected opencode, received subscription');
   });
+
+  it('does not misclassify a non-delivery acknowledgement as a delivered event', () => {
+    expect(() =>
+      createRuntimeControlEventFromAck(createDeliveryCommand(), createAck('accepted'))
+    ).toThrow(
+      'Runtime control ack state mismatch for runtime.deliver-message: expected delivered or duplicate, received accepted'
+    );
+  });
 });
 
 function createDeliveryCommand(): RuntimeDeliverMessageCommand {

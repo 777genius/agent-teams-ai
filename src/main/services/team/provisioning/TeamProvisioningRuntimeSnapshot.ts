@@ -11,12 +11,10 @@ import {
 } from '@shared/utils/teamProvider';
 
 import {
-  hasRuntimeProjectionBootstrapConfirmationEvidence,
   hasRuntimeProjectionSnapshotBootstrapConfirmationEvidence,
   isStrongRuntimeEvidence,
   mapRuntimeProjectionMemberEntry,
   mapRuntimeProjectionSnapshot,
-  projectRuntimeSnapshotMemberLivenessFields,
   projectRuntimeSnapshotResourceFields,
 } from '../runtime-projection';
 import { type TeamAgentRuntimeResourceHistoryRecordInput } from '../TeamAgentRuntimeResourceHistory';
@@ -24,7 +22,6 @@ import {
   choosePreferredLaunchSnapshot,
   readBootstrapLaunchSnapshot,
 } from '../TeamBootstrapStateReader';
-import { resolveTeamMemberRuntimeLiveness } from '../TeamRuntimeLivenessResolver';
 import {
   addRuntimeRootOwnersFromProcessRows,
   buildProcessUsageStatsFromRows,
@@ -64,9 +61,15 @@ import {
   OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
+  hasTeamProvisioningRuntimePermissionBlock,
+  readTeamProvisioningBootstrapEvidence,
+} from './TeamProvisioningRuntimeEvidenceReader';
+import { resolveTeamProvisioningRuntimeLiveness } from './TeamProvisioningRuntimeLiveness';
+import {
   type LiveTeamAgentRuntimeMetadata,
   shouldReadProcessTableForLiveRuntimeMetadata,
 } from './TeamProvisioningRuntimeMetadataPolicy';
+import { resolveTeamProvisioningRuntimeSnapshotLiveness } from './TeamProvisioningRuntimeSnapshotResolver';
 
 import type { TeamRuntimeMemberLaunchEvidence } from '../runtime';
 import type { TeamProvisioningRuntimeSnapshotResourceSamplingPorts } from './TeamProvisioningRuntimeResourceSampling';
@@ -1110,9 +1113,21 @@ export async function buildTeamAgentRuntimeSnapshot(
         launchState: spawnStatusMember?.launchState,
       },
     });
-    const spawnStatusConfirmsBootstrap = hasRuntimeProjectionBootstrapConfirmationEvidence({
-      bootstrapConfirmed: spawnStatusMember?.bootstrapConfirmed,
-      launchState: spawnStatusMember?.launchState,
+    const spawnStatusBootstrapEvidence = readTeamProvisioningBootstrapEvidence({
+      status: spawnStatusMember,
+      nowIso: updatedAt,
+    });
+    const launchBootstrapEvidence = readTeamProvisioningBootstrapEvidence({
+      status: launchMember
+        ? {
+            bootstrapConfirmed: launchMember.bootstrapConfirmed,
+            launchState: launchMember.launchState,
+            lastHeartbeatAt: launchMember.lastHeartbeatAt,
+            pendingPermissionRequestIds: launchMember.pendingPermissionRequestIds,
+            updatedAt: launchMember.lastEvaluatedAt,
+          }
+        : undefined,
+      nowIso: updatedAt,
     });
     const hasOpenCodeRuntimeHandle =
       isOpenCodeMember &&
@@ -1121,16 +1136,26 @@ export async function buildTeamAgentRuntimeSnapshot(
         typeof liveRuntimeMember?.runtimeSessionId === 'string' ||
         typeof runtimeAdapterPid === 'number' ||
         runtimeAdapterSessionId.length > 0);
+    const permissionBlocked =
+      liveRuntimeMember?.livenessKind === 'permission_blocked' ||
+      hasTeamProvisioningRuntimePermissionBlock(
+        launchMember,
+        spawnStatusMember,
+        runtimeAdapterEvidence
+      );
     const confirmedOpenCodeRuntimeAlive =
       isOpenCodeMember &&
+      !permissionBlocked &&
       canUseLiveSpawnStatusRuntimeTruth &&
-      historicalBootstrapConfirmed &&
+      (spawnStatusBootstrapEvidence.bootstrapConfirmed ||
+        launchBootstrapEvidence.bootstrapConfirmed) &&
       hasOpenCodeRuntimeHandle &&
       spawnStatusMember?.hardFailure !== true &&
       spawnStatusMember?.launchState !== 'failed_to_start' &&
       spawnStatusMember?.launchState !== 'runtime_pending_permission';
     const confirmedOpenCodeRuntimeAdapterAlive =
       isOpenCodeMember &&
+      !permissionBlocked &&
       runtimeAdapterEvidence?.bootstrapConfirmed === true &&
       runtimeAdapterEvidence.runtimeAlive === true &&
       runtimeAdapterEvidence.hardFailure !== true &&
@@ -1139,7 +1164,8 @@ export async function buildTeamAgentRuntimeSnapshot(
       confirmedOpenCodeRuntimeAlive || confirmedOpenCodeRuntimeAdapterAlive;
     const confirmedSpawnRuntimeFallback =
       !isOpenCodeMember &&
-      spawnStatusConfirmsBootstrap &&
+      !permissionBlocked &&
+      spawnStatusBootstrapEvidence.bootstrapConfirmed &&
       spawnStatusMember?.hardFailure !== true &&
       spawnStatusMember?.launchState !== 'failed_to_start' &&
       !isStrongRuntimeEvidence(liveRuntimeMember);
@@ -1148,7 +1174,7 @@ export async function buildTeamAgentRuntimeSnapshot(
     const shouldKeepConfirmedSpawnRuntimeDiagnostic =
       !!confirmedSpawnRuntimeDiagnostic &&
       !shouldClearRuntimeDiagnosticAfterBootstrapConfirmation(confirmedSpawnRuntimeDiagnostic);
-    const runtimeLivenessFields = projectRuntimeSnapshotMemberLivenessFields({
+    const runtimeLivenessFields = resolveTeamProvisioningRuntimeSnapshotLiveness({
       liveAlive: liveRuntimeMember?.alive,
       liveLivenessKind: liveRuntimeMember?.livenessKind,
       livePidSource: liveRuntimeMember?.pidSource,
@@ -1165,6 +1191,7 @@ export async function buildTeamAgentRuntimeSnapshot(
         : {}),
       confirmedSpawnRuntimeFallback,
       keepConfirmedSpawnRuntimeDiagnostic: shouldKeepConfirmedSpawnRuntimeDiagnostic,
+      permissionBlocked,
     });
     if (
       rssPid &&
@@ -1712,7 +1739,7 @@ export async function buildLiveTeamAgentRuntimeMetadata(
         ? adapterStatus
         : (trackedStatus ?? adapterStatus ?? launchStatus);
     const resolvedAt = nowIso();
-    const resolved = resolveTeamMemberRuntimeLiveness({
+    const resolved = resolveTeamProvisioningRuntimeLiveness({
       teamName: params.teamName,
       memberName,
       agentId: metadata.agentId,

@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Показан резервный список моделей. В нем могут отсутствовать модели для вашего аккаунта и недавно выпущенные модели.",
+    "codexCatalogFallbackTitle": "Актуальные модели Codex недоступны",
     "badges": {
       "configured": "Настроено",
       "connected": "Подключено",

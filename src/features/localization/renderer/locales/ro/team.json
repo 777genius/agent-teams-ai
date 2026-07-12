@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Se afișează o listă de modele de rezervă. Este posibil să lipsească modelele specifice contului și cele lansate recent.",
+    "codexCatalogFallbackTitle": "Modelele Codex live nu sunt disponibile",
     "badges": {
       "configured": "Configurat",
       "connected": "Conectat",

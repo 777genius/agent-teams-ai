@@ -7,6 +7,7 @@ import { createTeamProvisioningLaunchExpectedMembersPorts } from '@main/services
 import {
   readHarnessRegularFileUtf8,
   type TeamProvisioningHarnessPaths,
+  validateTeamNamePathSegment,
 } from './harnessFilesystem';
 
 import type {
@@ -15,6 +16,54 @@ import type {
   TeamProvisioningHarnessStores,
 } from './TeamProvisioningHarnessBuilder';
 import type { TeamProvisioningLaunchExpectedMembersPorts } from '@main/services/team/provisioning/TeamProvisioningLaunchExpectedMembers';
+
+const ASYNC_TEAM_SCOPED_CONFIG_FACADE_METHODS = [
+  'readConfigSnapshot',
+  'readConfigForObservation',
+  'readConfigForStrictDecision',
+  'updateConfigProjectPath',
+  'updateConfigPostLaunch',
+  'cleanupCliAutoSuffixedMembers',
+  'assertConfigLeadOnlyForLaunch',
+  'normalizeTeamConfigForLaunch',
+  'restorePrelaunchConfig',
+  'cleanupPrelaunchBackup',
+  'persistMembersMeta',
+  'resolveLaunchExpectedMembers',
+] as const satisfies readonly (keyof TeamProvisioningConfigFacade)[];
+
+const SYNC_TEAM_SCOPED_CONFIG_FACADE_METHODS = [
+  'readPersistedTeamProjectPath',
+  'readPersistedRuntimeMembers',
+] as const satisfies readonly (keyof TeamProvisioningConfigFacade)[];
+
+function guardConfigFacadeTeamPaths(
+  facade: TeamProvisioningConfigFacade
+): TeamProvisioningConfigFacade {
+  for (const methodName of ASYNC_TEAM_SCOPED_CONFIG_FACADE_METHODS) {
+    const method = facade[methodName] as (...args: unknown[]) => unknown;
+    Object.defineProperty(facade, methodName, {
+      configurable: true,
+      writable: true,
+      value: async (...args: unknown[]) => {
+        validateTeamNamePathSegment(args[0] as string);
+        return Reflect.apply(method, facade, args);
+      },
+    });
+  }
+  for (const methodName of SYNC_TEAM_SCOPED_CONFIG_FACADE_METHODS) {
+    const method = facade[methodName] as (...args: unknown[]) => unknown;
+    Object.defineProperty(facade, methodName, {
+      configurable: true,
+      writable: true,
+      value: (...args: unknown[]) => {
+        validateTeamNamePathSegment(args[0] as string);
+        return Reflect.apply(method, facade, args);
+      },
+    });
+  }
+  return facade;
+}
 
 function createConfigFacade(
   paths: TeamProvisioningHarnessPaths,
@@ -32,7 +81,7 @@ function createConfigFacade(
       readHarnessRegularFileUtf8(paths, filePath, readOptions),
     logger,
   };
-  return new TeamProvisioningConfigFacade(options);
+  return guardConfigFacadeTeamPaths(new TeamProvisioningConfigFacade(options));
 }
 
 function createLaunchExpectedMembersPorts(

@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Đang hiển thị danh sách mô hình dự phòng. Các mô hình dành riêng cho tài khoản và mới phát hành có thể bị thiếu.",
+    "codexCatalogFallbackTitle": "Không thể sử dụng các mô hình Codex trực tiếp",
     "badges": {
       "configured": "Đã cấu hình",
       "connected": "Đã kết nối",

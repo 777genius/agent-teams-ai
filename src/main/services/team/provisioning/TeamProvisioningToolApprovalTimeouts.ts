@@ -11,6 +11,16 @@ import type {
   ToolApprovalSettings,
 } from '@shared/types';
 
+type SynchronousCallResult<T> = { success: true; value: T } | { success: false; error: unknown };
+
+function captureSynchronousCall<T>(call: () => T): SynchronousCallResult<T> {
+  try {
+    return { success: true, value: call() };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
+
 export interface TeamProvisioningToolApprovalTimeoutRun {
   runId: string;
   teamName: string;
@@ -82,19 +92,14 @@ export class TeamProvisioningToolApprovalTimeouts<
 
       const approval = run.pendingApprovals.get(requestId);
       if (approval && approval.source !== 'lead') {
-        void this.ports
-          .respondToTeammatePermission(
-            run,
-            approval,
-            allow,
-            allow ? undefined : resolution.teammateDenyMessage
-          )
-          .finally(() => {
-            run.pendingApprovals.delete(requestId);
-            this.maps.inFlightResponses.delete(requestId);
-            this.ports.dismissApprovalNotification(requestId);
-            this.ports.emitToolApprovalEvent(resolution.event);
-          });
+        this.settleTeammateAutoResponse(
+          run,
+          approval,
+          allow,
+          allow ? undefined : resolution.teammateDenyMessage,
+          resolution.event,
+          true
+        );
         return;
       }
 
@@ -130,20 +135,32 @@ export class TeamProvisioningToolApprovalTimeouts<
           this.clear(requestId);
           if (!this.tryClaimResponse(requestId)) continue;
           if (approval.source !== 'lead') {
-            void this.ports.respondToTeammatePermission(run, approval, true, undefined);
+            this.settleTeammateAutoResponse(
+              run,
+              approval,
+              true,
+              undefined,
+              buildToolApprovalAutoResolvedEvent({
+                requestId,
+                runId: run.runId,
+                teamName: run.teamName,
+                reason: 'auto_allow_category',
+              }),
+              false
+            );
           } else {
             this.ports.autoAllowControlRequest(run, requestId);
+            this.ports.dismissApprovalNotification(requestId);
+            toRemove.push(requestId);
+            this.ports.emitToolApprovalEvent(
+              buildToolApprovalAutoResolvedEvent({
+                requestId,
+                runId: run.runId,
+                teamName: run.teamName,
+                reason: 'auto_allow_category',
+              })
+            );
           }
-          this.ports.dismissApprovalNotification(requestId);
-          toRemove.push(requestId);
-          this.ports.emitToolApprovalEvent(
-            buildToolApprovalAutoResolvedEvent({
-              requestId,
-              runId: run.runId,
-              teamName: run.teamName,
-              reason: 'auto_allow_category',
-            })
-          );
         } else if (settings.timeoutAction !== 'wait' && !this.maps.pendingTimeouts.has(requestId)) {
           this.start(run, requestId);
         } else if (settings.timeoutAction === 'wait' && this.maps.pendingTimeouts.has(requestId)) {
@@ -155,5 +172,46 @@ export class TeamProvisioningToolApprovalTimeouts<
         this.maps.inFlightResponses.delete(requestId);
       }
     }
+  }
+
+  private settleTeammateAutoResponse(
+    run: TRun,
+    approval: ToolApprovalRequest,
+    allow: boolean,
+    message: string | undefined,
+    event: ToolApprovalAutoResolved,
+    restartTimeoutOnFailure: boolean
+  ): void {
+    const { requestId } = approval;
+    const handleFailure = (error: unknown): void => {
+      this.maps.inFlightResponses.delete(requestId);
+      this.ports.logInfo(
+        `[${run.teamName}] Failed to auto-resolve teammate approval ${requestId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      if (
+        restartTimeoutOnFailure &&
+        run.pendingApprovals.has(requestId) &&
+        !this.maps.pendingTimeouts.has(requestId)
+      ) {
+        this.start(run, requestId);
+      }
+    };
+
+    const response = captureSynchronousCall(() =>
+      this.ports.respondToTeammatePermission(run, approval, allow, message)
+    );
+    if (!response.success) {
+      handleFailure(response.error);
+      return;
+    }
+
+    void response.value.then(() => {
+      run.pendingApprovals.delete(requestId);
+      this.maps.inFlightResponses.delete(requestId);
+      this.ports.dismissApprovalNotification(requestId);
+      this.ports.emitToolApprovalEvent(event);
+    }, handleFailure);
   }
 }

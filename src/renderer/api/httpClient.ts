@@ -1431,11 +1431,15 @@ export class HttpAPIClient implements ElectronAPI {
   codexRuntime: CodexRuntimeAPI = {
     getStatus: async () => ({
       installed: false,
+      latestVersion: null,
+      updateAvailable: false,
       source: 'missing',
       state: 'idle',
     }),
     install: async () => ({
       installed: false,
+      latestVersion: null,
+      updateAvailable: false,
       source: 'missing',
       state: 'failed',
       error: 'Codex runtime installer is not available in browser mode',

@@ -119,8 +119,8 @@ export function launchQueuedMixedSecondaryLaneInBackground<
         })
         .catch(() => undefined);
       ports.deleteSecondaryRuntimeRun(run.teamName, lane.laneId);
-      await ports.publishMixedSecondaryLaneStatusChange(run, lane).catch(() => undefined);
       lane.state = 'finished';
+      await ports.publishMixedSecondaryLaneStatusChange(run, lane).catch(() => undefined);
     }
   };
 

@@ -20,6 +20,21 @@
       "description": "Diff-weergave per taak met accepteren, afwijzen en comments. Ingebouwde code-editor met Git-ondersteuning."
     },
     {
+      "id": "tokenUsage",
+      "title": "Tokenanalyse en budgetten",
+      "description": "Bekijk waar tokens en geschatte kosten naartoe gaan per team, agent, taak, project, model en run. Vind duur werk, volg trends en prognoses, stel maandbudgetten in en ontvang waarschuwingen bij 80% en 100%."
+    },
+    {
+      "id": "organizations",
+      "title": "Organisaties en totaaloverzicht",
+      "description": "Deel teams in afdelingen, squads of elke gewenste geneste structuur in. Bekijk alle organisaties op één live kaart met team- en agentstatussen, taakvoortgang, afhankelijkheden, delegatie en communicatie tussen teams."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Voer opdrachten uit in een visuele terminal met team- en lokale shells, geschiedenis, automatisch aanvullen en instellingen."
+    },
+    {
       "id": "crossTeam",
       "title": "Communicatie tussen teams",
       "description": "Agents berichten elkaar binnen en tussen teams. Directe berichten, taakcomments en snelle acties."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Solo-modus",
       "description": "Start met een enkele agent die taken zelf beheert. Breid uit naar een volledig team wanneer je meer kracht nodig hebt."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Live processen",
-      "description": "Bekijk draaiende agents, open URLs in de browser en monitor tokengebruik en sessiecontext realtime."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Wat is Agent Teams?",
-      "answer": "Een desktop-app voor het orkestreren van AI-agentteams met onze eigen lokale coordinatielaag. Agents hebben rollen, werken autonoom, werken samen via kanban en kunnen draaien op Anthropic of Codex."
+      "answer": "Een desktop-app voor het orkestreren van AI-agentteams met onze eigen lokale coordinatielaag. Agents hebben rollen, werken autonoom, werken samen via kanban en kunnen draaien op Claude, Codex of OpenCode."
     },
     {
       "id": "isFree",

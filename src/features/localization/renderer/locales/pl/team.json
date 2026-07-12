@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Wyświetlana jest zastępcza lista modeli. Może brakować modeli przypisanych do konta i niedawno wydanych.",
+    "codexCatalogFallbackTitle": "Modele Codex na żywo są niedostępne",
     "badges": {
       "configured": "Skonfigurowane",
       "connected": "Połączone",

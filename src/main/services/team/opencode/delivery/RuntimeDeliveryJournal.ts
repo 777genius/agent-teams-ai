@@ -170,12 +170,16 @@ export class RuntimeDeliveryJournalStore {
     updatedAt: string;
   }): Promise<void> {
     const canonicalInput = canonicalizeRuntimeDeliveryJournalInput(input);
-    await this.updateExisting(canonicalInput, (record) => ({
-      ...record,
-      status: canonicalInput.status,
-      updatedAt: canonicalInput.updatedAt,
-      lastError: canonicalInput.error,
-    }));
+    await this.updateExisting(canonicalInput, (record) =>
+      record.status === 'committed'
+        ? record
+        : {
+            ...record,
+            status: canonicalInput.status,
+            updatedAt: canonicalInput.updatedAt,
+            lastError: canonicalInput.error,
+          }
+    );
   }
 
   async get(input: RuntimeDeliveryJournalKeyInput): Promise<RuntimeDeliveryJournalRecord | null> {

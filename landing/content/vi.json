@@ -20,6 +20,21 @@
       "description": "Xem diff theo tung task voi chap nhan, tu choi va binh luan. Trinh soan code tich hop co ho tro Git."
     },
     {
+      "id": "tokenUsage",
+      "title": "Phân tích token và ngân sách",
+      "description": "Xem token và chi phí ước tính được dùng ở đâu theo nhóm, agent, tác vụ, dự án, mô hình và lần chạy. Phát hiện công việc tốn kém, theo dõi xu hướng và dự báo, đặt ngân sách hàng tháng và nhận cảnh báo ở mức 80% và 100%."
+    },
+    {
+      "id": "organizations",
+      "title": "Tổ chức và tổng quan toàn cục",
+      "description": "Sắp xếp các nhóm thành phòng ban, squad hoặc bất kỳ cấu trúc lồng nhau nào. Theo dõi mọi tổ chức trên một bản đồ trực tiếp với trạng thái nhóm và agent, tiến độ tác vụ, quan hệ phụ thuộc, phân công và giao tiếp liên nhóm."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Chay lenh trong terminal truc quan voi shell nhom va cuc bo, lich su, tu dong hoan thanh va cai dat."
+    },
+    {
       "id": "crossTeam",
       "title": "Giao tiep giua doi",
       "description": "Agent nhan tin trong cung doi va giua cac doi. Tin nhan truc tiep, binh luan task va hanh dong nhanh."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Che do solo",
       "description": "Bat dau voi mot agent tu quan ly task. Khi can them suc manh, mo rong thanh ca doi."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Tien trinh live",
-      "description": "Xem agent dang chay, mo URL trong trinh duyet, theo doi token va context phien theo thoi gian thuc."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Agent Teams la gi?",
-      "answer": "Ung dung desktop de dieu phoi cac doi agent AI voi lop dieu phoi cuc bo rieng. Agent co vai tro, lam viec tu chu, cong tac qua bang kanban va co the chay tren Anthropic hoac Codex."
+      "answer": "Ung dung desktop de dieu phoi cac doi agent AI voi lop dieu phoi cuc bo rieng. Agent co vai tro, lam viec tu chu, cong tac qua bang kanban va co the chay voi Claude, Codex hoac OpenCode."
     },
     {
       "id": "isFree",

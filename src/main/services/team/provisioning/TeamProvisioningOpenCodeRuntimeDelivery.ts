@@ -491,19 +491,58 @@ export async function getOpenCodeRuntimeDeliveryStatus(
         .filter(Boolean)
     ),
   ];
+  let recordForStatus: OpenCodePromptDeliveryLedgerRecord | null = null;
   for (const laneId of laneIds) {
     const records = await ports
       .createOpenCodePromptDeliveryLedger(teamName, laneId)
       .list()
       .catch(() => []);
-    const record = records.find((candidate) => candidate.inboxMessageId === normalizedMessageId);
-    if (record) {
-      const { record: latestRecord, decision } =
-        await ports.decideOpenCodeRuntimeDeliveryUserFacingAdvisory(record);
-      return toOpenCodeRuntimeDeliveryStatus({ record: latestRecord, decision });
+    for (const record of records) {
+      if (
+        record.inboxMessageId === normalizedMessageId &&
+        (!recordForStatus || isOpenCodePromptDeliveryRecordNewer(record, recordForStatus))
+      ) {
+        recordForStatus = record;
+      }
     }
   }
-  return null;
+  if (!recordForStatus) {
+    return null;
+  }
+  const { record: latestRecord, decision } =
+    await ports.decideOpenCodeRuntimeDeliveryUserFacingAdvisory(recordForStatus);
+  return toOpenCodeRuntimeDeliveryStatus({ record: latestRecord, decision });
+}
+
+function isOpenCodePromptDeliveryRecordNewer(
+  candidate: OpenCodePromptDeliveryLedgerRecord,
+  current: OpenCodePromptDeliveryLedgerRecord
+): boolean {
+  const candidateTimestamp = getOpenCodePromptDeliveryRecordEffectiveTimestamp(candidate);
+  const currentTimestamp = getOpenCodePromptDeliveryRecordEffectiveTimestamp(current);
+
+  if (candidateTimestamp === null) {
+    return false;
+  }
+  if (currentTimestamp === null) {
+    return true;
+  }
+
+  // Preserve the first record encountered when effective timestamps tie. This also keeps
+  // entirely invalid timestamp records deterministic in the lane/ledger traversal order.
+  return candidateTimestamp > currentTimestamp;
+}
+
+function getOpenCodePromptDeliveryRecordEffectiveTimestamp(
+  record: OpenCodePromptDeliveryLedgerRecord
+): number | null {
+  const updatedAt = Date.parse(record.updatedAt);
+  if (Number.isFinite(updatedAt)) {
+    return updatedAt;
+  }
+
+  const createdAt = Date.parse(record.createdAt);
+  return Number.isFinite(createdAt) ? createdAt : null;
 }
 
 export async function tryGetActiveOpenCodePromptDeliveryRecord(

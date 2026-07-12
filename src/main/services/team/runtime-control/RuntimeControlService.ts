@@ -1,5 +1,11 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import { RuntimeControlProviderRegistry } from './application/RuntimeControlProviderRegistry';
-import { createRuntimeControlEventFromAck } from './domain/RuntimeControlEventFactory';
+import {
+  assertRuntimeControlAckMatchesCommand,
+  createRuntimeControlEventFromAck,
+} from './domain/RuntimeControlEventFactory';
+import { canonicalizeRuntimeIdempotencyKey } from './domain/RuntimeIdempotencyKey';
 
 import type { RuntimeControlEventSink } from './application/RuntimeControlPorts';
 import type { RuntimeControlAck } from './domain/RuntimeControlAck';
@@ -19,6 +25,63 @@ import type {
 export interface RuntimeControlServiceOptions {
   providers?: readonly RuntimeControlProviderHandler[];
   eventSink?: RuntimeControlEventSink;
+  deliveryWriteFence?: RuntimeDeliveryWriteFence;
+}
+
+export interface RuntimeDeliveryWriteFence {
+  runExclusive<T>(key: string, action: () => Promise<T>): Promise<T>;
+}
+
+interface RuntimeDeliveryWriteFenceOwnership {
+  readonly key: string;
+  readonly parent?: RuntimeDeliveryWriteFenceOwnership;
+  active: boolean;
+}
+
+/** Serializes provider delivery commits while allowing unrelated identities to proceed. */
+export class KeyedRuntimeDeliveryWriteFence implements RuntimeDeliveryWriteFence {
+  private readonly tails = new Map<string, Promise<void>>();
+  private readonly ownership = new AsyncLocalStorage<RuntimeDeliveryWriteFenceOwnership>();
+
+  async runExclusive<T>(key: string, action: () => Promise<T>): Promise<T> {
+    if (this.currentCallOwns(key)) {
+      throw new Error(`Runtime delivery write fence is not reentrant for key: ${key}`);
+    }
+
+    const previous = this.tails.get(key) ?? Promise.resolve();
+    let release!: () => void;
+    const current = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    this.tails.set(key, current);
+
+    await previous;
+    const owner: RuntimeDeliveryWriteFenceOwnership = {
+      key,
+      parent: this.ownership.getStore(),
+      active: true,
+    };
+    try {
+      return await this.ownership.run(owner, action);
+    } finally {
+      owner.active = false;
+      release();
+      if (this.tails.get(key) === current) {
+        this.tails.delete(key);
+      }
+    }
+  }
+
+  private currentCallOwns(key: string): boolean {
+    let owner = this.ownership.getStore();
+    while (owner) {
+      if (owner.active && owner.key === key) {
+        return true;
+      }
+      owner = owner.parent;
+    }
+    return false;
+  }
 }
 
 function isRuntimeControlProviderList(
@@ -30,6 +93,7 @@ function isRuntimeControlProviderList(
 export class RuntimeControlService {
   private readonly providers: RuntimeControlProviderRegistry;
   private readonly eventSink?: RuntimeControlEventSink;
+  private readonly deliveryWriteFence: RuntimeDeliveryWriteFence;
 
   constructor(
     providersOrOptions: readonly RuntimeControlProviderHandler[] | RuntimeControlServiceOptions = []
@@ -39,6 +103,7 @@ export class RuntimeControlService {
       : providersOrOptions;
     this.providers = new RuntimeControlProviderRegistry(options.providers ?? []);
     this.eventSink = options.eventSink;
+    this.deliveryWriteFence = options.deliveryWriteFence ?? new KeyedRuntimeDeliveryWriteFence();
   }
 
   registerProvider(handler: RuntimeControlProviderHandler): void {
@@ -54,28 +119,42 @@ export class RuntimeControlService {
   }
 
   recordBootstrapCheckin(command: RuntimeBootstrapCheckinCommand): Promise<RuntimeControlAck> {
-    const handler = this.providers.requireOperation(command.providerId, 'recordBootstrapCheckin');
-    return this.withRecordedEvent(command, () => handler.recordBootstrapCheckin!(command));
+    return this.withRecordedEvent(command, () => {
+      const handler = this.providers.requireOperation(command.providerId, 'recordBootstrapCheckin');
+      return handler.recordBootstrapCheckin!(command);
+    });
   }
 
   deliverMessage(command: RuntimeDeliverMessageCommand): Promise<RuntimeControlAck> {
-    const handler = this.providers.requireOperation(command.providerId, 'deliverMessage');
-    return this.withRecordedEvent(command, () => handler.deliverMessage!(command));
+    return this.withRecordedEvent(command, () => {
+      const handler = this.providers.requireOperation(command.providerId, 'deliverMessage');
+      return this.deliveryWriteFence.runExclusive(buildDeliveryWriteFenceKey(command), () =>
+        handler.deliverMessage!(command)
+      );
+    });
   }
 
   recordTaskEvent(command: RuntimeTaskEventCommand): Promise<RuntimeControlAck> {
-    const handler = this.providers.requireOperation(command.providerId, 'recordTaskEvent');
-    return this.withRecordedEvent(command, () => handler.recordTaskEvent!(command));
+    return this.withRecordedEvent(command, () => {
+      const handler = this.providers.requireOperation(command.providerId, 'recordTaskEvent');
+      return handler.recordTaskEvent!(command);
+    });
   }
 
   recordHeartbeat(command: RuntimeHeartbeatCommand): Promise<RuntimeControlAck> {
-    const handler = this.providers.requireOperation(command.providerId, 'recordHeartbeat');
-    return this.withRecordedEvent(command, () => handler.recordHeartbeat!(command));
+    return this.withRecordedEvent(command, () => {
+      const handler = this.providers.requireOperation(command.providerId, 'recordHeartbeat');
+      return handler.recordHeartbeat!(command);
+    });
   }
 
   answerPermission(command: RuntimePermissionAnswerCommand): Promise<RuntimeControlAck> {
-    const handler = this.providers.requireOperation(command.providerId, 'answerPermission');
-    return this.withRecordedEvent(command, () => handler.answerPermission!(command));
+    return this.withRecordedEvent(command, () => {
+      const handler = this.providers.requireOperation(command.providerId, 'answerPermission');
+      return this.deliveryWriteFence.runExclusive(buildPermissionAnswerWriteFenceKey(command), () =>
+        handler.answerPermission!(command)
+      );
+    });
   }
 
   private async withRecordedEvent(
@@ -83,9 +162,31 @@ export class RuntimeControlService {
     action: () => Promise<RuntimeControlAck>
   ): Promise<RuntimeControlAck> {
     const ack = await action();
+    assertRuntimeControlAckMatchesCommand(command, ack);
     if (this.eventSink) {
       await this.eventSink.record(createRuntimeControlEventFromAck(command, ack));
     }
     return ack;
   }
+}
+
+function buildDeliveryWriteFenceKey(command: RuntimeDeliverMessageCommand): string {
+  return JSON.stringify([
+    command.kind,
+    command.providerId,
+    command.teamName,
+    command.laneId,
+    command.runId,
+    canonicalizeRuntimeIdempotencyKey(command.idempotencyKey),
+  ]);
+}
+
+function buildPermissionAnswerWriteFenceKey(command: RuntimePermissionAnswerCommand): string {
+  return JSON.stringify([
+    command.kind,
+    command.providerId,
+    command.teamName,
+    command.laneId,
+    command.runId,
+  ]);
 }

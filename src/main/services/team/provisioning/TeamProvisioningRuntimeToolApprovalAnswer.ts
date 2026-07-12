@@ -32,7 +32,14 @@ export interface OpenCodeRuntimePermissionAnswerRun {
   mixedSecondaryLanes?: MixedSecondaryRuntimeLaneState[];
 }
 
-export interface OpenCodeRuntimeToolApprovalAnswerPorts<TRun extends OpenCodeRuntimePermissionAnswerRun> {
+interface RuntimeToolApprovalIdentity {
+  readonly teamName: string;
+  readonly runId: string;
+}
+
+export interface OpenCodeRuntimeToolApprovalAnswerPorts<
+  TRun extends OpenCodeRuntimePermissionAnswerRun,
+> {
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
   readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
   buildOpenCodeRuntimePermissionAnswerInput(
@@ -74,6 +81,10 @@ export async function answerOpenCodeRuntimeToolApproval<
   allow: boolean,
   ports: OpenCodeRuntimeToolApprovalAnswerPorts<TRun>
 ): Promise<void> {
+  const expectedIdentity: RuntimeToolApprovalIdentity = {
+    teamName: entry.approval.teamName,
+    runId: entry.approval.runId,
+  };
   if (entry.providerId !== 'opencode') {
     throw new Error(`Runtime approval provider is not supported: ${entry.providerId}`);
   }
@@ -81,35 +92,35 @@ export async function answerOpenCodeRuntimeToolApproval<
   if (!adapter?.answerRuntimePermission) {
     throw new Error('OpenCode runtime permission answer bridge is not available');
   }
+  if (entry.laneId !== 'primary') {
+    assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
+  }
 
-  const previousLaunchState = await ports.readLaunchState(entry.approval.teamName);
+  const previousLaunchState = await ports.readLaunchState(expectedIdentity.teamName);
   const result = await adapter.answerRuntimePermission(
     ports.buildOpenCodeRuntimePermissionAnswerInput(entry, allow, previousLaunchState)
   );
 
   if (entry.laneId === 'primary') {
-    const launchInput = ports.buildOpenCodeRuntimePermissionLaunchInput(
-      entry,
-      previousLaunchState
-    );
+    const launchInput = ports.buildOpenCodeRuntimePermissionLaunchInput(entry, previousLaunchState);
     const { result: committed } = await ports.persistOpenCodeRuntimeAdapterLaunchResult(
       result,
       launchInput
     );
     if (committed.teamLaunchState === 'partial_failure') {
-      ports.deleteRuntimeAdapterRunByTeam(entry.approval.teamName);
+      ports.deleteRuntimeAdapterRunByTeam(expectedIdentity.teamName);
     } else {
-      ports.setRuntimeAdapterRunByTeam(entry.approval.teamName, {
-        runId: entry.approval.runId,
+      ports.setRuntimeAdapterRunByTeam(expectedIdentity.teamName, {
+        runId: expectedIdentity.runId,
         providerId: 'opencode',
         cwd: entry.cwd,
         members: committed.members,
       });
-      ports.setAliveRunId(entry.approval.teamName, entry.approval.runId);
+      ports.setAliveRunId(expectedIdentity.teamName, expectedIdentity.runId);
     }
     ports.syncOpenCodeRuntimeToolApprovals({
-      teamName: entry.approval.teamName,
-      runId: entry.approval.runId,
+      teamName: expectedIdentity.teamName,
+      runId: expectedIdentity.runId,
       laneId: entry.laneId,
       cwd: entry.cwd ?? '',
       members: committed.members,
@@ -118,13 +129,14 @@ export async function answerOpenCodeRuntimeToolApproval<
       teamColor: entry.approval.teamColor,
     });
   } else {
-    await applyOpenCodeSecondaryPermissionAnswerResult(entry, result, ports);
+    await applyOpenCodeSecondaryPermissionAnswerResult(entry, result, ports, expectedIdentity);
+    assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
   }
 
   ports.emitTeamChange({
     type: 'process',
-    teamName: entry.approval.teamName,
-    runId: entry.approval.runId,
+    teamName: expectedIdentity.teamName,
+    runId: expectedIdentity.runId,
     detail: allow ? 'permission-allowed' : 'permission-denied',
   });
 }
@@ -141,36 +153,42 @@ export async function applyOpenCodeSecondaryPermissionAnswerResult<
     | 'guardCommittedOpenCodeSecondaryLaneEvidence'
     | 'publishMixedSecondaryLaneStatusChange'
     | 'syncOpenCodeRuntimeToolApprovals'
-  >
+  >,
+  expectedIdentity: RuntimeToolApprovalIdentity = {
+    teamName: entry.approval.teamName,
+    runId: entry.approval.runId,
+  }
 ): Promise<void> {
-  const trackedRunId = ports.getTrackedRunId(entry.approval.teamName);
-  const run = trackedRunId ? ports.getRun(trackedRunId) : null;
+  assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
+  const run = ports.getRun(expectedIdentity.runId);
   if (!run) {
-    throw new Error(`Run not found for team "${entry.approval.teamName}"`);
+    throw new Error(`Run not found for team "${expectedIdentity.teamName}"`);
   }
   const lane = (run.mixedSecondaryLanes ?? []).find(
     (candidate) => candidate.laneId === entry.laneId
   );
   if (!lane) {
     throw new Error(
-      `OpenCode secondary lane ${entry.laneId} was not found for team "${entry.approval.teamName}"`
+      `OpenCode secondary lane ${entry.laneId} was not found for team "${expectedIdentity.teamName}"`
     );
   }
 
   const guarded = await ports.guardCommittedOpenCodeSecondaryLaneEvidence({
-    teamName: entry.approval.teamName,
+    teamName: expectedIdentity.teamName,
     laneId: entry.laneId,
     memberName: entry.memberName,
     result,
   });
+  assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
   lane.result = guarded;
   lane.warnings = [...guarded.warnings];
   lane.diagnostics = [...guarded.diagnostics];
   lane.state = 'finished';
   await ports.publishMixedSecondaryLaneStatusChange(run, lane);
+  assertTrackedRuntimeApprovalIdentity(expectedIdentity, ports);
   ports.syncOpenCodeRuntimeToolApprovals({
-    teamName: entry.approval.teamName,
-    runId: entry.approval.runId,
+    teamName: expectedIdentity.teamName,
+    runId: expectedIdentity.runId,
     laneId: entry.laneId,
     cwd: entry.cwd ?? '',
     members: guarded.members,
@@ -178,4 +196,22 @@ export async function applyOpenCodeSecondaryPermissionAnswerResult<
     teamDisplayName: entry.approval.teamDisplayName,
     teamColor: entry.approval.teamColor,
   });
+}
+
+function assertTrackedRuntimeApprovalIdentity(
+  expectedIdentity: RuntimeToolApprovalIdentity,
+  ports: Pick<
+    OpenCodeRuntimeToolApprovalAnswerPorts<OpenCodeRuntimePermissionAnswerRun>,
+    'getTrackedRunId'
+  >
+): void {
+  const trackedRunId = ports.getTrackedRunId(expectedIdentity.teamName);
+  if (!trackedRunId) {
+    throw new Error(`Run not found for team "${expectedIdentity.teamName}"`);
+  }
+  if (trackedRunId !== expectedIdentity.runId) {
+    throw new Error(
+      `Stale runtime approval: tracked runId mismatch for team "${expectedIdentity.teamName}" (expected ${expectedIdentity.runId}, got ${trackedRunId})`
+    );
+  }
 }

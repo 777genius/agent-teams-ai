@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Yedek model listesi gösteriliyor. Hesabınıza özel ve yeni yayınlanan modeller eksik olabilir.",
+    "codexCatalogFallbackTitle": "Canlı Codex modelleri kullanılamıyor",
     "badges": {
       "configured": "Yapılandırılmış",
       "connected": "Bağlandı",

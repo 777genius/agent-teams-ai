@@ -5,6 +5,7 @@ import { TeamRuntimeAdapterRegistry } from '../../runtime';
 import { TeamProvisioningDiagnosticsPreflightCompatibilityFacade } from '../TeamProvisioningDiagnosticsPreflightCompatibilityFacade';
 
 import type { TeamLaunchRuntimeAdapter, TeamRuntimeProviderId } from '../../runtime';
+import type { TeamProvisioningCliHelpOutputProviderRuntime } from '../TeamProvisioningCliHelpOutputPortsFactory';
 import type { TeamProvisioningCompatibilityDelegation } from '../TeamProvisioningCompatibilityFacade';
 import type { TeamProvisioningMemberLifecyclePublicFacade } from '../TeamProvisioningMemberLifecycleCompatibilityFacade';
 import type { TeamProvisioningPrepareFacade } from '../TeamProvisioningPrepareFacade';
@@ -60,7 +61,16 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
     prepareForProvisioning: vi.fn(async () => this.prepareResult),
     materializeEffectiveTeamMemberSpecs: vi.fn(async () => this.materializedMembers),
     resolveOpenCodeMemberWorkspacesForRuntime: vi.fn(async () => this.workspaceMembers),
+    getCachedOrProbeResult: vi.fn(async () => ({ claudePath: '/fake/claude' })),
   };
+  readonly providerRuntimeMock = {
+    buildProvisioningEnv: vi
+      .fn<TeamProvisioningCliHelpOutputProviderRuntime['buildProvisioningEnv']>()
+      .mockResolvedValue({ env: { PATH: '/bin' } }),
+    spawnProbe: vi
+      .fn<TeamProvisioningCliHelpOutputProviderRuntime['spawnProbe']>()
+      .mockResolvedValue({ exitCode: 0, stdout: 'Usage', stderr: '' }),
+  } satisfies TeamProvisioningCliHelpOutputProviderRuntime;
   readonly shutdownCoordination = {
     getShutdownTrackedTeamNames: vi.fn(() => ['alpha']),
   };
@@ -113,7 +123,7 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
   };
   protected readonly prepareFacade = this
     .prepareFacadeMock as unknown as TeamProvisioningPrepareFacade;
-  protected readonly providerRuntime = {} as never;
+  protected readonly providerRuntime = this.providerRuntimeMock as never;
   protected readonly reevaluateMemberLaunchStatusBoundary = {
     createPorts: vi.fn(),
     reevaluateMemberLaunchStatus: vi.fn(async () => undefined),
@@ -347,6 +357,93 @@ describe('TeamProvisioningDiagnosticsPreflightCompatibilityFacade', () => {
     expect(facade.verificationProbePorts.waitForMissingInboxes).toHaveBeenCalledWith(run);
     expect(facade.verificationProbePorts.tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
     expect(facade.verificationProbePorts.pathExists).toHaveBeenCalledWith('/repo/config.json');
+  });
+
+  it('coalesces concurrent CLI help preflight probes', async () => {
+    const facade = new TestDiagnosticsPreflightCompatibilityFacade();
+
+    const [first, second] = await Promise.all([
+      facade.getCliHelpOutput('/repo'),
+      facade.getCliHelpOutput('/repo'),
+    ]);
+
+    expect(first).toBe('Usage');
+    expect(second).toBe('Usage');
+    expect(facade.prepareFacadeMock.getCachedOrProbeResult).toHaveBeenCalledOnce();
+    expect(facade.providerRuntimeMock.buildProvisioningEnv).toHaveBeenCalledOnce();
+    expect(facade.providerRuntimeMock.spawnProbe).toHaveBeenCalledOnce();
+  });
+
+  it('keeps concurrent CLI help preflight probes isolated by working directory', async () => {
+    const facade = new TestDiagnosticsPreflightCompatibilityFacade();
+    facade.providerRuntimeMock.spawnProbe.mockImplementation(async (_claudePath, _args, cwd) => ({
+      exitCode: 0,
+      stdout: `Usage from ${cwd}`,
+      stderr: `Flags from ${cwd}`,
+    }));
+
+    const [first, second] = await Promise.all([
+      facade.getCliHelpOutput('/repo/first'),
+      facade.getCliHelpOutput('/repo/second'),
+    ]);
+
+    expect(first).toBe('Usage from /repo/first\nFlags from /repo/first');
+    expect(second).toBe('Usage from /repo/second\nFlags from /repo/second');
+    expect(facade.prepareFacadeMock.getCachedOrProbeResult).toHaveBeenCalledTimes(2);
+    expect(facade.prepareFacadeMock.getCachedOrProbeResult).toHaveBeenCalledWith(
+      '/repo/first',
+      'anthropic'
+    );
+    expect(facade.prepareFacadeMock.getCachedOrProbeResult).toHaveBeenCalledWith(
+      '/repo/second',
+      'anthropic'
+    );
+    expect(facade.providerRuntimeMock.buildProvisioningEnv).toHaveBeenCalledTimes(2);
+    expect(facade.providerRuntimeMock.spawnProbe).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not reuse cached CLI help output across working directories', async () => {
+    const facade = new TestDiagnosticsPreflightCompatibilityFacade();
+    facade.providerRuntimeMock.spawnProbe.mockImplementation(async (_claudePath, _args, cwd) => ({
+      exitCode: 0,
+      stdout: `Usage from ${cwd}`,
+      stderr: '',
+    }));
+
+    await expect(facade.getCliHelpOutput('/repo/first')).resolves.toBe('Usage from /repo/first');
+    await expect(facade.getCliHelpOutput('/repo/second')).resolves.toBe('Usage from /repo/second');
+
+    expect(facade.prepareFacadeMock.getCachedOrProbeResult).toHaveBeenCalledTimes(2);
+    expect(facade.providerRuntimeMock.spawnProbe).toHaveBeenCalledTimes(2);
+  });
+
+  it('releases a failed CLI help preflight so a later request can retry', async () => {
+    const facade = new TestDiagnosticsPreflightCompatibilityFacade();
+    const probeError = new Error('probe failed');
+    facade.providerRuntimeMock.spawnProbe.mockRejectedValue(probeError);
+
+    const failures = await Promise.allSettled([
+      facade.getCliHelpOutput('/repo'),
+      facade.getCliHelpOutput('/repo'),
+    ]);
+
+    expect(failures).toHaveLength(2);
+    for (const failure of failures) {
+      expect(failure.status).toBe('rejected');
+      if (failure.status === 'rejected') {
+        expect(failure.reason).toBe(probeError);
+      }
+    }
+    expect(facade.providerRuntimeMock.spawnProbe).toHaveBeenCalledOnce();
+
+    facade.providerRuntimeMock.spawnProbe.mockResolvedValue({
+      exitCode: 0,
+      stdout: 'Usage after retry',
+      stderr: '',
+    });
+    await expect(facade.getCliHelpOutput('/repo')).resolves.toBe('Usage after retry');
+
+    expect(facade.providerRuntimeMock.spawnProbe).toHaveBeenCalledTimes(2);
   });
 
   it('keeps language-change config maintenance routed through the diagnostics facade', async () => {

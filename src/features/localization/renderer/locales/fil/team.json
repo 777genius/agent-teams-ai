@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Ipinapakita ang fallback na listahan ng mga modelo. Maaaring wala rito ang mga modelong partikular sa iyong account at mga bagong release na modelo.",
+    "codexCatalogFallbackTitle": "Hindi available ang mga live na modelo ng Codex",
     "badges": {
       "configured": "Naka-configure",
       "connected": "Konektado",

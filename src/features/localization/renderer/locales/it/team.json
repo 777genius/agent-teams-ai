@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Viene mostrato un elenco di modelli di riserva. Potrebbero mancare i modelli specifici dell'account e quelli appena rilasciati.",
+    "codexCatalogFallbackTitle": "I modelli Codex in tempo reale non sono disponibili",
     "badges": {
       "configured": "Configurato",
       "connected": "Connesso",

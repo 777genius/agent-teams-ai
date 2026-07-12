@@ -3991,7 +3991,7 @@ Messages:
     }
   });
 
-  it('times out a hung existing OpenCode member relay in-flight lock', async () => {
+  it('times out a hung existing OpenCode member relay caller without releasing its lease', async () => {
     vi.useFakeTimers();
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
@@ -4023,7 +4023,7 @@ Messages:
             openCodeMemberInboxRelayInFlight: Map<string, Promise<unknown>>;
           }
         ).openCodeMemberInboxRelayInFlight.has(relayKey)
-      ).toBe(false);
+      ).toBe(true);
       expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
         'opencode_member_inbox_relay_timed_out'
       );

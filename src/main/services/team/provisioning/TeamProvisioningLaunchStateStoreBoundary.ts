@@ -107,9 +107,16 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       );
       return;
     }
+    const writtenRunIdBeforeClear = this.writtenRunIdByTeam.get(teamName);
     await this.ports.launchStateStore.clear(teamName);
-    this.writtenRunIdByTeam.delete(teamName);
-    await this.ports.clearBootstrapState(teamName);
+    if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeClear) {
+      this.writtenRunIdByTeam.delete(teamName);
+    }
+    // Bootstrap state is team-scoped and written outside this queue. A run-scoped delete could
+    // remove a successor run's state after the authority check has already passed.
+    if (!options?.expectedRunId) {
+      await this.ports.clearBootstrapState(teamName);
+    }
     this.ports.invalidateRuntimeSnapshotCaches(teamName);
   }
 
@@ -133,6 +140,18 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     options?: { allowNoopSkip?: boolean; runId?: string }
   ): Promise<LaunchStateWriteResult> {
     const previousSnapshot = await this.ports.launchStateStore.read(teamName).catch(() => null);
+    const trackedRunIdBeforeWrite =
+      typeof options?.runId === 'string' ? this.ports.getTrackedRunId(teamName) : undefined;
+    if (
+      typeof options?.runId === 'string' &&
+      typeof trackedRunIdBeforeWrite === 'string' &&
+      trackedRunIdBeforeWrite !== options.runId
+    ) {
+      this.ports.logDebug(
+        `[${teamName}] Skipping stale launch-state write for run ${options.runId}`
+      );
+      return { snapshot: previousSnapshot ?? snapshot, wrote: false };
+    }
     const metaMembers = await this.ports.membersMetaStore.getMembers(teamName).catch(() => []);
     const overlaidSnapshot = await this.ports.applyOpenCodeSecondaryEvidenceOverlay({
       teamName,
@@ -152,7 +171,25 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     ) {
       return { snapshot: previousSnapshot, wrote: false };
     }
+    const writtenRunIdBeforeWrite = this.writtenRunIdByTeam.get(teamName);
     await this.ports.launchStateStore.write(teamName, normalizedSnapshot);
+    const trackedRunIdAfterWrite =
+      typeof options?.runId === 'string' ? this.ports.getTrackedRunId(teamName) : undefined;
+    if (
+      typeof options?.runId === 'string' &&
+      typeof trackedRunIdAfterWrite === 'string' &&
+      trackedRunIdAfterWrite !== options.runId
+    ) {
+      await this.ports.launchStateStore.clear(teamName);
+      if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeWrite) {
+        this.writtenRunIdByTeam.delete(teamName);
+      }
+      this.ports.invalidateRuntimeSnapshotCaches(teamName);
+      this.ports.logDebug(
+        `[${teamName}] Removed stale launch-state write for run ${options.runId}`
+      );
+      return { snapshot: normalizedSnapshot, wrote: false };
+    }
     if (typeof options?.runId === 'string') {
       this.writtenRunIdByTeam.set(teamName, options.runId);
     }
@@ -194,11 +231,26 @@ export function createTeamProvisioningLaunchStateStoreBoundaryFromService(
         }
       },
       clear: async (teamName) => {
+        const errors: unknown[] = [];
         if (typeof service.launchStateStore.clear === 'function') {
-          await service.launchStateStore.clear(teamName);
+          try {
+            await service.launchStateStore.clear(teamName);
+          } catch (error) {
+            errors.push(error);
+          }
         }
         if (service.launchStateStore !== service.defaultLaunchStateStore) {
-          await service.defaultLaunchStateStore.clear(teamName);
+          try {
+            await service.defaultLaunchStateStore.clear(teamName);
+          } catch (error) {
+            errors.push(error);
+          }
+        }
+        if (errors.length === 1) {
+          throw errors[0];
+        }
+        if (errors.length > 1) {
+          throw new AggregateError(errors, `[${teamName}] Failed to clear launch-state stores`);
         }
       },
     },

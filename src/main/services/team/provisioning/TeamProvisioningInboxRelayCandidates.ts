@@ -4,6 +4,8 @@ import type { InboxMessage } from '@shared/types';
 
 export const PENDING_INBOX_RELAY_TTL_MS = 2 * 60 * 1000;
 export const INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS = 2 * 60_000;
+// Preserve ownership for one additional caller timeout before treating work as hung.
+export const INBOX_RELAY_IN_FLIGHT_LEASE_MS = INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS * 2;
 export const SILENT_TEAMMATE_FORWARD_CLEAR_MS = 60_000;
 
 export interface PendingInboxRelayCandidate {

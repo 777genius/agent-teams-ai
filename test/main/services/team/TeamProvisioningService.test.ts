@@ -4988,7 +4988,7 @@ describe('TeamProvisioningService', () => {
       });
     });
 
-    it('reconciles persisted launch state before building runtime snapshot metadata', async () => {
+    it('reconciles persisted launch history without reviving stale runtime metadata', async () => {
       const teamName = 'zz-runtime-snapshot-reconciles-before-live-metadata';
       const leadSessionId = 'lead-session';
       const projectPath = '/Users/test/proj';
@@ -5050,12 +5050,12 @@ describe('TeamProvisioningService', () => {
       const persisted = JSON.parse(fs.readFileSync(getTeamLaunchStatePath(teamName), 'utf8'));
 
       expect(snapshot.members.tom).toMatchObject({
-        alive: true,
-        livenessKind: 'confirmed_bootstrap',
-        runtimeDiagnostic: 'bootstrap confirmed',
-        runtimeDiagnosticSeverity: 'info',
+        alive: false,
+        historicalBootstrapConfirmed: true,
+        livenessKind: 'stale_metadata',
+        runtimeDiagnostic: staleDiagnostic,
+        runtimeDiagnosticSeverity: 'warning',
       });
-      expect(snapshot.members.tom?.runtimeDiagnostic).not.toBe(staleDiagnostic);
       expect(persisted.members.tom).toMatchObject({
         launchState: 'confirmed_alive',
         bootstrapConfirmed: true,
@@ -5064,7 +5064,7 @@ describe('TeamProvisioningService', () => {
       expect(persisted.members.tom?.runtimeDiagnostic).not.toBe(staleDiagnostic);
     });
 
-    it('exposes confirmed runtime snapshot after CLI provisioned-but-not-alive launch cleanup', async () => {
+    it('keeps historical bootstrap after CLI cleanup without reviving stale runtime metadata', async () => {
       const teamName = 'zz-runtime-snapshot-cli-provisioned-not-alive-heals';
       const leadSessionId = 'lead-session';
       const projectPath = '/Users/test/proj';
@@ -5121,13 +5121,13 @@ describe('TeamProvisioningService', () => {
       const persisted = JSON.parse(fs.readFileSync(getTeamLaunchStatePath(teamName), 'utf8'));
 
       expect(snapshot.members.tom).toMatchObject({
-        alive: true,
+        alive: false,
         providerId: 'anthropic',
         runtimeModel: 'sonnet',
-        livenessKind: 'confirmed_bootstrap',
+        livenessKind: 'stale_metadata',
         historicalBootstrapConfirmed: true,
-        runtimeDiagnostic: 'bootstrap confirmed',
-        runtimeDiagnosticSeverity: 'info',
+        runtimeDiagnostic: 'persisted runtime pid is not alive',
+        runtimeDiagnosticSeverity: 'warning',
       });
       expect(persisted.members.tom).toMatchObject({
         launchState: 'confirmed_alive',
@@ -20587,7 +20587,7 @@ describe('TeamProvisioningService', () => {
     expect(progressStates).not.toContain('verifying');
   });
 
-  it('clears lead-only bootstrap state before cleanup when deterministic launch process exits', async () => {
+  it('preserves run-scoped bootstrap state when deterministic launch process exits', async () => {
     allowConsoleLogs();
     const teamName = 'lead-only-launch-exit-clears-bootstrap-state';
     const leadSessionId = 'lead-session-lead-only-exit';
@@ -20651,7 +20651,10 @@ describe('TeamProvisioningService', () => {
     child.emit('close', 1);
 
     await vi.waitFor(() => expect(progressStates).toContain('disconnected'));
-    expect(fs.existsSync(getTeamBootstrapStatePath(teamName))).toBe(false);
+    expect(JSON.parse(fs.readFileSync(getTeamBootstrapStatePath(teamName), 'utf8'))).toMatchObject({
+      runId,
+      teamName,
+    });
     expect(fs.existsSync(getTeamLaunchStatePath(teamName))).toBe(false);
     expect(fs.existsSync(getTeamLaunchSummaryPath(teamName))).toBe(false);
   });

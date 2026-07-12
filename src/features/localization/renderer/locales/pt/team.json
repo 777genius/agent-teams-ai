@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Uma lista de modelos alternativa está sendo exibida. Modelos específicos da conta e recém-lançados podem estar ausentes.",
+    "codexCatalogFallbackTitle": "Os modelos Codex em tempo real não estão disponíveis",
     "badges": {
       "configured": "Configurado",
       "connected": "Ligado",

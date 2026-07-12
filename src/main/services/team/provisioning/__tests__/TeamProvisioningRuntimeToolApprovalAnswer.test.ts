@@ -86,9 +86,7 @@ function makeEntry(input: Partial<RuntimeToolApprovalEntry> = {}): RuntimeToolAp
   };
 }
 
-function makeResult(
-  input: Partial<TeamRuntimeLaunchResult> = {}
-): TeamRuntimeLaunchResult {
+function makeResult(input: Partial<TeamRuntimeLaunchResult> = {}): TeamRuntimeLaunchResult {
   return {
     runId: 'run-a',
     teamName: 'team-a',
@@ -112,7 +110,9 @@ function makeResult(
   };
 }
 
-function makeLane(input: Partial<MixedSecondaryRuntimeLaneState> = {}): MixedSecondaryRuntimeLaneState {
+function makeLane(
+  input: Partial<MixedSecondaryRuntimeLaneState> = {}
+): MixedSecondaryRuntimeLaneState {
   return {
     laneId: 'secondary-worker',
     providerId: 'opencode',
@@ -144,14 +144,16 @@ function makeAdapter(
   } as unknown as TeamLaunchRuntimeAdapter;
 }
 
-function makePorts(input: {
-  adapter?: TeamLaunchRuntimeAdapter | null;
-  adapterResult?: TeamRuntimeLaunchResult;
-  committedResult?: TeamRuntimeLaunchResult;
-  guardedResult?: TeamRuntimeLaunchResult;
-  trackedRunId?: string;
-  run?: TestRun;
-} = {}): TestPorts {
+function makePorts(
+  input: {
+    adapter?: TeamLaunchRuntimeAdapter | null;
+    adapterResult?: TeamRuntimeLaunchResult;
+    committedResult?: TeamRuntimeLaunchResult;
+    guardedResult?: TeamRuntimeLaunchResult;
+    trackedRunId?: string;
+    run?: TestRun;
+  } = {}
+): TestPorts {
   const events: string[] = [];
   const runtimeAdapterRunByTeam = new Map<string, unknown>([['team-a', { runId: 'old-run' }]]);
   const aliveRunByTeam = new Map<string, string>();
@@ -413,5 +415,81 @@ describe('answerOpenCodeRuntimeToolApproval', () => {
       teamDisplayName: 'Team A',
       teamColor: '#123456',
     });
+  });
+
+  it('rejects a secondary result when the tracked run changes while the answer is in flight', async () => {
+    const oldLane = makeLane();
+    const newLane = makeLane();
+    const runs = new Map<string, TestRun>([
+      [
+        'run-old',
+        {
+          runId: 'run-old',
+          teamName: 'team-a',
+          mixedSecondaryLanes: [oldLane],
+        },
+      ],
+      [
+        'run-new',
+        {
+          runId: 'run-new',
+          teamName: 'team-a',
+          mixedSecondaryLanes: [newLane],
+        },
+      ],
+    ]);
+    let signalAnswerStarted!: () => void;
+    const answerStarted = new Promise<void>((resolve) => {
+      signalAnswerStarted = resolve;
+    });
+    let resolveAnswer!: (result: TeamRuntimeLaunchResult) => void;
+    const answerResult = new Promise<TeamRuntimeLaunchResult>((resolve) => {
+      resolveAnswer = resolve;
+    });
+    const ports = makePorts({
+      adapter: makeAdapter(
+        vi.fn(async () => {
+          signalAnswerStarted();
+          return answerResult;
+        })
+      ),
+    });
+    let trackedRunId = 'run-old';
+    vi.mocked(ports.getTrackedRunId).mockImplementation(() => trackedRunId);
+    vi.mocked(ports.getRun).mockImplementation((runId) => runs.get(runId));
+    const baseEntry = makeEntry({ laneId: 'secondary-worker' });
+    const entry = makeEntry({
+      laneId: 'secondary-worker',
+      approval: {
+        ...baseEntry.approval,
+        requestId: 'opencode:run-old:provider-request-a',
+        runId: 'run-old',
+      },
+    });
+
+    const answer = answerOpenCodeRuntimeToolApproval(entry, true, ports);
+    await answerStarted;
+    trackedRunId = 'run-new';
+    resolveAnswer(makeResult({ runId: 'run-old' }));
+
+    await expect(answer).rejects.toThrow(
+      'Stale runtime approval: tracked runId mismatch for team "team-a" (expected run-old, got run-new)'
+    );
+    expect(oldLane).toMatchObject({
+      result: null,
+      warnings: [],
+      diagnostics: [],
+      state: 'launching',
+    });
+    expect(newLane).toMatchObject({
+      result: null,
+      warnings: [],
+      diagnostics: [],
+      state: 'launching',
+    });
+    expect(ports.guardCommittedOpenCodeSecondaryLaneEvidence).not.toHaveBeenCalled();
+    expect(ports.publishMixedSecondaryLaneStatusChange).not.toHaveBeenCalled();
+    expect(ports.syncOpenCodeRuntimeToolApprovals).not.toHaveBeenCalled();
+    expect(ports.emitTeamChange).not.toHaveBeenCalled();
   });
 });

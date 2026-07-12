@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "वैकल्पिक मॉडल सूची दिखाई जा रही है। आपके खाते के लिए विशिष्ट और हाल ही में जारी किए गए मॉडल इसमें नहीं हो सकते हैं।",
+    "codexCatalogFallbackTitle": "लाइव Codex मॉडल उपलब्ध नहीं हैं",
     "badges": {
       "configured": "कॉन्फ़िगर किया गया",
       "connected": "कनेक्ट",

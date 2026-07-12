@@ -73,6 +73,28 @@ export interface TeamProvisioningPreflightApi {
   ): Promise<TeamProvisioningPrepareResult>;
 }
 
+function assertDensePrepareModelArray(
+  values: readonly unknown[] | undefined,
+  field: 'modelIds' | 'modelChecks'
+): void {
+  if (!values) {
+    return;
+  }
+
+  for (let index = 0; index < values.length; index += 1) {
+    if (!Object.hasOwn(values, index) || values[index] === undefined) {
+      throw new TypeError(
+        `TeamProvisioningPrepareOptions.${field} must not contain missing indices`
+      );
+    }
+  }
+}
+
+function validatePrepareModelIndexes(opts?: TeamProvisioningPrepareOptions): void {
+  assertDensePrepareModelArray(opts?.modelIds, 'modelIds');
+  assertDensePrepareModelArray(opts?.modelChecks, 'modelChecks');
+}
+
 export type TeamRuntimeControlCompatibilityApi = OpenCodeRuntimeControlApi;
 
 export interface TeamRuntimeApi {
@@ -239,7 +261,7 @@ export interface TeamCrossTeamMessagingApi {
     inboxName: string,
     options?: TeamOpenCodeMemberInboxRelayOptions
   ): Promise<{
-    kind: string;
+    kind: 'ignored' | 'native_lead' | 'native_member_noop' | 'opencode_member';
     relayed: number;
     diagnostics?: string[];
     lastDelivery?: TeamOpenCodeMemberInboxDelivery;
@@ -280,7 +302,10 @@ export function bindTeamProvisioningPreflightApi(
 ): TeamProvisioningPreflightApi {
   return {
     getCliHelpOutput: source.getCliHelpOutput.bind(source),
-    prepareForProvisioning: source.prepareForProvisioning.bind(source),
+    async prepareForProvisioning(cwd, opts) {
+      validatePrepareModelIndexes(opts);
+      return source.prepareForProvisioning.call(source, cwd, opts);
+    },
   };
 }
 

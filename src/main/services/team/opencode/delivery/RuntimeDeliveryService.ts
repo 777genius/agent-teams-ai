@@ -87,6 +87,9 @@ export type RuntimeDeliveryAck =
       idempotencyKey: string;
     };
 
+// The runtime boundary creates a service per request, so in-flight turns must be shared.
+const runtimeDeliveryTurns = new Map<string, Promise<void>>();
+
 export class RuntimeDeliveryDestinationRegistry {
   private readonly ports = new Map<
     RuntimeDeliveryDestinationRef['kind'],
@@ -123,6 +126,10 @@ export class RuntimeDeliveryService {
 
   async deliver(raw: unknown): Promise<RuntimeDeliveryAck> {
     const envelope = normalizeRuntimeDeliveryEnvelope(raw);
+    return await serializeRuntimeDelivery(envelope, () => this.deliverEnvelope(envelope));
+  }
+
+  private async deliverEnvelope(envelope: RuntimeDeliveryEnvelope): Promise<RuntimeDeliveryAck> {
     const now = this.clock().toISOString();
     const staleRun = await this.rejectIfRunIsStale(envelope);
     if (staleRun) {
@@ -338,6 +345,29 @@ export class RuntimeDeliveryService {
       } catch {
         // Delivery is already committed; diagnostics emission is also best-effort here.
       }
+    }
+  }
+}
+
+async function serializeRuntimeDelivery<T>(
+  envelope: RuntimeDeliveryEnvelope,
+  operation: () => Promise<T>
+): Promise<T> {
+  const key = JSON.stringify([envelope.teamName, envelope.runId, envelope.idempotencyKey]);
+  const previousTurn = runtimeDeliveryTurns.get(key) ?? Promise.resolve();
+  let releaseTurn = (): void => {};
+  const currentTurn = new Promise<void>((resolve) => {
+    releaseTurn = resolve;
+  });
+  runtimeDeliveryTurns.set(key, currentTurn);
+
+  await previousTurn;
+  try {
+    return await operation();
+  } finally {
+    releaseTurn();
+    if (runtimeDeliveryTurns.get(key) === currentTurn) {
+      runtimeDeliveryTurns.delete(key);
     }
   }
 }

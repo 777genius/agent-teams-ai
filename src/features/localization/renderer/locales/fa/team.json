@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "فهرست جایگزین مدل‌ها نمایش داده می‌شود. ممکن است مدل‌های مخصوص حساب شما و مدل‌های تازه منتشرشده در آن نباشند.",
+    "codexCatalogFallbackTitle": "مدل‌های زنده Codex در دسترس نیستند",
     "badges": {
       "configured": "پیکربندی‌شده",
       "connected": "متصل",

@@ -34,11 +34,25 @@ export function registerSshRoutes(
 
   // Connect
   app.post<{ Body: SshConnectionConfig }>('/api/ssh/connect', async (request) => {
+    let connected = false;
     try {
       await connectionManager.connect(request.body);
+      connected = true;
       await modeSwitchCallback('ssh');
       return { success: true, data: connectionManager.getStatus() };
     } catch (err) {
+      if (connected) {
+        try {
+          connectionManager.disconnect();
+        } catch (rollbackError) {
+          logger.error('Failed to roll back SSH connection:', rollbackError);
+        }
+        try {
+          await modeSwitchCallback('local');
+        } catch (rollbackError) {
+          logger.error('Failed to restore local mode after SSH connect failure:', rollbackError);
+        }
+      }
       const message = err instanceof Error ? err.message : String(err);
       logger.error('SSH connect failed:', message);
       return { success: false, error: message };

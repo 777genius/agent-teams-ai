@@ -67,6 +67,33 @@ describe('TeamProvisioningMemberLifecycleOperationRunner', () => {
     expect(harness.invalidatedTeams).toEqual(['team-a', 'team-a']);
   });
 
+  it('releases the member operation when initial cache invalidation fails', async () => {
+    const memberLifecycleOperations = new Map<string, MemberLifecycleOperation>();
+    const cacheFailure = new Error('cache invalidation failed');
+    const invalidateRuntimeSnapshotCaches = vi
+      .fn<(teamName: string) => void>()
+      .mockImplementationOnce(() => {
+        throw cacheFailure;
+      });
+    const runner = createTeamProvisioningMemberLifecycleOperationRunner({
+      memberLifecycleOperations,
+      invalidateRuntimeSnapshotCaches,
+      nowMs: () => 1_234,
+    });
+    const failedOperation = vi.fn(async () => 'not reached');
+
+    await expect(
+      runner.runMemberLifecycleOperation('team-a', 'Dev', 'primary_member_updated', failedOperation)
+    ).rejects.toBe(cacheFailure);
+
+    expect(failedOperation).not.toHaveBeenCalled();
+    expect(memberLifecycleOperations.size).toBe(0);
+    expect(invalidateRuntimeSnapshotCaches).toHaveBeenCalledTimes(2);
+    await expect(
+      runner.runMemberLifecycleOperation('team-a', 'Dev', 'manual_restart', async () => 'retried')
+    ).resolves.toBe('retried');
+  });
+
   it('rejects overlapping operations for the same normalized member key', async () => {
     const existingToken = Symbol('existing');
     const harness = createRunnerHarness([

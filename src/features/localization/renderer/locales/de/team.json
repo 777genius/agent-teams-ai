@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Es wird eine Ersatzmodellliste angezeigt. Kontospezifische und neu veröffentlichte Modelle fehlen möglicherweise.",
+    "codexCatalogFallbackTitle": "Live-Codex-Modelle nicht verfügbar",
     "badges": {
       "configured": "Konfiguriert",
       "connected": "verbunden",

@@ -43,8 +43,9 @@ export function buildOrganizationMapViewModel(
     payload.organizations.find(
       (organization) => organization.id === payload.activeOrganizationId
     ) ?? payload.organizations[0];
+  const configuredRootNode = payload.rootNodeId ? nodeById.get(payload.rootNodeId) : undefined;
   const rootNode =
-    (payload.rootNodeId ? (nodeById.get(payload.rootNodeId) ?? null) : null) ??
+    configuredRootNode ??
     payload.nodes.find((node) => node.id === activeOrganization?.rootNodeId) ??
     payload.nodes.find((node) => node.kind === 'organization') ??
     null;

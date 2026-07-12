@@ -38,12 +38,8 @@ For paid or account-backed models, connect at least one provider:
 | ------------------ | ------------------------------------------------- |
 | Claude (Anthropic) | Claude Code CLI login or API key                  |
 | Codex (OpenAI)     | Codex CLI login or API key                        |
-| Gemini (Google)    | Google ADC, Gemini CLI, or API key                |
 | OpenCode           | Included free model with no auth, or API key for a supported backend (e.g. OpenRouter) |
 
-::: info
-Gemini is available as a supported provider path. See [Providers and runtimes](/reference/providers-runtimes) for auth options and current status across all providers.
-:::
 
 For source development, you also need:
 

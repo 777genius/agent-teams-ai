@@ -836,10 +836,13 @@ export function initializeTeamHandlers(
   teamClaudeLogsApi = teamHandlerApis.claudeLogs;
   teamMessagingApi = teamHandlerApis.messaging;
   teamToolApprovalApi = teamHandlerApis.toolApproval;
+  const autoResumeRuntimeApi = teamRuntimeApi;
+  const autoResumeMessagingApi = teamMessagingApi;
   initializeAutoResumeService({
-    getCurrentRunId: teamRuntimeApi.getCurrentRunId,
-    isTeamAlive: teamRuntimeApi.isTeamAlive,
-    sendMessageToTeam: teamMessagingApi.sendMessageToTeam,
+    getCurrentRunId: (teamName) => autoResumeRuntimeApi.getCurrentRunId(teamName),
+    isTeamAlive: (teamName) => autoResumeRuntimeApi.isTeamAlive(teamName),
+    sendMessageToTeam: (teamName, message) =>
+      autoResumeMessagingApi.sendMessageToTeam(teamName, message),
   });
   teamMemberLogsFinder = logsFinder ?? null;
   memberStatsComputer = statsComputer ?? null;
@@ -2699,14 +2702,22 @@ async function handlePrepareProvisioning(
     if (!Array.isArray(selectedModels)) {
       return { success: false, error: 'selectedModels must be an array when provided' };
     }
-    const normalized = Array.from(
-      new Set(
-        selectedModels
-          .filter((entry): entry is string => typeof entry === 'string')
-          .map((entry) => entry.trim())
-          .filter((entry) => entry.length > 0)
-      )
-    );
+    const normalized: string[] = [];
+    const seen = new Set<string>();
+    for (let index = 0; index < selectedModels.length; index += 1) {
+      if (!Object.hasOwn(selectedModels, index)) {
+        return { success: false, error: 'selectedModels entries must be non-empty strings' };
+      }
+      const entry = selectedModels[index];
+      if (typeof entry !== 'string' || entry.trim().length === 0) {
+        return { success: false, error: 'selectedModels entries must be non-empty strings' };
+      }
+      const model = entry.trim();
+      if (!seen.has(model)) {
+        seen.add(model);
+        normalized.push(model);
+      }
+    }
     validatedSelectedModels = normalized;
   }
   if (limitContext !== undefined) {

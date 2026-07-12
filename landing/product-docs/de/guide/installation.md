@@ -39,12 +39,8 @@ Für kostenpflichtige oder kontogebundene Modelle verbinden Sie mindestens einen
 | ------------------ | ------------------------------------------------- |
 | Claude (Anthropic) | Anmeldung über Claude Code CLI oder API-Schlüssel |
 | Codex (OpenAI)     | Anmeldung über Codex CLI oder API-Schlüssel       |
-| Gemini (Google)    | Google ADC, Gemini CLI oder API-Schlüssel         |
 | OpenCode           | Enthaltenes kostenloses Modell ohne Authentifizierung oder API-Schlüssel für ein unterstütztes Backend (z. B. OpenRouter) |
 
-::: info
-Gemini ist als unterstützter Anbieter-Pfad verfügbar. Siehe [Anbieter und Runtimes](/de/reference/providers-runtimes) für Authentifizierungsoptionen und den aktuellen Status über alle Anbieter hinweg.
-:::
 
 Für die Entwicklung aus dem Quellcode benötigen Sie außerdem:
 

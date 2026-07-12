@@ -15,6 +15,7 @@ import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 const logger = createLogger('Service:TeamLaunchStateStore');
 const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
 const MAX_LAUNCH_STATE_BYTES = 256 * 1024;
+const publicationQueueByTeam = new Map<string, Promise<void>>();
 
 export function getTeamLaunchStatePath(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STATE_FILE);
@@ -33,19 +34,23 @@ async function isMissingTeamDirectoryWriteRace(
     return false;
   }
   const targetDir = path.dirname(targetPath);
-  const errorPaths = [
-    (error as NodeJS.ErrnoException).path,
-    (error as NodeJS.ErrnoException & { dest?: string }).dest,
-  ].filter((value): value is string => typeof value === 'string' && value.length > 0);
-  if (code === 'ENOENT' && errorPaths.some((errorPath) => path.dirname(errorPath) === targetDir)) {
-    return true;
-  }
   try {
     await fs.promises.access(targetDir);
     return false;
-  } catch {
-    return true;
+  } catch (accessError) {
+    return (accessError as NodeJS.ErrnoException).code === 'ENOENT';
   }
+}
+
+function enqueuePublication(teamName: string, operation: () => Promise<void>): Promise<void> {
+  const previous = publicationQueueByTeam.get(teamName);
+  const queued = (previous ?? Promise.resolve()).catch(() => undefined).then(operation);
+  publicationQueueByTeam.set(teamName, queued);
+  return queued.finally(() => {
+    if (publicationQueueByTeam.get(teamName) === queued) {
+      publicationQueueByTeam.delete(teamName);
+    }
+  });
 }
 
 export class TeamLaunchStateStore {
@@ -64,6 +69,10 @@ export class TeamLaunchStateStore {
   }
 
   async write(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void> {
+    await enqueuePublication(teamName, () => this.writeNow(teamName, snapshot));
+  }
+
+  private async writeNow(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void> {
     const launchStatePath = getTeamLaunchStatePath(teamName);
     const launchSummaryPath = getTeamLaunchSummaryPath(teamName);
     try {
@@ -81,15 +90,16 @@ export class TeamLaunchStateStore {
           error instanceof Error ? error.message : String(error)
         }`
       );
+      throw error;
     }
   }
 
   async clear(teamName: string): Promise<void> {
-    try {
-      await fs.promises.rm(getTeamLaunchStatePath(teamName), { force: true });
-      await fs.promises.rm(getTeamLaunchSummaryPath(teamName), { force: true });
-    } catch {
-      // best-effort
-    }
+    await enqueuePublication(teamName, async () => {
+      await Promise.allSettled([
+        fs.promises.rm(getTeamLaunchStatePath(teamName), { force: true }),
+        fs.promises.rm(getTeamLaunchSummaryPath(teamName), { force: true }),
+      ]);
+    });
   }
 }

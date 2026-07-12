@@ -20,6 +20,21 @@
       "description": "按任务查看 diff，支持批准、拒绝和评论。内置代码编辑器，支持 Git。"
     },
     {
+      "id": "tokenUsage",
+      "title": "Token 分析与预算",
+      "description": "查看团队、智能体、任务、项目、模型和运行分别消耗了多少 Token 与预估成本。发现高成本工作，跟踪趋势和预测，设置月度预算，并在达到 80% 和 100% 时收到提醒。"
+    },
+    {
+      "id": "organizations",
+      "title": "组织与全局视图",
+      "description": "将团队组织为部门、工作组或任意嵌套结构。在一张实时地图中查看所有组织，以及团队和智能体状态、任务进度、依赖关系、委派和跨团队沟通。"
+    },
+    {
+      "id": "liveProcesses",
+      "title": "终端",
+      "description": "在具有团队和本地 shell、历史记录、自动补全及设置的可视化终端中运行命令。"
+    },
+    {
       "id": "crossTeam",
       "title": "跨团队通信",
       "description": "智能体在团队内部和团队之间互相发送消息。支持直接消息、任务评论和快捷操作。"
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "单人模式",
       "description": "从一个自我管理任务的智能体开始。需要更多能力时，随时扩展为完整团队。"
-    },
-    {
-      "id": "liveProcesses",
-      "title": "实时进程",
-      "description": "查看运行中的智能体，在浏览器中打开 URL，实时监控 token 使用和会话上下文。"
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "什么是 Agent Teams？",
-      "answer": "一个桌面应用，通过我们自己的本地协调层来编排 AI 智能体团队。每个智能体都有角色，可自主工作，在看板上协作，并且可以运行在 Anthropic 或 Codex 上。"
+      "answer": "一个桌面应用，通过我们自己的本地协调层来编排 AI 智能体团队。每个智能体都有角色，可自主工作，在看板上协作，并且可以运行 Claude、Codex 或 OpenCode。"
     },
     {
       "id": "isFree",

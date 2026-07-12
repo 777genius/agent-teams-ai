@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Une liste de modèles de secours est affichée. Certains modèles propres à votre compte ou récemment publiés peuvent manquer.",
+    "codexCatalogFallbackTitle": "Les modèles Codex en temps réel sont indisponibles",
     "badges": {
       "configured": "Configuration",
       "connected": "Connecté",

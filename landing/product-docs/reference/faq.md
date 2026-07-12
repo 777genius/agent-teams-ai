@@ -15,7 +15,7 @@ No. Agent Teams is the local orchestration and UI layer. Model access comes from
 
 ## Which runtimes are supported?
 
-The supported runtime paths are Claude Code, Codex, and OpenCode. The app also tracks provider ids such as Anthropic, Codex, Gemini, and OpenCode when the runtime exposes them.
+The supported runtime paths are Claude Code, Codex, and OpenCode. The app also tracks provider ids such as Anthropic, Codex, and OpenCode when the runtime exposes them.
 
 ## Do I need to install Claude Code or Codex first?
 

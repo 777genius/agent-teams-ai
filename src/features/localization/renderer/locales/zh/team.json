@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "正在显示备用模型列表。特定于账户的模型和最新发布的模型可能会缺失。",
+    "codexCatalogFallbackTitle": "实时 Codex 模型不可用",
     "badges": {
       "configured": "已配置",
       "connected": "已连接",

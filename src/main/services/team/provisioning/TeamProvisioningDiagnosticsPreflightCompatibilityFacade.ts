@@ -3,6 +3,7 @@ import { type TeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/ma
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { resolveLanguageName } from '@shared/utils/agentLanguage';
 import { createLogger } from '@shared/utils/logger';
+import * as path from 'path';
 
 import { type OpenCodePromptDeliveryLedgerRecord } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 
@@ -39,6 +40,7 @@ import {
   type TeamProvisioningOpenCodeRuntimePermissionAnswerBoundary,
 } from './TeamProvisioningOpenCodeRuntimePermissionAnswerBoundary';
 import { type TeamProvisioningPrepareFacade } from './TeamProvisioningPrepareFacade';
+import { type CliHelpOutputCache } from './TeamProvisioningProviderPreflight';
 import { type TeamProvisioningProviderRuntimeFacade } from './TeamProvisioningProviderRuntimeFacade';
 import { type RetainedClaudeLogsSnapshot } from './TeamProvisioningRetainedLogs';
 import { type ProvisioningRun, VERIFY_TIMEOUT_MS } from './TeamProvisioningRunModel';
@@ -108,7 +110,7 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     TeamProvisioningTransientRunState,
     'appendCliLogs'
   >;
-  protected abstract readonly helpOutputCache: { output: string | null; cachedAtMs: number };
+  protected abstract readonly helpOutputCache: CliHelpOutputCache;
   protected abstract readonly shutdownCoordination: { getShutdownTrackedTeamNames(): string[] };
   protected abstract readonly toolApprovalFacade: Pick<
     TeamProvisioningToolApprovalFacade<TRun>,
@@ -135,6 +137,8 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   protected abstract readonly openCodePromptDeliveryWatchdogScheduler: OpenCodeMemberInboxDeliveryWakePorts['watchdogScheduler'];
 
   private languageChangeInFlight: Promise<void> = Promise.resolve();
+  private readonly cliHelpOutputCacheByCwd = new Map<string, CliHelpOutputCache>();
+  private readonly cliHelpOutputInFlightByCwd = new Map<string, Promise<string>>();
 
   protected abstract scheduleOpenCodePromptDeliveryWatchdog(input: {
     teamName: string;
@@ -558,12 +562,36 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   }
 
   async getCliHelpOutput(cwd?: string): Promise<string> {
-    return getCliHelpOutputWithProvisioningPorts({
-      cwd,
-      cache: this.helpOutputCache,
+    const targetCwd = path.resolve(cwd ?? process.cwd());
+    const existingInFlight = this.cliHelpOutputInFlightByCwd.get(targetCwd);
+    if (existingInFlight) {
+      return existingInFlight;
+    }
+
+    let cache = this.cliHelpOutputCacheByCwd.get(targetCwd);
+    if (!cache) {
+      cache =
+        this.cliHelpOutputCacheByCwd.size === 0
+          ? this.helpOutputCache
+          : { output: null, cachedAtMs: 0 };
+      this.cliHelpOutputCacheByCwd.set(targetCwd, cache);
+    }
+
+    const inFlight = getCliHelpOutputWithProvisioningPorts({
+      cwd: targetCwd,
+      cache,
       getCachedOrProbeResult: (targetCwd, providerId) =>
         this.prepareFacade.getCachedOrProbeResult(targetCwd, providerId),
       providerRuntime: this.providerRuntime,
     });
+    this.cliHelpOutputInFlightByCwd.set(targetCwd, inFlight);
+
+    try {
+      return await inFlight;
+    } finally {
+      if (this.cliHelpOutputInFlightByCwd.get(targetCwd) === inFlight) {
+        this.cliHelpOutputInFlightByCwd.delete(targetCwd);
+      }
+    }
   }
 }

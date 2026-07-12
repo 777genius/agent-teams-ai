@@ -1,3 +1,5 @@
+import { KeyedRuntimeDeliveryWriteFence } from '../RuntimeControlService';
+
 import {
   createOpenCodeRuntimeControlApi,
   type OpenCodeRuntimeControlApi,
@@ -19,9 +21,11 @@ export interface TeamRuntimeControlCompatibilityApiPorts {
 export function createTeamRuntimeControlCompatibilityApi(
   ports: TeamRuntimeControlCompatibilityApiPorts
 ): OpenCodeRuntimeControlApi {
+  const deliveryWriteFence = new KeyedRuntimeDeliveryWriteFence();
   return createOpenCodeRuntimeControlApi({
     runtimeControl: createOpenCodeRuntimeControlRouter(ports.openCode, {
       eventSink: ports.eventSink,
+      deliveryWriteFence,
     }),
     resolveOpenCodeRuntimeLaneId: ports.resolveOpenCodeRuntimeLaneId,
   });

@@ -30,9 +30,6 @@ Cada miembro del equipo se ejecuta sobre un backend de proveedor. En el editor d
 
 Se admite mezclar proveedores en un mismo equipo — por ejemplo, un lead de Claude con builders de OpenCode.
 
-::: info
-Gemini está disponible como ruta de proveedor compatible. Consulta [Proveedores y runtimes](/es/reference/providers-runtimes) para conocer las opciones de autenticación y el estado actual de los proveedores.
-:::
 
 ## Redactar un buen briefing de equipo
 

@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "يتم عرض قائمة احتياطية بالنماذج. قد لا تظهر النماذج الخاصة بحسابك أو النماذج التي تم إصدارها حديثًا.",
+    "codexCatalogFallbackTitle": "نماذج Codex المباشرة غير متاحة",
     "badges": {
       "configured": "المؤمنين",
       "connected": "Connected",

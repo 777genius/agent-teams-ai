@@ -79,8 +79,8 @@ async function runMemberLifecycleOperationWithPorts<T>(
     token,
     startedAtMs: ports.nowMs(),
   });
-  ports.invalidateRuntimeSnapshotCaches(teamName);
   try {
+    ports.invalidateRuntimeSnapshotCaches(teamName);
     return await operation();
   } finally {
     if (ports.memberLifecycleOperations.get(key)?.token === token) {

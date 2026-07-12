@@ -153,6 +153,7 @@ function isVerifiedRuntimeProcess(params: {
   agentId?: string;
 }): boolean {
   return (
+    !isShellLikeCommand(params.row.command) &&
     commandArgEquals(params.row.command, '--team-name', params.teamName) &&
     commandArgEquals(params.row.command, '--agent-id', params.agentId)
   );

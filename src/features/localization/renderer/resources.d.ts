@@ -4648,6 +4648,8 @@ export default interface Resources {
         unavailable: 'Unavailable';
         verified: 'Verified';
       };
+      codexCatalogFallbackMessage: 'Showing a fallback model list. Account-specific and newly released models may be missing.';
+      codexCatalogFallbackTitle: 'Live Codex models unavailable';
       customModelId: 'Custom model id';
       defaultModel: 'Default';
       defaultTooltip: {

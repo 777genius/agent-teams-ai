@@ -1441,6 +1441,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       codexRuntimeError: null,
       codexRuntimeStatus: {
         installed: false,
+        latestVersion: null,
+        updateAvailable: false,
         source: 'missing',
         state: 'checking',
         progress: {

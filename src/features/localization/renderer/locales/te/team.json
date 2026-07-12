@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "ప్రత్యామ్నాయ మోడల్ జాబితా చూపబడుతోంది. మీ ఖాతాకు ప్రత్యేకమైనవి మరియు కొత్తగా విడుదలైన మోడల్‌లు ఇందులో లేకపోవచ్చు.",
+    "codexCatalogFallbackTitle": "ప్రత్యక్ష Codex మోడల్‌లు అందుబాటులో లేవు",
     "badges": {
       "configured": "కాన్ఫిగర్ చేయబడింది",
       "connected": "కనెక్ట్ చేయబడింది",

@@ -1,6 +1,9 @@
 import { GetCodexRuntimeStatusUseCase } from '../../core/application/use-cases/GetCodexRuntimeStatusUseCase';
 import { InstallCodexRuntimeUseCase } from '../../core/application/use-cases/InstallCodexRuntimeUseCase';
-import { CodexRuntimeInstallerService } from '../infrastructure/CodexRuntimeInstallerService';
+import {
+  CodexRuntimeInstallerService,
+  type CodexRuntimeInstallerServiceDependencies,
+} from '../infrastructure/CodexRuntimeInstallerService';
 
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { BrowserWindow } from 'electron';
@@ -12,8 +15,10 @@ export interface CodexRuntimeInstallerFeatureFacade {
   setMainWindow: (window: BrowserWindow | null) => void;
 }
 
-export function createCodexRuntimeInstallerFeature(): CodexRuntimeInstallerFeatureFacade {
-  const service = new CodexRuntimeInstallerService();
+export function createCodexRuntimeInstallerFeature(
+  dependencies: CodexRuntimeInstallerServiceDependencies = {}
+): CodexRuntimeInstallerFeatureFacade {
+  const service = new CodexRuntimeInstallerService(dependencies);
   const getStatusUseCase = new GetCodexRuntimeStatusUseCase(service);
   const installUseCase = new InstallCodexRuntimeUseCase(service);
 

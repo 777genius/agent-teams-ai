@@ -53,16 +53,13 @@ describe('TeamRuntimeControlCompatibility', () => {
   });
 
   it('delegates every runtime control compatibility operation through OpenCode ports', async () => {
-    const ack: OpenCodeRuntimeControlAck = {
-      ok: true,
-      providerId: 'opencode',
-      teamName: 'Team',
-      runId: 'run-1',
-      state: 'recorded',
-      diagnostics: [],
-      observedAt: OBSERVED_AT,
+    const openCode: OpenCodeRuntimeControlPort = {
+      recordOpenCodeRuntimeBootstrapCheckin: vi.fn(async () => createOpenCodeAck('accepted')),
+      deliverOpenCodeRuntimeMessage: vi.fn(async () => createOpenCodeAck('delivered')),
+      recordOpenCodeRuntimeTaskEvent: vi.fn(async () => createOpenCodeAck('recorded')),
+      recordOpenCodeRuntimeHeartbeat: vi.fn(async () => createOpenCodeAck('accepted')),
+      answerOpenCodeRuntimePermission: vi.fn(async () => createOpenCodeAck('accepted')),
     };
-    const openCode = createOpenCodePort(ack);
     const resolveOpenCodeRuntimeLaneId = vi.fn(async () => 'lane-1');
     const api = createTeamRuntimeControlCompatibilityApi({
       openCode,
@@ -319,6 +316,123 @@ describe('TeamRuntimeControlCompatibility', () => {
       memberName: 'Builder',
     });
   });
+
+  it('owns one persistent delivery fence across per-call production boundary creation', async () => {
+    const firstEntered = createDeferred();
+    const releaseFirst = createDeferred();
+    let calls = 0;
+    const openCode = createOpenCodePort(createOpenCodeAck('accepted'));
+    openCode.deliverOpenCodeRuntimeMessage = vi.fn(async (raw) => {
+      calls += 1;
+      const idempotencyKey = getPayloadIdempotencyKey(raw);
+      if (calls === 1) {
+        firstEntered.resolve();
+        await releaseFirst.promise;
+        return createOpenCodeAck('delivered', { idempotencyKey });
+      }
+      return createOpenCodeAck('duplicate', { idempotencyKey });
+    });
+    const service = {
+      createOpenCodeRuntimeDeliveryBoundary: vi.fn(() => openCode),
+      createOpenCodeRuntimePermissionAnswerBoundary: vi.fn(() => openCode),
+      resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'lane-1'),
+    };
+    const api = createTeamRuntimeControlCompatibilityApiFromService(service);
+
+    const first = api.deliverOpenCodeRuntimeMessage(
+      createDeliveryPayload({ idempotencyKey: '  message-key-1  ' })
+    );
+    await firstEntered.promise;
+    const conflicting = api.deliverOpenCodeRuntimeMessage(
+      createDeliveryPayload({ idempotencyKey: 'message-key-1', text: 'conflicting payload' })
+    );
+
+    expect(service.createOpenCodeRuntimeDeliveryBoundary).toHaveBeenCalledTimes(1);
+    expect(openCode.deliverOpenCodeRuntimeMessage).toHaveBeenCalledTimes(1);
+    releaseFirst.resolve();
+
+    await expect(Promise.all([first, conflicting])).resolves.toMatchObject([
+      { state: 'delivered' },
+      { state: 'duplicate' },
+    ]);
+    expect(service.createOpenCodeRuntimeDeliveryBoundary).toHaveBeenCalledTimes(2);
+    expect(openCode.deliverOpenCodeRuntimeMessage).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        idempotencyKey: 'message-key-1',
+        text: 'conflicting payload',
+      })
+    );
+  });
+
+  it('owns one persistent permission fence across per-call production boundary creation', async () => {
+    const firstEntered = createDeferred();
+    const releaseFirst = createDeferred();
+    const enteredRequests: string[] = [];
+    const openCode = createOpenCodePort(createOpenCodeAck('accepted'));
+    openCode.answerOpenCodeRuntimePermission = vi.fn(async (raw) => {
+      const requestId = getPayloadRequestId(raw);
+      enteredRequests.push(requestId);
+      if (enteredRequests.length === 1) {
+        firstEntered.resolve();
+        await releaseFirst.promise;
+      }
+      return createOpenCodeAck('accepted');
+    });
+    const service = {
+      createOpenCodeRuntimeDeliveryBoundary: vi.fn(() => openCode),
+      createOpenCodeRuntimePermissionAnswerBoundary: vi.fn(() => openCode),
+      resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'lane-1'),
+    };
+    const api = createTeamRuntimeControlCompatibilityApiFromService(service);
+
+    const first = api.answerOpenCodeRuntimePermission(createPermissionAnswerPayload());
+    await firstEntered.promise;
+    const second = api.answerOpenCodeRuntimePermission(
+      createPermissionAnswerPayload({ requestId: 'provider-request-2' })
+    );
+
+    expect(service.createOpenCodeRuntimePermissionAnswerBoundary).toHaveBeenCalledTimes(1);
+    expect(openCode.answerOpenCodeRuntimePermission).toHaveBeenCalledTimes(1);
+    releaseFirst.resolve();
+
+    await expect(Promise.all([first, second])).resolves.toHaveLength(2);
+    expect(enteredRequests).toEqual(['provider-request-1', 'provider-request-2']);
+    expect(service.createOpenCodeRuntimePermissionAnswerBoundary).toHaveBeenCalledTimes(2);
+  });
+
+  it('lets unrelated production compatibility delivery keys commit concurrently', async () => {
+    const release = createDeferred();
+    const enteredKeys = new Set<string>();
+    const openCode = createOpenCodePort(createOpenCodeAck('accepted'));
+    openCode.deliverOpenCodeRuntimeMessage = vi.fn(async (raw) => {
+      const idempotencyKey = getPayloadIdempotencyKey(raw);
+      enteredKeys.add(idempotencyKey);
+      await release.promise;
+      return createOpenCodeAck('delivered', { idempotencyKey });
+    });
+    const service = {
+      createOpenCodeRuntimeDeliveryBoundary: vi.fn(() => openCode),
+      createOpenCodeRuntimePermissionAnswerBoundary: vi.fn(() => openCode),
+      resolveOpenCodeRuntimeLaneId: vi.fn(async () => 'lane-1'),
+    };
+    const api = createTeamRuntimeControlCompatibilityApiFromService(service);
+    const deliveries = [
+      api.deliverOpenCodeRuntimeMessage(createDeliveryPayload()),
+      api.deliverOpenCodeRuntimeMessage(createDeliveryPayload({ idempotencyKey: 'message-key-2' })),
+    ];
+
+    try {
+      await vi.waitFor(() =>
+        expect(enteredKeys).toEqual(new Set(['message-key-1', 'message-key-2']))
+      );
+    } finally {
+      release.resolve();
+    }
+
+    await expect(Promise.all(deliveries)).resolves.toHaveLength(2);
+    expect(service.createOpenCodeRuntimeDeliveryBoundary).toHaveBeenCalledTimes(2);
+  });
 });
 
 function createOpenCodePort(ack: OpenCodeRuntimeControlAck): OpenCodeRuntimeControlPort {
@@ -347,4 +461,65 @@ function createOpenCodeAck(
     observedAt: OBSERVED_AT,
     ...overrides,
   };
+}
+
+function createDeliveryPayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    teamName: 'Team',
+    runId: 'run-1',
+    fromMemberName: 'Builder',
+    idempotencyKey: 'message-key-1',
+    runtimeSessionId: 'session-1',
+    to: { memberName: 'Reviewer' },
+    text: 'Delivered text',
+    createdAt: OBSERVED_AT,
+    ...overrides,
+  };
+}
+
+function createPermissionAnswerPayload(
+  overrides: Record<string, unknown> = {}
+): Record<string, unknown> {
+  return {
+    teamName: 'Team',
+    runId: 'run-1',
+    memberName: 'Builder',
+    requestId: 'provider-request-1',
+    decision: 'allow',
+    cwd: '/repo',
+    expectedMembers: [],
+    ...overrides,
+  };
+}
+
+function createDeferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+function getPayloadIdempotencyKey(raw: unknown): string {
+  if (
+    typeof raw !== 'object' ||
+    raw === null ||
+    !('idempotencyKey' in raw) ||
+    typeof raw.idempotencyKey !== 'string'
+  ) {
+    throw new Error('Expected delivery idempotency key');
+  }
+  return raw.idempotencyKey;
+}
+
+function getPayloadRequestId(raw: unknown): string {
+  if (
+    typeof raw !== 'object' ||
+    raw === null ||
+    !('requestId' in raw) ||
+    typeof raw.requestId !== 'string'
+  ) {
+    throw new Error('Expected permission request id');
+  }
+  return raw.requestId;
 }
