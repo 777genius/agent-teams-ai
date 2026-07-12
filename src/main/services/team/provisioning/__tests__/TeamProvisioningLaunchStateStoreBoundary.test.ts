@@ -205,6 +205,54 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     expect(invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
   });
 
+  it('clears the default store after an injected store clear fails and preserves the error', async () => {
+    const clearError = new Error('injected clear failed');
+    const clearOrder: string[] = [];
+    const launchStateStore = {
+      read: vi.fn(async () => null),
+      write: vi.fn(async () => undefined),
+      clear: vi.fn(async () => {
+        clearOrder.push('injected');
+        throw clearError;
+      }),
+    };
+    const defaultLaunchStateStore = {
+      write: vi.fn(async () => undefined),
+      clear: vi.fn(async () => {
+        clearOrder.push('default');
+      }),
+    };
+    const clearBootstrapState = vi.fn(async () => undefined);
+    const invalidateRuntimeSnapshotCaches = vi.fn();
+    const service = {
+      launchStateStore,
+      defaultLaunchStateStore,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => [{ name: 'Builder', joinedAt: 1 }]),
+      },
+      getTrackedRunId: vi.fn(() => 'run-1'),
+      applyOpenCodeSecondaryEvidenceOverlay: vi.fn(
+        async ({ snapshot: inputSnapshot }) => inputSnapshot
+      ),
+      applyOpenCodeSecondaryBootstrapStallOverlay: vi.fn(() => null),
+      invalidateRuntimeSnapshotCaches,
+      launchStateWrittenRunIdByTeam: new Map<string, string>(),
+    } satisfies TeamProvisioningLaunchStateStoreBoundaryServiceHost;
+    const boundary = createTeamProvisioningLaunchStateStoreBoundaryFromService(service, {
+      areSnapshotsSemanticallyEqual: vi.fn(() => false),
+      clearBootstrapState,
+      logDebug: vi.fn(),
+      nowMs: vi.fn(() => Date.parse(at)),
+    });
+
+    await expect(boundary.clearPersistedLaunchStateNow('demo')).rejects.toBe(clearError);
+
+    expect(clearOrder).toEqual(['injected', 'default']);
+    expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith('demo');
+    expect(clearBootstrapState).not.toHaveBeenCalled();
+    expect(invalidateRuntimeSnapshotCaches).not.toHaveBeenCalled();
+  });
+
   it('skips stale clears when the tracked run id differs', async () => {
     const { boundary, ports, setTrackedRunId } = createBoundary();
     setTrackedRunId('run-current');

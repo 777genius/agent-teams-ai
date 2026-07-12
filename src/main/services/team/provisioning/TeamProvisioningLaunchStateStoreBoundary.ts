@@ -231,11 +231,26 @@ export function createTeamProvisioningLaunchStateStoreBoundaryFromService(
         }
       },
       clear: async (teamName) => {
+        const errors: unknown[] = [];
         if (typeof service.launchStateStore.clear === 'function') {
-          await service.launchStateStore.clear(teamName);
+          try {
+            await service.launchStateStore.clear(teamName);
+          } catch (error) {
+            errors.push(error);
+          }
         }
         if (service.launchStateStore !== service.defaultLaunchStateStore) {
-          await service.defaultLaunchStateStore.clear(teamName);
+          try {
+            await service.defaultLaunchStateStore.clear(teamName);
+          } catch (error) {
+            errors.push(error);
+          }
+        }
+        if (errors.length === 1) {
+          throw errors[0];
+        }
+        if (errors.length > 1) {
+          throw new AggregateError(errors, `[${teamName}] Failed to clear launch-state stores`);
         }
       },
     },
