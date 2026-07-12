@@ -300,7 +300,7 @@ function spawnWindowsShellFallback(
   });
 }
 
-/** Env vars injected into every spawned Claude CLI process. */
+/** Env vars injected into every spawned agent runtime CLI process. */
 const CLI_ENV_DEFAULTS: Record<string, string> = {
   CLAUDE_HOOK_JUDGE_MODE: 'true',
 };
@@ -370,7 +370,7 @@ export async function execCli(
 ): Promise<{ stdout: string; stderr: string }> {
   if (!binaryPath) {
     throw new Error(
-      'Claude CLI binary path is null. Resolve the binary via ClaudeBinaryResolver before calling execCli.'
+      'Agent runtime CLI binary path is null. Resolve the binary before calling execCli.'
     );
   }
   const target = binaryPath;

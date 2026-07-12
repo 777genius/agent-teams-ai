@@ -1,5 +1,5 @@
 /**
- * Merged PATH for Claude CLI discovery and child processes.
+ * Merged PATH for agent runtime CLI discovery and child processes.
  * Packaged macOS apps get a minimal PATH; login-shell cache fixes that once warm.
  */
 

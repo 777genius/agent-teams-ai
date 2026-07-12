@@ -996,7 +996,7 @@ export class NotificationManager extends EventEmitter {
     const truncatedMessage = stripMarkdown(stored.message).slice(0, 200);
     const iconPath = isMac ? undefined : getAppIconPath();
     const notification = new NotificationClass({
-      title: 'Claude Code Error',
+      title: 'Agent Teams Error',
       ...(isMac ? { subtitle: stored.context.projectName } : {}),
       body: isMac ? truncatedMessage : `${stored.context.projectName}\n${truncatedMessage}`,
       sound: config.notifications.soundEnabled ? 'default' : undefined,
@@ -1016,7 +1016,7 @@ export class NotificationManager extends EventEmitter {
     notification.on('close', cleanup);
 
     notification.on('show', () => {
-      logger.debug(`[notification] shown: "Claude Code Error" — ${stored.context.projectName}`);
+      logger.debug(`[notification] shown: "Agent Teams Error" - ${stored.context.projectName}`);
     });
     notification.on('failed', (_, error) => {
       logger.warn(`[notification] failed: ${String(error)}`);

@@ -47,7 +47,7 @@ export const KNOWN_SLASH_COMMANDS: readonly KnownSlashCommandDefinition[] = [
   {
     name: 'model',
     command: '/model',
-    description: 'Select or change the Claude model.',
+    description: 'Select or change the active model.',
   },
   {
     name: 'effort',

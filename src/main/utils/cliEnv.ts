@@ -1,5 +1,5 @@
 /**
- * Builds an enriched environment for Claude CLI child processes.
+ * Builds an enriched environment for agent runtime CLI child processes.
  *
  * Packaged Electron apps on macOS receive a minimal PATH (often just /usr/bin:/bin)
  * and may lack USER (needed for macOS Keychain credential lookup).

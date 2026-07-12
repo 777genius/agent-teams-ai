@@ -242,7 +242,9 @@ describe('ScheduledTaskExecutor', () => {
     mockResolve.mockResolvedValue(null);
 
     const executor = new ScheduledTaskExecutor();
-    await expect(executor.execute(makeRequest())).rejects.toThrow('Claude CLI binary not found');
+    await expect(executor.execute(makeRequest())).rejects.toThrow(
+      'Agent runtime CLI binary not found'
+    );
   });
 
   // --- Output Truncation ---

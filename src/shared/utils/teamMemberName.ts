@@ -65,7 +65,7 @@ export function validateTeamMemberNameFormat(name: string): string | null {
 }
 
 /**
- * Claude CLI auto-suffixes teammate names when a name already exists in config.json
+ * Team runtimes may auto-suffix teammate names when a name already exists in config.json
  * (e.g. "alice" → "alice-2"). We treat "-2+" as an auto-suffix only when the base
  * name also exists among the current set of names.
  *
@@ -98,7 +98,7 @@ export function createCliAutoSuffixNameGuard(
 const PROVISIONER_SUFFIX = '-provisioner';
 
 /**
- * Claude CLI creates temporary "{name}-provisioner" agents during team provisioning
+ * Team runtimes may create temporary "{name}-provisioner" agents during provisioning
  * to spawn real teammates. These are always internal artifacts — never real teammates.
  *
  * Unlike numeric suffixes (alice-2) which can be intentional, "-provisioner" is a

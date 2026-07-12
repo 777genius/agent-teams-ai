@@ -1,5 +1,5 @@
 /**
- * PluginInstallService — installs/uninstalls plugins via Claude CLI.
+ * PluginInstallService - installs/uninstalls plugins through the configured runtime adapter.
  *
  * Security model: renderer sends ONLY pluginId, main resolves qualifiedName
  * from the current catalog snapshot (never trusts renderer-provided paths).

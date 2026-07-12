@@ -132,7 +132,7 @@ export class ScheduledTaskExecutor {
 
     const binaryPath = await ClaudeBinaryResolver.resolve();
     if (!binaryPath) {
-      throw new Error('Claude CLI binary not found');
+      throw new Error('Agent runtime CLI binary not found');
     }
 
     const shellEnv = await resolveInteractiveShellEnv({ source: 'scheduled-task-executor' });

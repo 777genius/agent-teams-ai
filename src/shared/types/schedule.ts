@@ -1,7 +1,7 @@
 /**
  * Schedule types — shared between main and renderer processes.
  *
- * Supports automatic cron-based execution of Claude tasks (one-shot `claude -p` mode).
+ * Supports automatic cron-based execution of agent tasks through the configured runtime.
  * Repository Pattern abstraction allows swapping storage backend (JSON → sql.js/Drizzle).
  */
 

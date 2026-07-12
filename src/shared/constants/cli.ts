@@ -12,4 +12,4 @@ export const CLI_NOT_FOUND_MARKER = 'CLI not found';
  * Contains CLI_NOT_FOUND_MARKER so the renderer can detect it.
  */
 export const CLI_NOT_FOUND_MESSAGE =
-  'Claude CLI not found. Go to the Dashboard to install it automatically.';
+  'Agent runtime CLI not found. Open the Dashboard to install or configure the required runtime.';

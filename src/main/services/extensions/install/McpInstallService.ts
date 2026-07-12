@@ -1,5 +1,5 @@
 /**
- * McpInstallService — installs/uninstalls MCP servers via Claude CLI.
+ * McpInstallService - installs/uninstalls MCP servers through the configured runtime adapter.
  *
  * Security model: renderer sends ONLY registryId + user inputs (env values,
  * headers, server name). Main re-fetches server spec from registry via getById()

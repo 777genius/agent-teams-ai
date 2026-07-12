@@ -650,7 +650,7 @@ function directoryHasEntries(targetPath: string): boolean {
 /**
  * Directory for per-team MCP config JSON files.
  * Stored in app's userData so they persist across sessions and are
- * accessible by Claude CLI subprocess on all platforms (including AppImage).
+ * accessible by agent runtime subprocesses on all platforms (including AppImage).
  */
 export function getMcpConfigsBasePath(): string {
   return path.join(getAppDataBasePath(), 'mcp-configs');
