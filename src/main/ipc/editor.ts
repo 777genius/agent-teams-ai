@@ -68,6 +68,10 @@ import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from 'electron';
 
 let activeProjectRoot: string | null = null;
 
+// Monotonically invalidates editor opens that are still awaiting filesystem validation.
+// Without this, a slow open can restore stale state after a newer open or close completes.
+let editorStateGeneration = 0;
+
 let mainWindowRef: BrowserWindow | null = null;
 
 let activeSearchController: AbortController | null = null;
@@ -127,10 +131,16 @@ async function handleEditorOpen(
       throw new Error('Cannot open Claude data directory as project');
     }
 
+    const openGeneration = ++editorStateGeneration;
+
     // Verify it's an existing directory
     const stat = await fs.stat(normalized);
     if (!stat.isDirectory()) {
       throw new Error('Project path is not a directory');
+    }
+
+    if (openGeneration !== editorStateGeneration) {
+      throw new Error('Editor open was superseded');
     }
 
     // Stop any previous watcher/git before switching projects
@@ -147,6 +157,8 @@ async function handleEditorOpen(
  * Cleanup editor state.
  */
 async function handleEditorClose(): Promise<IpcResult<void>> {
+  // Invalidate pending opens before the wrapped cleanup runs.
+  editorStateGeneration++;
   return wrapHandler('close', async () => {
     editorFileWatcher.stop();
     gitStatusService.destroy();
@@ -487,6 +499,7 @@ export function removeEditorHandlers(ipcMain: IpcMain): void {
  * Prevents state leak when Cmd+Q on macOS.
  */
 export function cleanupEditorState(): void {
+  editorStateGeneration++;
   editorFileWatcher.stop();
   gitStatusService.destroy();
   activeProjectRoot = null;
