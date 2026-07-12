@@ -144,6 +144,16 @@ describe('HTTP team route parsers', () => {
     );
 
     expectBadRequest(
+      () => parseCreateTeamRequest({ teamName: 'new-team', members: null }),
+      'members must be an array'
+    );
+
+    expectBadRequest(
+      () => parseCreateTeamRequest({ teamName: 'new-team' }),
+      'members must be an array'
+    );
+
+    expectBadRequest(
       () =>
         parseCreateTeamRequest({
           teamName: 'new-team',

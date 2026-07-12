@@ -180,9 +180,6 @@ export function parseCreateMembers(
   payloadMembers: unknown,
   defaultProviderId: TeamLaunchRequest['providerId']
 ): TeamCreateConfigRequest['members'] {
-  if (payloadMembers == null) {
-    return [];
-  }
   if (!Array.isArray(payloadMembers)) {
     throw new HttpBadRequestError('members must be an array');
   }
