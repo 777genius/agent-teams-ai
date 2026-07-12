@@ -72,3 +72,8 @@ remotion/*
 # Local reference captures
 /agent-teams-reference-fix-*.png
 /.tmp-*
+
+# Local dev notes (private)
+dev_log.md
+PROJECT_ANALYSIS.md
+/agent_team_template/

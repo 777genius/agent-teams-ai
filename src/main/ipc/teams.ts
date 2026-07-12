@@ -9,6 +9,7 @@ import {
   getTeamDataWorkerClient,
   isTeamDataWorkerFatalError,
 } from '@main/services/team/TeamDataWorkerClient';
+import { inspectTeamFolder } from '@main/services/team/TeamImportService';
 import { getAppIconPath } from '@main/utils/appIcon';
 import { getAppDataPath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
@@ -50,6 +51,7 @@ import {
   TEAM_GET_TASK_LOG_STREAM,
   TEAM_GET_TASK_LOG_STREAM_SUMMARY,
   TEAM_GET_WORKTREE_GIT_STATUS,
+  TEAM_IMPORT_FROM_FOLDER,
   TEAM_INITIALIZE_GIT_REPOSITORY,
   TEAM_KILL_PROCESS,
   TEAM_LAUNCH,
@@ -223,6 +225,7 @@ import type {
   TeamCreateResponse,
   TeamFastMode,
   TeamGetDataOptions,
+  TeamImportPreviewResult,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
   TeamLaunchResponse,
@@ -855,6 +858,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_ALIVE_LIST, handleAliveList);
   ipcMain.handle(TEAM_STOP, handleStopTeam);
   ipcMain.handle(TEAM_CREATE_CONFIG, handleCreateConfig);
+  ipcMain.handle(TEAM_IMPORT_FROM_FOLDER, handleImportFromFolder);
   ipcMain.handle(TEAM_GET_MEMBER_LOGS, handleGetMemberLogs);
   ipcMain.handle(TEAM_GET_LOGS_FOR_TASK, handleGetLogsForTask);
   ipcMain.handle(TEAM_GET_TASK_ACTIVITY, handleGetTaskActivity);
@@ -944,6 +948,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_ALIVE_LIST);
   ipcMain.removeHandler(TEAM_STOP);
   ipcMain.removeHandler(TEAM_CREATE_CONFIG);
+  ipcMain.removeHandler(TEAM_IMPORT_FROM_FOLDER);
   ipcMain.removeHandler(TEAM_GET_MEMBER_LOGS);
   ipcMain.removeHandler(TEAM_GET_LOGS_FOR_TASK);
   ipcMain.removeHandler(TEAM_GET_TASK_ACTIVITY);
@@ -3851,6 +3856,21 @@ async function handleProcessAlive(
   return wrapTeamHandler('processAlive', async () =>
     getTeamProvisioningService().isTeamAlive(validatedTeamName.value!)
   );
+}
+
+async function handleImportFromFolder(
+  _event: IpcMainInvokeEvent,
+  folderPath: unknown
+): Promise<IpcResult<TeamImportPreviewResult>> {
+  if (typeof folderPath !== 'string' || folderPath.trim().length === 0) {
+    return { success: false, error: 'folderPath is required' };
+  }
+  try {
+    const preview = await inspectTeamFolder(folderPath.trim());
+    return { success: true, data: preview };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 async function handleCreateConfig(

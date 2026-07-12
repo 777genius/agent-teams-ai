@@ -107,6 +107,7 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamGetDataOptions,
+  TeamImportPreviewResult,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
   TeamLaunchResponse,
@@ -1066,6 +1067,9 @@ export class HttpAPIClient implements ElectronAPI {
     },
     createConfig: async (): Promise<void> => {
       throw new Error('Team config creation is not available in browser mode');
+    },
+    importFromFolder: async (): Promise<TeamImportPreviewResult> => {
+      throw new Error('Team import is not available in browser mode');
     },
     getMemberLogs: async () => {
       console.warn('[HttpAPIClient] getMemberLogs is not available in browser mode');

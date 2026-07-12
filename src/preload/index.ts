@@ -162,6 +162,7 @@ import {
   TEAM_GET_TASK_LOG_STREAM,
   TEAM_GET_TASK_LOG_STREAM_SUMMARY,
   TEAM_GET_WORKTREE_GIT_STATUS,
+  TEAM_IMPORT_FROM_FOLDER,
   TEAM_INITIALIZE_GIT_REPOSITORY,
   TEAM_KILL_PROCESS,
   TEAM_LAUNCH,
@@ -333,6 +334,7 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamGetDataOptions,
+  TeamImportPreviewResult,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
   TeamLaunchResponse,
@@ -1119,6 +1121,9 @@ const electronAPI: ElectronAPI = {
     },
     createConfig: async (request: TeamCreateConfigRequest) => {
       return invokeIpcWithResult<void>(TEAM_CREATE_CONFIG, request);
+    },
+    importFromFolder: async (folderPath: string) => {
+      return invokeIpcWithResult<TeamImportPreviewResult>(TEAM_IMPORT_FROM_FOLDER, folderPath);
     },
     getMemberLogs: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<MemberLogSummary[]>(TEAM_GET_MEMBER_LOGS, teamName, memberName);

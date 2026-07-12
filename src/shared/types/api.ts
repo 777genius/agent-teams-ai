@@ -79,6 +79,7 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamGetDataOptions,
+  TeamImportPreviewResult,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
   TeamLaunchResponse,
@@ -556,6 +557,7 @@ export interface TeamsAPI {
   aliveList: () => Promise<string[]>;
   stop: (teamName: string) => Promise<void>;
   createConfig: (request: TeamCreateConfigRequest) => Promise<void>;
+  importFromFolder: (folderPath: string) => Promise<TeamImportPreviewResult>;
   getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
   getLogsForTask: (
     teamName: string,

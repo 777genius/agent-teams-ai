@@ -1495,6 +1495,17 @@ export interface TeamCreateConfigRequest {
   extraCliArgs?: string;
 }
 
+/** Preview result from inspecting a local agent team folder for import. */
+export interface TeamImportPreviewResult {
+  teamName: string;
+  projectPath: string;
+  members: TeamProvisioningMemberInput[];
+  prompt?: string;
+  claudeMdPath?: string;
+  skillsFound: string[];
+  warnings: string[];
+}
+
 export interface TeamCreateResponse {
   runId: string;
   launchStatus?: 'started' | 'already_launching' | 'already_running';

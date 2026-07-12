@@ -271,6 +271,9 @@ export const TEAM_CHANGE = 'team:change';
 /** Create new team by provisioning through CLI */
 export const TEAM_CREATE = 'team:create';
 
+/** Inspect a local agent team folder and return a preview (no side effects) */
+export const TEAM_IMPORT_FROM_FOLDER = 'team:importFromFolder';
+
 /** Launch existing offline team */
 export const TEAM_LAUNCH = 'team:launch';
 
