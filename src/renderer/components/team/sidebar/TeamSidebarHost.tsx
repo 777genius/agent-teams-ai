@@ -18,6 +18,7 @@ interface TeamSidebarHostProps {
   surface: TeamSidebarSurface;
   isActive: boolean;
   isFocused: boolean;
+  reserveSpaceWithoutSource?: boolean;
   children?: React.ReactNode;
 }
 
@@ -30,6 +31,7 @@ export const TeamSidebarHost = ({
   surface,
   isActive,
   isFocused,
+  reserveSpaceWithoutSource = false,
   children,
 }: TeamSidebarHostProps): React.JSX.Element => {
   const hostId = useId();
@@ -43,7 +45,10 @@ export const TeamSidebarHost = ({
   const snapshot = useTeamSidebarPortalSnapshot();
   const isVisible = messagesPanelMode === 'sidebar';
   const hasActiveSource = Boolean(snapshot.activeSourceIdByTeam[teamName]);
-  const isOwner = isVisible && hasActiveSource && snapshot.activeHostIdByTeam[teamName] === hostId;
+  const isOwner =
+    isVisible &&
+    (hasActiveSource || reserveSpaceWithoutSource) &&
+    snapshot.activeHostIdByTeam[teamName] === hostId;
 
   useLayoutEffect(() => {
     upsertTeamSidebarHost(hostId, {

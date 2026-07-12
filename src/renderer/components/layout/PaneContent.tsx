@@ -158,7 +158,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
     <div className="absolute inset-0 flex" style={{ display: isActive ? 'flex' : 'none' }}>
       {shouldRenderContent && (
         <Suspense fallback={fallback}>
-          {tab.type === 'dashboard' && <DashboardView />}
+          {tab.type === 'dashboard' && <DashboardView isActive={isActive} />}
           {tab.type === 'notifications' && <NotificationsView />}
           {tab.type === 'settings' && <SettingsView />}
           {tab.type === 'teams' && <TeamListView />}

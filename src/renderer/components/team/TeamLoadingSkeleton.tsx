@@ -398,6 +398,7 @@ export const TeamLoadingSkeleton = ({
         surface="team"
         isActive={Boolean(isActive)}
         isFocused={Boolean(isFocused)}
+        reserveSpaceWithoutSource
       >
         <TeamLoadingSidebarSkeleton />
       </TeamSidebarHost>

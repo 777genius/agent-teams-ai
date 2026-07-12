@@ -16,7 +16,12 @@ const teamDetailViewMock = vi.hoisted(() => {
 });
 
 vi.mock('../dashboard/DashboardView', () => ({
-  DashboardView: () => React.createElement('div', { 'data-view': 'dashboard' }, 'Dashboard view'),
+  DashboardView: ({ isActive = true }: { isActive?: boolean }) =>
+    React.createElement(
+      'div',
+      { 'data-view': 'dashboard', 'data-active': String(isActive) },
+      'Dashboard view'
+    ),
 }));
 
 vi.mock('../extensions/ExtensionStoreView', () => ({
@@ -139,9 +144,13 @@ describe('PaneContent', () => {
 
     await renderPane(root, createPane([dashboardTab, extensionTab], dashboardTab.id));
     expect(host.textContent).not.toContain('Extension store view');
+    expect(host.querySelector('[data-view="dashboard"]')?.getAttribute('data-active')).toBe('true');
 
     await renderPane(root, createPane([dashboardTab, extensionTab], extensionTab.id));
     await waitForText(host, 'Extension store view');
+    expect(host.querySelector('[data-view="dashboard"]')?.getAttribute('data-active')).toBe(
+      'false'
+    );
 
     const extensionView = host.querySelector<HTMLElement>('[data-view="extensions"]');
     expect(extensionView).not.toBeNull();
@@ -150,6 +159,7 @@ describe('PaneContent', () => {
 
     expect(host.querySelector('[data-view="extensions"]')).toBe(extensionView);
     expect(extensionView?.closest<HTMLElement>('.absolute')?.style.display).toBe('none');
+    expect(host.querySelector('[data-view="dashboard"]')?.getAttribute('data-active')).toBe('true');
   });
 
   it('uses the team loading skeleton while the team tab chunk is loading', async () => {

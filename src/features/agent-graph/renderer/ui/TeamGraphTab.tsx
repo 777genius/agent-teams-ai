@@ -228,6 +228,7 @@ export const TeamGraphTab = ({
       {graphMessagesPanel}
       <TerminalWorkspaceFloatingLauncher
         teamName={teamName}
+        bottomOffset={53}
         buttonTestId="open-terminal-floating-button-graph"
         enabled={isActive && !fullscreen}
       />

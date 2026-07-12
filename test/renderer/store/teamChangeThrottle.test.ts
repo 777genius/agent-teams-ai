@@ -85,6 +85,7 @@ vi.mock('@renderer/api', () => ({
 import { api } from '@renderer/api';
 
 import { initializeNotificationListeners, useStore } from '../../../src/renderer/store';
+import { createLoadingMultimodelCliStatus } from '../../../src/renderer/store/slices/cliInstallerSlice';
 import { __resetTeamSliceModuleStateForTests } from '../../../src/renderer/store/slices/teamSlice';
 import {
   __resetTeamRefreshFanoutDiagnosticsForTests,
@@ -232,6 +233,91 @@ describe('team change throttling', () => {
     await vi.advanceTimersByTimeAsync(30_000);
 
     expect(fetchAllTasksSpy).not.toHaveBeenCalled();
+  });
+
+  it('loads OpenCode after four seconds outside the provider idle batch even when bootstrap is slow', async () => {
+    const originalFetchConfig = useStore.getState().fetchConfig;
+    const originalBootstrapCliStatus = useStore.getState().bootstrapCliStatus;
+    const originalFetchCliProviderStatus = useStore.getState().fetchCliProviderStatus;
+    const originalNavigatorPlatform = Object.getOwnPropertyDescriptor(window.navigator, 'platform');
+    const startupConfig = useStore.getState().appConfig;
+    if (!startupConfig) {
+      throw new Error('Expected startup config to be loaded by the test harness');
+    }
+    const fetchConfig = vi.fn(async () => {
+      useStore.setState({
+        appConfig: {
+          ...startupConfig,
+          general: {
+            ...startupConfig.general,
+            multimodelEnabled: true,
+          },
+        },
+      });
+    });
+    let resolveBootstrap!: () => void;
+    const bootstrapCompletion = new Promise<void>((resolve) => {
+      resolveBootstrap = resolve;
+    });
+    const bootstrapCliStatus = vi.fn(() => {
+      useStore.setState({ cliStatus: createLoadingMultimodelCliStatus() });
+      return bootstrapCompletion;
+    });
+    const fetchCliProviderStatus = vi.fn(
+      async (..._args: Parameters<typeof originalFetchCliProviderStatus>) => true
+    );
+
+    cleanup?.();
+    cleanup = null;
+    Object.defineProperty(window.navigator, 'platform', {
+      configurable: true,
+      value: 'MacIntel',
+    });
+    Object.assign(api, { cliInstaller: {} });
+    useStore.setState({ fetchConfig, bootstrapCliStatus, fetchCliProviderStatus } as never);
+
+    try {
+      cleanup = initializeNotificationListeners();
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(api.cliInstaller).toBeDefined();
+      expect(fetchConfig).toHaveBeenCalledTimes(1);
+      expect(bootstrapCliStatus).toHaveBeenCalledWith({
+        multimodelEnabled: true,
+        providerStatusMode: 'defer',
+      });
+      expect(fetchCliProviderStatus).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(3_999);
+      expect(fetchCliProviderStatus).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fetchCliProviderStatus).toHaveBeenCalledWith('opencode', { silent: false });
+      expect(fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+
+      resolveBootstrap();
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(fetchCliProviderStatus).toHaveBeenCalledWith('anthropic', { silent: false });
+      expect(fetchCliProviderStatus).toHaveBeenCalledWith('codex', { silent: false });
+      expect(
+        fetchCliProviderStatus.mock.calls.filter(([providerId]) => providerId === 'opencode')
+      ).toHaveLength(1);
+    } finally {
+      cleanup?.();
+      cleanup = null;
+      Reflect.deleteProperty(api, 'cliInstaller');
+      if (originalNavigatorPlatform) {
+        Object.defineProperty(window.navigator, 'platform', originalNavigatorPlatform);
+      } else {
+        Reflect.deleteProperty(window.navigator, 'platform');
+      }
+      useStore.setState({
+        fetchConfig: originalFetchConfig,
+        bootstrapCliStatus: originalBootstrapCliStatus,
+        fetchCliProviderStatus: originalFetchCliProviderStatus,
+      } as never);
+    }
   });
 
   it('allows next refresh after throttle window passes', async () => {

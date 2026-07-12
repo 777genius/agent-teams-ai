@@ -22,7 +22,6 @@ import {
 } from '@renderer/components/ui/tooltip';
 import {
   getTeamColorSet,
-  getThemedBadge,
   getThemedBorder,
   type TeamColorSet,
 } from '@renderer/constants/teamColors';
@@ -172,7 +171,7 @@ function resolveLaunchDialogMembers(members: readonly TeamMemberSnapshot[]): Res
   });
 }
 
-function renderMemberChips(members: TeamSummaryMember[], isLight: boolean): React.JSX.Element {
+function renderMemberNames(members: TeamSummaryMember[]): React.JSX.Element {
   const teamColorMap = buildMemberColorMap(members);
   return (
     <>
@@ -182,16 +181,8 @@ function renderMemberChips(members: TeamSummaryMember[], isLight: boolean): Reac
         return (
           <span key={m.name} className="inline-flex items-center gap-1">
             <span
-              className="rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide"
-              style={
-                memberColor
-                  ? {
-                      backgroundColor: getThemedBadge(memberColor, isLight),
-                      color: memberColor.text,
-                      border: `1px solid ${memberColor.border}40`,
-                    }
-                  : undefined
-              }
+              className="text-[10px] font-medium tracking-wide"
+              style={memberColor ? { color: memberColor.text } : undefined}
             >
               {m.name}
             </span>
@@ -498,7 +489,7 @@ const ActiveTeamCard = ({
         ) : null}
         <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
           {team.members && team.members.length > 0 ? (
-            renderMemberChips(team.members, isLight)
+            renderMemberNames(team.members)
           ) : team.memberCount === 0 ? (
             <Badge variant="secondary" className="text-[10px] font-normal">
               {t('list.solo')}
@@ -1473,7 +1464,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                     </p>
                     {team.members && team.members.length > 0 && (
                       <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
-                        {renderMemberChips(team.members, isLight)}
+                        {renderMemberNames(team.members)}
                       </div>
                     )}
                   </div>
