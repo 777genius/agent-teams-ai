@@ -1,156 +1,149 @@
-# Phase 1: single-source contracts and conformance
+# Phase 1 controller plan: single-source contracts and conformance
 
 ## Status and authority
 
-- Status: `blocked proposal`; non-authoritative
-- Packet revision: `phase-01-proposal-r0`
-- Parent plan commit: `f1ad7a8cba2f26abf5f42ddd206937c24d143f77` (Phase 0 plan-bundle adoption)
-- Integrated canonical predecessor: `c958c872fa22edf9b2d6a0741d7781b00957903c`
-- Freeze candidate integration commit: `null`; pending controller integration
-- Freeze candidate evidence index SHA-256:
-  `d5c8725dfb22f7e0228e0dd51f53d978d117ed7253fdb279c8ddba7000ff8758` (candidate only; not an
-  integrated freeze digest)
-- Plan bundle commit: `missing for Phase 1`
-- Phase start SHA: `not created; no implementation bootstrap is authorized`
-- Required ADR IDs: ADR-15, ADR-19, ADR-20, plus frozen Phase 0 decisions
-- Explicit authorization: `pending after Phase 0 freeze`
+- Status: `blocked proposal`; non-authoritative for implementation
+- Proposed packet revision: `phase-01-proposal-r2`
+- Canonical planning base: `3bc0dfa7c00261785c0c752270cb302a9294e751`
+- Phase 0 freeze integration commit/digest: pending; see [prerequisite gates](./packet-inputs.md)
+- Plan bundle commit / Phase 1 start SHA: not created
+- Required decisions: ADR-15, ADR-19, ADR-20, plus the eventual frozen Phase 0 register
+- Explicit implementation authorization: pending
+- Implementation producer target: **zero**
 
-This proposal is not an active packet. It records a parent-plan dependency shape without inventing
-contract IDs, exact owned paths, shared writers, or proof topology. The canonical predecessor is known,
-but the freeze candidate is unintegrated and cannot be used as an implementation phase start.
+All identifiers, paths, ownership, commands, thresholds, and pairings in this bundle are proposed until
+serial bootstrap. This controller plan cannot render worker prompts or create implementation
+worktrees.
+
+The accepted `P0.D.TARGET_IMAGE` narrowing in the planning base closes that single Phase 0 gate for
+the Phase 0-to-Phase 1 transition. It does not admit an image or composition: Phase 5 retains the exact
+image/profile, provider canaries, complete inventory, terminal-negative scan, and standalone
+production-composition gate. The remaining Phase 0 gates below still block Phase 1.
 
 ## Outcome
 
-Establish one small shared contract kernel, feature-owned route/capability descriptors, repeatable
-conformance gates, and one read-only team-lifecycle vertical proof whose test, IPC, and Fastify adapters
-reach the same application use case without transport types entering application code.
+Prove one small shared contract kernel and one read-only team-lifecycle query whose direct,
+IPC-shaped, and HTTP-shaped test adapters call the same application use case and produce semantically
+equivalent outcomes. Both transport-shaped adapters live under the test tree, are assembled only by
+the conformance harness, and are rejected by production import/mount checks. Establish separate
+feature-owned route/capability sources and enforceable
+architecture/parity ratchets without creating an ElectronAPI clone, route framework, mega DTO, or
+second lifecycle authority.
 
-## Inputs and inherited failures
+## Goals
 
-- Parent-plan Phase 1 tasks 1-12 and exit gate.
-- Packet lifecycle and proof semantics from `docs/hosted-web-phases/PACKET_STANDARD.md`.
-- Phase 0 start `a32f509e6d9bd31ba2135940e336729bf90c3d93`, which is not a completion
-  or implementation-bootstrap commit.
-- Integrated canonical predecessor `c958c872fa22edf9b2d6a0741d7781b00957903c` and the unintegrated
-  freeze candidate under `docs/research/hosted-web/phase-0/freeze/current-canonical/`.
-- The 0A inherited lint ledger remains historical input only; its adoption/rerun outcome must be
-  refreshed by the final Phase 0 gate.
-- Current blockers are final target-image/profile proof, estimate reconciliation, the final Phase 0
-  gate with inherited typecheck normalization, serial bootstrap, candidate integration, and explicit
-  authorization.
-
-Original R12, RW35, R46, hold-all-adoption, and failed-freeze conclusions remain historical. Current
-controller dispositions supersede them; they are not revived as blockers by this proposal.
-
-No producer ADR recommendation is treated as frozen merely because its lane completed.
+- Freeze minimal conventions for opaque IDs, query context, revisions/cursors, safe errors, schemas,
+  parsing, and version behavior.
+- Create only the contracts needed by `ListTeamLifecycleSummaries` and its descriptors.
+- Prove transport-neutral application semantics through three isolated test adapters.
+- Cross-reference route, capability, auth policy, handler, client, schema, IPC, parity, and tests by
+  stable proposed IDs while keeping their sources separate.
+- Turn direct Electron/global transport use, hidden unsupported controls, forbidden imports, stale
+  ledger signatures, and route/client/policy drift into failing tests.
+- Leave a reviewed, reversible seam that Phase 2 can bind to canonical identity and production reads.
 
 ## Non-goals
 
-- No Phase 2 identity substrate, state migration, hosted team read rollout, or renderer screen
-  migration.
-- No mutation command/effect implementation, runtime launch/control, auth enablement, proxy/CORS
-  change, hosted production composition, or final Docker artifact.
-- No hosted terminal route, gateway, daemon, SDK, migration, capability, or generic WebSocket layer.
-- No ElectronAPI-compatible browser client, generated mega-client, all-parity DTO, god facade,
-  universal repository, service locator, or dependency-injection container.
-- No broad extraction from `teams.ts`, TeamDataService, teamSlice, or TeamDetailView beyond the one
-  accepted read-only proof and its explicitly owned migration adapter.
+- No Phase 2 identity substrate, canonical legacy adoption, filesystem-backed lifecycle repository,
+  renderer cutover, hosted team list rollout, or state migration.
+- No mutations, events publication, runtime launch/control, auth implementation, proxy/CORS changes,
+  production hosted composition, Docker artifact, terminal, SSE, or WebSocket work.
+- No production IPC channel, preload/global facet, or HTTP route. The IPC-shaped and Fastify adapters
+  exist only in the isolated conformance test tree until canonical identity, a real authorized reader,
+  and authenticated hosted composition exist.
+- No change to existing `TeamsAPI.list`, `team:list`, `GET /api/teams`, `teamSlice`, or browser stub
+  behavior except an integration-owned ratchet/quarantine annotation if bootstrap proves it necessary.
+- No broad extraction from `src/main/ipc/teams.ts`, `src/main/http/teams.ts`, `TeamDataService`, or
+  `teamSlice`; no all-parity schema/client generation.
+- No generic DI container, service locator, transport framework, universal repository, or capability
+  boolean per legacy method.
 
-## Definition of Ready
+## Practical clean boundary
 
-- [ ] Phase 0 freeze is complete and records all decisions as accepted, narrowed, reopened, or blocked.
-- [x] Current W1/W2, W3/W5, and W4/W6 dispositions are projected without reviving historical
-      rejections.
-- [ ] The current Phase 0 freeze candidate has passed independent review and been integrated.
-- [ ] The integrated freeze commit and its evidence-index SHA-256 are recorded.
-- [ ] Phase 0 target-topology requirements and final broad gate are satisfied or have explicit
-      capability-narrowing decisions permitted by the parent plan.
-- [ ] Reconciled estimate and inherited-failure ledgers are frozen.
-- [ ] Exact Phase 1 contract IDs, first read use case, owned paths, shared writers, lane checks, and
-      review pairs have no overlap.
-- [ ] Required deterministic fixture topology exists.
-- [ ] Rollback/ratchet behavior is recorded for every changed bypass or read path.
-- [ ] Child worktrees will be created only after the Phase 1 packet bundle and serial bootstrap
-      evidence are included in a new `phaseStartSha`.
-- [ ] Explicit Phase 1 implementation authorization has been received.
+The new use case owns pagination, immutable projections, revision/cursor rules, and application
+outcomes. Its consumer-owned port returns normalized legacy-safe records from an in-memory fixture in
+Phase 1. Test-only input adapters own fake principal binding, wire parsing, and transport mapping. They
+do not own filtering, errors, or pagination. Phase 2 may add production IPC/HTTP registration and
+legacy/filesystem output adapters after stable identity exists without changing application semantics.
 
-Until every item is checked, producer target is zero and no worker prompt may be rendered.
+The new proof does not claim that a name is a `TeamId`. Fixture `TeamId` values are explicitly
+synthetic and test-only. Production identity generation, persistence, and legacy mapping remain
+blocked on Phase 2.
 
-## Non-authoritative proposed DAG
+## Proposed subphases
 
-The following is the parent-plan dependency shape, not an executable lane registry or ownership map.
+| Subphase                       | Result                                                                                 | Admission                                                |
+| ------------------------------ | -------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `P1.S0` serial bootstrap       | Freeze exact IDs, files, owners, fixtures, baseline fingerprints, and packet revision. | All Phase 0 gates and implementation authorization pass. |
+| `P1.S1` foundations            | Contract kernel and route/catalog conventions.                                         | `P1.S0` integrated.                                      |
+| `P1.S2` parallel production    | Capability/route assertions and conformance/ratchet harnesses on disjoint paths.       | Foundation review passes.                                |
+| `P1.S3` seam review            | R1 falsifies 1B/1C architecture, omission sensitivity, and production isolation.       | Both 1B and 1C complete.                                 |
+| `P1.S4` first proof and review | Team-lifecycle list query plus isolated test adapters, then R2 semantic review.        | R1 accepted before 1D; 1D complete before R2.            |
+| `P1.S5` serialized integration | Shared ratchet/evidence wiring, full gate, rollback proof, evidence freeze.            | R2 accepted; one integration owner.                      |
 
-| Work package             | Parent-plan result                                                                             | Dependencies                                              | Evidence shape                                          | Ownership state |
-| ------------------------ | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------- | --------------- |
-| 1A Contract conventions  | Opaque IDs, request context, revisions/cursors, safe errors, first read DTO/schema conventions | Frozen Phase 0 decisions and reviewed W1 ledger           | Contract import/schema/version negatives                | Unassigned      |
-| 1B Capability and routes | Feature-owned RouteDescriptor/CapabilityDescriptor sources and narrow renderer facets          | 1A; accepted W1/W2 terminology                            | Route/capability/client/policy cross-reference evidence | Unassigned      |
-| 1C Conformance gates     | Import, dependency, no-stub, route/client/schema, IPC/HTTP outcome, and mount/action negatives | Frozen conventions; reviewed W1 bypass/action inputs      | Deliberate positive/negative fixtures                   | Unassigned      |
-| 1D First read proof      | One read-only lifecycle query through test, IPC, and Fastify adapters                          | 1A; route convention from 1B; conformance harness from 1C | Semantic conformance and transport-boundary proof       | Unassigned      |
+The detailed DAG and proposed ownership are in [execution-dag.md](./execution-dag.md).
 
-Serial bootstrap must freeze conventions and exact IDs before parallel work. The parent plan permits 1B
-and 1C to proceed in parallel against frozen conventions; 1D closes the phase only after the
-conformance seams exist. Shared RouteCatalog, architecture gates, public feature entrypoints, IPC
-registration, HTTP composition, and any global ratchet have one serialized integration owner.
+## Controller invariants
 
-No lane packet is materialized in this proposal. Exact non-overlapping writable paths, shared writers,
-evidence IDs, review pairs, and commands remain deliberately unassigned until readiness and serial
-bootstrap. No path listed or implied here is authoritative.
+1. Never start `P1.S0` from a moving branch or from this planning worktree.
+2. Every implementation child starts from one `phaseStartSha` containing the reviewed bundle and
+   serial bootstrap evidence.
+3. A path has one live writer. Production registration files are read-only throughout Phase 1; any
+   other existing shared ratchet/evidence file has only the integration owner.
+4. A proposed ID has one evidence owner; reviewers may falsify it but not publish a competing row.
+5. No lane is refilled merely to preserve concurrency. Replacement preserves worktree and handoff or
+   records an explicit salvage/supersession decision.
+6. Test-only IPC and HTTP adapter/composition modules must be impossible to import or mount from any
+   production composition, preload, renderer API, IPC registry, or HTTP registry.
+7. Negative fixtures are acceptance evidence; weakening them requires packet revision and review.
+8. No real user project, provider credential, host path, or raw auth/runtime payload enters fixtures or
+   handoffs.
 
-## Capacity epochs
+## Monitoring and stop conditions
 
-When a ready revision exists, it must define unique slots for serial bootstrap, contract/route/gate
-production, cross-review, and serialized integration. A slot can be retried only with a recorded
-supersession/salvage decision. Static templates are not a refill queue. The generic producer target
-remains zero for this draft.
-
-## Monitoring and intervention
-
-- Check project-scoped useful progress at least every ten minutes while jobs are active.
-- Stop a lane on stale predecessor facts, contract-ID drift, overlapping writes, out-of-scope renderer
-  migration, a fake browser stub, or a new god-contract/facade.
-- Treat a failing negative fixture as evidence to narrow the design, not permission to weaken the gate.
-- Do not admit later work to preserve worker count; 1A ordering and serialized integration take
-  precedence.
-- Keep all fixtures on temporary/test-only projects and redact secrets, raw auth/provider payloads,
-  host paths, and sensitive command bodies.
+Check useful progress at least every ten minutes while jobs exist. Stop the affected lane on stale
+base/revision, write overlap, unknown evidence ID, source/packet mismatch, dependency change,
+production IPC/HTTP exposure, direct renderer transport bypass, fake browser implementation, raw path
+or secret evidence, filesystem-backed Phase 1 adapter, god contract, or unclassified baseline failure.
+Return the blocker record defined by
+`PACKET_STANDARD.md`; unrelated lanes may continue only when their inputs and paths remain valid.
 
 ## Integration gate
 
-The ready packet must require, per lane, scope review, deterministic positive/negative fixtures,
-targeted `pnpm lint:fast:files`, focused tests, a diff check that covers new files, schema validation,
-secret/path scan, evidence-ID reconciliation, and a clean integration attempt. TypeScript production
-changes also require the project typecheck at the integration stage.
+The integration owner follows [conformance-and-tests.md](./conformance-and-tests.md) and must prove:
 
-Integration must prove:
-
-1. contract/domain/application-port code imports no Electron, Fastify, React, Zustand, `fs`, `path`,
-   or `@main`;
-2. RouteCatalog, capability/action descriptors, authorization policy, client routes, and parity records
-   cross-reference stable IDs without becoming one runtime god manifest;
-3. direct Electron/global-client/transport access fails the ratchet for the migrated slice;
-4. unsupported controls and effects are absent before mount, not handled by a thrown/no-op call;
-5. one read use case produces semantically equivalent outcomes through test, IPC, and HTTP adapters;
-6. no hosted facet can implement ElectronAPI and no all-parity DTO/interface is introduced.
-
-A finding returns the owning package for correction and focused re-review. It is not resolved by
-editing another lane during integration.
+1. Contracts, domain, and application ports import no Electron, Fastify, React, Zustand, Node
+   infrastructure, or `@main`.
+2. Direct, IPC-shaped, and HTTP-shaped test adapters normalize the same complete use-case outcome
+   oracle, including explicit applicability/deferral classifications.
+3. Route and capability sources cross-reference stable IDs but remain separate data structures.
+4. Both transport-shaped adapters and their route/channel identifiers are absent from production
+   composition; a deliberate production import/mount of either fails before runtime.
+5. Unknown-field/version, revision, cursor, auth, error redaction, and cancellation semantics pass.
+6. ADR-19 checks detect legacy signature drift and missing route/action/client/schema/test references.
+7. ADR-20 checks detect direct transport imports and hosted reachability of desktop-only modules.
+8. Deliberately invalid dependencies, route duplicates, unsupported UI actions, ElectronAPI facet
+   implementations, and any path-taking/filesystem-backed Phase 1 reader or adapter fail for the
+   expected diagnostic.
+9. Formatting, focused tests, typecheck, full relevant architecture tests, diff check, scope check, and
+   secret/path scan pass or have an unchanged inherited-failure fingerprint.
 
 ## Definition of Done
 
-- Every ready-packet evidence ID is reviewed and adopted, rejected, or explicitly deferred.
-- RouteCatalog and the separate capability/action ledger cross-reference owner, auth policy, handler,
-  client, schema, and test/E2E status for the first accepted slice.
-- ADR-19 records fail on legacy signature drift, missing semantic obligations, and a hosted-visible
-  desktop-only action.
-- The first read route/client/parser reaches one application use case through the semantic conformance
-  harness.
-- Every current renderer TeamsAPI call remains classified and every direct bypass is either failing the
-  gate or quarantined by an exact owner/removal phase.
-- New contracts satisfy the dependency/import negatives and no all-parity mega DTO/interface exists.
-- Inherited and new failures are classified; the integration attempt and required checks are green.
-- Ratchet/rollback evidence proves the old authority was removed or explicitly quarantined for the
-  migrated read seam.
-- Phase 1 decisions and unique estimate buckets are frozen.
-- The Phase 2 packet is materialized only from the resulting Phase 1 integration evidence.
+- [ ] Every Ready item passed before work began.
+- [ ] All frozen evidence IDs are adopted, rejected, or explicitly deferred with rationale.
+- [ ] One minimal contract kernel and the first feature-owned contracts exist; no speculative parity
+      DTOs or empty ceremonial layers exist.
+- [ ] The three-adapter conformance matrix passes against the same fixture vectors and use-case spy.
+- [ ] RouteCatalog, capability descriptors, auth policies, parity records, and test metadata reconcile
+      without merging into one runtime manifest.
+- [ ] Every current TeamsAPI member and renderer bypass remains classified; only the first proposed
+      read mapping advances proof level.
+- [ ] Production hosted routing remains unchanged; renderer and legacy API behavior remain unchanged.
+- [ ] Ratchet, migration, rollback, observability, performance, dependency, and cache evidence pass.
+- [ ] Reciprocal reviewers approve scope/architecture and semantic/security evidence.
+- [ ] Clean integration attempt and required checks are recorded with exit codes and exact SHA.
+- [ ] Decision register, evidence index, estimate reconciliation, risk disposition, and Phase 2 input
+      packet are frozen from actual integrated evidence.
 
-None of these completion conditions is claimed by this draft.
+None of these completion conditions is claimed by this blocked planning proposal.

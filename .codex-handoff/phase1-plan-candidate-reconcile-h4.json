@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "workKey": "phase1/plan/3bc0dfa7/82e07f79/candidate-reconcile/r3",
+  "taskId": "agent-teams-hosted-web-refactor-phase1-plan-candidate-reconcile-h4",
+  "phaseId": "phase-01",
+  "operation": "candidate-plan-reconciliation",
+  "status": "ready_for_independent_review",
+  "canonicalBaseSha": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+  "supersedes": {
+    "jobId": "agent-teams-hosted-web-refactor-phase1-plan-adoption-h3",
+    "patchSha256": "82e07f79d9f53d1ec9ba9253a380f24a786d547387857a5df4229f09b2a16295",
+    "decision": "REJECT",
+    "finding": "The adoption retained exact target-image admission as a Phase 1 prerequisite after accepted Phase 0 capability narrowing."
+  },
+  "preservedApprovedPlan": {
+    "producerJobId": "agent-teams-hosted-web-refactor-phase1-plan-remediation-h2",
+    "independentReviewJobId": "agent-teams-hosted-web-refactor-phase1-plan-remediation-h2-review-i1",
+    "reviewDecision": "APPROVE",
+    "patchSha256": "cb38128a28e4f1edfacf5242579d421c16c295a638f98ec71cdb0a5aee42e830",
+    "scope": "Blocked Phase 1 planning content only; prior approval does not replace fresh review of this reconciliation."
+  },
+  "targetImageReconciliation": {
+    "decisionId": "P0.D.TARGET_IMAGE",
+    "decisionPath": "docs/research/hosted-web/phase-0/auth-artifacts/target-image-admission.json",
+    "phase0Gate": "closed_by_accepted_narrowing",
+    "phase1PrerequisiteState": "pass_by_narrowing",
+    "exactImageEarliestOwner": "phase-5",
+    "phase5AdmissionState": "fail_closed",
+    "phase5Admitted": false,
+    "canonicalSourceGapCount": 51,
+    "terminalSensitiveSurfaceCount": 9,
+    "productionCompositionAdmitted": false
+  },
+  "prerequisiteEvaluation": [
+    {
+      "gateId": "P1.GATE.BASE",
+      "state": "pass_for_planning_only",
+      "evidence": "Exact repository HEAD is the canonical base SHA."
+    },
+    {
+      "gateId": "P1.GATE.P0_FREEZE",
+      "state": "blocked",
+      "requiredAction": "Review and integrate a Phase 0 freeze candidate reconciled with P0.D.TARGET_IMAGE."
+    },
+    {
+      "gateId": "P1.GATE.P0_DIGEST",
+      "state": "blocked",
+      "requiredAction": "Record the integrated evidence-index digest and byte provenance."
+    },
+    {
+      "gateId": "P1.GATE.TARGET_IMAGE",
+      "state": "pass_by_narrowing",
+      "requiredAction": "Retain exact image and admission as fail-closed Phase 5 work."
+    },
+    {
+      "gateId": "P1.GATE.P0_FINAL",
+      "state": "blocked",
+      "requiredAction": "Run the final Phase 0 broad gate and classify the inherited seven-diagnostic typecheck comparison."
+    },
+    {
+      "gateId": "P1.GATE.ESTIMATE",
+      "state": "blocked",
+      "requiredAction": "Reconcile unique estimate buckets, duplicates, and variance."
+    },
+    {
+      "gateId": "P1.GATE.DECISIONS",
+      "state": "blocked",
+      "requiredAction": "Freeze the complete decision register with the accepted target-image narrowing."
+    },
+    {
+      "gateId": "P1.GATE.PLAN_REVIEW",
+      "state": "pending",
+      "requiredAction": "Independently review this exact-base reconciled bundle."
+    },
+    {
+      "gateId": "P1.GATE.SERIAL_BOOTSTRAP",
+      "state": "blocked",
+      "requiredAction": "After Phase 0 readiness and authorization, freeze exact IDs, paths, writers, fixtures, checks, and review pairs."
+    },
+    {
+      "gateId": "P1.GATE.AUTHORIZATION",
+      "state": "blocked",
+      "requiredAction": "Receive fresh explicit Phase 1 implementation authorization."
+    }
+  ],
+  "phase1DesignBoundary": {
+    "applicationCoreTransportNeutral": true,
+    "ipcAdapterTestOnly": true,
+    "httpAdapterTestOnly": true,
+    "productionIpcRegistration": false,
+    "productionHttpRegistration": false,
+    "preloadOrRendererCutover": false,
+    "standaloneProductionCompositionPhase": "phase-5"
+  },
+  "changedPaths": [
+    ".codex-handoff/phase1-plan-candidate-reconcile-h4.json",
+    "docs/hosted-web-phases/phase-01/README.md",
+    "docs/hosted-web-phases/phase-01/architecture-and-contracts.md",
+    "docs/hosted-web-phases/phase-01/conformance-and-tests.md",
+    "docs/hosted-web-phases/phase-01/controller-packet.md",
+    "docs/hosted-web-phases/phase-01/execution-dag.md",
+    "docs/hosted-web-phases/phase-01/execution-packet-templates.md",
+    "docs/hosted-web-phases/phase-01/operations-and-risk.md",
+    "docs/hosted-web-phases/phase-01/packet-inputs.md"
+  ],
+  "scope": {
+    "planningOnly": true,
+    "phase1ImplementationAuthorized": false,
+    "phase1ImplementationPerformed": false,
+    "phase2WorkPerformed": false,
+    "productionCompositionPerformed": false,
+    "realProjectsUsed": false,
+    "dependencyOrLockfileChanged": false
+  },
+  "verification": [
+    {
+      "name": "canonical_base",
+      "result": "PASS",
+      "evidence": "HEAD is exactly 3bc0dfa7c00261785c0c752270cb302a9294e751."
+    },
+    {
+      "name": "json_parse",
+      "result": "PASS",
+      "evidence": "All changed JSON parses successfully."
+    },
+    {
+      "name": "links_and_anchors",
+      "result": "PASS",
+      "evidence": "Every relative Markdown path and local heading anchor in the eight-document bundle resolves."
+    },
+    {
+      "name": "prettier",
+      "result": "PASS",
+      "evidence": "Prettier check passes for all changed documents and this handoff."
+    },
+    {
+      "name": "diff_integrity",
+      "result": "PASS",
+      "evidence": "Tracked and untracked whitespace checks pass."
+    },
+    {
+      "name": "scope",
+      "result": "PASS",
+      "evidence": "Exactly the eight Phase 1 documents and this handoff are changed."
+    },
+    {
+      "name": "secret_and_path_scan",
+      "result": "PASS",
+      "evidence": "Focused changed-content scan finds no credential material, private keys, file URI, or user-specific host path."
+    },
+    {
+      "name": "semantic_consistency",
+      "result": "PASS",
+      "evidence": "Target-image narrowing is a passed Phase 0-to-Phase 1 gate while image admission remains fail closed in Phase 5; all remaining prerequisites still block Phase 1."
+    }
+  ],
+  "commit": {
+    "requestedMessage": "docs(hosted-web): reconcile phase 1 plan with candidate",
+    "created": false,
+    "reason": "Linked-worktree runtime delegates add, commit, and push to Project Integration."
+  },
+  "nextAction": "Independently review the exact nine-path reconciliation, then have Project Integration create the requested conventional commit if approved. Do not authorize Phase 1 until every remaining prerequisite passes."
+}
