@@ -67,7 +67,7 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
             mode: z.literal("serial-builtin"),
             contractSchema: z.literal("worker-start-v1"),
             contract: z.record(z.string(), z.unknown()),
-            state: z.record(z.string(), z.unknown()),
+            state: z.record(z.string(), z.unknown()).optional(),
           }).strict(),
         ]).optional(),
         confirmPreStartAdmission: z.boolean().optional(),

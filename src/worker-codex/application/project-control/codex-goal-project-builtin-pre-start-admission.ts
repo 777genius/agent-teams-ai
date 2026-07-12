@@ -42,6 +42,68 @@ const STATE_IDENTITY_FIELDS = [
   "retryCount",
   "supersedes",
 ] as const;
+const AUTO_CONTRACT_FIELDS = [
+  "jobId",
+  "workerId",
+  "registryStatus",
+  "jobRoot",
+  "workspaceRoot",
+  "promptPath",
+  "workKey",
+  "revision",
+  "retryCount",
+  "supersedes",
+] as const;
+
+export function materializeBuiltinWorkerStartV1(input: {
+  readonly contract: JsonObject;
+  readonly state?: JsonObject;
+  readonly manifest: CodexGoalJobManifest | CodexGoalJobManifestInput;
+}): { readonly contract: JsonObject; readonly state: JsonObject } {
+  const fullyMaterialized = AUTO_CONTRACT_FIELDS.every((field) => field in input.contract) &&
+    input.state !== undefined;
+  if (fullyMaterialized) {
+    return { contract: input.contract, state: input.state as JsonObject };
+  }
+  const expectedBindings: JsonObject = {
+    jobId: input.manifest.jobId,
+    workerId: input.manifest.jobId,
+    registryStatus: "queued",
+    jobRoot: input.manifest.jobRootDir,
+    workspaceRoot: input.manifest.workspacePath,
+    promptPath: input.manifest.promptPath,
+    revision: 0,
+    retryCount: 0,
+    supersedes: null,
+  };
+  for (const [field, expected] of Object.entries(expectedBindings)) {
+    if (field in input.contract && input.contract[field] !== expected) {
+      fail(`materialization_${field}_mismatch`);
+    }
+  }
+  const withoutWorkKey: JsonObject = { ...input.contract, ...expectedBindings };
+  const workKey = computeWorkerStartWorkKey(withoutWorkKey);
+  if ("workKey" in input.contract && input.contract.workKey !== workKey) {
+    fail("materialization_workKey_mismatch");
+  }
+  const contract: JsonObject = { ...withoutWorkKey, workKey };
+  const record = Object.fromEntries([
+    ...STATE_IDENTITY_FIELDS.map((field) => [field, contract[field]]),
+    ["status", "queued"],
+    ["supersededBy", null],
+    ["supersededFrom", null],
+  ]);
+  const state: JsonObject = {
+    schemaVersion: 1,
+    maxRetries: 0,
+    maxInFlight: 1,
+    records: [record],
+  };
+  if (input.state !== undefined && JSON.stringify(input.state) !== JSON.stringify(state)) {
+    fail("materialization_state_mismatch");
+  }
+  return { contract, state };
+}
 
 export async function validateBuiltinWorkerStartV1(input: {
   readonly contract: JsonObject;
@@ -116,9 +178,7 @@ function assertWorkerStartContract(contract: JsonObject): void {
   ) {
     fail("contract_serial_initial_only");
   }
-  const expectedWorkKey = sha256(JSON.stringify(Object.fromEntries(
-    WORK_KEY_FIELDS.map((field) => [field, contract[field]]),
-  )));
+  const expectedWorkKey = computeWorkerStartWorkKey(contract);
   if (contract.workKey !== expectedWorkKey) fail("contract_workKey_mismatch");
 
   const ownedPaths = assertPathList(contract.ownedPaths, "contract_ownedPaths");
@@ -135,6 +195,12 @@ function assertWorkerStartContract(contract: JsonObject): void {
   }
   assertRequiredChecks(contract.requiredChecks);
   assertExecutionPolicy(contract.executionPolicy);
+}
+
+function computeWorkerStartWorkKey(contract: JsonObject): string {
+  return sha256(JSON.stringify(Object.fromEntries(
+    WORK_KEY_FIELDS.map((field) => [field, contract[field]]),
+  )));
 }
 
 function assertSerialState(contract: JsonObject, state: JsonObject): void {

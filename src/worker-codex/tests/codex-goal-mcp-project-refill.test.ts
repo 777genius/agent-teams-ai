@@ -68,6 +68,10 @@ describe("codex goal MCP server", () => {
       await mkdir(sourceWorkspacePath, { recursive: true });
       await gitInitRepository(sourceWorkspacePath);
       await writeFile(join(sourceWorkspacePath, "README.md"), "base\n");
+      await writeFile(join(sourceWorkspacePath, "controller.md"), "controller\n");
+      await writeFile(join(sourceWorkspacePath, "lane.md"), "lane\n");
+      await mkdir(join(sourceWorkspacePath, "sandbox"));
+      await writeFile(join(sourceWorkspacePath, "sandbox", ".keep"), "");
       await writeFile(join(sourceWorkspacePath, "package.json"), JSON.stringify({
         packageManager: "npm@11.0.0",
         scripts: {
@@ -79,8 +83,20 @@ describe("codex goal MCP server", () => {
         lockfileVersion: 3,
         packages: {},
       }));
-      await git(sourceWorkspacePath, ["add", "README.md", "package.json", "package-lock.json"]);
+      await git(sourceWorkspacePath, [
+        "add",
+        "README.md",
+        "controller.md",
+        "lane.md",
+        "sandbox/.keep",
+        "package.json",
+        "package-lock.json",
+      ]);
       await git(sourceWorkspacePath, ["commit", "-m", "test: base"]);
+      const phaseStartSha = (await gitStdout(
+        sourceWorkspacePath,
+        ["rev-parse", "HEAD"],
+      )).trim();
       await git(sourceWorkspacePath, [
         "update-ref",
         "refs/remotes/origin/main",
@@ -111,8 +127,42 @@ describe("codex goal MCP server", () => {
           jobIdPrefixes: ["infinity-context-"],
           tmuxSessionPrefixes: ["infinity-context-"],
           allowedAccountIds: ["account-a"],
+          deniedRoots: [join(root, "real-user-project")],
+          preStartAdmission: {
+            required: true,
+            mode: "serial-builtin",
+            contractSchema: "worker-start-v1",
+          },
         },
       });
+
+      const builtinAdmission = {
+        mode: "serial-builtin",
+        contractSchema: "worker-start-v1",
+        contract: {
+          schemaVersion: 1,
+          canonicalSha: phaseStartSha,
+          baseSha: phaseStartSha,
+          phaseStartSha,
+          packetRevision: "phase-01-s0-r1",
+          controllerPacket: "controller.md",
+          lanePacket: "lane.md",
+          phaseId: "phase-01",
+          laneId: "p1-s0",
+          inputPatchHash: createHash("sha256").update("").digest("hex"),
+          reviewKind: "implementation",
+          ownedPaths: ["src/example.ts"],
+          mandatoryDocs: ["README.md", "controller.md", "lane.md"],
+          mandatoryScripts: [],
+          mandatoryFixtures: [],
+          requiredChecks: [{ id: "focused", cwd: "sandbox", command: "true" }],
+          executionPolicy: {
+            mode: "sandbox-only",
+            sandboxRoot: join(childWorkspace, "sandbox"),
+            forbiddenRealProjects: [join(root, "real-user-project")],
+          },
+        },
+      };
 
       const result = await callToolJson(client, "codex_goal_project_refill_worker", {
         registryRootDir,
@@ -126,9 +176,12 @@ describe("codex goal MCP server", () => {
         taskId: "infinity-context-memory-fastgate-v1",
         accounts: ["account-a"],
         workerRole: "fastgate",
+        preStartAdmission: builtinAdmission,
+        confirmPreStartAdmission: true,
         startWorker: false,
         confirmRefill: true,
       });
+      if (result.ok !== true) throw new Error(JSON.stringify(result));
 
       expect(result).toMatchObject({
         ok: true,
@@ -148,6 +201,10 @@ describe("codex goal MCP server", () => {
             "project-control-refill",
             "worker-role-fastgate",
           ]),
+          projectPreStartAdmission: {
+            mode: "serial-builtin",
+            contractSchema: "worker-start-v1",
+          },
         },
         dependencyPreflight: {
           status: "deps_missing",
@@ -168,6 +225,39 @@ describe("codex goal MCP server", () => {
       await expect(readFile(join(childJobRoot, "prompt.md"), "utf8")).resolves.toBe(
         "Run a focused memory fastgate and report cleanly.\n",
       );
+      const materializedContract = JSON.parse(await readFile(
+        join(childJobRoot, "pre-start-admission", "contract.json"),
+        "utf8",
+      ));
+      expect(materializedContract).toMatchObject({
+        jobId: "infinity-context-memory-fastgate-v1",
+        workerId: "infinity-context-memory-fastgate-v1",
+        jobRoot: childJobRoot,
+        workspaceRoot: childWorkspace,
+        registryStatus: "queued",
+        revision: 0,
+        retryCount: 0,
+        supersedes: null,
+        workKey: expect.stringMatching(/^[0-9a-f]{64}$/),
+      });
+      const materializedState = JSON.parse(await readFile(
+        join(childJobRoot, "pre-start-admission", "state.json"),
+        "utf8",
+      ));
+      expect(materializedState).toMatchObject({
+        maxRetries: 0,
+        maxInFlight: 1,
+        records: [{ workKey: materializedContract.workKey, status: "queued" }],
+      });
+      const admissionReceipt = JSON.parse(await readFile(
+        join(childJobRoot, "pre-start-admission", "receipt.json"),
+        "utf8",
+      ));
+      expect(admissionReceipt).toMatchObject({
+        validatorKind: "builtin",
+        contractSchema: "worker-start-v1",
+        workKey: materializedContract.workKey,
+      });
       await expect(access(join(childWorkspace, "README.md"))).resolves.toBeUndefined();
       const dependencyPreflight = JSON.parse(
         await readFile(join(childJobRoot, "dependency-preflight.json"), "utf8"),
@@ -189,14 +279,45 @@ describe("codex goal MCP server", () => {
         taskId: "infinity-context-memory-fastgate-v1",
         accounts: ["account-a"],
         workerRole: "fastgate",
+        preStartAdmission: builtinAdmission,
+        confirmPreStartAdmission: true,
         startWorker: false,
         confirmRefill: true,
       });
+      if (retry.ok !== true) throw new Error(JSON.stringify(retry));
       expect(retry).toMatchObject({
         ok: true,
         worktree: { status: "noop" },
         createJob: { status: "noop" },
       });
+      const rejectedWorkspace = join(root, "worktrees", "infinity-context-invalid-v1");
+      const rejectedJobRoot = join(root, "worker-jobs", "infinity-context-invalid-v1");
+      const rejected = await callToolJson(client, "codex_goal_project_refill_worker", {
+        registryRootDir,
+        controllerJobId: "infinity-context-controller-v1",
+        jobId: "infinity-context-invalid-v1",
+        jobRootDir: rejectedJobRoot,
+        authRootDir: join(root, "auth"),
+        sourceWorkspacePath,
+        workspacePath: rejectedWorkspace,
+        promptBody: "invalid binding must not create resources\n",
+        taskId: "infinity-context-invalid-v1",
+        accounts: ["account-a"],
+        workerRole: "fastgate",
+        preStartAdmission: {
+          ...builtinAdmission,
+          contract: { ...builtinAdmission.contract, jobId: "wrong-job" },
+        },
+        confirmPreStartAdmission: true,
+        startWorker: false,
+        confirmRefill: true,
+      });
+      expect(rejected).toEqual({
+        ok: false,
+        error: "project_control_pre_start_builtin_materialization_jobId_mismatch",
+      });
+      await expect(access(rejectedWorkspace)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(access(rejectedJobRoot)).rejects.toMatchObject({ code: "ENOENT" });
       const audit = await readProjectControlAudit(
         controllerJobRoot,
         "infinity-context-controller-v1",

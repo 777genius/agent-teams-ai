@@ -17,7 +17,10 @@ import type {
   CodexGoalJobManifestInput,
   CodexGoalProjectPreStartAdmission,
 } from "../../codex-goal-jobs";
-import { validateBuiltinWorkerStartV1 } from "./codex-goal-project-builtin-pre-start-admission";
+import {
+  materializeBuiltinWorkerStartV1,
+  validateBuiltinWorkerStartV1,
+} from "./codex-goal-project-builtin-pre-start-admission";
 
 const execFileAsync = promisify(execFile);
 const ADMISSION_DIRECTORY = "pre-start-admission";
@@ -45,7 +48,7 @@ export type ProjectPreStartAdmissionInput =
       readonly mode: "serial-builtin";
       readonly contractSchema: "worker-start-v1";
       readonly contract: JsonObject;
-      readonly state: JsonObject;
+      readonly state?: JsonObject;
     };
 
 export type PlannedProjectPreStartAdmission = {
@@ -76,15 +79,22 @@ export function planProjectPreStartAdmission(input: {
     configuredValidator(parsed.contractValidatorPath, input.scope);
     configuredValidator(parsed.admissionValidatorPath, input.scope);
   }
-  assertSerializedSize("contract", parsed.contract, MAX_CONTRACT_BYTES);
-  assertSerializedSize("state", parsed.state, MAX_STATE_BYTES);
-  if (parsed.state.maxInFlight !== 1) {
+  const materialized = isBuiltinInput(parsed)
+    ? materializeBuiltinWorkerStartV1({
+        contract: parsed.contract,
+        ...(parsed.state ? { state: parsed.state } : {}),
+        manifest: input.manifest,
+      })
+    : { contract: parsed.contract, state: parsed.state };
+  assertSerializedSize("contract", materialized.contract, MAX_CONTRACT_BYTES);
+  assertSerializedSize("state", materialized.state, MAX_STATE_BYTES);
+  if (materialized.state.maxInFlight !== 1) {
     throw new Error("project_control_pre_start_serial_maxInFlight_expected_1");
   }
-  if (!Array.isArray(parsed.state.records) || parsed.state.records.length !== 1) {
+  if (!Array.isArray(materialized.state.records) || materialized.state.records.length !== 1) {
     throw new Error("project_control_pre_start_serial_single_record_required");
   }
-  assertContractBindings(parsed.contract, input.manifest);
+  assertContractBindings(materialized.contract, input.manifest);
   const root = join(input.manifest.jobRootDir, ADMISSION_DIRECTORY);
   return {
     descriptor: isBuiltinInput(parsed)
@@ -104,8 +114,8 @@ export function planProjectPreStartAdmission(input: {
           statePath: join(root, "state.json"),
           receiptPath: join(root, "receipt.json"),
         },
-    contract: parsed.contract,
-    state: parsed.state,
+    contract: materialized.contract,
+    state: materialized.state,
   };
 }
 
@@ -332,7 +342,8 @@ function parseProjectPreStartAdmissionInput(
       );
     }
   }
-  if (!isObject(value.contract) || !isObject(value.state)) {
+  if (!isObject(value.contract) || (!builtin && !isObject(value.state)) ||
+    (value.state !== undefined && !isObject(value.state))) {
     throw new Error(
       "project_control_pre_start_admission_json_objects_required",
     );
@@ -345,7 +356,7 @@ function parseProjectPreStartAdmissionInput(
       mode: "serial-builtin",
       contractSchema: "worker-start-v1",
       contract: value.contract,
-      state: value.state,
+      ...(isObject(value.state) ? { state: value.state } : {}),
     };
   }
   return {
@@ -358,7 +369,7 @@ function parseProjectPreStartAdmissionInput(
       "admissionValidatorPath",
     ),
     contract: value.contract,
-    state: value.state,
+    state: value.state as JsonObject,
   };
 }
 

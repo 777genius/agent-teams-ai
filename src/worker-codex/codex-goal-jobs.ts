@@ -464,21 +464,18 @@ function parseProjectPreStartAdmissionManifest(
   if (!isRecord(value) || value.schemaVersion !== 1) {
     throw new Error("codex_goal_job_projectPreStartAdmission_invalid");
   }
-  const common = {
-    schemaVersion: 1 as const,
-    contractPath: requiredString(
-      value.contractPath,
-      "projectPreStartAdmission.contractPath",
-    ),
-    statePath: requiredString(
-      value.statePath,
-      "projectPreStartAdmission.statePath",
-    ),
-    receiptPath: requiredString(
-      value.receiptPath,
-      "projectPreStartAdmission.receiptPath",
-    ),
-  };
+  const contractPath = requiredString(
+    value.contractPath,
+    "projectPreStartAdmission.contractPath",
+  );
+  const statePath = requiredString(
+    value.statePath,
+    "projectPreStartAdmission.statePath",
+  );
+  const receiptPath = requiredString(
+    value.receiptPath,
+    "projectPreStartAdmission.receiptPath",
+  );
   if (value.mode === "serial-builtin") {
     if (value.contractSchema !== "worker-start-v1") {
       throw new Error(
@@ -486,13 +483,16 @@ function parseProjectPreStartAdmissionManifest(
       );
     }
     return {
-      ...common,
+      schemaVersion: 1,
       mode: "serial-builtin",
       contractSchema: "worker-start-v1",
+      contractPath,
+      statePath,
+      receiptPath,
     };
   }
   return {
-    ...common,
+    schemaVersion: 1,
     contractValidatorPath: requiredString(
       value.contractValidatorPath,
       "projectPreStartAdmission.contractValidatorPath",
@@ -501,6 +501,9 @@ function parseProjectPreStartAdmissionManifest(
       value.admissionValidatorPath,
       "projectPreStartAdmission.admissionValidatorPath",
     ),
+    contractPath,
+    statePath,
+    receiptPath,
   };
 }
 

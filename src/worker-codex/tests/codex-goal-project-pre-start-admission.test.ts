@@ -328,6 +328,69 @@ describe("builtin project pre-start admission", () => {
     });
   });
 
+  it("materializes trusted bindings, work key, and canonical serial state", async () => {
+    const fixture = await createBuiltinFixture();
+    const declarative = declarativeContract(fixture.contract);
+    const plan = fixture.plan({ contract: declarative, state: undefined });
+    expect(plan.contract).toMatchObject({
+      jobId: fixture.manifest.jobId,
+      workerId: fixture.manifest.jobId,
+      registryStatus: "queued",
+      jobRoot: fixture.manifest.jobRootDir,
+      workspaceRoot: fixture.manifest.workspacePath,
+      promptPath: fixture.manifest.promptPath,
+      revision: 0,
+      retryCount: 0,
+      supersedes: null,
+      workKey: expect.stringMatching(/^[0-9a-f]{64}$/),
+    });
+    expect(plan.state).toEqual({
+      schemaVersion: 1,
+      maxRetries: 0,
+      maxInFlight: 1,
+      records: [{
+        workKey: plan.contract.workKey,
+        jobId: fixture.manifest.jobId,
+        workerId: fixture.manifest.jobId,
+        phaseId: plan.contract.phaseId,
+        laneId: plan.contract.laneId,
+        baseSha: plan.contract.baseSha,
+        phaseStartSha: plan.contract.phaseStartSha,
+        packetRevision: plan.contract.packetRevision,
+        controllerPacket: plan.contract.controllerPacket,
+        lanePacket: plan.contract.lanePacket,
+        inputPatchHash: plan.contract.inputPatchHash,
+        reviewKind: plan.contract.reviewKind,
+        revision: 0,
+        retryCount: 0,
+        supersedes: null,
+        status: "queued",
+        supersededBy: null,
+        supersededFrom: null,
+      }],
+    });
+    const manifest = {
+      ...fixture.storedManifest,
+      projectPreStartAdmission: plan.descriptor,
+    };
+    await prepareProjectPreStartAdmission({ plan, manifest, scope: fixture.scope });
+    await validateStoredProjectPreStartAdmission({ manifest, scope: fixture.scope });
+    await assertProjectPreStartAdmissionLaunchBinding({ manifest, scope: fixture.scope });
+
+    expect(() => fixture.plan({
+      contract: { ...declarative, jobId: "wrong-job" },
+      state: undefined,
+    })).toThrow("project_control_pre_start_builtin_materialization_jobId_mismatch");
+    expect(() => fixture.plan({
+      contract: { ...declarative, workKey: "f".repeat(64) },
+      state: undefined,
+    })).toThrow("project_control_pre_start_builtin_materialization_workKey_mismatch");
+    expect(() => fixture.plan({
+      contract: declarative,
+      state: { schemaVersion: 1, maxRetries: 1, maxInFlight: 1, records: [] },
+    })).toThrow("project_control_pre_start_builtin_materialization_state_mismatch");
+  });
+
   it("rejects malformed work identity, paths, checks, and state identity", async () => {
     const badWorkKey = await createBuiltinFixture();
     await expect(prepareBuiltin(badWorkKey, {
@@ -585,6 +648,24 @@ function withWorkKey<T extends Record<string, unknown>>(contract: T): T & { work
     revision: contract.revision,
   })));
   return { ...contract, workKey };
+}
+
+function declarativeContract(contract: Record<string, unknown>): Record<string, unknown> {
+  const computed = new Set([
+    "jobId",
+    "workerId",
+    "registryStatus",
+    "jobRoot",
+    "workspaceRoot",
+    "promptPath",
+    "workKey",
+    "revision",
+    "retryCount",
+    "supersedes",
+  ]);
+  return Object.fromEntries(
+    Object.entries(contract).filter(([field]) => !computed.has(field)),
+  );
 }
 
 async function createFixture(
