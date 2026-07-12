@@ -5,13 +5,18 @@
   "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
   "phaseId": "phase-00",
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
-  "currentIntegrationCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
-  "generatedAt": "2026-07-12T01:47:35Z",
+  "currentIntegrationCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+  "freezeCandidate": {
+    "baseCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+    "status": "pending-integration",
+    "integrationCommit": null
+  },
+  "generatedAt": "2026-07-12T06:03:29Z",
   "decisions": [
     {
       "decisionId": "P0.C1.IDENTITY.001",
       "status": "resolved",
-      "decision": "The controller-owned lane identity index is the sole current identity authority for W1-W6. All lanes share phaseStartSha a32f509e6d9bd31ba2135940e336729bf90c3d93 and current integration commit 0bf8f2d105def1fa34dd8dedfb8d345d720dc35e.",
+      "decision": "The controller-owned lane identity index is the sole current identity authority for W1-W6. All lanes share phaseStartSha a32f509e6d9bd31ba2135940e336729bf90c3d93. The integrated predecessor is c958c872fa22edf9b2d6a0741d7781b00957903c; this freeze candidate has no integration commit yet.",
       "authorityPaths": [
         "docs/research/hosted-web/phase-0/freeze/current-canonical/lane-identity-index.json"
       ]
@@ -19,7 +24,7 @@
     {
       "decisionId": "P0.C1.STALE.001",
       "status": "resolved",
-      "decision": "Historical producer, review, audit, ledger and baseline records remain immutable evidence but no longer supply current lane identity, disposition, decision, or integration status.",
+      "decision": "Historical producer, review, audit, ledger and baseline records remain immutable evidence but no longer supply current lane identity, disposition, decision, integration status, or readiness blockers.",
       "authorityPaths": [
         "docs/research/hosted-web/phase-0/freeze/current-canonical/supersession-index.json"
       ]
@@ -27,7 +32,7 @@
     {
       "decisionId": "P0.CURRENT.PHASE_START",
       "status": "accepted",
-      "decision": "a32f509e6d9bd31ba2135940e336729bf90c3d93 is the one true Phase 0 phaseStartSha. A lane source base, remediation base, review base, or integration commit is never a substitute.",
+      "decision": "a32f509e6d9bd31ba2135940e336729bf90c3d93 is the one true Phase 0 phaseStartSha. A lane source base, remediation base, review base, predecessor, or eventual freeze commit is never a substitute.",
       "authorityPaths": [
         "docs/research/hosted-web/phase-0/freeze/current-canonical/lane-identity-index.json",
         "docs/research/hosted-web/phase-0/freeze/current-canonical/supersession-index.json"
@@ -36,18 +41,36 @@
     {
       "decisionId": "P0.CURRENT.W1.ADOPTION",
       "status": "accepted",
-      "decision": "Adopt W1 v9 as the current W1 evidence bundle at integration commit 89c1358925033d480bcfe3bdfee6c899df556431.",
+      "decision": "Adopt W1 v9 at 89c1358925033d480bcfe3bdfee6c899df556431 as the original bundle.",
       "authorityPaths": [
         "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json"
       ]
     },
     {
+      "decisionId": "P0.CURRENT.W1.LATER_BYTES",
+      "status": "narrowed",
+      "decision": "Narrowly adopt the later W1 renderer census and scanner semantics integrated at 0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3. The legacy-bypass artifact remains source-observed; this candidate only makes its raw-output locator pack-relative. The candidate legacy and scanner bytes remain pending integration and must not be attributed to 0d1a82fe or c958c872.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/hash-reconciliation.md"
+      ]
+    },
+    {
       "decisionId": "P0.CURRENT.W2.ADOPTION",
       "status": "accepted",
-      "decision": "Adopt the approved W2 targeted A1 evidence bundle at integration commit 0bf8f2d105def1fa34dd8dedfb8d345d720dc35e while superseding its incorrect phaseStartSha claim.",
+      "decision": "Adopt the approved W2 targeted A1 evidence bundle at 0bf8f2d105def1fa34dd8dedfb8d345d720dc35e while superseding its incorrect phaseStartSha claim.",
       "authorityPaths": [
         "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
         "docs/research/hosted-web/phase-0/freeze/current-canonical/supersession-index.json"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.W2.LATER_BYTES",
+      "status": "narrowed",
+      "decision": "Narrowly adopt the omission-sensitive W2 environment census integrated at 6d54e7c60d29812de5b96e471761486fbbc0842c. It remains source-observed and does not prove target-image provider behavior or credential canaries.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/hash-reconciliation.md"
       ]
     },
     {
@@ -60,9 +83,18 @@
       ]
     },
     {
+      "decisionId": "P0.CURRENT.W5.LATER_BYTES",
+      "status": "narrowed",
+      "decision": "Narrowly adopt the W5 command-ownership and formatting-stable evidence corrections integrated at 5d723407f287767c0f30f3d708459fb943256eaf. They remain Phase 0 evidence and do not implement or authorize hosted recovery.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json",
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/hash-reconciliation.md"
+      ]
+    },
+    {
       "decisionId": "P0.CURRENT.W4_W6.ADOPTION",
       "status": "narrowed",
-      "decision": "Adopt the approved paired W4/W6 characterization bundle without treating it as final-image admission, hosted mutation readiness, or terminal implementation.",
+      "decision": "Adopt W4/W6 as characterization only, including W6 current-commit artifact authority integrated at c958c872fa22edf9b2d6a0741d7781b00957903c. The exact standalone artifact remains rejected for hosted v1; final-image admission and terminal absence are unproved.",
       "authorityPaths": [
         "docs/research/hosted-web/phase-0/freeze/current-canonical/review-disposition-index.json",
         "docs/research/hosted-web/phase-0/freeze/current-canonical/evidence-index.json"
@@ -71,9 +103,27 @@
     {
       "decisionId": "P0.CURRENT.HISTORICAL_PRESERVATION",
       "status": "accepted",
-      "decision": "No historical file is rewritten. Supersession changes only which controller-owned record is authoritative for current state and interpretation.",
+      "decision": "No historical file is rewritten. Supersession changes only which controller-owned record is authoritative for current state and interpretation. Historical rejection and hold conclusions cannot become current blockers without a new current decision.",
       "authorityPaths": [
         "docs/research/hosted-web/phase-0/freeze/current-canonical/supersession-index.json"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.READINESS_BLOCKERS",
+      "status": "blocked",
+      "decision": "Readiness remains blocked by final target-image proof, reconciled unique-bucket estimates, the final Phase 0 gate with normalized inherited typecheck diagnostics, serial bootstrap evidence, and explicit implementation authorization. None is recorded as passed by this candidate.",
+      "authorityPaths": [
+        "docs/research/hosted-web/phase-0/freeze/current-canonical/acceptance-and-completion.md",
+        "docs/hosted-web-phases/phase-01/packet-inputs.md"
+      ]
+    },
+    {
+      "decisionId": "P0.CURRENT.PHASE1_AUTHORITY",
+      "status": "blocked",
+      "decision": "Phase 1 ownership, contract IDs, lane topology, and shared writers are non-authoritative proposals only until every readiness item passes, a serial bootstrap exists, and explicit authorization is received. Producer target is zero.",
+      "authorityPaths": [
+        "docs/hosted-web-phases/phase-01/README.md",
+        "docs/hosted-web-phases/phase-01/controller-packet.md"
       ]
     }
   ]

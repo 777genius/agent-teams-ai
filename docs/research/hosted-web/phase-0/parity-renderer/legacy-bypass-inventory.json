@@ -15,7 +15,9 @@
     "format": "deterministically sorted compact JSON",
     "recordCount": 610,
     "sha256": "sha256:2ea065639675df126935790d86578cfdae9cf9feb60371826b03f1f877c5f497",
-    "externalPath": "/tmp/phase-00-freeze-w1-f4-integration/legacy-bypass-raw.json"
+    "externalPath": "legacy-bypass-raw.json",
+    "pathScope": "artifact-pack-relative",
+    "reproductionCommand": "W1_RAW_EVIDENCE_ROOT=<artifact-pack-dir> node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
   },
   "requiredDisposition": "Supported hosted actions use a real feature facet; unavailable and desktop-only controls are absent before mount. No optional-method check or fabricated success is capability proof."
 }

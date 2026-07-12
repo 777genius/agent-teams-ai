@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -56,6 +57,22 @@ const assertUnique = (rows, field, collection) => {
 };
 
 const sha256 = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');
+const sha256Bytes = (bytes) => createHash('sha256').update(bytes).digest('hex');
+
+const hashAtCommit = (commit, path) => {
+  try {
+    return sha256Bytes(
+      execFileSync('git', ['show', `${commit}:${path}`], {
+        cwd: repoRoot,
+        encoding: null,
+        maxBuffer: 128 * 1024 * 1024,
+      })
+    );
+  } catch (error) {
+    if (error?.status === 0 && error?.stdout) return sha256Bytes(error.stdout);
+    fail('GIT_PROVENANCE_MISSING', `${commit}:${path}`);
+  }
+};
 
 const checkPathHash = ({ path, sha256: expected, scope = 'repository' }) => {
   if (scope === 'controller-external' && !includeControllerExternal) return;
@@ -72,6 +89,20 @@ const validateSemantics = (allIndexes) => {
   const evidenceIndex = allIndexes.get('evidence-index.json');
   const supersessionIndex = allIndexes.get('supersession-index.json');
 
+  const expectedCurrentCommit = 'c958c872fa22edf9b2d6a0741d7781b00957903c';
+  for (const [name, index] of allIndexes) {
+    if (index.currentIntegrationCommit !== expectedCurrentCommit) {
+      fail('INTEGRATION_COMMIT_MISMATCH', `${name} does not pin canonical predecessor c958c872`);
+    }
+    if (
+      index.freezeCandidate?.baseCommit !== expectedCurrentCommit ||
+      index.freezeCandidate?.status !== 'pending-integration' ||
+      index.freezeCandidate?.integrationCommit !== null
+    ) {
+      fail('CANDIDATE_PROVENANCE_MISMATCH', `${name} conflates predecessor and freeze candidate`);
+    }
+  }
+
   const expectedLanes = ['w1', 'w2', 'w3', 'w4', 'w5', 'w6'];
   assertUnique(laneIndex.lanes, 'laneId', 'lanes');
   const actualLanes = laneIndex.lanes.map(({ laneId }) => laneId).sort();
@@ -84,13 +115,13 @@ const validateSemantics = (allIndexes) => {
       producerJobId: 'agent-teams-hosted-web-refactor-phase-00-remediation-w1-v9',
       packetRevision: 'phase-00-r2',
       sourceBaseSha: 'f7d98790eb868714e536f77bd796072ea706911a',
-      integratedAtCommit: '89c1358925033d480bcfe3bdfee6c899df556431',
+      integratedAtCommit: '0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3',
     },
     w2: {
       producerJobId: 'agent-teams-hosted-web-refactor-phase-00-w2-targeted-fix-a1',
       packetRevision: 'phase-00-r2',
       sourceBaseSha: 'c72fd201867b9bcd1ef77d5e0f95ba379adb4fca',
-      integratedAtCommit: '0bf8f2d105def1fa34dd8dedfb8d345d720dc35e',
+      integratedAtCommit: '6d54e7c60d29812de5b96e471761486fbbc0842c',
     },
     w3: {
       producerJobId: 'agent-teams-hosted-web-refactor-phase-00-remediation-w3-v1',
@@ -108,13 +139,13 @@ const validateSemantics = (allIndexes) => {
       producerJobId: 'agent-teams-hosted-web-refactor-phase-00-remediation-w5-v3',
       packetRevision: 'phase-00-r2',
       sourceBaseSha: '648bebed68f5a64c984e83b441e14dd7c587c403',
-      integratedAtCommit: 'ffaecae3fc70a42df1ac49c65469f84515ea5ed8',
+      integratedAtCommit: '5d723407f287767c0f30f3d708459fb943256eaf',
     },
     w6: {
       producerJobId: 'agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v7',
       packetRevision: 'phase-00-r3',
       sourceBaseSha: 'f7d98790eb868714e536f77bd796072ea706911a',
-      integratedAtCommit: 'c72fd201867b9bcd1ef77d5e0f95ba379adb4fca',
+      integratedAtCommit: 'c958c872fa22edf9b2d6a0741d7781b00957903c',
     },
   };
 
@@ -128,6 +159,12 @@ const validateSemantics = (allIndexes) => {
       }
     }
     checkPathHash(lane.handoff);
+    if (!lane.integrationHistory.some(({ commit }) => commit === lane.integratedAtCommit)) {
+      fail(
+        'INTEGRATION_COMMIT_MISMATCH',
+        `${lane.laneId} latest commit is absent from its history`
+      );
+    }
   }
 
   const expectedEvidenceById = new Map();
@@ -177,9 +214,193 @@ const validateSemantics = (allIndexes) => {
       fail('EVIDENCE_PROVENANCE_MISMATCH', row.evidenceId);
     }
     checkPathHash({ path: row.path, sha256: row.sha256, scope: 'repository' });
-    if (row.integratedAtCommit !== laneById.get(row.laneId)?.integratedAtCommit) {
-      fail('INTEGRATION_COMMIT_MISMATCH', `${row.evidenceId} disagrees with ${row.laneId}`);
+    const lane = laneById.get(row.laneId);
+    const laneCommits = new Set(lane.integrationHistory.map(({ commit }) => commit));
+    if (row.byteState === 'pending-integration') {
+      if (
+        row.integratedAtCommit !== null ||
+        !laneCommits.has(row.derivedFromCommit) ||
+        !lane.pendingCandidatePaths?.includes(row.path)
+      ) {
+        fail('CANDIDATE_PROVENANCE_MISMATCH', row.evidenceId);
+      }
+    } else {
+      if (!laneCommits.has(row.integratedAtCommit)) {
+        fail(
+          'INTEGRATION_COMMIT_MISMATCH',
+          `${row.evidenceId} is absent from ${row.laneId} history`
+        );
+      }
+      const committedHash = hashAtCommit(row.integratedAtCommit, row.path);
+      if (committedHash !== row.sha256) {
+        fail(
+          'GIT_PROVENANCE_MISMATCH',
+          `${row.evidenceId}: ${row.integratedAtCommit} has ${committedHash}, index has ${row.sha256}`
+        );
+      }
     }
+  }
+
+  const expectedLaterBytes = {
+    'P0.W1.RENDERER_ACTIONS': {
+      commit: '0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3',
+      disposition: 'narrowed',
+      decisionId: 'P0.CURRENT.W1.LATER_BYTES',
+    },
+    'P0.W1.RENDERER_CHILD_CONTROLS': {
+      commit: '0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3',
+      disposition: 'narrowed',
+      decisionId: 'P0.CURRENT.W1.LATER_BYTES',
+    },
+    'P0.W1.LEGACY_BYPASSES': {
+      commit: null,
+      disposition: 'narrowed',
+      decisionId: 'P0.CURRENT.W1.LATER_BYTES',
+    },
+    'P0.W1.SCANNER': {
+      commit: null,
+      disposition: 'narrowed',
+      decisionId: 'P0.CURRENT.W1.LATER_BYTES',
+    },
+    'P0.W2.ENVIRONMENT_PROVENANCE': {
+      commit: '6d54e7c60d29812de5b96e471761486fbbc0842c',
+      disposition: 'narrowed',
+      decisionId: 'P0.CURRENT.W2.LATER_BYTES',
+    },
+    'P0.W2.CREDENTIAL_EXPOSURE_MATRIX': {
+      commit: '6d54e7c60d29812de5b96e471761486fbbc0842c',
+      disposition: 'narrowed',
+      decisionId: 'P0.CURRENT.W2.LATER_BYTES',
+    },
+    'P0.W2.RUNTIME_SCANNER': {
+      commit: '6d54e7c60d29812de5b96e471761486fbbc0842c',
+      disposition: 'narrowed',
+      decisionId: 'P0.CURRENT.W2.LATER_BYTES',
+    },
+    'P0.W5.COMMAND_CATALOG': {
+      commit: '5d723407f287767c0f30f3d708459fb943256eaf',
+      disposition: 'narrowed',
+      decisionId: 'P0.CURRENT.W5.LATER_BYTES',
+    },
+    'P0.W5.EFFECT_RECOVERY_MATRIX': {
+      commit: '5d723407f287767c0f30f3d708459fb943256eaf',
+      disposition: 'narrowed',
+      decisionId: 'P0.CURRENT.W5.LATER_BYTES',
+    },
+    'P0.W5.SUPPORTING.MUTATION_CENSUS': {
+      commit: '5d723407f287767c0f30f3d708459fb943256eaf',
+      disposition: 'narrowed',
+      decisionId: 'P0.CURRENT.W5.LATER_BYTES',
+    },
+    'P0.W5.SUPPORTING.MUTATION_SURFACE_MANIFEST': {
+      commit: '5d723407f287767c0f30f3d708459fb943256eaf',
+      disposition: 'narrowed',
+      decisionId: 'P0.CURRENT.W5.LATER_BYTES',
+    },
+  };
+  const decisionIds = new Set(decisionIndex.decisions.map(({ decisionId }) => decisionId));
+  for (const [evidenceId, expected] of Object.entries(expectedLaterBytes)) {
+    const row = evidenceIndex.evidence.find((candidate) => candidate.evidenceId === evidenceId);
+    if (
+      row?.integratedAtCommit !== expected.commit ||
+      row?.adoptionDisposition !== expected.disposition ||
+      row?.adoptionDecisionId !== expected.decisionId ||
+      !decisionIds.has(expected.decisionId)
+    ) {
+      fail('ADOPTION_PROVENANCE_MISMATCH', evidenceId);
+    }
+  }
+
+  const laterReviewByDecision = {
+    'P0.CURRENT.W1.LATER_BYTES': {
+      reviewId: 'P0.CURRENT.REVIEW.W1',
+      commit: '0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3',
+    },
+    'P0.CURRENT.W2.LATER_BYTES': {
+      reviewId: 'P0.CURRENT.REVIEW.W2',
+      commit: '6d54e7c60d29812de5b96e471761486fbbc0842c',
+    },
+    'P0.CURRENT.W5.LATER_BYTES': {
+      reviewId: 'P0.CURRENT.REVIEW.W3_W5',
+      commit: '5d723407f287767c0f30f3d708459fb943256eaf',
+    },
+  };
+  for (const [decisionId, expected] of Object.entries(laterReviewByDecision)) {
+    const review = reviewIndex.reviews.find(({ reviewId }) => reviewId === expected.reviewId);
+    const disposition = review?.commitDispositions.find(({ commit }) => commit === expected.commit);
+    const expectedPaths = evidenceIndex.evidence
+      .filter(({ adoptionDecisionId }) => adoptionDecisionId === decisionId)
+      .map(({ path }) => path);
+    if (
+      disposition?.disposition !== 'narrowed' ||
+      expectedPaths.some((path) => !disposition.paths.includes(path))
+    ) {
+      fail('ADOPTION_PROVENANCE_MISMATCH', `${decisionId} review projection`);
+    }
+  }
+
+  const legacyBypasses = readJson(
+    resolve(
+      repoRoot,
+      'docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json'
+    )
+  );
+  if (
+    legacyBypasses.rawArtifact?.externalPath !== 'legacy-bypass-raw.json' ||
+    legacyBypasses.rawArtifact?.pathScope !== 'artifact-pack-relative' ||
+    /(^|\/)tmp\//.test(legacyBypasses.rawArtifact?.externalPath ?? '') ||
+    !legacyBypasses.rawArtifact?.reproductionCommand?.includes(
+      'scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts'
+    )
+  ) {
+    fail(
+      'NON_PORTABLE_PROVENANCE',
+      'legacy bypass raw artifact is not pack-relative and reproducible'
+    );
+  }
+
+  for (const requiredDecision of ['P0.CURRENT.READINESS_BLOCKERS', 'P0.CURRENT.PHASE1_AUTHORITY']) {
+    if (
+      decisionIndex.decisions.find(({ decisionId }) => decisionId === requiredDecision)?.status !==
+      'blocked'
+    ) {
+      fail('READINESS_AUTHORITY_MISMATCH', requiredDecision);
+    }
+  }
+
+  const phase1Readme = readFileSync(
+    resolve(repoRoot, 'docs/hosted-web-phases/phase-01/README.md'),
+    'utf8'
+  );
+  const phase1Inputs = readFileSync(
+    resolve(repoRoot, 'docs/hosted-web-phases/phase-01/packet-inputs.md'),
+    'utf8'
+  );
+  const phase1Packet = readFileSync(
+    resolve(repoRoot, 'docs/hosted-web-phases/phase-01/controller-packet.md'),
+    'utf8'
+  );
+  const revivedHistoricalClaim = [
+    'Both rejected',
+    'Pair rejected with RW35',
+    'Pair rejected with R46',
+    'Holds all adoption',
+  ].find((claim) => `${phase1Inputs}\n${phase1Packet}`.includes(claim));
+  if (
+    revivedHistoricalClaim ||
+    !phase1Packet.includes('remain historical') ||
+    !phase1Inputs.includes('do not revive them as readiness blockers')
+  ) {
+    fail('SUPERSESSION_PROJECTION_MISMATCH', revivedHistoricalClaim ?? 'historical status missing');
+  }
+  if (
+    !phase1Readme.includes('blocked proposal') ||
+    !phase1Readme.includes('Producer target is zero') ||
+    !phase1Packet.includes('non-authoritative') ||
+    !phase1Packet.includes('No path listed or implied here is authoritative') ||
+    !phase1Inputs.includes('Proposal only')
+  ) {
+    fail('PHASE1_AUTHORITY_MISMATCH', 'Phase 1 proposal-only or producer-zero guard is absent');
   }
 
   assertUnique(supersessionIndex.supersessions, 'supersessionId', 'supersessions');

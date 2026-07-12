@@ -5,8 +5,13 @@
   "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
   "phaseId": "phase-00",
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
-  "currentIntegrationCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
-  "generatedAt": "2026-07-12T01:47:35Z",
+  "currentIntegrationCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+  "freezeCandidate": {
+    "baseCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+    "status": "pending-integration",
+    "integrationCommit": null
+  },
+  "generatedAt": "2026-07-12T06:03:29Z",
   "lanes": [
     {
       "laneId": "w1",
@@ -14,14 +19,38 @@
       "packetRevision": "phase-00-r2",
       "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
       "sourceBaseSha": "f7d98790eb868714e536f77bd796072ea706911a",
-      "integratedAtCommit": "89c1358925033d480bcfe3bdfee6c899df556431",
+      "integratedAtCommit": "0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3",
+      "integrationHistory": [
+        {
+          "commit": "89c1358925033d480bcfe3bdfee6c899df556431",
+          "disposition": "adopted",
+          "scope": "Original reviewed W1 v9 bundle.",
+          "paths": [".codex-handoff/phase-00-w1.json"]
+        },
+        {
+          "commit": "0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3",
+          "disposition": "narrowed",
+          "scope": "Adopt the later external-callback renderer census and scanner semantics; legacy raw output remains source-observed and pack-relative only.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json",
+            "docs/research/hosted-web/phase-0/parity-renderer/renderer-child-control-catalog.json",
+            "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
+            "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
+          ]
+        }
+      ],
       "currentState": "integrated-current",
       "handoff": {
         "path": ".codex-handoff/phase-00-w1.json",
         "sha256": "0cc95df4fe153e046788d8592dda638cfd2ebf199133f670917db22bab32a10e",
         "scope": "repository"
       },
-      "identityCorrection": "The producer field laneId=w1-remediation-v9 is historical job identity; the controller canonical lane is w1."
+      "identityCorrection": "The producer field laneId=w1-remediation-v9 is historical job identity; the controller canonical lane is w1.",
+      "pendingCandidatePaths": [
+        "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
+        "docs/research/hosted-web/phase-0/parity-renderer/schemas/legacy-bypass-inventory.schema.json",
+        "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
+      ]
     },
     {
       "laneId": "w2",
@@ -29,7 +58,25 @@
       "packetRevision": "phase-00-r2",
       "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
       "sourceBaseSha": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
-      "integratedAtCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
+      "integratedAtCommit": "6d54e7c60d29812de5b96e471761486fbbc0842c",
+      "integrationHistory": [
+        {
+          "commit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
+          "disposition": "adopted",
+          "scope": "Original approved W2 targeted A1 bundle.",
+          "paths": [".codex-handoff/phase-00-w2.json"]
+        },
+        {
+          "commit": "6d54e7c60d29812de5b96e471761486fbbc0842c",
+          "disposition": "narrowed",
+          "scope": "Adopt the omission-sensitive environment census while retaining final target-image and credential-canary limits.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
+            "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+            "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts"
+          ]
+        }
+      ],
       "currentState": "integrated-current",
       "handoff": {
         "path": ".codex-handoff/phase-00-w2.json",
@@ -45,6 +92,14 @@
       "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
       "sourceBaseSha": "0e8431b1935c71a2e77bea1384b134ee25c8aa12",
       "integratedAtCommit": "7f23e7b628b09e8fbed71c914af5e665f14dab25",
+      "integrationHistory": [
+        {
+          "commit": "7f23e7b628b09e8fbed71c914af5e665f14dab25",
+          "disposition": "adopted",
+          "scope": "Current W3 evidence bundle.",
+          "paths": [".codex-handoff/phase-00-w3.json"]
+        }
+      ],
       "currentState": "integrated-current",
       "handoff": {
         "path": ".codex-handoff/phase-00-w3.json",
@@ -59,6 +114,14 @@
       "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
       "sourceBaseSha": "f7d98790eb868714e536f77bd796072ea706911a",
       "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+      "integrationHistory": [
+        {
+          "commit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+          "disposition": "narrowed",
+          "scope": "Current-host characterization only.",
+          "paths": [".codex-handoff/phase-00-w4.json"]
+        }
+      ],
       "currentState": "integrated-current",
       "handoff": {
         "path": ".codex-handoff/phase-00-w4.json",
@@ -72,7 +135,26 @@
       "packetRevision": "phase-00-r2",
       "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
       "sourceBaseSha": "648bebed68f5a64c984e83b441e14dd7c587c403",
-      "integratedAtCommit": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8",
+      "integratedAtCommit": "5d723407f287767c0f30f3d708459fb943256eaf",
+      "integrationHistory": [
+        {
+          "commit": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8",
+          "disposition": "narrowed",
+          "scope": "Original evidence-only W5 adoption.",
+          "paths": [".codex-handoff/phase-00-w5.json"]
+        },
+        {
+          "commit": "5d723407f287767c0f30f3d708459fb943256eaf",
+          "disposition": "narrowed",
+          "scope": "Adopt command-ownership reconciliation and formatting-stable projections inside the evidence-only boundary.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/recovery-events/command-catalog.json",
+            "docs/research/hosted-web/phase-0/recovery-events/effect-recovery-matrix.json",
+            "docs/research/hosted-web/phase-0/recovery-events/mutation-census.json",
+            "docs/research/hosted-web/phase-0/recovery-events/mutation-surface-manifest.json"
+          ]
+        }
+      ],
       "currentState": "integrated-current",
       "handoff": {
         "path": ".codex-handoff/phase-00-w5.json",
@@ -86,7 +168,25 @@
       "packetRevision": "phase-00-r3",
       "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
       "sourceBaseSha": "f7d98790eb868714e536f77bd796072ea706911a",
-      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+      "integratedAtCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+      "integrationHistory": [
+        {
+          "commit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+          "disposition": "narrowed",
+          "scope": "Original W6 characterization bundle.",
+          "paths": [".codex-handoff/phase-00-w6.json"]
+        },
+        {
+          "commit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+          "disposition": "narrowed",
+          "scope": "Adopt current-commit artifact authority and preserve standalone rejection, terminal absence failure, and final-image limits.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+            "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+            "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json"
+          ]
+        }
+      ],
       "currentState": "integrated-current",
       "handoff": {
         "path": ".codex-handoff/phase-00-w6.json",

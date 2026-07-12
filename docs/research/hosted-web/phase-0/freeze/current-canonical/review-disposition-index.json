@@ -5,19 +5,48 @@
   "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
   "phaseId": "phase-00",
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
-  "currentIntegrationCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
-  "generatedAt": "2026-07-12T01:47:35Z",
+  "currentIntegrationCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+  "freezeCandidate": {
+    "baseCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+    "status": "pending-integration",
+    "integrationCommit": null
+  },
+  "generatedAt": "2026-07-12T06:03:29Z",
   "reviews": [
     {
       "reviewId": "P0.CURRENT.REVIEW.W1",
       "lanes": ["w1"],
       "disposition": "controller-adopted",
-      "scope": "Exact clean-base v9 reproduction of reviewed v8 W1 output; estimate scope escalation remains explicit and does not invalidate the evidence adoption.",
+      "scope": "The v9 bundle is adopted. Commit 0d1a82fe adds the reviewed external-callback census and is narrowed to renderer characterization. The candidate pack-relative raw reference is pending integration and does not raise the legacy-bypass proof level.",
       "sources": [
         {
           "path": ".codex-handoff/phase-00-w1.json",
           "sha256": "0cc95df4fe153e046788d8592dda638cfd2ebf199133f670917db22bab32a10e",
           "scope": "repository"
+        },
+        {
+          "path": ".codex-handoff/phase-00-freeze-fix-w1-f4.json",
+          "sha256": "4274fe8b9cbe8a1bf84b49801d1c16bd47694940c0158a47193ec4833858d196",
+          "scope": "repository"
+        }
+      ],
+      "commitDispositions": [
+        {
+          "commit": "89c1358925033d480bcfe3bdfee6c899df556431",
+          "disposition": "adopted",
+          "scope": "Original W1 v9 evidence bundle.",
+          "paths": [".codex-handoff/phase-00-w1.json"]
+        },
+        {
+          "commit": "0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3",
+          "disposition": "narrowed",
+          "scope": "Later renderer census and scanner correction, with legacy bypasses remaining source-observed.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json",
+            "docs/research/hosted-web/phase-0/parity-renderer/renderer-child-control-catalog.json",
+            "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
+            "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
+          ]
         }
       ]
     },
@@ -25,7 +54,7 @@
       "reviewId": "P0.CURRENT.REVIEW.W2",
       "lanes": ["w2"],
       "disposition": "approve",
-      "scope": "Exact 22-path targeted A1 bundle approved with no blocking defects; its phaseStartSha label is separately corrected by controller identity authority.",
+      "scope": "The targeted A1 bundle is approved and commit 6d54e7c6 is narrowed to its omission-sensitive environment census; target-image provider execution and credential canaries remain unproved.",
       "sources": [
         {
           "path": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-w2-targeted-fix-review-a1-r9/.codex-handoff/phase-00-w2-targeted-fix-review-a1-r9.json",
@@ -36,6 +65,29 @@
           "path": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-w2-targeted-fix-review-a1-r9/agent-teams-hosted-web-refactor-phase-00-w2-targeted-fix-review-a1-r9.latest-result.json",
           "sha256": "ff9d800de6a827aa479f988c8b70b546f9a93ffe0dbf1dea9405130564adbf30",
           "scope": "controller-external"
+        },
+        {
+          "path": ".codex-handoff/phase-00-freeze-fix-w2-d1.json",
+          "sha256": "5f3ef80c62a4a3a5d894a1dc2339ffecbd84fa9a157037d5de0b64e925c85ca0",
+          "scope": "repository"
+        }
+      ],
+      "commitDispositions": [
+        {
+          "commit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
+          "disposition": "adopted",
+          "scope": "Original approved W2 targeted A1 bundle.",
+          "paths": [".codex-handoff/phase-00-w2.json"]
+        },
+        {
+          "commit": "6d54e7c60d29812de5b96e471761486fbbc0842c",
+          "disposition": "narrowed",
+          "scope": "Omission-sensitive environment and credential census; no target-image readiness claim.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
+            "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
+            "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts"
+          ]
         }
       ]
     },
@@ -43,12 +95,42 @@
       "reviewId": "P0.CURRENT.REVIEW.W3_W5",
       "lanes": ["w3", "w5"],
       "disposition": "compatible-narrowed",
-      "scope": "Adopted W3/W5 pair is reciprocally compatible within the Phase 0 r3 evidence-only boundary; no later implementation readiness is implied.",
+      "scope": "The adopted W3/W5 pair remains compatible only within the Phase 0 evidence boundary; commit 5d723407 is narrowed to its approved command-ownership and stable-format corrections.",
       "sources": [
         {
           "path": "docs/research/hosted-web/phase-0/reciprocal-reviews/w3-w5-current-canonical.md",
           "sha256": "7bc2ded46924f18e28b0b85d3dafbd09e17662cf7e95c11b139bfe799a4f1564",
           "scope": "repository"
+        },
+        {
+          "path": ".codex-handoff/phase-00-freeze-fix-w5-format-f4.json",
+          "sha256": "de86b44dc836f4342cb486d24d59a86fd866b9e24805957774baaca5e17b19d0",
+          "scope": "repository"
+        }
+      ],
+      "commitDispositions": [
+        {
+          "commit": "7f23e7b628b09e8fbed71c914af5e665f14dab25",
+          "disposition": "adopted",
+          "scope": "Current W3 evidence bundle.",
+          "paths": [".codex-handoff/phase-00-w3.json"]
+        },
+        {
+          "commit": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8",
+          "disposition": "narrowed",
+          "scope": "Original evidence-only W5 adoption.",
+          "paths": [".codex-handoff/phase-00-w5.json"]
+        },
+        {
+          "commit": "5d723407f287767c0f30f3d708459fb943256eaf",
+          "disposition": "narrowed",
+          "scope": "Approved command ownership and formatting-stable evidence projections.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/recovery-events/command-catalog.json",
+            "docs/research/hosted-web/phase-0/recovery-events/effect-recovery-matrix.json",
+            "docs/research/hosted-web/phase-0/recovery-events/mutation-census.json",
+            "docs/research/hosted-web/phase-0/recovery-events/mutation-surface-manifest.json"
+          ]
         }
       ]
     },
@@ -56,7 +138,7 @@
       "reviewId": "P0.CURRENT.REVIEW.W4_W6",
       "lanes": ["w4", "w6"],
       "disposition": "approve",
-      "scope": "Exact 36-file paired bundle approved; evidence remains characterization and explicitly does not admit a final hosted artifact or terminal.",
+      "scope": "W4/W6 remains characterization only. Commit c958c872 supplies current artifact authority while preserving hosted-v1 rejection, terminal absence failure, and final-image admission blockers.",
       "sources": [
         {
           "path": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w4-w6-v6/.codex-handoff/phase-00-review-w4-w6-v6.json",
@@ -67,6 +149,29 @@
           "path": "/var/data/agent-teams-hosted-web-refactor/worker-jobs/jobs/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v6/agent-teams-hosted-web-refactor-phase-00-review-w4-w6-v6.latest-result.json",
           "sha256": "b29b4188a98de25cead5f299e9fab0e16160d8f3f0252023050d8fc73cbe52cc",
           "scope": "controller-external"
+        },
+        {
+          "path": ".codex-handoff/phase-00-freeze-fix-w6-artifact-f16.json",
+          "sha256": "507a6c280cc2f3cd82906111033653dd857ae5a89a875f191c67825f011f62b5",
+          "scope": "repository"
+        }
+      ],
+      "commitDispositions": [
+        {
+          "commit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
+          "disposition": "narrowed",
+          "scope": "Original paired W4/W6 characterization.",
+          "paths": [".codex-handoff/phase-00-w4.json", ".codex-handoff/phase-00-w6.json"]
+        },
+        {
+          "commit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+          "disposition": "narrowed",
+          "scope": "Current-commit W6 artifact authority; no final-image, mutation, or terminal admission.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+            "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+            "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json"
+          ]
         }
       ]
     }

@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 
 import ts from 'typescript';
 
@@ -1554,7 +1554,22 @@ function evidenceSchemas(outputRoot: string): void {
       properties: {
         rawArtifact: {
           type: 'object',
-          required: ['format', 'recordCount', 'sha256', 'externalPath'],
+          required: [
+            'format',
+            'recordCount',
+            'sha256',
+            'externalPath',
+            'pathScope',
+            'reproductionCommand',
+          ],
+          properties: {
+            externalPath: { const: 'legacy-bypass-raw.json' },
+            pathScope: { const: 'artifact-pack-relative' },
+            reproductionCommand: {
+              const:
+                'W1_RAW_EVIDENCE_ROOT=<artifact-pack-dir> node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts',
+            },
+          },
         },
       },
     },
@@ -1765,7 +1780,10 @@ export function generateEvidence(
       format: 'deterministically sorted compact JSON',
       recordCount: bypasses.rows.length,
       sha256: rawHash,
-      externalPath: rawPath,
+      externalPath: basename(rawPath),
+      pathScope: 'artifact-pack-relative',
+      reproductionCommand:
+        'W1_RAW_EVIDENCE_ROOT=<artifact-pack-dir> node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts',
     },
     requiredDisposition:
       'Supported hosted actions use a real feature facet; unavailable and desktop-only controls are absent before mount. No optional-method check or fabricated success is capability proof.',

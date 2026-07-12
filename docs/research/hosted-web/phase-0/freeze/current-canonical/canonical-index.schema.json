@@ -11,6 +11,7 @@
     "phaseId",
     "phaseStartSha",
     "currentIntegrationCommit",
+    "freezeCandidate",
     "generatedAt"
   ],
   "additionalProperties": false,
@@ -23,7 +24,8 @@
     "controllerOwner": { "const": "agent-teams-hosted-web-refactor-controller-v2" },
     "phaseId": { "const": "phase-00" },
     "phaseStartSha": { "const": "a32f509e6d9bd31ba2135940e336729bf90c3d93" },
-    "currentIntegrationCommit": { "const": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e" },
+    "currentIntegrationCommit": { "const": "c958c872fa22edf9b2d6a0741d7781b00957903c" },
+    "freezeCandidate": { "$ref": "#/definitions/freezeCandidate" },
     "generatedAt": { "type": "string", "format": "date-time" },
     "lanes": {
       "type": "array",
@@ -38,7 +40,7 @@
     },
     "decisions": {
       "type": "array",
-      "minItems": 8,
+      "minItems": 13,
       "items": { "$ref": "#/definitions/decision" }
     },
     "evidence": {
@@ -78,6 +80,16 @@
     "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "laneId": { "type": "string", "enum": ["w1", "w2", "w3", "w4", "w5", "w6"] },
+    "freezeCandidate": {
+      "type": "object",
+      "required": ["baseCommit", "status", "integrationCommit"],
+      "additionalProperties": false,
+      "properties": {
+        "baseCommit": { "const": "c958c872fa22edf9b2d6a0741d7781b00957903c" },
+        "status": { "const": "pending-integration" },
+        "integrationCommit": { "type": "null" }
+      }
+    },
     "pathHash": {
       "type": "object",
       "required": ["path", "sha256", "scope"],
@@ -86,6 +98,21 @@
         "path": { "type": "string", "minLength": 1 },
         "sha256": { "$ref": "#/definitions/sha256" },
         "scope": { "enum": ["repository", "controller-external"] }
+      }
+    },
+    "commitDisposition": {
+      "type": "object",
+      "required": ["commit", "disposition", "scope", "paths"],
+      "additionalProperties": false,
+      "properties": {
+        "commit": { "$ref": "#/definitions/sha1" },
+        "disposition": { "enum": ["adopted", "narrowed", "rejected"] },
+        "scope": { "type": "string", "minLength": 1 },
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
       }
     },
     "lane": {
@@ -97,6 +124,7 @@
         "phaseStartSha",
         "sourceBaseSha",
         "integratedAtCommit",
+        "integrationHistory",
         "currentState",
         "handoff"
       ],
@@ -108,14 +136,24 @@
         "phaseStartSha": { "const": "a32f509e6d9bd31ba2135940e336729bf90c3d93" },
         "sourceBaseSha": { "$ref": "#/definitions/sha1" },
         "integratedAtCommit": { "$ref": "#/definitions/sha1" },
+        "integrationHistory": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/commitDisposition" }
+        },
         "currentState": { "const": "integrated-current" },
         "handoff": { "$ref": "#/definitions/pathHash" },
-        "identityCorrection": { "type": "string", "minLength": 1 }
+        "identityCorrection": { "type": "string", "minLength": 1 },
+        "pendingCandidatePaths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
       }
     },
     "review": {
       "type": "object",
-      "required": ["reviewId", "lanes", "disposition", "scope", "sources"],
+      "required": ["reviewId", "lanes", "disposition", "scope", "sources", "commitDispositions"],
       "additionalProperties": false,
       "properties": {
         "reviewId": { "type": "string", "pattern": "^P0\\.CURRENT\\.REVIEW\\." },
@@ -132,6 +170,11 @@
           "type": "array",
           "minItems": 1,
           "items": { "$ref": "#/definitions/pathHash" }
+        },
+        "commitDispositions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/commitDisposition" }
         }
       }
     },
@@ -141,7 +184,7 @@
       "additionalProperties": false,
       "properties": {
         "decisionId": { "type": "string", "pattern": "^P0\\." },
-        "status": { "enum": ["resolved", "accepted", "narrowed"] },
+        "status": { "enum": ["resolved", "accepted", "narrowed", "blocked"] },
         "decision": { "type": "string", "minLength": 1 },
         "authorityPaths": {
           "type": "array",
@@ -160,7 +203,13 @@
         "path": { "type": "string", "minLength": 1 },
         "sha256": { "$ref": "#/definitions/sha256" },
         "proofLevel": { "type": "string", "minLength": 1 },
-        "integratedAtCommit": { "$ref": "#/definitions/sha1" }
+        "byteState": { "enum": ["integrated", "pending-integration"] },
+        "integratedAtCommit": {
+          "oneOf": [{ "$ref": "#/definitions/sha1" }, { "type": "null" }]
+        },
+        "derivedFromCommit": { "$ref": "#/definitions/sha1" },
+        "adoptionDisposition": { "enum": ["adopted", "narrowed", "rejected"] },
+        "adoptionDecisionId": { "type": "string", "pattern": "^P0\\." }
       }
     },
     "supersession": {

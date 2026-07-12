@@ -2,18 +2,22 @@
 
 ## Status and authority
 
-- Status: `blocked`
-- Packet revision: `phase-01-draft-r0`
+- Status: `blocked proposal`; non-authoritative
+- Packet revision: `phase-01-proposal-r0`
 - Parent plan commit: `f1ad7a8cba2f26abf5f42ddd206937c24d143f77` (Phase 0 plan-bundle adoption)
-- Predecessor integration commit: `missing`
-- Predecessor evidence index SHA-256: `missing`
+- Integrated canonical predecessor: `c958c872fa22edf9b2d6a0741d7781b00957903c`
+- Freeze candidate integration commit: `null`; pending controller integration
+- Freeze candidate evidence index SHA-256:
+  `d5c8725dfb22f7e0228e0dd51f53d978d117ed7253fdb279c8ddba7000ff8758` (candidate only; not an
+  integrated freeze digest)
 - Plan bundle commit: `missing for Phase 1`
-- Phase start SHA: `missing`
+- Phase start SHA: `not created; no implementation bootstrap is authorized`
 - Required ADR IDs: ADR-15, ADR-19, ADR-20, plus frozen Phase 0 decisions
 - Explicit authorization: `pending after Phase 0 freeze`
 
-This draft is not an active packet. It records the supported packet skeleton without inventing the
-predecessor facts, contract IDs, exact owned paths, or proof topology that Phase 0 must freeze.
+This proposal is not an active packet. It records a parent-plan dependency shape without inventing
+contract IDs, exact owned paths, shared writers, or proof topology. The canonical predecessor is known,
+but the freeze candidate is unintegrated and cannot be used as an implementation phase start.
 
 ## Outcome
 
@@ -25,13 +29,18 @@ reach the same application use case without transport types entering application
 
 - Parent-plan Phase 1 tasks 1-12 and exit gate.
 - Packet lifecycle and proof semantics from `docs/hosted-web-phases/PACKET_STANDARD.md`.
-- Common Phase 0 producer base `a32f509e6d9bd31ba2135940e336729bf90c3d93`, which is not a
-  predecessor completion commit.
-- Registry projection and gaps under `docs/research/hosted-web/phase-0/evidence/`.
+- Phase 0 start `a32f509e6d9bd31ba2135940e336729bf90c3d93`, which is not a completion
+  or implementation-bootstrap commit.
+- Integrated canonical predecessor `c958c872fa22edf9b2d6a0741d7781b00957903c` and the unintegrated
+  freeze candidate under `docs/research/hosted-web/phase-0/freeze/current-canonical/`.
 - The 0A inherited lint ledger remains historical input only; its adoption/rerun outcome must be
   refreshed by the final Phase 0 gate.
-- Reopened/blocking evidence includes every R12, RW35, and R46 finding, the cross-lane audit's hold on
-  all adoption, the requirements audit's rejection of acceptance/freeze, and all target-topology gaps.
+- Current blockers are final target-image/profile proof, estimate reconciliation, the final Phase 0
+  gate with inherited typecheck normalization, serial bootstrap, candidate integration, and explicit
+  authorization.
+
+Original R12, RW35, R46, hold-all-adoption, and failed-freeze conclusions remain historical. Current
+controller dispositions supersede them; they are not revived as blockers by this proposal.
 
 No producer ADR recommendation is treated as frozen merely because its lane completed.
 
@@ -50,11 +59,10 @@ No producer ADR recommendation is treated as frozen merely because its lane comp
 ## Definition of Ready
 
 - [ ] Phase 0 freeze is complete and records all decisions as accepted, narrowed, reopened, or blocked.
-- [ ] Corrected W1/W2 evidence has passed focused reciprocal re-review.
-- [ ] Corrected W3/W5 and W4/W6 evidence has passed focused reciprocal re-review.
-- [ ] Cross-lane and requirements audit records are complete, current after corrections, and
-      registry-final.
-- [ ] Predecessor integration SHA and evidence-index SHA-256 are recorded.
+- [x] Current W1/W2, W3/W5, and W4/W6 dispositions are projected without reviving historical
+      rejections.
+- [ ] The current Phase 0 freeze candidate has passed independent review and been integrated.
+- [ ] The integrated freeze commit and its evidence-index SHA-256 are recorded.
 - [ ] Phase 0 target-topology requirements and final broad gate are satisfied or have explicit
       capability-narrowing decisions permitted by the parent plan.
 - [ ] Reconciled estimate and inherited-failure ledgers are frozen.
@@ -68,9 +76,9 @@ No producer ADR recommendation is treated as frozen merely because its lane comp
 
 Until every item is checked, producer target is zero and no worker prompt may be rendered.
 
-## Proposed DAG and work-package registry
+## Non-authoritative proposed DAG
 
-The following is the parent-plan dependency shape, not an executable lane registry.
+The following is the parent-plan dependency shape, not an executable lane registry or ownership map.
 
 | Work package             | Parent-plan result                                                                             | Dependencies                                              | Evidence shape                                          | Ownership state |
 | ------------------------ | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------- | --------------- |
@@ -84,8 +92,9 @@ and 1C to proceed in parallel against frozen conventions; 1D closes the phase on
 conformance seams exist. Shared RouteCatalog, architecture gates, public feature entrypoints, IPC
 registration, HTTP composition, and any global ratchet have one serialized integration owner.
 
-No lane packet is materialized in this draft because exact non-overlapping writable paths, evidence
-IDs, review pairs, and commands are predecessor-dependent.
+No lane packet is materialized in this proposal. Exact non-overlapping writable paths, shared writers,
+evidence IDs, review pairs, and commands remain deliberately unassigned until readiness and serial
+bootstrap. No path listed or implied here is authoritative.
 
 ## Capacity epochs
 

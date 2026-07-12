@@ -5,8 +5,13 @@
   "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
   "phaseId": "phase-00",
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
-  "currentIntegrationCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
-  "generatedAt": "2026-07-12T01:47:35Z",
+  "currentIntegrationCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+  "freezeCandidate": {
+    "baseCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+    "status": "pending-integration",
+    "integrationCommit": null
+  },
+  "generatedAt": "2026-07-12T06:03:29Z",
   "supersessions": [
     {
       "supersessionId": "P0.CURRENT.SUPERSESSION.BASE_PENDING_IDENTITY",
@@ -162,7 +167,7 @@
         },
         {
           "path": "docs/research/hosted-web/phase-0/provider-runtime/README.md",
-          "sha256": "f2e53d953324f79118d7b8d138e09ba4d5fbb2af3fa4b242fbdc8ffb25d5e65b",
+          "sha256": "31773c1442d1db34cae604c23cefa458c0eada3635d124c0e8a5581776b20408",
           "scope": "repository"
         },
         {
@@ -177,12 +182,12 @@
         },
         {
           "path": "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
-          "sha256": "273ca1f34098e3fe3efeab80919443ea6ea0ad95fd1a4fff4780867a8155b12a",
+          "sha256": "302cc6081598a182df58478f6d50288228e037db5f14c33df72c512fcc5b3d81",
           "scope": "repository"
         },
         {
           "path": "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
-          "sha256": "6e4a40b34cf9e3aeb1eb085b3dfc3bf04f810cfabac33a48fd8763fd5432d9c6",
+          "sha256": "5f039a47a65ced6556f5c096e4135d18aeea3377db1f21fb347025c1af5b36e1",
           "scope": "repository"
         },
         {
@@ -207,7 +212,7 @@
         },
         {
           "path": "docs/research/hosted-web/phase-0/provider-runtime/schemas/environment-provenance.schema.json",
-          "sha256": "74637dcd998c504c097dd885e15021709fbf3d3ce3c41b5e347a557c22782e98",
+          "sha256": "1a6d23b175a81b43e107873f720f045033a56ff8be5e6dbcc665f57ab83f9426",
           "scope": "repository"
         },
         {

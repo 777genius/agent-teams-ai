@@ -14,7 +14,25 @@
   "properties": {
     "rawArtifact": {
       "type": "object",
-      "required": ["format", "recordCount", "sha256", "externalPath"]
+      "required": [
+        "format",
+        "recordCount",
+        "sha256",
+        "externalPath",
+        "pathScope",
+        "reproductionCommand"
+      ],
+      "properties": {
+        "externalPath": {
+          "const": "legacy-bypass-raw.json"
+        },
+        "pathScope": {
+          "const": "artifact-pack-relative"
+        },
+        "reproductionCommand": {
+          "const": "W1_RAW_EVIDENCE_ROOT=<artifact-pack-dir> node --import tsx scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
+        }
+      }
     }
   }
 }

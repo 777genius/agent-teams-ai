@@ -5,8 +5,13 @@
   "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
   "phaseId": "phase-00",
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
-  "currentIntegrationCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e",
-  "generatedAt": "2026-07-12T01:47:35Z",
+  "currentIntegrationCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+  "freezeCandidate": {
+    "baseCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+    "status": "pending-integration",
+    "integrationCommit": null
+  },
+  "generatedAt": "2026-07-12T06:03:29Z",
   "evidence": [
     {
       "evidenceId": "P0.W1.API_PARITY_LEDGER",
@@ -20,25 +25,35 @@
       "evidenceId": "P0.W1.RENDERER_ACTIONS",
       "laneId": "w1",
       "path": "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json",
-      "sha256": "1a69370dae79e34045141980504504c062b0598ce47dd91021738291ec67fe55",
+      "sha256": "9ff8164fb83dd235b69aef81168d03ed5c6dd84f5ffd25fab25bacd594d175b4",
       "proofLevel": "fixture_characterized",
-      "integratedAtCommit": "89c1358925033d480bcfe3bdfee6c899df556431"
+      "byteState": "integrated",
+      "integratedAtCommit": "0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W1.LATER_BYTES"
     },
     {
       "evidenceId": "P0.W1.RENDERER_CHILD_CONTROLS",
       "laneId": "w1",
       "path": "docs/research/hosted-web/phase-0/parity-renderer/renderer-child-control-catalog.json",
-      "sha256": "86ac0707c90bf50167cbbc61e6bffebd8f451468e08ebc9ea753399f0c533225",
+      "sha256": "833200abb1218a8b8596c65614f1f8d407ed55f2a030139178b1d57196ed5a7e",
       "proofLevel": "fixture_characterized",
-      "integratedAtCommit": "89c1358925033d480bcfe3bdfee6c899df556431"
+      "byteState": "integrated",
+      "integratedAtCommit": "0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W1.LATER_BYTES"
     },
     {
       "evidenceId": "P0.W1.LEGACY_BYPASSES",
       "laneId": "w1",
       "path": "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
-      "sha256": "cc520c31957e5fbf046eee0c096b35d13e673eaf614418d9568ea2cb5165620e",
+      "sha256": "674859e100839256f86869b8a72ddf65153001f399d7ba08ba135fdf22b2d0d5",
       "proofLevel": "source_observed",
-      "integratedAtCommit": "89c1358925033d480bcfe3bdfee6c899df556431"
+      "byteState": "pending-integration",
+      "integratedAtCommit": null,
+      "derivedFromCommit": "0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W1.LATER_BYTES"
     },
     {
       "evidenceId": "P0.W1.SELECTION_INVARIANTS",
@@ -52,9 +67,13 @@
       "evidenceId": "P0.W1.SCANNER",
       "laneId": "w1",
       "path": "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts",
-      "sha256": "2f96b564e707cc71e2c44ab25e443c4f6df0da91fd2a5f96d011317c8bc50a84",
+      "sha256": "a91bcbdcf383bb06c07517d12ca4c0985591f66057e0a60bd7388c156dc7ad8b",
       "proofLevel": "fixture_characterized",
-      "integratedAtCommit": "89c1358925033d480bcfe3bdfee6c899df556431"
+      "byteState": "pending-integration",
+      "integratedAtCommit": null,
+      "derivedFromCommit": "0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W1.LATER_BYTES"
     },
     {
       "evidenceId": "P0.W1.ESTIMATE",
@@ -84,25 +103,34 @@
       "evidenceId": "P0.W2.ENVIRONMENT_PROVENANCE",
       "laneId": "w2",
       "path": "docs/research/hosted-web/phase-0/provider-runtime/environment-provenance.json",
-      "sha256": "273ca1f34098e3fe3efeab80919443ea6ea0ad95fd1a4fff4780867a8155b12a",
+      "sha256": "302cc6081598a182df58478f6d50288228e037db5f14c33df72c512fcc5b3d81",
       "proofLevel": "source_observed_per_key_with_executed_routing_semantics_target_unverified",
-      "integratedAtCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e"
+      "byteState": "integrated",
+      "integratedAtCommit": "6d54e7c60d29812de5b96e471761486fbbc0842c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W2.LATER_BYTES"
     },
     {
       "evidenceId": "P0.W2.CREDENTIAL_EXPOSURE_MATRIX",
       "laneId": "w2",
       "path": "docs/research/hosted-web/phase-0/provider-runtime/credential-exposure-matrix.json",
-      "sha256": "6e4a40b34cf9e3aeb1eb085b3dfc3bf04f810cfabac33a48fd8763fd5432d9c6",
+      "sha256": "5f039a47a65ced6556f5c096e4135d18aeea3377db1f21fb347025c1af5b36e1",
       "proofLevel": "source_observed_per_key_target_unverified",
-      "integratedAtCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e"
+      "byteState": "integrated",
+      "integratedAtCommit": "6d54e7c60d29812de5b96e471761486fbbc0842c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W2.LATER_BYTES"
     },
     {
       "evidenceId": "P0.W2.RUNTIME_SCANNER",
       "laneId": "w2",
       "path": "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts",
-      "sha256": "85a2f2cae350add686dc168af3f76527a7d004404a21a760f61257bbb93b6e9e",
+      "sha256": "92a28a82c279467f844a48743c3c87ef4bea89c991bb3d0e06424052a3738f7c",
       "proofLevel": "executable_fixture_characterized",
-      "integratedAtCommit": "0bf8f2d105def1fa34dd8dedfb8d345d720dc35e"
+      "byteState": "integrated",
+      "integratedAtCommit": "6d54e7c60d29812de5b96e471761486fbbc0842c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W2.LATER_BYTES"
     },
     {
       "evidenceId": "P0.W2.ESTIMATE",
@@ -228,17 +256,23 @@
       "evidenceId": "P0.W5.COMMAND_CATALOG",
       "laneId": "w5",
       "path": "docs/research/hosted-web/phase-0/recovery-events/command-catalog.json",
-      "sha256": "fcc09b2c9afa0f25c127a0e8e234c5e8198c3055a86f85e4702455630f4d965e",
+      "sha256": "a40fd876f0a9ffc63e5932985c969ab867411716a48718586abf1552a35780ff",
       "proofLevel": "source_observed_plus_executable_omission_proof",
-      "integratedAtCommit": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8"
+      "byteState": "integrated",
+      "integratedAtCommit": "5d723407f287767c0f30f3d708459fb943256eaf",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W5.LATER_BYTES"
     },
     {
       "evidenceId": "P0.W5.EFFECT_RECOVERY_MATRIX",
       "laneId": "w5",
       "path": "docs/research/hosted-web/phase-0/recovery-events/effect-recovery-matrix.json",
-      "sha256": "962b5670be0f277b066a0566ab7129d4743dec8be7edb7d5e4bac20bb952d3a7",
+      "sha256": "c7166ca1ac43f72591fd1c56221dd3f2b6ffe8bebdbdca2b9fb89288874a79bc",
       "proofLevel": "fresh_process_fixture_characterized",
-      "integratedAtCommit": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8"
+      "byteState": "integrated",
+      "integratedAtCommit": "5d723407f287767c0f30f3d708459fb943256eaf",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W5.LATER_BYTES"
     },
     {
       "evidenceId": "P0.W5.FINGERPRINT_GOLDENS",
@@ -260,73 +294,100 @@
       "evidenceId": "P0.W5.SUPPORTING.MUTATION_CENSUS",
       "laneId": "w5",
       "path": "docs/research/hosted-web/phase-0/recovery-events/mutation-census.json",
-      "sha256": "abf4fc548409978c932c32118468943ec54bfd25c5065cd92d34c43ef02016c3",
+      "sha256": "5db5e282d358d4fad77b812cdec59c96bbe395ff04e6433ea9497d18126c0f98",
       "proofLevel": "source_observed_plus_executable_omission_proof",
-      "integratedAtCommit": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8"
+      "byteState": "integrated",
+      "integratedAtCommit": "5d723407f287767c0f30f3d708459fb943256eaf",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W5.LATER_BYTES"
     },
     {
       "evidenceId": "P0.W5.SUPPORTING.MUTATION_SURFACE_MANIFEST",
       "laneId": "w5",
       "path": "docs/research/hosted-web/phase-0/recovery-events/mutation-surface-manifest.json",
-      "sha256": "c225deb9b4ae30a8fd2b8655491d9df84f9f6859bf5d7104c0dcf74d6d910d74",
+      "sha256": "8922576490c0a9496a105923502008bc0d5c361af47282fbe5834e07b40d8130",
       "proofLevel": "review_input",
-      "integratedAtCommit": "ffaecae3fc70a42df1ac49c65469f84515ea5ed8"
+      "byteState": "integrated",
+      "integratedAtCommit": "5d723407f287767c0f30f3d708459fb943256eaf",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W5.LATER_BYTES"
     },
     {
       "evidenceId": "P0.W6.AUTH_TRANSITIONS",
       "laneId": "w6",
       "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
-      "sha256": "b84394204bfe908102c298992c6182f595c463cb95a575e4fd00c2ced6cd6cf2",
+      "sha256": "7d63f46818f0cc35b6ce3fa4c39e8ac63b77c8a93f00484d0efc17f7b5605a99",
       "proofLevel": "fixture_characterized",
-      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+      "byteState": "integrated",
+      "integratedAtCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
     },
     {
       "evidenceId": "P0.W6.PROXY_ORIGIN_THREAT_MATRIX",
       "laneId": "w6",
       "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
-      "sha256": "b84394204bfe908102c298992c6182f595c463cb95a575e4fd00c2ced6cd6cf2",
+      "sha256": "7d63f46818f0cc35b6ce3fa4c39e8ac63b77c8a93f00484d0efc17f7b5605a99",
       "proofLevel": "fixture_characterized",
-      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+      "byteState": "integrated",
+      "integratedAtCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
     },
     {
       "evidenceId": "P0.W6.COOKIE_VERSION_EVIDENCE",
       "laneId": "w6",
       "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
-      "sha256": "b84394204bfe908102c298992c6182f595c463cb95a575e4fd00c2ced6cd6cf2",
+      "sha256": "7d63f46818f0cc35b6ce3fa4c39e8ac63b77c8a93f00484d0efc17f7b5605a99",
       "proofLevel": "source_observed",
-      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+      "byteState": "integrated",
+      "integratedAtCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
     },
     {
       "evidenceId": "P0.W6.ARTIFACT_INVENTORY",
       "laneId": "w6",
       "path": "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
-      "sha256": "470ad4f8fc40be4a53647e393c8a93cff912de248f14378f6e5caf470b10e152",
+      "sha256": "e93deb209a9c3b4f569f94d427fc45b6afd22c769ef4eea393ea7a80b5113bb8",
       "proofLevel": "source_observed",
-      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+      "byteState": "integrated",
+      "integratedAtCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
     },
     {
       "evidenceId": "P0.W6.ABI_STUB_REPORT",
       "laneId": "w6",
       "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
-      "sha256": "b84394204bfe908102c298992c6182f595c463cb95a575e4fd00c2ced6cd6cf2",
+      "sha256": "7d63f46818f0cc35b6ce3fa4c39e8ac63b77c8a93f00484d0efc17f7b5605a99",
       "proofLevel": "fixture_characterized",
-      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+      "byteState": "integrated",
+      "integratedAtCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
     },
     {
       "evidenceId": "P0.W6.TERMINAL_ABSENCE_REPORT",
       "laneId": "w6",
       "path": "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
-      "sha256": "b84394204bfe908102c298992c6182f595c463cb95a575e4fd00c2ced6cd6cf2",
+      "sha256": "7d63f46818f0cc35b6ce3fa4c39e8ac63b77c8a93f00484d0efc17f7b5605a99",
       "proofLevel": "source_observed",
-      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+      "byteState": "integrated",
+      "integratedAtCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
     },
     {
       "evidenceId": "P0.W6.ESTIMATE",
       "laneId": "w6",
       "path": "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json",
-      "sha256": "8050e94e6f8b6d2b701b0774b33c582c5c51c9cebb6b4a5cdaaaab753b3b87b3",
+      "sha256": "1309dd32d3ebf57447dc181b802fa5e625f1b7bb069fc040c08fef74513750b8",
       "proofLevel": "source_observed",
-      "integratedAtCommit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+      "byteState": "integrated",
+      "integratedAtCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+      "adoptionDisposition": "narrowed",
+      "adoptionDecisionId": "P0.CURRENT.W4_W6.ADOPTION"
     }
   ]
 }
