@@ -25,7 +25,6 @@ import {
   isSubscriptionWorkerError,
   normalizeWorkerReport,
   type RuntimeRecommendedAction,
-  type RuntimeResultArtifact,
   type RuntimeResultEnvelopeInput,
   type RuntimeResultStatus,
   type WorkerReport,
@@ -46,7 +45,9 @@ import {
 } from "./codex-goal-access-plan";
 import { readLocalGitHeadCommit } from "./codex-goal-git-revision";
 import { createCodexGoalResultRecorder } from "./codex-goal-runtime-result-io";
-import { materializeCodexGoalHandoffArtifacts } from "./codex-goal-handoff-artifacts";
+import {
+  tryMaterializeTerminalCodexGoalHandoff,
+} from "./codex-goal-terminal-handoff-materialization";
 import {
   codexGoalRuntimeEventObservability,
   createCodexGoalRuntimeEventWriter,
@@ -683,7 +684,12 @@ async function codexRuntimeResultInput(input: {
   });
   const handoff = changedFiles.length === 0
     ? null
-    : await preservePatchArtifacts(input.config, input.baseCommit);
+    : await tryMaterializeTerminalCodexGoalHandoff({
+        ...input.config,
+        ...(input.baseCommit === undefined
+          ? {}
+          : { expectedBaseCommit: input.baseCommit }),
+      });
   const artifacts = handoff?.artifacts ?? [];
   const exactChangedFiles = handoff?.changedPaths ?? changedFiles;
   const details = runtimeResultDetails({
@@ -735,7 +741,12 @@ async function codexExceptionRuntimeResultInput(input: {
   const changedFiles = workspace.changedFiles;
   const handoff = changedFiles.length === 0
     ? null
-    : await preservePatchArtifacts(input.config, input.baseCommit);
+    : await tryMaterializeTerminalCodexGoalHandoff({
+        ...input.config,
+        ...(input.baseCommit === undefined
+          ? {}
+          : { expectedBaseCommit: input.baseCommit }),
+      });
   const artifacts = handoff?.artifacts ?? [];
   const exactChangedFiles = handoff?.changedPaths ?? changedFiles;
   const details = runtimeResultDetails({
@@ -944,50 +955,6 @@ function statusPorcelainPath(line: string): string {
   const path = line.length > 3 ? line.slice(3).trim() : line.trim();
   const renameTarget = path.split(" -> ").at(-1);
   return renameTarget?.trim() ?? path;
-}
-
-async function preservePatchArtifacts(
-  config: Pick<
-    CodexGoalRunConfig,
-    "workspacePath" | "jobRootDir" | "jobId" | "taskId"
-  >,
-  expectedBaseCommit?: string,
-): Promise<{
-  readonly artifacts: readonly RuntimeResultArtifact[];
-  readonly changedPaths?: readonly string[];
-  readonly errorCode?: string;
-} | null> {
-  try {
-    const materialized = await materializeCodexGoalHandoffArtifacts({
-      workerJobId: config.jobId ?? config.taskId,
-      taskId: config.taskId,
-      workspacePath: config.workspacePath,
-      jobRootDir: config.jobRootDir,
-      ...(expectedBaseCommit === undefined ? {} : { expectedBaseCommit }),
-    });
-    return materialized === null
-      ? {
-          artifacts: [],
-          errorCode: "handoff_patch_empty_for_dirty_workspace",
-        }
-      : {
-          artifacts: materialized.artifacts,
-          changedPaths: materialized.changedPaths,
-        };
-  } catch (error) {
-    return {
-      artifacts: [],
-      errorCode: safeHandoffMaterializationErrorCode(error),
-    };
-  }
-}
-
-function safeHandoffMaterializationErrorCode(error: unknown): string {
-  const message = error instanceof Error ? error.message : "";
-  const code = message.split(":", 1)[0] ?? "";
-  return /^handoff_[a-z0-9_]+$/.test(code)
-    ? code
-    : "handoff_artifact_materialization_failed";
 }
 
 function uniqueStrings(values: readonly string[]): readonly string[] {
