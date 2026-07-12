@@ -32,6 +32,7 @@ export interface GitPort {
   applyWorkerOutput(input: {
     readonly attempt: IntegrationAttempt;
     readonly workerOutput: WorkerOutput;
+    readonly allowAlreadyApplied?: boolean;
   }): Promise<GitApplyWorkerOutputResult> | GitApplyWorkerOutputResult;
 
   diffCheck(input: {

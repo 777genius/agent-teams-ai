@@ -16,6 +16,7 @@ import {
   CheckRunStatus,
   assertCommitIdentity,
   SecretScanStatus,
+  assertFilesWithinExpected,
   normalizeProjectRelativePath,
   type CheckRun,
   type CheckRunnerPort,
@@ -77,12 +78,23 @@ export class LocalGitIntegrationAdapter implements GitPort {
     };
     readonly attempt: {
       readonly targetWorkspacePath: string;
+      readonly expectedFiles: readonly string[];
     };
+    readonly allowAlreadyApplied?: boolean;
   }): Promise<GitApplyWorkerOutputResult> {
     const workspacePath = await canonicalDirectory(
       input.attempt.targetWorkspacePath,
     );
     if (input.workerOutput.commitSha) {
+      const changedFiles = await this.gitNullTerminatedPaths([
+        "diff-tree",
+        "--no-commit-id",
+        "--name-only",
+        "-r",
+        "-z",
+        input.workerOutput.commitSha,
+      ], workspacePath);
+      assertFilesWithinExpected(changedFiles, input.attempt.expectedFiles);
       await this.git(
         ["cherry-pick", "--no-commit", input.workerOutput.commitSha],
         workspacePath,
@@ -105,10 +117,31 @@ export class LocalGitIntegrationAdapter implements GitPort {
           ...workerJobRoot,
         ],
       });
-      await this.git(
-        ["apply", "--whitespace=nowarn", patchPath],
+      const changedFiles = await this.patchChangedFiles(patchPath, workspacePath);
+      assertFilesWithinExpected(changedFiles, input.attempt.expectedFiles);
+      const forwardCheck = await this.tryGit(
+        ["apply", "--check", "--whitespace=nowarn", patchPath],
         workspacePath,
       );
+      if (forwardCheck.exitCode === 0) {
+        await this.git(
+          ["apply", "--whitespace=nowarn", patchPath],
+          workspacePath,
+        );
+      } else if (
+        input.allowAlreadyApplied === true &&
+        sameFiles(changedFiles, input.attempt.expectedFiles)
+      ) {
+        const reverseCheck = await this.tryGit(
+          ["apply", "--reverse", "--check", "--whitespace=nowarn", patchPath],
+          workspacePath,
+        );
+        if (reverseCheck.exitCode !== 0) {
+          throw new Error("local_git_integration_patch_not_fully_applied");
+        }
+      } else {
+        throw new Error("local_git_integration_patch_not_applicable");
+      }
     } else {
       throw new Error("local_git_integration_worker_output_source_required");
     }
@@ -234,6 +267,33 @@ export class LocalGitIntegrationAdapter implements GitPort {
       .filter((line) => line.length > 0);
   }
 
+  private async gitNullTerminatedPaths(
+    args: readonly string[],
+    cwd: string,
+  ): Promise<readonly string[]> {
+    const result = await this.git(args, cwd);
+    return uniqueSorted(
+      result.stdout.split("\0").filter(Boolean).map(normalizeProjectRelativePath),
+    );
+  }
+
+  private async patchChangedFiles(
+    patchPath: string,
+    cwd: string,
+  ): Promise<readonly string[]> {
+    const result = await this.git(
+      ["apply", "--numstat", "-z", patchPath],
+      cwd,
+    );
+    const paths = result.stdout.split("\0").filter(Boolean).map((record) => {
+      const fields = record.split("\t");
+      const path = fields.slice(2).join("\t");
+      if (!path) throw new Error("local_git_integration_patch_path_required");
+      return normalizeProjectRelativePath(path);
+    });
+    return uniqueSorted(paths);
+  }
+
   private async tryGit(
     args: readonly string[],
     cwd: string,
@@ -248,6 +308,13 @@ export class LocalGitIntegrationAdapter implements GitPort {
       maxBuffer: this.options.maxBuffer ?? 10 * 1024 * 1024,
     });
   }
+}
+
+function sameFiles(left: readonly string[], right: readonly string[]): boolean {
+  const normalizedLeft = uniqueSorted(left.map(normalizeProjectRelativePath));
+  const normalizedRight = uniqueSorted(right.map(normalizeProjectRelativePath));
+  return normalizedLeft.length === normalizedRight.length &&
+    normalizedLeft.every((file, index) => file === normalizedRight[index]);
 }
 
 export class ConfiguredCommitIdentityAdapter implements CommitIdentityPort {

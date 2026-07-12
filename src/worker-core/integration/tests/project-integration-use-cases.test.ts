@@ -97,6 +97,30 @@ describe("project integration use cases", () => {
     expect(fixture.git.calls).toEqual(["status"]);
   });
 
+  it("allows already-applied recovery only for exact expected dirty files", async () => {
+    const recoverable = createFixture();
+    recoverable.git.dirtyFiles = ["src/memory.ts"];
+    const opened = await openProjectIntegrationAttempt(recoverable.deps(), input());
+
+    await applyWorkerOutput(recoverable.deps(), {
+      attemptId: opened.attemptId,
+      allowedPreExistingDirtyFiles: ["src/memory.ts"],
+    });
+    expect(recoverable.git.lastAllowAlreadyApplied).toBe(true);
+
+    const superset = createFixture();
+    superset.git.dirtyFiles = ["src/memory.ts"];
+    const second = await openProjectIntegrationAttempt(superset.deps(), {
+      ...input(),
+      attemptId: "attempt-2",
+    });
+    await applyWorkerOutput(superset.deps(), {
+      attemptId: second.attemptId,
+      allowedPreExistingDirtyFiles: ["src/memory.ts", "src/extra.ts"],
+    });
+    expect(superset.git.lastAllowAlreadyApplied).toBe(false);
+  });
+
   it("does not commit when required checks failed", async () => {
     const fixture = createFixture({
       checkStatus: CheckRunStatus.Failed,
@@ -574,6 +598,7 @@ class FakeGit implements GitPort {
   readonly calls: string[] = [];
   dirtyFiles: readonly string[] = [];
   branch = "main";
+  lastAllowAlreadyApplied: boolean | undefined;
 
   getStatus() {
     this.calls.push("status");
@@ -583,8 +608,9 @@ class FakeGit implements GitPort {
     };
   }
 
-  applyWorkerOutput() {
+  applyWorkerOutput(input: { readonly allowAlreadyApplied?: boolean }) {
     this.calls.push("apply");
+    this.lastAllowAlreadyApplied = input.allowAlreadyApplied;
     this.dirtyFiles = ["src/memory.ts"];
     return { changedFiles: ["src/memory.ts"] };
   }

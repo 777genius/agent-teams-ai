@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   CheckRunStatus,
+  IntegrationErrorReason,
   SecretScanStatus,
   type IntegrationAttempt,
 } from "@vioxen/subscription-runtime/worker-core";
@@ -40,7 +41,10 @@ describe("local project integration adapters", () => {
       .resolves.toEqual({ branch: "main", dirtyFiles: [] });
 
     await expect(adapter.applyWorkerOutput({
-      attempt: { targetWorkspacePath: fixture.workspacePath },
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/memory.ts"],
+      },
       workerOutput: {
         workspacePath: fixture.workspacePath,
         commitSha: fixture.workerCommitSha,
@@ -97,12 +101,113 @@ describe("local project integration adapters", () => {
     });
 
     await expect(adapter.applyWorkerOutput({
-      attempt: { targetWorkspacePath: fixture.workspacePath },
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/memory.ts"],
+      },
       workerOutput: {
         workspacePath: fixture.workspacePath,
         patchPath,
       },
     })).resolves.toEqual({ changedFiles: ["src/memory.ts"] });
+  });
+
+  it("rejects patch paths outside exact expected files before mutating the target", async () => {
+    const fixture = await createGitFixture();
+    const patchPath = join(fixture.rootDir, "worker-output.patch");
+    await writeFile(patchPath, await gitOutput(fixture.workspacePath, [
+      "show",
+      "--format=",
+      fixture.workerCommitSha,
+    ]));
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/"],
+      },
+      workerOutput: {
+        workspacePath: fixture.workspacePath,
+        patchPath,
+      },
+    })).rejects.toMatchObject({
+      reason: IntegrationErrorReason.PathOutsideExpectedFiles,
+      evidence: ["src/memory.ts"],
+    });
+    expect(await gitOutput(fixture.workspacePath, ["status", "--porcelain"]))
+      .toBe("");
+    expect(await readFile(join(fixture.workspacePath, "src", "memory.ts"), "utf8"))
+      .toBe("export const value = 1;\n");
+  });
+
+  it("recognizes a fully applied patch only when idempotent recovery is allowed", async () => {
+    const fixture = await createGitFixture();
+    const patchPath = join(fixture.rootDir, "worker-output.patch");
+    await writeFile(patchPath, await gitOutput(fixture.workspacePath, [
+      "show",
+      "--format=",
+      fixture.workerCommitSha,
+    ]));
+    await git(fixture.workspacePath, ["apply", patchPath]);
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/memory.ts"],
+      },
+      workerOutput: {
+        workspacePath: fixture.workspacePath,
+        patchPath,
+      },
+      allowAlreadyApplied: true,
+    })).resolves.toEqual({ changedFiles: ["src/memory.ts"] });
+    expect(await readFile(join(fixture.workspacePath, "src", "memory.ts"), "utf8"))
+      .toBe("export const value = 2;\n");
+  });
+
+  it("fails closed when a patch is only partially applied", async () => {
+    const fixture = await createGitFixture();
+    await git(fixture.workspacePath, ["checkout", "worker"]);
+    await writeFile(join(fixture.workspacePath, "src", "extra.ts"), "export const extra = 1;\n");
+    await git(fixture.workspacePath, ["add", "src/extra.ts"]);
+    await git(fixture.workspacePath, ["commit", "-m", "test: add second worker file"]);
+    await git(fixture.workspacePath, ["checkout", "main"]);
+    const patchPath = join(fixture.rootDir, "worker-output.patch");
+    await writeFile(patchPath, await gitOutput(fixture.workspacePath, [
+      "diff",
+      "--binary",
+      "main..worker",
+    ]));
+    await git(fixture.workspacePath, [
+      "apply",
+      "--include=src/memory.ts",
+      patchPath,
+    ]);
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/extra.ts", "src/memory.ts"],
+      },
+      workerOutput: {
+        workspacePath: fixture.workspacePath,
+        patchPath,
+      },
+      allowAlreadyApplied: true,
+    })).rejects.toThrow("local_git_integration_patch_not_fully_applied");
+    expect(await readFile(join(fixture.workspacePath, "src", "memory.ts"), "utf8"))
+      .toBe("export const value = 2;\n");
+    await expect(readFile(join(fixture.workspacePath, "src", "extra.ts"), "utf8"))
+      .rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("skips stale missing patch roots before checking an allowed root", async () => {
@@ -124,7 +229,10 @@ describe("local project integration adapters", () => {
     });
 
     await expect(adapter.applyWorkerOutput({
-      attempt: { targetWorkspacePath: fixture.workspacePath },
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/memory.ts"],
+      },
       workerOutput: {
         workspacePath: fixture.workspacePath,
         patchPath,
@@ -155,7 +263,8 @@ describe("local project integration adapters", () => {
     await expect(adapter.applyWorkerOutput({
       attempt: {
         targetWorkspacePath: fixture.workspacePath,
-      } as IntegrationAttempt,
+        expectedFiles: ["src/memory.ts"],
+      },
       workerOutput: {
         workerJobId: "worker-1",
         workspacePath: fixture.workspacePath,
@@ -166,7 +275,8 @@ describe("local project integration adapters", () => {
     await expect(adapter.applyWorkerOutput({
       attempt: {
         targetWorkspacePath: fixture.workspacePath,
-      } as IntegrationAttempt,
+        expectedFiles: ["src/memory.ts"],
+      },
       workerOutput: {
         workerJobId: "worker-1",
         workspacePath: fixture.workspacePath,

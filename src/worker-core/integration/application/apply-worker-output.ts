@@ -47,13 +47,15 @@ export async function applyWorkerOutput(
         evidence: [status.branch, attempt.targetBranch],
       });
     }
-    assertDirtyFilesAllowed(
-      status.dirtyFiles,
-      input.allowedPreExistingDirtyFiles ?? [],
-    );
+    const allowedPreExistingDirtyFiles =
+      input.allowedPreExistingDirtyFiles ?? [];
+    assertDirtyFilesAllowed(status.dirtyFiles, allowedPreExistingDirtyFiles);
     const result = await deps.git.applyWorkerOutput({
       attempt,
       workerOutput: attempt.workerOutput,
+      allowAlreadyApplied:
+        sameFiles(allowedPreExistingDirtyFiles, attempt.expectedFiles) &&
+        sameFiles(status.dirtyFiles, attempt.expectedFiles),
     });
     assertFilesWithinExpected(result.changedFiles, attempt.expectedFiles);
     const now = nowIso(deps.clock);
@@ -71,6 +73,13 @@ export async function applyWorkerOutput(
   } finally {
     await deps.locks.release(lock);
   }
+}
+
+function sameFiles(left: readonly string[], right: readonly string[]): boolean {
+  const normalizedLeft = [...new Set(left.map(normalizeProjectRelativePath))].sort();
+  const normalizedRight = [...new Set(right.map(normalizeProjectRelativePath))].sort();
+  return normalizedLeft.length === normalizedRight.length &&
+    normalizedLeft.every((file, index) => file === normalizedRight[index]);
 }
 
 function assertDirtyFilesAllowed(
