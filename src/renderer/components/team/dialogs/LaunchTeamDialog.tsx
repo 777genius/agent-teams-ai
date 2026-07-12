@@ -922,13 +922,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       }
       if (cancelled) return;
 
-      const nextMembersSource =
+      const editableMembersSource =
         members.length > 0
-          ? members
+          ? filterEditableMemberInputs(members)
           : savedRequest?.members && savedRequest.members.length > 0
-            ? savedRequest.members
+            ? filterEditableMemberInputs(savedRequest.members)
             : [];
-      const editableMembersSource = filterEditableMemberInputs(nextMembersSource);
       const storedEffort = localStorage.getItem('team:lastSelectedEffort');
       const savedProviderId = normalizeOptionalTeamProviderId(savedRequest?.providerId) ?? null;
       const savedProviderBackendId =
