@@ -23,6 +23,13 @@ import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useStore } from '@renderer/store';
 import { selectTeamDataForName } from '@renderer/store/slices/teamSlice';
 import { chipToken, serializeChipsWithText } from '@renderer/types/inlineChip';
+import {
+  type CreateTaskSubmitGate,
+  type PendingCreateTaskCommand,
+  resetCreateTaskSubmit,
+  resolveCreateTaskCommand,
+  tryBeginCreateTaskSubmit,
+} from '@renderer/utils/createTaskCommandIdentity';
 import { formatAgentRole } from '@renderer/utils/formatAgentRole';
 import { isImeComposing } from '@renderer/utils/imeComposition';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
@@ -36,7 +43,7 @@ import { AlertTriangle, ChevronDown, ChevronRight, Search } from 'lucide-react';
 
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
-import type { ResolvedTeamMember, TaskRef, TeamTaskWithKanban } from '@shared/types';
+import type { CreateTaskRequest, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -50,17 +57,7 @@ interface CreateTaskDialogProps {
   defaultStartImmediately?: boolean;
   defaultChip?: InlineChip;
   onClose: () => void;
-  onSubmit: (
-    subject: string,
-    description: string,
-    owner?: string,
-    blockedBy?: string[],
-    related?: string[],
-    prompt?: string,
-    startImmediately?: boolean,
-    descriptionTaskRefs?: TaskRef[],
-    promptTaskRefs?: TaskRef[]
-  ) => void;
+  onSubmit: (request: CreateTaskRequest) => Promise<void>;
   submitting?: boolean;
 }
 
@@ -100,10 +97,14 @@ export const CreateTaskDialog = ({
   const [relatedSearch, setRelatedSearch] = useState('');
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const prevOpenRef = useRef(false);
+  const pendingCommandRef = useRef<PendingCreateTaskCommand | null>(null);
+  const submitGateRef = useRef<CreateTaskSubmitGate>({ inFlight: false });
 
   // Reset form when dialog opens (avoid setState during render)
   useEffect(() => {
     if (open && !prevOpenRef.current) {
+      pendingCommandRef.current = null;
+      resetCreateTaskSubmit(submitGateRef.current);
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional sync on prop change
       setSubject(defaultSubject);
       if (defaultChip) {
@@ -126,6 +127,10 @@ export const CreateTaskDialog = ({
       setRelatedSearch('');
       setShowOptionalFields(false);
     }
+    if (!open && prevOpenRef.current) {
+      pendingCommandRef.current = null;
+      resetCreateTaskSubmit(submitGateRef.current);
+    }
     prevOpenRef.current = open;
   }, [
     open,
@@ -139,6 +144,12 @@ export const CreateTaskDialog = ({
     descChipDraft,
     promptDraft,
   ]);
+
+  useEffect(() => {
+    if (!submitting) {
+      resetCreateTaskSubmit(submitGateRef.current);
+    }
+  }, [submitting]);
 
   const mentionSuggestions = useMemo<MentionSuggestion[]>(
     () =>
@@ -172,7 +183,7 @@ export const CreateTaskDialog = ({
   };
 
   const handleSubmit = (): void => {
-    if (!canSubmit) return;
+    if (!canSubmit || !tryBeginCreateTaskSubmit(submitGateRef.current)) return;
     const trimmedDescription = stripEncodedTaskReferenceMetadata(descriptionDraft.value.trim());
     const trimmedPrompt = stripEncodedTaskReferenceMetadata(promptDraft.value.trim());
     const serializedDesc = serializeChipsWithText(trimmedDescription, descChipDraft.chips);
@@ -180,20 +191,25 @@ export const CreateTaskDialog = ({
     const promptTaskRefs = trimmedPrompt
       ? extractTaskRefsFromText(promptDraft.value, taskSuggestions)
       : [];
-    onSubmit(
-      subject.trim(),
-      serializedDesc,
-      owner || undefined,
-      blockedBy.length > 0 ? blockedBy : undefined,
-      related.length > 0 ? related : undefined,
-      trimmedPrompt || undefined,
+    const request: CreateTaskRequest = {
+      subject: subject.trim(),
+      description: serializedDesc || undefined,
+      owner: owner || undefined,
+      blockedBy: blockedBy.length > 0 ? blockedBy : undefined,
+      related: related.length > 0 ? related : undefined,
+      prompt: trimmedPrompt || undefined,
       startImmediately,
       descriptionTaskRefs,
-      promptTaskRefs
+      promptTaskRefs,
+    };
+    pendingCommandRef.current = resolveCreateTaskCommand(
+      pendingCommandRef.current,
+      teamName,
+      request
     );
-    descriptionDraft.clearDraft();
-    descChipDraft.clearChipDraft();
-    promptDraft.clearDraft();
+    void onSubmit({ ...request, command: pendingCommandRef.current.identity }).finally(() => {
+      resetCreateTaskSubmit(submitGateRef.current);
+    });
   };
 
   const handleOpenChange = (nextOpen: boolean): void => {

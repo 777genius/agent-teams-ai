@@ -9,6 +9,10 @@ function createTask(context, flags) {
   return tasks.createTask(context, flags);
 }
 
+function reconcileTaskCreation(context, flags) {
+  return tasks.reconcileTaskCreation(context, flags);
+}
+
 function getTask(context, taskId) {
   return tasks.getTask(context, taskId);
 }
@@ -171,6 +175,7 @@ module.exports = {
   memberBriefing,
   removeReviewer,
   removeTaskAttachment,
+  reconcileTaskCreation,
   requestChanges,
   requestReview,
   resolveTaskId,
