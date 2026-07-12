@@ -144,6 +144,16 @@ describe('HTTP team route parsers', () => {
     );
 
     expectBadRequest(
+      () => parseCreateTeamRequest({ teamName: 'new-team', members: null }),
+      'members must be an array'
+    );
+
+    expectBadRequest(
+      () => parseCreateTeamRequest({ teamName: 'new-team' }),
+      'members must be an array'
+    );
+
+    expectBadRequest(
       () =>
         parseCreateTeamRequest({
           teamName: 'new-team',
@@ -203,6 +213,33 @@ describe('HTTP team route parsers', () => {
         ),
       'cwd is required'
     );
+  });
+
+  it.each([
+    { body: [], bodyType: 'array' },
+    { body: 'use the saved draft', bodyType: 'string' },
+    { body: null, bodyType: 'null' },
+  ])('rejects an explicit $bodyType draft launch body', ({ body }) => {
+    const savedRequest: TeamCreateRequest = {
+      teamName: 'draft-team',
+      cwd: '/Users/test/saved-project',
+      members: [{ name: 'builder' }],
+    };
+
+    expectBadRequest(
+      () => parseDraftLaunchCreateRequest(savedRequest, body),
+      'draft launch body must be an object'
+    );
+  });
+
+  it.each([undefined, {}])('accepts an omitted or empty draft launch override', (body) => {
+    const savedRequest: TeamCreateRequest = {
+      teamName: 'draft-team',
+      cwd: '/Users/test/saved-project',
+      members: [{ name: 'builder' }],
+    };
+
+    expect(parseDraftLaunchCreateRequest(savedRequest, body)).toMatchObject(savedRequest);
   });
 
   it('normalizes runtime callback bodies to the route team name', () => {

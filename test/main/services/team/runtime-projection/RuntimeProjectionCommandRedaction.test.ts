@@ -30,6 +30,20 @@ describe('runtime projection command redaction', () => {
     expect(sanitized).not.toContain(sentinel);
   });
 
+  it.each(['<', '>'])(
+    'redacts a %s(...) process-substitution value as one shell word',
+    (operator) => {
+      const sentinel = `process-substitution-${operator === '<' ? 'input' : 'output'}-sentinel`;
+      const command =
+        `node runtime --token ${operator}(printf '%s' ${sentinel}) ` + '--verbose --team-name demo';
+
+      const sanitized = sanitizeRuntimeProjectionProcessCommand(command);
+
+      expect(sanitized).toBe('node runtime --token [redacted] --verbose --team-name demo');
+      expect(sanitized).not.toContain(sentinel);
+    }
+  );
+
   it('does not consume short or long option boundaries when a secret value is missing', () => {
     expect(sanitizeRuntimeProjectionProcessCommand('node runtime --token -v --safe ok')).toBe(
       'node runtime --token [redacted] -v --safe ok'

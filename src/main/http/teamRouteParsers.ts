@@ -180,9 +180,6 @@ export function parseCreateMembers(
   payloadMembers: unknown,
   defaultProviderId: TeamLaunchRequest['providerId']
 ): TeamCreateConfigRequest['members'] {
-  if (payloadMembers == null) {
-    return [];
-  }
   if (!Array.isArray(payloadMembers)) {
     throw new HttpBadRequestError('members must be an array');
   }
@@ -325,7 +322,13 @@ export function parseCreateTeamRequest(body: unknown): TeamCreateConfigRequest {
 }
 
 function getObjectPayload(body: unknown): Record<string, unknown> {
-  return body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
+  if (body === undefined) {
+    return {};
+  }
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    throw new HttpBadRequestError('draft launch body must be an object');
+  }
+  return body as Record<string, unknown>;
 }
 
 function pickOptionalString(

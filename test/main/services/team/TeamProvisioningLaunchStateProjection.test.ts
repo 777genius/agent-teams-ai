@@ -213,6 +213,30 @@ describe('TeamProvisioningLaunchStateProjection', () => {
     ).toBe(false);
   });
 
+  it('rejects secondary confirmation evidence without a current lane run id', () => {
+    expect(
+      areAllExpectedLaunchMembersConfirmed({
+        expectedMembers: ['Lead'],
+        memberSpawnStatuses: new Map([
+          [
+            'Lead',
+            makeStatus({
+              launchState: 'confirmed_alive',
+              bootstrapConfirmed: true,
+            }),
+          ],
+        ]),
+        mixedSecondaryLanes: [
+          {
+            member: { name: 'Builder' },
+            state: 'finished',
+            result: makeRuntimeResult(makeEvidence({ memberName: 'Builder' })),
+          },
+        ],
+      })
+    ).toBe(false);
+  });
+
   it('projects lane metadata presence without mutating snapshots', () => {
     const secondary = makeSnapshot({
       Builder: makeMember('Builder', {
@@ -229,9 +253,9 @@ describe('TeamProvisioningLaunchStateProjection', () => {
       }),
     });
 
-    expect(getPersistedLaunchMemberNames(makeSnapshot({ Builder: makeMember('Builder') }))).toEqual([
-      'Builder',
-    ]);
+    expect(getPersistedLaunchMemberNames(makeSnapshot({ Builder: makeMember('Builder') }))).toEqual(
+      ['Builder']
+    );
     expect(hasMixedLaunchMetadata(secondary)).toBe(true);
     expect(hasMixedSecondaryLaunchMetadata(secondary)).toBe(true);
     expect(hasPrimaryOnlyLaneAwareLaunchMetadata(secondary)).toBe(false);

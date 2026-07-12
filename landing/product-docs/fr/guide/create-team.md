@@ -30,9 +30,6 @@ Chaque membre de l'équipe s'exécute sur un backend fournisseur. Dans l'éditeu
 
 Le mélange de fournisseurs au sein d'une même équipe est pris en charge — par exemple, un lead Claude avec des builders OpenCode.
 
-::: info
-Gemini est disponible comme parcours fournisseur pris en charge. Consultez [Fournisseurs et runtimes](/fr/reference/providers-runtimes) pour les options d'authentification et le statut actuel des fournisseurs.
-:::
 
 ## Rédiger un bon brief d'équipe
 

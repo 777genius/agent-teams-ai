@@ -20,6 +20,21 @@
       "description": "Her gorev icin diff gorunumu, kabul, reddetme ve yorum. Git destekli yerlesik kod editoru."
     },
     {
+      "id": "tokenUsage",
+      "title": "Token Analizi ve Bütçeler",
+      "description": "Tokenların ve tahmini maliyetlerin ekipler, ajanlar, görevler, projeler, modeller ve çalıştırmalar arasında nereye gittiğini görün. Pahalı işleri bulun, eğilimleri ve tahminleri izleyin, aylık bütçeler belirleyin ve %80 ile %100 seviyelerinde uyarı alın."
+    },
+    {
+      "id": "organizations",
+      "title": "Organizasyonlar ve Genel Bakış",
+      "description": "Ekipleri departmanlar, squadlar veya istediğiniz iç içe yapıda düzenleyin. Tüm organizasyonları ekip ve ajan durumları, görev ilerlemesi, bağımlılıklar, delegasyon ve ekipler arası iletişimle tek bir canlı haritada izleyin."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Ekip ve yerel shell, gecmis, otomatik tamamlama ve ayarlara sahip gorsel terminalde komut calistir."
+    },
+    {
       "id": "crossTeam",
       "title": "Ekipler arasi iletisim",
       "description": "Ajanlar ayni ekip icinde ve ekipler arasinda mesajlasir. Direkt mesajlar, gorev yorumlari ve hizli aksiyonlar."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Solo mod",
       "description": "Gorevlerini kendi yoneten tek bir ajanla basla. Daha fazla guc gerektiginde tam ekibe genislet."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Canli surecler",
-      "description": "Calisan ajanlari gor, URLleri tarayicida ac, token kullanimini ve oturum baglamini gercek zamanli izle."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Agent Teams nedir?",
-      "answer": "Yerel koordinasyon katmanimizla AI ajan ekiplerini yoneten bir masaustu uygulamasi. Ajanlar rollere sahiptir, otonom calisir, kanban panosu uzerinden is birligi yapar ve Anthropic ya da Codex ile calisabilir."
+      "answer": "Yerel koordinasyon katmanimizla AI ajan ekiplerini yoneten bir masaustu uygulamasi. Ajanlar rollere sahiptir, otonom calisir, kanban panosu uzerinden is birligi yapar ve Claude, Codex ya da OpenCode ile calisabilir."
     },
     {
       "id": "isFree",

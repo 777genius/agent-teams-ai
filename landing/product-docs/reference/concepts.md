@@ -61,7 +61,7 @@ The runtime owns model execution behavior, auth details, tool execution semantic
 
 ## Provider
 
-A provider is the model access path behind a runtime. Current provider ids include Anthropic, Codex, Gemini, and OpenCode. OpenCode can route to many model providers through its own configuration.
+A provider is the model access path behind a runtime. Current provider ids include Anthropic, Codex, and OpenCode. OpenCode can route to many model providers through its own configuration.
 
 Agent Teams orchestrates tasks and messages, but it does not replace provider authentication or provider policy.
 

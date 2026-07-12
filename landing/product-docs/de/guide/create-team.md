@@ -30,9 +30,6 @@ Jedes Teammitglied läuft auf einem Anbieter-Backend. Wählen Sie im Team-Editor
 
 Das Mischen von Anbietern innerhalb eines Teams wird unterstützt — zum Beispiel ein Claude-Lead mit OpenCode-Buildern.
 
-::: info
-Gemini steht als unterstützter Anbieter-Pfad zur Verfügung. Weitere Informationen zu Authentifizierungsoptionen und zum aktuellen Anbieterstatus finden Sie unter [Anbieter und Runtimes](/de/reference/providers-runtimes).
-:::
 
 ## Ein gutes Team-Briefing schreiben
 

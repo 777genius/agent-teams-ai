@@ -62,7 +62,7 @@ El runtime se encarga del comportamiento de ejecución del modelo, los detalles 
 
 ## Proveedor
 
-Un proveedor es la ruta de acceso a los modelos que hay detrás de un runtime. Los ids de proveedor actuales incluyen Anthropic, Codex, Gemini y OpenCode. OpenCode puede enrutar hacia muchos proveedores de modelos mediante su propia configuración.
+Un proveedor es la ruta de acceso a los modelos que hay detrás de un runtime. Los ids de proveedor actuales incluyen Anthropic, Codex y OpenCode. OpenCode puede enrutar hacia muchos proveedores de modelos mediante su propia configuración.
 
 Agent Teams orquesta tareas y mensajes, pero no sustituye la autenticación del proveedor ni la política del proveedor.
 

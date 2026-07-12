@@ -39,12 +39,8 @@ Agent Teams 以桌面应用的形式分发，支持 macOS、Windows 和 Linux。
 | ------------------ | ------------------------------------------------- |
 | Claude (Anthropic) | Claude Code CLI 登录或 API 密钥                   |
 | Codex (OpenAI)     | Codex CLI 登录或 API 密钥                         |
-| Gemini (Google)    | Google ADC、Gemini CLI 或 API 密钥                |
 | OpenCode           | 内置的无需认证免费模型，或用于受支持后端（例如 OpenRouter）的 API 密钥 |
 
-::: info
-Gemini 作为受支持的提供方路径提供。关于所有提供方的认证选项和当前状态，请参阅[提供方与运行时](/zh/reference/providers-runtimes)。
-:::
 
 对于源码开发，你还需要：
 

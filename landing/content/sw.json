@@ -20,6 +20,21 @@
       "description": "Diff view kwa kila task pamoja na accept, reject na comment. Code editor ya ndani yenye Git support."
     },
     {
+      "id": "tokenUsage",
+      "title": "Uchanganuzi wa Tokeni na Bajeti",
+      "description": "Ona matumizi ya tokeni na makadirio ya gharama kwa timu, mawakala, kazi, miradi, modeli na uendeshaji. Tambua kazi ghali, fuatilia mielekeo na utabiri, weka bajeti za mwezi na upate arifa kwa 80% na 100%."
+    },
+    {
+      "id": "organizations",
+      "title": "Mashirika na Muhtasari wa Jumla",
+      "description": "Panga timu katika idara, vikosi au muundo wowote wenye ngazi. Ona mashirika yote kwenye ramani moja ya moja kwa moja yenye hali za timu na mawakala, maendeleo ya kazi, utegemezi, ugawaji na mawasiliano kati ya timu."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Endesha commands kwenye visual terminal workspace yenye team na local shells, history, autocomplete na settings."
+    },
+    {
       "id": "crossTeam",
       "title": "Mawasiliano kati ya timu",
       "description": "Agents hutumiana ujumbe ndani ya timu na kati ya timu. Direct messages, task comments na quick actions."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Solo mode",
       "description": "Anza na agent mmoja anayejisimamia tasks. Panua kuwa timu kamili unapohitaji nguvu zaidi."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Live processes",
-      "description": "Ona agents zinazoendelea, fungua URLs kwenye browser na fuatilia token usage na session context realtime."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Agent Teams ni nini?",
-      "answer": "Desktop app ya kuendesha timu za AI agents kwa local coordination layer yetu. Agents zina roles, hufanya kazi autonomously, hushirikiana kupitia kanban board na zinaweza kutumia Anthropic au Codex."
+      "answer": "Desktop app ya kuendesha timu za AI agents kwa local coordination layer yetu. Agents zina roles, hufanya kazi autonomously, hushirikiana kupitia kanban board na zinaweza kutumia Claude, Codex au OpenCode."
     },
     {
       "id": "isFree",

@@ -125,6 +125,26 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
     );
   });
 
+  it('formats a non-object MCP config as a normalized validation error', async () => {
+    const normalizeApiRetryErrorMessage = vi.fn((text: string) => text);
+    const ports = createFakePorts({
+      readFileUtf8: vi.fn().mockResolvedValue('null'),
+      normalizeApiRetryErrorMessage,
+    });
+
+    await expect(
+      readAgentTeamsMcpLaunchSpec({
+        mcpConfigPath: '/tmp/mcp.json',
+        ports,
+      })
+    ).rejects.toThrow(
+      'agent-teams MCP preflight failed before team launch. Details: Generated MCP config /tmp/mcp.json must be a JSON object.'
+    );
+    expect(normalizeApiRetryErrorMessage).toHaveBeenCalledWith(
+      'Generated MCP config /tmp/mcp.json must be a JSON object.'
+    );
+  });
+
   it('preserves a pre-normalized validation error through runtime validation', async () => {
     const normalizedError =
       'agent-teams MCP preflight failed before team launch. Details: generated config is invalid';
@@ -319,6 +339,35 @@ describe('TeamProvisioningProviderDiagnostics provider probes', () => {
       'provider_one_shot_diagnostic_start',
       'provider_one_shot_diagnostic_complete',
     ]);
+  });
+
+  it('accepts PONG from stderr when stdout also contains diagnostic output', async () => {
+    const spawnProbe = vi
+      .fn<TeamProvisioningProviderDiagnosticsPorts['spawnProbe']>()
+      .mockResolvedValue({
+        exitCode: 0,
+        stdout: 'provider diagnostic banner',
+        stderr: 'PONG',
+      });
+    const appendPreflightDebugLog =
+      vi.fn<TeamProvisioningProviderDiagnosticsPorts['appendPreflightDebugLog']>();
+    const ports = createFakePorts({ spawnProbe, appendPreflightDebugLog });
+
+    await expect(
+      runProviderOneShotDiagnostic({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        providerId: 'codex',
+        ports,
+      })
+    ).resolves.toEqual({});
+
+    expect(spawnProbe).toHaveBeenCalledOnce();
+    expect(appendPreflightDebugLog).toHaveBeenLastCalledWith(
+      'provider_one_shot_diagnostic_complete',
+      expect.objectContaining({ ok: true })
+    );
   });
 });
 

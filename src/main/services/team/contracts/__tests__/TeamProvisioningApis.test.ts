@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import {
   bindTeamClaudeLogsApi,
@@ -29,6 +29,7 @@ import type {
   TeamMessagingApi,
   TeamOpenCodeMemberInboxRelayOptions,
   TeamProvisioningPreflightApi,
+  TeamProvisioningPrepareOptions,
   TeamProvisioningRunApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
@@ -48,6 +49,7 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamLaunchResponse,
+  TeamProvisioningModelCheckRequest,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamRuntimeState,
@@ -119,17 +121,21 @@ describe('TeamProvisioning API binders', () => {
   it('binds provisioning preflight methods to the source object', async () => {
     interface PreflightSource extends TeamProvisioningPreflightApi {
       readonly cwd: string;
+      receivedOptions: TeamProvisioningPrepareOptions | undefined;
     }
 
     const source: PreflightSource = {
       cwd: TEST_TEAM_CWD,
+      receivedOptions: undefined,
       getCliHelpOutput(this: PreflightSource): Promise<string> {
         return Promise.resolve(`Usage ${this.cwd}`);
       },
       prepareForProvisioning(
         this: PreflightSource,
-        cwd?: string
+        cwd?: string,
+        opts?: TeamProvisioningPrepareOptions
       ): Promise<TeamProvisioningPrepareResult> {
+        this.receivedOptions = opts;
         return Promise.resolve({
           ready: true,
           message: cwd ?? this.cwd,
@@ -142,11 +148,76 @@ describe('TeamProvisioning API binders', () => {
     const prepareForProvisioning = api.prepareForProvisioning.bind(undefined);
 
     await expect(getCliHelpOutput()).resolves.toBe(`Usage ${TEST_TEAM_CWD}`);
-    await expect(prepareForProvisioning('/workspace/preflight')).resolves.toEqual({
+    await expect(
+      prepareForProvisioning('/workspace/preflight', {
+        modelIds: ['gpt-5.4'],
+        modelChecks: [{ providerId: 'codex', model: 'gpt-5.4', effort: 'medium' }],
+        modelVerificationMode: 'compatibility',
+      })
+    ).resolves.toEqual({
       ready: true,
       message: '/workspace/preflight',
     });
+    expect(source.receivedOptions).toEqual({
+      modelIds: ['gpt-5.4'],
+      modelChecks: [{ providerId: 'codex', model: 'gpt-5.4', effort: 'medium' }],
+      modelVerificationMode: 'compatibility',
+    });
   });
+
+  it.each(['modelIds', 'modelChecks'] as const)(
+    'rejects a sparse preflight %s array before dispatching to the source',
+    async (field) => {
+      let prepareCalls = 0;
+      const source: TeamProvisioningPreflightApi = {
+        getCliHelpOutput: () => Promise.resolve('Usage'),
+        prepareForProvisioning: () => {
+          prepareCalls += 1;
+          return Promise.resolve({ ready: true, message: 'ready' });
+        },
+      };
+      const opts: TeamProvisioningPrepareOptions = {};
+      if (field === 'modelIds') {
+        const modelIds: string[] = [];
+        modelIds.length = 1;
+        opts.modelIds = modelIds;
+      } else {
+        const modelChecks: TeamProvisioningModelCheckRequest[] = [];
+        modelChecks.length = 1;
+        opts.modelChecks = modelChecks;
+      }
+
+      await expect(
+        bindTeamProvisioningPreflightApi(source).prepareForProvisioning(undefined, opts)
+      ).rejects.toThrow(`TeamProvisioningPrepareOptions.${field} must not contain missing indices`);
+      expect(prepareCalls).toBe(0);
+    }
+  );
+
+  it.each(['modelIds', 'modelChecks'] as const)(
+    'rejects an undefined preflight %s index before dispatching to the source',
+    async (field) => {
+      let prepareCalls = 0;
+      const source: TeamProvisioningPreflightApi = {
+        getCliHelpOutput: () => Promise.resolve('Usage'),
+        prepareForProvisioning: () => {
+          prepareCalls += 1;
+          return Promise.resolve({ ready: true, message: 'ready' });
+        },
+      };
+      const opts: TeamProvisioningPrepareOptions =
+        field === 'modelIds'
+          ? { modelIds: [undefined] as unknown as string[] }
+          : {
+              modelChecks: [undefined] as unknown as TeamProvisioningModelCheckRequest[],
+            };
+
+      await expect(
+        bindTeamProvisioningPreflightApi(source).prepareForProvisioning(undefined, opts)
+      ).rejects.toThrow(`TeamProvisioningPrepareOptions.${field} must not contain missing indices`);
+      expect(prepareCalls).toBe(0);
+    }
+  );
 
   it('binds provisioning run and log diagnostic methods to the source object', async () => {
     interface RunSource extends TeamProvisioningRunApi {
@@ -799,6 +870,7 @@ describe('TeamProvisioning API binders', () => {
       cleared: string[];
       relayedTeamName: string | null;
       relayedInbox: string | null;
+      relayedOptions: TeamOpenCodeMemberInboxRelayOptions | undefined;
     }
 
     const source: CrossTeamSource = {
@@ -807,6 +879,7 @@ describe('TeamProvisioning API binders', () => {
       cleared: [],
       relayedTeamName: null,
       relayedInbox: null,
+      relayedOptions: undefined,
       resolveCrossTeamReplyMetadata(this: CrossTeamSource, teamName: string, toTeam: string) {
         return {
           conversationId: `${this.marker}:${teamName}:${toTeam}`,
@@ -835,9 +908,18 @@ describe('TeamProvisioning API binders', () => {
       relayInboxFileToLiveRecipient(
         this: CrossTeamSource,
         teamName: string,
-        inboxName: string
-      ): Promise<{ kind: 'native_lead'; relayed: number }> {
+        inboxName: string,
+        options?: TeamOpenCodeMemberInboxRelayOptions
+      ): ReturnType<TeamCrossTeamMessagingApi['relayInboxFileToLiveRecipient']> {
         this.relayedInbox = `${teamName}:${inboxName}`;
+        this.relayedOptions = options;
+        if (options?.onlyMessageId) {
+          return Promise.resolve({
+            kind: 'opencode_member',
+            relayed: 1,
+            lastDelivery: { delivered: true },
+          });
+        }
         return Promise.resolve({ kind: 'native_lead', relayed: 4 });
       },
       relayLeadInboxMessages(this: CrossTeamSource, teamName: string): Promise<number> {
@@ -854,6 +936,11 @@ describe('TeamProvisioning API binders', () => {
       api.clearPendingCrossTeamReplyExpectation.bind(undefined);
     const relayInboxFileToLiveRecipient = api.relayInboxFileToLiveRecipient.bind(undefined);
     const relayLeadInboxMessages = api.relayLeadInboxMessages.bind(undefined);
+
+    type RelayResult = Awaited<ReturnType<typeof relayInboxFileToLiveRecipient>>;
+    expectTypeOf<RelayResult['kind']>().toEqualTypeOf<
+      'ignored' | 'native_lead' | 'native_member_noop' | 'opencode_member'
+    >();
 
     expect(Object.keys(api).sort()).toEqual([
       'clearPendingCrossTeamReplyExpectation',
@@ -872,11 +959,21 @@ describe('TeamProvisioning API binders', () => {
     expect(source.registered).toEqual(['team-a:team-b:conversation-1']);
     expect(source.cleared).toEqual(['team-a:team-b:conversation-1']);
     expect(api.isTeamAlive('source-bound')).toBe(true);
+    await expect(
+      relayInboxFileToLiveRecipient('team-b', 'worker', { onlyMessageId: 'message-1' })
+    ).resolves.toEqual({
+      kind: 'opencode_member',
+      relayed: 1,
+      lastDelivery: { delivered: true },
+    });
+    expect(source.relayedInbox).toBe('team-b:worker');
+    expect(source.relayedOptions).toEqual({ onlyMessageId: 'message-1' });
     await expect(relayInboxFileToLiveRecipient('team-b', 'team-lead')).resolves.toEqual({
       kind: 'native_lead',
       relayed: 4,
     });
     expect(source.relayedInbox).toBe('team-b:team-lead');
+    expect(source.relayedOptions).toBeUndefined();
     await expect(relayLeadInboxMessages('team-b')).resolves.toBe(3);
     expect(source.relayedTeamName).toBe('team-b');
   });

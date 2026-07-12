@@ -20,6 +20,21 @@
       "description": "प्रत्येक task साठी diff view, accept, reject आणि comments. Git support असलेला built-in code editor."
     },
     {
+      "id": "tokenUsage",
+      "title": "टोकन विश्लेषण आणि बजेट",
+      "description": "टीम, एजंट, टास्क, प्रोजेक्ट, मॉडेल आणि रनमध्ये टोकन व अंदाजित खर्च कुठे होतो ते पहा. महाग काम शोधा, ट्रेंड आणि अंदाज पाहा, मासिक बजेट ठरवा आणि 80% व 100% वर सूचना मिळवा."
+    },
+    {
+      "id": "organizations",
+      "title": "संस्था आणि संपूर्ण आढावा",
+      "description": "टीमना विभाग, स्क्वॉड किंवा कोणत्याही नेस्टेड रचनेत व्यवस्थित करा. एका लाइव्ह मॅपवर सर्व संस्था, टीम व एजंट स्थिती, टास्क प्रगती, अवलंबित्वे, प्रतिनिधीत्व आणि टीममधील संवाद पहा."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "टर्मिनल",
+      "description": "Team आणि local shells, history, autocomplete आणि settings असलेल्या visual terminal workspace मध्ये commands चालवा."
+    },
+    {
       "id": "crossTeam",
       "title": "Teams मधला संवाद",
       "description": "Agents team मध्ये आणि teams मधे messages करतात. Direct messages, task comments आणि quick actions."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Solo mode",
       "description": "स्वतः tasks manage करणाऱ्या एका agent पासून सुरुवात करा. जास्त power हवी तेव्हा full team करा."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Live processes",
-      "description": "Running agents पहा, browser मध्ये URLs उघडा आणि token usage व session context realtime monitor करा."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Agent Teams म्हणजे काय?",
-      "answer": "Local coordination layer सह AI agent teams orchestrate करणारा desktop app. Agents ना roles असतात, ते autonomous काम करतात, kanban board वर collaborate करतात आणि Anthropic किंवा Codex वर run होऊ शकतात."
+      "answer": "Local coordination layer सह AI agent teams orchestrate करणारा desktop app. Agents ना roles असतात, ते autonomous काम करतात, kanban board वर collaborate करतात आणि Claude, Codex किंवा OpenCode वर run होऊ शकतात."
     },
     {
       "id": "isFree",

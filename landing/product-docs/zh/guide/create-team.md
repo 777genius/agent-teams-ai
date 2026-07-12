@@ -30,9 +30,6 @@ lang: zh-Hans
 
 支持在一个团队中混用多个提供方——例如，一个 Claude lead 搭配若干 OpenCode builders。
 
-::: info
-Gemini 作为受支持的提供方路径可用。有关身份验证选项和当前提供方状态，请参阅[提供方与运行时](/zh/reference/providers-runtimes)。
-:::
 
 ## 编写一份好的团队简报
 

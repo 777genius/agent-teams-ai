@@ -16,7 +16,7 @@ lang: ru-RU
 
 ## Какие runtimes поддерживаются?
 
-Поддерживаемые runtime paths: Claude Code, Codex и OpenCode. App также отслеживает provider ids вроде Anthropic, Codex, Gemini и OpenCode, когда runtime их отдаёт.
+Поддерживаемые runtime paths: Claude Code, Codex и OpenCode. App также отслеживает provider ids вроде Anthropic, Codex и OpenCode, когда runtime их отдаёт.
 
 ## Нужно ли заранее ставить Claude Code или Codex?
 

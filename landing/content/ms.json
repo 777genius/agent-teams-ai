@@ -20,6 +20,21 @@
       "description": "Paparan diff untuk setiap task dengan accept, reject dan comment. Editor kod terbina dalam dengan sokongan Git."
     },
     {
+      "id": "tokenUsage",
+      "title": "Analitik Token & Belanjawan",
+      "description": "Lihat penggunaan token dan anggaran kos merentas pasukan, ejen, tugasan, projek, model dan proses. Kenal pasti kerja mahal, ikuti trend dan ramalan, tetapkan belanjawan bulanan serta terima amaran pada 80% dan 100%."
+    },
+    {
+      "id": "organizations",
+      "title": "Organisasi & Gambaran Global",
+      "description": "Susun pasukan mengikut jabatan, skuad atau sebarang struktur bertingkat. Lihat semua organisasi pada satu peta langsung dengan status pasukan dan ejen, kemajuan tugasan, kebergantungan, delegasi dan komunikasi antara pasukan."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Jalankan arahan dalam terminal visual dengan shell pasukan dan lokal, sejarah, auto lengkap dan tetapan."
+    },
+    {
       "id": "crossTeam",
       "title": "Komunikasi antara pasukan",
       "description": "Agent menghantar mesej dalam pasukan dan antara pasukan. Mesej terus, komen task dan tindakan pantas."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Mod solo",
       "description": "Mulakan dengan satu agent yang mengurus task sendiri. Kembangkan kepada pasukan penuh bila perlukan lebih kuasa."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Proses live",
-      "description": "Lihat agent yang sedang berjalan, buka URL dalam browser dan pantau token usage serta session context secara realtime."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Apa itu Agent Teams?",
-      "answer": "Aplikasi desktop untuk mengorkestra pasukan agent AI dengan lapisan koordinasi lokal kami. Agent mempunyai role, bekerja autonomi, bekerjasama melalui kanban board dan boleh berjalan pada Anthropic atau Codex."
+      "answer": "Aplikasi desktop untuk mengorkestra pasukan agent AI dengan lapisan koordinasi lokal kami. Agent mempunyai role, bekerja autonomi, bekerjasama melalui kanban board dan boleh berjalan dengan Claude, Codex atau OpenCode."
     },
     {
       "id": "isFree",

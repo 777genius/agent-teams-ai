@@ -20,6 +20,21 @@
       "description": "ஒவ்வொரு task-க்கும் diff view, accept, reject, comment. Git support உடன் built-in code editor."
     },
     {
+      "id": "tokenUsage",
+      "title": "டோக்கன் பகுப்பாய்வு மற்றும் பட்ஜெட்கள்",
+      "description": "குழுக்கள், ஏஜென்ட்கள், பணிகள், திட்டங்கள், மாடல்கள் மற்றும் இயக்கங்களில் டோக்கன்களும் மதிப்பிடப்பட்ட செலவும் எங்கு செல்கின்றன என்பதைப் பாருங்கள். அதிக செலவான பணிகளை கண்டறிந்து, போக்குகள் மற்றும் முன்னறிவிப்புகளைப் பின்தொடர்ந்து, மாதாந்திர பட்ஜெட்களை அமைத்து 80% மற்றும் 100%-இல் எச்சரிக்கைகளைப் பெறுங்கள்."
+    },
+    {
+      "id": "organizations",
+      "title": "அமைப்புகள் மற்றும் முழுப் பார்வை",
+      "description": "குழுக்களை துறைகள், ஸ்குவாட்கள் அல்லது எந்த அடுக்கமைப்பிலும் ஒழுங்குபடுத்துங்கள். ஒரே நேரடி வரைபடத்தில் அனைத்து அமைப்புகளையும், குழு மற்றும் ஏஜென்ட் நிலைகளையும், பணி முன்னேற்றம், சார்புகள், ஒப்படைப்பு மற்றும் குழுக்களுக்கிடையேயான தொடர்பையும் பாருங்கள்."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Team மற்றும் local shells, history, autocomplete, settings கொண்ட visual terminal workspace-ல் commands இயக்கவும்."
+    },
+    {
       "id": "crossTeam",
       "title": "குழுக்கள் இடையேயான தொடர்பு",
       "description": "Agents ஒரே குழுவிலும் பல குழுக்களிடையிலும் message செய்கின்றன. Direct messages, task comments, quick actions."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Solo mode",
       "description": "தன் tasks-ஐ தானாக நிர்வகிக்கும் ஒரு agent-இல் தொடங்குங்கள். அதிக சக்தி தேவைப்பட்டால் முழு குழுவாக விரிவாக்குங்கள்."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Live processes",
-      "description": "இயங்கும் agents-ஐ பார்க்கவும், browser-ல் URLs திறக்கவும், token usage மற்றும் session context-ஐ real time-ல் கண்காணிக்கவும்."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Agent Teams என்றால் என்ன?",
-      "answer": "உள்ளூர் coordination layer உடன் AI agent குழுக்களை இயக்கும் desktop app. Agents-க்கு roles இருக்கும், அவை autonomous ஆக வேலை செய்யும், kanban board மூலம் collaborate செய்யும், Anthropic அல்லது Codex-ல் இயங்கும்."
+      "answer": "உள்ளூர் coordination layer உடன் AI agent குழுக்களை இயக்கும் desktop app. Agents-க்கு roles இருக்கும், அவை autonomous ஆக வேலை செய்யும், kanban board மூலம் collaborate செய்யும், Claude, Codex அல்லது OpenCode-ல் இயங்கும்."
     },
     {
       "id": "isFree",

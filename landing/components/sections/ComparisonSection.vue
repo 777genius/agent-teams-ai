@@ -7,7 +7,7 @@ const showComparisonRobotBubble = ref(false)
 let comparisonRobotObserver: IntersectionObserver | null = null
 
 const ruNotes: Record<string, string> = {
-  'Messages between separate teams': 'Сообщения между отдельными командами',
+  'Direct agent messages and shared task links across teams': 'Прямые сообщения агентов и общие ссылки на задачи между командами',
   'Coordination across groups': 'Координация между группами',
   'Company-scoped org work': 'Оргработа на уровне компании',
   'Native real-time mailbox': 'Нативный mailbox в реальном времени',
@@ -18,7 +18,7 @@ const ruNotes: Record<string, string> = {
   'Task deps + grouped work': 'Зависимости задач и группировка работ',
   'Goals, parent tasks, blockers': 'Цели, родительские задачи, блокеры',
   'Shared task list': 'Общий список задач',
-  'Task logs + token usage': 'Логи задач и расход токенов',
+  'Agent messages, tool calls, timeline, token use, and cost': 'Сообщения агентов, действия, таймлайн, токены и стоимость',
   'Session recall, feed, metrics': 'Память сессий, лента, метрики',
   'Run transcripts + cost audit': 'Транскрипты запусков и аудит стоимости',
   'Run transcripts + audit log': 'Транскрипты запусков и журнал аудита',
@@ -33,35 +33,40 @@ const ruNotes: Record<string, string> = {
   'With Git support': 'С поддержкой Git',
   'Control plane, not editor': 'Панель управления, не редактор',
   'Full IDE': 'Полная IDE',
-  'Plan, assign, work, and review': 'Планирует, назначает, работает и ревьюит',
-  'Coordinator, grouped work, recovery': 'Координатор, группировка работ, восстановление',
-  'Wake-up runs + governance': 'Отложенные запуски и управление',
-  'Cloud agents, not teams': 'Cloud agents, не команды',
-  'Experimental CLI teams': 'Экспериментальные CLI-команды',
+  'Built-in visual terminal for team and local commands': 'Встроенный визуальный терминал для командных и локальных команд',
+  'Terminal-based workflow, no built-in terminal': 'Работа через внешний терминал, без встроенного терминала',
+  'Runs commands, no interactive terminal': 'Запускает команды, но без интерактивного терминала',
+  'Built-in IDE terminal': 'Встроенный терминал в IDE',
+  'Runs in your terminal': 'Работает в вашем терминале',
+  'Live agents plan, delegate, work, and review together': 'Живые агенты вместе планируют, делят работу и проводят ревью',
+  'Persistent teams with coordination and recovery': 'Постоянные команды с координацией и восстановлением',
+  'Durable scheduled agents, less live peer teamwork': 'Надёжные агенты по расписанию, но меньше живой работы друг с другом',
+  'Parallel agents coordinated by one parent': 'Параллельные агенты под управлением одного главного агента',
+  'Experimental teams with known recovery limits': 'Экспериментальные команды с известными ограничениями восстановления',
   'Tasks wait for blockers automatically': 'Задачи автоматически ждут блокеры',
   'Dependency waves': 'Волны зависимостей',
   'Blockers + execution locks': 'Блокеры и execution locks',
   'Team task deps, no UI': 'Зависимости командных задач, без UI',
-  'Agents review each other': 'Агенты ревьюят друг друга',
+  'Agent review plus accept, reject, and comment in the app': 'Ревью агентами и принятие, отклонение и комментарии в приложении',
   'Merge queue': 'Merge queue',
   'Merge queue, no diff UI': 'Merge queue, без diff UI',
   'Approvals + governance': 'Подтверждения и управление',
+  'Approvals, but code review happens elsewhere': 'Подтверждения есть, но код-ревью проводится отдельно',
+  'Accept / reject individual changes': 'Принятие или отклонение отдельных изменений',
   'PR/BugBot only': 'Только PR/BugBot',
-  'Team review, no UI': 'Командное ревью, без UI',
-  'Guided runtime setup': 'Пошаговая настройка runtime',
+  'Agent review, no review UI': 'Ревью агентами, без интерфейса ревью',
+  'Start free, no signup or API key': 'Бесплатный старт без регистрации и API-ключа',
   'Manual CLI stack': 'Ручной CLI-стек',
-  'npx + local database': 'npx и локальная база',
+  'One npx terminal command, less convenient than an app': 'Одна npx-команда в терминале, менее удобно, чем приложение',
   'CLI + env flag': 'CLI и env-флаг',
+  'App install + account': 'Установка приложения и аккаунт',
   '5 columns, real-time': '5 колонок, в реальном времени',
   'Dashboard, not Kanban': 'Панель, не канбан',
   '7 columns, drag-and-drop': '7 колонок, перетаскивание',
   'Tools, reasoning trace, and timeline': 'Инструменты, ход рассуждений и таймлайн',
   'Feed, metrics, dashboard': 'Лента, метрики, панель',
   'Agent chat + terminal': 'Чат агента и терминал',
-  'View, stop, open URLs': 'Просмотр, остановка, открытие URL',
-  'Agent health dashboard': 'Dashboard здоровья агентов',
-  'Manual services + previews': 'Ручные сервисы и previews',
-  'Native terminal only': 'Только нативный терминал',
+  'CLI transcripts + background logs': 'CLI-транскрипты и логи фоновых сессий',
   'CPU/RAM history for each live teammate': 'История CPU/RAM для каждого живого участника',
   'Activity/health, not CPU/RAM': 'Активность/здоровье, не CPU/RAM',
   'Run status/cost, not CPU/RAM': 'Статус/стоимость запуска, не CPU/RAM',
@@ -69,16 +74,17 @@ const ruNotes: Record<string, string> = {
   'Accept / reject / comment': 'Принять, отклонить или прокомментировать',
   'PR/work products, no diff UI': 'PR/рабочие артефакты, без diff UI',
   'BugBot on PRs': 'BugBot для PR',
-  'Per-action approvals + notifications': 'Подтверждения и уведомления для каждого действия',
-  'Проверки, эскалация, восстановление': 'Проверки, эскалация, восстановление',
-  'Подтверждения на доске, пауза, остановка': 'Подтверждения на доске, пауза, остановка',
+  'Per-action approvals, roles, and notifications': 'Подтверждения действий, роли и уведомления',
+  'Gates, roles, escalation, and recovery': 'Проверки, роли, эскалация и восстановление',
+  'Board approvals, roles, pause, and stop': 'Подтверждения, роли, пауза и остановка',
   'Cloud agents run commands': 'Cloud agents запускают команды',
+  'Command controls and admin policies': 'Контроль команд и политики администратора',
   'Permissions + hooks': 'Permissions и hooks',
-  'Optional': 'Опционально',
+  'Optional separate workspace per teammate': 'Отдельное рабочее пространство для каждого участника по желанию',
   'Core primitive': 'Ключевая примитивная модель',
   'Worktrees / branches': 'Worktrees / branches',
   'Agents Window worktrees': 'Worktrees в Agents Window',
-  'Manual worktrees': 'Ручные worktrees',
+  'Built-in for sessions and subagents': 'Встроено для сессий и субагентов',
   'Claude, Codex, and OpenCode in one team': 'Claude, Codex и OpenCode в одной команде',
   'Many providers, terminal-first': 'Много провайдеров, terminal-first',
   'Bring your own agents/runtimes': 'Подключайте своих агентов и runtimes',
@@ -87,26 +93,24 @@ const ruNotes: Record<string, string> = {
   'Teammates, tasks, blockers, handoffs, activity, logs': 'Участники, задачи, блокеры, передачи, активность, логи',
   'Agent tree + feed panels': 'Дерево агентов и панели ленты',
   'Org chart/status, not a task/log map': 'Оргструктура/статус, не карта задач и логов',
-  'Watch teammates work and message them directly': 'Смотрите работу участников и пишите им напрямую',
-  'Terminal-based agent sessions': 'Терминальные сессии агентов',
-  'Agents wake up for runs, then sleep': 'Агенты просыпаются для запусков, потом засыпают',
-  'Cloud agents per task': 'Cloud agents на задачу',
-  'CLI teams, no desktop view': 'CLI-команды, без desktop-экрана',
-  'Tasks, logs, Kanban, review, and teammates in one app': 'Задачи, логи, канбан, ревью и участники в одном приложении',
+  'Agents Window, no shared peer-team map': 'Agents Window, без общей карты равноправной команды',
+  'Terminal team panel, no graphical UI': 'Командная панель в терминале, без графического UI',
+  'Tasks, code, terminal, review, and teammates in one app': 'Задачи, код, терминал, ревью и участники в одном приложении',
   'Mail/feed/dashboard across tools': 'Почта, лента и панель между tools',
   'Board + transcripts, less live teammate view': 'Доска и транскрипты, меньше live-вида участников',
   'IDE chats/tasks, not team view': 'IDE-чаты/задачи, не командный вид',
   'No desktop UI': 'Нет desktop UI',
-  'Know who started, who is stuck, and who replied': 'Видно кто стартовал, кто застрял и кто ответил',
-  'Session health, less clear message status': 'Здоровье сессии, менее ясный статус сообщений',
-  'Run status, not live teammate status': 'Статус запуска, не live-статус участника',
-  'CLI mailbox, no visual status': 'CLI mailbox, без визуального статуса',
-  'Organization map + approvals': 'Оргкарта и подтверждения',
+  'Clear ready/stuck status with launch diagnostics': 'Понятный статус готовности и проблем с диагностикой запуска',
+  'Working, stalled, and failed health with recovery controls': 'Статусы работы, зависания и ошибок с управлением восстановлением',
+  'Run status and orphan recovery': 'Статус запусков и восстановление потерянных запусков',
+  'Agent status in Agents Window': 'Статус агентов в Agents Window',
+  'Statuses in terminal, no graphical UI': 'Статусы в терминале, без графического UI',
+  'Nested organizations with live team, task, relation, and communication map': 'Вложенные организации с живой картой команд, задач, связей и общения',
   'Roles + approvals, no org chart': 'Роли и подтверждения, без оргструктуры',
   'Roles + escalation': 'Роли и эскалация',
   'Org chart + board governance': 'Оргструктура и управление доской',
   'Team admin only': 'Только администрирование команды',
-  'Usage budgets + scheduled hard caps': 'Бюджеты расхода и жёсткие лимиты запусков',
+  'Budget alerts + hard caps for scheduled runs': 'Бюджетные уведомления и жёсткие лимиты для запусков по расписанию',
   'Cost/token visibility, no hard caps': 'Видимость стоимости/токенов, без жёстких лимитов',
   'Cost tiers + digest, no hard caps': 'Тарифные уровни и дайджест, без жёстких лимитов',
   'Per-agent budgets + hard stops': 'Бюджеты на агента и жёсткие остановки',
@@ -125,12 +129,19 @@ function note(text: string): string {
 
 const sourcesPrefix = computed(() => (
   locale.value === 'ru'
-    ? 'Факты Agent Teams проверены по локальному исходному коду 9 июля 2026; источники конкурентов проверены 9 июля 2026:'
-    : 'Agent Teams product facts checked in local source on July 9, 2026; competitor sources checked on July 9, 2026:'
+    ? 'Факты Agent Teams проверены по локальному исходному коду 11 июля 2026; источники конкурентов проверены 11 июля 2026:'
+    : 'Agent Teams product facts checked in local source on July 11, 2026; competitor sources checked on July 11, 2026:'
+))
+
+const autonomyRatingNote = computed(() => (
+  locale.value === 'ru'
+    ? 'Оценка показывает, насколько хорошо агенты общаются, делят работу и вместе доводят сложные задачи до конца.'
+    : 'Scores measure how well live agents communicate, divide work, and complete complex tasks together.'
 ))
 
 const ruSourceLabels: Record<string, string> = {
   'Agent Teams organizations feature': 'фича организаций Agent Teams',
+  'Agent Teams terminal workspace': 'терминальный workspace Agent Teams',
   'Agent Teams token usage budgets': 'бюджеты расхода токенов Agent Teams',
   'Agent Teams scheduled budget cap': 'лимит бюджета scheduled runs Agent Teams',
   'detailed research notes': 'подробные заметки исследования',
@@ -147,12 +158,17 @@ const ruSourceLabels: Record<string, string> = {
   'Paperclip Kanban source': 'исходники Kanban Paperclip',
   'Paperclip work products': 'work products Paperclip',
   'Paperclip release': 'релиз Paperclip',
+  'Cursor terminal': 'терминал Cursor',
   'Cursor Cloud Agents': 'cloud agents Cursor',
   'Cursor Agent Review': 'agent review Cursor',
   'Cursor worktrees': 'worktrees Cursor',
+  'Cursor multitask agents': 'параллельные агенты Cursor',
+  'Cursor cloud subagents': 'cloud-субагенты Cursor',
   'Cursor Models & Pricing': 'модели и цены Cursor',
   'Cursor Team Pricing': 'team pricing Cursor',
+  'Claude Code CLI': 'Claude Code CLI',
   'Claude Code agent teams': 'команды агентов Claude Code',
+  'Claude Code worktrees': 'worktrees Claude Code',
   'Claude Code subagents': 'сабагенты Claude Code',
   'Claude Code workflows': 'workflows Claude Code',
   'Claude Code costs': 'стоимость Claude Code',
@@ -168,6 +184,7 @@ interface CellValue {
   status: string
   note?: string
   noteLink?: string
+  power?: number
 }
 
 interface ComparisonRow {
@@ -181,92 +198,52 @@ interface ComparisonRow {
 
 const rows = computed<ComparisonRow[]>(() => [
   {
-    feature: t('comparison.features.crossTeam'),
-    us: { status: 'yes', note: note('Messages between separate teams') },
-    gastown: { status: 'partial', note: note('Coordination across groups') },
-    paperclip: { status: 'partial', note: note('Company-scoped org work') },
-    cursor: { status: 'na' },
-    claudeCli: { status: 'no' },
+    feature: t('comparison.features.teamAutonomy'),
+    us: { status: 'yes', power: 9, note: note('Live agents plan, delegate, work, and review together') },
+    gastown: { status: 'yes', power: 8, note: note('Persistent teams with coordination and recovery') },
+    paperclip: { status: 'partial', power: 7, note: note('Durable scheduled agents, less live peer teamwork') },
+    cursor: { status: 'partial', power: 6, note: note('Parallel agents coordinated by one parent') },
+    claudeCli: { status: 'partial', power: 7, note: note('Experimental teams with known recovery limits') },
   },
   {
-    feature: t('comparison.features.agentMessaging'),
-    us: { status: 'yes', note: note('Native real-time mailbox') },
-    gastown: { status: 'yes', note: note('Mailboxes + handoffs') },
-    paperclip: { status: 'partial', note: note('Comments + @mentions') },
-    cursor: { status: 'no' },
-    claudeCli: { status: 'yes', note: note('Team mailbox, no UI') },
+    feature: t('comparison.features.flexAutonomy'),
+    us: { status: 'yes', note: note('Per-action approvals, roles, and notifications') },
+    gastown: { status: 'yes', note: note('Gates, roles, escalation, and recovery') },
+    paperclip: { status: 'yes', note: note('Board approvals, roles, pause, and stop') },
+    cursor: { status: 'partial', note: note('Command controls and admin policies') },
+    claudeCli: { status: 'yes', note: note('Permissions + hooks') },
   },
   {
-    feature: t('comparison.features.linkedTasks'),
-    us: { status: 'yes', note: note('Tasks can link to and block each other') },
-    gastown: { status: 'partial', note: note('Task deps + grouped work') },
-    paperclip: { status: 'yes', note: note('Goals, parent tasks, blockers') },
-    cursor: { status: 'no' },
-    claudeCli: { status: 'yes', note: note('Shared task list') },
+    feature: t('comparison.features.liveWorkGraph'),
+    us: { status: 'yes', note: note('Teammates, tasks, blockers, handoffs, activity, logs') },
+    gastown: { status: 'partial', note: note('Agent tree + feed panels') },
+    paperclip: { status: 'partial', note: note('Org chart/status, not a task/log map') },
+    cursor: { status: 'partial', note: note('Agents Window, no shared peer-team map') },
+    claudeCli: { status: 'partial', note: note('Terminal team panel, no graphical UI') },
   },
   {
-    feature: t('comparison.features.sessionAnalysis'),
-    us: { status: 'yes', note: note('Task logs + token usage') },
-    gastown: { status: 'partial', note: note('Session recall, feed, metrics') },
-    paperclip: { status: 'partial', note: note('Run transcripts + cost audit') },
-    cursor: { status: 'no' },
-    claudeCli: { status: 'partial', note: note('Usage command, no UI') },
-  },
-  {
-    feature: t('comparison.features.taskAttachments'),
-    us: { status: 'yes', note: note('Auto-attach, agents read & attach') },
-    gastown: { status: 'no', note: note('Not task-level') },
-    paperclip: { status: 'yes', note: note('Docs, attachments, work products') },
-    cursor: { status: 'partial', note: note('Chat session only') },
-    claudeCli: { status: 'partial', note: note('Chat images only') },
-  },
-  {
-    feature: t('comparison.features.hunkReview'),
-    us: { status: 'yes', note: note('Accept / reject individual hunks') },
-    gastown: { status: 'no' },
-    paperclip: { status: 'no', note: note('Bring your own review') },
-    cursor: { status: 'yes' },
-    claudeCli: { status: 'no' },
-  },
-  {
-    feature: t('comparison.features.codeEditor'),
-    us: { status: 'yes', note: note('With Git support') },
-    gastown: { status: 'no' },
-    paperclip: { status: 'no', note: note('Control plane, not editor') },
-    cursor: { status: 'yes', note: note('Full IDE') },
-    claudeCli: { status: 'no' },
-  },
-  {
-    feature: t('comparison.features.fullAutonomy'),
-    us: { status: 'yes', note: note('Plan, assign, work, and review') },
-    gastown: { status: 'yes', note: note('Coordinator, grouped work, recovery') },
-    paperclip: { status: 'yes', note: note('Wake-up runs + governance') },
-    cursor: { status: 'partial', note: note('Cloud agents, not teams') },
-    claudeCli: { status: 'yes', note: note('Experimental CLI teams') },
-  },
-  {
-    feature: t('comparison.features.taskDeps'),
-    us: { status: 'yes', note: note('Tasks wait for blockers automatically') },
-    gastown: { status: 'yes', note: note('Dependency waves') },
-    paperclip: { status: 'yes', note: note('Blockers + execution locks') },
-    cursor: { status: 'no' },
-    claudeCli: { status: 'yes', note: note('Team task deps, no UI') },
-  },
-  {
-    feature: t('comparison.features.reviewWorkflow'),
-    us: { status: 'yes', note: note('Agents review each other') },
-    gastown: { status: 'partial', note: note('Merge queue') },
-    paperclip: { status: 'yes', note: note('Approvals + governance') },
-    cursor: { status: 'partial', note: note('PR/BugBot only') },
-    claudeCli: { status: 'yes', note: note('Team review, no UI') },
+    feature: t('comparison.features.teamWorkspace'),
+    us: { status: 'yes', note: note('Tasks, code, terminal, review, and teammates in one app') },
+    gastown: { status: 'partial', note: note('Mail/feed/dashboard across tools') },
+    paperclip: { status: 'partial', note: note('Board + transcripts, less live teammate view') },
+    cursor: { status: 'partial', note: note('IDE chats/tasks, not team view') },
+    claudeCli: { status: 'no', note: note('No desktop UI') },
   },
   {
     feature: t('comparison.features.zeroSetup'),
-    us: { status: 'yes', note: note('Guided runtime setup') },
+    us: { status: 'yes', note: note('Start free, no signup or API key') },
     gastown: { status: 'no', note: note('Manual CLI stack') },
-    paperclip: { status: 'partial', note: note('npx + local database') },
-    cursor: { status: 'yes' },
+    paperclip: { status: 'partial', note: note('One npx terminal command, less convenient than an app') },
+    cursor: { status: 'partial', note: note('App install + account') },
     claudeCli: { status: 'partial', note: note('CLI + env flag') },
+  },
+  {
+    feature: t('comparison.features.launchProof'),
+    us: { status: 'yes', note: note('Clear ready/stuck status with launch diagnostics') },
+    gastown: { status: 'yes', note: note('Working, stalled, and failed health with recovery controls') },
+    paperclip: { status: 'partial', note: note('Run status and orphan recovery') },
+    cursor: { status: 'partial', note: note('Agent status in Agents Window') },
+    claudeCli: { status: 'partial', note: note('Statuses in terminal, no graphical UI') },
   },
   {
     feature: t('comparison.features.kanban'),
@@ -277,52 +254,44 @@ const rows = computed<ComparisonRow[]>(() => [
     claudeCli: { status: 'no' },
   },
   {
-    feature: t('comparison.features.execLog'),
-    us: { status: 'yes', note: note('Tools, reasoning trace, and timeline') },
-    gastown: { status: 'partial', note: note('Feed, metrics, dashboard') },
-    paperclip: { status: 'yes', note: note('Run transcripts + audit log') },
-    cursor: { status: 'partial', note: note('Agent chat + terminal') },
-    claudeCli: { status: 'no' },
-  },
-  {
-    feature: t('comparison.features.liveProcesses'),
-    us: { status: 'yes', note: note('View, stop, open URLs') },
-    gastown: { status: 'partial', note: note('Agent health dashboard') },
-    paperclip: { status: 'partial', note: note('Manual services + previews') },
-    cursor: { status: 'partial', note: note('Native terminal only') },
-    claudeCli: { status: 'no' },
-  },
-  {
-    feature: t('comparison.features.runtimeLoad'),
-    us: { status: 'yes', note: note('CPU/RAM history for each live teammate') },
-    gastown: { status: 'partial', note: note('Activity/health, not CPU/RAM') },
-    paperclip: { status: 'partial', note: note('Run status/cost, not CPU/RAM') },
-    cursor: { status: 'no', note: note('Remote agent/terminal only') },
-    claudeCli: { status: 'no' },
-  },
-  {
-    feature: t('comparison.features.perTaskReview'),
-    us: { status: 'yes', note: note('Accept / reject / comment') },
+    feature: t('comparison.features.reviewWorkflow'),
+    us: { status: 'yes', note: note('Agent review plus accept, reject, and comment in the app') },
     gastown: { status: 'partial', note: note('Merge queue, no diff UI') },
-    paperclip: { status: 'partial', note: note('PR/work products, no diff UI') },
-    cursor: { status: 'yes', note: note('BugBot on PRs') },
+    paperclip: { status: 'partial', note: note('Approvals, but code review happens elsewhere') },
+    cursor: { status: 'yes', note: note('Accept / reject individual changes') },
+    claudeCli: { status: 'partial', note: note('Agent review, no review UI') },
+  },
+  {
+    feature: t('comparison.features.crossTeam'),
+    us: { status: 'yes', note: note('Direct agent messages and shared task links across teams') },
+    gastown: { status: 'partial', note: note('Mailboxes + handoffs') },
+    paperclip: { status: 'partial', note: note('Comments + @mentions') },
+    cursor: { status: 'na' },
     claudeCli: { status: 'no' },
   },
   {
-    feature: t('comparison.features.flexAutonomy'),
-    us: { status: 'yes', note: note('Per-action approvals + notifications') },
-    gastown: { status: 'yes', note: note('Проверки, эскалация, восстановление') },
-    paperclip: { status: 'yes', note: note('Подтверждения на доске, пауза, остановка') },
-    cursor: { status: 'partial', note: note('Cloud agents run commands') },
-    claudeCli: { status: 'yes', note: note('Permissions + hooks') },
+    feature: t('comparison.features.linkedTasks'),
+    us: { status: 'yes', note: note('Tasks can link to and block each other') },
+    gastown: { status: 'yes', note: note('Task deps + grouped work') },
+    paperclip: { status: 'yes', note: note('Goals, parent tasks, blockers') },
+    cursor: { status: 'no' },
+    claudeCli: { status: 'yes', note: note('Shared task list') },
   },
   {
-    feature: t('comparison.features.worktree'),
-    us: { status: 'yes', note: note('Optional') },
-    gastown: { status: 'yes', note: note('Core primitive') },
-    paperclip: { status: 'yes', note: note('Worktrees / branches') },
-    cursor: { status: 'yes', note: note('Agents Window worktrees') },
-    claudeCli: { status: 'partial', note: note('Manual worktrees') },
+    feature: t('comparison.features.sessionAnalysis'),
+    us: { status: 'yes', note: note('Agent messages, tool calls, timeline, token use, and cost') },
+    gastown: { status: 'partial', note: note('Session recall, feed, metrics') },
+    paperclip: { status: 'partial', note: note('Run transcripts + cost audit') },
+    cursor: { status: 'partial', note: note('Agent chat + terminal') },
+    claudeCli: { status: 'partial', note: note('CLI transcripts + background logs') },
+  },
+  {
+    feature: t('comparison.features.orgGovernance'),
+    us: { status: 'yes', note: note('Nested organizations with live team, task, relation, and communication map') },
+    gastown: { status: 'partial', note: note('Roles + escalation, no org chart') },
+    paperclip: { status: 'yes', note: note('Org chart + board governance') },
+    cursor: { status: 'partial', note: note('Team admin only') },
+    claudeCli: { status: 'no' },
   },
   {
     feature: t('comparison.features.multiAgent'),
@@ -333,52 +302,44 @@ const rows = computed<ComparisonRow[]>(() => [
     claudeCli: { status: 'partial', note: note('Claude-only experimental teams') },
   },
   {
-    feature: t('comparison.features.liveWorkGraph'),
-    us: { status: 'yes', note: note('Teammates, tasks, blockers, handoffs, activity, logs') },
-    gastown: { status: 'partial', note: note('Agent tree + feed panels') },
-    paperclip: { status: 'partial', note: note('Org chart/status, not a task/log map') },
-    cursor: { status: 'no' },
-    claudeCli: { status: 'no' },
-  },
-  {
-    feature: t('comparison.features.liveTeam'),
-    us: { status: 'yes', note: note('Watch teammates work and message them directly') },
-    gastown: { status: 'partial', note: note('Terminal-based agent sessions') },
-    paperclip: { status: 'partial', note: note('Agents wake up for runs, then sleep') },
-    cursor: { status: 'partial', note: note('Cloud agents per task') },
-    claudeCli: { status: 'partial', note: note('CLI teams, no desktop view') },
-  },
-  {
-    feature: t('comparison.features.teamWorkspace'),
-    us: { status: 'yes', note: note('Tasks, logs, Kanban, review, and teammates in one app') },
-    gastown: { status: 'partial', note: note('Mail/feed/dashboard across tools') },
-    paperclip: { status: 'partial', note: note('Board + transcripts, less live teammate view') },
-    cursor: { status: 'partial', note: note('IDE chats/tasks, not team view') },
-    claudeCli: { status: 'no', note: note('No desktop UI') },
-  },
-  {
-    feature: t('comparison.features.launchProof'),
-    us: { status: 'yes', note: note('Know who started, who is stuck, and who replied') },
-    gastown: { status: 'partial', note: note('Session health, less clear message status') },
-    paperclip: { status: 'partial', note: note('Run status, not live teammate status') },
-    cursor: { status: 'no' },
-    claudeCli: { status: 'partial', note: note('CLI mailbox, no visual status') },
-  },
-  {
-    feature: t('comparison.features.orgGovernance'),
-    us: { status: 'yes', note: note('Organization map + approvals') },
-    gastown: { status: 'partial', note: note('Roles + escalation') },
-    paperclip: { status: 'yes', note: note('Org chart + board governance') },
-    cursor: { status: 'partial', note: note('Team admin only') },
-    claudeCli: { status: 'no' },
-  },
-  {
     feature: t('comparison.features.budgetControls'),
-    us: { status: 'yes', note: note('Usage budgets + scheduled hard caps') },
+    us: { status: 'yes', note: note('Budget alerts + hard caps for scheduled runs') },
     gastown: { status: 'partial', note: note('Cost tiers + digest, no hard caps') },
     paperclip: { status: 'yes', note: note('Per-agent budgets + hard stops') },
     cursor: { status: 'partial', note: note('Usage + cloud spend limits') },
     claudeCli: { status: 'partial', note: note('/usage + workspace limits') },
+  },
+  {
+    feature: t('comparison.features.worktree'),
+    us: { status: 'yes', note: note('Optional separate workspace per teammate') },
+    gastown: { status: 'yes', note: note('Core primitive') },
+    paperclip: { status: 'yes', note: note('Worktrees / branches') },
+    cursor: { status: 'yes', note: note('Agents Window worktrees') },
+    claudeCli: { status: 'yes', note: note('Built-in for sessions and subagents') },
+  },
+  {
+    feature: t('comparison.features.integratedTerminal'),
+    us: { status: 'yes', note: note('Built-in visual terminal for team and local commands') },
+    gastown: { status: 'partial', note: note('Terminal-based workflow, no built-in terminal') },
+    paperclip: { status: 'partial', note: note('Runs commands, no interactive terminal') },
+    cursor: { status: 'yes', note: note('Built-in IDE terminal') },
+    claudeCli: { status: 'partial', note: note('Runs in your terminal') },
+  },
+  {
+    feature: t('comparison.features.codeEditor'),
+    us: { status: 'yes', note: note('With Git support') },
+    gastown: { status: 'no' },
+    paperclip: { status: 'no', note: note('Control plane, not editor') },
+    cursor: { status: 'yes', note: note('Full IDE') },
+    claudeCli: { status: 'no' },
+  },
+  {
+    feature: t('comparison.features.taskAttachments'),
+    us: { status: 'yes', note: note('Auto-attach, agents read & attach') },
+    gastown: { status: 'no', note: note('Not task-level') },
+    paperclip: { status: 'yes', note: note('Docs, attachments, work products') },
+    cursor: { status: 'partial', note: note('Chat session only') },
+    claudeCli: { status: 'partial', note: note('Chat images only') },
   },
   {
     feature: t('comparison.features.price'),
@@ -392,7 +353,7 @@ const rows = computed<ComparisonRow[]>(() => [
 
 const competitors = [
   { key: 'us', name: 'Agent Teams', highlight: true },
-  { key: 'gastown', name: 'Gastown' },
+  { key: 'gastown', name: 'Gas Town' },
   { key: 'paperclip', name: 'Paperclip' },
   { key: 'cursor', name: 'Cursor' },
   { key: 'claudeCli', name: 'Claude Code CLI' },
@@ -402,6 +363,10 @@ const sourceLinks = [
   {
     label: 'Agent Teams organizations feature',
     href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/organizations/README.md',
+  },
+  {
+    label: 'Agent Teams terminal workspace',
+    href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/terminal-workspace/renderer/ui/TerminalWorkspacePanel.tsx',
   },
   {
     label: 'Agent Teams token usage budgets',
@@ -438,7 +403,7 @@ const sourceLinks = [
     label: 'Paperclip heartbeat protocol',
     href: 'https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/heartbeat-protocol.md',
   },
-  { label: 'Paperclip org chart', href: 'https://paperclip.inc/docs/guides/board-operator/org-structure/' },
+  { label: 'Paperclip org chart', href: 'https://github.com/paperclipai/paperclip#the-systems' },
   {
     label: 'Paperclip OrgChart source',
     href: 'https://github.com/paperclipai/paperclip/blob/master/ui/src/pages/OrgChart.tsx',
@@ -460,13 +425,18 @@ const sourceLinks = [
     href: 'https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/validators/work-product.ts',
   },
   { label: 'Paperclip release', href: 'https://github.com/paperclipai/paperclip/releases/tag/v2026.707.0' },
+  { label: 'Cursor terminal', href: 'https://cursor.com/docs/agent/terminal' },
   { label: 'Cursor Cloud Agents', href: 'https://cursor.com/docs/cloud-agent' },
   { label: 'Cursor Agent Review', href: 'https://cursor.com/docs/agent/agent-review' },
   { label: 'Cursor Bugbot', href: 'https://cursor.com/docs/bugbot' },
   { label: 'Cursor worktrees', href: 'https://cursor.com/docs/configuration/worktrees' },
+  { label: 'Cursor multitask agents', href: 'https://cursor.com/changelog/04-24-26' },
+  { label: 'Cursor cloud subagents', href: 'https://cursor.com/changelog/cloud-in-agents-window' },
   { label: 'Cursor Models & Pricing', href: 'https://cursor.com/docs/models-and-pricing' },
   { label: 'Cursor Team Pricing', href: 'https://cursor.com/docs/account/teams/pricing' },
+  { label: 'Claude Code CLI', href: 'https://code.claude.com/docs/en/cli-usage' },
   { label: 'Claude Code agent teams', href: 'https://code.claude.com/docs/en/agent-teams' },
+  { label: 'Claude Code worktrees', href: 'https://code.claude.com/docs/en/worktrees' },
   { label: 'Claude Code subagents', href: 'https://code.claude.com/docs/en/sub-agents' },
   { label: 'Claude Code workflows', href: 'https://code.claude.com/docs/en/common-workflows' },
   { label: 'Claude Code costs', href: 'https://code.claude.com/docs/en/costs' },
@@ -520,6 +490,17 @@ function getStatusIcon(status: string): string {
     case 'soon': return '\uD83D\uDCC5'
     default: return ''
   }
+}
+
+function getPowerBar(power: number): string {
+  const normalizedPower = Math.max(0, Math.min(10, Math.round(power)))
+  return `${'█'.repeat(normalizedPower)}${'░'.repeat(10 - normalizedPower)} ${normalizedPower}/10`
+}
+
+function getPowerLabel(power: number): string {
+  return locale.value === 'ru'
+    ? `Живая командная работа: ${power} из 10`
+    : `Live team collaboration: ${power} out of 10`
 }
 </script>
 
@@ -602,6 +583,13 @@ function getStatusIcon(status: string): string {
                       {{ getStatusIcon((row[comp.key as keyof ComparisonRow] as CellValue).status) }}
                     </template>
                   </span>
+                  <span
+                    v-if="(row[comp.key as keyof ComparisonRow] as CellValue).power !== undefined"
+                    class="comparison-table__power"
+                    :aria-label="getPowerLabel((row[comp.key as keyof ComparisonRow] as CellValue).power!)"
+                  >
+                    {{ getPowerBar((row[comp.key as keyof ComparisonRow] as CellValue).power!) }}
+                  </span>
                   <a
                     v-if="(row[comp.key as keyof ComparisonRow] as CellValue).noteLink && (row[comp.key as keyof ComparisonRow] as CellValue).status !== 'text'"
                     :href="(row[comp.key as keyof ComparisonRow] as CellValue).noteLink"
@@ -623,6 +611,10 @@ function getStatusIcon(status: string): string {
           </tbody>
         </table>
       </div>
+
+      <p class="comparison-section__rating-note">
+        {{ autonomyRatingNote }}
+      </p>
 
       <p class="comparison-section__sources">
         {{ sourcesPrefix }}
@@ -793,6 +785,15 @@ function getStatusIcon(status: string): string {
   z-index: 1;
 }
 
+.comparison-section__rating-note {
+  max-width: 1040px;
+  margin: 12px auto 0;
+  color: rgba(136, 146, 176, 0.9);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .comparison-section__sources a {
   color: #00d4e6;
   text-decoration: none;
@@ -911,6 +912,16 @@ function getStatusIcon(status: string): string {
   max-width: 140px;
   text-align: center;
   white-space: normal;
+}
+
+.comparison-table__power {
+  color: #00d4e6;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .comparison-table__cell-note--link {

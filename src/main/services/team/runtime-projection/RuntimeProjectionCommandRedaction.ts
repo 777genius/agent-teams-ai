@@ -199,8 +199,11 @@ function findShellWordEnd(command: string, start: number, end: number): ShellWor
       } else if (character === '`') {
         frames.pop();
         index += 1;
-      } else if (character === '$' && command[index + 1] === '(') {
-        const arithmetic = command[index + 2] === '(';
+      } else if (
+        command[index + 1] === '(' &&
+        (character === '$' || character === '<' || character === '>')
+      ) {
+        const arithmetic = character === '$' && command[index + 2] === '(';
         if (
           !pushFrame(frames, {
             kind: arithmetic ? 'arithmetic' : 'command',
@@ -249,9 +252,12 @@ function findShellWordEnd(command: string, start: number, end: number): ShellWor
       continue;
     }
 
-    if (character === '$' && command[index + 1] === '(') {
+    if (
+      command[index + 1] === '(' &&
+      (character === '$' || (frame.quote === 'none' && (character === '<' || character === '>')))
+    ) {
       markCasePatternStarted(frame);
-      const arithmetic = command[index + 2] === '(';
+      const arithmetic = character === '$' && command[index + 2] === '(';
       if (
         !pushFrame(frames, {
           kind: arithmetic ? 'arithmetic' : 'command',
