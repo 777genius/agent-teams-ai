@@ -20,6 +20,21 @@
       "description": "Vista de diff por tarea con aprobar, rechazar y comentar. Editor de código integrado con soporte Git."
     },
     {
+      "id": "tokenUsage",
+      "title": "Análisis de tokens y presupuestos",
+      "description": "Consulta dónde se consumen los tokens y los costes estimados por equipo, agente, tarea, proyecto, modelo y ejecución. Detecta el trabajo costoso, sigue tendencias y previsiones, define presupuestos mensuales y recibe alertas al 80 % y al 100 %."
+    },
+    {
+      "id": "organizations",
+      "title": "Organizaciones y vista global",
+      "description": "Organiza los equipos en departamentos, squads o cualquier estructura anidada. Consulta todas las organizaciones en un mapa en vivo con estados de equipos y agentes, progreso de tareas, dependencias, delegación y comunicación entre equipos."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Ejecuta comandos en un terminal visual con shells de equipo y local, historial, autocompletado y configuración."
+    },
+    {
       "id": "crossTeam",
       "title": "Comunicación entre equipos",
       "description": "Los agentes se envían mensajes dentro y entre equipos. Mensajes directos, comentarios en tareas y acciones rápidas."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Modo solo",
       "description": "Empieza con un solo agente que gestiona sus propias tareas. Amplía a un equipo completo cuando necesites más potencia."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Procesos en vivo",
-      "description": "Ve los agentes en ejecución, abre URLs en el navegador, monitoriza el uso de tokens y el contexto en tiempo real."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "¿Qué es Agent Teams?",
-      "answer": "Una app de escritorio para orquestar equipos de agentes IA con nuestra propia capa local de coordinación. Cada agente tiene un rol, trabaja de forma autónoma, colabora a través de un tablero kanban y puede ejecutarse con Anthropic o Codex."
+      "answer": "Una app de escritorio para orquestar equipos de agentes IA con nuestra propia capa local de coordinación. Cada agente tiene un rol, trabaja de forma autónoma, colabora a través de un tablero kanban y puede ejecutarse con Claude, Codex u OpenCode."
     },
     {
       "id": "isFree",

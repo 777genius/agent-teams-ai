@@ -39,7 +39,6 @@ Runtime отвечает за:
 | Codex | Codex / OpenAI-backed models | Для Codex-native workflows | Использует Codex runtime integration и Codex auth/account state, когда они доступны. Часть diagnostics отличается от Claude transcripts. |
 | OpenCode | OpenCode-managed model routing | Для multi-provider teams и широкой model coverage | OpenCode может маршрутизировать через множество model providers. Agent Teams считает OpenCode lanes runtime-specific evidence и не угадывает attribution при ambiguous lane identity. |
 
-Gemini — поддерживаемый провайдер с Google ADC, Gemini CLI и API key аутентификацией. Он доступен в UI создания команд и настройки рантайма, когда runtime сообщает о его доступности.
 
 ## Provider ids
 
@@ -49,7 +48,6 @@ Gemini — поддерживаемый провайдер с Google ADC, Gemini
 | --- | --- |
 | `anthropic` | Anthropic / Claude Code path |
 | `codex` | Codex path |
-| `gemini` | Gemini provider path (Google ADC, Gemini CLI или API key) |
 | `opencode` | OpenCode path, включая OpenCode-managed provider routing |
 
 Эта таблица не гарантирует, что каждый provider authenticated, installed или доступен для каждой модели на каждой машине. Runtime status и capability checks - source of truth для конкретного launch.

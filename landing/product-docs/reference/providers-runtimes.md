@@ -38,8 +38,6 @@ The runtime provides:
 | Codex | Codex / OpenAI-backed models | Codex-native workflows | Uses Codex runtime integration and Codex auth/account state where available. Some diagnostics are different from Claude transcripts. |
 | OpenCode | OpenCode-managed model routing | Multi-provider teams and broad model coverage | OpenCode can route through many model providers. Agent Teams treats OpenCode lanes as runtime-specific evidence and avoids guessing when lane identity is ambiguous. |
 
-Gemini is available as a supported provider path with Google ADC (gcloud auth), Gemini CLI OAuth, and API key authentication. It appears alongside other providers in the team creation and runtime setup UI when the runtime reports it as available.
-
 ## Provider ids
 
 The app currently recognizes these provider ids in team/runtime configuration:
@@ -48,7 +46,6 @@ The app currently recognizes these provider ids in team/runtime configuration:
 | --- | --- |
 | `anthropic` | Anthropic / Claude Code path |
 | `codex` | Codex path |
-| `gemini` | Gemini provider path (Google ADC, Gemini CLI, or API key) |
 | `opencode` | OpenCode path, including OpenCode-managed provider routing |
 
 Do not read this table as a guarantee that every provider is authenticated, installed, or available for every model on every machine. The runtime status and capability checks are the source of truth for a given launch.

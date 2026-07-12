@@ -20,6 +20,21 @@
       "description": "Widok diff dla kazdego zadania z akceptacja, odrzuceniem i komentarzami. Wbudowany edytor kodu z obsluga Git."
     },
     {
+      "id": "tokenUsage",
+      "title": "Analityka tokenów i budżety",
+      "description": "Zobacz zużycie tokenów i szacowane koszty według zespołów, agentów, zadań, projektów, modeli i uruchomień. Wykrywaj kosztowną pracę, śledź trendy i prognozy, ustawiaj miesięczne budżety i otrzymuj alerty przy 80% i 100%."
+    },
+    {
+      "id": "organizations",
+      "title": "Organizacje i widok globalny",
+      "description": "Grupuj zespoły w działy, squady lub dowolne zagnieżdżone struktury. Śledź wszystkie organizacje na jednej mapie na żywo ze statusami zespołów i agentów, postępem zadań, zależnościami, delegowaniem i komunikacją między zespołami."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Uruchamiaj polecenia w wizualnym terminalu z powłokami zespołu i lokalną, historią, autouzupełnianiem i ustawieniami."
+    },
+    {
       "id": "crossTeam",
       "title": "Komunikacja miedzy zespolami",
       "description": "Agenci pisza do siebie w zespole i miedzy zespolami. Wiadomosci bezposrednie, komentarze do zadan i szybkie akcje."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Tryb solo",
       "description": "Zacznij od jednego agenta, ktory sam zarzadza zadaniami. Gdy potrzeba wiecej mocy, rozszerz go do pelnego zespolu."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Procesy live",
-      "description": "Widzisz dzialajacych agentow, otwierasz URL w przegladarce i monitorujesz tokeny oraz kontekst sesji w czasie rzeczywistym."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Czym jest Agent Teams?",
-      "answer": "Aplikacja desktopowa do orkiestracji zespolow agentow AI z lokalna warstwa koordynacji. Agenci maja role, pracuja autonomicznie, wspolpracuja przez kanban i moga dzialac na Anthropic lub Codex."
+      "answer": "Aplikacja desktopowa do orkiestracji zespolow agentow AI z lokalna warstwa koordynacji. Agenci maja role, pracuja autonomicznie, wspolpracuja przez kanban i moga dzialac z Claude, Codex lub OpenCode."
     },
     {
       "id": "isFree",

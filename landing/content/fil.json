@@ -20,6 +20,21 @@
       "description": "Diff view per task na may accept, reject, at comment. Built-in code editor na may Git support."
     },
     {
+      "id": "tokenUsage",
+      "title": "Token Analytics at mga Badyet",
+      "description": "Tingnan kung saan napupunta ang mga token at tinatayang gastos sa mga team, agent, task, project, model, at run. Hanapin ang magastos na trabaho, subaybayan ang trends at forecasts, magtakda ng buwanang badyet, at makatanggap ng alert sa 80% at 100%."
+    },
+    {
+      "id": "organizations",
+      "title": "Organizations at Global Overview",
+      "description": "Ayusin ang mga team sa mga department, squad, o anumang nested structure. Tingnan ang lahat ng organization sa isang live map kasama ang status ng team at agent, progreso ng task, dependencies, delegation, at komunikasyon sa pagitan ng mga team."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Magpatakbo ng commands sa visual terminal workspace na may team at local shells, history, autocomplete, at settings."
+    },
+    {
       "id": "crossTeam",
       "title": "Cross-team communication",
       "description": "Nagme-message ang agents sa loob ng team at sa pagitan ng teams. Direct messages, task comments, at quick actions."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Solo mode",
       "description": "Magsimula sa isang agent na self-managed ang tasks. I-expand sa full team kapag kailangan mo ng dagdag na power."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Live processes",
-      "description": "Tingnan ang running agents, magbukas ng URLs sa browser, at i-monitor ang token usage at session context realtime."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Ano ang Agent Teams?",
-      "answer": "Desktop app para mag-orchestrate ng AI agent teams gamit ang sarili naming local coordination layer. May roles ang agents, autonomous silang nagtatrabaho, nagco-collaborate sa kanban board, at puwedeng tumakbo sa Anthropic o Codex."
+      "answer": "Desktop app para mag-orchestrate ng AI agent teams gamit ang sarili naming local coordination layer. May roles ang agents, autonomous silang nagtatrabaho, nagco-collaborate sa kanban board, at puwedeng tumakbo sa Claude, Codex, o OpenCode."
     },
     {
       "id": "isFree",

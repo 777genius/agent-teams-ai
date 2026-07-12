@@ -30,9 +30,6 @@ lang: ru-RU
 
 Микс провайдеров в одной команде поддерживается — например, Claude lead с OpenCode builder-ами.
 
-::: info
-Gemini — поддерживаемый провайдер. Варианты auth смотрите в разделе [Провайдеры и рантаймы](/ru/reference/providers-runtimes).
-:::
 
 ## Хороший team brief
 

@@ -20,6 +20,21 @@
       "description": "Diff-Ansicht pro Aufgabe mit Annehmen, Ablehnen und Kommentieren. Integrierter Code-Editor mit Git-Unterstützung."
     },
     {
+      "id": "tokenUsage",
+      "title": "Token-Analyse und Budgets",
+      "description": "Sehen Sie, wo Tokens und geschätzte Kosten in Teams, Agenten, Aufgaben, Projekten, Modellen und Runs entstehen. Finden Sie teure Arbeit, verfolgen Sie Trends und Prognosen, legen Sie Monatsbudgets fest und erhalten Sie Warnungen bei 80 % und 100 %."
+    },
+    {
+      "id": "organizations",
+      "title": "Organisationen & Gesamtübersicht",
+      "description": "Ordnen Sie Teams in Abteilungen, Squads oder beliebig verschachtelte Strukturen ein. Verfolgen Sie alle Organisationen auf einer Live-Karte mit Team- und Agentenstatus, Aufgabenfortschritt, Abhängigkeiten, Delegierung und teamübergreifender Kommunikation."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Terminal",
+      "description": "Führen Sie Befehle in einem visuellen Terminal-Workspace mit Team- und lokaler Shell, Verlauf, Autovervollständigung und Einstellungen aus."
+    },
+    {
       "id": "crossTeam",
       "title": "Teamübergreifende Kommunikation",
       "description": "Agenten kommunizieren inner- und teamübergreifend. Direktnachrichten, Aufgabenkommentare und Schnellaktionen."
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Solo-Modus",
       "description": "Starten Sie mit einem einzelnen Agenten, der seine Aufgaben selbst verwaltet. Erweitern Sie jederzeit zum vollständigen Team."
-    },
-    {
-      "id": "liveProcesses",
-      "title": "Live-Prozesse",
-      "description": "Sehen Sie laufende Agenten, öffnen Sie URLs im Browser, überwachen Sie Token-Nutzung und Sitzungskontext in Echtzeit."
     }
   ],
   "faq": [
     {
       "id": "whatIsIt",
       "question": "Was ist Agent Teams?",
-      "answer": "Eine Desktop-App zur Orchestrierung von KI-Agententeams mit unserer eigenen lokalen Koordinationsschicht. Agenten haben Rollen, arbeiten autonom, kollaborieren über ein Kanban-Board und können mit Anthropic oder Codex laufen."
+      "answer": "Eine Desktop-App zur Orchestrierung von KI-Agententeams mit unserer eigenen lokalen Koordinationsschicht. Agenten haben Rollen, arbeiten autonom, kollaborieren über ein Kanban-Board und können mit Claude, Codex oder OpenCode laufen."
     },
     {
       "id": "isFree",

@@ -39,7 +39,6 @@ Agent Teams 提供：
 | Codex | Codex / 由 OpenAI 支持的模型 | Codex 原生工作流 | 在可用时使用 Codex 运行时集成以及 Codex 认证/账户状态。部分诊断与 Claude 转录不同。 |
 | OpenCode | OpenCode 托管的模型路由 | 多提供方团队以及广泛的模型覆盖 | OpenCode 可以路由到许多模型提供方。Agent Teams 将 OpenCode 通道视为特定于运行时的凭证，并在通道身份不明确时避免臆测。 |
 
-Gemini 作为一条受支持的提供方路径提供，支持 Google ADC（gcloud auth）、Gemini CLI OAuth 以及 API 密钥身份验证。当运行时报告其可用时，它会在团队创建和运行时设置 UI 中与其他提供方一同出现。
 
 ## 提供方 ID
 
@@ -49,7 +48,6 @@ Gemini 作为一条受支持的提供方路径提供，支持 Google ADC（gclou
 | --- | --- |
 | `anthropic` | Anthropic / Claude Code 路径 |
 | `codex` | Codex 路径 |
-| `gemini` | Gemini 提供方路径（Google ADC、Gemini CLI 或 API 密钥） |
 | `opencode` | OpenCode 路径，包括 OpenCode 托管的提供方路由 |
 
 不要将此表解读为对每台机器上每个模型的每个提供方都已认证、已安装或可用的保证。对于某次具体启动而言，运行时状态和能力检查才是事实来源。

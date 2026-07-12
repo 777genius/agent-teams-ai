@@ -16,7 +16,7 @@ Non. Agent Teams est la couche locale d'orchestration et d'interface utilisateur
 
 ## Quels runtimes sont pris en charge ?
 
-Les chemins de runtime pris en charge sont Claude Code, Codex et OpenCode. L'application suit également des identifiants de fournisseur tels qu'Anthropic, Codex, Gemini et OpenCode lorsque le runtime les expose.
+Les chemins de runtime pris en charge sont Claude Code, Codex et OpenCode. L'application suit également des identifiants de fournisseur tels qu'Anthropic, Codex et OpenCode lorsque le runtime les expose.
 
 ## Dois-je d'abord installer Claude Code ou Codex ?
 

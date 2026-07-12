@@ -62,7 +62,7 @@ Le runtime gère le comportement d'exécution du modèle, les détails d'authent
 
 ## Fournisseur
 
-Un fournisseur est le chemin d'accès au modèle situé derrière un runtime. Les ids de fournisseur actuels incluent Anthropic, Codex, Gemini et OpenCode. OpenCode peut router vers de nombreux fournisseurs de modèles via sa propre configuration.
+Un fournisseur est le chemin d'accès au modèle situé derrière un runtime. Les ids de fournisseur actuels incluent Anthropic, Codex et OpenCode. OpenCode peut router vers de nombreux fournisseurs de modèles via sa propre configuration.
 
 Agent Teams orchestre les tâches et les messages, mais il ne remplace pas l'authentification du fournisseur ni la politique du fournisseur.
 

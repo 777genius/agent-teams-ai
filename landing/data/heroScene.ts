@@ -193,7 +193,7 @@ export const heroFeatureRail = [
   {
     id: "local",
     title: "Your Machine, Your Code",
-    text: "Track activity, logs, file changes, and what every agent is doing inside each task.",
+    text: "Run commands in the built-in terminal and track logs, file changes, and every agent's work.",
   },
 ] as const;
 
@@ -255,7 +255,7 @@ const ruHeroFeatureRail: Record<string, { title: string; text: string }> = {
   },
   local: {
     title: "Ваша машина, ваш код",
-    text: "Легко отслеживайте активность, логи, изменения файлов и работу каждого агента внутри каждой задачи.",
+    text: "Запускайте команды во встроенном терминале и отслеживайте логи, изменения файлов и работу агентов.",
   },
 };
 

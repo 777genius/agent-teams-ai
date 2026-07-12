@@ -16,7 +16,7 @@ lang: ja-JP
 
 ## どのランタイムがサポートされていますか？
 
-サポートされているランタイムの経路は Claude Code、Codex、OpenCode です。また、ランタイムが公開している場合、アプリは Anthropic、Codex、Gemini、OpenCode などのプロバイダー id も追跡します。
+サポートされているランタイムの経路は Claude Code、Codex、OpenCode です。また、ランタイムが公開している場合、アプリは Anthropic、Codex、OpenCode などのプロバイダー id も追跡します。
 
 ## 先に Claude Code や Codex をインストールする必要がありますか？
 

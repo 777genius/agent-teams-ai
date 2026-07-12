@@ -5,7 +5,7 @@
   },
   "features": [
     {
-      "id": "AgentTeams",
+      "id": "agentTeams",
       "title": "Agent Teams",
       "description": "Membuat tim dengan peran yang berbeda. Agen bekerja secara mandiri secara paralel, berkomunikasi satu sama lain, dan berkolaborasi dalam tim."
     },
@@ -20,7 +20,22 @@
       "description": "Diff tampilan per tugas dengan menerima, menolak, dan berkomentar. Bawaan-dalam penyunting kode dengan Git dukungan."
     },
     {
-      "id": "cross Team",
+      "id": "tokenUsage",
+      "title": "Analitik Token & Anggaran",
+      "description": "Lihat penggunaan token dan perkiraan biaya di seluruh tim, agen, tugas, proyek, model, dan proses. Temukan pekerjaan mahal, pantau tren dan prakiraan, tetapkan anggaran bulanan, serta dapatkan peringatan pada 80% dan 100%."
+    },
+    {
+      "id": "organizations",
+      "title": "Organisasi & Gambaran Global",
+      "description": "Atur tim ke dalam departemen, skuad, atau struktur bertingkat apa pun. Lihat seluruh organisasi dalam satu peta langsung dengan status tim dan agen, progres tugas, dependensi, delegasi, dan komunikasi lintas tim."
+    },
+    {
+      "id": "liveProcesses",
+      "title": "Proses Hidup",
+      "description": "Lihat agen yang sedang berjalan, URL terbuka dalam browser, monitor penggunaan token dan konteks sesi dalam waktu nyata."
+    },
+    {
+      "id": "crossTeam",
       "title": "Cross- Tim Komunikasi",
       "description": "Agen saling mengirim pesan dalam dan dalam tim. Pesan langsung, komentar tugas, dan tindakan cepat."
     },
@@ -28,18 +43,13 @@
       "id": "soloMode",
       "title": "Moda Solo",
       "description": "Mulailah dengan satu agen yang mengelola sendiri. Perluas ke tim penuh setiap kali Anda membutuhkan lebih banyak kekuatan."
-    },
-    {
-      "id": "Hidup Proses",
-      "title": "Proses Hidup",
-      "description": "Lihat agen yang sedang berjalan, URL terbuka dalam browser, monitor penggunaan token dan konteks sesi dalam waktu nyata."
     }
   ],
   "faq": [
     {
       "id": "APA ITU",
       "question": "Apa Agent Teams?",
-      "answer": "Aplikasi desktop untuk mendalangi AI tim agen dengan lapisan koordinasi lokal kita sendiri. Agen memiliki peran, bekerja sendiri, berkolaborasi melalui papan kanban, dan dapat berjalan di Anthropic atau Codex."
+      "answer": "Aplikasi desktop untuk mendalangi AI tim agen dengan lapisan koordinasi lokal kita sendiri. Agen memiliki peran, bekerja sendiri, berkolaborasi melalui papan kanban, dan dapat berjalan dengan Claude, Codex, atau OpenCode."
     },
     {
       "id": "isfree",

@@ -89,9 +89,6 @@ git status --short
 | Codex    | Codex 原生工作流以及 OpenAI 访问权限        |
 | OpenCode | 免费模型、无需认证，多模型团队，以及众多提供方后端 |
 
-::: info
-Gemini 作为受支持的提供方路径提供。有关认证选项以及当前提供方状态，请参阅[提供方与运行时](/zh/reference/providers-runtimes)。
-:::
 
 有关每个提供方的详细配置，请参阅[运行时设置](/zh/guide/runtime-setup)。
 
