@@ -44,6 +44,7 @@ export type CodexControlledAgentProviderOptions = {
   readonly processFactory?: CodexAppServerProcessFactory;
   readonly redactor?: RedactorPort;
   readonly controllerObjective?: string;
+  readonly controllerRegistryRootDir?: string;
   readonly maxGoalTurns?: number;
 };
 
@@ -99,14 +100,17 @@ export class CodexControlledAgentProvider implements ControlledAgentProviderPort
       session: this.options.sessionArtifact,
       task: {
         kind: "structured-prompt",
-        prompt: controlledAgentPrompt(input, this.options.controllerObjective),
+        prompt: controlledAgentPrompt(
+          input,
+          this.options.controllerObjective,
+          this.options.controllerRegistryRootDir,
+        ),
         systemPrompt: input.systemPrompt,
         controls: {
           editMode: "read-only",
         },
         metadata: {
-          codexGoalObjective: this.options.controllerObjective ??
-            controlledAgentGoalObjective(input),
+          codexGoalObjective: controlledAgentGoalObjective(input),
           codexManagedRunId: providerRunId,
         },
       },
@@ -335,11 +339,19 @@ const noShellRunner: RunnerPort = {
 function controlledAgentPrompt(
   input: ControlledAgentProviderStartInput,
   controllerObjective?: string,
+  controllerRegistryRootDir?: string,
 ): string {
   return [
     "Start the project controller loop.",
     `Controller job: ${input.session.identity.controllerJobId}.`,
     `Project: ${input.session.identity.projectId}.`,
+    ...(controllerRegistryRootDir === undefined
+      ? []
+      : [
+          `Controller broker identity: controllerJobId=${input.session.identity.controllerJobId}.`,
+          `Controller registry root: registryRootDir=${controllerRegistryRootDir}.`,
+          "Pass these exact values on every project-controller broker/status call, including the first consume_guidance call.",
+        ]),
     ...(controllerObjective === undefined
       ? []
       : [

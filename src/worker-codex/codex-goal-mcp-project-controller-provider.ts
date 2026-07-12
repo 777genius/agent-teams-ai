@@ -97,6 +97,7 @@ export async function projectControllerProvider(input: {
       workspacePath: input.launch.config.workspacePath,
       codexBinaryPath: input.launch.config.codexBinaryPath ?? "codex",
       controllerObjective,
+      controllerRegistryRootDir: input.controller.registryRootDir,
       ...(input.launch.config.model === undefined
         ? {}
         : { model: input.launch.config.model }),

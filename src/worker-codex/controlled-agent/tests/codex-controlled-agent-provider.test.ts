@@ -172,6 +172,68 @@ describe("CodexControlledAgentProvider", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("keeps a long controller packet in the turn while binding compact goal metadata and exact controller routing", async () => {
+    const root = await mkdtemp(join(tmpdir(), "codex-controlled-agent-provider-"));
+    const workspacePath = join(root, "workspace");
+    const stateDir = join(root, "state");
+    const fakeFactory = new MinimalAppServerFactory();
+    const profile = buildCodexControlledAgentProfile({
+      stateDir,
+      mcpCommand: "subscription-runtime-codex-goal-mcp-test",
+      mcpArgs: ["--stdio"],
+      rawShellMode: "disabled-by-provider",
+    });
+    const longControllerObjective = `controller-packet-start\n${"x".repeat(5_000)}\ncontroller-packet-end`;
+    const registryRootDir = join(root, "registry-v10");
+    const provider = new CodexControlledAgentProvider({
+      profile,
+      sessionArtifact: sessionArtifactFromCodexAuthJson(validAuthJson),
+      workspacePath,
+      codexBinaryPath: "/bin/codex-test",
+      processFactory: fakeFactory.create,
+      controllerObjective: longControllerObjective,
+      controllerRegistryRootDir: registryRootDir,
+      maxGoalTurns: 1,
+    });
+
+    try {
+      provider.start(startInput());
+      await waitForProviderStatus(
+        () => provider.status({ session: startInput().session, run: providerRun() }),
+        ControlledAgentRunStatus.Completed,
+        false,
+      );
+
+      const prompt = fakeFactory.prompts.join("\n");
+      expect(prompt).toContain("controller-packet-start");
+      expect(prompt).toContain("controller-packet-end");
+      expect(prompt).toContain("controllerJobId=controller-1");
+      expect(prompt).toContain(`registryRootDir=${registryRootDir}`);
+      expect(prompt.indexOf("controllerJobId=controller-1")).toBeLessThan(
+        prompt.indexOf("codex_goal_project_controller_consume_guidance"),
+      );
+      expect(prompt.indexOf(`registryRootDir=${registryRootDir}`)).toBeLessThan(
+        prompt.indexOf("codex_goal_project_controller_consume_guidance"),
+      );
+
+      const goalSet = fakeFactory.requests.find(
+        (request) => request.method === "thread/goal/set",
+      );
+      const goalObjective = String(goalSet?.params?.objective ?? "");
+      expect(goalObjective.length).toBeLessThanOrEqual(4_000);
+      expect(goalObjective).toContain("Controller job: controller-1.");
+      expect(goalObjective).toContain("Project: project-1.");
+      expect(goalObjective).not.toContain("controller-packet-start");
+      expect(goalObjective).not.toContain("controller-packet-end");
+    } finally {
+      await provider.stop({
+        session: startInput().session,
+        run: providerRun(),
+      });
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 function startInput(): ControlledAgentProviderStartInput {
