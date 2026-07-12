@@ -128,13 +128,17 @@ function isTeamNotFoundError(error: unknown): boolean {
   );
 }
 
-function withStableRuntimeObservedAt(teamName: string, body: unknown): Record<string, unknown> {
+function withValidatedRuntimeObservedAt(teamName: string, body: unknown): Record<string, unknown> {
   const payload = withRuntimeTeamName(teamName, body);
-  const observedAt = typeof payload.observedAt === 'string' ? payload.observedAt.trim() : '';
-  if (!observedAt) {
-    throw new HttpBadRequestError('OpenCode runtime payload missing observedAt');
+  if (!Object.prototype.hasOwnProperty.call(payload, 'observedAt')) {
+    return payload;
   }
-  if (!Number.isFinite(Date.parse(observedAt))) {
+  const observedAt = payload.observedAt;
+  if (
+    typeof observedAt !== 'string' ||
+    !observedAt.trim() ||
+    !Number.isFinite(Date.parse(observedAt))
+  ) {
     throw new HttpBadRequestError('OpenCode runtime payload invalid observedAt');
   }
   return payload;
@@ -471,7 +475,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         }
         return reply.send(
           await getTeamRuntimeControlApi(services).recordOpenCodeRuntimeHeartbeat(
-            withStableRuntimeObservedAt(validatedTeamName.value!, request.body)
+            withValidatedRuntimeObservedAt(validatedTeamName.value!, request.body)
           )
         );
       } catch (error) {
