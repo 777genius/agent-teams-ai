@@ -146,7 +146,7 @@ export function areAllExpectedLaunchMembersConfirmed(
     if (lane.state !== 'finished' || !lane.result) {
       return false;
     }
-    if (lane.runId && lane.result.runId !== lane.runId) {
+    if (!lane.runId || lane.result.runId !== lane.runId) {
       return false;
     }
     const evidence = resolveOpenCodeSecondaryLaneMemberEvidence(lane, memberName);
