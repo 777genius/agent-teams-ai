@@ -1,0 +1,458 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "phase-00-w2-environment-provenance-r1",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "evidenceId",
+    "phaseStartSha",
+    "authoredBy",
+    "validatedBy",
+    "claimStatus",
+    "records",
+    "sourceDiscovery",
+    "perKeyModel",
+    "keyPolicyProfiles",
+    "keyEvidence"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "./schemas/environment-provenance.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "evidenceId": {
+      "const": "P0.W2.ENVIRONMENT_PROVENANCE"
+    },
+    "phaseStartSha": {
+      "const": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca"
+    },
+    "authoredBy": {
+      "const": "phase-00-w2-targeted-a1-source-review"
+    },
+    "validatedBy": {
+      "const": "scripts/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.ts"
+    },
+    "claimStatus": {
+      "const": "source_observed_not_target_verified"
+    },
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "keys",
+          "provenance",
+          "providers",
+          "classification",
+          "targetRule",
+          "source",
+          "sourceToken",
+          "discoveryDisposition"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "keys": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "provenance": {
+            "type": "string",
+            "minLength": 1
+          },
+          "providers": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": ["anthropic", "codex", "gemini", "opencode"]
+            }
+          },
+          "classification": {
+            "enum": ["required", "optional", "forbidden"]
+          },
+          "targetRule": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceToken": {
+            "type": "string",
+            "minLength": 1
+          },
+          "discoveryDisposition": {
+            "enum": [
+              "source_discovered",
+              "open_ended_wildcard",
+              "target_only_prohibition",
+              "fixture_bound"
+            ]
+          },
+          "keyBindings": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "required": ["key", "path"],
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "currentBehavior": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "sourceDiscovery": {
+      "type": "object",
+      "required": ["strategy", "roots", "excludedSegments", "extensions", "extractionVersion"],
+      "properties": {
+        "strategy": {
+          "const": "repository_production_source_census"
+        },
+        "roots": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "excludedSegments": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "extensions": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": [".ts", ".tsx"]
+          }
+        },
+        "extractionVersion": {
+          "const": 2
+        }
+      },
+      "additionalProperties": false
+    },
+    "keyEvidence": {
+      "type": "object",
+      "required": ["fields", "probePaths", "rows"],
+      "properties": {
+        "fields": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["key", "groupId", "policyProfileId", "probePathId"]
+          }
+        },
+        "probePaths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "path"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "prefixItems": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "string",
+                "minLength": 1
+              }
+            ],
+            "items": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "perKeyModel": {
+      "type": "object",
+      "required": ["strategy", "executionUnitModelVersion", "targetVerification", "resolution"],
+      "properties": {
+        "strategy": {
+          "const": "normalized_one_row_per_exact_key_or_explicit_wildcard"
+        },
+        "executionUnitModelVersion": {
+          "const": "adr-18-adr-30-r3-source-executed-routing-semantics"
+        },
+        "targetVerification": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolution": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "keyPolicyProfiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "sourceClass",
+          "owner",
+          "executionUnitIds",
+          "providerBindings",
+          "credentialExposureSetIds",
+          "secretClass",
+          "childVisibility",
+          "redactionRule",
+          "claimStatus",
+          "platformScope",
+          "semanticRole"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sourceClass": {
+            "enum": [
+              "production_source_census",
+              "checked_fixture_binding",
+              "ambient_open_ended_inheritance",
+              "target_contract_prohibition"
+            ]
+          },
+          "owner": {
+            "enum": [
+              "host_environment_policy",
+              "controller_lane_relay",
+              "provider_runtime_policy",
+              "team_provisioning_policy",
+              "opencode_runtime_adapter",
+              "desktop_host_policy",
+              "process_execution_unit_policy"
+            ]
+          },
+          "executionUnitIds": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "unit-primary-provisioning",
+                "unit-opencode-bridge",
+                "unit-runtime-relay-target"
+              ]
+            }
+          },
+          "providerBindings": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "required": ["providerId", "backendFamily", "versionScope", "targetDisposition"],
+              "properties": {
+                "providerId": {
+                  "enum": ["anthropic", "codex", "gemini", "opencode"]
+                },
+                "backendFamily": {
+                  "enum": ["provisioning_cli_primary", "opencode_runtime_adapter"]
+                },
+                "versionScope": {
+                  "const": "canonical-base-c72fd2018-source-observed"
+                },
+                "targetDisposition": {
+                  "enum": ["required", "optional", "forbidden"]
+                },
+                "runtimeBackend": {
+                  "enum": [
+                    "anthropic_default",
+                    "anthropic_bedrock",
+                    "anthropic_vertex",
+                    "anthropic_foundry",
+                    "anthropic_claude_platform_aws",
+                    "codex_configured",
+                    "gemini_configured"
+                  ]
+                },
+                "emissionDisposition": {
+                  "enum": [
+                    "emitted_always",
+                    "emitted_when_backend_selected",
+                    "emitted_configured_backend",
+                    "preserved_when_custom_configuration",
+                    "removed_before_spawn"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "providerlessProhibition": {
+            "type": "object",
+            "required": ["scope", "targetDisposition", "reason"],
+            "properties": {
+              "scope": {
+                "const": "all_provider_execution_units"
+              },
+              "targetDisposition": {
+                "const": "forbidden"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "credentialExposureSetIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "ces-ambient-unbounded",
+                "ces-provider-secret-material",
+                "ces-target-ingress-relay-secret",
+                "ces-host-only-denied",
+                "ces-runtime-metadata"
+              ]
+            }
+          },
+          "secretClass": {
+            "enum": [
+              "ambient_unknown_may_contain_secret",
+              "runtime_ingress_bearer",
+              "provider_credential_or_reference",
+              "non_secret_configuration"
+            ]
+          },
+          "childVisibility": {
+            "enum": [
+              "target_relay_only_provider_forbidden",
+              "absent_current_and_target",
+              "currently_possible_target_forbidden",
+              "provider_child_visible_when_selected"
+            ]
+          },
+          "redactionRule": {
+            "type": "string",
+            "minLength": 1
+          },
+          "claimStatus": {
+            "const": "source_observed_not_target_verified"
+          },
+          "platformScope": {
+            "enum": [
+              "windows_only",
+              "posix_primary",
+              "cross_platform_or_provider_conditional",
+              "target_platform_independent"
+            ]
+          },
+          "semanticRole": {
+            "enum": [
+              "ambient_inheritance",
+              "selected_child_input",
+              "emitted_child_key",
+              "removed_child_key",
+              "host_policy_input",
+              "host_policy_input_and_emitted_child_key",
+              "target_relay_secret"
+            ]
+          }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "providerBindings": {
+                "minItems": 1
+              }
+            },
+            "not": {
+              "required": ["providerlessProhibition"]
+            }
+          },
+          {
+            "required": ["providerlessProhibition"],
+            "properties": {
+              "sourceClass": {
+                "const": "target_contract_prohibition"
+              },
+              "providerBindings": {
+                "maxItems": 0
+              }
+            }
+          }
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
