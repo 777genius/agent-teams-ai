@@ -135,7 +135,7 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   protected abstract readonly openCodePromptDeliveryWatchdogScheduler: OpenCodeMemberInboxDeliveryWakePorts['watchdogScheduler'];
 
   private languageChangeInFlight: Promise<void> = Promise.resolve();
-  private cliHelpOutputInFlight: Promise<string> | null = null;
+  private readonly cliHelpOutputInFlightByCwd = new Map<string, Promise<string>>();
 
   protected abstract scheduleOpenCodePromptDeliveryWatchdog(input: {
     teamName: string;
@@ -559,24 +559,26 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
   }
 
   async getCliHelpOutput(cwd?: string): Promise<string> {
-    if (this.cliHelpOutputInFlight) {
-      return this.cliHelpOutputInFlight;
+    const targetCwd = cwd ?? process.cwd();
+    const existingInFlight = this.cliHelpOutputInFlightByCwd.get(targetCwd);
+    if (existingInFlight) {
+      return existingInFlight;
     }
 
     const inFlight = getCliHelpOutputWithProvisioningPorts({
-      cwd,
+      cwd: targetCwd,
       cache: this.helpOutputCache,
       getCachedOrProbeResult: (targetCwd, providerId) =>
         this.prepareFacade.getCachedOrProbeResult(targetCwd, providerId),
       providerRuntime: this.providerRuntime,
     });
-    this.cliHelpOutputInFlight = inFlight;
+    this.cliHelpOutputInFlightByCwd.set(targetCwd, inFlight);
 
     try {
       return await inFlight;
     } finally {
-      if (this.cliHelpOutputInFlight === inFlight) {
-        this.cliHelpOutputInFlight = null;
+      if (this.cliHelpOutputInFlightByCwd.get(targetCwd) === inFlight) {
+        this.cliHelpOutputInFlightByCwd.delete(targetCwd);
       }
     }
   }
