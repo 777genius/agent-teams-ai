@@ -110,6 +110,52 @@ describe('TeamLaunchStateStore', () => {
     expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(1);
   });
 
+  it('rejects a missing temporary file when the team directory still exists', async () => {
+    const launchStatePath = getTeamLaunchStatePath('demo');
+    const missingTemporaryFileError = Object.assign(new Error('temporary file disappeared'), {
+      code: 'ENOENT',
+      path: path.join(path.dirname(launchStatePath), '.tmp.missing'),
+      dest: launchStatePath,
+    });
+    const access = vi.spyOn(fs.promises, 'access').mockResolvedValueOnce(undefined);
+    mocks.atomicWriteAsync.mockRejectedValueOnce(missingTemporaryFileError);
+
+    try {
+      await expect(new TeamLaunchStateStore().write('demo', snapshot())).rejects.toBe(
+        missingTemporaryFileError
+      );
+
+      expect(access).toHaveBeenCalledWith(path.dirname(launchStatePath));
+      expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+        '[demo] Failed to persist launch-state: temporary file disappeared'
+      );
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      access.mockRestore();
+    }
+  });
+
+  it('rejects when the team directory probe cannot confirm revocation', async () => {
+    const launchStatePath = getTeamLaunchStatePath('demo');
+    const missingTemporaryFileError = Object.assign(new Error('temporary file disappeared'), {
+      code: 'ENOENT',
+      path: path.join(path.dirname(launchStatePath), '.tmp.missing'),
+    });
+    const probeError = Object.assign(new Error('directory probe failed'), { code: 'EACCES' });
+    const access = vi.spyOn(fs.promises, 'access').mockRejectedValueOnce(probeError);
+    mocks.atomicWriteAsync.mockRejectedValueOnce(missingTemporaryFileError);
+
+    try {
+      await expect(new TeamLaunchStateStore().write('demo', snapshot())).rejects.toBe(
+        missingTemporaryFileError
+      );
+      expect(access).toHaveBeenCalledWith(path.dirname(launchStatePath));
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      access.mockRestore();
+    }
+  });
+
   it('attempts to clear both publication files when the first removal fails', async () => {
     const stateRemovalError = Object.assign(new Error('state file is busy'), { code: 'EBUSY' });
     const remove = vi

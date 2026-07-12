@@ -33,18 +33,11 @@ async function isMissingTeamDirectoryWriteRace(
     return false;
   }
   const targetDir = path.dirname(targetPath);
-  const errorPaths = [
-    (error as NodeJS.ErrnoException).path,
-    (error as NodeJS.ErrnoException & { dest?: string }).dest,
-  ].filter((value): value is string => typeof value === 'string' && value.length > 0);
-  if (code === 'ENOENT' && errorPaths.some((errorPath) => path.dirname(errorPath) === targetDir)) {
-    return true;
-  }
   try {
     await fs.promises.access(targetDir);
     return false;
-  } catch {
-    return true;
+  } catch (accessError) {
+    return (accessError as NodeJS.ErrnoException).code === 'ENOENT';
   }
 }
 
