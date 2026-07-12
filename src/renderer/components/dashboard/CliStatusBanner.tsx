@@ -15,6 +15,7 @@ import {
   mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
+import { CodexRuntimeUpdateDialog } from '@features/codex-runtime-installer/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   isOpenCodeProviderOAuthBridgeOutdated,
@@ -33,6 +34,7 @@ import {
 import {
   isCodexProviderRuntimeMissing,
   shouldOfferCodexRuntimeInstall,
+  shouldOfferCodexRuntimeUpdate,
 } from '@renderer/components/runtime/codexRuntimeInstallAction';
 import {
   formatProviderStatusText,
@@ -678,9 +680,10 @@ function shouldShowCodexInstallAction(
   return (
     provider.providerId === 'codex' &&
     !showSkeleton &&
-    !provider.authenticated &&
-    isCodexProviderRuntimeMissing(provider) &&
-    shouldOfferCodexRuntimeInstall(codexRuntimeStatus)
+    (shouldOfferCodexRuntimeUpdate(codexRuntimeStatus) ||
+      (!provider.authenticated &&
+        isCodexProviderRuntimeMissing(provider) &&
+        shouldOfferCodexRuntimeInstall(codexRuntimeStatus)))
   );
 }
 
@@ -714,6 +717,9 @@ function getRuntimeInstallLabel(
   }
   if (status?.state === 'failed') {
     return t('cliStatus.runtimeInstall.retryInstall');
+  }
+  if (status && 'updateAvailable' in status && status.updateAvailable && status.latestVersion) {
+    return t('cliStatus.actions.updateTo', { version: status.latestVersion });
   }
   if (status?.installed) {
     return t('cliStatus.runtimeInstall.update');
@@ -1507,6 +1513,7 @@ export const CliStatusBanner = ({
     openCodeRuntimeStatusLoading,
     codexRuntimeStatus,
     codexRuntimeStatusLoading,
+    codexRuntimeError,
     bootstrapCliStatus,
     fetchCliStatus,
     fetchCliProviderStatus,
@@ -1519,6 +1526,7 @@ export const CliStatusBanner = ({
   } = useCliInstaller();
 
   const [showLoginTerminal, setShowLoginTerminal] = useState(false);
+  const [codexRuntimeDialogOpen, setCodexRuntimeDialogOpen] = useState(false);
   const [providerTerminal, setProviderTerminal] = useState<{
     providerId: CliProviderId;
     action: 'login' | 'logout';
@@ -1640,7 +1648,7 @@ export const CliStatusBanner = ({
       return;
     }
 
-    if (visibleCliProviders.some(isCodexProviderRuntimeMissing)) {
+    if (visibleCliProviders.some((provider) => provider.providerId === 'codex')) {
       void fetchCodexRuntimeStatus();
     }
   }, [
@@ -2038,6 +2046,14 @@ export const CliStatusBanner = ({
             onAdvancedSettings={handleOnboardingAdvancedSettings}
           />
         ) : null}
+        <CodexRuntimeUpdateDialog
+          open={codexRuntimeDialogOpen}
+          onOpenChange={setCodexRuntimeDialogOpen}
+          status={codexRuntimeStatus}
+          loading={codexRuntimeStatusLoading}
+          error={codexRuntimeError}
+          onInstall={() => void installCodexRuntime()}
+        />
         {manageDialogOpen && (
           <Suspense fallback={null}>
             <ProviderRuntimeSettingsDialog
@@ -2175,7 +2191,7 @@ export const CliStatusBanner = ({
           isBusy={isBusy}
           onInstall={handleInstall}
           onOpenCodeInstall={() => void installOpenCodeRuntime()}
-          onCodexInstall={() => void installCodexRuntime()}
+          onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
           onRefresh={handleRefresh}
           onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
           onProviderLogin={handleProviderLogin}
@@ -2433,7 +2449,7 @@ export const CliStatusBanner = ({
             isBusy={isBusy}
             onInstall={handleInstall}
             onOpenCodeInstall={() => void installOpenCodeRuntime()}
-            onCodexInstall={() => void installCodexRuntime()}
+            onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
             onRefresh={handleRefresh}
             onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
             onProviderLogin={handleProviderLogin}
@@ -2514,7 +2530,7 @@ export const CliStatusBanner = ({
           isBusy={isBusy}
           onInstall={handleInstall}
           onOpenCodeInstall={() => void installOpenCodeRuntime()}
-          onCodexInstall={() => void installCodexRuntime()}
+          onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
           onRefresh={handleRefresh}
           onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
           onProviderLogin={handleProviderLogin}
@@ -2739,7 +2755,7 @@ export const CliStatusBanner = ({
         isBusy={isBusy}
         onInstall={handleInstall}
         onOpenCodeInstall={() => void installOpenCodeRuntime()}
-        onCodexInstall={() => void installCodexRuntime()}
+        onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
         onRefresh={handleRefresh}
         onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
         onProviderLogin={handleProviderLogin}

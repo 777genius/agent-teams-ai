@@ -35,10 +35,10 @@ let postHogIdentityNeedsRestore = false;
 let identitySyncToken = 0;
 let appSessionStartCaptured = false;
 
-type PostHogIdentityContext = {
+interface PostHogIdentityContext {
   userId: string;
   tags: Record<string, string>;
-};
+}
 
 function getElectronApi(): ElectronAPI | undefined {
   return (window as Window & { electronAPI?: ElectronAPI }).electronAPI;

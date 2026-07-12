@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "正在显示备用模型列表。特定于账户的模型和最新发布的模型可能会缺失。",
+    "codexCatalogFallbackTitle": "实时 Codex 模型不可用",
     "badges": {
       "configured": "已配置",
       "connected": "已连接",
@@ -1410,8 +1412,37 @@
       "description": "将启动流程集中在项目路径上，并且仅在需要额外控制时才扩展此流程。"
     }
   },
+  "teamImport": {
+    "cancel": "取消",
+    "chooseFolder": "选择文件夹",
+    "createDraft": "创建团队草稿",
+    "createFailed": "无法创建导入的团队",
+    "creating": "正在创建...",
+    "description": "选择本地智能体团队文件夹，并在创建草稿前检查所有导入的指令。",
+    "inspectFailed": "无法检查所选文件夹",
+    "invalidTeamName": "请使用 kebab-case 格式的小写英文字母、数字和连字符，长度不超过 64 个字符。",
+    "leadPrompt": "团队负责人提示词",
+    "members": "成员（{{count}}）",
+    "projectPath": "项目路径",
+    "scanning": "正在扫描...",
+    "selectPrompt": "选择文件夹以预览要导入的团队。",
+    "skills": "发现的技能（{{count}}）",
+    "summary": "创建 {{teamName}}，包含 {{count}} 名成员。",
+    "teamName": "团队名称",
+    "teamNameRequired": "必须填写团队名称。",
+    "teamNameReserved": "此团队名称为操作系统保留名称。",
+    "title": "导入智能体团队",
+    "warningDuplicateMember": "{{fileName}}：已跳过重复的成员名称 {{name}}。",
+    "warningMemberInvalid": "{{fileName}}：成员名称 {{name}} 无效。",
+    "warningMemberReserved": "{{fileName}}：成员名称 {{name}} 为保留名称。",
+    "warningMemberReservedSuffix": "{{fileName}}：成员名称 {{name}} 使用了保留的自动后缀。",
+    "warningMissingClaudeMd": "未找到 .claude/CLAUDE.md 或 CLAUDE.md；团队负责人提示词将为空。",
+    "warningUnknownTaskOwner": "任务 {{description}} 引用了未知成员 {{owner}}，已在不指定负责人的情况下导入。",
+    "warningUnsafeTaskCall": "无法安全重写 Task 调用：{{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "从文件夹导入",
       "copyTeam": "复制团队",
       "createTeam": "创建团队",
       "organizationMap": "Org Map",

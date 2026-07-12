@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Se muestra una lista de modelos alternativa. Es posible que falten modelos específicos de tu cuenta y modelos recién publicados.",
+    "codexCatalogFallbackTitle": "Los modelos de Codex en vivo no están disponibles",
     "badges": {
       "configured": "Configurado",
       "connected": "Conectado",
@@ -1410,8 +1412,37 @@
       "description": "Mantenga el flujo de lanzamiento enfocado en la ruta del proyecto y sólo expanda esto cuando desee control adicional."
     }
   },
+  "teamImport": {
+    "cancel": "Cancelar",
+    "chooseFolder": "Elegir carpeta",
+    "createDraft": "Crear borrador del equipo",
+    "createFailed": "No se pudo crear el equipo importado",
+    "creating": "Creando...",
+    "description": "Elige la carpeta de un equipo de agentes local y revisa todas las instrucciones importadas antes de crear un borrador.",
+    "inspectFailed": "No se pudo inspeccionar la carpeta seleccionada",
+    "invalidTeamName": "Usa letras minúsculas, números y guiones en formato kebab-case, con un máximo de 64 caracteres.",
+    "leadPrompt": "Prompt del líder",
+    "members": "Miembros ({{count}})",
+    "projectPath": "Ruta del proyecto",
+    "scanning": "Analizando...",
+    "selectPrompt": "Elige una carpeta para ver una vista previa del equipo importado.",
+    "skills": "Habilidades encontradas ({{count}})",
+    "summary": "Crear {{teamName}} con {{count}} miembros.",
+    "teamName": "Nombre del equipo",
+    "teamNameRequired": "El nombre del equipo es obligatorio.",
+    "teamNameReserved": "El sistema operativo reserva este nombre de equipo.",
+    "title": "Importar equipo de agentes",
+    "warningDuplicateMember": "{{fileName}}: se omitió el nombre de miembro duplicado {{name}}.",
+    "warningMemberInvalid": "{{fileName}}: el nombre de miembro {{name}} no es válido.",
+    "warningMemberReserved": "{{fileName}}: el nombre de miembro {{name}} está reservado.",
+    "warningMemberReservedSuffix": "{{fileName}}: el nombre de miembro {{name}} usa un sufijo automático reservado.",
+    "warningMissingClaudeMd": "No se encontró .claude/CLAUDE.md ni CLAUDE.md; el prompt del líder quedará vacío.",
+    "warningUnknownTaskOwner": "La tarea {{description}} hacía referencia al miembro desconocido {{owner}} y se importó sin propietario.",
+    "warningUnsafeTaskCall": "No se pudo reescribir de forma segura la llamada a Task: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "Importar desde una carpeta",
       "copyTeam": "Equipo de copia",
       "createTeam": "Crear equipo",
       "organizationMap": "Org Map",

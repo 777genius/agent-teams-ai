@@ -3,10 +3,25 @@ import { describe, expect, it } from 'vitest';
 import { createStaticCodexModelCatalogModels } from '../codexModelCatalogFallback';
 
 describe('createStaticCodexModelCatalogModels', () => {
-  it('includes GPT-5.5 without changing the default from GPT-5.4', () => {
+  it('includes GPT-5.6 Sol, Terra, and Luna without changing the default from GPT-5.4', () => {
     const models = createStaticCodexModelCatalogModels();
+    const modelIds = models.map((model) => model.launchModel);
 
-    expect(models.map((model) => model.launchModel)).toContain('gpt-5.5');
+    expect(modelIds).toEqual(
+      expect.arrayContaining(['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5'])
+    );
     expect(models.find((model) => model.isDefault)?.launchModel).toBe('gpt-5.4');
+    expect(models.find((model) => model.launchModel === 'gpt-5.6-sol')).toMatchObject({
+      supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+      defaultReasoningEffort: 'low',
+    });
+    expect(models.find((model) => model.launchModel === 'gpt-5.6-terra')).toMatchObject({
+      supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+      defaultReasoningEffort: 'medium',
+    });
+    expect(models.find((model) => model.launchModel === 'gpt-5.6-luna')).toMatchObject({
+      supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'],
+      defaultReasoningEffort: 'medium',
+    });
   });
 });

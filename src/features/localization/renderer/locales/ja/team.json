@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "代替のモデル一覧を表示しています。アカウント固有のモデルや新しくリリースされたモデルが含まれていない可能性があります。",
+    "codexCatalogFallbackTitle": "Codex のライブモデルを利用できません",
     "badges": {
       "configured": "構成される",
       "connected": "コネクテッド",
@@ -1410,8 +1412,37 @@
       "description": "プロジェクトパスに焦点を絞った起動フローを保持し、余分な制御が必要な場合にのみこれを拡張します。"
     }
   },
+  "teamImport": {
+    "cancel": "キャンセル",
+    "chooseFolder": "フォルダーを選択",
+    "createDraft": "下書きチームを作成",
+    "createFailed": "インポートしたチームを作成できませんでした",
+    "creating": "作成中...",
+    "description": "ローカルのエージェントチームフォルダーを選択し、下書きを作成する前にインポートされるすべての指示を確認してください。",
+    "inspectFailed": "選択したフォルダーを確認できませんでした",
+    "invalidTeamName": "英小文字、数字、ハイフンを使った kebab-case で、64文字以内にしてください。",
+    "leadPrompt": "リードプロンプト",
+    "members": "メンバー（{{count}}）",
+    "projectPath": "プロジェクトパス",
+    "scanning": "スキャン中...",
+    "selectPrompt": "インポートするチームをプレビューするフォルダーを選択してください。",
+    "skills": "検出されたスキル（{{count}}）",
+    "summary": "{{count}}人のメンバーで {{teamName}} を作成します。",
+    "teamName": "チーム名",
+    "teamNameRequired": "チーム名は必須です。",
+    "teamNameReserved": "このチーム名はオペレーティングシステムによって予約されています。",
+    "title": "エージェントチームをインポート",
+    "warningDuplicateMember": "{{fileName}}：重複するメンバー名 {{name}} をスキップしました。",
+    "warningMemberInvalid": "{{fileName}}：メンバー名 {{name}} は無効です。",
+    "warningMemberReserved": "{{fileName}}：メンバー名 {{name}} は予約されています。",
+    "warningMemberReservedSuffix": "{{fileName}}：メンバー名 {{name}} は予約済みの自動サフィックスを使用しています。",
+    "warningMissingClaudeMd": ".claude/CLAUDE.md または CLAUDE.md が見つかりませんでした。リードプロンプトは空になります。",
+    "warningUnknownTaskOwner": "タスク {{description}} は不明なメンバー {{owner}} を参照していたため、担当者なしでインポートされました。",
+    "warningUnsafeTaskCall": "Task 呼び出しを安全に書き換えられませんでした：{{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "フォルダーからインポート",
       "copyTeam": "コピーチーム",
       "createTeam": "チームの作成",
       "organizationMap": "Org Map",

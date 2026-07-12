@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Viene mostrato un elenco di modelli di riserva. Potrebbero mancare i modelli specifici dell'account e quelli appena rilasciati.",
+    "codexCatalogFallbackTitle": "I modelli Codex in tempo reale non sono disponibili",
     "badges": {
       "configured": "Configurato",
       "connected": "Connesso",
@@ -1410,8 +1412,37 @@
       "description": "Mantieni il flusso di avvio focalizzato sul percorso del progetto ed espandi questo solo quando vuoi un controllo aggiuntivo."
     }
   },
+  "teamImport": {
+    "cancel": "Annulla",
+    "chooseFolder": "Scegli cartella",
+    "createDraft": "Crea team in bozza",
+    "createFailed": "Impossibile creare il team importato",
+    "creating": "Creazione in corso...",
+    "description": "Scegli la cartella locale di un team di agenti, quindi controlla tutte le istruzioni importate prima di creare una bozza.",
+    "inspectFailed": "Impossibile analizzare la cartella selezionata",
+    "invalidTeamName": "Usa lettere minuscole, numeri e trattini in formato kebab-case, fino a 64 caratteri.",
+    "leadPrompt": "Prompt del lead",
+    "members": "Membri ({{count}})",
+    "projectPath": "Percorso del progetto",
+    "scanning": "Analisi in corso...",
+    "selectPrompt": "Scegli una cartella per visualizzare l'anteprima del team importato.",
+    "skills": "Skill trovate ({{count}})",
+    "summary": "Crea {{teamName}} con {{count}} membri.",
+    "teamName": "Nome del team",
+    "teamNameRequired": "Il nome del team è obbligatorio.",
+    "teamNameReserved": "Questo nome del team è riservato dal sistema operativo.",
+    "title": "Importa team di agenti",
+    "warningDuplicateMember": "{{fileName}}: il nome membro duplicato {{name}} è stato ignorato.",
+    "warningMemberInvalid": "{{fileName}}: il nome membro {{name}} non è valido.",
+    "warningMemberReserved": "{{fileName}}: il nome membro {{name}} è riservato.",
+    "warningMemberReservedSuffix": "{{fileName}}: il nome membro {{name}} usa un suffisso automatico riservato.",
+    "warningMissingClaudeMd": "Non è stato trovato .claude/CLAUDE.md né CLAUDE.md; il prompt del lead sarà vuoto.",
+    "warningUnknownTaskOwner": "Il task {{description}} faceva riferimento al membro sconosciuto {{owner}} ed è stato importato senza proprietario.",
+    "warningUnsafeTaskCall": "Impossibile riscrivere in modo sicuro la chiamata Task: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "Importa da cartella",
       "copyTeam": "Copia team",
       "createTeam": "Crea team",
       "organizationMap": "Org Map",

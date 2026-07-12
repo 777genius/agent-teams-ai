@@ -6,6 +6,10 @@ The format is based on Keep a Changelog and this project follows Semantic Versio
 
 ## [Unreleased]
 
+### Added
+
+- GPT-5.6 Sol, Terra, and Luna fallback selection for Codex teams, dynamic future-model efforts, and in-app Codex CLI updates.
+
 ## [1.2.0] - 2026-03-31
 
 ### Added

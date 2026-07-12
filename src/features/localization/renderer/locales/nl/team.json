@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Er wordt een reservemodellenlijst weergegeven. Accountspecifieke en nieuw uitgebrachte modellen kunnen ontbreken.",
+    "codexCatalogFallbackTitle": "Live Codex-modellen niet beschikbaar",
     "badges": {
       "configured": "Geconfigureerd",
       "connected": "Verbonden",
@@ -1410,8 +1412,37 @@
       "description": "Houd de startflow gericht op het projectpad en klap dit alleen uit wanneer je extra controle wilt."
     }
   },
+  "teamImport": {
+    "cancel": "Annuleren",
+    "chooseFolder": "Map kiezen",
+    "createDraft": "Conceptteam maken",
+    "createFailed": "Het geïmporteerde team kon niet worden gemaakt",
+    "creating": "Bezig met maken...",
+    "description": "Kies een lokale map van een agentteam en controleer alle geïmporteerde instructies voordat je een concept maakt.",
+    "inspectFailed": "De geselecteerde map kon niet worden gecontroleerd",
+    "invalidTeamName": "Gebruik kleine letters, cijfers en koppeltekens in kebab-case, met maximaal 64 tekens.",
+    "leadPrompt": "Leadprompt",
+    "members": "Leden ({{count}})",
+    "projectPath": "Projectpad",
+    "scanning": "Bezig met scannen...",
+    "selectPrompt": "Kies een map om een voorbeeld van het geïmporteerde team te bekijken.",
+    "skills": "Gevonden skills ({{count}})",
+    "summary": "Maak {{teamName}} met {{count}} leden.",
+    "teamName": "Teamnaam",
+    "teamNameRequired": "Teamnaam is verplicht.",
+    "teamNameReserved": "Deze teamnaam is gereserveerd door het besturingssysteem.",
+    "title": "Agentteam importeren",
+    "warningDuplicateMember": "{{fileName}}: de dubbele lidnaam {{name}} is overgeslagen.",
+    "warningMemberInvalid": "{{fileName}}: de lidnaam {{name}} is ongeldig.",
+    "warningMemberReserved": "{{fileName}}: de lidnaam {{name}} is gereserveerd.",
+    "warningMemberReservedSuffix": "{{fileName}}: de lidnaam {{name}} gebruikt een gereserveerd automatisch achtervoegsel.",
+    "warningMissingClaudeMd": ".claude/CLAUDE.md en CLAUDE.md zijn niet gevonden; de leadprompt blijft leeg.",
+    "warningUnknownTaskOwner": "Taak {{description}} verwees naar het onbekende lid {{owner}} en is zonder eigenaar geïmporteerd.",
+    "warningUnsafeTaskCall": "De Task-aanroep kon niet veilig worden herschreven: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "Importeren uit map",
       "copyTeam": "Team kopiëren",
       "createTeam": "Team aanmaken",
       "organizationMap": "Org Map",

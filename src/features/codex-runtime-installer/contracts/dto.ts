@@ -20,6 +20,8 @@ export interface CodexRuntimeStatus {
   installed: boolean;
   binaryPath?: string;
   version?: string;
+  latestVersion: string | null;
+  updateAvailable: boolean;
   source: CodexRuntimeSource;
   state: CodexRuntimeInstallerState;
   progress?: CodexRuntimeInstallProgress;

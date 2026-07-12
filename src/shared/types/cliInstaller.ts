@@ -140,7 +140,8 @@ export type CliProviderReasoningEffort =
   | 'medium'
   | 'high'
   | 'xhigh'
-  | 'max';
+  | 'max'
+  | 'ultra';
 
 export type CliProviderModelCatalogSource =
   | 'anthropic-models-api'

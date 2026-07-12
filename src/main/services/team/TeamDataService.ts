@@ -3337,84 +3337,111 @@ export class TeamDataService {
 
   async createTeamConfig(request: TeamCreateConfigRequest): Promise<void> {
     const teamDir = path.join(getTeamsBasePath(), request.teamName);
-    const configPath = path.join(teamDir, 'config.json');
+    const tasksDir = path.join(getTasksBasePath(), request.teamName);
+    await Promise.all([
+      fs.promises.mkdir(getTeamsBasePath(), { recursive: true }),
+      fs.promises.mkdir(getTasksBasePath(), { recursive: true }),
+    ]);
 
-    // Check if team already exists (config.json = fully created by CLI)
-    try {
-      await fs.promises.access(configPath, fs.constants.F_OK);
-      throw new Error(`Team already exists: ${request.teamName}`);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    const pathExists = async (targetPath: string): Promise<boolean> => {
+      try {
+        await fs.promises.lstat(targetPath);
+        return true;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
         throw error;
       }
+    };
+    if ((await pathExists(teamDir)) || (await pathExists(tasksDir))) {
+      throw new Error(`Team already exists: ${request.teamName}`);
     }
 
-    const tasksDir = path.join(getTasksBasePath(), request.teamName);
-    await fs.promises.mkdir(teamDir, { recursive: true });
-    await fs.promises.mkdir(tasksDir, { recursive: true });
+    try {
+      await fs.promises.mkdir(teamDir);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+        throw new Error(`Team already exists: ${request.teamName}`);
+      }
+      throw error;
+    }
 
-    const joinedAt = Date.now();
+    let tasksDirectoryCreated = false;
+    try {
+      await fs.promises.mkdir(tasksDir);
+      tasksDirectoryCreated = true;
 
-    // Save team-level metadata to team.meta.json (NOT config.json).
-    // config.json is CLI territory — created by TeamCreate during provisioning.
-    // team.meta.json preserves user's configuration for the Launch flow.
-    await this.teamMetaStore.writeMeta(request.teamName, {
-      displayName: request.displayName,
-      description: request.description,
-      color: request.color,
-      cwd: request.cwd?.trim() || '',
-      prompt: request.prompt,
-      providerId: request.providerId,
-      providerBackendId: request.providerBackendId,
-      model: request.model,
-      effort: request.effort,
-      fastMode: request.fastMode,
-      skipPermissions: request.skipPermissions,
-      worktree: request.worktree,
-      extraCliArgs: request.extraCliArgs,
-      limitContext: request.limitContext,
-      createdAt: joinedAt,
-    });
+      const joinedAt = Date.now();
 
-    const membersToWrite = applyDistinctRosterColors(
-      request.members.map((member) => ({
-        name: (() => {
-          const name = member.name.trim();
-          if (!name) throw new Error('Member name cannot be empty');
-          const formatError = validateTeamMemberNameFormat(name);
-          if (formatError) {
-            throw new Error(`Member name "${name}" is invalid: ${formatError}`);
-          }
-          if (name.toLowerCase() === 'user') {
-            throw new Error('Member name "user" is reserved');
-          }
-          if (name.toLowerCase() === 'team-lead')
-            throw new Error('Member name "team-lead" is reserved');
-          const suffixInfo = parseNumericSuffixName(name);
-          if (suffixInfo && suffixInfo.suffix >= 2) {
-            throw new Error(
-              `Member name "${name}" is not allowed (reserved for runtime-managed numeric suffixes). Use "${suffixInfo.base}" instead.`
-            );
-          }
-          return name;
-        })(),
-        role: member.role?.trim() || undefined,
-        workflow: member.workflow?.trim() || undefined,
-        isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
-        providerId: normalizeOptionalTeamProviderId(member.providerId),
-        providerBackendId: member.providerBackendId,
-        model: member.model?.trim() || undefined,
-        effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
-        fastMode: member.fastMode,
-        mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
-        agentType: 'general-purpose' as const,
-        joinedAt,
-      }))
-    );
-    await this.membersMetaStore.writeMembers(request.teamName, membersToWrite, {
-      providerBackendId: request.providerBackendId,
-    });
-    TeamConfigReader.invalidateListTeamsCache();
+      // Save team-level metadata to team.meta.json (NOT config.json).
+      // config.json is CLI territory — created by TeamCreate during provisioning.
+      // team.meta.json preserves user's configuration for the Launch flow.
+      await this.teamMetaStore.writeMeta(request.teamName, {
+        displayName: request.displayName,
+        description: request.description,
+        color: request.color,
+        cwd: request.cwd?.trim() || '',
+        prompt: request.prompt,
+        providerId: request.providerId,
+        providerBackendId: request.providerBackendId,
+        model: request.model,
+        effort: request.effort,
+        fastMode: request.fastMode,
+        skipPermissions: request.skipPermissions,
+        worktree: request.worktree,
+        extraCliArgs: request.extraCliArgs,
+        limitContext: request.limitContext,
+        createdAt: joinedAt,
+      });
+
+      const membersToWrite = applyDistinctRosterColors(
+        request.members.map((member) => ({
+          name: (() => {
+            const name = member.name.trim();
+            if (!name) throw new Error('Member name cannot be empty');
+            const formatError = validateTeamMemberNameFormat(name);
+            if (formatError) {
+              throw new Error(`Member name "${name}" is invalid: ${formatError}`);
+            }
+            if (name.toLowerCase() === 'user') {
+              throw new Error('Member name "user" is reserved');
+            }
+            if (name.toLowerCase() === 'team-lead')
+              throw new Error('Member name "team-lead" is reserved');
+            const suffixInfo = parseNumericSuffixName(name);
+            if (suffixInfo && suffixInfo.suffix >= 2) {
+              throw new Error(
+                `Member name "${name}" is not allowed (reserved for runtime-managed numeric suffixes). Use "${suffixInfo.base}" instead.`
+              );
+            }
+            return name;
+          })(),
+          role: member.role?.trim() || undefined,
+          workflow: member.workflow?.trim() || undefined,
+          isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
+          providerId: normalizeOptionalTeamProviderId(member.providerId),
+          providerBackendId: member.providerBackendId,
+          model: member.model?.trim() || undefined,
+          effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
+          fastMode: member.fastMode,
+          mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
+          agentType: 'general-purpose' as const,
+          joinedAt,
+        }))
+      );
+      await this.membersMetaStore.writeMembers(request.teamName, membersToWrite, {
+        providerBackendId: request.providerBackendId,
+      });
+      TeamConfigReader.invalidateListTeamsCache();
+    } catch (error) {
+      if (tasksDirectoryCreated) {
+        await fs.promises.rm(tasksDir, { recursive: true, force: true }).catch(() => undefined);
+      }
+      await fs.promises.rm(teamDir, { recursive: true, force: true }).catch(() => undefined);
+      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+        throw new Error(`Team already exists: ${request.teamName}`);
+      }
+      throw error;
+    }
   }
 
   async reconcileTeamArtifacts(

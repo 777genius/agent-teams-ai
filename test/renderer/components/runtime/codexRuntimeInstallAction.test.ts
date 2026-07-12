@@ -1,6 +1,7 @@
 import {
   isCodexProviderRuntimeMissing,
   shouldOfferCodexRuntimeInstall,
+  shouldOfferCodexRuntimeUpdate,
 } from '@renderer/components/runtime/codexRuntimeInstallAction';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { describe, expect, it } from 'vitest';
@@ -59,6 +60,8 @@ describe('codexRuntimeInstallAction', () => {
     expect(
       shouldOfferCodexRuntimeInstall({
         installed: false,
+        latestVersion: '0.144.1',
+        updateAvailable: false,
         source: 'missing',
         state: 'idle',
       })
@@ -66,6 +69,8 @@ describe('codexRuntimeInstallAction', () => {
     expect(
       shouldOfferCodexRuntimeInstall({
         installed: false,
+        latestVersion: '0.144.1',
+        updateAvailable: false,
         source: 'app-managed',
         state: 'failed',
       })
@@ -73,9 +78,24 @@ describe('codexRuntimeInstallAction', () => {
     expect(
       shouldOfferCodexRuntimeInstall({
         installed: true,
+        latestVersion: '0.144.1',
+        updateAvailable: false,
         source: 'path',
         state: 'ready',
       })
     ).toBe(false);
+  });
+
+  it('offers an update for an installed stale Codex runtime', () => {
+    expect(
+      shouldOfferCodexRuntimeUpdate({
+        installed: true,
+        version: 'codex-cli 0.139.0',
+        latestVersion: '0.144.1',
+        updateAvailable: true,
+        source: 'path',
+        state: 'ready',
+      })
+    ).toBe(true);
   });
 });

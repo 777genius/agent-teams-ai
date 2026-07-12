@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Yedek model listesi gösteriliyor. Hesabınıza özel ve yeni yayınlanan modeller eksik olabilir.",
+    "codexCatalogFallbackTitle": "Canlı Codex modelleri kullanılamıyor",
     "badges": {
       "configured": "Yapılandırılmış",
       "connected": "Bağlandı",
@@ -1410,8 +1412,37 @@
       "description": "Başlatma akışını proje yoluna odaklı tutun ve yalnızca ekstra kontrol istediğinizde bunu genişletin."
     }
   },
+  "teamImport": {
+    "cancel": "İptal",
+    "chooseFolder": "Klasör seç",
+    "createDraft": "Taslak ekip oluştur",
+    "createFailed": "İçe aktarılan ekip oluşturulamadı",
+    "creating": "Oluşturuluyor...",
+    "description": "Yerel bir ajan ekibi klasörü seçin, ardından taslak oluşturmadan önce içe aktarılan tüm talimatları gözden geçirin.",
+    "inspectFailed": "Seçilen klasör incelenemedi",
+    "invalidTeamName": "Kebab-case biçiminde küçük Latin harfleri, sayılar ve tireler kullanın; en fazla 64 karakter.",
+    "leadPrompt": "Lider istemi",
+    "members": "Üyeler ({{count}})",
+    "projectPath": "Proje yolu",
+    "scanning": "Taranıyor...",
+    "selectPrompt": "İçe aktarılacak ekibin önizlemesi için bir klasör seçin.",
+    "skills": "Bulunan beceriler ({{count}})",
+    "summary": "{{teamName}} ekibini {{count}} üyeyle oluşturun.",
+    "teamName": "Ekip adı",
+    "teamNameRequired": "Ekip adı gereklidir.",
+    "teamNameReserved": "Bu ekip adı işletim sistemi tarafından ayrılmıştır.",
+    "title": "Ajan ekibini içe aktar",
+    "warningDuplicateMember": "{{fileName}}: yinelenen {{name}} üye adı atlandı.",
+    "warningMemberInvalid": "{{fileName}}: {{name}} üye adı geçersizdir.",
+    "warningMemberReserved": "{{fileName}}: {{name}} üye adı ayrılmıştır.",
+    "warningMemberReservedSuffix": "{{fileName}}: {{name}} üye adı ayrılmış bir otomatik son ek kullanıyor.",
+    "warningMissingClaudeMd": ".claude/CLAUDE.md veya CLAUDE.md bulunamadı; lider istemi boş olacak.",
+    "warningUnknownTaskOwner": "{{description}} görevi bilinmeyen {{owner}} üyesine başvuruyordu ve atanmadan içe aktarıldı.",
+    "warningUnsafeTaskCall": "Task çağrısı güvenli şekilde yeniden yazılamadı: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "Klasörden içe aktar",
       "copyTeam": "Ekibi kopyala",
       "createTeam": "Ekip Oluştur",
       "organizationMap": "Org Haritasi",

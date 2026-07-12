@@ -213,7 +213,7 @@ describe('members editor editable input filtering', () => {
           name: 'alice',
           agentType: 'reviewer',
           model: 'gpt-5.4-mini',
-          effort: 'max',
+          effort: 'none',
         },
       ] as any)
     );
@@ -230,6 +230,33 @@ describe('members editor editable input filtering', () => {
     ]);
     expect(exported[0]).not.toHaveProperty('effort');
   });
+
+  it.each(['max', 'ultra'] as const)(
+    'preserves Codex %s effort while exporting teammate overrides',
+    (effort) => {
+      const drafts = createMemberDraftsFromInputs(
+        filterEditableMemberInputs([
+          {
+            name: 'alice',
+            agentType: 'reviewer',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: 'gpt-5.6-sol',
+            effort,
+          },
+        ] as any)
+      );
+
+      expect(buildMembersFromDrafts(drafts)).toEqual([
+        expect.objectContaining({
+          name: 'alice',
+          providerId: 'codex',
+          model: 'gpt-5.6-sol',
+          effort,
+        }),
+      ]);
+    }
+  );
 
   it('preserves legacy no-context effort export for callers without inherited provider', () => {
     const drafts = createMemberDraftsFromInputs(
@@ -259,7 +286,7 @@ describe('members editor editable input filtering', () => {
           providerId: 'codex',
           providerBackendId: 'codex-native',
           model: 'gpt-5.4-mini',
-          effort: 'max',
+          effort: 'none',
         },
       ] as any)
     );

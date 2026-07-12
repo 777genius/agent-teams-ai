@@ -500,6 +500,64 @@ describe('TeamDataService task projection cache invalidation', () => {
 });
 
 describe('TeamDataService draft metadata', () => {
+  it('rejects an existing draft without overwriting its artifacts', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-draft-collision-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const teamDir = path.join(claudeRoot, 'teams', 'draft-team');
+    const tasksDir = path.join(claudeRoot, 'tasks', 'draft-team');
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.mkdir(tasksDir, { recursive: true });
+    const existingMeta = '{"displayName":"Existing Draft"}';
+    await fs.writeFile(path.join(teamDir, 'team.meta.json'), existingMeta, 'utf8');
+    await fs.writeFile(path.join(tasksDir, '1.json'), '{"subject":"Existing task"}', 'utf8');
+
+    await expect(
+      new TeamDataService().createTeamConfig({
+        teamName: 'draft-team',
+        members: [{ name: 'replacement' }],
+      })
+    ).rejects.toThrow('Team already exists');
+
+    await expect(fs.readFile(path.join(teamDir, 'team.meta.json'), 'utf8')).resolves.toBe(
+      existingMeta
+    );
+    await expect(fs.readFile(path.join(tasksDir, '1.json'), 'utf8')).resolves.toContain(
+      'Existing task'
+    );
+  });
+
+  it('rejects an orphaned tasks directory instead of creating a hybrid draft', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-task-collision-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    await fs.mkdir(path.join(claudeRoot, 'tasks', 'draft-team'), { recursive: true });
+
+    await expect(
+      new TeamDataService().createTeamConfig({ teamName: 'draft-team', members: [] })
+    ).rejects.toThrow('Team already exists');
+    await expect(fs.access(path.join(claudeRoot, 'teams', 'draft-team'))).rejects.toThrow();
+  });
+
+  it('allows exactly one of two concurrent creates for the same team name', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-create-race-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const service = new TeamDataService();
+
+    const results = await Promise.allSettled([
+      service.createTeamConfig({ teamName: 'draft-team', members: [{ name: 'alpha' }] }),
+      service.createTeamConfig({ teamName: 'draft-team', members: [{ name: 'beta' }] }),
+    ]);
+
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    const members = JSON.parse(
+      await fs.readFile(path.join(claudeRoot, 'teams', 'draft-team', 'members.meta.json'), 'utf8')
+    ) as { members: { name: string }[] };
+    expect([['alpha'], ['beta']]).toContainEqual(members.members.map((member) => member.name));
+  });
+
   it('round-trips create config metadata through getSavedRequest', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-saved-request-'));
     tempPaths.push(claudeRoot);

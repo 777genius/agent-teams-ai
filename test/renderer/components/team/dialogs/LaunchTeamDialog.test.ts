@@ -427,7 +427,8 @@ vi.mock('@renderer/utils/geminiUiFreeze', () => ({
   normalizeCreateLaunchProviderForUi: (providerId: unknown) => providerId ?? 'anthropic',
 }));
 
-vi.mock('@renderer/utils/teamModelAvailability', () => ({
+vi.mock('@renderer/utils/teamModelAvailability', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@renderer/utils/teamModelAvailability')>()),
   getTeamModelSelectionError: vi.fn(() => null),
   isTeamModelAvailableForUi: vi.fn(() => true),
   isTeamProviderModelVerificationPending: vi.fn(() => false),
@@ -1249,7 +1250,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('blocks OpenCode lead launch until a model is selected', async () => {
+  it('allows OpenCode lead launch with the runtime default model', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -1300,11 +1301,11 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
 
-    expect(host.textContent).toContain('OpenCode lead requires a selected model.');
+    expect(host.textContent).not.toContain('OpenCode lead requires a selected model.');
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
     );
-    expect(submitButton?.hasAttribute('disabled')).toBe(true);
+    expect(submitButton?.hasAttribute('disabled')).toBe(false);
     expect(onLaunch).not.toHaveBeenCalled();
 
     await act(async () => {

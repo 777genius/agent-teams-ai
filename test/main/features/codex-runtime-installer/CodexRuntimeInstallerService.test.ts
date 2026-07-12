@@ -88,6 +88,7 @@ describe('CodexRuntimeInstallerService resolver', () => {
   });
 
   afterEach(async () => {
+    vi.unstubAllGlobals();
     setAppDataBasePath(null);
     process.env.PATH = originalPath;
     if (tempRoot) {
@@ -206,11 +207,15 @@ describe('CodexRuntimeInstallerService resolver', () => {
     buildMergedCliPathMock.mockReturnValue('/usr/bin:/bin');
     resolveInteractiveShellEnvBestEffortMock.mockResolvedValue({ PATH: binDir });
 
-    const status = await createCodexRuntimeInstallerFeature().getStatus();
+    const status = await createCodexRuntimeInstallerFeature({
+      resolveLatestVersion: async () => '1.1.0',
+    }).getStatus();
 
     expect(status).toMatchObject({
       installed: true,
       binaryPath,
+      latestVersion: '1.1.0',
+      updateAvailable: true,
       source: 'path',
       state: 'ready',
     });
@@ -220,6 +225,44 @@ describe('CodexRuntimeInstallerService resolver', () => {
         timeoutMs: 1_500,
       })
     );
+  });
+
+  it('keeps an installed PATH runtime usable when an update attempt fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const binDir = path.join(tempRoot!, 'path-bin');
+    const executableName = process.platform === 'win32' ? 'codex.exe' : 'codex';
+    const binaryPath = path.join(binDir, executableName);
+    await mkdir(binDir, { recursive: true });
+    await writeFile(binaryPath, 'binary');
+    if (process.platform !== 'win32') {
+      await chmod(binaryPath, 0o755);
+    }
+    process.env.PATH = binDir;
+    buildMergedCliPathMock.mockReturnValue(binDir);
+    const feature = createCodexRuntimeInstallerFeature({
+      resolveLatestVersion: async () => '1.1.0',
+    });
+
+    await expect(feature.getStatus()).resolves.toMatchObject({
+      installed: true,
+      binaryPath,
+      version: 'codex-cli 1.0.0',
+      latestVersion: '1.1.0',
+      updateAvailable: true,
+    });
+
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('registry offline')));
+
+    await expect(feature.install()).resolves.toMatchObject({
+      installed: true,
+      binaryPath,
+      version: 'codex-cli 1.0.0',
+      latestVersion: '1.1.0',
+      updateAvailable: true,
+      source: 'path',
+      state: 'failed',
+      error: 'registry offline',
+    });
   });
 });
 

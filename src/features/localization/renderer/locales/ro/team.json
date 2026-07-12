@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Se afișează o listă de modele de rezervă. Este posibil să lipsească modelele specifice contului și cele lansate recent.",
+    "codexCatalogFallbackTitle": "Modelele Codex live nu sunt disponibile",
     "badges": {
       "configured": "Configurat",
       "connected": "Conectat",
@@ -1410,8 +1412,37 @@
       "description": "Menține fluxul de lansare concentrat pe calea proiectului și extinde acest lucru doar când vrei control suplimentar."
     }
   },
+  "teamImport": {
+    "cancel": "Anulează",
+    "chooseFolder": "Alege folderul",
+    "createDraft": "Creează echipa ca schiță",
+    "createFailed": "Echipa importată nu a putut fi creată",
+    "creating": "Se creează...",
+    "description": "Alege un folder local al unei echipe de agenți, apoi verifică toate instrucțiunile importate înainte de a crea schița.",
+    "inspectFailed": "Folderul selectat nu a putut fi inspectat",
+    "invalidTeamName": "Folosește litere mici, cifre și cratime în format kebab-case, maximum 64 de caractere.",
+    "leadPrompt": "Promptul liderului",
+    "members": "Membri ({{count}})",
+    "projectPath": "Calea proiectului",
+    "scanning": "Se scanează...",
+    "selectPrompt": "Alege un folder pentru a previzualiza echipa importată.",
+    "skills": "Skill-uri găsite ({{count}})",
+    "summary": "Creează {{teamName}} cu {{count}} membri.",
+    "teamName": "Numele echipei",
+    "teamNameRequired": "Numele echipei este obligatoriu.",
+    "teamNameReserved": "Acest nume de echipă este rezervat de sistemul de operare.",
+    "title": "Importă echipa de agenți",
+    "warningDuplicateMember": "{{fileName}}: numele duplicat de membru {{name}} a fost ignorat.",
+    "warningMemberInvalid": "{{fileName}}: numele de membru {{name}} nu este valid.",
+    "warningMemberReserved": "{{fileName}}: numele de membru {{name}} este rezervat.",
+    "warningMemberReservedSuffix": "{{fileName}}: numele de membru {{name}} folosește un sufix automat rezervat.",
+    "warningMissingClaudeMd": "Nu a fost găsit .claude/CLAUDE.md sau CLAUDE.md; promptul liderului va rămâne gol.",
+    "warningUnknownTaskOwner": "Sarcina {{description}} făcea referire la membrul necunoscut {{owner}} și a fost importată fără responsabil.",
+    "warningUnsafeTaskCall": "Apelul Task nu a putut fi rescris în siguranță: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "Importă din folder",
       "copyTeam": "Copiază echipa",
       "createTeam": "Creează echipă",
       "organizationMap": "Harta org.",

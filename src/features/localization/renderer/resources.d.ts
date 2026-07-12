@@ -4219,6 +4219,7 @@ export default interface Resources {
         deleteForever: 'Delete forever';
         deletePermanently: 'Delete permanently';
         deleteTeam: 'Delete team';
+        importTeam: 'Import from folder';
         launchTeam: 'Launch team';
         launching: 'Launching...';
         organizationMap: 'Org Map';
@@ -4734,6 +4735,8 @@ export default interface Resources {
         unavailable: 'Unavailable';
         verified: 'Verified';
       };
+      codexCatalogFallbackMessage: 'Showing a fallback model list. Account-specific and newly released models may be missing.';
+      codexCatalogFallbackTitle: 'Live Codex models unavailable';
       customModelId: 'Custom model id';
       defaultModel: 'Default';
       defaultTooltip: {
@@ -6020,6 +6023,34 @@ export default interface Resources {
       };
       teamPrefix: 'Team:';
       unassigned: 'Unassigned';
+    };
+    teamImport: {
+      cancel: 'Cancel';
+      chooseFolder: 'Choose folder';
+      createDraft: 'Create draft team';
+      createFailed: 'Failed to create the imported team';
+      creating: 'Creating...';
+      description: 'Choose a local agent team folder, then review every imported instruction before creating a draft.';
+      inspectFailed: 'Failed to inspect the selected folder';
+      invalidTeamName: 'Use kebab-case letters, numbers, and dashes, up to 64 characters.';
+      leadPrompt: 'Lead prompt';
+      members: 'Members ({{count}})';
+      projectPath: 'Project path';
+      scanning: 'Scanning...';
+      selectPrompt: 'Choose a folder to preview the imported team.';
+      skills: 'Skills found ({{count}})';
+      summary: 'Create {{teamName}} with {{count}} members.';
+      teamName: 'Team name';
+      teamNameRequired: 'Team name is required.';
+      teamNameReserved: 'This team name is reserved by the operating system.';
+      title: 'Import agent team';
+      warningDuplicateMember: '{{fileName}}: duplicate member name {{name}} was skipped.';
+      warningMemberInvalid: '{{fileName}}: member name {{name}} is invalid.';
+      warningMemberReserved: '{{fileName}}: member name {{name}} is reserved.';
+      warningMemberReservedSuffix: '{{fileName}}: member name {{name}} uses a reserved auto-suffix.';
+      warningMissingClaudeMd: 'No .claude/CLAUDE.md or CLAUDE.md was found; the lead prompt will be empty.';
+      warningUnknownTaskOwner: 'Task {{description}} referenced unknown member {{owner}} and was imported without an owner.';
+      warningUnsafeTaskCall: 'Could not safely rewrite Task call: {{call}}';
     };
     terminalWorkspace: {
       backgroundModeImage: 'Image';

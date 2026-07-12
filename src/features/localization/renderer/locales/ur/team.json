@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "متبادل ماڈلز کی فہرست دکھائی جا رہی ہے۔ آپ کے اکاؤنٹ کے مخصوص اور حال ہی میں جاری کردہ ماڈلز موجود نہ ہوں۔",
+    "codexCatalogFallbackTitle": "لائیو Codex ماڈلز دستیاب نہیں ہیں",
     "badges": {
       "configured": "اوپر لکھیں",
       "connected": "غیر متصل",
@@ -1410,8 +1412,37 @@
       "description": "لانچ بہاؤ کو منصوبے کے راستے پر مرکوز رکھیں اور صرف اس وقت توسیع کریں جب آپ اضافی کنٹرول چاہتے ہیں۔"
     }
   },
+  "teamImport": {
+    "cancel": "منسوخ کریں",
+    "chooseFolder": "فولڈر منتخب کریں",
+    "createDraft": "ٹیم کا ڈرافٹ بنائیں",
+    "createFailed": "درآمد شدہ ٹیم نہیں بنائی جا سکی",
+    "creating": "بنایا جا رہا ہے...",
+    "description": "مقامی ایجنٹ ٹیم کا فولڈر منتخب کریں، پھر ڈرافٹ بنانے سے پہلے درآمد شدہ تمام ہدایات کا جائزہ لیں۔",
+    "inspectFailed": "منتخب فولڈر کا جائزہ نہیں لیا جا سکا",
+    "invalidTeamName": "kebab-case فارمیٹ میں چھوٹے لاطینی حروف، اعداد اور ڈیش استعمال کریں، زیادہ سے زیادہ 64 حروف۔",
+    "leadPrompt": "ٹیم لیڈ کا پرامپٹ",
+    "members": "اراکین ({{count}})",
+    "projectPath": "پروجیکٹ کا راستہ",
+    "scanning": "اسکین کیا جا رہا ہے...",
+    "selectPrompt": "درآمد کی جانے والی ٹیم کا پیش منظر دیکھنے کے لیے فولڈر منتخب کریں۔",
+    "skills": "ملنے والی مہارتیں ({{count}})",
+    "summary": "{{count}} اراکین کے ساتھ {{teamName}} بنائیں۔",
+    "teamName": "ٹیم کا نام",
+    "teamNameRequired": "ٹیم کا نام درکار ہے۔",
+    "teamNameReserved": "یہ ٹیم نام آپریٹنگ سسٹم کے لیے مخصوص ہے۔",
+    "title": "ایجنٹ ٹیم درآمد کریں",
+    "warningDuplicateMember": "{{fileName}}: رکن کا دہرایا گیا نام {{name}} چھوڑ دیا گیا۔",
+    "warningMemberInvalid": "{{fileName}}: رکن کا نام {{name}} درست نہیں۔",
+    "warningMemberReserved": "{{fileName}}: رکن کا نام {{name}} مخصوص ہے۔",
+    "warningMemberReservedSuffix": "{{fileName}}: رکن کا نام {{name}} مخصوص خودکار لاحقہ استعمال کرتا ہے۔",
+    "warningMissingClaudeMd": ".claude/CLAUDE.md یا CLAUDE.md نہیں ملی؛ ٹیم لیڈ کا پرامپٹ خالی رہے گا۔",
+    "warningUnknownTaskOwner": "ٹاسک {{description}} میں نامعلوم رکن {{owner}} کا حوالہ تھا، اس لیے اسے مالک کے بغیر درآمد کیا گیا۔",
+    "warningUnsafeTaskCall": "Task کال کو محفوظ طریقے سے دوبارہ نہیں لکھا جا سکا: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "فولڈر سے درآمد کریں",
       "copyTeam": "ٹیم کاپی",
       "createTeam": "ٹیم بنائیں",
       "organizationMap": "تنظیم کا نقشہ",

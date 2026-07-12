@@ -94,6 +94,9 @@ const CreateTeamDialog = lazy(() =>
 const LaunchTeamDialog = lazy(() =>
   import('./dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
 );
+const ImportTeamDialog = lazy(() =>
+  import('@features/team-import/renderer').then((m) => ({ default: m.ImportTeamDialog }))
+);
 
 const TEAM_SECTION_INITIAL_VISIBLE_COUNT = 24;
 const TEAM_SECTION_PAGE_SIZE = 24;
@@ -515,6 +518,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const { t: tCommon } = useAppTranslation('common');
   const electronMode = isElectronMode();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [copyData, setCopyData] = useState<TeamCopyData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<TeamListFilterState>(EMPTY_TEAM_FILTER);
@@ -1107,6 +1111,25 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     </Suspense>
   );
 
+  const importDialogElement = showImportDialog && (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center p-6 text-sm text-text-muted" role="status">
+          {tCommon('states.loading')}
+        </div>
+      }
+    >
+      <ImportTeamDialog
+        open={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImported={() => {
+          setShowImportDialog(false);
+          void fetchTeams();
+        }}
+      />
+    </Suspense>
+  );
+
   const launchDialogElement = launchDialogOpen && (
     <Suspense
       fallback={
@@ -1161,6 +1184,15 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           >
             <Network size={13} />
             {t('list.actions.organizationMap')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canCreate}
+            onClick={() => setShowImportDialog(true)}
+          >
+            <FolderOpen size={13} />
+            {t('list.actions.importTeam')}
           </Button>
           <Button
             variant="outline"
@@ -1236,7 +1268,11 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
 
     if (teamsWithProvisioning.length === 0) {
       return (
-        <TeamEmptyState canCreate={canCreate} onCreateTeam={() => setShowCreateDialog(true)} />
+        <TeamEmptyState
+          canCreate={canCreate}
+          onCreateTeam={() => setShowCreateDialog(true)}
+          onImportTeam={() => setShowImportDialog(true)}
+        />
       );
     }
 
@@ -1483,6 +1519,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         {renderHeader()}
         {renderContent()}
         {createDialogElement}
+        {importDialogElement}
         {launchDialogElement}
       </div>
     </TooltipProvider>

@@ -16,6 +16,7 @@ export const TEAM_EFFORT_LABELS: Record<EffortLevel, string> = {
   medium: 'Medium',
   high: 'High',
   max: 'Max',
+  ultra: 'Ultra',
   xhigh: 'XHigh',
 };
 

@@ -54,6 +54,7 @@ import type {
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementApi,
 } from '@features/runtime-provider-management/contracts';
+import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type {
   AppConfig,
@@ -193,6 +194,14 @@ export class HttpAPIClient implements ElectronAPI {
   private eventListeners = new Map<string, Set<(...args: any[]) => void>>();
   telemetry = {
     getSentryContext: async (): Promise<null> => null,
+  };
+  teamImport: TeamImportApi = {
+    chooseFolderAndPreview: async () => {
+      throw new Error('Team import is only available in the desktop app');
+    },
+    createDraft: async () => {
+      throw new Error('Team import is only available in the desktop app');
+    },
   };
 
   constructor(baseUrl: string) {
@@ -1462,11 +1471,15 @@ export class HttpAPIClient implements ElectronAPI {
   codexRuntime: CodexRuntimeAPI = {
     getStatus: async () => ({
       installed: false,
+      latestVersion: null,
+      updateAvailable: false,
       source: 'missing',
       state: 'idle',
     }),
     install: async () => ({
       installed: false,
+      latestVersion: null,
+      updateAvailable: false,
       source: 'missing',
       state: 'failed',
       error: 'Codex runtime installer is not available in browser mode',

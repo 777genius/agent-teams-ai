@@ -773,6 +773,8 @@
     }
   },
   "modelSelector": {
+    "codexCatalogFallbackMessage": "Senarai model sandaran sedang dipaparkan. Model khusus akaun dan model yang baru dikeluarkan mungkin tiada.",
+    "codexCatalogFallbackTitle": "Model Codex langsung tidak tersedia",
     "badges": {
       "configured": "Dikonfigurasi",
       "connected": "Disambung",
@@ -1410,8 +1412,37 @@
       "description": "Kekalkan aliran pelancaran fokus pada laluan projek dan kembangkan ini hanya apabila anda mahukan kawalan tambahan."
     }
   },
+  "teamImport": {
+    "cancel": "Batal",
+    "chooseFolder": "Pilih folder",
+    "createDraft": "Cipta pasukan draf",
+    "createFailed": "Gagal mencipta pasukan yang diimport",
+    "creating": "Sedang mencipta...",
+    "description": "Pilih folder pasukan ejen setempat, kemudian semak setiap arahan yang diimport sebelum mencipta draf.",
+    "inspectFailed": "Gagal memeriksa folder yang dipilih",
+    "invalidTeamName": "Gunakan huruf kecil, nombor dan tanda sempang dalam format kebab-case, sehingga 64 aksara.",
+    "leadPrompt": "Prompt ketua",
+    "members": "Ahli ({{count}})",
+    "projectPath": "Laluan projek",
+    "scanning": "Sedang mengimbas...",
+    "selectPrompt": "Pilih folder untuk pratonton pasukan yang akan diimport.",
+    "skills": "Kemahiran ditemui ({{count}})",
+    "summary": "Cipta {{teamName}} dengan {{count}} ahli.",
+    "teamName": "Nama pasukan",
+    "teamNameRequired": "Nama pasukan diperlukan.",
+    "teamNameReserved": "Nama pasukan ini dikhaskan oleh sistem pengendalian.",
+    "title": "Import pasukan ejen",
+    "warningDuplicateMember": "{{fileName}}: nama ahli pendua {{name}} telah dilangkau.",
+    "warningMemberInvalid": "{{fileName}}: nama ahli {{name}} tidak sah.",
+    "warningMemberReserved": "{{fileName}}: nama ahli {{name}} dikhaskan.",
+    "warningMemberReservedSuffix": "{{fileName}}: nama ahli {{name}} menggunakan akhiran automatik yang dikhaskan.",
+    "warningMissingClaudeMd": "Tiada .claude/CLAUDE.md atau CLAUDE.md ditemui; prompt ketua akan dibiarkan kosong.",
+    "warningUnknownTaskOwner": "Tugas {{description}} merujuk ahli tidak diketahui {{owner}} dan diimport tanpa pemilik.",
+    "warningUnsafeTaskCall": "Tidak dapat menulis semula panggilan Task dengan selamat: {{call}}"
+  },
   "list": {
     "actions": {
+      "importTeam": "Import daripada folder",
       "copyTeam": "Salin pasukan",
       "createTeam": "Cipta Pasukan",
       "organizationMap": "Org Map",

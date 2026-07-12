@@ -45,3 +45,13 @@ export function shouldOfferCodexRuntimeInstall(
     codexRuntimeStatus.state === 'installing'
   );
 }
+
+export function shouldOfferCodexRuntimeUpdate(
+  codexRuntimeStatus: CodexRuntimeStatus | null | undefined
+): boolean {
+  return (
+    codexRuntimeStatus?.installed === true &&
+    codexRuntimeStatus.updateAvailable === true &&
+    Boolean(codexRuntimeStatus.latestVersion)
+  );
+}

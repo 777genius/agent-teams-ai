@@ -3,32 +3,34 @@ import { describe, expect, it } from 'vitest';
 import { normalizeCodexAppServerModels } from '../normalizeCodexAppServerModel';
 
 describe('normalizeCodexAppServerModels', () => {
-  it('keeps app-server model metadata required by the UI picker', () => {
+  it('keeps metadata for a future app-server model with no static catalog entry', () => {
     const result = normalizeCodexAppServerModels([
       {
-        id: 'gpt-5.5',
-        displayName: 'GPT-5.5',
+        id: 'gpt-99-future',
+        displayName: 'GPT-99 Future',
         supportedReasoningEfforts: [
           { reasoningEffort: 'low' },
           { reasoningEffort: 'medium' },
           { reasoningEffort: 'high' },
           { reasoningEffort: 'xhigh' },
+          { reasoningEffort: 'max' },
+          { reasoningEffort: 'ultra' },
         ],
-        defaultReasoningEffort: 'xhigh',
+        defaultReasoningEffort: 'ultra',
         inputModalities: ['text', 'image'],
         supportsPersonality: true,
         isDefault: true,
       },
     ]);
 
-    expect(result.defaultModelId).toBe('gpt-5.5');
+    expect(result.defaultModelId).toBe('gpt-99-future');
     expect(result.models).toEqual([
       expect.objectContaining({
-        id: 'gpt-5.5',
-        launchModel: 'gpt-5.5',
-        displayName: 'GPT-5.5',
-        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'],
-        defaultReasoningEffort: 'xhigh',
+        id: 'gpt-99-future',
+        launchModel: 'gpt-99-future',
+        displayName: 'GPT-99 Future',
+        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+        defaultReasoningEffort: 'ultra',
         inputModalities: ['text', 'image'],
         supportsPersonality: true,
         isDefault: true,
