@@ -81,6 +81,7 @@ export class TeamLaunchStateStore {
           error instanceof Error ? error.message : String(error)
         }`
       );
+      throw error;
     }
   }
 

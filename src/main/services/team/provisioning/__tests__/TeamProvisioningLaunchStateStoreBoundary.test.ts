@@ -155,6 +155,56 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     expect(invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
   });
 
+  it('notifies readers only after both service stores confirm the publication', async () => {
+    const nextSnapshot = snapshot();
+    const defaultWriteStarted = deferred();
+    const defaultWriteGate = deferred();
+    const launchStateStore = {
+      read: vi.fn(async () => null),
+      write: vi.fn(async () => undefined),
+      clear: vi.fn(async () => undefined),
+    };
+    const defaultLaunchStateStore = {
+      write: vi.fn(async () => {
+        defaultWriteStarted.resolve();
+        await defaultWriteGate.promise;
+      }),
+      clear: vi.fn(async () => undefined),
+    };
+    const invalidateRuntimeSnapshotCaches = vi.fn();
+    const service = {
+      launchStateStore,
+      defaultLaunchStateStore,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => [{ name: 'Builder', joinedAt: 1 }]),
+      },
+      getTrackedRunId: vi.fn(() => 'run-1'),
+      applyOpenCodeSecondaryEvidenceOverlay: vi.fn(
+        async ({ snapshot: inputSnapshot }) => inputSnapshot
+      ),
+      applyOpenCodeSecondaryBootstrapStallOverlay: vi.fn(() => null),
+      invalidateRuntimeSnapshotCaches,
+      launchStateWrittenRunIdByTeam: new Map<string, string>(),
+    } satisfies TeamProvisioningLaunchStateStoreBoundaryServiceHost;
+    const boundary = createTeamProvisioningLaunchStateStoreBoundaryFromService(service, {
+      areSnapshotsSemanticallyEqual: vi.fn(() => false),
+      clearBootstrapState: vi.fn(async () => undefined),
+      logDebug: vi.fn(),
+      nowMs: vi.fn(() => Date.parse(at)),
+    });
+
+    const publishing = boundary.writeLaunchStateSnapshot('demo', nextSnapshot);
+    await defaultWriteStarted.promise;
+
+    expect(launchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot);
+    expect(defaultLaunchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot);
+    expect(invalidateRuntimeSnapshotCaches).not.toHaveBeenCalled();
+
+    defaultWriteGate.resolve();
+    await expect(publishing).resolves.toEqual(nextSnapshot);
+    expect(invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
+  });
+
   it('skips stale clears when the tracked run id differs', async () => {
     const { boundary, ports, setTrackedRunId } = createBoundary();
     setTrackedRunId('run-current');
