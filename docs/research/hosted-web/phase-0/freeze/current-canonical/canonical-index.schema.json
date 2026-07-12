@@ -24,7 +24,7 @@
     "controllerOwner": { "const": "agent-teams-hosted-web-refactor-controller-v2" },
     "phaseId": { "const": "phase-00" },
     "phaseStartSha": { "const": "a32f509e6d9bd31ba2135940e336729bf90c3d93" },
-    "currentIntegrationCommit": { "const": "c958c872fa22edf9b2d6a0741d7781b00957903c" },
+    "currentIntegrationCommit": { "const": "f4fa24aac9615a4ce10632965a2244a2e11a273e" },
     "freezeCandidate": { "$ref": "#/definitions/freezeCandidate" },
     "generatedAt": { "type": "string", "format": "date-time" },
     "lanes": {
@@ -37,6 +37,12 @@
       "type": "array",
       "minItems": 4,
       "items": { "$ref": "#/definitions/review" }
+    },
+    "acceptedAuthorities": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": { "$ref": "#/definitions/acceptedAuthority" }
     },
     "decisions": {
       "type": "array",
@@ -61,7 +67,7 @@
     },
     {
       "properties": { "indexType": { "const": "review-disposition" } },
-      "required": ["reviews"]
+      "required": ["reviews", "acceptedAuthorities"]
     },
     {
       "properties": { "indexType": { "const": "decision" } },
@@ -85,9 +91,9 @@
       "required": ["baseCommit", "status", "integrationCommit"],
       "additionalProperties": false,
       "properties": {
-        "baseCommit": { "const": "c958c872fa22edf9b2d6a0741d7781b00957903c" },
-        "status": { "const": "pending-integration" },
-        "integrationCommit": { "type": "null" }
+        "baseCommit": { "const": "f4fa24aac9615a4ce10632965a2244a2e11a273e" },
+        "status": { "const": "accepted-frozen" },
+        "integrationCommit": { "const": "f4fa24aac9615a4ce10632965a2244a2e11a273e" }
       }
     },
     "pathHash": {
@@ -113,6 +119,26 @@
           "minItems": 1,
           "items": { "type": "string", "minLength": 1 }
         }
+      }
+    },
+    "acceptedAuthority": {
+      "type": "object",
+      "required": ["authorityId", "commit", "disposition", "role", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "authorityId": { "type": "string", "pattern": "^P0\\.CURRENT\\.AUTHORITY\\." },
+        "commit": { "$ref": "#/definitions/sha1" },
+        "disposition": { "const": "accepted" },
+        "role": {
+          "enum": [
+            "target-image-narrowing",
+            "final-gate",
+            "orchestration",
+            "navigation",
+            "estimate"
+          ]
+        },
+        "source": { "$ref": "#/definitions/pathHash" }
       }
     },
     "lane": {

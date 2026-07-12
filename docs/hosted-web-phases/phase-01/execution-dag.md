@@ -1,13 +1,13 @@
 # Proposed execution DAG, ownership, and integration
 
-Status: blocked design. IDs, paths, owners, estimates, commands, and pairings are proposed until serial
-bootstrap. They are planning precision, not present write authority.
+Status: `P1.S0` is current and executable. IDs, paths, owners, estimates, commands, and pairings for
+every successor remain proposed until serial bootstrap is integrated and the router advances.
 
 ## DAG
 
 ```text
 P1.S0 serial bootstrap
-  -> P1.1A contract kernel
+  -X-> P1.1A contract kernel
       -> P1.1B route/catalog conventions ----+
       -> P1.1C conformance + ratchets --------+-> P1.R1 seam review
                                                 -> P1.1D first read proof
@@ -15,6 +15,12 @@ P1.S0 serial bootstrap
                                                     -> P1.I serialized integration
                                                       -> P1.F freeze
 ```
+
+`-X->` is a blocked transition, not an executable edge. Current authorization ends when S0 produces
+its reviewed bootstrap evidence. S0 may not start, refill, or pre-provision `1A`.
+The sole executable node is defined by the compact
+[`P1.S0 serial-bootstrap lane packet`](./lanes/p1-s0-serial-bootstrap.md); this proposal is not a
+substitute for that lane packet.
 
 `1B` and `1C` may run in parallel only after `1A` is integrated. The required chain is exactly
 `1B + 1C -> R1 -> 1D -> R2 -> I`: R1 acceptance is an admission dependency of 1D, and R2 acceptance
@@ -25,7 +31,7 @@ Reviews write only review evidence. `P1.I` is the sole writer of shared existing
 
 | Slot    | Mission                                                                                    | Depends on    | Proposed evidence                      | Unique estimate bucket |
 | ------- | ------------------------------------------------------------------------------------------ | ------------- | -------------------------------------- | ---------------------- |
-| `P1.S0` | Resolve/freeze all proposal tokens and baseline fingerprints.                              | Ready gates   | `P1.S0.BOOTSTRAP`, `P1.S0.BASELINE`    | 120–220 lines          |
+| `P1.S0` | Resolve/freeze all proposal tokens and baseline fingerprints; no product source.           | Authorized    | `P1.S0.BOOTSTRAP`, `P1.S0.BASELINE`    | 120–220 lines          |
 | `P1.1A` | Minimal kernel, parsers, and import negatives.                                             | `S0`          | `P1.1A.KERNEL`, `P1.1A.VERSION`        | 180–300 lines          |
 | `P1.1B` | RouteCatalog assertions and separate capability cross-reference.                           | `1A`          | `P1.1B.ROUTES`, `P1.1B.CAPABILITIES`   | 180–320 lines          |
 | `P1.1C` | IPC/HTTP semantic harness plus ADR-19/20/dependency negatives.                             | `1A`          | `P1.1C.CONFORMANCE`, `P1.1C.RATCHETS`  | 240–420 lines          |
@@ -113,7 +119,8 @@ evidence ID, smallest reproducer, owner, and whether unaffected integration can 
 
 ## Capacity and recovery
 
-Maximum active producer slots after bootstrap: two (`1B`, `1C`). `R1`, `1D`, `R2`, and `I`
-then run serially in that order. A replacement worker resumes the same worktree and handoff after
+Current maximum active producer slots: one (`P1.S0`). The proposed later maximum is two (`1B`, `1C`)
+only after the router separately authorizes the required predecessors. `R1`, `1D`, `R2`, and `I` then
+run serially in that proposed order. A replacement worker resumes the same worktree and handoff after
 validating base, packet revision, existing diff, and checks. Duplicate completion requires controller
 supersession, never refill.

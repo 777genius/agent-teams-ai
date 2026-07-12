@@ -1,27 +1,36 @@
-# Phase 1 blocked plan bundle
+# Phase 1 execution entrypoint
 
-Status: **blocked planning proposal**. Phase 1 implementation is not authorized.
+Status: **current for `P1.S0` serial bootstrap only**. Product implementation and every successor
+subphase remain blocked.
 
-This bundle expands the Phase 1 intent at exact planning base
-`3bc0dfa7c00261785c0c752270cb302a9294e751`. That base closes the Phase 0 target-image gate by
-accepted capability narrowing: exact-image construction and admission remain fail closed and belong to
-Phase 5, so they are not a Phase 1 prerequisite. Every other open Phase 0 gate remains intact. The
-bundle is autonomous enough to turn into executable packets after those remaining gates pass, but it
-is not itself an executable packet.
+Phase 0 is accepted and frozen at `f4fa24aac9615a4ce10632965a2244a2e11a273e`. That candidate
+includes the accepted fail-closed target-image narrowing, final gate, orchestration authority, bounded
+navigation contract, and estimate reconciliation. Exact-image construction and admission remain fail
+closed and belong to Phase 5; provider canaries, production composition, and terminal-negative
+admission remain explicit implementation risks. They do not reopen Phase 0.
 
-> Until serial bootstrap is integrated, every `P1.*` ID, contract name, route/channel/action ID, path,
-> owner, estimate, threshold, review pair, and command in this directory is **proposed**. Serial
-> bootstrap may narrow or rename them. It may not silently broaden Phase 1. Producer target: **zero**.
+> The router authorizes exactly one producer target: `P1.S0`. Until that serial bootstrap is
+> integrated, every later `P1.*` ID, contract name, route/channel/action ID, path, owner, estimate,
+> threshold, review pair, and command remains **proposed**. S0 may narrow or rename them. It may not
+> silently broaden Phase 1 or implement product source.
 
-## Reading order
+## Validated worker route
 
-1. [Inputs and prerequisite gates](./packet-inputs.md)
-2. [Controller plan](./controller-packet.md)
-3. [Boundary, ownership, and candidate contracts](./architecture-and-contracts.md)
-4. [Subphases, DAG, paths, and integration](./execution-dag.md)
-5. [Semantic conformance and negative gates](./conformance-and-tests.md)
-6. [Migration, operations, and risk](./operations-and-risk.md)
-7. [Execution packet templates](./execution-packet-templates.md)
+The current route contains exactly these packets, in this order:
+
+1. `docs/hosted-web-phases/phase-01/controller-packet.md`
+2. `docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md`
+
+After both packets, read only the exact files in the validated worker-start contract. The proposal
+documents below remain reference-on-demand; their presence in this directory is not an unconditional
+reading queue:
+
+- `docs/hosted-web-phases/phase-01/packet-inputs.md`
+- `docs/hosted-web-phases/phase-01/architecture-and-contracts.md`
+- `docs/hosted-web-phases/phase-01/execution-dag.md`
+- `docs/hosted-web-phases/phase-01/conformance-and-tests.md`
+- `docs/hosted-web-phases/phase-01/operations-and-risk.md`
+- `docs/hosted-web-phases/phase-01/execution-packet-templates.md`
 
 ## Planning result
 
@@ -44,8 +53,8 @@ The practical boundary is therefore contracts plus conformance, not a disguised 
 - isolated test/IPC/HTTP conformance adapters that normalize the same application outcomes;
 - architecture ratchets that stop a second god API from forming.
 
-No production implementation is created by this planning bundle.
+No production implementation is authorized by this transition.
 
-Phase 1 implementation remains blocked until every Phase 0 prerequisite gate passes, the reviewed
-plan is integrated, and `P1.S0` serial bootstrap has frozen exact IDs, paths, owners, fixtures,
-commands, baselines, and the start SHA. This bundle does not satisfy those conditions.
+`P1.S0` must freeze exact IDs, paths, owners, fixtures, commands, baselines, and the Phase 1 start SHA.
+`P1.S1` and every later subphase remain blocked until S0 is integrated and the compact execution
+router is explicitly advanced.

@@ -5,13 +5,13 @@
   "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
   "phaseId": "phase-00",
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
-  "currentIntegrationCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+  "currentIntegrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
   "freezeCandidate": {
-    "baseCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
-    "status": "pending-integration",
-    "integrationCommit": null
+    "baseCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+    "status": "accepted-frozen",
+    "integrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e"
   },
-  "generatedAt": "2026-07-12T06:03:29Z",
+  "generatedAt": "2026-07-12T10:28:17Z",
   "supersessions": [
     {
       "supersessionId": "P0.CURRENT.SUPERSESSION.BASE_PENDING_IDENTITY",

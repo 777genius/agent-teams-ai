@@ -1,6 +1,31 @@
 {
   "schemaVersion": 1,
-  "currentExecutablePhase": "phase-00",
+  "currentExecutablePhase": "phase-01",
+  "currentExecutableSubphase": "P1.S0",
+  "currentRoute": {
+    "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
+    "lanePackets": [
+      {
+        "subphase": "P1.S0",
+        "path": "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md"
+      }
+    ]
+  },
+  "acceptedPhase0Freeze": {
+    "status": "accepted-frozen",
+    "commit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+    "acceptedAuthorities": {
+      "orchestration": "1587615c751c3cb12b5078ab4b7264b6e9fd42ad",
+      "navigation": "f32be6a6fcb2da7a47ef3553476430ef8052e19a",
+      "estimate": "f4fa24aac9615a4ce10632965a2244a2e11a273e"
+    },
+    "canonicalFreeze": "docs/research/hosted-web/phase-0/freeze/current-canonical/README.md"
+  },
+  "authorization": {
+    "authorized": ["P1.S0"],
+    "blockedUntilRouterAdvance": ["P1.S1", "P1.S2", "P1.S3", "P1.S4", "P1.S5"],
+    "productSourceImplementationAuthorized": false
+  },
   "workerMandatoryBaseline": [
     "AGENTS.md",
     "docs/hosted-web-phases/START_HERE.md",
@@ -33,35 +58,23 @@
     ],
     "current-phase": [
       {
-        "path": "docs/hosted-web-phase-0-execution-packet.md",
-        "role": "phase-00 controller packet"
+        "path": "docs/hosted-web-phases/phase-01/README.md",
+        "role": "Phase 1 entrypoint; P1.S0 authorization boundary"
       },
       {
-        "path": "docs/hosted-web-phases/phase-00/lanes/w1-parity-renderer.md",
-        "role": "w1 lane packet"
+        "path": "docs/hosted-web-phases/phase-01/controller-packet.md",
+        "role": "current controller authority for serial P1.S0 only"
       },
       {
-        "path": "docs/hosted-web-phases/phase-00/lanes/w2-provider-runtime.md",
-        "role": "w2 lane packet"
-      },
-      {
-        "path": "docs/hosted-web-phases/phase-00/lanes/w3-state-writers-backup.md",
-        "role": "w3 lane packet"
-      },
-      {
-        "path": "docs/hosted-web-phases/phase-00/lanes/w4-lease-guard-process.md",
-        "role": "w4 lane packet"
-      },
-      {
-        "path": "docs/hosted-web-phases/phase-00/lanes/w5-events-commands-recovery.md",
-        "role": "w5 lane packet"
-      },
-      {
-        "path": "docs/hosted-web-phases/phase-00/lanes/w6-auth-proxy-artifacts.md",
-        "role": "w6 lane packet"
+        "path": "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md",
+        "role": "the single current lane packet; metadata and evidence bootstrap only"
       }
     ],
     "reference-on-demand": [
+      {
+        "path": "docs/hosted-web-phase-0-execution-packet.md",
+        "role": "accepted and frozen Phase 0 controller history; not executable"
+      },
       {
         "path": "docs/hosted-web-e2e-completion-plan.md",
         "role": "architecture, ADR, invariant, and release reference"
@@ -71,8 +84,28 @@
         "role": "controller gate details"
       },
       {
-        "path": "docs/hosted-web-phases/phase-01/README.md",
-        "role": "blocked Phase 1 planning proposal; not executable authority"
+        "path": "docs/hosted-web-phases/phase-01/packet-inputs.md",
+        "role": "preserved pre-freeze Phase 1 input proposal; current router decisions supersede its blocker projection"
+      },
+      {
+        "path": "docs/hosted-web-phases/phase-01/architecture-and-contracts.md",
+        "role": "Phase 1 boundary and contract proposal; read only when an exact worker-start contract lists it"
+      },
+      {
+        "path": "docs/hosted-web-phases/phase-01/execution-dag.md",
+        "role": "proposed successor DAG and ownership; read only when an exact worker-start contract lists it"
+      },
+      {
+        "path": "docs/hosted-web-phases/phase-01/conformance-and-tests.md",
+        "role": "Phase 1 conformance proposal; read only when an exact worker-start contract lists it"
+      },
+      {
+        "path": "docs/hosted-web-phases/phase-01/operations-and-risk.md",
+        "role": "Phase 1 operations proposal; read only when an exact worker-start contract lists it"
+      },
+      {
+        "path": "docs/hosted-web-phases/phase-01/execution-packet-templates.md",
+        "role": "blocked successor packet templates; read only when an exact worker-start contract lists it"
       }
     ],
     "historical-preserved": [

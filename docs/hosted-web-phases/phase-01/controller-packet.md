@@ -2,23 +2,39 @@
 
 ## Status and authority
 
-- Status: `blocked proposal`; non-authoritative for implementation
+- Status: current execution authority for serial `P1.S0` only
 - Proposed packet revision: `phase-01-proposal-r2`
 - Canonical planning base: `3bc0dfa7c00261785c0c752270cb302a9294e751`
-- Phase 0 freeze integration commit/digest: pending; see [prerequisite gates](./packet-inputs.md)
+- Phase 0 accepted freeze commit: `f4fa24aac9615a4ce10632965a2244a2e11a273e`
 - Plan bundle commit / Phase 1 start SHA: not created
 - Required decisions: ADR-15, ADR-19, ADR-20, plus the eventual frozen Phase 0 register
-- Explicit implementation authorization: pending
-- Implementation producer target: **zero**
+- Explicit authorization: `P1.S0` bootstrap only
+- Authorized producer target: **one serial S0 worker**
+- Later-subphase producer target: **zero**
 
-All identifiers, paths, ownership, commands, thresholds, and pairings in this bundle are proposed until
-serial bootstrap. This controller plan cannot render worker prompts or create implementation
-worktrees.
+All identifiers, paths, ownership, commands, thresholds, and pairings after S0 remain proposed until
+serial bootstrap. This controller plan may render one bounded S0 bootstrap contract. It cannot render
+or admit an S1-or-later worker, and S0 cannot edit product source.
 
 The accepted `P0.D.TARGET_IMAGE` narrowing in the planning base closes that single Phase 0 gate for
 the Phase 0-to-Phase 1 transition. It does not admit an image or composition: Phase 5 retains the exact
 image/profile, provider canaries, complete inventory, terminal-negative scan, and standalone
-production-composition gate. The remaining Phase 0 gates below still block Phase 1.
+production-composition gate. The accepted freeze removes this item from Phase 0 transition blockers.
+Exact-image/profile proof, provider canaries, production composition, and terminal-negative admission
+remain fail-closed implementation risks owned by later phases.
+
+## P1.S0 authorization boundary
+
+S0 starts from the accepted Phase 0 freeze and may only freeze the Phase 1 start SHA, packet revision,
+exact identifiers, exact paths, owners, synthetic fixtures, commands, baseline fingerprints, and the
+unique estimate allocation. It must preserve proposal status for every downstream work package. S0
+does not create the contract kernel, adapters, feature code, routes, preload channels, renderer
+facets, migrations, provider runtime, artifact composition, or terminal behavior.
+
+S0 completion is evidence for a later router decision; it is not self-authority to start `P1.S1`.
+The only current lane packet is
+[`lanes/p1-s0-serial-bootstrap.md`](./lanes/p1-s0-serial-bootstrap.md). A worker-start contract that
+binds any other Phase 1 lane conflicts with this controller and must be rejected.
 
 ## Outcome
 
@@ -72,14 +88,14 @@ blocked on Phase 2.
 
 ## Proposed subphases
 
-| Subphase                       | Result                                                                                 | Admission                                                |
-| ------------------------------ | -------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `P1.S0` serial bootstrap       | Freeze exact IDs, files, owners, fixtures, baseline fingerprints, and packet revision. | All Phase 0 gates and implementation authorization pass. |
-| `P1.S1` foundations            | Contract kernel and route/catalog conventions.                                         | `P1.S0` integrated.                                      |
-| `P1.S2` parallel production    | Capability/route assertions and conformance/ratchet harnesses on disjoint paths.       | Foundation review passes.                                |
-| `P1.S3` seam review            | R1 falsifies 1B/1C architecture, omission sensitivity, and production isolation.       | Both 1B and 1C complete.                                 |
-| `P1.S4` first proof and review | Team-lifecycle list query plus isolated test adapters, then R2 semantic review.        | R1 accepted before 1D; 1D complete before R2.            |
-| `P1.S5` serialized integration | Shared ratchet/evidence wiring, full gate, rollback proof, evidence freeze.            | R2 accepted; one integration owner.                      |
+| Subphase                       | Result                                                                                 | Admission                                       |
+| ------------------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `P1.S0` serial bootstrap       | Freeze exact IDs, files, owners, fixtures, baseline fingerprints, and packet revision. | Authorized now from accepted freeze `f4fa24aa`. |
+| `P1.S1` foundations            | Contract kernel and route/catalog conventions.                                         | `P1.S0` integrated.                             |
+| `P1.S2` parallel production    | Capability/route assertions and conformance/ratchet harnesses on disjoint paths.       | Foundation review passes.                       |
+| `P1.S3` seam review            | R1 falsifies 1B/1C architecture, omission sensitivity, and production isolation.       | Both 1B and 1C complete.                        |
+| `P1.S4` first proof and review | Team-lifecycle list query plus isolated test adapters, then R2 semantic review.        | R1 accepted before 1D; 1D complete before R2.   |
+| `P1.S5` serialized integration | Shared ratchet/evidence wiring, full gate, rollback proof, evidence freeze.            | R2 accepted; one integration owner.             |
 
 The detailed DAG and proposed ownership are in [execution-dag.md](./execution-dag.md).
 
@@ -146,4 +162,4 @@ The integration owner follows [conformance-and-tests.md](./conformance-and-tests
 - [ ] Decision register, evidence index, estimate reconciliation, risk disposition, and Phase 2 input
       packet are frozen from actual integrated evidence.
 
-None of these completion conditions is claimed by this blocked planning proposal.
+None of these Phase 1 completion conditions is claimed by the S0-only authorization.

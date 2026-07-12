@@ -16,12 +16,16 @@ broaden scope, change an ADR, weaken a guardrail, or skip an exit gate.
 
 ## Current execution
 
-Phase 0 is the only executable phase. Its controller entrypoint is
-[`docs/hosted-web-phase-0-execution-packet.md`](../hosted-web-phase-0-execution-packet.md); a worker's
-contract selects exactly one W1-W6 lane packet beneath `phase-00/lanes/`.
+Phase 0 is accepted and frozen at `f4fa24aac9615a4ce10632965a2244a2e11a273e`. Its controller packet
+and W1-W6 lanes are preserved history, not executable work.
 
-[`phase-01/README.md`](phase-01/README.md) is a blocked planning proposal and is reference-on-demand,
-not worker authority. Later phases remain blocked until the preceding phase is reviewed and frozen.
+Phase 1 is current, but authorization is deliberately limited to serial bootstrap `P1.S0`. A
+validated worker-start contract must bind the current
+[`controller packet`](phase-01/controller-packet.md) and exactly one lane packet: the compact
+[`P1.S0 serial-bootstrap packet`](phase-01/lanes/p1-s0-serial-bootstrap.md). Only after those two
+packets may the worker read exact contract-listed references. No `P1.S1` or later producer may start
+until S0 is integrated and this router is explicitly advanced. This transition authorizes bootstrap
+freezing only; it does not authorize product source implementation.
 
 ## Evidence boundary
 
@@ -31,6 +35,6 @@ retained unchanged under [`EVIDENCE_LIFECYCLE.md`](EVIDENCE_LIFECYCLE.md).
 
 ## Start and completion
 
-The controller admits a worker only after the bounded worker-start validator and the registry
+The controller admits the one S0 worker only after the bounded worker-start validator and the registry
 admission gate both succeed for exactly one `queued` record. Completion states are `verified`,
 `characterized`, `blocked`, `failed`, or `superseded`; vague states such as `done` are not evidence.

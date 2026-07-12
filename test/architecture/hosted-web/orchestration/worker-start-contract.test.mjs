@@ -46,6 +46,86 @@ function validate(contract, options = {}) {
   return validateWorkerStartContract(contract, { gitHead: CANONICAL_SHA, ...options });
 }
 
+function currentPhaseNavigationIssues(executionIndex, phaseReadme) {
+  const issues = [];
+  const controllerPacket = executionIndex.currentRoute?.controllerPacket;
+  const lanePackets = executionIndex.currentRoute?.lanePackets ?? [];
+  const routeMatch = phaseReadme.match(/## Validated worker route\n(?<route>[\s\S]*?)(?=\n## |$)/);
+  const route = routeMatch?.groups?.route ?? '';
+  const routedPaths = [...route.matchAll(/`(docs\/hosted-web-phases\/[^`]+)`/g)].map(
+    (match) => match[1]
+  );
+  const routedLanePaths = routedPaths.filter((item) => item.includes('/lanes/'));
+
+  if (lanePackets.length !== 1) {
+    issues.push(`currentRoute:expected_one_lane:${lanePackets.length}`);
+  }
+
+  const expectedRoute = lanePackets.length === 1 ? [controllerPacket, lanePackets[0].path] : [];
+  if (!controllerPacket || !routeMatch) {
+    issues.push('currentRoute:missing_controller_or_route_section');
+  } else if (JSON.stringify(routedPaths.slice(0, 2)) !== JSON.stringify(expectedRoute)) {
+    issues.push(`currentRoute:packet_order:${routedPaths.slice(0, 2).join(',')}`);
+  }
+  if (routedLanePaths.length !== 1) {
+    issues.push(`currentRoute:readme_expected_one_lane:${routedLanePaths.length}`);
+  }
+
+  const controllerPosition = phaseReadme.indexOf(controllerPacket);
+  for (const reference of executionIndex.authorityTiers?.['reference-on-demand'] ?? []) {
+    const referencePosition = phaseReadme.indexOf(reference.path);
+    if (
+      referencePosition !== -1 &&
+      (controllerPosition === -1 || referencePosition < controllerPosition)
+    ) {
+      issues.push(`currentRoute:reference_before_controller:${reference.path}`);
+    }
+  }
+
+  return issues;
+}
+
+test('current Phase README routes controller then exactly one lane before on-demand references', () => {
+  const executionIndex = JSON.parse(
+    readFileSync(path.join(repoRoot, 'docs/hosted-web-phases/EXECUTION_INDEX.json'), 'utf8')
+  );
+  const phaseReadme = readFileSync(
+    path.join(repoRoot, 'docs/hosted-web-phases/phase-01/README.md'),
+    'utf8'
+  );
+  assert.deepEqual(currentPhaseNavigationIssues(executionIndex, phaseReadme), []);
+
+  const referenceFirst = phaseReadme.replace(
+    '## Validated worker route',
+    'docs/hosted-web-phases/phase-01/packet-inputs.md\n\n## Validated worker route'
+  );
+  assert.ok(
+    currentPhaseNavigationIssues(executionIndex, referenceFirst).includes(
+      'currentRoute:reference_before_controller:docs/hosted-web-phases/phase-01/packet-inputs.md'
+    )
+  );
+
+  const missingLane = JSON.parse(JSON.stringify(executionIndex));
+  missingLane.currentRoute.lanePackets = [];
+  assert.ok(
+    currentPhaseNavigationIssues(missingLane, phaseReadme).includes(
+      'currentRoute:expected_one_lane:0'
+    )
+  );
+
+  const multipleLanes = JSON.parse(JSON.stringify(executionIndex));
+  multipleLanes.currentRoute.lanePackets.push({
+    subphase: 'P1.S1',
+    path: 'docs/hosted-web-phases/phase-01/lanes/p1-s1-invalid-concurrent-lane.md',
+  });
+  assert.equal(multipleLanes.currentRoute.lanePackets.length, 2);
+  assert.ok(
+    currentPhaseNavigationIssues(multipleLanes, phaseReadme).includes(
+      'currentRoute:expected_one_lane:2'
+    )
+  );
+});
+
 test('accepts the exact canonical, sandbox-only worker-start contract', () => {
   const result = validate(validContract());
   assert.deepEqual(result, { ok: true, issues: [] });
@@ -147,9 +227,7 @@ test('rejects recursive, globbed, and numerically unbounded mandatory reads', ()
   const recursiveResult = validate(recursive);
   assert.equal(recursiveResult.ok, false);
   assert.ok(
-    recursiveResult.issues.includes(
-      'mandatoryDocs:unbounded_read_root:docs/research/hosted-web'
-    )
+    recursiveResult.issues.includes('mandatoryDocs:unbounded_read_root:docs/research/hosted-web')
   );
 
   const globbed = validContract();
@@ -274,9 +352,7 @@ test('rejects a research file not listed by the lane packet', (t) => {
   const result = validate(contract, { checkGitHead: false });
   assert.equal(result.ok, false);
   assert.ok(
-    result.issues.includes(
-      `mandatoryReads:research_reference_not_in_lane_packet:${exactReference}`
-    )
+    result.issues.includes(`mandatoryReads:research_reference_not_in_lane_packet:${exactReference}`)
   );
 });
 

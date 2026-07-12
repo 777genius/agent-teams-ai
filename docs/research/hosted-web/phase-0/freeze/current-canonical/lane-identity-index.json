@@ -5,13 +5,13 @@
   "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
   "phaseId": "phase-00",
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
-  "currentIntegrationCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+  "currentIntegrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
   "freezeCandidate": {
-    "baseCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
-    "status": "pending-integration",
-    "integrationCommit": null
+    "baseCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+    "status": "accepted-frozen",
+    "integrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e"
   },
-  "generatedAt": "2026-07-12T06:03:29Z",
+  "generatedAt": "2026-07-12T10:28:17Z",
   "lanes": [
     {
       "laneId": "w1",
@@ -19,7 +19,7 @@
       "packetRevision": "phase-00-r2",
       "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
       "sourceBaseSha": "f7d98790eb868714e536f77bd796072ea706911a",
-      "integratedAtCommit": "0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3",
+      "integratedAtCommit": "a6bd7a39aebb4d822f57707c96c5e071b2aecb2b",
       "integrationHistory": [
         {
           "commit": "89c1358925033d480bcfe3bdfee6c899df556431",
@@ -37,6 +37,15 @@
             "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
             "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
           ]
+        },
+        {
+          "commit": "a6bd7a39aebb4d822f57707c96c5e071b2aecb2b",
+          "disposition": "narrowed",
+          "scope": "Integrate the pack-relative legacy raw locator and deterministic scanner bytes into the accepted Phase 0 candidate.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
+            "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
+          ]
         }
       ],
       "currentState": "integrated-current",
@@ -45,12 +54,7 @@
         "sha256": "0cc95df4fe153e046788d8592dda638cfd2ebf199133f670917db22bab32a10e",
         "scope": "repository"
       },
-      "identityCorrection": "The producer field laneId=w1-remediation-v9 is historical job identity; the controller canonical lane is w1.",
-      "pendingCandidatePaths": [
-        "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
-        "docs/research/hosted-web/phase-0/parity-renderer/schemas/legacy-bypass-inventory.schema.json",
-        "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
-      ]
+      "identityCorrection": "The producer field laneId=w1-remediation-v9 is historical job identity; the controller canonical lane is w1. The pack-relative correction is integrated at a6bd7a39."
     },
     {
       "laneId": "w2",
@@ -168,7 +172,7 @@
       "packetRevision": "phase-00-r3",
       "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
       "sourceBaseSha": "f7d98790eb868714e536f77bd796072ea706911a",
-      "integratedAtCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+      "integratedAtCommit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
       "integrationHistory": [
         {
           "commit": "c72fd201867b9bcd1ef77d5e0f95ba379adb4fca",
@@ -184,6 +188,16 @@
             "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
             "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
             "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json"
+          ]
+        },
+        {
+          "commit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+          "disposition": "narrowed",
+          "scope": "Accept fail-closed target-image narrowing: exact image admission is deferred to Phase 5 and is an implementation risk rather than a Phase 0 blocker.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+            "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+            "docs/research/hosted-web/phase-0/auth-artifacts/target-image-admission.json"
           ]
         }
       ],

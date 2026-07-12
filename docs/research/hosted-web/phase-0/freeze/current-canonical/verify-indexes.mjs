@@ -89,17 +89,17 @@ const validateSemantics = (allIndexes) => {
   const evidenceIndex = allIndexes.get('evidence-index.json');
   const supersessionIndex = allIndexes.get('supersession-index.json');
 
-  const expectedCurrentCommit = 'c958c872fa22edf9b2d6a0741d7781b00957903c';
+  const expectedCurrentCommit = 'f4fa24aac9615a4ce10632965a2244a2e11a273e';
   for (const [name, index] of allIndexes) {
     if (index.currentIntegrationCommit !== expectedCurrentCommit) {
-      fail('INTEGRATION_COMMIT_MISMATCH', `${name} does not pin canonical predecessor c958c872`);
+      fail('INTEGRATION_COMMIT_MISMATCH', `${name} does not pin accepted freeze f4fa24aa`);
     }
     if (
       index.freezeCandidate?.baseCommit !== expectedCurrentCommit ||
-      index.freezeCandidate?.status !== 'pending-integration' ||
-      index.freezeCandidate?.integrationCommit !== null
+      index.freezeCandidate?.status !== 'accepted-frozen' ||
+      index.freezeCandidate?.integrationCommit !== expectedCurrentCommit
     ) {
-      fail('CANDIDATE_PROVENANCE_MISMATCH', `${name} conflates predecessor and freeze candidate`);
+      fail('CANDIDATE_PROVENANCE_MISMATCH', `${name} does not freeze the accepted candidate`);
     }
   }
 
@@ -115,7 +115,7 @@ const validateSemantics = (allIndexes) => {
       producerJobId: 'agent-teams-hosted-web-refactor-phase-00-remediation-w1-v9',
       packetRevision: 'phase-00-r2',
       sourceBaseSha: 'f7d98790eb868714e536f77bd796072ea706911a',
-      integratedAtCommit: '0d1a82fe2fb0c8d73b62cd3b5996b853bef2d7c3',
+      integratedAtCommit: 'a6bd7a39aebb4d822f57707c96c5e071b2aecb2b',
     },
     w2: {
       producerJobId: 'agent-teams-hosted-web-refactor-phase-00-w2-targeted-fix-a1',
@@ -145,7 +145,7 @@ const validateSemantics = (allIndexes) => {
       producerJobId: 'agent-teams-hosted-web-refactor-phase-00-remediation-w4-w6-v7',
       packetRevision: 'phase-00-r3',
       sourceBaseSha: 'f7d98790eb868714e536f77bd796072ea706911a',
-      integratedAtCommit: 'c958c872fa22edf9b2d6a0741d7781b00957903c',
+      integratedAtCommit: '3bc0dfa7c00261785c0c752270cb302a9294e751',
     },
   };
 
@@ -184,6 +184,63 @@ const validateSemantics = (allIndexes) => {
 
   assertUnique(reviewIndex.reviews, 'reviewId', 'reviews');
   for (const review of reviewIndex.reviews) review.sources.forEach(checkPathHash);
+
+  const expectedAuthorities = {
+    'P0.CURRENT.AUTHORITY.ESTIMATE': {
+      commit: 'f4fa24aac9615a4ce10632965a2244a2e11a273e',
+      role: 'estimate',
+    },
+    'P0.CURRENT.AUTHORITY.FINAL_GATE': {
+      commit: '63ff349e14e44a83d363ccbcdd756af935555aa9',
+      role: 'final-gate',
+    },
+    'P0.CURRENT.AUTHORITY.NAVIGATION': {
+      commit: 'f32be6a6fcb2da7a47ef3553476430ef8052e19a',
+      role: 'navigation',
+    },
+    'P0.CURRENT.AUTHORITY.ORCHESTRATION': {
+      commit: '1587615c751c3cb12b5078ab4b7264b6e9fd42ad',
+      role: 'orchestration',
+    },
+    'P0.CURRENT.AUTHORITY.TARGET_IMAGE': {
+      commit: '3bc0dfa7c00261785c0c752270cb302a9294e751',
+      role: 'target-image-narrowing',
+    },
+  };
+  assertUnique(reviewIndex.acceptedAuthorities, 'authorityId', 'acceptedAuthorities');
+  if (reviewIndex.acceptedAuthorities.length !== Object.keys(expectedAuthorities).length) {
+    fail('MISSING_PROVENANCE', 'accepted authority count differs from the frozen set');
+  }
+  for (const authority of reviewIndex.acceptedAuthorities) {
+    const expected = expectedAuthorities[authority.authorityId];
+    if (
+      !expected ||
+      authority.commit !== expected.commit ||
+      authority.role !== expected.role ||
+      authority.disposition !== 'accepted'
+    ) {
+      fail('ADOPTION_PROVENANCE_MISMATCH', authority.authorityId);
+    }
+    checkPathHash(authority.source);
+    if (hashAtCommit(authority.commit, authority.source.path) !== authority.source.sha256) {
+      fail('GIT_PROVENANCE_MISMATCH', `${authority.authorityId} manifest`);
+    }
+    try {
+      execFileSync(
+        'git',
+        ['merge-base', '--is-ancestor', authority.commit, expectedCurrentCommit],
+        {
+          cwd: repoRoot,
+          stdio: 'ignore',
+        }
+      );
+    } catch {
+      fail(
+        'CANDIDATE_PROVENANCE_MISMATCH',
+        `${authority.authorityId} is not in the freeze ancestry`
+      );
+    }
+  }
 
   assertUnique(decisionIndex.decisions, 'decisionId', 'decisions');
   for (const decision of decisionIndex.decisions) {
@@ -253,12 +310,12 @@ const validateSemantics = (allIndexes) => {
       decisionId: 'P0.CURRENT.W1.LATER_BYTES',
     },
     'P0.W1.LEGACY_BYPASSES': {
-      commit: null,
+      commit: 'a6bd7a39aebb4d822f57707c96c5e071b2aecb2b',
       disposition: 'narrowed',
       decisionId: 'P0.CURRENT.W1.LATER_BYTES',
     },
     'P0.W1.SCANNER': {
-      commit: null,
+      commit: 'a6bd7a39aebb4d822f57707c96c5e071b2aecb2b',
       disposition: 'narrowed',
       decisionId: 'P0.CURRENT.W1.LATER_BYTES',
     },
@@ -338,6 +395,17 @@ const validateSemantics = (allIndexes) => {
       fail('ADOPTION_PROVENANCE_MISMATCH', `${decisionId} review projection`);
     }
   }
+  for (const [reviewId, commit] of [
+    ['P0.CURRENT.REVIEW.W1', 'a6bd7a39aebb4d822f57707c96c5e071b2aecb2b'],
+    ['P0.CURRENT.REVIEW.W4_W6', '3bc0dfa7c00261785c0c752270cb302a9294e751'],
+  ]) {
+    const disposition = reviewIndex.reviews
+      .find((review) => review.reviewId === reviewId)
+      ?.commitDispositions.find((candidate) => candidate.commit === commit);
+    if (disposition?.disposition !== 'narrowed') {
+      fail('ADOPTION_PROVENANCE_MISMATCH', `${reviewId} ${commit}`);
+    }
+  }
 
   const legacyBypasses = readJson(
     resolve(
@@ -359,12 +427,19 @@ const validateSemantics = (allIndexes) => {
     );
   }
 
-  for (const requiredDecision of ['P0.CURRENT.READINESS_BLOCKERS', 'P0.CURRENT.PHASE1_AUTHORITY']) {
+  const requiredDecisions = {
+    'P0.CURRENT.PHASE0_FREEZE': 'accepted',
+    'P0.CURRENT.PHASE1_AUTHORITY': 'narrowed',
+    'P0.CURRENT.ORCHESTRATION_AUTHORITY': 'accepted',
+    'P0.CURRENT.NAVIGATION_AUTHORITY': 'accepted',
+    'P0.CURRENT.ESTIMATE_AUTHORITY': 'accepted',
+  };
+  for (const [decisionId, status] of Object.entries(requiredDecisions)) {
     if (
-      decisionIndex.decisions.find(({ decisionId }) => decisionId === requiredDecision)?.status !==
-      'blocked'
+      decisionIndex.decisions.find((decision) => decision.decisionId === decisionId)?.status !==
+      status
     ) {
-      fail('READINESS_AUTHORITY_MISMATCH', requiredDecision);
+      fail('READINESS_AUTHORITY_MISMATCH', decisionId);
     }
   }
 
@@ -372,35 +447,39 @@ const validateSemantics = (allIndexes) => {
     resolve(repoRoot, 'docs/hosted-web-phases/phase-01/README.md'),
     'utf8'
   );
-  const phase1Inputs = readFileSync(
-    resolve(repoRoot, 'docs/hosted-web-phases/phase-01/packet-inputs.md'),
-    'utf8'
-  );
   const phase1Packet = readFileSync(
     resolve(repoRoot, 'docs/hosted-web-phases/phase-01/controller-packet.md'),
     'utf8'
   );
+  const phase1Dag = readFileSync(
+    resolve(repoRoot, 'docs/hosted-web-phases/phase-01/execution-dag.md'),
+    'utf8'
+  );
+  const executionIndex = readJson(resolve(repoRoot, 'docs/hosted-web-phases/EXECUTION_INDEX.json'));
   const revivedHistoricalClaim = [
     'Both rejected',
     'Pair rejected with RW35',
     'Pair rejected with R46',
     'Holds all adoption',
-  ].find((claim) => `${phase1Inputs}\n${phase1Packet}`.includes(claim));
+  ].find((claim) => `${phase1Readme}\n${phase1Packet}\n${phase1Dag}`.includes(claim));
   if (
     revivedHistoricalClaim ||
-    !phase1Packet.includes('remain historical') ||
-    !phase1Inputs.includes('do not revive them as readiness blockers')
+    executionIndex.acceptedPhase0Freeze?.commit !== expectedCurrentCommit ||
+    executionIndex.acceptedPhase0Freeze?.status !== 'accepted-frozen'
   ) {
-    fail('SUPERSESSION_PROJECTION_MISMATCH', revivedHistoricalClaim ?? 'historical status missing');
+    fail('SUPERSESSION_PROJECTION_MISMATCH', revivedHistoricalClaim ?? 'accepted freeze missing');
   }
   if (
-    !phase1Readme.includes('blocked proposal') ||
-    !phase1Readme.includes('Producer target is zero') ||
-    !phase1Packet.includes('non-authoritative') ||
-    !phase1Packet.includes('No path listed or implied here is authoritative') ||
-    !phase1Inputs.includes('Proposal only')
+    executionIndex.currentExecutablePhase !== 'phase-01' ||
+    executionIndex.currentExecutableSubphase !== 'P1.S0' ||
+    JSON.stringify(executionIndex.authorization?.authorized) !== JSON.stringify(['P1.S0']) ||
+    executionIndex.authorization?.productSourceImplementationAuthorized !== false ||
+    !phase1Readme.includes('current for `P1.S0` serial bootstrap only') ||
+    !phase1Packet.includes('current execution authority for serial `P1.S0` only') ||
+    !phase1Packet.includes('Later-subphase producer target: **zero**') ||
+    !phase1Dag.includes('`-X->` is a blocked transition')
   ) {
-    fail('PHASE1_AUTHORITY_MISMATCH', 'Phase 1 proposal-only or producer-zero guard is absent');
+    fail('PHASE1_AUTHORITY_MISMATCH', 'Phase 1 is not restricted to serial P1.S0');
   }
 
   assertUnique(supersessionIndex.supersessions, 'supersessionId', 'supersessions');
@@ -506,5 +585,5 @@ for (const fixtureName of fixtureFiles) {
 }
 
 process.stdout.write(
-  `Phase 0 current canonical indexes passed: 5 schemas, ${indexes.get('evidence-index.json').evidence.length} evidence IDs, 3 focused negatives${includeControllerExternal ? ', controller-external hashes checked' : ''}.\n`
+  `Phase 0 current canonical indexes passed: 5 schemas, ${indexes.get('evidence-index.json').evidence.length} evidence IDs, 5 accepted authorities, 3 focused negatives${includeControllerExternal ? ', controller-external hashes checked' : ''}.\n`
 );

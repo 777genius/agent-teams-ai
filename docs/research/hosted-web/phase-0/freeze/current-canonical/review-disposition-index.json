@@ -5,19 +5,19 @@
   "controllerOwner": "agent-teams-hosted-web-refactor-controller-v2",
   "phaseId": "phase-00",
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
-  "currentIntegrationCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
+  "currentIntegrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
   "freezeCandidate": {
-    "baseCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
-    "status": "pending-integration",
-    "integrationCommit": null
+    "baseCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+    "status": "accepted-frozen",
+    "integrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e"
   },
-  "generatedAt": "2026-07-12T06:03:29Z",
+  "generatedAt": "2026-07-12T10:28:17Z",
   "reviews": [
     {
       "reviewId": "P0.CURRENT.REVIEW.W1",
       "lanes": ["w1"],
       "disposition": "controller-adopted",
-      "scope": "The v9 bundle is adopted. Commit 0d1a82fe adds the reviewed external-callback census and is narrowed to renderer characterization. The candidate pack-relative raw reference is pending integration and does not raise the legacy-bypass proof level.",
+      "scope": "The v9 bundle is adopted. Commit 0d1a82fe adds the reviewed external-callback census and is narrowed to renderer characterization. Commit a6bd7a39 integrates the pack-relative raw reference without raising the legacy-bypass proof level.",
       "sources": [
         {
           "path": ".codex-handoff/phase-00-w1.json",
@@ -44,6 +44,15 @@
           "paths": [
             "docs/research/hosted-web/phase-0/parity-renderer/renderer-action-inventory.json",
             "docs/research/hosted-web/phase-0/parity-renderer/renderer-child-control-catalog.json",
+            "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
+            "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
+          ]
+        },
+        {
+          "commit": "a6bd7a39aebb4d822f57707c96c5e071b2aecb2b",
+          "disposition": "narrowed",
+          "scope": "Pack-relative raw locator and deterministic scanner integration.",
+          "paths": [
             "docs/research/hosted-web/phase-0/parity-renderer/legacy-bypass-inventory.json",
             "scripts/hosted-web/phase-0/parity-renderer/scan-api-and-actions.ts"
           ]
@@ -138,7 +147,7 @@
       "reviewId": "P0.CURRENT.REVIEW.W4_W6",
       "lanes": ["w4", "w6"],
       "disposition": "approve",
-      "scope": "W4/W6 remains characterization only. Commit c958c872 supplies current artifact authority while preserving hosted-v1 rejection, terminal absence failure, and final-image admission blockers.",
+      "scope": "W4/W6 remains characterization only. Commit c958c872 supplies artifact authority, and 3bc0dfa7 accepts fail-closed target-image narrowing. Exact-image admission and provider canaries remain later implementation risks, not Phase 0 blockers.",
       "sources": [
         {
           "path": "/var/data/agent-teams-hosted-web-refactor/worktrees/phase-00-review-w4-w6-v6/.codex-handoff/phase-00-review-w4-w6-v6.json",
@@ -172,8 +181,75 @@
             "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
             "docs/research/hosted-web/phase-0/auth-artifacts/estimate-input.json"
           ]
+        },
+        {
+          "commit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+          "disposition": "narrowed",
+          "scope": "Fail-closed target-image narrowing accepted for the Phase 0 exit; exact-image admission remains Phase 5 scope.",
+          "paths": [
+            "docs/research/hosted-web/phase-0/auth-artifacts/evidence.json",
+            "docs/research/hosted-web/phase-0/auth-artifacts/observed-artifact-scan.json",
+            "docs/research/hosted-web/phase-0/auth-artifacts/target-image-admission.json"
+          ]
         }
       ]
+    }
+  ],
+  "acceptedAuthorities": [
+    {
+      "authorityId": "P0.CURRENT.AUTHORITY.ESTIMATE",
+      "commit": "f4fa24aac9615a4ce10632965a2244a2e11a273e",
+      "disposition": "accepted",
+      "role": "estimate",
+      "source": {
+        "path": ".codex-handoff/estimate-semantics-h6.json",
+        "sha256": "246dac62c31f015ec3601cfb2cc3a6435bfa6f027aff192f05c9e03b06bf5f16",
+        "scope": "repository"
+      }
+    },
+    {
+      "authorityId": "P0.CURRENT.AUTHORITY.FINAL_GATE",
+      "commit": "63ff349e14e44a83d363ccbcdd756af935555aa9",
+      "disposition": "accepted",
+      "role": "final-gate",
+      "source": {
+        "path": ".codex-handoff/final-gate-candidate-reconcile-h4.json",
+        "sha256": "f45033d339fca0f436ab52226aa5528416967f1000f80ee9e42c2caf38d30754",
+        "scope": "repository"
+      }
+    },
+    {
+      "authorityId": "P0.CURRENT.AUTHORITY.NAVIGATION",
+      "commit": "f32be6a6fcb2da7a47ef3553476430ef8052e19a",
+      "disposition": "accepted",
+      "role": "navigation",
+      "source": {
+        "path": ".codex-handoff/document-navigation-h6.json",
+        "sha256": "58e025f6dfe691b3151bdc2119955f87e303423910a14375354068f126663bcb",
+        "scope": "repository"
+      }
+    },
+    {
+      "authorityId": "P0.CURRENT.AUTHORITY.ORCHESTRATION",
+      "commit": "1587615c751c3cb12b5078ab4b7264b6e9fd42ad",
+      "disposition": "accepted",
+      "role": "orchestration",
+      "source": {
+        "path": ".codex-handoff/orchestration-authority-remediation-h5.json",
+        "sha256": "32c0a04bb321bd94f80bddc5e1eb2d749d781c9fb5e9ff85785e2510b1b5e3df",
+        "scope": "repository"
+      }
+    },
+    {
+      "authorityId": "P0.CURRENT.AUTHORITY.TARGET_IMAGE",
+      "commit": "3bc0dfa7c00261785c0c752270cb302a9294e751",
+      "disposition": "accepted",
+      "role": "target-image-narrowing",
+      "source": {
+        "path": ".codex-handoff/target-image-decision-h2.json",
+        "sha256": "fa6a5c9a7386eb202fdb247d59c4fa6e30c048f90b73b8148c643c1c2c2e39d8",
+        "scope": "repository"
+      }
     }
   ]
 }

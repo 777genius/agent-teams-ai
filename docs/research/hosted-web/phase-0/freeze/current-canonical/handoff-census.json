@@ -4,8 +4,8 @@
   "phaseStartSha": "a32f509e6d9bd31ba2135940e336729bf90c3d93",
   "canonicalPredecessorCommit": "c958c872fa22edf9b2d6a0741d7781b00957903c",
   "freezeCandidate": {
-    "status": "pending-integration",
-    "integrationCommit": null
+    "status": "accepted-frozen",
+    "integrationCommit": "f4fa24aac9615a4ce10632965a2244a2e11a273e"
   },
   "authority": "lane-identity-index.json",
   "lanes": [
@@ -24,5 +24,5 @@
       "state": "integrated-current-characterization"
     }
   ],
-  "policy": "Current indexes override stale registry progress. Historical handoffs remain immutable. Candidate bytes remain pending until controller integration records a new commit."
+  "policy": "Current indexes override stale registry progress. Historical handoffs remain immutable. The accepted freeze is f4fa24aac9615a4ce10632965a2244a2e11a273e; rejected h7/h8 outputs are not adopted."
 }
