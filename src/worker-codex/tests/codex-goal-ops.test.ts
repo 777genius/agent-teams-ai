@@ -305,7 +305,7 @@ describe("codex goal ops", () => {
     });
   });
 
-  it("optionally validates account slots with codex login status without leaking provider output", async () => {
+  it("optionally validates account slots with live quota observation without leaking provider output", async () => {
     const fixture = await createGoalFixture();
     const codexOk = join(fixture.root, "codex-ok.sh");
     const codexFail = join(fixture.root, "codex-fail.sh");
@@ -324,7 +324,7 @@ describe("codex goal ops", () => {
     expect(okAccounts[0]).toMatchObject({
       status: "ready",
       liveCheck: "passed",
-      liveCheckSafeMessage: "codex login status passed",
+      liveCheckSafeMessage: "codex app-server quota check passed",
     });
     expect(JSON.stringify(okAccounts)).not.toContain("secret@example.com");
 
@@ -338,8 +338,8 @@ describe("codex goal ops", () => {
     expect(failedAccounts[0]).toMatchObject({
       status: "auth_invalid",
       liveCheck: "failed",
-      liveCheckSafeMessage: "codex login status failed",
-      safeMessage: "codex login status failed",
+      liveCheckSafeMessage: "codex account live observation failed",
+      safeMessage: "codex account live observation failed",
     });
     expect(JSON.stringify(failedAccounts)).not.toContain("refresh-secret");
   });

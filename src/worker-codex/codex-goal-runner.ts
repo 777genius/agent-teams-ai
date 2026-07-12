@@ -1,9 +1,10 @@
 import { execFile } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
-import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
+import type { ObservabilityPort } from "@vioxen/subscription-runtime/core";
 import type { ProviderTaskControls } from "@vioxen/subscription-runtime/core";
 import {
   AccessBoundary,
@@ -33,6 +34,7 @@ import {
   FileBackendCodexSafeExecutor,
   type FileBackendCodexSafeExecutorOptions,
 } from "./file-backend-codex-safe-executor";
+import { migrateLegacyCodexAccountCapacity } from "./application/codex-account-capacity-store";
 import type {
   CodexWorkerExecutionEngine,
   FileBackendCodexWorkerResult,
@@ -47,6 +49,14 @@ import {
   createCodexGoalResultRecorder,
   GitPatchPreserver,
 } from "./codex-goal-runtime-result-io";
+import {
+  codexGoalRuntimeEventObservability,
+  createCodexGoalRuntimeEventWriter,
+} from "./codex-goal-runtime-events";
+export type {
+  CodexGoalRuntimeEvent,
+  CodexGoalRuntimeEventLevel,
+} from "./codex-goal-runtime-events";
 
 const execFileAsync = promisify(execFile);
 const gitStatusTimeoutMs = 5_000;
@@ -166,22 +176,11 @@ export type CodexGoalProgressSnapshot = {
   readonly currentAccount?: string;
 };
 
-export type CodexGoalRuntimeEventLevel = "info" | "warning" | "error";
-
-export type CodexGoalRuntimeEvent = {
-  readonly schemaVersion: 1;
-  readonly taskId: string;
-  readonly event: string;
-  readonly level: CodexGoalRuntimeEventLevel;
-  readonly timestamp: string;
-  readonly pid: number;
-  readonly attributes?: Readonly<Record<string, string | number | boolean>>;
-};
-
 export type CodexGoalRunDeps = {
   readonly createExecutor?: (
     options: FileBackendCodexSafeExecutorOptions,
   ) => CodexGoalExecutor;
+  readonly observability?: ObservabilityPort;
 };
 
 export type CodexGoalExecutor = {
@@ -211,6 +210,8 @@ export async function runCodexGoal(
     eventPath: runtimeEventsPath,
     taskId: config.taskId,
   });
+  const observability =
+    deps.observability ?? codexGoalRuntimeEventObservability(runtimeEvents);
   await runtimeEvents.write("runner_starting", {
     jobId: config.jobId ?? config.taskId,
     executionEngine: config.executionEngine ?? "app-server-goal",
@@ -249,6 +250,7 @@ export async function runCodexGoal(
     config,
     stateRootDir,
     encryptionKey,
+    observability,
   }));
 
   try {
@@ -331,6 +333,7 @@ export function buildCodexGoalExecutorOptions(input: {
   readonly config: CodexGoalRunConfig;
   readonly stateRootDir: string;
   readonly encryptionKey: Uint8Array;
+  readonly observability?: ObservabilityPort;
 }): FileBackendCodexSafeExecutorOptions {
   const { config } = input;
   const accessLaunchPlan = buildCodexGoalAccessLaunchPlan(config);
@@ -341,7 +344,22 @@ export function buildCodexGoalExecutorOptions(input: {
       : undefined;
   return {
     ...(config.executorId ? { executorId: config.executorId } : {}),
+    authRootDir: config.authRootDir,
+    ...(input.observability ? { observability: input.observability } : {}),
     stateRootDir: input.stateRootDir,
+    accountCapacityStore: migrateLegacyCodexAccountCapacity({
+      authRootDir: config.authRootDir,
+      stateRootDir: input.stateRootDir,
+      accountIds: config.accounts.map((account) => account.name),
+      authJsonPaths: Object.fromEntries(
+        config.accounts.map((account) => [
+          account.name,
+          account.authJsonPath ??
+            join(config.authRootDir, account.name, "auth.json"),
+        ]),
+      ),
+      ...(input.observability ? { observability: input.observability } : {}),
+    }),
     workspacePath: config.workspacePath,
     maxAccountCycles: config.maxAccountCycles ?? 5,
     allowDuplicateAccountIdentities:
@@ -599,59 +617,6 @@ function createCodexGoalProgressHeartbeat(input: {
       await writes;
     },
   };
-}
-
-function createCodexGoalRuntimeEventWriter(input: {
-  readonly eventPath: string;
-  readonly taskId: string;
-}) {
-  let writes = Promise.resolve();
-  const write = (
-    event: string,
-    attributes: Readonly<Record<string, string | number | boolean>> = {},
-    level: CodexGoalRuntimeEventLevel = "info",
-  ) => {
-    writes = writes.then(async () => {
-      await mkdir(dirname(input.eventPath), { recursive: true, mode: 0o700 });
-      const compactedAttributes = compactEventAttributes(attributes);
-      const entry: CodexGoalRuntimeEvent = {
-        schemaVersion: 1,
-        taskId: input.taskId,
-        event,
-        level,
-        timestamp: new Date().toISOString(),
-        pid: process.pid,
-        ...(compactedAttributes === undefined ? {} : { attributes: compactedAttributes }),
-      };
-      await appendFile(input.eventPath, `${JSON.stringify(entry)}\n`, {
-        encoding: "utf8",
-        mode: 0o600,
-      });
-    });
-    return writes;
-  };
-  return {
-    write(
-      event: string,
-      attributes?: Readonly<Record<string, string | number | boolean>> & {
-        readonly level?: CodexGoalRuntimeEventLevel;
-      },
-    ): Promise<void> {
-      const { level, ...eventAttributes } = attributes ?? {};
-      return write(event, eventAttributes, level ?? "info");
-    },
-  };
-}
-
-function compactEventAttributes(
-  attributes: Readonly<Record<string, string | number | boolean>>,
-): Readonly<Record<string, string | number | boolean>> | undefined {
-  const compacted = Object.fromEntries(
-    Object.entries(attributes).filter(([, value]) =>
-      value !== "" && value !== undefined && value !== null
-    ),
-  );
-  return Object.keys(compacted).length ? compacted : undefined;
 }
 
 function progressFromResult(

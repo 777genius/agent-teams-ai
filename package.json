@@ -4,6 +4,9 @@
   "description": "Provider-neutral subscription runtime for backend workers, Codex subscription execution, and pluggable session custody.",
   "license": "UNLICENSED",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "engines": {
     "node": ">=20"
   },
@@ -128,14 +131,21 @@
     "docs",
     "LICENSE"
   ],
+  "bundleDependencies": [
+    "@vioxen/agent-account-observability"
+  ],
   "scripts": {
     "clean:dist": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
-    "build": "npm run clean:dist && tsc -p tsconfig.build.json && node scripts/rewrite-dist-esm-imports.mjs",
+    "build": "npm run clean:dist && npm run build:packages && tsc -p tsconfig.build.json && node scripts/rewrite-dist-esm-imports.mjs",
+    "build:packages": "npm run --prefix packages/agent-account-observability build",
     "prepack": "npm run build",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "typecheck": "npm run build:packages && tsc --noEmit -p tsconfig.json && npm run typecheck:packages",
+    "typecheck:packages": "npm run --prefix packages/agent-account-observability typecheck",
+    "test": "npm run build:packages && vitest run && npm run test:packages",
+    "test:packages": "npm run --prefix packages/agent-account-observability test",
     "e2e:live-workers": "npm run build && node scripts/e2e-live-workers/run.mjs",
     "e2e:live-workers:dist": "node scripts/e2e-live-workers/run.mjs",
+    "ops:codex-account-quota": "node scripts/ops/codex-account-quota-table.mjs",
     "ops:sync-codex-auth": "node scripts/ops/sync-codex-auth-to-host.mjs",
     "smoke:worker-claude": "npm run build && node scripts/smoke-claude-worker.mjs",
     "smoke:worker-claude-thread": "npm run build && CLAUDE_WORKER_SMOKE_MODE=thread node scripts/smoke-claude-worker.mjs",
@@ -148,6 +158,7 @@
     "check:architecture-guardrails": "node scripts/check-architecture-guardrails.mjs && node scripts/check-architecture-guardrails-self-test.mjs"
   },
   "dependencies": {
+    "@vioxen/agent-account-observability": "file:packages/agent-account-observability",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/node": "^22.20.0",
     "libsodium-wrappers": "^0.8.4",

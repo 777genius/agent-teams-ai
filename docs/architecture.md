@@ -27,6 +27,11 @@ status model, merge policy and cached capacity bridge, while Codex and Claude
 diagnostic adapters live under their worker modules. See
 `docs/account-diagnostics.md`.
 
+`packages/agent-account-observability` is a separate DDD package for deeper
+provider account facts such as Codex app-server rate-limit buckets and Claude
+Code statusline quota snapshots. It reports facts only; scheduler policy stays
+in `subscription-runtime`. See `docs/agent-account-observability.md`.
+
 See `docs/pluggable-agent-runtime.md` for the proposed Claude, Codex and
 multi-agent reviewer/tribunal architecture.
 

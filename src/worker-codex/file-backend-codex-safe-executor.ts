@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { ObservabilityPort } from "@vioxen/subscription-runtime/core";
 import {
   validateCodexAuthJsonBytes,
   type ValidatedCodexAuthJson,
@@ -44,6 +45,8 @@ import {
   type FileBackendCodexWorkerOptions,
   type FileBackendCodexWorkerResult,
 } from "./file-backend-codex-worker";
+import { CodexAccountCapacityRechecker } from "./application/codex-account-capacity-rechecker";
+import { CodexAccountCapacityAliasStore } from "./application/codex-account-capacity-alias-store";
 
 export type FileBackendCodexSafeExecutorAccount = {
   readonly worker: Omit<
@@ -57,6 +60,7 @@ export type FileBackendCodexSafeExecutorAccount = {
 export type FileBackendCodexSafeExecutorOptions = {
   readonly executorId?: string;
   readonly stateRootDir: string;
+  readonly authRootDir?: string;
   readonly workspacePath: string;
   readonly accounts: readonly FileBackendCodexSafeExecutorAccount[];
   /**
@@ -65,6 +69,7 @@ export type FileBackendCodexSafeExecutorOptions = {
    */
   readonly allowDuplicateAccountIdentities?: boolean;
   readonly accountCapacityStore?: WorkerAccountCapacityStore;
+  readonly observability?: ObservabilityPort;
   readonly controlInbox?: WorkerControlContinuationSource;
   readonly activeAttemptRegistry?: ActiveAttemptRegistry;
   readonly lockStore?: WorkspaceLockStore;
@@ -132,14 +137,39 @@ export class FileBackendCodexSafeExecutor {
     this.executorId =
       options.executorId ??
       `file-backend-codex-safe:${hashText(options.workspacePath).slice(0, 12)}`;
-    this.accountCapacityStore =
+    const observability =
+      options.observability ??
+      options.accounts.find((account) => account.worker.observability)
+        ?.worker.observability;
+    const baseAccountCapacityStore =
       options.accountCapacityStore ??
       new LocalFileWorkerAccountCapacityStore({
         rootDir: join(options.stateRootDir, "worker-account-capacity"),
+        ...(observability ? { observability } : {}),
       });
+    const aliasedAccountCapacityStore = new CodexAccountCapacityAliasStore({
+      authRootDir: options.authRootDir ?? options.stateRootDir,
+      store: baseAccountCapacityStore,
+      authJsonPaths: Object.fromEntries(
+        options.accounts.flatMap((account, index) =>
+          account.codexAuthJsonPath
+            ? [[safeExecutorAccountLabel(account, index), account.codexAuthJsonPath]]
+            : [],
+        ),
+      ),
+      authJsonByAlias: Object.fromEntries(
+        options.accounts.flatMap((account, index) =>
+          account.codexAuthJson !== undefined
+            ? [[safeExecutorAccountLabel(account, index), account.codexAuthJson]]
+            : [],
+        ),
+      ),
+    });
+    this.accountCapacityStore = aliasedAccountCapacityStore;
     this.pool = new BoundedSubscriptionWorkerPool({
       poolId: this.executorId,
       slots: options.accounts.length,
+      ...(observability ? { observability } : {}),
       ...(options.clock ? { clock: options.clock } : {}),
       ...(options.maxQueueSize === undefined
         ? {}
@@ -157,6 +187,20 @@ export class FileBackendCodexSafeExecutor {
       slotSelector: ({ slots }) => this.selectRoundRobinSlot(slots),
       workerFactory: accountCapacityAwareWorkerFactory({
         accountCapacityStore: this.accountCapacityStore,
+        accountWideLimitReasons: ["quota_limited"],
+        recheckClaimTtlMs: 5 * 60_000,
+        recheckFailureCooldownMs: 60_000,
+        capacityRecheckerFactory: ({ slotIndex }) => {
+          const account = options.accounts[slotIndex];
+          if (!account?.codexAuthJsonPath) return undefined;
+          return new CodexAccountCapacityRechecker({
+            accountId:
+              account.worker.capacityAccountId ?? account.worker.providerInstanceId,
+            authJsonPath: account.codexAuthJsonPath,
+            codexBinaryPath: account.worker.codexBinaryPath,
+            timeoutMs: account.worker.appServerStartupTimeoutMs ?? 30_000,
+          });
+        },
         ...(options.clock ? { clock: options.clock } : {}),
         workerFactory: ({ slotIndex, workerId }) => {
           const account = options.accounts[slotIndex];
@@ -165,6 +209,12 @@ export class FileBackendCodexSafeExecutor {
           }
           const worker = new FileBackendCodexWorker({
             ...account.worker,
+            capacityAccountId:
+              account.worker.capacityAccountId ??
+              safeExecutorAccountLabel(account, slotIndex),
+            ...(account.worker.observability || !observability
+              ? {}
+              : { observability }),
             workerId: account.worker.workerId ?? workerId,
             workspacePath: options.workspacePath,
             ...(options.outputSchemas === undefined

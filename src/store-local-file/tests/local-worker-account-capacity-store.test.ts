@@ -3,6 +3,16 @@ import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { MemoryObservability } from "../../core/testing";
+import {
+  WorkerAccountCapacityClaimStatus,
+  WorkerAccountCapacityPhase,
+  WorkerAccountCapacityRecheckMode,
+  WorkerAccountCapacityResolutionType,
+  WorkerAccountCapacityResolveStatus,
+  WorkerAccountCapacitySignalScope,
+  WorkerAccountCapacityMetric,
+} from "../../worker-core";
 import { LocalFileWorkerAccountCapacityStore } from "../index";
 
 describe("Local file worker account capacity store", () => {
@@ -144,6 +154,47 @@ describe("Local file worker account capacity store", () => {
     }
   });
 
+  it("does not let a short demand cooldown shadow a longer account-wide quota", async () => {
+    const rootDir = await tempRoot();
+    const now = new Date("2026-06-01T00:00:00.000Z");
+    const store = new LocalFileWorkerAccountCapacityStore({ rootDir });
+    try {
+      store.observe({
+        accountId: "account-a",
+        scope: WorkerAccountCapacitySignalScope.AccountWide,
+        observedAt: now,
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: new Date("2026-06-01T04:00:00.000Z"),
+          details: { provider: "codex" },
+        },
+      });
+      store.observe({
+        accountId: "account-a",
+        demand: { provider: "codex", model: "gpt-5.5" },
+        observedAt: now,
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: new Date("2026-06-01T00:15:00.000Z"),
+        },
+      });
+
+      expect(
+        store.read({
+          accountId: "account-a",
+          demand: { provider: "codex", model: "gpt-5.5" },
+          now,
+        }),
+      ).toMatchObject({
+        cooldownUntil: new Date("2026-06-01T04:00:00.000Z"),
+      });
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
   it("aggregates demand-specific persisted records for account-wide reads", async () => {
     const rootDir = await tempRoot();
     const observedAt = new Date("2026-06-01T00:00:00.000Z");
@@ -202,7 +253,7 @@ describe("Local file worker account capacity store", () => {
     }
   });
 
-  it("expires cooldown records at reset time", async () => {
+  it("retains expired cooldown records until post-reset recheck", async () => {
     const rootDir = await tempRoot();
     const observedAt = new Date("2026-06-01T00:00:00.000Z");
     const resetAt = new Date("2026-06-01T00:00:01.000Z");
@@ -229,7 +280,16 @@ describe("Local file worker account capacity store", () => {
           now: new Date(resetAt.getTime() + 1),
         }),
       ).toBeNull();
-      await expect(readCapacityFiles(rootDir)).resolves.toEqual([]);
+      expect(
+        store.readState({
+          accountId: "account-a",
+          now: new Date(resetAt.getTime() + 1),
+        }),
+      ).toMatchObject({
+        phase: WorkerAccountCapacityPhase.RecheckDue,
+        capacity: { availability: "cooldown" },
+      });
+      await expect(readCapacityFiles(rootDir)).resolves.toHaveLength(1);
     } finally {
       await rm(rootDir, { recursive: true, force: true });
     }
@@ -534,6 +594,335 @@ describe("Local file worker account capacity store", () => {
       await rm(rootDir, { recursive: true, force: true });
     }
   });
+
+  it("allows only one post-reset recheck across store instances", async () => {
+    const rootDir = await tempRoot();
+    const resetAt = new Date("2026-06-01T00:01:00.000Z");
+    const now = new Date("2026-06-01T00:01:00.001Z");
+    const first = new LocalFileWorkerAccountCapacityStore({ rootDir });
+    const second = new LocalFileWorkerAccountCapacityStore({ rootDir });
+    try {
+      first.observe({
+        accountId: "account-a",
+        observedAt: new Date("2026-06-01T00:00:00.000Z"),
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: resetAt,
+        },
+      });
+      const state = first.readState({ accountId: "account-a", now });
+      expect(state?.phase).toBe(WorkerAccountCapacityPhase.RecheckDue);
+      const claimed = first.tryClaimRecheck({
+        state: state!,
+        ownerId: "worker-a",
+        now,
+        ttlMs: 30_000,
+        mode: WorkerAccountCapacityRecheckMode.DueOnly,
+      });
+      expect(claimed.status).toBe(WorkerAccountCapacityClaimStatus.Claimed);
+
+      const racedState = second.readState({ accountId: "account-a", now });
+      const raced = second.tryClaimRecheck({
+        state: racedState!,
+        ownerId: "worker-b",
+        now,
+        ttlMs: 30_000,
+        mode: WorkerAccountCapacityRecheckMode.DueOnly,
+      });
+      expect(raced).toMatchObject({
+        status: WorkerAccountCapacityClaimStatus.Busy,
+      });
+      expect(second.read({ accountId: "account-a", now })).toMatchObject({
+        availability: "cooldown",
+        reason: "quota_recheck_in_progress",
+      });
+      const recoveredAt = new Date(now.getTime() + 30_001);
+      const recoveredState = second.readState({
+        accountId: "account-a",
+        now: recoveredAt,
+      });
+      const recovered = second.tryClaimRecheck({
+        state: recoveredState!,
+        ownerId: "worker-b",
+        now: recoveredAt,
+        ttlMs: 30_000,
+        mode: WorkerAccountCapacityRecheckMode.DueOnly,
+      });
+      expect(recovered.status).toBe(WorkerAccountCapacityClaimStatus.Claimed);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves available narrowly without deleting sibling demand records", async () => {
+    const rootDir = await tempRoot();
+    const observedAt = new Date("2026-06-01T00:00:00.000Z");
+    const resetAt = new Date("2026-06-01T00:01:00.000Z");
+    const now = new Date("2026-06-01T00:01:00.001Z");
+    const store = new LocalFileWorkerAccountCapacityStore({ rootDir });
+    try {
+      store.observe({
+        accountId: "account-a",
+        observedAt,
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: resetAt,
+        },
+      });
+      const generic = store.readState({ accountId: "account-a", now });
+      const claimed = store.tryClaimRecheck({
+        state: generic!,
+        ownerId: "worker-a",
+        now,
+        ttlMs: 30_000,
+        mode: WorkerAccountCapacityRecheckMode.DueOnly,
+      });
+      expect(claimed.status).toBe(WorkerAccountCapacityClaimStatus.Claimed);
+      store.observe({
+        accountId: "account-a",
+        demand: { provider: "codex", model: "gpt-5.5" },
+        observedAt: now,
+        capacity: {
+          availability: "cooldown",
+          reason: "model_limit",
+          cooldownUntil: new Date("2026-06-01T02:00:00.000Z"),
+        },
+      });
+      const resolved = store.resolveRecheck({
+        claim: claimed.status === WorkerAccountCapacityClaimStatus.Claimed
+          ? claimed.claim
+          : (() => { throw new Error("claim expected"); })(),
+        observedAt: now,
+        resolution: { type: WorkerAccountCapacityResolutionType.Available },
+      });
+      expect(resolved.status).toBe(WorkerAccountCapacityResolveStatus.Applied);
+      expect(
+        store.read({
+          accountId: "account-a",
+          demand: { provider: "codex", model: "gpt-5.5" },
+          now,
+        }),
+      ).toMatchObject({ reason: "model_limit" });
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a stale CAS resolution after a newer observation", async () => {
+    const rootDir = await tempRoot();
+    const store = new LocalFileWorkerAccountCapacityStore({ rootDir });
+    const observedAt = new Date("2026-06-01T00:00:00.000Z");
+    const dueAt = new Date("2026-06-01T00:01:00.000Z");
+    try {
+      store.observe({
+        accountId: "account-a",
+        observedAt,
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: dueAt,
+        },
+      });
+      const state = store.readState({ accountId: "account-a", now: dueAt });
+      const claimed = store.tryClaimRecheck({
+        state: state!,
+        ownerId: "worker-a",
+        now: dueAt,
+        ttlMs: 1,
+        mode: WorkerAccountCapacityRecheckMode.DueOnly,
+      });
+      expect(claimed.status).toBe(WorkerAccountCapacityClaimStatus.Claimed);
+      const newerAt = new Date(dueAt.getTime() + 2);
+      store.observe({
+        accountId: "account-a",
+        observedAt: newerAt,
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: new Date("2026-06-01T03:00:00.000Z"),
+        },
+      });
+      const result = store.resolveRecheck({
+        claim: claimed.status === WorkerAccountCapacityClaimStatus.Claimed
+          ? claimed.claim
+          : (() => { throw new Error("claim expected"); })(),
+        observedAt: newerAt,
+        resolution: { type: WorkerAccountCapacityResolutionType.Available },
+      });
+      expect(result.status).toBe(WorkerAccountCapacityResolveStatus.StaleClaim);
+      expect(store.read({ accountId: "account-a", now: newerAt })).toMatchObject({
+        cooldownUntil: new Date("2026-06-01T03:00:00.000Z"),
+      });
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("invalidates an active claim when a fresh limit is observed", async () => {
+    const rootDir = await tempRoot();
+    const store = new LocalFileWorkerAccountCapacityStore({ rootDir });
+    const dueAt = new Date("2026-06-01T00:01:00.000Z");
+    try {
+      store.observe({
+        accountId: "account-a",
+        observedAt: new Date("2026-06-01T00:00:00.000Z"),
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: dueAt,
+        },
+      });
+      const state = store.readState({ accountId: "account-a", now: dueAt })!;
+      const claimed = store.tryClaimRecheck({
+        state,
+        ownerId: "worker-a",
+        now: dueAt,
+        ttlMs: 30_000,
+        mode: WorkerAccountCapacityRecheckMode.DueOnly,
+      });
+      expect(claimed.status).toBe(WorkerAccountCapacityClaimStatus.Claimed);
+      const freshReset = new Date("2026-06-01T04:00:00.000Z");
+      store.observe({
+        accountId: "account-a",
+        observedAt: new Date(dueAt.getTime() + 1),
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: freshReset,
+        },
+      });
+      const result = store.resolveRecheck({
+        claim: claimed.status === WorkerAccountCapacityClaimStatus.Claimed
+          ? claimed.claim
+          : (() => { throw new Error("claim expected"); })(),
+        observedAt: new Date(dueAt.getTime() + 2),
+        resolution: { type: WorkerAccountCapacityResolutionType.Available },
+      });
+
+      expect(result.status).toBe(WorkerAccountCapacityResolveStatus.Conflict);
+      expect(store.read({ accountId: "account-a", now: dueAt })).toMatchObject({
+        cooldownUntil: freshReset,
+      });
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a bounded blocker when a limited recheck result already expired", async () => {
+    const rootDir = await tempRoot();
+    const store = new LocalFileWorkerAccountCapacityStore({ rootDir });
+    const dueAt = new Date("2026-06-01T00:01:00.000Z");
+    try {
+      store.observe({
+        accountId: "account-a",
+        observedAt: new Date("2026-06-01T00:00:00.000Z"),
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: dueAt,
+        },
+      });
+      const state = store.readState({ accountId: "account-a", now: dueAt })!;
+      const claimed = store.tryClaimRecheck({
+        state,
+        ownerId: "worker-a",
+        now: dueAt,
+        ttlMs: 5 * 60_000,
+        mode: WorkerAccountCapacityRecheckMode.DueOnly,
+      });
+      expect(claimed.status).toBe(WorkerAccountCapacityClaimStatus.Claimed);
+      const observedAt = new Date(dueAt.getTime() + 2 * 60_000);
+      const result = store.resolveRecheck({
+        claim: claimed.status === WorkerAccountCapacityClaimStatus.Claimed
+          ? claimed.claim
+          : (() => { throw new Error("claim expected"); })(),
+        observedAt,
+        resolution: {
+          type: WorkerAccountCapacityResolutionType.Limited,
+          capacity: {
+            availability: "cooldown",
+            reason: "quota_recheck_inconclusive",
+            cooldownUntil: new Date(dueAt.getTime() + 60_000),
+          },
+        },
+      });
+
+      expect(result.status).toBe(WorkerAccountCapacityResolveStatus.Applied);
+      expect(store.read({ accountId: "account-a", now: observedAt })).toMatchObject({
+        reason: "quota_recheck_invalid_limited",
+        cooldownUntil: new Date(observedAt.getTime() + 60_000),
+      });
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("emits due, busy, failed and time-to-reset capacity metrics", async () => {
+    const rootDir = await tempRoot();
+    const observability = new MemoryObservability();
+    const store = new LocalFileWorkerAccountCapacityStore({
+      rootDir,
+      observability,
+    });
+    const observedAt = new Date("2026-06-01T00:00:00.000Z");
+    const resetAt = new Date("2026-06-01T02:00:00.000Z");
+    const now = new Date(resetAt.getTime() + 1);
+    try {
+      store.observe({
+        accountId: "account-a",
+        observedAt,
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: resetAt,
+        },
+      });
+      const state = store.readState({ accountId: "account-a", now })!;
+      const claimed = store.tryClaimRecheck({
+        state,
+        ownerId: "worker-a",
+        now,
+        ttlMs: 30_000,
+        mode: WorkerAccountCapacityRecheckMode.DueOnly,
+      });
+      const busy = store.tryClaimRecheck({
+        state,
+        ownerId: "worker-b",
+        now,
+        ttlMs: 30_000,
+        mode: WorkerAccountCapacityRecheckMode.DueOnly,
+      });
+      expect(claimed.status).toBe(WorkerAccountCapacityClaimStatus.Claimed);
+      expect(busy.status).toBe(WorkerAccountCapacityClaimStatus.Busy);
+      store.resolveRecheck({
+        claim: claimed.status === WorkerAccountCapacityClaimStatus.Claimed
+          ? claimed.claim
+          : (() => { throw new Error("claim expected"); })(),
+        observedAt: now,
+        resolution: {
+          type: WorkerAccountCapacityResolutionType.Retry,
+          retryAt: new Date(now.getTime() + 60_000),
+          reason: "quota_recheck_failed",
+        },
+      });
+
+      expect(observability.timings).toEqual([{
+        metric: WorkerAccountCapacityMetric.TimeToResetMs,
+        durationMs: 2 * 60 * 60_000,
+      }]);
+      expect(observability.counts).toEqual([
+        { metric: WorkerAccountCapacityMetric.RecheckDue, value: 1 },
+        { metric: WorkerAccountCapacityMetric.RecheckDue, value: 1 },
+        { metric: WorkerAccountCapacityMetric.RecheckBusy, value: 1 },
+        { metric: WorkerAccountCapacityMetric.RecheckFailed, value: 1 },
+      ]);
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
 });
 
 async function tempRoot(): Promise<string> {

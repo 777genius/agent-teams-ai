@@ -10,14 +10,25 @@ export async function projectControlDefaultAccountNames(input: {
   const allowed = new Set(input.allowedAccountIds);
   const slots = await listCodexGoalAccountStatuses({
     authRootDir: input.authRootDir,
+    ...(input.requestedAccounts.length > 0
+      ? { accounts: input.requestedAccounts }
+      : {}),
+    recheckDueCapacity: true,
   });
-  const readyAccounts = slots
+  const capacityAllowed = slots.filter(capacityAllowsProjectSelection);
+  const readyAccounts = capacityAllowed
     .filter((slot) =>
       slot.status === "ready" &&
       (allowed.size === 0 || allowed.has(slot.name))
     )
     .map((slot) => slot.name);
-  return readyAccounts.length > 0 ? readyAccounts : input.requestedAccounts;
+  if (readyAccounts.length > 0) return readyAccounts;
+  const allowedByCapacity = new Set(capacityAllowed.map((slot) => slot.name));
+  return input.requestedAccounts.filter(
+    (account) =>
+      allowedByCapacity.has(account) &&
+      (allowed.size === 0 || allowed.has(account)),
+  );
 }
 
 export async function projectControlRefillAccountNames(input: {
@@ -40,16 +51,27 @@ export async function projectControlRefillAccountNames(input: {
   const slots = await listCodexGoalAccountStatuses({
     authRootDir: input.authRootDir,
     accounts: scopedAccounts,
+    recheckDueCapacity: true,
   });
+  const capacityAllowedSlots = slots.filter(capacityAllowsProjectSelection);
   const ready = new Set(
-    slots
+    capacityAllowedSlots
       .filter((slot) => slot.status === "ready")
       .map((slot) => slot.name),
   );
-  const readyAccounts = ready.size > 0
-    ? scopedAccounts.filter((account) => ready.has(account))
-    : scopedAccounts;
-  return rotateProjectControlAccountNames(readyAccounts, input.rotationKey);
+  const capacityAllowed = new Set(capacityAllowedSlots.map((slot) => slot.name));
+  const selected = ready.size > 0 ? ready : capacityAllowed;
+  return rotateProjectControlAccountNames(
+    scopedAccounts.filter((account) => selected.has(account)),
+    input.rotationKey,
+  );
+}
+
+function capacityAllowsProjectSelection(input: {
+  readonly schedulerEligible: boolean;
+  readonly capacityAvailability?: string;
+}): boolean {
+  return input.capacityAvailability === undefined || input.schedulerEligible;
 }
 
 export function rotateProjectControlAccountNames(

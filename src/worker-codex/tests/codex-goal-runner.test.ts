@@ -47,12 +47,15 @@ describe("codex goal runner", () => {
       await writeFile(promptPath, "Do a sandbox task.\n");
 
       const running = runCodexGoal(config, {
-        createExecutor: () => ({
+        createExecutor: (options) => ({
           async run() {
             startedRun?.();
             await new Promise<void>((resolve) => {
               releaseRun = resolve;
             });
+            options.observability?.count(
+              "subscription_runtime.worker_account_capacity_recheck_due",
+            );
             return {
               status: "completed",
               attempts: [],
@@ -98,9 +101,18 @@ describe("codex goal runner", () => {
       expect(events.map((event) => event.event)).toEqual([
         "runner_starting",
         "executor_started",
+        "runtime_metric",
         "executor_finished",
         "runner_disposed",
       ]);
+      expect(events[2]).toMatchObject({
+        event: "runtime_metric",
+        attributes: {
+          kind: "count",
+          metric: "subscription_runtime.worker_account_capacity_recheck_due",
+          value: 1,
+        },
+      });
       expect(events.at(-1)).toMatchObject({
         schemaVersion: 1,
         taskId: "task-heartbeat",

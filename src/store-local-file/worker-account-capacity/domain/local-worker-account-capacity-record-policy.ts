@@ -3,3 +3,6 @@ export const localWorkerAccountCapacityStorageVersion =
 
 export const localWorkerAccountCapacityDemandAwareStorageVersion =
   "local-file-worker-account-capacity-v2";
+
+export const localWorkerAccountCapacityRevisionedStorageVersion =
+  "local-file-worker-account-capacity-v3";

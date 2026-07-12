@@ -15,6 +15,7 @@ const legacyLineCaps = {
   "src/provider-claude/tests/claude-provider.test.ts": 1254,
   "src/worker-codex/tests/codex-goal-cli.test.ts": 1145,
   "src/worker-codex/tests/codex-goal-ops.test.ts": 1526,
+  "src/worker-core/safe-execution/tests/safe-execution-runner.test.ts": 1012,
   "src/worker-local/tests/agent-task-runner-cli.test.ts": 1027,
 };
 

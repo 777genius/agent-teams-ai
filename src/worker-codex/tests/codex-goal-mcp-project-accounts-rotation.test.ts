@@ -1,4 +1,8 @@
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { codexAccountCapacityStore } from "../application/codex-account-capacity-store";
 import {
   projectControlRefillAccountNames,
   rotateProjectControlAccountNames,
@@ -46,4 +50,60 @@ describe("project-control refill account rotation", () => {
     expect(rotated).toHaveLength(accounts.length);
     expect(new Set(rotated)).toEqual(new Set(accounts));
   });
+
+  it("excludes durable quota-blocked accounts from project refill", async () => {
+    const root = await mkdtemp(join(tmpdir(), "project-refill-capacity-"));
+    const authRootDir = join(root, "auth");
+    try {
+      await Promise.all([
+        writeFakeAuth(authRootDir, "account-a"),
+        writeFakeAuth(authRootDir, "account-b"),
+      ]);
+      codexAccountCapacityStore(authRootDir).observe({
+        accountId: "account-b",
+        observedAt: new Date(),
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: new Date(Date.now() + 60 * 60_000),
+        },
+      });
+
+      await expect(
+        projectControlRefillAccountNames({
+          authRootDir,
+          requestedAccounts: ["account-a", "account-b"],
+          allowedAccountIds: ["account-a", "account-b"],
+        }),
+      ).resolves.toEqual(["account-a"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
+
+async function writeFakeAuth(authRootDir: string, account: string): Promise<void> {
+  const dir = join(authRootDir, account);
+  await mkdir(dir, { recursive: true });
+  await writeFile(
+    join(dir, "auth.json"),
+    `${JSON.stringify({
+      auth_mode: "chatgpt",
+      last_refresh: new Date().toISOString(),
+      tokens: {
+        refresh_token: `refresh-${account}`,
+        access_token: `access-${account}`,
+        id_token: fakeJwt({ sub: account }),
+        expiry: Math.floor(Date.now() / 1000) + 3600,
+      },
+    })}\n`,
+  );
+}
+
+function fakeJwt(payload: Record<string, unknown>): string {
+  return [
+    Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url"),
+    Buffer.from(JSON.stringify(payload)).toString("base64url"),
+    "",
+  ].join(".");
+}

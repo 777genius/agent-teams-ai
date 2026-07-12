@@ -21,7 +21,6 @@ import {
   projectControllerCapacityDemand,
   recordProjectControllerCapacitySignal,
 } from "../../project-controller-capacity";
-import { codexGoalStateRootDir } from "../codex-goal-worker-control";
 import type { ProjectControllerProfile } from "./codex-goal-project-controller-profile";
 import {
   projectControllerOwnerIsLive,
@@ -206,7 +205,7 @@ export async function reconcileProjectControllerControlledRun(input: {
     if (reconciled.ok) {
       const launch = await input.loadLaunch();
       recordProjectControllerCapacitySignal({
-        stateRootDir: codexGoalStateRootDir(launch),
+        authRootDir: launch.config.authRootDir,
         controllerJobId: input.controllerJobId,
         config: launch.config,
         run: reconciled.run,

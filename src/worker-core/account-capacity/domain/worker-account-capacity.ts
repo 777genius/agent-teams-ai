@@ -9,11 +9,18 @@ export type WorkerRuntimeDemand = {
 
 export type WorkerAccountLimitSignal = {
   readonly accountId: string;
+  readonly scope?: WorkerAccountCapacitySignalScope;
   readonly demand?: WorkerRuntimeDemand;
   readonly capacity: WorkerCapacitySnapshot;
   readonly observedAt: Date;
   readonly sourceWorkerId?: string;
+  readonly retainExpiredForRecheck?: boolean;
 };
+
+export enum WorkerAccountCapacitySignalScope {
+  AccountWide = "account_wide",
+  DemandAware = "demand_aware",
+}
 
 export const defaultWorkerAccountLimitReasons = [
   "rate_limit_threshold",
@@ -89,6 +96,7 @@ export function normalizeWorkerAccountCapacitySignal(
   const capacity = input.capacity;
   if (!isPersistableWorkerAccountCapacity(capacity)) return null;
   if (
+    !input.retainExpiredForRecheck &&
     capacity.cooldownUntil &&
     capacity.cooldownUntil.getTime() <= input.observedAt.getTime()
   ) {
@@ -105,8 +113,10 @@ export function normalizeWorkerAccountCapacitySignal(
       ...(capacity.details ?? {}),
       accountId,
       ...runtimeDemandDetails(
-        normalizeWorkerRuntimeDemand(input.demand) ??
-          defaultRuntimeDemandFromCapacityDetails(capacity.details),
+        input.scope === WorkerAccountCapacitySignalScope.AccountWide
+          ? null
+          : normalizeWorkerRuntimeDemand(input.demand) ??
+              defaultRuntimeDemandFromCapacityDetails(capacity.details),
       ),
       ...(input.sourceWorkerId ? { sourceWorkerId: input.sourceWorkerId } : {}),
     },

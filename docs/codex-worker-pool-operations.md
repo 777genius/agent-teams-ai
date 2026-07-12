@@ -521,8 +521,8 @@ Even in direct API mode, keep these invariants:
   `retryOnReconnectRequired` may be automatic;
 - provider output, unknown runtime, test and benchmark failures require
   manual inspection before retry;
-- pass the job `stateRootDir` to account status checks so cooldown/quota
-  records are visible;
+- inject one shared `accountCapacityStore` for every executor using the same
+  auth pool; the Codex goal runner does this automatically from `authRootDir`;
 - never print raw auth files, tokens or provider payloads.
 
 ## MCP adapter for agents
@@ -781,9 +781,9 @@ identity appears in multiple slots, the deduped list keeps the newest ready
 slot for that identity and leaves the older duplicate visible for manual
 cleanup. Agents should use `availableDedupedAccountNames` for new worker runs
 because it also excludes cooldown, quota exhausted and auth-broken slots.
-Pass the job `stateRootDir` whenever you care about quota/cooldown state;
-without it, account tools can validate auth files but cannot see worker
-capacity records.
+Quota/cooldown state is resolved from the canonical auth-pool root, so account
+tools and separate jobs using the same `authRootDir` see one shared capacity
+view. `stateRootDir` remains job-local runtime state and is not the quota scope.
 
 `codex_goal_accounts_status` also returns top-level `count`, `available`,
 `hasAvailableAccount`, `summary` and an `accounts` alias for `slots`. Monitors
@@ -822,9 +822,9 @@ machine that can complete browser auth, run the sync helper above for exactly
 the affected accounts, then retry the worker. Use the host's actual auth root
 when it is not `/var/data/codex-home/live-codex-auth`.
 
-`codex_accounts_list_pools` also accepts `stateRootDir`. Use it when choosing
-between pools for a specific job. Its response includes `capacityAware` so an
-agent can tell whether capacity records were considered.
+`codex_accounts_list_pools` resolves capacity independently for every auth
+pool. Its response includes `capacityAware` to confirm that quota records were
+considered.
 
 Prompt templates:
 
@@ -1092,6 +1092,12 @@ Status tools may then show both the stable slot and label, for example
 Device auth is preferred for handoff because it gives a short-lived code and
 does not depend on a specific browser callback window.
 
+Do not start device-auth relogin for multiple Codex slots in parallel. OpenAI
+device auth can answer `429 Too Many Requests` when several `codex login
+--device-auth` processes wait at the same time. Relogin one slot, wait for the
+CLI to finish, verify that slot, then continue with the next slot. Use a short
+operator pause between slots if several accounts need repair.
+
 For relogin:
 
 ```sh
@@ -1108,6 +1114,18 @@ sanitized metadata:
 ```sh
 node ~/.cache/subscription-runtime/<job-id>/check-codex-accounts.mjs
 ```
+
+For the local operator view, use the quota table helper:
+
+```sh
+npm run ops:codex-account-quota
+```
+
+It prints only the main `codex` 5h and 7d free percentages, reset times in Kyiv,
+and account availability. The `5h free` and `7d free` columns include a compact
+progress bar, available rows are bolded and sorted first, and the end of the
+output includes the total `7d free` capacity across the account pool. Accounts
+with `0%` weekly free are kept below accounts with usable weekly capacity.
 
 Expected statuses:
 

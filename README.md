@@ -52,6 +52,8 @@ subscription-runtime-account-status --provider codex --only reconnect_required
 
 See [docs/account-diagnostics.md](docs/account-diagnostics.md) for account
 sources, cached capacity and optional probe behavior.
+See [docs/agent-account-observability.md](docs/agent-account-observability.md)
+for the separate package that reads deeper provider auth/quota facts.
 
 See [docs/dependency-bootstrap.md](docs/dependency-bootstrap.md) for isolated
 worktree environments backed by shared pnpm, npm, Yarn, Bun and uv caches.
@@ -61,6 +63,8 @@ worktree environments backed by shared pnpm, npm, Yarn, Bun and uv caches.
 - `core` - provider-neutral ports, policy, state machines and redaction.
 - `account-diagnostics` - provider-neutral account status, relogin and limit
   diagnostics for scheduler/account operations.
+- `agent-account-observability` - separate DDD package for provider account
+  auth/quota facts, including Codex app-server limit buckets.
 - `provider-codex` - Codex session refresh and execution adapters.
 - `provider-claude` - Claude OAuth session validation, injectable task driver
   ports and an optional concrete bridge to `claude-runtime`.

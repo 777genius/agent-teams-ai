@@ -1,8 +1,18 @@
-import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { promisify } from "node:util";
+import {
+  AccountAvailability as ObservedAccountAvailability,
+  AgentProvider,
+  CodexAccountObserver,
+  CodexAppServerClientFactory,
+  CodexAppServerQuotaReader,
+  CodexAuthJsonReader,
+  CodexExecProbe,
+  NodeProcessRunner,
+  type AccountObservation,
+  type AvailabilityDecision,
+} from "@vioxen/agent-account-observability";
 import {
   isSchedulerEligible,
   recommendedActionForAvailability,
@@ -14,15 +24,22 @@ import {
   readCodexAuthJsonFreshness,
   validateCodexAuthJsonBytes,
 } from "@vioxen/subscription-runtime/provider-codex";
-import { LocalFileWorkerAccountCapacityStore } from "@vioxen/subscription-runtime/store-local-file";
-import type { WorkerCapacitySnapshot } from "@vioxen/subscription-runtime/worker-core";
+import type {
+  WorkerAccountCapacityStore,
+  WorkerCapacitySnapshot,
+} from "@vioxen/subscription-runtime/worker-core";
+import { WorkerAccountCapacityPhase } from "@vioxen/subscription-runtime/worker-core";
+import { recordCodexLiveQuotaCapacity } from "./application/codex-live-quota-capacity";
+import {
+  codexAccountCapacityStore,
+  migrateLegacyCodexAccountCapacity,
+} from "./application/codex-account-capacity-store";
+import { recheckDueCodexAccountCapacity } from "./application/codex-account-capacity-rechecker";
 import {
   codexAccountDisplayMetadataForSlot,
   readCodexAccountDisplayMetadata,
   type CodexAccountDisplayMetadata,
 } from "./account-display-metadata";
-
-const execFileAsync = promisify(execFile);
 
 export type CodexGoalAccountStatus =
   | "ready"
@@ -65,6 +82,8 @@ export type CodexGoalAccountStatusInput = {
   readonly codexBinaryPath?: string;
   readonly liveCheckTimeoutMs?: number;
   readonly accountMetadata?: Readonly<Record<string, CodexAccountDisplayMetadata>>;
+  readonly accountCapacityStore?: WorkerAccountCapacityStore;
+  readonly recheckDueCapacity?: boolean;
 };
 
 export async function listCodexGoalAccountStatuses(
@@ -77,6 +96,30 @@ export async function listCodexGoalAccountStatuses(
     ...(await readCodexAccountDisplayMetadata(input.authRootDir)),
     ...(input.accountMetadata ?? {}),
   };
+  if (input.stateRootDir && !input.accountCapacityStore) {
+    migrateLegacyCodexAccountCapacity({
+      authRootDir: input.authRootDir,
+      stateRootDir: input.stateRootDir,
+      accountIds: accountNames,
+    });
+  }
+  const accountCapacityStore = resolveAccountCapacityStore(input);
+  if (input.recheckDueCapacity && accountCapacityStore) {
+    await Promise.all(
+      accountNames.map((name) =>
+        recheckDueCodexAccountCapacity({
+          store: accountCapacityStore,
+          accountId: name,
+          authJsonPath: join(input.authRootDir, name, "auth.json"),
+          codexBinaryPath: input.codexBinaryPath ?? "codex",
+          now: new Date(),
+          ...(input.liveCheckTimeoutMs
+            ? { timeoutMs: input.liveCheckTimeoutMs }
+            : {}),
+        }),
+      ),
+    );
+  }
   return Promise.all(
     accountNames.map((name) =>
       inspectCodexGoalAccount({
@@ -85,7 +128,7 @@ export async function listCodexGoalAccountStatuses(
         ...(accountMetadata[name]
           ? { displayMetadata: accountMetadata[name] }
           : {}),
-        ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
+        ...(accountCapacityStore ? { accountCapacityStore } : {}),
         ...(input.liveCheck ? { liveCheck: input.liveCheck } : {}),
         ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
         ...(input.liveCheckTimeoutMs ? { liveCheckTimeoutMs: input.liveCheckTimeoutMs } : {}),
@@ -98,7 +141,7 @@ async function inspectCodexGoalAccount(input: {
   readonly authRootDir: string;
   readonly name: string;
   readonly displayMetadata?: CodexAccountDisplayMetadata;
-  readonly stateRootDir?: string;
+  readonly accountCapacityStore?: WorkerAccountCapacityStore;
   readonly liveCheck?: boolean;
   readonly codexBinaryPath?: string;
   readonly liveCheckTimeoutMs?: number;
@@ -113,28 +156,64 @@ async function inspectCodexGoalAccount(input: {
     const validation = validateCodexAuthJsonBytes({ authJsonBytes });
     const freshness = readCodexAuthJsonFreshness({ authJsonBytes });
     const identity = sanitizedCodexIdentity(validation.parsed.tokens.id_token);
-    const capacity = readAccountCapacity({
+    let capacity = readAccountCapacity({
       accountName: input.name,
-      ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
+      ...(input.accountCapacityStore
+        ? { store: input.accountCapacityStore }
+        : {}),
     });
     const live = input.liveCheck
       ? await inspectCodexAccountLiveStatus({
+          name: input.name,
           codexHome: dirname(authJsonPath),
+          authJsonPath,
           ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
           ...(input.liveCheckTimeoutMs ? { timeoutMs: input.liveCheckTimeoutMs } : {}),
         })
       : undefined;
-    const warnings = [...validation.warnings, ...freshness.warnings];
+    const capacityPersistenceWarning = recordLiveQuotaCapacitySafely({
+      accountId: input.name,
+      ...(live?.observation ? { observation: live.observation } : {}),
+      ...(input.accountCapacityStore
+        ? { store: input.accountCapacityStore }
+        : {}),
+    });
+    if (live?.observation && input.accountCapacityStore && !capacityPersistenceWarning) {
+      capacity = readAccountCapacity({
+        accountName: input.name,
+        store: input.accountCapacityStore,
+      });
+    }
+    const warnings = [
+      ...validation.warnings,
+      ...freshness.warnings,
+      ...(capacityPersistenceWarning ? [capacityPersistenceWarning] : []),
+    ];
+    const liveAvailability = live?.observation
+      ? liveDecisionToDiagnosticAvailability(live.observation.decision)
+      : undefined;
+    const liveLimitResetAt = live?.observation?.decision.limitResetAt;
+    const liveStatus = live && !liveAvailability
+      ? "auth_invalid"
+      : liveAvailability === "reconnect_required"
+        ? "auth_invalid"
+        : liveAvailability === "auth_unknown" ||
+          liveAvailability === "unhealthy" ||
+          liveAvailability === "unknown"
+          ? "auth_invalid"
+          : "ready";
     if (live && !live.ok) {
       const availability = codexGoalAccountAvailability({
-        status: "auth_invalid",
+        status: liveStatus,
         capacity,
+        ...(liveAvailability ? { observedAvailability: liveAvailability } : {}),
+        ...(liveLimitResetAt ? { observedLimitResetAt: liveLimitResetAt } : {}),
       });
       return {
         name: input.name,
         ...display,
         authJsonPath,
-        status: "auth_invalid",
+        status: liveStatus,
         ...availability,
         byteLength: validation.byteLength,
         authJsonSha256Prefix: validation.exactBytesSha256.slice(0, 12),
@@ -165,6 +244,8 @@ async function inspectCodexGoalAccount(input: {
     const availability = codexGoalAccountAvailability({
       status: "ready",
       capacity,
+      ...(liveAvailability ? { observedAvailability: liveAvailability } : {}),
+      ...(liveLimitResetAt ? { observedLimitResetAt: liveLimitResetAt } : {}),
     });
     return {
       name: input.name,
@@ -221,6 +302,8 @@ async function inspectCodexGoalAccount(input: {
 function codexGoalAccountAvailability(input: {
   readonly status: CodexGoalAccountStatus;
   readonly capacity: WorkerCapacitySnapshot | null;
+  readonly observedAvailability?: ProviderAccountAvailability;
+  readonly observedLimitResetAt?: Date;
 }): {
   readonly availability: ProviderAccountAvailability;
   readonly schedulerEligible: boolean;
@@ -239,44 +322,112 @@ function codexGoalAccountAvailability(input: {
   const capacitySignal = input.capacity
     ? workerCapacityToDiagnosticSignal(input.capacity)
     : null;
-  const availability = capacitySignal?.availability ?? "available";
+  const availability =
+    input.observedAvailability ?? capacitySignal?.availability ?? "available";
   return {
     availability,
     schedulerEligible: isSchedulerEligible(availability),
     recommendedAction: recommendedActionForAvailability(availability),
-    ...(capacitySignal?.limitResetAt
-      ? { limitResetAt: capacitySignal.limitResetAt.toISOString() }
-      : {}),
+    ...(input.observedLimitResetAt
+      ? { limitResetAt: input.observedLimitResetAt.toISOString() }
+      : capacitySignal?.limitResetAt
+        ? { limitResetAt: capacitySignal.limitResetAt.toISOString() }
+        : {}),
   };
 }
 
-async function inspectCodexAccountLiveStatus(input: {
-  readonly codexHome: string;
-  readonly codexBinaryPath?: string;
-  readonly timeoutMs?: number;
-}): Promise<{ readonly ok: boolean; readonly safeMessage: string }> {
-  const codexBinaryPath = input.codexBinaryPath ?? "codex";
-  try {
-    await execFileAsync(codexBinaryPath, ["login", "status"], {
-      env: {
-        ...process.env,
-        CODEX_HOME: input.codexHome,
-      },
-      timeout: input.timeoutMs ?? 70_000,
-      maxBuffer: 1024 * 1024,
-    });
-    return { ok: true, safeMessage: "codex login status passed" };
-  } catch (error) {
-    if (isExecTimeoutError(error)) {
-      return { ok: false, safeMessage: "codex login status timed out" };
-    }
-    return { ok: false, safeMessage: "codex login status failed" };
+function liveDecisionToDiagnosticAvailability(
+  decision: AvailabilityDecision,
+): ProviderAccountAvailability {
+  switch (decision.availability) {
+    case ObservedAccountAvailability.Available:
+      return "available";
+    case ObservedAccountAvailability.Limited:
+      return "limited";
+    case ObservedAccountAvailability.ReloginRequired:
+      return "reconnect_required";
+    case ObservedAccountAvailability.AuthUnknown:
+      return "auth_unknown";
+    case ObservedAccountAvailability.Unhealthy:
+      return "unhealthy";
+    case ObservedAccountAvailability.Unknown:
+      return "unknown";
   }
+  return "unknown";
 }
 
-function isExecTimeoutError(error: unknown): boolean {
-  return isRecord(error) &&
-    (error.signal === "SIGTERM" || error.killed === true || error.code === "ETIMEDOUT");
+function safeMessageForLiveDecision(decision: AvailabilityDecision): string {
+  switch (decision.availability) {
+    case ObservedAccountAvailability.Available:
+      return "codex app-server quota check passed";
+    case ObservedAccountAvailability.Limited:
+      return decision.limitResetAt
+        ? `codex account is quota limited until ${decision.limitResetAt.toISOString()}`
+        : "codex account is quota limited";
+    case ObservedAccountAvailability.ReloginRequired:
+      return "codex account requires relogin";
+    case ObservedAccountAvailability.AuthUnknown:
+    case ObservedAccountAvailability.Unhealthy:
+    case ObservedAccountAvailability.Unknown:
+      return "codex account live observation failed";
+  }
+  return "codex account live observation failed";
+}
+
+function liveDecisionOk(decision: AvailabilityDecision): boolean {
+  return (
+    decision.availability === ObservedAccountAvailability.Available ||
+    decision.availability === ObservedAccountAvailability.Limited
+  );
+}
+
+async function inspectCodexAccountLiveStatus(input: {
+  readonly name: string;
+  readonly codexHome: string;
+  readonly authJsonPath: string;
+  readonly codexBinaryPath?: string;
+  readonly timeoutMs?: number;
+}): Promise<{
+  readonly ok: boolean;
+  readonly safeMessage: string;
+  readonly observation?: AccountObservation;
+}> {
+  try {
+    const observer = new CodexAccountObserver({
+      appServerReader: new CodexAppServerQuotaReader({
+        clientFactory: new CodexAppServerClientFactory({
+          ...(input.codexBinaryPath
+            ? { codexBinaryPath: input.codexBinaryPath }
+            : {}),
+          ...(input.timeoutMs ? { requestTimeoutMs: input.timeoutMs } : {}),
+          ...(input.timeoutMs ? { startupTimeoutMs: input.timeoutMs } : {}),
+        }),
+      }),
+      authReader: new CodexAuthJsonReader(),
+      execProbe: new CodexExecProbe({
+        runner: new NodeProcessRunner(),
+        ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
+      }),
+    });
+    const observation = await observer.observe({
+      account: {
+        provider: AgentProvider.Codex,
+        slotId: input.name,
+        authHome: input.codexHome,
+        authJsonPath: input.authJsonPath,
+        ...(input.codexBinaryPath ? { codexBinaryPath: input.codexBinaryPath } : {}),
+      },
+      now: new Date(),
+      ...(input.timeoutMs ? { timeoutMs: input.timeoutMs } : {}),
+    });
+    return {
+      ok: liveDecisionOk(observation.decision),
+      safeMessage: safeMessageForLiveDecision(observation.decision),
+      observation,
+    };
+  } catch {
+    return { ok: false, safeMessage: "codex account live observation failed" };
+  }
 }
 
 function sanitizedCodexIdentity(idToken: string | undefined): {
@@ -322,16 +473,55 @@ function decodeJwtClaims(token: string): Record<string, unknown> | null {
 }
 
 function readAccountCapacity(input: {
-  readonly stateRootDir?: string;
+  readonly store?: WorkerAccountCapacityStore;
   readonly accountName: string;
 }) {
-  if (!input.stateRootDir) return null;
+  if (!input.store) return null;
   try {
-    return new LocalFileWorkerAccountCapacityStore({
-      rootDir: join(input.stateRootDir, "worker-account-capacity"),
-    }).read({ accountId: input.accountName });
+    const now = new Date();
+    const capacity = input.store.read({ accountId: input.accountName, now });
+    if (capacity) return capacity;
+    const state = input.store.readState({
+      accountId: input.accountName,
+      now,
+    });
+    if (state?.phase !== WorkerAccountCapacityPhase.RecheckDue) return null;
+    return {
+      availability: "cooldown" as const,
+      reason: "quota_recheck_due",
+      cooldownUntil: new Date(now.getTime() + 1000),
+      ...(state.capacity.lastLimitSignalAt
+        ? { lastLimitSignalAt: state.capacity.lastLimitSignalAt }
+        : {}),
+      ...(state.capacity.details ? { details: state.capacity.details } : {}),
+    };
   } catch {
     return null;
+  }
+}
+
+function resolveAccountCapacityStore(
+  input: CodexGoalAccountStatusInput,
+): WorkerAccountCapacityStore | undefined {
+  if (input.accountCapacityStore) return input.accountCapacityStore;
+  return codexAccountCapacityStore(input.authRootDir);
+}
+
+function recordLiveQuotaCapacitySafely(input: {
+  readonly accountId: string;
+  readonly observation?: AccountObservation;
+  readonly store?: WorkerAccountCapacityStore;
+}): string | undefined {
+  if (!input.observation || !input.store) return undefined;
+  try {
+    recordCodexLiveQuotaCapacity({
+      accountId: input.accountId,
+      observation: input.observation,
+      store: input.store,
+    });
+    return undefined;
+  } catch {
+    return "live quota capacity persistence failed";
   }
 }
 

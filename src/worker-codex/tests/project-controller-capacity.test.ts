@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { LocalFileWorkerAccountCapacityStore } from "@vioxen/subscription-runtime/store-local-file";
+import { codexAccountCapacityStore } from "../application/codex-account-capacity-store";
 import {
   isProjectControllerQuotaFailure,
   isProjectControllerSessionInvalidFailure,
@@ -15,7 +15,7 @@ describe("project controller capacity signals", () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-controller-capacity-"));
     try {
       const recorded = recordProjectControllerCapacitySignal({
-        stateRootDir: root,
+        authRootDir: join(root, "auth"),
         controllerJobId: "infinity-context-project-controller-v1",
         config: {
           model: "gpt-5.5",
@@ -32,9 +32,7 @@ describe("project controller capacity signals", () => {
       });
 
       expect(recorded).toBe(true);
-      const capacity = new LocalFileWorkerAccountCapacityStore({
-        rootDir: join(root, "worker-account-capacity"),
-      }).read({
+      const capacity = codexAccountCapacityStore(join(root, "auth")).read({
         accountId: "account-d",
         demand: projectControllerCapacityDemand({
           model: "gpt-5.5",
@@ -59,7 +57,7 @@ describe("project controller capacity signals", () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-controller-capacity-"));
     try {
       const recorded = recordProjectControllerCapacitySignal({
-        stateRootDir: root,
+        authRootDir: join(root, "auth"),
         controllerJobId: "infinity-context-project-controller-v1",
         config: {
           model: "gpt-5.5",
@@ -75,9 +73,7 @@ describe("project controller capacity signals", () => {
         observedAt: new Date("2026-07-05T11:00:00.000Z"),
       });
 
-      const capacity = new LocalFileWorkerAccountCapacityStore({
-        rootDir: join(root, "worker-account-capacity"),
-      }).read({
+      const capacity = codexAccountCapacityStore(join(root, "auth")).read({
         accountId: "account-d",
         demand: projectControllerCapacityDemand({
           model: "gpt-5.5",
@@ -103,7 +99,7 @@ describe("project controller capacity signals", () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-controller-capacity-"));
     try {
       const recorded = recordProjectControllerCapacitySignal({
-        stateRootDir: root,
+        authRootDir: join(root, "auth"),
         controllerJobId: "infinity-context-project-controller-v1",
         config: { model: "gpt-5.5" },
         run: {
@@ -115,9 +111,7 @@ describe("project controller capacity signals", () => {
       });
 
       expect(recorded).toBe(false);
-      const capacity = new LocalFileWorkerAccountCapacityStore({
-        rootDir: join(root, "worker-account-capacity"),
-      }).read({
+      const capacity = codexAccountCapacityStore(join(root, "auth")).read({
         accountId: "account-d",
         now: new Date("2026-07-05T11:00:01.000Z"),
       });

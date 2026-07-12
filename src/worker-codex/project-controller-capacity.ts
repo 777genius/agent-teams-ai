@@ -1,7 +1,6 @@
-import { join } from "node:path";
-
-import { LocalFileWorkerAccountCapacityStore } from "@vioxen/subscription-runtime/store-local-file";
 import type { WorkerRuntimeDemand } from "@vioxen/subscription-runtime/worker-core";
+import { WorkerAccountCapacitySignalScope } from "@vioxen/subscription-runtime/worker-core";
+import { codexAccountCapacityStore } from "./application/codex-account-capacity-store";
 
 export function isProjectControllerProviderSessionInvalid(
   safeMessage: string | undefined,
@@ -27,7 +26,7 @@ export type ProjectControllerCapacityRun = {
 };
 
 export type RecordProjectControllerCapacitySignalInput = {
-  readonly stateRootDir: string;
+  readonly authRootDir: string;
   readonly controllerJobId: string;
   readonly config: ProjectControllerRuntimeConfig;
   readonly run: ProjectControllerCapacityRun;
@@ -62,11 +61,18 @@ export function recordProjectControllerCapacitySignal(
   });
   if (!signal) return false;
 
-  new LocalFileWorkerAccountCapacityStore({
-    rootDir: join(input.stateRootDir, "worker-account-capacity"),
-  }).observe({
+  codexAccountCapacityStore(input.authRootDir).observe({
     accountId: input.run.capacityAccountId,
-    demand: input.run.capacityDemand ?? projectControllerCapacityDemand(input.config),
+    ...(signal.capacity.reason === "quota_limited"
+      ? { scope: WorkerAccountCapacitySignalScope.AccountWide }
+      : {}),
+    ...(signal.capacity.reason === "quota_limited"
+      ? {}
+      : {
+          demand:
+            input.run.capacityDemand ??
+            projectControllerCapacityDemand(input.config),
+        }),
     capacity: signal.capacity,
     observedAt: signal.observedAt,
     sourceWorkerId: input.controllerJobId,

@@ -52,7 +52,7 @@ export async function codexAccountStatusPayload(input: {
   return {
     ok: availableDedupedSlots.length > 0,
     authRootDir: input.authRootDir,
-    capacityAware: Boolean(input.stateRootDir),
+    capacityAware: true,
     liveCheck: Boolean(input.liveCheck),
     ...(input.stateRootDir ? { stateRootDir: input.stateRootDir } : {}),
     count: slots.length,

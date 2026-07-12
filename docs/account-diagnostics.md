@@ -121,6 +121,13 @@ The use-case depends on ports:
 Provider adapters depend inward on those ports. The neutral module must not
 import `provider-*`, concrete workers, queues, stores or runners.
 
+Detailed provider quota observation lives in
+`packages/agent-account-observability`. Use that package for Codex app-server
+rate limit buckets and future Claude Code statusline quota adapters, then map
+the normalized facts back into this diagnostics read model.
+The Codex goal account status live-check path already uses it for app-server
+quota buckets with controlled exec fallback.
+
 ## Edge Cases
 
 - `codex login status` can report a session as logged in while a real refresh

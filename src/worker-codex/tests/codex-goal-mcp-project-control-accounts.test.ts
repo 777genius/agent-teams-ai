@@ -564,7 +564,7 @@ describe("codex goal MCP project-control server", () => {
             name: "account-a",
             status: "auth_invalid",
             liveCheck: "failed",
-            liveCheckSafeMessage: "codex login status failed",
+            liveCheckSafeMessage: "codex account live observation failed",
           }),
         ]);
         expect(JSON.stringify(liveStatus)).not.toContain("secret@example.com");
