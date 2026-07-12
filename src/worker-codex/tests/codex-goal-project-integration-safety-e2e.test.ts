@@ -376,11 +376,22 @@ describe("project integration safety kernel e2e", () => {
         otherControllerArchivePath,
         "tracked.diff",
       );
+      const otherWorkerArchivePath = join(
+        controllerRoot,
+        "archives",
+        "synthetic-other-worker-rejected-old-attempt",
+      );
+      const otherWorkerPatchPath = join(
+        otherWorkerArchivePath,
+        "tracked.diff",
+      );
       await mkdir(join(controllerRoot, "not-archives"), { recursive: true });
       await mkdir(otherControllerArchivePath, { recursive: true });
+      await mkdir(otherWorkerArchivePath, { recursive: true });
       const archivedPatch = await readFile(rawRecord.backup.patchPath, "utf8");
       await writeFile(siblingPatchPath, archivedPatch);
       await writeFile(otherControllerPatchPath, archivedPatch);
+      await writeFile(otherWorkerPatchPath, archivedPatch);
 
       const adoptionBaseArgs = {
         ...args,
@@ -409,6 +420,20 @@ describe("project integration safety kernel e2e", () => {
       });
       await expect(handlers.applyWorkerOutput({
         ...otherControllerAttemptArgs,
+        confirmApply: true,
+      })).rejects.toThrow("local_project_integration_path_outside_root");
+
+      const otherWorkerAttemptArgs = {
+        ...adoptionBaseArgs,
+        attemptId: "synthetic-adoption-other-worker-attempt",
+        workerPatchPath: otherWorkerPatchPath,
+      } as const;
+      await handlers.openAttempt({
+        ...otherWorkerAttemptArgs,
+        confirmOpen: true,
+      });
+      await expect(handlers.applyWorkerOutput({
+        ...otherWorkerAttemptArgs,
         confirmApply: true,
       })).rejects.toThrow("local_project_integration_path_outside_root");
 
