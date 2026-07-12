@@ -26,8 +26,18 @@ import type { PtySpawnOptions } from '@shared/types/terminal';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 const logger = createLogger('IPC:terminal');
+const MAX_TERMINAL_DIMENSION = 32_767;
 
 let service: PtyTerminalService;
+
+function isValidTerminalDimension(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= MAX_TERMINAL_DIMENSION
+  );
+}
 
 /**
  * Initializes terminal handlers with the service instance.
@@ -52,8 +62,12 @@ export function registerTerminalHandlers(ipcMain: IpcMain): void {
       logger.warn('terminal:write error:', getErrorMessage(err));
     }
   });
-  ipcMain.on(TERMINAL_RESIZE, (_event, ptyId: string, cols: number, rows: number) => {
+  ipcMain.on(TERMINAL_RESIZE, (_event, ptyId: string, cols: unknown, rows: unknown) => {
     try {
+      if (!isValidTerminalDimension(cols) || !isValidTerminalDimension(rows)) {
+        logger.warn('terminal:resize rejected invalid dimensions');
+        return;
+      }
       service.resize(ptyId, cols, rows);
     } catch (err) {
       logger.warn('terminal:resize error:', getErrorMessage(err));
