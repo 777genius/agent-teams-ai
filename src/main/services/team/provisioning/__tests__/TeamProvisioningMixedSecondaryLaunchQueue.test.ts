@@ -123,9 +123,8 @@ function createPorts(
     upsertOpenCodeRuntimeLaneIndexEntry: vi.fn<
       MixedSecondaryLaunchQueuePorts<TestRun>['upsertOpenCodeRuntimeLaneIndexEntry']
     >(async () => undefined),
-    deleteSecondaryRuntimeRun: vi.fn<
-      MixedSecondaryLaunchQueuePorts<TestRun>['deleteSecondaryRuntimeRun']
-    >(),
+    deleteSecondaryRuntimeRun:
+      vi.fn<MixedSecondaryLaunchQueuePorts<TestRun>['deleteSecondaryRuntimeRun']>(),
     launchSingleMixedSecondaryLane: vi.fn<
       MixedSecondaryLaunchQueuePorts<TestRun>['launchSingleMixedSecondaryLane']
     >(async () => undefined),
@@ -135,8 +134,8 @@ function createPorts(
     persistLaunchStateSnapshot: vi.fn<
       MixedSecondaryLaunchQueuePorts<TestRun>['persistLaunchStateSnapshot']
     >(async (_run, launchPhase) => createSnapshot(launchPhase)),
-    readLaunchState: vi.fn<MixedSecondaryLaunchQueuePorts<TestRun>['readLaunchState']>(
-      async () => createSnapshot('active')
+    readLaunchState: vi.fn<MixedSecondaryLaunchQueuePorts<TestRun>['readLaunchState']>(async () =>
+      createSnapshot('active')
     ),
     getOpenCodeRuntimeAdapter: vi.fn<
       MixedSecondaryLaunchQueuePorts<TestRun>['getOpenCodeRuntimeAdapter']
@@ -144,9 +143,10 @@ function createPorts(
     getMixedSecondaryLaunchPhase: vi.fn<
       MixedSecondaryLaunchQueuePorts<TestRun>['getMixedSecondaryLaunchPhase']
     >(() => 'active'),
-    createUnexpectedMixedSecondaryLaneFailureResult: vi.fn<
-      MixedSecondaryLaunchQueuePorts<TestRun>['createUnexpectedMixedSecondaryLaneFailureResult']
-    >(createFailureResult),
+    createUnexpectedMixedSecondaryLaneFailureResult:
+      vi.fn<
+        MixedSecondaryLaunchQueuePorts<TestRun>['createUnexpectedMixedSecondaryLaneFailureResult']
+      >(createFailureResult),
     logger: {
       warn: vi.fn<(message: string) => void>(),
     },
@@ -233,7 +233,7 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
     expect(ports.publishMixedSecondaryLaneStatusChange).not.toHaveBeenCalled();
   });
 
-  it('records degraded result, publishes best-effort, and finishes after launch failure', async () => {
+  it('records degraded result and publishes the finished state after launch failure', async () => {
     const lane = createLane({ diagnostics: ['existing diagnostic'], warnings: ['old warning'] });
     const run = createRun({ mixedSecondaryLanes: [lane] });
     const publishStates: MixedSecondaryRuntimeLaneState['state'][] = [];
@@ -286,7 +286,7 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
       'secondary:opencode:bob'
     );
     expect(ports.publishMixedSecondaryLaneStatusChange).toHaveBeenCalledWith(run, lane);
-    expect(publishStates).toEqual(['launching']);
+    expect(publishStates).toEqual(['finished']);
     expect(lane.state).toBe('finished');
   });
 
