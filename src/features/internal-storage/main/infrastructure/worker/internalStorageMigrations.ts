@@ -134,6 +134,37 @@ const MIGRATIONS: InternalStorageMigration[] = [
         ON member_work_sync_metric_events (team_name, recorded_at)`,
     ],
   },
+  {
+    version: 4,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS application_command_ledger (
+        namespace TEXT NOT NULL,
+        scope_key TEXT NOT NULL,
+        command_id TEXT NOT NULL,
+        idempotency_key TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        payload_hash TEXT NOT NULL,
+        status TEXT NOT NULL,
+        failure_kind TEXT,
+        retryable INTEGER NOT NULL,
+        attempt_count INTEGER NOT NULL,
+        result_hash TEXT,
+        result_json TEXT,
+        metadata_json TEXT,
+        started_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT,
+        last_error TEXT,
+        PRIMARY KEY (namespace, scope_key, command_id)
+      )`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_app_cmd_ledger_idempotency
+        ON application_command_ledger (namespace, scope_key, idempotency_key)`,
+      `CREATE INDEX IF NOT EXISTS idx_app_cmd_ledger_status
+        ON application_command_ledger (namespace, scope_key, status)`,
+      `CREATE INDEX IF NOT EXISTS idx_app_cmd_ledger_operation
+        ON application_command_ledger (namespace, scope_key, operation)`,
+    ],
+  },
 ];
 
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

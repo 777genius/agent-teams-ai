@@ -3631,6 +3631,43 @@ describe('ipc teams handlers', () => {
   });
 
   describe('createTask prompt validation', () => {
+    it('passes a valid durable command identity to the service', async () => {
+      const handler = handlers.get(TEAM_CREATE_TASK)!;
+      const result = (await handler({} as never, 'my-team', {
+        subject: 'Do something once',
+        command: {
+          commandId: '11111111-1111-4111-8111-111111111111',
+          idempotencyKey: ' create-task-intent-1 ',
+        },
+      })) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(service.createTask).toHaveBeenCalledWith(
+        'my-team',
+        expect.objectContaining({
+          command: {
+            commandId: '11111111-1111-4111-8111-111111111111',
+            idempotencyKey: 'create-task-intent-1',
+          },
+          subject: 'Do something once',
+        })
+      );
+    });
+
+    it('rejects a non-UUID task command id before calling the service', async () => {
+      const handler = handlers.get(TEAM_CREATE_TASK)!;
+      service.createTask.mockClear();
+
+      const result = (await handler({} as never, 'my-team', {
+        subject: 'Unsafe identity',
+        command: { commandId: '../task', idempotencyKey: 'intent-1' },
+      })) as { success: boolean; error: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('command.commandId must be a UUID');
+      expect(service.createTask).not.toHaveBeenCalled();
+    });
+
     it('accepts valid prompt string', async () => {
       const handler = handlers.get(TEAM_CREATE_TASK)!;
       const result = (await handler({} as never, 'my-team', {

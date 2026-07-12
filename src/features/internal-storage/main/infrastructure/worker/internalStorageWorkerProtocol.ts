@@ -30,6 +30,7 @@ export type InternalStorageWorkerRequest =
     }
   // Member-work-sync ops share one wire shape; the typed client methods and
   // the worker-side dispatcher (memberWorkSyncWorkerOps) own the payloads.
+  | { id: string; op: `appCommandLedger.${string}`; payload: unknown }
   | { id: string; op: `mws.${string}`; payload: unknown }
   | { id: string; op: 'close'; payload: Record<string, never> };
 

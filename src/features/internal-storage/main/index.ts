@@ -4,6 +4,7 @@ export { archiveFileWithGenerations } from './adapters/output/TeamScopedLegacyJs
 export { BackendSelectingTaskCommentNotificationJournalStore } from './composition/BackendSelectingTaskCommentNotificationJournalStore';
 export { BackendSelectingTaskStallJournalStore } from './composition/BackendSelectingTaskStallJournalStore';
 export type {
+  InternalStorageApplicationCommandLedgerBackend,
   InternalStorageFeature,
   InternalStorageFeatureDeps,
   InternalStorageMemberWorkSyncBackend,

@@ -262,6 +262,30 @@ async function cleanupDeterministicCreateMaterializedFiles<
   await ports.removeRunMemberMcpConfigFiles(run).catch(() => {});
 }
 
+export async function handleDeterministicCreateSpawnTimeout<
+  TRun extends DeterministicCreateSpawnFlowRun,
+>(
+  run: TRun,
+  ports: Pick<
+    DeterministicCreateSpawnFlowPorts<TRun>,
+    'tryCompleteAfterTimeout' | 'killTeamProcess' | 'updateProgress' | 'cleanupRun'
+  >
+): Promise<void> {
+  const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
+  ports.killTeamProcess(run.child);
+  if (readyOnTimeout) {
+    return; // cleanupRun already called inside tryCompleteAfterTimeout
+  }
+
+  const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI', {
+    error:
+      'Timed out waiting for CLI. Run `claude` once in terminal to complete onboarding and try again.',
+    cliLogsTail: extractCliLogsFromRun(run),
+  });
+  run.onProgress(progress);
+  ports.cleanupRun(run);
+}
+
 export async function runDeterministicCreateSpawnFlow<
   TRun extends DeterministicCreateSpawnFlowRun,
 >({
@@ -443,21 +467,7 @@ export async function runDeterministicCreateSpawnFlow<
     if (!run.processKilled && !run.provisioningComplete) {
       run.processKilled = true;
       run.finalizingByTimeout = true;
-      void (async () => {
-        const readyOnTimeout = await ports.tryCompleteAfterTimeout(run);
-        ports.killTeamProcess(run.child);
-        if (readyOnTimeout) {
-          return; // cleanupRun already called inside tryCompleteAfterTimeout
-        }
-
-        const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI', {
-          error:
-            'Timed out waiting for CLI. Run `claude` once in terminal to complete onboarding and try again.',
-          cliLogsTail: extractCliLogsFromRun(run),
-        });
-        run.onProgress(progress);
-        ports.cleanupRun(run);
-      })();
+      void handleDeterministicCreateSpawnTimeout(run, ports);
     }
   }, getProvisioningRunTimeoutMs(run));
 

@@ -5,6 +5,10 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 
 import {
+  ApplicationCommandLedgerWorkerOps,
+  handleApplicationCommandLedgerOp,
+} from './applicationCommandLedgerWorkerOps';
+import {
   INTERNAL_STORAGE_SCHEMA_VERSION,
   readSchemaVersion,
   runInternalStorageMigrations,
@@ -73,6 +77,9 @@ interface OpenState {
  */
 export class InternalStorageWorkerCore {
   private state: OpenState | null = null;
+  private readonly applicationCommandLedgerOps = new ApplicationCommandLedgerWorkerOps(
+    () => this.open().orm
+  );
   private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
 
   constructor(private readonly options: InternalStorageWorkerCoreOptions) {}
@@ -109,6 +116,9 @@ export class InternalStorageWorkerCore {
         this.close();
         return null;
       default: {
+        if (typeof op === 'string' && op.startsWith('appCommandLedger.')) {
+          return handleApplicationCommandLedgerOp(this.applicationCommandLedgerOps, op, payload);
+        }
         if (typeof op === 'string' && op.startsWith('mws.')) {
           return handleMemberWorkSyncOp(this.memberWorkSyncOps, op, payload);
         }

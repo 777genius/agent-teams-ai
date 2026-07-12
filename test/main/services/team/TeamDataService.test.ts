@@ -1735,6 +1735,76 @@ describe('TeamDataService', () => {
     expect(getConfig).not.toHaveBeenCalled();
   });
 
+  it('routes identified task creates through the durable command facade without legacy fallback', async () => {
+    const directCreate = vi.fn();
+    const durableTask = {
+      id: '11111111-1111-4111-8111-111111111111',
+      subject: 'Durable task',
+      status: 'pending' as const,
+    };
+    const commandFacade = {
+      createTask: vi.fn(async () => ({
+        task: durableTask,
+        outcome: 'executed',
+        createdInAttempt: true,
+      })),
+    };
+    const service = new TeamDataService(
+      {
+        getConfig: vi.fn(async () => ({ name: 'My team', members: [] })),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      null,
+      {} as never,
+      {} as never,
+      () =>
+        ({
+          taskBoard: {
+            getTask: vi.fn(),
+            createTask: directCreate,
+          },
+        }) as never
+    );
+    service.setTaskBoardCommandFacade(commandFacade as never);
+    const command = {
+      commandId: durableTask.id,
+      idempotencyKey: 'create-task-intent-1',
+    };
+
+    await expect(
+      service.createTask('my-team', { subject: durableTask.subject, command })
+    ).resolves.toEqual(durableTask);
+    expect(commandFacade.createTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName: 'my-team',
+        identity: command,
+        payload: expect.objectContaining({ subject: durableTask.subject, createdBy: 'user' }),
+        destination: expect.objectContaining({
+          findById: expect.any(Function),
+          create: expect.any(Function),
+        }),
+      })
+    );
+    expect(directCreate).not.toHaveBeenCalled();
+
+    service.setTaskBoardCommandFacade(null);
+    await expect(
+      service.createTask('my-team', {
+        subject: 'Must not bypass durability',
+        command: {
+          commandId: '22222222-2222-4222-8222-222222222222',
+          idempotencyKey: 'create-task-intent-2',
+        },
+      })
+    ).rejects.toThrow('Durable task-board commands are unavailable');
+    expect(directCreate).not.toHaveBeenCalled();
+  });
+
   it('returns lightweight notification context from config without hydrating team data', async () => {
     const getConfig = vi.fn(async () => ({
       name: 'My Team',

@@ -317,4 +317,51 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     expect(run.processKilled).toBe(true);
     expect(run.finalizingByTimeout).toBe(true);
   });
+
+  it('kills and cleans up a timed-out launch when timeout completion persistence rejects', async () => {
+    let timeoutCallback: (() => void) | null = null;
+    const child = new EventEmitter() as ChildProcess;
+    const run = createRun({ child });
+    const killTeamProcess = vi.fn();
+    const cleanupRun = vi.fn();
+    const updateProgress = vi.fn((nextRun: DeterministicLaunchSpawnFlowRun, state, message) => {
+      nextRun.progress = { ...nextRun.progress, state, message };
+      return nextRun.progress;
+    });
+
+    registerDeterministicLaunchChildHandlers(
+      { run, child },
+      {
+        setTimeout: vi.fn((callback) => {
+          timeoutCallback = callback;
+          return { timeout: true } as unknown as NodeJS.Timeout;
+        }),
+        tryCompleteAfterTimeout: vi.fn(async () => {
+          throw new Error('launch state persistence failed');
+        }),
+        killTeamProcess,
+        updateProgress,
+        cleanupRun,
+        handleProcessExit: vi.fn(),
+      }
+    );
+
+    const triggerTimeout = timeoutCallback as (() => void) | null;
+    if (!triggerTimeout) {
+      throw new Error('Expected launch timeout callback to be registered.');
+    }
+    triggerTimeout();
+    await vi.waitFor(() => {
+      expect(cleanupRun).toHaveBeenCalledWith(run);
+    });
+
+    expect(killTeamProcess).toHaveBeenCalledWith(child);
+    expect(updateProgress).toHaveBeenCalledWith(
+      run,
+      'failed',
+      'Timed out waiting for CLI (launch)',
+      expect.objectContaining({ error: 'Timed out waiting for CLI during team launch.' })
+    );
+    expect(run.onProgress).toHaveBeenCalledWith(run.progress);
+  });
 });

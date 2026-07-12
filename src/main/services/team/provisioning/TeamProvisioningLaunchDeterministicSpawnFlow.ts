@@ -331,7 +331,7 @@ export function registerDeterministicLaunchChildHandlers<
       run.processKilled = true;
       run.finalizingByTimeout = true;
       void (async () => {
-        const readyOnTimeout = await ports.tryCompleteAfterTimeout(run);
+        const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
         ports.killTeamProcess(run.child);
         if (readyOnTimeout) {
           return;

@@ -26,15 +26,27 @@ import type {
   InternalStorageWorkerRequest,
   InternalStorageWorkerResponse,
 } from './worker/internalStorageWorkerProtocol';
+import type {
+  ApplicationCommandLedgerBeginRequest,
+  ApplicationCommandLedgerBeginResult,
+  ApplicationCommandLedgerCompleteRequest,
+  ApplicationCommandLedgerFailRequest,
+  ApplicationCommandLedgerListScopeRequest,
+  ApplicationCommandLedgerReadByCommandIdRequest,
+  ApplicationCommandLedgerReadByIdempotencyKeyRequest,
+  ApplicationCommandLedgerRecord,
+  ApplicationCommandLedgerStorageGateway,
+} from '@features/application-command-ledger';
 
 const logger = createLogger('Service:InternalStorageWorkerClient');
 
 // Keeps per-op payload typing for the journal ops; mws.* ops share one wire
 // shape and are typed by the public gateway methods instead.
-type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerRequest['op']> =
-  TOp extends `mws.${string}`
-    ? unknown
-    : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
+type InternalStorageWorkerPayloadFor<TOp extends InternalStorageWorkerRequest['op']> = TOp extends
+  | `appCommandLedger.${string}`
+  | `mws.${string}`
+  ? unknown
+  : Extract<InternalStorageWorkerRequest, { op: TOp }>['payload'];
 
 const WORKER_CALL_TIMEOUT_MS = 20_000;
 const WORKER_FILENAME = 'internal-storage-worker.cjs';
@@ -87,7 +99,10 @@ function resolveWorkerPath(): string | null {
  * all in-flight requests and the worker is recreated on the next call.
  */
 export class InternalStorageWorkerClient
-  implements InternalStorageGateway, MemberWorkSyncStorageGateway
+  implements
+    InternalStorageGateway,
+    MemberWorkSyncStorageGateway,
+    ApplicationCommandLedgerStorageGateway
 {
   private worker: Worker | null = null;
   private readonly workerPath: string | null = resolveWorkerPath();
@@ -298,6 +313,54 @@ export class InternalStorageWorkerClient
 
   async importTeam(teamName: string, snapshot: MemberWorkSyncTeamSnapshotRecords): Promise<void> {
     await this.call('mws.importTeam', { teamName, snapshot });
+  }
+
+  async applicationCommandLedgerBegin<TOperation extends string>(
+    request: ApplicationCommandLedgerBeginRequest<TOperation>
+  ): Promise<ApplicationCommandLedgerBeginResult<TOperation>> {
+    return (await this.call(
+      'appCommandLedger.begin',
+      request
+    )) as ApplicationCommandLedgerBeginResult<TOperation>;
+  }
+
+  async applicationCommandLedgerMarkCompleted(
+    request: ApplicationCommandLedgerCompleteRequest
+  ): Promise<void> {
+    await this.call('appCommandLedger.markCompleted', request);
+  }
+
+  async applicationCommandLedgerMarkFailed(
+    request: ApplicationCommandLedgerFailRequest
+  ): Promise<void> {
+    await this.call('appCommandLedger.markFailed', request);
+  }
+
+  async applicationCommandLedgerGetByCommandId<TOperation extends string>(
+    request: ApplicationCommandLedgerReadByCommandIdRequest
+  ): Promise<ApplicationCommandLedgerRecord<TOperation> | null> {
+    return (await this.call(
+      'appCommandLedger.getByCommandId',
+      request
+    )) as ApplicationCommandLedgerRecord<TOperation> | null;
+  }
+
+  async applicationCommandLedgerGetByIdempotencyKey<TOperation extends string>(
+    request: ApplicationCommandLedgerReadByIdempotencyKeyRequest
+  ): Promise<ApplicationCommandLedgerRecord<TOperation> | null> {
+    return (await this.call(
+      'appCommandLedger.getByIdempotencyKey',
+      request
+    )) as ApplicationCommandLedgerRecord<TOperation> | null;
+  }
+
+  async applicationCommandLedgerListByScope<TOperation extends string>(
+    request: ApplicationCommandLedgerListScopeRequest
+  ): Promise<ApplicationCommandLedgerRecord<TOperation>[]> {
+    return (await this.call(
+      'appCommandLedger.listByScope',
+      request
+    )) as ApplicationCommandLedgerRecord<TOperation>[];
   }
 
   async close(): Promise<void> {
