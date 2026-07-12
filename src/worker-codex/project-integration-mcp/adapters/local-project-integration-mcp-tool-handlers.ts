@@ -40,7 +40,7 @@ function localProjectIntegrationDeps(
   return {
     store: new LocalIntegrationAttemptStore({ rootDir }),
     git: new LocalGitIntegrationAdapter({
-      allowedPatchRoots: controller.scope.workspaceRoots ?? [],
+      allowedPatchRoots: projectIntegrationAllowedPatchRoots(controller),
       workerJobRootParent: dirname(controller.controller.jobRootDir),
     }),
     commitIdentity: new ConfiguredCommitIdentityAdapter(
@@ -57,4 +57,13 @@ function localProjectIntegrationDeps(
       staleLockMs: 30 * 60_000,
     }),
   };
+}
+
+function projectIntegrationAllowedPatchRoots(
+  controller: ProjectIntegrationMcpController,
+): readonly string[] {
+  return [
+    ...(controller.scope.workspaceRoots ?? []),
+    ...(controller.scope.worktreeRoots ?? []),
+  ];
 }

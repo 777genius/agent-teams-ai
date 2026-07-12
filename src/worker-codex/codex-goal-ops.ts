@@ -25,6 +25,7 @@ import {
 } from "./codex-goal-runner";
 import { assertCodexGoalAccessLaunchAllowed } from "./codex-goal-access-plan";
 import { readLocalGitHeadCommit } from "./codex-goal-git-revision";
+import { refreshCompletedCodexGoalResultArtifacts } from "./codex-goal-terminal-result-refresh";
 import { listCodexGoalAccountStatuses } from "./codex-goal-account-status";
 import {
   doctorCodexGoal,
@@ -665,6 +666,16 @@ export async function reconcileCodexGoalRuntimeResult(
   }
 
   const changedFiles = status.changedFiles ?? [];
+  if (input.forceWrite && existingStrictResult?.status === "done") {
+    return await refreshCompletedCodexGoalResultArtifacts({
+      config: input.config,
+      outputPath,
+      existingResult: existingStrictResult,
+      changedFiles,
+      preservePatch: input.preservePatch !== false,
+    });
+  }
+
   const nonStrictExistingResult = status.resultExists === true && !existingStrictResult;
   const progressStaleForReconcile = staleProgress(status);
   const workerLiveness = resolveCodexGoalWorkerLiveness({

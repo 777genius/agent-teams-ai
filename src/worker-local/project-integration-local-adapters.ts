@@ -535,11 +535,23 @@ async function canonicalPatchPath(input: {
   if (isPathInside(canonical, workspaceRoot)) return canonical;
 
   for (const rootPath of input.allowedPatchRoots) {
-    const root = await canonicalDirectory(rootPath);
+    const root = await canonicalDirectoryIfExists(rootPath);
+    if (root === undefined) continue;
     if (isPathInside(canonical, root)) return canonical;
   }
 
   throw new Error("local_project_integration_path_outside_root");
+}
+
+async function canonicalDirectoryIfExists(
+  path: string,
+): Promise<string | undefined> {
+  try {
+    return await canonicalDirectory(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
 }
 
 function workerJobRootPath(

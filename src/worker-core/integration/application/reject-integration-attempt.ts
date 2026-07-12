@@ -1,4 +1,5 @@
 import {
+  IntegrationAttemptStatus,
   markRejected,
   type IntegrationAttempt,
 } from "../domain/integration-attempt";
@@ -9,6 +10,10 @@ import {
   recordIntegrationAudit,
   type IntegrationUseCaseDeps,
 } from "./common";
+import type {
+  IntegratedOutputLedgerPort,
+  RejectedOutputLedgerReceipt,
+} from "../ports/integrated-output-ledger-port";
 
 export type RejectIntegrationAttemptInput = {
   readonly attemptId: string;
@@ -16,14 +21,34 @@ export type RejectIntegrationAttemptInput = {
 };
 
 export async function rejectIntegrationAttempt(
-  deps: IntegrationUseCaseDeps,
+  deps: IntegrationUseCaseDeps & {
+    readonly integratedOutputLedger: IntegratedOutputLedgerPort;
+  },
   input: RejectIntegrationAttemptInput,
-): Promise<IntegrationAttempt> {
+): Promise<IntegrationAttempt & {
+  readonly consumedOutputLedger: RejectedOutputLedgerReceipt;
+}> {
   const attempt = await loadIntegrationAttempt(deps.store, input.attemptId);
+  const preparation = await deps.integratedOutputLedger.prepareRejection({
+    attempt,
+  });
+  if (attempt.status === IntegrationAttemptStatus.Rejected) {
+    const consumedOutputLedger = await deps.integratedOutputLedger.finalizeRejection({
+      preparation,
+      rejectedAt: attempt.updatedAt,
+      reason: attempt.rejectReason ?? input.reason,
+    });
+    return { ...attempt, consumedOutputLedger };
+  }
   const now = nowIso(deps.clock);
   const updated = markRejected(attempt, {
     reason: input.reason,
     now,
+  });
+  const consumedOutputLedger = await deps.integratedOutputLedger.finalizeRejection({
+    preparation,
+    rejectedAt: now,
+    reason: input.reason,
   });
   await deps.store.update(updated);
   await recordIntegrationAudit(deps, updated, {
@@ -31,5 +56,5 @@ export async function rejectIntegrationAttempt(
     occurredAt: now,
     safeReason: input.reason,
   });
-  return updated;
+  return { ...updated, consumedOutputLedger };
 }

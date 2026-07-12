@@ -105,6 +105,33 @@ describe("local project integration adapters", () => {
     })).resolves.toEqual({ changedFiles: ["src/memory.ts"] });
   });
 
+  it("skips stale missing patch roots before checking an allowed root", async () => {
+    const fixture = await createGitFixture();
+    const patchRoot = join(fixture.rootDir, "worker-jobs");
+    await mkdir(patchRoot);
+    const patchPath = join(patchRoot, "worker-output.patch");
+    const patch = await gitOutput(fixture.workspacePath, [
+      "show",
+      "--format=",
+      fixture.workerCommitSha,
+    ]);
+    await writeFile(patchPath, patch);
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [
+        join(fixture.rootDir, "removed-legacy-root"),
+        patchRoot,
+      ],
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: { targetWorkspacePath: fixture.workspacePath },
+      workerOutput: {
+        workspacePath: fixture.workspacePath,
+        patchPath,
+      },
+    })).resolves.toEqual({ changedFiles: ["src/memory.ts"] });
+  });
+
   it("accepts a patch only from the exact canonical worker job root", async () => {
     const fixture = await createGitFixture();
     const jobsRoot = join(fixture.rootDir, "worker-jobs");

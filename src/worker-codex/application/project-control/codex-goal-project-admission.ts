@@ -344,6 +344,22 @@ async function debtFromOverviewItem(input: {
   const resolvedWorkspacePath = workspacePath
     ? await optionalRealPathForAdmission(workspacePath)
     : undefined;
+  const markerTypes = safeStringArray(item.lifecycleMarkerTypes);
+  const recommendedAction = stringValue(item.recommendedAction);
+  if (
+    markerTypes.includes("review") &&
+    recommendedAction === "review_completed" &&
+    safeStringArray(item.tags).includes("worker-role-reviewer") &&
+    workspacePath &&
+    workspaceConsumedByAnotherJob({
+      ledger: input.consumedOutput,
+      jobId,
+      workspacePath,
+      ...(resolvedWorkspacePath ? { resolvedWorkspacePath } : {}),
+    })
+  ) {
+    return debt;
+  }
   const consumed = consumedOutputRecordFor({
     ledger: input.consumedOutput,
     jobId,
@@ -354,8 +370,6 @@ async function debtFromOverviewItem(input: {
     debt.push(...consumedDebt(consumed));
     return debt;
   }
-  const markerTypes = safeStringArray(item.lifecycleMarkerTypes);
-  const recommendedAction = stringValue(item.recommendedAction);
   const resultStatus = stringValue(item.resultStatus);
   const completedOrReviewed = resultStatus === "completed" ||
     recommendedAction === "review_completed" ||
@@ -373,6 +387,21 @@ async function debtFromOverviewItem(input: {
     ],
   });
   return debt;
+}
+
+function workspaceConsumedByAnotherJob(input: {
+  readonly ledger: ConsumedOutputLedger;
+  readonly jobId: string;
+  readonly workspacePath: string;
+  readonly resolvedWorkspacePath?: string;
+}): boolean {
+  if (input.ledger.byJobId.has(input.jobId)) return false;
+  const workspaceRecord = input.ledger.byWorkspace.get(resolve(input.workspacePath));
+  const resolvedWorkspaceRecord = input.resolvedWorkspacePath
+    ? input.ledger.byWorkspace.get(resolve(input.resolvedWorkspacePath))
+    : undefined;
+  const record = workspaceRecord ?? resolvedWorkspaceRecord;
+  return record !== undefined && record.jobId !== input.jobId && record.valid;
 }
 
 async function rememberKnownWorkspacePath(

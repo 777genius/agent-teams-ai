@@ -53,6 +53,8 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
         controllerJobId: z.string().optional(),
         sourceWorkspacePath: z.string().optional(),
         baseBranch: z.string().optional(),
+        sourceRef: z.string().optional(),
+        newBranch: z.string().optional(),
         promptBody: z.string().optional(),
         workerRole: z.enum(projectAdmissionRefillWorkerRoleSchemaValues).optional(),
         description: z.string().optional(),

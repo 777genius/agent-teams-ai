@@ -259,14 +259,16 @@ export async function projectIntegrationRejectAttempt(
       rejectionReason: reason,
     });
   }
-  const attempt = await rejectIntegrationAttempt(options.integrationDeps(controller), {
+  const result = await rejectIntegrationAttempt(options.integrationDeps(controller), {
     attemptId,
     reason,
   });
+  const { consumedOutputLedger, ...attempt } = result;
   return mcpJson({
     ok: true,
     mode: "project_integration_reject_attempt",
     controllerJobId: controller.controller.jobId,
     attempt: attempt as unknown as JsonObject,
+    consumedOutputLedger: consumedOutputLedger as unknown as JsonObject,
   });
 }

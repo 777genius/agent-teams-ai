@@ -245,7 +245,7 @@ describe("codex goal MCP server", () => {
     }
   });
 
-  it("starts bounded project refill as a durable operation with a status handle", async () => {
+  it("advertises and preserves branch fields for bounded project refill", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-project-refill-bounded-"));
     const registryRootDir = join(root, "worker-jobs", "registry");
     const controllerJobRoot = join(root, "worker-jobs", "infinity-context-controller-v1");
@@ -285,7 +285,9 @@ operation.result = {
   ok: true,
   mode: "fake_bounded_refill",
   jobId: operation.targetJobId,
-  executionMode: operation.args.executionMode
+  executionMode: operation.args.executionMode,
+  sourceRef: operation.args.sourceRef,
+  newBranch: operation.args.newBranch
 };
 await mkdir(dirname(operation.resultPath), { recursive: true });
 await writeFile(operation.resultPath, JSON.stringify(operation.result, null, 2) + "\\n");
@@ -297,6 +299,15 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
         server.connect(serverTransport),
         client.connect(clientTransport),
       ]);
+
+      const tools = await client.listTools();
+      const refillTool = tools.tools.find(
+        (tool) => tool.name === "codex_goal_project_refill_worker",
+      );
+      expect(refillTool?.inputSchema.properties).toMatchObject({
+        sourceRef: expect.any(Object),
+        newBranch: expect.any(Object),
+      });
 
       await callToolJson(client, "codex_goal_create_job", {
         registryRootDir,
@@ -328,6 +339,8 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
         authRootDir: join(root, "auth"),
         sourceWorkspacePath,
         workspacePath: childWorkspace,
+        sourceRef: "main",
+        newBranch: "refactor/infinity-context-memory-fastgate-v1",
         promptBody: "Run bounded refill.\n",
         taskId: "infinity-context-memory-fastgate-v1",
         accounts: ["account-a"],
@@ -369,6 +382,8 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
             mode: "fake_bounded_refill",
             jobId: "infinity-context-memory-fastgate-v1",
             executionMode: "sync",
+            sourceRef: "main",
+            newBranch: "refactor/infinity-context-memory-fastgate-v1",
           },
         },
       });

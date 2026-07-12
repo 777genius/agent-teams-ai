@@ -14,6 +14,7 @@ import {
   commitApprovedChanges,
   openProjectIntegrationAttempt,
   pushApprovedCommit,
+  rejectIntegrationAttempt,
   rollupCheckRuns,
   runRequiredChecks,
   type CheckRun,
@@ -22,6 +23,7 @@ import {
   type IntegrationAttempt,
   type IntegratedOutputLedgerPort,
   type IntegratedOutputLedgerPreparation,
+  type RejectedOutputLedgerPreparation,
   type IntegrationAttemptStorePort,
   type IntegrationAuditEvent,
   type ProjectAccessScope,
@@ -142,6 +144,29 @@ describe("project integration use cases", () => {
     })).resolves.toMatchObject({
       status: IntegrationAttemptStatus.CommitCreated,
     });
+  });
+
+  it("records terminal consumed-output evidence before marking an attempt rejected", async () => {
+    const fixture = createFixture();
+    const opened = await openProjectIntegrationAttempt(fixture.deps(), input());
+
+    const rejected = await rejectIntegrationAttempt(fixture.deps(), {
+      attemptId: opened.attemptId,
+      reason: "review rejected",
+    });
+
+    expect(rejected).toMatchObject({
+      status: IntegrationAttemptStatus.Rejected,
+      rejectReason: "review rejected",
+      consumedOutputLedger: {
+        status: "rejected",
+        ledgerPath: "/ledger/rejected.json",
+      },
+    });
+    expect(fixture.ledger.prepareRejectionCalls).toBe(1);
+    expect(fixture.ledger.finalizeRejectionCalls).toBe(1);
+    expect(fixture.ledger.lastRejectedAt).toBe("2026-01-01T00:00:00.000Z");
+    expect(fixture.events.at(-1)?.type).toBe(IntegrationAuditEventType.Rejected);
   });
 
   it("rolls timed-out required checks into failed integration status", async () => {
@@ -456,6 +481,9 @@ class FakeIntegratedOutputLedger implements IntegratedOutputLedgerPort {
   finalizeError?: Error;
   prepareCalls = 0;
   finalizeCalls = 0;
+  prepareRejectionCalls = 0;
+  finalizeRejectionCalls = 0;
+  lastRejectedAt?: string;
 
   async prepare(input: {
     readonly attempt: IntegrationAttempt;
@@ -484,6 +512,36 @@ class FakeIntegratedOutputLedger implements IntegratedOutputLedgerPort {
       ledgerPath: "/ledger/item.json",
       archivePath: input.preparation.archivePath,
       commitSha: input.preparation.commitSha,
+      idempotentReplay: false,
+    };
+  }
+
+  async prepareRejection(input: {
+    readonly attempt: IntegrationAttempt;
+  }): Promise<RejectedOutputLedgerPreparation> {
+    this.prepareRejectionCalls += 1;
+    return {
+      attemptId: input.attempt.attemptId,
+      workerJobId: input.attempt.workerOutput.workerJobId,
+      workerWorkspacePath: input.attempt.workerOutput.workspacePath,
+      archivePath: "/archive/rejected",
+      statusPath: "/archive/rejected/status",
+      patchPath: "/archive/rejected/patch",
+      numstatPath: "/archive/rejected/numstat",
+      hasAuthoredOutput: true,
+    };
+  }
+
+  async finalizeRejection(input: {
+    readonly preparation: RejectedOutputLedgerPreparation;
+    readonly rejectedAt: string;
+  }) {
+    this.finalizeRejectionCalls += 1;
+    this.lastRejectedAt = input.rejectedAt;
+    return {
+      ledgerPath: "/ledger/rejected.json",
+      archivePath: input.preparation.archivePath,
+      status: "rejected" as const,
       idempotentReplay: false,
     };
   }

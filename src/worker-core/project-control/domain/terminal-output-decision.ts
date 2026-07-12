@@ -26,6 +26,14 @@ export type TerminalOutputDecision = {
   readonly closedAt: string;
   readonly commitSha?: string;
   readonly archivePath?: string;
+  readonly failure?: {
+    readonly category: string;
+    readonly code: string;
+  };
+  readonly output?: {
+    readonly authoredChanges: boolean;
+    readonly workspaceDirty: boolean;
+  };
   readonly note: string;
   readonly backup: TerminalOutputBackup;
 };
@@ -46,6 +54,17 @@ export function assertTerminalOutputDecision(
   }
   if (decision.status === "integrated" && !decision.commitSha) {
     throw new Error("terminal_output_integrated_commit_required");
+  }
+  if (
+    decision.status === "failed_no_output" &&
+    (
+      !decision.failure?.category ||
+      !decision.failure.code ||
+      decision.output?.authoredChanges !== false ||
+      decision.output.workspaceDirty !== false
+    )
+  ) {
+    throw new Error("terminal_output_failed_no_output_evidence_required");
   }
   return decision;
 }
