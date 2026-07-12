@@ -112,6 +112,7 @@ export function validateTeamImportName(teamName: string): TeamImportNameValidati
 }
 
 function validateImportedMemberName(name: string): ImportedMemberValidationCode | null {
+  if (!name.trim()) return 'memberInvalid';
   const lower = name.toLowerCase();
   if (lower === 'user' || lower === 'team-lead' || lower === 'lead') {
     return 'memberReserved';

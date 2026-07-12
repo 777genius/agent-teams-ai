@@ -110,6 +110,24 @@ describe('teamImportPolicy', () => {
     expect(preview.blockingErrors).toHaveLength(1);
   });
 
+  it('rejects an empty member name derived from a .md filename during preview', () => {
+    const preview = buildTeamImportPreview({
+      projectPath: '/project',
+      folderName: 'Empty Name',
+      agentFiles: [{ fileName: '.md', content: 'No frontmatter.' }],
+      skills: [],
+      warnings: [],
+    });
+
+    expect(preview.members).toEqual([]);
+    expect(preview.warnings).toContainEqual({
+      code: 'memberInvalid',
+      fileName: '.md',
+      name: '',
+    });
+    expect(preview.blockingErrors).toHaveLength(1);
+  });
+
   it('blocks confirmation when a Task call cannot be rewritten safely', () => {
     const preview = buildTeamImportPreview({
       projectPath: '/project',

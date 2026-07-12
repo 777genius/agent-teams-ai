@@ -3,6 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import {
+  readBoundedTeamImportFileHandle,
   SafeLocalTeamImportFolderSource,
   TEAM_IMPORT_LIMITS,
 } from '@features/team-import/main/infrastructure/SafeLocalTeamImportFolderSource';
@@ -83,6 +84,27 @@ describe('SafeLocalTeamImportFolderSource', () => {
     );
 
     await expect(new SafeLocalTeamImportFolderSource().inspect(root)).rejects.toThrow('too large');
+  });
+
+  it('bounds reads when an agent file grows after the opened-file stat', async () => {
+    const root = await createFixture();
+    const agentPath = path.join(root, '.claude', 'agents', 'writer.md');
+    const handle = await fs.open(agentPath, 'r');
+    try {
+      const opened = await handle.stat();
+      expect(opened.size).toBeLessThan(TEAM_IMPORT_LIMITS.maxAgentFileBytes);
+      await fs.appendFile(agentPath, 'x'.repeat(TEAM_IMPORT_LIMITS.maxAgentFileBytes + 1));
+
+      await expect(
+        readBoundedTeamImportFileHandle({
+          handle,
+          filePath: agentPath,
+          maxBytes: TEAM_IMPORT_LIMITS.maxAgentFileBytes,
+        })
+      ).rejects.toThrow('too large');
+    } finally {
+      await handle.close();
+    }
   });
 
   it('rejects more than the configured number of agent definitions', async () => {

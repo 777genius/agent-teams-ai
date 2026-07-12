@@ -10,6 +10,7 @@ import {
 import type { TeamImportFolderSnapshot } from '../../core/application/models/TeamImportFolderSnapshot';
 import type { TeamImportFolderSourcePort } from '../../core/application/ports/TeamImportFolderSourcePort';
 import type { Dirent, Stats } from 'node:fs';
+import type { FileHandle } from 'node:fs/promises';
 
 export const TEAM_IMPORT_LIMITS = {
   maxAgentFiles: 32,
@@ -22,6 +23,24 @@ export const TEAM_IMPORT_LIMITS = {
 
 interface ReadBudget {
   totalBytes: number;
+}
+
+export async function readBoundedTeamImportFileHandle(input: {
+  handle: FileHandle;
+  filePath: string;
+  maxBytes: number;
+}): Promise<{ content: string; bytes: number }> {
+  const buffer = Buffer.allocUnsafe(input.maxBytes + 1);
+  let bytes = 0;
+  while (bytes < buffer.length) {
+    const result = await input.handle.read(buffer, bytes, buffer.length - bytes, null);
+    if (result.bytesRead === 0) break;
+    bytes += result.bytesRead;
+  }
+  if (bytes > input.maxBytes) {
+    throw new Error(`Import file is too large: ${input.filePath}`);
+  }
+  return { content: buffer.subarray(0, bytes).toString('utf8'), bytes };
 }
 
 function isMissing(error: unknown): boolean {
@@ -103,11 +122,11 @@ async function readBoundRegularUtf8File(input: {
     if (opened.size > input.maxBytes) {
       throw new Error(`Import file is too large: ${input.filePath}`);
     }
-    const content = await handle.readFile({ encoding: 'utf8' });
-    const bytes = Buffer.byteLength(content, 'utf8');
-    if (bytes > input.maxBytes) {
-      throw new Error(`Import file is too large: ${input.filePath}`);
-    }
+    const { content, bytes } = await readBoundedTeamImportFileHandle({
+      handle,
+      filePath: input.filePath,
+      maxBytes: input.maxBytes,
+    });
     if (input.budget.totalBytes + bytes > TEAM_IMPORT_LIMITS.maxTotalBytes) {
       throw new Error('Import source is too large to preview safely.');
     }

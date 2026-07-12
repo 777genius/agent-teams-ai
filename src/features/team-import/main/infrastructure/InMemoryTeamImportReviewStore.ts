@@ -26,13 +26,18 @@ export class InMemoryTeamImportReviewStore implements TeamImportReviewStorePort 
     return storedPreview;
   }
 
-  get(reviewId: string): TeamImportPreview | null {
+  consume(reviewId: string): TeamImportPreview | null {
     this.prune();
-    return this.reviews.get(reviewId)?.preview ?? null;
+    const stored = this.reviews.get(reviewId);
+    if (!stored) return null;
+    this.reviews.delete(reviewId);
+    return stored.preview;
   }
 
-  delete(reviewId: string): void {
-    this.reviews.delete(reviewId);
+  restore(preview: TeamImportPreview): void {
+    this.prune();
+    if (this.reviews.has(preview.reviewId)) return;
+    this.reviews.set(preview.reviewId, { preview, createdAt: Date.now() });
   }
 
   private prune(): void {

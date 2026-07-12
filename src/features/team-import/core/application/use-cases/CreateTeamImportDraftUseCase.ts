@@ -21,14 +21,18 @@ export class CreateTeamImportDraftUseCase {
     const teamNameError = validateTeamImportName(teamName);
     if (teamNameError) throw new Error(`TEAM_IMPORT_VALIDATION:${teamNameError}`);
 
-    const preview = this.reviewStore.get(reviewId);
+    const preview = this.reviewStore.consume(reviewId);
     if (!preview) throw new Error('This import preview expired. Choose the folder again.');
     if (preview.blockingErrors.length > 0) {
       throw new Error(preview.blockingErrors[0]);
     }
 
-    await this.draftRepository.createDraft(teamName, preview);
-    this.reviewStore.delete(reviewId);
-    return { teamName };
+    try {
+      await this.draftRepository.createDraft(teamName, preview);
+      return { teamName };
+    } catch (error) {
+      this.reviewStore.restore(preview);
+      throw error;
+    }
   }
 }
