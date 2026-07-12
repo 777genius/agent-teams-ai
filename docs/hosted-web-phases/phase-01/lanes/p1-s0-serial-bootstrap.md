@@ -6,8 +6,8 @@
 - Contract phase/lane: `phase-01` / `p1-s0`
 - Controller: `docs/hosted-web-phases/phase-01/controller-packet.md`
 - Worker-start revision: `phase-01-s0-bootstrap-r1`
-- Status: the single current Phase 1 lane, admitted only by a validated worker-start contract and one
-  matching `queued` registry record
+- Status: the single current Phase 1 lane, admitted only through subscription-runtime's builtin
+  `worker-start-v1` boundary
 - Scope: metadata and evidence serial bootstrap only
 - Concurrency: one producer; no refill or successor provisioning
 
@@ -57,8 +57,8 @@ The S0 contract may grant write access only to these new files:
 - `docs/research/hosted-web/phase-1/bootstrap/estimate-allocation.json`
 - `docs/research/hosted-web/phase-1/bootstrap/bootstrap-report.md`
 
-All other repository paths are read-only. The worker-start contract must repeat these paths exactly;
-directory roots, globs, and implicit sibling authority are invalid.
+All other repository paths are read-only. The runtime `worker-start-v1` contract must repeat these
+paths exactly; directory roots, globs, and implicit sibling authority are invalid.
 
 ## Contract-listed references
 
@@ -82,10 +82,9 @@ permitted.
 
 ## Required checks
 
-- Validate the worker-start contract and its single matching queued admission record before work.
+- Confirm subscription-runtime `worker-start-v1` admission before work.
 - Run `node docs/research/hosted-web/phase-0/freeze/current-canonical/verify-indexes.mjs`.
 - Run `node docs/research/hosted-web/phase-0/estimate-reconciliation/verify-ledger.mjs`.
-- Run `node --test test/architecture/hosted-web/orchestration/worker-start-contract.test.mjs`.
 - Parse every created JSON file and verify deterministic ordering, exact paths, unique IDs, ownership
   disjointness, estimate arithmetic, and baseline fingerprints with contract-listed checks.
 - Run targeted lint for every changed script or test, Prettier on the exact changed paths,

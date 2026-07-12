@@ -21,7 +21,8 @@ The current route contains exactly these packets, in this order:
 1. `docs/hosted-web-phases/phase-01/controller-packet.md`
 2. `docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md`
 
-After both packets, read only the exact files in the validated worker-start contract. The proposal
+After both packets, read only the exact files in the subscription-runtime `worker-start-v1`
+contract. The proposal
 documents below remain reference-on-demand; their presence in this directory is not an unconditional
 reading queue:
 

@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "currentExecutablePhase": "phase-01",
   "currentExecutableSubphase": "P1.S0",
+  "workerStartAuthority": "hosting/subscription-runtime builtin worker-start-v1",
   "currentRoute": {
     "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
     "lanePackets": [
@@ -81,7 +82,7 @@
       },
       {
         "path": "docs/hosted-web-phases/ORCHESTRATION_GUARDS.md",
-        "role": "controller gate details"
+        "role": "hosted-worker responsibility boundary; admission and launch are owned by subscription-runtime worker-start-v1"
       },
       {
         "path": "docs/hosted-web-phases/phase-01/packet-inputs.md",
@@ -89,23 +90,23 @@
       },
       {
         "path": "docs/hosted-web-phases/phase-01/architecture-and-contracts.md",
-        "role": "Phase 1 boundary and contract proposal; read only when an exact worker-start contract lists it"
+        "role": "Phase 1 boundary and contract proposal; read only when the runtime worker-start-v1 contract lists it"
       },
       {
         "path": "docs/hosted-web-phases/phase-01/execution-dag.md",
-        "role": "proposed successor DAG and ownership; read only when an exact worker-start contract lists it"
+        "role": "proposed successor DAG and ownership; read only when the runtime worker-start-v1 contract lists it"
       },
       {
         "path": "docs/hosted-web-phases/phase-01/conformance-and-tests.md",
-        "role": "Phase 1 conformance proposal; read only when an exact worker-start contract lists it"
+        "role": "Phase 1 conformance proposal; read only when the runtime worker-start-v1 contract lists it"
       },
       {
         "path": "docs/hosted-web-phases/phase-01/operations-and-risk.md",
-        "role": "Phase 1 operations proposal; read only when an exact worker-start contract lists it"
+        "role": "Phase 1 operations proposal; read only when the runtime worker-start-v1 contract lists it"
       },
       {
         "path": "docs/hosted-web-phases/phase-01/execution-packet-templates.md",
-        "role": "blocked successor packet templates; read only when an exact worker-start contract lists it"
+        "role": "blocked successor packet templates; read only when the runtime worker-start-v1 contract lists it"
       }
     ],
     "historical-preserved": [

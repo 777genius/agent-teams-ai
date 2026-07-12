@@ -6,9 +6,9 @@ new sandbox/test project or an explicitly test-only existing project.
 
 Existing phase scripts and their outputs are retained as agent evidence. Do not delete, move,
 truncate, or rewrite them while organizing newer evidence. Record authority, hashes, regeneration,
-review disposition, and supersession in the catalog contract described by
+review disposition, and supersession under
 `docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md`.
 
-The `orchestration/` directory contains dependency-free catalog, worker-start, and work-registry
-contract gates. See `scripts/hosted-web/orchestration/README.md`. These repository checks do not
-replace the separately required durable shared-runtime enforcement.
+Hosted-worker orchestration is not implemented in this repository. Admission and launch use
+subscription-runtime's builtin `worker-start-v1` boundary; scripts retained here are product evidence
+producers and probes only.

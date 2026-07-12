@@ -2,10 +2,9 @@
 
 ## One catalog, explicit authority
 
-Every catalog row names one stable evidence ID and records its repository-relative path, phase, lane,
+Every evidence record names one stable evidence ID and records its repository-relative path, phase, lane,
 authority class, producer, producer base SHA, content SHA-256, regeneration command, review
 disposition, and supersession links. A file's directory or modification time never implies authority.
-The schema is `docs/hosted-web-phases/evidence-catalog.schema.json`.
 
 A supersession link transfers authority; it is not merely a provenance link. Therefore every row
 named by `supersededBy` must itself be `canonical` with an `approved` or
@@ -42,32 +41,12 @@ Raw observations may use `not-required` because review applies to the conclusion
 to whether the bytes were observed. Generated artifacts require a non-empty exact regeneration command.
 Other classes use `null` only when regeneration is impossible or inapplicable.
 
-## Catalog generation and validation
+## Evidence maintenance boundary
 
-The generator takes a metadata source, hashes the referenced files, sorts rows by evidence ID, and
-writes deterministic JSON. The source has the catalog shape but omits each row's `sha256`; the
-generator is the only authority for those hashes. It never changes an evidence artifact or overwrites
-an existing output path:
-
-```text
-node scripts/hosted-web/orchestration/generate-evidence-catalog.mjs \
-  --source <metadata-source.json> \
-  --output <generated-catalog.json> \
-  --repo-root <repository-root>
-```
-
-Validate a catalog and re-hash every referenced file with:
-
-```text
-node scripts/hosted-web/orchestration/validate-evidence-catalog.mjs \
-  --catalog <generated-catalog.json> \
-  --repo-root <repository-root>
-```
-
-Generation fails on missing files, duplicate IDs or paths, invalid authority/disposition combinations,
-unsafe paths, malformed SHAs, or broken supersession links. Validation additionally fails on stale
-content hashes and a canonical SHA other than
-`42ec333848e29e97c41699b9fed73ed199740e3f`.
+Existing evidence and its recorded hashes, dispositions, and historical regeneration commands remain
+frozen. Historical commands are provenance only, not executable instructions. New evidence must be
+created at a new exact path and reviewed through the current controller and lane packets. The product
+repository does not provide a hosted-worker evidence-catalog generator or orchestration validator.
 
 ## Correction and supersession
 
@@ -76,7 +55,7 @@ content hashes and a canonical SHA other than
 3. Record its producer, base SHA, hash, regeneration command, and review disposition.
 4. After adoption, classify the old row as `superseded`, set its disposition to `superseded`, set
    `supersededBy` to the new ID, and add the old ID to the new row's `supersedes` list.
-5. Validate the entire catalog before using the replacement as an input to a packet or worker.
+5. Review the complete evidence record before using the replacement as an input to a packet or worker.
 
-Catalog generation and validation are non-destructive. They never delete, move, truncate, or rewrite
-archived evidence.
+Evidence maintenance is non-destructive. It never deletes, moves, truncates, or rewrites archived
+evidence.

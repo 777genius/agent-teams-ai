@@ -15,9 +15,9 @@ Read only this bounded sequence before working:
 2. This file.
 3. `docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md`.
 4. `docs/hosted-web-phases/README.md`, then `docs/hosted-web-phases/EXECUTION_INDEX.json`.
-5. The current controller packet named by the validated worker-start contract. The compact router
-   currently authorizes only Phase 1 serial bootstrap `P1.S0`.
-6. The one assigned lane packet, followed only by the exact files in that contract's
+5. The current controller packet named by the subscription-runtime `worker-start-v1` contract. The
+   compact router currently authorizes only Phase 1 serial bootstrap `P1.S0`.
+6. The one assigned lane packet, followed only by the exact files in that runtime contract's
    `mandatoryDocs`, `mandatoryScripts`, and `mandatoryFixtures` lists.
 
 Do not recursively explore documentation or evidence directories. In particular,
@@ -27,16 +27,10 @@ recursive patterns are invalid mandatory reads.
 
 ## Start gate
 
-Before launch, run the bounded worker-start validator, then validate its single queued registry
-record:
-
-```text
-node scripts/hosted-web/orchestration/validate-worker-start.mjs --contract <absolute-contract-path>
-node scripts/hosted-web/orchestration/validate-worker-admission.mjs --contract <absolute-contract-path> --state <absolute-state-path>
-```
-
-The contract must bind the current controller packet, exactly one lane packet, and the bounded read
-set above. Validation success is admission evidence; it is not permission to use a real project.
+Before launch, the hosting controller must admit the work through subscription-runtime's builtin
+`worker-start-v1` boundary. The runtime contract must bind the current controller packet, exactly one
+lane packet, and the bounded read set above. Runtime admission is not permission to use a real
+project. This repository contains no hosted-worker admission or launch implementation.
 
 ## Authority and preservation
 

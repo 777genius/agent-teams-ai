@@ -7,9 +7,9 @@ not redefine product architecture or turn preserved evidence into worker instruc
 
 1. Read the baseline in `START_HERE.md`.
 2. Confirm the tier and phase status in [`EXECUTION_INDEX.json`](EXECUTION_INDEX.json).
-3. Read the current controller packet named by the worker-start contract.
+3. Read the current controller packet named by the subscription-runtime `worker-start-v1` contract.
 4. Read exactly one assigned lane packet.
-5. Read only exact lane references listed in that validated contract.
+5. Read only exact lane references listed in that runtime contract.
 
 On conflict, stop with `packet_conflict`. A packet or directive may narrow its authority but may not
 broaden scope, change an ADR, weaken a guardrail, or skip an exit gate.
@@ -20,7 +20,7 @@ Phase 0 is accepted and frozen at `f4fa24aac9615a4ce10632965a2244a2e11a273e`. It
 and W1-W6 lanes are preserved history, not executable work.
 
 Phase 1 is current, but authorization is deliberately limited to serial bootstrap `P1.S0`. A
-validated worker-start contract must bind the current
+subscription-runtime `worker-start-v1` contract must bind the current
 [`controller packet`](phase-01/controller-packet.md) and exactly one lane packet: the compact
 [`P1.S0 serial-bootstrap packet`](phase-01/lanes/p1-s0-serial-bootstrap.md). Only after those two
 packets may the worker read exact contract-listed references. No `P1.S1` or later producer may start
@@ -35,6 +35,7 @@ retained unchanged under [`EVIDENCE_LIFECYCLE.md`](EVIDENCE_LIFECYCLE.md).
 
 ## Start and completion
 
-The controller admits the one S0 worker only after the bounded worker-start validator and the registry
-admission gate both succeed for exactly one `queued` record. Completion states are `verified`,
-`characterized`, `blocked`, `failed`, or `superseded`; vague states such as `done` are not evidence.
+The hosting controller admits the one S0 worker only through subscription-runtime's builtin
+`worker-start-v1` boundary. Completion states are `verified`, `characterized`, `blocked`, `failed`,
+or `superseded`; vague states such as `done` are not evidence. This product repository supplies the
+packets and evidence inputs, not the hosted-worker orchestration engine.
