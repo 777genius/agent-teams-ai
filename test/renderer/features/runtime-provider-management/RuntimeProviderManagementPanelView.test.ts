@@ -114,6 +114,7 @@ function createActions(): RuntimeProviderManagementActions {
     submitOAuthCode: vi.fn(() => Promise.resolve()),
     submitConnect: vi.fn(() => Promise.resolve(true)),
     forgetProvider: vi.fn(() => Promise.resolve()),
+    openProviderCredentialPage: vi.fn(() => Promise.resolve()),
     openModelPicker: vi.fn(),
     closeModelPicker: vi.fn(),
     setModelQuery: vi.fn(),
@@ -1267,6 +1268,60 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(submitButton?.disabled).toBe(false);
   });
 
+  it('shows clear Xiaomi Token Plan key and region guidance', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+    const provider = {
+      ...state.view!.providers[0],
+      providerId: 'xiaomi-token-plan-ams',
+      displayName: 'Xiaomi MiMo Token Plan - Europe',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            view: { ...state.view!, providers: [provider] },
+            providers: [provider],
+            activeFormProviderId: provider.providerId,
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: provider.providerId,
+              displayName: provider.displayName,
+              method: 'api',
+              supported: true,
+              title: `Connect ${provider.displayName}`,
+              description:
+                'Copy the tp-... key from the Xiaomi Token Plan page. Use this provider only when that page shows https://token-plan-ams.xiaomimimo.com/v1 as the Base URL.',
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'curated',
+              secret: {
+                key: 'key',
+                label: 'Token Plan API Key (tp-...)',
+                placeholder: 'tp-xxxxx',
+                required: true,
+              },
+              prompts: [],
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Open Dedicated API Key page');
+    expect(host.textContent).toContain('Token Plan API Key (tp-...)');
+    expect(host.textContent).toContain('token-plan-ams.xiaomimimo.com');
+    expect(host.querySelector('input[placeholder="tp-xxxxx"]')).not.toBeNull();
+  });
+
   it('shows generic OAuth browser progress and keeps cancellation available', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -1334,7 +1389,7 @@ describe('RuntimeProviderManagementPanelView', () => {
               methodIndex: 0,
               phase: 'waiting-for-browser',
               completionMethod: 'auto',
-              instructions: 'Approve access in the browser window.',
+              instructions: 'Approve access in the browser window. Enter code A7F0-835A.',
               message: 'Your browser was opened. Finish authorization there.',
             },
           },
@@ -1348,6 +1403,9 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).toContain('SuperGrok subscription');
     expect(host.textContent).toContain('Your browser was opened. Finish authorization there.');
     expect(host.textContent).not.toContain('accounts.x.ai');
+    const genericCode = host.querySelector('[data-testid="runtime-provider-oauth-device-code"]');
+    expect(genericCode?.textContent).toContain('A7F0-835A');
+    expect(genericCode?.querySelector('button')).not.toBeNull();
     const cancelButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent?.trim() === 'Cancel'
     );
@@ -1426,6 +1484,8 @@ describe('RuntimeProviderManagementPanelView', () => {
     const code = host.querySelector('[data-testid="runtime-provider-oauth-device-code"]');
     expect(code?.textContent).toContain('Enter this code in xAI');
     expect(code?.textContent).toContain('C8ZB-RJ9G');
+    expect(code?.textContent).toContain('Waiting for confirmation - this updates automatically');
+    expect(code?.querySelector('.text-2xl')).not.toBeNull();
     expect(code?.querySelector('button')).not.toBeNull();
   });
 

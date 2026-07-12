@@ -1877,9 +1877,11 @@ export const ProviderRuntimeSettingsDialog = ({
               }}
             >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                  {selectedProvider.displayName}
-                </span>
+                {!showRuntimeProviderManagement ? (
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    {selectedProvider.displayName}
+                  </span>
+                ) : null}
                 <span
                   className="text-xs"
                   style={{

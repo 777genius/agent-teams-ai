@@ -140,7 +140,7 @@
       "runNow": "Corre ahora"
     },
     "empty": {
-      "description": "Cree un horario en cualquier equipo para automatizar la ejecución de tareas de Claude con expresiones cron. Los horarios de todos los equipos aparecerán aquí.",
+      "description": "Crea una programación en cualquier equipo para automatizar la ejecución de tareas del equipo con expresiones cron. Las programaciones de todos los equipos aparecerán aquí.",
       "noMatches": "Sin horarios coinciden con los filtros actuales",
       "title": "Sin tareas programadas"
     },

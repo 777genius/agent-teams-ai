@@ -1216,6 +1216,57 @@ a[href],
   );
 }
 
+/* One-shot confirmation sweep after dashboard rate limits finish refreshing */
+
+@keyframes dashboard-rate-limit-refresh {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+
+.dashboard-rate-limit-refreshed {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-rate-limit-refreshed::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  transform: translateX(-120%);
+  background: linear-gradient(
+    100deg,
+    transparent 15%,
+    rgba(134, 239, 172, 0.04) 35%,
+    rgba(134, 239, 172, 0.18) 50%,
+    rgba(134, 239, 172, 0.04) 65%,
+    transparent 85%
+  );
+  animation: dashboard-rate-limit-refresh 900ms ease-out 1;
+}
+
+:root.light .dashboard-rate-limit-refreshed::after {
+  background: linear-gradient(
+    100deg,
+    transparent 15%,
+    rgba(22, 101, 52, 0.03) 35%,
+    rgba(22, 101, 52, 0.12) 50%,
+    rgba(22, 101, 52, 0.03) 65%,
+    transparent 85%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-rate-limit-refreshed::after {
+    display: none;
+  }
+}
+
 /* Optional field label — muted text for non-required form fields */
 
 .label-optional {

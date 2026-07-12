@@ -1,6 +1,16 @@
 export type RuntimeProviderManagementRuntimeId = 'opencode';
 
-export type RuntimeProviderCompanionIdDto = 'kiro-cli';
+export const RUNTIME_PROVIDER_COMPANION_IDS = ['kiro-cli', 'cursor-agent'] as const;
+
+export type RuntimeProviderCompanionIdDto = (typeof RUNTIME_PROVIDER_COMPANION_IDS)[number];
+
+const RUNTIME_PROVIDER_COMPANION_ID_SET = new Set<string>(RUNTIME_PROVIDER_COMPANION_IDS);
+
+export function isRuntimeProviderCompanionId(
+  value: unknown
+): value is RuntimeProviderCompanionIdDto {
+  return typeof value === 'string' && RUNTIME_PROVIDER_COMPANION_ID_SET.has(value);
+}
 
 export type RuntimeProviderCompanionPhaseDto =
   | 'checking'
@@ -371,6 +381,11 @@ export interface RuntimeProviderModelDto {
   proofState?: RuntimeProviderModelProofStateDto;
   requiresExecutionProof?: boolean;
   accessReason?: string | null;
+  catalogContextTokens?: number | null;
+  catalogOutputTokens?: number | null;
+  managedContextTokens?: number | null;
+  managedOutputTokens?: number | null;
+  managedUpdatedAt?: string | null;
 }
 
 export interface RuntimeProviderManagementModelsDto {
@@ -486,4 +501,31 @@ export interface RuntimeProviderManagementSetDefaultModelInput {
   probe?: boolean;
   scope?: RuntimeProviderDefaultScopeDto;
   projectPath?: string | null;
+}
+
+export interface RuntimeProviderManagementConfigureModelLimitsInput {
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  providerId: string;
+  modelId: string;
+  contextTokens: number;
+  outputTokens: number;
+  projectPath?: string | null;
+}
+
+export interface RuntimeProviderModelLimitsResultDto {
+  providerId: string;
+  modelId: string;
+  contextTokens: number;
+  outputTokens: number;
+  saved: boolean;
+  verified: boolean;
+  message: string;
+  diagnostics: readonly string[];
+}
+
+export interface RuntimeProviderManagementModelLimitsResponse {
+  schemaVersion: 1;
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  result?: RuntimeProviderModelLimitsResultDto;
+  error?: RuntimeProviderManagementErrorDto;
 }

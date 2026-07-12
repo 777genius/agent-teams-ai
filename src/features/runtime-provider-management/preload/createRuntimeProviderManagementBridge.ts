@@ -3,6 +3,7 @@ import {
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_PROGRESS,
   RUNTIME_PROVIDER_COMPANION_STATUS,
+  RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
   RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY,
@@ -22,6 +23,7 @@ import type {
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementCancelOAuthInput,
+  RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
   RuntimeProviderManagementDirectoryResponse,
@@ -30,6 +32,7 @@ import type {
   RuntimeProviderManagementLoadModelsInput,
   RuntimeProviderManagementLoadSetupFormInput,
   RuntimeProviderManagementLoadViewInput,
+  RuntimeProviderManagementModelLimitsResponse,
   RuntimeProviderManagementModelsResponse,
   RuntimeProviderManagementModelTestResponse,
   RuntimeProviderManagementOAuthControlResponse,
@@ -103,6 +106,10 @@ export function createRuntimeProviderManagementBridge(
       input: RuntimeProviderManagementSetDefaultModelInput
     ): Promise<RuntimeProviderManagementViewResponse> =>
       ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL, input),
+    configureModelLimits: (
+      input: RuntimeProviderManagementConfigureModelLimitsInput
+    ): Promise<RuntimeProviderManagementModelLimitsResponse> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS, input),
     submitOAuthCode: (
       input: RuntimeProviderManagementSubmitOAuthCodeInput
     ): Promise<RuntimeProviderManagementOAuthControlResponse> =>

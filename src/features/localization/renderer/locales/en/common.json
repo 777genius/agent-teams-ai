@@ -140,7 +140,7 @@
       "runNow": "Run now"
     },
     "empty": {
-      "description": "Create a schedule on any team to automate Claude task execution with cron expressions. Schedules from all teams will appear here.",
+      "description": "Create a schedule on any team to automate team task execution with cron expressions. Schedules from all teams will appear here.",
       "noMatches": "No schedules match the current filters",
       "title": "No scheduled tasks"
     },

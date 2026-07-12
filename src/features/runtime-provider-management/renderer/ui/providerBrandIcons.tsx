@@ -691,7 +691,7 @@ export function ProviderBrandIcon({
       aria-hidden="true"
       className={
         isLarge
-          ? 'runtime-provider-brand-icon inline-flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border'
+          ? 'runtime-provider-brand-icon inline-flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border'
           : 'runtime-provider-brand-icon inline-flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md border'
       }
       style={shellStyle(renderedDescriptor)}
@@ -700,7 +700,7 @@ export function ProviderBrandIcon({
         <img
           src={renderedDescriptor.src}
           alt=""
-          className={isLarge ? 'size-6 object-contain' : 'size-5 object-contain'}
+          className="size-5 object-contain"
           draggable={false}
           onError={() => setImageFailed(true)}
         />
@@ -708,7 +708,7 @@ export function ProviderBrandIcon({
       {renderedDescriptor.kind === 'svg' ? (
         <svg
           viewBox={renderedDescriptor.viewBox}
-          className={isLarge ? 'size-[22px]' : 'size-[18px]'}
+          className={isLarge ? 'size-5' : 'size-[18px]'}
           focusable="false"
         >
           {renderedDescriptor.paths.map((path) => (

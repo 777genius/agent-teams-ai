@@ -15,6 +15,8 @@ import type { JSX } from 'react';
 
 interface RuntimeProviderCompanionSetupDialogProps {
   open: boolean;
+  title: string;
+  description: string;
   status: RuntimeProviderCompanionStatusDto | null;
   busy: boolean;
   onOpenChange: (open: boolean) => void;
@@ -36,6 +38,8 @@ const BUSY_PHASES = new Set<RuntimeProviderCompanionStatusDto['phase']>([
 
 export const RuntimeProviderCompanionSetupDialog = ({
   open,
+  title,
+  description,
   status,
   busy,
   onOpenChange,
@@ -56,8 +60,8 @@ export const RuntimeProviderCompanionSetupDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[min(92vw,31rem)] gap-4 p-5">
         <DialogHeader>
-          <DialogTitle>{t('cliStatus.quickConnect.kiroSetupTitle')}</DialogTitle>
-          <DialogDescription>{t('cliStatus.quickConnect.kiroSetupDescription')}</DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div

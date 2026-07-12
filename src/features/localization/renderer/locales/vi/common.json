@@ -140,7 +140,7 @@
       "runNow": "Chạy ngay"
     },
     "empty": {
-      "description": "Tạo lịch trên bất kỳ đội ngũ nào để tự động hóa việc thực thi tác vụ Claude bằng biểu thức cron. Lịch từ tất cả các đội ngũ sẽ xuất hiện ở đây.",
+      "description": "Tạo lịch cho bất kỳ nhóm nào để tự động hóa việc thực thi tác vụ của nhóm bằng biểu thức cron. Lịch từ tất cả các nhóm sẽ xuất hiện ở đây.",
       "noMatches": "Không có lịch nào khớp với bộ lọc hiện tại",
       "title": "Không có tác vụ theo lịch"
     },

@@ -147,6 +147,7 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
               context: 32768,
               limits: null,
               free: false,
+              releaseDate: '2026-05-20',
               opencode: {
                 providerId: 'llama.cpp',
                 modelId: 'qwen-test:0.5b',
@@ -177,6 +178,7 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
       requiresExecutionProof: true,
       reason: 'Execution proof required',
     });
+    expect(provider.modelCatalog?.models[0]?.metadata?.releaseDate).toBe('2026-05-20');
   });
 
   test('ignores Anthropic subscription rate limits for API key auth', () => {

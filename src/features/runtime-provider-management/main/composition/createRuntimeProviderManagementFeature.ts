@@ -1,18 +1,22 @@
+import { RuntimeProviderCompanionCoordinator } from '../application/RuntimeProviderCompanionCoordinator';
 import {
   AgentTeamsRuntimeProviderManagementCliClient,
   type RuntimeProviderOAuthClientDependencies,
 } from '../infrastructure/AgentTeamsRuntimeProviderManagementCliClient';
+import { createRuntimeProviderCompanionRegistry } from '../infrastructure/cli-companion/createRuntimeProviderCompanionRegistry';
 import {
   KiroCliCompanionService,
   type KiroCliCompanionServiceDependencies,
 } from '../infrastructure/KiroCliCompanionService';
 
 import type { RuntimeProviderManagementPort } from '../../core/application';
+import type { RuntimeProviderCompanionRegistry } from '../infrastructure/cli-companion/types';
 import type {
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementApi,
   RuntimeProviderManagementCancelOAuthInput,
+  RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
   RuntimeProviderManagementDirectoryResponse,
@@ -21,6 +25,7 @@ import type {
   RuntimeProviderManagementLoadModelsInput,
   RuntimeProviderManagementLoadSetupFormInput,
   RuntimeProviderManagementLoadViewInput,
+  RuntimeProviderManagementModelLimitsResponse,
   RuntimeProviderManagementModelsResponse,
   RuntimeProviderManagementModelTestResponse,
   RuntimeProviderManagementOAuthControlResponse,
@@ -35,61 +40,46 @@ import type {
 
 export type RuntimeProviderManagementFeatureFacade = RuntimeProviderManagementApi;
 
-function assertKiroCompanion(input: RuntimeProviderCompanionInput): void {
-  if (!input || input.companionId !== 'kiro-cli') {
-    throw new Error('Unsupported runtime provider companion');
-  }
-}
-
 export function createRuntimeProviderManagementFeature(
   deps: {
     port?: RuntimeProviderManagementPort;
+    companionRegistry?: RuntimeProviderCompanionRegistry;
+    /** @deprecated Use companionRegistry. Kept for focused tests and packaged integrations. */
     companionService?: KiroCliCompanionService;
   } & RuntimeProviderOAuthClientDependencies &
     Pick<KiroCliCompanionServiceDependencies, 'emitProgress'> = {}
 ): RuntimeProviderManagementFeatureFacade {
   const port = deps.port ?? new AgentTeamsRuntimeProviderManagementCliClient(deps);
-  const companionService =
-    deps.companionService ?? new KiroCliCompanionService({ emitProgress: deps.emitProgress });
-
-  const verifyConnectedCompanion = async (
-    input: RuntimeProviderCompanionInput,
-    status: RuntimeProviderCompanionStatusDto
-  ): Promise<RuntimeProviderCompanionStatusDto> => {
-    if (!status.authenticated) return status;
-    companionService.setModelVerificationPending();
-    const response = await port.testModel({
-      runtimeId: 'opencode',
-      providerId: 'kiro',
-      modelId: 'kiro/auto',
-      projectPath: input.projectPath ?? null,
-    });
-    const ok = response.result?.ok === true && response.result.availability === 'available';
-    const detail =
-      response.result?.message ??
-      response.error?.message ??
-      (ok ? 'Kiro completed a verified OpenCode request.' : 'OpenCode could not verify kiro/auto.');
-    return companionService.setModelVerificationResult(ok, detail);
-  };
+  const companionRegistry =
+    deps.companionRegistry ??
+    (() => {
+      const defaultRegistry = createRuntimeProviderCompanionRegistry({
+        emitProgress: deps.emitProgress,
+      });
+      return deps.companionService
+        ? new Map(defaultRegistry).set('kiro-cli', {
+            service: deps.companionService,
+            verification: { providerId: 'kiro', modelId: 'kiro/auto' },
+          })
+        : defaultRegistry;
+    })();
+  const companionCoordinator = new RuntimeProviderCompanionCoordinator(port, companionRegistry);
 
   return {
     getCompanionStatus: async (
       input: RuntimeProviderCompanionInput
     ): Promise<RuntimeProviderCompanionStatusDto> => {
-      assertKiroCompanion(input);
-      return companionService.getStatus();
+      return companionCoordinator.getStatus(input);
     },
     installAndConnectCompanion: async (
       input: RuntimeProviderCompanionInput
     ): Promise<RuntimeProviderCompanionStatusDto> => {
-      assertKiroCompanion(input);
-      return verifyConnectedCompanion(input, await companionService.installAndConnect());
+      return companionCoordinator.installAndConnect(input);
     },
     connectCompanion: async (
       input: RuntimeProviderCompanionInput
     ): Promise<RuntimeProviderCompanionStatusDto> => {
-      assertKiroCompanion(input);
-      return verifyConnectedCompanion(input, await companionService.connect());
+      return companionCoordinator.connect(input);
     },
     onCompanionProgress: (): (() => void) => () => {},
     loadView: (
@@ -119,6 +109,9 @@ export function createRuntimeProviderManagementFeature(
     setDefaultModel: (
       input: RuntimeProviderManagementSetDefaultModelInput
     ): Promise<RuntimeProviderManagementViewResponse> => port.setDefaultModel(input),
+    configureModelLimits: (
+      input: RuntimeProviderManagementConfigureModelLimitsInput
+    ): Promise<RuntimeProviderManagementModelLimitsResponse> => port.configureModelLimits(input),
     submitOAuthCode: (
       input: RuntimeProviderManagementSubmitOAuthCodeInput
     ): Promise<RuntimeProviderManagementOAuthControlResponse> => port.submitOAuthCode(input),

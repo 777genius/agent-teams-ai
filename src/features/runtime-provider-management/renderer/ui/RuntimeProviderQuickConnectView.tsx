@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Info,
   Loader2,
+  Plus,
   RefreshCw,
   Settings2,
 } from 'lucide-react';
@@ -81,31 +82,46 @@ const CardStateIcon = ({ state }: { state: RuntimeProviderQuickPlanState }): JSX
   return <span className="size-1.5 rounded-full bg-current" />;
 };
 
-const QuickProviderCard = ({ card }: { card: RuntimeProviderQuickCardViewModel }): JSX.Element => {
+const QuickProviderCard = ({
+  card,
+  isLastDesktopRow,
+  disabled,
+}: {
+  card: RuntimeProviderQuickCardViewModel;
+  isLastDesktopRow: boolean;
+  disabled: boolean;
+}): JSX.Element => {
   return (
     <article
       data-testid={`provider-quick-card-${card.id}`}
-      className="relative grid min-h-[4.125rem] grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[auto_auto] content-center items-center gap-x-2.5 gap-y-0 overflow-hidden rounded-lg border p-2.5 transition-colors hover:border-[var(--color-border-emphasis)]"
-      style={{
-        borderColor: 'var(--color-border-subtle)',
-        backgroundColor: 'color-mix(in srgb, var(--color-surface-raised) 76%, transparent)',
-      }}
+      data-disabled={disabled ? 'true' : undefined}
+      className={cn(
+        'relative grid min-h-20 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[auto_auto] content-center items-center gap-x-3 overflow-hidden border-b px-3 py-3.5 last:border-b-0 sm:px-4',
+        isLastDesktopRow ? 'md:border-b-0' : 'md:border-b',
+        disabled ? 'bg-white/[0.012]' : null
+      )}
+      style={{ borderColor: 'var(--color-border-subtle)' }}
     >
-      <div className="row-span-2 self-center">
+      <div className={cn('row-span-2 self-center', disabled ? 'opacity-50 grayscale' : null)}>
         <ProviderBrandIcon
           provider={{ providerId: card.providerId, displayName: card.displayName }}
           size="large"
         />
       </div>
-      <div className="col-span-2 col-start-2 row-start-1 flex min-w-0 items-center gap-1">
-        <p className="truncate text-xs font-semibold" style={{ color: 'var(--color-text)' }}>
+      <div
+        className={cn(
+          'col-start-2 row-start-1 flex min-w-0 items-center gap-1.5',
+          card.actionLabel && card.onAction ? null : 'col-span-2'
+        )}
+      >
+        <p className="truncate text-xs font-medium" style={{ color: 'var(--color-text)' }}>
           {card.displayName}
         </p>
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               type="button"
-              aria-label={`About ${card.displayName}`}
+              aria-label={`${card.displayName}: ${card.description}`}
               className="inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70"
             >
               <Info className="size-3.5" />
@@ -122,9 +138,9 @@ const QuickProviderCard = ({ card }: { card: RuntimeProviderQuickCardViewModel }
       </div>
       <span
         className={cn(
-          'col-start-2 row-start-2 flex min-w-0 -translate-y-0.5 items-center gap-1.5 text-[10px] font-medium',
+          'col-start-2 row-start-2 flex min-w-0 items-center gap-1.5 text-xs',
           !card.actionLabel || !card.onAction ? 'col-span-2' : null,
-          cardStateClassName(card.state)
+          disabled ? 'text-[var(--color-text-muted)]' : cardStateClassName(card.state)
         )}
         title={card.stateLabel}
       >
@@ -135,27 +151,30 @@ const QuickProviderCard = ({ card }: { card: RuntimeProviderQuickCardViewModel }
         <Button
           type="button"
           data-testid={`provider-quick-action-${card.id}`}
-          variant="outline"
+          variant="ghost"
           size="sm"
-          className="col-start-3 row-start-2 h-6 shrink-0 -translate-y-0.5 px-2 text-[10px]"
+          className="col-start-3 row-span-2 row-start-1 h-7 shrink-0 self-center px-2 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+          disabled={disabled}
           onClick={card.onAction}
         >
           {card.state === 'update-required' ? (
             <Download className="mr-1 size-3" />
-          ) : (
+          ) : card.state === 'connected' || card.state === 'manual' ? (
             <Settings2 className="mr-1 size-3" />
+          ) : (
+            <Plus className="mr-1 size-3" />
           )}
           {card.actionLabel}
         </Button>
       ) : null}
-      {card.progress ? (
+      {card.progress && card.state !== 'connected' ? (
         <div
           className="absolute inset-x-0 bottom-0 h-0.5 bg-black/20"
           title={card.progress.detail ?? `${card.progress.percent}%`}
         >
           <div
             role="progressbar"
-            aria-label={`${card.displayName} setup progress`}
+            aria-label={card.stateLabel}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={card.progress.percent}
@@ -185,6 +204,8 @@ const OpenCodePrerequisite = ({
   const busy = gate === 'checking' || gate === 'installing';
   const isError = gate === 'error';
   const percent = runtimeStatus?.progress?.percent;
+  const normalizedPercent =
+    typeof percent === 'number' ? Math.max(0, Math.min(100, percent)) : null;
   const detail =
     gate === 'missing'
       ? t('cliStatus.quickConnect.openCodeRequired')
@@ -199,13 +220,19 @@ const OpenCodePrerequisite = ({
   return (
     <div
       data-testid="provider-quick-opencode-prerequisite"
-      className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2.5"
+      className="relative mb-3 flex flex-wrap items-center justify-between gap-3 overflow-hidden rounded-lg border px-3 py-2.5"
       style={{
         borderColor: isError ? 'rgba(248, 113, 113, 0.32)' : 'rgba(56, 189, 248, 0.25)',
         backgroundColor: isError ? 'rgba(248, 113, 113, 0.06)' : 'rgba(56, 189, 248, 0.05)',
       }}
     >
-      <div className="flex min-w-0 items-center gap-2.5">
+      <div
+        className="flex min-w-0 items-center gap-2.5"
+        role={isError ? 'alert' : 'status'}
+        aria-live={isError ? 'assertive' : 'polite'}
+        aria-atomic="true"
+        aria-busy={busy}
+      >
         {busy ? (
           <Loader2 className="size-4 shrink-0 animate-spin text-sky-300" />
         ) : isError ? (
@@ -217,7 +244,10 @@ const OpenCodePrerequisite = ({
           <p className="text-[11px] font-semibold" style={{ color: 'var(--color-text)' }}>
             {t('cliStatus.quickConnect.openCodeTitle')}
           </p>
-          <p className="truncate text-[10.5px]" style={{ color: 'var(--color-text-muted)' }}>
+          <p
+            className="text-pretty text-[10.5px] leading-4"
+            style={{ color: 'var(--color-text-muted)' }}
+          >
             {detail}
           </p>
         </div>
@@ -229,6 +259,22 @@ const OpenCodePrerequisite = ({
             ? t('cliStatus.quickConnect.retryOpenCode')
             : t('cliStatus.quickConnect.installOpenCode')}
         </Button>
+      ) : null}
+      {gate === 'installing' && normalizedPercent !== null ? (
+        <div
+          role="progressbar"
+          aria-label={t('cliStatus.quickConnect.openCodeInstalling')}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={normalizedPercent}
+          aria-valuetext={detail}
+          className="absolute inset-x-0 bottom-0 h-0.5 bg-black/20"
+        >
+          <div
+            className="h-full bg-sky-400 transition-[width] duration-300"
+            style={{ width: `${normalizedPercent}%` }}
+          />
+        </div>
       ) : null}
     </div>
   );
@@ -266,6 +312,9 @@ export const RuntimeProviderQuickConnectView = ({
       className="mt-3 border-t pt-3"
       style={{ borderColor: 'var(--color-border-subtle)' }}
     >
+      <span role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {gate === 'ready' ? `OpenCode: ${t('cliStatus.quickConnect.connected')}` : ''}
+      </span>
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3
@@ -285,6 +334,7 @@ export const RuntimeProviderQuickConnectView = ({
             variant="ghost"
             size="sm"
             className="h-7 px-2 text-[10.5px]"
+            disabled={gate !== 'ready'}
             onClick={onBrowseProviders}
           >
             {t('cliStatus.quickConnect.browseAll')}
@@ -319,12 +369,14 @@ export const RuntimeProviderQuickConnectView = ({
       ) : null}
 
       <TooltipProvider delayDuration={180}>
-        <div
-          className="grid gap-2"
-          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 16rem), 1fr))' }}
-        >
-          {cards.map((card) => (
-            <QuickProviderCard key={card.id} card={card} />
+        <div className="grid grid-cols-1 md:grid-cols-2">
+          {cards.map((card, index) => (
+            <QuickProviderCard
+              key={card.id}
+              card={card}
+              isLastDesktopRow={index >= cards.length - (cards.length % 2 || 2)}
+              disabled={gate !== 'ready'}
+            />
           ))}
         </div>
       </TooltipProvider>

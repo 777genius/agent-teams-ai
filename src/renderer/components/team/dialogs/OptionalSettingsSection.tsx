@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { cn } from '@renderer/lib/utils';
-import { ChevronRight, Settings2 } from 'lucide-react';
+import { ChevronDown, Settings2 } from 'lucide-react';
 
 interface OptionalSettingsSectionProps {
   title: string;
@@ -70,6 +70,7 @@ export const OptionalSettingsSection = ({
   const { t } = useAppTranslation('team');
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const { isLight } = useTheme();
+  const contentId = useId();
 
   const chips = useMemo(() => {
     const result: string[] = [];
@@ -91,13 +92,13 @@ export const OptionalSettingsSection = ({
     return Math.max(0, total - chips.length);
   }, [summary, chips.length]);
 
-  const containerBackground = isLight
-    ? 'color-mix(in srgb, var(--color-surface-overlay) 30%, white 70%)'
-    : 'var(--color-surface-overlay)';
-
   const contentBackground = isLight
-    ? 'color-mix(in srgb, var(--color-surface-overlay) 52%, white 48%)'
-    : 'color-mix(in srgb, var(--color-surface-raised) 88%, black 12%)';
+    ? 'color-mix(in srgb, var(--color-surface-overlay) 22%, transparent)'
+    : 'color-mix(in srgb, var(--color-surface-raised) 54%, transparent)';
+
+  const contentAccent = isLight
+    ? 'color-mix(in srgb, var(--color-accent) 42%, var(--color-border-emphasis))'
+    : 'color-mix(in srgb, var(--color-accent) 30%, var(--color-border-emphasis))';
 
   const headerTitleColor = isLight
     ? 'var(--color-text)'
@@ -118,27 +119,15 @@ export const OptionalSettingsSection = ({
   };
 
   return (
-    <div
-      className={cn(
-        'overflow-hidden rounded-lg border border-[var(--color-border-emphasis)] shadow-sm',
-        className
-      )}
-      style={{
-        backgroundColor: containerBackground,
-      }}
-    >
+    <div className={cn('border-y border-[var(--color-border)]', className)}>
       <button
         type="button"
-        className="flex w-full items-center gap-3 p-2.5 text-left transition-colors hover:bg-[var(--color-surface-raised)]"
+        className="flex min-h-12 w-full items-center gap-2.5 px-2 py-2 text-left transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--color-border-emphasis)]"
         onClick={handleToggleOpen}
         aria-expanded={isOpen}
+        aria-controls={contentId}
       >
-        <div
-          className="flex size-8 shrink-0 items-center justify-center rounded-md border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)]"
-          style={{ color: headerIconColor }}
-        >
-          <Settings2 className="size-3.5" />
-        </div>
+        <Settings2 className="size-4 shrink-0" style={{ color: headerIconColor }} />
 
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="truncate text-sm font-medium" style={{ color: headerTitleColor }}>
@@ -185,17 +174,22 @@ export const OptionalSettingsSection = ({
           ) : null}
         </div>
 
-        <ChevronRight
-          className={cn('size-4 shrink-0 transition-transform duration-150', isOpen && 'rotate-90')}
+        <ChevronDown
+          className={cn(
+            'size-4 shrink-0 transition-transform duration-150',
+            isOpen && 'rotate-180'
+          )}
           style={{ color: headerIconColor }}
         />
       </button>
 
       {isOpen ? (
         <div
-          className="border-t border-[var(--color-border-emphasis)] px-3 pb-3 pt-2.5"
+          id={contentId}
+          className="border-l-2 border-t border-t-[var(--color-border)] px-4 pb-4 pt-3"
           style={{
             backgroundColor: contentBackground,
+            borderLeftColor: contentAccent,
           }}
         >
           {description ? (

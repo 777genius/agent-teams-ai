@@ -157,6 +157,10 @@ function buildRateLimitLabel(
   fallbackTitle: 'Primary left' | 'Secondary left' | 'Weekly left',
   windowDurationMins: number | null | undefined
 ): string {
+  if (windowDurationMins === 10_080) {
+    return 'Weekly left';
+  }
+
   const duration = formatCodexWindowDuration(windowDurationMins);
   return duration ? `${duration} left` : fallbackTitle;
 }

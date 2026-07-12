@@ -183,6 +183,39 @@ const TEAM_PROVIDER_MODEL_ORDER: Record<SupportedProviderId, Map<string, number>
   ),
 };
 
+function extractComparableModelVersion(model: string): number[] | null {
+  const match = /(?:^|[^0-9])(\d+(?:[.-]\d+)*)(?:[^0-9]|$)/.exec(model);
+  if (!match?.[1]) {
+    return null;
+  }
+
+  const parts = match[1]
+    .split(/[.-]/)
+    .map(Number)
+    .filter((part) => Number.isFinite(part));
+  return parts.length > 0 ? parts : null;
+}
+
+/** Sorts dotted/dashed model versions newest-first without treating 5.10 as 5.1. */
+export function compareTeamModelVersionsDescending(left: string, right: string): number {
+  const leftVersion = extractComparableModelVersion(left);
+  const rightVersion = extractComparableModelVersion(right);
+  if (!leftVersion || !rightVersion) {
+    if (leftVersion) return -1;
+    if (rightVersion) return 1;
+    return 0;
+  }
+
+  const partCount = Math.max(leftVersion.length, rightVersion.length);
+  for (let index = 0; index < partCount; index += 1) {
+    const difference = (rightVersion[index] ?? 0) - (leftVersion[index] ?? 0);
+    if (difference !== 0) {
+      return difference;
+    }
+  }
+  return 0;
+}
+
 function getKnownTeamProviderModelOption(
   providerId: SupportedProviderId | undefined,
   model: string | undefined
@@ -605,6 +638,12 @@ export function sortTeamProviderModels(
   const order = TEAM_PROVIDER_MODEL_ORDER[providerId];
 
   const sorted = [...deduped].sort((left, right) => {
+    if (providerId === 'codex') {
+      const versionOrder = compareTeamModelVersionsDescending(left, right);
+      if (versionOrder !== 0) {
+        return versionOrder;
+      }
+    }
     const leftRank = order.get(left) ?? Number.MAX_SAFE_INTEGER;
     const rightRank = order.get(right) ?? Number.MAX_SAFE_INTEGER;
     if (leftRank !== rightRank) {

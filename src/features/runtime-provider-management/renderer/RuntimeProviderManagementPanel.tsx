@@ -79,7 +79,9 @@ export const RuntimeProviderManagementPanel = ({
   const [state, actions] = useRuntimeProviderManagement({
     runtimeId,
     enabled: open,
-    directoryPageSize: 100,
+    // Match the Dashboard quick-connect request so the main process can reuse
+    // its full-catalog cache when provider settings opens.
+    directoryPageSize: 250,
     loadViewOnEnable: false,
     searchDirectoryOnQueryChange: false,
     projectPath: activeProjectPath,

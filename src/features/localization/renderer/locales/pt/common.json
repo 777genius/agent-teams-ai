@@ -140,7 +140,7 @@
       "runNow": "Corre agora."
     },
     "empty": {
-      "description": "Crie um cronograma em qualquer equipe para automatizar a execução da tarefa de Claude com expressões cron. Os horários de todas as equipas aparecerão aqui.",
+      "description": "Crie um agendamento em qualquer equipa para automatizar a execução das tarefas da equipa com expressões cron. Os agendamentos de todas as equipas aparecerão aqui.",
       "noMatches": "Nenhum escalonamento corresponde aos filtros atuais",
       "title": "Sem tarefas agendadas"
     },

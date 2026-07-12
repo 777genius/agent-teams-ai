@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
-import { selectInitialProviderId } from '../../core/domain';
+import { getRuntimeProviderCredentialUrl, selectInitialProviderId } from '../../core/domain';
 import {
   getOpenCodeModelForNewTeams,
   saveOpenCodeModelForNewTeams,
@@ -106,6 +106,7 @@ export interface RuntimeProviderManagementActions {
   submitOAuthCode: () => Promise<void>;
   submitConnect: (providerId: string) => Promise<boolean>;
   forgetProvider: (providerId: string) => Promise<void>;
+  openProviderCredentialPage: (providerId: string) => Promise<void>;
   openModelPicker: (providerId: string, mode: RuntimeProviderModelPickerMode) => void;
   closeModelPicker: () => void;
   setModelQuery: (value: string) => void;
@@ -1224,6 +1225,13 @@ export function useRuntimeProviderManagement(
     [openModelPickerState]
   );
 
+  const openProviderCredentialPage = useCallback(async (providerId: string): Promise<void> => {
+    const credentialUrl = getRuntimeProviderCredentialUrl(providerId);
+    if (credentialUrl) {
+      await api.openExternal(credentialUrl);
+    }
+  }, []);
+
   const closeModelPicker = useCallback((): void => {
     closeModelPickerState();
   }, [closeModelPickerState]);
@@ -1578,6 +1586,7 @@ export function useRuntimeProviderManagement(
       submitOAuthCode,
       submitConnect,
       forgetProvider,
+      openProviderCredentialPage,
       openModelPicker,
       closeModelPicker,
       setModelQuery,
@@ -1591,6 +1600,7 @@ export function useRuntimeProviderManagement(
       closeModelPicker,
       forgetProvider,
       loadMoreDirectory,
+      openProviderCredentialPage,
       openModelPicker,
       refresh,
       refreshDirectory,

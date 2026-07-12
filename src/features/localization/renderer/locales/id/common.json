@@ -140,7 +140,7 @@
       "runNow": "Lari sekarang"
     },
     "empty": {
-      "description": "Buat jadwal pada setiap tim untuk mengotomatisasi eksekusi tugas Claude dengan ekspresi kron. Rencana dari semua tim akan muncul di sini.",
+      "description": "Buat jadwal pada tim mana pun untuk mengotomatiskan eksekusi tugas tim dengan ekspresi cron. Jadwal dari semua tim akan muncul di sini.",
       "noMatches": "Tidak ada jadwal yang cocok dengan filter saat ini",
       "title": "Tak ada tugas yang dijadwalkan"
     },

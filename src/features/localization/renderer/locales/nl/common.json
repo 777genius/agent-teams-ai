@@ -140,7 +140,7 @@
       "runNow": "Nu uitvoeren"
     },
     "empty": {
-      "description": "Maak op elk team een planning aan om de uitvoering van Claude-taken te automatiseren met cron-expressies. Planningen van alle teams verschijnen hier.",
+      "description": "Maak voor elk team een planning aan om de uitvoering van teamtaken te automatiseren met cron-expressies. Planningen van alle teams verschijnen hier.",
       "noMatches": "Geen planningen komen overeen met de huidige filters",
       "title": "Geen geplande taken"
     },

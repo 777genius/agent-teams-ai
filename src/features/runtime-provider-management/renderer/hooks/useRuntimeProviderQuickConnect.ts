@@ -64,7 +64,9 @@ export function useRuntimeProviderQuickConnect({
           projectPath,
           query: null,
           filter: 'all',
-          limit: 100,
+          // Quick-connect cards include curated providers near the end of the
+          // OpenCode catalog (for example Xiaomi MiMo regional plans).
+          limit: 250,
           cursor: null,
           refresh: refreshRequested,
         })

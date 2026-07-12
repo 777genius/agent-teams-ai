@@ -118,7 +118,7 @@
       "teamName": "Nama pasukan"
     },
     "launchAfterCreate": {
-      "description": "Mulakan pasukan serta-merta melalui Claude CLI tempatan.",
+      "description": "Mulakan pasukan dengan serta-merta menggunakan runtime ejen yang dikonfigurasikan untuknya.",
       "label": "Jalankan arahan selepas mencipta"
     },
     "localOnly": "Tersedia hanya dalam mod Electron tempatan.",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "Rakan pasukan sedia ada tidak boleh dinamakan semula semasa pasukan langsung. dinamakan semula: {{names}}",
       "memberNameEmpty": "Nama ahli tidak boleh kosong",
       "memberNameInvalid": "Nama ahli mesti bermula dengan alfanumerik, gunakan hanya [a-zA-Z0-9._-], maksimum 128 aksara",
-      "memberNameNumericSuffix": "Nama ahli \"{{name}}\" tidak dibenarkan (dikhaskan untuk akhiran auto Claude CLI). Gunakan \"{{base}}\" sebaliknya.",
+      "memberNameNumericSuffix": "Nama ahli \"{{name}}\" tidak dibenarkan (dikhaskan untuk akhiran angka yang diurus oleh runtime). Gunakan \"{{base}}\" sebaliknya.",
       "memberNameReserved": "Nama ahli \"{{name}}\" dikhaskan",
       "memberNamesUnique": "Nama ahli mesti unik sebelum menyimpan",
       "newLiveTeammates": "Tambah rakan pasukan baharu daripada dialog Tambah ahli khusus semasa pasukan langsung. Sunting Pasukan hanya menyokong mengemas kini rakan pasukan sedia ada.",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "Direktori kerja:"
     },
     "description": {
-      "createSchedule": "Jadualkan pelaksanaan tugasan Claude automatik",
+      "createSchedule": "Jadualkan pelaksanaan tugas ejen automatik",
       "createScheduleForTeam": "Jadualkan larian automatik untuk pasukan \"{{team}}\"",
       "editSchedule": "Menyunting jadual untuk pasukan \"{{team}}\"",
       "launchPrefix": "Mulakan pasukan",
-      "launchSuffix": "melalui Claude CLI tempatan.",
+      "launchSuffix": "menggunakan runtime ejen yang dikonfigurasikan untuknya.",
       "relaunchPrefix": "Hentikan larian semasa untuk",
-      "relaunchSuffix": "dan mulakannya semula melalui Claude CLI tempatan."
+      "relaunchSuffix": "dan mulakannya semula menggunakan runtime ejen yang dikonfigurasikan untuknya."
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "Prompt ini akan dihantar kepada",
       "oneShotSuffix": "untuk pelaksanaan sekali sahaja",
       "saved": "Disimpan",
-      "schedulePlaceholder": "Arahan untuk Claude laksanakan mengikut jadual...",
+      "schedulePlaceholder": "Arahan untuk ketua pasukan laksanakan mengikut jadual...",
       "teamLeadOptional": "Prompt untuk ketua pasukan (pilihan)",
       "teamLeadPlaceholder": "Arahan untuk ketua pasukan..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "Mesej merentas pasukan ke {{team}}...",
       "teamFallback": "pasukan",
       "placeholder": "Tulis mesej... (Enter untuk hantar, Shift+Enter untuk baris baharu)",
-      "slashTip": "Petua: Anda boleh gunakan \"/\" untuk menjalankan sebarang arahan Claude.",
+      "slashTip": "Petua: Gunakan \"/\" untuk menjalankan arahan yang disokong oleh runtime ketua pasukan.",
       "charsLeft_few": "{{count}} aksara berbaki",
       "charsLeft_many": "{{count}} aksara berbaki"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "Belum ada jadual",
-      "description": "Cipta jadual untuk menjalankan tugasan Claude secara automatik mengikut jadual cron."
+      "description": "Cipta jadual untuk menjalankan tugas pasukan secara automatik mengikut jadual cron."
     },
     "title": "Jadual",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "Betulkan kebenaran folder atau alihkan projek ke folder yang boleh ditulis pengguna. Berjalan sebagai pentadbir hanyalah penyelesaian sementara.",
         "openCodeBridgeNoOutput": "Mulakan semula aplikasi dan runtime OpenCode, kemudian cuba lagi. Jika berulang, salin diagnostik.",
         "workingDirectoryMissing": "Pilih direktori kerja yang wujud, kemudian buka semula dialog ini.",
-        "authenticationRequired": "Sahkan pembekal yang diperlukan dalam Claude CLI, kemudian buka semula dialog ini.",
+        "authenticationRequired": "Sahkan penyedia yang diperlukan dalam runtime yang dikonfigurasikan untuknya, kemudian buka semula dialog ini.",
         "runtimeProviderNotConfigured": "Konfigurasikan runtime pembekal yang dipilih, kemudian buka semula dialog ini.",
         "openCodeRuntimeMissing": "Pasang atau cuba semula runtime OpenCode daripada kad status pembekal, kemudian buka semula dialog ini.",
         "openCodeAppMcpUnreachable": "Cuba lancarkan semula untuk menyegarkan jambatan MCP aplikasi OpenCode. Jika berulang, mulakan semula aplikasi dan runtime OpenCode.",
-        "cliBinaryMissing": "Pastikan binari Claude CLI tempatan wujud dan boleh dimulakan, kemudian buka semula dialog ini.",
+        "cliBinaryMissing": "Pastikan runtime tempatan yang diperlukan telah dipasang dan boleh dimulakan, kemudian buka semula dialog ini.",
         "default": "Selesaikan isu di atas, kemudian buka semula dialog ini.",
         "openCodeNodeModulesSymlinkPermission": "Jalankan Agent Teams AI sebagai Pentadbir, kemudian cuba lancarkan semula."
       }

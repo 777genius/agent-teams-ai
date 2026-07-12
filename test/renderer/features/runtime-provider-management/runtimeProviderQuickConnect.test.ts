@@ -144,6 +144,23 @@ describe('runtimeProviderQuickConnect domain policy', () => {
     ).toBe('different-credential');
   });
 
+  it('accepts explicit plugin credential evidence for a configured Cursor route', () => {
+    expect(
+      resolveOpenCodeQuickPlanState({
+        entry: directoryEntry({
+          providerId: 'cursor-acp',
+          connectedAuthHint: 'api',
+          metadata: {
+            hasKnownModels: true,
+            requiresManualConfig: false,
+            supportedInlineAuth: false,
+            configuredAuthless: true,
+          },
+        }),
+      })
+    ).toBe('connected');
+  });
+
   it('requires an OpenCode update for SuperGrok unless OAuth is already connected', () => {
     expect(
       resolveOpenCodeQuickPlanState({

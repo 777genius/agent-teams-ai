@@ -1,4 +1,5 @@
 import {
+  compareTeamModelVersionsDescending,
   getTeamModelBadgeLabel,
   getVisibleTeamProviderModels,
   isAnthropicOneMillionContextTeamModel,
@@ -8,6 +9,19 @@ import {
 import { describe, expect, it } from 'vitest';
 
 describe('teamModelCatalog', () => {
+  it('sorts dotted model versions numerically newest-first', () => {
+    const models = ['gpt-5.5', 'gpt-5.10', 'gpt-5.6-luna', 'gpt-5.6-sol', 'glm-5', 'glm-4.7'];
+
+    expect(models.toSorted(compareTeamModelVersionsDescending)).toEqual([
+      'gpt-5.10',
+      'gpt-5.6-luna',
+      'gpt-5.6-sol',
+      'gpt-5.5',
+      'glm-5',
+      'glm-4.7',
+    ]);
+  });
+
   it('filters UI-disabled Codex models from provider badge lists', () => {
     expect(
       getVisibleTeamProviderModels('codex', [
@@ -166,11 +180,7 @@ describe('teamModelCatalog', () => {
     expect(
       getVisibleTeamProviderModels(
         'opencode',
-        [
-          'openai/gpt-5.4',
-          'opencode/big-pickle',
-          'openrouter/openai/gpt-oss-20b',
-        ],
+        ['openai/gpt-5.4', 'opencode/big-pickle', 'openrouter/openai/gpt-oss-20b'],
         {
           providerId: 'opencode',
           authMethod: 'opencode_managed',
@@ -238,11 +248,7 @@ describe('teamModelCatalog', () => {
           },
         }
       )
-    ).toEqual([
-      'opencode/big-pickle',
-      'openrouter/openai/gpt-oss-20b',
-      'openai/gpt-5.4',
-    ]);
+    ).toEqual(['opencode/big-pickle', 'openrouter/openai/gpt-oss-20b', 'openai/gpt-5.4']);
   });
 
   it('uses the OpenCode model catalog when the runtime model list is summary-only', () => {

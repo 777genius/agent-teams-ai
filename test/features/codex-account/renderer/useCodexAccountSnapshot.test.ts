@@ -428,7 +428,7 @@ describe('useCodexAccountSnapshot', () => {
     });
     const snapshot = createSnapshot();
     apiMocks.refreshCodexAccountSnapshot.mockResolvedValue(snapshot);
-    let refreshNow!: () => Promise<void>;
+    let refreshNow!: () => Promise<boolean>;
 
     const host = document.createElement('div');
     document.body.appendChild(host);

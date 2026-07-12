@@ -140,7 +140,7 @@
       "runNow": "Courez maintenant"
     },
     "empty": {
-      "description": "Créez un calendrier sur n'importe quelle équipe pour automatiser l'exécution des tâches Claude avec des expressions cron. Les horaires de toutes les équipes apparaîtront ici.",
+      "description": "Créez une planification pour n’importe quelle équipe afin d’automatiser l’exécution des tâches avec des expressions cron. Les planifications de toutes les équipes apparaîtront ici.",
       "noMatches": "Aucun calendrier ne correspond aux filtres actuels",
       "title": "Aucune tâche prévue"
     },

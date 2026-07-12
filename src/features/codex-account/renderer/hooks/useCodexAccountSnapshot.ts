@@ -61,7 +61,7 @@ export function useCodexAccountSnapshot(options: {
     includeRateLimits?: boolean;
     forceRefreshToken?: boolean;
     silent?: boolean;
-  }) => Promise<void>;
+  }) => Promise<boolean>;
   startChatgptLogin: (mode?: CodexChatgptLoginMode) => Promise<boolean>;
   cancelChatgptLogin: () => Promise<boolean>;
   logout: () => Promise<boolean>;
@@ -103,7 +103,7 @@ export function useCodexAccountSnapshot(options: {
       silent?: boolean;
     }) => {
       if (!electronMode || !options.enabled) {
-        return;
+        return false;
       }
 
       const silent = refreshOptions?.silent === true;
@@ -121,12 +121,14 @@ export function useCodexAccountSnapshot(options: {
           forceRefreshToken: refreshOptions?.forceRefreshToken,
         });
         applySnapshot(nextSnapshot);
+        return true;
       } catch (nextError) {
         if (!silent) {
           setError(
             nextError instanceof Error ? nextError.message : 'Failed to refresh Codex account'
           );
         }
+        return false;
       } finally {
         if (!silent) {
           setLoading(false);

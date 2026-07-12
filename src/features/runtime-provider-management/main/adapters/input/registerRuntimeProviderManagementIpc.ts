@@ -1,7 +1,9 @@
 import {
+  isRuntimeProviderCompanionId,
   RUNTIME_PROVIDER_COMPANION_CONNECT,
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_STATUS,
+  RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
   RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY,
@@ -21,6 +23,7 @@ import type {
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementCancelOAuthInput,
+  RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
   RuntimeProviderManagementDirectoryResponse,
@@ -30,6 +33,7 @@ import type {
   RuntimeProviderManagementLoadModelsInput,
   RuntimeProviderManagementLoadSetupFormInput,
   RuntimeProviderManagementLoadViewInput,
+  RuntimeProviderManagementModelLimitsResponse,
   RuntimeProviderManagementModelsResponse,
   RuntimeProviderManagementModelTestResponse,
   RuntimeProviderManagementOAuthControlResponse,
@@ -130,7 +134,13 @@ export function registerRuntimeProviderManagementIpc(
   const readCompanionInput = (
     input: RuntimeProviderCompanionInput
   ): RuntimeProviderCompanionInput => {
-    if (!input || input.companionId !== 'kiro-cli') {
+    if (
+      !input ||
+      !isRuntimeProviderCompanionId(input.companionId) ||
+      (input.projectPath !== undefined &&
+        input.projectPath !== null &&
+        typeof input.projectPath !== 'string')
+    ) {
       throw new Error('Unsupported runtime provider companion');
     }
     return input;
@@ -352,6 +362,48 @@ export function registerRuntimeProviderManagementIpc(
   );
 
   ipcMain.handle(
+    RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
+    async (
+      _event,
+      input: RuntimeProviderManagementConfigureModelLimitsInput
+    ): Promise<RuntimeProviderManagementModelLimitsResponse> => {
+      const validInput =
+        input?.runtimeId === 'opencode' &&
+        typeof input.providerId === 'string' &&
+        typeof input.modelId === 'string' &&
+        Number.isSafeInteger(input.contextTokens) &&
+        input.contextTokens > 0 &&
+        Number.isSafeInteger(input.outputTokens) &&
+        input.outputTokens > 0 &&
+        input.outputTokens <= input.contextTokens;
+      if (!validInput) {
+        return {
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          error: createUnexpectedRuntimeProviderIpcError(
+            'model-test-failed',
+            'Local model context limits are invalid'
+          ),
+        };
+      }
+      try {
+        return await feature.configureModelLimits(input);
+      } catch (error) {
+        const message = getRuntimeProviderIpcErrorMessage(
+          error,
+          'Failed to configure local model context limits'
+        );
+        logger.error('Failed to configure runtime provider model limits', message);
+        return {
+          schemaVersion: 1,
+          runtimeId: input.runtimeId,
+          error: createUnexpectedRuntimeProviderIpcError('model-test-failed', message),
+        };
+      }
+    }
+  );
+
+  ipcMain.handle(
     RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CODE,
     async (
       _event,
@@ -391,6 +443,7 @@ export function removeRuntimeProviderManagementIpc(ipcMain: IpcMain): void {
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_MODELS);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_TEST_MODEL);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL);
+  ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CODE);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CANCEL);
 }

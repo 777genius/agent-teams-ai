@@ -571,12 +571,14 @@ function mapRuntimeProviderModelMetadata(
     return null;
   }
   const context = metadata.context;
+  const releaseDate = metadata.releaseDate;
   const opencode = mapOpenCodeModelRouteMetadata(metadata.opencode);
   return {
     cost: metadata.cost ?? null,
     context: typeof context === 'number' && Number.isFinite(context) ? context : null,
     limits: metadata.limits ?? null,
     free: metadata.free === true,
+    releaseDate: typeof releaseDate === 'string' ? releaseDate : null,
     ...(opencode ? { opencode } : {}),
   };
 }

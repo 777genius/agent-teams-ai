@@ -118,7 +118,7 @@
       "teamName": "Nama tim"
     },
     "launchAfterCreate": {
-      "description": "Mulai tim segera melalui Claude lokal CLI.",
+      "description": "Segera mulai tim menggunakan runtime agen yang telah dikonfigurasi untuknya.",
       "label": "Jalankan perintah setelah membuat"
     },
     "localOnly": "Hanya tersedia dalam mode Elektron lokal.",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "Existing rekan tim tidak dapat diganti nama sementara tim masih hidup. ganti nama: {{names}}",
       "memberNameEmpty": "Nama anggota tidak dapat kosong",
       "memberNameInvalid": "Nama anggota harus dimulai dengan alfanumerik, hanya gunakan [a-zA-Z0-9.], maksimal 128 chars",
-      "memberNameNumericSuffix": "Nama anggota \"{{name}}\"tidak diperbolehkan (disediakan untuk Claude CLI auto-suffix). Gunakan \"{{base}}\"sebagai gantinya.",
+      "memberNameNumericSuffix": "Nama anggota \"{{name}}\" tidak diizinkan (dicadangkan untuk sufiks numerik yang dikelola runtime). Gunakan \"{{base}}\" sebagai gantinya.",
       "memberNameReserved": "Nama anggota \"{{name}}\"Dipesan",
       "memberNamesUnique": "Nama anggota harus unik sebelum menyimpan",
       "newLiveTeammates": "Tambahkan rekan tim baru dari dialog anggota yang berdedikasi selagi tim masih hidup. Tim Sunting hanya mendukung pemutakhiran rekan tim yang ada.",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "Direktori kerja:"
     },
     "description": {
-      "createSchedule": "Jadwalkan eksekusi tugas Claude otomatis",
+      "createSchedule": "Jadwalkan eksekusi otomatis tugas agen",
       "createScheduleForTeam": "Jadwal otomatis berjalan untuk tim \"{{team}}\"",
       "editSchedule": "Editing schedule for team \"{{team}}\"",
       "launchPrefix": "Mulai tim",
-      "launchSuffix": "via lokal Claude CLI.",
+      "launchSuffix": "menggunakan runtime agen yang telah dikonfigurasi untuknya.",
       "relaunchPrefix": "Menghentikan menjalankan saat",
-      "relaunchSuffix": "dan memulainya lagi melalui Claude lokal CLI."
+      "relaunchSuffix": "dan mulai lagi menggunakan runtime agen yang telah dikonfigurasi untuknya."
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "Prompt ini akan dilewatkan ke",
       "oneShotSuffix": "untuk satu - tembakan eksekusi",
       "saved": "Tersimpan",
-      "schedulePlaceholder": "Instruksi untuk Claude untuk dijalankan sesuai jadwal...",
+      "schedulePlaceholder": "Instruksi untuk dijalankan oleh pemimpin tim sesuai jadwal...",
       "teamLeadOptional": "Prompt untuk memimpin tim (opsional)",
       "teamLeadPlaceholder": "Instruksi untuk memimpin tim..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "Pesan Cross- tim untuk {{team}}...",
       "teamFallback": "tim",
       "placeholder": "Tulis sebuah pesan... (Masukkan untuk mengirim, Shift + Enter untuk baris baru)",
-      "slashTip": "Tip: Anda dapat menggunakan \"/\" untuk menjalankan perintah Claude apapun.",
+      "slashTip": "Tip: Gunakan \"/\" untuk menjalankan perintah yang didukung oleh runtime pemimpin tim.",
       "charsLeft_few": "{{count}} chars kiri",
       "charsLeft_many": "{{count}} chars kiri"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "Belum ada jadwal",
-      "description": "Buat jadwal untuk menjalankan tugas Claude secara otomatis pada jadwal cron."
+      "description": "Buat jadwal untuk menjalankan tugas tim secara otomatis dengan cron."
     },
     "title": "Schedules",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "Perbaiki perizinan folder atau pindahkan projek ke folder yang dapat ditulisi. Menjalankan sebagai administrator hanya untuk sementara.",
         "openCodeBridgeNoOutput": "Nyalakan kembali aplikasi dan waktu berjalan OpenCode, lalu coba lagi. Jika berulang, salin diagnosa.",
         "workingDirectoryMissing": "Pilih direktori kerja yang telah ada, kemudian buka kembali dialog ini.",
-        "authenticationRequired": "Otentikasi penyedia yang diperlukan dalam Claude CLI, kemudian membuka kembali dialog ini.",
+        "authenticationRequired": "Autentikasi penyedia yang diperlukan di runtime yang dikonfigurasi untuknya, lalu buka kembali dialog ini.",
         "runtimeProviderNotConfigured": "Mengkonfigurasi waktu berjalan penyedia yang dipilih, kemudian membuka kembali dialog ini.",
         "openCodeRuntimeMissing": "Pasang atau coba ulang waktu berjalan OpenCode dari kartu status penyedia, kemudian buka kembali dialog ini.",
         "openCodeAppMcpUnreachable": "Coba lagi meluncurkan untuk menyegarkan aplikasi OpenCode MCP bridge. Jika berulang, restart aplikasi dan waktu berjalan OpenCode.",
-        "cliBinaryMissing": "Pastikan Claude lokal CLI biner ada dan dapat dimulai, kemudian membuka kembali dialog ini.",
+        "cliBinaryMissing": "Pastikan runtime lokal yang diperlukan telah diinstal dan dapat dijalankan, lalu buka kembali dialog ini.",
         "default": "Selesaikan masalah di atas, lalu buka kembali dialog ini.",
         "openCodeNodeModulesSymlinkPermission": "Jalankan Agent Teams AI sebagai Administrator, lalu coba launch lagi."
       }

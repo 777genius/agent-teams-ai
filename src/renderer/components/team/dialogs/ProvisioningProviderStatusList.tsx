@@ -1169,7 +1169,7 @@ export function getProvisioningFailureHint(
   if (combined.includes('not authenticated') || combined.includes('not logged in')) {
     return (
       t?.('provisioning.providerStatus.failureHints.authenticationRequired') ??
-      'Authenticate the required provider in Claude CLI, then reopen this dialog.'
+      'Authenticate the required provider in its configured runtime, then reopen this dialog.'
     );
   }
   if (combined.includes('provider is not configured for runtime use')) {
@@ -1208,7 +1208,7 @@ export function getProvisioningFailureHint(
   ) {
     return (
       t?.('provisioning.providerStatus.failureHints.cliBinaryMissing') ??
-      'Make sure the local Claude CLI binary exists and can be started, then reopen this dialog.'
+      'Make sure the required local runtime is installed and can be started, then reopen this dialog.'
     );
   }
 

@@ -33,6 +33,7 @@ import {
   Check,
   CheckCircle2,
   ClipboardList,
+  ExternalLink,
   KeyRound,
   Loader2,
   RefreshCcw,
@@ -409,10 +410,12 @@ export function ProviderSetupFormPanel({
   const selectedMethod = authOption?.method ?? form?.method ?? null;
   const oauthInProgress = selectedMethod === 'oauth' && busy;
   const oauthProgress = oauthInProgress ? state.oauthProgress : null;
-  const oauthDeviceCode =
+  const oauthDeviceCode = extractOAuthDeviceCode(oauthProgress?.instructions);
+  const oauthDeviceCodeDestination =
     oauthProgress?.providerId === 'xai'
-      ? extractOAuthDeviceCode(oauthProgress.instructions)
-      : null;
+      ? 'xAI'
+      : (oauthProgress?.displayName ?? provider.displayName);
+  const isXiaomiTokenPlan = provider.providerId.startsWith('xiaomi-token-plan-');
 
   return (
     <div
@@ -443,6 +446,18 @@ export function ProviderSetupFormPanel({
               <div className="mt-1 text-[11px] text-[var(--color-text-muted)]">
                 {form.description}
               </div>
+            ) : null}
+            {isXiaomiTokenPlan ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2 h-7 px-2.5 text-[11px]"
+                onClick={() => void actions.openProviderCredentialPage(provider.providerId)}
+              >
+                Open Dedicated API Key page
+                <ExternalLink className="ml-1.5 size-3" />
+              </Button>
             ) : null}
           </div>
 
@@ -552,25 +567,31 @@ export function ProviderSetupFormPanel({
                 <Loader2 className="size-3.5 animate-spin" />
                 {oauthProgress?.message ?? 'Preparing secure browser authorization...'}
               </div>
-              {oauthProgress?.instructions ? (
+              {oauthProgress?.instructions && !oauthDeviceCode ? (
                 <div className="mt-1.5 text-[11px] text-[var(--color-text-muted)]">
                   {oauthProgress.instructions}
                 </div>
               ) : null}
               {oauthDeviceCode ? (
                 <div
-                  className="mt-3 flex items-center justify-between gap-3 rounded-md border border-sky-400/25 bg-sky-400/[0.06] px-3 py-2"
+                  className="mt-3 flex w-full items-end justify-between gap-4 border-l-2 border-sky-400/60 bg-gradient-to-r from-sky-400/[0.08] to-transparent px-4 py-3"
                   data-testid="runtime-provider-oauth-device-code"
                 >
                   <div className="min-w-0">
-                    <div className="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
-                      Enter this code in xAI
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+                      Enter this code in {oauthDeviceCodeDestination}
                     </div>
-                    <div className="mt-0.5 font-mono text-base font-semibold tracking-[0.16em] text-sky-200">
+                    <div className="mt-1 font-mono text-2xl font-bold tracking-[0.18em] text-sky-100 sm:text-3xl">
                       {oauthDeviceCode}
                     </div>
+                    <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)]">
+                      <span className="size-1.5 animate-pulse rounded-full bg-sky-300" />
+                      Waiting for confirmation - this updates automatically
+                    </div>
                   </div>
-                  <CopyButton text={oauthDeviceCode} inline />
+                  <div className="mb-1 shrink-0 rounded-md border border-white/10 bg-white/[0.04] p-1">
+                    <CopyButton text={oauthDeviceCode} inline />
+                  </div>
                 </div>
               ) : null}
               {oauthProgress?.phase === 'waiting-for-code' ? (
@@ -2310,6 +2331,11 @@ export function RuntimeProviderManagementPanelView({
   const useDirectoryRows =
     state.directorySupported &&
     (state.directoryLoaded || state.directoryLoading || state.directoryEntries.length > 0);
+  const directoryStarting =
+    state.directorySupported &&
+    !state.directoryLoaded &&
+    state.directoryEntries.length === 0 &&
+    !state.directoryError;
   const visibleDirectoryRows = state.directoryEntries.filter((provider) =>
     directoryEntryMatchesQuery(provider, providerQuery)
   );
@@ -2444,9 +2470,6 @@ export function RuntimeProviderManagementPanelView({
         <TabsContent value="providers" className="mt-3 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0">
-              <div className="text-sm font-medium text-[var(--color-text)]">
-                {t('runtimeProvider.tabs.providers')}
-              </div>
               <div className="text-xs text-[var(--color-text-muted)]">
                 {t('runtimeProvider.providers.description', { count: providerCountLabel })}
               </div>
@@ -2500,7 +2523,8 @@ export function RuntimeProviderManagementPanelView({
           <div className="max-h-[min(52vh,640px)] space-y-2 overflow-y-auto pr-1">
             {useDirectoryRows ? (
               <>
-                {state.directoryLoading && state.directoryEntries.length === 0 ? (
+                {(state.directoryLoading || directoryStarting) &&
+                state.directoryEntries.length === 0 ? (
                   <RuntimeProviderLoadingPlaceholder />
                 ) : null}
                 {visibleDirectoryRows.map((provider) => (
@@ -2585,7 +2609,10 @@ export function RuntimeProviderManagementPanelView({
             </div>
           ) : null}
 
-          {!useDirectoryRows && !state.loading && state.providers.length === 0 ? (
+          {!useDirectoryRows &&
+          !directoryStarting &&
+          !state.loading &&
+          state.providers.length === 0 ? (
             <div
               className="rounded-lg border p-3 text-sm"
               style={{

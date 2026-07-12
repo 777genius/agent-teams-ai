@@ -118,7 +118,7 @@
       "teamName": "Team பெயர்"
     },
     "launchAfterCreate": {
-      "description": "உள்ளூர் Claude CLI வழியாக team ஐ உடனடியாகத் தொடங்கு.",
+      "description": "குழுவிற்காக உள்ளமைக்கப்பட்ட முகவர் இயக்க நேரங்களைப் பயன்படுத்தி உடனடியாக அதைத் தொடங்கு.",
       "label": "உருவாக்கிய பிறகு கட்டளையை இயக்கு"
     },
     "localOnly": "உள்ளூர் Electron பயன்முறையில் மட்டுமே கிடைக்கிறது.",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "team live ஆக இருக்கும்போது தற்போதுள்ள teammates ஐ மறுபெயரிட முடியாது. மறுபெயரிடப்பட்டது: {{names}}",
       "memberNameEmpty": "உறுப்பினர் பெயர் காலியாக இருக்க முடியாது",
       "memberNameInvalid": "உறுப்பினர் பெயர் alphanumeric உடன் தொடங்க வேண்டும், [a-zA-Z0-9._-] மட்டுமே பயன்படுத்தவும், அதிகபட்சம் 128 எழுத்துகள்",
-      "memberNameNumericSuffix": "உறுப்பினர் பெயர் \"{{name}}\" அனுமதிக்கப்படவில்லை (Claude CLI auto-suffix க்கு ஒதுக்கப்பட்டது). அதற்கு பதிலாக \"{{base}}\" ஐப் பயன்படுத்தவும்.",
+      "memberNameNumericSuffix": "உறுப்பினர் பெயர் \"{{name}}\" அனுமதிக்கப்படவில்லை (இயக்கச் சூழல் நிர்வகிக்கும் எண் பின்னொட்டுகளுக்கு ஒதுக்கப்பட்டுள்ளது). அதற்கு பதிலாக \"{{base}}\" ஐப் பயன்படுத்தவும்.",
       "memberNameReserved": "உறுப்பினர் பெயர் \"{{name}}\" ஒதுக்கப்பட்டுள்ளது",
       "memberNamesUnique": "சேமிப்பதற்கு முன் உறுப்பினர் பெயர்கள் தனித்துவமாக இருக்க வேண்டும்",
       "newLiveTeammates": "team live ஆக இருக்கும்போது அர்ப்பணிக்கப்பட்ட Add member dialog இலிருந்து புதிய teammates ஐச் சேர்க்கவும். Edit Team தற்போதுள்ள teammates ஐப் புதுப்பிப்பதை மட்டுமே ஆதரிக்கிறது.",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "Working directory:"
     },
     "description": {
-      "createSchedule": "தானியங்கி Claude task execution ஐ அட்டவணைப்படுத்து",
+      "createSchedule": "தானியங்கி முகவர் பணி செயல்பாட்டை அட்டவணைப்படுத்து",
       "createScheduleForTeam": "team \"{{team}}\" க்கு தானியங்கி இயக்கங்களை அட்டவணைப்படுத்து",
       "editSchedule": "team \"{{team}}\" க்கான அட்டவணையைத் திருத்துகிறது",
       "launchPrefix": "team ஐத் தொடங்கு",
-      "launchSuffix": "உள்ளூர் Claude CLI வழியாக.",
+      "launchSuffix": "அதற்காக உள்ளமைக்கப்பட்ட முகவர் இயக்க நேரங்களைப் பயன்படுத்தி.",
       "relaunchPrefix": "இதற்கான தற்போதைய இயக்கத்தை நிறுத்து",
-      "relaunchSuffix": "மற்றும் உள்ளூர் Claude CLI வழியாக அதை மீண்டும் தொடங்கு."
+      "relaunchSuffix": "மற்றும் அதற்காக உள்ளமைக்கப்பட்ட முகவர் இயக்க நேரங்களைப் பயன்படுத்தி அதை மீண்டும் தொடங்கு."
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "இந்த prompt இதற்கு அனுப்பப்படும்",
       "oneShotSuffix": "one-shot execution க்காக",
       "saved": "சேமிக்கப்பட்டது",
-      "schedulePlaceholder": "அட்டவணையில் Claude செயல்படுத்த வேண்டிய வழிமுறைகள்...",
+      "schedulePlaceholder": "அட்டவணைப்படி குழுத் தலைவர் செயல்படுத்த வேண்டிய வழிமுறைகள்...",
       "teamLeadOptional": "team lead க்கான prompt (விருப்பத்திற்குரியது)",
       "teamLeadPlaceholder": "team lead க்கான வழிமுறைகள்..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "{{team}} க்கு cross-team செய்தி...",
       "teamFallback": "team",
       "placeholder": "ஒரு செய்தியை எழுது... (அனுப்ப Enter, புதிய வரிக்கு Shift+Enter)",
-      "slashTip": "குறிப்பு: எந்த Claude கட்டளைகளையும் இயக்க \"/\" ஐப் பயன்படுத்தலாம்.",
+      "slashTip": "குறிப்பு: குழுத் தலைவரின் இயக்கச் சூழல் ஆதரிக்கும் கட்டளைகளை இயக்க \"/\" ஐப் பயன்படுத்தவும்.",
       "charsLeft_few": "{{count}} எழுத்துகள் மீதம்",
       "charsLeft_many": "{{count}} எழுத்துகள் மீதம்"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "இன்னும் அட்டவணைகள் இல்லை",
-      "description": "cron அட்டவணையில் Claude tasks ஐ தானாக இயக்க ஒரு அட்டவணையை உருவாக்கவும்."
+      "description": "cron அட்டவணைப்படி குழுப் பணிகளைத் தானாக இயக்க ஓர் அட்டவணையை உருவாக்கவும்."
     },
     "title": "அட்டவணைகள்",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "folder அனுமதிகளைச் சரிசெய்யவும் அல்லது project ஐ user-writable folder க்கு நகர்த்தவும். Administrator ஆக இயக்குவது தற்காலிக தீர்வு மட்டுமே.",
         "openCodeBridgeNoOutput": "app மற்றும் OpenCode runtime ஐ மறுதொடக்கம் செய்து, பிறகு மீண்டும் முயற்சிக்கவும். மீண்டும் நிகழ்ந்தால், diagnostics ஐ நகலெடுக்கவும்.",
         "workingDirectoryMissing": "தற்போதுள்ள ஒரு working directory ஐத் தேர்ந்தெடுத்து, பிறகு இந்த dialog ஐ மீண்டும் திறக்கவும்.",
-        "authenticationRequired": "Claude CLI இல் தேவையான வழங்குநரை அங்கீகரிக்கவும், பிறகு இந்த dialog ஐ மீண்டும் திறக்கவும்.",
+        "authenticationRequired": "தேவையான வழங்குநரை அதற்காக உள்ளமைக்கப்பட்ட runtime-இல் அங்கீகரித்து, பின்னர் இந்த dialog-ஐ மீண்டும் திறக்கவும்.",
         "runtimeProviderNotConfigured": "தேர்ந்தெடுத்த வழங்குநர் runtime ஐ கட்டமைக்கவும், பிறகு இந்த dialog ஐ மீண்டும் திறக்கவும்.",
         "openCodeRuntimeMissing": "வழங்குநர் நிலை card இலிருந்து OpenCode runtime ஐ நிறுவவும் அல்லது மீண்டும் முயற்சிக்கவும், பிறகு இந்த dialog ஐ மீண்டும் திறக்கவும்.",
         "openCodeAppMcpUnreachable": "OpenCode app MCP bridge ஐ புதுப்பிக்க launch ஐ மீண்டும் முயற்சிக்கவும். மீண்டும் நிகழ்ந்தால், app மற்றும் OpenCode runtime ஐ மறுதொடக்கம் செய்யவும்.",
-        "cliBinaryMissing": "உள்ளூர் Claude CLI binary உள்ளது மற்றும் தொடங்க முடியும் என்பதை உறுதிப்படுத்தவும், பிறகு இந்த dialog ஐ மீண்டும் திறக்கவும்.",
+        "cliBinaryMissing": "தேவையான local runtime நிறுவப்பட்டு தொடங்கக்கூடியதாக உள்ளதா என்பதை உறுதிசெய்து, பின்னர் இந்த dialog-ஐ மீண்டும் திறக்கவும்.",
         "default": "மேலே உள்ள சிக்கலைத் தீர்க்கவும், பிறகு இந்த dialog ஐ மீண்டும் திறக்கவும்.",
         "openCodeNodeModulesSymlinkPermission": "Agent Teams AI ஐ Administrator ஆக இயக்கவும், பிறகு launch ஐ மீண்டும் முயற்சிக்கவும்."
       }

@@ -10,7 +10,27 @@ export type RuntimeProviderOnboardingPlanId =
   | 'kimi-code-membership'
   | 'kiro'
   | 'cursor'
+  | 'xiaomi-mimo-token-plan'
   | 'openai-plus-pro';
+
+export type XiaomiMiMoTokenPlanProviderId =
+  | 'xiaomi-token-plan-ams'
+  | 'xiaomi-token-plan-sgp'
+  | 'xiaomi-token-plan-cn';
+
+export interface XiaomiMiMoTokenPlanResolution {
+  readonly providerId: XiaomiMiMoTokenPlanProviderId;
+  readonly regionLabel: 'Europe' | 'Singapore' | 'China';
+  readonly canonicalBaseUrl: string;
+}
+
+export type XiaomiMiMoTokenPlanResolutionResult =
+  | { readonly ok: true; readonly value: XiaomiMiMoTokenPlanResolution }
+  | {
+      readonly ok: false;
+      readonly reason: 'empty' | 'invalid-url' | 'unsupported-url';
+      readonly message: string;
+    };
 
 export type RuntimeProviderOnboardingStage =
   | 'connect'
@@ -57,7 +77,14 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     description: 'Use the dedicated key from your GLM Coding Plan.',
     credentialKind: 'subscription-key',
     credentialUrl: 'https://z.ai/manage-apikey/apikey-list',
-    preferredModelFragments: ['glm-5.2', 'glm-5.1', 'glm-5-turbo', 'glm-4.7'],
+    preferredModelFragments: [
+      'glm-5.2',
+      'glm-5.1',
+      'glm-5',
+      'glm-5-turbo',
+      'glm-4.7',
+      'glm-4.5-air',
+    ],
     requireOAuthCredentialHint: false,
   },
   {
@@ -75,13 +102,12 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     providerId: 'github-copilot',
     displayName: 'GitHub Copilot',
     description:
-      'Use a paid GitHub Copilot subscription through OpenCode. Copilot Free can sign in but is not enabled for the official OpenCode integration.',
+      'Use GitHub Copilot through OpenCode. Compatible models are verified automatically for your plan, including Copilot Free.',
     credentialKind: 'oauth',
     credentialUrl: null,
-    // Prefer broadly available paid-plan models before premium Claude/Gemini
-    // routes so connect-and-verify has the best chance of succeeding across
-    // the officially supported Copilot subscription tiers.
-    preferredModelFragments: ['gpt-5-mini', 'gpt-4.1', 'gpt-5', 'claude-sonnet', 'gemini'],
+    // gpt-4.1 is available on Copilot Free while gpt-5-mini can be catalogued
+    // but rejected by that tier. Keep paid/premium routes as fallbacks.
+    preferredModelFragments: ['gpt-4.1', 'gpt-5-mini', 'gpt-5', 'claude-sonnet', 'gemini'],
     requireOAuthCredentialHint: false,
   },
   {
@@ -129,6 +155,118 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
   },
 ];
 
+export const XIAOMI_MIMO_TOKEN_PLAN_CREDENTIAL_URL =
+  'https://platform.xiaomimimo.com/console/plan-manage';
+
+const XIAOMI_MIMO_TOKEN_PLAN_REGIONS: Readonly<
+  Record<
+    string,
+    {
+      readonly providerId: XiaomiMiMoTokenPlanProviderId;
+      readonly regionLabel: XiaomiMiMoTokenPlanResolution['regionLabel'];
+    }
+  >
+> = {
+  'token-plan-ams.xiaomimimo.com': {
+    providerId: 'xiaomi-token-plan-ams',
+    regionLabel: 'Europe',
+  },
+  'token-plan-sgp.xiaomimimo.com': {
+    providerId: 'xiaomi-token-plan-sgp',
+    regionLabel: 'Singapore',
+  },
+  'token-plan-cn.xiaomimimo.com': {
+    providerId: 'xiaomi-token-plan-cn',
+    regionLabel: 'China',
+  },
+};
+
+function createXiaomiMiMoTokenPlan(
+  resolution: XiaomiMiMoTokenPlanResolution
+): RuntimeProviderOnboardingPlan {
+  return {
+    id: 'xiaomi-mimo-token-plan',
+    providerId: resolution.providerId,
+    displayName: `Xiaomi MiMo Token Plan - ${resolution.regionLabel}`,
+    description: `Use the Dedicated API Key shown next to ${resolution.canonicalBaseUrl}.`,
+    credentialKind: 'subscription-key',
+    credentialUrl: XIAOMI_MIMO_TOKEN_PLAN_CREDENTIAL_URL,
+    preferredModelFragments: [
+      `${resolution.providerId}/mimo-v2.5-pro`,
+      `${resolution.providerId}/mimo-v2.5`,
+    ],
+    requireOAuthCredentialHint: false,
+  };
+}
+
+function getXiaomiMiMoTokenPlanByProviderId(
+  providerId: string
+): RuntimeProviderOnboardingPlan | null {
+  const regionEntry = Object.entries(XIAOMI_MIMO_TOKEN_PLAN_REGIONS).find(
+    ([, candidate]) => candidate.providerId === providerId
+  );
+  if (!regionEntry) {
+    return null;
+  }
+  const [hostname, region] = regionEntry;
+  return createXiaomiMiMoTokenPlan({
+    ...region,
+    canonicalBaseUrl: `https://${hostname}/v1`,
+  });
+}
+
+export function resolveXiaomiMiMoTokenPlanProvider(
+  baseUrl: string
+): XiaomiMiMoTokenPlanResolutionResult {
+  const value = baseUrl.trim();
+  if (!value) {
+    return {
+      ok: false,
+      reason: 'empty',
+      message: 'Paste the Dedicated Base URL from your Xiaomi MiMo Token Plan page.',
+    };
+  }
+
+  let url: URL;
+  try {
+    url = new URL(value.includes('://') ? value : `https://${value}`);
+  } catch {
+    return {
+      ok: false,
+      reason: 'invalid-url',
+      message: 'Enter a valid Xiaomi MiMo Dedicated Base URL.',
+    };
+  }
+
+  const normalizedPath = url.pathname.replace(/\/+$/, '').toLowerCase();
+  const region = XIAOMI_MIMO_TOKEN_PLAN_REGIONS[url.hostname.toLowerCase()];
+  const valid =
+    url.protocol === 'https:' &&
+    !url.username &&
+    !url.password &&
+    !url.port &&
+    !url.search &&
+    !url.hash &&
+    (normalizedPath === '/v1' || normalizedPath === '/anthropic') &&
+    Boolean(region);
+  if (!valid || !region) {
+    return {
+      ok: false,
+      reason: 'unsupported-url',
+      message:
+        'This Base URL is not recognized yet. Copy the Dedicated Base URL exactly as shown in your Token Plan dashboard.',
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      ...region,
+      canonicalBaseUrl: `https://${url.hostname.toLowerCase()}/v1`,
+    },
+  };
+}
+
 const PLAN_ID_SET = new Set<RuntimeProviderOnboardingPlanId>(
   RUNTIME_PROVIDER_ONBOARDING_PLANS.map((plan) => plan.id)
 );
@@ -147,11 +285,20 @@ export function findRuntimeProviderOnboardingPlanByProviderId(
   providerId: string
 ): RuntimeProviderOnboardingPlan | null {
   const normalizedProviderId = providerId.trim().toLowerCase();
+  const xiaomiPlan = getXiaomiMiMoTokenPlanByProviderId(normalizedProviderId);
+  if (xiaomiPlan) {
+    return xiaomiPlan;
+  }
   return (
     RUNTIME_PROVIDER_ONBOARDING_PLANS.find(
       (plan) => plan.providerId.toLowerCase() === normalizedProviderId
     ) ?? null
   );
+}
+
+export function getRuntimeProviderCredentialUrl(providerId: string): string | null {
+  const normalizedProviderId = providerId.trim().toLowerCase();
+  return findRuntimeProviderOnboardingPlanByProviderId(normalizedProviderId)?.credentialUrl ?? null;
 }
 
 export function isRuntimeProviderOnboardingPlanConnected(
@@ -195,30 +342,41 @@ function modelCanBeProbed(model: RuntimeProviderModelDto): boolean {
   );
 }
 
-export function selectRecommendedRuntimeProviderModel(
+export function rankRecommendedRuntimeProviderModels(
   plan: RuntimeProviderOnboardingPlan,
   models: readonly RuntimeProviderModelDto[]
-): RuntimeProviderModelDto | null {
+): RuntimeProviderModelDto[] {
   const candidates = models.filter(modelCanBeProbed);
+  const ranked: RuntimeProviderModelDto[] = [];
+  const seen = new Set<string>();
+  const add = (model: RuntimeProviderModelDto | undefined): void => {
+    if (!model || seen.has(model.modelId)) {
+      return;
+    }
+    seen.add(model.modelId);
+    ranked.push(model);
+  };
   for (const fragment of plan.preferredModelFragments) {
     const exactMatch = candidates.find(
       (model) => model.modelId.toLowerCase() === fragment.toLowerCase()
     );
-    if (exactMatch) {
-      return exactMatch;
-    }
-    const match = candidates.find((model) =>
-      `${model.modelId} ${model.displayName}`.toLowerCase().includes(fragment.toLowerCase())
-    );
-    if (match) {
-      return match;
-    }
+    add(exactMatch);
+    candidates
+      .filter((model) =>
+        `${model.modelId} ${model.displayName}`.toLowerCase().includes(fragment.toLowerCase())
+      )
+      .forEach(add);
   }
-  const runtimeDefault = candidates.find((model) => model.default);
-  if (runtimeDefault) {
-    return runtimeDefault;
-  }
-  return candidates[0] ?? null;
+  add(candidates.find((model) => model.default));
+  candidates.forEach(add);
+  return ranked;
+}
+
+export function selectRecommendedRuntimeProviderModel(
+  plan: RuntimeProviderOnboardingPlan,
+  models: readonly RuntimeProviderModelDto[]
+): RuntimeProviderModelDto | null {
+  return rankRecommendedRuntimeProviderModels(plan, models)[0] ?? null;
 }
 
 function normalizePlanIds(value: unknown): RuntimeProviderOnboardingPlanId[] {

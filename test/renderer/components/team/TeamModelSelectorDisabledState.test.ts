@@ -275,40 +275,8 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('shows a temporary New ribbon for Opus 4.8 during the launch window', async () => {
+  it('does not synthesize a New ribbon without release metadata', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 4, 31));
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-
-    await act(async () => {
-      root.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'anthropic',
-          onProviderChange: () => undefined,
-          value: 'opus',
-          onValueChange: () => undefined,
-        })
-      );
-      await Promise.resolve();
-    });
-
-    const opus48Button = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.trim().startsWith('Opus 4.8')
-    );
-    expect(opus48Button?.textContent).toContain('New');
-
-    await act(async () => {
-      root.unmount();
-      await Promise.resolve();
-    });
-    dateNowSpy.mockRestore();
-  });
-
-  it('hides the Opus 4.8 New ribbon after the launch window expires', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 5, 12));
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -329,6 +297,90 @@ describe('TeamModelSelector disabled Codex models', () => {
       button.textContent?.trim().startsWith('Opus 4.8')
     );
     expect(opus48Button?.textContent).not.toContain('New');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows a New ribbon for a model with a recent runtime release date', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 6, 12));
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          detailMessage: null,
+          statusMessage: null,
+          capabilities: { teamLaunch: true },
+          models: ['zai-coding-plan/glm-5.2'],
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-07-12T00:00:00.000Z',
+            staleAt: '2026-07-12T00:10:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [
+              {
+                id: 'zai-coding-plan/glm-5.2',
+                launchModel: 'zai-coding-plan/glm-5.2',
+                displayName: 'GLM-5.2',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  releaseDate: '2026-07-01',
+                  opencode: {
+                    providerId: 'zai-coding-plan',
+                    modelId: 'glm-5.2',
+                    sourceLabel: 'Z.AI Coding Plan',
+                    accessKind: 'credentialed',
+                    routeKind: 'connected_provider',
+                    proofState: 'not_required',
+                    requiresExecutionProof: false,
+                    reason: null,
+                  },
+                },
+              },
+            ],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: 'zai-coding-plan/glm-5.2',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const glmButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.toLowerCase().includes('glm-5.2')
+    );
+    expect(glmButton).toBeDefined();
+    expect(glmButton?.textContent).toContain('New');
 
     await act(async () => {
       root.unmount();
@@ -812,8 +864,8 @@ describe('TeamModelSelector disabled Codex models', () => {
       | undefined;
     expect(virtualizerOptions?.count).toBeGreaterThan(80);
     expect(host.textContent).toContain('OpenRouter');
-    expect(host.textContent).toContain('test/model-000');
-    expect(host.textContent).not.toContain('test/model-159');
+    expect(host.textContent).toContain('test/model-159');
+    expect(host.textContent).not.toContain('test/model-000');
 
     await act(async () => {
       root.unmount();
@@ -2036,6 +2088,9 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(onProviderChange).toHaveBeenCalledWith('opencode');
+    expect(
+      host.querySelector('[data-testid="team-model-selector-opencode-provider-filter"]')
+    ).toBeNull();
 
     await act(async () => {
       root.unmount();
@@ -2540,12 +2595,11 @@ describe('TeamModelSelector disabled Codex models', () => {
 
     const buttons = Array.from(host.querySelectorAll('button'));
     const codexTab = buttons.find((button) => button.textContent?.trim() === 'Codex');
-    const providerTabIndex = (label: string): number =>
-      buttons.findIndex((button) => button.textContent?.includes(label));
     expect(codexTab).not.toBeNull();
     expect(host.textContent).toContain('Anthropic');
     expect(host.textContent).toContain('Codex');
-    expect(providerTabIndex('OpenCode')).toBeLessThan(providerTabIndex('Gemini'));
+    expect(host.textContent).toContain('OpenCode');
+    expect(host.textContent).not.toContain('Gemini');
 
     await act(async () => {
       codexTab?.click();
@@ -2553,6 +2607,122 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(onProviderChange).toHaveBeenCalledWith('codex');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('shows connected dashboard OpenCode providers as model tabs', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          detailMessage: null,
+          statusMessage: null,
+          capabilities: { teamLaunch: true },
+          models: ['github-copilot/gpt-4.1', 'xai/grok-4'],
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-07-12T00:00:00.000Z',
+            staleAt: '2026-07-12T00:10:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [
+              {
+                id: 'github-copilot/gpt-4.1',
+                launchModel: 'github-copilot/gpt-4.1',
+                displayName: 'GPT-4.1',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  opencode: {
+                    providerId: 'github-copilot',
+                    modelId: 'gpt-4.1',
+                    sourceLabel: 'GitHub Copilot',
+                    accessKind: 'credentialed',
+                    routeKind: 'connected_provider',
+                    proofState: 'not_required',
+                    requiresExecutionProof: false,
+                    reason: null,
+                  },
+                },
+              },
+              {
+                id: 'xai/grok-4',
+                launchModel: 'xai/grok-4',
+                displayName: 'Grok 4',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  opencode: {
+                    providerId: 'xai',
+                    modelId: 'grok-4',
+                    sourceLabel: 'xAI',
+                    accessKind: 'not_authenticated',
+                    routeKind: 'catalog_provider',
+                    proofState: 'not_required',
+                    requiresExecutionProof: false,
+                    reason: null,
+                  },
+                },
+              },
+            ],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
+        },
+      ],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onProviderChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'anthropic',
+          onProviderChange,
+          value: '',
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const copilotTab = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'GitHub Copilot'
+    );
+    expect(copilotTab).toBeDefined();
+    expect(host.textContent).not.toContain('SuperGrok');
+
+    await act(async () => {
+      copilotTab?.click();
+      await Promise.resolve();
+    });
+
+    expect(onProviderChange).toHaveBeenCalledWith('opencode');
 
     await act(async () => {
       root.unmount();

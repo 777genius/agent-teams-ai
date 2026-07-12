@@ -10,7 +10,7 @@ import { RecentProjectsSection } from '@features/recent-projects/renderer';
 import { RunningTeamsSection } from '@features/running-teams/renderer';
 import { useStore } from '@renderer/store';
 import { formatShortcut } from '@renderer/utils/stringUtils';
-import { Command, Gauge, Search, Users } from 'lucide-react';
+import { Command, Search, Users } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { CliStatusBanner } from './CliStatusBanner';
@@ -104,11 +104,14 @@ const CommandSearch = ({ value, onChange }: Readonly<CommandSearchProps>): React
   );
 };
 
-export const DashboardView = (): React.JSX.Element => {
+interface DashboardViewProps {
+  isActive?: boolean;
+}
+
+export const DashboardView = ({ isActive = true }: DashboardViewProps): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const openTeamsTab = useStore((state) => state.openTeamsTab);
-  const openTab = useStore((state) => state.openTab);
 
   return (
     <div className="relative flex-1 overflow-auto bg-surface">
@@ -121,7 +124,7 @@ export const DashboardView = (): React.JSX.Element => {
         <WebPreviewBanner />
         <WindowsAdministratorBanner />
         <DashboardUpdateBanner />
-        <CliStatusBanner />
+        <CliStatusBanner isDashboardActive={isActive} />
         <TmuxStatusBanner />
 
         <div className="mb-12 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
@@ -131,13 +134,6 @@ export const DashboardView = (): React.JSX.Element => {
           >
             <Users className="size-4" />
             {t('actions.selectTeam')}
-          </button>
-          <button
-            onClick={() => openTab({ type: 'token-usage', label: 'Usage' })}
-            className="flex shrink-0 items-center justify-center gap-2 rounded-sm border border-border bg-surface-raised px-4 py-3 text-sm text-text-secondary transition-all duration-200 hover:border-zinc-500 hover:text-text"
-          >
-            <Gauge className="size-4" />
-            Usage
           </button>
           <span className="hidden shrink-0 text-xs text-text-muted sm:block">
             {t('actions.or')}

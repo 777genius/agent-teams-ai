@@ -1521,8 +1521,9 @@ describe('cliInstallerSlice', () => {
         new Error('Failed to refresh anthropic status')
       );
 
-      await useStore.getState().fetchCliProviderStatus('anthropic');
+      const refreshed = await useStore.getState().fetchCliProviderStatus('anthropic');
 
+      expect(refreshed).toBe(false);
       expect(useStore.getState().cliProviderStatusLoading).toEqual({
         anthropic: false,
       });
@@ -1758,8 +1759,9 @@ describe('cliInstallerSlice', () => {
         })
       );
 
-      await useStore.getState().fetchCliProviderStatus('codex');
+      const refreshed = await useStore.getState().fetchCliProviderStatus('codex');
 
+      expect(refreshed).toBe(true);
       const provider = useStore
         .getState()
         .cliStatus?.providers.find((candidate) => candidate.providerId === 'codex');

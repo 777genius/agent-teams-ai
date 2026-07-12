@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { OpenCodeLocalModelLimitsCard } from '@features/runtime-provider-management/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import {
   ANTHROPIC_LONG_CONTEXT_PRICING_URL,
@@ -9,7 +10,6 @@ import {
 } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
-import { OpenCodeContextConfigHint } from '@renderer/components/team/dialogs/OpenCodeContextConfigHint';
 import {
   getProviderScopedTeamModelLabel,
   getTeamProviderLabel,
@@ -54,6 +54,7 @@ interface LeadModelRowProps {
   modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
   showAnthropicContextLimit?: boolean;
   disableAnthropicContextLimit?: boolean;
+  projectPath?: string | null;
 }
 
 export const LeadModelRow = ({
@@ -76,6 +77,7 @@ export const LeadModelRow = ({
   modelUnavailableReasonByValue,
   showAnthropicContextLimit = providerId === 'anthropic',
   disableAnthropicContextLimit,
+  projectPath,
 }: LeadModelRowProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
@@ -239,7 +241,9 @@ export const LeadModelRow = ({
             model={model}
             limitContext={limitContext}
           />
-          {providerId === 'opencode' ? <OpenCodeContextConfigHint /> : null}
+          {providerId === 'opencode' ? (
+            <OpenCodeLocalModelLimitsCard model={model} projectPath={projectPath} />
+          ) : null}
           {showAnthropicContextLimit ? (
             <LimitContextCheckbox
               id="lead-limit-context"

@@ -1770,6 +1770,188 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(execCliMock).toHaveBeenCalledTimes(2);
   });
 
+  it('shares an in-flight provider directory load across renderer reload requests', async () => {
+    const directoryResponse = {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      directory: {
+        runtimeId: 'opencode',
+        totalCount: 3,
+        returnedCount: 3,
+        query: null,
+        filter: 'all',
+        limit: 100,
+        cursor: null,
+        nextCursor: null,
+        fetchedAt: '2026-07-12T00:00:00.000Z',
+        entries: [],
+        diagnostics: [],
+      },
+    };
+    let finishCommand: ((value: { stdout: string; stderr: string }) => void) | undefined;
+    execCliMock.mockImplementationOnce(
+      () =>
+        new Promise<{ stdout: string; stderr: string }>((resolve) => {
+          finishCommand = resolve;
+        })
+    );
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const request = {
+      runtimeId: 'opencode' as const,
+      projectPath: '/Users/test/project',
+      query: null,
+      filter: 'all' as const,
+      limit: 100,
+      cursor: null,
+      refresh: false,
+    };
+
+    const first = client.loadProviderDirectory(request);
+    const afterRendererReload = client.loadProviderDirectory(request);
+
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
+    finishCommand?.({ stdout: JSON.stringify(directoryResponse), stderr: '' });
+
+    const [firstResult, reloadResult] = await Promise.all([first, afterRendererReload]);
+    expect(reloadResult).toBe(firstResult);
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shares an explicit refresh with concurrent refresh and cached callers', async () => {
+    const directoryResponse = {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      directory: {
+        runtimeId: 'opencode',
+        totalCount: 3,
+        returnedCount: 3,
+        query: null,
+        filter: 'all',
+        limit: 100,
+        cursor: null,
+        nextCursor: null,
+        fetchedAt: '2026-07-12T00:00:00.000Z',
+        entries: [],
+        diagnostics: [],
+      },
+    };
+    let finishCommand: ((value: { stdout: string; stderr: string }) => void) | undefined;
+    execCliMock.mockImplementationOnce(
+      () =>
+        new Promise<{ stdout: string; stderr: string }>((resolve) => {
+          finishCommand = resolve;
+        })
+    );
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const request = {
+      runtimeId: 'opencode' as const,
+      projectPath: '/Users/test/project',
+      query: null,
+      filter: 'all' as const,
+      limit: 100,
+      cursor: null,
+    };
+
+    const refresh = client.loadProviderDirectory({ ...request, refresh: true });
+    const duplicateRefresh = client.loadProviderDirectory({ ...request, refresh: true });
+    const cachedCaller = client.loadProviderDirectory({ ...request, refresh: false });
+
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
+    finishCommand?.({ stdout: JSON.stringify(directoryResponse), stderr: '' });
+
+    const [refreshResult, duplicateResult, cachedResult] = await Promise.all([
+      refresh,
+      duplicateRefresh,
+      cachedCaller,
+    ]);
+    expect(duplicateResult).toBe(refreshResult);
+    expect(cachedResult).toBe(refreshResult);
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not let an in-flight directory load repopulate cache after credential mutation', async () => {
+    const staleDirectoryResponse = {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      directory: {
+        runtimeId: 'opencode',
+        totalCount: 1,
+        returnedCount: 1,
+        query: null,
+        filter: 'all',
+        limit: 100,
+        cursor: null,
+        nextCursor: null,
+        fetchedAt: '2026-07-12T00:00:00.000Z',
+        entries: [],
+        diagnostics: [],
+      },
+    };
+    const freshDirectoryResponse = {
+      ...staleDirectoryResponse,
+      directory: {
+        ...staleDirectoryResponse.directory,
+        totalCount: 2,
+        returnedCount: 2,
+        fetchedAt: '2026-07-12T00:01:00.000Z',
+      },
+    };
+    let finishStaleCommand: ((value: { stdout: string; stderr: string }) => void) | undefined;
+    execCliMock
+      .mockImplementationOnce(
+        () =>
+          new Promise<{ stdout: string; stderr: string }>((resolve) => {
+            finishStaleCommand = resolve;
+          })
+      )
+      .mockResolvedValueOnce({ stdout: JSON.stringify(freshDirectoryResponse), stderr: '' });
+    const { child } = createSpawnProcess({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      provider: {
+        providerId: 'openrouter',
+        displayName: 'OpenRouter',
+        state: 'connected',
+        ownership: ['managed'],
+        recommended: true,
+        modelCount: 1,
+        defaultModelId: null,
+        authMethods: ['api'],
+        actions: [],
+        detail: null,
+      },
+    });
+    spawnCliMock.mockReturnValue(child);
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const request = {
+      runtimeId: 'opencode' as const,
+      projectPath: '/Users/test/project',
+      query: null,
+      filter: 'all' as const,
+      limit: 100,
+      cursor: null,
+      refresh: false,
+    };
+    const staleLoad = client.loadProviderDirectory(request);
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
+
+    await client.connectWithApiKey({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      apiKey: 'sk-test',
+      projectPath: '/Users/test/project',
+    });
+    finishStaleCommand?.({ stdout: JSON.stringify(staleDirectoryResponse), stderr: '' });
+    await staleLoad;
+
+    const afterMutation = await client.loadProviderDirectory(request);
+    expect(afterMutation.directory?.totalCount).toBe(2);
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
+
   it('passes all-projects default scope to the runtime CLI', async () => {
     execCliMock.mockResolvedValue({
       stdout: JSON.stringify({

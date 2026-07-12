@@ -57,18 +57,24 @@ export function resolveOpenCodeQuickConnectGate(input: {
   cliStatusLoading: boolean;
 }): RuntimeProviderQuickConnectGate {
   const { runtimeStatus } = input;
+  // A concrete installer state is more authoritative than the generic request flag.
+  // `runtimeStatusLoading` remains true while install IPC is pending, including while
+  // progress events report downloading/installing or the request has already failed.
+  if (runtimeStatus?.state === 'downloading' || runtimeStatus?.state === 'installing') {
+    return 'installing';
+  }
+  if (runtimeStatus?.state === 'failed') {
+    return 'error';
+  }
+  if (runtimeStatus?.state === 'ready' && runtimeStatus.installed) {
+    return 'ready';
+  }
   if (
     input.runtimeStatusLoading ||
     runtimeStatus?.state === 'checking' ||
     (runtimeStatus === null && (input.cliStatusLoading || isProviderCheckPending(input.provider)))
   ) {
     return 'checking';
-  }
-  if (runtimeStatus?.state === 'downloading' || runtimeStatus?.state === 'installing') {
-    return 'installing';
-  }
-  if (runtimeStatus?.state === 'failed') {
-    return 'error';
   }
   if (runtimeStatus?.installed) {
     return 'ready';
@@ -104,9 +110,6 @@ export function resolveOpenCodeQuickPlanState(input: {
     return 'unavailable';
   }
   if (entry.state === 'connected') {
-    if (entry.metadata.configuredAuthless) {
-      return 'different-credential';
-    }
     if (input.requiresOAuthCredential && !connectedWithOAuth) {
       return 'different-credential';
     }

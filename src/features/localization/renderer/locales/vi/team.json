@@ -118,7 +118,7 @@
       "teamName": "Tên đội ngũ"
     },
     "launchAfterCreate": {
-      "description": "Khởi động đội ngũ ngay lập tức qua Claude CLI cục bộ.",
+      "description": "Khởi động đội ngũ ngay lập tức bằng các môi trường chạy tác nhân đã được cấu hình cho đội ngũ.",
       "label": "Chạy lệnh sau khi tạo"
     },
     "localOnly": "Chỉ khả dụng ở chế độ Electron cục bộ.",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "Không thể đổi tên các thành viên hiện có khi đội ngũ đang hoạt động. Đã đổi tên: {{names}}",
       "memberNameEmpty": "Tên thành viên không được để trống",
       "memberNameInvalid": "Tên thành viên phải bắt đầu bằng ký tự chữ và số, chỉ dùng [a-zA-Z0-9._-], tối đa 128 ký tự",
-      "memberNameNumericSuffix": "Tên thành viên \"{{name}}\" không được phép (dành riêng cho hậu tố tự động của Claude CLI). Hãy dùng \"{{base}}\" thay thế.",
+      "memberNameNumericSuffix": "Tên thành viên \"{{name}}\" không được phép (dành riêng cho hậu tố số do môi trường chạy quản lý). Hãy dùng \"{{base}}\" thay thế.",
       "memberNameReserved": "Tên thành viên \"{{name}}\" được dành riêng",
       "memberNamesUnique": "Tên thành viên phải là duy nhất trước khi lưu",
       "newLiveTeammates": "Hãy thêm thành viên mới từ hộp thoại Thêm thành viên riêng khi đội ngũ đang hoạt động. Chỉnh sửa đội ngũ chỉ hỗ trợ cập nhật các thành viên hiện có.",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "Thư mục làm việc:"
     },
     "description": {
-      "createSchedule": "Lên lịch thực thi tác vụ Claude tự động",
+      "createSchedule": "Lên lịch thực thi tác vụ tác nhân tự động",
       "createScheduleForTeam": "Lên lịch chạy tự động cho đội ngũ \"{{team}}\"",
       "editSchedule": "Đang chỉnh sửa lịch cho đội ngũ \"{{team}}\"",
       "launchPrefix": "Khởi động đội ngũ",
-      "launchSuffix": "qua Claude CLI cục bộ.",
+      "launchSuffix": "bằng các môi trường chạy tác nhân đã được cấu hình cho đội ngũ.",
       "relaunchPrefix": "Dừng lần chạy hiện tại cho",
-      "relaunchSuffix": "và khởi động lại nó qua Claude CLI cục bộ."
+      "relaunchSuffix": "và khởi động lại đội ngũ bằng các môi trường chạy tác nhân đã được cấu hình cho đội ngũ."
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "Prompt này sẽ được truyền cho",
       "oneShotSuffix": "để thực thi một lần",
       "saved": "Đã lưu",
-      "schedulePlaceholder": "Hướng dẫn để Claude thực thi theo lịch...",
+      "schedulePlaceholder": "Hướng dẫn để trưởng nhóm thực thi theo lịch...",
       "teamLeadOptional": "Prompt cho trưởng nhóm (tùy chọn)",
       "teamLeadPlaceholder": "Hướng dẫn cho trưởng nhóm..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "Tin nhắn giữa các đội ngũ tới {{team}}...",
       "teamFallback": "đội ngũ",
       "placeholder": "Viết một tin nhắn... (Enter để gửi, Shift+Enter để xuống dòng)",
-      "slashTip": "Mẹo: Bạn có thể dùng \"/\" để chạy bất kỳ lệnh Claude nào.",
+      "slashTip": "Mẹo: Dùng \"/\" để chạy các lệnh được môi trường chạy của trưởng nhóm hỗ trợ.",
       "charsLeft_few": "Còn {{count}} ký tự",
       "charsLeft_many": "Còn {{count}} ký tự"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "Chưa có lịch nào",
-      "description": "Tạo một lịch để chạy các tác vụ Claude tự động theo lịch cron."
+      "description": "Tạo lịch để tự động chạy các tác vụ của nhóm theo lịch cron."
     },
     "title": "Lịch",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "Hãy sửa quyền thư mục hoặc chuyển dự án sang một thư mục mà người dùng có thể ghi. Chạy với quyền quản trị viên chỉ là cách khắc phục tạm thời.",
         "openCodeBridgeNoOutput": "Hãy khởi động lại ứng dụng và runtime OpenCode, rồi thử lại. Nếu lặp lại, hãy sao chép chẩn đoán.",
         "workingDirectoryMissing": "Hãy chọn một thư mục làm việc đang tồn tại, rồi mở lại hộp thoại này.",
-        "authenticationRequired": "Hãy xác thực nhà cung cấp cần thiết trong Claude CLI, rồi mở lại hộp thoại này.",
+        "authenticationRequired": "Xác thực nhà cung cấp cần thiết trong runtime đã được cấu hình cho nhà cung cấp đó, rồi mở lại hộp thoại này.",
         "runtimeProviderNotConfigured": "Hãy cấu hình runtime của nhà cung cấp đã chọn, rồi mở lại hộp thoại này.",
         "openCodeRuntimeMissing": "Hãy cài đặt hoặc thử lại runtime OpenCode từ thẻ trạng thái nhà cung cấp, rồi mở lại hộp thoại này.",
         "openCodeAppMcpUnreachable": "Hãy thử khởi chạy lại để làm mới cầu nối MCP ứng dụng OpenCode. Nếu lặp lại, hãy khởi động lại ứng dụng và runtime OpenCode.",
-        "cliBinaryMissing": "Hãy đảm bảo tệp nhị phân Claude CLI cục bộ tồn tại và có thể được khởi động, rồi mở lại hộp thoại này.",
+        "cliBinaryMissing": "Đảm bảo runtime cục bộ cần thiết đã được cài đặt và có thể khởi động, rồi mở lại hộp thoại này.",
         "default": "Hãy giải quyết vấn đề ở trên, rồi mở lại hộp thoại này.",
         "openCodeNodeModulesSymlinkPermission": "Hãy chạy Agent Teams AI với quyền Quản trị viên, rồi thử khởi chạy lại."
       }

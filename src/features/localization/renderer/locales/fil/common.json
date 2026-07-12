@@ -140,7 +140,7 @@
       "runNow": "Patakbuhin ngayon"
     },
     "empty": {
-      "description": "Lumikha ng schedule sa anumang team para i-automate ang execution ng Claude task gamit ang mga cron expression. Lalabas dito ang mga schedule mula sa lahat ng team.",
+      "description": "Gumawa ng iskedyul sa anumang team upang i-automate ang pagpapatakbo ng mga gawain ng team gamit ang mga cron expression. Lalabas dito ang mga iskedyul ng lahat ng team.",
       "noMatches": "Walang schedule na tumutugma sa kasalukuyang mga filter",
       "title": "Walang naka-schedule na task"
     },

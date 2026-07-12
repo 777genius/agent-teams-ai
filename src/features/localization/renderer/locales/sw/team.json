@@ -118,7 +118,7 @@
       "teamName": "Jina la timu"
     },
     "launchAfterCreate": {
-      "description": "Anzisha timu mara moja kupitia Claude CLI ya ndani.",
+      "description": "Anzisha timu mara moja ukitumia mazingira yake ya utekelezaji ya maajenti yaliyosanidiwa.",
       "label": "Endesha amri baada ya kuunda"
     },
     "localOnly": "Inapatikana katika hali ya Electron ya ndani pekee.",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "Wenzako waliopo wa timu hawawezi kubadilishwa jina wakati timu iko hai. waliobadilishwa jina: {{names}}",
       "memberNameEmpty": "Jina la mwanachama haliwezi kuwa tupu",
       "memberNameInvalid": "Jina la mwanachama lazima lianze na alfanumeriki, litumie [a-zA-Z0-9._-] pekee, kiwango cha juu herufi 128",
-      "memberNameNumericSuffix": "Jina la mwanachama \"{{name}}\" haliruhusiwi (limehifadhiwa kwa kiambishi-otomatiki cha Claude CLI). Tumia \"{{base}}\" badala yake.",
+      "memberNameNumericSuffix": "Jina la mwanachama \"{{name}}\" haliruhusiwi (limehifadhiwa kwa viambishi vya nambari vinavyodhibitiwa na mazingira ya utekelezaji). Tumia \"{{base}}\" badala yake.",
       "memberNameReserved": "Jina la mwanachama \"{{name}}\" limehifadhiwa",
       "memberNamesUnique": "Majina ya wanachama lazima yawe ya kipekee kabla ya kuhifadhi",
       "newLiveTeammates": "Ongeza wenzako wapya wa timu kutoka kidirisha maalum cha Ongeza mwanachama wakati timu iko hai. Hariri Timu inaunga mkono tu kusasisha wenzako waliopo wa timu.",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "Saraka ya kazi:"
     },
     "description": {
-      "createSchedule": "Ratibu utekelezaji otomatiki wa kazi za Claude",
+      "createSchedule": "Ratibu utekelezaji wa kiotomatiki wa kazi za maajenti",
       "createScheduleForTeam": "Ratibu mwendo otomatiki kwa timu \"{{team}}\"",
       "editSchedule": "Inahariri ratiba ya timu \"{{team}}\"",
       "launchPrefix": "Anzisha timu",
-      "launchSuffix": "kupitia Claude CLI ya ndani.",
+      "launchSuffix": "ukitumia mazingira yake ya utekelezaji ya maajenti yaliyosanidiwa.",
       "relaunchPrefix": "Simamisha mwendo wa sasa kwa",
-      "relaunchSuffix": "na uianzishe tena kupitia Claude CLI ya ndani."
+      "relaunchSuffix": "na uianzishe tena ukitumia mazingira yake ya utekelezaji ya maajenti yaliyosanidiwa."
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "Kidokezo hiki kitapitishwa kwa",
       "oneShotSuffix": "kwa utekelezaji wa mara moja",
       "saved": "Imehifadhiwa",
-      "schedulePlaceholder": "Maagizo kwa Claude kutekeleza kulingana na ratiba...",
+      "schedulePlaceholder": "Maagizo ya kiongozi wa timu kutekeleza kulingana na ratiba...",
       "teamLeadOptional": "Kidokezo kwa kiongozi wa timu (hiari)",
       "teamLeadPlaceholder": "Maagizo kwa kiongozi wa timu..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "Ujumbe wa timu mtambuka kwa {{team}}...",
       "teamFallback": "timu",
       "placeholder": "Andika ujumbe... (Enter kutuma, Shift+Enter kwa mstari mpya)",
-      "slashTip": "Kidokezo: Unaweza kutumia \"/\" kuendesha amri yoyote ya Claude.",
+      "slashTip": "Kidokezo: Tumia \"/\" kuendesha amri zinazotumika na mazingira ya utekelezaji ya kiongozi wa timu.",
       "charsLeft_few": "herufi {{count}} zimebaki",
       "charsLeft_many": "herufi {{count}} zimebaki"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "Bado hakuna ratiba",
-      "description": "Unda ratiba ili kuendesha kazi za Claude kiotomatiki kulingana na ratiba ya cron."
+      "description": "Unda ratiba ili kuendesha kazi za timu kiotomatiki kulingana na ratiba ya cron."
     },
     "title": "Ratiba",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "Rekebisha ruhusa za folda au uhamishe mradi kwenye folda inayoandikika na mtumiaji. Kuendesha kama msimamizi ni suluhisho la muda pekee.",
         "openCodeBridgeNoOutput": "Anzisha upya programu na runtime ya OpenCode, kisha ujaribu tena. Ikijirudia, nakili utambuzi.",
         "workingDirectoryMissing": "Chagua saraka ya kazi iliyopo, kisha ufungue tena kidirisha hiki.",
-        "authenticationRequired": "Thibitisha mtoa huduma anayehitajika katika Claude CLI, kisha ufungue tena kidirisha hiki.",
+        "authenticationRequired": "Thibitisha mtoa huduma anayehitajika katika runtime iliyosanidiwa kwa ajili yake, kisha ufungue tena kidirisha hiki.",
         "runtimeProviderNotConfigured": "Sanidi runtime ya mtoa huduma uliyechagua, kisha ufungue tena kidirisha hiki.",
         "openCodeRuntimeMissing": "Sakinisha au jaribu tena runtime ya OpenCode kutoka kadi ya hali ya mtoa huduma, kisha ufungue tena kidirisha hiki.",
         "openCodeAppMcpUnreachable": "Jaribu tena uzinduzi ili kuonyesha upya daraja la MCP la programu ya OpenCode. Ikijirudia, anzisha upya programu na runtime ya OpenCode.",
-        "cliBinaryMissing": "Hakikisha binari ya Claude CLI ya ndani ipo na inaweza kuanzishwa, kisha ufungue tena kidirisha hiki.",
+        "cliBinaryMissing": "Hakikisha runtime ya ndani inayohitajika imesakinishwa na inaweza kuanzishwa, kisha ufungue tena kidirisha hiki.",
         "default": "Suluhisha tatizo hapo juu, kisha ufungue tena kidirisha hiki.",
         "openCodeNodeModulesSymlinkPermission": "Endesha Agent Teams AI kama Msimamizi, kisha ujaribu tena uzinduzi."
       }

@@ -13,29 +13,33 @@ vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
     t: (key: string, values?: { percent?: number }) => {
       const labels: Record<string, string> = {
-        'cliStatus.quickConnect.title': 'Plans & providers',
-        'cliStatus.quickConnect.description': 'Mix plans in one Agent Team.',
+        'cliStatus.quickConnect.title': 'Optional providers & plans',
+        'cliStatus.quickConnect.description': 'Connect any plans you use.',
         'cliStatus.quickConnect.browseAll': 'Browse all providers',
         'cliStatus.quickConnect.installOpenCodeFirst': 'Install OpenCode first',
-        'cliStatus.quickConnect.openCodeTitle': 'OpenCode is the provider bridge',
-        'cliStatus.quickConnect.openCodeRequired': 'OpenCode is required for these plans.',
-        'cliStatus.quickConnect.openCodeChecking': 'Checking OpenCode',
+        'cliStatus.quickConnect.openCodeTitle': 'Preparing OpenCode',
+        'cliStatus.quickConnect.openCodeRequired':
+          'Install OpenCode to connect and use these providers with Agent Teams.',
+        'cliStatus.quickConnect.openCodeChecking':
+          'Checking that OpenCode is installed and ready...',
         'cliStatus.quickConnect.openCodeInstalling': 'Installing OpenCode',
         'cliStatus.quickConnect.openCodeInstallingPercent': `Installing OpenCode ${values?.percent ?? 0}%`,
         'cliStatus.quickConnect.openCodeError': 'OpenCode could not start',
+        'cliStatus.quickConnect.connected': 'Connected',
         'cliStatus.quickConnect.retryOpenCode': 'Repair OpenCode',
         'cliStatus.quickConnect.installOpenCode': 'Install OpenCode',
         'cliStatus.quickConnect.providerStatusError': 'Could not load provider status',
         'cliStatus.quickConnect.openAiTitle': 'OpenAI Plus / Pro',
+        'cliStatus.actions.connect': 'Connect',
         'cliStatus.actions.retry': 'Retry',
         'cliStatus.actions.manage': 'Manage',
-        'cliStatus.quickConnect.connectPlan': 'Connect plan',
         'cliStatus.quickConnect.checkAndConnect': 'Check & connect',
         'cliStatus.quickConnect.cliNotInstalled': 'CLI not installed',
         'cliStatus.quickConnect.installAndConnect': 'Install & connect',
         'cliStatus.quickConnect.signIn': 'Sign in',
         'cliStatus.quickConnect.signInRequired': 'Sign in required',
-        'cliStatus.quickConnect.readyToConnect': 'Ready to connect',
+        'cliStatus.quickConnect.readyToConnect': 'Available to connect',
+        'cliStatus.quickConnect.regionNotSelected': 'Region not selected',
         'cliStatus.quickConnect.kiroConnected': 'Kiro account connected',
         'cliStatus.quickConnect.kiroDescription': 'Use Kiro.',
         'cliStatus.quickConnect.cursorConnected': 'Cursor account connected',
@@ -109,20 +113,133 @@ describe('RuntimeProviderQuickConnectView', () => {
       (button) => button.textContent?.trim() === 'Install OpenCode'
     );
     expect(installButtons).toHaveLength(1);
+    expect(host.textContent).toContain('Preparing OpenCode');
+    expect(host.textContent).toContain(
+      'Install OpenCode to connect and use these providers with Agent Teams.'
+    );
     expect(
       buttons.find((button) => button.textContent?.includes('Browse all providers'))?.disabled
-    ).toBe(false);
+    ).toBe(true);
     expect(host.querySelectorAll('[data-testid^="provider-quick-card-"]')).toHaveLength(5);
     expect(host.querySelector('[data-testid="provider-quick-card-claude"]')).toBeNull();
     expect(host.querySelector('[data-testid="provider-quick-card-codex"]')).toBeNull();
     expect(host.textContent).not.toContain('Connect all my plans');
     expect(host.textContent).not.toContain('OpenAI Plus / Pro');
 
+    const firstProviderRow = host.querySelector<HTMLElement>(
+      '[data-testid="provider-quick-card-supergrok"]'
+    );
+    expect(firstProviderRow?.classList.contains('border-b')).toBe(true);
+    expect(firstProviderRow?.classList.contains('rounded-lg')).toBe(false);
+    expect(firstProviderRow?.dataset.disabled).toBe('true');
+    expect(firstProviderRow?.classList.contains('opacity-50')).toBe(false);
+    expect(firstProviderRow?.firstElementChild?.classList.contains('opacity-50')).toBe(true);
+    expect(
+      firstProviderRow
+        ?.querySelector('[data-testid="runtime-provider-logo-supergrok"]')
+        ?.classList.contains('size-7')
+    ).toBe(true);
+    expect(firstProviderRow?.parentElement?.classList.contains('gap-x-6')).toBe(false);
+
     act(() => installButtons[0]?.click());
     expect(onInstallOpenCode).toHaveBeenCalledTimes(1);
   });
 
-  it('opens a plan-specific setup popup even when OpenCode is not installed yet', async () => {
+  it('shows concise preparation copy while OpenCode availability is checked', async () => {
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnectView, {
+          cards: [card('supergrok', { state: 'checking', stateLabel: 'Checking OpenCode' })],
+          gate: 'checking',
+          runtimeStatus: null,
+          directoryError: null,
+          onInstallOpenCode: vi.fn(),
+          onRetryDirectory: vi.fn(),
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+
+    expect(host.textContent).toContain('Preparing OpenCode');
+    expect(host.textContent).toContain('Checking that OpenCode is installed and ready...');
+    const status = host.querySelector(
+      '[data-testid="provider-quick-opencode-prerequisite"] [role="status"]'
+    );
+    expect(status?.getAttribute('aria-live')).toBe('polite');
+    expect(status?.getAttribute('aria-busy')).toBe('true');
+    expect(
+      [...host.querySelectorAll('button')].some(
+        (button) => button.textContent?.trim() === 'Install OpenCode'
+      )
+    ).toBe(false);
+  });
+
+  it('announces install progress and exposes its percentage semantically', async () => {
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnectView, {
+          cards: [card('supergrok', { state: 'checking', stateLabel: 'Installing OpenCode' })],
+          gate: 'installing',
+          runtimeStatus: {
+            installed: false,
+            source: 'missing',
+            state: 'downloading',
+            progress: {
+              phase: 'downloading',
+              percent: 42,
+              detail: 'Downloading OpenCode 42%',
+            },
+          },
+          directoryError: null,
+          onInstallOpenCode: vi.fn(),
+          onRetryDirectory: vi.fn(),
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+
+    expect(host.textContent).toContain('Installing OpenCode 42%');
+    const progress = host.querySelector('[role="progressbar"]');
+    expect(progress?.getAttribute('aria-valuenow')).toBe('42');
+    expect(progress?.getAttribute('aria-valuetext')).toBe('Installing OpenCode 42%');
+    expect(
+      host
+        .querySelector('[data-testid="provider-quick-opencode-prerequisite"] [role="status"]')
+        ?.getAttribute('aria-busy')
+    ).toBe('true');
+  });
+
+  it('announces runtime failure and exposes the repair action', async () => {
+    const onInstallOpenCode = vi.fn();
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnectView, {
+          cards: [card('supergrok')],
+          gate: 'error',
+          runtimeStatus: {
+            installed: false,
+            source: 'missing',
+            state: 'failed',
+            error: 'Network unavailable',
+          },
+          directoryError: null,
+          onInstallOpenCode,
+          onRetryDirectory: vi.fn(),
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Network unavailable');
+    const repair = [...host.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === 'Repair OpenCode'
+    );
+    expect(repair).not.toBeUndefined();
+    act(() => repair?.click());
+    expect(onInstallOpenCode).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps provider setup disabled until OpenCode is installed', async () => {
     const onOpenCodeProviderAction = vi.fn();
     await act(async () => {
       root.render(
@@ -143,9 +260,7 @@ describe('RuntimeProviderQuickConnectView', () => {
     const setupButton = superGrok?.querySelector<HTMLElement>(
       '[data-testid="provider-quick-action-supergrok"]'
     );
-    expect(setupButton).not.toBeNull();
-    act(() => setupButton?.click());
-    expect(onOpenCodeProviderAction).toHaveBeenCalledWith('xai', 'connect');
+    expect(setupButton).toBeNull();
 
     const kimi = host.querySelector('[data-testid="provider-quick-card-kimi-code-membership"]');
     const kimiSetupButton = kimi?.querySelector<HTMLElement>(
@@ -153,10 +268,12 @@ describe('RuntimeProviderQuickConnectView', () => {
     );
     expect(kimi?.textContent).toContain('Kimi Code Membership');
     expect(kimi?.textContent).not.toContain('Use a Kimi Code membership key');
-    expect(kimi?.querySelector('button[aria-label="About Kimi Code Membership"]')).not.toBeNull();
-    expect(kimiSetupButton).not.toBeNull();
-    act(() => kimiSetupButton?.click());
-    expect(onOpenCodeProviderAction).toHaveBeenCalledWith('kimi-for-coding', 'connect');
+    expect(
+      kimi?.querySelector(
+        'button[aria-label="Kimi Code Membership: Use a Kimi Code membership key through OpenCode."]'
+      )
+    ).not.toBeNull();
+    expect(kimiSetupButton).toBeNull();
 
     const kiroSetupButton = host.querySelector<HTMLElement>(
       '[data-testid="provider-quick-action-kiro"]'
@@ -164,23 +281,23 @@ describe('RuntimeProviderQuickConnectView', () => {
     const cursorSetupButton = host.querySelector<HTMLElement>(
       '[data-testid="provider-quick-action-cursor"]'
     );
-    act(() => kiroSetupButton?.click());
-    act(() => cursorSetupButton?.click());
-    expect(onOpenCodeProviderAction).toHaveBeenCalledWith('kiro', 'connect');
-    expect(onOpenCodeProviderAction).toHaveBeenCalledWith('cursor-acp', 'connect');
+    expect(kiroSetupButton).toBeNull();
+    expect(cursorSetupButton).toBeNull();
+    expect(onOpenCodeProviderAction).not.toHaveBeenCalled();
 
     expect(
       [...host.querySelectorAll<HTMLElement>('[data-testid^="provider-quick-card-"]')].map(
         (element) => element.dataset.testid?.replace('provider-quick-card-', '')
       )
     ).toEqual([
-      'github-copilot',
       'cursor',
+      'github-copilot',
       'supergrok',
       'kiro',
       'kimi-code-membership',
       'zai-coding-plan',
       'minimax-token-plan',
+      'xiaomi-mimo-token-plan',
     ]);
   });
 
@@ -197,6 +314,7 @@ describe('RuntimeProviderQuickConnectView', () => {
               stateLabel: 'SuperGrok OAuth connected',
               actionLabel: 'Manage',
               onAction: onManage,
+              progress: { percent: 100, detail: 'Setup complete' },
             }),
           ],
           gate: 'ready',
@@ -216,8 +334,15 @@ describe('RuntimeProviderQuickConnectView', () => {
 
     const superGrok = host.querySelector('[data-testid="provider-quick-card-supergrok"]');
     expect(superGrok?.textContent).toContain('SuperGrok OAuth connected');
+    expect(host.querySelector('.sr-only[role="status"]')?.textContent).toBe('OpenCode: Connected');
+    const manageButton = superGrok?.querySelector<HTMLElement>(
+      '[data-testid="provider-quick-action-supergrok"]'
+    );
+    expect(manageButton?.classList.contains('row-span-2')).toBe(true);
+    expect(manageButton?.classList.contains('self-center')).toBe(true);
+    expect(superGrok?.querySelector('[role="progressbar"]')).toBeNull();
     act(() =>
-      superGrok?.querySelector<HTMLElement>('[data-testid="provider-quick-action-supergrok"]')?.click()
+      manageButton?.click()
     );
     expect(onManage).toHaveBeenCalledTimes(1);
 
@@ -228,7 +353,7 @@ describe('RuntimeProviderQuickConnectView', () => {
     expect(onRetryDirectory).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps OpenCode plugin plans actionable when the native provider snapshot is empty', async () => {
+  it('keeps OpenCode plugin plans visible but disabled when the runtime is missing', async () => {
     const onOpenCodeProviderAction = vi.fn();
 
     await act(async () => {
@@ -251,13 +376,10 @@ describe('RuntimeProviderQuickConnectView', () => {
     expect(kiro?.textContent).toContain('OpenCode');
     expect(cursor?.textContent).toContain('OpenCode');
     expect(host.textContent).not.toContain('Status unavailable');
-    act(() =>
-      kiro?.querySelector<HTMLElement>('[data-testid="provider-quick-action-kiro"]')?.click()
-    );
-    act(() =>
-      cursor?.querySelector<HTMLElement>('[data-testid="provider-quick-action-cursor"]')?.click()
-    );
-    expect(onOpenCodeProviderAction).toHaveBeenCalledWith('kiro', 'connect');
-    expect(onOpenCodeProviderAction).toHaveBeenCalledWith('cursor-acp', 'connect');
+    expect((kiro as HTMLElement | null)?.dataset.disabled).toBe('true');
+    expect((cursor as HTMLElement | null)?.dataset.disabled).toBe('true');
+    expect(kiro?.querySelector('[data-testid="provider-quick-action-kiro"]')).toBeNull();
+    expect(cursor?.querySelector('[data-testid="provider-quick-action-cursor"]')).toBeNull();
+    expect(onOpenCodeProviderAction).not.toHaveBeenCalled();
   });
 });

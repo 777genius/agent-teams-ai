@@ -50,6 +50,7 @@ const STATUS_CACHE_TTL_MS = 5_000;
 const MAX_PARALLEL_PROVIDER_RUNTIME_REQUESTS = 3;
 const PARALLEL_PROVIDER_STATUS_ENV = 'CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS';
 const FRONTEND_MULTIMODEL_PROVIDER_IDS = new Set<CliProviderId>(['anthropic', 'codex', 'opencode']);
+const INDEPENDENT_PROVIDER_RUNTIME_REQUEST_IDS = new Set<CliProviderId>(['opencode']);
 
 function isFrontendMultimodelProviderId(providerId: CliProviderId): boolean {
   return FRONTEND_MULTIMODEL_PROVIDER_IDS.has(providerId);
@@ -163,9 +164,13 @@ function runProviderRuntimeRequest<T>(
   operation: () => Promise<T>
 ): Promise<T> {
   const previousProviderRequest = providerRuntimeRequestTails.get(providerId) ?? Promise.resolve();
+  const runOperation = (): Promise<T> =>
+    INDEPENDENT_PROVIDER_RUNTIME_REQUEST_IDS.has(providerId)
+      ? operation()
+      : runWithProviderRuntimeSlot(operation);
   const request = previousProviderRequest.then(
-    () => runWithProviderRuntimeSlot(operation),
-    () => runWithProviderRuntimeSlot(operation)
+    () => runOperation(),
+    () => runOperation()
   );
   const tail = request.then(
     () => undefined,

@@ -118,7 +118,7 @@
       "teamName": "Nume echipă"
     },
     "launchAfterCreate": {
-      "description": "Pornește echipa imediat prin Claude CLI local.",
+      "description": "Pornește echipa imediat folosind mediile de execuție ale agenților configurate pentru aceasta.",
       "label": "Rulează comanda după creare"
     },
     "localOnly": "Disponibil doar în modul local Electron.",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "Coechipierii existenți nu pot fi redenumiți cât timp echipa este live. redenumiți: {{names}}",
       "memberNameEmpty": "Numele membrului nu poate fi gol",
       "memberNameInvalid": "Numele membrului trebuie să înceapă cu un caracter alfanumeric, să folosească doar [a-zA-Z0-9._-], max 128 de caractere",
-      "memberNameNumericSuffix": "Numele membrului \"{{name}}\" nu este permis (rezervat pentru sufixul automat al Claude CLI). Folosește \"{{base}}\" în schimb.",
+      "memberNameNumericSuffix": "Numele membrului \"{{name}}\" nu este permis (rezervat pentru sufixele numerice gestionate de runtime). Folosește \"{{base}}\" în schimb.",
       "memberNameReserved": "Numele membrului \"{{name}}\" este rezervat",
       "memberNamesUnique": "Numele membrilor trebuie să fie unice înainte de salvare",
       "newLiveTeammates": "Adaugă coechipieri noi din dialogul dedicat Adaugă membru cât timp echipa este live. Editează echipa acceptă doar actualizarea coechipierilor existenți.",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "Director de lucru:"
     },
     "description": {
-      "createSchedule": "Programează execuția automată a sarcinilor Claude",
+      "createSchedule": "Programează execuția automată a sarcinilor agenților",
       "createScheduleForTeam": "Programează rulări automate pentru echipa \"{{team}}\"",
       "editSchedule": "Se editează programarea pentru echipa \"{{team}}\"",
       "launchPrefix": "Pornește echipa",
-      "launchSuffix": "prin Claude CLI local.",
+      "launchSuffix": "folosind mediile de execuție ale agenților configurate pentru aceasta.",
       "relaunchPrefix": "Oprește rularea curentă pentru",
-      "relaunchSuffix": "și pornește-o din nou prin Claude CLI local."
+      "relaunchSuffix": "și pornește-o din nou folosind mediile de execuție ale agenților configurate pentru aceasta."
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "Acest prompt va fi transmis către",
       "oneShotSuffix": "pentru execuție într-o singură rulare",
       "saved": "Salvat",
-      "schedulePlaceholder": "Instrucțiuni pe care Claude să le execute conform programării...",
+      "schedulePlaceholder": "Instrucțiuni pe care liderul echipei să le execute conform programării...",
       "teamLeadOptional": "Prompt pentru liderul echipei (opțional)",
       "teamLeadPlaceholder": "Instrucțiuni pentru liderul echipei..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "Mesaj între echipe către {{team}}...",
       "teamFallback": "echipă",
       "placeholder": "Scrie un mesaj... (Enter pentru a trimite, Shift+Enter pentru linie nouă)",
-      "slashTip": "Sfat: Poți folosi \"/\" pentru a rula orice comandă Claude.",
+      "slashTip": "Sfat: Folosește \"/\" pentru a rula comenzile acceptate de runtime-ul liderului echipei.",
       "charsLeft_few": "{{count}} caractere rămase",
       "charsLeft_many": "{{count}} caractere rămase"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "Nicio programare încă",
-      "description": "Creează o programare pentru a rula sarcini Claude automat conform unei programări cron."
+      "description": "Creează o programare pentru a rula automat sarcinile echipei conform unei programări cron."
     },
     "title": "Programări",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "Corectează permisiunile folderului sau mută proiectul într-un folder cu drept de scriere pentru utilizator. Rularea ca administrator este doar o soluție temporară.",
         "openCodeBridgeNoOutput": "Repornește aplicația și runtime-ul OpenCode, apoi reîncearcă. Dacă se repetă, copiază diagnosticele.",
         "workingDirectoryMissing": "Alege un director de lucru existent, apoi redeschide acest dialog.",
-        "authenticationRequired": "Autentifică furnizorul necesar în Claude CLI, apoi redeschide acest dialog.",
+        "authenticationRequired": "Autentifică furnizorul necesar în mediul de execuție configurat pentru acesta, apoi redeschide această fereastră de dialog.",
         "runtimeProviderNotConfigured": "Configurează runtime-ul furnizorului selectat, apoi redeschide acest dialog.",
         "openCodeRuntimeMissing": "Instalează sau reîncearcă runtime-ul OpenCode din cardul de stare al furnizorului, apoi redeschide acest dialog.",
         "openCodeAppMcpUnreachable": "Reîncearcă lansarea pentru a reîmprospăta puntea MCP a aplicației OpenCode. Dacă se repetă, repornește aplicația și runtime-ul OpenCode.",
-        "cliBinaryMissing": "Asigură-te că binarul Claude CLI local există și poate fi pornit, apoi redeschide acest dialog.",
+        "cliBinaryMissing": "Asigură-te că mediul de execuție local necesar este instalat și poate fi pornit, apoi redeschide această fereastră de dialog.",
         "default": "Rezolvă problema de mai sus, apoi redeschide acest dialog.",
         "openCodeNodeModulesSymlinkPermission": "Rulează Agent Teams AI ca Administrator, apoi reîncearcă lansarea."
       }

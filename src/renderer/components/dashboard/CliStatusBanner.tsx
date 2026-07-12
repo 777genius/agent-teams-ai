@@ -7,7 +7,7 @@
  * Only rendered in Electron mode.
  */
 
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS,
@@ -81,6 +81,7 @@ import {
   ChevronUp,
   Download,
   ExternalLink,
+  Gauge,
   Handshake,
   HelpCircle,
   Loader2,
@@ -88,8 +89,8 @@ import {
   LogOut,
   Puzzle,
   RefreshCw,
+  Settings2,
   SlidersHorizontal,
-  Terminal,
 } from 'lucide-react';
 
 import {
@@ -125,7 +126,6 @@ const VARIANT_STYLES: Record<BannerVariant, { border: string; bg: string }> = {
 const BANNER_MIN_H = 'min-h-[4.25rem]';
 const INSTALLED_BANNER_BACKGROUND =
   'color-mix(in srgb, var(--color-surface-raised) 30%, transparent)';
-const PROVIDER_STATUS_CARD_BACKGROUND = 'var(--color-surface-raised)';
 const ANTHROPIC_LIMIT_REFRESH_INTERVAL_MS = 60 * 1000;
 const SHOW_ATLAS_CLOUD_OPENCODE_BANNER = false;
 const ATLAS_CLOUD_OPENCODE_PROVIDER_ID = 'atlascloud';
@@ -149,9 +149,11 @@ const TerminalModal = lazy(() =>
 const DashboardRateLimitChips = ({
   providerId,
   items,
+  refreshCycle,
 }: {
   providerId: CliProviderId;
   items: DashboardRateLimitItem[];
+  refreshCycle: number;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
 
@@ -159,8 +161,10 @@ const DashboardRateLimitChips = ({
     <div className="flex flex-wrap items-center gap-2">
       {items.map((item) => (
         <div
-          key={`${providerId}-${item.label}`}
-          className="w-fit max-w-full rounded-md border px-2 py-1.5"
+          key={`${providerId}-${item.label}-${refreshCycle}`}
+          className={`w-fit max-w-full rounded-md border px-2 py-1.5 ${
+            refreshCycle > 0 ? 'dashboard-rate-limit-refreshed' : ''
+          }`}
           style={{
             borderColor: 'rgba(74, 222, 128, 0.2)',
             backgroundColor: 'rgba(74, 222, 128, 0.06)',
@@ -232,6 +236,54 @@ const DashboardRateLimitSkeletonChips = (): React.JSX.Element => {
       ))}
     </div>
   );
+};
+
+const DashboardRateLimitStatus = ({
+  providerId,
+  items,
+  successfulRefreshKey,
+  showInitialSkeleton,
+}: {
+  providerId: CliProviderId;
+  items: DashboardRateLimitItem[] | null;
+  successfulRefreshKey: number | string | null;
+  showInitialSkeleton: boolean;
+}): React.JSX.Element | null => {
+  const [displayedItems, setDisplayedItems] = useState<DashboardRateLimitItem[] | null>(items);
+  const [refreshCycle, setRefreshCycle] = useState(0);
+  const lastSuccessfulRefreshKeyRef = useRef(successfulRefreshKey);
+
+  useEffect(() => {
+    if (items?.length) {
+      setDisplayedItems(items);
+    }
+  }, [items]);
+
+  useEffect(() => {
+    if (
+      successfulRefreshKey === null ||
+      successfulRefreshKey === lastSuccessfulRefreshKeyRef.current
+    ) {
+      return;
+    }
+    lastSuccessfulRefreshKeyRef.current = successfulRefreshKey;
+
+    if (items?.length) {
+      setRefreshCycle((current) => current + 1);
+    }
+  }, [items, successfulRefreshKey]);
+
+  if (displayedItems?.length) {
+    return (
+      <DashboardRateLimitChips
+        providerId={providerId}
+        items={displayedItems}
+        refreshCycle={refreshCycle}
+      />
+    );
+  }
+
+  return showInitialSkeleton ? <DashboardRateLimitSkeletonChips /> : null;
 };
 
 function getCodexDashboardHint(
@@ -426,7 +478,9 @@ interface InstalledBannerProps {
     codex: CliProviderAuthMode | null;
   };
   codexRateLimitsLoading: boolean;
+  codexRateLimitsRefreshKey: string | null;
   anthropicRateLimitsRefreshing: boolean;
+  anthropicRateLimitsRefreshVersion: number;
   openCodeRuntimeStatus: OpenCodeRuntimeStatus | null;
   openCodeRuntimeStatusLoading: boolean;
   projectPath: string | null;
@@ -444,12 +498,13 @@ interface InstalledBannerProps {
   onProviderManage: (providerId: CliProviderId) => void;
   onOpenCodeProviderConnect: (providerId: string) => void;
   onOpenCodeProviderAction: (providerId: string, action: 'connect' | 'select') => void;
-  onBrowseOpenCodeProviders: () => void;
+  onBrowseOpenCodeProviders: (query?: string) => void;
   onProviderRefresh: (providerId: CliProviderId) => void;
   onCodexReconnect: () => void;
   onCodexDeviceCodeLogin: () => void;
   codexReconnectBusy: boolean;
-  variant: BannerVariant;
+  openCodeConnectedPlanCount: number;
+  onOpenCodeConnectedPlanCountChange: (count: number) => void;
 }
 
 function getProviderLabel(providerId: CliProviderId): string {
@@ -540,20 +595,19 @@ function isProviderCountedAsConnected(provider: CliProviderStatus): boolean {
 function formatRuntimeAuthSummary(
   cliStatus: NonNullable<ReturnType<typeof useCliInstaller>['cliStatus']>,
   visibleProviders: readonly CliProviderStatus[],
+  additionalConnectedCount: number,
   t: ReturnType<typeof useAppTranslation>['t']
 ): string | null {
   if (isMultimodelRuntimeStatus(cliStatus)) {
-    if (visibleProviders.length === 0) {
-      return null;
-    }
-
-    if (visibleProviders.every(isPendingMultimodelProviderStatus)) {
+    if (visibleProviders.length > 0 && visibleProviders.every(isPendingMultimodelProviderStatus)) {
       return t('cliStatus.provider.checkingProviders');
     }
-    const denominator = visibleProviders.length;
-    const connected = visibleProviders.filter(isProviderCountedAsConnected).length;
+    const connected =
+      visibleProviders.filter(isProviderCountedAsConnected).length + additionalConnectedCount;
 
-    return t('cliStatus.provider.connectedCount', { connected, denominator });
+    return connected > 0
+      ? t('cliStatus.provider.connectedCount', { connected })
+      : t('cliStatus.provider.connectToGetStarted');
   }
 
   if (cliStatus.authStatusChecking) {
@@ -825,7 +879,9 @@ const InstalledBanner = ({
   providersCollapsed,
   providerConnectionAuthModes,
   codexRateLimitsLoading,
+  codexRateLimitsRefreshKey,
   anthropicRateLimitsRefreshing,
+  anthropicRateLimitsRefreshVersion,
   openCodeRuntimeStatus,
   openCodeRuntimeStatusLoading,
   projectPath,
@@ -848,7 +904,8 @@ const InstalledBanner = ({
   onCodexReconnect,
   onCodexDeviceCodeLogin,
   codexReconnectBusy,
-  variant,
+  openCodeConnectedPlanCount,
+  onOpenCodeConnectedPlanCountChange,
 }: InstalledBannerProps): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
@@ -858,53 +915,87 @@ const InstalledBanner = ({
     [commonT]
   );
   const openExtensionsTab = useStore((s) => s.openExtensionsTab);
-  const styles = VARIANT_STYLES[variant];
+  const openTab = useStore((s) => s.openTab);
   const visibleProviders = useMemo(
     () => filterMainScreenCliProviders(cliStatus.providers),
     [cliStatus.providers]
   );
   const detailedProviders = visibleProviders;
   const canOpenExtensions = cliStatus.installed;
-  const runtimeLabel = formatRuntimeLabel(cliStatus);
-  const runtimeAuthSummary = formatRuntimeAuthSummary(cliStatus, visibleProviders, t);
+  const hasConnectedMultimodelProvider =
+    isMultimodelRuntimeStatus(cliStatus) &&
+    (visibleProviders.some(isProviderCountedAsConnected) || openCodeConnectedPlanCount > 0);
+  const runtimeLabel = hasConnectedMultimodelProvider
+    ? t('cliStatus.provider.readyToRunAgents')
+    : formatRuntimeLabel(cliStatus);
+  const runtimeAuthSummary = formatRuntimeAuthSummary(
+    cliStatus,
+    visibleProviders,
+    openCodeConnectedPlanCount,
+    t
+  );
   const showCollapseControl = visibleProviders.length > 0;
   const showExpandedContent = !providersCollapsed;
 
   return (
     <div
-      className={`mb-6 rounded-lg border-l-4 px-4 ${
-        showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'
-      }`}
-      style={{ borderColor: styles.border, backgroundColor: INSTALLED_BANNER_BACKGROUND }}
+      className={`mb-6 rounded-lg px-4 ${showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'}`}
+      style={{ backgroundColor: INSTALLED_BANNER_BACKGROUND }}
     >
-      <div className="flex items-center justify-between">
+      <div
+        className={`flex items-center justify-between rounded-md ${
+          showCollapseControl
+            ? '-mx-2 cursor-pointer px-2 py-1 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/15'
+            : ''
+        }`}
+        role="button"
+        tabIndex={showCollapseControl ? 0 : -1}
+        aria-disabled={!showCollapseControl}
+        aria-expanded={showCollapseControl ? !providersCollapsed : undefined}
+        aria-label={
+          showCollapseControl
+            ? providersCollapsed
+              ? t('cliStatus.labels.expandProviderDetails')
+              : t('cliStatus.labels.collapseProviderDetails')
+            : undefined
+        }
+        title={
+          showCollapseControl
+            ? providersCollapsed
+              ? t('cliStatus.labels.expandProviderDetails')
+              : t('cliStatus.labels.collapseProviderDetails')
+            : undefined
+        }
+        onClick={(event) => {
+          if (!showCollapseControl || (event.target as HTMLElement).closest('button, a')) {
+            return;
+          }
+          onToggleProvidersCollapsed();
+        }}
+        onKeyDown={(event) => {
+          if (!showCollapseControl || event.target !== event.currentTarget) {
+            return;
+          }
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onToggleProvidersCollapsed();
+          }
+        }}
+      >
         <div className="flex items-center gap-3">
           {showCollapseControl && (
-            <button
-              type="button"
-              onClick={onToggleProvidersCollapsed}
-              className="flex items-center justify-center rounded-md p-1 transition-colors hover:bg-white/5"
+            <span
+              className="flex items-center justify-center p-1"
               style={{ color: 'var(--color-text-muted)' }}
-              aria-label={
-                providersCollapsed
-                  ? t('cliStatus.labels.expandProviderDetails')
-                  : t('cliStatus.labels.collapseProviderDetails')
-              }
-              aria-expanded={!providersCollapsed}
-              title={
-                providersCollapsed
-                  ? t('cliStatus.labels.expandProviderDetails')
-                  : t('cliStatus.labels.collapseProviderDetails')
-              }
+              aria-hidden="true"
             >
               {providersCollapsed ? (
                 <ChevronRight className="size-4 shrink-0" />
               ) : (
                 <ChevronDown className="size-4 shrink-0" />
               )}
-            </button>
+            </span>
           )}
-          <Terminal className="size-4 shrink-0" style={{ color: 'var(--color-text-muted)' }} />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               {runtimeLabel && (
@@ -939,7 +1030,15 @@ const InstalledBanner = ({
               ) : null}
 
               {runtimeAuthSummary && (
-                <span className="text-xs" style={{ color: '#4ade80' }}>
+                <span
+                  className="text-xs"
+                  style={{
+                    color:
+                      isMultimodelRuntimeStatus(cliStatus) && !hasConnectedMultimodelProvider
+                        ? 'var(--color-text-muted)'
+                        : '#4ade80',
+                  }}
+                >
                   {runtimeAuthSummary}
                 </span>
               )}
@@ -957,7 +1056,7 @@ const InstalledBanner = ({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-8">
+        <div className="flex shrink-0 items-center gap-2">
           {/* Extensions button — available whenever the runtime is installed */}
           {canOpenExtensions && (
             <button
@@ -969,6 +1068,14 @@ const InstalledBanner = ({
               {t('cliStatus.actions.extensions')}
             </button>
           )}
+          <button
+            onClick={() => openTab({ type: 'token-usage', label: 'Usage' })}
+            className="flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/5"
+            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
+          >
+            <Gauge className="size-3.5" />
+            Usage
+          </button>
         </div>
       </div>
       {showExpandedContent && cliStatusError && !cliStatusLoading && (
@@ -976,25 +1083,25 @@ const InstalledBanner = ({
           {t('cliStatus.errors.refreshFailed')}
         </p>
       )}
-      {showExpandedContent && cliStatus.flavor === 'agent_teams_orchestrator' ? (
-        <RuntimeProviderQuickConnect
-          enabled
-          cliStatusLoading={cliStatusLoading}
-          providers={visibleProviders}
-          openCodeRuntimeStatus={openCodeRuntimeStatus}
-          openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
-          projectPath={projectPath}
-          refreshKey={providerQuickConnectRefreshKey}
-          onInstallOpenCode={onOpenCodeInstall}
-          onOpenCodeProviderAction={onOpenCodeProviderAction}
-          onBrowseProviders={onBrowseOpenCodeProviders}
-        />
+      {cliStatus.flavor === 'agent_teams_orchestrator' ? (
+        <div className={showExpandedContent ? undefined : 'hidden'}>
+          <RuntimeProviderQuickConnect
+            enabled
+            cliStatusLoading={cliStatusLoading}
+            providers={visibleProviders}
+            openCodeRuntimeStatus={openCodeRuntimeStatus}
+            openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
+            projectPath={projectPath}
+            refreshKey={providerQuickConnectRefreshKey}
+            onInstallOpenCode={onOpenCodeInstall}
+            onOpenCodeProviderAction={onOpenCodeProviderAction}
+            onBrowseProviders={onBrowseOpenCodeProviders}
+            onConnectedCountChange={onOpenCodeConnectedPlanCountChange}
+          />
+        </div>
       ) : null}
       {showExpandedContent && detailedProviders.length > 0 && (
-        <div
-          className="mt-3 space-y-2 border-t pt-3"
-          style={{ borderColor: 'var(--color-border-subtle)' }}
-        >
+        <div className="mt-3 border-t" style={{ borderColor: 'var(--color-border-subtle)' }}>
           {detailedProviders.map((provider) => {
             const actionDisabled = isBusy || !cliStatus.binaryPath;
             const runtimeSummary = isConnectionManagedRuntimeProvider(provider)
@@ -1034,11 +1141,12 @@ const InstalledBanner = ({
             const anthropicRateLimitsLoading =
               provider.providerId === 'anthropic' &&
               (anthropicRateLimitsRefreshing || provider.modelCatalogRefreshState === 'loading');
-            const rateLimitsLoading =
+            const rateLimitsRefreshing =
               showSkeleton ||
               (provider.providerId === 'codex' && codexRateLimitsLoading) ||
-              anthropicRateLimitsLoading ||
-              isSubscriptionRateLimitMode;
+              (provider.providerId === 'anthropic' && anthropicRateLimitsRefreshing);
+            const rateLimitsLoading =
+              rateLimitsRefreshing || anthropicRateLimitsLoading || isSubscriptionRateLimitMode;
             const showRateLimitSkeleton = shouldShowDashboardRateLimitSkeleton({
               provider,
               sourceProvider,
@@ -1070,8 +1178,8 @@ const InstalledBanner = ({
             return (
               <div
                 key={provider.providerId}
-                className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 rounded-md p-2"
-                style={{ backgroundColor: PROVIDER_STATUS_CARD_BACKGROUND }}
+                className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 border-b px-3 py-3.5 last:border-b-0"
+                style={{ borderColor: 'var(--color-border-subtle)' }}
               >
                 <div className="col-span-2 flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
@@ -1270,7 +1378,7 @@ const InstalledBanner = ({
                         color: 'var(--color-text-secondary)',
                       }}
                     >
-                      <SlidersHorizontal className="size-3" />
+                      <Settings2 className="size-3" />
                       {t('cliStatus.actions.manage')}
                     </button>
                     {disconnectAction ? (
@@ -1338,17 +1446,20 @@ const InstalledBanner = ({
                     onConnect={() => onOpenCodeProviderConnect(ATLAS_CLOUD_OPENCODE_PROVIDER_ID)}
                   />
                 ) : null}
-                {!showSkeleton && dashboardRateLimits && dashboardRateLimits.length > 0 && (
+                {(hasDashboardRateLimits || showRateLimitSkeleton) && (
                   <div className="col-span-2">
-                    <DashboardRateLimitChips
+                    <DashboardRateLimitStatus
                       providerId={provider.providerId}
                       items={dashboardRateLimits}
+                      successfulRefreshKey={
+                        provider.providerId === 'codex'
+                          ? codexRateLimitsRefreshKey
+                          : provider.providerId === 'anthropic'
+                            ? anthropicRateLimitsRefreshVersion
+                            : null
+                      }
+                      showInitialSkeleton={showRateLimitSkeleton}
                     />
-                  </div>
-                )}
-                {showRateLimitSkeleton && (
-                  <div className="col-span-2">
-                    <DashboardRateLimitSkeletonChips />
                   </div>
                 )}
               </div>
@@ -1364,7 +1475,13 @@ const InstalledBanner = ({
 // Main Component
 // =============================================================================
 
-export const CliStatusBanner = (): React.JSX.Element | null => {
+interface CliStatusBannerProps {
+  isDashboardActive?: boolean;
+}
+
+export const CliStatusBanner = ({
+  isDashboardActive = false,
+}: CliStatusBannerProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
   const { t: settingsT } = useAppTranslation('settings');
   const isElectron = useMemo(() => isElectronMode(), []);
@@ -1423,10 +1540,27 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     loadDashboardCliStatusBannerCollapsed()
   );
   const [anthropicRateLimitsRefreshing, setAnthropicRateLimitsRefreshing] = useState(false);
+  const [anthropicRateLimitsRefreshVersion, setAnthropicRateLimitsRefreshVersion] = useState(0);
+  const dashboardWasActiveRef = useRef(false);
+  const dashboardLimitsRefreshInFlightRef = useRef(false);
   const multimodelEnabled = appConfig?.general?.multimodelEnabled ?? true;
   const selectedProjectPath = useMemo(
     () => resolveProjectPathById(selectedProjectId, projects, repositoryGroups)?.path ?? null,
     [projects, repositoryGroups, selectedProjectId]
+  );
+  const [openCodeConnectedPlanSummary, setOpenCodeConnectedPlanSummary] = useState<{
+    projectPath: string | null;
+    count: number;
+  }>(() => ({ projectPath: selectedProjectPath, count: 0 }));
+  const openCodeConnectedPlanCount =
+    openCodeConnectedPlanSummary.projectPath === selectedProjectPath
+      ? openCodeConnectedPlanSummary.count
+      : 0;
+  const handleOpenCodeConnectedPlanCountChange = useCallback(
+    (count: number) => {
+      setOpenCodeConnectedPlanSummary({ projectPath: selectedProjectPath, count });
+    },
+    [selectedProjectPath]
   );
   const loadingCliStatus = useMemo(
     () =>
@@ -1538,7 +1672,88 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
       configuredAuthModes: providerConnectionAuthModes,
     });
   }, [loadingCliProviderMap, multimodelEnabled, providerConnectionAuthModes, renderCliStatus]);
+  const shouldRefreshCodexSubscriptionLimits = useMemo(() => {
+    if (
+      !renderCliStatus?.installed ||
+      renderCliStatus.flavor !== 'agent_teams_orchestrator' ||
+      !multimodelEnabled
+    ) {
+      return false;
+    }
+
+    const provider =
+      renderCliStatus.providers.find((candidate) => candidate.providerId === 'codex') ?? null;
+    if (!provider) {
+      return false;
+    }
+
+    return isDashboardRateLimitSubscriptionMode({
+      provider,
+      sourceProvider: loadingCliProviderMap.get('codex') ?? null,
+      configuredAuthModes: providerConnectionAuthModes,
+    });
+  }, [loadingCliProviderMap, multimodelEnabled, providerConnectionAuthModes, renderCliStatus]);
   const runtimeDisplayName = getHumanRuntimeDisplayName(renderCliStatus, multimodelEnabled);
+
+  const refreshAnthropicSubscriptionLimits = useCallback(async (): Promise<void> => {
+    if (!shouldPollAnthropicSubscriptionLimits) {
+      return;
+    }
+
+    setAnthropicRateLimitsRefreshing(true);
+    try {
+      const refreshed = await fetchCliProviderStatus('anthropic', { silent: true });
+      if (refreshed) {
+        setAnthropicRateLimitsRefreshVersion((current) => current + 1);
+      }
+    } finally {
+      setAnthropicRateLimitsRefreshing(false);
+    }
+  }, [fetchCliProviderStatus, shouldPollAnthropicSubscriptionLimits]);
+
+  useEffect(() => {
+    if (!isDashboardActive) {
+      dashboardWasActiveRef.current = false;
+      return;
+    }
+
+    if (dashboardWasActiveRef.current) {
+      return;
+    }
+    dashboardWasActiveRef.current = true;
+
+    if (!isElectron || dashboardLimitsRefreshInFlightRef.current) {
+      return;
+    }
+
+    const refreshes: Promise<unknown>[] = [];
+    if (shouldPollAnthropicSubscriptionLimits) {
+      refreshes.push(refreshAnthropicSubscriptionLimits());
+    }
+    if (shouldRefreshCodexSubscriptionLimits) {
+      refreshes.push(
+        codexAccount.refresh({
+          includeRateLimits: true,
+          silent: true,
+        })
+      );
+    }
+    if (refreshes.length === 0) {
+      return;
+    }
+
+    dashboardLimitsRefreshInFlightRef.current = true;
+    void Promise.allSettled(refreshes).finally(() => {
+      dashboardLimitsRefreshInFlightRef.current = false;
+    });
+  }, [
+    codexAccount,
+    isDashboardActive,
+    isElectron,
+    refreshAnthropicSubscriptionLimits,
+    shouldPollAnthropicSubscriptionLimits,
+    shouldRefreshCodexSubscriptionLimits,
+  ]);
 
   useEffect(() => {
     if (!isElectron) return;
@@ -1570,31 +1785,14 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
       return;
     }
 
-    let active = true;
-    const refreshAnthropicLimits = async (): Promise<void> => {
-      if (!active) {
-        return;
-      }
-
-      setAnthropicRateLimitsRefreshing(true);
-      try {
-        await fetchCliProviderStatus('anthropic', { silent: true });
-      } finally {
-        if (active) {
-          setAnthropicRateLimitsRefreshing(false);
-        }
-      }
-    };
-
     const interval = setInterval(() => {
-      void refreshAnthropicLimits();
+      void refreshAnthropicSubscriptionLimits();
     }, ANTHROPIC_LIMIT_REFRESH_INTERVAL_MS);
 
     return () => {
-      active = false;
       clearInterval(interval);
     };
-  }, [fetchCliProviderStatus, isElectron, shouldPollAnthropicSubscriptionLimits]);
+  }, [isElectron, refreshAnthropicSubscriptionLimits, shouldPollAnthropicSubscriptionLimits]);
 
   const handleInstall = useCallback(() => {
     installCli();
@@ -1700,10 +1898,10 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     []
   );
 
-  const handleBrowseOpenCodeProviders = useCallback(() => {
+  const handleBrowseOpenCodeProviders = useCallback((query?: string) => {
     setManageProviderId('opencode');
-    setManageRuntimeProviderId(null);
-    setManageRuntimeProviderAction(null);
+    setManageRuntimeProviderId(query?.trim() || null);
+    setManageRuntimeProviderAction(query?.trim() ? 'select' : null);
     setManageDialogOpen(true);
   }, []);
 
@@ -1734,7 +1932,10 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
     (providerId: CliProviderId) => {
       void (async () => {
         await invalidateCliStatus();
-        await fetchCliProviderStatus(providerId);
+        const refreshed = await fetchCliProviderStatus(providerId);
+        if (refreshed && providerId === 'anthropic') {
+          setAnthropicRateLimitsRefreshVersion((current) => current + 1);
+        }
       })();
     },
     [fetchCliProviderStatus, invalidateCliStatus]
@@ -1800,14 +2001,13 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         (provider) => provider.providerId === providerTerminal.providerId
       ) ?? null)
     : null;
-  const providerTerminalCommand =
-    providerTerminal
-      ? activeTerminalProvider
-        ? providerTerminal.action === 'login'
-          ? getProviderTerminalCommand(activeTerminalProvider)
-          : getProviderTerminalLogoutCommand(activeTerminalProvider)
-        : getProviderTerminalCommandById(providerTerminal.providerId, providerTerminal.action)
-      : null;
+  const providerTerminalCommand = providerTerminal
+    ? activeTerminalProvider
+      ? providerTerminal.action === 'login'
+        ? getProviderTerminalCommand(activeTerminalProvider)
+        : getProviderTerminalLogoutCommand(activeTerminalProvider)
+      : getProviderTerminalCommandById(providerTerminal.providerId, providerTerminal.action)
+    : null;
   const installedAuxiliaryUi =
     renderCliStatus !== null ? (
       <>
@@ -1963,7 +2163,9 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           providersCollapsed={providersCollapsed}
           providerConnectionAuthModes={providerConnectionAuthModes}
           codexRateLimitsLoading={codexAccount.rateLimitsLoading}
+          codexRateLimitsRefreshKey={codexAccount.snapshot?.updatedAt ?? null}
           anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
+          anthropicRateLimitsRefreshVersion={anthropicRateLimitsRefreshVersion}
           openCodeRuntimeStatus={openCodeRuntimeStatus}
           openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
           projectPath={selectedProjectPath}
@@ -1986,7 +2188,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           onCodexReconnect={handleCodexDashboardLogin}
           onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
           codexReconnectBusy={codexAccount.loading}
-          variant="info"
+          openCodeConnectedPlanCount={openCodeConnectedPlanCount}
+          onOpenCodeConnectedPlanCountChange={handleOpenCodeConnectedPlanCountChange}
         />
       );
     }
@@ -2218,7 +2421,9 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
             providersCollapsed={providersCollapsed}
             providerConnectionAuthModes={providerConnectionAuthModes}
             codexRateLimitsLoading={codexAccount.rateLimitsLoading}
+            codexRateLimitsRefreshKey={codexAccount.snapshot?.updatedAt ?? null}
             anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
+            anthropicRateLimitsRefreshVersion={anthropicRateLimitsRefreshVersion}
             openCodeRuntimeStatus={openCodeRuntimeStatus}
             openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
             projectPath={selectedProjectPath}
@@ -2241,7 +2446,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
             onCodexReconnect={handleCodexDashboardLogin}
             onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
             codexReconnectBusy={codexAccount.loading}
-            variant={variant}
+            openCodeConnectedPlanCount={openCodeConnectedPlanCount}
+            onOpenCodeConnectedPlanCountChange={handleOpenCodeConnectedPlanCountChange}
           />
           {installedAuxiliaryUi}
         </>
@@ -2296,7 +2502,9 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           providersCollapsed={providersCollapsed}
           providerConnectionAuthModes={providerConnectionAuthModes}
           codexRateLimitsLoading={codexAccount.rateLimitsLoading}
+          codexRateLimitsRefreshKey={codexAccount.snapshot?.updatedAt ?? null}
           anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
+          anthropicRateLimitsRefreshVersion={anthropicRateLimitsRefreshVersion}
           openCodeRuntimeStatus={openCodeRuntimeStatus}
           openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
           projectPath={selectedProjectPath}
@@ -2319,7 +2527,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
           onCodexReconnect={handleCodexDashboardLogin}
           onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
           codexReconnectBusy={codexAccount.loading}
-          variant={variant}
+          openCodeConnectedPlanCount={openCodeConnectedPlanCount}
+          onOpenCodeConnectedPlanCountChange={handleOpenCodeConnectedPlanCountChange}
         />
         <div
           className="mb-6 rounded-lg border-l-4 p-4"
@@ -2518,7 +2727,9 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         providersCollapsed={providersCollapsed}
         providerConnectionAuthModes={providerConnectionAuthModes}
         codexRateLimitsLoading={codexAccount.rateLimitsLoading}
+        codexRateLimitsRefreshKey={codexAccount.snapshot?.updatedAt ?? null}
         anthropicRateLimitsRefreshing={anthropicRateLimitsRefreshing}
+        anthropicRateLimitsRefreshVersion={anthropicRateLimitsRefreshVersion}
         openCodeRuntimeStatus={openCodeRuntimeStatus}
         openCodeRuntimeStatusLoading={openCodeRuntimeStatusLoading}
         projectPath={selectedProjectPath}
@@ -2541,7 +2752,8 @@ export const CliStatusBanner = (): React.JSX.Element | null => {
         onCodexReconnect={handleCodexDashboardLogin}
         onCodexDeviceCodeLogin={handleCodexDashboardDeviceCodeLogin}
         codexReconnectBusy={codexAccount.loading}
-        variant={variant}
+        openCodeConnectedPlanCount={openCodeConnectedPlanCount}
+        onOpenCodeConnectedPlanCountChange={handleOpenCodeConnectedPlanCountChange}
       />
       {installedAuxiliaryUi}
     </>

@@ -118,7 +118,7 @@
       "teamName": "Nazwa zespołu"
     },
     "launchAfterCreate": {
-      "description": "Uruchom zespół natychmiast przez lokalne Claude CLI.",
+      "description": "Uruchom zespół natychmiast, używając skonfigurowanych dla niego środowisk uruchomieniowych agentów.",
       "label": "Uruchom polecenie po utworzeniu"
     },
     "localOnly": "Dostępne tylko w trybie lokalnym Electron.",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "Istniejących członków zespołu nie można zmieniać nazwy, gdy zespół jest aktywny. zmieniono nazwę: {{names}}",
       "memberNameEmpty": "Nazwa członka nie może być pusta",
       "memberNameInvalid": "Nazwa członka musi zaczynać się od znaku alfanumerycznego, używać tylko [a-zA-Z0-9._-], maks. 128 znaków",
-      "memberNameNumericSuffix": "Nazwa członka \"{{name}}\" jest niedozwolona (zarezerwowana dla auto-sufiksu Claude CLI). Użyj zamiast tego \"{{base}}\".",
+      "memberNameNumericSuffix": "Nazwa członka \"{{name}}\" jest niedozwolona (zarezerwowana dla sufiksów numerycznych zarządzanych przez środowisko uruchomieniowe). Użyj zamiast tego \"{{base}}\".",
       "memberNameReserved": "Nazwa członka \"{{name}}\" jest zarezerwowana",
       "memberNamesUnique": "Nazwy członków muszą być unikalne przed zapisaniem",
       "newLiveTeammates": "Dodawaj nowych członków zespołu z dedykowanego okna Dodaj członka, gdy zespół jest aktywny. Edycja zespołu obsługuje tylko aktualizowanie istniejących członków.",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "Katalog roboczy:"
     },
     "description": {
-      "createSchedule": "Zaplanuj automatyczne wykonywanie zadań Claude",
+      "createSchedule": "Zaplanuj automatyczne wykonywanie zadań agentów",
       "createScheduleForTeam": "Zaplanuj automatyczne uruchomienia dla zespołu \"{{team}}\"",
       "editSchedule": "Edytowanie harmonogramu dla zespołu \"{{team}}\"",
       "launchPrefix": "Uruchom zespół",
-      "launchSuffix": "przez lokalne Claude CLI.",
+      "launchSuffix": "przy użyciu skonfigurowanych dla niego środowisk uruchomieniowych agentów.",
       "relaunchPrefix": "Zatrzymaj bieżący przebieg dla",
-      "relaunchSuffix": "i uruchom go ponownie przez lokalne Claude CLI."
+      "relaunchSuffix": "i uruchom go ponownie przy użyciu skonfigurowanych dla niego środowisk uruchomieniowych agentów."
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "Ten prompt zostanie przekazany do",
       "oneShotSuffix": "w celu jednorazowego wykonania",
       "saved": "Zapisano",
-      "schedulePlaceholder": "Instrukcje dla Claude do wykonania zgodnie z harmonogramem...",
+      "schedulePlaceholder": "Instrukcje dla lidera zespołu do wykonania zgodnie z harmonogramem...",
       "teamLeadOptional": "Prompt dla lidera zespołu (opcjonalnie)",
       "teamLeadPlaceholder": "Instrukcje dla lidera zespołu..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "Wiadomość między zespołami do {{team}}...",
       "teamFallback": "zespół",
       "placeholder": "Napisz wiadomość... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
-      "slashTip": "Wskazówka: Możesz użyć \"/\", aby uruchomić dowolne polecenia Claude.",
+      "slashTip": "Wskazówka: Użyj \"/\", aby uruchamiać polecenia obsługiwane przez środowisko uruchomieniowe lidera zespołu.",
       "charsLeft_few": "Pozostały {{count}} znaki",
       "charsLeft_many": "Pozostało {{count}} znaków"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "Brak harmonogramów",
-      "description": "Utwórz harmonogram, aby automatycznie uruchamiać zadania Claude zgodnie z harmonogramem cron."
+      "description": "Utwórz harmonogram, aby automatycznie uruchamiać zadania zespołu zgodnie z harmonogramem cron."
     },
     "title": "Harmonogramy",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "Napraw uprawnienia folderu lub przenieś projekt do folderu zapisywalnego dla użytkownika. Uruchamianie jako administrator jest tylko tymczasowym obejściem.",
         "openCodeBridgeNoOutput": "Uruchom ponownie aplikację i środowisko uruchomieniowe OpenCode, a następnie spróbuj ponownie. Jeśli się powtarza, skopiuj diagnostykę.",
         "workingDirectoryMissing": "Wybierz istniejący katalog roboczy, a następnie otwórz ponownie to okno.",
-        "authenticationRequired": "Uwierzytelnij wymaganego dostawcę w Claude CLI, a następnie otwórz ponownie to okno.",
+        "authenticationRequired": "Uwierzytelnij wymaganego dostawcę w skonfigurowanym dla niego środowisku uruchomieniowym, a następnie ponownie otwórz to okno dialogowe.",
         "runtimeProviderNotConfigured": "Skonfiguruj wybrane środowisko uruchomieniowe dostawcy, a następnie otwórz ponownie to okno.",
         "openCodeRuntimeMissing": "Zainstaluj lub ponów środowisko uruchomieniowe OpenCode z karty statusu dostawcy, a następnie otwórz ponownie to okno.",
         "openCodeAppMcpUnreachable": "Ponów uruchomienie, aby odświeżyć most MCP aplikacji OpenCode. Jeśli się powtarza, uruchom ponownie aplikację i środowisko uruchomieniowe OpenCode.",
-        "cliBinaryMissing": "Upewnij się, że lokalny plik binarny Claude CLI istnieje i można go uruchomić, a następnie otwórz ponownie to okno.",
+        "cliBinaryMissing": "Upewnij się, że wymagane lokalne środowisko uruchomieniowe jest zainstalowane i można je uruchomić, a następnie ponownie otwórz to okno dialogowe.",
         "default": "Rozwiąż powyższy problem, a następnie otwórz ponownie to okno.",
         "openCodeNodeModulesSymlinkPermission": "Uruchom Agent Teams AI jako administrator, a następnie ponów uruchomienie."
       }

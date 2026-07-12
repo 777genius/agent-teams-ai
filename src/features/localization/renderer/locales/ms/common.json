@@ -140,7 +140,7 @@
       "runNow": "Jalankan sekarang"
     },
     "empty": {
-      "description": "Cipta jadual pada mana-mana pasukan untuk mengautomasikan pelaksanaan tugasan Claude dengan ungkapan cron. Jadual daripada semua pasukan akan dipaparkan di sini.",
+      "description": "Cipta jadual pada mana-mana pasukan untuk mengautomasikan pelaksanaan tugas pasukan dengan ungkapan cron. Jadual daripada semua pasukan akan dipaparkan di sini.",
       "noMatches": "Tiada jadual yang sepadan dengan penapis semasa",
       "title": "Tiada tugasan berjadual"
     },

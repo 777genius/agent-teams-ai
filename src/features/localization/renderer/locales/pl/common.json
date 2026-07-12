@@ -140,7 +140,7 @@
       "runNow": "Uruchom teraz"
     },
     "empty": {
-      "description": "Utwórz harmonogram w dowolnym zespole, aby zautomatyzować wykonywanie zadań Claude za pomocą wyrażeń cron. Harmonogramy ze wszystkich zespołów pojawią się tutaj.",
+      "description": "Utwórz harmonogram w dowolnym zespole, aby zautomatyzować wykonywanie zadań zespołu za pomocą wyrażeń cron. Harmonogramy ze wszystkich zespołów pojawią się tutaj.",
       "noMatches": "Żaden harmonogram nie pasuje do bieżących filtrów",
       "title": "Brak zaplanowanych zadań"
     },

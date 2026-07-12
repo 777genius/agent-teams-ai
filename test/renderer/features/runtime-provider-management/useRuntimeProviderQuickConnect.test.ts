@@ -21,7 +21,7 @@ function directoryResponse(): RuntimeProviderManagementDirectoryResponse {
       returnedCount: 1,
       query: null,
       filter: 'all',
-      limit: 100,
+      limit: 250,
       cursor: null,
       nextCursor: null,
       entries: [
@@ -108,7 +108,7 @@ describe('useRuntimeProviderQuickConnect', () => {
       projectPath: '/tmp/test-project',
       query: null,
       filter: 'all',
-      limit: 100,
+      limit: 250,
       cursor: null,
       refresh: false,
     });

@@ -118,7 +118,7 @@
       "teamName": "团团队名称称"
     },
     "launchAfterCreate": {
-      "description": "通过本地 Claude CLI 立即启动团队。",
+      "description": "使用为团队配置的智能体运行时立即启动团队。",
       "label": "创建后运行命令"
     },
     "localOnly": "仅在本地 Electron 模式下可用。",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "当团队上线时，现有队友无法重命名。更名：{{names}}",
       "memberNameEmpty": "成员名不能为空",
       "memberNameInvalid": "成员名称必须以字母数字开头，仅使用 [a-zA-Z0-9._-]，最多 128 个字符",
-      "memberNameNumericSuffix": "不允许成员名称“{{name}}”（为 Claude CLI 自动后缀保留）。请改用“{{base}}”。",
+      "memberNameNumericSuffix": "不允许成员名称“{{name}}”（为运行时管理的数字后缀保留）。请改用“{{base}}”。",
       "memberNameReserved": "成员名“{{name}}”已保留",
       "memberNamesUnique": "保存前成员名称必须是唯一的",
       "newLiveTeammates": "当团队在线时，通过专用的“添加成员”对话框添加新的队友。编辑团队仅支持更新现有队友。",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "工作目录："
     },
     "description": {
-      "createSchedule": "安排自动执行 Claude 任务",
+      "createSchedule": "安排自动执行智能体任务",
       "createScheduleForTeam": "为团队“{{team}}”安排自动运行",
       "editSchedule": "编辑“{{team}}”团队的日程",
       "launchPrefix": "开始组队",
-      "launchSuffix": "通过本地 Claude CLI。",
+      "launchSuffix": "使用为其配置的智能体运行时。",
       "relaunchPrefix": "停止当前运行",
-      "relaunchSuffix": "并通过本地 Claude CLI 再次启动它。"
+      "relaunchSuffix": "并使用为其配置的智能体运行时再次启动。"
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "该提示词将被传递到",
       "oneShotSuffix": "用于一次性执行",
       "saved": "已保存",
-      "schedulePlaceholder": "指示 Claude 按计划执行……",
+      "schedulePlaceholder": "供团队负责人按计划执行的说明……",
       "teamLeadOptional": "提示团队负责人（可选）",
       "teamLeadPlaceholder": "给团队领导的指示…"
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "跨团队消息至 {{team}}…",
       "teamFallback": "团队",
       "placeholder": "写一条消息…（Enter 发送，Shift+Enter 换行）",
-      "slashTip": "提示词：您可以使用“/”来运行任何 Claude 命令。",
+      "slashTip": "提示：使用“/”运行团队负责人所用运行时支持的命令。",
       "charsLeft_few": "{{count}} 剩余字符数",
       "charsLeft_many": "{{count}} 剩余字符数"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "还没有计划任务",
-      "description": "创建一个计划以按照 cron 计划自动运行 Claude 任务。"
+      "description": "创建计划，以按照 cron 计划自动运行团队任务。"
     },
     "title": "计划任务",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "修复文件夹权限或将项目移动到用户可写的文件夹。以管理员身份运行只是一个临时解决方法。",
         "openCodeBridgeNoOutput": "重新启动应用和 OpenCode 运行时，然后重试。如果重复出现，请复制诊断信息。",
         "workingDirectoryMissing": "选择现有的工作目录，然后重新打开此对话框。",
-        "authenticationRequired": "在 Claude CLI 中验证所需的提供商，然后重新打开此对话框。",
+        "authenticationRequired": "在为所需提供商配置的运行时中完成身份验证，然后重新打开此对话框。",
         "runtimeProviderNotConfigured": "配置选定的提供商运行时，然后重新打开此对话框。",
         "openCodeRuntimeMissing": "从提供商状态卡安装或重试 OpenCode 运行时，然后重新打开此对话框。",
         "openCodeAppMcpUnreachable": "重试启动以刷新 OpenCode 应用 MCP 桥。如果重复出现，请重新启动应用和 OpenCode 运行时。",
-        "cliBinaryMissing": "确保本地 Claude CLI 二进制文件存在并且可以启动，然后重新打开此对话框。",
+        "cliBinaryMissing": "确保所需的本地运行时已安装且可以启动，然后重新打开此对话框。",
         "default": "解决上述问题，然后重新打开此对话框。",
         "openCodeNodeModulesSymlinkPermission": "以管理员身份运行 Agent Teams AI，然后重试启动。"
       }

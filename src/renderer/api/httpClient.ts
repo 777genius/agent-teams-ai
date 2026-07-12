@@ -49,7 +49,11 @@ import type {
 import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contracts';
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
-import type { RuntimeProviderManagementApi } from '@features/runtime-provider-management/contracts';
+import type {
+  RuntimeProviderCompanionInput,
+  RuntimeProviderCompanionStatusDto,
+  RuntimeProviderManagementApi,
+} from '@features/runtime-provider-management/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
 import type {
   AppConfig,
@@ -155,13 +159,40 @@ function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): stri
   return suffix ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${suffix}` : TOKEN_USAGE_SNAPSHOT_ROUTE;
 }
 
+function createBrowserCompanionStatus(
+  input: RuntimeProviderCompanionInput,
+  operation: 'status' | 'install' | 'connect'
+): RuntimeProviderCompanionStatusDto {
+  const cursor = input.companionId === 'cursor-agent';
+  const displayName = cursor ? 'Cursor Agent CLI' : 'Kiro CLI';
+  const action = operation === 'install' ? 'install and connect' : 'connect';
+  return {
+    companionId: input.companionId,
+    displayName,
+    phase: 'needs-manual-step',
+    installed: false,
+    authenticated: false,
+    binaryPath: null,
+    version: null,
+    percent: null,
+    message: `${displayName} setup is available in the desktop app.`,
+    detail: `Open Agent Teams desktop to ${action} ${displayName}.`,
+    error: operation === 'status' ? null : `Native CLI ${action} is not available in browser mode.`,
+    manualCommand: cursor
+      ? 'curl https://cursor.com/install -fsS | bash'
+      : 'curl -fsSL https://cli.kiro.dev/install | bash',
+    manualUrl: cursor ? 'https://cursor.com/docs/cli/installation' : 'https://kiro.dev/downloads/',
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 export class HttpAPIClient implements ElectronAPI {
   private baseUrl: string;
   private eventSource: EventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
   private eventListeners = new Map<string, Set<(...args: any[]) => void>>();
   telemetry = {
-    getSentryContext: async () => null,
+    getSentryContext: async (): Promise<null> => null,
   };
 
   constructor(baseUrl: string) {
@@ -1447,6 +1478,10 @@ export class HttpAPIClient implements ElectronAPI {
   };
 
   runtimeProviderManagement: RuntimeProviderManagementApi = {
+    getCompanionStatus: async (input) => createBrowserCompanionStatus(input, 'status'),
+    installAndConnectCompanion: async (input) => createBrowserCompanionStatus(input, 'install'),
+    connectCompanion: async (input) => createBrowserCompanionStatus(input, 'connect'),
+    onCompanionProgress: () => () => {},
     loadView: async (input) => ({
       schemaVersion: 1,
       runtimeId: input.runtimeId,
@@ -1528,6 +1563,24 @@ export class HttpAPIClient implements ElectronAPI {
         recoverable: true,
       },
     }),
+    configureModelLimits: async (input) => ({
+      schemaVersion: 1,
+      runtimeId: input.runtimeId,
+      error: {
+        code: 'unsupported-action',
+        message: 'Local model context configuration is not available in browser mode.',
+        recoverable: true,
+      },
+    }),
+    submitOAuthCode: async () => ({
+      ok: false,
+      error: 'Runtime provider OAuth is not available in browser mode.',
+    }),
+    cancelOAuth: async () => ({
+      ok: false,
+      error: 'Runtime provider OAuth is not available in browser mode.',
+    }),
+    onOAuthProgress: () => () => {},
   };
 
   memberWorkSync: MemberWorkSyncElectronApi = {

@@ -8,8 +8,8 @@ import {
   findRuntimeProviderOnboardingPlanByProviderId,
   getRuntimeProviderOnboardingPlan,
   isRuntimeProviderOnboardingPlanRoutable,
+  rankRecommendedRuntimeProviderModels,
   RUNTIME_PROVIDER_ONBOARDING_PLANS,
-  selectRecommendedRuntimeProviderModel,
 } from '../../core/domain';
 import {
   createRuntimeProviderOnboardingProgressRepository,
@@ -90,6 +90,12 @@ const DEFAULT_WIZARD_PLAN_IDS: readonly RuntimeProviderOnboardingPlanId[] = [
   'github-copilot',
   'kimi-code-membership',
 ];
+
+function getAutomaticModelProbeLimit(plan: RuntimeProviderOnboardingPlan): number {
+  // Copilot catalogs models that an individual plan can still reject. Try one
+  // fallback, but never burn through a user's quota by probing the full list.
+  return plan.id === 'github-copilot' ? 2 : 1;
+}
 
 function findDirectoryEntry(
   state: RuntimeProviderManagementState,
@@ -239,37 +245,51 @@ export function useRuntimeProviderOnboarding({
     setVerifiedModelId(null);
   }, [activePlan, wizardStarted]);
 
-  const verifyModel = useCallback(
-    async (modelId: string): Promise<void> => {
+  const verifyModelCandidates = useCallback(
+    async (modelIds: readonly string[]): Promise<void> => {
       if (!activePlan) {
         return;
       }
-      const model = management.models.find((entry) => entry.modelId === modelId) ?? null;
-      if (!model) {
+      const models = modelIds
+        .map((modelId) => management.models.find((entry) => entry.modelId === modelId) ?? null)
+        .filter((model): model is RuntimeProviderModelDto => model !== null);
+      if (models.length === 0) {
         setStage('error');
         setStageError('The selected model is no longer available in the live OpenCode catalog.');
         return;
       }
       const probeSequence = probeSequenceRef.current + 1;
       probeSequenceRef.current = probeSequence;
-      setRecommendedModel(model);
       setVerifiedModelId(null);
       setStage('verifying');
       setStageError(null);
-      managementActions.selectModel(model.modelId);
-      const result = await managementActions.testModel(activePlan.providerId, model.modelId);
-      if (probeSequenceRef.current !== probeSequence) {
-        return;
+      let lastError = 'The model could not complete a verification request.';
+      for (const model of models) {
+        if (probeSequenceRef.current !== probeSequence) {
+          return;
+        }
+        setRecommendedModel(model);
+        managementActions.selectModel(model.modelId);
+        const result = await managementActions.testModel(activePlan.providerId, model.modelId);
+        if (probeSequenceRef.current !== probeSequence) {
+          return;
+        }
+        if (result.ok && result.availability === 'available') {
+          setVerifiedModelId(model.modelId);
+          setStage('choose-model');
+          return;
+        }
+        lastError = result.message || lastError;
       }
-      if (!result.ok || result.availability !== 'available') {
-        setStage('error');
-        setStageError(result.message || 'The model could not complete a verification request.');
-        return;
-      }
-      setVerifiedModelId(model.modelId);
-      setStage('choose-model');
+      setStage('error');
+      setStageError(lastError);
     },
     [activePlan, management.models, managementActions]
+  );
+
+  const verifyModel = useCallback(
+    async (modelId: string): Promise<void> => verifyModelCandidates([modelId]),
+    [verifyModelCandidates]
   );
 
   useEffect(() => {
@@ -277,6 +297,11 @@ export function useRuntimeProviderOnboarding({
       return;
     }
     if (!management.directoryLoaded || management.directoryLoading) {
+      return;
+    }
+    if (management.activeFormProviderId === activePlan.providerId) {
+      setStage('connect');
+      setStageError(null);
       return;
     }
     const entry = findDirectoryEntry(management, activePlan.providerId);
@@ -313,13 +338,17 @@ export function useRuntimeProviderOnboarding({
     if (recommendedModel || verifiedModelId) {
       return;
     }
-    const candidate = selectRecommendedRuntimeProviderModel(activePlan, management.models);
-    if (!candidate) {
+    const candidates = rankRecommendedRuntimeProviderModels(activePlan, management.models);
+    if (candidates.length === 0) {
       setStage('error');
       setStageError('No usable model was reported for this connected provider.');
       return;
     }
-    void verifyModel(candidate.modelId);
+    void verifyModelCandidates(
+      candidates
+        .slice(0, getAutomaticModelProbeLimit(activePlan))
+        .map((candidate) => candidate.modelId)
+    );
   }, [
     activePlan,
     enabled,
@@ -329,7 +358,7 @@ export function useRuntimeProviderOnboarding({
     runtimeGate,
     runtimeUpdateRequired,
     verifiedModelId,
-    verifyModel,
+    verifyModelCandidates,
   ]);
 
   const togglePlan = useCallback((planId: RuntimeProviderOnboardingPlanId): void => {

@@ -140,7 +140,7 @@
       "runNow": "Rulează acum"
     },
     "empty": {
-      "description": "Creează o programare pe orice echipă pentru a automatiza execuția sarcinilor Claude cu expresii cron. Programările din toate echipele vor apărea aici.",
+      "description": "Creează o programare pentru orice echipă pentru a automatiza execuția sarcinilor echipei cu expresii cron. Programările tuturor echipelor vor apărea aici.",
       "noMatches": "Nicio programare nu corespunde filtrelor curente",
       "title": "Nicio sarcină programată"
     },

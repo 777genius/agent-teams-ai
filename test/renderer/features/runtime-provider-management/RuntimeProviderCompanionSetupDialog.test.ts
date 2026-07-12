@@ -55,6 +55,8 @@ describe('RuntimeProviderCompanionSetupDialog', () => {
       root.render(
         React.createElement(RuntimeProviderCompanionSetupDialog, {
           open: true,
+          title: 'Amazon Q Developer / Kiro',
+          description: 'Use Kiro through OpenCode.',
           status: status(),
           busy: true,
           onOpenChange: vi.fn(),
@@ -78,6 +80,8 @@ describe('RuntimeProviderCompanionSetupDialog', () => {
       root.render(
         React.createElement(RuntimeProviderCompanionSetupDialog, {
           open: true,
+          title: 'Amazon Q Developer / Kiro',
+          description: 'Use Kiro through OpenCode.',
           status: status({
             phase: 'needs-manual-step',
             percent: null,
@@ -100,5 +104,40 @@ describe('RuntimeProviderCompanionSetupDialog', () => {
     act(() => buttons.find((button) => button.textContent?.includes('openKiroGuide'))?.click());
     expect(onCopyManualCommand).toHaveBeenCalledTimes(1);
     expect(onOpenManualGuide).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders Cursor in the same provider-agnostic setup dialog', async () => {
+    const onInstallAndConnect = vi.fn();
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderCompanionSetupDialog, {
+          open: true,
+          title: 'Cursor',
+          description: 'Use Cursor through the managed OpenCode Cursor plugin.',
+          status: status({
+            companionId: 'cursor-agent',
+            displayName: 'Cursor Agent CLI',
+            phase: 'missing',
+            message: 'Cursor Agent CLI is required',
+            manualCommand: 'curl https://cursor.com/install -fsS | bash',
+            manualUrl: 'https://cursor.com/docs/cli/installation',
+          }),
+          busy: false,
+          onOpenChange: vi.fn(),
+          onInstallAndConnect,
+          onConnect: vi.fn(),
+          onCopyManualCommand: vi.fn(),
+          onOpenManualGuide: vi.fn(),
+        })
+      );
+    });
+
+    expect(document.body.textContent).toContain('Cursor');
+    expect(document.body.textContent).not.toContain('Connect Amazon Q Developer / Kiro');
+    const install = [...document.body.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('installAndConnect')
+    );
+    act(() => install?.click());
+    expect(onInstallAndConnect).toHaveBeenCalledTimes(1);
   });
 });

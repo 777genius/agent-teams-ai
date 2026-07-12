@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  RUNTIME_PROVIDER_COMPANION_CONNECT,
+  RUNTIME_PROVIDER_COMPANION_INSTALL,
+  RUNTIME_PROVIDER_COMPANION_STATUS,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY,
+  RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
   RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY,
   RUNTIME_PROVIDER_MANAGEMENT_MODELS,
   RUNTIME_PROVIDER_MANAGEMENT_SETUP_FORM,
@@ -13,6 +17,7 @@ import { registerRuntimeProviderManagementIpc } from '../../../../src/features/r
 import type {
   RuntimeProviderManagementDirectoryResponse,
   RuntimeProviderManagementModelsResponse,
+  RuntimeProviderManagementModelLimitsResponse,
   RuntimeProviderManagementModelTestResponse,
   RuntimeProviderManagementProviderResponse,
   RuntimeProviderManagementSetupFormResponse,
@@ -37,6 +42,69 @@ function createCompanionFeatureStubs(): Pick<
 }
 
 describe('registerRuntimeProviderManagementIpc', () => {
+  it('accepts every registered companion id and rejects unknown transport input', async () => {
+    const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+    const ipcMain = {
+      handle: vi.fn((channel: string, handler: (...args: unknown[]) => Promise<unknown>) => {
+        handlers.set(channel, handler);
+      }),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const status = {
+      companionId: 'cursor-agent' as const,
+      displayName: 'Cursor Agent',
+      phase: 'connected' as const,
+      installed: true,
+      authenticated: true,
+      binaryPath: '/test/cursor-agent',
+      version: 'cursor-agent 2026.07.09',
+      percent: 100,
+      message: 'Connected',
+      detail: null,
+      error: null,
+      manualCommand: 'curl https://cursor.com/install -fsS | bash',
+      manualUrl: 'https://cursor.com/docs/cli/installation',
+      updatedAt: '2026-07-12T00:00:00.000Z',
+    };
+    const feature = {
+      ...createCompanionFeatureStubs(),
+      getCompanionStatus: vi.fn(async () => status),
+      installAndConnectCompanion: vi.fn(async () => status),
+      connectCompanion: vi.fn(async () => status),
+    } as unknown as RuntimeProviderManagementFeatureFacade;
+
+    registerRuntimeProviderManagementIpc(ipcMain, feature);
+
+    await handlers.get(RUNTIME_PROVIDER_COMPANION_STATUS)?.({}, {
+      companionId: 'cursor-agent',
+      projectPath: '/tmp/cursor-test',
+    });
+    await handlers.get(RUNTIME_PROVIDER_COMPANION_INSTALL)?.({}, {
+      companionId: 'kiro-cli',
+      projectPath: null,
+    });
+    await handlers.get(RUNTIME_PROVIDER_COMPANION_CONNECT)?.({}, {
+      companionId: 'cursor-agent',
+    });
+    expect(feature.getCompanionStatus).toHaveBeenCalledWith({
+      companionId: 'cursor-agent',
+      projectPath: '/tmp/cursor-test',
+    });
+    expect(feature.installAndConnectCompanion).toHaveBeenCalledWith({
+      companionId: 'kiro-cli',
+      projectPath: null,
+    });
+    await expect(
+      handlers.get(RUNTIME_PROVIDER_COMPANION_STATUS)?.({}, { companionId: 'unknown-cli' })
+    ).rejects.toThrow('Unsupported runtime provider companion');
+    await expect(
+      handlers.get(RUNTIME_PROVIDER_COMPANION_STATUS)?.({}, {
+        companionId: 'cursor-agent',
+        projectPath: 42,
+      })
+    ).rejects.toThrow('Unsupported runtime provider companion');
+  });
+
   it('passes API keys through input only and returns provider DTOs without the raw secret', async () => {
     const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
     const ipcMain = {
@@ -159,6 +227,20 @@ describe('registerRuntimeProviderManagementIpc', () => {
         prompts: [],
       },
     };
+    const modelLimitsResponse: RuntimeProviderManagementModelLimitsResponse = {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      result: {
+        providerId: 'local',
+        modelId: 'local/qwen',
+        contextTokens: 128_000,
+        outputTokens: 32_000,
+        saved: true,
+        verified: true,
+        message: 'Context limits saved and model probe passed',
+        diagnostics: [],
+      },
+    };
     const feature: RuntimeProviderManagementFeatureFacade = {
       ...createCompanionFeatureStubs(),
       loadView: vi.fn(() => Promise.resolve(viewResponse)),
@@ -173,6 +255,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       loadModels: vi.fn(() => Promise.resolve(modelsResponse)),
       testModel: vi.fn(() => Promise.resolve(testResponse)),
       setDefaultModel: vi.fn(() => Promise.resolve(viewResponse)),
+      configureModelLimits: vi.fn(() => Promise.resolve(modelLimitsResponse)),
     };
 
     registerRuntimeProviderManagementIpc(ipcMain, feature);
@@ -252,6 +335,29 @@ describe('registerRuntimeProviderManagementIpc', () => {
       query: 'free',
       limit: 10,
     });
+
+    const limitsResponse = await handlers.get(
+      RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS
+    )?.(
+      {},
+      {
+        runtimeId: 'opencode',
+        providerId: 'local',
+        modelId: 'local/qwen',
+        contextTokens: 128_000,
+        outputTokens: 32_000,
+        projectPath: '/tmp/local-project',
+      }
+    );
+    expect(feature.configureModelLimits).toHaveBeenCalledWith({
+      runtimeId: 'opencode',
+      providerId: 'local',
+      modelId: 'local/qwen',
+      contextTokens: 128_000,
+      outputTokens: 32_000,
+      projectPath: '/tmp/local-project',
+    });
+    expect(limitsResponse).toEqual(modelLimitsResponse);
   });
 
   it('sanitizes unexpected IPC error messages before returning them to the renderer', async () => {
@@ -283,6 +389,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       loadModels: vi.fn(),
       testModel: vi.fn(),
       setDefaultModel: vi.fn(),
+      configureModelLimits: vi.fn(),
     };
 
     registerRuntimeProviderManagementIpc(ipcMain, feature);
@@ -344,6 +451,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       loadModels: vi.fn(),
       testModel: vi.fn(),
       setDefaultModel: vi.fn(),
+      configureModelLimits: vi.fn(),
     };
 
     registerRuntimeProviderManagementIpc(ipcMain, feature);
@@ -386,6 +494,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       loadModels: vi.fn(),
       testModel: vi.fn(),
       setDefaultModel: vi.fn(),
+      configureModelLimits: vi.fn(),
     };
 
     registerRuntimeProviderManagementIpc(ipcMain, feature);

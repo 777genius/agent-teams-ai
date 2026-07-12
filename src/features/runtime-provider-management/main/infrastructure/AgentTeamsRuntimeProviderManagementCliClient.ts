@@ -14,6 +14,7 @@ import {
 
 import type {
   RuntimeProviderManagementCancelOAuthInput,
+  RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
   RuntimeProviderManagementDirectoryResponse,
@@ -23,6 +24,7 @@ import type {
   RuntimeProviderManagementLoadModelsInput,
   RuntimeProviderManagementLoadSetupFormInput,
   RuntimeProviderManagementLoadViewInput,
+  RuntimeProviderManagementModelLimitsResponse,
   RuntimeProviderManagementModelsResponse,
   RuntimeProviderManagementModelTestResponse,
   RuntimeProviderManagementOAuthControlResponse,
@@ -47,6 +49,7 @@ const SPAWN_OUTPUT_TRUNCATED_MARKER = '...[truncated runtime provider command ou
 const COMMAND_ERROR_DETAIL_LIMIT = 1_600;
 const COMMAND_OUTPUT_PREVIEW_LIMIT = 1_200;
 const DIRECTORY_RESPONSE_CACHE_TTL_MS = 30_000;
+const DEFAULT_DIRECTORY_RESPONSE_CACHE_TTL_MS = 2 * 60_000;
 const RUNTIME_PROVIDER_OAUTH_EVENT_PREFIX = '@@agent-teams-runtime-provider-oauth@@';
 const OAUTH_OPERATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 const OAUTH_EVENT_IDENTITY_FIELD_LIMIT = 256;
@@ -85,7 +88,8 @@ type RuntimeProviderManagementErrorResponse =
   | RuntimeProviderManagementProviderResponse
   | RuntimeProviderManagementSetupFormResponse
   | RuntimeProviderManagementModelsResponse
-  | RuntimeProviderManagementModelTestResponse;
+  | RuntimeProviderManagementModelTestResponse
+  | RuntimeProviderManagementModelLimitsResponse;
 
 interface RuntimeProviderCommandContext {
   binaryPath: string;
@@ -1315,6 +1319,11 @@ function collectOAuthSpawnOutput(input: {
 
 export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProviderManagementPort {
   private readonly directoryResponseCache = new Map<string, DirectoryResponseCacheEntry>();
+  private readonly directoryResponseInFlight = new Map<
+    string,
+    Promise<RuntimeProviderManagementDirectoryResponse>
+  >();
+  private directoryResponseCacheGeneration = 0;
   private readonly activeOAuthOperations = new Map<string, ActiveRuntimeProviderOAuthOperation>();
   private readonly openExternal: (url: string) => Promise<void>;
   private readonly emitOAuthProgress: (event: RuntimeProviderOAuthProgressDto) => void;
@@ -1358,11 +1367,17 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
 
   private writeDirectoryResponseCache(
     cacheKey: string,
-    response: RuntimeProviderManagementDirectoryResponse
+    response: RuntimeProviderManagementDirectoryResponse,
+    ttlMs: number,
+    cacheGeneration: number
   ): RuntimeProviderManagementDirectoryResponse {
-    if (response.directory && !response.error) {
+    if (
+      cacheGeneration === this.directoryResponseCacheGeneration &&
+      response.directory &&
+      !response.error
+    ) {
       this.directoryResponseCache.set(cacheKey, {
-        expiresAt: Date.now() + DIRECTORY_RESPONSE_CACHE_TTL_MS,
+        expiresAt: Date.now() + ttlMs,
         response,
       });
     }
@@ -1370,7 +1385,21 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   }
 
   private invalidateDirectoryResponseCache(): void {
+    this.directoryResponseCacheGeneration += 1;
     this.directoryResponseCache.clear();
+    this.directoryResponseInFlight.clear();
+  }
+
+  private getDirectoryResponseCacheTtlMs(
+    input: RuntimeProviderManagementLoadDirectoryInput
+  ): number {
+    const isDefaultDirectory =
+      !input.query?.trim() &&
+      (input.filter === undefined || input.filter === null || input.filter === 'all') &&
+      !input.cursor?.trim();
+    return isDefaultDirectory
+      ? DEFAULT_DIRECTORY_RESPONSE_CACHE_TTL_MS
+      : DIRECTORY_RESPONSE_CACHE_TTL_MS;
   }
 
   async loadView(
@@ -1454,14 +1483,53 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   ): Promise<RuntimeProviderManagementDirectoryResponse> {
     const projectPath = normalizeProjectPath(input.projectPath);
     const cacheKey = this.getDirectoryResponseCacheKey(input, projectPath);
+    const refreshInFlightKey = `refresh:${cacheKey}`;
+    const cachedInFlightKey = `cached:${cacheKey}`;
     if (input.refresh) {
+      const existingRefresh = this.directoryResponseInFlight.get(refreshInFlightKey);
+      if (existingRefresh) {
+        return existingRefresh;
+      }
       this.invalidateDirectoryResponseCache();
     } else {
       const cached = this.readDirectoryResponseCache(cacheKey);
       if (cached) {
         return cached;
       }
+      const existingRefresh = this.directoryResponseInFlight.get(refreshInFlightKey);
+      if (existingRefresh) {
+        return existingRefresh;
+      }
     }
+
+    const inFlightKey = input.refresh ? refreshInFlightKey : cachedInFlightKey;
+    const existingRequest = this.directoryResponseInFlight.get(inFlightKey);
+    if (existingRequest) {
+      return existingRequest;
+    }
+
+    const request = this.loadProviderDirectoryUncached(
+      input,
+      projectPath,
+      cacheKey,
+      this.directoryResponseCacheGeneration
+    );
+    this.directoryResponseInFlight.set(inFlightKey, request);
+    try {
+      return await request;
+    } finally {
+      if (this.directoryResponseInFlight.get(inFlightKey) === request) {
+        this.directoryResponseInFlight.delete(inFlightKey);
+      }
+    }
+  }
+
+  private async loadProviderDirectoryUncached(
+    input: RuntimeProviderManagementLoadDirectoryInput,
+    projectPath: string | null,
+    cacheKey: string,
+    cacheGeneration: number
+  ): Promise<RuntimeProviderManagementDirectoryResponse> {
     const { binaryPath, env } = await resolveCliEnv();
     if (!binaryPath) {
       return missingRuntimeBinaryResponse<RuntimeProviderManagementDirectoryResponse>(
@@ -1502,7 +1570,9 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           stdout,
           context,
           stderr
-        )
+        ),
+        this.getDirectoryResponseCacheTtlMs(input),
+        cacheGeneration
       );
     } catch (error) {
       const failure = normalizeCommandFailure(error, context);
@@ -1527,7 +1597,9 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
                   retryResult.stdout,
                   context,
                   retryResult.stderr
-                )
+                ),
+                this.getDirectoryResponseCacheTtlMs(input),
+                cacheGeneration
               );
             } catch {
               // Retry also failed; fall through to return the original error.
@@ -2181,6 +2253,71 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         return response;
       }
       return commandFailureResponse<RuntimeProviderManagementViewResponse>(
+        input.runtimeId,
+        normalizeCommandFailure(error, context),
+        'model-test-failed'
+      );
+    }
+  }
+
+  async configureModelLimits(
+    input: RuntimeProviderManagementConfigureModelLimitsInput
+  ): Promise<RuntimeProviderManagementModelLimitsResponse> {
+    this.invalidateDirectoryResponseCache();
+    const projectPath = normalizeProjectPath(input.projectPath);
+    const { binaryPath, env } = await resolveCliEnv();
+    if (!binaryPath) {
+      return missingRuntimeBinaryResponse<RuntimeProviderManagementModelLimitsResponse>(
+        input.runtimeId,
+        projectPath
+      );
+    }
+
+    const args = appendProjectPathArgs(
+      [
+        'runtime',
+        'providers',
+        'configure-model-limits',
+        '--runtime',
+        input.runtimeId,
+        '--provider',
+        input.providerId,
+        '--model',
+        input.modelId,
+        '--context-tokens',
+        String(input.contextTokens),
+        '--output-tokens',
+        String(input.outputTokens),
+        '--json',
+      ],
+      projectPath
+    );
+    const context = createCommandContext(binaryPath, args, projectPath);
+    const misconfigured = rejectWrongRuntimeBinary<RuntimeProviderManagementModelLimitsResponse>(
+      input.runtimeId,
+      context
+    );
+    if (misconfigured) {
+      return misconfigured;
+    }
+    try {
+      const { stdout, stderr } = await execCli(
+        binaryPath,
+        args,
+        runtimeProviderCommandOptions({ env, timeout: PROBE_COMMAND_TIMEOUT_MS }, projectPath)
+      );
+      return extractJsonObjectWithContext<RuntimeProviderManagementModelLimitsResponse>(
+        stdout,
+        context,
+        stderr
+      );
+    } catch (error) {
+      const response =
+        extractJsonObjectFromError<RuntimeProviderManagementModelLimitsResponse>(error);
+      if (response) {
+        return response;
+      }
+      return commandFailureResponse<RuntimeProviderManagementModelLimitsResponse>(
         input.runtimeId,
         normalizeCommandFailure(error, context),
         'model-test-failed'

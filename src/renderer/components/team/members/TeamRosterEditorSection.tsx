@@ -185,6 +185,7 @@ const TeamRosterEditorSectionImpl = ({
         <div className="space-y-3">
           {headerTop}
           <LeadModelRow
+            projectPath={projectPath}
             providerId={providerId}
             model={model}
             effort={effort}

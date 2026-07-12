@@ -118,7 +118,7 @@
       "teamName": "Pangalan ng team"
     },
     "launchAfterCreate": {
-      "description": "Simulan agad ang team sa pamamagitan ng lokal na Claude CLI.",
+      "description": "Simulan agad ang team gamit ang mga naka-configure nitong agent runtime.",
       "label": "Patakbuhin ang command pagkatapos lumikha"
     },
     "localOnly": "Available lang sa lokal na Electron mode.",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "Hindi maaaring palitan ang pangalan ng mga umiiral na teammate habang live ang team. pinalitan ng pangalan: {{names}}",
       "memberNameEmpty": "Hindi maaaring blangko ang pangalan ng miyembro",
       "memberNameInvalid": "Ang pangalan ng miyembro ay dapat magsimula sa alphanumeric, gumamit lang ng [a-zA-Z0-9._-], max 128 chars",
-      "memberNameNumericSuffix": "Hindi pinapayagan ang pangalan ng miyembro na \"{{name}}\" (nakareserba para sa Claude CLI auto-suffix). Gamitin ang \"{{base}}\" sa halip.",
+      "memberNameNumericSuffix": "Hindi pinapayagan ang pangalan ng miyembro na \"{{name}}\" (nakalaan para sa mga numeric suffix na pinamamahalaan ng runtime). Gamitin ang \"{{base}}\" sa halip.",
       "memberNameReserved": "Nakareserba ang pangalan ng miyembro na \"{{name}}\"",
       "memberNamesUnique": "Ang mga pangalan ng miyembro ay dapat natatangi bago mag-save",
       "newLiveTeammates": "Magdagdag ng mga bagong teammate mula sa dedikadong Add member dialog habang live ang team. Sinusuportahan lang ng Edit Team ang pag-update ng mga umiiral na teammate.",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "Working directory:"
     },
     "description": {
-      "createSchedule": "Mag-schedule ng awtomatikong execution ng Claude task",
+      "createSchedule": "Mag-iskedyul ng awtomatikong pagpapatakbo ng mga gawain ng agent",
       "createScheduleForTeam": "Mag-schedule ng awtomatikong pagtakbo para sa team na \"{{team}}\"",
       "editSchedule": "Ine-edit ang schedule para sa team na \"{{team}}\"",
       "launchPrefix": "Simulan ang team",
-      "launchSuffix": "sa pamamagitan ng lokal na Claude CLI.",
+      "launchSuffix": "gamit ang mga naka-configure nitong agent runtime.",
       "relaunchPrefix": "Ihinto ang kasalukuyang pagtakbo para sa",
-      "relaunchSuffix": "at simulan itong muli sa pamamagitan ng lokal na Claude CLI."
+      "relaunchSuffix": "at simulan itong muli gamit ang mga naka-configure nitong agent runtime."
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "Ipapasa ang prompt na ito sa",
       "oneShotSuffix": "para sa one-shot na execution",
       "saved": "Na-save",
-      "schedulePlaceholder": "Mga tagubilin para sa Claude na isasagawa ayon sa schedule...",
+      "schedulePlaceholder": "Mga tagubilin para sa team lead na patakbuhin ayon sa iskedyul...",
       "teamLeadOptional": "Prompt para sa team lead (opsyonal)",
       "teamLeadPlaceholder": "Mga tagubilin para sa team lead..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "Cross-team na mensahe sa {{team}}...",
       "teamFallback": "team",
       "placeholder": "Magsulat ng mensahe... (Enter para ipadala, Shift+Enter para sa bagong linya)",
-      "slashTip": "Tip: Maaari mong gamitin ang \"/\" para patakbuhin ang anumang Claude command.",
+      "slashTip": "Tip: Gamitin ang \"/\" upang magpatakbo ng mga command na sinusuportahan ng runtime ng team lead.",
       "charsLeft_few": "{{count}} char na natitira",
       "charsLeft_many": "{{count}} char na natitira"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "Wala pang schedule",
-      "description": "Lumikha ng schedule para awtomatikong magpatakbo ng mga Claude task sa isang cron schedule."
+      "description": "Gumawa ng iskedyul upang awtomatikong patakbuhin ang mga gawain ng team gamit ang cron."
     },
     "title": "Mga Schedule",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "Ayusin ang mga folder permission o ilipat ang proyekto sa folder na nasusulatan ng user. Pansamantalang solusyon lang ang pagpapatakbo bilang administrator.",
         "openCodeBridgeNoOutput": "I-restart ang app at OpenCode runtime, pagkatapos ay subukang muli. Kung uulit ito, kopyahin ang diagnostics.",
         "workingDirectoryMissing": "Pumili ng umiiral na working directory, pagkatapos ay buksang muli ang dialog na ito.",
-        "authenticationRequired": "I-authenticate ang kinakailangang provider sa Claude CLI, pagkatapos ay buksang muli ang dialog na ito.",
+        "authenticationRequired": "I-authenticate ang kinakailangang provider sa naka-configure nitong runtime, pagkatapos ay muling buksan ang dialog na ito.",
         "runtimeProviderNotConfigured": "I-configure ang napiling provider runtime, pagkatapos ay buksang muli ang dialog na ito.",
         "openCodeRuntimeMissing": "I-install o subukang muli ang OpenCode runtime mula sa provider status card, pagkatapos ay buksang muli ang dialog na ito.",
         "openCodeAppMcpUnreachable": "Subukang muli ang paglunsad para i-refresh ang OpenCode app MCP bridge. Kung uulit ito, i-restart ang app at OpenCode runtime.",
-        "cliBinaryMissing": "Tiyaking umiiral ang lokal na Claude CLI binary at masisimulan ito, pagkatapos ay buksang muli ang dialog na ito.",
+        "cliBinaryMissing": "Tiyaking naka-install at maaaring simulan ang kinakailangang lokal na runtime, pagkatapos ay muling buksan ang dialog na ito.",
         "default": "Lutasin ang isyu sa itaas, pagkatapos ay buksang muli ang dialog na ito.",
         "openCodeNodeModulesSymlinkPermission": "Patakbuhin ang Agent Teams AI bilang Administrator, pagkatapos ay subukang muli ang paglunsad."
       }

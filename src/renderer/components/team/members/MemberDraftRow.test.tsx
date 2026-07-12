@@ -4,6 +4,10 @@ import { createRoot } from 'react-dom/client';
 import { ANTHROPIC_LONG_CONTEXT_PRICING_URL } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('@features/runtime-provider-management/renderer', () => ({
+  OpenCodeLocalModelLimitsCard: () => React.createElement('div', null, 'local-model-limits-card'),
+}));
+
 vi.mock('@renderer/components/common/ProviderBrandLogo', () => ({
   ProviderBrandLogo: () => React.createElement('span', { 'data-testid': 'provider-logo' }),
 }));
@@ -486,7 +490,7 @@ describe('MemberDraftRow', () => {
     });
   });
 
-  it('shows the OpenCode context config hint inside OpenCode teammate provider settings after effort', () => {
+  it('shows local OpenCode limit controls inside OpenCode teammate settings after effort', () => {
     const { host, root } = renderMemberDraftRow({
       member: createMemberDraft({
         id: 'member-1',
@@ -506,7 +510,7 @@ describe('MemberDraftRow', () => {
 
     const text = host.textContent ?? '';
     const effortIndex = text.indexOf('effort-selector');
-    const hintIndex = text.indexOf('OpenCode local models can use an OpenCode context budget');
+    const hintIndex = text.indexOf('local-model-limits-card');
 
     expect(hintIndex).toBeGreaterThan(-1);
     expect(effortIndex).toBeGreaterThan(-1);

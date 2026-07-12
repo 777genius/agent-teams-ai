@@ -411,19 +411,29 @@ const ActivePlanFlow = ({
           </div>
           <div className="mt-3 flex flex-wrap justify-end gap-2">
             {state.management.models.length > 0 ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  void actions.verifyModel(
-                    state.recommendedModel?.modelId ?? state.management.models[0].modelId
-                  )
-                }
-              >
-                <RefreshCw className="mr-1.5 size-3.5" />
-                Retry verification
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => actions.beginConnect()}
+                >
+                  Reconnect plan
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    void actions.verifyModel(
+                      state.recommendedModel?.modelId ?? state.management.models[0].modelId
+                    )
+                  }
+                >
+                  <RefreshCw className="mr-1.5 size-3.5" />
+                  Retry verification
+                </Button>
+              </>
             ) : (
               <Button
                 type="button"

@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   completeRuntimeProviderOnboardingPlan,
   createRuntimeProviderOnboardingProgress,
+  getRuntimeProviderCredentialUrl,
   getRuntimeProviderOnboardingPlan,
   isRuntimeProviderOnboardingPlanConnected,
   isRuntimeProviderOnboardingPlanRoutable,
   normalizeRuntimeProviderOnboardingProgress,
+  resolveXiaomiMiMoTokenPlanProvider,
   selectRecommendedRuntimeProviderModel,
 } from '../../../../src/features/runtime-provider-management/core/domain/runtimeProviderOnboarding';
 
@@ -101,6 +103,63 @@ describe('runtime provider onboarding domain', () => {
     ).toBe(true);
   });
 
+  it('opens the official MiMo Token Plan key management page for every region', () => {
+    for (const providerId of [
+      'xiaomi-token-plan-ams',
+      'xiaomi-token-plan-sgp',
+      'xiaomi-token-plan-cn',
+    ]) {
+      expect(getRuntimeProviderCredentialUrl(providerId)).toBe(
+        'https://platform.xiaomimimo.com/console/plan-manage'
+      );
+    }
+  });
+
+  it.each([
+    {
+      host: 'token-plan-sgp.xiaomimimo.com',
+      providerId: 'xiaomi-token-plan-sgp',
+      regionLabel: 'Singapore',
+    },
+    {
+      host: 'token-plan-ams.xiaomimimo.com',
+      providerId: 'xiaomi-token-plan-ams',
+      regionLabel: 'Europe',
+    },
+    {
+      host: 'token-plan-cn.xiaomimimo.com',
+      providerId: 'xiaomi-token-plan-cn',
+      regionLabel: 'China',
+    },
+  ] as const)(
+    'resolves the allowlisted $regionLabel MiMo host for both supported API paths',
+    ({ host, providerId, regionLabel }) => {
+      for (const path of ['/v1', '/anthropic']) {
+        expect(resolveXiaomiMiMoTokenPlanProvider(`https://${host}${path}`)).toEqual({
+          ok: true,
+          value: {
+            providerId,
+            regionLabel,
+            canonicalBaseUrl: `https://${host}/v1`,
+          },
+        });
+      }
+    }
+  );
+
+  it.each([
+    ['non-HTTPS scheme', 'http://token-plan-sgp.xiaomimimo.com/v1'],
+    ['lookalike host', 'https://token-plan-sgp.xiaomimimo.com.example.com/v1'],
+    ['query string', 'https://token-plan-sgp.xiaomimimo.com/v1?token=secret'],
+    ['username credentials', 'https://user@token-plan-sgp.xiaomimimo.com/v1'],
+    ['password credentials', 'https://user:secret@token-plan-sgp.xiaomimimo.com/v1'],
+  ])('rejects a MiMo Base URL containing %s', (_caseName, baseUrl) => {
+    expect(resolveXiaomiMiMoTokenPlanProvider(baseUrl)).toMatchObject({
+      ok: false,
+      reason: 'unsupported-url',
+    });
+  });
+
   it('prefers a curated coding model over an unsafe provider default', () => {
     const plan = getRuntimeProviderOnboardingPlan('zai-coding-plan');
     const models = [
@@ -129,7 +188,7 @@ describe('runtime provider onboarding domain', () => {
     ).toBe('xai/grok-4.3');
   });
 
-  it('prefers a broadly available paid Copilot model before premium routes', () => {
+  it('prefers the Copilot Free compatible model before paid and premium routes', () => {
     const plan = getRuntimeProviderOnboardingPlan('github-copilot');
     const models = [
       model('github-copilot/claude-sonnet-4.5'),
@@ -138,7 +197,7 @@ describe('runtime provider onboarding domain', () => {
     ];
 
     expect(selectRecommendedRuntimeProviderModel(plan, models)?.modelId).toBe(
-      'github-copilot/gpt-5-mini'
+      'github-copilot/gpt-4.1'
     );
   });
 

@@ -118,7 +118,7 @@
       "teamName": "チーム名"
     },
     "launchAfterCreate": {
-      "description": "ローカルClaude CLIですぐにチームを始めて下さい。",
+      "description": "設定済みのエージェントランタイムを使用して、チームをすぐに起動します。",
       "label": "作成後にコマンドを実行する"
     },
     "localOnly": "ローカルエレクトロンモードでのみご利用いただけます。",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "チームメイトがライブ中に名前を変更することはできません。 名称: {{names}}",
       "memberNameEmpty": "会員名を空にすることはできません",
       "memberNameInvalid": "会員名は英数字で始まり、[a-zA-Z0-9. -]、最大128文字を使用する必要があります。",
-      "memberNameNumericSuffix": "会員名「{{name}}」は利用できません。(Claude CLIオートサフィックス) 代わりに \"{{base}}\" を使用します。",
+      "memberNameNumericSuffix": "メンバー名「{{name}}」は使用できません（ランタイムが管理する数値サフィックス用に予約されています）。代わりに「{{base}}」を使用してください。",
       "memberNameReserved": "会員名「{{name}}」を予約",
       "memberNamesUnique": "会員名は、保存する前にユニークでなければなりません",
       "newLiveTeammates": "チームがライブ中、専用のメンバーの追加ダイアログからチームメイトを追加します。 チームを編集すると、既存のチームメイトの更新のみがサポートされます。",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "作業ディレクトリ:"
     },
     "description": {
-      "createSchedule": "スケジュール自動クロードタスク実行",
+      "createSchedule": "エージェントタスクの自動実行をスケジュール",
       "createScheduleForTeam": "チーム「{{team}}」のスケジュール自動実行",
       "editSchedule": "チーム「{{team}}」の編集スケジュール",
       "launchPrefix": "スタートチーム",
-      "launchSuffix": "ローカルClaude CLI経由で。",
+      "launchSuffix": "設定済みのエージェントランタイムを使用して。",
       "relaunchPrefix": "現在の実行を停止する",
-      "relaunchSuffix": "ローカルClaude CLIで再び起動します。"
+      "relaunchSuffix": "設定済みのエージェントランタイムを使用して、もう一度起動します。"
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "このプロンプトは、",
       "oneShotSuffix": "1ショットの実行",
       "saved": "保存済み",
-      "schedulePlaceholder": "Claudeのスケジュールで実行するための手順...",
+      "schedulePlaceholder": "チームリードがスケジュールに従って実行する指示...",
       "teamLeadOptional": "チームの鉛(任意)のための敏速な",
       "teamLeadPlaceholder": "チームのリードのための指示..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "{{team}}へのクロスチームメッセージ...",
       "teamFallback": "スタッフ",
       "placeholder": "メッセージを書きます... (送信するために入力します, Shift +新しい行のEnter)",
-      "slashTip": "ヒント: \"/\" を使用して、任意の Claude コマンドを実行できます。",
+      "slashTip": "ヒント: \"/\" を使用して、チームリードのランタイムがサポートするコマンドを実行できます。",
       "charsLeft_few": "{{count}} 文字左",
       "charsLeft_many": "{{count}} 文字左"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "予定なし",
-      "description": "Claude タスクを cron スケジュールで自動的に実行するスケジュールを作成します。"
+      "description": "チームタスクを cron スケジュールで自動的に実行するスケジュールを作成します。"
     },
     "title": "スケジュール",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "フォルダ権限を修正したり、プロジェクトをユーザ書き込み可能なフォルダに移動したりします。 管理者としての実行は一時的な回避策です。",
         "openCodeBridgeNoOutput": "アプリとOpenCodeのランタイムを再起動し、再試行します。 繰り返すと、診断をコピーします。",
         "workingDirectoryMissing": "既存の作業ディレクトリを選択し、このダイアログを開きます。",
-        "authenticationRequired": "Claude CLI で必要なプロバイダを認証し、このダイアログを再オープンします。",
+        "authenticationRequired": "必要なプロバイダーを、そのプロバイダー用に設定されたランタイムで認証してから、このダイアログを再度開いてください。",
         "runtimeProviderNotConfigured": "選択したプロバイダのランタイムを設定し、このダイアログを再オープンします。",
         "openCodeRuntimeMissing": "プロバイダーのステータスカードからOpenCodeのランタイムをインストールまたは再試行し、このダイアログを再起動します。",
         "openCodeAppMcpUnreachable": "OpenCodeアプリのMCPブリッジをリフレッシュするためのリトリー起動。 繰り返すと、アプリとOpenCodeのランタイムを再起動します。",
-        "cliBinaryMissing": "ローカルClaude CLIバイナリが存在し、起動できることを確認してください。その後、このダイアログが開きます。",
+        "cliBinaryMissing": "必要なローカルランタイムがインストールされ、起動できることを確認してから、このダイアログを再度開いてください。",
         "default": "上記の問題を解決し、このダイアログを再オープンします。",
         "openCodeNodeModulesSymlinkPermission": "Agent Teams AI を管理者として実行してから、launch を再試行してください。"
       }

@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { OpenCodeLocalModelLimitsCard } from '@features/runtime-provider-management/renderer';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { AnthropicExtraUsageWarning } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
-import { OpenCodeContextConfigHint } from '@renderer/components/team/dialogs/OpenCodeContextConfigHint';
 import {
   formatTeamModelSummary,
   getProviderScopedTeamModelLabel,
@@ -928,7 +928,12 @@ export const MemberDraftRow = ({
                 model={effectiveModel}
                 limitContext={limitContext}
               />
-              {effectiveProviderId === 'opencode' ? <OpenCodeContextConfigHint /> : null}
+              {effectiveProviderId === 'opencode' ? (
+                <OpenCodeLocalModelLimitsCard
+                  model={effectiveModel ?? ''}
+                  projectPath={projectPath}
+                />
+              ) : null}
               {effectiveProviderId === 'anthropic' ? (
                 <div className="rounded-md border border-sky-500/20 bg-sky-500/5 px-3 py-2">
                   <div className="flex items-start gap-2">

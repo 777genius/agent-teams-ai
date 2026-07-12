@@ -43,7 +43,7 @@ describe('getProvisioningFailureHint', () => {
         },
       ])
     ).toBe(
-      'Make sure the local Claude CLI binary exists and can be started, then reopen this dialog.'
+      'Make sure the required local runtime is installed and can be started, then reopen this dialog.'
     );
   });
 
@@ -62,7 +62,7 @@ describe('getProvisioningFailureHint', () => {
         },
       ])
     ).toBe(
-      'Make sure the local Claude CLI binary exists and can be started, then reopen this dialog.'
+      'Make sure the required local runtime is installed and can be started, then reopen this dialog.'
     );
   });
 
@@ -81,7 +81,7 @@ describe('getProvisioningFailureHint', () => {
         },
       ])
     ).toBe(
-      'Make sure the local Claude CLI binary exists and can be started, then reopen this dialog.'
+      'Make sure the required local runtime is installed and can be started, then reopen this dialog.'
     );
   });
 

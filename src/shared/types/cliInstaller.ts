@@ -198,6 +198,7 @@ export interface CliProviderModelCatalogItem {
     context?: number | null;
     limits?: unknown;
     free?: boolean;
+    releaseDate?: string | null;
     opencode?: OpenCodeModelRouteMetadata | null;
   } | null;
 }

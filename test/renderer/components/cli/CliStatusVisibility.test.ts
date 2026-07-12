@@ -79,12 +79,13 @@ let terminalModalProps: {
   onClose?: () => void;
   onExit?: (exitCode: number) => void;
 } | null = null;
+let quickConnectConnectedCount = 0;
 const codexAccountHookState = {
   snapshot: null as CodexAccountSnapshotDto | null,
   loading: false,
   rateLimitsLoading: false,
   error: null as string | null,
-  refresh: vi.fn(() => Promise.resolve(undefined)),
+  refresh: vi.fn(() => Promise.resolve(true)),
   startChatgptLogin: vi.fn(() => Promise.resolve(true)),
   cancelChatgptLogin: vi.fn(() => Promise.resolve(true)),
   logout: vi.fn(() => Promise.resolve(true)),
@@ -113,8 +114,13 @@ vi.mock('@features/runtime-provider-management/renderer', async (importOriginal)
     ...actual,
     RuntimeProviderQuickConnect: (props: {
       onOpenCodeProviderAction?: (providerId: string, action: 'connect' | 'select') => void;
-    }) =>
-      React.createElement(
+      onConnectedCountChange?: (count: number) => void;
+    }) => {
+      React.useEffect(() => {
+        props.onConnectedCountChange?.(quickConnectConnectedCount);
+      }, [props.onConnectedCountChange]);
+
+      return React.createElement(
         'div',
         { 'data-testid': 'runtime-provider-quick-connect' },
         React.createElement(
@@ -125,7 +131,8 @@ vi.mock('@features/runtime-provider-management/renderer', async (importOriginal)
           },
           'Connect SuperGrok'
         )
-      ),
+      );
+    },
     RuntimeProviderOnboardingDialog: (props: {
       mode?: 'provider' | 'wizard';
       providerId?: string | null;
@@ -411,6 +418,7 @@ describe('CLI status visibility during completed install state', () => {
     providerRuntimeSettingsDialogProps = null;
     runtimeProviderOnboardingDialogProps = null;
     terminalModalProps = null;
+    quickConnectConnectedCount = 0;
     codexAccountHookState.snapshot = null;
     codexAccountHookState.loading = false;
     codexAccountHookState.rateLimitsLoading = false;
@@ -439,7 +447,7 @@ describe('CLI status visibility during completed install state', () => {
     storeState.codexRuntimeError = null;
     storeState.bootstrapCliStatus = vi.fn().mockResolvedValue(undefined);
     storeState.fetchCliStatus = vi.fn().mockResolvedValue(undefined);
-    storeState.fetchCliProviderStatus = vi.fn().mockResolvedValue(undefined);
+    storeState.fetchCliProviderStatus = vi.fn().mockResolvedValue(true);
     storeState.invalidateCliStatus = vi.fn().mockResolvedValue(undefined);
     storeState.installCli = vi.fn();
     storeState.fetchOpenCodeRuntimeStatus = vi.fn().mockResolvedValue(undefined);
@@ -738,7 +746,7 @@ describe('CLI status visibility during completed install state', () => {
 
     expect(host.textContent).toContain('Checking providers...');
     expect(host.textContent).toContain('Checking...');
-    expect(host.textContent).not.toContain('Providers: 0/3 connected');
+    expect(host.textContent).not.toContain('Providers: 0 connected');
     expect(host.textContent).not.toContain('Models unavailable for this runtime build');
 
     await act(async () => {
@@ -805,6 +813,7 @@ describe('CLI status visibility during completed install state', () => {
 
   it('renders OpenCode inventory fallback with model badges instead of unavailable text', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    quickConnectConnectedCount = 7;
     storeState.cliInstallerState = 'idle';
     storeState.openCodeRuntimeStatus = {
       installed: true,
@@ -879,7 +888,8 @@ describe('CLI status visibility during completed install state', () => {
     });
 
     expect(host.textContent).toContain('OpenCode');
-    expect(host.textContent).toContain('Providers: 3/3 connected');
+    expect(host.textContent).toContain('Ready to run agents');
+    expect(host.textContent).toContain('Providers: 10 connected');
     expect(host.textContent).toContain('Models available');
     expect(host.textContent).toContain('big-pickle');
     expect(host.textContent).not.toContain('Checking...');
@@ -967,7 +977,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 3/3 connected');
+    expect(host.textContent).toContain('Providers: 3 connected');
     expect(host.textContent).toContain('ChatGPT account ready');
     expect(host.textContent).toContain('Loading models...');
     expect(host.textContent).not.toContain('Checking...');
@@ -2149,9 +2159,8 @@ describe('CLI status visibility during completed install state', () => {
 
     expect(host.textContent).not.toContain('Authenticated');
     expect(host.textContent).not.toContain('Providers:');
-    expect((host.firstElementChild as HTMLElement | null)?.getAttribute('style')).toMatch(
-      /(?:245,\s*158,\s*11|#f59e0b)/i
-    );
+    expect(host.textContent).toContain('Connect a provider to get started');
+    expect(host.firstElementChild?.classList.contains('border-l-4')).toBe(false);
 
     await act(async () => {
       root.unmount();
@@ -2159,7 +2168,7 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it('keeps the dashboard banner in warning state when only hidden providers are authenticated', async () => {
+  it('shows provider setup guidance when only hidden providers are authenticated', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
     storeState.cliStatus = createInstalledCliStatus({
@@ -2226,10 +2235,9 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 0/2 connected');
-    expect((host.firstElementChild as HTMLElement | null)?.getAttribute('style')).toMatch(
-      /(?:245,\s*158,\s*11|#f59e0b)/i
-    );
+    expect(host.textContent).toContain('Connect a provider to get started');
+    expect(host.textContent).not.toContain('Ready to run agents');
+    expect(host.firstElementChild?.classList.contains('border-l-4')).toBe(false);
 
     await act(async () => {
       root.unmount();
@@ -2284,23 +2292,23 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1/1 connected');
+    expect(host.textContent).toContain('Providers: 1 connected');
     expect(host.textContent).toContain('Anthropic');
 
-    const collapseButton = host.querySelector<HTMLButtonElement>(
-      'button[aria-label="Collapse provider details"]'
+    const collapseHeader = host.querySelector<HTMLElement>(
+      '[role="button"][aria-label="Collapse provider details"]'
     );
-    expect(collapseButton).not.toBeNull();
+    expect(collapseHeader).not.toBeNull();
 
     await act(async () => {
-      collapseButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      collapseHeader?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1/1 connected');
+    expect(host.textContent).toContain('Providers: 1 connected');
     expect(host.textContent).not.toContain('Anthropic');
     expect(host.textContent).not.toContain('Manage');
-    expect(host.querySelector('button[aria-label="Expand provider details"]')).not.toBeNull();
+    expect(host.querySelector('[role="button"][aria-label="Expand provider details"]')).not.toBeNull();
 
     await act(async () => {
       root.unmount();
@@ -2382,13 +2390,13 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    const collapseButton = firstHost.querySelector<HTMLButtonElement>(
-      'button[aria-label="Collapse provider details"]'
+    const collapseHeader = firstHost.querySelector<HTMLElement>(
+      '[role="button"][aria-label="Collapse provider details"]'
     );
-    expect(collapseButton).not.toBeNull();
+    expect(collapseHeader).not.toBeNull();
 
     await act(async () => {
-      collapseButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      collapseHeader?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
 
@@ -2406,9 +2414,11 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(secondHost.textContent).toContain('Providers: 1/1 connected');
+    expect(secondHost.textContent).toContain('Providers: 1 connected');
     expect(secondHost.textContent).not.toContain('ChatGPT account ready');
-    expect(secondHost.querySelector('button[aria-label="Expand provider details"]')).not.toBeNull();
+    expect(
+      secondHost.querySelector('[role="button"][aria-label="Expand provider details"]')
+    ).not.toBeNull();
 
     await act(async () => {
       secondRoot.unmount();
@@ -2885,16 +2895,76 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1/1 connected');
+    expect(host.textContent).toContain('Providers: 1 connected');
     expect(host.textContent).toContain('ChatGPT account ready');
     expect(host.textContent).not.toContain(
       'Connect a ChatGPT account to use your Codex subscription.'
     );
     expect(host.textContent).toContain('5h left');
     expect(host.textContent).toContain('95%');
-    expect(host.textContent).toContain('1w left');
+    expect(host.textContent).toContain('Weekly left');
     expect(host.textContent).toContain('59%');
     expect(host.textContent).toContain('resets');
+
+    const previousSnapshot = codexAccountHookState.snapshot;
+    const previousRateLimits = previousSnapshot?.rateLimits;
+    const previousPrimary = previousRateLimits?.primary;
+    if (!previousSnapshot || !previousRateLimits || !previousPrimary) {
+      throw new Error('Expected the Codex rate-limit fixture to be available');
+    }
+
+    codexAccountHookState.rateLimitsLoading = true;
+    codexAccountHookState.snapshot = {
+      ...previousSnapshot,
+      rateLimits: null,
+    };
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('95%');
+    expect(host.textContent).toContain('59%');
+    expect(host.querySelectorAll('.skeleton-shimmer')).toHaveLength(0);
+
+    codexAccountHookState.rateLimitsLoading = false;
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('95%');
+    expect(host.textContent).toContain('59%');
+    expect(host.querySelectorAll('.dashboard-rate-limit-refreshed')).toHaveLength(0);
+
+    codexAccountHookState.snapshot = {
+      ...previousSnapshot,
+      rateLimits: {
+        ...previousRateLimits,
+        primary: {
+          usedPercent: 8,
+          windowDurationMins: previousPrimary.windowDurationMins ?? null,
+          resetsAt: previousPrimary.resetsAt ?? null,
+        },
+        secondary: previousRateLimits.secondary
+          ? {
+              usedPercent: 43,
+              windowDurationMins: previousRateLimits.secondary.windowDurationMins ?? null,
+              resetsAt: previousRateLimits.secondary.resetsAt ?? null,
+            }
+          : null,
+      },
+      updatedAt: new Date(Date.now() + 1_000).toISOString(),
+    };
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('92%');
+    expect(host.textContent).toContain('57%');
+    expect(host.querySelectorAll('.dashboard-rate-limit-refreshed')).toHaveLength(2);
 
     await act(async () => {
       root.unmount();
@@ -2967,6 +3037,106 @@ describe('CLI status visibility during completed install state', () => {
 
     expect(host.textContent).toContain('5h left');
     expect(host.textContent).toContain('Weekly left');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('refreshes Claude Code and Codex subscription limits when the dashboard becomes active', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.appConfig.providerConnections = {
+      anthropic: {
+        authMode: 'oauth',
+        fastModeDefault: false,
+      },
+      codex: {
+        preferredAuthMode: 'chatgpt',
+      },
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      authLoggedIn: true,
+      providers: [
+        {
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: true,
+          authenticated: true,
+          authMethod: 'claude.ai',
+          verificationState: 'verified',
+          statusMessage: 'Connected via Anthropic subscription',
+          models: ['claude-sonnet-4-5'],
+          canLoginFromUi: true,
+          capabilities: {
+            teamLaunch: true,
+            oneShot: true,
+          },
+          connection: {
+            supportsOAuth: true,
+            supportsApiKey: true,
+            configurableAuthModes: ['auto', 'oauth', 'api_key'],
+            configuredAuthMode: 'oauth',
+            apiKeyConfigured: false,
+            apiKeySource: null,
+            apiKeySourceLabel: null,
+          },
+        },
+        createCodexNativeRolloutProvider({
+          connection: {
+            supportsOAuth: false,
+            supportsApiKey: true,
+            configurableAuthModes: ['auto', 'chatgpt', 'api_key'],
+            configuredAuthMode: 'chatgpt',
+            apiKeyConfigured: false,
+            apiKeySource: null,
+            apiKeySourceLabel: null,
+            codex: null,
+          },
+        }),
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: false }));
+      await Promise.resolve();
+    });
+
+    expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
+    expect(codexAccountHookState.refresh).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('anthropic', { silent: true });
+    expect(codexAccountHookState.refresh).toHaveBeenCalledWith({
+      includeRateLimits: true,
+      silent: true,
+    });
+
+    storeState.fetchCliProviderStatus.mockClear();
+    codexAccountHookState.refresh.mockClear();
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: false }));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner, { isDashboardActive: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('anthropic', { silent: true });
+    expect(codexAccountHookState.refresh).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       root.unmount();
@@ -3134,9 +3304,9 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Providers: 1/3 connected');
+    expect(host.textContent).toContain('Providers: 1 connected');
     expect(host.textContent).toContain('5h left');
-    expect(host.textContent).toContain('1w left');
+    expect(host.textContent).toContain('Weekly left');
     expect(host.textContent).toContain('resets');
     expect(host.textContent).not.toContain('status will be checked in the background');
 

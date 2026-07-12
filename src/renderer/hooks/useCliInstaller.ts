@@ -50,7 +50,7 @@ export function useCliInstaller(): {
   fetchCliProviderStatus: (
     providerId: CliProviderId,
     options?: { silent?: boolean; epoch?: number; verifyModels?: boolean }
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
   fetchOpenCodeRuntimeStatus: () => Promise<void>;

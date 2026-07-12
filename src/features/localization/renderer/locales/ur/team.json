@@ -118,7 +118,7 @@
       "teamName": "ٹیم کا نام"
     },
     "launchAfterCreate": {
-      "description": "لوکل پلگ ان کے ذریعے فوری طور پر ٹیم شروع کريں CLI.",
+      "description": "ٹیم کو اس کے لیے ترتیب دیے گئے ایجنٹ رن ٹائمز استعمال کرتے ہوئے فوراً شروع کریں۔",
       "label": "تخلیق کے بعد چلا وٴ"
     },
     "localOnly": "صرف مقامی الیکٹرون موڈ میں دستیاب ہے.",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "ٹیموں کو ٹیموں کا نام تبدیل نہیں کیا جا سکتا جبکہ ٹیم زندہ ہے۔ نام بدل دیا گیا: {{names}}",
       "memberNameEmpty": "ممبر نام خالی نہیں کیا جا سکتا",
       "memberNameInvalid": "Member name must start with alphanumeric, use only [a-zA-Z0-9._-], max 128 chars",
-      "memberNameNumericSuffix": "Member name \"{{name}}\" is not allowed (reserved for Claude CLI auto-suffix). Use \"{{base}}\" instead.",
+      "memberNameNumericSuffix": "رکن کا نام \"{{name}}\" استعمال نہیں کیا جا سکتا (یہ رن ٹائم کے زیر انتظام عددی لاحقوں کے لیے مخصوص ہے)۔ اس کے بجائے \"{{base}}\" استعمال کریں۔",
       "memberNameReserved": "ممبر کا نام \"{{name}}\" محفوظ ہے۔",
       "memberNamesUnique": "ممبر ناموں کو محفوظ کرنے سے پہلے منفرد ہونا ضروری ہے",
       "newLiveTeammates": "ٹیم کے نئے ممبروں کو بھی شامل کریں جبکہ ٹیم زندہ ہے ۔ ایڈیٹنگ ٹیم صرف موجودہ ٹیم کے ساتھیوں کی مدد کرتی ہے۔",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "ورک ڈائریکٹری:"
     },
     "description": {
-      "createSchedule": "اِس کے بعد اُس نے کہا : ” اَے میرے بیٹے !",
+      "createSchedule": "ایجنٹ کے کاموں کی خودکار تکمیل کا شیڈول بنائیں",
       "createScheduleForTeam": "Schedule خودکار ٹیم کے لیے چلاتی ہے \"{{team}}\"",
       "editSchedule": "ٹیم کے لئے شیڈول مرتب کرنا \"{{team}}\"",
       "launchPrefix": "ٹیم شروع کریں",
-      "launchSuffix": "مقامی پلگ انس کے ذریعے CLI.",
+      "launchSuffix": "اس کے لیے ترتیب دیے گئے ایجنٹ رن ٹائمز استعمال کرتے ہوئے۔",
       "relaunchPrefix": "حالیہ چلائیں برائے",
-      "relaunchSuffix": "اور اسے پھر سے شروع کر دو CLI."
+      "relaunchSuffix": "اور اس کے لیے ترتیب دیے گئے ایجنٹ رن ٹائمز استعمال کرتے ہوئے اسے دوبارہ شروع کریں۔"
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "اس فوری تعمیل کو عبور کیا جائے گا۔",
       "oneShotSuffix": "(یعنی) ایک آدھی رات کو",
       "saved": "محفوظ کریں",
-      "schedulePlaceholder": "[ نقشہ ]",
+      "schedulePlaceholder": "ٹیم لیڈ کے لیے شیڈول کے مطابق عمل کرنے کی ہدایات...",
       "teamLeadOptional": "ٹیم کی قیادت کے لئے تیار",
       "teamLeadPlaceholder": "ٹیم کی قیادت کے لئے ہدایات ..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "کراس {{team}}...",
       "teamFallback": "ٹیم",
       "placeholder": "پیغام لکھیں... (پہلے میں بھیجنے کے لیے داخل ہوں)",
-      "slashTip": "ٹیپ : آپ کسی بھی پلگ ان کمانڈز کو چلانے کے لیے \"/\" استعمال کر سکتے ہیں۔",
+      "slashTip": "مشورہ: ٹیم لیڈ کے رن ٹائم کے تعاون یافتہ کمانڈز چلانے کے لیے \"/\" استعمال کریں۔",
       "charsLeft_few": "{{count}} حساب",
       "charsLeft_many": "{{count}} حساب"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "ابھی تک کوئی شیڈول نہیں",
-      "description": "کارون شیڈول پر خودکار طور پر کام چلانے کے لئے ایک شیڈول بنائیں."
+      "description": "ٹیم کے کاموں کو cron شیڈول کے مطابق خودکار طور پر چلانے کے لیے شیڈول بنائیں۔"
     },
     "title": "سبز رنگ",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "فیکس فولڈر کے اجازے یا اس منصوبے کو صارف-ورئٹہ فولڈر میں منتقل کرتا ہے۔ انتظامیہ کے طور پر چلانا محض ایک عارضی کام ہے.",
         "openCodeBridgeNoOutput": "ایپ اور اوپنCode وقت کو دوبارہ شروع کریں، پھر دوبارہ اگر اسے دوبارہ بنایا جائے تو نقل کریں ۔",
         "workingDirectoryMissing": "موجودہ کام کی ڈائریکٹری منتخب کریں، پھر اس پلگ انس کو بھیج دیں۔",
-        "authenticationRequired": "اتصال مدون کا فراہم کار CLI، پھر اسے دوبارہ شروع کریں.",
+        "authenticationRequired": "مطلوبہ فراہم کنندہ کی اس کے لیے ترتیب دیے گئے runtime میں توثیق کریں، پھر یہ ڈائیلاگ دوبارہ کھولیں۔",
         "runtimeProviderNotConfigured": "منتخب فراہم کُنندہ وقتی طور پر وضع کریں، پھر اس پلگ تازہ کریں.",
         "openCodeRuntimeMissing": "فراہم کُنندہ اسٹیٹ کارڈ سے وقتاً فوقتاً انسٹال کریں یا پھر اس پلگ ان انسٹال کریں۔",
         "openCodeAppMcpUnreachable": "اوپن کووڈ ایپ کو تازگی بخشنے کے لئے دوبارہ آغاز MCP بریگیڈ. اگر اسے دوبارہ بحال کیا جائے تو ایپ اور اوپنCode وقت کو دوبارہ شروع کریں۔",
-        "cliBinaryMissing": "مقامی پلگ ان کو یقینی بنائیں CLI binary موجود ہے اور شروع کیا جا سکتا ہے، پھر اسے دوبارہ کھول.",
+        "cliBinaryMissing": "یقینی بنائیں کہ مطلوبہ مقامی runtime انسٹال ہے اور اسے شروع کیا جا سکتا ہے، پھر یہ ڈائیلاگ دوبارہ کھولیں۔",
         "default": "اوپر کے شمارے پر غور کریں، پھر اس کو دوبارہ کھول دیں۔",
         "openCodeNodeModulesSymlinkPermission": "Agent Teams AI کو Administrator کے طور پر چلائیں، پھر launch دوبارہ آزمائیں."
       }

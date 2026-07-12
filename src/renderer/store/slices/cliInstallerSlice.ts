@@ -775,7 +775,7 @@ export interface CliInstallerSlice {
   fetchCliProviderStatus: (
     providerId: CliProviderId,
     options?: { silent?: boolean; epoch?: number; verifyModels?: boolean }
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
@@ -787,7 +787,7 @@ export interface CliInstallerSlice {
 }
 
 let cliStatusInFlight: Promise<void> | null = null;
-const cliProviderStatusInFlight = new Map<string, Promise<void>>();
+const cliProviderStatusInFlight = new Map<string, Promise<boolean>>();
 let cliStatusEpoch = 0;
 const cliProviderStatusSeq = new Map<CliProviderId, number>();
 const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
@@ -842,6 +842,24 @@ function scheduleCodexCatalogLoadingRefreshes(
   get: () => Pick<CliInstallerSlice, 'cliStatus' | 'fetchCliProviderStatus'>
 ): void {
   scheduleCodexCatalogLoadingRefresh(get, 'codex');
+}
+
+function createFailedOpenCodeRuntimeStatus(
+  previousStatus: OpenCodeRuntimeStatus | null,
+  message: string
+): OpenCodeRuntimeStatus {
+  return {
+    installed: previousStatus?.installed ?? false,
+    ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
+    ...(previousStatus?.version ? { version: previousStatus.version } : {}),
+    source: previousStatus?.source ?? 'missing',
+    state: 'failed',
+    progress: {
+      phase: 'failed',
+      detail: message,
+    },
+    error: message,
+  };
 }
 
 // =============================================================================
@@ -1070,9 +1088,9 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   },
 
   fetchCliProviderStatus: async (providerId, options) => {
-    if (!api.cliInstaller) return;
+    if (!api.cliInstaller) return false;
     if (get().cliStatus && !get().cliStatus?.installed) {
-      return;
+      return false;
     }
     const verifyModels = options?.verifyModels === true && providerId !== 'opencode';
     const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}`;
@@ -1203,6 +1221,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           };
         });
         scheduleCodexCatalogLoadingRefresh(get, providerId);
+        return true;
       } catch (error) {
         if (
           !silent &&
@@ -1305,6 +1324,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           };
         });
         clearCodexCatalogLoadingRefresh(providerId);
+        return false;
       } finally {
         cliProviderStatusInFlight.delete(requestKey);
       }
@@ -1349,7 +1369,13 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         const message =
           error instanceof Error ? error.message : 'Failed to check OpenCode runtime status';
         logger.error('Failed to fetch OpenCode runtime status:', error);
-        set({ openCodeRuntimeError: message });
+        set({
+          openCodeRuntimeStatus: createFailedOpenCodeRuntimeStatus(
+            get().openCodeRuntimeStatus,
+            message
+          ),
+          openCodeRuntimeError: message,
+        });
       } finally {
         set({ openCodeRuntimeStatusLoading: false });
         openCodeRuntimeStatusInFlight = null;
@@ -1392,7 +1418,13 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to install OpenCode runtime';
       logger.error('Failed to install OpenCode runtime:', error);
-      set({ openCodeRuntimeError: message });
+      set({
+        openCodeRuntimeStatus: createFailedOpenCodeRuntimeStatus(
+          get().openCodeRuntimeStatus,
+          message
+        ),
+        openCodeRuntimeError: message,
+      });
       recordRuntimeInstallEnd({
         runtime: 'opencode',
         success: false,

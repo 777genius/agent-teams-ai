@@ -140,7 +140,7 @@
       "runNow": "Endesha sasa"
     },
     "empty": {
-      "description": "Unda ratiba kwenye timu yoyote ili kuotomatisha utekelezaji wa kazi za Claude kwa kutumia maneno ya cron. Ratiba kutoka timu zote zitaonekana hapa.",
+      "description": "Unda ratiba kwenye timu yoyote ili kuotomatisha utekelezaji wa kazi za timu kwa kutumia maneno ya cron. Ratiba kutoka timu zote zitaonekana hapa.",
       "noMatches": "Hakuna ratiba zinazolingana na vichujio vya sasa",
       "title": "Hakuna kazi zilizopangwa"
     },

@@ -83,6 +83,7 @@ function managementActions(): RuntimeProviderManagementActions {
     submitOAuthCode: vi.fn(async () => undefined),
     submitConnect: vi.fn(async () => true),
     forgetProvider: vi.fn(async () => undefined),
+    openProviderCredentialPage: vi.fn(async () => undefined),
     openModelPicker: vi.fn(),
     closeModelPicker: vi.fn(),
     setModelQuery: vi.fn(),
@@ -249,5 +250,46 @@ describe('RuntimeProviderOnboardingView', () => {
     );
     act(() => keyButton?.click());
     expect(openCredentialPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers reconnect after a saved credential fails live verification', async () => {
+    const beginConnect = vi.fn();
+    const plan = RUNTIME_PROVIDER_ONBOARDING_PLANS[0]!;
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderOnboardingView, {
+          state: onboardingState({
+            mode: 'provider',
+            selectedPlanIds: [plan.id],
+            activePlan: plan,
+            stage: 'error',
+            stageError: 'Refresh token has been revoked',
+            management: managementState({
+              models: [
+                {
+                  modelId: 'xai/grok-4.3',
+                  providerId: 'xai',
+                  displayName: 'Grok 4.3',
+                  sourceLabel: 'OpenCode',
+                  free: false,
+                  default: true,
+                  availability: 'unavailable',
+                },
+              ],
+            }),
+          }),
+          actions: onboardingActions({ beginConnect }),
+          onAdvancedSettings: vi.fn(),
+          onDone: vi.fn(),
+        })
+      );
+    });
+
+    const reconnectButton = [...host.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === 'Reconnect plan'
+    );
+    act(() => reconnectButton?.click());
+    expect(beginConnect).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toContain('Retry verification');
   });
 });

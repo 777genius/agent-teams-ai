@@ -118,7 +118,7 @@
       "teamName": "팀 이름"
     },
     "launchAfterCreate": {
-      "description": "로컬 클로드 CLI를 통해 즉시 팀을 시작합니다.",
+      "description": "구성된 에이전트 런타임을 사용하여 팀을 즉시 시작합니다.",
       "label": "생성 후 명령 실행"
     },
     "localOnly": "로컬 Electron 모드에서만 사용할 수 있습니다.",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "팀메이트는 팀이 살고있는 동안 이름을 변경할 수 없습니다. 이름: {{names}}",
       "memberNameEmpty": "회원 이름은 비어있을 수 없습니다.",
       "memberNameInvalid": "회원 이름은 알파벳으로 시작해야합니다, 만 사용 [a-zA-Z0-9. -], 최대 128 숯",
-      "memberNameNumericSuffix": "회원 이름 \"{{name}}\"는 허용되지 않습니다 (클래드 CLI 자동 스프릭스에 대한 예약). 대신 \"{{base}}\"를 사용하십시오.",
+      "memberNameNumericSuffix": "멤버 이름 \"{{name}}\"은 사용할 수 없습니다(런타임에서 관리하는 숫자 접미사용으로 예약됨). 대신 \"{{base}}\"을 사용하세요.",
       "memberNameReserved": "회원 이름 \"{{name}}\"는",
       "memberNamesUnique": "회원 이름은 저장하기 전에 고유해야합니다.",
       "newLiveTeammates": "전용 Add member 대화 상자에서 새 팀메이트를 추가하고 팀이 살고 있습니다. 팀 편집은 기존 팀메이트를 업데이트합니다.",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "작업 디렉토리:"
     },
     "description": {
-      "createSchedule": "시간표 자동 Claude 작업 실행",
+      "createSchedule": "에이전트 작업 자동 실행 예약",
       "createScheduleForTeam": "팀 \"{{team}}\"의 자동 실행",
       "editSchedule": "팀 \"{{team}}\"의 편집 일정",
       "launchPrefix": "팀 시작",
-      "launchSuffix": "로컬 클로드 CLI를 통해.",
+      "launchSuffix": "구성된 에이전트 런타임을 사용하여.",
       "relaunchPrefix": "현재 실행 중지",
-      "relaunchSuffix": "로컬 클로드 CLI를 통해 다시 시작합니다."
+      "relaunchSuffix": "그리고 구성된 에이전트 런타임을 사용하여 다시 시작합니다."
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "이 신속한 전달",
       "oneShotSuffix": "원샷 실행",
       "saved": "지원하다",
-      "schedulePlaceholder": "Claude에 대한 지침은 일정에 실행...",
+      "schedulePlaceholder": "팀 리드가 일정에 따라 실행할 지침...",
       "teamLeadOptional": "팀 리드 (선택 사항)",
       "teamLeadPlaceholder": "팀 리드에 대한 지침..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "{{team}}에 크로스 팀 메시지...",
       "teamFallback": "팀 팀",
       "placeholder": "메시지 쓰기... (신선을 위해 Shift+Enter를 보내려면)",
-      "slashTip": "팁: Claude 명령을 실행하려면 \"/\"을 사용할 수 있습니다.",
+      "slashTip": "팁: \"/\"을 사용하여 팀 리드 런타임에서 지원하는 명령을 실행할 수 있습니다.",
       "charsLeft_few": "{{count}} 숯 왼쪽",
       "charsLeft_many": "{{count}} 숯 왼쪽"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "아직 일정 없음",
-      "description": "Cron 일정에서 Claude 작업을 자동으로 실행할 계획 만들기."
+      "description": "cron 일정에 따라 팀 작업을 자동으로 실행할 일정을 만드세요."
     },
     "title": "일정표",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "폴더 권한을 수정하거나 프로젝트를 user-writable 폴더로 이동합니다. 관리자로 실행하는 것은 임시 작업입니다.",
         "openCodeBridgeNoOutput": "앱과 OpenCode 런타임을 재시작합니다. 반복하면 진단을 복사합니다.",
         "workingDirectoryMissing": "기존 작업 디렉토리를 선택하고, 이 대화 상자를 다시 엽니다.",
-        "authenticationRequired": "Claude CLI에서 필요한 공급자를 인증한 후 이 대화 상자를 다시 엽니다.",
+        "authenticationRequired": "필요한 공급자를 해당 공급자에 구성된 런타임에서 인증한 후 이 대화 상자를 다시 여세요.",
         "runtimeProviderNotConfigured": "선택한 공급자 실행 시간을 구성, 다음이 대화 상자를 다시 엽니다.",
         "openCodeRuntimeMissing": "공급자 상태 카드에서 OpenCode 런타임을 설치하거나 재시작하면 이 대화 상자를 다시 엽니다.",
         "openCodeAppMcpUnreachable": "OpenCode 앱 MCP 브리지를 새로 고침합니다. 반복하면 앱과 OpenCode runtime을 다시 시작합니다.",
-        "cliBinaryMissing": "로컬 클로드 CLI 바이너리가 존재하고 시작할 수 있는지 확인하고, 이 대화 상자를 다시 엽니다.",
+        "cliBinaryMissing": "필요한 로컬 런타임이 설치되어 있고 시작할 수 있는지 확인한 후 이 대화 상자를 다시 여세요.",
         "default": "위의 문제를 해결 한 다음이 대화 상자를 다시 엽니다.",
         "openCodeNodeModulesSymlinkPermission": "Agent Teams AI를 관리자 권한으로 실행한 다음 launch를 다시 시도하세요."
       }

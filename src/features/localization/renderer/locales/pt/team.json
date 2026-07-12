@@ -118,7 +118,7 @@
       "teamName": "Nome da equipa"
     },
     "launchAfterCreate": {
-      "description": "Inicie a equipe imediatamente através local Claude CLI.",
+      "description": "Inicie imediatamente a equipa utilizando os runtimes de agentes configurados para ela.",
       "label": "Executar o comando após criar"
     },
     "localOnly": "Disponível apenas no modo Electron local.",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "Os companheiros de equipa existentes não podem ser renomeados enquanto a equipa estiver ao vivo. renomeado: {{names}}",
       "memberNameEmpty": "O nome do membro não pode estar vazio",
       "memberNameInvalid": "Nome do membro deve começar com alfanumérico, usar apenas [a-zA-Z0-9. -], máximo 128 caracteres",
-      "memberNameNumericSuffix": "Nome de membro \"{{name}}\" não é permitido (reservado para Claude CLI auto- sufixo). Use \"{{base}}\" em vez disso.",
+      "memberNameNumericSuffix": "O nome de membro \"{{name}}\" não é permitido (reservado para sufixos numéricos geridos pelo runtime). Use \"{{base}}\" em vez disso.",
       "memberNameReserved": "Nome de membro \"{{name}}\" é reservado",
       "memberNamesUnique": "Os nomes dos membros devem ser únicos antes de salvar",
       "newLiveTeammates": "Adicione novos companheiros de equipe da janela dedicada Adicionar membro enquanto a equipe está ao vivo. Edit Team só suporta atualização de colegas de equipe existentes.",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "Directório de trabalho:"
     },
     "description": {
-      "createSchedule": "Agendar a execução automática da tarefa Claude",
+      "createSchedule": "Agendar a execução automática de tarefas de agentes",
       "createScheduleForTeam": "Agendar corridas automáticas para a equipe \"{{team}}\"",
       "editSchedule": "Programa de edição da equipa \"{{team}}\"",
       "launchPrefix": "Iniciar a equipa",
-      "launchSuffix": "via local Claude CLI.",
+      "launchSuffix": "utilizando os runtimes de agentes configurados para ela.",
       "relaunchPrefix": "Parar a execução actual para",
-      "relaunchSuffix": "e começar novamente através local Claude CLI."
+      "relaunchSuffix": "e inicie-a novamente utilizando os runtimes de agentes configurados para ela."
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "Este prompt será passado para",
       "oneShotSuffix": "para execução de um tiro",
       "saved": "Gravado",
-      "schedulePlaceholder": "Instruções para Claude executar no horário...",
+      "schedulePlaceholder": "Instruções para o líder da equipa executar de acordo com o agendamento...",
       "teamLeadOptional": "Pedido para o líder da equipa (opcional)",
       "teamLeadPlaceholder": "Instruções para liderar a equipa..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "Mensagem cruzada para {{team}}...",
       "teamFallback": "equipe",
       "placeholder": "Escreva uma mensagem... (Enter para enviar, Shift+Enter para nova linha)",
-      "slashTip": "Dica: Você pode usar \"/\" para executar qualquer comando Claude.",
+      "slashTip": "Dica: Use \"/\" para executar comandos suportados pelo runtime do líder da equipa.",
       "charsLeft_few": "{{count}} chars esquerda",
       "charsLeft_many": "{{count}} chars esquerda"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "Sem agendamentos ainda",
-      "description": "Crie um cronograma para executar tarefas de Claude automaticamente em um cronograma de cron."
+      "description": "Crie um agendamento para executar tarefas da equipa automaticamente segundo uma programação cron."
     },
     "title": "Agendamentos",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "Corrigir permissões de pastas ou mover o projeto para uma pasta com escrita pelo usuário. Executar como administrador é apenas uma solução temporária.",
         "openCodeBridgeNoOutput": "Reinicie o aplicativo e o tempo de execução do OpenCode, então tente novamente. Se repetir, copie o diagnóstico.",
         "workingDirectoryMissing": "Escolha uma pasta de trabalho existente e então reabra esta janela.",
-        "authenticationRequired": "Autentique o provedor necessário em Claude CLI e, em seguida, reabra esta janela.",
+        "authenticationRequired": "Autentique o provedor necessário no runtime configurado para ele e reabra esta janela.",
         "runtimeProviderNotConfigured": "Configurar o tempo de execução do provedor selecionado e então reabrir esta janela.",
         "openCodeRuntimeMissing": "Instale ou tente novamente o tempo de execução do OpenCode a partir do cartão de status do provedor e então reabra esta janela.",
         "openCodeAppMcpUnreachable": "Repetir o lançamento para atualizar o aplicativo OpenCode MCP ponte. Se repetir, reinicie o aplicativo e o tempo de execução do OpenCode.",
-        "cliBinaryMissing": "Certifique-se de que o binário local Claude CLI exista e possa ser iniciado, e então reabra esta janela.",
+        "cliBinaryMissing": "Verifique se o runtime local necessário está instalado e pode ser iniciado e reabra esta janela.",
         "default": "Resolver o problema acima e depois reabrir esta janela.",
         "openCodeNodeModulesSymlinkPermission": "Execute o Agent Teams AI como administrador e tente o launch novamente."
       }

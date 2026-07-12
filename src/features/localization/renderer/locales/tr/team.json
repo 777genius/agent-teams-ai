@@ -118,7 +118,7 @@
       "teamName": "Ekip adı"
     },
     "launchAfterCreate": {
-      "description": "Ekibi yerel Claude CLI aracılığıyla hemen başlat.",
+      "description": "Ekibi, onun için yapılandırılmış ajan çalışma zamanlarını kullanarak hemen başlat.",
       "label": "Oluşturduktan sonra komutu çalıştır"
     },
     "localOnly": "Yalnızca yerel Electron modunda kullanılabilir.",
@@ -218,7 +218,7 @@
       "liveRenameBlocked": "Mevcut takım arkadaşları ekip canlıyken yeniden adlandırılamaz. yeniden adlandırılan: {{names}}",
       "memberNameEmpty": "Üye adı boş olamaz",
       "memberNameInvalid": "Üye adı alfasayısal ile başlamalı, yalnızca [a-zA-Z0-9._-] kullanmalı, en fazla 128 karakter olmalıdır",
-      "memberNameNumericSuffix": "\"{{name}}\" üye adına izin verilmiyor (Claude CLI otomatik son ekine ayrılmıştır). Bunun yerine \"{{base}}\" kullanın.",
+      "memberNameNumericSuffix": "\"{{name}}\" üye adına izin verilmiyor (çalışma zamanı tarafından yönetilen sayısal son eklere ayrılmıştır). Bunun yerine \"{{base}}\" kullanın.",
       "memberNameReserved": "\"{{name}}\" üye adı ayrılmıştır",
       "memberNamesUnique": "Kaydetmeden önce üye adları benzersiz olmalıdır",
       "newLiveTeammates": "Ekip canlıyken yeni takım arkadaşlarını özel Üye ekle iletişim kutusundan ekleyin. Ekibi Düzenle yalnızca mevcut takım arkadaşlarını güncellemeyi destekler.",
@@ -1332,13 +1332,13 @@
       "workingDirectory": "Çalışma dizini:"
     },
     "description": {
-      "createSchedule": "Otomatik Claude görev yürütmesini zamanla",
+      "createSchedule": "Otomatik ajan görevi yürütmesini zamanla",
       "createScheduleForTeam": "\"{{team}}\" ekibi için otomatik çalıştırmaları zamanla",
       "editSchedule": "\"{{team}}\" ekibi için zamanlama düzenleniyor",
       "launchPrefix": "Ekibi başlat",
-      "launchSuffix": "yerel Claude CLI aracılığıyla.",
+      "launchSuffix": "onun için yapılandırılmış ajan çalışma zamanlarını kullanarak.",
       "relaunchPrefix": "Şunun geçerli çalıştırmasını durdur:",
-      "relaunchSuffix": "ve yerel Claude CLI aracılığıyla yeniden başlat."
+      "relaunchSuffix": "ve onu, onun için yapılandırılmış ajan çalışma zamanlarını kullanarak yeniden başlat."
     },
     "prepare": {
       "action": {
@@ -1361,7 +1361,7 @@
       "oneShotPrefix": "Bu komut istemi şuraya iletilecek:",
       "oneShotSuffix": "tek seferlik yürütme için",
       "saved": "Kaydedildi",
-      "schedulePlaceholder": "Claude'un zamanlamaya göre yürütmesi için talimatlar...",
+      "schedulePlaceholder": "Ekip liderinin zamanlamaya göre yürüteceği talimatlar...",
       "teamLeadOptional": "Ekip lideri için komut istemi (isteğe bağlı)",
       "teamLeadPlaceholder": "Ekip lideri için talimatlar..."
     },
@@ -1552,7 +1552,7 @@
       "crossTeamPlaceholder": "{{team}} ekibine ekipler arası mesaj...",
       "teamFallback": "ekip",
       "placeholder": "Bir mesaj yazın... (göndermek için Enter, yeni satır için Shift+Enter)",
-      "slashTip": "İpucu: Herhangi bir Claude komutunu çalıştırmak için \"/\" kullanabilirsiniz.",
+      "slashTip": "İpucu: Ekip liderinin çalışma zamanı tarafından desteklenen komutları çalıştırmak için \"/\" kullanın.",
       "charsLeft_few": "{{count}} karakter kaldı",
       "charsLeft_many": "{{count}} karakter kaldı"
     },
@@ -1951,7 +1951,7 @@
     },
     "empty": {
       "title": "Henüz zamanlama yok",
-      "description": "Claude görevlerini cron zamanlamasıyla otomatik olarak çalıştırmak için bir zamanlama oluşturun."
+      "description": "Ekip görevlerini cron zamanlamasıyla otomatik olarak çalıştırmak için bir zamanlama oluşturun."
     },
     "title": "Zamanlamalar",
     "status": {
@@ -2108,11 +2108,11 @@
         "openCodeAccessDenied": "Klasör izinlerini düzeltin veya projeyi kullanıcı tarafından yazılabilir bir klasöre taşıyın. Yönetici olarak çalıştırmak yalnızca geçici bir çözümdür.",
         "openCodeBridgeNoOutput": "Uygulamayı ve OpenCode çalışma zamanını yeniden başlatın, ardından tekrar deneyin. Tekrarlarsa tanılamaları kopyalayın.",
         "workingDirectoryMissing": "Mevcut bir çalışma dizini seçin, ardından bu iletişim kutusunu yeniden açın.",
-        "authenticationRequired": "Gerekli sağlayıcıyı Claude CLI'de doğrulayın, ardından bu iletişim kutusunu yeniden açın.",
+        "authenticationRequired": "Gerekli sağlayıcının kimliğini, sağlayıcı için yapılandırılmış çalışma zamanında doğrulayın ve ardından bu iletişim kutusunu yeniden açın.",
         "runtimeProviderNotConfigured": "Seçili sağlayıcı çalışma zamanını yapılandırın, ardından bu iletişim kutusunu yeniden açın.",
         "openCodeRuntimeMissing": "Sağlayıcı durum kartından OpenCode çalışma zamanını kurun veya yeniden deneyin, ardından bu iletişim kutusunu yeniden açın.",
         "openCodeAppMcpUnreachable": "OpenCode uygulama MCP köprüsünü yenilemek için başlatmayı yeniden deneyin. Tekrarlarsa uygulamayı ve OpenCode çalışma zamanını yeniden başlatın.",
-        "cliBinaryMissing": "Yerel Claude CLI ikili dosyasının var olduğundan ve başlatılabildiğinden emin olun, ardından bu iletişim kutusunu yeniden açın.",
+        "cliBinaryMissing": "Gerekli yerel çalışma zamanının yüklü ve başlatılabilir olduğundan emin olun, ardından bu iletişim kutusunu yeniden açın.",
         "default": "Yukarıdaki sorunu çözün, ardından bu iletişim kutusunu yeniden açın.",
         "openCodeNodeModulesSymlinkPermission": "Agent Teams AI'yi Yönetici olarak çalıştırın, ardından başlatmayı yeniden deneyin."
       }

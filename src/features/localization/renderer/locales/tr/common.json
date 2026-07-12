@@ -140,7 +140,7 @@
       "runNow": "Şimdi çalıştır"
     },
     "empty": {
-      "description": "Cron ifadeleriyle Claude görev yürütmesini otomatikleştirmek için herhangi bir ekipte bir zamanlama oluşturun. Tüm ekiplerin zamanlamaları burada görünecek.",
+      "description": "Cron ifadeleriyle ekip görevlerinin yürütülmesini otomatikleştirmek için herhangi bir ekipte bir zamanlama oluşturun. Tüm ekiplerin zamanlamaları burada görünecek.",
       "noMatches": "Geçerli filtrelerle eşleşen zamanlama yok",
       "title": "Zamanlanmış görev yok"
     },

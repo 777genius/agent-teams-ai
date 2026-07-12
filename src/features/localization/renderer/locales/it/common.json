@@ -140,7 +140,7 @@
       "runNow": "Esegui ora"
     },
     "empty": {
-      "description": "Crea una pianificazione su qualsiasi team per automatizzare l'esecuzione dei task di Claude con espressioni cron. Le pianificazioni di tutti i team appariranno qui.",
+      "description": "Crea una pianificazione su qualsiasi team per automatizzare l'esecuzione dei task del team con espressioni cron. Le pianificazioni di tutti i team appariranno qui.",
       "noMatches": "Nessuna pianificazione corrisponde ai filtri attuali",
       "title": "Nessun task pianificato"
     },

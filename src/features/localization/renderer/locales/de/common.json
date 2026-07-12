@@ -140,7 +140,7 @@
       "runNow": "Lauf jetzt!"
     },
     "empty": {
-      "description": "Erstellen Sie einen Zeitplan für jedes Team, um die Claude Task-Ausführung mit Cron-Ausdrücken zu automatisieren. Fahrpläne aller Teams werden hier angezeigt.",
+      "description": "Erstellen Sie für ein beliebiges Team einen Zeitplan, um die Ausführung von Teamaufgaben mit Cron-Ausdrücken zu automatisieren. Zeitpläne aller Teams werden hier angezeigt.",
       "noMatches": "Keine Termine entsprechen den aktuellen Filtern",
       "title": "Keine geplanten Aufgaben"
     },

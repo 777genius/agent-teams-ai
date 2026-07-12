@@ -238,6 +238,111 @@ describe('useRuntimeProviderOnboarding', () => {
     expect(currentState?.stage).toBe('ready');
   });
 
+  it('tries one Copilot fallback without probing the full provider catalog', async () => {
+    loadProviderDirectory.mockResolvedValue(
+      directoryResponse([directoryEntry('github-copilot', 'connected', 'oauth')])
+    );
+    loadModels.mockResolvedValue({
+      schemaVersion: 1 as const,
+      runtimeId: 'opencode' as const,
+      models: {
+        runtimeId: 'opencode' as const,
+        providerId: 'github-copilot',
+        defaultModelId: null,
+        diagnostics: [],
+        models: [
+          {
+            modelId: 'github-copilot/gpt-4.1',
+            providerId: 'github-copilot',
+            displayName: 'GPT-4.1',
+            sourceLabel: 'OpenCode',
+            free: false,
+            default: false,
+            availability: 'untested' as const,
+          },
+          {
+            modelId: 'github-copilot/gpt-5-mini',
+            providerId: 'github-copilot',
+            displayName: 'GPT-5 mini',
+            sourceLabel: 'OpenCode',
+            free: false,
+            default: false,
+            availability: 'untested' as const,
+          },
+          {
+            modelId: 'github-copilot/claude-sonnet-4.6',
+            providerId: 'github-copilot',
+            displayName: 'Claude Sonnet 4.6',
+            sourceLabel: 'OpenCode',
+            free: false,
+            default: false,
+            availability: 'untested' as const,
+          },
+        ],
+      },
+    });
+    testModel.mockImplementation(async (input: { providerId: string; modelId: string }) => ({
+      schemaVersion: 1 as const,
+      runtimeId: 'opencode' as const,
+      result: {
+        providerId: input.providerId,
+        modelId: input.modelId,
+        ok: input.modelId === 'github-copilot/gpt-5-mini',
+        availability:
+          input.modelId === 'github-copilot/gpt-5-mini'
+            ? ('available' as const)
+            : ('unavailable' as const),
+        message:
+          input.modelId === 'github-copilot/gpt-5-mini'
+            ? 'Model probe passed'
+            : 'The requested model is not supported',
+        diagnostics: [],
+      },
+    }));
+
+    await act(async () => root.render(React.createElement(Harness, { providerId: 'github-copilot' })));
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 150));
+    });
+
+    expect(testModel.mock.calls.map(([input]) => input.modelId)).toEqual([
+      'github-copilot/gpt-4.1',
+      'github-copilot/gpt-5-mini',
+    ]);
+    expect(currentState?.verifiedModelId).toBe('github-copilot/gpt-5-mini');
+    expect(currentState?.stage).toBe('choose-model');
+  });
+
+  it('keeps an explicit reconnect form open after a saved credential fails verification', async () => {
+    testModel.mockResolvedValue({
+      schemaVersion: 1 as const,
+      runtimeId: 'opencode' as const,
+      result: {
+        providerId: 'xai',
+        modelId: 'xai/grok-4.3',
+        ok: false,
+        availability: 'unavailable' as const,
+        message: 'Refresh token has been revoked',
+        diagnostics: [],
+      },
+    });
+
+    await act(async () => root.render(React.createElement(Harness)));
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 100));
+    });
+    expect(currentState?.stage).toBe('error');
+
+    await act(async () => currentActions?.beginConnect());
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 50));
+    });
+
+    expect(currentState?.management.activeFormProviderId).toBe('xai');
+    expect(currentState?.stage).toBe('connect');
+    expect(testModel).toHaveBeenCalledTimes(1);
+  });
+
   it('verifies Cursor through its existing CLI session instead of requesting an API key', async () => {
     loadProviderDirectory.mockResolvedValue(
       directoryResponse([directoryEntry('cursor-acp', 'available', null, true)])

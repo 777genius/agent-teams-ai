@@ -221,7 +221,47 @@ describe('cliInstaller IPC handlers', () => {
     expect(service.invalidateStatusCache).toHaveBeenCalledTimes(1);
   });
 
-  it('serializes explicit provider runtime status requests to avoid startup memory spikes', async () => {
+  it('serializes non-OpenCode provider runtime status requests to avoid startup memory spikes', async () => {
+    const anthropicRequest = deferred<CliProviderStatus>();
+    const codexRequest = deferred<CliProviderStatus>();
+    const startedProviders: CliProviderId[] = [];
+    service.getProviderStatus.mockImplementation((providerId: CliProviderId) => {
+      startedProviders.push(providerId);
+      return providerId === 'anthropic' ? anthropicRequest.promise : codexRequest.promise;
+    });
+
+    const anthropicInvoke = ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'anthropic'
+    ) as Promise<IpcResult<CliProviderStatus | null>>;
+    await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(1));
+
+    const codexInvoke = ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex'
+    ) as Promise<IpcResult<CliProviderStatus | null>>;
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(startedProviders).toEqual(['anthropic']);
+    expect(service.getProviderStatus).toHaveBeenCalledTimes(1);
+
+    anthropicRequest.resolve(provider({ providerId: 'anthropic', authenticated: true }));
+    await expect(anthropicInvoke).resolves.toMatchObject({
+      success: true,
+      data: { providerId: 'anthropic' },
+    });
+    await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(2));
+
+    expect(startedProviders).toEqual(['anthropic', 'codex']);
+    codexRequest.resolve(provider({ providerId: 'codex', authenticated: true }));
+    await expect(codexInvoke).resolves.toMatchObject({
+      success: true,
+      data: { providerId: 'codex' },
+    });
+  });
+
+  it('runs OpenCode outside the serialized provider runtime queue', async () => {
     const codexRequest = deferred<CliProviderStatus>();
     const opencodeRequest = deferred<CliProviderStatus>();
     const startedProviders: CliProviderId[] = [];
@@ -240,17 +280,6 @@ describe('cliInstaller IPC handlers', () => {
       CLI_INSTALLER_GET_PROVIDER_STATUS,
       'opencode'
     ) as Promise<IpcResult<CliProviderStatus | null>>;
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(startedProviders).toEqual(['codex']);
-    expect(service.getProviderStatus).toHaveBeenCalledTimes(1);
-
-    codexRequest.resolve(provider({ providerId: 'codex', authenticated: true }));
-    await expect(codexInvoke).resolves.toMatchObject({
-      success: true,
-      data: { providerId: 'codex' },
-    });
     await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(2));
 
     expect(startedProviders).toEqual(['codex', 'opencode']);
@@ -258,6 +287,12 @@ describe('cliInstaller IPC handlers', () => {
     await expect(opencodeInvoke).resolves.toMatchObject({
       success: true,
       data: { providerId: 'opencode' },
+    });
+
+    codexRequest.resolve(provider({ providerId: 'codex', authenticated: true }));
+    await expect(codexInvoke).resolves.toMatchObject({
+      success: true,
+      data: { providerId: 'codex' },
     });
   });
 

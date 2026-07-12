@@ -1,5 +1,6 @@
 import type { RuntimeProviderManagementPort } from './RuntimeProviderManagementPort';
 import type {
+  RuntimeProviderManagementConfigureModelLimitsInput,
   RuntimeProviderManagementConnectApiKeyInput,
   RuntimeProviderManagementConnectInput,
   RuntimeProviderManagementDirectoryResponse,
@@ -8,6 +9,7 @@ import type {
   RuntimeProviderManagementLoadModelsInput,
   RuntimeProviderManagementLoadSetupFormInput,
   RuntimeProviderManagementLoadViewInput,
+  RuntimeProviderManagementModelLimitsResponse,
   RuntimeProviderManagementModelsResponse,
   RuntimeProviderManagementModelTestResponse,
   RuntimeProviderManagementProviderResponse,
@@ -78,4 +80,11 @@ export function setRuntimeProviderDefaultModel(
   input: RuntimeProviderManagementSetDefaultModelInput
 ): Promise<RuntimeProviderManagementViewResponse> {
   return port.setDefaultModel(input);
+}
+
+export function configureRuntimeProviderModelLimits(
+  port: RuntimeProviderManagementPort,
+  input: RuntimeProviderManagementConfigureModelLimitsInput
+): Promise<RuntimeProviderManagementModelLimitsResponse> {
+  return port.configureModelLimits(input);
 }

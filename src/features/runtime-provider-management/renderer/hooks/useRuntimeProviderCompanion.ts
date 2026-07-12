@@ -2,9 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
-import type { RuntimeProviderCompanionStatusDto } from '../../contracts';
+import type {
+  RuntimeProviderCompanionIdDto,
+  RuntimeProviderCompanionStatusDto,
+} from '../../contracts';
 
-interface RuntimeProviderCompanionState {
+export interface RuntimeProviderCompanionState {
   status: RuntimeProviderCompanionStatusDto | null;
   loading: boolean;
   runInstallAndConnect: () => Promise<void>;
@@ -13,6 +16,7 @@ interface RuntimeProviderCompanionState {
 }
 
 export function useRuntimeProviderCompanion(
+  companionId: RuntimeProviderCompanionIdDto,
   enabled: boolean,
   projectPath: string | null
 ): RuntimeProviderCompanionState {
@@ -32,19 +36,19 @@ export function useRuntimeProviderCompanion(
     setLoading(true);
     try {
       const next = await api.runtimeProviderManagement.getCompanionStatus({
-        companionId: 'kiro-cli',
+        companionId,
         projectPath,
       });
       if (mountedRef.current) setStatus(next);
     } finally {
       if (mountedRef.current) setLoading(false);
     }
-  }, [enabled, projectPath]);
+  }, [companionId, enabled, projectPath]);
 
   useEffect(() => {
     if (!enabled) return;
     const unsubscribe = api.runtimeProviderManagement.onCompanionProgress((next) => {
-      if (next.companionId === 'kiro-cli' && mountedRef.current) {
+      if (next.companionId === companionId && mountedRef.current) {
         setStatus(next);
         setLoading(
           [
@@ -61,7 +65,7 @@ export function useRuntimeProviderCompanion(
     });
     void refresh();
     return unsubscribe;
-  }, [enabled, refresh]);
+  }, [companionId, enabled, refresh]);
 
   const run = useCallback(
     async (operation: 'install' | 'connect'): Promise<void> => {
@@ -70,11 +74,11 @@ export function useRuntimeProviderCompanion(
         const next =
           operation === 'install'
             ? await api.runtimeProviderManagement.installAndConnectCompanion({
-                companionId: 'kiro-cli',
+                companionId,
                 projectPath,
               })
             : await api.runtimeProviderManagement.connectCompanion({
-                companionId: 'kiro-cli',
+                companionId,
                 projectPath,
               });
         if (mountedRef.current) setStatus(next);
@@ -86,8 +90,9 @@ export function useRuntimeProviderCompanion(
                 ...current,
                 phase: 'error',
                 percent: null,
-                message: 'Kiro CLI setup failed',
-                error: error instanceof Error ? error.message : 'Kiro CLI setup failed',
+                message: `${current.displayName} setup failed`,
+                error:
+                  error instanceof Error ? error.message : `${current.displayName} setup failed`,
                 updatedAt: new Date().toISOString(),
               }
             : current
@@ -96,7 +101,7 @@ export function useRuntimeProviderCompanion(
         if (mountedRef.current) setLoading(false);
       }
     },
-    [projectPath]
+    [companionId, projectPath]
   );
 
   const runInstallAndConnect = useCallback(() => run('install'), [run]);

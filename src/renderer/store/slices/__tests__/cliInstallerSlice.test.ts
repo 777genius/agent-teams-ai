@@ -1,10 +1,37 @@
 import {
+  createCliInstallerSlice,
   createLoadingMultimodelCliStatus,
   mergeCliStatusPreservingHydratedProviders,
 } from '@renderer/store/slices/cliInstallerSlice';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { createStore } from 'zustand/vanilla';
 
+import type { CliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
+import type { ElectronAPI } from '@shared/types/api';
 import type { CliProviderReasoningEffort } from '@shared/types/cliInstaller';
+import type { StateCreator } from 'zustand';
+
+function createCliInstallerStore() {
+  return createStore<CliInstallerSlice>()(
+    createCliInstallerSlice as unknown as StateCreator<CliInstallerSlice>
+  );
+}
+
+function installElectronApi(openCodeRuntime: ElectronAPI['openCodeRuntime']): () => void {
+  const previousApi = window.electronAPI;
+  Object.defineProperty(window, 'electronAPI', {
+    configurable: true,
+    writable: true,
+    value: { openCodeRuntime } as ElectronAPI,
+  });
+  return () => {
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: previousApi,
+    });
+  };
+}
 
 describe('mergeCliStatusPreservingHydratedProviders', () => {
   it('returns the previous status reference when a structurally identical clone arrives', () => {
@@ -160,5 +187,90 @@ describe('mergeCliStatusPreservingHydratedProviders', () => {
     expect(merged).not.toBe(current);
     expect(merged.providers[1]).not.toBe(current.providers[1]);
     expect(merged.providers[1].availableBackends?.[0].available).toBe(false);
+  });
+});
+
+describe('OpenCode runtime rejection state', () => {
+  it('surfaces a rejected status check as failed without discarding known runtime identity', async () => {
+    const restoreApi = installElectronApi({
+      getStatus: async () => {
+        throw new Error('runtime status IPC unavailable');
+      },
+      install: async () => {
+        throw new Error('not used');
+      },
+      invalidateStatus: async () => undefined,
+      onProgress: () => () => undefined,
+    });
+    const store = createCliInstallerStore();
+    store.setState({
+      openCodeRuntimeStatus: {
+        installed: true,
+        binaryPath: '/known/opencode',
+        version: '1.16.0',
+        source: 'path',
+        state: 'ready',
+      },
+    });
+
+    try {
+      await store.getState().fetchOpenCodeRuntimeStatus();
+
+      expect(store.getState()).toMatchObject({
+        openCodeRuntimeStatusLoading: false,
+        openCodeRuntimeError: 'runtime status IPC unavailable',
+        openCodeRuntimeStatus: {
+          installed: true,
+          binaryPath: '/known/opencode',
+          version: '1.16.0',
+          source: 'path',
+          state: 'failed',
+          error: 'runtime status IPC unavailable',
+          progress: {
+            phase: 'failed',
+            detail: 'runtime status IPC unavailable',
+          },
+        },
+      });
+    } finally {
+      restoreApi();
+      vi.mocked(console.error).mockClear();
+    }
+  });
+
+  it('replaces the temporary checking state with failed when installation rejects', async () => {
+    const restoreApi = installElectronApi({
+      getStatus: async () => {
+        throw new Error('not used');
+      },
+      install: async () => {
+        throw new Error('download connection lost');
+      },
+      invalidateStatus: async () => undefined,
+      onProgress: () => () => undefined,
+    });
+    const store = createCliInstallerStore();
+
+    try {
+      await store.getState().installOpenCodeRuntime();
+
+      expect(store.getState()).toMatchObject({
+        openCodeRuntimeStatusLoading: false,
+        openCodeRuntimeError: 'download connection lost',
+        openCodeRuntimeStatus: {
+          installed: false,
+          source: 'missing',
+          state: 'failed',
+          error: 'download connection lost',
+          progress: {
+            phase: 'failed',
+            detail: 'download connection lost',
+          },
+        },
+      });
+    } finally {
+      restoreApi();
+      vi.mocked(console.error).mockClear();
+    }
   });
 });

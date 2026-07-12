@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
@@ -10,13 +10,17 @@ import {
   resolveOpenCodeQuickPlanState,
 } from '../core/domain';
 
-import { useRuntimeProviderCompanion } from './hooks/useRuntimeProviderCompanion';
+import {
+  type RuntimeProviderCompanionState,
+  useRuntimeProviderCompanion,
+} from './hooks/useRuntimeProviderCompanion';
 import { useRuntimeProviderQuickConnect } from './hooks/useRuntimeProviderQuickConnect';
 import { RuntimeProviderCompanionSetupDialog } from './ui/RuntimeProviderCompanionSetupDialog';
 import {
   type RuntimeProviderQuickCardViewModel,
   RuntimeProviderQuickConnectView,
 } from './ui/RuntimeProviderQuickConnectView';
+import { XiaomiMiMoTokenPlanSetupDialog } from './ui/XiaomiMiMoTokenPlanSetupDialog';
 
 import type { RuntimeProviderDirectoryEntryDto } from '../contracts';
 import type { RuntimeProviderOnboardingPlanId } from '../core/domain';
@@ -33,7 +37,8 @@ interface RuntimeProviderQuickConnectProps {
   refreshKey?: number;
   onInstallOpenCode: () => void;
   onOpenCodeProviderAction: (providerId: string, action: 'connect' | 'select') => void;
-  onBrowseProviders: () => void;
+  onBrowseProviders: (query?: string) => void;
+  onConnectedCountChange?: (count: number) => void;
 }
 
 interface OpenCodePlanDefinition {
@@ -50,6 +55,10 @@ interface OpenCodePlanDefinition {
     | 'cursorDescription';
   requiresOAuthCredential?: boolean;
 }
+
+type CompanionPlanId = 'kiro' | 'cursor';
+
+const COMPANION_PLAN_IDS = new Set<RuntimeProviderOnboardingPlanId>(['kiro', 'cursor']);
 
 const OPEN_CODE_PLAN_PRESENTATION: readonly Pick<
   OpenCodePlanDefinition,
@@ -98,13 +107,14 @@ const OPEN_CODE_PLANS: readonly OpenCodePlanDefinition[] = OPEN_CODE_PLAN_PRESEN
 );
 
 const QUICK_CONNECT_CARD_ORDER = [
-  'github-copilot',
   'cursor',
+  'github-copilot',
   'supergrok',
   'kiro',
   'kimi-code-membership',
   'zai-coding-plan',
   'minimax-token-plan',
+  'xiaomi-mimo-token-plan',
 ] as const;
 
 const QUICK_CONNECT_CARD_RANK = new Map<string, number>(
@@ -142,6 +152,7 @@ export const RuntimeProviderQuickConnect = ({
   onInstallOpenCode,
   onOpenCodeProviderAction,
   onBrowseProviders,
+  onConnectedCountChange,
 }: RuntimeProviderQuickConnectProps): JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const providerMap = useMemo(
@@ -161,47 +172,57 @@ export const RuntimeProviderQuickConnect = ({
     refreshKey,
   });
   const kiroCompanion = useRuntimeProviderCompanion(
+    'kiro-cli',
     enabled && gate === 'ready',
     projectPath ?? null
   );
-  const [kiroDialogOpen, setKiroDialogOpen] = useState(false);
+  const cursorCompanion = useRuntimeProviderCompanion(
+    'cursor-agent',
+    enabled && gate === 'ready',
+    projectPath ?? null
+  );
+  const [activeCompanionPlanId, setActiveCompanionPlanId] = useState<CompanionPlanId | null>(null);
+  const [xiaomiDialogOpen, setXiaomiDialogOpen] = useState(false);
   const oauthBridgeOutdated = isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus);
 
-  const runKiroOperation = useCallback(
-    async (operation: 'install' | 'connect'): Promise<void> => {
-      setKiroDialogOpen(true);
+  const getCompanionState = useCallback(
+    (planId: CompanionPlanId): RuntimeProviderCompanionState =>
+      planId === 'kiro' ? kiroCompanion : cursorCompanion,
+    [cursorCompanion, kiroCompanion]
+  );
+
+  const runCompanionOperation = useCallback(
+    async (planId: CompanionPlanId, operation: 'install' | 'connect'): Promise<void> => {
+      setActiveCompanionPlanId(planId);
+      const companion = getCompanionState(planId);
       if (operation === 'install') {
-        await kiroCompanion.runInstallAndConnect();
+        await companion.runInstallAndConnect();
       } else {
-        await kiroCompanion.runConnect();
+        await companion.runConnect();
       }
       directory.refresh();
     },
-    [directory, kiroCompanion]
+    [directory, getCompanionState]
   );
 
-  const handleKiroCardAction = useCallback((): void => {
-    const status = kiroCompanion.status;
-    if (status?.phase === 'connected') {
-      onOpenCodeProviderAction('kiro', 'select');
-      return;
-    }
-    if (kiroCompanion.loading) {
-      setKiroDialogOpen(true);
-      return;
-    }
-    setKiroDialogOpen(true);
-  }, [kiroCompanion.loading, kiroCompanion.status, onOpenCodeProviderAction]);
+  const handleCompanionCardAction = useCallback(
+    (planId: CompanionPlanId): void => {
+      const companion = getCompanionState(planId);
+      const status = companion.status;
+      if (status?.phase === 'connected') {
+        const providerId = planId === 'kiro' ? 'kiro' : 'cursor-acp';
+        onOpenCodeProviderAction(providerId, 'select');
+        return;
+      }
+      setActiveCompanionPlanId(planId);
+    },
+    [getCompanionState, onOpenCodeProviderAction]
+  );
 
   const openCodeCards = useMemo<RuntimeProviderQuickCardViewModel[]>(() => {
-    return OPEN_CODE_PLANS.map((plan) => {
+    const planCards: RuntimeProviderQuickCardViewModel[] = OPEN_CODE_PLANS.map((plan) => {
       if (gate !== 'ready') {
         const busy = gate === 'checking' || gate === 'installing';
-        const actionLabel = busy
-          ? null
-          : plan.id === 'supergrok'
-            ? t('cliStatus.quickConnect.connectSuperGrok')
-            : t('cliStatus.quickConnect.connectPlan');
         return {
           id: plan.id,
           providerId: plan.providerId,
@@ -213,18 +234,20 @@ export const RuntimeProviderQuickConnect = ({
               ? t('cliStatus.quickConnect.installingOpenCode')
               : t('cliStatus.quickConnect.checkingOpenCode')
             : t('cliStatus.quickConnect.requiresOpenCode'),
-          actionLabel,
-          onAction: busy ? null : () => onOpenCodeProviderAction(plan.providerId, 'connect'),
+          actionLabel: null,
+          onAction: null,
         };
       }
 
-      if (plan.id === 'kiro') {
-        const status = kiroCompanion.status;
+      if (COMPANION_PLAN_IDS.has(plan.id)) {
+        const companionPlanId = plan.id as CompanionPlanId;
+        const companion = getCompanionState(companionPlanId);
+        const status = companion.status;
         const progress =
           typeof status?.percent === 'number'
             ? { percent: status.percent, detail: status.detail }
             : null;
-        if (!status || kiroCompanion.loading) {
+        if (!status || companion.loading) {
           return {
             id: plan.id,
             providerId: plan.providerId,
@@ -244,9 +267,12 @@ export const RuntimeProviderQuickConnect = ({
             displayName: plan.displayName,
             description: t(`cliStatus.quickConnect.${plan.descriptionKey}`),
             state: 'connected',
-            stateLabel: t('cliStatus.quickConnect.kiroConnected'),
+            stateLabel:
+              companionPlanId === 'kiro'
+                ? t('cliStatus.quickConnect.kiroConnected')
+                : t('cliStatus.quickConnect.cursorConnected'),
             actionLabel: t('cliStatus.actions.manage'),
-            onAction: handleKiroCardAction,
+            onAction: () => handleCompanionCardAction(companionPlanId),
             progress,
           };
         }
@@ -271,7 +297,7 @@ export const RuntimeProviderQuickConnect = ({
             : status.phase === 'error'
               ? t('cliStatus.quickConnect.checkAndConnect')
               : t('cliStatus.quickConnect.signIn'),
-          onAction: handleKiroCardAction,
+          onAction: () => handleCompanionCardAction(companionPlanId),
           progress,
         };
       }
@@ -330,13 +356,11 @@ export const RuntimeProviderQuickConnect = ({
         state === 'connected'
           ? t('cliStatus.actions.manage')
           : state === 'connectable'
-            ? isSuperGrok
-              ? t('cliStatus.quickConnect.connectSuperGrok')
-              : t('cliStatus.quickConnect.connectPlan')
+            ? t('cliStatus.actions.connect')
             : state === 'different-credential'
               ? isSuperGrok
                 ? t('cliStatus.quickConnect.switchToSuperGrok')
-                : t('cliStatus.quickConnect.connectPlan')
+                : t('cliStatus.actions.connect')
               : state === 'update-required'
                 ? t('cliStatus.quickConnect.updateOpenCode')
                 : state === 'manual'
@@ -363,20 +387,68 @@ export const RuntimeProviderQuickConnect = ({
         onAction,
       };
     });
+    const xiaomiEntries = directory.entries.filter((entry) =>
+      entry.providerId.toLowerCase().startsWith('xiaomi-token-plan-')
+    );
+    const connectedXiaomiEntry = xiaomiEntries.find((entry) => entry.state === 'connected') ?? null;
+    const xiaomiConnected = connectedXiaomiEntry !== null;
+    const xiaomiLoading = gate === 'checking' || gate === 'installing' || directory.loading;
+    const xiaomiAvailable = xiaomiEntries.length > 0;
+    planCards.push({
+      id: 'xiaomi-mimo-token-plan',
+      providerId: 'xiaomi',
+      displayName: 'Xiaomi MiMo Token Plan',
+      description: t('cliStatus.quickConnect.xiaomiDescription'),
+      state: xiaomiLoading
+        ? 'checking'
+        : xiaomiConnected
+          ? 'connected'
+          : gate !== 'ready' || directory.error || !xiaomiAvailable
+            ? 'unavailable'
+            : 'connectable',
+      stateLabel: xiaomiLoading
+        ? t('cliStatus.quickConnect.checkingPlan')
+        : xiaomiConnected
+          ? t('cliStatus.quickConnect.planConnected')
+          : gate !== 'ready'
+            ? t('cliStatus.quickConnect.requiresOpenCode')
+            : directory.error
+              ? t('cliStatus.quickConnect.statusUnavailable')
+              : xiaomiAvailable
+                ? t('cliStatus.quickConnect.pasteBaseUrl')
+                : t('cliStatus.quickConnect.notInCatalog'),
+      actionLabel:
+        xiaomiLoading || directory.error || !xiaomiAvailable
+          ? null
+          : xiaomiConnected
+            ? t('cliStatus.actions.manage')
+            : t('cliStatus.actions.connect'),
+      onAction:
+        xiaomiLoading || directory.error || !xiaomiAvailable
+          ? null
+          : xiaomiConnected && connectedXiaomiEntry
+            ? () => onOpenCodeProviderAction(connectedXiaomiEntry.providerId, 'select')
+            : () => setXiaomiDialogOpen(true),
+    });
+    return planCards;
   }, [
     directory.entries,
     directory.error,
     directory.loaded,
     directory.loading,
     gate,
-    handleKiroCardAction,
-    kiroCompanion.loading,
-    kiroCompanion.status,
+    getCompanionState,
+    handleCompanionCardAction,
     oauthBridgeOutdated,
     onInstallOpenCode,
     onOpenCodeProviderAction,
     t,
   ]);
+  const connectedCount = openCodeCards.filter((card) => card.state === 'connected').length;
+
+  useEffect(() => {
+    onConnectedCountChange?.(connectedCount);
+  }, [connectedCount, onConnectedCountChange]);
 
   return (
     <>
@@ -387,23 +459,53 @@ export const RuntimeProviderQuickConnect = ({
         directoryError={directory.error}
         onInstallOpenCode={onInstallOpenCode}
         onRetryDirectory={directory.refresh}
-        onBrowseProviders={onBrowseProviders}
+        onBrowseProviders={() => onBrowseProviders()}
       />
       <RuntimeProviderCompanionSetupDialog
-        open={kiroDialogOpen}
-        status={kiroCompanion.status}
-        busy={kiroCompanion.loading}
-        onOpenChange={setKiroDialogOpen}
-        onInstallAndConnect={() => void runKiroOperation('install')}
-        onConnect={() => void runKiroOperation('connect')}
+        open={activeCompanionPlanId !== null}
+        title={
+          activeCompanionPlanId === 'kiro'
+            ? getRuntimeProviderOnboardingPlan('kiro').displayName
+            : getRuntimeProviderOnboardingPlan('cursor').displayName
+        }
+        description={
+          activeCompanionPlanId === 'kiro'
+            ? t('cliStatus.quickConnect.kiroDescription')
+            : t('cliStatus.quickConnect.cursorDescription')
+        }
+        status={activeCompanionPlanId ? getCompanionState(activeCompanionPlanId).status : null}
+        busy={activeCompanionPlanId ? getCompanionState(activeCompanionPlanId).loading : false}
+        onOpenChange={(open) => {
+          if (!open) setActiveCompanionPlanId(null);
+        }}
+        onInstallAndConnect={() => {
+          if (activeCompanionPlanId) {
+            void runCompanionOperation(activeCompanionPlanId, 'install');
+          }
+        }}
+        onConnect={() => {
+          if (activeCompanionPlanId) {
+            void runCompanionOperation(activeCompanionPlanId, 'connect');
+          }
+        }}
         onCopyManualCommand={() => {
-          const command = kiroCompanion.status?.manualCommand;
+          const command = activeCompanionPlanId
+            ? getCompanionState(activeCompanionPlanId).status?.manualCommand
+            : null;
           if (command) void navigator.clipboard.writeText(command);
         }}
         onOpenManualGuide={() => {
-          const url = kiroCompanion.status?.manualUrl;
+          const url = activeCompanionPlanId
+            ? getCompanionState(activeCompanionPlanId).status?.manualUrl
+            : null;
           if (url) void api.openExternal(url);
         }}
+      />
+      <XiaomiMiMoTokenPlanSetupDialog
+        open={xiaomiDialogOpen}
+        onOpenChange={setXiaomiDialogOpen}
+        onConnect={(providerId) => onOpenCodeProviderAction(providerId, 'connect')}
+        onOpenPlanPage={(url) => void api.openExternal(url)}
       />
     </>
   );
