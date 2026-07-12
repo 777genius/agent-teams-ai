@@ -1850,11 +1850,13 @@ describe('TeamDataService', () => {
     };
     const service = new TeamDataService(
       {
-        getConfig: vi.fn(async () => ({
-          name: 'My team',
-          members: [],
-          projectPath: '/projects/current',
-        })),
+        getConfig: vi.fn(() =>
+          Promise.resolve({
+            name: 'My team',
+            members: [],
+            projectPath: '/projects/current',
+          })
+        ),
       } as never,
       {} as never,
       {} as never,
