@@ -356,6 +356,62 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     }
   });
 
+  it('fences stale relay work before it can deliver after lease replacement', async () => {
+    vi.useFakeTimers();
+    try {
+      const staleRuntimeCheck = deferred<boolean>();
+      const replacementInboxRead = deferred<readonly RelayInboxMessage[]>();
+      const isOpenCodeRuntimeRecipient = vi
+        .fn<RelayOpenCodeMemberInboxMessagesPorts['isOpenCodeRuntimeRecipient']>()
+        .mockImplementationOnce(() => staleRuntimeCheck.promise)
+        .mockResolvedValueOnce(true);
+      const readInboxMessages = vi
+        .fn<RelayOpenCodeMemberInboxMessagesPorts['readInboxMessages']>()
+        .mockImplementationOnce(() => replacementInboxRead.promise);
+      const deliverOpenCodeMemberMessage = vi.fn().mockResolvedValue({ delivered: true });
+      const ports = createRelayPorts({
+        isOpenCodeRuntimeRecipient,
+        readInboxMessages,
+        deliverOpenCodeMemberMessage,
+      });
+      const input = {
+        teamName: 'team',
+        memberName: 'worker',
+        relayKey: 'team/worker',
+      };
+
+      const staleCall = relayOpenCodeMemberInboxMessagesWithPorts(input, ports);
+      const staleWork = ports.inFlight.get(input.relayKey);
+      await vi.advanceTimersByTimeAsync(INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS);
+      await staleCall;
+      await vi.advanceTimersByTimeAsync(
+        INBOX_RELAY_IN_FLIGHT_LEASE_MS - INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS
+      );
+
+      const replacementCall = relayOpenCodeMemberInboxMessagesWithPorts(input, ports);
+      await vi.advanceTimersByTimeAsync(0);
+      staleRuntimeCheck.resolve(true);
+      await vi.advanceTimersByTimeAsync(0);
+
+      await expect(staleWork).resolves.toMatchObject({
+        attempted: 0,
+        delivered: 0,
+        lastDelivery: { reason: 'opencode_member_inbox_relay_superseded' },
+      });
+      expect(readInboxMessages).toHaveBeenCalledTimes(1);
+      expect(deliverOpenCodeMemberMessage).not.toHaveBeenCalled();
+
+      replacementInboxRead.resolve([message()]);
+      await expect(replacementCall).resolves.toMatchObject({
+        attempted: 1,
+        delivered: 1,
+      });
+      expect(deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('cleans relay ownership when work rejects', async () => {
     const ports = createRelayPorts({
       isOpenCodeRuntimeRecipient: vi.fn().mockRejectedValue(new Error('runtime check failed')),

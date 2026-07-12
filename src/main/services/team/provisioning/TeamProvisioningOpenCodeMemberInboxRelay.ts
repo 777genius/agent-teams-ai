@@ -367,7 +367,10 @@ export async function relayOpenCodeMemberInboxMessagesWithPorts(
     return buildOpenCodeMemberInboxQueuedBehindResult({ relayKey, messageId: onlyMessageId });
   }
 
-  const work = runOpenCodeMemberInboxRelayWork(input, ports);
+  const generation: { work?: Promise<OpenCodeMemberInboxRelayResult> } = {};
+  const isCurrentGeneration = (): boolean => ports.inFlight.get(relayKey) === generation.work;
+  const work = runOpenCodeMemberInboxRelayWork(input, ports, isCurrentGeneration);
+  generation.work = work;
 
   registerOpenCodeMemberInboxRelayWork({ inFlight: ports.inFlight, relayKey, work });
   try {
@@ -421,16 +424,24 @@ async function readOpenCodeAlreadyReadProofRecord(input: {
 
 async function runOpenCodeMemberInboxRelayWork(
   input: RelayOpenCodeMemberInboxMessagesInput,
-  ports: RelayOpenCodeMemberInboxMessagesPorts
+  ports: RelayOpenCodeMemberInboxMessagesPorts,
+  isCurrentGeneration: () => boolean
 ): Promise<OpenCodeMemberInboxRelayResult> {
   const { teamName, memberName } = input;
   const options = input.options ?? {};
   const result = createOpenCodeMemberInboxRelayResult();
-  if (!(await ports.isOpenCodeRuntimeRecipient(teamName, memberName))) {
+  const isRuntimeRecipient = await ports.isOpenCodeRuntimeRecipient(teamName, memberName);
+  if (!isCurrentGeneration()) {
+    return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+  }
+  if (!isRuntimeRecipient) {
     result.lastDelivery = { delivered: false, reason: 'recipient_is_not_opencode' };
     return result;
   }
   const memberIdentity = await ports.resolveOpenCodeMemberDeliveryIdentity(teamName, memberName);
+  if (!isCurrentGeneration()) {
+    return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+  }
   if (!memberIdentity.ok) {
     result.lastDelivery = { delivered: false, reason: memberIdentity.reason };
     return result;
@@ -443,6 +454,9 @@ async function runOpenCodeMemberInboxRelayWork(
   } catch (error) {
     const diagnostic = `opencode_inbox_read_failed: ${ports.getErrorMessage(error)}`;
     return buildOpenCodeInboxReadFailedResult(diagnostic);
+  }
+  if (!isCurrentGeneration()) {
+    return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
   }
 
   const onlyMessageId = options.onlyMessageId?.trim();
@@ -457,6 +471,9 @@ async function runOpenCodeMemberInboxRelayWork(
           inboxMessageId: onlyMessageId,
         })
         .catch(() => null);
+      if (!isCurrentGeneration()) {
+        return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+      }
       return buildOpenCodeMemberInboxAlreadyReadResult(alreadyReadRecord);
     }
     if (!targetMessage) {
@@ -490,11 +507,17 @@ async function runOpenCodeMemberInboxRelayWork(
         inboxMessageId: message.messageId,
       })
       .catch(() => null);
+    if (!isCurrentGeneration()) {
+      return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+    }
     if (existingRecord?.status === 'failed_terminal') {
       const requeuedRecord = await ports.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded({
         ledger: promptLedger,
         ledgerRecord: existingRecord,
       });
+      if (!isCurrentGeneration()) {
+        return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+      }
       if (requeuedRecord.status !== 'failed_terminal') {
         existingRecord = requeuedRecord;
       }
@@ -504,6 +527,9 @@ async function runOpenCodeMemberInboxRelayWork(
         ledger: promptLedger,
         ledgerRecord: existingRecord,
       });
+      if (!isCurrentGeneration()) {
+        return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+      }
       if (requeuedRecord.status !== 'failed_terminal') {
         existingRecord = requeuedRecord;
       }
@@ -527,6 +553,9 @@ async function runOpenCodeMemberInboxRelayWork(
           recoveredVisibleReply = null;
         }
       }
+      if (!isCurrentGeneration()) {
+        return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+      }
       const recoveredReadAllowed = recoveredRecord
         ? await ports.isOpenCodeDeliveryResponseReadCommitAllowed({
             teamName,
@@ -538,6 +567,9 @@ async function runOpenCodeMemberInboxRelayWork(
             ledgerRecord: recoveredRecord,
           })
         : false;
+      if (!isCurrentGeneration()) {
+        return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+      }
       if (recoveredRecord && recoveredReadAllowed) {
         try {
           await ports.markInboxMessagesRead(teamName, memberName, [message]);
@@ -612,6 +644,9 @@ async function runOpenCodeMemberInboxRelayWork(
             message,
             readTasks: readTaskRefInferenceTasks,
           });
+    if (!isCurrentGeneration()) {
+      return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+    }
     const deliveryDecision = resolveOpenCodeMemberInboxDeliveryDecision({
       memberName,
       message,
@@ -625,6 +660,9 @@ async function runOpenCodeMemberInboxRelayWork(
       teamName,
       message,
     });
+    if (!isCurrentGeneration()) {
+      return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+    }
     if (!attachmentPayloads.ok) {
       const attachmentFailure = await handleOpenCodeInboxAttachmentFailure({
         teamName,
@@ -650,6 +688,9 @@ async function runOpenCodeMemberInboxRelayWork(
       ];
       result.lastDelivery = attachmentFailure.lastDelivery;
       break;
+    }
+    if (!isCurrentGeneration()) {
+      return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
     const delivery = await ports.deliverOpenCodeMemberMessage(teamName, {
       memberName,
@@ -739,6 +780,22 @@ export function buildOpenCodeMemberInboxRelayTimeoutResult(input: {
       diagnostics: [input.diagnostic],
     },
     diagnostics: [input.diagnostic],
+  });
+}
+
+export function buildOpenCodeMemberInboxRelaySupersededResult(
+  relayKey: string
+): OpenCodeMemberInboxRelayResult {
+  const diagnostic = `opencode_member_inbox_relay_superseded: ${relayKey}`;
+  return createOpenCodeMemberInboxRelayResult({
+    lastDelivery: {
+      delivered: false,
+      accepted: false,
+      responsePending: false,
+      reason: 'opencode_member_inbox_relay_superseded',
+      diagnostics: [diagnostic],
+    },
+    diagnostics: [diagnostic],
   });
 }
 
