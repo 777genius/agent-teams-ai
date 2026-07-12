@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "subphase": "P1.S0",
+  "packetRevision": "phase-01-s0-bootstrap-r1",
+  "status": "frozen-bootstrap-metadata",
+  "phaseStartSha": "5f30df49e052d1cc1d0e7efd03aa105673b5b614",
+  "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
+  "lanePacket": "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md",
+  "dependencyChain": ["P1.S0", "P1.1A", "P1.1B+P1.1C", "P1.R1", "P1.1D", "P1.R2", "P1.I", "P1.F"],
+  "downstreamStatus": "proposal-only-blocked-until-router-advance",
+  "resolvedIdentifiers": {
+    "actionIds": ["team.lifecycle.list"],
+    "evidenceIds": [
+      "P1.1A.KERNEL",
+      "P1.1A.VERSION",
+      "P1.1B.CAPABILITIES",
+      "P1.1B.ROUTES",
+      "P1.1C.CONFORMANCE",
+      "P1.1C.RATCHETS",
+      "P1.1D.LIST_SLICE",
+      "P1.1D.TRANSPORTS",
+      "P1.I.INTEGRATION",
+      "P1.I.ROLLBACK",
+      "P1.R1.ARCH_REVIEW",
+      "P1.R2.SEMANTIC_REVIEW",
+      "P1.S0.BASELINE",
+      "P1.S0.BOOTSTRAP"
+    ],
+    "facetIds": ["teamRead"],
+    "gapIds": [
+      "P1-GAP-001",
+      "P1-GAP-002",
+      "P1-GAP-003",
+      "P1-GAP-004",
+      "P1-GAP-005",
+      "P1-GAP-006",
+      "P1-GAP-007",
+      "P1-GAP-008",
+      "P1-GAP-009",
+      "P1-GAP-010"
+    ],
+    "ipcSpecimenOperationIds": ["teamLifecycle:listSummaries"],
+    "negativeFixtureIds": [
+      "P1.NEG.CAPABILITY_MOUNT",
+      "P1.NEG.CORE_SIDE_EFFECT",
+      "P1.NEG.HOSTED_ELECTRON_API",
+      "P1.NEG.ID_REVISION_CURSOR",
+      "P1.NEG.IMPORT_FORBIDDEN",
+      "P1.NEG.LEGACY_GOD_DTO",
+      "P1.NEG.NO_FILESYSTEM_ADAPTER_PHASE1",
+      "P1.NEG.PARITY_DRIFT",
+      "P1.NEG.PATH_SECRET_LEAK",
+      "P1.NEG.PERFORMANCE_DEGRADATION",
+      "P1.NEG.PRODUCTION_ADAPTER_MOUNT",
+      "P1.NEG.RATCHET_REGRESSION",
+      "P1.NEG.ROUTE_DRIFT",
+      "P1.NEG.SCHEMA_VERSION",
+      "P1.NEG.SEMANTIC_OUTCOME",
+      "P1.NEG.TEST_ROOT_ESCAPE"
+    ],
+    "routeIds": ["team-lifecycle.list-summaries.v1"],
+    "schemaIds": ["team-lifecycle.list.request.v1", "team-lifecycle.list.response.v1"]
+  },
+  "resolvedContractValues": {
+    "applicationQuery": "ListTeamLifecycleSummaries",
+    "authPolicyId": "browser.session.read",
+    "httpMethod": "GET",
+    "httpSpecimenPath": "/api/v1/team-lifecycle/teams",
+    "maximumPageSize": 200,
+    "responseSchemaVersion": 1,
+    "testOnlyTransportAdapters": ["http-shaped", "ipc-shaped"]
+  },
+  "gapDispositions": [
+    {
+      "gapId": "P1-GAP-001",
+      "status": "resolved-for-phase-1",
+      "evidenceOwner": "P1.1C",
+      "requiredEvidenceId": "P1.NEG.PRODUCTION_ADAPTER_MOUNT"
+    },
+    {
+      "gapId": "P1-GAP-002",
+      "status": "resolved-for-phase-1",
+      "evidenceOwner": "P1.1D",
+      "requiredEvidenceId": "P1.NEG.LEGACY_GOD_DTO"
+    },
+    {
+      "gapId": "P1-GAP-003",
+      "status": "acceptance-gated",
+      "evidenceOwner": "P1.1D",
+      "requiredEvidenceId": "P1.NEG.SEMANTIC_OUTCOME"
+    },
+    {
+      "gapId": "P1-GAP-004",
+      "status": "resolved-for-phase-1",
+      "evidenceOwner": "P1.1B",
+      "requiredEvidenceId": "P1.NEG.CAPABILITY_MOUNT"
+    },
+    {
+      "gapId": "P1-GAP-005",
+      "status": "acceptance-gated",
+      "evidenceOwner": "P1.1A",
+      "requiredEvidenceId": "P1.NEG.SCHEMA_VERSION"
+    },
+    {
+      "gapId": "P1-GAP-006",
+      "status": "resolved-by-exact-path-manifest",
+      "evidenceOwner": "P1.S0",
+      "requiredEvidenceId": "P1.S0.BOOTSTRAP"
+    },
+    {
+      "gapId": "P1-GAP-007",
+      "status": "acceptance-gated",
+      "evidenceOwner": "P1.1C",
+      "requiredEvidenceId": "P1.1C.RATCHETS"
+    },
+    {
+      "gapId": "P1-GAP-008",
+      "status": "acceptance-gated",
+      "evidenceOwner": "P1.I",
+      "requiredEvidenceId": "P1.NEG.RATCHET_REGRESSION"
+    },
+    {
+      "gapId": "P1-GAP-009",
+      "status": "deferred-to-phase-2",
+      "evidenceOwner": "Phase 2 first filesystem-backed adapter",
+      "requiredEvidenceId": "P1.NEG.NO_FILESYSTEM_ADAPTER_PHASE1",
+      "reopenCondition": "Any Phase 1 path-taking or filesystem-backed port, reader, adapter, fixture, or command"
+    },
+    {
+      "gapId": "P1-GAP-010",
+      "status": "acceptance-gated",
+      "evidenceOwner": "P1.1D",
+      "requiredEvidenceId": "P1.NEG.PERFORMANCE_DEGRADATION"
+    }
+  ],
+  "orderingPolicy": {
+    "identifierArrays": "lexicographic except dependencyChain, which is dependency order",
+    "gapDispositions": "ascending gapId",
+    "ownership": "dependency order with exact paths lexicographically ordered per owner"
+  },
+  "sourceReferences": [
+    "docs/hosted-web-phases/EXECUTION_INDEX.json",
+    "docs/hosted-web-phases/phase-01/architecture-and-contracts.md",
+    "docs/hosted-web-phases/phase-01/conformance-and-tests.md",
+    "docs/hosted-web-phases/phase-01/controller-packet.md",
+    "docs/hosted-web-phases/phase-01/execution-dag.md",
+    "docs/hosted-web-phases/phase-01/execution-packet-templates.md",
+    "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md",
+    "docs/hosted-web-phases/phase-01/operations-and-risk.md",
+    "docs/hosted-web-phases/phase-01/packet-inputs.md"
+  ]
+}
