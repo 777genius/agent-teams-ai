@@ -543,17 +543,6 @@ export function buildAgentTeamsMcpValidationError(
   return buildAgentTeamsMcpValidationErrorMessage(output, normalizeApiRetryErrorMessage);
 }
 
-interface AgentTeamsMcpConfigEntry {
-  command?: unknown;
-  args?: unknown;
-  env?: unknown;
-  cwd?: unknown;
-}
-
-interface AgentTeamsMcpConfigFile {
-  mcpServers?: Record<string, AgentTeamsMcpConfigEntry>;
-}
-
 export interface AgentTeamsMcpLaunchSpec {
   command: string;
   args: string[];
@@ -594,12 +583,18 @@ interface AgentTeamsMcpValidationFixture {
 }
 
 export function parseAgentTeamsMcpLaunchSpec(
-  parsed: AgentTeamsMcpConfigFile,
+  parsed: unknown,
   mcpConfigPath: string,
   buildValidationError: (output: string) => string = buildAgentTeamsMcpValidationError
 ): AgentTeamsMcpLaunchSpec {
-  const server = parsed.mcpServers?.['agent-teams'];
-  if (!server) {
+  if (!isUnknownRecord(parsed)) {
+    throw new Error(
+      buildValidationError(`Generated MCP config ${mcpConfigPath} must be a JSON object.`)
+    );
+  }
+
+  const server = isUnknownRecord(parsed.mcpServers) ? parsed.mcpServers['agent-teams'] : undefined;
+  if (!isUnknownRecord(server)) {
     throw new Error(
       buildValidationError(
         `Generated MCP config ${mcpConfigPath} does not contain an "agent-teams" server entry.`
@@ -647,10 +642,10 @@ export async function readAgentTeamsMcpLaunchSpec({
     'readFileUtf8' | 'normalizeApiRetryErrorMessage'
   >;
 }): Promise<AgentTeamsMcpLaunchSpec> {
-  let parsed: AgentTeamsMcpConfigFile;
+  let parsed: unknown;
   try {
     const raw = await ports.readFileUtf8(mcpConfigPath);
-    parsed = JSON.parse(raw) as AgentTeamsMcpConfigFile;
+    parsed = JSON.parse(raw) as unknown;
   } catch (error) {
     throw new Error(
       buildAgentTeamsMcpValidationError(
@@ -1194,6 +1189,10 @@ async function pathExistsAsDirectory(candidatePath: string): Promise<boolean> {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+}
+
+function isUnknownRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function normalizeRecordStringValues(value: unknown): Record<string, string> {

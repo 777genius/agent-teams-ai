@@ -29,6 +29,7 @@ import type {
   TeamMessagingApi,
   TeamOpenCodeMemberInboxRelayOptions,
   TeamProvisioningPreflightApi,
+  TeamProvisioningPrepareOptions,
   TeamProvisioningRunApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
@@ -48,6 +49,7 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamLaunchResponse,
+  TeamProvisioningModelCheckRequest,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamRuntimeState,
@@ -119,17 +121,21 @@ describe('TeamProvisioning API binders', () => {
   it('binds provisioning preflight methods to the source object', async () => {
     interface PreflightSource extends TeamProvisioningPreflightApi {
       readonly cwd: string;
+      receivedOptions: TeamProvisioningPrepareOptions | undefined;
     }
 
     const source: PreflightSource = {
       cwd: TEST_TEAM_CWD,
+      receivedOptions: undefined,
       getCliHelpOutput(this: PreflightSource): Promise<string> {
         return Promise.resolve(`Usage ${this.cwd}`);
       },
       prepareForProvisioning(
         this: PreflightSource,
-        cwd?: string
+        cwd?: string,
+        opts?: TeamProvisioningPrepareOptions
       ): Promise<TeamProvisioningPrepareResult> {
+        this.receivedOptions = opts;
         return Promise.resolve({
           ready: true,
           message: cwd ?? this.cwd,
@@ -142,11 +148,51 @@ describe('TeamProvisioning API binders', () => {
     const prepareForProvisioning = api.prepareForProvisioning.bind(undefined);
 
     await expect(getCliHelpOutput()).resolves.toBe(`Usage ${TEST_TEAM_CWD}`);
-    await expect(prepareForProvisioning('/workspace/preflight')).resolves.toEqual({
+    await expect(
+      prepareForProvisioning('/workspace/preflight', {
+        modelIds: ['gpt-5.4'],
+        modelChecks: [{ providerId: 'codex', model: 'gpt-5.4', effort: 'medium' }],
+        modelVerificationMode: 'compatibility',
+      })
+    ).resolves.toEqual({
       ready: true,
       message: '/workspace/preflight',
     });
+    expect(source.receivedOptions).toEqual({
+      modelIds: ['gpt-5.4'],
+      modelChecks: [{ providerId: 'codex', model: 'gpt-5.4', effort: 'medium' }],
+      modelVerificationMode: 'compatibility',
+    });
   });
+
+  it.each(['modelIds', 'modelChecks'] as const)(
+    'rejects a sparse preflight %s array before dispatching to the source',
+    async (field) => {
+      let prepareCalls = 0;
+      const source: TeamProvisioningPreflightApi = {
+        getCliHelpOutput: () => Promise.resolve('Usage'),
+        prepareForProvisioning: () => {
+          prepareCalls += 1;
+          return Promise.resolve({ ready: true, message: 'ready' });
+        },
+      };
+      const opts: TeamProvisioningPrepareOptions = {};
+      if (field === 'modelIds') {
+        const modelIds: string[] = [];
+        modelIds.length = 1;
+        opts.modelIds = modelIds;
+      } else {
+        const modelChecks: TeamProvisioningModelCheckRequest[] = [];
+        modelChecks.length = 1;
+        opts.modelChecks = modelChecks;
+      }
+
+      await expect(
+        bindTeamProvisioningPreflightApi(source).prepareForProvisioning(undefined, opts)
+      ).rejects.toThrow(`TeamProvisioningPrepareOptions.${field} must not contain missing indices`);
+      expect(prepareCalls).toBe(0);
+    }
+  );
 
   it('binds provisioning run and log diagnostic methods to the source object', async () => {
     interface RunSource extends TeamProvisioningRunApi {

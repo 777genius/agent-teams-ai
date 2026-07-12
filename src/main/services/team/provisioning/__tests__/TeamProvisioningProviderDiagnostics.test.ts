@@ -125,6 +125,26 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
     );
   });
 
+  it('formats a non-object MCP config as a normalized validation error', async () => {
+    const normalizeApiRetryErrorMessage = vi.fn((text: string) => text);
+    const ports = createFakePorts({
+      readFileUtf8: vi.fn().mockResolvedValue('null'),
+      normalizeApiRetryErrorMessage,
+    });
+
+    await expect(
+      readAgentTeamsMcpLaunchSpec({
+        mcpConfigPath: '/tmp/mcp.json',
+        ports,
+      })
+    ).rejects.toThrow(
+      'agent-teams MCP preflight failed before team launch. Details: Generated MCP config /tmp/mcp.json must be a JSON object.'
+    );
+    expect(normalizeApiRetryErrorMessage).toHaveBeenCalledWith(
+      'Generated MCP config /tmp/mcp.json must be a JSON object.'
+    );
+  });
+
   it('preserves a pre-normalized validation error through runtime validation', async () => {
     const normalizedError =
       'agent-teams MCP preflight failed before team launch. Details: generated config is invalid';
