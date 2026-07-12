@@ -56,12 +56,20 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
         sourceRef: z.string().optional(),
         newBranch: z.string().optional(),
         promptBody: z.string().optional(),
-        preStartAdmission: z.object({
-          contractValidatorPath: z.string(),
-          admissionValidatorPath: z.string(),
-          contract: z.record(z.string(), z.unknown()),
-          state: z.record(z.string(), z.unknown()),
-        }).strict().optional(),
+        preStartAdmission: z.union([
+          z.object({
+            contractValidatorPath: z.string(),
+            admissionValidatorPath: z.string(),
+            contract: z.record(z.string(), z.unknown()),
+            state: z.record(z.string(), z.unknown()),
+          }).strict(),
+          z.object({
+            mode: z.literal("serial-builtin"),
+            contractSchema: z.literal("worker-start-v1"),
+            contract: z.record(z.string(), z.unknown()),
+            state: z.record(z.string(), z.unknown()),
+          }).strict(),
+        ]).optional(),
         confirmPreStartAdmission: z.boolean().optional(),
         workerRole: z.enum(projectAdmissionRefillWorkerRoleSchemaValues).optional(),
         description: z.string().optional(),

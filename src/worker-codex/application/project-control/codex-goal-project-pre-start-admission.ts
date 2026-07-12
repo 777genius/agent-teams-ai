@@ -17,6 +17,7 @@ import type {
   CodexGoalJobManifestInput,
   CodexGoalProjectPreStartAdmission,
 } from "../../codex-goal-jobs";
+import { validateBuiltinWorkerStartV1 } from "./codex-goal-project-builtin-pre-start-admission";
 
 const execFileAsync = promisify(execFile);
 const ADMISSION_DIRECTORY = "pre-start-admission";
@@ -33,12 +34,19 @@ type JsonObject = Readonly<Record<string, unknown>>;
 // not a durable multi-host uniqueness registry. Parallel admission still requires a transactional
 // shared-runtime work-key authority.
 
-export type ProjectPreStartAdmissionInput = {
-  readonly contractValidatorPath: string;
-  readonly admissionValidatorPath: string;
-  readonly contract: JsonObject;
-  readonly state: JsonObject;
-};
+export type ProjectPreStartAdmissionInput =
+  | {
+      readonly contractValidatorPath: string;
+      readonly admissionValidatorPath: string;
+      readonly contract: JsonObject;
+      readonly state: JsonObject;
+    }
+  | {
+      readonly mode: "serial-builtin";
+      readonly contractSchema: "worker-start-v1";
+      readonly contract: JsonObject;
+      readonly state: JsonObject;
+    };
 
 export type PlannedProjectPreStartAdmission = {
   readonly descriptor: CodexGoalProjectPreStartAdmission;
@@ -62,8 +70,12 @@ export function planProjectPreStartAdmission(input: {
     throw new Error("project_control_confirm_pre_start_admission_required");
   }
   const parsed = parseProjectPreStartAdmissionInput(input.value);
-  configuredValidator(parsed.contractValidatorPath, input.scope);
-  configuredValidator(parsed.admissionValidatorPath, input.scope);
+  if (isBuiltinInput(parsed)) {
+    assertBuiltinScope(input.scope, parsed.contractSchema);
+  } else {
+    configuredValidator(parsed.contractValidatorPath, input.scope);
+    configuredValidator(parsed.admissionValidatorPath, input.scope);
+  }
   assertSerializedSize("contract", parsed.contract, MAX_CONTRACT_BYTES);
   assertSerializedSize("state", parsed.state, MAX_STATE_BYTES);
   if (parsed.state.maxInFlight !== 1) {
@@ -75,14 +87,23 @@ export function planProjectPreStartAdmission(input: {
   assertContractBindings(parsed.contract, input.manifest);
   const root = join(input.manifest.jobRootDir, ADMISSION_DIRECTORY);
   return {
-    descriptor: {
-      schemaVersion: 1,
-      contractValidatorPath: parsed.contractValidatorPath,
-      admissionValidatorPath: parsed.admissionValidatorPath,
-      contractPath: join(root, "contract.json"),
-      statePath: join(root, "state.json"),
-      receiptPath: join(root, "receipt.json"),
-    },
+    descriptor: isBuiltinInput(parsed)
+      ? {
+          schemaVersion: 1,
+          mode: "serial-builtin",
+          contractSchema: parsed.contractSchema,
+          contractPath: join(root, "contract.json"),
+          statePath: join(root, "state.json"),
+          receiptPath: join(root, "receipt.json"),
+        }
+      : {
+          schemaVersion: 1,
+          contractValidatorPath: parsed.contractValidatorPath,
+          admissionValidatorPath: parsed.admissionValidatorPath,
+          contractPath: join(root, "contract.json"),
+          statePath: join(root, "state.json"),
+          receiptPath: join(root, "receipt.json"),
+        },
     contract: parsed.contract,
     state: parsed.state,
   };
@@ -167,6 +188,9 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
   assertContractBindings(contract, input.manifest);
   assertQueuedStateBinding(contract, state, input.manifest.jobId);
   const binding = await currentBinding(input.manifest, descriptor);
+  const builtinReceiptValid = !isBuiltinDescriptor(descriptor) ||
+    (receipt.validatorKind === "builtin" &&
+      receipt.contractSchema === descriptor.contractSchema);
   if (
     binding.workspaceHead !== contract.phaseStartSha ||
     receipt.status !== "validated_not_launched" ||
@@ -174,7 +198,8 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
     receipt.workKey !== contract.workKey ||
     receipt.contractSha256 !== binding.contractSha256 ||
     receipt.stateSha256 !== binding.stateSha256 ||
-    receipt.promptSha256 !== binding.promptSha256
+    receipt.promptSha256 !== binding.promptSha256 ||
+    !builtinReceiptValid
   ) {
     throw new Error("project_control_pre_start_launch_binding_mismatch");
   }
@@ -195,15 +220,6 @@ async function validateProjectPreStartAdmission(input: {
     throw new Error("project_control_pre_start_admission_required");
   assertDescriptorPaths(descriptor, input.manifest.jobRootDir);
   await assertArtifactRootSecure(input.manifest.jobRootDir);
-  const contractValidatorConfig = configuredValidator(
-    descriptor.contractValidatorPath,
-    input.scope,
-  );
-  const admissionValidatorConfig = configuredValidator(
-    descriptor.admissionValidatorPath,
-    input.scope,
-  );
-
   const contract = await readJsonObject(
     descriptor.contractPath,
     "contract",
@@ -216,28 +232,60 @@ async function validateProjectPreStartAdmission(input: {
   );
   assertContractBindings(contract, input.manifest);
   assertQueuedStateBinding(contract, state, input.manifest.jobId);
-
-  const snapshotRoot = await snapshotValidatorBundle({
-    workspacePath: input.manifest.workspacePath,
-    jobRootDir: input.manifest.jobRootDir,
-    scope: input.scope,
-    expectedHead: requiredString(contract.phaseStartSha, "phaseStartSha"),
-  });
-  const contractValidator = join(snapshotRoot, descriptor.contractValidatorPath);
-  const admissionValidator = join(snapshotRoot, descriptor.admissionValidatorPath);
   const beforeBinding = await currentBinding(input.manifest, descriptor);
-  await runValidator(
-    "contract",
-    contractValidator,
-    ["--contract", descriptor.contractPath],
-    input.manifest.workspacePath,
-  );
-  await runValidator(
-    "admission",
-    admissionValidator,
-    ["--contract", descriptor.contractPath, "--state", descriptor.statePath],
-    input.manifest.workspacePath,
-  );
+  let validatorReceipt: JsonObject;
+  if (isBuiltinDescriptor(descriptor)) {
+    assertBuiltinScope(input.scope, descriptor.contractSchema);
+    if (beforeBinding.workspaceHead !== contract.phaseStartSha) {
+      throw new Error("project_control_pre_start_workspace_head_mismatch");
+    }
+    await validateBuiltinWorkerStartV1({
+      contract,
+      state,
+      manifest: input.manifest,
+      scope: input.scope,
+    });
+    validatorReceipt = {
+      validatorKind: "builtin",
+      contractSchema: descriptor.contractSchema,
+    };
+  } else {
+    const contractValidatorConfig = configuredValidator(
+      descriptor.contractValidatorPath,
+      input.scope,
+    );
+    const admissionValidatorConfig = configuredValidator(
+      descriptor.admissionValidatorPath,
+      input.scope,
+    );
+    const snapshotRoot = await snapshotValidatorBundle({
+      workspacePath: input.manifest.workspacePath,
+      jobRootDir: input.manifest.jobRootDir,
+      scope: input.scope,
+      expectedHead: requiredString(contract.phaseStartSha, "phaseStartSha"),
+    });
+    const contractValidator = join(snapshotRoot, descriptor.contractValidatorPath);
+    const admissionValidator = join(snapshotRoot, descriptor.admissionValidatorPath);
+    await runValidator(
+      "contract",
+      contractValidator,
+      ["--contract", descriptor.contractPath],
+      input.manifest.workspacePath,
+    );
+    await runValidator(
+      "admission",
+      admissionValidator,
+      ["--contract", descriptor.contractPath, "--state", descriptor.statePath],
+      input.manifest.workspacePath,
+    );
+    validatorReceipt = {
+      validatorKind: "external",
+      contractValidatorPath: descriptor.contractValidatorPath,
+      admissionValidatorPath: descriptor.admissionValidatorPath,
+      contractValidatorSha256: contractValidatorConfig.sha256,
+      admissionValidatorSha256: admissionValidatorConfig.sha256,
+    };
+  }
   const afterBinding = await currentBinding(input.manifest, descriptor);
   if (JSON.stringify(beforeBinding) !== JSON.stringify(afterBinding)) {
     throw new Error("project_control_pre_start_binding_changed_during_validation");
@@ -250,10 +298,7 @@ async function validateProjectPreStartAdmission(input: {
     jobId: input.manifest.jobId,
     workKey: contract.workKey,
     manifestSha256: sha256(Buffer.from(JSON.stringify(input.manifest))),
-    contractValidatorPath: descriptor.contractValidatorPath,
-    admissionValidatorPath: descriptor.admissionValidatorPath,
-    contractValidatorSha256: contractValidatorConfig.sha256,
-    admissionValidatorSha256: admissionValidatorConfig.sha256,
+    ...validatorReceipt,
     contractSha256: afterBinding.contractSha256,
     stateSha256: afterBinding.stateSha256,
     promptSha256: afterBinding.promptSha256,
@@ -268,12 +313,10 @@ function parseProjectPreStartAdmissionInput(
 ): ProjectPreStartAdmissionInput {
   if (!isObject(value))
     throw new Error("project_control_pre_start_admission_invalid");
-  const allowedFields = new Set([
-    "contractValidatorPath",
-    "admissionValidatorPath",
-    "contract",
-    "state",
-  ]);
+  const builtin = value.mode === "serial-builtin";
+  const allowedFields = new Set(builtin
+    ? ["mode", "contractSchema", "contract", "state"]
+    : ["contractValidatorPath", "admissionValidatorPath", "contract", "state"]);
   for (const field of Object.keys(value)) {
     if (!allowedFields.has(field)) {
       throw new Error(
@@ -285,6 +328,17 @@ function parseProjectPreStartAdmissionInput(
     throw new Error(
       "project_control_pre_start_admission_json_objects_required",
     );
+  }
+  if (builtin) {
+    if (value.contractSchema !== "worker-start-v1") {
+      throw new Error("project_control_pre_start_contractSchema_invalid");
+    }
+    return {
+      mode: "serial-builtin",
+      contractSchema: "worker-start-v1",
+      contract: value.contract,
+      state: value.state,
+    };
   }
   return {
     contractValidatorPath: requiredString(
@@ -298,6 +352,33 @@ function parseProjectPreStartAdmissionInput(
     contract: value.contract,
     state: value.state,
   };
+}
+
+function assertBuiltinScope(
+  scope: ProjectAccessScope,
+  contractSchema: "worker-start-v1",
+): void {
+  if (
+    scope.preStartAdmission?.mode !== "serial-builtin" ||
+    scope.preStartAdmission.contractSchema !== contractSchema
+  ) {
+    throw new Error("project_control_pre_start_serial_builtin_scope_required");
+  }
+}
+
+function isBuiltinInput(
+  input: ProjectPreStartAdmissionInput,
+): input is Extract<ProjectPreStartAdmissionInput, { readonly mode: "serial-builtin" }> {
+  return "mode" in input && input.mode === "serial-builtin";
+}
+
+function isBuiltinDescriptor(
+  descriptor: CodexGoalProjectPreStartAdmission,
+): descriptor is Extract<
+  CodexGoalProjectPreStartAdmission,
+  { readonly mode: "serial-builtin" }
+> {
+  return "mode" in descriptor && descriptor.mode === "serial-builtin";
 }
 
 function configuredValidator(
@@ -338,7 +419,9 @@ async function snapshotValidatorBundle(input: {
   readonly expectedHead: string;
 }): Promise<string> {
   const workspace = await realpath(input.workspacePath);
-  const bundle = input.scope.preStartAdmission?.validatorBundle ?? [];
+  const bundle = input.scope.preStartAdmission?.mode === "serial"
+    ? input.scope.preStartAdmission.validatorBundle
+    : [];
   if (bundle.length < 2) {
     throw new Error("project_control_pre_start_validator_bundle_required");
   }

@@ -235,6 +235,16 @@ function parseProjectPreStartAdmissionScope(
   fieldName: string,
 ): NonNullable<ProjectAccessScope["preStartAdmission"]> {
   if (!isRecord(value)) throw new Error(`${fieldName}_invalid`);
+  if (value.mode === "serial-builtin") {
+    if (value.contractSchema !== "worker-start-v1") {
+      throw new Error(`${fieldName}.contractSchema_invalid`);
+    }
+    return {
+      required: booleanValue(value.required, `${fieldName}.required`),
+      mode: "serial-builtin",
+      contractSchema: "worker-start-v1",
+    };
+  }
   if (value.mode !== "serial") throw new Error(`${fieldName}.mode_invalid`);
   return {
     required: booleanValue(value.required, `${fieldName}.required`),
@@ -249,7 +259,7 @@ function parseProjectPreStartAdmissionScope(
 function parseProjectPreStartAdmissionValidators(
   value: unknown,
   fieldName: string,
-): NonNullable<ProjectAccessScope["preStartAdmission"]>["validatorBundle"] {
+): readonly { readonly path: string; readonly sha256: string }[] {
   if (!Array.isArray(value) || value.length === 0) {
     throw new Error(`${fieldName}_invalid`);
   }

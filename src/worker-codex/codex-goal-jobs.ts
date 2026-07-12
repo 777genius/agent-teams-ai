@@ -31,14 +31,23 @@ import {
 export const codexGoalJobManifestSchemaVersion = 1;
 export const codexGoalObjectiveMaxChars = 4000;
 
-export type CodexGoalProjectPreStartAdmission = {
-  readonly schemaVersion: 1;
-  readonly contractValidatorPath: string;
-  readonly admissionValidatorPath: string;
-  readonly contractPath: string;
-  readonly statePath: string;
-  readonly receiptPath: string;
-};
+export type CodexGoalProjectPreStartAdmission =
+  | {
+      readonly schemaVersion: 1;
+      readonly contractValidatorPath: string;
+      readonly admissionValidatorPath: string;
+      readonly contractPath: string;
+      readonly statePath: string;
+      readonly receiptPath: string;
+    }
+  | {
+      readonly schemaVersion: 1;
+      readonly mode: "serial-builtin";
+      readonly contractSchema: "worker-start-v1";
+      readonly contractPath: string;
+      readonly statePath: string;
+      readonly receiptPath: string;
+    };
 
 export type CodexGoalJobManifest = {
   readonly schemaVersion: typeof codexGoalJobManifestSchemaVersion;
@@ -455,16 +464,8 @@ function parseProjectPreStartAdmissionManifest(
   if (!isRecord(value) || value.schemaVersion !== 1) {
     throw new Error("codex_goal_job_projectPreStartAdmission_invalid");
   }
-  return {
-    schemaVersion: 1,
-    contractValidatorPath: requiredString(
-      value.contractValidatorPath,
-      "projectPreStartAdmission.contractValidatorPath",
-    ),
-    admissionValidatorPath: requiredString(
-      value.admissionValidatorPath,
-      "projectPreStartAdmission.admissionValidatorPath",
-    ),
+  const common = {
+    schemaVersion: 1 as const,
     contractPath: requiredString(
       value.contractPath,
       "projectPreStartAdmission.contractPath",
@@ -476,6 +477,29 @@ function parseProjectPreStartAdmissionManifest(
     receiptPath: requiredString(
       value.receiptPath,
       "projectPreStartAdmission.receiptPath",
+    ),
+  };
+  if (value.mode === "serial-builtin") {
+    if (value.contractSchema !== "worker-start-v1") {
+      throw new Error(
+        "codex_goal_job_projectPreStartAdmission_contractSchema_invalid",
+      );
+    }
+    return {
+      ...common,
+      mode: "serial-builtin",
+      contractSchema: "worker-start-v1",
+    };
+  }
+  return {
+    ...common,
+    contractValidatorPath: requiredString(
+      value.contractValidatorPath,
+      "projectPreStartAdmission.contractValidatorPath",
+    ),
+    admissionValidatorPath: requiredString(
+      value.admissionValidatorPath,
+      "projectPreStartAdmission.admissionValidatorPath",
     ),
   };
 }

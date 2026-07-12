@@ -143,14 +143,20 @@ export type ProjectAccessScope = {
   readonly allowedGitRemotes?: readonly string[];
   readonly allowedAccountIds?: readonly string[];
   readonly allowForcePush?: boolean;
-  readonly preStartAdmission?: {
-    readonly required: boolean;
-    readonly mode: "serial";
-    readonly validatorBundle: readonly {
-      readonly path: string;
-      readonly sha256: string;
-    }[];
-  };
+  readonly preStartAdmission?:
+    | {
+        readonly required: boolean;
+        readonly mode: "serial";
+        readonly validatorBundle: readonly {
+          readonly path: string;
+          readonly sha256: string;
+        }[];
+      }
+    | {
+        readonly required: boolean;
+        readonly mode: "serial-builtin";
+        readonly contractSchema: "worker-start-v1";
+      };
 };
 
 export type AccessPolicyContext = {
