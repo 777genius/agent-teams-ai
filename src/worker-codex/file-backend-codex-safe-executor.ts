@@ -188,6 +188,7 @@ export class FileBackendCodexSafeExecutor {
       workerFactory: accountCapacityAwareWorkerFactory({
         accountCapacityStore: this.accountCapacityStore,
         accountWideLimitReasons: ["quota_limited"],
+        requireCapacityRecheckWhenDue: true,
         recheckClaimTtlMs: 5 * 60_000,
         recheckFailureCooldownMs: 60_000,
         capacityRecheckerFactory: ({ slotIndex }) => {

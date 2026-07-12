@@ -1,6 +1,9 @@
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PassThrough, Writable } from "node:stream";
 import { setTimeout as delay } from "node:timers/promises";
 import { describe, expect, it } from "vitest";
 import { JsonRpcLineClient } from "../JsonRpcLineClient";
@@ -46,7 +49,57 @@ done
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("rejects a request safely when the child stdin reports EPIPE", async () => {
+    const child = createFakeChildWithSecondWriteFailure();
+    const client = new JsonRpcLineClient({
+      command: "fake-app-server",
+      args: [],
+      cwd: "/tmp",
+      env: {},
+      spawnProcess: (() => child) as typeof import("node:child_process").spawn,
+    });
+
+    await client.start();
+    await expect(client.call({ method: "account/read" })).rejects.toMatchObject({
+      code: "EPIPE",
+    });
+    await client.close();
+  });
 });
+
+function createFakeChildWithSecondWriteFailure(): ChildProcessWithoutNullStreams {
+  const stdout = new PassThrough();
+  const stderr = new PassThrough();
+  let writeCount = 0;
+  const stdin = new Writable({
+    write(_chunk, _encoding, callback) {
+      writeCount += 1;
+      if (writeCount === 1) {
+        callback();
+        queueMicrotask(() => stdout.write('{"id":1,"result":{}}\n'));
+        return;
+      }
+      const error = Object.assign(new Error("write EPIPE"), { code: "EPIPE" });
+      callback(error);
+    },
+  });
+  const child = Object.assign(new EventEmitter(), {
+    stdin,
+    stdout,
+    stderr,
+    exitCode: null as number | null,
+    signalCode: null,
+    killed: false,
+    kill(signal: NodeJS.Signals = "SIGTERM") {
+      this.killed = true;
+      this.exitCode = 0;
+      queueMicrotask(() => this.emit("exit", 0, signal));
+      return true;
+    },
+  });
+  return child as unknown as ChildProcessWithoutNullStreams;
+}
 
 async function waitForPidFile(path: string): Promise<number> {
   for (let attempt = 0; attempt < 100; attempt += 1) {

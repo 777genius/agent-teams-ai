@@ -44,6 +44,7 @@ export type AccountCapacityAwareWorkerOptions<Job, Result> = {
   readonly limitReasons?: readonly string[];
   readonly accountWideLimitReasons?: readonly string[];
   readonly capacityRechecker?: WorkerAccountCapacityRechecker;
+  readonly requireCapacityRecheckWhenDue?: boolean;
   readonly recheckClaimTtlMs?: number;
   readonly recheckFailureCooldownMs?: number;
   readonly clock?: { now(): Date };
@@ -236,6 +237,7 @@ export class AccountCapacityAwareWorker<Job, Result>
     });
     if (state?.phase !== WorkerAccountCapacityPhase.RecheckDue) return;
     if (!this.options.capacityRechecker) {
+      if (!this.options.requireCapacityRecheckWhenDue) return;
       throw new SubscriptionWorkerError(
         "subscription_worker_account_unavailable",
         "Worker account quota requires a provider recheck before use.",
@@ -377,6 +379,9 @@ export function accountCapacityAwareWorkerFactory<Job, Result>(
         ? { accountWideLimitReasons: options.accountWideLimitReasons }
         : {}),
       ...(capacityRechecker ? { capacityRechecker } : {}),
+      ...(options.requireCapacityRecheckWhenDue
+        ? { requireCapacityRecheckWhenDue: true }
+        : {}),
       ...(options.recheckClaimTtlMs
         ? { recheckClaimTtlMs: options.recheckClaimTtlMs }
         : {}),
