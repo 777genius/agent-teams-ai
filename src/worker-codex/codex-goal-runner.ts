@@ -45,10 +45,8 @@ import {
   codexGoalControlsForAccessBoundary,
 } from "./codex-goal-access-plan";
 import { readLocalGitHeadCommit } from "./codex-goal-git-revision";
-import {
-  createCodexGoalResultRecorder,
-  GitPatchPreserver,
-} from "./codex-goal-runtime-result-io";
+import { createCodexGoalResultRecorder } from "./codex-goal-runtime-result-io";
+import { materializeCodexGoalHandoffArtifacts } from "./codex-goal-handoff-artifacts";
 import {
   codexGoalRuntimeEventObservability,
   createCodexGoalRuntimeEventWriter,
@@ -683,14 +681,19 @@ async function codexRuntimeResultInput(input: {
     resultStatus: input.result.status,
     changedFilesCount: changedFiles.length,
   });
-  const artifacts = status === "done" || changedFiles.length === 0
-    ? []
-    : await preservePatchArtifacts(input.config);
+  const handoff = changedFiles.length === 0
+    ? null
+    : await preservePatchArtifacts(input.config, input.baseCommit);
+  const artifacts = handoff?.artifacts ?? [];
+  const exactChangedFiles = handoff?.changedPaths ?? changedFiles;
   const details = runtimeResultDetails({
     ...("failureDetails" in input.result && input.result.failureDetails
       ? { failureDetails: input.result.failureDetails }
       : {}),
     ...(input.baseCommit === undefined ? {} : { baseCommit: input.baseCommit }),
+    ...(handoff?.errorCode === undefined
+      ? {}
+      : { handoffArtifactError: handoff.errorCode }),
   });
   return {
     status,
@@ -698,11 +701,14 @@ async function codexRuntimeResultInput(input: {
     runId: input.config.jobId ?? input.config.taskId,
     taskId: input.config.taskId,
     reason,
-    changedFiles,
+    changedFiles: exactChangedFiles,
     evidence: [
       ...runtimeEvidenceFromSafeExecutionResult(input.result),
       ...artifacts.map((artifact) => `patch_preserved:${artifact.path ?? ""}`),
-      ...(changedFiles.length > 0 && artifacts.length === 0 && status !== "done"
+      ...(handoff?.errorCode === undefined
+        ? []
+        : [`handoff_artifact_materialization_failed:${handoff.errorCode}`]),
+      ...(changedFiles.length > 0 && artifacts.length === 0
         ? ["patch_preserve_unavailable"]
         : []),
     ],
@@ -727,9 +733,11 @@ async function codexExceptionRuntimeResultInput(input: {
   const failure = codexRunnerExceptionFailure(input.error);
   const workspace = await changedFilesFromWorkspace(input.config.workspacePath);
   const changedFiles = workspace.changedFiles;
-  const artifacts = changedFiles.length === 0
-    ? []
-    : await preservePatchArtifacts(input.config);
+  const handoff = changedFiles.length === 0
+    ? null
+    : await preservePatchArtifacts(input.config, input.baseCommit);
+  const artifacts = handoff?.artifacts ?? [];
+  const exactChangedFiles = handoff?.changedPaths ?? changedFiles;
   const details = runtimeResultDetails({
     failureDetails: {
       errorName: input.error instanceof Error ? input.error.name : "unknown",
@@ -738,6 +746,9 @@ async function codexExceptionRuntimeResultInput(input: {
         : { errorCode: failure.errorCode }),
     },
     ...(input.baseCommit === undefined ? {} : { baseCommit: input.baseCommit }),
+    ...(handoff?.errorCode === undefined
+      ? {}
+      : { handoffArtifactError: handoff.errorCode }),
   });
   return {
     status: changedFiles.length > 0 ? "partial" : "failed",
@@ -745,11 +756,14 @@ async function codexExceptionRuntimeResultInput(input: {
     runId: input.config.jobId ?? input.config.taskId,
     taskId: input.config.taskId,
     reason: failure.reason,
-    changedFiles,
+    changedFiles: exactChangedFiles,
     evidence: [
       failure.evidence,
       ...(workspace.warning ? [workspace.warning] : []),
       ...artifacts.map((artifact) => `patch_preserved:${artifact.path ?? ""}`),
+      ...(handoff?.errorCode === undefined
+        ? []
+        : [`handoff_artifact_materialization_failed:${handoff.errorCode}`]),
       ...(changedFiles.length > 0 && artifacts.length === 0
         ? ["patch_preserve_unavailable"]
         : []),
@@ -813,10 +827,14 @@ function errorCauseChain(error: unknown): readonly unknown[] {
 function runtimeResultDetails(input: {
   readonly failureDetails?: Readonly<Record<string, string>>;
   readonly baseCommit?: string;
+  readonly handoffArtifactError?: string;
 }): Readonly<Record<string, string>> | undefined {
   const details = {
     ...(input.failureDetails ?? {}),
     ...(input.baseCommit === undefined ? {} : { baseCommit: input.baseCommit }),
+    ...(input.handoffArtifactError === undefined
+      ? {}
+      : { handoffArtifactError: input.handoffArtifactError }),
   };
   return Object.keys(details).length === 0 ? undefined : details;
 }
@@ -929,17 +947,47 @@ function statusPorcelainPath(line: string): string {
 }
 
 async function preservePatchArtifacts(
-  config: Pick<CodexGoalRunConfig, "workspacePath" | "jobRootDir" | "taskId">,
-): Promise<readonly RuntimeResultArtifact[]> {
+  config: Pick<
+    CodexGoalRunConfig,
+    "workspacePath" | "jobRootDir" | "jobId" | "taskId"
+  >,
+  expectedBaseCommit?: string,
+): Promise<{
+  readonly artifacts: readonly RuntimeResultArtifact[];
+  readonly changedPaths?: readonly string[];
+  readonly errorCode?: string;
+} | null> {
   try {
-    const artifact = await new GitPatchPreserver().preserve({
+    const materialized = await materializeCodexGoalHandoffArtifacts({
+      workerJobId: config.jobId ?? config.taskId,
+      taskId: config.taskId,
       workspacePath: config.workspacePath,
-      outputPath: join(config.jobRootDir, `${config.taskId}.preserved.patch`),
+      jobRootDir: config.jobRootDir,
+      ...(expectedBaseCommit === undefined ? {} : { expectedBaseCommit }),
     });
-    return artifact ? [artifact] : [];
-  } catch {
-    return [];
+    return materialized === null
+      ? {
+          artifacts: [],
+          errorCode: "handoff_patch_empty_for_dirty_workspace",
+        }
+      : {
+          artifacts: materialized.artifacts,
+          changedPaths: materialized.changedPaths,
+        };
+  } catch (error) {
+    return {
+      artifacts: [],
+      errorCode: safeHandoffMaterializationErrorCode(error),
+    };
   }
+}
+
+function safeHandoffMaterializationErrorCode(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  const code = message.split(":", 1)[0] ?? "";
+  return /^handoff_[a-z0-9_]+$/.test(code)
+    ? code
+    : "handoff_artifact_materialization_failed";
 }
 
 function uniqueStrings(values: readonly string[]): readonly string[] {

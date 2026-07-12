@@ -55,6 +55,8 @@ export async function projectIntegrationOpenAttempt(
   if (commitSha) assertSafeGitCommitSha(commitSha);
   const patchPath = stringValue(args.workerPatchPath);
   const summaryPath = stringValue(args.workerSummaryPath);
+  const handoffManifestPath = stringValue(args.workerHandoffManifestPath);
+  const handoffManifestSha256 = stringValue(args.workerHandoffManifestSha256);
   const baseCommit = stringValue(args.workerBaseCommit);
   if (baseCommit) assertSafeGitCommitSha(baseCommit);
   const targetCommit = stringValue(args.targetCommit);
@@ -65,6 +67,25 @@ export async function projectIntegrationOpenAttempt(
     throw new Error("project_integration_worker_output_source_required");
   }
   const changedFiles = requiredStringArrayArg(args.changedFiles, "changedFiles");
+  const validatedHandoff = args.confirmOpen && patchPath &&
+      options.validateWorkerHandoffArtifact
+    ? await options.validateWorkerHandoffArtifact({
+        controller,
+        workerJobId,
+        workspacePath: workerWorkspacePath,
+        patchPath,
+        ...(summaryPath ? { summaryPath } : {}),
+        ...(handoffManifestPath ? { manifestPath: handoffManifestPath } : {}),
+        ...(handoffManifestSha256
+          ? { manifestSha256: handoffManifestSha256 }
+          : {}),
+        ...(baseCommit ? { baseCommit } : {}),
+        changedPaths: changedFiles,
+      })
+    : {};
+  const effectiveBaseCommit = baseCommit ?? validatedHandoff.baseCommit;
+  const effectiveSummaryPath = summaryPath ?? validatedHandoff.summaryPath;
+  const effectiveManifestPath = handoffManifestPath ?? validatedHandoff.manifestPath;
   const approvedFiles = stringArrayArg(args.approvedFiles);
   const requiredChecks = parseProjectIntegrationChecks(args.requiredChecks);
   const input = {
@@ -81,8 +102,14 @@ export async function projectIntegrationOpenAttempt(
       workspacePath: workerWorkspacePath,
       ...(commitSha ? { commitSha } : {}),
       ...(patchPath ? { patchPath } : {}),
-      ...(summaryPath ? { summaryPath } : {}),
-      ...(baseCommit ? { baseCommit } : {}),
+      ...(effectiveSummaryPath ? { summaryPath: effectiveSummaryPath } : {}),
+      ...(effectiveManifestPath
+        ? { handoffManifestPath: effectiveManifestPath }
+        : {}),
+      ...(handoffManifestSha256
+        ? { handoffManifestSha256 }
+        : {}),
+      ...(effectiveBaseCommit ? { baseCommit: effectiveBaseCommit } : {}),
       ...(targetCommit ? { targetCommit } : {}),
       ...(baseStatus ? { baseStatus } : {}),
       ...(baseRevisionReasons.length ? { baseRevisionReasons } : {}),

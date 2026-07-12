@@ -10,6 +10,8 @@ export async function readRuntimeResultBrief(path: string): Promise<{
   readonly baseCommit?: string;
   readonly patchPath?: string;
   readonly summaryPath?: string;
+  readonly manifestPath?: string;
+  readonly manifestSha256?: string;
   readonly artifacts?: readonly RuntimeResultArtifact[];
 }> {
   try {
@@ -20,6 +22,8 @@ export async function readRuntimeResultBrief(path: string): Promise<{
     const artifacts = runtimeResultArtifacts(parsed.artifacts);
     const patchPath = runtimeResultArtifactPath(artifacts, "patch");
     const summaryPath = runtimeResultArtifactPath(artifacts, "summary");
+    const manifestPath = runtimeResultArtifactPath(artifacts, "manifest");
+    const manifestSha256 = runtimeResultArtifactSha256(artifacts, "manifest");
     const baseCommit = runtimeResultBaseCommit(parsed);
     return {
       ...(isRecord(lastAttempt) && typeof lastAttempt.accountId === "string"
@@ -36,6 +40,8 @@ export async function readRuntimeResultBrief(path: string): Promise<{
       ...(baseCommit === undefined ? {} : { baseCommit }),
       ...(patchPath === undefined ? {} : { patchPath }),
       ...(summaryPath === undefined ? {} : { summaryPath }),
+      ...(manifestPath === undefined ? {} : { manifestPath }),
+      ...(manifestSha256 === undefined ? {} : { manifestSha256 }),
       ...(artifacts.length === 0 ? {} : { artifacts }),
       strict: isStrictRuntimeResultBrief(parsed),
     };
@@ -60,6 +66,7 @@ function runtimeResultArtifacts(value: unknown): readonly RuntimeResultArtifact[
       kind: item.kind,
       ...(typeof item.path === "string" ? { path: item.path } : {}),
       ...(typeof item.byteLength === "number" ? { byteLength: item.byteLength } : {}),
+      ...(typeof item.sha256 === "string" ? { sha256: item.sha256 } : {}),
     }];
   });
 }
@@ -71,6 +78,15 @@ function runtimeResultArtifactPath(
   return artifacts.find((artifact) =>
     artifact.kind === kind && typeof artifact.path === "string"
   )?.path;
+}
+
+function runtimeResultArtifactSha256(
+  artifacts: readonly RuntimeResultArtifact[],
+  kind: string,
+): string | undefined {
+  return artifacts.find((artifact) =>
+    artifact.kind === kind && typeof artifact.sha256 === "string"
+  )?.sha256;
 }
 
 function runtimeResultBaseCommit(parsed: Record<string, unknown>): string | undefined {

@@ -30,6 +30,8 @@ export type HandoffManifest = {
   readonly baseCommit?: string;
   readonly patchPath?: string;
   readonly summaryPath?: string;
+  readonly manifestPath?: string;
+  readonly manifestSha256?: string;
   readonly changedFiles: readonly string[];
   readonly checks: readonly HandoffCheck[];
   readonly createdAt: string;
@@ -44,6 +46,9 @@ export type HandoffContractInput = {
   readonly baseCommit?: string;
   readonly patchPath?: string;
   readonly summaryPath?: string;
+  readonly manifestPath?: string;
+  readonly manifestSha256?: string;
+  readonly artifactRootPath?: string;
   readonly changedFiles?: readonly string[];
   readonly checks?: readonly HandoffCheck[];
   readonly workspaceDirty?: boolean;

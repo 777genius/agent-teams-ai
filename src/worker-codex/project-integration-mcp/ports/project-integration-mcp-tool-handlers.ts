@@ -32,6 +32,8 @@ export type ProjectIntegrationMcpArgs = {
   readonly workerCommitSha?: string;
   readonly workerPatchPath?: string;
   readonly workerSummaryPath?: string;
+  readonly workerHandoffManifestPath?: string;
+  readonly workerHandoffManifestSha256?: string;
   readonly workerBaseCommit?: string;
   readonly targetWorkspacePath?: string;
   readonly targetCommit?: string;

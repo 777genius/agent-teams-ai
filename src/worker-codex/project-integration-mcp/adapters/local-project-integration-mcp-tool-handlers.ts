@@ -17,6 +17,7 @@ import type {
   ProjectIntegrationMcpController,
   ProjectIntegrationMcpToolHandlers,
 } from "../ports/project-integration-mcp-tool-handlers";
+import { validateLocalWorkerHandoffArtifact } from "./local-worker-handoff-artifact-validator";
 
 export type CreateLocalProjectIntegrationMcpToolHandlersOptions =
   Pick<
@@ -30,6 +31,7 @@ export function createLocalProjectIntegrationMcpToolHandlers(
   return createProjectIntegrationMcpToolHandlers({
     ...options,
     integrationDeps: localProjectIntegrationDeps,
+    validateWorkerHandoffArtifact: validateLocalWorkerHandoffArtifact,
   });
 }
 

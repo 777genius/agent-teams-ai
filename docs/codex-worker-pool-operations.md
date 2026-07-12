@@ -775,6 +775,23 @@ registry-level workspace conflicts, so agents should prefer it over checking
 structured `summary`, `mcpCommands`, `reviewCommands`, `cliFallbackCommands`
 and sanitized account status.
 
+For a terminal dirty `isolated_workspace_write` job, handoff and review requests
+lazily materialize an integration bundle in the exact worker `jobRootDir`:
+
+- `<taskId>.handoff.patch` contains deterministic tracked and untracked output;
+- `<taskId>.handoff.summary.json` contains only bounded metadata and changed paths;
+- `<taskId>.handoff.manifest.json` binds the worker/job ownership, workspace,
+  base commit, exact changed paths and SHA-256/byte-length descriptors.
+
+This backfills already-completed jobs without rerunning the provider. Repeated
+requests are idempotent only while the workspace produces identical bytes. If
+the workspace changes after publication, the runtime does not overwrite the
+bundle and fails closed for review. Materialization also rejects symlinks,
+special files, path escapes, sensitive auth paths, high-confidence raw secrets,
+more than 256 changed files, files larger than 4 MiB, more than 16 MiB of source
+bytes, or a patch larger than 16 MiB. See the access and integration policy in
+[Project access boundaries](project-access-boundaries.md).
+
 `codex_accounts_status` returns `dedupedAccountNames` and
 `availableDedupedAccountNames` for worker pool inputs. If the same sanitized
 identity appears in multiple slots, the deduped list keeps the newest ready
@@ -1021,6 +1038,14 @@ Parallel worker split:
    commit through the Project Integration lifecycle. Worker-local commits are
    appropriate only when the workspace is commit-capable, for example an
    isolated clone with its own writable `.git` directory.
+6. For a materialized job-root patch, pass `workerHandoffManifestPath` and
+   `workerHandoffManifestSha256` from `handoff.handoffContract` to
+   `codex_goal_project_open_integration_attempt`. The integration adapter
+   verifies exact job-root ownership, base commit, descriptor hashes and that
+   requested `changedFiles` exactly equal both manifest and patch paths.
+   Legacy `.preserved.patch` artifacts remain accepted under the existing
+   canonical path policy; the manifest requirement applies to new
+   `.handoff.patch` bundles.
 
 Read-only or analysis task:
 

@@ -63,6 +63,25 @@ describe("validateHandoffContract", () => {
     });
   });
 
+  it("accepts hashed artifacts owned by the worker job root", () => {
+    expect(validateHandoffContract({
+      workerJobId: "job-valid-root",
+      workspacePath: "/work/job-valid-root",
+      artifactRootPath: "/jobs/job-valid-root",
+      createdAt: "2026-07-05T00:00:00.000Z",
+      workspaceDirty: true,
+      changedFiles: ["src/file.ts"],
+      baseCommit: "abc123",
+      patchPath: "/jobs/job-valid-root/task.handoff.patch",
+      summaryPath: "/jobs/job-valid-root/task.handoff.summary.json",
+      manifestPath: "/jobs/job-valid-root/task.handoff.manifest.json",
+      manifestSha256: "a".repeat(64),
+    })).toMatchObject({
+      status: "valid",
+      issues: [],
+    });
+  });
+
   it("rejects artifact paths outside the worker workspace", () => {
     expect(validateHandoffContract({
       workerJobId: "job-escape",

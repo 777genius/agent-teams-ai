@@ -63,6 +63,9 @@ import {
   isSafeStartAction,
 } from "./codex-goal-mcp-decision";
 import {
+  ensureTerminalCodexGoalHandoffArtifacts,
+} from "./application/ensure-codex-goal-handoff-artifacts";
+import {
   booleanValue,
   requiredRawString,
   stringValue,
@@ -544,6 +547,7 @@ export async function projectControlMarkReviewedView(
     registryRootDir: controller.registryRootDir,
     jobId: requiredRawString(args.jobId, "jobId"),
   });
+  await ensureTerminalCodexGoalHandoffArtifacts({ launch: loaded.launch });
   const broker = deps.codexProjectControlBroker({
     registryRootDir: controller.registryRootDir,
     controller: controller.controller,

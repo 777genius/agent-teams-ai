@@ -148,6 +148,11 @@ Current Codex adapter status:
   integrate the worker output through Project Integration lifecycle tools. If a
   worker-local commit is required, use a commit-capable isolated clone where the
   `.git` directory is inside the writable workspace;
+- terminal dirty isolated workers publish bounded patch, summary and manifest
+  handoff artifacts in their exact worker job root. Handoff/review requests can
+  safely backfill legacy completed jobs. Existing mismatched artifacts are never
+  overwritten, and Project Integration validates manifest hash, base commit,
+  artifact ownership and exact changed paths before opening an attempt;
 - Codex access-boundary jobs must set `networkAccess: "restricted"`.
   The adapter fails closed for implicit or explicit `disabled` network mode until
   a real OS/container egress sandbox exists;

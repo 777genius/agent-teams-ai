@@ -271,6 +271,8 @@ export async function buildCodexGoalBrief(input: {
     handoffBaseCommit: result.baseCommit,
     handoffPatchPath: result.patchPath,
     handoffSummaryPath: result.summaryPath,
+    handoffManifestPath: result.manifestPath,
+    handoffManifestSha256: result.manifestSha256,
     activeWriterRisk: workerHealth.activeWriterRisk.kind,
     activeWriterRiskReasons: workerHealth.activeWriterRisk.reasons,
     silentStale,

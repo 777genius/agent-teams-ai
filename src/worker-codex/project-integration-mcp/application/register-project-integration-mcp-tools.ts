@@ -21,6 +21,8 @@ export function registerProjectIntegrationMcpTools(
         workerCommitSha: z.string().optional(),
         workerPatchPath: z.string().optional(),
         workerSummaryPath: z.string().optional(),
+        workerHandoffManifestPath: z.string().optional(),
+        workerHandoffManifestSha256: z.string().optional(),
         workerBaseCommit: z.string().optional(),
         targetWorkspacePath: z.string().optional(),
         targetCommit: z.string().optional(),

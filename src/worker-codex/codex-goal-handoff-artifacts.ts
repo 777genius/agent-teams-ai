@@ -1,0 +1,529 @@
+import { execFile } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
+import {
+  link,
+  lstat,
+  mkdir,
+  readFile,
+  realpath,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+} from "node:path";
+import { promisify } from "node:util";
+
+import type { RuntimeResultArtifact } from "@vioxen/subscription-runtime/worker-core";
+
+const execFileAsync = promisify(execFile);
+
+export const DEFAULT_HANDOFF_ARTIFACT_LIMITS = {
+  maxChangedFiles: 256,
+  maxFileBytes: 4 * 1024 * 1024,
+  maxTotalFileBytes: 16 * 1024 * 1024,
+  maxPatchBytes: 16 * 1024 * 1024,
+} as const;
+
+export type HandoffArtifactLimits = {
+  readonly maxChangedFiles: number;
+  readonly maxFileBytes: number;
+  readonly maxTotalFileBytes: number;
+  readonly maxPatchBytes: number;
+};
+
+export type CodexGoalHandoffArtifactManifest = {
+  readonly schemaVersion: 1;
+  readonly kind: "subscription-runtime-worker-handoff";
+  readonly workerJobId: string;
+  readonly taskId: string;
+  readonly workspacePath: string;
+  readonly jobRootDir: string;
+  readonly baseCommit: string;
+  readonly changedPaths: readonly string[];
+  readonly provenance: {
+    readonly generator: "subscription-runtime";
+    readonly source: "terminal-worker-workspace";
+    readonly baseCommit: string;
+  };
+  readonly artifacts: {
+    readonly patch: HandoffArtifactDescriptor;
+    readonly summary: HandoffArtifactDescriptor;
+  };
+};
+
+export type HandoffArtifactDescriptor = {
+  readonly path: string;
+  readonly byteLength: number;
+  readonly sha256: string;
+};
+
+export type MaterializedCodexGoalHandoffArtifacts = {
+  readonly baseCommit: string;
+  readonly changedPaths: readonly string[];
+  readonly patchPath: string;
+  readonly summaryPath: string;
+  readonly manifestPath: string;
+  readonly manifest: CodexGoalHandoffArtifactManifest;
+  readonly artifacts: readonly RuntimeResultArtifact[];
+};
+
+export async function materializeCodexGoalHandoffArtifacts(input: {
+  readonly workerJobId: string;
+  readonly taskId: string;
+  readonly workspacePath: string;
+  readonly jobRootDir: string;
+  readonly expectedBaseCommit?: string;
+  readonly limits?: Partial<HandoffArtifactLimits>;
+}): Promise<MaterializedCodexGoalHandoffArtifacts | null> {
+  assertSafeId(input.workerJobId, "worker_job_id");
+  assertSafeId(input.taskId, "task_id");
+  const limits = handoffArtifactLimits(input.limits);
+  const workspacePath = await canonicalOwnedDirectory(
+    input.workspacePath,
+    "handoff_workspace",
+  );
+  await mkdir(input.jobRootDir, { recursive: true, mode: 0o700 });
+  const jobRootDir = await canonicalOwnedDirectory(
+    input.jobRootDir,
+    "handoff_job_root",
+  );
+  const baseCommit = await gitText(workspacePath, [
+    "rev-parse",
+    "--verify",
+    "HEAD",
+  ]);
+  if (input.expectedBaseCommit && input.expectedBaseCommit !== baseCommit) {
+    throw new Error("handoff_base_commit_mismatch");
+  }
+
+  const changedPaths = await gitChangedPaths(workspacePath);
+  if (changedPaths.length === 0) return null;
+  if (changedPaths.length > limits.maxChangedFiles) {
+    throw new Error("handoff_changed_file_limit_exceeded");
+  }
+  await assertSafeChangedFiles({
+    workspacePath,
+    changedPaths,
+    limits,
+  });
+  const patch = await buildDeterministicPatch({
+    workspacePath,
+    changedPaths,
+    limits,
+  });
+  assertNoRawSecret(Buffer.from(patch), "handoff.patch");
+  const confirmedChangedPaths = await gitChangedPaths(workspacePath);
+  if (!sameStrings(changedPaths, confirmedChangedPaths)) {
+    throw new Error("handoff_workspace_changed_during_materialization");
+  }
+  const totalFileBytes = await assertSafeChangedFiles({
+    workspacePath,
+    changedPaths: confirmedChangedPaths,
+    limits,
+  });
+  const confirmedPatch = await buildDeterministicPatch({
+    workspacePath,
+    changedPaths: confirmedChangedPaths,
+    limits,
+  });
+  if (patch !== confirmedPatch) {
+    throw new Error("handoff_workspace_changed_during_materialization");
+  }
+  const patchPath = join(jobRootDir, `${input.taskId}.handoff.patch`);
+  const summaryPath = join(jobRootDir, `${input.taskId}.handoff.summary.json`);
+  const manifestPath = join(jobRootDir, `${input.taskId}.handoff.manifest.json`);
+  await assertPatchChangedPaths({
+    workspacePath,
+    jobRootDir,
+    patch,
+    expectedChangedPaths: changedPaths,
+  });
+
+  const patchDescriptor = descriptor(patchPath, patch);
+  const summary = stableJson({
+    schemaVersion: 1,
+    kind: "subscription-runtime-worker-handoff-summary",
+    workerJobId: input.workerJobId,
+    taskId: input.taskId,
+    workspacePath,
+    baseCommit,
+    changedPaths,
+    changedFileCount: changedPaths.length,
+    totalFileBytes,
+    patch: patchDescriptor,
+  });
+  const summaryDescriptor = descriptor(summaryPath, summary);
+  const manifest: CodexGoalHandoffArtifactManifest = {
+    schemaVersion: 1,
+    kind: "subscription-runtime-worker-handoff",
+    workerJobId: input.workerJobId,
+    taskId: input.taskId,
+    workspacePath,
+    jobRootDir,
+    baseCommit,
+    changedPaths,
+    provenance: {
+      generator: "subscription-runtime",
+      source: "terminal-worker-workspace",
+      baseCommit,
+    },
+    artifacts: {
+      patch: patchDescriptor,
+      summary: summaryDescriptor,
+    },
+  };
+  const manifestText = stableJson(manifest);
+
+  await publishExactFile(patchPath, patch);
+  await publishExactFile(summaryPath, summary);
+  await publishExactFile(manifestPath, manifestText);
+  return {
+    baseCommit,
+    changedPaths,
+    patchPath,
+    summaryPath,
+    manifestPath,
+    manifest,
+    artifacts: [
+      runtimeArtifact("patch", patchDescriptor),
+      runtimeArtifact("summary", summaryDescriptor),
+      runtimeArtifact("manifest", descriptor(manifestPath, manifestText)),
+    ],
+  };
+}
+
+function handoffArtifactLimits(
+  overrides: Partial<HandoffArtifactLimits> | undefined,
+): HandoffArtifactLimits {
+  const limits = { ...DEFAULT_HANDOFF_ARTIFACT_LIMITS, ...overrides };
+  for (const [name, value] of Object.entries(limits)) {
+    if (!Number.isSafeInteger(value) || value <= 0) {
+      throw new Error(`handoff_limit_invalid:${name}`);
+    }
+  }
+  return limits;
+}
+
+async function gitChangedPaths(workspacePath: string): Promise<readonly string[]> {
+  const [tracked, untracked] = await Promise.all([
+    gitNullPaths(workspacePath, [
+      "diff",
+      "--name-only",
+      "--no-renames",
+      "-z",
+      "HEAD",
+      "--",
+    ]),
+    gitNullPaths(workspacePath, [
+      "ls-files",
+      "--others",
+      "--exclude-standard",
+      "-z",
+    ]),
+  ]);
+  return uniqueSorted([...tracked, ...untracked].map(assertSafeRelativePath));
+}
+
+async function assertSafeChangedFiles(input: {
+  readonly workspacePath: string;
+  readonly changedPaths: readonly string[];
+  readonly limits: HandoffArtifactLimits;
+}): Promise<number> {
+  let totalBytes = 0;
+  for (const changedPath of input.changedPaths) {
+    assertNonSensitivePath(changedPath);
+    const path = resolve(input.workspacePath, changedPath);
+    if (!pathInside(input.workspacePath, path)) {
+      throw new Error("handoff_changed_path_escape");
+    }
+    let item;
+    try {
+      item = await lstat(path);
+    } catch (error) {
+      if (isNodeError(error, "ENOENT")) continue;
+      throw error;
+    }
+    if (item.isSymbolicLink()) throw new Error("handoff_symlink_rejected");
+    if (!item.isFile()) throw new Error("handoff_special_file_rejected");
+    const canonical = await realpath(path);
+    if (!pathInside(input.workspacePath, canonical)) {
+      throw new Error("handoff_changed_path_escape");
+    }
+    if (item.size > input.limits.maxFileBytes) {
+      throw new Error("handoff_file_byte_limit_exceeded");
+    }
+    totalBytes += item.size;
+    if (totalBytes > input.limits.maxTotalFileBytes) {
+      throw new Error("handoff_total_byte_limit_exceeded");
+    }
+    assertNoRawSecret(await readFile(canonical), changedPath);
+  }
+  return totalBytes;
+}
+
+async function buildDeterministicPatch(input: {
+  readonly workspacePath: string;
+  readonly changedPaths: readonly string[];
+  readonly limits: HandoffArtifactLimits;
+}): Promise<string> {
+  const untracked = new Set(await gitNullPaths(input.workspacePath, [
+    "ls-files",
+    "--others",
+    "--exclude-standard",
+    "-z",
+  ]));
+  const trackedPatch = await gitOutput(input.workspacePath, [
+    "diff",
+    "--binary",
+    "--no-renames",
+    "HEAD",
+    "--",
+  ], input.limits.maxPatchBytes);
+  const parts = trackedPatch ? [ensureTrailingNewline(trackedPatch)] : [];
+  let byteLength = Buffer.byteLength(trackedPatch);
+  for (const changedPath of input.changedPaths.filter((path) => untracked.has(path))) {
+    const remaining = input.limits.maxPatchBytes - byteLength;
+    if (remaining <= 0) throw new Error("handoff_patch_byte_limit_exceeded");
+    const item = await gitDiffNoIndex(
+      input.workspacePath,
+      changedPath,
+      remaining,
+    );
+    const normalized = ensureTrailingNewline(item);
+    byteLength += Buffer.byteLength(normalized);
+    if (byteLength > input.limits.maxPatchBytes) {
+      throw new Error("handoff_patch_byte_limit_exceeded");
+    }
+    parts.push(normalized);
+  }
+  const patch = parts.join("");
+  if (!patch.trim()) throw new Error("handoff_patch_empty_for_dirty_workspace");
+  return patch;
+}
+
+async function assertPatchChangedPaths(input: {
+  readonly workspacePath: string;
+  readonly jobRootDir: string;
+  readonly patch: string;
+  readonly expectedChangedPaths: readonly string[];
+}): Promise<void> {
+  const tempPath = join(
+    input.jobRootDir,
+    `.handoff-validate-${process.pid}-${randomUUID()}.patch.tmp`,
+  );
+  await writeFile(tempPath, input.patch, { encoding: "utf8", mode: 0o600, flag: "wx" });
+  try {
+    const output = await gitOutput(input.workspacePath, [
+      "apply",
+      "--numstat",
+      "-z",
+      tempPath,
+    ], DEFAULT_HANDOFF_ARTIFACT_LIMITS.maxPatchBytes);
+    const actual = uniqueSorted(output.split("\0").filter(Boolean).map((record) => {
+      const fields = record.split("\t");
+      return assertSafeRelativePath(fields.slice(2).join("\t"));
+    }));
+    if (!sameStrings(actual, input.expectedChangedPaths)) {
+      throw new Error("handoff_patch_changed_paths_mismatch");
+    }
+  } finally {
+    await unlink(tempPath).catch((error: unknown) => {
+      if (!isNodeError(error, "ENOENT")) throw error;
+    });
+  }
+}
+
+async function publishExactFile(path: string, content: string): Promise<void> {
+  const tempPath = join(
+    dirname(path),
+    `.${basename(path)}.${process.pid}.${randomUUID()}.tmp`,
+  );
+  await writeFile(tempPath, content, { encoding: "utf8", mode: 0o600, flag: "wx" });
+  try {
+    try {
+      await link(tempPath, path);
+    } catch (error) {
+      if (!isNodeError(error, "EEXIST")) throw error;
+      const item = await lstat(path);
+      if (!item.isFile() || item.isSymbolicLink()) {
+        throw new Error("handoff_artifact_existing_path_unsafe");
+      }
+      if ((await readFile(path, "utf8")) !== content) {
+        throw new Error("handoff_artifact_content_mismatch");
+      }
+    }
+  } finally {
+    await unlink(tempPath).catch((error: unknown) => {
+      if (!isNodeError(error, "ENOENT")) throw error;
+    });
+  }
+}
+
+async function canonicalOwnedDirectory(path: string, label: string): Promise<string> {
+  const item = await lstat(path);
+  if (item.isSymbolicLink() || !item.isDirectory()) {
+    throw new Error(`${label}_unsafe`);
+  }
+  return await realpath(path);
+}
+
+function assertSafeRelativePath(path: string): string {
+  if (
+    !path ||
+    isAbsolute(path) ||
+    path.includes("\0") ||
+    path.includes("\\") ||
+    path.split("/").some((part) => !part || part === "." || part === "..")
+  ) {
+    throw new Error("handoff_changed_path_invalid");
+  }
+  return path;
+}
+
+function assertNonSensitivePath(path: string): void {
+  const lower = path.toLowerCase();
+  const name = basename(lower);
+  if (
+    name === "auth.json" ||
+    name === ".env" ||
+    name.startsWith(".env.") ||
+    name === ".npmrc" ||
+    name === ".pypirc" ||
+    name === "credentials" ||
+    name === "credentials.json" ||
+    lower.includes("/.ssh/") ||
+    lower.startsWith(".ssh/")
+  ) {
+    throw new Error("handoff_sensitive_path_rejected");
+  }
+}
+
+function assertNoRawSecret(content: Buffer, path: string): void {
+  const text = content.toString("utf8");
+  const patterns = [
+    /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
+    /\bsk-[A-Za-z0-9_-]{20,}\b/,
+    /\bgh[pousr]_[A-Za-z0-9]{20,}\b/,
+    /\bAKIA[0-9A-Z]{16}\b/,
+    /["'](?:access_token|refresh_token|id_token)["']\s*:\s*["'][^"'\r\n]{16,}["']/i,
+  ];
+  if (patterns.some((pattern) => pattern.test(text))) {
+    throw new Error(`handoff_raw_secret_rejected:${path}`);
+  }
+}
+
+async function gitNullPaths(
+  cwd: string,
+  args: readonly string[],
+): Promise<readonly string[]> {
+  const output = await gitOutput(cwd, args, 2 * 1024 * 1024);
+  return output.split("\0").filter(Boolean);
+}
+
+async function gitText(cwd: string, args: readonly string[]): Promise<string> {
+  return (await gitOutput(cwd, args, 1024 * 1024)).trim();
+}
+
+async function gitOutput(
+  cwd: string,
+  args: readonly string[],
+  maxBuffer: number,
+): Promise<string> {
+  const { stdout } = await execFileAsync("git", ["-c", "core.quotepath=false", ...args], {
+    cwd,
+    encoding: "utf8",
+    maxBuffer,
+    timeout: 15_000,
+  });
+  return stdout;
+}
+
+async function gitDiffNoIndex(
+  cwd: string,
+  path: string,
+  maxBuffer: number,
+): Promise<string> {
+  try {
+    return await gitOutput(cwd, [
+      "diff",
+      "--binary",
+      "--no-index",
+      "--",
+      "/dev/null",
+      path,
+    ], maxBuffer);
+  } catch (error) {
+    if (isExecErrorWithStdout(error) && error.code === 1) return error.stdout;
+    if (isNodeError(error, "ERR_CHILD_PROCESS_STDIO_MAXBUFFER")) {
+      throw new Error("handoff_patch_byte_limit_exceeded");
+    }
+    throw error;
+  }
+}
+
+function descriptor(path: string, content: string): HandoffArtifactDescriptor {
+  return {
+    path,
+    byteLength: Buffer.byteLength(content),
+    sha256: sha256(content),
+  };
+}
+
+function runtimeArtifact(
+  kind: string,
+  item: HandoffArtifactDescriptor,
+): RuntimeResultArtifact {
+  return { kind, ...item };
+}
+
+function stableJson(value: unknown): string {
+  return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+function sha256(value: string | Buffer): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function uniqueSorted(values: readonly string[]): readonly string[] {
+  return [...new Set(values)].sort();
+}
+
+function sameStrings(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function ensureTrailingNewline(value: string): string {
+  return value.endsWith("\n") ? value : `${value}\n`;
+}
+
+function pathInside(root: string, path: string): boolean {
+  const rel = relative(root, path);
+  return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+}
+
+function assertSafeId(value: string, label: string): void {
+  if (
+    basename(value) !== value ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)
+  ) {
+    throw new Error(`${label}_invalid`);
+  }
+}
+
+function isNodeError(error: unknown, code: string): error is NodeJS.ErrnoException {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+
+function isExecErrorWithStdout(
+  error: unknown,
+): error is { readonly code: number; readonly stdout: string } {
+  return typeof error === "object" && error !== null &&
+    "code" in error && error.code === 1 &&
+    "stdout" in error && typeof error.stdout === "string";
+}

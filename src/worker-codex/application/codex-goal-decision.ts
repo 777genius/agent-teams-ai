@@ -82,6 +82,8 @@ type CodexGoalBriefView = {
   readonly handoffBaseCommit?: string | undefined;
   readonly handoffPatchPath?: string | undefined;
   readonly handoffSummaryPath?: string | undefined;
+  readonly handoffManifestPath?: string | undefined;
+  readonly handoffManifestSha256?: string | undefined;
   readonly logExists?: boolean | undefined;
   readonly progressPath?: string | undefined;
   readonly progressExists?: boolean | undefined;
@@ -642,6 +644,13 @@ export function buildCodexGoalHandoff(input: {
     ...(input.brief.handoffSummaryPath === undefined
       ? {}
       : { summaryPath: input.brief.handoffSummaryPath }),
+    ...(input.brief.handoffManifestPath === undefined
+      ? {}
+      : { manifestPath: input.brief.handoffManifestPath }),
+    ...(input.brief.handoffManifestSha256 === undefined
+      ? {}
+      : { manifestSha256: input.brief.handoffManifestSha256 }),
+    artifactRootPath: input.launch.config.jobRootDir,
     ...(input.status.workspaceDirty === undefined
       ? {}
       : { workspaceDirty: input.status.workspaceDirty }),

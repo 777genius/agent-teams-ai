@@ -76,6 +76,9 @@ import {
   isSafeStartAction,
   nextActionForStatus,
 } from "./codex-goal-decision";
+import {
+  ensureTerminalCodexGoalHandoffArtifacts,
+} from "./ensure-codex-goal-handoff-artifacts";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 
@@ -288,7 +291,9 @@ export async function markCodexGoalReviewedUseCase(
     loaded.launch.config.jobRootDir,
     `${loaded.launch.config.taskId}.review.json`,
   );
-  const status = await collectCodexGoalStatus(statusInput(loaded.launch));
+  const status = await ensureTerminalCodexGoalHandoffArtifacts({
+    launch: loaded.launch,
+  });
   await writeFile(
     reviewPath,
     `${JSON.stringify({
@@ -384,7 +389,9 @@ export async function buildCodexGoalHandoffUseCase(
   args: CodexGoalJobHandoffInput,
 ): Promise<JsonObject> {
   const loaded = await loadJobLaunch(args);
-  const status = await collectCodexGoalStatus(statusInput(loaded.launch));
+  const status = await ensureTerminalCodexGoalHandoffArtifacts({
+    launch: loaded.launch,
+  });
   const accounts = await listCodexGoalAccountStatuses({
     authRootDir: loaded.launch.config.authRootDir,
     accounts: loaded.launch.config.accounts.map((account) => account.name),

@@ -52,6 +52,8 @@ export type WorkerOutput = {
   readonly commitSha?: string;
   readonly patchPath?: string;
   readonly summaryPath?: string;
+  readonly handoffManifestPath?: string;
+  readonly handoffManifestSha256?: string;
   readonly baseCommit?: string;
   readonly targetCommit?: string;
   readonly baseStatus?: BaseRevisionStatus;

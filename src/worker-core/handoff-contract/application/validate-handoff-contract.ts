@@ -22,6 +22,10 @@ export class ValidateHandoffContractUseCase {
       ...(input.baseCommit === undefined ? {} : { baseCommit: input.baseCommit }),
       ...(input.patchPath === undefined ? {} : { patchPath: input.patchPath }),
       ...(input.summaryPath === undefined ? {} : { summaryPath: input.summaryPath }),
+      ...(input.manifestPath === undefined ? {} : { manifestPath: input.manifestPath }),
+      ...(input.manifestSha256 === undefined
+        ? {}
+        : { manifestSha256: input.manifestSha256 }),
       changedFiles,
       checks,
       createdAt: input.createdAt,
@@ -43,7 +47,7 @@ function validateIssues(input: HandoffContractInput & {
 }): readonly HandoffValidationIssue[] {
   const issues: HandoffValidationIssue[] = [];
   if (!input.handoffRequired) return issues;
-  if (!input.patchPath && !input.summaryPath) {
+  if (!input.patchPath && !input.summaryPath && !input.manifestPath) {
     issues.push({
       code: "handoff_artifact_missing",
       severity: "blocked",
@@ -60,12 +64,25 @@ function validateIssues(input: HandoffContractInput & {
         "Worker handoff does not declare the base commit. Integration should verify stale-base risk before applying output.",
     });
   }
-  for (const artifactPath of [input.patchPath, input.summaryPath]) {
-    if (artifactPath && !pathInside(input.workspacePath, artifactPath)) {
+  if (input.manifestPath && !/^[a-f0-9]{64}$/i.test(input.manifestSha256 ?? "")) {
+    issues.push({
+      code: "handoff_manifest_hash_missing",
+      severity: "blocked",
+      message: "Worker handoff manifest does not declare a valid SHA-256 hash.",
+      evidence: [input.manifestPath],
+    });
+  }
+  const artifactRootPath = input.artifactRootPath ?? input.workspacePath;
+  for (const artifactPath of [
+    input.patchPath,
+    input.summaryPath,
+    input.manifestPath,
+  ]) {
+    if (artifactPath && !pathInside(artifactRootPath, artifactPath)) {
       issues.push({
         code: "handoff_path_outside_workspace",
         severity: "blocked",
-        message: "Handoff artifact path is outside the worker workspace.",
+        message: "Handoff artifact path is outside the owned artifact root.",
         evidence: [artifactPath],
       });
     }

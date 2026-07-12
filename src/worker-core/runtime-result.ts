@@ -35,6 +35,7 @@ export type RuntimeResultArtifact = {
   readonly kind: string;
   readonly path?: string;
   readonly byteLength?: number;
+  readonly sha256?: string;
 };
 
 export type RuntimeResultEnvelope = {

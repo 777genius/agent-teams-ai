@@ -633,17 +633,81 @@ describe("codex goal runner", () => {
         Record<string, unknown>;
       expect(result).toMatchObject({
         status: "partial",
-        changedFiles: ["tracked.txt", "new/nested.txt"],
+        changedFiles: ["new/nested.txt", "tracked.txt"],
         nextAction: "preserve_patch",
       });
       expect(result.details).toMatchObject({ baseCommit });
       expect(result.evidence).toEqual(expect.arrayContaining([
-        `patch_preserved:${join(config.jobRootDir, "task-patch.preserved.patch")}`,
+        `patch_preserved:${join(config.jobRootDir, "task-patch.handoff.patch")}`,
       ]));
-      expect(await readFile(join(config.jobRootDir, "task-patch.preserved.patch"), "utf8"))
+      expect(await readFile(join(config.jobRootDir, "task-patch.handoff.patch"), "utf8"))
         .toContain("after");
-      expect(await readFile(join(config.jobRootDir, "task-patch.preserved.patch"), "utf8"))
+      expect(await readFile(join(config.jobRootDir, "task-patch.handoff.patch"), "utf8"))
         .toContain("new file");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("records stable evidence when a completed handoff cannot be materialized", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-goal-handoff-blocked-"));
+    const promptPath = join(root, "prompt.md");
+    const workspacePath = join(root, "workspace");
+    const config: CodexGoalRunConfig = {
+      jobRootDir: join(root, "job"),
+      authRootDir: join(root, "auth"),
+      workspacePath,
+      promptPath,
+      taskId: "task-handoff-blocked",
+      accounts: codexGoalAccountSlots(["account-a"]),
+      outputPath: join(root, "job", "task-handoff-blocked.latest-result.json"),
+    };
+
+    try {
+      await mkdir(config.jobRootDir, { recursive: true });
+      await mkdir(workspacePath, { recursive: true });
+      await writeFile(promptPath, "Do a sandbox task.\n");
+      await execFileAsync("git", ["init"], { cwd: workspacePath });
+      await execFileAsync("git", ["config", "user.email", "test@example.com"], {
+        cwd: workspacePath,
+      });
+      await execFileAsync("git", ["config", "user.name", "Test User"], {
+        cwd: workspacePath,
+      });
+      await writeFile(join(workspacePath, "README.md"), "fixture\n");
+      await execFileAsync("git", ["add", "README.md"], { cwd: workspacePath });
+      await execFileAsync("git", ["commit", "-m", "fixture"], {
+        cwd: workspacePath,
+      });
+
+      await runCodexGoal(config, {
+        createExecutor: () => ({
+          async run() {
+            await writeFile(join(workspacePath, "auth.json"), "{}\n");
+            return {
+              status: "completed",
+              attempts: [{ changedFiles: ["auth.json"] }],
+              task: { outputText: "done" },
+            } as never;
+          },
+          async dispose() {},
+        }),
+      });
+      const result = JSON.parse(await readFile(config.outputPath!, "utf8")) as
+        Record<string, unknown>;
+
+      expect(result).toMatchObject({
+        status: "done",
+        changedFiles: ["auth.json"],
+        details: {
+          handoffArtifactError: "handoff_sensitive_path_rejected",
+        },
+      });
+      expect(result.evidence).toEqual(expect.arrayContaining([
+        "handoff_artifact_materialization_failed:handoff_sensitive_path_rejected",
+        "patch_preserve_unavailable",
+      ]));
+      expect(result).not.toHaveProperty("artifacts");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

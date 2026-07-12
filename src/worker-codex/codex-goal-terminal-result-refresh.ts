@@ -1,14 +1,13 @@
-import { join } from "node:path";
 import type {
   RunProgressClassification,
   RuntimeRecommendedAction,
   RuntimeResultArtifact,
   RuntimeResultEnvelope,
 } from "@vioxen/subscription-runtime/worker-core";
+import { createCodexGoalResultRecorder } from "./codex-goal-runtime-result-io";
 import {
-  createCodexGoalResultRecorder,
-  GitPatchPreserver,
-} from "./codex-goal-runtime-result-io";
+  materializeCodexGoalHandoffArtifacts,
+} from "./codex-goal-handoff-artifacts";
 import type { CodexGoalRunConfig } from "./codex-goal-runner";
 
 export async function refreshCompletedCodexGoalResultArtifacts(input: {
@@ -28,9 +27,11 @@ export async function refreshCompletedCodexGoalResultArtifacts(input: {
   readonly recommendedAction: RuntimeRecommendedAction;
   readonly result: RuntimeResultEnvelope;
 }> {
-  const artifacts = input.preservePatch && input.changedFiles.length > 0
-    ? await refreshedPatchArtifacts(input)
-    : input.existingResult.artifacts ?? [];
+  const handoff = input.preservePatch && input.changedFiles.length > 0
+    ? await refreshedHandoffArtifacts(input)
+    : null;
+  const artifacts = handoff?.artifacts ?? input.existingResult.artifacts ?? [];
+  const changedFiles = handoff?.changedPaths ?? input.existingResult.changedFiles;
   const result = await createCodexGoalResultRecorder({
     outputPath: input.outputPath,
   }).record({
@@ -40,8 +41,13 @@ export async function refreshCompletedCodexGoalResultArtifacts(input: {
     taskId: input.existingResult.taskId,
     classification: input.existingResult.classification,
     reason: input.existingResult.reason,
-    details: input.existingResult.details,
-    changedFiles: input.existingResult.changedFiles,
+    details: {
+      ...(input.existingResult.details ?? {}),
+      ...(handoff?.baseCommit === undefined
+        ? {}
+        : { baseCommit: handoff.baseCommit }),
+    },
+    changedFiles,
     evidence: [
       ...input.existingResult.evidence,
       "supervisor_refreshed_terminal_result_artifacts",
@@ -63,23 +69,38 @@ export async function refreshCompletedCodexGoalResultArtifacts(input: {
   };
 }
 
-async function refreshedPatchArtifacts(input: {
+async function refreshedHandoffArtifacts(input: {
   readonly config: Pick<
     CodexGoalRunConfig,
-    "jobRootDir" | "taskId" | "workspacePath"
+    "jobRootDir" | "jobId" | "taskId" | "workspacePath"
   >;
   readonly existingResult: RuntimeResultEnvelope;
-}): Promise<readonly RuntimeResultArtifact[]> {
-  try {
-    const artifact = await new GitPatchPreserver().preserve({
-      workspacePath: input.config.workspacePath,
-      outputPath: join(
-        input.config.jobRootDir,
-        `${input.config.taskId}.preserved.patch`,
-      ),
-    });
-    return artifact === null ? input.existingResult.artifacts ?? [] : [artifact];
-  } catch {
-    return input.existingResult.artifacts ?? [];
+}): Promise<{
+  readonly artifacts: readonly RuntimeResultArtifact[];
+  readonly baseCommit: string;
+  readonly changedPaths: readonly string[];
+} | null> {
+  const expectedBaseCommit = runtimeResultBaseCommit(input.existingResult);
+  const materialized = await materializeCodexGoalHandoffArtifacts({
+    workerJobId: input.config.jobId ?? input.config.taskId,
+    taskId: input.config.taskId,
+    workspacePath: input.config.workspacePath,
+    jobRootDir: input.config.jobRootDir,
+    ...(expectedBaseCommit === undefined ? {} : { expectedBaseCommit }),
+  });
+  if (materialized === null) {
+    throw new Error("handoff_dirty_workspace_materialized_empty");
   }
+  return {
+    artifacts: materialized.artifacts,
+    baseCommit: materialized.baseCommit,
+    changedPaths: materialized.changedPaths,
+  };
+}
+
+function runtimeResultBaseCommit(
+  result: RuntimeResultEnvelope,
+): string | undefined {
+  const value = result.details?.baseCommit;
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
