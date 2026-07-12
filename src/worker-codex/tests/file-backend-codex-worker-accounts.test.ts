@@ -174,7 +174,7 @@ describe("CommandPolicyRunner", () => {
     }
   });
 
-  it("self-switches safe Codex work to another account with a continuation packet", async () => {
+  it("delivers startup guidance across retries and resumes a completed task only for new guidance", async () => {
     const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-executor-"));
     const workspacePath = await gitWorkspace("codex-safe-workspace-");
     const clock = {
@@ -248,7 +248,13 @@ describe("CommandPolicyRunner", () => {
       expect(result.task.effectMode).toBe("workspace_patch");
       expect(result.attempts).toHaveLength(2);
       expect(result.attempts[0]?.failureReason).toBe("quota_limited");
-      expect(appServers[0]!.prompts).toEqual(["Implement the safe task."]);
+      expect(appServers[0]!.prompts).toHaveLength(1);
+      expect(appServers[0]!.prompts[0]).toContain(
+        "Original task:\nImplement the safe task.",
+      );
+      expect(appServers[0]!.prompts[0]).toContain(
+        "Preserve current WIP and continue with targeted tests first.",
+      );
       const continuationPrompt = appServers[1]!.prompts[0] ?? "";
       const canonicalWorkspacePath = await realpath(workspacePath);
       expect(continuationPrompt).toContain(
@@ -305,6 +311,35 @@ describe("CommandPolicyRunner", () => {
       if (replayed.status !== "completed") throw new Error("expected replay");
       expect(replayed.replayed).toBe(true);
       expect(appServers[1]!.prompts).toHaveLength(1);
+
+      await controlInbox.enqueueSignal({
+        target: {
+          jobId: "codex-safe-switch-job",
+          taskId: "codex-safe-switch-task",
+          workspaceId: workspacePath,
+        },
+        intent: "guidance",
+        body: "Re-open the completed task and add the missing focused assertion.",
+      });
+      const guidedContinuation = await executor.run({
+        jobId: "codex-safe-switch-job",
+        taskId: "codex-safe-switch-task",
+        prompt: "Implement the safe task.",
+        controls: { editMode: "allow-edits" },
+      });
+      expect(guidedContinuation.status).toBe("completed");
+      if (guidedContinuation.status !== "completed") {
+        throw new Error("expected guided continuation");
+      }
+      expect(guidedContinuation.replayed).toBe(false);
+      expect(guidedContinuation.attempts).toHaveLength(3);
+      expect(appServers[1]!.prompts).toHaveLength(2);
+      expect(appServers[1]!.prompts[1]).toContain(
+        "Re-open the completed task and add the missing focused assertion.",
+      );
+      expect(appServers[1]!.prompts[1]).not.toContain(
+        "Previous attempt stopped because",
+      );
     } finally {
       await executor.dispose();
       await rm(rootDir, { recursive: true, force: true });

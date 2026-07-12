@@ -28,12 +28,25 @@ export class InMemoryAttemptJournal implements AttemptJournal {
     readonly effectMode: TaskEffectMode;
     readonly provider: string;
     readonly now: Date;
+    readonly resumeCompleted?: boolean;
   }): Promise<SafeExecutionTaskRecord> {
     const existing = this.records.get(input.taskId);
     if (existing) {
+      const {
+        completedAt: _completedAt,
+        result: _result,
+        lastFailureReason: _lastFailureReason,
+        lastFailureMessage: _lastFailureMessage,
+        lastFailureDetails: _lastFailureDetails,
+        ...resumable
+      } = existing;
+      const shouldResumeCompleted =
+        existing.status === "completed" && input.resumeCompleted === true;
       const next = {
-        ...existing,
-        status: existing.status === "completed" ? existing.status : "running",
+        ...(shouldResumeCompleted ? resumable : existing),
+        status: existing.status === "completed" && !shouldResumeCompleted
+          ? existing.status
+          : "running",
         updatedAt: input.now,
       } satisfies SafeExecutionTaskRecord;
       this.records.set(input.taskId, next);

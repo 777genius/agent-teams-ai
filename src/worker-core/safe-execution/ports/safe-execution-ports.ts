@@ -37,6 +37,7 @@ export interface AttemptJournal {
     readonly effectMode: TaskEffectMode;
     readonly provider: string;
     readonly now: Date;
+    readonly resumeCompleted?: boolean;
   }): Promise<SafeExecutionTaskRecord>;
   appendAttempt(input: {
     readonly taskId: TaskRunId;

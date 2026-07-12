@@ -1,5 +1,6 @@
 import type {
   ActiveAttemptRegistry,
+  WorkerControlContinuationBatch,
   WorkerControlContinuationSource,
   WorkerControlTarget,
 } from "../../control";
@@ -44,6 +45,15 @@ export type SafeExecutionRunInput<Job, Result> = {
     readonly continuationPacket: ContinuationPacket;
     readonly attemptNumber: number;
   }) => Job;
+  readonly controlContinuationJobFactory?: (input: {
+    readonly job: Job;
+    readonly originalPrompt: string;
+    readonly controlBatch: WorkerControlContinuationBatch;
+    readonly attemptNumber: number;
+  }) => {
+    readonly job: Job;
+    readonly originalPrompt: string;
+  };
   readonly attemptMetadata?: (input: {
     readonly result?: Result;
     readonly error?: unknown;

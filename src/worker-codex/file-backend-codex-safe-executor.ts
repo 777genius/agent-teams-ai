@@ -26,6 +26,7 @@ import {
   type SafeExecutionWorkspaceAccess,
   type TaskEffectMode,
   type WorkerAccountCapacityStore,
+  type WorkerControlContinuationBatch,
   type WorkerControlContinuationSource,
   type WorkerControlTarget,
   type WorkerPoolHealth,
@@ -335,6 +336,25 @@ export class FileBackendCodexSafeExecutor {
         runId: `${taskId}:attempt-${attemptNumber}`,
         prompt: continuationPacket.message,
       }),
+      controlContinuationJobFactory: ({
+        job: currentJob,
+        originalPrompt: currentOriginalPrompt,
+        controlBatch,
+        attemptNumber,
+      }) => {
+        const prompt = codexStartupControlPrompt({
+          originalPrompt: currentOriginalPrompt,
+          controlBatch,
+        });
+        return {
+          job: {
+            ...currentJob,
+            runId: `${taskId}:attempt-${attemptNumber}`,
+            prompt,
+          },
+          originalPrompt: prompt,
+        };
+      },
       summarizeResult: (result) => result.outputText,
       summarizeErrorOutput: codexWorkerErrorOutputSummary,
       attemptUsage: codexWorkerResultUsage,
@@ -491,6 +511,25 @@ function codexSafeExecutionInput(input: FileBackendCodexSafeExecutorRunInput): {
       ? {}
       : { policy: safeExecutionPolicy }),
   };
+}
+
+function codexStartupControlPrompt(input: {
+  readonly originalPrompt: string;
+  readonly controlBatch: WorkerControlContinuationBatch;
+}): string {
+  if (!input.controlBatch.message || input.controlBatch.signalIds.length === 0) {
+    return input.originalPrompt;
+  }
+  return [
+    "Continue the same task in the current workspace.",
+    "",
+    "Original task:",
+    input.originalPrompt,
+    "",
+    input.controlBatch.message,
+    "",
+    "Apply the delivered runtime guidance now. Preserve useful existing work and do not restart from scratch.",
+  ].join("\n");
 }
 
 function codexControlTarget(input: {

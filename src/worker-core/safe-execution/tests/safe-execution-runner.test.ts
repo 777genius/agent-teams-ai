@@ -375,6 +375,14 @@ describe("SafeExecutionRunner", () => {
       controlInbox: {
         async consumeForContinuation(input) {
           consumed += 1;
+          if (consumed === 1) {
+            return {
+              target: input.target,
+              deliveryAttemptId: input.deliveryAttemptId,
+              signals: [],
+              signalIds: [],
+            };
+          }
           return {
             target: input.target,
             deliveryAttemptId: input.deliveryAttemptId,
@@ -395,6 +403,17 @@ describe("SafeExecutionRunner", () => {
       pool,
       job: { prompt: "Repair account.", workspacePath },
       originalPrompt: "Repair account.",
+      controlContinuationJobFactory: ({
+        job,
+        originalPrompt,
+        controlBatch,
+      }) => ({
+        job: {
+          ...job,
+          prompt: `${originalPrompt}\n${controlBatch.message ?? ""}`,
+        },
+        originalPrompt: `${originalPrompt}\n${controlBatch.message ?? ""}`,
+      }),
       controlTarget: {
         jobId: "job-control-reconnect",
         taskId: "task-control-reconnect",
@@ -404,7 +423,7 @@ describe("SafeExecutionRunner", () => {
     });
 
     expect(result.status).toBe("completed");
-    expect(consumed).toBe(0);
+    expect(consumed).toBe(1);
   });
 
   it("rejects concurrent tasks for the same existing workspace lock", async () => {

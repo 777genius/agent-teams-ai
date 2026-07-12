@@ -1,4 +1,7 @@
-import type { WorkerControlTarget } from "../../control";
+import type {
+  WorkerControlContinuationBatch,
+  WorkerControlTarget,
+} from "../../control";
 import {
   defaultSafeExecutionErrorClassifier,
   failureDetailsFromUnknown,
@@ -73,7 +76,10 @@ export class SafeExecutionRunner {
     const existing = await this.options.journal.readTask({
       taskId: input.taskId,
     });
-    if (existing?.status === "completed") {
+    if (
+      existing?.status === "completed" &&
+      (!this.options.controlInbox || !input.controlContinuationJobFactory)
+    ) {
       return {
         status: "completed",
         task: existing,
@@ -95,23 +101,17 @@ export class SafeExecutionRunner {
     });
 
     try {
-      let task = await this.options.journal.startTask({
-        taskId: input.taskId,
-        workspaceRunId: workspaceRunId(workspacePath),
-        workspacePath,
-        effectMode: input.effectMode,
-        provider: input.provider,
-        now: this.clock.now(),
-      });
-      if (task.status === "completed") {
-        return {
-          status: "completed",
-          task,
-          result: task.result as Result,
-          attempts: task.attempts,
-          replayed: true,
-        };
-      }
+      const firstAttemptNumber = (existing?.attempts.length ?? 0) + 1;
+      let task = existing?.status === "completed"
+        ? existing
+        : await this.options.journal.startTask({
+            taskId: input.taskId,
+            workspaceRunId: workspaceRunId(workspacePath),
+            workspacePath,
+            effectMode: input.effectMode,
+            provider: input.provider,
+            now: this.clock.now(),
+          });
       if (input.workspace.requireGitWorkspace) {
         try {
           await this.workspaceAccess.assertGitWorkspace({
@@ -119,6 +119,7 @@ export class SafeExecutionRunner {
             ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
           });
         } catch (error) {
+          if (task.status === "completed") throw error;
           return this.failStartedTask({ input, error });
         }
       }
@@ -155,11 +156,115 @@ export class SafeExecutionRunner {
           };
         }
       }
-
       const policy = normalizeSafeExecutionPolicy(input);
+      if (task.status === "completed" && task.effectMode === "external_side_effects") {
+        return {
+          status: "completed",
+          task,
+          result: task.result as Result,
+          attempts: task.attempts,
+          replayed: true,
+        };
+      }
+      if (input.abortSignal?.aborted) {
+        if (task.status === "completed") {
+          return {
+            status: "completed",
+            task,
+            result: task.result as Result,
+            attempts: task.attempts,
+            replayed: true,
+          };
+        }
+        const aborted = await this.options.journal.markPartial({
+          taskId: input.taskId,
+          status: "aborted",
+          reason: "user_abort",
+          message: "Safe execution run was aborted before guidance delivery.",
+          now: this.clock.now(),
+        });
+        return {
+          status: "aborted",
+          task: aborted,
+          attempts: aborted.attempts,
+          reason: "user_abort",
+          safeMessage: "Safe execution run was aborted.",
+        };
+      }
+      let startupBeforeSnapshot: WorkspaceSnapshot | undefined;
+      if (task.status === "completed") {
+        startupBeforeSnapshot = await this.snapshotter.capture({
+          workspacePath,
+          ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+        });
+      }
+      const startupControlAllowed =
+        task.status === "completed" ||
+        !task.lastFailureReason ||
+        shouldDeliverSafeExecutionControlForContinuation(task.lastFailureReason);
+      const startupControlBatch =
+        startupControlAllowed &&
+          this.options.controlInbox &&
+          input.controlContinuationJobFactory
+          ? await this.options.controlInbox.consumeForContinuation({
+              target: input.controlTarget ?? {
+                jobId: input.taskId,
+                workspaceId: workspacePath,
+              },
+              deliveryAttemptId: `${input.taskId}:attempt-${firstAttemptNumber}`,
+              now: this.clock.now(),
+            })
+          : undefined;
+      if (
+        startupControlBatch &&
+        startupControlBatch.signalIds.length > 0 &&
+        !startupControlBatch.message
+      ) {
+        throw new SafeExecutionError(
+          "safe_execution_invalid_task",
+          "Worker control inbox returned deliverable signal ids without a continuation message.",
+        );
+      }
+      const hasStartupControl = Boolean(
+        startupControlBatch?.message && startupControlBatch.signalIds.length > 0,
+      );
       let job = input.job;
+      let effectiveOriginalPrompt = input.originalPrompt;
       let previousOutputSummary = task.outputSummary;
-      const firstAttemptNumber = task.attempts.length + 1;
+      const controlledStartup = hasStartupControl && startupControlBatch
+        ? input.controlContinuationJobFactory?.({
+            job,
+            originalPrompt: effectiveOriginalPrompt,
+            controlBatch: startupControlBatch,
+            attemptNumber: firstAttemptNumber,
+          })
+        : undefined;
+      if (hasStartupControl && !controlledStartup) {
+        throw new SafeExecutionError(
+          "safe_execution_invalid_task",
+          "Safe execution cannot deliver pending startup guidance without a control continuation job factory.",
+        );
+      }
+      if (task.status === "completed") {
+        if (!hasStartupControl) {
+          return {
+            status: "completed",
+            task,
+            result: task.result as Result,
+            attempts: task.attempts,
+            replayed: true,
+          };
+        }
+        task = await this.options.journal.startTask({
+          taskId: input.taskId,
+          workspaceRunId: workspaceRunId(workspacePath),
+          workspacePath,
+          effectMode: input.effectMode,
+          provider: input.provider,
+          now: this.clock.now(),
+          resumeCompleted: true,
+        });
+      }
 
       if (
         task.attempts.length > 0 &&
@@ -190,6 +295,9 @@ export class SafeExecutionRunner {
           ...(input.controlTarget === undefined
             ? {}
             : { controlTarget: input.controlTarget }),
+          ...(startupControlBatch === undefined
+            ? {}
+            : { controlBatch: startupControlBatch }),
         });
         const continuationJob = continuationJobFor({
           factory: input.continuationJobFactory,
@@ -222,11 +330,20 @@ export class SafeExecutionRunner {
           };
         }
         job = continuationJob;
+        effectiveOriginalPrompt =
+          controlledStartup?.originalPrompt ?? input.originalPrompt;
+      } else if (controlledStartup) {
+        job = controlledStartup.job;
+        effectiveOriginalPrompt = controlledStartup.originalPrompt;
       }
 
+      const maxAttemptNumber =
+        existing && hasStartupControl
+          ? firstAttemptNumber + policy.maxAttempts - 1
+          : policy.maxAttempts;
       for (
         let attemptNumber = firstAttemptNumber;
-        attemptNumber <= policy.maxAttempts;
+        attemptNumber <= maxAttemptNumber;
         attemptNumber += 1
       ) {
         if (input.abortSignal?.aborted) {
@@ -248,10 +365,12 @@ export class SafeExecutionRunner {
 
         let before: WorkspaceSnapshot;
         try {
-          before = await this.snapshotter.capture({
-            workspacePath,
-            ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
-          });
+          before = attemptNumber === firstAttemptNumber && startupBeforeSnapshot
+            ? startupBeforeSnapshot
+            : await this.snapshotter.capture({
+                workspacePath,
+                ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+              });
         } catch (error) {
           return this.failStartedTask({ input, error });
         }
@@ -379,7 +498,7 @@ export class SafeExecutionRunner {
             policy,
             effectMode: input.effectMode,
             workspaceChanged: changed,
-            attemptsRemaining: attemptNumber < policy.maxAttempts,
+            attemptsRemaining: attemptNumber < maxAttemptNumber,
           });
 
           if (!canContinue.allowed) {
@@ -421,7 +540,7 @@ export class SafeExecutionRunner {
             attemptNumber: attemptNumber + 1,
             provider: input.provider,
             workspacePath,
-            originalPrompt: input.originalPrompt,
+            originalPrompt: effectiveOriginalPrompt,
             previousFailureReason: classification.reason,
             snapshot: after,
             ...(continuationOutputSummary === undefined
@@ -539,12 +658,13 @@ export class SafeExecutionRunner {
     readonly snapshot: WorkspaceSnapshot;
     readonly previousOutputSummary?: string;
     readonly controlTarget?: WorkerControlTarget;
+    readonly controlBatch?: WorkerControlContinuationBatch;
   }): Promise<ContinuationPacket> {
-    const controlBatch =
-      this.options.controlInbox &&
-      shouldDeliverSafeExecutionControlForContinuation(
-        input.previousFailureReason,
-      )
+    const controlBatch = input.controlBatch ??
+      (this.options.controlInbox &&
+          shouldDeliverSafeExecutionControlForContinuation(
+            input.previousFailureReason,
+          )
         ? await this.options.controlInbox.consumeForContinuation({
             target: input.controlTarget ?? {
               jobId: input.taskId,
@@ -553,7 +673,7 @@ export class SafeExecutionRunner {
             deliveryAttemptId: `${input.taskId}:attempt-${input.attemptNumber}`,
             now: this.clock.now(),
           })
-        : undefined;
+        : undefined);
     return this.continuationPacketBuilder.build({
       taskId: input.taskId,
       attemptNumber: input.attemptNumber,

@@ -140,14 +140,11 @@ export class LocalFileAttemptJournal implements AttemptJournal {
     readonly effectMode: TaskEffectMode;
     readonly provider: string;
     readonly now: Date;
+    readonly resumeCompleted?: boolean;
   }): Promise<SafeExecutionTaskRecord> {
     const existing = await this.readTask({ taskId: input.taskId });
     const record: SafeExecutionTaskRecord = existing
-      ? {
-          ...existing,
-          status: existing.status === "completed" ? existing.status : "running",
-          updatedAt: input.now,
-        }
+      ? resumedTaskRecord(existing, input.now, input.resumeCompleted === true)
       : {
           taskId: input.taskId,
           workspaceRunId: input.workspaceRunId,
@@ -252,6 +249,33 @@ export class LocalFileAttemptJournal implements AttemptJournal {
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
     await atomicWriteJson(path, serializeTaskRecord(record));
   }
+}
+
+function resumedTaskRecord(
+  existing: SafeExecutionTaskRecord,
+  now: Date,
+  resumeCompleted: boolean,
+): SafeExecutionTaskRecord {
+  if (existing.status !== "completed" || !resumeCompleted) {
+    return {
+      ...existing,
+      status: existing.status === "completed" ? "completed" : "running",
+      updatedAt: now,
+    };
+  }
+  const {
+    completedAt: _completedAt,
+    result: _result,
+    lastFailureReason: _lastFailureReason,
+    lastFailureMessage: _lastFailureMessage,
+    lastFailureDetails: _lastFailureDetails,
+    ...resumable
+  } = existing;
+  return {
+    ...resumable,
+    status: "running",
+    updatedAt: now,
+  };
 }
 
 async function canonicalWorkspacePath(path: string): Promise<string> {

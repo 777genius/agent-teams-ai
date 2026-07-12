@@ -234,7 +234,7 @@ describe("project integration safety kernel e2e", () => {
     });
   });
 
-  it("archives rejected worker output and records valid terminal admission evidence", async () => {
+  it("archives rejected output and safely adopts its controller-owned patch", async () => {
     const root = await mkdtemp(join(tmpdir(), "project-integration-rejection-e2e-"));
     const targetPath = join(root, "target");
     const workerPath = join(root, "worker");
@@ -359,6 +359,97 @@ describe("project integration safety kernel e2e", () => {
       });
       await expect(readFile(rawRecord.backup.patchPath, "utf8"))
         .resolves.toContain("export const value = 2");
+
+      const siblingPatchPath = join(
+        controllerRoot,
+        "not-archives",
+        "tracked.diff",
+      );
+      const otherControllerArchivePath = join(
+        root,
+        "worker-jobs",
+        "controller-other",
+        "archives",
+        "synthetic-rejected-worker-1",
+      );
+      const otherControllerPatchPath = join(
+        otherControllerArchivePath,
+        "tracked.diff",
+      );
+      const otherWorkerArchivePath = join(
+        controllerRoot,
+        "archives",
+        "synthetic-other-worker-rejected-old-attempt",
+      );
+      const otherWorkerPatchPath = join(
+        otherWorkerArchivePath,
+        "tracked.diff",
+      );
+      await mkdir(join(controllerRoot, "not-archives"), { recursive: true });
+      await mkdir(otherControllerArchivePath, { recursive: true });
+      await mkdir(otherWorkerArchivePath, { recursive: true });
+      const archivedPatch = await readFile(rawRecord.backup.patchPath, "utf8");
+      await writeFile(siblingPatchPath, archivedPatch);
+      await writeFile(otherControllerPatchPath, archivedPatch);
+      await writeFile(otherWorkerPatchPath, archivedPatch);
+
+      const adoptionBaseArgs = {
+        ...args,
+        reviewReason: "adopt reviewed controller-owned archived output",
+      } as const;
+
+      const siblingAttemptArgs = {
+        ...adoptionBaseArgs,
+        attemptId: "synthetic-adoption-sibling-attempt",
+        workerPatchPath: siblingPatchPath,
+      } as const;
+      await handlers.openAttempt({ ...siblingAttemptArgs, confirmOpen: true });
+      await expect(handlers.applyWorkerOutput({
+        ...siblingAttemptArgs,
+        confirmApply: true,
+      })).rejects.toThrow("local_project_integration_path_outside_root");
+
+      const otherControllerAttemptArgs = {
+        ...adoptionBaseArgs,
+        attemptId: "synthetic-adoption-other-controller-attempt",
+        workerPatchPath: otherControllerPatchPath,
+      } as const;
+      await handlers.openAttempt({
+        ...otherControllerAttemptArgs,
+        confirmOpen: true,
+      });
+      await expect(handlers.applyWorkerOutput({
+        ...otherControllerAttemptArgs,
+        confirmApply: true,
+      })).rejects.toThrow("local_project_integration_path_outside_root");
+
+      const otherWorkerAttemptArgs = {
+        ...adoptionBaseArgs,
+        attemptId: "synthetic-adoption-other-worker-attempt",
+        workerPatchPath: otherWorkerPatchPath,
+      } as const;
+      await handlers.openAttempt({
+        ...otherWorkerAttemptArgs,
+        confirmOpen: true,
+      });
+      await expect(handlers.applyWorkerOutput({
+        ...otherWorkerAttemptArgs,
+        confirmApply: true,
+      })).rejects.toThrow("local_project_integration_path_outside_root");
+
+      const adoptionArgs = {
+        ...adoptionBaseArgs,
+        attemptId: "synthetic-adoption-attempt-1",
+        workerPatchPath: rawRecord.backup.patchPath as string,
+      } as const;
+      await handlers.openAttempt({ ...adoptionArgs, confirmOpen: true });
+      const adopted = await handlers.applyWorkerOutput({
+        ...adoptionArgs,
+        confirmApply: true,
+      });
+      expect(adopted.structuredContent).toMatchObject({ ok: true });
+      expect(await readFile(join(targetPath, "feature.ts"), "utf8"))
+        .toBe("export const value = 2;\n");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

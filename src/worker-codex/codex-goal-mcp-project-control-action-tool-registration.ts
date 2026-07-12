@@ -22,7 +22,7 @@ export function registerCodexGoalProjectControlActionTools(server: McpServer): v
     {
       title: "Project Control Start Codex Goal Worker",
       description:
-        "Start a stored Codex goal worker through a ProjectScopedControl controller manifest and broker policy.",
+        "Start or safely continue a stored Codex goal worker through a ProjectScopedControl controller manifest and broker policy. Pending deliverable guidance is injected before the next provider attempt.",
       inputSchema: {
         ...jobIdInputSchema(),
         controllerJobId: z.string().optional(),

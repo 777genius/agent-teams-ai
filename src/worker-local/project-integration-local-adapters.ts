@@ -41,6 +41,7 @@ export type LocalGitIntegrationAdapterOptions = {
   readonly maxBuffer?: number;
   readonly allowedPatchRoots?: readonly string[];
   readonly workerJobRootParent?: string;
+  readonly controllerArchiveRoot?: string;
 };
 
 export class LocalGitIntegrationAdapter implements GitPort {
@@ -112,10 +113,16 @@ export class LocalGitIntegrationAdapter implements GitPort {
       const patchPath = await canonicalPatchPath({
         workspacePath: input.workerOutput.workspacePath,
         path: input.workerOutput.patchPath,
+        ...(input.workerOutput.workerJobId === undefined
+          ? {}
+          : { workerJobId: input.workerOutput.workerJobId }),
         allowedPatchRoots: [
           ...(this.options.allowedPatchRoots ?? []),
           ...workerJobRoot,
         ],
+        ...(this.options.controllerArchiveRoot === undefined
+          ? {}
+          : { controllerArchiveRoot: this.options.controllerArchiveRoot }),
       });
       const changedFiles = await this.patchChangedFiles(patchPath, workspacePath);
       assertFilesWithinExpected(changedFiles, input.attempt.expectedFiles);
@@ -617,7 +624,9 @@ async function canonicalDirectory(path: string): Promise<string> {
 async function canonicalPatchPath(input: {
   readonly workspacePath: string;
   readonly path: string;
+  readonly workerJobId?: string;
   readonly allowedPatchRoots: readonly string[];
+  readonly controllerArchiveRoot?: string;
 }): Promise<string> {
   const workspaceRoot = await canonicalDirectory(input.workspacePath);
   const candidate =
@@ -633,7 +642,54 @@ async function canonicalPatchPath(input: {
     if (isPathInside(canonical, root)) return canonical;
   }
 
+  if (input.controllerArchiveRoot !== undefined) {
+    const archiveRoot = await canonicalDirectoryIfExists(
+      input.controllerArchiveRoot,
+    );
+    if (
+      archiveRoot !== undefined &&
+      isControllerRejectedPatch({
+        path: canonical,
+        archiveRoot,
+        ...(input.workerJobId === undefined
+          ? {}
+          : { workerJobId: input.workerJobId }),
+      })
+    ) {
+      return canonical;
+    }
+  }
+
   throw new Error("local_project_integration_path_outside_root");
+}
+
+function isControllerRejectedPatch(input: {
+  readonly path: string;
+  readonly archiveRoot: string;
+  readonly workerJobId?: string;
+}): boolean {
+  if (
+    input.workerJobId === undefined ||
+    basename(input.workerJobId) !== input.workerJobId ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(input.workerJobId)
+  ) {
+    return false;
+  }
+  const relativePath = relative(input.archiveRoot, input.path);
+  if (
+    relativePath.startsWith("..") ||
+    isAbsolute(relativePath) ||
+    basename(relativePath) !== "tracked.diff"
+  ) {
+    return false;
+  }
+  const archiveDirectory = dirname(relativePath);
+  const expectedPrefix = `${input.workerJobId}-rejected-`;
+  return (
+    dirname(archiveDirectory) === "." &&
+    archiveDirectory.startsWith(expectedPrefix) &&
+    archiveDirectory.length > expectedPrefix.length
+  );
 }
 
 async function canonicalDirectoryIfExists(
