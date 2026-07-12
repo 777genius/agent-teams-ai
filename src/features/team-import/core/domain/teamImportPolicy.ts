@@ -133,10 +133,12 @@ function buildMemberWorkflow(skills: string[], body: string): string {
   return `${MEMBER_PREFIX}\n${skillLine}\n\n${body.trim()}`.trim();
 }
 
-function findTaskCalls(
-  content: string
-): Array<{ start: number; end: number; text: string; args: string }> {
+function findTaskCalls(content: string): {
+  calls: Array<{ start: number; end: number; text: string; args: string }>;
+  malformedCalls: string[];
+} {
   const calls: Array<{ start: number; end: number; text: string; args: string }> = [];
+  const malformedCalls: string[] = [];
   const startPattern = /\bTask\s*\(/g;
   let match: RegExpExecArray | null;
   while ((match = startPattern.exec(content))) {
@@ -169,7 +171,10 @@ function findTaskCalls(
         if (depth === 0) break;
       }
     }
-    if (depth !== 0) continue;
+    if (depth !== 0) {
+      malformedCalls.push(content.slice(match.index, match.index + 120));
+      continue;
+    }
     calls.push({
       start: match.index,
       end: index + 1,
@@ -178,7 +183,7 @@ function findTaskCalls(
     });
     startPattern.lastIndex = index + 1;
   }
-  return calls;
+  return { calls, malformedCalls };
 }
 
 function decodeQuotedArgument(value: string): string {
@@ -220,8 +225,15 @@ export function rewriteClaudeMdForTeamImport(
   const warnings: TeamImportWarning[] = [];
   const blockingErrors: string[] = [];
   const canonicalMembers = new Map(memberNames.map((name) => [name.toLowerCase(), name]));
-  const calls = findTaskCalls(claudeMd);
+  const { calls, malformedCalls } = findTaskCalls(claudeMd);
   let result = claudeMd;
+
+  for (const malformedCall of malformedCalls) {
+    warnings.push({ code: 'unsafeTaskCall', call: malformedCall });
+  }
+  if (malformedCalls.length > 0) {
+    blockingErrors.push('One or more Task calls could not be converted safely.');
+  }
 
   for (const call of calls.reverse()) {
     const args = parseTaskArguments(call.args);

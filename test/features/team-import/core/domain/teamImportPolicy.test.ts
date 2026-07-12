@@ -124,4 +124,23 @@ describe('teamImportPolicy', () => {
       'One or more Task calls could not be converted safely.'
     );
   });
+
+  it('blocks confirmation for an unterminated Task call', () => {
+    const preview = buildTeamImportPreview({
+      projectPath: '/project',
+      folderName: 'Demo',
+      agentFiles: [{ fileName: 'writer.md', content: '---\nname: writer\n---\nWrite.' }],
+      claudeMd: 'Task(description="Draft", prompt="Write it"',
+      skills: [],
+      warnings: [],
+    });
+
+    expect(preview.warnings).toContainEqual({
+      code: 'unsafeTaskCall',
+      call: 'Task(description="Draft", prompt="Write it"',
+    });
+    expect(preview.blockingErrors).toContain(
+      'One or more Task calls could not be converted safely.'
+    );
+  });
 });
