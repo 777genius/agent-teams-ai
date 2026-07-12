@@ -98,7 +98,7 @@ function getStatusCode(error: unknown, fallback: number = 500): number {
   if (error instanceof Error && error.name === 'RuntimeStaleEvidenceError') {
     return 409;
   }
-  if (error instanceof Error && error.message.startsWith('Team not found')) {
+  if (isTeamNotFoundError(error)) {
     return 404;
   }
   if (error instanceof Error && error.message.startsWith('Team already exists')) {
@@ -119,6 +119,13 @@ function isOpenCodeRuntimeValidationError(error: unknown): boolean {
 
 function isRuntimeControlProviderRoutingError(error: unknown): boolean {
   return error instanceof Error && error.name === 'RuntimeControlProviderRoutingError';
+}
+
+function isTeamNotFoundError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.startsWith('Team not found') || /^Team "[^"]+" not found\b/.test(error.message))
+  );
 }
 
 function withStableRuntimeObservedAt(teamName: string, body: unknown): Record<string, unknown> {
