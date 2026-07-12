@@ -228,6 +228,19 @@ describe('bindTeamIpcHandlerApis', () => {
     ).rejects.toThrow('TeamProvisioningPrepareOptions.modelIds must not contain missing indices');
     expect(source.prepareForProvisioning).not.toHaveBeenCalled();
   });
+
+  it('rejects an explicitly undefined model-check index through the IPC preflight facade', async () => {
+    const source = createSource();
+    const modelChecks = [undefined] as unknown as NonNullable<
+      Parameters<TeamIpcHandlerApis['preflight']['prepareForProvisioning']>[1]
+    >['modelChecks'];
+    const api: TeamIpcHandlerApis = bindTeamIpcHandlerApis(source);
+
+    await expect(api.preflight.prepareForProvisioning(undefined, { modelChecks })).rejects.toThrow(
+      'TeamProvisioningPrepareOptions.modelChecks must not contain missing indices'
+    );
+    expect(source.prepareForProvisioning).not.toHaveBeenCalled();
+  });
 });
 
 describe('bindTeamCrossTeamMessagingApi', () => {

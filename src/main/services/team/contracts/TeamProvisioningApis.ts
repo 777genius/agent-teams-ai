@@ -82,7 +82,7 @@ function assertDensePrepareModelArray(
   }
 
   for (let index = 0; index < values.length; index += 1) {
-    if (!Object.hasOwn(values, index)) {
+    if (!Object.hasOwn(values, index) || values[index] === undefined) {
       throw new TypeError(
         `TeamProvisioningPrepareOptions.${field} must not contain missing indices`
       );

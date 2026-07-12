@@ -194,6 +194,31 @@ describe('TeamProvisioning API binders', () => {
     }
   );
 
+  it.each(['modelIds', 'modelChecks'] as const)(
+    'rejects an undefined preflight %s index before dispatching to the source',
+    async (field) => {
+      let prepareCalls = 0;
+      const source: TeamProvisioningPreflightApi = {
+        getCliHelpOutput: () => Promise.resolve('Usage'),
+        prepareForProvisioning: () => {
+          prepareCalls += 1;
+          return Promise.resolve({ ready: true, message: 'ready' });
+        },
+      };
+      const opts: TeamProvisioningPrepareOptions =
+        field === 'modelIds'
+          ? { modelIds: [undefined] as unknown as string[] }
+          : {
+              modelChecks: [undefined] as unknown as TeamProvisioningModelCheckRequest[],
+            };
+
+      await expect(
+        bindTeamProvisioningPreflightApi(source).prepareForProvisioning(undefined, opts)
+      ).rejects.toThrow(`TeamProvisioningPrepareOptions.${field} must not contain missing indices`);
+      expect(prepareCalls).toBe(0);
+    }
+  );
+
   it('binds provisioning run and log diagnostic methods to the source object', async () => {
     interface RunSource extends TeamProvisioningRunApi {
       activeTeamName: string | null;
