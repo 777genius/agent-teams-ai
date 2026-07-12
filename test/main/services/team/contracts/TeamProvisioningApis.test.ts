@@ -98,9 +98,11 @@ function createSource() {
         failed: 0,
       })
     ),
-    relayInboxFileToLiveRecipient: vi.fn(() =>
+    relayInboxFileToLiveRecipient: vi.fn<
+      TeamCrossTeamMessagingApi['relayInboxFileToLiveRecipient']
+    >(() =>
       Promise.resolve({
-        kind: 'native_lead' as const,
+        kind: 'native_lead',
         relayed: 0,
       })
     ),
@@ -261,6 +263,12 @@ describe('bindTeamCrossTeamMessagingApi', () => {
     const relayInboxFileToLiveRecipient = api.relayInboxFileToLiveRecipient;
     const relayLeadInboxMessages = api.relayLeadInboxMessages;
 
+    source.relayInboxFileToLiveRecipient.mockResolvedValueOnce({
+      kind: 'opencode_member',
+      relayed: 1,
+      lastDelivery: { delivered: true },
+    });
+
     expect(sortedKeys(api)).toEqual([
       'clearPendingCrossTeamReplyExpectation',
       'isTeamAlive',
@@ -288,6 +296,16 @@ describe('bindTeamCrossTeamMessagingApi', () => {
       'to-team',
       'conversation-1'
     );
+    await expect(
+      relayInboxFileToLiveRecipient('to-team', 'worker', { onlyMessageId: 'message-1' })
+    ).resolves.toEqual({
+      kind: 'opencode_member',
+      relayed: 1,
+      lastDelivery: { delivered: true },
+    });
+    expect(source.relayInboxFileToLiveRecipient).toHaveBeenCalledWith('to-team', 'worker', {
+      onlyMessageId: 'message-1',
+    });
     await expect(relayInboxFileToLiveRecipient('to-team', 'team-lead')).resolves.toEqual({
       kind: 'native_lead',
       relayed: 0,
