@@ -517,9 +517,9 @@ function ensureTaskCreationBacklinks(paths, taskId, blockedByIds, relatedIds) {
   }
   for (const relatedId of relatedIds) {
     const related = readTask(paths, relatedId, { includeDeleted: true });
-    const relatedIds = Array.isArray(related.related) ? related.related : [];
-    if (!relatedIds.includes(taskId)) {
-      related.related = [...relatedIds, taskId];
+    const existingRelatedIds = Array.isArray(related.related) ? related.related : [];
+    if (!existingRelatedIds.includes(taskId)) {
+      related.related = [...existingRelatedIds, taskId];
       related.updatedAt = nowIso();
       writeTask(paths, related);
     }

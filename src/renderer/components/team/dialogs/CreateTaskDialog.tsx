@@ -24,6 +24,7 @@ import { useStore } from '@renderer/store';
 import { selectTeamDataForName } from '@renderer/store/slices/teamSlice';
 import { chipToken, serializeChipsWithText } from '@renderer/types/inlineChip';
 import {
+  canCloseCreateTaskDialog,
   type CreateTaskSubmitGate,
   type PendingCreateTaskCommand,
   resetCreateTaskSubmit,
@@ -213,7 +214,7 @@ export const CreateTaskDialog = ({
   };
 
   const handleOpenChange = (nextOpen: boolean): void => {
-    if (!nextOpen) {
+    if (!nextOpen && canCloseCreateTaskDialog(submitting)) {
       onClose();
     }
   };

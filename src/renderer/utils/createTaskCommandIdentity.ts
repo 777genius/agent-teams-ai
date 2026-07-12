@@ -21,6 +21,10 @@ export function resetCreateTaskSubmit(gate: CreateTaskSubmitGate): void {
   gate.inFlight = false;
 }
 
+export function canCloseCreateTaskDialog(submitting: boolean): boolean {
+  return !submitting;
+}
+
 export function resolveCreateTaskCommand(
   current: PendingCreateTaskCommand | null,
   teamName: string,

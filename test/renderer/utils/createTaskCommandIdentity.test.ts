@@ -1,4 +1,5 @@
 import {
+  canCloseCreateTaskDialog,
   resetCreateTaskSubmit,
   resolveCreateTaskCommand,
   tryBeginCreateTaskSubmit,
@@ -59,5 +60,10 @@ describe('resolveCreateTaskCommand', () => {
 
     resetCreateTaskSubmit(gate);
     expect(tryBeginCreateTaskSubmit(gate)).toBe(true);
+  });
+
+  it('keeps the dialog open while a create request is in flight', () => {
+    expect(canCloseCreateTaskDialog(true)).toBe(false);
+    expect(canCloseCreateTaskDialog(false)).toBe(true);
   });
 });
