@@ -6,7 +6,10 @@ import type {
   DependencyPreflightResult,
 } from "./dependency-bootstrap";
 import type { ProjectControlMcpArgs } from "./codex-goal-mcp-inputs";
-export { projectControlRealPathOutsideWorkspaceScope } from "./application/project-control/codex-goal-project-workspace-scope";
+export {
+  projectControlRealPathIfExists,
+  projectControlRealPathOutsideWorkspaceScope,
+} from "./application/project-control/codex-goal-project-workspace-scope";
 import {
   matchesProjectControlPrefix,
   pathInsideAnyProjectRoot,

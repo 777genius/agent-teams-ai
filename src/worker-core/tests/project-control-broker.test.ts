@@ -232,6 +232,29 @@ describe("ProjectControlBroker", () => {
     expect(calls).toEqual([]);
   });
 
+  it("fails closed when an existing worktree target resolves outside project roots", async () => {
+    const calls: string[] = [];
+    const broker = new ProjectControlBroker({
+      boundary: AccessBoundary.ProjectScopedControl,
+      scope: scope(),
+    }, ports(calls, [], allowAdmission()));
+
+    await expect(broker.createWorktree({
+      sourceWorkspacePath: "/work/infinity-context-main",
+      path: "/work/infinity-context-child",
+      realPath: "/other-project/infinity-context-child",
+      baseBranch: "main",
+      workerRole: ProjectAdmissionWorkerRole.Reviewer,
+    })).rejects.toMatchObject({
+      decision: {
+        allowed: false,
+        reason: AccessDecisionReason.PathOutsideScope,
+      },
+    });
+
+    expect(calls).toEqual([]);
+  });
+
   it("creates worktrees from allowed source refs onto worker branches", async () => {
     const calls: string[] = [];
     const broker = new ProjectControlBroker({

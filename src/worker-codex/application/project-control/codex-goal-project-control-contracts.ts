@@ -6,7 +6,11 @@ import type {
 export type CodexGoalProjectCreateWorktreeInput = {
   readonly sourceWorkspacePath: string;
   readonly realSourceWorkspacePath?: string;
+  readonly expectedSourceRealPath: string;
   readonly path: string;
+  readonly realPath?: string;
+  readonly expectedRealPath?: string;
+  readonly expectedRevision: string;
   readonly baseBranch?: string;
   readonly sourceRef?: string;
   readonly newBranch?: string;

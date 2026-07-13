@@ -178,6 +178,7 @@ export type ProjectJobAccessRequest = {
 
 export type ProjectWorktreeAccessRequest = {
   readonly path: string;
+  readonly realPath?: string;
   readonly sourceWorkspacePath?: string;
   readonly realSourceWorkspacePath?: string;
   readonly baseBranch?: string;
@@ -497,7 +498,10 @@ class DefaultAccessPolicyService implements AccessPolicyService {
     }
     return this.pathDecision(
       ProjectOperation.CreateWorktree,
-      { path: request.path },
+      {
+        path: request.path,
+        ...(request.realPath ? { realPath: request.realPath } : {}),
+      },
       this.scope()?.worktreeRoots ?? [],
     );
   }

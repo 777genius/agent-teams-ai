@@ -29,6 +29,7 @@ import {
 } from "./codex-goal-mcp-project-broker";
 import {
   assertReadablePrompt,
+  createOrReuseProjectWorktree,
 } from "./application/project-control/codex-goal-project-refill";
 import {
   assertProjectPreStartAdmissionLaunchBinding,
@@ -41,6 +42,7 @@ import {
   assertProjectControlDependencyBootstrapReady,
   projectControlDependencyBootstrapMode,
   projectControlPathArg,
+  projectControlRealPathIfExists,
   projectControlRealPathOutsideWorkspaceScope,
 } from "./codex-goal-mcp-project-scope";
 import {
@@ -255,10 +257,17 @@ export async function projectControlCreateWorktreeView(
     sourceWorkspacePath,
     controller.scope,
   );
-  const createWorktreeInput: CodexGoalProjectCreateWorktreeInput = {
+  const realPath = await projectControlRealPathOutsideWorkspaceScope(
+    path,
+    controller.scope,
+  );
+  const expectedRealPath = await projectControlRealPathIfExists(path);
+  const worktreeAccessInput = {
     sourceWorkspacePath,
     ...(realSourceWorkspacePath ? { realSourceWorkspacePath } : {}),
     path,
+    ...(realPath ? { realPath } : {}),
+    ...(expectedRealPath ? { expectedRealPath } : {}),
     ...(baseBranch ? { baseBranch } : {}),
     ...(sourceRef ? { sourceRef } : {}),
     ...(newBranch ? { newBranch } : {}),
@@ -284,13 +293,32 @@ export async function projectControlCreateWorktreeView(
     };
   }
 
+  const resolverBroker = deps.codexProjectControlBroker({
+    registryRootDir: controller.registryRootDir,
+    controller: controller.controller,
+    scope: controller.scope,
+  });
+  const resolvedSource = await resolverBroker.resolveWorktreeRevision(
+    worktreeAccessInput,
+  );
+  assertSafeGitCommitSha(resolvedSource.revision);
+  const createWorktreeInput: CodexGoalProjectCreateWorktreeInput = {
+    ...worktreeAccessInput,
+    expectedRevision: resolvedSource.revision,
+    expectedSourceRealPath: resolvedSource.sourceRealPath,
+  };
   const broker = deps.codexProjectControlBroker({
     registryRootDir: controller.registryRootDir,
     controller: controller.controller,
     scope: controller.scope,
     createWorktreeInput,
   });
-  const result = await broker.createWorktree(createWorktreeInput);
+  const worktree = await createOrReuseProjectWorktree({
+    broker,
+    scope: controller.scope,
+    createWorktreeInput,
+  });
+  const result = worktree.result;
   const dependencyPreflight = await runDependencyBootstrap({
     workspacePath: path,
     cacheNamespace: controller.scope.projectId,

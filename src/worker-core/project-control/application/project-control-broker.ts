@@ -49,6 +49,11 @@ export type ProjectControlAdmissionMetadata = {
 export type ProjectControlCreateWorktreeInput =
   ProjectWorktreeAccessRequest & ProjectControlAdmissionMetadata;
 
+export type ProjectResolvedWorktreeSource = {
+  readonly revision: string;
+  readonly sourceRealPath: string;
+};
+
 export type ProjectControlStartWorkerInput =
   ProjectJobAccessRequest & ProjectControlAdmissionMetadata & {
     readonly accounts?: readonly string[];
@@ -91,6 +96,9 @@ export interface ProjectWorkerSupervisorPort {
 }
 
 export interface ProjectWorkspacePort {
+  resolveRevision?(
+    input: ProjectControlCreateWorktreeInput,
+  ): Promise<ProjectResolvedWorktreeSource>;
   createWorktree(
     input: ProjectControlCreateWorktreeInput,
   ): Promise<ProjectControlOperationResult>;
@@ -184,6 +192,16 @@ export class ProjectControlBroker {
       ...(input.tags ? { tags: input.tags } : {}),
     });
     return this.ports.workspace.createWorktree(input);
+  }
+
+  async resolveWorktreeRevision(
+    input: ProjectControlCreateWorktreeInput,
+  ): Promise<ProjectResolvedWorktreeSource> {
+    await this.authorize(this.policy.canCreateWorktree(input));
+    if (!this.ports.workspace.resolveRevision) {
+      throw new Error("project_control_worktree_revision_resolver_unavailable");
+    }
+    return this.ports.workspace.resolveRevision(input);
   }
 
   async writeReviewMarker(

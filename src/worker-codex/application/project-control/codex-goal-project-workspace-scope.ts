@@ -5,6 +5,12 @@ import {
   uniqueProjectControlStrings,
 } from "./codex-goal-project-utils";
 
+export async function projectControlRealPathIfExists(
+  path: string,
+): Promise<string | undefined> {
+  return optionalRealPathForAdmission(path);
+}
+
 export async function projectControlRealPathOutsideWorkspaceScope(
   path: string,
   scope: ProjectAccessScope,

@@ -1,4 +1,4 @@
-import { readdir, readFile, rm, rmdir, stat } from "node:fs/promises";
+import { readdir, readFile, rm, rmdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type {
   ProjectAccessScope,
@@ -17,17 +17,10 @@ import {
 } from "./codex-goal-project-control-contracts";
 import { execGit, execGitStdout } from "./codex-goal-project-git";
 import { nodeErrorCode } from "./codex-goal-project-utils";
-import { projectControlRealPathOutsideWorkspaceScope } from "./codex-goal-project-workspace-scope";
-
-async function pathExists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch (error) {
-    if (nodeErrorCode(error) === "ENOENT") return false;
-    throw error;
-  }
-}
+import {
+  projectControlRealPathIfExists,
+  projectControlRealPathOutsideWorkspaceScope,
+} from "./codex-goal-project-workspace-scope";
 
 export async function readTextFileIfExists(path: string): Promise<string | null> {
   try {
@@ -57,52 +50,91 @@ export async function assertReadablePrompt(input: {
 
 export async function createOrReuseProjectWorktree(input: {
   readonly broker: ProjectControlBroker;
+  readonly scope: ProjectAccessScope;
   readonly createWorktreeInput: CodexGoalProjectCreateWorktreeInput;
 }): Promise<{
   readonly result: ProjectControlOperationResult;
   readonly created: boolean;
 }> {
-  if (await pathExists(input.createWorktreeInput.path)) {
-    await assertReusableProjectWorktree(input.createWorktreeInput.path);
-    return {
-      result: noopOperationResult(
-        input.createWorktreeInput.path,
-        "existing clean git worktree reused for idempotent refill",
-      ),
-      created: false,
-    };
-  }
+  const result = await input.broker.createWorktree(input.createWorktreeInput);
+  const created = result.status === "applied";
   try {
-    return {
-      result: await input.broker.createWorktree(input.createWorktreeInput),
-      created: true,
-    };
+    await assertReusableProjectWorktree({
+      createWorktreeInput: input.createWorktreeInput,
+      scope: input.scope,
+    });
   } catch (error) {
-    if (await pathExists(input.createWorktreeInput.path)) {
-      await assertReusableProjectWorktree(input.createWorktreeInput.path);
-      return {
-        result: noopOperationResult(
-          input.createWorktreeInput.path,
-          "existing clean git worktree reused after create race",
-        ),
-        created: false,
-      };
+    const rollback = created
+      ? await removeFailedProjectWorktreeMaterialization(input.createWorktreeInput)
+      : null;
+    if (error instanceof Error && rollback) {
+      error.message = `${error.message}; rollback=${rollback}`;
     }
     throw error;
   }
+  return { result, created };
 }
 
-async function assertReusableProjectWorktree(path: string): Promise<void> {
+async function assertReusableProjectWorktree(
+  input: {
+    readonly createWorktreeInput: CodexGoalProjectCreateWorktreeInput;
+    readonly scope: ProjectAccessScope;
+  },
+): Promise<void> {
   try {
-    await execGitStdout(["-C", path, "rev-parse", "--show-toplevel"]);
-    const status = await execGitStdout(["-C", path, "status", "--porcelain"]);
+    const worktreeInput = input.createWorktreeInput;
+    const materializedRealPath = await projectControlRealPathIfExists(
+      worktreeInput.path,
+    );
+    if (!materializedRealPath) {
+      throw new Error("project_control_existing_worktree_invalid");
+    }
+    const outsideScope = await projectControlRealPathOutsideWorkspaceScope(
+      materializedRealPath,
+      input.scope,
+    );
+    if (outsideScope) {
+      throw new Error("project_control_existing_worktree_real_path_outside_scope");
+    }
+    if (
+      worktreeInput.expectedRealPath &&
+      materializedRealPath !== worktreeInput.expectedRealPath
+    ) {
+      throw new Error("project_control_existing_worktree_real_path_changed");
+    }
+    await execGitStdout(["-C", materializedRealPath, "rev-parse", "--show-toplevel"]);
+    const status = await execGitStdout([
+      "-C",
+      materializedRealPath,
+      "status",
+      "--porcelain",
+    ]);
     if (status.trim().length > 0) {
       throw new Error("project_control_existing_worktree_dirty");
+    }
+    if (worktreeInput.newBranch) {
+      const branch = (await execGitStdout([
+        "-C",
+        materializedRealPath,
+        "symbolic-ref",
+        "--short",
+        "HEAD",
+      ])).trim();
+      if (branch !== worktreeInput.newBranch) {
+        throw new Error("project_control_existing_worktree_branch_mismatch");
+      }
+    }
+    const actual = await resolveProjectWorktreeRevision(
+      materializedRealPath,
+      "HEAD",
+    );
+    if (actual !== worktreeInput.expectedRevision) {
+      throw new Error("project_control_existing_worktree_revision_mismatch");
     }
   } catch (error) {
     if (
       error instanceof Error &&
-      error.message === "project_control_existing_worktree_dirty"
+      error.message.startsWith("project_control_existing_worktree_")
     ) {
       throw error;
     }
@@ -110,8 +142,38 @@ async function assertReusableProjectWorktree(path: string): Promise<void> {
   }
 }
 
+async function resolveProjectWorktreeRevision(
+  workspacePath: string,
+  ref: string,
+): Promise<string> {
+  return (await execGitStdout([
+    "-C",
+    workspacePath,
+    "rev-parse",
+    "--verify",
+    `${ref}^{commit}`,
+  ])).trim();
+}
+
+async function removeFailedProjectWorktreeMaterialization(
+  input: CodexGoalProjectCreateWorktreeInput,
+): Promise<string | null> {
+  try {
+    await execGit([
+      "-C",
+      input.expectedSourceRealPath,
+      "worktree",
+      "remove",
+      input.path,
+    ]);
+    return "worktree";
+  } catch {
+    return "worktree-remove-failed";
+  }
+}
+
 export async function rollbackProjectRefillPartial(input: {
-  readonly sourceWorkspacePath: string;
+  readonly expectedSourceRealPath: string;
   readonly workspacePath: string;
   readonly promptPath: string;
   readonly registryRootDir: string;
@@ -130,7 +192,7 @@ export async function rollbackProjectRefillPartial(input: {
     try {
       await execGit([
         "-C",
-        input.sourceWorkspacePath,
+        input.expectedSourceRealPath,
         "worktree",
         "remove",
         "--force",

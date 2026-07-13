@@ -1,4 +1,4 @@
-import { appendFile, mkdir } from "node:fs/promises";
+import { appendFile, mkdir, realpath, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
   AccessBoundary,
@@ -47,7 +47,12 @@ import {
   noopOperationResult,
   type CodexGoalProjectCreateWorktreeInput,
 } from "./application/project-control/codex-goal-project-control-contracts";
-import { assertGitCurrentBranch, execGit } from "./codex-goal-mcp-project-git";
+import { projectControlRealPathOutsideWorkspaceScope } from "./application/project-control/codex-goal-project-workspace-scope";
+import {
+  assertGitCurrentBranch,
+  execGit,
+  execGitStdout,
+} from "./codex-goal-mcp-project-git";
 
 export type {
   CodexGoalProjectCreateWorktreeInput,
@@ -67,6 +72,25 @@ export type CodexGoalProjectPushBranchInput = {
   readonly remote: string;
   readonly force: boolean;
 };
+
+export async function resolveBoundProjectWorktreeSource(input: {
+  readonly sourceWorkspacePath: string;
+  readonly expectedSourceRealPath: string;
+  readonly scope: ProjectAccessScope;
+}): Promise<string> {
+  const sourceRealPath = await realpath(input.sourceWorkspacePath);
+  if (sourceRealPath !== input.expectedSourceRealPath) {
+    throw new Error("project_control_source_workspace_real_path_changed");
+  }
+  const outsideScope = await projectControlRealPathOutsideWorkspaceScope(
+    sourceRealPath,
+    input.scope,
+  );
+  if (outsideScope) {
+    throw new Error("project_control_source_workspace_real_path_outside_scope");
+  }
+  return sourceRealPath;
+}
 
 export type CodexProjectControlBrokerInput = {
   readonly registryRootDir: string;
@@ -255,26 +279,72 @@ function codexProjectControlPorts(
       },
     },
     workspace: {
+      async resolveRevision(worktreeInput) {
+        const sourceWorkspacePath = await realpath(
+          worktreeInput.sourceWorkspacePath ?? input.controller.workspacePath,
+        );
+        const outsideScope = await projectControlRealPathOutsideWorkspaceScope(
+          sourceWorkspacePath,
+          input.scope,
+        );
+        if (outsideScope) {
+          throw new Error("project_control_source_workspace_real_path_outside_scope");
+        }
+        const sourceRef = worktreeInput.sourceRef ?? worktreeInput.baseBranch ?? "HEAD";
+        const revision = (await execGitStdout([
+          "-C",
+          sourceWorkspacePath,
+          "rev-parse",
+          "--verify",
+          `${sourceRef}^{commit}`,
+        ])).trim();
+        return { revision, sourceRealPath: sourceWorkspacePath };
+      },
       async createWorktree() {
         if (!input.createWorktreeInput) {
           throw new Error("project_control_worktree_input_required");
         }
+        if (await codexProjectControlPathExists(input.createWorktreeInput.path)) {
+          return noopOperationResult(
+            input.createWorktreeInput.path,
+            "existing worktree candidate delegated for exact identity validation",
+          );
+        }
+        const sourceWorkspacePath = await resolveBoundProjectWorktreeSource({
+          sourceWorkspacePath: input.createWorktreeInput.sourceWorkspacePath,
+          expectedSourceRealPath: input.createWorktreeInput.expectedSourceRealPath,
+          scope: input.scope,
+        });
         await mkdir(dirname(input.createWorktreeInput.path), {
           recursive: true,
           mode: 0o700,
         });
         const sourceRef =
           input.createWorktreeInput.sourceRef ?? input.createWorktreeInput.baseBranch;
+        const newBranch = input.createWorktreeInput.newBranch;
+        const existingBranch = newBranch
+          ? (await execGitStdout([
+              "-C",
+              sourceWorkspacePath,
+              "for-each-ref",
+              "--format=%(refname)",
+              `refs/heads/${newBranch}`,
+            ])).trim()
+          : "";
         const args = [
           "-C",
-          input.createWorktreeInput.sourceWorkspacePath,
+          sourceWorkspacePath,
           "worktree",
           "add",
-          ...(input.createWorktreeInput.newBranch
-            ? ["-b", input.createWorktreeInput.newBranch]
+          ...(newBranch && !existingBranch
+            ? ["-b", newBranch]
             : []),
           input.createWorktreeInput.path,
-          ...(sourceRef ? [sourceRef] : []),
+          ...(existingBranch && newBranch
+            ? [newBranch]
+            : newBranch
+              ? [input.createWorktreeInput.expectedRevision]
+              : [sourceRef ?? input.createWorktreeInput.expectedRevision]),
         ];
         await execGit(args);
         return operationResult(input.createWorktreeInput.path);
@@ -320,6 +390,23 @@ function codexProjectControlPorts(
       },
     },
   };
+}
+
+async function codexProjectControlPathExists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "ENOENT"
+    ) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 function assertReviewedOutputWorkerStopped(

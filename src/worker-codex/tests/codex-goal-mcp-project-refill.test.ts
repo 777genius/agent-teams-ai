@@ -69,6 +69,7 @@ describe("codex goal MCP server", () => {
     const sourceWorkspacePath = join(root, "workspaces", "infinity-context-main");
     const childWorkspace = join(root, "worktrees", "infinity-context-memory-fastgate-v1");
     const childJobRoot = join(root, "worker-jobs", "infinity-context-memory-fastgate-v1");
+    const childBranch = "test/infinity-context-memory-fastgate-v1";
     const server = createCodexGoalMcpServer();
     const client = new Client({
       name: "subscription-runtime-test",
@@ -114,6 +115,7 @@ describe("codex goal MCP server", () => {
         "refs/remotes/origin/main",
         "HEAD",
       ]);
+      await git(sourceWorkspacePath, ["branch", childBranch, phaseStartSha]);
 
       await Promise.all([
         server.connect(serverTransport),
@@ -139,6 +141,8 @@ describe("codex goal MCP server", () => {
           authRoot: join(root, "auth"),
           jobIdPrefixes: ["infinity-context-"],
           tmuxSessionPrefixes: ["infinity-context-"],
+          allowedBranches: ["main", "HEAD", "test/infinity-context-*"],
+          allowedGitRemotes: ["origin"],
           allowedAccountIds: ["account-a"],
           deniedRoots: [join(root, "real-user-project")],
           preStartAdmission: {
@@ -181,6 +185,7 @@ describe("codex goal MCP server", () => {
         controllerJobId: "infinity-context-controller-v1",
         jobId: "infinity-context-memory-fastgate-v1",
         sourceWorkspacePath,
+        newBranch: childBranch,
         workspacePath: childWorkspace,
         promptBody: "Run a focused memory fastgate and report cleanly.\n",
         taskId: "infinity-context-memory-fastgate-v1",
@@ -351,6 +356,45 @@ describe("codex goal MCP server", () => {
       await expect(
         access(join(controllerJobRoot, "project-control-operations")),
       ).rejects.toMatchObject({ code: "ENOENT" });
+      const existingBranchMismatch = "test/infinity-context-existing-branch-mismatch-v1";
+      await git(sourceWorkspacePath, ["branch", existingBranchMismatch, "HEAD"]);
+      const branchMismatchWorkspace = join(root, "worktrees", existingBranchMismatch);
+      const branchMismatchJobRoot = join(root, "worker-jobs", existingBranchMismatch);
+      const branchMismatch = await callToolJson(
+        client,
+        "codex_goal_project_refill_worker",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          jobId: "infinity-context-existing-branch-mismatch-v1",
+          jobRootDir: branchMismatchJobRoot,
+          authRootDir: join(root, "auth"),
+          sourceWorkspacePath,
+          newBranch: existingBranchMismatch,
+          workspacePath: branchMismatchWorkspace,
+          promptBody: "mismatched existing branch must not create resources\n",
+          taskId: "infinity-context-existing-branch-mismatch-v1",
+          accounts: ["account-a"],
+          workerRole: "fastgate",
+          preStartAdmission: {
+            ...builtinAdmission,
+            contract: {
+              ...builtinAdmission.contract,
+              executionPolicy: {
+                ...builtinAdmission.contract.executionPolicy,
+                sandboxRoot: join(branchMismatchWorkspace, "sandbox"),
+              },
+            },
+          },
+          confirmPreStartAdmission: true,
+          startWorker: false,
+          confirmRefill: true,
+        },
+      );
+      expect(branchMismatch).toEqual({
+        ok: false,
+        error: "project_control_existing_worktree_revision_mismatch; rollback=worktree",
+      });
       const rejectedWorkspace = join(root, "worktrees", "infinity-context-invalid-v1");
       const rejectedJobRoot = join(root, "worker-jobs", "infinity-context-invalid-v1");
       const rejected = await callToolJson(client, "codex_goal_project_refill_worker", {
@@ -384,9 +428,13 @@ describe("codex goal MCP server", () => {
         "infinity-context-controller-v1",
       );
       expect(policyAuditDecisions(audit).map((decision) => decision.operation)).toEqual([
+        "create_worktree", "create_worktree",
+        "create_job", "use_account",
         "create_worktree",
-        "create_job",
-        "use_account",
+        "create_worktree",
+        "create_worktree",
+        "create_worktree",
+        "create_worktree",
       ]);
       expect(audit.some((event) =>
         event.type === "project_control.admission_decision_recorded"

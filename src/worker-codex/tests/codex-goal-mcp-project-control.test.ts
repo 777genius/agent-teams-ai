@@ -729,12 +729,14 @@ describe("codex goal MCP project-control server", () => {
       );
       expect(policyAuditDecisions(audit).map((decision) => decision.operation)).toEqual([
         "create_worktree",
+        "create_worktree",
         "integrate_commit",
         "push_branch",
         "push_branch",
         "push_branch",
       ]);
       expect(policyAuditDecisions(audit).map((decision) => decision.reason)).toEqual([
+        "allowed",
         "allowed",
         "allowed",
         "allowed",

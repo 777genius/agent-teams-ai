@@ -49,13 +49,13 @@ import {
   projectControlChildScope,
   projectControlDependencyBootstrapMode,
   projectControlPathArg,
+  projectControlRealPathIfExists,
   projectControlRealPathOutsideWorkspaceScope,
   projectControlWorkerRole,
 } from "./codex-goal-mcp-project-scope";
 import {
   assertSafeGitRefName,
 } from "./codex-goal-mcp-project-git";
-import { execGitStdout } from "./application/project-control/codex-goal-project-git";
 import {
   matchesProjectControlPrefix,
   uniqueProjectControlStrings,
@@ -315,20 +315,19 @@ export async function projectControlRefillWorkerView(
     sourceWorkspacePath,
     controller.scope,
   );
-  const sourceRevision = (await execGitStdout([
-    "-C",
-    sourceWorkspacePath,
-    "rev-parse",
-    sourceRef ?? baseBranch,
-  ])).trim();
-  assertProjectPreStartAdmissionSourceRevision({
-    plan: preStartAdmission,
-    sourceRevision,
-  });
-  const createWorktreeInput: CodexGoalProjectCreateWorktreeInput = {
+  const realPath = await projectControlRealPathOutsideWorkspaceScope(
+    createManifest.workspacePath,
+    controller.scope,
+  );
+  const expectedRealPath = await projectControlRealPathIfExists(
+    createManifest.workspacePath,
+  );
+  const worktreeAccessInput = {
     sourceWorkspacePath,
     ...(realSourceWorkspacePath ? { realSourceWorkspacePath } : {}),
     path: createManifest.workspacePath,
+    ...(realPath ? { realPath } : {}),
+    ...(expectedRealPath ? { expectedRealPath } : {}),
     baseBranch,
     ...(sourceRef ? { sourceRef } : {}),
     ...(newBranch ? { newBranch } : {}),
@@ -346,12 +345,29 @@ export async function projectControlRefillWorkerView(
       auditPath: projectControlAuditPath(controller.controller),
       workerRole: role,
       startWorker: booleanValue(args.startWorker) !== false,
-      worktreePreview: createWorktreeInput,
+      worktreePreview: worktreeAccessInput,
       manifestPreview: createManifest as unknown as JsonObject,
       promptPath: createManifest.promptPath,
     };
   }
 
+  const resolverBroker = deps.codexProjectControlBroker({
+    registryRootDir: controller.registryRootDir,
+    controller: controller.controller,
+    scope: controller.scope,
+  });
+  const resolvedSource = await resolverBroker.resolveWorktreeRevision(
+    worktreeAccessInput,
+  );
+  assertProjectPreStartAdmissionSourceRevision({
+    plan: preStartAdmission,
+    sourceRevision: resolvedSource.revision,
+  });
+  const createWorktreeInput: CodexGoalProjectCreateWorktreeInput = {
+    ...worktreeAccessInput,
+    expectedRevision: resolvedSource.revision,
+    expectedSourceRealPath: resolvedSource.sourceRealPath,
+  };
   const worktreeBroker = deps.codexProjectControlBroker({
     registryRootDir: controller.registryRootDir,
     controller: controller.controller,
@@ -369,6 +385,7 @@ export async function projectControlRefillWorkerView(
   try {
     const worktreeResult = await createOrReuseProjectWorktree({
       broker: worktreeBroker,
+      scope: controller.scope,
       createWorktreeInput,
     });
     worktree = worktreeResult.result;
@@ -436,7 +453,7 @@ export async function projectControlRefillWorkerView(
   } catch (error) {
     await removeProjectPreStartAdmissionPaths(admissionCreatedPaths);
     const rolledBack = await rollbackProjectRefillPartial({
-      sourceWorkspacePath,
+      expectedSourceRealPath: createWorktreeInput.expectedSourceRealPath,
       workspacePath: createManifest.workspacePath,
       promptPath: createManifest.promptPath,
       registryRootDir: controller.registryRootDir,
@@ -576,19 +593,33 @@ async function projectControlRefillWorkerBoundedView(
     assertSafeGitRefName(baseBranch, "baseBranch");
     const sourceRef = stringValue(args.sourceRef);
     if (sourceRef) assertSafeGitRefName(sourceRef, "sourceRef");
-    await projectControlRealPathOutsideWorkspaceScope(
+    const newBranch = stringValue(args.newBranch);
+    if (newBranch) assertSafeGitRefName(newBranch, "newBranch");
+    const realSourceWorkspacePath = await projectControlRealPathOutsideWorkspaceScope(
       sourceWorkspacePath,
       controller.scope,
     );
-    const sourceRevision = (await execGitStdout([
-      "-C",
+    const realPath = await projectControlRealPathOutsideWorkspaceScope(
+      requested.workspacePath,
+      controller.scope,
+    );
+    const resolverBroker = deps.codexProjectControlBroker({
+      registryRootDir: controller.registryRootDir,
+      controller: controller.controller,
+      scope: controller.scope,
+    });
+    const resolvedSource = await resolverBroker.resolveWorktreeRevision({
       sourceWorkspacePath,
-      "rev-parse",
-      sourceRef ?? baseBranch,
-    ])).trim();
+      ...(realSourceWorkspacePath ? { realSourceWorkspacePath } : {}),
+      path: requested.workspacePath,
+      ...(realPath ? { realPath } : {}),
+      baseBranch,
+      ...(sourceRef ? { sourceRef } : {}),
+      ...(newBranch ? { newBranch } : {}),
+    });
     assertProjectPreStartAdmissionSourceRevision({
       plan: preStartAdmission,
-      sourceRevision,
+      sourceRevision: resolvedSource.revision,
     });
   }
   const operationArgs = {
