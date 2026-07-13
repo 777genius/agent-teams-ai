@@ -682,6 +682,16 @@ describe("codex goal MCP server", () => {
         reason: "project_control_broker_required",
         requiredTool: "codex_goal_project_mark_reviewed",
       });
+      const reconciled = await callToolJson(client, "codex_goal_reconcile_result", {
+        registryRootDir,
+        jobId: "infinity-context-memory-legacy-v1",
+        forceWrite: true,
+      });
+      expect(reconciled).toMatchObject({
+        ok: false,
+        reason: "project_control_broker_required",
+        requiredTool: "codex_goal_project_mark_reviewed",
+      });
     } finally {
       await client.close();
       await server.close();

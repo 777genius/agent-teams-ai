@@ -21,6 +21,11 @@ import {
   localProjectIntegrationSnapshotRoot,
   validateLocalWorkerHandoffArtifact,
 } from "./local-worker-handoff-artifact-validator";
+import {
+  LocalReviewedWorkerOutputStore,
+  resolveReviewedWorkerOutput,
+  reviewedWorkerOutputRoot,
+} from "../../reviewed-worker-output";
 
 export type CreateLocalProjectIntegrationMcpToolHandlersOptions =
   Pick<
@@ -35,6 +40,17 @@ export function createLocalProjectIntegrationMcpToolHandlers(
     ...options,
     integrationDeps: localProjectIntegrationDeps,
     validateWorkerHandoffArtifact: validateLocalWorkerHandoffArtifact,
+    resolveReviewedOutput: async (controller, input) =>
+      resolveReviewedWorkerOutput({
+        store: new LocalReviewedWorkerOutputStore({
+          rootDir: reviewedWorkerOutputRoot(controller.registryRootDir),
+        }),
+        projectId: controller.scope.projectId,
+        reviewedOutputId: input.reviewedOutputId,
+        ...(input.expectedWorkerJobId
+          ? { expectedWorkerJobId: input.expectedWorkerJobId }
+          : {}),
+      }),
   });
 }
 
@@ -73,6 +89,7 @@ function projectIntegrationAllowedPatchRoots(
     ...(controller.scope.workspaceRoots ?? []),
     ...(controller.scope.worktreeRoots ?? []),
     localProjectIntegrationSnapshotRoot(controller),
+    reviewedWorkerOutputRoot(controller.registryRootDir),
   ];
 }
 

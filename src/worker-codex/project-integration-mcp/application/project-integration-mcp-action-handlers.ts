@@ -36,12 +36,25 @@ export async function projectIntegrationOpenAttempt(
 ): Promise<ProjectIntegrationMcpToolResponse> {
   const controller = await options.loadController(args);
   const attemptId = requiredRawString(args.attemptId, "attemptId");
-  const workerJobId = requiredRawString(args.workerJobId, "workerJobId");
-  const workerWorkspacePath = options.resolvePathArg(
-    args,
-    args.workerWorkspacePath ?? args.sourceWorkspacePath,
-    "workerWorkspacePath",
-  );
+  const reviewedOutputId = stringValue(args.reviewedOutputId);
+  const expectedWorkerJobId = stringValue(args.workerJobId);
+  if (reviewedOutputId) assertNoExplicitReviewedOutputSource(args);
+  const resolvedReviewedOutput = reviewedOutputId
+    ? await requiredReviewedOutputResolver(options)(controller, {
+        reviewedOutputId,
+        ...(expectedWorkerJobId
+          ? { expectedWorkerJobId }
+          : {}),
+      })
+    : undefined;
+  const workerJobId = resolvedReviewedOutput?.workerOutput.workerJobId ??
+    requiredRawString(args.workerJobId, "workerJobId");
+  const workerWorkspacePath = resolvedReviewedOutput?.workerOutput.workspacePath ??
+    options.resolvePathArg(
+      args,
+      args.workerWorkspacePath ?? args.sourceWorkspacePath,
+      "workerWorkspacePath",
+    );
   const targetWorkspacePath = options.resolvePathArg(
     args,
     args.targetWorkspacePath ?? args.workspacePath,
@@ -51,13 +64,20 @@ export async function projectIntegrationOpenAttempt(
   const targetRemote = stringValue(args.targetRemote ?? args.remote) ?? "origin";
   assertSafeGitRefName(targetBranch, "targetBranch");
   assertSafeGitRemoteName(targetRemote, "targetRemote");
-  const commitSha = stringValue(args.workerCommitSha ?? args.commitSha);
+  const commitSha = resolvedReviewedOutput?.workerOutput.commitSha ??
+    stringValue(args.workerCommitSha ?? args.commitSha);
   if (commitSha) assertSafeGitCommitSha(commitSha);
-  const patchPath = stringValue(args.workerPatchPath);
-  const summaryPath = stringValue(args.workerSummaryPath);
-  const handoffManifestPath = stringValue(args.workerHandoffManifestPath);
-  const handoffManifestSha256 = stringValue(args.workerHandoffManifestSha256);
-  const baseCommit = stringValue(args.workerBaseCommit);
+  const patchPath = resolvedReviewedOutput?.workerOutput.patchPath ??
+    stringValue(args.workerPatchPath);
+  const summaryPath = resolvedReviewedOutput?.workerOutput.summaryPath ??
+    stringValue(args.workerSummaryPath);
+  const handoffManifestPath = resolvedReviewedOutput?.workerOutput.handoffManifestPath ??
+    stringValue(args.workerHandoffManifestPath);
+  const handoffManifestSha256 =
+    resolvedReviewedOutput?.workerOutput.handoffManifestSha256 ??
+    stringValue(args.workerHandoffManifestSha256);
+  const baseCommit = resolvedReviewedOutput?.workerOutput.baseCommit ??
+    stringValue(args.workerBaseCommit);
   if (baseCommit) assertSafeGitCommitSha(baseCommit);
   const targetCommit = stringValue(args.targetCommit);
   if (targetCommit) assertSafeGitCommitSha(targetCommit);
@@ -66,8 +86,9 @@ export async function projectIntegrationOpenAttempt(
   if (!commitSha && !patchPath) {
     throw new Error("project_integration_worker_output_source_required");
   }
-  const changedFiles = requiredStringArrayArg(args.changedFiles, "changedFiles");
-  const validatedHandoff = args.confirmOpen && patchPath &&
+  const changedFiles = resolvedReviewedOutput?.workerOutput.changedFiles ??
+    requiredStringArrayArg(args.changedFiles, "changedFiles");
+  const validatedHandoff = !resolvedReviewedOutput && args.confirmOpen && patchPath &&
       options.validateWorkerHandoffArtifact
     ? await options.validateWorkerHandoffArtifact({
         controller,
@@ -86,12 +107,20 @@ export async function projectIntegrationOpenAttempt(
     : undefined;
   const effectiveBaseCommit = baseCommit ?? validatedHandoff?.baseCommit;
   const effectivePatchPath = validatedHandoff?.patchPath ?? patchPath;
-  const effectivePatchSha256 = validatedHandoff?.patchSha256;
+  const effectivePatchSha256 = resolvedReviewedOutput?.workerOutput.patchSha256 ??
+    validatedHandoff?.patchSha256;
   const effectiveSummaryPath = summaryPath ?? validatedHandoff?.summaryPath;
   const effectiveManifestPath = handoffManifestPath ??
     validatedHandoff?.manifestPath;
   const approvedFiles = stringArrayArg(args.approvedFiles);
   const requiredChecks = parseProjectIntegrationChecks(args.requiredChecks);
+  const reviewDecision = resolvedReviewedOutput?.snapshot.reviewDecision ?? {
+    reviewedBy: stringValue(args.reviewedBy) ?? controller.controller.jobId,
+    decision: ReviewDecisionStatus.Approved,
+    reason: stringValue(args.reviewReason) ?? "project_integration_reviewed",
+    approvedFiles: approvedFiles.length ? approvedFiles : changedFiles,
+    requiredChecks,
+  };
   const input = {
     policy: projectIntegrationPolicy(controller, args),
     attemptId,
@@ -123,13 +152,7 @@ export async function projectIntegrationOpenAttempt(
       ...(baseRevisionReasons.length ? { baseRevisionReasons } : {}),
       changedFiles,
     },
-    reviewDecision: {
-      reviewedBy: stringValue(args.reviewedBy) ?? controller.controller.jobId,
-      decision: ReviewDecisionStatus.Approved,
-      reason: stringValue(args.reviewReason) ?? "project_integration_reviewed",
-      approvedFiles: approvedFiles.length ? approvedFiles : changedFiles,
-      requiredChecks,
-    },
+    reviewDecision,
   };
 
   if (!args.confirmOpen) {
@@ -153,6 +176,37 @@ export async function projectIntegrationOpenAttempt(
     controllerJobId: controller.controller.jobId,
     attempt: attempt as unknown as JsonObject,
   });
+}
+
+function requiredReviewedOutputResolver(
+  options: CreateProjectIntegrationMcpToolHandlersOptions,
+): NonNullable<CreateProjectIntegrationMcpToolHandlersOptions["resolveReviewedOutput"]> {
+  if (!options.resolveReviewedOutput) {
+    throw new Error("reviewed_worker_output_resolver_unavailable");
+  }
+  return options.resolveReviewedOutput;
+}
+
+function assertNoExplicitReviewedOutputSource(args: ProjectIntegrationMcpArgs): void {
+  const conflicting = [
+    args.sourceWorkspacePath,
+    args.workerWorkspacePath,
+    args.commitSha,
+    args.workerCommitSha,
+    args.workerPatchPath,
+    args.workerSummaryPath,
+    args.workerHandoffManifestPath,
+    args.workerHandoffManifestSha256,
+    args.workerBaseCommit,
+    args.changedFiles,
+    args.approvedFiles,
+    args.requiredChecks,
+    args.reviewedBy,
+    args.reviewReason,
+  ].some((value) => value !== undefined);
+  if (conflicting) {
+    throw new Error("reviewed_worker_output_explicit_source_conflict");
+  }
 }
 
 export async function projectIntegrationApplyWorkerOutput(

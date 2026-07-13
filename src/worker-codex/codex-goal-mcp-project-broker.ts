@@ -18,6 +18,7 @@ import {
   collectCodexGoalStatus,
   doctorCodexGoal,
   prepareCodexGoalLaunchPaths,
+  resolveCodexGoalWorkerLiveness,
   startCodexGoalTmux,
   stopCodexGoalDirectProcess,
   stopCodexGoalTmux,
@@ -31,6 +32,17 @@ import {
   codexProjectAdmissionGate,
   type CodexProjectAdmissionDeps,
 } from "./application/project-control/codex-goal-project-admission";
+import type {
+  CaptureReviewedWorkerOutputInput,
+  ReviewedWorkerOutputSnapshot,
+} from "./reviewed-worker-output";
+import {
+  captureReviewedWorkerOutput,
+  commitReviewedWorkerOutputApproval,
+  localReviewedWorkerOutputDeps,
+  reviewedWorkerOutputRoot,
+  verifyReviewedWorkerOutputStillMatches,
+} from "./reviewed-worker-output";
 import {
   noopOperationResult,
   type CodexGoalProjectCreateWorktreeInput,
@@ -71,6 +83,10 @@ export type CodexProjectControlBrokerInput = {
   readonly stopLaunch?: CodexGoalLaunchInput;
   readonly reviewLaunch?: CodexGoalLaunchInput;
   readonly reviewNote?: string;
+  readonly reviewedOutputCapture?: Omit<
+    CaptureReviewedWorkerOutputInput,
+    "workerJobId" | "taskId" | "workspacePath"
+  >;
 };
 
 export function createCodexProjectControlBroker(
@@ -118,14 +134,51 @@ function codexProjectControlPorts(
           throw new Error("project_control_review_launch_required");
         }
         const status = await collectCodexGoalStatus(statusInput(input.reviewLaunch));
+        let reviewedOutput: ReviewedWorkerOutputSnapshot | undefined;
+        const reviewedOutputDeps = localReviewedWorkerOutputDeps({
+          rootDir: reviewedWorkerOutputRoot(input.registryRootDir),
+        });
+        if (input.reviewedOutputCapture) {
+          assertReviewedOutputWorkerStopped(input.reviewLaunch, status);
+          reviewedOutput = await captureReviewedWorkerOutput(
+            reviewedOutputDeps,
+            {
+              ...input.reviewedOutputCapture,
+              workerJobId: marker.jobId,
+              taskId: input.reviewLaunch.config.taskId,
+              workspacePath: input.reviewLaunch.config.workspacePath,
+            },
+          );
+          const statusAfterCapture = await collectCodexGoalStatus(
+            statusInput(input.reviewLaunch),
+          );
+          assertReviewedOutputWorkerStopped(input.reviewLaunch, statusAfterCapture);
+        }
         const reviewPath = await writeCodexGoalReviewMarker({
           jobId: marker.jobId,
           taskId: input.reviewLaunch.config.taskId,
           jobRootDir: input.reviewLaunch.config.jobRootDir,
           note: input.reviewNote ?? marker.note ?? "project_control_reviewed",
           status,
+          ...(reviewedOutput ? { reviewedOutput } : {}),
         });
-        return operationResult(reviewPath);
+        if (reviewedOutput) {
+          await verifyReviewedWorkerOutputStillMatches(
+            reviewedOutputDeps,
+            reviewedOutput,
+          );
+          const statusBeforeApproval = await collectCodexGoalStatus(
+            statusInput(input.reviewLaunch),
+          );
+          assertReviewedOutputWorkerStopped(input.reviewLaunch, statusBeforeApproval);
+          await commitReviewedWorkerOutputApproval({
+            store: reviewedOutputDeps.store,
+            markerVerifier: reviewedOutputDeps.markerVerifier,
+            snapshot: reviewedOutput,
+            reviewMarkerPath: reviewPath,
+          });
+        }
+        return operationResult(reviewedOutput?.reviewedOutputId ?? reviewPath);
       },
     },
     supervisor: {
@@ -267,6 +320,21 @@ function codexProjectControlPorts(
       },
     },
   };
+}
+
+function assertReviewedOutputWorkerStopped(
+  launch: CodexGoalLaunchInput,
+  status: Awaited<ReturnType<typeof collectCodexGoalStatus>>,
+): void {
+  const progressStale = status.progressHeartbeatAgeMs !== undefined &&
+    status.progressHeartbeatAgeMs > 10 * 60_000;
+  const liveness = resolveCodexGoalWorkerLiveness({ status, progressStale });
+  if (liveness.alive) {
+    throw new Error("reviewed_worker_output_worker_still_running");
+  }
+  if (launch.tmuxSession && status.tmuxAlive === true) {
+    throw new Error("reviewed_worker_output_worker_still_running");
+  }
 }
 
 async function appendProjectControlAuditEvent(

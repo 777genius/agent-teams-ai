@@ -175,6 +175,13 @@ export type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly executionMode?: string;
   readonly operationId?: string;
   readonly includeResult?: boolean;
+  readonly captureReviewedOutput?: boolean;
+  readonly expectedPatchSha256?: string;
+  readonly reviewDecision?: string;
+  readonly reviewedBy?: string;
+  readonly reviewReason?: string;
+  readonly approvedFiles?: readonly string[] | string;
+  readonly requiredChecks?: readonly unknown[];
 };
 
 export type ProjectControllerLaunchPlanMcpArgs = ProjectControlMcpArgs & {

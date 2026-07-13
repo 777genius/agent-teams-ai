@@ -188,6 +188,18 @@ export async function reconcileStoredJobRuntimeResultLifecycle(
   deps: CodexGoalMcpJobLifecycleDeps,
 ): Promise<JsonObject> {
   const loaded = await deps.loadJobLaunch(args);
+  const projectControlDenial = projectControlGenericToolDenial({
+    accessBoundary: loaded.manifest.accessBoundary,
+    projectAccessScope: loaded.manifest.projectAccessScope,
+    jobId: loaded.manifest.jobId,
+    requiredTool: "codex_goal_project_mark_reviewed",
+  }) ?? await projectControlGenericScopeDenial({
+    registryRootDir: loaded.registryRootDir,
+    jobId: loaded.manifest.jobId,
+    workspacePath: loaded.launch.config.workspacePath,
+    requiredTool: "codex_goal_project_mark_reviewed",
+  });
+  if (projectControlDenial) return projectControlDenial;
   const status = await collectCodexGoalStatus(statusInput(loaded.launch));
   const accounts = await listCodexGoalAccountStatuses({
     authRootDir: loaded.launch.config.authRootDir,

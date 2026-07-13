@@ -70,6 +70,10 @@ import {
   requiredRawString,
   stringValue,
 } from "./codex-goal-mcp-values";
+import {
+  parseProjectIntegrationChecks,
+  requiredStringArrayArg,
+} from "./project-integration-mcp/application/project-integration-mcp-values";
 import type {
   JobIdMcpArgs,
   ProjectControlMcpArgs,
@@ -547,13 +551,39 @@ export async function projectControlMarkReviewedView(
     registryRootDir: controller.registryRootDir,
     jobId: requiredRawString(args.jobId, "jobId"),
   });
-  await ensureTerminalCodexGoalHandoffArtifacts({ launch: loaded.launch });
+  const captureReviewedOutput = booleanValue(args.captureReviewedOutput) === true;
+  if (!captureReviewedOutput) {
+    await ensureTerminalCodexGoalHandoffArtifacts({ launch: loaded.launch });
+  }
+  if (captureReviewedOutput && args.reviewDecision !== "approved") {
+    throw new Error("reviewed_worker_output_approved_decision_required");
+  }
+  const reviewNote = stringValue(args.note) ?? "project_control_reviewed";
   const broker = deps.codexProjectControlBroker({
     registryRootDir: controller.registryRootDir,
     controller: controller.controller,
     scope: controller.scope,
     reviewLaunch: loaded.launch,
-    reviewNote: stringValue(args.note) ?? "project_control_reviewed",
+    reviewNote,
+    ...(captureReviewedOutput
+      ? {
+          reviewedOutputCapture: {
+            projectId: controller.scope.projectId,
+            controllerJobId: controller.controller.jobId,
+            expectedPatchSha256: requiredRawString(
+              args.expectedPatchSha256,
+              "expectedPatchSha256",
+            ),
+            reviewedBy: stringValue(args.reviewedBy) ?? controller.controller.jobId,
+            reason: stringValue(args.reviewReason) ?? reviewNote,
+            approvedFiles: requiredStringArrayArg(
+              args.approvedFiles,
+              "approvedFiles",
+            ),
+            requiredChecks: parseProjectIntegrationChecks(args.requiredChecks),
+          },
+        }
+      : {}),
   });
   const realWorkspacePath = await projectControlRealPathOutsideWorkspaceScope(
     loaded.launch.config.workspacePath,
@@ -566,7 +596,7 @@ export async function projectControlMarkReviewedView(
     ...(realWorkspacePath ? { realWorkspacePath } : {}),
     ...(loaded.launch.tmuxSession ? { tmuxSession: loaded.launch.tmuxSession } : {}),
     markerType: "review",
-    note: stringValue(args.note) ?? "project_control_reviewed",
+    note: reviewNote,
   });
   return {
     ok: true,
@@ -575,6 +605,9 @@ export async function projectControlMarkReviewedView(
     registryRootDir: controller.registryRootDir,
     auditPath: projectControlAuditPath(controller.controller),
     jobId: loaded.manifest.jobId,
+    ...(captureReviewedOutput && result.resourceId
+      ? { reviewedOutputId: result.resourceId }
+      : {}),
     result: result as unknown as JsonObject,
   };
 }

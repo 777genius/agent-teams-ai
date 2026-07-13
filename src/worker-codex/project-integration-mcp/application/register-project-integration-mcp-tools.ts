@@ -17,6 +17,7 @@ export function registerProjectIntegrationMcpTools(
         controllerJobId: z.string().optional(),
         attemptId: z.string().optional(),
         workerJobId: z.string().optional(),
+        reviewedOutputId: z.string().regex(/^[a-fA-F0-9]{64}$/).optional(),
         workerWorkspacePath: z.string().optional(),
         workerCommitSha: z.string().optional(),
         workerPatchPath: z.string().optional(),

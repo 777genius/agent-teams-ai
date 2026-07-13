@@ -1,6 +1,9 @@
 import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { DefaultRedactor } from "@vioxen/subscription-runtime/core";
+import type {
+  ReviewedWorkerOutputSnapshot,
+} from "../reviewed-worker-output";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 
@@ -68,6 +71,7 @@ export async function writeCodexGoalReviewMarker(input: {
   readonly jobRootDir: string;
   readonly note: string;
   readonly status: unknown;
+  readonly reviewedOutput?: ReviewedWorkerOutputSnapshot;
 }): Promise<string> {
   await mkdir(input.jobRootDir, { recursive: true, mode: 0o700 });
   const reviewPath = join(input.jobRootDir, `${input.taskId}.review.json`);
@@ -80,6 +84,19 @@ export async function writeCodexGoalReviewMarker(input: {
       reviewedAt: new Date().toISOString(),
       note: input.note,
       status: input.status,
+      ...(input.reviewedOutput
+        ? {
+            reviewedOutput: {
+              reviewedOutputId: input.reviewedOutput.reviewedOutputId,
+              patchSha256: input.reviewedOutput.patchSha256,
+              patchPath: input.reviewedOutput.patchPath,
+              baseCommit: input.reviewedOutput.baseCommit,
+              changedFiles: input.reviewedOutput.changedFiles,
+              reviewedBy: input.reviewedOutput.reviewDecision.reviewedBy,
+              capturedAt: input.reviewedOutput.capturedAt,
+            },
+          }
+        : {}),
     }, null, 2)}\n`,
     { encoding: "utf8", mode: 0o600 },
   );
@@ -210,6 +227,9 @@ async function readCodexGoalLifecycleMarker(input: {
     const parsed = parseLifecycleMarker(raw);
     const timestamp = firstStringKey(parsed, input.spec.timestampKeys);
     const brief = isRecord(parsed.brief) ? parsed.brief : {};
+    const reviewedOutput = isRecord(parsed.reviewedOutput)
+      ? parsed.reviewedOutput
+      : {};
     return {
       type: input.spec.type,
       markerPath,
@@ -231,6 +251,12 @@ async function readCodexGoalLifecycleMarker(input: {
         ? { logByteLength: brief.logByteLength }
         : {}),
       ...(typeof parsed.schemaVersion === "number" ? { schemaVersion: parsed.schemaVersion } : {}),
+      ...(typeof reviewedOutput.reviewedOutputId === "string"
+        ? { reviewedOutputId: reviewedOutput.reviewedOutputId }
+        : {}),
+      ...(typeof reviewedOutput.patchSha256 === "string"
+        ? { reviewedOutputPatchSha256: reviewedOutput.patchSha256 }
+        : {}),
     };
   } catch {
     return undefined;

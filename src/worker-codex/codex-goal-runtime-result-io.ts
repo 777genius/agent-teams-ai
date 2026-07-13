@@ -43,26 +43,12 @@ export class GitPatchPreserver implements RuntimePatchPreserverPort {
     readonly workspacePath: string;
     readonly outputPath: string;
   }): Promise<RuntimeResultArtifact | null> {
-    const gitBinaryPath = this.options.gitBinaryPath ?? "git";
-    const hasHead = await gitHasHead({
-      gitBinaryPath,
+    const patch = await captureGitWorkspacePatch({
       workspacePath: input.workspacePath,
+      ...(this.options.gitBinaryPath
+        ? { gitBinaryPath: this.options.gitBinaryPath }
+        : {}),
     });
-    const trackedPatch = await gitDiff({
-      gitBinaryPath,
-      workspacePath: input.workspacePath,
-      args: hasHead
-        ? ["diff", "--binary", "HEAD", "--"]
-        : ["diff", "--binary", "--"],
-    });
-    const untrackedPatch = await gitUntrackedPatch({
-      gitBinaryPath,
-      workspacePath: input.workspacePath,
-    });
-    const patch = [trackedPatch, untrackedPatch]
-      .filter((value) => value.length > 0)
-      .map(ensureTrailingNewline)
-      .join("");
     if (!patch.trim()) return null;
     await mkdir(dirname(input.outputPath), { recursive: true, mode: 0o700 });
     await writeFile(input.outputPath, patch, {
@@ -76,6 +62,32 @@ export class GitPatchPreserver implements RuntimePatchPreserverPort {
       byteLength: item.size,
     };
   }
+}
+
+export async function captureGitWorkspacePatch(input: {
+  readonly workspacePath: string;
+  readonly gitBinaryPath?: string;
+}): Promise<string> {
+  const gitBinaryPath = input.gitBinaryPath ?? "git";
+  const hasHead = await gitHasHead({
+    gitBinaryPath,
+    workspacePath: input.workspacePath,
+  });
+  const trackedPatch = await gitDiff({
+    gitBinaryPath,
+    workspacePath: input.workspacePath,
+    args: hasHead
+      ? ["diff", "--binary", "HEAD", "--"]
+      : ["diff", "--binary", "--"],
+  });
+  const untrackedPatch = await gitUntrackedPatch({
+    gitBinaryPath,
+    workspacePath: input.workspacePath,
+  });
+  return [trackedPatch, untrackedPatch]
+    .filter((value) => value.length > 0)
+    .map(ensureTrailingNewline)
+    .join("");
 }
 
 function ensureTrailingNewline(value: string): string {
@@ -117,6 +129,7 @@ async function gitDiff(input: {
   readonly gitBinaryPath: string;
   readonly workspacePath: string;
   readonly args: readonly string[];
+  readonly allowDifferenceExitCode?: boolean;
 }): Promise<string> {
   try {
     const { stdout } = await execFileAsync(input.gitBinaryPath, [
@@ -129,7 +142,12 @@ async function gitDiff(input: {
     });
     return stdout;
   } catch (error) {
-    if (isExecErrorWithStdout(error)) return error.stdout;
+    if (
+      input.allowDifferenceExitCode === true &&
+      isExecDifferenceWithStdout(error)
+    ) {
+      return error.stdout;
+    }
     throw error;
   }
 }
@@ -155,6 +173,7 @@ async function gitUntrackedPatch(input: {
       gitBinaryPath: input.gitBinaryPath,
       workspacePath: input.workspacePath,
       args: ["diff", "--binary", "--no-index", "--", "/dev/null", path],
+      allowDifferenceExitCode: true,
     })
   ));
   return patches.join("\n");
@@ -169,6 +188,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isExecErrorWithStdout(error: unknown): error is { readonly stdout: string } {
-  return isRecord(error) && typeof error.stdout === "string";
+function isExecDifferenceWithStdout(
+  error: unknown,
+): error is { readonly code: 1; readonly stdout: string } {
+  return isRecord(error) &&
+    error.code === 1 &&
+    typeof error.stdout === "string";
 }

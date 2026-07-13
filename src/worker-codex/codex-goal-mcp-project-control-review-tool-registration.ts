@@ -11,6 +11,8 @@ import {
 } from "./codex-goal-mcp-project-control-tool-handlers";
 
 export function registerCodexGoalProjectControlReviewTools(server: McpServer): void {
+  // Keep model-facing tool names stable and evolve additive fields in place.
+  // Introduce a new public version only for an unavoidable breaking contract.
   server.registerTool(
     "codex_goal_project_stop",
     {
@@ -39,6 +41,18 @@ export function registerCodexGoalProjectControlReviewTools(server: McpServer): v
         ...jobIdInputSchema(),
         controllerJobId: z.string().optional(),
         note: z.string().optional(),
+        captureReviewedOutput: z.boolean().optional(),
+        expectedPatchSha256: z.string().regex(/^[a-fA-F0-9]{64}$/).optional(),
+        reviewDecision: z.enum(["approved", "rejected", "needs_human"]).optional(),
+        reviewedBy: z.string().optional(),
+        reviewReason: z.string().optional(),
+        approvedFiles: z.union([z.string(), z.array(z.string())]).optional(),
+        requiredChecks: z.array(z.object({
+          checkId: z.string(),
+          command: z.array(z.string()),
+          cwd: z.string().optional(),
+          timeoutMs: z.number().int().positive().optional(),
+        })).optional(),
       },
     },
     async (args) => withMcpErrors(async () =>

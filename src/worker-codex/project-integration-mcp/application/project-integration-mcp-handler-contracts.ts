@@ -10,6 +10,7 @@ import type {
   ProjectIntegrationMcpController,
   ProjectIntegrationMcpLoadController,
   ProjectIntegrationMcpResolvePathArg,
+  ProjectIntegrationMcpResolveReviewedOutput,
 } from "../ports/project-integration-mcp-tool-handlers";
 
 export type JsonObject = Readonly<Record<string, unknown>>;
@@ -25,6 +26,7 @@ export type ProjectIntegrationMcpUseCaseDeps =
 export type CreateProjectIntegrationMcpToolHandlersOptions = {
   readonly loadController: ProjectIntegrationMcpLoadController;
   readonly resolvePathArg: ProjectIntegrationMcpResolvePathArg;
+  readonly resolveReviewedOutput?: ProjectIntegrationMcpResolveReviewedOutput;
   readonly integrationDeps: (
     controller: ProjectIntegrationMcpController,
   ) => ProjectIntegrationMcpUseCaseDeps;

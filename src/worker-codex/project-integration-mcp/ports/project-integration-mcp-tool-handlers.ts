@@ -1,5 +1,11 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import type { ProjectAccessScope } from "@vioxen/subscription-runtime/worker-core";
+import type {
+  ProjectAccessScope,
+  WorkerOutput,
+} from "@vioxen/subscription-runtime/worker-core";
+import type {
+  ReviewedWorkerOutputSnapshot,
+} from "../../reviewed-worker-output";
 
 export type ProjectIntegrationMcpToolResponse = CallToolResult;
 
@@ -28,6 +34,7 @@ export type ProjectIntegrationMcpArgs = {
   readonly force?: boolean;
   readonly commitSha?: string;
   readonly workerJobId?: string;
+  readonly reviewedOutputId?: string;
   readonly workerWorkspacePath?: string;
   readonly workerCommitSha?: string;
   readonly workerPatchPath?: string;
@@ -78,3 +85,14 @@ export type ProjectIntegrationMcpResolvePathArg = (
   value: unknown,
   fieldName: string,
 ) => string;
+
+export type ProjectIntegrationMcpResolveReviewedOutput = (
+  controller: ProjectIntegrationMcpController,
+  input: {
+    readonly reviewedOutputId: string;
+    readonly expectedWorkerJobId?: string;
+  },
+) => Promise<{
+  readonly snapshot: ReviewedWorkerOutputSnapshot;
+  readonly workerOutput: WorkerOutput;
+}>;

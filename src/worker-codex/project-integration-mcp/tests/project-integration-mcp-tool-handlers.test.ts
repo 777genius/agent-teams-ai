@@ -7,6 +7,7 @@ import {
   createProjectIntegrationMcpToolHandlers,
   type ProjectIntegrationMcpController,
 } from "../index";
+import { reviewedWorkerOutputFormat } from "../../reviewed-worker-output";
 
 const controller: ProjectIntegrationMcpController = {
   registryRootDir: "/registry",
@@ -135,6 +136,86 @@ describe("project integration MCP tool handlers", () => {
       baseStatus: "bad",
       changedFiles: ["src/file.ts"],
     })).rejects.toThrow("project_integration_base_status_invalid");
+  });
+
+  it("resolves immutable reviewed output without duplicating source arguments", async () => {
+    const reviewedOutputId = "a".repeat(64);
+    const patchSha256 = "b".repeat(64);
+    const handlers = createProjectIntegrationMcpToolHandlers({
+      loadController: async () => controller,
+      resolvePathArg: (_args, value, fieldName) => {
+        if (typeof value !== "string") throw new Error(`${fieldName} is required`);
+        return `/resolved/${value}`;
+      },
+      resolveReviewedOutput: async () => ({
+        snapshot: {
+          format: reviewedWorkerOutputFormat,
+          formatRevision: 1,
+          reviewedOutputId,
+          projectId: "project-1",
+          controllerJobId: "controller-1",
+          workerJobId: "worker-1",
+          taskId: "task-1",
+          sourceWorkspacePath: "/worker",
+          patchPath: "/evidence/output.patch",
+          patchSha256,
+          patchByteLength: 100,
+          baseCommit: "1".repeat(40),
+          changedFiles: ["src/file.ts"],
+          reviewDecision: {
+            reviewedBy: "controller-1",
+            decision: ReviewDecisionStatus.Approved,
+            reason: "review accepted",
+            approvedFiles: ["src/file.ts"],
+            requiredChecks: [{ checkId: "unit", command: ["npm", "test"] }],
+          },
+          capturedAt: "2026-07-13T00:00:00.000Z",
+        },
+        workerOutput: {
+          workerJobId: "worker-1",
+          workspacePath: "/worker",
+          patchPath: "/evidence/output.patch",
+          patchSha256,
+          baseCommit: "1".repeat(40),
+          changedFiles: ["src/file.ts"],
+        },
+      }),
+      integrationDeps: () => {
+        throw new Error("integration_deps_unexpected");
+      },
+    });
+
+    const result = await handlers.openAttempt({
+      attemptId: "attempt-reviewed",
+      reviewedOutputId,
+      targetWorkspacePath: "target",
+      targetBranch: "feature/project",
+    });
+    expect(result.structuredContent).toMatchObject({
+      ok: false,
+      reason: "confirm_open_required",
+      attemptPreview: {
+        sourceWorkspacePath: "/worker",
+        workerOutput: {
+          workerJobId: "worker-1",
+          patchPath: "/evidence/output.patch",
+          patchSha256,
+          changedFiles: ["src/file.ts"],
+        },
+        reviewDecision: {
+          reason: "review accepted",
+          approvedFiles: ["src/file.ts"],
+        },
+      },
+    });
+
+    await expect(handlers.openAttempt({
+      attemptId: "attempt-conflict",
+      reviewedOutputId,
+      workerPatchPath: "/caller/patch",
+      targetWorkspacePath: "target",
+      targetBranch: "feature/project",
+    })).rejects.toThrow("reviewed_worker_output_explicit_source_conflict");
   });
 
   it("previews rejection reasons before invoking integration use cases", async () => {

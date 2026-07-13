@@ -109,4 +109,27 @@ describe("codex goal runtime result IO", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("never stores stdout from a failed git command as patch evidence", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-patch-git-error-"));
+    const fakeGitPath = join(root, "fake-git");
+    const outputPath = join(root, "preserved.patch");
+    try {
+      await writeFile(
+        fakeGitPath,
+        "#!/bin/sh\nprintf 'spawn git ENOENT\\n'\nexit 2\n",
+        { mode: 0o700 },
+      );
+
+      await expect(new GitPatchPreserver({ gitBinaryPath: fakeGitPath }).preserve({
+        workspacePath: root,
+        outputPath,
+      })).rejects.toMatchObject({ code: 2 });
+      await expect(readFile(outputPath, "utf8")).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
