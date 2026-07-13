@@ -183,18 +183,24 @@ vi.mock('@renderer/components/ui/tabs', () => ({
       { 'data-value': value, 'data-on-change': Boolean(onValueChange) },
       children
     ),
-  TabsList: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
+  TabsList: ({
+    children,
+    className,
+  }: React.PropsWithChildren<{ className?: string }>) =>
+    React.createElement('div', { role: 'tablist', className }, children),
   TabsTrigger: ({
     children,
     value,
     onClick,
-  }: React.PropsWithChildren<{ value: string; onClick?: () => void }>) =>
+    className,
+  }: React.PropsWithChildren<{ value: string; onClick?: () => void; className?: string }>) =>
     React.createElement(
       'button',
       {
         type: 'button',
         role: 'tab',
         'data-value': value,
+        className,
         onClick,
       },
       children
@@ -612,6 +618,13 @@ describe('ProviderRuntimeSettingsDialog', () => {
     );
     expect(providerTabs).toContain('Claude');
     expect(providerTabs).toContain('Codex');
+    expect(host.querySelector<HTMLElement>('[role="tablist"]')?.className).toContain(
+      'bg-transparent'
+    );
+    for (const providerTab of host.querySelectorAll<HTMLElement>('[role="tab"]')) {
+      expect(providerTab.className).toContain('border-[var(--color-border-subtle)]');
+      expect(providerTab.className).toContain('bg-white/[0.025]');
+    }
   });
 
   it('renders anthropic connection cards and can switch to API key mode', async () => {

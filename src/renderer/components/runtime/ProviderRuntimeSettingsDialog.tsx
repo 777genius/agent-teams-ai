@@ -1884,7 +1884,7 @@ export const ProviderRuntimeSettingsDialog = ({
                 className="-mx-1 overflow-x-auto border-b px-1"
                 style={{ borderColor: 'var(--color-border-subtle)' }}
               >
-                <TabsList className="w-max min-w-full gap-1 rounded-b-none">
+                <TabsList className="h-auto w-max min-w-full items-end justify-center gap-1.5 rounded-none bg-transparent p-0">
                   {providers.map((provider) => (
                     <TabsTrigger
                       key={provider.providerId}
@@ -1895,7 +1895,7 @@ export const ProviderRuntimeSettingsDialog = ({
                       }
                       value={provider.providerId}
                       disabled={runtimeProviderOperationBlocking}
-                      className="relative rounded-b-none data-[state=active]:z-10 data-[state=active]:-mb-px data-[state=active]:bg-[var(--color-surface)] data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:-bottom-px data-[state=active]:after:h-1 data-[state=active]:after:bg-[var(--color-surface)] data-[state=active]:after:content-['']"
+                      className="relative h-10 min-w-[140px] rounded-b-none rounded-t-lg border border-b-0 border-[var(--color-border-subtle)] bg-white/[0.025] px-4 py-2 text-[var(--color-text-secondary)] shadow-none transition-[color,background-color,border-color] hover:border-[var(--color-border-emphasis)] hover:bg-white/[0.055] hover:text-[var(--color-text)] focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--color-border-emphasis)] data-[state=active]:z-10 data-[state=active]:-mb-px data-[state=active]:border-[var(--color-border)] data-[state=active]:bg-[var(--color-surface)] data-[state=active]:text-[var(--color-text)] data-[state=active]:shadow-none data-[state=active]:after:absolute data-[state=active]:after:inset-x-0 data-[state=active]:after:-bottom-px data-[state=active]:after:h-px data-[state=active]:after:bg-[var(--color-surface)] data-[state=active]:after:content-['']"
                     >
                       <span className="inline-flex items-center gap-2">
                         <ProviderBrandLogo
