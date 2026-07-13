@@ -234,6 +234,43 @@ describe('TeamProvisioningProviderRuntimeFacade', () => {
     expect(envRuntimePorts.resolveControlApiBaseUrl).toHaveBeenCalledOnce();
   });
 
+  it('returns rejected promises when runtime dependencies throw synchronously', async () => {
+    const diagnosticsFailure = new Error('diagnostics construction failed');
+    const envFailure = new Error('env runtime failed');
+    const envRuntimePorts = createEnvRuntimePorts();
+    vi.mocked(envRuntimePorts.buildProvisioningEnv).mockImplementation(() => {
+      throw envFailure;
+    });
+    vi.mocked(envRuntimePorts.buildCrossProviderMemberArgs).mockImplementation(() => {
+      throw envFailure;
+    });
+    vi.mocked(envRuntimePorts.resolveControlApiBaseUrl).mockImplementation(() => {
+      throw envFailure;
+    });
+    const facade = createTeamProvisioningProviderRuntimeFacade(
+      createFacadeDeps({
+        envRuntimePorts,
+        createDiagnosticsRuntime: () => {
+          throw diagnosticsFailure;
+        },
+      })
+    );
+    const env = { PATH: '/bin' };
+
+    await expect(facade.probeClaudeRuntime('/bin/claude', '/repo', env)).rejects.toBe(
+      diagnosticsFailure
+    );
+    await expect(facade.runProviderOneShotDiagnostic('/bin/claude', '/repo', env)).rejects.toBe(
+      diagnosticsFailure
+    );
+    await expect(facade.spawnProbe('/bin/claude', ['--version'], '/repo', env, 1000)).rejects.toBe(
+      diagnosticsFailure
+    );
+    await expect(facade.buildProvisioningEnv()).rejects.toBe(envFailure);
+    await expect(facade.buildCrossProviderMemberArgs('anthropic', [])).rejects.toBe(envFailure);
+    await expect(facade.resolveControlApiBaseUrl()).rejects.toBe(envFailure);
+  });
+
   it('binds compatibility delegates for provisioning ports', async () => {
     const envRuntimePorts = createEnvRuntimePorts();
     const diagnosticsRuntime = createDiagnosticsRuntime();
