@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "이름 *",
+      "reconnect": "다시 연결",
+      "removeManagedCredential": "저장된 자격 증명 제거",
+      "replaceCredential": "자격 증명 교체",
+      "signInAgain": "다시 로그인",
       "test": "제품정보"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}입니다. 연결 및 권장 제공 업체는 먼저 표시됩니다.",
       "description_one": "{{count}}입니다. 연결 및 권장 제공 업체는 먼저 표시됩니다.",
       "description_other": "{{count}}입니다. 연결 및 권장 제공 업체는 먼저 표시됩니다."
+    },
+    "reconnect": {
+      "apiDescription": "새 자격 증명을 입력하세요. 새 자격 증명이 모델 검증을 통과할 때까지 현재 저장된 자격 증명이 유지됩니다.",
+      "apiTitle": "{{provider}} 자격 증명 교체",
+      "continueInBrowser": "브라우저에서 계속",
+      "getBrowserCode": "브라우저 코드 받기",
+      "oauthDescription": "계정을 전환하거나 인증을 복구할 때 사용하세요. 검증에 실패하면 현재 로그인이 복원됩니다.",
+      "oauthTitle": "{{provider}}에 다시 로그인",
+      "replaceAndVerify": "교체 및 검증"
     },
     "setup": {
       "loading": "로드 공급자 설정..."

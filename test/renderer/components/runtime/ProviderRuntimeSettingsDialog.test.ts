@@ -2229,8 +2229,16 @@ describe('ProviderRuntimeSettingsDialog', () => {
       );
     });
 
-    expect(host.textContent).toContain('OpenCode 1.17.18 is ready.');
+    expect(host.textContent).toContain('OpenCode 1.17.18');
+    expect(host.textContent).not.toContain('Using opencode managed');
+    expect(host.textContent).not.toContain('is ready');
     expect(host.textContent).not.toContain('z.ai-coding-plan');
+    expect(host.querySelector('[data-testid="provider-runtime-summary"]')?.className).toContain(
+      'px-1'
+    );
+    expect(host.querySelector('[data-testid="provider-runtime-summary"]')?.className).not.toContain(
+      'rounded-lg'
+    );
   });
 
   it('shows OpenCode inventory fallback as models available instead of disconnected', async () => {

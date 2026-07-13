@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Batal",
+      "reconnect": "Hubungkan kembali",
+      "removeManagedCredential": "Hapus kredensial tersimpan",
+      "replaceCredential": "Ganti kredensial",
+      "signInAgain": "Masuk lagi",
       "test": "Uji"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Terhubung dan disarankan penyedia ditampilkan pertama.",
       "description_one": "{{count}}. Terhubung dan disarankan penyedia ditampilkan pertama.",
       "description_other": "{{count}}. Terhubung dan disarankan penyedia ditampilkan pertama."
+    },
+    "reconnect": {
+      "apiDescription": "Masukkan kredensial baru. Kredensial tersimpan saat ini tetap aktif hingga penggantinya lolos verifikasi model.",
+      "apiTitle": "Ganti kredensial {{provider}}",
+      "continueInBrowser": "Lanjutkan di browser",
+      "getBrowserCode": "Dapatkan kode browser",
+      "oauthDescription": "Gunakan ini untuk mengganti akun atau memperbaiki otorisasi. Login saat ini akan dipulihkan jika verifikasi gagal.",
+      "oauthTitle": "Masuk lagi ke {{provider}}",
+      "replaceAndVerify": "Ganti dan verifikasi"
     },
     "setup": {
       "loading": "Memuat setup penyedia..."

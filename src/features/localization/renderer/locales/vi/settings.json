@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Hủy",
+      "reconnect": "Kết nối lại",
+      "removeManagedCredential": "Xóa thông tin xác thực đã lưu",
+      "replaceCredential": "Thay thế thông tin xác thực",
+      "signInAgain": "Đăng nhập lại",
       "test": "Kiểm thử"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Các nhà cung cấp đã kết nối và được khuyến nghị hiển thị trước.",
       "description_one": "{{count}}. Các nhà cung cấp đã kết nối và được khuyến nghị hiển thị trước.",
       "description_other": "{{count}}. Các nhà cung cấp đã kết nối và được khuyến nghị hiển thị trước."
+    },
+    "reconnect": {
+      "apiDescription": "Nhập thông tin xác thực mới. Thông tin hiện tại vẫn hoạt động cho đến khi thông tin mới vượt qua bước xác minh mô hình.",
+      "apiTitle": "Thay thông tin xác thực của {{provider}}",
+      "continueInBrowser": "Tiếp tục trong trình duyệt",
+      "getBrowserCode": "Lấy mã trình duyệt",
+      "oauthDescription": "Dùng tùy chọn này để đổi tài khoản hoặc sửa ủy quyền. Phiên đăng nhập hiện tại sẽ được khôi phục nếu xác minh thất bại.",
+      "oauthTitle": "Đăng nhập lại vào {{provider}}",
+      "replaceAndVerify": "Thay thế và xác minh"
     },
     "setup": {
       "loading": "Đang tải thiết lập nhà cung cấp..."

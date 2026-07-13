@@ -499,7 +499,10 @@ interface InstalledBannerProps {
   onProviderLogout: (providerId: CliProviderId) => void;
   onProviderManage: (providerId: CliProviderId) => void;
   onOpenCodeProviderConnect: (providerId: string) => void;
-  onOpenCodeProviderAction: (providerId: string, action: 'connect' | 'select') => void;
+  onOpenCodeProviderAction: (
+    providerId: string,
+    action: 'connect' | 'reconnect' | 'select'
+  ) => void;
   onBrowseOpenCodeProviders: (query?: string) => void;
   onProviderRefresh: (providerId: CliProviderId) => void;
   onCodexReconnect: () => void;
@@ -1534,7 +1537,7 @@ export const CliStatusBanner = ({
   const [manageProviderId, setManageProviderId] = useState<CliProviderId>('anthropic');
   const [manageRuntimeProviderId, setManageRuntimeProviderId] = useState<string | null>(null);
   const [manageRuntimeProviderAction, setManageRuntimeProviderAction] = useState<
-    'connect' | 'select' | null
+    'connect' | 'reconnect' | 'select' | null
   >(null);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
   const [providerOnboardingRequest, setProviderOnboardingRequest] = useState<{
@@ -1900,11 +1903,11 @@ export const CliStatusBanner = ({
   }, []);
 
   const handleOpenCodeProviderAction = useCallback(
-    (providerId: string, action: 'connect' | 'select') => {
-      if (action === 'select') {
+    (providerId: string, action: 'connect' | 'reconnect' | 'select') => {
+      if (action === 'select' || action === 'reconnect') {
         setManageProviderId('opencode');
         setManageRuntimeProviderId(providerId);
-        setManageRuntimeProviderAction('select');
+        setManageRuntimeProviderAction(action);
         setManageDialogOpen(true);
         return;
       }

@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Cancelar",
+      "reconnect": "Volver a conectar",
+      "removeManagedCredential": "Eliminar credencial guardada",
+      "replaceCredential": "Reemplazar credencial",
+      "signInAgain": "Volver a iniciar sesión",
       "test": "Prueba"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Los proveedores conectados y recomendados se muestran primero.",
       "description_one": "{{count}}. Los proveedores conectados y recomendados se muestran primero.",
       "description_other": "{{count}}. Los proveedores conectados y recomendados se muestran primero."
+    },
+    "reconnect": {
+      "apiDescription": "Introduce la nueva credencial. La credencial guardada actual seguirá activa hasta que la nueva supere la verificación del modelo.",
+      "apiTitle": "Reemplazar credencial de {{provider}}",
+      "continueInBrowser": "Continuar en el navegador",
+      "getBrowserCode": "Obtener código del navegador",
+      "oauthDescription": "Úsalo para cambiar de cuenta o reparar la autorización. Si falla la verificación, se restaurará la sesión actual.",
+      "oauthTitle": "Volver a iniciar sesión en {{provider}}",
+      "replaceAndVerify": "Reemplazar y verificar"
     },
     "setup": {
       "loading": "Configuración del proveedor de carga..."

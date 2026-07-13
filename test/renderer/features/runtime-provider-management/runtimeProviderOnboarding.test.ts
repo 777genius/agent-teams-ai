@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   completeRuntimeProviderOnboardingPlan,
   createRuntimeProviderOnboardingProgress,
+  findRuntimeProviderOnboardingPlanByProviderId,
   getRuntimeProviderCredentialUrl,
   getRuntimeProviderOnboardingPlan,
+  getXiaomiMiMoTokenPlanResolutionByProviderId,
   isRuntimeProviderOnboardingPlanConnected,
   isRuntimeProviderOnboardingPlanRoutable,
   normalizeRuntimeProviderOnboardingProgress,
@@ -63,6 +65,35 @@ function model(
 }
 
 describe('runtime provider onboarding domain', () => {
+  it('declares connection strategy capabilities for every featured plan', () => {
+    expect(getRuntimeProviderOnboardingPlan('kiro').connectionStrategy).toEqual({
+      kind: 'companion',
+      companionId: 'kiro-cli',
+    });
+    expect(getRuntimeProviderOnboardingPlan('cursor').connectionStrategy).toEqual({
+      kind: 'companion',
+      companionId: 'cursor-agent',
+    });
+    for (const planId of [
+      'supergrok',
+      'zai-coding-plan',
+      'minimax-token-plan',
+      'github-copilot',
+      'kimi-code-membership',
+      'openai-plus-pro',
+    ] as const) {
+      expect(getRuntimeProviderOnboardingPlan(planId).connectionStrategy).toEqual({
+        kind: 'opencode-auth',
+      });
+    }
+    expect(
+      findRuntimeProviderOnboardingPlanByProviderId('xiaomi-token-plan-sgp')?.connectionStrategy
+    ).toEqual({
+      kind: 'provider-selector',
+      selectorId: 'xiaomi-mimo-base-url',
+    });
+  });
+
   it('does not confuse an xAI API key with a SuperGrok subscription', () => {
     const plan = getRuntimeProviderOnboardingPlan('supergrok');
     expect(
@@ -158,6 +189,15 @@ describe('runtime provider onboarding domain', () => {
       ok: false,
       reason: 'unsupported-url',
     });
+  });
+
+  it('restores the canonical Xiaomi endpoint from a connected provider id', () => {
+    expect(getXiaomiMiMoTokenPlanResolutionByProviderId('xiaomi-token-plan-sgp')).toEqual({
+      providerId: 'xiaomi-token-plan-sgp',
+      regionLabel: 'Singapore',
+      canonicalBaseUrl: 'https://token-plan-sgp.xiaomimimo.com/v1',
+    });
+    expect(getXiaomiMiMoTokenPlanResolutionByProviderId('unknown')).toBeNull();
   });
 
   it('prefers a curated coding model over an unsafe provider default', () => {

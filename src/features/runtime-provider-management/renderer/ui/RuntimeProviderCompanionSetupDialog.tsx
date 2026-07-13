@@ -22,6 +22,7 @@ interface RuntimeProviderCompanionSetupDialogProps {
   onOpenChange: (open: boolean) => void;
   onInstallAndConnect: () => void;
   onConnect: () => void;
+  onManage?: () => void;
   onCopyManualCommand: () => void;
   onOpenManualGuide: () => void;
 }
@@ -45,6 +46,7 @@ export const RuntimeProviderCompanionSetupDialog = ({
   onOpenChange,
   onInstallAndConnect,
   onConnect,
+  onManage,
   onCopyManualCommand,
   onOpenManualGuide,
 }: RuntimeProviderCompanionSetupDialogProps): JSX.Element => {
@@ -158,9 +160,19 @@ export const RuntimeProviderCompanionSetupDialog = ({
 
         <DialogFooter>
           {connected ? (
-            <Button type="button" onClick={() => onOpenChange(false)}>
-              {t('cliStatus.quickConnect.done')}
-            </Button>
+            <>
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                {t('cliStatus.quickConnect.done')}
+              </Button>
+              {onManage ? (
+                <Button type="button" variant="outline" onClick={onManage}>
+                  {t('cliStatus.actions.manage')}
+                </Button>
+              ) : null}
+              <Button type="button" disabled={phaseBusy} onClick={onConnect}>
+                {t('cliStatus.quickConnect.signIn')}
+              </Button>
+            </>
           ) : needsInstall ? (
             <Button type="button" disabled={phaseBusy} onClick={onInstallAndConnect}>
               {phaseBusy ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}

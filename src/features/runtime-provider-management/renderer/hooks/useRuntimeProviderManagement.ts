@@ -2,12 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
 
-import { getRuntimeProviderCredentialUrl, selectInitialProviderId } from '../../core/domain';
+import {
+  getRuntimeProviderCredentialUrl,
+  selectInitialProviderId,
+  selectRuntimeProviderSetupAuthOptionId,
+} from '../../core/domain';
 import {
   getOpenCodeModelForNewTeams,
   saveOpenCodeModelForNewTeams,
 } from '../adapters/createTeamDefaultModelWriter';
 
+import type { RuntimeProviderConnectionIntent } from '../../core/domain';
 import type {
   RuntimeProviderConnectionDto,
   RuntimeProviderDefaultScopeDto,
@@ -32,7 +37,7 @@ interface UseRuntimeProviderManagementOptions {
   searchDirectoryOnQueryChange?: boolean;
   projectPath?: string | null;
   initialProviderId?: string | null;
-  initialProviderAction?: 'connect' | 'select' | null;
+  initialProviderAction?: RuntimeProviderConnectionIntent | 'select' | null;
   onProviderChanged?: () => Promise<void> | void;
 }
 
@@ -62,6 +67,7 @@ export interface RuntimeProviderManagementState {
   directorySelectedProviderId: string | null;
   directorySupported: boolean;
   activeFormProviderId: string | null;
+  connectionIntent: RuntimeProviderConnectionIntent | null;
   setupForm: RuntimeProviderSetupFormDto | null;
   setupFormLoading: boolean;
   setupFormError: string | null;
@@ -100,6 +106,7 @@ export interface RuntimeProviderManagementActions {
   selectDirectoryProvider: (providerId: string) => void;
   searchAllProviders: (query: string) => void;
   startConnect: (providerId: string) => void;
+  startReconnect: (providerId: string) => void;
   cancelConnect: () => void;
   setApiKeyValue: (value: string) => void;
   setAuthOption: (authOptionId: string) => void;
@@ -313,6 +320,9 @@ export function useRuntimeProviderManagement(
   );
   const [directorySupported, setDirectorySupported] = useState(true);
   const [activeFormProviderId, setActiveFormProviderId] = useState<string | null>(null);
+  const [connectionIntent, setConnectionIntent] = useState<RuntimeProviderConnectionIntent | null>(
+    null
+  );
   const [setupForm, setSetupForm] = useState<RuntimeProviderSetupFormDto | null>(null);
   const [setupFormLoading, setSetupFormLoading] = useState(false);
   const [setupFormError, setSetupFormError] = useState<string | null>(null);
@@ -358,6 +368,10 @@ export function useRuntimeProviderManagement(
   const appliedInitialProviderRef = useRef<string | null>(null);
   const activeOAuthOperationRef = useRef<string | null>(null);
   const activeOAuthPhaseRef = useRef<RuntimeProviderOAuthProgressDto['phase'] | null>(null);
+  const providerViewRef = useRef(view);
+  const directoryEntriesRef = useRef(directoryEntries);
+  providerViewRef.current = view;
+  directoryEntriesRef.current = directoryEntries;
   const cancelActiveOAuthBestEffort = useCallback((): Promise<void> | null => {
     // Once a credential has been received, let the bounded backend verification
     // finish. Terminating here can leave a saved but unverified credential.
@@ -457,6 +471,7 @@ export function useRuntimeProviderManagement(
     setSetupSubmitError(null);
     setSetupSubmitErrorDiagnostics(null);
     setActiveFormProviderId(null);
+    setConnectionIntent(null);
     setApiKeyValue('');
     setSelectedAuthOptionId(null);
     setOAuthProgress(null);
@@ -921,10 +936,11 @@ export function useRuntimeProviderManagement(
     setDirectoryNextCursor(null);
   }, []);
 
-  const startConnect = useCallback(
-    (providerId: string): void => {
+  const startConnection = useCallback(
+    (providerId: string, intent: RuntimeProviderConnectionIntent): void => {
       setSelectedProviderId(providerId);
       setActiveFormProviderId(providerId);
+      setConnectionIntent(intent);
       closeModelPickerState();
       setApiKeyValue('');
       setSelectedAuthOptionId(null);
@@ -941,6 +957,12 @@ export function useRuntimeProviderManagement(
       setError(null);
       setErrorDiagnostics(null);
       setSuccessMessage(null);
+      const connectedAuthHint =
+        providerViewRef.current?.providers.find((provider) => provider.providerId === providerId)
+          ?.connectedAuthHint ??
+        directoryEntriesRef.current.find((provider) => provider.providerId === providerId)
+          ?.connectedAuthHint ??
+        null;
       const projectContext = getProjectContextSnapshot();
       const requestSeq = setupFormRequestSeq.current + 1;
       setupFormRequestSeq.current = requestSeq;
@@ -966,9 +988,13 @@ export function useRuntimeProviderManagement(
           }
           setSetupForm(response.setupForm ?? null);
           setSelectedAuthOptionId(
-            response.setupForm?.defaultAuthOptionId ??
-              response.setupForm?.authOptions?.[0]?.id ??
-              null
+            response.setupForm
+              ? selectRuntimeProviderSetupAuthOptionId({
+                  form: response.setupForm,
+                  intent,
+                  connectedAuthHint,
+                })
+              : null
           );
           if (!response.setupForm) {
             setSetupFormError('Provider setup form response was empty');
@@ -999,6 +1025,16 @@ export function useRuntimeProviderManagement(
     ]
   );
 
+  const startConnect = useCallback(
+    (providerId: string): void => startConnection(providerId, 'connect'),
+    [startConnection]
+  );
+
+  const startReconnect = useCallback(
+    (providerId: string): void => startConnection(providerId, 'reconnect'),
+    [startConnection]
+  );
+
   const updateProviderQuery = useCallback(
     (value: string): void => {
       setProviderQuery(value);
@@ -1022,6 +1058,7 @@ export function useRuntimeProviderManagement(
     const cancellation = cancelActiveOAuthBestEffort();
     setupFormRequestSeq.current += 1;
     setActiveFormProviderId(null);
+    setConnectionIntent(null);
     setApiKeyValue('');
     setSelectedAuthOptionId(null);
     setOAuthProgress(null);
@@ -1157,6 +1194,7 @@ export function useRuntimeProviderManagement(
           );
         }
         setActiveFormProviderId(null);
+        setConnectionIntent(null);
         setSuccessMessage(null);
         setApiKeyValue('');
         setSelectedAuthOptionId(null);
@@ -1294,6 +1332,7 @@ export function useRuntimeProviderManagement(
     (providerId: string, mode: RuntimeProviderModelPickerMode): void => {
       setSelectedProviderId(providerId);
       setActiveFormProviderId(null);
+      setConnectionIntent(null);
       openModelPickerState(providerId, mode);
       setError(null);
       setErrorDiagnostics(null);
@@ -1497,6 +1536,7 @@ export function useRuntimeProviderManagement(
       setupFormRequestSeq.current += 1;
       setSelectedProviderId(providerId);
       setActiveFormProviderId(null);
+      setConnectionIntent(null);
       setSetupForm(null);
       setSetupFormError(null);
       setSetupFormErrorDiagnostics(null);
@@ -1527,7 +1567,12 @@ export function useRuntimeProviderManagement(
 
     const initialAction = options.initialProviderAction ?? 'select';
     updateProviderQuery(initialProviderId);
-    if (initialAction === 'connect' && directorySupported && !directoryLoaded && !directoryError) {
+    if (
+      (initialAction === 'connect' || initialAction === 'reconnect') &&
+      directorySupported &&
+      !directoryLoaded &&
+      !directoryError
+    ) {
       return;
     }
     const initialKey = `${initialProviderId}:${initialAction}`;
@@ -1537,8 +1582,8 @@ export function useRuntimeProviderManagement(
 
     appliedInitialProviderRef.current = initialKey;
 
-    if (initialAction === 'connect') {
-      startConnect(initialProviderId);
+    if (initialAction === 'connect' || initialAction === 'reconnect') {
+      startConnection(initialProviderId, initialAction);
       return;
     }
 
@@ -1551,7 +1596,7 @@ export function useRuntimeProviderManagement(
     options.initialProviderAction,
     options.initialProviderId,
     selectProvider,
-    startConnect,
+    startConnection,
     updateProviderQuery,
   ]);
 
@@ -1573,6 +1618,7 @@ export function useRuntimeProviderManagement(
       directorySelectedProviderId,
       directorySupported,
       activeFormProviderId,
+      connectionIntent,
       setupForm,
       setupFormLoading,
       setupFormError,
@@ -1603,6 +1649,7 @@ export function useRuntimeProviderManagement(
     }),
     [
       activeFormProviderId,
+      connectionIntent,
       apiKeyValue,
       selectedAuthOptionId,
       oauthProgress,
@@ -1657,6 +1704,7 @@ export function useRuntimeProviderManagement(
       selectDirectoryProvider,
       searchAllProviders,
       startConnect,
+      startReconnect,
       cancelConnect,
       setApiKeyValue: updateApiKeyValue,
       setAuthOption,
@@ -1690,6 +1738,7 @@ export function useRuntimeProviderManagement(
       setSetupMetadataValue,
       setAuthOption,
       startConnect,
+      startReconnect,
       submitConnect,
       submitOAuthCode,
       testModel,

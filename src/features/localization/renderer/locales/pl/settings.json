@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Anuluj",
+      "reconnect": "Połącz ponownie",
+      "removeManagedCredential": "Usuń zapisane dane logowania",
+      "replaceCredential": "Zastąp dane logowania",
+      "signInAgain": "Zaloguj ponownie",
       "test": "Testuj"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Połączeni i zalecani dostawcy są pokazywani jako pierwsi.",
       "description_one": "{{count}}. Połączeni i zalecani dostawcy są pokazywani jako pierwsi.",
       "description_other": "{{count}}. Połączeni i zalecani dostawcy są pokazywani jako pierwsi."
+    },
+    "reconnect": {
+      "apiDescription": "Wprowadź nowe dane logowania. Obecne zapisane dane pozostaną aktywne, dopóki nowe nie przejdą weryfikacji modelu.",
+      "apiTitle": "Zastąp dane logowania {{provider}}",
+      "continueInBrowser": "Kontynuuj w przeglądarce",
+      "getBrowserCode": "Pobierz kod przeglądarki",
+      "oauthDescription": "Użyj tej opcji, aby zmienić konto lub naprawić autoryzację. Jeśli weryfikacja się nie powiedzie, bieżące logowanie zostanie przywrócone.",
+      "oauthTitle": "Zaloguj ponownie do {{provider}}",
+      "replaceAndVerify": "Zastąp i zweryfikuj"
     },
     "setup": {
       "loading": "Ładowanie konfiguracji dostawcy..."

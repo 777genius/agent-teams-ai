@@ -93,7 +93,7 @@ interface Props {
   readonly providers: CliProviderStatus[];
   readonly initialProviderId: CliProviderId;
   readonly initialRuntimeProviderId?: string | null;
-  readonly initialRuntimeProviderAction?: 'connect' | 'select' | null;
+  readonly initialRuntimeProviderAction?: 'connect' | 'reconnect' | 'select' | null;
   readonly projectPath?: string | null;
   readonly providerStatusLoading?: Partial<Record<CliProviderId, boolean>>;
   readonly disabled?: boolean;
@@ -498,11 +498,12 @@ function getCompactOpenCodeProviderDetailMessage(detailMessage?: string | null):
     typeof firstInternalDetailIndex === 'number'
       ? trimmed.slice(0, firstInternalDetailIndex).trim()
       : trimmed;
-  const connectedVersion = /^version\s+([^\s]+)\s+-\s+connected\b/i.exec(compact)?.[1];
-  if (connectedVersion) {
-    return `OpenCode ${connectedVersion} is ready.`;
-  }
   return compact || null;
+}
+
+function getOpenCodeVersionLabel(detailMessage?: string | null): string | null {
+  const version = /^version\s+([^\s]+)\s+-\s+connected\b/i.exec(detailMessage?.trim() ?? '')?.[1];
+  return version ? `OpenCode ${version}` : null;
 }
 
 function getCodexAccountPanelHint(
@@ -1321,9 +1322,18 @@ export const ProviderRuntimeSettingsDialog = ({
     }
   }
   const showSelectedProviderSummary = Boolean(selectedProvider) && !connectionManagedRuntime;
+  const selectedOpenCodeVersionLabel =
+    selectedProvider?.providerId === 'opencode'
+      ? getOpenCodeVersionLabel(selectedProvider.detailMessage)
+      : null;
+  const selectedProviderSummaryLabel = selectedProvider
+    ? (selectedOpenCodeVersionLabel ?? getProviderUsageLabel(selectedProvider, t))
+    : null;
   const selectedProviderDetailMessage =
     selectedProvider?.providerId === 'opencode'
-      ? getCompactOpenCodeProviderDetailMessage(selectedProvider.detailMessage)
+      ? selectedOpenCodeVersionLabel
+        ? null
+        : getCompactOpenCodeProviderDetailMessage(selectedProvider.detailMessage)
       : (selectedProvider?.detailMessage ?? null);
   const selectedProviderDiagnostics =
     selectedProvider?.providerId === 'opencode'
@@ -1868,10 +1878,7 @@ export const ProviderRuntimeSettingsDialog = ({
         </DialogHeader>
 
         <div className="min-w-0 space-y-4">
-          <div className="space-y-2">
-            <div className="text-[11px] font-medium" style={{ color: 'var(--color-text-muted)' }}>
-              {t('providerRuntime.provider')}
-            </div>
+          <div>
             <Tabs
               value={selectedProvider?.providerId ?? selectedProviderId}
               onValueChange={(value) => {
@@ -1913,11 +1920,18 @@ export const ProviderRuntimeSettingsDialog = ({
 
           {showSelectedProviderSummary && selectedProvider ? (
             <div
-              className="rounded-lg border px-3 py-2.5"
-              style={{
-                borderColor: 'var(--color-border-subtle)',
-                backgroundColor: 'rgba(255, 255, 255, 0.025)',
-              }}
+              data-testid="provider-runtime-summary"
+              className={
+                selectedOpenCodeVersionLabel ? 'px-1 py-0.5' : 'rounded-lg border px-3 py-2.5'
+              }
+              style={
+                selectedOpenCodeVersionLabel
+                  ? undefined
+                  : {
+                      borderColor: 'var(--color-border-subtle)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.025)',
+                    }
+              }
             >
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 {!showRuntimeProviderManagement ? (
@@ -1934,7 +1948,7 @@ export const ProviderRuntimeSettingsDialog = ({
                     ),
                   }}
                 >
-                  {getProviderUsageLabel(selectedProvider, t)}
+                  {selectedProviderSummaryLabel}
                 </span>
                 {managedRuntimeSummary && !hideConnectionMethodMeta ? (
                   <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>

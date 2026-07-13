@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Ghairi",
+      "reconnect": "Unganisha tena",
+      "removeManagedCredential": "Ondoa kitambulisho kilichohifadhiwa",
+      "replaceCredential": "Badilisha kitambulisho",
+      "signInAgain": "Ingia tena",
       "test": "Jaribu"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza.",
       "description_one": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza.",
       "description_other": "{{count}}. Watoa huduma walioungana na waliopendekezwa wanaonyeshwa kwanza."
+    },
+    "reconnect": {
+      "apiDescription": "Weka kitambulisho kipya. Kitambulisho cha sasa kilichohifadhiwa kitaendelea kutumika hadi kipya kipite uthibitishaji wa modeli.",
+      "apiTitle": "Badilisha kitambulisho cha {{provider}}",
+      "continueInBrowser": "Endelea kwenye kivinjari",
+      "getBrowserCode": "Pata msimbo wa kivinjari",
+      "oauthDescription": "Tumia hii kubadilisha akaunti au kurekebisha idhini. Kuingia kwa sasa kutarejeshwa ikiwa uthibitishaji utashindwa.",
+      "oauthTitle": "Ingia tena kwenye {{provider}}",
+      "replaceAndVerify": "Badilisha na uthibitishe"
     },
     "setup": {
       "loading": "Inapakia usanidi wa mtoa huduma..."

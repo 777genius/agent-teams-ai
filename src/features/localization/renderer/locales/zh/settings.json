@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "取消",
+      "reconnect": "重新连接",
+      "removeManagedCredential": "移除已保存的凭据",
+      "replaceCredential": "替换凭据",
+      "signInAgain": "重新登录",
       "test": "测试"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}。首先显示已连接和推荐的提供商。",
       "description_one": "{{count}}。首先显示已连接和推荐的提供商。",
       "description_other": "{{count}}。首先显示已连接和推荐的提供商。"
+    },
+    "reconnect": {
+      "apiDescription": "请输入新凭据。在新凭据通过模型验证之前，当前已保存的凭据将保持有效。",
+      "apiTitle": "替换 {{provider}} 凭据",
+      "continueInBrowser": "在浏览器中继续",
+      "getBrowserCode": "获取浏览器代码",
+      "oauthDescription": "用于切换账户或修复授权。如果验证失败，将恢复当前登录状态。",
+      "oauthTitle": "重新登录 {{provider}}",
+      "replaceAndVerify": "替换并验证"
     },
     "setup": {
       "loading": "正在加载提供商设置…"

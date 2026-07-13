@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Batal",
+      "reconnect": "Sambung semula",
+      "removeManagedCredential": "Alih keluar kelayakan tersimpan",
+      "replaceCredential": "Ganti kelayakan",
+      "signInAgain": "Log masuk semula",
       "test": "Uji"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Pembekal yang disambung dan disyorkan dipaparkan dahulu.",
       "description_one": "{{count}}. Pembekal yang disambung dan disyorkan dipaparkan dahulu.",
       "description_other": "{{count}}. Pembekal yang disambung dan disyorkan dipaparkan dahulu."
+    },
+    "reconnect": {
+      "apiDescription": "Masukkan kelayakan baharu. Kelayakan tersimpan semasa kekal aktif sehingga penggantinya lulus pengesahan model.",
+      "apiTitle": "Ganti kelayakan {{provider}}",
+      "continueInBrowser": "Teruskan dalam pelayar",
+      "getBrowserCode": "Dapatkan kod pelayar",
+      "oauthDescription": "Gunakan ini untuk menukar akaun atau membaiki kebenaran. Log masuk semasa akan dipulihkan jika pengesahan gagal.",
+      "oauthTitle": "Log masuk semula ke {{provider}}",
+      "replaceAndVerify": "Ganti dan sahkan"
     },
     "setup": {
       "loading": "Memuatkan persediaan pembekal..."

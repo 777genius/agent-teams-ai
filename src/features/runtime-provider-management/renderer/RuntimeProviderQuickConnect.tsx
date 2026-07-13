@@ -5,6 +5,7 @@ import { api } from '@renderer/api';
 
 import {
   getRuntimeProviderOnboardingPlan,
+  getXiaomiMiMoTokenPlanResolutionByProviderId,
   isOpenCodeProviderOAuthBridgeOutdated,
   isRuntimeProviderOnboardingPlanRoutable,
   resolveOpenCodeQuickConnectGate,
@@ -37,7 +38,10 @@ interface RuntimeProviderQuickConnectProps {
   projectPath?: string | null;
   refreshKey?: number;
   onInstallOpenCode: () => void;
-  onOpenCodeProviderAction: (providerId: string, action: 'connect' | 'select') => void;
+  onOpenCodeProviderAction: (
+    providerId: string,
+    action: 'connect' | 'reconnect' | 'select'
+  ) => void;
   onBrowseProviders: (query?: string) => void;
   onConnectedCountChange?: (count: number) => void;
 }
@@ -55,11 +59,10 @@ interface OpenCodePlanDefinition {
     | 'kiroDescription'
     | 'cursorDescription';
   requiresOAuthCredential?: boolean;
+  connectionStrategy: ReturnType<typeof getRuntimeProviderOnboardingPlan>['connectionStrategy'];
 }
 
 type CompanionPlanId = 'kiro' | 'cursor';
-
-const COMPANION_PLAN_IDS = new Set<RuntimeProviderOnboardingPlanId>(['kiro', 'cursor']);
 
 const OPEN_CODE_PLAN_PRESENTATION: readonly Pick<
   OpenCodePlanDefinition,
@@ -103,6 +106,7 @@ const OPEN_CODE_PLANS: readonly OpenCodePlanDefinition[] = OPEN_CODE_PLAN_PRESEN
       ...presentation,
       providerId: plan.providerId,
       displayName: plan.displayName,
+      connectionStrategy: plan.connectionStrategy,
     };
   }
 );
@@ -210,19 +214,21 @@ export const RuntimeProviderQuickConnect = ({
     [directory, getCompanionState]
   );
 
-  const handleCompanionCardAction = useCallback(
-    (planId: CompanionPlanId): void => {
-      const companion = getCompanionState(planId);
-      const status = companion.status;
-      if (status?.phase === 'connected') {
-        const providerId = planId === 'kiro' ? 'kiro' : 'cursor-acp';
-        onOpenCodeProviderAction(providerId, 'select');
-        return;
-      }
-      setActiveCompanionPlanId(planId);
-    },
-    [getCompanionState, onOpenCodeProviderAction]
+  const handleCompanionCardAction = useCallback((planId: CompanionPlanId): void => {
+    setActiveCompanionPlanId(planId);
+  }, []);
+
+  const xiaomiEntries = useMemo(
+    () =>
+      directory.entries.filter((entry) =>
+        entry.providerId.toLowerCase().startsWith('xiaomi-token-plan-')
+      ),
+    [directory.entries]
   );
+  const connectedXiaomiEntry = xiaomiEntries.find((entry) => entry.state === 'connected') ?? null;
+  const connectedXiaomiResolution = connectedXiaomiEntry
+    ? getXiaomiMiMoTokenPlanResolutionByProviderId(connectedXiaomiEntry.providerId)
+    : null;
 
   const openCodeCards = useMemo<RuntimeProviderQuickCardViewModel[]>(() => {
     const planCards: RuntimeProviderQuickCardViewModel[] = OPEN_CODE_PLANS.map((plan) => {
@@ -244,7 +250,7 @@ export const RuntimeProviderQuickConnect = ({
         };
       }
 
-      if (COMPANION_PLAN_IDS.has(plan.id)) {
+      if (plan.connectionStrategy.kind === 'companion') {
         const companionPlanId = plan.id as CompanionPlanId;
         const companion = getCompanionState(companionPlanId);
         const status = companion.status;
@@ -411,10 +417,6 @@ export const RuntimeProviderQuickConnect = ({
         onAction,
       };
     });
-    const xiaomiEntries = directory.entries.filter((entry) =>
-      entry.providerId.toLowerCase().startsWith('xiaomi-token-plan-')
-    );
-    const connectedXiaomiEntry = xiaomiEntries.find((entry) => entry.state === 'connected') ?? null;
     const xiaomiConnected = connectedXiaomiEntry !== null;
     const xiaomiLoading =
       gate === 'checking' || gate === 'installing' || (directory.loading && !directory.loaded);
@@ -452,9 +454,7 @@ export const RuntimeProviderQuickConnect = ({
       onAction:
         xiaomiLoading || xiaomiDirectoryUnavailable || !xiaomiAvailable
           ? null
-          : xiaomiConnected && connectedXiaomiEntry
-            ? () => onOpenCodeProviderAction(connectedXiaomiEntry.providerId, 'select')
-            : () => setXiaomiDialogOpen(true),
+          : () => setXiaomiDialogOpen(true),
     });
     return planCards;
   }, [
@@ -462,6 +462,7 @@ export const RuntimeProviderQuickConnect = ({
     directory.error,
     directory.loaded,
     directory.loading,
+    connectedXiaomiEntry,
     gate,
     getCompanionState,
     handleCompanionCardAction,
@@ -470,6 +471,7 @@ export const RuntimeProviderQuickConnect = ({
     onOpenCodeProviderAction,
     runCompanionOperation,
     t,
+    xiaomiEntries,
   ]);
   const observedConnectedCount = openCodeCards.filter((card) => card.state === 'connected').length;
   const [lastReadyConnectedCount, setLastReadyConnectedCount] = useState(0);
@@ -523,6 +525,14 @@ export const RuntimeProviderQuickConnect = ({
             void runCompanionOperation(activeCompanionPlanId, 'connect');
           }
         }}
+        onManage={() => {
+          if (!activeCompanionPlanId) return;
+          onOpenCodeProviderAction(
+            activeCompanionPlanId === 'kiro' ? 'kiro' : 'cursor-acp',
+            'select'
+          );
+          setActiveCompanionPlanId(null);
+        }}
         onCopyManualCommand={() => {
           const command = activeCompanionPlanId
             ? getCompanionState(activeCompanionPlanId).status?.manualCommand
@@ -539,7 +549,21 @@ export const RuntimeProviderQuickConnect = ({
       <XiaomiMiMoTokenPlanSetupDialog
         open={xiaomiDialogOpen}
         onOpenChange={setXiaomiDialogOpen}
-        onConnect={(providerId) => onOpenCodeProviderAction(providerId, 'connect')}
+        initialBaseUrl={connectedXiaomiResolution?.canonicalBaseUrl ?? null}
+        onConnect={(providerId) =>
+          onOpenCodeProviderAction(
+            providerId,
+            connectedXiaomiEntry?.providerId === providerId ? 'reconnect' : 'connect'
+          )
+        }
+        onManage={
+          connectedXiaomiEntry
+            ? () => {
+                onOpenCodeProviderAction(connectedXiaomiEntry.providerId, 'select');
+                setXiaomiDialogOpen(false);
+              }
+            : undefined
+        }
         onOpenPlanPage={(url) => void api.openExternal(url)}
       />
     </>

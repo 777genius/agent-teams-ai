@@ -26,6 +26,8 @@ interface XiaomiMiMoTokenPlanSetupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConnect: (providerId: XiaomiMiMoTokenPlanProviderId) => void;
+  initialBaseUrl?: string | null;
+  onManage?: () => void;
   onOpenPlanPage: (url: string) => void;
 }
 
@@ -33,6 +35,8 @@ export const XiaomiMiMoTokenPlanSetupDialog = ({
   open,
   onOpenChange,
   onConnect,
+  initialBaseUrl,
+  onManage,
   onOpenPlanPage,
 }: XiaomiMiMoTokenPlanSetupDialogProps): JSX.Element => {
   const { t } = useAppTranslation('dashboard');
@@ -41,11 +45,9 @@ export const XiaomiMiMoTokenPlanSetupDialog = ({
   const resolution = useMemo(() => resolveXiaomiMiMoTokenPlanProvider(baseUrl), [baseUrl]);
 
   useEffect(() => {
-    if (!open) {
-      setBaseUrl('');
-      setSubmitted(false);
-    }
-  }, [open]);
+    setBaseUrl(open ? (initialBaseUrl ?? '') : '');
+    setSubmitted(false);
+  }, [initialBaseUrl, open]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -63,7 +65,11 @@ export const XiaomiMiMoTokenPlanSetupDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[min(calc(100vw-2rem),34rem)] gap-4 p-5">
         <DialogHeader>
-          <DialogTitle>{t('cliStatus.quickConnect.xiaomiSetupTitle')}</DialogTitle>
+          <DialogTitle>
+            {onManage
+              ? `${t('cliStatus.actions.manage')} Xiaomi MiMo Token Plan`
+              : t('cliStatus.quickConnect.xiaomiSetupTitle')}
+          </DialogTitle>
           <DialogDescription>
             {t('cliStatus.quickConnect.xiaomiSetupDescription')}
           </DialogDescription>
@@ -135,6 +141,11 @@ export const XiaomiMiMoTokenPlanSetupDialog = ({
           )}
 
           <DialogFooter>
+            {onManage ? (
+              <Button type="button" variant="outline" onClick={onManage}>
+                {t('cliStatus.actions.manage')}
+              </Button>
+            ) : null}
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('cliStatus.quickConnect.cancel')}
             </Button>

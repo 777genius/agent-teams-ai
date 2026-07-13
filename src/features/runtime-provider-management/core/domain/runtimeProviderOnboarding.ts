@@ -39,6 +39,14 @@ export type RuntimeProviderOnboardingStage =
   | 'ready'
   | 'error';
 
+export type RuntimeProviderConnectionStrategy =
+  | { readonly kind: 'opencode-auth' }
+  | {
+      readonly kind: 'companion';
+      readonly companionId: 'kiro-cli' | 'cursor-agent';
+    }
+  | { readonly kind: 'provider-selector'; readonly selectorId: 'xiaomi-mimo-base-url' };
+
 export interface RuntimeProviderOnboardingPlan {
   readonly id: RuntimeProviderOnboardingPlanId;
   readonly providerId: string;
@@ -48,6 +56,7 @@ export interface RuntimeProviderOnboardingPlan {
   readonly credentialUrl: string | null;
   readonly preferredModelFragments: readonly string[];
   readonly requireOAuthCredentialHint: boolean;
+  readonly connectionStrategy: RuntimeProviderConnectionStrategy;
 }
 
 export interface RuntimeProviderOnboardingProgress {
@@ -69,6 +78,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     credentialUrl: null,
     preferredModelFragments: ['grok-4.3', 'grok-code', 'grok-4'],
     requireOAuthCredentialHint: true,
+    connectionStrategy: { kind: 'opencode-auth' },
   },
   {
     id: 'zai-coding-plan',
@@ -86,6 +96,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
       'glm-4.5-air',
     ],
     requireOAuthCredentialHint: false,
+    connectionStrategy: { kind: 'opencode-auth' },
   },
   {
     id: 'minimax-token-plan',
@@ -96,6 +107,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     credentialUrl: 'https://platform.minimax.io/console/plan',
     preferredModelFragments: ['minimax-m3', 'minimax-m2.7-highspeed', 'minimax-m2.7'],
     requireOAuthCredentialHint: false,
+    connectionStrategy: { kind: 'opencode-auth' },
   },
   {
     id: 'github-copilot',
@@ -109,6 +121,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     // but rejected by that tier. Keep paid/premium routes as fallbacks.
     preferredModelFragments: ['gpt-4.1', 'gpt-5-mini', 'gpt-5', 'claude-sonnet', 'gemini'],
     requireOAuthCredentialHint: false,
+    connectionStrategy: { kind: 'opencode-auth' },
   },
   {
     id: 'kimi-code-membership',
@@ -122,6 +135,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
       'kimi-for-coding/kimi-for-coding-highspeed',
     ],
     requireOAuthCredentialHint: false,
+    connectionStrategy: { kind: 'opencode-auth' },
   },
   {
     id: 'kiro',
@@ -132,6 +146,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     credentialUrl: null,
     preferredModelFragments: ['kiro/auto', 'kiro/claude-opus', 'kiro/claude-sonnet'],
     requireOAuthCredentialHint: false,
+    connectionStrategy: { kind: 'companion', companionId: 'kiro-cli' },
   },
   {
     id: 'cursor',
@@ -142,6 +157,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     credentialUrl: null,
     preferredModelFragments: ['cursor-acp/auto'],
     requireOAuthCredentialHint: false,
+    connectionStrategy: { kind: 'companion', companionId: 'cursor-agent' },
   },
   {
     id: 'openai-plus-pro',
@@ -152,6 +168,7 @@ export const RUNTIME_PROVIDER_ONBOARDING_PLANS: readonly RuntimeProviderOnboardi
     credentialUrl: null,
     preferredModelFragments: ['gpt-5', 'codex'],
     requireOAuthCredentialHint: true,
+    connectionStrategy: { kind: 'opencode-auth' },
   },
 ];
 
@@ -196,23 +213,34 @@ function createXiaomiMiMoTokenPlan(
       `${resolution.providerId}/mimo-v2.5`,
     ],
     requireOAuthCredentialHint: false,
+    connectionStrategy: { kind: 'provider-selector', selectorId: 'xiaomi-mimo-base-url' },
+  };
+}
+
+export function getXiaomiMiMoTokenPlanResolutionByProviderId(
+  providerId: string
+): XiaomiMiMoTokenPlanResolution | null {
+  const regionEntry = Object.entries(XIAOMI_MIMO_TOKEN_PLAN_REGIONS).find(
+    ([, candidate]) => candidate.providerId === providerId.trim().toLowerCase()
+  );
+  if (!regionEntry) {
+    return null;
+  }
+  const [hostname, region] = regionEntry;
+  return {
+    ...region,
+    canonicalBaseUrl: `https://${hostname}/v1`,
   };
 }
 
 function getXiaomiMiMoTokenPlanByProviderId(
   providerId: string
 ): RuntimeProviderOnboardingPlan | null {
-  const regionEntry = Object.entries(XIAOMI_MIMO_TOKEN_PLAN_REGIONS).find(
-    ([, candidate]) => candidate.providerId === providerId
-  );
-  if (!regionEntry) {
+  const resolution = getXiaomiMiMoTokenPlanResolutionByProviderId(providerId);
+  if (!resolution) {
     return null;
   }
-  const [hostname, region] = regionEntry;
-  return createXiaomiMiMoTokenPlan({
-    ...region,
-    canonicalBaseUrl: `https://${hostname}/v1`,
-  });
+  return createXiaomiMiMoTokenPlan(resolution);
 }
 
 export function resolveXiaomiMiMoTokenPlanProvider(

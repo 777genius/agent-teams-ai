@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "キャンセル",
+      "reconnect": "再接続",
+      "removeManagedCredential": "保存済み認証情報を削除",
+      "replaceCredential": "認証情報を置き換える",
+      "signInAgain": "再度サインイン",
       "test": "テスト"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}の特長 接続および推奨プロバイダが最初に表示されます。",
       "description_one": "{{count}}の特長 接続および推奨プロバイダが最初に表示されます。",
       "description_other": "{{count}}の特長 接続および推奨プロバイダが最初に表示されます。"
+    },
+    "reconnect": {
+      "apiDescription": "新しい認証情報を入力してください。新しい認証情報がモデル検証に合格するまで、現在の保存済み認証情報は有効なままです。",
+      "apiTitle": "{{provider}} の認証情報を置き換える",
+      "continueInBrowser": "ブラウザーで続行",
+      "getBrowserCode": "ブラウザーコードを取得",
+      "oauthDescription": "アカウントの切り替えや認証の修復に使用します。検証に失敗した場合は、現在のサインインが復元されます。",
+      "oauthTitle": "{{provider}} に再度サインイン",
+      "replaceAndVerify": "置き換えて検証"
     },
     "setup": {
       "loading": "ローディングプロバイダーのセットアップ..."

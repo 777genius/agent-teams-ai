@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "منسوخ",
+      "reconnect": "دوبارہ منسلک کریں",
+      "removeManagedCredential": "محفوظ سند ہٹائیں",
+      "replaceCredential": "سند تبدیل کریں",
+      "signInAgain": "دوبارہ سائن ان کریں",
       "test": "جانچ"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. . . .",
       "description_one": "{{count}}. . . .",
       "description_other": "{{count}}. . . ."
+    },
+    "reconnect": {
+      "apiDescription": "نئی سند درج کریں۔ نئی سند کے ماڈل کی توثیق میں کامیاب ہونے تک موجودہ محفوظ سند فعال رہے گی۔",
+      "apiTitle": "{{provider}} کی سند تبدیل کریں",
+      "continueInBrowser": "براؤزر میں جاری رکھیں",
+      "getBrowserCode": "براؤزر کوڈ حاصل کریں",
+      "oauthDescription": "اکاؤنٹ تبدیل کرنے یا اجازت درست کرنے کے لیے اسے استعمال کریں۔ توثیق ناکام ہونے پر موجودہ سائن ان بحال کر دیا جائے گا۔",
+      "oauthTitle": "{{provider}} میں دوبارہ سائن ان کریں",
+      "replaceAndVerify": "تبدیل کریں اور تصدیق کریں"
     },
     "setup": {
       "loading": "وائیرڈ فراہم کُنندہ وضع کیا گیا ہے..."

@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Anulează",
+      "reconnect": "Reconectează",
+      "removeManagedCredential": "Elimină acreditările salvate",
+      "replaceCredential": "Înlocuiește acreditările",
+      "signInAgain": "Autentifică-te din nou",
       "test": "Testează"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii.",
       "description_one": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii.",
       "description_other": "{{count}}. Furnizorii conectați și recomandați sunt afișați primii."
+    },
+    "reconnect": {
+      "apiDescription": "Introdu noile acreditări. Acreditările salvate curente rămân active până când cele noi trec verificarea modelului.",
+      "apiTitle": "Înlocuiește acreditările pentru {{provider}}",
+      "continueInBrowser": "Continuă în browser",
+      "getBrowserCode": "Obține codul pentru browser",
+      "oauthDescription": "Folosește această opțiune pentru a schimba contul sau a repara autorizarea. Autentificarea curentă va fi restaurată dacă verificarea eșuează.",
+      "oauthTitle": "Autentifică-te din nou la {{provider}}",
+      "replaceAndVerify": "Înlocuiește și verifică"
     },
     "setup": {
       "loading": "Se încarcă configurarea furnizorului..."

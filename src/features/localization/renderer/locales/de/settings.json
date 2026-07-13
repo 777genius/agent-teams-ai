@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Abbrechen",
+      "reconnect": "Erneut verbinden",
+      "removeManagedCredential": "Gespeicherte Zugangsdaten entfernen",
+      "replaceCredential": "Zugangsdaten ersetzen",
+      "signInAgain": "Erneut anmelden",
       "test": "Prüfung"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Vernetzte und empfohlene Anbieter werden zuerst angezeigt.",
       "description_one": "{{count}}. Vernetzte und empfohlene Anbieter werden zuerst angezeigt.",
       "description_other": "{{count}}. Vernetzte und empfohlene Anbieter werden zuerst angezeigt."
+    },
+    "reconnect": {
+      "apiDescription": "Gib die neuen Zugangsdaten ein. Die aktuell gespeicherten Zugangsdaten bleiben aktiv, bis der Ersatz die Modellprüfung besteht.",
+      "apiTitle": "Zugangsdaten für {{provider}} ersetzen",
+      "continueInBrowser": "Im Browser fortfahren",
+      "getBrowserCode": "Browsercode abrufen",
+      "oauthDescription": "Verwende dies, um das Konto zu wechseln oder die Autorisierung zu reparieren. Bei fehlgeschlagener Prüfung wird die aktuelle Anmeldung wiederhergestellt.",
+      "oauthTitle": "Erneut bei {{provider}} anmelden",
+      "replaceAndVerify": "Ersetzen und prüfen"
     },
     "setup": {
       "loading": "Installation des Anbieters..."

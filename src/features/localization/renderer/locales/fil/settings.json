@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Kanselahin",
+      "reconnect": "Kumonekta muli",
+      "removeManagedCredential": "Alisin ang naka-save na credential",
+      "replaceCredential": "Palitan ang credential",
+      "signInAgain": "Mag-sign in muli",
       "test": "Subukan"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Ipinapakita muna ang mga konektado at inirerekomendang provider.",
       "description_one": "{{count}}. Ipinapakita muna ang mga konektado at inirerekomendang provider.",
       "description_other": "{{count}}. Ipinapakita muna ang mga konektado at inirerekomendang provider."
+    },
+    "reconnect": {
+      "apiDescription": "Ilagay ang bagong credential. Mananatiling aktibo ang kasalukuyang naka-save na credential hanggang pumasa sa model verification ang kapalit.",
+      "apiTitle": "Palitan ang credential ng {{provider}}",
+      "continueInBrowser": "Magpatuloy sa browser",
+      "getBrowserCode": "Kunin ang browser code",
+      "oauthDescription": "Gamitin ito para magpalit ng account o ayusin ang authorization. Ibabalik ang kasalukuyang sign-in kapag nabigo ang verification.",
+      "oauthTitle": "Mag-sign in muli sa {{provider}}",
+      "replaceAndVerify": "Palitan at i-verify"
     },
     "setup": {
       "loading": "Niloload ang provider setup..."

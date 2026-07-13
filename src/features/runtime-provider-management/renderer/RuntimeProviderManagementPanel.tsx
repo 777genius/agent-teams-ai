@@ -17,7 +17,7 @@ interface RuntimeProviderManagementPanelProps {
   readonly open: boolean;
   readonly projectPath?: string | null;
   readonly initialProviderId?: string | null;
-  readonly initialProviderAction?: 'connect' | 'select' | null;
+  readonly initialProviderAction?: 'connect' | 'reconnect' | 'select' | null;
   readonly disabled?: boolean;
   readonly onProviderChanged?: () => Promise<void> | void;
   readonly onBlockingOperationChange?: (blocking: boolean) => void;

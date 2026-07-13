@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Cancel",
+      "reconnect": "Reconnect",
+      "removeManagedCredential": "Remove managed credential",
+      "replaceCredential": "Replace credential",
+      "signInAgain": "Sign in again",
       "test": "Test"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Connected and recommended providers are shown first.",
       "description_one": "{{count}}. Connected and recommended providers are shown first.",
       "description_other": "{{count}}. Connected and recommended providers are shown first."
+    },
+    "reconnect": {
+      "apiDescription": "Enter the new credential. The current managed credential stays active unless the replacement passes model verification.",
+      "apiTitle": "Replace {{provider}} credential",
+      "continueInBrowser": "Continue in browser",
+      "getBrowserCode": "Get browser code",
+      "oauthDescription": "Use this to switch accounts or repair authorization. The current managed sign-in is restored if verification fails.",
+      "oauthTitle": "Sign in to {{provider}} again",
+      "replaceAndVerify": "Replace and verify"
     },
     "setup": {
       "loading": "Loading provider setup..."

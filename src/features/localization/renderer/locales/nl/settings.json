@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Annuleren",
+      "reconnect": "Opnieuw verbinden",
+      "removeManagedCredential": "Opgeslagen referentie verwijderen",
+      "replaceCredential": "Referentie vervangen",
+      "signInAgain": "Opnieuw aanmelden",
       "test": "Testen"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Verbonden en aanbevolen providers worden als eerste getoond.",
       "description_one": "{{count}}. Verbonden en aanbevolen providers worden als eerste getoond.",
       "description_other": "{{count}}. Verbonden en aanbevolen providers worden als eerste getoond."
+    },
+    "reconnect": {
+      "apiDescription": "Voer de nieuwe referentie in. De huidige opgeslagen referentie blijft actief totdat de vervanging de modelverificatie doorstaat.",
+      "apiTitle": "Referentie voor {{provider}} vervangen",
+      "continueInBrowser": "Doorgaan in browser",
+      "getBrowserCode": "Browsercode ophalen",
+      "oauthDescription": "Gebruik dit om van account te wisselen of de autorisatie te herstellen. De huidige aanmelding wordt hersteld als de verificatie mislukt.",
+      "oauthTitle": "Opnieuw aanmelden bij {{provider}}",
+      "replaceAndVerify": "Vervangen en verifiëren"
     },
     "setup": {
       "loading": "Providerconfiguratie laden..."

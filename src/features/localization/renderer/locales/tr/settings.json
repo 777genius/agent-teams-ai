@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "İptal",
+      "reconnect": "Yeniden bağlan",
+      "removeManagedCredential": "Kayıtlı kimlik bilgisini kaldır",
+      "replaceCredential": "Kimlik bilgisini değiştir",
+      "signInAgain": "Yeniden oturum aç",
       "test": "Test et"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Bağlı ve önerilen sağlayıcılar önce gösterilir.",
       "description_one": "{{count}}. Bağlı ve önerilen sağlayıcılar önce gösterilir.",
       "description_other": "{{count}}. Bağlı ve önerilen sağlayıcılar önce gösterilir."
+    },
+    "reconnect": {
+      "apiDescription": "Yeni kimlik bilgisini girin. Yeni bilgi model doğrulamasını geçene kadar mevcut kayıtlı kimlik bilgisi etkin kalır.",
+      "apiTitle": "{{provider}} kimlik bilgisini değiştir",
+      "continueInBrowser": "Tarayıcıda devam et",
+      "getBrowserCode": "Tarayıcı kodunu al",
+      "oauthDescription": "Hesap değiştirmek veya yetkilendirmeyi onarmak için bunu kullanın. Doğrulama başarısız olursa mevcut oturum geri yüklenir.",
+      "oauthTitle": "{{provider}} hesabında yeniden oturum aç",
+      "replaceAndVerify": "Değiştir ve doğrula"
     },
     "setup": {
       "loading": "Sağlayıcı kurulumu yükleniyor..."

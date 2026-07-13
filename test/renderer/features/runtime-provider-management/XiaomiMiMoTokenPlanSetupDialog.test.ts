@@ -18,6 +18,7 @@ vi.mock('@features/localization/renderer', () => ({
         'cliStatus.quickConnect.xiaomiRegionAutomatic': 'Region is detected automatically.',
         'cliStatus.quickConnect.cancel': 'Cancel',
         'cliStatus.quickConnect.continue': 'Continue',
+        'cliStatus.actions.manage': 'Manage',
         'actions.close': 'Close',
       };
       return labels[key] ?? key;
@@ -146,5 +147,28 @@ describe('XiaomiMiMoTokenPlanSetupDialog', () => {
       document.querySelector<HTMLInputElement>('[data-testid="xiaomi-mimo-base-url"]')?.value
     ).toBe('');
     expect(document.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('reuses the current endpoint when managing a connected plan', async () => {
+    await act(async () => {
+      root.render(
+        React.createElement(XiaomiMiMoTokenPlanSetupDialog, {
+          open: true,
+          initialBaseUrl: 'https://token-plan-sgp.xiaomimimo.com/v1',
+          onOpenChange: vi.fn(),
+          onConnect: vi.fn(),
+          onManage: vi.fn(),
+          onOpenPlanPage: vi.fn(),
+        })
+      );
+    });
+
+    expect(document.body.textContent).toContain('Manage Xiaomi MiMo Token Plan');
+    expect(
+      document.querySelector<HTMLInputElement>('[data-testid="xiaomi-mimo-base-url"]')?.value
+    ).toBe('https://token-plan-sgp.xiaomimimo.com/v1');
+    expect(
+      document.querySelector('[data-testid="xiaomi-mimo-detected-region"]')?.textContent
+    ).toContain('Singapore endpoint detected');
   });
 });

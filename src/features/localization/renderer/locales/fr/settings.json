@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Annuler",
+      "reconnect": "Reconnecter",
+      "removeManagedCredential": "Supprimer les identifiants enregistrés",
+      "replaceCredential": "Remplacer les identifiants",
+      "signInAgain": "Se reconnecter",
       "test": "Essai"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. Les fournisseurs connectés et recommandés sont montrés en premier.",
       "description_one": "{{count}}. Les fournisseurs connectés et recommandés sont montrés en premier.",
       "description_other": "{{count}}. Les fournisseurs connectés et recommandés sont montrés en premier."
+    },
+    "reconnect": {
+      "apiDescription": "Saisissez les nouveaux identifiants. Les identifiants enregistrés actuels restent actifs tant que les nouveaux n'ont pas réussi la vérification du modèle.",
+      "apiTitle": "Remplacer les identifiants de {{provider}}",
+      "continueInBrowser": "Continuer dans le navigateur",
+      "getBrowserCode": "Obtenir le code du navigateur",
+      "oauthDescription": "Utilisez cette option pour changer de compte ou réparer l'autorisation. La connexion actuelle sera restaurée si la vérification échoue.",
+      "oauthTitle": "Se reconnecter à {{provider}}",
+      "replaceAndVerify": "Remplacer et vérifier"
     },
     "setup": {
       "loading": "Chargement de la configuration du fournisseur..."

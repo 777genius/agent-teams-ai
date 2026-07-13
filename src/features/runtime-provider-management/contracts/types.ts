@@ -154,6 +154,7 @@ export interface RuntimeProviderOAuthProgressDto {
 
 export type RuntimeProviderActionIdDto =
   | 'connect'
+  | 'reconnect'
   | 'use'
   | 'test'
   | 'set-default'

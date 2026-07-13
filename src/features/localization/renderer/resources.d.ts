@@ -3144,6 +3144,10 @@ export default interface Resources {
     runtimeProvider: {
       actions: {
         cancel: 'Cancel';
+        reconnect: 'Reconnect';
+        removeManagedCredential: 'Remove managed credential';
+        replaceCredential: 'Replace credential';
+        signInAgain: 'Sign in again';
         test: 'Test';
       };
       badges: {
@@ -3231,6 +3235,15 @@ export default interface Resources {
         recommended: 'Recommended';
         refreshCatalog: 'Refresh catalog';
         searchPlaceholder: 'Search providers';
+      };
+      reconnect: {
+        apiDescription: 'Enter the new credential. The current managed credential stays active unless the replacement passes model verification.';
+        apiTitle: 'Replace {{provider}} credential';
+        continueInBrowser: 'Continue in browser';
+        getBrowserCode: 'Get browser code';
+        oauthDescription: 'Use this to switch accounts or repair authorization. The current managed sign-in is restored if verification fails.';
+        oauthTitle: 'Sign in to {{provider}} again';
+        replaceAndVerify: 'Replace and verify';
       };
       setup: {
         loading: 'Loading provider setup...';

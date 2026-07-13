@@ -8,6 +8,7 @@ import type {
 
 const ACTION_ORDER: RuntimeProviderActionIdDto[] = [
   'connect',
+  'reconnect',
   'use',
   'test',
   'set-default',

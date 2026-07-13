@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Отмена",
+      "reconnect": "Переподключить",
+      "removeManagedCredential": "Удалить сохранённые данные подключения",
+      "replaceCredential": "Заменить данные подключения",
+      "signInAgain": "Войти снова",
       "test": "Тест"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "recommended": "Recommended",
       "refreshCatalog": "Обновить catalog",
       "searchPlaceholder": "Поиск providers"
+    },
+    "reconnect": {
+      "apiDescription": "Введите новые данные подключения. Текущие сохранённые данные останутся активными, пока новые не пройдут проверку модели.",
+      "apiTitle": "Заменить данные подключения {{provider}}",
+      "continueInBrowser": "Продолжить в браузере",
+      "getBrowserCode": "Получить код для браузера",
+      "oauthDescription": "Используйте повторный вход, чтобы сменить аккаунт или восстановить авторизацию. Если проверка завершится ошибкой, текущий вход будет восстановлен.",
+      "oauthTitle": "Снова войти в {{provider}}",
+      "replaceAndVerify": "Заменить и проверить"
     },
     "setup": {
       "loading": "Загрузка provider setup..."

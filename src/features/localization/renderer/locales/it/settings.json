@@ -22,6 +22,10 @@
   "runtimeProvider": {
     "actions": {
       "cancel": "Annulla",
+      "reconnect": "Riconnetti",
+      "removeManagedCredential": "Rimuovi credenziale salvata",
+      "replaceCredential": "Sostituisci credenziale",
+      "signInAgain": "Accedi di nuovo",
       "test": "Testa"
     },
     "defaults": {
@@ -90,6 +94,15 @@
       "description_many": "{{count}}. I provider connessi e consigliati vengono mostrati per primi.",
       "description_one": "{{count}}. I provider connessi e consigliati vengono mostrati per primi.",
       "description_other": "{{count}}. I provider connessi e consigliati vengono mostrati per primi."
+    },
+    "reconnect": {
+      "apiDescription": "Inserisci la nuova credenziale. La credenziale salvata corrente rimane attiva finché quella nuova non supera la verifica del modello.",
+      "apiTitle": "Sostituisci la credenziale di {{provider}}",
+      "continueInBrowser": "Continua nel browser",
+      "getBrowserCode": "Ottieni il codice del browser",
+      "oauthDescription": "Usa questa opzione per cambiare account o ripristinare l'autorizzazione. Se la verifica non riesce, verrà ripristinato l'accesso corrente.",
+      "oauthTitle": "Accedi di nuovo a {{provider}}",
+      "replaceAndVerify": "Sostituisci e verifica"
     },
     "setup": {
       "loading": "Caricamento della configurazione del provider..."

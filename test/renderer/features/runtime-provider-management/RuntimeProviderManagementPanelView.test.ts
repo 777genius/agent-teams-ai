@@ -66,6 +66,7 @@ function createState(
     directorySelectedProviderId: null,
     directorySupported: true,
     activeFormProviderId: null,
+    connectionIntent: null,
     setupForm: null,
     setupFormLoading: false,
     setupFormError: null,
@@ -107,6 +108,7 @@ function createActions(): RuntimeProviderManagementActions {
     selectDirectoryProvider: vi.fn(),
     searchAllProviders: vi.fn(),
     startConnect: vi.fn(),
+    startReconnect: vi.fn(),
     cancelConnect: vi.fn(),
     setApiKeyValue: vi.fn(),
     setAuthOption: vi.fn(),
@@ -1163,12 +1165,18 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).toContain('4 models');
     expect(host.querySelector('[data-testid="runtime-provider-search"]')).not.toBeNull();
     expect(
-      host.querySelector('[data-testid="runtime-provider-row-openrouter"]')?.className
+      host.querySelector('[data-testid="runtime-provider-row-openrouter-header"]')?.className
     ).toContain('hover:bg-sky-400');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter"]')?.className
+    ).toContain('border-b');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter"]')?.className
+    ).not.toContain('rounded-lg');
 
     await act(async () => {
-      host
-        .querySelector('[data-testid="runtime-provider-row-openrouter"]')
+      Array.from(host.querySelectorAll('span'))
+        .find((element) => element.textContent === 'OpenRouter')
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
@@ -1769,11 +1777,13 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     const buttons = Array.from(host.querySelectorAll('button'));
     expect(buttons.some((button) => button.textContent?.includes('Connect'))).toBe(true);
-    expect(buttons.some((button) => button.textContent?.includes('Forget'))).toBe(true);
+    expect(buttons.some((button) => button.textContent?.includes('Remove managed credential'))).toBe(
+      true
+    );
 
     await act(async () => {
       buttons
-        .find((button) => button.textContent?.includes('Forget'))
+        .find((button) => button.textContent?.includes('Remove managed credential'))
         ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       await Promise.resolve();
     });
@@ -1782,13 +1792,141 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     await act(async () => {
       buttons
-        .find((button) => button.textContent?.includes('Forget'))
+        .find((button) => button.textContent?.includes('Remove managed credential'))
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
 
     expect(actions.forgetProvider).toHaveBeenCalledWith('openrouter');
     expect(actions.startConnect).not.toHaveBeenCalled();
+  });
+
+  it('reuses the setup form for safe credential replacement on connected providers', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const provider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed' as const],
+      connectedAuthHint: 'api' as const,
+      detail: 'Connected via app-managed OpenCode credential',
+      actions: [
+        {
+          id: 'reconnect' as const,
+          label: 'Replace credential',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: true,
+          ownershipScope: 'managed' as const,
+        },
+      ],
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: { ...createState().view!, providers: [provider] },
+            providers: [provider],
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const replaceButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Replace credential')
+    );
+    expect(host.textContent).not.toContain('Connection');
+    expect(host.textContent).not.toContain('API credential');
+    expect(host.textContent).not.toContain('Connected via app-managed OpenCode credential');
+    expect(host.textContent).toContain('Models');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter"]')?.className
+    ).not.toContain('bg-sky-400');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter-header"]')?.className
+    ).toContain('bg-sky-400');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter-content"]')?.className
+    ).toContain('border-l-2');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-row-openrouter-content"]')?.className
+    ).toContain('bg-white');
+    const modelToolbar = host.querySelector('[data-testid="runtime-provider-model-toolbar"]');
+    const modelSearch = host.querySelector('[data-testid="runtime-provider-model-search"]');
+    expect(modelToolbar?.textContent).toContain('Models');
+    expect(modelToolbar?.contains(modelSearch)).toBe(true);
+    await act(async () => {
+      replaceButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(actions.startReconnect).toHaveBeenCalledWith('openrouter');
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: { ...createState().view!, providers: [provider] },
+            providers: [provider],
+            activeFormProviderId: 'openrouter',
+            connectionIntent: 'reconnect',
+            selectedAuthOptionId: 'api:0',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'OpenRouter',
+              method: 'api',
+              supported: true,
+              title: 'Connect OpenRouter',
+              description: 'Credential is stored in the managed profile.',
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'opencode-auth',
+              secret: {
+                key: 'key',
+                label: 'API key',
+                placeholder: 'Paste API key',
+                required: true,
+              },
+              prompts: [],
+              authOptions: [
+                {
+                  id: 'api:0',
+                  method: 'api',
+                  methodIndex: 0,
+                  label: 'API key',
+                  supported: true,
+                  disabledReason: null,
+                  secret: {
+                    key: 'key',
+                    label: 'API key',
+                    placeholder: 'Paste API key',
+                    required: true,
+                  },
+                  prompts: [],
+                },
+              ],
+              defaultAuthOptionId: 'api:0',
+            },
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Replace OpenRouter credential');
+    expect(host.textContent).toContain('current managed credential stays active');
+    expect(host.textContent).toContain('Replace and verify');
+    expect((host.querySelector('input[type="password"]') as HTMLInputElement | null)?.value).toBe(
+      ''
+    );
   });
 
   it('supports keyboard activation for compact provider rows', async () => {
@@ -2001,11 +2139,21 @@ describe('RuntimeProviderManagementPanelView', () => {
     });
 
     expect(host.textContent).toContain('115 OpenCode providers');
+    expect(host.textContent).not.toContain('Connected and recommended providers are shown first.');
     expect(host.textContent).toContain('DeepSeek');
     expect(host.textContent).toContain('Cloudflare Workers AI');
     expect(host.textContent).toContain('62 models');
     expect(host.textContent).toContain('OpenCode catalog');
     expect(host.querySelector('[data-testid="runtime-provider-search"]')).not.toBeNull();
+    expect(
+      host.querySelector('[data-testid="runtime-provider-catalog-list"]')?.className
+    ).toContain('border-y');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-directory-row-deepseek"]')?.className
+    ).toContain('border-b');
+    expect(
+      host.querySelector('[data-testid="runtime-provider-directory-row-deepseek"]')?.className
+    ).not.toContain('rounded-lg');
 
     await act(async () => {
       host
@@ -2074,7 +2222,7 @@ describe('RuntimeProviderManagementPanelView', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('1 OpenCode provider.');
+    expect(host.textContent).toContain('1 OpenCode provider');
     expect(host.textContent).not.toContain('1 OpenCode providers');
   });
 

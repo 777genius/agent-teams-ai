@@ -265,6 +265,91 @@ describe('RuntimeProviderQuickConnect', () => {
     expect(runConnect).toHaveBeenCalledTimes(1);
   });
 
+  it('reuses the companion dialog to sign in again after Cursor is connected', async () => {
+    const runConnect = vi.fn(async () => undefined);
+    mocks.companions.set('cursor-agent', companion('cursor-agent', runConnect));
+    mocks.directory = {
+      entries: [
+        entry('kiro', { metadata: { ...entry('kiro').metadata, configuredAuthless: true } }),
+        entry('cursor-acp', {
+          metadata: { ...entry('cursor-acp').metadata, configuredAuthless: true },
+        }),
+      ],
+      loaded: true,
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    };
+
+    await renderQuickConnect();
+    await act(async () => {
+      host
+        .querySelector<HTMLButtonElement>('[data-testid="provider-quick-action-cursor"]')
+        ?.click();
+    });
+    const signIn = [...document.body.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('cliStatus.quickConnect.signIn')
+    );
+    await act(async () => signIn?.click());
+
+    expect(runConnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes the current MiMo endpoint through the reusable reconnect flow', async () => {
+    const onOpenCodeProviderAction = vi.fn();
+    mocks.directory = {
+      entries: [entry('xiaomi-token-plan-sgp')],
+      loaded: true,
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    };
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnect, {
+          enabled: true,
+          cliStatusLoading: false,
+          providers: [openCodeProvider],
+          openCodeRuntimeStatus: {
+            installed: true,
+            source: 'app-managed',
+            state: 'ready',
+            version: '1.17.18',
+          },
+          openCodeRuntimeStatusLoading: false,
+          onInstallOpenCode: vi.fn(),
+          onOpenCodeProviderAction,
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+    await act(async () => {
+      host
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="provider-quick-action-xiaomi-mimo-token-plan"]'
+        )
+        ?.click();
+    });
+    const input = document.body.querySelector<HTMLInputElement>(
+      '[data-testid="xiaomi-mimo-base-url"]'
+    );
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    await act(async () => {
+      setter?.call(input, 'https://token-plan-sgp.xiaomimimo.com/v1');
+      input?.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      document.body
+        .querySelector<HTMLButtonElement>('[data-testid="xiaomi-mimo-continue"]')
+        ?.click();
+    });
+
+    expect(onOpenCodeProviderAction).toHaveBeenCalledWith(
+      'xiaomi-token-plan-sgp',
+      'reconnect'
+    );
+  });
+
   it('warms the provider directory while OpenCode readiness is still checking', async () => {
     mocks.directory = {
       entries: [],

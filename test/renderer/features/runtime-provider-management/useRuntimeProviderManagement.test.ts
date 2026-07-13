@@ -145,7 +145,7 @@ describe('useRuntimeProviderManagement', () => {
     loadViewOnEnable?: boolean;
     searchDirectoryOnQueryChange?: boolean;
     initialProviderId?: string | null;
-    initialProviderAction?: 'connect' | 'select' | null;
+    initialProviderAction?: 'connect' | 'reconnect' | 'select' | null;
     onProviderChanged?: () => Promise<void> | void;
   }): React.ReactElement {
     const hook = useRuntimeProviderManagement({
@@ -409,6 +409,166 @@ describe('useRuntimeProviderManagement', () => {
     });
     expect(state?.activeFormProviderId).toBe('xai');
     expect(state?.setupForm?.defaultAuthOptionId).toBe('oauth:0');
+    await act(async () => root.unmount());
+  });
+
+  it('reuses setup while preserving the connected auth method for reconnect', async () => {
+    const mixedProvider: RuntimeProviderConnectionDto = {
+      providerId: 'mixed-provider',
+      displayName: 'Mixed Provider',
+      state: 'connected',
+      connectedAuthHint: 'api',
+      ownership: ['managed'],
+      recommended: false,
+      modelCount: 2,
+      authMethods: ['oauth', 'api'],
+      defaultModelId: 'mixed-provider/default',
+      detail: 'Connected via app-managed OpenCode credential',
+      actions: [],
+    };
+    const loadView = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        view: createRuntimeView([mixedProvider]),
+      })
+    );
+    const loadProviderDirectory = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        directory: {
+          runtimeId: 'opencode' as const,
+          totalCount: 1,
+          returnedCount: 1,
+          query: null,
+          filter: 'all' as const,
+          limit: 50,
+          cursor: null,
+          nextCursor: null,
+          entries: [
+            {
+              providerId: 'mixed-provider',
+              displayName: 'Mixed Provider',
+              state: 'connected' as const,
+              connectedAuthHint: 'api',
+              setupKind: 'connected' as const,
+              ownership: ['managed' as const],
+              recommended: false,
+              modelCount: 2,
+              authMethods: ['oauth' as const, 'api' as const],
+              defaultModelId: 'mixed-provider/default',
+              sources: ['opencode-provider' as const],
+              sourceLabel: 'OpenCode catalog',
+              providerSource: 'custom',
+              detail: 'Connected via app-managed OpenCode credential',
+              actions: [],
+              metadata: {
+                hasKnownModels: true,
+                requiresManualConfig: false,
+                supportedInlineAuth: true,
+                configuredAuthless: false,
+              },
+            },
+          ],
+          diagnostics: [],
+          fetchedAt: '2026-07-13T00:00:00.000Z',
+        },
+      })
+    );
+    const loadSetupForm = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        setupForm: {
+          runtimeId: 'opencode' as const,
+          providerId: 'mixed-provider',
+          displayName: 'Mixed Provider',
+          method: 'oauth' as const,
+          supported: true,
+          title: 'Connect Mixed Provider',
+          description: null,
+          submitLabel: 'Continue in browser',
+          disabledReason: null,
+          source: 'oauth' as const,
+          secret: null,
+          prompts: [],
+          authOptions: [
+            {
+              id: 'oauth:0',
+              method: 'oauth' as const,
+              methodIndex: 0,
+              label: 'Browser sign-in',
+              supported: true,
+              disabledReason: null,
+              secret: null,
+              prompts: [],
+            },
+            {
+              id: 'api:1',
+              method: 'api' as const,
+              methodIndex: 1,
+              label: 'API key',
+              supported: true,
+              disabledReason: null,
+              secret: {
+                key: 'key' as const,
+                label: 'API key',
+                placeholder: 'Paste API key',
+                required: true,
+              },
+              prompts: [],
+            },
+          ],
+          defaultAuthOptionId: 'oauth:0',
+        },
+      })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: {
+          loadView,
+          loadProviderDirectory,
+          loadSetupForm,
+          loadModels: vi.fn(() =>
+            Promise.resolve({
+              schemaVersion: 1 as const,
+              runtimeId: 'opencode' as const,
+              models: {
+                runtimeId: 'opencode' as const,
+                providerId: 'mixed-provider',
+                displayName: 'Mixed Provider',
+                models: [],
+                totalCount: 0,
+                query: null,
+                limit: 250,
+                diagnostics: [],
+              },
+            })
+          ),
+        },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(EnabledHarness, {}));
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.waitFor(() => expect(loadView).toHaveBeenCalled());
+      await vi.waitFor(() => expect(state?.view?.providers).toHaveLength(1));
+    });
+    await act(async () => {
+      actions?.startReconnect('mixed-provider');
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(loadSetupForm).toHaveBeenCalled());
+
+    expect(state?.connectionIntent).toBe('reconnect');
+    expect(state?.selectedAuthOptionId).toBe('api:1');
+    expect(state?.apiKeyValue).toBe('');
     await act(async () => root.unmount());
   });
 
