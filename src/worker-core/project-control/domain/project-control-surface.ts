@@ -3,6 +3,8 @@ export type ProjectControlToolKind =
   | "create_job"
   | "start_worker"
   | "refill_worker"
+  | "prepare_verifier"
+  | "recover_operations"
   | "mark_reviewed"
   | "open_integration_attempt"
   | "apply_worker_output"

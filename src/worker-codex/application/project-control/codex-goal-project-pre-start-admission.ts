@@ -21,6 +21,9 @@ import {
   materializeBuiltinWorkerLaunchSpec,
   validateBuiltinWorkerLaunchSpec,
 } from "./codex-goal-project-builtin-pre-start-admission";
+import {
+  DEFAULT_HANDOFF_ARTIFACT_LIMITS,
+} from "../../codex-goal-handoff-artifacts";
 
 const execFileAsync = promisify(execFile);
 const ADMISSION_DIRECTORY = "pre-start-admission";
@@ -213,7 +216,7 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
     receipt.validatorKind === "builtin";
   if (
     binding.workspaceHead !== contract.phaseStartSha ||
-    binding.workspaceStatus !== "" ||
+    !bindingMatchesInputPatch(binding, contract) ||
     receipt.status !== "validated_not_launched" ||
     receipt.jobId !== input.manifest.jobId ||
     receipt.workKey !== contract.workKey ||
@@ -255,7 +258,7 @@ async function validateProjectPreStartAdmission(input: {
   assertContractBindings(contract, input.manifest);
   assertQueuedStateBinding(contract, state, input.manifest.jobId);
   const beforeBinding = await currentBinding(input.manifest, descriptor);
-  if (beforeBinding.workspaceStatus !== "") {
+  if (!bindingMatchesInputPatch(beforeBinding, contract)) {
     throw new Error("project_control_pre_start_workspace_dirty");
   }
   let validatorReceipt: JsonObject;
@@ -311,7 +314,7 @@ async function validateProjectPreStartAdmission(input: {
     };
   }
   const afterBinding = await currentBinding(input.manifest, descriptor);
-  if (afterBinding.workspaceStatus !== "") {
+  if (!bindingMatchesInputPatch(afterBinding, contract)) {
     throw new Error("project_control_pre_start_workspace_dirty");
   }
   if (JSON.stringify(beforeBinding) !== JSON.stringify(afterBinding)) {
@@ -526,13 +529,51 @@ async function currentBinding(
     ["-C", manifest.workspacePath, "status", "--porcelain", "--untracked-files=all"],
     { encoding: "utf8", timeout: VALIDATOR_TIMEOUT_MS },
   )).stdout.trim();
+  const workspaceStagedPatch = (await execFileAsync(
+    "git",
+    ["-C", manifest.workspacePath, "diff", "--cached", "--binary", "HEAD", "--"],
+    {
+      encoding: "utf8",
+      timeout: VALIDATOR_TIMEOUT_MS,
+      maxBuffer: DEFAULT_HANDOFF_ARTIFACT_LIMITS.maxPatchBytes,
+    },
+  )).stdout;
+  const workspaceUnstagedPaths = (await execFileAsync(
+    "git",
+    ["-C", manifest.workspacePath, "diff", "--name-only", "-z", "--"],
+    { encoding: "utf8", timeout: VALIDATOR_TIMEOUT_MS },
+  )).stdout;
+  const workspaceUntrackedPaths = (await execFileAsync(
+    "git",
+    ["-C", manifest.workspacePath, "ls-files", "--others", "--exclude-standard", "-z"],
+    { encoding: "utf8", timeout: VALIDATOR_TIMEOUT_MS },
+  )).stdout;
   return {
     workspaceHead,
     workspaceStatus,
+    workspaceStagedPatchSha256: sha256(Buffer.from(workspaceStagedPatch)),
+    workspaceUnstagedDirty:
+      workspaceUnstagedPaths.length > 0 || workspaceUntrackedPaths.length > 0,
     contractSha256: sha256(Buffer.from(await readBoundedFile(descriptor.contractPath, MAX_CONTRACT_BYTES, "contract"))),
     stateSha256: sha256(Buffer.from(await readBoundedFile(descriptor.statePath, MAX_STATE_BYTES, "state"))),
     promptSha256: sha256(Buffer.from(await readBoundedFile(manifest.promptPath, MAX_PROMPT_BYTES, "prompt"))),
   };
+}
+
+function bindingMatchesInputPatch(
+  binding: Awaited<ReturnType<typeof currentBinding>>,
+  contract: JsonObject,
+): boolean {
+  const inputPatchHash = requiredString(contract.inputPatchHash, "inputPatchHash");
+  if (!/^[0-9a-f]{64}$/.test(inputPatchHash)) return false;
+  const emptyPatchHash = sha256(Buffer.alloc(0));
+  if (inputPatchHash === emptyPatchHash) {
+    return binding.workspaceStatus === "" &&
+      binding.workspaceStagedPatchSha256 === emptyPatchHash;
+  }
+  return binding.workspaceStatus !== "" &&
+    !binding.workspaceUnstagedDirty &&
+    binding.workspaceStagedPatchSha256 === inputPatchHash;
 }
 
 function assertDescriptorPaths(

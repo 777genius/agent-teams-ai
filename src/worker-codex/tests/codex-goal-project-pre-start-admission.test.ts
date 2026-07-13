@@ -454,6 +454,28 @@ describe("builtin project pre-start admission", () => {
       .rejects.toThrow("project_control_pre_start_workspace_dirty");
   });
 
+  it("accepts only the staged patch bound by inputPatchHash", async () => {
+    const fixture = await createBuiltinFixture();
+    await mkdir(join(fixture.workspacePath, "src"), { recursive: true });
+    await writeFile(join(fixture.workspacePath, "src", "example.ts"), "export const value = 1;\n");
+    execFileSync("git", ["add", "src/example.ts"], { cwd: fixture.workspacePath });
+    const stagedPatch = execFileSync(
+      "git",
+      ["diff", "--cached", "--binary", "HEAD", "--"],
+      { cwd: fixture.workspacePath },
+    );
+    const contract = withWorkKey({
+      ...fixture.contract,
+      inputPatchHash: sha256(stagedPatch),
+    });
+
+    await expect(prepareBuiltin(fixture, { contract })).resolves.toBeDefined();
+
+    await writeFile(join(fixture.workspacePath, "src", "unstaged.ts"), "unstaged\n");
+    await expect(prepareBuiltin(fixture, { contract }))
+      .rejects.toThrow("project_control_pre_start_workspace_dirty");
+  });
+
   it("rebinds prompt and workspace HEAD immediately before launch", async () => {
     const fixture = await createBuiltinFixture();
     const plan = fixture.plan();
@@ -763,7 +785,7 @@ if (state.records.filter((record) => record.workKey === contract.workKey).length
     packetRevision: "r1",
     controllerPacket: "controller.md",
     lanePacket: "lane.md",
-    inputPatchHash: "d".repeat(64),
+    inputPatchHash: sha256(Buffer.alloc(0)),
     reviewKind: "implementation",
     revision: 0,
     retryCount: 0,

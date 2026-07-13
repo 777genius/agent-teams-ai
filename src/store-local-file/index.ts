@@ -8,4 +8,5 @@ export * from "./local-controlled-agent-state-store";
 export * from "./local-safe-execution-state-store";
 export * from "./local-file-lease-store";
 export * from "./local-encrypted-file-store";
+export * from "./worker-account-leases";
 export * from "./manifest";

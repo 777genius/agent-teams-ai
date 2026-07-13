@@ -89,7 +89,9 @@ describe("controlled-agent launch plan", () => {
 
     expect(tools).toContain(ControlledAgentToolName.ProjectControllerConsumeGuidance);
     expect(tools).toContain(ControlledAgentToolName.ProjectOperationStatus);
+    expect(tools).toContain(ControlledAgentToolName.ProjectRecoverOperations);
     expect(tools).toContain(ControlledAgentToolName.ProjectCreateJob);
+    expect(tools).toContain(ControlledAgentToolName.ProjectPrepareVerifier);
     expect(tools).toContain(ControlledAgentToolName.ProjectPushApprovedCommit);
     expect(tools).not.toContain("codex_goal_create_job" as never);
     expect(tools).not.toContain("codex_goal_update_job" as never);

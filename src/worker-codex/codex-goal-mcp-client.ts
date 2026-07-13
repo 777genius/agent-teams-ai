@@ -7,6 +7,7 @@ import { createCodexGoalMcpServer } from "./codex-goal-mcp";
 
 type JsonRecord = Record<string, unknown>;
 type SuperviseEvent =
+  | { readonly type: "operation_recovery"; readonly result: unknown }
   | { readonly type: "start"; readonly result: unknown }
   | { readonly type: "status"; readonly result: unknown }
   | { readonly type: "reconcile"; readonly result: unknown }
@@ -68,6 +69,8 @@ const requiredCodexGoalMcpTools = [
   "codex_goal_start",
   "codex_goal_project_create_job",
   "codex_goal_project_refill_worker",
+  "codex_goal_project_prepare_verifier",
+  "codex_goal_project_recover_operations",
   "codex_goal_project_admission_snapshot",
   "codex_goal_project_update_controller_scope",
   "brokered_project_manifest_repair",
@@ -140,6 +143,20 @@ export async function superviseCodexGoalProjectController(input: {
     let lastStatus: unknown = start;
     let lastGuidanceRestartSignature: string | undefined;
     while (!input.signal?.aborted) {
+      const operationRecovery = parseMcpJsonResult(await client.callTool({
+        name: "codex_goal_project_recover_operations",
+        arguments: {
+          ...input.args,
+          confirmRecoverOperations: true,
+        },
+      }));
+      input.onEvent?.({
+        type: "operation_recovery",
+        result: operationRecovery,
+      });
+      if (!mcpResultOk(operationRecovery)) {
+        return { ok: false, start: operationRecovery };
+      }
       start = parseMcpJsonResult(await client.callTool({
         name: "codex_goal_project_controller_start",
         arguments: input.args,

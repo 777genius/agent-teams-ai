@@ -109,8 +109,15 @@ async function assertReusableProjectWorktree(
       "status",
       "--porcelain",
     ]);
-    if (status.trim().length > 0) {
+    if (!worktreeInput.inputPatch && status.trim().length > 0) {
       throw new Error("project_control_existing_worktree_dirty");
+    }
+    if (worktreeInput.inputPatch) {
+      await assertReusableInputPatch({
+        workspacePath: materializedRealPath,
+        patchPath: worktreeInput.inputPatch.path,
+        expectedChangedPaths: worktreeInput.inputPatch.changedPaths,
+      });
     }
     if (worktreeInput.newBranch) {
       const branch = (await execGitStdout([
@@ -139,6 +146,59 @@ async function assertReusableProjectWorktree(
       throw error;
     }
     throw new Error("project_control_existing_worktree_invalid");
+  }
+}
+
+async function assertReusableInputPatch(input: {
+  readonly workspacePath: string;
+  readonly patchPath: string;
+  readonly expectedChangedPaths: readonly string[];
+}): Promise<void> {
+  await execGit([
+    "-C",
+    input.workspacePath,
+    "apply",
+    "--cached",
+    "--reverse",
+    "--check",
+    input.patchPath,
+  ]);
+  const staged = await execGitStdout([
+    "-C",
+    input.workspacePath,
+    "diff",
+    "--cached",
+    "--name-only",
+    "-z",
+    "HEAD",
+    "--",
+  ]);
+  const actual = staged.split("\0").filter(Boolean).sort();
+  const expected = [...new Set(input.expectedChangedPaths)].sort();
+  if (
+    actual.length !== expected.length ||
+    actual.some((path, index) => path !== expected[index])
+  ) {
+    throw new Error("project_control_existing_worktree_input_patch_mismatch");
+  }
+  const unstaged = await execGitStdout([
+    "-C",
+    input.workspacePath,
+    "diff",
+    "--name-only",
+    "-z",
+    "--",
+  ]);
+  const untracked = await execGitStdout([
+    "-C",
+    input.workspacePath,
+    "ls-files",
+    "--others",
+    "--exclude-standard",
+    "-z",
+  ]);
+  if (unstaged.length > 0 || untracked.length > 0) {
+    throw new Error("project_control_existing_worktree_input_patch_dirty");
   }
 }
 

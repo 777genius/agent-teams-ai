@@ -12,6 +12,7 @@ export * from "./host-command";
 export * from "./integration";
 export * from "./job-watch";
 export * from "./project-control";
+export * from "./project-operations-snapshot";
 export * from "./run-provider-kind";
 export * from "./run-observability";
 export * from "./run-events";

@@ -1,16 +1,25 @@
 import {
   normalizeWorkerAccountId,
+  workerRuntimeDemandKey,
   type WorkerRuntimeDemand,
 } from "../../account-capacity";
 
 export type WorkerAccountLease = {
   readonly leaseId: string;
+  readonly fencingToken: number;
   readonly accountId: string;
   readonly demand?: WorkerRuntimeDemand;
   readonly ownerId: string;
   readonly acquiredAt: Date;
   readonly expiresAt: Date;
 };
+
+export function workerAccountLeaseResourceKey(
+  accountId: string,
+  demand: WorkerRuntimeDemand | null,
+): string {
+  return `${accountId}\u0000${workerRuntimeDemandKey(demand) ?? ""}`;
+}
 
 export type RuntimeAccountSelectionDecision =
   | {

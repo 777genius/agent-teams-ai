@@ -9,6 +9,7 @@ import * as safeExecution from "../safe-execution";
 import * as sessionCustody from "../session-custody";
 import * as sessionLeases from "../session-leases";
 import * as workerAccountCapacity from "../worker-account-capacity";
+import * as workerAccountLeases from "../worker-account-leases";
 import * as workerControlInbox from "../worker-control-inbox";
 
 describe("store-local-file boundary modules", () => {
@@ -39,6 +40,9 @@ describe("store-local-file boundary modules", () => {
     );
     expect(publicApi.LocalFileWorkerAccountCapacityStore).toBe(
       workerAccountCapacity.LocalFileWorkerAccountCapacityStore,
+    );
+    expect(publicApi.LocalFileWorkerAccountLeaseStore).toBe(
+      workerAccountLeases.LocalFileWorkerAccountLeaseStore,
     );
     expect(publicApi.LocalFileWorkerControlInboxStore).toBe(
       workerControlInbox.LocalFileWorkerControlInboxStore,

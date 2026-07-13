@@ -1,5 +1,7 @@
 import {
   AccessBoundary,
+  ProjectAdmissionWorkerRole,
+  ProjectOperation,
   evaluateProjectAdmission,
   type ProjectAccessScope,
 } from "@vioxen/subscription-runtime/worker-core";
@@ -45,6 +47,9 @@ import {
   matchesProjectControlPrefix,
   pathInsideAnyProjectRoot,
 } from "./codex-goal-mcp-project-utils";
+import {
+  buildCodexProjectOperationsSnapshot,
+} from "./application/project-control/codex-goal-project-operations-snapshot";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 
@@ -83,6 +88,21 @@ export async function projectControlAdmissionSnapshotView(
         snapshot,
       })
     : undefined;
+  const operationalDecision = decision ?? evaluateProjectAdmission({
+    request: {
+      operation: ProjectOperation.CreateJob,
+      projectId: controller.scope.projectId,
+      workerRole: ProjectAdmissionWorkerRole.Producer,
+    },
+    snapshot,
+  });
+  const operations = await buildCodexProjectOperationsSnapshot({
+    registryRootDir: controller.registryRootDir,
+    scope: controller.scope,
+    admissionSnapshot: snapshot,
+    admissionDecision: operationalDecision,
+    deps: deps.admissionDeps,
+  });
   const detailView = projectAdmissionDetailView({
     snapshot,
     ...(decision ? { decision } : {}),
@@ -95,6 +115,7 @@ export async function projectControlAdmissionSnapshotView(
     controllerJobId: controller.controller.jobId,
     registryRootDir: controller.registryRootDir,
     snapshot: detailView.snapshot,
+    operations,
     ...(detailView.decision ? { decision: detailView.decision } : {}),
   };
 }

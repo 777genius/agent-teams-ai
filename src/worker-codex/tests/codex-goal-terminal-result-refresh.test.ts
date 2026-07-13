@@ -1,5 +1,12 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -18,7 +25,9 @@ describe("completed Codex goal result refresh", () => {
   });
 
   it("refreshes artifacts without downgrading a completed strict result", async () => {
-    const root = await mkdtemp(join(tmpdir(), "codex-terminal-refresh-"));
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), "codex-terminal-refresh-")),
+    );
     cleanup.push(root);
     const workspacePath = join(root, "workspace");
     const jobRootDir = join(root, "job");
@@ -94,7 +103,9 @@ describe("completed Codex goal result refresh", () => {
   });
 
   it("lazily backfills an already-completed untracked-only job for handoff review", async () => {
-    const root = await mkdtemp(join(tmpdir(), "codex-terminal-backfill-"));
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), "codex-terminal-backfill-")),
+    );
     cleanup.push(root);
     const workspacePath = join(root, "workspace");
     const jobRootDir = join(root, "worker-jobs", "worker-1");

@@ -83,6 +83,10 @@ import type {
 import {
   goalLaunchInput,
 } from "./codex-goal-mcp-launch-input";
+import {
+  releaseCodexProjectAccount,
+  reserveCodexProjectAccount,
+} from "./application/project-control/codex-goal-project-account-reservation";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 
@@ -195,30 +199,46 @@ export async function projectControlStartStoredJobView(
     scope: controller.scope,
   });
 
+  const accountReservation = await reserveCodexProjectAccount({
+    manifest: loaded.manifest,
+    launch: loaded.launch,
+  });
+  const reservedLaunch = accountReservation.launch;
+
   const broker = deps.codexProjectControlBroker({
     registryRootDir: controller.registryRootDir,
     controller: controller.controller,
     scope: controller.scope,
-    startLaunch: loaded.launch,
+    startLaunch: reservedLaunch,
     startSkipDoctor: booleanValue(args.skipDoctor) ?? false,
   });
   const realWorkspacePath = await projectControlRealPathOutsideWorkspaceScope(
-    loaded.launch.config.workspacePath,
+    reservedLaunch.config.workspacePath,
     controller.scope,
   );
   await validateStoredProjectPreStartAdmission({
     manifest: loaded.manifest,
     scope: controller.scope,
   });
-  const result = await broker.startWorker({
-    jobId: loaded.manifest.jobId,
-    registryRoot: controller.registryRootDir,
-    workspacePath: loaded.launch.config.workspacePath,
-    ...(realWorkspacePath ? { realWorkspacePath } : {}),
-    tmuxSession: loaded.launch.tmuxSession,
-    accounts: loaded.manifest.accounts,
-    ...(loaded.manifest.tags ? { tags: loaded.manifest.tags } : {}),
-  });
+  let result;
+  try {
+    result = await broker.startWorker({
+      jobId: loaded.manifest.jobId,
+      registryRoot: controller.registryRootDir,
+      workspacePath: reservedLaunch.config.workspacePath,
+      ...(realWorkspacePath ? { realWorkspacePath } : {}),
+      tmuxSession: reservedLaunch.tmuxSession as string,
+      accounts: [accountReservation.accountId],
+      ...(loaded.manifest.tags ? { tags: loaded.manifest.tags } : {}),
+    });
+  } catch (error) {
+    await releaseCodexProjectAccount({
+      manifest: loaded.manifest,
+      launch: reservedLaunch,
+      reason: "worker_start_failed",
+    });
+    throw error;
+  }
   return {
     ok: true,
     mode: "project_control_start",
@@ -230,6 +250,11 @@ export async function projectControlStartStoredJobView(
     tmuxSession: loaded.launch.tmuxSession,
     statusBefore: status,
     dependencyPreflight: dependencyPreflight as unknown as JsonObject,
+    accountReservation: {
+      accountId: accountReservation.accountId,
+      fencingToken: accountReservation.fencingToken,
+      expiresAt: accountReservation.expiresAt,
+    },
     result: result as unknown as JsonObject,
   };
 }
@@ -554,6 +579,11 @@ export async function projectControlStopStoredJobView(
     statusAfter,
     brief,
   });
+  const accountReservationReleased = await releaseCodexProjectAccount({
+    manifest: loaded.manifest,
+    launch: loaded.launch,
+    reason: "worker_stopped",
+  });
   return {
     ok: true,
     mode: "project_control_stop",
@@ -564,6 +594,7 @@ export async function projectControlStopStoredJobView(
     taskId: loaded.launch.config.taskId,
     ...(loaded.launch.tmuxSession ? { tmuxSession: loaded.launch.tmuxSession } : {}),
     stopEventPath,
+    accountReservationReleased,
     statusBefore: status,
     statusAfter,
     result: result as unknown as JsonObject,
@@ -626,6 +657,11 @@ export async function projectControlMarkReviewedView(
     markerType: "review",
     note: reviewNote,
   });
+  const accountReservationReleased = await releaseCodexProjectAccount({
+    manifest: loaded.manifest,
+    launch: loaded.launch,
+    reason: "worker_reviewed",
+  });
   return {
     ok: true,
     mode: "project_control_mark_reviewed",
@@ -633,6 +669,7 @@ export async function projectControlMarkReviewedView(
     registryRootDir: controller.registryRootDir,
     auditPath: projectControlAuditPath(controller.controller),
     jobId: loaded.manifest.jobId,
+    accountReservationReleased,
     ...(captureReviewedOutput && result.resourceId
       ? { reviewedOutputId: result.resourceId }
       : {}),

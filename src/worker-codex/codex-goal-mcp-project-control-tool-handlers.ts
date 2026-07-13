@@ -20,6 +20,8 @@ import {
 import {
   projectControlCreateCodexGoalJobView,
   projectControlOperationStatusView,
+  projectControlPrepareVerifierView,
+  projectControlRecoverOperationsView,
   projectControlRefillWorkerView,
 } from "./codex-goal-mcp-project-control-jobs";
 import {
@@ -114,8 +116,16 @@ export async function projectControlRefillWorker(args: ProjectControlMcpArgs) {
   return mcpJson(await projectControlRefillWorkerView(args, projectControlJobsDeps()));
 }
 
+export async function projectControlPrepareVerifier(args: ProjectControlMcpArgs) {
+  return mcpJson(await projectControlPrepareVerifierView(args, projectControlJobsDeps()));
+}
+
 export async function projectControlOperationStatus(args: ProjectControlMcpArgs) {
   return mcpJson(await projectControlOperationStatusView(args, projectControlJobsDeps()));
+}
+
+export async function projectControlRecoverOperations(args: ProjectControlMcpArgs) {
+  return mcpJson(await projectControlRecoverOperationsView(args, projectControlJobsDeps()));
 }
 
 function projectControlActionDeps() {

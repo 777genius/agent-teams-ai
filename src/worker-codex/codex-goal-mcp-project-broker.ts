@@ -49,6 +49,7 @@ import {
 } from "./application/project-control/codex-goal-project-control-contracts";
 import { projectControlRealPathOutsideWorkspaceScope } from "./application/project-control/codex-goal-project-workspace-scope";
 import {
+  applyVerifiedInputPatch,
   assertGitCurrentBranch,
   execGit,
   execGitStdout,
@@ -347,6 +348,26 @@ function codexProjectControlPorts(
               : [sourceRef ?? input.createWorktreeInput.expectedRevision]),
         ];
         await execGit(args);
+        if (input.createWorktreeInput.inputPatch) {
+          try {
+            await applyVerifiedInputPatch({
+              workspacePath: input.createWorktreeInput.path,
+              patchPath: input.createWorktreeInput.inputPatch.path,
+              expectedSha256: input.createWorktreeInput.inputPatch.sha256,
+              expectedBaseCommit: input.createWorktreeInput.inputPatch.baseCommit,
+            });
+          } catch (error) {
+            await execGit([
+              "-C",
+              sourceWorkspacePath,
+              "worktree",
+              "remove",
+              "--force",
+              input.createWorktreeInput.path,
+            ]).catch(() => undefined);
+            throw error;
+          }
+        }
         return operationResult(input.createWorktreeInput.path);
       },
     },

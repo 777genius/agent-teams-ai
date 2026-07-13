@@ -3,6 +3,7 @@ import {
   mkdtemp,
   mkdir,
   readFile,
+  realpath,
   rm,
   symlink,
   writeFile,
@@ -228,7 +229,9 @@ describe("Codex goal handoff artifact materialization", () => {
 });
 
 async function createFixture() {
-  const root = await mkdtemp(join(tmpdir(), "codex-handoff-artifacts-"));
+  const root = await realpath(
+    await mkdtemp(join(tmpdir(), "codex-handoff-artifacts-")),
+  );
   cleanup.push(root);
   const workspacePath = join(root, "workspace");
   const jobRootDir = join(root, "worker-jobs", "worker-1");

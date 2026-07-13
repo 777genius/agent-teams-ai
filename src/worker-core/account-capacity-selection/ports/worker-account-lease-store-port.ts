@@ -12,6 +12,16 @@ export type WorkerAccountLeaseAcquireResult =
       readonly currentLeaseExpiresAt?: Date;
     };
 
+export type WorkerAccountLeaseRenewResult =
+  | {
+      readonly status: "renewed";
+      readonly lease: WorkerAccountLease;
+    }
+  | {
+      readonly status: "lost";
+      readonly reason: "lease_expired" | "lease_not_current";
+    };
+
 export interface WorkerAccountLeaseStore {
   acquire(input: {
     readonly accountId: string;
@@ -20,6 +30,13 @@ export interface WorkerAccountLeaseStore {
     readonly ttlMs: number;
     readonly now: Date;
   }): Promise<WorkerAccountLeaseAcquireResult>;
+
+  renew(input: {
+    readonly leaseId: string;
+    readonly ownerId: string;
+    readonly ttlMs: number;
+    readonly now: Date;
+  }): Promise<WorkerAccountLeaseRenewResult>;
 
   release(input: {
     readonly leaseId: string;

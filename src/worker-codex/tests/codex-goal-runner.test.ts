@@ -1,5 +1,12 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -581,7 +588,9 @@ describe("codex goal runner", () => {
   });
 
   it("preserves a patch artifact when the executor fails after workspace changes", async () => {
-    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-goal-patch-"));
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), "subscription-runtime-goal-patch-")),
+    );
     const promptPath = join(root, "prompt.md");
     const workspacePath = join(root, "workspace");
     const config: CodexGoalRunConfig = {

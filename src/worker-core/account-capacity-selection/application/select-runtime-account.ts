@@ -13,6 +13,7 @@ import type { WorkerAccountLeaseStore } from "../ports";
 export type SelectRuntimeAccountInput = {
   readonly allowedAccounts: readonly string[];
   readonly demand?: WorkerRuntimeDemand;
+  readonly leaseDemand?: WorkerRuntimeDemand | null;
   readonly ownerId: string;
   readonly leaseTtlMs: number;
   readonly capacityStore: WorkerAccountCapacityStore;
@@ -49,9 +50,12 @@ export class SelectRuntimeAccountUseCase {
         continue;
       }
 
+      const leaseDemand = input.leaseDemand === undefined
+        ? input.demand
+        : input.leaseDemand;
       const lease = await input.leaseStore.acquire({
         accountId,
-        ...(input.demand ? { demand: input.demand } : {}),
+        ...(leaseDemand ? { demand: leaseDemand } : {}),
         ownerId: input.ownerId,
         ttlMs: input.leaseTtlMs,
         now: input.now,

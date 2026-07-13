@@ -14,6 +14,12 @@ export type CodexGoalProjectCreateWorktreeInput = {
   readonly baseBranch?: string;
   readonly sourceRef?: string;
   readonly newBranch?: string;
+  readonly inputPatch?: {
+    readonly path: string;
+    readonly sha256: string;
+    readonly baseCommit: string;
+    readonly changedPaths: readonly string[];
+  };
   readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
   readonly tags?: readonly string[];
 };

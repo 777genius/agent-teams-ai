@@ -11,6 +11,8 @@ import { withMcpErrors } from "./codex-goal-mcp-response";
 import {
   projectControlCreateCodexGoalJob,
   projectControlOperationStatus,
+  projectControlPrepareVerifier,
+  projectControlRecoverOperations,
   projectControlRefillWorker,
 } from "./codex-goal-mcp-project-control-tool-handlers";
 import {
@@ -92,6 +94,51 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
   );
 
   server.registerTool(
+    "codex_goal_project_prepare_verifier",
+    {
+      title: "Project Control Prepare Verifier",
+      description:
+        "Create a verifier worktree at canonical remote HEAD, atomically apply a terminal producer handoff, create the verifier job and optionally start it.",
+      inputSchema: {
+        ...goalInputSchema(),
+        ...jobRegistryInputSchema(),
+        controllerJobId: z.string().optional(),
+        producerJobId: z.string(),
+        sourceWorkspacePath: z.string().optional(),
+        baseBranch: z.string().optional(),
+        newBranch: z.string().optional(),
+        promptBody: z.string().optional(),
+        preStartAdmission: z.union([
+          z.object({
+            contractValidatorPath: z.string(),
+            admissionValidatorPath: z.string(),
+            contract: z.record(z.string(), z.unknown()),
+            state: z.record(z.string(), z.unknown()),
+          }).strict(),
+          z.object({
+            mode: z.literal("serial-builtin"),
+            contract: workerLaunchRequestSchema,
+            state: workerLaunchStateSchema.optional(),
+          }).strict(),
+        ]).optional(),
+        confirmPreStartAdmission: z.boolean().optional(),
+        workerRole: z.enum(["fastgate", "reviewer"]).optional(),
+        description: z.string().optional(),
+        tags: z.union([z.string(), z.array(z.string())]).optional(),
+        skipDoctor: z.boolean().optional(),
+        startWorker: z.boolean().optional(),
+        dependencyBootstrap: z.enum(["off", "preflight", "install"]).optional(),
+        confirmDependencyBootstrap: z.boolean().optional(),
+        executionMode: z.enum(["sync", "bounded", "async"]).optional(),
+        confirmRefill: z.boolean().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      projectControlPrepareVerifier(args as ProjectControlMcpArgs),
+    ),
+  );
+
+  server.registerTool(
     "codex_goal_project_operation_status",
     {
       title: "Project Control Operation Status",
@@ -106,6 +153,23 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
     },
     async (args) => withMcpErrors(async () =>
       projectControlOperationStatus(args as ProjectControlMcpArgs),
+    ),
+  );
+
+  server.registerTool(
+    "codex_goal_project_recover_operations",
+    {
+      title: "Project Control Recover Operations",
+      description:
+        "Idempotently reconcile or resume unfinished durable ProjectScopedControl operations under an exclusive claim.",
+      inputSchema: {
+        ...jobRegistryInputSchema(),
+        controllerJobId: z.string().optional(),
+        confirmRecoverOperations: z.boolean().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      projectControlRecoverOperations(args as ProjectControlMcpArgs),
     ),
   );
 }

@@ -283,6 +283,47 @@ describe("SelectRuntimeAccountUseCase", () => {
     });
   });
 
+  it("can lease an account globally while keeping demand-aware capacity selection", async () => {
+    const now = new Date("2026-06-01T00:00:00.000Z");
+    const capacityStore = new InMemoryWorkerAccountCapacityStore();
+    const leaseStore = new InMemoryWorkerAccountLeaseStore();
+
+    const first = await new SelectRuntimeAccountUseCase().execute({
+      allowedAccounts: ["account-a"],
+      demand,
+      leaseDemand: null,
+      ownerId: "worker-1",
+      leaseTtlMs: 60_000,
+      capacityStore,
+      leaseStore,
+      now,
+    });
+    expect(first).toMatchObject({
+      type: "selected",
+      accountId: "account-a",
+    });
+    if (first.type !== "selected") throw new Error("account_not_selected");
+    expect("demand" in first.lease).toBe(false);
+
+    await expect(
+      new SelectRuntimeAccountUseCase().execute({
+        allowedAccounts: ["account-a"],
+        demand: highDemand,
+        leaseDemand: null,
+        ownerId: "worker-2",
+        leaseTtlMs: 60_000,
+        capacityStore,
+        leaseStore,
+        now,
+      }),
+    ).resolves.toMatchObject({
+      type: "all_unavailable",
+      waitPlan: {
+        unavailable: [{ accountId: "account-a", reason: "leased" }],
+      },
+    });
+  });
+
   it("normalizes account ids and runtime demand at the lease boundary", async () => {
     const now = new Date("2026-06-01T00:00:00.000Z");
     const leaseStore = new InMemoryWorkerAccountLeaseStore();
@@ -375,6 +416,9 @@ describe("SelectRuntimeAccountUseCase", () => {
           reason: "leased",
         };
       },
+      async renew() {
+        return { status: "lost", reason: "lease_not_current" };
+      },
       async release() {},
     };
 
@@ -466,6 +510,9 @@ describe("SelectRuntimeAccountUseCase", () => {
           reason: "leased",
           currentLeaseExpiresAt: elapsedReset,
         };
+      },
+      async renew() {
+        return { status: "lost", reason: "lease_not_current" };
       },
       async release() {},
     };

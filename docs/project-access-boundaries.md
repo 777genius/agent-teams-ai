@@ -97,6 +97,35 @@ work cannot bypass unresolved project output debt.
 Use `codex_goal_project_admission_snapshot` to inspect the read-only snapshot
 and optional decision for a proposed operation and worker role.
 
+The same response includes a compact, explicitly non-authoritative `operations`
+projection. It reports the observed worker pool by role/state, output-debt count,
+available/total host memory, active heavy reviewer/fastgate workers and the current
+admission reason. Missing worker observations make the projection partial instead
+of turning an observability failure into scheduler authority.
+
+## Durable worker handoff and recovery
+
+Use `codex_goal_project_prepare_verifier` for producer-to-verifier handoff. The
+broker resolves the configured remote branch with `git ls-remote`, rejects a
+stale local source ref, verifies the terminal producer manifest and patch
+SHA-256, creates an isolated worktree at the exact base commit and applies the
+patch to the index. The pre-start contract must bind `inputPatchHash` to that
+exact staged patch, so unrelated staged, unstaged or untracked content fails
+closed.
+
+Before `start_worker`, the runtime reserves one available account with a durable
+TTL lease and fencing token. The launched worker receives only that account;
+the reservation is released on failed start, brokered stop or review, and
+otherwise expires after the task timeout plus grace. Account choice remains a
+runtime safety mechanism, not project worker-mix policy.
+
+Bounded project-control operations publish request, result and claim state with
+durable atomic files. `codex_goal_project_recover_operations` reconciles a
+published result or resumes an unfinished operation under an exclusive claim.
+The controller supervisor calls this recovery before starting a new controller
+run. Recovery is idempotent at the operation boundary; downstream effects still
+use their existing broker idempotency and fencing contracts.
+
 Use `observedWorkspaceRoots` for legacy or shared parent directories that must
 be scanned for dirty project output but must not become write targets. For
 example, a project may create new child worktrees only under
@@ -320,6 +349,8 @@ The expected control loop is:
    refill helper;
 4. start it with `codex_goal_project_start` when not using the refill helper;
 5. review the child diff and verification evidence;
+   for a verifier, prefer `codex_goal_project_prepare_verifier` over a manual
+   patch copy or `git apply`;
 6. write a review marker with `codex_goal_project_mark_reviewed`;
 7. open the reviewed output with `codex_goal_project_open_integration_attempt`;
 8. apply it with `codex_goal_project_apply_worker_output`;
