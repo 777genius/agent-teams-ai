@@ -83,6 +83,23 @@ describe('TeamProvisioningRuntimeEvidenceReader', () => {
     });
   });
 
+  it('rejects an impossible calendar date instead of accepting its normalized instant', () => {
+    expect(
+      readTeamProvisioningBootstrapEvidence({
+        status: {
+          launchState: 'confirmed_alive',
+          bootstrapConfirmed: true,
+          lastHeartbeatAt: '2026-02-30T12:00:00.000Z',
+          updatedAt: '2026-03-02T12:00:00.000Z',
+        },
+        nowIso: '2026-03-02T12:00:00.000Z',
+      })
+    ).toMatchObject({
+      bootstrapConfirmed: false,
+      heartbeatFreshness: 'invalid_timestamp',
+    });
+  });
+
   it('keeps permission evidence authoritative over a fresh raw confirmation', () => {
     const status = {
       status: 'waiting' as const,

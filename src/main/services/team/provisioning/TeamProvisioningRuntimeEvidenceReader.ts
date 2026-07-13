@@ -28,10 +28,46 @@ export interface TeamProvisioningBootstrapEvidence {
 }
 
 const DEFAULT_HEARTBEAT_STALE_AFTER_MS = 120_000;
+const ISO_SECOND_TIMESTAMP_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(Z|([+-])(\d{2}):(\d{2}))$/;
+const ISO_FRACTIONAL_TIMESTAMP_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.\d{1,9}(Z|([+-])(\d{2}):(\d{2}))$/;
 
 function nonEmptyString(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function parseIsoTimestampMs(value: string): number | undefined {
+  const match =
+    ISO_SECOND_TIMESTAMP_PATTERN.exec(value) ?? ISO_FRACTIONAL_TIMESTAMP_PATTERN.exec(value);
+  if (!match) {
+    return undefined;
+  }
+
+  const timestampMs = Date.parse(value);
+  if (!Number.isFinite(timestampMs)) {
+    return undefined;
+  }
+
+  const offsetHours = Number(match[9] ?? 0);
+  const offsetMinutes = Number(match[10] ?? 0);
+  const offsetDirection = match[8] === '-' ? -1 : 1;
+  const localTimestamp = new Date(
+    timestampMs + offsetDirection * (offsetHours * 60 + offsetMinutes) * 60_000
+  );
+  const expectedComponents = match.slice(1, 7).map(Number);
+  const actualComponents = [
+    localTimestamp.getUTCFullYear(),
+    localTimestamp.getUTCMonth() + 1,
+    localTimestamp.getUTCDate(),
+    localTimestamp.getUTCHours(),
+    localTimestamp.getUTCMinutes(),
+    localTimestamp.getUTCSeconds(),
+  ];
+  return actualComponents.every((component, index) => component === expectedComponents[index])
+    ? timestampMs
+    : undefined;
 }
 
 export function hasTeamProvisioningRuntimePermissionBlock(
@@ -97,12 +133,12 @@ export function readTeamProvisioningBootstrapEvidence(params: {
   if (!heartbeatAt) {
     heartbeatFreshness = 'missing_timestamp';
   } else {
-    const heartbeatMs = Date.parse(heartbeatAt);
-    const nowMs = Date.parse(params.nowIso);
+    const heartbeatMs = parseIsoTimestampMs(heartbeatAt);
+    const nowMs = parseIsoTimestampMs(params.nowIso);
     const staleAfterMs = params.heartbeatStaleAfterMs ?? DEFAULT_HEARTBEAT_STALE_AFTER_MS;
     if (
-      !Number.isFinite(heartbeatMs) ||
-      !Number.isFinite(nowMs) ||
+      heartbeatMs === undefined ||
+      nowMs === undefined ||
       !Number.isFinite(staleAfterMs) ||
       staleAfterMs < 0
     ) {
