@@ -1,5 +1,86 @@
 # Release Guide
 
+## Draft: v2.8.0 (2026-07-13)
+
+Target branch: `dev`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.63`.
+- Terminal Platform runtime: `v0.3.2`.
+
+Draft body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.8.0 -->
+Connect more of the AI subscriptions you already pay for directly from the dashboard, then mix their models in the same Agent Team. This release also adds clearer provider setup, team-folder import, newer Codex models, and stronger runtime recovery.
+
+### What's New
+
+- Connect SuperGrok, GitHub Copilot, Cursor, Amazon Q Developer / Kiro, Z.AI Coding Plan, MiniMax Token Plan, Kimi Code Membership, and Xiaomi MiMo Token Plan from guided dashboard flows.
+- Browse connected providers separately and choose their available models when configuring teammates.
+- Import an existing Agent Teams folder with its members and task data.
+- Add GPT-5.6 model discovery and refresh the Codex model catalog.
+- Include OpenCode usage in the shared Usage dashboard and budget breakdowns.
+
+### Improvements
+
+- Load provider cards sooner and keep dashboard connection counts responsive while the full OpenCode catalog loads in the background.
+- Show immediate setup progress, provider-specific sign-in choices, secure device codes, plan-key validation, credential links, and clearer verification states.
+- Detect Xiaomi MiMo Token Plan regions from the dedicated Base URL instead of requiring users to understand region codes.
+- Install or update the managed OpenCode runtime from the setup flow when a provider requires it.
+- Improve mixed OpenCode teammate isolation, provider readiness checks, and model-limit configuration.
+- Update the terminal runtime and stabilize command history rendering.
+
+### Bug Fixes
+
+- Fix SuperGrok device authorization remaining stuck after the website confirms the device is authorized.
+- Fix stale provider cards, connection counts, and delayed status refresh after connecting or reconnecting a plan.
+- Fix provider setup races around loading, cancellation, OAuth completion, credential writes, and model verification.
+- Fix subscription plans being shown as connected from config alone without usable credentials.
+- Fix malformed or unsafe Agent Teams folder imports and concurrent team-storage writes.
+- Fix unavailable Codex models and stale teammate effort values appearing in team configuration.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.8.0/Agent.Teams.AI-2.8.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.8.0/Agent.Teams.AI-2.8.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.8.0/Agent.Teams.AI.Setup.2.8.0.exe">
+    <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub><strong>Windows required:</strong> launch Agent Teams AI as Administrator, especially when using OpenCode runtimes.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.8.0/Agent.Teams.AI-2.8.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.8.0/agent-teams-ai_2.8.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.8.0/agent-teams-ai-2.8.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.8.0/agent-teams-ai-2.8.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.8.0 -->
+
 ## Published: v2.5.1 (2026-06-21)
 
 GitHub release: [v2.5.1](https://github.com/777genius/agent-teams-ai/releases/tag/v2.5.1).
