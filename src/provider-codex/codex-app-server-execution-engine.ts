@@ -60,6 +60,7 @@ import {
   isManagedRunResumeValidationError,
 } from "./app-server/application/app-server-managed-run-mapper";
 import { AppServerSlotPool } from "./app-server/application/app-server-slot-pool";
+import { isCodexModelUnavailableError } from "./app-server/domain/model-catalog";
 
 export type {
   CodexAppServerChildProcess,
@@ -165,6 +166,7 @@ export class CodexAppServerExecutionEngine implements CodexExecutionEngine {
     } catch (error) {
       await this.slotPool.disposeSessionSlot(input.session);
       if (input.abortSignal.aborted || isAbortLikeError(error)) throw error;
+      if (isCodexModelUnavailableError(error)) throw error;
       if (!this.options.fallback) throw error;
 
       const fallbackResult = await this.options.fallback.run(input);

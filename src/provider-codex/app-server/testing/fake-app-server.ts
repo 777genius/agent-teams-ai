@@ -3,6 +3,13 @@ import { EventEmitter } from "node:events";
 export type FakeAppServerFactoryOptions = {
   readonly failThreadStart?: boolean;
   readonly failThreadStartNumbers?: readonly number[];
+  readonly threadStartError?: string;
+  readonly availableModels?: readonly {
+    readonly model: string;
+    readonly supportedReasoningEfforts?: readonly string[];
+    readonly hidden?: boolean;
+    readonly isDefault?: boolean;
+  }[];
   readonly suppressInitializeResponse?: boolean;
   readonly initializeError?: string;
   readonly emitUnsupportedServerRequestOnTurn?: boolean;
@@ -161,13 +168,36 @@ export class FakeAppServerProcess extends EventEmitter {
         });
         continue;
       }
+      if (request.method === "model/list") {
+        this.respond(request.id, {
+          data: (this.options.availableModels ?? []).map((entry) => ({
+            id: entry.model,
+            model: entry.model,
+            displayName: entry.model,
+            description: "Fake Codex model",
+            hidden: entry.hidden ?? false,
+            isDefault: entry.isDefault ?? false,
+            supportedReasoningEfforts: (
+              entry.supportedReasoningEfforts ?? []
+            ).map((reasoningEffort) => ({
+              reasoningEffort,
+              description: reasoningEffort,
+            })),
+          })),
+          nextCursor: null,
+        });
+        continue;
+      }
       if (request.method === "thread/start") {
         this.threadStartCount += 1;
         if (
           this.options.failThreadStart ||
           this.options.failThreadStartNumbers?.includes(this.threadStartCount)
         ) {
-          this.respondError(request.id, "fake thread start failure");
+          this.respondError(
+            request.id,
+            this.options.threadStartError ?? "fake thread start failure",
+          );
           continue;
         }
         const threadId = `thread-${this.nextThreadId}`;

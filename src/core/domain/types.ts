@@ -273,6 +273,7 @@ export const providerFailureCodes = [
   "stale_generation",
   "backend_unavailable",
   "goal_slice_exhausted",
+  "model_unavailable",
   "unknown_runtime_failure",
 ] as const;
 

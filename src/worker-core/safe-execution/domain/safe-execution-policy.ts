@@ -29,6 +29,7 @@ export const attemptFailureReasons = [
   "provider_output_invalid",
   "runtime_interrupted",
   "goal_slice_exhausted",
+  "model_unavailable",
   "user_abort",
   "unknown_error",
 ] as const;
@@ -151,6 +152,8 @@ export function shouldContinueSafeExecutionAfterFailure(input: {
       return { allowed: input.policy.retryOnCapacity };
     case "account_unavailable":
       return { allowed: input.policy.retryOnAccountUnavailable };
+    case "model_unavailable":
+      return { allowed: input.policy.retryOnAccountUnavailable };
     case "reconnect_required":
       return { allowed: input.policy.retryOnReconnectRequired };
     case "unknown_error":
@@ -194,6 +197,7 @@ export function safeExecutionFinalStatusForFailure(
   if (
     reason === "unknown_error" ||
     reason === "permission_required" ||
+    reason === "model_unavailable" ||
     reason === "provider_output_invalid"
   ) {
     return "failed";
@@ -225,6 +229,7 @@ export function shouldDeliverSafeExecutionControlForContinuation(
 ): boolean {
   return (
     previousFailureReason !== "account_unavailable" &&
+    previousFailureReason !== "model_unavailable" &&
     previousFailureReason !== "reconnect_required"
   );
 }
@@ -514,6 +519,13 @@ function classifyWorkerFailureCode(
         reason: "provider_output_invalid",
         safeMessage,
         retryable: true,
+      };
+    case "model_unavailable":
+      return {
+        reason: "model_unavailable",
+        safeMessage,
+        retryable: true,
+        ...optionalFailureDetails(details),
       };
     case "unknown_runtime_failure":
       return {

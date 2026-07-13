@@ -123,6 +123,10 @@ describe("safe execution policy decisions", () => {
     expect(safeExecutionFinalStatusForFailure("provider_output_invalid")).toBe(
       "failed",
     );
+    expect(safeExecutionFinalStatusForFailure("model_unavailable")).toBe(
+      "failed",
+    );
+    expect(safeExecutionWaitingStatusForFailure("model_unavailable")).toBeNull();
     expect(safeExecutionFinalStatusForFailure("quota_limited")).toBe("partial");
   });
 
@@ -130,6 +134,8 @@ describe("safe execution policy decisions", () => {
     expect(shouldDeliverSafeExecutionControlForContinuation("unknown_error"))
       .toBe(true);
     expect(shouldDeliverSafeExecutionControlForContinuation("account_unavailable"))
+      .toBe(false);
+    expect(shouldDeliverSafeExecutionControlForContinuation("model_unavailable"))
       .toBe(false);
     expect(shouldDeliverSafeExecutionControlForContinuation("reconnect_required"))
       .toBe(false);
@@ -196,6 +202,24 @@ describe("safe execution policy decisions", () => {
       reason: "account_unavailable",
       safeMessage: "Provider auth failed.",
       retryable: true,
+    });
+
+    const modelFailure = new SubscriptionWorkerError(
+      "subscription_worker_run_failed",
+      'Codex model "gpt-5.6" is unavailable.',
+      {
+        details: {
+          code: "model_unavailable",
+          availableModels: "gpt-5.6-sol,gpt-5.5",
+        },
+      },
+    );
+
+    expect(defaultSafeExecutionErrorClassifier(modelFailure)).toMatchObject({
+      reason: "model_unavailable",
+      safeMessage: 'Codex model "gpt-5.6" is unavailable.',
+      retryable: true,
+      details: { availableModels: "gpt-5.6-sol,gpt-5.5" },
     });
   });
 });

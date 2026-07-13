@@ -5,6 +5,7 @@ export * from "./codex-cli-agent-driver";
 export * from "./codex-execution-profile";
 export * from "./codex-json-agent-driver";
 export * from "./codex-app-server-execution-engine";
+export * from "./app-server/domain/model-catalog";
 export * from "./codex-json-execution-engine";
 export * from "./codex-session-materializer";
 export * from "./codex-cli-provider-driver";

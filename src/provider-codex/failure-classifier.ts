@@ -1,7 +1,18 @@
 import type { ProviderFailure } from "@vioxen/subscription-runtime/core";
 import { classifyCodexRuntimeFailure } from "./codex-cli-domain";
+import { isCodexModelUnavailableError } from "./app-server/domain/model-catalog";
 
 export function classifyCodexFailure(error: unknown): ProviderFailure {
+  if (isCodexModelUnavailableError(error)) {
+    return {
+      code: "model_unavailable",
+      retryable: true,
+      reconnectRequired: false,
+      safeMessage: error.message,
+      causeCategory: "model_unavailable",
+      details: error.details(),
+    };
+  }
   const message = codexFailureMessage(error);
   const state = classifyCodexRuntimeFailure(message);
   const details = codexFailureDetails(error, message);

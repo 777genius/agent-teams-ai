@@ -63,6 +63,70 @@ import {
 } from "./codex-provider-test-support";
 
 describe("Codex provider app-server adapter", () => {
+  it("reports the account model catalog and skips fallback for unavailable models", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), "codex-model-catalog-test-"));
+    const fakeFactory = new FakeAppServerFactory({
+      failThreadStart: true,
+      threadStartError:
+        "The 'gpt-5.6' model is not supported when using Codex with a ChatGPT account",
+      availableModels: [
+        {
+          model: "gpt-5.6-sol",
+          supportedReasoningEfforts: ["high", "xhigh"],
+          isDefault: true,
+        },
+        {
+          model: "gpt-5.5",
+          supportedReasoningEfforts: ["medium", "high", "xhigh"],
+        },
+      ],
+    });
+    const fallback = new RecordingJsonEngine("fallback must not run");
+    const driver = new CodexJsonAgentDriver({
+      engine: new CodexAppServerExecutionEngine({
+        codexBinaryPath: "/bin/codex-test",
+        processFactory: fakeFactory.create,
+        fallback,
+      }),
+      model: "gpt-5.6",
+      reasoningEffort: "xhigh",
+    });
+
+    try {
+      const result = await driver.runTask({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        task: { kind: "review", prompt: "inspect model availability" },
+        workspace: { path: workspace },
+        runner: new StaticRunner(""),
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result).toMatchObject({
+        status: "failed",
+        failure: {
+          code: "model_unavailable",
+          retryable: true,
+          safeMessage:
+            'Codex model "gpt-5.6" is unavailable for this account. Available models: gpt-5.6-sol, gpt-5.5.',
+          details: {
+            requestedModel: "gpt-5.6",
+            availableModels: "gpt-5.6-sol,gpt-5.5",
+            availableModelProfiles:
+              "gpt-5.6-sol[high|xhigh],gpt-5.5[medium|high|xhigh]",
+          },
+        },
+      });
+      expect(fallback.prompts).toEqual([]);
+      expect(fakeFactory.requests.map((request) => request.method)).toContain(
+        "model/list",
+      );
+    } finally {
+      await driver.dispose();
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
   it("falls back to packaged Codex exec when app-server fails", async () => {
     const workspace = await mkdtemp(join(tmpdir(), "codex-app-fallback-test-"));
     const fakeFactory = new FakeAppServerFactory({

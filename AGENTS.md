@@ -15,6 +15,9 @@
 - Do not model extensibility as `string` fallbacks like `"codex" | "claude" | string`.
 - When a new provider, runtime status or event type is needed, add it explicitly to the enum and handle unknown legacy input through an explicit `Unknown` enum value or validation error.
 - Keep JSON payloads sanitized. Never persist or print secrets, auth payloads, API keys, tokens, cookies or raw provider credentials.
+- Treat provider model IDs as exact external identifiers. For GPT-5.6 Sol use
+  `gpt-5.6-sol`, not `gpt-5.6`. Do not infer availability from a hardcoded
+  list: use the Codex app-server `model/list` catalog for the active account.
 
 ## Git
 

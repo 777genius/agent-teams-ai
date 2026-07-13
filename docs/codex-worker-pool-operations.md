@@ -104,6 +104,39 @@ Defaults:
 - execution engine: `app-server-goal`;
 - edit mode: `allow-edits`.
 
+### Codex model IDs and availability
+
+Model IDs are exact provider identifiers, not generation aliases. For example,
+GPT-5.6 Sol is `gpt-5.6-sol`; `gpt-5.6` is not the same model ID. Codex CLI
+`0.144.0` or newer is required for GPT-5.6. Account plan, workspace policy and
+staged rollout can still make a model unavailable after the CLI is updated.
+
+Do not maintain a static "available models" list in an orchestrator or prompt.
+The `app-server` and `app-server-goal` engines inspect Codex `model/list` after
+a model-availability rejection. The resulting `model_unavailable` failure
+contains:
+
+- the requested model;
+- model IDs reported for that account;
+- provider-advertised reasoning efforts for each model.
+
+The runtime may retry another configured account because catalogs can differ
+between accounts. It does not silently substitute a different model and does
+not run the `codex exec` fallback for a known unavailable-model failure. If the
+installed Codex version cannot provide `model/list`, the original provider
+error is preserved instead of trusting a guessed catalog.
+
+Example:
+
+```sh
+subscription-runtime-codex-goal run \
+  --model gpt-5.6-sol \
+  --effort xhigh \
+  --service-tier default \
+  --job-root /path/to/job \
+  --workspace /path/to/project-worktree
+```
+
 Edit mode is a subscription-runtime edit/effect policy, not the provider's
 low-level sandbox flag. Use `allow-edits` for workers that may create a
 workspace patch. Use `providerSandboxMode` only when the provider sandbox itself

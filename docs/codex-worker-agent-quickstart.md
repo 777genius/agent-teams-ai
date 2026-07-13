@@ -104,6 +104,11 @@ subscription-runtime-codex-goal tool codex_goal_continue --args-json '{"jobId":"
 
 ## Starting a new job
 
+Use exact Codex model IDs. GPT-5.6 Sol is `gpt-5.6-sol`, not `gpt-5.6`, and
+requires Codex CLI `0.144.0` or newer. Availability remains account-specific;
+on a model rejection, the app-server runtime reports the current account's
+`model/list` catalog instead of silently selecting another model.
+
 Create one stored job per logical goal and per writer worktree:
 
 ```json

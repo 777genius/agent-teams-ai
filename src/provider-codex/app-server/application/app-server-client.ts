@@ -33,11 +33,18 @@ import { mergeAgentUsage, readUsageFromRecords } from "../domain/app-server-usag
 import { safeMessage, throwIfAborted } from "../domain/app-server-errors";
 import { isCodexAppServerReconnectProgressMessage } from "../protocol/app-server-event-parser";
 import { readGoal } from "../protocol/app-server-goal-protocol";
+import { readCodexModelCatalogPage } from "../protocol/app-server-model-catalog";
 import {
   encodeJsonRpcMessage,
   parseJsonRpcLine,
   type CodexAppServerJsonRpcResponse,
 } from "../protocol/app-server-json-rpc";
+import {
+  CodexModelUnavailableError,
+  hasCodexModel,
+  isCodexModelUnavailableMessage,
+  type CodexModelCatalogEntry,
+} from "../domain/model-catalog";
 import {
   agentMessageText,
   nestedString,
@@ -287,6 +294,15 @@ export class CodexAppServerClient {
       input,
     );
     if (response.error) {
+      const modelError = await this.modelUnavailableError({
+        requestedModel: input.model,
+        ...(response.error.message === undefined
+          ? {}
+          : { providerMessage: response.error.message }),
+        timeoutMs: input.timeoutMs,
+        abortSignal: input.abortSignal,
+      });
+      if (modelError) throw modelError;
       throw new Error(
         `codex_app_server_thread_start_failed:${response.error.message ?? "unknown"}`,
       );
@@ -295,6 +311,54 @@ export class CodexAppServerClient {
     const threadId = nestedString(response.result, ["thread", "id"]);
     if (!threadId) throw new Error("codex_app_server_thread_id_missing");
     return threadId;
+  }
+
+  private async modelUnavailableError(input: {
+    readonly requestedModel: string;
+    readonly providerMessage?: string;
+    readonly timeoutMs: number;
+    readonly abortSignal: AbortSignal;
+  }): Promise<CodexModelUnavailableError | null> {
+    if (!isCodexModelUnavailableMessage(input.providerMessage ?? "")) {
+      return null;
+    }
+    const availableModels = await this.readAvailableModels(input).catch(
+      () => null,
+    );
+    if (availableModels === null || hasCodexModel(availableModels, input.requestedModel)) {
+      return null;
+    }
+    return new CodexModelUnavailableError({
+      requestedModel: input.requestedModel,
+      availableModels,
+    });
+  }
+
+  private async readAvailableModels(input: {
+    readonly timeoutMs: number;
+    readonly abortSignal: AbortSignal;
+  }): Promise<readonly CodexModelCatalogEntry[] | null> {
+    const entries: CodexModelCatalogEntry[] = [];
+    const seenCursors = new Set<string>();
+    let cursor: string | null = null;
+
+    for (let pageNumber = 0; pageNumber < 10; pageNumber += 1) {
+      const response = await this.send(
+        "model/list",
+        { cursor, limit: 100, includeHidden: true },
+        input,
+      );
+      if (response.error) return null;
+      const page = readCodexModelCatalogPage(response.result);
+      if (!page) return null;
+      entries.push(...page.data);
+      if (entries.length > 500) return null;
+      if (page.nextCursor === null) return entries.length === 0 ? null : entries;
+      if (seenCursors.has(page.nextCursor)) return null;
+      seenCursors.add(page.nextCursor);
+      cursor = page.nextCursor;
+    }
+    return null;
   }
 
   async setGoal(input: {
