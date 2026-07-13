@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "corpusId": "phase1-team-lifecycle-semantic-v1",
+  "fixedClockMs": 1704067200000,
+  "fakePrincipal": {
+    "actorId": "actor_fixture_reader",
+    "sessionId": "session_fixture_session",
+    "deploymentId": "deployment_fixture_deployment",
+    "bootId": "boot_fixture_boot",
+    "requestId": "request_fixture_request",
+    "authorizedScope": "scope_fixture_team_read"
+  },
+  "vectors": [
+    {
+      "vectorId": "success",
+      "auditedState": "success",
+      "applicability": "applicable"
+    },
+    {
+      "vectorId": "empty",
+      "auditedState": "empty",
+      "applicability": "applicable"
+    },
+    {
+      "vectorId": "not-found-inapplicable",
+      "auditedState": "not-found",
+      "applicability": "inapplicable"
+    },
+    {
+      "vectorId": "draft",
+      "auditedState": "draft",
+      "applicability": "data"
+    },
+    {
+      "vectorId": "provisioning-inapplicable",
+      "auditedState": "provisioning",
+      "applicability": "inapplicable"
+    },
+    {
+      "vectorId": "corrupt",
+      "auditedState": "corrupt",
+      "applicability": "applicable"
+    },
+    {
+      "vectorId": "partial",
+      "auditedState": "partial",
+      "applicability": "applicable"
+    },
+    {
+      "vectorId": "unavailable",
+      "auditedState": "unavailable",
+      "applicability": "applicable"
+    },
+    {
+      "vectorId": "stale",
+      "auditedState": "stale",
+      "applicability": "applicable"
+    },
+    {
+      "vectorId": "unexpected",
+      "auditedState": "unexpected",
+      "applicability": "applicable"
+    }
+  ]
+}

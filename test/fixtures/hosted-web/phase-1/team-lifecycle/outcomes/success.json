@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "vectorId": "success",
+  "auditedState": "success",
+  "oracles": [
+    {
+      "kind": "success",
+      "page": {
+        "schemaVersion": 1,
+        "snapshotRevision": "revision_snapshot_success",
+        "items": [
+          {
+            "teamId": "team_alpha",
+            "displayName": "Alpha",
+            "lifecycle": "ready",
+            "revision": "revision_team_alpha"
+          },
+          {
+            "teamId": "team_beta_a",
+            "displayName": "Beta",
+            "lifecycle": "running",
+            "revision": "revision_team_beta_a"
+          },
+          {
+            "teamId": "team_beta_b",
+            "displayName": "Beta",
+            "lifecycle": "degraded",
+            "revision": "revision_team_beta_b"
+          }
+        ],
+        "nextCursor": "cursor_success_next"
+      },
+      "warnings": []
+    }
+  ]
+}
