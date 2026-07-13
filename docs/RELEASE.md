@@ -12,35 +12,37 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.8.0 -->
-Connect more of the AI subscriptions you already pay for directly from the dashboard, then mix their models in the same Agent Team. This release also adds clearer provider setup, team-folder import, newer Codex models, and stronger runtime recovery.
+Use more of the AI subscriptions you already pay for in the same Agent Team. Guided setup connects supported plans, lets you choose a provider and model for each teammate, and keeps the whole flow in one place. This release also adds safe team-folder import, newer Codex models, and fuller usage and cost reporting.
 
 ### What's New
 
-- Connect SuperGrok, GitHub Copilot, Cursor, Amazon Q Developer / Kiro, Z.AI Coding Plan, MiniMax Token Plan, Kimi Code Membership, and Xiaomi MiMo Token Plan from guided dashboard flows.
-- Browse connected providers separately and choose their available models when configuring teammates.
-- Import an existing Agent Teams folder with its members and task data.
-- Add GPT-5.6 model discovery and refresh the Codex model catalog.
-- Include OpenCode usage in the shared Usage dashboard and budget breakdowns.
+- Connect SuperGrok, GitHub Copilot, Cursor, Amazon Q Developer / Kiro, Z.AI Coding Plan, MiniMax Token Plan, Kimi Code Membership, and Xiaomi MiMo Token Plan through guided setup in the dashboard and Provider Settings.
+- Browse models by connected provider and assign them to individual teammates, including models from the larger OpenCode catalog.
+- Import an existing team folder, preview the detected members, skills, and project path, and create a draft team before launching it.
+- Discover GPT-5.6 Sol, Terra, and Luna in Codex, with Max and Ultra reasoning effort where supported.
+- Include OpenCode token usage and refreshed model pricing in the shared Usage dashboard and budget breakdowns.
+- Configure and validate context and output limits for local OpenCode models without changing the user's OpenCode project settings.
 
 ### Improvements
 
-- Load provider cards sooner and keep dashboard connection counts responsive while the full OpenCode catalog loads in the background.
-- Paginate, cache, and virtualize large provider model catalogs for faster search and scrolling.
-- Show immediate setup progress, provider-specific sign-in choices, secure device codes, plan-key validation, credential links, and clearer verification states.
-- Let connected providers replace or renew managed credentials without removing the working credential first.
-- Detect Xiaomi MiMo Token Plan regions from the dedicated Base URL instead of requiring users to understand region codes.
-- Install or update the managed OpenCode runtime from the setup flow when a provider requires it.
-- Improve mixed OpenCode teammate isolation, provider readiness checks, and model-limit configuration.
-- Update the terminal runtime and stabilize command history rendering.
+- Make Provider Settings easier to understand with clearer Claude, Codex, and OpenCode tabs, immediate setup progress, guided browser and device-code sign-in, key validation, and clearer verification results.
+- Load provider cards and connection counts sooner, then cache, paginate, and virtualize large model catalogs for faster search and stable scrolling.
+- Guide installation or updates for the OpenCode runtime and the Cursor Agent or Kiro CLI components required by their provider flows.
+- Let connected providers renew or replace managed credentials without deleting the working credential first, and detect Xiaomi MiMo regions automatically from the plan's dedicated Base URL.
+- Keep mixed OpenCode teammates isolated by model, improve readiness checks, and apply model context limits consistently.
+- Update the terminal runtime and make command history render more reliably.
+- Preserve task references, attachment paths, and work-sync timeouts in MCP actions, plus advanced team settings sent through HTTP.
 
 ### Bug Fixes
 
-- Fix SuperGrok device authorization remaining stuck after the website confirms the device is authorized.
-- Fix stale provider cards, connection counts, and delayed status refresh after connecting or reconnecting a plan.
-- Fix provider setup races around loading, cancellation, OAuth completion, credential writes, and model verification.
-- Fix subscription plans being shown as connected from config alone without usable credentials.
-- Fix malformed or unsafe Agent Teams folder imports and concurrent team-storage writes.
-- Fix unavailable Codex models and stale teammate effort values appearing in team configuration.
+- Fix SuperGrok device authorization getting stuck after browser approval, and refresh its managed session before team launch when needed.
+- Fix stale provider cards and connection counts after connecting or reconnecting, stop plans from appearing connected without usable credentials, and close setup races around OAuth, cancellation, credential writes, and model verification.
+- Prevent simultaneous team messages from overwriting one another, keep other inboxes readable when one history is damaged, and reject unsafe member paths.
+- Fix project matching when path casing differs while keeping distinct case-sensitive paths separate on macOS and Linux.
+- Reject malformed or unsafe team-folder imports and prevent competing imports or storage writes from overwriting each other.
+- Fix unavailable Codex models and stale teammate effort values in team configuration, show a clear fallback notice when the live catalog is unavailable, and offer an in-app runtime update when one is available.
+- Stop cancelled setup and CLI operations from leaving child processes running in the background.
+- Prevent the startup configuration request from running before its desktop handler is ready.
 
 ### Downloads
 
@@ -62,7 +64,7 @@ Connect more of the AI subscriptions you already pay for directly from the dashb
   <br />
   <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
   <br />
-  <sub><strong>Windows required:</strong> launch Agent Teams AI as Administrator, especially when using OpenCode runtimes.</sub>
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
 </td>
 <td align="center">
   <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.8.0/Agent.Teams.AI-2.8.0.AppImage">
@@ -678,7 +680,7 @@ If a draft was published before notes were written, immediately edit the public 
   <br />
   <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
   <br />
-  <sub><strong>Windows required:</strong> launch Agent Teams AI as Administrator, especially when using OpenCode runtimes.</sub>
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
 </td>
 <td align="center">
   <a href="https://github.com/777genius/agent-teams-ai/releases/download/v<VERSION>/Agent.Teams.AI-<VERSION>.AppImage">
