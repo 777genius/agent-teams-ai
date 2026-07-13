@@ -36,6 +36,47 @@ export type InternalStorageWorkerRequest =
 
 export type InternalStorageWorkerOp = InternalStorageWorkerRequest['op'];
 
+interface JournalReplacePayloadByOp {
+  'stallJournal.replace': { teamName: string; entries: StallJournalEntryRecord[] };
+  'commentJournal.replace': { teamName: string; entries: CommentJournalEntryRecord[] };
+}
+
+/**
+ * Runtime-checks the team-isolation invariant before a replace operation can
+ * delete any rows. TypeScript cannot guarantee that every entry's embedded
+ * teamName agrees with the payload teamName after the worker-thread hop.
+ */
+export function parseJournalReplacePayload<TOp extends keyof JournalReplacePayloadByOp>(
+  op: TOp,
+  payload: unknown
+): JournalReplacePayloadByOp[TOp] {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    throw new Error(`Invalid ${op} payload: expected an object`);
+  }
+
+  const candidate = payload as { teamName?: unknown; entries?: unknown };
+  if (typeof candidate.teamName !== 'string') {
+    throw new Error(`Invalid ${op} payload: teamName must be a string`);
+  }
+  if (!Array.isArray(candidate.entries)) {
+    throw new Error(`Invalid ${op} payload: entries must be an array`);
+  }
+
+  for (const [index, entry] of candidate.entries.entries()) {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      throw new Error(`Invalid ${op} payload: entries[${index}] must be an object`);
+    }
+    const entryTeamName = (entry as { teamName?: unknown }).teamName;
+    if (entryTeamName !== candidate.teamName) {
+      throw new Error(
+        `Invalid ${op} payload: entries[${index}].teamName must match payload teamName`
+      );
+    }
+  }
+
+  return candidate as JournalReplacePayloadByOp[TOp];
+}
+
 export type InternalStorageWorkerResponse =
   | { id: string; ok: true; result: unknown }
   | { id: string; ok: false; error: string };
