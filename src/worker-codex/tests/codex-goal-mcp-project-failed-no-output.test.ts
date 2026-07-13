@@ -53,6 +53,8 @@ describe("project failed_no_output lifecycle", () => {
     const controllerWorkspace = join(root, "repo");
     const authRoot = join(root, "auth");
     const controllerJobId = "project-controller-v1";
+    const freshWorkerJobId = "project-worker-fresh-v1";
+    const freshDirtyWorkerJobId = "project-worker-fresh-dirty-v1";
     const workerJobId = "project-worker-v1";
     const dirtyWorkerJobId = "project-worker-dirty-v1";
     const verifierJobId = "project-verifier-v1";
@@ -60,6 +62,8 @@ describe("project failed_no_output lifecycle", () => {
     try {
       await mkdir(authRoot, { recursive: true });
       await createCleanWorkspace(controllerWorkspace);
+      await createCleanWorkspace(join(worktreeRoot, freshWorkerJobId));
+      await createCleanWorkspace(join(worktreeRoot, freshDirtyWorkerJobId));
       await createCleanWorkspace(join(worktreeRoot, workerJobId));
       await createCleanWorkspace(join(worktreeRoot, dirtyWorkerJobId));
       await createCleanWorkspace(join(worktreeRoot, verifierJobId));
@@ -81,6 +85,20 @@ describe("project failed_no_output lifecycle", () => {
           tmuxSessionPrefixes: ["project-"],
           allowedAccountIds: ["account-a"],
         },
+      });
+      await createStoredJob({
+        registryRootDir,
+        root,
+        authRoot,
+        jobId: freshWorkerJobId,
+        workspacePath: join(worktreeRoot, freshWorkerJobId),
+      });
+      await createStoredJob({
+        registryRootDir,
+        root,
+        authRoot,
+        jobId: freshDirtyWorkerJobId,
+        workspacePath: join(worktreeRoot, freshDirtyWorkerJobId),
       });
       await createStoredJob({
         registryRootDir,
@@ -119,6 +137,75 @@ describe("project failed_no_output lifecycle", () => {
         failureCategory: "infrastructure",
         failureCode: "prewarm_failed_before_task",
       };
+      const freshArgs = {
+        ...args,
+        jobId: freshWorkerJobId,
+        terminalAttemptId: "terminalize-project-worker-fresh-v1",
+        failureCode: "stale_source_before_task",
+      };
+      await expect(projectControlRecordFailedNoOutputView(freshArgs, deps)).resolves
+        .toMatchObject({
+          ok: false,
+          reason: "confirm_failed_no_output_required",
+          sourceRecord: null,
+          decisionPreview: {
+            status: "failed_no_output",
+            failure: {
+              category: "infrastructure",
+              code: "stale_source_before_task",
+            },
+          },
+        });
+      const freshRecorded = await projectControlRecordFailedNoOutputView({
+        ...freshArgs,
+        confirmFailedNoOutput: true,
+      }, deps);
+      expect(freshRecorded).toMatchObject({
+        ok: true,
+        mode: "project_control_record_failed_no_output",
+        decision: {
+          jobId: freshWorkerJobId,
+          status: "failed_no_output",
+          failure: {
+            category: "infrastructure",
+            code: "stale_source_before_task",
+          },
+          output: { authoredChanges: false, workspaceDirty: false },
+        },
+      });
+      const freshDecision = freshRecorded.decision as {
+        readonly archivePath: string;
+        readonly backup: {
+          readonly statusPath: string;
+          readonly patchPath: string;
+          readonly numstatPath: string;
+        };
+      };
+      await expect(readFile(freshDecision.backup.statusPath, "utf8")).resolves.toBe("");
+      await expect(readFile(freshDecision.backup.patchPath, "utf8")).resolves.toBe("");
+      await expect(readFile(freshDecision.backup.numstatPath, "utf8")).resolves.toBe("");
+      expect(freshDecision.archivePath).toContain(
+        `${freshWorkerJobId}-failed-no-output-terminalize-project-worker-fresh-v1`,
+      );
+      await expect(projectControlRecordFailedNoOutputView({
+        ...freshArgs,
+        confirmFailedNoOutput: true,
+      }, deps)).resolves.toMatchObject({
+        ok: true,
+        alreadyTerminal: true,
+        idempotentReplay: true,
+      });
+      await writeFile(
+        join(worktreeRoot, freshDirtyWorkerJobId, "dirty.txt"),
+        "unarchived output\n",
+      );
+      await expect(projectControlRecordFailedNoOutputView({
+        ...freshArgs,
+        jobId: freshDirtyWorkerJobId,
+        terminalAttemptId: "terminalize-project-worker-fresh-dirty-v1",
+        confirmFailedNoOutput: true,
+      }, deps)).rejects.toThrow("failed_no_output_clean_workspace_required");
+
       await expect(projectControlRecordFailedNoOutputView(args, deps)).resolves
         .toMatchObject({
           ok: false,

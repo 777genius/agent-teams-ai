@@ -66,7 +66,7 @@ export function registerCodexGoalProjectControlReviewTools(server: McpServer): v
     {
       title: "Project Control Record Failed Worker Without Output",
       description:
-        "Append an immutable failed_no_output terminal ledger correction for a stopped worker with complete empty authored-output evidence, including a verified preexisting workspace patch when applicable.",
+        "Record an immutable failed_no_output terminal ledger decision for a stopped worker with complete empty authored-output evidence, or append a correction to an invalid prior decision.",
       inputSchema: {
         ...jobIdInputSchema(),
         controllerJobId: z.string().min(1),

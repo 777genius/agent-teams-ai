@@ -7,10 +7,14 @@ import {
   consumedOutputRecordFor,
   createAccessPolicyService,
   recordFailedNoOutput,
+  recordTerminalOutputDecision,
   type ProjectAccessScope,
   type TerminalOutputBackup,
 } from "@vioxen/subscription-runtime/worker-core";
-import { LocalConsumedOutputLedgerWriter } from "@vioxen/subscription-runtime/worker-local";
+import {
+  captureLocalTerminalOutputBackup,
+  LocalConsumedOutputLedgerWriter,
+} from "@vioxen/subscription-runtime/worker-local";
 import type { ProjectControlMcpArgs } from "./codex-goal-mcp-inputs";
 import {
   collectCodexGoalStatus,
@@ -80,15 +84,6 @@ export async function projectControlRecordFailedNoOutputView(
     jobId: loaded.manifest.jobId,
     workspacePath: loaded.manifest.workspacePath,
   });
-  if (!sourceRecord) {
-    throw new Error("failed_no_output_source_record_required");
-  }
-  await assertBackupPathsReadable(sourceRecord.backup, {
-    scope: controller.scope,
-    registryRootDir: controller.registryRootDir,
-    jobId: loaded.manifest.jobId,
-    jobRootDir: loaded.manifest.jobRootDir,
-  });
   const preexistingWorkspacePatch = await requestedPreexistingWorkspacePatch(
     args,
     {
@@ -98,6 +93,33 @@ export async function projectControlRecordFailedNoOutputView(
       jobRootDir: loaded.manifest.jobRootDir,
     },
   );
+  const attemptId = requiredRawString(args.terminalAttemptId, "terminalAttemptId");
+  const failureCategory = requiredRawString(args.failureCategory, "failureCategory");
+  const failureCode = requiredRawString(args.failureCode, "failureCode");
+  const note = stringValue(args.note) ??
+    `Closed ${loaded.manifest.jobId} after infrastructure failure without authored output.`;
+  if (!sourceRecord) {
+    if (preexistingWorkspacePatch) {
+      throw new Error("failed_no_output_source_record_required_for_preexisting_patch");
+    }
+    return await recordInitialFailedNoOutput({
+      controller,
+      loaded,
+      ledgerRoots,
+      ledgerRoot,
+      attemptId,
+      failureCategory,
+      failureCode,
+      note,
+      confirmFailedNoOutput: args.confirmFailedNoOutput === true,
+    });
+  }
+  await assertBackupPathsReadable(sourceRecord.backup, {
+    scope: controller.scope,
+    registryRootDir: controller.registryRootDir,
+    jobId: loaded.manifest.jobId,
+    jobRootDir: loaded.manifest.jobRootDir,
+  });
   if (sourceRecord.valid && sourceRecord.status === "failed_no_output") {
     return {
       ok: true,
@@ -113,11 +135,6 @@ export async function projectControlRecordFailedNoOutputView(
   const progressStale = status.progressHeartbeatAgeMs !== undefined &&
     status.progressHeartbeatAgeMs > 10 * 60_000;
   const workerLiveness = resolveCodexGoalWorkerLiveness({ status, progressStale });
-  const attemptId = requiredRawString(args.terminalAttemptId, "terminalAttemptId");
-  const failureCategory = requiredRawString(args.failureCategory, "failureCategory");
-  const failureCode = requiredRawString(args.failureCode, "failureCode");
-  const note = stringValue(args.note) ??
-    `Closed ${loaded.manifest.jobId} after infrastructure failure without authored output.`;
   const closedAt = failedNoOutputClosedAt(sourceRecord.closedAt);
 
   if (!args.confirmFailedNoOutput) {
@@ -193,6 +210,112 @@ export async function projectControlRecordFailedNoOutputView(
     registryRootDir: controller.registryRootDir,
     auditPath: projectControlAuditPath(controller.controller),
     jobId: loaded.manifest.jobId,
+    ledgerPath: receipt.ledgerPath,
+    idempotentReplay: receipt.idempotentReplay,
+    accountReservationReleased,
+    decision: receipt.decision,
+  };
+}
+
+async function recordInitialFailedNoOutput(input: {
+  readonly controller: Awaited<ReturnType<
+    CodexGoalMcpProjectControlActionsDeps["loadProjectControlController"]
+  >>;
+  readonly loaded: Awaited<ReturnType<
+    CodexGoalMcpProjectControlActionsDeps["loadJobLaunch"]
+  >>;
+  readonly ledgerRoots: readonly string[];
+  readonly ledgerRoot: string;
+  readonly attemptId: string;
+  readonly failureCategory: string;
+  readonly failureCode: string;
+  readonly note: string;
+  readonly confirmFailedNoOutput: boolean;
+}): Promise<JsonObject> {
+  const status = await collectCodexGoalStatus(statusInput(input.loaded.launch));
+  const progressStale = status.progressHeartbeatAgeMs !== undefined &&
+    status.progressHeartbeatAgeMs > 10 * 60_000;
+  const workerLiveness = resolveCodexGoalWorkerLiveness({ status, progressStale });
+  const closedAt = new Date().toISOString();
+  const decisionPreview = {
+    status: "failed_no_output",
+    attemptId: input.attemptId,
+    closedAt,
+    failure: { category: input.failureCategory, code: input.failureCode },
+    note: input.note,
+  };
+  if (!input.confirmFailedNoOutput) {
+    return {
+      ok: false,
+      reason: "confirm_failed_no_output_required",
+      mode: "project_control_record_failed_no_output",
+      controllerJobId: input.controller.controller.jobId,
+      jobId: input.loaded.manifest.jobId,
+      requiredOverride: "confirmFailedNoOutput",
+      sourceRecord: null,
+      status,
+      workerLiveness,
+      decisionPreview,
+    };
+  }
+  if (workerLiveness.alive) {
+    throw new Error("failed_no_output_worker_still_alive");
+  }
+  if (status.workspaceDirty !== false) {
+    throw new Error("failed_no_output_clean_workspace_required");
+  }
+  const backup = await captureLocalTerminalOutputBackup({
+    archiveRoot: join(input.loaded.manifest.jobRootDir, "archives"),
+    archiveName:
+      `${input.loaded.manifest.jobId}-failed-no-output-${input.attemptId}`,
+    workspacePath: input.loaded.manifest.workspacePath,
+    changedFiles: [],
+  });
+  if (
+    backup.hasAuthoredOutput ||
+    (await readFile(backup.statusPath, "utf8")).trim().length > 0
+  ) {
+    throw new Error("failed_no_output_clean_workspace_required");
+  }
+  const receipt = await recordTerminalOutputDecision(
+    { writer: new LocalConsumedOutputLedgerWriter() },
+    {
+      allowedLedgerRoots: input.ledgerRoots,
+      ledgerRoot: input.ledgerRoot,
+      decision: {
+        schemaVersion: 1,
+        jobId: input.loaded.manifest.jobId,
+        attemptId: input.attemptId,
+        status: "failed_no_output",
+        closedAt,
+        archivePath: backup.archivePath,
+        failure: {
+          category: input.failureCategory,
+          code: input.failureCode,
+        },
+        output: { authoredChanges: false, workspaceDirty: false },
+        note: input.note,
+        backup: {
+          workspace: input.loaded.manifest.workspacePath,
+          statusPath: backup.statusPath,
+          patchPath: backup.patchPath,
+          numstatPath: backup.numstatPath,
+        },
+      },
+    },
+  );
+  const accountReservationReleased = await releaseCodexProjectAccount({
+    manifest: input.loaded.manifest,
+    launch: input.loaded.launch,
+    reason: "worker_failed_no_output",
+  });
+  return {
+    ok: true,
+    mode: "project_control_record_failed_no_output",
+    controllerJobId: input.controller.controller.jobId,
+    registryRootDir: input.controller.registryRootDir,
+    auditPath: projectControlAuditPath(input.controller.controller),
+    jobId: input.loaded.manifest.jobId,
     ledgerPath: receipt.ledgerPath,
     idempotentReplay: receipt.idempotentReplay,
     accountReservationReleased,
