@@ -185,7 +185,9 @@ export async function readCodexGoalJob(input: {
 }): Promise<CodexGoalJobManifest> {
   const registryRootDir = resolveCodexGoalJobRegistryRoot(input);
   const path = codexGoalJobManifestPath({ registryRootDir, jobId: input.jobId });
-  return parseCodexGoalJobManifest(JSON.parse(await readFile(path, "utf8")));
+  return parseStoredCodexGoalJobManifest(
+    JSON.parse(await readFile(path, "utf8")),
+  );
 }
 
 export async function createCodexGoalJob(input: {
@@ -317,6 +319,21 @@ export function summarizeCodexGoalJob(
 export function parseCodexGoalJobManifest(
   value: unknown,
 ): CodexGoalJobManifest {
+  return parseCodexGoalJobManifestValue(value, {});
+}
+
+function parseStoredCodexGoalJobManifest(
+  value: unknown,
+): CodexGoalJobManifest {
+  return parseCodexGoalJobManifestValue(value, {
+    allowLegacyBuiltinContractSchema: true,
+  });
+}
+
+function parseCodexGoalJobManifestValue(
+  value: unknown,
+  options: { readonly allowLegacyBuiltinContractSchema?: boolean },
+): CodexGoalJobManifest {
   if (!isRecord(value)) throw new Error("codex_goal_job_manifest_invalid");
   if (value.schemaVersion !== codexGoalJobManifestSchemaVersion) {
     throw new Error("codex_goal_job_manifest_version_unsupported");
@@ -446,6 +463,7 @@ export function parseCodexGoalJobManifest(
       : {
           projectPreStartAdmission: parseProjectPreStartAdmissionManifest(
             value.projectPreStartAdmission,
+            options,
           ),
         }),
     ...(optionalString(value.outputFormat) === undefined
@@ -459,6 +477,7 @@ export function parseCodexGoalJobManifest(
 
 function parseProjectPreStartAdmissionManifest(
   value: unknown,
+  options: { readonly allowLegacyBuiltinContractSchema?: boolean },
 ): CodexGoalProjectPreStartAdmission {
   if (!isRecord(value) || value.schemaVersion !== 1) {
     throw new Error("codex_goal_job_projectPreStartAdmission_invalid");
@@ -482,6 +501,9 @@ function parseProjectPreStartAdmissionManifest(
       "contractPath",
       "statePath",
       "receiptPath",
+      ...(options.allowLegacyBuiltinContractSchema === true
+        ? ["contractSchema"]
+        : []),
     ]);
     for (const field of Object.keys(value)) {
       if (!allowedFields.has(field)) {
@@ -489,6 +511,14 @@ function parseProjectPreStartAdmissionManifest(
           `codex_goal_job_projectPreStartAdmission_unexpected_field:${field}`,
         );
       }
+    }
+    if (
+      value.contractSchema !== undefined &&
+      value.contractSchema !== "worker-start-v1"
+    ) {
+      throw new Error(
+        "codex_goal_job_projectPreStartAdmission_contractSchema_invalid",
+      );
     }
     return {
       schemaVersion: 1,

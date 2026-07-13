@@ -1,4 +1,11 @@
-import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -157,6 +164,51 @@ describe("codex goal job registry", () => {
       })).rejects.toThrow(
         "codex_goal_job_projectPreStartAdmission_unexpected_field:contractSchema",
       );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("normalizes the legacy builtin discriminator when reading stored jobs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-jobs-"));
+    const registryRootDir = join(root, "registry");
+    try {
+      const created = await createCodexGoalJob({
+        registryRootDir,
+        manifest: {
+          ...jobManifest(root),
+          projectPreStartAdmission: {
+            schemaVersion: 1,
+            mode: "serial-builtin",
+            contractPath: join(root, "contract.json"),
+            statePath: join(root, "state.json"),
+            receiptPath: join(root, "receipt.json"),
+          },
+        },
+      });
+      const path = codexGoalJobManifestPath({
+        registryRootDir,
+        jobId: created.jobId,
+      });
+      const stored = JSON.parse(await readFile(path, "utf8")) as
+        Record<string, unknown>;
+      stored.projectPreStartAdmission = {
+        ...(stored.projectPreStartAdmission as Record<string, unknown>),
+        contractSchema: "worker-start-v1",
+      };
+      await writeFile(path, `${JSON.stringify(stored, null, 2)}\n`);
+
+      const read = await readCodexGoalJob({
+        registryRootDir,
+        jobId: created.jobId,
+      });
+      expect(read.projectPreStartAdmission).toEqual({
+        schemaVersion: 1,
+        mode: "serial-builtin",
+        contractPath: join(root, "contract.json"),
+        statePath: join(root, "state.json"),
+        receiptPath: join(root, "receipt.json"),
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }
