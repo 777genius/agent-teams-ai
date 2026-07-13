@@ -53,6 +53,8 @@ export interface TeamProvisioningLeadInboxRelayPortsBoundary {
   relayLeadInboxMessages(teamName: string, options?: LeadInboxRelayOptions): Promise<number>;
 }
 
+const leadInboxRelayScopes = new WeakMap<Promise<number>, string | null>();
+
 export interface TeamProvisioningLeadInboxRelayServiceHost<TRun extends LeadInboxRelayFlowRun> {
   leadInboxRelayInFlight: TeamProvisioningLeadInboxRelayPortsFactoryDeps<TRun>['leadInboxRelayInFlight'];
   runTracking: Pick<
@@ -223,10 +225,14 @@ export function createTeamProvisioningLeadInboxRelayPortsBoundary<
       teamName: string,
       options?: LeadInboxRelayOptions
     ): Promise<number> {
-      const onlyMessageId = options?.onlyMessageId?.trim();
-      const relayKey = onlyMessageId ? `${teamName}::${onlyMessageId}` : teamName;
+      const onlyMessageId = options?.onlyMessageId?.trim() || null;
+      const relayKey = teamName;
       const existing = deps.leadInboxRelayInFlight.get(relayKey);
-      if (existing) {
+      const canShareExisting =
+        existing &&
+        (!leadInboxRelayScopes.has(existing) ||
+          leadInboxRelayScopes.get(existing) === onlyMessageId);
+      if (existing && canShareExisting) {
         try {
           return await waitForInFlight({
             promise: existing,
@@ -249,8 +255,11 @@ export function createTeamProvisioningLeadInboxRelayPortsBoundary<
       }
 
       const ports = createTeamProvisioningLeadInboxRelayFlowPorts(deps);
-      const work = options ? runRelay(teamName, ports, options) : runRelay(teamName, ports);
+      const runCurrentRelay = (): Promise<number> =>
+        options ? runRelay(teamName, ports, options) : runRelay(teamName, ports);
+      const work = existing ? existing.then(runCurrentRelay, runCurrentRelay) : runCurrentRelay();
 
+      leadInboxRelayScopes.set(work, onlyMessageId);
       deps.leadInboxRelayInFlight.set(relayKey, work);
       try {
         return await waitForInFlight({

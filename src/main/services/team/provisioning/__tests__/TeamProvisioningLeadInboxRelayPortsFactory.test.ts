@@ -210,6 +210,43 @@ describe('TeamProvisioningLeadInboxRelayPortsFactory', () => {
     });
   });
 
+  it('serializes differently scoped relay work under the team lifecycle key', async () => {
+    let releaseFirstRelay: (() => void) | undefined;
+    const firstRelayBlocked = new Promise<void>((resolve) => {
+      releaseFirstRelay = resolve;
+    });
+    let activeRelays = 0;
+    let maxActiveRelays = 0;
+    const runRelay = vi.fn(async (_teamName, _ports, options) => {
+      activeRelays += 1;
+      maxActiveRelays = Math.max(maxActiveRelays, activeRelays);
+      if (runRelay.mock.calls.length === 1) {
+        await firstRelayBlocked;
+      }
+      activeRelays -= 1;
+      return options?.onlyMessageId ? 2 : 1;
+    });
+    const deps = createDeps({ relayLeadInboxMessagesForTeam: runRelay });
+    const boundary = createTeamProvisioningLeadInboxRelayPortsBoundary(deps);
+
+    const first = boundary.relayLeadInboxMessages('alpha');
+    await vi.waitFor(() => expect(runRelay).toHaveBeenCalledTimes(1));
+    const scoped = boundary.relayLeadInboxMessages('alpha', { onlyMessageId: 'message-1' });
+
+    await Promise.resolve();
+    expect(runRelay).toHaveBeenCalledTimes(1);
+    expect([...deps.leadInboxRelayInFlight.keys()]).toEqual(['alpha']);
+
+    releaseFirstRelay?.();
+
+    await expect(Promise.all([first, scoped])).resolves.toEqual([1, 2]);
+    expect(runRelay).toHaveBeenNthCalledWith(2, 'alpha', expect.any(Object), {
+      onlyMessageId: 'message-1',
+    });
+    expect(maxActiveRelays).toBe(1);
+    expect(deps.leadInboxRelayInFlight.has('alpha')).toBe(false);
+  });
+
   it('shares existing in-flight relay work and clears the matching entry', async () => {
     const existing = Promise.resolve(3);
     const deps = createDeps({
