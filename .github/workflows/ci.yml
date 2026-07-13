@@ -90,19 +90,18 @@ jobs:
       - name: Audit dependencies
         run: pnpm audit --audit-level high
 
-      - name: Restore ESLint cache
-        uses: actions/cache@v5
-        with:
-          path: .eslintcache
-          key: eslint-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'eslint.config.*', 'src/**/*.ts', 'src/**/*.tsx') }}
-
       - name: Validate workspace truth gate
         env:
           NODE_OPTIONS: --max-old-space-size=8192
-        run: pnpm check:ci
+        run: pnpm validate:ci
 
   test:
+    name: test (${{ matrix.shard }}/2)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
 
     steps:
       - name: Checkout
@@ -130,8 +129,65 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Test
-        run: pnpm test:workspace:ci
+      - name: Test workspace packages
+        if: matrix.shard == 1
+        run: pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test
+
+      - name: Test root shard
+        run: pnpm test:ci --shard=${{ matrix.shard }}/2
+
+  lint:
+    name: lint (${{ matrix.scope }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scope: main
+            paths: src/main src/preload src/shared src/types
+          - scope: renderer
+            paths: src/renderer
+          - scope: features
+            paths: src/features
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Restore pnpm node-gyp executable bit
+        run: |
+          PNPM_STORE="$(pnpm store path)"
+          PNPM_BIN_DIR="$(dirname "$(command -v pnpm)")"
+          for path in "$PNPM_STORE" "${PNPM_HOME:-}" "$PNPM_BIN_DIR"; do
+            if [ -d "$path" ]; then
+              find "$path" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
+            fi
+          done
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore ESLint cache
+        uses: actions/cache@v5
+        with:
+          path: .eslintcache-${{ matrix.scope }}
+          key: eslint-v3-${{ runner.os }}-${{ matrix.scope }}-${{ hashFiles('.node-version', 'pnpm-lock.yaml', 'package.json', 'pnpm-workspace.yaml', 'eslint.config.*', 'tsconfig*.json', 'electron.vite.config.ts', 'src/**', 'test/**', 'packages/agent-graph/src/**', 'scripts/team-changes-real-data-smoke.ts', 'scripts/smoke/codex-runtime-install.ts', 'resources/pricing.json') }}
+
+      - name: Lint source shard
+        run: pnpm lint:ci:files ${{ matrix.paths }} --cache-location .eslintcache-${{ matrix.scope }}
+
+      - name: Lint MCP package
+        if: matrix.scope == 'main'
+        run: pnpm lint:mcp
 
   task-change-ledger-windows:
     name: Task change ledger Windows smoke
