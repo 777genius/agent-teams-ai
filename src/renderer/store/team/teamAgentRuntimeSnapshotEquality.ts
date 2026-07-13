@@ -64,6 +64,34 @@ export interface TeamAgentRuntimeSnapshotEqualityOptions {
   compareFreshnessTimestamps?: boolean;
 }
 
+const DEFAULT_FRESHNESS_UPDATE_CADENCE_MS = 5_000;
+
+function parseFreshnessTimestampMs(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function areFreshnessTimestampsEqual(
+  left: string | undefined,
+  right: string | undefined,
+  options: TeamAgentRuntimeSnapshotEqualityOptions
+): boolean {
+  if (left === right || options.compareFreshnessTimestamps === false) return true;
+  if (options.compareFreshnessTimestamps === true) return false;
+
+  const rightMs = parseFreshnessTimestampMs(right);
+  if (rightMs === null) return true;
+
+  const leftMs = parseFreshnessTimestampMs(left);
+  if (leftMs === null) return false;
+
+  // Production callers omit options. Only a forward observation at least one
+  // cadence newer is renderer-visible; sub-cadence and regressive timestamps
+  // remain equal so polling cannot cause millisecond churn or stale rewrites.
+  return rightMs - leftMs < DEFAULT_FRESHNESS_UPDATE_CADENCE_MS;
+}
+
 export function areTeamAgentRuntimeEntriesEqual(
   left: TeamAgentRuntimeEntry | undefined,
   right: TeamAgentRuntimeEntry | undefined,
@@ -103,8 +131,8 @@ export function areTeamAgentRuntimeEntriesEqual(
     left.runtimeLeaseExpiresAt === right.runtimeLeaseExpiresAt &&
     left.runtimeDiagnostic === right.runtimeDiagnostic &&
     left.runtimeDiagnosticSeverity === right.runtimeDiagnosticSeverity &&
-    (!options.compareFreshnessTimestamps ||
-      (left.updatedAt === right.updatedAt && left.runtimeLastSeenAt === right.runtimeLastSeenAt)) &&
+    areFreshnessTimestampsEqual(left.updatedAt, right.updatedAt, options) &&
+    areFreshnessTimestampsEqual(left.runtimeLastSeenAt, right.runtimeLastSeenAt, options) &&
     left.historicalBootstrapConfirmed === right.historicalBootstrapConfirmed &&
     areDiagnosticsEqual(left.diagnostics, right.diagnostics) &&
     areResourceHistoryEntriesEqual(left.resourceHistory, right.resourceHistory)
@@ -125,7 +153,7 @@ export function areTeamAgentRuntimeSnapshotsEqual(
   ) {
     return false;
   }
-  if (options.compareFreshnessTimestamps && left.updatedAt !== right.updatedAt) {
+  if (!areFreshnessTimestampsEqual(left.updatedAt, right.updatedAt, options)) {
     return false;
   }
   const leftKeys = Object.keys(left.members);
