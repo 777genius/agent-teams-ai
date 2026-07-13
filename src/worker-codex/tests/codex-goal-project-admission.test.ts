@@ -201,4 +201,119 @@ describe("Codex project admission snapshot", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("only consumes an inactive reused workspace when the ledger is newer", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-reused-workspace-"));
+    const workspacePath = join(root, "worktrees", "project-router-r1");
+    const ledgerRoot = join(root, "consumed-output");
+    const backupRoot = join(root, "backups");
+    const statusPath = join(backupRoot, "router-r2.status.txt");
+    const patchPath = join(backupRoot, "router-r2.patch");
+    const scope: ProjectAccessScope = {
+      projectId: "project",
+      worktreeRoots: [join(root, "worktrees")],
+      consumedOutputLedgerRoots: [ledgerRoot],
+      jobIdPrefixes: ["project-"],
+    };
+
+    try {
+      await mkdir(workspacePath, { recursive: true });
+      await mkdir(join(ledgerRoot, "items"), { recursive: true });
+      await mkdir(backupRoot, { recursive: true });
+      await writeFile(statusPath, " M docs/router.md\n");
+      await writeFile(patchPath, "diff --git a/docs/router.md b/docs/router.md\n");
+      await writeFile(
+        join(ledgerRoot, "items", "project-router-r2.json"),
+        `${JSON.stringify({
+          jobId: "project-router-r2",
+          status: "integrated",
+          closedAt: "2026-07-13T13:34:16.281Z",
+          commitSha: "b".repeat(40),
+          backup: { workspace: workspacePath, statusPath, patchPath },
+        })}\n`,
+      );
+
+      const summary = (jobId: string, updatedAt: string) => ({
+        jobId,
+        tags: ["worker-role-producer"],
+        taskId: jobId,
+        workspacePath,
+        promptPath: join(root, `${jobId}.md`),
+        accountNames: ["account-a"],
+        updatedAt,
+        manifestPath: join(root, `${jobId}.json`),
+      });
+      const deps = (input: {
+        readonly currentUpdatedAt: string;
+        readonly consumingUpdatedAt?: string;
+      }): CodexProjectAdmissionDeps => ({
+        listJobs: async () => [
+          summary("project-router-r1", input.currentUpdatedAt),
+          ...(input.consumingUpdatedAt
+            ? [summary("project-router-r2", input.consumingUpdatedAt)]
+            : []),
+        ],
+        buildOverviewItems: async () => [{
+          ok: true,
+          jobId: "project-router-r1",
+          workspacePath,
+          workspaceDirty: true,
+          workerAlive: false,
+          resultStatus: "completed",
+          tags: ["worker-role-producer"],
+        }],
+      });
+
+      const consumed = await buildCodexProjectAdmissionSnapshot({
+        registryRootDir: join(root, "registry"),
+        scope,
+        deps: deps({
+          currentUpdatedAt: "2026-07-13T13:30:00.000Z",
+          consumingUpdatedAt: "2026-07-13T13:32:00.000Z",
+        }),
+      });
+      expect(consumed.counts).toMatchObject({
+        consumedDirtyWorkspaces: 1,
+        incompleteConsumedOutputRecords: 0,
+      });
+
+      const newerDirtyJob = await buildCodexProjectAdmissionSnapshot({
+        registryRootDir: join(root, "registry"),
+        scope,
+        deps: deps({
+          currentUpdatedAt: "2026-07-13T13:40:00.000Z",
+          consumingUpdatedAt: "2026-07-13T13:32:00.000Z",
+        }),
+      });
+      expect(newerDirtyJob.debt).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          reason: ProjectDebtReason.IncompleteConsumedOutputRecord,
+          severity: "blocking",
+        }),
+      ]));
+
+      const missingConsumingJob = await buildCodexProjectAdmissionSnapshot({
+        registryRootDir: join(root, "registry"),
+        scope,
+        deps: deps({ currentUpdatedAt: "2026-07-13T13:30:00.000Z" }),
+      });
+      expect(missingConsumingJob.debt).toEqual(expect.arrayContaining([
+        expect.objectContaining({ severity: "blocking" }),
+      ]));
+
+      const equalGeneration = await buildCodexProjectAdmissionSnapshot({
+        registryRootDir: join(root, "registry"),
+        scope,
+        deps: deps({
+          currentUpdatedAt: "2026-07-13T13:32:00.000Z",
+          consumingUpdatedAt: "2026-07-13T13:32:00.000Z",
+        }),
+      });
+      expect(equalGeneration.debt).toEqual(expect.arrayContaining([
+        expect.objectContaining({ severity: "blocking" }),
+      ]));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

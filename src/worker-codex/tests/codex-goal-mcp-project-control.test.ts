@@ -338,6 +338,7 @@ describe("codex goal MCP project-control server", () => {
           workspaceRoots: [join(root, "workspaces")],
           worktreeRoots: [join(root, "worktrees")],
           registryRoot: registryRootDir,
+          authRoot: authRootDir,
           jobIdPrefixes: ["infinity-context-"],
           tmuxSessionPrefixes: ["infinity-context-"],
           allowedAccountIds: ["account-a"],
@@ -348,8 +349,6 @@ describe("codex goal MCP project-control server", () => {
         registryRootDir,
         controllerJobId: "infinity-context-controller-v1",
         jobId: "infinity-context-child-v1",
-        jobRootDir: childJobRoot,
-        authRootDir,
         workspacePath: join(root, "worktrees", "infinity-context-child-v1"),
         promptPath: join(childJobRoot, "prompt.md"),
         taskId: "infinity-context-child-v1",
@@ -357,7 +356,10 @@ describe("codex goal MCP project-control server", () => {
         logPath: join(childJobRoot, "infinity-context-child-v1.log"),
         confirmCreate: true,
       });
-      expect(childCreate).toMatchObject({ ok: true });
+      expect(childCreate).toMatchObject({
+        ok: true,
+        manifest: { jobRootDir: childJobRoot, authRootDir },
+      });
 
       await callToolJson(client, "codex_goal_control_enqueue", {
         registryRootDir,

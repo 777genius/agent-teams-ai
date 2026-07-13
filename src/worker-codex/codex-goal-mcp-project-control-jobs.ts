@@ -76,8 +76,8 @@ import {
   validateStoredProjectPreStartAdmission,
 } from "./application/project-control/codex-goal-project-pre-start-admission";
 import {
-  jobManifestInputFromArgs,
-} from "./codex-goal-mcp-manifest-args";
+  projectControlChildManifestInput,
+} from "./application/project-control/codex-goal-project-child-manifest";
 import {
   booleanValue,
   requiredRawString,
@@ -124,7 +124,11 @@ export async function projectControlCreateCodexGoalJobView(
     throw new Error("project_control_pre_start_admission_refill_required");
   }
 
-  const requested = jobManifestInputFromArgs(args as JobCreateMcpArgs);
+  const requested = projectControlChildManifestInput({
+    args: args as JobCreateMcpArgs,
+    scope: controller.scope,
+    registryRootDir: controller.registryRootDir,
+  });
   if (
     requested.accessBoundary === AccessBoundary.ProjectScopedControl ||
     requested.accessBoundary === AccessBoundary.DangerFullAccess
@@ -240,7 +244,11 @@ export async function projectControlRefillWorkerView(
     "sourceWorkspacePath",
   );
 
-  const requested = jobManifestInputFromArgs(args as JobCreateMcpArgs);
+  const requested = projectControlChildManifestInput({
+    args: args as JobCreateMcpArgs,
+    scope: controller.scope,
+    registryRootDir: controller.registryRootDir,
+  });
   if (
     requested.accessBoundary === AccessBoundary.ProjectScopedControl ||
     requested.accessBoundary === AccessBoundary.DangerFullAccess
@@ -531,7 +539,11 @@ async function projectControlRefillWorkerBoundedView(
     args.sourceWorkspacePath,
     "sourceWorkspacePath",
   );
-  const requested = jobManifestInputFromArgs(args as JobCreateMcpArgs);
+  const requested = projectControlChildManifestInput({
+    args: args as JobCreateMcpArgs,
+    scope: controller.scope,
+    registryRootDir: controller.registryRootDir,
+  });
   if (
     requested.accessBoundary === AccessBoundary.ProjectScopedControl ||
     requested.accessBoundary === AccessBoundary.DangerFullAccess

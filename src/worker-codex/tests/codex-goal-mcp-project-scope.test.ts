@@ -89,6 +89,11 @@ describe("codex goal MCP project scope helpers", () => {
     expect(() => assertProjectControlCreateManifestPaths({
       scope,
       registryRootDir: "/tmp/project/registry/jobs",
+      manifest: { ...manifest, authRootDir: "/tmp/other/auth" },
+    })).toThrow("project_control_auth_root_outside_scope");
+    expect(() => assertProjectControlCreateManifestPaths({
+      scope,
+      registryRootDir: "/tmp/project/registry/jobs",
       manifest: { ...manifest, workspacePath: "/tmp/other/workspace" },
     })).toThrow("project_control_workspace_outside_scope");
     expect(() => assertProjectControlCreateManifestPaths({

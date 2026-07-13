@@ -169,6 +169,9 @@ export async function buildCodexProjectAdmissionSnapshot(
       tailLines: 0,
     })),
   );
+  const summariesByJobId = new Map(
+    projectSummaries.map((summary) => [summary.jobId, summary]),
+  );
   for (const item of overviewItems) {
     if (typeof item.workspacePath === "string") {
       await rememberKnownWorkspacePath(knownWorkspacePaths, item.workspacePath);
@@ -176,6 +179,7 @@ export async function buildCodexProjectAdmissionSnapshot(
     debt.push(...await debtFromOverviewItem({
       item,
       consumedOutput,
+      summariesByJobId,
     }));
   }
   const roots = uniqueProjectControlStrings([
@@ -305,6 +309,7 @@ async function debtFromConsumedJobSummary(input: {
 async function debtFromOverviewItem(input: {
   readonly item: JsonObject;
   readonly consumedOutput: ConsumedOutputLedger;
+  readonly summariesByJobId: ReadonlyMap<string, CodexGoalJobSummary>;
 }): Promise<ProjectDebtItem[]> {
   const { item } = input;
   const jobId = stringValue(item.jobId) ?? "unknown-job";
@@ -360,6 +365,20 @@ async function debtFromOverviewItem(input: {
   ) {
     return debt;
   }
+  // A refill may intentionally reuse an inactive job's physical worktree. Only
+  // a registered newer job on that same worktree can consume the older entry.
+  if (
+    workspacePath &&
+    workspaceConsumedByLaterJob({
+      ledger: input.consumedOutput,
+      jobId,
+      workspacePath,
+      summariesByJobId: input.summariesByJobId,
+      ...(resolvedWorkspacePath ? { resolvedWorkspacePath } : {}),
+    })
+  ) {
+    return debt;
+  }
   const consumed = consumedOutputRecordFor({
     ledger: input.consumedOutput,
     jobId,
@@ -402,6 +421,37 @@ function workspaceConsumedByAnotherJob(input: {
     : undefined;
   const record = workspaceRecord ?? resolvedWorkspaceRecord;
   return record !== undefined && record.jobId !== input.jobId && record.valid;
+}
+
+function workspaceConsumedByLaterJob(input: {
+  readonly ledger: ConsumedOutputLedger;
+  readonly jobId: string;
+  readonly workspacePath: string;
+  readonly resolvedWorkspacePath?: string;
+  readonly summariesByJobId: ReadonlyMap<string, CodexGoalJobSummary>;
+}): boolean {
+  const workspaceRecord = input.ledger.byWorkspace.get(resolve(input.workspacePath));
+  const resolvedWorkspaceRecord = input.resolvedWorkspacePath
+    ? input.ledger.byWorkspace.get(resolve(input.resolvedWorkspacePath))
+    : undefined;
+  const record = workspaceRecord ?? resolvedWorkspaceRecord;
+  if (!record || record.jobId === input.jobId || !record.valid) return false;
+
+  const currentSummary = input.summariesByJobId.get(input.jobId);
+  const consumingSummary = input.summariesByJobId.get(record.jobId);
+  if (!currentSummary || !consumingSummary) return false;
+  if (resolve(consumingSummary.workspacePath) !== resolve(input.workspacePath)) {
+    return false;
+  }
+
+  const currentUpdatedAtMs = Date.parse(currentSummary.updatedAt);
+  const consumingUpdatedAtMs = Date.parse(consumingSummary.updatedAt);
+  const closedAtMs = Date.parse(record.closedAt ?? "");
+  return Number.isFinite(currentUpdatedAtMs) &&
+    Number.isFinite(consumingUpdatedAtMs) &&
+    Number.isFinite(closedAtMs) &&
+    currentUpdatedAtMs < consumingUpdatedAtMs &&
+    consumingUpdatedAtMs < closedAtMs;
 }
 
 async function rememberKnownWorkspacePath(
