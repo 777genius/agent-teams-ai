@@ -13,6 +13,7 @@ import type {
 } from '../index';
 
 const OBSERVED_AT = '2026-01-01T00:00:00.000Z';
+const SERVER_NOW = '2026-02-03T04:05:06.789Z';
 
 describe('OpenCodeRuntimeControlApi', () => {
   it('builds stable bootstrap commands and routes them through runtime control', async () => {
@@ -185,7 +186,7 @@ describe('OpenCodeRuntimeControlApi', () => {
     expect(ports.runtimeControl.deliverMessage).not.toHaveBeenCalled();
   });
 
-  it('rejects missing or invalid delivery createdAt before runtime control', async () => {
+  it('normalizes delivery createdAt while rejecting invalid supplied timestamps', async () => {
     const ack = createAck('delivered');
     const ports = createPorts(ack);
     const api = createOpenCodeRuntimeControlApi(ports);
@@ -199,14 +200,32 @@ describe('OpenCodeRuntimeControlApi', () => {
       text: 'Delivered text',
     };
 
-    await expect(api.deliverOpenCodeRuntimeMessage(raw)).rejects.toThrow(
-      'Runtime delivery envelope missing createdAt'
-    );
-    await expect(
-      api.deliverOpenCodeRuntimeMessage({ ...raw, createdAt: 'not-a-date' })
-    ).rejects.toThrow('Runtime delivery envelope invalid createdAt');
+    vi.useFakeTimers();
+    vi.setSystemTime(SERVER_NOW);
+    try {
+      await expect(api.deliverOpenCodeRuntimeMessage(raw)).resolves.toBe(ack);
+      await expect(api.deliverOpenCodeRuntimeMessage({ ...raw, createdAt: '   ' })).resolves.toBe(
+        ack
+      );
+      await expect(
+        api.deliverOpenCodeRuntimeMessage({
+          ...raw,
+          createdAt: '2026-01-01T01:00:00+01:00',
+        })
+      ).resolves.toBe(ack);
+      await expect(
+        api.deliverOpenCodeRuntimeMessage({ ...raw, createdAt: 'not-a-date' })
+      ).rejects.toThrow('Runtime delivery envelope invalid createdAt');
+    } finally {
+      vi.useRealTimers();
+    }
 
-    expect(ports.runtimeControl.deliverMessage).not.toHaveBeenCalled();
+    expect(ports.runtimeControl.deliverMessage).toHaveBeenCalledTimes(3);
+    expect(
+      vi
+        .mocked(ports.runtimeControl.deliverMessage)
+        .mock.calls.map(([command]) => command.createdAt)
+    ).toEqual([SERVER_NOW, SERVER_NOW, OBSERVED_AT]);
   });
 
   it('builds stable task-event and heartbeat command ids', async () => {
@@ -268,7 +287,7 @@ describe('OpenCodeRuntimeControlApi', () => {
     );
   });
 
-  it('rejects missing or invalid task-event createdAt before runtime control', async () => {
+  it('normalizes task-event createdAt while rejecting invalid supplied timestamps', async () => {
     const ack = createAck('recorded');
     const ports = createPorts(ack);
     const api = createOpenCodeRuntimeControlApi(ports);
@@ -281,14 +300,32 @@ describe('OpenCodeRuntimeControlApi', () => {
       idempotencyKey: 'task-key-1',
     };
 
-    await expect(api.recordOpenCodeRuntimeTaskEvent(raw)).rejects.toThrow(
-      'OpenCode runtime payload missing createdAt'
-    );
-    await expect(
-      api.recordOpenCodeRuntimeTaskEvent({ ...raw, createdAt: 'not-a-date' })
-    ).rejects.toThrow('OpenCode runtime payload invalid createdAt');
+    vi.useFakeTimers();
+    vi.setSystemTime(SERVER_NOW);
+    try {
+      await expect(api.recordOpenCodeRuntimeTaskEvent(raw)).resolves.toBe(ack);
+      await expect(api.recordOpenCodeRuntimeTaskEvent({ ...raw, createdAt: '   ' })).resolves.toBe(
+        ack
+      );
+      await expect(
+        api.recordOpenCodeRuntimeTaskEvent({
+          ...raw,
+          createdAt: '2026-01-01T01:00:00+01:00',
+        })
+      ).resolves.toBe(ack);
+      await expect(
+        api.recordOpenCodeRuntimeTaskEvent({ ...raw, createdAt: 'not-a-date' })
+      ).rejects.toThrow('OpenCode runtime payload invalid createdAt');
+    } finally {
+      vi.useRealTimers();
+    }
 
-    expect(ports.runtimeControl.recordTaskEvent).not.toHaveBeenCalled();
+    expect(ports.runtimeControl.recordTaskEvent).toHaveBeenCalledTimes(3);
+    expect(
+      vi
+        .mocked(ports.runtimeControl.recordTaskEvent)
+        .mock.calls.map(([command]) => command.createdAt)
+    ).toEqual([SERVER_NOW, SERVER_NOW, OBSERVED_AT]);
   });
 
   it('maps OpenCode permission answers onto the runtime-control answer command', async () => {
