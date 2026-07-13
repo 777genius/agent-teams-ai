@@ -177,4 +177,76 @@ describe('lead inbox relay flow', () => {
     expect(ports.relayedLeadInboxMessageIds.get('alpha')?.has('msg-2')).toBe(true);
     expect(ports.relayedLeadInboxMessageIds.get('alpha')?.has('msg-1')).toBe(false);
   });
+
+  it('serializes scoped and unscoped relays so the same message is delivered once', async () => {
+    const run = createRun();
+    const ports = createPorts(run, [createMessage()]);
+
+    const results = await Promise.all([
+      relayLeadInboxMessagesForTeam('alpha', ports),
+      relayLeadInboxMessagesForTeam('alpha', ports, { onlyMessageId: 'msg-1' }),
+    ]);
+
+    expect(results).toEqual([1, 0]);
+    expect(ports.sendMessageToRun).toHaveBeenCalledTimes(1);
+    expect(ports.relayedLeadInboxMessageIds.get('alpha')).toEqual(new Set(['msg-1']));
+  });
+
+  it('lets an unscoped relay deliver remaining unread work after a scoped relay', async () => {
+    const run = createRun();
+    const ports = createPorts(run, [
+      createMessage({ messageId: 'msg-1', text: 'Relay after the scoped message.' }),
+      createMessage({ messageId: 'msg-2', text: 'Relay this scoped message first.' }),
+    ]);
+
+    const results = await Promise.all([
+      relayLeadInboxMessagesForTeam('alpha', ports, { onlyMessageId: 'msg-2' }),
+      relayLeadInboxMessagesForTeam('alpha', ports),
+    ]);
+
+    expect(results).toEqual([1, 1]);
+    expect(ports.sentMessages).toHaveLength(2);
+    expect(ports.sentMessages[0]).toContain('Relay this scoped message first.');
+    expect(ports.sentMessages[0]).not.toContain('Relay after the scoped message.');
+    expect(ports.sentMessages[1]).toContain('Relay after the scoped message.');
+    expect(ports.sentMessages[1]).not.toContain('Relay this scoped message first.');
+  });
+
+  it('allows a queued relay to retry after the preceding delivery errors', async () => {
+    const run = createRun();
+    const ports = createPorts(run, [createMessage()]);
+    vi.mocked(ports.sendMessageToRun).mockRejectedValueOnce(new Error('stdin unavailable'));
+
+    const results = await Promise.all([
+      relayLeadInboxMessagesForTeam('alpha', ports),
+      relayLeadInboxMessagesForTeam('alpha', ports, { onlyMessageId: 'msg-1' }),
+    ]);
+
+    expect(results).toEqual([0, 1]);
+    expect(ports.sendMessageToRun).toHaveBeenCalledTimes(2);
+    expect(ports.relayedLeadInboxMessageIds.get('alpha')).toEqual(new Set(['msg-1']));
+    expect(run.leadRelayCapture).toBeNull();
+  });
+
+  it('rechecks cancellation before starting a queued relay', async () => {
+    const run = createRun();
+    const ports = createPorts(run, [createMessage()]);
+    let releaseFirstSend: (() => void) | undefined;
+    const firstSendBlocked = new Promise<void>((resolve) => {
+      releaseFirstSend = resolve;
+    });
+    vi.mocked(ports.sendMessageToRun).mockImplementationOnce(async () => {
+      await firstSendBlocked;
+      run.leadRelayCapture?.resolveOnce('First delivery completed.');
+    });
+
+    const first = relayLeadInboxMessagesForTeam('alpha', ports);
+    const queued = relayLeadInboxMessagesForTeam('alpha', ports, { onlyMessageId: 'msg-1' });
+    await vi.waitFor(() => expect(ports.sendMessageToRun).toHaveBeenCalledTimes(1));
+    run.cancelRequested = true;
+    releaseFirstSend?.();
+
+    await expect(Promise.all([first, queued])).resolves.toEqual([1, 0]);
+    expect(ports.sendMessageToRun).toHaveBeenCalledTimes(1);
+  });
 });
