@@ -15,12 +15,83 @@ export interface CachedProbeResult {
   result: ProbeResult;
 }
 
+function isolateSharedArrayBufferMemory<T>(value: T): T {
+  const replacements = new WeakMap<object, object>();
+
+  const isolate = (candidate: unknown): unknown => {
+    if (typeof candidate !== 'object' || candidate === null) return candidate;
+
+    const existing = replacements.get(candidate);
+    if (existing) return existing;
+
+    if (typeof SharedArrayBuffer !== 'undefined' && candidate instanceof SharedArrayBuffer) {
+      const isolatedBuffer = new SharedArrayBuffer(candidate.byteLength);
+      new Uint8Array(isolatedBuffer).set(new Uint8Array(candidate));
+      replacements.set(candidate, isolatedBuffer);
+      return isolatedBuffer;
+    }
+
+    if (
+      ArrayBuffer.isView(candidate) &&
+      typeof SharedArrayBuffer !== 'undefined' &&
+      candidate.buffer instanceof SharedArrayBuffer
+    ) {
+      const isolatedBuffer = isolate(candidate.buffer) as SharedArrayBuffer;
+      const isolatedView =
+        candidate instanceof DataView
+          ? new DataView(isolatedBuffer, candidate.byteOffset, candidate.byteLength)
+          : new (candidate.constructor as new (
+              buffer: SharedArrayBuffer,
+              byteOffset: number,
+              length: number
+            ) => ArrayBufferView)(
+              isolatedBuffer,
+              candidate.byteOffset,
+              (candidate as ArrayBufferView & { length: number }).length
+            );
+      replacements.set(candidate, isolatedView);
+      return isolatedView;
+    }
+
+    replacements.set(candidate, candidate);
+
+    if (candidate instanceof Map) {
+      const entries = [...candidate.entries()].map(([key, entryValue]) => [
+        isolate(key),
+        isolate(entryValue),
+      ]);
+      candidate.clear();
+      for (const [key, entryValue] of entries) candidate.set(key, entryValue);
+      return candidate;
+    }
+
+    if (candidate instanceof Set) {
+      const entries = [...candidate].map(isolate);
+      candidate.clear();
+      for (const entry of entries) candidate.add(entry);
+      return candidate;
+    }
+
+    for (const key of Reflect.ownKeys(candidate)) {
+      const descriptor = Object.getOwnPropertyDescriptor(candidate, key);
+      if (!descriptor || !('value' in descriptor)) continue;
+      const isolatedValue = isolate(descriptor.value);
+      if (isolatedValue !== descriptor.value) {
+        Object.defineProperty(candidate, key, { ...descriptor, value: isolatedValue });
+      }
+    }
+    return candidate;
+  };
+
+  return isolate(value) as T;
+}
+
 export function cloneProviderProbeResult<T extends ProbeResult>(result: T): T {
-  return structuredClone(result);
+  return isolateSharedArrayBufferMemory(structuredClone(result));
 }
 
 export function cloneCachedProviderProbeResult<T extends CachedProbeResult>(cached: T): T {
-  return structuredClone(cached);
+  return isolateSharedArrayBufferMemory(structuredClone(cached));
 }
 
 export function cachedProviderProbeResultToProbeResult(cached: CachedProbeResult): ProbeResult {
