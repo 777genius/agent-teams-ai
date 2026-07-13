@@ -2,9 +2,9 @@
 
 This is the canonical entrypoint for every hosted-web controller and worker. Phase 0 is accepted and
 frozen at `f4fa24aac9615a4ce10632965a2244a2e11a273e`. Phase 1 serial bootstrap, foundations,
-routes, conformance, and formal P1.R1 are accepted. The original P1.1D router is canonical at
-`1b37afb02bec25a1f08432d733595b553101ecab`, but the P1.1D r3 implementation candidate was
-independently rejected and was never integrated.
+routes, conformance, and formal P1.R1 are accepted. The P1.1D additive-response remediation product
+candidate now exists and is immutable. Product work is complete for this review cycle; the only
+current authority is one fresh independent review with corrected input provenance.
 
 ## Deterministic reading order
 
@@ -15,51 +15,63 @@ Read only this bounded sequence before working:
 3. `docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md`.
 4. `docs/hosted-web-phases/README.md`, then `docs/hosted-web-phases/EXECUTION_INDEX.json`.
 5. The current `docs/hosted-web-phases/phase-01/controller-packet.md` named by the
-   subscription-runtime `worker-start-v1` contract.
-6. The single assigned remediation packet:
+   ProjectScopedControl `codex_goal_project_refill_worker` reviewer admission.
+6. The single assigned review-only packet:
    `docs/hosted-web-phases/phase-01/lanes/p1-1d-additive-response-remediation.md`.
-7. Only the exact files and plan headings in that packet's mandatory-read list.
+7. Only the exact files and headings in that packet's mandatory-read list.
 
-Do not recursively explore documentation or evidence directories. Preserved research, accepted
-P1.R1 evidence, and the rejected r3 artifact are immutable inputs, not writer paths.
+Do not recursively explore documentation or evidence directories. Accepted inputs, rejected records,
+the immutable candidate, and both integration-ledger records are read-only.
 
-## Current route and start gate
+## Current route and corrected review input
 
-The sole current node is `P1.1D-additive-response-remediation`. Capacity is zero until this exact
-seven-path docs-only router is policy-integrated after canonical router commit
-`1b37afb02bec25a1f08432d733595b553101ecab` and a successor controller reports exactly
-`live=true`. Only then may the hosting controller admit one serial remediation producer through the
-subscription-runtime builtin `worker-start-v1` boundary. The runtime must bind the integrated
-remediation-router commit as both `planBundleCommit` and `phaseStartSha`, canonical commit
-`1b37afb02bec25a1f08432d733595b553101ecab` as `baseSha`, the current controller packet, and the
-one remediation packet. This repository contains no hosted-worker admission or launch
-implementation.
+`P1.1D-additive-response-remediation` remains the sole current node, now in review-only mode under
+packet revision `phase-01-p1-1d-additive-response-review-r2`. Capacity is zero until this exact
+seven-path docs-only correction router is policy-integrated and the same durable controller has
+atomically bound the review-only scope while remaining `live=true`. After both gates, capacity is
+exactly one fresh independent reviewer using reasoning effort `xhigh` and service tier `default`.
+This docs job does not launch that reviewer.
 
-## Rejected r3 provenance
+The immutable product candidate has `baseSha`
+`1b37afb02bec25a1f08432d733595b553101ecab`. The reviewer has `canonicalSha`, `phaseStartSha`,
+`planBundleCommit`, and worktree `HEAD`
+`bbfd2551baaa904061e705511f07716e0f6db17d`. These product and reviewer roles must not be
+collapsed. The candidate's legitimate hashes likewise have distinct roles:
 
-Independent review returned formal `REJECT` with one P1 finding: same-version response parsers
-exact-key rejected additive fields for success, failure, inapplicable, and nested item values,
-contrary to the frozen Phase 1 response-compatibility policy. Requests correctly remained strict.
+- runtime nine-path handoff carrier SHA-256:
+  `1f9c6a2a28e5540c61d1395bc51a34a7c0db31855bae575abc9582f839118b49`;
+- final eight-path semantic reconstruction SHA-256:
+  `fa46617652b072e887563f5a751f7bd0260e0e1d4fb96b628badea91ea7ae9d6`; and
+- reviewed-workspace snapshot SHA-256
+  `521d8bab2ed7bc4334b38a5786dd5685f5e4f033c3962cab566f9ab3b60d0000`, which is consumed only to
+  locate and verify the prior rejection-ledger record. It is not a candidate handoff or semantic hash.
 
-The rejected subscription-runtime patch is
-`a7d5539e68e62b1c64e5cdf663bc784d92d4db03e74a0087e29d9bb3b2faa7ee`, produced by
-`agent-teams-hosted-web-refactor-p1-1d-producer-v17-r3` from canonical router commit
-`1b37afb02bec25a1f08432d733595b553101ecab`. Its nine-path output and review record remain immutable
-rejected evidence. They are not integrated, canonical, or executable authority. A remediation
-producer may consume that artifact read-only and reproduce useful work into a fresh candidate; it
-must never modify, relabel, or revive the rejected artifact or reuse its handoff/hashes as fresh
-proof.
+The prior independent reviewer returned binding `REJECT` P1. Its strict result SHA-256 is
+`29ad2243be1a1e0c7aa95cb1a32ae32b8f15db8ebe1a260cd41dd85d2c079934`. The sole reason was a stale
+external review instruction that mislabeled transient interim hash `7672e922` as the final handoff
+hash. That assertion existed only outside the candidate. The final candidate neither contains nor
+claims `7672e922`. The rejection remains `REJECT`; this correction does not reinterpret it as
+`ACCEPT`.
 
-## Authority and blocked successors
+The rejected predecessor docs router is separately preserved as immutable reviewed output
+`1ad2849056be658ab629b9810914ace7eab3287745ecb39c1d76ac1c124d0eb7`, patch SHA-256
+`657c1c5ff6421f6b206ef14509586d09fad72e8c511efe1a6f9bf6b8dce5f577`. Its review-only transition
+is reproduced here with corrected base provenance and the existing ProjectScopedControl admission
+shape; the rejected output itself is not modified or integrated.
 
-[`EXECUTION_INDEX.json`](EXECUTION_INDEX.json) classifies current authority and preserved history. A
-lower tier may narrow work but cannot broaden scope or weaken a guardrail. Existing evidence remains
-immutable under [`EVIDENCE_LIFECYCLE.md`](EVIDENCE_LIFECYCLE.md).
+## Authority and HOLD
 
-The current route authorizes only one fresh nine-path P1.1D additive-response remediation candidate.
-It authorizes no IPC or HTTP adapter, preload or renderer work, filesystem adapter, production mount,
-fake browser implementation, real runtime, integration, commit, push, or launch by this docs author.
-The candidate must pass every original P1.1D gate and a distinct independent review must return
-`ACCEPT` before any separately authorized integration. P1.R2, P1.I, P1.F, and Phase 2+ remain blocked
-even after remediation or independent acceptance; only a later policy-integrated docs-only router
-with its own live successor controller may advance them.
+The producer and prior reviewer outputs have formal rejected integration-ledger records, and runtime
+admission reports no blocking output debt. Those facts permit only a fresh review; they do not admit
+product work or integration. The same durable controller remains responsible. The producer-to-review
+authority transition requires a structured scope update, not controller replacement or a new
+controller launch. Reviewer admission uses `codex_goal_project_refill_worker` with outer
+`workerRole: reviewer`, reasoning effort `xhigh`, service tier `default`, and `serial-builtin`
+`preStartAdmission`. Its internal contract remains `kind: worker-launch`, `format: 1`,
+`reviewKind: review`, with `inputPatchHash` equal to the runtime nine-path carrier above. No
+separate reviewer-launch tool or public contract exists.
+
+No product change, producer retry/refill, product integration, commit, push, P1.R2, P1.I, P1.F,
+Phase 2+, or any of the five PR conflict files is authorized. A fresh reviewer must return explicit `ACCEPT` or
+`REJECT`. Until that later result is returned and separately routed, product integration remains
+blocked and the controller holds.
