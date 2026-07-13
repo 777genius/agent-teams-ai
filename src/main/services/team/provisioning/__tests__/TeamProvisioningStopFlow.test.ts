@@ -113,6 +113,20 @@ describe('team provisioning stop flow', () => {
     expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledWith(teamName);
   });
 
+  it('cleans API-key helper material when stopping secondary lanes fails', async () => {
+    const teamName = 'team-a';
+    const ports = makePorts(teamName, new Map());
+    ports.hasSecondaryRuntimeRuns = vi.fn(() => true);
+    ports.stopMixedSecondaryRuntimeLanes = vi.fn(async () => {
+      throw new Error('secondary stop failed');
+    });
+
+    await expect(stopTeamFlow(teamName, ports)).rejects.toThrow('secondary stop failed');
+
+    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledOnce();
+    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledWith(teamName);
+  });
+
   it('stops the newer alive run when a stale provisioning id masks it', async () => {
     const teamName = 'team-a';
     const currentRun = makeRun('current-run', teamName);
