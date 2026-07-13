@@ -1,5 +1,5 @@
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
-import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
+import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
@@ -41,6 +41,14 @@ type TeamHttpRuntimeControlApi = TeamHttpHandlerApis['runtimeControl'];
 
 function isMemberWorkSyncReportState(value: string): value is MemberWorkSyncReportState {
   return value === 'still_working' || value === 'blocked' || value === 'caught_up';
+}
+
+function assertValidMemberName(memberName: string): string {
+  const validatedMemberName = validateMemberName(memberName);
+  if (!validatedMemberName.valid) {
+    throw new HttpBadRequestError(validatedMemberName.error ?? 'Invalid memberName');
+  }
+  return validatedMemberName.value!;
 }
 
 function getTeamProvisioningStartApi(services: HttpServices): TeamHttpProvisioningStartApi {
@@ -583,7 +591,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         return reply.send(
           await getMemberWorkSyncFeature(services).getStatus({
             teamName: validatedTeamName.value!,
-            memberName,
+            memberName: assertValidMemberName(memberName),
           })
         );
       } catch (error) {
@@ -613,7 +621,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         return reply.send(
           await getMemberWorkSyncFeature(services).refreshStatus({
             teamName: validatedTeamName.value!,
-            memberName,
+            memberName: assertValidMemberName(memberName),
             ...(request.body?.forceNudge === true ? { forceNudge: true } : {}),
           })
         );
@@ -647,6 +655,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             error: 'memberName, state, and agendaFingerprint are required',
           });
         }
+        const validatedMemberName = assertValidMemberName(memberName);
         if (!isMemberWorkSyncReportState(state)) {
           return reply
             .status(400)
@@ -665,7 +674,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         return reply.send(
           await getMemberWorkSyncFeature(services).report({
             teamName: validatedTeamName.value!,
-            memberName,
+            memberName: validatedMemberName,
             state,
             agendaFingerprint,
             ...(typeof payload.reportToken === 'string'
