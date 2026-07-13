@@ -6,7 +6,7 @@ Target branch: `dev`.
 
 Runtime gate:
 
-- Agent Teams runtime: `v0.0.64`.
+- Agent Teams runtime: `v0.0.65`.
 - Terminal Platform runtime: `v0.3.2`.
 
 Draft body source for GitHub release:
