@@ -16,18 +16,25 @@ import {
 } from '@main/ipc/terminal';
 
 import type { PtyTerminalService } from '@main/services';
-import type { IpcMain, IpcMainEvent } from 'electron';
+import type { IpcMain, IpcMainEvent, IpcMainInvokeEvent } from 'electron';
 
 type IpcListener = (event: IpcMainEvent, ...args: unknown[]) => void;
+type IpcHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
 
 function createMockIpcMain(): IpcMain & {
   emitToListener: (channel: string, ...args: unknown[]) => void;
+  invokeHandler: <T>(channel: string, ...args: unknown[]) => Promise<T>;
   listenerCount: (channel: string) => number;
 } {
+  const handlers = new Map<string, IpcHandler>();
   const listeners = new Map<string, IpcListener[]>();
   const ipcMain = {
-    handle: vi.fn(),
-    removeHandler: vi.fn(),
+    handle: vi.fn((channel: string, handler: IpcHandler) => {
+      handlers.set(channel, handler);
+    }),
+    removeHandler: vi.fn((channel: string) => {
+      handlers.delete(channel);
+    }),
     on: vi.fn((channel: string, listener: IpcListener) => {
       listeners.set(channel, [...(listeners.get(channel) ?? []), listener]);
       return ipcMain;
@@ -48,25 +55,78 @@ function createMockIpcMain(): IpcMain & {
         listener({} as IpcMainEvent, ...args);
       }
     },
+    invokeHandler: async <T>(channel: string, ...args: unknown[]): Promise<T> => {
+      const handler = handlers.get(channel);
+      if (!handler) {
+        throw new Error(`No handler for ${channel}`);
+      }
+      return (await handler({} as IpcMainInvokeEvent, ...args)) as T;
+    },
     listenerCount: (channel: string) => listeners.get(channel)?.length ?? 0,
   };
 
   return ipcMain as unknown as IpcMain & {
     emitToListener: (channel: string, ...args: unknown[]) => void;
+    invokeHandler: <T>(channel: string, ...args: unknown[]) => Promise<T>;
     listenerCount: (channel: string) => number;
   };
 }
 
 describe('terminal IPC handlers', () => {
   let ipcMain: ReturnType<typeof createMockIpcMain>;
+  let spawnMock: ReturnType<typeof vi.fn<(options?: unknown) => Promise<string>>>;
   let resizeMock: ReturnType<typeof vi.fn<(id: string, cols: number, rows: number) => void>>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     ipcMain = createMockIpcMain();
+    spawnMock = vi.fn<(options?: unknown) => Promise<string>>().mockResolvedValue('pty-new');
     resizeMock = vi.fn<(id: string, cols: number, rows: number) => void>();
-    initializeTerminalHandlers({ resize: resizeMock } as unknown as PtyTerminalService);
+    initializeTerminalHandlers({
+      spawn: spawnMock,
+      resize: resizeMock,
+    } as unknown as PtyTerminalService);
     registerTerminalHandlers(ipcMain);
+  });
+
+  it('rejects native-unsafe spawn dimensions before calling the service', async () => {
+    const invalidSpawnOptions = [
+      { cols: 0, rows: 24 },
+      { cols: 80, rows: -1 },
+      { cols: 80.5, rows: 24 },
+      { cols: 80, rows: Number.NaN },
+      { cols: Number.POSITIVE_INFINITY, rows: 24 },
+      { cols: '80', rows: 24 },
+      { cols: 32_768, rows: 24 },
+      { cols: 80, rows: 32_768 },
+    ];
+
+    for (const options of invalidSpawnOptions) {
+      await expect(ipcMain.invokeHandler('terminal:spawn', options)).resolves.toEqual({
+        success: false,
+        error: 'Invalid terminal dimensions',
+      });
+    }
+
+    expect(spawnMock).not.toHaveBeenCalled();
+    expect(loggerMock.warn).toHaveBeenCalledTimes(invalidSpawnOptions.length);
+  });
+
+  it('forwards valid or omitted spawn dimensions', async () => {
+    await expect(
+      ipcMain.invokeHandler('terminal:spawn', { command: '/bin/sh', cols: 120, rows: 40 })
+    ).resolves.toEqual({ success: true, data: 'pty-new' });
+    await expect(ipcMain.invokeHandler('terminal:spawn')).resolves.toEqual({
+      success: true,
+      data: 'pty-new',
+    });
+
+    expect(spawnMock).toHaveBeenNthCalledWith(1, {
+      command: '/bin/sh',
+      cols: 120,
+      rows: 40,
+    });
+    expect(spawnMock).toHaveBeenNthCalledWith(2, undefined);
   });
 
   it('forwards valid positive integer dimensions', () => {
