@@ -204,7 +204,6 @@ export async function writeCodexGoalStoppedProgress(input: {
       schemaVersion: 1,
       taskId: input.taskId,
       updatedAt: new Date().toISOString(),
-      pid: process.pid,
       status: input.status,
       ...(input.reason ? { reason: input.reason } : {}),
     }, null, 2)}\n`,

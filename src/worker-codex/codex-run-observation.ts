@@ -37,6 +37,7 @@ import {
 } from "./codex-goal-jobs";
 import {
   collectCodexGoalStatus,
+  isCodexGoalStoppedProgressStatus,
   listCodexGoalAccountStatuses,
   resolveCodexGoalWorkerLiveness,
   tailCodexGoalLog,
@@ -553,6 +554,9 @@ function codexRunStatus(input: {
     return "blocked";
   }
   if (input.workerAlive) return "running";
+  if (isCodexGoalStoppedProgressStatus(input.status.progressStatus)) {
+    return "stopped";
+  }
   if (
     input.status.resultStatus === "failed" ||
     input.status.resultStatus === "partial" ||
@@ -574,6 +578,9 @@ function codexLiveness(input: {
 }): RunObservationLiveness {
   if (input.silentStale) return "stale";
   if (input.workerAlive) return "alive";
+  if (isCodexGoalStoppedProgressStatus(input.status.progressStatus)) {
+    return "dead";
+  }
   if (input.status.tmuxAlive === false || input.status.progressProcessAlive === false) {
     return "dead";
   }

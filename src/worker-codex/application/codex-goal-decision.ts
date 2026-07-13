@@ -7,6 +7,7 @@ import {
 import { isSafeStartAction } from "./codex-goal-start-policy";
 import type { CodexGoalJobManifest } from "../codex-goal-jobs";
 import {
+  isCodexGoalStoppedProgressStatus,
   resolveCodexGoalWorkerLiveness,
   shellQuote,
   type CodexGoalLaunchInput,
@@ -126,6 +127,9 @@ export function codexGoalBriefHealthStatus(input: {
     return "blocked";
   }
   if (input.workerAlive) return "running";
+  if (isCodexGoalStoppedProgressStatus(input.status.progressStatus)) {
+    return "stopped";
+  }
   if (
     input.status.resultStatus === "failed" ||
     input.status.resultStatus === "partial" ||

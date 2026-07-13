@@ -1107,8 +1107,6 @@ describe("codex goal ops", () => {
         progressPid: 123,
         progressProcessAlive: true,
         progressCommand: "node subscription-runtime-codex-goal run --no-tmux",
-        recommendedAction: "wait_for_worker",
-        warnings: [],
       })).toEqual({
         preview: "kill -TERM 123",
         status: "terminated",
@@ -1127,8 +1125,6 @@ describe("codex goal ops", () => {
         progressPid: 123,
         progressProcessAlive: true,
         progressCommand: "[kworker/R-slub_]",
-        recommendedAction: "wait_for_worker",
-        warnings: [],
       })).toEqual({
         preview: "kill -TERM 123",
         status: "untrusted_process",
@@ -1138,8 +1134,6 @@ describe("codex goal ops", () => {
         progressPid: 124,
         progressProcessAlive: true,
         progressCommand: "bash unrelated-script.sh",
-        recommendedAction: "wait_for_worker",
-        warnings: [],
       })).toEqual({
         preview: "kill -TERM 124",
         status: "untrusted_process",

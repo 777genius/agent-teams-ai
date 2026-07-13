@@ -6,8 +6,6 @@ import {
   AccessBoundary,
   actionForRuntimeState,
   classifyRuntimeRunState,
-  RunProcessAliveReason,
-  RunProcessSupervisorKind,
   type RunProgressClassification,
   type RuntimeRecommendedAction,
   type RuntimeResultEnvelope,
@@ -35,6 +33,11 @@ import {
 } from "./codex-goal-doctor";
 import { inspectCodexGoalProcessSnapshot } from "./codex-goal-process-snapshot";
 import type { CodexGoalObservationContext } from "./application/codex-goal-observation-context";
+import {
+  isCodexGoalStoppedProgressStatus,
+  resolveCodexGoalWorkerLiveness,
+  stopCodexGoalDirectProcess,
+} from "./application/codex-goal-process-liveness";
 import * as goalResult from "./application/codex-goal-visible-result";
 import {
   fileExists,
@@ -61,6 +64,15 @@ export type {
   CodexGoalAccountStatus,
   CodexGoalAccountStatusInput,
 } from "./codex-goal-account-status";
+export {
+  isCodexGoalStoppedProgressStatus,
+  resolveCodexGoalWorkerLiveness,
+  stopCodexGoalDirectProcess,
+};
+export type {
+  CodexGoalDirectStopCommand,
+  CodexGoalWorkerLiveness,
+} from "./application/codex-goal-process-liveness";
 
 const execFileAsync = promisify(execFile);
 
@@ -78,12 +90,6 @@ export type CodexGoalLaunchInput = {
 export type CodexGoalTmuxCommand = {
   readonly args: readonly string[];
   readonly preview: string;
-};
-
-export type CodexGoalDirectStopCommand = {
-  readonly preview: string;
-  readonly status: "terminated" | "process_gone" | "pid_missing" | "untrusted_process";
-  readonly pid?: number;
 };
 
 export type CodexGoalStatusInput = {
@@ -187,14 +193,6 @@ export class CodexGoalRuntimeResultReconciler
     return reconcileCodexGoalRuntimeResult(input);
   }
 }
-
-export type CodexGoalWorkerLiveness = {
-  readonly alive: boolean;
-  readonly supervisorKind: RunProcessSupervisorKind;
-  readonly aliveReason: RunProcessAliveReason;
-  readonly processAlive: boolean;
-  readonly freshProgressAlive: boolean;
-};
 
 export function buildCodexGoalNoTmuxCommand(input: CodexGoalLaunchInput): string {
   const config = input.config;
@@ -353,55 +351,6 @@ export async function stopCodexGoalTmux(
   const command = buildCodexGoalStopTmuxCommand(tmuxSession);
   await execFileAsync(await resolveCodexGoalTmuxExecutable(), command.args);
   return command;
-}
-
-export function stopCodexGoalDirectProcess(
-  status: CodexGoalStatus,
-): CodexGoalDirectStopCommand {
-  const pid = status.progressPid;
-  if (pid === undefined) {
-    return {
-      preview: "no direct process pid",
-      status: "pid_missing",
-    };
-  }
-  const preview = `kill -TERM ${pid}`;
-  if (status.progressProcessAlive !== true) {
-    return {
-      preview,
-      status: "process_gone",
-      pid,
-    };
-  }
-  if (!isTrustedCodexGoalDirectStopProcess(status.progressCommand)) {
-    return {
-      preview,
-      status: "untrusted_process",
-      pid,
-    };
-  }
-  try {
-    process.kill(pid, "SIGTERM");
-  } catch (error) {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      (error as { readonly code?: unknown }).code === "ESRCH"
-    ) {
-      return {
-        preview,
-        status: "process_gone",
-        pid,
-      };
-    }
-    throw error;
-  }
-  return {
-    preview,
-    status: "terminated",
-    pid,
-  };
 }
 
 export async function collectCodexGoalStatus(
@@ -577,80 +526,6 @@ export async function collectCodexGoalStatus(
     }),
     warnings,
   };
-}
-
-export function resolveCodexGoalWorkerLiveness(input: {
-  readonly status: Pick<
-    CodexGoalStatus,
-    | "tmuxAlive"
-    | "progressExists"
-    | "progressStatus"
-    | "progressHeartbeatAgeMs"
-    | "progressProcessAlive"
-    | "progressCommand"
-  >;
-  readonly progressStale?: boolean;
-}): CodexGoalWorkerLiveness {
-  const tmuxAlive = input.status.tmuxAlive === true;
-  const terminalProgress = input.status.progressStatus === "completed" ||
-    input.status.progressStatus === "failed" ||
-    input.status.progressStatus === "partial" ||
-    input.status.progressStatus === "maintenance_paused";
-  const trustedProgressProcessAlive = input.status.progressProcessAlive === true &&
-    isTrustedCodexGoalProgressProcess(input.status.progressCommand);
-  const processAlive = !terminalProgress &&
-    (tmuxAlive || trustedProgressProcessAlive);
-  const explicitSupervisorDead = input.status.tmuxAlive === false &&
-    !trustedProgressProcessAlive;
-  const freshProgressAlive = Boolean(
-    !terminalProgress &&
-      !explicitSupervisorDead &&
-      input.status.progressExists &&
-      input.status.progressStatus === "running" &&
-      input.status.progressHeartbeatAgeMs !== undefined &&
-      input.progressStale !== true,
-  );
-  const alive = processAlive || freshProgressAlive;
-  const supervisorKind = tmuxAlive
-    ? RunProcessSupervisorKind.Tmux
-    : terminalProgress
-    ? RunProcessSupervisorKind.None
-    : trustedProgressProcessAlive
-    ? RunProcessSupervisorKind.Direct
-    : freshProgressAlive
-    ? RunProcessSupervisorKind.External
-    : RunProcessSupervisorKind.None;
-  return {
-    alive,
-    supervisorKind,
-    aliveReason: tmuxAlive
-      ? RunProcessAliveReason.Tmux
-      : terminalProgress
-      ? RunProcessAliveReason.TerminalResult
-      : trustedProgressProcessAlive
-      ? RunProcessAliveReason.Pid
-      : freshProgressAlive
-      ? RunProcessAliveReason.FreshProgress
-      : input.status.progressStatus === "running" && input.progressStale === true
-      ? RunProcessAliveReason.StaleProgress
-      : RunProcessAliveReason.Unknown,
-    processAlive,
-    freshProgressAlive,
-  };
-}
-
-function isTrustedCodexGoalProgressProcess(command: string | undefined): boolean {
-  if (command === undefined) return true;
-  const trimmed = command.trim();
-  if (trimmed.length === 0) return false;
-  return !(trimmed.startsWith("[") && trimmed.endsWith("]"));
-}
-
-function isTrustedCodexGoalDirectStopProcess(command: string | undefined): boolean {
-  if (!isTrustedCodexGoalProgressProcess(command)) return false;
-  const trimmed = command?.trim() ?? "";
-  return /\bsubscription-runtime-codex-goal\b/.test(trimmed) ||
-    /\bcodex-goal-cli\.js\b/.test(trimmed);
 }
 
 export async function reconcileCodexGoalRuntimeResult(
