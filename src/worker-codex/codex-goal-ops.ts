@@ -35,6 +35,7 @@ import {
 } from "./codex-goal-doctor";
 import { inspectCodexGoalProcessSnapshot } from "./codex-goal-process-snapshot";
 import type { CodexGoalObservationContext } from "./application/codex-goal-observation-context";
+import * as goalResult from "./application/codex-goal-visible-result";
 import {
   fileExists,
   gitWorkspaceStatus,
@@ -449,6 +450,20 @@ export async function collectCodexGoalStatus(
       ? observation.processSnapshot(progress.pid)
       : inspectCodexGoalProcessSnapshot(progress.pid));
   if (progress.warning) warnings.push(progress.warning);
+  const currentAttemptWorkerAlive = goalResult.isCodexGoalAttemptProcess({
+    alive: progressProcess.alive,
+    command: progressProcess.supervisorCommand ?? progressProcess.command,
+    taskId: input.taskId,
+    progressPath,
+  }) || tmuxAlive === true;
+  const visibleResult = goalResult.resolveVisibleCodexGoalResult({
+    exists: resultExists,
+    ...result,
+    updatedAt: resultFile.updatedAt,
+    progress,
+    workerAlive: currentAttemptWorkerAlive,
+  });
+  if (visibleResult.warning) warnings.push(visibleResult.warning);
   const runtimeEventsPath = input.jobRootDir && input.taskId
     ? codexGoalRuntimeEventsPath({
         jobRootDir: input.jobRootDir,
@@ -463,7 +478,7 @@ export async function collectCodexGoalStatus(
     : {};
   if (
     input.accessBoundary === AccessBoundary.ProjectScopedControl &&
-    resultExists === false
+    visibleResult.exists === false
   ) {
     warnings.push("project_scoped_control broker-only anchor; use project broker tools, not raw worker start");
   }
@@ -471,12 +486,10 @@ export async function collectCodexGoalStatus(
   return {
     ...(tmuxAlive === undefined ? {} : { tmuxAlive }),
     ...(resultPath === undefined ? {} : { resultPath }),
-    ...(resultExists === undefined ? {} : { resultExists }),
-    ...(result.status === undefined ? {} : { resultStatus: result.status }),
-    ...(result.reason === undefined ? {} : { resultReason: result.reason }),
-    ...(resultFile.updatedAt === undefined
-      ? {}
-      : { resultUpdatedAt: resultFile.updatedAt }),
+    ...(visibleResult.exists === undefined ? {} : { resultExists: visibleResult.exists }),
+    ...(visibleResult.status === undefined ? {} : { resultStatus: visibleResult.status }),
+    ...(visibleResult.reason === undefined ? {} : { resultReason: visibleResult.reason }),
+    ...(visibleResult.updatedAt === undefined ? {} : { resultUpdatedAt: visibleResult.updatedAt }),
     ...(workspace.exists === undefined ? {} : { workspaceExists: workspace.exists }),
     ...(workspace.dirty === undefined ? {} : { workspaceDirty: workspace.dirty }),
     ...(workspace.changedFiles === undefined
@@ -547,9 +560,9 @@ export async function collectCodexGoalStatus(
       ? {}
       : { lastRuntimeEventLevel: lastRuntimeEvent.level }),
     recommendedAction: recommendCodexGoalAction({
-      ...(tmuxAlive === undefined ? {} : { tmuxAlive }),
-      ...(result.status === undefined ? {} : { resultStatus: result.status }),
-      ...(result.reason === undefined ? {} : { resultReason: result.reason }),
+      tmuxAlive: currentAttemptWorkerAlive,
+      ...(visibleResult.status === undefined ? {} : { resultStatus: visibleResult.status }),
+      ...(visibleResult.reason === undefined ? {} : { resultReason: visibleResult.reason }),
       ...(progress.status === undefined ? {} : { progressStatus: progress.status }),
       ...(input.accessBoundary === undefined
         ? {}
@@ -560,7 +573,7 @@ export async function collectCodexGoalStatus(
       ...(workspace.dirty === undefined
         ? {}
         : { workspaceDirty: workspace.dirty }),
-      ...(resultExists === undefined ? {} : { resultExists }),
+      ...(visibleResult.exists === undefined ? {} : { resultExists: visibleResult.exists }),
     }),
     warnings,
   };

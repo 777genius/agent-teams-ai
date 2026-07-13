@@ -17,6 +17,7 @@ export type CodexGoalProcessSnapshot = {
   readonly alive?: boolean;
   readonly cpuActive?: boolean;
   readonly command?: string;
+  readonly supervisorCommand?: string;
   readonly appServerAlive?: boolean;
   readonly appServerPid?: number;
 };
@@ -50,6 +51,7 @@ export async function inspectCodexGoalProcessSnapshot(
       summary.alive !== undefined ||
       summary.cpuActive !== undefined ||
       summary.command !== undefined ||
+      summary.supervisorCommand !== undefined ||
       summary.appServerAlive !== undefined ||
       summary.appServerPid !== undefined
     ) {
@@ -79,6 +81,7 @@ export async function inspectCodexGoalProcessSnapshot(
         alive: false,
         cpuActive: false,
         ...(command ? { command: redactStatusText(command) } : {}),
+        ...(command ? { supervisorCommand: redactStatusText(command) } : {}),
       };
     }
     const cpu = match ? Number(match[2]) : Number.NaN;
@@ -87,6 +90,7 @@ export async function inspectCodexGoalProcessSnapshot(
       alive: true,
       ...(Number.isFinite(cpu) ? { cpuActive: cpu > 0.1 } : {}),
       ...(command ? { command: redactStatusText(command) } : {}),
+      ...(command ? { supervisorCommand: redactStatusText(command) } : {}),
     };
   } catch {
     return {};
@@ -102,6 +106,9 @@ function redactProcessSnapshot(
     ...(summary.command === undefined
       ? {}
       : { command: redactStatusText(summary.command) }),
+    ...(summary.supervisorCommand === undefined
+      ? {}
+      : { supervisorCommand: redactStatusText(summary.supervisorCommand) }),
     ...(summary.appServerAlive === undefined
       ? {}
       : { appServerAlive: summary.appServerAlive }),
@@ -135,11 +142,13 @@ export function summarizeCodexGoalProcessTree(
   const activeRows = treeRows.filter((row) => row.cpu > processCpuActiveThreshold);
   const totalCpu = treeRows.reduce((sum, row) => sum + row.cpu, 0);
   const commandRow = bestProcessCommandRow(activeRows.length > 0 ? activeRows : treeRows);
+  const supervisorCommand = treeRows[0]?.command;
   const appServerRow = treeRows.find((row) => isCodexAppServerCommand(row.command));
   return {
     alive: true,
     cpuActive: activeRows.length > 0 || totalCpu > processCpuActiveThreshold,
     ...(commandRow?.command ? { command: commandRow.command } : {}),
+    ...(supervisorCommand ? { supervisorCommand } : {}),
     appServerAlive: appServerRow !== undefined,
     ...(appServerRow ? { appServerPid: appServerRow.pid } : {}),
   };
