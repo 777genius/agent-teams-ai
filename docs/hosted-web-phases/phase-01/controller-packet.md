@@ -2,25 +2,29 @@
 
 ## Status and authority
 
-- Status: current execution authority for serial `P1.S0` only
-- Worker-start packet revision: `phase-01-s0-bootstrap-r1`
-- Worker-start canonical/base provenance: `42ec333848e29e97c41699b9fed73ed199740e3f`
+- Status: current execution authority for bounded `P1.S1` foundations only
+- Worker-start packet revision: `phase-01-s1-foundations-r1`
+- Transition base: `f12a85af0fddadd06f69a27ef408d26bc27eb3fc`
+- Accepted P1.S0 commit: `6f1a87daa9a4bfdf5d754347d92f313f28d0f95d`
+- Historical P1.S0 phase start SHA: `5f30df49e052d1cc1d0e7efd03aa105673b5b614`
 - Preserved proposal planning base: `3bc0dfa7c00261785c0c752270cb302a9294e751`
 - Phase 0 accepted freeze commit: `f4fa24aac9615a4ce10632965a2244a2e11a273e`
-- Phase 1 start SHA: the isolated worker `workspaceRoot` Git HEAD bound as `phaseStartSha`
+- P1.S1 start SHA: the isolated worker `workspaceRoot` Git HEAD bound as `phaseStartSha`; it must
+  contain this router transition and descend from the transition base
 - Required decisions: ADR-15, ADR-19, ADR-20, plus the eventual frozen Phase 0 register
-- Explicit authorization: `P1.S0` bootstrap only
-- Authorized producer target: **one serial S0 worker**
+- Explicit authorization: `P1.S1` foundations, frozen owner `P1.1A`, only
+- Authorized producer target: **one serial S1 worker**
 - Later-subphase producer target: **zero**
 
-All identifiers, paths, ownership, commands, thresholds, and pairings after S0 remain proposed until
-serial bootstrap. This controller plan may render one bounded S0 bootstrap contract. It cannot render
-or admit an S1-or-later worker, and S0 cannot edit product source.
+S0 froze the downstream identifiers, paths, ownership, commands, and pairings. This controller may
+render one bounded S1 foundations contract using only the accepted `P1.1A` row. It cannot render or
+admit an S2-or-later worker.
 
-The exact worker-start identity is `phaseId: phase-01`, `laneId: p1-s0`, controller
+The exact worker-start identity is `phaseId: phase-01`, `laneId: p1-s1`, controller
 `docs/hosted-web-phases/phase-01/controller-packet.md`, lane
-`docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md`, and revision
-`phase-01-s0-bootstrap-r1`. Every cross-product with Phase 0 or a later Phase 1 subphase fails closed.
+`docs/hosted-web-phases/phase-01/lanes/p1-s1-foundations.md`, and revision
+`phase-01-s1-foundations-r1`. Every cross-product with Phase 0, accepted S0 history, or a later Phase
+1 subphase fails closed.
 
 The accepted `P0.D.TARGET_IMAGE` narrowing in the planning base closes that single Phase 0 gate for
 the Phase 0-to-Phase 1 transition. It does not admit an image or composition: Phase 5 retains the exact
@@ -29,18 +33,22 @@ production-composition gate. The accepted freeze removes this item from Phase 0 
 Exact-image/profile proof, provider canaries, production composition, and terminal-negative admission
 remain fail-closed implementation risks owned by later phases.
 
-## P1.S0 authorization boundary
+## Accepted P1.S0 evidence
 
-S0 starts from the accepted Phase 0 freeze and may only freeze the Phase 1 start SHA, packet revision,
-exact identifiers, exact paths, owners, synthetic fixtures, commands, baseline fingerprints, and the
-unique estimate allocation. It must preserve proposal status for every downstream work package. S0
-does not create the contract kernel, adapters, feature code, routes, preload channels, renderer
-facets, migrations, provider runtime, artifact composition, or terminal behavior.
+P1.S0 is accepted at `6f1a87daa9a4bfdf5d754347d92f313f28d0f95d`, which is an ancestor of
+the transition base. The exact six paths under `docs/research/hosted-web/phase-1/bootstrap/` are
+immutable accepted input and remain unchanged at the transition base. Their recorded historical
+`phaseStartSha` remains `5f30df49e052d1cc1d0e7efd03aa105673b5b614`; it is not replaced by the
+acceptance commit, transition base, router-transition commit, or an S1 worker SHA.
 
-S0 completion is evidence for a later router decision; it is not self-authority to start `P1.S1`.
-The only current lane packet is
-[`lanes/p1-s0-serial-bootstrap.md`](./lanes/p1-s0-serial-bootstrap.md). A worker-start contract that
-binds any other Phase 1 lane conflicts with this controller and must be rejected.
+## P1.S1 authorization boundary
+
+P1.S1 may create only the minimal shared hosted contract kernel and its contract tests frozen for
+owner `P1.1A`. It may not create route/catalog conventions (`P1.1B`), conformance or ratchets
+(`P1.1C`), the team-lifecycle feature (`P1.1D`), review or integration evidence, production transport
+registration, or any filesystem-backed adapter. The only current lane packet is
+[`lanes/p1-s1-foundations.md`](./lanes/p1-s1-foundations.md). A worker-start contract that binds any
+other Phase 1 lane conflicts with this controller and must be rejected.
 
 ## Outcome
 
@@ -96,9 +104,9 @@ blocked on Phase 2.
 
 | Subphase                       | Result                                                                                 | Admission                                       |
 | ------------------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `P1.S0` serial bootstrap       | Freeze exact IDs, files, owners, fixtures, baseline fingerprints, and packet revision. | Authorized now from accepted freeze `f4fa24aa`. |
-| `P1.S1` foundations            | Contract kernel and route/catalog conventions.                                         | `P1.S0` integrated.                             |
-| `P1.S2` parallel production    | Capability/route assertions and conformance/ratchet harnesses on disjoint paths.       | Foundation review passes.                       |
+| `P1.S0` serial bootstrap       | Freeze exact IDs, files, owners, fixtures, baseline fingerprints, and packet revision. | Accepted at `6f1a87da`.                         |
+| `P1.S1` foundations            | `P1.1A` minimal shared contract kernel and focused contract tests.                     | Authorized now from transition base `f12a85af`. |
+| `P1.S2` parallel production    | `P1.1B` route assertions and `P1.1C` conformance/ratchets on disjoint paths.           | Blocked until reviewed S1 integration.          |
 | `P1.S3` seam review            | R1 falsifies 1B/1C architecture, omission sensitivity, and production isolation.       | Both 1B and 1C complete.                        |
 | `P1.S4` first proof and review | Team-lifecycle list query plus isolated test adapters, then R2 semantic review.        | R1 accepted before 1D; 1D complete before R2.   |
 | `P1.S5` serialized integration | Shared ratchet/evidence wiring, full gate, rollback proof, evidence freeze.            | R2 accepted; one integration owner.             |
@@ -107,12 +115,13 @@ The detailed DAG and proposed ownership are in [execution-dag.md](./execution-da
 
 ## Controller invariants
 
-1. Never start `P1.S0` from a moving branch or from this planning worktree.
-2. Every implementation child starts from one `phaseStartSha` containing the reviewed bundle and
-   serial bootstrap evidence.
+1. Preserve the accepted S0 commit, exact evidence paths, and historical `phaseStartSha`; never rerun
+   or rewrite S0 during an S1 transition or worker start.
+2. The S1 child starts from one `phaseStartSha` containing this transition and the accepted serial
+   bootstrap evidence.
 3. A path has one live writer. Production registration files are read-only throughout Phase 1; any
    other existing shared ratchet/evidence file has only the integration owner.
-4. A proposed ID has one evidence owner; reviewers may falsify it but not publish a competing row.
+4. A frozen ID has one evidence owner; reviewers may falsify it but not publish a competing row.
 5. No lane is refilled merely to preserve concurrency. Replacement preserves worktree and handoff or
    records an explicit salvage/supersession decision.
 6. Test-only IPC and HTTP adapter/composition modules must be impossible to import or mount from any
@@ -168,4 +177,4 @@ The integration owner follows [conformance-and-tests.md](./conformance-and-tests
 - [ ] Decision register, evidence index, estimate reconciliation, risk disposition, and Phase 2 input
       packet are frozen from actual integrated evidence.
 
-None of these Phase 1 completion conditions is claimed by the S0-only authorization.
+None of these Phase 1 completion conditions is claimed by the S1-only authorization.

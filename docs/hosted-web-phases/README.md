@@ -19,13 +19,19 @@ broaden scope, change an ADR, weaken a guardrail, or skip an exit gate.
 Phase 0 is accepted and frozen at `f4fa24aac9615a4ce10632965a2244a2e11a273e`. Its controller packet
 and W1-W6 lanes are preserved history, not executable work.
 
-Phase 1 is current, but authorization is deliberately limited to serial bootstrap `P1.S0`. A
-subscription-runtime `worker-start-v1` contract must bind the current
-[`controller packet`](phase-01/controller-packet.md) and exactly one lane packet: the compact
-[`P1.S0 serial-bootstrap packet`](phase-01/lanes/p1-s0-serial-bootstrap.md). Only after those two
-packets may the worker read exact contract-listed references. No `P1.S1` or later producer may start
-until S0 is integrated and this router is explicitly advanced. This transition authorizes bootstrap
-freezing only; it does not authorize product source implementation.
+Phase 1 is current. Serial bootstrap `P1.S0` is accepted at
+`6f1a87daa9a4bfdf5d754347d92f313f28d0f95d`, which is an ancestor of the transition base
+`f12a85af0fddadd06f69a27ef408d26bc27eb3fc`. The six bootstrap evidence paths remain byte-for-byte
+unchanged, and their historical `phaseStartSha` remains
+`5f30df49e052d1cc1d0e7efd03aa105673b5b614`.
+
+Authorization is now deliberately limited to foundations `P1.S1`. A subscription-runtime
+`worker-start-v1` contract must bind the current
+[`controller packet`](phase-01/controller-packet.md) and exactly one lane packet: the bounded
+[`P1.S1 foundations packet`](phase-01/lanes/p1-s1-foundations.md). Only after those two packets may
+the worker read the exact contract-listed references. This transition authorizes only the frozen
+`P1.1A` contract-kernel ownership. `P1.S2` and every later producer remain blocked; no route/catalog,
+conformance, feature-slice, review, integration, or production transport work is authorized.
 
 ## Evidence boundary
 
@@ -35,7 +41,7 @@ retained unchanged under [`EVIDENCE_LIFECYCLE.md`](EVIDENCE_LIFECYCLE.md).
 
 ## Start and completion
 
-The hosting controller admits the one S0 worker only through subscription-runtime's builtin
+The hosting controller admits the one S1 worker only through subscription-runtime's builtin
 `worker-start-v1` boundary. Completion states are `verified`, `characterized`, `blocked`, `failed`,
 or `superseded`; vague states such as `done` are not evidence. This product repository supplies the
 packets and evidence inputs, not the hosted-worker orchestration engine.

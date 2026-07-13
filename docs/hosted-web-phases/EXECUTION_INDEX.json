@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "currentExecutablePhase": "phase-01",
-  "currentExecutableSubphase": "P1.S0",
+  "currentExecutableSubphase": "P1.S1",
   "workerStartAuthority": "hosting/subscription-runtime builtin worker-start-v1",
   "currentRoute": {
     "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
     "lanePackets": [
       {
-        "subphase": "P1.S0",
-        "path": "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md"
+        "subphase": "P1.S1",
+        "path": "docs/hosted-web-phases/phase-01/lanes/p1-s1-foundations.md"
       }
     ]
   },
@@ -22,10 +22,26 @@
     },
     "canonicalFreeze": "docs/research/hosted-web/phase-0/freeze/current-canonical/README.md"
   },
+  "acceptedPhase1Bootstrap": {
+    "status": "accepted",
+    "commit": "6f1a87daa9a4bfdf5d754347d92f313f28d0f95d",
+    "transitionBase": "f12a85af0fddadd06f69a27ef408d26bc27eb3fc",
+    "historicalPhaseStartSha": "5f30df49e052d1cc1d0e7efd03aa105673b5b614",
+    "evidencePaths": [
+      "docs/research/hosted-web/phase-1/bootstrap/phase-start.json",
+      "docs/research/hosted-web/phase-1/bootstrap/packet-revision.json",
+      "docs/research/hosted-web/phase-1/bootstrap/ownership-manifest.json",
+      "docs/research/hosted-web/phase-1/bootstrap/baseline-fingerprints.json",
+      "docs/research/hosted-web/phase-1/bootstrap/estimate-allocation.json",
+      "docs/research/hosted-web/phase-1/bootstrap/bootstrap-report.md"
+    ]
+  },
   "authorization": {
-    "authorized": ["P1.S0"],
-    "blockedUntilRouterAdvance": ["P1.S1", "P1.S2", "P1.S3", "P1.S4", "P1.S5"],
-    "productSourceImplementationAuthorized": false
+    "authorized": ["P1.S1"],
+    "blockedUntilRouterAdvance": ["P1.S2", "P1.S3", "P1.S4", "P1.S5"],
+    "productSourceImplementationAuthorized": true,
+    "productSourceImplementationOwner": "P1.1A",
+    "productSourceImplementationScope": "exact writable paths in docs/hosted-web-phases/phase-01/lanes/p1-s1-foundations.md"
   },
   "workerMandatoryBaseline": [
     "AGENTS.md",
@@ -60,18 +76,22 @@
     "current-phase": [
       {
         "path": "docs/hosted-web-phases/phase-01/README.md",
-        "role": "Phase 1 entrypoint; P1.S0 authorization boundary"
+        "role": "Phase 1 entrypoint; P1.S1 authorization boundary"
       },
       {
         "path": "docs/hosted-web-phases/phase-01/controller-packet.md",
-        "role": "current controller authority for serial P1.S0 only"
+        "role": "current controller authority for bounded P1.S1 foundations only"
       },
       {
-        "path": "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md",
-        "role": "the single current lane packet; metadata and evidence bootstrap only"
+        "path": "docs/hosted-web-phases/phase-01/lanes/p1-s1-foundations.md",
+        "role": "the single current lane packet; P1.1A contract kernel and focused tests only"
       }
     ],
     "reference-on-demand": [
+      {
+        "path": "docs/hosted-web-phases/phase-01/lanes/p1-s0-serial-bootstrap.md",
+        "role": "accepted P1.S0 lane history; not executable"
+      },
       {
         "path": "docs/hosted-web-phase-0-execution-packet.md",
         "role": "accepted and frozen Phase 0 controller history; not executable"

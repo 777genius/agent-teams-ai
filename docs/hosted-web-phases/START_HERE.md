@@ -16,7 +16,7 @@ Read only this bounded sequence before working:
 3. `docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md`.
 4. `docs/hosted-web-phases/README.md`, then `docs/hosted-web-phases/EXECUTION_INDEX.json`.
 5. The current controller packet named by the subscription-runtime `worker-start-v1` contract. The
-   compact router currently authorizes only Phase 1 serial bootstrap `P1.S0`.
+   compact router currently authorizes only Phase 1 foundations `P1.S1`.
 6. The one assigned lane packet, followed only by the exact files in that runtime contract's
    `mandatoryDocs`, `mandatoryScripts`, and `mandatoryFixtures` lists.
 
@@ -44,5 +44,8 @@ it. Corrections use a new artifact and the lifecycle in
 
 The exact-image/profile, provider-canary, production-composition, and terminal-negative limitations
 remain explicit later-phase implementation risks. They do not reopen Phase 0 or authorize repeated
-research. `P1.S1` and every later Phase 1 subphase remain blocked until the integrated `P1.S0`
-bootstrap and a subsequent router transition authorize them.
+research. `P1.S0` is accepted at `6f1a87daa9a4bfdf5d754347d92f313f28d0f95d` and is an ancestor of
+the transition base `f12a85af0fddadd06f69a27ef408d26bc27eb3fc`; its exact six bootstrap evidence
+paths remain immutable. Its historical `phaseStartSha` remains
+`5f30df49e052d1cc1d0e7efd03aa105673b5b614`. This router transition authorizes exactly `P1.S1`;
+`P1.S2` and every later Phase 1 subphase remain blocked.
