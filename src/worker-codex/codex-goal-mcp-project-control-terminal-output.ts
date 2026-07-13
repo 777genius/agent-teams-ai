@@ -1,9 +1,10 @@
+import { dirname, join, relative, resolve, sep } from "node:path";
+
 import {
   AccessBoundary,
   consumedOutputRecordFor,
   createAccessPolicyService,
   recordFailedNoOutput,
-  type AccessPolicyService,
   type ProjectAccessScope,
   type TerminalOutputBackup,
 } from "@vioxen/subscription-runtime/worker-core";
@@ -80,7 +81,12 @@ export async function projectControlRecordFailedNoOutputView(
   if (!sourceRecord) {
     throw new Error("failed_no_output_source_record_required");
   }
-  await assertBackupPathsReadable(sourceRecord.backup, policy, controller.scope);
+  await assertBackupPathsReadable(sourceRecord.backup, {
+    scope: controller.scope,
+    registryRootDir: controller.registryRootDir,
+    jobId: loaded.manifest.jobId,
+    jobRootDir: loaded.manifest.jobRootDir,
+  });
   if (sourceRecord.valid && sourceRecord.status === "failed_no_output") {
     return {
       ok: true,
@@ -170,8 +176,12 @@ function failedNoOutputClosedAt(sourceClosedAt: string | undefined): string {
 
 async function assertBackupPathsReadable(
   backup: TerminalOutputBackup | undefined,
-  policy: AccessPolicyService,
-  scope: ProjectAccessScope,
+  input: {
+    readonly scope: ProjectAccessScope;
+    readonly registryRootDir: string;
+    readonly jobId: string;
+    readonly jobRootDir: string;
+  },
 ): Promise<void> {
   if (!backup) throw new Error("failed_no_output_source_backup_required");
   for (const path of [
@@ -181,6 +191,20 @@ async function assertBackupPathsReadable(
     backup.untrackedArchivePath,
   ]) {
     if (!path) continue;
+    const evidenceRoot = projectOwnedEvidenceRoot(path, input);
+    const scope = evidenceRoot
+      ? {
+          ...input.scope,
+          readRoots: Array.from(new Set([
+            ...(input.scope.readRoots ?? []),
+            evidenceRoot,
+          ])),
+        }
+      : input.scope;
+    const policy = createAccessPolicyService({
+      boundary: AccessBoundary.ProjectScopedControl,
+      scope,
+    });
     const realPath = await projectControlRealPathOutsideReadScope(path, scope);
     const decision = policy.canReadPath({
       path,
@@ -192,4 +216,41 @@ async function assertBackupPathsReadable(
       );
     }
   }
+}
+
+function projectOwnedEvidenceRoot(
+  path: string,
+  input: {
+    readonly registryRootDir: string;
+    readonly jobId: string;
+    readonly jobRootDir: string;
+  },
+): string | undefined {
+  const candidate = resolve(path);
+  const jobRoot = resolve(input.jobRootDir);
+  if (pathInsideOrEqual(candidate, jobRoot)) return jobRoot;
+
+  const archiveRoot = join(dirname(resolve(input.registryRootDir)), "archives");
+  const archiveRelative = relative(archiveRoot, candidate);
+  if (
+    !archiveRelative ||
+    archiveRelative === ".." ||
+    archiveRelative.startsWith(`..${sep}`)
+  ) {
+    return undefined;
+  }
+  const archiveName = archiveRelative.split(sep)[0]!;
+  if (
+    archiveName !== input.jobId &&
+    !archiveName.startsWith(`${input.jobId}-`)
+  ) {
+    return undefined;
+  }
+  return join(archiveRoot, archiveName);
+}
+
+function pathInsideOrEqual(path: string, root: string): boolean {
+  const relativePath = relative(root, path);
+  return relativePath === "" ||
+    relativePath !== ".." && !relativePath.startsWith(`..${sep}`);
 }

@@ -69,7 +69,7 @@ describe("project failed_no_output lifecycle", () => {
         accessBoundary: AccessBoundary.ProjectScopedControl,
         projectAccessScope: {
           projectId: "project",
-          readRoots: [root],
+          readRoots: [],
           workspaceRoots: [controllerWorkspace],
           worktreeRoots: [worktreeRoot],
           registryRoot: registryRootDir,
@@ -213,7 +213,12 @@ async function writeMislabeledNoOutput(input: {
   readonly ledgerRoot: string;
   readonly jobId: string;
 }): Promise<void> {
-  const evidenceRoot = join(input.root, "evidence", input.jobId);
+  const evidenceRoot = join(
+    input.root,
+    "worker-jobs",
+    "archives",
+    `${input.jobId}-rejected-test`,
+  );
   const workspace = join(input.root, "worktrees", input.jobId);
   await mkdir(join(input.ledgerRoot, "items"), { recursive: true });
   await mkdir(evidenceRoot, { recursive: true });
