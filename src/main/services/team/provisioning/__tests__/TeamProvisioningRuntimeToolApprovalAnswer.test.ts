@@ -86,6 +86,18 @@ function makeEntry(input: Partial<RuntimeToolApprovalEntry> = {}): RuntimeToolAp
   };
 }
 
+function makeSecondaryEntry(runtimeRunId = 'run-secondary'): RuntimeToolApprovalEntry {
+  const entry = makeEntry({ laneId: 'secondary-worker' });
+  return {
+    ...entry,
+    approval: {
+      ...entry.approval,
+      requestId: `opencode:${runtimeRunId}:provider-request-a`,
+      runId: runtimeRunId,
+    },
+  };
+}
+
 function makeResult(input: Partial<TeamRuntimeLaunchResult> = {}): TeamRuntimeLaunchResult {
   return {
     runId: 'run-a',
@@ -158,6 +170,9 @@ function makePorts(
   const runtimeAdapterRunByTeam = new Map<string, unknown>([['team-a', { runId: 'old-run' }]]);
   const aliveRunByTeam = new Map<string, string>();
   const emittedTeamChanges: TeamChangeEvent[] = [];
+  const trackedRunId = Object.prototype.hasOwnProperty.call(input, 'trackedRunId')
+    ? input.trackedRunId
+    : 'run-a';
   const answerRuntimePermission =
     input.adapter?.answerRuntimePermission ??
     vi.fn(async () => {
@@ -231,8 +246,8 @@ function makePorts(
       events.push('setAliveRunId');
       aliveRunByTeam.set(teamName, runId);
     }),
-    getTrackedRunId: vi.fn(() => input.trackedRunId),
-    getRun: vi.fn((runId) => (runId === input.trackedRunId ? input.run : undefined)),
+    getTrackedRunId: vi.fn(() => trackedRunId),
+    getRun: vi.fn((runId) => (runId === trackedRunId ? input.run : undefined)),
     guardCommittedOpenCodeSecondaryLaneEvidence: vi.fn(async () => {
       events.push('guardEvidence');
       return input.guardedResult ?? makeResult();
@@ -344,11 +359,121 @@ describe('answerOpenCodeRuntimeToolApproval', () => {
     });
   });
 
+  it('does not send a primary answer after the tracked run changes while launch state is read', async () => {
+    let signalReadStarted!: () => void;
+    const readStarted = new Promise<void>((resolve) => {
+      signalReadStarted = resolve;
+    });
+    let resolveRead!: (state: PersistedTeamLaunchSnapshot | null) => void;
+    const readResult = new Promise<PersistedTeamLaunchSnapshot | null>((resolve) => {
+      resolveRead = resolve;
+    });
+    const ports = makePorts();
+    let trackedRunId = 'run-a';
+    vi.mocked(ports.getTrackedRunId).mockImplementation(() => trackedRunId);
+    vi.mocked(ports.readLaunchState).mockImplementation(async () => {
+      signalReadStarted();
+      return readResult;
+    });
+
+    const answer = answerOpenCodeRuntimeToolApproval(makeEntry(), true, ports);
+    await readStarted;
+    trackedRunId = 'run-new';
+    resolveRead(previousLaunchState);
+
+    await expect(answer).rejects.toThrow(
+      'Stale runtime approval: tracked runId mismatch for team "team-a" (expected run-a, got run-new)'
+    );
+    expect(ports.buildOpenCodeRuntimePermissionAnswerInput).not.toHaveBeenCalled();
+    expect(ports.getOpenCodeRuntimeAdapter()?.answerRuntimePermission).not.toHaveBeenCalled();
+    expect(ports.persistOpenCodeRuntimeAdapterLaunchResult).not.toHaveBeenCalled();
+    expect(ports.emitTeamChange).not.toHaveBeenCalled();
+  });
+
+  it('does not persist a primary answer after the tracked run changes while the bridge is in flight', async () => {
+    let signalAnswerStarted!: () => void;
+    const answerStarted = new Promise<void>((resolve) => {
+      signalAnswerStarted = resolve;
+    });
+    let resolveAnswer!: (result: TeamRuntimeLaunchResult) => void;
+    const answerResult = new Promise<TeamRuntimeLaunchResult>((resolve) => {
+      resolveAnswer = resolve;
+    });
+    const ports = makePorts({
+      adapter: makeAdapter(
+        vi.fn(async () => {
+          signalAnswerStarted();
+          return answerResult;
+        })
+      ),
+    });
+    let trackedRunId = 'run-a';
+    vi.mocked(ports.getTrackedRunId).mockImplementation(() => trackedRunId);
+
+    const answer = answerOpenCodeRuntimeToolApproval(makeEntry(), true, ports);
+    await answerStarted;
+    trackedRunId = 'run-new';
+    resolveAnswer(makeResult());
+
+    await expect(answer).rejects.toThrow(
+      'Stale runtime approval: tracked runId mismatch for team "team-a" (expected run-a, got run-new)'
+    );
+    expect(ports.persistOpenCodeRuntimeAdapterLaunchResult).not.toHaveBeenCalled();
+    expect(ports.setRuntimeAdapterRunByTeam).not.toHaveBeenCalled();
+    expect(ports.setAliveRunId).not.toHaveBeenCalled();
+    expect(ports.syncOpenCodeRuntimeToolApprovals).not.toHaveBeenCalled();
+    expect(ports.emitTeamChange).not.toHaveBeenCalled();
+  });
+
+  it('does not apply a committed primary result after the tracked run changes during persistence', async () => {
+    let signalPersistStarted!: () => void;
+    const persistStarted = new Promise<void>((resolve) => {
+      signalPersistStarted = resolve;
+    });
+    let resolvePersist!: (value: { result: TeamRuntimeLaunchResult }) => void;
+    const persistResult = new Promise<{ result: TeamRuntimeLaunchResult }>((resolve) => {
+      resolvePersist = resolve;
+    });
+    const ports = makePorts();
+    let trackedRunId = 'run-a';
+    vi.mocked(ports.getTrackedRunId).mockImplementation(() => trackedRunId);
+    vi.mocked(ports.persistOpenCodeRuntimeAdapterLaunchResult).mockImplementation(async () => {
+      signalPersistStarted();
+      return persistResult;
+    });
+
+    const answer = answerOpenCodeRuntimeToolApproval(makeEntry(), true, ports);
+    await persistStarted;
+    trackedRunId = 'run-new';
+    resolvePersist({ result: makeResult({ teamLaunchState: 'clean_success' }) });
+
+    await expect(answer).rejects.toThrow(
+      'Stale runtime approval: tracked runId mismatch for team "team-a" (expected run-a, got run-new)'
+    );
+    expect(ports.setRuntimeAdapterRunByTeam).not.toHaveBeenCalled();
+    expect(ports.deleteRuntimeAdapterRunByTeam).not.toHaveBeenCalled();
+    expect(ports.setAliveRunId).not.toHaveBeenCalled();
+    expect(ports.syncOpenCodeRuntimeToolApprovals).not.toHaveBeenCalled();
+    expect(ports.emitTeamChange).not.toHaveBeenCalled();
+  });
+
+  it('rejects a permission result for a different runtime identity', async () => {
+    const ports = makePorts({
+      adapterResult: makeResult({ runId: 'run-other', teamName: 'team-other' }),
+    });
+
+    await expect(answerOpenCodeRuntimeToolApproval(makeEntry(), true, ports)).rejects.toThrow(
+      'Runtime permission answer identity mismatch for team "team-a" (expected runId run-a, got team "team-other" runId run-other)'
+    );
+    expect(ports.persistOpenCodeRuntimeAdapterLaunchResult).not.toHaveBeenCalled();
+    expect(ports.emitTeamChange).not.toHaveBeenCalled();
+  });
+
   it('throws the existing error text when the secondary run is missing', async () => {
     const ports = makePorts({ trackedRunId: undefined });
 
     await expect(
-      answerOpenCodeRuntimeToolApproval(makeEntry({ laneId: 'secondary-worker' }), true, ports)
+      answerOpenCodeRuntimeToolApproval(makeSecondaryEntry(), true, ports)
     ).rejects.toThrow('Run not found for team "team-a"');
   });
 
@@ -363,34 +488,36 @@ describe('answerOpenCodeRuntimeToolApproval', () => {
     });
 
     await expect(
-      answerOpenCodeRuntimeToolApproval(makeEntry({ laneId: 'secondary-worker' }), true, ports)
+      answerOpenCodeRuntimeToolApproval(makeSecondaryEntry(), true, ports)
     ).rejects.toThrow('OpenCode secondary lane secondary-worker was not found for team "team-a"');
   });
 
-  it('guards, mutates, publishes, syncs, and emits for a successful secondary answer', async () => {
-    const lane = makeLane();
+  it('preserves the distinct tracked run and secondary runtime identities', async () => {
+    const lane = makeLane({ runId: 'run-secondary' });
     const run: TestRun = {
-      runId: 'run-a',
+      runId: 'run-parent',
       teamName: 'team-a',
       mixedSecondaryLanes: [lane],
     };
     const guardedResult = makeResult({
+      runId: 'run-secondary',
       warnings: ['guarded-warning'],
       diagnostics: ['guarded-diagnostic'],
     });
     const ports = makePorts({
-      trackedRunId: 'run-a',
+      adapterResult: makeResult({ runId: 'run-secondary' }),
+      trackedRunId: 'run-parent',
       run,
       guardedResult,
     });
 
-    await answerOpenCodeRuntimeToolApproval(makeEntry({ laneId: 'secondary-worker' }), true, ports);
+    await answerOpenCodeRuntimeToolApproval(makeSecondaryEntry(), true, ports);
 
     expect(ports.guardCommittedOpenCodeSecondaryLaneEvidence).toHaveBeenCalledWith({
       teamName: 'team-a',
       laneId: 'secondary-worker',
       memberName: 'Worker',
-      result: expect.objectContaining({ runId: 'run-a' }),
+      result: expect.objectContaining({ runId: 'run-secondary' }),
     });
     expect(lane.result).toBe(guardedResult);
     expect(lane.warnings).toEqual(['guarded-warning']);
@@ -407,7 +534,7 @@ describe('answerOpenCodeRuntimeToolApproval', () => {
     ]);
     expect(ports.syncOpenCodeRuntimeToolApprovals).toHaveBeenCalledWith({
       teamName: 'team-a',
-      runId: 'run-a',
+      runId: 'run-secondary',
       laneId: 'secondary-worker',
       cwd: '/repo',
       members: guardedResult.members,
@@ -417,22 +544,99 @@ describe('answerOpenCodeRuntimeToolApproval', () => {
     });
   });
 
+  it('rejects a stale secondary approval after the lane runtime is replaced', async () => {
+    const run: TestRun = {
+      runId: 'run-parent',
+      teamName: 'team-a',
+      mixedSecondaryLanes: [makeLane({ runId: 'run-secondary-new' })],
+    };
+    const ports = makePorts({ trackedRunId: 'run-parent', run });
+
+    await expect(
+      answerOpenCodeRuntimeToolApproval(makeSecondaryEntry('run-secondary-old'), true, ports)
+    ).rejects.toThrow(
+      'Stale runtime approval: secondary lane runId mismatch for team "team-a" lane secondary-worker (expected run-secondary-old, got run-secondary-new)'
+    );
+    expect(ports.readLaunchState).not.toHaveBeenCalled();
+    expect(ports.getOpenCodeRuntimeAdapter()?.answerRuntimePermission).not.toHaveBeenCalled();
+    expect(ports.guardCommittedOpenCodeSecondaryLaneEvidence).not.toHaveBeenCalled();
+    expect(ports.emitTeamChange).not.toHaveBeenCalled();
+  });
+
+  it('rejects a secondary result when the tracked run object is replaced during evidence guard', async () => {
+    const oldLane = makeLane({ runId: 'run-secondary' });
+    const newLane = makeLane({ runId: 'run-secondary' });
+    const oldRun: TestRun = {
+      runId: 'run-parent',
+      teamName: 'team-a',
+      mixedSecondaryLanes: [oldLane],
+    };
+    const newRun: TestRun = {
+      runId: 'run-parent',
+      teamName: 'team-a',
+      mixedSecondaryLanes: [newLane],
+    };
+    let signalGuardStarted!: () => void;
+    const guardStarted = new Promise<void>((resolve) => {
+      signalGuardStarted = resolve;
+    });
+    let resolveGuard!: (result: TeamRuntimeLaunchResult) => void;
+    const guardResult = new Promise<TeamRuntimeLaunchResult>((resolve) => {
+      resolveGuard = resolve;
+    });
+    const ports = makePorts({
+      adapterResult: makeResult({ runId: 'run-secondary' }),
+      trackedRunId: 'run-parent',
+      run: oldRun,
+    });
+    let currentRun = oldRun;
+    vi.mocked(ports.getRun).mockImplementation(() => currentRun);
+    vi.mocked(ports.guardCommittedOpenCodeSecondaryLaneEvidence).mockImplementation(async () => {
+      signalGuardStarted();
+      return guardResult;
+    });
+
+    const answer = answerOpenCodeRuntimeToolApproval(makeSecondaryEntry(), true, ports);
+    await guardStarted;
+    currentRun = newRun;
+    resolveGuard(makeResult({ runId: 'run-secondary' }));
+
+    await expect(answer).rejects.toThrow(
+      'Stale runtime approval: tracked run identity changed for team "team-a"'
+    );
+    expect(oldLane).toMatchObject({
+      result: null,
+      warnings: [],
+      diagnostics: [],
+      state: 'launching',
+    });
+    expect(newLane).toMatchObject({
+      result: null,
+      warnings: [],
+      diagnostics: [],
+      state: 'launching',
+    });
+    expect(ports.publishMixedSecondaryLaneStatusChange).not.toHaveBeenCalled();
+    expect(ports.syncOpenCodeRuntimeToolApprovals).not.toHaveBeenCalled();
+    expect(ports.emitTeamChange).not.toHaveBeenCalled();
+  });
+
   it('rejects a secondary result when the tracked run changes while the answer is in flight', async () => {
-    const oldLane = makeLane();
-    const newLane = makeLane();
+    const oldLane = makeLane({ runId: 'run-secondary' });
+    const newLane = makeLane({ runId: 'run-new-secondary' });
     const runs = new Map<string, TestRun>([
       [
-        'run-old',
+        'run-parent-old',
         {
-          runId: 'run-old',
+          runId: 'run-parent-old',
           teamName: 'team-a',
           mixedSecondaryLanes: [oldLane],
         },
       ],
       [
-        'run-new',
+        'run-parent-new',
         {
-          runId: 'run-new',
+          runId: 'run-parent-new',
           teamName: 'team-a',
           mixedSecondaryLanes: [newLane],
         },
@@ -454,26 +658,18 @@ describe('answerOpenCodeRuntimeToolApproval', () => {
         })
       ),
     });
-    let trackedRunId = 'run-old';
+    let trackedRunId = 'run-parent-old';
     vi.mocked(ports.getTrackedRunId).mockImplementation(() => trackedRunId);
     vi.mocked(ports.getRun).mockImplementation((runId) => runs.get(runId));
-    const baseEntry = makeEntry({ laneId: 'secondary-worker' });
-    const entry = makeEntry({
-      laneId: 'secondary-worker',
-      approval: {
-        ...baseEntry.approval,
-        requestId: 'opencode:run-old:provider-request-a',
-        runId: 'run-old',
-      },
-    });
+    const entry = makeSecondaryEntry();
 
     const answer = answerOpenCodeRuntimeToolApproval(entry, true, ports);
     await answerStarted;
-    trackedRunId = 'run-new';
-    resolveAnswer(makeResult({ runId: 'run-old' }));
+    trackedRunId = 'run-parent-new';
+    resolveAnswer(makeResult({ runId: 'run-secondary' }));
 
     await expect(answer).rejects.toThrow(
-      'Stale runtime approval: tracked runId mismatch for team "team-a" (expected run-old, got run-new)'
+      'Stale runtime approval: tracked runId mismatch for team "team-a" (expected run-parent-old, got run-parent-new)'
     );
     expect(oldLane).toMatchObject({
       result: null,
