@@ -62,7 +62,17 @@ export class TeamLaunchStateStore {
         return null;
       }
       const raw = await fs.promises.readFile(targetPath, 'utf8');
-      return normalizePersistedLaunchSnapshot(teamName, JSON.parse(raw));
+      const parsed = JSON.parse(raw) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const record = parsed as Record<string, unknown>;
+        if (
+          record.version === 2 &&
+          (typeof record.teamName !== 'string' || record.teamName.trim() !== teamName)
+        ) {
+          return null;
+        }
+      }
+      return normalizePersistedLaunchSnapshot(teamName, parsed);
     } catch {
       return null;
     }

@@ -48,6 +48,22 @@ describe('TeamLaunchStateStore', () => {
     mocks.atomicWriteAsync.mockReset();
   });
 
+  it('rejects a versioned snapshot whose persisted team identity does not match its path', async () => {
+    const raw = JSON.stringify({ ...snapshot(), teamName: 'other-team' });
+    const stat = vi.spyOn(fs.promises, 'stat').mockResolvedValue({
+      isFile: () => true,
+      size: Buffer.byteLength(raw),
+    } as fs.Stats);
+    const readFile = vi.spyOn(fs.promises, 'readFile').mockResolvedValue(raw);
+
+    try {
+      await expect(new TeamLaunchStateStore().read('demo')).resolves.toBeNull();
+    } finally {
+      stat.mockRestore();
+      readFile.mockRestore();
+    }
+  });
+
   it('rejects when a live team directory cannot persist the complete launch publication', async () => {
     const writeError = Object.assign(new Error('disk full'), { code: 'ENOSPC' });
     mocks.atomicWriteAsync.mockResolvedValueOnce(undefined).mockRejectedValueOnce(writeError);
