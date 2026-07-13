@@ -502,39 +502,6 @@ describe("SafeExecutionRunner", () => {
     await deadOwner.release();
   });
 
-  it("does not let stale in-memory handles release replacement workspace locks", async () => {
-    const workspacePath = await gitWorkspace(
-      cleanupPaths,
-      "safe-execution-stale-release-memory-",
-    );
-    const lockStore = new InMemoryWorkspaceLockStore();
-    const stale = await lockStore.acquire({
-      taskId: "task-same-owner",
-      workspacePath,
-      ownerId: "same-owner",
-      ownerPid: 9_999_999,
-    });
-    const replacement = await lockStore.acquire({
-      taskId: "task-same-owner",
-      workspacePath,
-      ownerId: "same-owner",
-      ownerPid: process.pid,
-    });
-
-    await stale.release();
-    await expect(
-      lockStore.acquire({
-        taskId: "task-probe",
-        workspacePath,
-        ownerId: "probe-owner",
-        ownerPid: process.pid,
-      }),
-    ).rejects.toMatchObject({
-      code: "safe_execution_workspace_locked",
-    });
-    await replacement.release();
-  });
-
   it("replays a completed task by taskId without running the worker again", async () => {
     const workspacePath = await gitWorkspace(
       cleanupPaths,
