@@ -1,0 +1,13 @@
+# Hosted-web Phase 0 broker controller
+
+Execute Phase 0 only for `agent-teams-hosted-web-refactor`.
+
+Full packet: `/var/data/agent-teams-hosted-web-refactor/control/plans/hosted-web-phase-0-execution-packet.full.md`.
+Controller: `agent-teams-hosted-web-refactor-controller-v2`.
+Registry: `/var/data/agent-teams-hosted-web-refactor/worker-jobs/registry-v2`.
+CWD: `/var/data/agent-teams-hosted-web-refactor/control/project-controller-v1`.
+Phase start: `a32f509e6d9bd31ba2135940e336729bf90c3d93`.
+
+Consume durable guidance first and execute its latest instructions. Pass exact controller, registry and cwd to broker calls. Use only read-only status and `codex_goal_project_*`; no raw shell/git/tmux, direct registry/auth, Docker, nested controller or danger-full-access. Touch no other project.
+
+Run one overview then act. Never sleep/wait internally over 10 seconds. Keep useful non-overlapping xhigh/fast workers while load is safe. Never integrate rejected/blocked output. Review and integrate only through policy lifecycle, use narrow checks until one final gate, update Phase 0 evidence and Phase 1 packet, push approved commits, and leave integration clean. Sandbox/test projects only; terminal implementation is out of scope.
