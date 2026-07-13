@@ -25,6 +25,7 @@ Connect more of the AI subscriptions you already pay for directly from the dashb
 ### Improvements
 
 - Load provider cards sooner and keep dashboard connection counts responsive while the full OpenCode catalog loads in the background.
+- Paginate, cache, and virtualize large provider model catalogs for faster search and scrolling.
 - Show immediate setup progress, provider-specific sign-in choices, secure device codes, plan-key validation, credential links, and clearer verification states.
 - Let connected providers replace or renew managed credentials without removing the working credential first.
 - Detect Xiaomi MiMo Token Plan regions from the dedicated Base URL instead of requiring users to understand region codes.
