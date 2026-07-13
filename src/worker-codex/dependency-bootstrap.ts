@@ -1,18 +1,27 @@
 import { createHash } from "node:crypto";
-import { access, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  readFile,
+  realpath,
+  stat,
+  writeFile,
+} from "node:fs/promises";
 import { arch, platform } from "node:os";
 import { basename, join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { withDependencyBootstrapLock } from "./dependency-bootstrap-lock";
+import { resolveDependencyCacheRoot } from "./dependency-cache-placement";
 import {
-  type DependencyBootstrapLockResult,
-  withDependencyBootstrapLock,
-} from "./dependency-bootstrap-lock";
-import {
-  resolveDependencyCacheRoot,
-} from "./dependency-cache-placement";
+  inspectNodeDependencyEnvironment,
+  sanitizeNodeDependencyEnvironment,
+} from "./dependency-environment-safety";
 
-export { defaultDependencyCacheRoot, dependencyCacheNamespace } from "./dependency-cache-placement";
+export {
+  defaultDependencyCacheRoot,
+  dependencyCacheNamespace,
+} from "./dependency-cache-placement";
 
 const execFileAsync = promisify(execFile);
 
@@ -20,8 +29,12 @@ export type DependencyBootstrapMode = "off" | "preflight" | "install";
 
 export type DependencyEcosystem = "node" | "python";
 
-export type DependencyPackageManagerName = "pnpm" | "npm" | "yarn" | "bun" | "uv";
-type NodeDependencyPackageManagerName = Exclude<DependencyPackageManagerName, "uv">;
+export type DependencyPackageManagerName =
+  "pnpm" | "npm" | "yarn" | "bun" | "uv";
+type NodeDependencyPackageManagerName = Exclude<
+  DependencyPackageManagerName,
+  "uv"
+>;
 
 export type DependencyPackageManager = {
   readonly name: DependencyPackageManagerName;
@@ -56,12 +69,15 @@ export type DependencyPreflightResult = {
   readonly cacheLockPath?: string;
   readonly cacheLockWaitMs?: number;
   readonly staleCacheLockRecovered?: boolean;
+  readonly unsafeDependencyPaths?: readonly string[];
+  readonly sanitizedDependencyPaths?: readonly string[];
   readonly status:
     | "off"
     | "unsupported_project"
     | "ready"
     | "deps_missing"
     | "installed"
+    | "unsafe"
     | "install_failed";
   readonly warnings: readonly string[];
 };
@@ -81,6 +97,16 @@ export type DependencyBootstrapInput = {
 };
 
 export async function runDependencyBootstrap(
+  input: DependencyBootstrapInput,
+): Promise<DependencyPreflightResult> {
+  const canonicalWorkspacePath = await realpath(input.workspacePath);
+  return runDependencyBootstrapUnlocked({
+    ...input,
+    workspacePath: canonicalWorkspacePath,
+  });
+}
+
+async function runDependencyBootstrapUnlocked(
   input: DependencyBootstrapInput,
 ): Promise<DependencyPreflightResult> {
   const mode = input.mode ?? "preflight";
@@ -117,26 +143,40 @@ export async function runDependencyBootstrap(
       ...(cacheRoot ? { cacheRoot } : {}),
       ...(input.runCommand ? { runCommand: input.runCommand } : {}),
     });
-    const installed = await inspectDependencyBootstrap(input.workspacePath, mode);
+    const installed = await inspectDependencyBootstrap(
+      input.workspacePath,
+      mode,
+    );
     const placementWarnings = cacheRoot
       ? await dependencyCachePlacementWarnings(
-        input.workspacePath,
-        cacheRoot,
-        withCommand.packageManager.name,
-      )
+          input.workspacePath,
+          cacheRoot,
+          withCommand.packageManager.name,
+        )
       : [];
-    let result = attachInstallCommand({
-      ...installed,
-      status: "installed",
-      warnings: [...installed.warnings, ...placementWarnings],
-      ...(install?.lockPath ? { cacheLockPath: install.lockPath } : {}),
-      ...(install ? { cacheLockWaitMs: install.waitMs } : {}),
-      ...(install?.staleLockRecovered
-        ? { staleCacheLockRecovered: true }
-        : {}),
-    }, cacheRoot);
+    let result = attachInstallCommand(
+      {
+        ...installed,
+        status: installed.status === "unsafe" ? "unsafe" : "installed",
+        warnings: [...installed.warnings, ...placementWarnings],
+        ...(install.sanitizedDependencyPaths.length > 0
+          ? { sanitizedDependencyPaths: install.sanitizedDependencyPaths }
+          : {}),
+        ...(install.lockPath ? { cacheLockPath: install.lockPath } : {}),
+        ...(install.waitMs !== undefined
+          ? { cacheLockWaitMs: install.waitMs }
+          : {}),
+        ...(install.staleLockRecovered
+          ? { staleCacheLockRecovered: true }
+          : {}),
+      },
+      cacheRoot,
+    );
     if (input.jobRootDir) {
-      const diagnosticPath = await writeDependencyPreflightDiagnostic(input.jobRootDir, result);
+      const diagnosticPath = await writeDependencyPreflightDiagnostic(
+        input.jobRootDir,
+        result,
+      );
       result = { ...result, diagnosticPath };
     }
     return result;
@@ -150,7 +190,10 @@ export async function runDependencyBootstrap(
       ],
     };
     if (input.jobRootDir) {
-      const diagnosticPath = await writeDependencyPreflightDiagnostic(input.jobRootDir, result);
+      const diagnosticPath = await writeDependencyPreflightDiagnostic(
+        input.jobRootDir,
+        result,
+      );
       result = { ...result, diagnosticPath };
     }
     return result;
@@ -161,12 +204,21 @@ export async function inspectDependencyBootstrap(
   workspacePath: string,
   mode: DependencyBootstrapMode = "preflight",
 ): Promise<DependencyPreflightResult> {
+  const dependencySafety = await inspectNodeDependencyEnvironment({
+    workspacePath,
+  });
   if (mode === "off") {
-    return baseResult(workspacePath, mode, "off");
+    return withDependencySafety(
+      baseResult(workspacePath, mode, "off"),
+      dependencySafety.unsafeDependencyRoots,
+    );
   }
   const packageJsonPath = join(workspacePath, "package.json");
   if (!(await pathExists(packageJsonPath))) {
-    return inspectPythonDependencyBootstrap(workspacePath, mode);
+    return withDependencySafety(
+      await inspectPythonDependencyBootstrap(workspacePath, mode),
+      dependencySafety.unsafeDependencyRoots,
+    );
   }
 
   const packageJson = await readPackageJson(packageJsonPath);
@@ -181,23 +233,26 @@ export async function inspectDependencyBootstrap(
   const nodeModulesExists = await pathExists(nodeModulesPath);
   const binaryChecks = await dependencyBinaryChecks(workspacePath, packageJson);
 
-  return {
-    mode,
-    workspacePath,
-    ecosystem: "node",
-    manifestPath: packageJsonPath,
-    environmentPath: nodeModulesPath,
-    environmentExists: nodeModulesExists,
-    packageJsonPath,
-    packageManager,
-    nodeModulesPath,
-    nodeModulesExists,
-    binaryChecks,
-    fingerprint,
-    fingerprintInputs,
-    status: nodeModulesExists ? "ready" : "deps_missing",
-    warnings: nodeModulesExists ? [] : ["node_modules_missing"],
-  };
+  return withDependencySafety(
+    {
+      mode,
+      workspacePath,
+      ecosystem: "node",
+      manifestPath: packageJsonPath,
+      environmentPath: nodeModulesPath,
+      environmentExists: nodeModulesExists,
+      packageJsonPath,
+      packageManager,
+      nodeModulesPath,
+      nodeModulesExists,
+      binaryChecks,
+      fingerprint,
+      fingerprintInputs,
+      status: nodeModulesExists ? "ready" : "deps_missing",
+      warnings: nodeModulesExists ? [] : ["node_modules_missing"],
+    },
+    dependencySafety.unsafeDependencyRoots,
+  );
 }
 
 async function runPackageManagerInstall(input: {
@@ -206,28 +261,51 @@ async function runPackageManagerInstall(input: {
   readonly fingerprint?: string;
   readonly cacheRoot?: string;
   readonly runCommand?: DependencyBootstrapInput["runCommand"];
-}): Promise<DependencyBootstrapLockResult<void> | undefined> {
-  const commands = packageManagerInstallCommands(input.packageManager, input.cacheRoot);
+}): Promise<{
+  readonly sanitizedDependencyPaths: readonly string[];
+  readonly lockPath?: string;
+  readonly waitMs?: number;
+  readonly staleLockRecovered?: boolean;
+}> {
+  const commands = packageManagerInstallCommands(
+    input.packageManager,
+    input.cacheRoot,
+  );
   const runCommand = input.runCommand ?? defaultRunCommand;
   if (input.cacheRoot) {
     await mkdir(input.cacheRoot, { recursive: true, mode: 0o700 });
   }
-  const install = async () => {
+  const install = async (): Promise<readonly string[]> => {
+    const sanitized =
+      input.packageManager.name === "uv"
+        ? { removedPaths: [] as readonly string[] }
+        : await sanitizeNodeDependencyEnvironment({
+            workspacePath: input.workspacePath,
+          });
     for (const command of commands) {
       await runCommand(command[0] ?? "", command.slice(1), {
         cwd: input.workspacePath,
         timeoutMs: 120_000,
       });
     }
+    return sanitized.removedPaths;
   };
   if (!input.cacheRoot || !input.fingerprint) {
-    await install();
-    return undefined;
+    return { sanitizedDependencyPaths: await install() };
   }
-  return withDependencyBootstrapLock({
-    cacheRoot: input.cacheRoot,
-    fingerprint: input.fingerprint,
-  }, install);
+  const locked = await withDependencyBootstrapLock(
+    {
+      cacheRoot: input.cacheRoot,
+      fingerprint: input.fingerprint,
+    },
+    install,
+  );
+  return {
+    sanitizedDependencyPaths: locked.value,
+    lockPath: locked.lockPath,
+    waitMs: locked.waitMs,
+    staleLockRecovered: locked.staleLockRecovered,
+  };
 }
 
 function attachInstallCommand(
@@ -238,7 +316,10 @@ function attachInstallCommand(
   return {
     ...result,
     ...(cacheRoot ? { cacheRoot } : {}),
-    installCommand: packageManagerInstallCommands(result.packageManager, cacheRoot)
+    installCommand: packageManagerInstallCommands(
+      result.packageManager,
+      cacheRoot,
+    )
       .map((command) => command.join(" "))
       .join(" && "),
   };
@@ -250,40 +331,52 @@ function packageManagerInstallCommands(
 ): readonly (readonly string[])[] {
   switch (packageManager.name) {
     case "pnpm": {
-      const storeArgs = cacheRoot ? ["--store-dir", join(cacheRoot, "pnpm-store")] : [];
+      const storeArgs = cacheRoot
+        ? ["--store-dir", join(cacheRoot, "pnpm-store")]
+        : [];
       return [
         ["pnpm", "fetch", "--frozen-lockfile", ...storeArgs],
         ["pnpm", "install", "--offline", "--frozen-lockfile", ...storeArgs],
       ];
     }
     case "npm":
-      return [[
-        "npm",
-        "ci",
-        "--prefer-offline",
-        ...(cacheRoot ? ["--cache", join(cacheRoot, "npm-cache")] : []),
-      ]];
+      return [
+        [
+          "npm",
+          "ci",
+          "--prefer-offline",
+          ...(cacheRoot ? ["--cache", join(cacheRoot, "npm-cache")] : []),
+        ],
+      ];
     case "yarn":
-      return [[
-        "yarn",
-        "install",
-        "--frozen-lockfile",
-        ...(cacheRoot ? ["--cache-folder", join(cacheRoot, "yarn-cache")] : []),
-      ]];
+      return [
+        [
+          "yarn",
+          "install",
+          "--frozen-lockfile",
+          ...(cacheRoot
+            ? ["--cache-folder", join(cacheRoot, "yarn-cache")]
+            : []),
+        ],
+      ];
     case "bun":
-      return [[
-        "bun",
-        "install",
-        "--frozen-lockfile",
-        ...(cacheRoot ? ["--cache-dir", join(cacheRoot, "bun-cache")] : []),
-      ]];
+      return [
+        [
+          "bun",
+          "install",
+          "--frozen-lockfile",
+          ...(cacheRoot ? ["--cache-dir", join(cacheRoot, "bun-cache")] : []),
+        ],
+      ];
     case "uv":
-      return [[
-        "uv",
-        "sync",
-        "--locked",
-        ...(cacheRoot ? ["--cache-dir", join(cacheRoot, "uv-cache")] : []),
-      ]];
+      return [
+        [
+          "uv",
+          "sync",
+          "--locked",
+          ...(cacheRoot ? ["--cache-dir", join(cacheRoot, "uv-cache")] : []),
+        ],
+      ];
   }
 }
 
@@ -306,9 +399,10 @@ async function detectPackageManager(
   workspacePath: string,
   packageJson: Record<string, unknown>,
 ): Promise<DependencyPackageManager> {
-  const packageManagerSpec = typeof packageJson.packageManager === "string"
-    ? packageJson.packageManager
-    : undefined;
+  const packageManagerSpec =
+    typeof packageJson.packageManager === "string"
+      ? packageJson.packageManager
+      : undefined;
   const packageManagerName = packageManagerSpec?.split("@")[0];
   if (isNodePackageManagerName(packageManagerName)) {
     return {
@@ -343,12 +437,13 @@ async function lockfileForPackageManager(
   workspacePath: string,
   name: NodeDependencyPackageManagerName,
 ): Promise<Pick<DependencyPackageManager, "lockfilePath">> {
-  const lockfiles: Record<NodeDependencyPackageManagerName, readonly string[]> = {
-    pnpm: ["pnpm-lock.yaml"],
-    npm: ["package-lock.json", "npm-shrinkwrap.json"],
-    yarn: ["yarn.lock"],
-    bun: ["bun.lockb", "bun.lock"],
-  };
+  const lockfiles: Record<NodeDependencyPackageManagerName, readonly string[]> =
+    {
+      pnpm: ["pnpm-lock.yaml"],
+      npm: ["package-lock.json", "npm-shrinkwrap.json"],
+      yarn: ["yarn.lock"],
+      bun: ["bun.lockb", "bun.lock"],
+    };
   for (const lockfile of lockfiles[name]) {
     const lockfilePath = join(workspacePath, lockfile);
     if (await pathExists(lockfilePath)) return { lockfilePath };
@@ -375,9 +470,9 @@ async function dependencyFingerprintInputs(input: {
   if (input.packageManager.lockfilePath) {
     return [
       ...inputs,
-      `${basename(input.packageManager.lockfilePath)}=${
-        await fileHash(input.packageManager.lockfilePath)
-      }`,
+      `${basename(input.packageManager.lockfilePath)}=${await fileHash(
+        input.packageManager.lockfilePath,
+      )}`,
     ];
   }
   return inputs;
@@ -387,21 +482,24 @@ async function dependencyBinaryChecks(
   workspacePath: string,
   packageJson: Record<string, unknown>,
 ): Promise<readonly DependencyBinaryCheck[]> {
-  const scripts = typeof packageJson.scripts === "object" && packageJson.scripts !== null
-    ? packageJson.scripts as Record<string, unknown>
-    : {};
+  const scripts =
+    typeof packageJson.scripts === "object" && packageJson.scripts !== null
+      ? (packageJson.scripts as Record<string, unknown>)
+      : {};
   const names = new Set<string>(["tsc"]);
   if (typeof scripts.test === "string") names.add("vitest");
   if (typeof scripts.lint === "string") names.add("eslint");
   const binDir = join(workspacePath, "node_modules", ".bin");
-  return Promise.all([...names].sort().map(async (name) => {
-    const path = join(binDir, name);
-    return {
-      name,
-      path,
-      exists: await pathExists(path),
-    };
-  }));
+  return Promise.all(
+    [...names].sort().map(async (name) => {
+      const path = join(binDir, name);
+      return {
+        name,
+        path,
+        exists: await pathExists(path),
+      };
+    }),
+  );
 }
 
 async function writeDependencyPreflightDiagnostic(
@@ -410,10 +508,18 @@ async function writeDependencyPreflightDiagnostic(
 ): Promise<string> {
   await mkdir(jobRootDir, { recursive: true, mode: 0o700 });
   const diagnosticPath = join(jobRootDir, "dependency-preflight.json");
-  await writeFile(diagnosticPath, `${JSON.stringify({
-    ...result,
+  await writeFile(
     diagnosticPath,
-  }, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+    `${JSON.stringify(
+      {
+        ...result,
+        diagnosticPath,
+      },
+      null,
+      2,
+    )}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
   return diagnosticPath;
 }
 
@@ -421,7 +527,7 @@ async function readPackageJson(path: string): Promise<Record<string, unknown>> {
   try {
     const parsed = JSON.parse(await readFile(path, "utf8"));
     return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
+      ? (parsed as Record<string, unknown>)
       : {};
   } catch {
     return {};
@@ -435,15 +541,15 @@ async function fileHash(path: string): Promise<string> {
 }
 
 function hashStrings(values: readonly string[]): string {
-  return createHash("sha256")
-    .update(values.join("\n"))
-    .digest("hex");
+  return createHash("sha256").update(values.join("\n")).digest("hex");
 }
 
 function isNodePackageManagerName(
   value: string | undefined,
 ): value is NodeDependencyPackageManagerName {
-  return value === "pnpm" || value === "npm" || value === "yarn" || value === "bun";
+  return (
+    value === "pnpm" || value === "npm" || value === "yarn" || value === "bun"
+  );
 }
 
 async function inspectPythonDependencyBootstrap(
@@ -465,7 +571,7 @@ async function inspectPythonDependencyBootstrap(
     "packageManager=uv",
     `pyproject.toml=${await fileHash(pyprojectPath)}`,
     `uv.lock=${await fileHash(uvLockPath)}`,
-    ...(await pathExists(pythonVersionPath)
+    ...((await pathExists(pythonVersionPath))
       ? [`.python-version=${await fileHash(pythonVersionPath)}`]
       : []),
   ];
@@ -539,6 +645,22 @@ function baseResult(
     fingerprintInputs: [],
     status,
     warnings: [],
+  };
+}
+
+function withDependencySafety(
+  result: DependencyPreflightResult,
+  unsafeDependencyPaths: readonly string[],
+): DependencyPreflightResult {
+  if (unsafeDependencyPaths.length === 0) return result;
+  return {
+    ...result,
+    status: "unsafe",
+    unsafeDependencyPaths,
+    warnings: [
+      ...result.warnings,
+      `dependency_environment_unsafe:${unsafeDependencyPaths.join(",")}`,
+    ],
   };
 }
 

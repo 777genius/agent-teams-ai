@@ -3,6 +3,7 @@ import {
   assertFilesWithinExpected,
   normalizeExpectedFiles,
   ReviewDecisionStatus,
+  type WorkspaceLock,
   type WorkspaceLockPort,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
@@ -41,7 +42,7 @@ export async function captureReviewedWorkerOutput(
   });
   try {
     const captured = await deps.snapshotter.capture({
-      workspacePath: input.workspacePath,
+      workspacePath: lock.workspacePath,
     });
     const changedFiles = normalizeExpectedFiles(captured.changedFiles);
     assertFilesWithinExpected(changedFiles, approvedFiles);
@@ -111,7 +112,7 @@ export async function verifyReviewedWorkerOutputStillMatches(
     owner: `reviewed-output-verify:${snapshot.controllerJobId}:${snapshot.workerJobId}`,
   });
   try {
-    await assertReviewedWorkerOutputStillMatches(deps, snapshot);
+    await assertReviewedWorkerOutputStillMatchesLocked(deps, snapshot, lock);
   } finally {
     await deps.locks.release(lock);
   }
@@ -123,18 +124,16 @@ export async function withReviewedWorkerOutputStillMatching<T>(
     "snapshotter" | "locks" | "continuationEnvironment"
   >,
   snapshot: ReviewedWorkerOutputSnapshot,
-  effect: () => Promise<T>,
+  effect: (canonicalWorkspacePath: string) => Promise<T>,
 ): Promise<T> {
   const lock = await deps.locks.acquire({
     workspacePath: snapshot.sourceWorkspacePath,
     owner: `reviewed-output-continuation:${snapshot.controllerJobId}:${snapshot.workerJobId}`,
   });
   try {
-    await assertReviewedWorkerOutputStillMatches(deps, snapshot);
-    await deps.continuationEnvironment.assertDependencyRootsSafe({
-      workspacePath: snapshot.sourceWorkspacePath,
-    });
-    return await effect();
+    await assertReviewedWorkerOutputStillMatchesLocked(deps, snapshot, lock);
+    await assertReviewedWorkerContinuationEnvironmentLocked(deps, lock);
+    return await effect(lock.workspacePath);
   } finally {
     await deps.locks.release(lock);
   }
@@ -152,21 +151,23 @@ export async function sanitizeReviewedWorkerContinuationEnvironment(
     owner: `reviewed-output-sanitize:${snapshot.controllerJobId}:${snapshot.workerJobId}`,
   });
   try {
-    await assertReviewedWorkerOutputStillMatches(deps, snapshot);
-    return await deps.continuationEnvironment.sanitizeDependencyRootLinks({
-      workspacePath: snapshot.sourceWorkspacePath,
-    });
+    return await sanitizeReviewedWorkerContinuationEnvironmentLocked(
+      deps,
+      snapshot,
+      lock,
+    );
   } finally {
     await deps.locks.release(lock);
   }
 }
 
-async function assertReviewedWorkerOutputStillMatches(
+export async function assertReviewedWorkerOutputStillMatchesLocked(
   deps: Pick<ReviewedWorkerOutputDeps, "snapshotter">,
   snapshot: ReviewedWorkerOutputSnapshot,
+  workspace: WorkspaceLock,
 ): Promise<void> {
   const current = await deps.snapshotter.capture({
-    workspacePath: snapshot.sourceWorkspacePath,
+    workspacePath: workspace.workspacePath,
   });
   const currentChangedFiles = normalizeExpectedFiles(current.changedFiles);
   if (
@@ -176,6 +177,29 @@ async function assertReviewedWorkerOutputStillMatches(
   ) {
     throw new Error("reviewed_worker_output_workspace_changed_after_capture");
   }
+}
+
+export async function sanitizeReviewedWorkerContinuationEnvironmentLocked(
+  deps: Pick<
+    ReviewedWorkerOutputDeps,
+    "snapshotter" | "continuationEnvironment"
+  >,
+  snapshot: ReviewedWorkerOutputSnapshot,
+  workspace: WorkspaceLock,
+): Promise<{ readonly removedPaths: readonly string[] }> {
+  await assertReviewedWorkerOutputStillMatchesLocked(deps, snapshot, workspace);
+  return await deps.continuationEnvironment.sanitizeDependencyRootLinks({
+    workspacePath: workspace.workspacePath,
+  });
+}
+
+export async function assertReviewedWorkerContinuationEnvironmentLocked(
+  deps: Pick<ReviewedWorkerOutputDeps, "continuationEnvironment">,
+  workspace: WorkspaceLock,
+): Promise<void> {
+  await deps.continuationEnvironment.assertDependencyRootsSafe({
+    workspacePath: workspace.workspacePath,
+  });
 }
 
 export async function commitReviewedWorkerOutputReviewAttestation(input: {

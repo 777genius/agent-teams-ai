@@ -1,5 +1,12 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -637,8 +644,9 @@ describe("codex goal runner", () => {
         nextAction: "preserve_patch",
       });
       expect(result.details).toMatchObject({ baseCommit });
+      const canonicalJobRoot = await realpath(config.jobRootDir);
       expect(result.evidence).toEqual(expect.arrayContaining([
-        `patch_preserved:${join(config.jobRootDir, "task-patch.handoff.patch")}`,
+        `patch_preserved:${join(canonicalJobRoot, "task-patch.handoff.patch")}`,
       ]));
       expect(await readFile(join(config.jobRootDir, "task-patch.handoff.patch"), "utf8"))
         .toContain("after");

@@ -1,5 +1,12 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -63,6 +70,7 @@ describe("completed Codex goal result refresh", () => {
     });
     const result = JSON.parse(await readFile(outputPath, "utf8")) as
       Record<string, unknown>;
+    const canonicalJobRoot = await realpath(jobRootDir);
 
     expect(reconciliation).toMatchObject({
       wrote: true,
@@ -77,19 +85,19 @@ describe("completed Codex goal result refresh", () => {
       changedFiles: ["tracked.txt"],
       artifacts: [{
         kind: "patch",
-        path: join(jobRootDir, "task-1.handoff.patch"),
+        path: join(canonicalJobRoot, "task-1.handoff.patch"),
       }, {
         kind: "summary",
-        path: join(jobRootDir, "task-1.handoff.summary.json"),
+        path: join(canonicalJobRoot, "task-1.handoff.summary.json"),
       }, {
         kind: "manifest",
-        path: join(jobRootDir, "task-1.handoff.manifest.json"),
+        path: join(canonicalJobRoot, "task-1.handoff.manifest.json"),
       }],
     });
     expect(result.evidence).toEqual(expect.arrayContaining([
       "worker_completed",
       "supervisor_refreshed_terminal_result_artifacts",
-      `patch_preserved:${join(jobRootDir, "task-1.handoff.patch")}`,
+      `patch_preserved:${join(canonicalJobRoot, "task-1.handoff.patch")}`,
     ]));
   });
 
@@ -136,6 +144,7 @@ describe("completed Codex goal result refresh", () => {
     });
     const result = JSON.parse(await readFile(outputPath, "utf8")) as
       Record<string, unknown>;
+    const canonicalJobRoot = await realpath(jobRootDir);
 
     expect(status).toMatchObject({
       resultStatus: "done",
@@ -146,9 +155,9 @@ describe("completed Codex goal result refresh", () => {
       changedFiles: ["S0.md"],
       details: { baseCommit: expect.stringMatching(/^[a-f0-9]{40}$/) },
       artifacts: [
-        { kind: "patch", path: join(jobRootDir, "task-1.handoff.patch") },
-        { kind: "summary", path: join(jobRootDir, "task-1.handoff.summary.json") },
-        { kind: "manifest", path: join(jobRootDir, "task-1.handoff.manifest.json") },
+        { kind: "patch", path: join(canonicalJobRoot, "task-1.handoff.patch") },
+        { kind: "summary", path: join(canonicalJobRoot, "task-1.handoff.summary.json") },
+        { kind: "manifest", path: join(canonicalJobRoot, "task-1.handoff.manifest.json") },
       ],
     });
   });

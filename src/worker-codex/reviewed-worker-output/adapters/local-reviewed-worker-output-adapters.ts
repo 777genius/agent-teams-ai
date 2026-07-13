@@ -3,23 +3,20 @@ import { createHash, randomUUID } from "node:crypto";
 import {
   access,
   link,
-  lstat,
   mkdir,
   mkdtemp,
-  readdir,
   readFile,
-  realpath,
   rename,
   rm,
-  unlink,
   writeFile,
 } from "node:fs/promises";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import {
   detectSecretLikeContent,
   ReviewDecisionStatus,
   type ReviewDecision,
+  type WorkspaceLockPort,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
   LocalGitIntegrationAdapter,
@@ -27,6 +24,10 @@ import {
 } from "@vioxen/subscription-runtime/worker-local";
 import { readLocalGitHeadCommit } from "../../codex-goal-git-revision";
 import { captureGitWorkspacePatch } from "../../codex-goal-runtime-result-io";
+import {
+  inspectNodeDependencyEnvironment,
+  sanitizeNodeDependencyEnvironment,
+} from "../../dependency-environment-safety";
 import {
   reviewedWorkerOutputIdentityPayload,
   reviewedWorkerOutputFormat,
@@ -42,27 +43,21 @@ import type {
 } from "../ports/reviewed-worker-output-ports";
 
 const execFileAsync = promisify(execFile);
-const MAX_PACKAGE_ROOTS_SCAN = 10_000;
-const PACKAGE_SCAN_EXCLUDED_DIRS = new Set([
-  ".git",
-  ".cache",
-  ".pnpm-store",
-  "dist",
-  "node_modules",
-]);
 
-export class GitReviewedWorkerOutputSnapshotter
-  implements ReviewedWorkerOutputSnapshotterPort {
-  constructor(private readonly options: {
-    readonly tempRootDir: string;
-    readonly gitBinaryPath?: string;
-  }) {}
+export class GitReviewedWorkerOutputSnapshotter implements ReviewedWorkerOutputSnapshotterPort {
+  constructor(
+    private readonly options: {
+      readonly tempRootDir: string;
+      readonly gitBinaryPath?: string;
+    },
+  ) {}
 
   async capture(input: {
     readonly workspacePath: string;
   }): Promise<ReviewedWorkerOutputWorkspaceSnapshot> {
     const baseCommit = await readLocalGitHeadCommit(input.workspacePath);
-    if (!baseCommit) throw new Error("reviewed_worker_output_base_commit_required");
+    if (!baseCommit)
+      throw new Error("reviewed_worker_output_base_commit_required");
     const patch = await captureGitWorkspacePatch({
       workspacePath: input.workspacePath,
       ...(this.options.gitBinaryPath
@@ -104,22 +99,28 @@ export class GitReviewedWorkerOutputSnapshotter
     const indexPath = join(tempDir, "index");
     const env = { ...process.env, GIT_INDEX_FILE: indexPath };
     try {
-      await writeFile(patchPath, input.patch, { encoding: "utf8", mode: 0o600 });
-      await execFileAsync(this.options.gitBinaryPath ?? "git", [
-        "-C",
-        input.workspacePath,
-        "read-tree",
-        input.baseCommit,
-      ], { env, timeout: 10_000 });
-      await execFileAsync(this.options.gitBinaryPath ?? "git", [
-        "-C",
-        input.workspacePath,
-        "apply",
-        "--cached",
-        "--check",
-        "--whitespace=nowarn",
-        patchPath,
-      ], { env, timeout: 30_000, maxBuffer: 16 * 1024 * 1024 });
+      await writeFile(patchPath, input.patch, {
+        encoding: "utf8",
+        mode: 0o600,
+      });
+      await execFileAsync(
+        this.options.gitBinaryPath ?? "git",
+        ["-C", input.workspacePath, "read-tree", input.baseCommit],
+        { env, timeout: 10_000 },
+      );
+      await execFileAsync(
+        this.options.gitBinaryPath ?? "git",
+        [
+          "-C",
+          input.workspacePath,
+          "apply",
+          "--cached",
+          "--check",
+          "--whitespace=nowarn",
+          patchPath,
+        ],
+        { env, timeout: 30_000, maxBuffer: 16 * 1024 * 1024 },
+      );
     } catch {
       throw new Error("reviewed_worker_output_patch_apply_check_failed");
     } finally {
@@ -195,10 +196,14 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
   }): Promise<void> {
     assertSha256(input.attestation.reviewedOutputId);
     assertSha256(input.attestation.reviewMarkerSha256);
-    if (sha256(input.reviewMarkerContent) !== input.attestation.reviewMarkerSha256) {
+    if (
+      sha256(input.reviewMarkerContent) !== input.attestation.reviewMarkerSha256
+    ) {
       throw new Error("reviewed_worker_output_review_marker_hash_mismatch");
     }
-    const snapshot = await this.readSnapshot(input.attestation.reviewedOutputId);
+    const snapshot = await this.readSnapshot(
+      input.attestation.reviewedOutputId,
+    );
     if (!snapshot) throw new Error("reviewed_worker_output_not_found");
     const itemDir = this.itemDir(input.attestation.reviewedOutputId);
     const attestationPath = join(itemDir, "review-attestation.json");
@@ -212,7 +217,9 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
         "utf8",
       );
       if (sha256(markerCopy) !== existing.reviewMarkerSha256) {
-        throw new Error("reviewed_worker_output_review_attestation_marker_hash_mismatch");
+        throw new Error(
+          "reviewed_worker_output_review_attestation_marker_hash_mismatch",
+        );
       }
       return;
     }
@@ -221,16 +228,17 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
       input.attestation.reviewMarkerSha256,
     );
     await this.writeImmutableFile(markerCopyPath, input.reviewMarkerContent);
-    const tempPath = join(
-      itemDir,
-      `.review-attestation-${randomUUID()}.tmp`,
-    );
+    const tempPath = join(itemDir, `.review-attestation-${randomUUID()}.tmp`);
     try {
-      await writeFile(tempPath, `${JSON.stringify(input.attestation, null, 2)}\n`, {
-        encoding: "utf8",
-        mode: 0o600,
-        flag: "wx",
-      });
+      await writeFile(
+        tempPath,
+        `${JSON.stringify(input.attestation, null, 2)}\n`,
+        {
+          encoding: "utf8",
+          mode: 0o600,
+          flag: "wx",
+        },
+      );
       try {
         await link(tempPath, attestationPath);
       } catch (error) {
@@ -244,7 +252,9 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
       !committed ||
       committed.reviewedOutputId !== input.attestation.reviewedOutputId
     ) {
-      throw new Error("reviewed_worker_output_review_attestation_commit_failed");
+      throw new Error(
+        "reviewed_worker_output_review_attestation_commit_failed",
+      );
     }
   }
 
@@ -253,12 +263,14 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
   ): Promise<ReviewedWorkerOutputSnapshot | undefined> {
     const snapshot = await this.readSnapshot(reviewedOutputId);
     if (!snapshot) return undefined;
-    const attestation = await this.readReviewAttestation(
-      join(this.itemDir(reviewedOutputId), "review-attestation.json"),
-    ) ?? await this.readLegacyApprovedAttestation(
-      join(this.itemDir(reviewedOutputId), "approval.json"),
-      snapshot,
-    );
+    const attestation =
+      (await this.readReviewAttestation(
+        join(this.itemDir(reviewedOutputId), "review-attestation.json"),
+      )) ??
+      (await this.readLegacyApprovedAttestation(
+        join(this.itemDir(reviewedOutputId), "approval.json"),
+        snapshot,
+      ));
     if (!attestation) return undefined;
     if (attestation.reviewedOutputId !== reviewedOutputId) {
       throw new Error("reviewed_worker_output_review_attestation_id_mismatch");
@@ -271,7 +283,9 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
       "utf8",
     );
     if (sha256(markerCopy) !== attestation.reviewMarkerSha256) {
-      throw new Error("reviewed_worker_output_review_attestation_marker_hash_mismatch");
+      throw new Error(
+        "reviewed_worker_output_review_attestation_marker_hash_mismatch",
+      );
     }
     return snapshot;
   }
@@ -293,19 +307,23 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
       if (snapshot.reviewedOutputId !== reviewedOutputId) {
         throw new Error("reviewed_worker_output_manifest_id_mismatch");
       }
-      if (sha256(reviewedWorkerOutputIdentityPayload({
-        format: snapshot.format,
-        formatRevision: snapshot.formatRevision,
-        projectId: snapshot.projectId,
-        controllerJobId: snapshot.controllerJobId,
-        workerJobId: snapshot.workerJobId,
-        taskId: snapshot.taskId,
-        sourceWorkspacePath: snapshot.sourceWorkspacePath,
-        baseCommit: snapshot.baseCommit,
-        patchSha256: snapshot.patchSha256,
-        changedFiles: snapshot.changedFiles,
-        reviewDecision: snapshot.reviewDecision,
-      })) !== reviewedOutputId) {
+      if (
+        sha256(
+          reviewedWorkerOutputIdentityPayload({
+            format: snapshot.format,
+            formatRevision: snapshot.formatRevision,
+            projectId: snapshot.projectId,
+            controllerJobId: snapshot.controllerJobId,
+            workerJobId: snapshot.workerJobId,
+            taskId: snapshot.taskId,
+            sourceWorkspacePath: snapshot.sourceWorkspacePath,
+            baseCommit: snapshot.baseCommit,
+            patchSha256: snapshot.patchSha256,
+            changedFiles: snapshot.changedFiles,
+            reviewDecision: snapshot.reviewDecision,
+          }),
+        ) !== reviewedOutputId
+      ) {
         throw new Error("reviewed_worker_output_manifest_identity_mismatch");
       }
       if (sha256(patch) !== snapshot.patchSha256) {
@@ -325,7 +343,9 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
     attestationPath: string,
   ): Promise<ReviewedWorkerOutputReviewAttestation | undefined> {
     try {
-      const value = JSON.parse(await readFile(attestationPath, "utf8")) as unknown;
+      const value = JSON.parse(
+        await readFile(attestationPath, "utf8"),
+      ) as unknown;
       return parseReviewAttestation(value);
     } catch (error) {
       if (isMissingError(error)) return undefined;
@@ -341,7 +361,9 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
       const value = JSON.parse(await readFile(approvalPath, "utf8")) as unknown;
       const legacy = parseLegacyApproval(value);
       if (snapshot.reviewDecision.decision !== ReviewDecisionStatus.Approved) {
-        throw new Error("reviewed_worker_output_legacy_approval_requires_approved_decision");
+        throw new Error(
+          "reviewed_worker_output_legacy_approval_requires_approved_decision",
+        );
       }
       return {
         format: "reviewed-worker-output-review-attestation",
@@ -366,7 +388,10 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
     return join(itemDir, `review-marker-${markerSha256}.json`);
   }
 
-  private async writeImmutableFile(path: string, content: string): Promise<void> {
+  private async writeImmutableFile(
+    path: string,
+    content: string,
+  ): Promise<void> {
     try {
       const existing = await readFile(path, "utf8");
       if (existing !== content) {
@@ -391,14 +416,13 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
     } finally {
       await rm(tempPath, { force: true });
     }
-    if (await readFile(path, "utf8") !== content) {
+    if ((await readFile(path, "utf8")) !== content) {
       throw new Error("reviewed_worker_output_immutable_conflict");
     }
   }
 }
 
-export class LocalReviewedWorkerOutputReviewMarkerVerifier
-  implements ReviewedWorkerOutputReviewMarkerVerifierPort {
+export class LocalReviewedWorkerOutputReviewMarkerVerifier implements ReviewedWorkerOutputReviewMarkerVerifierPort {
   async verify(input: {
     readonly markerPath: string;
     readonly snapshot: ReviewedWorkerOutputSnapshot;
@@ -422,14 +446,17 @@ export class LocalReviewedWorkerOutputReviewMarkerVerifier
       "capturedAt",
     ]);
     if (
-      value.reviewedOutput.reviewedOutputId !== input.snapshot.reviewedOutputId ||
+      value.reviewedOutput.reviewedOutputId !==
+        input.snapshot.reviewedOutputId ||
       value.reviewedOutput.patchSha256 !== input.snapshot.patchSha256 ||
       value.reviewedOutput.patchPath !== input.snapshot.patchPath ||
       value.reviewedOutput.baseCommit !== input.snapshot.baseCommit ||
       stableJson(value.reviewedOutput.changedFiles) !==
         stableJson(input.snapshot.changedFiles) ||
-      value.reviewedOutput.reviewedBy !== input.snapshot.reviewDecision.reviewedBy ||
-      value.reviewedOutput.decision !== input.snapshot.reviewDecision.decision ||
+      value.reviewedOutput.reviewedBy !==
+        input.snapshot.reviewDecision.reviewedBy ||
+      value.reviewedOutput.decision !==
+        input.snapshot.reviewDecision.decision ||
       value.reviewedOutput.capturedAt !== input.snapshot.capturedAt
     ) {
       throw new Error("reviewed_worker_output_review_marker_mismatch");
@@ -438,94 +465,28 @@ export class LocalReviewedWorkerOutputReviewMarkerVerifier
   }
 }
 
-export class LocalReviewedWorkerContinuationEnvironment
-  implements ReviewedWorkerContinuationEnvironmentPort {
+export class LocalReviewedWorkerContinuationEnvironment implements ReviewedWorkerContinuationEnvironmentPort {
   async sanitizeDependencyRootLinks(input: {
     readonly workspacePath: string;
   }): Promise<{ readonly removedPaths: readonly string[] }> {
-    const workspaceRealPath = await realpath(input.workspacePath);
-    const dependencyRoots = await nodePackageDependencyRoots(workspaceRealPath);
-    const removedPaths: string[] = [];
-    for (const dependencyRoot of dependencyRoots) {
-      const status = await dependencyRootStatus(dependencyRoot, workspaceRealPath);
-      if (status === "symlink") {
-        await unlink(dependencyRoot);
-        removedPaths.push(relative(workspaceRealPath, dependencyRoot));
-      }
-    }
-    return { removedPaths: removedPaths.sort() };
+    return sanitizeNodeDependencyEnvironment(input);
   }
 
   async assertDependencyRootsSafe(input: {
     readonly workspacePath: string;
   }): Promise<void> {
-    const workspaceRealPath = await realpath(input.workspacePath);
-    const dependencyRoots = await nodePackageDependencyRoots(workspaceRealPath);
-    for (const dependencyRoot of dependencyRoots) {
-      const status = await dependencyRootStatus(dependencyRoot, workspaceRealPath);
-      if (status === "symlink") {
-        throw new Error("reviewed_worker_output_dependency_root_symlink_denied");
-      }
+    const inspection = await inspectNodeDependencyEnvironment(input);
+    if (inspection.unsafeDependencyRoots.length > 0) {
+      throw new Error(
+        "reviewed_worker_output_dependency_tree_outside_workspace",
+      );
     }
   }
-}
-
-async function nodePackageDependencyRoots(
-  workspaceRealPath: string,
-): Promise<readonly string[]> {
-  const queue = [workspaceRealPath];
-  const roots: string[] = [];
-  let scanned = 0;
-  while (queue.length > 0) {
-    const directory = queue.shift();
-    if (!directory) break;
-    scanned += 1;
-    if (scanned > MAX_PACKAGE_ROOTS_SCAN) {
-      throw new Error("reviewed_worker_output_dependency_scan_limit_exceeded");
-    }
-    const entries = await readdir(directory, { withFileTypes: true });
-    if (entries.some((entry) => entry.name === "package.json" && entry.isFile())) {
-      roots.push(join(directory, "node_modules"));
-    }
-    for (const entry of entries) {
-      if (!entry.isDirectory() || PACKAGE_SCAN_EXCLUDED_DIRS.has(entry.name)) continue;
-      queue.push(join(directory, entry.name));
-    }
-  }
-  return roots.sort();
-}
-
-async function dependencyRootStatus(
-  dependencyRoot: string,
-  workspaceRealPath: string,
-): Promise<"missing" | "directory" | "symlink"> {
-  let status;
-  try {
-    status = await lstat(dependencyRoot);
-  } catch (error) {
-    if (isMissingError(error)) return "missing";
-    throw error;
-  }
-  if (status.isSymbolicLink()) return "symlink";
-  if (!status.isDirectory()) {
-    throw new Error("reviewed_worker_output_dependency_root_invalid");
-  }
-  const dependencyRealPath = await realpath(dependencyRoot);
-  if (!pathWithin(workspaceRealPath, dependencyRealPath)) {
-    throw new Error("reviewed_worker_output_dependency_root_outside_workspace");
-  }
-  return "directory";
-}
-
-function pathWithin(root: string, candidate: string): boolean {
-  const normalizedRoot = resolve(root);
-  const normalizedCandidate = resolve(candidate);
-  return normalizedCandidate === normalizedRoot ||
-    normalizedCandidate.startsWith(`${normalizedRoot}${sep}`);
 }
 
 export function localReviewedWorkerOutputDeps(input: {
   readonly rootDir: string;
+  readonly locks?: WorkspaceLockPort;
 }) {
   return {
     snapshotter: new GitReviewedWorkerOutputSnapshotter({
@@ -534,10 +495,12 @@ export function localReviewedWorkerOutputDeps(input: {
     store: new LocalReviewedWorkerOutputStore({ rootDir: input.rootDir }),
     markerVerifier: new LocalReviewedWorkerOutputReviewMarkerVerifier(),
     continuationEnvironment: new LocalReviewedWorkerContinuationEnvironment(),
-    locks: new LocalWorkspaceIntegrationLock({
-      rootDir: join(input.rootDir, ".locks"),
-      staleLockMs: 30 * 60_000,
-    }),
+    locks:
+      input.locks ??
+      new LocalWorkspaceIntegrationLock({
+        rootDir: join(input.rootDir, ".locks"),
+        staleLockMs: 30 * 60_000,
+      }),
   };
 }
 
@@ -545,9 +508,13 @@ export function reviewedWorkerOutputRoot(registryRootDir: string): string {
   return join(dirname(registryRootDir), "reviewed-worker-outputs");
 }
 
-function parseSnapshot(raw: string, patchPath: string): ReviewedWorkerOutputSnapshot {
+function parseSnapshot(
+  raw: string,
+  patchPath: string,
+): ReviewedWorkerOutputSnapshot {
   const value = JSON.parse(raw) as unknown;
-  if (!isRecord(value)) throw new Error("reviewed_worker_output_manifest_invalid");
+  if (!isRecord(value))
+    throw new Error("reviewed_worker_output_manifest_invalid");
   assertExactKeys(value, [
     "format",
     "formatRevision",
@@ -616,14 +583,14 @@ function parseReviewDecision(value: unknown): ReviewDecision {
 }
 
 function isReviewDecisionStatus(value: unknown): value is ReviewDecisionStatus {
-  return value === ReviewDecisionStatus.Approved ||
+  return (
+    value === ReviewDecisionStatus.Approved ||
     value === ReviewDecisionStatus.Rejected ||
-    value === ReviewDecisionStatus.NeedsHuman;
+    value === ReviewDecisionStatus.NeedsHuman
+  );
 }
 
-function parseRequiredChecks(
-  value: unknown,
-): ReviewDecision["requiredChecks"] {
+function parseRequiredChecks(value: unknown): ReviewDecision["requiredChecks"] {
   if (!Array.isArray(value)) {
     throw new Error("reviewed_worker_output_review_invalid");
   }
@@ -635,7 +602,9 @@ function parseRequiredChecks(
     const timeoutMs = item.timeoutMs;
     if (
       timeoutMs !== undefined &&
-      (typeof timeoutMs !== "number" || !Number.isInteger(timeoutMs) || timeoutMs <= 0)
+      (typeof timeoutMs !== "number" ||
+        !Number.isInteger(timeoutMs) ||
+        timeoutMs <= 0)
     ) {
       throw new Error("reviewed_worker_output_review_invalid");
     }
@@ -723,9 +692,10 @@ function requiredString(value: unknown): string {
 }
 
 function requiredStringArray(value: unknown): readonly string[] {
-  if (!Array.isArray(value) || !value.every((item) =>
-    typeof item === "string" && item.length > 0
-  )) {
+  if (
+    !Array.isArray(value) ||
+    !value.every((item) => typeof item === "string" && item.length > 0)
+  ) {
     throw new Error("reviewed_worker_output_manifest_invalid");
   }
   return value;
@@ -767,15 +737,18 @@ function isMissingError(error: unknown): boolean {
 }
 
 function isAlreadyExistsError(error: unknown): boolean {
-  return isRecord(error) && (error.code === "EEXIST" || error.code === "ENOTEMPTY");
+  return (
+    isRecord(error) && (error.code === "EEXIST" || error.code === "ENOTEMPTY")
+  );
 }
 
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
   if (isRecord(value)) {
-    return `{${Object.keys(value).sort().map((key) =>
-      `${JSON.stringify(key)}:${stableJson(value[key])}`
-    ).join(",")}}`;
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`)
+      .join(",")}}`;
   }
   return JSON.stringify(value);
 }

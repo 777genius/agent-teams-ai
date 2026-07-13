@@ -876,7 +876,7 @@ describe("codex goal MCP server", () => {
         skipDoctor: true,
       })).resolves.toMatchObject({
         ok: false,
-        error: "project_control_denied:path_outside_scope",
+        error: "project_control_workspace_real_path_outside_scope",
       });
     } finally {
       await client.close();

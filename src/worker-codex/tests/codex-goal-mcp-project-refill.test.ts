@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, chmod, mkdir, mkdtemp, readFile, rm, symlink, utimes, writeFile } from "node:fs/promises";
+import { access, chmod, mkdir, mkdtemp, readFile, realpath, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -228,9 +228,9 @@ describe("codex goal MCP server", () => {
             name: "npm",
             source: "packageManager",
             versionSpec: "npm@11.0.0",
-            lockfilePath: join(childWorkspace, "package-lock.json"),
+            lockfilePath: join(await realpath(childWorkspace), "package-lock.json"),
           },
-          nodeModulesPath: join(childWorkspace, "node_modules"),
+          nodeModulesPath: join(await realpath(childWorkspace), "node_modules"),
           nodeModulesExists: false,
           diagnosticPath: join(childJobRoot, "dependency-preflight.json"),
           installCommand: `npm ci --prefer-offline --cache ${
@@ -281,7 +281,7 @@ describe("codex goal MCP server", () => {
       ) as Record<string, unknown>;
       expect(dependencyPreflight).toMatchObject({
         status: "deps_missing",
-        nodeModulesPath: join(childWorkspace, "node_modules"),
+        nodeModulesPath: join(await realpath(childWorkspace), "node_modules"),
         cacheRoot: join(root, "worker-jobs", ".dependency-cache"),
       });
       const retry = await callToolJson(client, "codex_goal_project_refill_worker", {
