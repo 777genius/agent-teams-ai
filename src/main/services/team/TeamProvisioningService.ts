@@ -469,8 +469,8 @@ import {
   OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC,
   promoteCommittedOpenCodeAppManagedBootstrapEvidence,
   selectOpenCodeSecondaryBootstrapStallDiagnostic,
-  shouldRetainOpenCodeRuntimeLaunch,
   shouldMarkPersistedOpenCodeBootstrapStalled,
+  shouldRetainOpenCodeRuntimeLaunch,
   summarizeRuntimeLaunchResultMembers,
   toOpenCodePersistedLaunchMember as toOpenCodePersistedLaunchMemberHelper,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy';
