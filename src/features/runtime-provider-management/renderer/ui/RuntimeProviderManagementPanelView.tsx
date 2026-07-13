@@ -2414,6 +2414,8 @@ function ProviderModelList({
   const pickerOpen = state.modelPickerProviderId === provider.providerId;
   const modelListRef = useRef<HTMLDivElement | null>(null);
   const requestedModelCursorRef = useRef<string | null>(null);
+  const modelPageScrollTopRef = useRef(0);
+  const modelPageUserScrolledRef = useRef(false);
   const [recommendedOnly, setRecommendedOnly] = useState(false);
   const [freeOnly, setFreeOnly] = useState(false);
   const hasRecommendedModels = useMemo(
@@ -2502,6 +2504,8 @@ function ProviderModelList({
       return;
     }
     requestedModelCursorRef.current = cursor;
+    modelPageScrollTopRef.current = modelListRef.current?.scrollTop ?? 0;
+    modelPageUserScrolledRef.current = false;
     void actions
       .loadMoreModels()
       .catch(() => undefined)
@@ -2509,6 +2513,21 @@ function ProviderModelList({
         if (requestedModelCursorRef.current === cursor) {
           requestedModelCursorRef.current = null;
         }
+        const modelList = modelListRef.current;
+        const scrollTopBeforeLoad = modelPageScrollTopRef.current;
+        if (!modelList) {
+          return;
+        }
+        window.requestAnimationFrame(() => {
+          if (
+            modelList === modelListRef.current &&
+            !modelPageUserScrolledRef.current &&
+            modelList.scrollTop === 0 &&
+            scrollTopBeforeLoad > 0
+          ) {
+            modelList.scrollTop = scrollTopBeforeLoad;
+          }
+        });
       });
   }, [
     actions,
@@ -2631,7 +2650,7 @@ function ProviderModelList({
             </Label>
           </div>
         ) : null}
-        {state.modelsTotalCount !== null && state.modelsTotalCount > state.models.length ? (
+        {state.modelsTotalCount !== null ? (
           <div className="ml-auto text-xs tabular-nums text-[var(--color-text-muted)]">
             {state.models.length} / {state.modelsTotalCount}
           </div>
@@ -2651,7 +2670,12 @@ function ProviderModelList({
         data-testid="runtime-provider-model-list"
         className={cn(!shouldVirtualize && 'space-y-2', 'overflow-y-auto pr-1')}
         style={{ maxHeight: 300 }}
-        onScroll={(event) => loadNextModelPageNearEnd(event.currentTarget)}
+        onScroll={(event) => {
+          if (state.modelsLoadingMore && event.nativeEvent.isTrusted) {
+            modelPageUserScrolledRef.current = true;
+          }
+          loadNextModelPageNearEnd(event.currentTarget);
+        }}
       >
         {!pickerOpen || state.modelsLoading ? <RuntimeProviderModelLoadingSkeleton /> : null}
         {pickerOpen && !state.modelsLoading && visibleModels.length === 0 && !state.modelsError ? (

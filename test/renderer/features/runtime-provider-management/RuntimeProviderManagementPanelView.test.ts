@@ -2880,6 +2880,92 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(host.textContent).toContain('Provider models load timed out');
   });
 
+  it('preserves the model scroll position when a virtualized page is appended', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let finishLoadMore: (() => void) | undefined;
+    const actions = createActions();
+    actions.loadMoreModels = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishLoadMore = resolve;
+        })
+    );
+    const connectedProvider = {
+      ...createState().view!.providers[0],
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      modelCount: 100,
+      actions: [],
+    };
+    const models = Array.from({ length: 80 }, (_, index) => ({
+      providerId: 'openrouter',
+      modelId: `openrouter/test/model-${index}`,
+      displayName: `test/model-${index}`,
+      sourceLabel: 'OpenRouter',
+      free: false,
+      default: false,
+      availability: 'untested' as const,
+    }));
+    const clientHeightSpy = vi
+      .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
+      .mockImplementation(function getClientHeight(this: HTMLElement) {
+        return this.getAttribute('data-testid') === 'runtime-provider-model-list' ? 300 : 0;
+      });
+    const scrollHeightSpy = vi
+      .spyOn(HTMLElement.prototype, 'scrollHeight', 'get')
+      .mockImplementation(function getScrollHeight(this: HTMLElement) {
+        return this.getAttribute('data-testid') === 'runtime-provider-model-list' ? 9_000 : 0;
+      });
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(RuntimeProviderManagementPanelView, {
+            state: createState({
+              view: { ...createState().view!, providers: [connectedProvider] },
+              providers: [connectedProvider],
+              selectedProviderId: 'openrouter',
+              modelPickerProviderId: 'openrouter',
+              modelPickerMode: 'use',
+              models,
+              modelsTotalCount: 100,
+              modelsNextCursor: '80',
+            }),
+            actions,
+            disabled: false,
+          })
+        );
+        await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      });
+
+      const modelList = host.querySelector<HTMLElement>(
+        '[data-testid="runtime-provider-model-list"]'
+      );
+      expect(modelList).not.toBeNull();
+      if (!modelList) {
+        return;
+      }
+      modelList.scrollTop = 8_700;
+      await act(async () => {
+        modelList.dispatchEvent(new Event('scroll', { bubbles: true }));
+        await Promise.resolve();
+      });
+      expect(actions.loadMoreModels).toHaveBeenCalledTimes(1);
+
+      modelList.scrollTop = 0;
+      await act(async () => {
+        finishLoadMore?.();
+        await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      });
+      expect(modelList.scrollTop).toBe(8_700);
+    } finally {
+      clientHeightSpy.mockRestore();
+      scrollHeightSpy.mockRestore();
+    }
+  });
+
   it('filters provider model picker rows to free models', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
