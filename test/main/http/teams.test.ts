@@ -1154,6 +1154,29 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
+  it('rejects malformed OpenCode runtime callback bodies before delegation', async () => {
+    const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
+
+    try {
+      for (const payload of ['null', '[]']) {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+          headers: { 'content-type': 'application/json' },
+          payload,
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json()).toEqual({
+          error: 'runtime body must be an object',
+        });
+      }
+      expect(recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
   it('returns 501 for OpenCode runtime callbacks without the optional team HTTP aggregate', async () => {
     const app = Fastify();
     const mocks = createServicesMock();
