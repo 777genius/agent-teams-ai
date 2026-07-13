@@ -34,7 +34,7 @@ describe("Codex goal handoff artifact materialization", () => {
       workerJobId: "worker-1",
       taskId: "task-1",
       workspacePath: fixture.workspacePath,
-      jobRootDir: fixture.jobRootDir,
+      jobRootDir: await realpath(fixture.jobRootDir),
       expectedBaseCommit: fixture.baseCommit,
     });
     expect(first).not.toBeNull();
@@ -58,7 +58,7 @@ describe("Codex goal handoff artifact materialization", () => {
     expect(JSON.parse(manifestBytes.toString("utf8"))).toMatchObject({
       kind: "subscription-runtime-worker-handoff",
       workerJobId: "worker-1",
-      jobRootDir: fixture.jobRootDir,
+      jobRootDir: await realpath(fixture.jobRootDir),
       changedPaths: ["docs/plan.md"],
     });
     expect(materialized.artifacts[2]?.sha256).toBe(

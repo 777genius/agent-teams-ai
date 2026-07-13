@@ -42,8 +42,8 @@ import {
   localReviewedWorkerOutputDeps,
   reviewedWorkerOutputRoot,
   verifyReviewedWorkerOutputStillMatches,
-  withReviewedWorkerOutputStillMatching,
 } from "./reviewed-worker-output";
+import type { ProjectControlWorkspaceLease } from "./codex-goal-project-workspace-lock";
 import {
   noopOperationResult,
   type CodexGoalProjectCreateWorktreeInput,
@@ -105,6 +105,7 @@ export type CodexProjectControlBrokerInput = {
   readonly integrateCommitInput?: CodexGoalProjectIntegrateCommitInput;
   readonly pushBranchInput?: CodexGoalProjectPushBranchInput;
   readonly startLaunch?: CodexGoalLaunchInput;
+  readonly startWorkspaceLease?: ProjectControlWorkspaceLease;
   readonly startSkipDoctor?: boolean;
   readonly stopLaunch?: CodexGoalLaunchInput;
   readonly reviewLaunch?: CodexGoalLaunchInput;
@@ -214,6 +215,15 @@ function codexProjectControlPorts(
           throw new Error("project_control_start_launch_required");
         }
         const startLaunch = input.startLaunch;
+        if (!input.startWorkspaceLease) {
+          throw new Error("project_control_start_workspace_lease_required");
+        }
+        if (
+          input.startWorkspaceLease.canonicalWorkspacePath !==
+          startLaunch.config.workspacePath
+        ) {
+          throw new Error("project_control_start_workspace_lease_mismatch");
+        }
         const start = async () => {
           await prepareCodexGoalLaunchPaths(startLaunch);
           if (!input.startSkipDoctor) {
@@ -242,15 +252,7 @@ function codexProjectControlPorts(
           }
           return operationResult(command.preview);
         };
-        if (!input.reviewedContinuation) return await start();
-        const reviewedOutputDeps = localReviewedWorkerOutputDeps({
-          rootDir: reviewedWorkerOutputRoot(input.registryRootDir),
-        });
-        return await withReviewedWorkerOutputStillMatching(
-          reviewedOutputDeps,
-          input.reviewedContinuation,
-          start,
-        );
+        return await start();
       },
       async stopWorker() {
         if (!input.stopLaunch) {

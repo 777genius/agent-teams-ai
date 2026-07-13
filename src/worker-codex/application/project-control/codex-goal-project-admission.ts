@@ -11,6 +11,7 @@ import {
   evaluateProjectAdmission,
   projectAdmissionDebtCounts,
   type ConsumedOutputLedger,
+  type ActiveWriterRiskKind,
   type ProjectAccessScope,
   type ProjectAdmissionGate,
   type ProjectAdmissionSnapshot,
@@ -91,7 +92,9 @@ export function codexProjectAdmissionGate(
 ): ProjectAdmissionGate {
   return {
     async evaluate(request) {
-      const snapshot = await readCodexProjectAdmissionSnapshot(input);
+      // Admission protects a mutation. A cached pre-launch snapshot can no
+      // longer prove that another writer did not start in the meantime.
+      const snapshot = await buildCodexProjectAdmissionSnapshot(input);
       return evaluateProjectAdmission({
         request: {
           ...request,
@@ -323,7 +326,11 @@ async function debtFromOverviewItem(input: {
     }];
   }
   const debt: ProjectDebtItem[] = [];
-  if (item.activeWriterRisk === true || item.workspaceConflict === true) {
+  if (
+    item.workerAlive === true ||
+    hasActiveWriterRisk(item.activeWriterRisk) ||
+    item.workspaceConflict === true
+  ) {
     debt.push({
       reason: ProjectDebtReason.ActiveWriterConflict,
       subject: jobId,
@@ -406,6 +413,25 @@ async function debtFromOverviewItem(input: {
     ],
   });
   return debt;
+}
+
+const activeWriterRiskKinds = new Set<string>([
+  "none",
+  "active_worker",
+  "stale_live_worker",
+  "dirty_workspace_without_worker",
+  "state_mismatch",
+  "unknown",
+] satisfies readonly ActiveWriterRiskKind[]);
+
+function hasActiveWriterRisk(value: unknown): boolean {
+  // Keep accepting the former boolean overview shape while current status
+  // views publish a typed risk kind. Unknown non-empty strings fail closed.
+  if (value === true) return true;
+  const kind = stringValue(value);
+  if (kind === undefined) return false;
+  if (!activeWriterRiskKinds.has(kind)) return true;
+  return kind !== "none";
 }
 
 function workspaceConsumedByAnotherJob(input: {

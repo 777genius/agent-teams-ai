@@ -7,6 +7,7 @@ import type {
 } from "./dependency-bootstrap";
 import type { ProjectControlMcpArgs } from "./codex-goal-mcp-inputs";
 export {
+  projectControlCanonicalWorkspacePath,
   projectControlRealPathIfExists,
   projectControlRealPathOutsideReadScope,
   projectControlRealPathOutsideWorkspaceScope,
@@ -74,7 +75,7 @@ export function assertProjectControlScopeRepairAllowed(input: {
   for (const field of PROJECT_CONTROL_SCOPE_REPAIR_IMMUTABLE_FIELDS) {
     if (
       projectScopeFieldFingerprint(input.existing[field]) !==
-        projectScopeFieldFingerprint(input.proposed[field])
+      projectScopeFieldFingerprint(input.proposed[field])
     ) {
       throw new Error(`project_control_scope_${field}_repair_denied`);
     }
@@ -91,7 +92,9 @@ export function assertProjectControlScopeRepairAllowed(input: {
   const deniedRoots = input.existing.deniedRoots ?? [];
   for (const root of input.proposed.consumedOutputLedgerRoots ?? []) {
     if (!pathInsideAnyProjectRoot(root, allowedRoots)) {
-      throw new Error("project_control_consumed_output_ledger_root_outside_scope");
+      throw new Error(
+        "project_control_consumed_output_ledger_root_outside_scope",
+      );
     }
     if (pathInsideAnyProjectRoot(root, deniedRoots)) {
       throw new Error("project_control_consumed_output_ledger_root_denied");
@@ -129,6 +132,13 @@ export function projectControlDependencyBootstrapMode(
 export function assertProjectControlDependencyBootstrapReady(
   result: DependencyPreflightResult,
 ): void {
+  if (result.status === "unsafe") {
+    throw new Error(
+      `project_control_dependency_environment_unsafe:${(
+        result.unsafeDependencyPaths ?? []
+      ).join(",")}`,
+    );
+  }
   if (result.mode === "install" && result.status === "install_failed") {
     throw new Error(
       `project_control_dependency_bootstrap_failed:${result.warnings.join(",")}`,
@@ -141,24 +151,29 @@ export function assertProjectControlCreateManifestPaths(input: {
   readonly registryRootDir: string;
   readonly manifest: CodexGoalJobManifestInput;
 }): void {
-  const jobRootBase = dirname(input.scope.registryRoot ?? input.registryRootDir);
+  const jobRootBase = dirname(
+    input.scope.registryRoot ?? input.registryRootDir,
+  );
   if (!pathInsideOrEqual(input.manifest.jobRootDir, jobRootBase)) {
     throw new Error("project_control_job_root_outside_scope");
   }
-  if (!matchesProjectControlPrefix(
-    basename(input.manifest.jobRootDir),
-    input.scope.jobIdPrefixes ?? [],
-  )) {
+  if (
+    !matchesProjectControlPrefix(
+      basename(input.manifest.jobRootDir),
+      input.scope.jobIdPrefixes ?? [],
+    )
+  ) {
     throw new Error("project_control_job_root_prefix_denied");
   }
-  if (!pathInsideAnyProjectRoot(
-    input.manifest.workspacePath,
-    [
+  if (
+    !pathInsideAnyProjectRoot(input.manifest.workspacePath, [
       ...(input.scope.workspaceRoots ?? []),
       ...(input.scope.worktreeRoots ?? []),
-      ...(input.scope.isolatedWorkspaceRoot ? [input.scope.isolatedWorkspaceRoot] : []),
-    ],
-  )) {
+      ...(input.scope.isolatedWorkspaceRoot
+        ? [input.scope.isolatedWorkspaceRoot]
+        : []),
+    ])
+  ) {
     throw new Error("project_control_workspace_outside_scope");
   }
 
@@ -189,12 +204,14 @@ export function assertProjectControlCreateManifestPaths(input: {
   }
 }
 
-
 export function projectControlPathArg(
   args: ProjectControlMcpArgs,
   value: unknown,
   fieldName: string,
 ): string {
-  const cwd = resolvePath(process.cwd(), stringValue(args.cwd) ?? process.cwd());
+  const cwd = resolvePath(
+    process.cwd(),
+    stringValue(args.cwd) ?? process.cwd(),
+  );
   return requiredString(value, fieldName, cwd);
 }

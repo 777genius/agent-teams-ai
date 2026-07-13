@@ -3,15 +3,83 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  ProjectAdmissionWorkerRole,
   ProjectDebtReason,
+  ProjectOperation,
   type ProjectAccessScope,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
   buildCodexProjectAdmissionSnapshot,
+  codexProjectAdmissionGate,
   type CodexProjectAdmissionDeps,
 } from "../application/project-control/codex-goal-project-admission";
 
 describe("Codex project admission snapshot", () => {
+  it("denies a second writer from the current string risk view without using stale cache", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-active-writer-admission-"));
+    const workspacePath = join(root, "worktrees", "project-producer");
+    const previousCacheTtl = process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_CACHE_TTL_MS;
+    let activeWriter = false;
+
+    try {
+      process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_CACHE_TTL_MS = "120000";
+      await mkdir(workspacePath, { recursive: true });
+      const deps: CodexProjectAdmissionDeps = {
+        listJobs: async () => [{
+          jobId: "project-producer",
+          tags: ["worker-role-producer"],
+          taskId: "project-producer",
+          workspacePath,
+          promptPath: join(root, "producer.md"),
+          accountNames: ["account-a"],
+          updatedAt: "2026-07-14T00:00:00.000Z",
+          manifestPath: join(root, "producer.json"),
+        }],
+        buildOverviewItems: async () => [{
+          ok: true,
+          jobId: "project-producer",
+          workspacePath,
+          workspaceDirty: false,
+          workerAlive: activeWriter,
+          activeWriterRisk: activeWriter ? "active_worker" : "none",
+          activeWriterRiskReasons: activeWriter ? ["worker process is alive"] : [],
+        }],
+      };
+      const gate = codexProjectAdmissionGate({
+        registryRootDir: join(root, "registry"),
+        scope: {
+          projectId: "project",
+          jobIdPrefixes: ["project-"],
+        },
+        deps,
+      });
+
+      await expect(gate.evaluate({
+        operation: ProjectOperation.StartWorker,
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+      })).resolves.toMatchObject({ allowed: true });
+
+      activeWriter = true;
+      await expect(gate.evaluate({
+        operation: ProjectOperation.StartWorker,
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+      })).resolves.toMatchObject({
+        allowed: false,
+        debt: [expect.objectContaining({
+          reason: ProjectDebtReason.ActiveWriterConflict,
+          subject: "project-producer",
+        })],
+      });
+    } finally {
+      if (previousCacheTtl === undefined) {
+        delete process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_CACHE_TTL_MS;
+      } else {
+        process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_CACHE_TTL_MS = previousCacheTtl;
+      }
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps shared-worktree review markers separate from terminal job ledgers", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-shared-review-admission-"));
     const sharedWorkspace = join(root, "worktrees", "project-producer-v1");
@@ -117,7 +185,7 @@ describe("Codex project admission snapshot", () => {
     }
   });
 
-  it("does not assign consumed producer output to a live reviewer sharing its workspace", async () => {
+  it("fails closed when a live worker overview omits the active-writer risk kind", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-live-reviewer-admission-"));
     const workspacePath = join(root, "worktrees", "project-producer-v1");
     const ledgerRoot = join(root, "consumed-output");
@@ -176,7 +244,26 @@ describe("Codex project admission snapshot", () => {
         scope,
         deps,
       });
-      expect(liveSnapshot.debt).toEqual([]);
+      expect(liveSnapshot.debt).toEqual([
+        expect.objectContaining({
+          reason: ProjectDebtReason.ActiveWriterConflict,
+          subject: reviewer.jobId,
+          severity: "blocking",
+        }),
+      ]);
+      await expect(codexProjectAdmissionGate({
+        registryRootDir: join(root, "registry"),
+        scope,
+        deps,
+      }).evaluate({
+        operation: ProjectOperation.StartWorker,
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+      })).resolves.toMatchObject({
+        allowed: false,
+        debt: [expect.objectContaining({
+          reason: ProjectDebtReason.ActiveWriterConflict,
+        })],
+      });
 
       const staleSnapshot = await buildCodexProjectAdmissionSnapshot({
         registryRootDir: join(root, "registry"),
@@ -190,13 +277,18 @@ describe("Codex project admission snapshot", () => {
           }],
         },
       });
-      expect(staleSnapshot.debt).toEqual([
+      expect(staleSnapshot.debt).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          reason: ProjectDebtReason.ActiveWriterConflict,
+          subject: reviewer.jobId,
+          severity: "blocking",
+        }),
         expect.objectContaining({
           reason: ProjectDebtReason.StaleDirtyWorker,
           subject: workspacePath,
           severity: "blocking",
         }),
-      ]);
+      ]));
     } finally {
       await rm(root, { recursive: true, force: true });
     }
