@@ -18,6 +18,9 @@ import {
   projectControlStopStoredJobView,
 } from "./codex-goal-mcp-project-control-actions";
 import {
+  projectControlRecordFailedNoOutputView,
+} from "./codex-goal-mcp-project-control-terminal-output";
+import {
   projectControlCreateCodexGoalJobView,
   projectControlOperationStatusView,
   projectControlPrepareVerifierView,
@@ -158,4 +161,13 @@ export async function projectControlStopStoredJob(args: ProjectControlMcpArgs) {
 
 export async function projectControlMarkReviewed(args: ProjectControlMcpArgs) {
   return mcpJson(await projectControlMarkReviewedView(args, projectControlActionDeps()));
+}
+
+export async function projectControlRecordFailedNoOutput(
+  args: ProjectControlMcpArgs,
+) {
+  return mcpJson(await projectControlRecordFailedNoOutputView(
+    args,
+    projectControlActionDeps(),
+  ));
 }

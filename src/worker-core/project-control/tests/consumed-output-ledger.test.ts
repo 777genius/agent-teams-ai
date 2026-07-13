@@ -477,7 +477,7 @@ async function createBackupEvidence(
   const statusPath = join(backupRoot, "status.txt");
   const patchPath = join(backupRoot, "tracked.patch");
   const numstatPath = join(backupRoot, "numstat.txt");
-  await writeFile(statusPath, " M memory.py\n");
+  await writeFile(statusPath, hasAuthoredOutput ? " M memory.py\n" : "");
   await writeFile(
     patchPath,
     hasAuthoredOutput ? "diff --git a/memory.py b/memory.py\n" : "",

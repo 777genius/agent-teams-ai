@@ -296,6 +296,7 @@ codex_goal_project_controller_launch_plan({ controllerJobId, ... })
 codex_goal_project_controller_status({ controllerJobId, ... })
 codex_goal_project_start({ controllerJobId, jobId, confirmStart: true })
 codex_goal_project_mark_reviewed({ controllerJobId, jobId })
+codex_goal_project_record_failed_no_output({ controllerJobId, jobId, terminalAttemptId, failureCategory, failureCode, confirmFailedNoOutput: true })
 codex_goal_project_open_integration_attempt({ controllerJobId, ... })
 codex_goal_project_apply_worker_output({ controllerJobId, attemptId, ... })
 codex_goal_project_run_required_checks({ controllerJobId, attemptId, ... })
@@ -303,6 +304,11 @@ codex_goal_project_commit_approved_changes({ controllerJobId, attemptId, ... })
 codex_goal_project_push_approved_commit({ controllerJobId, attemptId, ... })
 codex_goal_project_reject_integration_attempt({ controllerJobId, attemptId, ... })
 ```
+
+Use `codex_goal_project_record_failed_no_output` only for a stopped worker whose
+workspace and immutable backup status are clean and whose patch/numstat evidence
+is empty. The command appends a new terminal receipt and never rewrites the
+original ledger record.
 
 Child jobs created by `codex_goal_project_create_job` inherit a narrowed scope
 from the controller. They default to

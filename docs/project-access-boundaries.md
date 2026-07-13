@@ -204,6 +204,7 @@ Current Codex adapter status:
   controller manifest can operate only through broker MCP tools such as
   `codex_goal_project_create_job`, `codex_goal_project_start`,
   `codex_goal_project_stop`, `codex_goal_project_mark_reviewed`,
+  `codex_goal_project_record_failed_no_output`,
   `codex_goal_project_create_worktree`, and the Project Integration lifecycle
   tools `codex_goal_project_open_integration_attempt`,
   `codex_goal_project_apply_worker_output`,
@@ -351,6 +352,8 @@ The expected control loop is:
 5. review the child diff and verification evidence;
    for a verifier, prefer `codex_goal_project_prepare_verifier` over a manual
    patch copy or `git apply`;
+   if an infrastructure failure produced no authored output, record it with
+   `codex_goal_project_record_failed_no_output` instead of review/integration;
 6. write a review marker with `codex_goal_project_mark_reviewed`;
 7. open the reviewed output with `codex_goal_project_open_integration_attempt`;
 8. apply it with `codex_goal_project_apply_worker_output`;

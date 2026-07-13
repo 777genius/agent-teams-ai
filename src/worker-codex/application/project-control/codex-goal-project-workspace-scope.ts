@@ -15,9 +15,26 @@ export async function projectControlRealPathOutsideWorkspaceScope(
   path: string,
   scope: ProjectAccessScope,
 ): Promise<string | undefined> {
+  return projectControlRealPathOutsideRoots(path, projectControlWorkspaceRoots(scope));
+}
+
+export async function projectControlRealPathOutsideReadScope(
+  path: string,
+  scope: ProjectAccessScope,
+): Promise<string | undefined> {
+  return projectControlRealPathOutsideRoots(path, uniqueProjectControlStrings([
+    ...(scope.readRoots ?? []),
+    ...projectControlWorkspaceRoots(scope),
+    ...(scope.registryRoot ? [scope.registryRoot] : []),
+  ]));
+}
+
+async function projectControlRealPathOutsideRoots(
+  path: string,
+  roots: readonly string[],
+): Promise<string | undefined> {
   const realPath = await optionalRealPathForAdmission(path);
   if (!realPath) return undefined;
-  const roots = projectControlWorkspaceRoots(scope);
   const realRoots = (await Promise.all(
     roots.map((root) => optionalRealPathForAdmission(root)),
   )).filter((root): root is string => Boolean(root));

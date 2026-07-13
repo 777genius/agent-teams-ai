@@ -56,6 +56,11 @@ export const projectScopedControllerToolGrants: readonly ControlledAgentToolGran
     "write",
   ),
   grant(
+    ControlledAgentToolName.ProjectRecordFailedNoOutput,
+    ControlledAgentToolGroup.WorkerLifecycle,
+    "write",
+  ),
+  grant(
     ControlledAgentToolName.ProjectOpenIntegrationAttempt,
     ControlledAgentToolGroup.IntegrationLifecycle,
     "write",

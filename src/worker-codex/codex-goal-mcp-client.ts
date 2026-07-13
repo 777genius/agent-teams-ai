@@ -92,6 +92,7 @@ const requiredCodexGoalMcpTools = [
   "codex_goal_project_reject_integration_attempt",
   "codex_goal_project_stop",
   "codex_goal_project_mark_reviewed",
+  "codex_goal_project_record_failed_no_output",
   "codex_goal_status",
   "codex_goal_doctor",
   "codex_goal_tail",

@@ -7,6 +7,7 @@ import {
 import { withMcpErrors } from "./codex-goal-mcp-response";
 import {
   projectControlMarkReviewed,
+  projectControlRecordFailedNoOutput,
   projectControlStopStoredJob,
 } from "./codex-goal-mcp-project-control-tool-handlers";
 
@@ -57,6 +58,27 @@ export function registerCodexGoalProjectControlReviewTools(server: McpServer): v
     },
     async (args) => withMcpErrors(async () =>
       projectControlMarkReviewed(args as ProjectControlMcpArgs),
+    ),
+  );
+
+  server.registerTool(
+    "codex_goal_project_record_failed_no_output",
+    {
+      title: "Project Control Record Failed Worker Without Output",
+      description:
+        "Append an immutable failed_no_output terminal ledger correction for a stopped, clean worker with complete empty-output evidence.",
+      inputSchema: {
+        ...jobIdInputSchema(),
+        controllerJobId: z.string().min(1),
+        terminalAttemptId: z.string().min(1),
+        failureCategory: z.string().min(1),
+        failureCode: z.string().min(1),
+        note: z.string().min(1).optional(),
+        confirmFailedNoOutput: z.boolean().optional(),
+      },
+    },
+    async (args) => withMcpErrors(async () =>
+      projectControlRecordFailedNoOutput(args as ProjectControlMcpArgs),
     ),
   );
 }

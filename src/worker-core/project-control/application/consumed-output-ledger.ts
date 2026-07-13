@@ -5,6 +5,7 @@ import {
   type ProjectAdmissionSnapshot,
   type ProjectDebtItem,
 } from "../domain/project-admission";
+import type { TerminalOutputBackup } from "../domain/terminal-output-decision";
 
 const CONSUMED_OUTPUT_TERMINAL_STATUSES = new Set([
   "integrated",
@@ -27,6 +28,10 @@ export type ConsumedOutputRecord = {
   readonly workspace?: string;
   readonly resolvedWorkspace?: string;
   readonly commitSha?: string;
+  readonly backup?: TerminalOutputBackup;
+  readonly backupEvidenceValid?: boolean;
+  readonly backupWorkspaceDirty?: boolean;
+  readonly reclassifiableAsFailedNoOutput?: boolean;
   readonly hasAuthoredOutput: boolean;
   readonly valid: boolean;
   readonly evidence: readonly string[];
@@ -149,7 +154,10 @@ export async function consumedOutputRecordFromJson(input: {
   const evidence: string[] = [];
   const backup = isRecord(input.value.backup) ? input.value.backup : undefined;
   const workspace = backup ? stringValue(backup.workspace) : undefined;
+  const terminalBackup = terminalOutputBackup(backup);
   const closedAt = stringValue(input.value.closedAt);
+  const hasActiveClaim = isRecord(input.value.claim) ||
+    input.value.active === true || input.value.claimed === true;
   if (!closedAt) evidence.push("terminal consumed-output record is missing closedAt");
   if (!backup) evidence.push("terminal consumed-output record is missing backup");
   if (!workspace) evidence.push("terminal consumed-output backup is missing workspace");
@@ -164,6 +172,7 @@ export async function consumedOutputRecordFromJson(input: {
     : {
       ok: false,
       hasAuthoredOutput: false,
+      workspaceDirty: false,
       evidence: ["backup metadata is missing"],
     };
   evidence.push(...backupEvidence.evidence);
@@ -171,7 +180,11 @@ export async function consumedOutputRecordFromJson(input: {
   const hasAuthoredOutput = backupEvidence.hasAuthoredOutput ||
     (status === "integrated" && commit !== undefined);
   if (status === NO_OUTPUT_STATUS) {
-    evidence.push(...failedNoOutputEvidence(input.value, hasAuthoredOutput));
+    evidence.push(...failedNoOutputEvidence(
+      input.value,
+      hasAuthoredOutput,
+      backupEvidence.workspaceDirty,
+    ));
   } else if (status === REVIEWED_NO_CHANGE_STATUS) {
     evidence.push(...reviewedNoChangeEvidence(input.value, hasAuthoredOutput));
   } else if (!hasAuthoredOutput) {
@@ -185,6 +198,14 @@ export async function consumedOutputRecordFromJson(input: {
   const resolvedWorkspace = workspace
     ? await input.source.resolveWorkspacePath(workspace)
     : undefined;
+  const reclassifiableAsFailedNoOutput = Boolean(
+    closedAt &&
+      terminalBackup &&
+      !hasActiveClaim &&
+      backupEvidence.ok &&
+      !backupEvidence.hasAuthoredOutput &&
+      !backupEvidence.workspaceDirty,
+  );
   return {
     jobId,
     status,
@@ -193,6 +214,10 @@ export async function consumedOutputRecordFromJson(input: {
     ...(workspace ? { workspace } : {}),
     ...(resolvedWorkspace ? { resolvedWorkspace } : {}),
     ...(commit ? { commitSha: commit } : {}),
+    ...(terminalBackup ? { backup: terminalBackup } : {}),
+    backupEvidenceValid: backupEvidence.ok,
+    backupWorkspaceDirty: backupEvidence.workspaceDirty,
+    reclassifiableAsFailedNoOutput,
     hasAuthoredOutput,
     valid: evidence.length === 0,
     evidence: evidence.length === 0
@@ -299,14 +324,18 @@ async function consumedOutputBackupEvidence(
 ): Promise<{
   readonly ok: boolean;
   readonly hasAuthoredOutput: boolean;
+  readonly workspaceDirty: boolean;
   readonly evidence: readonly string[];
 }> {
   const evidence: string[] = [];
   const statusPath = stringValue(backup.statusPath);
+  let statusSize: number | undefined;
   if (!statusPath) {
     evidence.push("backup is missing statusPath");
   } else if (!await source.pathExists(statusPath)) {
     evidence.push(`backup statusPath is missing: ${statusPath}`);
+  } else {
+    statusSize = await source.pathSize(statusPath);
   }
   const payloadPaths = [
     stringValue(backup.patchPath),
@@ -325,6 +354,7 @@ async function consumedOutputBackupEvidence(
   return {
     ok: evidence.length === 0,
     hasAuthoredOutput: payloadSizes.some((size) => size !== undefined && size > 0),
+    workspaceDirty: statusSize !== undefined && statusSize > 0,
     evidence,
   };
 }
@@ -332,6 +362,7 @@ async function consumedOutputBackupEvidence(
 function failedNoOutputEvidence(
   value: Record<string, unknown>,
   hasAuthoredOutput: boolean,
+  backupWorkspaceDirty: boolean,
 ): readonly string[] {
   const evidence: string[] = [];
   const failure = isRecord(value.failure) ? value.failure : undefined;
@@ -347,7 +378,29 @@ function failedNoOutputEvidence(
   if (hasAuthoredOutput) {
     evidence.push("failed_no_output record contradicts non-empty authored output evidence");
   }
+  if (backupWorkspaceDirty) {
+    evidence.push("failed_no_output record contradicts non-empty workspace status evidence");
+  }
   return evidence;
+}
+
+function terminalOutputBackup(
+  value: Record<string, unknown> | undefined,
+): TerminalOutputBackup | undefined {
+  if (!value) return undefined;
+  const workspace = stringValue(value.workspace);
+  const statusPath = stringValue(value.statusPath);
+  if (!workspace || !statusPath) return undefined;
+  const patchPath = stringValue(value.patchPath);
+  const numstatPath = stringValue(value.numstatPath);
+  const untrackedArchivePath = stringValue(value.untrackedArchivePath);
+  return {
+    workspace,
+    statusPath,
+    ...(patchPath ? { patchPath } : {}),
+    ...(numstatPath ? { numstatPath } : {}),
+    ...(untrackedArchivePath ? { untrackedArchivePath } : {}),
+  };
 }
 
 function reviewedNoChangeEvidence(

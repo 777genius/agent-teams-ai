@@ -41,6 +41,7 @@ export enum ControlledAgentToolName {
   ProjectPrepareVerifier = "codex_goal_project_prepare_verifier",
   ProjectStop = "codex_goal_project_stop",
   ProjectMarkReviewed = "codex_goal_project_mark_reviewed",
+  ProjectRecordFailedNoOutput = "codex_goal_project_record_failed_no_output",
   ProjectOpenIntegrationAttempt = "codex_goal_project_open_integration_attempt",
   ProjectApplyWorkerOutput = "codex_goal_project_apply_worker_output",
   ProjectRunRequiredChecks = "codex_goal_project_run_required_checks",

@@ -12,6 +12,7 @@ const workerLifecycleTools: readonly ProjectControlToolCapability[] = [
   capability("prepare_verifier", "worker_lifecycle", false),
   capability("recover_operations", "worker_lifecycle", false),
   capability("mark_reviewed", "worker_lifecycle", false),
+  capability("record_failed_no_output", "worker_lifecycle", false),
 ];
 
 const integrationLifecycleTools: readonly ProjectControlToolCapability[] = [

@@ -20,6 +20,7 @@ describe("describeProjectControlSurface", () => {
       "prepare_verifier",
       "recover_operations",
       "mark_reviewed",
+      "record_failed_no_output",
       "open_integration_attempt",
       "apply_worker_output",
       "run_required_checks",

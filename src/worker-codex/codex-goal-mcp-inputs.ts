@@ -185,6 +185,10 @@ export type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly reviewReason?: string;
   readonly approvedFiles?: readonly string[] | string;
   readonly requiredChecks?: readonly unknown[];
+  readonly terminalAttemptId?: string;
+  readonly failureCategory?: string;
+  readonly failureCode?: string;
+  readonly confirmFailedNoOutput?: boolean;
 };
 
 export type ProjectControllerLaunchPlanMcpArgs = ProjectControlMcpArgs & {
