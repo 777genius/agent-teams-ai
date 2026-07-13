@@ -7,8 +7,9 @@
 
 <p align="center">
   <a href="https://github.com/777genius/agent-teams-ai/releases/latest"><img src="https://img.shields.io/github/v/release/777genius/agent-teams-ai?style=flat-square&label=version&color=007ec6" alt="Latest Release" /></a>&nbsp;
+  <a href="https://discord.gg/qtqSZSyuEc"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv10%2Finvites%2FqtqSZSyuEc%3Fwith_counts%3Dtrue&query=%24.approximate_member_count&label=Discord&logo=discord&logoColor=white&color=5865F2&style=flat-square&suffix=%20members" alt="Discord" /></a>&nbsp;
+  <a href="https://agentteams.live/"><img src="https://img.shields.io/badge/site-agentteams.live-8B5CF6?style=flat-square&logo=googlechrome&logoColor=white" alt="AgentTeams" /></a>&nbsp;
   <a href="https://github.com/777genius/agent-teams-ai/actions/workflows/ci.yml"><img src="https://github.com/777genius/agent-teams-ai/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>&nbsp;
-  <a href="https://discord.gg/qtqSZSyuEc"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Fv10%2Finvites%2FqtqSZSyuEc%3Fwith_counts%3Dtrue&query=%24.approximate_member_count&label=Discord&logo=discord&logoColor=white&color=5865F2&style=flat-square&suffix=%20members" alt="Discord" /></a>
 </p>
 
 <p align="center">
@@ -292,9 +293,15 @@ Some RDP (Remote Desktop Protocol) sessions expose virtual GPU drivers that can 
 
 ---
 
-## Development
+## Roadmap (new)
+- [ ] Launching 24/7 autonomous teams in the cloud with current UI (in progress)
+- [ ] Automatic account switching  (in progress)
+- [ ] Navigating very complex long tasks without losing context (in progress)
+- [ ] Support for different coding agents (in progress)
+- [ ] A secure universal plugin system regardless of the type of agents
+- [ ] Efficiency and controllability under load with 20-100+ agents in parallel
 
-### Developer architecture docs
+## Development
 
 For feature architecture and implementation guidance:
 
@@ -305,7 +312,7 @@ For feature architecture and implementation guidance:
 
 ## Tech stack
 
-Electron 40, React 19, TypeScript 5, Tailwind CSS 3, Zustand 4. The desktop app reads local project, app, and runtime/session data. Claude Code data under `~/.claude/` is one of the supported local sources.
+Electron 40, React 19, TypeScript 5, Tailwind CSS 3, Zustand 4. The desktop app reads local project, app, and runtime/session data. Claude Code data under `~/.claude/` is one supported local source, while some runtime modes may also use provider or startup capability services when required.
 
 <details>
 <summary><strong>Build from source</strong></summary>
