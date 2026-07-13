@@ -332,8 +332,9 @@ pnpm dev
 
 `pnpm dev` starts the desktop Electron app. Do not start a browser/web dev server for normal development; that path is limited and is not the supported way to run agent teams locally.
 
-Use `pnpm dev:mcp` when you want an MCP browser/debugging tool to attach to the current
-Electron renderer through the local Chrome DevTools Protocol endpoint on `127.0.0.1:9222`.
+Use `pnpm dev:mcp` for automated interactive or visual UI verification. It exposes the current
+Electron renderer through the local Chrome DevTools Protocol endpoint on `127.0.0.1:9222`, avoiding
+window-selection ambiguity when packaged or other Electron apps are also open.
 
 The desktop app auto-discovers Claude Code projects from `~/.claude/`.
 

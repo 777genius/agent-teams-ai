@@ -20,6 +20,7 @@ GitHub repository disambiguation:
 Default local run target:
 
 - Use the desktop Electron app: `pnpm dev`
+- For automated interactive or visual UI verification, use `pnpm dev:mcp` instead of `pnpm dev`. It exposes the Electron renderer over local CDP on port `9222`, so the automation attaches to the intended dev window instead of confusing it with another Electron or packaged app window.
 - Do not start the browser/web dev mode for normal development or smoke checks. The browser path is limited and lacks the full desktop runtime, IPC, terminal, provider auth, and team lifecycle behavior.
 - When documenting or recommending startup commands, point contributors to the desktop app unless a task explicitly asks for browser-mode internals.
 
