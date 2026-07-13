@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -39,11 +39,16 @@ describe("Codex project reviewed worker output", () => {
     await Promise.all([
       mkdir(workerWorkspacePath, { recursive: true }),
       mkdir(targetWorkspacePath, { recursive: true }),
+      mkdir(workerJobRoot, { recursive: true }),
     ]);
     await gitInitRepository(workerWorkspacePath);
     await gitInitRepository(targetWorkspacePath);
     await mkdir(join(workerWorkspacePath, "docs"), { recursive: true });
-    await writeFile(join(workerWorkspacePath, "docs", "packet.md"), "base\n");
+    await Promise.all([
+      writeFile(join(workerWorkspacePath, "docs", "packet.md"), "base\n"),
+      writeFile(join(workerWorkspacePath, "package.json"), "{\"private\":true}\n"),
+      writeFile(join(workerWorkspacePath, ".gitignore"), "node_modules\n"),
+    ]);
     await git(workerWorkspacePath, ["add", "."]);
     await git(workerWorkspacePath, ["commit", "-m", "test: base"]);
     await writeFile(join(workerWorkspacePath, "docs", "packet.md"), "accepted output\n");
@@ -66,8 +71,11 @@ describe("Codex project reviewed worker output", () => {
         promptPath: join(workerJobRoot, "prompt.md"),
         taskId: workerJobId,
         accounts: ["account-a"],
+        tmuxSession: workerJobId,
+        codexBinaryPath: join(root, "missing-codex"),
         networkAccess: NetworkAccessMode.Restricted,
       });
+      await writeFile(join(workerJobRoot, "prompt.md"), "Continue reviewed remediation.\n");
       await callToolJson(client, "codex_goal_create_job", {
         registryRootDir,
         jobId: controllerJobId,
@@ -153,6 +161,100 @@ describe("Codex project reviewed worker output", () => {
           },
         },
       });
+
+      const rejected = await callToolJson(client, "codex_goal_project_mark_reviewed", {
+        registryRootDir,
+        controllerJobId,
+        jobId: workerJobId,
+        captureReviewedOutput: true,
+        expectedPatchSha256: sha256(patch),
+        reviewDecision: "rejected",
+        reviewedBy: controllerJobId,
+        reviewReason: "The same worker must remediate this exact patch.",
+        approvedFiles: ["docs/packet.md"],
+        requiredChecks: [],
+        note: "REJECT",
+      });
+      const rejectedOutputId = String(rejected.reviewedOutputId);
+      expect(rejectedOutputId).toMatch(/^[a-f0-9]{64}$/);
+      expect(rejectedOutputId).not.toBe(reviewedOutputId);
+      await expect(callToolJson(
+        client,
+        "codex_goal_project_open_integration_attempt",
+        {
+          registryRootDir,
+          controllerJobId,
+          attemptId: "attempt-rejected-output",
+          reviewedOutputId: rejectedOutputId,
+          targetWorkspacePath,
+          targetBranch: "main",
+        },
+      )).resolves.toMatchObject({
+        ok: false,
+        error: "reviewed_worker_output_not_approved",
+      });
+
+      await expect(callToolJson(client, "codex_goal_project_start", {
+        registryRootDir,
+        controllerJobId,
+        jobId: workerJobId,
+        forceStart: true,
+        confirmStart: true,
+      })).resolves.toMatchObject({
+        ok: false,
+        error: "project_control_reviewed_dirty_continuation_output_required",
+      });
+      await expect(callToolJson(client, "codex_goal_project_start", {
+        registryRootDir,
+        controllerJobId,
+        jobId: workerJobId,
+        reviewedOutputId,
+        forceStart: true,
+        confirmStart: true,
+      })).resolves.toMatchObject({
+        ok: false,
+        error: "reviewed_worker_output_rejected_continuation_required",
+      });
+      await writeFile(join(workerWorkspacePath, "docs", "packet.md"), "changed after review\n");
+      await expect(callToolJson(client, "codex_goal_project_start", {
+        registryRootDir,
+        controllerJobId,
+        jobId: workerJobId,
+        reviewedOutputId: rejectedOutputId,
+        forceStart: true,
+        confirmStart: true,
+      })).resolves.toMatchObject({
+        ok: false,
+        error: "reviewed_worker_output_workspace_changed_after_capture",
+      });
+      await writeFile(join(workerWorkspacePath, "docs", "packet.md"), "accepted output\n");
+      const foreignDependencies = join(root, "foreign-node-modules");
+      await mkdir(foreignDependencies, { recursive: true });
+      await symlink(foreignDependencies, join(workerWorkspacePath, "node_modules"));
+      await expect(callToolJson(client, "codex_goal_project_start", {
+        registryRootDir,
+        controllerJobId,
+        jobId: workerJobId,
+        reviewedOutputId: rejectedOutputId,
+        forceStart: true,
+        confirmStart: true,
+      })).resolves.toMatchObject({
+        ok: false,
+        reason: "project_control_dependency_environment_sanitized_recapture_required",
+        sanitizedPaths: ["node_modules"],
+      });
+      await expect(access(join(workerWorkspacePath, "node_modules")))
+        .rejects.toMatchObject({ code: "ENOENT" });
+      const continuation = await callToolJson(client, "codex_goal_project_start", {
+        registryRootDir,
+        controllerJobId,
+        jobId: workerJobId,
+        reviewedOutputId: rejectedOutputId,
+        forceStart: true,
+        confirmStart: true,
+      });
+      expect(continuation).toMatchObject({ ok: false });
+      expect(String(continuation.error)).toContain("doctor");
     } finally {
       await client.close();
       await server.close();

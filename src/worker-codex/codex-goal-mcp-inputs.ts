@@ -179,6 +179,7 @@ export type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly producerJobId?: string;
   readonly requireCanonicalRemoteHead?: boolean;
   readonly captureReviewedOutput?: boolean;
+  readonly reviewedOutputId?: string;
   readonly expectedPatchSha256?: string;
   readonly reviewDecision?: string;
   readonly reviewedBy?: string;

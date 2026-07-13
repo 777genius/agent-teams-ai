@@ -32,6 +32,7 @@ export type CaptureReviewedWorkerOutputInput = {
   readonly taskId: string;
   readonly workspacePath: string;
   readonly expectedPatchSha256: string;
+  readonly decision: ReviewDecisionStatus;
   readonly reviewedBy: string;
   readonly reason: string;
   readonly approvedFiles: readonly string[];
@@ -59,8 +60,8 @@ export type ReviewedWorkerOutputIdentity = Pick<
   | "reviewDecision"
 >;
 
-export type ReviewedWorkerOutputApproval = {
-  readonly format: "reviewed-worker-output-approval";
+export type ReviewedWorkerOutputReviewAttestation = {
+  readonly format: "reviewed-worker-output-review-attestation";
   readonly formatRevision: 1;
   readonly reviewedOutputId: string;
   readonly reviewMarkerPath: string;
@@ -100,7 +101,8 @@ export function reviewedOutputAsWorkerOutput(
   };
 }
 
-export function approvedReviewDecision(input: {
+export function reviewedOutputDecision(input: {
+  readonly decision: ReviewDecisionStatus;
   readonly reviewedBy: string;
   readonly reason: string;
   readonly approvedFiles: readonly string[];
@@ -108,7 +110,7 @@ export function approvedReviewDecision(input: {
 }): ReviewDecision {
   return {
     reviewedBy: input.reviewedBy,
-    decision: ReviewDecisionStatus.Approved,
+    decision: input.decision,
     reason: input.reason,
     approvedFiles: input.approvedFiles,
     requiredChecks: input.requiredChecks,

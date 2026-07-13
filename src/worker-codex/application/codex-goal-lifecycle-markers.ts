@@ -93,6 +93,7 @@ export async function writeCodexGoalReviewMarker(input: {
               baseCommit: input.reviewedOutput.baseCommit,
               changedFiles: input.reviewedOutput.changedFiles,
               reviewedBy: input.reviewedOutput.reviewDecision.reviewedBy,
+              decision: input.reviewedOutput.reviewDecision.decision,
               capturedAt: input.reviewedOutput.capturedAt,
             },
           }

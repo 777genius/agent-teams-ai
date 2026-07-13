@@ -3,14 +3,18 @@ import { createHash, randomUUID } from "node:crypto";
 import {
   access,
   link,
+  lstat,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
+  realpath,
   rename,
   rm,
+  unlink,
   writeFile,
 } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
 import {
   detectSecretLikeContent,
@@ -26,17 +30,26 @@ import { captureGitWorkspacePatch } from "../../codex-goal-runtime-result-io";
 import {
   reviewedWorkerOutputIdentityPayload,
   reviewedWorkerOutputFormat,
-  type ReviewedWorkerOutputApproval,
+  type ReviewedWorkerOutputReviewAttestation,
   type ReviewedWorkerOutputSnapshot,
   type ReviewedWorkerOutputWorkspaceSnapshot,
 } from "../domain/reviewed-worker-output";
 import type {
+  ReviewedWorkerContinuationEnvironmentPort,
   ReviewedWorkerOutputReviewMarkerVerifierPort,
   ReviewedWorkerOutputSnapshotterPort,
   ReviewedWorkerOutputStorePort,
 } from "../ports/reviewed-worker-output-ports";
 
 const execFileAsync = promisify(execFile);
+const MAX_PACKAGE_ROOTS_SCAN = 10_000;
+const PACKAGE_SCAN_EXCLUDED_DIRS = new Set([
+  ".git",
+  ".cache",
+  ".pnpm-store",
+  "dist",
+  "node_modules",
+]);
 
 export class GitReviewedWorkerOutputSnapshotter
   implements ReviewedWorkerOutputSnapshotterPort {
@@ -176,62 +189,62 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
     return stored;
   }
 
-  async commitApproval(input: {
-    readonly approval: ReviewedWorkerOutputApproval;
+  async commitReviewAttestation(input: {
+    readonly attestation: ReviewedWorkerOutputReviewAttestation;
     readonly reviewMarkerContent: string;
   }): Promise<void> {
-    assertSha256(input.approval.reviewedOutputId);
-    assertSha256(input.approval.reviewMarkerSha256);
-    if (sha256(input.reviewMarkerContent) !== input.approval.reviewMarkerSha256) {
+    assertSha256(input.attestation.reviewedOutputId);
+    assertSha256(input.attestation.reviewMarkerSha256);
+    if (sha256(input.reviewMarkerContent) !== input.attestation.reviewMarkerSha256) {
       throw new Error("reviewed_worker_output_review_marker_hash_mismatch");
     }
-    const snapshot = await this.readSnapshot(input.approval.reviewedOutputId);
+    const snapshot = await this.readSnapshot(input.attestation.reviewedOutputId);
     if (!snapshot) throw new Error("reviewed_worker_output_not_found");
-    const itemDir = this.itemDir(input.approval.reviewedOutputId);
-    const approvalPath = join(itemDir, "approval.json");
-    const existing = await this.readApproval(approvalPath);
+    const itemDir = this.itemDir(input.attestation.reviewedOutputId);
+    const attestationPath = join(itemDir, "review-attestation.json");
+    const existing = await this.readReviewAttestation(attestationPath);
     if (existing) {
-      if (existing.reviewedOutputId !== input.approval.reviewedOutputId) {
-        throw new Error("reviewed_worker_output_approval_conflict");
+      if (existing.reviewedOutputId !== input.attestation.reviewedOutputId) {
+        throw new Error("reviewed_worker_output_review_attestation_conflict");
       }
       const markerCopy = await readFile(
         this.reviewMarkerCopyPath(itemDir, existing.reviewMarkerSha256),
         "utf8",
       );
       if (sha256(markerCopy) !== existing.reviewMarkerSha256) {
-        throw new Error("reviewed_worker_output_approval_marker_hash_mismatch");
+        throw new Error("reviewed_worker_output_review_attestation_marker_hash_mismatch");
       }
       return;
     }
     const markerCopyPath = this.reviewMarkerCopyPath(
       itemDir,
-      input.approval.reviewMarkerSha256,
+      input.attestation.reviewMarkerSha256,
     );
     await this.writeImmutableFile(markerCopyPath, input.reviewMarkerContent);
     const tempPath = join(
       itemDir,
-      `.approval-${randomUUID()}.tmp`,
+      `.review-attestation-${randomUUID()}.tmp`,
     );
     try {
-      await writeFile(tempPath, `${JSON.stringify(input.approval, null, 2)}\n`, {
+      await writeFile(tempPath, `${JSON.stringify(input.attestation, null, 2)}\n`, {
         encoding: "utf8",
         mode: 0o600,
         flag: "wx",
       });
       try {
-        await link(tempPath, approvalPath);
+        await link(tempPath, attestationPath);
       } catch (error) {
         if (!isAlreadyExistsError(error)) throw error;
       }
     } finally {
       await rm(tempPath, { force: true });
     }
-    const committed = await this.readApproval(approvalPath);
+    const committed = await this.readReviewAttestation(attestationPath);
     if (
       !committed ||
-      committed.reviewedOutputId !== input.approval.reviewedOutputId
+      committed.reviewedOutputId !== input.attestation.reviewedOutputId
     ) {
-      throw new Error("reviewed_worker_output_approval_commit_failed");
+      throw new Error("reviewed_worker_output_review_attestation_commit_failed");
     }
   }
 
@@ -240,22 +253,25 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
   ): Promise<ReviewedWorkerOutputSnapshot | undefined> {
     const snapshot = await this.readSnapshot(reviewedOutputId);
     if (!snapshot) return undefined;
-    const approval = await this.readApproval(
+    const attestation = await this.readReviewAttestation(
+      join(this.itemDir(reviewedOutputId), "review-attestation.json"),
+    ) ?? await this.readLegacyApprovedAttestation(
       join(this.itemDir(reviewedOutputId), "approval.json"),
+      snapshot,
     );
-    if (!approval) return undefined;
-    if (approval.reviewedOutputId !== reviewedOutputId) {
-      throw new Error("reviewed_worker_output_approval_id_mismatch");
+    if (!attestation) return undefined;
+    if (attestation.reviewedOutputId !== reviewedOutputId) {
+      throw new Error("reviewed_worker_output_review_attestation_id_mismatch");
     }
     const markerCopy = await readFile(
       this.reviewMarkerCopyPath(
         this.itemDir(reviewedOutputId),
-        approval.reviewMarkerSha256,
+        attestation.reviewMarkerSha256,
       ),
       "utf8",
     );
-    if (sha256(markerCopy) !== approval.reviewMarkerSha256) {
-      throw new Error("reviewed_worker_output_approval_marker_hash_mismatch");
+    if (sha256(markerCopy) !== attestation.reviewMarkerSha256) {
+      throw new Error("reviewed_worker_output_review_attestation_marker_hash_mismatch");
     }
     return snapshot;
   }
@@ -305,12 +321,36 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
     }
   }
 
-  private async readApproval(
+  private async readReviewAttestation(
+    attestationPath: string,
+  ): Promise<ReviewedWorkerOutputReviewAttestation | undefined> {
+    try {
+      const value = JSON.parse(await readFile(attestationPath, "utf8")) as unknown;
+      return parseReviewAttestation(value);
+    } catch (error) {
+      if (isMissingError(error)) return undefined;
+      throw error;
+    }
+  }
+
+  private async readLegacyApprovedAttestation(
     approvalPath: string,
-  ): Promise<ReviewedWorkerOutputApproval | undefined> {
+    snapshot: ReviewedWorkerOutputSnapshot,
+  ): Promise<ReviewedWorkerOutputReviewAttestation | undefined> {
     try {
       const value = JSON.parse(await readFile(approvalPath, "utf8")) as unknown;
-      return parseApproval(value);
+      const legacy = parseLegacyApproval(value);
+      if (snapshot.reviewDecision.decision !== ReviewDecisionStatus.Approved) {
+        throw new Error("reviewed_worker_output_legacy_approval_requires_approved_decision");
+      }
+      return {
+        format: "reviewed-worker-output-review-attestation",
+        formatRevision: 1,
+        reviewedOutputId: legacy.reviewedOutputId,
+        reviewMarkerPath: legacy.reviewMarkerPath,
+        reviewMarkerSha256: legacy.reviewMarkerSha256,
+        committedAt: legacy.committedAt,
+      };
     } catch (error) {
       if (isMissingError(error)) return undefined;
       throw error;
@@ -378,6 +418,7 @@ export class LocalReviewedWorkerOutputReviewMarkerVerifier
       "baseCommit",
       "changedFiles",
       "reviewedBy",
+      "decision",
       "capturedAt",
     ]);
     if (
@@ -388,12 +429,99 @@ export class LocalReviewedWorkerOutputReviewMarkerVerifier
       stableJson(value.reviewedOutput.changedFiles) !==
         stableJson(input.snapshot.changedFiles) ||
       value.reviewedOutput.reviewedBy !== input.snapshot.reviewDecision.reviewedBy ||
+      value.reviewedOutput.decision !== input.snapshot.reviewDecision.decision ||
       value.reviewedOutput.capturedAt !== input.snapshot.capturedAt
     ) {
       throw new Error("reviewed_worker_output_review_marker_mismatch");
     }
     return { markerSha256: sha256(raw), markerContent: raw };
   }
+}
+
+export class LocalReviewedWorkerContinuationEnvironment
+  implements ReviewedWorkerContinuationEnvironmentPort {
+  async sanitizeDependencyRootLinks(input: {
+    readonly workspacePath: string;
+  }): Promise<{ readonly removedPaths: readonly string[] }> {
+    const workspaceRealPath = await realpath(input.workspacePath);
+    const dependencyRoots = await nodePackageDependencyRoots(workspaceRealPath);
+    const removedPaths: string[] = [];
+    for (const dependencyRoot of dependencyRoots) {
+      const status = await dependencyRootStatus(dependencyRoot, workspaceRealPath);
+      if (status === "symlink") {
+        await unlink(dependencyRoot);
+        removedPaths.push(relative(workspaceRealPath, dependencyRoot));
+      }
+    }
+    return { removedPaths: removedPaths.sort() };
+  }
+
+  async assertDependencyRootsSafe(input: {
+    readonly workspacePath: string;
+  }): Promise<void> {
+    const workspaceRealPath = await realpath(input.workspacePath);
+    const dependencyRoots = await nodePackageDependencyRoots(workspaceRealPath);
+    for (const dependencyRoot of dependencyRoots) {
+      const status = await dependencyRootStatus(dependencyRoot, workspaceRealPath);
+      if (status === "symlink") {
+        throw new Error("reviewed_worker_output_dependency_root_symlink_denied");
+      }
+    }
+  }
+}
+
+async function nodePackageDependencyRoots(
+  workspaceRealPath: string,
+): Promise<readonly string[]> {
+  const queue = [workspaceRealPath];
+  const roots: string[] = [];
+  let scanned = 0;
+  while (queue.length > 0) {
+    const directory = queue.shift();
+    if (!directory) break;
+    scanned += 1;
+    if (scanned > MAX_PACKAGE_ROOTS_SCAN) {
+      throw new Error("reviewed_worker_output_dependency_scan_limit_exceeded");
+    }
+    const entries = await readdir(directory, { withFileTypes: true });
+    if (entries.some((entry) => entry.name === "package.json" && entry.isFile())) {
+      roots.push(join(directory, "node_modules"));
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory() || PACKAGE_SCAN_EXCLUDED_DIRS.has(entry.name)) continue;
+      queue.push(join(directory, entry.name));
+    }
+  }
+  return roots.sort();
+}
+
+async function dependencyRootStatus(
+  dependencyRoot: string,
+  workspaceRealPath: string,
+): Promise<"missing" | "directory" | "symlink"> {
+  let status;
+  try {
+    status = await lstat(dependencyRoot);
+  } catch (error) {
+    if (isMissingError(error)) return "missing";
+    throw error;
+  }
+  if (status.isSymbolicLink()) return "symlink";
+  if (!status.isDirectory()) {
+    throw new Error("reviewed_worker_output_dependency_root_invalid");
+  }
+  const dependencyRealPath = await realpath(dependencyRoot);
+  if (!pathWithin(workspaceRealPath, dependencyRealPath)) {
+    throw new Error("reviewed_worker_output_dependency_root_outside_workspace");
+  }
+  return "directory";
+}
+
+function pathWithin(root: string, candidate: string): boolean {
+  const normalizedRoot = resolve(root);
+  const normalizedCandidate = resolve(candidate);
+  return normalizedCandidate === normalizedRoot ||
+    normalizedCandidate.startsWith(`${normalizedRoot}${sep}`);
 }
 
 export function localReviewedWorkerOutputDeps(input: {
@@ -405,6 +533,7 @@ export function localReviewedWorkerOutputDeps(input: {
     }),
     store: new LocalReviewedWorkerOutputStore({ rootDir: input.rootDir }),
     markerVerifier: new LocalReviewedWorkerOutputReviewMarkerVerifier(),
+    continuationEnvironment: new LocalReviewedWorkerContinuationEnvironment(),
     locks: new LocalWorkspaceIntegrationLock({
       rootDir: join(input.rootDir, ".locks"),
       staleLockMs: 30 * 60_000,
@@ -467,7 +596,7 @@ function parseSnapshot(raw: string, patchPath: string): ReviewedWorkerOutputSnap
 }
 
 function parseReviewDecision(value: unknown): ReviewDecision {
-  if (!isRecord(value) || value.decision !== ReviewDecisionStatus.Approved) {
+  if (!isRecord(value) || !isReviewDecisionStatus(value.decision)) {
     throw new Error("reviewed_worker_output_review_invalid");
   }
   assertExactKeys(value, [
@@ -479,11 +608,17 @@ function parseReviewDecision(value: unknown): ReviewDecision {
   ]);
   return {
     reviewedBy: requiredString(value.reviewedBy),
-    decision: ReviewDecisionStatus.Approved,
+    decision: value.decision,
     reason: requiredString(value.reason),
     approvedFiles: requiredStringArray(value.approvedFiles),
     requiredChecks: parseRequiredChecks(value.requiredChecks),
   };
+}
+
+function isReviewDecisionStatus(value: unknown): value is ReviewDecisionStatus {
+  return value === ReviewDecisionStatus.Approved ||
+    value === ReviewDecisionStatus.Rejected ||
+    value === ReviewDecisionStatus.NeedsHuman;
 }
 
 function parseRequiredChecks(
@@ -513,9 +648,47 @@ function parseRequiredChecks(
   });
 }
 
-function parseApproval(value: unknown): ReviewedWorkerOutputApproval {
+function parseReviewAttestation(
+  value: unknown,
+): ReviewedWorkerOutputReviewAttestation {
   if (!isRecord(value)) {
-    throw new Error("reviewed_worker_output_approval_invalid");
+    throw new Error("reviewed_worker_output_review_attestation_invalid");
+  }
+  assertExactKeys(value, [
+    "format",
+    "formatRevision",
+    "reviewedOutputId",
+    "reviewMarkerPath",
+    "reviewMarkerSha256",
+    "committedAt",
+  ]);
+  if (
+    value.format !== "reviewed-worker-output-review-attestation" ||
+    value.formatRevision !== 1
+  ) {
+    throw new Error("reviewed_worker_output_review_attestation_invalid");
+  }
+  const attestation: ReviewedWorkerOutputReviewAttestation = {
+    format: "reviewed-worker-output-review-attestation",
+    formatRevision: 1,
+    reviewedOutputId: requiredString(value.reviewedOutputId),
+    reviewMarkerPath: requiredString(value.reviewMarkerPath),
+    reviewMarkerSha256: requiredString(value.reviewMarkerSha256),
+    committedAt: requiredString(value.committedAt),
+  };
+  assertSha256(attestation.reviewedOutputId);
+  assertSha256(attestation.reviewMarkerSha256);
+  return attestation;
+}
+
+function parseLegacyApproval(value: unknown): {
+  readonly reviewedOutputId: string;
+  readonly reviewMarkerPath: string;
+  readonly reviewMarkerSha256: string;
+  readonly committedAt: string;
+} {
+  if (!isRecord(value)) {
+    throw new Error("reviewed_worker_output_legacy_approval_invalid");
   }
   assertExactKeys(value, [
     "format",
@@ -529,19 +702,17 @@ function parseApproval(value: unknown): ReviewedWorkerOutputApproval {
     value.format !== "reviewed-worker-output-approval" ||
     value.formatRevision !== 1
   ) {
-    throw new Error("reviewed_worker_output_approval_invalid");
+    throw new Error("reviewed_worker_output_legacy_approval_invalid");
   }
-  const approval: ReviewedWorkerOutputApproval = {
-    format: "reviewed-worker-output-approval",
-    formatRevision: 1,
+  const legacy = {
     reviewedOutputId: requiredString(value.reviewedOutputId),
     reviewMarkerPath: requiredString(value.reviewMarkerPath),
     reviewMarkerSha256: requiredString(value.reviewMarkerSha256),
     committedAt: requiredString(value.committedAt),
   };
-  assertSha256(approval.reviewedOutputId);
-  assertSha256(approval.reviewMarkerSha256);
-  return approval;
+  assertSha256(legacy.reviewedOutputId);
+  assertSha256(legacy.reviewMarkerSha256);
+  return legacy;
 }
 
 function requiredString(value: unknown): string {

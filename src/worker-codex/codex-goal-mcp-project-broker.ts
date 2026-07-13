@@ -38,10 +38,11 @@ import type {
 } from "./reviewed-worker-output";
 import {
   captureReviewedWorkerOutput,
-  commitReviewedWorkerOutputApproval,
+  commitReviewedWorkerOutputReviewAttestation,
   localReviewedWorkerOutputDeps,
   reviewedWorkerOutputRoot,
   verifyReviewedWorkerOutputStillMatches,
+  withReviewedWorkerOutputStillMatching,
 } from "./reviewed-worker-output";
 import {
   noopOperationResult,
@@ -112,6 +113,7 @@ export type CodexProjectControlBrokerInput = {
     CaptureReviewedWorkerOutputInput,
     "workerJobId" | "taskId" | "workspacePath"
   >;
+  readonly reviewedContinuation?: ReviewedWorkerOutputSnapshot;
 };
 
 export function createCodexProjectControlBroker(
@@ -192,11 +194,11 @@ function codexProjectControlPorts(
             reviewedOutputDeps,
             reviewedOutput,
           );
-          const statusBeforeApproval = await collectCodexGoalStatus(
+          const statusBeforeAttestation = await collectCodexGoalStatus(
             statusInput(input.reviewLaunch),
           );
-          assertReviewedOutputWorkerStopped(input.reviewLaunch, statusBeforeApproval);
-          await commitReviewedWorkerOutputApproval({
+          assertReviewedOutputWorkerStopped(input.reviewLaunch, statusBeforeAttestation);
+          await commitReviewedWorkerOutputReviewAttestation({
             store: reviewedOutputDeps.store,
             markerVerifier: reviewedOutputDeps.markerVerifier,
             snapshot: reviewedOutput,
@@ -211,32 +213,44 @@ function codexProjectControlPorts(
         if (!input.startLaunch) {
           throw new Error("project_control_start_launch_required");
         }
-        await prepareCodexGoalLaunchPaths(input.startLaunch);
-        if (!input.startSkipDoctor) {
-          const doctor = await doctorCodexGoal({
-            config: input.startLaunch.config,
-            ...(input.startLaunch.tmuxSession
-              ? { tmuxSession: input.startLaunch.tmuxSession }
-              : {}),
-          });
-          if (!doctor.ok) {
-            throw new Error(`project_control_doctor_failed:${JSON.stringify(doctor)}`);
+        const startLaunch = input.startLaunch;
+        const start = async () => {
+          await prepareCodexGoalLaunchPaths(startLaunch);
+          if (!input.startSkipDoctor) {
+            const doctor = await doctorCodexGoal({
+              config: startLaunch.config,
+              ...(startLaunch.tmuxSession
+                ? { tmuxSession: startLaunch.tmuxSession }
+                : {}),
+            });
+            if (!doctor.ok) {
+              throw new Error(`project_control_doctor_failed:${JSON.stringify(doctor)}`);
+            }
           }
-        }
-        const previousBrokeredStart =
-          process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START;
-        process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START = "1";
-        let command: Awaited<ReturnType<typeof startCodexGoalTmux>>;
-        try {
-          command = await startCodexGoalTmux(input.startLaunch);
-        } finally {
-          if (previousBrokeredStart === undefined) {
-            delete process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START;
-          } else {
-            process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START = previousBrokeredStart;
+          const previousBrokeredStart =
+            process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START;
+          process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START = "1";
+          let command: Awaited<ReturnType<typeof startCodexGoalTmux>>;
+          try {
+            command = await startCodexGoalTmux(startLaunch);
+          } finally {
+            if (previousBrokeredStart === undefined) {
+              delete process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START;
+            } else {
+              process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START = previousBrokeredStart;
+            }
           }
-        }
-        return operationResult(command.preview);
+          return operationResult(command.preview);
+        };
+        if (!input.reviewedContinuation) return await start();
+        const reviewedOutputDeps = localReviewedWorkerOutputDeps({
+          rootDir: reviewedWorkerOutputRoot(input.registryRootDir),
+        });
+        return await withReviewedWorkerOutputStillMatching(
+          reviewedOutputDeps,
+          input.reviewedContinuation,
+          start,
+        );
       },
       async stopWorker() {
         if (!input.stopLaunch) {

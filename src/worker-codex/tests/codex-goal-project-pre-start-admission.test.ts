@@ -107,6 +107,32 @@ describe("project pre-start admission", () => {
       await readFile(plan.descriptor.receiptPath, "utf8"),
     );
     expect(secondReceipt.manifestSha256).not.toBe(firstReceipt.manifestSha256);
+    const storedWithAdmission = {
+      ...fixture.storedManifest,
+      projectPreStartAdmission: plan.descriptor,
+    };
+    await expect(assertProjectPreStartAdmissionLaunchBinding({
+      manifest: storedWithAdmission,
+      scope: fixture.scope,
+    })).resolves.toBeUndefined();
+    const externalAdmission = fixture.scope.preStartAdmission;
+    if (!externalAdmission || externalAdmission.mode !== "serial") {
+      throw new Error("test_external_admission_required");
+    }
+    await expect(assertProjectPreStartAdmissionLaunchBinding({
+      manifest: storedWithAdmission,
+      scope: {
+        ...fixture.scope,
+        preStartAdmission: {
+          ...externalAdmission,
+          validatorBundle: externalAdmission.validatorBundle.map((item) =>
+            item.path === "scripts/contract-validator.mjs"
+              ? { ...item, sha256: "f".repeat(64) }
+              : item
+          ),
+        },
+      },
+    })).rejects.toThrow("project_control_pre_start_launch_binding_mismatch");
 
     await writeFile(
       plan.descriptor.statePath,
@@ -489,11 +515,23 @@ describe("builtin project pre-start admission", () => {
       scope: fixture.scope,
     });
     await assertProjectPreStartAdmissionLaunchBinding({ manifest, scope: fixture.scope });
+    await expect(assertProjectPreStartAdmissionLaunchBinding({
+      manifest,
+      scope: fixture.scope,
+      workspaceMode: "reviewed_dirty_continuation",
+    })).rejects.toThrow("project_control_pre_start_launch_binding_mismatch");
 
     await expect(assertProjectPreStartAdmissionLaunchBinding({
       manifest: { ...manifest, description: "manifest changed after receipt" },
       scope: fixture.scope,
     })).rejects.toThrow("project_control_pre_start_launch_binding_mismatch");
+    await writeFile(join(fixture.workspacePath, "DIRTY.txt"), "dirty\n");
+    await expect(assertProjectPreStartAdmissionLaunchBinding({
+      manifest: { ...manifest, description: "manifest changed after receipt" },
+      scope: fixture.scope,
+      workspaceMode: "reviewed_dirty_continuation",
+    })).rejects.toThrow("project_control_pre_start_launch_binding_mismatch");
+    await rm(join(fixture.workspacePath, "DIRTY.txt"));
 
     await writeFile(fixture.manifest.promptPath, "changed prompt\n");
     await expect(assertProjectPreStartAdmissionLaunchBinding({
@@ -517,6 +555,17 @@ describe("builtin project pre-start admission", () => {
       manifest: dirtyManifest,
       scope: dirtyFixture.scope,
     })).rejects.toThrow("project_control_pre_start_launch_binding_mismatch");
+    await expect(assertProjectPreStartAdmissionLaunchBinding({
+      manifest: dirtyManifest,
+      scope: dirtyFixture.scope,
+      workspaceMode: "reviewed_dirty_continuation",
+    })).resolves.toBeUndefined();
+    await writeFile(dirtyFixture.manifest.promptPath, "changed prompt\n");
+    await expect(assertProjectPreStartAdmissionLaunchBinding({
+      manifest: dirtyManifest,
+      scope: dirtyFixture.scope,
+      workspaceMode: "reviewed_dirty_continuation",
+    })).rejects.toThrow("project_control_pre_start_launch_binding_mismatch");
 
     const headFixture = await createBuiltinFixture();
     const headPlan = headFixture.plan();
@@ -537,6 +586,12 @@ describe("builtin project pre-start admission", () => {
     await expect(assertProjectPreStartAdmissionLaunchBinding({
       manifest: headManifest,
       scope: headFixture.scope,
+    })).rejects.toThrow("project_control_pre_start_launch_binding_mismatch");
+    await writeFile(join(headFixture.workspacePath, "DIRTY.txt"), "dirty\n");
+    await expect(assertProjectPreStartAdmissionLaunchBinding({
+      manifest: headManifest,
+      scope: headFixture.scope,
+      workspaceMode: "reviewed_dirty_continuation",
     })).rejects.toThrow("project_control_pre_start_launch_binding_mismatch");
   });
 });

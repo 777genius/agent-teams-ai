@@ -1,5 +1,5 @@
 import type {
-  ReviewedWorkerOutputApproval,
+  ReviewedWorkerOutputReviewAttestation,
   ReviewedWorkerOutputSnapshot,
   ReviewedWorkerOutputWorkspaceSnapshot,
 } from "../domain/reviewed-worker-output";
@@ -16,8 +16,8 @@ export interface ReviewedWorkerOutputStorePort {
     readonly patch: string;
   }): Promise<ReviewedWorkerOutputSnapshot>;
 
-  commitApproval(input: {
-    readonly approval: ReviewedWorkerOutputApproval;
+  commitReviewAttestation(input: {
+    readonly attestation: ReviewedWorkerOutputReviewAttestation;
     readonly reviewMarkerContent: string;
   }): Promise<void>;
 
@@ -32,4 +32,14 @@ export interface ReviewedWorkerOutputReviewMarkerVerifierPort {
     readonly markerSha256: string;
     readonly markerContent: string;
   }>;
+}
+
+export interface ReviewedWorkerContinuationEnvironmentPort {
+  sanitizeDependencyRootLinks(input: {
+    readonly workspacePath: string;
+  }): Promise<{ readonly removedPaths: readonly string[] }>;
+
+  assertDependencyRootsSafe(input: {
+    readonly workspacePath: string;
+  }): Promise<void>;
 }

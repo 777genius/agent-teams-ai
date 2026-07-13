@@ -5,11 +5,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
+import { ReviewDecisionStatus } from "@vioxen/subscription-runtime/worker-core";
 import { captureGitWorkspacePatch } from "../../codex-goal-runtime-result-io";
 import {
   captureReviewedWorkerOutput,
-  commitReviewedWorkerOutputApproval,
+  commitReviewedWorkerOutputReviewAttestation,
+  resolveReviewedWorkerContinuation,
   resolveReviewedWorkerOutput,
+  withReviewedWorkerOutputStillMatching,
 } from "../application/reviewed-worker-output-use-cases";
 import {
   GitReviewedWorkerOutputSnapshotter,
@@ -41,6 +44,7 @@ describe("reviewed worker output", () => {
         taskId: "task-1",
         workspacePath: fixture.workspacePath,
         expectedPatchSha256: sha256(patch),
+        decision: ReviewDecisionStatus.Approved,
         reviewedBy: "project-1-controller",
         reason: "Focused review accepted the exact patch.",
         approvedFiles: ["src/value.ts", "src/new.ts"],
@@ -70,7 +74,7 @@ describe("reviewed worker output", () => {
       projectId: "project-1",
       reviewedOutputId: snapshot.reviewedOutputId,
     })).rejects.toThrow("reviewed_worker_output_not_found");
-    await commitReviewedWorkerOutputApproval({
+    await commitReviewedWorkerOutputReviewAttestation({
       store,
       markerVerifier: {
         async verify() {
@@ -110,6 +114,7 @@ describe("reviewed worker output", () => {
         taskId: "task-1",
         workspacePath: fixture.workspacePath,
         expectedPatchSha256: sha256(patch),
+        decision: ReviewDecisionStatus.Approved,
         reviewedBy: "project-1-controller",
         reason: "Focused review accepted the exact patch.",
         approvedFiles: ["src/value.ts", "src/new.ts"],
@@ -148,6 +153,7 @@ describe("reviewed worker output", () => {
       workspacePath: fixture.workspacePath,
       reviewedBy: "project-1-controller",
       reason: "reviewed",
+      decision: ReviewDecisionStatus.Approved,
       requiredChecks: [],
     };
 
@@ -165,6 +171,162 @@ describe("reviewed worker output", () => {
       expectedPatchSha256: sha256(patch),
       approvedFiles: ["src/value.ts"],
     })).rejects.toThrow("path_outside_expected_files");
+  });
+
+  it("reads deployed approval artifacts as approved-only review attestations", async () => {
+    const fixture = await reviewedOutputFixture();
+    const deps = localReviewedWorkerOutputDeps({ rootDir: fixture.storeRoot });
+    const patch = await captureGitWorkspacePatch({ workspacePath: fixture.workspacePath });
+    const snapshot = await captureReviewedWorkerOutput(deps, {
+      projectId: "project-1",
+      controllerJobId: "project-1-controller",
+      workerJobId: "project-1-worker",
+      taskId: "task-1",
+      workspacePath: fixture.workspacePath,
+      expectedPatchSha256: sha256(patch),
+      decision: ReviewDecisionStatus.Approved,
+      reviewedBy: "project-1-controller",
+      reason: "Legacy approved review.",
+      approvedFiles: ["src/value.ts", "src/new.ts"],
+      requiredChecks: [],
+    });
+    await commitReviewedWorkerOutputReviewAttestation({
+      store: deps.store,
+      markerVerifier: {
+        async verify() {
+          return {
+            markerSha256: sha256("legacy marker"),
+            markerContent: "legacy marker",
+          };
+        },
+      },
+      snapshot,
+      reviewMarkerPath: "/evidence/legacy-review.json",
+    });
+    const itemDir = join(fixture.storeRoot, snapshot.reviewedOutputId);
+    const currentPath = join(itemDir, "review-attestation.json");
+    const legacyPath = join(itemDir, "approval.json");
+    const current = JSON.parse(await readFile(currentPath, "utf8")) as
+      Record<string, unknown>;
+    await writeFile(legacyPath, `${JSON.stringify({
+      ...current,
+      format: "reviewed-worker-output-approval",
+    }, null, 2)}\n`);
+    await rm(currentPath);
+
+    await expect(resolveReviewedWorkerOutput({
+      store: deps.store,
+      projectId: "project-1",
+      reviewedOutputId: snapshot.reviewedOutputId,
+    })).resolves.toMatchObject({
+      snapshot: { reviewedOutputId: snapshot.reviewedOutputId },
+    });
+  });
+
+  it("uses an attested rejected snapshot only for the same dirty worker continuation", async () => {
+    const fixture = await reviewedOutputFixture();
+    const deps = localReviewedWorkerOutputDeps({ rootDir: fixture.storeRoot });
+    const patch = await captureGitWorkspacePatch({ workspacePath: fixture.workspacePath });
+    const snapshot = await captureReviewedWorkerOutput(deps, {
+      projectId: "project-1",
+      controllerJobId: "project-1-controller",
+      workerJobId: "project-1-worker",
+      taskId: "task-1",
+      workspacePath: fixture.workspacePath,
+      expectedPatchSha256: sha256(patch),
+      decision: ReviewDecisionStatus.Rejected,
+      reviewedBy: "project-1-controller",
+      reason: "Evidence needs remediation in the same workspace.",
+      approvedFiles: ["src/value.ts", "src/new.ts"],
+      requiredChecks: [],
+    });
+    await commitReviewedWorkerOutputReviewAttestation({
+      store: deps.store,
+      markerVerifier: {
+        async verify() {
+          return {
+            markerSha256: sha256("rejected review marker"),
+            markerContent: "rejected review marker",
+          };
+        },
+      },
+      snapshot,
+      reviewMarkerPath: "/evidence/rejected-review.json",
+    });
+
+    await expect(resolveReviewedWorkerOutput({
+      store: deps.store,
+      projectId: "project-1",
+      reviewedOutputId: snapshot.reviewedOutputId,
+    })).rejects.toThrow("reviewed_worker_output_not_approved");
+    await expect(resolveReviewedWorkerContinuation({
+      store: deps.store,
+      projectId: "project-1",
+      controllerJobId: "project-1-controller",
+      workerJobId: "project-1-worker",
+      taskId: "task-1",
+      workspacePath: fixture.workspacePath,
+      reviewedOutputId: snapshot.reviewedOutputId,
+    })).resolves.toEqual(snapshot);
+    await expect(resolveReviewedWorkerContinuation({
+      store: deps.store,
+      projectId: "project-1",
+      controllerJobId: "wrong-controller",
+      workerJobId: "project-1-worker",
+      taskId: "task-1",
+      workspacePath: fixture.workspacePath,
+      reviewedOutputId: snapshot.reviewedOutputId,
+    })).rejects.toThrow("reviewed_worker_output_controller_mismatch");
+  });
+
+  it("holds the continuation lock across exact verification and the launch effect", async () => {
+    const fixture = await reviewedOutputFixture();
+    const localDeps = localReviewedWorkerOutputDeps({ rootDir: fixture.storeRoot });
+    const patch = await captureGitWorkspacePatch({ workspacePath: fixture.workspacePath });
+    const snapshot = await captureReviewedWorkerOutput(localDeps, {
+      projectId: "project-1",
+      controllerJobId: "project-1-controller",
+      workerJobId: "project-1-worker",
+      taskId: "task-1",
+      workspacePath: fixture.workspacePath,
+      expectedPatchSha256: sha256(patch),
+      decision: ReviewDecisionStatus.Rejected,
+      reviewedBy: "project-1-controller",
+      reason: "Same worker continuation.",
+      approvedFiles: ["src/value.ts", "src/new.ts"],
+      requiredChecks: [],
+    });
+    let lockHeld = false;
+    const deps = {
+      ...localDeps,
+      locks: {
+        async acquire(input: { readonly workspacePath: string; readonly owner: string }) {
+          const lock = await localDeps.locks.acquire(input);
+          lockHeld = true;
+          return lock;
+        },
+        async release(lock: Parameters<typeof localDeps.locks.release>[0]) {
+          await localDeps.locks.release(lock);
+          lockHeld = false;
+        },
+      },
+    };
+    let effectCalls = 0;
+    await expect(withReviewedWorkerOutputStillMatching(deps, snapshot, async () => {
+      expect(lockHeld).toBe(true);
+      effectCalls += 1;
+      return "started";
+    })).resolves.toBe("started");
+    expect(effectCalls).toBe(1);
+    expect(lockHeld).toBe(false);
+
+    await writeFile(join(fixture.workspacePath, "src", "value.ts"), "mutated\n");
+    await expect(withReviewedWorkerOutputStillMatching(deps, snapshot, async () => {
+      effectCalls += 1;
+      return "must-not-start";
+    })).rejects.toThrow("reviewed_worker_output_workspace_changed_after_capture");
+    expect(effectCalls).toBe(1);
+    expect(lockHeld).toBe(false);
   });
 
   it("round-trips staged and binary output through the immutable patch", async () => {

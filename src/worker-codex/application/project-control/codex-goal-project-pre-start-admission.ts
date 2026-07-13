@@ -197,6 +197,7 @@ export async function validateStoredProjectPreStartAdmission(input: {
 export async function assertProjectPreStartAdmissionLaunchBinding(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly scope: ProjectAccessScope;
+  readonly workspaceMode?: "clean_first_launch" | "reviewed_dirty_continuation";
 }): Promise<void> {
   const descriptor = input.manifest.projectPreStartAdmission;
   if (!descriptor) {
@@ -205,6 +206,7 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
     }
     return;
   }
+  assertDescriptorPaths(descriptor, input.manifest.jobRootDir);
   await assertArtifactRootSecure(input.manifest.jobRootDir);
   const contract = await readJsonObject(descriptor.contractPath, "contract", MAX_CONTRACT_BYTES);
   const state = await readJsonObject(descriptor.statePath, "state", MAX_STATE_BYTES);
@@ -212,11 +214,20 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
   assertContractBindings(contract, input.manifest);
   assertQueuedStateBinding(contract, state, input.manifest.jobId);
   const binding = await currentBinding(input.manifest, descriptor);
-  const builtinReceiptValid = !isBuiltinDescriptor(descriptor) ||
-    receipt.validatorKind === "builtin";
+  const validatorReceiptValid = projectPreStartValidatorReceiptValid({
+    descriptor,
+    receipt,
+    scope: input.scope,
+  });
+  const workspaceBindingValid = input.workspaceMode === "reviewed_dirty_continuation"
+    ? binding.workspaceStatus !== ""
+    : binding.workspaceStatus === "";
+  const inputPatchBindingValid = input.workspaceMode === "reviewed_dirty_continuation" ||
+    bindingMatchesInputPatch(binding, contract);
   if (
     binding.workspaceHead !== contract.phaseStartSha ||
-    !bindingMatchesInputPatch(binding, contract) ||
+    !inputPatchBindingValid ||
+    !workspaceBindingValid ||
     receipt.status !== "validated_not_launched" ||
     receipt.jobId !== input.manifest.jobId ||
     receipt.workKey !== contract.workKey ||
@@ -224,10 +235,34 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
     receipt.stateSha256 !== binding.stateSha256 ||
     receipt.promptSha256 !== binding.promptSha256 ||
     receipt.manifestSha256 !== sha256(Buffer.from(JSON.stringify(input.manifest))) ||
-    !builtinReceiptValid
+    !validatorReceiptValid
   ) {
     throw new Error("project_control_pre_start_launch_binding_mismatch");
   }
+}
+
+function projectPreStartValidatorReceiptValid(input: {
+  readonly descriptor: CodexGoalProjectPreStartAdmission;
+  readonly receipt: JsonObject;
+  readonly scope: ProjectAccessScope;
+}): boolean {
+  if (isBuiltinDescriptor(input.descriptor)) {
+    assertBuiltinScope(input.scope);
+    return input.receipt.validatorKind === "builtin";
+  }
+  const contractValidator = configuredValidator(
+    input.descriptor.contractValidatorPath,
+    input.scope,
+  );
+  const admissionValidator = configuredValidator(
+    input.descriptor.admissionValidatorPath,
+    input.scope,
+  );
+  return input.receipt.validatorKind === "external" &&
+    input.receipt.contractValidatorPath === input.descriptor.contractValidatorPath &&
+    input.receipt.admissionValidatorPath === input.descriptor.admissionValidatorPath &&
+    input.receipt.contractValidatorSha256 === contractValidator.sha256 &&
+    input.receipt.admissionValidatorSha256 === admissionValidator.sha256;
 }
 
 export async function removeProjectPreStartAdmissionPaths(

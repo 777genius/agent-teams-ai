@@ -2,10 +2,11 @@ import { createHash } from "node:crypto";
 import {
   assertFilesWithinExpected,
   normalizeExpectedFiles,
+  ReviewDecisionStatus,
   type WorkspaceLockPort,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
-  approvedReviewDecision,
+  reviewedOutputDecision,
   reviewedOutputAsWorkerOutput,
   reviewedWorkerOutputIdentityPayload,
   reviewedWorkerOutputFormat,
@@ -14,6 +15,7 @@ import {
   type ReviewedWorkerOutputSnapshot,
 } from "../domain/reviewed-worker-output";
 import type {
+  ReviewedWorkerContinuationEnvironmentPort,
   ReviewedWorkerOutputReviewMarkerVerifierPort,
   ReviewedWorkerOutputSnapshotterPort,
   ReviewedWorkerOutputStorePort,
@@ -23,6 +25,7 @@ export type ReviewedWorkerOutputDeps = {
   readonly snapshotter: ReviewedWorkerOutputSnapshotterPort;
   readonly store: ReviewedWorkerOutputStorePort;
   readonly locks: WorkspaceLockPort;
+  readonly continuationEnvironment: ReviewedWorkerContinuationEnvironmentPort;
   readonly clock?: { now(): Date };
 };
 
@@ -46,7 +49,8 @@ export async function captureReviewedWorkerOutput(
     if (patchSha256 !== expectedPatchSha256) {
       throw new Error("reviewed_worker_output_patch_hash_mismatch");
     }
-    const reviewDecision = approvedReviewDecision({
+    const reviewDecision = reviewedOutputDecision({
+      decision: input.decision,
       reviewedBy: input.reviewedBy,
       reason: input.reason,
       approvedFiles,
@@ -107,23 +111,74 @@ export async function verifyReviewedWorkerOutputStillMatches(
     owner: `reviewed-output-verify:${snapshot.controllerJobId}:${snapshot.workerJobId}`,
   });
   try {
-    const current = await deps.snapshotter.capture({
-      workspacePath: snapshot.sourceWorkspacePath,
-    });
-    const currentChangedFiles = normalizeExpectedFiles(current.changedFiles);
-    if (
-      current.baseCommit !== snapshot.baseCommit ||
-      sha256(current.patch) !== snapshot.patchSha256 ||
-      JSON.stringify(currentChangedFiles) !== JSON.stringify(snapshot.changedFiles)
-    ) {
-      throw new Error("reviewed_worker_output_workspace_changed_after_capture");
-    }
+    await assertReviewedWorkerOutputStillMatches(deps, snapshot);
   } finally {
     await deps.locks.release(lock);
   }
 }
 
-export async function commitReviewedWorkerOutputApproval(input: {
+export async function withReviewedWorkerOutputStillMatching<T>(
+  deps: Pick<
+    ReviewedWorkerOutputDeps,
+    "snapshotter" | "locks" | "continuationEnvironment"
+  >,
+  snapshot: ReviewedWorkerOutputSnapshot,
+  effect: () => Promise<T>,
+): Promise<T> {
+  const lock = await deps.locks.acquire({
+    workspacePath: snapshot.sourceWorkspacePath,
+    owner: `reviewed-output-continuation:${snapshot.controllerJobId}:${snapshot.workerJobId}`,
+  });
+  try {
+    await assertReviewedWorkerOutputStillMatches(deps, snapshot);
+    await deps.continuationEnvironment.assertDependencyRootsSafe({
+      workspacePath: snapshot.sourceWorkspacePath,
+    });
+    return await effect();
+  } finally {
+    await deps.locks.release(lock);
+  }
+}
+
+export async function sanitizeReviewedWorkerContinuationEnvironment(
+  deps: Pick<
+    ReviewedWorkerOutputDeps,
+    "snapshotter" | "locks" | "continuationEnvironment"
+  >,
+  snapshot: ReviewedWorkerOutputSnapshot,
+): Promise<{ readonly removedPaths: readonly string[] }> {
+  const lock = await deps.locks.acquire({
+    workspacePath: snapshot.sourceWorkspacePath,
+    owner: `reviewed-output-sanitize:${snapshot.controllerJobId}:${snapshot.workerJobId}`,
+  });
+  try {
+    await assertReviewedWorkerOutputStillMatches(deps, snapshot);
+    return await deps.continuationEnvironment.sanitizeDependencyRootLinks({
+      workspacePath: snapshot.sourceWorkspacePath,
+    });
+  } finally {
+    await deps.locks.release(lock);
+  }
+}
+
+async function assertReviewedWorkerOutputStillMatches(
+  deps: Pick<ReviewedWorkerOutputDeps, "snapshotter">,
+  snapshot: ReviewedWorkerOutputSnapshot,
+): Promise<void> {
+  const current = await deps.snapshotter.capture({
+    workspacePath: snapshot.sourceWorkspacePath,
+  });
+  const currentChangedFiles = normalizeExpectedFiles(current.changedFiles);
+  if (
+    current.baseCommit !== snapshot.baseCommit ||
+    sha256(current.patch) !== snapshot.patchSha256 ||
+    JSON.stringify(currentChangedFiles) !== JSON.stringify(snapshot.changedFiles)
+  ) {
+    throw new Error("reviewed_worker_output_workspace_changed_after_capture");
+  }
+}
+
+export async function commitReviewedWorkerOutputReviewAttestation(input: {
   readonly store: ReviewedWorkerOutputStorePort;
   readonly markerVerifier: ReviewedWorkerOutputReviewMarkerVerifierPort;
   readonly snapshot: ReviewedWorkerOutputSnapshot;
@@ -134,9 +189,9 @@ export async function commitReviewedWorkerOutputApproval(input: {
     markerPath: input.reviewMarkerPath,
     snapshot: input.snapshot,
   });
-  await input.store.commitApproval({
-    approval: {
-      format: "reviewed-worker-output-approval",
+  await input.store.commitReviewAttestation({
+    attestation: {
+      format: "reviewed-worker-output-review-attestation",
       formatRevision: 1,
       reviewedOutputId: input.snapshot.reviewedOutputId,
       reviewMarkerPath: input.reviewMarkerPath,
@@ -167,10 +222,45 @@ export async function resolveReviewedWorkerOutput(input: {
   ) {
     throw new Error("reviewed_worker_output_job_mismatch");
   }
+  if (snapshot.reviewDecision.decision !== ReviewDecisionStatus.Approved) {
+    throw new Error("reviewed_worker_output_not_approved");
+  }
   return {
     snapshot,
     workerOutput: reviewedOutputAsWorkerOutput(snapshot),
   };
+}
+
+export async function resolveReviewedWorkerContinuation(input: {
+  readonly store: ReviewedWorkerOutputStorePort;
+  readonly projectId: string;
+  readonly controllerJobId: string;
+  readonly workerJobId: string;
+  readonly taskId: string;
+  readonly workspacePath: string;
+  readonly reviewedOutputId: string;
+}): Promise<ReviewedWorkerOutputSnapshot> {
+  const snapshot = await input.store.get(normalizeSha256(input.reviewedOutputId));
+  if (!snapshot) throw new Error("reviewed_worker_output_not_found");
+  if (snapshot.projectId !== input.projectId) {
+    throw new Error("reviewed_worker_output_project_mismatch");
+  }
+  if (snapshot.controllerJobId !== input.controllerJobId) {
+    throw new Error("reviewed_worker_output_controller_mismatch");
+  }
+  if (snapshot.workerJobId !== input.workerJobId) {
+    throw new Error("reviewed_worker_output_job_mismatch");
+  }
+  if (snapshot.taskId !== input.taskId) {
+    throw new Error("reviewed_worker_output_task_mismatch");
+  }
+  if (snapshot.sourceWorkspacePath !== input.workspacePath) {
+    throw new Error("reviewed_worker_output_workspace_mismatch");
+  }
+  if (snapshot.reviewDecision.decision !== ReviewDecisionStatus.Rejected) {
+    throw new Error("reviewed_worker_output_rejected_continuation_required");
+  }
+  return snapshot;
 }
 
 function normalizeSha256(value: string): string {
