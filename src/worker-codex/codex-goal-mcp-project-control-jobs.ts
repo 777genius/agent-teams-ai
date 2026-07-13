@@ -55,6 +55,7 @@ import {
 import {
   assertSafeGitRefName,
 } from "./codex-goal-mcp-project-git";
+import { execGitStdout } from "./application/project-control/codex-goal-project-git";
 import {
   matchesProjectControlPrefix,
   uniqueProjectControlStrings,
@@ -68,6 +69,7 @@ import {
 } from "./application/project-control/codex-goal-project-refill";
 import {
   assertProjectPreStartAdmissionLaunchBinding,
+  assertProjectPreStartAdmissionSourceRevision,
   planProjectPreStartAdmission,
   prepareProjectPreStartAdmission,
   removeProjectPreStartAdmissionPaths,
@@ -305,6 +307,16 @@ export async function projectControlRefillWorkerView(
     sourceWorkspacePath,
     controller.scope,
   );
+  const sourceRevision = (await execGitStdout([
+    "-C",
+    sourceWorkspacePath,
+    "rev-parse",
+    sourceRef ?? baseBranch,
+  ])).trim();
+  assertProjectPreStartAdmissionSourceRevision({
+    plan: preStartAdmission,
+    sourceRevision,
+  });
   const createWorktreeInput: CodexGoalProjectCreateWorktreeInput = {
     sourceWorkspacePath,
     ...(realSourceWorkspacePath ? { realSourceWorkspacePath } : {}),
@@ -514,7 +526,11 @@ async function projectControlRefillWorkerBoundedView(
     };
   }
   requiredRawString(args.promptBody, "promptBody");
-  projectControlPathArg(args, args.sourceWorkspacePath, "sourceWorkspacePath");
+  const sourceWorkspacePath = projectControlPathArg(
+    args,
+    args.sourceWorkspacePath,
+    "sourceWorkspacePath",
+  );
   const requested = jobManifestInputFromArgs(args as JobCreateMcpArgs);
   if (
     requested.accessBoundary === AccessBoundary.ProjectScopedControl ||
@@ -532,7 +548,7 @@ async function projectControlRefillWorkerBoundedView(
     allowDangerFullAccess: false,
     networkAccess: requested.networkAccess ?? NetworkAccessMode.Restricted,
   };
-  planProjectPreStartAdmission({
+  const preStartAdmission = planProjectPreStartAdmission({
     value: args.preStartAdmission,
     confirmed: booleanValue(args.confirmPreStartAdmission) === true,
     scope: controller.scope,
@@ -543,6 +559,26 @@ async function projectControlRefillWorkerBoundedView(
     registryRootDir: controller.registryRootDir,
     manifest: createManifest,
   });
+  if (preStartAdmission) {
+    const baseBranch = stringValue(args.baseBranch) ?? "origin/main";
+    assertSafeGitRefName(baseBranch, "baseBranch");
+    const sourceRef = stringValue(args.sourceRef);
+    if (sourceRef) assertSafeGitRefName(sourceRef, "sourceRef");
+    await projectControlRealPathOutsideWorkspaceScope(
+      sourceWorkspacePath,
+      controller.scope,
+    );
+    const sourceRevision = (await execGitStdout([
+      "-C",
+      sourceWorkspacePath,
+      "rev-parse",
+      sourceRef ?? baseBranch,
+    ])).trim();
+    assertProjectPreStartAdmissionSourceRevision({
+      plan: preStartAdmission,
+      sourceRevision,
+    });
+  }
   const operationArgs = {
     ...jsonRecordFromProjectControlArgs(args),
     executionMode: "sync",

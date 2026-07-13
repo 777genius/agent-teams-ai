@@ -236,13 +236,15 @@ function parseProjectPreStartAdmissionScope(
 ): NonNullable<ProjectAccessScope["preStartAdmission"]> {
   if (!isRecord(value)) throw new Error(`${fieldName}_invalid`);
   if (value.mode === "serial-builtin") {
-    if (value.contractSchema !== "worker-start-v1") {
-      throw new Error(`${fieldName}.contractSchema_invalid`);
+    const allowedFields = new Set(["required", "mode"]);
+    for (const field of Object.keys(value)) {
+      if (!allowedFields.has(field)) {
+        throw new Error(`${fieldName}.unexpected_field:${field}`);
+      }
     }
     return {
       required: booleanValue(value.required, `${fieldName}.required`),
       mode: "serial-builtin",
-      contractSchema: "worker-start-v1",
     };
   }
   if (value.mode !== "serial") throw new Error(`${fieldName}.mode_invalid`);

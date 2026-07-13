@@ -17,6 +17,10 @@ import {
   projectAdmissionRefillWorkerRoleSchemaValues,
   projectAdmissionWorkerRoleSchemaValues,
 } from "./codex-goal-mcp-project-control-tool-schemas";
+import {
+  workerLaunchRequestSchema,
+  workerLaunchStateSchema,
+} from "./application/project-control/worker-launch-spec";
 
 export function registerCodexGoalProjectControlJobTools(server: McpServer): void {
   server.registerTool(
@@ -65,9 +69,8 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
           }).strict(),
           z.object({
             mode: z.literal("serial-builtin"),
-            contractSchema: z.literal("worker-start-v1"),
-            contract: z.record(z.string(), z.unknown()),
-            state: z.record(z.string(), z.unknown()).optional(),
+            contract: workerLaunchRequestSchema,
+            state: workerLaunchStateSchema.optional(),
           }).strict(),
         ]).optional(),
         confirmPreStartAdmission: z.boolean().optional(),

@@ -155,7 +155,6 @@ export type ProjectAccessScope = {
     | {
         readonly required: boolean;
         readonly mode: "serial-builtin";
-        readonly contractSchema: "worker-start-v1";
       };
 };
 

@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { hostname } from "node:os";
 import { dirname, join } from "node:path";
 import { execPath } from "node:process";
@@ -34,6 +34,7 @@ export type ProjectControlOperationRecord = {
   readonly targetJobId?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly requestDigest: string;
   readonly args: JsonRecord;
   readonly operationFilePath: string;
   readonly resultPath: string;
@@ -82,6 +83,18 @@ export async function createProjectControlOperation(input: {
   readonly args: JsonRecord;
   readonly targetJobId?: string;
 }): Promise<ProjectControlOperationRecord> {
+  const requestDigest = projectControlOperationRequestDigest(input);
+  // Structural launch failures are deterministic for an unchanged request.
+  // External-state failures remain retryable; corrected input gets a new digest.
+  const blockedBy = await identicalFailedOperation({
+    operationsRootDir: input.operationsRootDir,
+    requestDigest,
+  });
+  if (blockedBy) {
+    throw new Error(
+      `project_control_operation_identical_failed_request_blocked:${blockedBy.operationId}`,
+    );
+  }
   const operationId = `project-control-${compactTimestamp(new Date())}-${randomUUID().slice(0, 8)}`;
   const operationDir = join(input.operationsRootDir, operationId);
   const now = new Date().toISOString();
@@ -93,6 +106,7 @@ export async function createProjectControlOperation(input: {
     ...(input.targetJobId === undefined ? {} : { targetJobId: input.targetJobId }),
     createdAt: now,
     updatedAt: now,
+    requestDigest,
     args: input.args,
     operationFilePath: join(operationDir, "operation.json"),
     resultPath: join(operationDir, "result.json"),
@@ -280,6 +294,19 @@ function parseProjectControlOperationRecord(
     ...(typeof value.targetJobId === "string" ? { targetJobId: value.targetJobId } : {}),
     createdAt: requiredString(value.createdAt, "createdAt"),
     updatedAt: requiredString(value.updatedAt, "updatedAt"),
+    requestDigest: typeof value.requestDigest === "string"
+      ? value.requestDigest
+      : projectControlOperationRequestDigest({
+          toolName,
+          controllerJobId: requiredString(
+            value.controllerJobId,
+            "controllerJobId",
+          ),
+          ...(typeof value.targetJobId === "string"
+            ? { targetJobId: value.targetJobId }
+            : {}),
+          args: jsonRecordFromUnknown(value.args),
+        }),
     args: jsonRecordFromUnknown(value.args),
     operationFilePath: requiredString(value.operationFilePath, "operationFilePath"),
     resultPath: requiredString(value.resultPath, "resultPath"),
@@ -323,6 +350,76 @@ function projectControlOperationError(result: JsonRecord): string {
   if (typeof result.error === "string") return result.error;
   if (typeof result.reason === "string") return result.reason;
   return "project_control_operation_result_not_ok";
+}
+
+async function identicalFailedOperation(input: {
+  readonly operationsRootDir: string;
+  readonly requestDigest: string;
+}): Promise<ProjectControlOperationRecord | undefined> {
+  let entries;
+  try {
+    entries = await readdir(input.operationsRootDir, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+  const candidates = await Promise.all(entries
+    .filter((entry) => entry.isDirectory())
+    .map(async (entry) => {
+      try {
+        return await readProjectControlOperation(
+          join(input.operationsRootDir, entry.name, "operation.json"),
+        );
+      } catch {
+        return undefined;
+      }
+    }));
+  return candidates
+    .filter((candidate): candidate is ProjectControlOperationRecord =>
+      candidate !== undefined &&
+      candidate.status === ProjectControlOperationStatus.Failed &&
+      candidate.requestDigest === input.requestDigest &&
+      retryProtectedOperationError(candidate.error)
+    )
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0];
+}
+
+function retryProtectedOperationError(error: string | undefined): boolean {
+  return typeof error === "string" &&
+    (
+      error.startsWith("worker_launch_") ||
+      error.startsWith("project_control_pre_start_builtin_materialization_") ||
+      error.startsWith("project_control_pre_start_contract_") ||
+      error.startsWith("project_control_pre_start_state_") ||
+      error === "project_control_pre_start_serial_maxInFlight_expected_1" ||
+      error === "project_control_pre_start_serial_single_record_required"
+    );
+}
+
+function projectControlOperationRequestDigest(input: {
+  readonly controllerJobId: string;
+  readonly toolName: ProjectControlOperationToolName;
+  readonly targetJobId?: string;
+  readonly args: JsonRecord;
+}): string {
+  return createHash("sha256").update(stableJson({
+    controllerJobId: input.controllerJobId,
+    toolName: input.toolName,
+    targetJobId: input.targetJobId ?? null,
+    args: input.args,
+  })).digest("hex");
+}
+
+function stableJson(value: JsonValue): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableJson).join(",")}]`;
+  }
+  if (isRecord(value)) {
+    return `{${Object.keys(value).sort().map((key) =>
+      `${JSON.stringify(key)}:${stableJson(value[key] as JsonValue)}`
+    ).join(",")}}`;
+  }
+  return JSON.stringify(value);
 }
 
 function jsonRecordFromUnknown(value: unknown): JsonRecord {

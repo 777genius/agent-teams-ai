@@ -18,8 +18,8 @@ import type {
   CodexGoalProjectPreStartAdmission,
 } from "../../codex-goal-jobs";
 import {
-  materializeBuiltinWorkerStartV1,
-  validateBuiltinWorkerStartV1,
+  materializeBuiltinWorkerLaunchSpec,
+  validateBuiltinWorkerLaunchSpec,
 } from "./codex-goal-project-builtin-pre-start-admission";
 
 const execFileAsync = promisify(execFile);
@@ -46,7 +46,6 @@ export type ProjectPreStartAdmissionInput =
     }
   | {
       readonly mode: "serial-builtin";
-      readonly contractSchema: "worker-start-v1";
       readonly contract: JsonObject;
       readonly state?: JsonObject;
     };
@@ -56,6 +55,19 @@ export type PlannedProjectPreStartAdmission = {
   readonly contract: JsonObject;
   readonly state: JsonObject;
 };
+
+export function assertProjectPreStartAdmissionSourceRevision(input: {
+  readonly plan: PlannedProjectPreStartAdmission | undefined;
+  readonly sourceRevision: string;
+}): void {
+  if (
+    input.plan &&
+    isBuiltinDescriptor(input.plan.descriptor) &&
+    input.plan.contract.phaseStartSha !== input.sourceRevision
+  ) {
+    throw new Error("project_control_pre_start_source_revision_mismatch");
+  }
+}
 
 export function planProjectPreStartAdmission(input: {
   readonly value: unknown;
@@ -74,13 +86,13 @@ export function planProjectPreStartAdmission(input: {
   }
   const parsed = parseProjectPreStartAdmissionInput(input.value);
   if (isBuiltinInput(parsed)) {
-    assertBuiltinScope(input.scope, parsed.contractSchema);
+    assertBuiltinScope(input.scope);
   } else {
     configuredValidator(parsed.contractValidatorPath, input.scope);
     configuredValidator(parsed.admissionValidatorPath, input.scope);
   }
   const materialized = isBuiltinInput(parsed)
-    ? materializeBuiltinWorkerStartV1({
+    ? materializeBuiltinWorkerLaunchSpec({
         contract: parsed.contract,
         ...(parsed.state ? { state: parsed.state } : {}),
         manifest: input.manifest,
@@ -101,7 +113,6 @@ export function planProjectPreStartAdmission(input: {
       ? {
           schemaVersion: 1,
           mode: "serial-builtin",
-          contractSchema: parsed.contractSchema,
           contractPath: join(root, "contract.json"),
           statePath: join(root, "state.json"),
           receiptPath: join(root, "receipt.json"),
@@ -199,8 +210,7 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
   assertQueuedStateBinding(contract, state, input.manifest.jobId);
   const binding = await currentBinding(input.manifest, descriptor);
   const builtinReceiptValid = !isBuiltinDescriptor(descriptor) ||
-    (receipt.validatorKind === "builtin" &&
-      receipt.contractSchema === descriptor.contractSchema);
+    receipt.validatorKind === "builtin";
   if (
     binding.workspaceHead !== contract.phaseStartSha ||
     binding.workspaceStatus !== "" ||
@@ -250,11 +260,11 @@ async function validateProjectPreStartAdmission(input: {
   }
   let validatorReceipt: JsonObject;
   if (isBuiltinDescriptor(descriptor)) {
-    assertBuiltinScope(input.scope, descriptor.contractSchema);
+    assertBuiltinScope(input.scope);
     if (beforeBinding.workspaceHead !== contract.phaseStartSha) {
       throw new Error("project_control_pre_start_workspace_head_mismatch");
     }
-    await validateBuiltinWorkerStartV1({
+    await validateBuiltinWorkerLaunchSpec({
       contract,
       state,
       manifest: input.manifest,
@@ -262,7 +272,6 @@ async function validateProjectPreStartAdmission(input: {
     });
     validatorReceipt = {
       validatorKind: "builtin",
-      contractSchema: descriptor.contractSchema,
     };
   } else {
     const contractValidatorConfig = configuredValidator(
@@ -333,7 +342,7 @@ function parseProjectPreStartAdmissionInput(
     throw new Error("project_control_pre_start_admission_invalid");
   const builtin = value.mode === "serial-builtin";
   const allowedFields = new Set(builtin
-    ? ["mode", "contractSchema", "contract", "state"]
+    ? ["mode", "contract", "state"]
     : ["contractValidatorPath", "admissionValidatorPath", "contract", "state"]);
   for (const field of Object.keys(value)) {
     if (!allowedFields.has(field)) {
@@ -349,12 +358,8 @@ function parseProjectPreStartAdmissionInput(
     );
   }
   if (builtin) {
-    if (value.contractSchema !== "worker-start-v1") {
-      throw new Error("project_control_pre_start_contractSchema_invalid");
-    }
     return {
       mode: "serial-builtin",
-      contractSchema: "worker-start-v1",
       contract: value.contract,
       ...(isObject(value.state) ? { state: value.state } : {}),
     };
@@ -373,14 +378,8 @@ function parseProjectPreStartAdmissionInput(
   };
 }
 
-function assertBuiltinScope(
-  scope: ProjectAccessScope,
-  contractSchema: "worker-start-v1",
-): void {
-  if (
-    scope.preStartAdmission?.mode !== "serial-builtin" ||
-    scope.preStartAdmission.contractSchema !== contractSchema
-  ) {
+function assertBuiltinScope(scope: ProjectAccessScope): void {
+  if (scope.preStartAdmission?.mode !== "serial-builtin") {
     throw new Error("project_control_pre_start_serial_builtin_scope_required");
   }
 }

@@ -43,7 +43,6 @@ export type CodexGoalProjectPreStartAdmission =
   | {
       readonly schemaVersion: 1;
       readonly mode: "serial-builtin";
-      readonly contractSchema: "worker-start-v1";
       readonly contractPath: string;
       readonly statePath: string;
       readonly receiptPath: string;
@@ -477,15 +476,23 @@ function parseProjectPreStartAdmissionManifest(
     "projectPreStartAdmission.receiptPath",
   );
   if (value.mode === "serial-builtin") {
-    if (value.contractSchema !== "worker-start-v1") {
-      throw new Error(
-        "codex_goal_job_projectPreStartAdmission_contractSchema_invalid",
-      );
+    const allowedFields = new Set([
+      "schemaVersion",
+      "mode",
+      "contractPath",
+      "statePath",
+      "receiptPath",
+    ]);
+    for (const field of Object.keys(value)) {
+      if (!allowedFields.has(field)) {
+        throw new Error(
+          `codex_goal_job_projectPreStartAdmission_unexpected_field:${field}`,
+        );
+      }
     }
     return {
       schemaVersion: 1,
       mode: "serial-builtin",
-      contractSchema: "worker-start-v1",
       contractPath,
       statePath,
       receiptPath,

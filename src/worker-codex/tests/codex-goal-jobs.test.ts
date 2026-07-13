@@ -137,6 +137,31 @@ describe("codex goal job registry", () => {
     }
   });
 
+  it("rejects legacy builtin launch discriminator fields", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-jobs-"));
+
+    try {
+      await expect(createCodexGoalJob({
+        registryRootDir: join(root, "registry"),
+        manifest: {
+          ...jobManifest(root),
+          projectPreStartAdmission: {
+            schemaVersion: 1,
+            mode: "serial-builtin",
+            contractSchema: "worker-start-v1",
+            contractPath: join(root, "contract.json"),
+            statePath: join(root, "state.json"),
+            receiptPath: join(root, "receipt.json"),
+          },
+        } as unknown as CodexGoalJobManifestInput,
+      })).rejects.toThrow(
+        "codex_goal_job_projectPreStartAdmission_unexpected_field:contractSchema",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects unsupported codex goal control mode combinations", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-jobs-"));
 

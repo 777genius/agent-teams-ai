@@ -275,13 +275,11 @@ describe("builtin project pre-start admission", () => {
       preStartAdmission: {
         required: true,
         mode: "serial-builtin",
-        contractSchema: "worker-start-v1",
       },
     }))).toMatchObject({
       preStartAdmission: {
         required: true,
         mode: "serial-builtin",
-        contractSchema: "worker-start-v1",
       },
     });
     expect(parseCodexGoalProjectAccessScopeJson(JSON.stringify({
@@ -297,12 +295,12 @@ describe("builtin project pre-start admission", () => {
       preStartAdmission: {
         required: true,
         mode: "serial-builtin",
-        contractSchema: "unknown",
+        contractSchema: "worker-start-v1",
       },
-    }))).toThrow("projectAccessScope.preStartAdmission.contractSchema_invalid");
+    }))).toThrow("projectAccessScope.preStartAdmission.unexpected_field:contractSchema");
   });
 
-  it("validates worker-start-v1 without workspace validator snapshots", async () => {
+  it("validates the stable worker launch format without workspace validator snapshots", async () => {
     const fixture = await createBuiltinFixture();
     const plan = fixture.plan();
     await prepareProjectPreStartAdmission({
@@ -314,7 +312,6 @@ describe("builtin project pre-start admission", () => {
     const receipt = JSON.parse(await readFile(plan.descriptor.receiptPath, "utf8"));
     expect(receipt).toMatchObject({
       validatorKind: "builtin",
-      contractSchema: "worker-start-v1",
       workKey: fixture.contract.workKey,
     });
     expect(fixture.contract.mandatoryScripts).toEqual([]);
@@ -403,7 +400,9 @@ describe("builtin project pre-start admission", () => {
       ownedPaths: ["../escape.ts"],
     });
     await expect(prepareBuiltin(badPath, { contract: badPathContract }))
-      .rejects.toThrow("project_control_pre_start_builtin_contract_ownedPaths_invalid");
+      .rejects.toThrow(
+        "worker_launch_request_invalid:ownedPaths.0:contract_relative_path_invalid",
+      );
 
     const badCheck = await createBuiltinFixture();
     const badCheckContract = withWorkKey({
@@ -411,7 +410,9 @@ describe("builtin project pre-start admission", () => {
       requiredChecks: [{ id: "focused", cwd: "scripts", command: " pnpm test" }],
     });
     await expect(prepareBuiltin(badCheck, { contract: badCheckContract }))
-      .rejects.toThrow("project_control_pre_start_builtin_contract_requiredCheck_command_invalid");
+      .rejects.toThrow(
+        "worker_launch_request_invalid:requiredChecks.0.command:contract_requiredCheck_command_invalid",
+      );
 
     const mismatch = await createBuiltinFixture();
     await expect(prepareBuiltin(mismatch, {
@@ -441,7 +442,9 @@ describe("builtin project pre-start admission", () => {
       },
     };
     await expect(prepareBuiltin(emptyForbidden, { contract: emptyForbiddenContract }))
-      .rejects.toThrow("project_control_pre_start_builtin_contract_forbiddenRealProjects_invalid");
+      .rejects.toThrow(
+        "worker_launch_request_invalid:executionPolicy.forbiddenRealProjects:contract_forbiddenRealProjects_empty",
+      );
   });
 
   it("rejects dirty non-validator workspace content", async () => {
@@ -556,7 +559,8 @@ async function createBuiltinFixture() {
     encoding: "utf8",
   }).trim();
   const contract = withWorkKey({
-    schemaVersion: 1,
+    kind: "worker-launch",
+    format: 1,
     ...base.contract,
     canonicalSha: phaseStartSha,
     baseSha: phaseStartSha,
@@ -611,7 +615,6 @@ async function createBuiltinFixture() {
     preStartAdmission: {
       required: true,
       mode: "serial-builtin",
-      contractSchema: "worker-start-v1",
     },
   };
   return {
@@ -623,7 +626,6 @@ async function createBuiltinFixture() {
       return planProjectPreStartAdmission({
         value: {
           mode: "serial-builtin",
-          contractSchema: "worker-start-v1",
           contract,
           state,
           ...overrides,
@@ -638,6 +640,8 @@ async function createBuiltinFixture() {
 
 function withWorkKey<T extends Record<string, unknown>>(contract: T): T & { workKey: string } {
   const workKey = sha256(Buffer.from(JSON.stringify({
+    kind: contract.kind,
+    format: contract.format,
     phaseId: contract.phaseId,
     laneId: contract.laneId,
     baseSha: contract.baseSha,

@@ -49,6 +49,18 @@ import {
 
 const execFileAsync = promisify(execFile);
 
+type TestJsonSchema = {
+  readonly type?: string;
+  readonly const?: unknown;
+  readonly enum?: readonly unknown[];
+  readonly minItems?: number;
+  readonly required?: readonly string[];
+  readonly additionalProperties?: boolean | TestJsonSchema;
+  readonly properties?: Readonly<Record<string, TestJsonSchema>>;
+  readonly items?: TestJsonSchema;
+  readonly anyOf?: readonly TestJsonSchema[];
+};
+
 describe("codex goal MCP server", () => {
   it("refills a project worker with one brokered worktree, prompt and job flow", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-project-refill-"));
@@ -131,16 +143,15 @@ describe("codex goal MCP server", () => {
           preStartAdmission: {
             required: true,
             mode: "serial-builtin",
-            contractSchema: "worker-start-v1",
           },
         },
       });
 
       const builtinAdmission = {
         mode: "serial-builtin",
-        contractSchema: "worker-start-v1",
         contract: {
-          schemaVersion: 1,
+          kind: "worker-launch",
+          format: 1,
           canonicalSha: phaseStartSha,
           baseSha: phaseStartSha,
           phaseStartSha,
@@ -203,7 +214,6 @@ describe("codex goal MCP server", () => {
           ]),
           projectPreStartAdmission: {
             mode: "serial-builtin",
-            contractSchema: "worker-start-v1",
           },
         },
         dependencyPreflight: {
@@ -230,6 +240,8 @@ describe("codex goal MCP server", () => {
         "utf8",
       ));
       expect(materializedContract).toMatchObject({
+        kind: "worker-launch",
+        format: 1,
         jobId: "infinity-context-memory-fastgate-v1",
         workerId: "infinity-context-memory-fastgate-v1",
         jobRoot: childJobRoot,
@@ -255,7 +267,6 @@ describe("codex goal MCP server", () => {
       ));
       expect(admissionReceipt).toMatchObject({
         validatorKind: "builtin",
-        contractSchema: "worker-start-v1",
         workKey: materializedContract.workKey,
       });
       await expect(access(join(childWorkspace, "README.md"))).resolves.toBeUndefined();
@@ -290,6 +301,55 @@ describe("codex goal MCP server", () => {
         worktree: { status: "noop" },
         createJob: { status: "noop" },
       });
+      await writeFile(join(sourceWorkspacePath, "after-phase-start.md"), "new head\n");
+      await git(sourceWorkspacePath, ["add", "after-phase-start.md"]);
+      await git(sourceWorkspacePath, ["commit", "-m", "test: advance source head"]);
+      const mismatchedSourceWorkspace = join(
+        root,
+        "worktrees",
+        "infinity-context-source-mismatch-v1",
+      );
+      const mismatchedSourceJobRoot = join(
+        root,
+        "worker-jobs",
+        "infinity-context-source-mismatch-v1",
+      );
+      const sourceMismatch = await callToolJson(
+        client,
+        "codex_goal_project_refill_worker",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          jobId: "infinity-context-source-mismatch-v1",
+          jobRootDir: mismatchedSourceJobRoot,
+          authRootDir: join(root, "auth"),
+          sourceWorkspacePath,
+          workspacePath: mismatchedSourceWorkspace,
+          sourceRef: "HEAD",
+          promptBody: "mismatched source must not create resources\n",
+          taskId: "infinity-context-source-mismatch-v1",
+          accounts: ["account-a"],
+          workerRole: "fastgate",
+          preStartAdmission: builtinAdmission,
+          confirmPreStartAdmission: true,
+          startWorker: false,
+          executionMode: "bounded",
+          confirmRefill: true,
+        },
+      );
+      expect(sourceMismatch).toEqual({
+        ok: false,
+        error: "project_control_pre_start_source_revision_mismatch",
+      });
+      await expect(access(mismatchedSourceWorkspace)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(access(mismatchedSourceJobRoot)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(
+        access(join(controllerJobRoot, "project-control-operations")),
+      ).rejects.toMatchObject({ code: "ENOENT" });
       const rejectedWorkspace = join(root, "worktrees", "infinity-context-invalid-v1");
       const rejectedJobRoot = join(root, "worker-jobs", "infinity-context-invalid-v1");
       const rejected = await callToolJson(client, "codex_goal_project_refill_worker", {
@@ -429,6 +489,89 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
         sourceRef: expect.any(Object),
         newBranch: expect.any(Object),
       });
+      const refillSchema = refillTool?.inputSchema.properties
+        ?.preStartAdmission as TestJsonSchema;
+      const builtinSchema = refillSchema.anyOf?.find(
+        (candidate) => candidate.properties?.mode?.const === "serial-builtin",
+      );
+      expect(builtinSchema).toMatchObject({
+        type: "object",
+        required: ["mode", "contract"],
+        additionalProperties: false,
+      });
+      const contractSchema = builtinSchema?.properties?.contract;
+      const declarativeFields = [
+        "kind",
+        "format",
+        "canonicalSha",
+        "baseSha",
+        "phaseStartSha",
+        "packetRevision",
+        "controllerPacket",
+        "lanePacket",
+        "phaseId",
+        "laneId",
+        "inputPatchHash",
+        "reviewKind",
+        "ownedPaths",
+        "mandatoryDocs",
+        "mandatoryScripts",
+        "mandatoryFixtures",
+        "requiredChecks",
+        "executionPolicy",
+      ];
+      const materializedFields = [
+        "jobId",
+        "workerId",
+        "revision",
+        "retryCount",
+        "workKey",
+        "supersedes",
+        "registryStatus",
+        "jobRoot",
+        "workspaceRoot",
+        "promptPath",
+      ];
+      expect(contractSchema?.required).toEqual(declarativeFields);
+      expect(Object.keys(contractSchema?.properties ?? {}).sort()).toEqual(
+        [...declarativeFields, ...materializedFields].sort(),
+      );
+      expect(contractSchema).toMatchObject({
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          kind: { type: "string", const: "worker-launch" },
+          format: { type: "number", const: 1 },
+          reviewKind: {
+            type: "string",
+            enum: ["implementation", "review", "remediation"],
+          },
+          requiredChecks: {
+            type: "array",
+            minItems: 1,
+            items: {
+              type: "object",
+              required: ["id", "cwd", "command"],
+              additionalProperties: false,
+            },
+          },
+          executionPolicy: {
+            type: "object",
+            required: ["mode", "sandboxRoot", "forbiddenRealProjects"],
+            additionalProperties: false,
+            properties: {
+              mode: { type: "string", const: "sandbox-only" },
+            },
+          },
+        },
+      });
+      expect(builtinSchema?.properties?.state).toMatchObject({
+        type: "object",
+        required: ["schemaVersion", "maxRetries", "maxInFlight", "records"],
+        additionalProperties: false,
+      });
+      expect(JSON.stringify(refillSchema)).not.toContain("worker-start-v1");
+      expect(JSON.stringify(refillSchema)).not.toContain("contractSchema");
 
       await callToolJson(client, "codex_goal_create_job", {
         registryRootDir,

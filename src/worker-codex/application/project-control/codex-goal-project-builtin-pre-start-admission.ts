@@ -1,21 +1,25 @@
 import { createHash } from "node:crypto";
 import { realpath, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { isAbsolute, normalize, relative, resolve, sep } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import type { ProjectAccessScope } from "@vioxen/subscription-runtime/worker-core";
 import type {
   CodexGoalJobManifest,
   CodexGoalJobManifestInput,
 } from "../../codex-goal-jobs";
+import {
+  parseWorkerLaunchRequest,
+  parseWorkerLaunchSpec,
+  parseWorkerLaunchState,
+  type WorkerLaunchSpec,
+  type WorkerLaunchState,
+} from "./worker-launch-spec";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 
-const SHA1 = /^[0-9a-f]{40}$/;
-const SHA256 = /^[0-9a-f]{64}$/;
-const PHASE_ID = /^phase-[0-9]{2}$/;
-const LANE_ID = /^[a-z][a-z0-9-]*$/;
-const SIMPLE_ID = /^[a-z0-9][a-z0-9._-]*$/;
 const WORK_KEY_FIELDS = [
+  "kind",
+  "format",
   "phaseId",
   "laneId",
   "baseSha",
@@ -55,15 +59,21 @@ const AUTO_CONTRACT_FIELDS = [
   "supersedes",
 ] as const;
 
-export function materializeBuiltinWorkerStartV1(input: {
+export function materializeBuiltinWorkerLaunchSpec(input: {
   readonly contract: JsonObject;
   readonly state?: JsonObject;
   readonly manifest: CodexGoalJobManifest | CodexGoalJobManifestInput;
 }): { readonly contract: JsonObject; readonly state: JsonObject } {
-  const fullyMaterialized = AUTO_CONTRACT_FIELDS.every((field) => field in input.contract) &&
+  const requestedContract = parseWorkerLaunchRequest(input.contract) as JsonObject;
+  const fullyMaterialized = AUTO_CONTRACT_FIELDS.every(
+    (field) => field in requestedContract,
+  ) &&
     input.state !== undefined;
   if (fullyMaterialized) {
-    return { contract: input.contract, state: input.state as JsonObject };
+    return {
+      contract: parseWorkerLaunchSpec(requestedContract),
+      state: parseWorkerLaunchState(input.state),
+    };
   }
   const expectedBindings: JsonObject = {
     jobId: input.manifest.jobId,
@@ -77,16 +87,16 @@ export function materializeBuiltinWorkerStartV1(input: {
     supersedes: null,
   };
   for (const [field, expected] of Object.entries(expectedBindings)) {
-    if (field in input.contract && input.contract[field] !== expected) {
+    if (field in requestedContract && requestedContract[field] !== expected) {
       fail(`materialization_${field}_mismatch`);
     }
   }
-  const withoutWorkKey: JsonObject = { ...input.contract, ...expectedBindings };
-  const workKey = computeWorkerStartWorkKey(withoutWorkKey);
-  if ("workKey" in input.contract && input.contract.workKey !== workKey) {
+  const withoutWorkKey: JsonObject = { ...requestedContract, ...expectedBindings };
+  const workKey = computeWorkerLaunchWorkKey(withoutWorkKey);
+  if ("workKey" in requestedContract && requestedContract.workKey !== workKey) {
     fail("materialization_workKey_mismatch");
   }
-  const contract: JsonObject = { ...withoutWorkKey, workKey };
+  const contract = parseWorkerLaunchSpec({ ...withoutWorkKey, workKey });
   const record = Object.fromEntries([
     ...STATE_IDENTITY_FIELDS.map((field) => [field, contract[field]]),
     ["status", "queued"],
@@ -102,72 +112,25 @@ export function materializeBuiltinWorkerStartV1(input: {
   if (input.state !== undefined && JSON.stringify(input.state) !== JSON.stringify(state)) {
     fail("materialization_state_mismatch");
   }
-  return { contract, state };
+  return { contract, state: parseWorkerLaunchState(state) };
 }
 
-export async function validateBuiltinWorkerStartV1(input: {
+export async function validateBuiltinWorkerLaunchSpec(input: {
   readonly contract: JsonObject;
   readonly state: JsonObject;
   readonly manifest: CodexGoalJobManifest | CodexGoalJobManifestInput;
   readonly scope: ProjectAccessScope;
 }): Promise<void> {
-  assertWorkerStartContract(input.contract);
-  assertSerialState(input.contract, input.state);
-  await assertWorkerStartFilesystem(input.contract, input.manifest, input.scope);
+  const contract = parseWorkerLaunchSpec(input.contract);
+  const state = parseWorkerLaunchState(input.state);
+  assertSerialState(contract, state);
+  await assertWorkerLaunchFilesystem(contract, input.manifest, input.scope);
 }
 
-function assertWorkerStartContract(contract: JsonObject): void {
-  assertExactKeys(contract, [
-    "schemaVersion",
-    "jobId",
-    "workerId",
-    "canonicalSha",
-    "baseSha",
-    "phaseStartSha",
-    "packetRevision",
-    "controllerPacket",
-    "lanePacket",
-    "phaseId",
-    "laneId",
-    "inputPatchHash",
-    "reviewKind",
-    "revision",
-    "retryCount",
-    "workKey",
-    "supersedes",
-    "registryStatus",
-    "jobRoot",
-    "workspaceRoot",
-    "promptPath",
-    "ownedPaths",
-    "mandatoryDocs",
-    "mandatoryScripts",
-    "mandatoryFixtures",
-    "requiredChecks",
-    "executionPolicy",
-  ], "contract");
-  if (contract.schemaVersion !== 1) fail("contract_schemaVersion_expected_1");
-  assertPattern(contract.jobId, SIMPLE_ID, "contract_jobId_invalid");
-  assertPattern(contract.workerId, SIMPLE_ID, "contract_workerId_invalid");
-  assertPattern(contract.canonicalSha, SHA1, "contract_canonicalSha_invalid");
-  assertPattern(contract.baseSha, SHA1, "contract_baseSha_invalid");
-  assertPattern(contract.phaseStartSha, SHA1, "contract_phaseStartSha_invalid");
-  assertPattern(contract.packetRevision, SIMPLE_ID, "contract_packetRevision_invalid");
-  assertRelativePath(contract.controllerPacket, "contract_controllerPacket_invalid");
-  assertRelativePath(contract.lanePacket, "contract_lanePacket_invalid");
-  assertPattern(contract.phaseId, PHASE_ID, "contract_phaseId_invalid");
-  assertPattern(contract.laneId, LANE_ID, "contract_laneId_invalid");
-  assertPattern(contract.inputPatchHash, SHA256, "contract_inputPatchHash_invalid");
-  if (!["implementation", "review", "remediation"].includes(String(contract.reviewKind))) {
-    fail("contract_reviewKind_invalid");
-  }
-  assertNonNegativeInteger(contract.revision, "contract_revision_invalid");
-  assertNonNegativeInteger(contract.retryCount, "contract_retryCount_invalid");
-  assertPattern(contract.workKey, SHA256, "contract_workKey_invalid");
-  if (contract.supersedes !== null) {
-    assertPattern(contract.supersedes, SHA256, "contract_supersedes_invalid");
-  }
-  if (contract.registryStatus !== "queued") fail("contract_registryStatus_not_queued");
+function assertSerialState(
+  contract: WorkerLaunchSpec,
+  state: WorkerLaunchState,
+): void {
   // Builtin admission is intentionally serial-initial-only. Safe remediation/refill
   // requires the future transactional shared work-key ledger.
   if (
@@ -178,48 +141,11 @@ function assertWorkerStartContract(contract: JsonObject): void {
   ) {
     fail("contract_serial_initial_only");
   }
-  const expectedWorkKey = computeWorkerStartWorkKey(contract);
+  const expectedWorkKey = computeWorkerLaunchWorkKey(contract);
   if (contract.workKey !== expectedWorkKey) fail("contract_workKey_mismatch");
 
-  const ownedPaths = assertPathList(contract.ownedPaths, "contract_ownedPaths");
-  const mandatoryDocs = assertPathList(contract.mandatoryDocs, "contract_mandatoryDocs");
-  assertPathList(contract.mandatoryScripts, "contract_mandatoryScripts", true);
-  assertPathList(contract.mandatoryFixtures, "contract_mandatoryFixtures", true);
-  if (ownedPaths.length === 0 || mandatoryDocs.length === 0) {
-    fail("contract_path_list_empty");
-  }
-  for (const packet of [contract.controllerPacket, contract.lanePacket]) {
-    if (typeof packet === "string" && !mandatoryDocs.includes(packet)) {
-      fail("contract_mandatoryDocs_missing_packet");
-    }
-  }
-  assertRequiredChecks(contract.requiredChecks);
-  assertExecutionPolicy(contract.executionPolicy);
-}
-
-function computeWorkerStartWorkKey(contract: JsonObject): string {
-  return sha256(JSON.stringify(Object.fromEntries(
-    WORK_KEY_FIELDS.map((field) => [field, contract[field]]),
-  )));
-}
-
-function assertSerialState(contract: JsonObject, state: JsonObject): void {
-  assertExactKeys(state, ["schemaVersion", "maxRetries", "maxInFlight", "records"], "state");
-  if (state.schemaVersion !== 1) fail("state_schemaVersion_expected_1");
-  assertNonNegativeInteger(state.maxRetries, "state_maxRetries_invalid");
-  if (state.maxInFlight !== 1) fail("serial_maxInFlight_expected_1");
-  if (!Array.isArray(state.records) || state.records.length !== 1) {
-    fail("serial_single_record_required");
-  }
   const record = state.records[0];
-  if (!isObject(record)) fail("state_record_object_required");
-  assertExactKeys(record, [
-    ...STATE_IDENTITY_FIELDS,
-    "status",
-    "supersededBy",
-    "supersededFrom",
-  ], "state_record", new Set(["supersededBy", "supersededFrom"]));
-  if (record.status !== "queued") fail("state_record_not_queued");
+  if (!record) fail("state_record_missing");
   if (record.supersededBy !== undefined && record.supersededBy !== null) {
     fail("state_record_has_successor");
   }
@@ -229,17 +155,21 @@ function assertSerialState(contract: JsonObject, state: JsonObject): void {
   for (const field of STATE_IDENTITY_FIELDS) {
     if (record[field] !== contract[field]) fail(`state_${field}_mismatch`);
   }
-  if (
-    typeof state.maxRetries === "number" &&
-    typeof record.retryCount === "number" &&
-    record.retryCount > state.maxRetries
-  ) {
+  if (record.retryCount > state.maxRetries) {
     fail("state_maxRetries_exceeded");
   }
 }
 
-async function assertWorkerStartFilesystem(
-  contract: JsonObject,
+function computeWorkerLaunchWorkKey(
+  contract: Readonly<Record<string, unknown>>,
+): string {
+  return sha256(JSON.stringify(Object.fromEntries(
+    WORK_KEY_FIELDS.map((field) => [field, contract[field]]),
+  )));
+}
+
+async function assertWorkerLaunchFilesystem(
+  contract: WorkerLaunchSpec,
   manifest: CodexGoalJobManifest | CodexGoalJobManifestInput,
   scope: ProjectAccessScope,
 ): Promise<void> {
@@ -250,28 +180,28 @@ async function assertWorkerStartFilesystem(
   if (inside(workspace, prompt)) fail("prompt_inside_workspace");
   if (inside(jobRoot, workspace) || inside(workspace, jobRoot)) fail("job_workspace_overlap");
 
-  const executionPolicy = contract.executionPolicy as JsonObject;
-  const sandboxRoot = await realpath(requiredString(executionPolicy.sandboxRoot, "sandboxRoot"));
+  const executionPolicy = contract.executionPolicy;
+  const sandboxRoot = await realpath(executionPolicy.sandboxRoot);
   if (!inside(workspace, sandboxRoot)) fail("sandbox_outside_workspace");
   if (inside(jobRoot, sandboxRoot) || inside(sandboxRoot, jobRoot)) fail("sandbox_jobRoot_overlap");
 
   for (const field of ["mandatoryDocs", "mandatoryScripts", "mandatoryFixtures"] as const) {
-    for (const path of contract[field] as readonly string[]) {
+    for (const path of contract[field]) {
       const resolved = await realpath(resolve(workspace, path));
       if (!inside(workspace, resolved) || !(await stat(resolved)).isFile()) {
         fail(`${field}_unsafe_or_missing`);
       }
     }
   }
-  for (const check of contract.requiredChecks as readonly JsonObject[]) {
-    const cwd = await realpath(resolve(workspace, requiredString(check.cwd, "requiredChecks.cwd")));
+  for (const check of contract.requiredChecks) {
+    const cwd = await realpath(resolve(workspace, check.cwd));
     if (!inside(workspace, cwd) || !(await stat(cwd)).isDirectory()) {
       fail("requiredChecks_cwd_unsafe_or_missing");
     }
   }
 
   const forbiddenRoots = [
-    ...(executionPolicy.forbiddenRealProjects as readonly string[]),
+    ...executionPolicy.forbiddenRealProjects,
     ...(scope.deniedRoots ?? []),
   ].map((path) => resolve(expandHome(path)));
   for (const forbidden of forbiddenRoots) {
@@ -281,86 +211,6 @@ async function assertWorkerStartFilesystem(
       }
     }
   }
-}
-
-function assertRequiredChecks(value: unknown): void {
-  if (!Array.isArray(value) || value.length === 0) fail("contract_requiredChecks_empty");
-  const ids = new Set<string>();
-  for (const check of value) {
-    if (!isObject(check)) fail("contract_requiredCheck_object_required");
-    assertExactKeys(check, ["id", "cwd", "command"], "requiredCheck");
-    assertPattern(check.id, SIMPLE_ID, "contract_requiredCheck_id_invalid");
-    assertRelativePath(check.cwd, "contract_requiredCheck_cwd_invalid");
-    const command = requiredString(check.command, "requiredCheck.command");
-    if (command.trim() !== command) fail("contract_requiredCheck_command_invalid");
-    if (ids.has(check.id as string)) fail("contract_requiredCheck_duplicate_id");
-    ids.add(check.id as string);
-  }
-}
-
-function assertExecutionPolicy(value: unknown): void {
-  if (!isObject(value)) fail("contract_executionPolicy_object_required");
-  assertExactKeys(value, ["mode", "sandboxRoot", "forbiddenRealProjects"], "executionPolicy");
-  if (value.mode !== "sandbox-only") fail("contract_executionPolicy_mode_invalid");
-  if (typeof value.sandboxRoot !== "string" || !isAbsolute(value.sandboxRoot)) {
-    fail("contract_sandboxRoot_absolute_required");
-  }
-  if (
-    !Array.isArray(value.forbiddenRealProjects) ||
-    value.forbiddenRealProjects.length === 0 ||
-    !value.forbiddenRealProjects.every((entry) => typeof entry === "string" && entry.length > 0) ||
-    new Set(value.forbiddenRealProjects).size !== value.forbiddenRealProjects.length
-  ) {
-    fail("contract_forbiddenRealProjects_invalid");
-  }
-}
-
-function assertPathList(
-  value: unknown,
-  label: string,
-  allowEmpty = false,
-): readonly string[] {
-  if (!Array.isArray(value) || (!allowEmpty && value.length === 0)) fail(`${label}_empty`);
-  const paths = value as unknown[];
-  for (const path of paths) assertRelativePath(path, `${label}_invalid`);
-  if (new Set(paths).size !== paths.length) fail(`${label}_duplicate`);
-  return paths as readonly string[];
-}
-
-function assertExactKeys(
-  value: JsonObject,
-  allowed: readonly string[],
-  label: string,
-  optional = new Set<string>(),
-): void {
-  for (const key of Object.keys(value)) {
-    if (!allowed.includes(key)) fail(`${label}_unexpected_field_${key}`);
-  }
-  for (const key of allowed) {
-    if (!optional.has(key) && !(key in value)) fail(`${label}_missing_field_${key}`);
-  }
-}
-
-function assertPattern(value: unknown, pattern: RegExp, error: string): void {
-  if (typeof value !== "string" || !pattern.test(value)) fail(error);
-}
-
-function assertRelativePath(value: unknown, error: string): void {
-  if (
-    typeof value !== "string" || !value || isAbsolute(value) || value.includes("\\") ||
-    normalize(value) !== value || value === "." || value === ".." || value.startsWith(`..${sep}`)
-  ) {
-    fail(error);
-  }
-}
-
-function assertNonNegativeInteger(value: unknown, error: string): void {
-  if (!Number.isInteger(value) || (value as number) < 0) fail(error);
-}
-
-function requiredString(value: unknown, field: string): string {
-  if (typeof value !== "string" || !value.trim()) fail(`${field}_required`);
-  return value as string;
 }
 
 function expandHome(path: string): string {
@@ -380,10 +230,6 @@ function inside(root: string, candidate: string): boolean {
 
 function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
-}
-
-function isObject(value: unknown): value is JsonObject {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function fail(code: string): never {
