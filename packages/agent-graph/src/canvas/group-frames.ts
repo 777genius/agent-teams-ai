@@ -43,6 +43,8 @@ const GROUP_FRAME_NESTED_PRIMARY_LABEL_MIN_ZOOM = 0.015;
 const GROUP_FRAME_NORMAL_LABEL_MIN_ZOOM = GROUP_FRAME_RENDER_MIN_ZOOM;
 const GROUP_FRAME_NORMAL_LABEL_DEPTH_STEP = 0;
 const GROUP_FRAME_NORMAL_LABEL_MAX_ZOOM = GROUP_FRAME_RENDER_MIN_ZOOM;
+const GROUP_FRAME_BOTTOM_LABEL_BASE_PADDING_PX = 48;
+const GROUP_FRAME_LABEL_LANE_STEP_PX = 28;
 
 function getDepthLevel(frame: GraphGroupFrame, fallbackDepth: number): number {
   if (typeof frame.depth !== 'number' || !Number.isFinite(frame.depth)) {
@@ -180,7 +182,9 @@ export function getPaddedGroupFrameBounds(
   const labelLane = Math.max(0, Math.floor(frame?.labelLane ?? 0));
   const usesBottomLabelLane =
     Boolean(frame && hasDepth && frame.priority !== 'primary' && depth > 0) || labelLane > 0;
-  const nestedLabelPaddingPx = usesBottomLabelLane ? 36 + labelLane * 28 : 0;
+  const nestedLabelPaddingPx = usesBottomLabelLane
+    ? GROUP_FRAME_BOTTOM_LABEL_BASE_PADDING_PX + labelLane * GROUP_FRAME_LABEL_LANE_STEP_PX
+    : 0;
   const bottomPaddingPx = Math.max(topPaddingPx, nestedLabelPaddingPx);
   const horizontalPadding = horizontalPaddingPx / paddingZoom;
   const topPadding = topPaddingPx / paddingZoom;

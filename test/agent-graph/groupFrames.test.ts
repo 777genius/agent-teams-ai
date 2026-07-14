@@ -154,7 +154,7 @@ describe('group frame hit detection', () => {
       verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(frame),
     });
 
-    expect(labelBounds.top).toBeGreaterThan(prepared!.bounds.bottom);
+    expect(labelBounds.top - prepared!.bounds.bottom).toBe(21);
     expect(paddedBounds.bottom - labelBounds.bottom).toBe(8);
   });
 
