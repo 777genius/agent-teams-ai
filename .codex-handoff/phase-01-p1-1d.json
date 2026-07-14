@@ -1,0 +1,375 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-01",
+  "laneId": "p1-1d-shadowed-map-remediation",
+  "packetRevision": "phase-01-p1-1d-shadowed-map-remediation-r4",
+  "mode": "implementation-remediation",
+  "baseSha": "1b37afb02bec25a1f08432d733595b553101ecab",
+  "canonicalSha": "3405da177b040c65caad10ef2df4d4f4338feed0",
+  "planBundleCommit": "3405da177b040c65caad10ef2df4d4f4338feed0",
+  "phaseStartSha": "3405da177b040c65caad10ef2df4d4f4338feed0",
+  "headSha": "3405da177b040c65caad10ef2df4d4f4338feed0",
+  "producerJob": "agent-teams-hosted-web-refactor-p1-1d-shadowed-map-remediation-producer-v17-r4",
+  "status": "verified",
+  "admission": {
+    "operation": "codex_goal_project_refill_worker",
+    "workerRole": "producer",
+    "preStartAdmission": {
+      "mode": "serial-builtin",
+      "contract": {
+        "kind": "worker-launch",
+        "format": 1,
+        "canonicalSha": "3405da177b040c65caad10ef2df4d4f4338feed0",
+        "baseSha": "1b37afb02bec25a1f08432d733595b553101ecab",
+        "phaseStartSha": "3405da177b040c65caad10ef2df4d4f4338feed0",
+        "packetRevision": "phase-01-p1-1d-shadowed-map-remediation-r4",
+        "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
+        "lanePacket": "docs/hosted-web-phases/phase-01/lanes/p1-1d-additive-response-remediation.md",
+        "phaseId": "phase-01",
+        "laneId": "p1-1d-shadowed-map-remediation",
+        "inputPatchHash": "521d8bab2ed7bc4334b38a5786dd5685f5e4f033c3962cab566f9ab3b60d0000",
+        "reviewKind": "implementation"
+      }
+    }
+  },
+  "inputProvenance": {
+    "reviewedOutputId": "693d79c9314c46b9ac0ae13c8c62cb7951461fb7d335ec426119fc8a86a23c91",
+    "materializedArtifact": "output.patch",
+    "inputPatchHash": "521d8bab2ed7bc4334b38a5786dd5685f5e4f033c3962cab566f9ab3b60d0000",
+    "runtimeNinePathCarrierSha256": "1f9c6a2a28e5540c61d1395bc51a34a7c0db31855bae575abc9582f839118b49",
+    "inputEightPathSemanticReconstructionSha256": "fa46617652b072e887563f5a751f7bd0260e0e1d4fb96b628badea91ea7ae9d6",
+    "rolesKeptDistinct": true,
+    "runtimeMaterializationVerified": true
+  },
+  "bindingRejectedReview": {
+    "strictResultSha256": "b8dca625e5eedfc457fd9908a7c0f41489db1dc784c98b52598a1e26504dc895",
+    "auditedAttempt": "p1-1d-review-v17-r2-formal-reject",
+    "disposition": "REJECT",
+    "findings": [
+      {
+        "id": "P1-001",
+        "classification": "product",
+        "remediation": "replace input-owned array mapping with an indexed copy into a fresh plain array"
+      },
+      {
+        "id": "P1-002",
+        "classification": "process-only-fail-closed",
+        "productChangeRequired": false
+      }
+    ],
+    "preservedAsReject": true
+  },
+  "rejectedBroadR3Evidence": {
+    "reviewedOutputId": "5e1f1bcb6bfc076d59346b0fddc97db271800af4a9e17e85c604de0f2d046822",
+    "patchSha256": "8f74ea9cf5b3e187a75a36c0e4e90378752e52d5e1b06893d961811c54ab5dcf",
+    "auditedAttempt": "p1-1d-shadowed-map-router-v17-r3-scope-reject",
+    "copiedOrApplied": false,
+    "integrated": false
+  },
+  "evidence": [
+    {
+      "id": "P1.1D.TEAM_LIFECYCLE_READ_CONTRACT",
+      "paths": [
+        "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
+        "src/features/team-lifecycle/contracts/index.ts",
+        "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts"
+      ],
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P1.1D.TEAM_LIFECYCLE_READ_USE_CASE",
+      "paths": [
+        "src/features/team-lifecycle/core/application/ListTeamLifecycle.ts",
+        "src/features/team-lifecycle/core/application/index.ts",
+        "src/features/team-lifecycle/index.ts",
+        "test/features/team-lifecycle/core/ListTeamLifecycle.test.ts"
+      ],
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P1.1D.TEAM_LIFECYCLE_SEMANTIC_PROOF",
+      "paths": [
+        "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts",
+        "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts"
+      ],
+      "proofLevel": "target_verified"
+    }
+  ],
+  "changedPaths": [
+    "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
+    "src/features/team-lifecycle/contracts/index.ts",
+    "src/features/team-lifecycle/core/application/ListTeamLifecycle.ts",
+    "src/features/team-lifecycle/core/application/index.ts",
+    "src/features/team-lifecycle/index.ts",
+    "test/features/team-lifecycle/core/ListTeamLifecycle.test.ts",
+    "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts",
+    "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts",
+    ".codex-handoff/phase-01-p1-1d.json"
+  ],
+  "semanticEditPaths": [
+    "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
+    "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts",
+    ".codex-handoff/phase-01-p1-1d.json"
+  ],
+  "bytePreservationProofs": [
+    {
+      "path": "src/features/team-lifecycle/contracts/index.ts",
+      "reviewedCarrierSha256": "6ce70ee187f8b8da58e2d1722b5de13efade6da536f5186cb2aaf5f5ed232bf3",
+      "finalSha256": "6ce70ee187f8b8da58e2d1722b5de13efade6da536f5186cb2aaf5f5ed232bf3",
+      "bytePreserved": true
+    },
+    {
+      "path": "src/features/team-lifecycle/core/application/ListTeamLifecycle.ts",
+      "reviewedCarrierSha256": "1e6e72911615af3207e04f48f9abf16c57f262abf1ffdcd33e72e66662b9c435",
+      "finalSha256": "1e6e72911615af3207e04f48f9abf16c57f262abf1ffdcd33e72e66662b9c435",
+      "bytePreserved": true
+    },
+    {
+      "path": "src/features/team-lifecycle/core/application/index.ts",
+      "reviewedCarrierSha256": "ed348a14f02aa070ae6437aef5c0b4932fd7bfa2f2cd43004b86d8c2da255bdd",
+      "finalSha256": "ed348a14f02aa070ae6437aef5c0b4932fd7bfa2f2cd43004b86d8c2da255bdd",
+      "bytePreserved": true
+    },
+    {
+      "path": "src/features/team-lifecycle/index.ts",
+      "reviewedCarrierSha256": "beff7b458a9b9eafe247c35f1a449f083696376cb83e2abda3e73d917212b03c",
+      "finalSha256": "beff7b458a9b9eafe247c35f1a449f083696376cb83e2abda3e73d917212b03c",
+      "bytePreserved": true
+    },
+    {
+      "path": "test/features/team-lifecycle/core/ListTeamLifecycle.test.ts",
+      "reviewedCarrierSha256": "d17fa39e0dce56c6f80a2f98d36ec368168f7c29df84238ca4811b128b06fa66",
+      "finalSha256": "d17fa39e0dce56c6f80a2f98d36ec368168f7c29df84238ca4811b128b06fa66",
+      "bytePreserved": true
+    },
+    {
+      "path": "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts",
+      "reviewedCarrierSha256": "2f7d971aa6743f3980f60c1693fe97513cdb5d07831ebc91a8739153c58ffe29",
+      "finalSha256": "2f7d971aa6743f3980f60c1693fe97513cdb5d07831ebc91a8739153c58ffe29",
+      "bytePreserved": true
+    }
+  ],
+  "semanticEditHashes": [
+    {
+      "path": "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
+      "reviewedCarrierSha256": "5e972fd10bed1df161f324076a727ccb4ccb24fb6b950a87d1ec48a917363e69",
+      "finalSha256": "9407de573f0fdcabf4cf77fd5faf4b2fa229e4cff7d34b25096d6f69cd2a3df8"
+    },
+    {
+      "path": "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts",
+      "reviewedCarrierSha256": "32bf371bae10970dea66abc8a45e56c1fc6222d844413912c974d57ef5353b09",
+      "finalSha256": "1e16e6a0fdd8bb559ae5c6d5d3973b6ca9d85ada51e18d52c8620354994b36a5"
+    },
+    {
+      "path": ".codex-handoff/phase-01-p1-1d.json",
+      "reviewedCarrierSha256": "d07a76b4a641dc4a0928e437823edd6b655a48ddd25ba13a8699f854993b2713",
+      "finalCanonicalSha256": "fd4331dbbabd6b0e11cb943e33ddaa4a7663b5b0dbe931c8867e99c84664b352",
+      "canonicalization": "sha256 of the final UTF-8 file bytes after replacing only this finalCanonicalSha256 value with 64 ASCII zeroes"
+    }
+  ],
+  "finalSemanticPatchManifest": {
+    "algorithm": "sha256",
+    "sha256": "3280cda7b2169d7ca59e6f0441c09b10b752d3c211f64741eaf2222484f9d403",
+    "pathOrder": [
+      "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
+      "src/features/team-lifecycle/contracts/index.ts",
+      "src/features/team-lifecycle/core/application/ListTeamLifecycle.ts",
+      "src/features/team-lifecycle/core/application/index.ts",
+      "src/features/team-lifecycle/index.ts",
+      "test/features/team-lifecycle/core/ListTeamLifecycle.test.ts",
+      "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts",
+      "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts"
+    ],
+    "reconstruction": "after proving every path is absent at phaseStartSha, concatenate git diff --binary --full-index --no-index output from /dev/null to each path in exact pathOrder; sha256",
+    "handoffExcludedFromSelfHash": true
+  },
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/features/team-lifecycle/core/ListTeamLifecycle.test.ts",
+      "exitCode": 0,
+      "testFiles": "1/1 passed",
+      "tests": "6/6 passed"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts",
+      "exitCode": 0,
+      "testFiles": "1/1 passed",
+      "tests": "11/11 passed"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts",
+      "exitCode": 0,
+      "testFiles": "1/1 passed",
+      "tests": "5/5 passed"
+    },
+    {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts",
+      "exitCode": 0,
+      "testFiles": "2/2 passed",
+      "tests": "7/7 passed"
+    },
+    {
+      "command": "pnpm lint:fast:files -- src/features/team-lifecycle/contracts/team-lifecycle-read.ts src/features/team-lifecycle/contracts/index.ts src/features/team-lifecycle/core/application/ListTeamLifecycle.ts src/features/team-lifecycle/core/application/index.ts src/features/team-lifecycle/index.ts test/features/team-lifecycle/core/ListTeamLifecycle.test.ts test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts",
+      "exitCode": 0,
+      "matchedFiles": 8
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 1,
+      "classification": "exact accepted inherited Phase 0 diagnostics only",
+      "diagnosticCount": 7,
+      "diagnosticFileCount": 3,
+      "diagnostics": [
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7016",
+          "location": "25:8"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7031",
+          "location": "66:31"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS18046",
+          "location": "117:68"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7031",
+          "location": "413:48"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+          "code": "TS7031",
+          "location": "733:10"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+          "code": "TS7016",
+          "location": "12:8"
+        },
+        {
+          "path": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+          "code": "TS2352",
+          "location": "162:44"
+        }
+      ],
+      "inheritedDiagnosticsUnchanged": true,
+      "ownedPathDiagnosticCount": 0
+    },
+    {
+      "command": "pnpm exec prettier --check src/features/team-lifecycle/contracts/team-lifecycle-read.ts src/features/team-lifecycle/contracts/index.ts src/features/team-lifecycle/core/application/ListTeamLifecycle.ts src/features/team-lifecycle/core/application/index.ts src/features/team-lifecycle/index.ts test/features/team-lifecycle/core/ListTeamLifecycle.test.ts test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts .codex-handoff/phase-01-p1-1d.json",
+      "exitCode": 0,
+      "matchedFiles": 9
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git status --short",
+      "exitCode": 0,
+      "statusEntryCount": 4,
+      "resolvedChangedPathCount": 9,
+      "stagedPathCount": 0
+    }
+  ],
+  "negativeResultMatrix": [
+    {
+      "id": "P1.NEG.SEMANTIC_OUTCOME",
+      "diagnostic": "phase1-semantic-outcome-drift",
+      "negativeResult": "rejected",
+      "positiveNeighborResult": "all ten immutable fixture outcomes preserved"
+    },
+    {
+      "id": "P1.NEG.LEGACY_GOD_DTO",
+      "diagnostic": "phase1-legacy-god-dto-forbidden",
+      "negativeResult": "rejected",
+      "positiveNeighborResult": "narrow feature-owned contract accepted"
+    },
+    {
+      "id": "P1.NEG.NO_FILESYSTEM_ADAPTER_PHASE1",
+      "diagnostic": "phase1-filesystem-adapter-forbidden",
+      "negativeResult": "rejected",
+      "positiveNeighborResult": "pure injected source port and test-owned in-memory value accepted"
+    }
+  ],
+  "shadowedMapProof": {
+    "validatedLengthCapturedOnce": true,
+    "maximumAcceptedLength": 1000,
+    "freshPlainArrayAllocated": true,
+    "everyOutputIndexOwned": true,
+    "sparseInputsRejectedAtEveryTestedPosition": true,
+    "everyDenseInputIndexReadExactlyOnce": true,
+    "parseItemCalledForEveryCopiedElement": true,
+    "inputOwnedMapDispatched": false,
+    "inputOwnedIteratorDispatched": false,
+    "inputOwnedConstructorDispatched": false,
+    "inputOwnedSpeciesDispatched": false,
+    "deterministicOrderingRunsOnlyOnTrustedArray": true,
+    "frozenArraysAreTrusted": true
+  },
+  "preservedBehavior": {
+    "strictTopLevelAndNestedRequests": true,
+    "sameVersionAdditiveResponsesValidatedAndProjected": true,
+    "safeKnownFieldOnlyFrozenProjections": true,
+    "allTenFixtureOutcomes": true,
+    "transportNeutrality": true,
+    "sourceCallBehavior": true,
+    "negativeDiagnostics": true,
+    "publicBoundaries": true
+  },
+  "ownership": {
+    "expectedChangedPathCount": 9,
+    "actualChangedPathCount": 9,
+    "semanticEditPathCount": 3,
+    "bytePreservedPathCount": 6,
+    "onlyOwnedPaths": true,
+    "stagedPaths": 0
+  },
+  "provenance": {
+    "headMatchesCanonical": true,
+    "baseIsAncestorOfCanonical": true,
+    "runtimeBindingsMatchPacket": true,
+    "carrierRolesKeptDistinct": true,
+    "rejectedR2Preserved": true,
+    "rejectedR3CopiedOrApplied": false
+  },
+  "safety": {
+    "highSignalLexicalMatches": 0,
+    "credentialOrSecretValues": 0,
+    "authOrProviderPayloadValues": 0,
+    "privateOrRealProjectPathValues": 0,
+    "rawCommandOrRuntimePayloadValues": 0,
+    "binaryFiles": 0,
+    "textFiles": 9
+  },
+  "selfReview": {
+    "authorizedSemanticPathsOnly": true,
+    "sixCarrierPathsBytePreserved": true,
+    "shadowedMapFindingRemediated": true,
+    "scopeExpansion": false,
+    "independentExactReadReviewCompleted": false
+  },
+  "findings": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "unverifiedClaims": [
+    "fresh independent exact-read acceptance",
+    "integration",
+    "IPC/HTTP adapters",
+    "preload/renderer behavior",
+    "filesystem/runtime integration",
+    "production mount",
+    "Phase 1 completion",
+    "Phase 2+"
+  ],
+  "blockers": [],
+  "reviewRequirement": "fresh independent exact-read reviewer",
+  "nextAction": "review",
+  "terminalState": "HOLD"
+}
