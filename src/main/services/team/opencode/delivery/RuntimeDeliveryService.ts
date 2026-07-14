@@ -136,8 +136,8 @@ export class RuntimeDeliveryService {
       return staleRun;
     }
 
-    const destination = resolveRuntimeDeliveryDestination(envelope);
-    const destinationMessageId = buildRuntimeDestinationMessageId(envelope);
+    const requestedDestination = resolveRuntimeDeliveryDestination(envelope);
+    const requestedDestinationMessageId = buildRuntimeDestinationMessageId(envelope);
     const payloadHash = hashRuntimeDeliveryEnvelope(envelope);
     const legacyPayloadHash = hashRuntimeDeliveryEnvelopeLegacyTaskRefs(envelope);
     const begin = await this.journal.begin({
@@ -149,8 +149,8 @@ export class RuntimeDeliveryService {
       fromMemberName: envelope.fromMemberName,
       providerId: envelope.providerId,
       runtimeSessionId: envelope.runtimeSessionId,
-      destination,
-      destinationMessageId,
+      destination: requestedDestination,
+      destinationMessageId: requestedDestinationMessageId,
       now,
     });
 
@@ -198,23 +198,36 @@ export class RuntimeDeliveryService {
       };
     }
 
+    const destination = begin.record.destination;
+    const destinationMessageId = begin.record.destinationMessageId;
     const port = this.destinations.get(destination.kind);
-    const preExisting = await port.verify({ destination, destinationMessageId });
-    if (preExisting.found && preExisting.location) {
-      await this.journal.markCommitted({
-        idempotencyKey: envelope.idempotencyKey,
-        runId: envelope.runId,
-        teamName: envelope.teamName,
-        location: preExisting.location,
-        committedAt: now,
+    const verifiedDestinationMessageIds = new Set<string>();
+    for (const candidate of [...(begin.recoveryRecords ?? []), begin.record]) {
+      if (verifiedDestinationMessageIds.has(candidate.destinationMessageId)) {
+        continue;
+      }
+      verifiedDestinationMessageIds.add(candidate.destinationMessageId);
+      const candidatePort = this.destinations.get(candidate.destination.kind);
+      const preExisting = await candidatePort.verify({
+        destination: candidate.destination,
+        destinationMessageId: candidate.destinationMessageId,
       });
-      return {
-        ok: true,
-        delivered: false,
-        reason: 'duplicate_destination_found',
-        idempotencyKey: envelope.idempotencyKey,
-        location: preExisting.location,
-      };
+      if (preExisting.found && preExisting.location) {
+        await this.journal.markCommitted({
+          idempotencyKey: envelope.idempotencyKey,
+          runId: envelope.runId,
+          teamName: envelope.teamName,
+          location: preExisting.location,
+          committedAt: now,
+        });
+        return {
+          ok: true,
+          delivered: false,
+          reason: 'duplicate_destination_found',
+          idempotencyKey: envelope.idempotencyKey,
+          location: preExisting.location,
+        };
+      }
     }
 
     const staleRunBeforeWrite = await this.rejectIfRunIsStale(envelope, {
@@ -353,7 +366,7 @@ async function serializeRuntimeDelivery<T>(
   envelope: RuntimeDeliveryEnvelope,
   operation: () => Promise<T>
 ): Promise<T> {
-  const key = JSON.stringify([envelope.teamName, envelope.runId, envelope.idempotencyKey]);
+  const key = JSON.stringify([envelope.teamName, envelope.idempotencyKey]);
   const previousTurn = runtimeDeliveryTurns.get(key) ?? Promise.resolve();
   let releaseTurn = (): void => {};
   const currentTurn = new Promise<void>((resolve) => {
