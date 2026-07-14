@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
 import { useAppTranslation } from '@features/localization/renderer';
-import { Plus } from 'lucide-react';
+import { Columns3, Network, Plus } from 'lucide-react';
 
 import {
   buildOrganizationGraphData,
@@ -513,10 +513,30 @@ export const OrgGraphSurface = ({
               </button>
             );
           })}
+          <span className="mx-0.5 h-4 w-px bg-sky-200/10" aria-hidden="true" />
+          <button
+            type="button"
+            aria-label={
+              layoutMode === 'hierarchical'
+                ? t('organizations.graph.layout.switchToNested')
+                : t('organizations.graph.layout.switchToHierarchy')
+            }
+            title={
+              layoutMode === 'hierarchical'
+                ? t('organizations.graph.layout.switchToNested')
+                : t('organizations.graph.layout.switchToHierarchy')
+            }
+            className="flex size-6 shrink-0 items-center justify-center rounded-md text-[#66ccff90] transition-colors hover:bg-[rgba(100,200,255,0.1)] hover:text-[#aaeeff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
+            onClick={() =>
+              onLayoutModeChange(layoutMode === 'hierarchical' ? 'grid-under-lead' : 'hierarchical')
+            }
+          >
+            {layoutMode === 'hierarchical' ? <Columns3 size={11} /> : <Network size={11} />}
+          </button>
         </div>
       </div>
     ),
-    [relationViewMode, t]
+    [layoutMode, onLayoutModeChange, relationViewMode, t]
   );
   const createTeamFrameId = useMemo(
     () => getCreateTeamFrameId(viewModel, selectedNodeId),
@@ -586,12 +606,6 @@ export const OrgGraphSurface = ({
         showStarField: false,
         showSpaceEffects: false,
         bloomIntensity: 0.25,
-      }}
-      onLayoutModeChange={onLayoutModeChange}
-      layoutModeCycle={['grid-under-lead', 'hierarchical']}
-      layoutModeLabels={{
-        'grid-under-lead': t('organizations.graph.layout.switchToNested'),
-        hierarchical: t('organizations.graph.layout.switchToHierarchy'),
       }}
       showMinimap
       minimapLabel={t('organizations.graph.canvas.minimap')}
