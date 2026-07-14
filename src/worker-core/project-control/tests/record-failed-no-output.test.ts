@@ -85,6 +85,77 @@ describe("recordFailedNoOutput", () => {
       note: "Worker failed before producing authored output.",
     })).rejects.toThrow("failed_no_output_closed_at_must_follow_source");
   });
+
+  it("allows relocating legacy preexisting patch evidence into terminal backup", async () => {
+    const source = sourceRecord();
+    await expect(recordFailedNoOutput({ writer: new CapturingWriter() }, {
+      allowedLedgerRoots: ["/project/control/ledger"],
+      ledgerRoot: "/project/control/ledger",
+      sourceRecord: {
+        ...source,
+        status: "failed_no_output",
+        backupWorkspaceDirty: true,
+        reclassifiableAsFailedNoOutput: false,
+        evidence: [
+          "preexisting workspace patch is outside terminal backup",
+          "failed_no_output record contradicts non-empty workspace status evidence",
+        ],
+      },
+      jobId: "project-worker-1",
+      workspace: "/project/worktrees/project-worker-1",
+      workerAlive: false,
+      workspaceDirty: true,
+      attemptId: "relocate-legacy-baseline-v2",
+      closedAt: "2026-07-13T20:00:00.001Z",
+      failureCategory: "infrastructure",
+      failureCode: "legacy_shared_workspace",
+      note: "Relocated the immutable preexisting patch into terminal backup.",
+      preexistingWorkspacePatch: {
+        path: "/project/evidence/project-worker-1/preexisting-workspace.patch",
+        sha256: "a".repeat(64),
+      },
+    })).resolves.toMatchObject({
+      decision: {
+        status: "failed_no_output",
+        preexistingWorkspacePatch: {
+          path: "/project/evidence/project-worker-1/preexisting-workspace.patch",
+          sha256: "a".repeat(64),
+        },
+      },
+    });
+  });
+
+  it("rejects unrelated evidence during legacy baseline relocation", async () => {
+    const source = sourceRecord();
+    await expect(recordFailedNoOutput({ writer: new CapturingWriter() }, {
+      allowedLedgerRoots: ["/project/control/ledger"],
+      ledgerRoot: "/project/control/ledger",
+      sourceRecord: {
+        ...source,
+        status: "failed_no_output",
+        backupWorkspaceDirty: true,
+        reclassifiableAsFailedNoOutput: false,
+        evidence: [
+          "preexisting workspace patch is outside terminal backup",
+          "failed_no_output record contradicts non-empty workspace status evidence",
+          "backup statusPath is missing",
+        ],
+      },
+      jobId: "project-worker-1",
+      workspace: "/project/worktrees/project-worker-1",
+      workerAlive: false,
+      workspaceDirty: true,
+      attemptId: "relocate-invalid-baseline-v2",
+      closedAt: "2026-07-13T20:00:00.001Z",
+      failureCategory: "infrastructure",
+      failureCode: "legacy_shared_workspace",
+      note: "This correction must remain blocked.",
+      preexistingWorkspacePatch: {
+        path: "/project/evidence/project-worker-1/preexisting-workspace.patch",
+        sha256: "a".repeat(64),
+      },
+    })).rejects.toThrow("failed_no_output_source_evidence_invalid");
+  });
 });
 
 class CapturingWriter implements ConsumedOutputLedgerWriterPort {

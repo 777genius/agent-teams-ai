@@ -370,6 +370,7 @@ async function writeBaselineFailedNoOutput(input: {
     "producer-output.patch",
   );
   const baseline = "diff --git a/README.md b/README.md\n";
+  const baselineSha256 = createHash("sha256").update(baseline).digest("hex");
   await mkdir(dirname(baselinePath), { recursive: true });
   await writeFile(statusPath, " M README.md\n");
   await writeFile(patchPath, "");
@@ -383,13 +384,17 @@ async function writeBaselineFailedNoOutput(input: {
       closedAt: "2026-07-13T20:00:00.000Z",
       failure: { category: "infrastructure", code: "terminal_result_missing" },
       output: { authoredChanges: false, workspaceDirty: false },
+      preexistingWorkspacePatch: {
+        path: baselinePath,
+        sha256: baselineSha256,
+      },
       note: "Verifier failed after the producer patch was applied.",
       backup: { workspace, statusPath, patchPath },
     }, null, 2)}\n`,
   );
   return {
     path: baselinePath,
-    sha256: createHash("sha256").update(baseline).digest("hex"),
+    sha256: baselineSha256,
   };
 }
 

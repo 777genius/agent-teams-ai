@@ -21,6 +21,7 @@ import {
   localProjectIntegrationSnapshotRoot,
   validateLocalWorkerHandoffArtifact,
 } from "./local-worker-handoff-artifact-validator";
+import { readCodexGoalJob } from "../../codex-goal-jobs";
 import {
   LocalReviewedWorkerOutputStore,
   resolveReviewedWorkerOutput,
@@ -28,11 +29,10 @@ import {
 } from "../../reviewed-worker-output";
 import { projectControlWorkspaceLockRoot } from "../../codex-goal-project-workspace-lock";
 
-export type CreateLocalProjectIntegrationMcpToolHandlersOptions =
-  Pick<
-    CreateProjectIntegrationMcpToolHandlersOptions,
-    "loadController" | "resolvePathArg"
-  >;
+export type CreateLocalProjectIntegrationMcpToolHandlersOptions = Pick<
+  CreateProjectIntegrationMcpToolHandlersOptions,
+  "loadController" | "resolvePathArg"
+>;
 
 export function createLocalProjectIntegrationMcpToolHandlers(
   options: CreateLocalProjectIntegrationMcpToolHandlersOptions,
@@ -40,7 +40,16 @@ export function createLocalProjectIntegrationMcpToolHandlers(
   return createProjectIntegrationMcpToolHandlers({
     ...options,
     integrationDeps: localProjectIntegrationDeps,
-    validateWorkerHandoffArtifact: validateLocalWorkerHandoffArtifact,
+    validateWorkerHandoffArtifact: async (input) => {
+      const registeredWorker = await readRegisteredWorkerOwnership(
+        input.controller,
+        input.workerJobId,
+      );
+      return validateLocalWorkerHandoffArtifact({
+        ...input,
+        ...(registeredWorker ? { registeredWorker } : {}),
+      });
+    },
     resolveReviewedOutput: async (controller, input) =>
       resolveReviewedWorkerOutput({
         store: new LocalReviewedWorkerOutputStore({
@@ -53,6 +62,36 @@ export function createLocalProjectIntegrationMcpToolHandlers(
           : {}),
       }),
   });
+}
+
+async function readRegisteredWorkerOwnership(
+  controller: ProjectIntegrationMcpController,
+  workerJobId: string,
+) {
+  try {
+    const worker = await readCodexGoalJob({
+      registryRootDir: controller.registryRootDir,
+      jobId: workerJobId,
+    });
+    return {
+      jobId: worker.jobId,
+      jobRootDir: worker.jobRootDir,
+      workspacePath: worker.workspacePath,
+      ...(worker.projectAccessScope
+        ? { projectAccessScope: worker.projectAccessScope }
+        : {}),
+    };
+  } catch (error) {
+    if (isNodeError(error, "ENOENT")) return undefined;
+    throw error;
+  }
+}
+
+function isNodeError(
+  error: unknown,
+  code: string,
+): error is NodeJS.ErrnoException {
+  return error instanceof Error && "code" in error && error.code === code;
 }
 
 function localProjectIntegrationDeps(

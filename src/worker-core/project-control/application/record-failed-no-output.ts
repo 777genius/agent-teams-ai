@@ -7,6 +7,11 @@ import type {
   TerminalOutputDecisionReceipt,
 } from "../ports/consumed-output-ledger-writer-port";
 
+const BASELINE_CORRECTION_EVIDENCE = new Set([
+  "failed_no_output record contradicts non-empty workspace status evidence",
+  "preexisting workspace patch is outside terminal backup",
+]);
+
 export type RecordFailedNoOutputInput = {
   readonly allowedLedgerRoots: readonly string[];
   readonly ledgerRoot: string;
@@ -82,9 +87,11 @@ export function assertFailedNoOutputEvidence(
       input.workspaceDirty === true &&
       input.sourceRecord.status === "failed_no_output" &&
       input.sourceRecord.backupWorkspaceDirty === true &&
+      input.sourceRecord.evidence.includes(
+        "failed_no_output record contradicts non-empty workspace status evidence",
+      ) &&
       input.sourceRecord.evidence.every(
-        (item) => item ===
-          "failed_no_output record contradicts non-empty workspace status evidence",
+        (item) => BASELINE_CORRECTION_EVIDENCE.has(item),
       ),
   );
   if (
