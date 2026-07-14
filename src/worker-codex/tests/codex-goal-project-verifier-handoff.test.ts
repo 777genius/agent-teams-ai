@@ -10,6 +10,7 @@ import { materializeCodexGoalHandoffArtifacts } from "../codex-goal-handoff-arti
 import {
   applyVerifiedInputPatch,
   assertCanonicalRemoteRevision,
+  canonicalRemoteWorktreeSourceRef,
   resolveCanonicalRemoteHead,
 } from "../application/project-control/codex-goal-project-git";
 import { readVerifiedProducerHandoff } from "../application/project-control/codex-goal-project-verifier-handoff";
@@ -108,6 +109,48 @@ describe("project verifier handoff", () => {
         resolvedRevision: localHead,
       }),
     ).toThrow("project_control_source_revision_stale");
+  });
+
+  it("uses the canonical local branch when its remote tracking ref is stale", async () => {
+    const root = await temporaryRoot("canonical-worktree-source-");
+    const remotePath = join(root, "remote.git");
+    const workspacePath = join(root, "source");
+    await git(root, ["init", "--bare", remotePath]);
+    await initRepository(workspacePath);
+    await git(workspacePath, ["remote", "add", "origin", remotePath]);
+    const staleTrackingRevision = await gitText(workspacePath, [
+      "rev-parse",
+      "HEAD",
+    ]);
+    await git(workspacePath, ["push", "-u", "origin", "HEAD:main"]);
+    await writeFile(join(workspacePath, "canonical.txt"), "current\n");
+    await git(workspacePath, ["add", "canonical.txt"]);
+    await git(workspacePath, ["commit", "-m", "test: advance canonical"]);
+    const canonicalRevision = await gitText(workspacePath, [
+      "rev-parse",
+      "HEAD",
+    ]);
+    await git(workspacePath, ["push", "origin", "HEAD:main"]);
+    await git(workspacePath, [
+      "update-ref",
+      "refs/remotes/origin/main",
+      staleTrackingRevision,
+    ]);
+
+    const canonicalRemoteHead = await resolveCanonicalRemoteHead({
+      workspacePath,
+      remoteTrackingRef: "origin/main",
+    });
+    const sourceRef = canonicalRemoteWorktreeSourceRef("origin/main");
+
+    expect(await gitText(workspacePath, ["rev-parse", "origin/main"])).toBe(
+      staleTrackingRevision,
+    );
+    expect(canonicalRemoteHead.oid).toBe(canonicalRevision);
+    expect(sourceRef).toBe("main");
+    expect(await gitText(workspacePath, ["rev-parse", sourceRef])).toBe(
+      canonicalRevision,
+    );
   });
 
   it("applies an immutable handoff to a descendant with no owned-path drift", async () => {

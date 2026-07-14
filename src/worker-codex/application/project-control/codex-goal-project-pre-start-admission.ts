@@ -197,7 +197,10 @@ export async function validateStoredProjectPreStartAdmission(input: {
 export async function assertProjectPreStartAdmissionLaunchBinding(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly scope: ProjectAccessScope;
-  readonly workspaceMode?: "clean_first_launch" | "reviewed_dirty_continuation";
+  readonly workspaceMode?:
+    | "clean_first_launch"
+    | "admitted_input_patch"
+    | "reviewed_dirty_continuation";
 }): Promise<void> {
   const descriptor = input.manifest.projectPreStartAdmission;
   if (!descriptor) {
@@ -219,9 +222,11 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
     receipt,
     scope: input.scope,
   });
-  const workspaceBindingValid = input.workspaceMode === "reviewed_dirty_continuation"
-    ? binding.workspaceStatus !== ""
-    : binding.workspaceStatus === "";
+  const workspaceBindingValid =
+    input.workspaceMode === "admitted_input_patch" ||
+    input.workspaceMode === "reviewed_dirty_continuation"
+      ? binding.workspaceStatus !== ""
+      : binding.workspaceStatus === "";
   const inputPatchBindingValid = input.workspaceMode === "reviewed_dirty_continuation" ||
     bindingMatchesInputPatch(binding, contract);
   if (

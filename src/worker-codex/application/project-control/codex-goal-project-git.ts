@@ -96,6 +96,12 @@ export async function resolveCanonicalRemoteHead(input: {
   };
 }
 
+export function canonicalRemoteWorktreeSourceRef(
+  remoteTrackingRef: string,
+): string {
+  return parseRemoteTrackingRef(remoteTrackingRef).branch;
+}
+
 export function assertCanonicalRemoteRevision(input: {
   readonly canonical: CanonicalRemoteHead;
   readonly resolvedRevision: string;
