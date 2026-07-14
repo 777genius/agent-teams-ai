@@ -1,24 +1,59 @@
 {
   "schemaVersion": 1,
   "currentExecutablePhase": "phase-01",
-  "currentExecutableSubphase": "PR252-semantic-conflict-remediation",
-  "currentExecutableNodes": ["PR252-semantic-conflict-remediation"],
-  "currentRouterRevision": "phase-01-pr252-semantic-conflict-remediation-router-r2",
+  "currentExecutableSubphase": "PR252-task-provenance-remediation",
+  "currentExecutableNodes": ["PR252-task-provenance-remediation"],
+  "currentRouterRevision": "phase-01-pr252-task-provenance-remediation-router-r1",
   "currentRouterTerminalState": "HOLD",
-  "durableController": {
-    "identity": "controller-v17",
-    "requiredState": "live=true",
-    "replacementAuthorized": false
+  "orchestrationAuthority": {
+    "rootRole": "orchestrator-only",
+    "durableController": "controller-v17",
+    "requiredControllerState": "live=true",
+    "controllerReplacementAuthorized": false,
+    "controllerRestartAuthorized": false
   },
   "workerStartAuthority": "ProjectScopedControl codex_goal_project_refill_worker",
   "verifierStartAuthority": "ProjectScopedControl codex_goal_project_prepare_verifier",
-  "fixedRouterBaseSha": "7c502f45df32b58bbc161b26dcc28df8a17107c9",
+  "fixedRouterBaseSha": "3256ee3b5b8e81b144aa0a14eac1bca080c9b779",
+  "remoteBaseAuthority": {
+    "remote": "origin",
+    "branch": "refactor/team-provisioning-round2-reapply",
+    "fullRef": "refs/heads/refactor/team-provisioning-round2-reapply",
+    "pinnedCurrentRealBaseSha": "e9ffa30cc016ad3cb833fcc0a138fa4f026eb850",
+    "proofCommand": "git ls-remote origin refs/heads/refactor/team-provisioning-round2-reapply",
+    "proofResultSha": "e9ffa30cc016ad3cb833fcc0a138fa4f026eb850",
+    "proofKind": "direct-remote-head-observation",
+    "githubPrBaseOid": "d2585e7634800eb795644c4b6d0e8baf5f81c98f",
+    "githubPrBaseOidClassification": "stale",
+    "githubPrBaseOidIsAncestorOfPinnedBase": true,
+    "githubPrBaseOidBehindPinnedBaseBy": 52,
+    "formerPinnedSourceSha": "7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0",
+    "formerPinnedSourceIsAncestorOfPinnedBase": true,
+    "formerPinnedSourceHasCurrentAuthority": false,
+    "remoteHeadMustBeRecheckedImmediatelyBeforeIntegration": true,
+    "remoteHeadDriftDisposition": "HOLD-and-require-new-base-review"
+  },
+  "freshMergeTreeProof": {
+    "targetSha": "3256ee3b5b8e81b144aa0a14eac1bca080c9b779",
+    "sourceSha": "e9ffa30cc016ad3cb833fcc0a138fa4f026eb850",
+    "mergeBaseSha": "d2585e7634800eb795644c4b6d0e8baf5f81c98f",
+    "conflictCount": 5,
+    "conflictPaths": [
+      "src/features/task-board-commands/core/application/TaskBoardCommandFacade.ts",
+      "src/main/services/team/TeamDataService.ts",
+      "src/renderer/components/team/TeamDetailView.tsx",
+      "test/features/task-board-commands/TaskBoardCommands.e2e.test.ts",
+      "test/main/services/team/TeamDataService.test.ts"
+    ],
+    "standaloneNormalPushInterpretationSuperseded": true,
+    "trueMergeRouteRequired": true
+  },
   "storedAcceptedPushedRouterCommit": {
-    "definition": "the full commit SHA of semantic router r2 after independent ACCEPT, integration, and push",
+    "definition": "full commit SHA of this router after independent ACCEPT, integration, and push",
     "stateInThisDocsRouter": "unresolved",
     "resolvedBy": "ProjectScopedControl",
     "requiredResolutionCount": 1,
-    "resolutionTiming": "after-router-accept-integration-push-and-before-producer-admission",
+    "resolutionTiming": "after-router-accept-integration-push-and-before-remediation-admission",
     "resolvedValueFormat": "full-40-character-commit-sha",
     "downstreamReresolutionAuthorized": false,
     "baseShaDoesNotRebind": true,
@@ -32,31 +67,27 @@
       "projectScopedProducerAdmission.orchestrationLaunchTemplate.planMetadata.baseBranch",
       "projectScopedProducerAdmission.orchestrationLaunchTemplate.planMetadata.planBundleCommit",
       "projectScopedProducerAdmission.orchestrationLaunchTemplate.materializationMetadata.worktreeHead",
-      "projectScopedProducerAdmission.orchestrationLaunchTemplate.contractRenderer.valueSources.canonicalSha",
-      "projectScopedProducerAdmission.orchestrationLaunchTemplate.contractRenderer.valueSources.phaseStartSha",
       "integrationReviewAdmission.storedTarget",
       "integrationReviewAdmission.materialization.worktreeHead",
-      "integrationReviewAdmission.strictContractRenderer.valueSources.canonicalSha",
-      "integrationReviewAdmission.strictContractRenderer.valueSources.phaseStartSha",
       "reviewedIntegrationProtocol.markReviewedTarget",
       "reviewedIntegrationProtocol.integrationTarget",
       "reviewedIntegrationProtocol.requiredParentOrder[0]"
     ]
   },
   "currentRoute": {
-    "mode": "semantic-conflict-remediation",
+    "mode": "task-provenance-true-merge-remediation",
     "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
     "lanePackets": [
       {
-        "subphase": "PR252-semantic-conflict-remediation",
-        "node": "PR252-semantic-conflict-remediation",
-        "laneId": "pr252-semantic-conflict-remediation",
+        "subphase": "PR252-task-provenance-remediation",
+        "node": "PR252-task-provenance-remediation",
+        "laneId": "pr252-task-provenance-remediation",
         "path": "docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md",
-        "packetRevision": "phase-01-pr252-semantic-conflict-remediation-router-r2"
+        "packetRevision": "phase-01-pr252-task-provenance-remediation-router-r1"
       }
     ],
     "canonicalSha": { "binding": "storedAcceptedPushedRouterCommit" },
-    "baseSha": "7c502f45df32b58bbc161b26dcc28df8a17107c9",
+    "baseSha": "3256ee3b5b8e81b144aa0a14eac1bca080c9b779",
     "phaseStartSha": { "binding": "storedAcceptedPushedRouterCommit" },
     "sourceRef": { "binding": "storedAcceptedPushedRouterCommit" },
     "baseBranch": { "binding": "storedAcceptedPushedRouterCommit" },
@@ -64,24 +95,36 @@
     "mergeSource": {
       "remote": "origin",
       "branch": "refactor/team-provisioning-round2-reapply",
-      "commit": "7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0"
+      "commit": "e9ffa30cc016ad3cb833fcc0a138fa4f026eb850"
     },
     "launchGate": {
       "required": {
-        "semanticRouterR2Accepted": true,
-        "semanticRouterR2Integrated": true,
-        "semanticRouterR2Pushed": true,
+        "taskProvenanceRouterR1Accepted": true,
+        "taskProvenanceRouterR1Integrated": true,
+        "taskProvenanceRouterR1Pushed": true,
+        "rootRemainsOrchestrator": true,
         "sameDurableControllerV17": true,
         "durableControllerLive": true,
         "storedAcceptedPushedRouterCommitResolvedExactlyOnce": true,
         "allStoredTargetFieldsEqual": true,
-        "fixedBaseShaVerified": true,
-        "pinnedMergeSourceVerified": true,
-        "rejectedJobsTerminalAndUnused": true,
+        "fixedTargetSideBaseVerified": true,
+        "pinnedCurrentRealBaseVerified": true,
+        "freshFiveConflictMergeTreeProofVerified": true,
+        "rejectedR3DecisionConsumed": true,
+        "rejectedEvidenceHashesVerified": true,
         "noPriorPr252WorkerActive": true
       },
       "attestedByThisDocsTransition": false
     }
+  },
+  "acceptedPriorSemanticRouter": {
+    "packetRevision": "phase-01-pr252-semantic-conflict-remediation-router-r2",
+    "acceptedCommit": "50eb69f32c4e83ba740fe37eb1d43e3a6ff10c06",
+    "use": "historical-predecessor-authority"
+  },
+  "acceptedTypeScriptBaselineCorrection": {
+    "commit": "3256ee3b5b8e81b144aa0a14eac1bca080c9b779",
+    "use": "fixed-target-side-base-and-native-seven-diagnostic-baseline"
   },
   "acceptedPhase0Freeze": {
     "status": "accepted-frozen",
@@ -91,11 +134,7 @@
     "status": "independently-formally-accepted-integrated-pushed",
     "reviewer": "agent-teams-hosted-web-refactor-p1-1d-shadowed-map-review-v17-r4",
     "disposition": "FORMAL ACCEPT",
-    "findings": {
-      "P0": 0,
-      "P1": 0,
-      "P2": 0
-    },
+    "findings": { "P0": 0, "P1": 0, "P2": 0 },
     "strictResultSha256": "be0c9abd679f817c386d1d06d1b738c2a1505bb3c4718279129ab74842c98fa6",
     "reviewedOutputId": "f3394026185348c84673d44a9b30a82667c3ff9435b5d4d7609c04785c274f41",
     "integrationAttempt": "p1-1d-shadowed-map-r4-accepted-integration-v3",
@@ -103,26 +142,28 @@
     "acceptedCommitUse": "immutable-historical-provenance-only",
     "pushed": true
   },
-  "supersededPr252TargetBindingRouter": {
-    "packetRevision": "phase-01-pr252-target-binding-correction-r1",
-    "status": "superseded-by-semantic-router-r2",
-    "baseCommit": "7c502f45df32b58bbc161b26dcc28df8a17107c9",
-    "inspectJobStateAuthorized": false,
-    "reuseAuthorized": false,
-    "continueAuthorized": false
-  },
-  "rejectedPr252SemanticRouterR1": {
-    "packetRevision": "phase-01-pr252-semantic-conflict-remediation-router-r1",
-    "patchSha256": "95dcdae236fdadbd63bfb3022441accc4354cffdc5ca6db7447e7a01e9d53221",
-    "disposition": "REJECT",
-    "reason": "invalid-future-launch-contract",
-    "consumedBy": "pr252-semantic-router-r1-contract-reject-consume-v1",
-    "terminal": true,
-    "integrateAuthorized": false,
-    "reuseAuthorized": false,
-    "continueAuthorized": false,
-    "implementationInputAuthorized": false,
-    "replacementPacket": "phase-01-pr252-semantic-conflict-remediation-router-r2"
+  "rejectedPr252SemanticProducerR3": {
+    "producerRevision": "r3",
+    "reviewerRevision": "r4",
+    "reviewerIndependent": true,
+    "disposition": "FORMAL REJECT",
+    "findings": { "P0": 0, "P1": 1, "P2": 0 },
+    "soleFinding": "findById fallback accepted an unrelated same-ID task when destination reconcile and task creationCommand were absent",
+    "negativeControl": {
+      "returnedSubject": "UNRELATED SUBJECT",
+      "returnedOutcome": "Executed",
+      "expected": "terminal-conflict-never-success"
+    },
+    "allOtherSemanticsPassed": true,
+    "allOtherChecksPassed": true,
+    "usefulHandoffSha256": "f810a0aa191e82316737c5c0069ee6225597d8a477d77b50c57bc3fd931fe579",
+    "fullDiffSha256": "cb534246905f6fd7cc03b0b761018157ed12d204d11819f0978915af7c778491",
+    "fullDiffPathCount": 5,
+    "terminalForDirectIntegration": true,
+    "remediationReferenceAuthorized": true,
+    "fullDiffMaterializationAuthorized": false,
+    "cleanRewriteAuthorized": false,
+    "directIntegrationAuthorized": false
   },
   "rejectedPr252ByteCopyAttempt": {
     "patchSha256": "a0fade213fd86c52022f944c9d3a9f169175f1fd5a54f6c19652173ae5307304",
@@ -132,8 +173,16 @@
     "terminal": true,
     "integrateAuthorized": false,
     "reuseAuthorized": false,
-    "retryAuthorized": false,
-    "continueAuthorized": false,
+    "implementationInputAuthorized": false
+  },
+  "rejectedPr252SemanticRouterR1": {
+    "packetRevision": "phase-01-pr252-semantic-conflict-remediation-router-r1",
+    "patchSha256": "95dcdae236fdadbd63bfb3022441accc4354cffdc5ca6db7447e7a01e9d53221",
+    "disposition": "REJECT",
+    "reason": "invalid-future-launch-contract",
+    "terminal": true,
+    "integrateAuthorized": false,
+    "reuseAuthorized": false,
     "implementationInputAuthorized": false
   },
   "producerOwnedPaths": [
@@ -143,6 +192,22 @@
     "test/features/task-board-commands/TaskBoardCommands.e2e.test.ts",
     "test/main/services/team/TeamDataService.test.ts"
   ],
+  "incrementalEditPolicy": {
+    "semanticRemediationPaths": [
+      "src/features/task-board-commands/core/application/TaskBoardCommandFacade.ts",
+      "test/features/task-board-commands/TaskBoardCommands.e2e.test.ts"
+    ],
+    "compileCoherenceExceptionPaths": [
+      "src/main/services/team/TeamDataService.ts",
+      "src/renderer/components/team/TeamDetailView.tsx",
+      "test/main/services/team/TeamDataService.test.ts"
+    ],
+    "compileCoherenceExceptionRequiresProof": true,
+    "freshMergeConflictResolutionRequiredForAllOwnedPaths": true,
+    "allOtherPaths": "read-only",
+    "cleanRewriteAuthorized": false,
+    "rejectedFivePathDiffMaterializationAuthorized": false
+  },
   "workerMandatoryDocs": [
     "AGENTS.md",
     "docs/hosted-web-phases/START_HERE.md",
@@ -166,7 +231,10 @@
     "pnpm exec prettier --check src/features/task-board-commands/core/application/TaskBoardCommandFacade.ts src/main/services/team/TeamDataService.ts src/renderer/components/team/TeamDetailView.tsx test/features/task-board-commands/TaskBoardCommands.e2e.test.ts test/main/services/team/TeamDataService.test.ts",
     "git diff --check",
     "exact five-path diff and ownership proof",
-    "semantic no-whole-source-blob-copy proof",
+    "fresh merge-tree exact five-conflict proof",
+    "both rejection evidence hash bindings without rejected-diff materialization",
+    "semantic no-whole-source-blob-copy and no-clean-rewrite proof",
+    "unrelated same-ID terminal never-success regression with exact ten-case E2E suite",
     "conflict-marker scan over exact five owned paths",
     "secret and private-path scan over exact five owned paths",
     "textual and non-binary scan over exact five owned paths"
@@ -214,7 +282,6 @@
     "fetch": false,
     "appRuntimeOrTeamLaunch": false,
     "realProjectAccess": false,
-    "fastMode": false,
     "writerScope": "ownedPaths-only",
     "stage": false,
     "merge": false,
@@ -223,12 +290,7 @@
   },
   "producerStrictExecutionPolicy": {
     "mode": "sandbox-only",
-    "sandboxRoot": "/var/data/agent-teams-hosted-web-refactor/worktrees/pr252-semantic-conflict-producer-v17-r1",
-    "forbiddenRealProjects": ["/Users/belief/dev/projects/ai/claude-runtime"]
-  },
-  "reviewerStrictExecutionPolicy": {
-    "mode": "sandbox-only",
-    "sandboxRoot": "/var/data/agent-teams-hosted-web-refactor/worktrees/pr252-semantic-conflict-reviewer-v17-r1",
+    "sandboxRoot": "/var/data/agent-teams-hosted-web-refactor/worktrees/pr252-task-provenance-remediation-producer-v17-r1",
     "forbiddenRealProjects": ["/Users/belief/dev/projects/ai/claude-runtime"]
   },
   "reviewerExecutionPolicy": {
@@ -237,65 +299,77 @@
     "fetch": false,
     "appRuntimeOrTeamLaunch": false,
     "realProjectAccess": false,
-    "fastMode": false,
     "writerScope": "none",
     "stage": false,
     "merge": false,
     "commit": false,
     "push": false
   },
+  "reviewerStrictExecutionPolicy": {
+    "mode": "sandbox-only",
+    "sandboxRoot": "/var/data/agent-teams-hosted-web-refactor/worktrees/pr252-task-provenance-remediation-reviewer-v17-r1",
+    "forbiddenRealProjects": ["/Users/belief/dev/projects/ai/claude-runtime"]
+  },
   "semanticAcceptance": {
-    "wholeSourceBlobCopyAuthorized": false,
-    "rejectedPatchReuseAuthorized": false,
-    "preserveTargetTaskBoardApi": true,
-    "supportedFinalApiRetainsReconcileTaskCreation": true,
+    "implementationTopology": "fresh-true-two-parent-merge",
+    "targetSideBaseSha": "3256ee3b5b8e81b144aa0a14eac1bca080c9b779",
+    "pinnedCurrentRealBaseSha": "e9ffa30cc016ad3cb833fcc0a138fa4f026eb850",
+    "preserveAllOtherR3Semantics": true,
+    "cleanRewriteAuthorized": false,
+    "rejectedFullDiffMaterializationAuthorized": false,
+    "provenanceRequirementAuthorized": false,
     "facadeDestinationReconcile": {
       "required": false,
       "useWhenAvailable": true,
-      "fallbackWhenUnavailable": "findById-plus-validation",
-      "presentMismatchedProvenanceDisposition": "terminal",
+      "fallbackWhenUnavailable": "findById-plus-target-safe-subject-payload-validation",
+      "sameIdAloneMayProveSuccess": false,
       "unknownOutcomeMayBeReportedAsSuccess": false
     },
-    "teamDataServiceReconcilePort": {
-      "capabilityGuard": "narrow-runtime-function-guard",
-      "omitWhenUnavailable": true,
-      "absenceDisablesDurableFacade": false
-    },
-    "durableCommandPayload": {
-      "projectPathIncluded": false,
-      "relationNormalization": "filter-sort-dedupe"
-    },
-    "teamDetailViewCreateTaskAdapter": {
-      "async": true,
-      "acceptedSignatures": ["target-positional", "source-request-object-promise"],
-      "stablePositionalCommandIdentity": true,
-      "preserveRequestCommand": true
+    "assertMatchingTaskPolicy": {
+      "passRequestedPayloadAtEveryFallbackSuccessSite": true,
+      "payloadSubjectType": "string",
+      "subjectComparison": "task.subject===payload.subject.trim()",
+      "mismatchError": "TaskBoardCreateDestinationConflictError",
+      "mismatchFailureKind": "Terminal",
+      "compareOrRequireCreationCommand": false,
+      "compareCreatedBy": false,
+      "compareRelations": false
     },
     "taskBoardE2ECoverage": {
       "retainedTargetCases": 4,
       "portedSourceCases": 5,
-      "requiredTotalCases": 9,
-      "unguardedRealControllerReconcileAuthorized": false
+      "addedRegressionCount": 1,
+      "requiredTotalCases": 10,
+      "unrelatedSameIdSubject": "UNRELATED SUBJECT",
+      "unrelatedSameIdHasReconcile": false,
+      "unrelatedSameIdHasCreationCommand": false,
+      "unrelatedSameIdNeverSuccessTerminal": true
     },
-    "preserveTargetTests": true,
-    "pathCount": 5,
-    "exactConflictSetRequired": true,
-    "allOtherPaths": "read-only"
+    "preservePassingBehavior": [
+      "partial-create-recovery",
+      "stale-command-recovery",
+      "idempotent-retry-identity",
+      "json-validation",
+      "team-data-service-reconcile-capability",
+      "team-detail-dual-signature-adapter",
+      "relation-normalization"
+    ]
   },
   "projectScopedProducerAdmission": {
     "operation": "codex_goal_project_refill_worker",
     "workerRole": "producer",
     "producerCount": 1,
     "mode": "serial-builtin",
+    "model": "gpt-5.6-sol",
     "reasoningEffort": "xhigh",
-    "serviceTier": "default",
-    "fastMode": false,
+    "serviceTier": "fast",
     "authorizedOnlyAfterLaunchGate": true,
-    "cleanImplementationAttempt": {
-      "revision": 0,
-      "retryCount": 0,
-      "supersedes": null,
-      "inputPatchHash": null
+    "remediationInput": {
+      "inputPatchHash": "f810a0aa191e82316737c5c0069ee6225597d8a477d77b50c57bc3fd931fe579",
+      "rejectedFullDiffSha256": "cb534246905f6fd7cc03b0b761018157ed12d204d11819f0978915af7c778491",
+      "fullDiffUse": "review-provenance-and-reference-only",
+      "materializeRejectedFullDiff": false,
+      "cleanRewriteAuthorized": false
     },
     "orchestrationLaunchTemplate": {
       "templateKind": "post-push-single-render",
@@ -308,20 +382,20 @@
       "requestEnvelope": {
         "operation": "codex_goal_project_refill_worker",
         "workerRole": "producer",
+        "model": "gpt-5.6-sol",
         "reasoningEffort": "xhigh",
-        "serviceTier": "default",
-        "fastMode": false,
+        "serviceTier": "fast",
         "serial": true
       },
-      "attemptMetadata": {
-        "revision": 0,
-        "retryCount": 0,
-        "supersedes": null
+      "inputEvidenceMetadata": {
+        "usefulHandoffSha256": "f810a0aa191e82316737c5c0069ee6225597d8a477d77b50c57bc3fd931fe579",
+        "rejectedFullDiffSha256": "cb534246905f6fd7cc03b0b761018157ed12d204d11819f0978915af7c778491",
+        "rejectedFullDiffMaterializationAuthorized": false
       },
       "mergeSourceMetadata": {
         "remote": "origin",
         "branch": "refactor/team-provisioning-round2-reapply",
-        "commit": "7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0"
+        "commit": "e9ffa30cc016ad3cb833fcc0a138fa4f026eb850"
       },
       "planMetadata": {
         "sourceRef": { "binding": "storedAcceptedPushedRouterCommit" },
@@ -357,14 +431,14 @@
           "kind": "worker-launch",
           "format": 1,
           "canonicalSha": { "binding": "storedAcceptedPushedRouterCommit" },
-          "baseSha": "7c502f45df32b58bbc161b26dcc28df8a17107c9",
+          "baseSha": "3256ee3b5b8e81b144aa0a14eac1bca080c9b779",
           "phaseStartSha": { "binding": "storedAcceptedPushedRouterCommit" },
-          "packetRevision": "phase-01-pr252-semantic-conflict-remediation-router-r2",
+          "packetRevision": "phase-01-pr252-task-provenance-remediation-router-r1",
           "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
           "lanePacket": "docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md",
           "phaseId": "phase-01",
-          "laneId": "pr252-semantic-conflict-remediation",
-          "inputPatchHash": null,
+          "laneId": "pr252-task-provenance-remediation",
+          "inputPatchHash": "f810a0aa191e82316737c5c0069ee6225597d8a477d77b50c57bc3fd931fe579",
           "reviewKind": "implementation",
           "ownedPaths": { "copyExactFrom": "producerOwnedPaths" },
           "mandatoryDocs": { "copyExactFrom": "workerMandatoryDocs" },
@@ -384,12 +458,11 @@
     "operation": "codex_goal_project_prepare_verifier",
     "workerRole": "reviewer",
     "reviewKind": "review",
-    "reviewerPurpose": "independent architecture/integration review",
     "reviewerCount": 1,
     "freshIndependentReviewerRequired": true,
+    "model": "gpt-5.6-sol",
     "reasoningEffort": "xhigh",
-    "serviceTier": "default",
-    "fastMode": false,
+    "serviceTier": "fast",
     "repositoryWriterAuthority": false,
     "repairAuthority": false,
     "canonicalReresolutionAuthorized": false,
@@ -397,9 +470,9 @@
     "materialization": {
       "worktreeHead": { "binding": "storedAcceptedPushedRouterCommit" }
     },
-    "immutableProducerOutputPatchHash": {
+    "immutableRemediationOutputPatchHash": {
       "stateBeforeProducerHold": "unresolved",
-      "resolvedBy": "ProjectScopedControl from the single immutable held producer output",
+      "resolvedBy": "ProjectScopedControl from the single immutable held remediation output",
       "requiredResolutionCount": 1,
       "resolvedValueFormat": "sha256"
     },
@@ -433,14 +506,14 @@
         "kind": "worker-launch",
         "format": 1,
         "canonicalSha": { "binding": "storedAcceptedPushedRouterCommit" },
-        "baseSha": "7c502f45df32b58bbc161b26dcc28df8a17107c9",
+        "baseSha": "3256ee3b5b8e81b144aa0a14eac1bca080c9b779",
         "phaseStartSha": { "binding": "storedAcceptedPushedRouterCommit" },
-        "packetRevision": "phase-01-pr252-semantic-conflict-remediation-router-r2",
+        "packetRevision": "phase-01-pr252-task-provenance-remediation-router-r1",
         "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
         "lanePacket": "docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md",
         "phaseId": "phase-01",
-        "laneId": "pr252-semantic-conflict-remediation",
-        "inputPatchHash": { "binding": "immutableProducerOutputPatchHash" },
+        "laneId": "pr252-task-provenance-remediation",
+        "inputPatchHash": { "binding": "immutableRemediationOutputPatchHash" },
         "reviewKind": "review",
         "ownedPaths": { "copyExactFrom": "producerOwnedPaths" },
         "mandatoryDocs": { "copyExactFrom": "workerMandatoryDocs" },
@@ -451,48 +524,54 @@
       },
       "failClosedOnMissingExtraPlaceholderOrDrift": true
     },
-    "requiredChecksSource": "strictRequiredChecks",
     "requiredDisposition": ["ACCEPT", "REJECT"],
-    "acceptFindingCounts": {
-      "P0": 0,
-      "P1": 0,
-      "P2": 0
-    }
+    "acceptFindingCounts": { "P0": 0, "P1": 0, "P2": 0 }
   },
   "reviewedIntegrationProtocol": {
     "performedBy": "ProjectScopedControl",
+    "mode": "ordered-true-merge",
     "authorizedOnlyAfterReviewerAccept": true,
     "markReviewedTarget": { "binding": "storedAcceptedPushedRouterCommit" },
     "integrationTarget": { "binding": "storedAcceptedPushedRouterCommit" },
     "mergeSource": {
       "remote": "origin",
       "branch": "refactor/team-provisioning-round2-reapply",
-      "commit": "7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0"
+      "commit": "e9ffa30cc016ad3cb833fcc0a138fa4f026eb850"
+    },
+    "preIntegrationRemoteHeadVerification": {
+      "required": true,
+      "timing": "immediately-before-integration",
+      "command": "git ls-remote origin refs/heads/refactor/team-provisioning-round2-reapply",
+      "expectedCommit": "e9ffa30cc016ad3cb833fcc0a138fa4f026eb850",
+      "movedHeadDisposition": "HOLD-and-require-new-base-review",
+      "silentRebindingAuthorized": false
     },
     "runtimeCreatesTrueMerge": true,
     "requiredParentOrder": [
       { "binding": "storedAcceptedPushedRouterCommit" },
-      "7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0"
+      "e9ffa30cc016ad3cb833fcc0a138fa4f026eb850"
     ],
     "runtimeValidatesExactConflictSet": true,
+    "runtimeMaterializesPinnedSourceNonConflicts": true,
+    "runtimeAppliesAcceptedFivePathOutput": true,
     "runtimeRerunsAllRequiredChecks": true,
-    "sourceNonConflictMaterializationPrecedesFinalChecks": true,
     "postSourceMaterializationRequiredChecks": [
       "pnpm exec vitest run test/renderer/utils/createTaskCommandIdentity.test.ts"
     ],
-    "conventionalCommitRequired": true,
+    "conventionalMergeCommitRequired": true,
     "pushRequiredBeforeAdvance": true,
     "failClosedOnDrift": true
   },
   "authorization": {
     "authorizedNow": [],
     "conditionallyAuthorizedAfterRouterAcceptIntegrationPush": [
-      "PR252-semantic-conflict-remediation-producer"
+      "PR252-task-provenance-remediation-producer"
     ],
     "reviewAuthorizedOnlyAfterProducerHold": true,
-    "integrationAuthorizedOnlyAfterReviewerAccept": true,
+    "integrationAuthorizedOnlyAfterReviewerAcceptAndRemoteRecheck": true,
     "producerCount": 1,
     "reviewerCount": 1,
+    "controllerReplacementAuthorized": false,
     "workerMergeAuthorized": false,
     "workerCommitAuthorized": false,
     "workerPushAuthorized": false,
@@ -502,7 +581,7 @@
     "docsJobCommitAuthorized": false,
     "docsJobMergeAuthorized": false,
     "docsJobPushAuthorized": false,
-    "blockedUntilValidatedMergePushed": ["P1.R2", "P1.I", "P1.F", "Phase 2+"]
+    "blockedUntilValidatedOrderedMergePushed": ["P1.R2", "P1.I", "P1.F", "Phase 2+"]
   },
   "routerExclusiveOwnership": [
     "docs/hosted-web-phases/START_HERE.md",
@@ -517,32 +596,27 @@
     "algorithm": "sha256",
     "controllerPacket": {
       "path": "docs/hosted-web-phases/phase-01/controller-packet.md",
-      "sha256": "6f993a7bf3366b99aab268dfd52c341f81dfdacb295dbe9fdc18048f43d2cfd0"
+      "sha256": "777f20e9772552e617ad5551fa6ed9c0facac4151d7e39a7505d04c81c6a21a2"
     },
     "lanePacket": {
       "path": "docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md",
-      "sha256": "f2fd7972dff3e7db4d7fafe8a51906ba8dd061ec9709342f857c6fb601ae0149"
+      "sha256": "6ab5279b60589876e72efdf7838260fa0eb945c5a86dcee5498186787c3b1e0a"
     }
   },
   "authorityTiers": {
-    "execution-authority": [
+    "executionAuthority": [
       "AGENTS.md",
       "docs/hosted-web-phases/START_HERE.md",
-      "docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md",
       "docs/hosted-web-phases/README.md",
       "docs/hosted-web-phases/EXECUTION_INDEX.json"
     ],
-    "current-phase": [
+    "currentPhase": [
       "docs/hosted-web-phases/phase-01/README.md",
       "docs/hosted-web-phases/phase-01/controller-packet.md",
       "docs/hosted-web-phases/phase-01/execution-dag.md",
       "docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md"
     ],
-    "rejected-provenance-only": [
-      "semantic router r1 patch 95dcdae236fdadbd63bfb3022441accc4354cffdc5ca6db7447e7a01e9d53221",
-      "semantic router r1 consume pr252-semantic-router-r1-contract-reject-consume-v1",
-      "byte-copy patch a0fade213fd86c52022f944c9d3a9f169175f1fd5a54f6c19652173ae5307304"
-    ],
+    "rejectedInputUse": "review-provenance-and-reference-only",
     "researchWriteException": null
   }
 }

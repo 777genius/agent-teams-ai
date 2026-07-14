@@ -1,114 +1,93 @@
 # Hosted-web execution: start here
 
-> Current route: revision `phase-01-pr252-semantic-conflict-remediation-router-r2` corrects the
-> rejected PR #252 router contract. After this exact seven-document router receives `ACCEPT`, is
-> integrated, and is pushed, `ProjectScopedControl` may resolve the accepted pushed router commit
-> once and admit exactly one serial `xhigh`/`default` semantic five-path producer. Fast is forbidden.
-> This docs transition launches nothing and ends `HOLD`.
+> Current route: `phase-01-pr252-task-provenance-remediation-router-r1` consumes the independent r4
+> `FORMAL REJECT` of producer r3 and conditionally authorizes one hash-bound, true-merge remediation
+> producer followed by one fresh independent reviewer. This seven-document router launches nothing
+> and ends `HOLD`.
 
-This is the canonical entrypoint for every hosted-web controller and worker. Phase 0 is accepted and
-frozen. Phase 1 bootstrap, foundations, routes, conformance, formal P1.R1, and P1.1D are accepted and
-integrated. P1.1D's pushed commit `e7e7e734c82c49105682e7a19bbedafa1f5ddbad` remains immutable
-historical provenance, not the PR #252 target.
+Phase 0 and accepted Phase 1 history remain frozen. The only current executable node is
+`PR252-task-provenance-remediation`. Root stays orchestrator; `controller-v17` stays exactly live and
+is neither replaced nor restarted.
 
 ## Deterministic reading order
 
-Read only this bounded sequence before working:
+1. `AGENTS.md`
+2. This file
+3. `docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md`
+4. `docs/hosted-web-phases/README.md`
+5. `docs/hosted-web-phases/EXECUTION_INDEX.json`
+6. `docs/hosted-web-phases/phase-01/controller-packet.md`
+7. `docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md`
+8. `CLAUDE.md`
+9. `AGENT_CRITICAL_GUARDRAILS.md`
+10. `docs/hosted-web-phases/PACKET_STANDARD.md`
+11. Only the five producer-owned product/test paths listed in the lane packet
 
-1. `AGENTS.md`.
-2. This file.
-3. `docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md`.
-4. `docs/hosted-web-phases/README.md`.
-5. `docs/hosted-web-phases/EXECUTION_INDEX.json`.
-6. `docs/hosted-web-phases/phase-01/controller-packet.md`.
-7. `docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md`.
-8. `CLAUDE.md`.
-9. `AGENT_CRITICAL_GUARDRAILS.md`.
-10. `docs/hosted-web-phases/PACKET_STANDARD.md`.
-11. Only the exact five owned product/test paths listed by the lane packet, at the stored target and
-    pinned source identities.
+Do not recursively inspect rejected job state, fetch, launch an app/runtime/team, access a real
+project, or substitute a moving ref for a stored immutable target.
 
-Do not recursively explore documentation or evidence directories, inspect rejected job state, use
-Fast, launch an app/runtime/team, access a real project, fetch, or substitute a moving ref for a
-pinned identity.
+## Rejection consumed without replaying its candidate
 
-## Rejected provenance is terminal
+Reviewer r4 returned `FORMAL REJECT`, P0/P1/P2 `0/1/0`, for producer r3. The sole P1 demonstrated
+that, without destination `reconcile` or task `creationCommand`, a `findById` fallback returned an
+unrelated task with the requested ID, subject `UNRELATED SUBJECT`, and outcome `Executed`. Every
+other semantic requirement and check passed.
 
-The semantic router r1 candidate patch
-`95dcdae236fdadbd63bfb3022441accc4354cffdc5ca6db7447e7a01e9d53221` was `REJECT` because it
-published an invalid future launch contract. Its rejection was consumed by
-`pr252-semantic-router-r1-contract-reject-consume-v1`. It is not integrated, reused, continued, or
-treated as an input to r2.
+The successor is bound to useful-handoff SHA-256
+`f810a0aa191e82316737c5c0069ee6225597d8a477d77b50c57bc3fd931fe579` and rejected full-diff
+SHA-256 `cb534246905f6fd7cc03b0b761018157ed12d204d11819f0978915af7c778491`. Both are review
+provenance/reference. The rejected full diff is not applied, materialized, or integrated, and this
+remediation is not a clean rewrite.
 
-The earlier whole-source-blob producer patch
-`a0fade213fd86c52022f944c9d3a9f169175f1fd5a54f6c19652173ae5307304` and its independent review
-also remain `REJECT`. Those bytes and both rejected jobs have provenance value only. No rejected
-patch or materialization may become `inputPatchHash`, a retry, a superseded implementation, or merge
-input.
+## Corrected current-base authority
 
-## Current route and post-push target
+- Canonical/head snapshot: `3256ee3b5b8e81b144aa0a14eac1bca080c9b779`.
+- Pinned current real base and merge source:
+  `origin/refactor/team-provisioning-round2-reapply@e9ffa30cc016ad3cb833fcc0a138fa4f026eb850`.
+- Direct remote proof: `git ls-remote origin
+refs/heads/refactor/team-provisioning-round2-reapply` returned that exact `e9ffa30c...` commit.
+- GitHub PR `baseOid` `d2585e7634800eb795644c4b6d0e8baf5f81c98f` is stale. It is 52 commits behind
+  `e9ffa30c...`.
+- Former source `7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0` is also an ancestor of
+  `e9ffa30c...`; it is provenance only and is not the active merge source.
+- Fresh `merge-tree(3256ee3b..., e9ffa30c...)` proves exactly the same five conflict paths recorded
+  in the lane packet.
 
-`PR252-semantic-conflict-remediation` is the sole executable node, but product-worker capacity is
-zero during this router job. `baseSha` remains
-`7c502f45df32b58bbc161b26dcc28df8a17107c9`.
+The standalone-normal-push interpretation is superseded. The conflict route remains current.
 
-Only after this r2 router is independently accepted, integrated, and pushed may
-`ProjectScopedControl` resolve that accepted pushed router commit exactly once. The stored full SHA
-then supplies `canonicalSha`, `phaseStartSha`, `sourceRef`, `baseBranch`, producer worktree `HEAD`,
-reviewer target, `mark_reviewed` target, integration target, and the true merge's first parent. It is
-never re-resolved. A changed canonical value or unequal binding fails closed.
+## Hash-bound true-merge remediation
 
-The merge source stays
-`origin/refactor/team-provisioning-round2-reapply@7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0` and is
-metadata outside the strict worker contract. The first clean implementation has
-`inputPatchHash=null`, `revision=0`, `retryCount=0`, and `supersedes=null`. The rendered launch
-request must be fully concrete; a binding object, placeholder, rejected patch hash, moving ref, or
-extra contract field is invalid.
+After this router receives independent `ACCEPT`, is integrated, and is pushed,
+`ProjectScopedControl` resolves that pushed target once. It admits exactly one serial producer using
+`codex_goal_project_refill_worker`. The producer owns all five merge-conflict paths, while new
+remediation semantics are limited to `TaskBoardCommandFacade.ts` and its E2E test unless demonstrated
+compile coherence requires an owned-path exception.
 
-Its strict `requiredChecks` is the index's seven-object command array, never the human prose list:
-every item has exactly `{id,cwd,command}`, uses `cwd="src"`, and starts its command with
-`cd .. && `. Strict `executionPolicy` has only `mode`, `sandboxRoot`, and
-`forbiddenRealProjects`; the producer root is the fully concrete isolated producer worktree and the
-fixed forbidden list is nonempty. Extended orchestration safety flags stay outside the strict
-contract. String checks, an extra policy key, or any unresolved binding/copy directive fail closed.
+The producer starts from a fresh two-parent merge of the stored target with pinned source
+`e9ffa30c...`. It preserves the accepted r3 conflict resolutions, keeps destination reconciliation
+optional, and restores target-safe payload/trimmed-subject validation without requiring provenance.
+A found same-ID task is success only when the fallback validation matches; otherwise it throws and
+terminally classifies `TaskBoardCreateDestinationConflictError`. Add one exact `UNRELATED SUBJECT`
+regression and prove it can never report `Executed`, `Retried`, `Reconciled`, `Replayed`, or any other
+success.
 
-## Semantic producer, review, and integration
+The producer self-reviews, emits one immutable output, and ends `HOLD`. Then
+`ProjectScopedControl` admits exactly one fresh independent reviewer through
+`codex_goal_project_prepare_verifier`. Both launches use `gpt-5.6-sol`, `xhigh`, and
+`serviceTier: "fast"`. Machine request envelopes contain no `fastMode` field. Only independent
+`ACCEPT` with P0/P1/P2 `0/0/0` permits ordered broker integration.
 
-The one producer owns exactly the five lane paths and resolves their conflicts semantically. It must
-not byte-copy a complete source blob. The facade's destination `reconcile` capability is optional: use
-it when present, otherwise use `findById` plus validation. Present mismatched provenance is terminal,
-and an unknown outcome is never invented as success. `TeamDataService` must use a narrow runtime
-capability guard, omit the reconciliation port when the controller lacks it, keep derived
-`projectPath` outside the hashed payload, and sort/dedupe task relations.
-
-`TeamDetailView` must expose one dual-signature async adapter that accepts both the target positional
-`CreateTaskDialog` callback and the source request-object Promise callback. The positional path keeps
-stable command identity across retries; the request-object path preserves `request.command`. The
-TaskBoard E2E suite retains all four target cases and ports all five source cases for exactly nine,
-without an unguarded real-controller reconciliation call. The producer runs the complete lane gates,
-self-reviews, returns an immutable output, and ends `HOLD`; it never stages, merges, commits, pushes,
-or starts its reviewer.
-
-The final supported task-board API must retain the coherent `reconcileTaskCreation` path; capability
-guards may accommodate target-side mocks or older boundaries but may not silently delete or bypass
-that reconciliation capability when it is present.
-
-Then, and only then, exactly one fresh independent `xhigh`/`default` reviewer may inspect the stored
-output with no writer authority. `ProjectScopedControl` must start it through
-`codex_goal_project_prepare_verifier` with `workerRole: reviewer` and a strict contract whose runtime
-enum is `reviewKind: review`; architecture/integration is reviewer purpose only. The verifier request
-must be fully concrete and fail closed on drift. Only `ACCEPT` with P0/P1/P2 `0/0/0` permits
-`ProjectScopedControl` to bind the review, create the ordered true merge with parents `[stored
-accepted router target, 7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0]`, rerun all gates, create a
-conventional commit, and push it. After the pinned source's non-conflict paths are materialized, the
-final merge gate additionally runs
-`pnpm exec vitest run test/renderer/utils/createTaskCommandIdentity.test.ts`.
+Immediately before integration, the broker must rerun the exact `git ls-remote` query and require
+the remote branch head still equals `e9ffa30c...`. A moved head ends `HOLD` and requires review of a
+new pinned base. If unchanged, the broker creates the true merge with ordered parents `[stored
+accepted router target, e9ffa30c...]`, materializes source non-conflicts, applies the accepted
+five-path resolution, reruns every gate, runs the final source-only command-identity test, creates a
+conventional merge commit, and pushes.
 
 ## Authority and HOLD
 
-This router changes exactly its seven owned documentation paths. It changes no product, test,
-runtime, orchestration, configuration, package, lockfile, handoff, or evidence file; launches no
-worker or reviewer; and performs no fetch, stage, commit, merge, push, or integration attempt.
-
-P1.R2, P1.I, P1.F, and Phase 2+ remain blocked until the validated true two-parent merge is pushed.
-End `HOLD`.
+All inherited focused checks, native exact seven-diagnostic TypeScript baseline, self-review,
+independent review, exact five-path scope, empty index, conflict, secret/provider, private-path, and
+textual/non-binary gates remain required. P1.R2, P1.I, P1.F, and Phase 2+ remain blocked until the
+validated ordered merge is pushed. This router changes exactly seven docs, performs no lifecycle or
+Git mutation, and ends `HOLD`.

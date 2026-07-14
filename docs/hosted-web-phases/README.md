@@ -1,105 +1,67 @@
 # Hosted Web execution router
 
-> Current authority: correct the rejected PR #252 future launch contract with semantic router r2.
-> After router `ACCEPT`, integration, and push, admit one serial semantic five-path producer and then
-> one fresh independent reviewer. Both use `xhigh` reasoning and the `default` service tier; Fast is
-> forbidden. This docs author launches nothing and ends `HOLD`.
+> Current authority: `phase-01-pr252-task-provenance-remediation-router-r1` consumes producer r3's
+> independent r4 `FORMAL REJECT` and conditionally routes one hash-bound true-merge remediation
+> producer, then one fresh independent reviewer. This docs transition launches nothing and ends
+> `HOLD`.
 
-Always begin with [`START_HERE.md`](START_HERE.md). This router selects bounded execution authority;
-it does not redefine product architecture, grant raw Git authority, or turn rejected output into an
-input.
+Always begin with [`START_HERE.md`](START_HERE.md). Machine-readable authority is
+[`EXECUTION_INDEX.json`](EXECUTION_INDEX.json); the current Phase 1 controller and lane packets are
+the only executable packets.
 
-## Fixed route
+## Current route
 
-1. Read the mandatory documents in the exact order in [`START_HERE.md`](START_HERE.md).
-2. Confirm the sole node, provenance, launch renderer, and post-push binding in
-   [`EXECUTION_INDEX.json`](EXECUTION_INDEX.json).
-3. Follow the current [`Phase 1 controller packet`](phase-01/controller-packet.md).
-4. Follow the single assigned
-   [`PR #252 semantic conflict packet`](phase-01/lanes/pr252-base-conflict-resolution.md).
-5. Read only that packet's five owned paths at the stored target and pinned source commits.
+Reviewer r4 rejected producer r3 at P0/P1/P2 `0/1/0`. The sole P1 proved that a
+`TaskBoardCommandFacade` fallback could accept an unrelated same-ID task when destination
+`reconcile` and task `creationCommand` were absent; the executed result returned subject
+`UNRELATED SUBJECT`. All other r3 semantics and checks passed.
 
-Stop on stale or mixed identity, unexpected scope, missing pinned object, staged content, hash or
-packet drift, placeholder launch values, an extra strict-contract field, Fast mode, canonical
-re-resolution, rejected-job reuse, unsafe content, or any failed required check.
+Useful handoff
+`f810a0aa191e82316737c5c0069ee6225597d8a477d77b50c57bc3fd931fe579` and full rejected diff
+`cb534246905f6fd7cc03b0b761018157ed12d204d11819f0978915af7c778491` bind the successor as
+review provenance/reference. The full diff is not a carrier and must not be materialized or directly
+integrated. The successor is a remediation of that reviewed work, not a clean rewrite.
 
-## Terminal rejected provenance
+Direct `git ls-remote` authority supersedes the stale GitHub PR `baseOid`. The current real base and
+pinned merge source is
+`origin/refactor/team-provisioning-round2-reapply@e9ffa30cc016ad3cb833fcc0a138fa4f026eb850`.
+Stale `d2585e7634800eb795644c4b6d0e8baf5f81c98f` is its ancestor by 52 commits, and old source
+`7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0` is also its ancestor. Fresh merge-tree proof between
+canonical/head `3256ee3b5b8e81b144aa0a14eac1bca080c9b779` and `e9ffa30c...` reports the same exact five
+conflicts. Therefore the conflict route, ordered true merge, and final source-only test remain real;
+the standalone-normal-push interpretation is superseded.
 
-Revision `phase-01-pr252-semantic-conflict-remediation-router-r2` is a clean correction. Semantic
-router r1 patch `95dcdae236fdadbd63bfb3022441accc4354cffdc5ca6db7447e7a01e9d53221` was rejected for an
-invalid future launch contract, and
-`pr252-semantic-router-r1-contract-reject-consume-v1` consumed that decision. The r1 job is not an
-implementation input and may never be integrated, reused, retried, or continued.
+## Authorized successor
 
-The earlier byte-copy producer patch
-`a0fade213fd86c52022f944c9d3a9f169175f1fd5a54f6c19652173ae5307304` and its independent review
-remain `REJECT`. Their jobs are terminal provenance only. The new producer must begin clean with
-`inputPatchHash=null`, `revision=0`, `retryCount=0`, and `supersedes=null`.
+After this exact seven-document router is independently accepted, integrated, and pushed,
+`ProjectScopedControl` may resolve its pushed commit once and admit exactly one serial producer with
+`codex_goal_project_refill_worker`. The producer owns the exact five conflict paths. It may introduce
+new remediation semantics only in `TaskBoardCommandFacade.ts` and `TaskBoardCommands.e2e.test.ts`
+unless an owned-path compile-coherence change is proved necessary.
 
-## Current execution contract
+It materializes a fresh true two-parent merge against pinned `e9ffa30c...`, uses the r3 handoff and
+full-diff hashes only as immutable review reference, and preserves all passing r3 semantics. It keeps
+destination reconciliation optional and restores target-safe payload/trimmed-subject validation at
+every `findById` fallback success without requiring `creationCommand`, `createdBy`, or relation
+provenance. A mismatch is a terminal `TaskBoardCreateDestinationConflictError`, never success. One
+focused `UNRELATED SUBJECT` negative regression is added to the combined nine-case E2E suite, for ten
+cases total.
 
-`PR252-semantic-conflict-remediation` is the only executable node. Its fixed `baseSha` is
-`7c502f45df32b58bbc161b26dcc28df8a17107c9`. Product-worker capacity remains zero until this exact
-seven-path docs router receives independent `ACCEPT`, is integrated, and is pushed.
+Producer self-review ends `HOLD`. Then exactly one fresh independent reviewer is admitted with
+`codex_goal_project_prepare_verifier`. Producer and reviewer use model `gpt-5.6-sol`, reasoning
+effort `xhigh`, and `serviceTier: "fast"`; machine request envelopes contain no `fastMode` field.
+Only fresh `ACCEPT` with P0/P1/P2 `0/0/0` permits broker integration.
 
-After the push, `ProjectScopedControl` resolves the accepted pushed router commit once. That stored
-full SHA is used without recomputation for `canonicalSha`, `phaseStartSha`, `sourceRef`,
-`baseBranch`, producer worktree `HEAD`, reviewer materialization, `mark_reviewed`, integration, and
-the true merge's first parent. `baseSha` does not move.
+Immediately before integration, the broker reruns `git ls-remote origin
+refs/heads/refactor/team-provisioning-round2-reapply`. It must still return exactly `e9ffa30c...` or
+the route ends `HOLD` for a new-base review. With an unchanged source, integration creates a true
+merge with ordered parents `[stored accepted router target, e9ffa30c...]`, proves the exact five
+conflicts, materializes source non-conflicts, applies the accepted output, reruns every focused gate,
+runs `test/renderer/utils/createTaskCommandIdentity.test.ts`, conventionally commits, and pushes.
 
-The controller packet publishes one orchestration launch template. The strict future contract has
-only the fields enumerated there. Merge source and plan/materialization metadata remain outside it.
-The controller may render exactly one request only after the stored SHA exists, and every value in
-the rendered request must be concrete. Any placeholder, binding object, missing field, extra field,
-or drift rejects admission.
+## HOLD
 
-Within that contract, `requiredChecks` is exactly seven `{id,cwd,command}` objects copied from the
-strict command references, with `cwd="src"` and every command prefixed `cd .. && `; the separate
-human-readable gate list is not a contract source. `executionPolicy` has exactly `mode`,
-`sandboxRoot`, and nonempty `forbiddenRealProjects`. Its sandbox root is the fully concrete isolated
-producer or reviewer workspace. The extended network, runtime, Fast, writer, and Git controls remain
-outer orchestration enforcement. String checks, extra policy keys, or unresolved binding/copy
-objects reject rendering.
-
-The merge source identity is unchanged:
-`origin/refactor/team-provisioning-round2-reapply@7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0`.
-
-## Semantic implementation and review
-
-Exactly one producer may edit the five lane-owned paths. The producer semantically combines the
-stored target and pinned source intent; it never replaces a complete file with a source blob. The
-facade destination's `reconcile` method is optional: use it when available, otherwise reconcile with
-`findById` plus validation. Present mismatched provenance is terminal, and unknown outcomes never
-become success. `TeamDataService` capability-detects `reconcileTaskCreation` with a narrow runtime
-guard and omits that port when absent; it also keeps `projectPath` outside the hashed payload and
-sorts/dedupes relation IDs.
-
-`TeamDetailView` uses one dual-signature async adapter compatible with both the target positional
-dialog callback and the source request-object Promise callback. It keeps positional retry identity
-stable and passes through `request.command`. The TaskBoard E2E suite must retain the four target
-cases and port the five source cases for exactly nine, with no unguarded real-controller reconcile.
-The supported final task-board API must retain its coherent `reconcileTaskCreation` path; a narrow
-capability guard may support target mocks or older boundaries but may not omit that path when the
-capability exists.
-The producer runs all gates, self-reviews, emits one immutable output, and ends `HOLD` without
-staging, merging, committing, pushing, or launching a reviewer.
-
-`ProjectScopedControl` then starts exactly one fresh independent reviewer through
-`codex_goal_project_prepare_verifier` with `workerRole: reviewer`, `xhigh`/`default`, Fast forbidden,
-and strict runtime `reviewKind: review`; architecture/integration is purpose prose, not the enum. Its
-fully concrete verifier request uses the exact strict shape and no-write execution policy. The
-reviewer reruns the focused suites, exact inherited seven-diagnostic typecheck classification, exact
-`lint:fast:files`, Prettier, index-empty, diff/ownership, conflict-marker, secret/private-path, and
-binary gates. It owns no paths and returns `ACCEPT` or `REJECT`; `ACCEPT` requires P0/P1/P2 `0/0/0`.
-
-Only after that acceptance may `ProjectScopedControl` create and validate the true ordered
-two-parent merge `[stored accepted router target,
-7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0]`, make a conventional commit, and push it. Once the
-pinned source's non-conflict paths are materialized, final-merge validation additionally runs
-`pnpm exec vitest run test/renderer/utils/createTaskCommandIdentity.test.ts`.
-
-## Blocked successors and HOLD
-
-P1.R2, P1.I, P1.F, and Phase 2+ remain blocked until the validated merge is pushed. This exact
-seven-path docs transition launches no job and performs no fetch, stage, commit, merge, push, or
-integration attempt. End `HOLD`.
+All inherited tests, the exact native seven-diagnostic TypeScript baseline, bounded lint, Prettier,
+index-empty, diff/ownership, conflict, secret, private-path, and binary gates remain mandatory.
+P1.R2, P1.I, P1.F, and Phase 2+ remain blocked until the validated ordered merge is pushed. This docs
+router performs no launch, fetch, stage, commit, merge, push, or lifecycle action. End `HOLD`.
