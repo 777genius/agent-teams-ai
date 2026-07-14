@@ -34,7 +34,7 @@ import {
   assertProjectPreStartAdmissionLaunchBinding,
   validateStoredProjectPreStartAdmission,
 } from "./application/project-control/codex-goal-project-pre-start-admission";
-import { isAdmittedInputPatchCapacityContinuation } from "./application/project-control/codex-goal-project-admitted-input-patch-continuation";
+import { projectPreStartCapacityContinuationMode } from "./application/project-control/codex-goal-project-capacity-continuation";
 import {
   terminalHandoffDependencyRecoveryRequested,
   verifyTerminalHandoffRecovery,
@@ -207,10 +207,11 @@ export async function projectControlStartStoredJobView(
   }
   const reviewedOutputId = stringValue(args.reviewedOutputId);
   const workspaceDirty = status.workspaceDirty === true;
-  const admittedInputPatchContinuation =
-    !reviewedOutputId &&
-    loaded.manifest.projectPreStartAdmission !== undefined &&
-    isAdmittedInputPatchCapacityContinuation(status);
+  const capacityContinuationMode = projectPreStartCapacityContinuationMode({
+    manifest: loaded.manifest,
+    ...(reviewedOutputId ? { reviewedOutputId } : {}),
+    status,
+  });
   const terminalHandoffDependencyRecovery =
     terminalHandoffDependencyRecoveryRequested({
       status,
@@ -222,7 +223,7 @@ export async function projectControlStartStoredJobView(
       confirmDependencyBootstrap:
         booleanValue(args.confirmDependencyBootstrap) === true,
     });
-  if (workspaceDirty && !admittedInputPatchContinuation) {
+  if (workspaceDirty && capacityContinuationMode === undefined) {
     if (!args.forceStart) {
       throw new Error(
         "project_control_reviewed_dirty_continuation_force_required",
@@ -268,13 +269,13 @@ export async function projectControlStartStoredJobView(
       if (lockedStatus.workspaceDirty === true !== workspaceDirty) {
         throw new Error("project_control_workspace_state_changed_before_start");
       }
-      const lockedAdmittedInputPatchContinuation =
-        !reviewedOutputId &&
-        loaded.manifest.projectPreStartAdmission !== undefined &&
-        isAdmittedInputPatchCapacityContinuation(lockedStatus);
-      if (
-        lockedAdmittedInputPatchContinuation !== admittedInputPatchContinuation
-      ) {
+      const lockedCapacityContinuationMode =
+        projectPreStartCapacityContinuationMode({
+          manifest: loaded.manifest,
+          ...(reviewedOutputId ? { reviewedOutputId } : {}),
+          status: lockedStatus,
+        });
+      if (lockedCapacityContinuationMode !== capacityContinuationMode) {
         throw new Error("project_control_workspace_state_changed_before_start");
       }
       if (
@@ -345,11 +346,11 @@ export async function projectControlStartStoredJobView(
           };
         }
       }
-      if (admittedInputPatchContinuation) {
+      if (capacityContinuationMode) {
         await assertProjectPreStartAdmissionLaunchBinding({
           manifest: loaded.manifest,
           scope: controller.scope,
-          workspaceMode: "admitted_input_patch_continuation",
+          workspaceMode: capacityContinuationMode,
         });
       }
       const dependencyPreflight = await (
@@ -394,11 +395,11 @@ export async function projectControlStartStoredJobView(
           scope: controller.scope,
           workspaceMode: "terminal_handoff_dependency_recovery",
         });
-      } else if (admittedInputPatchContinuation) {
+      } else if (capacityContinuationMode) {
         await assertProjectPreStartAdmissionLaunchBinding({
           manifest: loaded.manifest,
           scope: controller.scope,
-          workspaceMode: "admitted_input_patch_continuation",
+          workspaceMode: capacityContinuationMode,
         });
       } else {
         await validateStoredProjectPreStartAdmission({
@@ -426,6 +427,11 @@ export async function projectControlStartStoredJobView(
         ...continuationReservation,
       });
       const reservedLaunch = accountReservation.launch;
+      const startAdmissionWorkspaceMode = reviewedContinuation
+        ? "reviewed_dirty_continuation" as const
+        : terminalRecovery
+        ? "terminal_handoff_dependency_recovery" as const
+        : capacityContinuationMode;
       let result;
       try {
         const broker = deps.codexProjectControlBroker({
@@ -434,22 +440,9 @@ export async function projectControlStartStoredJobView(
           scope: controller.scope,
           startLaunch: reservedLaunch,
           startManifest: loaded.manifest,
-          ...(reviewedContinuation
-            ? {
-                startAdmissionWorkspaceMode:
-                  "reviewed_dirty_continuation" as const,
-              }
-            : terminalRecovery
-              ? {
-                  startAdmissionWorkspaceMode:
-                    "terminal_handoff_dependency_recovery" as const,
-                }
-              : admittedInputPatchContinuation
-                ? {
-                    startAdmissionWorkspaceMode:
-                      "admitted_input_patch_continuation" as const,
-                  }
-              : {}),
+          ...(startAdmissionWorkspaceMode
+            ? { startAdmissionWorkspaceMode }
+            : {}),
           startWorkspaceLease: workspace,
           startSkipDoctor: booleanValue(args.skipDoctor) ?? false,
         });

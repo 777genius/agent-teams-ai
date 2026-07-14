@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -18,13 +18,18 @@ import type {
 } from "../codex-goal-jobs";
 import { codexGoalJobManifestPath, readCodexGoalJob } from "../codex-goal-jobs";
 import type { CodexGoalLaunchInput } from "../codex-goal-ops";
-import { projectControlStartStoredJobView } from "../codex-goal-mcp-project-control-actions";
+import {
+  projectControlStartStoredJobView,
+  type CodexGoalMcpProjectControlActionsDeps,
+} from "../codex-goal-mcp-project-control-actions";
 import { isAdmittedInputPatchCapacityContinuation } from "../application/project-control/codex-goal-project-admitted-input-patch-continuation";
+import { isCleanPreStartAdmissionCapacityContinuation } from "../application/project-control/codex-goal-project-clean-capacity-continuation";
 import {
   planProjectPreStartAdmission,
   prepareProjectPreStartAdmission,
 } from "../application/project-control/codex-goal-project-pre-start-admission";
 import { authorizeProjectPreStartAdmissionLaunch } from "../application/project-control/codex-goal-project-pre-start-launch-authorization";
+import { codexGoalProgressPath } from "../codex-goal-runner";
 import {
   cleanupProjectPreStartAdmissionFixtures,
   createBuiltinFixture,
@@ -314,6 +319,253 @@ describe("admitted input-patch capacity continuation", () => {
   });
 });
 
+describe("clean pre-start capacity continuation", () => {
+  it("recognizes only an unchanged terminal account-capacity pause", () => {
+    const status = {
+      workspaceDirty: false,
+      recommendedAction: "continue_after_capacity",
+      resultStatus: "blocked",
+      resultReason: "account_unavailable",
+      progressResultStatus: "waiting_capacity",
+      progressResultReason: "account_unavailable",
+    } as const;
+    expect(isCleanPreStartAdmissionCapacityContinuation(status)).toBe(true);
+    expect(isCleanPreStartAdmissionCapacityContinuation({
+      ...status,
+      workspaceDirty: true,
+    })).toBe(false);
+    expect(isCleanPreStartAdmissionCapacityContinuation({
+      ...status,
+      resultReason: "provider_failure",
+      progressResultReason: "provider_failure",
+    })).toBe(false);
+    expect(isCleanPreStartAdmissionCapacityContinuation({
+      ...status,
+      progressResultStatus: "blocked",
+    })).toBe(false);
+  });
+
+  it("continues the same clean admitted job on the next journaled account", async () => {
+    const fixture = await createBuiltinFixture();
+    const registryRootDir = join(fixture.root, "registry");
+    const canonicalWorkspacePath = join(fixture.root, "canonical");
+    await mkdir(canonicalWorkspacePath, { recursive: true });
+    execFileSync("git", ["init", "--quiet"], { cwd: canonicalWorkspacePath });
+    execFileSync("git", ["config", "user.email", "test@example.com"], {
+      cwd: canonicalWorkspacePath,
+    });
+    execFileSync("git", ["config", "user.name", "Test"], {
+      cwd: canonicalWorkspacePath,
+    });
+    await writeFile(join(canonicalWorkspacePath, "README.md"), "canonical\n");
+    execFileSync("git", ["add", "."], { cwd: canonicalWorkspacePath });
+    execFileSync("git", ["commit", "--quiet", "-m", "test: canonical"], {
+      cwd: canonicalWorkspacePath,
+    });
+
+    const scope: ProjectAccessScope = {
+      ...fixture.scope,
+      workspaceRoots: [canonicalWorkspacePath],
+      worktreeRoots: [fixture.root],
+      registryRoot: registryRootDir,
+      jobIdPrefixes: ["project-"],
+      tmuxSessionPrefixes: ["project-"],
+      allowedAccountIds: ["account-c", "account-g"],
+      allowedBranches: ["main"],
+      allowedGitRemotes: ["origin"],
+    };
+    const manifestInput: CodexGoalJobManifestInput = {
+      ...fixture.manifest,
+      accounts: ["account-c", "account-g"],
+      authRootDir: join(fixture.root, "auth"),
+      tmuxSession: fixture.manifest.jobId,
+    };
+    const plan = planProjectPreStartAdmission({
+      value: {
+        mode: "serial-builtin",
+        contract: fixture.contract,
+        state: fixture.state,
+      },
+      confirmed: true,
+      scope,
+      manifest: manifestInput,
+    });
+    if (!plan) throw new Error("expected admission plan");
+    const manifestDefinition: CodexGoalJobManifest = {
+      ...manifestInput,
+      schemaVersion: 1,
+      createdAt: "2026-07-14T00:00:00.000Z",
+      updatedAt: "2026-07-14T00:00:00.000Z",
+      projectPreStartAdmission: plan.descriptor,
+    };
+    await mkdir(join(registryRootDir, manifestDefinition.jobId), {
+      recursive: true,
+    });
+    await writeFile(
+      codexGoalJobManifestPath({
+        registryRootDir,
+        jobId: manifestDefinition.jobId,
+      }),
+      `${JSON.stringify(manifestDefinition, null, 2)}\n`,
+    );
+    const manifest = await readCodexGoalJob({
+      registryRootDir,
+      jobId: manifestDefinition.jobId,
+    });
+    await prepareProjectPreStartAdmission({ plan, manifest, scope });
+    await authorizeProjectPreStartAdmissionLaunch({ manifest, scope });
+
+    const resultPath = join(
+      manifest.jobRootDir,
+      `${manifest.taskId}.latest-result.json`,
+    );
+    const progressPath = codexGoalProgressPath({
+      taskId: manifest.taskId,
+      jobRootDir: manifest.jobRootDir,
+    });
+    const writeCapacityResult = async () => {
+      await writeFile(resultPath, `${JSON.stringify({
+        status: "blocked",
+        reason: "account_unavailable",
+        changedFiles: [],
+        evidence: ["safe_execution_status:waiting_capacity"],
+        blockers: ["account_unavailable"],
+        nextAction: "wait",
+      })}\n`);
+      await writeFile(progressPath, `${JSON.stringify({
+        schemaVersion: 1,
+        taskId: manifest.taskId,
+        status: "blocked",
+        resultStatus: "waiting_capacity",
+        reason: "account_unavailable",
+        updatedAt: new Date().toISOString(),
+      })}\n`);
+    };
+    await writeCapacityResult();
+
+    const journal = new InMemoryAttemptJournal();
+    await recordUnavailableAttempt(
+      journal,
+      manifest.taskId,
+      manifest.workspacePath,
+      false,
+    );
+    const controller = {
+      schemaVersion: 1,
+      jobId: "project-controller",
+      createdAt: "2026-07-14T00:00:00.000Z",
+      updatedAt: "2026-07-14T00:00:00.000Z",
+      jobRootDir: join(fixture.root, "jobs", "project-controller"),
+      workspacePath: canonicalWorkspacePath,
+      promptPath: join(fixture.root, "jobs", "project-controller", "prompt.md"),
+      taskId: "project-controller",
+      accounts: ["account-a"],
+      accessBoundary: AccessBoundary.ProjectScopedControl,
+      projectAccessScope: scope,
+    } as CodexGoalJobManifest;
+    let bootstrapCalls = 0;
+    let reservedLaunch: CodexGoalLaunchInput | undefined;
+    let startAdmissionWorkspaceMode: string | undefined;
+    const deps: CodexGoalMcpProjectControlActionsDeps = {
+      loadProjectControlController: async () => ({
+        registryRootDir,
+        controller,
+        scope,
+      }),
+      loadJobLaunch: async () => {
+        throw new Error("unexpected_load_job_launch");
+      },
+      safeExecutionJournal: journal,
+      dependencyBootstrap: async () => {
+        bootstrapCalls += 1;
+        return {
+          mode: "install" as const,
+          workspacePath: manifest.workspacePath,
+          nodeModulesPath: join(manifest.workspacePath, "node_modules"),
+          nodeModulesExists: true,
+          binaryChecks: [],
+          fingerprintInputs: [],
+          status: "installed" as const,
+          warnings: [],
+        };
+      },
+      codexProjectControlBroker: (input) => {
+        if (!input.startLaunch) throw new Error("expected_start_launch");
+        reservedLaunch = input.startLaunch;
+        startAdmissionWorkspaceMode = input.startAdmissionWorkspaceMode;
+        return {
+          startWorker: async () => ({ status: "started" }),
+        } as unknown as ProjectControlBroker;
+      },
+    };
+    const args = {
+      registryRootDir,
+      controllerJobId: controller.jobId,
+      jobId: manifest.jobId,
+      confirmStart: true,
+    };
+
+    await writeFile(join(manifest.workspacePath, "DIRTY.txt"), "dirty\n");
+    await expect(projectControlStartStoredJobView(args, deps)).rejects.toThrow(
+      "project_control_pre_start_launch_binding_mismatch",
+    );
+    await rm(join(manifest.workspacePath, "DIRTY.txt"));
+
+    await writeFile(resultPath, `${JSON.stringify({
+      status: "blocked",
+      reason: "provider_failure",
+      changedFiles: [],
+      blockers: ["provider_failure"],
+      nextAction: "inspect",
+    })}\n`);
+    await expect(projectControlStartStoredJobView({
+      ...args,
+      forceStart: true,
+    }, deps)).rejects.toThrow(
+      "project_control_pre_start_admission_already_authorized",
+    );
+    await writeCapacityResult();
+
+    await writeFile(progressPath, `${JSON.stringify({
+      schemaVersion: 1,
+      taskId: manifest.taskId,
+      status: "running",
+      updatedAt: new Date().toISOString(),
+      pid: process.pid,
+    })}\n`);
+    await expect(projectControlStartStoredJobView(args, deps)).resolves.toMatchObject({
+      ok: false,
+      reason: "worker_already_running",
+    });
+    await writeCapacityResult();
+
+    const originalPrompt = await readFile(manifest.promptPath, "utf8");
+    await writeFile(manifest.promptPath, "binding drift\n");
+    await expect(projectControlStartStoredJobView(args, deps)).rejects.toThrow(
+      "project_control_pre_start_launch_binding_mismatch:prompt_sha256",
+    );
+    await writeFile(manifest.promptPath, originalPrompt);
+
+    const started = await projectControlStartStoredJobView(args, deps);
+    expect(started).toMatchObject({
+      ok: true,
+      accountReservation: { accountId: "account-g" },
+    });
+    expect(bootstrapCalls).toBe(2);
+    expect(reservedLaunch?.config.accounts).toEqual([{ name: "account-g" }]);
+    expect(reservedLaunch?.config.maxAccountCycles).toBe(2);
+    expect(startAdmissionWorkspaceMode).toBe("clean_capacity_continuation");
+    await authorizeProjectPreStartAdmissionLaunch({
+      manifest,
+      scope,
+      workspaceMode: "clean_capacity_continuation",
+    });
+    expect(await readFile(plan.descriptor.receiptPath, "utf8")).toContain(
+      '"launchAuthorizationCount": 2',
+    );
+  });
+});
+
 function sha256(value: Uint8Array): string {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -322,6 +574,7 @@ async function recordUnavailableAttempt(
   journal: InMemoryAttemptJournal,
   taskId: string,
   workspacePath: string,
+  workspaceDirty = true,
 ): Promise<void> {
   const now = new Date("2026-07-14T00:00:00.000Z");
   await journal.startTask({
@@ -343,8 +596,8 @@ async function recordUnavailableAttempt(
       finishedAt: now,
       status: "blocked",
       failureReason: "account_unavailable",
-      workspaceDirtyBefore: true,
-      workspaceDirtyAfter: true,
+      workspaceDirtyBefore: workspaceDirty,
+      workspaceDirtyAfter: workspaceDirty,
       changedFiles: [],
     },
     now,

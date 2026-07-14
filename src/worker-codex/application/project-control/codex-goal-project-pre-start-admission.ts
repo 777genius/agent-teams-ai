@@ -261,7 +261,10 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
     input.workspaceMode === "terminal_handoff_dependency_recovery";
   const admittedInputPatchContinuation =
     input.workspaceMode === "admitted_input_patch_continuation";
-  const receiptStatusValid = dirtyContinuation || admittedInputPatchContinuation
+  const cleanCapacityContinuation = input.workspaceMode === "clean_capacity_continuation";
+  const receiptStatusValid = dirtyContinuation ||
+      admittedInputPatchContinuation ||
+      cleanCapacityContinuation
     ? receipt.status === "launch_authorized" ||
       receipt.status === "validated_not_launched"
     : receipt.status === "validated_not_launched";
