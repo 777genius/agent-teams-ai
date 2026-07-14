@@ -71,6 +71,39 @@ describe("codex goal MCP project scope helpers", () => {
     ).toThrow("project_control_consumed_output_ledger_root_outside_scope");
   });
 
+  it("allows only a fail-closed builtin admission upgrade", () => {
+    const existing = projectScope();
+    const upgraded = {
+      ...existing,
+      preStartAdmission: {
+        required: true as const,
+        mode: "serial-builtin" as const,
+      },
+    };
+
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({ existing, proposed: upgraded }),
+    ).not.toThrow();
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing: upgraded,
+        proposed: existing,
+      }),
+    ).toThrow("project_control_scope_preStartAdmission_repair_denied");
+    expect(() =>
+      assertProjectControlScopeRepairAllowed({
+        existing,
+        proposed: {
+          ...existing,
+          preStartAdmission: {
+            required: false,
+            mode: "serial-builtin",
+          },
+        },
+      }),
+    ).toThrow("project_control_scope_preStartAdmission_repair_denied");
+  });
+
   it("parses project control role and dependency bootstrap mode", () => {
     expect(projectControlWorkerRole(undefined)).toBe("producer");
     expect(projectControlWorkerRole("reviewer")).toBe("reviewer");

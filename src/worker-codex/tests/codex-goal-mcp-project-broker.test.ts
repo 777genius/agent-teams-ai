@@ -398,6 +398,34 @@ describe("codex goal MCP server", () => {
         },
       });
 
+      const admissionUpgrade = await callToolJson(
+        client,
+        "codex_goal_project_update_controller_scope",
+        {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          projectAccessScope: {
+            ...proposedScope,
+            preStartAdmission: {
+              required: true,
+              mode: "serial-builtin",
+            },
+          },
+          confirmUpdate: true,
+        },
+      );
+      expect(admissionUpgrade).toMatchObject({
+        ok: true,
+        manifest: {
+          projectAccessScope: {
+            preStartAdmission: {
+              required: true,
+              mode: "serial-builtin",
+            },
+          },
+        },
+      });
+
       const widened = await callToolJson(
         client,
         "codex_goal_project_update_controller_scope",

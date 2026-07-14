@@ -73,6 +73,15 @@ export function assertProjectControlScopeRepairAllowed(input: {
 }): void {
   for (const field of PROJECT_CONTROL_SCOPE_REPAIR_IMMUTABLE_FIELDS) {
     if (
+      field === "preStartAdmission" &&
+      projectControlPreStartAdmissionUpgradeAllowed({
+        existing: input.existing.preStartAdmission,
+        proposed: input.proposed.preStartAdmission,
+      })
+    ) {
+      continue;
+    }
+    if (
       projectScopeFieldFingerprint(input.existing[field]) !==
       projectScopeFieldFingerprint(input.proposed[field])
     ) {
@@ -99,6 +108,15 @@ export function assertProjectControlScopeRepairAllowed(input: {
       throw new Error("project_control_consumed_output_ledger_root_denied");
     }
   }
+}
+
+function projectControlPreStartAdmissionUpgradeAllowed(input: {
+  readonly existing: ProjectAccessScope["preStartAdmission"];
+  readonly proposed: ProjectAccessScope["preStartAdmission"];
+}): boolean {
+  return input.existing === undefined &&
+    input.proposed?.required === true &&
+    input.proposed.mode === "serial-builtin";
 }
 
 export function projectScopeFieldFingerprint(value: unknown): string {
