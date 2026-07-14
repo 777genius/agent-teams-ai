@@ -116,4 +116,34 @@ describe('group frame labels', () => {
     expect(labelBounds.bottom).toBeLessThan(frameBounds.bottom);
     expect(labelBounds.top).toBeGreaterThan(frameBounds.top);
   });
+
+  it('stacks labels for nested levels instead of drawing them on top of each other', () => {
+    const parent = groupFrame({ id: 'group:parent', depth: 1 });
+    const child = groupFrame({ id: 'group:child', depth: 2 });
+    const frameBounds = { left: 0, top: 100, right: 4000, bottom: 3000 };
+    const parentLabelBounds = getGroupFrameLabelBounds(
+      parent.label,
+      frameBounds,
+      0.5,
+      undefined,
+      {
+        placement: getGroupFrameLabelPlacement(parent),
+        verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(parent),
+      }
+    );
+    const childLabelBounds = getGroupFrameLabelBounds(
+      child.label,
+      frameBounds,
+      0.5,
+      undefined,
+      {
+        placement: getGroupFrameLabelPlacement(child),
+        verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(child),
+      }
+    );
+
+    expect(childLabelBounds.bottom).toBeLessThan(parentLabelBounds.top);
+    expect(getGroupFrameLabelVerticalOffsetPx(parent)).toBe(12);
+    expect(getGroupFrameLabelVerticalOffsetPx(child)).toBe(34);
+  });
 });

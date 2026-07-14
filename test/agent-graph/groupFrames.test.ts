@@ -196,6 +196,45 @@ describe('group frame hit detection', () => {
     expect(labelBounds.textY).toBeGreaterThan(frameBounds.top);
   });
 
+  it('separates nested frame labels that share the same bottom edge', () => {
+    const parentFrame: GraphGroupFrame = {
+      id: 'unit:parent',
+      label: 'Parent Group',
+      nodeIds: ['team:alpha'],
+      depth: 1,
+      priority: 'normal',
+    };
+    const childFrame: GraphGroupFrame = {
+      ...parentFrame,
+      id: 'unit:child',
+      label: 'Child Group',
+      depth: 2,
+    };
+    const sharedBounds = { left: 0, top: 0, right: 600, bottom: 600 };
+    const parentLabelBounds = getGroupFrameLabelBounds(
+      parentFrame.label,
+      sharedBounds,
+      1,
+      undefined,
+      {
+        placement: getGroupFrameLabelPlacement(parentFrame),
+        verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(parentFrame),
+      }
+    );
+    const childLabelBounds = getGroupFrameLabelBounds(
+      childFrame.label,
+      sharedBounds,
+      1,
+      undefined,
+      {
+        placement: getGroupFrameLabelPlacement(childFrame),
+        verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(childFrame),
+      }
+    );
+
+    expect(childLabelBounds.bottom).toBeLessThan(parentLabelBounds.top);
+  });
+
   it('reveals group frame labels progressively by zoom and depth', () => {
     const primaryFrame: GraphGroupFrame = {
       id: 'org:parent',

@@ -91,7 +91,8 @@ export function getGroupFrameLabelVerticalOffsetPx(frame: GraphGroupFrame): numb
   if (frame.priority === 'primary') {
     return 6;
   }
-  return getDepthLevel(frame, 0) > 0 ? 12 : 8;
+  const depth = getDepthLevel(frame, 0);
+  return depth > 0 ? 12 + (depth - 1) * 22 : 8;
 }
 
 export function getGroupFrameLabelHorizontalOffsetPx(frame: GraphGroupFrame): number {
