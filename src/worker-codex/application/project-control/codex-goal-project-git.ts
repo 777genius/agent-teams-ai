@@ -19,7 +19,10 @@ export function assertSafeGitRefName(value: string, fieldName: string): void {
   }
 }
 
-export function assertSafeGitRemoteName(value: string, fieldName: string): void {
+export function assertSafeGitRemoteName(
+  value: string,
+  fieldName: string,
+): void {
   if (
     value.startsWith("-") ||
     !/^[A-Za-z0-9._-]+$/.test(value) ||
@@ -78,7 +81,11 @@ export async function resolveCanonicalRemoteHead(input: {
     throw new Error("project_control_canonical_remote_head_ambiguous");
   }
   const [oid, observedRef] = records[0]?.split(/\s+/) ?? [];
-  if (!oid || !/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/i.test(oid) || observedRef !== fullRef) {
+  if (
+    !oid ||
+    !/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/i.test(oid) ||
+    observedRef !== fullRef
+  ) {
     throw new Error("project_control_canonical_remote_head_invalid");
   }
   return {
@@ -103,30 +110,125 @@ export async function applyVerifiedInputPatch(input: {
   readonly patchPath: string;
   readonly expectedSha256: string;
   readonly expectedBaseCommit: string;
+  readonly expectedTargetCommit: string;
+  readonly changedPaths: readonly string[];
 }): Promise<void> {
-  const patch = await readFile(input.patchPath);
+  await assertInputPatchHash(input.patchPath, input.expectedSha256);
+  const head = (
+    await execGitStdout([
+      "-C",
+      input.workspacePath,
+      "rev-parse",
+      "--verify",
+      "HEAD^{commit}",
+    ])
+  ).trim();
+  if (head !== input.expectedTargetCommit) {
+    throw new Error("project_control_input_patch_target_mismatch");
+  }
+  const status = await execGitStdout([
+    "-C",
+    input.workspacePath,
+    "status",
+    "--porcelain",
+    "--untracked-files=all",
+  ]);
+  if (status.length > 0) {
+    throw new Error("project_control_input_patch_target_dirty");
+  }
+  if (input.changedPaths.length === 0) {
+    throw new Error("project_control_input_patch_changed_paths_required");
+  }
+  if (input.expectedBaseCommit !== input.expectedTargetCommit) {
+    await execGitGuard(
+      [
+        "-C",
+        input.workspacePath,
+        "merge-base",
+        "--is-ancestor",
+        input.expectedBaseCommit,
+        input.expectedTargetCommit,
+      ],
+      "project_control_input_patch_base_not_ancestor",
+    );
+    await execGitGuard(
+      [
+        "--literal-pathspecs",
+        "-C",
+        input.workspacePath,
+        "diff",
+        "--quiet",
+        "--no-ext-diff",
+        "--no-renames",
+        input.expectedBaseCommit,
+        input.expectedTargetCommit,
+        "--",
+        ...input.changedPaths,
+      ],
+      "project_control_input_patch_changed_paths_advanced",
+    );
+  }
+  await execGitGuard(
+    [
+      "-C",
+      input.workspacePath,
+      "apply",
+      "--check",
+      "--index",
+      "--binary",
+      input.patchPath,
+    ],
+    "project_control_input_patch_not_applicable",
+  );
+  await assertInputPatchHash(input.patchPath, input.expectedSha256);
+  const confirmedHead = (
+    await execGitStdout([
+      "-C",
+      input.workspacePath,
+      "rev-parse",
+      "--verify",
+      "HEAD^{commit}",
+    ])
+  ).trim();
+  if (confirmedHead !== input.expectedTargetCommit) {
+    throw new Error("project_control_input_patch_target_changed");
+  }
+  await execGitGuard(
+    [
+      "-C",
+      input.workspacePath,
+      "apply",
+      "--index",
+      "--binary",
+      input.patchPath,
+    ],
+    "project_control_input_patch_apply_failed",
+  );
+}
+
+async function assertInputPatchHash(
+  patchPath: string,
+  expectedSha256: string,
+): Promise<void> {
+  const patch = await readFile(patchPath);
   const actualSha256 = createHash("sha256").update(patch).digest("hex");
-  if (actualSha256 !== input.expectedSha256.toLowerCase()) {
+  if (actualSha256 !== expectedSha256.toLowerCase()) {
     throw new Error("project_control_input_patch_hash_mismatch");
   }
-  const head = (await execGitStdout([
-    "-C",
-    input.workspacePath,
-    "rev-parse",
-    "--verify",
-    "HEAD^{commit}",
-  ])).trim();
-  if (head !== input.expectedBaseCommit) {
-    throw new Error("project_control_input_patch_base_mismatch");
+}
+
+async function execGitGuard(
+  args: readonly string[],
+  errorCode: string,
+): Promise<void> {
+  try {
+    await execFileAsync("git", [...args], {
+      timeout: 120_000,
+      maxBuffer: 1024 * 1024,
+    });
+  } catch {
+    throw new Error(errorCode);
   }
-  await execGit([
-    "-C",
-    input.workspacePath,
-    "apply",
-    "--index",
-    "--binary",
-    input.patchPath,
-  ]);
 }
 
 function parseRemoteTrackingRef(value: string): {
@@ -163,13 +265,14 @@ export async function execGitStdout(args: readonly string[]): Promise<string> {
 }
 
 function gitOperationLabel(args: readonly string[]): string {
-  const command = args.find((arg) =>
-    arg === "worktree" ||
-    arg === "cherry-pick" ||
-    arg === "push" ||
-    arg === "apply" ||
-    arg === "ls-remote" ||
-    arg === "rev-parse"
+  const command = args.find(
+    (arg) =>
+      arg === "worktree" ||
+      arg === "cherry-pick" ||
+      arg === "push" ||
+      arg === "apply" ||
+      arg === "ls-remote" ||
+      arg === "rev-parse",
   );
   return command ?? "unknown";
 }
@@ -181,15 +284,13 @@ function gitErrorSummary(error: unknown): string {
     readonly stderr?: unknown;
     readonly message?: unknown;
   };
-  const raw = typeof candidate.stderr === "string" && candidate.stderr.trim()
-    ? candidate.stderr
-    : typeof candidate.message === "string"
-    ? candidate.message
-    : typeof candidate.code === "string"
-    ? candidate.code
-    : "unknown";
-  return raw
-    .replace(/\s+/g, " ")
-    .replace(/["'`]/g, "")
-    .slice(0, 240);
+  const raw =
+    typeof candidate.stderr === "string" && candidate.stderr.trim()
+      ? candidate.stderr
+      : typeof candidate.message === "string"
+        ? candidate.message
+        : typeof candidate.code === "string"
+          ? candidate.code
+          : "unknown";
+  return raw.replace(/\s+/g, " ").replace(/["'`]/g, "").slice(0, 240);
 }

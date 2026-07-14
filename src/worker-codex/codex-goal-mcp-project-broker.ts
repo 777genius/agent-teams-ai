@@ -25,9 +25,7 @@ import {
   type CodexGoalLaunchInput,
 } from "./codex-goal-ops";
 import { writeCodexGoalReviewMarker } from "./codex-goal-mcp-lifecycle-markers";
-import {
-  codexGoalStatusInputFromLaunch as statusInput,
-} from "./codex-goal-mcp-status-input";
+import { codexGoalStatusInputFromLaunch as statusInput } from "./codex-goal-mcp-status-input";
 import {
   codexProjectAdmissionGate,
   type CodexProjectAdmissionDeps,
@@ -56,9 +54,7 @@ import {
   execGitStdout,
 } from "./codex-goal-mcp-project-git";
 
-export type {
-  CodexGoalProjectCreateWorktreeInput,
-} from "./application/project-control/codex-goal-project-control-contracts";
+export type { CodexGoalProjectCreateWorktreeInput } from "./application/project-control/codex-goal-project-control-contracts";
 
 export type CodexGoalProjectIntegrateCommitInput = {
   readonly workspacePath: string;
@@ -161,7 +157,9 @@ function codexProjectControlPorts(
         if (!input.reviewLaunch) {
           throw new Error("project_control_review_launch_required");
         }
-        const status = await collectCodexGoalStatus(statusInput(input.reviewLaunch));
+        const status = await collectCodexGoalStatus(
+          statusInput(input.reviewLaunch),
+        );
         let reviewedOutput: ReviewedWorkerOutputSnapshot | undefined;
         const reviewedOutputDeps = localReviewedWorkerOutputDeps({
           rootDir: reviewedWorkerOutputRoot(input.registryRootDir),
@@ -180,7 +178,10 @@ function codexProjectControlPorts(
           const statusAfterCapture = await collectCodexGoalStatus(
             statusInput(input.reviewLaunch),
           );
-          assertReviewedOutputWorkerStopped(input.reviewLaunch, statusAfterCapture);
+          assertReviewedOutputWorkerStopped(
+            input.reviewLaunch,
+            statusAfterCapture,
+          );
         }
         const reviewPath = await writeCodexGoalReviewMarker({
           jobId: marker.jobId,
@@ -198,7 +199,10 @@ function codexProjectControlPorts(
           const statusBeforeAttestation = await collectCodexGoalStatus(
             statusInput(input.reviewLaunch),
           );
-          assertReviewedOutputWorkerStopped(input.reviewLaunch, statusBeforeAttestation);
+          assertReviewedOutputWorkerStopped(
+            input.reviewLaunch,
+            statusBeforeAttestation,
+          );
           await commitReviewedWorkerOutputReviewAttestation({
             store: reviewedOutputDeps.store,
             markerVerifier: reviewedOutputDeps.markerVerifier,
@@ -234,7 +238,9 @@ function codexProjectControlPorts(
                 : {}),
             });
             if (!doctor.ok) {
-              throw new Error(`project_control_doctor_failed:${JSON.stringify(doctor)}`);
+              throw new Error(
+                `project_control_doctor_failed:${JSON.stringify(doctor)}`,
+              );
             }
           }
           const previousBrokeredStart =
@@ -245,9 +251,11 @@ function codexProjectControlPorts(
             command = await startCodexGoalTmux(startLaunch);
           } finally {
             if (previousBrokeredStart === undefined) {
-              delete process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START;
+              delete process.env
+                .SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START;
             } else {
-              process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START = previousBrokeredStart;
+              process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START =
+                previousBrokeredStart;
             }
           }
           return operationResult(command.preview);
@@ -258,22 +266,29 @@ function codexProjectControlPorts(
         if (!input.stopLaunch) {
           throw new Error("project_control_stop_launch_required");
         }
-        const status = await collectCodexGoalStatus(statusInput(input.stopLaunch));
+        const status = await collectCodexGoalStatus(
+          statusInput(input.stopLaunch),
+        );
         if (input.stopLaunch.tmuxSession) {
           if (status.tmuxAlive === false) {
             return noopOperationResult(
-              buildCodexGoalStopTmuxCommand(input.stopLaunch.tmuxSession).preview,
+              buildCodexGoalStopTmuxCommand(input.stopLaunch.tmuxSession)
+                .preview,
               "Worker tmux session is already gone.",
             );
           }
           try {
-            const command = await stopCodexGoalTmux(input.stopLaunch.tmuxSession);
+            const command = await stopCodexGoalTmux(
+              input.stopLaunch.tmuxSession,
+            );
             return operationResult(command.preview);
           } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
+            const message =
+              error instanceof Error ? error.message : String(error);
             if (/can't find session|no server running/i.test(message)) {
               return noopOperationResult(
-                buildCodexGoalStopTmuxCommand(input.stopLaunch.tmuxSession).preview,
+                buildCodexGoalStopTmuxCommand(input.stopLaunch.tmuxSession)
+                  .preview,
                 "Worker tmux session is already gone.",
               );
             }
@@ -284,7 +299,10 @@ function codexProjectControlPorts(
         if (command.status === "terminated") {
           return operationResult(command.preview);
         }
-        if (command.status === "process_gone" || command.status === "pid_missing") {
+        if (
+          command.status === "process_gone" ||
+          command.status === "pid_missing"
+        ) {
           return noopOperationResult(
             command.preview,
             command.status === "process_gone"
@@ -305,23 +323,30 @@ function codexProjectControlPorts(
           input.scope,
         );
         if (outsideScope) {
-          throw new Error("project_control_source_workspace_real_path_outside_scope");
+          throw new Error(
+            "project_control_source_workspace_real_path_outside_scope",
+          );
         }
-        const sourceRef = worktreeInput.sourceRef ?? worktreeInput.baseBranch ?? "HEAD";
-        const revision = (await execGitStdout([
-          "-C",
-          sourceWorkspacePath,
-          "rev-parse",
-          "--verify",
-          `${sourceRef}^{commit}`,
-        ])).trim();
+        const sourceRef =
+          worktreeInput.sourceRef ?? worktreeInput.baseBranch ?? "HEAD";
+        const revision = (
+          await execGitStdout([
+            "-C",
+            sourceWorkspacePath,
+            "rev-parse",
+            "--verify",
+            `${sourceRef}^{commit}`,
+          ])
+        ).trim();
         return { revision, sourceRealPath: sourceWorkspacePath };
       },
       async createWorktree() {
         if (!input.createWorktreeInput) {
           throw new Error("project_control_worktree_input_required");
         }
-        if (await codexProjectControlPathExists(input.createWorktreeInput.path)) {
+        if (
+          await codexProjectControlPathExists(input.createWorktreeInput.path)
+        ) {
           return noopOperationResult(
             input.createWorktreeInput.path,
             "existing worktree candidate delegated for exact identity validation",
@@ -329,7 +354,8 @@ function codexProjectControlPorts(
         }
         const sourceWorkspacePath = await resolveBoundProjectWorktreeSource({
           sourceWorkspacePath: input.createWorktreeInput.sourceWorkspacePath,
-          expectedSourceRealPath: input.createWorktreeInput.expectedSourceRealPath,
+          expectedSourceRealPath:
+            input.createWorktreeInput.expectedSourceRealPath,
           scope: input.scope,
         });
         await mkdir(dirname(input.createWorktreeInput.path), {
@@ -337,25 +363,26 @@ function codexProjectControlPorts(
           mode: 0o700,
         });
         const sourceRef =
-          input.createWorktreeInput.sourceRef ?? input.createWorktreeInput.baseBranch;
+          input.createWorktreeInput.sourceRef ??
+          input.createWorktreeInput.baseBranch;
         const newBranch = input.createWorktreeInput.newBranch;
         const existingBranch = newBranch
-          ? (await execGitStdout([
-              "-C",
-              sourceWorkspacePath,
-              "for-each-ref",
-              "--format=%(refname)",
-              `refs/heads/${newBranch}`,
-            ])).trim()
+          ? (
+              await execGitStdout([
+                "-C",
+                sourceWorkspacePath,
+                "for-each-ref",
+                "--format=%(refname)",
+                `refs/heads/${newBranch}`,
+              ])
+            ).trim()
           : "";
         const args = [
           "-C",
           sourceWorkspacePath,
           "worktree",
           "add",
-          ...(newBranch && !existingBranch
-            ? ["-b", newBranch]
-            : []),
+          ...(newBranch && !existingBranch ? ["-b", newBranch] : []),
           input.createWorktreeInput.path,
           ...(existingBranch && newBranch
             ? [newBranch]
@@ -370,7 +397,10 @@ function codexProjectControlPorts(
               workspacePath: input.createWorktreeInput.path,
               patchPath: input.createWorktreeInput.inputPatch.path,
               expectedSha256: input.createWorktreeInput.inputPatch.sha256,
-              expectedBaseCommit: input.createWorktreeInput.inputPatch.baseCommit,
+              expectedBaseCommit:
+                input.createWorktreeInput.inputPatch.baseCommit,
+              expectedTargetCommit: input.createWorktreeInput.expectedRevision,
+              changedPaths: input.createWorktreeInput.inputPatch.changedPaths,
             });
           } catch (error) {
             await execGit([
@@ -450,7 +480,8 @@ function assertReviewedOutputWorkerStopped(
   launch: CodexGoalLaunchInput,
   status: Awaited<ReturnType<typeof collectCodexGoalStatus>>,
 ): void {
-  const progressStale = status.progressHeartbeatAgeMs !== undefined &&
+  const progressStale =
+    status.progressHeartbeatAgeMs !== undefined &&
     status.progressHeartbeatAgeMs > 10 * 60_000;
   const liveness = resolveCodexGoalWorkerLiveness({ status, progressStale });
   if (liveness.alive) {
@@ -473,7 +504,9 @@ async function appendProjectControlAuditEvent(
   });
 }
 
-export function projectControlAuditPath(controller: CodexGoalJobManifest): string {
+export function projectControlAuditPath(
+  controller: CodexGoalJobManifest,
+): string {
   return join(
     controller.jobRootDir,
     `${controller.taskId}.project-control-events.jsonl`,

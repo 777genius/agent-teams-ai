@@ -97,16 +97,12 @@ import type {
   ProjectControlMcpArgs,
 } from "./codex-goal-mcp-inputs";
 import { goalLaunchInput } from "./codex-goal-mcp-launch-input";
-import {
-  ensureTerminalCodexGoalHandoffArtifacts,
-} from "./application/ensure-codex-goal-handoff-artifacts";
+import { ensureTerminalCodexGoalHandoffArtifacts } from "./application/ensure-codex-goal-handoff-artifacts";
 import {
   readVerifiedProducerHandoff,
   type VerifiedProducerHandoff,
 } from "./application/project-control/codex-goal-project-verifier-handoff";
-import {
-  codexGoalStatusInputFromLaunch,
-} from "./application/codex-goal-status-input";
+import { codexGoalStatusInputFromLaunch } from "./application/codex-goal-status-input";
 import {
   releaseCodexProjectAccount,
   reserveCodexProjectAccount,
@@ -383,9 +379,8 @@ export async function projectControlRefillWorkerView(
     controller: controller.controller,
     scope: controller.scope,
   });
-  const resolvedSource = await resolverBroker.resolveWorktreeRevision(
-    worktreeAccessInput,
-  );
+  const resolvedSource =
+    await resolverBroker.resolveWorktreeRevision(worktreeAccessInput);
   let canonicalRemoteHead;
   if (booleanValue(args.requireCanonicalRemoteHead) === true) {
     canonicalRemoteHead = await resolveCanonicalRemoteHead({
@@ -401,7 +396,6 @@ export async function projectControlRefillWorkerView(
     ? await resolveProducerHandoffForVerifier({
         registryRootDir: controller.registryRootDir,
         producerJobId,
-        expectedBaseCommit: resolvedSource.revision,
         expectedInputPatchHash: preStartAdmission?.contract.inputPatchHash,
       })
     : undefined;
@@ -669,11 +663,14 @@ export async function projectControlPrepareVerifierView(
   if (requestedRole !== "reviewer" && requestedRole !== "fastgate") {
     throw new Error("project_control_verifier_role_required");
   }
-  const result = await projectControlRefillWorkerView({
-    ...args,
-    workerRole: requestedRole,
-    requireCanonicalRemoteHead: true,
-  }, deps);
+  const result = await projectControlRefillWorkerView(
+    {
+      ...args,
+      workerRole: requestedRole,
+      requireCanonicalRemoteHead: true,
+    },
+    deps,
+  );
   return {
     ...result,
     mode: "project_control_prepare_verifier",
@@ -683,7 +680,6 @@ export async function projectControlPrepareVerifierView(
 async function resolveProducerHandoffForVerifier(input: {
   readonly registryRootDir: string;
   readonly producerJobId: string;
-  readonly expectedBaseCommit: string;
   readonly expectedInputPatchHash: unknown;
 }): Promise<VerifiedProducerHandoff> {
   const producer = await readCodexGoalJob({
@@ -702,9 +698,6 @@ async function resolveProducerHandoffForVerifier(input: {
     throw new Error("project_control_verifier_producer_still_running");
   }
   const handoff = await readVerifiedProducerHandoff({ producer });
-  if (handoff.baseCommit !== input.expectedBaseCommit) {
-    throw new Error("project_control_verifier_handoff_stale_base");
-  }
   if (
     typeof input.expectedInputPatchHash !== "string" ||
     input.expectedInputPatchHash.toLowerCase() !== handoff.patchSha256
