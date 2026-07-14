@@ -8,9 +8,12 @@ import { fileURLToPath } from "node:url";
 import {
   DurableJsonPublishStatus,
   type ProjectControlOperationClaimEnvironment,
+  type ProjectControlOperationExecutionClaim,
+  type ProjectControlOperationUpdateLockEnvironment,
   durablePublishJsonFile,
   durableReplaceJsonFile,
   tryAcquireProjectControlOperationClaim,
+  withProjectControlOperationUpdateLock,
 } from "./project-control-operation-file-store";
 
 export {
@@ -99,6 +102,11 @@ export type ProjectControlOperationRunResult = {
   readonly disposition?: ProjectControlOperationRunDisposition;
 };
 
+export type ProjectControlOperationCreationResult = {
+  readonly operation: ProjectControlOperationRecord;
+  readonly created: boolean;
+};
+
 export function projectControlOperationsRoot(controllerJobRootDir: string): string {
   return join(controllerJobRootDir, "project-control-operations");
 }
@@ -118,37 +126,68 @@ export async function createProjectControlOperation(input: {
   readonly args: JsonRecord;
   readonly targetJobId?: string;
 }): Promise<ProjectControlOperationRecord> {
+  return (await createOrReuseProjectControlOperation(input)).operation;
+}
+
+export async function createOrReuseProjectControlOperation(input: {
+  readonly operationsRootDir: string;
+  readonly controllerJobId: string;
+  readonly toolName: ProjectControlOperationToolName;
+  readonly args: JsonRecord;
+  readonly targetJobId?: string;
+}): Promise<ProjectControlOperationCreationResult> {
   const requestDigest = projectControlOperationRequestDigest(input);
-  // Structural launch failures are deterministic for an unchanged request.
-  // External-state failures remain retryable; corrected input gets a new digest.
-  const blockedBy = await identicalFailedOperation({
+  const existing = await identicalNonTerminalOrProtectedFailure({
     operationsRootDir: input.operationsRootDir,
     requestDigest,
   });
-  if (blockedBy) {
+  if (existing?.status === ProjectControlOperationStatus.Failed) {
     throw new Error(
-      `project_control_operation_identical_failed_request_blocked:${blockedBy.operationId}`,
+      `project_control_operation_identical_failed_request_blocked:${existing.operationId}`,
     );
   }
-  const operationId = `project-control-${compactTimestamp(new Date())}-${randomUUID().slice(0, 8)}`;
-  const operationDir = join(input.operationsRootDir, operationId);
-  const now = new Date().toISOString();
-  const record: ProjectControlOperationRecord = {
-    operationId,
-    toolName: input.toolName,
-    status: ProjectControlOperationStatus.Queued,
-    controllerJobId: input.controllerJobId,
-    ...(input.targetJobId === undefined ? {} : { targetJobId: input.targetJobId }),
-    createdAt: now,
-    updatedAt: now,
-    requestDigest,
-    args: input.args,
-    operationFilePath: join(operationDir, "operation.json"),
-    resultPath: join(operationDir, "result.json"),
-    logPath: join(operationDir, "runner.log"),
-  };
-  await writeProjectControlOperation(record);
-  return record;
+  if (existing) return { operation: existing, created: false };
+
+  for (let generation = 1; generation <= 10_000; generation += 1) {
+    const operationId = deterministicProjectControlOperationId(
+      requestDigest,
+      generation,
+    );
+    const operationDir = join(input.operationsRootDir, operationId);
+    const operationFilePath = join(operationDir, "operation.json");
+    const current = await readProjectControlOperationIfExists(operationFilePath);
+    if (current) {
+      const reusable = reusableIdenticalOperation(current, requestDigest);
+      if (reusable) return reusable;
+      continue;
+    }
+    const now = new Date().toISOString();
+    const record: ProjectControlOperationRecord = {
+      operationId,
+      toolName: input.toolName,
+      status: ProjectControlOperationStatus.Queued,
+      controllerJobId: input.controllerJobId,
+      ...(input.targetJobId === undefined ? {} : { targetJobId: input.targetJobId }),
+      createdAt: now,
+      updatedAt: now,
+      requestDigest,
+      args: input.args,
+      operationFilePath,
+      resultPath: join(operationDir, "result.json"),
+      logPath: join(operationDir, "runner.log"),
+    };
+    const publication = await durablePublishJsonFile({
+      path: operationFilePath,
+      value: record,
+    });
+    if (publication === DurableJsonPublishStatus.Published) {
+      return { operation: record, created: true };
+    }
+    const winner = await readProjectControlOperation(operationFilePath);
+    const reusable = reusableIdenticalOperation(winner, requestDigest);
+    if (reusable) return reusable;
+  }
+  throw new Error("project_control_operation_generation_exhausted");
 }
 
 export async function readProjectControlOperation(
@@ -170,16 +209,44 @@ export async function patchProjectControlOperation(input: {
   readonly operationFilePath: string;
   readonly patch: Partial<Omit<ProjectControlOperationRecord, "operationId" | "operationFilePath">>;
 }): Promise<ProjectControlOperationRecord> {
-  const current = await readProjectControlOperation(input.operationFilePath);
-  const record: ProjectControlOperationRecord = {
-    ...current,
-    ...input.patch,
-    operationId: current.operationId,
-    operationFilePath: current.operationFilePath,
-    updatedAt: new Date().toISOString(),
-  };
-  await writeProjectControlOperation(record);
-  return record;
+  return updateProjectControlOperation({
+    operationFilePath: input.operationFilePath,
+    update: () => input.patch,
+  });
+}
+
+export async function updateProjectControlOperation(input: {
+  readonly operationFilePath: string;
+  readonly beforePersist?: () => Promise<void>;
+  readonly persistFence?: (effect: () => Promise<void>) => Promise<void>;
+  readonly updateLockEnvironment?: ProjectControlOperationUpdateLockEnvironment;
+  readonly update: (
+    current: ProjectControlOperationRecord,
+  ) => Promise<Partial<Omit<ProjectControlOperationRecord, "operationId" | "operationFilePath">>> |
+    Partial<Omit<ProjectControlOperationRecord, "operationId" | "operationFilePath">>;
+}): Promise<ProjectControlOperationRecord> {
+  return withProjectControlOperationUpdateLock({
+    operationFilePath: input.operationFilePath,
+    ...(input.updateLockEnvironment === undefined
+      ? {}
+      : { environment: input.updateLockEnvironment }),
+    effect: async (lockFence) => {
+      const current = await readProjectControlOperation(input.operationFilePath);
+      const patch = await input.update(current);
+      const record = monotonicProjectControlOperationUpdate(current, patch);
+      if (record === current) return current;
+      await input.beforePersist?.();
+      return lockFence.runIfOwned(async () => {
+        const persist = () => writeProjectControlOperation(record);
+        if (input.persistFence) {
+          await input.persistFence(persist);
+        } else {
+          await persist();
+        }
+        return record;
+      });
+    },
+  });
 }
 
 export async function startProjectControlOperationRunner(input: {
@@ -273,6 +340,7 @@ export async function runProjectControlOperationFile(input: {
       const operation = await finalizeProjectControlOperation({
         operationFilePath: input.operationFilePath,
         result: persistedResult,
+        claim,
         recovery: {
           count: (current.recovery?.count ?? 0) + 1,
           lastRecoveredAt: recoveredAt,
@@ -290,41 +358,48 @@ export async function runProjectControlOperationFile(input: {
     }
 
     const startedAt = operationNow(input.claimEnvironment).toISOString();
-    const recovery = input.recovery === true ||
-      current.status === ProjectControlOperationStatus.Running ||
-      (current.attemptCount ?? 0) > 0;
-    const attemptNumber = (current.attemptCount ?? 0) + 1;
-    const initial = await patchProjectControlOperation({
+    const initial = await updateProjectControlOperation({
       operationFilePath: input.operationFilePath,
-      patch: {
-        status: ProjectControlOperationStatus.Running,
-        runningAt: startedAt,
-        attemptCount: attemptNumber,
-        lastAttempt: {
-          attemptId: randomUUID(),
-          claimId: claim.record.claimId,
-          number: attemptNumber,
-          startedAt,
-          recovery,
-          ...(recovery ? { recoveredFromStatus: current.status } : {}),
-        },
-        ...(recovery
-          ? {
-              recovery: {
-                count: (current.recovery?.count ?? 0) + 1,
-                lastRecoveredAt: startedAt,
-                lastRecoveredFromStatus: current.status,
-              },
-            }
-          : {}),
-        runner: {
-          hostname: input.claimEnvironment?.hostname ?? hostname(),
-          pid: input.claimEnvironment?.pid ?? process.pid,
-          command: process.argv,
-          startedAt,
-        },
+      persistFence: (effect) => runWithExecutionClaimCurrent(claim, effect),
+      update: (latest) => {
+        const recovery = input.recovery === true ||
+          latest.status === ProjectControlOperationStatus.Running ||
+          (latest.attemptCount ?? 0) > 0;
+        const attemptNumber = (latest.attemptCount ?? 0) + 1;
+        return {
+          status: ProjectControlOperationStatus.Running,
+          runningAt: startedAt,
+          attemptCount: attemptNumber,
+          lastAttempt: {
+            attemptId: randomUUID(),
+            claimId: claim.record.claimId,
+            number: attemptNumber,
+            startedAt,
+            recovery,
+            ...(recovery ? { recoveredFromStatus: latest.status } : {}),
+          },
+          ...(recovery
+            ? {
+                recovery: {
+                  count: (latest.recovery?.count ?? 0) + 1,
+                  lastRecoveredAt: startedAt,
+                  lastRecoveredFromStatus: latest.status,
+                },
+              }
+            : {}),
+          runner: {
+            hostname: input.claimEnvironment?.hostname ?? hostname(),
+            pid: input.claimEnvironment?.pid ?? process.pid,
+            command: process.argv,
+            startedAt,
+          },
+        };
       },
     });
+    if (operationIsTerminal(initial)) {
+      return terminalReplay(initial);
+    }
+    await assertExecutionClaimCurrent(claim);
     let resultRecord: JsonRecord;
     try {
       const result = await input.invokeTool(initial.toolName, {
@@ -333,33 +408,38 @@ export async function runProjectControlOperationFile(input: {
       });
       resultRecord = jsonRecordFromUnknown(result);
     } catch (error) {
-      const operation = await patchProjectControlOperation({
+      const operation = await updateProjectControlOperation({
         operationFilePath: input.operationFilePath,
-        patch: {
+        persistFence: (effect) => runWithExecutionClaimCurrent(claim, effect),
+        update: () => ({
           status: ProjectControlOperationStatus.Failed,
           failedAt: operationNow(input.claimEnvironment).toISOString(),
           error: error instanceof Error
             ? error.message
             : "project_control_operation_failed",
-        },
+        }),
       });
       return {
-        ok: false,
+        ok: operation.status === ProjectControlOperationStatus.Completed,
         operation,
         disposition: ProjectControlOperationRunDisposition.Executed,
       };
     }
 
-    const publication = await durablePublishJsonFile({
-      path: initial.resultPath,
-      value: resultRecord,
-    });
+    const publication = await runWithExecutionClaimCurrent(
+      claim,
+      () => durablePublishJsonFile({
+        path: initial.resultPath,
+        value: resultRecord,
+      }),
+    );
     if (publication === DurableJsonPublishStatus.AlreadyExists) {
       resultRecord = await requiredProjectControlOperationResult(initial.resultPath);
     }
     const operation = await finalizeProjectControlOperation({
       operationFilePath: input.operationFilePath,
       result: resultRecord,
+      claim,
       ...(input.claimEnvironment === undefined
         ? {}
         : { claimEnvironment: input.claimEnvironment }),
@@ -378,14 +458,17 @@ export async function runProjectControlOperationFile(input: {
 async function finalizeProjectControlOperation(input: {
   readonly operationFilePath: string;
   readonly result: JsonRecord;
+  readonly claim: ProjectControlOperationExecutionClaim;
   readonly claimEnvironment?: ProjectControlOperationClaimEnvironment;
   readonly recovery?: ProjectControlOperationRecord["recovery"];
 }): Promise<ProjectControlOperationRecord> {
   const ok = input.result.ok !== false;
   const finishedAt = operationNow(input.claimEnvironment).toISOString();
-  return patchProjectControlOperation({
+  return updateProjectControlOperation({
     operationFilePath: input.operationFilePath,
-    patch: {
+    persistFence: (effect) =>
+      runWithExecutionClaimCurrent(input.claim, effect),
+    update: () => ({
       status: ok
         ? ProjectControlOperationStatus.Completed
         : ProjectControlOperationStatus.Failed,
@@ -393,8 +476,27 @@ async function finalizeProjectControlOperation(input: {
       ...(input.recovery === undefined ? {} : { recovery: input.recovery }),
       result: input.result,
       ...(ok ? {} : { error: projectControlOperationError(input.result) }),
-    },
+    }),
   });
+}
+
+async function assertExecutionClaimCurrent(
+  claim: ProjectControlOperationExecutionClaim,
+): Promise<void> {
+  if (!await claim.revalidate() || !await claim.renew()) {
+    throw new Error("project_control_operation_execution_claim_lost");
+  }
+}
+
+async function runWithExecutionClaimCurrent<T>(
+  claim: ProjectControlOperationExecutionClaim,
+  effect: () => Promise<T>,
+): Promise<T> {
+  const fenced = await claim.runIfCurrent(effect);
+  if (!fenced.executed) {
+    throw new Error("project_control_operation_execution_claim_lost");
+  }
+  return fenced.value;
 }
 
 async function readProjectControlOperationResult(
@@ -635,7 +737,7 @@ function projectControlOperationError(result: JsonRecord): string {
   return "project_control_operation_result_not_ok";
 }
 
-async function identicalFailedOperation(input: {
+async function identicalNonTerminalOrProtectedFailure(input: {
   readonly operationsRootDir: string;
   readonly requestDigest: string;
 }): Promise<ProjectControlOperationRecord | undefined> {
@@ -660,11 +762,102 @@ async function identicalFailedOperation(input: {
   return candidates
     .filter((candidate): candidate is ProjectControlOperationRecord =>
       candidate !== undefined &&
-      candidate.status === ProjectControlOperationStatus.Failed &&
       candidate.requestDigest === input.requestDigest &&
-      retryProtectedOperationError(candidate.error)
+      (!operationIsTerminal(candidate) ||
+        (candidate.status === ProjectControlOperationStatus.Failed &&
+          retryProtectedOperationError(candidate.error)))
     )
     .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0];
+}
+
+function reusableIdenticalOperation(
+  operation: ProjectControlOperationRecord,
+  requestDigest: string,
+): ProjectControlOperationCreationResult | undefined {
+  if (operation.requestDigest !== requestDigest) {
+    throw new Error("project_control_operation_identity_collision");
+  }
+  if (!operationIsTerminal(operation)) {
+    return { operation, created: false };
+  }
+  if (
+    operation.status === ProjectControlOperationStatus.Failed &&
+    retryProtectedOperationError(operation.error)
+  ) {
+    throw new Error(
+      `project_control_operation_identical_failed_request_blocked:${operation.operationId}`,
+    );
+  }
+  return undefined;
+}
+
+async function readProjectControlOperationIfExists(
+  operationFilePath: string,
+): Promise<ProjectControlOperationRecord | undefined> {
+  try {
+    return await readProjectControlOperation(operationFilePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+function deterministicProjectControlOperationId(
+  requestDigest: string,
+  generation: number,
+): string {
+  return `project-control-${requestDigest}-${generation}`;
+}
+
+function monotonicProjectControlOperationUpdate(
+  current: ProjectControlOperationRecord,
+  patch: Partial<Omit<ProjectControlOperationRecord, "operationId" | "operationFilePath">>,
+): ProjectControlOperationRecord {
+  if (Object.keys(patch).length === 0) return current;
+  if (
+    operationIsTerminal(current) &&
+    patch.status !== undefined
+  ) {
+    return current;
+  }
+  if (
+    current.status === ProjectControlOperationStatus.Running &&
+    patch.status === ProjectControlOperationStatus.Queued
+  ) {
+    return current;
+  }
+  if (
+    patch.status === ProjectControlOperationStatus.Running &&
+    patch.attemptCount !== undefined &&
+    current.attemptCount !== undefined &&
+    patch.attemptCount <= current.attemptCount
+  ) {
+    return current;
+  }
+  const attemptCount = patch.attemptCount === undefined
+    ? current.attemptCount
+    : Math.max(current.attemptCount ?? 0, patch.attemptCount);
+  const recovery = patch.recovery === undefined ||
+      (current.recovery?.count ?? 0) >= patch.recovery.count
+    ? current.recovery
+    : patch.recovery;
+  return {
+    ...current,
+    ...patch,
+    operationId: current.operationId,
+    operationFilePath: current.operationFilePath,
+    ...(attemptCount === undefined ? {} : { attemptCount }),
+    ...(recovery === undefined ? {} : { recovery }),
+    updatedAt: monotonicOperationTimestamp(current.updatedAt),
+  };
+}
+
+function monotonicOperationTimestamp(previous: string): string {
+  const now = Date.now();
+  const previousTime = Date.parse(previous);
+  return new Date(Number.isFinite(previousTime) && previousTime >= now
+    ? previousTime + 1
+    : now).toISOString();
 }
 
 function retryProtectedOperationError(error: string | undefined): boolean {
@@ -752,10 +945,6 @@ function assertProjectControlOperationId(value: string): void {
   if (!/^[A-Za-z0-9_.:-]+$/.test(value)) {
     throw new Error("project_control_operation_id_invalid");
   }
-}
-
-function compactTimestamp(date: Date): string {
-  return date.toISOString().replace(/[-:.]/g, "").replace("T", "T").replace("Z", "Z");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -18,6 +18,7 @@ export type CodexGoalProjectCreateWorktreeInput = {
   readonly inputPatch?: {
     readonly path: string;
     readonly sha256: string;
+    readonly stagedSha256: string;
     readonly baseCommit: string;
     readonly changedPaths: readonly string[];
   };

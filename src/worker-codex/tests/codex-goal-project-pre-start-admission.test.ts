@@ -29,6 +29,7 @@ import {
   planProjectPreStartAdmission,
   prepareProjectPreStartAdmission,
   validateStoredProjectPreStartAdmission,
+  withProjectPreStartAdmissionLaunchAuthorization,
 } from "../application/project-control/codex-goal-project-pre-start-admission";
 
 const roots: string[] = [];
@@ -666,6 +667,50 @@ describe("builtin project pre-start admission", () => {
       scope: headFixture.scope,
       workspaceMode: "reviewed_dirty_continuation",
     })).rejects.toThrow("project_control_pre_start_launch_binding_mismatch");
+  });
+
+  it("rolls back failed startup authorization and permits one reviewed-dirty restart", async () => {
+    const fixture = await createBuiltinFixture();
+    const plan = fixture.plan();
+    const manifest = {
+      ...fixture.storedManifest,
+      projectPreStartAdmission: plan.descriptor,
+    };
+    await prepareProjectPreStartAdmission({
+      plan,
+      manifest,
+      scope: fixture.scope,
+    });
+
+    await expect(withProjectPreStartAdmissionLaunchAuthorization({
+        manifest,
+        scope: fixture.scope,
+      }, async () => {
+        throw new Error("provider_startup_failed");
+      })).rejects.toThrow("provider_startup_failed");
+    await expect(validateStoredProjectPreStartAdmission({
+      manifest,
+      scope: fixture.scope,
+    })).resolves.toBeUndefined();
+
+    await authorizeProjectPreStartAdmissionLaunch({
+      manifest,
+      scope: fixture.scope,
+    });
+    await writeFile(join(fixture.workspacePath, "reviewed-change.ts"), "dirty\n");
+    await authorizeProjectPreStartAdmissionLaunch({
+      manifest,
+      scope: fixture.scope,
+      workspaceMode: "reviewed_dirty_continuation",
+    });
+
+    const receipt = JSON.parse(
+      await readFile(plan.descriptor.receiptPath, "utf8"),
+    ) as Record<string, unknown>;
+    expect(receipt).toMatchObject({
+      status: "launch_authorized",
+      launchAuthorizationCount: 2,
+    });
   });
 });
 

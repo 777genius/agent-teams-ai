@@ -29,14 +29,15 @@ import {
   projectControlAuditPath,
 } from "./codex-goal-mcp-project-broker";
 import {
-  createProjectControlOperation,
-  patchProjectControlOperation,
+  createOrReuseProjectControlOperation,
+  ProjectControlOperationStatus,
   projectControlOperationExecutionMode,
   projectControlOperationView,
   projectControlOperationsRoot,
   readProjectControlOperationById,
   recoverProjectControlOperations,
   startProjectControlOperationRunner,
+  updateProjectControlOperation,
   type JsonRecord as ProjectControlOperationJsonRecord,
   type ProjectControlOperationToolName,
 } from "./project-control-operation-lifecycle";
@@ -61,6 +62,7 @@ import {
 import {
   assertSafeGitRefName,
   canonicalRemoteWorktreeSourceRef,
+  stagedPatchSha256ForRevision,
 } from "./codex-goal-mcp-project-git";
 import { resolveProjectSourceRevision } from "./application/project-control/codex-goal-project-source-revision";
 import {
@@ -420,21 +422,25 @@ export async function projectControlRefillWorkerView(
     plan: preStartAdmission,
     sourceRevision: sourceRevision.revision,
   });
+  const producerInputPatch = producerHandoff
+    ? {
+        path: producerHandoff.patchPath,
+        sha256: producerHandoff.patchSha256,
+        stagedSha256: await stagedPatchSha256ForRevision({
+          workspacePath: resolvedSource.sourceRealPath,
+          revision: sourceRevision.revision,
+          patchPath: producerHandoff.patchPath,
+        }),
+        baseCommit: producerHandoff.baseCommit,
+        changedPaths: producerHandoff.changedPaths,
+      }
+    : undefined;
   const createWorktreeInput: CodexGoalProjectCreateWorktreeInput = {
     ...worktreeAccessInput,
     expectedRevision: sourceRevision.revision,
     ...(sourceRevision.pinned ? { sourceRevisionPinned: true } : {}),
     expectedSourceRealPath: resolvedSource.sourceRealPath,
-    ...(producerHandoff
-      ? {
-          inputPatch: {
-            path: producerHandoff.patchPath,
-            sha256: producerHandoff.patchSha256,
-            baseCommit: producerHandoff.baseCommit,
-            changedPaths: producerHandoff.changedPaths,
-          },
-        }
-      : {}),
+    ...(producerInputPatch ? { inputPatch: producerInputPatch } : {}),
   };
   const worktreeBroker = deps.codexProjectControlBroker({
     registryRootDir: controller.registryRootDir,
@@ -487,9 +493,11 @@ export async function projectControlRefillWorkerView(
         plan: preStartAdmission,
         manifest: createManifest,
         scope: controller.scope,
-        ...(producerHandoff
+        ...(producerInputPatch
           ? {
-              verifiedInputPatchArtifactSha256: producerHandoff.patchSha256,
+              verifiedInputPatchArtifactSha256: producerInputPatch.sha256,
+              verifiedInputPatchStagedSha256:
+                producerInputPatch.stagedSha256,
             }
           : {}),
       });
@@ -866,27 +874,55 @@ async function projectControlRefillWorkerBoundedView(
   const operationsRootDir = projectControlOperationsRoot(
     controller.controller.jobRootDir,
   );
-  const operation = await createProjectControlOperation({
+  const creation = await createOrReuseProjectControlOperation({
     operationsRootDir,
     controllerJobId: controller.controller.jobId,
     toolName: operationToolName,
     args: operationArgs,
     targetJobId: createManifest.jobId,
   });
+  if (!creation.created) {
+    const existing = creation.operation;
+    return {
+      ok: true,
+      mode: "project_control_refill_worker_operation_started",
+      executionMode: "bounded",
+      controllerJobId: controller.controller.jobId,
+      registryRootDir: controller.registryRootDir,
+      auditPath: projectControlAuditPath(controller.controller),
+      operationId: existing.operationId,
+      operationStatusTool: "codex_goal_project_operation_status",
+      operationStatusArgs: {
+        registryRootDir: controller.registryRootDir,
+        controllerJobId: controller.controller.jobId,
+        operationId: existing.operationId,
+      },
+      targetJobId: createManifest.jobId,
+      ...(existing.runner ? { runnerPid: existing.runner.pid } : {}),
+      operation: projectControlOperationView({ operation: existing }),
+    };
+  }
+  const operation = creation.operation;
   const runner = await startProjectControlOperationRunner({
     operationFilePath: operation.operationFilePath,
     cwd: controller.controller.workspacePath,
   });
-  const updated = await patchProjectControlOperation({
+  const updated = await updateProjectControlOperation({
     operationFilePath: operation.operationFilePath,
-    patch: {
-      runner: {
-        hostname: hostname(),
-        pid: runner.pid,
-        command: runner.command,
-        startedAt: new Date().toISOString(),
-      },
-    },
+    update: (current) =>
+      (
+        current.status === ProjectControlOperationStatus.Queued &&
+        current.runner === undefined
+      )
+        ? {
+            runner: {
+              hostname: hostname(),
+              pid: runner.pid,
+              command: runner.command,
+              startedAt: new Date().toISOString(),
+            },
+          }
+        : {},
   });
   return {
     ok: true,

@@ -32,7 +32,7 @@ import {
   type CodexProjectAdmissionDeps,
 } from "./application/project-control/codex-goal-project-admission";
 import {
-  authorizeProjectPreStartAdmissionLaunch,
+  withProjectPreStartAdmissionLaunchAuthorization,
 } from "./application/project-control/codex-goal-project-pre-start-admission";
 import {
   assertCodexGoalProjectJobNotTerminal,
@@ -43,11 +43,11 @@ import type {
   ReviewedWorkerOutputSnapshot,
 } from "./reviewed-worker-output";
 import {
-  captureReviewedWorkerOutput,
+  assertReviewedWorkerOutputStillMatchesLocked,
+  captureReviewedWorkerOutputLocked,
   commitReviewedWorkerOutputReviewAttestation,
   localReviewedWorkerOutputDeps,
   reviewedWorkerOutputRoot,
-  verifyReviewedWorkerOutputStillMatches,
 } from "./reviewed-worker-output";
 import type { ProjectControlWorkspaceLease } from "./codex-goal-project-workspace-lock";
 import {
@@ -115,6 +115,7 @@ export type CodexProjectControlBrokerInput = {
   readonly startSkipDoctor?: boolean;
   readonly stopLaunch?: CodexGoalLaunchInput;
   readonly reviewLaunch?: CodexGoalLaunchInput;
+  readonly reviewWorkspaceLease?: ProjectControlWorkspaceLease;
   readonly reviewNote?: string;
   readonly reviewedOutputCapture?: Omit<
     CaptureReviewedWorkerOutputInput,
@@ -167,6 +168,13 @@ function codexProjectControlPorts(
         if (!input.reviewLaunch) {
           throw new Error("project_control_review_launch_required");
         }
+        if (
+          !input.reviewWorkspaceLease ||
+          input.reviewWorkspaceLease.canonicalWorkspacePath !==
+            input.reviewLaunch.config.workspacePath
+        ) {
+          throw new Error("project_control_review_workspace_lease_required");
+        }
         const status = await collectCodexGoalStatus(
           statusInput(input.reviewLaunch),
         );
@@ -176,7 +184,7 @@ function codexProjectControlPorts(
         });
         if (input.reviewedOutputCapture) {
           assertReviewedOutputWorkerStopped(input.reviewLaunch, status);
-          reviewedOutput = await captureReviewedWorkerOutput(
+          reviewedOutput = await captureReviewedWorkerOutputLocked(
             reviewedOutputDeps,
             {
               ...input.reviewedOutputCapture,
@@ -184,6 +192,7 @@ function codexProjectControlPorts(
               taskId: input.reviewLaunch.config.taskId,
               workspacePath: input.reviewLaunch.config.workspacePath,
             },
+            input.reviewWorkspaceLease.lease,
           );
           const statusAfterCapture = await collectCodexGoalStatus(
             statusInput(input.reviewLaunch),
@@ -202,9 +211,10 @@ function codexProjectControlPorts(
           ...(reviewedOutput ? { reviewedOutput } : {}),
         });
         if (reviewedOutput) {
-          await verifyReviewedWorkerOutputStillMatches(
+          await assertReviewedWorkerOutputStillMatchesLocked(
             reviewedOutputDeps,
             reviewedOutput,
+            input.reviewWorkspaceLease.lease,
           );
           const statusBeforeAttestation = await collectCodexGoalStatus(
             statusInput(input.reviewLaunch),
@@ -258,15 +268,7 @@ function codexProjectControlPorts(
               );
             }
           }
-          if (input.startManifest) {
-            await authorizeProjectPreStartAdmissionLaunch({
-              manifest: input.startManifest,
-              scope: input.scope,
-              ...(input.startAdmissionWorkspaceMode
-                ? { workspaceMode: input.startAdmissionWorkspaceMode }
-                : {}),
-            });
-          } else if (input.scope.preStartAdmission?.required) {
+          if (!input.startManifest && input.scope.preStartAdmission?.required) {
             throw new Error("project_control_start_manifest_required");
           }
           const previousBrokeredStart =
@@ -274,7 +276,18 @@ function codexProjectControlPorts(
           process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START = "1";
           let command: Awaited<ReturnType<typeof startCodexGoalTmux>>;
           try {
-            command = await startCodexGoalTmux(startLaunch);
+            command = input.startManifest
+              ? await withProjectPreStartAdmissionLaunchAuthorization(
+                {
+                  manifest: input.startManifest,
+                  scope: input.scope,
+                  ...(input.startAdmissionWorkspaceMode
+                    ? { workspaceMode: input.startAdmissionWorkspaceMode }
+                    : {}),
+                },
+                async () => await startCodexGoalTmux(startLaunch),
+              )
+              : await startCodexGoalTmux(startLaunch);
           } finally {
             if (previousBrokeredStart === undefined) {
               delete process.env

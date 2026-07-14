@@ -708,11 +708,24 @@ export async function projectControlStopStoredJobView(
     };
   }
 
+  return await withValidatedProjectWorkspaceLock({
+    locks: projectControlWorkspaceLocks(controller.registryRootDir),
+    scope: controller.scope,
+    requestedWorkspacePath: loaded.manifest.workspacePath,
+    owner: `project-stop:${controller.controller.jobId}:${loaded.manifest.jobId}`,
+    effect: async (workspace) => {
+      const lockedLaunch: CodexGoalLaunchInput = {
+        ...loaded.launch,
+        config: {
+          ...loaded.launch.config,
+          workspacePath: workspace.canonicalWorkspacePath,
+        },
+      };
   const broker = deps.codexProjectControlBroker({
     registryRootDir: controller.registryRootDir,
     controller: controller.controller,
     scope: controller.scope,
-    stopLaunch: loaded.launch,
+    stopLaunch: lockedLaunch,
   });
   const realWorkspacePath = await projectControlRealPathOutsideWorkspaceScope(
     loaded.launch.config.workspacePath,
@@ -737,7 +750,7 @@ export async function projectControlStopStoredJobView(
     taskId: loaded.launch.config.taskId,
     status: "stopped",
   });
-  const statusAfter = await collectCodexGoalStatus(statusInput(loaded.launch));
+  const statusAfter = await collectCodexGoalStatus(statusInput(lockedLaunch));
   const stopEventPath = await writeCodexGoalStopEvent({
     jobId: loaded.manifest.jobId,
     taskId: loaded.launch.config.taskId,
@@ -753,7 +766,7 @@ export async function projectControlStopStoredJobView(
   });
   const accountReservationReleased = await releaseCodexProjectAccount({
     manifest: loaded.manifest,
-    launch: loaded.launch,
+    launch: lockedLaunch,
     reason: "worker_stopped",
   });
   return {
@@ -773,6 +786,8 @@ export async function projectControlStopStoredJobView(
     statusAfter,
     result: result as unknown as JsonObject,
   };
+    },
+  });
 }
 
 export async function projectControlMarkReviewedView(
@@ -790,11 +805,26 @@ export async function projectControlMarkReviewedView(
     await ensureTerminalCodexGoalHandoffArtifacts({ launch: loaded.launch });
   }
   const reviewNote = stringValue(args.note) ?? "project_control_reviewed";
+  return await withValidatedProjectWorkspaceLock({
+    locks: projectControlWorkspaceLocks(controller.registryRootDir),
+    scope: controller.scope,
+    requestedWorkspacePath: loaded.manifest.workspacePath,
+    owner:
+      `project-review:${controller.controller.jobId}:${loaded.manifest.jobId}`,
+    effect: async (workspace) => {
+      const lockedLaunch: CodexGoalLaunchInput = {
+        ...loaded.launch,
+        config: {
+          ...loaded.launch.config,
+          workspacePath: workspace.canonicalWorkspacePath,
+        },
+      };
   const broker = deps.codexProjectControlBroker({
     registryRootDir: controller.registryRootDir,
     controller: controller.controller,
     scope: controller.scope,
-    reviewLaunch: loaded.launch,
+    reviewLaunch: lockedLaunch,
+    reviewWorkspaceLease: workspace,
     reviewNote,
     ...(captureReviewedOutput
       ? {
@@ -838,7 +868,7 @@ export async function projectControlMarkReviewedView(
   });
   const accountReservationReleased = await releaseCodexProjectAccount({
     manifest: loaded.manifest,
-    launch: loaded.launch,
+    launch: lockedLaunch,
     reason: "worker_reviewed",
   });
   return {
@@ -854,6 +884,8 @@ export async function projectControlMarkReviewedView(
       : {}),
     result: result as unknown as JsonObject,
   };
+    },
+  });
 }
 
 function parseReviewedOutputMerge(

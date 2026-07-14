@@ -12,7 +12,7 @@ import {
 } from "../codex-goal-project-workspace-lock";
 
 describe("project control workspace lock", () => {
-  it("serializes different jobs that target the same canonical workspace", async () => {
+  it("permits only one concurrent restart launch for the same canonical workspace", async () => {
     const root = await mkdtemp(join(tmpdir(), "project-workspace-lock-"));
     const workspace = join(root, "worktrees", "shared");
     const registryRootDir = join(root, "worker-jobs", "registry");
@@ -27,6 +27,7 @@ describe("project control workspace lock", () => {
     });
     let active = 0;
     let maxConcurrency = 0;
+    let launches = 0;
     try {
       await mkdir(workspace, { recursive: true });
       const first = withValidatedProjectWorkspaceLock({
@@ -35,6 +36,7 @@ describe("project control workspace lock", () => {
         requestedWorkspacePath: workspace,
         owner: "controller-a:job-a",
         effect: async () => {
+          launches += 1;
           active += 1;
           maxConcurrency = Math.max(maxConcurrency, active);
           firstEntered();
@@ -50,12 +52,14 @@ describe("project control workspace lock", () => {
           requestedWorkspacePath: workspace,
           owner: "controller-b:job-b",
           effect: async () => {
+            launches += 1;
             active += 1;
             maxConcurrency = Math.max(maxConcurrency, active);
             active -= 1;
           },
         }),
       ).rejects.toMatchObject({ code: "safe_execution_workspace_locked" });
+      expect(launches).toBe(1);
       releaseFirst();
       await first;
       await withValidatedProjectWorkspaceLock({
@@ -64,12 +68,14 @@ describe("project control workspace lock", () => {
         requestedWorkspacePath: workspace,
         owner: "controller-b:job-b",
         effect: async () => {
+          launches += 1;
           active += 1;
           maxConcurrency = Math.max(maxConcurrency, active);
           active -= 1;
         },
       });
       expect(maxConcurrency).toBe(1);
+      expect(launches).toBe(2);
     } finally {
       releaseFirst?.();
       await rm(root, { recursive: true, force: true });

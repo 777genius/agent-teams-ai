@@ -1,6 +1,5 @@
 import { execFile } from "node:child_process";
 import {
-  copyFile,
   link,
   mkdir,
   readFile,
@@ -9,7 +8,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { promisify } from "node:util";
+import { isDeepStrictEqual, promisify } from "node:util";
 import type {
   ConsumedOutputLedgerWriterPort,
   IntegratedOutputLedgerPort,
@@ -100,11 +99,11 @@ export async function captureLocalTerminalOutputBackup(input: {
   if (input.sourcePatchPath) {
     await publishExactFile(patchPath, input.sourcePatchPath);
   } else {
-    await publishExactText(
+    await publishExactBytes(
       patchPath,
       input.changedFiles.length === 0
-        ? ""
-        : await localGitOutput({
+        ? Buffer.alloc(0)
+        : await localGitOutputBytes({
             cwd: input.workspacePath,
             args: ["diff", "--binary", "--", ...input.changedFiles],
             ...(input.gitBinaryPath ? { gitBinaryPath: input.gitBinaryPath } : {}),
@@ -159,7 +158,7 @@ export class LocalIntegratedOutputLedgerAdapter
       input.attempt.workerOutput.workspacePath,
       ["status", "--short"],
     ));
-    await publishExactText(patchPath, await this.gitOutput(
+    await publishExactBytes(patchPath, await this.gitOutputBytes(
       input.attempt.targetWorkspacePath,
       ["show", "--format=", "--binary", input.commitSha, "--", ...input.attempt.workerOutput.changedFiles],
     ));
@@ -306,6 +305,23 @@ export class LocalIntegratedOutputLedgerAdapter
     );
     return result.stdout;
   }
+
+  private async gitOutputBytes(
+    cwd: string,
+    args: readonly string[],
+  ): Promise<Buffer> {
+    const result = await execFileAsync(
+      this.options.gitBinaryPath ?? "git",
+      [...args],
+      {
+        cwd,
+        encoding: "buffer",
+        maxBuffer: 10 * 1024 * 1024,
+        timeout: 60_000,
+      },
+    );
+    return result.stdout;
+  }
 }
 
 async function localGitOutput(input: {
@@ -321,20 +337,31 @@ async function localGitOutput(input: {
   return result.stdout;
 }
 
+async function localGitOutputBytes(input: {
+  readonly cwd: string;
+  readonly args: readonly string[];
+  readonly gitBinaryPath?: string;
+}): Promise<Buffer> {
+  const result = await execFileAsync(
+    input.gitBinaryPath ?? "git",
+    [...input.args],
+    {
+      cwd: input.cwd,
+      encoding: "buffer",
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: 60_000,
+    },
+  );
+  return result.stdout;
+}
+
 function sameTerminalDecision(
   existingJson: string,
   decision: TerminalOutputDecision,
 ): boolean {
   try {
-    const existing = JSON.parse(existingJson) as Record<string, unknown>;
-    return existing.jobId === decision.jobId &&
-      (existing.attemptId ?? undefined) === (decision.attemptId ?? undefined) &&
-      existing.status === decision.status &&
-      (existing.commitSha ?? undefined) === (decision.commitSha ?? undefined) &&
-      (existing.archivePath ?? undefined) === (decision.archivePath ?? undefined) &&
-      JSON.stringify(existing.failure) === JSON.stringify(decision.failure) &&
-      JSON.stringify(existing.output) === JSON.stringify(decision.output) &&
-      JSON.stringify(existing.backup) === JSON.stringify(decision.backup);
+    const existing: unknown = JSON.parse(existingJson);
+    return isDeepStrictEqual(existing, ledgerRecord(decision));
   } catch {
     return false;
   }
@@ -345,19 +372,7 @@ async function publishExactJson(path: string, value: unknown): Promise<void> {
 }
 
 async function publishExactFile(path: string, sourcePath: string): Promise<void> {
-  await mkdir(dirname(path), { recursive: true });
-  const tmpPath = `${path}.${process.pid}.${Date.now()}.tmp`;
-  await copyFile(sourcePath, tmpPath);
-  try {
-    await link(tmpPath, path);
-  } catch (error) {
-    if (!isNodeErrorCode(error, "EEXIST")) throw error;
-    if (await readFile(path, "utf8") !== await readFile(sourcePath, "utf8")) {
-      throw new Error("integrated_output_ledger_preparation_conflict");
-    }
-  } finally {
-    await unlink(tmpPath).catch(() => undefined);
-  }
+  await publishExactBytes(path, await readFile(sourcePath));
 }
 
 async function anyFileHasBytes(paths: readonly string[]): Promise<boolean> {
@@ -368,6 +383,10 @@ async function anyFileHasBytes(paths: readonly string[]): Promise<boolean> {
 }
 
 async function publishExactText(path: string, contents: string): Promise<void> {
+  await publishExactBytes(path, Buffer.from(contents));
+}
+
+async function publishExactBytes(path: string, contents: Buffer): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
   const tmpPath = `${path}.${process.pid}.${Date.now()}.tmp`;
   await writeFile(tmpPath, contents, { flag: "wx" });
@@ -375,7 +394,7 @@ async function publishExactText(path: string, contents: string): Promise<void> {
     await link(tmpPath, path);
   } catch (error) {
     if (!isNodeErrorCode(error, "EEXIST")) throw error;
-    if (await readFile(path, "utf8") !== contents) {
+    if (!(await readFile(path)).equals(contents)) {
       throw new Error("integrated_output_ledger_preparation_conflict");
     }
   } finally {

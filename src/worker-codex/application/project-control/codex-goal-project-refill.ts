@@ -15,7 +15,11 @@ import {
   noopOperationResult,
   type CodexGoalProjectCreateWorktreeInput,
 } from "./codex-goal-project-control-contracts";
-import { execGit, execGitStdout } from "./codex-goal-project-git";
+import {
+  execGit,
+  execGitStdout,
+  stagedPatchSha256,
+} from "./codex-goal-project-git";
 import { nodeErrorCode } from "./codex-goal-project-utils";
 import {
   projectControlRealPathIfExists,
@@ -116,6 +120,7 @@ async function assertReusableProjectWorktree(
       await assertReusableInputPatch({
         workspacePath: materializedRealPath,
         patchPath: worktreeInput.inputPatch.path,
+        expectedStagedSha256: worktreeInput.inputPatch.stagedSha256,
         expectedChangedPaths: worktreeInput.inputPatch.changedPaths,
       });
     }
@@ -152,6 +157,7 @@ async function assertReusableProjectWorktree(
 async function assertReusableInputPatch(input: {
   readonly workspacePath: string;
   readonly patchPath: string;
+  readonly expectedStagedSha256: string;
   readonly expectedChangedPaths: readonly string[];
 }): Promise<void> {
   await execGit([
@@ -163,6 +169,12 @@ async function assertReusableInputPatch(input: {
     "--check",
     input.patchPath,
   ]);
+  if (
+    await stagedPatchSha256(input.workspacePath) !==
+      input.expectedStagedSha256
+  ) {
+    throw new Error("project_control_existing_worktree_input_patch_mismatch");
+  }
   const staged = await execGitStdout([
     "-C",
     input.workspacePath,
