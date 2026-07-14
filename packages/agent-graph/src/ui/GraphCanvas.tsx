@@ -39,10 +39,17 @@ import {
   type PreparedGroupFrame,
   prepareGroupFrame,
   shouldRenderGroupFrameLabel,
+  shouldRenderGroupFrameSemanticSummary,
+  truncateGroupFrameLabel,
 } from '../canvas/group-frames';
 import { hexWithAlpha } from '../canvas/render-cache';
+import {
+  getGraphSemanticZoomLevel,
+  shouldRenderParticlesAtZoom,
+  shouldRenderTaskAtZoom,
+} from '../canvas/semantic-zoom';
 import { NODE } from '../constants/canvas-constants';
-import { KanbanLayoutEngine } from '../layout/kanbanLayout';
+import { KanbanLayoutEngine, type KanbanZoneInfo } from '../layout/kanbanLayout';
 
 import {
   computeAdaptiveParticleBudget,
@@ -77,6 +84,7 @@ export interface GraphDrawState {
   hoveredEdgeId: string | null;
   focusNodeIds: ReadonlySet<string> | null;
   focusEdgeIds: ReadonlySet<string> | null;
+  animateOverviewParticles: boolean;
   ownerColumnGroupRects: readonly OwnerColumnGroupRect[];
   dragPreview: {
     nodeId: string;
@@ -190,6 +198,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const visibleNodeIdsCache = useRef(new Set<string>());
   const visibleEdgeIdsCache = useRef(new Set<string>());
   const activeParticleEdgesCache = useRef(new Set<string>());
+  const renderableTaskZoneOwnerIdsCache = useRef(new Set<string>());
   const handoffStateRef = useRef(createTransientHandoffState());
   const lastTeamNameRef = useRef<string | null>(null);
   const lastDrawTimeRef = useRef(0);
@@ -219,6 +228,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
 
           const cam = state.camera;
           const zoom = cam.zoom;
+          const semanticLevel = getGraphSemanticZoomLevel(zoom);
 
           // ─── Frustum culling: compute visible world-space bounds ──────────
           const viewLeft = -cam.x / zoom;
@@ -229,8 +239,16 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
 
           // ─── Reuse cached maps (avoid per-frame allocation) ───────────────
           const nodeMap = nodeMapCache.current;
-          nodeMap.clear();
-          for (const n of state.nodes) nodeMap.set(n.id, n);
+          const renderableTaskZoneOwnerIds = prepareNodeMapAndTaskZoneOwners({
+            nodeMap,
+            targetOwnerIds: renderableTaskZoneOwnerIdsCache.current,
+            nodes: state.nodes,
+            zones: KanbanLayoutEngine.zones,
+            zoom,
+            semanticLevel,
+            selectedNodeId: state.selectedNodeId,
+            hoveredNodeId: state.hoveredNodeId,
+          });
 
           const edgeMap = edgeMapCache.current;
           edgeMap.clear();
@@ -292,6 +310,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             groups: state.ownerColumnGroupRects,
             zoom,
             focusNodeIds: state.focusNodeIds,
+            renderableTaskZoneOwnerIds,
           });
           drawGroupFrames(ctx, {
             frames: state.groupFrames,
@@ -341,25 +360,30 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             hasFocusedEdges: (prioritizedEdgeIds?.size ?? 0) > 0,
             zoom,
           });
-          const renderableParticles = selectRenderableParticles({
-            particles: state.particles,
-            visibleEdgeIds,
-            focusEdgeIds: prioritizedEdgeIds,
-            budget: particleBudget,
-          });
+          const renderableParticles = shouldRenderParticlesAtZoom(
+            zoom,
+            state.animateOverviewParticles
+          )
+            ? selectRenderableParticles({
+                particles: state.particles,
+                visibleEdgeIds,
+                focusEdgeIds: prioritizedEdgeIds,
+                budget: particleBudget,
+              })
+            : [];
           updateTransientHandoffState(handoffStateRef.current, {
             particles: state.particles,
             edgeMap,
             nodeMap,
             time: state.time,
           });
-          const renderableHandoffCards = selectRenderableTransientHandoffCards(
-            handoffStateRef.current,
-            {
-              focusNodeIds: state.focusNodeIds,
-              focusEdgeIds: prioritizedEdgeIds ?? state.focusEdgeIds,
-            }
-          ).filter((card) => card.anchorKind !== 'lead' && card.anchorKind !== 'member');
+          const renderableHandoffCards =
+            semanticLevel === 'detail'
+              ? selectRenderableTransientHandoffCards(handoffStateRef.current, {
+                  focusNodeIds: state.focusNodeIds,
+                  focusEdgeIds: prioritizedEdgeIds ?? state.focusEdgeIds,
+                }).filter((card) => card.anchorKind !== 'lead' && card.anchorKind !== 'member')
+              : [];
           drawParticles(ctx, renderableParticles, edgeMap, nodeMap, state.time, prioritizedEdgeIds);
 
           // 2c. Visible nodes only (back to front: process → task → member/lead)
@@ -380,7 +404,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             state.hoveredNodeId,
             state.focusNodeIds
           );
-          drawColumnHeaders(ctx, KanbanLayoutEngine.zones, zoom);
+          drawColumnHeaders(ctx, KanbanLayoutEngine.zones, zoom, renderableTaskZoneOwnerIds);
           drawTasks(
             ctx,
             visibleNodes,
@@ -502,6 +526,43 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     </div>
   );
 });
+
+function prepareNodeMapAndTaskZoneOwners(args: {
+  nodeMap: Map<string, GraphNode>;
+  targetOwnerIds: Set<string>;
+  nodes: readonly GraphNode[];
+  zones: readonly KanbanZoneInfo[];
+  zoom: number;
+  semanticLevel: ReturnType<typeof getGraphSemanticZoomLevel>;
+  selectedNodeId: string | null;
+  hoveredNodeId: string | null;
+}): ReadonlySet<string> {
+  args.nodeMap.clear();
+  args.targetOwnerIds.clear();
+
+  for (const node of args.nodes) {
+    args.nodeMap.set(node.id, node);
+    if (
+      node.kind === 'task' &&
+      node.taskStatus !== 'deleted' &&
+      shouldRenderTaskAtZoom(
+        args.zoom,
+        node.id === args.selectedNodeId || node.id === args.hoveredNodeId,
+        node.taskZoomVisibility
+      )
+    ) {
+      args.targetOwnerIds.add(node.ownerId ?? '__unassigned__');
+    }
+  }
+
+  if (args.semanticLevel === 'detail') {
+    for (const zone of args.zones) {
+      if (zone.emptyPlaceholder) args.targetOwnerIds.add(zone.ownerId);
+    }
+  }
+
+  return args.targetOwnerIds;
+}
 
 function drawGroupFrames(
   ctx: CanvasRenderingContext2D,
@@ -669,21 +730,46 @@ function drawGroupFrameLabel(
 
   const labelScaleZoom = getGroupFrameLabelScaleZoom(zoom);
   const fontSize = (prepared.frame.priority === 'primary' ? 12 : 11) / labelScaleZoom;
-  const label = prepared.frame.label;
+  const availableTextWidth = Math.max(
+    0,
+    Math.min(260 / labelScaleZoom, bounds.right - bounds.left - 28 / labelScaleZoom)
+  );
 
   ctx.save();
   ctx.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
+  const label = truncateGroupFrameLabel(
+    prepared.frame.label,
+    availableTextWidth,
+    (value) => ctx.measureText(value).width
+  );
+  const rawSecondaryLabel = shouldRenderGroupFrameSemanticSummary(prepared.frame, zoom)
+    ? prepared.frame.semanticSummary
+    : undefined;
+  ctx.font = `500 ${fontSize * 0.78}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  const secondaryLabel = rawSecondaryLabel
+    ? truncateGroupFrameLabel(
+        rawSecondaryLabel,
+        availableTextWidth,
+        (value) => ctx.measureText(value).width
+      )
+    : undefined;
+  if (!label && !secondaryLabel) {
+    ctx.restore();
+    return;
+  }
+  ctx.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
   const labelBounds = getGroupFrameLabelBounds(
     label,
     bounds,
     zoom,
     (value) => ctx.measureText(value).width,
     {
-      horizontalOffsetPx: getGroupFrameLabelHorizontalOffsetPx(prepared.frame),
+      horizontalOffsetPx: getGroupFrameLabelHorizontalOffsetPx(),
       placement: getGroupFrameLabelPlacement(prepared.frame),
       verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(prepared.frame),
+      secondaryLabel,
     }
   );
 
@@ -702,6 +788,11 @@ function drawGroupFrameLabel(
   ctx.stroke();
   ctx.fillStyle = hexWithAlpha(color, selected ? 0.98 : 0.86);
   ctx.fillText(label, labelBounds.textX, labelBounds.textY);
+  if (secondaryLabel && labelBounds.secondaryTextY != null) {
+    ctx.font = `500 ${fontSize * 0.78}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    ctx.fillStyle = 'rgba(190, 211, 235, 0.82)';
+    ctx.fillText(secondaryLabel, labelBounds.textX, labelBounds.secondaryTextY);
+  }
   ctx.restore();
 }
 
@@ -711,6 +802,7 @@ function drawOwnerColumnGroups(
     groups: readonly OwnerColumnGroupRect[];
     zoom: number;
     focusNodeIds: ReadonlySet<string> | null;
+    renderableTaskZoneOwnerIds: ReadonlySet<string>;
   }
 ): void {
   if (args.groups.length === 0 || args.zoom < 0.1) {
@@ -721,6 +813,7 @@ function drawOwnerColumnGroups(
   const radius = 8;
 
   for (const group of args.groups) {
+    if (!args.renderableTaskZoneOwnerIds.has(group.ownerId)) continue;
     const rect = group.rect;
     if (rect.width <= 0 || rect.height <= 0) {
       continue;

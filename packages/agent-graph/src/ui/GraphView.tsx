@@ -37,6 +37,7 @@ import { buildFocusState } from './buildFocusState';
 import { GraphCanvas, type GraphCanvasHandle } from './GraphCanvas';
 import { GraphControls, type GraphFilterState } from './GraphControls';
 import { GraphEdgeOverlay } from './GraphEdgeOverlay';
+import { GraphMinimap, type GraphMinimapSnapshot } from './GraphMinimap';
 import { GraphOverlay } from './GraphOverlay';
 
 import type { StableRect } from '../layout/stableSlots';
@@ -82,8 +83,14 @@ export interface GraphViewProps {
   isSidebarVisible?: boolean;
   focusNodeIds?: ReadonlySet<string> | null;
   focusEdgeIds?: ReadonlySet<string> | null;
+  focusOverridesSelection?: boolean;
+  revealNodeRequest?: { nodeId: string; requestId: number } | null;
   renderTopToolbarContent?: () => React.ReactNode;
   onLayoutModeChange?: (mode: GraphLayoutMode) => void;
+  layoutModeCycle?: readonly GraphLayoutMode[];
+  layoutModeLabels?: Partial<Record<GraphLayoutMode, string>>;
+  showMinimap?: boolean;
+  minimapLabel?: string;
   onOwnerSlotDrop?: (payload: {
     nodeId: string;
     assignment: GraphOwnerSlotAssignment;
@@ -188,8 +195,14 @@ export function GraphView({
   isSidebarVisible = true,
   focusNodeIds,
   focusEdgeIds,
+  focusOverridesSelection = false,
+  revealNodeRequest,
   renderTopToolbarContent,
   onLayoutModeChange,
+  layoutModeCycle,
+  layoutModeLabels,
+  showMinimap = false,
+  minimapLabel = 'Graph navigation map',
   onOwnerSlotDrop,
   onOwnerGridOrderDrop,
   renderOverlay,
@@ -243,6 +256,8 @@ export function GraphView({
   const runningRef = useRef(false);
   const hasAutoFit = useRef(false);
   const allowAutoFitRef = useRef(true);
+  const previousLayoutModeRef = useRef(layoutMode);
+  const animateNextLayoutFitRef = useRef(false);
   const nodeMapRef = useRef(new Map<string, GraphNode>());
   const nodeMapNodesRef = useRef<GraphNode[] | null>(null);
   const dragPreviewRef = useRef<{
@@ -321,20 +336,31 @@ export function GraphView({
   }, [data.edges, data.nodes, data.particles, data.teamName, simulation, simulationLayout]);
 
   // ─── UNIFIED RAF LOOP: tick simulation + draw canvas ────────────────────
-  const focusState = useMemo(
-    () => {
-      const selectionFocus = buildFocusState(selectedNodeId, selectedEdgeId, data.nodes, data.edges);
-      if (!focusNodeIds && !focusEdgeIds) {
-        return selectionFocus;
-      }
-
+  const focusState = useMemo(() => {
+    const selectionFocus = buildFocusState(selectedNodeId, selectedEdgeId, data.nodes, data.edges);
+    if (!focusNodeIds && !focusEdgeIds) {
+      return selectionFocus;
+    }
+    if (focusOverridesSelection) {
       return {
-        focusNodeIds: mergeFocusSets(selectionFocus.focusNodeIds, focusNodeIds),
-        focusEdgeIds: mergeFocusSets(selectionFocus.focusEdgeIds, focusEdgeIds),
+        focusNodeIds: focusNodeIds ?? null,
+        focusEdgeIds: focusEdgeIds ?? null,
       };
-    },
-    [focusEdgeIds, focusNodeIds, selectedEdgeId, selectedNodeId, data.edges, data.nodes]
-  );
+    }
+
+    return {
+      focusNodeIds: mergeFocusSets(selectionFocus.focusNodeIds, focusNodeIds),
+      focusEdgeIds: mergeFocusSets(selectionFocus.focusEdgeIds, focusEdgeIds),
+    };
+  }, [
+    focusEdgeIds,
+    focusNodeIds,
+    focusOverridesSelection,
+    selectedEdgeId,
+    selectedNodeId,
+    data.edges,
+    data.nodes,
+  ]);
 
   const getNodeMap = useCallback((nodes: GraphNode[]): Map<string, GraphNode> => {
     if (nodeMapNodesRef.current === nodes) {
@@ -478,6 +504,42 @@ export function GraphView({
     });
   }, [data.groupFrames, getNodeMap, getOwnerColumnFrameBoundsByNodeId, getVisibleNodes]);
 
+  useEffect(() => {
+    if (!revealNodeRequest) return undefined;
+
+    const frameId = window.requestAnimationFrame(() => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const node = simulation.stateRef.current.nodes.find(
+        (candidate) => candidate.id === revealNodeRequest.nodeId
+      );
+      const transform = camera.transformRef.current;
+      let worldX = node?.x;
+      let worldY = node?.y;
+
+      if (worldX == null || worldY == null) {
+        const placement = getGroupFrameScreenPlacements().find(
+          (candidate) => candidate.frame.id === revealNodeRequest.nodeId
+        );
+        if (!placement) return;
+        const screenX = (placement.bounds.left + placement.bounds.right) / 2;
+        const screenY = (placement.bounds.top + placement.bounds.bottom) / 2;
+        worldX = (screenX - transform.x) / transform.zoom;
+        worldY = (screenY - transform.y) / transform.zoom;
+      }
+
+      const zoom = Math.max(transform.zoom, 0.72);
+      transform.zoom = zoom;
+      transform.x = container.clientWidth / 2 - worldX * zoom;
+      transform.y = container.clientHeight / 2 - worldY * zoom;
+      hasAutoFit.current = true;
+      allowAutoFitRef.current = false;
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [camera.transformRef, getGroupFrameScreenPlacements, revealNodeRequest, simulation.stateRef]);
+
   const setInteractionSelectionDisabled = useCallback((disabled: boolean) => {
     if (typeof document === 'undefined') {
       return;
@@ -525,7 +587,7 @@ export function GraphView({
     simulationRef.current.tick(dt);
 
     // 2. Update camera inertia
-    cameraRef.current.updateInertia();
+    cameraRef.current.updateInertia(dt);
 
     // 3. Draw every frame: background stars and shooting stars need continuous motion.
     const state = simulationRef.current.stateRef.current;
@@ -551,6 +613,7 @@ export function GraphView({
       hoveredEdgeId: hoveredEdgeIdRef.current,
       focusNodeIds: focusState.focusNodeIds,
       focusEdgeIds: focusState.focusEdgeIds,
+      animateOverviewParticles: data.layout?.mode === 'hierarchical',
       ownerColumnGroupRects: simulationRef.current.getOwnerColumnGroupRects(),
       dragPreview: dragPreviewRef.current,
     });
@@ -558,6 +621,7 @@ export function GraphView({
     rafRef.current = requestAnimationFrame(animate);
   }, [
     data.groupFrames,
+    data.layout?.mode,
     data.teamName,
     focusState.focusEdgeIds,
     focusState.focusNodeIds,
@@ -582,18 +646,30 @@ export function GraphView({
     };
   }, [effectivePaused, animate]);
 
-  const fitGraphToViewport = useCallback(() => {
-    const el = containerRef.current;
-    if (!el || data.nodes.length === 0) return;
-    camera.zoomToFit(
-      getFitNodes(simulation.stateRef.current.nodes),
-      el.clientWidth,
-      el.clientHeight,
-      simulation.getExtraWorldBounds()
-    );
-  }, [camera, data.nodes.length, getFitNodes, simulation]);
+  const fitGraphToViewport = useCallback(
+    (animated = false) => {
+      const el = containerRef.current;
+      if (!el || data.nodes.length === 0) return;
+      const fitNodes = getFitNodes(simulation.stateRef.current.nodes);
+      const extraBounds = simulation.getExtraWorldBounds();
+      if (animated) {
+        camera.animateToFit(fitNodes, el.clientWidth, el.clientHeight, extraBounds);
+      } else {
+        camera.zoomToFit(fitNodes, el.clientWidth, el.clientHeight, extraBounds);
+      }
+    },
+    [camera, data.nodes.length, getFitNodes, simulation]
+  );
 
   // ─── Auto-fit: until first user interaction, also react to container resizes ─────
+  useEffect(() => {
+    if (previousLayoutModeRef.current === layoutMode) return;
+    previousLayoutModeRef.current = layoutMode;
+    animateNextLayoutFitRef.current = true;
+    hasAutoFit.current = false;
+    allowAutoFitRef.current = true;
+  }, [layoutMode]);
+
   useEffect(() => {
     if (data.nodes.length === 0) {
       hasAutoFit.current = false;
@@ -603,7 +679,11 @@ export function GraphView({
 
     if (!hasAutoFit.current) {
       hasAutoFit.current = true;
-      fitGraphToViewport();
+      const animated = animateNextLayoutFitRef.current;
+      animateNextLayoutFitRef.current = false;
+      fitGraphToViewport(animated);
+
+      if (animated) return;
 
       const raf1 = requestAnimationFrame(() => {
         fitGraphToViewport();
@@ -614,7 +694,7 @@ export function GraphView({
 
       return () => cancelAnimationFrame(raf1);
     }
-  }, [data.nodes.length, fitGraphToViewport]);
+  }, [data.nodes.length, fitGraphToViewport, layoutMode]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -639,6 +719,27 @@ export function GraphView({
   const markUserInteracted = useCallback(() => {
     allowAutoFitRef.current = false;
   }, []);
+
+  const getMinimapSnapshot = useCallback((): GraphMinimapSnapshot => {
+    const state = simulationRef.current.stateRef.current;
+    return {
+      nodes: getVisibleNodes(state.nodes),
+      edges: state.edges,
+      camera: { ...cameraRef.current.transformRef.current },
+      viewport: getViewportSize(),
+      extraBounds: simulationRef.current.getExtraWorldBounds(),
+    };
+  }, [getViewportSize, getVisibleNodes]);
+
+  const handleMinimapNavigate = useCallback(
+    (worldX: number, worldY: number) => {
+      const viewport = getViewportSize();
+      if (viewport.width <= 0 || viewport.height <= 0) return;
+      markUserInteracted();
+      cameraRef.current.centerOn(worldX, worldY, viewport.width, viewport.height);
+    },
+    [getViewportSize, markUserInteracted]
+  );
 
   useLayoutEffect(() => {
     if (isSurfaceActive) {
@@ -1392,9 +1493,19 @@ export function GraphView({
         isAlive={data.isAlive}
         layoutMode={layoutMode}
         onLayoutModeChange={onLayoutModeChange}
+        layoutModeCycle={layoutModeCycle}
+        layoutModeLabels={layoutModeLabels}
         topToolbarContent={renderTopToolbarContent?.()}
         interactionLocked={interactionLocked}
       />
+
+      {showMinimap ? (
+        <GraphMinimap
+          label={minimapLabel}
+          getSnapshot={getMinimapSnapshot}
+          onNavigate={handleMinimapNavigate}
+        />
+      ) : null}
 
       {renderHud ? (
         <div className="pointer-events-none absolute inset-0 z-[5] overflow-hidden">

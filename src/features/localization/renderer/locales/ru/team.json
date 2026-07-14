@@ -2839,6 +2839,32 @@
       "actions": {
         "createTeamIn": "Создать команду в {{label}}"
       },
+      "layout": {
+        "switchToHierarchy": "Переключить на иерархическую схему",
+        "switchToNested": "Переключить на вложенную карту"
+      },
+      "view": {
+        "hierarchy": "Иерархия",
+        "structure": "Структура",
+        "relations": "Связи"
+      },
+      "focus": {
+        "searchLabel": "Поиск по карте организации",
+        "searchPlaceholder": "Организация, группа, команда или задача...",
+        "clearSearch": "Очистить поиск",
+        "noResults": "Ничего не найдено",
+        "taskMatch": "Задача: {{task}}",
+        "pathToRoot": "Путь к корню",
+        "connectedOnly": "Связанные ({{count}})",
+        "collapseBranch": "Свернуть ветку",
+        "expandBranch": "Развернуть ветку",
+        "clearFocus": "Сбросить фокус",
+        "kind": {
+          "organization": "организация",
+          "container": "группа",
+          "team": "команда"
+        }
+      },
       "canvas": {
         "organizationMap": "Карта организации",
         "allOrganizations": "Все организации",
@@ -2860,6 +2886,9 @@
         "teams_other": "{{count}} команд",
         "orgsAndTeams": "{{orgCount}} орг. - {{teamCount}} команд",
         "teamRole": "{{memberCount}} участников - {{activeCount}} активных",
+        "groupSummary": "{{teamCount}} ком. · {{activeTeamCount}} актив. · {{taskCount}} задач",
+        "teamSummary": "{{status}} · {{activeTaskCount}} актив. · {{taskCount}} задач",
+        "minimap": "Навигация по карте организации",
         "teamReference": "ссылка на команду",
         "notFound": "не найдена",
         "online": "онлайн",

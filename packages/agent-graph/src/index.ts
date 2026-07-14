@@ -28,6 +28,7 @@ export type {
   GraphLayoutVersion,
   GraphNode,
   GraphNodeKind,
+  GraphNodePosition,
   GraphNodeState,
   GraphOwnerSlotAssignment,
   GraphParticle,

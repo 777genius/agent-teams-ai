@@ -353,14 +353,24 @@ export function computeOwnerFootprints(
   const showLogs = layout?.showLogs ?? showActivity;
   const showTasks = layout?.showTasks ?? true;
   const ownerNodeById = new Map(ownerNodes.map((node) => [node.id, node] as const));
-  const taskColumnsByOwnerId = new Map<string, Set<string>>();
+  const taskColumnsByOwnerId = new Map<
+    string,
+    Map<string, { regularRowCount: number; hasOverflow: boolean }>
+  >();
   const processCountByOwnerId = new Map<string, number>();
 
   for (const node of nodes) {
     if (node.kind === 'task' && node.ownerId) {
-      const existing = taskColumnsByOwnerId.get(node.ownerId) ?? new Set<string>();
-      existing.add(resolveTaskColumnKey(node));
-      taskColumnsByOwnerId.set(node.ownerId, existing);
+      const columns = taskColumnsByOwnerId.get(node.ownerId) ?? new Map();
+      const columnKey = resolveTaskColumnKey(node);
+      const metrics = columns.get(columnKey) ?? { regularRowCount: 0, hasOverflow: false };
+      if (node.isOverflowStack) {
+        metrics.hasOverflow = true;
+      } else {
+        metrics.regularRowCount += 1;
+      }
+      columns.set(columnKey, metrics);
+      taskColumnsByOwnerId.set(node.ownerId, columns);
     }
     if (node.kind === 'process' && node.ownerId) {
       processCountByOwnerId.set(node.ownerId, (processCountByOwnerId.get(node.ownerId) ?? 0) + 1);
@@ -379,15 +389,24 @@ export function computeOwnerFootprints(
     if (!ownerNode) {
       return [];
     }
+    const taskColumns = taskColumnsByOwnerId.get(ownerId);
+    const taskColumnMetrics = Array.from(taskColumns?.values() ?? []);
 
     return [
       buildOwnerFootprint({
         ownerId,
-        taskColumnCount: showTasks ? (taskColumnsByOwnerId.get(ownerId)?.size ?? 0) : 0,
+        taskColumnCount: showTasks ? (taskColumns?.size ?? 0) : 0,
+        taskRowCount: showTasks
+          ? Math.max(0, ...taskColumnMetrics.map((metrics) => metrics.regularRowCount))
+          : 0,
+        hasTaskOverflow:
+          showTasks && taskColumnMetrics.some((metrics) => metrics.hasOverflow),
         processCount: processCountByOwnerId.get(ownerId) ?? 0,
         showActivity,
         showLogs,
         showTasks,
+        showEmptyTaskPlaceholders: layout?.showEmptyTaskPlaceholders === true,
+        fitTaskRowsToContent: layout?.fitTaskRowsToContent ?? false,
       }),
     ];
   });
@@ -398,12 +417,19 @@ function computeOwnerFootprintForOwnerId(
   ownerId: string,
   layout?: GraphLayoutPort
 ): OwnerFootprint {
-  const taskColumns = new Set<string>();
+  const taskColumns = new Map<string, { regularRowCount: number; hasOverflow: boolean }>();
   let processCount = 0;
 
   for (const node of nodes) {
     if (node.kind === 'task' && node.ownerId === ownerId) {
-      taskColumns.add(resolveTaskColumnKey(node));
+      const columnKey = resolveTaskColumnKey(node);
+      const metrics = taskColumns.get(columnKey) ?? { regularRowCount: 0, hasOverflow: false };
+      if (node.isOverflowStack) {
+        metrics.hasOverflow = true;
+      } else {
+        metrics.regularRowCount += 1;
+      }
+      taskColumns.set(columnKey, metrics);
     }
     if (node.kind === 'process' && node.ownerId === ownerId) {
       processCount += 1;
@@ -413,20 +439,31 @@ function computeOwnerFootprintForOwnerId(
   return buildOwnerFootprint({
     ownerId,
     taskColumnCount: taskColumns.size,
+    taskRowCount: Math.max(
+      0,
+      ...Array.from(taskColumns.values(), (metrics) => metrics.regularRowCount)
+    ),
+    hasTaskOverflow: Array.from(taskColumns.values()).some((metrics) => metrics.hasOverflow),
     processCount,
     showActivity: layout?.showActivity ?? true,
     showLogs: layout?.showLogs ?? layout?.showActivity ?? true,
     showTasks: layout?.showTasks ?? true,
+    showEmptyTaskPlaceholders: layout?.showEmptyTaskPlaceholders === true,
+    fitTaskRowsToContent: layout?.fitTaskRowsToContent ?? false,
   });
 }
 
 function buildOwnerFootprint(args: {
   ownerId: string;
   taskColumnCount: number;
+  taskRowCount: number;
+  hasTaskOverflow: boolean;
   processCount: number;
   showActivity: boolean;
   showLogs: boolean;
   showTasks: boolean;
+  showEmptyTaskPlaceholders: boolean;
+  fitTaskRowsToContent: boolean;
 }): OwnerFootprint {
   const activityColumnWidth = args.showActivity ? SLOT_GEOMETRY.activityColumnWidth : 0;
   const activityColumnHeight = args.showActivity ? SLOT_GEOMETRY.activityColumnHeight : 0;
@@ -443,7 +480,21 @@ function buildOwnerFootprint(args: {
       ? TASK_PILL.width
       : TASK_PILL.width + (args.taskColumnCount - 1) * KANBAN_ZONE.columnWidth
     : 0;
-  const kanbanBandHeight = args.showTasks ? SLOT_GEOMETRY.kanbanBandHeight : 0;
+  const hasTaskBandContent =
+    args.taskRowCount > 0 || args.hasTaskOverflow || args.showEmptyTaskPlaceholders;
+  const contentTaskBandHeight = hasTaskBandContent
+    ? KANBAN_ZONE.headerHeight +
+      Math.max(0, args.taskRowCount - 1) * KANBAN_ZONE.rowHeight +
+      TASK_PILL.height / 2
+    : 0;
+  const kanbanBandHeight = args.showTasks
+    ? args.fitTaskRowsToContent
+      ? Math.max(
+          contentTaskBandHeight,
+          args.hasTaskOverflow ? SLOT_GEOMETRY.kanbanBandHeight : 0
+        )
+      : SLOT_GEOMETRY.kanbanBandHeight
+    : 0;
   const processBandWidth = computeProcessBandWidth(args.processCount);
   const boardBandWidth =
     activityColumnWidth + activityToLogGap + logColumnWidth + feedToKanbanGap + kanbanBandWidth;

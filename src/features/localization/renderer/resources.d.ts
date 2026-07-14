@@ -4952,6 +4952,32 @@ export default interface Resources {
         actions: {
           createTeamIn: 'Create team in {{label}}';
         };
+        layout: {
+          switchToHierarchy: 'Switch to hierarchy chart';
+          switchToNested: 'Switch to nested map';
+        };
+        view: {
+          hierarchy: 'Hierarchy';
+          relations: 'Relations';
+          structure: 'Structure';
+        };
+        focus: {
+          clearFocus: 'Clear focus';
+          clearSearch: 'Clear search';
+          collapseBranch: 'Collapse branch';
+          connectedOnly: 'Connected ({{count}})';
+          expandBranch: 'Expand branch';
+          kind: {
+            container: 'group';
+            organization: 'organization';
+            team: 'team';
+          };
+          noResults: 'No results found';
+          pathToRoot: 'Path to root';
+          searchLabel: 'Search organization map';
+          searchPlaceholder: 'Organization, group, team, or task...';
+          taskMatch: 'Task: {{task}}';
+        };
         canvas: {
           activeAgents: '{{count}} active agents';
           activeAgents_few: '{{count}} active agents';
@@ -4977,6 +5003,9 @@ export default interface Resources {
           orgsAndTeams: '{{orgCount}} orgs - {{teamCount}} teams';
           teamReference: 'team reference';
           teamRole: '{{memberCount}} agents - {{activeCount}} active';
+          groupSummary: '{{teamCount}} teams · {{activeTeamCount}} active · {{taskCount}} tasks';
+          teamSummary: '{{status}} · {{activeTaskCount}} active · {{taskCount}} tasks';
+          minimap: 'Organization map navigation';
           teams: '{{count}} teams';
           teams_few: '{{count}} teams';
           teams_many: '{{count}} teams';
