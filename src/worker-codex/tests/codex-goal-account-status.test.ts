@@ -109,6 +109,93 @@ exit 1
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("clears a stale canonical cooldown after an available live check", async () => {
+    const root = await mkdtemp(
+      join(tmpdir(), "codex-goal-account-status-clear-"),
+    );
+    try {
+      const authRootDir = join(root, "auth");
+      await mkdir(join(authRootDir, "account-a"), { recursive: true });
+      await writeFile(
+        join(authRootDir, "account-a", "auth.json"),
+        `${JSON.stringify({
+          auth_mode: "chatgpt",
+          last_refresh: new Date().toISOString(),
+          tokens: {
+            refresh_token: "refresh-secret",
+            access_token: "access-secret",
+            id_token: fakeJwt({
+              "https://api.openai.com/auth": {
+                chatgpt_account_id: "chatgpt-account-secret",
+              },
+            }),
+          },
+        })}\n`,
+      );
+
+      const store = codexAccountCapacityStore(authRootDir);
+      store.observe({
+        accountId: "account-a",
+        demand: {
+          provider: "codex",
+          model: "gpt-5.6-sol",
+          reasoningEffort: "xhigh",
+          serviceTier: "fast",
+        },
+        observedAt: new Date(Date.now() - 60_000),
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        },
+      });
+
+      const codexAvailable = join(root, "codex-available.sh");
+      await writeFile(
+        codexAvailable,
+        `#!/bin/sh
+if [ "$1" = "app-server" ]; then
+  while IFS= read -r line; do
+    case "$line" in
+      *'"method":"initialize"'*)
+        echo '{"id":1,"result":{}}'
+        ;;
+      *'"method":"account/read"'*)
+        echo '{"id":2,"result":{"account":{"id":"chatgpt-account-secret"}}}'
+        ;;
+      *'"method":"account/rateLimits/read"'*)
+        echo '{"id":3,"result":{"rateLimitsByLimitId":{"codex":{"limitId":"codex","usedPercent":10,"windowDurationMins":300}}}}'
+        exit 0
+        ;;
+    esac
+  done
+fi
+exit 1
+`,
+      );
+      await chmod(codexAvailable, 0o700);
+
+      const accounts = await listCodexGoalAccountStatuses({
+        authRootDir,
+        accounts: ["account-a"],
+        liveCheck: true,
+        codexBinaryPath: codexAvailable,
+        liveCheckTimeoutMs: 1000,
+      });
+
+      expect(accounts[0]).toMatchObject({
+        status: "ready",
+        availability: "available",
+        schedulerEligible: true,
+        liveCheck: "passed",
+        liveCheckSafeMessage: "codex app-server quota check passed",
+      });
+      expect(store.read({ accountId: "account-a" })).toBeNull();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 function fakeJwt(payload: Record<string, unknown>): string {

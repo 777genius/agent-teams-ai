@@ -108,6 +108,95 @@ describe("recordCodexLiveQuotaCapacity", () => {
     });
   });
 
+  it("clears canonical quota when the inspected auth verifies the alias", () => {
+    const store = new InMemoryWorkerAccountCapacityStore();
+    const canonicalAccountId = `codex-provider:${"a".repeat(64)}`;
+    store.observe({
+      accountId: canonicalAccountId,
+      demand: {
+        provider: "codex",
+        model: "gpt-5.6-sol",
+        reasoningEffort: "xhigh",
+        serviceTier: "fast",
+      },
+      observedAt: new Date("2026-07-12T09:00:00.000Z"),
+      capacity: {
+        availability: "quota_exhausted",
+        reason: "quota_limited",
+        cooldownUntil: new Date("2026-07-12T12:00:00.000Z"),
+      },
+    });
+
+    expect(
+      recordCodexLiveQuotaCapacity({
+        accountId: canonicalAccountId,
+        verifiedCapacityAccountId: canonicalAccountId,
+        observation: availableObservation(),
+        store,
+      }),
+    ).toBe(true);
+    expect(
+      store.read({ accountId: canonicalAccountId, now: checkedAt }),
+    ).toBeNull();
+  });
+
+  it("clears every stale quota demand after an available live check", () => {
+    const store = new InMemoryWorkerAccountCapacityStore();
+    for (const serviceTier of ["fast", "default"] as const) {
+      store.observe({
+        accountId: "account-a",
+        demand: {
+          provider: "codex",
+          model: "gpt-5.6-sol",
+          reasoningEffort: "xhigh",
+          serviceTier,
+        },
+        observedAt: new Date("2026-07-12T09:00:00.000Z"),
+        capacity: {
+          availability: "quota_exhausted",
+          reason: "quota_limited",
+          cooldownUntil: new Date("2026-07-12T12:00:00.000Z"),
+        },
+      });
+    }
+
+    expect(
+      recordCodexLiveQuotaCapacity({
+        accountId: "account-a",
+        observation: availableObservation(),
+        store,
+      }),
+    ).toBe(true);
+    expect(store.read({ accountId: "account-a", now: checkedAt })).toBeNull();
+  });
+
+  it("does not clear a quota signal newer than the available observation", () => {
+    const store = new InMemoryWorkerAccountCapacityStore();
+    const newerSignalAt = new Date("2026-07-12T10:01:00.000Z");
+    store.observe({
+      accountId: "account-a",
+      observedAt: newerSignalAt,
+      capacity: {
+        availability: "quota_exhausted",
+        reason: "quota_limited",
+        cooldownUntil: new Date("2026-07-12T12:00:00.000Z"),
+        lastLimitSignalAt: newerSignalAt,
+      },
+    });
+
+    expect(
+      recordCodexLiveQuotaCapacity({
+        accountId: "account-a",
+        observation: availableObservation(),
+        store,
+      }),
+    ).toBe(false);
+    expect(store.read({ accountId: "account-a", now: newerSignalAt })).toMatchObject({
+      availability: "quota_exhausted",
+      reason: "quota_limited",
+    });
+  });
+
   it("lets newer authoritative live quota shorten a previous reset", () => {
     const store = new InMemoryWorkerAccountCapacityStore();
     recordCodexLiveQuotaCapacity({

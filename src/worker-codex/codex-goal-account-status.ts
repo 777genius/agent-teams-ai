@@ -34,6 +34,7 @@ import {
   codexAccountCapacityStore,
   migrateLegacyCodexAccountCapacity,
 } from "./application/codex-account-capacity-store";
+import { codexCapacityAccountIdFromAuthJson } from "./application/codex-account-capacity-alias-store";
 import { recheckDueCodexAccountCapacity } from "./application/codex-account-capacity-rechecker";
 import {
   codexAccountDisplayMetadataForSlot,
@@ -156,6 +157,11 @@ async function inspectCodexGoalAccount(input: {
     const validation = validateCodexAuthJsonBytes({ authJsonBytes });
     const freshness = readCodexAuthJsonFreshness({ authJsonBytes });
     const identity = sanitizedCodexIdentity(validation.parsed.tokens.id_token);
+    const verifiedCapacityAccountId = codexCapacityAccountIdFromAuthJson({
+      authJson: validation.parsed,
+      slotAlias: input.name,
+      authJsonPath,
+    });
     let capacity = readAccountCapacity({
       accountName: input.name,
       ...(input.accountCapacityStore
@@ -173,6 +179,7 @@ async function inspectCodexGoalAccount(input: {
       : undefined;
     const capacityPersistenceWarning = recordLiveQuotaCapacitySafely({
       accountId: input.name,
+      verifiedCapacityAccountId,
       ...(live?.observation ? { observation: live.observation } : {}),
       ...(input.accountCapacityStore
         ? { store: input.accountCapacityStore }
@@ -194,14 +201,14 @@ async function inspectCodexGoalAccount(input: {
       : undefined;
     const liveLimitResetAt = live?.observation?.decision.limitResetAt;
     const liveStatus = live && !liveAvailability
-      ? "auth_invalid"
-      : liveAvailability === "reconnect_required"
         ? "auth_invalid"
-        : liveAvailability === "auth_unknown" ||
-          liveAvailability === "unhealthy" ||
-          liveAvailability === "unknown"
+        : liveAvailability === "reconnect_required"
           ? "auth_invalid"
-          : "ready";
+          : liveAvailability === "auth_unknown" ||
+              liveAvailability === "unhealthy" ||
+              liveAvailability === "unknown"
+            ? "auth_invalid"
+            : "ready";
     if (live && !live.ok) {
       const availability = codexGoalAccountAvailability({
         status: liveStatus,
@@ -509,6 +516,7 @@ function resolveAccountCapacityStore(
 
 function recordLiveQuotaCapacitySafely(input: {
   readonly accountId: string;
+  readonly verifiedCapacityAccountId: string;
   readonly observation?: AccountObservation;
   readonly store?: WorkerAccountCapacityStore;
 }): string | undefined {
@@ -516,6 +524,7 @@ function recordLiveQuotaCapacitySafely(input: {
   try {
     recordCodexLiveQuotaCapacity({
       accountId: input.accountId,
+      verifiedCapacityAccountId: input.verifiedCapacityAccountId,
       observation: input.observation,
       store: input.store,
     });

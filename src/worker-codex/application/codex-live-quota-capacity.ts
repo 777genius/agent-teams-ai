@@ -13,21 +13,37 @@ import {
   WorkerAccountCapacityClaimStatus,
   WorkerAccountCapacityRecheckMode,
   WorkerAccountCapacityResolutionType,
+  WorkerAccountCapacityResolveStatus,
   WorkerAccountCapacitySignalScope,
 } from "@vioxen/subscription-runtime/worker-core";
 
 export const codexLiveQuotaCapacitySource = "codex_app_server_live_quota";
+const maxQuotaRecordsClearedPerObservation = 64;
 
 export function recordCodexLiveQuotaCapacity(input: {
   readonly accountId: string;
   readonly observation: AccountObservation;
   readonly store: WorkerAccountCapacityStore;
+  readonly verifiedCapacityAccountId?: string;
 }): boolean {
   const accountId = codexCapacityAccountIdFromIdentity(
     input.observation.auth.identity,
     input.accountId,
   );
   const capacity = codexLiveQuotaCapacitySnapshot(input.observation);
+  if (
+    !capacity &&
+    input.observation.decision.availability === AccountAvailability.Available
+  ) {
+    return clearObservedQuotaCapacity({
+      accountId,
+      observation: input.observation,
+      store: input.store,
+      ...(input.verifiedCapacityAccountId
+        ? { verifiedCapacityAccountId: input.verifiedCapacityAccountId }
+        : {}),
+    });
+  }
   const current = input.store.readState({
     accountId,
     now: input.observation.checkedAt,
@@ -36,17 +52,8 @@ export function recordCodexLiveQuotaCapacity(input: {
     current &&
     current.demand === null &&
     isQuotaCapacityRecord(current.capacity) &&
-    (capacity ||
-      input.observation.decision.availability === AccountAvailability.Available)
+    capacity
   ) {
-    if (
-      !capacity &&
-      input.observation.decision.availability === AccountAvailability.Available &&
-      current.accountId.startsWith("codex-provider:") &&
-      !input.observation.auth.identity?.accountKeyHash
-    ) {
-      return false;
-    }
     const claimed = input.store.tryClaimRecheck({
       state: current,
       ownerId: `codex-live-status:${accountId}`,
@@ -55,7 +62,6 @@ export function recordCodexLiveQuotaCapacity(input: {
       mode: WorkerAccountCapacityRecheckMode.Refresh,
     });
     if (claimed.status !== WorkerAccountCapacityClaimStatus.Claimed) {
-      if (!capacity) return false;
       input.store.observe({
         accountId,
         scope: WorkerAccountCapacitySignalScope.AccountWide,
@@ -67,12 +73,10 @@ export function recordCodexLiveQuotaCapacity(input: {
     input.store.resolveRecheck({
       claim: claimed.claim,
       observedAt: input.observation.checkedAt,
-      resolution: capacity
-        ? {
-            type: WorkerAccountCapacityResolutionType.Limited,
-            capacity,
-          }
-        : { type: WorkerAccountCapacityResolutionType.Available },
+      resolution: {
+        type: WorkerAccountCapacityResolutionType.Limited,
+        capacity,
+      },
     });
     return true;
   }
@@ -84,6 +88,56 @@ export function recordCodexLiveQuotaCapacity(input: {
     observedAt: input.observation.checkedAt,
   });
   return true;
+}
+
+function clearObservedQuotaCapacity(input: {
+  readonly accountId: string;
+  readonly observation: AccountObservation;
+  readonly store: WorkerAccountCapacityStore;
+  readonly verifiedCapacityAccountId?: string;
+}): boolean {
+  let cleared = false;
+  for (let attempt = 0; attempt < maxQuotaRecordsClearedPerObservation; attempt++) {
+    const current = input.store.readState({
+      accountId: input.accountId,
+      now: input.observation.checkedAt,
+    });
+    if (!current || !isQuotaCapacityRecord(current.capacity)) return cleared;
+    if (
+      current.capacity.lastLimitSignalAt &&
+      current.capacity.lastLimitSignalAt.getTime() >
+        input.observation.checkedAt.getTime()
+    ) {
+      return cleared;
+    }
+    if (
+      current.accountId.startsWith("codex-provider:") &&
+      !input.observation.auth.identity?.accountKeyHash &&
+      current.accountId !== input.verifiedCapacityAccountId
+    ) {
+      return cleared;
+    }
+    const claimed = input.store.tryClaimRecheck({
+      state: current,
+      ownerId: `codex-live-status:${input.accountId}`,
+      now: input.observation.checkedAt,
+      ttlMs: 30_000,
+      mode: WorkerAccountCapacityRecheckMode.Refresh,
+    });
+    if (claimed.status !== WorkerAccountCapacityClaimStatus.Claimed) {
+      return cleared;
+    }
+    const resolved = input.store.resolveRecheck({
+      claim: claimed.claim,
+      observedAt: input.observation.checkedAt,
+      resolution: { type: WorkerAccountCapacityResolutionType.Available },
+    });
+    if (resolved.status !== WorkerAccountCapacityResolveStatus.Applied) {
+      return cleared;
+    }
+    cleared = true;
+  }
+  return cleared;
 }
 
 function isQuotaCapacityRecord(capacity: WorkerCapacitySnapshot): boolean {
@@ -104,8 +158,8 @@ export function codexLiveQuotaCapacitySnapshot(
     return null;
   }
   const limitedWindows = observation.quota?.windows.filter(
-    (window) => window.state === QuotaLimitState.Limited,
-  ) ?? [];
+      (window) => window.state === QuotaLimitState.Limited,
+    ) ?? [];
   return {
     availability: "quota_exhausted",
     reason: "quota_limited",

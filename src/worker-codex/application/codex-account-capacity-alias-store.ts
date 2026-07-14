@@ -27,6 +27,22 @@ export function codexCapacityAccountIdFromIdentity(
     : fallbackAccountId;
 }
 
+export function codexCapacityAccountIdFromAuthJson(input: {
+  readonly authJson: unknown;
+  readonly slotAlias: string;
+  readonly authJsonPath: string;
+}): string {
+  const identity = identityFromAuthJson(input.authJson, {
+    provider: AgentProvider.Codex,
+    slotId: input.slotAlias,
+    authHome: dirname(input.authJsonPath),
+    authJsonPath: input.authJsonPath,
+  });
+  return identity.accountKeyHash
+    ? codexCapacityAccountIdFromIdentity(identity, input.slotAlias)
+    : (refreshSessionCapacityAccountId(input.authJson) ?? input.slotAlias);
+}
+
 export class CodexAccountCapacityAliasStore
   implements WorkerAccountCapacityStore
 {
@@ -130,15 +146,11 @@ class CodexAccountCapacityAliasResolver {
     if (cached?.signature === input.signature) return cached.capacityAccountId;
     try {
       const authJson: unknown = JSON.parse(input.authJsonText);
-      const identity = identityFromAuthJson(authJson, {
-        provider: AgentProvider.Codex,
-        slotId: input.slotAlias,
-        authHome: dirname(input.authJsonPath),
+      const capacityAccountId = codexCapacityAccountIdFromAuthJson({
+        authJson,
+        slotAlias: input.slotAlias,
         authJsonPath: input.authJsonPath,
       });
-      const capacityAccountId = identity.accountKeyHash
-        ? codexCapacityAccountIdFromIdentity(identity, input.slotAlias)
-        : refreshSessionCapacityAccountId(authJson) ?? input.slotAlias;
       this.cache.set(input.slotAlias, {
         signature: input.signature,
         capacityAccountId,
