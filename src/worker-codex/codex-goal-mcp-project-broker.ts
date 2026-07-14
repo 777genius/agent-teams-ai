@@ -185,6 +185,9 @@ function codexProjectControlPorts(
         });
         if (input.reviewedOutputCapture) {
           assertReviewedOutputWorkerStopped(input.reviewLaunch, status);
+          await reviewedOutputDeps.continuationEnvironment.sanitizeDependencyRootLinks({
+            workspacePath: input.reviewLaunch.config.workspacePath,
+          });
           reviewedOutput = await captureReviewedWorkerOutputLocked(
             reviewedOutputDeps,
             {

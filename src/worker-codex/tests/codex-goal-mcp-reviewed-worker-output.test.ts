@@ -60,7 +60,7 @@ describe("Codex project reviewed worker output", () => {
         join(workerWorkspacePath, "package.json"),
         '{"private":true}\n',
       ),
-      writeFile(join(workerWorkspacePath, ".gitignore"), "node_modules\n"),
+      writeFile(join(workerWorkspacePath, ".gitignore"), "/node_modules\n"),
     ]);
     await git(workerWorkspacePath, ["add", "."]);
     await git(workerWorkspacePath, ["commit", "-m", "test: base"]);
@@ -71,6 +71,20 @@ describe("Codex project reviewed worker output", () => {
     const patch = await captureGitWorkspacePatch({
       workspacePath: workerWorkspacePath,
     });
+    const generatedDependencies = join(
+      workerWorkspacePath,
+      "mcp-server",
+      "node_modules",
+    );
+    const foreignGeneratedDependencies = join(
+      root,
+      "foreign-generated-dependencies",
+    );
+    await Promise.all([
+      mkdir(join(workerWorkspacePath, "mcp-server"), { recursive: true }),
+      mkdir(foreignGeneratedDependencies, { recursive: true }),
+    ]);
+    await symlink(foreignGeneratedDependencies, generatedDependencies);
 
     const server = createCodexGoalMcpServer();
     const client = new Client({
@@ -155,6 +169,9 @@ describe("Codex project reviewed worker output", () => {
       });
       const reviewedOutputId = String(reviewed.reviewedOutputId);
       expect(reviewedOutputId).toMatch(/^[a-f0-9]{64}$/);
+      await expect(access(generatedDependencies)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
       await expect(
         access(join(workerJobRoot, `${workerJobId}.result.json`)),
       ).rejects.toMatchObject({ code: "ENOENT" });
