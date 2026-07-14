@@ -13,6 +13,7 @@ import {
   type WorkerControlIntent,
   type WorkerControlPriority,
 } from "@vioxen/subscription-runtime/worker-core";
+import type { WorkerLaunchAdmission } from "./application/project-control/worker-launch-spec";
 import type { CodexGoalRunConfig } from "./codex-goal-runner";
 import type { CodexGoalOutputFormat } from "./codex-goal-ops";
 import { resolveCodexGoalJobRegistryRoot } from "./codex-goal-jobs";
@@ -162,7 +163,7 @@ export type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly overwrite?: boolean;
   readonly promptBody?: string;
   readonly confirmRefill?: boolean;
-  readonly preStartAdmission?: unknown;
+  readonly preStartAdmission?: WorkerLaunchAdmission;
   readonly confirmPreStartAdmission?: boolean;
   readonly confirmRepair?: boolean;
   readonly startWorker?: boolean;

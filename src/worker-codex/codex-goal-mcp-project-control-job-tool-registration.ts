@@ -20,8 +20,7 @@ import {
   projectAdmissionWorkerRoleSchemaValues,
 } from "./codex-goal-mcp-project-control-tool-schemas";
 import {
-  workerLaunchRequestSchema,
-  workerLaunchStateSchema,
+  workerLaunchAdmissionSchema,
 } from "./application/project-control/worker-launch-spec";
 
 export function registerCodexGoalProjectControlJobTools(server: McpServer): void {
@@ -62,19 +61,11 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
         sourceRef: z.string().optional(),
         newBranch: z.string().optional(),
         promptBody: z.string().optional(),
-        preStartAdmission: z.union([
-          z.object({
-            contractValidatorPath: z.string(),
-            admissionValidatorPath: z.string(),
-            contract: z.record(z.string(), z.unknown()),
-            state: z.record(z.string(), z.unknown()),
-          }).strict(),
-          z.object({
-            mode: z.literal("serial-builtin"),
-            contract: workerLaunchRequestSchema,
-            state: workerLaunchStateSchema.optional(),
-          }).strict(),
-        ]).optional(),
+        preStartAdmission: workerLaunchAdmissionSchema
+          .describe(
+            "Declarative worker launch admission. Runtime computes job identity, workKey, paths and state. phaseStartSha must match sourceRef/baseBranch HEAD; inputPatchHash binds the admitted input patch.",
+          )
+          .optional(),
         confirmPreStartAdmission: z.boolean().optional(),
         workerRole: z.enum(projectAdmissionRefillWorkerRoleSchemaValues).optional(),
         description: z.string().optional(),
@@ -108,19 +99,11 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
         baseBranch: z.string().optional(),
         newBranch: z.string().optional(),
         promptBody: z.string().optional(),
-        preStartAdmission: z.union([
-          z.object({
-            contractValidatorPath: z.string(),
-            admissionValidatorPath: z.string(),
-            contract: z.record(z.string(), z.unknown()),
-            state: z.record(z.string(), z.unknown()),
-          }).strict(),
-          z.object({
-            mode: z.literal("serial-builtin"),
-            contract: workerLaunchRequestSchema,
-            state: workerLaunchStateSchema.optional(),
-          }).strict(),
-        ]).optional(),
+        preStartAdmission: workerLaunchAdmissionSchema
+          .describe(
+            "Declarative verifier launch admission. Runtime computes job identity, workKey, paths and state. phaseStartSha must match canonical source HEAD; inputPatchHash must match the terminal producer handoff.",
+          )
+          .optional(),
         confirmPreStartAdmission: z.boolean().optional(),
         workerRole: z.enum(["fastgate", "reviewer"]).optional(),
         description: z.string().optional(),

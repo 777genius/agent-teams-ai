@@ -397,30 +397,31 @@ describe("codex goal MCP server", () => {
       });
       const rejectedWorkspace = join(root, "worktrees", "infinity-context-invalid-v1");
       const rejectedJobRoot = join(root, "worker-jobs", "infinity-context-invalid-v1");
-      const rejected = await callToolJson(client, "codex_goal_project_refill_worker", {
-        registryRootDir,
-        controllerJobId: "infinity-context-controller-v1",
-        jobId: "infinity-context-invalid-v1",
-        jobRootDir: rejectedJobRoot,
-        authRootDir: join(root, "auth"),
-        sourceWorkspacePath,
-        workspacePath: rejectedWorkspace,
-        promptBody: "invalid binding must not create resources\n",
-        taskId: "infinity-context-invalid-v1",
-        accounts: ["account-a"],
-        workerRole: "fastgate",
-        preStartAdmission: {
-          ...builtinAdmission,
-          contract: { ...builtinAdmission.contract, jobId: "wrong-job" },
+      const rejected = await client.callTool({
+        name: "codex_goal_project_refill_worker",
+        arguments: {
+          registryRootDir,
+          controllerJobId: "infinity-context-controller-v1",
+          jobId: "infinity-context-invalid-v1",
+          jobRootDir: rejectedJobRoot,
+          authRootDir: join(root, "auth"),
+          sourceWorkspacePath,
+          workspacePath: rejectedWorkspace,
+          promptBody: "invalid binding must not create resources\n",
+          taskId: "infinity-context-invalid-v1",
+          accounts: ["account-a"],
+          workerRole: "fastgate",
+          preStartAdmission: {
+            ...builtinAdmission,
+            contract: { ...builtinAdmission.contract, jobId: "wrong-job" },
+          },
+          confirmPreStartAdmission: true,
+          startWorker: false,
+          confirmRefill: true,
         },
-        confirmPreStartAdmission: true,
-        startWorker: false,
-        confirmRefill: true,
       });
-      expect(rejected).toEqual({
-        ok: false,
-        error: "project_control_pre_start_builtin_materialization_jobId_mismatch",
-      });
+      expect(rejected.isError).toBe(true);
+      expect(JSON.stringify(rejected.content)).toContain("jobId");
       await expect(access(rejectedWorkspace)).rejects.toMatchObject({ code: "ENOENT" });
       await expect(access(rejectedJobRoot)).rejects.toMatchObject({ code: "ENOENT" });
       const audit = await readProjectControlAudit(
@@ -534,21 +535,30 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
       const refillTool = tools.tools.find(
         (tool) => tool.name === "codex_goal_project_refill_worker",
       );
+      const verifierTool = tools.tools.find(
+        (tool) => tool.name === "codex_goal_project_prepare_verifier",
+      );
       expect(refillTool?.inputSchema.properties).toMatchObject({
         sourceRef: expect.any(Object),
         newBranch: expect.any(Object),
       });
       const refillSchema = refillTool?.inputSchema.properties
         ?.preStartAdmission as TestJsonSchema;
-      const builtinSchema = refillSchema.anyOf?.find(
-        (candidate) => candidate.properties?.mode?.const === "serial-builtin",
-      );
-      expect(builtinSchema).toMatchObject({
+      const verifierSchema = verifierTool?.inputSchema.properties
+        ?.preStartAdmission as TestJsonSchema;
+      expect(refillSchema).toMatchObject({
         type: "object",
         required: ["mode", "contract"],
         additionalProperties: false,
       });
-      const contractSchema = builtinSchema?.properties?.contract;
+      expect(verifierSchema).toMatchObject({
+        type: "object",
+        required: ["mode", "contract"],
+        additionalProperties: false,
+      });
+      expect(verifierSchema.properties).toEqual(refillSchema.properties);
+      expect(refillSchema.anyOf).toBeUndefined();
+      const contractSchema = refillSchema.properties?.contract;
       const declarativeFields = [
         "kind",
         "format",
@@ -569,21 +579,9 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
         "requiredChecks",
         "executionPolicy",
       ];
-      const materializedFields = [
-        "jobId",
-        "workerId",
-        "revision",
-        "retryCount",
-        "workKey",
-        "supersedes",
-        "registryStatus",
-        "jobRoot",
-        "workspaceRoot",
-        "promptPath",
-      ];
       expect(contractSchema?.required).toEqual(declarativeFields);
       expect(Object.keys(contractSchema?.properties ?? {}).sort()).toEqual(
-        [...declarativeFields, ...materializedFields].sort(),
+        [...declarativeFields].sort(),
       );
       expect(contractSchema).toMatchObject({
         type: "object",
@@ -614,11 +612,10 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
           },
         },
       });
-      expect(builtinSchema?.properties?.state).toMatchObject({
-        type: "object",
-        required: ["schemaVersion", "maxRetries", "maxInFlight", "records"],
-        additionalProperties: false,
-      });
+      expect(refillSchema.properties?.state).toBeUndefined();
+      expect(refillSchema.properties?.contractValidatorPath).toBeUndefined();
+      expect(refillSchema.properties?.admissionValidatorPath).toBeUndefined();
+      expect(JSON.stringify(refillSchema)).not.toContain("additionalProperties\":{}");
       expect(JSON.stringify(refillSchema)).not.toContain("worker-start-v1");
       expect(JSON.stringify(refillSchema)).not.toContain("contractSchema");
 

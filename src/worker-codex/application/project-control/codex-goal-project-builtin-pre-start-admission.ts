@@ -8,7 +8,7 @@ import type {
   CodexGoalJobManifestInput,
 } from "../../codex-goal-jobs";
 import {
-  parseWorkerLaunchRequest,
+  parseWorkerLaunchMaterializationInput,
   parseWorkerLaunchSpec,
   parseWorkerLaunchState,
   type WorkerLaunchSpec,
@@ -64,7 +64,7 @@ export function materializeBuiltinWorkerLaunchSpec(input: {
   readonly state?: JsonObject;
   readonly manifest: CodexGoalJobManifest | CodexGoalJobManifestInput;
 }): { readonly contract: JsonObject; readonly state: JsonObject } {
-  const requestedContract = parseWorkerLaunchRequest(input.contract) as JsonObject;
+  const requestedContract = parseWorkerLaunchMaterializationInput(input.contract);
   const fullyMaterialized = AUTO_CONTRACT_FIELDS.every(
     (field) => field in requestedContract,
   ) &&

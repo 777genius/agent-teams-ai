@@ -12,4 +12,19 @@ export * from "./node-process-runner";
 export * from "./observability";
 export * from "./project-integration-mcp";
 export * from "./temp-workspace";
-export * from "./application/project-control/worker-launch-spec";
+export {
+  parseWorkerLaunchRequest,
+  parseWorkerLaunchSpec,
+  parseWorkerLaunchState,
+  workerLaunchAdmissionSchema,
+  workerLaunchExecutionPolicySchema,
+  workerLaunchRequestSchema,
+  workerLaunchRequiredCheckSchema,
+  workerLaunchSpecSchema,
+  workerLaunchStateSchema,
+  workerLaunchValidationIssues,
+  type WorkerLaunchAdmission,
+  type WorkerLaunchRequest,
+  type WorkerLaunchSpec,
+  type WorkerLaunchState,
+} from "./application/project-control/worker-launch-spec";
