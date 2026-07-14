@@ -1,14 +1,8 @@
 # Phase 1 execution DAG and ownership
 
-> Current r4 override: the sole active edge is reviewer r2 `REJECT` -> exactly one shadowed-map
-> remediation producer -> fresh independent exact-read review. Packet/start/HEAD is
-> `3405da177b040c65caad10ef2df4d4f4338feed0`; all review-only r2 DAG text below is retained
-> non-executable provenance. Integration and later nodes remain blocked. End `HOLD`.
-
-Status: P1.S0, P1.S1, P1.S2, and P1.R1 are accepted and integrated. The immutable P1.1D remediation
-candidate is complete. Its first independent review returned binding `REJECT` P1 because the external
-review input mislabeled one transient interim hash. A single corrected fresh review is the sole current
-serial activity. Later nodes and product integration are blocked.
+Status: P1.S0, P1.S1, P1.S2, P1.R1, and P1.1D are accepted and integrated. P1.1D is pushed at
+`e7e7e734c82c49105682e7a19bbedafa1f5ddbad`. The sole current serial edge is the exact PR #252
+five-file base-conflict resolution lane under the unchanged `controller-v17`. End `HOLD`.
 
 ## Current DAG
 
@@ -17,84 +11,81 @@ P1.S0 accepted
   -> P1.S1 accepted + integrated
        -> P1.S2 routes + conformance accepted
             -> P1.R1 ACCEPT
-                 -> P1.1D remediation router at bbfd2551b
-                      -> immutable nine-path candidate
-                           -> prior independent review REJECT (binding; stale external hash assertion)
-                                -> corrected fresh independent review (current; one xhigh/default slot)
-                                     -> explicit ACCEPT or REJECT required
-                                          -X-> product integration
-                                          -X-> P1.R2 -> P1.I -> P1.F -> Phase 2+
+                 -> P1.1D remediation
+                      -> independent FORMAL ACCEPT P0/P1/P2=0
+                           -> accepted integration pushed at e7e7e734
+                                -> PR #252 exact five-file producer (one; xhigh/default; no Fast)
+                                     -> immutable resolution output
+                                          -> independent integration review (one; xhigh/default)
+                                               -> explicit ACCEPT or REJECT
+                                                    -> runtime true two-parent merge + push
+                                                         -X-> P1.R2 -> P1.I -> P1.F -> Phase 2+
 ```
 
-The immutable product candidate `baseSha` is
-`1b37afb02bec25a1f08432d733595b553101ecab`. Reviewer `canonicalSha`, `phaseStartSha`,
-`planBundleCommit`, and worktree `HEAD` are
-`bbfd2551baaa904061e705511f07716e0f6db17d`. The latter is the review source/start identity, not the
-product base.
+The earlier r1 worker on the current edge is terminal `failed_no_output`; r2 is its only authorized
+replacement. r1 has no reusable output or authority and is never inspected or resumed.
 
-The prior `REJECT` is not reinterpreted. The fresh reviewer receives corrected role labels for:
+## Binding accepted input and merge pins
 
-- nine-path runtime handoff carrier
-  `1f9c6a2a28e5540c61d1395bc51a34a7c0db31855bae575abc9582f839118b49`;
-- eight-path semantic reconstruction
-  `fa46617652b072e887563f5a751f7bd0260e0e1d4fb96b628badea91ea7ae9d6`; and
-- rejection-ledger-only reviewed snapshot
-  `521d8bab2ed7bc4334b38a5786dd5685f5e4f033c3962cab566f9ab3b60d0000`.
+P1.1D's accepted review was performed by
+`agent-teams-hosted-web-refactor-p1-1d-shadowed-map-review-v17-r4`. The strict result SHA-256 is
+`be0c9abd679f817c386d1d06d1b738c2a1505bb3c4718279129ab74842c98fa6`; reviewed output ID is
+`f3394026185348c84673d44a9b30a82667c3ff9435b5d4d7609c04785c274f41`; accepted integration is
+`p1-1d-shadowed-map-r4-accepted-integration-v3`; and the accepted/pushed target commit is
+`e7e7e734c82c49105682e7a19bbedafa1f5ddbad`.
 
-Prior strict result SHA-256
-`29ad2243be1a1e0c7aa95cb1a32ae32b8f15db8ebe1a260cd41dd85d2c079934` records the binding rejection.
-Transient `7672e922` is not an immutable-candidate hash and never appeared in or was claimed by the
-final candidate.
-
-The predecessor review-input router remains immutable rejected reviewed output
-`1ad2849056be658ab629b9810914ace7eab3287745ecb39c1d76ac1c124d0eb7`, patch SHA-256
-`657c1c5ff6421f6b206ef14509586d09fad72e8c511efe1a6f9bf6b8dce5f577`. This corrected transition
-does not modify or integrate it.
+The PR source is `origin/refactor/team-provisioning-round2-reapply`, pinned to
+`7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0`. A moving branch head is not an admissible substitute.
 
 ## Current lane registry
 
-| Node                                  | Current mission                                                   | Dependency                                                | Packet / revision                                                                             |
-| ------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `P1.1D-additive-response-remediation` | Review the existing immutable candidate with corrected provenance | correction router integrated; same controller `live=true` | `lanes/p1-1d-additive-response-remediation.md` / `phase-01-p1-1d-additive-response-review-r2` |
+| Node                             | Mission                                                                     | Capacity                                    | Packet / revision                                                                        |
+| -------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `PR252-base-conflict-resolution` | Resolve exactly five PR #252 conflicts byte-for-byte to pinned source blobs | one producer, then one independent reviewer | `lanes/pr252-base-conflict-resolution.md` / `phase-01-pr252-base-conflict-resolution-r2` |
 
-Capacity is zero before both admission gates. Afterward capacity is exactly one fresh independent
-reviewer through `codex_goal_project_refill_worker`, with outer `workerRole: reviewer`, `xhigh`
-reasoning, `default` service tier, and the existing serial-builtin internal `worker-launch` format 1
-contract. `reviewKind` is `review`; `inputPatchHash` is the nine-path runtime carrier. There is no
-separate reviewer-launch operation, product producer, retry, refill, integration, or later-node
-capacity.
+Both workers use `xhigh` reasoning and `default` service tier with Fast disabled. The producer owns
+only the five conflict paths and produces an immutable runtime-captured patch. The reviewer owns no
+repository path. Neither worker may merge, stage, commit, or push.
 
-## Immutable candidate scope
+## Exact conflict scope
 
-Product paths:
+| Path                                                                          | Required final blob OID                    |
+| ----------------------------------------------------------------------------- | ------------------------------------------ |
+| `src/features/task-board-commands/core/application/TaskBoardCommandFacade.ts` | `f5515ddac4cd7bee957a75bc06aad78309ad3a74` |
+| `src/main/services/team/TeamDataService.ts`                                   | `a8fea50ddbd71563f2ab7853978d6420eed6c441` |
+| `src/renderer/components/team/TeamDetailView.tsx`                             | `5cbaef7f23046dab598a1c2878811adbfd62ea4c` |
+| `test/features/task-board-commands/TaskBoardCommands.e2e.test.ts`             | `0c0a717fea61031c3c24a4ef787c0acd9bd80ad5` |
+| `test/main/services/team/TeamDataService.test.ts`                             | `c281cac6493e07abf1ddd201255539e902122af2` |
 
-- `src/features/team-lifecycle/contracts/team-lifecycle-read.ts`
-- `src/features/team-lifecycle/contracts/index.ts`
-- `src/features/team-lifecycle/core/application/ListTeamLifecycle.ts`
-- `src/features/team-lifecycle/core/application/index.ts`
-- `src/features/team-lifecycle/index.ts`
+The producer diff, runtime-recreated merge conflict set, reviewed output, and final merge resolution
+set must all equal this exact five-path set. An extra or missing path fails closed.
 
-Test paths:
+## Review and integration edges
 
-- `test/features/team-lifecycle/core/ListTeamLifecycle.test.ts`
-- `test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts`
-- `test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts`
+The independent reviewer reruns both focused test files, the inherited typecheck-baseline
+classification, exact five-file `lint:fast:files`, Prettier, diff, blob, secret/private-path, binary,
+ownership, provenance, and no-stage checks. Only a complete `ACCEPT` with P0/P1/P2 `0/0/0` permits
+`mark_reviewed`.
 
-Handoff path:
+`mark_reviewed` binds the immutable reviewed output to:
 
-- `.codex-handoff/phase-01-p1-1d.json`
+```json
+{
+  "sourceRemote": "origin",
+  "sourceBranch": "refactor/team-provisioning-round2-reapply",
+  "sourceCommit": "7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0",
+  "expectedTargetCommit": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad"
+}
+```
 
-The five product, three test, and one handoff paths form the exact immutable nine-path review input.
-The fresh reviewer has no writer authority over them or any repository path. Both earlier outputs have
-formal rejected integration-ledger records, and admission reports no blocking output debt.
+`open_integration_attempt` consumes only `reviewedOutputId`. Runtime creates the true merge and
+requires final parents, in order,
+`[e7e7e734c82c49105682e7a19bbedafa1f5ddbad,
+7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0]`. A patch-only, squash, synthetic one-parent, reversed,
+or moving-head result is rejected.
 
-## Gates and blocked successor
+## Blocked successor
 
-The reviewer independently reruns the original and additive-response checks, validates the carrier
-and semantic hashes by their exact roles, confirms the candidate does not contain or claim
-`7672e922`, and returns explicit `ACCEPT` or `REJECT`. The ledger snapshot hash is used only to consume
-the prior rejection record, not to reconstruct or identify the candidate.
-
-The durable controller remains the same and applies only the structured producer-to-review scope
-update. The docs author launches nothing. Product integration, commit, push, P1.R2, P1.I, P1.F,
-Phase 2+, and all five PR conflict files remain blocked. Current terminal state: `HOLD`.
+P1.R2, P1.I, P1.F, and Phase 2+ remain blocked through review and integration and until the validated
+two-parent merge is pushed. This docs author launches no worker/controller/integration attempt and
+performs no fetch, stage, commit, merge, or push. Terminal state: `HOLD`.

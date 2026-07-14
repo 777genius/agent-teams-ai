@@ -1,76 +1,59 @@
 # Phase 1: contracts and conformance
 
-> Current r4 override: exactly one shadowed-map implementation remediation producer is executable at
-> `3405da177b040c65caad10ef2df4d4f4338feed0`; review-only r2 text below is retained non-executable
-> provenance. A fresh independent exact-read reviewer follows the producer. P1.R2, integration,
-> P1.I, P1.F, Phase 2+, and the exact five PR conflict files remain blocked. End `HOLD`.
+Status: **P1.1D independently accepted, integrated, and pushed; one exact PR #252 five-file
+base-conflict resolution lane current under `controller-v17`; HOLD**.
 
-Status: **one fresh P1.1D independent reviewer after correction-router integration and the existing
-durable controller's structured review-scope update**. P1.R2 and every later node remain blocked.
+## Accepted provenance
 
-## Provenance
+P1.S0, P1.S1, P1.S2, and formal P1.R1 remain accepted and integrated. P1.1D now also has independent
+`FORMAL ACCEPT` with P0/P1/P2 `0/0/0` from
+`agent-teams-hosted-web-refactor-p1-1d-shadowed-map-review-v17-r4`.
 
-P1.S0, P1.S1, P1.S2, and formal P1.R1 remain accepted and integrated as previously recorded. The
-current immutable P1.1D remediation product candidate has `baseSha`
-`1b37afb02bec25a1f08432d733595b553101ecab`. The reviewer has `canonicalSha`, `phaseStartSha`,
-`planBundleCommit`, and worktree `HEAD` `bbfd2551baaa904061e705511f07716e0f6db17d`.
+- Strict result SHA-256:
+  `be0c9abd679f817c386d1d06d1b738c2a1505bb3c4718279129ab74842c98fa6`
+- Reviewed output ID: `f3394026185348c84673d44a9b30a82667c3ff9435b5d4d7609c04785c274f41`
+- Accepted integration: `p1-1d-shadowed-map-r4-accepted-integration-v3`
+- Accepted/pushed commit: `e7e7e734c82c49105682e7a19bbedafa1f5ddbad`
 
-The candidate's runtime nine-path handoff carrier SHA-256 is
-`1f9c6a2a28e5540c61d1395bc51a34a7c0db31855bae575abc9582f839118b49`. Its final eight-path semantic
-reconstruction SHA-256 is `fa46617652b072e887563f5a751f7bd0260e0e1d4fb96b628badea91ea7ae9d6`.
-These hashes name different layers and are not interchangeable.
-
-The prior independent strict result SHA-256
-`29ad2243be1a1e0c7aa95cb1a32ae32b8f15db8ebe1a260cd41dd85d2c079934` is binding `REJECT` P1. The
-sole finding was that an external review instruction mislabeled transient interim hash `7672e922` as
-the final handoff hash. The final candidate did not contain or claim `7672e922`; nevertheless, the
-review disposition remains `REJECT`, not `ACCEPT`.
-
-Reviewed-workspace snapshot SHA-256
-`521d8bab2ed7bc4334b38a5786dd5685f5e4f033c3962cab566f9ab3b60d0000` is used only to consume the
-prior rejection-ledger record and never as candidate identity. Formal rejected integration-ledger
-records exist for both producer and reviewer output, with no blocking output debt reported by
-admission.
-
-The predecessor docs-router output is immutable rejected evidence: reviewed output
-`1ad2849056be658ab629b9810914ace7eab3287745ecb39c1d76ac1c124d0eb7`, patch SHA-256
-`657c1c5ff6421f6b206ef14509586d09fad72e8c511efe1a6f9bf6b8dce5f577`. This revision preserves its
-review-only transition without altering or integrating those bytes and corrects only product-base
-provenance and reviewer admission shape.
+The accepted commit is the target/base for the current route. No P1.1D rerun, reinterpretation,
+mutation, or reintegration is authorized.
 
 ## Current route
 
 The route contains exactly these executable packets:
 
 1. [`controller-packet.md`](controller-packet.md)
-2. [`lanes/p1-1d-additive-response-remediation.md`](lanes/p1-1d-additive-response-remediation.md)
+2. [`lanes/pr252-base-conflict-resolution.md`](lanes/pr252-base-conflict-resolution.md)
 
-The node remains `P1.1D-additive-response-remediation`, but its only current mode is review-only under
-revision `phase-01-p1-1d-additive-response-review-r2`. There is one reviewer slot and no producer,
-retry, refill, integration, or later-node slot.
+The sole node is `PR252-base-conflict-resolution`, packet revision
+`phase-01-pr252-base-conflict-resolution-r2`. It is the only replacement for the terminal
+`failed_no_output` r1 worker; r1 is not inspected, resumed, or reused.
 
-## Review launch boundary
+The PR source is `origin/refactor/team-provisioning-round2-reapply`, pinned to
+`7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0`. Capacity is serial: exactly one `xhigh`/`default`
+producer with Fast disabled creates one immutable resolution patch for the exact five lane-owned
+conflict paths, then exactly one fresh independent `xhigh`/`default` integration reviewer with Fast
+disabled returns `ACCEPT` or `REJECT`.
 
-This seven-path docs-only transition launches no reviewer or controller. After policy integration,
-the same durable controller must atomically replace its completed producer scope with the current
-review-only revision while remaining `live=true`. It must not be replaced or restarted merely for this
-transition.
+## Resolution and integration boundary
 
-Only then may ProjectScopedControl operation `codex_goal_project_refill_worker` admit one new isolated
-reviewer that is independent of the router author, all P1.1D producers, and the prior rejected
-reviewer. The operation binds outer `workerRole: reviewer`, reasoning effort `xhigh`, service tier
-`default`, and `serial-builtin` `preStartAdmission`. The internal contract remains
-`kind: worker-launch`, `format: 1`, `reviewKind: review`, with the runtime nine-path carrier as
-`inputPatchHash`. The `521d8bab...` snapshot remains ledger-consumption-only, and `7672e922` remains a
-stale external assertion only. There is no separate reviewer-launch tool or public contract.
+All five resolved files must be byte-for-byte identical to their audited complete blobs at the pinned
+source commit. The producer may not merge, stage, commit, push, or modify a sixth path. The reviewer
+has no writer or Git mutation authority.
 
-## Review and successor boundary
+After reviewer `ACCEPT`, `mark_reviewed` must bind the immutable reviewed output to the exact source
+remote, source branch, source commit, and expected target commit. `open_integration_attempt` receives
+only `reviewedOutputId`. The runtime recreates the real merge, validates that the conflict set is
+exactly the five lane paths, applies only reviewed bytes, reruns all gates, and creates the true merge
+with parents
+`[e7e7e734c82c49105682e7a19bbedafa1f5ddbad,
+7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0]`.
 
-The fresh reviewer must rerun every bound semantic, architecture, quality, provenance, ownership,
-hash, and safety check and return explicit `ACCEPT` or `REJECT` with P0/P1/P2 findings. Missing,
-blocked, or ambiguous output is not acceptance.
+## Successor boundary and HOLD
 
-No product change or producer rerun is permitted. No result from this docs router authorizes product
-integration, commit, push, P1.R2, P1.I, P1.F, Phase 2+, or work in any of the five PR conflict files. Product integration stays
-blocked pending a separately routed explicit `ACCEPT`. The authoritative dependency and ownership
-projection is [`execution-dag.md`](execution-dag.md). Current disposition: `HOLD`.
+The validated true two-parent merge must be pushed before P1.R2, P1.I, P1.F, or Phase 2+ can advance.
+The authoritative dependency and ownership projection is [`execution-dag.md`](execution-dag.md).
+
+This docs router keeps `controller-v17`, launches nothing, changes only its exact seven owned docs
+paths, and performs no fetch, stage, commit, merge, push, or integration attempt. Current disposition:
+`HOLD`.

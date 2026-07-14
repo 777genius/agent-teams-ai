@@ -1,16 +1,14 @@
 # Hosted-web execution: start here
 
-> Current r4 override: reviewer r2 rejected reviewed output
-> `693d79c9314c46b9ac0ae13c8c62cb7951461fb7d335ec426119fc8a86a23c91`; the sole executable
-> authority is one implementation remediation producer under
-> `phase-01-p1-1d-shadowed-map-remediation-r4` at `3405da177b040c65caad10ef2df4d4f4338feed0`.
-> Review-only r2 descriptions below are retained non-executable provenance. End `HOLD`.
+> Current route: accepted P1.1D advances only to the exact PR #252 five-file base-conflict
+> resolution lane under `controller-v17`. Exactly one `xhigh`/`default` producer and one fresh
+> independent `xhigh`/`default` integration reviewer are authorized in serial, with Fast disabled.
+> This docs transition launches nothing and ends `HOLD`.
 
 This is the canonical entrypoint for every hosted-web controller and worker. Phase 0 is accepted and
-frozen at `f4fa24aac9615a4ce10632965a2244a2e11a273e`. Phase 1 serial bootstrap, foundations,
-routes, conformance, and formal P1.R1 are accepted. The P1.1D additive-response remediation product
-candidate now exists and is immutable. Product work is complete for this review cycle; the only
-current authority is one fresh independent review with corrected input provenance.
+frozen. Phase 1 bootstrap, foundations, routes, conformance, formal P1.R1, and P1.1D are accepted and
+integrated. P1.1D's independently reviewed product is pushed at
+`e7e7e734c82c49105682e7a19bbedafa1f5ddbad`.
 
 ## Deterministic reading order
 
@@ -20,64 +18,47 @@ Read only this bounded sequence before working:
 2. This file.
 3. `docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md`.
 4. `docs/hosted-web-phases/README.md`, then `docs/hosted-web-phases/EXECUTION_INDEX.json`.
-5. The current `docs/hosted-web-phases/phase-01/controller-packet.md` named by the
-   ProjectScopedControl `codex_goal_project_refill_worker` reviewer admission.
-6. The single assigned review-only packet:
-   `docs/hosted-web-phases/phase-01/lanes/p1-1d-additive-response-remediation.md`.
-7. Only the exact files and headings in that packet's mandatory-read list.
+5. `docs/hosted-web-phases/phase-01/controller-packet.md`.
+6. The single assigned packet,
+   `docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md`.
+7. Only the exact mandatory documents and five pinned source/target paths listed by that packet.
 
-Do not recursively explore documentation or evidence directories. Accepted inputs, rejected records,
-the immutable candidate, and both integration-ledger records are read-only.
+Do not recursively explore documentation/evidence directories, use Fast, inspect or reuse the
+terminal `failed_no_output` r1 worker, or substitute a moving branch ref for a pinned commit.
 
-## Current route and corrected review input
+## Binding P1.1D acceptance
 
-`P1.1D-additive-response-remediation` remains the sole current node, now in review-only mode under
-packet revision `phase-01-p1-1d-additive-response-review-r2`. Capacity is zero until this exact
-seven-path docs-only correction router is policy-integrated and the same durable controller has
-atomically bound the review-only scope while remaining `live=true`. After both gates, capacity is
-exactly one fresh independent reviewer using reasoning effort `xhigh` and service tier `default`.
-This docs job does not launch that reviewer.
+The independent reviewer
+`agent-teams-hosted-web-refactor-p1-1d-shadowed-map-review-v17-r4` returned `FORMAL ACCEPT` with
+P0/P1/P2 `0/0/0`. The strict result SHA-256 is
+`be0c9abd679f817c386d1d06d1b738c2a1505bb3c4718279129ab74842c98fa6`; reviewed output ID is
+`f3394026185348c84673d44a9b30a82667c3ff9435b5d4d7609c04785c274f41`; accepted integration is
+`p1-1d-shadowed-map-r4-accepted-integration-v3`; and accepted/pushed commit is
+`e7e7e734c82c49105682e7a19bbedafa1f5ddbad`.
 
-The immutable product candidate has `baseSha`
-`1b37afb02bec25a1f08432d733595b553101ecab`. The reviewer has `canonicalSha`, `phaseStartSha`,
-`planBundleCommit`, and worktree `HEAD`
-`bbfd2551baaa904061e705511f07716e0f6db17d`. These product and reviewer roles must not be
-collapsed. The candidate's legitimate hashes likewise have distinct roles:
+These facts are immutable accepted provenance. They are not authority to rerun P1.1D, change its
+product, or start P1.R2/P1.I/P1.F/Phase 2+.
 
-- runtime nine-path handoff carrier SHA-256:
-  `1f9c6a2a28e5540c61d1395bc51a34a7c0db31855bae575abc9582f839118b49`;
-- final eight-path semantic reconstruction SHA-256:
-  `fa46617652b072e887563f5a751f7bd0260e0e1d4fb96b628badea91ea7ae9d6`; and
-- reviewed-workspace snapshot SHA-256
-  `521d8bab2ed7bc4334b38a5786dd5685f5e4f033c3962cab566f9ab3b60d0000`, which is consumed only to
-  locate and verify the prior rejection-ledger record. It is not a candidate handoff or semantic hash.
+## Current route
 
-The prior independent reviewer returned binding `REJECT` P1. Its strict result SHA-256 is
-`29ad2243be1a1e0c7aa95cb1a32ae32b8f15db8ebe1a260cd41dd85d2c079934`. The sole reason was a stale
-external review instruction that mislabeled transient interim hash `7672e922` as the final handoff
-hash. That assertion existed only outside the candidate. The final candidate neither contains nor
-claims `7672e922`. The rejection remains `REJECT`; this correction does not reinterpret it as
-`ACCEPT`.
+`PR252-base-conflict-resolution` is the sole executable node. The target is the accepted P1.1D commit.
+The PR source is `origin/refactor/team-provisioning-round2-reapply`, pinned to
+`7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0`. One producer may create an immutable patch that changes
+exactly the five lane-owned conflict paths byte-for-byte to their audited source blobs. The producer
+must not merge, stage, commit, or push.
 
-The rejected predecessor docs router is separately preserved as immutable reviewed output
-`1ad2849056be658ab629b9810914ace7eab3287745ecb39c1d76ac1c124d0eb7`, patch SHA-256
-`657c1c5ff6421f6b206ef14509586d09fad72e8c511efe1a6f9bf6b8dce5f577`. Its review-only transition
-is reproduced here with corrected base provenance and the existing ProjectScopedControl admission
-shape; the rejected output itself is not modified or integrated.
+One fresh independent integration reviewer must return explicit `ACCEPT` or `REJECT`. Only after
+`ACCEPT` may `mark_reviewed` bind the reviewed output to the exact source remote/branch/commit and
+expected target commit. `open_integration_attempt` consumes only `reviewedOutputId`; the runtime must
+create and validate the true merge with parents
+`[e7e7e734c82c49105682e7a19bbedafa1f5ddbad,
+7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0]`.
 
 ## Authority and HOLD
 
-The producer and prior reviewer outputs have formal rejected integration-ledger records, and runtime
-admission reports no blocking output debt. Those facts permit only a fresh review; they do not admit
-product work or integration. The same durable controller remains responsible. The producer-to-review
-authority transition requires a structured scope update, not controller replacement or a new
-controller launch. Reviewer admission uses `codex_goal_project_refill_worker` with outer
-`workerRole: reviewer`, reasoning effort `xhigh`, service tier `default`, and `serial-builtin`
-`preStartAdmission`. Its internal contract remains `kind: worker-launch`, `format: 1`,
-`reviewKind: review`, with `inputPatchHash` equal to the runtime nine-path carrier above. No
-separate reviewer-launch tool or public contract exists.
+The same durable `controller-v17` must remain exactly `live=true`. This router changes no product,
+test, runtime, orchestration, configuration, package, lockfile, handoff, or research path; launches no
+worker; and performs no fetch, stage, commit, merge, push, or integration attempt.
 
-No product change, producer retry/refill, product integration, commit, push, P1.R2, P1.I, P1.F,
-Phase 2+, or any of the five PR conflict files is authorized. A fresh reviewer must return explicit `ACCEPT` or
-`REJECT`. Until that later result is returned and separately routed, product integration remains
-blocked and the controller holds.
+P1.R2, P1.I, P1.F, and Phase 2+ remain blocked until the validated true two-parent PR #252 merge is
+pushed. End `HOLD`.
