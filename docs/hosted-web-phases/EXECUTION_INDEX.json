@@ -10,6 +10,46 @@
     "replacementAuthorized": false
   },
   "workerStartAuthority": "ProjectScopedControl codex_goal_project_refill_worker",
+  "jitCanonicalBinding": {
+    "name": "canonicalAtProducerAdmission",
+    "definition": "the exact current canonical commit after this correction router has been accepted, policy-integrated, and pushed",
+    "stateInThisDocsRouter": "unresolved",
+    "resolvedBy": "controller-v17",
+    "requiredResolutionCount": 1,
+    "resolutionTiming": "immediately-before-producer-admission",
+    "resolutionPreconditions": [
+      "target-binding-correction-accepted",
+      "target-binding-correction-policy-integrated",
+      "target-binding-correction-pushed",
+      "controller-v17-live=true"
+    ],
+    "resolvedValueFormat": "full-40-character-commit-sha",
+    "downstreamReresolutionAuthorized": false,
+    "boundFieldPaths": [
+      "currentRoute.canonicalSha",
+      "currentRoute.baseSha",
+      "currentRoute.phaseStartSha",
+      "currentRoute.planBundleCommit",
+      "currentRoute.materializationHead",
+      "currentRoute.expectedTargetCommit",
+      "projectScopedProducerAdmission.preStartAdmission.contract.canonicalSha",
+      "projectScopedProducerAdmission.preStartAdmission.contract.baseSha",
+      "projectScopedProducerAdmission.preStartAdmission.contract.phaseStartSha",
+      "projectScopedProducerAdmission.preStartAdmission.contract.planBundleCommit",
+      "projectScopedProducerAdmission.preStartAdmission.contract.materializationHead",
+      "projectScopedProducerAdmission.preStartAdmission.contract.expectedTargetCommit",
+      "projectScopedProducerAdmission.planBundleCommitBinding",
+      "integrationReviewAdmission.materialization.canonicalSha",
+      "integrationReviewAdmission.materialization.baseSha",
+      "integrationReviewAdmission.materialization.phaseStartSha",
+      "integrationReviewAdmission.materialization.materializationHead",
+      "integrationReviewAdmission.materialization.expectedTargetCommit",
+      "pr252BaseConflictScope.expectedTargetCommit",
+      "reviewedIntegrationProtocol.markReviewedMergeBinding.expectedTargetCommit",
+      "reviewedIntegrationProtocol.integrationTargetCommit",
+      "reviewedIntegrationProtocol.requiredParentOrder[0]"
+    ]
+  },
   "currentRoute": {
     "mode": "base-conflict-resolution",
     "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
@@ -19,26 +59,31 @@
         "node": "PR252-base-conflict-resolution",
         "laneId": "pr252-base-conflict-resolution",
         "path": "docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md",
-        "packetRevision": "phase-01-pr252-base-conflict-resolution-r2"
+        "packetRevision": "phase-01-pr252-target-binding-correction-r1"
       }
     ],
-    "canonicalSha": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad",
-    "baseSha": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad",
-    "phaseStartSha": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad",
-    "planBundleCommit": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad",
-    "expectedTargetCommit": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad",
+    "canonicalSha": { "binding": "canonicalAtProducerAdmission" },
+    "baseSha": { "binding": "canonicalAtProducerAdmission" },
+    "phaseStartSha": { "binding": "canonicalAtProducerAdmission" },
+    "planBundleCommit": { "binding": "canonicalAtProducerAdmission" },
+    "materializationHead": { "binding": "canonicalAtProducerAdmission" },
+    "expectedTargetCommit": { "binding": "canonicalAtProducerAdmission" },
     "sourceRemote": "origin",
     "sourceBranch": "refactor/team-provisioning-round2-reapply",
     "sourceCommit": "7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0",
     "launchGate": {
       "required": {
-        "exactSevenPathRouterPolicyIntegrated": true,
+        "exactSevenPathTargetBindingCorrectionAccepted": true,
+        "exactSevenPathTargetBindingCorrectionPolicyIntegrated": true,
+        "exactSevenPathTargetBindingCorrectionPushed": true,
         "sameDurableControllerV17": true,
         "durableControllerLive": true,
         "controllerValue": "live=true",
+        "canonicalAtProducerAdmissionResolvedExactlyOnce": true,
+        "allTargetFieldsBoundToResolvedFullSha": true,
         "p11dFormalAcceptVerified": true,
         "p11dAcceptedCommitPushed": true,
-        "targetAndPinnedSourceMaterialized": true,
+        "resolvedTargetAndPinnedSourceMaterialized": true,
         "fiveSourceBlobsVerified": true,
         "r1TerminalFailedNoOutput": true,
         "noPriorConflictWorkerActive": true
@@ -94,6 +139,7 @@
     "reviewedOutputId": "f3394026185348c84673d44a9b30a82667c3ff9435b5d4d7609c04785c274f41",
     "integrationAttempt": "p1-1d-shadowed-map-r4-accepted-integration-v3",
     "acceptedCommit": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad",
+    "acceptedCommitUse": "immutable-historical-provenance-only",
     "pushed": true
   },
   "retiredPr252BaseConflictR1": {
@@ -103,7 +149,14 @@
     "inspectAuthorized": false,
     "resumeAuthorized": false,
     "reuseAuthorized": false,
-    "soleReplacementPacket": "phase-01-pr252-base-conflict-resolution-r2"
+    "soleReplacementPacket": "phase-01-pr252-target-binding-correction-r1"
+  },
+  "supersededPr252TargetBindingPacket": {
+    "status": "superseded-self-staling-target-binding",
+    "inspectAuthorized": false,
+    "resumeAuthorized": false,
+    "reuseAuthorized": false,
+    "replacementPacket": "phase-01-pr252-target-binding-correction-r1"
   },
   "projectScopedProducerAdmission": {
     "operation": "codex_goal_project_refill_worker",
@@ -114,13 +167,18 @@
     "producerCount": 1,
     "preStartAdmission": {
       "mode": "serial-builtin",
+      "contractStateBeforeJitResolution": "binding-template",
+      "contractStateRequiredAtAdmission": "all-bound-fields-concrete-full-sha",
       "contract": {
         "kind": "worker-launch",
         "format": 1,
-        "canonicalSha": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad",
-        "baseSha": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad",
-        "phaseStartSha": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad",
-        "packetRevision": "phase-01-pr252-base-conflict-resolution-r2",
+        "canonicalSha": { "binding": "canonicalAtProducerAdmission" },
+        "baseSha": { "binding": "canonicalAtProducerAdmission" },
+        "phaseStartSha": { "binding": "canonicalAtProducerAdmission" },
+        "planBundleCommit": { "binding": "canonicalAtProducerAdmission" },
+        "materializationHead": { "binding": "canonicalAtProducerAdmission" },
+        "expectedTargetCommit": { "binding": "canonicalAtProducerAdmission" },
+        "packetRevision": "phase-01-pr252-target-binding-correction-r1",
         "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
         "lanePacket": "docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md",
         "phaseId": "phase-01",
@@ -141,7 +199,7 @@
       "inputPatchHash": null,
       "inputPatchHashReason": "no preexisting patch; never relabel the pinned source commit"
     },
-    "planBundleCommitBinding": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad",
+    "planBundleCommitBinding": { "binding": "canonicalAtProducerAdmission" },
     "sourceRemoteBinding": "origin",
     "sourceBranchBinding": "refactor/team-provisioning-round2-reapply",
     "sourceCommitBinding": "7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0"
@@ -160,6 +218,14 @@
     "independentFromAllP11dWorkers": true,
     "independentFromPriorPr252ConflictWorkers": true,
     "repositoryWriterAuthority": false,
+    "canonicalReresolutionAuthorized": false,
+    "materialization": {
+      "canonicalSha": { "binding": "canonicalAtProducerAdmission" },
+      "baseSha": { "binding": "canonicalAtProducerAdmission" },
+      "phaseStartSha": { "binding": "canonicalAtProducerAdmission" },
+      "materializationHead": { "binding": "canonicalAtProducerAdmission" },
+      "expectedTargetCommit": { "binding": "canonicalAtProducerAdmission" }
+    },
     "requiredDisposition": ["ACCEPT", "REJECT"],
     "acceptFindingCounts": {
       "P0": 0,
@@ -168,7 +234,7 @@
     }
   },
   "pr252BaseConflictScope": {
-    "expectedTargetCommit": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad",
+    "expectedTargetCommit": { "binding": "canonicalAtProducerAdmission" },
     "sourceRemote": "origin",
     "sourceBranch": "refactor/team-provisioning-round2-reapply",
     "sourceCommit": "7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0",
@@ -200,13 +266,23 @@
       "sourceRemote": "origin",
       "sourceBranch": "refactor/team-provisioning-round2-reapply",
       "sourceCommit": "7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0",
-      "expectedTargetCommit": "e7e7e734c82c49105682e7a19bbedafa1f5ddbad"
+      "expectedTargetCommit": { "binding": "canonicalAtProducerAdmission" }
     },
     "openIntegrationAttemptAcceptedFields": ["reviewedOutputId"],
+    "integrationTargetCommit": { "binding": "canonicalAtProducerAdmission" },
     "runtimeCreatesTrueMerge": true,
     "runtimeValidatesExactConflictSet": true,
+    "runtimeValidation": {
+      "role": "validation-only",
+      "choosesDag": false,
+      "choosesBranch": false,
+      "resolvesCanonicalBinding": false,
+      "allResolvedTargetFieldsMustEqualStoredBinding": true,
+      "allResolvedTargetFieldsMustEqualCurrentCanonical": true,
+      "failClosedOnDrift": true
+    },
     "requiredParentOrder": [
-      "e7e7e734c82c49105682e7a19bbedafa1f5ddbad",
+      { "binding": "canonicalAtProducerAdmission" },
       "7afc908ce92f14b4b0ebd06cc4aa3a4cf33807d0"
     ],
     "runtimePushRequiredBeforeAdvance": true
@@ -224,8 +300,9 @@
     "final merge parents and exact conflict-set proof"
   ],
   "authorization": {
-    "authorized": ["PR252-base-conflict-resolution-producer"],
-    "authorizedNodes": ["PR252-base-conflict-resolution"],
+    "authorizedNow": [],
+    "conditionallyAuthorizedAfterLaunchGate": ["PR252-base-conflict-resolution-producer"],
+    "authorizedNodesAfterLaunchGate": ["PR252-base-conflict-resolution"],
     "mode": "base-conflict-resolution",
     "producerCount": 1,
     "integrationReviewerCountAfterProducer": 1,
@@ -272,11 +349,11 @@
     "algorithm": "sha256",
     "controllerPacket": {
       "path": "docs/hosted-web-phases/phase-01/controller-packet.md",
-      "sha256": "b75422bd5d0cedfad5ec8d847cba0c35ca31c3d65d1260b2797031fe0038241a"
+      "sha256": "fa369d245b95defa44dece737bfb0ac8c314f127d3b1fa6ca4caa386232e8009"
     },
     "lanePacket": {
       "path": "docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md",
-      "sha256": "05d102213f18d7ce5320f0bab6e9a22d422e5b873e431a577a5422c15758f8a7"
+      "sha256": "1d48c8dfd565edc996c50387528dc525900c890650cdd76f2bc531636f035290"
     }
   },
   "authorityTiers": {
@@ -293,11 +370,11 @@
       "docs/hosted-web-phases/phase-01/execution-dag.md",
       "docs/hosted-web-phases/phase-01/lanes/pr252-base-conflict-resolution.md"
     ],
-    "accepted-p11d": [
+    "accepted-p11d-historical-provenance": [
       "strict result be0c9abd679f817c386d1d06d1b738c2a1505bb3c4718279129ab74842c98fa6",
       "reviewed output f3394026185348c84673d44a9b30a82667c3ff9435b5d4d7609c04785c274f41",
       "integration p1-1d-shadowed-map-r4-accepted-integration-v3",
-      "accepted/pushed commit e7e7e734c82c49105682e7a19bbedafa1f5ddbad"
+      "accepted/pushed P1.1D commit e7e7e734c82c49105682e7a19bbedafa1f5ddbad"
     ],
     "researchWriteException": null
   }
