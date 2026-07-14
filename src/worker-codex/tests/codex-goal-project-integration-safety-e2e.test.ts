@@ -21,36 +21,63 @@ const execFileAsync = promisify(execFile);
 
 describe("project integration safety kernel e2e", () => {
   it("applies a preserved patch from registry jobs into an isolated worktree", async () => {
-    const root = await mkdtemp(join(tmpdir(), "project-integration-preserved-patch-"));
-    const projectRoot = join(root, "var", "data", "agent-teams-hosted-web-refactor");
+    const root = await mkdtemp(
+      join(tmpdir(), "project-integration-preserved-patch-"),
+    );
+    const projectRoot = join(
+      root,
+      "var",
+      "data",
+      "agent-teams-hosted-web-refactor",
+    );
     const worktreeRoot = join(projectRoot, "worktrees");
-    const targetPath = join(worktreeRoot, "integration-hosted-web-feature-boundaries");
+    const targetPath = join(
+      worktreeRoot,
+      "integration-hosted-web-feature-boundaries",
+    );
     const workerPath = join(worktreeRoot, "phase-0-worker-h6");
     const registryRootDir = join(projectRoot, "worker-jobs", "registry-v2");
     const jobsRoot = join(projectRoot, "worker-jobs", "jobs");
     const controllerRoot = join(jobsRoot, "controller-v2");
-    const patchPath = join(jobsRoot, "phase-0-worker-h6", "worker.preserved.patch");
+    const patchPath = join(
+      jobsRoot,
+      "phase-0-worker-h6",
+      "worker.preserved.patch",
+    );
 
     try {
       await mkdir(targetPath, { recursive: true });
       await git(targetPath, ["init", "-b", "main"]);
       await git(targetPath, ["config", "user.name", "Seed"]);
       await git(targetPath, ["config", "user.email", "seed@example.com"]);
-      await writeFile(join(targetPath, "feature.ts"), "export const value = 1;\n");
+      await writeFile(
+        join(targetPath, "feature.ts"),
+        "export const value = 1;\n",
+      );
       await git(targetPath, ["add", "feature.ts"]);
       await git(targetPath, ["commit", "-m", "chore: seed synthetic project"]);
       await git(root, ["clone", targetPath, workerPath]);
-      await writeFile(join(workerPath, "feature.ts"), "export const value = 2;\n");
+      await writeFile(
+        join(workerPath, "feature.ts"),
+        "export const value = 2;\n",
+      );
       await mkdir(join(jobsRoot, "phase-0-worker-h6"), { recursive: true });
-      await writeFile(patchPath, await gitOutput(workerPath, ["diff", "--binary"]));
+      await writeFile(
+        patchPath,
+        await gitOutput(workerPath, ["diff", "--binary"]),
+      );
       await mkdir(controllerRoot, { recursive: true });
+      await mkdir(registryRootDir, { recursive: true });
 
-      const baseCommit = (await gitOutput(targetPath, ["rev-parse", "HEAD"])).trim();
+      const baseCommit = (
+        await gitOutput(targetPath, ["rev-parse", "HEAD"])
+      ).trim();
       const controller: ProjectIntegrationMcpController = {
         registryRootDir,
         controller: { jobId: "controller-v2", jobRootDir: controllerRoot },
         scope: {
           projectId: "agent-teams-hosted-web-refactor",
+          registryRoot: registryRootDir,
           workspaceRoots: [targetPath],
           worktreeRoots: [worktreeRoot],
           jobIdPrefixes: ["phase-0-"],
@@ -61,7 +88,8 @@ describe("project integration safety kernel e2e", () => {
       const handlers = createLocalProjectIntegrationMcpToolHandlers({
         loadController: async () => controller,
         resolvePathArg: (_args, value, fieldName) => {
-          if (typeof value !== "string" || !value) throw new Error(`${fieldName}_required`);
+          if (typeof value !== "string" || !value)
+            throw new Error(`${fieldName}_required`);
           return value;
         },
       });
@@ -98,20 +126,32 @@ describe("project integration safety kernel e2e", () => {
           },
         },
       });
-      await writeFile(join(workerPath, "feature.ts"), "export const value = 999;\n");
-      await writeFile(patchPath, await gitOutput(workerPath, ["diff", "--binary"]));
-      const applied = await handlers.applyWorkerOutput({ ...args, confirmApply: true });
+      await writeFile(
+        join(workerPath, "feature.ts"),
+        "export const value = 999;\n",
+      );
+      await writeFile(
+        patchPath,
+        await gitOutput(workerPath, ["diff", "--binary"]),
+      );
+      const applied = await handlers.applyWorkerOutput({
+        ...args,
+        confirmApply: true,
+      });
 
       expect(applied.structuredContent).toMatchObject({ ok: true });
-      expect(await readFile(join(targetPath, "feature.ts"), "utf8"))
-        .toBe("export const value = 2;\n");
+      expect(await readFile(join(targetPath, "feature.ts"), "utf8")).toBe(
+        "export const value = 2;\n",
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
   it("applies, checks, commits, pushes, records and reopens producer admission", async () => {
-    const root = await mkdtemp(join(tmpdir(), "project-integration-safety-e2e-"));
+    const root = await mkdtemp(
+      join(tmpdir(), "project-integration-safety-e2e-"),
+    );
     const remotePath = join(root, "remote.git");
     const seedPath = join(root, "seed");
     const targetPath = join(root, "target");
@@ -124,25 +164,44 @@ describe("project integration safety kernel e2e", () => {
     await git(seedPath, ["init", "-b", "main"]);
     await git(seedPath, ["config", "user.name", "Seed"]);
     await git(seedPath, ["config", "user.email", "seed@example.com"]);
-    await writeFile(join(seedPath, "src", "feature.ts"), "export const value = 1;\n");
+    await writeFile(
+      join(seedPath, "src", "feature.ts"),
+      "export const value = 1;\n",
+    );
     await git(seedPath, ["add", "."]);
     await git(seedPath, ["commit", "-m", "chore: seed synthetic project"]);
     await git(seedPath, ["remote", "add", "origin", remotePath]);
     await git(seedPath, ["push", "-u", "origin", "main"]);
-    await git(root, ["--git-dir", remotePath, "symbolic-ref", "HEAD", "refs/heads/main"]);
+    await git(root, [
+      "--git-dir",
+      remotePath,
+      "symbolic-ref",
+      "HEAD",
+      "refs/heads/main",
+    ]);
     await git(root, ["clone", remotePath, targetPath]);
     await git(root, ["clone", remotePath, workerPath]);
     await mkdir(controllerRoot, { recursive: true });
+    await mkdir(registryRootDir, { recursive: true });
 
-    await writeFile(join(workerPath, "src", "feature.ts"), "export const value = 2;\n");
+    await writeFile(
+      join(workerPath, "src", "feature.ts"),
+      "export const value = 2;\n",
+    );
     const patchPath = join(workerPath, "worker-output.patch");
-    await writeFile(patchPath, await gitOutput(workerPath, ["diff", "--binary"]));
-    const baseCommit = (await gitOutput(targetPath, ["rev-parse", "HEAD"])).trim();
+    await writeFile(
+      patchPath,
+      await gitOutput(workerPath, ["diff", "--binary"]),
+    );
+    const baseCommit = (
+      await gitOutput(targetPath, ["rev-parse", "HEAD"])
+    ).trim();
     const controller: ProjectIntegrationMcpController = {
       registryRootDir,
       controller: { jobId: "controller-v1", jobRootDir: controllerRoot },
       scope: {
         projectId: "synthetic-project",
+        registryRoot: registryRootDir,
         workspaceRoots: [targetPath, workerPath],
         consumedOutputLedgerRoots: [ledgerRoot],
         jobIdPrefixes: ["synthetic-"],
@@ -158,7 +217,8 @@ describe("project integration safety kernel e2e", () => {
     const handlers = createLocalProjectIntegrationMcpToolHandlers({
       loadController,
       resolvePathArg: (_args, value, fieldName) => {
-        if (typeof value !== "string" || !value) throw new Error(`${fieldName}_required`);
+        if (typeof value !== "string" || !value)
+          throw new Error(`${fieldName}_required`);
         return value;
       },
     });
@@ -178,10 +238,12 @@ describe("project integration safety kernel e2e", () => {
       approvedFiles: ["src/feature.ts"],
       allowedPathPrefixes: ["src"],
       requiredCheckIds: ["synthetic-check"],
-      requiredChecks: [{
-        checkId: "synthetic-check",
-        command: ["node", "-e", "process.exit(0)"],
-      }],
+      requiredChecks: [
+        {
+          checkId: "synthetic-check",
+          command: ["node", "-e", "process.exit(0)"],
+        },
+      ],
       reviewedBy: "synthetic-controller",
       reviewReason: "synthetic e2e approval",
     } as const;
@@ -195,24 +257,31 @@ describe("project integration safety kernel e2e", () => {
       confirmCommit: true,
     });
     expect(committed.structuredContent).toMatchObject({ ok: true });
-    const pushed = await projectIntegrationPushApprovedCommitWithConsumedLedger({
-      args: { ...args, confirmPush: true },
-      loadController,
-      pushApprovedCommitHandler: handlers.pushApprovedCommit,
-    });
+    const pushed = await projectIntegrationPushApprovedCommitWithConsumedLedger(
+      {
+        args: { ...args, confirmPush: true },
+        loadController,
+        pushApprovedCommitHandler: handlers.pushApprovedCommit,
+      },
+    );
     expect(pushed.structuredContent).toMatchObject({
       ok: true,
     });
-    expect(await gitOutput(root, [
-      "--git-dir",
-      remotePath,
-      "show",
-      "main:src/feature.ts",
-    ])).toBe("export const value = 2;\n");
-    expect(await gitOutput(targetPath, ["show", "-s", "--format=%an <%ae>"]))
-      .toBe("Approved Integrator <integrator@example.com>\n");
+    expect(
+      await gitOutput(root, [
+        "--git-dir",
+        remotePath,
+        "show",
+        "main:src/feature.ts",
+      ]),
+    ).toBe("export const value = 2;\n");
+    expect(
+      await gitOutput(targetPath, ["show", "-s", "--format=%an <%ae>"]),
+    ).toBe("Approved Integrator <integrator@example.com>\n");
 
-    const ledger = await readCodexGoalConsumedOutputLedgers({ roots: [ledgerRoot] });
+    const ledger = await readCodexGoalConsumedOutputLedgers({
+      roots: [ledgerRoot],
+    });
     const record = consumedOutputRecordFor({
       ledger,
       jobId: "synthetic-worker-1",
@@ -248,7 +317,9 @@ describe("project integration safety kernel e2e", () => {
   });
 
   it("archives rejected output and safely adopts its controller-owned patch", async () => {
-    const root = await mkdtemp(join(tmpdir(), "project-integration-rejection-e2e-"));
+    const root = await mkdtemp(
+      join(tmpdir(), "project-integration-rejection-e2e-"),
+    );
     const targetPath = join(root, "target");
     const workerPath = join(root, "worker");
     const registryRootDir = join(root, "worker-jobs", "registry");
@@ -260,21 +331,34 @@ describe("project integration safety kernel e2e", () => {
       await git(targetPath, ["init", "-b", "main"]);
       await git(targetPath, ["config", "user.name", "Seed"]);
       await git(targetPath, ["config", "user.email", "seed@example.com"]);
-      await writeFile(join(targetPath, "feature.ts"), "export const value = 1;\n");
+      await writeFile(
+        join(targetPath, "feature.ts"),
+        "export const value = 1;\n",
+      );
       await git(targetPath, ["add", "feature.ts"]);
       await git(targetPath, ["commit", "-m", "chore: seed synthetic project"]);
       await git(root, ["clone", targetPath, workerPath]);
-      await writeFile(join(workerPath, "feature.ts"), "export const value = 2;\n");
+      await writeFile(
+        join(workerPath, "feature.ts"),
+        "export const value = 2;\n",
+      );
       const patchPath = join(workerPath, "worker-output.patch");
-      await writeFile(patchPath, await gitOutput(workerPath, ["diff", "--binary"]));
+      await writeFile(
+        patchPath,
+        await gitOutput(workerPath, ["diff", "--binary"]),
+      );
       await mkdir(controllerRoot, { recursive: true });
+      await mkdir(registryRootDir, { recursive: true });
 
-      const baseCommit = (await gitOutput(targetPath, ["rev-parse", "HEAD"])).trim();
+      const baseCommit = (
+        await gitOutput(targetPath, ["rev-parse", "HEAD"])
+      ).trim();
       const controller: ProjectIntegrationMcpController = {
         registryRootDir,
         controller: { jobId: "controller-v1", jobRootDir: controllerRoot },
         scope: {
           projectId: "synthetic-project",
+          registryRoot: registryRootDir,
           workspaceRoots: [targetPath, workerPath],
           consumedOutputLedgerRoots: [ledgerRoot],
           jobIdPrefixes: ["synthetic-"],
@@ -354,11 +438,16 @@ describe("project integration safety kernel e2e", () => {
         status: ProjectAdmissionDecisionStatus.Allowed,
       });
 
-      const rawRecord = JSON.parse(await readFile(join(
-        ledgerRoot,
-        "items",
-        "synthetic-rejected-worker-1--synthetic-rejected-attempt-1.json",
-      ), "utf8"));
+      const rawRecord = JSON.parse(
+        await readFile(
+          join(
+            ledgerRoot,
+            "items",
+            "synthetic-rejected-worker-1--synthetic-rejected-attempt-1.json",
+          ),
+          "utf8",
+        ),
+      );
       expect(rawRecord).toMatchObject({
         status: "rejected",
         closedAt: expect.any(String),
@@ -370,8 +459,9 @@ describe("project integration safety kernel e2e", () => {
           numstatPath: expect.any(String),
         },
       });
-      await expect(readFile(rawRecord.backup.patchPath, "utf8"))
-        .resolves.toContain("export const value = 2");
+      await expect(
+        readFile(rawRecord.backup.patchPath, "utf8"),
+      ).resolves.toContain("export const value = 2");
 
       const siblingPatchPath = join(
         controllerRoot,
@@ -394,10 +484,7 @@ describe("project integration safety kernel e2e", () => {
         "archives",
         "synthetic-other-worker-rejected-old-attempt",
       );
-      const otherWorkerPatchPath = join(
-        otherWorkerArchivePath,
-        "tracked.diff",
-      );
+      const otherWorkerPatchPath = join(otherWorkerArchivePath, "tracked.diff");
       await mkdir(join(controllerRoot, "not-archives"), { recursive: true });
       await mkdir(otherControllerArchivePath, { recursive: true });
       await mkdir(otherWorkerArchivePath, { recursive: true });
@@ -416,30 +503,36 @@ describe("project integration safety kernel e2e", () => {
         attemptId: "synthetic-adoption-sibling-attempt",
         workerPatchPath: siblingPatchPath,
       } as const;
-      await expect(handlers.openAttempt({
-        ...siblingAttemptArgs,
-        confirmOpen: true,
-      })).rejects.toThrow("project_integration_handoff_patch_unowned");
+      await expect(
+        handlers.openAttempt({
+          ...siblingAttemptArgs,
+          confirmOpen: true,
+        }),
+      ).rejects.toThrow("project_integration_handoff_patch_unowned");
 
       const otherControllerAttemptArgs = {
         ...adoptionBaseArgs,
         attemptId: "synthetic-adoption-other-controller-attempt",
         workerPatchPath: otherControllerPatchPath,
       } as const;
-      await expect(handlers.openAttempt({
-        ...otherControllerAttemptArgs,
-        confirmOpen: true,
-      })).rejects.toThrow("project_integration_handoff_patch_unowned");
+      await expect(
+        handlers.openAttempt({
+          ...otherControllerAttemptArgs,
+          confirmOpen: true,
+        }),
+      ).rejects.toThrow("project_integration_handoff_patch_unowned");
 
       const otherWorkerAttemptArgs = {
         ...adoptionBaseArgs,
         attemptId: "synthetic-adoption-other-worker-attempt",
         workerPatchPath: otherWorkerPatchPath,
       } as const;
-      await expect(handlers.openAttempt({
-        ...otherWorkerAttemptArgs,
-        confirmOpen: true,
-      })).rejects.toThrow("project_integration_handoff_patch_unowned");
+      await expect(
+        handlers.openAttempt({
+          ...otherWorkerAttemptArgs,
+          confirmOpen: true,
+        }),
+      ).rejects.toThrow("project_integration_handoff_patch_unowned");
 
       const adoptionArgs = {
         ...adoptionBaseArgs,
@@ -452,8 +545,9 @@ describe("project integration safety kernel e2e", () => {
         confirmApply: true,
       });
       expect(adopted.structuredContent).toMatchObject({ ok: true });
-      expect(await readFile(join(targetPath, "feature.ts"), "utf8"))
-        .toBe("export const value = 2;\n");
+      expect(await readFile(join(targetPath, "feature.ts"), "utf8")).toBe(
+        "export const value = 2;\n",
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -464,6 +558,9 @@ async function git(cwd: string, args: readonly string[]): Promise<void> {
   await execFileAsync("git", args, { cwd });
 }
 
-async function gitOutput(cwd: string, args: readonly string[]): Promise<string> {
+async function gitOutput(
+  cwd: string,
+  args: readonly string[],
+): Promise<string> {
   return (await execFileAsync("git", args, { cwd })).stdout;
 }

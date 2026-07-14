@@ -12,13 +12,23 @@ import {
 import { basename, dirname, isAbsolute, join, relative } from "node:path";
 import { promisify } from "node:util";
 
-import { detectSecretLikeContent } from "@vioxen/subscription-runtime/worker-core";
+import {
+  detectSecretLikeContent,
+  type ProjectAccessScope,
+} from "@vioxen/subscription-runtime/worker-core";
 
 import type { ProjectIntegrationMcpController } from "../ports/project-integration-mcp-tool-handlers";
 
 const execFileAsync = promisify(execFile);
 const maxManifestBytes = 1024 * 1024;
 const maxPatchBytes = 16 * 1024 * 1024;
+
+export type LocalRegisteredWorkerOwnership = {
+  readonly jobId: string;
+  readonly jobRootDir: string;
+  readonly workspacePath: string;
+  readonly projectAccessScope?: ProjectAccessScope;
+};
 
 export function localProjectIntegrationSnapshotRoot(
   controller: ProjectIntegrationMcpController,
@@ -41,6 +51,7 @@ export async function validateLocalWorkerHandoffArtifact(input: {
   readonly manifestSha256?: string;
   readonly baseCommit?: string;
   readonly changedPaths: readonly string[];
+  readonly registeredWorker?: LocalRegisteredWorkerOwnership;
 }): Promise<{
   readonly baseCommit?: string;
   readonly manifestPath?: string;
@@ -50,17 +61,24 @@ export async function validateLocalWorkerHandoffArtifact(input: {
 }> {
   assertSafeWorkerJobId(input.workerJobId);
   assertSafePathSegment(input.attemptId, "integration_attempt_id");
-  const expectedJobRoot = await canonicalDirectoryIfExists(join(
-    dirname(input.controller.controller.jobRootDir),
-    input.workerJobId,
-  ));
-  const patchFile = await readCanonicalRegularFile(input.patchPath, maxPatchBytes);
+  const expectedJobRoot = await resolveWorkerJobRoot({
+    controller: input.controller,
+    workerJobId: input.workerJobId,
+    workspacePath: input.workspacePath,
+    ...(input.registeredWorker
+      ? { registeredWorker: input.registeredWorker }
+      : {}),
+  });
+  const patchFile = await readCanonicalRegularFile(
+    input.patchPath,
+    maxPatchBytes,
+  );
   if (detectSecretLikeContent(patchFile.bytes) !== undefined) {
     throw new Error("project_integration_handoff_secret_like_content");
   }
   const patchPath = patchFile.path;
-  const ownedByWorkerJob = expectedJobRoot !== undefined &&
-    pathInside(expectedJobRoot, patchPath);
+  const ownedByWorkerJob =
+    expectedJobRoot !== undefined && pathInside(expectedJobRoot, patchPath);
   const ownedByControllerArchive = await patchInsideControllerRejectedArchive({
     controller: input.controller,
     workerJobId: input.workerJobId,
@@ -69,11 +87,13 @@ export async function validateLocalWorkerHandoffArtifact(input: {
   if (
     !ownedByWorkerJob &&
     !ownedByControllerArchive &&
-    !await patchInsideProjectScope(input.controller, patchPath)
+    !(await patchInsideProjectScope(input.controller, patchPath))
   ) {
-    throw new Error(input.manifestPath || input.manifestSha256
-      ? "project_integration_handoff_manifest_unowned_patch"
-      : "project_integration_handoff_patch_unowned");
+    throw new Error(
+      input.manifestPath || input.manifestSha256
+        ? "project_integration_handoff_manifest_unowned_patch"
+        : "project_integration_handoff_patch_unowned",
+    );
   }
   const isManifestHandoff = basename(patchPath).endsWith(".handoff.patch");
   if (!isManifestHandoff) {
@@ -141,14 +161,13 @@ export async function validateLocalWorkerHandoffArtifact(input: {
   if (!pathInside(expectedJobRoot, summaryPath)) {
     throw new Error("project_integration_handoff_summary_unowned");
   }
-  if (input.summaryPath && await realpath(input.summaryPath) !== summaryPath) {
+  if (
+    input.summaryPath &&
+    (await realpath(input.summaryPath)) !== summaryPath
+  ) {
     throw new Error("project_integration_handoff_summary_mismatch");
   }
-  assertDescriptor(
-    manifest.artifacts.summary,
-    summaryFile,
-    maxManifestBytes,
-  );
+  assertDescriptor(manifest.artifacts.summary, summaryFile, maxManifestBytes);
   const manifestChangedPaths = uniqueSorted(
     manifest.changedPaths.map(assertSafeChangedPath),
   );
@@ -160,7 +179,10 @@ export async function validateLocalWorkerHandoffArtifact(input: {
     attemptId: input.attemptId,
     bytes: patchFile.bytes,
   });
-  const patchChangedPaths = await patchChangedPathsFromGit(workspacePath, snapshot.path);
+  const patchChangedPaths = await patchChangedPathsFromGit(
+    workspacePath,
+    snapshot.path,
+  );
   if (
     !sameStrings(manifestChangedPaths, requestedChangedPaths) ||
     !sameStrings(manifestChangedPaths, patchChangedPaths)
@@ -174,6 +196,115 @@ export async function validateLocalWorkerHandoffArtifact(input: {
     patchSha256: snapshot.sha256,
     summaryPath,
   };
+}
+
+async function resolveWorkerJobRoot(input: {
+  readonly controller: ProjectIntegrationMcpController;
+  readonly workerJobId: string;
+  readonly workspacePath: string;
+  readonly registeredWorker?: LocalRegisteredWorkerOwnership;
+}): Promise<string | undefined> {
+  const registryRoot = await requiredCanonicalDirectory(
+    input.controller.registryRootDir,
+    "project_integration_registry_root_missing",
+  );
+  const jobStorageRoot = await requiredCanonicalDirectory(
+    dirname(registryRoot),
+    "project_integration_job_storage_root_missing",
+  );
+  const requestedWorkspace = await requiredCanonicalDirectory(
+    input.workspacePath,
+    "project_integration_worker_workspace_missing",
+  );
+  if (
+    !(await pathInsideDeclaredRoots(requestedWorkspace, [
+      ...(input.controller.scope.workspaceRoots ?? []),
+      ...(input.controller.scope.worktreeRoots ?? []),
+    ]))
+  ) {
+    throw new Error("project_integration_worker_workspace_outside_scope");
+  }
+
+  const worker = input.registeredWorker;
+  if (worker !== undefined) {
+    if (worker.jobId !== input.workerJobId) {
+      throw new Error("project_integration_worker_registry_identity_mismatch");
+    }
+    const workerScope = worker.projectAccessScope;
+    if (
+      workerScope === undefined ||
+      workerScope.projectId !== input.controller.scope.projectId
+    ) {
+      throw new Error("project_integration_worker_registry_scope_mismatch");
+    }
+    const [workerRegistryRoot, controllerRegistryRoot, registeredWorkspace] =
+      await Promise.all([
+        canonicalDirectoryIfExists(workerScope.registryRoot ?? ""),
+        canonicalDirectoryIfExists(input.controller.scope.registryRoot ?? ""),
+        canonicalDirectoryIfExists(worker.workspacePath),
+      ]);
+    if (
+      workerRegistryRoot !== registryRoot ||
+      controllerRegistryRoot !== registryRoot ||
+      registeredWorkspace === undefined ||
+      registeredWorkspace !== requestedWorkspace
+    ) {
+      throw new Error("project_integration_worker_registry_ownership_mismatch");
+    }
+    if (
+      !(await pathInsideDeclaredRoots(requestedWorkspace, [
+        ...(workerScope.workspaceRoots ?? []),
+        ...(workerScope.worktreeRoots ?? []),
+      ])) ||
+      (workerScope.isolatedWorkspaceRoot !== undefined &&
+        (await canonicalDirectoryIfExists(
+          workerScope.isolatedWorkspaceRoot,
+        )) !== requestedWorkspace)
+    ) {
+      throw new Error("project_integration_worker_registry_workspace_mismatch");
+    }
+    const jobRoot = await canonicalDirectoryIfExists(worker.jobRootDir);
+    if (jobRoot === undefined) return undefined;
+    if (
+      basename(jobRoot) !== input.workerJobId ||
+      !pathInside(jobStorageRoot, jobRoot)
+    ) {
+      throw new Error("project_integration_worker_registry_job_root_unowned");
+    }
+    return jobRoot;
+  }
+
+  const legacyJobRoot = await canonicalDirectoryIfExists(
+    join(dirname(input.controller.controller.jobRootDir), input.workerJobId),
+  );
+  if (
+    legacyJobRoot !== undefined &&
+    (basename(legacyJobRoot) !== input.workerJobId ||
+      !pathInside(jobStorageRoot, legacyJobRoot))
+  ) {
+    throw new Error("project_integration_worker_legacy_job_root_unowned");
+  }
+  return legacyJobRoot;
+}
+
+async function requiredCanonicalDirectory(
+  path: string,
+  errorCode: string,
+): Promise<string> {
+  const canonical = await canonicalDirectoryIfExists(path);
+  if (canonical === undefined) throw new Error(errorCode);
+  return canonical;
+}
+
+async function pathInsideDeclaredRoots(
+  path: string,
+  roots: readonly string[],
+): Promise<boolean> {
+  for (const rootPath of roots) {
+    const root = await canonicalDirectoryIfExists(rootPath);
+    if (root !== undefined && pathInside(root, path)) return true;
+  }
+  return false;
 }
 
 type ParsedManifest = {
@@ -277,22 +408,24 @@ async function patchChangedPathsFromGit(
   workspacePath: string,
   patchPath: string,
 ): Promise<readonly string[]> {
-  const { stdout } = await execFileAsync("git", [
-    "-C",
-    workspacePath,
-    "apply",
-    "--numstat",
-    "-z",
-    patchPath,
-  ], {
-    encoding: "utf8",
-    maxBuffer: 2 * 1024 * 1024,
-    timeout: 15_000,
-  });
-  return uniqueSorted(stdout.split("\0").filter(Boolean).map((record) => {
-    const fields = record.split("\t");
-    return assertSafeChangedPath(fields.slice(2).join("\t"));
-  }));
+  const { stdout } = await execFileAsync(
+    "git",
+    ["-C", workspacePath, "apply", "--numstat", "-z", patchPath],
+    {
+      encoding: "utf8",
+      maxBuffer: 2 * 1024 * 1024,
+      timeout: 15_000,
+    },
+  );
+  return uniqueSorted(
+    stdout
+      .split("\0")
+      .filter(Boolean)
+      .map((record) => {
+        const fields = record.split("\t");
+        return assertSafeChangedPath(fields.slice(2).join("\t"));
+      }),
+  );
 }
 
 async function assertExactPatchChangedPaths(input: {
@@ -336,7 +469,10 @@ async function snapshotValidatedPatch(input: {
   return { path: snapshotPath, sha256: digest };
 }
 
-async function publishExactSnapshot(path: string, bytes: Buffer): Promise<void> {
+async function publishExactSnapshot(
+  path: string,
+  bytes: Buffer,
+): Promise<void> {
   const tempPath = join(
     dirname(path),
     `.${basename(path)}.${process.pid}.${randomUUID()}.tmp`,
@@ -379,19 +515,20 @@ async function patchInsideControllerRejectedArchive(input: {
   readonly workerJobId: string;
   readonly patchPath: string;
 }): Promise<boolean> {
-  const archiveRoot = await canonicalDirectoryIfExists(join(
-    input.controller.controller.jobRootDir,
-    "archives",
-  ));
+  const archiveRoot = await canonicalDirectoryIfExists(
+    join(input.controller.controller.jobRootDir, "archives"),
+  );
   if (archiveRoot === undefined || !pathInside(archiveRoot, input.patchPath)) {
     return false;
   }
   const rel = relative(archiveRoot, input.patchPath);
   const archiveDirectory = dirname(rel);
-  return basename(rel) === "tracked.diff" &&
+  return (
+    basename(rel) === "tracked.diff" &&
     dirname(archiveDirectory) === "." &&
     archiveDirectory.startsWith(`${input.workerJobId}-rejected-`) &&
-    archiveDirectory.length > `${input.workerJobId}-rejected-`.length;
+    archiveDirectory.length > `${input.workerJobId}-rejected-`.length
+  );
 }
 
 async function readCanonicalRegularFile(
@@ -410,7 +547,9 @@ async function readCanonicalRegularFile(
   return { path: canonical, bytes };
 }
 
-async function canonicalDirectoryIfExists(path: string): Promise<string | undefined> {
+async function canonicalDirectoryIfExists(
+  path: string,
+): Promise<string | undefined> {
   try {
     const item = await lstat(path);
     if (item.isSymbolicLink() || !item.isDirectory()) return undefined;
@@ -449,8 +588,14 @@ function uniqueSorted(values: readonly string[]): readonly string[] {
   return [...new Set(values)].sort();
 }
 
-function sameStrings(left: readonly string[], right: readonly string[]): boolean {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
+function sameStrings(
+  left: readonly string[],
+  right: readonly string[],
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  );
 }
 
 function pathInside(root: string, path: string): boolean {
@@ -466,6 +611,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isNodeError(error: unknown, code: string): error is NodeJS.ErrnoException {
+function isNodeError(
+  error: unknown,
+  code: string,
+): error is NodeJS.ErrnoException {
   return error instanceof Error && "code" in error && error.code === code;
 }
