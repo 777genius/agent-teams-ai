@@ -311,6 +311,14 @@ Some RDP (Remote Desktop Protocol) sessions expose virtual GPU drivers that can 
 - [ ] A secure universal plugin system regardless of the type of agents
 - [ ] Efficiency and controllability under load with 20-100+ agents in parallel
 
+## Vision
+
+Agent Teams AI is moving toward a simple interface for highly autonomous work. From a phone, users should be able to see only the high-level tasks that matter and give the lead agent instructions by voice. The lead should route each request to the right project and team, while agents break it down, work in parallel, communicate, review, resolve blockers, and prepare the final result with minimal supervision.
+
+Technical subtasks and coordination should remain available as a secondary layer, while the main view surfaces only the decisions, blockers, and outcomes that genuinely need attention. Agents should first try to solve problems together and involve the user only when human input is truly required.
+
+This vision is not tied to a specific SDLC or workflow. Users should be free to organize teams however they prefer and continue using their existing plugins, skills, MCP servers, rules, and agent settings.
+
 ## Development
 
 For feature architecture and implementation guidance:
