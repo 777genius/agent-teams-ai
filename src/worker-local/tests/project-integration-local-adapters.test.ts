@@ -14,6 +14,7 @@ import {
 } from "@vioxen/subscription-runtime/worker-core";
 import {
   ConfiguredCommitIdentityAdapter,
+  captureLocalTerminalOutputBackup,
   LocalConsumedOutputLedgerWriter,
   LocalGitIntegrationAdapter,
   LocalIntegratedOutputLedgerAdapter,
@@ -542,7 +543,7 @@ describe("local project integration adapters", () => {
     });
     const replay = await adapter.finalize({
       preparation,
-      pushedAt: "2026-07-12T00:01:00.000Z",
+      pushedAt: "2026-07-12T00:00:00.000Z",
     });
     expect(first.idempotentReplay).toBe(false);
     expect(replay.idempotentReplay).toBe(true);
@@ -576,6 +577,51 @@ describe("local project integration adapters", () => {
       ledgerRoot,
       decision: { ...base, archivePath: "/archive/two" },
     })).rejects.toThrow("consumed_output_ledger_terminal_conflict");
+    await expect(writer.record({
+      ledgerRoot,
+      decision: { ...base, note: "different approval evidence" },
+    })).rejects.toThrow("consumed_output_ledger_terminal_conflict");
+    await expect(writer.record({
+      ledgerRoot,
+      decision: { ...base, closedAt: "2026-07-12T00:01:00.000Z" },
+    })).rejects.toThrow("consumed_output_ledger_terminal_conflict");
+    await expect(writer.record({
+      ledgerRoot,
+      decision: {
+        ...base,
+        preexistingWorkspacePatch: {
+          path: "/archive/one/preexisting.patch",
+          sha256: "a".repeat(64),
+        },
+      },
+    })).rejects.toThrow("consumed_output_ledger_terminal_conflict");
+  });
+
+  it("preserves invalid UTF-8 patch bytes and rejects byte-distinct replay", async () => {
+    const fixture = await createGitFixture();
+    const archiveRoot = join(fixture.rootDir, "archives");
+    const sourcePatchPath = join(fixture.rootDir, "source.patch");
+    const firstBytes = Buffer.from([0x64, 0x69, 0x66, 0x66, 0x0a, 0x80]);
+    const secondBytes = Buffer.from([0x64, 0x69, 0x66, 0x66, 0x0a, 0x81]);
+    await writeFile(sourcePatchPath, firstBytes);
+
+    const captured = await captureLocalTerminalOutputBackup({
+      archiveRoot,
+      archiveName: "binary-patch",
+      workspacePath: fixture.workspacePath,
+      changedFiles: [],
+      sourcePatchPath,
+    });
+    await expect(readFile(captured.patchPath)).resolves.toEqual(firstBytes);
+
+    await writeFile(sourcePatchPath, secondBytes);
+    await expect(captureLocalTerminalOutputBackup({
+      archiveRoot,
+      archiveName: "binary-patch",
+      workspacePath: fixture.workspacePath,
+      changedFiles: [],
+      sourcePatchPath,
+    })).rejects.toThrow("integrated_output_ledger_preparation_conflict");
   });
 
   it("preserves a rejected attempt when a later attempt integrates the same worker", async () => {

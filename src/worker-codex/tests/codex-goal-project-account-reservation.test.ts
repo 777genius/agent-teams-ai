@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -12,6 +12,10 @@ import {
   releaseCodexProjectAccount,
   reserveCodexProjectAccount,
 } from "../application/project-control/codex-goal-project-account-reservation";
+import {
+  projectControlWorkspaceLocks,
+  withValidatedProjectWorkspaceLock,
+} from "../codex-goal-project-workspace-lock";
 
 const roots: string[] = [];
 
@@ -58,6 +62,86 @@ describe("project account reservation", () => {
     expect(thirdReservation.fencingToken).toBeGreaterThan(
       firstReservation.fencingToken,
     );
+  });
+
+  it("serializes stop release against restart so a successor receipt survives", async () => {
+    const root = await mkdtemp(join(tmpdir(), "project-account-release-race-"));
+    roots.push(root);
+    const workspacePath = join(root, "worktrees", "shared");
+    const registryRootDir = join(root, "worker-jobs", "registry");
+    await mkdir(workspacePath, { recursive: true });
+    const leaseStore = new InMemoryWorkerAccountLeaseStore();
+    const capacityStore = new InMemoryWorkerAccountCapacityStore();
+    const now = new Date("2026-07-13T00:00:00.000Z");
+    const account = fixture(root, "job-1");
+    const scoped = {
+      ...account,
+      manifest: { ...account.manifest, workspacePath },
+      launch: {
+        ...account.launch,
+        config: { ...account.launch.config, workspacePath },
+      },
+    };
+    const deps = { capacityStore, leaseStore, now };
+    await reserveCodexProjectAccount({ ...scoped, deps });
+    let allowStopRelease!: () => void;
+    const stopMayRelease = new Promise<void>((resolve) => {
+      allowStopRelease = resolve;
+    });
+    let stopEntered!: () => void;
+    const stopDidEnter = new Promise<void>((resolve) => {
+      stopEntered = resolve;
+    });
+    const locks = projectControlWorkspaceLocks(registryRootDir);
+    const scope = {
+      projectId: "project-a",
+      workspaceRoots: [join(root, "workspaces")],
+      worktreeRoots: [join(root, "worktrees")],
+      registryRoot: registryRootDir,
+    };
+    const stop = withValidatedProjectWorkspaceLock({
+      locks,
+      scope,
+      requestedWorkspacePath: workspacePath,
+      owner: "stop:job-1",
+      effect: async () => {
+        stopEntered();
+        await stopMayRelease;
+        await releaseCodexProjectAccount({
+          ...scoped,
+          reason: "worker_stopped",
+          deps: { leaseStore, now },
+        });
+      },
+    });
+    await stopDidEnter;
+
+    await expect(withValidatedProjectWorkspaceLock({
+      locks,
+      scope,
+      requestedWorkspacePath: workspacePath,
+      owner: "restart:job-1",
+      effect: async () => {
+        await reserveCodexProjectAccount({ ...scoped, deps });
+      },
+    })).rejects.toMatchObject({ code: "safe_execution_workspace_locked" });
+    allowStopRelease();
+    await stop;
+
+    const successor = await withValidatedProjectWorkspaceLock({
+      locks,
+      scope,
+      requestedWorkspacePath: workspacePath,
+      owner: "restart:job-1",
+      effect: async () =>
+        await reserveCodexProjectAccount({ ...scoped, deps }),
+    });
+    expect(successor.fencingToken).toBeGreaterThan(1);
+    await expect(releaseCodexProjectAccount({
+      ...scoped,
+      reason: "successor_cleanup",
+      deps: { leaseStore, now },
+    })).resolves.toBe(true);
   });
 });
 

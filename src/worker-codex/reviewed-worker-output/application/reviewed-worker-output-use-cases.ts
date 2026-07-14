@@ -34,70 +34,78 @@ export async function captureReviewedWorkerOutput(
   deps: ReviewedWorkerOutputDeps,
   input: CaptureReviewedWorkerOutputInput,
 ): Promise<ReviewedWorkerOutputSnapshot> {
-  const expectedPatchSha256 = normalizeSha256(input.expectedPatchSha256);
-  const approvedFiles = normalizeExpectedFiles(input.approvedFiles);
   const lock = await deps.locks.acquire({
     workspacePath: input.workspacePath,
     owner: `reviewed-output:${input.controllerJobId}:${input.workerJobId}`,
   });
   try {
-    const captured = await deps.snapshotter.capture({
-      workspacePath: lock.workspacePath,
-    });
-    const changedFiles = normalizeExpectedFiles(captured.changedFiles);
-    assertFilesWithinExpected(changedFiles, approvedFiles);
-    const patchSha256 = sha256(captured.patch);
-    if (patchSha256 !== expectedPatchSha256) {
-      throw new Error("reviewed_worker_output_patch_hash_mismatch");
-    }
-    const reviewDecision = reviewedOutputDecision({
-      decision: input.decision,
-      reviewedBy: input.reviewedBy,
-      reason: input.reason,
-      approvedFiles,
-      requiredChecks: input.requiredChecks,
-    });
-    const merge = normalizeReviewedOutputMerge(input.merge);
-    const capturedAt = (deps.clock ?? { now: () => new Date() })
-      .now()
-      .toISOString();
-    const reviewedOutputId = reviewedWorkerOutputId({
+    return await captureReviewedWorkerOutputLocked(deps, input, lock);
+  } finally {
+    await deps.locks.release(lock);
+  }
+}
+
+export async function captureReviewedWorkerOutputLocked(
+  deps: Pick<ReviewedWorkerOutputDeps, "snapshotter" | "store" | "clock">,
+  input: CaptureReviewedWorkerOutputInput,
+  lock: WorkspaceLock,
+): Promise<ReviewedWorkerOutputSnapshot> {
+  const expectedPatchSha256 = normalizeSha256(input.expectedPatchSha256);
+  const approvedFiles = normalizeExpectedFiles(input.approvedFiles);
+  const captured = await deps.snapshotter.capture({
+    workspacePath: lock.workspacePath,
+  });
+  const changedFiles = normalizeExpectedFiles(captured.changedFiles);
+  assertFilesWithinExpected(changedFiles, approvedFiles);
+  const patchSha256 = sha256(captured.patch);
+  if (patchSha256 !== expectedPatchSha256) {
+    throw new Error("reviewed_worker_output_patch_hash_mismatch");
+  }
+  const reviewDecision = reviewedOutputDecision({
+    decision: input.decision,
+    reviewedBy: input.reviewedBy,
+    reason: input.reason,
+    approvedFiles,
+    requiredChecks: input.requiredChecks,
+  });
+  const merge = normalizeReviewedOutputMerge(input.merge);
+  const capturedAt = (deps.clock ?? { now: () => new Date() })
+    .now()
+    .toISOString();
+  const reviewedOutputId = reviewedWorkerOutputId({
+    format: reviewedWorkerOutputFormat,
+    formatRevision: 1,
+    projectId: input.projectId,
+    controllerJobId: input.controllerJobId,
+    workerJobId: input.workerJobId,
+    taskId: input.taskId,
+    sourceWorkspacePath: input.workspacePath,
+    baseCommit: captured.baseCommit,
+    patchSha256,
+    changedFiles,
+    reviewDecision,
+    ...(merge ? { merge } : {}),
+  });
+  return await deps.store.create({
+    snapshot: {
       format: reviewedWorkerOutputFormat,
       formatRevision: 1,
+      reviewedOutputId,
       projectId: input.projectId,
       controllerJobId: input.controllerJobId,
       workerJobId: input.workerJobId,
       taskId: input.taskId,
       sourceWorkspacePath: input.workspacePath,
-      baseCommit: captured.baseCommit,
       patchSha256,
+      patchByteLength: Buffer.byteLength(captured.patch),
+      baseCommit: captured.baseCommit,
       changedFiles,
       reviewDecision,
       ...(merge ? { merge } : {}),
-    });
-    return await deps.store.create({
-      snapshot: {
-        format: reviewedWorkerOutputFormat,
-        formatRevision: 1,
-        reviewedOutputId,
-        projectId: input.projectId,
-        controllerJobId: input.controllerJobId,
-        workerJobId: input.workerJobId,
-        taskId: input.taskId,
-        sourceWorkspacePath: input.workspacePath,
-        patchSha256,
-        patchByteLength: Buffer.byteLength(captured.patch),
-        baseCommit: captured.baseCommit,
-        changedFiles,
-        reviewDecision,
-        ...(merge ? { merge } : {}),
-        capturedAt,
-      },
-      patch: captured.patch,
-    });
-  } finally {
-    await deps.locks.release(lock);
-  }
+      capturedAt,
+    },
+    patch: captured.patch,
+  });
 }
 
 function normalizeReviewedOutputMerge(

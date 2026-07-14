@@ -1,9 +1,82 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
+const MAX_STAGED_PATCH_BYTES = 16 * 1024 * 1024;
+
+export async function stagedPatchSha256(
+  workspacePath: string,
+): Promise<string> {
+  try {
+    const { stdout } = await execFileAsync("git", [
+      "-C",
+      workspacePath,
+      "diff",
+      "--cached",
+      "--binary",
+      "HEAD",
+      "--",
+    ], {
+      encoding: "buffer",
+      timeout: 120_000,
+      maxBuffer: MAX_STAGED_PATCH_BYTES,
+    });
+    return createHash("sha256").update(stdout).digest("hex");
+  } catch {
+    throw new Error("project_control_staged_patch_digest_failed");
+  }
+}
+
+export async function stagedPatchSha256ForRevision(input: {
+  readonly workspacePath: string;
+  readonly revision: string;
+  readonly patchPath: string;
+}): Promise<string> {
+  const temporaryDirectory = await mkdtemp(
+    join(tmpdir(), "subscription-runtime-staged-index-"),
+  );
+  const indexPath = join(temporaryDirectory, "index");
+  const options = {
+    env: { ...process.env, GIT_INDEX_FILE: indexPath },
+    encoding: "buffer" as const,
+    timeout: 120_000,
+    maxBuffer: MAX_STAGED_PATCH_BYTES,
+  };
+  try {
+    await execFileAsync("git", [
+      "-C",
+      input.workspacePath,
+      "read-tree",
+      input.revision,
+    ], options);
+    await execFileAsync("git", [
+      "-C",
+      input.workspacePath,
+      "apply",
+      "--cached",
+      "--binary",
+      input.patchPath,
+    ], options);
+    const { stdout } = await execFileAsync("git", [
+      "-C",
+      input.workspacePath,
+      "diff",
+      "--cached",
+      "--binary",
+      input.revision,
+      "--",
+    ], options);
+    return createHash("sha256").update(stdout).digest("hex");
+  } catch {
+    throw new Error("project_control_input_patch_staged_digest_failed");
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
+}
 
 export function assertSafeGitRefName(value: string, fieldName: string): void {
   if (

@@ -11,7 +11,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
-import { promisify } from "node:util";
+import { isDeepStrictEqual, promisify } from "node:util";
 import type { ProjectAccessScope } from "@vioxen/subscription-runtime/worker-core";
 import type {
   CodexGoalJobManifest,
@@ -26,9 +26,7 @@ import {
   assertProjectInputPatchContract,
   projectInputPatchBindingMatches,
 } from "./codex-goal-project-input-patch-policy";
-import {
-  DEFAULT_HANDOFF_ARTIFACT_LIMITS,
-} from "../../codex-goal-handoff-artifacts";
+import { stagedPatchSha256 } from "./codex-goal-project-git";
 
 const execFileAsync = promisify(execFile);
 const ADMISSION_DIRECTORY = "pre-start-admission";
@@ -143,7 +141,14 @@ export async function prepareProjectPreStartAdmission(input: {
   readonly manifest: CodexGoalJobManifestInput;
   readonly scope: ProjectAccessScope;
   readonly verifiedInputPatchArtifactSha256?: string;
+  readonly verifiedInputPatchStagedSha256?: string;
 }): Promise<{ readonly createdPaths: readonly string[] }> {
+  if (
+    input.verifiedInputPatchArtifactSha256 === undefined &&
+    input.verifiedInputPatchStagedSha256 !== undefined
+  ) {
+    throw new Error("project_control_pre_start_verified_input_patch_mismatch");
+  }
   assertDescriptorPaths(input.plan.descriptor, input.manifest.jobRootDir);
   const createdPaths: string[] = [];
   try {
@@ -180,6 +185,10 @@ export async function prepareProjectPreStartAdmission(input: {
         ? {
             verifiedInputPatch: {
               artifactSha256: input.verifiedInputPatchArtifactSha256,
+              stagedPatchSha256: requiredSha256(
+                input.verifiedInputPatchStagedSha256,
+                "verifiedInputPatchStagedSha256",
+              ),
             },
           }
         : {}),
@@ -280,17 +289,23 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
   }
 }
 
+export type ProjectPreStartAdmissionLaunchAuthorization = {
+  readonly receiptPath: string;
+  readonly previousReceipt: Readonly<Record<string, unknown>>;
+  readonly authorizedReceipt: Readonly<Record<string, unknown>>;
+};
+
 export async function authorizeProjectPreStartAdmissionLaunch(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly scope: ProjectAccessScope;
   readonly workspaceMode?: "reviewed_dirty_continuation";
-}): Promise<void> {
+}): Promise<ProjectPreStartAdmissionLaunchAuthorization | undefined> {
   const descriptor = input.manifest.projectPreStartAdmission;
   if (!descriptor) {
     if (input.scope.preStartAdmission?.required) {
       throw new Error("project_control_pre_start_admission_required");
     }
-    return;
+    return undefined;
   }
   await assertProjectPreStartAdmissionLaunchBinding({
     manifest: input.manifest,
@@ -308,12 +323,63 @@ export async function authorizeProjectPreStartAdmissionLaunch(input: {
       receipt.launchAuthorizationCount >= 0
       ? receipt.launchAuthorizationCount
       : 0;
-  await writeJsonAtomically(descriptor.receiptPath, {
+  const authorizedReceipt = {
     ...receipt,
     status: "launch_authorized",
     launchAuthorizationCount: authorizationCount + 1,
     launchAuthorizedAt: new Date().toISOString(),
-  });
+  };
+  await writeJsonAtomically(descriptor.receiptPath, authorizedReceipt);
+  return {
+    receiptPath: descriptor.receiptPath,
+    previousReceipt: receipt,
+    authorizedReceipt,
+  };
+}
+
+export async function rollbackProjectPreStartAdmissionLaunch(
+  authorization: ProjectPreStartAdmissionLaunchAuthorization,
+): Promise<void> {
+  const currentReceipt = await readJsonObject(
+    authorization.receiptPath,
+    "receipt",
+    64 * 1024,
+  );
+  if (!isDeepStrictEqual(currentReceipt, authorization.authorizedReceipt)) {
+    throw new Error(
+      "project_control_pre_start_launch_authorization_rollback_conflict",
+    );
+  }
+  await writeJsonAtomically(
+    authorization.receiptPath,
+    authorization.previousReceipt,
+  );
+}
+
+export async function withProjectPreStartAdmissionLaunchAuthorization<T>(
+  input: {
+    readonly manifest: CodexGoalJobManifest;
+    readonly scope: ProjectAccessScope;
+    readonly workspaceMode?: "reviewed_dirty_continuation";
+  },
+  start: () => Promise<T>,
+): Promise<T> {
+  const authorization = await authorizeProjectPreStartAdmissionLaunch(input);
+  try {
+    return await start();
+  } catch (error) {
+    if (authorization) {
+      try {
+        await rollbackProjectPreStartAdmissionLaunch(authorization);
+      } catch (rollbackError) {
+        throw new AggregateError(
+          [error, rollbackError],
+          "project_control_pre_start_launch_rollback_failed",
+        );
+      }
+    }
+    throw error;
+  }
 }
 
 function projectPreStartValidatorReceiptValid(input: {
@@ -351,7 +417,7 @@ async function validateProjectPreStartAdmission(input: {
   readonly scope: ProjectAccessScope;
   readonly verifiedInputPatch?: {
     readonly artifactSha256: string;
-    readonly stagedPatchSha256?: string;
+    readonly stagedPatchSha256: string;
   };
 }): Promise<void> {
   const descriptor = input.manifest.projectPreStartAdmission;
@@ -472,6 +538,8 @@ async function validateProjectPreStartAdmission(input: {
       ? {
           workspaceMode: "verified_input_patch",
           inputPatchArtifactSha256: verifiedInputPatch.artifactSha256,
+          expectedWorkspaceStagedPatchSha256:
+            verifiedInputPatch.stagedPatchSha256,
           workspaceStagedPatchSha256: afterBinding.workspaceStagedPatchSha256,
         }
       : {}),
@@ -691,15 +759,9 @@ async function currentBinding(
     ["-C", manifest.workspacePath, "status", "--porcelain", "--untracked-files=all"],
     { encoding: "utf8", timeout: VALIDATOR_TIMEOUT_MS },
   )).stdout.trim();
-  const workspaceStagedPatch = (await execFileAsync(
-    "git",
-    ["-C", manifest.workspacePath, "diff", "--cached", "--binary", "HEAD", "--"],
-    {
-      encoding: "utf8",
-      timeout: VALIDATOR_TIMEOUT_MS,
-      maxBuffer: DEFAULT_HANDOFF_ARTIFACT_LIMITS.maxPatchBytes,
-    },
-  )).stdout;
+  const workspaceStagedPatchSha256 = await stagedPatchSha256(
+    manifest.workspacePath,
+  );
   const workspaceUnstagedPaths = (await execFileAsync(
     "git",
     ["-C", manifest.workspacePath, "diff", "--name-only", "-z", "--"],
@@ -713,7 +775,7 @@ async function currentBinding(
   return {
     workspaceHead,
     workspaceStatus,
-    workspaceStagedPatchSha256: sha256(Buffer.from(workspaceStagedPatch)),
+    workspaceStagedPatchSha256,
     workspaceUnstagedDirty:
       workspaceUnstagedPaths.length > 0 || workspaceUntrackedPaths.length > 0,
     contractSha256: sha256(Buffer.from(await readBoundedFile(descriptor.contractPath, MAX_CONTRACT_BYTES, "contract"))),
@@ -724,7 +786,7 @@ async function currentBinding(
 
 type VerifiedInputPatchBinding = {
   readonly artifactSha256: string;
-  readonly stagedPatchSha256?: string;
+  readonly stagedPatchSha256: string;
 };
 
 function verifiedInputPatchBindingValid(
@@ -732,10 +794,10 @@ function verifiedInputPatchBindingValid(
   verifiedInputPatch: VerifiedInputPatchBinding,
 ): boolean {
   return /^[0-9a-f]{64}$/.test(verifiedInputPatch.artifactSha256) &&
+    /^[0-9a-f]{64}$/.test(verifiedInputPatch.stagedPatchSha256) &&
     binding.workspaceStatus !== "" &&
     !binding.workspaceUnstagedDirty &&
-    (verifiedInputPatch.stagedPatchSha256 === undefined ||
-      binding.workspaceStagedPatchSha256 === verifiedInputPatch.stagedPatchSha256);
+    binding.workspaceStagedPatchSha256 === verifiedInputPatch.stagedPatchSha256;
 }
 
 async function readVerifiedInputPatchFromExistingReceipt(
@@ -775,10 +837,22 @@ function verifiedInputPatchFromReceipt(
     receipt.workspaceStagedPatchSha256,
     "workspaceStagedPatchSha256",
   );
+  if (receipt.expectedWorkspaceStagedPatchSha256 === undefined) {
+    throw new Error(
+      "project_control_pre_start_verified_input_patch_receipt_migration_required",
+    );
+  }
+  const expectedStagedPatchSha256 = requiredSha256(
+    receipt.expectedWorkspaceStagedPatchSha256,
+    "expectedWorkspaceStagedPatchSha256",
+  );
   if (artifactSha256 !== requiredSha256(contract.inputPatchHash, "inputPatchHash")) {
     throw new Error("project_control_pre_start_verified_input_patch_mismatch");
   }
-  return { artifactSha256, stagedPatchSha256 };
+  if (stagedPatchSha256 !== expectedStagedPatchSha256) {
+    throw new Error("project_control_pre_start_verified_input_patch_mismatch");
+  }
+  return { artifactSha256, stagedPatchSha256: expectedStagedPatchSha256 };
 }
 
 function assertDescriptorPaths(
