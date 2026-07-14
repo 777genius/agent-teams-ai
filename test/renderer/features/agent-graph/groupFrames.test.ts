@@ -79,6 +79,17 @@ describe('group frame labels', () => {
     expect(bounds.left - padded.left).toBe(22);
   });
 
+  it('keeps a visible gutter between deeply nested frame borders', () => {
+    const bounds = { left: -100, top: -50, right: 100, bottom: 50 };
+    const depthTwo = getPaddedGroupFrameBounds(bounds, 1, groupFrame({ depth: 2 }));
+    const depthThree = getPaddedGroupFrameBounds(bounds, 1, groupFrame({ depth: 3 }));
+
+    expect(depthThree.left - depthTwo.left).toBe(7);
+    expect(depthThree.top - depthTwo.top).toBe(11);
+    expect(depthTwo.right - depthThree.right).toBe(7);
+    expect(depthTwo.bottom - depthThree.bottom).toBe(11);
+  });
+
   it('keeps labels readable at far zoom', () => {
     expect(getGroupFrameLabelScaleZoom(0.01)).toBe(0.015);
   });

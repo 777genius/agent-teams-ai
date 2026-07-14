@@ -113,6 +113,8 @@ export interface GraphNode {
   layoutOnly?: boolean;
   /** Preformatted status/count summary used by semantic zoom cards. */
   semanticSummary?: string;
+  /** Earliest semantic zoom level where a task card remains visible. */
+  taskZoomVisibility?: 'overview' | 'summary' | 'detail';
   /** Hierarchy depth used to progressively reveal aggregate nodes at overview scale. */
   hierarchyDepth?: number;
 

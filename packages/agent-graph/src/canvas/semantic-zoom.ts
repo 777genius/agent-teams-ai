@@ -27,6 +27,19 @@ export function shouldRenderOverviewHierarchyNode(
   return node.visualVariant === 'organization' || depth <= 2;
 }
 
-export function shouldRenderTaskAtZoom(zoom: number, isEmphasized = false): boolean {
-  return isEmphasized || getGraphSemanticZoomLevel(zoom) === 'detail';
+export function shouldRenderTaskAtZoom(
+  zoom: number,
+  isEmphasized = false,
+  visibility: NonNullable<GraphNode['taskZoomVisibility']> = 'detail'
+): boolean {
+  if (isEmphasized || visibility === 'overview') return true;
+  const level = getGraphSemanticZoomLevel(zoom);
+  return level === 'detail' || (visibility === 'summary' && level === 'summary');
+}
+
+export function shouldRenderParticlesAtZoom(
+  zoom: number,
+  animateAtOverview = false
+): boolean {
+  return animateAtOverview || getGraphSemanticZoomLevel(zoom) !== 'overview';
 }

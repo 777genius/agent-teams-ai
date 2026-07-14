@@ -40,7 +40,7 @@ export function drawTasks(
     const y = node.y ?? 0;
     const isSelected = node.id === selectedId;
     const isHovered = node.id === hoveredId;
-    if (!shouldRenderTaskAtZoom(zoom, isSelected || isHovered)) continue;
+    if (!shouldRenderTaskAtZoom(zoom, isSelected || isHovered, node.taskZoomVisibility)) continue;
 
     ctx.save();
     ctx.globalAlpha = opacity;

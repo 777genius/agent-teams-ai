@@ -170,6 +170,54 @@ export class KanbanLayoutEngine {
     KanbanLayoutEngine.#layoutUnassigned(unassigned, nodes, options?.unassignedTaskRect ?? null);
   }
 
+  /** Build headers for task nodes whose positions are supplied by a static layout. */
+  static layoutStatic(nodes: GraphNode[]): void {
+    const nodeMap = this.#nodeMap;
+    nodeMap.clear();
+    for (const node of nodes) nodeMap.set(node.id, node);
+
+    const tasksByOwner = this.#tasksByOwner;
+    tasksByOwner.clear();
+    for (const node of nodes) {
+      if (node.kind !== 'task' || !node.ownerId || node.x == null || node.y == null) continue;
+      const tasks = tasksByOwner.get(node.ownerId) ?? [];
+      tasks.push(node);
+      tasksByOwner.set(node.ownerId, tasks);
+    }
+
+    this.zones.length = 0;
+    for (const [ownerId, tasks] of tasksByOwner) {
+      const owner = nodeMap.get(ownerId);
+      if (!owner || owner.x == null || owner.y == null) continue;
+
+      const firstTaskByColumn = new Map<string, GraphNode>();
+      for (const task of [...tasks].sort((left, right) => (left.y ?? 0) - (right.y ?? 0))) {
+        const column = KanbanLayoutEngine.#resolveColumn(task);
+        if (!firstTaskByColumn.has(column)) firstTaskByColumn.set(column, task);
+      }
+      const headers = KANBAN_ZONE.columns.flatMap((column) => {
+        const task = firstTaskByColumn.get(column);
+        if (!task || task.x == null || task.y == null) return [];
+        const config = COLUMN_LABELS[column] ?? { label: column, color: '#888' };
+        return [
+          {
+            label: config.label,
+            x: task.x,
+            y: task.y - KANBAN_ZONE.headerHeight,
+            color: config.color,
+          },
+        ];
+      });
+      if (headers.length === 0) continue;
+      this.zones.push({
+        ownerId,
+        ownerX: owner.x,
+        ownerY: owner.y,
+        headers,
+      });
+    }
+  }
+
   // ─── Private ──────────────────────────────────────────────────────────────
 
   static #layoutZone(

@@ -50,7 +50,7 @@ describe('OrgGraphSurface', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders the layout switch inside the centered relation toolbar', async () => {
+  it('renders hierarchy, structure, and relations as one centered mode switch', async () => {
     const onLayoutModeChange = vi.fn();
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -73,16 +73,29 @@ describe('OrgGraphSurface', () => {
       await Promise.resolve();
     });
 
-    const switchButton = host.querySelector<HTMLButtonElement>(
-      'button[aria-label="organizations.graph.layout.switchToNested"]'
+    const modeButtons = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('button[data-organization-map-view-mode]')
     );
-    expect(switchButton).not.toBeNull();
+    expect(modeButtons.map((button) => button.dataset.organizationMapViewMode)).toEqual([
+      'hierarchy',
+      'structure',
+      'relations',
+    ]);
+    expect(modeButtons[0]?.getAttribute('aria-pressed')).toBe('true');
 
     await act(async () => {
-      switchButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      modeButtons[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
     expect(onLayoutModeChange).toHaveBeenCalledWith('grid-under-lead');
+
+    onLayoutModeChange.mockClear();
+    await act(async () => {
+      modeButtons[2]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(onLayoutModeChange).toHaveBeenCalledWith('grid-under-lead');
+    expect(modeButtons[2]?.getAttribute('aria-pressed')).toBe('true');
 
     await act(async () => root.unmount());
   });

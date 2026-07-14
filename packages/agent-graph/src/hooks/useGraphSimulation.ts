@@ -427,6 +427,7 @@ function commitStaticLayoutGeometry(args: {
   }
 
   fallbackPositionNodes(nodes);
+  KanbanLayoutEngine.layoutStatic(nodes);
   extraWorldBoundsRef.current = nodes
     .filter((node) => !node.layoutOnly)
     .map((node) => {

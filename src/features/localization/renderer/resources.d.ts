@@ -4957,6 +4957,7 @@ export default interface Resources {
           switchToNested: 'Switch to nested map';
         };
         view: {
+          hierarchy: 'Hierarchy';
           relations: 'Relations';
           structure: 'Structure';
         };

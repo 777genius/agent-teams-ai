@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getGraphSemanticZoomLevel,
   shouldRenderOverviewHierarchyNode,
+  shouldRenderParticlesAtZoom,
   shouldRenderTaskAtZoom,
 } from '../../../../packages/agent-graph/src/canvas/semantic-zoom';
 
@@ -55,5 +56,13 @@ describe('semantic zoom', () => {
     expect(shouldRenderTaskAtZoom(0.4)).toBe(false);
     expect(shouldRenderTaskAtZoom(0.4, true)).toBe(true);
     expect(shouldRenderTaskAtZoom(0.8)).toBe(true);
+    expect(shouldRenderTaskAtZoom(0.4, false, 'summary')).toBe(true);
+    expect(shouldRenderTaskAtZoom(0.2, false, 'summary')).toBe(false);
+  });
+
+  it('keeps hierarchy communication particles animated at overview zoom', () => {
+    expect(shouldRenderParticlesAtZoom(0.2)).toBe(false);
+    expect(shouldRenderParticlesAtZoom(0.2, true)).toBe(true);
+    expect(shouldRenderParticlesAtZoom(0.4)).toBe(true);
   });
 });

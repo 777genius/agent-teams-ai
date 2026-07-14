@@ -166,12 +166,18 @@ export function getPaddedGroupFrameBounds(
   const depth = frame ? Math.min(getDepthLevel(frame, 0), 5) : 0;
   const hasDepth = frame?.depth != null;
   const horizontalPaddingPx = hasDepth
-    ? Math.max(8, (frame.priority === 'primary' ? 26 : 22) - depth * 6)
+    ? frame.priority === 'primary'
+      ? Math.max(8, 26 - depth * 6)
+      : depth === 0
+        ? 22
+        : Math.max(1, 25 - depth * 7)
     : 30;
   const topPaddingPx = hasDepth
     ? frame.priority === 'primary'
       ? Math.max(28, 52 - depth * 10)
-      : Math.max(20, 44 - depth * 10)
+      : depth === 0
+        ? 44
+        : Math.max(8, 49 - depth * 11)
     : 46;
   const bottomPaddingPx = topPaddingPx;
   const horizontalPadding = horizontalPaddingPx / paddingZoom;

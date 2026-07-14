@@ -613,6 +613,7 @@ export function GraphView({
       hoveredEdgeId: hoveredEdgeIdRef.current,
       focusNodeIds: focusState.focusNodeIds,
       focusEdgeIds: focusState.focusEdgeIds,
+      animateOverviewParticles: data.layout?.mode === 'hierarchical',
       ownerColumnGroupRects: simulationRef.current.getOwnerColumnGroupRects(),
       dragPreview: dragPreviewRef.current,
     });
@@ -620,6 +621,7 @@ export function GraphView({
     rafRef.current = requestAnimationFrame(animate);
   }, [
     data.groupFrames,
+    data.layout?.mode,
     data.teamName,
     focusState.focusEdgeIds,
     focusState.focusNodeIds,

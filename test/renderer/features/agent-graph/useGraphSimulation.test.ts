@@ -458,6 +458,35 @@ describe('stable slot layout planner', () => {
     );
   });
 
+  it('reuses kanban headers for statically positioned hierarchy tasks', () => {
+    const teamName = 'team-static-hierarchy';
+    const alice = createMember(teamName, 'agent-alice', 'alice');
+    const task = createTask(teamName, 'active-task', alice.id, {
+      taskStatus: 'in_progress',
+    });
+    alice.x = 40;
+    alice.y = 100;
+    task.x = 40;
+    task.y = 212;
+
+    KanbanLayoutEngine.layoutStatic([alice, task]);
+
+    expect(task.x).toBe(40);
+    expect(task.y).toBe(212);
+    expect(KanbanLayoutEngine.zones).toEqual([
+      expect.objectContaining({
+        ownerId: alice.id,
+        headers: [
+          expect.objectContaining({
+            label: 'In Progress',
+            x: 40,
+            y: 212 - KANBAN_ZONE.headerHeight,
+          }),
+        ],
+      }),
+    ]);
+  });
+
   it('keeps the reserved log column when logs are shown and activity is hidden', () => {
     const teamName = 'team-logs-without-activity-slot';
     const lead = createLead(teamName);

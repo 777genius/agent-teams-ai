@@ -353,7 +353,11 @@ function getRenderableAgentTasks(node: OrganizationNodeDto): RenderableAgentTask
     .slice(0, MAX_ACTIVE_AGENT_TASKS_PER_TEAM);
 }
 
-function buildAgentTaskNodes(node: OrganizationNodeDto, text: OrganizationGraphText): GraphNode[] {
+function buildAgentTaskNodes(
+  node: OrganizationNodeDto,
+  text: OrganizationGraphText,
+  options: { taskZoomVisibility?: GraphNode['taskZoomVisibility'] } = {}
+): GraphNode[] {
   const team = node.team;
   if (!team) return [];
 
@@ -369,6 +373,7 @@ function buildAgentTaskNodes(node: OrganizationNodeDto, text: OrganizationGraphT
       sublabel: task.subject,
       taskStatus: 'in_progress',
       reviewState: 'none',
+      taskZoomVisibility: options.taskZoomVisibility,
       domainRef: {
         kind: 'task',
         teamName: team.teamName,
@@ -1478,7 +1483,7 @@ function buildHierarchicalOrganizationGraphData(
     context.renderedAgentTeamIds.has(node.id)
   );
   const hierarchyTaskNodes = renderedAgentTeamNodes.flatMap((node) =>
-    buildAgentTaskNodes(node, text)
+    buildAgentTaskNodes(node, text, { taskZoomVisibility: 'summary' })
   );
   const hierarchyNodes = [...hierarchyStructureNodes, ...hierarchyTaskNodes];
   const graphNodeIds = new Set(hierarchyNodes.map((node) => node.id));

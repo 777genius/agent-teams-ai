@@ -1372,6 +1372,8 @@ describe('buildOrganizationGraphData', () => {
           kind: 'task',
           state: 'active',
           ownerId: 'team:alpha',
+          sublabel: 'Build org overview',
+          taskZoomVisibility: 'summary',
         }),
       ])
     );

@@ -43,7 +43,7 @@ import {
   truncateGroupFrameLabel,
 } from '../canvas/group-frames';
 import { hexWithAlpha } from '../canvas/render-cache';
-import { getGraphSemanticZoomLevel } from '../canvas/semantic-zoom';
+import { getGraphSemanticZoomLevel, shouldRenderParticlesAtZoom } from '../canvas/semantic-zoom';
 import { NODE } from '../constants/canvas-constants';
 import { KanbanLayoutEngine } from '../layout/kanbanLayout';
 
@@ -80,6 +80,7 @@ export interface GraphDrawState {
   hoveredEdgeId: string | null;
   focusNodeIds: ReadonlySet<string> | null;
   focusEdgeIds: ReadonlySet<string> | null;
+  animateOverviewParticles: boolean;
   ownerColumnGroupRects: readonly OwnerColumnGroupRect[];
   dragPreview: {
     nodeId: string;
@@ -345,15 +346,17 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             zoom,
           });
           const semanticLevel = getGraphSemanticZoomLevel(zoom);
-          const renderableParticles =
-            semanticLevel === 'overview'
-              ? []
-              : selectRenderableParticles({
-                  particles: state.particles,
-                  visibleEdgeIds,
-                  focusEdgeIds: prioritizedEdgeIds,
-                  budget: particleBudget,
-                });
+          const renderableParticles = shouldRenderParticlesAtZoom(
+            zoom,
+            state.animateOverviewParticles
+          )
+            ? selectRenderableParticles({
+                particles: state.particles,
+                visibleEdgeIds,
+                focusEdgeIds: prioritizedEdgeIds,
+                budget: particleBudget,
+              })
+            : [];
           updateTransientHandoffState(handoffStateRef.current, {
             particles: state.particles,
             edgeMap,

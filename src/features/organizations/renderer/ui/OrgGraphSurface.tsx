@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
 import { useAppTranslation } from '@features/localization/renderer';
-import { Columns3, Network, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 import {
   buildOrganizationGraphData,
@@ -26,6 +26,7 @@ import type {
 } from '@claude-teams/agent-graph';
 
 type OrganizationRelationViewMode = 'structure' | 'relations';
+type OrganizationGraphViewMode = 'hierarchy' | OrganizationRelationViewMode;
 
 interface OrgGraphSurfaceProps {
   viewModel: OrganizationMapViewModel;
@@ -485,58 +486,55 @@ export const OrgGraphSurface = ({
     () => buildRelationModeGraphData(relationViewMode, graphData, effectiveFocus.focusNodeIds),
     [effectiveFocus.focusNodeIds, graphData, relationViewMode]
   );
+  const activeViewMode: OrganizationGraphViewMode =
+    relationViewMode === 'relations'
+      ? 'relations'
+      : layoutMode === 'hierarchical'
+        ? 'hierarchy'
+        : 'structure';
   const relationToolbar = useMemo(
     () => (
       <div className="mx-auto flex max-w-full flex-col items-center gap-1">
         <div className="inline-flex max-w-full items-center rounded-lg border border-sky-300/15 bg-[var(--color-surface-overlay)] p-0.5 text-[11px] font-medium shadow-lg shadow-black/20 backdrop-blur-md">
           {(
             [
+              ['hierarchy', t('organizations.graph.view.hierarchy')],
               ['structure', t('organizations.graph.view.structure')],
               ['relations', t('organizations.graph.view.relations')],
             ] as const
           ).map(([mode, label]) => {
-            const active = relationViewMode === mode;
+            const active = activeViewMode === mode;
             return (
               <button
                 key={mode}
                 type="button"
+                aria-pressed={active}
+                data-organization-map-view-mode={mode}
                 className={`h-6 rounded-md px-2.5 transition-colors ${
                   active
                     ? 'bg-sky-400/18 text-sky-100 shadow-sm shadow-sky-500/10'
                     : 'text-[var(--color-text-muted)] hover:bg-white/5 hover:text-[var(--color-text)]'
                 }`}
                 onClick={() => {
+                  if (mode === 'hierarchy') {
+                    setRelationViewMode('structure');
+                    if (layoutMode !== 'hierarchical') onLayoutModeChange('hierarchical');
+                    return;
+                  }
                   setRelationViewMode(mode);
+                  if (layoutMode !== 'grid-under-lead') {
+                    onLayoutModeChange('grid-under-lead');
+                  }
                 }}
               >
                 {label}
               </button>
             );
           })}
-          <span className="mx-0.5 h-4 w-px bg-sky-200/10" aria-hidden="true" />
-          <button
-            type="button"
-            aria-label={
-              layoutMode === 'hierarchical'
-                ? t('organizations.graph.layout.switchToNested')
-                : t('organizations.graph.layout.switchToHierarchy')
-            }
-            title={
-              layoutMode === 'hierarchical'
-                ? t('organizations.graph.layout.switchToNested')
-                : t('organizations.graph.layout.switchToHierarchy')
-            }
-            className="flex size-6 shrink-0 items-center justify-center rounded-md text-[#66ccff90] transition-colors hover:bg-[rgba(100,200,255,0.1)] hover:text-[#aaeeff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60"
-            onClick={() =>
-              onLayoutModeChange(layoutMode === 'hierarchical' ? 'grid-under-lead' : 'hierarchical')
-            }
-          >
-            {layoutMode === 'hierarchical' ? <Columns3 size={11} /> : <Network size={11} />}
-          </button>
         </div>
       </div>
     ),
-    [layoutMode, onLayoutModeChange, relationViewMode, t]
+    [activeViewMode, layoutMode, onLayoutModeChange, t]
   );
   const createTeamFrameId = useMemo(
     () => getCreateTeamFrameId(viewModel, selectedNodeId),
