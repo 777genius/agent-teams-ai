@@ -34,6 +34,7 @@ import {
 import {
   withProjectPreStartAdmissionLaunchAuthorization,
 } from "./application/project-control/codex-goal-project-pre-start-launch-authorization";
+import type { ProjectPreStartAdmissionDirtyContinuationMode } from "./application/project-control/codex-goal-project-pre-start-admission";
 import {
   assertCodexGoalProjectJobNotTerminal,
 } from "./application/project-control/codex-goal-consumed-output-ledger-io";
@@ -110,7 +111,7 @@ export type CodexProjectControlBrokerInput = {
   readonly pushBranchInput?: CodexGoalProjectPushBranchInput;
   readonly startLaunch?: CodexGoalLaunchInput;
   readonly startManifest?: CodexGoalJobManifest;
-  readonly startAdmissionWorkspaceMode?: "reviewed_dirty_continuation";
+  readonly startAdmissionWorkspaceMode?: ProjectPreStartAdmissionDirtyContinuationMode;
   readonly startWorkspaceLease?: ProjectControlWorkspaceLease;
   readonly startSkipDoctor?: boolean;
   readonly stopLaunch?: CodexGoalLaunchInput;

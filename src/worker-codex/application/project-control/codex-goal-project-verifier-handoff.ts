@@ -5,6 +5,7 @@ import { isAbsolute, join, relative } from "node:path";
 import { promisify } from "node:util";
 import { detectSecretLikeContent } from "@vioxen/subscription-runtime/worker-core";
 import type { CodexGoalJobManifest } from "../../codex-goal-jobs";
+import { readRuntimeResultBrief } from "../codex-goal-runtime-result";
 
 const execFileAsync = promisify(execFile);
 const maxManifestBytes = 1024 * 1024;
@@ -12,6 +13,7 @@ const maxPatchBytes = 16 * 1024 * 1024;
 
 export type VerifiedProducerHandoff = {
   readonly producerJobId: string;
+  readonly resultPath?: string;
   readonly manifestPath: string;
   readonly manifestSha256: string;
   readonly patchPath: string;
@@ -26,13 +28,24 @@ export async function readVerifiedProducerHandoff(input: {
 }): Promise<VerifiedProducerHandoff> {
   const producerJobRoot = await canonicalDirectory(input.producer.jobRootDir);
   const producerWorkspace = await canonicalDirectory(input.producer.workspacePath);
+  const resultHandoff = await currentResultHandoff({
+    producer: input.producer,
+    producerJobRoot,
+  });
   const manifestPath = await realpath(
-    join(producerJobRoot, `${input.producer.taskId}.handoff.manifest.json`),
+    resultHandoff?.manifestPath ??
+      join(producerJobRoot, `${input.producer.taskId}.handoff.manifest.json`),
   );
   if (!pathInside(producerJobRoot, manifestPath)) {
     throw new Error("project_control_verifier_handoff_manifest_unowned");
   }
   const manifestFile = await readRegularFile(manifestPath, maxManifestBytes);
+  if (
+    resultHandoff &&
+    resultHandoff.manifestSha256 !== sha256(manifestFile.bytes)
+  ) {
+    throw new Error("project_control_verifier_handoff_result_manifest_mismatch");
+  }
   const manifest = parseManifest(manifestFile.bytes);
   if (
     manifest.workerJobId !== input.producer.jobId ||
@@ -58,6 +71,7 @@ export async function readVerifiedProducerHandoff(input: {
   }
   return {
     producerJobId: input.producer.jobId,
+    ...(resultHandoff ? { resultPath: resultHandoff.resultPath } : {}),
     manifestPath,
     manifestSha256: sha256(manifestFile.bytes),
     patchPath,
@@ -65,6 +79,44 @@ export async function readVerifiedProducerHandoff(input: {
     patchByteLength: patchFile.bytes.byteLength,
     baseCommit: manifest.baseCommit,
     changedPaths,
+  };
+}
+
+async function currentResultHandoff(input: {
+  readonly producer: CodexGoalJobManifest;
+  readonly producerJobRoot: string;
+}): Promise<{
+  readonly resultPath: string;
+  readonly manifestPath: string;
+  readonly manifestSha256: string;
+} | undefined> {
+  const requestedResultPath =
+    input.producer.outputPath ??
+    join(input.producerJobRoot, `${input.producer.taskId}.latest-result.json`);
+  let resultPath: string;
+  try {
+    resultPath = await realpath(requestedResultPath);
+  } catch (error) {
+    if (isNodeError(error, "ENOENT")) return undefined;
+    throw error;
+  }
+  if (!pathInside(input.producerJobRoot, resultPath)) {
+    throw new Error("project_control_verifier_handoff_result_unowned");
+  }
+  const result = await readRuntimeResultBrief(resultPath);
+  if (
+    result.strict !== true ||
+    result.status !== "done" ||
+    !result.manifestPath ||
+    !result.manifestSha256 ||
+    !/^[0-9a-f]{64}$/i.test(result.manifestSha256)
+  ) {
+    throw new Error("project_control_verifier_handoff_result_invalid");
+  }
+  return {
+    resultPath,
+    manifestPath: result.manifestPath,
+    manifestSha256: result.manifestSha256.toLowerCase(),
   };
 }
 
@@ -230,4 +282,12 @@ function sha256(bytes: Buffer): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNodeError(error: unknown, code: string): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    (error as NodeJS.ErrnoException).code === code
+  );
 }

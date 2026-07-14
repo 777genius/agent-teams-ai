@@ -33,7 +33,7 @@ describe("project verifier handoff", () => {
     await initRepository(workspacePath);
     await mkdir(jobRootDir, { recursive: true });
     await writeFile(join(workspacePath, "feature.txt"), "changed\n");
-    const materialized = await materializeCodexGoalHandoffArtifacts({
+    const materialized = await materializeProducerHandoff({
       workerJobId: "producer-1",
       taskId: "task-1",
       workspacePath,
@@ -225,7 +225,7 @@ describe("project verifier handoff", () => {
     await initRepository(producerPath);
     await mkdir(jobRootDir, { recursive: true });
     await writeFile(join(producerPath, "feature.txt"), "producer change\n");
-    const materialized = await materializeCodexGoalHandoffArtifacts({
+    const materialized = await materializeProducerHandoff({
       workerJobId: "producer-1",
       taskId: "task-1",
       workspacePath: producerPath,
@@ -262,7 +262,7 @@ describe("project verifier handoff", () => {
     await initRepository(producerPath);
     await mkdir(jobRootDir, { recursive: true });
     await writeFile(join(producerPath, "feature.txt"), "producer change\n");
-    await materializeCodexGoalHandoffArtifacts({
+    await materializeProducerHandoff({
       workerJobId: "producer-1",
       taskId: "task-1",
       workspacePath: producerPath,
@@ -305,7 +305,7 @@ describe("project verifier handoff", () => {
       "test: add literal pathspec file",
     ]);
     await writeFile(join(producerPath, magicPath), "producer change\n");
-    await materializeCodexGoalHandoffArtifacts({
+    await materializeProducerHandoff({
       workerJobId: "producer-1",
       taskId: "task-1",
       workspacePath: producerPath,
@@ -346,7 +346,7 @@ describe("project verifier handoff", () => {
     await initRepository(producerPath);
     await mkdir(jobRootDir, { recursive: true });
     await writeFile(join(producerPath, "feature.txt"), "producer change\n");
-    await materializeCodexGoalHandoffArtifacts({
+    await materializeProducerHandoff({
       workerJobId: "producer-1",
       taskId: "task-1",
       workspacePath: producerPath,
@@ -394,6 +394,29 @@ async function temporaryRoot(prefix: string): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), prefix));
   roots.push(root);
   return root;
+}
+
+async function materializeProducerHandoff(input: {
+  readonly workerJobId: string;
+  readonly taskId: string;
+  readonly workspacePath: string;
+  readonly jobRootDir: string;
+}) {
+  const handoff = await materializeCodexGoalHandoffArtifacts(input);
+  if (!handoff) throw new Error("expected producer handoff");
+  await writeFile(
+    join(input.jobRootDir, `${input.taskId}.latest-result.json`),
+    `${JSON.stringify({
+      status: "done",
+      changedFiles: handoff.changedPaths,
+      evidence: [],
+      blockers: [],
+      nextAction: "review_completed",
+      artifacts: handoff.artifacts,
+      details: { baseCommit: handoff.baseCommit },
+    })}\n`,
+  );
+  return handoff;
 }
 
 async function initRepository(path: string): Promise<void> {

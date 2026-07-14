@@ -73,6 +73,11 @@ describe("completed Codex goal result refresh", () => {
     const result = JSON.parse(await readFile(outputPath, "utf8")) as
       Record<string, unknown>;
     const canonicalJobRoot = await realpath(jobRootDir);
+    const artifacts = result.artifacts as readonly Record<string, unknown>[];
+    const patch = artifacts.find((artifact) => artifact.kind === "patch");
+    const generation = String(patch?.path).match(
+      /task-1\.([a-f0-9]{64})\.handoff\.patch$/,
+    )?.[1];
 
     expect(reconciliation).toMatchObject({
       wrote: true,
@@ -85,21 +90,26 @@ describe("completed Codex goal result refresh", () => {
       blockers: [],
       nextAction: "review_completed",
       changedFiles: ["tracked.txt"],
-      artifacts: [{
-        kind: "patch",
-        path: join(canonicalJobRoot, "task-1.handoff.patch"),
-      }, {
-        kind: "summary",
-        path: join(canonicalJobRoot, "task-1.handoff.summary.json"),
-      }, {
-        kind: "manifest",
-        path: join(canonicalJobRoot, "task-1.handoff.manifest.json"),
-      }],
+      artifacts: [
+        { kind: "patch", sha256: generation },
+        { kind: "summary" },
+        { kind: "manifest" },
+      ],
     });
+    expect(generation).toMatch(/^[a-f0-9]{64}$/);
+    expect(patch?.path).toBe(
+      join(canonicalJobRoot, `task-1.${generation}.handoff.patch`),
+    );
+    expect(artifacts[1]?.path).toBe(
+      join(canonicalJobRoot, `task-1.${generation}.handoff.summary.json`),
+    );
+    expect(artifacts[2]?.path).toBe(
+      join(canonicalJobRoot, `task-1.${generation}.handoff.manifest.json`),
+    );
     expect(result.evidence).toEqual(expect.arrayContaining([
       "worker_completed",
       "supervisor_refreshed_terminal_result_artifacts",
-      `patch_preserved:${join(canonicalJobRoot, "task-1.handoff.patch")}`,
+      `patch_preserved:${patch?.path}`,
     ]));
   });
 
@@ -149,6 +159,11 @@ describe("completed Codex goal result refresh", () => {
     const result = JSON.parse(await readFile(outputPath, "utf8")) as
       Record<string, unknown>;
     const canonicalJobRoot = await realpath(jobRootDir);
+    const artifacts = result.artifacts as readonly Record<string, unknown>[];
+    const patch = artifacts.find((artifact) => artifact.kind === "patch");
+    const generation = String(patch?.path).match(
+      /task-1\.([a-f0-9]{64})\.handoff\.patch$/,
+    )?.[1];
 
     expect(status).toMatchObject({
       resultStatus: "done",
@@ -158,12 +173,18 @@ describe("completed Codex goal result refresh", () => {
       status: "done",
       changedFiles: ["S0.md"],
       details: { baseCommit: expect.stringMatching(/^[a-f0-9]{40}$/) },
-      artifacts: [
-        { kind: "patch", path: join(canonicalJobRoot, "task-1.handoff.patch") },
-        { kind: "summary", path: join(canonicalJobRoot, "task-1.handoff.summary.json") },
-        { kind: "manifest", path: join(canonicalJobRoot, "task-1.handoff.manifest.json") },
-      ],
+      artifacts: [{ kind: "patch", sha256: generation }, { kind: "summary" }, { kind: "manifest" }],
     });
+    expect(generation).toMatch(/^[a-f0-9]{64}$/);
+    expect(patch?.path).toBe(
+      join(canonicalJobRoot, `task-1.${generation}.handoff.patch`),
+    );
+    expect(artifacts[1]?.path).toBe(
+      join(canonicalJobRoot, `task-1.${generation}.handoff.summary.json`),
+    );
+    expect(artifacts[2]?.path).toBe(
+      join(canonicalJobRoot, `task-1.${generation}.handoff.manifest.json`),
+    );
   });
 });
 

@@ -74,13 +74,22 @@ describe("Codex goal handoff artifact materialization", () => {
     })).resolves.toEqual(first);
 
     await writeFile(join(fixture.workspacePath, "docs", "plan.md"), "changed\n");
-    await expect(materializeCodexGoalHandoffArtifacts({
+    const second = await materializeCodexGoalHandoffArtifacts({
       workerJobId: "worker-1",
       taskId: "task-1",
       workspacePath: fixture.workspacePath,
       jobRootDir: fixture.jobRootDir,
       expectedBaseCommit: fixture.baseCommit,
-    })).rejects.toThrow("handoff_artifact_content_mismatch");
+    });
+    expect(second).not.toBeNull();
+    expect(second?.patchPath).not.toBe(first?.patchPath);
+    expect(second?.manifestPath).not.toBe(first?.manifestPath);
+    await expect(readFile(first!.patchPath, "utf8")).resolves.toContain(
+      "+plan",
+    );
+    await expect(readFile(second!.patchPath, "utf8")).resolves.toContain(
+      "+changed",
+    );
   });
 
   it("rejects symlinks, sensitive auth files and bounded-size violations", async () => {

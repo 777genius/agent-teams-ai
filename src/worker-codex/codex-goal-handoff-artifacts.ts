@@ -147,9 +147,11 @@ export async function materializeCodexGoalHandoffArtifacts(input: {
   if (patch !== confirmedPatch) {
     throw new Error("handoff_workspace_changed_during_materialization");
   }
-  const patchPath = join(jobRootDir, `${input.taskId}.handoff.patch`);
-  const summaryPath = join(jobRootDir, `${input.taskId}.handoff.summary.json`);
-  const manifestPath = join(jobRootDir, `${input.taskId}.handoff.manifest.json`);
+  const generation = sha256(patch);
+  const artifactPrefix = `${input.taskId}.${generation}.handoff`;
+  const patchPath = join(jobRootDir, `${artifactPrefix}.patch`);
+  const summaryPath = join(jobRootDir, `${artifactPrefix}.summary.json`);
+  const manifestPath = join(jobRootDir, `${artifactPrefix}.manifest.json`);
   await assertPatchChangedPaths({
     workspacePath,
     jobRootDir,

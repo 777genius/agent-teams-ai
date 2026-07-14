@@ -35,6 +35,10 @@ import {
   assertProjectPreStartAdmissionLaunchBinding,
   validateStoredProjectPreStartAdmission,
 } from "./application/project-control/codex-goal-project-pre-start-admission";
+import {
+  terminalHandoffDependencyRecoveryRequested,
+  verifyTerminalHandoffRecovery,
+} from "./application/project-control/codex-goal-project-terminal-handoff-recovery";
 import { projectAdmissionWorkerRoleArg } from "./application/project-control/codex-goal-project-admission";
 import {
   assertProjectControlDependencyBootstrapReady,
@@ -115,6 +119,7 @@ export type CodexGoalMcpProjectControlActionsDeps = {
   readonly codexProjectControlBroker: (
     input: Omit<CodexProjectControlBrokerInput, "admissionDeps">,
   ) => ProjectControlBroker;
+  readonly dependencyBootstrap?: typeof runDependencyBootstrap;
 };
 
 export async function projectControlStartStoredJobView(
@@ -195,13 +200,24 @@ export async function projectControlStartStoredJobView(
   }
   const reviewedOutputId = stringValue(args.reviewedOutputId);
   const dirtyContinuation = status.workspaceDirty === true;
+  const terminalHandoffDependencyRecovery =
+    terminalHandoffDependencyRecoveryRequested({
+      status,
+      ...(reviewedOutputId ? { reviewedOutputId } : {}),
+      forceStart: args.forceStart === true,
+      ...(typeof args.dependencyBootstrap === "string"
+        ? { dependencyBootstrap: args.dependencyBootstrap }
+        : {}),
+      confirmDependencyBootstrap:
+        booleanValue(args.confirmDependencyBootstrap) === true,
+    });
   if (dirtyContinuation) {
     if (!args.forceStart) {
       throw new Error(
         "project_control_reviewed_dirty_continuation_force_required",
       );
     }
-    if (!reviewedOutputId) {
+    if (!reviewedOutputId && !terminalHandoffDependencyRecovery) {
       throw new Error(
         "project_control_reviewed_dirty_continuation_output_required",
       );
@@ -242,6 +258,19 @@ export async function projectControlStartStoredJobView(
         throw new Error("project_control_workspace_state_changed_before_start");
       }
       if (
+        terminalHandoffDependencyRecovery &&
+        !terminalHandoffDependencyRecoveryRequested({
+          status: lockedStatus,
+          forceStart: args.forceStart === true,
+          dependencyBootstrap: "install",
+          confirmDependencyBootstrap: true,
+        })
+      ) {
+        throw new Error(
+          "project_control_terminal_handoff_recovery_status_changed",
+        );
+      }
+      if (
         !isSafeStartAction(lockedStatus.recommendedAction) &&
         !args.forceStart
       ) {
@@ -258,16 +287,24 @@ export async function projectControlStartStoredJobView(
         rootDir: reviewedWorkerOutputRoot(controller.registryRootDir),
         locks,
       });
-      const reviewedContinuation = dirtyContinuation
-        ? await resolveReviewedWorkerContinuation({
-            store: reviewedOutputDeps.store,
-            projectId: controller.scope.projectId,
-            controllerJobId: controller.controller.jobId,
-            workerJobId: loaded.manifest.jobId,
-            taskId: loaded.launch.config.taskId,
-            workspacePath: workspace.canonicalWorkspacePath,
-            reviewedOutputId: reviewedOutputId!,
-          })
+      const reviewedContinuation =
+        dirtyContinuation && reviewedOutputId
+          ? await resolveReviewedWorkerContinuation({
+              store: reviewedOutputDeps.store,
+              projectId: controller.scope.projectId,
+              controllerJobId: controller.controller.jobId,
+              workerJobId: loaded.manifest.jobId,
+              taskId: loaded.launch.config.taskId,
+              workspacePath: workspace.canonicalWorkspacePath,
+              reviewedOutputId,
+            })
+          : undefined;
+      const terminalRecovery = terminalHandoffDependencyRecovery
+        ? await verifyTerminalHandoffRecovery({
+              producer: loaded.manifest,
+              workspacePath: workspace.canonicalWorkspacePath,
+              snapshotter: reviewedOutputDeps.snapshotter,
+            })
         : undefined;
       if (reviewedContinuation) {
         const sanitized =
@@ -288,7 +325,9 @@ export async function projectControlStartStoredJobView(
           };
         }
       }
-      const dependencyPreflight = await runDependencyBootstrap({
+      const dependencyPreflight = await (
+        deps.dependencyBootstrap ?? runDependencyBootstrap
+      )({
         workspacePath: workspace.canonicalWorkspacePath,
         jobRootDir: loaded.manifest.jobRootDir,
         cacheNamespace: controller.scope.projectId,
@@ -311,6 +350,22 @@ export async function projectControlStartStoredJobView(
           manifest: loaded.manifest,
           scope: controller.scope,
           workspaceMode: "reviewed_dirty_continuation",
+        });
+      } else if (terminalRecovery) {
+        await verifyTerminalHandoffRecovery({
+          producer: loaded.manifest,
+          workspacePath: workspace.canonicalWorkspacePath,
+          snapshotter: reviewedOutputDeps.snapshotter,
+          expected: terminalRecovery,
+        });
+        await assertReviewedWorkerContinuationEnvironmentLocked(
+          reviewedOutputDeps,
+          workspace.lease,
+        );
+        await assertProjectPreStartAdmissionLaunchBinding({
+          manifest: loaded.manifest,
+          scope: controller.scope,
+          workspaceMode: "terminal_handoff_dependency_recovery",
         });
       } else {
         await validateStoredProjectPreStartAdmission({
@@ -343,7 +398,12 @@ export async function projectControlStartStoredJobView(
                 startAdmissionWorkspaceMode:
                   "reviewed_dirty_continuation" as const,
               }
-            : {}),
+            : terminalRecovery
+              ? {
+                  startAdmissionWorkspaceMode:
+                    "terminal_handoff_dependency_recovery" as const,
+                }
+              : {}),
           startWorkspaceLease: workspace,
           startSkipDoctor: booleanValue(args.skipDoctor) ?? false,
         });

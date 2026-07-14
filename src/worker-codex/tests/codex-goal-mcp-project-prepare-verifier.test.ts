@@ -91,6 +91,18 @@ describe("project verifier preparation", () => {
           jobRootDir: producerJobRoot,
         });
         if (!handoff) throw new Error("expected producer handoff");
+        await writeFile(
+          join(producerJobRoot, "project-producer.latest-result.json"),
+          `${JSON.stringify({
+            status: "done",
+            changedFiles: handoff.changedPaths,
+            evidence: [],
+            blockers: [],
+            nextAction: "review_completed",
+            artifacts: handoff.artifacts,
+            details: { baseCommit: handoff.baseCommit },
+          })}\n`,
+        );
 
         await writeFile(join(sourceWorkspacePath, "router.md"), "current\n");
         await git(sourceWorkspacePath, ["add", "router.md"]);

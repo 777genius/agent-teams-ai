@@ -216,6 +216,9 @@ export async function validateStoredProjectPreStartAdmission(input: {
   await validateProjectPreStartAdmission(input);
 }
 
+export type ProjectPreStartAdmissionDirtyContinuationMode =
+  "reviewed_dirty_continuation" | "terminal_handoff_dependency_recovery";
+
 export async function assertProjectPreStartAdmissionLaunchBinding(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly scope: ProjectAccessScope;
@@ -223,7 +226,7 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
   readonly workspaceMode?:
     | "clean_first_launch"
     | "admitted_input_patch"
-    | "reviewed_dirty_continuation";
+    | ProjectPreStartAdmissionDirtyContinuationMode;
 }): Promise<void> {
   const descriptor = input.manifest.projectPreStartAdmission;
   if (!descriptor) {
@@ -254,18 +257,20 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
     scope: input.scope,
   });
   const verifiedInputPatch = verifiedInputPatchFromReceipt(receipt, contract);
-  const expectedReceiptStatus =
-    input.workspaceMode === "reviewed_dirty_continuation"
-      ? "launch_authorized"
-      : "validated_not_launched";
+  const dirtyContinuation =
+    input.workspaceMode === "reviewed_dirty_continuation" ||
+    input.workspaceMode === "terminal_handoff_dependency_recovery";
+  const expectedReceiptStatus = dirtyContinuation
+    ? "launch_authorized"
+    : "validated_not_launched";
   const workspaceBindingValid =
-    input.workspaceMode === "admitted_input_patch" ||
-    input.workspaceMode === "reviewed_dirty_continuation"
+    input.workspaceMode === "admitted_input_patch" || dirtyContinuation
       ? binding.workspaceStatus !== ""
       : verifiedInputPatch
       ? verifiedInputPatchBindingValid(binding, verifiedInputPatch)
       : binding.workspaceStatus === "";
-  const inputPatchBindingValid = input.workspaceMode === "reviewed_dirty_continuation" ||
+  const inputPatchBindingValid =
+    dirtyContinuation ||
     (verifiedInputPatch
       ? verifiedInputPatchBindingValid(binding, verifiedInputPatch)
       : projectInputPatchBindingMatches(binding, contract));

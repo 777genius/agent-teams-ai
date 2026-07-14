@@ -2,7 +2,10 @@ import { isDeepStrictEqual } from "node:util";
 import { readFile, rename, writeFile } from "node:fs/promises";
 import type { ProjectAccessScope } from "@vioxen/subscription-runtime/worker-core";
 import type { CodexGoalJobManifest } from "../../codex-goal-jobs";
-import { assertProjectPreStartAdmissionLaunchBinding } from "./codex-goal-project-pre-start-admission";
+import {
+  assertProjectPreStartAdmissionLaunchBinding,
+  type ProjectPreStartAdmissionDirtyContinuationMode,
+} from "./codex-goal-project-pre-start-admission";
 
 const MAX_RECEIPT_BYTES = 64 * 1024;
 
@@ -17,7 +20,7 @@ export type ProjectPreStartAdmissionLaunchAuthorization = {
 export async function authorizeProjectPreStartAdmissionLaunch(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly scope: ProjectAccessScope;
-  readonly workspaceMode?: "reviewed_dirty_continuation";
+  readonly workspaceMode?: ProjectPreStartAdmissionDirtyContinuationMode;
 }): Promise<ProjectPreStartAdmissionLaunchAuthorization | undefined> {
   const descriptor = input.manifest.projectPreStartAdmission;
   if (!descriptor) {
@@ -71,7 +74,7 @@ export async function withProjectPreStartAdmissionLaunchAuthorization<T>(
   input: {
     readonly manifest: CodexGoalJobManifest;
     readonly scope: ProjectAccessScope;
-    readonly workspaceMode?: "reviewed_dirty_continuation";
+    readonly workspaceMode?: ProjectPreStartAdmissionDirtyContinuationMode;
   },
   start: () => Promise<T>,
 ): Promise<T> {

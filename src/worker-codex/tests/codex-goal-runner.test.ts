@@ -647,13 +647,20 @@ describe("codex goal runner", () => {
       });
       expect(result.details).toMatchObject({ baseCommit });
       const canonicalJobRoot = await realpath(config.jobRootDir);
+      const patchArtifact = (
+        result.artifacts as readonly Record<string, unknown>[]
+      ).find((artifact) => artifact.kind === "patch");
+      const patchPath = String(patchArtifact?.path);
+      const generation = patchPath.match(
+        /task-patch\.([a-f0-9]{64})\.handoff\.patch$/,
+      )?.[1];
+      expect(patchPath.startsWith(`${canonicalJobRoot}/`)).toBe(true);
+      expect(generation).toBe(patchArtifact?.sha256);
       expect(result.evidence).toEqual(expect.arrayContaining([
-        `patch_preserved:${join(canonicalJobRoot, "task-patch.handoff.patch")}`,
+        `patch_preserved:${patchPath}`,
       ]));
-      expect(await readFile(join(config.jobRootDir, "task-patch.handoff.patch"), "utf8"))
-        .toContain("after");
-      expect(await readFile(join(config.jobRootDir, "task-patch.handoff.patch"), "utf8"))
-        .toContain("new file");
+      expect(await readFile(patchPath, "utf8")).toContain("after");
+      expect(await readFile(patchPath, "utf8")).toContain("new file");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
