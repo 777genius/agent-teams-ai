@@ -3765,6 +3765,48 @@ describe('ipc teams handlers', () => {
       expect(service.removeMember).toHaveBeenCalledWith('my-team', 'alice');
     });
 
+    it('requests persisted runtime detach even when mutable team-alive tracking is absent', async () => {
+      provisioningService.isTeamAlive.mockReturnValueOnce(false);
+      const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
+
+      const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+    });
+
+    it('treats repeated removal of a persisted tombstone as a successful no-op', async () => {
+      mockGetMembersMetaFile.mockImplementation(async () =>
+        service.removeMember.mock.calls.length > 0
+          ? {
+              version: 1,
+              providerBackendId: undefined,
+              members: [{ name: 'alice', role: 'Developer', removedAt: 1_752_000_000_000 }],
+            }
+          : {
+              version: 1,
+              providerBackendId: undefined,
+              members: [{ name: 'alice', role: 'Developer' }],
+            }
+      );
+      const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
+
+      const firstResult = (await handler({} as never, 'my-team', 'alice')) as {
+        success: boolean;
+      };
+      const secondResult = (await handler({} as never, 'my-team', 'alice')) as {
+        success: boolean;
+      };
+
+      expect(firstResult.success).toBe(true);
+      expect(secondResult.success).toBe(true);
+      expect(service.getTeamData).toHaveBeenCalledTimes(2);
+      expect(service.removeMember).toHaveBeenCalledTimes(1);
+      expect(provisioningService.detachLiveRosterMember).toHaveBeenCalledTimes(1);
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledTimes(1);
+    });
+
     it('rejects invalid team name', async () => {
       const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
       const result = (await handler({} as never, '../bad', 'alice')) as { success: boolean };

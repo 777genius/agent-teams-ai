@@ -253,6 +253,7 @@ import {
   collectConfigLaunchBaseNamesFromConfigMembers,
   collectConfigLaunchBaseNamesFromMetaMembers,
   getPrelaunchConfigBackupPath,
+  mergeMembersMetaForLaunch,
   planCliAutoSuffixedConfigMemberCleanup,
   planCliAutoSuffixedMetaMemberCleanup,
   planTeamConfigLaunchNormalization,
@@ -469,8 +470,8 @@ import {
   OPENCODE_APP_MANAGED_BOOTSTRAP_STALLED_DIAGNOSTIC,
   promoteCommittedOpenCodeAppManagedBootstrapEvidence,
   selectOpenCodeSecondaryBootstrapStallDiagnostic,
-  shouldRetainOpenCodeRuntimeLaunch,
   shouldMarkPersistedOpenCodeBootstrapStalled,
+  shouldRetainOpenCodeRuntimeLaunch,
   summarizeRuntimeLaunchResultMembers,
   toOpenCodePersistedLaunchMember as toOpenCodePersistedLaunchMemberHelper,
 } from './provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy';
@@ -13266,12 +13267,14 @@ export class TeamProvisioningService {
         launchIdentity,
         createdAt: Date.now(),
       });
+      const existingMeta = await this.membersMetaStore.getMeta(request.teamName);
       await this.membersMetaStore.writeMembers(
         request.teamName,
-        buildMembersMetaWritePayload(allEffectiveMemberSpecs),
-        {
-          providerBackendId: request.providerBackendId,
-        }
+        mergeMembersMetaForLaunch(
+          buildMembersMetaWritePayload(allEffectiveMemberSpecs),
+          existingMeta?.members ?? []
+        ),
+        { providerBackendId: request.providerBackendId }
       );
 
       try {
@@ -22089,19 +22092,23 @@ export class TeamProvisioningService {
 
   private async persistMembersMeta(teamName: string, request: TeamCreateRequest): Promise<void> {
     const teammateMembers = selectMembersMetaTeammates(request.members);
-    if (teammateMembers.length === 0) {
-      return;
-    }
 
     const joinedAt = Date.now();
 
     try {
-      const membersToWrite = buildMembersMetaWritePayload(
-        teammateMembers.map((member) => ({
-          ...member,
-          joinedAt,
-        }))
+      const existingMeta = await this.membersMetaStore.getMeta(teamName);
+      const membersToWrite = mergeMembersMetaForLaunch(
+        buildMembersMetaWritePayload(
+          teammateMembers.map((member) => ({
+            ...member,
+            joinedAt,
+          }))
+        ),
+        existingMeta?.members ?? []
       );
+      if (membersToWrite.length === 0 && existingMeta == null) {
+        return;
+      }
       await this.membersMetaStore.writeMembers(teamName, membersToWrite, {
         providerBackendId: request.providerBackendId,
       });
@@ -22149,9 +22156,9 @@ export class TeamProvisioningService {
     ]);
 
     try {
-      const metaMembers = await this.membersMetaStore.getMembers(teamName);
-      const members = buildLaunchMembersFromMeta(metaMembers);
-      if (members.length > 0) {
+      const membersMeta = await this.membersMetaStore.getMeta(teamName);
+      if (membersMeta) {
+        const members = buildLaunchMembersFromMeta(membersMeta.members);
         return {
           level: 'ready',
           rosterSource: 'members-meta',

@@ -7,6 +7,7 @@ import {
   collectConfigLaunchBaseNamesFromMetaMembers,
   createInboxJsonFileSet,
   mergeInboxMessageLists,
+  mergeMembersMetaForLaunch,
   parseInboxMessageListRaw,
   planCliAutoSuffixedConfigMemberCleanup,
   planCliAutoSuffixedMetaMemberCleanup,
@@ -290,5 +291,23 @@ describe('team provisioning members.meta payload planning', () => {
       agentType: 'general-purpose',
       joinedAt: 123,
     });
+  });
+
+  it('preserves tombstones across launch persistence and excludes stale active duplicates', () => {
+    const removedAt = Date.parse('2026-07-14T17:00:00.000Z');
+    const active = buildMembersMetaWritePayload([
+      { name: 'alice', role: 'stale launch input' },
+      { name: 'bob', role: 'remaining teammate' },
+    ]);
+
+    expect(
+      mergeMembersMetaForLaunch(active, [
+        { name: 'Alice', role: 'removed teammate', removedAt },
+        { name: 'bob', role: 'previous metadata' },
+      ])
+    ).toEqual([
+      expect.objectContaining({ name: 'bob', role: 'remaining teammate' }),
+      { name: 'Alice', role: 'removed teammate', removedAt },
+    ]);
   });
 });

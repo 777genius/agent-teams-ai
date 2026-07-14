@@ -10,6 +10,7 @@ import { getEffectiveInboxMessageId } from '../../../../src/main/services/team/i
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
+import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import { encodePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
@@ -664,6 +665,74 @@ describe('TeamDataService draft metadata', () => {
         },
       ],
     });
+  });
+
+  it('persists a migrated removal tombstone and makes repeated removal restart-safe', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-remove-restart-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+    const teamDir = path.join(claudeRoot, 'teams', 'restart-team');
+    await fs.mkdir(path.join(teamDir, 'inboxes'), { recursive: true });
+    const configRaw = JSON.stringify({
+      name: 'restart-team',
+      members: [
+        { name: 'team-lead', agentType: 'team-lead', role: 'Lead' },
+        { name: 'user', role: 'Reserved recipient' },
+        { name: 'alice', role: 'Developer' },
+        { name: 'bob', role: 'Reviewer' },
+      ],
+    });
+    await fs.writeFile(path.join(teamDir, 'config.json'), configRaw);
+    await Promise.all(
+      [
+        'alice',
+        'bob',
+        'team-lead',
+        'user',
+        'alice-provisioner',
+        'alice-2',
+        'cross_team::other-team',
+        'cross_team_send',
+        'other-team.external',
+        'a0123456789abcdef',
+      ].map((name) => fs.writeFile(path.join(teamDir, 'inboxes', `${name}.json`), '[]'))
+    );
+
+    await new TeamDataService().removeMember('restart-team', 'alice');
+    await expect(
+      new TeamDataService().removeMember('restart-team', 'alice')
+    ).resolves.toBeUndefined();
+
+    const persisted = JSON.parse(
+      await fs.readFile(path.join(teamDir, 'members.meta.json'), 'utf8')
+    );
+    expect(persisted.members).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'alice',
+          role: 'Developer',
+          removedAt: expect.any(Number),
+        }),
+        expect.objectContaining({ name: 'bob', role: 'Reviewer' }),
+      ])
+    );
+    expect(persisted.members).toHaveLength(2);
+
+    for (let restart = 0; restart < 2; restart += 1) {
+      const provisioning = new TeamProvisioningService();
+      const report = await (
+        provisioning as unknown as {
+          probeLaunchCompatibility(
+            teamName: string,
+            rawConfig: string,
+            providerId: string
+          ): Promise<{ rosterSource: string; members: Array<{ name: string }> }>;
+        }
+      ).probeLaunchCompatibility('restart-team', configRaw, 'codex');
+
+      expect(report.rosterSource).toBe('members-meta');
+      expect(report.members.map((member) => member.name)).toEqual(['bob']);
+    }
   });
 });
 

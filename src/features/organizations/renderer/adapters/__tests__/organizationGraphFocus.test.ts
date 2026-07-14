@@ -60,8 +60,8 @@ function buildFixture(): {
     ['org:acme', 'team:gamma'],
   ].map(([sourceNodeId, targetNodeId], index) => ({
     id: `contains:${index}`,
-    sourceNodeId: sourceNodeId!,
-    targetNodeId: targetNodeId!,
+    sourceNodeId,
+    targetNodeId,
     kind: 'contains',
     sourceKind: 'manual',
     weight: 1,
