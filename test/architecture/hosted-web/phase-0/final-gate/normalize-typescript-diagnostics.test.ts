@@ -124,6 +124,52 @@ describe('Phase 0 final-gate TypeScript diagnostic normalization', () => {
     });
   });
 
+  it('accepts semantically identical quoted union members rendered in a different order', () => {
+    const expected = baseline.diagnostics.find((diagnostic) => diagnostic.code === 2352)!;
+    const observed = {
+      ...expected,
+      message: expected.message.replace('"auto" | "api" | "cli-sdk"', '"cli-sdk" | "auto" | "api"'),
+    };
+
+    expect(
+      evaluateCompilerResult({
+        exitCode: 2,
+        output: render(observed),
+        expected: [expected],
+        repositoryRoot,
+      })
+    ).toMatchObject({
+      passed: true,
+      normalizedInheritedCount: 1,
+      resolvedInheritedCount: 0,
+      effectiveDiagnosticCount: 0,
+      inheritedDiagnostics: [observed],
+    });
+  });
+
+  it.each([
+    ['added', '"auto" | "api" | "cli-sdk" | "added-member"'],
+    ['removed', '"auto" | "api"'],
+    ['changed', '"changed-member" | "auto" | "api"'],
+  ])('rejects a quoted union with %s members', (_change, observedUnion) => {
+    const expected = baseline.diagnostics.find((diagnostic) => diagnostic.code === 2352)!;
+    const observed = {
+      ...expected,
+      message: expected.message.replace('"auto" | "api" | "cli-sdk"', observedUnion),
+    };
+    const report = evaluateCompilerResult({
+      exitCode: 2,
+      output: render(observed),
+      expected: [expected],
+      repositoryRoot,
+    });
+
+    expect(report.passed).toBe(false);
+    expect(report.resolvedDiagnostics).toEqual([expected]);
+    expect(report.unexpectedDiagnostics).toEqual([observed]);
+    expect(report.effectiveDiagnosticCount).toBe(1);
+  });
+
   it('accepts removal of inherited diagnostics without hiding it', () => {
     const output = baseline.diagnostics.slice(0, 2).map(render).join('\n');
     expect(

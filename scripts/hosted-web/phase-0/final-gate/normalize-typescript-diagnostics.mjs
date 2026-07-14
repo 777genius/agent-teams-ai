@@ -10,6 +10,12 @@ const BASELINE_PATH = path.join(
   REPOSITORY_ROOT,
   'docs/research/hosted-web/phase-0/final-gate/inherited-typescript-diagnostics.json'
 );
+const QUOTED_TYPE_MEMBER_SOURCE = String.raw`"(?:\\.|[^"\\])*"`;
+const QUOTED_UNION_PATTERN = new RegExp(
+  String.raw`${QUOTED_TYPE_MEMBER_SOURCE}(?: \| ${QUOTED_TYPE_MEMBER_SOURCE})+`,
+  'g'
+);
+const QUOTED_TYPE_MEMBER_PATTERN = new RegExp(QUOTED_TYPE_MEMBER_SOURCE, 'g');
 
 function normalizeFilePath(file, repositoryRoot) {
   const portable = file.replaceAll('\\', '/');
@@ -23,6 +29,12 @@ function normalizeMessage(message, repositoryRoot) {
   const portable = message.replaceAll('\\', '/');
   const root = repositoryRoot.replaceAll('\\', '/').replace(/\/$/, '');
   return portable.replaceAll(root, '<repo>');
+}
+
+function canonicalizeQuotedUnionMemberOrder(message) {
+  return message.replace(QUOTED_UNION_PATTERN, (union) =>
+    (union.match(QUOTED_TYPE_MEMBER_PATTERN) ?? []).sort().join(' | ')
+  );
 }
 
 export function parseTypeScriptDiagnostics(output, repositoryRoot = REPOSITORY_ROOT) {
@@ -77,7 +89,7 @@ function diagnosticKey(diagnostic) {
     diagnostic.line,
     diagnostic.column,
     diagnostic.code,
-    diagnostic.message,
+    canonicalizeQuotedUnionMemberOrder(diagnostic.message),
   ]);
 }
 
