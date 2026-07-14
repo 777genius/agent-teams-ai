@@ -3,12 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  InMemoryAttemptJournal,
   InMemoryWorkerAccountCapacityStore,
   InMemoryWorkerAccountLeaseStore,
 } from "@vioxen/subscription-runtime/worker-core";
 import type { CodexGoalJobManifest } from "../codex-goal-jobs";
 import type { CodexGoalLaunchInput } from "../codex-goal-ops";
 import {
+  codexProjectContinuationReservationInput,
   codexProjectContinuationExcludedAccountIds,
   codexProjectAccountLeaseMode,
   releaseCodexProjectAccount,
@@ -62,9 +64,28 @@ describe("project account reservation", () => {
       now: new Date("2026-07-13T00:00:00.000Z"),
     };
     const first = await reserveCodexProjectAccount({ ...scoped, deps });
+    const journal = new InMemoryAttemptJournal();
+    await recordUnavailableAttempt(journal, first.accountId);
+    const continuation = await codexProjectContinuationReservationInput({
+      status: {
+        recommendedAction: "continue_after_capacity",
+        resultReason: "account_unavailable",
+      },
+      launch: scoped.launch,
+      journal,
+    });
+    await expect(codexProjectContinuationReservationInput({
+      status: {
+        recommendedAction: "continue_after_capacity",
+        resultReason: "account_unavailable",
+        progressAttemptCount: 0,
+      },
+      launch: scoped.launch,
+      journal,
+    })).rejects.toThrow("project_control_continuation_attempt_history_mismatch");
     const continued = await reserveCodexProjectAccount({
       ...scoped,
-      excludedAccountIds: [first.accountId],
+      ...continuation,
       deps,
     });
 
@@ -72,6 +93,7 @@ describe("project account reservation", () => {
     expect(continued.launch.config.accounts.map((item) => item.name)).toEqual([
       continued.accountId,
     ]);
+    expect(continued.launch.config.maxAccountCycles).toBe(2);
   });
 
   it("releases an excluded exclusive reservation before selecting another account", async () => {
@@ -91,6 +113,7 @@ describe("project account reservation", () => {
     const continued = await reserveCodexProjectAccount({
       ...scoped,
       excludedAccountIds: [first.accountId],
+      continuation: { previousAttemptCount: 1 },
       deps,
     });
 
@@ -345,4 +368,42 @@ function fixture(
       cliCommand: ["node", "runtime.js"],
     },
   };
+}
+
+async function recordUnavailableAttempt(
+  journal: InMemoryAttemptJournal,
+  accountId: string,
+): Promise<void> {
+  const now = new Date("2026-07-13T00:00:00.000Z");
+  await journal.startTask({
+    taskId: "job-1-task",
+    workspaceRunId: "workspace-run",
+    workspacePath: "/workspace",
+    effectMode: "workspace_patch",
+    provider: "codex",
+    now,
+  });
+  await journal.appendAttempt({
+    taskId: "job-1-task",
+    attempt: {
+      taskId: "job-1-task",
+      attemptNumber: 1,
+      accountId,
+      provider: "codex",
+      startedAt: now,
+      finishedAt: now,
+      status: "blocked",
+      failureReason: "account_unavailable",
+      workspaceDirtyBefore: true,
+      workspaceDirtyAfter: true,
+      changedFiles: [],
+    },
+    now,
+  });
+  await journal.markPartial({
+    taskId: "job-1-task",
+    status: "waiting_capacity",
+    reason: "account_unavailable",
+    now,
+  });
 }

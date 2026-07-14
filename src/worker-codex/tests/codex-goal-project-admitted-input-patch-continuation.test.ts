@@ -6,7 +6,9 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   AccessBoundary,
+  InMemoryAttemptJournal,
   NetworkAccessMode,
+  type ProjectControlBroker,
   type ProjectAccessScope,
 } from "@vioxen/subscription-runtime/worker-core";
 
@@ -15,6 +17,7 @@ import type {
   CodexGoalJobManifestInput,
 } from "../codex-goal-jobs";
 import { codexGoalJobManifestPath, readCodexGoalJob } from "../codex-goal-jobs";
+import type { CodexGoalLaunchInput } from "../codex-goal-ops";
 import { projectControlStartStoredJobView } from "../codex-goal-mcp-project-control-actions";
 import { isAdmittedInputPatchCapacityContinuation } from "../application/project-control/codex-goal-project-admitted-input-patch-continuation";
 import {
@@ -116,7 +119,7 @@ describe("admitted input-patch capacity continuation", () => {
       registryRoot: registryRootDir,
       jobIdPrefixes: ["project-"],
       tmuxSessionPrefixes: ["project-"],
-      allowedAccountIds: ["account-a"],
+      allowedAccountIds: ["account-c", "account-g"],
       allowedBranches: ["main"],
       allowedGitRemotes: ["origin"],
       preStartAdmission: { required: true, mode: "serial-builtin" },
@@ -127,7 +130,7 @@ describe("admitted input-patch capacity continuation", () => {
       workspacePath,
       promptPath: fixture.manifest.promptPath,
       taskId: fixture.manifest.taskId,
-      accounts: fixture.manifest.accounts,
+      accounts: ["account-c", "account-g"],
       authRootDir: join(fixture.root, "auth"),
       tmuxSession: fixture.manifest.jobId,
       accessBoundary: AccessBoundary.IsolatedWorkspaceWrite,
@@ -222,6 +225,8 @@ describe("admitted input-patch capacity continuation", () => {
         nextAction: "wait",
       })}\n`,
     );
+    const journal = new InMemoryAttemptJournal();
+    await recordUnavailableAttempt(journal, manifest.taskId, workspacePath);
 
     const controller = {
       schemaVersion: 1,
@@ -265,6 +270,39 @@ describe("admitted input-patch capacity continuation", () => {
     );
     expect(bootstrapCalls).toBe(1);
 
+    let reservedLaunch: CodexGoalLaunchInput | undefined;
+    const started = await projectControlStartStoredJobView(args, {
+      ...deps,
+      safeExecutionJournal: journal,
+      dependencyBootstrap: async () => ({
+        mode: "install" as const,
+        workspacePath,
+        nodeModulesPath: join(workspacePath, "node_modules"),
+        nodeModulesExists: true,
+        binaryChecks: [],
+        fingerprintInputs: [],
+        status: "installed" as const,
+        warnings: [],
+      }),
+      codexProjectControlBroker: (input) => {
+        reservedLaunch = input.startLaunch;
+        return {
+          startWorker: async () => ({ status: "started" }),
+        } as unknown as ProjectControlBroker;
+      },
+    });
+    expect(started).toMatchObject({
+      ok: true,
+      accountReservation: { accountId: "account-g" },
+    });
+    expect(reservedLaunch?.config.accounts).toEqual([{ name: "account-g" }]);
+    expect(reservedLaunch?.config.maxAccountCycles).toBe(2);
+    expect(sha256(execFileSync(
+      "git",
+      ["diff", "--cached", "--binary", "--no-ext-diff"],
+      { cwd: workspacePath },
+    ))).toBe(patchSha256);
+
     await writeFile(join(workspacePath, "UNTRACKED.txt"), "drift\n");
     await expect(projectControlStartStoredJobView(args, deps)).rejects.toThrow(
       "project_control_pre_start_launch_binding_mismatch",
@@ -278,4 +316,43 @@ describe("admitted input-patch capacity continuation", () => {
 
 function sha256(value: Uint8Array): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+async function recordUnavailableAttempt(
+  journal: InMemoryAttemptJournal,
+  taskId: string,
+  workspacePath: string,
+): Promise<void> {
+  const now = new Date("2026-07-14T00:00:00.000Z");
+  await journal.startTask({
+    taskId,
+    workspaceRunId: "workspace-run",
+    workspacePath,
+    effectMode: "workspace_patch",
+    provider: "codex",
+    now,
+  });
+  await journal.appendAttempt({
+    taskId,
+    attempt: {
+      taskId,
+      attemptNumber: 1,
+      accountId: "account-c",
+      provider: "codex",
+      startedAt: now,
+      finishedAt: now,
+      status: "blocked",
+      failureReason: "account_unavailable",
+      workspaceDirtyBefore: true,
+      workspaceDirtyAfter: true,
+      changedFiles: [],
+    },
+    now,
+  });
+  await journal.markPartial({
+    taskId,
+    status: "waiting_capacity",
+    reason: "account_unavailable",
+    now,
+  });
 }

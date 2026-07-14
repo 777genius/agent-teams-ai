@@ -5,6 +5,8 @@ import {
   buildRuntimeAccountWaitPlan,
   SelectRuntimeAccountUseCase,
   selectableWorkerAccountIds,
+  type AttemptJournal,
+  type SafeExecutionTaskRecord,
   type WorkerAccountCapacityStore,
   type WorkerAccountLeaseStore,
   type WorkerRuntimeDemand,
@@ -22,6 +24,7 @@ import {
 
 const reservationSchemaVersion = 1 as const;
 const reservationGraceMs = 10 * 60_000;
+const defaultMaxAccountCycles = 5;
 const exclusiveLeaseFlag =
   "SUBSCRIPTION_RUNTIME_PROJECT_ACCOUNT_EXCLUSIVE_LEASES";
 
@@ -79,6 +82,7 @@ export async function reserveCodexProjectAccount(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly launch: CodexGoalLaunchInput;
   readonly excludedAccountIds?: readonly string[];
+  readonly continuation?: CodexProjectAccountContinuation;
   readonly deps?: CodexProjectAccountReservationDeps;
 }): Promise<CodexProjectAccountReservation> {
   const leaseMode = input.deps?.leaseMode ?? codexProjectAccountLeaseMode();
@@ -91,6 +95,7 @@ async function reserveExclusiveCodexProjectAccount(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly launch: CodexGoalLaunchInput;
   readonly excludedAccountIds?: readonly string[];
+  readonly continuation?: CodexProjectAccountContinuation;
   readonly deps?: CodexProjectAccountReservationDeps;
 }): Promise<CodexProjectExclusiveAccountReservation> {
   const now = input.deps?.now ?? new Date();
@@ -117,7 +122,7 @@ async function reserveExclusiveCodexProjectAccount(input: {
     if (renewed.status === "renewed") {
       const receipt = receiptFromLease(renewed.lease);
       await writeReservation(receiptPath, receipt);
-      return reservationResult(input.launch, receipt);
+      return reservationResult(input.launch, receipt, reservedAttemptBudget(input));
     }
   }
   if (existing) {
@@ -169,13 +174,14 @@ async function reserveExclusiveCodexProjectAccount(input: {
     });
     throw error;
   }
-  return reservationResult(input.launch, receipt);
+  return reservationResult(input.launch, receipt, reservedAttemptBudget(input));
 }
 
 async function selectSharedCodexProjectAccount(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly launch: CodexGoalLaunchInput;
   readonly excludedAccountIds?: readonly string[];
+  readonly continuation?: CodexProjectAccountContinuation;
   readonly deps?: CodexProjectAccountReservationDeps;
 }): Promise<CodexProjectSharedAccountReservation> {
   const now = input.deps?.now ?? new Date();
@@ -214,7 +220,11 @@ async function selectSharedCodexProjectAccount(input: {
       });
       continue;
     }
-    return sharedReservationResult(input.launch, accountId);
+    return sharedReservationResult(
+      input.launch,
+      accountId,
+      reservedAttemptBudget(input),
+    );
   }
 
   const waitPlan = buildRuntimeAccountWaitPlan(unavailable, now);
@@ -245,6 +255,76 @@ export function codexProjectContinuationExcludedAccountIds(
   }
   return [status.progressCurrentAccount];
 }
+
+export async function codexProjectContinuationReservationInput(input: {
+  readonly status: Pick<
+    CodexGoalStatus,
+    | "recommendedAction"
+    | "resultReason"
+    | "progressResultReason"
+    | "progressAttemptCount"
+    | "progressCurrentAccount"
+  >;
+  readonly launch: CodexGoalLaunchInput;
+  readonly journal: Pick<AttemptJournal, "readTask">;
+}): Promise<{
+  readonly excludedAccountIds: readonly string[];
+  readonly continuation?: CodexProjectAccountContinuation;
+}> {
+  if (!isAccountUnavailableContinuation(input.status)) {
+    return { excludedAccountIds: [] };
+  }
+  return continuationAttemptHistory({
+    status: input.status,
+    task: await input.journal.readTask({ taskId: input.launch.config.taskId }),
+  });
+}
+
+function isAccountUnavailableContinuation(status: Pick<
+  CodexGoalStatus,
+  "recommendedAction" | "resultReason" | "progressResultReason"
+>): boolean {
+  return status.recommendedAction === "continue_after_capacity" &&
+    (status.resultReason === "account_unavailable" ||
+      status.progressResultReason === "account_unavailable");
+}
+
+function continuationAttemptHistory(input: {
+  readonly status: Pick<
+    CodexGoalStatus,
+    "progressAttemptCount" | "progressCurrentAccount"
+  >;
+  readonly task: SafeExecutionTaskRecord | null;
+}): {
+  readonly excludedAccountIds: readonly string[];
+  readonly continuation: CodexProjectAccountContinuation;
+} {
+  const lastAttempt = input.task?.attempts.at(-1);
+  if (
+    !input.task ||
+    !lastAttempt?.accountId ||
+    input.task.lastFailureReason !== "account_unavailable" ||
+    lastAttempt.failureReason !== "account_unavailable"
+  ) {
+    throw new Error("project_control_continuation_attempt_history_required");
+  }
+  if (
+    (input.status.progressAttemptCount !== undefined &&
+      input.status.progressAttemptCount !== input.task.attempts.length) ||
+    (input.status.progressCurrentAccount !== undefined &&
+      input.status.progressCurrentAccount !== lastAttempt.accountId)
+  ) {
+    throw new Error("project_control_continuation_attempt_history_mismatch");
+  }
+  return {
+    excludedAccountIds: [lastAttempt.accountId],
+    continuation: { previousAttemptCount: input.task.attempts.length },
+  };
+}
+
+export type CodexProjectAccountContinuation = {
+  readonly previousAttemptCount: number;
+};
 
 export async function releaseCodexProjectAccount(input: {
   readonly manifest: CodexGoalJobManifest;
@@ -293,6 +373,7 @@ function codexProjectAccountLeaseStore(
 function reservationResult(
   launch: CodexGoalLaunchInput,
   receipt: PersistedCodexProjectAccountReservation,
+  maxAccountCycles: number,
 ): CodexProjectExclusiveAccountReservation {
   const account = launch.config.accounts.find(
     (candidate) => candidate.name === receipt.accountId,
@@ -309,7 +390,7 @@ function reservationResult(
       config: {
         ...launch.config,
         accounts: [account],
-        maxAccountCycles: 1,
+        maxAccountCycles,
       },
     },
   };
@@ -318,6 +399,7 @@ function reservationResult(
 function sharedReservationResult(
   launch: CodexGoalLaunchInput,
   accountId: string,
+  maxAccountCycles: number,
 ): CodexProjectSharedAccountReservation {
   const account = launch.config.accounts.find(
     (candidate) => candidate.name === accountId,
@@ -331,10 +413,28 @@ function sharedReservationResult(
       config: {
         ...launch.config,
         accounts: [account],
-        maxAccountCycles: 1,
+        maxAccountCycles,
       },
     },
   };
+}
+
+function reservedAttemptBudget(input: {
+  readonly launch: CodexGoalLaunchInput;
+  readonly continuation?: CodexProjectAccountContinuation;
+}): number {
+  if (!input.continuation) return 1;
+  if (!Number.isInteger(input.continuation.previousAttemptCount) ||
+    input.continuation.previousAttemptCount < 1) {
+    throw new Error("project_control_continuation_attempt_count_required");
+  }
+  const previousAttemptCount = input.continuation.previousAttemptCount;
+  const maximumAttemptCount = input.launch.config.accounts.length *
+    (input.launch.config.maxAccountCycles ?? defaultMaxAccountCycles);
+  if (previousAttemptCount + 1 > maximumAttemptCount) {
+    throw new Error("project_control_continuation_attempt_budget_exhausted");
+  }
+  return previousAttemptCount + 1;
 }
 
 function projectAccountDemand(

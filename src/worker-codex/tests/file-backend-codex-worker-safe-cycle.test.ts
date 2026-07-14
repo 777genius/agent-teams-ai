@@ -16,6 +16,7 @@ import {
   AccessBoundary,
   BoundedSubscriptionWorkerPool,
   InMemoryActiveAttemptRegistry,
+  InMemoryAttemptJournal,
   InMemoryWorkerAccountCapacityStore,
   InterruptAndContinueWorkerUseCase,
   LaunchPlanStatus,
@@ -46,6 +47,8 @@ import {
   validAuthJson,
   waitUntil,
 } from "./file-backend-codex-worker-test-support";
+
+const execFileAsync = promisify(execFile);
 
 describe("CommandPolicyRunner", () => {
   it("surfaces prewarm setup failure before consuming task attempts", async () => {
@@ -414,6 +417,98 @@ describe("CommandPolicyRunner", () => {
       expect(result.attempts[0]?.failureReason).toBe("account_unavailable");
       expect(appServers[0]!.prompts).toEqual(["Implement the auth invalid task."]);
       expect(appServers[1]!.prompts[0]).toContain("Continue the same task");
+    } finally {
+      await executor.dispose();
+      await rm(rootDir, { recursive: true, force: true });
+      await rm(workspacePath, { recursive: true, force: true });
+    }
+  });
+
+  it("runs a newly reserved account after a persisted unavailable attempt", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "codex-safe-reserved-resume-"));
+    const workspacePath = await gitWorkspace(
+      "codex-safe-reserved-resume-workspace-",
+    );
+    const now = new Date("2026-05-31T00:05:00.000Z");
+    const clock = { now: () => now, monotonicMs: () => performance.now() };
+    await writeFile(join(workspacePath, "input.ts"), "export const input = 1;\n");
+    await execFileAsync("git", ["add", "input.ts"], { cwd: workspacePath });
+    const stagedPatch = (await execFileAsync(
+      "git",
+      ["diff", "--cached", "--binary", "--no-ext-diff"],
+      { cwd: workspacePath, encoding: "utf8" },
+    )).stdout;
+    const journal = new InMemoryAttemptJournal();
+    await journal.startTask({
+      taskId: "reserved-resume-task",
+      workspaceRunId: "reserved-resume-workspace",
+      workspacePath,
+      effectMode: "workspace_patch",
+      provider: "codex",
+      now,
+    });
+    await journal.appendAttempt({
+      taskId: "reserved-resume-task",
+      attempt: {
+        taskId: "reserved-resume-task",
+        attemptNumber: 1,
+        accountId: "account-c",
+        provider: "codex",
+        startedAt: now,
+        finishedAt: now,
+        status: "blocked",
+        failureReason: "account_unavailable",
+        workspaceDirtyBefore: true,
+        workspaceDirtyAfter: true,
+        changedFiles: [],
+      },
+      now,
+    });
+    await journal.markPartial({
+      taskId: "reserved-resume-task",
+      status: "waiting_capacity",
+      reason: "account_unavailable",
+      now,
+    });
+
+    const reservedAccount = new FakeAppServerFactory();
+    const executor = new FileBackendCodexSafeExecutor({
+      stateRootDir: rootDir,
+      workspacePath,
+      journal,
+      maxAccountCycles: 2,
+      accounts: [{
+        codexAuthJson: codexAuthJson("reserved-account-g"),
+        worker: {
+          providerInstanceId: "reserved-account-g",
+          stateRootDir: rootDir,
+          codexBinaryPath: "codex",
+          encryptionKey: new Uint8Array(32).fill(81),
+          appServerProcessFactory: reservedAccount.create,
+          clock,
+        },
+      }],
+      clock,
+    });
+
+    try {
+      const result = await executor.run({
+        taskId: "reserved-resume-task",
+        prompt: "Review the admitted patch.",
+        controls: { editMode: "allow-edits" },
+      });
+      if (result.status !== "completed") {
+        throw new Error(`expected completed: ${result.reason}`);
+      }
+      expect(result.replayed).toBe(false);
+      expect(result.attempts).toHaveLength(2);
+      expect(reservedAccount.prompts).toHaveLength(1);
+      expect(reservedAccount.prompts[0]).toContain("Continue the same task");
+      expect((await execFileAsync(
+        "git",
+        ["diff", "--cached", "--binary", "--no-ext-diff"],
+        { cwd: workspacePath, encoding: "utf8" },
+      )).stdout).toBe(stagedPatch);
     } finally {
       await executor.dispose();
       await rm(rootDir, { recursive: true, force: true });

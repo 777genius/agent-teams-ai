@@ -85,8 +85,9 @@ import type {
   ProjectControlMcpArgs,
 } from "./codex-goal-mcp-inputs";
 import { goalLaunchInput } from "./codex-goal-mcp-launch-input";
+import { localCodexProjectSafeExecutionJournal } from "./codex-goal-project-safe-execution-journal";
 import {
-  codexProjectContinuationExcludedAccountIds,
+  codexProjectContinuationReservationInput,
   releaseCodexProjectAccount,
   reserveCodexProjectAccount,
 } from "./application/project-control/codex-goal-project-account-reservation";
@@ -125,6 +126,7 @@ export type CodexGoalMcpProjectControlActionsDeps = {
     input: Omit<CodexProjectControlBrokerInput, "admissionDeps">,
   ) => ProjectControlBroker;
   readonly dependencyBootstrap?: typeof runDependencyBootstrap;
+  readonly safeExecutionJournal?: ReturnType<typeof localCodexProjectSafeExecutionJournal>;
 };
 
 export async function projectControlStartStoredJobView(
@@ -411,11 +413,17 @@ export async function projectControlStartStoredJobView(
           workspacePath: workspace.canonicalWorkspacePath,
         },
       };
+      const continuationReservation =
+        await codexProjectContinuationReservationInput({
+          status: lockedStatus,
+          launch: canonicalLaunch,
+          journal: deps.safeExecutionJournal ??
+            localCodexProjectSafeExecutionJournal(canonicalLaunch),
+        });
       const accountReservation = await reserveCodexProjectAccount({
         manifest: loaded.manifest,
         launch: canonicalLaunch,
-        excludedAccountIds:
-          codexProjectContinuationExcludedAccountIds(lockedStatus),
+        ...continuationReservation,
       });
       const reservedLaunch = accountReservation.launch;
       let result;
