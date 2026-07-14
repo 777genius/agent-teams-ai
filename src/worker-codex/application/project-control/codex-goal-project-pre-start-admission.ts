@@ -320,6 +320,94 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
   }
 }
 
+export async function rebindProjectPreStartAdmissionManifest(input: {
+  readonly manifest: CodexGoalJobManifest;
+  readonly scope: ProjectAccessScope;
+  readonly workspaceMode:
+    | "clean_capacity_continuation"
+    | "reviewed_dirty_continuation";
+}): Promise<{
+  readonly updated: boolean;
+  readonly previousManifestSha256: string;
+  readonly manifestSha256: string;
+}> {
+  const descriptor = input.manifest.projectPreStartAdmission;
+  if (!descriptor) {
+    throw new Error("project_control_pre_start_admission_required");
+  }
+  assertDescriptorPaths(descriptor, input.manifest.jobRootDir);
+  await assertArtifactRootSecure(input.manifest.jobRootDir);
+  const contract = await readJsonObject(
+    descriptor.contractPath,
+    "contract",
+    MAX_CONTRACT_BYTES,
+  );
+  const state = await readJsonObject(
+    descriptor.statePath,
+    "state",
+    MAX_STATE_BYTES,
+  );
+  const receipt = await readJsonObject(
+    descriptor.receiptPath,
+    "receipt",
+    64 * 1024,
+  );
+  assertProjectInputPatchContract({
+    builtin: isBuiltinDescriptor(descriptor),
+    contract,
+  });
+  assertContractBindings(contract, input.manifest);
+  assertQueuedStateBinding(contract, state, input.manifest.jobId);
+  const binding = await currentBinding(input.manifest, descriptor);
+  const dirtyContinuation = input.workspaceMode === "reviewed_dirty_continuation";
+  const receiptStatusValid =
+    receipt.status === "launch_authorized" ||
+    receipt.status === "validated_not_launched";
+  const workspaceBindingValid = dirtyContinuation
+    ? binding.workspaceStatus !== ""
+    : binding.workspaceStatus === "";
+  const inputPatchBindingValid = dirtyContinuation
+    ? true
+    : projectInputPatchBindingMatches(binding, contract);
+  const mismatches = [
+    binding.workspaceHead !== contract.phaseStartSha ? "workspace_head" : undefined,
+    !inputPatchBindingValid ? "input_patch_binding" : undefined,
+    !workspaceBindingValid ? "workspace_binding" : undefined,
+    !receiptStatusValid ? "receipt_status" : undefined,
+    receipt.jobId !== input.manifest.jobId ? "job_id" : undefined,
+    receipt.workKey !== contract.workKey ? "work_key" : undefined,
+    receipt.contractSha256 !== binding.contractSha256 ? "contract_sha256" : undefined,
+    receipt.stateSha256 !== binding.stateSha256 ? "state_sha256" : undefined,
+    receipt.promptSha256 !== binding.promptSha256 ? "prompt_sha256" : undefined,
+    !projectPreStartValidatorReceiptValid({ descriptor, receipt, scope: input.scope })
+      ? "validator_receipt"
+      : undefined,
+  ].filter((value): value is string => value !== undefined);
+  if (mismatches.length > 0) {
+    throw new Error(
+      `project_control_pre_start_manifest_rebind_mismatch:${mismatches.join(",")}`,
+    );
+  }
+  const previousManifestSha256 = requiredSha256(
+    receipt.manifestSha256,
+    "manifestSha256",
+  );
+  const manifestSha256 = sha256(Buffer.from(JSON.stringify(input.manifest)));
+  if (previousManifestSha256 === manifestSha256) {
+    return { updated: false, previousManifestSha256, manifestSha256 };
+  }
+  await writeJsonAtomically(descriptor.receiptPath, {
+    ...receipt,
+    manifestSha256,
+    manifestRepair: {
+      previousManifestSha256,
+      manifestSha256,
+      repairedAt: new Date().toISOString(),
+    },
+  });
+  return { updated: true, previousManifestSha256, manifestSha256 };
+}
+
 function projectPreStartValidatorReceiptValid(input: {
   readonly descriptor: CodexGoalProjectPreStartAdmission;
   readonly receipt: JsonObject;

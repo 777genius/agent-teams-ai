@@ -20,6 +20,18 @@ import {
 import { goalLaunchInput } from "./codex-goal-mcp-launch-input";
 import { codexGoalStatusInputFromLaunch } from "./codex-goal-mcp-status-input";
 import {
+  assertReviewedWorkerContinuationEnvironmentLocked,
+  assertReviewedWorkerOutputStillMatchesLocked,
+  localReviewedWorkerOutputDeps,
+  resolveReviewedWorkerContinuation,
+  reviewedWorkerOutputRoot,
+} from "./reviewed-worker-output";
+import {
+  projectControlWorkspaceLocks,
+  withValidatedProjectWorkspaceLock,
+} from "./codex-goal-project-workspace-lock";
+import { rebindProjectPreStartAdmissionManifest } from "./application/project-control/codex-goal-project-pre-start-admission";
+import {
   parseCodexGoalProjectAccessScope,
 } from "./codex-goal-access-plan";
 import {
@@ -201,6 +213,7 @@ export async function projectControlRepairJobManifestView(
   });
 
   const patch: Record<string, unknown> = {};
+  let serviceTierWorkspaceDirty: boolean | undefined;
   if (args.accounts !== undefined) {
     const requestedAccounts = accountNames(args.accounts);
     if (requestedAccounts.length === 0) {
@@ -230,17 +243,24 @@ export async function projectControlRepairJobManifestView(
     ) {
       throw new Error("project_control_repair_service_tier_invalid");
     }
+    const launch = await goalLaunchInput(codexGoalJobToArgs(existing));
+    const status = await collectCodexGoalStatus(
+      codexGoalStatusInputFromLaunch(launch),
+    );
+    const progressStale =
+      status.progressHeartbeatAgeMs !== undefined &&
+      status.progressHeartbeatAgeMs > 10 * 60_000;
+    if (resolveCodexGoalWorkerLiveness({ status, progressStale }).alive) {
+      throw new Error("project_control_repair_live_worker_profile_denied");
+    }
+    serviceTierWorkspaceDirty = status.workspaceDirty === true;
+    if (
+      serviceTierWorkspaceDirty &&
+      stringValue(args.reviewedOutputId) === undefined
+    ) {
+      throw new Error("project_control_repair_reviewed_output_required");
+    }
     if (requestedServiceTier !== existing.serviceTier) {
-      const launch = await goalLaunchInput(codexGoalJobToArgs(existing));
-      const status = await collectCodexGoalStatus(
-        codexGoalStatusInputFromLaunch(launch),
-      );
-      const progressStale =
-        status.progressHeartbeatAgeMs !== undefined &&
-        status.progressHeartbeatAgeMs > 10 * 60_000;
-      if (resolveCodexGoalWorkerLiveness({ status, progressStale }).alive) {
-        throw new Error("project_control_repair_live_worker_profile_denied");
-      }
       patch.serviceTier = requestedServiceTier;
     }
   }
@@ -251,7 +271,9 @@ export async function projectControlRepairJobManifestView(
     patch.tags = tagValues(args.tags);
   }
 
-  if (Object.keys(patch).length === 0) {
+  const rebindPreStartAdmission =
+    args.serviceTier !== undefined && existing.projectPreStartAdmission !== undefined;
+  if (Object.keys(patch).length === 0 && !rebindPreStartAdmission) {
     return {
       ok: true,
       mode: "brokered_project_manifest_repair",
@@ -273,14 +295,25 @@ export async function projectControlRepairJobManifestView(
       jobId: existing.jobId,
       auditPath: projectControlAuditPath(controller.controller),
       proposedPatch: patch as unknown as JsonObject,
+      ...(rebindPreStartAdmission ? { rebindPreStartAdmission: true } : {}),
     };
   }
 
-  const manifest = await updateCodexGoalJob({
-    registryRootDir: controller.registryRootDir,
-    jobId: existing.jobId,
-    patch: patch as CodexGoalJobManifestPatch,
-  });
+  const manifest = Object.keys(patch).length === 0
+    ? existing
+    : await updateCodexGoalJob({
+        registryRootDir: controller.registryRootDir,
+        jobId: existing.jobId,
+        patch: patch as CodexGoalJobManifestPatch,
+      });
+  const preStartAdmissionRebind = rebindPreStartAdmission
+    ? await rebindRepairedProjectJobManifest({
+        controller,
+        manifest,
+        workspaceDirty: serviceTierWorkspaceDirty === true,
+        reviewedOutputId: stringValue(args.reviewedOutputId),
+      })
+    : undefined;
   return {
     ok: true,
     mode: "brokered_project_manifest_repair",
@@ -288,8 +321,74 @@ export async function projectControlRepairJobManifestView(
     registryRootDir: controller.registryRootDir,
     auditPath: projectControlAuditPath(controller.controller),
     manifest,
+    ...(preStartAdmissionRebind ? { preStartAdmissionRebind } : {}),
     summary: summarizeCodexGoalJob(manifest, controller.registryRootDir),
   };
+}
+
+async function rebindRepairedProjectJobManifest(input: {
+  readonly controller: LoadedProjectControlController;
+  readonly manifest: CodexGoalJobManifest;
+  readonly workspaceDirty: boolean;
+  readonly reviewedOutputId: string | undefined;
+}): Promise<JsonObject> {
+  const locks = projectControlWorkspaceLocks(input.controller.registryRootDir);
+  return await withValidatedProjectWorkspaceLock({
+    locks,
+    scope: input.controller.scope,
+    requestedWorkspacePath: input.manifest.workspacePath,
+    owner: `project-manifest-repair:${input.controller.controller.jobId}:${input.manifest.jobId}`,
+    effect: async (workspace) => {
+      const launch = await goalLaunchInput(codexGoalJobToArgs(input.manifest));
+      const status = await collectCodexGoalStatus(
+        codexGoalStatusInputFromLaunch(launch),
+      );
+      const progressStale =
+        status.progressHeartbeatAgeMs !== undefined &&
+        status.progressHeartbeatAgeMs > 10 * 60_000;
+      if (resolveCodexGoalWorkerLiveness({ status, progressStale }).alive) {
+        throw new Error("project_control_repair_live_worker_profile_denied");
+      }
+      if ((status.workspaceDirty === true) !== input.workspaceDirty) {
+        throw new Error("project_control_repair_workspace_state_changed");
+      }
+      if (input.workspaceDirty) {
+        const reviewedOutputId = input.reviewedOutputId;
+        if (!reviewedOutputId) {
+          throw new Error("project_control_repair_reviewed_output_required");
+        }
+        const reviewedOutputDeps = localReviewedWorkerOutputDeps({
+          rootDir: reviewedWorkerOutputRoot(input.controller.registryRootDir),
+          locks,
+        });
+        const snapshot = await resolveReviewedWorkerContinuation({
+          store: reviewedOutputDeps.store,
+          projectId: input.controller.scope.projectId,
+          controllerJobId: input.controller.controller.jobId,
+          workerJobId: input.manifest.jobId,
+          taskId: launch.config.taskId,
+          workspacePath: workspace.canonicalWorkspacePath,
+          reviewedOutputId,
+        });
+        await assertReviewedWorkerOutputStillMatchesLocked(
+          reviewedOutputDeps,
+          snapshot,
+          workspace.lease,
+        );
+        await assertReviewedWorkerContinuationEnvironmentLocked(
+          reviewedOutputDeps,
+          workspace.lease,
+        );
+      }
+      return await rebindProjectPreStartAdmissionManifest({
+        manifest: input.manifest,
+        scope: input.controller.scope,
+        workspaceMode: input.workspaceDirty
+          ? "reviewed_dirty_continuation"
+          : "clean_capacity_continuation",
+      });
+    },
+  });
 }
 
 function assertProjectControlRepairJobOwned(input: {

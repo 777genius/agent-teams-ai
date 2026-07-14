@@ -16,6 +16,7 @@ import {
   assertProjectPreStartAdmissionLaunchBinding,
   planProjectPreStartAdmission,
   prepareProjectPreStartAdmission,
+  rebindProjectPreStartAdmissionManifest,
   validateStoredProjectPreStartAdmission,
 } from "../application/project-control/codex-goal-project-pre-start-admission";
 import {
@@ -666,6 +667,84 @@ describe("builtin project pre-start admission", () => {
       scope: headFixture.scope,
       workspaceMode: "reviewed_dirty_continuation",
     })).rejects.toThrow("project_control_pre_start_launch_binding_mismatch");
+  });
+
+  it("rebinds only the repaired manifest for an authorized reviewed dirty continuation", async () => {
+    const fixture = await createBuiltinFixture();
+    const plan = fixture.plan();
+    const manifest = {
+      ...fixture.storedManifest,
+      projectPreStartAdmission: plan.descriptor,
+    };
+    await prepareProjectPreStartAdmission({
+      plan,
+      manifest,
+      scope: fixture.scope,
+    });
+    await authorizeProjectPreStartAdmissionLaunch({
+      manifest,
+      scope: fixture.scope,
+    });
+    await writeFile(join(fixture.workspacePath, "reviewed-change.ts"), "dirty\n");
+
+    const repairedManifest = {
+      ...manifest,
+      serviceTier: "default" as const,
+    };
+    await expect(
+      assertProjectPreStartAdmissionLaunchBinding({
+        manifest: repairedManifest,
+        scope: fixture.scope,
+        workspaceMode: "reviewed_dirty_continuation",
+      }),
+    ).rejects.toThrow(
+      "project_control_pre_start_launch_binding_mismatch:manifest_sha256",
+    );
+
+    const rebound = await rebindProjectPreStartAdmissionManifest({
+      manifest: repairedManifest,
+      scope: fixture.scope,
+      workspaceMode: "reviewed_dirty_continuation",
+    });
+    expect(rebound).toMatchObject({ updated: true });
+    expect(rebound.previousManifestSha256).not.toBe(rebound.manifestSha256);
+    await expect(
+      assertProjectPreStartAdmissionLaunchBinding({
+        manifest: repairedManifest,
+        scope: fixture.scope,
+        workspaceMode: "reviewed_dirty_continuation",
+      }),
+    ).resolves.toBeUndefined();
+
+    const receipt = JSON.parse(
+      await readFile(plan.descriptor.receiptPath, "utf8"),
+    ) as Record<string, unknown>;
+    expect(receipt).toMatchObject({
+      manifestSha256: rebound.manifestSha256,
+      manifestRepair: {
+        previousManifestSha256: rebound.previousManifestSha256,
+        manifestSha256: rebound.manifestSha256,
+        repairedAt: expect.any(String),
+      },
+    });
+    await expect(
+      rebindProjectPreStartAdmissionManifest({
+        manifest: repairedManifest,
+        scope: fixture.scope,
+        workspaceMode: "reviewed_dirty_continuation",
+      }),
+    ).resolves.toMatchObject({ updated: false });
+
+    await writeFile(fixture.manifest.promptPath, "tampered prompt\n");
+    await expect(
+      rebindProjectPreStartAdmissionManifest({
+        manifest: { ...repairedManifest, description: "another repair" },
+        scope: fixture.scope,
+        workspaceMode: "reviewed_dirty_continuation",
+      }),
+    ).rejects.toThrow(
+      "project_control_pre_start_manifest_rebind_mismatch:prompt_sha256",
+    );
   });
 
   it("rolls back failed startup authorization and permits one reviewed-dirty restart", async () => {
