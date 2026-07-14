@@ -30,6 +30,12 @@ import {
   codexProjectAdmissionGate,
   type CodexProjectAdmissionDeps,
 } from "./application/project-control/codex-goal-project-admission";
+import {
+  authorizeProjectPreStartAdmissionLaunch,
+} from "./application/project-control/codex-goal-project-pre-start-admission";
+import {
+  assertCodexGoalProjectJobNotTerminal,
+} from "./application/project-control/codex-goal-consumed-output-ledger-io";
 import type {
   CaptureReviewedWorkerOutputInput,
   ReviewedWorkerOutputSnapshot,
@@ -101,6 +107,8 @@ export type CodexProjectControlBrokerInput = {
   readonly integrateCommitInput?: CodexGoalProjectIntegrateCommitInput;
   readonly pushBranchInput?: CodexGoalProjectPushBranchInput;
   readonly startLaunch?: CodexGoalLaunchInput;
+  readonly startManifest?: CodexGoalJobManifest;
+  readonly startAdmissionWorkspaceMode?: "reviewed_dirty_continuation";
   readonly startWorkspaceLease?: ProjectControlWorkspaceLease;
   readonly startSkipDoctor?: boolean;
   readonly stopLaunch?: CodexGoalLaunchInput;
@@ -229,6 +237,11 @@ function codexProjectControlPorts(
           throw new Error("project_control_start_workspace_lease_mismatch");
         }
         const start = async () => {
+          await assertCodexGoalProjectJobNotTerminal({
+            roots: input.scope.consumedOutputLedgerRoots ?? [],
+            jobId: input.startManifest?.jobId ?? startLaunch.config.taskId,
+            workspacePath: startLaunch.config.workspacePath,
+          });
           await prepareCodexGoalLaunchPaths(startLaunch);
           if (!input.startSkipDoctor) {
             const doctor = await doctorCodexGoal({
@@ -242,6 +255,17 @@ function codexProjectControlPorts(
                 `project_control_doctor_failed:${JSON.stringify(doctor)}`,
               );
             }
+          }
+          if (input.startManifest) {
+            await authorizeProjectPreStartAdmissionLaunch({
+              manifest: input.startManifest,
+              scope: input.scope,
+              ...(input.startAdmissionWorkspaceMode
+                ? { workspaceMode: input.startAdmissionWorkspaceMode }
+                : {}),
+            });
+          } else if (input.scope.preStartAdmission?.required) {
+            throw new Error("project_control_start_manifest_required");
           }
           const previousBrokeredStart =
             process.env.SUBSCRIPTION_RUNTIME_PROJECT_CONTROL_BROKERED_START;

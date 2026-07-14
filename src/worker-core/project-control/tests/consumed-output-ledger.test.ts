@@ -10,7 +10,7 @@ import {
 } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -177,25 +177,29 @@ describe("consumed output ledger", () => {
     const workspace = join(root, "workspaces", "verifier-v1");
     const backup = await createBackupEvidence(root, "verifier-v1", workspace, false);
     await writeFile(backup.statusPath!, " M producer-output.ts\n");
-    const preexistingPatchPath = join(root, "producer.patch");
+    const preexistingPatchPath = join(
+      dirname(backup.statusPath!),
+      "producer.patch",
+    );
     const preexistingPatch = "diff --git a/producer-output.ts b/producer-output.ts\n";
     await writeFile(preexistingPatchPath, preexistingPatch);
 
+    const value = {
+      jobId: "verifier-v1",
+      status: "failed_no_output",
+      closedAt: "2026-07-13T00:00:00.000Z",
+      failure: { category: "infrastructure", code: "terminal_result_missing" },
+      output: { authoredChanges: false, workspaceDirty: false },
+      preexistingWorkspacePatch: {
+        path: preexistingPatchPath,
+        sha256: createHash("sha256").update(preexistingPatch).digest("hex"),
+      },
+      backup,
+    };
     const record = await consumedOutputRecordFromJson({
       ledgerPath: join(root, "failed-verifier.json"),
       source: localConsumedOutputLedgerSource(),
-      value: {
-        jobId: "verifier-v1",
-        status: "failed_no_output",
-        closedAt: "2026-07-13T00:00:00.000Z",
-        failure: { category: "infrastructure", code: "terminal_result_missing" },
-        output: { authoredChanges: false, workspaceDirty: false },
-        preexistingWorkspacePatch: {
-          path: preexistingPatchPath,
-          sha256: createHash("sha256").update(preexistingPatch).digest("hex"),
-        },
-        backup,
-      },
+      value,
     });
 
     expect(record).toMatchObject({
@@ -204,6 +208,19 @@ describe("consumed output ledger", () => {
       valid: true,
     });
     expect(consumedDebt(record!)).toEqual([]);
+
+    await writeFile(preexistingPatchPath, "mutated evidence\n");
+    await expect(consumedOutputRecordFromJson({
+      ledgerPath: join(root, "failed-verifier.json"),
+      source: localConsumedOutputLedgerSource(),
+      value,
+    })).resolves.toMatchObject({
+      preexistingWorkspacePatchValid: false,
+      valid: false,
+      evidence: expect.arrayContaining([
+        `preexisting workspace patch hash mismatch: ${preexistingPatchPath}`,
+      ]),
+    });
   });
 
   it("requires commit evidence for integrated records", async () => {
@@ -574,6 +591,13 @@ function localConsumedOutputLedgerSource(): ConsumedOutputLedgerSourcePort {
     async pathSize(path) {
       try {
         return (await stat(path)).size;
+      } catch {
+        return undefined;
+      }
+    },
+    async pathSha256(path) {
+      try {
+        return createHash("sha256").update(await readFile(path)).digest("hex");
       } catch {
         return undefined;
       }

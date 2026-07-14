@@ -57,7 +57,9 @@ export async function recordFailedNoOutput(
   });
 }
 
-function assertFailedNoOutputEvidence(input: RecordFailedNoOutputInput): void {
+export function assertFailedNoOutputEvidence(
+  input: RecordFailedNoOutputInput,
+): void {
   if (!input.attemptId.trim()) {
     throw new Error("failed_no_output_attempt_id_required");
   }

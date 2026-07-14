@@ -24,6 +24,7 @@ import type {
 import { parseCodexGoalProjectAccessScopeJson } from "../codex-goal-access-plan";
 import { projectControlCreateCodexGoalJobView } from "../codex-goal-mcp-project-control-jobs";
 import {
+  authorizeProjectPreStartAdmissionLaunch,
   assertProjectPreStartAdmissionLaunchBinding,
   planProjectPreStartAdmission,
   prepareProjectPreStartAdmission,
@@ -550,6 +551,18 @@ describe("builtin project pre-start admission", () => {
       manifest: dirtyManifest,
       scope: dirtyFixture.scope,
     });
+    await authorizeProjectPreStartAdmissionLaunch({
+      manifest: dirtyManifest,
+      scope: dirtyFixture.scope,
+    });
+    await expect(readFile(dirtyPlan.descriptor.receiptPath, "utf8")).resolves
+      .toContain('"status": "launch_authorized"');
+    await expect(validateStoredProjectPreStartAdmission({
+      manifest: dirtyManifest,
+      scope: dirtyFixture.scope,
+    })).rejects.toThrow(
+      "project_control_pre_start_admission_already_authorized",
+    );
     await writeFile(join(dirtyFixture.workspacePath, "DIRTY.txt"), "dirty\n");
     await expect(assertProjectPreStartAdmissionLaunchBinding({
       manifest: dirtyManifest,

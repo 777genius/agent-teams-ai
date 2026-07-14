@@ -336,6 +336,13 @@ export async function projectControlStartStoredJobView(
           controller: controller.controller,
           scope: controller.scope,
           startLaunch: reservedLaunch,
+          startManifest: loaded.manifest,
+          ...(reviewedContinuation
+            ? {
+                startAdmissionWorkspaceMode:
+                  "reviewed_dirty_continuation" as const,
+              }
+            : {}),
           startWorkspaceLease: workspace,
           startSkipDoctor: booleanValue(args.skipDoctor) ?? false,
         });

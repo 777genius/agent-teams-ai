@@ -206,6 +206,7 @@ export async function validateStoredProjectPreStartAdmission(input: {
 export async function assertProjectPreStartAdmissionLaunchBinding(input: {
   readonly manifest: CodexGoalJobManifest;
   readonly scope: ProjectAccessScope;
+  readonly expectedInputPatchArtifactSha256?: string;
   readonly workspaceMode?:
     | "clean_first_launch"
     | "admitted_input_patch"
@@ -213,7 +214,11 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
 }): Promise<void> {
   const descriptor = input.manifest.projectPreStartAdmission;
   if (!descriptor) {
-    if (input.scope.preStartAdmission?.required) {
+    if (
+      input.scope.preStartAdmission?.required ||
+      input.workspaceMode === "admitted_input_patch" ||
+      input.expectedInputPatchArtifactSha256 !== undefined
+    ) {
       throw new Error("project_control_pre_start_admission_required");
     }
     return;
@@ -232,6 +237,10 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
     scope: input.scope,
   });
   const verifiedInputPatch = verifiedInputPatchFromReceipt(receipt, contract);
+  const expectedReceiptStatus =
+    input.workspaceMode === "reviewed_dirty_continuation"
+      ? "launch_authorized"
+      : "validated_not_launched";
   const workspaceBindingValid =
     input.workspaceMode === "admitted_input_patch" ||
     input.workspaceMode === "reviewed_dirty_continuation"
@@ -245,9 +254,12 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
       : bindingMatchesInputPatch(binding, contract));
   if (
     binding.workspaceHead !== contract.phaseStartSha ||
+    (input.expectedInputPatchArtifactSha256 !== undefined &&
+      verifiedInputPatch?.artifactSha256 !==
+        input.expectedInputPatchArtifactSha256) ||
     !inputPatchBindingValid ||
     !workspaceBindingValid ||
-    receipt.status !== "validated_not_launched" ||
+    receipt.status !== expectedReceiptStatus ||
     receipt.jobId !== input.manifest.jobId ||
     receipt.workKey !== contract.workKey ||
     receipt.contractSha256 !== binding.contractSha256 ||
@@ -258,6 +270,42 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
   ) {
     throw new Error("project_control_pre_start_launch_binding_mismatch");
   }
+}
+
+export async function authorizeProjectPreStartAdmissionLaunch(input: {
+  readonly manifest: CodexGoalJobManifest;
+  readonly scope: ProjectAccessScope;
+  readonly workspaceMode?: "reviewed_dirty_continuation";
+}): Promise<void> {
+  const descriptor = input.manifest.projectPreStartAdmission;
+  if (!descriptor) {
+    if (input.scope.preStartAdmission?.required) {
+      throw new Error("project_control_pre_start_admission_required");
+    }
+    return;
+  }
+  await assertProjectPreStartAdmissionLaunchBinding({
+    manifest: input.manifest,
+    scope: input.scope,
+    ...(input.workspaceMode ? { workspaceMode: input.workspaceMode } : {}),
+  });
+  const receipt = await readJsonObject(
+    descriptor.receiptPath,
+    "receipt",
+    64 * 1024,
+  );
+  const authorizationCount =
+    typeof receipt.launchAuthorizationCount === "number" &&
+      Number.isSafeInteger(receipt.launchAuthorizationCount) &&
+      receipt.launchAuthorizationCount >= 0
+      ? receipt.launchAuthorizationCount
+      : 0;
+  await writeJsonAtomically(descriptor.receiptPath, {
+    ...receipt,
+    status: "launch_authorized",
+    launchAuthorizationCount: authorizationCount + 1,
+    launchAuthorizedAt: new Date().toISOString(),
+  });
 }
 
 function projectPreStartValidatorReceiptValid(input: {
@@ -301,6 +349,7 @@ async function validateProjectPreStartAdmission(input: {
   const descriptor = input.manifest.projectPreStartAdmission;
   if (!descriptor)
     throw new Error("project_control_pre_start_admission_required");
+  await assertProjectPreStartAdmissionNotAuthorized(descriptor);
   assertDescriptorPaths(descriptor, input.manifest.jobRootDir);
   await assertArtifactRootSecure(input.manifest.jobRootDir);
   const contract = await readJsonObject(
@@ -417,7 +466,27 @@ async function validateProjectPreStartAdmission(input: {
       : {}),
     validatedAt: new Date().toISOString(),
   };
+  await assertProjectPreStartAdmissionNotAuthorized(descriptor);
   await writeJsonAtomically(descriptor.receiptPath, receipt);
+}
+
+async function assertProjectPreStartAdmissionNotAuthorized(
+  descriptor: CodexGoalProjectPreStartAdmission,
+): Promise<void> {
+  try {
+    await access(descriptor.receiptPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+  const receipt = await readJsonObject(
+    descriptor.receiptPath,
+    "receipt",
+    64 * 1024,
+  );
+  if (receipt.status === "launch_authorized") {
+    throw new Error("project_control_pre_start_admission_already_authorized");
+  }
 }
 
 function parseProjectPreStartAdmissionInput(

@@ -75,13 +75,13 @@ import {
   rollbackProjectRefillPartial,
 } from "./application/project-control/codex-goal-project-refill";
 import {
-  assertProjectPreStartAdmissionLaunchBinding,
   assertProjectPreStartAdmissionSourceRevision,
   planProjectPreStartAdmission,
   prepareProjectPreStartAdmission,
   removeProjectPreStartAdmissionPaths,
   validateStoredProjectPreStartAdmission,
 } from "./application/project-control/codex-goal-project-pre-start-admission";
+import { validateProjectRefillPreStartAdmission } from "./application/project-control/codex-goal-project-refill-admission";
 import { projectControlChildManifestInput } from "./application/project-control/codex-goal-project-child-manifest";
 import {
   projectControlWorkspaceLocks,
@@ -513,21 +513,18 @@ export async function projectControlRefillWorkerView(
     });
     createJob = createResult.result;
     manifest = createResult.manifest;
-    await validateStoredProjectPreStartAdmission({
-      manifest,
-      scope: controller.scope,
-    });
-    await assertProjectPreStartAdmissionLaunchBinding({
-      manifest,
-      scope: controller.scope,
-      ...(producerHandoff
-        ? { workspaceMode: "admitted_input_patch" as const }
-        : {}),
-    });
     expectedCanonicalWorkspacePath = await projectControlCanonicalWorkspacePath(
       manifest.workspacePath,
       controller.scope,
     );
+    await validateProjectRefillPreStartAdmission({
+      registryRootDir: controller.registryRootDir,
+      controllerJobId: controller.controller.jobId,
+      scope: controller.scope,
+      manifest,
+      expectedCanonicalWorkspacePath,
+      admittedInputPatch: Boolean(producerHandoff),
+    });
   } catch (error) {
     await removeProjectPreStartAdmissionPaths(admissionCreatedPaths);
     const rolledBack = await rollbackProjectRefillPartial({
@@ -593,6 +590,7 @@ export async function projectControlRefillWorkerView(
             controller: controller.controller,
             scope: controller.scope,
             startLaunch: reservedLaunch,
+            startManifest: manifest,
             startWorkspaceLease: workspace,
             startSkipDoctor: booleanValue(args.skipDoctor) ?? false,
           });

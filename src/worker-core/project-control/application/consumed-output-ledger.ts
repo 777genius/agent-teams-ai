@@ -1,4 +1,4 @@
-import { basename, resolve } from "node:path";
+import { basename, dirname, relative, resolve, sep } from "node:path";
 
 import {
   ProjectDebtReason,
@@ -63,6 +63,7 @@ export type ConsumedOutputLedgerSourcePort = {
   }>;
   pathExists(path: string): Promise<boolean>;
   pathSize(path: string): Promise<number | undefined>;
+  pathSha256(path: string): Promise<string | undefined>;
   resolveWorkspacePath(path: string): Promise<string | undefined>;
 };
 
@@ -135,7 +136,7 @@ export async function consumedOutputRecordFromJson(input: {
   readonly ledgerPath: string;
   readonly source: Pick<
     ConsumedOutputLedgerSourcePort,
-    "pathExists" | "pathSize" | "resolveWorkspacePath"
+    "pathExists" | "pathSize" | "pathSha256" | "resolveWorkspacePath"
   >;
 }): Promise<ConsumedOutputRecord | null> {
   if (!isRecord(input.value)) return null;
@@ -395,7 +396,7 @@ function failedNoOutputEvidence(
 
 async function preexistingWorkspacePatchEvidence(
   value: Record<string, unknown>,
-  source: Pick<ConsumedOutputLedgerSourcePort, "pathSize">,
+  source: Pick<ConsumedOutputLedgerSourcePort, "pathSize" | "pathSha256">,
 ): Promise<{ readonly valid: boolean; readonly evidence: readonly string[] }> {
   const candidate = isRecord(value.preexistingWorkspacePatch)
     ? value.preexistingWorkspacePatch
@@ -409,6 +410,14 @@ async function preexistingWorkspacePatchEvidence(
       evidence: ["preexisting workspace patch metadata is invalid"],
     };
   }
+  const backup = isRecord(value.backup) ? value.backup : undefined;
+  const statusPath = backup ? stringValue(backup.statusPath) : undefined;
+  if (!statusPath || !pathInsideOrEqual(path, dirname(statusPath))) {
+    return {
+      valid: false,
+      evidence: ["preexisting workspace patch is outside terminal backup"],
+    };
+  }
   // The scoped command verifies payload bytes before publishing the immutable
   // decision. Admission readers only inspect metadata and never open payloads.
   const size = await source.pathSize(path);
@@ -418,7 +427,20 @@ async function preexistingWorkspacePatchEvidence(
       evidence: [`preexisting workspace patch is missing or empty: ${path}`],
     };
   }
+  const actualSha256 = await source.pathSha256(path);
+  if (actualSha256 !== expectedSha256) {
+    return {
+      valid: false,
+      evidence: [`preexisting workspace patch hash mismatch: ${path}`],
+    };
+  }
   return { valid: true, evidence: [] };
+}
+
+function pathInsideOrEqual(path: string, root: string): boolean {
+  const pathRelative = relative(resolve(root), resolve(path));
+  return pathRelative === "" ||
+    (pathRelative !== ".." && !pathRelative.startsWith(`..${sep}`));
 }
 
 function terminalOutputBackup(

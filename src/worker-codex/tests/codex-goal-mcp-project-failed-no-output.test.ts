@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -21,6 +21,7 @@ import {
   projectControlRecordFailedNoOutputView,
 } from "../codex-goal-mcp-project-control-terminal-output";
 import {
+  assertCodexGoalProjectJobNotTerminal,
   readCodexGoalConsumedOutputLedgers,
 } from "../application/project-control/codex-goal-consumed-output-ledger-io";
 import { git, gitInitRepository } from "./codex-goal-mcp-test-support";
@@ -187,6 +188,13 @@ describe("project failed_no_output lifecycle", () => {
       expect(freshDecision.archivePath).toContain(
         `${freshWorkerJobId}-failed-no-output-terminalize-project-worker-fresh-v1`,
       );
+      await expect(assertCodexGoalProjectJobNotTerminal({
+        roots: [ledgerRoot],
+        jobId: freshWorkerJobId,
+        workspacePath: join(worktreeRoot, freshWorkerJobId),
+      })).rejects.toThrow(
+        "project_control_terminal_job_start_denied:failed_no_output",
+      );
       await expect(projectControlRecordFailedNoOutputView({
         ...freshArgs,
         confirmFailedNoOutput: true,
@@ -205,6 +213,25 @@ describe("project failed_no_output lifecycle", () => {
         terminalAttemptId: "terminalize-project-worker-fresh-dirty-v1",
         confirmFailedNoOutput: true,
       }, deps)).rejects.toThrow("failed_no_output_clean_workspace_required");
+      const unadmittedPatchPath = join(
+        root,
+        "worker-jobs",
+        freshDirtyWorkerJobId,
+        "unadmitted.patch",
+      );
+      const unadmittedPatch = "unadmitted input patch\n";
+      await writeFile(unadmittedPatchPath, unadmittedPatch);
+      await expect(projectControlRecordFailedNoOutputView({
+        ...freshArgs,
+        jobId: freshDirtyWorkerJobId,
+        terminalAttemptId: "terminalize-unadmitted-dirty-v1",
+        confirmFailedNoOutput: true,
+        preexistingWorkspacePatchPath: unadmittedPatchPath,
+        preexistingWorkspacePatchSha256: createHash("sha256")
+          .update(unadmittedPatch)
+          .digest("hex"),
+        confirmPreexistingWorkspacePatch: true,
+      }, deps)).rejects.toThrow("project_control_pre_start_admission_required");
 
       await expect(projectControlRecordFailedNoOutputView(args, deps)).resolves
         .toMatchObject({
@@ -278,9 +305,28 @@ describe("project failed_no_output lifecycle", () => {
         ok: true,
         decision: {
           status: "failed_no_output",
-          preexistingWorkspacePatch: baseline,
+          preexistingWorkspacePatch: {
+            sha256: baseline.sha256,
+          },
         },
       });
+      const verifierDecision = verifierRecorded.decision as {
+        readonly backup: { readonly statusPath: string };
+        readonly preexistingWorkspacePatch: {
+          readonly path: string;
+          readonly sha256: string;
+        };
+      };
+      expect(verifierDecision.preexistingWorkspacePatch.path).not.toBe(baseline.path);
+      expect(verifierDecision.preexistingWorkspacePatch.path).toBe(
+        join(
+          dirname(verifierDecision.backup.statusPath),
+          "preexisting-workspace.patch",
+        ),
+      );
+      await expect(
+        readFile(verifierDecision.preexistingWorkspacePatch.path, "utf8"),
+      ).resolves.toBe("diff --git a/README.md b/README.md\n");
       const reconciled = await readCodexGoalConsumedOutputLedgers({ roots: [ledgerRoot] });
       expect(reconciled.byJobId.get(verifierJobId)).toMatchObject({
         status: "failed_no_output",
@@ -317,8 +363,14 @@ async function writeBaselineFailedNoOutput(input: {
   await mkdir(evidenceRoot, { recursive: true });
   const statusPath = join(evidenceRoot, "git-status.txt");
   const patchPath = join(evidenceRoot, "verifier-output.patch");
-  const baselinePath = join(evidenceRoot, "producer-output.patch");
+  const baselinePath = join(
+    input.root,
+    "worker-jobs",
+    input.jobId,
+    "producer-output.patch",
+  );
   const baseline = "diff --git a/README.md b/README.md\n";
+  await mkdir(dirname(baselinePath), { recursive: true });
   await writeFile(statusPath, " M README.md\n");
   await writeFile(patchPath, "");
   await writeFile(baselinePath, baseline);

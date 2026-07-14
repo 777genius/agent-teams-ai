@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 
 import {
   AccessBoundary,
+  assertFailedNoOutputEvidence,
   consumedOutputRecordFor,
   createAccessPolicyService,
   recordFailedNoOutput,
@@ -27,6 +28,9 @@ import {
   readCodexGoalConsumedOutputLedgers,
 } from "./application/project-control/codex-goal-consumed-output-ledger-io";
 import {
+  assertProjectPreStartAdmissionLaunchBinding,
+} from "./application/project-control/codex-goal-project-pre-start-admission";
+import {
   projectControlRealPathOutsideReadScope,
   projectControlRealPathOutsideWorkspaceScope,
 } from "./codex-goal-mcp-project-scope";
@@ -43,8 +47,13 @@ import {
 import type {
   CodexGoalMcpProjectControlActionsDeps,
 } from "./codex-goal-mcp-project-control-actions";
+import {
+  projectControlWorkspaceLocks,
+  withValidatedProjectWorkspaceLock,
+} from "./codex-goal-project-workspace-lock";
 
 type JsonObject = Readonly<Record<string, unknown>>;
+const MAX_PREEXISTING_WORKSPACE_PATCH_BYTES = 16 * 1024 * 1024;
 
 export async function projectControlRecordFailedNoOutputView(
   args: ProjectControlMcpArgs,
@@ -99,9 +108,6 @@ export async function projectControlRecordFailedNoOutputView(
   const note = stringValue(args.note) ??
     `Closed ${loaded.manifest.jobId} after infrastructure failure without authored output.`;
   if (!sourceRecord) {
-    if (preexistingWorkspacePatch) {
-      throw new Error("failed_no_output_source_record_required_for_preexisting_patch");
-    }
     return await recordInitialFailedNoOutput({
       controller,
       loaded,
@@ -112,14 +118,11 @@ export async function projectControlRecordFailedNoOutputView(
       failureCode,
       note,
       confirmFailedNoOutput: args.confirmFailedNoOutput === true,
+      confirmPreexistingWorkspacePatch:
+        args.confirmPreexistingWorkspacePatch === true,
+      ...(preexistingWorkspacePatch ? { preexistingWorkspacePatch } : {}),
     });
   }
-  await assertBackupPathsReadable(sourceRecord.backup, {
-    scope: controller.scope,
-    registryRootDir: controller.registryRootDir,
-    jobId: loaded.manifest.jobId,
-    jobRootDir: loaded.manifest.jobRootDir,
-  });
   if (sourceRecord.valid && sourceRecord.status === "failed_no_output") {
     return {
       ok: true,
@@ -180,41 +183,114 @@ export async function projectControlRecordFailedNoOutputView(
     };
   }
 
-  const receipt = await recordFailedNoOutput(
-    { writer: new LocalConsumedOutputLedgerWriter() },
-    {
-      allowedLedgerRoots: ledgerRoots,
-      ledgerRoot,
-      sourceRecord,
-      jobId: loaded.manifest.jobId,
-      workspace: loaded.manifest.workspacePath,
-      workerAlive: workerLiveness.alive,
-      workspaceDirty: status.workspaceDirty,
-      attemptId,
-      closedAt,
-      failureCategory,
-      failureCode,
-      note,
-      ...(preexistingWorkspacePatch ? { preexistingWorkspacePatch } : {}),
+  return await withValidatedProjectWorkspaceLock({
+    locks: projectControlWorkspaceLocks(controller.registryRootDir),
+    scope: controller.scope,
+    requestedWorkspacePath: loaded.manifest.workspacePath,
+    owner:
+      `project-failed-no-output-correction:${controller.controller.jobId}:` +
+      loaded.manifest.jobId,
+    effect: async (workspace) => {
+      const lockedLedger = await readCodexGoalConsumedOutputLedgers({
+        roots: ledgerRoots,
+      });
+      const lockedSourceRecord = consumedOutputRecordFor({
+        ledger: lockedLedger,
+        jobId: loaded.manifest.jobId,
+        workspacePath: workspace.canonicalWorkspacePath,
+      });
+      if (!lockedSourceRecord) {
+        throw new Error("failed_no_output_source_record_required");
+      }
+      await assertBackupPathsReadable(lockedSourceRecord.backup, {
+        scope: controller.scope,
+        registryRootDir: controller.registryRootDir,
+        jobId: loaded.manifest.jobId,
+        jobRootDir: loaded.manifest.jobRootDir,
+      });
+      if (
+        lockedSourceRecord.valid &&
+        lockedSourceRecord.status === "failed_no_output"
+      ) {
+        return {
+          ok: true,
+          mode: "project_control_record_failed_no_output",
+          controllerJobId: controller.controller.jobId,
+          jobId: loaded.manifest.jobId,
+          ledgerPath: lockedSourceRecord.ledgerPath,
+          idempotentReplay: true,
+          alreadyTerminal: true,
+        };
+      }
+
+      const lockedLaunch = {
+        ...loaded.launch,
+        config: {
+          ...loaded.launch.config,
+          workspacePath: workspace.canonicalWorkspacePath,
+        },
+      };
+      const lockedStatus = await collectCodexGoalStatus(statusInput(lockedLaunch));
+      const lockedProgressStale =
+        lockedStatus.progressHeartbeatAgeMs !== undefined &&
+        lockedStatus.progressHeartbeatAgeMs > 10 * 60_000;
+      const lockedWorkerLiveness = resolveCodexGoalWorkerLiveness({
+        status: lockedStatus,
+        progressStale: lockedProgressStale,
+      });
+      const lockedClosedAt = failedNoOutputClosedAt(lockedSourceRecord.closedAt);
+      const validationInput = {
+        allowedLedgerRoots: ledgerRoots,
+        ledgerRoot,
+        sourceRecord: lockedSourceRecord,
+        jobId: loaded.manifest.jobId,
+        workspace: loaded.manifest.workspacePath,
+        workerAlive: lockedWorkerLiveness.alive,
+        workspaceDirty: lockedStatus.workspaceDirty,
+        attemptId,
+        closedAt: lockedClosedAt,
+        failureCategory,
+        failureCode,
+        note,
+        ...(preexistingWorkspacePatch
+          ? { preexistingWorkspacePatch }
+          : {}),
+      };
+      assertFailedNoOutputEvidence(validationInput);
+      const archivedPreexistingWorkspacePatch = preexistingWorkspacePatch
+        ? await archivePreexistingWorkspacePatch({
+            source: preexistingWorkspacePatch,
+            archivePath: dirname(lockedSourceRecord.backup!.statusPath),
+          })
+        : undefined;
+      const accountReservationReleased = await releaseCodexProjectAccount({
+        manifest: loaded.manifest,
+        launch: lockedLaunch,
+        reason: "worker_failed_no_output",
+      });
+      const receipt = await recordFailedNoOutput(
+        { writer: new LocalConsumedOutputLedgerWriter() },
+        {
+          ...validationInput,
+          ...(archivedPreexistingWorkspacePatch
+            ? { preexistingWorkspacePatch: archivedPreexistingWorkspacePatch }
+            : {}),
+        },
+      );
+      return {
+        ok: true,
+        mode: "project_control_record_failed_no_output",
+        controllerJobId: controller.controller.jobId,
+        registryRootDir: controller.registryRootDir,
+        auditPath: projectControlAuditPath(controller.controller),
+        jobId: loaded.manifest.jobId,
+        ledgerPath: receipt.ledgerPath,
+        idempotentReplay: receipt.idempotentReplay,
+        accountReservationReleased,
+        decision: receipt.decision,
+      };
     },
-  );
-  const accountReservationReleased = await releaseCodexProjectAccount({
-    manifest: loaded.manifest,
-    launch: loaded.launch,
-    reason: "worker_failed_no_output",
   });
-  return {
-    ok: true,
-    mode: "project_control_record_failed_no_output",
-    controllerJobId: controller.controller.jobId,
-    registryRootDir: controller.registryRootDir,
-    auditPath: projectControlAuditPath(controller.controller),
-    jobId: loaded.manifest.jobId,
-    ledgerPath: receipt.ledgerPath,
-    idempotentReplay: receipt.idempotentReplay,
-    accountReservationReleased,
-    decision: receipt.decision,
-  };
 }
 
 async function recordInitialFailedNoOutput(input: {
@@ -231,6 +307,11 @@ async function recordInitialFailedNoOutput(input: {
   readonly failureCode: string;
   readonly note: string;
   readonly confirmFailedNoOutput: boolean;
+  readonly confirmPreexistingWorkspacePatch: boolean;
+  readonly preexistingWorkspacePatch?: {
+    readonly path: string;
+    readonly sha256: string;
+  };
 }): Promise<JsonObject> {
   const status = await collectCodexGoalStatus(statusInput(input.loaded.launch));
   const progressStale = status.progressHeartbeatAgeMs !== undefined &&
@@ -243,6 +324,9 @@ async function recordInitialFailedNoOutput(input: {
     closedAt,
     failure: { category: input.failureCategory, code: input.failureCode },
     note: input.note,
+    ...(input.preexistingWorkspacePatch
+      ? { preexistingWorkspacePatch: input.preexistingWorkspacePatch }
+      : {}),
   };
   if (!input.confirmFailedNoOutput) {
     return {
@@ -258,69 +342,194 @@ async function recordInitialFailedNoOutput(input: {
       decisionPreview,
     };
   }
-  if (workerLiveness.alive) {
-    throw new Error("failed_no_output_worker_still_alive");
-  }
-  if (status.workspaceDirty !== false) {
-    throw new Error("failed_no_output_clean_workspace_required");
-  }
-  const backup = await captureLocalTerminalOutputBackup({
-    archiveRoot: join(input.loaded.manifest.jobRootDir, "archives"),
-    archiveName:
-      `${input.loaded.manifest.jobId}-failed-no-output-${input.attemptId}`,
-    workspacePath: input.loaded.manifest.workspacePath,
-    changedFiles: [],
-  });
   if (
-    backup.hasAuthoredOutput ||
-    (await readFile(backup.statusPath, "utf8")).trim().length > 0
+    input.preexistingWorkspacePatch &&
+    !input.confirmPreexistingWorkspacePatch
   ) {
-    throw new Error("failed_no_output_clean_workspace_required");
+    return {
+      ok: false,
+      reason: "confirm_preexisting_workspace_patch_required",
+      mode: "project_control_record_failed_no_output",
+      controllerJobId: input.controller.controller.jobId,
+      jobId: input.loaded.manifest.jobId,
+      requiredOverride: "confirmPreexistingWorkspacePatch",
+      sourceRecord: null,
+      status,
+      workerLiveness,
+      decisionPreview,
+    };
   }
-  const receipt = await recordTerminalOutputDecision(
-    { writer: new LocalConsumedOutputLedgerWriter() },
-    {
-      allowedLedgerRoots: input.ledgerRoots,
-      ledgerRoot: input.ledgerRoot,
-      decision: {
-        schemaVersion: 1,
+  return await withValidatedProjectWorkspaceLock({
+    locks: projectControlWorkspaceLocks(input.controller.registryRootDir),
+    scope: input.controller.scope,
+    requestedWorkspacePath: input.loaded.manifest.workspacePath,
+    owner:
+      `project-failed-no-output:${input.controller.controller.jobId}:` +
+      input.loaded.manifest.jobId,
+    effect: async (workspace) => {
+      const lockedLaunch = {
+        ...input.loaded.launch,
+        config: {
+          ...input.loaded.launch.config,
+          workspacePath: workspace.canonicalWorkspacePath,
+        },
+      };
+      const lockedStatus = await collectCodexGoalStatus(
+        statusInput(lockedLaunch),
+      );
+      const lockedProgressStale =
+        lockedStatus.progressHeartbeatAgeMs !== undefined &&
+        lockedStatus.progressHeartbeatAgeMs > 10 * 60_000;
+      const lockedWorkerLiveness = resolveCodexGoalWorkerLiveness({
+        status: lockedStatus,
+        progressStale: lockedProgressStale,
+      });
+      if (lockedWorkerLiveness.alive) {
+        throw new Error("failed_no_output_worker_still_alive");
+      }
+      if (input.preexistingWorkspacePatch) {
+        assertNoWorkerLaunchArtifacts(lockedStatus);
+        if (lockedStatus.workspaceDirty !== true) {
+          throw new Error(
+            "failed_no_output_preexisting_patch_workspace_required",
+          );
+        }
+        await assertProjectPreStartAdmissionLaunchBinding({
+          manifest: input.loaded.manifest,
+          scope: input.controller.scope,
+          workspaceMode: "admitted_input_patch",
+          expectedInputPatchArtifactSha256:
+            input.preexistingWorkspacePatch.sha256,
+        });
+      } else if (lockedStatus.workspaceDirty !== false) {
+        throw new Error("failed_no_output_clean_workspace_required");
+      }
+      const backup = await captureLocalTerminalOutputBackup({
+        archiveRoot: join(input.loaded.manifest.jobRootDir, "archives"),
+        archiveName:
+          `${input.loaded.manifest.jobId}-failed-no-output-${input.attemptId}`,
+        workspacePath: workspace.canonicalWorkspacePath,
+        changedFiles: [],
+      });
+      const backupStatusDirty =
+        (await readFile(backup.statusPath, "utf8")).trim().length > 0;
+      if (
+        backup.hasAuthoredOutput ||
+        (input.preexistingWorkspacePatch
+          ? !backupStatusDirty
+          : backupStatusDirty)
+      ) {
+        throw new Error("failed_no_output_clean_workspace_required");
+      }
+      const archivedPreexistingWorkspacePatch =
+        input.preexistingWorkspacePatch
+          ? await archivePreexistingWorkspacePatch({
+              source: input.preexistingWorkspacePatch,
+              archivePath: backup.archivePath,
+            })
+          : undefined;
+      if (input.preexistingWorkspacePatch) {
+        await assertProjectPreStartAdmissionLaunchBinding({
+          manifest: input.loaded.manifest,
+          scope: input.controller.scope,
+          workspaceMode: "admitted_input_patch",
+          expectedInputPatchArtifactSha256:
+            input.preexistingWorkspacePatch.sha256,
+        });
+      }
+      const accountReservationReleased = await releaseCodexProjectAccount({
+        manifest: input.loaded.manifest,
+        launch: lockedLaunch,
+        reason: "worker_failed_no_output",
+      });
+      const receipt = await recordTerminalOutputDecision(
+        { writer: new LocalConsumedOutputLedgerWriter() },
+        {
+          allowedLedgerRoots: input.ledgerRoots,
+          ledgerRoot: input.ledgerRoot,
+          decision: {
+            schemaVersion: 1,
+            jobId: input.loaded.manifest.jobId,
+            attemptId: input.attemptId,
+            status: "failed_no_output",
+            closedAt,
+            archivePath: backup.archivePath,
+            failure: {
+              category: input.failureCategory,
+              code: input.failureCode,
+            },
+            output: { authoredChanges: false, workspaceDirty: false },
+            ...(archivedPreexistingWorkspacePatch
+              ? {
+                  preexistingWorkspacePatch:
+                    archivedPreexistingWorkspacePatch,
+                }
+              : {}),
+            note: input.note,
+            backup: {
+              workspace: input.loaded.manifest.workspacePath,
+              statusPath: backup.statusPath,
+              patchPath: backup.patchPath,
+              numstatPath: backup.numstatPath,
+            },
+          },
+        },
+      );
+      return {
+        ok: true,
+        mode: "project_control_record_failed_no_output",
+        controllerJobId: input.controller.controller.jobId,
+        registryRootDir: input.controller.registryRootDir,
+        auditPath: projectControlAuditPath(input.controller.controller),
         jobId: input.loaded.manifest.jobId,
-        attemptId: input.attemptId,
-        status: "failed_no_output",
-        closedAt,
-        archivePath: backup.archivePath,
-        failure: {
-          category: input.failureCategory,
-          code: input.failureCode,
-        },
-        output: { authoredChanges: false, workspaceDirty: false },
-        note: input.note,
-        backup: {
-          workspace: input.loaded.manifest.workspacePath,
-          statusPath: backup.statusPath,
-          patchPath: backup.patchPath,
-          numstatPath: backup.numstatPath,
-        },
-      },
+        ledgerPath: receipt.ledgerPath,
+        idempotentReplay: receipt.idempotentReplay,
+        accountReservationReleased,
+        decision: receipt.decision,
+      };
     },
-  );
-  const accountReservationReleased = await releaseCodexProjectAccount({
-    manifest: input.loaded.manifest,
-    launch: input.loaded.launch,
-    reason: "worker_failed_no_output",
   });
-  return {
-    ok: true,
-    mode: "project_control_record_failed_no_output",
-    controllerJobId: input.controller.controller.jobId,
-    registryRootDir: input.controller.registryRootDir,
-    auditPath: projectControlAuditPath(input.controller.controller),
-    jobId: input.loaded.manifest.jobId,
-    ledgerPath: receipt.ledgerPath,
-    idempotentReplay: receipt.idempotentReplay,
-    accountReservationReleased,
-    decision: receipt.decision,
-  };
+}
+
+async function archivePreexistingWorkspacePatch(input: {
+  readonly source: { readonly path: string; readonly sha256: string };
+  readonly archivePath: string;
+}): Promise<{ readonly path: string; readonly sha256: string }> {
+  const contents = await readFile(input.source.path);
+  if (contents.byteLength > MAX_PREEXISTING_WORKSPACE_PATCH_BYTES) {
+    throw new Error("failed_no_output_preexisting_patch_too_large");
+  }
+  const actualSha256 = createHash("sha256").update(contents).digest("hex");
+  if (actualSha256 !== input.source.sha256) {
+    throw new Error("failed_no_output_preexisting_patch_sha256_mismatch");
+  }
+  const path = join(input.archivePath, "preexisting-workspace.patch");
+  try {
+    await writeFile(path, contents, { flag: "wx", mode: 0o400 });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    const existingSha256 = createHash("sha256")
+      .update(await readFile(path))
+      .digest("hex");
+    if (existingSha256 !== input.source.sha256) {
+      throw new Error("failed_no_output_preexisting_patch_archive_conflict");
+    }
+  }
+  return { path, sha256: input.source.sha256 };
+}
+
+function assertNoWorkerLaunchArtifacts(
+  status: Awaited<ReturnType<typeof collectCodexGoalStatus>>,
+): void {
+  if (
+    status.tmuxAlive === true ||
+    status.resultExists !== false ||
+    status.progressExists !== false ||
+    status.logExists !== false ||
+    status.runtimeEventsExists !== false
+  ) {
+    throw new Error("failed_no_output_worker_launch_artifacts_present");
+  }
 }
 
 async function requestedPreexistingWorkspacePatch(
@@ -339,7 +548,14 @@ async function requestedPreexistingWorkspacePatch(
     throw new Error("failed_no_output_preexisting_patch_evidence_required");
   }
   await assertEvidencePathReadable(path, input);
-  const actualSha256 = createHash("sha256").update(await readFile(path)).digest("hex");
+  if ((await stat(path)).size > MAX_PREEXISTING_WORKSPACE_PATCH_BYTES) {
+    throw new Error("failed_no_output_preexisting_patch_too_large");
+  }
+  const contents = await readFile(path);
+  if (contents.byteLength > MAX_PREEXISTING_WORKSPACE_PATCH_BYTES) {
+    throw new Error("failed_no_output_preexisting_patch_too_large");
+  }
+  const actualSha256 = createHash("sha256").update(contents).digest("hex");
   if (actualSha256 !== expectedSha256) {
     throw new Error("failed_no_output_preexisting_patch_sha256_mismatch");
   }

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   chmod,
   mkdir,
@@ -51,7 +52,12 @@ describe("project verifier preparation", () => {
 
       try {
         await git(root, ["init", "--bare", remotePath]);
-        await mkdir(sourceWorkspacePath, { recursive: true });
+        await Promise.all([
+          mkdir(sourceWorkspacePath, { recursive: true }),
+          mkdir(join(root, "control", "consumed-output-ledger", "items"), {
+            recursive: true,
+          }),
+        ]);
         await gitInitRepository(sourceWorkspacePath);
         await Promise.all([
           writeFile(join(sourceWorkspacePath, "README.md"), "base\n"),
@@ -207,6 +213,105 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
             }),
           ).resolves.toBeUndefined();
 
+          const preexistingPatchPath = join(
+            verifierManifest.jobRootDir,
+            "preexisting-producer.patch",
+          );
+          await writeFile(
+            preexistingPatchPath,
+            await readFile(handoff.manifest.artifacts.patch.path),
+          );
+          const unrelatedPatchPath = join(
+            verifierManifest.jobRootDir,
+            "unrelated.patch",
+          );
+          const unrelatedPatch = "unrelated immutable input\n";
+          await writeFile(unrelatedPatchPath, unrelatedPatch);
+          const terminalArgs = {
+            registryRootDir,
+            controllerJobId: "project-controller",
+            jobId: "project-verifier",
+            terminalAttemptId: "verifier-account-unavailable",
+            failureCategory: "infrastructure",
+            failureCode: "account_reservation_unavailable",
+            confirmFailedNoOutput: true,
+          };
+          await expect(callToolJson(
+            client,
+            "codex_goal_project_record_failed_no_output",
+            {
+              ...terminalArgs,
+              preexistingWorkspacePatchPath: unrelatedPatchPath,
+              preexistingWorkspacePatchSha256: createHash("sha256")
+                .update(unrelatedPatch)
+                .digest("hex"),
+              confirmPreexistingWorkspacePatch: true,
+            },
+          )).resolves.toMatchObject({
+            ok: false,
+            error: "project_control_pre_start_launch_binding_mismatch",
+          });
+          await expect(callToolJson(
+            client,
+            "codex_goal_project_record_failed_no_output",
+            {
+              ...terminalArgs,
+              preexistingWorkspacePatchPath: preexistingPatchPath,
+              preexistingWorkspacePatchSha256:
+                handoff.manifest.artifacts.patch.sha256,
+            },
+          )).resolves.toMatchObject({
+            ok: false,
+            reason: "confirm_preexisting_workspace_patch_required",
+          });
+          const verifierLogPath = verifierManifest.logPath ?? join(
+            verifierManifest.jobRootDir,
+            `${verifierManifest.taskId}.log`,
+          );
+          await writeFile(verifierLogPath, "worker launch evidence\n");
+          await expect(callToolJson(
+            client,
+            "codex_goal_project_record_failed_no_output",
+            {
+              ...terminalArgs,
+              preexistingWorkspacePatchPath: preexistingPatchPath,
+              preexistingWorkspacePatchSha256:
+                handoff.manifest.artifacts.patch.sha256,
+              confirmPreexistingWorkspacePatch: true,
+            },
+          )).resolves.toMatchObject({
+            ok: false,
+            error: "failed_no_output_worker_launch_artifacts_present",
+          });
+          await rm(verifierLogPath);
+          const archivedPreexistingPatchPath = join(
+            verifierManifest.jobRootDir,
+            "archives",
+            "project-verifier-failed-no-output-verifier-account-unavailable",
+            "preexisting-workspace.patch",
+          );
+          await expect(callToolJson(
+            client,
+            "codex_goal_project_record_failed_no_output",
+            {
+              ...terminalArgs,
+              preexistingWorkspacePatchPath: preexistingPatchPath,
+              preexistingWorkspacePatchSha256:
+                handoff.manifest.artifacts.patch.sha256,
+              confirmPreexistingWorkspacePatch: true,
+            },
+          )).resolves.toMatchObject({
+            ok: true,
+            decision: {
+              status: "failed_no_output",
+              output: { authoredChanges: false, workspaceDirty: false },
+              preexistingWorkspacePatch: {
+                path: archivedPreexistingPatchPath,
+                sha256: handoff.manifest.artifacts.patch.sha256,
+              },
+            },
+          });
+
           await writeFile(
             join(verifierWorkspacePath, "feature.txt"),
             "unstaged drift\n",
@@ -326,6 +431,9 @@ function projectScope(input: {
     workspaceRoots: [input.sourceWorkspacePath],
     worktreeRoots: [join(input.root, "worktrees")],
     registryRoot: input.registryRootDir,
+    consumedOutputLedgerRoots: [
+      join(input.root, "control", "consumed-output-ledger"),
+    ],
     authRoot: join(input.root, "auth"),
     jobIdPrefixes: ["project-"],
     tmuxSessionPrefixes: ["project-"],
