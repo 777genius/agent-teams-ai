@@ -206,7 +206,11 @@ export async function createCodexGoalJob(input: {
     updatedAt: input.manifest.updatedAt ?? now,
   });
   assertCodexGoalStoredAccessBoundaryAllowed(manifest);
-  await assertCodexGoalJobManifestAccessConsistency(manifest, registryRootDir);
+  await assertCodexGoalJobManifestAccessConsistency(
+    manifest,
+    registryRootDir,
+    { requireProjectControllerCreateAuthorization: true },
+  );
   const path = codexGoalJobManifestPath({
     registryRootDir,
     jobId: manifest.jobId,
@@ -244,7 +248,14 @@ export async function updateCodexGoalJob(input: {
     updatedAt: (input.now ?? new Date()).toISOString(),
   });
   assertCodexGoalStoredAccessBoundaryAllowed(manifest);
-  await assertCodexGoalJobManifestAccessConsistency(manifest, registryRootDir);
+  await assertCodexGoalJobManifestAccessConsistency(
+    manifest,
+    registryRootDir,
+    {
+      requireProjectControllerCreateAuthorization:
+        existing.accessBoundary !== AccessBoundary.ProjectScopedControl,
+    },
+  );
   await writeFile(
     codexGoalJobManifestPath({ registryRootDir, jobId: input.jobId }),
     `${JSON.stringify(manifest, null, 2)}\n`,
@@ -569,6 +580,9 @@ function parseProjectPreStartAdmissionManifest(
 async function assertCodexGoalJobManifestAccessConsistency(
   manifest: CodexGoalJobManifest,
   registryRootDir: string,
+  options: {
+    readonly requireProjectControllerCreateAuthorization: boolean;
+  },
 ): Promise<void> {
   if (
     manifest.accessBoundary === undefined ||
@@ -602,7 +616,20 @@ async function assertCodexGoalJobManifestAccessConsistency(
       throw new Error(`codex_goal_job_account_denied:${accountDecision.reason}`);
     }
   }
-  if (manifest.accessBoundary !== AccessBoundary.ProjectScopedControl) return;
+  if (
+    manifest.accessBoundary !== AccessBoundary.ProjectScopedControl ||
+    !options.requireProjectControllerCreateAuthorization
+  ) {
+    // Child job and tmux prefixes do not identify an already-stored controller.
+    if (
+      manifest.accessBoundary === AccessBoundary.ProjectScopedControl &&
+      manifest.projectAccessScope?.registryRoot &&
+      resolve(manifest.projectAccessScope.registryRoot) !== resolve(registryRootDir)
+    ) {
+      throw new Error("codex_goal_job_create_denied:path_outside_scope");
+    }
+    return;
+  }
   const createDecision = policy.canCreateJob({
     jobId: manifest.jobId,
     registryRoot: registryRootDir,

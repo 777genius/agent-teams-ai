@@ -33,6 +33,10 @@ import {
   projectControllerPendingGuidancePromptContext,
 } from "../codex-goal-mcp";
 import {
+  codexGoalJobManifestPath,
+  readCodexGoalJob,
+} from "../codex-goal-jobs";
+import {
   auditDecision,
   callToolJson,
   git,
@@ -398,6 +402,27 @@ describe("codex goal MCP server", () => {
         },
       });
 
+      const legacyScope = {
+        ...proposedScope,
+        jobIdPrefixes: ["infinity-context-worker-"],
+        tmuxSessionPrefixes: ["infinity-context-worker-"],
+      };
+      const storedController = await readCodexGoalJob({
+        registryRootDir,
+        jobId: "infinity-context-controller-v1",
+      });
+      await writeFile(
+        codexGoalJobManifestPath({
+          registryRootDir,
+          jobId: storedController.jobId,
+        }),
+        `${JSON.stringify({
+          ...storedController,
+          projectAccessScope: legacyScope,
+        }, null, 2)}\n`,
+        { encoding: "utf8", mode: 0o600 },
+      );
+
       const admissionUpgrade = await callToolJson(
         client,
         "codex_goal_project_update_controller_scope",
@@ -405,7 +430,7 @@ describe("codex goal MCP server", () => {
           registryRootDir,
           controllerJobId: "infinity-context-controller-v1",
           projectAccessScope: {
-            ...proposedScope,
+            ...legacyScope,
             preStartAdmission: {
               required: true,
               mode: "serial-builtin",
