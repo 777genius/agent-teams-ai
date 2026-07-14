@@ -16,19 +16,15 @@ function makeNode(id: string, x: number, y: number): GraphNode {
     state: 'idle',
     x,
     y,
-    domainRef:
-      id.startsWith('task')
-        ? { kind: 'task', teamName: 'my-team', taskId: id }
-        : { kind: 'member', teamName: 'my-team', memberName: id },
+    domainRef: id.startsWith('task')
+      ? { kind: 'task', teamName: 'my-team', taskId: id }
+      : { kind: 'member', teamName: 'my-team', memberName: id },
   } as GraphNode;
 }
 
 describe('edge hit detection', () => {
   it('detects blocking edges near the curve midpoint', () => {
-    const nodes = [
-      makeNode('member:alice', 0, 0),
-      makeNode('task:1', 160, 90),
-    ];
+    const nodes = [makeNode('member:alice', 0, 0), makeNode('task:1', 160, 90)];
     const nodeMap = new Map(nodes.map((node) => [node.id, node] as const));
     const edge: GraphEdge = {
       id: 'edge:blocking',
@@ -60,10 +56,7 @@ describe('edge hit detection', () => {
   });
 
   it('keeps runtime message edges inspectable at far zoom without widening normal edges', () => {
-    const nodes = [
-      makeNode('member:alice', 0, 0),
-      makeNode('member:bob', 180, 0),
-    ];
+    const nodes = [makeNode('member:alice', 0, 0), makeNode('member:bob', 180, 0)];
     const nodeMap = new Map(nodes.map((node) => [node.id, node] as const));
     const messageEdge: GraphEdge = {
       id: 'edge:message',
@@ -98,11 +91,31 @@ describe('edge hit detection', () => {
     ];
     const nodeMap = new Map(nodes.map((node) => [node.id, node] as const));
     const edges: GraphEdge[] = [
-      { id: 'edge:blocking:visible', source: 'task:blocker', target: 'task:blocked', type: 'blocking' },
-      { id: 'edge:blocking:hidden', source: 'task:offscreen-a', target: 'task:offscreen-b', type: 'blocking' },
+      {
+        id: 'edge:blocking:visible',
+        source: 'task:blocker',
+        target: 'task:blocked',
+        type: 'blocking',
+      },
+      {
+        id: 'edge:blocking:hidden',
+        source: 'task:offscreen-a',
+        target: 'task:offscreen-b',
+        type: 'blocking',
+      },
       { id: 'edge:ownership', source: 'task:blocker', target: 'task:blocked', type: 'ownership' },
-      { id: 'edge:message', source: 'task:blocker', target: 'task:message-target', type: 'message' },
-      { id: 'edge:related', source: 'task:blocked', target: 'task:message-target', type: 'related' },
+      {
+        id: 'edge:message',
+        source: 'task:blocker',
+        target: 'task:message-target',
+        type: 'message',
+      },
+      {
+        id: 'edge:related',
+        source: 'task:blocked',
+        target: 'task:message-target',
+        type: 'related',
+      },
     ];
 
     const interactive = collectInteractiveEdgesInViewport(edges, nodeMap, {
@@ -118,5 +131,31 @@ describe('edge hit detection', () => {
       'edge:message',
       'edge:related',
     ]);
+  });
+
+  it('hit-tests orthogonal hierarchy connectors by their routed segments', () => {
+    const source = {
+      ...makeNode('org:root', 0, 0),
+      visualVariant: 'organization' as const,
+    };
+    const target = {
+      ...makeNode('team:alpha', 220, 164),
+      visualVariant: 'team' as const,
+    };
+    const nodeMap = new Map<string, GraphNode>([
+      [source.id, source],
+      [target.id, target],
+    ]);
+    const edge: GraphEdge = {
+      id: 'contains:root:alpha',
+      source: source.id,
+      target: target.id,
+      type: 'parent-child',
+      routing: 'orthogonal',
+    };
+    const midpoint = getEdgeMidpoint(edge, nodeMap);
+
+    expect(midpoint).not.toBeNull();
+    expect(findEdgeAt(midpoint!.x, midpoint!.y, [edge], nodeMap)).toBe(edge.id);
   });
 });

@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { drawTasks } from '../../../../packages/agent-graph/src/canvas/draw-tasks';
+import {
+  drawColumnHeaders,
+  drawTasks,
+} from '../../../../packages/agent-graph/src/canvas/draw-tasks';
 
+import type { KanbanZoneInfo } from '../../../../packages/agent-graph/src/layout/kanbanLayout';
 import type { GraphNode } from '@claude-teams/agent-graph';
 
 function createMockContext() {
@@ -83,6 +87,74 @@ function createTaskNode(hasLiveTaskLogs: boolean): GraphNode {
 }
 
 describe('drawTasks', () => {
+  it('hides task headers when semantic zoom hides their task cards', () => {
+    const hidden = createMockContext();
+    const visible = createMockContext();
+    const zones: KanbanZoneInfo[] = [
+      {
+        ownerId: 'team:alpha',
+        ownerX: 0,
+        ownerY: 0,
+        headers: [{ label: 'In Progress', x: 120, y: 80, color: '#38bdf8' }],
+      },
+    ];
+
+    drawColumnHeaders(hidden.ctx, zones, 0.4, new Set());
+    drawColumnHeaders(visible.ctx, zones, 0.4, new Set(['team:alpha']));
+
+    expect(hidden.fillTextCalls).toHaveLength(0);
+    expect(visible.fillTextCalls.length).toBeGreaterThan(0);
+  });
+
+  it('shows empty task placeholders only at detail zoom', () => {
+    const summary = createMockContext();
+    const detail = createMockContext();
+    const zones: KanbanZoneInfo[] = [
+      {
+        ownerId: 'team:alpha',
+        ownerX: 0,
+        ownerY: 0,
+        headers: [{ label: 'In Progress', x: 120, y: 80, color: '#38bdf8' }],
+        emptyPlaceholder: { label: 'No active tasks', x: 120, y: 120, color: '#64748b' },
+      },
+    ];
+
+    drawColumnHeaders(summary.ctx, zones, 0.4, new Set());
+    drawColumnHeaders(detail.ctx, zones, 0.8, new Set());
+
+    expect(summary.fillTextCalls).toHaveLength(0);
+    expect(detail.fillTextCalls.some((call) => call.text === 'No active tasks')).toBe(true);
+  });
+
+  it('shows task content only at detail zoom unless the task is selected', () => {
+    const overview = createMockContext();
+    const summary = createMockContext();
+    const detail = createMockContext();
+    const selected = createMockContext();
+    const hierarchySummary = createMockContext();
+    const node = createTaskNode(false);
+
+    drawTasks(overview.ctx, [node], 1, null, null, null, 0.1);
+    drawTasks(summary.ctx, [node], 1, null, null, null, 0.4);
+    drawTasks(detail.ctx, [node], 1, null, null, null, 0.8);
+    drawTasks(selected.ctx, [node], 1, node.id, null, null, 0.4);
+    drawTasks(
+      hierarchySummary.ctx,
+      [{ ...node, taskZoomVisibility: 'summary' }],
+      1,
+      null,
+      null,
+      null,
+      0.4
+    );
+
+    expect(overview.fillTextCalls).toHaveLength(0);
+    expect(summary.fillTextCalls).toHaveLength(0);
+    expect(detail.fillTextCalls.some((call) => call.text === 'Live log task')).toBe(true);
+    expect(selected.fillTextCalls.some((call) => call.text === 'Live log task')).toBe(true);
+    expect(hierarchySummary.fillTextCalls.some((call) => call.text === 'Live log task')).toBe(true);
+  });
+
   it('draws the live log indicator only for task nodes with live log activity', () => {
     const active = createMockContext();
     drawTasks(active.ctx, [createTaskNode(true)], 1, null, null, null, 1);

@@ -9,6 +9,7 @@ import { COLORS, getReviewStateColor, getTaskStatusColor } from '../constants/co
 import { wrapTextLines } from './draw-misc';
 import { drawPillShell } from './draw-pill-shell';
 import { hexWithAlpha } from './render-cache';
+import { getGraphSemanticZoomLevel, shouldRenderTaskAtZoom } from './semantic-zoom';
 
 import type { KanbanZoneInfo } from '../layout/kanbanLayout';
 import type { GraphNode } from '../ports/types';
@@ -29,7 +30,6 @@ export function drawTasks(
   focusNodeIds?: ReadonlySet<string> | null,
   zoom = 1
 ): void {
-  const simplify = zoom < 0.2;
   for (const node of nodes) {
     if (node.kind !== 'task') continue;
 
@@ -40,15 +40,12 @@ export function drawTasks(
     const y = node.y ?? 0;
     const isSelected = node.id === selectedId;
     const isHovered = node.id === hoveredId;
+    if (!shouldRenderTaskAtZoom(zoom, isSelected || isHovered, node.taskZoomVisibility)) continue;
 
     ctx.save();
     ctx.globalAlpha = opacity;
 
-    if (simplify) {
-      drawTaskPillLod(ctx, x, y, node, time, isSelected, isHovered);
-    } else {
-      drawTaskPill(ctx, x, y, node, time, isSelected, isHovered);
-    }
+    drawTaskPill(ctx, x, y, node, time, isSelected, isHovered);
 
     ctx.restore();
   }
@@ -184,6 +181,8 @@ function drawTaskPill(
   ctx.fillStyle = COLORS.textDim;
   ctx.fillText(displayId, -halfW + 10, subjectLineCount > 1 ? 23 : 12);
 
+  drawTaskProgressRail(ctx, halfW, halfH, node, time, statusColor);
+
   // Approved badge: checkmark at right side
   if (node.reviewState === 'approved') {
     ctx.font = 'bold 13px sans-serif';
@@ -246,58 +245,40 @@ function drawTaskPill(
   ctx.restore();
 }
 
-function drawTaskPillLod(
+function drawTaskProgressRail(
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
+  halfW: number,
+  halfH: number,
   node: GraphNode,
   time: number,
-  isSelected: boolean,
-  isHovered: boolean
+  statusColor: string
 ): void {
-  const w = TASK_PILL.width;
-  const h = TASK_PILL.height;
-  const r = TASK_PILL.borderRadius;
-  const halfW = w / 2;
-  const halfH = h / 2;
-
-  const statusColor = getTaskStatusColor(node.taskStatus);
-
-  ctx.save();
-  ctx.translate(x, y);
-
-  if (node.isOverflowStack) {
-    drawOverflowStack(ctx, halfW, r, node, time, isSelected, isHovered);
-    ctx.restore();
-    return;
-  }
+  const railWidth = halfW * 2 - 20;
+  const railHeight = 2;
+  const x = -halfW + 10;
+  const y = halfH - 7;
 
   ctx.beginPath();
-  ctx.roundRect(-halfW, -halfH, w, h, r);
-  ctx.fillStyle = isSelected
-    ? COLORS.cardBgSelected
-    : isHovered
-      ? 'rgba(15, 20, 40, 0.78)'
-      : COLORS.cardBg;
+  ctx.roundRect(x, y, railWidth, railHeight, 1);
+  ctx.fillStyle = 'rgba(92, 112, 142, 0.22)';
   ctx.fill();
-  ctx.strokeStyle = node.isBlocked
-    ? hexWithAlpha(COLORS.edgeBlocking, isSelected ? 0.85 : 0.65)
-    : hexWithAlpha(statusColor, isSelected ? 0.8 : 0.55);
-  ctx.lineWidth = node.isBlocked ? (isSelected ? 2.2 : 1.5) : isSelected ? 2 : 1;
-  ctx.stroke();
 
-  if (node.isBlocked) {
-    ctx.fillStyle = hexWithAlpha(COLORS.edgeBlocking, 0.6);
+  if (node.taskStatus === 'completed') {
     ctx.beginPath();
-    ctx.roundRect(-halfW, -halfH, 4, h, [r, 0, 0, r]);
+    ctx.roundRect(x, y, railWidth, railHeight, 1);
+    ctx.fillStyle = hexWithAlpha(statusColor, 0.85);
     ctx.fill();
+    return;
   }
+  if (node.taskStatus !== 'in_progress') return;
 
-  if (node.hasLiveTaskLogs) {
-    drawLiveTaskLogIndicator(ctx, -halfW + 8, -halfH + 8, time, true);
-  }
-
-  ctx.restore();
+  const segmentWidth = railWidth * 0.34;
+  const travel = railWidth - segmentWidth;
+  const progress = (time * 0.28) % 1;
+  ctx.beginPath();
+  ctx.roundRect(x + travel * progress, y, segmentWidth, railHeight, 1);
+  ctx.fillStyle = hexWithAlpha(statusColor, 0.92);
+  ctx.fill();
 }
 
 function drawLiveTaskLogIndicator(
@@ -466,10 +447,16 @@ function drawLeftSpacedText(
 export function drawColumnHeaders(
   ctx: CanvasRenderingContext2D,
   zones: KanbanZoneInfo[],
-  zoom = 1
+  zoom = 1,
+  renderableTaskZoneOwnerIds?: ReadonlySet<string>
 ): void {
   if (zoom < 0.22) return;
   for (const zone of zones) {
+    const hasRenderableTask = renderableTaskZoneOwnerIds?.has(zone.ownerId) ?? true;
+    const showsEmptyPlaceholder =
+      Boolean(zone.emptyPlaceholder) && getGraphSemanticZoomLevel(zoom) === 'detail';
+    if (!hasRenderableTask && !showsEmptyPlaceholder) continue;
+
     // Section header for unassigned tasks — larger, centered above all columns
     if (zone.ownerId === '__unassigned__') {
       ctx.font = KANBAN_HEADER_FONT;
@@ -496,7 +483,7 @@ export function drawColumnHeaders(
       );
     }
 
-    if (zone.emptyPlaceholder && zoom >= 0.35) {
+    if (zone.emptyPlaceholder && showsEmptyPlaceholder) {
       drawEmptyTaskPlaceholder(ctx, zone.emptyPlaceholder);
     }
   }

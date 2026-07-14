@@ -2844,6 +2844,32 @@
       "actions": {
         "createTeamIn": "Create team in {{label}}"
       },
+      "layout": {
+        "switchToHierarchy": "Switch to hierarchy chart",
+        "switchToNested": "Switch to nested map"
+      },
+      "view": {
+        "hierarchy": "Hierarchy",
+        "structure": "Structure",
+        "relations": "Relations"
+      },
+      "focus": {
+        "searchLabel": "Search organization map",
+        "searchPlaceholder": "Organization, group, team, or task...",
+        "clearSearch": "Clear search",
+        "noResults": "No results found",
+        "taskMatch": "Task: {{task}}",
+        "pathToRoot": "Path to root",
+        "connectedOnly": "Connected ({{count}})",
+        "collapseBranch": "Collapse branch",
+        "expandBranch": "Expand branch",
+        "clearFocus": "Clear focus",
+        "kind": {
+          "organization": "organization",
+          "container": "group",
+          "team": "team"
+        }
+      },
       "canvas": {
         "organizationMap": "Organization Map",
         "allOrganizations": "All Organizations",
@@ -2865,6 +2891,9 @@
         "teams_other": "{{count}} teams",
         "orgsAndTeams": "{{orgCount}} orgs - {{teamCount}} teams",
         "teamRole": "{{memberCount}} agents - {{activeCount}} active",
+        "groupSummary": "{{teamCount}} teams · {{activeTeamCount}} active · {{taskCount}} tasks",
+        "teamSummary": "{{status}} · {{activeTaskCount}} active · {{taskCount}} tasks",
+        "minimap": "Organization map navigation",
         "teamReference": "team reference",
         "notFound": "not found",
         "online": "online",

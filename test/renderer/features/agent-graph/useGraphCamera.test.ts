@@ -2,7 +2,10 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { useGraphCamera, type UseGraphCameraResult } from '../../../../packages/agent-graph/src/hooks/useGraphCamera';
+import {
+  useGraphCamera,
+  type UseGraphCameraResult,
+} from '../../../../packages/agent-graph/src/hooks/useGraphCamera';
 
 import type { GraphNode } from '@claude-teams/agent-graph';
 
@@ -68,7 +71,7 @@ describe('useGraphCamera zoomToFit', () => {
 
     const transform = capturedCamera?.transformRef.current;
     expect(transform).not.toBeNull();
-    expect((transform?.zoom ?? 0)).toBeLessThan(zoomWithoutExtra);
+    expect(transform?.zoom ?? 0).toBeLessThan(zoomWithoutExtra);
 
     const right = 420 * (transform?.zoom ?? 0) + (transform?.x ?? 0);
     const bottom = 120 * (transform?.zoom ?? 0) + (transform?.y ?? 0);
@@ -104,6 +107,45 @@ describe('useGraphCamera zoomToFit', () => {
 
     expect(firstCamera).toBeTruthy();
     expect(secondCamera).toBe(firstCamera);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('animates camera fitting and supports minimap centering', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CameraHarness));
+      await Promise.resolve();
+    });
+
+    const node: GraphNode = {
+      id: 'team:alpha',
+      kind: 'member',
+      label: 'Alpha',
+      state: 'active',
+      x: 900,
+      y: 500,
+      domainRef: { kind: 'member', teamName: 'alpha', memberName: 'alpha' },
+    };
+    const initial = { ...capturedCamera!.transformRef.current };
+    capturedCamera!.animateToFit([node], 800, 600);
+    capturedCamera!.updateInertia(0.29);
+    const midpoint = { ...capturedCamera!.transformRef.current };
+    capturedCamera!.updateInertia(0.29);
+    const target = { ...capturedCamera!.transformRef.current };
+
+    expect(midpoint).not.toEqual(initial);
+    expect(midpoint).not.toEqual(target);
+
+    capturedCamera!.centerOn(100, 50, 800, 600);
+    expect(capturedCamera!.worldToScreen(100, 50)).toEqual({ x: 400, y: 300 });
 
     await act(async () => {
       root.unmount();

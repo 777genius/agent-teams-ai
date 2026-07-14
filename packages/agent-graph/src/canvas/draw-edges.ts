@@ -6,6 +6,9 @@
 import { BEAM, MIN_VISIBLE_OPACITY } from '../constants/canvas-constants';
 import { COLORS } from '../constants/colors';
 
+import { getGraphNodeWorldBounds } from './node-geometry';
+import { getGraphSemanticZoomLevel } from './semantic-zoom';
+
 import type { GraphEdge, GraphEdgeType, GraphNode } from '../ports/types';
 
 const ALWAYS_VISIBLE_EDGE_ALPHA = 0.42;
@@ -32,6 +35,30 @@ export interface ControlPoints {
   cp1y: number;
   cp2x: number;
   cp2y: number;
+}
+
+export interface OrthogonalRoutePoint {
+  x: number;
+  y: number;
+}
+
+export function computeOrthogonalRoute(
+  source: GraphNode,
+  target: GraphNode
+): OrthogonalRoutePoint[] {
+  const sourceBounds = getGraphNodeWorldBounds(source);
+  const targetBounds = getGraphNodeWorldBounds(target);
+  const downwards = (target.y ?? 0) >= (source.y ?? 0);
+  const start = {
+    x: source.x ?? 0,
+    y: downwards ? sourceBounds.bottom : sourceBounds.top,
+  };
+  const end = {
+    x: target.x ?? 0,
+    y: downwards ? targetBounds.top : targetBounds.bottom,
+  };
+  const bendY = start.y + (end.y - start.y) * 0.5;
+  return [start, { x: start.x, y: bendY }, { x: end.x, y: bendY }, end];
 }
 
 export function computeControlPoints(
@@ -88,10 +115,12 @@ export function drawEdges(
   zoom = 1
 ): void {
   const simplify = zoom < 0.18;
+  const semanticLevel = getGraphSemanticZoomLevel(zoom);
   for (const edge of edges) {
     const source = nodeMap.get(edge.source);
     const target = nodeMap.get(edge.target);
     if (!source || !target) continue;
+    if (edge.type === 'ownership' && semanticLevel !== 'detail') continue;
     if (source.x == null || source.y == null || target.x == null || target.y == null) continue;
 
     const style = EDGE_STYLES[edge.type] ?? EDGE_STYLES['parent-child'];
@@ -111,6 +140,8 @@ export function drawEdges(
     if (finalAlpha < MIN_VISIBLE_OPACITY) continue;
 
     const cp = computeControlPoints(source.x, source.y, target.x, target.y);
+    const orthogonalRoute =
+      edge.routing === 'orthogonal' ? computeOrthogonalRoute(source, target) : null;
     const widthScale = edge.alwaysVisible
       ? Math.min(
           ALWAYS_VISIBLE_EDGE_MAX_WIDTH_SCALE,
@@ -127,7 +158,15 @@ export function drawEdges(
       ctx.shadowBlur = isSelected ? 16 : isHovered ? 10 : 12;
     }
 
-    if (simplify) {
+    if (orthogonalRoute) {
+      drawOrthogonalPath(
+        ctx,
+        orthogonalRoute,
+        (style.startW + style.endW) * 0.5 * widthScale * (isSelected ? 1.35 : isHovered ? 1.15 : 1),
+        edge.color ?? style.color,
+        style.dash
+      );
+    } else if (simplify) {
       drawSimplifiedBezier(
         ctx,
         source.x,
@@ -135,10 +174,7 @@ export function drawEdges(
         cp,
         target.x,
         target.y,
-        (style.startW + style.endW) *
-          0.5 *
-          widthScale *
-          (isSelected ? 1.35 : isHovered ? 1.15 : 1),
+        (style.startW + style.endW) * 0.5 * widthScale * (isSelected ? 1.35 : isHovered ? 1.15 : 1),
         edge.color ?? style.color,
         style.dash
       );
@@ -159,12 +195,34 @@ export function drawEdges(
     }
 
     // Arrow for blocking edges
-    if (!simplify && edge.type === 'blocking') {
+    if (!simplify && !orthogonalRoute && edge.type === 'blocking') {
       drawArrowHead(ctx, cp, target.x, target.y, style.color, finalAlpha);
     }
 
     ctx.restore();
   }
+}
+
+function drawOrthogonalPath(
+  ctx: CanvasRenderingContext2D,
+  points: readonly OrthogonalRoutePoint[],
+  width: number,
+  color: string,
+  dash?: number[]
+): void {
+  if (points.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (const point of points.slice(1)) {
+    ctx.lineTo(point.x, point.y);
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (dash) ctx.setLineDash(dash);
+  ctx.stroke();
+  if (dash) ctx.setLineDash([]);
 }
 
 function drawSimplifiedBezier(

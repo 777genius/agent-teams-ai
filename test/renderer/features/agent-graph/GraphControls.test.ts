@@ -290,6 +290,57 @@ describe('GraphControls', () => {
     });
   });
 
+  it('supports an organization-specific nested to hierarchy cycle', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onLayoutModeChange = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphControls, {
+          filters: {
+            showActivity: true,
+            showLogs: true,
+            showTasks: true,
+            showProcesses: true,
+            showEdges: true,
+            showSpaceEffects: true,
+            paused: false,
+          },
+          onFiltersChange: vi.fn(),
+          onZoomIn: vi.fn(),
+          onZoomOut: vi.fn(),
+          onZoomToFit: vi.fn(),
+          layoutMode: 'grid-under-lead',
+          layoutModeCycle: ['grid-under-lead', 'hierarchical'],
+          layoutModeLabels: {
+            hierarchical: 'Switch to hierarchy chart',
+            'grid-under-lead': 'Switch to nested map',
+          },
+          onLayoutModeChange,
+          teamName: 'organization-map',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const hierarchyButton = host.querySelector('button[aria-label="Switch to hierarchy chart"]');
+    expect(hierarchyButton).not.toBeNull();
+
+    await act(async () => {
+      hierarchyButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(onLayoutModeChange).toHaveBeenCalledWith('hierarchical');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('toggles stable space effects from graph settings', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
