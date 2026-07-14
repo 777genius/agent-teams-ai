@@ -158,8 +158,8 @@
     }
   },
   "meta": {
-    "homeTitle": "Agent Teams - AI Agent Orchestration for Developers",
-    "homeDescription": "Free, open-source desktop app for AI agent teams across Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, and Kiro.",
+    "homeTitle": "Agent Teams - You're the boss. Agents are your team.",
+    "homeDescription": "Your AI teams handle tasks on their own, message each other, and review each other's work. You just watch the Kanban board and give high-level commands. Agent Teams works with Codex, Claude, Grok, GitHub Copilot, Cursor, Kiro, Z.AI, MiniMax, Kimi, and OpenCode (200+ models, 75+ LLM providers, and free models with no authentication required). Build your AI company with multiple teams.",
     "downloadTitle": "Download Agent Teams for macOS, Windows, and Linux",
     "downloadDescription": "Download Agent Teams for macOS, Windows, and Linux. Build mixed AI agent teams with Claude Code, Codex, OpenCode, Cursor, SuperGrok, GitHub Copilot, Z.AI, MiniMax, and Kiro."
   },

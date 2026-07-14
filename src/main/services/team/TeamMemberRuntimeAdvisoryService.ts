@@ -72,6 +72,7 @@ interface CachedTeamBatchAdvisories {
 interface RecentBatchAdvisories {
   value: Map<string, MemberRuntimeAdvisory>;
   expiresAt: number;
+  generation: number;
 }
 
 async function mapLimit<T, R>(
@@ -119,7 +120,12 @@ export class TeamMemberRuntimeAdvisoryService {
     }
 
     this.cacheGenerationByTeam.set(teamKey, (this.cacheGenerationByTeam.get(teamKey) ?? 0) + 1);
-    this.memberCache.delete(`${teamKey}::${memberKey}`);
+    const memberCachePrefix = `${teamKey}::${memberKey}::`;
+    for (const key of this.memberCache.keys()) {
+      if (key.startsWith(memberCachePrefix)) {
+        this.memberCache.delete(key);
+      }
+    }
     this.teamBatchCacheByTeam.delete(teamKey);
   }
 
@@ -173,7 +179,12 @@ export class TeamMemberRuntimeAdvisoryService {
     }
 
     const recentBatch = this.recentBatchByKey.get(inFlightKey);
-    if (recentBatch && recentBatch.expiresAt > now) {
+    const currentGeneration = this.cacheGenerationByTeam.get(teamKey) ?? 0;
+    if (
+      recentBatch &&
+      recentBatch.generation === currentGeneration &&
+      recentBatch.expiresAt > now
+    ) {
       return this.materializeBatchAdvisories(activeMembers, recentBatch.value);
     }
 
@@ -283,7 +294,11 @@ export class TeamMemberRuntimeAdvisoryService {
         expiresAt: Date.now() + CACHE_TTL_MS,
       });
     }
-    this.rememberRecentBatch(`${teamKey}::${membersSignature}::${observedAfterScopeKey}`, result);
+    this.rememberRecentBatch(
+      `${teamKey}::${membersSignature}::${observedAfterScopeKey}`,
+      result,
+      generationAtStart
+    );
 
     const totalMs = performance.now() - startedAt;
     if (totalMs >= BATCH_WARN_MS) {
@@ -317,11 +332,13 @@ export class TeamMemberRuntimeAdvisoryService {
 
   private rememberRecentBatch(
     inFlightKey: string,
-    advisories: ReadonlyMap<string, MemberRuntimeAdvisory>
+    advisories: ReadonlyMap<string, MemberRuntimeAdvisory>,
+    generation: number
   ): void {
     this.recentBatchByKey.set(inFlightKey, {
       value: this.cloneNormalizedAdvisories(advisories),
       expiresAt: Date.now() + RECENT_BATCH_REUSE_AFTER_INVALIDATION_MS,
+      generation,
     });
     if (this.recentBatchByKey.size > 50) {
       const now = Date.now();
@@ -508,10 +525,6 @@ export class TeamMemberRuntimeAdvisoryService {
       if (lane.state === 'stopped') {
         continue;
       }
-      const laneMember = this.getOpenCodeLaneMemberName(lane.laneId);
-      if (!laneMember || !activeMembersByKey.has(this.normalizeToken(laneMember))) {
-        continue;
-      }
       const ledger = createOpenCodePromptDeliveryLedgerStore({
         filePath: getOpenCodeLaneScopedRuntimeFilePath({
           teamsBasePath: getTeamsBasePath(),
@@ -521,9 +534,15 @@ export class TeamMemberRuntimeAdvisoryService {
         }),
       });
       const records = await ledger.list().catch(() => []);
-      const existing = recordsByMember.get(this.normalizeToken(laneMember)) ?? [];
-      existing.push(...records);
-      recordsByMember.set(this.normalizeToken(laneMember), existing);
+      for (const record of records) {
+        const memberKey = this.normalizeToken(record.memberName);
+        if (!activeMembersByKey.has(memberKey)) {
+          continue;
+        }
+        const existing = recordsByMember.get(memberKey) ?? [];
+        existing.push(record);
+        recordsByMember.set(memberKey, existing);
+      }
     }
 
     const memberKeysWithRecentErrors = new Set<string>();
@@ -575,14 +594,6 @@ export class TeamMemberRuntimeAdvisoryService {
       }
     }
     return result;
-  }
-
-  private getOpenCodeLaneMemberName(laneId: string): string | null {
-    const parts = laneId.split(':');
-    if (parts.length < 3 || parts[0] !== 'secondary' || parts[1] !== 'opencode') {
-      return null;
-    }
-    return parts.slice(2).join(':').trim() || null;
   }
 
   private buildOpenCodeDeliveryAdvisoryFromRecords(

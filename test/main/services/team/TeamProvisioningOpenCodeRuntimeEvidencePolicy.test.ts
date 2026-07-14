@@ -10,11 +10,13 @@ import {
   formatOpenCodeLaneTimingMs,
   getOpenCodeSecondaryBootstrapPendingMemberNames,
   getOpenCodeSecondaryBootstrapStallDiagnosticFromPersisted,
+  hasConfirmedOpenCodeRuntimeMember,
   hasMaterializedOpenCodeRuntimeForBootstrap,
   hasOpenCodeRuntimeEntryHandle,
   hasOpenCodeRuntimeHandle,
   hasOpenCodeRuntimeLivenessMarker,
   hasRecoverableOpenCodeBootstrapDiagnostic,
+  hasRetainableOpenCodeRuntimeMember,
   isBootstrapMemberEvidenceCurrentForMember,
   isDefinitiveOpenCodePreLaunchFailure,
   isExplicitLegacyOpenCodeBootstrap,
@@ -24,6 +26,7 @@ import {
   isRecoverablePersistedOpenCodeRuntimeCandidate,
   isRecoverablePersistedOpenCodeTerminalRuntimeCandidate,
   MEMBER_BOOTSTRAP_STALL_MS,
+  normalizeExpectedOpenCodeRuntimeLaunchMembers,
   normalizeIsoTimestamp,
   normalizeRecoverableOpenCodeBootstrapPendingLaunchResult,
   OPENCODE_APP_MANAGED_BOOTSTRAP_PENDING_DIAGNOSTIC,
@@ -33,6 +36,7 @@ import {
   resolveOpenCodeBootstrapAcceptedAt,
   selectOpenCodeSecondaryBootstrapStallDiagnostic,
   shouldMarkPersistedOpenCodeBootstrapStalled,
+  shouldRetainOpenCodeRuntimeLaunch,
   summarizeRuntimeLaunchResultMembers,
   toOpenCodePersistedLaunchMember,
 } from '@main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy';
@@ -120,6 +124,131 @@ function makeLaunchResult(
 }
 
 describe('TeamProvisioningOpenCodeRuntimeEvidencePolicy', () => {
+  it('retains a partially failed team only while another member is confirmed alive', () => {
+    const cursorFailure = makeEvidence({
+      memberName: 'alice',
+      launchState: 'failed_to_start',
+      hardFailure: true,
+      hardFailureReason: "You've hit your Cursor usage limit.",
+      diagnostics: ["You've hit your Cursor usage limit."],
+    });
+    const healthyMember = makeEvidence({
+      memberName: 'bob',
+      launchState: 'confirmed_alive',
+      agentToolAccepted: true,
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+      hardFailure: false,
+    });
+    const partialResult = makeLaunchResult(cursorFailure, {
+      teamLaunchState: 'partial_failure',
+      members: {
+        alice: cursorFailure,
+        bob: healthyMember,
+      },
+    });
+
+    expect(hasConfirmedOpenCodeRuntimeMember(partialResult)).toBe(true);
+    expect(hasRetainableOpenCodeRuntimeMember(partialResult)).toBe(true);
+    expect(shouldRetainOpenCodeRuntimeLaunch(partialResult)).toBe(true);
+
+    const allFailedResult = makeLaunchResult(cursorFailure, {
+      teamLaunchState: 'partial_failure',
+      members: { alice: cursorFailure },
+    });
+    expect(hasConfirmedOpenCodeRuntimeMember(allFailedResult)).toBe(false);
+    expect(hasRetainableOpenCodeRuntimeMember(allFailedResult)).toBe(false);
+    expect(shouldRetainOpenCodeRuntimeLaunch(allFailedResult)).toBe(false);
+  });
+
+  it('retains materialized pending members without trusting empty or hard-failed evidence', () => {
+    const cursorFailure = makeEvidence({
+      memberName: 'alice',
+      launchState: 'failed_to_start',
+      hardFailure: true,
+      diagnostics: ["You've hit your Cursor usage limit."],
+    });
+    const pendingMember = makeEvidence({
+      memberName: 'bob',
+      launchState: 'runtime_pending_permission',
+      agentToolAccepted: true,
+      runtimeAlive: true,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+      pendingPermissionRequestIds: ['permission-1'],
+    });
+    const partialWithPendingRuntime = makeLaunchResult(cursorFailure, {
+      teamLaunchState: 'partial_failure',
+      members: { alice: cursorFailure, bob: pendingMember },
+    });
+
+    expect(hasConfirmedOpenCodeRuntimeMember(partialWithPendingRuntime)).toBe(false);
+    expect(hasRetainableOpenCodeRuntimeMember(partialWithPendingRuntime)).toBe(true);
+    expect(shouldRetainOpenCodeRuntimeLaunch(partialWithPendingRuntime)).toBe(true);
+
+    const hardFailedButAlive = makeEvidence({
+      memberName: 'bob',
+      launchState: 'failed_to_start',
+      runtimeAlive: true,
+      hardFailure: true,
+    });
+    expect(
+      hasRetainableOpenCodeRuntimeMember(
+        makeLaunchResult(hardFailedButAlive, {
+          teamLaunchState: 'partial_failure',
+          members: { bob: hardFailedButAlive },
+        })
+      )
+    ).toBe(false);
+    expect(
+      hasRetainableOpenCodeRuntimeMember(
+        makeLaunchResult(undefined, {
+          teamLaunchState: 'clean_success',
+          members: {},
+        })
+      )
+    ).toBe(false);
+  });
+
+  it('turns missing expected adapter evidence into a member-scoped hard failure', () => {
+    const normalized = normalizeExpectedOpenCodeRuntimeLaunchMembers(
+      makeLaunchResult(undefined, {
+        teamLaunchState: 'clean_success',
+        members: {
+          unexpected: makeEvidence({
+            memberName: 'unexpected',
+            launchState: 'confirmed_alive',
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+          }),
+        },
+      }),
+      [
+        {
+          name: 'alice',
+          providerId: 'opencode',
+          model: 'cursor-acp/auto',
+          cwd: '/tmp/test',
+        },
+      ]
+    );
+
+    expect(normalized.teamLaunchState).toBe('partial_failure');
+    expect(normalized.members).toEqual({
+      alice: expect.objectContaining({
+        memberName: 'alice',
+        launchState: 'failed_to_start',
+        hardFailure: true,
+      }),
+    });
+    expect(normalized.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('expected member alice'),
+        expect.stringContaining('unexpected member evidence: unexpected'),
+      ])
+    );
+  });
+
   it('formats timing diagnostics and appends diagnostics without duplicates', () => {
     expect(formatOpenCodeLaneTimingMs(12.6)).toBe('13ms');
     expect(formatOpenCodeLaneTimingMs(-4.4)).toBe('0ms');

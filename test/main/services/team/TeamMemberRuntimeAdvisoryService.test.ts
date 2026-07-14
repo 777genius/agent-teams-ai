@@ -540,6 +540,49 @@ describe('TeamMemberRuntimeAdvisoryService', () => {
     expect(advisory?.message).not.toContain('Latest assistant message');
   });
 
+  it('surfaces a Cursor quota failure from the shared primary OpenCode lane only for its member', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-advisory-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'primary-cursor-quota';
+    const nowIso = new Date().toISOString();
+    await writeOpenCodeDeliveryFixture({
+      baseDir: tmpDir,
+      teamName,
+      laneId: 'primary',
+      records: [
+        buildOpenCodeDeliveryRecord({
+          id: 'opencode-prompt:alice-cursor-quota',
+          teamName,
+          memberName: 'alice',
+          laneId: 'primary',
+          diagnostics: ["You've hit your Cursor usage limit."],
+          lastReason: "You've hit your Cursor usage limit.",
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          failedAt: nowIso,
+          lastAttemptAt: nowIso,
+          lastObservedAt: nowIso,
+        }),
+      ],
+    });
+
+    const service = new TeamMemberRuntimeAdvisoryService({
+      findMemberLogs: vi.fn(async () => []),
+    });
+    const advisories = await service.getMemberAdvisories(teamName, [
+      buildMember('alice'),
+      buildMember('bob'),
+    ]);
+
+    expect(advisories.get('alice')).toMatchObject({
+      kind: 'api_error',
+      reasonCode: 'quota_exhausted',
+      message: expect.stringContaining('Cursor usage limit'),
+    });
+    expect(advisories.has('bob')).toBe(false);
+  });
+
   it('keeps pending OpenCode free usage exhaustion visible while delivery is unresolved', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-05-17T21:44:45.000Z'));
@@ -1539,7 +1582,7 @@ describe('TeamMemberRuntimeAdvisoryService', () => {
     expect(first).not.toBe(second);
   });
 
-  it('keeps slow in-flight batch scans through invalidation and briefly reuses the result', async () => {
+  it('shares an already in-flight scan but refreshes its result after invalidation', async () => {
     const { service, logsFinder } = createStubbedServiceHarness();
     const gate = createDeferred<void>();
     logsFinder.findMemberLogs.mockImplementation(async (_teamName: string, memberName: string) => {
@@ -1564,19 +1607,24 @@ describe('TeamMemberRuntimeAdvisoryService', () => {
 
     await service.getMemberAdvisories('signal-ops', [buildMember('Alice')]);
 
-    expect(logsFinder.findMemberLogs).toHaveBeenCalledTimes(1);
+    expect(logsFinder.findMemberLogs).toHaveBeenCalledTimes(2);
+  });
 
-    const recentBatchByKey = (
-      service as unknown as {
-        recentBatchByKey: Map<string, { expiresAt: number }>;
-      }
-    ).recentBatchByKey;
-    for (const recentBatch of recentBatchByKey.values()) {
-      recentBatch.expiresAt = Date.now() - 1;
-    }
+  it('drops a recovered member advisory immediately after member invalidation', async () => {
+    const { service, logsFinder, advisoryByFilePath } = createStubbedServiceHarness();
+    const members = [buildMember('Alice')];
 
-    await service.getMemberAdvisories('signal-ops', [buildMember('Alice')]);
+    await expect(service.getMemberAdvisories('signal-ops', members)).resolves.toHaveProperty(
+      'size',
+      1
+    );
+    advisoryByFilePath.set('/logs/Alice.jsonl', null);
+    service.invalidateMemberAdvisory('signal-ops', 'Alice');
 
+    await expect(service.getMemberAdvisories('signal-ops', members)).resolves.toHaveProperty(
+      'size',
+      0
+    );
     expect(logsFinder.findMemberLogs).toHaveBeenCalledTimes(2);
   });
 

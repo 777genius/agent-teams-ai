@@ -304,6 +304,52 @@ export function summarizeRuntimeLaunchResultMembers(
   return 'partial_pending';
 }
 
+export function normalizeExpectedOpenCodeRuntimeLaunchMembers(
+  result: TeamRuntimeLaunchResult,
+  expectedMembers: readonly TeamRuntimeLaunchInput['expectedMembers'][number][]
+): TeamRuntimeLaunchResult {
+  const members: Record<string, TeamRuntimeMemberLaunchEvidence> = {};
+  const diagnostics = [...result.diagnostics];
+  const expectedNames = new Set(expectedMembers.map((member) => member.name));
+
+  for (const member of expectedMembers) {
+    const evidence = result.members[member.name];
+    if (evidence) {
+      members[member.name] = evidence;
+      continue;
+    }
+    const diagnostic = `OpenCode runtime adapter did not return launch evidence for expected member ${member.name}.`;
+    diagnostics.push(diagnostic);
+    members[member.name] = {
+      memberName: member.name,
+      providerId: 'opencode',
+      model: member.model,
+      launchState: 'failed_to_start',
+      agentToolAccepted: false,
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      hardFailure: true,
+      hardFailureReason: diagnostic,
+      diagnostics: [diagnostic],
+    };
+  }
+
+  const unexpectedNames = Object.keys(result.members).filter((name) => !expectedNames.has(name));
+  if (unexpectedNames.length > 0) {
+    diagnostics.push(
+      `OpenCode runtime adapter returned unexpected member evidence: ${unexpectedNames.join(', ')}.`
+    );
+  }
+
+  const teamLaunchState = summarizeRuntimeLaunchResultMembers(members);
+  return {
+    ...result,
+    teamLaunchState,
+    members,
+    diagnostics: Array.from(new Set(diagnostics)),
+  };
+}
+
 export function hasConfirmedOpenCodeRuntimeMember(result: TeamRuntimeLaunchResult): boolean {
   return Object.values(result.members).some(
     (member) =>
@@ -314,13 +360,22 @@ export function hasConfirmedOpenCodeRuntimeMember(result: TeamRuntimeLaunchResul
   );
 }
 
+export function hasRetainableOpenCodeRuntimeMember(result: TeamRuntimeLaunchResult): boolean {
+  return Object.values(result.members).some(
+    (member) =>
+      member.launchState !== 'failed_to_start' &&
+      member.hardFailure !== true &&
+      isRecoverableOpenCodeRuntimeEvidence(member)
+  );
+}
+
 /**
  * A partial member failure is not a terminal team failure while another
- * OpenCode member is confirmed alive. Clean and pending launches remain
- * retainable under their existing lifecycle rules.
+ * OpenCode member has usable runtime evidence or a materialized pending state.
+ * Clean and pending launches retain their existing lifecycle behavior.
  */
 export function shouldRetainOpenCodeRuntimeLaunch(result: TeamRuntimeLaunchResult): boolean {
-  return result.teamLaunchState !== 'partial_failure' || hasConfirmedOpenCodeRuntimeMember(result);
+  return result.teamLaunchState !== 'partial_failure' || hasRetainableOpenCodeRuntimeMember(result);
 }
 
 export function normalizeRecoverableOpenCodeBootstrapPendingLaunchResult(

@@ -11,6 +11,7 @@ import * as path from 'path';
 
 export const AGENT_TEAMS_IDENTITY_STORE_PATH_ENV = 'AGENT_TEAMS_IDENTITY_STORE_PATH';
 export const AGENT_TEAMS_IDENTITY_SCHEMA_VERSION = 1;
+const IDENTITY_RECOVERY_SUFFIX = '.recovery';
 const SENTRY_ANONYMOUS_USER_PREFIX = 'agent-teams-sentry-v1:';
 const IDENTITY_DIR_MODE = 0o700;
 const IDENTITY_FILE_MODE = 0o600;
@@ -90,6 +91,10 @@ export function getAgentTeamsIdentityStorePath(): string {
 
 function getAgentTeamsIdentityStoreLockPath(storePath: string): string {
   return `${storePath}.lock`;
+}
+
+function getAgentTeamsIdentityRecoveryPath(storePath: string): string {
+  return `${storePath}${IDENTITY_RECOVERY_SUFFIX}`;
 }
 
 export function applyAgentTeamsIdentityEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
@@ -212,6 +217,28 @@ async function loadAppDataIdentity(storePath: string): Promise<AgentTeamsIdentit
   return normalizeStoreRecord(await readJsonFile(storePath));
 }
 
+async function ensureIdentityRecoverySnapshot(
+  storePath: string,
+  record: AgentTeamsIdentityStoreV1
+): Promise<void> {
+  const recoveryPath = getAgentTeamsIdentityRecoveryPath(storePath);
+  const recovery = await loadAppDataIdentity(recoveryPath);
+  if (
+    recovery?.clientId === record.clientId &&
+    recovery.session === undefined &&
+    recovery.capabilities === undefined
+  ) {
+    return;
+  }
+
+  await writeStoreRecord(recoveryPath, {
+    schemaVersion: AGENT_TEAMS_IDENTITY_SCHEMA_VERSION,
+    clientId: record.clientId,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+  });
+}
+
 async function removeStaleIdentityStoreLock(lockPath: string): Promise<void> {
   try {
     const stat = await fs.promises.stat(lockPath);
@@ -285,6 +312,7 @@ async function ensureAgentTeamsClientIdentityOnce(
 ): Promise<AgentTeamsClientIdentity> {
   const existing = await loadAppDataIdentity(storePath);
   if (existing) {
+    await ensureIdentityRecoverySnapshot(storePath, existing);
     return {
       clientId: existing.clientId,
       source: 'app-data',
@@ -295,6 +323,7 @@ async function ensureAgentTeamsClientIdentityOnce(
   return withIdentityStoreLock(storePath, async () => {
     const existingAfterLock = await loadAppDataIdentity(storePath);
     if (existingAfterLock) {
+      await ensureIdentityRecoverySnapshot(storePath, existingAfterLock);
       return {
         clientId: existingAfterLock.clientId,
         source: 'app-data',
@@ -302,9 +331,27 @@ async function ensureAgentTeamsClientIdentityOnce(
       };
     }
 
-    const legacy = !(await pathExists(storePath)) ? await readLegacyAgentTeamsState() : null;
+    const storeExists = await pathExists(storePath);
+    const recovery = await loadAppDataIdentity(getAgentTeamsIdentityRecoveryPath(storePath));
+    if (recovery) {
+      await writeStoreRecord(storePath, recovery);
+      return {
+        clientId: recovery.clientId,
+        source: 'app-data',
+        storePath,
+      };
+    }
+
+    const legacy = await readLegacyAgentTeamsState();
+    if (storeExists && !legacy) {
+      throw new Error(
+        'Agent Teams identity store is invalid and no recovery identity is available'
+      );
+    }
+
     const record = buildStoreRecord(legacy);
     await writeStoreRecord(storePath, record);
+    await ensureIdentityRecoverySnapshot(storePath, record);
 
     return {
       clientId: record.clientId,

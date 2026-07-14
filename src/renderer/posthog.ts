@@ -1,8 +1,8 @@
 /**
  * PostHog initialisation for the renderer process.
  *
- * The SDK is build-time configured and stays disabled unless POSTHOG_KEY
- * or VITE_POSTHOG_KEY is provided for the renderer bundle.
+ * The SDK is build-time configured and stays disabled unless an official
+ * release explicitly includes POSTHOG_KEY or VITE_POSTHOG_KEY.
  */
 
 import {
@@ -55,6 +55,9 @@ function normalizeEnvValue(value: unknown): string {
 }
 
 function getPostHogKey(): string {
+  if (typeof __OFFICIAL_POSTHOG_BUILD__ !== 'boolean' || __OFFICIAL_POSTHOG_BUILD__ !== true) {
+    return '';
+  }
   return normalizeEnvValue(import.meta.env.VITE_POSTHOG_KEY);
 }
 

@@ -48,6 +48,7 @@ function makePorts(
   cleanupRun: ReturnType<typeof vi.fn>;
   deleteAliveRunId: ReturnType<typeof vi.fn>;
   killTeamProcess: ReturnType<typeof vi.fn>;
+  runtimeAdapterRunByTeam: Map<string, { runId: string; providerId: string }>;
 } {
   const ports = {
     invalidateRuntimeSnapshotCaches: vi.fn(),
@@ -124,5 +125,45 @@ describe('team provisioning stop flow', () => {
     );
     expect(ports.cleanupRun).toHaveBeenCalledWith(currentRun);
     expect(ports.deleteAliveRunId).not.toHaveBeenCalledWith(teamName);
+  });
+
+  it('stops primary and secondary OpenCode lanes owned by an aggregate run', async () => {
+    const teamName = 'opencode-team';
+    const currentRun = makeRun('aggregate-run', teamName);
+    const runs = new Map([[currentRun.runId, currentRun]]);
+    const aliveRunByTeam = new Map([[teamName, currentRun.runId]]);
+    const ports = makePorts(teamName, runs, new Map(), aliveRunByTeam);
+    ports.runtimeAdapterRunByTeam.set(teamName, {
+      runId: currentRun.runId,
+      providerId: 'opencode',
+    });
+    vi.mocked(ports.hasSecondaryRuntimeRuns).mockReturnValue(true);
+
+    await stopTeamFlow(teamName, ports);
+
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(teamName, currentRun.runId);
+    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(teamName);
+    expect(ports.cleanupRun).toHaveBeenCalledWith(currentRun);
+  });
+
+  it('retries aggregate lane cleanup when the tracked run was already marked stopped', async () => {
+    const teamName = 'opencode-team-retry';
+    const currentRun = makeRun('aggregate-run-retry', teamName);
+    currentRun.processKilled = true;
+    currentRun.cancelRequested = true;
+    const runs = new Map([[currentRun.runId, currentRun]]);
+    const aliveRunByTeam = new Map([[teamName, currentRun.runId]]);
+    const ports = makePorts(teamName, runs, new Map(), aliveRunByTeam);
+    ports.runtimeAdapterRunByTeam.set(teamName, {
+      runId: currentRun.runId,
+      providerId: 'opencode',
+    });
+    vi.mocked(ports.hasSecondaryRuntimeRuns).mockReturnValue(true);
+
+    await stopTeamFlow(teamName, ports);
+
+    expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(teamName, currentRun.runId);
+    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(teamName);
+    expect(ports.killTeamProcess).not.toHaveBeenCalled();
   });
 });

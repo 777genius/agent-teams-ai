@@ -8,7 +8,7 @@ import type { AgentActionMode, InboxMessage, TaskRef } from '@shared/types/team'
 export const OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS = 3_000;
 export const OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS = 15_000;
 export const OPENCODE_PROMPT_WATCHDOG_GLOBAL_CONCURRENCY = 2;
-export const OPENCODE_PROMPT_WATCHDOG_PER_TEAM_CONCURRENCY = 1;
+export const OPENCODE_PROMPT_WATCHDOG_PER_TEAM_CONCURRENCY = 2;
 
 const ACK_ONLY_PHRASES = new Set([
   'понял',

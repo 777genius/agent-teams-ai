@@ -46,6 +46,9 @@ describe('AgentTeamsIdentityStore', () => {
     const first = await ensureAgentTeamsClientIdentity();
     const second = await ensureAgentTeamsClientIdentity();
     const persisted = await readAgentTeamsIdentityStore();
+    const recovery = JSON.parse(
+      await fs.readFile(`${getAgentTeamsIdentityStorePath()}.recovery`, 'utf8')
+    ) as Record<string, unknown>;
 
     expect(first.clientId).toMatch(UUID_PATTERN);
     expect(second.clientId).toBe(first.clientId);
@@ -53,6 +56,9 @@ describe('AgentTeamsIdentityStore', () => {
     expect(second.source).toBe('app-data');
     expect(persisted?.schemaVersion).toBe(1);
     expect(persisted?.clientId).toBe(first.clientId);
+    expect(recovery).toMatchObject({ schemaVersion: 1, clientId: first.clientId });
+    expect(recovery).not.toHaveProperty('session');
+    expect(recovery).not.toHaveProperty('capabilities');
   });
 
   it('deduplicates concurrent first-run identity creation', async () => {
@@ -95,28 +101,63 @@ describe('AgentTeamsIdentityStore', () => {
     await expect(fs.stat(lockPath)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it('falls back safely when app-data JSON or UUID is invalid', async () => {
+  it('restores the same client id from the recovery snapshot when the primary JSON is invalid', async () => {
+    const original = await ensureAgentTeamsClientIdentity();
     const storePath = getAgentTeamsIdentityStorePath();
-    await fs.mkdir(path.dirname(storePath), { recursive: true });
     await fs.writeFile(storePath, '{not-json', 'utf8');
 
-    const fromInvalidJson = await ensureAgentTeamsClientIdentity();
-    expect(fromInvalidJson.clientId).toMatch(UUID_PATTERN);
+    const recovered = await ensureAgentTeamsClientIdentity();
+    const persisted = await readAgentTeamsIdentityStore();
 
-    await fs.writeFile(
-      storePath,
+    expect(recovered).toMatchObject({ clientId: original.clientId, source: 'app-data' });
+    expect(persisted?.clientId).toBe(original.clientId);
+  });
+
+  it.each([
+    ['malformed JSON', '{not-json'],
+    [
+      'invalid UUID',
       JSON.stringify({
         schemaVersion: 1,
         clientId: 'not-a-uuid',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }),
+    ],
+  ])('fails closed for %s without replacing an unrecoverable identity', async (_label, raw) => {
+    const storePath = getAgentTeamsIdentityStorePath();
+    await fs.mkdir(path.dirname(storePath), { recursive: true });
+    await fs.writeFile(storePath, raw, 'utf8');
+
+    await expect(ensureAgentTeamsClientIdentity()).rejects.toThrow(
+      'identity store is invalid and no recovery identity is available'
+    );
+    expect(await fs.readFile(storePath, 'utf8')).toBe(raw);
+    await expect(fs.stat(`${storePath}.recovery`)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('recovers an invalid primary store from the legacy identity without minting a UUID', async () => {
+    const storePath = getAgentTeamsIdentityStorePath();
+    await fs.mkdir(path.dirname(storePath), { recursive: true });
+    await fs.writeFile(storePath, '{not-json', 'utf8');
+
+    await fs.writeFile(
+      path.join(tempHome, '.claude.json'),
+      JSON.stringify({
+        agentTeams: {
+          clientId: LEGACY_CLIENT_ID,
+        },
+      }),
       'utf8'
     );
 
-    const fromInvalidUuid = await ensureAgentTeamsClientIdentity();
-    expect(fromInvalidUuid.clientId).toMatch(UUID_PATTERN);
-    expect(fromInvalidUuid.clientId).not.toBe('not-a-uuid');
+    const recovered = await ensureAgentTeamsClientIdentity();
+
+    expect(recovered).toMatchObject({
+      clientId: LEGACY_CLIENT_ID,
+      source: 'legacy-global-config',
+    });
+    expect((await readAgentTeamsIdentityStore())?.clientId).toBe(LEGACY_CLIENT_ID);
   });
 
   it('soft-migrates legacy ~/.claude.json agentTeams into app data', async () => {

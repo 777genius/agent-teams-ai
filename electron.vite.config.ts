@@ -5,6 +5,10 @@ import { execSync } from 'child_process'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { loadEnv, type Plugin } from 'vite'
+import {
+  isOfficialPostHogReleaseBuild,
+  resolvePostHogBuildKey,
+} from './src/shared/utils/posthogBuildPolicy'
 
 // Read all production dependencies from package.json
 // so they get bundled into the main process output.
@@ -18,12 +22,8 @@ const localEnv = loadEnv(process.env.NODE_ENV ?? 'development', __dirname, '')
 const buildGitSha = resolveBuildGitSha()
 const buildId = resolveBuildId(buildGitSha)
 const releaseChannel = resolveReleaseChannel()
-const posthogKey =
-  process.env.POSTHOG_KEY ??
-  localEnv.POSTHOG_KEY ??
-  process.env.VITE_POSTHOG_KEY ??
-  localEnv.VITE_POSTHOG_KEY ??
-  ''
+const officialPostHogBuild = isOfficialPostHogReleaseBuild(process.env)
+const posthogKey = resolvePostHogBuildKey(process.env, localEnv)
 const posthogHost =
   process.env.POSTHOG_HOST ??
   localEnv.POSTHOG_HOST ??
@@ -275,6 +275,7 @@ export default defineConfig({
       __BUILD_GIT_SHA__: JSON.stringify(buildGitSha),
       __BUILD_ID__: JSON.stringify(buildId),
       __RELEASE_CHANNEL__: JSON.stringify(releaseChannel),
+      __OFFICIAL_POSTHOG_BUILD__: JSON.stringify(officialPostHogBuild),
       // Pass SENTRY_DSN to renderer as VITE_SENTRY_DSN (Vite replaces at compile time)
       'import.meta.env.VITE_SENTRY_DSN': JSON.stringify(process.env.SENTRY_DSN ?? ''),
       // PostHog project API keys are public browser SDK keys. Prefer POSTHOG_* in CI.

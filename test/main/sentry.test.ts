@@ -86,6 +86,28 @@ describe('main Sentry telemetry gate', () => {
     );
   });
 
+  it('fails telemetry closed without breaking startup when identity is unrecoverable', async () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-sentry-identity-'));
+    const { getAgentTeamsIdentityStorePath } =
+      await import('@main/services/identity/AgentTeamsIdentityStore');
+    const { setAppDataBasePath } = await import('@main/utils/pathDecoder');
+    setAppDataBasePath(tempRoot);
+    const storePath = getAgentTeamsIdentityStorePath();
+    fs.mkdirSync(path.dirname(storePath), { recursive: true });
+    fs.writeFileSync(storePath, '{not-json', 'utf8');
+
+    try {
+      const sentry = await import('@main/sentry');
+      sentry.syncTelemetryFlag(true);
+
+      await expect(sentry.getCurrentSentryTelemetryContext()).resolves.toBeNull();
+      expect(fs.readFileSync(storePath, 'utf8')).toBe('{not-json');
+    } finally {
+      setAppDataBasePath(null);
+      fs.rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   it('does not attach high-cardinality breadcrumb data', async () => {
     const sentry = await import('@main/sentry');
     const sentryApi = {

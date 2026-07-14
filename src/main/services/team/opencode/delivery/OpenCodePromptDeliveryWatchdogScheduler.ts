@@ -33,10 +33,15 @@ export interface OpenCodePromptDeliveryWatchdogStaleErrorInput {
 export class OpenCodePromptDeliveryWatchdogScheduler {
   private readonly timers = new Map<string, NodeJS.Timeout>();
   private readonly deadlines = new Map<string, number>();
-  private readonly queue: { teamName: string; run: () => Promise<void> }[] = [];
+  private readonly queue: {
+    teamName: string;
+    memberName: string;
+    run: () => Promise<void>;
+  }[] = [];
   private inFlight = 0;
   private disabledLogged = false;
   private readonly inFlightByTeam = new Map<string, number>();
+  private readonly inFlightByMember = new Set<string>();
 
   constructor(private readonly deps: OpenCodePromptDeliveryWatchdogSchedulerDependencies) {}
 
@@ -82,6 +87,7 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
       this.deadlines.delete(key);
       this.enqueue({
         teamName: input.teamName,
+        memberName: input.memberName,
         run: async () => {
           if (!this.deps.canDeliverToTeamRuntime(input.teamName)) {
             const recovered = await this.deps.recoverBeforeDelivery({
@@ -170,18 +176,20 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
     return `opencode-delivery:${input.teamName}:${input.memberName.toLowerCase()}:${input.messageId}`;
   }
 
-  private enqueue(input: { teamName: string; run: () => Promise<void> }): void {
+  private enqueue(input: { teamName: string; memberName: string; run: () => Promise<void> }): void {
     this.queue.push(input);
     this.drain();
   }
 
   private drain(): void {
     while (this.inFlight < OPENCODE_PROMPT_WATCHDOG_GLOBAL_CONCURRENCY && this.queue.length > 0) {
-      const nextIndex = this.queue.findIndex(
-        (queued) =>
+      const nextIndex = this.queue.findIndex((queued) => {
+        const memberKey = this.getMemberKey(queued.teamName, queued.memberName);
+        return (
           (this.inFlightByTeam.get(queued.teamName) ?? 0) <
-          OPENCODE_PROMPT_WATCHDOG_PER_TEAM_CONCURRENCY
-      );
+            OPENCODE_PROMPT_WATCHDOG_PER_TEAM_CONCURRENCY && !this.inFlightByMember.has(memberKey)
+        );
+      });
       if (nextIndex < 0) {
         return;
       }
@@ -191,6 +199,8 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
       }
       this.inFlight += 1;
       this.inFlightByTeam.set(job.teamName, (this.inFlightByTeam.get(job.teamName) ?? 0) + 1);
+      const memberKey = this.getMemberKey(job.teamName, job.memberName);
+      this.inFlightByMember.add(memberKey);
       void job
         .run()
         .catch((error: unknown) => {
@@ -206,8 +216,13 @@ export class OpenCodePromptDeliveryWatchdogScheduler {
           } else {
             this.inFlightByTeam.delete(job.teamName);
           }
+          this.inFlightByMember.delete(memberKey);
           this.drain();
         });
     }
+  }
+
+  private getMemberKey(teamName: string, memberName: string): string {
+    return `${teamName}::${memberName.trim().toLowerCase()}`;
   }
 }

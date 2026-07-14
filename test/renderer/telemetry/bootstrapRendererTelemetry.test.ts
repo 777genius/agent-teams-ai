@@ -52,6 +52,7 @@ async function loadTelemetryModule() {
 
 describe('bootstrapRendererTelemetryFromConfig', () => {
   beforeEach(() => {
+    vi.stubGlobal('__OFFICIAL_POSTHOG_BUILD__', true);
     vi.useRealTimers();
     vi.stubEnv('VITE_SENTRY_DSN', 'https://public@example.com/1');
     vi.stubEnv('VITE_POSTHOG_KEY', 'phc_test');

@@ -4,9 +4,20 @@ import {
   isOpenCodePromptDeliveryRetryableResponseState,
   isOpenCodePromptDeliveryRetryAttemptDue,
 } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryWatchdog';
+import { OpenCodePromptDeliveryWatchdogScheduler } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryWatchdogScheduler';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { OpenCodePromptDeliveryLedgerRecord } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
 
 describe('OpenCodePromptDeliveryWatchdog retry policy', () => {
   it('treats stale OpenCode sessions as retryable after observation', () => {
@@ -104,5 +115,67 @@ describe('OpenCodePromptDeliveryWatchdog retry policy', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('OpenCodePromptDeliveryWatchdogScheduler isolation', () => {
+  function createScheduler(relay: (memberName: string, messageId: string) => Promise<void>) {
+    return new OpenCodePromptDeliveryWatchdogScheduler({
+      canDeliverToTeamRuntime: () => true,
+      recoverBeforeDelivery: vi.fn(async () => false),
+      relay: ({ memberName, messageId }) => relay(memberName, messageId),
+      getInboxMessages: vi.fn(async () => []),
+      resolveIdentity: vi.fn(async () => null),
+      isLaneActive: vi.fn(async () => false),
+      isRecordNotFoundError: () => false,
+      info: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      getErrorMessage: (error) => String(error),
+    });
+  }
+
+  it('does not let a stuck Cursor member block a healthy teammate in the same team', async () => {
+    vi.useFakeTimers();
+    const aliceGate = createDeferred<void>();
+    const relay = vi.fn(async (memberName: string) => {
+      if (memberName === 'alice') {
+        await aliceGate.promise;
+      }
+    });
+    const scheduler = createScheduler(relay);
+
+    scheduler.schedule({ teamName: 'team', memberName: 'alice', messageId: 'a-1', delayMs: 500 });
+    scheduler.schedule({ teamName: 'team', memberName: 'bob', messageId: 'b-1', delayMs: 500 });
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(relay.mock.calls.map(([memberName]) => memberName)).toEqual(['alice', 'bob']);
+    aliceGate.resolve();
+    await aliceGate.promise;
+    vi.useRealTimers();
+  });
+
+  it('keeps deliveries serialized within one member lane', async () => {
+    vi.useFakeTimers();
+    const firstGate = createDeferred<void>();
+    const secondStarted = createDeferred<void>();
+    const relay = vi.fn(async (_memberName: string, messageId: string) => {
+      if (messageId === 'a-1') {
+        await firstGate.promise;
+      } else {
+        secondStarted.resolve();
+      }
+    });
+    const scheduler = createScheduler(relay);
+
+    scheduler.schedule({ teamName: 'team', memberName: 'alice', messageId: 'a-1', delayMs: 500 });
+    scheduler.schedule({ teamName: 'team', memberName: 'alice', messageId: 'a-2', delayMs: 500 });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(relay).toHaveBeenCalledTimes(1);
+
+    firstGate.resolve();
+    await secondStarted.promise;
+    expect(relay).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
   });
 });
