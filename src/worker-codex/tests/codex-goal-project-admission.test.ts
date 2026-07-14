@@ -15,15 +15,17 @@ import {
 } from "../application/project-control/codex-goal-project-admission";
 
 describe("Codex project admission snapshot", () => {
-  it("denies a second writer from the current string risk view without using stale cache", async () => {
+  it("admits a disjoint writer and denies a writer targeting the active workspace", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-active-writer-admission-"));
     const workspacePath = join(root, "worktrees", "project-producer");
+    const disjointWorkspacePath = join(root, "worktrees", "project-disjoint-producer");
     const previousCacheTtl = process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_CACHE_TTL_MS;
     let activeWriter = false;
 
     try {
       process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_CACHE_TTL_MS = "120000";
       await mkdir(workspacePath, { recursive: true });
+      await mkdir(disjointWorkspacePath, { recursive: true });
       const deps: CodexProjectAdmissionDeps = {
         listJobs: async () => [{
           jobId: "project-producer",
@@ -57,12 +59,20 @@ describe("Codex project admission snapshot", () => {
       await expect(gate.evaluate({
         operation: ProjectOperation.StartWorker,
         workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: disjointWorkspacePath,
       })).resolves.toMatchObject({ allowed: true });
 
       activeWriter = true;
       await expect(gate.evaluate({
         operation: ProjectOperation.StartWorker,
         workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: disjointWorkspacePath,
+      })).resolves.toMatchObject({ allowed: true });
+
+      await expect(gate.evaluate({
+        operation: ProjectOperation.StartWorker,
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath,
       })).resolves.toMatchObject({
         allowed: false,
         debt: [expect.objectContaining({
@@ -244,13 +254,7 @@ describe("Codex project admission snapshot", () => {
         scope,
         deps,
       });
-      expect(liveSnapshot.debt).toEqual([
-        expect.objectContaining({
-          reason: ProjectDebtReason.ActiveWriterConflict,
-          subject: reviewer.jobId,
-          severity: "blocking",
-        }),
-      ]);
+      expect(liveSnapshot.debt).toEqual([]);
       await expect(codexProjectAdmissionGate({
         registryRootDir: join(root, "registry"),
         scope,
@@ -278,11 +282,6 @@ describe("Codex project admission snapshot", () => {
         },
       });
       expect(staleSnapshot.debt).toEqual(expect.arrayContaining([
-        expect.objectContaining({
-          reason: ProjectDebtReason.ActiveWriterConflict,
-          subject: reviewer.jobId,
-          severity: "blocking",
-        }),
         expect.objectContaining({
           reason: ProjectDebtReason.StaleDirtyWorker,
           subject: workspacePath,
