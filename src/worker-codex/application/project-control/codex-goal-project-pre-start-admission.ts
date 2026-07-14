@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  access,
   mkdir,
   lstat,
   readFile,
@@ -137,6 +138,7 @@ export async function prepareProjectPreStartAdmission(input: {
   readonly plan: PlannedProjectPreStartAdmission;
   readonly manifest: CodexGoalJobManifestInput;
   readonly scope: ProjectAccessScope;
+  readonly verifiedInputPatchArtifactSha256?: string;
 }): Promise<{ readonly createdPaths: readonly string[] }> {
   assertDescriptorPaths(input.plan.descriptor, input.manifest.jobRootDir);
   const createdPaths: string[] = [];
@@ -170,6 +172,13 @@ export async function prepareProjectPreStartAdmission(input: {
         projectPreStartAdmission: input.plan.descriptor,
       },
       scope: input.scope,
+      ...(input.verifiedInputPatchArtifactSha256
+        ? {
+            verifiedInputPatch: {
+              artifactSha256: input.verifiedInputPatchArtifactSha256,
+            },
+          }
+        : {}),
     });
     if (createdPaths.length > 0) {
       createdPaths.push(input.plan.descriptor.receiptPath);
@@ -219,11 +228,16 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
     receipt,
     scope: input.scope,
   });
+  const verifiedInputPatch = verifiedInputPatchFromReceipt(receipt, contract);
   const workspaceBindingValid = input.workspaceMode === "reviewed_dirty_continuation"
     ? binding.workspaceStatus !== ""
+    : verifiedInputPatch
+    ? verifiedInputPatchBindingValid(binding, verifiedInputPatch)
     : binding.workspaceStatus === "";
   const inputPatchBindingValid = input.workspaceMode === "reviewed_dirty_continuation" ||
-    bindingMatchesInputPatch(binding, contract);
+    (verifiedInputPatch
+      ? verifiedInputPatchBindingValid(binding, verifiedInputPatch)
+      : bindingMatchesInputPatch(binding, contract));
   if (
     binding.workspaceHead !== contract.phaseStartSha ||
     !inputPatchBindingValid ||
@@ -274,6 +288,10 @@ export async function removeProjectPreStartAdmissionPaths(
 async function validateProjectPreStartAdmission(input: {
   readonly manifest: CodexGoalJobManifest | CodexGoalJobManifestInput;
   readonly scope: ProjectAccessScope;
+  readonly verifiedInputPatch?: {
+    readonly artifactSha256: string;
+    readonly stagedPatchSha256?: string;
+  };
 }): Promise<void> {
   const descriptor = input.manifest.projectPreStartAdmission;
   if (!descriptor)
@@ -292,8 +310,21 @@ async function validateProjectPreStartAdmission(input: {
   );
   assertContractBindings(contract, input.manifest);
   assertQueuedStateBinding(contract, state, input.manifest.jobId);
+  const verifiedInputPatch = input.verifiedInputPatch ??
+    await readVerifiedInputPatchFromExistingReceipt(descriptor, contract);
+  if (
+    verifiedInputPatch &&
+    verifiedInputPatch.artifactSha256 !==
+      requiredSha256(contract.inputPatchHash, "inputPatchHash")
+  ) {
+    throw new Error("project_control_pre_start_verified_input_patch_mismatch");
+  }
   const beforeBinding = await currentBinding(input.manifest, descriptor);
-  if (!bindingMatchesInputPatch(beforeBinding, contract)) {
+  if (
+    verifiedInputPatch
+      ? !verifiedInputPatchBindingValid(beforeBinding, verifiedInputPatch)
+      : !bindingMatchesInputPatch(beforeBinding, contract)
+  ) {
     throw new Error("project_control_pre_start_workspace_dirty");
   }
   let validatorReceipt: JsonObject;
@@ -349,7 +380,11 @@ async function validateProjectPreStartAdmission(input: {
     };
   }
   const afterBinding = await currentBinding(input.manifest, descriptor);
-  if (!bindingMatchesInputPatch(afterBinding, contract)) {
+  if (
+    verifiedInputPatch
+      ? !verifiedInputPatchBindingValid(afterBinding, verifiedInputPatch)
+      : !bindingMatchesInputPatch(afterBinding, contract)
+  ) {
     throw new Error("project_control_pre_start_workspace_dirty");
   }
   if (JSON.stringify(beforeBinding) !== JSON.stringify(afterBinding)) {
@@ -368,6 +403,13 @@ async function validateProjectPreStartAdmission(input: {
     stateSha256: afterBinding.stateSha256,
     promptSha256: afterBinding.promptSha256,
     workspaceHead,
+    ...(verifiedInputPatch
+      ? {
+          workspaceMode: "verified_input_patch",
+          inputPatchArtifactSha256: verifiedInputPatch.artifactSha256,
+          workspaceStagedPatchSha256: afterBinding.workspaceStagedPatchSha256,
+        }
+      : {}),
     validatedAt: new Date().toISOString(),
   };
   await writeJsonAtomically(descriptor.receiptPath, receipt);
@@ -611,6 +653,65 @@ function bindingMatchesInputPatch(
     binding.workspaceStagedPatchSha256 === inputPatchHash;
 }
 
+type VerifiedInputPatchBinding = {
+  readonly artifactSha256: string;
+  readonly stagedPatchSha256?: string;
+};
+
+function verifiedInputPatchBindingValid(
+  binding: Awaited<ReturnType<typeof currentBinding>>,
+  verifiedInputPatch: VerifiedInputPatchBinding,
+): boolean {
+  return /^[0-9a-f]{64}$/.test(verifiedInputPatch.artifactSha256) &&
+    binding.workspaceStatus !== "" &&
+    !binding.workspaceUnstagedDirty &&
+    (verifiedInputPatch.stagedPatchSha256 === undefined ||
+      binding.workspaceStagedPatchSha256 === verifiedInputPatch.stagedPatchSha256);
+}
+
+async function readVerifiedInputPatchFromExistingReceipt(
+  descriptor: CodexGoalProjectPreStartAdmission,
+  contract: JsonObject,
+): Promise<VerifiedInputPatchBinding | undefined> {
+  let receipt: JsonObject;
+  try {
+    receipt = await readJsonObject(descriptor.receiptPath, "receipt", 64 * 1024);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    if (
+      error instanceof Error &&
+      error.message === "project_control_pre_start_receipt_invalid"
+    ) {
+      try {
+        await access(descriptor.receiptPath);
+      } catch (accessError) {
+        if ((accessError as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+      }
+    }
+    throw error;
+  }
+  return verifiedInputPatchFromReceipt(receipt, contract);
+}
+
+function verifiedInputPatchFromReceipt(
+  receipt: JsonObject,
+  contract: JsonObject,
+): VerifiedInputPatchBinding | undefined {
+  if (receipt.workspaceMode !== "verified_input_patch") return undefined;
+  const artifactSha256 = requiredSha256(
+    receipt.inputPatchArtifactSha256,
+    "inputPatchArtifactSha256",
+  );
+  const stagedPatchSha256 = requiredSha256(
+    receipt.workspaceStagedPatchSha256,
+    "workspaceStagedPatchSha256",
+  );
+  if (artifactSha256 !== requiredSha256(contract.inputPatchHash, "inputPatchHash")) {
+    throw new Error("project_control_pre_start_verified_input_patch_mismatch");
+  }
+  return { artifactSha256, stagedPatchSha256 };
+}
+
 function assertDescriptorPaths(
   descriptor: CodexGoalProjectPreStartAdmission,
   jobRootDir: string,
@@ -803,6 +904,14 @@ function requiredString(value: unknown, field: string): string {
     throw new Error(`project_control_pre_start_${field}_required`);
   }
   return value;
+}
+
+function requiredSha256(value: unknown, field: string): string {
+  const parsed = requiredString(value, field).toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(parsed)) {
+    throw new Error(`project_control_pre_start_${field}_invalid`);
+  }
+  return parsed;
 }
 
 function isObject(value: unknown): value is JsonObject {
