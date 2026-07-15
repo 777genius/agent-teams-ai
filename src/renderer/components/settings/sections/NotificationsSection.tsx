@@ -493,7 +493,7 @@ export const NotificationsSection = ({
           </SettingRow>
 
           {/* Task Status Change Notifications — nested within team card */}
-          <div className="last:*:border-b-0 xl:col-span-2">
+          <div className="*:last:border-b-0 xl:col-span-2">
             <SettingRow
               label={t('notifications.team.statusChange.label')}
               description={t('notifications.team.statusChange.description')}
