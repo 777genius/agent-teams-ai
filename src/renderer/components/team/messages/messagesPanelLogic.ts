@@ -3,6 +3,42 @@ import { isLeadThought } from '../activity/LeadThoughtsGroup';
 import type { OpenCodeRuntimeDeliveryDebugDetails } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 import type { InboxMessage } from '@shared/types';
 
+export type PendingMemberDeliveryState = 'queued' | 'delivering' | 'delivered';
+
+export function getPendingMemberDeliveryState(
+  isTeamAlive: boolean | undefined,
+  messages: readonly InboxMessage[],
+  memberName: string,
+  sentAtMs: number
+): PendingMemberDeliveryState {
+  const normalizedMemberName = normalizeMessageParticipant(memberName);
+  let latestOutgoing: InboxMessage | null = null;
+  let latestOutgoingAt = Number.NEGATIVE_INFINITY;
+
+  for (const message of messages) {
+    if (
+      message.source !== 'user_sent' ||
+      normalizeMessageParticipant(message.from) !== 'user' ||
+      normalizeMessageParticipant(message.to) !== normalizedMemberName
+    ) {
+      continue;
+    }
+
+    const timestampMs = Date.parse(message.timestamp);
+    if (!Number.isFinite(timestampMs) || timestampMs < sentAtMs || timestampMs < latestOutgoingAt) {
+      continue;
+    }
+
+    latestOutgoing = message;
+    latestOutgoingAt = timestampMs;
+  }
+
+  if (latestOutgoing?.read === true) {
+    return 'delivered';
+  }
+  return isTeamAlive === false ? 'queued' : 'delivering';
+}
+
 export function reconcilePendingRepliesByMember(
   pendingRepliesByMember: Record<string, number>,
   messages: InboxMessage[]

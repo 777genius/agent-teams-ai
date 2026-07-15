@@ -16,10 +16,12 @@ import {
 } from '@renderer/utils/memberHelpers';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { formatDistanceToNowStrict } from 'date-fns';
-import { Loader2, ShieldQuestion, Users } from 'lucide-react';
+import { Check, Clock3, Loader2, ShieldQuestion, Users } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import type { ResolvedTeamMember } from '@shared/types';
+import { getPendingMemberDeliveryState } from '../messages/messagesPanelLogic';
+
+import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
 import type { ReactNode } from 'react';
 
 export interface PendingCrossTeamReply {
@@ -30,6 +32,8 @@ export interface PendingCrossTeamReply {
 interface PendingRepliesBlockProps {
   members: ResolvedTeamMember[];
   pendingRepliesByMember: Record<string, number>;
+  messages?: InboxMessage[];
+  isTeamAlive?: boolean;
   pendingCrossTeamReplies?: PendingCrossTeamReply[];
   headerRight?: ReactNode;
   onMemberClick?: (member: ResolvedTeamMember) => void;
@@ -38,6 +42,8 @@ interface PendingRepliesBlockProps {
 export const PendingRepliesBlock = memo(function PendingRepliesBlock({
   members,
   pendingRepliesByMember,
+  messages = [],
+  isTeamAlive,
   pendingCrossTeamReplies = [],
   headerRight,
   onMemberClick,
@@ -81,7 +87,7 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
     <div className="mb-3 space-y-1.5">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
-          {t('activity.pendingReplies.title')}
+          {t('messages.status.title')}
         </p>
         {headerRight ? <div className="shrink-0">{headerRight}</div> : null}
       </div>
@@ -102,7 +108,43 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
             member.runtimeAdvisory,
             member.providerId
           );
-          const isRetrying = advisoryLabel !== null;
+          const deliveryState = getPendingMemberDeliveryState(
+            isTeamAlive,
+            messages,
+            member.name,
+            entry.sentAtMs
+          );
+          const isQueued = deliveryState === 'queued';
+          const isDelivered = deliveryState === 'delivered';
+          const showRuntimeAdvisory = deliveryState === 'delivering' && advisoryLabel !== null;
+          const statusLabel = isQueued
+            ? 'Queued'
+            : isDelivered
+              ? 'Delivered'
+              : showRuntimeAdvisory
+                ? advisoryLabel
+                : 'Delivering';
+          const statusTitle = isQueued
+            ? 'Queued - will be delivered after the team starts'
+            : isDelivered
+              ? 'The member runtime has read this message'
+              : showRuntimeAdvisory
+                ? advisoryTitle
+                : 'Team is online - waiting for the member runtime to read this message';
+          const statusColorClass = isQueued
+            ? 'text-amber-300'
+            : isDelivered
+              ? 'text-emerald-300'
+              : showRuntimeAdvisory
+                ? 'text-amber-300'
+                : 'text-cyan-300';
+          const dotColorClass = isQueued
+            ? 'bg-amber-500'
+            : isDelivered
+              ? 'bg-emerald-500'
+              : showRuntimeAdvisory
+                ? 'bg-amber-500'
+                : 'bg-cyan-500';
 
           return (
             <article
@@ -123,11 +165,13 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
                     loading="lazy"
                   />
                   <span className="absolute -bottom-0.5 -right-0.5 flex size-2.5">
+                    {!isQueued && !isDelivered ? (
+                      <span
+                        className={`absolute inline-flex size-full animate-ping rounded-full opacity-60 ${dotColorClass}`}
+                      />
+                    ) : null}
                     <span
-                      className={`absolute inline-flex size-full animate-ping rounded-full opacity-70 ${isRetrying ? 'bg-amber-400' : 'bg-emerald-400'}`}
-                    />
-                    <span
-                      className={`relative inline-flex size-full rounded-full ${isRetrying ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                      className={`relative inline-flex size-full rounded-full ${dotColorClass}`}
                     />
                   </span>
                 </span>
@@ -163,15 +207,20 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
                   </span>
                 ) : null}
                 <span
-                  className={`min-w-0 flex-1 truncate text-[10px] ${isRetrying ? 'text-amber-300' : ''}`}
-                  style={isRetrying ? undefined : { color: CARD_ICON_MUTED }}
-                  title={advisoryTitle ?? t('activity.pendingReplies.messageSentAwaitingReply')}
+                  className={`min-w-0 flex-1 truncate text-[10px] ${statusColorClass}`}
+                  title={statusTitle ?? undefined}
                 >
-                  {advisoryLabel ?? t('activity.pendingReplies.awaitingReply')}
+                  {statusLabel}
                 </span>
-                {isRetrying ? (
-                  <Loader2 className="size-3 shrink-0 animate-spin text-amber-400" />
-                ) : null}
+                {isQueued ? (
+                  <Clock3 className="size-3 shrink-0 text-amber-400" />
+                ) : isDelivered ? (
+                  <Check className="size-3 shrink-0 text-emerald-400" />
+                ) : (
+                  <Loader2
+                    className={`size-3 shrink-0 animate-spin ${showRuntimeAdvisory ? 'text-amber-400' : 'text-cyan-400'}`}
+                  />
+                )}
                 <span className="shrink-0 text-[10px]" style={{ color: CARD_ICON_MUTED }}>
                   {since}
                 </span>
