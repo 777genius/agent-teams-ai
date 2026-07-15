@@ -22,6 +22,8 @@ export enum LiveInboxRelayKind {
 export interface LiveInboxRelayResult {
   kind: LiveInboxRelayKind;
   relayed: number;
+  /** Exact scoped message confirmed by the recent native-lead delivery ledger. */
+  recentlyDeliveredMessageId?: string;
   diagnostics?: string[];
   lastDelivery?: OpenCodeMemberInboxDelivery;
 }
@@ -50,6 +52,7 @@ export interface RelayInboxFileToLiveRecipientPorts {
     options: OpenCodeMemberInboxRelayOptions
   ): Promise<OpenCodeMemberInboxRelayResult>;
   relayLeadInboxMessages(teamName: string, options?: NativeLeadInboxRelayOptions): Promise<number>;
+  wasRecentlyDeliveredToLead(teamName: string, messageId: string): boolean;
   isTeamAlive(teamName: string): boolean;
 }
 
@@ -91,9 +94,16 @@ export async function relayInboxFileToLiveRecipientWithPorts(
         ? await ports.relayLeadInboxMessages(teamName, leadOptions)
         : await ports.relayLeadInboxMessages(teamName)
       : 0;
+    const recentlyDeliveredMessageId =
+      relayed === 0 &&
+      leadOptions?.onlyMessageId &&
+      ports.wasRecentlyDeliveredToLead(teamName, leadOptions.onlyMessageId)
+        ? leadOptions.onlyMessageId
+        : undefined;
     return {
       kind: LiveInboxRelayKind.NativeLead,
       relayed,
+      ...(recentlyDeliveredMessageId ? { recentlyDeliveredMessageId } : {}),
     };
   }
 

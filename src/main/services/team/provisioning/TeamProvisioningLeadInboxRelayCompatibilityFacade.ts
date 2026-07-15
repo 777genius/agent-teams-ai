@@ -13,6 +13,7 @@ import {
   registerPendingCrossTeamReplyExpectation as registerPendingCrossTeamReplyExpectationInState,
   rememberRecentCrossTeamLeadDeliveryMessageIds as rememberRecentCrossTeamLeadDeliveryMessageIdsHelper,
   resolveCrossTeamLeadName,
+  wasRecentlyDeliveredToLead as wasRecentlyDeliveredToLeadInState,
 } from './TeamProvisioningCrossTeamRelayHelpers';
 import { type NativeSameTeamFingerprint } from './TeamProvisioningInboxRelayPolicy';
 import {
@@ -509,6 +510,13 @@ export class TeamProvisioningLeadInboxRelayCompatibilityFacade<
           this.relayOpenCodeMemberInboxMessages(teamName, memberName, relayOptions),
         relayLeadInboxMessages: (teamName, leadOptions) =>
           this.relayLeadInboxMessages(teamName, leadOptions),
+        wasRecentlyDeliveredToLead: (teamName, messageId) =>
+          wasRecentlyDeliveredToLeadInState(
+            this.recentCrossTeamLeadDeliveryMessageIds,
+            teamName,
+            messageId,
+            this.options.nowMs()
+          ),
         isTeamAlive: (teamName) => this.host.isTeamAlive(teamName),
       }
     );

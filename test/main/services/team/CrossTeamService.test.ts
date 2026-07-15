@@ -288,10 +288,47 @@ describe('CrossTeamService', () => {
         relayed: 0,
       });
 
-      await expect(
-        service.send(makeRequest({ requireRuntimeDelivery: true }))
-      ).rejects.toThrow('Cross-team runtime delivery was not confirmed for team-b.team-lead');
+      await expect(service.send(makeRequest({ requireRuntimeDelivery: true }))).rejects.toThrow(
+        'Cross-team runtime delivery was not confirmed for team-b.team-lead'
+      );
       expect(fs.existsSync(`${MOCK_TEAMS_BASE_PATH}/teams/team-a/sentMessages.json`)).toBe(false);
+    });
+
+    it('accepts recent native lead delivery proof for the requested message', async () => {
+      provisioning.relayInboxFileToLiveRecipient.mockResolvedValue({
+        kind: 'native_lead',
+        relayed: 0,
+        recentlyDeliveredMessageId: 'cross-runtime-race-1',
+      });
+
+      await expect(
+        service.send(
+          makeRequest({
+            requireRuntimeDelivery: true,
+            messageId: 'cross-runtime-race-1',
+          })
+        )
+      ).resolves.toMatchObject({
+        deliveredToInbox: true,
+        messageId: 'cross-runtime-race-1',
+      });
+    });
+
+    it('rejects recent native lead delivery proof for a different message', async () => {
+      provisioning.relayInboxFileToLiveRecipient.mockResolvedValue({
+        kind: 'native_lead',
+        relayed: 0,
+        recentlyDeliveredMessageId: 'cross-runtime-race-1',
+      });
+
+      await expect(
+        service.send(
+          makeRequest({
+            requireRuntimeDelivery: true,
+            messageId: 'cross-runtime-race-2',
+          })
+        )
+      ).rejects.toThrow('Cross-team runtime delivery was not confirmed for team-b.team-lead');
     });
 
     it('writes sender copy and clears pending reply when retry deduplicates after runtime proof failure', async () => {
@@ -435,9 +472,9 @@ describe('CrossTeamService', () => {
         },
       });
 
-      await expect(
-        service.send(makeRequest({ requireRuntimeDelivery: true }))
-      ).rejects.toThrow('opencode_delivery_response_pending');
+      await expect(service.send(makeRequest({ requireRuntimeDelivery: true }))).rejects.toThrow(
+        'opencode_delivery_response_pending'
+      );
     });
 
     it('gracefully handles relay failure', async () => {

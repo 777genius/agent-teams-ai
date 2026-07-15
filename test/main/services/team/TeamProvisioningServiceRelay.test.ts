@@ -2698,9 +2698,7 @@ Messages:
         summary: 'Comment on #abcd1234',
       },
     ]);
-    const inferMock = vi
-      .mocked(inferOpenCodeInboxMessageTaskRefs)
-      .mockResolvedValueOnce(taskRefs);
+    const inferMock = vi.mocked(inferOpenCodeInboxMessageTaskRefs).mockResolvedValueOnce(taskRefs);
     const deliverSpy = vi
       .spyOn(service, 'deliverOpenCodeMemberMessage')
       .mockResolvedValue({ delivered: true, diagnostics: [] });
@@ -4286,17 +4284,17 @@ Messages:
     const relaySpy = vi
       .spyOn((service as any).leadInboxRelayFacade, 'relayOpenCodeMemberInboxMessages')
       .mockResolvedValue({
-      relayed: 1,
-      attempted: 1,
-      delivered: 1,
-      failed: 0,
-      diagnostics: ['fake OpenCode lead relay ready'],
-      lastDelivery: {
-        delivered: true,
-        accepted: true,
-        responsePending: false,
-      },
-    });
+        relayed: 1,
+        attempted: 1,
+        delivered: 1,
+        failed: 0,
+        diagnostics: ['fake OpenCode lead relay ready'],
+        lastDelivery: {
+          delivered: true,
+          accepted: true,
+          responsePending: false,
+        },
+      });
 
     const relay = await service.relayInboxFileToLiveRecipient(teamName, 'team-lead', {
       onlyMessageId: 'opencode-lead-unread-1',
@@ -4329,6 +4327,53 @@ Messages:
         }),
       })
     );
+  });
+
+  it('proves a native lead message consumed by an earlier unscoped serialized relay', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedLeadInbox(teamName, [
+      {
+        from: 'peer-team.team-lead',
+        to: 'team-lead',
+        text: 'Please coordinate this cross-team handoff.',
+        timestamp: '2026-02-23T17:07:00.000Z',
+        read: false,
+        messageId: 'native-lead-unscoped-first-1',
+        source: 'cross_team',
+        conversationId: 'native-lead-unscoped-first-conversation-1',
+      },
+    ]);
+    const { writeSpy } = attachAliveRun(service, teamName);
+
+    const unscopedRelay = service.relayLeadInboxMessages(teamName);
+    const run = await waitForCapture(service);
+    const scopedProof = service.relayInboxFileToLiveRecipient(teamName, 'team-lead', {
+      onlyMessageId: 'native-lead-unscoped-first-1',
+    });
+    (service as any).handleStreamJsonMessage(run, {
+      type: 'assistant',
+      content: [{ type: 'text', text: 'Cross-team handoff received.' }],
+    });
+    (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
+
+    await expect(unscopedRelay).resolves.toBe(1);
+    await expect(scopedProof).resolves.toEqual({
+      kind: 'native_lead',
+      relayed: 0,
+      recentlyDeliveredMessageId: 'native-lead-unscoped-first-1',
+    });
+    expect(writeSpy).toHaveBeenCalledTimes(1);
+    const rows = JSON.parse(
+      hoisted.files.get(`/mock/teams/${teamName}/inboxes/team-lead.json`) ?? '[]'
+    );
+    expect(rows).toEqual([
+      expect.objectContaining({
+        messageId: 'native-lead-unscoped-first-1',
+        read: true,
+      }),
+    ]);
   });
 
   it('keeps failed OpenCode member inbox relay rows unread for retry', async () => {

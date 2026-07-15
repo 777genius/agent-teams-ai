@@ -337,7 +337,7 @@ export class CrossTeamService {
       input.memberName,
       { onlyMessageId: input.messageId }
     );
-    if (hasRuntimeDeliveryProof(relay)) {
+    if (hasRuntimeDeliveryProof(relay, input.messageId)) {
       return;
     }
 
@@ -395,10 +395,11 @@ export class CrossTeamService {
 }
 
 function hasRuntimeDeliveryProof(
-  relay: Awaited<ReturnType<TeamCrossTeamMessagingApi['relayInboxFileToLiveRecipient']>>
+  relay: Awaited<ReturnType<TeamCrossTeamMessagingApi['relayInboxFileToLiveRecipient']>>,
+  expectedMessageId: string
 ): boolean {
   if (relay.kind === 'native_lead') {
-    return relay.relayed > 0;
+    return relay.relayed > 0 || relay.recentlyDeliveredMessageId === expectedMessageId;
   }
 
   if (relay.kind !== 'opencode_member') {

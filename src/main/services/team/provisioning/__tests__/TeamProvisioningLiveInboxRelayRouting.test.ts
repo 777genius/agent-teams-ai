@@ -29,6 +29,7 @@ function createPorts(
       failed: 0,
     }),
     relayLeadInboxMessages: vi.fn().mockResolvedValue(0),
+    wasRecentlyDeliveredToLead: vi.fn().mockReturnValue(false),
     isTeamAlive: vi.fn().mockReturnValue(true),
     ...overrides,
   };
@@ -96,6 +97,44 @@ describe('TeamProvisioningLiveInboxRelayRouting', () => {
       relayed: 1,
     });
     expect(relayLeadInboxMessages).toHaveBeenCalledWith('team-a', { onlyMessageId: 'message-1' });
+  });
+
+  it('returns exact recent delivery proof for a scoped native lead message', async () => {
+    const ports = createPorts({
+      wasRecentlyDeliveredToLead: vi.fn((_teamName, messageId) => messageId === 'message-1'),
+    });
+
+    await expect(
+      relayInboxFileToLiveRecipientWithPorts(
+        { teamName: 'team-a', inboxName: 'team-lead', options: { onlyMessageId: 'message-1' } },
+        ports
+      )
+    ).resolves.toEqual({
+      kind: LiveInboxRelayKind.NativeLead,
+      relayed: 0,
+      recentlyDeliveredMessageId: 'message-1',
+    });
+
+    expect(ports.relayLeadInboxMessages).toHaveBeenCalledWith('team-a', {
+      onlyMessageId: 'message-1',
+    });
+    expect(ports.wasRecentlyDeliveredToLead).toHaveBeenCalledWith('team-a', 'message-1');
+  });
+
+  it('does not invent native lead delivery proof for an unconfirmed scoped message', async () => {
+    const ports = createPorts();
+
+    await expect(
+      relayInboxFileToLiveRecipientWithPorts(
+        { teamName: 'team-a', inboxName: 'team-lead', options: { onlyMessageId: 'message-1' } },
+        ports
+      )
+    ).resolves.toEqual({
+      kind: LiveInboxRelayKind.NativeLead,
+      relayed: 0,
+    });
+
+    expect(ports.wasRecentlyDeliveredToLead).toHaveBeenCalledWith('team-a', 'message-1');
   });
 
   it('routes OpenCode lead inbox files through OpenCode member delivery', async () => {

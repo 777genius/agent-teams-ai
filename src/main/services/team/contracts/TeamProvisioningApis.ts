@@ -264,6 +264,8 @@ export interface TeamCrossTeamMessagingApi {
   ): Promise<{
     kind: 'ignored' | 'native_lead' | 'native_member_noop' | 'opencode_member';
     relayed: number;
+    /** Exact scoped message confirmed by the recent native-lead delivery ledger. */
+    recentlyDeliveredMessageId?: string;
     diagnostics?: string[];
     lastDelivery?: TeamOpenCodeMemberInboxDelivery;
   }>;
