@@ -1083,6 +1083,7 @@ export default interface Resources {
         openAiViaCodex: 'Already available through Codex. OpenCode is optional.';
         openCodeChecking: 'Checking that OpenCode is installed and ready...';
         openCodeError: 'OpenCode could not start. Repair or reinstall it, then retry.';
+        openCodeErrorTitle: 'OpenCode needs attention';
         openCodeInstalling: 'Installing the managed OpenCode runtime...';
         openCodeInstallingPercent: 'Installing the managed OpenCode runtime - {{percent}}%';
         openCodeRequired: 'Install OpenCode to connect and use these providers with Agent Teams.';
@@ -1093,6 +1094,7 @@ export default interface Resources {
         planCredentialUnverified: 'Plan credential not verified';
         providerStatusError: 'Could not load OpenCode provider status. Your saved credentials were not changed.';
         readyToConnect: 'Available to connect';
+        refreshOpenCode: 'Refresh status';
         regionNotSelected: 'Region not selected';
         requiresOpenCode: 'Requires OpenCode';
         retryInstall: 'Retry installation';

@@ -49,6 +49,7 @@ interface RuntimeProviderQuickConnectViewProps {
   runtimeStatus: OpenCodeRuntimeStatus | null;
   directoryError: string | null;
   onInstallOpenCode: () => void;
+  onRefreshOpenCode: () => void;
   onRetryDirectory: () => void;
   onBrowseProviders: () => void;
 }
@@ -191,31 +192,23 @@ const OpenCodePrerequisite = ({
   gate,
   runtimeStatus,
   onInstall,
+  onRefresh,
 }: {
   gate: RuntimeProviderQuickConnectGate;
   runtimeStatus: OpenCodeRuntimeStatus | null;
   onInstall: () => void;
+  onRefresh: () => void;
 }): JSX.Element | null => {
   const { t } = useAppTranslation('dashboard');
-  if (gate === 'ready') {
+  if (gate === 'ready' || gate === 'checking' || gate === 'installing') {
     return null;
   }
 
-  const busy = gate === 'checking' || gate === 'installing';
   const isError = gate === 'error';
-  const percent = runtimeStatus?.progress?.percent;
-  const normalizedPercent =
-    typeof percent === 'number' ? Math.max(0, Math.min(100, percent)) : null;
   const detail =
     gate === 'missing'
       ? t('cliStatus.quickConnect.openCodeRequired')
-      : gate === 'installing'
-        ? typeof percent === 'number'
-          ? t('cliStatus.quickConnect.openCodeInstallingPercent', { percent })
-          : t('cliStatus.quickConnect.openCodeInstalling')
-        : gate === 'checking'
-          ? t('cliStatus.quickConnect.openCodeChecking')
-          : runtimeStatus?.error || t('cliStatus.quickConnect.openCodeError');
+      : runtimeStatus?.error || t('cliStatus.quickConnect.openCodeError');
 
   return (
     <div
@@ -231,18 +224,17 @@ const OpenCodePrerequisite = ({
         role={isError ? 'alert' : 'status'}
         aria-live={isError ? 'assertive' : 'polite'}
         aria-atomic="true"
-        aria-busy={busy}
       >
-        {busy ? (
-          <Loader2 className="size-4 shrink-0 animate-spin text-sky-300" />
-        ) : isError ? (
+        {isError ? (
           <AlertTriangle className="size-4 shrink-0 text-red-300" />
         ) : (
           <Download className="size-4 shrink-0 text-sky-300" />
         )}
         <div className="min-w-0">
           <p className="text-[11px] font-semibold" style={{ color: 'var(--color-text)' }}>
-            {t('cliStatus.quickConnect.openCodeTitle')}
+            {isError
+              ? t('cliStatus.quickConnect.openCodeErrorTitle')
+              : t('cliStatus.quickConnect.openCodeTitle')}
           </p>
           <p
             className="text-pretty text-[10.5px] leading-4"
@@ -252,30 +244,27 @@ const OpenCodePrerequisite = ({
           </p>
         </div>
       </div>
-      {!busy ? (
+      <div className="flex items-center gap-1.5">
         <Button type="button" variant="outline" size="sm" className="h-7" onClick={onInstall}>
           <Download className="mr-1.5 size-3.5" />
           {isError
             ? t('cliStatus.quickConnect.retryOpenCode')
             : t('cliStatus.quickConnect.installOpenCode')}
         </Button>
-      ) : null}
-      {gate === 'installing' && normalizedPercent !== null ? (
-        <div
-          role="progressbar"
-          aria-label={t('cliStatus.quickConnect.openCodeInstalling')}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={normalizedPercent}
-          aria-valuetext={detail}
-          className="absolute inset-x-0 bottom-0 h-0.5 bg-black/20"
-        >
-          <div
-            className="h-full bg-sky-400 transition-[width] duration-300"
-            style={{ width: `${normalizedPercent}%` }}
-          />
-        </div>
-      ) : null}
+        {isError ? (
+          <Button
+            type="button"
+            data-testid="provider-quick-opencode-refresh"
+            variant="ghost"
+            size="sm"
+            className="h-7"
+            onClick={onRefresh}
+          >
+            <RefreshCw className="mr-1.5 size-3.5" />
+            {t('cliStatus.quickConnect.refreshOpenCode')}
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 };
@@ -301,6 +290,7 @@ export const RuntimeProviderQuickConnectView = ({
   runtimeStatus,
   directoryError,
   onInstallOpenCode,
+  onRefreshOpenCode,
   onRetryDirectory,
   onBrowseProviders,
 }: RuntimeProviderQuickConnectViewProps): JSX.Element => {
@@ -347,6 +337,7 @@ export const RuntimeProviderQuickConnectView = ({
         gate={gate}
         runtimeStatus={runtimeStatus}
         onInstall={onInstallOpenCode}
+        onRefresh={onRefreshOpenCode}
       />
 
       {directoryError && gate === 'ready' ? (

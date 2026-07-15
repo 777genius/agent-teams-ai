@@ -25,8 +25,10 @@ vi.mock('@features/localization/renderer', () => ({
         'cliStatus.quickConnect.openCodeInstalling': 'Installing OpenCode',
         'cliStatus.quickConnect.openCodeInstallingPercent': `Installing OpenCode ${values?.percent ?? 0}%`,
         'cliStatus.quickConnect.openCodeError': 'OpenCode could not start',
+        'cliStatus.quickConnect.openCodeErrorTitle': 'OpenCode needs attention',
         'cliStatus.quickConnect.connected': 'Connected',
         'cliStatus.quickConnect.retryOpenCode': 'Repair OpenCode',
+        'cliStatus.quickConnect.refreshOpenCode': 'Refresh status',
         'cliStatus.quickConnect.installOpenCode': 'Install OpenCode',
         'cliStatus.quickConnect.providerStatusError': 'Could not load provider status',
         'cliStatus.quickConnect.openAiTitle': 'OpenAI Plus / Pro',
@@ -102,6 +104,7 @@ describe('RuntimeProviderQuickConnectView', () => {
           runtimeStatus: null,
           directoryError: null,
           onInstallOpenCode,
+          onRefreshOpenCode: vi.fn(),
           onRetryDirectory: vi.fn(),
           onBrowseProviders: vi.fn(),
         })
@@ -145,7 +148,7 @@ describe('RuntimeProviderQuickConnectView', () => {
     expect(onInstallOpenCode).toHaveBeenCalledTimes(1);
   });
 
-  it('shows concise preparation copy while OpenCode availability is checked', async () => {
+  it('keeps the prerequisite notice hidden while OpenCode availability is checked', async () => {
     await act(async () => {
       root.render(
         React.createElement(RuntimeProviderQuickConnectView, {
@@ -154,19 +157,16 @@ describe('RuntimeProviderQuickConnectView', () => {
           runtimeStatus: null,
           directoryError: null,
           onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
           onRetryDirectory: vi.fn(),
           onBrowseProviders: vi.fn(),
         })
       );
     });
 
-    expect(host.textContent).toContain('Preparing OpenCode');
-    expect(host.textContent).toContain('Checking that OpenCode is installed and ready...');
-    const status = host.querySelector(
-      '[data-testid="provider-quick-opencode-prerequisite"] [role="status"]'
-    );
-    expect(status?.getAttribute('aria-live')).toBe('polite');
-    expect(status?.getAttribute('aria-busy')).toBe('true');
+    expect(host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]')).toBeNull();
+    expect(host.textContent).not.toContain('Preparing OpenCode');
+    expect(host.textContent).not.toContain('Checking that OpenCode is installed and ready...');
     expect(
       [...host.querySelectorAll('button')].some(
         (button) => button.textContent?.trim() === 'Install OpenCode'
@@ -174,7 +174,7 @@ describe('RuntimeProviderQuickConnectView', () => {
     ).toBe(false);
   });
 
-  it('announces install progress and exposes its percentage semantically', async () => {
+  it('keeps the prerequisite notice hidden while OpenCode is installed', async () => {
     await act(async () => {
       root.render(
         React.createElement(RuntimeProviderQuickConnectView, {
@@ -192,25 +192,20 @@ describe('RuntimeProviderQuickConnectView', () => {
           },
           directoryError: null,
           onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
           onRetryDirectory: vi.fn(),
           onBrowseProviders: vi.fn(),
         })
       );
     });
 
-    expect(host.textContent).toContain('Installing OpenCode 42%');
-    const progress = host.querySelector('[role="progressbar"]');
-    expect(progress?.getAttribute('aria-valuenow')).toBe('42');
-    expect(progress?.getAttribute('aria-valuetext')).toBe('Installing OpenCode 42%');
-    expect(
-      host
-        .querySelector('[data-testid="provider-quick-opencode-prerequisite"] [role="status"]')
-        ?.getAttribute('aria-busy')
-    ).toBe('true');
+    expect(host.querySelector('[data-testid="provider-quick-opencode-prerequisite"]')).toBeNull();
+    expect(host.textContent).not.toContain('Installing OpenCode 42%');
   });
 
-  it('announces runtime failure and exposes the repair action', async () => {
+  it('announces runtime failure and exposes separate repair and refresh actions', async () => {
     const onInstallOpenCode = vi.fn();
+    const onRefreshOpenCode = vi.fn();
     await act(async () => {
       root.render(
         React.createElement(RuntimeProviderQuickConnectView, {
@@ -224,6 +219,7 @@ describe('RuntimeProviderQuickConnectView', () => {
           },
           directoryError: null,
           onInstallOpenCode,
+          onRefreshOpenCode,
           onRetryDirectory: vi.fn(),
           onBrowseProviders: vi.fn(),
         })
@@ -231,12 +227,20 @@ describe('RuntimeProviderQuickConnectView', () => {
     });
 
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Network unavailable');
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('OpenCode needs attention');
     const repair = [...host.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === 'Repair OpenCode'
     );
     expect(repair).not.toBeUndefined();
     act(() => repair?.click());
     expect(onInstallOpenCode).toHaveBeenCalledTimes(1);
+
+    const refresh = host.querySelector<HTMLButtonElement>(
+      '[data-testid="provider-quick-opencode-refresh"]'
+    );
+    expect(refresh?.textContent?.trim()).toBe('Refresh status');
+    act(() => refresh?.click());
+    expect(onRefreshOpenCode).toHaveBeenCalledTimes(1);
   });
 
   it('keeps provider setup disabled until OpenCode is installed', async () => {
@@ -250,6 +254,7 @@ describe('RuntimeProviderQuickConnectView', () => {
           openCodeRuntimeStatus: null,
           openCodeRuntimeStatusLoading: false,
           onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
           onOpenCodeProviderAction,
           onBrowseProviders: vi.fn(),
         })
@@ -326,6 +331,7 @@ describe('RuntimeProviderQuickConnectView', () => {
           },
           directoryError: 'catalog timeout',
           onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
           onRetryDirectory,
           onBrowseProviders: vi.fn(),
         })
@@ -341,9 +347,7 @@ describe('RuntimeProviderQuickConnectView', () => {
     expect(manageButton?.classList.contains('row-span-2')).toBe(true);
     expect(manageButton?.classList.contains('self-center')).toBe(true);
     expect(superGrok?.querySelector('[role="progressbar"]')).toBeNull();
-    act(() =>
-      manageButton?.click()
-    );
+    act(() => manageButton?.click());
     expect(onManage).toHaveBeenCalledTimes(1);
 
     const retry = [...host.querySelectorAll('button')].find(
@@ -365,6 +369,7 @@ describe('RuntimeProviderQuickConnectView', () => {
           openCodeRuntimeStatus: null,
           openCodeRuntimeStatusLoading: false,
           onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
           onOpenCodeProviderAction,
           onBrowseProviders: vi.fn(),
         })

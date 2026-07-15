@@ -207,7 +207,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
 
     await expect(resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).resolves.toBe(binaryPath);
     expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 10_000,
+      timeout: 20_000,
       windowsHide: true,
     });
 
@@ -276,7 +276,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       })
     );
     expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 10_000,
+      timeout: 20_000,
       windowsHide: true,
     });
   });
@@ -412,7 +412,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       })
     );
     expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 10_000,
+      timeout: 20_000,
       windowsHide: true,
     });
   });
@@ -428,7 +428,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     ).resolves.toBe(binaryPath);
     expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
     expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 10_000,
+      timeout: 20_000,
       windowsHide: true,
     });
   });
@@ -478,7 +478,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     );
     expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
     expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 10_000,
+      timeout: 20_000,
       windowsHide: true,
     });
   });
@@ -507,7 +507,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       ).resolves.toBe(binaryPath);
       expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
       expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-        timeout: 10_000,
+        timeout: 20_000,
         windowsHide: true,
       });
     } finally {
