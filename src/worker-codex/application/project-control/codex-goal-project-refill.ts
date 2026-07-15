@@ -109,7 +109,10 @@ async function assertReusableProjectWorktree(
       "status",
       "--porcelain",
     ]);
-    if (status.trim().length > 0) {
+    if (
+      status.trim().length > 0 &&
+      worktreeInput.workerRole !== "adoption"
+    ) {
       throw new Error("project_control_existing_worktree_dirty");
     }
     if (worktreeInput.newBranch) {

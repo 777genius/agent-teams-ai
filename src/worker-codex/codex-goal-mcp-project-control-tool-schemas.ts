@@ -11,6 +11,7 @@ export const projectAdmissionRefillWorkerRoleSchemaValues = [
   "producer",
   "fastgate",
   "reviewer",
+  "adoption",
 ] as const;
 
 export const projectAdmissionOperationSchemaValues = [
