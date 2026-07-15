@@ -30,19 +30,19 @@ The routes diff contains the exact listed 9 paths. The conformance diff contains
 
 ### Scope and provenance commands
 
-| Exact command | Exit | Observation |
-| --- | ---: | --- |
-| `git merge-base --is-ancestor a0dc964e9a71b782b1bbad4769db62a691e50c97 74038b54eee23e93798b3aa5d11411d3f7e9adcf` | 0 | Routes producer descends from the accepted P1.S2 router. |
-| `git merge-base --is-ancestor 74038b54eee23e93798b3aa5d11411d3f7e9adcf 6a9e9ab714359638fb93a6880855a53c9e8ef4be` | 0 | Canonical combined input descends from routes. |
-| `git diff --name-only a0dc964e9a71b782b1bbad4769db62a691e50c97..74038b54eee23e93798b3aa5d11411d3f7e9adcf` | 0 | Exactly 9 listed P1.1B paths. |
-| `git diff --name-only 74038b54eee23e93798b3aa5d11411d3f7e9adcf..6a9e9ab714359638fb93a6880855a53c9e8ef4be` | 0 | Exactly 28 listed P1.1C paths. |
-| `git diff --name-only a0dc964e9a71b782b1bbad4769db62a691e50c97..6a9e9ab714359638fb93a6880855a53c9e8ef4be` | 0 | Exactly the 37-path union. |
-| `git diff --exit-code 02a6b3ac5ac2baaad55c413f8547252dddee4d41..6a9e9ab714359638fb93a6880855a53c9e8ef4be` | 0 | No byte difference. |
-| `git rev-parse 02a6b3ac5ac2baaad55c413f8547252dddee4d41^{tree}` | 0 | `22020029327465ed389cd4479db340082ae81601`. |
-| `git rev-parse 6a9e9ab714359638fb93a6880855a53c9e8ef4be^{tree}` | 0 | `22020029327465ed389cd4479db340082ae81601`. |
-| `git diff --name-only 6a9e9ab714359638fb93a6880855a53c9e8ef4be..a3f1ba92d8bd4989373a0b6deb4718123c129d09` | 0 | Exactly the 7 authorized router paths. |
-| `git diff --exit-code a3f1ba92d8bd4989373a0b6deb4718123c129d09 -- . ':(exclude)docs/research/hosted-web/phase-1/reviews/routes-ratchets.md'` | 0 | No non-owned worktree diff before or after review. |
-| `git status --short` | 0 | Initially empty; final status is only the owned result. |
+| Exact command                                                                                                                                | Exit | Observation                                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------- | ---: | -------------------------------------------------------- |
+| `git merge-base --is-ancestor a0dc964e9a71b782b1bbad4769db62a691e50c97 74038b54eee23e93798b3aa5d11411d3f7e9adcf`                             |    0 | Routes producer descends from the accepted P1.S2 router. |
+| `git merge-base --is-ancestor 74038b54eee23e93798b3aa5d11411d3f7e9adcf 6a9e9ab714359638fb93a6880855a53c9e8ef4be`                             |    0 | Canonical combined input descends from routes.           |
+| `git diff --name-only a0dc964e9a71b782b1bbad4769db62a691e50c97..74038b54eee23e93798b3aa5d11411d3f7e9adcf`                                    |    0 | Exactly 9 listed P1.1B paths.                            |
+| `git diff --name-only 74038b54eee23e93798b3aa5d11411d3f7e9adcf..6a9e9ab714359638fb93a6880855a53c9e8ef4be`                                    |    0 | Exactly 28 listed P1.1C paths.                           |
+| `git diff --name-only a0dc964e9a71b782b1bbad4769db62a691e50c97..6a9e9ab714359638fb93a6880855a53c9e8ef4be`                                    |    0 | Exactly the 37-path union.                               |
+| `git diff --exit-code 02a6b3ac5ac2baaad55c413f8547252dddee4d41..6a9e9ab714359638fb93a6880855a53c9e8ef4be`                                    |    0 | No byte difference.                                      |
+| `git rev-parse 02a6b3ac5ac2baaad55c413f8547252dddee4d41^{tree}`                                                                              |    0 | `22020029327465ed389cd4479db340082ae81601`.              |
+| `git rev-parse 6a9e9ab714359638fb93a6880855a53c9e8ef4be^{tree}`                                                                              |    0 | `22020029327465ed389cd4479db340082ae81601`.              |
+| `git diff --name-only 6a9e9ab714359638fb93a6880855a53c9e8ef4be..a3f1ba92d8bd4989373a0b6deb4718123c129d09`                                    |    0 | Exactly the 7 authorized router paths.                   |
+| `git diff --exit-code a3f1ba92d8bd4989373a0b6deb4718123c129d09 -- . ':(exclude)docs/research/hosted-web/phase-1/reviews/routes-ratchets.md'` |    0 | No non-owned worktree diff before or after review.       |
+| `git status --short`                                                                                                                         |    0 | Initially empty; final status is only the owned result.  |
 
 Supplemental provenance checks also passed: `git rev-parse HEAD` exited 0 with `a3f1ba92d8bd4989373a0b6deb4718123c129d09`; `git merge-base --is-ancestor 6a9e9ab714359638fb93a6880855a53c9e8ef4be a3f1ba92d8bd4989373a0b6deb4718123c129d09` exited 0; `git merge-base --is-ancestor 041b5c7c2d3225b7dc2eca9e9b7b71aa33217060 a0dc964e9a71b782b1bbad4769db62a691e50c97` exited 0; and `git diff --name-only 041b5c7c2d3225b7dc2eca9e9b7b71aa33217060..a0dc964e9a71b782b1bbad4769db62a691e50c97` exited 0 with the eight contract-owned P1.S2 router paths recorded by both handoffs.
 
@@ -50,16 +50,16 @@ The subscription runner initially supplied a restricted login `PATH`. The first 
 
 ## Architecture and focused verification
 
-| Exact command | Exit | Observed result |
-| --- | ---: | --- |
-| `pnpm exec vitest run test/architecture/hosted-web/phase-1/routes` | 0 | 2/2 files; 16/16 tests. |
-| `pnpm exec vitest run test/architecture/hosted-web/phase-1/conformance test/architecture/hosted-web/phase-1/dependencies test/architecture/hosted-web/phase-1/parity test/architecture/hosted-web/phase-1/renderer-boundaries` | 0 | 4/4 files; 13/13 tests. |
-| `pnpm exec vitest run test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts` | 0 | 1/1 file; 12/12 tests. |
-| `pnpm exec vitest run test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts` | 0 | 1/1 file; 4/4 tests. |
-| `pnpm exec vitest run test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts` | 0 | 1/1 file; 4/4 tests. |
-| `pnpm exec vitest run test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts` | 0 | 1/1 file; 3/3 tests. |
-| `pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts` | 0 | 1/1 file; 3/3 tests. |
-| `pnpm exec vitest run test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts` | 0 | 1/1 file; 3/3 tests. |
+| Exact command                                                                                                                                                                                                                  | Exit | Observed result         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---: | ----------------------- |
+| `pnpm exec vitest run test/architecture/hosted-web/phase-1/routes`                                                                                                                                                             |    0 | 2/2 files; 16/16 tests. |
+| `pnpm exec vitest run test/architecture/hosted-web/phase-1/conformance test/architecture/hosted-web/phase-1/dependencies test/architecture/hosted-web/phase-1/parity test/architecture/hosted-web/phase-1/renderer-boundaries` |    0 | 4/4 files; 13/13 tests. |
+| `pnpm exec vitest run test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts`                                                                                                                                        |    0 | 1/1 file; 12/12 tests.  |
+| `pnpm exec vitest run test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts`                                                                                                                              |    0 | 1/1 file; 4/4 tests.    |
+| `pnpm exec vitest run test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts`                                                                                                                          |    0 | 1/1 file; 4/4 tests.    |
+| `pnpm exec vitest run test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts`                                                                                                                    |    0 | 1/1 file; 3/3 tests.    |
+| `pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts`                                                                                                                                   |    0 | 1/1 file; 3/3 tests.    |
+| `pnpm exec vitest run test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts`                                                                                                                               |    0 | 1/1 file; 3/3 tests.    |
 
 Manual architecture review of all 37 inputs passed:
 
@@ -72,19 +72,19 @@ Manual architecture review of all 37 inputs passed:
 
 ## Complete negative matrix
 
-| Negative ID | Required/observed diagnostic | Result and positive neighbor |
-| --- | --- | --- |
-| `P1.NEG.ROUTE_DRIFT` | `phase1-route-catalog-drift` | Duplicate ID, duplicate method/path, and missing-reference fixtures reject; adjacent valid descriptors accept. |
-| `P1.NEG.CAPABILITY_MOUNT` | `phase1-test-capability-production-mount` | Production-support and production-mount cases reject; the test catalog with absent production support accepts. |
-| `P1.NEG.CORE_SIDE_EFFECT` | `phase1-core-side-effect-forbidden` | Rejects; pure value-only core neighbor verified. |
-| `P1.NEG.HOSTED_ELECTRON_API` | `phase1-hosted-electron-api-forbidden` | Rejects; narrow value-only hosted facet verified. |
-| `P1.NEG.IMPORT_FORBIDDEN` | `phase1-core-import-forbidden` | Rejects; pure core neighbor verified. |
-| `P1.NEG.LEGACY_GOD_DTO` | `phase1-legacy-god-dto-forbidden` | Fixture/scanner half verified; P1.1D-owned positive neighbor unverified. |
-| `P1.NEG.NO_FILESYSTEM_ADAPTER_PHASE1` | `phase1-filesystem-adapter-forbidden` | Fixture/scanner half verified; P1.1D-owned positive neighbor unverified. |
-| `P1.NEG.PARITY_DRIFT` | `phase1-parity-reference-drift` | Incomplete reference rejects; pinned references accept. |
-| `P1.NEG.PATH_SECRET_LEAK` | `phase1-path-secret-leak` | Synthetic path/credential canary rejects; clean synthetic corpus verified. |
-| `P1.NEG.PRODUCTION_ADAPTER_MOUNT` | `phase1-test-adapter-production-import` | Test-adapter import rejects; all eight frozen production boundaries are clean. |
-| `P1.NEG.RATCHET_REGRESSION` | `phase1-ratchet-regression` | Expired and over-count ratchets reject; pinned current ratchets accept. |
+| Negative ID                           | Required/observed diagnostic              | Result and positive neighbor                                                                                   |
+| ------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `P1.NEG.ROUTE_DRIFT`                  | `phase1-route-catalog-drift`              | Duplicate ID, duplicate method/path, and missing-reference fixtures reject; adjacent valid descriptors accept. |
+| `P1.NEG.CAPABILITY_MOUNT`             | `phase1-test-capability-production-mount` | Production-support and production-mount cases reject; the test catalog with absent production support accepts. |
+| `P1.NEG.CORE_SIDE_EFFECT`             | `phase1-core-side-effect-forbidden`       | Rejects; pure value-only core neighbor verified.                                                               |
+| `P1.NEG.HOSTED_ELECTRON_API`          | `phase1-hosted-electron-api-forbidden`    | Rejects; narrow value-only hosted facet verified.                                                              |
+| `P1.NEG.IMPORT_FORBIDDEN`             | `phase1-core-import-forbidden`            | Rejects; pure core neighbor verified.                                                                          |
+| `P1.NEG.LEGACY_GOD_DTO`               | `phase1-legacy-god-dto-forbidden`         | Fixture/scanner half verified; P1.1D-owned positive neighbor unverified.                                       |
+| `P1.NEG.NO_FILESYSTEM_ADAPTER_PHASE1` | `phase1-filesystem-adapter-forbidden`     | Fixture/scanner half verified; P1.1D-owned positive neighbor unverified.                                       |
+| `P1.NEG.PARITY_DRIFT`                 | `phase1-parity-reference-drift`           | Incomplete reference rejects; pinned references accept.                                                        |
+| `P1.NEG.PATH_SECRET_LEAK`             | `phase1-path-secret-leak`                 | Synthetic path/credential canary rejects; clean synthetic corpus verified.                                     |
+| `P1.NEG.PRODUCTION_ADAPTER_MOUNT`     | `phase1-test-adapter-production-import`   | Test-adapter import rejects; all eight frozen production boundaries are clean.                                 |
+| `P1.NEG.RATCHET_REGRESSION`           | `phase1-ratchet-regression`               | Expired and over-count ratchets reject; pinned current ratchets accept.                                        |
 
 No absent P1.1D positive-neighbor test was created or run. No `P1.NEG.SEMANTIC_OUTCOME` or future feature-conformance claim is made.
 
