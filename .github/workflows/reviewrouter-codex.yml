@@ -27,10 +27,6 @@ jobs:
       - name: ReviewRouter Codex OAuth review
         id: run_codex
         uses: 777genius/review-router@main
-        env:
-          BATCH_MAX_FILES: "100"
-          CODEX_AGENTIC_CONTEXT: "false"
-          TARGET_TOKENS_PER_BATCH: "240000"
         with:
           mode: codex-oauth-rotating
           api-url: "https://api.reviewrouter.site"
