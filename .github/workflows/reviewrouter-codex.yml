@@ -15,7 +15,7 @@ jobs:
   codex-review:
     name: codex-review
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: ${{ fromJSON(vars.REVIEW_ROUTER_TIMEOUT_MINUTES || '60') }}
     concurrency:
       group: reviewrouter-codex-oauth-${{ github.repository_id }}-codex-rotating-1163183284
       queue: max
@@ -34,6 +34,7 @@ jobs:
           workflow-schema-version: "1"
           review-drafts: ${{ vars.REVIEW_ROUTER_REVIEW_DRAFTS == 'true' }}
           max-changed-lines: ${{ vars.REVIEW_ROUTER_MAX_CHANGED_LINES }}
+          review-timeout-minutes: ${{ vars.REVIEW_ROUTER_TIMEOUT_MINUTES || '60' }}
           auth-json: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON }}
 
   codex-refresh:
