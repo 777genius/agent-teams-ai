@@ -1,3 +1,5 @@
+import { isAbsolute, relative, resolve, sep } from "node:path";
+
 import {
   IntegrationAttemptStatus,
   allCheckRunsPassed,
@@ -57,8 +59,10 @@ export async function runRequiredChecks(
 function requiredChecksAlreadyInProgressOrPassed(
   attempt: IntegrationAttempt,
 ): boolean {
-  return attempt.status === IntegrationAttemptStatus.ChecksRunning ||
-    attempt.status === IntegrationAttemptStatus.ChecksPassed;
+  return (
+    attempt.status === IntegrationAttemptStatus.ChecksRunning ||
+    attempt.status === IntegrationAttemptStatus.ChecksPassed
+  );
 }
 
 async function runDeclaredRequiredChecks(
@@ -67,18 +71,43 @@ async function runDeclaredRequiredChecks(
 ): Promise<readonly CheckRun[]> {
   const checkRuns: CheckRun[] = [];
   for (const check of attempt.reviewDecision.requiredChecks) {
-    checkRuns.push(await deps.checks.runCheck({
-      workspacePath: attempt.targetWorkspacePath,
-      check,
-      startedAt: nowIso(deps.clock),
-    }));
+    checkRuns.push(
+      await deps.checks.runCheck({
+        workspacePath: attempt.targetWorkspacePath,
+        check: rebaseReviewedCheckCwd(attempt, check),
+        startedAt: nowIso(deps.clock),
+      }),
+    );
   }
   return checkRuns;
 }
 
+function rebaseReviewedCheckCwd(
+  attempt: IntegrationAttempt,
+  check: IntegrationAttempt["reviewDecision"]["requiredChecks"][number],
+): IntegrationAttempt["reviewDecision"]["requiredChecks"][number] {
+  if (check.cwd === undefined || !isAbsolute(check.cwd)) return check;
+
+  const sourceWorkspace = resolve(attempt.sourceWorkspacePath);
+  const relativeCwd = relative(sourceWorkspace, resolve(check.cwd));
+  if (
+    relativeCwd === ".." ||
+    relativeCwd.startsWith(`..${sep}`) ||
+    isAbsolute(relativeCwd)
+  )
+    return check;
+
+  return {
+    ...check,
+    cwd: relativeCwd === "" ? "." : relativeCwd,
+  };
+}
+
 function auditEventTypeForCheckRuns(
   checkRuns: readonly CheckRun[],
-): IntegrationAuditEventType.ChecksFailed | IntegrationAuditEventType.ChecksPassed {
+):
+  | IntegrationAuditEventType.ChecksFailed
+  | IntegrationAuditEventType.ChecksPassed {
   return allCheckRunsPassed(checkRuns)
     ? IntegrationAuditEventType.ChecksPassed
     : IntegrationAuditEventType.ChecksFailed;

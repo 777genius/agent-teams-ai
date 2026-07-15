@@ -40,18 +40,21 @@ describe("runRequiredChecks", () => {
       CheckRunStatus.Passed,
     ]);
 
-    const checked = await runRequiredChecks({
-      store,
-      checks,
-      clock: new SequenceClock([
-        "2026-01-01T00:00:01.000Z",
-        "2026-01-01T00:00:02.000Z",
-        "2026-01-01T00:00:03.000Z",
-        "2026-01-01T00:00:04.000Z",
-      ]),
-    }, {
-      attemptId: attempt.attemptId,
-    });
+    const checked = await runRequiredChecks(
+      {
+        store,
+        checks,
+        clock: new SequenceClock([
+          "2026-01-01T00:00:01.000Z",
+          "2026-01-01T00:00:02.000Z",
+          "2026-01-01T00:00:03.000Z",
+          "2026-01-01T00:00:04.000Z",
+        ]),
+      },
+      {
+        attemptId: attempt.attemptId,
+      },
+    );
 
     expect(checks.calls).toEqual([
       {
@@ -85,11 +88,13 @@ describe("runRequiredChecks", () => {
       IntegrationAttemptStatus.ChecksRunning,
       IntegrationAttemptStatus.ChecksPassed,
     ]);
-    expect(store.events.map((event) => ({
-      type: event.type,
-      occurredAt: event.occurredAt,
-      status: event.status,
-    }))).toEqual([
+    expect(
+      store.events.map((event) => ({
+        type: event.type,
+        occurredAt: event.occurredAt,
+        status: event.status,
+      })),
+    ).toEqual([
       {
         type: IntegrationAuditEventType.ChecksStarted,
         occurredAt: "2026-01-01T00:00:01.000Z",
@@ -123,18 +128,21 @@ describe("runRequiredChecks", () => {
       CheckRunStatus.TimedOut,
     ]);
 
-    const checked = await runRequiredChecks({
-      store,
-      checks,
-      clock: new SequenceClock([
-        "2026-01-01T00:00:01.000Z",
-        "2026-01-01T00:00:02.000Z",
-        "2026-01-01T00:00:03.000Z",
-        "2026-01-01T00:00:04.000Z",
-      ]),
-    }, {
-      attemptId: attempt.attemptId,
-    });
+    const checked = await runRequiredChecks(
+      {
+        store,
+        checks,
+        clock: new SequenceClock([
+          "2026-01-01T00:00:01.000Z",
+          "2026-01-01T00:00:02.000Z",
+          "2026-01-01T00:00:03.000Z",
+          "2026-01-01T00:00:04.000Z",
+        ]),
+      },
+      {
+        attemptId: attempt.attemptId,
+      },
+    );
 
     expect(checked.status).toBe(IntegrationAttemptStatus.ChecksFailed);
     expect(checked.checkRuns.map((run) => run.status)).toEqual([
@@ -145,6 +153,83 @@ describe("runRequiredChecks", () => {
       IntegrationAuditEventType.ChecksStarted,
       IntegrationAuditEventType.ChecksFailed,
     ]);
+  });
+
+  it("rebases reviewed absolute source check directories into the target workspace", async () => {
+    const attempt = createAttempt({
+      requiredChecks: [
+        {
+          checkId: "root",
+          command: ["npm", "test"],
+          cwd: "/work/project-worker",
+        },
+        {
+          checkId: "nested",
+          command: ["npm", "run", "lint"],
+          cwd: "/work/project-worker/packages/app",
+        },
+      ],
+      status: IntegrationAttemptStatus.Applied,
+    });
+    const store = new MemoryAttemptStore(attempt);
+    const checks = new RecordingCheckRunner([
+      CheckRunStatus.Passed,
+      CheckRunStatus.Passed,
+    ]);
+
+    await runRequiredChecks(
+      {
+        store,
+        checks,
+        clock: new SequenceClock([
+          "2026-01-01T00:00:01.000Z",
+          "2026-01-01T00:00:02.000Z",
+          "2026-01-01T00:00:03.000Z",
+          "2026-01-01T00:00:04.000Z",
+        ]),
+      },
+      {
+        attemptId: attempt.attemptId,
+      },
+    );
+
+    expect(checks.calls.map((call) => call.check.cwd)).toEqual([
+      ".",
+      "packages/app",
+    ]);
+  });
+
+  it("leaves absolute check directories outside the source workspace fail-closed", async () => {
+    const attempt = createAttempt({
+      requiredChecks: [
+        {
+          checkId: "outside",
+          command: ["npm", "test"],
+          cwd: "/work/project-worker-evil/checks",
+        },
+      ],
+      status: IntegrationAttemptStatus.Applied,
+    });
+    const store = new MemoryAttemptStore(attempt);
+    const checks = new RecordingCheckRunner([CheckRunStatus.Failed]);
+
+    const checked = await runRequiredChecks(
+      {
+        store,
+        checks,
+        clock: new SequenceClock([
+          "2026-01-01T00:00:01.000Z",
+          "2026-01-01T00:00:02.000Z",
+          "2026-01-01T00:00:03.000Z",
+        ]),
+      },
+      {
+        attemptId: attempt.attemptId,
+      },
+    );
+
+    expect(checks.calls[0]?.check.cwd).toBe("/work/project-worker-evil/checks");
+    expect(checked.status).toBe(IntegrationAttemptStatus.ChecksFailed);
   });
 
   it.each([
@@ -163,13 +248,16 @@ describe("runRequiredChecks", () => {
     const store = new MemoryAttemptStore(attempt);
     const checks = new RecordingCheckRunner([CheckRunStatus.Failed]);
 
-    const checked = await runRequiredChecks({
-      store,
-      checks,
-      clock: new SequenceClock(["2026-01-01T00:00:01.000Z"]),
-    }, {
-      attemptId: attempt.attemptId,
-    });
+    const checked = await runRequiredChecks(
+      {
+        store,
+        checks,
+        clock: new SequenceClock(["2026-01-01T00:00:01.000Z"]),
+      },
+      {
+        attemptId: attempt.attemptId,
+      },
+    );
 
     expect(checked).toBe(attempt);
     expect(checks.calls).toEqual([]);
@@ -274,7 +362,8 @@ class RecordingCheckRunner implements CheckRunnerPort {
 
   runCheck(input: CheckRunInput): CheckRun {
     this.calls.push(input);
-    const status = this.statuses[this.calls.length - 1] ?? CheckRunStatus.Passed;
+    const status =
+      this.statuses[this.calls.length - 1] ?? CheckRunStatus.Passed;
     return {
       checkId: input.check.checkId,
       command: input.check.command,
