@@ -27,6 +27,7 @@ import {
 } from "@vioxen/subscription-runtime/worker-core";
 import { readGitBlobBatch } from "@vioxen/subscription-runtime/worker-local";
 import { assertGitPatchBlobsSecretSafe } from "./git-patch-secret-validator";
+import { withLiteralGitPathspecs } from "./git-literal-pathspecs";
 
 const execFileAsync = promisify(execFile);
 const maximumHandoffByteLimit = 64 * 1024 * 1024;
@@ -666,12 +667,16 @@ async function gitOutput(
   args: readonly string[],
   maxBuffer: number,
 ): Promise<string> {
-  const { stdout } = await execFileAsync("git", ["-c", "core.quotepath=false", ...args], {
-    cwd,
-    encoding: "utf8",
-    maxBuffer,
-    timeout: 15_000,
-  });
+  const { stdout } = await execFileAsync(
+    "git",
+    withLiteralGitPathspecs(["-c", "core.quotepath=false", ...args]),
+    {
+      cwd,
+      encoding: "utf8",
+      maxBuffer,
+      timeout: 15_000,
+    },
+  );
   return stdout;
 }
 

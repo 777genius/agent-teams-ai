@@ -10,6 +10,7 @@ import {
   parseRemoteTrackingBranch,
   type ProjectAccessScope,
 } from "@vioxen/subscription-runtime/worker-core";
+import { withLiteralGitPathspecs } from "../../git-literal-pathspecs";
 
 const execFileAsync = promisify(execFile);
 const MAX_STAGED_PATCH_BYTES = 16 * 1024 * 1024;
@@ -351,7 +352,6 @@ export async function applyVerifiedInputPatch(input: {
     );
     await execGitGuard(
       [
-        "--literal-pathspecs",
         "-C",
         input.workspacePath,
         "diff",
@@ -420,7 +420,7 @@ async function execGitGuard(
   errorCode: string,
 ): Promise<void> {
   try {
-    await execFileAsync("git", [...args], {
+    await execFileAsync("git", withLiteralGitPathspecs(args), {
       timeout: 120_000,
       maxBuffer: 1024 * 1024,
     });
@@ -450,10 +450,14 @@ export async function execGit(args: readonly string[]): Promise<void> {
 
 export async function execGitStdout(args: readonly string[]): Promise<string> {
   try {
-    const { stdout } = await execFileAsync("git", [...args], {
-      timeout: 120_000,
-      maxBuffer: 1024 * 1024,
-    });
+    const { stdout } = await execFileAsync(
+      "git",
+      withLiteralGitPathspecs(args),
+      {
+        timeout: 120_000,
+        maxBuffer: 1024 * 1024,
+      },
+    );
     return stdout;
   } catch (error) {
     throw new Error(

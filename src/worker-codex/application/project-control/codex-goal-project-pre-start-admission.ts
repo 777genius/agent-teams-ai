@@ -19,6 +19,7 @@ import type {
   CodexGoalProjectPreStartAdmission,
 } from "../../codex-goal-jobs";
 import { captureGitWorkspacePatch } from "../../codex-goal-runtime-result-io";
+import { withLiteralGitPathspecs } from "../../git-literal-pathspecs";
 import {
   materializeBuiltinWorkerLaunchSpec,
   validateBuiltinWorkerLaunchSpec,
@@ -769,7 +770,14 @@ async function assertWorkspaceBinding(
     timeout: VALIDATOR_TIMEOUT_MS,
   })).stdout.trim();
   if (head !== expectedHead) throw new Error("project_control_pre_start_workspace_head_mismatch");
-  const status = (await execFileAsync("git", ["-C", workspace, "status", "--porcelain", "--", ...paths], {
+  const status = (await execFileAsync("git", withLiteralGitPathspecs([
+    "-C",
+    workspace,
+    "status",
+    "--porcelain",
+    "--",
+    ...paths,
+  ]), {
     encoding: "utf8",
     timeout: VALIDATOR_TIMEOUT_MS,
   })).stdout.trim();

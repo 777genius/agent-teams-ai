@@ -10,6 +10,7 @@ import {
   OpaqueSecretDetectionPolicy,
 } from "@vioxen/subscription-runtime/worker-core";
 import { readGitBlobBatch } from "@vioxen/subscription-runtime/worker-local";
+import { withLiteralGitPathspecs } from "./git-literal-pathspecs";
 
 const execFileAsync = promisify(execFile);
 const maximumChangedPaths = 256;
@@ -483,7 +484,13 @@ async function git(
 ): Promise<string> {
   const { stdout } = await execFileAsync(
     input.gitBinaryPath ?? "git",
-    ["-c", "core.quotepath=false", "-C", input.workspacePath, ...args],
+    withLiteralGitPathspecs([
+      "-c",
+      "core.quotepath=false",
+      "-C",
+      input.workspacePath,
+      ...args,
+    ]),
     {
       encoding: "utf8",
       env,
@@ -507,7 +514,13 @@ async function gitWithInput(
   return await new Promise<string>((resolvePromise, rejectPromise) => {
     const child = spawn(
       input.gitBinaryPath ?? "git",
-      ["-c", "core.quotepath=false", "-C", input.workspacePath, ...args],
+      withLiteralGitPathspecs([
+        "-c",
+        "core.quotepath=false",
+        "-C",
+        input.workspacePath,
+        ...args,
+      ]),
       { env, stdio: ["pipe", "pipe", "pipe"] },
     );
     const stdout: Buffer[] = [];
