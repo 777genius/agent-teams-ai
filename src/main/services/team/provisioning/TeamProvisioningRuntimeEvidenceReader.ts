@@ -28,35 +28,94 @@ export interface TeamProvisioningBootstrapEvidence {
 }
 
 const DEFAULT_HEARTBEAT_STALE_AFTER_MS = 120_000;
-const ISO_SECOND_TIMESTAMP_PATTERN =
-  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(Z|([+-])(\d{2}):(\d{2}))$/;
-const ISO_FRACTIONAL_TIMESTAMP_PATTERN =
-  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.\d{1,9}(Z|([+-])(\d{2}):(\d{2}))$/;
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_TIME_PATTERN = /^\d{2}:\d{2}:\d{2}$/;
+const ISO_FRACTION_PATTERN = /^\d{1,9}$/;
+const ISO_OFFSET_PATTERN = /^[+-]\d{2}:?\d{2}$/;
+
+interface NormalizedIsoTimestamp {
+  value: string;
+  offsetMinutes: number;
+  expectedComponents: readonly number[];
+}
 
 function nonEmptyString(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
 }
 
-function parseIsoTimestampMs(value: string): number | undefined {
-  const match =
-    ISO_SECOND_TIMESTAMP_PATTERN.exec(value) ?? ISO_FRACTIONAL_TIMESTAMP_PATTERN.exec(value);
-  if (!match) {
+function normalizeIsoTimestamp(value: string): NormalizedIsoTimestamp | undefined {
+  const separator = value.at(10);
+  if (separator !== 'T' && separator !== ' ') {
     return undefined;
   }
 
-  const timestampMs = Date.parse(value);
+  let dateTime = value;
+  let offset = '';
+  if (value.endsWith('Z')) {
+    dateTime = value.slice(0, -1);
+  } else {
+    const offsetIndex = Math.max(value.lastIndexOf('+'), value.lastIndexOf('-'));
+    if (offsetIndex > 10) {
+      dateTime = value.slice(0, offsetIndex);
+      offset = value.slice(offsetIndex);
+    }
+  }
+
+  const date = dateTime.slice(0, 10);
+  const time = dateTime.slice(11);
+  const timeParts = time.split('.');
+  if (
+    !ISO_DATE_PATTERN.test(date) ||
+    !ISO_TIME_PATTERN.test(timeParts[0]) ||
+    timeParts.length > 2 ||
+    (timeParts.length === 2 && !ISO_FRACTION_PATTERN.test(timeParts[1]))
+  ) {
+    return undefined;
+  }
+
+  let normalizedOffset = 'Z';
+  let offsetMinutes = 0;
+  if (offset) {
+    if (!ISO_OFFSET_PATTERN.test(offset)) {
+      return undefined;
+    }
+    const offsetHours = Number(offset.slice(1, 3));
+    const offsetMinuteComponent = Number(offset.slice(-2));
+    if (offsetHours > 23 || offsetMinuteComponent > 59) {
+      return undefined;
+    }
+    const offsetDirection = offset.startsWith('-') ? -1 : 1;
+    offsetMinutes = offsetDirection * (offsetHours * 60 + offsetMinuteComponent);
+    normalizedOffset = `${offset.slice(0, 3)}:${offset.slice(-2)}`;
+  }
+
+  return {
+    value: `${date}T${time}${normalizedOffset}`,
+    offsetMinutes,
+    expectedComponents: [
+      Number(date.slice(0, 4)),
+      Number(date.slice(5, 7)),
+      Number(date.slice(8, 10)),
+      Number(time.slice(0, 2)),
+      Number(time.slice(3, 5)),
+      Number(time.slice(6, 8)),
+    ],
+  };
+}
+
+function parseIsoTimestampMs(value: string): number | undefined {
+  const normalized = normalizeIsoTimestamp(value);
+  if (!normalized) {
+    return undefined;
+  }
+
+  const timestampMs = Date.parse(normalized.value);
   if (!Number.isFinite(timestampMs)) {
     return undefined;
   }
 
-  const offsetHours = Number(match[9] ?? 0);
-  const offsetMinutes = Number(match[10] ?? 0);
-  const offsetDirection = match[8] === '-' ? -1 : 1;
-  const localTimestamp = new Date(
-    timestampMs + offsetDirection * (offsetHours * 60 + offsetMinutes) * 60_000
-  );
-  const expectedComponents = match.slice(1, 7).map(Number);
+  const localTimestamp = new Date(timestampMs + normalized.offsetMinutes * 60_000);
   const actualComponents = [
     localTimestamp.getUTCFullYear(),
     localTimestamp.getUTCMonth() + 1,
@@ -65,17 +124,19 @@ function parseIsoTimestampMs(value: string): number | undefined {
     localTimestamp.getUTCMinutes(),
     localTimestamp.getUTCSeconds(),
   ];
-  return actualComponents.every((component, index) => component === expectedComponents[index])
+  return actualComponents.every(
+    (component, index) => component === normalized.expectedComponents[index]
+  )
     ? timestampMs
     : undefined;
 }
 
 export function hasTeamProvisioningRuntimePermissionBlock(
-  ...sources: ReadonlyArray<
+  ...sources: readonly (
     | Pick<TeamProvisioningRuntimeStatusEvidence, 'launchState' | 'pendingPermissionRequestIds'>
     | null
     | undefined
-  >
+  )[]
 ): boolean {
   return sources.some(
     (source) =>

@@ -4,6 +4,7 @@ import {
   hasTeamProvisioningRuntimePermissionBlock,
   readTeamProvisioningBootstrapEvidence,
 } from '../TeamProvisioningRuntimeEvidenceReader';
+import { resolveTeamProvisioningRuntimeLiveness } from '../TeamProvisioningRuntimeLiveness';
 
 const NOW = '2026-04-24T12:00:00.000Z';
 
@@ -83,20 +84,113 @@ describe('TeamProvisioningRuntimeEvidenceReader', () => {
     });
   });
 
-  it('rejects an impossible calendar date instead of accepting its normalized instant', () => {
+  it.each([
+    { label: 'strict UTC', timestamp: '2026-04-24T12:00:00Z' },
+    { label: 'strict offset', timestamp: '2026-04-24T14:00:00+02:00' },
+    { label: 'zone-less UTC', timestamp: '2026-04-24T12:00:00' },
+    { label: 'space-separated UTC', timestamp: '2026-04-24 12:00:00.000' },
+    { label: 'compact positive offset', timestamp: '2026-04-24T17:30:00+0530' },
+    { label: 'space and compact negative offset', timestamp: '2026-04-24 07:00:00-0500' },
+    {
+      label: 'nanosecond precision',
+      timestamp: '2026-04-24T12:00:00.000000001Z',
+    },
+  ])('accepts $label producer timestamps', ({ timestamp }) => {
     expect(
       readTeamProvisioningBootstrapEvidence({
         status: {
           launchState: 'confirmed_alive',
           bootstrapConfirmed: true,
-          lastHeartbeatAt: '2026-02-30T12:00:00.000Z',
-          updatedAt: '2026-03-02T12:00:00.000Z',
+          lastHeartbeatAt: timestamp,
+          updatedAt: NOW,
         },
-        nowIso: '2026-03-02T12:00:00.000Z',
+        nowIso: NOW,
+      })
+    ).toMatchObject({
+      bootstrapConfirmed: true,
+      heartbeatFreshness: 'fresh',
+    });
+  });
+
+  it.each([
+    { label: 'an impossible date', timestamp: '2026-02-30T12:00:00.000Z' },
+    { label: 'a non-leap day', timestamp: '2025-02-29T12:00:00Z' },
+    { label: 'month thirteen', timestamp: '2026-13-24T12:00:00Z' },
+    { label: 'hour twenty-four', timestamp: '2026-04-24T24:00:00Z' },
+    { label: 'minute sixty', timestamp: '2026-04-24T12:60:00Z' },
+    { label: 'second sixty', timestamp: '2026-04-24T12:00:60Z' },
+    { label: 'offset hour twenty-four', timestamp: '2026-04-24T12:00:00+2400' },
+    { label: 'offset minute sixty', timestamp: '2026-04-24T12:00:00+12:60' },
+    { label: 'a partial offset', timestamp: '2026-04-24T12:00:00+05' },
+    { label: 'an empty fraction', timestamp: '2026-04-24T12:00:00.Z' },
+    { label: 'an overlong fraction', timestamp: '2026-04-24T12:00:00.1234567890Z' },
+    { label: 'lowercase UTC', timestamp: '2026-04-24T12:00:00z' },
+    { label: 'trailing junk', timestamp: '2026-04-24T12:00:00Z later' },
+  ])('rejects $label', ({ timestamp }) => {
+    expect(
+      readTeamProvisioningBootstrapEvidence({
+        status: {
+          launchState: 'confirmed_alive',
+          bootstrapConfirmed: true,
+          lastHeartbeatAt: timestamp,
+          updatedAt: NOW,
+        },
+        nowIso: NOW,
       })
     ).toMatchObject({
       bootstrapConfirmed: false,
       heartbeatFreshness: 'invalid_timestamp',
+    });
+  });
+
+  it.each([
+    { label: 'NaN', staleAfterMs: Number.NaN },
+    { label: 'positive infinity', staleAfterMs: Number.POSITIVE_INFINITY },
+    { label: 'negative infinity', staleAfterMs: Number.NEGATIVE_INFINITY },
+  ])('rejects a $label freshness window', ({ staleAfterMs }) => {
+    expect(
+      readTeamProvisioningBootstrapEvidence({
+        status: {
+          launchState: 'confirmed_alive',
+          bootstrapConfirmed: true,
+          lastHeartbeatAt: NOW,
+          updatedAt: NOW,
+        },
+        nowIso: NOW,
+        heartbeatStaleAfterMs: staleAfterMs,
+      })
+    ).toMatchObject({
+      bootstrapConfirmed: false,
+      heartbeatFreshness: 'invalid_timestamp',
+    });
+  });
+
+  it('does not mark a fresh producer-formatted heartbeat offline', () => {
+    const lastHeartbeatAt = '2026-04-24 11:59:30+0000';
+    expect(
+      resolveTeamProvisioningRuntimeLiveness({
+        teamName: 'demo',
+        memberName: 'worker',
+        backendType: 'process',
+        trackedSpawnStatus: {
+          status: 'online',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          lastHeartbeatAt,
+          updatedAt: NOW,
+        },
+        processRows: [],
+        processTableAvailable: true,
+        nowIso: NOW,
+      })
+    ).toMatchObject({
+      alive: true,
+      livenessKind: 'confirmed_bootstrap',
+      runtimeLastSeenAt: lastHeartbeatAt,
+      runtimeDiagnostic: 'bootstrap confirmed',
     });
   });
 
