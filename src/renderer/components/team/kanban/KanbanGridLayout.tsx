@@ -16,7 +16,7 @@ import type { Layout, LayoutItem, ResizeHandleAxis } from 'react-grid-layout/leg
 
 const GRID_COLS = 12;
 const GRID_ROW_HEIGHT = 18;
-const GRID_MARGIN: [number, number] = [12, 12];
+const GRID_MARGIN: [number, number] = [0, 12];
 const DEFAULT_ITEM_WIDTH = 4;
 const DEFAULT_ITEM_HEIGHT_PX = 400;
 const DEFAULT_ITEM_HEIGHT = Math.max(
@@ -36,8 +36,7 @@ export interface KanbanGridColumn {
   title: string;
   count: number;
   icon?: React.ReactNode;
-  headerBg?: string;
-  bodyBg?: string;
+  accentColor: string;
   content: React.ReactNode;
   showAddButton?: boolean;
   skeletonCards?: {
@@ -134,26 +133,27 @@ function renderResizeHandle(axis: ResizeHandleAxis, ref: Ref<HTMLElement>): Reac
 
 const KanbanTaskCardSkeleton = ({ height }: { height: number }): ReactElement => (
   <div
-    className="relative shrink-0 overflow-hidden rounded-md border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface-raised)]"
+    className="kanban-task-card-skeleton relative shrink-0 overflow-hidden bg-transparent"
     style={{ height }}
   >
-    <div className="bg-[var(--color-surface-overlay)]/30 absolute left-[3px] top-[4px] h-2 w-14 rounded" />
+    <div className="absolute left-3 top-1.5 flex items-center gap-1.5">
+      <div className="bg-[var(--color-surface-overlay)]/30 h-2 w-14 rounded" />
+      <div className="bg-[var(--color-surface-overlay)]/20 size-3 rounded-full" />
+      <div className="bg-[var(--color-surface-overlay)]/20 h-2 w-2 rounded" />
+    </div>
     <div className="bg-[var(--color-surface-overlay)]/25 absolute right-[6px] top-[4px] h-5 w-16 rounded-full" />
-    <div className="flex h-full flex-col px-1.5 py-3">
-      <div className="pt-[11px]">
+    <div className="flex h-full flex-col py-3 pl-3 pr-1.5">
+      <div className="pt-5">
         <div className="bg-[var(--color-surface-overlay)]/25 h-4 w-[84%] rounded" />
         <div className="bg-[var(--color-surface-overlay)]/18 mt-2 h-4 w-[68%] rounded" />
       </div>
-      <div className="mt-auto flex items-center justify-between gap-2">
-        <div className="flex gap-2">
-          <div className="bg-[var(--color-surface-overlay)]/18 size-6 rounded-full border border-[var(--color-border)]" />
-          <div className="bg-[var(--color-surface-overlay)]/18 size-6 rounded-full border border-[var(--color-border)]" />
+      {height > 110 ? (
+        <div className="mt-3 flex items-center gap-1.5">
+          <div className="bg-[var(--color-surface-overlay)]/20 size-3 rounded" />
+          <div className="bg-[var(--color-surface-overlay)]/20 h-2 w-16 rounded" />
+          <div className="bg-[var(--color-surface-overlay)]/15 h-2 flex-1 rounded" />
         </div>
-        <div className="flex gap-1.5">
-          <div className="bg-[var(--color-surface-overlay)]/12 size-6 rounded-full border border-[var(--color-border)]" />
-          <div className="bg-[var(--color-surface-overlay)]/12 size-6 rounded-full border border-[var(--color-border)]" />
-        </div>
-      </div>
+      ) : null}
     </div>
   </div>
 );
@@ -214,7 +214,7 @@ const LoadingKanbanGridLayout = ({
   return (
     <div ref={containerRef} className={cn('min-w-0 max-w-full', className)}>
       <div
-        className="grid gap-3"
+        className="grid gap-y-3"
         style={{
           gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))`,
           gridAutoRows: `${GRID_ROW_HEIGHT}px`,
@@ -242,8 +242,7 @@ const LoadingKanbanGridLayout = ({
                 title={column.title}
                 count={column.count}
                 icon={column.icon}
-                headerBg={column.headerBg}
-                bodyBg={column.bodyBg}
+                accentColor={column.accentColor}
                 className="flex h-full min-h-0 animate-pulse flex-col"
                 headerClassName="shrink-0"
                 bodyClassName="min-h-0 max-h-none flex-1 overflow-hidden"
@@ -372,8 +371,7 @@ const LoadedKanbanGridLayout = ({
                 title={column.title}
                 count={column.count}
                 icon={column.icon}
-                headerBg={column.headerBg}
-                bodyBg={column.bodyBg}
+                accentColor={column.accentColor}
                 className="flex h-full min-h-0 flex-col"
                 headerClassName="shrink-0"
                 bodyClassName="kanban-grid-no-drag min-h-0 max-h-none flex-1"

@@ -1,14 +1,12 @@
 import { memo } from 'react';
 
-import { Badge } from '@renderer/components/ui/badge';
 import { cn } from '@renderer/lib/utils';
 
 interface KanbanColumnProps {
   title: string;
   count: number;
   icon?: React.ReactNode;
-  headerBg?: string;
-  bodyBg?: string;
+  accentColor: string;
   className?: string;
   headerClassName?: string;
   bodyClassName?: string;
@@ -21,8 +19,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   title,
   count,
   icon,
-  headerBg,
-  bodyBg,
+  accentColor,
   className,
   headerClassName,
   bodyClassName,
@@ -32,28 +29,35 @@ export const KanbanColumn = memo(function KanbanColumn({
 }: KanbanColumnProps): React.JSX.Element {
   return (
     <section
-      className={cn('relative rounded-md', className, !bodyBg && 'bg-[var(--color-surface)]')}
-      style={bodyBg ? { backgroundColor: bodyBg } : undefined}
+      className={cn('kanban-column-glow relative', className)}
+      style={{ '--kanban-column-accent': accentColor } as React.CSSProperties}
     >
-      {count > 0 && (
-        <Badge
-          variant="secondary"
-          className="absolute -right-2 -top-2 z-10 min-w-5 px-1.5 py-0 text-[10px] font-medium leading-5"
-        >
-          {count}
-        </Badge>
-      )}
       <header
-        className={cn('rounded-t-md px-3 py-2', headerClassName, headerDragClassName)}
-        style={headerBg ? { backgroundColor: headerBg } : undefined}
+        className={cn(
+          'kanban-column-header-glow relative flex items-center px-3 py-2',
+          headerClassName,
+          headerDragClassName
+        )}
       >
         <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]">
           {icon}
           {title}
         </h4>
-        {headerAccessory && <div className="absolute right-2 top-2 z-10">{headerAccessory}</div>}
+        <div className="ml-auto flex items-center gap-1.5 pl-2">
+          {count > 0 ? (
+            <span className="min-w-5 text-center text-[10px] font-medium leading-5 text-[var(--color-text-muted)]">
+              {count}
+            </span>
+          ) : null}
+          {headerAccessory}
+        </div>
       </header>
-      <div className={cn('flex max-h-[480px] flex-col gap-1.5 overflow-auto p-2', bodyClassName)}>
+      <div
+        className={cn(
+          'flex max-h-[480px] flex-col gap-1.5 overflow-auto pb-2 pr-2 pt-3',
+          bodyClassName
+        )}
+      >
         {children}
       </div>
     </section>

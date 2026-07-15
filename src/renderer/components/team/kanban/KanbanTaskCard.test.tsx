@@ -5,7 +5,13 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const unreadBadgeMock = vi.hoisted(() => ({
-  props: [] as { unreadCount: number; totalCount: number; pulseKey?: number }[],
+  props: [] as {
+    unreadCount: number;
+    totalCount: number;
+    pulseKey?: number;
+    showZero?: boolean;
+    displayMode?: 'overlay' | 'inline';
+  }[],
 }));
 
 const unreadCommentCountMock = vi.hoisted(() => ({
@@ -18,7 +24,13 @@ vi.mock('@renderer/components/team/MemberBadge', () => ({
 }));
 
 vi.mock('@renderer/components/team/UnreadCommentsBadge', () => ({
-  UnreadCommentsBadge: (props: { unreadCount: number; totalCount: number; pulseKey?: number }) => {
+  UnreadCommentsBadge: (props: {
+    unreadCount: number;
+    totalCount: number;
+    pulseKey?: number;
+    showZero?: boolean;
+    displayMode?: 'overlay' | 'inline';
+  }) => {
     unreadBadgeMock.props.push(props);
     return React.createElement('span', {
       className: (props.pulseKey ?? 0) > 0 ? 'kanban-comment-badge-pulse' : '',
@@ -58,13 +70,27 @@ vi.mock('@renderer/components/ui/popover', () => ({
     React.createElement('div', null, children),
 }));
 
+vi.mock('@renderer/components/ui/hover-card', () => ({
+  HoverCard: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  HoverCardTrigger: ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children),
+  HoverCardContent: ({ children, className }: { children: React.ReactNode; className?: string }) =>
+    React.createElement('div', { className }, children),
+}));
+
 vi.mock('@renderer/components/ui/tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
   TooltipTrigger: ({ children }: { children: React.ReactNode }) =>
     React.createElement(React.Fragment, null, children),
-  TooltipContent: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('div', null, children),
+  TooltipContent: ({
+    children,
+    'data-testid': testId,
+  }: {
+    children: React.ReactNode;
+    'data-testid'?: string;
+  }) => React.createElement('div', { 'data-testid': testId }, children),
 }));
 
 vi.mock('@renderer/hooks/useTheme', () => ({
@@ -136,7 +162,13 @@ function createTaskCardElement(
   });
 }
 
-function getLastUnreadBadgeProps(): { unreadCount: number; totalCount: number; pulseKey?: number } {
+function getLastUnreadBadgeProps(): {
+  unreadCount: number;
+  totalCount: number;
+  pulseKey?: number;
+  showZero?: boolean;
+  displayMode?: 'overlay' | 'inline';
+} {
   const props = unreadBadgeMock.props[unreadBadgeMock.props.length - 1];
   if (!props) throw new Error('UnreadCommentsBadge was not rendered');
   return props;
@@ -647,6 +679,149 @@ describe('KanbanTaskCard blocked border', () => {
       });
     }
   );
+});
+
+describe('KanbanTaskCard flat board appearance', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('uses the inherited column accent without removing task content or actions', async () => {
+    const { host, root } = await renderTaskCard({ flat: true });
+
+    const card = host.querySelector<HTMLElement>('[data-task-id="task-1"]');
+    expect(card?.className).toContain('kanban-task-card-flat');
+    expect(card?.className).not.toContain('border-l-2');
+    expect(card?.style.borderLeftColor).toBe('');
+    expect(card?.className).not.toContain('bg-[var(--color-surface-raised)]');
+    const title = host.querySelector('h5');
+    expect(title?.className).toContain('line-clamp-2');
+    expect(title?.className).toContain('h-10');
+    expect(title?.className).toContain('text-sm');
+    const toolbar = host.querySelector('[data-kanban-task-toolbar="true"]');
+    expect(toolbar).not.toBeNull();
+    expect(card?.contains(toolbar ?? null)).toBe(false);
+    const metadataCommentBadge = card?.querySelector('[data-testid="unread-comments-badge"]');
+    expect(metadataCommentBadge?.previousElementSibling?.textContent).toContain('#abcd1234');
+    expect(getLastUnreadBadgeProps()).toMatchObject({
+      totalCount: 0,
+      showZero: true,
+      displayMode: 'inline',
+    });
+    expect(host.textContent).toContain('Implement safer onboarding flow');
+    expect(host.textContent).toContain('alice');
+    expect(host.querySelector('[aria-label="Complete"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it.each([
+    { name: 'fitting', scrollHeight: 40, expectsTooltip: false },
+    { name: 'clamped', scrollHeight: 60, expectsTooltip: true },
+  ])(
+    'detects $name title text before tooltip display',
+    async ({ scrollHeight, expectsTooltip }) => {
+      const clientHeightSpy = vi
+        .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
+        .mockImplementation(function getClientHeight(this: HTMLElement) {
+          return this.tagName === 'H5' ? 40 : 0;
+        });
+      const scrollHeightSpy = vi
+        .spyOn(HTMLElement.prototype, 'scrollHeight', 'get')
+        .mockImplementation(function getScrollHeight(this: HTMLElement) {
+          return this.tagName === 'H5' ? scrollHeight : 0;
+        });
+
+      const { host, root } = await renderTaskCard({ flat: true });
+
+      expect(host.querySelector('h5')?.getAttribute('data-title-overflow')).toBe(
+        expectsTooltip ? 'true' : 'false'
+      );
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+      clientHeightSpy.mockRestore();
+      scrollHeightSpy.mockRestore();
+    }
+  );
+
+  it('keeps the raised standalone appearance when flat mode is not requested', async () => {
+    const { host, root } = await renderTaskCard();
+
+    const card = host.querySelector<HTMLElement>('[data-task-id="task-1"]');
+    expect(card?.className).not.toContain('kanban-task-card-flat');
+    expect(card?.className).toContain('bg-[var(--color-surface-raised)]');
+    expect(card?.className).toContain('border-[var(--color-border)]');
+    expect(host.querySelector('h5')?.className).not.toContain('h-8');
+    expect(host.querySelector('[data-kanban-task-toolbar="true"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('renders expandable relationship rows with real dependency state semantics', async () => {
+    const blocker = {
+      ...baseTask,
+      id: 'task-blocker',
+      displayId: 'blocker',
+      subject: 'Waiting for user clarification',
+      status: 'in_progress',
+    } as TeamTaskWithKanban;
+    const completedDependency = {
+      ...baseTask,
+      id: 'task-dependency',
+      displayId: 'dependency',
+      subject: 'Finalize API schema',
+      status: 'completed',
+    } as TeamTaskWithKanban;
+    const blockedTask = {
+      ...baseTask,
+      id: 'task-blocked',
+      displayId: 'blocked',
+      subject: 'Simplify member editor layout',
+      status: 'pending',
+    } as TeamTaskWithKanban;
+
+    const { host, root } = await renderTaskCard({
+      flat: true,
+      task: {
+        ...baseTask,
+        blockedBy: [blocker.id, completedDependency.id],
+        blocks: [blockedTask.id],
+      },
+      taskMap: new Map([
+        [blocker.id, blocker],
+        [completedDependency.id, completedDependency],
+        [blockedTask.id, blockedTask],
+      ]),
+    });
+
+    expect(host.textContent).toContain('Blocked by');
+    expect(host.textContent).toContain('Depends on');
+    expect(host.textContent).toContain('Blocks');
+    expect(host.textContent).toContain('Waiting for user clarification');
+    expect(host.textContent).toContain('Finalize API schema');
+    expect(host.textContent).toContain('Simplify member editor layout');
+    const relationRows = [...host.querySelectorAll('button')].filter((button) =>
+      ['Blocked by', 'Depends on', 'Blocks'].some((label) => button.textContent?.includes(label))
+    );
+    expect(relationRows).toHaveLength(3);
+    expect(relationRows.every((row) => row.className.includes('whitespace-nowrap'))).toBe(true);
+    expect(
+      relationRows.every((row) => row.querySelector('[title]')?.className.includes('truncate'))
+    ).toBe(true);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
 });
 
 describe('KanbanTaskCard live log indicator', () => {
