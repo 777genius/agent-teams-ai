@@ -85,7 +85,7 @@ describe('TeamProvisioningOpenCodeRuntimePermissionAnswerBoundary', () => {
     );
   });
 
-  it('normalizes a request prefix from another run before sending or persisting it', async () => {
+  it('preserves an opaque provider request id with a different run-like segment', async () => {
     const answerRuntimeToolApproval = vi.fn(async () => undefined);
 
     await answerOpenCodeRuntimePermission(
@@ -95,23 +95,38 @@ describe('TeamProvisioningOpenCodeRuntimePermissionAnswerBoundary', () => {
 
     expectNormalizedRequestIds(
       answerRuntimeToolApproval,
-      'provider-request-1',
-      'opencode:run-1:provider-request-1'
+      'opencode:run-previous:provider-request-1',
+      'opencode:run-1:opencode:run-previous:provider-request-1'
     );
   });
 
-  it('removes repeated request prefixes without double-prefixing the persisted id', async () => {
+  it('removes only the outer request prefix and preserves opaque provider content', async () => {
     const answerRuntimeToolApproval = vi.fn(async () => undefined);
 
     await answerOpenCodeRuntimePermission(
-      runtimePermissionPayload('opencode:run-previous:opencode:run-older:provider-request-1'),
+      runtimePermissionPayload('opencode:run1:opencode:foo', 'run1'),
       runtimePermissionPorts(answerRuntimeToolApproval)
     );
 
     expectNormalizedRequestIds(
       answerRuntimeToolApproval,
-      'provider-request-1',
-      'opencode:run-1:provider-request-1'
+      'opencode:foo',
+      'opencode:run1:opencode:foo'
+    );
+  });
+
+  it('normalizes at most one outer request prefix', async () => {
+    const answerRuntimeToolApproval = vi.fn(async () => undefined);
+
+    await answerOpenCodeRuntimePermission(
+      runtimePermissionPayload('opencode:run-1:opencode:run-1:provider-request-1'),
+      runtimePermissionPorts(answerRuntimeToolApproval)
+    );
+
+    expectNormalizedRequestIds(
+      answerRuntimeToolApproval,
+      'opencode:run-1:provider-request-1',
+      'opencode:run-1:opencode:run-1:provider-request-1'
     );
   });
 
@@ -151,6 +166,21 @@ describe('TeamProvisioningOpenCodeRuntimePermissionAnswerBoundary', () => {
     );
   });
 
+  it('preserves an opaque provider request id that starts with opencode', async () => {
+    const answerRuntimeToolApproval = vi.fn(async () => undefined);
+
+    await answerOpenCodeRuntimePermission(
+      runtimePermissionPayload('opencode:foo'),
+      runtimePermissionPorts(answerRuntimeToolApproval)
+    );
+
+    expectNormalizedRequestIds(
+      answerRuntimeToolApproval,
+      'opencode:foo',
+      'opencode:run-1:opencode:foo'
+    );
+  });
+
   it.each([null, 42, {}, []])('rejects malformed request id value %j', async (requestId) => {
     const answerRuntimeToolApproval = vi.fn(async () => undefined);
 
@@ -163,20 +193,24 @@ describe('TeamProvisioningOpenCodeRuntimePermissionAnswerBoundary', () => {
     expect(answerRuntimeToolApproval).not.toHaveBeenCalled();
   });
 
-  it.each(['opencode:', 'opencode::provider-request-1', 'opencode:run-previous:'])(
-    'rejects malformed request id prefix %j',
-    async (requestId) => {
-      const answerRuntimeToolApproval = vi.fn(async () => undefined);
+  it.each([
+    'opencode:',
+    'opencode::provider-request-1',
+    'opencode: :provider-request-1',
+    'opencode:run-previous:',
+    'opencode:run-1:',
+    'opencode:run-previous:   ',
+  ])('rejects malformed request id prefix %j', async (requestId) => {
+    const answerRuntimeToolApproval = vi.fn(async () => undefined);
 
-      await expect(
-        answerOpenCodeRuntimePermission(
-          runtimePermissionPayload(requestId),
-          runtimePermissionPorts(answerRuntimeToolApproval)
-        )
-      ).rejects.toThrow(/OpenCode runtime payload (malformed|missing) requestId/);
-      expect(answerRuntimeToolApproval).not.toHaveBeenCalled();
-    }
-  );
+    await expect(
+      answerOpenCodeRuntimePermission(
+        runtimePermissionPayload(requestId),
+        runtimePermissionPorts(answerRuntimeToolApproval)
+      )
+    ).rejects.toThrow('OpenCode runtime payload malformed requestId');
+    expect(answerRuntimeToolApproval).not.toHaveBeenCalled();
+  });
 
   it.each(['', '   '])('rejects empty request id value %j', async (requestId) => {
     const answerRuntimeToolApproval = vi.fn(async () => undefined);
@@ -191,10 +225,10 @@ describe('TeamProvisioningOpenCodeRuntimePermissionAnswerBoundary', () => {
   });
 });
 
-function runtimePermissionPayload(requestId: unknown): Record<string, unknown> {
+function runtimePermissionPayload(requestId: unknown, runId = 'run-1'): Record<string, unknown> {
   return {
     teamName: 'Team',
-    runId: 'run-1',
+    runId,
     laneId: 'lane-1',
     cwd: '/repo',
     memberName: 'Builder',
