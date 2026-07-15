@@ -12,11 +12,11 @@ import {
 import {
   projectControlCreateWorktreeView,
   projectControlIntegrateCommitView,
-  projectControlMarkReviewedView,
   projectControlPushBranchView,
   projectControlStartStoredJobView,
   projectControlStopStoredJobView,
 } from "./codex-goal-mcp-project-control-actions";
+import { projectControlMarkReviewedView } from "./codex-goal-mcp-project-control-review";
 import {
   projectControlRecordFailedNoOutputView,
 } from "./codex-goal-mcp-project-control-terminal-output";

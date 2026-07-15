@@ -62,7 +62,6 @@ import { buildCodexGoalBrief } from "./codex-goal-mcp-brief";
 import { codexGoalStateRootDir } from "./application/codex-goal-worker-control";
 import { codexGoalStatusInputFromLaunch as statusInput } from "./codex-goal-mcp-status-input";
 import { isSafeStartAction } from "./codex-goal-mcp-decision";
-import { ensureTerminalCodexGoalHandoffArtifacts } from "./application/ensure-codex-goal-handoff-artifacts";
 import {
   assertReviewedWorkerContinuationEnvironmentLocked,
   assertReviewedWorkerOutputStillMatchesLocked,
@@ -96,10 +95,6 @@ import {
   projectControlWorkspaceLocks,
   withValidatedProjectWorkspaceLock,
 } from "./codex-goal-project-workspace-lock";
-import {
-  parseReviewedOutputMerge,
-  requiredReviewDecision,
-} from "./codex-goal-mcp-project-control-reviewed-output";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 
@@ -889,104 +884,6 @@ export async function projectControlStopStoredJobView(
     accountReservationReleased,
     statusBefore: status,
     statusAfter,
-    result: result as unknown as JsonObject,
-  };
-    },
-  });
-}
-
-export async function projectControlMarkReviewedView(
-  args: ProjectControlMcpArgs,
-  deps: CodexGoalMcpProjectControlActionsDeps,
-): Promise<JsonObject> {
-  const controller = await deps.loadProjectControlController(args);
-  const loaded = await deps.loadJobLaunch({
-    registryRootDir: controller.registryRootDir,
-    jobId: requiredRawString(args.jobId, "jobId"),
-  });
-  const captureReviewedOutput =
-    booleanValue(args.captureReviewedOutput) === true;
-  if (!captureReviewedOutput) {
-    await ensureTerminalCodexGoalHandoffArtifacts({ launch: loaded.launch });
-  }
-  const reviewNote = stringValue(args.note) ?? "project_control_reviewed";
-  return await withValidatedProjectWorkspaceLock({
-    locks: projectControlWorkspaceLocks(controller.registryRootDir),
-    scope: controller.scope,
-    requestedWorkspacePath: loaded.manifest.workspacePath,
-    owner:
-      `project-review:${controller.controller.jobId}:${loaded.manifest.jobId}`,
-    effect: async (workspace) => {
-      const lockedLaunch: CodexGoalLaunchInput = {
-        ...loaded.launch,
-        config: {
-          ...loaded.launch.config,
-          workspacePath: workspace.canonicalWorkspacePath,
-        },
-      };
-  const broker = deps.codexProjectControlBroker({
-    registryRootDir: controller.registryRootDir,
-    controller: controller.controller,
-    scope: controller.scope,
-    reviewLaunch: lockedLaunch,
-    reviewWorkspaceLease: workspace,
-    reviewNote,
-    ...(captureReviewedOutput
-      ? {
-          reviewedOutputCapture: {
-            projectId: controller.scope.projectId,
-            controllerJobId: controller.controller.jobId,
-            expectedPatchSha256: requiredRawString(
-              args.expectedPatchSha256,
-              "expectedPatchSha256",
-            ),
-            decision: requiredReviewDecision(args.reviewDecision),
-            reviewedBy:
-              stringValue(args.reviewedBy) ?? controller.controller.jobId,
-            reason: stringValue(args.reviewReason) ?? reviewNote,
-            approvedFiles: requiredStringArrayArg(
-              args.approvedFiles,
-              "approvedFiles",
-            ),
-            requiredChecks: parseProjectIntegrationChecks(args.requiredChecks),
-            ...(args.merge
-              ? { merge: parseReviewedOutputMerge(controller.scope, args.merge) }
-              : {}),
-          },
-        }
-      : {}),
-  });
-  const realWorkspacePath = await projectControlRealPathOutsideWorkspaceScope(
-    loaded.launch.config.workspacePath,
-    controller.scope,
-  );
-  const result = await broker.writeReviewMarker({
-    jobId: loaded.manifest.jobId,
-    registryRoot: controller.registryRootDir,
-    workspacePath: loaded.launch.config.workspacePath,
-    ...(realWorkspacePath ? { realWorkspacePath } : {}),
-    ...(loaded.launch.tmuxSession
-      ? { tmuxSession: loaded.launch.tmuxSession }
-      : {}),
-    markerType: "review",
-    note: reviewNote,
-  });
-  const accountReservationReleased = await releaseCodexProjectAccount({
-    manifest: loaded.manifest,
-    launch: lockedLaunch,
-    reason: "worker_reviewed",
-  });
-  return {
-    ok: true,
-    mode: "project_control_mark_reviewed",
-    controllerJobId: controller.controller.jobId,
-    registryRootDir: controller.registryRootDir,
-    auditPath: projectControlAuditPath(controller.controller),
-    jobId: loaded.manifest.jobId,
-    accountReservationReleased,
-    ...(captureReviewedOutput && result.resourceId
-      ? { reviewedOutputId: result.resourceId }
-      : {}),
     result: result as unknown as JsonObject,
   };
     },
