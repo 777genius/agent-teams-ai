@@ -12984,10 +12984,10 @@ describe('Team agent launch matrix safe e2e', () => {
     const run = createMixedLiveRun({ teamName, projectPath });
     run.child = { kill: () => undefined };
     trackLiveRun(svc, run);
-    await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
+    await (svc as any).launchMixedSecondaryLaneIfNeeded(run, { waitForCompletion: true });
     await waitForCondition(() => adapter.launchInputs.length === 2);
 
-    svc.stopTeam(teamName);
+    await svc.stopTeam(teamName);
     await waitForCondition(() => adapter.stopInputs.length === 2);
     await waitForCondition(() => !svc.isTeamAlive(teamName));
     await waitForCondition(async () => {
