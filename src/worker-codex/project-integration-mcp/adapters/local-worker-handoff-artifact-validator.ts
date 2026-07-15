@@ -12,16 +12,16 @@ import {
 import { basename, dirname, isAbsolute, join, relative } from "node:path";
 import { promisify } from "node:util";
 
-import {
-  detectSecretLikeContent,
-  type ProjectAccessScope,
-} from "@vioxen/subscription-runtime/worker-core";
+import type { ProjectAccessScope } from "@vioxen/subscription-runtime/worker-core";
 
+import { assertGitPatchBlobsSecretSafe } from "../../git-patch-secret-validator";
 import type { ProjectIntegrationMcpController } from "../ports/project-integration-mcp-tool-handlers";
 
 const execFileAsync = promisify(execFile);
 const maxManifestBytes = 1024 * 1024;
 const maxPatchBytes = 16 * 1024 * 1024;
+const maxChangedPaths = 256;
+const maxInputChangedPaths = 1024;
 
 export type LocalRegisteredWorkerOwnership = {
   readonly jobId: string;
@@ -61,6 +61,7 @@ export async function validateLocalWorkerHandoffArtifact(input: {
 }> {
   assertSafeWorkerJobId(input.workerJobId);
   assertSafePathSegment(input.attemptId, "integration_attempt_id");
+  const requestedChangedPaths = normalizeChangedPaths(input.changedPaths);
   const expectedJobRoot = await resolveWorkerJobRoot({
     controller: input.controller,
     workerJobId: input.workerJobId,
@@ -73,9 +74,6 @@ export async function validateLocalWorkerHandoffArtifact(input: {
     input.patchPath,
     maxPatchBytes,
   );
-  if (detectSecretLikeContent(patchFile.bytes) !== undefined) {
-    throw new Error("project_integration_handoff_secret_like_content");
-  }
   const patchPath = patchFile.path;
   const ownedByWorkerJob =
     expectedJobRoot !== undefined && pathInside(expectedJobRoot, patchPath);
@@ -108,7 +106,14 @@ export async function validateLocalWorkerHandoffArtifact(input: {
     await assertExactPatchChangedPaths({
       workspacePath: await realpath(input.workspacePath),
       patchPath: snapshot.path,
-      expectedChangedPaths: input.changedPaths,
+      expectedChangedPaths: requestedChangedPaths,
+    });
+    await assertValidatedPatchSecretSafe({
+      controller: input.controller,
+      workspacePath: await realpath(input.workspacePath),
+      patchPath: snapshot.path,
+      baseCommit: input.baseCommit ?? (await gitHead(input.workspacePath)),
+      changedPaths: requestedChangedPaths,
     });
     return {
       patchPath: snapshot.path,
@@ -171,9 +176,6 @@ export async function validateLocalWorkerHandoffArtifact(input: {
   const manifestChangedPaths = uniqueSorted(
     manifest.changedPaths.map(assertSafeChangedPath),
   );
-  const requestedChangedPaths = uniqueSorted(
-    input.changedPaths.map(assertSafeChangedPath),
-  );
   const snapshot = await snapshotValidatedPatch({
     controller: input.controller,
     attemptId: input.attemptId,
@@ -189,6 +191,13 @@ export async function validateLocalWorkerHandoffArtifact(input: {
   ) {
     throw new Error("project_integration_handoff_changed_paths_mismatch");
   }
+  await assertValidatedPatchSecretSafe({
+    controller: input.controller,
+    workspacePath,
+    patchPath: snapshot.path,
+    baseCommit: manifest.baseCommit,
+    changedPaths: manifestChangedPaths,
+  });
   return {
     baseCommit: manifest.baseCommit,
     manifestPath,
@@ -345,6 +354,8 @@ function parseManifest(bytes: Buffer): ParsedManifest {
     !isAbsolute(value.workspacePath) ||
     !isAbsolute(value.jobRootDir) ||
     !Array.isArray(value.changedPaths) ||
+    value.changedPaths.length === 0 ||
+    value.changedPaths.length > maxInputChangedPaths ||
     !value.changedPaths.every((path) => typeof path === "string") ||
     !isRecord(value.provenance) ||
     typeof value.provenance.baseCommit !== "string" ||
@@ -563,13 +574,72 @@ async function canonicalDirectoryIfExists(
 function assertSafeChangedPath(path: string): string {
   if (
     !path ||
+    Buffer.byteLength(path) > 4096 ||
     isAbsolute(path) ||
+    /[\u0000-\u001f\u007f]/.test(path) ||
     path.includes("\\") ||
     path.split("/").some((part) => !part || part === "." || part === "..")
   ) {
     throw new Error("project_integration_handoff_changed_path_invalid");
   }
   return path;
+}
+
+function normalizeChangedPaths(paths: readonly string[]): readonly string[] {
+  if (paths.length > maxInputChangedPaths) {
+    throw new Error("project_integration_handoff_changed_path_limit_exceeded");
+  }
+  const normalized = uniqueSorted(paths.map(assertSafeChangedPath));
+  if (normalized.length === 0 || normalized.length > maxChangedPaths) {
+    throw new Error("project_integration_handoff_changed_path_limit_exceeded");
+  }
+  return normalized;
+}
+
+async function assertValidatedPatchSecretSafe(input: {
+  readonly controller: ProjectIntegrationMcpController;
+  readonly workspacePath: string;
+  readonly patchPath: string;
+  readonly baseCommit: string;
+  readonly changedPaths: readonly string[];
+}): Promise<void> {
+  try {
+    await assertGitPatchBlobsSecretSafe({
+      workspacePath: input.workspacePath,
+      baseCommit: input.baseCommit.toLowerCase(),
+      patchPath: input.patchPath,
+      changedPaths: input.changedPaths,
+      tempRootDir: join(
+        localProjectIntegrationSnapshotRoot(input.controller),
+        ".secret-validation",
+      ),
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith("git_patch_secret_like_content:")
+    ) {
+      throw new Error("project_integration_handoff_secret_like_content");
+    }
+    throw new Error("project_integration_handoff_blob_validation_failed");
+  }
+}
+
+async function gitHead(workspacePath: string): Promise<string> {
+  const { stdout } = await execFileAsync(
+    "git",
+    ["-C", workspacePath, "rev-parse", "--verify", "HEAD"],
+    {
+      encoding: "utf8",
+      maxBuffer: 1024,
+      timeout: 15_000,
+    },
+  );
+  const value = stdout.trim().toLowerCase();
+  if (!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value)) {
+    throw new Error("project_integration_handoff_base_commit_invalid");
+  }
+  return value;
 }
 
 function assertSafeWorkerJobId(value: string): void {

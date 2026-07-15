@@ -5,8 +5,15 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +25,48 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm run check:dist
-      - run: npm test
       - run: npm run check:boundaries
-      - run: npm pack --dry-run
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
       - run: npm run check:packed-consumer
+
+  test:
+    if: ${{ always() }}
+    needs: [quality, unit-tests, package]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify all CI gates passed
+        env:
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          UNIT_TESTS_RESULT: ${{ needs.unit-tests.result }}
+          PACKAGE_RESULT: ${{ needs.package.result }}
+        run: |
+          if [ "$QUALITY_RESULT" = "success" ] && \
+             [ "$UNIT_TESTS_RESULT" = "success" ] && \
+             [ "$PACKAGE_RESULT" = "success" ]; then
+            exit 0
+          fi
+
+          echo "quality: $QUALITY_RESULT"
+          echo "unit-tests: $UNIT_TESTS_RESULT"
+          echo "package: $PACKAGE_RESULT"
+          exit 1

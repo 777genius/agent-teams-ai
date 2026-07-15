@@ -296,4 +296,91 @@ describe("local worker handoff artifact validator", () => {
       ),
     });
   });
+
+  it("carries fixture paths into downstream exact-blob validation", async () => {
+    const root = await mkdtemp(join(tmpdir(), "integration-handoff-fixture-"));
+    cleanup.push(root);
+    const jobsRoot = join(root, "worker-jobs");
+    const controllerRoot = join(jobsRoot, "controller-1");
+    const workerRoot = join(jobsRoot, "worker-1");
+    const workspacePath = join(root, "workspace");
+    const registryRootDir = join(root, "registry");
+    await mkdir(controllerRoot, { recursive: true });
+    await mkdir(workerRoot, { recursive: true });
+    await mkdir(join(workspacePath, "tests", "fixtures"), { recursive: true });
+    await mkdir(registryRootDir, { recursive: true });
+    await git(workspacePath, ["init"]);
+    await git(workspacePath, ["config", "user.email", "test@example.com"]);
+    await git(workspacePath, ["config", "user.name", "Test User"]);
+    await writeFile(join(workspacePath, "README.md"), "fixture\n");
+    await git(workspacePath, ["add", "README.md"]);
+    await git(workspacePath, ["commit", "-m", "fixture"]);
+    const relativePath = "tests/fixtures/config.env";
+    await writeFile(
+      join(workspacePath, relativePath),
+      ["API_", "KEY=", "test-", "fixture-literal", "\n"].join(""),
+    );
+    const artifacts = await materializeCodexGoalHandoffArtifacts({
+      workerJobId: "worker-1",
+      taskId: "task-fixture",
+      workspacePath,
+      jobRootDir: workerRoot,
+    });
+    expect(artifacts).not.toBeNull();
+    const materialized = artifacts!;
+    const manifestSha256 = createHash("sha256")
+      .update(await readFile(materialized.manifestPath))
+      .digest("hex");
+
+    await expect(
+      validateLocalWorkerHandoffArtifact({
+        controller: {
+          registryRootDir,
+          controller: { jobId: "controller-1", jobRootDir: controllerRoot },
+          scope: {
+            projectId: "project-1",
+            registryRoot: registryRootDir,
+            workspaceRoots: [workspacePath],
+          },
+        },
+        attemptId: "attempt-fixture",
+        workerJobId: "worker-1",
+        workspacePath,
+        patchPath: materialized.patchPath,
+        summaryPath: materialized.summaryPath,
+        manifestPath: materialized.manifestPath,
+        manifestSha256,
+        baseCommit: materialized.baseCommit,
+        changedPaths: [relativePath],
+      }),
+    ).resolves.toMatchObject({
+      baseCommit: materialized.baseCommit,
+      patchSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
+  });
+
+  it("rejects oversized changed-path inputs before artifact I/O", async () => {
+    await expect(
+      validateLocalWorkerHandoffArtifact({
+        controller: {
+          registryRootDir: "/not-read",
+          controller: {
+            jobId: "controller-1",
+            jobRootDir: "/not-read/controller",
+          },
+          scope: { projectId: "project-1" },
+        },
+        attemptId: "attempt-oversized",
+        workerJobId: "worker-1",
+        workspacePath: "/not-read/workspace",
+        patchPath: "/not-read/output.patch",
+        changedPaths: Array.from(
+          { length: 257 },
+          (_, index) => `src/file-${index}.ts`,
+        ),
+      }),
+    ).rejects.toThrow(
+      "project_integration_handoff_changed_path_limit_exceeded",
+    );
+  });
 });

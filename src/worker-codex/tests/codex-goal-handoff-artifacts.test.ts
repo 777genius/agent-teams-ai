@@ -115,6 +115,15 @@ describe("Codex goal handoff artifact materialization", () => {
       expectedBaseCommit: boundedFixture.baseCommit,
       limits: { maxFileBytes: 4 },
     })).rejects.toThrow("handoff_file_byte_limit_exceeded");
+    for (const maxFileBytes of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      await expect(materializeCodexGoalHandoffArtifacts({
+        workerJobId: "worker-1",
+        taskId: "task-invalid-limit",
+        workspacePath: boundedFixture.workspacePath,
+        jobRootDir: boundedFixture.jobRootDir,
+        limits: { maxFileBytes },
+      })).rejects.toThrow("handoff_limit_invalid:maxFileBytes");
+    }
 
     const envSecretFixture = await createFixture();
     await writeFile(
@@ -161,6 +170,21 @@ describe("Codex goal handoff artifact materialization", () => {
     await expect(materialize(safeSourceFixture)).resolves.toMatchObject({
       changedPaths: ["config.ts"],
     });
+  });
+
+  it("enforces the remaining aggregate current-file budget before reading", async () => {
+    const fixture = await createFixture();
+    await writeFile(join(fixture.workspacePath, "first.txt"), "a".repeat(40));
+    await writeFile(join(fixture.workspacePath, "second.txt"), "b".repeat(40));
+
+    await expect(materializeCodexGoalHandoffArtifacts({
+      workerJobId: "worker-1",
+      taskId: "task-aggregate-limit",
+      workspacePath: fixture.workspacePath,
+      jobRootDir: fixture.jobRootDir,
+      expectedBaseCommit: fixture.baseCommit,
+      limits: { maxFileBytes: 64, maxTotalFileBytes: 64 },
+    })).rejects.toThrow("handoff_total_byte_limit_exceeded");
   });
 
   it("captures tracked plus untracked paths and enforces file-count bounds", async () => {

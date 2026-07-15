@@ -1,8 +1,8 @@
-import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
   access,
   link,
+  lstat,
   mkdir,
   mkdtemp,
   readFile,
@@ -10,10 +10,9 @@ import {
   rm,
   writeFile,
 } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { promisify } from "node:util";
+import { dirname, isAbsolute, join } from "node:path";
 import {
-  detectSecretLikeContent,
+  OpaqueSecretDetectionPolicy,
   ReviewDecisionStatus,
   type ReviewDecision,
   type WorkspaceLockPort,
@@ -28,6 +27,7 @@ import {
   inspectNodeDependencyEnvironment,
   sanitizeNodeDependencyEnvironment,
 } from "../../dependency-environment-safety";
+import { assertGitPatchBlobsSecretSafe } from "../../git-patch-secret-validator";
 import {
   reviewedWorkerOutputIdentityPayload,
   reviewedWorkerOutputFormat,
@@ -42,7 +42,10 @@ import type {
   ReviewedWorkerOutputStorePort,
 } from "../ports/reviewed-worker-output-ports";
 
-const execFileAsync = promisify(execFile);
+const maxReviewedChangedFiles = 256;
+const maxReviewedInputFiles = 1024;
+const maxReviewedManifestBytes = 1024 * 1024;
+const maxReviewedPatchBytes = 16 * 1024 * 1024;
 
 export class GitReviewedWorkerOutputSnapshotter implements ReviewedWorkerOutputSnapshotterPort {
   constructor(
@@ -65,9 +68,6 @@ export class GitReviewedWorkerOutputSnapshotter implements ReviewedWorkerOutputS
         : {}),
     });
     if (!patch.trim()) throw new Error("reviewed_worker_output_patch_required");
-    if (detectSecretLikeContent(Buffer.from(patch)) !== undefined) {
-      throw new Error("reviewed_worker_output_secret_like_content");
-    }
     const status = await new LocalGitIntegrationAdapter({
       ...(this.options.gitBinaryPath
         ? { gitBinaryPath: this.options.gitBinaryPath }
@@ -80,6 +80,7 @@ export class GitReviewedWorkerOutputSnapshotter implements ReviewedWorkerOutputS
       workspacePath: input.workspacePath,
       baseCommit,
       patch,
+      changedFiles: status.dirtyFiles,
     });
     return {
       patch,
@@ -92,36 +93,41 @@ export class GitReviewedWorkerOutputSnapshotter implements ReviewedWorkerOutputS
     readonly workspacePath: string;
     readonly baseCommit: string;
     readonly patch: string;
+    readonly changedFiles: readonly string[];
   }): Promise<void> {
     await mkdir(this.options.tempRootDir, { recursive: true, mode: 0o700 });
     const tempDir = await mkdtemp(join(this.options.tempRootDir, ".capture-"));
     const patchPath = join(tempDir, "output.patch");
-    const indexPath = join(tempDir, "index");
-    const env = { ...process.env, GIT_INDEX_FILE: indexPath };
     try {
       await writeFile(patchPath, input.patch, {
         encoding: "utf8",
         mode: 0o600,
       });
-      await execFileAsync(
-        this.options.gitBinaryPath ?? "git",
-        ["-C", input.workspacePath, "read-tree", input.baseCommit],
-        { env, timeout: 10_000 },
-      );
-      await execFileAsync(
-        this.options.gitBinaryPath ?? "git",
-        [
-          "-C",
-          input.workspacePath,
-          "apply",
-          "--cached",
-          "--check",
-          "--whitespace=nowarn",
-          patchPath,
-        ],
-        { env, timeout: 30_000, maxBuffer: 16 * 1024 * 1024 },
-      );
-    } catch {
+      await assertGitPatchBlobsSecretSafe({
+        workspacePath: input.workspacePath,
+        baseCommit: input.baseCommit,
+        patchPath,
+        changedPaths: input.changedFiles,
+        tempRootDir: tempDir,
+        opaqueContentPolicy:
+          OpaqueSecretDetectionPolicy.ScanKnownSignatures,
+        ...(this.options.gitBinaryPath === undefined
+          ? {}
+          : { gitBinaryPath: this.options.gitBinaryPath }),
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.startsWith("git_patch_secret_like_content:")
+      ) {
+        throw new Error("reviewed_worker_output_secret_like_content");
+      }
+      if (
+        error instanceof Error &&
+        error.message === "git_patch_secret_changed_path_limit_exceeded"
+      ) {
+        throw new Error("reviewed_worker_output_changed_file_limit_exceeded");
+      }
       throw new Error("reviewed_worker_output_patch_apply_check_failed");
     } finally {
       await rm(tempDir, { recursive: true, force: true });
@@ -137,11 +143,16 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
     readonly patch: string;
   }): Promise<ReviewedWorkerOutputSnapshot> {
     assertSha256(input.snapshot.reviewedOutputId);
+    assertReviewedFileList(input.snapshot.changedFiles);
+    assertReviewedFileList(input.snapshot.reviewDecision.approvedFiles);
     const patchSha256 = sha256(input.patch);
     if (patchSha256 !== input.snapshot.patchSha256) {
       throw new Error("reviewed_worker_output_store_patch_hash_mismatch");
     }
     if (Buffer.byteLength(input.patch) !== input.snapshot.patchByteLength) {
+      throw new Error("reviewed_worker_output_store_patch_size_mismatch");
+    }
+    if (input.snapshot.patchByteLength > maxReviewedPatchBytes) {
       throw new Error("reviewed_worker_output_store_patch_size_mismatch");
     }
     const itemDir = this.itemDir(input.snapshot.reviewedOutputId);
@@ -299,10 +310,30 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
     const patchPath = join(itemDir, "output.patch");
     try {
       await access(manifestPath);
+      const [manifestItem, patchItem] = await Promise.all([
+        lstat(manifestPath),
+        lstat(patchPath),
+      ]);
+      if (
+        manifestItem.isSymbolicLink() ||
+        !manifestItem.isFile() ||
+        manifestItem.size > maxReviewedManifestBytes ||
+        patchItem.isSymbolicLink() ||
+        !patchItem.isFile() ||
+        patchItem.size > maxReviewedPatchBytes
+      ) {
+        throw new Error("reviewed_worker_output_artifact_unsafe");
+      }
       const [rawManifest, patch] = await Promise.all([
         readFile(manifestPath, "utf8"),
         readFile(patchPath, "utf8"),
       ]);
+      if (
+        Buffer.byteLength(rawManifest) > maxReviewedManifestBytes ||
+        Buffer.byteLength(patch) > maxReviewedPatchBytes
+      ) {
+        throw new Error("reviewed_worker_output_artifact_unsafe");
+      }
       const snapshot = parseSnapshot(rawManifest, patchPath);
       if (snapshot.reviewedOutputId !== reviewedOutputId) {
         throw new Error("reviewed_worker_output_manifest_id_mismatch");
@@ -551,7 +582,7 @@ function parseSnapshot(
     patchSha256: requiredString(value.patchSha256),
     patchByteLength: requiredPositiveInteger(value.patchByteLength),
     baseCommit: requiredString(value.baseCommit),
-    changedFiles: requiredStringArray(value.changedFiles),
+    changedFiles: requiredReviewedFileList(value.changedFiles),
     reviewDecision,
     ...(value.merge === undefined ? {} : { merge: parseMergePlan(value.merge) }),
     capturedAt: requiredString(value.capturedAt),
@@ -611,7 +642,7 @@ function parseReviewDecision(value: unknown): ReviewDecision {
     reviewedBy: requiredString(value.reviewedBy),
     decision: value.decision,
     reason: requiredString(value.reason),
-    approvedFiles: requiredStringArray(value.approvedFiles),
+    approvedFiles: requiredReviewedFileList(value.approvedFiles),
     requiredChecks: parseRequiredChecks(value.requiredChecks),
   };
 }
@@ -733,6 +764,50 @@ function requiredStringArray(value: unknown): readonly string[] {
     throw new Error("reviewed_worker_output_manifest_invalid");
   }
   return value;
+}
+
+function requiredReviewedFileList(value: unknown): readonly string[] {
+  if (!Array.isArray(value) || value.length > maxReviewedInputFiles) {
+    throw new Error("reviewed_worker_output_manifest_invalid");
+  }
+  const files = requiredStringArray(value).map(assertReviewedPath);
+  const normalized = [...new Set(files)].sort();
+  if (normalized.length === 0 || normalized.length > maxReviewedChangedFiles) {
+    throw new Error("reviewed_worker_output_manifest_invalid");
+  }
+  return normalized;
+}
+
+function assertReviewedFileList(value: readonly string[]): void {
+  if (
+    value.length > maxReviewedInputFiles ||
+    value.some((path) => {
+      try {
+        assertReviewedPath(path);
+        return false;
+      } catch {
+        return true;
+      }
+    }) ||
+    [...new Set(value)].length === 0 ||
+    [...new Set(value)].length > maxReviewedChangedFiles
+  ) {
+    throw new Error("reviewed_worker_output_changed_file_limit_exceeded");
+  }
+}
+
+function assertReviewedPath(path: string): string {
+  if (
+    !path ||
+    Buffer.byteLength(path) > 4096 ||
+    isAbsolute(path) ||
+    /[\u0000-\u001f\u007f]/.test(path) ||
+    path.includes("\\") ||
+    path.split("/").some((part) => !part || part === "." || part === "..")
+  ) {
+    throw new Error("reviewed_worker_output_changed_path_invalid");
+  }
+  return path;
 }
 
 function requiredPositiveInteger(value: unknown): number {

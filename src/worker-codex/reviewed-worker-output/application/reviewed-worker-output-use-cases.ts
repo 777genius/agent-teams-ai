@@ -30,6 +30,9 @@ export type ReviewedWorkerOutputDeps = {
   readonly clock?: { now(): Date };
 };
 
+const maxReviewedChangedFiles = 256;
+const maxReviewedInputFiles = 1024;
+
 export async function captureReviewedWorkerOutput(
   deps: ReviewedWorkerOutputDeps,
   input: CaptureReviewedWorkerOutputInput,
@@ -51,11 +54,11 @@ export async function captureReviewedWorkerOutputLocked(
   lock: WorkspaceLock,
 ): Promise<ReviewedWorkerOutputSnapshot> {
   const expectedPatchSha256 = normalizeSha256(input.expectedPatchSha256);
-  const approvedFiles = normalizeExpectedFiles(input.approvedFiles);
+  const approvedFiles = normalizeReviewedFiles(input.approvedFiles);
   const captured = await deps.snapshotter.capture({
     workspacePath: lock.workspacePath,
   });
-  const changedFiles = normalizeExpectedFiles(captured.changedFiles);
+  const changedFiles = normalizeReviewedFiles(captured.changedFiles);
   assertFilesWithinExpected(changedFiles, approvedFiles);
   const patchSha256 = sha256(captured.patch);
   if (patchSha256 !== expectedPatchSha256) {
@@ -106,6 +109,17 @@ export async function captureReviewedWorkerOutputLocked(
     },
     patch: captured.patch,
   });
+}
+
+function normalizeReviewedFiles(paths: readonly string[]): readonly string[] {
+  if (paths.length > maxReviewedInputFiles) {
+    throw new Error("reviewed_worker_output_changed_file_limit_exceeded");
+  }
+  const normalized = normalizeExpectedFiles(paths);
+  if (normalized.length > maxReviewedChangedFiles) {
+    throw new Error("reviewed_worker_output_changed_file_limit_exceeded");
+  }
+  return normalized;
 }
 
 function normalizeReviewedOutputMerge(
