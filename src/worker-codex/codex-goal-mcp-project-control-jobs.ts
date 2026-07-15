@@ -330,6 +330,7 @@ export async function projectControlRefillWorkerView(
       }
     : undefined;
   const createWorktreeInput: CodexGoalProjectCreateWorktreeInput = {
+    jobId: requested.jobId,
     ...worktreeAccessInput,
     expectedRevision: sourceRevision.revision,
     ...(sourceRevision.pinned ? { sourceRevisionPinned: true } : {}),

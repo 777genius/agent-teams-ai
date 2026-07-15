@@ -42,6 +42,7 @@ export type ProjectControlWriteReviewMarkerInput = ProjectJobAccessRequest & {
 };
 
 export type ProjectControlAdmissionMetadata = {
+  readonly jobId?: string;
   readonly workerRole?: ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
   readonly tags?: readonly string[];
 };
@@ -187,6 +188,7 @@ export class ProjectControlBroker {
   ): Promise<ProjectControlOperationResult> {
     await this.authorize(this.policy.canCreateWorktree(input));
     await this.admit(ProjectOperation.CreateWorktree, {
+      ...(input.jobId ? { jobId: input.jobId } : {}),
       workspacePath: input.path,
       ...(input.workerRole ? { workerRole: input.workerRole } : {}),
       ...(input.tags ? { tags: input.tags } : {}),

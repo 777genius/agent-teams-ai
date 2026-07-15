@@ -139,14 +139,18 @@ export function createCodexProjectControlBroker(
         registryRootDir: input.registryRootDir,
         scope: input.scope,
         deps: input.admissionDeps,
-        ...(input.startAdmissionWorkspaceMode === "admitted_input_patch" &&
-            input.startManifest &&
-            input.startWorkspaceLease
+        ...((input.startAdmissionWorkspaceMode === "admitted_input_patch" &&
+              input.startManifest &&
+              input.startWorkspaceLease) ||
+            (input.createWorktreeInput?.inputPatch &&
+              input.createWorktreeInput.jobId)
           ? {
-              admittedInputPatchStart: {
-                jobId: input.startManifest.jobId,
-                workspacePath:
-                  input.startWorkspaceLease.canonicalWorkspacePath,
+              admittedInputPatchTarget: {
+                jobId: input.startManifest?.jobId ??
+                  input.createWorktreeInput?.jobId ?? "",
+                workspacePath: input.startWorkspaceLease
+                  ?.canonicalWorkspacePath ??
+                  input.createWorktreeInput?.path ?? "",
               },
             }
           : {}),

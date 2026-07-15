@@ -47,7 +47,7 @@ type CodexProjectAdmissionInput = {
   readonly registryRootDir: string;
   readonly scope: ProjectAccessScope;
   readonly deps: CodexProjectAdmissionDeps;
-  readonly admittedInputPatchStart?: {
+  readonly admittedInputPatchTarget?: {
     readonly jobId: string;
     readonly workspacePath: string;
   };
@@ -112,7 +112,7 @@ export function codexProjectAdmissionGate(
       const snapshot = await withoutAdmittedInputPatchStartDebt({
         snapshot: observedSnapshot,
         request,
-        binding: input.admittedInputPatchStart,
+        binding: input.admittedInputPatchTarget,
       });
       return evaluateProjectAdmission({
         request: {
@@ -132,12 +132,13 @@ async function withoutAdmittedInputPatchStartDebt(input: {
     readonly jobId?: string;
     readonly workspacePath?: string;
   };
-  readonly binding: CodexProjectAdmissionInput["admittedInputPatchStart"];
+  readonly binding: CodexProjectAdmissionInput["admittedInputPatchTarget"];
 }): Promise<ProjectAdmissionSnapshot> {
   const { binding, request } = input;
   if (
     !binding ||
-    request.operation !== ProjectOperation.StartWorker ||
+    (request.operation !== ProjectOperation.StartWorker &&
+      request.operation !== ProjectOperation.CreateWorktree) ||
     request.jobId !== binding.jobId ||
     !request.workspacePath ||
     !await admissionWorkspacePathsMatch(

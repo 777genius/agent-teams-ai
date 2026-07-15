@@ -122,7 +122,7 @@ describe("Codex project admission snapshot", () => {
         registryRootDir: join(root, "registry"),
         scope: { projectId: "project", jobIdPrefixes: ["project-"] },
         deps,
-        admittedInputPatchStart: {
+        admittedInputPatchTarget: {
           jobId: "project-remediation",
           workspacePath,
         },
@@ -130,6 +130,12 @@ describe("Codex project admission snapshot", () => {
 
       await expect(gate.evaluate({
         operation: ProjectOperation.StartWorker,
+        jobId: "project-remediation",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath,
+      })).resolves.toMatchObject({ allowed: true, debt: [] });
+      await expect(gate.evaluate({
+        operation: ProjectOperation.CreateWorktree,
         jobId: "project-remediation",
         workerRole: ProjectAdmissionWorkerRole.Producer,
         workspacePath,

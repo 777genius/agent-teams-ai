@@ -195,6 +195,7 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
         }
 
         let remediation: Record<string, unknown> | undefined;
+        let remediationRetry: Record<string, unknown> | undefined;
         if (executionMode === "sync") {
           await git(sourceWorkspacePath, [
             "update-ref",
@@ -202,6 +203,16 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
             canonicalSha,
           ]);
           remediation = await prepareRemediation({
+            client,
+            root,
+            registryRootDir,
+            sourceWorkspacePath,
+            remediationWorkspacePath,
+            producerBase,
+            canonicalSha,
+            patchSha256: handoff.manifest.artifacts.patch.sha256,
+          });
+          remediationRetry = await prepareRemediation({
             client,
             root,
             registryRootDir,
@@ -245,6 +256,12 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
             mode: "project_control_refill_worker",
             workerRole: "producer",
             worktree: { status: "applied" },
+            startSkipped: true,
+          });
+          expect(remediationRetry).toMatchObject({
+            ok: true,
+            mode: "project_control_refill_worker",
+            worktree: { status: "noop" },
             startSkipped: true,
           });
           expect(await revision(remediationWorkspacePath)).toBe(canonicalSha);

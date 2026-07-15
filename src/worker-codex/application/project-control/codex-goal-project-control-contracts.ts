@@ -4,6 +4,7 @@ import type {
 } from "@vioxen/subscription-runtime/worker-core";
 
 export type CodexGoalProjectCreateWorktreeInput = {
+  readonly jobId?: string;
   readonly sourceWorkspacePath: string;
   readonly realSourceWorkspacePath?: string;
   readonly expectedSourceRealPath: string;
