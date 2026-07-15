@@ -39,7 +39,7 @@ Live team smoke runtime:
 - Source-mode teammate startup can be slower than bundled startup. Live smoke harnesses may raise `CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS` and `CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS` when the test is validating source behavior instead of watchdog latency.
 - Use the built wrapper only for release or production-like smoke checks. Build first in `/Users/belief/dev/projects/claude/agent_teams_orchestrator` with `bun run build`, then set `CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH=/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli`.
 - Do not use `cli-dev` or `bun run build:dev` as proof for the production wrapper. `cli` reads `dist/local-cli/cli.js`; `cli-dev` reads `dist/local-cli-dev/cli.js`.
-Fast local lint:
+  Fast local lint:
 
 - Use `pnpm lint:fast:files -- <changed files>` for quick preflight on files you touched.
 - Use `pnpm lint:fast` for a faster source-tree lint pass when full type-aware lint is too slow.
@@ -61,6 +61,7 @@ For new features:
 - Verify new medium and large features follow `docs/FEATURE_ARCHITECTURE_STANDARD.md`, especially cross-process boundaries and public feature entrypoints.
 - Check that Electron main, preload, renderer, and shared code keep their responsibilities separate and use the documented path aliases.
 - Check that interactive UI controls use reusable Radix UI headless primitives from `src/renderer/components/ui` instead of one-off native or hand-rolled controls when a shared primitive exists.
+- Flag user-facing native HTML `title` tooltips. Use the shared Radix Tooltip primitive so help text is themed, keyboard-aware, portaled, and collision-safe.
 - Flag changes that manually concatenate agent block markers instead of using `wrapAgentBlock(text)`.
 - Flag changes that can break `isMeta` semantics, chunk generation, teammate message parsing, task/subagent filtering, or structured task references.
 - Ensure IPC and main-process handlers validate inputs, fail gracefully, and do not expose unsafe filesystem or process access.
