@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import {
   createTeamInnerWithService,
   launchTeamInnerWithService,
@@ -14,6 +16,12 @@ import type {
 
 interface TeamProvisioningRequestWithTeamName {
   teamName?: unknown;
+}
+
+interface TeamProvisioningRequestAdmissionContext {
+  active: boolean;
+  lockKey: string;
+  parent: TeamProvisioningRequestAdmissionContext | undefined;
 }
 
 export interface TeamProvisioningRequestAdmissionServiceHost extends TeamProvisioningCreateLaunchOrchestrationServiceHost {
@@ -42,23 +50,47 @@ export function getTeamProvisioningRequestLockKey(
 
 async function runAdmittedTeamProvisioningRequest<TResult>(
   service: TeamProvisioningRequestAdmissionServiceHost,
+  admissionContext: AsyncLocalStorage<TeamProvisioningRequestAdmissionContext>,
   request: TeamProvisioningRequestWithTeamName,
   run: () => Promise<TResult>
 ): Promise<TResult> {
   const lockKey = getTeamProvisioningRequestLockKey(request);
-  return service.withTeamLock(lockKey, run);
+  const parentContext = admissionContext.getStore();
+  for (
+    let context: TeamProvisioningRequestAdmissionContext | undefined = parentContext;
+    context;
+    context = context.parent
+  ) {
+    if (context.active && context.lockKey === lockKey) {
+      throw new Error(`Reentrant team provisioning request for "${lockKey}"`);
+    }
+  }
+
+  return service.withTeamLock(lockKey, async () => {
+    const context: TeamProvisioningRequestAdmissionContext = {
+      active: true,
+      lockKey,
+      parent: parentContext,
+    };
+    try {
+      return await admissionContext.run(context, run);
+    } finally {
+      context.active = false;
+    }
+  });
 }
 
 export function createTeamProvisioningRequestAdmissionBoundary(
   service: TeamProvisioningRequestAdmissionServiceHost
 ): TeamProvisioningRequestAdmissionBoundary {
+  const admissionContext = new AsyncLocalStorage<TeamProvisioningRequestAdmissionContext>();
   return {
     createTeam: (request, onProgress) =>
-      runAdmittedTeamProvisioningRequest(service, request, () =>
+      runAdmittedTeamProvisioningRequest(service, admissionContext, request, () =>
         createTeamInnerWithService(service, request, onProgress)
       ),
     launchTeam: (request, onProgress) =>
-      runAdmittedTeamProvisioningRequest(service, request, () =>
+      runAdmittedTeamProvisioningRequest(service, admissionContext, request, () =>
         launchTeamInnerWithService(service, request, onProgress)
       ),
   };

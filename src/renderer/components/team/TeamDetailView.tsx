@@ -176,6 +176,7 @@ import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
   ApplicationCommandRequestIdentity,
+  CreateTaskRequest,
   KanbanColumnId,
   KanbanTaskState,
   MemberSpawnStatusEntry,
@@ -2666,9 +2667,9 @@ export const TeamDetailView = memo(function TeamDetailView({
     })();
   }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId]);
 
-  const handleCreateTask = (
-    subject: string,
-    description: string,
+  const handleCreateTask = async (
+    requestOrSubject: CreateTaskRequest | string,
+    description = '',
     owner?: string,
     blockedBy?: string[],
     related?: string[],
@@ -2676,53 +2677,68 @@ export const TeamDetailView = memo(function TeamDetailView({
     startImmediately?: boolean,
     descriptionTaskRefs?: TaskRef[],
     promptTaskRefs?: TaskRef[]
-  ): void => {
-    const taskRequest = {
-      subject,
-      description: description || undefined,
-      owner,
-      blockedBy,
-      related,
-      prompt,
-      descriptionTaskRefs,
-      promptTaskRefs,
-      startImmediately,
-    };
-    const fingerprint = JSON.stringify(taskRequest);
-    let pendingCommand = pendingCreateTaskCommandRef.current;
-    if (pendingCommand?.fingerprint !== fingerprint) {
-      const commandId = crypto.randomUUID();
-      pendingCommand = {
-        fingerprint,
-        identity: { commandId, idempotencyKey: commandId },
+  ): Promise<void> => {
+    let taskRequest: CreateTaskRequest;
+    if (typeof requestOrSubject === 'string') {
+      const positionalRequest: CreateTaskRequest = {
+        subject: requestOrSubject,
+        description: description || undefined,
+        owner,
+        blockedBy,
+        related,
+        prompt,
+        descriptionTaskRefs,
+        promptTaskRefs,
+        startImmediately,
       };
-      pendingCreateTaskCommandRef.current = pendingCommand;
-    }
-    const command = pendingCommand.identity;
-    setCreatingTask(true);
-    void (async () => {
-      try {
-        await createTeamTask(teamName, {
-          ...taskRequest,
-          command,
-        });
-
-        if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
-          const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
-          try {
-            await api.teams.processSend(teamName, msg);
-          } catch {
-            // best-effort
-          }
-        }
-
-        closeCreateTaskDialog();
-      } catch {
-        // error shown via store
-      } finally {
-        setCreatingTask(false);
+      const fingerprint = JSON.stringify(positionalRequest);
+      let pendingCommand = pendingCreateTaskCommandRef.current;
+      if (pendingCommand?.fingerprint !== fingerprint) {
+        const commandId = crypto.randomUUID();
+        pendingCommand = {
+          fingerprint,
+          identity: { commandId, idempotencyKey: commandId },
+        };
+        pendingCreateTaskCommandRef.current = pendingCommand;
       }
-    })();
+      taskRequest = {
+        ...positionalRequest,
+        command: pendingCommand.identity,
+      };
+    } else {
+      taskRequest = requestOrSubject;
+    }
+    const {
+      owner: taskOwner,
+      prompt: taskPrompt,
+      startImmediately: taskStartImmediately,
+      subject,
+    } = taskRequest;
+    setCreatingTask(true);
+    try {
+      await createTeamTask(teamName, taskRequest);
+
+      if (
+        taskPrompt &&
+        taskOwner &&
+        data?.isAlive &&
+        !isTeamProvisioning &&
+        taskStartImmediately !== false
+      ) {
+        const msg = `New task assigned to ${taskOwner}: "${subject}". Instructions:\n${taskPrompt}`;
+        try {
+          await api.teams.processSend(teamName, msg);
+        } catch {
+          // best-effort
+        }
+      }
+
+      closeCreateTaskDialog();
+    } catch {
+      // error shown via store
+    } finally {
+      setCreatingTask(false);
+    }
   };
 
   const messagesPanelTasks = useStableMessagesPanelTasks(data?.tasks);

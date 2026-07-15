@@ -238,6 +238,156 @@ controller.messages.sendMessage({
     expect(readKanbanFile(claudeDir).tasks[task.id]).toBeUndefined();
   });
 
+  it('reconciles command task provenance and repairs missing relationship backlinks', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const dependency = controller.taskBoard.createTask({ subject: 'Dependency' });
+    const related = controller.taskBoard.createTask({ subject: 'Related' });
+    const commandId = '11111111-1111-4111-8111-111111111111';
+    const input = {
+      id: commandId,
+      subject: 'Command task',
+      blockedBy: [dependency.id],
+      related: [related.id],
+      createdBy: 'user',
+      creationCommand: {
+        namespace: 'task-board',
+        scopeKey: 'my-team',
+        operation: 'task.create',
+        commandId,
+        payloadHash: 'sha256:payload',
+      },
+    };
+    controller.taskBoard.createTask(input);
+
+    const dependencyRow = readTaskFile(claudeDir, dependency.id);
+    dependencyRow.blocks = 'legacy-block-value';
+    dependencyRow.status = 'deleted';
+    dependencyRow.deletedAt = new Date().toISOString();
+    fs.writeFileSync(
+      path.join(claudeDir, 'tasks', 'my-team', `${dependency.id}.json`),
+      JSON.stringify(dependencyRow, null, 2)
+    );
+    const relatedRow = readTaskFile(claudeDir, related.id);
+    relatedRow.related = 'legacy-related-value';
+    fs.writeFileSync(
+      path.join(claudeDir, 'tasks', 'my-team', `${related.id}.json`),
+      JSON.stringify(relatedRow, null, 2)
+    );
+
+    const reconciled = controller.taskBoard.reconcileTaskCreation(input);
+
+    expect(reconciled.creationCommand).toEqual(input.creationCommand);
+    expect(readTaskFile(claudeDir, dependency.id).blocks).toEqual([commandId]);
+    expect(readTaskFile(claudeDir, related.id).related).toEqual([commandId]);
+    expect(() =>
+      controller.taskBoard.reconcileTaskCreation({
+        ...input,
+        creationCommand: { ...input.creationCommand, payloadHash: 'sha256:other' },
+      })
+    ).toThrow(`Task creation command conflict: ${commandId}`);
+  });
+
+  it('adopts matching legacy command tasks before completing reconciliation', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const commandId = '22222222-2222-4222-8222-222222222222';
+    controller.taskBoard.createTask({
+      id: commandId,
+      subject: 'Legacy command task',
+      description: 'Original description',
+      createdBy: 'user',
+    });
+    const legacyRow = readTaskFile(claudeDir, commandId);
+    legacyRow.subject = 'Edited subject after the original create';
+    legacyRow.description = 'Edited after the original create';
+    legacyRow.owner = 'new-owner';
+    fs.writeFileSync(
+      path.join(claudeDir, 'tasks', 'my-team', `${commandId}.json`),
+      JSON.stringify(legacyRow, null, 2)
+    );
+    const input = {
+      id: commandId,
+      subject: 'Legacy command task',
+      description: 'Original description',
+      createdBy: 'user',
+      creationCommand: {
+        namespace: 'task-board',
+        scopeKey: 'my-team',
+        operation: 'task.create',
+        commandId,
+        payloadHash: 'sha256:legacy',
+      },
+    };
+
+    const reconciled = controller.taskBoard.reconcileTaskCreation(input);
+
+    expect(reconciled.creationCommand).toEqual(input.creationCommand);
+    expect(reconciled.subject).toBe('Edited subject after the original create');
+    expect(readTaskFile(claudeDir, commandId).creationCommand).toEqual(input.creationCommand);
+  });
+
+  it('rejects legacy command adoption when the stable creator does not match', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const commandId = '55555555-5555-4555-8555-555555555555';
+    controller.taskBoard.createTask({
+      id: commandId,
+      subject: 'Different legacy command',
+      createdBy: 'agent',
+    });
+
+    expect(() =>
+      controller.taskBoard.reconcileTaskCreation({
+        id: commandId,
+        subject: 'Requested command',
+        createdBy: 'user',
+        creationCommand: {
+          namespace: 'task-board',
+          scopeKey: 'my-team',
+          operation: 'task.create',
+          commandId,
+          payloadHash: 'sha256:legacy',
+        },
+      })
+    ).toThrow(`Task creation command conflict: legacy task ${commandId} does not match payload`);
+  });
+
+  it('rejects mismatched creation provenance before writing a task row', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const taskId = '33333333-3333-4333-8333-333333333333';
+
+    expect(() =>
+      controller.taskBoard.createTask({
+        id: taskId,
+        subject: 'Invalid provenance',
+        creationCommand: {
+          namespace: 'task-board',
+          scopeKey: 'my-team',
+          operation: 'task.create',
+          commandId: '44444444-4444-4444-8444-444444444444',
+          payloadHash: 'sha256:payload',
+        },
+      })
+    ).toThrow('Task creation command conflict: command id does not match task id');
+
+    expect(() =>
+      controller.taskBoard.createTask({
+        id: taskId,
+        subject: 'Wrong scope',
+        creationCommand: {
+          namespace: 'task-board',
+          scopeKey: 'another-team',
+          operation: 'task.create',
+          commandId: taskId,
+          payloadHash: 'sha256:payload',
+        },
+      })
+    ).toThrow('Task creation command conflict: scope does not match team');
+    expect(controller.taskBoard.listTasks()).toHaveLength(0);
+  });
+
   it('keeps request-changes and restart semantics behind taskBoard', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -2381,6 +2531,31 @@ controller.messages.sendMessage({
     expect(leadBriefing).toContain('Board anomalies:');
     expect(leadBriefing).toContain('unreadable_task (broken)');
     expect(leadBriefing).toContain('anomalies=1');
+  });
+
+  it('rejects payload and file task identity mismatches before an update can fork the row', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const task = controller.taskBoard.createTask({ subject: 'Stable identity' });
+    const taskPath = path.join(claudeDir, 'tasks', 'my-team', `${task.id}.json`);
+    const foreignTaskId = '11111111-1111-4111-8111-111111111111';
+    const persistedTask = readTaskFile(claudeDir, task.id);
+    persistedTask.id = foreignTaskId;
+    fs.writeFileSync(taskPath, JSON.stringify(persistedTask, null, 2), 'utf8');
+
+    expect(() =>
+      controller.taskBoard.updateTaskFields(task.id, { description: 'must not fork' })
+    ).toThrow(`Task id "${foreignTaskId}" does not match file name "${task.id}"`);
+    expect(fs.existsSync(path.join(claudeDir, 'tasks', 'my-team', `${foreignTaskId}.json`))).toBe(
+      false
+    );
+
+    const leadBriefing = await controller.taskBoard.leadBriefing();
+    expect(leadBriefing).toContain('Board anomalies:');
+    expect(leadBriefing).toContain(`unreadable_task (${foreignTaskId})`);
+    expect(leadBriefing).toContain(
+      `Task id "${foreignTaskId}" does not match file name "${task.id}"`
+    );
   });
 
   it('caps large member briefings and points agents to drill-down tools', async () => {

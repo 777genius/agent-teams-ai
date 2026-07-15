@@ -128,6 +128,10 @@ type RuntimeAgentTeamsController = Omit<
   taskBoard?: AgentTeamsController['taskBoard'];
 };
 
+type TaskBoardWithCreationReconciliation = AgentTeamsController['taskBoard'] & {
+  reconcileTaskCreation(input: Record<string, unknown>): unknown;
+};
+
 interface TeamNotificationContext {
   displayName: string;
   projectPath?: string;
@@ -146,6 +150,14 @@ interface InFlightTeamNotificationContext {
 
 function isControllerTaskNotFoundError(error: unknown, taskId: string): boolean {
   return error instanceof Error && error.message === `Task not found: ${taskId}`;
+}
+
+function hasTaskCreationReconciliation(
+  taskBoard: AgentTeamsController['taskBoard']
+): taskBoard is TaskBoardWithCreationReconciliation {
+  return (
+    typeof (taskBoard as { reconcileTaskCreation?: unknown }).reconcileTaskCreation === 'function'
+  );
 }
 
 function compareInboxMessagesNewestFirst(left: InboxMessage, right: InboxMessage): number {
@@ -2189,20 +2201,19 @@ export class TeamDataService {
   }
 
   async createTask(teamName: string, request: CreateTaskRequest): Promise<TeamTask> {
-    const taskBoard = this.getTaskBoard(teamName);
-    const blockedBy = request.blockedBy?.filter((id) => id.length > 0) ?? [];
-    const related = request.related?.filter((id) => id.length > 0) ?? [];
+    return (await this.createTaskWithOutcome(teamName, request)).task;
+  }
 
-    let projectPath: string | undefined;
-    try {
-      const config = await readConfigForUiSnapshot(this.configReader, teamName);
-      projectPath = config?.projectPath;
-    } catch {
-      /* best-effort */
-    }
+  private async createTaskWithOutcome(
+    teamName: string,
+    request: CreateTaskRequest
+  ): Promise<{ task: TeamTask; createdInAttempt: boolean }> {
+    const taskBoard = this.getTaskBoard(teamName);
+    const blockedBy = [...new Set(request.blockedBy?.filter((id) => id.length > 0) ?? [])].sort();
+    const related = [...new Set(request.related?.filter((id) => id.length > 0) ?? [])].sort();
 
     const shouldStart = Boolean(request.owner && request.startImmediately === true);
-    const taskInput: Record<string, unknown> = {
+    const commandPayload: Record<string, unknown> = {
       subject: request.subject,
       ...(request.description?.trim() ? { description: request.description.trim() } : {}),
       ...(request.descriptionTaskRefs?.length
@@ -2211,7 +2222,6 @@ export class TeamDataService {
       ...(request.owner ? { owner: request.owner } : {}),
       ...(blockedBy.length > 0 ? { blockedBy } : {}),
       ...(related.length > 0 ? { related } : {}),
-      ...(projectPath ? { projectPath } : {}),
       createdBy: 'user',
       ...(request.prompt?.trim() ? { prompt: request.prompt.trim() } : {}),
       ...(request.promptTaskRefs?.length ? { promptTaskRefs: request.promptTaskRefs } : {}),
@@ -2227,7 +2237,7 @@ export class TeamDataService {
       const commandResult = await this.taskBoardCommandFacade.createTask({
         teamName,
         identity: request.command,
-        payload: taskInput,
+        payload: commandPayload,
         destination: {
           findById: (taskId) => {
             try {
@@ -2239,13 +2249,29 @@ export class TeamDataService {
               throw error;
             }
           },
-          create: (input) => taskBoard.createTask(input) as TeamTask,
+          create: async (input) => {
+            const projectPath = await this.readTaskCreateProjectPath(teamName);
+            return taskBoard.createTask({
+              ...input,
+              ...(projectPath ? { projectPath } : {}),
+            }) as TeamTask;
+          },
+          ...(hasTaskCreationReconciliation(taskBoard)
+            ? {
+                reconcile: (input: Record<string, unknown>) =>
+                  taskBoard.reconcileTaskCreation(input) as TeamTask,
+              }
+            : {}),
         },
       });
       task = commandResult.task;
       createdInAttempt = commandResult.createdInAttempt;
     } else {
-      task = taskBoard.createTask(taskInput) as TeamTask;
+      const projectPath = await this.readTaskCreateProjectPath(teamName);
+      task = taskBoard.createTask({
+        ...commandPayload,
+        ...(projectPath ? { projectPath } : {}),
+      }) as TeamTask;
     }
     this.invalidateGlobalTaskProjectionCache();
 
@@ -2262,7 +2288,16 @@ export class TeamDataService {
       }
     }
 
-    return task;
+    return { task, createdInAttempt };
+  }
+
+  private async readTaskCreateProjectPath(teamName: string): Promise<string | undefined> {
+    try {
+      const config = await readConfigForUiSnapshot(this.configReader, teamName);
+      return config?.projectPath;
+    } catch {
+      return undefined;
+    }
   }
 
   async startTask(teamName: string, taskId: string): Promise<{ notifiedOwner: boolean }> {

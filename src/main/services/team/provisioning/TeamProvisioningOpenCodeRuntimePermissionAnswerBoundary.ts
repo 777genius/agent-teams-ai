@@ -51,8 +51,7 @@ export async function answerOpenCodeRuntimePermission(
   const cwd = requireRuntimeString(payload.cwd ?? payload.projectPath, 'cwd');
   const memberName = requireRuntimeString(payload.memberName, 'memberName');
   const requestId = normalizeOpenCodeRuntimePermissionRequestId(
-    requireRuntimeString(payload.providerRequestId ?? payload.requestId, 'requestId'),
-    runId
+    requireRuntimeString(payload.providerRequestId ?? payload.requestId, 'requestId')
   );
   const decision = normalizeRuntimePermissionAnswerDecision(payload.decision);
 
@@ -104,9 +103,18 @@ function normalizeRuntimePermissionAnswerDecision(value: unknown): RuntimePermis
   throw new Error('OpenCode runtime permission answer decision must be allow or reject');
 }
 
-function normalizeOpenCodeRuntimePermissionRequestId(value: string, runId: string): string {
-  const prefix = `opencode:${runId}:`;
-  const normalized = value.startsWith(prefix) ? value.slice(prefix.length) : value;
+function normalizeOpenCodeRuntimePermissionRequestId(value: string): string {
+  const prefix = 'opencode:';
+  let normalized = value.trim();
+
+  while (normalized.startsWith(prefix)) {
+    const runIdEnd = normalized.indexOf(':', prefix.length);
+    if (runIdEnd < 0 || !normalized.slice(prefix.length, runIdEnd).trim()) {
+      throw new Error('OpenCode runtime payload malformed requestId');
+    }
+    normalized = normalized.slice(runIdEnd + 1).trim();
+  }
+
   if (!normalized.trim()) {
     throw new Error('OpenCode runtime payload missing requestId');
   }

@@ -60,6 +60,71 @@ function createRuntimeControlApi(overrides: Partial<TeamRuntimeControlCompatibil
 }
 
 describe('HTTP team runtime-control validation', () => {
+  it('accepts omitted or valid heartbeat observedAt and rejects invalid provided values', async () => {
+    const recordOpenCodeRuntimeHeartbeat =
+      vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();
+    recordOpenCodeRuntimeHeartbeat.mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      teamName: 'demo-team',
+      runId: 'run-opencode',
+      state: 'recorded',
+      memberName: 'builder',
+      runtimeSessionId: 'session-1',
+      diagnostics: [],
+      observedAt: '2026-03-12T00:00:02.000Z',
+    });
+    const app = Fastify();
+    registerTeamRoutes(
+      app,
+      createHttpServices(createRuntimeControlApi({ recordOpenCodeRuntimeHeartbeat }))
+    );
+    await app.ready();
+
+    const heartbeat = {
+      runId: 'run-opencode',
+      memberName: 'builder',
+      runtimeSessionId: 'session-1',
+    };
+
+    try {
+      for (const observedAt of [undefined, '2026-03-12T00:00:02.000Z']) {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+          payload: {
+            ...heartbeat,
+            ...(observedAt === undefined ? {} : { observedAt }),
+          },
+        });
+
+        expect(response.statusCode).toBe(200);
+        expect(recordOpenCodeRuntimeHeartbeat).toHaveBeenLastCalledWith({
+          ...heartbeat,
+          ...(observedAt === undefined ? {} : { observedAt }),
+          teamName: 'demo-team',
+        });
+      }
+
+      recordOpenCodeRuntimeHeartbeat.mockClear();
+      for (const observedAt of ['not-a-date', 42]) {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+          payload: { ...heartbeat, observedAt },
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json()).toEqual({
+          error: 'OpenCode runtime payload invalid observedAt',
+        });
+      }
+      expect(recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
   it('maps invalid runtime delivery targets to 400', async () => {
     const deliverOpenCodeRuntimeMessage =
       vi.fn<(raw: unknown) => Promise<OpenCodeRuntimeControlAck>>();

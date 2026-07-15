@@ -19,6 +19,7 @@ import {
   stallJournalEntries,
   storeImports,
 } from './internalStorageSchema';
+import { parseJournalReplacePayload } from './internalStorageWorkerProtocol';
 import { handleMemberWorkSyncOp, MemberWorkSyncWorkerOps } from './memberWorkSyncWorkerOps';
 
 import type {
@@ -91,14 +92,14 @@ export class InternalStorageWorkerCore {
       case 'stallJournal.load':
         return this.loadStallJournalEntries((payload as { teamName: string }).teamName);
       case 'stallJournal.replace': {
-        const typed = payload as { teamName: string; entries: StallJournalEntryRecord[] };
+        const typed = parseJournalReplacePayload('stallJournal.replace', payload);
         this.replaceStallJournalEntries(typed.teamName, typed.entries);
         return null;
       }
       case 'commentJournal.load':
         return this.loadCommentJournalEntries((payload as { teamName: string }).teamName);
       case 'commentJournal.replace': {
-        const typed = payload as { teamName: string; entries: CommentJournalEntryRecord[] };
+        const typed = parseJournalReplacePayload('commentJournal.replace', payload);
         this.replaceCommentJournalEntries(typed.teamName, typed.entries);
         return null;
       }

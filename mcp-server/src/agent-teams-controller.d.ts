@@ -71,7 +71,9 @@ declare module 'agent-teams-controller' {
   }
 
   export interface ControllerTaskBoardTaskApi
-    extends ControllerTaskReadApi, ControllerTaskWriteApi {}
+    extends ControllerTaskReadApi, ControllerTaskWriteApi {
+    reconcileTaskCreation(flags: Record<string, unknown>): unknown;
+  }
 
   export interface ControllerTaskApi extends ControllerTaskBoardTaskApi {
     /** @deprecated Internal task lifecycle write. Use controller.taskBoard.createTask. */

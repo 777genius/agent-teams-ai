@@ -45,6 +45,32 @@ describe('team inbox persistence', () => {
     ]);
   });
 
+  it('marks rows read in inboxes larger than the provisioning scan limit', async () => {
+    const teamsRoot = await makeTeamsRoot();
+    const inboxDir = path.join(teamsRoot, 'team-a', 'inboxes');
+    const inboxPath = path.join(inboxDir, 'lead.json');
+    await mkdir(inboxDir, { recursive: true });
+    await writeFile(
+      inboxPath,
+      JSON.stringify([{ messageId: 'stable-1', read: false, text: 'x'.repeat(2 * 1024 * 1024) }])
+    );
+
+    await markTeamInboxMessagesReadWithDefaults({
+      teamName: 'team-a',
+      member: 'lead',
+      teamsBasePath: teamsRoot,
+      messages: [{ messageId: 'stable-1' }],
+    });
+
+    const [row] = JSON.parse(await readFile(inboxPath, 'utf8')) as {
+      messageId: string;
+      read: boolean;
+      text: string;
+    }[];
+    expect(row).toMatchObject({ messageId: 'stable-1', read: true });
+    expect(row?.text).toHaveLength(2 * 1024 * 1024);
+  });
+
   it('marks matching inbox rows read by stable and legacy message ids', async () => {
     const teamsRoot = await makeTeamsRoot();
     const inboxDir = path.join(teamsRoot, 'team-a', 'inboxes');

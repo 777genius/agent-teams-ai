@@ -109,7 +109,10 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     const generationAtStart =
       this.ports.runtimeSnapshotCache.getRuntimeSnapshotCacheGeneration(teamName);
     const existingRequest = this.agentRuntimeSnapshotInFlightByTeam.get(teamName);
-    if (existingRequest?.runIdAtStart === runId) {
+    if (
+      existingRequest?.runIdAtStart === runId &&
+      existingRequest.generationAtStart === generationAtStart
+    ) {
       return existingRequest.promise;
     }
 

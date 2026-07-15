@@ -44,6 +44,28 @@ describe('runtime projection command redaction', () => {
     }
   );
 
+  it('fails closed when a heredoc body imitates the end of the secret shell word', () => {
+    const sentinel = 'heredoc-body-secret-sentinel';
+    const command =
+      `node runtime --token "$(cat <<EOF\n)" ${sentinel}\nEOF\n)" ` + '--verbose --team-name demo';
+
+    const sanitized = sanitizeRuntimeProjectionProcessCommand(command);
+
+    expect(sanitized).toBe('node runtime --token [redacted]');
+    expect(sanitized).not.toContain(sentinel);
+  });
+
+  it('redacts a valid here-string value while preserving safe trailing arguments', () => {
+    const sentinel = 'here-string-secret-sentinel';
+    const command =
+      `node runtime --token "$(cat <<< "${sentinel}")" ` + '--verbose --team-name demo';
+
+    const sanitized = sanitizeRuntimeProjectionProcessCommand(command);
+
+    expect(sanitized).toBe('node runtime --token [redacted] --verbose --team-name demo');
+    expect(sanitized).not.toContain(sentinel);
+  });
+
   it('does not consume short or long option boundaries when a secret value is missing', () => {
     expect(sanitizeRuntimeProjectionProcessCommand('node runtime --token -v --safe ok')).toBe(
       'node runtime --token [redacted] -v --safe ok'

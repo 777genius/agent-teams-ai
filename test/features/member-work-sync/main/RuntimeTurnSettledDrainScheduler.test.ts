@@ -81,4 +81,39 @@ describe('RuntimeTurnSettledDrainScheduler', () => {
     });
     expect(drain).toHaveBeenCalledTimes(2);
   });
+
+  it('idempotently waits for the actual timed-out drain during disposal', async () => {
+    let release!: () => void;
+    const activeDrain = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const scheduler = new RuntimeTurnSettledDrainScheduler({
+      drain: async () => {
+        await activeDrain;
+        return { claimed: 0, enqueued: 0, unresolved: 0, ignored: 0, invalid: 0, failed: 0 };
+      },
+      drainTimeoutMs: 20,
+    });
+
+    const drain = scheduler.drainNow();
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(20);
+    await expect(drain).resolves.toBeNull();
+
+    let disposed = false;
+    const firstDispose = scheduler.dispose();
+    const secondDispose = scheduler.dispose();
+    void firstDispose.then(() => {
+      disposed = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(secondDispose).toBe(firstDispose);
+    expect(disposed).toBe(false);
+
+    release();
+    await firstDispose;
+    expect(disposed).toBe(true);
+    expect(scheduler.dispose()).toBe(firstDispose);
+  });
 });

@@ -138,4 +138,43 @@ describe('TeamProvisioningInboxDuplicateMerge', () => {
     expect(unlink).toHaveBeenCalledTimes(1);
     expect(unlink).toHaveBeenCalledWith(path.join(inboxDir, 'Alice-3.json'));
   });
+
+  it('keeps a duplicate containing malformed rows so they are not destroyed unmerged', async () => {
+    const inboxDir = '/fake/team/inboxes';
+    const reads = new Map<string, string>([
+      [
+        'Alice.json',
+        JSON.stringify([{ messageId: 'a', timestamp: '2026-01-01T00:00:00.000Z', text: 'old' }]),
+      ],
+      ['Alice-2.json', JSON.stringify(['malformed row that must not be discarded'])],
+      [
+        'Alice-3.json',
+        JSON.stringify([{ messageId: 'b', timestamp: '2026-01-03T00:00:00.000Z', text: 'new' }]),
+      ],
+    ]);
+    const unlink = vi.fn(async () => undefined);
+    const ports = createPorts({
+      readDir: vi.fn(async () => ['Alice.json', 'Alice-2.json', 'Alice-3.json']),
+      readRegularFileUtf8: vi.fn(async (filePath) => reads.get(path.basename(filePath)) ?? null),
+      unlink,
+    });
+
+    await mergeAndRemoveDuplicateInboxes({
+      inboxDir,
+      baseNames: new Set(['Alice']),
+      timeoutMs: 5_000,
+      maxBytes: 1_000_000,
+      ports,
+    });
+
+    expect(ports.writeFileUtf8).toHaveBeenCalledTimes(1);
+    const writeFileUtf8 = vi.mocked(ports.writeFileUtf8);
+    expect(JSON.parse(writeFileUtf8.mock.calls[0]?.[1] ?? '[]')).toEqual([
+      { messageId: 'b', timestamp: '2026-01-03T00:00:00.000Z', text: 'new' },
+      { messageId: 'a', timestamp: '2026-01-01T00:00:00.000Z', text: 'old' },
+    ]);
+    expect(unlink).toHaveBeenCalledTimes(1);
+    expect(unlink).toHaveBeenCalledWith(path.join(inboxDir, 'Alice-3.json'));
+    expect(unlink).not.toHaveBeenCalledWith(path.join(inboxDir, 'Alice-2.json'));
+  });
 });

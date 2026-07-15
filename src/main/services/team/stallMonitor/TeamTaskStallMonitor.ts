@@ -46,6 +46,8 @@ export class TeamTaskStallMonitor {
   private nudgeTimer: ReturnType<typeof setTimeout> | null = null;
   private scanInFlight = false;
   private started = false;
+  private readonly activeScanBodies = new Map<TeamTaskStallScanRun, Promise<void>>();
+  private stopPromise: Promise<void> | null = null;
   private readonly observationByTeam = new Map<string, TeamObservationState>();
   private readonly scanTimeoutMs: number;
 
@@ -64,6 +66,9 @@ export class TeamTaskStallMonitor {
   }
 
   start(): void {
+    if (this.stopPromise) {
+      return;
+    }
     if (!isTeamTaskStallScannerEnabled()) {
       logger.debug('Task stall monitor disabled by feature gate');
       return;
@@ -76,7 +81,11 @@ export class TeamTaskStallMonitor {
     this.scheduleNextScan(2_000);
   }
 
-  async stop(): Promise<void> {
+  stop(): Promise<void> {
+    if (this.stopPromise) {
+      return this.stopPromise;
+    }
+
     this.started = false;
     if (this.scanTimer) {
       clearTimeout(this.scanTimer);
@@ -86,11 +95,24 @@ export class TeamTaskStallMonitor {
       clearTimeout(this.nudgeTimer);
       this.nudgeTimer = null;
     }
-    await this.registry.stop();
+    for (const scanRun of this.activeScanBodies.keys()) {
+      scanRun.cancelled = true;
+    }
+
+    const registryStop = Promise.resolve().then(() => this.registry.stop());
+    this.stopPromise = Promise.allSettled([
+      registryStop,
+      Promise.allSettled([...this.activeScanBodies.values()]),
+    ]).then(([registryStopResult]) => {
+      if (registryStopResult.status === 'rejected') {
+        throw registryStopResult.reason;
+      }
+    });
+    return this.stopPromise;
   }
 
   noteTeamChange(event: TeamChangeEvent): void {
-    if (!isTeamTaskStallScannerEnabled()) {
+    if (this.stopPromise || !isTeamTaskStallScannerEnabled()) {
       return;
     }
     this.registry.noteTeamChange(event);
@@ -145,8 +167,14 @@ export class TeamTaskStallMonitor {
     }
     this.scanInFlight = true;
     const scanRun: TeamTaskStallScanRun = { cancelled: false };
+    const scanBody = this.runScanBody(scanRun);
+    this.activeScanBodies.set(scanRun, scanBody);
+    void scanBody.then(
+      () => this.activeScanBodies.delete(scanRun),
+      () => this.activeScanBodies.delete(scanRun)
+    );
     try {
-      await this.runScanWithTimeout(scanRun);
+      await this.runScanWithTimeout(scanRun, scanBody);
     } catch (error) {
       logger.warn(`Task stall monitor scan failed: ${String(error)}`);
     } finally {
@@ -156,11 +184,14 @@ export class TeamTaskStallMonitor {
     }
   }
 
-  private async runScanWithTimeout(scanRun: TeamTaskStallScanRun): Promise<void> {
+  private async runScanWithTimeout(
+    scanRun: TeamTaskStallScanRun,
+    scanBody: Promise<void>
+  ): Promise<void> {
     let timeout: ReturnType<typeof setTimeout> | null = null;
     try {
       await Promise.race([
-        this.runScanBody(scanRun),
+        scanBody,
         new Promise<never>((_, reject) => {
           timeout = setTimeout(() => {
             scanRun.cancelled = true;

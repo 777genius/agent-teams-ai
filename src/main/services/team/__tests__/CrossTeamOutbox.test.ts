@@ -69,6 +69,38 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     expect(onBeforeAppend).toHaveBeenCalledTimes(1);
   });
 
+  it('dedupes a runtime retry behind an out-of-order stale message', async () => {
+    const outbox = new CrossTeamOutbox();
+    const onBeforeAppend = vi.fn(async () => {});
+    const message = makeMessage();
+    const staleInterveningMessage = makeMessage({
+      messageId: 'runtime-message-stale',
+      conversationId: 'runtime-idempotency-stale',
+      text: 'Older message appended after the original delivery',
+      timestamp: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    });
+    const retry = makeMessage({
+      messageId: 'runtime-message-retry',
+      text: 'Retry payload changed after the original delivery',
+    });
+
+    for (const nextMessage of [message, staleInterveningMessage]) {
+      await expect(
+        outbox.appendIfNotRecent('source-team', nextMessage, onBeforeAppend, undefined, {
+          stableIdentity: true,
+        })
+      ).resolves.toEqual({ duplicate: null });
+    }
+
+    await expect(
+      outbox.appendIfNotRecent('source-team', retry, onBeforeAppend, undefined, {
+        stableIdentity: true,
+      })
+    ).resolves.toEqual({ duplicate: message });
+    await expect(outbox.read('source-team')).resolves.toEqual([message, staleInterveningMessage]);
+    expect(onBeforeAppend).toHaveBeenCalledTimes(2);
+  });
+
   it('dedupes body-identical messages when stable identity is not requested', async () => {
     const outbox = new CrossTeamOutbox();
     const onBeforeAppend = vi.fn(async () => {});

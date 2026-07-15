@@ -31,6 +31,50 @@ function createConnectionManager() {
 }
 
 describe('HTTP SSH routes', () => {
+  it('serializes disconnect behind an in-flight connection', async () => {
+    const app = Fastify();
+    const connectionManager = createConnectionManager();
+    let finishConnecting: (() => void) | undefined;
+    vi.mocked(connectionManager.connect).mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishConnecting = resolve;
+        })
+    );
+    const modeSwitchCallback = vi.fn<(mode: 'local' | 'ssh') => Promise<void>>();
+    registerSshRoutes(app, connectionManager, modeSwitchCallback);
+    await app.ready();
+
+    try {
+      const connectResponse = app.inject({
+        method: 'POST',
+        url: '/api/ssh/connect',
+        payload: {
+          host: 'example.test',
+          port: 22,
+          username: 'test',
+          authMethod: 'agent',
+        },
+      });
+      await vi.waitFor(() => expect(connectionManager.connect).toHaveBeenCalledOnce());
+
+      const disconnectResponse = app.inject({ method: 'POST', url: '/api/ssh/disconnect' });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(connectionManager.disconnect).not.toHaveBeenCalled();
+      expect(modeSwitchCallback).not.toHaveBeenCalled();
+
+      finishConnecting?.();
+      await Promise.all([connectResponse, disconnectResponse]);
+
+      expect(modeSwitchCallback).toHaveBeenNthCalledWith(1, 'ssh');
+      expect(connectionManager.disconnect).toHaveBeenCalledOnce();
+      expect(modeSwitchCallback).toHaveBeenNthCalledWith(2, 'local');
+    } finally {
+      await app.close();
+    }
+  });
+
   it('rolls back a connection when switching to SSH mode fails', async () => {
     const app = Fastify();
     const connectionManager = createConnectionManager();

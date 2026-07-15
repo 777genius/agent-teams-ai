@@ -1,24 +1,29 @@
-import Database from 'better-sqlite3-node';
+import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import {
   buildPendingReportIntentId,
   JsonMemberWorkSyncStore,
 } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 import { MemberWorkSyncSqliteImporter } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncSqliteImporter';
+import { snapshotToRecords } from '@features/member-work-sync/main/infrastructure/memberWorkSyncSqliteMappers';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import { SqliteMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/SqliteMemberWorkSyncStore';
+import Database from 'better-sqlite3-node';
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { InProcessGateway } from '../../internal-storage/helpers/InProcessGateway';
 
 import type {
+  MemberWorkSyncMetricEvent,
   MemberWorkSyncNudgePayload,
+  MemberWorkSyncOutboxItem,
+  MemberWorkSyncReportIntent,
   MemberWorkSyncReportRequest,
   MemberWorkSyncStatus,
 } from '@features/member-work-sync/contracts';
+import type { MemberWorkSyncStoreSnapshot } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 
 const T0 = '2026-07-07T10:00:00.000Z';
 const T1 = '2026-07-07T10:01:00.000Z';
@@ -84,12 +89,83 @@ function makeReportRequest(
   };
 }
 
+function makeMemberStatus(
+  memberName: string,
+  overrides: Partial<MemberWorkSyncStatus> = {}
+): MemberWorkSyncStatus {
+  const base = makeStatus();
+  return makeStatus({
+    memberName,
+    agenda: { ...base.agenda, memberName },
+    ...overrides,
+  });
+}
+
+function makeReportIntent(
+  id: string,
+  memberName: string,
+  reason = `reason:${id}`
+): MemberWorkSyncReportIntent {
+  return {
+    id,
+    teamName: 'team-a',
+    memberName,
+    request: makeReportRequest({ memberName }),
+    reason,
+    status: 'pending',
+    recordedAt: T0,
+  };
+}
+
+function makeOutboxItem(
+  id: string,
+  memberName: string,
+  payloadHash = `hash:${id}`
+): MemberWorkSyncOutboxItem {
+  return {
+    id,
+    teamName: 'team-a',
+    memberName,
+    agendaFingerprint: 'agenda:v1:abc',
+    payloadHash,
+    payload: makePayload({ to: memberName }),
+    status: 'pending',
+    attemptGeneration: 0,
+    createdAt: T0,
+    updatedAt: T0,
+  };
+}
+
+function makeMetricEvent(
+  id: string,
+  memberName: string,
+  actionableCount = 1
+): MemberWorkSyncMetricEvent {
+  return {
+    id,
+    teamName: 'team-a',
+    memberName,
+    kind: 'status_evaluated',
+    state: 'needs_sync',
+    agendaFingerprint: 'agenda:v1:abc',
+    recordedAt: T0,
+    actionableCount,
+  };
+}
+
+function makeImportSnapshot(
+  input: Omit<MemberWorkSyncStoreSnapshot, 'filesToArchive'> & { filesToArchive?: string[] }
+): MemberWorkSyncStoreSnapshot {
+  return { ...input, filesToArchive: input.filesToArchive ?? [] };
+}
+
 type StoreKind = 'json' | 'sqlite';
 
 interface Harness {
   store: JsonMemberWorkSyncStore | SqliteMemberWorkSyncStore;
   jsonStore: JsonMemberWorkSyncStore;
   core: InternalStorageWorkerCore | null;
+  gateway: InProcessGateway | null;
   root: string;
 }
 
@@ -101,13 +177,14 @@ describe('SqliteMemberWorkSyncStore', () => {
     const paths = new MemberWorkSyncStorePaths(root);
     const jsonStore = new JsonMemberWorkSyncStore(paths);
     let core: InternalStorageWorkerCore | null = null;
+    let gateway: InProcessGateway | null = null;
     let store: Harness['store'] = jsonStore;
     if (kind === 'sqlite') {
       core = new InternalStorageWorkerCore({
         databasePath: join(root, 'storage', 'app.db'),
         createDatabase: (file) => new Database(file),
       });
-      const gateway = new InProcessGateway(core);
+      gateway = new InProcessGateway(core);
       store = new SqliteMemberWorkSyncStore({
         gateway,
         importer: new MemberWorkSyncSqliteImporter({ gateway, jsonStore }),
@@ -122,7 +199,7 @@ describe('SqliteMemberWorkSyncStore', () => {
       }
       await rm(root, { recursive: true, force: true });
     });
-    return { store, jsonStore, core, root };
+    return { store, jsonStore, core, gateway, root };
   }
 
   afterEach(async () => {
@@ -433,6 +510,244 @@ describe('SqliteMemberWorkSyncStore', () => {
   });
 
   describe('legacy import', () => {
+    async function importSnapshot(
+      gateway: InProcessGateway,
+      snapshot: MemberWorkSyncStoreSnapshot
+    ): Promise<void> {
+      await new MemberWorkSyncSqliteImporter({
+        gateway,
+        jsonStore: { readSnapshotForImport: async () => snapshot },
+      }).ensureImported('team-a');
+    }
+
+    function requireGateway(gateway: InProcessGateway | null): InProcessGateway {
+      if (!gateway) {
+        throw new Error('expected sqlite gateway');
+      }
+      return gateway;
+    }
+
+    function twoMemberSnapshot(): MemberWorkSyncStoreSnapshot {
+      return makeImportSnapshot({
+        statuses: [makeMemberStatus('alice'), makeMemberStatus('bob')],
+        reportIntents: [makeReportIntent('report-a', 'alice'), makeReportIntent('report-b', 'bob')],
+        outboxItems: [makeOutboxItem('outbox-a', 'alice'), makeOutboxItem('outbox-b', 'bob')],
+        metricEvents: [makeMetricEvent('event-a', 'alice'), makeMetricEvent('event-b', 'bob')],
+      });
+    }
+
+    it('preserves canonical rows missing from an unchanged JSON subset', async () => {
+      const harness = await makeHarness('sqlite');
+      const gateway = requireGateway(harness.gateway);
+      const canonical = twoMemberSnapshot();
+      await gateway.importTeam('team-a', snapshotToRecords(canonical));
+
+      await importSnapshot(
+        gateway,
+        makeImportSnapshot({
+          statuses: [canonical.statuses[1]],
+          reportIntents: [canonical.reportIntents[1]],
+          outboxItems: [canonical.outboxItems[1]],
+          metricEvents: [canonical.metricEvents[1]],
+        })
+      );
+
+      const result = await gateway.listTeamSnapshot('team-a');
+      expect(result.statuses.map((row) => row.memberKey)).toEqual(['alice', 'bob']);
+      expect(result.reportIntents.map((row) => row.id)).toEqual(['report-a', 'report-b']);
+      expect(result.outboxItems.map((row) => row.id)).toEqual(['outbox-a', 'outbox-b']);
+      expect(result.metricEvents.map((row) => row.id)).toEqual(['event-a', 'event-b']);
+    });
+
+    it('lets changed JSON identities replace canonical rows without deleting missing identities', async () => {
+      const harness = await makeHarness('sqlite');
+      const gateway = requireGateway(harness.gateway);
+      await gateway.importTeam('team-a', snapshotToRecords(twoMemberSnapshot()));
+
+      await importSnapshot(
+        gateway,
+        makeImportSnapshot({
+          statuses: [makeMemberStatus('bob', { state: 'caught_up', evaluatedAt: T1 })],
+          reportIntents: [makeReportIntent('report-b', 'bob', 'changed-report')],
+          outboxItems: [makeOutboxItem('outbox-b', 'bob', 'changed-hash')],
+          metricEvents: [makeMetricEvent('event-b', 'bob', 42)],
+        })
+      );
+
+      const result = await gateway.listTeamSnapshot('team-a');
+      expect(result.statuses).toHaveLength(2);
+      expect(result.statuses.find((row) => row.memberKey === 'bob')).toMatchObject({
+        state: 'caught_up',
+        evaluatedAt: T1,
+      });
+      expect(result.reportIntents).toHaveLength(2);
+      expect(result.reportIntents.find((row) => row.id === 'report-b')?.reason).toBe(
+        'changed-report'
+      );
+      expect(result.outboxItems).toHaveLength(2);
+      expect(result.outboxItems.find((row) => row.id === 'outbox-b')?.payloadHash).toBe(
+        'changed-hash'
+      );
+      expect(result.metricEvents).toHaveLength(2);
+      expect(
+        JSON.parse(result.metricEvents.find((row) => row.id === 'event-b')?.eventJson ?? '{}')
+      ).toMatchObject({ actionableCount: 42 });
+    });
+
+    it('keeps missing rows and adds new rows when changed plus new input has the old count', async () => {
+      const harness = await makeHarness('sqlite');
+      const gateway = requireGateway(harness.gateway);
+      await gateway.importTeam('team-a', snapshotToRecords(twoMemberSnapshot()));
+
+      await importSnapshot(
+        gateway,
+        makeImportSnapshot({
+          statuses: [
+            makeMemberStatus('bob', { state: 'caught_up', evaluatedAt: T1 }),
+            makeMemberStatus('carol'),
+          ],
+          reportIntents: [
+            makeReportIntent('report-b', 'bob', 'changed-report'),
+            makeReportIntent('report-c', 'carol'),
+          ],
+          outboxItems: [
+            makeOutboxItem('outbox-b', 'bob', 'changed-hash'),
+            makeOutboxItem('outbox-c', 'carol'),
+          ],
+          metricEvents: [
+            makeMetricEvent('event-b', 'bob', 42),
+            makeMetricEvent('event-c', 'carol'),
+          ],
+        })
+      );
+
+      const result = await gateway.listTeamSnapshot('team-a');
+      expect(result.statuses.map((row) => row.memberKey)).toEqual(['alice', 'bob', 'carol']);
+      expect(result.reportIntents.map((row) => row.id)).toEqual([
+        'report-a',
+        'report-b',
+        'report-c',
+      ]);
+      expect(result.outboxItems.map((row) => row.id)).toEqual(['outbox-a', 'outbox-b', 'outbox-c']);
+      expect(result.metricEvents.map((row) => row.id)).toEqual(['event-a', 'event-b', 'event-c']);
+    });
+
+    it('sorts merged identities and deterministically lets the last duplicate win', async () => {
+      const harness = await makeHarness('sqlite');
+      const gateway = requireGateway(harness.gateway);
+
+      await importSnapshot(
+        gateway,
+        makeImportSnapshot({
+          statuses: [
+            makeMemberStatus('zed'),
+            makeMemberStatus('Bob'),
+            makeMemberStatus('alpha'),
+            makeMemberStatus('bob', { state: 'caught_up', evaluatedAt: T2 }),
+          ],
+          reportIntents: [
+            makeReportIntent('z', 'zed'),
+            makeReportIntent('duplicate', 'Bob', 'first'),
+            makeReportIntent('a', 'alpha'),
+            makeReportIntent('duplicate', 'bob', 'last'),
+          ],
+          outboxItems: [
+            makeOutboxItem('z', 'zed'),
+            makeOutboxItem('duplicate', 'Bob', 'first'),
+            makeOutboxItem('a', 'alpha'),
+            makeOutboxItem('duplicate', 'bob', 'last'),
+          ],
+          metricEvents: [
+            makeMetricEvent('z', 'zed'),
+            makeMetricEvent('duplicate', 'Bob', 1),
+            makeMetricEvent('a', 'alpha'),
+            makeMetricEvent('duplicate', 'bob', 99),
+          ],
+        })
+      );
+
+      const result = await gateway.listTeamSnapshot('team-a');
+      expect(result.statuses.map((row) => row.memberKey)).toEqual(['alpha', 'bob', 'zed']);
+      expect(result.statuses.find((row) => row.memberKey === 'bob')).toMatchObject({
+        memberName: 'bob',
+        state: 'caught_up',
+        evaluatedAt: T2,
+      });
+      expect(result.reportIntents.map((row) => row.id)).toEqual(['a', 'duplicate', 'z']);
+      expect(result.reportIntents.find((row) => row.id === 'duplicate')?.reason).toBe('last');
+      expect(result.outboxItems.map((row) => row.id)).toEqual(['a', 'duplicate', 'z']);
+      expect(result.outboxItems.find((row) => row.id === 'duplicate')?.payloadHash).toBe('last');
+      expect(result.metricEvents.map((row) => row.id)).toEqual(['a', 'duplicate', 'z']);
+      expect(
+        JSON.parse(result.metricEvents.find((row) => row.id === 'duplicate')?.eventJson ?? '{}')
+      ).toMatchObject({ memberName: 'bob', actionableCount: 99 });
+    });
+
+    it('retries a partial archive from the surviving JSON subset without deleting imported rows', async () => {
+      const harness = await makeHarness('sqlite');
+      const gateway = requireGateway(harness.gateway);
+      const archivedFirst = join(harness.root, 'archive-first.json');
+      const blockedArchive = join(harness.root, 'archive-blocked.json');
+      await writeFile(archivedFirst, '{}');
+      await writeFile(blockedArchive, '{}');
+      await Promise.all(
+        Array.from({ length: 100 }, (_, index) => {
+          const suffix = index === 0 ? '.pre-sqlite' : `.pre-sqlite-${index + 1}`;
+          return writeFile(`${blockedArchive}${suffix}`, '{}');
+        })
+      );
+
+      const fullSnapshot = {
+        ...twoMemberSnapshot(),
+        filesToArchive: [archivedFirst, blockedArchive],
+      };
+      await expect(importSnapshot(gateway, fullSnapshot)).rejects.toThrow('No free archive slot');
+      await expect(readFile(archivedFirst, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(await readFile(`${archivedFirst}.pre-sqlite`, 'utf8')).toBe('{}');
+
+      await importSnapshot(
+        gateway,
+        makeImportSnapshot({
+          statuses: [
+            makeMemberStatus('bob', { state: 'caught_up', evaluatedAt: T1 }),
+            makeMemberStatus('carol'),
+          ],
+          reportIntents: [
+            makeReportIntent('report-b', 'bob', 'retry-change'),
+            makeReportIntent('report-c', 'carol'),
+          ],
+          outboxItems: [
+            makeOutboxItem('outbox-b', 'bob', 'retry-change'),
+            makeOutboxItem('outbox-c', 'carol'),
+          ],
+          metricEvents: [
+            makeMetricEvent('event-b', 'bob', 77),
+            makeMetricEvent('event-c', 'carol'),
+          ],
+        })
+      );
+
+      const result = await gateway.listTeamSnapshot('team-a');
+      expect(result.statuses.map((row) => row.memberKey)).toEqual(['alice', 'bob', 'carol']);
+      expect(result.reportIntents.map((row) => row.id)).toEqual([
+        'report-a',
+        'report-b',
+        'report-c',
+      ]);
+      expect(result.outboxItems.map((row) => row.id)).toEqual(['outbox-a', 'outbox-b', 'outbox-c']);
+      expect(result.metricEvents.map((row) => row.id)).toEqual(['event-a', 'event-b', 'event-c']);
+      expect(result.statuses.find((row) => row.memberKey === 'bob')?.state).toBe('caught_up');
+      expect(result.reportIntents.find((row) => row.id === 'report-b')?.reason).toBe(
+        'retry-change'
+      );
+      expect(result.outboxItems.find((row) => row.id === 'outbox-b')?.payloadHash).toBe(
+        'retry-change'
+      );
+      expect(
+        JSON.parse(result.metricEvents.find((row) => row.id === 'event-b')?.eventJson ?? '{}')
+      ).toMatchObject({ actionableCount: 77 });
+    });
+
     it('imports JSON state on first access, verifies it and archives every file', async () => {
       const { store, jsonStore, root } = await makeHarness('sqlite');
 

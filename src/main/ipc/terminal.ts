@@ -130,6 +130,14 @@ async function handleSpawn(
   options?: PtySpawnOptions
 ): Promise<IpcResult<string>> {
   try {
+    if (
+      (options?.cols !== undefined && !isValidTerminalDimension(options.cols)) ||
+      (options?.rows !== undefined && !isValidTerminalDimension(options.rows))
+    ) {
+      logger.warn('terminal:spawn rejected invalid dimensions');
+      return { success: false, error: 'Invalid terminal dimensions' };
+    }
+
     const id = await service.spawn(options);
     return { success: true, data: id };
   } catch (error) {

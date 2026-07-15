@@ -306,15 +306,7 @@ function buildAskUserQuestionUpdatedInput(
   toolInput: Record<string, unknown>,
   message: string
 ): Record<string, unknown> {
-  try {
-    const answers = JSON.parse(message) as Record<string, string>;
-    return { ...toolInput, answers };
-  } catch {
-    const questions = (toolInput.questions as { question?: string }[]) ?? [];
-    const answers: Record<string, string> = {};
-    if (questions[0]?.question) answers[questions[0].question] = message;
-    return { ...toolInput, answers };
-  }
+  return { ...toolInput, answers: parseAskUserQuestionAnswers(message, toolInput) };
 }
 
 function buildControlResponsePayload(

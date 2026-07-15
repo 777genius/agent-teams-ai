@@ -94,7 +94,7 @@ function findRecentDuplicate(
     const entry = list[i];
     const ts = Date.parse(entry.timestamp);
     if (!Number.isFinite(ts) || ts < cutoff) {
-      break;
+      continue;
     }
     if (isDuplicateCrossTeamMessage(entry, message, dedupeKey, options)) {
       return entry;

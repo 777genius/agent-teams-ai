@@ -84,7 +84,6 @@ describe('RuntimeDeliveryService', () => {
     expect(destination.messages).toHaveLength(1);
   });
 
-
   it('keeps committed delivery successful when change event emission fails', async () => {
     vi.spyOn(emitter, 'emit').mockImplementation(() => {
       throw new Error('emitter unavailable after commit');
@@ -288,7 +287,102 @@ describe('RuntimeDeliveryService', () => {
     });
   });
 
-  it('scopes idempotency records to the current run while preserving same-run retry dedupe', async () => {
+  it.each<{
+    name: string;
+    kind: RuntimeDeliveryDestinationRef['kind'];
+    to: RuntimeDeliveryEnvelope['to'];
+  }>([
+    {
+      name: 'member inbox',
+      kind: 'member_inbox',
+      to: { memberName: 'Reviewer' },
+    },
+    {
+      name: 'user sent messages',
+      kind: 'user_sent_messages',
+      to: 'user',
+    },
+  ])(
+    'recovers a $name write across a process relaunch before markCommitted',
+    async ({ kind, to }) => {
+      destination = new FakeDestinationPort(kind);
+      const firstRunMessage = envelope({ idempotencyKey: 'shared-delivery', to });
+      const firstRunDestination = resolveRuntimeDeliveryDestination(firstRunMessage);
+      const firstRunMessageId = buildRuntimeDestinationMessageId(firstRunMessage);
+      await journal.begin({
+        idempotencyKey: firstRunMessage.idempotencyKey,
+        payloadHash: hashRuntimeDeliveryEnvelope(firstRunMessage),
+        runId: firstRunMessage.runId,
+        teamName: firstRunMessage.teamName,
+        fromMemberName: firstRunMessage.fromMemberName,
+        providerId: firstRunMessage.providerId,
+        runtimeSessionId: firstRunMessage.runtimeSessionId,
+        destination: firstRunDestination,
+        destinationMessageId: firstRunMessageId,
+        now: now.toISOString(),
+      });
+      if (firstRunDestination.kind === 'cross_team_outbox') {
+        throw new Error('Expected a local runtime delivery destination');
+      }
+      destination.messages.set(
+        firstRunMessageId,
+        firstRunDestination.kind === 'user_sent_messages'
+          ? {
+              kind: 'user_sent_messages',
+              teamName: firstRunDestination.teamName,
+              messageId: firstRunMessageId,
+            }
+          : {
+              kind: 'member_inbox',
+              teamName: firstRunDestination.teamName,
+              memberName: firstRunDestination.memberName,
+              messageId: firstRunMessageId,
+            }
+      );
+
+      journal = createRuntimeDeliveryJournalStore({
+        filePath: path.join(tempDir, 'delivery-journal.json'),
+        clock: () => now,
+      });
+      runState.currentRunId = 'run-2';
+      const secondRunMessage = envelope({
+        idempotencyKey: 'shared-delivery',
+        runId: 'run-2',
+        runtimeSessionId: 'session-2',
+        to,
+      });
+      const service = createService();
+
+      await expect(service.deliver(secondRunMessage)).resolves.toMatchObject({
+        ok: true,
+        delivered: false,
+        reason: 'duplicate_destination_found',
+        location: expect.objectContaining({ messageId: firstRunMessageId }),
+      });
+      await expect(
+        service.deliver({ ...secondRunMessage, text: 'conflicting same-run payload' })
+      ).resolves.toMatchObject({
+        ok: false,
+        delivered: false,
+        reason: 'idempotency_conflict',
+      });
+
+      expect(destination.writeCalls).toBe(0);
+      expect(destination.messages).toHaveLength(1);
+      const sharedRecords = (await journal.list()).filter(
+        (record) => record.idempotencyKey === 'shared-delivery'
+      );
+      expect(sharedRecords).toMatchObject([
+        { runId: 'run-1', status: 'committed' },
+        { runId: 'run-2', status: 'committed' },
+      ]);
+      expect(new Set(sharedRecords.map((record) => record.destinationMessageId))).toEqual(
+        new Set([firstRunMessageId])
+      );
+    }
+  );
+
+  it('allows a committed key to identify a legitimate new-run message', async () => {
     const service = createService();
 
     await expect(
@@ -303,6 +397,9 @@ describe('RuntimeDeliveryService', () => {
     const secondRunMessage = envelope({
       idempotencyKey: 'shared-delivery',
       runId: 'run-2',
+      runtimeSessionId: 'session-2',
+      text: 'A legitimate new message in the new run',
+      createdAt: '2026-04-21T12:01:00.000Z',
     });
     await expect(service.deliver(secondRunMessage)).resolves.toMatchObject({
       ok: true,
@@ -527,6 +624,9 @@ describe('RuntimeDeliveryService', () => {
         messageId: deliveredMessageId,
       },
     });
+    expect(crossTeamSender).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: 'delivery-1' })
+    );
     expect(sentMessages).toEqual([
       expect.objectContaining({
         from: 'Builder',

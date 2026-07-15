@@ -247,11 +247,20 @@ describe('HTTP team route parsers', () => {
       runId: 'run-1',
       teamName: 'demo-team',
     });
-    expect(withRuntimeTeamName('demo-team', null)).toEqual({ teamName: 'demo-team' });
 
     expectBadRequest(
       () => withRuntimeTeamName('demo-team', { teamName: 'other-team' }),
       'runtime body teamName must match route teamName'
     );
   });
+
+  it.each([undefined, null, [], 'runtime payload'])(
+    'rejects malformed runtime callback body %#',
+    (body) => {
+      expectBadRequest(
+        () => withRuntimeTeamName('demo-team', body),
+        'runtime body must be an object'
+      );
+    }
+  );
 });

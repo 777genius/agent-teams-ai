@@ -103,8 +103,8 @@ export function listPersistedTeamNames(teamsBasePath: string): string[] {
     return fs
       .readdirSync(teamsBasePath, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
-      .map((entry) => entry.name.trim())
-      .filter((name) => name.length > 0);
+      .map((entry) => entry.name)
+      .filter((name) => name.trim().length > 0);
   } catch {
     return [];
   }

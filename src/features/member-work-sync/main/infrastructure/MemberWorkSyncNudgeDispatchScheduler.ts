@@ -29,6 +29,7 @@ export class MemberWorkSyncNudgeDispatchScheduler {
   private running: Promise<void> | null = null;
   private timedOutWork: Promise<unknown> | null = null;
   private stopped = false;
+  private disposePromise: Promise<void> | null = null;
 
   constructor(private readonly deps: MemberWorkSyncNudgeDispatchSchedulerDeps) {
     this.intervalMs = Math.max(10_000, deps.intervalMs ?? DEFAULT_NUDGE_DISPATCH_INTERVAL_MS);
@@ -68,15 +69,24 @@ export class MemberWorkSyncNudgeDispatchScheduler {
     }
   }
 
-  async dispose(): Promise<void> {
+  dispose(): Promise<void> {
+    if (this.disposePromise) {
+      return this.disposePromise;
+    }
+
     this.stopped = true;
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
     }
-    if (this.running) {
-      await this.running.catch(() => undefined);
-    }
+
+    this.disposePromise = this.drainForDisposal();
+    return this.disposePromise;
+  }
+
+  private async drainForDisposal(): Promise<void> {
+    await this.running?.catch(() => undefined);
+    await this.timedOutWork?.catch(() => undefined);
   }
 
   private schedule(delayMs: number): void {

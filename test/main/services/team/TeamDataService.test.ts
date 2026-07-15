@@ -1743,12 +1743,14 @@ describe('TeamDataService', () => {
       status: 'pending' as const,
     };
     const commandFacade = {
-      createTask: vi.fn(async () => ({
+      createTask: vi.fn(async (_command: unknown) => ({
         task: durableTask,
         outcome: 'executed',
         createdInAttempt: true,
       })),
     };
+    let supportsReconciliation = true;
+    const reconcileTaskCreation = vi.fn();
     const service = new TeamDataService(
       {
         getConfig: vi.fn(async () => ({ name: 'My team', members: [] })),
@@ -1767,6 +1769,7 @@ describe('TeamDataService', () => {
           taskBoard: {
             getTask: vi.fn(),
             createTask: directCreate,
+            reconcileTaskCreation: supportsReconciliation ? reconcileTaskCreation : undefined,
           },
         }) as never
     );
@@ -1787,6 +1790,29 @@ describe('TeamDataService', () => {
         destination: expect.objectContaining({
           findById: expect.any(Function),
           create: expect.any(Function),
+          reconcile: expect.any(Function),
+        }),
+      })
+    );
+    expect(directCreate).not.toHaveBeenCalled();
+
+    supportsReconciliation = false;
+    const fallbackCommand = {
+      commandId: '22222222-2222-4222-8222-222222222222',
+      idempotencyKey: 'create-task-intent-2',
+    };
+    await expect(
+      service.createTask('my-team', {
+        subject: 'Durable fallback task',
+        command: fallbackCommand,
+      })
+    ).resolves.toEqual(durableTask);
+    expect(commandFacade.createTask).toHaveBeenCalledTimes(2);
+    expect(commandFacade.createTask.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        identity: fallbackCommand,
+        destination: expect.not.objectContaining({
+          reconcile: expect.anything(),
         }),
       })
     );
@@ -1797,12 +1823,94 @@ describe('TeamDataService', () => {
       service.createTask('my-team', {
         subject: 'Must not bypass durability',
         command: {
-          commandId: '22222222-2222-4222-8222-222222222222',
-          idempotencyKey: 'create-task-intent-2',
+          commandId: '33333333-3333-4333-8333-333333333333',
+          idempotencyKey: 'create-task-intent-3',
         },
       })
     ).rejects.toThrow('Durable task-board commands are unavailable');
     expect(directCreate).not.toHaveBeenCalled();
+  });
+
+  it('keeps derived projectPath outside the normalized durable command payload', async () => {
+    const directCreate = vi.fn((input: Record<string, unknown>) => ({
+      ...input,
+      status: 'pending' as const,
+    }));
+    const commandFacade = {
+      createTask: vi.fn(
+        async (command: {
+          identity: { commandId: string };
+          payload: Record<string, unknown>;
+          destination: { create(input: Record<string, unknown>): Promise<TeamTask> | TeamTask };
+        }) => ({
+          task: await command.destination.create({
+            ...command.payload,
+            id: command.identity.commandId,
+            creationCommand: {
+              namespace: 'task-board',
+              scopeKey: 'my-team',
+              operation: 'task.create',
+              commandId: command.identity.commandId,
+              payloadHash: 'sha256:test',
+            },
+          }),
+          outcome: 'executed',
+          createdInAttempt: true,
+        })
+      ),
+    };
+    const service = new TeamDataService(
+      {
+        getConfig: vi.fn(() =>
+          Promise.resolve({
+            name: 'My team',
+            members: [],
+            projectPath: '/projects/current',
+          })
+        ),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      null,
+      {} as never,
+      {} as never,
+      () =>
+        ({
+          taskBoard: {
+            getTask: vi.fn(),
+            createTask: directCreate,
+            reconcileTaskCreation: vi.fn(),
+          },
+        }) as never
+    );
+    service.setTaskBoardCommandFacade(commandFacade as never);
+
+    await service.createTask('my-team', {
+      subject: 'Stable intent',
+      blockedBy: ['task-b', 'task-a', 'task-b'],
+      related: ['task-d', 'task-c', 'task-d'],
+      command: {
+        commandId: '44444444-4444-4444-8444-444444444444',
+        idempotencyKey: 'stable-intent',
+      },
+    });
+
+    expect(commandFacade.createTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          blockedBy: ['task-a', 'task-b'],
+          related: ['task-c', 'task-d'],
+        }),
+      })
+    );
+    expect(commandFacade.createTask.mock.calls[0]?.[0].payload).not.toHaveProperty('projectPath');
+    expect(directCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ projectPath: '/projects/current' })
+    );
   });
 
   it('returns lightweight notification context from config without hydrating team data', async () => {

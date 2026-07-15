@@ -10,7 +10,7 @@ import {
 } from '@renderer/store/slices/teamSlice';
 import { useShallow } from 'zustand/react/shallow';
 
-import type { TaskRef } from '@shared/types';
+import type { CreateTaskRequest } from '@shared/types';
 
 interface CreateTaskDialogState {
   open: boolean;
@@ -55,54 +55,33 @@ export function useGraphCreateTaskDialog(teamName: string): UseGraphCreateTaskDi
   }, []);
 
   const handleCreateTask = useCallback(
-    (
-      subject: string,
-      description: string,
-      owner?: string,
-      blockedBy?: string[],
-      related?: string[],
-      prompt?: string,
-      startImmediately?: boolean,
-      descriptionTaskRefs?: TaskRef[],
-      promptTaskRefs?: TaskRef[]
-    ): void => {
+    async (request: CreateTaskRequest): Promise<void> => {
+      const { owner, prompt, startImmediately, subject } = request;
       setSubmitting(true);
-      void (async () => {
-        try {
-          await createTeamTask(teamName, {
-            subject,
-            description: description || undefined,
-            owner,
-            blockedBy,
-            related,
-            prompt,
-            descriptionTaskRefs,
-            promptTaskRefs,
-            startImmediately,
-          });
+      try {
+        await createTeamTask(teamName, request);
 
-          if (
-            prompt &&
-            owner &&
-            teamData?.isAlive &&
-            !isTeamProvisioning &&
-            startImmediately !== false
-          ) {
-            const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
-            try {
-              await api.teams.processSend(teamName, msg);
-            } catch {
-              // best-effort only
-            }
+        if (
+          prompt &&
+          owner &&
+          teamData?.isAlive &&
+          !isTeamProvisioning &&
+          startImmediately !== false
+        ) {
+          const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
+          try {
+            await api.teams.processSend(teamName, msg);
+          } catch {
+            // best-effort only
           }
-
-          closeCreateTaskDialog();
-        } catch {
-          // store already exposes the error
-        } finally {
-          setSubmitting(false);
         }
-      })();
+
+        closeCreateTaskDialog();
+      } catch {
+        // store already exposes the error
+      } finally {
+        setSubmitting(false);
+      }
     },
     [closeCreateTaskDialog, createTeamTask, isTeamProvisioning, teamData?.isAlive, teamName]
   );

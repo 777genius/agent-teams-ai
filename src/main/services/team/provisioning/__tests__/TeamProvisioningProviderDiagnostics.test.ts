@@ -193,6 +193,35 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
     expect(spawnCli).not.toHaveBeenCalled();
   });
 
+  it('normalizes unrelated errors that share the cancellation message', async () => {
+    const cancellationMessage = 'agent-teams MCP preflight cancelled by app shutdown';
+    const ports = createFakePorts({
+      readFileUtf8: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          mcpServers: {
+            'agent-teams': { command: 'node', args: ['server.js'] },
+          },
+        })
+      ),
+      makeTempDir: vi.fn().mockRejectedValue(new Error(cancellationMessage)),
+    });
+
+    await expect(
+      validateAgentTeamsMcpRuntime({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        mcpConfigPath: '/tmp/mcp.json',
+        options: { isCancelled: () => false },
+        ports,
+      })
+    ).rejects.toThrow(
+      new RegExp(
+        `^agent-teams MCP preflight failed before team launch\\. Details: Error: ${cancellationMessage}$`
+      )
+    );
+  });
+
   it('honors cancellation after launch-spec and fixture async boundaries', async () => {
     let cancelled = false;
     const launchSpecMakeTempDir = vi.fn<TeamProvisioningProviderDiagnosticsPorts['makeTempDir']>();

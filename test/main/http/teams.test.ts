@@ -1013,11 +1013,50 @@ describe('HTTP team runtime routes', () => {
     }
   });
 
-  it('rejects heartbeats without a stable observed-at identifier before delegation', async () => {
+  it('accepts heartbeats without observedAt for service-side normalization', async () => {
+    const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
+    const ack: OpenCodeRuntimeControlAck = {
+      ok: true,
+      providerId: 'opencode',
+      teamName: 'demo-team',
+      runId: 'run-opencode',
+      state: 'recorded',
+      memberName: 'builder',
+      runtimeSessionId: 'session-1',
+      diagnostics: [],
+      observedAt: '2026-03-12T00:00:02.000Z',
+    };
+    recordOpenCodeRuntimeHeartbeat.mockResolvedValueOnce(ack);
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+        payload: {
+          runId: 'run-opencode',
+          memberName: 'builder',
+          runtimeSessionId: 'session-1',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual(ack);
+      expect(recordOpenCodeRuntimeHeartbeat).toHaveBeenCalledWith({
+        teamName: 'demo-team',
+        runId: 'run-opencode',
+        memberName: 'builder',
+        runtimeSessionId: 'session-1',
+      });
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('rejects provided invalid or non-string heartbeat observedAt before delegation', async () => {
     const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
 
     try {
-      for (const observedAt of [undefined, 'not-a-date']) {
+      for (const observedAt of ['not-a-date', 42]) {
         const response = await app.inject({
           method: 'POST',
           url: '/api/teams/demo-team/opencode/runtime/heartbeat',
@@ -1025,16 +1064,13 @@ describe('HTTP team runtime routes', () => {
             runId: 'run-opencode',
             memberName: 'builder',
             runtimeSessionId: 'session-1',
-            ...(observedAt === undefined ? {} : { observedAt }),
+            observedAt,
           },
         });
 
         expect(response.statusCode).toBe(400);
         expect(response.json()).toEqual({
-          error:
-            observedAt === undefined
-              ? 'OpenCode runtime payload missing observedAt'
-              : 'OpenCode runtime payload invalid observedAt',
+          error: 'OpenCode runtime payload invalid observedAt',
         });
       }
       expect(recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
@@ -1112,6 +1148,29 @@ describe('HTTP team runtime routes', () => {
       expect(response.json()).toEqual({
         error: 'runtime body teamName must match route teamName',
       });
+      expect(recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('rejects malformed OpenCode runtime callback bodies before delegation', async () => {
+    const { app, recordOpenCodeRuntimeHeartbeat } = await createApp();
+
+    try {
+      for (const payload of ['null', '[]']) {
+        const response = await app.inject({
+          method: 'POST',
+          url: '/api/teams/demo-team/opencode/runtime/heartbeat',
+          headers: { 'content-type': 'application/json' },
+          payload,
+        });
+
+        expect(response.statusCode).toBe(400);
+        expect(response.json()).toEqual({
+          error: 'runtime body must be an object',
+        });
+      }
       expect(recordOpenCodeRuntimeHeartbeat).not.toHaveBeenCalled();
     } finally {
       await app.close();

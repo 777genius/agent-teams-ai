@@ -111,14 +111,24 @@ describe('TeamProvisioningPersistedTeamConfigAccess', () => {
     expect(invalidCache.has('invalid')).toBe(false);
   });
 
-  it('lists only persisted team directory names after trimming', () => {
+  it('preserves persisted directory names so listed team configs remain readable', () => {
     const teamsBasePath = createTeamsBasePath();
-    fs.mkdirSync(path.join(teamsBasePath, ' Team A '));
+    writeTeamConfig(teamsBasePath, ' Team A ', {
+      members: [{ name: 'builder', runtimePid: 123 }],
+    });
     fs.mkdirSync(path.join(teamsBasePath, 'team-b'));
     fs.mkdirSync(path.join(teamsBasePath, '   '));
     fs.writeFileSync(path.join(teamsBasePath, 'not-a-team'), '', 'utf8');
 
-    expect(listPersistedTeamNames(teamsBasePath).sort()).toEqual(['Team A', 'team-b']);
+    const teamNames = listPersistedTeamNames(teamsBasePath).sort();
+
+    expect(teamNames).toEqual([' Team A ', 'team-b']);
+    expect(
+      readPersistedRuntimeMembers(teamNames[0], {
+        teamsBasePath,
+        cache: new Map(),
+      })
+    ).toEqual([{ name: 'builder', runtimePid: 123 }]);
     expect(listPersistedTeamNames(path.join(teamsBasePath, 'missing'))).toEqual([]);
   });
 });

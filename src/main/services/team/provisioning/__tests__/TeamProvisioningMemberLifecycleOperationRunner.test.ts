@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { getMemberLifecycleOperationKey } from '../TeamProvisioningMemberLifecycleKeys';
+import {
+  getMemberLifecycleOperationKey,
+  isMemberLifecycleOperationInProgressError,
+} from '../TeamProvisioningMemberLifecycleKeys';
 import {
   createTeamProvisioningMemberLifecycleOperationRunner,
   type MemberLifecycleOperation,
@@ -126,5 +129,29 @@ describe('TeamProvisioningMemberLifecycleOperationRunner', () => {
       startedAtMs: 1,
     });
     expect(harness.invalidatedTeams).toEqual([]);
+  });
+
+  it('classifies only runner-generated overlap errors as lifecycle contention', async () => {
+    const harness = createRunnerHarness([
+      [
+        getMemberLifecycleOperationKey('team-a', 'Dev'),
+        {
+          kind: 'manual_restart',
+          token: Symbol('existing'),
+          startedAtMs: 1,
+        },
+      ],
+    ]);
+
+    const overlapError = await harness.runner
+      .runMemberLifecycleOperation('team-a', 'Dev', 'primary_member_updated', async () => undefined)
+      .catch((error: unknown) => error);
+
+    expect(isMemberLifecycleOperationInProgressError(overlapError)).toBe(true);
+    expect(
+      isMemberLifecycleOperationInProgressError(
+        new Error('Lifecycle operation for teammate "Dev" is already in progress')
+      )
+    ).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
-import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
+import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
@@ -41,6 +41,14 @@ type TeamHttpRuntimeControlApi = TeamHttpHandlerApis['runtimeControl'];
 
 function isMemberWorkSyncReportState(value: string): value is MemberWorkSyncReportState {
   return value === 'still_working' || value === 'blocked' || value === 'caught_up';
+}
+
+function assertValidMemberName(memberName: string): string {
+  const validatedMemberName = validateMemberName(memberName);
+  if (!validatedMemberName.valid) {
+    throw new HttpBadRequestError(validatedMemberName.error ?? 'Invalid memberName');
+  }
+  return validatedMemberName.value!;
 }
 
 function getTeamProvisioningStartApi(services: HttpServices): TeamHttpProvisioningStartApi {
@@ -128,13 +136,17 @@ function isTeamNotFoundError(error: unknown): boolean {
   );
 }
 
-function withStableRuntimeObservedAt(teamName: string, body: unknown): Record<string, unknown> {
+function withValidatedRuntimeObservedAt(teamName: string, body: unknown): Record<string, unknown> {
   const payload = withRuntimeTeamName(teamName, body);
-  const observedAt = typeof payload.observedAt === 'string' ? payload.observedAt.trim() : '';
-  if (!observedAt) {
-    throw new HttpBadRequestError('OpenCode runtime payload missing observedAt');
+  if (!Object.prototype.hasOwnProperty.call(payload, 'observedAt')) {
+    return payload;
   }
-  if (!Number.isFinite(Date.parse(observedAt))) {
+  const observedAt = payload.observedAt;
+  if (
+    typeof observedAt !== 'string' ||
+    !observedAt.trim() ||
+    !Number.isFinite(Date.parse(observedAt))
+  ) {
     throw new HttpBadRequestError('OpenCode runtime payload invalid observedAt');
   }
   return payload;
@@ -471,7 +483,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         }
         return reply.send(
           await getTeamRuntimeControlApi(services).recordOpenCodeRuntimeHeartbeat(
-            withStableRuntimeObservedAt(validatedTeamName.value!, request.body)
+            withValidatedRuntimeObservedAt(validatedTeamName.value!, request.body)
           )
         );
       } catch (error) {
@@ -579,7 +591,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         return reply.send(
           await getMemberWorkSyncFeature(services).getStatus({
             teamName: validatedTeamName.value!,
-            memberName,
+            memberName: assertValidMemberName(memberName),
           })
         );
       } catch (error) {
@@ -609,7 +621,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         return reply.send(
           await getMemberWorkSyncFeature(services).refreshStatus({
             teamName: validatedTeamName.value!,
-            memberName,
+            memberName: assertValidMemberName(memberName),
             ...(request.body?.forceNudge === true ? { forceNudge: true } : {}),
           })
         );
@@ -643,6 +655,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
             error: 'memberName, state, and agendaFingerprint are required',
           });
         }
+        const validatedMemberName = assertValidMemberName(memberName);
         if (!isMemberWorkSyncReportState(state)) {
           return reply
             .status(400)
@@ -661,7 +674,7 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
         return reply.send(
           await getMemberWorkSyncFeature(services).report({
             teamName: validatedTeamName.value!,
-            memberName,
+            memberName: validatedMemberName,
             state,
             agendaFingerprint,
             ...(typeof payload.reportToken === 'string'

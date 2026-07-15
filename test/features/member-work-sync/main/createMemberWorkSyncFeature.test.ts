@@ -5,8 +5,11 @@ import {
 } from '@features/member-work-sync/main';
 import { HmacMemberWorkSyncReportTokenAdapter } from '@features/member-work-sync/main/infrastructure/HmacMemberWorkSyncReportTokenAdapter';
 import { JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
+import { MemberWorkSyncEventQueue } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue';
+import { MemberWorkSyncNudgeDispatchScheduler } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncNudgeDispatchScheduler';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
 import { NodeHashAdapter } from '@features/member-work-sync/main/infrastructure/NodeHashAdapter';
+import { RuntimeTurnSettledDrainScheduler } from '@features/member-work-sync/main/infrastructure/RuntimeTurnSettledDrainScheduler';
 import { RUNTIME_TURN_SETTLED_SPOOL_ROOT_ENV } from '@features/member-work-sync/main/infrastructure/runtimeTurnSettledEnvironment';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import fs from 'fs';
@@ -15,6 +18,14 @@ import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const tempRoots: string[] = [];
+
+function createDeferred(): { promise: Promise<void>; resolve(): void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
 
 function makeTempRoot(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'member-work-sync-feature-'));
@@ -425,6 +436,78 @@ async function backdateDeliveredOutboxItems(input: {
 }
 
 describe('createMemberWorkSyncFeature composition', () => {
+  it('idempotently waits for every scheduler and queue disposal', async () => {
+    const runtimeDrain = createDeferred();
+    const nudgeDrain = createDeferred();
+    const queueDrain = createDeferred();
+    const runtimeDisposeOriginal = RuntimeTurnSettledDrainScheduler.prototype.dispose;
+    const nudgeDisposeOriginal = MemberWorkSyncNudgeDispatchScheduler.prototype.dispose;
+    const queueStopOriginal = MemberWorkSyncEventQueue.prototype.stop;
+    const runtimeDispose = vi
+      .spyOn(RuntimeTurnSettledDrainScheduler.prototype, 'dispose')
+      .mockImplementation(function (this: RuntimeTurnSettledDrainScheduler) {
+        return Promise.all([runtimeDisposeOriginal.call(this), runtimeDrain.promise]).then(
+          () => undefined
+        );
+      });
+    const nudgeDispose = vi
+      .spyOn(MemberWorkSyncNudgeDispatchScheduler.prototype, 'dispose')
+      .mockImplementation(function (this: MemberWorkSyncNudgeDispatchScheduler) {
+        return Promise.all([nudgeDisposeOriginal.call(this), nudgeDrain.promise]).then(
+          () => undefined
+        );
+      });
+    const queueStop = vi
+      .spyOn(MemberWorkSyncEventQueue.prototype, 'stop')
+      .mockImplementation(function (this: MemberWorkSyncEventQueue) {
+        return Promise.all([queueStopOriginal.call(this), queueDrain.promise]).then(
+          () => undefined
+        );
+      });
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath: path.join(makeTempRoot(), 'teams'),
+      configReader: { getConfig: vi.fn(async () => null) } as never,
+      taskReader: { getTasks: vi.fn(async () => []) } as never,
+      kanbanManager: { getState: vi.fn(async () => null) } as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+      listLifecycleActiveTeamNames: async () => [],
+    });
+
+    try {
+      const firstDispose = feature.dispose();
+      const secondDispose = feature.dispose();
+      expect(secondDispose).toBe(firstDispose);
+      expect(runtimeDispose).toHaveBeenCalledOnce();
+      expect(nudgeDispose).toHaveBeenCalledOnce();
+      expect(queueStop).toHaveBeenCalledOnce();
+
+      let disposed = false;
+      void firstDispose.then(() => {
+        disposed = true;
+      });
+      await Promise.resolve();
+      expect(disposed).toBe(false);
+
+      runtimeDrain.resolve();
+      queueDrain.resolve();
+      await Promise.resolve();
+      expect(disposed).toBe(false);
+
+      nudgeDrain.resolve();
+      await firstDispose;
+      expect(disposed).toBe(true);
+      expect(feature.dispose()).toBe(firstDispose);
+    } finally {
+      runtimeDrain.resolve();
+      nudgeDrain.resolve();
+      queueDrain.resolve();
+      await feature.dispose();
+      runtimeDispose.mockRestore();
+      nudgeDispose.mockRestore();
+      queueStop.mockRestore();
+    }
+  });
+
   it('schedules proof-missing recovery through the work-sync queue', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
@@ -1505,7 +1588,6 @@ describe('createMemberWorkSyncFeature composition', () => {
         await expect(feature.drainRuntimeTurnSettledEvents()).resolves.toMatchObject({
           invalid: 0,
           unresolved: 0,
-          ignored: 1,
         });
 
         const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
@@ -1522,18 +1604,24 @@ describe('createMemberWorkSyncFeature composition', () => {
           outboxItems.some((item) => item.payload?.workSyncIntentKey?.startsWith('status-only:'))
         ).toBe(false);
 
-        const processedMeta = JSON.parse(
-          await fs.promises.readFile(
-            path.join(spoolRoot!, 'processed', `${eventFileName}.meta.json`),
-            'utf8'
-          )
-        ) as { outcome?: string; reason?: string; event?: { turnId?: string; threadId?: string } };
-        expect(processedMeta).toMatchObject({
-          outcome: 'ignored',
-          reason: scenario.expectedReason,
-          event: { turnId: 'msg_launch_or_bootstrap' },
+        await waitForAssertion(async () => {
+          const processedMeta = JSON.parse(
+            await fs.promises.readFile(
+              path.join(spoolRoot!, 'processed', `${eventFileName}.meta.json`),
+              'utf8'
+            )
+          ) as {
+            outcome?: string;
+            reason?: string;
+            event?: { turnId?: string; threadId?: string };
+          };
+          expect(processedMeta).toMatchObject({
+            outcome: 'ignored',
+            reason: scenario.expectedReason,
+            event: { turnId: 'msg_launch_or_bootstrap' },
+          });
+          expect(processedMeta.event).not.toHaveProperty('threadId');
         });
-        expect(processedMeta.event).not.toHaveProperty('threadId');
       } finally {
         await feature.dispose();
       }

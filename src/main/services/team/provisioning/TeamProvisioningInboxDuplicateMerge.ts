@@ -26,6 +26,20 @@ export interface MergeAndRemoveDuplicateInboxesInput {
   ports: DuplicateInboxMergePorts;
 }
 
+function parseRemovableDuplicateInboxMessageList(raw: string): unknown[] | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(parsed)) {
+    return null;
+  }
+
+  return parsed.every((item) => item !== null && typeof item === 'object') ? parsed : null;
+}
+
 async function mergeSingleInboxBase(
   input: MergeAndRemoveDuplicateInboxesInput,
   mergePlan: { canonicalFile: string; duplicateFiles: string[] },
@@ -48,9 +62,9 @@ async function mergeSingleInboxBase(
 
   const canonicalList = parseInboxMessageListRaw(canonicalRaw);
   const duplicateLists: unknown[][] = [];
-  // Only duplicates whose content made it into the merged canonical list may
-  // be removed; an unreadable duplicate (oversized, read timeout) still holds
-  // messages that would otherwise be destroyed unmerged.
+  // Only duplicates whose complete content made it into the merged canonical
+  // list may be removed; unreadable or malformed duplicates still hold data
+  // that would otherwise be destroyed unmerged.
   const removableDuplicateFiles: string[] = [];
   for (const dupFile of mergePlan.duplicateFiles) {
     const dupPath = path.join(input.inboxDir, dupFile);
@@ -67,11 +81,13 @@ async function mergeSingleInboxBase(
       continue;
     }
 
-    removableDuplicateFiles.push(dupFile);
-    if (!dupRaw) {
+    const duplicateList = parseRemovableDuplicateInboxMessageList(dupRaw);
+    if (!duplicateList) {
       continue;
     }
-    duplicateLists.push(parseInboxMessageListRaw(dupRaw));
+
+    removableDuplicateFiles.push(dupFile);
+    duplicateLists.push(duplicateList);
   }
 
   const mergedDeduped = mergeInboxMessageLists(canonicalList, duplicateLists);

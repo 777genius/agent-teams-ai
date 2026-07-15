@@ -129,6 +129,43 @@ describe('InternalStorageWorkerCore', () => {
     expect(neighbor.map((r) => r.epochKey)).toEqual(['n-1']);
   });
 
+  it.each([
+    {
+      op: 'stallJournal.replace' as const,
+      entry: makeRecord({ teamName: 'neighbor' }),
+    },
+    {
+      op: 'commentJournal.replace' as const,
+      entry: {
+        key: 'task-a:comment-1',
+        teamName: 'neighbor',
+        taskId: 'task-a',
+        commentId: 'comment-1',
+        author: 'alice',
+        commentCreatedAt: null,
+        messageId: null,
+        state: 'pending',
+        createdAt: '2026-07-07T10:00:00.000Z',
+        updatedAt: '2026-07-07T10:00:00.000Z',
+        sentAt: null,
+      },
+    },
+  ])('rejects cross-team rows for $op before opening the database', ({ op, entry }) => {
+    let openAttempts = 0;
+    const core = new InternalStorageWorkerCore({
+      databasePath: '/not-opened/app.db',
+      createDatabase: () => {
+        openAttempts += 1;
+        throw new Error('database should not open');
+      },
+    });
+
+    expect(() => core.handle(op, { teamName: 'demo', entries: [entry] })).toThrow(
+      /entries\[0\]\.teamName must match payload teamName/
+    );
+    expect(openAttempts).toBe(0);
+  });
+
   it('persists across close and reopen (WAL survives)', async () => {
     const dbPath = await makeTmpDbPath();
     const first = track(makeCore(dbPath));

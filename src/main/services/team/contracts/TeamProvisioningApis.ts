@@ -73,12 +73,13 @@ export interface TeamProvisioningPreflightApi {
   ): Promise<TeamProvisioningPrepareResult>;
 }
 
-function assertDensePrepareModelArray(
-  values: readonly unknown[] | undefined,
-  field: 'modelIds' | 'modelChecks'
-): void {
-  if (!values) {
+function assertDensePrepareModelArray(values: unknown, field: 'modelIds' | 'modelChecks'): void {
+  if (values === undefined) {
     return;
+  }
+
+  if (!Array.isArray(values)) {
+    throw new TypeError(`TeamProvisioningPrepareOptions.${field} must be an array when provided`);
   }
 
   for (let index = 0; index < values.length; index += 1) {

@@ -71,19 +71,29 @@ export class TeamProvisioningRunTrackingDeliveryHelper<
     if (!runId) {
       return null;
     }
+    const run = this.options.state.runs.get(runId);
+    const runtimeProgress = this.options.state.runtimeAdapterProgressByRunId.get(runId);
     if (
-      this.options.state.runs.has(runId) ||
-      this.options.state.runtimeAdapterProgressByRunId.has(runId)
+      (run && isTerminalRuntimeProgressState(run.progress.state)) ||
+      (runtimeProgress && isTerminalRuntimeProgressState(runtimeProgress.state))
     ) {
+      this.clearStaleProvisioningRunId(teamName, runId);
+      return null;
+    }
+    if (run !== undefined || runtimeProgress !== undefined) {
       return runId;
     }
+    this.clearStaleProvisioningRunId(teamName, runId);
+    return null;
+  }
+
+  private clearStaleProvisioningRunId(teamName: string, runId: string): void {
     if (this.options.state.provisioningRunByTeam.get(teamName) === runId) {
       this.options.state.provisioningRunByTeam.delete(teamName);
     }
     this.options.ports.logDebug(
       `[${teamName}] Cleared stale provisioning run id before launch: ${runId}`
     );
-    return null;
   }
 
   getAliveRunId(teamName: string): string | null {

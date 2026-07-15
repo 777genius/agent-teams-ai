@@ -41,8 +41,12 @@ interface LegacyStatusFile {
 }
 
 /**
- * Everything the JSON backend persisted for one team, read for the one-time
- * import into SQLite. filesToArchive lists every file the snapshot came from.
+ * Everything currently readable from the JSON backend for one team, read for
+ * import into SQLite. A retry after a partial archive can be a strict subset of
+ * an earlier snapshot, so consumers must treat these arrays as an overlay:
+ * memberKey identifies statuses and id identifies report intents, outbox items,
+ * and metric events. Later duplicate identities win; missing identities are not
+ * deletions. filesToArchive lists every file the snapshot came from.
  */
 export interface MemberWorkSyncStoreSnapshot {
   statuses: MemberWorkSyncStatus[];

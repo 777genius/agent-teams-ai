@@ -101,6 +101,28 @@ describe('tool approval control response payloads', () => {
     });
   });
 
+  it('treats a JSON scalar as a plain-text AskUserQuestion answer', () => {
+    expect(
+      buildLeadToolApprovalDecisionPayload({
+        requestId: 'req-question-scalar',
+        allow: true,
+        message: 'true',
+        approval: {
+          toolName: 'AskUserQuestion',
+          toolInput: { questions: [{ question: 'Enable the feature?' }] },
+        },
+      })
+    ).toMatchObject({
+      response: {
+        response: {
+          updatedInput: {
+            answers: { 'Enable the feature?': 'true' },
+          },
+        },
+      },
+    });
+  });
+
   it('builds lead deny payloads with the default user denial message', () => {
     expect(
       buildLeadToolApprovalDecisionPayload({

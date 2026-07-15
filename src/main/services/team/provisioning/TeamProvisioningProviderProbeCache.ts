@@ -15,12 +15,137 @@ export interface CachedProbeResult {
   result: ProbeResult;
 }
 
+function deepCloneProviderProbeValue<T>(value: T): T {
+  const clones = new WeakMap<object, object>();
+
+  const cloneOwnDataProperties = (
+    source: object,
+    target: object,
+    shouldSkip?: (key: PropertyKey) => boolean
+  ): void => {
+    for (const key of Reflect.ownKeys(source)) {
+      if (shouldSkip?.(key)) continue;
+      const descriptor = Object.getOwnPropertyDescriptor(source, key);
+      if (!descriptor || !('value' in descriptor)) continue;
+      Object.defineProperty(target, key, {
+        ...descriptor,
+        value: clone(descriptor.value),
+      });
+    }
+  };
+
+  const clone = (candidate: unknown): unknown => {
+    if (typeof candidate !== 'object' || candidate === null) {
+      if (typeof candidate === 'function' || typeof candidate === 'symbol') {
+        return structuredClone(candidate);
+      }
+      return candidate;
+    }
+
+    const existing = clones.get(candidate);
+    if (existing) return existing;
+
+    if (typeof SharedArrayBuffer !== 'undefined' && candidate instanceof SharedArrayBuffer) {
+      const isolatedBuffer = new SharedArrayBuffer(candidate.byteLength);
+      clones.set(candidate, isolatedBuffer);
+      new Uint8Array(isolatedBuffer).set(new Uint8Array(candidate));
+      cloneOwnDataProperties(candidate, isolatedBuffer);
+      return isolatedBuffer;
+    }
+
+    if (candidate instanceof ArrayBuffer) {
+      const isolatedBuffer = structuredClone(candidate);
+      clones.set(candidate, isolatedBuffer);
+      cloneOwnDataProperties(candidate, isolatedBuffer);
+      return isolatedBuffer;
+    }
+
+    if (ArrayBuffer.isView(candidate)) {
+      const isolatedBuffer = clone(candidate.buffer) as ArrayBufferLike;
+      const isolatedView =
+        candidate instanceof DataView
+          ? new DataView(isolatedBuffer, candidate.byteOffset, candidate.byteLength)
+          : new (structuredClone(candidate).constructor as new (
+              buffer: ArrayBufferLike,
+              byteOffset: number,
+              length: number
+            ) => ArrayBufferView)(
+              isolatedBuffer,
+              candidate.byteOffset,
+              (candidate as ArrayBufferView & { length: number }).length
+            );
+      clones.set(candidate, isolatedView);
+      const viewLength =
+        candidate instanceof DataView
+          ? 0
+          : (candidate as ArrayBufferView & { length: number }).length;
+      cloneOwnDataProperties(
+        candidate,
+        isolatedView,
+        (key) => typeof key === 'string' && /^(?:0|[1-9]\d*)$/.test(key) && Number(key) < viewLength
+      );
+      return isolatedView;
+    }
+
+    if (candidate instanceof Map) {
+      const isolatedMap = new Map<unknown, unknown>();
+      clones.set(candidate, isolatedMap);
+      for (const [key, entryValue] of Map.prototype.entries.call(candidate)) {
+        isolatedMap.set(clone(key), clone(entryValue));
+      }
+      cloneOwnDataProperties(candidate, isolatedMap);
+      return isolatedMap;
+    }
+
+    if (candidate instanceof Set) {
+      const isolatedSet = new Set<unknown>();
+      clones.set(candidate, isolatedSet);
+      for (const entry of Set.prototype.values.call(candidate)) {
+        isolatedSet.add(clone(entry));
+      }
+      cloneOwnDataProperties(candidate, isolatedSet);
+      return isolatedSet;
+    }
+
+    if (candidate instanceof Date) {
+      const isolatedDate = new Date(candidate.getTime());
+      clones.set(candidate, isolatedDate);
+      cloneOwnDataProperties(candidate, isolatedDate);
+      return isolatedDate;
+    }
+
+    if (candidate instanceof RegExp) {
+      const isolatedRegExp = new RegExp(candidate.source, candidate.flags);
+      clones.set(candidate, isolatedRegExp);
+      cloneOwnDataProperties(candidate, isolatedRegExp);
+      return isolatedRegExp;
+    }
+
+    if (candidate instanceof Error) {
+      const isolatedError = structuredClone(candidate);
+      clones.set(candidate, isolatedError);
+      cloneOwnDataProperties(candidate, isolatedError);
+      return isolatedError;
+    }
+
+    const isolatedObject: object = Array.isArray(candidate) ? [] : {};
+    if (!Array.isArray(candidate) && Object.getPrototypeOf(candidate) === null) {
+      Object.setPrototypeOf(isolatedObject, null);
+    }
+    clones.set(candidate, isolatedObject);
+    cloneOwnDataProperties(candidate, isolatedObject);
+    return isolatedObject;
+  };
+
+  return clone(value) as T;
+}
+
 export function cloneProviderProbeResult<T extends ProbeResult>(result: T): T {
-  return structuredClone(result);
+  return deepCloneProviderProbeValue(result);
 }
 
 export function cloneCachedProviderProbeResult<T extends CachedProbeResult>(cached: T): T {
-  return structuredClone(cached);
+  return deepCloneProviderProbeValue(cached);
 }
 
 export function cachedProviderProbeResultToProbeResult(cached: CachedProbeResult): ProbeResult {

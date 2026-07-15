@@ -557,6 +557,7 @@ export function createMemberWorkSyncFeature(deps: {
     : null;
   runtimeTurnSettledDrainScheduler.start();
   nudgeDispatchScheduler?.start();
+  let disposePromise: Promise<void> | null = null;
 
   const readStatusWithStaleRefresh = async (
     request: MemberWorkSyncStatusRequest
@@ -719,9 +720,15 @@ export function createMemberWorkSyncFeature(deps: {
       runtimeTurnSettledSpool.buildEnvironment({ provider }),
     drainRuntimeTurnSettledEvents: () => runtimeTurnSettledIngestor.drainPending(),
     getQueueDiagnostics: () => queue.getDiagnostics(),
-    dispose: async () => {
-      runtimeTurnSettledDrainScheduler.dispose();
-      await Promise.allSettled([queue.stop(), nudgeDispatchScheduler?.dispose()]);
+    dispose: () => {
+      if (!disposePromise) {
+        disposePromise = Promise.allSettled([
+          runtimeTurnSettledDrainScheduler.dispose(),
+          nudgeDispatchScheduler?.dispose(),
+          queue.stop(),
+        ]).then(() => undefined);
+      }
+      return disposePromise;
     },
   };
 }

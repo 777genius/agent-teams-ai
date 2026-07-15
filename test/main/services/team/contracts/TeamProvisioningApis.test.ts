@@ -263,6 +263,25 @@ describe('bindTeamIpcHandlerApis', () => {
     );
     expect(source.prepareForProvisioning).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['modelIds', null],
+    ['modelChecks', { length: 0 }],
+  ] as const)(
+    'rejects a non-array %s value before dispatching through the IPC preflight facade',
+    async (field, value) => {
+      const source = createSource();
+      const api: TeamIpcHandlerApis = bindTeamIpcHandlerApis(source);
+      const options = { [field]: value } as unknown as NonNullable<
+        Parameters<TeamIpcHandlerApis['preflight']['prepareForProvisioning']>[1]
+      >;
+
+      await expect(api.preflight.prepareForProvisioning(undefined, options)).rejects.toThrow(
+        `TeamProvisioningPrepareOptions.${field} must be an array when provided`
+      );
+      expect(source.prepareForProvisioning).not.toHaveBeenCalled();
+    }
+  );
 });
 
 describe('bindTeamCrossTeamMessagingApi', () => {

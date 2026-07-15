@@ -120,7 +120,11 @@ export function createOpenCodeRuntimeControlApi(
         ),
         target: normalizeRuntimeDeliveryTarget(payload.to),
         text: requireRuntimeDeliveryString(payload.text, 'text'),
-        createdAt: requireRuntimeDeliveryIso(payload.createdAt, 'createdAt'),
+        createdAt: normalizeRuntimeIngressCreatedAt(
+          payload.createdAt,
+          'createdAt',
+          'Runtime delivery envelope'
+        ),
         summary:
           payload.summary === undefined || payload.summary === null
             ? null
@@ -139,7 +143,7 @@ export function createOpenCodeRuntimeControlApi(
         errorPrefix: 'OpenCode runtime payload',
       });
       const runtimeSessionId = optionalRuntimeString(payload.runtimeSessionId);
-      const createdAt = requireRuntimeIso(payload.createdAt, 'createdAt');
+      const createdAt = normalizeRuntimeIngressCreatedAt(payload.createdAt, 'createdAt');
       const laneId = await resolveLaneId(ports, { teamName, runId, memberName });
 
       return ports.runtimeControl.recordTaskEvent({
@@ -281,24 +285,23 @@ function normalizeRuntimeIso(value: unknown, fallback: string = new Date().toISO
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : fallback;
 }
 
-function requireRuntimeIso(
+function normalizeRuntimeIngressCreatedAt(
   value: unknown,
   fieldName: string,
   errorPrefix = 'OpenCode runtime payload'
 ): string {
-  const raw = optionalRuntimeString(value);
-  if (!raw) {
-    throw new Error(`${errorPrefix} missing ${fieldName}`);
+  if (value === undefined || (typeof value === 'string' && value.trim().length === 0)) {
+    return new Date().toISOString();
   }
+  if (typeof value !== 'string') {
+    throw new Error(`${errorPrefix} invalid ${fieldName}`);
+  }
+  const raw = value.trim();
   const parsed = Date.parse(raw);
   if (!Number.isFinite(parsed)) {
     throw new Error(`${errorPrefix} invalid ${fieldName}`);
   }
   return new Date(parsed).toISOString();
-}
-
-function requireRuntimeDeliveryIso(value: unknown, fieldName: string): string {
-  return requireRuntimeIso(value, fieldName, 'Runtime delivery envelope');
 }
 
 function normalizeRuntimeStringArray(value: unknown): string[] {

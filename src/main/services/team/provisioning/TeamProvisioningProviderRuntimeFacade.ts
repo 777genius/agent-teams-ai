@@ -64,7 +64,7 @@ export class TeamProvisioningProviderRuntimeFacade {
     return this.createDiagnosticsRuntime(this.deps.diagnosticsRuntimeInput);
   }
 
-  probeClaudeRuntime(
+  async probeClaudeRuntime(
     claudePath: string,
     cwd: string,
     env: NodeJS.ProcessEnv,
@@ -80,7 +80,7 @@ export class TeamProvisioningProviderRuntimeFacade {
     );
   }
 
-  runProviderOneShotDiagnostic(
+  async runProviderOneShotDiagnostic(
     claudePath: string,
     cwd: string,
     env: NodeJS.ProcessEnv,
@@ -112,7 +112,7 @@ export class TeamProvisioningProviderRuntimeFacade {
     );
   }
 
-  spawnProbe(
+  async spawnProbe(
     claudePath: string,
     args: string[],
     cwd: string,
@@ -130,7 +130,7 @@ export class TeamProvisioningProviderRuntimeFacade {
     );
   }
 
-  buildProvisioningEnv(
+  async buildProvisioningEnv(
     providerId: TeamProviderId | undefined = 'anthropic',
     providerBackendId?: string | null,
     options?: BuildProvisioningEnvOptions
@@ -138,7 +138,7 @@ export class TeamProvisioningProviderRuntimeFacade {
     return this.deps.envRuntimePorts.buildProvisioningEnv(providerId, providerBackendId, options);
   }
 
-  buildCrossProviderMemberArgs(
+  async buildCrossProviderMemberArgs(
     primaryProviderId: TeamProviderId,
     memberSpecs: TeamCreateRequest['members'],
     options?: { teamRuntimeAuth?: TeamRuntimeAuthContext }
@@ -150,7 +150,7 @@ export class TeamProvisioningProviderRuntimeFacade {
     );
   }
 
-  resolveControlApiBaseUrl(): Promise<string | null> {
+  async resolveControlApiBaseUrl(): Promise<string | null> {
     return this.deps.envRuntimePorts.resolveControlApiBaseUrl();
   }
 }

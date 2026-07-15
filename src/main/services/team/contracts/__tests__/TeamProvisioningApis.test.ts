@@ -219,6 +219,31 @@ describe('TeamProvisioning API binders', () => {
     }
   );
 
+  it.each([
+    ['modelIds', null],
+    ['modelIds', 'gpt-5.4'],
+    ['modelChecks', null],
+    ['modelChecks', { length: 0 }],
+  ] as const)(
+    'rejects a non-array preflight %s value before dispatching to the source',
+    async (field, value) => {
+      let prepareCalls = 0;
+      const source: TeamProvisioningPreflightApi = {
+        getCliHelpOutput: () => Promise.resolve('Usage'),
+        prepareForProvisioning: () => {
+          prepareCalls += 1;
+          return Promise.resolve({ ready: true, message: 'ready' });
+        },
+      };
+      const opts = { [field]: value } as unknown as TeamProvisioningPrepareOptions;
+
+      await expect(
+        bindTeamProvisioningPreflightApi(source).prepareForProvisioning(undefined, opts)
+      ).rejects.toThrow(`TeamProvisioningPrepareOptions.${field} must be an array when provided`);
+      expect(prepareCalls).toBe(0);
+    }
+  );
+
   it('binds provisioning run and log diagnostic methods to the source object', async () => {
     interface RunSource extends TeamProvisioningRunApi {
       activeTeamName: string | null;

@@ -7,7 +7,9 @@ import {
 
 import type { TeamProvisioningProgress } from '@shared/types';
 
-function progress(state: TeamProvisioningProgress['state']): Pick<TeamProvisioningProgress, 'state'> {
+function progress(
+  state: TeamProvisioningProgress['state']
+): Pick<TeamProvisioningProgress, 'state'> {
   return { state };
 }
 
@@ -29,10 +31,7 @@ function createHarness() {
     aliveRunByTeam: new Map<string, string>(),
     runs: new Map<string, RunTrackingProvisioningRun>(),
     runtimeAdapterProgressByRunId: new Map<string, Pick<TeamProvisioningProgress, 'state'>>(),
-    retainedProvisioningProgressByRunId: new Map<
-      string,
-      Pick<TeamProvisioningProgress, 'state'>
-    >(),
+    retainedProvisioningProgressByRunId: new Map<string, Pick<TeamProvisioningProgress, 'state'>>(),
     runtimeAdapterRunByTeam: new Map<string, { runId: string }>(),
   };
   const ports = {
@@ -89,6 +88,18 @@ describe('TeamProvisioningRunTrackingDeliveryHelper', () => {
     state.provisioningRunByTeam.set('team', 'adapter-run');
     state.runtimeAdapterProgressByRunId.set('adapter-run', progress('validating'));
     expect(helper.getResolvableProvisioningRunId('team')).toBe('adapter-run');
+  });
+
+  it('does not report terminal adapter progress as an active provisioning run', () => {
+    const { helper, ports, state } = createHarness();
+    state.provisioningRunByTeam.set('team', 'failed-adapter-run');
+    state.runtimeAdapterProgressByRunId.set('failed-adapter-run', progress('failed'));
+
+    expect(helper.getResolvableProvisioningRunId('team')).toBeNull();
+    expect(state.provisioningRunByTeam.has('team')).toBe(false);
+    expect(ports.logDebug).toHaveBeenCalledWith(
+      '[team] Cleared stale provisioning run id before launch: failed-adapter-run'
+    );
   });
 
   it('uses live snapshot cache ttl for tracked or adapter-backed runs', () => {

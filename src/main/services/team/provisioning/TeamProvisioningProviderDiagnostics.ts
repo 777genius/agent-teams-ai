@@ -722,6 +722,7 @@ export async function validateAgentTeamsMcpRuntime({
   let cancellationTriggered = false;
   let cancellationTimer: ReturnType<typeof setInterval> | null = null;
   const cancellationMessage = 'agent-teams MCP preflight cancelled by app shutdown';
+  const cancellationError = new Error(cancellationMessage);
   const pending = new Map<
     number,
     {
@@ -739,7 +740,6 @@ export async function validateAgentTeamsMcpRuntime({
     }
   };
 
-  const getCancellationError = (): Error => new Error(cancellationMessage);
   const cancelPreflightIfNeeded = (): boolean => {
     if (cancellationTriggered) {
       return true;
@@ -748,8 +748,7 @@ export async function validateAgentTeamsMcpRuntime({
       return false;
     }
     cancellationTriggered = true;
-    const error = getCancellationError();
-    rejectAll(error);
+    rejectAll(cancellationError);
     if (child?.pid) {
       ports.killProcessTree(child);
     }
@@ -757,7 +756,7 @@ export async function validateAgentTeamsMcpRuntime({
   };
   const throwIfCancelled = (): void => {
     if (cancelPreflightIfNeeded()) {
-      throw getCancellationError();
+      throw cancellationError;
     }
   };
 
@@ -870,7 +869,7 @@ export async function validateAgentTeamsMcpRuntime({
     ): Promise<TResult> =>
       new Promise<TResult>((resolve, reject) => {
         if (cancelPreflightIfNeeded()) {
-          reject(getCancellationError());
+          reject(cancellationError);
           return;
         }
         if (!child?.stdin) {
@@ -893,7 +892,7 @@ export async function validateAgentTeamsMcpRuntime({
         if (cancelPreflightIfNeeded()) {
           clearTimeout(timeoutHandle);
           pending.delete(id);
-          reject(getCancellationError());
+          reject(cancellationError);
           return;
         }
 
@@ -1010,12 +1009,8 @@ export async function validateAgentTeamsMcpRuntime({
       throw new Error('agent-teams MCP returned empty content for lead_briefing');
     }
   } catch (error) {
-    if (
-      cancellationTriggered ||
-      options.isCancelled?.() ||
-      (error instanceof Error && error.message === cancellationMessage)
-    ) {
-      throw getCancellationError();
+    if (cancellationTriggered || options.isCancelled?.() || error === cancellationError) {
+      throw cancellationError;
     }
     const detail = buildCombinedLogs('', stderrBuffer).trim();
     const errorText =

@@ -97,6 +97,14 @@ function isFlagLikeToken(command: string, index: number, end: number): boolean {
   return /[A-Za-z?]/u.test(next ?? '');
 }
 
+function isHereDocumentOperator(command: string, index: number): boolean {
+  return command[index] === '<' && command[index + 1] === '<' && command[index + 2] !== '<';
+}
+
+function isHereStringOperator(command: string, index: number): boolean {
+  return command[index] === '<' && command[index + 1] === '<' && command[index + 2] === '<';
+}
+
 function pushFrame(frames: ShellFrame[], frame: ShellFrame): boolean {
   if (frames.length >= MAX_NESTING_DEPTH) {
     return false;
@@ -199,6 +207,10 @@ function findShellWordEnd(command: string, start: number, end: number): ShellWor
       } else if (character === '`') {
         frames.pop();
         index += 1;
+      } else if (isHereStringOperator(command, index)) {
+        index += 3;
+      } else if (isHereDocumentOperator(command, index)) {
+        return { end: index, complete: false };
       } else if (
         command[index + 1] === '(' &&
         (character === '$' || character === '<' || character === '>')
@@ -291,6 +303,27 @@ function findShellWordEnd(command: string, start: number, end: number): ShellWor
     if (frame.quote === 'double') {
       index += 1;
       continue;
+    }
+
+    const inCasePattern = currentCaseFrame(frame)?.inPattern === true;
+    if (
+      isHereStringOperator(command, index) &&
+      frame.kind !== 'parameter' &&
+      frame.kind !== 'arithmetic' &&
+      !inCasePattern
+    ) {
+      index += 3;
+      continue;
+    }
+    if (
+      isHereDocumentOperator(command, index) &&
+      frame.kind !== 'parameter' &&
+      frame.kind !== 'arithmetic' &&
+      !inCasePattern
+    ) {
+      // A heredoc body is arbitrary text, so shell-looking bytes in it cannot safely
+      // determine the end of this word. Here-strings (`<<<`) do not have that ambiguity.
+      return { end: index, complete: false };
     }
 
     if (frame.kind === 'root') {

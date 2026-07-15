@@ -129,10 +129,45 @@ export interface LeadInboxRelayOptions {
   onlyMessageId?: string;
 }
 
+const leadInboxRelayQueues = new WeakMap<Map<string, Set<string>>, Map<string, Promise<number>>>();
+
 export async function relayLeadInboxMessagesForTeam<TRun extends LeadInboxRelayFlowRun>(
   teamName: string,
   ports: LeadInboxRelayFlowPorts<TRun>,
   options: LeadInboxRelayOptions = {}
+): Promise<number> {
+  let queue = leadInboxRelayQueues.get(ports.relayedLeadInboxMessageIds);
+  if (!queue) {
+    queue = new Map<string, Promise<number>>();
+    leadInboxRelayQueues.set(ports.relayedLeadInboxMessageIds, queue);
+  }
+
+  const previous = queue.get(teamName);
+  const work = (async (): Promise<number> => {
+    if (previous) {
+      try {
+        await previous;
+      } catch {
+        // A failed attempt must not prevent the queued relay from retrying unread messages.
+      }
+    }
+    return runLeadInboxRelayForTeam(teamName, ports, options);
+  })();
+  queue.set(teamName, work);
+
+  try {
+    return await work;
+  } finally {
+    if (queue.get(teamName) === work) {
+      queue.delete(teamName);
+    }
+  }
+}
+
+async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
+  teamName: string,
+  ports: LeadInboxRelayFlowPorts<TRun>,
+  options: LeadInboxRelayOptions
 ): Promise<number> {
   const runId = ports.getAliveRunId(teamName) ?? ports.getProvisioningRunId(teamName);
   if (!runId) return 0;
@@ -351,6 +386,16 @@ export async function relayLeadInboxMessagesForTeam<TRun extends LeadInboxRelayF
     return 0;
   }
 
+  const captureResult = await finalizeLeadRelayCapture(run, capturePromise, ports);
+  if (!captureResult.deliveryConfirmed) {
+    run.activeCrossTeamReplyHints = [];
+    ports.logger.debug(
+      `[${teamName}] lead relay did not receive delivery proof; leaving ${batch.length} message(s) unread for retry`
+    );
+    ports.scheduleLeadInboxFollowUpRelay(teamName);
+    return 0;
+  }
+
   rememberRecentCrossTeamLeadDeliveryMessageIds(
     ports.recentCrossTeamLeadDeliveryMessageIds,
     teamName,
@@ -360,8 +405,6 @@ export async function relayLeadInboxMessagesForTeam<TRun extends LeadInboxRelayF
     ports.nowMs(),
     ports.recentCrossTeamDeliveryTtlMs
   );
-
-  const captureResult = await finalizeLeadRelayCapture(run, capturePromise, ports);
 
   const readCommitBatch = await getLeadRelayReadCommitBatch({
     teamName,
@@ -484,12 +527,15 @@ async function finalizeLeadRelayCapture<TRun extends LeadInboxRelayFlowRun>(
   replyText: string | null;
   capturedVisibleSendMessage: boolean;
   capturedUserVisibleSendMessage: boolean;
+  deliveryConfirmed: boolean;
 }> {
   let replyText: string | null = null;
   let capturedVisibleSendMessage = false;
   let capturedUserVisibleSendMessage = false;
+  let deliveryConfirmed = false;
   try {
     replyText = (await capturePromise).trim() || null;
+    deliveryConfirmed = true;
   } catch {
     const partial = run.leadRelayCapture ? joinLeadRelayCaptureText(run.leadRelayCapture) : null;
     replyText = partial && partial.length > 0 ? partial : null;
@@ -505,5 +551,10 @@ async function finalizeLeadRelayCapture<TRun extends LeadInboxRelayFlowRun>(
       run.leadRelayCapture = null;
     }
   }
-  return { replyText, capturedVisibleSendMessage, capturedUserVisibleSendMessage };
+  return {
+    replyText,
+    capturedVisibleSendMessage,
+    capturedUserVisibleSendMessage,
+    deliveryConfirmed,
+  };
 }

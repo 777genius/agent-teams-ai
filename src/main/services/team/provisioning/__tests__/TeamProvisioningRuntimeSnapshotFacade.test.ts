@@ -222,7 +222,7 @@ describe('TeamProvisioningRuntimeSnapshotFacade', () => {
     expect(harness.getBuildCount()).toBe(2);
   });
 
-  it('keeps in-flight snapshot builds single-flight across cache invalidation for the same tracked run', async () => {
+  it('starts a fresh snapshot build after cache invalidation for the same tracked run', async () => {
     const firstProbe = createDeferred<TeamAgentRuntimeSnapshot>();
     const secondProbe = createDeferred<TeamAgentRuntimeSnapshot>();
     const firstSnapshot: TeamAgentRuntimeSnapshot = {
@@ -245,25 +245,21 @@ describe('TeamProvisioningRuntimeSnapshotFacade', () => {
     harness.incrementGeneration();
     const second = harness.facade.getTeamAgentRuntimeSnapshot('alpha');
 
-    expect(buildTeamAgentRuntimeSnapshot).toHaveBeenCalledTimes(1);
+    expect(buildTeamAgentRuntimeSnapshot).toHaveBeenCalledTimes(2);
     expect(buildTeamAgentRuntimeSnapshot.mock.calls[0]?.[0]).toMatchObject({
       teamName: 'alpha',
       runId: null,
       generationAtStart: 0,
     });
-    firstProbe.resolve(firstSnapshot);
-    await expect(first).resolves.toBe(firstSnapshot);
-    await expect(second).resolves.toBe(firstSnapshot);
-
-    const fresh = harness.facade.getTeamAgentRuntimeSnapshot('alpha');
-    expect(buildTeamAgentRuntimeSnapshot).toHaveBeenCalledTimes(2);
     expect(buildTeamAgentRuntimeSnapshot.mock.calls[1]?.[0]).toMatchObject({
       teamName: 'alpha',
       runId: null,
       generationAtStart: 1,
     });
+    firstProbe.resolve(firstSnapshot);
+    await expect(first).resolves.toBe(firstSnapshot);
     secondProbe.resolve(secondSnapshot);
-    await expect(fresh).resolves.toBe(secondSnapshot);
+    await expect(second).resolves.toBe(secondSnapshot);
   });
 
   it('starts a separate in-flight snapshot when the tracked run changes', async () => {

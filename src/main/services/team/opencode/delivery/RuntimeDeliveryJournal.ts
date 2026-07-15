@@ -5,6 +5,7 @@ import { VersionedJsonStore, VersionedJsonStoreError } from '../store/VersionedJ
 import type { TaskRef } from '@shared/types/team';
 
 export const RUNTIME_DELIVERY_JOURNAL_SCHEMA_VERSION = 1;
+export const RUNTIME_DELIVERY_JOURNAL_MAX_TERMINAL_RECORDS = 512;
 
 export type RuntimeDeliveryJournalStatus =
   | 'pending'
@@ -72,19 +73,28 @@ export interface RuntimeDeliveryJournalKeyInput {
   teamName: string;
 }
 
-export type RuntimeDeliveryJournalBeginResult =
+export type RuntimeDeliveryJournalBeginResult = (
   | { state: 'new'; record: RuntimeDeliveryJournalRecord }
   | { state: 'already_committed'; record: RuntimeDeliveryJournalRecord }
   | { state: 'resume_pending'; record: RuntimeDeliveryJournalRecord }
-  | { state: 'payload_conflict'; record: RuntimeDeliveryJournalRecord };
+  | { state: 'payload_conflict'; record: RuntimeDeliveryJournalRecord }
+) & { recoveryRecords?: RuntimeDeliveryJournalRecord[] };
 
 export class RuntimeDeliveryJournalStore {
-  constructor(private readonly store: VersionedJsonStore<RuntimeDeliveryJournalRecord[]>) {}
+  constructor(
+    private readonly store: VersionedJsonStore<RuntimeDeliveryJournalRecord[]>,
+    private readonly maxTerminalRecords = RUNTIME_DELIVERY_JOURNAL_MAX_TERMINAL_RECORDS
+  ) {}
 
   async begin(input: RuntimeDeliveryJournalBeginInput): Promise<RuntimeDeliveryJournalBeginResult> {
     const canonicalInput = canonicalizeRuntimeDeliveryJournalInput(input);
     let result: RuntimeDeliveryJournalBeginResult | null = null;
     await this.store.updateLocked((records) => {
+      // A committed record closes its delivery generation. Only uncommitted local generations
+      // carry destination proof into a new run, so a key may still identify a later message.
+      const recoveryRecords = records.filter((record) =>
+        canCarryRuntimeDeliveryAcrossRuns(record, canonicalInput)
+      );
       const existing = records.find((record) =>
         matchesRuntimeDeliveryJournalKey(record, canonicalInput)
       );
@@ -94,12 +104,12 @@ export class RuntimeDeliveryJournalStore {
           canonicalInput.compatiblePayloadHashes?.includes(existing.payloadHash) === true;
         if (!hasCompatiblePayloadHash) {
           result = { state: 'payload_conflict', record: existing };
-          return records;
+          return pruneRuntimeDeliveryJournalRecords(records, this.maxTerminalRecords);
         }
 
         if (existing.status === 'committed') {
           result = { state: 'already_committed', record: existing };
-          return records;
+          return pruneRuntimeDeliveryJournalRecords(records, this.maxTerminalRecords);
         }
 
         const resumed = {
@@ -109,9 +119,16 @@ export class RuntimeDeliveryJournalStore {
           status: existing.status === 'failed_terminal' ? existing.status : 'pending',
           updatedAt: canonicalInput.now,
         } satisfies RuntimeDeliveryJournalRecord;
-        result = { state: 'resume_pending', record: resumed };
-        return records.map((record) =>
-          matchesRuntimeDeliveryJournalKey(record, canonicalInput) ? resumed : record
+        result = {
+          state: 'resume_pending',
+          record: resumed,
+          ...(recoveryRecords.length > 0 ? { recoveryRecords } : {}),
+        };
+        return pruneRuntimeDeliveryJournalRecords(
+          records.map((record) =>
+            matchesRuntimeDeliveryJournalKey(record, canonicalInput) ? resumed : record
+          ),
+          this.maxTerminalRecords
         );
       }
 
@@ -124,7 +141,8 @@ export class RuntimeDeliveryJournalStore {
         runtimeSessionId: canonicalInput.runtimeSessionId,
         payloadHash: canonicalInput.payloadHash,
         destination: canonicalInput.destination,
-        destinationMessageId: canonicalInput.destinationMessageId,
+        destinationMessageId:
+          recoveryRecords[0]?.destinationMessageId ?? canonicalInput.destinationMessageId,
         committedLocation: null,
         status: 'pending',
         attempts: 1,
@@ -133,8 +151,12 @@ export class RuntimeDeliveryJournalStore {
         committedAt: null,
         lastError: null,
       };
-      result = { state: 'new', record: created };
-      return [...records, created];
+      result = {
+        state: 'new',
+        record: created,
+        ...(recoveryRecords.length > 0 ? { recoveryRecords } : {}),
+      };
+      return pruneRuntimeDeliveryJournalRecords([...records, created], this.maxTerminalRecords);
     });
 
     if (!result) {
@@ -151,14 +173,34 @@ export class RuntimeDeliveryJournalStore {
     committedAt: string;
   }): Promise<void> {
     const canonicalInput = canonicalizeRuntimeDeliveryJournalInput(input);
-    await this.updateExisting(canonicalInput, (record) => ({
-      ...record,
-      committedLocation: canonicalInput.location,
-      status: 'committed',
-      updatedAt: canonicalInput.committedAt,
-      committedAt: canonicalInput.committedAt,
-      lastError: null,
-    }));
+    let found = false;
+    await this.store.updateLocked((records) => {
+      const current = records.find((record) =>
+        matchesRuntimeDeliveryJournalKey(record, canonicalInput)
+      );
+      if (!current) {
+        return records;
+      }
+      found = true;
+      const committed = records.map((record) =>
+        matchesRuntimeDeliveryJournalKey(record, canonicalInput) ||
+        belongsToRuntimeDeliveryRecoveryLineage(record, current)
+          ? {
+              ...record,
+              committedLocation: canonicalInput.location,
+              status: 'committed' as const,
+              updatedAt: canonicalInput.committedAt,
+              committedAt: canonicalInput.committedAt,
+              lastError: null,
+            }
+          : record
+      );
+      return pruneRuntimeDeliveryJournalRecords(committed, this.maxTerminalRecords);
+    });
+
+    if (!found) {
+      throwRuntimeDeliveryJournalRecordNotFound(canonicalInput);
+    }
   }
 
   async markFailed(input: {
@@ -227,20 +269,19 @@ export class RuntimeDeliveryJournalStore {
     updater: (record: RuntimeDeliveryJournalRecord) => RuntimeDeliveryJournalRecord
   ): Promise<void> {
     let found = false;
-    await this.store.updateLocked((records) =>
-      records.map((record) => {
+    await this.store.updateLocked((records) => {
+      const updated = records.map((record) => {
         if (!matchesRuntimeDeliveryJournalKey(record, input)) {
           return record;
         }
         found = true;
         return updater(record);
-      })
-    );
+      });
+      return pruneRuntimeDeliveryJournalRecords(updated, this.maxTerminalRecords);
+    });
 
     if (!found) {
-      throw new Error(
-        `Runtime delivery journal record not found: ${input.teamName}/${input.runId}/${input.idempotencyKey}`
-      );
+      throwRuntimeDeliveryJournalRecordNotFound(input);
     }
   }
 
@@ -264,11 +305,112 @@ function matchesRuntimeDeliveryJournalKey(
   );
 }
 
+function canCarryRuntimeDeliveryAcrossRuns(
+  record: RuntimeDeliveryJournalRecord,
+  input: RuntimeDeliveryJournalBeginInput
+): boolean {
+  return (
+    record.teamName === input.teamName &&
+    record.runId !== input.runId &&
+    record.idempotencyKey === input.idempotencyKey &&
+    (record.status === 'pending' ||
+      record.status === 'failed_retryable' ||
+      record.status === 'failed_terminal') &&
+    matchesLocalRuntimeDeliveryDestination(record.destination, input.destination)
+  );
+}
+
+function belongsToRuntimeDeliveryRecoveryLineage(
+  record: RuntimeDeliveryJournalRecord,
+  current: RuntimeDeliveryJournalRecord
+): boolean {
+  return (
+    record.teamName === current.teamName &&
+    record.runId !== current.runId &&
+    record.idempotencyKey === current.idempotencyKey &&
+    (record.status === 'pending' ||
+      record.status === 'failed_retryable' ||
+      record.status === 'failed_terminal') &&
+    matchesLocalRuntimeDeliveryDestination(record.destination, current.destination)
+  );
+}
+
+function matchesLocalRuntimeDeliveryDestination(
+  left: RuntimeDeliveryDestinationRef,
+  right: RuntimeDeliveryDestinationRef
+): boolean {
+  if (left.kind === 'user_sent_messages' && right.kind === 'user_sent_messages') {
+    return left.teamName === right.teamName;
+  }
+  if (left.kind === 'member_inbox' && right.kind === 'member_inbox') {
+    return left.teamName === right.teamName && left.memberName === right.memberName;
+  }
+  // Cross-team sends retain run-scoped message ids and use conversationId for duplicate proof.
+  return false;
+}
+
+function pruneRuntimeDeliveryJournalRecords(
+  records: RuntimeDeliveryJournalRecord[],
+  maxTerminalRecords: number
+): RuntimeDeliveryJournalRecord[] {
+  const terminalRecords = records
+    .map((record, index) => ({ record, index }))
+    .filter(({ record }) => isPrunableRuntimeDeliveryJournalRecord(record));
+  if (terminalRecords.length <= maxTerminalRecords) {
+    return records;
+  }
+
+  const newestTerminal = terminalRecords
+    .sort(compareRuntimeDeliveryJournalRecency)
+    .slice(0, maxTerminalRecords);
+  const retainedIndexes = new Set(newestTerminal.map(({ index }) => index));
+
+  return records.filter(
+    (record, index) => !isPrunableRuntimeDeliveryJournalRecord(record) || retainedIndexes.has(index)
+  );
+}
+
+function isPrunableRuntimeDeliveryJournalRecord(record: RuntimeDeliveryJournalRecord): boolean {
+  // Pending and retryable records are the durable proof source for process-relaunch recovery.
+  return record.status === 'committed' || record.status === 'failed_terminal';
+}
+
+function compareRuntimeDeliveryJournalRecency(
+  left: { record: RuntimeDeliveryJournalRecord; index: number },
+  right: { record: RuntimeDeliveryJournalRecord; index: number }
+): number {
+  const timestampDifference =
+    getRuntimeDeliveryJournalTimestamp(right.record) -
+    getRuntimeDeliveryJournalTimestamp(left.record);
+  return timestampDifference || right.index - left.index;
+}
+
+function getRuntimeDeliveryJournalTimestamp(record: RuntimeDeliveryJournalRecord): number {
+  const updatedAt = Date.parse(record.updatedAt);
+  if (Number.isFinite(updatedAt)) {
+    return updatedAt;
+  }
+  const createdAt = Date.parse(record.createdAt);
+  return Number.isFinite(createdAt) ? createdAt : Number.NEGATIVE_INFINITY;
+}
+
+function throwRuntimeDeliveryJournalRecordNotFound(input: RuntimeDeliveryJournalKeyInput): never {
+  throw new Error(
+    `Runtime delivery journal record not found: ${input.teamName}/${input.runId}/${input.idempotencyKey}`
+  );
+}
+
 export function createRuntimeDeliveryJournalStore(options: {
   filePath: string;
   clock?: () => Date;
+  maxTerminalRecords?: number;
 }): RuntimeDeliveryJournalStore {
   const clock = options.clock ?? (() => new Date());
+  const maxTerminalRecords =
+    options.maxTerminalRecords ?? RUNTIME_DELIVERY_JOURNAL_MAX_TERMINAL_RECORDS;
+  if (!Number.isInteger(maxTerminalRecords) || maxTerminalRecords < 1) {
+    throw new Error('Runtime delivery journal maxTerminalRecords must be a positive integer');
+  }
   return new RuntimeDeliveryJournalStore(
     new VersionedJsonStore<RuntimeDeliveryJournalRecord[]>({
       filePath: options.filePath,
@@ -276,7 +418,8 @@ export function createRuntimeDeliveryJournalStore(options: {
       defaultData: () => [],
       validate: validateRuntimeDeliveryJournalRecords,
       clock,
-    })
+    }),
+    maxTerminalRecords
   );
 }
 

@@ -73,7 +73,7 @@ export function getOrphanPersistedTeamNames(
   return persistedTeamNames.filter((teamName) => !tracked.has(teamName));
 }
 
-export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
+async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
   teamName: string,
   ports: TeamProvisioningStopTeamPorts<TRun>
 ): Promise<void> {
@@ -87,7 +87,6 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
     if (ports.hasSecondaryRuntimeRuns(teamName)) {
       await ports.stopMixedSecondaryRuntimeLanes(teamName);
     }
-    await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
     return;
   }
   let run = ports.runs.get(runId);
@@ -103,7 +102,6 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
     const runtimeProgress = ports.runtimeAdapterProgressByRunId.get(runId);
     if (runtimeProgress && ports.isCancellableRuntimeAdapterProgress(runtimeProgress)) {
       await ports.cancelRuntimeAdapterProvisioning(runId, runtimeProgress);
-      await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
       return;
     }
     const runtimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
@@ -114,7 +112,6 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
           await ports.stopOpenCodeRuntimeAdapterTeam(teamName, runId);
         }
       });
-      await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
       return;
     }
     if (ports.hasSecondaryRuntimeRuns(teamName)) {
@@ -126,14 +123,12 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
     if (ports.getAliveRunId(teamName) === runId) {
       ports.deleteAliveRunId(teamName);
     }
-    await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
     return;
   }
   if (run.processKilled || run.cancelRequested) {
     if (ports.hasSecondaryRuntimeRuns(teamName)) {
       await ports.stopMixedSecondaryRuntimeLanes(teamName);
     }
-    await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
     return;
   }
   run.processKilled = true;
@@ -147,7 +142,17 @@ export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
   ports.cleanupRun(run);
   ports.logger.info(`[${teamName}] Process stopped (SIGKILL)`);
   await stopSecondaryRuntimeLanes;
-  await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
+}
+
+export async function stopTeamFlow<TRun extends TeamProvisioningStopRun>(
+  teamName: string,
+  ports: TeamProvisioningStopTeamPorts<TRun>
+): Promise<void> {
+  try {
+    await stopTeamRuntimeFlow(teamName, ports);
+  } finally {
+    await ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam(teamName);
+  }
 }
 
 export async function stopAllTeamsFlow(ports: TeamProvisioningStopAllPorts): Promise<void> {

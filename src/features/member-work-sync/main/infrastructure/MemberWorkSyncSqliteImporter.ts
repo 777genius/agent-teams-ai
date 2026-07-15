@@ -4,6 +4,13 @@ import { archiveFileWithGenerations } from '@features/internal-storage/main';
 import { areSnapshotRecordSetsEquivalent, snapshotToRecords } from './memberWorkSyncSqliteMappers';
 
 import type { JsonMemberWorkSyncStore } from './JsonMemberWorkSyncStore';
+import type {
+  MemberWorkSyncMetricEventRecord,
+  MemberWorkSyncOutboxItemRecord,
+  MemberWorkSyncReportIntentRecord,
+  MemberWorkSyncStatusRecord,
+  MemberWorkSyncTeamSnapshotRecords,
+} from '@features/internal-storage/contracts/internalStorageContracts';
 import type { MemberWorkSyncStorageGateway } from '@features/internal-storage/main';
 
 export interface MemberWorkSyncSqliteImporterDeps {
@@ -17,15 +24,72 @@ export interface MemberWorkSyncSqliteImporterDeps {
  * One-time, idempotent JSON -> SQLite import for a team's member-work-sync
  * state. This is message-delivery state, so the sequence is strict:
  *
- *   1. read the full legacy snapshot (absent -> done)
- *   2. replace every team row in one transaction
+ *   1. read the currently surviving legacy snapshot (absent -> done)
+ *   2. overlay it on the canonical SQLite rows and replace the merged team in
+ *      one transaction
  *   3. read back and verify the complete content
  *   4. only then archive the legacy files (*.pre-sqlite, never deleted)
  *
- * File presence is the trigger: a crash before archiving or a downgrade that
- * recreated the files leads to a safe re-import where the JSON wins.
+ * File presence is the trigger: a crash during archiving can leave only a
+ * subset of the JSON files for the retry. JSON rows win by identity, while
+ * canonical rows whose identities are absent from that surviving subset stay
+ * intact. This also makes a downgrade that recreated files a safe overlay.
  */
 const IMPORT_FAILURE_RETRY_COOLDOWN_MS = 60_000;
+
+function compareIdentity(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/**
+ * Import snapshots are overlays, not authoritative deletions. Encounter order
+ * resolves duplicate identities (the last incoming row wins), then identity
+ * sorting makes the replacement and verification deterministic.
+ */
+function overlayRecords<T>(
+  canonical: readonly T[],
+  incoming: readonly T[],
+  identity: (record: T) => string
+): T[] {
+  const merged = new Map<string, T>();
+  for (const record of canonical) {
+    merged.set(identity(record), record);
+  }
+  for (const record of incoming) {
+    merged.set(identity(record), record);
+  }
+  return [...merged.entries()]
+    .sort(([left], [right]) => compareIdentity(left, right))
+    .map(([, record]) => record);
+}
+
+function overlaySnapshotRecords(
+  canonical: MemberWorkSyncTeamSnapshotRecords,
+  incoming: MemberWorkSyncTeamSnapshotRecords
+): MemberWorkSyncTeamSnapshotRecords {
+  return {
+    statuses: overlayRecords<MemberWorkSyncStatusRecord>(
+      canonical.statuses,
+      incoming.statuses,
+      (record) => record.memberKey
+    ),
+    reportIntents: overlayRecords<MemberWorkSyncReportIntentRecord>(
+      canonical.reportIntents,
+      incoming.reportIntents,
+      (record) => record.id
+    ),
+    outboxItems: overlayRecords<MemberWorkSyncOutboxItemRecord>(
+      canonical.outboxItems,
+      incoming.outboxItems,
+      (record) => record.id
+    ),
+    metricEvents: overlayRecords<MemberWorkSyncMetricEventRecord>(
+      canonical.metricEvents,
+      incoming.metricEvents,
+      (record) => record.id
+    ),
+  };
+}
 
 export class MemberWorkSyncSqliteImporter {
   private readonly importedTeams = new Set<string>();
@@ -68,12 +132,14 @@ export class MemberWorkSyncSqliteImporter {
     // may carry a differently-cased teamName, and rows keyed by it would be
     // invisible to queries (and to the verification read-back below).
     const mapped = snapshotToRecords(snapshot);
-    const records = {
+    const incomingRecords = {
       statuses: mapped.statuses.map((record) => ({ ...record, teamName })),
       reportIntents: mapped.reportIntents.map((record) => ({ ...record, teamName })),
       outboxItems: mapped.outboxItems.map((record) => ({ ...record, teamName })),
       metricEvents: mapped.metricEvents.map((record) => ({ ...record, teamName })),
     };
+    const canonicalRecords = await this.deps.gateway.listTeamSnapshot(teamName);
+    const records = overlaySnapshotRecords(canonicalRecords, incomingRecords);
     await this.deps.gateway.importTeam(teamName, records);
 
     const roundTrip = await this.deps.gateway.listTeamSnapshot(teamName);

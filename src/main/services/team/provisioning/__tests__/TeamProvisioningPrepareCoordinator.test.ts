@@ -516,6 +516,217 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     });
   });
 
+  it('isolates shared buffer memory while preserving future-field view relationships', async () => {
+    type FutureProbeResult = ProbeResult & {
+      runtimeFacts: {
+        memory: SharedArrayBuffer;
+        bytes: Uint8Array;
+        tail: DataView;
+      };
+    };
+    const cache = createInMemoryProviderProbeCachePort();
+    const memory = new SharedArrayBuffer(4);
+    const publishedBytes = new Uint8Array(memory);
+    publishedBytes.set([1, 2, 3, 4]);
+    const publishedResult: FutureProbeResult = {
+      claudePath: '/fake/claude',
+      authSource: 'none',
+      runtimeFacts: {
+        memory,
+        bytes: publishedBytes,
+        tail: new DataView(memory, 2, 2),
+      },
+    };
+    const publication = deferredPublication();
+    const create = vi.fn(() => publication.promise);
+    const firstCall = cache.getOrCreate('probe-key', create);
+    const secondCall = cache.getOrCreate('probe-key', create);
+
+    await vi.waitFor(() => expect(create).toHaveBeenCalledOnce());
+    publication.resolve({ result: publishedResult, cacheable: true });
+    const [first, second] = (await Promise.all([firstCall, secondCall])) as [
+      FutureProbeResult,
+      FutureProbeResult,
+    ];
+
+    expect(first.runtimeFacts.bytes.buffer).toBe(first.runtimeFacts.memory);
+    expect(first.runtimeFacts.tail.buffer).toBe(first.runtimeFacts.memory);
+    expect([...first.runtimeFacts.bytes]).toEqual([1, 2, 3, 4]);
+
+    publishedBytes[0] = 90;
+    first.runtimeFacts.bytes[1] = 91;
+    expect([...second.runtimeFacts.bytes]).toEqual([1, 2, 3, 4]);
+
+    const cacheHit = (await cache.getOrCreate('probe-key', async () => {
+      throw new Error('Expected the cached probe result.');
+    })) as FutureProbeResult;
+    expect(cacheHit.runtimeFacts.bytes.buffer).toBe(cacheHit.runtimeFacts.memory);
+    expect(cacheHit.runtimeFacts.tail.buffer).toBe(cacheHit.runtimeFacts.memory);
+    expect([...cacheHit.runtimeFacts.bytes]).toEqual([1, 2, 3, 4]);
+
+    cacheHit.runtimeFacts.tail.setUint8(0, 92);
+    const laterCacheHit = (await cache.getOrCreate('probe-key', async () => {
+      throw new Error('Expected the cached probe result.');
+    })) as FutureProbeResult;
+    expect([...laterCacheHit.runtimeFacts.bytes]).toEqual([1, 2, 3, 4]);
+    expect([...publishedBytes]).toEqual([90, 2, 3, 4]);
+  });
+
+  it('preserves complex structured-clone topology while isolating shared memory', async () => {
+    interface RuntimeFacts {
+      memory: SharedArrayBuffer;
+      aliasA: { id: string };
+      aliasB: { id: string };
+      views: {
+        bytes: Uint8Array;
+        ints: Int16Array;
+        floats: Float32Array;
+        bigInts: BigUint64Array;
+        data: DataView;
+      };
+      map: Map<unknown, unknown>;
+      set: Set<unknown>;
+      error: Error;
+      date: Date;
+      regexp: RegExp;
+      self?: RuntimeFacts;
+    }
+    type FutureProbeResult = ProbeResult & { runtimeFacts: RuntimeFacts };
+
+    const cache = createInMemoryProviderProbeCachePort();
+    const memory = new SharedArrayBuffer(32);
+    const publishedBytes = new Uint8Array(memory);
+    publishedBytes.set(Array.from({ length: 32 }, (_, index) => index));
+    const alias = { id: 'shared-alias' };
+    const map = new Map<unknown, unknown>();
+    const set = new Set<unknown>();
+    const error = new Error('probe failed', {
+      cause: { bytes: new Uint8Array(memory, 3, 4) },
+    });
+    const runtimeFacts: RuntimeFacts = {
+      memory,
+      aliasA: alias,
+      aliasB: alias,
+      views: {
+        bytes: new Uint8Array(memory, 1, 6),
+        ints: new Int16Array(memory, 2, 3),
+        floats: new Float32Array(memory, 8, 2),
+        bigInts: new BigUint64Array(memory, 16, 1),
+        data: new DataView(memory, 24, 4),
+      },
+      map,
+      set,
+      error,
+      date: new Date('2026-07-13T00:00:00.000Z'),
+      regexp: /probe-cache/giu,
+    };
+    runtimeFacts.self = runtimeFacts;
+    map.set(alias, memory);
+    map.set(memory, alias);
+    set.add(set);
+    set.add(memory);
+
+    let getterCalls = 0;
+    const publishedResult: FutureProbeResult = {
+      claudePath: '/fake/claude',
+      authSource: 'none',
+      runtimeFacts,
+    };
+    Object.defineProperty(publishedResult, 'throwingGetter', {
+      enumerable: false,
+      get() {
+        getterCalls += 1;
+        throw new Error('Getter must not be invoked while cloning.');
+      },
+    });
+
+    const isolated = (await cache.getOrCreate('probe-key', async () => ({
+      result: publishedResult,
+      cacheable: true,
+    }))) as FutureProbeResult;
+    const isolatedFacts = isolated.runtimeFacts;
+    const isolatedCause = isolatedFacts.error.cause as { bytes: Uint8Array };
+
+    expect(getterCalls).toBe(0);
+    expect(isolatedFacts.self).toBe(isolatedFacts);
+    expect(isolatedFacts.aliasA).toBe(isolatedFacts.aliasB);
+    expect(isolatedFacts.map.get(isolatedFacts.aliasA)).toBe(isolatedFacts.memory);
+    expect(isolatedFacts.map.get(isolatedFacts.memory)).toBe(isolatedFacts.aliasA);
+    expect(isolatedFacts.set.has(isolatedFacts.set)).toBe(true);
+    expect(isolatedFacts.set.has(isolatedFacts.memory)).toBe(true);
+
+    expect(isolatedFacts.views.bytes).toBeInstanceOf(Uint8Array);
+    expect(isolatedFacts.views.ints).toBeInstanceOf(Int16Array);
+    expect(isolatedFacts.views.floats).toBeInstanceOf(Float32Array);
+    expect(isolatedFacts.views.bigInts).toBeInstanceOf(BigUint64Array);
+    expect(isolatedFacts.views.data).toBeInstanceOf(DataView);
+    for (const view of Object.values(isolatedFacts.views)) {
+      expect(view.buffer).toBe(isolatedFacts.memory);
+    }
+    expect(isolatedFacts.views.bytes).toMatchObject({ byteOffset: 1, length: 6 });
+    expect(isolatedFacts.views.ints).toMatchObject({ byteOffset: 2, length: 3 });
+    expect(isolatedFacts.views.floats).toMatchObject({ byteOffset: 8, length: 2 });
+    expect(isolatedFacts.views.bigInts).toMatchObject({ byteOffset: 16, length: 1 });
+    expect(isolatedFacts.views.data).toMatchObject({ byteOffset: 24, byteLength: 4 });
+    expect(isolatedCause.bytes.buffer).toBe(isolatedFacts.memory);
+    expect(isolatedCause.bytes).toMatchObject({ byteOffset: 3, length: 4 });
+
+    expect(isolatedFacts.error).toBeInstanceOf(Error);
+    expect(isolatedFacts.error.message).toBe('probe failed');
+    expect(isolatedFacts.date).toBeInstanceOf(Date);
+    expect(isolatedFacts.date.toISOString()).toBe('2026-07-13T00:00:00.000Z');
+    expect(isolatedFacts.regexp).toBeInstanceOf(RegExp);
+    expect(isolatedFacts.regexp).toEqual(/probe-cache/giu);
+
+    publishedBytes[1] = 200;
+    expect(isolatedFacts.views.bytes[0]).toBe(1);
+    isolatedFacts.views.bytes[1] = 201;
+    const cacheHit = cache.get('probe-key') as CachedProbeResult & {
+      result: FutureProbeResult;
+    };
+    expect(cacheHit.result.runtimeFacts.views.bytes[1]).toBe(2);
+    expect(getterCalls).toBe(0);
+  });
+
+  it('preserves and isolates future non-enumerable Error data fields across misses and hits', async () => {
+    interface ProbeError extends Error {
+      diagnostics: { attempts: { status: string }[] };
+    }
+    type FutureProbeResult = ProbeResult & { runtimeFacts: { error: ProbeError } };
+
+    const cache = createInMemoryProviderProbeCachePort();
+    const error = new Error('probe failed') as ProbeError;
+    Object.defineProperty(error, 'diagnostics', {
+      configurable: true,
+      enumerable: false,
+      value: { attempts: [{ status: 'original' }] },
+      writable: true,
+    });
+    const publishedResult: FutureProbeResult = {
+      claudePath: '/fake/claude',
+      authSource: 'none',
+      runtimeFacts: { error },
+    };
+    const create = vi.fn().mockResolvedValue({ result: publishedResult, cacheable: true });
+
+    const miss = (await cache.getOrCreate('probe-key', create)) as FutureProbeResult;
+    expect(miss.runtimeFacts.error.diagnostics.attempts).toEqual([{ status: 'original' }]);
+    expect(Object.getOwnPropertyDescriptor(miss.runtimeFacts.error, 'diagnostics')).toMatchObject({
+      enumerable: false,
+    });
+
+    miss.runtimeFacts.error.diagnostics.attempts[0].status = 'caller-mutated';
+    error.diagnostics.attempts[0].status = 'publisher-mutated';
+    const hit = (await cache.getOrCreate('probe-key', create)) as FutureProbeResult;
+
+    expect(hit.runtimeFacts.error.diagnostics.attempts).toEqual([{ status: 'original' }]);
+    hit.runtimeFacts.error.diagnostics.attempts[0].status = 'hit-mutated';
+    const laterHit = (await cache.getOrCreate('probe-key', create)) as FutureProbeResult;
+
+    expect(laterHit.runtimeFacts.error.diagnostics.attempts).toEqual([{ status: 'original' }]);
+    expect(create).toHaveBeenCalledOnce();
+  });
+
   it('does not pin a failed clone of a future probe result field', async () => {
     const cache = createInMemoryProviderProbeCachePort();
     const create = vi

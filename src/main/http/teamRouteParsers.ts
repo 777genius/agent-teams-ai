@@ -428,10 +428,10 @@ export function parseDraftLaunchCreateRequest(
 }
 
 export function withRuntimeTeamName(teamName: string, body: unknown): Record<string, unknown> {
-  const payload =
-    body && typeof body === 'object' && !Array.isArray(body)
-      ? (body as Record<string, unknown>)
-      : {};
+  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+    throw new HttpBadRequestError('runtime body must be an object');
+  }
+  const payload = body as Record<string, unknown>;
   const bodyTeamName = typeof payload.teamName === 'string' ? payload.teamName.trim() : '';
   if (bodyTeamName && bodyTeamName !== teamName) {
     throw new HttpBadRequestError('runtime body teamName must match route teamName');

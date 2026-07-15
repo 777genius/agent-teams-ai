@@ -9,7 +9,11 @@ import { withInboxLock } from '../inboxLock';
 import { getEffectiveInboxMessageId } from '../inboxMessageIdentity';
 
 import { tryReadRegularFileUtf8 } from './TeamProvisioningRegularFileRead';
-import { TEAM_INBOX_MAX_BYTES, TEAM_JSON_READ_TIMEOUT_MS } from './TeamProvisioningRunModel';
+import { TEAM_JSON_READ_TIMEOUT_MS } from './TeamProvisioningRunModel';
+
+// TeamInboxReader can surface messages from inbox files up to 10 MiB. Read-mark persistence
+// must accept the same files or delivered messages remain unread and are relayed repeatedly.
+const TEAM_INBOX_MARK_READ_MAX_BYTES = 10 * 1024 * 1024;
 
 export interface TeamInboxReadFileOptions {
   timeoutMs: number;
@@ -129,6 +133,6 @@ export function markTeamInboxMessagesReadWithDefaults(
     ...input,
     readRegularFileUtf8: tryReadRegularFileUtf8,
     timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
-    maxBytes: TEAM_INBOX_MAX_BYTES,
+    maxBytes: TEAM_INBOX_MARK_READ_MAX_BYTES,
   });
 }
