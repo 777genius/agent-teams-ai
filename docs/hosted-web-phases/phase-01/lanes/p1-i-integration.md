@@ -1,15 +1,15 @@
-# P1.I lint remediation and integration lane
+# P1.I format remediation and integration lane
 
 ## Authority and provenance
 
 - Project: `agent-teams-hosted-web-refactor`
 - Phase: `phase-01`
-- Current node: `P1.I.LINT.REMEDIATION`
+- Current node: `P1.I.FORMAT.REMEDIATION`
 - Serial successor: `P1.I.INTEGRATION`
-- Lane packet revision: `phase-01-p1-i-integration-r2`
-- Router revision: `phase-01-p1-i-lint-remediation-router-r1`
-- Router `packetBaseSha`: `0d7f904abf2a3d4eaf7ba4e16ebd987d473535fe`
-- Remediation evidence ID: `P1.I.LINT.REMEDIATION`
+- Lane packet revision: `phase-01-p1-i-integration-r3`
+- Router revision: `phase-01-p1-i-format-remediation-router-r1`
+- Router `packetBaseSha`: `b482e816a90e9bb988a0797565241bae4d60b690`
+- Remediation evidence ID: `P1.I.FORMAT.REMEDIATION`
 - Downstream evidence IDs: `P1.I.INTEGRATION` and `P1.I.ROLLBACK`
 - Profile for every producer and reviewer: `gpt-5.6-sol`, `xhigh`,
   `serviceTier: "default"`; Fast is prohibited
@@ -17,16 +17,21 @@
 - Durable controller: `controller-v17`, `HOLD`, observation-only
 - Terminal state after every authorized attempt: `HOLD`
 
-The canonical authority is clean and remotely pushed. Its full `pnpm lint` result has exactly one
-error and no other lint finding:
+The canonical authority is clean and remote-equal. It contains the accepted lint remediation and the
+existing 69 canonical P1.I inputs. Terminal job
+`agent-teams-hosted-web-refactor-p1-i-integration-v17-r1` returned immutable `BLOCKED`/`HOLD`:
 
-```text
-src/shared/contracts/hosted/app-error.ts:29:65
-@typescript-eslint/no-unnecessary-type-assertion
-```
+- patch SHA-256: `d94f8dfa6548427e007402e8771c469c8e661cd64de3a8728dec042a509aebbe`;
+- manifest SHA-256:
+  `1b88a6e8e53199f0b1905d4f4c194525bcb86db185f0e4748acf60f69bb78f94`;
+- audited rejection ledger: present;
+- gate result: 13 of 14 passed; and
+- sole failure: exact 74-path Prettier reports
+  `docs/research/hosted-web/phase-1/reviews/routes-ratchets.md` unformatted.
 
-The redundant expression is the `as string` assertion in the validated `diagnosticId` projection.
-This lane inserts one exact product remediation before the existing P1.I evidence-freeze producer.
+The rejected patch and its blocked five outputs are provenance only. They must never be materialized,
+applied, copied, repaired, salvaged, reviewed for acceptance, or integrated. This lane inserts one
+exact formatting remediation before a fresh P1.I evidence-freeze producer.
 
 This router author starts nothing. No worker starts until the router has independent acceptance,
 broker integration and push, and root has immutably bound the exact broker-returned pushed commit as
@@ -35,8 +40,8 @@ of `git ls-remote origin refs/heads/refactor/hosted-web-feature-boundaries`.
 
 ## Exact mandatory reads
 
-Read in this order. Directory reads, globs, recursive research reads, implicit siblings, and the whole
-master plan are not authorized:
+Read in this order. Directory reads, globs, recursive research reads, implicit siblings, rejected
+patch materialization, and the whole master plan are not authorized:
 
 1. `AGENTS.md`
 2. `docs/hosted-web-phases/START_HERE.md`
@@ -56,11 +61,13 @@ master plan are not authorized:
 16. `docs/hosted-web-phases/phase-01/operations-and-risk.md`
 17. `docs/hosted-web-phases/phase-01/packet-inputs.md`
 18. the exact 68 paths in `EXECUTION_INDEX.json.phase1CanonicalInputs`, in exact group and path order
+19. `.codex-handoff/phase-01-p1-i-lint-remediation.json`, the accepted 69th P1.I input
 
-The index must be expanded and validated as 68 distinct existing paths before reading the first
-manifest path. Nothing nearby becomes an input implicitly.
+The index must be expanded and validated as 68 distinct manifest paths and 69 distinct existing P1.I
+inputs before reading the first manifest path. Nothing nearby becomes an input implicitly. The
+format-remediation handoff created by this lane is not a 70th P1.I input.
 
-## P1.I.LINT.REMEDIATION start gate
+## P1.I.FORMAT.REMEDIATION start gate
 
 Root must capture one immutable pre-start snapshot proving:
 
@@ -68,21 +75,22 @@ Root must capture one immutable pre-start snapshot proving:
 2. `postRouterIntegrationAuthoritySha` is the exact broker-returned pushed commit and equals local
    `HEAD`, admission `expectedSourceCommit`, and the worker contract authority fields;
 3. the worktree is clean and the explicit remote ref equals that SHA;
-4. the original 68 Phase 1 input paths are present and unchanged from
-   `0d7f904abf2a3d4eaf7ba4e16ebd987d473535fe`;
-5. `.codex-handoff/phase-01-p1-i-lint-remediation.json` is absent;
-6. full-lint baseline evidence is exactly the one diagnostic above;
-7. no remediation producer/reviewer, P1.I producer/reviewer, P1.F, Phase 2+, unrelated product worker,
+4. all existing 69 Phase 1/P1.I inputs are present at their canonical bytes from
+   `b482e816a90e9bb988a0797565241bae4d60b690`;
+5. `.codex-handoff/phase-01-p1-i-format-remediation.json` and all five P1.I outputs are absent;
+6. the immutable exact-74 finding is exactly the one unformatted Markdown path above;
+7. the rejected patch and its five candidate outputs have not been materialized or applied;
+8. no remediation producer/reviewer, P1.I producer/reviewer, P1.F, Phase 2+, unrelated product worker,
    or successor controller is active;
-8. dependencies are broker-materialized offline and worker install/fetch/update is disabled; and
-9. admission uses the exact default-only profile.
+9. dependencies are broker-materialized offline and worker install/fetch/update is disabled; and
+10. admission uses the exact default-only profile.
 
 Any mismatch ends `HOLD` without launch. Root uses this admission shape:
 
 ```text
 operation: codex_goal_project_refill_worker
 workerRole: producer
-node: P1.I.LINT.REMEDIATION
+node: P1.I.FORMAT.REMEDIATION
 model: gpt-5.6-sol
 reasoningEffort: xhigh
 serviceTier: default
@@ -95,189 +103,192 @@ preStartAdmission.contract.format: 1
 preStartAdmission.contract.canonicalSha: <postRouterIntegrationAuthoritySha>
 preStartAdmission.contract.baseSha: <postRouterIntegrationAuthoritySha>
 preStartAdmission.contract.phaseStartSha: <postRouterIntegrationAuthoritySha>
-preStartAdmission.contract.packetRevision: phase-01-p1-i-integration-r2
+preStartAdmission.contract.packetRevision: phase-01-p1-i-integration-r3
 preStartAdmission.contract.controllerPacket: docs/hosted-web-phases/phase-01/controller-packet.md
 preStartAdmission.contract.lanePacket: docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md
 preStartAdmission.contract.phaseId: phase-01
-preStartAdmission.contract.laneId: p1-i-lint-remediation
+preStartAdmission.contract.laneId: p1-i-format-remediation
 preStartAdmission.contract.inputPatchHash: null
 preStartAdmission.contract.reviewKind: implementation
 ```
 
 No fallback model, tier substitution, Fast mode, concurrent worker, retry, refill, producer-side
-reviewer launch, network query, or moving source ref is authorized.
+reviewer launch, network query, moving source ref, or rejected patch/input binding is authorized.
 
 ## Exact remediation ownership and edit
 
-The product worker owns exactly these three paths, in this order:
+The producer owns exactly these two paths, in this order:
 
-1. `src/shared/contracts/hosted/app-error.ts`
-2. `test/architecture/hosted-web/phase-1/contracts/app-error.test.ts`
-3. `.codex-handoff/phase-01-p1-i-lint-remediation.json`
+1. `docs/research/hosted-web/phase-1/reviews/routes-ratchets.md`
+2. `.codex-handoff/phase-01-p1-i-format-remediation.json`
 
-The source edit is exactly:
+Before any write, record the canonical Markdown SHA-256 and semantic-token SHA-256 and compute the
+expected formatted bytes with the repository-installed Prettier module using the Markdown filepath.
+Then the only authorized repository writer command is:
 
-```diff
--    ...(input.diagnosticId === undefined ? {} : { diagnosticId: input.diagnosticId as string }),
-+    ...(input.diagnosticId === undefined ? {} : { diagnosticId: input.diagnosticId }),
+```bash
+pnpm exec prettier --write docs/research/hosted-web/phase-1/reviews/routes-ratchets.md
 ```
 
-No other source token, assertion, branch, validation rule, error code, reason grammar, diagnostic
-grammar, retry rule, projection key, freeze behavior, return type, import, export, or formatting may
-change.
+The Markdown after that command must hash exactly to the precomputed expected formatter output. A
+second formatter evaluation must be byte-identical. No other `--write`, format/fix command, editor,
+patch, substitution, append, generated file, or cleanup is permitted.
 
-The test file adds one focused regression which proves all of the following together:
+No word, link, heading, list marker, table value/alignment, inline-code token, fenced-code byte, HTML
+token, identifier, command, SHA, disposition, finding, or successor statement may change. Only
+repository-pinned Prettier formatting is legal.
 
-- a valid `diagnosticId` survives `createSafeAppError` unchanged;
-- the returned safe error is frozen and contains only the expected known fields;
-- an unsafe diagnostic ID still rejects with the existing safe-error failure behavior; and
-- no raw message, transport field, retry rule, or `AppErrorCode` semantic changes.
+There is no product, test, fixture, P1.I output, dependency, config, lockfile, router, review, registry,
+temporary repository output, or third-path exception.
 
-The worker may not edit fixtures because the regression uses inline synthetic values. No fourth path,
-temporary repository output, generated file, cache, dependency, config, lockfile, router, review,
-P1.I output, registry entry, or real-project path is authorized.
+## Exact semantic-token proof
+
+The producer and reviewer use this algorithm over the canonical base bytes and candidate bytes:
+
+1. normalize CRLF/CR line endings to LF;
+2. identify fenced code blocks opened by three or more backticks or tildes and retain each fence token
+   and every content line byte-for-byte;
+3. identify Markdown table-delimiter rows only when every nonempty pipe-delimited cell matches
+   `^:?-{3,}:?$`; replace only each delimiter's hyphen run with `---` while retaining leading/trailing
+   alignment colons and pipe structure;
+4. retain inline-code spans and HTML comment tokens byte-for-byte;
+5. emit the remaining ordered non-whitespace tokens without changing punctuation or text; and
+6. SHA-256 hash the UTF-8 JSON encoding of that ordered token array.
+
+Before and after token hashes must be equal. Fenced-code and inline-code token arrays must also be
+equal independently. Table alignment-colon arrays must be equal. This is supplemental to exact
+formatter derivation: the post-write raw SHA must equal the SHA of Prettier's output computed from the
+canonical raw input before the write.
+
+The handoff records the exact algorithm version
+`phase1-markdown-semantic-token-v1`, before/after raw hashes, before/after semantic-token hashes,
+fenced/inline token hashes, table-alignment hashes, pinned Prettier version, expected format hash, and
+post-write format hash.
 
 ## Required remediation checks
 
-Run the focused regression:
+Validate pinned formatter derivation before and after the sole write. The producer may use a Node
+process that imports the repository-installed `prettier` package to compute bytes/hashes in memory;
+it may not write through the API. The CLI command above remains the only Markdown writer.
 
-```bash
-pnpm exec vitest run test/architecture/hosted-web/phase-1/contracts/app-error.test.ts
-```
-
-Acceptance is exactly 1/1 file and 2/2 tests.
-
-Run full lint, never the fast substitute or a writer/fix command:
-
-```bash
-pnpm lint
-```
-
-Acceptance is exit `0` with zero errors. Run the frozen native typecheck:
-
-```bash
-pnpm typecheck
-```
-
-It may exit `1` only for these exact inherited Phase 0 diagnostics:
-
-- `auth-artifacts-spike.test.ts`: TS7016 at 25:8; TS7031 at 66:31; TS18046 at 117:68;
-  TS7031 at 413:48; TS7031 at 733:10;
-- `evidence-scanner.test.ts`: TS7016 at 12:8; and
-- `scan-runtime-surfaces.test.ts`: TS2352 at 162:44.
-
-Acceptance is exactly seven inherited, zero owned, and zero unexpected diagnostics. A removed, moved,
-changed, or additional diagnostic fails closed.
-
-After the handoff is final, run exact three-path Prettier:
+After the handoff is final, run exact two-path Prettier:
 
 ```bash
 pnpm exec prettier --check \
-  src/shared/contracts/hosted/app-error.ts \
-  test/architecture/hosted-web/phase-1/contracts/app-error.test.ts \
-  .codex-handoff/phase-01-p1-i-lint-remediation.json
+  docs/research/hosted-web/phase-1/reviews/routes-ratchets.md \
+  .codex-handoff/phase-01-p1-i-format-remediation.json
 ```
 
-Formatting writers are prohibited.
+Acceptance is exit `0` with exactly two matched paths. Parse the handoff as JSON and recompute all
+recorded hashes and token proofs.
 
 Read-only Git is authorized only for these provenance, diff, and scope observations; staging,
-checkout, apply, commit, merge, push, reset, integration, or index mutation is forbidden:
+checkout, apply, commit, merge, push, reset, integration, rejected patch access, or index mutation is
+forbidden:
 
 ```bash
 test "$(git rev-parse HEAD)" = "$postRouterIntegrationAuthoritySha"
 git diff --check
 git diff --cached --quiet
 git diff --name-only "$postRouterIntegrationAuthoritySha" -- \
-  src/shared/contracts/hosted/app-error.ts \
-  test/architecture/hosted-web/phase-1/contracts/app-error.test.ts
+  docs/research/hosted-web/phase-1/reviews/routes-ratchets.md
 git ls-files --others --exclude-standard
 git status --short
 ```
 
-The tracked diff must contain exactly the source and test in the declared order, the untracked set
-must contain only the handoff, the staged set must be empty, and status must resolve to exactly three
-paths. The source diff must equal the one-line assertion deletion above; the test diff must be only the
-focused regression.
+The tracked diff must contain exactly the Markdown, the untracked set must contain only the handoff,
+the staged set must be empty, and status must resolve to exactly two paths. The Markdown diff must be
+exactly the pinned formatter output already proved from canonical input.
 
-Scan the exact same three paths and classify every match:
+Scan the exact same two paths and classify every match:
 
 ```bash
 remediation_paths=(
-  src/shared/contracts/hosted/app-error.ts
-  test/architecture/hosted-web/phase-1/contracts/app-error.test.ts
-  .codex-handoff/phase-01-p1-i-lint-remediation.json
+  docs/research/hosted-web/phase-1/reviews/routes-ratchets.md
+  .codex-handoff/phase-01-p1-i-format-remediation.json
 )
-test "${#remediation_paths[@]}" -eq 3
+test "${#remediation_paths[@]}" -eq 2
 rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer|cookie|authorization)' "${remediation_paths[@]}"
 rg -n -i '(provider|anthropic|claude|openai|opencode|gpt-[0-9])' "${remediation_paths[@]}"
 rg -n '(/Users/|/home/|/root/|/tmp/|~/|[A-Za-z]:\\Users\\|real[-_ ]project)' "${remediation_paths[@]}"
 file --mime-type "${remediation_paths[@]}"
 ```
 
-Required model/profile metadata, repository-relative paths, synthetic unsafe values, and the recorded
-scan command are control text, not payload values, but still require classification. Any real secret,
-auth/provider payload, private/real-project/task-temporary path, raw command/runtime body, or binary
-file fails.
+Also prove both paths are valid UTF-8 text with no NUL byte. Required model/profile metadata,
+repository-relative paths, provenance hashes, scan-command text, and explicit prohibited-action
+language are control text, but every match still requires classification. Any real secret,
+auth/provider payload, private/real-project/task-temporary path, raw command/runtime body, binary, or
+unclassified match fails.
+
+Do not run product tests, ESLint, typecheck, full lint, app/runtime flows, or a second writer. The
+immutable terminal record already establishes that every non-format P1 gate passed; this lane changes
+no product/test token and must not reinterpret those gates as remediation checks.
 
 ## Remediation handoff and self-review
 
-`.codex-handoff/phase-01-p1-i-lint-remediation.json` follows `PACKET_STANDARD.md` and records:
+`.codex-handoff/phase-01-p1-i-format-remediation.json` follows `PACKET_STANDARD.md` and records:
 
 1. schema, phase, node, lane, packet/router revision, evidence ID, and terminal `HOLD`;
 2. `baseSha`, `canonicalSha`, `planBundleCommit`, `phaseStartSha`, and `headSha`, all equal to
    `postRouterIntegrationAuthoritySha`;
-3. the exact three `changedPaths` in writer order and SHA-256 for both non-handoff changed files;
-4. the exact baseline lint diagnostic and exact post-edit full-lint zero result;
-5. focused Vitest 1/2, typecheck 7/0/0, Prettier, diff, scope, scan, and binary results;
-6. explicit confirmation that only the redundant assertion was removed and `AppError` semantics were
-   preserved;
-7. explicit self-review of the source diff, focused regression, output hashes, writer scope, frozen
-   typecheck baseline, and zero-lint result;
-8. no claim of independent acceptance, integration, or P1.I completion; and
-9. `nextAction: "independent-verification"` and `terminalState: "HOLD"`.
+3. the exact two `changedPaths` in writer order;
+4. the immutable terminal job, `BLOCKED`/`HOLD`, rejected patch/manifest hashes, audited-ledger
+   presence, exact-74 failure, and never-integrate disposition without importing rejected bytes;
+5. canonical Markdown raw SHA, expected pinned-Prettier output SHA, final Markdown SHA, pinned Prettier
+   version, and idempotence result;
+6. exact semantic-token algorithm version and all equal before/after semantic/fenced/inline/table
+   hashes with semantic token change count zero;
+7. exact two-path Prettier, JSON parse, diff, scope, scan, UTF-8/NUL and MIME results;
+8. explicit self-review of formatter derivation, complete Markdown diff, token proof, hashes, writer
+   scope, handoff, classifications, and rejected-attempt quarantine;
+9. no claim of independent acceptance, integration, P1.I completion, or successor authority; and
+10. `nextAction: "independent-verification"` and `terminalState: "HOLD"`.
 
-Before returning, the producer rereads both tracked diffs and the complete handoff. Any ambiguity,
-scope expansion, missing classification, semantic change, gate failure, or unsupported claim ends
-`HOLD` with no self-repair outside the three paths.
+Before returning, the producer rereads the complete Markdown diff and handoff. Any ambiguity, scope
+expansion, missing classification, token/content change, hash/gate failure, or unsupported claim ends
+`HOLD` with no self-repair outside the two paths.
 
 The strict producer result is:
 
 ```text
-P1_I_LINT_REMEDIATION_PRODUCER_RESULT {"status":"VERIFIED","evidenceId":"P1.I.LINT.REMEDIATION","changedPathCount":3,"fullLintErrorCount":0,"nextAction":"independent-verification","terminalState":"HOLD"}
+P1_I_FORMAT_REMEDIATION_PRODUCER_RESULT {"status":"VERIFIED","evidenceId":"P1.I.FORMAT.REMEDIATION","changedPathCount":2,"semanticTokenChangeCount":0,"nextAction":"independent-verification","terminalState":"HOLD"}
 ```
 
 `VERIFIED` is legal only when every gate passes. On failure, replace only `status` with `BLOCKED` or
-`FAILED`. The result plus broker-captured immutable bytes/hashes for all three paths is required;
-heartbeat, PID, tmux, changed-file notice, or provider observation is insufficient.
+`FAILED`. The result plus broker-captured immutable bytes/hashes for both paths is required; heartbeat,
+PID, tmux, changed-file notice, or provider observation is insufficient.
 
 ## Independent remediation review
 
-After producer termination and immutable three-path capture, root proves no remediation producer or
+After producer termination and immutable two-path capture, root proves no remediation producer or
 reviewer is active and prepares exactly one fresh independent reviewer:
 
 ```text
 operation: codex_goal_project_prepare_verifier
 workerRole: reviewer
-reviewScope: P1.I.LINT.REMEDIATION
+reviewScope: P1.I.FORMAT.REMEDIATION
 model: gpt-5.6-sol
 reasoningEffort: xhigh
 serviceTier: default
 sourceRemote: origin
 sourceBranch: refactor/hosted-web-feature-boundaries
 expectedSourceCommit: <postRouterIntegrationAuthoritySha>
-inputPatchHash: <brokerCapturedRemediationImmutableOutputHash>
+inputPatchHash: <brokerCapturedFormatRemediationImmutableOutputHash>
 reviewKind: review
 ```
 
-The reviewer is fresh and independent of the router author, producer, and prior Phase 1 workers. It is
-read-only over the exact three candidate paths plus the execution documents needed to evaluate them.
-It has no writer, repair, lifecycle, integration, retry, refill, network, provider, runtime,
-agent-flow, registry, or real-project authority. It independently inspects the exact source/test diff,
-reruns focused Vitest, full lint, frozen typecheck, exact Prettier and scans, validates the handoff and
-self-review, and returns exactly one immutable result:
+The reviewer is fresh and independent of the router author, format producer, terminal blocked-attempt
+worker, and prior Phase 1 workers. It is read-only over the exact two candidate paths, broker-captured
+canonical base bytes, and execution documents needed to evaluate them. It has no writer, repair,
+lifecycle, integration, retry, refill, network, provider, runtime, agent-flow, registry,
+rejected-patch, or real-project authority.
+
+It independently inspects the exact Markdown diff, proves pinned formatter derivation, reruns semantic
+token/fenced/inline/table equivalence, validates every hash, runs exact two-path Prettier and scans,
+validates the handoff and self-review, and returns exactly one immutable result:
 
 ```text
-P1_I_LINT_REMEDIATION_REVIEW_RESULT {"disposition":"ACCEPT","findingCounts":{"P0":0,"P1":0,"P2":0},"reviewedPathCount":3,"integrationPathCount":3,"fullLintErrorCount":0,"terminalState":"HOLD"}
+P1_I_FORMAT_REMEDIATION_REVIEW_RESULT {"disposition":"ACCEPT","findingCounts":{"P0":0,"P1":0,"P2":0},"reviewedPathCount":2,"integrationPathCount":2,"semanticTokenChangeCount":0,"terminalState":"HOLD"}
 ```
 
 `ACCEPT` requires complete proof and zero P0/P1/P2 findings. `REJECT` uses the same schema with
@@ -285,28 +296,33 @@ nonzero finding counts and immutable finding details. Admission, provider, envir
 missing-result incidents remain `HOLD` and are not synthetic `REJECT`.
 
 On `ACCEPT`, root may mechanically call `mark_reviewed`; only then may the broker integrate and push
-exactly the three paths in writer order. On `REJECT`, root may not mark reviewed, the broker may not
+exactly the two paths in writer order. On `REJECT`, root may not mark reviewed, the broker may not
 integrate, and P1.I may not start. The only permitted follow-up is a separately admitted bounded
-remediation addressing the immutable findings within these same three paths and the same default-only
+remediation addressing immutable findings within these same two paths and the same default-only
 profile. It grants no broad cleanup, unrelated edit, direct retry, or integration authority.
 
 ## Direct P1.I.INTEGRATION continuation
 
-After accepted remediation integration, root resolves the exact broker-returned pushed commit as
-`postRemediationIntegrationAuthoritySha` and proves:
+After accepted format-remediation integration, root resolves the exact broker-returned pushed commit
+as `postFormatRemediationIntegrationAuthoritySha` and proves:
 
 1. clean worktree and exact equality to the explicit remote branch ref;
-2. the integration commit changes exactly the three accepted remediation paths;
+2. the integration changes exactly the two accepted remediation paths;
 3. all integrated bytes/hashes equal the independently accepted immutable candidate;
-4. the original 68-path Phase 1 manifest is present, with only the two remediation-owned manifest
-   paths changed from the pre-remediation snapshot;
-5. the accepted remediation handoff is present and makes the P1.I input set 69 distinct paths;
-6. all five P1.I outputs are absent; and
-7. a fresh `pnpm lint` at `postRemediationIntegrationAuthoritySha` exits `0` with zero errors.
+4. all 68 manifest paths and the accepted lint-remediation handoff are present, making the unchanged
+   P1.I input set 69 distinct paths;
+5. only `routes-ratchets.md` differs among those 69 inputs from
+   `b482e816a90e9bb988a0797565241bae4d60b690`, and it equals the accepted pinned-Prettier output;
+6. the format-remediation handoff is present as provenance but excluded from the 69 P1.I inputs;
+7. all five P1.I outputs are absent;
+8. rejected patch/output bytes were never materialized, applied, copied, or selected for integration;
+   and
+9. exact pinned Prettier over all 69 canonical inputs exits `0`.
 
-Those facts directly satisfy the new prerequisite for the existing five-output producer. No further
-docs router is required. Root then admits one `P1.I.INTEGRATION` producer at
-`postRemediationIntegrationAuthoritySha` using the same default-only profile and lane packet revision.
+Those facts directly satisfy the prerequisite for one fresh five-output producer. No further docs
+router is required. Root then admits one fresh `P1.I.INTEGRATION` producer at
+`postFormatRemediationIntegrationAuthoritySha` using the same default-only profile and lane packet
+revision.
 
 The P1.I producer retains exact output ownership:
 
@@ -316,46 +332,47 @@ The P1.I producer retains exact output ownership:
 4. `docs/research/hosted-web/phase-1/evidence-index.json`
 5. `docs/research/hosted-web/phase-1/integration-report.json`
 
-Its read-only input set is the 68 paths in `phase1CanonicalInputs`, evaluated at the accepted
-remediation authority, followed by
-`.codex-handoff/phase-01-p1-i-lint-remediation.json`: 69 distinct inputs. The two remediated source/test
-paths must match the accepted candidate; the other 66 original inputs must remain byte-identical to
-`0d7f904abf2a3d4eaf7ba4e16ebd987d473535fe`.
+Its read-only input set is the 68 paths in `phase1CanonicalInputs`, evaluated at accepted format
+authority, followed by `.codex-handoff/phase-01-p1-i-lint-remediation.json`: 69 distinct inputs. The
+format handoff is not an input. The rejected patch, manifest, and blocked outputs are not inputs or
+salvage carriers.
 
-The existing 14 P1 gate IDs remain mandatory. Updated exact checks are:
+The fresh producer must generate all five output files anew from those canonical inputs. It must not
+reuse, copy, compare for adoption, materialize, or integrate any blocked output. The existing 14 P1
+gate IDs remain mandatory. Exact checks are:
 
 - full Phase 1 plus team-lifecycle Vitest: 13/13 files and 60/60 tests;
 - focused ratchet Vitest: 1/1 file and 3/3 tests;
 - typecheck: seven inherited, zero owned, zero unexpected;
 - full `pnpm lint`: exit `0`;
-- Prettier and classified scans: exact 69 inputs plus five outputs, 74 paths;
+- Prettier and classified scans: exact 69 inputs plus five fresh outputs, 74 paths;
 - scratch-only rollback/apply proof: the same exact 54 payload paths, from P1.S0 to
-  `postRemediationIntegrationAuthoritySha`, with forward byte equality and reverse absence;
+  `postFormatRemediationIntegrationAuthoritySha`, with forward byte equality and reverse absence;
 - diff/scope: exactly five untracked P1.I outputs with no staged or tracked change; and
-- decision, estimate, evidence lifecycle, integration report, handoff, self-review, and terminal
-  `HOLD` requirements from the accepted P1.I contract.
+- provenance, predecessors, tests, negatives, ratchet, security, decision, estimate, evidence
+  lifecycle, integration report, handoff, self-review, and terminal `HOLD` requirements.
 
-The P1.I producer strict result remains:
+The fresh P1.I producer strict result is:
 
 ```text
 P1_I_PRODUCER_RESULT {"status":"VERIFIED","evidenceIds":["P1.I.INTEGRATION","P1.I.ROLLBACK"],"changedPathCount":5,"nextAction":"independent-verification","terminalState":"HOLD"}
 ```
 
-After its terminal immutable five-path output, root may start the already authorized one fresh
-independent P1.I milestone reviewer. That reviewer is read-only over 69 inputs plus five outputs (74
-paths), uses the same default-only profile, and returns `ACCEPT` or `REJECT`. On `ACCEPT`, root may
-`mark_reviewed` and the broker may integrate and push exactly the five P1.I outputs. On `REJECT`, no
-integration occurs.
+After terminal immutable five-path output, root may start exactly one fresh independent P1.I
+milestone reviewer. That reviewer is read-only over 69 inputs plus five outputs (74 paths), uses the
+same default-only profile, and returns `ACCEPT` or `REJECT`. On `ACCEPT`, root may `mark_reviewed` and
+the broker may integrate and push exactly the five P1.I outputs. On `REJECT`, no integration occurs.
 
 ## Stop conditions and HOLD
 
-Stop and end `HOLD` on authority drift, profile mismatch, extra/missing path, source edit beyond the
-one assertion deletion, unfocused test change, `AppError` semantic drift, focused-test failure, any
-lint error, typecheck drift, Prettier failure, staged path, scope/diff mismatch, unsafe or unclassified
-scan match, binary output, false handoff field, incomplete self-review, early/concurrent reviewer,
-integration before `ACCEPT` and `mark_reviewed`, or unsupported successor claim.
+Stop and end `HOLD` on authority drift, profile mismatch, extra/missing path, writer command/target
+beyond the exact pinned formatter, output not exactly derived from canonical input, any semantic-token
+or content drift, hash mismatch, Prettier failure, staged path, scope/diff mismatch, unsafe or
+unclassified scan match, binary output, false handoff field, incomplete self-review, early/concurrent
+reviewer, integration before `ACCEPT` and `mark_reviewed`, rejected-byte materialization/use, or
+unsupported successor claim.
 
-No current action authorizes fetch, install, app/server/runtime/team launch, agent-flow test,
-real-project access, registry write, stage, commit, merge, push, raw Git integration, P1.F, Phase 2+,
-unrelated product work, controller replacement, or a successor controller. The router author performs
-none of those actions and ends `HOLD`.
+No current action authorizes product/test edits, fetch, install, app/server/runtime/team launch,
+agent-flow tests, real-project access, registry writes, stage, commit, merge, push, raw Git integration,
+lifecycle action, P1.F, Phase 2+, unrelated product work, controller replacement, or a successor
+controller. The router author performs none of those actions and ends `HOLD`.
