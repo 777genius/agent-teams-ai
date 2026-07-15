@@ -8,8 +8,13 @@ import {
   type CheckRun,
   type IntegrationAttempt,
 } from "../domain/integration-attempt";
+import {
+  IntegrationError,
+  IntegrationErrorReason,
+} from "../domain/integration-errors";
 import { IntegrationAuditEventType } from "../domain/integration-events";
 import type { CheckRunnerPort } from "../ports/check-runner-port";
+import type { WorkspaceLockPort } from "../ports/workspace-lock-port";
 import {
   loadIntegrationAttempt,
   nowIso,
@@ -19,6 +24,7 @@ import {
 
 export type RunRequiredChecksDeps = IntegrationUseCaseDeps & {
   readonly checks: CheckRunnerPort;
+  readonly locks: WorkspaceLockPort;
 };
 
 export type RunRequiredChecksInput = {
@@ -29,7 +35,24 @@ export async function runRequiredChecks(
   deps: RunRequiredChecksDeps,
   input: RunRequiredChecksInput,
 ): Promise<IntegrationAttempt> {
-  const attempt = await loadIntegrationAttempt(deps.store, input.attemptId);
+  const snapshot = await loadIntegrationAttempt(deps.store, input.attemptId);
+  const lock = await deps.locks.acquire({
+    workspacePath: snapshot.targetWorkspacePath,
+    owner: snapshot.attemptId,
+  });
+  try {
+    const attempt = await loadIntegrationAttempt(deps.store, input.attemptId);
+    assertSameTargetWorkspace(snapshot, attempt);
+    return await runRequiredChecksLocked(deps, attempt);
+  } finally {
+    await deps.locks.release(lock);
+  }
+}
+
+async function runRequiredChecksLocked(
+  deps: RunRequiredChecksDeps,
+  attempt: IntegrationAttempt,
+): Promise<IntegrationAttempt> {
   if (requiredChecksAlreadyInProgressOrPassed(attempt)) {
     return attempt;
   }
@@ -54,6 +77,18 @@ export async function runRequiredChecks(
     occurredAt: completedAt,
   });
   return updated;
+}
+
+function assertSameTargetWorkspace(
+  snapshot: IntegrationAttempt,
+  current: IntegrationAttempt,
+): void {
+  if (snapshot.targetWorkspacePath !== current.targetWorkspacePath) {
+    throw new IntegrationError({
+      reason: IntegrationErrorReason.InvalidTransition,
+      evidence: ["integration_attempt_target_workspace_changed"],
+    });
+  }
 }
 
 function requiredChecksAlreadyInProgressOrPassed(

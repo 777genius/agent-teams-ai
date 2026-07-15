@@ -52,6 +52,10 @@ export interface GitPort {
     readonly attempt: IntegrationAttempt;
   }): Promise<void> | void;
 
+  rollbackWorkerOutput?(input: {
+    readonly attempt: IntegrationAttempt;
+  }): Promise<void> | void;
+
   push(input: {
     readonly workspacePath: string;
     readonly remote: string;

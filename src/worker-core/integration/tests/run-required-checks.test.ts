@@ -14,6 +14,7 @@ import {
   type IntegrationAttemptStorePort,
   type IntegrationAuditEvent,
   type ProjectIntegrationCheckSpec,
+  type WorkspaceLockPort,
 } from "../../index";
 
 describe("runRequiredChecks", () => {
@@ -44,6 +45,7 @@ describe("runRequiredChecks", () => {
       {
         store,
         checks,
+        locks: immediateWorkspaceLock(),
         clock: new SequenceClock([
           "2026-01-01T00:00:01.000Z",
           "2026-01-01T00:00:02.000Z",
@@ -132,6 +134,7 @@ describe("runRequiredChecks", () => {
       {
         store,
         checks,
+        locks: immediateWorkspaceLock(),
         clock: new SequenceClock([
           "2026-01-01T00:00:01.000Z",
           "2026-01-01T00:00:02.000Z",
@@ -181,6 +184,7 @@ describe("runRequiredChecks", () => {
       {
         store,
         checks,
+        locks: immediateWorkspaceLock(),
         clock: new SequenceClock([
           "2026-01-01T00:00:01.000Z",
           "2026-01-01T00:00:02.000Z",
@@ -217,6 +221,7 @@ describe("runRequiredChecks", () => {
       {
         store,
         checks,
+        locks: immediateWorkspaceLock(),
         clock: new SequenceClock([
           "2026-01-01T00:00:01.000Z",
           "2026-01-01T00:00:02.000Z",
@@ -252,6 +257,7 @@ describe("runRequiredChecks", () => {
       {
         store,
         checks,
+        locks: immediateWorkspaceLock(),
         clock: new SequenceClock(["2026-01-01T00:00:01.000Z"]),
       },
       {
@@ -265,6 +271,15 @@ describe("runRequiredChecks", () => {
     expect(store.events).toEqual([]);
   });
 });
+
+function immediateWorkspaceLock(): WorkspaceLockPort {
+  return {
+    acquire(input) {
+      return { lockId: "lock-1", ...input };
+    },
+    release() {},
+  };
+}
 
 function createAttempt(input: {
   readonly status: IntegrationAttemptStatus;

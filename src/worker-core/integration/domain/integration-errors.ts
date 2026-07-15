@@ -17,6 +17,7 @@ export enum IntegrationErrorReason {
   MergeParentsMismatch = "merge_parents_mismatch",
   MergeCommitRecoveryMismatch = "merge_commit_recovery_mismatch",
   MergeRollbackFailed = "merge_rollback_failed",
+  OutputRollbackFailed = "output_rollback_failed",
   PolicyDenied = "policy_denied",
 }
 

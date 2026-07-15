@@ -29,10 +29,12 @@ export type LocalGitMergeRuntime = {
   readonly git: (
     args: readonly string[],
     cwd: string,
+    env?: Readonly<Record<string, string | undefined>>,
   ) => Promise<LocalGitCommandResult>;
   readonly tryGit: (
     args: readonly string[],
     cwd: string,
+    env?: Readonly<Record<string, string | undefined>>,
   ) => Promise<LocalGitCommandResult>;
   readonly gitNullTerminatedPaths: (
     args: readonly string[],
