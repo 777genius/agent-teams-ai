@@ -9,11 +9,14 @@ import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { Brain, Expand, MessageSquare, Terminal, Wrench } from 'lucide-react';
+import { Brain, Expand, MessageSquare, PanelLeftClose, Terminal, Wrench } from 'lucide-react';
 
 import { MemberLogStreamWithLegacyFallback } from './members/MemberLogStreamWithLegacyFallback';
 import { ClaudeLogsPanel } from './ClaudeLogsPanel';
-import { CollapsibleTeamSection } from './CollapsibleTeamSection';
+import {
+  CollapsibleTeamSection,
+  type CollapsibleTeamSectionVariant,
+} from './CollapsibleTeamSection';
 import {
   buildSelectableLogMembers,
   formatMemberLogSourceDescription,
@@ -65,6 +68,8 @@ interface ClaudeLogsSectionProps {
   position?: 'sidebar' | 'inline';
   sidebarViewerMaxHeight?: number;
   onOpenChange?: (isOpen: boolean) => void;
+  onMoveToInline?: () => void;
+  sectionVariant?: CollapsibleTeamSectionVariant;
 }
 
 /**
@@ -282,6 +287,8 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
   position = 'inline',
   sidebarViewerMaxHeight,
   onOpenChange,
+  onMoveToInline,
+  sectionVariant,
 }: ClaudeLogsSectionProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const teamMembers = useStore((state) => selectResolvedMembersForTeamName(state, teamName));
@@ -416,12 +423,34 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
     </Tooltip>
   ) : undefined;
 
+  const sidebarAction =
+    isSidebar && onMoveToInline ? (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mr-3 size-7 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+            onClick={(event) => {
+              event.stopPropagation();
+              onMoveToInline();
+            }}
+            aria-label={t('messages.actions.moveToInline')}
+          >
+            <PanelLeftClose size={15} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{t('messages.actions.moveToInline')}</TooltipContent>
+      </Tooltip>
+    ) : undefined;
+
   return (
     <>
       <CollapsibleTeamSection
         sectionId="claude-logs"
+        variant={sectionVariant}
         title={t('claudeLogs.logsTitle')}
-        icon={null}
+        icon={sectionVariant === 'flat' ? <Terminal size={14} /> : null}
         badge={showingLeadLogs ? ctrl.badge : undefined}
         afterBadge={afterBadge}
         headerClassName={
@@ -436,6 +465,7 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
         }
         headerContentClassName={isSidebar ? 'items-center !pl-3 pr-3 py-2' : 'pr-1'}
         headerExtra={sectionHeaderExtra}
+        action={sidebarAction}
         defaultOpen={false}
         onOpenChange={onOpenChange}
         contentWrapperClassName={isSidebar ? 'mt-0 pb-0' : undefined}

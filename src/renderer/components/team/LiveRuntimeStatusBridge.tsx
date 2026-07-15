@@ -5,7 +5,10 @@ import { useStore } from '@renderer/store';
 import { Activity } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import { CollapsibleTeamSection } from './CollapsibleTeamSection';
+import {
+  CollapsibleTeamSection,
+  type CollapsibleTeamSectionVariant,
+} from './CollapsibleTeamSection';
 import { LiveRuntimeStatusSection } from './LiveRuntimeStatusSection';
 import {
   buildTeamRuntimeDisplayRows,
@@ -17,20 +20,29 @@ export const TEAM_RUNTIME_UI_DECOUPLING_STORAGE_KEY = 'teamRuntimeUiDecouplingEn
 interface LiveRuntimeStatusBridgeProps {
   teamName: string;
   members: readonly TeamRuntimeDisplayMember[];
+  sectionVariant?: CollapsibleTeamSectionVariant;
 }
 
 export const LiveRuntimeStatusBridge = memo(function LiveRuntimeStatusBridge({
   teamName,
   members,
+  sectionVariant,
 }: LiveRuntimeStatusBridgeProps): React.JSX.Element | null {
   if (!isTeamRuntimeUiDecouplingEnabled()) return null;
 
-  return <LiveRuntimeStatusStoreBridge teamName={teamName} members={members} />;
+  return (
+    <LiveRuntimeStatusStoreBridge
+      teamName={teamName}
+      members={members}
+      sectionVariant={sectionVariant}
+    />
+  );
 });
 
 const LiveRuntimeStatusStoreBridge = memo(function LiveRuntimeStatusStoreBridge({
   teamName,
   members,
+  sectionVariant,
 }: LiveRuntimeStatusBridgeProps): React.JSX.Element | null {
   const { t } = useAppTranslation('team');
   const { runtimeSnapshot, spawnStatuses } = useStore(
@@ -58,6 +70,7 @@ const LiveRuntimeStatusStoreBridge = memo(function LiveRuntimeStatusStoreBridge(
   return (
     <CollapsibleTeamSection
       sectionId="live-runtime-status"
+      variant={sectionVariant}
       title={t('liveRuntimeStatus.title')}
       icon={<Activity size={14} />}
       badge={badge}
