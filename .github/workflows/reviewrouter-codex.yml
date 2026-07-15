@@ -3,6 +3,8 @@ name: ReviewRouter Codex OAuth
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
   schedule:
     - cron: "17 */6 * * *"
@@ -18,7 +20,7 @@ jobs:
       group: reviewrouter-codex-oauth-${{ github.repository_id }}-codex-rotating-1163183284
       queue: max
       cancel-in-progress: false
-    if: ${{ (github.event.pull_request.draft == false || vars.REVIEW_ROUTER_REVIEW_DRAFTS == 'true') && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot' }}
+    if: ${{ ((github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'pull_request_target' && github.event.pull_request.draft == true && vars.REVIEW_ROUTER_REVIEW_DRAFTS == 'true')) && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot' }}
     permissions:
       id-token: write
     steps:
@@ -30,6 +32,7 @@ jobs:
           api-url: "https://api.reviewrouter.site"
           provider-instance-id: "codex-rotating:1163183284"
           workflow-schema-version: "1"
+          review-drafts: ${{ vars.REVIEW_ROUTER_REVIEW_DRAFTS == 'true' }}
           auth-json: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON }}
 
   codex-refresh:
