@@ -92,7 +92,7 @@ export type CodexAppServerSandboxPolicy =
       readonly writableRoots: readonly string[];
       readonly networkAccess: false;
       readonly excludeSlashTmp: true;
-      readonly excludeTmpdirEnvVar: true;
+      readonly excludeTmpdirEnvVar: boolean;
     };
 
 export type CodexAppServerThreadRuntimePolicy = {
@@ -200,16 +200,17 @@ export function codexAppServerSandboxPolicy(input: {
     return { type: "dangerFullAccess" };
   }
   if (sandboxMode === "workspace-write") {
+    const agentTempRoots = codexAgentTempWritableRootsFromEnv(input.sourceEnv);
     return {
       type: "workspaceWrite",
       writableRoots: uniqueNonEmptyStrings([
         input.workspacePath,
-        ...codexAgentTempWritableRootsFromEnv(input.sourceEnv),
+        ...agentTempRoots,
         ...codexExtraWritableRootsFromEnv(input.sourceEnv),
       ]),
       networkAccess: false,
       excludeSlashTmp: true,
-      excludeTmpdirEnvVar: true,
+      excludeTmpdirEnvVar: agentTempRoots.length === 0,
     };
   }
   return { type: "readOnly", networkAccess: false };

@@ -483,6 +483,7 @@ describe("Codex provider app-server adapter", () => {
         sandboxPolicy: {
           type: "workspaceWrite",
           writableRoots: [workspace, "/var/data/jobs/scoped-worker/tmp/agent"],
+          excludeTmpdirEnvVar: false,
         },
       });
     } finally {

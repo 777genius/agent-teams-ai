@@ -54,7 +54,10 @@ describe("Codex app-server boundary helpers", () => {
       sandboxMode: "workspace-write",
       workspacePath: "/work/repo",
       sourceEnv,
-    })).toMatchObject({ writableRoots: ["/work/repo", "/jobs/job-1/tmp/agent"] });
+    })).toMatchObject({
+      writableRoots: ["/work/repo", "/jobs/job-1/tmp/agent"],
+      excludeTmpdirEnvVar: false,
+    });
     expect(codexAppServerThreadRuntimePolicy({
       workspacePath: "/work/repo",
       sandboxMode: "workspace-write",
