@@ -4,8 +4,12 @@ import { createStopPrimaryOwnedRosterRuntimeUseCase } from '../TeamProvisioningS
 
 function createPorts(
   overrides: {
+    alivePids?: readonly number[];
     lingeringPids?: number[];
     lingeringPaneIds?: string[];
+    paneInfo?: ReadonlyMap<string, { panePid: number }>;
+    processCommandByPid?: (pid: number) => string | null;
+    processRows?: readonly { pid: number; ppid: number; command: string }[] | null;
     throwOnPane?: string;
     throwOnPid?: number;
   } = {}
@@ -16,11 +20,36 @@ function createPorts(
     waitPidCalls: [] as Array<{ pids: readonly number[]; timeoutMs: number; pollMs: number }>,
     waitPaneCalls: [] as Array<{ paneIds: readonly string[]; timeoutMs: number; pollMs: number }>,
     debug: [] as string[],
+    warnings: [] as string[],
+    paneInfoReads: [] as string[][],
+    processTableReads: [] as { bypassCache: boolean }[],
   };
+
+  const alivePids = new Set(overrides.alivePids ?? []);
 
   return {
     calls,
     ports: {
+      isProcessAlive(pid: number) {
+        return alivePids.has(pid);
+      },
+      readProcessCommandByPid(pid: number) {
+        return (
+          overrides.processCommandByPid?.(pid) ??
+          'bun cli.js --team-name team-a --agent-name Worker --agent-id Worker@team-a'
+        );
+      },
+      async listTmuxPaneRuntimeInfo(paneIds: readonly string[]) {
+        calls.paneInfoReads.push([...paneIds]);
+        return (
+          overrides.paneInfo ??
+          new Map(paneIds.map((paneId, index) => [paneId, { panePid: 900 + index }]))
+        );
+      },
+      async listRuntimeProcesses(options: { bypassCache: boolean }) {
+        calls.processTableReads.push(options);
+        return overrides.processRows ?? [];
+      },
       killTmuxPane(paneId: string) {
         calls.killedPanes.push(paneId);
         if (paneId === overrides.throwOnPane) {
@@ -49,6 +78,9 @@ function createPorts(
       },
       logDebug(message: string) {
         calls.debug.push(message);
+      },
+      logWarning(message: string) {
+        calls.warnings.push(message);
       },
     },
   };
@@ -130,6 +162,117 @@ describe('TeamProvisioningStopPrimaryOwnedRosterRuntimeUseCase', () => {
     );
     expect(calls.killedPanes).toEqual([]);
     expect(calls.killedPids).toEqual([]);
+  });
+
+  it('refuses a recycled persisted pid whose command belongs to another runtime', async () => {
+    const { calls, ports } = createPorts({
+      alivePids: [111],
+      processCommandByPid: () => 'node unrelated.js --team-name another-team --agent-name Worker',
+    });
+    const stopPrimaryOwnedRosterRuntime = createStopPrimaryOwnedRosterRuntimeUseCase(ports);
+
+    await expect(
+      stopPrimaryOwnedRosterRuntime({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        actionLabel: 'Detach for teammate "Worker"',
+        persistedRuntimeMembers: [{ backendType: 'process', runtimePid: 111 }],
+        liveRuntimeByMember: new Map(),
+      })
+    ).rejects.toThrow('does not expose a pid or tmux pane');
+
+    expect(calls.killedPids).toEqual([]);
+    expect(calls.waitPidCalls).toEqual([]);
+    expect(calls.warnings).toEqual([
+      expect.stringContaining('process identity does not match the exact team and member'),
+    ]);
+  });
+
+  it('refuses a persisted tmux pane whose descendant belongs to another member', async () => {
+    const { calls, ports } = createPorts({
+      paneInfo: new Map([['pane-a', { panePid: 420 }]]),
+      processCommandByPid: () => '/bin/zsh',
+      processRows: [
+        { pid: 421, ppid: 420, command: '/bin/zsh -l' },
+        {
+          pid: 422,
+          ppid: 421,
+          command: 'bun cli.js --team-name team-a --agent-name Other --agent-id Other@team-a',
+        },
+      ],
+    });
+    const stopPrimaryOwnedRosterRuntime = createStopPrimaryOwnedRosterRuntimeUseCase(ports);
+
+    await expect(
+      stopPrimaryOwnedRosterRuntime({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        actionLabel: 'Detach for teammate "Worker"',
+        persistedRuntimeMembers: [{ backendType: 'tmux', tmuxPaneId: 'pane-a' }],
+        liveRuntimeByMember: new Map([
+          ['Worker', { alive: true, backendType: 'tmux', tmuxPaneId: 'pane-a' }],
+        ]),
+      })
+    ).rejects.toThrow('does not expose a pid or tmux pane');
+
+    expect(calls.killedPanes).toEqual([]);
+    expect(calls.processTableReads).toEqual([{ bypassCache: true }]);
+    expect(calls.warnings).toEqual([
+      expect.stringContaining('pane runtime identity does not match the exact team and member'),
+    ]);
+  });
+
+  it('stops a persisted tmux pane with an exact teammate descendant', async () => {
+    const { calls, ports } = createPorts({
+      paneInfo: new Map([['pane-a', { panePid: 430 }]]),
+      processCommandByPid: () => '/bin/zsh',
+      processRows: [
+        { pid: 431, ppid: 430, command: '/bin/zsh -l' },
+        {
+          pid: 432,
+          ppid: 431,
+          command: 'bun cli.js --team-name team-a --agent-id Worker@team-a',
+        },
+      ],
+    });
+    const stopPrimaryOwnedRosterRuntime = createStopPrimaryOwnedRosterRuntimeUseCase(ports);
+
+    await expect(
+      stopPrimaryOwnedRosterRuntime({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        actionLabel: 'Detach for teammate "Worker"',
+        persistedRuntimeMembers: [{ backendType: 'tmux', tmuxPaneId: 'pane-a', runtimePid: 432 }],
+        liveRuntimeByMember: new Map([
+          ['Worker', { alive: true, backendType: 'tmux', tmuxPaneId: 'pane-a' }],
+        ]),
+      })
+    ).resolves.toBeUndefined();
+
+    expect(calls.killedPanes).toEqual(['pane-a']);
+    expect(calls.waitPaneCalls).toEqual([{ paneIds: ['pane-a'], timeoutMs: 1_500, pollMs: 100 }]);
+    expect(calls.processTableReads).toEqual([{ bypassCache: true }]);
+  });
+
+  it('stops killable handles when another matching live runtime is handle-less', async () => {
+    const { calls, ports } = createPorts();
+    const stopPrimaryOwnedRosterRuntime = createStopPrimaryOwnedRosterRuntimeUseCase(ports);
+
+    await expect(
+      stopPrimaryOwnedRosterRuntime({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        actionLabel: 'Detach for teammate "Worker"',
+        persistedRuntimeMembers: [],
+        liveRuntimeByMember: new Map([
+          ['Worker', { alive: true, backendType: 'process' }],
+          ['Worker-2', { alive: true, backendType: 'process', pid: 222 }],
+        ]),
+      })
+    ).resolves.toBeUndefined();
+
+    expect(calls.killedPids).toEqual([222]);
+    expect(calls.waitPidCalls).toEqual([{ pids: [222], timeoutMs: 1_500, pollMs: 100 }]);
   });
 
   it('surfaces lingering process and pane evidence after stop attempts', async () => {
