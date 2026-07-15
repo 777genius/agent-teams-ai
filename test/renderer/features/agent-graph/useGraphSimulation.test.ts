@@ -410,6 +410,33 @@ describe('stable slot layout planner', () => {
     expect(frame?.kanbanBandRect.left).toBe(frame?.boardBandRect.left);
   });
 
+  it('reserves the adaptive team card width in compact owner slots', () => {
+    const teamName = 'team-adaptive-card';
+    const lead = createLead(teamName);
+    const team = {
+      ...createMember(
+        teamName,
+        'platform-runtime',
+        'Platform Runtime and Orchestration Engineering Team'
+      ),
+      visualVariant: 'team' as const,
+    };
+    const layout: GraphLayoutPort = {
+      version: 'stable-slots-v1',
+      ownerOrder: [team.id],
+      slotAssignments: { [team.id]: { ringIndex: 0, sectorIndex: 0 } },
+      showActivity: false,
+      showLogs: false,
+      showTasks: false,
+    };
+
+    const [footprint] = computeOwnerFootprints([lead, team], layout);
+
+    expect(footprint?.slotWidth).toBeGreaterThanOrEqual(
+      340 + STABLE_SLOT_GEOMETRY.memberSlotInnerPadding * 2
+    );
+  });
+
   it('fits task band height to rendered rows when compact content sizing is enabled', () => {
     const teamName = 'team-compact-task-slot';
     const lead = createLead(teamName);
@@ -440,9 +467,7 @@ describe('stable slot layout planner', () => {
     expect(compactFootprint?.kanbanBandHeight).toBe(
       KANBAN_ZONE.headerHeight + TASK_PILL.height / 2
     );
-    expect(compactFootprint?.slotHeight).toBeLessThan(
-      (reservedFootprint?.slotHeight ?? 0) - 150
-    );
+    expect(compactFootprint?.slotHeight).toBeLessThan((reservedFootprint?.slotHeight ?? 0) - 150);
     expect(snapshot).not.toBeNull();
     expect(validateStableSlotLayout(snapshot!)).toEqual({ valid: true });
     const frame = snapshot?.memberSlotFrameByOwnerId.get(alice.id);
@@ -453,9 +478,7 @@ describe('stable slot layout planner', () => {
       memberSlotFrames: snapshot!.memberSlotFrames,
       leadSlotFrame: snapshot!.leadSlotFrame,
     });
-    expect((task.y ?? 0) + TASK_PILL.height / 2).toBeLessThanOrEqual(
-      frame!.kanbanBandRect.bottom
-    );
+    expect((task.y ?? 0) + TASK_PILL.height / 2).toBeLessThanOrEqual(frame!.kanbanBandRect.bottom);
   });
 
   it('reuses kanban headers for statically positioned hierarchy tasks', () => {

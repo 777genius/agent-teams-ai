@@ -1,5 +1,7 @@
 import { KANBAN_ZONE, TASK_PILL } from '../constants/canvas-constants';
 
+import { getGraphNodeCardSize } from '../canvas/node-geometry';
+
 import { ACTIVITY_LANE } from './activityLane';
 import { STABLE_SLOT_GEOMETRY, STABLE_SLOT_SECTOR_VECTORS } from './stableSlotGeometry';
 
@@ -397,12 +399,12 @@ export function computeOwnerFootprints(
     return [
       buildOwnerFootprint({
         ownerId,
+        ownerVisualWidth: getGraphNodeCardSize(ownerNode)?.width ?? 0,
         taskColumnCount: showTasks ? (taskColumns?.size ?? 0) : 0,
         taskRowCount: showTasks
           ? Math.max(0, ...taskColumnMetrics.map((metrics) => metrics.regularRowCount))
           : 0,
-        hasTaskOverflow:
-          showTasks && taskColumnMetrics.some((metrics) => metrics.hasOverflow),
+        hasTaskOverflow: showTasks && taskColumnMetrics.some((metrics) => metrics.hasOverflow),
         processCount: processCountByOwnerId.get(ownerId) ?? 0,
         showActivity,
         showLogs,
@@ -419,6 +421,7 @@ function computeOwnerFootprintForOwnerId(
   ownerId: string,
   layout?: GraphLayoutPort
 ): OwnerFootprint {
+  const ownerNode = nodes.find((node) => node.id === ownerId);
   const taskColumns = new Map<string, { regularRowCount: number; hasOverflow: boolean }>();
   let processCount = 0;
 
@@ -440,6 +443,7 @@ function computeOwnerFootprintForOwnerId(
 
   return buildOwnerFootprint({
     ownerId,
+    ownerVisualWidth: ownerNode ? (getGraphNodeCardSize(ownerNode)?.width ?? 0) : 0,
     taskColumnCount: taskColumns.size,
     taskRowCount: Math.max(
       0,
@@ -457,6 +461,7 @@ function computeOwnerFootprintForOwnerId(
 
 function buildOwnerFootprint(args: {
   ownerId: string;
+  ownerVisualWidth: number;
   taskColumnCount: number;
   taskRowCount: number;
   hasTaskOverflow: boolean;
@@ -491,10 +496,7 @@ function buildOwnerFootprint(args: {
     : 0;
   const kanbanBandHeight = args.showTasks
     ? args.fitTaskRowsToContent
-      ? Math.max(
-          contentTaskBandHeight,
-          args.hasTaskOverflow ? SLOT_GEOMETRY.kanbanBandHeight : 0
-        )
+      ? Math.max(contentTaskBandHeight, args.hasTaskOverflow ? SLOT_GEOMETRY.kanbanBandHeight : 0)
       : SLOT_GEOMETRY.kanbanBandHeight
     : 0;
   const processBandWidth = computeProcessBandWidth(args.processCount);
@@ -506,7 +508,12 @@ function buildOwnerFootprint(args: {
     kanbanBandHeight +
       (args.showTasks ? getKanbanBandTopInset({ activityColumnWidth, logColumnWidth }) : 0)
   );
-  const innerContentWidth = Math.max(SLOT_GEOMETRY.ownerMinWidth, processBandWidth, boardBandWidth);
+  const innerContentWidth = Math.max(
+    SLOT_GEOMETRY.ownerMinWidth,
+    args.ownerVisualWidth,
+    processBandWidth,
+    boardBandWidth
+  );
   const slotWidth = innerContentWidth + SLOT_GEOMETRY.memberSlotInnerPadding * 2;
   const slotHeight =
     SLOT_GEOMETRY.memberSlotInnerPadding * 2 +
@@ -1787,7 +1794,8 @@ function planAlignedGridUnderLeadOwnerSlots(
 
   const columnCount =
     Math.max(...assignedFootprints.map(({ assignment }) => assignment.sectorIndex)) + 1;
-  const rowCount = Math.max(...assignedFootprints.map(({ assignment }) => assignment.ringIndex)) + 1;
+  const rowCount =
+    Math.max(...assignedFootprints.map(({ assignment }) => assignment.ringIndex)) + 1;
   if (columnCount <= 0 || rowCount <= 0) {
     return null;
   }

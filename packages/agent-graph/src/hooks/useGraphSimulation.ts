@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { createCompleteEffect, createSpawnEffect, type VisualEffect } from '../canvas/draw-effects';
-import { getGraphNodeWorldBounds } from '../canvas/node-geometry';
 import { ANIM_SPEED, NODE } from '../constants/canvas-constants';
 import { getStateColor } from '../constants/colors';
 import { KanbanLayoutEngine } from '../layout/kanbanLayout';
@@ -197,7 +196,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       layout?: GraphLayoutPort
     ) => {
       const state = stateRef.current;
-      const previousMode = layoutRef.current?.mode;
+      const previousMode = layoutRef.current?.mode ?? 'radial';
       const previousPositions = captureGraphNodePositions(state.nodes);
       const previousTransition = layoutTransitionRef.current;
       teamNameRef.current = teamName;
@@ -218,8 +217,8 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       state.particles = mergeParticles(state.particles, particles);
       applyCurrentLayout();
 
-      const nextMode = layout?.mode;
-      const modeChanged = previousMode != null && nextMode != null && previousMode !== nextMode;
+      const nextMode = layout?.mode ?? 'radial';
+      const modeChanged = previousMode !== nextMode;
       if (modeChanged || previousTransition) {
         const remainingDuration = previousTransition
           ? Math.max(0.16, previousTransition.duration - previousTransition.elapsed)
@@ -428,16 +427,9 @@ function commitStaticLayoutGeometry(args: {
 
   fallbackPositionNodes(nodes);
   KanbanLayoutEngine.layoutStatic(nodes);
-  extraWorldBoundsRef.current = nodes
-    .filter((node) => !node.layoutOnly)
-    .map((node) => {
-      const bounds = getGraphNodeWorldBounds(node);
-      return {
-        ...bounds,
-        width: bounds.right - bounds.left,
-        height: bounds.bottom - bounds.top,
-      };
-    });
+  // Node bounds are fitted directly by the camera. Keeping them as extra geometry would
+  // re-introduce filtered tasks and processes into the fit calculation.
+  extraWorldBoundsRef.current = [];
 }
 
 function applySnapshotToNodes(

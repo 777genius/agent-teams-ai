@@ -37,9 +37,26 @@ export function shouldRenderTaskAtZoom(
   return level === 'detail' || (visibility === 'summary' && level === 'summary');
 }
 
-export function shouldRenderParticlesAtZoom(
+export function shouldRenderNodeAtZoom(
+  node: GraphNode,
   zoom: number,
-  animateAtOverview = false
+  isEmphasized = false
 ): boolean {
+  if (node.layoutOnly || node.taskStatus === 'deleted') return false;
+  if (node.kind === 'task') {
+    return shouldRenderTaskAtZoom(zoom, isEmphasized, node.taskZoomVisibility);
+  }
+  if (
+    getGraphSemanticZoomLevel(zoom) === 'overview' &&
+    (node.visualVariant === 'organization' ||
+      node.visualVariant === 'container' ||
+      node.visualVariant === 'team')
+  ) {
+    return shouldRenderOverviewHierarchyNode(node, zoom, isEmphasized);
+  }
+  return true;
+}
+
+export function shouldRenderParticlesAtZoom(zoom: number, animateAtOverview = false): boolean {
   return animateAtOverview || getGraphSemanticZoomLevel(zoom) !== 'overview';
 }

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   collectInteractiveEdgesInViewport,
   findEdgeAt,
+  findNodeAt,
   getEdgeMidpoint,
 } from '../../../../packages/agent-graph/src/canvas/hit-detection';
 
@@ -23,6 +24,23 @@ function makeNode(id: string, x: number, y: number): GraphNode {
 }
 
 describe('edge hit detection', () => {
+  it('does not hit nodes hidden by semantic zoom or layout state', () => {
+    const task = {
+      ...makeNode('task:detail', 0, 0),
+      taskZoomVisibility: 'detail' as const,
+    };
+    const team = {
+      ...makeNode('member:team', 0, 0),
+      visualVariant: 'team' as const,
+    };
+    const layoutOnly = { ...makeNode('member:layout', 0, 0), layoutOnly: true };
+
+    expect(findNodeAt(0, 0, [task], 0.3)).toBeNull();
+    expect(findNodeAt(0, 0, [task], 0.8)).toBe(task.id);
+    expect(findNodeAt(0, 0, [team], 0.1)).toBeNull();
+    expect(findNodeAt(0, 0, [layoutOnly], 1)).toBeNull();
+  });
+
   it('detects blocking edges near the curve midpoint', () => {
     const nodes = [makeNode('member:alice', 0, 0), makeNode('task:1', 160, 90)];
     const nodeMap = new Map(nodes.map((node) => [node.id, node] as const));
@@ -131,6 +149,23 @@ describe('edge hit detection', () => {
       'edge:message',
       'edge:related',
     ]);
+  });
+
+  it('excludes ownership edges from hit testing outside detail zoom', () => {
+    const nodes = [makeNode('member:alice', 0, 0), makeNode('task:1', 160, 90)];
+    const nodeMap = new Map(nodes.map((node) => [node.id, node] as const));
+    const edge: GraphEdge = {
+      id: 'edge:ownership',
+      source: 'member:alice',
+      target: 'task:1',
+      type: 'ownership',
+    };
+    const midpoint = getEdgeMidpoint(edge, nodeMap)!;
+    const viewport = { left: -200, top: -200, right: 400, bottom: 300 };
+
+    expect(findEdgeAt(midpoint.x, midpoint.y, [edge], nodeMap, 0.4)).toBeNull();
+    expect(collectInteractiveEdgesInViewport([edge], nodeMap, viewport, 0.4)).toEqual([]);
+    expect(findEdgeAt(midpoint.x, midpoint.y, [edge], nodeMap, 0.8)).toBe(edge.id);
   });
 
   it('hit-tests orthogonal hierarchy connectors by their routed segments', () => {

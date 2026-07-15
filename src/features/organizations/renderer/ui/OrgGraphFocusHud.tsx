@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { Button } from '@renderer/components/ui/button';
 import { ChevronDown, ChevronRight, Focus, Network, Route, Search, Users, X } from 'lucide-react';
 
 import {
@@ -106,7 +107,9 @@ export const OrgGraphFocusHud = ({
       ref={panelRef}
       className="pointer-events-none absolute left-3 top-3 z-20 w-[min(430px,calc(100%-1.5rem))]"
     >
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         type="button"
         aria-label={t('organizations.graph.focus.searchLabel')}
         aria-controls={SEARCH_PANEL_ID}
@@ -120,7 +123,7 @@ export const OrgGraphFocusHud = ({
         onClick={toggleSearch}
       >
         <Search size={10} />
-      </button>
+      </Button>
 
       {isSearchOpen ? (
         <div
@@ -173,7 +176,9 @@ export const OrgGraphFocusHud = ({
               }}
             />
             {query ? (
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 type="button"
                 aria-label={t('organizations.graph.focus.clearSearch')}
                 className="absolute right-1.5 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-[var(--color-text-muted)] hover:bg-white/5 hover:text-[var(--color-text)]"
@@ -184,7 +189,7 @@ export const OrgGraphFocusHud = ({
                 }}
               >
                 <X size={13} />
-              </button>
+              </Button>
             ) : null}
 
             {isResultsOpen && query.trim() ? (
@@ -195,13 +200,15 @@ export const OrgGraphFocusHud = ({
               >
                 {searchResults.length > 0 ? (
                   searchResults.map((result, index) => (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       id={`${SEARCH_RESULTS_ID}-${index}`}
                       key={result.nodeId}
                       type="button"
                       role="option"
                       aria-selected={activeResultIndex === index}
-                      className={`flex w-full items-start gap-2 rounded-md px-2 py-2 text-left transition-colors ${
+                      className={`h-auto w-full items-start gap-2 rounded-md px-2 py-2 text-left transition-colors ${
                         activeResultIndex === index
                           ? 'bg-sky-400/15 text-sky-50'
                           : 'text-[var(--color-text)] hover:bg-white/5'
@@ -225,7 +232,7 @@ export const OrgGraphFocusHud = ({
                       <span className="mt-1 rounded border border-white/10 px-1 py-0.5 text-[9px] uppercase tracking-wide text-[var(--color-text-muted)]">
                         {t(`organizations.graph.focus.kind.${result.kind}`)}
                       </span>
-                    </button>
+                    </Button>
                   ))
                 ) : (
                   <div className="px-3 py-4 text-center text-xs text-[var(--color-text-muted)]">
@@ -244,9 +251,11 @@ export const OrgGraphFocusHud = ({
             {selectedPath.map((node, index) => (
               <span key={node.id} className="inline-flex shrink-0 items-center gap-0.5">
                 {index > 0 ? <ChevronRight size={10} className="opacity-50" /> : null}
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   type="button"
-                  className={`max-w-32 truncate rounded px-1.5 py-0.5 hover:bg-white/5 hover:text-[var(--color-text)] ${
+                  className={`h-auto max-w-32 truncate rounded px-1.5 py-0.5 hover:bg-white/5 hover:text-[var(--color-text)] ${
                     node.id === selectedNode.id ? 'bg-sky-400/10 text-sky-100' : ''
                   }`}
                   title={getNodeDisplayLabel(node)}
@@ -256,13 +265,15 @@ export const OrgGraphFocusHud = ({
                   }}
                 >
                   {getNodeDisplayLabel(node)}
-                </button>
+                </Button>
               </span>
             ))}
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-1">
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               type="button"
               className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[10px] font-medium transition-colors ${
                 focusMode === 'path'
@@ -273,8 +284,10 @@ export const OrgGraphFocusHud = ({
             >
               <Route size={11} />
               {t('organizations.graph.focus.pathToRoot')}
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               type="button"
               className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-[10px] font-medium transition-colors ${
                 focusMode === 'connections'
@@ -285,9 +298,11 @@ export const OrgGraphFocusHud = ({
             >
               <Focus size={11} />
               {t('organizations.graph.focus.connectedOnly', { count: connectedTeamCount })}
-            </button>
+            </Button>
             {canToggleCollapse ? (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 type="button"
                 className="inline-flex h-7 items-center gap-1.5 rounded-md border border-white/10 bg-white/[0.03] px-2 text-[10px] font-medium text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.07] hover:text-[var(--color-text)]"
                 onClick={() => onToggleNodeCollapse(selectedNode.id)}
@@ -300,9 +315,11 @@ export const OrgGraphFocusHud = ({
                 {collapsedNodeIds.has(selectedNode.id)
                   ? t('organizations.graph.focus.expandBranch')
                   : t('organizations.graph.focus.collapseBranch')}
-              </button>
+              </Button>
             ) : null}
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               type="button"
               aria-label={t('organizations.graph.focus.clearFocus')}
               title={t('organizations.graph.focus.clearFocus')}
@@ -313,7 +330,7 @@ export const OrgGraphFocusHud = ({
               }}
             >
               <X size={13} />
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}

@@ -1,5 +1,7 @@
 import { KANBAN_ZONE, NODE, TASK_PILL } from '../constants/canvas-constants';
 
+import { getGraphSemanticZoomLevel } from './semantic-zoom';
+
 import type { GraphNode } from '../ports/types';
 
 export interface GraphNodeVisualSize {
@@ -82,4 +84,24 @@ export function getGraphNodeWorldBounds(node: GraphNode): {
           ? NODE.radiusProcess
           : NODE.radiusMember;
   return { left: x - radius, top: y - radius, right: x + radius, bottom: y + radius };
+}
+
+export function getGraphNodeRenderBounds(
+  node: GraphNode,
+  zoom: number
+): { left: number; top: number; right: number; bottom: number } {
+  const x = node.x ?? 0;
+  const y = node.y ?? 0;
+  if (getGraphNodeCardSize(node) && getGraphSemanticZoomLevel(zoom) === 'overview') {
+    const inverseZoom = 1 / Math.max(zoom, 0.015);
+    const halfWidth = (220 * inverseZoom) / 2;
+    const halfHeight = (32 * inverseZoom) / 2;
+    return {
+      left: x - halfWidth,
+      top: y - halfHeight,
+      right: x + halfWidth,
+      bottom: y + halfHeight,
+    };
+  }
+  return getGraphNodeWorldBounds(node);
 }

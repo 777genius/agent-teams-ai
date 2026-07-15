@@ -2,15 +2,35 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
+const DEMO_DIRECTORY_NAME = 'agent-teams-commercial-organization-demo';
+const configuredDemoRoot = process.env.AGENT_TEAMS_COMMERCIAL_DEMO_ROOT;
+if (configuredDemoRoot != null && configuredDemoRoot.trim().length === 0) {
+  throw new Error('AGENT_TEAMS_COMMERCIAL_DEMO_ROOT cannot be empty');
+}
 const DEMO_ROOT = path.resolve(
-  process.env.AGENT_TEAMS_COMMERCIAL_DEMO_ROOT ??
-    path.join(os.tmpdir(), 'agent-teams-commercial-organization-demo')
+  configuredDemoRoot?.trim() ?? path.join(os.tmpdir(), DEMO_DIRECTORY_NAME)
 );
+assertSafeDemoRoot(DEMO_ROOT);
 const CLAUDE_ROOT = path.join(DEMO_ROOT, '.claude');
 const USER_DATA_ROOT = path.join(DEMO_ROOT, 'user-data');
 const PROJECT_PATH = path.resolve(process.cwd());
 const ORGANIZATION_ID = 'commercial-organizations';
 const NOW = '2026-07-14T14:00:00.000Z';
+
+function assertSafeDemoRoot(candidate) {
+  const normalized = path.resolve(candidate);
+  const blockedPaths = new Set([
+    path.parse(normalized).root.toLowerCase(),
+    path.resolve(process.cwd()).toLowerCase(),
+    path.resolve(os.homedir()).toLowerCase(),
+  ]);
+  if (blockedPaths.has(normalized.toLowerCase())) {
+    throw new Error(`Refusing to use unsafe demo root: ${normalized}`);
+  }
+  if (path.basename(normalized) !== DEMO_DIRECTORY_NAME) {
+    throw new Error(`Demo root must end with ${DEMO_DIRECTORY_NAME}: ${normalized}`);
+  }
+}
 
 const teams = [
   {

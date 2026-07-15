@@ -7,6 +7,7 @@ import { BEAM, HIT_DETECTION, KANBAN_ZONE, NODE, TASK_PILL } from '../constants/
 
 import { bezierPoint, computeControlPoints, computeOrthogonalRoute } from './draw-edges';
 import { getGraphNodeCardSize } from './node-geometry';
+import { getGraphSemanticZoomLevel, shouldRenderNodeAtZoom } from './semantic-zoom';
 
 import type { GraphEdge, GraphNode } from '../ports/types';
 
@@ -15,11 +16,17 @@ import type { GraphEdge, GraphNode } from '../ports/types';
  * Returns node ID or null.
  * Priority: lead > member > task > process.
  */
-export function findNodeAt(worldX: number, worldY: number, nodes: GraphNode[]): string | null {
+export function findNodeAt(
+  worldX: number,
+  worldY: number,
+  nodes: GraphNode[],
+  zoom = 1
+): string | null {
   // Check in reverse priority order, return last match (highest priority wins)
   let hit: string | null = null;
 
   for (const node of nodes) {
+    if (!shouldRenderNodeAtZoom(node, zoom)) continue;
     const x = node.x ?? 0;
     const y = node.y ?? 0;
     const cardSize = getGraphNodeCardSize(node);
@@ -258,6 +265,7 @@ export function collectInteractiveEdgesInViewport(
   const candidates: GraphEdge[] = [];
 
   for (const edge of edges) {
+    if (edge.type === 'ownership' && getGraphSemanticZoomLevel(zoom) !== 'detail') continue;
     const source = nodeMap.get(edge.source);
     const target = nodeMap.get(edge.target);
     if (!source || !target) continue;
@@ -290,6 +298,7 @@ export function findEdgeAt(
   let bestHit: { id: string; distanceSquared: number; priority: number } | null = null;
 
   for (const edge of edges) {
+    if (edge.type === 'ownership' && getGraphSemanticZoomLevel(zoom) !== 'detail') continue;
     const source = nodeMap.get(edge.source);
     const target = nodeMap.get(edge.target);
     if (!source || !target) continue;

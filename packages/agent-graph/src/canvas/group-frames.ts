@@ -33,7 +33,14 @@ export interface GroupFrameLabelBounds extends GroupFrameBounds {
   height: number;
 }
 
-type MeasureTextWidth = (label: string, fontSize: number) => number;
+export interface GroupFrameLabelLayout {
+  label: string;
+  secondaryLabel?: string;
+  bounds: GroupFrameLabelBounds;
+  fontSize: number;
+}
+
+export type MeasureTextWidth = (label: string, fontSize: number) => number;
 
 const GROUP_FRAME_PADDING_MIN_ZOOM = 0.42;
 export const GROUP_FRAME_RENDER_MIN_ZOOM = 0.015;
@@ -286,15 +293,61 @@ export function getGroupFrameLabelBounds(
   };
 }
 
+export function getGroupFrameLabelLayout(
+  frame: GraphGroupFrame,
+  frameBounds: GroupFrameBounds,
+  zoom: number,
+  measureTextWidth: MeasureTextWidth = estimateLabelWidth
+): GroupFrameLabelLayout | null {
+  if (!shouldRenderGroupFrameLabel(frame, zoom)) return null;
+
+  const labelScaleZoom = getGroupFrameLabelScaleZoom(zoom);
+  const fontSizePx = getGroupFrameLabelFontSizePx(frame);
+  const fontSize = fontSizePx / labelScaleZoom;
+  const availableTextWidth = Math.max(
+    0,
+    Math.min(260 / labelScaleZoom, frameBounds.right - frameBounds.left - 28 / labelScaleZoom)
+  );
+  const label = truncateGroupFrameLabel(frame.label, availableTextWidth, (value) =>
+    measureTextWidth(value, fontSize)
+  );
+  const rawSecondaryLabel = shouldRenderGroupFrameSemanticSummary(frame, zoom)
+    ? frame.semanticSummary
+    : undefined;
+  const secondaryLabel = rawSecondaryLabel
+    ? truncateGroupFrameLabel(rawSecondaryLabel, availableTextWidth, (value) =>
+        measureTextWidth(value, fontSize * 0.78)
+      )
+    : undefined;
+  if (!label && !secondaryLabel) return null;
+
+  return {
+    label,
+    secondaryLabel,
+    fontSize,
+    bounds: getGroupFrameLabelBounds(label, frameBounds, zoom, measureTextWidth, {
+      fontSizePx,
+      horizontalOffsetPx: getGroupFrameLabelHorizontalOffsetPx(),
+      placement: getGroupFrameLabelPlacement(frame),
+      verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(frame),
+      secondaryLabel,
+    }),
+  };
+}
+
 export function findGroupFrameAt(
   x: number,
   y: number,
   frames: readonly GraphGroupFrame[],
   nodeMap: ReadonlyMap<string, GraphNode>,
   zoom: number,
-  extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId
+  extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId,
+  measureTextWidth?: MeasureTextWidth
 ): GraphGroupFrame | null {
-  return findGroupFrameHitAt(x, y, frames, nodeMap, zoom, extraBoundsByNodeId)?.frame ?? null;
+  return (
+    findGroupFrameHitAt(x, y, frames, nodeMap, zoom, extraBoundsByNodeId, measureTextWidth)
+      ?.frame ?? null
+  );
 }
 
 export function findGroupFrameHitAt(
@@ -303,7 +356,8 @@ export function findGroupFrameHitAt(
   frames: readonly GraphGroupFrame[],
   nodeMap: ReadonlyMap<string, GraphNode>,
   zoom: number,
-  extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId
+  extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId,
+  measureTextWidth?: MeasureTextWidth
 ): GroupFrameHit | null {
   if (frames.length === 0 || zoom < GROUP_FRAME_RENDER_MIN_ZOOM) {
     return null;
@@ -316,21 +370,8 @@ export function findGroupFrameHitAt(
 
   for (const prepared of preparedFrames) {
     const bounds = getPaddedGroupFrameBounds(prepared.bounds, zoom, prepared.frame);
-    const labelHit = shouldRenderGroupFrameLabel(prepared.frame, zoom)
-      ? isPointInsideBounds(
-          x,
-          y,
-          getGroupFrameLabelBounds(prepared.frame.label, bounds, zoom, undefined, {
-            fontSizePx: getGroupFrameLabelFontSizePx(prepared.frame),
-            horizontalOffsetPx: getGroupFrameLabelHorizontalOffsetPx(),
-            placement: getGroupFrameLabelPlacement(prepared.frame),
-            verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(prepared.frame),
-            secondaryLabel: shouldRenderGroupFrameSemanticSummary(prepared.frame, zoom)
-              ? prepared.frame.semanticSummary
-              : undefined,
-          })
-        )
-      : false;
+    const labelLayout = getGroupFrameLabelLayout(prepared.frame, bounds, zoom, measureTextWidth);
+    const labelHit = labelLayout ? isPointInsideBounds(x, y, labelLayout.bounds) : false;
     if (labelHit) {
       return { frame: prepared.frame, target: 'label' };
     }

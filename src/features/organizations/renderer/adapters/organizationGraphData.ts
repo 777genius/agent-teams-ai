@@ -39,7 +39,8 @@ const SELECTIVE_AGENT_DETAILS_TEAM_THRESHOLD = 1;
 const SELECTIVE_AGENT_DETAILS_AGENT_THRESHOLD = 60;
 const SELECTIVE_AGENT_DETAILS_MESSAGE_THRESHOLD = 80;
 const ALL_ORGANIZATIONS_ROOT_NODE_ID = 'org:__all-organizations__';
-const HIERARCHY_HORIZONTAL_GAP = 292;
+// Team cards grow up to 340px. Keep a readable connector gutter between sibling cards.
+const HIERARCHY_HORIZONTAL_GAP = 372;
 const HIERARCHY_VERTICAL_GAP = 164;
 const HIERARCHY_ROOT_GAP_IN_LEAVES = 1;
 const HIERARCHY_TASK_TOP_OFFSET = 112;
@@ -263,7 +264,7 @@ function collectDescendantTeamStats(
   if (node?.kind === 'team') {
     return {
       teamCount: 1,
-      activeTeamCount: (node.team?.taskCounts.inProgress ?? 0) > 0 ? 1 : 0,
+      activeTeamCount: node.team?.isOnline ? 1 : 0,
       activeAgentCount: node.team?.agents.filter((agent) => agent.status === 'active').length ?? 0,
       activeTaskCount: node.team?.taskCounts.inProgress ?? 0,
       taskCount: node.team

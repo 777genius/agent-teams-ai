@@ -6,7 +6,8 @@
 
 import { useCallback, useMemo, useRef } from 'react';
 
-import { ANIM, CAMERA, NODE, TASK_PILL } from '../constants/canvas-constants';
+import { getGraphNodeWorldBounds } from '../canvas/node-geometry';
+import { ANIM, CAMERA } from '../constants/canvas-constants';
 import { easeGraphLayoutTransition } from '../layout/layoutTransition';
 
 import type { WorldBounds } from '../layout/launchAnchor';
@@ -263,15 +264,11 @@ export function calculateGraphCameraFit(
   let maxX = -Infinity;
   let maxY = -Infinity;
   for (const node of nodes) {
-    const x = node.x ?? 0;
-    const y = node.y ?? 0;
-    let pad: number = NODE.radiusMember;
-    if (node.kind === 'task') pad = TASK_PILL.width / 2;
-    else if (node.kind === 'lead') pad = NODE.radiusLead;
-    minX = Math.min(minX, x - pad);
-    minY = Math.min(minY, y - pad);
-    maxX = Math.max(maxX, x + pad);
-    maxY = Math.max(maxY, y + pad);
+    const bounds = getGraphNodeWorldBounds(node);
+    minX = Math.min(minX, bounds.left);
+    minY = Math.min(minY, bounds.top);
+    maxX = Math.max(maxX, bounds.right);
+    maxY = Math.max(maxY, bounds.bottom);
   }
 
   for (const bounds of extraBounds) {

@@ -37,7 +37,7 @@ import { buildFocusState } from './buildFocusState';
 import { GraphCanvas, type GraphCanvasHandle } from './GraphCanvas';
 import { GraphControls, type GraphFilterState } from './GraphControls';
 import { GraphEdgeOverlay } from './GraphEdgeOverlay';
-import { GraphMinimap, type GraphMinimapSnapshot } from './GraphMinimap';
+import { GraphMinimap, type GraphMinimapHandle, type GraphMinimapSnapshot } from './GraphMinimap';
 import { GraphOverlay } from './GraphOverlay';
 
 import type { StableRect } from '../layout/stableSlots';
@@ -179,6 +179,16 @@ function mergeFocusSets(
   return new Set([...(left ?? []), ...(right ?? [])]);
 }
 
+let groupFrameMeasurementContext: CanvasRenderingContext2D | null = null;
+
+function measureGroupFrameText(label: string, fontSize: number): number {
+  if (typeof document === 'undefined') return label.length * fontSize * 0.62;
+  groupFrameMeasurementContext ??= document.createElement('canvas').getContext('2d');
+  if (!groupFrameMeasurementContext) return label.length * fontSize * 0.62;
+  groupFrameMeasurementContext.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  return groupFrameMeasurementContext.measureText(label).width;
+}
+
 export function GraphView({
   data,
   events,
@@ -250,6 +260,7 @@ export function GraphView({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasHandle = useRef<GraphCanvasHandle>(null);
+  const minimapHandle = useRef<GraphMinimapHandle>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef(0);
   const lastTimeRef = useRef(0);
@@ -323,10 +334,7 @@ export function GraphView({
   );
 
   const getFitNodes = useCallback(
-    (nodes: GraphNode[]): GraphNode[] => {
-      const visibleNodes = getVisibleNodes(nodes);
-      return visibleNodes.length > 0 ? visibleNodes : nodes;
-    },
+    (nodes: GraphNode[]): GraphNode[] => getVisibleNodes(nodes),
     [getVisibleNodes]
   );
 
@@ -338,14 +346,14 @@ export function GraphView({
   // ─── UNIFIED RAF LOOP: tick simulation + draw canvas ────────────────────
   const focusState = useMemo(() => {
     const selectionFocus = buildFocusState(selectedNodeId, selectedEdgeId, data.nodes, data.edges);
-    if (!focusNodeIds && !focusEdgeIds) {
-      return selectionFocus;
-    }
     if (focusOverridesSelection) {
       return {
         focusNodeIds: focusNodeIds ?? null,
         focusEdgeIds: focusEdgeIds ?? null,
       };
+    }
+    if (!focusNodeIds && !focusEdgeIds) {
+      return selectionFocus;
     }
 
     return {
@@ -617,6 +625,7 @@ export function GraphView({
       ownerColumnGroupRects: simulationRef.current.getOwnerColumnGroupRects(),
       dragPreview: dragPreviewRef.current,
     });
+    minimapHandle.current?.redraw();
 
     rafRef.current = requestAnimationFrame(animate);
   }, [
@@ -800,10 +809,11 @@ export function GraphView({
       const interactiveEdges = getInteractiveEdges(canvas, nodes, edges);
 
       // Check if we hit a node
-      interaction.handleMouseDown(world.x, world.y, nodes);
+      const zoom = camera.transformRef.current.zoom;
+      interaction.handleMouseDown(world.x, world.y, nodes, zoom);
 
       // Hit a node (draggable or clickable) → don't pan
-      const hitNode = findNodeAt(world.x, world.y, nodes);
+      const hitNode = findNodeAt(world.x, world.y, nodes, zoom);
       if (hitNode) {
         markUserInteracted();
         isPanningRef.current = false;
@@ -818,7 +828,8 @@ export function GraphView({
           data.groupFrames ?? [],
           nodeMap,
           camera.transformRef.current.zoom,
-          getOwnerColumnFrameBoundsByNodeId()
+          getOwnerColumnFrameBoundsByNodeId(),
+          measureGroupFrameText
         );
         const hitEdge =
           !hitGroupFrame || hitGroupFrame.target === 'fill'
@@ -953,7 +964,8 @@ export function GraphView({
       interaction.handleMouseMove(
         world.x,
         world.y,
-        getVisibleNodes(simulation.stateRef.current.nodes)
+        getVisibleNodes(simulation.stateRef.current.nodes),
+        camera.transformRef.current.zoom
       );
 
       const draggedNodeId = interaction.dragNodeId.current;
@@ -1146,7 +1158,7 @@ export function GraphView({
       const visibleNodeIds = new Set(nodes.map((node) => node.id));
       const edges = getVisibleEdges(simulation.stateRef.current.edges, visibleNodeIds);
 
-      const hoveredNodeId = findNodeAt(world.x, world.y, nodes);
+      const hoveredNodeId = findNodeAt(world.x, world.y, nodes, camera.transformRef.current.zoom);
       interaction.hoveredNodeId.current = hoveredNodeId;
 
       if (hoveredNodeId) {
@@ -1163,7 +1175,8 @@ export function GraphView({
         data.groupFrames ?? [],
         nodeMap,
         camera.transformRef.current.zoom,
-        getOwnerColumnFrameBoundsByNodeId()
+        getOwnerColumnFrameBoundsByNodeId(),
+        measureGroupFrameText
       );
       const interactiveEdges = getInteractiveEdges(canvas, nodes, edges);
       const hoveredEdgeId =
@@ -1283,7 +1296,8 @@ export function GraphView({
       const nodeId = interaction.handleDoubleClick(
         world.x,
         world.y,
-        getVisibleNodes(simulation.stateRef.current.nodes)
+        getVisibleNodes(simulation.stateRef.current.nodes),
+        camera.transformRef.current.zoom
       );
       if (nodeId) {
         setSelectedEdgeId(null);
@@ -1307,7 +1321,8 @@ export function GraphView({
         data.groupFrames ?? [],
         nodeMap,
         camera.transformRef.current.zoom,
-        getOwnerColumnFrameBoundsByNodeId()
+        getOwnerColumnFrameBoundsByNodeId(),
+        measureGroupFrameText
       );
       if (groupFrame) {
         setSelectedNodeId(groupFrame.id);
@@ -1501,6 +1516,7 @@ export function GraphView({
 
       {showMinimap ? (
         <GraphMinimap
+          ref={minimapHandle}
           label={minimapLabel}
           getSnapshot={getMinimapSnapshot}
           onNavigate={handleMinimapNavigate}

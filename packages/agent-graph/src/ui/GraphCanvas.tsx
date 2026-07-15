@@ -26,13 +26,10 @@ import { drawHexagon } from '../canvas/draw-misc';
 import { drawParticles } from '../canvas/draw-particles';
 import { drawProcesses } from '../canvas/draw-processes';
 import { drawColumnHeaders, drawTasks } from '../canvas/draw-tasks';
+import { getGraphNodeRenderBounds } from '../canvas/node-geometry';
 import {
-  getGroupFrameLabelBounds,
-  getGroupFrameLabelFontSizePx,
-  getGroupFrameLabelHorizontalOffsetPx,
-  getGroupFrameLabelPlacement,
+  getGroupFrameLabelLayout,
   getGroupFrameLabelScaleZoom,
-  getGroupFrameLabelVerticalOffsetPx,
   getPaddedGroupFrameBounds,
   GROUP_FRAME_RENDER_MIN_ZOOM,
   type GroupFrameBounds,
@@ -40,8 +37,6 @@ import {
   type PreparedGroupFrame,
   prepareGroupFrame,
   shouldRenderGroupFrameLabel,
-  shouldRenderGroupFrameSemanticSummary,
-  truncateGroupFrameLabel,
 } from '../canvas/group-frames';
 import { hexWithAlpha } from '../canvas/render-cache';
 import {
@@ -259,13 +254,12 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           const visibleNodes = visibleNodesCache.current;
           visibleNodes.length = 0;
           for (const n of state.nodes) {
-            const x = n.x ?? 0;
-            const y = n.y ?? 0;
+            const bounds = getGraphNodeRenderBounds(n, zoom);
             if (
-              x > viewLeft - pad &&
-              x < viewRight + pad &&
-              y > viewTop - pad &&
-              y < viewBottom + pad
+              bounds.right > viewLeft - pad &&
+              bounds.left < viewRight + pad &&
+              bounds.bottom > viewTop - pad &&
+              bounds.top < viewBottom + pad
             ) {
               visibleNodes.push(n);
             }
@@ -730,51 +724,18 @@ function drawGroupFrameLabel(
   }
 
   const labelScaleZoom = getGroupFrameLabelScaleZoom(zoom);
-  const fontSizePx = getGroupFrameLabelFontSizePx(prepared.frame);
-  const fontSize = fontSizePx / labelScaleZoom;
-  const availableTextWidth = Math.max(
-    0,
-    Math.min(260 / labelScaleZoom, bounds.right - bounds.left - 28 / labelScaleZoom)
-  );
-
   ctx.save();
-  ctx.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  const label = truncateGroupFrameLabel(
-    prepared.frame.label,
-    availableTextWidth,
-    (value) => ctx.measureText(value).width
-  );
-  const rawSecondaryLabel = shouldRenderGroupFrameSemanticSummary(prepared.frame, zoom)
-    ? prepared.frame.semanticSummary
-    : undefined;
-  ctx.font = `500 ${fontSize * 0.78}px ui-monospace, SFMono-Regular, Menlo, monospace`;
-  const secondaryLabel = rawSecondaryLabel
-    ? truncateGroupFrameLabel(
-        rawSecondaryLabel,
-        availableTextWidth,
-        (value) => ctx.measureText(value).width
-      )
-    : undefined;
-  if (!label && !secondaryLabel) {
+  const labelLayout = getGroupFrameLabelLayout(prepared.frame, bounds, zoom, (value, fontSize) => {
+    ctx.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    return ctx.measureText(value).width;
+  });
+  if (!labelLayout) {
     ctx.restore();
     return;
   }
-  ctx.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
-  const labelBounds = getGroupFrameLabelBounds(
-    label,
-    bounds,
-    zoom,
-    (value) => ctx.measureText(value).width,
-    {
-      fontSizePx,
-      horizontalOffsetPx: getGroupFrameLabelHorizontalOffsetPx(),
-      placement: getGroupFrameLabelPlacement(prepared.frame),
-      verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(prepared.frame),
-      secondaryLabel,
-    }
-  );
+  const { bounds: labelBounds, fontSize, label, secondaryLabel } = labelLayout;
 
   ctx.beginPath();
   ctx.roundRect(
@@ -789,6 +750,7 @@ function drawGroupFrameLabel(
   ctx.strokeStyle = hexWithAlpha(color, selected ? 0.7 : 0.42);
   ctx.lineWidth = 1 / labelScaleZoom;
   ctx.stroke();
+  ctx.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
   ctx.fillStyle = hexWithAlpha(color, selected ? 0.98 : 0.86);
   ctx.fillText(label, labelBounds.textX, labelBounds.textY);
   if (secondaryLabel && labelBounds.secondaryTextY != null) {

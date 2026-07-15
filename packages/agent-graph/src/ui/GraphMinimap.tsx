@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 
 import { getGraphNodeWorldBounds } from '../canvas/node-geometry';
 
@@ -31,28 +31,30 @@ interface GraphMinimapProps {
   onNavigate: (worldX: number, worldY: number) => void;
 }
 
-export function GraphMinimap({
-  label,
-  getSnapshot,
-  onNavigate,
-}: Readonly<GraphMinimapProps>): React.JSX.Element {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const projectionRef = useRef<GraphMinimapProjection | null>(null);
+export interface GraphMinimapHandle {
+  redraw: () => void;
+}
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = MINIMAP_WIDTH * dpr;
-    canvas.height = MINIMAP_HEIGHT * dpr;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+export const GraphMinimap = forwardRef<GraphMinimapHandle, Readonly<GraphMinimapProps>>(
+  function GraphMinimap({ label, getSnapshot, onNavigate }, ref): React.JSX.Element {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const projectionRef = useRef<GraphMinimapProjection | null>(null);
+    const lastDrawAtRef = useRef(0);
 
-    let frame = 0;
-    let lastDrawAt = 0;
-    const drawFrame = (now: number) => {
-      if (now - lastDrawAt >= 32) {
-        lastDrawAt = now;
+    const draw = useCallback(
+      (force = false) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const now = performance.now();
+        if (!force && now - lastDrawAtRef.current < 32) return;
+        lastDrawAtRef.current = now;
+        const dpr = window.devicePixelRatio || 1;
+        if (canvas.width !== MINIMAP_WIDTH * dpr || canvas.height !== MINIMAP_HEIGHT * dpr) {
+          canvas.width = MINIMAP_WIDTH * dpr;
+          canvas.height = MINIMAP_HEIGHT * dpr;
+        }
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
         const snapshot = getSnapshot();
         const projection = calculateGraphMinimapProjection(
           snapshot.nodes,
@@ -63,73 +65,80 @@ export function GraphMinimap({
         projectionRef.current = projection;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         drawGraphMinimap(ctx, snapshot, projection);
-      }
-      frame = window.requestAnimationFrame(drawFrame);
-    };
-    frame = window.requestAnimationFrame(drawFrame);
-    return () => window.cancelAnimationFrame(frame);
-  }, [getSnapshot]);
+      },
+      [getSnapshot]
+    );
 
-  const navigateFromPointer = useCallback(
-    (event: React.PointerEvent<HTMLCanvasElement>) => {
-      if (event.type === 'pointermove' && event.buttons !== 1) return;
-      const projection = projectionRef.current;
-      if (!projection) return;
-      event.currentTarget.setPointerCapture(event.pointerId);
-      const rect = event.currentTarget.getBoundingClientRect();
-      const point = minimapToWorld(
-        (event.clientX - rect.left) * (MINIMAP_WIDTH / rect.width),
-        (event.clientY - rect.top) * (MINIMAP_HEIGHT / rect.height),
-        projection
-      );
-      onNavigate(point.x, point.y);
-    },
-    [onNavigate]
-  );
+    useImperativeHandle(ref, () => ({ redraw: () => draw() }), [draw]);
 
-  const navigateFromKeyboard = useCallback(
-    (event: React.KeyboardEvent<HTMLCanvasElement>) => {
-      const projection = projectionRef.current;
-      if (!projection) return;
-      const snapshot = getSnapshot();
-      const center = {
-        x: (snapshot.viewport.width / 2 - snapshot.camera.x) / snapshot.camera.zoom,
-        y: (snapshot.viewport.height / 2 - snapshot.camera.y) / snapshot.camera.zoom,
-      };
-      const stepX = (projection.bounds.right - projection.bounds.left) * 0.08;
-      const stepY = (projection.bounds.bottom - projection.bounds.top) * 0.08;
-      if (event.key === 'ArrowLeft') center.x -= stepX;
-      else if (event.key === 'ArrowRight') center.x += stepX;
-      else if (event.key === 'ArrowUp') center.y -= stepY;
-      else if (event.key === 'ArrowDown') center.y += stepY;
-      else if (event.key === 'Enter' || event.key === ' ') {
-        center.x = (projection.bounds.left + projection.bounds.right) / 2;
-        center.y = (projection.bounds.top + projection.bounds.bottom) / 2;
-      } else {
-        return;
-      }
-      event.preventDefault();
-      onNavigate(center.x, center.y);
-    },
-    [getSnapshot, onNavigate]
-  );
+    useEffect(() => {
+      draw(true);
+    }, [draw]);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      width={MINIMAP_WIDTH}
-      height={MINIMAP_HEIGHT}
-      className="pointer-events-auto absolute bottom-14 right-4 z-[4] h-[124px] w-[196px] cursor-crosshair rounded-xl border border-sky-300/20 bg-slate-950/90 shadow-xl shadow-black/35 backdrop-blur-md"
-      role="button"
-      tabIndex={0}
-      aria-label={label}
-      title={label}
-      onPointerDown={navigateFromPointer}
-      onPointerMove={navigateFromPointer}
-      onKeyDown={navigateFromKeyboard}
-    />
-  );
-}
+    const navigateFromPointer = useCallback(
+      (event: React.PointerEvent<HTMLCanvasElement>) => {
+        if (event.type === 'pointerdown' && (!event.isPrimary || event.button !== 0)) return;
+        if (event.type === 'pointermove' && (event.buttons & 1) === 0) return;
+        const projection = projectionRef.current;
+        if (!projection) return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        const rect = event.currentTarget.getBoundingClientRect();
+        const point = minimapToWorld(
+          (event.clientX - rect.left) * (MINIMAP_WIDTH / rect.width),
+          (event.clientY - rect.top) * (MINIMAP_HEIGHT / rect.height),
+          projection
+        );
+        onNavigate(point.x, point.y);
+        window.requestAnimationFrame(() => draw(true));
+      },
+      [draw, onNavigate]
+    );
+
+    const navigateFromKeyboard = useCallback(
+      (event: React.KeyboardEvent<HTMLCanvasElement>) => {
+        const projection = projectionRef.current;
+        if (!projection) return;
+        const snapshot = getSnapshot();
+        const center = {
+          x: (snapshot.viewport.width / 2 - snapshot.camera.x) / snapshot.camera.zoom,
+          y: (snapshot.viewport.height / 2 - snapshot.camera.y) / snapshot.camera.zoom,
+        };
+        const stepX = (projection.bounds.right - projection.bounds.left) * 0.08;
+        const stepY = (projection.bounds.bottom - projection.bounds.top) * 0.08;
+        if (event.key === 'ArrowLeft') center.x -= stepX;
+        else if (event.key === 'ArrowRight') center.x += stepX;
+        else if (event.key === 'ArrowUp') center.y -= stepY;
+        else if (event.key === 'ArrowDown') center.y += stepY;
+        else if (event.key === 'Enter' || event.key === ' ') {
+          center.x = (projection.bounds.left + projection.bounds.right) / 2;
+          center.y = (projection.bounds.top + projection.bounds.bottom) / 2;
+        } else {
+          return;
+        }
+        event.preventDefault();
+        onNavigate(center.x, center.y);
+        window.requestAnimationFrame(() => draw(true));
+      },
+      [draw, getSnapshot, onNavigate]
+    );
+
+    return (
+      <canvas
+        ref={canvasRef}
+        width={MINIMAP_WIDTH}
+        height={MINIMAP_HEIGHT}
+        className="pointer-events-auto absolute bottom-14 right-4 z-[4] h-[124px] w-[196px] cursor-crosshair rounded-xl border border-sky-300/20 bg-slate-950/90 shadow-xl shadow-black/35 backdrop-blur-md"
+        role="button"
+        tabIndex={0}
+        aria-label={label}
+        title={label}
+        onPointerDown={navigateFromPointer}
+        onPointerMove={navigateFromPointer}
+        onKeyDown={navigateFromKeyboard}
+      />
+    );
+  }
+);
 
 export function calculateGraphMinimapProjection(
   nodes: readonly GraphNode[],

@@ -973,6 +973,19 @@ describe('buildOrganizationGraphData', () => {
     ]);
   });
 
+  it('counts online teams in group aggregates independently of task status', () => {
+    const payload = buildNestedPayload();
+    const alpha = payload.nodes.find((node) => node.id === 'team:alpha');
+    if (!alpha?.team) throw new Error('Expected alpha team fixture');
+    alpha.team.isOnline = false;
+
+    const graph = buildOrganizationGraphData(buildOrganizationMapViewModel(payload));
+
+    expect(graph.groupFrames?.find((frame) => frame.id === 'unit:engineering')).toMatchObject({
+      semanticSummary: '1 teams · 0 active · 2 tasks',
+    });
+  });
+
   it('renders organizations as frames in all-organizations scope', () => {
     const viewModel = buildOrganizationMapViewModel(buildAllOrganizationsPayload());
     const graph = buildOrganizationGraphData(viewModel);
@@ -1424,10 +1437,10 @@ describe('buildOrganizationGraphData', () => {
     expect(positions['agent:alpha:alice']?.y).toBeGreaterThan(
       positions['team:alpha']?.y ?? Number.POSITIVE_INFINITY
     );
+    const hierarchyEdges = graph.edges.filter((edge) => edge.type === 'parent-child');
+    expect(hierarchyEdges.length).toBeGreaterThan(0);
     expect(
-      graph.edges
-        .filter((edge) => edge.type === 'parent-child')
-        .every((edge) => edge.routing === 'orthogonal' && edge.alwaysVisible === true)
+      hierarchyEdges.every((edge) => edge.routing === 'orthogonal' && edge.alwaysVisible === true)
     ).toBe(true);
     expect(graph.edges).toEqual(
       expect.arrayContaining([

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getGroupFrameLabelBounds,
+  getGroupFrameLabelLayout,
   getGroupFrameLabelPlacement,
   getGroupFrameLabelScaleZoom,
   getGroupFrameLabelVerticalOffsetPx,
@@ -72,6 +73,24 @@ describe('group frame labels', () => {
     expect(truncateGroupFrameLabel('Коротко', 120, measure)).toBe('Коротко');
   });
 
+  it('prepares the same truncated primary and summary labels for drawing and hit testing', () => {
+    const frame = groupFrame({
+      label: 'Очень длинное название организационной группы',
+      semanticSummary: '120 команд · 42 активны · 918 задач',
+      priority: 'primary',
+    });
+    const layout = getGroupFrameLabelLayout(
+      frame,
+      { left: 0, top: 100, right: 180, bottom: 400 },
+      0.2,
+      (value) => value.length * 10
+    );
+
+    expect(layout?.label.endsWith('…')).toBe(true);
+    expect(layout?.secondaryLabel?.endsWith('…')).toBe(true);
+    expect(layout?.bounds.width).toBeLessThanOrEqual(180);
+  });
+
   it('uses compact padding for depth-aware organization frames', () => {
     const bounds = { left: -100, top: -50, right: 100, bottom: 50 };
     const padded = getPaddedGroupFrameBounds(bounds, 1, groupFrame({ depth: 0 }));
@@ -82,11 +101,7 @@ describe('group frame labels', () => {
 
   it('keeps a visible gutter between deeply nested frame borders', () => {
     const bounds = { left: -100, top: -50, right: 100, bottom: 50 };
-    const depthTwo = getPaddedGroupFrameBounds(
-      bounds,
-      1,
-      groupFrame({ depth: 2, labelLane: 1 })
-    );
+    const depthTwo = getPaddedGroupFrameBounds(bounds, 1, groupFrame({ depth: 2, labelLane: 1 }));
     const depthThree = getPaddedGroupFrameBounds(bounds, 1, groupFrame({ depth: 3 }));
 
     expect(depthThree.left - depthTwo.left).toBe(7);
@@ -140,26 +155,14 @@ describe('group frame labels', () => {
     const contentBounds = { left: 0, top: 100, right: 4000, bottom: 3000 };
     const parentBounds = getPaddedGroupFrameBounds(contentBounds, 0.5, parent);
     const childBounds = getPaddedGroupFrameBounds(contentBounds, 0.5, child);
-    const parentLabelBounds = getGroupFrameLabelBounds(
-      parent.label,
-      parentBounds,
-      0.5,
-      undefined,
-      {
-        placement: getGroupFrameLabelPlacement(parent),
-        verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(parent),
-      }
-    );
-    const childLabelBounds = getGroupFrameLabelBounds(
-      child.label,
-      childBounds,
-      0.5,
-      undefined,
-      {
-        placement: getGroupFrameLabelPlacement(child),
-        verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(child),
-      }
-    );
+    const parentLabelBounds = getGroupFrameLabelBounds(parent.label, parentBounds, 0.5, undefined, {
+      placement: getGroupFrameLabelPlacement(parent),
+      verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(parent),
+    });
+    const childLabelBounds = getGroupFrameLabelBounds(child.label, childBounds, 0.5, undefined, {
+      placement: getGroupFrameLabelPlacement(child),
+      verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(child),
+    });
 
     expect(childLabelBounds.bottom).toBeLessThan(parentLabelBounds.top);
     expect(getGroupFrameLabelVerticalOffsetPx(parent)).toBe(8);

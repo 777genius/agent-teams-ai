@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
 import { useAppTranslation } from '@features/localization/renderer';
+import { Button } from '@renderer/components/ui/button';
 import { Plus } from 'lucide-react';
 
 import {
@@ -505,9 +506,11 @@ export const OrgGraphSurface = ({
           ).map(([mode, label]) => {
             const active = activeViewMode === mode;
             return (
-              <button
+              <Button
                 key={mode}
                 type="button"
+                variant="ghost"
+                size="sm"
                 aria-pressed={active}
                 data-organization-map-view-mode={mode}
                 className={`h-6 rounded-md px-2.5 transition-colors ${
@@ -528,7 +531,7 @@ export const OrgGraphSurface = ({
                 }}
               >
                 {label}
-              </button>
+              </Button>
             );
           })}
         </div>
