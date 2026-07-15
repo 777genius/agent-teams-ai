@@ -1,6 +1,22 @@
+import {
+  getParticipantIdentityColor,
+  getTeammateParticipantIdentityColor,
+  TEAMMATE_PARTICIPANT_COLOR_PALETTE,
+} from '@shared/constants/memberColors';
 import { describe, expect, it } from 'vitest';
 
-import { buildMemberLaunchPresentation, shouldDisplayMemberCurrentTask } from '../memberHelpers';
+import {
+  getParticipantAvatarUrlByIndex,
+  LEAD_PARTICIPANT_AVATAR_URL,
+} from '../memberAvatarCatalog';
+import {
+  agentAvatarUrl,
+  buildMemberAvatarMap,
+  buildMemberColorMap,
+  buildMemberLaunchPresentation,
+  resolveMemberIdentityColor,
+  shouldDisplayMemberCurrentTask,
+} from '../memberHelpers';
 
 import type {
   MemberLaunchState,
@@ -53,6 +69,49 @@ function createConfirmedCodexSpawn(): {
     spawnBootstrapConfirmed: true,
   };
 }
+
+describe('member identity visuals', () => {
+  it('keeps avatar slots and accent colors synchronized across a full roster cycle', () => {
+    const members = [
+      createMember({ name: 'maya', agentType: 'team-lead', color: 'saffron' }),
+      ...Array.from({ length: TEAMMATE_PARTICIPANT_COLOR_PALETTE.length + 1 }, (_, index) =>
+        createMember({ name: `member-${index + 1}`, color: 'pink' })
+      ),
+    ];
+
+    const avatarMap = buildMemberAvatarMap(members);
+    const colorMap = buildMemberColorMap(members);
+
+    expect(avatarMap.get('maya')).toBe(LEAD_PARTICIPANT_AVATAR_URL);
+    expect(colorMap.get('maya')).toBe(getParticipantIdentityColor(0));
+
+    for (const [index, member] of members.slice(1).entries()) {
+      const avatarIndex = 1 + (index % TEAMMATE_PARTICIPANT_COLOR_PALETTE.length);
+      expect(avatarMap.get(member.name)).toBe(getParticipantAvatarUrlByIndex(avatarIndex));
+      expect(colorMap.get(member.name)).toBe(getTeammateParticipantIdentityColor(index));
+    }
+  });
+
+  it('uses the same name-based identity slot for standalone avatar fallbacks', () => {
+    expect(agentAvatarUrl('maya')).toBe(agentAvatarUrl('MAYA'));
+    expect(agentAvatarUrl('team-lead')).toBe(LEAD_PARTICIPANT_AVATAR_URL);
+  });
+
+  it('prefers canonical roster colors over stale runtime metadata', () => {
+    const colorMap = new Map<string, string>([
+      ['maya', 'green'],
+      ['team-lead', 'green'],
+    ]);
+
+    expect(resolveMemberIdentityColor('maya', colorMap, 'saffron')).toBe('green');
+    expect(resolveMemberIdentityColor('MAYA', colorMap, 'saffron')).toBe('green');
+    expect(resolveMemberIdentityColor('lead', colorMap, 'saffron')).toBe('green');
+  });
+
+  it('keeps runtime colors as a fallback when the roster is unavailable', () => {
+    expect(resolveMemberIdentityColor('maya', new Map(), 'saffron')).toBe('saffron');
+  });
+});
 
 describe('member runtime presentation', () => {
   it('hides Codex native task activity when no spawn or runtime snapshot has loaded', () => {

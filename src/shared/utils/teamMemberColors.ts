@@ -1,5 +1,7 @@
 import {
   getMemberColorByName,
+  getParticipantIdentityColor,
+  getTeammateParticipantIdentityColor,
   MEMBER_COLOR_PALETTE,
   normalizeMemberColorName,
   TEAM_LEAD_MEMBER_COLOR_ID,
@@ -14,12 +16,14 @@ export interface TeamMemberColorInput {
 }
 
 interface BuildTeamMemberColorMapOptions {
+  /** Legacy/custom override mode. Canonical app surfaces use avatar-aligned colors. */
   preferProvidedColors?: boolean;
 }
 
 /**
- * Build a deterministic roster color map that optimizes contrast inside a team.
- * Leads reserve their own color but do not consume the teammate palette order.
+ * Build a deterministic roster color map. Canonical mode follows the same
+ * lead/teammate slots as the participant avatar catalog, including wraparound.
+ * Leads reserve avatar/color slot 01 and do not consume teammate slots 02-13.
  */
 export function buildTeamMemberColorMap(
   members: readonly TeamMemberColorInput[],
@@ -31,14 +35,40 @@ export function buildTeamMemberColorMap(
   const removed = members.filter((member) => member.removedAt);
   const activeLeads = active.filter((member) => isLeadMember(member));
   const activeTeammates = active.filter((member) => !isLeadMember(member));
+
+  if (!preferProvidedColors) {
+    for (const [index, member] of activeLeads.entries()) {
+      map.set(
+        member.name,
+        index === 0 ? getParticipantIdentityColor(0) : getMemberColorByName(member.name)
+      );
+    }
+
+    for (const [index, member] of activeTeammates.entries()) {
+      map.set(member.name, getTeammateParticipantIdentityColor(index));
+    }
+
+    for (const member of removed) {
+      map.set(
+        member.name,
+        isLeadMember(member) ? getParticipantIdentityColor(0) : getMemberColorByName(member.name)
+      );
+    }
+
+    map.set('user', 'user');
+    return map;
+  }
+
   const usedColors = new Set<string>();
   let nextPaletteIdx = 0;
 
-  for (const member of activeLeads) {
+  for (const [index, member] of activeLeads.entries()) {
     const color =
       preferProvidedColors && member.color
         ? normalizeMemberColorName(member.color)
-        : getMemberColorByName(member.name);
+        : index === 0
+          ? getParticipantIdentityColor(0)
+          : getMemberColorByName(member.name);
     map.set(member.name, color);
     usedColors.add(color);
   }
@@ -67,7 +97,9 @@ export function buildTeamMemberColorMap(
     const color =
       preferProvidedColors && member.color
         ? normalizeMemberColorName(member.color)
-        : getMemberColorByName(member.name);
+        : isLeadMember(member)
+          ? getParticipantIdentityColor(0)
+          : getMemberColorByName(member.name);
     map.set(member.name, color);
   }
 
