@@ -3,6 +3,9 @@ name: ReviewRouter Codex OAuth
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
 
 permissions: {}
 
@@ -11,15 +14,41 @@ jobs:
     name: codex-review
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    concurrency:
+      group: reviewrouter-codex-oauth-${{ github.repository_id }}-codex-rotating-1163183284
+      queue: max
+      cancel-in-progress: false
     if: ${{ github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.type != 'Bot' }}
     permissions:
       id-token: write
     steps:
       - name: ReviewRouter Codex OAuth review
         id: run_codex
-        uses: 777genius/review-router@97fdbdf1685350ac9a7f29e0430e82c2360c2821
+        uses: 777genius/review-router@main
         with:
           mode: codex-oauth-rotating
+          api-url: "https://api.reviewrouter.site"
+          provider-instance-id: "codex-rotating:1163183284"
+          workflow-schema-version: "1"
+          auth-json: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON }}
+
+  codex-refresh:
+    name: codex-refresh
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: reviewrouter-codex-oauth-${{ github.repository_id }}-codex-rotating-1163183284
+      queue: max
+      cancel-in-progress: false
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    permissions:
+      id-token: write
+    steps:
+      - name: ReviewRouter Codex OAuth refresh
+        id: refresh_codex
+        uses: 777genius/review-router@main
+        with:
+          mode: codex-oauth-refresh
           api-url: "https://api.reviewrouter.site"
           provider-instance-id: "codex-rotating:1163183284"
           workflow-schema-version: "1"
