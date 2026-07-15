@@ -10,9 +10,9 @@ import { materializeCodexGoalHandoffArtifacts } from "../codex-goal-handoff-arti
 import {
   applyVerifiedInputPatch,
   assertCanonicalRemoteRevision,
-  canonicalRemoteWorktreeSourceRef,
   materializePinnedRemoteCommit,
   resolveCanonicalRemoteHead,
+  resolveCanonicalRemoteWorktreeSource,
 } from "../application/project-control/codex-goal-project-git";
 import {
   readVerifiableProducerHandoff,
@@ -257,16 +257,60 @@ describe("project verifier handoff", () => {
       workspacePath,
       remoteTrackingRef: "origin/main",
     });
-    const sourceRef = canonicalRemoteWorktreeSourceRef("origin/main");
+    const source = resolveCanonicalRemoteWorktreeSource({
+      requestedRef: "origin/main",
+      scope: {
+        projectId: "project",
+        allowedBranches: ["main"],
+        allowedGitRemotes: ["origin"],
+      },
+    });
 
     expect(await gitText(workspacePath, ["rev-parse", "origin/main"])).toBe(
       staleTrackingRevision,
     );
     expect(canonicalRemoteHead.oid).toBe(canonicalRevision);
-    expect(sourceRef).toBe("main");
-    expect(await gitText(workspacePath, ["rev-parse", sourceRef])).toBe(
+    expect(source).toEqual({
+      remoteTrackingRef: "origin/main",
+      worktreeSourceRef: "main",
+    });
+    expect(await gitText(workspacePath, [
+      "rev-parse",
+      source.worktreeSourceRef,
+    ])).toBe(
       canonicalRevision,
     );
+  });
+
+  it("normalizes scoped local and remote-tracking slash branches", () => {
+    const scope = {
+      projectId: "project",
+      allowedBranches: ["refactor/hosted-web-*"],
+      allowedGitRemotes: ["origin"],
+    };
+
+    expect(resolveCanonicalRemoteWorktreeSource({
+      requestedRef: "refactor/hosted-web-feature-boundaries",
+      scope,
+    })).toEqual({
+      remoteTrackingRef: "origin/refactor/hosted-web-feature-boundaries",
+      worktreeSourceRef: "refactor/hosted-web-feature-boundaries",
+    });
+    expect(resolveCanonicalRemoteWorktreeSource({
+      requestedRef: "origin/refactor/hosted-web-feature-boundaries",
+      scope,
+    })).toEqual({
+      remoteTrackingRef: "origin/refactor/hosted-web-feature-boundaries",
+      worktreeSourceRef: "refactor/hosted-web-feature-boundaries",
+    });
+    expect(() => resolveCanonicalRemoteWorktreeSource({
+      requestedRef: "upstream/refactor/hosted-web-feature-boundaries",
+      scope,
+    })).toThrow("project_control_denied:remote_denied");
+    expect(() => resolveCanonicalRemoteWorktreeSource({
+      requestedRef: "release/private",
+      scope,
+    })).toThrow("project_control_denied:branch_denied");
   });
 
   it("materializes a pinned remote commit without mutating local tracking refs", async () => {

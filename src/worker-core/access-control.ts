@@ -11,6 +11,11 @@ import {
 import type { CommandPolicy } from "./host-command/safe-command-policy";
 
 export {
+  matchesAnyPattern,
+  parseRemoteTrackingBranch,
+} from "./access-control/domain/access-control-path-policy";
+
+export {
   CommandValidationDecisionReason,
   validateCommandAgainstPolicy,
 } from "./host-command/safe-command-policy";

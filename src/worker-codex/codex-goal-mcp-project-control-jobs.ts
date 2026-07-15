@@ -60,7 +60,7 @@ import {
 } from "./codex-goal-mcp-project-scope";
 import {
   assertSafeGitRefName,
-  canonicalRemoteWorktreeSourceRef,
+  resolveCanonicalRemoteWorktreeSource,
   stagedPatchSha256ForRevision,
 } from "./codex-goal-mcp-project-git";
 import { resolveProjectSourceRevision } from "./application/project-control/codex-goal-project-source-revision";
@@ -286,21 +286,24 @@ export async function projectControlRefillWorkerView(
           controller.scope,
         )
       : undefined;
-  const canonicalSourceRef = canonicalSourceWorkspacePath
-    ? canonicalRemoteWorktreeSourceRef(baseBranch)
+  const canonicalSource = canonicalSourceWorkspacePath
+    ? resolveCanonicalRemoteWorktreeSource({
+        requestedRef: baseBranch,
+        scope: controller.scope,
+      })
     : undefined;
-  const worktreeAccessInput = canonicalSourceRef
+  const worktreeAccessInput = canonicalSource
     ? {
         ...requestedWorktreeAccessInput,
-        sourceRef: canonicalSourceRef,
+        sourceRef: canonicalSource.worktreeSourceRef,
       }
     : requestedWorktreeAccessInput;
   const resolvedSource =
     await resolverBroker.resolveWorktreeRevision(worktreeAccessInput);
   const sourceRevision = await resolveProjectSourceRevision({
     resolvedSource,
-    remoteTrackingRef: canonicalSourceWorkspacePath
-      ? baseBranch
+    remoteTrackingRef: canonicalSource
+      ? canonicalSource.remoteTrackingRef
       : (sourceRef ?? baseBranch),
     ...(expectedSourceCommit ? { expectedSourceCommit } : {}),
     requireRemoteHead: canonicalSourceWorkspacePath !== undefined,
@@ -756,21 +759,24 @@ async function projectControlRefillWorkerBoundedView(
       ...(sourceRef ? { sourceRef } : {}),
       ...(newBranch ? { newBranch } : {}),
     };
-    const canonicalSourceRef = canonicalSourceWorkspacePath
-      ? canonicalRemoteWorktreeSourceRef(baseBranch)
+    const canonicalSource = canonicalSourceWorkspacePath
+      ? resolveCanonicalRemoteWorktreeSource({
+          requestedRef: baseBranch,
+          scope: controller.scope,
+        })
       : undefined;
-    const worktreeAccessInput = canonicalSourceRef
+    const worktreeAccessInput = canonicalSource
       ? {
           ...requestedWorktreeAccessInput,
-          sourceRef: canonicalSourceRef,
+          sourceRef: canonicalSource.worktreeSourceRef,
         }
       : requestedWorktreeAccessInput;
     const resolvedSource =
       await resolverBroker.resolveWorktreeRevision(worktreeAccessInput);
     const sourceRevision = await resolveProjectSourceRevision({
       resolvedSource,
-      remoteTrackingRef: canonicalSourceWorkspacePath
-        ? baseBranch
+      remoteTrackingRef: canonicalSource
+        ? canonicalSource.remoteTrackingRef
         : (sourceRef ?? baseBranch),
       ...(expectedSourceCommit ? { expectedSourceCommit } : {}),
       requireRemoteHead: canonicalSourceWorkspacePath !== undefined,

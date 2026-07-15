@@ -5,6 +5,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
+import {
+  matchesAnyPattern,
+  parseRemoteTrackingBranch,
+  type ProjectAccessScope,
+} from "@vioxen/subscription-runtime/worker-core";
+
 const execFileAsync = promisify(execFile);
 const MAX_STAGED_PATCH_BYTES = 16 * 1024 * 1024;
 
@@ -226,10 +232,66 @@ export async function materializePinnedRemoteCommit(input: {
   return afterFetch;
 }
 
-export function canonicalRemoteWorktreeSourceRef(
-  remoteTrackingRef: string,
-): string {
-  return parseRemoteTrackingRef(remoteTrackingRef).branch;
+export type CanonicalRemoteWorktreeSource = {
+  readonly remoteTrackingRef: string;
+  readonly worktreeSourceRef: string;
+};
+
+export function resolveCanonicalRemoteWorktreeSource(input: {
+  readonly requestedRef: string;
+  readonly scope: ProjectAccessScope;
+}): CanonicalRemoteWorktreeSource {
+  assertSafeGitRefName(input.requestedRef, "baseBranch");
+  const parsed = parseRemoteTrackingBranch(input.requestedRef);
+  if (
+    parsed &&
+    canonicalRemoteAllowed(parsed.remote, input.scope) &&
+    canonicalBranchAllowed(parsed.branch, input.scope)
+  ) {
+    return {
+      remoteTrackingRef: input.requestedRef,
+      worktreeSourceRef: parsed.branch,
+    };
+  }
+  if (canonicalBranchAllowed(input.requestedRef, input.scope)) {
+    const remote = canonicalRemoteForLocalBranch(input.scope);
+    return {
+      remoteTrackingRef: `${remote}/${input.requestedRef}`,
+      worktreeSourceRef: input.requestedRef,
+    };
+  }
+  if (parsed && canonicalBranchAllowed(parsed.branch, input.scope)) {
+    throw new Error("project_control_denied:remote_denied");
+  }
+  throw new Error("project_control_denied:branch_denied");
+}
+
+function canonicalBranchAllowed(
+  branch: string,
+  scope: ProjectAccessScope,
+): boolean {
+  return scope.allowedBranches
+    ? matchesAnyPattern(branch, scope.allowedBranches)
+    : branch === "main";
+}
+
+function canonicalRemoteAllowed(
+  remote: string,
+  scope: ProjectAccessScope,
+): boolean {
+  return scope.allowedGitRemotes
+    ? matchesAnyPattern(remote, scope.allowedGitRemotes)
+    : remote === "origin";
+}
+
+function canonicalRemoteForLocalBranch(scope: ProjectAccessScope): string {
+  if (!scope.allowedGitRemotes) return "origin";
+  if (matchesAnyPattern("origin", scope.allowedGitRemotes)) return "origin";
+  const exactRemotes = scope.allowedGitRemotes.filter(
+    (remote) => !remote.includes("*"),
+  );
+  if (exactRemotes.length === 1) return exactRemotes[0] as string;
+  throw new Error("project_control_canonical_remote_ambiguous");
 }
 
 export function assertCanonicalRemoteRevision(input: {
