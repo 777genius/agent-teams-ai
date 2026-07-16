@@ -27,6 +27,9 @@ export function registerCodexGoalProjectControlActionTools(server: McpServer): v
         ...jobIdInputSchema(),
         controllerJobId: z.string().optional(),
         reviewedOutputId: z.string().regex(/^[a-fA-F0-9]{64}$/).optional(),
+        continuationAccounts: z
+          .union([z.string(), z.array(z.string())])
+          .optional(),
         confirmStart: z.boolean().optional(),
         forceStart: z.boolean().optional(),
         skipDoctor: z.boolean().optional(),

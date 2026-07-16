@@ -91,6 +91,7 @@ import {
   reserveCodexProjectAccount,
 } from "./application/project-control/codex-goal-project-account-reservation";
 import { decideCodexGoalProjectStop } from "./application/project-control/codex-goal-project-stop-policy";
+import { withProjectContinuationAccounts } from "./application/project-control/codex-goal-project-continuation-accounts";
 import {
   projectControlWorkspaceLocks,
   withValidatedProjectWorkspaceLock,
@@ -124,6 +125,7 @@ export type CodexGoalMcpProjectControlActionsDeps = {
   readonly safeExecutionJournal?: ReturnType<
     typeof localCodexProjectSafeExecutionJournal
   >;
+  readonly listAccountStatuses?: typeof listCodexGoalAccountStatuses;
 };
 
 export async function projectControlStartStoredJobView(
@@ -460,9 +462,28 @@ export async function projectControlStartStoredJobView(
             deps.safeExecutionJournal ??
             localCodexProjectSafeExecutionJournal(canonicalLaunch),
         });
+      const continuationLaunch = await withProjectContinuationAccounts({
+        launch: canonicalLaunch,
+        ...(args.continuationAccounts === undefined
+          ? {}
+          : {
+              requestedAccounts:
+                typeof args.continuationAccounts === "string"
+                  ? [args.continuationAccounts]
+                  : args.continuationAccounts,
+            }),
+        ...(continuationReservation.continuation
+          ? { continuation: continuationReservation.continuation }
+          : {}),
+        excludedAccountIds: continuationReservation.excludedAccountIds,
+        allowedAccountIds: controller.scope.allowedAccountIds ?? [],
+        ...(deps.listAccountStatuses
+          ? { listAccountStatuses: deps.listAccountStatuses }
+          : {}),
+      });
       const accountReservation = await reserveCodexProjectAccount({
         manifest: loaded.manifest,
-        launch: canonicalLaunch,
+        launch: continuationLaunch,
         ...continuationReservation,
       });
       const reservedLaunch = accountReservation.launch;

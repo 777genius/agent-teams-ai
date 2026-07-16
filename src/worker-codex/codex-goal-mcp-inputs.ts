@@ -156,6 +156,7 @@ export type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly confirmUpdate?: boolean;
   readonly confirmPush?: boolean;
   readonly confirmStart?: boolean;
+  readonly continuationAccounts?: string | readonly string[];
   readonly confirmStop?: boolean;
   readonly forceStart?: boolean;
   readonly forceStop?: boolean;

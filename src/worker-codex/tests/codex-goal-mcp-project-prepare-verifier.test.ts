@@ -639,20 +639,19 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
       expect(await stagedPatchSha256(verifierWorkspacePath)).not.toBe(
         handoff.manifest.artifacts.patch.sha256,
       );
-      await writeFile(
-        join(
-          initialVerifierManifest.jobRootDir,
-          `${initialVerifierManifest.taskId}.latest-result.json`,
-        ),
-        `${JSON.stringify({
-          status: "blocked",
-          reason: "account_unavailable",
-          changedFiles: [],
-          evidence: ["safe_execution_status:waiting_capacity"],
-          blockers: ["account_unavailable"],
-          nextAction: "wait",
-        })}\n`,
+      const latestResultPath = join(
+        initialVerifierManifest.jobRootDir,
+        `${initialVerifierManifest.taskId}.latest-result.json`,
       );
+      const accountUnavailableResult = `${JSON.stringify({
+        status: "blocked",
+        reason: "account_unavailable",
+        changedFiles: [],
+        evidence: ["safe_execution_status:waiting_capacity"],
+        blockers: ["account_unavailable"],
+        nextAction: "wait",
+      })}\n`;
+      await writeFile(latestResultPath, accountUnavailableResult);
       const journal = new InMemoryAttemptJournal();
       await recordUnavailableAttempt({
         journal,
@@ -661,29 +660,7 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
         accountId: "account-c",
       });
 
-      const repaired = await callToolJson(
-        client,
-        "brokered_project_manifest_repair",
-        {
-          registryRootDir,
-          controllerJobId: controller.jobId,
-          jobId: initialVerifierManifest.jobId,
-          accounts: allowedAccountIds,
-          confirmRepair: true,
-        },
-      );
-      expect(repaired, JSON.stringify(repaired)).toMatchObject({
-        ok: true,
-        manifest: { accounts: allowedAccountIds },
-        preStartAdmissionRebind: {
-          updated: true,
-          workspaceMode: "admitted_input_patch_continuation",
-        },
-      });
-      const verifierManifest = await readCodexGoalJob({
-        registryRootDir,
-        jobId: "project-verifier",
-      });
+      const verifierManifest = initialVerifierManifest;
 
       const stagedPatchBefore = await stagedPatchSha256(verifierWorkspacePath);
       const manifestBefore = await readFile(verifierManifestPath, "utf8");
@@ -707,6 +684,19 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
           throw new Error("unexpected_load_job_launch");
         },
         safeExecutionJournal: journal,
+        listAccountStatuses: async (input) => {
+          expect(input).toEqual({ authRootDir: join(root, "auth") });
+          return allowedAccountIds.map((accountId) => ({
+            name: accountId,
+            authJsonPath: join(root, "auth", accountId, "auth.json"),
+            status: "ready" as const,
+            availability: "available" as const,
+            schedulerEligible: true,
+            recommendedAction: "none" as const,
+            warnings: [],
+            safeMessage: "ready",
+          }));
+        },
         dependencyBootstrap: async () => ({
           mode: "install",
           workspacePath: verifierWorkspacePath,
@@ -743,8 +733,27 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
         registryRootDir,
         controllerJobId: controller.jobId,
         jobId: verifierManifest.jobId,
+        continuationAccounts: ["account-g"],
         confirmStart: true,
       };
+      await writeFile(
+        latestResultPath,
+        `${JSON.stringify({
+          status: "blocked",
+          reason: "quota_limited",
+          changedFiles: [],
+          evidence: ["safe_execution_status:waiting_capacity"],
+          blockers: ["quota_limited"],
+          nextAction: "wait",
+        })}\n`,
+      );
+      await expect(
+        projectControlStartStoredJobView(startArgs, deps),
+      ).rejects.toThrow(
+        "project_control_continuation_accounts_account_unavailable_proof_required",
+      );
+      expect(brokerCalls).toBe(0);
+      await writeFile(latestResultPath, accountUnavailableResult);
       const started = await projectControlStartStoredJobView(startArgs, deps);
 
       expect(started).toMatchObject({
@@ -762,7 +771,10 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
       expect(reservedLaunch?.config.workspacePath).toBe(
         await realpath(verifierManifest.workspacePath),
       );
-      expect(reservedLaunch?.config.accounts).toEqual([{ name: "account-g" }]);
+      expect(reservedLaunch?.config.accounts).toEqual([{
+        name: "account-g",
+        authJsonPath: join(root, "auth", "account-g", "auth.json"),
+      }]);
       expect(await stagedPatchSha256(verifierWorkspacePath)).toBe(
         stagedPatchBefore,
       );
