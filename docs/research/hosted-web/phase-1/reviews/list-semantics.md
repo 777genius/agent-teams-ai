@@ -1,5 +1,11 @@
 # P1.R2 list semantics formal review
 
+> **Post-freeze amendment (2026-07-16).** A post-freeze review fix moved `QueryContext` out of
+> the wire request: `ListTeamLifecycleRequest` is now `{ schemaVersion, cursor, expectedRevision }`
+> only, and the host assembles the context and passes it to `execute(request, context)` separately.
+> Statements below about request parsing validating a nested query context describe the reviewed
+> pre-fix snapshot, not the current contract.
+
 Disposition: ACCEPT
 
 Finding counts: P0 0 / P1 0 / P2 0.

@@ -29,7 +29,9 @@ const REQUIRED_ROUTE_KEYS = Object.freeze([
 const ROUTE_KEYS = new Set<string>([...REQUIRED_ROUTE_KEYS, 'capabilityId']);
 const CAPABILITY_KEYS = new Set(['id', 'actionId', 'facetId', 'owner', 'productionSupport']);
 const STABLE_REFERENCE = /^[a-z][a-z0-9.-]{1,127}$/;
-const ROUTE_PATH = /^\/(?!\/)(?!.*(?:\s|\?|#|\/\/)).{1,254}$/;
+// Printable ASCII only: control bytes, bidi overrides, and zero-width characters must not
+// slip a confusable path through the drift check.
+const ROUTE_PATH = /^\/(?!\/)(?!.*(?:\?|#|\/\/))[\x21-\x7E]{1,254}$/;
 
 function routeDrift(): never {
   throw new TypeError(ROUTE_CATALOG_DRIFT_DIAGNOSTIC);

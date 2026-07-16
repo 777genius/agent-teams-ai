@@ -390,14 +390,14 @@ function normalizationKey(value) {
 
 export function normalizeDecisionFacts(value) {
   if (Array.isArray(value)) {
-    const normalized = value.map(normalizeDecisionFacts);
-    return normalized.every((item) => typeof item !== 'object' || item === null)
-      ? normalized.sort((left, right) =>
-          normalizationKey(left).localeCompare(normalizationKey(right))
-        )
-      : normalized.sort((left, right) =>
-          normalizationKey(left).localeCompare(normalizationKey(right))
-        );
+    // Canonicalize arrays order-insensitively for the drift digest, using a
+    // locale-independent code-unit comparator so the digest is deterministic
+    // across ICU locales.
+    return value.map(normalizeDecisionFacts).sort((left, right) => {
+      const leftKey = normalizationKey(left);
+      const rightKey = normalizationKey(right);
+      return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+    });
   }
   if (value && typeof value === 'object') {
     return Object.fromEntries(
@@ -475,10 +475,14 @@ function main() {
   const decision = collectTargetImageDecision();
   const verification = verifyCommittedTargetImageDecision(decision);
   process.stdout.write(`${JSON.stringify(decision, null, 2)}\n`);
+  // Independent gates: both flags are honored when passed together. Admission
+  // failure (exit 2) takes precedence over source-relationship failure (exit 1);
+  // with no flags the command stays a diagnostic dump that exits 0.
+  if (process.argv.includes('--verify-source-relationship') && !verification.ok) {
+    process.exitCode = 1;
+  }
   if (process.argv.includes('--require-admission') && !decision.phase5AdmissionGate.admitted) {
     process.exitCode = 2;
-  } else if (process.argv.includes('--verify-source-relationship') && !verification.ok) {
-    process.exitCode = 1;
   }
 }
 

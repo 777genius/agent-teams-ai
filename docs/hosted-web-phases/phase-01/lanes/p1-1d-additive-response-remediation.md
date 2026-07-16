@@ -1,5 +1,10 @@
 # P1.1D shadowed-map implementation remediation lane
 
+> **Post-freeze amendment (2026-07-16).** The wire request no longer embeds a query context:
+> `ListTeamLifecycleRequest` is `{ schemaVersion, cursor, expectedRevision }` and the host passes
+> the `QueryContext` to `execute(request, context)` separately. Criteria below that require
+> nested query-context request objects describe the reviewed pre-fix snapshot.
+
 ## Current r4 producer contract
 
 - Packet revision: `phase-01-p1-1d-shadowed-map-remediation-r4`

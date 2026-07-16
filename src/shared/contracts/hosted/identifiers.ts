@@ -11,8 +11,13 @@ const MAX_PHASE_ONE_ID_LENGTH = 128;
 const CANONICAL_ID_PAYLOAD_LENGTH = 32;
 const CANONICAL_ID_PAYLOAD_PATTERN = /^[0-9a-f]{32}$/;
 
+const PHASE_ONE_ID_PATTERNS = new Map<string, RegExp>();
 function parsePhaseOneId<T extends string>(value: unknown, prefix: string): T {
-  const pattern = new RegExp(`^${prefix}_[A-Za-z0-9][A-Za-z0-9._-]*$`);
+  let pattern = PHASE_ONE_ID_PATTERNS.get(prefix);
+  if (!pattern) {
+    pattern = new RegExp(`^${prefix}_[A-Za-z0-9][A-Za-z0-9._-]*$`);
+    PHASE_ONE_ID_PATTERNS.set(prefix, pattern);
+  }
   if (typeof value !== 'string' || value.length > MAX_PHASE_ONE_ID_LENGTH || !pattern.test(value)) {
     throw new TypeError('hosted-contract-identifier-invalid');
   }

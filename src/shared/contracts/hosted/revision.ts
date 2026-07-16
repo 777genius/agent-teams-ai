@@ -8,8 +8,13 @@ export interface HostedRevisionContract {
   revision: Revision;
 }
 
+const TOKEN_PATTERNS = new Map<string, RegExp>();
 function parseToken<T extends string>(value: unknown, prefix: string): T {
-  const pattern = new RegExp(`^${prefix}_[A-Za-z0-9][A-Za-z0-9._-]*$`);
+  let pattern = TOKEN_PATTERNS.get(prefix);
+  if (!pattern) {
+    pattern = new RegExp(`^${prefix}_[A-Za-z0-9][A-Za-z0-9._-]*$`);
+    TOKEN_PATTERNS.set(prefix, pattern);
+  }
   if (typeof value !== 'string' || value.length > 256 || !pattern.test(value)) {
     throw new TypeError('hosted-contract-opaque-token-invalid');
   }

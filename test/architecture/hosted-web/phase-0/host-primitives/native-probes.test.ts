@@ -7,7 +7,13 @@ import { describe, expect, it } from 'vitest';
 
 const execFileAsync = promisify(execFile);
 const runner = 'scripts/hosted-web/phase-0/host-primitives/run-native-probes.py';
-const linuxDescribe = process.platform === 'linux' ? describe : describe.skip;
+// Real host probes characterize the machine they run on (pidfd signaling, mounts,
+// process groups); shared CI runners are not the characterized host and the spike
+// instances may fail to start there. Opt in explicitly to execute them.
+const linuxDescribe =
+  process.platform === 'linux' && process.env.HOSTED_WEB_NATIVE_PROBES === '1'
+    ? describe
+    : describe.skip;
 
 interface ProbeOutput {
   cleanup: {

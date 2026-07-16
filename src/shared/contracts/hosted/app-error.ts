@@ -9,24 +9,29 @@ export function createSafeAppError(value: unknown) {
     throw new TypeError('hosted-contract-safe-error-invalid');
   }
   const input = value as Record<string, unknown>;
+  // Snapshot every field exactly once: getters/Proxies must not be able to pass validation
+  // with one value and place a different (unvalidated) value into the frozen result.
+  const code = input.code;
+  const reason = input.reason;
+  const diagnosticId = input.diagnosticId;
   const retry = input.retryAfterMs;
   if (
-    Object.keys(input).some((key) => !ERROR_KEYS.includes(key)) ||
-    !APP_ERROR_CODES.includes(input.code as AppErrorCode) ||
-    typeof input.reason !== 'string' ||
-    !SAFE_REASON.test(input.reason) ||
-    (input.diagnosticId !== undefined &&
-      (typeof input.diagnosticId !== 'string' || !SAFE_DIAGNOSTIC.test(input.diagnosticId))) ||
-    (retry !== undefined && input.code !== 'unavailable') ||
+    Reflect.ownKeys(input).some((key) => typeof key !== 'string' || !ERROR_KEYS.includes(key)) ||
+    !APP_ERROR_CODES.includes(code as AppErrorCode) ||
+    typeof reason !== 'string' ||
+    !SAFE_REASON.test(reason) ||
+    (diagnosticId !== undefined &&
+      (typeof diagnosticId !== 'string' || !SAFE_DIAGNOSTIC.test(diagnosticId))) ||
+    (retry !== undefined && code !== 'unavailable') ||
     (retry !== undefined &&
       (!Number.isSafeInteger(retry) || (retry as number) < 1 || (retry as number) > 60_000))
   ) {
     throw new TypeError('hosted-contract-safe-error-invalid');
   }
   return Object.freeze({
-    code: input.code as AppErrorCode,
-    reason: input.reason,
-    ...(input.diagnosticId === undefined ? {} : { diagnosticId: input.diagnosticId }),
+    code: code as AppErrorCode,
+    reason,
+    ...(diagnosticId === undefined ? {} : { diagnosticId }),
     ...(retry === undefined ? {} : { retryAfterMs: retry as number }),
   });
 }

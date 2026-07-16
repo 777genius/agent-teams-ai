@@ -24,6 +24,27 @@ test('hosted errors freeze safe fields and reject unsafe or transport-shaped val
   expect(() => hosted.createSafeAppError({ code: 'other', reason: 'unexpected' })).toThrow();
 });
 
+test('hosted errors snapshot fields once so getters cannot swap validated values', () => {
+  let reasonReads = 0;
+  const toctou = {
+    code: 'internal',
+    get reason() {
+      reasonReads += 1;
+      return reasonReads === 1 ? 'validated_safe_reason' : 'leaked raw internal detail';
+    },
+  };
+
+  const safeError = hosted.createSafeAppError(toctou);
+
+  expect(reasonReads).toBe(1);
+  expect(safeError.reason).toBe('validated_safe_reason');
+
+  const symbolKeyed = { code: 'internal', reason: 'unexpected', [Symbol('extra')]: 'x' };
+  expect(() => hosted.createSafeAppError(symbolKeyed)).toThrowError(
+    'hosted-contract-safe-error-invalid'
+  );
+});
+
 test('hosted error diagnostic IDs survive only in frozen known-field projections', () => {
   const diagnosticId = 'diag.focused-regression';
   const safeError = hosted.createSafeAppError({

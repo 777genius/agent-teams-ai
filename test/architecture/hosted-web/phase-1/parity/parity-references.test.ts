@@ -12,12 +12,13 @@ import {
 import { createParityDriftFixture, ratchetRegressionFixture } from '../fixtures/ratchet-regression';
 
 // The full src corpus, so a duplicated channel/route literal in ANY file trips the ratchet.
+// Keys are normalized to forward slashes so pinned reference.sourcePath values match on Windows.
 const sourceByPath = Object.fromEntries(
   readdirSync('src', { recursive: true, withFileTypes: true })
     .filter((entry) => entry.isFile() && /\.(?:ts|tsx)$/.test(entry.name))
     .map((entry) => {
       const path = join(entry.parentPath, entry.name);
-      return [path, readFileSync(path, 'utf8')];
+      return [path.replaceAll('\\', '/'), readFileSync(path, 'utf8')];
     })
 );
 

@@ -18,13 +18,16 @@ export function createQueryContext(value: unknown) {
     throw new TypeError('hosted-contract-query-context-invalid');
   }
   const input = value as Record<string, unknown>;
-  if (Object.keys(input).some((key) => !CONTEXT_KEYS.has(key))) {
+  if (Reflect.ownKeys(input).some((key) => typeof key !== 'string' || !CONTEXT_KEYS.has(key))) {
     throw new TypeError('hosted-contract-query-context-invalid');
   }
-  if (!Number.isSafeInteger(input.deadlineAtMs) || (input.deadlineAtMs as number) < 0) {
+  // Snapshot once so getters cannot swap values between validation and the frozen result.
+  const deadlineAtMs = input.deadlineAtMs;
+  const signal = input.signal;
+  if (!Number.isSafeInteger(deadlineAtMs) || (deadlineAtMs as number) < 0) {
     throw new TypeError('hosted-contract-query-context-invalid');
   }
-  if (!(input.signal instanceof AbortSignal)) {
+  if (!(signal instanceof AbortSignal)) {
     throw new TypeError('hosted-contract-query-context-invalid');
   }
   return Object.freeze({
@@ -34,8 +37,8 @@ export function createQueryContext(value: unknown) {
     bootId: ids.parseBootId(input.bootId),
     requestId: ids.parseRequestId(input.requestId),
     authorizedScope: parseAuthorizedScope(input.authorizedScope),
-    deadlineAtMs: input.deadlineAtMs as number,
-    signal: input.signal,
+    deadlineAtMs: deadlineAtMs as number,
+    signal,
   });
 }
 export type QueryContext = ReturnType<typeof createQueryContext>;

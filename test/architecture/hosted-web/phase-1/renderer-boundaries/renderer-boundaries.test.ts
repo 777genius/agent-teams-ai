@@ -22,7 +22,7 @@ function collectHostedSources(): RendererBoundarySource[] {
       .filter((entry) => entry.isFile() && /\.(?:ts|tsx)$/.test(entry.name))
       .map((entry) => {
         const path = join(entry.parentPath, entry.name);
-        return { path, source: readFileSync(path, 'utf8') };
+        return { path: path.replaceAll('\\', '/'), source: readFileSync(path, 'utf8') };
       })
   );
 }

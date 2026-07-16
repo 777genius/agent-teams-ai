@@ -210,7 +210,10 @@ export async function scanEvidence(directory) {
       let sourceText = null;
       if (artifact?.spikeSourcePath) {
         try {
-          sourceText = await readFile(path.resolve(artifact.spikeSourcePath), 'utf8');
+          sourceText = await readFile(
+            path.resolve(repositoryRoot, artifact.spikeSourcePath),
+            'utf8'
+          );
         } catch {
           sourceText = null;
         }

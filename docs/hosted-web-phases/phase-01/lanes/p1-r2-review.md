@@ -1,5 +1,10 @@
 # P1.R2 list semantics formal review lane
 
+> **Post-freeze amendment (2026-07-16).** The wire request no longer embeds a query context:
+> `ListTeamLifecycleRequest` is `{ schemaVersion, cursor, expectedRevision }` and the host passes
+> the `QueryContext` to `execute(request, context)` separately. Review criteria below that require
+> nested query-context request parsing describe the reviewed pre-fix snapshot.
+
 ## Authority and provenance
 
 - Project: `agent-teams-hosted-web-refactor`

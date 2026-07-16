@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
@@ -14,6 +15,16 @@ import {
   verifyCommittedTargetImageDecision,
   // @ts-expect-error The repository-owned JavaScript admission harness has no declaration file.
 } from '../../../../../scripts/hosted-web/phase-0/auth-artifacts/prove-target-image-admission.mjs';
+
+// The canonical-source gates read git objects of the pinned historical commit; a shallow
+// clone (e.g. default CI fetch-depth) cannot serve them. CI deep-fetches to run these;
+// shallow local clones skip them visibly instead of failing on git plumbing.
+const canonicalCommitReachable =
+  // eslint-disable-next-line sonarjs/no-os-command-from-path -- same PATH-resolved git the admission harness itself uses; test-only capability probe
+  spawnSync('git', ['cat-file', '-e', `${REQUIRED_CANONICAL_SOURCE_COMMIT}^{commit}`], {
+    encoding: 'utf8',
+  }).status === 0;
+const canonicalSourceIt = canonicalCommitReachable ? it : it.skip;
 
 const digest = (character: string) => `sha256:${character.repeat(64)}`;
 
@@ -119,29 +130,32 @@ describe('Phase 0 target-image narrowing and Phase 5 admission', () => {
     });
   });
 
-  it('preserves all 51 canonical-source obligations and all nine terminal surfaces', () => {
-    const decision = collectTargetImageDecision();
-    const gaps = decision.phase5AdmissionGate.canonicalSourceGaps;
-    expect(gaps).toHaveLength(51);
-    const counts = gaps.reduce((result: Record<string, number>, gap: string) => {
-      const group = gap.split(':')[0];
-      result[group] = (result[group] ?? 0) + 1;
-      return result;
-    }, {});
-    expect(counts).toEqual({
-      composition: 21,
-      image: 4,
-      inventory: 3,
-      profile: 12,
-      provider_runtime: 2,
-      terminal_negative: 9,
-    });
-    expect(decision.phase5AdmissionGate.terminalSensitiveSurfaces).toEqual(
-      TERMINAL_SENSITIVE_SURFACES
-    );
-    expect(decision.phase5AdmissionGate.terminalNegative).toBe(false);
-    expect(committedDecision().phase5AdmissionGate.canonicalSourceGaps).toEqual(gaps);
-  });
+  canonicalSourceIt(
+    'preserves all 51 canonical-source obligations and all nine terminal surfaces',
+    () => {
+      const decision = collectTargetImageDecision();
+      const gaps = decision.phase5AdmissionGate.canonicalSourceGaps;
+      expect(gaps).toHaveLength(51);
+      const counts = gaps.reduce((result: Record<string, number>, gap: string) => {
+        const group = gap.split(':')[0];
+        result[group] = (result[group] ?? 0) + 1;
+        return result;
+      }, {});
+      expect(counts).toEqual({
+        composition: 21,
+        image: 4,
+        inventory: 3,
+        profile: 12,
+        provider_runtime: 2,
+        terminal_negative: 9,
+      });
+      expect(decision.phase5AdmissionGate.terminalSensitiveSurfaces).toEqual(
+        TERMINAL_SENSITIVE_SURFACES
+      );
+      expect(decision.phase5AdmissionGate.terminalNegative).toBe(false);
+      expect(committedDecision().phase5AdmissionGate.canonicalSourceGaps).toEqual(gaps);
+    }
+  );
 
   it.each([
     [
@@ -311,7 +325,7 @@ describe('Phase 0 target-image narrowing and Phase 5 admission', () => {
     ]);
   });
 
-  it('separates immutable source identity from descendant evidence identity', () => {
+  canonicalSourceIt('separates immutable source identity from descendant evidence identity', () => {
     const decision = committedDecision();
     const descendantHead = 'f'.repeat(40);
     const result = verifyCommittedTargetImageDecision(decision, {
@@ -334,7 +348,7 @@ describe('Phase 0 target-image narrowing and Phase 5 admission', () => {
     expect(decision).not.toHaveProperty('repositoryHeadAtVerification');
   });
 
-  it('rejects a non-descendant evidence identity and provenance tampering', () => {
+  canonicalSourceIt('rejects a non-descendant evidence identity and provenance tampering', () => {
     const decision = committedDecision();
     expect(
       verifyCommittedTargetImageDecision(decision, {
@@ -352,7 +366,7 @@ describe('Phase 0 target-image narrowing and Phase 5 admission', () => {
     expect(tampered.authorityProvenanceValid).toBe(false);
   });
 
-  it('uses normalized fact comparison rather than serialized object order', () => {
+  canonicalSourceIt('uses normalized fact comparison rather than serialized object order', () => {
     const decision = committedDecision();
     const reordered = Object.fromEntries(Object.entries(decision).reverse());
     expect(normalizeDecisionFacts(reordered)).toEqual(normalizeDecisionFacts(decision));
@@ -374,7 +388,7 @@ describe('Phase 0 target-image narrowing and Phase 5 admission', () => {
     expect(committedDecision()).not.toHaveProperty('containerRuntimeProbe');
   });
 
-  it('contains no real-project path or raw credential', () => {
+  canonicalSourceIt('contains no real-project path or raw credential', () => {
     const serialized = JSON.stringify(collectTargetImageDecision());
     for (const pattern of [
       /phase0:(?:anthropic|codex|gemini|opencode):credential:canary/,

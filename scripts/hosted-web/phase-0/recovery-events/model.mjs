@@ -432,7 +432,9 @@ export function encodeIntent(value) {
     return `a:${value.length}:${value.map((item) => frame(encodeIntent(item))).join('')}`;
   }
   if (typeof value === 'object') {
-    const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right));
+    const entries = Object.entries(value).sort(([left], [right]) =>
+      left < right ? -1 : left > right ? 1 : 0
+    );
     return `o:${entries.length}:${entries
       .map(([key, item]) => `${frame(encodeIntent(key))}${frame(encodeIntent(item))}`)
       .join('')}`;
