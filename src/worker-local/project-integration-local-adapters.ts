@@ -26,10 +26,7 @@ import {
   IntegrationError,
   IntegrationErrorReason,
   assertCommitIdentity,
-  SecretScanStatus,
   assertFilesWithinExpected,
-  detectSecretLikeContent,
-  matchesSecretLikeContentPatterns,
   normalizeProjectRelativePath,
   type CheckRun,
   type CheckRunnerPort,
@@ -41,8 +38,6 @@ import {
   type GitPort,
   type GitWorkspaceStatus,
   type IntegrationAttempt,
-  type SecretScannerPort,
-  type SecretScanResult,
   type WorkspaceLock,
   type WorkspaceLockPort,
   type WorkerOutput,
@@ -627,66 +622,10 @@ function resolveCheckCommand(
   return { command, args };
 }
 
-export type SimpleSecretScannerOptions = {
-  readonly maxFileBytes?: number;
-  readonly patterns?: readonly RegExp[];
-};
-
-export class SimpleSecretScanner implements SecretScannerPort {
-  constructor(private readonly options: SimpleSecretScannerOptions = {}) {}
-
-  async scanFiles(input: {
-    readonly workspacePath: string;
-    readonly files: readonly string[];
-  }): Promise<SecretScanResult> {
-    const workspacePath = await canonicalDirectory(input.workspacePath);
-    const matches: string[] = [];
-    for (const file of input.files.map(normalizeProjectRelativePath)) {
-      const filePath = resolve(workspacePath, file);
-      if (!isPathInside(filePath, workspacePath)) {
-        return {
-          status: SecretScanStatus.Failed,
-          safeMessage: "secret_scan_file_outside_workspace",
-        };
-      }
-      let contents: Buffer;
-      try {
-        const realFilePath = await realpath(filePath);
-        if (!isPathInside(realFilePath, workspacePath)) {
-          return {
-            status: SecretScanStatus.Failed,
-            safeMessage: "secret_scan_file_outside_workspace",
-          };
-        }
-        contents = await readFile(realFilePath);
-      } catch (error) {
-        if (!isNodeErrorCode(error, "ENOENT")) {
-          return {
-            status: SecretScanStatus.Failed,
-            safeMessage: `secret_scan_unreadable_file:${file}`,
-          };
-        }
-        continue;
-      }
-      const sample = contents
-        .subarray(0, this.options.maxFileBytes ?? 1024 * 1024)
-        .toString("utf8");
-      const secretLikeContent = this.options.patterns === undefined
-        ? detectSecretLikeContent(sample) !== undefined
-        : matchesSecretLikeContentPatterns(sample, this.options.patterns);
-      if (secretLikeContent) {
-        matches.push(file);
-      }
-    }
-    if (matches.length > 0) {
-      return {
-        status: SecretScanStatus.Failed,
-        safeMessage: `secret_like_content:${matches.join(",")}`,
-      };
-    }
-    return { status: SecretScanStatus.Passed };
-  }
-}
+export {
+  SimpleSecretScanner,
+  type SimpleSecretScannerOptions,
+} from "./simple-secret-scanner";
 
 export type LocalWorkspaceIntegrationLockOptions = {
   readonly rootDir: string;
@@ -937,13 +876,5 @@ function dropUndefinedEnv(
     Object.entries(env).filter(
       (entry): entry is [string, string] => entry[1] !== undefined,
     ),
-  );
-}
-
-function isNodeErrorCode(error: unknown, code: string): boolean {
-  return (
-    error instanceof Error &&
-    "code" in error &&
-    (error as NodeJS.ErrnoException).code === code
   );
 }

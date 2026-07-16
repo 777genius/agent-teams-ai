@@ -123,18 +123,21 @@ export async function validateBuiltinWorkerLaunchSpec(input: {
 }): Promise<void> {
   const contract = parseWorkerLaunchSpec(input.contract);
   const state = parseWorkerLaunchState(input.state);
-  assertSerialState(contract, state);
+  assertSerialState(contract, state, {
+    allowRemediation: isAdoptionManifest(input.manifest),
+  });
   await assertWorkerLaunchFilesystem(contract, input.manifest, input.scope);
 }
 
 function assertSerialState(
   contract: WorkerLaunchSpec,
   state: WorkerLaunchState,
+  options: { readonly allowRemediation: boolean },
 ): void {
-  // Builtin admission is intentionally serial-initial-only. Safe remediation/refill
-  // requires the future transactional shared work-key ledger.
+  // Builtin admission remains serial-initial-only. Adoption is the only remediation
+  // entry because its exact dirty patch is bound by the pre-start receipt.
   if (
-    contract.reviewKind === "remediation" ||
+    (contract.reviewKind === "remediation" && !options.allowRemediation) ||
     contract.revision !== 0 ||
     contract.retryCount !== 0 ||
     contract.supersedes !== null
@@ -158,6 +161,12 @@ function assertSerialState(
   if (record.retryCount > state.maxRetries) {
     fail("state_maxRetries_exceeded");
   }
+}
+
+function isAdoptionManifest(
+  manifest: CodexGoalJobManifest | CodexGoalJobManifestInput,
+): boolean {
+  return manifest.tags?.includes("worker-role-adoption") === true;
 }
 
 function computeWorkerLaunchWorkKey(

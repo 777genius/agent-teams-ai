@@ -371,6 +371,45 @@ describe("reviewed worker output", () => {
     expect(lockHeld).toBe(false);
   });
 
+  it("carries fixture paths through reviewed-output blob validation", async () => {
+    const fixture = await reviewedOutputFixture();
+    const fixturePath = join(fixture.workspacePath, "src", "config.fixture.env");
+    await writeFile(
+      fixturePath,
+      ["API_", "KEY=", "test-", "fixture-literal", "\n"].join(""),
+    );
+
+    await expect(new GitReviewedWorkerOutputSnapshotter({
+      tempRootDir: join(fixture.storeRoot, ".captures"),
+    }).capture({ workspacePath: fixture.workspacePath })).resolves.toMatchObject({
+      changedFiles: ["src/config.fixture.env", "src/new.ts", "src/value.ts"],
+      patch: expect.stringContaining("config.fixture.env"),
+    });
+  });
+
+  it("rejects provider-shaped material embedded in a reviewed binary blob", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-reviewed-secret-"));
+    roots.push(root);
+    const workspacePath = join(root, "workspace");
+    await execFileAsync("git", ["init", workspacePath]);
+    await execFileAsync("git", ["-C", workspacePath, "config", "user.email", "test@example.com"]);
+    await execFileAsync("git", ["-C", workspacePath, "config", "user.name", "Test"]);
+    await writeFile(join(workspacePath, "blob.bin"), Buffer.alloc(256, 1));
+    await execFileAsync("git", ["-C", workspacePath, "add", "blob.bin"]);
+    await execFileAsync("git", ["-C", workspacePath, "commit", "-m", "test: base"]);
+    await writeFile(join(workspacePath, "blob.bin"), Buffer.concat([
+      Buffer.from([0x00, 0x01]),
+      Buffer.from([["s", "k", "-"].join(""), "z".repeat(24)].join("")),
+      Buffer.from([0xff]),
+    ]));
+
+    await expect(new GitReviewedWorkerOutputSnapshotter({
+      tempRootDir: join(root, "captures"),
+    }).capture({ workspacePath })).rejects.toThrow(
+      "reviewed_worker_output_secret_like_content",
+    );
+  });
+
   it("round-trips staged and binary output through the immutable patch", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-reviewed-binary-"));
     roots.push(root);

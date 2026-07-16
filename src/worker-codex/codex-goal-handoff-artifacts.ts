@@ -1,9 +1,11 @@
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
+import { constants } from "node:fs";
 import {
   link,
   lstat,
   mkdir,
+  open,
   readFile,
   realpath,
   unlink,
@@ -23,8 +25,11 @@ import {
   detectSecretLikeContent,
   type RuntimeResultArtifact,
 } from "@vioxen/subscription-runtime/worker-core";
+import { readGitBlobBatch } from "@vioxen/subscription-runtime/worker-local";
+import { assertGitPatchBlobsSecretSafe } from "./git-patch-secret-validator";
 
 const execFileAsync = promisify(execFile);
+const maximumHandoffByteLimit = 64 * 1024 * 1024;
 
 export const DEFAULT_HANDOFF_ARTIFACT_LIMITS = {
   maxChangedFiles: 256,
@@ -84,6 +89,7 @@ export async function materializeCodexGoalHandoffArtifacts(input: {
   readonly expectedBaseCommit?: string;
   readonly limits?: Partial<HandoffArtifactLimits>;
   readonly testHooks?: {
+    readonly afterSafetyScan?: (scan: 1 | 2) => Promise<void>;
     readonly afterPatchSnapshot?: (snapshot: 1 | 2) => Promise<void>;
   };
 }): Promise<MaterializedCodexGoalHandoffArtifacts | null> {
@@ -108,7 +114,11 @@ export async function materializeCodexGoalHandoffArtifacts(input: {
     throw new Error("handoff_base_commit_mismatch");
   }
 
-  const changedPaths = await gitChangedPaths(workspacePath, baseCommit);
+  const changedPaths = await gitChangedPaths(
+    workspacePath,
+    baseCommit,
+    limits.maxChangedFiles,
+  );
   if (changedPaths.length === 0) return null;
   if (changedPaths.length > limits.maxChangedFiles) {
     throw new Error("handoff_changed_file_limit_exceeded");
@@ -116,8 +126,10 @@ export async function materializeCodexGoalHandoffArtifacts(input: {
   await assertSafeChangedFiles({
     workspacePath,
     changedPaths,
+    baseCommit,
     limits,
   });
+  await input.testHooks?.afterSafetyScan?.(1);
   const patch = await buildDeterministicPatch({
     workspacePath,
     changedPaths,
@@ -126,16 +138,21 @@ export async function materializeCodexGoalHandoffArtifacts(input: {
   });
   await input.testHooks?.afterPatchSnapshot?.(1);
   await assertGitHeadUnchanged(workspacePath, baseCommit);
-  assertNoRawSecret(Buffer.from(patch), "handoff.patch");
-  const confirmedChangedPaths = await gitChangedPaths(workspacePath, baseCommit);
+  const confirmedChangedPaths = await gitChangedPaths(
+    workspacePath,
+    baseCommit,
+    limits.maxChangedFiles,
+  );
   if (!sameStrings(changedPaths, confirmedChangedPaths)) {
     throw new Error("handoff_workspace_changed_during_materialization");
   }
-  const totalFileBytes = await assertSafeChangedFiles({
+  await assertSafeChangedFiles({
     workspacePath,
     changedPaths: confirmedChangedPaths,
+    baseCommit,
     limits,
   });
+  await input.testHooks?.afterSafetyScan?.(2);
   const confirmedPatch = await buildDeterministicPatch({
     workspacePath,
     changedPaths: confirmedChangedPaths,
@@ -150,11 +167,13 @@ export async function materializeCodexGoalHandoffArtifacts(input: {
   const patchPath = join(jobRootDir, `${input.taskId}.handoff.patch`);
   const summaryPath = join(jobRootDir, `${input.taskId}.handoff.summary.json`);
   const manifestPath = join(jobRootDir, `${input.taskId}.handoff.manifest.json`);
-  await assertPatchChangedPaths({
+  const totalFileBytes = await assertExactPatchSecretSafe({
     workspacePath,
     jobRootDir,
-    patch,
-    expectedChangedPaths: changedPaths,
+    baseCommit,
+    patch: confirmedPatch,
+    changedPaths,
+    limits,
   });
   await assertGitHeadUnchanged(workspacePath, baseCommit);
 
@@ -216,7 +235,10 @@ function handoffArtifactLimits(
 ): HandoffArtifactLimits {
   const limits = { ...DEFAULT_HANDOFF_ARTIFACT_LIMITS, ...overrides };
   for (const [name, value] of Object.entries(limits)) {
-    if (!Number.isSafeInteger(value) || value <= 0) {
+    const maximum = name === "maxChangedFiles"
+      ? DEFAULT_HANDOFF_ARTIFACT_LIMITS.maxChangedFiles
+      : maximumHandoffByteLimit;
+    if (!Number.isSafeInteger(value) || value <= 0 || value > maximum) {
       throw new Error(`handoff_limit_invalid:${name}`);
     }
   }
@@ -226,6 +248,7 @@ function handoffArtifactLimits(
 async function gitChangedPaths(
   workspacePath: string,
   baseCommit: string,
+  maxChangedFiles: number,
 ): Promise<readonly string[]> {
   const [tracked, untracked] = await Promise.all([
     gitNullPaths(workspacePath, [
@@ -243,44 +266,211 @@ async function gitChangedPaths(
       "-z",
     ]),
   ]);
+  if (tracked.length + untracked.length > maxChangedFiles) {
+    throw new Error("handoff_changed_file_limit_exceeded");
+  }
   return uniqueSorted([...tracked, ...untracked].map(assertSafeRelativePath));
 }
 
 async function assertSafeChangedFiles(input: {
   readonly workspacePath: string;
   readonly changedPaths: readonly string[];
+  readonly baseCommit: string;
   readonly limits: HandoffArtifactLimits;
 }): Promise<number> {
   let totalBytes = 0;
+  const currentBlobs = new Map<string, Buffer>();
   for (const changedPath of input.changedPaths) {
     assertNonSensitivePath(changedPath);
+    assertNoRawSecret(Buffer.from(changedPath), changedPath);
     const path = resolve(input.workspacePath, changedPath);
     if (!pathInside(input.workspacePath, path)) {
       throw new Error("handoff_changed_path_escape");
     }
-    let item;
+    let currentBytes: Buffer | undefined;
     try {
-      item = await lstat(path);
+      const item = await lstat(path);
+      if (item.isSymbolicLink()) throw new Error("handoff_symlink_rejected");
+      if (!item.isFile()) throw new Error("handoff_special_file_rejected");
+      const canonical = await realpath(path);
+      if (!pathInside(input.workspacePath, canonical)) {
+        throw new Error("handoff_changed_path_escape");
+      }
+      if (item.size > input.limits.maxFileBytes) {
+        throw new Error("handoff_file_byte_limit_exceeded");
+      }
+      const remainingTotalBytes = input.limits.maxTotalFileBytes - totalBytes;
+      if (item.size > remainingTotalBytes) {
+        throw new Error("handoff_total_byte_limit_exceeded");
+      }
+      const handle = await open(
+        canonical,
+        constants.O_RDONLY | constants.O_NOFOLLOW,
+      );
+      try {
+        const opened = await handle.stat();
+        if (!opened.isFile()) throw new Error("handoff_special_file_rejected");
+        if (opened.size > input.limits.maxFileBytes) {
+          throw new Error("handoff_file_byte_limit_exceeded");
+        }
+        if (opened.size > remainingTotalBytes) {
+          throw new Error("handoff_total_byte_limit_exceeded");
+        }
+        if (
+          opened.dev !== item.dev ||
+          opened.ino !== item.ino ||
+          opened.size !== item.size ||
+          opened.mtimeMs !== item.mtimeMs
+        ) {
+          throw new Error("handoff_changed_file_unstable");
+        }
+        currentBytes = await readExactBoundedFile(handle, opened.size);
+        const confirmed = await handle.stat();
+        if (
+          confirmed.size !== opened.size ||
+          confirmed.mtimeMs !== opened.mtimeMs
+        ) {
+          throw new Error("handoff_changed_file_unstable");
+        }
+      } finally {
+        await handle.close();
+      }
+      currentBlobs.set(changedPath, currentBytes);
     } catch (error) {
-      if (isNodeError(error, "ENOENT")) continue;
-      throw error;
+      if (!isNodeError(error, "ENOENT")) throw error;
     }
-    if (item.isSymbolicLink()) throw new Error("handoff_symlink_rejected");
-    if (!item.isFile()) throw new Error("handoff_special_file_rejected");
-    const canonical = await realpath(path);
-    if (!pathInside(input.workspacePath, canonical)) {
-      throw new Error("handoff_changed_path_escape");
+    if (currentBytes !== undefined) {
+      totalBytes += currentBytes.byteLength;
+      if (totalBytes > input.limits.maxTotalFileBytes) {
+        throw new Error("handoff_total_byte_limit_exceeded");
+      }
+      assertNoRawSecret(currentBytes, changedPath);
     }
-    if (item.size > input.limits.maxFileBytes) {
-      throw new Error("handoff_file_byte_limit_exceeded");
+  }
+  const baseObjects = await gitBaseBlobObjects({
+    workspacePath: input.workspacePath,
+    baseCommit: input.baseCommit,
+    changedPaths: input.changedPaths,
+  });
+  const objectIds = [...new Set(
+    input.changedPaths.flatMap((path) => {
+      const objectId = baseObjects.get(path);
+      return objectId === undefined ? [] : [objectId];
+    }),
+  )];
+  let objectBlobs: readonly (Buffer | undefined)[] = [];
+  try {
+    objectBlobs = objectIds.length === 0
+      ? []
+      : await readGitBlobBatch({
+        workspacePath: input.workspacePath,
+        objectNames: objectIds,
+        maxBlobBytes: input.limits.maxFileBytes,
+        maxTotalBytes: input.limits.maxTotalFileBytes - totalBytes,
+      });
+  } catch (error) {
+    throw handoffGitBlobError(error);
+  }
+  const bytesByObject = new Map<string, Buffer>();
+  for (const [index, objectId] of objectIds.entries()) {
+    const bytes = objectBlobs[index];
+    if (bytes === undefined) throw new Error("handoff_base_blob_missing");
+    bytesByObject.set(objectId, bytes);
+  }
+  for (const changedPath of input.changedPaths) {
+    const objectId = baseObjects.get(changedPath);
+    const baseBytes = objectId === undefined
+      ? undefined
+      : bytesByObject.get(objectId);
+    if (currentBlobs.get(changedPath) === undefined && baseBytes === undefined) {
+      throw new Error("handoff_changed_blob_missing");
     }
-    totalBytes += item.size;
+    if (baseBytes === undefined) continue;
+    totalBytes += baseBytes.byteLength;
     if (totalBytes > input.limits.maxTotalFileBytes) {
       throw new Error("handoff_total_byte_limit_exceeded");
     }
-    assertNoRawSecret(await readFile(canonical), changedPath);
+    assertNoRawSecret(baseBytes, changedPath);
   }
   return totalBytes;
+}
+
+async function readExactBoundedFile(
+  handle: Awaited<ReturnType<typeof open>>,
+  declaredSize: number,
+): Promise<Buffer> {
+  const contents = Buffer.allocUnsafe(declaredSize);
+  let offset = 0;
+  while (offset < declaredSize) {
+    const { bytesRead } = await handle.read(
+      contents,
+      offset,
+      declaredSize - offset,
+      offset,
+    );
+    if (bytesRead === 0) break;
+    offset += bytesRead;
+  }
+  const overflow = Buffer.allocUnsafe(1);
+  const { bytesRead: overflowBytes } = await handle.read(
+    overflow,
+    0,
+    1,
+    offset,
+  );
+  if (overflowBytes !== 0 || offset !== declaredSize) {
+    throw new Error("handoff_changed_file_unstable");
+  }
+  return contents;
+}
+
+async function gitBaseBlobObjects(input: {
+  readonly workspacePath: string;
+  readonly baseCommit: string;
+  readonly changedPaths: readonly string[];
+}): Promise<ReadonlyMap<string, string>> {
+  const treeOutput = await gitOutput(input.workspacePath, [
+    "ls-tree",
+    "-z",
+    input.baseCommit,
+    "--",
+    ...input.changedPaths,
+  ], 2 * 1024 * 1024);
+  const requested = new Set(input.changedPaths);
+  const objects = new Map<string, string>();
+  for (const entry of treeOutput.split("\0").filter(Boolean)) {
+    const separator = entry.indexOf("\t");
+    const metadata = entry.slice(0, separator).split(" ");
+    const listedPath = entry.slice(separator + 1);
+    const [mode, type, objectId] = metadata;
+    if (
+      separator < 0 ||
+      !requested.has(listedPath) ||
+      objects.has(listedPath) ||
+      (mode !== "100644" && mode !== "100755") ||
+      type !== "blob" ||
+      !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(objectId ?? "")
+    ) {
+      throw new Error("handoff_base_blob_entry_invalid");
+    }
+    objects.set(listedPath, objectId as string);
+  }
+  return objects;
+}
+
+function handoffGitBlobError(error: unknown): Error {
+  if (error instanceof Error) {
+    if (error.message.includes("blob_limit")) {
+      return new Error("handoff_file_byte_limit_exceeded");
+    }
+    if (
+      error.message.includes("total_limit") ||
+      error.message.includes("output_limit")
+    ) {
+      return new Error("handoff_total_byte_limit_exceeded");
+    }
+  }
+  return new Error("handoff_base_blob_unreadable");
 }
 
 async function buildDeterministicPatch(input: {
@@ -338,36 +528,51 @@ async function assertGitHeadUnchanged(
   }
 }
 
-async function assertPatchChangedPaths(input: {
+async function assertExactPatchSecretSafe(input: {
   readonly workspacePath: string;
   readonly jobRootDir: string;
+  readonly baseCommit: string;
   readonly patch: string;
-  readonly expectedChangedPaths: readonly string[];
-}): Promise<void> {
-  const tempPath = join(
-    input.jobRootDir,
-    `.handoff-validate-${process.pid}-${randomUUID()}.patch.tmp`,
-  );
-  await writeFile(tempPath, input.patch, { encoding: "utf8", mode: 0o600, flag: "wx" });
+  readonly changedPaths: readonly string[];
+  readonly limits: HandoffArtifactLimits;
+}): Promise<number> {
   try {
-    const output = await gitOutput(input.workspacePath, [
-      "apply",
-      "--numstat",
-      "-z",
-      tempPath,
-    ], DEFAULT_HANDOFF_ARTIFACT_LIMITS.maxPatchBytes);
-    const actual = uniqueSorted(output.split("\0").filter(Boolean).map((record) => {
-      const fields = record.split("\t");
-      return assertSafeRelativePath(fields.slice(2).join("\t"));
-    }));
-    if (!sameStrings(actual, input.expectedChangedPaths)) {
-      throw new Error("handoff_patch_changed_paths_mismatch");
-    }
-  } finally {
-    await unlink(tempPath).catch((error: unknown) => {
-      if (!isNodeError(error, "ENOENT")) throw error;
+    return await assertGitPatchBlobsSecretSafe({
+      workspacePath: input.workspacePath,
+      baseCommit: input.baseCommit,
+      patch: input.patch,
+      changedPaths: input.changedPaths,
+      tempRootDir: input.jobRootDir,
+      maxFileBytes: input.limits.maxFileBytes,
+      maxTotalFileBytes: input.limits.maxTotalFileBytes,
     });
+  } catch (error) {
+    throw handoffPatchValidationError(error);
   }
+}
+
+function handoffPatchValidationError(error: unknown): Error {
+  if (error instanceof Error) {
+    if (error.message.startsWith("git_patch_secret_like_content:")) {
+      return new Error(error.message.replace(
+        "git_patch_secret_like_content:",
+        "handoff_raw_secret_rejected:",
+      ));
+    }
+    if (error.message === "git_patch_secret_file_limit_exceeded") {
+      return new Error("handoff_file_byte_limit_exceeded");
+    }
+    if (error.message === "git_patch_secret_total_limit_exceeded") {
+      return new Error("handoff_total_byte_limit_exceeded");
+    }
+    if (error.message === "git_patch_secret_changed_paths_mismatch") {
+      return new Error("handoff_patch_changed_paths_mismatch");
+    }
+    if (error.message === "git_patch_secret_changed_blob_missing") {
+      return new Error("handoff_changed_blob_missing");
+    }
+  }
+  return new Error("handoff_patch_validation_failed");
 }
 
 async function publishExactFile(path: string, content: string): Promise<void> {
@@ -407,8 +612,9 @@ async function canonicalOwnedDirectory(path: string, label: string): Promise<str
 function assertSafeRelativePath(path: string): string {
   if (
     !path ||
+    Buffer.byteLength(path) > 4096 ||
     isAbsolute(path) ||
-    path.includes("\0") ||
+    /[\u0000-\u001f\u007f]/.test(path) ||
     path.includes("\\") ||
     path.split("/").some((part) => !part || part === "." || part === "..")
   ) {
@@ -436,7 +642,7 @@ function assertNonSensitivePath(path: string): void {
 }
 
 function assertNoRawSecret(content: Buffer, path: string): void {
-  if (detectSecretLikeContent(content) !== undefined) {
+  if (detectSecretLikeContent(content, { filePath: path }) !== undefined) {
     throw new Error(`handoff_raw_secret_rejected:${path}`);
   }
 }

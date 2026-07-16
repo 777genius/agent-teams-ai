@@ -445,6 +445,7 @@ export async function projectControlRefillWorkerView(
     await assertProjectPreStartAdmissionLaunchBinding({
       manifest,
       scope: controller.scope,
+      ...(role === "adoption" ? { workspaceMode: "adoption_input" } : {}),
     });
     expectedCanonicalWorkspacePath = await projectControlCanonicalWorkspacePath(
       manifest.workspacePath,

@@ -128,9 +128,14 @@ export function projectScopeFieldFingerprint(value: unknown): string {
 
 export function projectControlWorkerRole(
   value: unknown,
-): "producer" | "fastgate" | "reviewer" {
+): "producer" | "fastgate" | "reviewer" | "adoption" {
   const role = stringValue(value) ?? "producer";
-  if (role === "producer" || role === "fastgate" || role === "reviewer") {
+  if (
+    role === "producer" ||
+    role === "fastgate" ||
+    role === "reviewer" ||
+    role === "adoption"
+  ) {
     return role;
   }
   throw new Error("project_control_worker_role_invalid");
