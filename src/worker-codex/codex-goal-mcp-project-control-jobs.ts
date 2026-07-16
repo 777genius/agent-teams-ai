@@ -958,13 +958,28 @@ async function projectControlRefillWorkerBoundedView(
     allowDangerFullAccess: false,
     networkAccess: requested.networkAccess ?? NetworkAccessMode.Restricted,
   };
-  const preStartAdmission = planProjectPreStartAdmission({
-    value: args.preStartAdmission,
-    confirmed: booleanValue(args.confirmPreStartAdmission) === true,
-    scope: controller.scope,
-    manifest: createManifest,
+  const mergeBinding = parseProjectMergeBindingRequest({
+    value: args.mergeBinding,
+    admission: args.preStartAdmission,
+    requireCanonicalRemoteHead:
+      booleanValue(args.requireCanonicalRemoteHead) === true,
+    expectedSourceCommit: args.expectedSourceCommit,
   });
-  if (operationToolName === "codex_goal_project_refill_worker") {
+  // Dynamic merge revisions are resolved by the immutable sync operation. The
+  // bounded wrapper cannot materialize that contract before it has pinned both
+  // remote heads, so it validates only the request shape here.
+  const preStartAdmission = mergeBinding
+    ? undefined
+    : planProjectPreStartAdmission({
+        value: args.preStartAdmission,
+        confirmed: booleanValue(args.confirmPreStartAdmission) === true,
+        scope: controller.scope,
+        manifest: createManifest,
+      });
+  if (
+    operationToolName === "codex_goal_project_refill_worker" &&
+    !mergeBinding
+  ) {
     assertProjectRefillInputPatchSource({
       contract: preStartAdmission?.contract,
       producerJobId: stringValue(args.producerJobId),
