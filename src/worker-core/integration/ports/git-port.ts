@@ -62,6 +62,7 @@ export interface GitPort {
     readonly branch: string;
     readonly commitSha: string;
     readonly force: boolean;
+    readonly expectedRemoteCommit?: string;
   }): Promise<void> | void;
 
   remoteBranchCommit(input: {

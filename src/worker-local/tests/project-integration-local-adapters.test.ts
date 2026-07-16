@@ -93,6 +93,94 @@ describe("local project integration adapters", () => {
     expect(pushed).toContain(commit.commitSha);
   });
 
+  it("promotes a fast-forward commit with an exact remote lease", async () => {
+    const fixture = await createGitFixture();
+    const adapter = new LocalGitIntegrationAdapter();
+    const expectedRemoteCommit = (await gitOutput(
+      fixture.workspacePath,
+      ["rev-parse", "HEAD"],
+    )).trim();
+    await git(fixture.workspacePath, ["push", "origin", "main:canonical"]);
+    await adapter.applyWorkerOutput({
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/memory.ts"],
+      },
+      workerOutput: {
+        workspacePath: fixture.workspacePath,
+        commitSha: fixture.workerCommitSha,
+      },
+    });
+    const commit = await adapter.commit({
+      workspacePath: fixture.workspacePath,
+      message: "fix(memory): integrate worker output",
+      files: ["src/memory.ts"],
+      identity: {
+        name: "Approved Integrator",
+        email: "integrator@example.com",
+      },
+    });
+
+    await adapter.push({
+      workspacePath: fixture.workspacePath,
+      remote: "origin",
+      branch: "canonical",
+      commitSha: commit.commitSha,
+      force: false,
+      expectedRemoteCommit,
+    });
+
+    const promoted = await gitOutput(
+      fixture.workspacePath,
+      ["ls-remote", "origin", "refs/heads/canonical"],
+    );
+    expect(promoted).toContain(commit.commitSha);
+  });
+
+  it("rejects promotion when the exact remote lease changed", async () => {
+    const fixture = await createGitFixture();
+    const adapter = new LocalGitIntegrationAdapter();
+    const expectedRemoteCommit = (await gitOutput(
+      fixture.workspacePath,
+      ["rev-parse", "HEAD"],
+    )).trim();
+    await git(fixture.workspacePath, ["push", "origin", "main:canonical"]);
+    await adapter.applyWorkerOutput({
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/memory.ts"],
+      },
+      workerOutput: {
+        workspacePath: fixture.workspacePath,
+        commitSha: fixture.workerCommitSha,
+      },
+    });
+    const commit = await adapter.commit({
+      workspacePath: fixture.workspacePath,
+      message: "fix(memory): integrate worker output",
+      files: ["src/memory.ts"],
+      identity: {
+        name: "Approved Integrator",
+        email: "integrator@example.com",
+      },
+    });
+    await git(fixture.workspacePath, ["push", "origin", "worker:canonical"]);
+
+    await expect(adapter.push({
+      workspacePath: fixture.workspacePath,
+      remote: "origin",
+      branch: "canonical",
+      commitSha: commit.commitSha,
+      force: false,
+      expectedRemoteCommit,
+    })).rejects.toThrow();
+    const unchanged = await gitOutput(
+      fixture.workspacePath,
+      ["ls-remote", "origin", "refs/heads/canonical"],
+    );
+    expect(unchanged).toContain(fixture.workerCommitSha);
+  });
+
   it("applies an immutable conflict resolution and creates an exact two-parent merge", async () => {
     const fixture = await createMergeFixture();
     const adapter = new LocalGitIntegrationAdapter({

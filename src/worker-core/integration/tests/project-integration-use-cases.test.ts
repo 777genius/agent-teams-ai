@@ -15,6 +15,7 @@ import {
   rejectIntegrationAttempt,
   rollupCheckRuns,
   runRequiredChecks,
+  type ProjectIntegrationPolicy,
 } from "../../index";
 import {
   MERGE_SOURCE_COMMIT,
@@ -24,6 +25,22 @@ import {
   mergeInput,
   policy,
 } from "./project-integration-use-cases.fixture";
+
+function promotionPolicy(): ProjectIntegrationPolicy {
+  const base = policy();
+  const scope = base.access.scope;
+  if (!scope) throw new Error("test_project_scope_required");
+  return {
+    ...base,
+    access: {
+      ...base.access,
+      scope: {
+        ...scope,
+        allowedBranches: ["main", "release"],
+      },
+    },
+  };
+}
 
 describe("project integration use cases", () => {
   it("opens, applies, checks, commits and pushes a reviewed worker output", async () => {
@@ -307,6 +324,103 @@ describe("project integration use cases", () => {
     expect(fixture.ledger.finalizeCalls).toBe(1);
     expect(fixture.store.get(opened.attemptId)?.status)
       .toBe(IntegrationAttemptStatus.Pushed);
+  });
+
+  it("promotes a pushed commit while preserving immutable push evidence", async () => {
+    let clockTick = 0;
+    const fixture = createFixture({
+      clockNow: () => new Date(Date.UTC(2026, 0, 1, 0, clockTick++)),
+    });
+    const promotePolicy = promotionPolicy();
+    const targetCommit = "f".repeat(40);
+    const opened = await openProjectIntegrationAttempt(fixture.deps(), {
+      ...input(),
+      workerOutput: {
+        ...input().workerOutput,
+        targetCommit,
+      },
+      policy: promotePolicy,
+    });
+    await applyWorkerOutput(fixture.deps(), { attemptId: opened.attemptId });
+    await runRequiredChecks(fixture.deps(), { attemptId: opened.attemptId });
+    await commitApprovedChanges(fixture.deps(), {
+      attemptId: opened.attemptId,
+      message: "fix(memory): integrate worker output",
+      policy: promotePolicy,
+    });
+    await pushApprovedCommit(fixture.deps(), {
+      attemptId: opened.attemptId,
+      policy: promotePolicy,
+    });
+    fixture.git.remoteCommit = targetCommit;
+
+    const promoted = await pushApprovedCommit(fixture.deps(), {
+      attemptId: opened.attemptId,
+      branch: "release",
+      policy: promotePolicy,
+    });
+
+    expect(promoted.pushAttempt?.branch).toBe("main");
+    expect(promoted.promotionAttempts).toHaveLength(1);
+    expect(promoted.promotionAttempts?.[0]?.branch).toBe("release");
+    expect(fixture.git.lastPushedBranch).toBe("release");
+    expect(fixture.git.lastExpectedRemoteCommit).toBe(targetCommit);
+    expect(fixture.ledger.finalizeCalls).toBe(2);
+    expect(fixture.ledger.finalizedAt.at(-1)).toBe(
+      promoted.pushAttempt?.pushedAt,
+    );
+    expect(promoted.promotionAttempts?.[0]?.pushedAt).not.toBe(
+      promoted.pushAttempt?.pushedAt,
+    );
+
+    const pushCallsAfterPromotion = fixture.git.calls
+      .filter((call) => call === "push").length;
+    const replayed = await pushApprovedCommit(fixture.deps(), {
+      attemptId: opened.attemptId,
+      branch: "release",
+      policy: promotePolicy,
+    });
+    expect(replayed.promotionAttempts).toHaveLength(1);
+    expect(fixture.git.calls.filter((call) => call === "push"))
+      .toHaveLength(pushCallsAfterPromotion);
+    expect(fixture.ledger.finalizeCalls).toBe(3);
+  });
+
+  it("rejects promotion when the remote target changed", async () => {
+    const fixture = createFixture();
+    const promotePolicy = promotionPolicy();
+    const opened = await openProjectIntegrationAttempt(fixture.deps(), {
+      ...input(),
+      workerOutput: {
+        ...input().workerOutput,
+        targetCommit: "f".repeat(40),
+      },
+      policy: promotePolicy,
+    });
+    await applyWorkerOutput(fixture.deps(), { attemptId: opened.attemptId });
+    await runRequiredChecks(fixture.deps(), { attemptId: opened.attemptId });
+    await commitApprovedChanges(fixture.deps(), {
+      attemptId: opened.attemptId,
+      message: "fix(memory): integrate worker output",
+      policy: promotePolicy,
+    });
+    await pushApprovedCommit(fixture.deps(), {
+      attemptId: opened.attemptId,
+      policy: promotePolicy,
+    });
+    const pushCallsBeforePromotion = fixture.git.calls
+      .filter((call) => call === "push").length;
+    fixture.git.remoteCommit = "e".repeat(40);
+
+    await expect(pushApprovedCommit(fixture.deps(), {
+      attemptId: opened.attemptId,
+      branch: "release",
+      policy: promotePolicy,
+    })).rejects.toMatchObject({
+      reason: IntegrationErrorReason.StaleBase,
+    });
+    expect(fixture.git.calls.filter((call) => call === "push"))
+      .toHaveLength(pushCallsBeforePromotion);
   });
 
   it("does not mark an attempt pushed when ledger finalization fails", async () => {
