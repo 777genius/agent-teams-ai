@@ -140,6 +140,38 @@ export async function assertGitCurrentBranch(input: {
   }
 }
 
+export async function isGitAncestor(input: {
+  readonly workspacePath: string;
+  readonly ancestor: string;
+  readonly descendant: string;
+}): Promise<boolean> {
+  try {
+    await execFileAsync("git", withLiteralGitPathspecs([
+      "-C",
+      input.workspacePath,
+      "merge-base",
+      "--is-ancestor",
+      input.ancestor,
+      input.descendant,
+    ]), {
+      timeout: 120_000,
+      maxBuffer: 1024 * 1024,
+    });
+    return true;
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      (error as { readonly code?: unknown }).code === 1
+    ) {
+      return false;
+    }
+    throw new Error(
+      `project_control_git_failed:merge-base:${gitErrorSummary(error)}`,
+    );
+  }
+}
+
 export type CanonicalRemoteHead = {
   readonly remote: string;
   readonly branch: string;
@@ -470,6 +502,8 @@ function gitOperationLabel(args: readonly string[]): string {
   const command = args.find(
     (arg) =>
       arg === "worktree" ||
+      arg === "merge-base" ||
+      arg === "merge" ||
       arg === "cherry-pick" ||
       arg === "push" ||
       arg === "apply" ||

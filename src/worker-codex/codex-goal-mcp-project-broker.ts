@@ -61,6 +61,7 @@ import {
   assertGitCurrentBranch,
   execGit,
   execGitStdout,
+  isGitAncestor,
 } from "./codex-goal-mcp-project-git";
 
 export type { CodexGoalProjectCreateWorktreeInput } from "./application/project-control/codex-goal-project-control-contracts";
@@ -531,12 +532,17 @@ function codexProjectControlPorts(
           workspacePath: input.integrateCommitInput.workspacePath,
           branch: input.integrateCommitInput.branch,
         });
+        const targetIsDescendant = await isGitAncestor({
+          workspacePath: input.integrateCommitInput.workspacePath,
+          ancestor: "HEAD",
+          descendant: input.integrateCommitInput.commitSha,
+        });
         await execGit([
           "-C",
           input.integrateCommitInput.workspacePath,
-          "cherry-pick",
-          "--ff",
-          input.integrateCommitInput.commitSha,
+          ...(targetIsDescendant
+            ? ["merge", "--ff-only", input.integrateCommitInput.commitSha]
+            : ["cherry-pick", "--ff", input.integrateCommitInput.commitSha]),
         ]);
         return operationResult(input.integrateCommitInput.commitSha);
       },

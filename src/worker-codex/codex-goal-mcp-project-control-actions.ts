@@ -728,14 +728,34 @@ export async function projectControlIntegrateCommitView(
       reason: "confirm_integrate_required",
       controllerJobId: controller.controller.jobId,
       auditPath: projectControlAuditPath(controller.controller),
-      commandPreview: [
-        "git",
-        "-C",
-        workspacePath,
-        "cherry-pick",
-        "--ff",
-        commitSha,
-      ],
+      integrationStrategy: "fast_forward_descendant_or_cherry_pick_commit",
+      commandPreview: {
+        ancestryCheck: [
+          "git",
+          "-C",
+          workspacePath,
+          "merge-base",
+          "--is-ancestor",
+          "HEAD",
+          commitSha,
+        ],
+        descendant: [
+          "git",
+          "-C",
+          workspacePath,
+          "merge",
+          "--ff-only",
+          commitSha,
+        ],
+        nonDescendant: [
+          "git",
+          "-C",
+          workspacePath,
+          "cherry-pick",
+          "--ff",
+          commitSha,
+        ],
+      },
     };
   }
 
