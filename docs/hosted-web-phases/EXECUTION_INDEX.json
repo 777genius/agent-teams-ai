@@ -1,87 +1,58 @@
 {
   "schemaVersion": 1,
   "currentExecutablePhase": "phase-01",
-  "currentExecutableSubphase": "P1.I.FORMAT.REMEDIATION",
-  "currentExecutableNodes": ["P1.I.FORMAT.REMEDIATION"],
-  "currentRouterRevision": "phase-01-p1-i-format-remediation-router-r1",
+  "currentExecutableSubphase": "P1.F",
+  "currentExecutableNodes": ["P1.F"],
+  "currentRouterRevision": "phase-01-p1-f-freeze-router-r2",
   "currentRouterTerminalState": "HOLD",
   "canonicalAuthority": {
-    "packetBaseSha": "b482e816a90e9bb988a0797565241bae4d60b690",
-    "packetBaseRole": "clean-remote-equal-canonical-format-router-authoring-base",
-    "acceptedP1R2IntegrationSha": "c5d842f75ca7a647a0773b0c30d303d7da21d1d6",
-    "acceptedLintRemediationAuthoritySha": "b482e816a90e9bb988a0797565241bae4d60b690",
+    "packetBaseSha": "20706bd067ce5ccbf13697700411904faa2a00c8",
+    "packetBaseRole": "clean-remote-equal-canonical-p1f-router-authoring-base",
+    "acceptedTrueMerge": true,
+    "pullRequest": 252,
+    "mergeParentCount": 2,
+    "firstParentRef": "20706bd067ce5ccbf13697700411904faa2a00c8^1",
+    "mergeParent1": "134f64f0c5c7bbbab0552eddf08df1508118f4bb",
+    "mergeParent2": "6bf43f140878f8b79f7ee17349bd21b177df901d",
+    "mergeParentOrderRequired": true,
+    "firstParentEqualsAcceptedP1IIntegrationSha": true,
+    "secondParentDiffRole": "accumulated-current-base-history-never-exact-p1i-proof",
     "postRouterIntegrationAuthoritySha": null,
     "postRouterIntegrationAuthorityShaState": "resolve-after-router-accept-broker-integration-push",
-    "postFormatRemediationIntegrationAuthoritySha": null,
-    "postFormatRemediationIntegrationAuthorityShaState": "resolve-after-format-remediation-accept-mark-reviewed-broker-integration-push",
+    "p1fWorkerAuthorityBinding": "postRouterIntegrationAuthoritySha",
     "authoritySource": "exact-broker-returned-and-pushed-commit",
-    "formatRemediationProducerAuthorityBinding": "postRouterIntegrationAuthoritySha",
-    "downstreamP1IProducerAuthorityBinding": "postFormatRemediationIntegrationAuthoritySha",
     "remoteName": "origin",
     "remoteBranch": "refactor/hosted-web-feature-boundaries",
     "remoteRef": "refs/heads/refactor/hosted-web-feature-boundaries",
     "remoteEqualityCommand": "git ls-remote origin refs/heads/refactor/hosted-web-feature-boundaries",
     "rootImmutableAuthorityAttestationRequired": true,
+    "workerIndependentRemoteAndAncestryRecheckRequired": true,
     "cleanPostIntegrationWorktreeRequired": true,
     "remoteEqualityToPostIntegrationAuthorityRequired": true,
-    "workerNetworkRecheckAuthorized": false,
     "upstreamTrackingEvidenceAuthorized": false,
-    "mustBeResolvedAndAttestedBeforeEachProducerStart": true,
     "missingOrMismatchedAttestationDisposition": "HOLD"
   },
-  "acceptedP1R2": {
-    "integrationSha": "c5d842f75ca7a647a0773b0c30d303d7da21d1d6",
-    "reviewAuthoritySha": "f6794b607609c57dc92def696d05946c9c96856a",
-    "reviewedProductSnapshotSha": "666042037a9c91df572b1d8274bf6024f8d00f40",
-    "evidenceId": "P1.R2.SEMANTIC_REVIEW",
+  "acceptedP1I": {
     "disposition": "ACCEPT",
     "findingCounts": {
       "P0": 0,
       "P1": 0,
       "P2": 0
     },
-    "handoffPath": ".codex-handoff/phase-01-p1-r2.json",
-    "handoffSha256": "bbf61b20dad577af7536f78f108116531acd17925ca9a17140c4d9fadb7d038c",
-    "resultPath": "docs/research/hosted-web/phase-1/reviews/list-semantics.md",
-    "resultSha256": "de4b1e4fc0f633a40703e6af106bcdfcd2ab3a7d524b28f19df376a4052cdc70",
-    "integrationCommitExactPathCount": 2,
+    "integrationAttempt": "agent-teams-hosted-web-refactor-p1-i-integration-apply-v17-r2",
+    "integrationSha": "134f64f0c5c7bbbab0552eddf08df1508118f4bb",
+    "integrationRange": "134f64f0c5c7bbbab0552eddf08df1508118f4bb^..134f64f0c5c7bbbab0552eddf08df1508118f4bb",
+    "exactOutputPathProof": "integration-range",
+    "outputPathCount": 5,
+    "independentlyReviewed": true,
     "integrated": true,
     "modificationAuthorized": false,
-    "reintegrationAuthorized": false
-  },
-  "acceptedLintRemediation": {
-    "evidenceId": "P1.I.LINT.REMEDIATION",
-    "handoffPath": ".codex-handoff/phase-01-p1-i-lint-remediation.json",
-    "integratedAtCanonicalAuthority": true,
-    "changedPathCount": 3,
-    "fullLintErrorCount": 0,
-    "currentP1IInputOrdinal": 69,
-    "modificationAuthorized": false,
-    "reintegrationAuthorized": false
-  },
-  "terminalBlockedP1IAttempt": {
-    "authoritySha": "b482e816a90e9bb988a0797565241bae4d60b690",
-    "job": "agent-teams-hosted-web-refactor-p1-i-integration-v17-r1",
-    "status": "BLOCKED",
-    "terminalState": "HOLD",
-    "patchSha256": "d94f8dfa6548427e007402e8771c469c8e661cd64de3a8728dec042a509aebbe",
-    "manifestSha256": "1b88a6e8e53199f0b1905d4f4c194525bcb86db185f0e4748acf60f69bb78f94",
-    "auditedRejectionLedgerExists": true,
-    "rejectionLedgerAuthority": "controller-audited-external-lifecycle-ledger",
-    "requiredGateCount": 14,
-    "passedGateCount": 13,
-    "failingGateCount": 1,
-    "failingGateId": "P1.GATE.FORMAT",
-    "prettierScopePathCount": 74,
-    "soleUnformattedPath": "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
-    "allNonFormatGatesPassed": true,
-    "patchRole": "rejected-provenance-only",
-    "patchMaterializationAuthorized": false,
-    "patchApplicationAuthorized": false,
-    "patchSalvageAuthorized": false,
-    "blockedOutputPathCount": 5,
-    "blockedOutputsIntegrationAuthorized": false,
-    "blockedOutputsDisposition": "never-integrate"
+    "regenerationAuthorized": false,
+    "reintegrationAuthorized": false,
+    "unchangedAtPacketBase": true,
+    "outputBytesIdenticalAtIntegrationAndPacketBase": true,
+    "packetBaseSecondParentDiffAuthorizedAsExactP1IProof": false,
+    "historicalLanePacket": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md"
   },
   "orchestrationAuthority": {
     "rootRole": "sole-orchestrator",
@@ -94,51 +65,28 @@
     "controllerRestartAuthorized": false,
     "controllerReplacementAuthorized": false,
     "successorControllerAuthorized": false,
-    "remediationProducerStartAuthority": "root-after-router-independent-accept-broker-integration-push",
-    "remediationReviewerStartAuthority": "root-after-remediation-producer-terminal-and-broker-captured-immutable-two-path-output",
-    "downstreamP1IProducerStartAuthority": "root-after-remediation-accept-mark-reviewed-exact-two-path-broker-integration-push-authority-attestation-and-exact-69-input-prettier",
-    "downstreamP1IReviewerStartAuthority": "root-after-fresh-p1i-producer-terminal-and-broker-captured-immutable-five-path-output",
+    "p1fWorkerStartAuthority": "root-after-router-independent-accept-broker-integration-push-and-authority-attestation",
     "acceptedResultMechanicalVerifier": "root",
     "acceptedResultLifecycleAction": "mark_reviewed",
     "acceptedResultIntegrator": "broker"
   },
-  "formatRemediationProducerProfile": {
-    "model": "gpt-5.6-sol",
-    "reasoningEffort": "xhigh",
-    "serviceTier": "default",
-    "fastAuthorized": false
-  },
-  "formatRemediationReviewerProfile": {
-    "model": "gpt-5.6-sol",
-    "reasoningEffort": "xhigh",
-    "serviceTier": "default",
-    "fastAuthorized": false
-  },
-  "downstreamP1IProducerProfile": {
-    "model": "gpt-5.6-sol",
-    "reasoningEffort": "xhigh",
-    "serviceTier": "default",
-    "fastAuthorized": false
-  },
-  "downstreamP1IReviewerProfile": {
+  "p1fWorkerProfile": {
     "model": "gpt-5.6-sol",
     "reasoningEffort": "xhigh",
     "serviceTier": "default",
     "fastAuthorized": false
   },
   "currentRoute": {
-    "mode": "serialized-format-remediation-review-integration-then-fresh-direct-p1i",
+    "mode": "single-serial-independent-p1f-milestone-freeze",
     "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
     "lanePackets": [
       {
-        "subphase": "P1.I.FORMAT.REMEDIATION-then-P1.I.INTEGRATION",
-        "node": "P1.I.FORMAT.REMEDIATION",
-        "serialSuccessorNode": "P1.I.INTEGRATION",
-        "laneId": "p1-i-format-remediation",
-        "serialSuccessorLaneId": "p1-i",
-        "path": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md",
-        "packetRevision": "phase-01-p1-i-integration-r3",
-        "evidenceIds": ["P1.I.FORMAT.REMEDIATION", "P1.I.INTEGRATION", "P1.I.ROLLBACK"]
+        "subphase": "P1.F",
+        "node": "P1.F",
+        "laneId": "p1-f-freeze",
+        "path": "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md",
+        "packetRevision": "phase-01-p1-f-freeze-r2",
+        "evidenceIds": ["P1.F.FREEZE", "P1.F.PHASE_EXIT"]
       }
     ],
     "launchGate": {
@@ -148,139 +96,58 @@
         "routerPushed": true,
         "rootRemainsSoleOrchestrator": true,
         "controllerV17HoldObservationOnly": true,
-        "noSuccessorController": true,
         "postRouterIntegrationAuthorityResolvedFromBrokerReturn": true,
-        "postRouterIntegrationAuthorityPushed": true,
         "postRouterIntegrationAuthorityAttestationImmutable": true,
         "postRouterIntegrationWorktreeClean": true,
         "postRouterIntegrationAuthorityRemoteEqual": true,
-        "remoteEqualityUsesExactLsRemoteRef": true,
-        "upstreamTrackingEvidenceForbidden": true,
-        "workerNetworkRecheckForbidden": true,
-        "existingP1IInputCountExact69": true,
-        "acceptedLintRemediationHandoffPresent": true,
-        "formatRemediationProducerWorktreeHeadExact": true,
-        "handoffAuthorityBindingsExact": true,
-        "noRemediationOrP1IWorkerActive": true,
+        "routerBaseAncestor": true,
+        "routerDeltaPathCountExact7": true,
+        "acceptedP1IOutputsBytePreserved": true,
+        "historicalP1IPacketBytePreserved": true,
+        "phase1FreezeManifestPathCountExact74": true,
+        "p1fOutputsInitiallyAbsent": true,
+        "workerIndependenceAttested": true,
+        "noP1FOrPhase2WorkerActive": true,
         "defaultOnlyProfileVerified": true,
         "dependenciesBrokerMaterializedOffline": true,
-        "workerDependencyInstallDisabled": true,
-        "formatRemediationHandoffInitiallyAbsent": true,
-        "freshP1IOutputsInitiallyAbsent": true,
-        "rejectedPatchNotMaterializedOrApplied": true,
-        "blockedOutputsNeverIntegrated": true,
-        "blockedSuccessorsInactive": true
+        "workerDependencyInstallDisabled": true
       },
       "attestedByThisDocsTransition": false,
       "anyFailureDisposition": "HOLD-without-launch"
     },
-    "dependencyPolicy": {
-      "materializedBy": "broker",
-      "mode": "offline",
-      "workerInstallAuthorized": false,
-      "workerFetchOrUpdateAuthorized": false
-    },
-    "remediationCompletionProof": {
-      "required": [
-        "strict-terminal-result",
-        "immutable-output",
-        "exact-pinned-prettier-derivation",
-        "semantic-token-equivalence"
-      ],
-      "immutableOutputBindsExactResultPaths": true,
-      "immutableOutputPaths": [
-        "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
-        ".codex-handoff/phase-01-p1-i-format-remediation.json"
-      ],
-      "semanticTokenAlgorithm": "phase1-markdown-semantic-token-v1",
-      "semanticTokenChangeCountRequired": 0,
-      "insufficientSignals": ["changedFiles", "heartbeat", "PID", "tmux", "providerObserved"]
-    },
-    "remediationProducerCompletionBoundary": {
+    "completionBoundary": {
+      "workerCount": 1,
+      "workerIsIndependentMilestoneReviewer": true,
+      "additionalReviewerAuthorized": false,
       "terminalState": "HOLD",
-      "independentVerificationRequired": true,
-      "independentVerificationAuthorizedByThisRouter": true,
-      "freshIndependentReviewerCount": 1,
-      "producerAndReviewerConcurrencyAuthorized": false,
-      "maximumActiveReviewerCount": 1,
-      "brokerIntegrationRequiredAfterIndependentAccept": true,
-      "brokerIntegrationAuthorizedByThisRouterAfterIndependentAccept": true,
-      "rootMarkReviewedRequiredBeforeBrokerIntegration": true,
-      "acceptedIntegrationPathCount": 2,
-      "acceptedIntegrationPathsSource": "formatRemediationOutputs.writablePaths",
-      "rejectDisposition": "bounded-same-two-path-remediation-only",
-      "directDownstreamP1ILaunchAfterAcceptedIntegrationAndExactFormat": true
-    },
-    "remediationIndependentReview": {
-      "scope": "P1.I.FORMAT.REMEDIATION",
-      "startCondition": "remediation-producer-terminal-and-broker-captured-immutable-two-path-output",
-      "freshReviewerRequired": true,
-      "independenceRequired": true,
-      "reviewedCandidatePathCount": 2,
       "allowedDispositions": ["ACCEPT", "REJECT"],
       "acceptFindingCounts": {
         "P0": 0,
         "P1": 0,
         "P2": 0
       },
-      "semanticTokenChangeCountRequired": 0,
-      "rejectRequiresAtLeastOneFinding": true,
-      "strictTerminalPrefix": "P1_I_FORMAT_REMEDIATION_REVIEW_RESULT",
-      "immutableResultRequired": true,
-      "immutableFindingDetailsRequiredOnReject": true,
-      "repositoryWritesAuthorized": false,
-      "acceptLifecycle": [
-        "root-mark_reviewed",
-        "broker-integrate-and-push-exact-two-remediation-paths"
-      ],
-      "rejectLifecycle": [
-        "HOLD",
-        "no-mark_reviewed",
-        "no-integration",
-        "bounded-same-two-path-remediation-only"
-      ]
-    },
-    "directDownstreamP1I": {
-      "node": "P1.I.INTEGRATION",
-      "freshProducerRequired": true,
-      "rejectedAttemptReuseAuthorized": false,
-      "newRouterRequired": false,
-      "startCondition": "accepted-format-remediation-exact-two-path-integration-pushed-attested-clean-and-exact-69-input-prettier-zero",
-      "authorityBinding": "postFormatRemediationIntegrationAuthoritySha",
-      "canonicalManifestPathCount": 68,
-      "acceptedLintRemediationHandoffPathCount": 1,
-      "formatRemediationHandoffInputPathCount": 0,
-      "readOnlyInputPathCount": 69,
-      "outputPathCount": 5,
-      "requiredGateCount": 14,
-      "fullPhase1TestFileCount": 13,
-      "fullPhase1TestCount": 60,
-      "prettierAndScanPathCount": 74,
-      "rollbackPayloadPathCount": 54,
-      "laterIndependentMilestoneReviewRetained": true,
-      "p1fAuthorized": false,
-      "phase2PlusAuthorized": false,
-      "successorControllerAuthorized": false
+      "acceptedIntegrationPathCount": 2,
+      "rejectDisposition": "bounded-same-two-path-remediation-only",
+      "phase2JitRouterRequiresSeparateLifecycle": true,
+      "phase2WorkerAuthorized": false
     }
   },
-  "phase1CanonicalInputs": {
-    "currentSnapshotSha": "b482e816a90e9bb988a0797565241bae4d60b690",
-    "downstreamAuthorityShaBinding": "postFormatRemediationIntegrationAuthoritySha",
-    "formatMutablePaths": ["docs/research/hosted-web/phase-1/reviews/routes-ratchets.md"],
-    "unchangedFromPreFormatSnapshotPathCountRequired": 68,
-    "acceptedLintRemediationHandoffPath": ".codex-handoff/phase-01-p1-i-lint-remediation.json",
-    "formatRemediationHandoffPath": ".codex-handoff/phase-01-p1-i-format-remediation.json",
-    "formatRemediationHandoffExcludedFromP1IInputs": true,
-    "existingDistinctInputPathCount": 69,
-    "bootstrapPaths": [
+  "phase1FreezeManifest": {
+    "authoritySha": "20706bd067ce5ccbf13697700411904faa2a00c8",
+    "sourceP1ICanonicalInputPathCount": 69,
+    "acceptedP1IOutputPathCount": 5,
+    "pathCount": 74,
+    "distinctPathCount": 74,
+    "orderedPathArrayHashAlgorithm": "sha256-utf8-compact-json-array",
+    "orderedPathArraySha256": "0e8e2b82125eb3b8e559f9fa439e8942e0eea89d75da4cccc35d75099e868223",
+    "allPathsReadOnlyForP1F": true,
+    "paths": [
       "docs/research/hosted-web/phase-1/bootstrap/phase-start.json",
       "docs/research/hosted-web/phase-1/bootstrap/packet-revision.json",
       "docs/research/hosted-web/phase-1/bootstrap/ownership-manifest.json",
       "docs/research/hosted-web/phase-1/bootstrap/baseline-fingerprints.json",
       "docs/research/hosted-web/phase-1/bootstrap/estimate-allocation.json",
-      "docs/research/hosted-web/phase-1/bootstrap/bootstrap-report.md"
-    ],
-    "p11aPaths": [
+      "docs/research/hosted-web/phase-1/bootstrap/bootstrap-report.md",
       ".codex-handoff/phase-01-p1-1a.json",
       "src/shared/contracts/hosted/app-error.ts",
       "src/shared/contracts/hosted/identifiers.ts",
@@ -292,12 +159,8 @@
       "test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json",
       "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
       "test/architecture/hosted-web/phase-1/contracts/query-context.test.ts",
-      "test/architecture/hosted-web/phase-1/contracts/revision.test.ts"
-    ],
-    "p11aRemediationProvenancePaths": [
-      ".codex-handoff/phase-01-p1-s1-schema-version-remediation.json"
-    ],
-    "p11bPaths": [
+      "test/architecture/hosted-web/phase-1/contracts/revision.test.ts",
+      ".codex-handoff/phase-01-p1-s1-schema-version-remediation.json",
       ".codex-handoff/phase-01-p1-1b.json",
       "src/main/composition/hosted/routing/RouteCatalog.ts",
       "src/main/composition/hosted/routing/index.ts",
@@ -306,9 +169,7 @@
       "test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts",
       "test/architecture/hosted-web/phase-1/routes/fixtures/duplicate-route.ts",
       "test/architecture/hosted-web/phase-1/routes/fixtures/missing-reference.ts",
-      "test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts"
-    ],
-    "p11cPaths": [
+      "test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts",
       ".codex-handoff/phase-01-p1-1c.json",
       "scripts/hosted-web/phase-1/check-feature-dependencies.ts",
       "scripts/hosted-web/phase-1/check-parity-references.ts",
@@ -336,10 +197,8 @@
       "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/stale.json",
       "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json",
       "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unavailable.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json"
-    ],
-    "p1r1Paths": ["docs/research/hosted-web/phase-1/reviews/routes-ratchets.md"],
-    "p11dPaths": [
+      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json",
+      "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
       ".codex-handoff/phase-01-p1-1d.json",
       "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
       "src/features/team-lifecycle/contracts/index.ts",
@@ -348,32 +207,145 @@
       "src/features/team-lifecycle/index.ts",
       "test/features/team-lifecycle/core/ListTeamLifecycle.test.ts",
       "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts",
-      "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts"
-    ],
-    "p1r2Paths": [
+      "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts",
       ".codex-handoff/phase-01-p1-r2.json",
-      "docs/research/hosted-web/phase-1/reviews/list-semantics.md"
+      "docs/research/hosted-web/phase-1/reviews/list-semantics.md",
+      ".codex-handoff/phase-01-p1-i-lint-remediation.json",
+      ".codex-handoff/phase-01-p1-i.json",
+      "docs/research/hosted-web/phase-1/decision-register.json",
+      "docs/research/hosted-web/phase-1/estimate-reconciliation.json",
+      "docs/research/hosted-web/phase-1/evidence-index.json",
+      "docs/research/hosted-web/phase-1/integration-report.json"
     ],
-    "requiredGroupCounts": {
-      "bootstrap": 6,
-      "p11a": 12,
-      "p11aRemediationProvenance": 1,
-      "p11b": 9,
-      "p11c": 28,
-      "p1r1": 1,
-      "p11d": 9,
-      "p1r2": 2
-    },
-    "requiredManifestPathCount": 68,
-    "allPathsReadOnlyForP1I": true
+    "acceptedP1IOutputSha256": {
+      ".codex-handoff/phase-01-p1-i.json": "be6ca8a01fba06871b9246ae2baaf230e7b95222bb0da3eec8548016c5639903",
+      "docs/research/hosted-web/phase-1/decision-register.json": "1d275a95a189d7840a6d75591d90c138b0ec5399747db41794697de0cde32ba9",
+      "docs/research/hosted-web/phase-1/estimate-reconciliation.json": "941c58195b9955b9807b896aedf7f46ea1a4ed455dc6713241ffefb074405328",
+      "docs/research/hosted-web/phase-1/evidence-index.json": "07a17cb6674916f65713e337f15deeb3f5405d36fbcccbbcdada3b5895724590",
+      "docs/research/hosted-web/phase-1/integration-report.json": "a64cc23427dd049e0ede0ce217a7401a5ec6f6df51ec6cb9b5ca3ef5458f4e8f"
+    }
   },
+  "requiredPhase1EvidenceIds": [
+    "P1.S0.BASELINE",
+    "P1.S0.BOOTSTRAP",
+    "P1.1A.KERNEL",
+    "P1.1A.VERSION",
+    "P1.1B.ROUTES",
+    "P1.1B.CAPABILITIES",
+    "P1.1C.CONFORMANCE",
+    "P1.1C.RATCHETS",
+    "P1.R1.ARCH_REVIEW",
+    "P1.1D.TEAM_LIFECYCLE_READ_CONTRACT",
+    "P1.1D.TEAM_LIFECYCLE_READ_USE_CASE",
+    "P1.1D.TEAM_LIFECYCLE_SEMANTIC_PROOF",
+    "P1.R2.SEMANTIC_REVIEW",
+    "P1.NEG.RATCHET_REGRESSION"
+  ],
+  "additionalFrozenCatalogIds": ["P1.I.LINT.REMEDIATION", "P1.I.INTEGRATION", "P1.I.ROLLBACK"],
+  "requiredFrozenCatalogRowCount": 17,
+  "requiredGateIds": [
+    "P1.GATE.PROVENANCE",
+    "P1.GATE.PREDECESSORS",
+    "P1.GATE.SCOPE",
+    "P1.GATE.TESTS",
+    "P1.GATE.TYPECHECK",
+    "P1.GATE.LINT",
+    "P1.GATE.FORMAT",
+    "P1.GATE.NEGATIVES",
+    "P1.GATE.RATCHET",
+    "P1.GATE.SECURITY",
+    "P1.GATE.ROLLBACK",
+    "P1.GATE.ESTIMATE",
+    "P1.GATE.DECISIONS",
+    "P1.GATE.EVIDENCE_FREEZE"
+  ],
+  "requiredExactResults": {
+    "fullPhase1Vitest": {
+      "command": "pnpm exec vitest run test/features/team-lifecycle test/architecture/hosted-web/phase-1",
+      "testFiles": 13,
+      "passed": 60,
+      "total": 60
+    },
+    "ratchetRegressionFocused": {
+      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
+      "testFiles": 1,
+      "passed": 3,
+      "total": 3
+    },
+    "nativeTypeScript": {
+      "command": "node scripts/hosted-web/phase-0/final-gate/normalize-typescript-diagnostics.mjs --mode milestone",
+      "inherited": 7,
+      "owned": 0,
+      "unexpected": 0
+    },
+    "fullLint": {
+      "command": "pnpm lint",
+      "exitCode": 0,
+      "errorCount": 0
+    },
+    "frozenManifestFormat": {
+      "inputPathCount": 74,
+      "exitCode": 0
+    },
+    "p1fOutputFormat": {
+      "outputPathCount": 2,
+      "exitCode": 0
+    },
+    "findingCountsOnAccept": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 0
+    }
+  },
+  "inheritedNativeTypeScriptDiagnostics": [
+    {
+      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "code": "TS7016",
+      "line": 25,
+      "column": 8
+    },
+    {
+      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "code": "TS7031",
+      "line": 66,
+      "column": 31
+    },
+    {
+      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "code": "TS18046",
+      "line": 117,
+      "column": 68
+    },
+    {
+      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "code": "TS7031",
+      "line": 413,
+      "column": 48
+    },
+    {
+      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
+      "code": "TS7031",
+      "line": 733,
+      "column": 10
+    },
+    {
+      "path": "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
+      "code": "TS7016",
+      "line": 12,
+      "column": 8
+    },
+    {
+      "path": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
+      "code": "TS2352",
+      "line": 162,
+      "column": 44
+    }
+  ],
   "rollbackPayload": {
     "bootstrapSha": "5f30df49e052d1cc1d0e7efd03aa105673b5b614",
-    "acceptedPayloadSha": null,
-    "acceptedPayloadShaBinding": "postFormatRemediationIntegrationAuthoritySha",
+    "acceptedPayloadSha": "20706bd067ce5ccbf13697700411904faa2a00c8",
     "pathCount": 54,
     "allPathsRequiredAbsentAtBootstrap": true,
-    "evidenceAndReviewPathsRetained": true,
     "workspaceApplyAuthorized": false,
     "scratchRoundTripRequired": true,
     "paths": [
@@ -433,10 +405,11 @@
       "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts"
     ]
   },
-  "formatRemediationAdmission": {
-    "producerCount": 1,
-    "workerRole": "producer",
-    "node": "P1.I.FORMAT.REMEDIATION",
+  "p1fAdmission": {
+    "workerCount": 1,
+    "workerRole": "reviewer",
+    "reviewKind": "review",
+    "node": "P1.F",
     "model": "gpt-5.6-sol",
     "reasoningEffort": "xhigh",
     "serviceTier": "default",
@@ -447,316 +420,41 @@
     "expectedSourceCommitBinding": "postRouterIntegrationAuthoritySha",
     "worktreeHeadShaBinding": "postRouterIntegrationAuthoritySha",
     "handoffAuthorityBindingSource": "postRouterIntegrationAuthoritySha",
-    "preStartAdmission": {
-      "mode": "serial-builtin",
-      "contract": {
-        "kind": "worker-launch",
-        "format": 1,
-        "canonicalShaBinding": "postRouterIntegrationAuthoritySha",
-        "baseShaBinding": "postRouterIntegrationAuthoritySha",
-        "phaseStartShaBinding": "postRouterIntegrationAuthoritySha",
-        "packetRevision": "phase-01-p1-i-integration-r3",
-        "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
-        "lanePacket": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md",
-        "phaseId": "phase-01",
-        "laneId": "p1-i-format-remediation",
-        "inputPatchHash": null,
-        "reviewKind": "implementation"
-      }
-    },
-    "repositoryWriterAuthority": "exact-two-format-remediation-paths-only",
-    "authorizedMarkdownWriteCommand": "pnpm exec prettier --write docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
-    "genericFormattingWriterAuthorized": false,
+    "packetRevision": "phase-01-p1-f-freeze-r2",
+    "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
+    "lanePacket": "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md",
+    "repositoryWriterAuthority": "exact-two-p1f-output-paths-only",
     "workerDependencyInstallAuthorized": false,
     "selfRetryOrRefillAuthority": false,
+    "reviewerLaunchAuthority": false,
     "integrationAuthority": false,
     "successorLaunchAuthority": false
   },
-  "formatRemediationReviewerAdmission": {
-    "reviewerCount": 1,
-    "workerRole": "reviewer",
-    "reviewScope": "P1.I.FORMAT.REMEDIATION",
-    "model": "gpt-5.6-sol",
-    "reasoningEffort": "xhigh",
-    "serviceTier": "default",
-    "fastAuthorized": false,
-    "projectScopedControlOperation": "codex_goal_project_prepare_verifier",
-    "expectedSourceCommitBinding": "postRouterIntegrationAuthoritySha",
-    "inputPatchHashBinding": "brokerCapturedFormatRemediationImmutableOutputHash",
-    "requiredReviewedPathCount": 2,
-    "freshReviewerRequired": true,
-    "independenceRequired": true,
-    "producerTerminalRequired": true,
-    "producerAndReviewerConcurrencyAuthorized": false,
-    "additionalConcurrentReviewerAuthorized": false,
-    "repositoryWriterAuthority": "none-read-only",
-    "repairAuthority": false,
-    "integrationAuthority": false,
-    "acceptIntegrationPathCount": 2,
-    "rejectFollowupAuthority": "bounded-same-two-path-remediation-only"
-  },
-  "downstreamP1IProducerAdmission": {
-    "producerCount": 1,
-    "freshProducerRequired": true,
-    "workerRole": "producer",
-    "model": "gpt-5.6-sol",
-    "reasoningEffort": "xhigh",
-    "serviceTier": "default",
-    "fastAuthorized": false,
-    "projectScopedControlOperation": "codex_goal_project_refill_worker",
-    "sourceRemote": "origin",
-    "sourceBranch": "refactor/hosted-web-feature-boundaries",
-    "expectedSourceCommitBinding": "postFormatRemediationIntegrationAuthoritySha",
-    "worktreeHeadShaBinding": "postFormatRemediationIntegrationAuthoritySha",
-    "handoffAuthorityBindingSource": "postFormatRemediationIntegrationAuthoritySha",
-    "handoffAuthorityFields": [
-      "baseSha",
-      "canonicalSha",
-      "planBundleCommit",
-      "phaseStartSha",
-      "headSha"
-    ],
-    "preStartAdmission": {
-      "mode": "serial-builtin",
-      "contract": {
-        "kind": "worker-launch",
-        "format": 1,
-        "canonicalShaBinding": "postFormatRemediationIntegrationAuthoritySha",
-        "baseShaBinding": "postFormatRemediationIntegrationAuthoritySha",
-        "phaseStartShaBinding": "postFormatRemediationIntegrationAuthoritySha",
-        "packetRevision": "phase-01-p1-i-integration-r3",
-        "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
-        "lanePacket": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md",
-        "phaseId": "phase-01",
-        "laneId": "p1-i",
-        "inputPatchHash": null,
-        "reviewKind": "implementation"
-      }
-    },
-    "canonicalInputPathCount": 69,
-    "formatRemediationHandoffIsInput": false,
-    "rejectedAttemptIsInput": false,
-    "workerDependencyInstallAuthorized": false,
-    "repositoryWriterAuthority": "exact-five-fresh-result-paths-only",
-    "productRepairAuthority": false,
-    "producerSelfRetryOrRefillAuthority": false,
-    "producerIntegrationAuthority": false,
-    "successorLaunchAuthority": false
-  },
-  "downstreamP1IReviewerAdmission": {
-    "reviewerCount": 1,
-    "workerRole": "reviewer",
-    "reviewScope": "P1.I-milestone",
-    "model": "gpt-5.6-sol",
-    "reasoningEffort": "xhigh",
-    "serviceTier": "default",
-    "fastAuthorized": false,
-    "projectScopedControlOperation": "codex_goal_project_prepare_verifier",
-    "sourceRemote": "origin",
-    "sourceBranch": "refactor/hosted-web-feature-boundaries",
-    "expectedSourceCommitBinding": "postFormatRemediationIntegrationAuthoritySha",
-    "inputPatchHashBinding": "brokerCapturedFreshProducerImmutableOutputHash",
-    "canonicalInputPathSource": "phase1CanonicalInputs",
-    "acceptedLintRemediationHandoffPathSource": "phase1CanonicalInputs.acceptedLintRemediationHandoffPath",
-    "candidateOutputPathSource": "downstreamP1IOutputs.writablePaths",
-    "requiredReadOnlyPathCount": 74,
-    "freshReviewerRequired": true,
-    "independenceRequired": true,
-    "rootPreStartIndependenceAttestationRequired": true,
-    "producerTerminalRequired": true,
-    "brokerCapturedImmutableOutputRequired": true,
-    "producerAndReviewerConcurrencyAuthorized": false,
-    "additionalConcurrentReviewerAuthorized": false,
-    "repositoryWriterAuthority": "none-read-only",
-    "repairAuthority": false,
-    "reviewerSelfRetryOrRefillAuthority": false,
-    "reviewerIntegrationAuthority": false,
-    "successorLaunchAuthority": false,
-    "authorizedOnlyAfterFreshProducerCompletionGate": true
-  },
-  "requiredGateIds": [
-    "P1.GATE.PROVENANCE",
-    "P1.GATE.PREDECESSORS",
-    "P1.GATE.SCOPE",
-    "P1.GATE.TESTS",
-    "P1.GATE.TYPECHECK",
-    "P1.GATE.LINT",
-    "P1.GATE.FORMAT",
-    "P1.GATE.NEGATIVES",
-    "P1.GATE.RATCHET",
-    "P1.GATE.SECURITY",
-    "P1.GATE.ROLLBACK",
-    "P1.GATE.ESTIMATE",
-    "P1.GATE.DECISIONS",
-    "P1.GATE.EVIDENCE_FREEZE"
-  ],
-  "requiredExactResults": {
-    "formatRemediation": {
-      "semanticTokenAlgorithm": "phase1-markdown-semantic-token-v1",
-      "semanticTokenChangeCount": 0,
-      "writerPathCount": 2,
-      "markdownWriterCommand": "pnpm exec prettier --write docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
-      "exactPrettierPathCount": 2
-    },
-    "fullPhase1Vitest": {
-      "command": "pnpm exec vitest run test/features/team-lifecycle test/architecture/hosted-web/phase-1",
-      "testFiles": 13,
-      "passed": 60,
-      "total": 60
-    },
-    "ratchetRegressionFocused": {
-      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
-      "testFiles": 1,
-      "passed": 3,
-      "total": 3,
-      "evidenceId": "P1.NEG.RATCHET_REGRESSION",
-      "diagnostic": "phase1-ratchet-regression"
-    },
-    "nativeTypeScript": {
-      "inherited": 7,
-      "owned": 0,
-      "unexpected": 0
-    },
-    "fullLint": {
-      "command": "pnpm lint",
-      "exitCode": 0
-    },
-    "fullP1IFormatScope": {
-      "inputPathCount": 69,
-      "outputPathCount": 5,
-      "totalPathCount": 74,
-      "exitCode": 0
-    }
-  },
-  "inheritedNativeTypeScriptDiagnostics": [
-    {
-      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
-      "code": "TS7016",
-      "line": 25,
-      "column": 8
-    },
-    {
-      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
-      "code": "TS7031",
-      "line": 66,
-      "column": 31
-    },
-    {
-      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
-      "code": "TS18046",
-      "line": 117,
-      "column": 68
-    },
-    {
-      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
-      "code": "TS7031",
-      "line": 413,
-      "column": 48
-    },
-    {
-      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
-      "code": "TS7031",
-      "line": 733,
-      "column": 10
-    },
-    {
-      "path": "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
-      "code": "TS7016",
-      "line": 12,
-      "column": 8
-    },
-    {
-      "path": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
-      "code": "TS2352",
-      "line": 162,
-      "column": 44
-    }
-  ],
-  "requiredChecks": [
-    {
-      "id": "format-remediation-pinned-prettier-derivation",
-      "actor": "format-remediation-producer-and-reviewer",
-      "commandSource": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md#exact-remediation-ownership-and-edit"
-    },
-    {
-      "id": "format-remediation-semantic-token-equivalence",
-      "actor": "format-remediation-producer-and-reviewer",
-      "commandSource": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md#exact-semantic-token-proof"
-    },
-    {
-      "id": "format-remediation-prettier-exact-2",
-      "commandSource": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md#required-remediation-checks"
-    },
-    {
-      "id": "format-remediation-diff-scope-scans-self-review",
-      "commandSource": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md#required-remediation-checks"
-    },
-    {
-      "id": "post-format-integration-prettier-exact-69-inputs",
-      "actor": "root-before-fresh-direct-p1i-launch",
-      "commandSource": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md#direct-p1iintegration-continuation"
-    },
-    {
-      "id": "downstream-full-phase1-vitest-plus-team-lifecycle-13-files-60-tests",
-      "command": "pnpm exec vitest run test/features/team-lifecycle test/architecture/hosted-web/phase-1"
-    },
-    {
-      "id": "downstream-p1-neg-ratchet-regression",
-      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts"
-    },
-    {
-      "id": "downstream-all-14-gates-prettier-scans-exact-74-and-rollback-exact-54",
-      "commandSource": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md#direct-p1iintegration-continuation"
-    }
-  ],
-  "requiredClassifiedScans": [
-    "format-remediation-secret-provider-private-path-and-binary-over-exact-2-path-scope",
-    "downstream-secret-and-credential-values-over-exact-74-path-scope",
-    "downstream-auth-and-provider-payload-values-over-exact-74-path-scope",
-    "downstream-private-user-real-project-and-task-temporary-paths-over-exact-74-path-scope",
-    "downstream-binary-file-scan-over-exact-74-path-scope"
-  ],
-  "formatRemediationOutputs": {
+  "p1fOutputs": {
     "writablePaths": [
-      "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
-      ".codex-handoff/phase-01-p1-i-format-remediation.json"
+      ".codex-handoff/phase-01-p1-f.json",
+      "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md"
     ],
-    "evidenceIds": ["P1.I.FORMAT.REMEDIATION"],
-    "handoffPath": ".codex-handoff/phase-01-p1-i-format-remediation.json",
-    "strictProducerResultPrefix": "P1_I_FORMAT_REMEDIATION_PRODUCER_RESULT",
-    "strictReviewerResultPrefix": "P1_I_FORMAT_REMEDIATION_REVIEW_RESULT",
-    "nextAction": "independent-verification",
+    "evidenceIds": ["P1.F.FREEZE", "P1.F.PHASE_EXIT"],
+    "handoffPath": ".codex-handoff/phase-01-p1-f.json",
+    "freezeReportPath": "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md",
+    "strictResultPrefix": "P1_F_FREEZE_RESULT",
+    "allowedDispositions": ["ACCEPT", "REJECT"],
     "terminalState": "HOLD"
   },
-  "downstreamP1IOutputs": {
-    "writablePaths": [
-      ".codex-handoff/phase-01-p1-i.json",
-      "docs/research/hosted-web/phase-1/decision-register.json",
-      "docs/research/hosted-web/phase-1/estimate-reconciliation.json",
-      "docs/research/hosted-web/phase-1/evidence-index.json",
-      "docs/research/hosted-web/phase-1/integration-report.json"
-    ],
-    "freshGenerationRequired": true,
-    "blockedAttemptReuseAuthorized": false,
-    "evidenceIds": ["P1.I.INTEGRATION", "P1.I.ROLLBACK"],
-    "ratchetAcceptanceEvidenceId": "P1.NEG.RATCHET_REGRESSION",
-    "handoffPath": ".codex-handoff/phase-01-p1-i.json",
-    "nextAction": "independent-verification",
-    "terminalState": "HOLD"
-  },
-  "formatRemediationExecutionPolicy": {
-    "workspace": "isolated-producer-worktree-only",
-    "network": false,
-    "githubAccess": false,
-    "remoteQuery": false,
+  "p1fExecutionPolicy": {
+    "workspace": "isolated-independent-milestone-review-worktree-only",
+    "network": "exact-remote-equality-query-only",
+    "githubApiAccess": false,
     "fetch": false,
     "dependencyInstall": false,
     "appRuntimeServerOrTeamLaunch": false,
     "providerCheck": false,
     "realProjectAccess": false,
-    "writerScope": "exact-two-format-remediation-paths",
-    "onlyMarkdownWriterCommand": "pnpm exec prettier --write docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
+    "writerScope": "exact-two-p1f-output-paths",
     "productOrTestEdit": false,
+    "p1iOutputEdit": false,
+    "historicalPacketEdit": false,
     "registryWrite": false,
     "agentFlowTest": false,
     "stage": false,
@@ -764,120 +462,73 @@
     "merge": false,
     "push": false,
     "rawGitIntegration": false,
-    "readOnlyGitDiffScopeChecksAuthorized": true,
-    "rejectedPatchAccess": false,
-    "reviewIntegration": false
-  },
-  "downstreamP1IExecutionPolicy": {
-    "workspace": "isolated-fresh-producer-worktree-only",
-    "network": false,
-    "githubAccess": false,
-    "remoteQuery": false,
-    "fetch": false,
-    "dependencyInstall": false,
-    "appRuntimeServerOrTeamLaunch": false,
-    "providerCheck": false,
-    "realProjectAccess": false,
-    "writerScope": "exact-five-fresh-result-paths",
-    "registryWrite": false,
-    "agentFlowTest": false,
-    "stage": false,
-    "commit": false,
-    "merge": false,
-    "push": false,
-    "productEdit": false,
-    "rawGitIntegration": false,
-    "rejectedAttemptReuse": false,
+    "repositoryApply": false,
+    "scratchRollbackApply": true,
+    "reviewerLaunch": false,
     "reviewIntegration": false
   },
   "authorization": {
     "authorizedNow": [],
     "conditionallyAuthorizedAfterRouterIndependentAcceptBrokerIntegrationPush": [
-      "one-p1-i-format-remediation-producer"
+      "one-fresh-independent-p1f-milestone-freeze-worker"
     ],
-    "conditionallyAuthorizedAfterFormatRemediationProducerTerminalImmutableOutput": [
-      "one-fresh-independent-p1-i-format-remediation-reviewer"
-    ],
-    "conditionallyAuthorizedAfterFormatRemediationReviewerAccept": [
+    "conditionallyAuthorizedAfterP1FAccept": [
       "root-mark_reviewed",
-      "broker-integrate-and-push-exact-two-format-remediation-paths"
+      "broker-integrate-and-push-exact-two-p1f-outputs"
     ],
-    "conditionallyAuthorizedAfterAcceptedFormatIntegrationPushAttestationAndExact69InputPrettier": [
-      "one-fresh-p1-i-five-output-producer-without-another-router"
+    "conditionallyAuthorizedAfterAcceptedP1FIntegrationPushAndAttestation": [
+      "commission-separate-phase2-jit-docs-router"
     ],
-    "conditionallyAuthorizedAfterFreshDownstreamP1IProducerTerminalImmutableOutput": [
-      "one-fresh-independent-p1-i-milestone-reviewer"
-    ],
-    "conditionallyAuthorizedAfterDownstreamP1IReviewerAccept": [
-      "root-mark_reviewed",
-      "broker-integrate-and-push-exact-five-fresh-p1-i-outputs"
-    ],
-    "formatRemediationProducerCount": 1,
-    "formatRemediationReviewerCount": 1,
-    "downstreamP1IProducerCount": 1,
-    "downstreamP1IReviewerCount": 1,
     "maximumConcurrentWorkerCount": 1,
-    "productWorkerCountBeforeRouterIntegration": 0,
-    "formatRemediationReviewerConcurrentWithProducerAuthorized": false,
-    "additionalConcurrentFormatRemediationReviewerAuthorized": false,
-    "formatRemediationBrokerIntegrationAuthorizedAfterReviewerAcceptAndMarkReviewed": true,
-    "formatRemediationBrokerIntegrationBeforeReviewerAcceptAuthorized": false,
-    "formatRemediationRejectFollowup": "bounded-same-two-path-remediation-only",
-    "directP1ILaunchWithoutAnotherRouterAuthorizedAfterExactFormatGate": true,
-    "blockedP1IAttemptMaterializationAuthorized": false,
-    "blockedP1IAttemptApplicationAuthorized": false,
-    "blockedP1IAttemptIntegrationAuthorized": false,
-    "blockedP1IOutputsIntegrationAuthorized": false,
-    "p1r2EvidenceReintegrationAuthorized": false,
-    "p1fAuthorized": false,
-    "phase2PlusAuthorized": false,
+    "acceptIntegrationPathCount": 2,
+    "rejectFollowup": "bounded-same-two-path-remediation-only",
+    "p1iRepeatAuthorized": false,
+    "p1iOutputModificationAuthorized": false,
+    "productTestRuntimeEditAuthorized": false,
+    "phase2JitRouterAuthoredByP1F": false,
+    "phase2WorkerAuthorized": false,
+    "phase2ProductWorkAuthorized": false,
     "controllerReplacementAuthorized": false,
     "successorControllerAuthorized": false,
-    "rootGitIntegrationAuthorized": false,
     "docsJobLifecycleActionPerformed": false,
-    "docsJobFetchAuthorized": false,
     "docsJobStageAuthorized": false,
     "docsJobCommitAuthorized": false,
     "docsJobMergeAuthorized": false,
     "docsJobPushAuthorized": false,
     "blocked": [
-      "terminal P1.I five-output attempt",
-      "P1.F",
-      "Phase 2+",
+      "P1.I repeat or modification",
+      "Phase 2 workers",
+      "Phase 2 product work",
       "unrelated nodes",
       "unrelated product workers",
       "successor controllers"
     ]
   },
   "historicalAuthority": {
+    "rejectedP1FRouterR1": {
+      "revision": "phase-01-p1-f-freeze-router-r1",
+      "patchSha256": "2f7338a1e7b41955d15106f5fb3994b17db6749158bde8134a0a8e23d2081615",
+      "disposition": "REJECT",
+      "findingCounts": {
+        "P0": 0,
+        "P1": 1,
+        "P2": 0
+      },
+      "immutable": true,
+      "integrationAuthorized": false,
+      "remediationScope": "merge-provenance-proof-only"
+    },
     "previousRouterRevision": {
-      "revision": "phase-01-p1-i-lint-remediation-router-r1",
+      "revision": "phase-01-p1-i-format-remediation-router-r1",
       "state": "superseded-execution-route-retained-as-provenance",
       "currentExecutionAuthority": false
     },
-    "p1R2LanePacket": {
-      "path": "docs/hosted-web-phases/phase-01/lanes/p1-r2-review.md",
-      "sha256": "8b089ab8337467da201be884fc8f52bfff6d6377f63722f6f8d1aa6d5f6778c3",
+    "p1ILanePacket": {
+      "path": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md",
+      "sha256": "3f81d6e65f9848b6b3db593dda6eb87e5eeb7276af9e76d2fe79ba3fc6f094fe",
       "state": "accepted-history-frozen",
       "currentExecutionAuthority": false,
       "modificationAuthorized": false
-    },
-    "p1R2EvidencePaths": {
-      "state": "integrated-accepted-frozen",
-      "paths": [
-        ".codex-handoff/phase-01-p1-r2.json",
-        "docs/research/hosted-web/phase-1/reviews/list-semantics.md"
-      ],
-      "modificationAuthorized": false,
-      "reintegrationAuthorized": false
-    },
-    "terminalBlockedP1IAttempt": {
-      "state": "rejected-provenance-only-never-integrate",
-      "patchSha256": "d94f8dfa6548427e007402e8771c469c8e661cd64de3a8728dec042a509aebbe",
-      "manifestSha256": "1b88a6e8e53199f0b1905d4f4c194525bcb86db185f0e4748acf60f69bb78f94",
-      "materializationAuthorized": false,
-      "applicationAuthorized": false,
-      "integrationAuthorized": false
     }
   },
   "routerExclusiveOwnership": [
@@ -887,17 +538,17 @@
     "docs/hosted-web-phases/phase-01/README.md",
     "docs/hosted-web-phases/phase-01/controller-packet.md",
     "docs/hosted-web-phases/phase-01/execution-dag.md",
-    "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md"
+    "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md"
   ],
   "packetHashes": {
     "algorithm": "sha256",
     "controllerPacket": {
       "path": "docs/hosted-web-phases/phase-01/controller-packet.md",
-      "sha256": "0bde802fdbe1055a7829d5f0eed6b154c8b69c3b8e3a66e48715f215b8ed1d7c"
+      "sha256": "096cad7f0aa876ec6d16bb7ddf22b3db93c4ce0247a0413b3ab66b1fe5cf2b52"
     },
     "lanePacket": {
-      "path": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md",
-      "sha256": "3f81d6e65f9848b6b3db593dda6eb87e5eeb7276af9e76d2fe79ba3fc6f094fe"
+      "path": "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md",
+      "sha256": "2a3e1edd0113307d0b4acba9f5bd81c604ae3963733c31b1e28b9185a1f9ec6e"
     }
   },
   "authorityTiers": {
@@ -911,25 +562,14 @@
       "docs/hosted-web-phases/phase-01/README.md",
       "docs/hosted-web-phases/phase-01/controller-packet.md",
       "docs/hosted-web-phases/phase-01/execution-dag.md",
-      "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md"
+      "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md"
     ],
-    "historicalOnly": ["docs/hosted-web-phases/phase-01/lanes/p1-r2-review.md"],
-    "formatRemediationWriteException": {
-      "evidenceIds": ["P1.I.FORMAT.REMEDIATION"],
+    "historicalOnly": ["docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md"],
+    "p1fWriteException": {
+      "evidenceIds": ["P1.F.FREEZE", "P1.F.PHASE_EXIT"],
       "paths": [
-        "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
-        ".codex-handoff/phase-01-p1-i-format-remediation.json"
-      ]
-    },
-    "downstreamP1IWriteException": {
-      "evidenceIds": ["P1.I.INTEGRATION", "P1.I.ROLLBACK"],
-      "freshGenerationRequired": true,
-      "paths": [
-        ".codex-handoff/phase-01-p1-i.json",
-        "docs/research/hosted-web/phase-1/decision-register.json",
-        "docs/research/hosted-web/phase-1/estimate-reconciliation.json",
-        "docs/research/hosted-web/phase-1/evidence-index.json",
-        "docs/research/hosted-web/phase-1/integration-report.json"
+        ".codex-handoff/phase-01-p1-f.json",
+        "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md"
       ]
     }
   }

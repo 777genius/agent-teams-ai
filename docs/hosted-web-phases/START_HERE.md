@@ -1,16 +1,28 @@
 # Hosted-web execution: start here
 
-> Current route: `phase-01-p1-i-format-remediation-router-r1`, authored at clean remote-equal
-> canonical authority `b482e816a90e9bb988a0797565241bae4d60b690`. The terminal P1.I attempt is
-> immutable `BLOCKED`/`HOLD`: every gate passed except exact 74-path Prettier because
-> `docs/research/hosted-web/phase-1/reviews/routes-ratchets.md` is not formatted. The route inserts
-> the serial prerequisite `P1.I.FORMAT.REMEDIATION` before a fresh `P1.I.INTEGRATION` producer. This
-> docs router launches nothing and ends `HOLD`.
+> Current route: `phase-01-p1-f-freeze-router-r2`, authored at clean remote-equal canonical
+> authority `20706bd067ce5ccbf13697700411904faa2a00c8`. The only conditionally executable node is
+> `P1.F`, a serial independent Phase 1 milestone-freeze worker. This docs router launches nothing and
+> ends `HOLD` for independent router review.
+
+P1.I received independent `ACCEPT` with P0/P1/P2 `0/0/0`. Attempt
+`agent-teams-hosted-web-refactor-p1-i-integration-apply-v17-r2` integrated its exact five outputs in
+`134f64f0c5c7bbbab0552eddf08df1508118f4bb^..134f64f0c5c7bbbab0552eddf08df1508118f4bb`.
+Canonical authority `20706bd067ce5ccbf13697700411904faa2a00c8` is the accepted ordered two-parent
+PR #252 merge: `20706bd067ce5ccbf13697700411904faa2a00c8^1` equals
+`134f64f0c5c7bbbab0552eddf08df1508118f4bb`, and its second parent is
+`6bf43f140878f8b79f7ee17349bd21b177df901d`. The exact five P1.I output bytes at the integration
+commit and canonical authority are identical. The second-parent-to-merge diff represents accumulated
+current-base history and is never the exact P1.I integration proof.
+
+Immutable r1 patch `2f7338a1e7b41955d15106f5fb3994b17db6749158bde8134a0a8e23d2081615` was independently
+`REJECT`ed for the single P1 merge-proof finding. This r2 route preserves the rest of r1 and replaces
+only that rejected provenance proof.
 
 Root is the sole orchestrator. `controller-v17` remains `HOLD` and observation-only. It cannot
-launch, admit, integrate, restart, replace itself, or create a successor. No worker may start until
-this exact seven-path router has independent acceptance, broker integration and push, and root has
-immutably attested the exact pushed authority and clean remote equality.
+launch, admit, integrate, restart, replace itself, or create a successor. No P1.F worker may start
+until this exact seven-path router receives independent acceptance, broker integration and push, and
+root immutably attests the exact pushed authority and clean remote equality.
 
 ## Deterministic reading order
 
@@ -20,7 +32,7 @@ immutably attested the exact pushed authority and clean remote equality.
 4. `docs/hosted-web-phases/README.md`
 5. `docs/hosted-web-phases/EXECUTION_INDEX.json`
 6. `docs/hosted-web-phases/phase-01/controller-packet.md`
-7. `docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md`
+7. `docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md`
 8. `CLAUDE.md`
 9. `AGENT_CRITICAL_GUARDRAILS.md`
 10. `docs/FEATURE_ARCHITECTURE_STANDARD.md`
@@ -31,44 +43,32 @@ immutably attested the exact pushed authority and clean remote equality.
 15. `docs/hosted-web-phases/phase-01/conformance-and-tests.md`
 16. `docs/hosted-web-phases/phase-01/operations-and-risk.md`
 17. `docs/hosted-web-phases/phase-01/packet-inputs.md`
-18. the exact 68 paths in `EXECUTION_INDEX.json.phase1CanonicalInputs`, in its declared group and
-    path order
-19. `.codex-handoff/phase-01-p1-i-lint-remediation.json`, the accepted 69th P1.I input
+18. historical `docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md`, read-only
+19. the exact 74 paths in `EXECUTION_INDEX.json.phase1FreezeManifest.paths`, in declared order
 
 Do not replace the exact manifest with a directory read or glob. Do not recursively inspect unrelated
-research, rejected job state, or product paths outside the manifest. The rejected P1.I patch and its
-five outputs are provenance only: never materialize, apply, copy, regenerate from, or integrate them.
+research, rejected job state, product paths outside the manifest, or real projects. P1.I is accepted
+history: never rewrite, regenerate, remediate, or reintegrate its five outputs.
 
-## Current serial prerequisite
+## Current serial milestone
 
-The only current node is `P1.I.FORMAT.REMEDIATION`. One producer owns exactly:
+The only current node is `P1.F`. Exactly one fresh worker, independent of this router author and all
+P1.I producers, reviewers, and integration actors, owns exactly:
 
-1. `docs/research/hosted-web/phase-1/reviews/routes-ratchets.md`
-2. `.codex-handoff/phase-01-p1-i-format-remediation.json`
+1. `.codex-handoff/phase-01-p1-f.json`
+2. `docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md`
 
-The producer may run repository-pinned Prettier in writer mode only on the Markdown path. It must
-prove the result is exactly pinned-Prettier output from the canonical input and that the Markdown
-semantic-token fingerprint is unchanged after canonicalizing only whitespace and table-delimiter
-padding. It then records before/after hashes and proof, runs exact two-path Prettier, diff/scope and
-classified scans, completes self-review, returns the strict remediation result, and ends `HOLD`.
+It uses only `gpt-5.6-sol`, `xhigh`, and `serviceTier: "default"`; Fast is prohibited. It verifies the
+canonical ancestry and remote equality, exact true-merge shape, current-base merge proof, P1.I byte
+preservation, all 14 Phase 1 evidence IDs, the exact 74-path manifest, every declared test and quality
+gate, rollback, JSON/hash/link/diff and classified security scans, and a complete self-review. It then
+records evidence IDs `P1.F.FREEZE` and `P1.F.PHASE_EXIT`, returns explicit `ACCEPT` or `REJECT` with
+P0/P1/P2 counts, and ends `HOLD`.
 
-Root may then start exactly one fresh independent remediation reviewer, never concurrently with the
-producer or another reviewer. The reviewer is read-only, uses `gpt-5.6-sol`, `xhigh`, and
-`serviceTier: "default"`; Fast is prohibited. `ACCEPT` permits root `mark_reviewed` and exact
-two-path broker integration and push. `REJECT` permits no integration or P1.I launch and only a
-separately admitted remediation confined to the same two paths and immutable findings.
+`ACCEPT` with P0/P1/P2 `0/0/0` allows only root mechanical validation, `mark_reviewed`, and broker
+integration/push of those exact two outputs. After exact pushed-authority and clean remote-equality
+attestation, root may commission a separate Phase 2 just-in-time docs router. `REJECT` permits only a
+separately admitted remediation bounded to the same two output paths and immutable findings.
 
-## Direct P1.I continuation
-
-After accepted two-path integration, root must resolve and attest the broker-returned pushed
-authority, prove the integrated path set exact, prove a clean worktree and exact remote equality, and
-rerun pinned Prettier over the exact 69 canonical inputs with zero unformatted paths. Root may then
-launch one fresh five-output `P1.I.INTEGRATION` producer directly, without another docs router and
-without using the blocked attempt. Its immutable input set remains the existing 69 paths: the 68-path
-Phase 1 manifest at the accepted formatting bytes plus the accepted lint-remediation handoff. The
-format-remediation handoff is integration provenance, not a 70th P1.I input. All 14 P1 gates remain
-mandatory; its output set remains exactly five JSON files. After generating those files, the producer
-runs exact 74-path Prettier over the 69 inputs plus five outputs as one of those gates.
-
-P1.F, Phase 2+, unrelated product work, controller replacement, and successor controllers remain
-blocked throughout.
+Phase 2 workers and product work remain blocked. P1.F cannot create, launch, review, integrate, or
+authorize a Phase 2 worker or router.
