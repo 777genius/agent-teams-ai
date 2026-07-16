@@ -1397,12 +1397,14 @@ export function GraphView({
   }, [selectedEdgeId, selectedNodeId, onRequestClose, camera, getFitNodes, simulation]);
 
   // ─── Selected node for overlay ──────────────────────────────────────────
-  const selectedNode: GraphNode | null = selectedNodeId
-    ? (simulation.stateRef.current.nodes.find((n) => n.id === selectedNodeId) ?? null)
-    : null;
-  const selectedEdge: GraphEdge | null = selectedEdgeId
-    ? (simulation.stateRef.current.edges.find((edge) => edge.id === selectedEdgeId) ?? null)
-    : null;
+  const selectedNode: GraphNode | null =
+    selectedNodeId && data.nodes.some((node) => node.id === selectedNodeId)
+      ? (simulation.stateRef.current.nodes.find((n) => n.id === selectedNodeId) ?? null)
+      : null;
+  const selectedEdge: GraphEdge | null =
+    selectedEdgeId && data.edges.some((edge) => edge.id === selectedEdgeId)
+      ? (simulation.stateRef.current.edges.find((edge) => edge.id === selectedEdgeId) ?? null)
+      : null;
   const selectedEdgeNodeMap = useMemo(
     () => getNodeMap(simulation.stateRef.current.nodes),
     [data.nodes, getNodeMap, selectedEdgeId, simulation.stateRef]

@@ -7,6 +7,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { OrganizationMapPayload } from '@features/organizations/contracts';
 
+vi.mock('@features/localization/renderer', () => ({
+  useAppTranslation: () => ({
+    t: (key: string, params: Record<string, number>) => {
+      if (key.endsWith('.summary')) {
+        return `${params.groupCount} groups · ${params.teamCount} teams · ${params.agentCount} agents`;
+      }
+      if (key.endsWith('.activeTasks')) return `${params.count} active tasks`;
+      if (key.endsWith('.attention')) return `${params.count} need attention`;
+      if (key.endsWith('.teamsOnline')) {
+        return `${params.onlineCount}/${params.teamCount} teams online`;
+      }
+      return key;
+    },
+  }),
+}));
+
 function buildViewModel() {
   const payload: OrganizationMapPayload = {
     organizations: [{ id: 'acme', name: 'Acme Platform', rootNodeId: 'org:acme' }],
@@ -89,7 +105,8 @@ describe('OrgOverviewHud', () => {
     expect(host.querySelector('[data-organization-overview-grid]')).not.toBeNull();
     expect(card?.classList.contains('absolute')).toBe(false);
     expect(card?.textContent).toContain('Acme Platform');
-    expect(card?.textContent).toContain('2 активных задач');
+    expect(card?.textContent).toContain('1 groups · 1 teams · 4 agents');
+    expect(card?.textContent).toContain('2 active tasks');
 
     const group = Array.from(card?.querySelectorAll('button') ?? []).find((button) =>
       button.textContent?.includes('Runtime')

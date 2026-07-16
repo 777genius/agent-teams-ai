@@ -2849,6 +2849,12 @@
         "structure": "Структура",
         "relations": "Связи"
       },
+      "overviewCard": {
+        "summary": "{{groupCount}} групп · {{teamCount}} команд · {{agentCount}} агентов",
+        "activeTasks": "{{count}} активных задач",
+        "attention": "{{count}} требуют внимания",
+        "teamsOnline": "{{onlineCount}}/{{teamCount}} команд онлайн"
+      },
       "focus": {
         "searchLabel": "Поиск по карте организации",
         "searchPlaceholder": "Организация, группа, команда или задача...",

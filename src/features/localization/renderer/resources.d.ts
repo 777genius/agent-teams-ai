@@ -4964,6 +4964,12 @@ export default interface Resources {
           relations: 'Relations';
           structure: 'Structure';
         };
+        overviewCard: {
+          activeTasks: '{{count}} active tasks';
+          attention: '{{count}} need attention';
+          summary: '{{groupCount}} groups · {{teamCount}} teams · {{agentCount}} agents';
+          teamsOnline: '{{onlineCount}}/{{teamCount}} teams online';
+        };
         focus: {
           clearFocus: 'Clear focus';
           clearSearch: 'Clear search';

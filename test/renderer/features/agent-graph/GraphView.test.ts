@@ -403,6 +403,97 @@ describe('GraphView pan interactions', () => {
     expect(hoisted.handlePanMove).toHaveBeenCalledWith(midpoint!.x + 24, midpoint!.y + 4);
   });
 
+  it('removes a selected edge overlay when the edge disappears from graph data', async () => {
+    const source: GraphNode = {
+      id: 'member:alice',
+      kind: 'member',
+      label: 'alice',
+      state: 'idle',
+      x: 0,
+      y: 0,
+      domainRef: { kind: 'member', teamName: 'demo-team', memberName: 'alice' },
+    };
+    const target: GraphNode = {
+      id: 'task:1',
+      kind: 'task',
+      label: 'Task 1',
+      state: 'idle',
+      x: 300,
+      y: 180,
+      domainRef: { kind: 'task', teamName: 'demo-team', taskId: 'task:1' },
+    };
+    const edge: GraphEdge = {
+      id: 'edge:blocking',
+      source: source.id,
+      target: target.id,
+      type: 'blocking',
+    };
+    const midpoint = getEdgeMidpoint(
+      edge,
+      new Map([
+        [source.id, source],
+        [target.id, target],
+      ])
+    );
+    const renderEdgeOverlay = vi.fn(() =>
+      React.createElement('div', { 'data-selected-edge-overlay': true })
+    );
+    hoisted.simulationState.nodes = [source, target];
+    hoisted.simulationState.edges = [edge];
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [source, target],
+            edges: [edge],
+            particles: [],
+          },
+          config: { animationEnabled: false, showEdges: true },
+          renderEdgeOverlay,
+        })
+      );
+    });
+
+    const canvas = container.querySelector('canvas');
+    expect(canvas).not.toBeNull();
+    expect(midpoint).not.toBeNull();
+    await act(async () => {
+      canvas!.dispatchEvent(
+        new MouseEvent('mousedown', {
+          bubbles: true,
+          button: 0,
+          clientX: midpoint!.x,
+          clientY: midpoint!.y,
+        })
+      );
+      canvas!.dispatchEvent(
+        new MouseEvent('mouseup', {
+          bubbles: true,
+          button: 0,
+          clientX: midpoint!.x,
+          clientY: midpoint!.y,
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(container.querySelector('[data-selected-edge-overlay]')).not.toBeNull();
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: { teamName: 'demo-team', nodes: [], edges: [], particles: [] },
+          config: { animationEnabled: false, showEdges: true },
+          renderEdgeOverlay,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(container.querySelector('[data-selected-edge-overlay]')).toBeNull();
+  });
+
   it('does not clear pan state on the rerender triggered by interaction lock', async () => {
     const source: GraphNode = {
       id: 'member:alice',

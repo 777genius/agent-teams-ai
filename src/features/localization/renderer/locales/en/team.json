@@ -2854,6 +2854,12 @@
         "structure": "Structure",
         "relations": "Relations"
       },
+      "overviewCard": {
+        "summary": "{{groupCount}} groups · {{teamCount}} teams · {{agentCount}} agents",
+        "activeTasks": "{{count}} active tasks",
+        "attention": "{{count}} need attention",
+        "teamsOnline": "{{onlineCount}}/{{teamCount}} teams online"
+      },
       "focus": {
         "searchLabel": "Search organization map",
         "searchPlaceholder": "Organization, group, team, or task...",
