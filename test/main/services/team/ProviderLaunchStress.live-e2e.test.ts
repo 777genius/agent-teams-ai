@@ -19,7 +19,11 @@ import {
 } from '../../../../src/main/utils/pathDecoder';
 import { killProcessByPid } from '../../../../src/main/utils/processKill';
 
-import { createOpenCodeLiveHarness, waitForOpenCodeLanesStopped, waitUntil } from './openCodeLiveTestHarness';
+import {
+  createOpenCodeLiveHarness,
+  waitForOpenCodeLanesStopped,
+  waitUntil,
+} from './openCodeLiveTestHarness';
 
 import type {
   TeamAgentRuntimeSnapshot,
@@ -42,7 +46,8 @@ const liveDescribe =
     ? describe
     : describe.skip;
 
-const DEFAULT_ORCHESTRATOR_CLI = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
+const DEFAULT_ORCHESTRATOR_CLI =
+  '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-source';
 const DEFAULT_ANTHROPIC_MODEL = 'haiku';
 const DEFAULT_CODEX_MODEL = 'gpt-5.4-mini';
 const DEFAULT_CODEX_EFFORT = 'low' as const;
@@ -183,7 +188,10 @@ liveDescribe('provider launch stress live e2e', () => {
     restoreEnv('ANTHROPIC_API_KEY', previousAnthropicApiKey);
     restoreEnv('ANTHROPIC_AUTH_TOKEN', previousAnthropicAuthToken);
     restoreEnv('CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS', previousRuntimeReadyTimeout);
-    restoreEnv('CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS', previousInboxPollerReadyTimeout);
+    restoreEnv(
+      'CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS',
+      previousInboxPollerReadyTimeout
+    );
 
     if (process.env.PROVIDER_LAUNCH_STRESS_KEEP_TEMP === '1') {
       process.stderr.write(`[ProviderLaunchStress.live] preserved temp dir: ${tempDir}\n`);
@@ -389,45 +397,51 @@ async function runPostLaunchWorkProofCheck(
   expectedMembers: string[],
   progressEvents: TeamProvisioningProgress[]
 ): Promise<void> {
-  const memberName = resolvePostLaunchWorkTarget(active.scenario, expectedMembers);
-  const marker = `provider-stress-${active.scenario}-${Date.now()}`;
+  const memberNames = resolvePostLaunchWorkTargets(active.scenario, expectedMembers);
+  const markerPrefix = `provider-stress-${active.scenario}-${Date.now()}`;
   const teamDataService = new TeamDataService();
   const taskReader = new TeamTaskReader();
 
   process.stderr.write(
-    `[ProviderLaunchStress.live] sending post-launch work probe to ${active.scenario}/${memberName}\n`
+    `[ProviderLaunchStress.live] sending post-launch work probes to ${active.scenario}/${memberNames.join(',')}\n`
   );
-  const task = await teamDataService.createTask(active.teamName, {
-    subject: `Provider launch stress proof ${marker}`,
-    owner: memberName,
-    startImmediately: true,
-    prompt: [
-      `This is a live provider launch stress validation. Marker: ${marker}.`,
-      'Do not edit files.',
-      'Add one task comment containing exactly:',
-      `${marker}:done`,
-      'Then mark this task complete.',
-      'After that stop. Do not send a separate user-visible chat reply.',
-    ].join('\n'),
-  });
-
-  const relay = await active.svc.relayInboxFileToLiveRecipient(active.teamName, memberName);
-  if (!isAcceptedStressRelayResult(relay)) {
-    throw new Error(
-      `Post-launch work probe was not relayed to ${memberName}; relay result: ${JSON.stringify(relay)}`
-    );
-  }
+  const probes = await Promise.all(
+    memberNames.map(async (memberName, index) => {
+      const marker = `${markerPrefix}-${index + 1}`;
+      const task = await teamDataService.createTask(active.teamName, {
+        subject: `Provider launch stress proof ${marker}`,
+        owner: memberName,
+        startImmediately: true,
+        prompt: [
+          `This is a live provider launch stress validation. Marker: ${marker}.`,
+          'Do not edit files.',
+          'Add one task comment containing exactly:',
+          `${marker}:done`,
+          'Then mark this task complete.',
+          'After that stop. Do not send a separate user-visible chat reply.',
+        ].join('\n'),
+      });
+      const relay = await active.svc.relayInboxFileToLiveRecipient(active.teamName, memberName);
+      if (!isAcceptedStressRelayResult(relay)) {
+        throw new Error(
+          `Post-launch work probe was not relayed to ${memberName}; relay result: ${JSON.stringify(relay)}`
+        );
+      }
+      return { marker, memberName, taskId: task.id };
+    })
+  );
 
   await waitForStressCondition(
-    `post-launch work proof ${active.teamName}/${memberName}/${task.id}`,
+    `post-launch work proofs ${active.teamName}/${memberNames.join(',')}`,
     async () => {
       const tasks = await taskReader.getTasks(active.teamName);
-      const current = tasks.find((candidate) => candidate.id === task.id);
-      if (!current) return false;
-      const hasMarkerComment = current.comments?.some((comment) =>
-        comment.text.includes(`${marker}:done`)
-      );
-      return Boolean(hasMarkerComment && current.status === 'completed');
+      return probes.every((probe) => {
+        const current = tasks.find((candidate) => candidate.id === probe.taskId);
+        const hasMarkerComment = current?.comments?.some((comment) =>
+          comment.text.includes(`${probe.marker}:done`)
+        );
+        return Boolean(hasMarkerComment && current?.status === 'completed');
+      });
     },
     POST_LAUNCH_WORK_TIMEOUT_MS,
     2_000,
@@ -436,17 +450,17 @@ async function runPostLaunchWorkProofCheck(
   process.stderr.write(`[ProviderLaunchStress.live] ${active.scenario} post-launch work passed\n`);
 }
 
-function isAcceptedStressRelayResult(relay: Awaited<
-  ReturnType<TeamProvisioningService['relayInboxFileToLiveRecipient']>
->): boolean {
+function isAcceptedStressRelayResult(
+  relay: Awaited<ReturnType<TeamProvisioningService['relayInboxFileToLiveRecipient']>>
+): boolean {
   if (relay.kind === 'native_member_noop') return true;
   if (relay.relayed > 0) return true;
   const lastDelivery = relay.lastDelivery;
   return Boolean(
     lastDelivery &&
-      (lastDelivery.accepted === true ||
-        lastDelivery.delivered === true ||
-        lastDelivery.responsePending === true)
+    (lastDelivery.accepted === true ||
+      lastDelivery.delivered === true ||
+      lastDelivery.responsePending === true)
   );
 }
 
@@ -476,12 +490,21 @@ function resolvePostLaunchWorkTarget(
 ): string {
   if (scenario === 'mixed') {
     const openCodeIndex = expectedMembers.findIndex(
-      (_memberName, memberIndex) =>
-        resolveStressMemberProvider('mixed', memberIndex) === 'opencode'
+      (_memberName, memberIndex) => resolveStressMemberProvider('mixed', memberIndex) === 'opencode'
     );
     if (openCodeIndex >= 0) return expectedMembers[openCodeIndex]!;
   }
   return expectedMembers[1] ?? expectedMembers[0] ?? 'alice';
+}
+
+function resolvePostLaunchWorkTargets(
+  scenario: ProviderLaunchStressScenario,
+  expectedMembers: string[]
+): string[] {
+  if (process.env.PROVIDER_LAUNCH_STRESS_WORK_TARGETS?.trim().toLowerCase() === 'all') {
+    return expectedMembers;
+  }
+  return [resolvePostLaunchWorkTarget(scenario, expectedMembers)];
 }
 
 async function waitForStressCondition(
@@ -605,9 +628,7 @@ function resolveScenarioSelection(_scenario: ProviderLaunchStressScenario): {
 
 function getStressMemberCount(): number {
   const parsed = Number.parseInt(process.env.PROVIDER_LAUNCH_STRESS_MEMBER_COUNT ?? '5', 10);
-  return Number.isFinite(parsed) && parsed > 0
-    ? Math.min(parsed, MEMBER_NAMES.length)
-    : 5;
+  return Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, MEMBER_NAMES.length) : 5;
 }
 
 function buildExpectedMemberNames(memberCount: number): string[] {
