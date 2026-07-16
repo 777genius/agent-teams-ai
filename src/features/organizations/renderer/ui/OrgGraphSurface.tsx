@@ -420,6 +420,7 @@ export const OrgGraphSurface = ({
     nodeId: string;
     requestId: number;
   } | null>(null);
+  const [fitViewRequestId, setFitViewRequestId] = useState(0);
   const edgeOverlayText = useMemo(
     () => ({
       runtimeMessages: t('organizations.graph.edgeOverlay.runtimeMessages'),
@@ -568,6 +569,7 @@ export const OrgGraphSurface = ({
         : displayedGraphData,
     [activeViewMode, displayedGraphData]
   );
+
   const events = useMemo<GraphEventPort>(
     () => ({
       onNodeClick: (ref: GraphDomainRef) => {
@@ -631,7 +633,7 @@ export const OrgGraphSurface = ({
             showEdges: true,
             paused: false,
           });
-          controls.onZoomToFit();
+          setFitViewRequestId((current) => current + 1);
         }}
         labels={{
           search: t('organizations.graph.focus.searchLabel'),
@@ -689,6 +691,7 @@ export const OrgGraphSurface = ({
       focusEdgeIds={activeViewMode === 'overview' ? null : effectiveFocus.focusEdgeIds}
       focusOverridesSelection={Boolean(selectedNodeId)}
       revealNodeRequest={revealNodeRequest}
+      fitViewRequestId={fitViewRequestId}
       renderControls={renderControls}
       renderOverlay={renderNodeOverlay}
       renderEdgeOverlay={(overlayProps) => renderEdgeOverlay(overlayProps, edgeOverlayText)}

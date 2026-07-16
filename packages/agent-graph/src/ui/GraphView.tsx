@@ -93,6 +93,8 @@ export interface GraphViewProps {
   focusEdgeIds?: ReadonlySet<string> | null;
   focusOverridesSelection?: boolean;
   revealNodeRequest?: { nodeId: string; requestId: number } | null;
+  /** Increment to fit the graph after the matching data update reaches the simulation. */
+  fitViewRequestId?: number;
   renderTopToolbarContent?: () => React.ReactNode;
   /** Replaces the package toolbar while retaining graph-owned camera and filter actions. */
   renderControls?: (props: GraphControlRenderProps) => React.ReactNode;
@@ -217,6 +219,7 @@ export function GraphView({
   focusEdgeIds,
   focusOverridesSelection = false,
   revealNodeRequest,
+  fitViewRequestId,
   renderTopToolbarContent,
   renderControls,
   onLayoutModeChange,
@@ -278,6 +281,7 @@ export function GraphView({
   const runningRef = useRef(false);
   const hasAutoFit = useRef(false);
   const allowAutoFitRef = useRef(true);
+  const handledFitViewRequestIdRef = useRef(fitViewRequestId);
   const previousLayoutModeRef = useRef(layoutMode);
   const animateNextLayoutFitRef = useRef(false);
   const nodeMapRef = useRef(new Map<string, GraphNode>());
@@ -695,6 +699,14 @@ export function GraphView({
     markUserInteracted();
     fitGraphToViewport(false);
   }, [fitGraphToViewport, markUserInteracted]);
+
+  useEffect(() => {
+    if (fitViewRequestId === undefined || fitViewRequestId === handledFitViewRequestIdRef.current) {
+      return;
+    }
+    handledFitViewRequestIdRef.current = fitViewRequestId;
+    zoomToFit();
+  }, [fitViewRequestId, zoomToFit]);
 
   // ─── Auto-fit: until first user interaction, also react to container resizes ─────
   useEffect(() => {
