@@ -866,7 +866,12 @@ function handleResultMessage<TRun extends TeamProvisioningStreamRun>(
   if (subtype === 'success') {
     logger.info(`[${run.teamName}] stream-json result: success — turn complete, process alive`);
     handleSuccessResultMessage(run, msg, ports);
-  } else if (subtype === 'error') {
+  } else {
+    // Any non-success result ('error', 'error_during_execution', 'error_max_turns', or an
+    // unrecognized/absent subtype) is a turn-ending failure. Route it all through the error
+    // handler so the lead relay capture is rejected and lead activity/provisioning state is
+    // cleared; otherwise the turn would hang (relay waits out its capture timeout and may
+    // re-deliver, and on initial launch provisioning never completes).
     handleErrorResultMessage(run, msg, ports);
   }
 }

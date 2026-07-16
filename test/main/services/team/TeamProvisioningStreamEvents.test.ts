@@ -4,6 +4,7 @@ import {
   extractStreamUserText,
   getStableLeadThoughtMessageId,
   handleDeterministicBootstrapEvent,
+  handleTeamProvisioningStreamJsonMessage,
   hasCapturedUserVisibleSendMessage,
   hasCapturedVisibleSendMessage,
   shouldAcceptDeterministicBootstrapEvent,
@@ -394,5 +395,59 @@ describe('TeamProvisioningStreamEvents', () => {
     expect(killTeamProcess).toHaveBeenCalledWith(null);
     expect(persistLaunchStateSnapshot).toHaveBeenCalledWith(run, 'finished');
     expect(cleanupRun).toHaveBeenCalledWith(run);
+  });
+});
+
+describe('handleTeamProvisioningStreamJsonMessage result handling', () => {
+  function makeResultPorts(): TeamProvisioningStreamEventPorts<DeterministicBootstrapTestRun> & {
+    killTeamProcess: ReturnType<typeof vi.fn>;
+    cleanupRun: ReturnType<typeof vi.fn>;
+  } {
+    const base = createStreamEventPorts();
+    const ports = {
+      ...(base.ports as unknown as Record<string, unknown>),
+      resetLiveLeadTextBuffer: vi.fn(),
+      completeProvisioningFromSuccessfulResult: vi.fn(),
+    } as unknown as TeamProvisioningStreamEventPorts<DeterministicBootstrapTestRun>;
+    return Object.assign(ports, {
+      killTeamProcess: base.killTeamProcess,
+      cleanupRun: base.cleanupRun,
+    });
+  }
+
+  // logger.warn (on the error path) is routed to the globally-guarded console.warn; clear the
+  // recorded, intentional warning so the setup afterEach guard does not flag it.
+  function clearExpectedWarnings(): void {
+    (console.warn as unknown as { mockClear?: () => void }).mockClear?.();
+  }
+
+  // Any non-success result subtype is a turn-ending failure. error_during_execution and
+  // error_max_turns must be handled like plain 'error' (fail + kill + cleanup the run),
+  // not fall through and hang the turn (relay capture never settles, provisioning never
+  // completes, lead stuck 'active').
+  for (const subtype of ['error', 'error_during_execution', 'error_max_turns']) {
+    it(`fails and tears down the run for result subtype "${subtype}"`, () => {
+      const { run } = createDeterministicBootstrapRun({ provisioningComplete: false });
+      const ports = makeResultPorts();
+
+      handleTeamProvisioningStreamJsonMessage(run, { type: 'result', subtype, error: 'boom' }, ports);
+
+      expect(run.progress.state).toBe('failed');
+      expect(ports.killTeamProcess).toHaveBeenCalledWith(run.child);
+      expect(ports.cleanupRun).toHaveBeenCalledWith(run);
+      clearExpectedWarnings();
+    });
+  }
+
+  it('does not fail the run for result subtype "success"', () => {
+    const { run } = createDeterministicBootstrapRun({ provisioningComplete: false });
+    const ports = makeResultPorts();
+
+    handleTeamProvisioningStreamJsonMessage(run, { type: 'result', subtype: 'success' }, ports);
+
+    expect(run.progress.state).not.toBe('failed');
+    expect(ports.killTeamProcess).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    clearExpectedWarnings();
   });
 });
