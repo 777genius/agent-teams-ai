@@ -3,6 +3,7 @@ import { isPathWithinRoot, validateFileName } from '@main/utils/pathValidation';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
+import { isDeepStrictEqual } from 'util';
 
 import { atomicWriteAsync } from './atomicWrite';
 import { withFileLock } from './fileLock';
@@ -116,7 +117,8 @@ export interface CorrelateRuntimeDeliveryReplyResult {
 export class TeamInboxWriter {
   async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
     const inboxPath = resolveInboxPath(teamName, request.member);
-    const messageId = request.messageId?.trim() || randomUUID();
+    const explicitMessageId = request.messageId?.trim();
+    const messageId = explicitMessageId || randomUUID();
 
     const attachmentMeta = request.attachments?.map((a) => ({
       id: a.id,
@@ -164,9 +166,18 @@ export class TeamInboxWriter {
       await withInboxLock(inboxPath, async () => {
         for (let attempt = 0; attempt < 3; attempt++) {
           const list = await this.readInbox(inboxPath);
-          const duplicateIndex = this.findRuntimeDeliveryDuplicateIndex(list, payload);
+          const explicitDuplicateIndex = explicitMessageId
+            ? this.findExplicitMessageIdDuplicateIndex(list, explicitMessageId)
+            : -1;
+          const matchedExplicitMessageId = explicitDuplicateIndex >= 0;
+          const duplicateIndex = matchedExplicitMessageId
+            ? explicitDuplicateIndex
+            : this.findRuntimeDeliveryDuplicateIndex(list, payload);
           if (duplicateIndex >= 0) {
             const duplicate = list[duplicateIndex];
+            if (matchedExplicitMessageId) {
+              this.assertMatchingExplicitMessagePayload(duplicate, payload, messageId);
+            }
             const merged = this.mergeTaskRefs(duplicate.taskRefs, payload.taskRefs);
             resultMessageId = duplicate.messageId ?? messageId;
             resultDeduplicated = true;
@@ -177,10 +188,9 @@ export class TeamInboxWriter {
               };
               await atomicWriteAsync(inboxPath, JSON.stringify(list, null, 2));
               const written = await this.readInbox(inboxPath);
-              const writtenDuplicateIndex = this.findRuntimeDeliveryDuplicateIndex(
-                written,
-                payload
-              );
+              const writtenDuplicateIndex = matchedExplicitMessageId
+                ? this.findExplicitMessageIdDuplicateIndex(written, messageId)
+                : this.findRuntimeDeliveryDuplicateIndex(written, payload);
               const writtenDuplicate =
                 writtenDuplicateIndex >= 0 ? written[writtenDuplicateIndex] : null;
               if (
@@ -210,6 +220,60 @@ export class TeamInboxWriter {
       deliveredToInbox: true,
       messageId: resultMessageId,
       ...(resultDeduplicated ? { deduplicated: true } : {}),
+    };
+  }
+
+  private findExplicitMessageIdDuplicateIndex(
+    messages: readonly InboxMessage[],
+    messageId: string
+  ): number {
+    return messages.findIndex(
+      (candidate) =>
+        typeof candidate.messageId === 'string' && candidate.messageId.trim() === messageId
+    );
+  }
+
+  private assertMatchingExplicitMessagePayload(
+    existing: InboxMessage,
+    incoming: InboxMessage,
+    messageId: string
+  ): void {
+    if (
+      isDeepStrictEqual(
+        this.getImmutableExplicitMessagePayload(existing),
+        this.getImmutableExplicitMessagePayload(incoming)
+      )
+    ) {
+      return;
+    }
+    throw new Error(`Inbox messageId collision for immutable payload: ${messageId}`);
+  }
+
+  private getImmutableExplicitMessagePayload(message: InboxMessage): Record<string, unknown> {
+    const isRuntimeDelivery = message.source === 'runtime_delivery';
+    return {
+      from: isRuntimeDelivery ? this.normalizeComparableParticipant(message.from) : message.from,
+      to: isRuntimeDelivery ? this.normalizeComparableParticipant(message.to) : message.to,
+      text: isRuntimeDelivery ? this.normalizeComparableText(message.text) : message.text,
+      actionMode: message.actionMode,
+      commentId: message.commentId,
+      summary: message.summary,
+      relayOfMessageId: isRuntimeDelivery
+        ? message.relayOfMessageId?.trim()
+        : message.relayOfMessageId,
+      attachments: message.attachments,
+      source: message.source,
+      conversationId: message.conversationId,
+      replyToConversationId: message.replyToConversationId,
+      toolSummary: message.toolSummary,
+      toolCalls: message.toolCalls,
+      messageKind: message.messageKind,
+      workSyncIntent: message.workSyncIntent,
+      workSyncIntentKey: message.workSyncIntentKey,
+      workSyncReviewRequestEventIds: message.workSyncReviewRequestEventIds,
+      workSyncPayloadHash: message.workSyncPayloadHash,
+      slashCommand: message.slashCommand,
+      commandOutput: message.commandOutput,
     };
   }
 

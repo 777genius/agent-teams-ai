@@ -2262,16 +2262,16 @@ export class TeamDataService {
     }
     this.invalidateGlobalTaskProjectionCache();
 
-    // Controller's maybeNotifyAssignedOwner skips the lead (owner === lead).
-    // For user-created tasks with startImmediately, ensure the lead also gets notified.
-    if (shouldStart && createdInAttempt) {
-      try {
-        const leadName = await this.resolveLeadName(teamName);
-        if (this.isLeadOwner(task.owner!, leadName)) {
+    // Controller's maybeNotifyAssignedOwner skips the lead (owner === lead). Base notification on
+    // the resolved task so reconciled/replayed durable commands repair a missing notification.
+    if (task.status === 'in_progress' && task.owner) {
+      const leadName = await this.resolveLeadName(teamName);
+      if (this.isLeadOwner(task.owner, leadName)) {
+        if (request.command) {
+          await this.sendDurableUserTaskStartNotification(teamName, task, leadName);
+        } else {
           await this.sendUserTaskStartNotification(teamName, task);
         }
-      } catch {
-        /* best-effort */
       }
     }
 
@@ -2371,36 +2371,52 @@ export class TeamDataService {
   private async sendUserTaskStartNotification(teamName: string, task: TeamTask): Promise<void> {
     if (!task.owner) return;
     try {
-      const parts = [`**start working on task now** ${this.getTaskLabel(task)} "${task.subject}"`];
-      if (task.description?.trim()) {
-        parts.push(`\nDetails:\n${task.description.trim()}`);
-      }
-      if (task.prompt?.trim()) {
-        parts.push(`\nInstructions:\n${task.prompt.trim()}`);
-      }
-      parts.push(
-        '',
-        wrapAgentBlock(
-          [
-            `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
-            `To fetch the full task context (description, comments, attachments) use:`,
-            `task_get { teamName: "${teamName}", taskId: "${task.id}" }`,
-            `When done, update task status:`,
-            `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
-          ].join('\n')
-        )
-      );
-      await this.sendMessage(teamName, {
-        member: task.owner,
-        from: 'user',
-        text: parts.join('\n'),
-        taskRefs: task.descriptionTaskRefs,
-        summary: `Start working on ${this.getTaskLabel(task)}`,
-        source: 'system_notification',
-      });
+      await this.sendMessage(teamName, this.buildUserTaskStartNotification(teamName, task));
     } catch {
       // Best-effort notification
     }
+  }
+
+  private async sendDurableUserTaskStartNotification(
+    teamName: string,
+    task: TeamTask,
+    leadName: string
+  ): Promise<void> {
+    await this.sendRuntimeRecipientMessage(teamName, {
+      ...this.buildUserTaskStartNotification(teamName, task),
+      member: leadName,
+      messageId: `task-start:${teamName}:${task.id}`,
+    });
+  }
+
+  private buildUserTaskStartNotification(teamName: string, task: TeamTask): SendMessageRequest {
+    const parts = [`**start working on task now** ${this.getTaskLabel(task)} "${task.subject}"`];
+    if (task.description?.trim()) {
+      parts.push(`\nDetails:\n${task.description.trim()}`);
+    }
+    if (task.prompt?.trim()) {
+      parts.push(`\nInstructions:\n${task.prompt.trim()}`);
+    }
+    parts.push(
+      '',
+      wrapAgentBlock(
+        [
+          `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
+          `To fetch the full task context (description, comments, attachments) use:`,
+          `task_get { teamName: "${teamName}", taskId: "${task.id}" }`,
+          `When done, update task status:`,
+          `task_complete { teamName: "${teamName}", taskId: "${task.id}" }`,
+        ].join('\n')
+      )
+    );
+    return {
+      member: task.owner!,
+      from: 'user',
+      text: parts.join('\n'),
+      taskRefs: task.descriptionTaskRefs,
+      summary: `Start working on ${this.getTaskLabel(task)}`,
+      source: 'system_notification',
+    };
   }
 
   async updateTaskStatus(

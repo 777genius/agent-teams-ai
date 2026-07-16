@@ -859,6 +859,64 @@ function buildResolvedMember(name: string): ResolvedTeamMember {
   };
 }
 
+function createDurableTaskStartNotificationHarness(options: {
+  task: TeamTask;
+  commandResults?: Array<{ outcome: string; createdInAttempt: boolean }>;
+  sendMessage?: ReturnType<typeof vi.fn>;
+}): {
+  service: TeamDataService;
+  sendMessage: ReturnType<typeof vi.fn>;
+  commandFacadeCreateTask: ReturnType<typeof vi.fn>;
+} {
+  const sendMessage =
+    options.sendMessage ??
+    vi.fn(async (_teamName: string, request: { messageId?: string }) => ({
+      deliveredToInbox: true,
+      messageId: request.messageId ?? 'generated-message-id',
+    }));
+  const commandResults = options.commandResults ?? [
+    { outcome: 'executed', createdInAttempt: true },
+  ];
+  let commandAttempt = 0;
+  const commandFacadeCreateTask = vi.fn(async () => {
+    const result = commandResults[Math.min(commandAttempt, commandResults.length - 1)];
+    commandAttempt += 1;
+    return {
+      task: options.task,
+      outcome: result?.outcome ?? 'replayed',
+      createdInAttempt: result?.createdInAttempt ?? false,
+    };
+  });
+  const service = new TeamDataService(
+    {
+      getConfig: vi.fn(async () => ({
+        name: 'My team',
+        members: [{ name: 'lead-agent', agentType: 'team-lead', role: 'Lead' }],
+        leadSessionId: 'lead-session-1',
+      })),
+    } as never,
+    {} as never,
+    {} as never,
+    { sendMessage } as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    null,
+    {} as never,
+    {} as never,
+    () =>
+      ({
+        taskBoard: {
+          getTask: vi.fn(() => options.task),
+          createTask: vi.fn(() => options.task),
+          reconcileTaskCreation: vi.fn(() => options.task),
+        },
+      }) as never
+  );
+  service.setTaskBoardCommandFacade({ createTask: commandFacadeCreateTask } as never);
+  return { service, sendMessage, commandFacadeCreateTask };
+}
+
 describe('TeamDataService', () => {
   it('rejects duplicate member names in replaceMembers', async () => {
     const writeMembers = vi.fn(async () => {});
@@ -1822,31 +1880,259 @@ describe('TeamDataService', () => {
     expect(directCreate).not.toHaveBeenCalled();
   });
 
+  it('notifies a lead-owned task from the final started state on fresh durable execution', async () => {
+    const task: TeamTask = {
+      id: '11111111-1111-4111-8111-111111111111',
+      displayId: '11111111',
+      subject: 'Durable lead task',
+      description: 'Use the final task description.',
+      owner: 'lead-agent',
+      status: 'in_progress',
+    };
+    const { service, sendMessage } = createDurableTaskStartNotificationHarness({ task });
+
+    await expect(
+      service.createTask('my-team', {
+        subject: task.subject,
+        owner: 'lead-agent',
+        startImmediately: true,
+        command: {
+          commandId: task.id,
+          idempotencyKey: 'durable-lead-task',
+        },
+      })
+    ).resolves.toEqual(task);
+
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({
+        member: 'lead-agent',
+        from: 'user',
+        source: 'system_notification',
+        leadSessionId: 'lead-session-1',
+        messageId: 'task-start:my-team:11111111-1111-4111-8111-111111111111',
+        summary: 'Start working on #11111111',
+      })
+    );
+  });
+
+  it.each(['reconciled', 'replayed'])(
+    'notifies from the resolved lead-owned started state when a durable command is %s',
+    async (outcome) => {
+      const task: TeamTask = {
+        id: '11111111-1111-4111-8111-111111111111',
+        subject: 'Recovered lead task',
+        owner: 'lead-agent',
+        status: 'in_progress',
+      };
+      const { service, sendMessage } = createDurableTaskStartNotificationHarness({
+        task,
+        commandResults: [{ outcome, createdInAttempt: false }],
+      });
+
+      await service.createTask('my-team', {
+        subject: task.subject,
+        owner: 'lead-agent',
+        startImmediately: true,
+        command: {
+          commandId: task.id,
+          idempotencyKey: 'recovered-lead-task',
+        },
+      });
+
+      expect(sendMessage).toHaveBeenCalledWith(
+        'my-team',
+        expect.objectContaining({
+          messageId: 'task-start:my-team:11111111-1111-4111-8111-111111111111',
+        })
+      );
+    }
+  );
+
+  it.each([
+    {
+      name: 'a non-lead owner',
+      owner: 'alice',
+      status: 'in_progress' as const,
+    },
+    {
+      name: 'a non-started final state',
+      owner: 'lead-agent',
+      status: 'pending' as const,
+    },
+  ])('does not send the durable lead notification for $name', async ({ owner, status }) => {
+    const task: TeamTask = {
+      id: '11111111-1111-4111-8111-111111111111',
+      subject: 'No lead notification',
+      owner,
+      status,
+    };
+    const { service, sendMessage } = createDurableTaskStartNotificationHarness({
+      task,
+      commandResults: [{ outcome: 'replayed', createdInAttempt: false }],
+    });
+
+    await service.createTask('my-team', {
+      subject: task.subject,
+      owner: 'lead-agent',
+      startImmediately: true,
+      command: {
+        commandId: task.id,
+        idempotencyKey: 'no-lead-notification',
+      },
+    });
+
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('attempts the same deterministic lead notification on every durable replay', async () => {
+    const task: TeamTask = {
+      id: '11111111-1111-4111-8111-111111111111',
+      subject: 'Replay notification',
+      owner: 'lead-agent',
+      status: 'in_progress',
+    };
+    const { service, sendMessage } = createDurableTaskStartNotificationHarness({
+      task,
+      commandResults: [
+        { outcome: 'replayed', createdInAttempt: false },
+        { outcome: 'replayed', createdInAttempt: false },
+      ],
+    });
+    const request = {
+      subject: task.subject,
+      owner: 'lead-agent',
+      startImmediately: true,
+      command: {
+        commandId: task.id,
+        idempotencyKey: 'replay-notification',
+      },
+    };
+
+    await service.createTask('my-team', request);
+    await service.createTask('my-team', request);
+
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+    expect(sendMessage.mock.calls.map((call) => call[1]?.messageId)).toEqual([
+      'task-start:my-team:11111111-1111-4111-8111-111111111111',
+      'task-start:my-team:11111111-1111-4111-8111-111111111111',
+    ]);
+  });
+
+  it('surfaces durable notification failure and retries the same message on replay', async () => {
+    const task: TeamTask = {
+      id: '11111111-1111-4111-8111-111111111111',
+      subject: 'Retry notification',
+      owner: 'lead-agent',
+      status: 'in_progress',
+    };
+    const sendMessage = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('inbox unavailable'))
+      .mockResolvedValueOnce({
+        deliveredToInbox: true,
+        messageId: 'task-start:my-team:11111111-1111-4111-8111-111111111111',
+      });
+    const { service, commandFacadeCreateTask } = createDurableTaskStartNotificationHarness({
+      task,
+      sendMessage,
+      commandResults: [
+        { outcome: 'executed', createdInAttempt: true },
+        { outcome: 'replayed', createdInAttempt: false },
+      ],
+    });
+    const request = {
+      subject: task.subject,
+      owner: 'lead-agent',
+      startImmediately: true,
+      command: {
+        commandId: task.id,
+        idempotencyKey: 'retry-notification',
+      },
+    };
+
+    await expect(service.createTask('my-team', request)).rejects.toThrow('inbox unavailable');
+    await expect(service.createTask('my-team', request)).resolves.toEqual(task);
+
+    expect(commandFacadeCreateTask).toHaveBeenCalledTimes(2);
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+    expect(sendMessage.mock.calls.map((call) => call[1]?.messageId)).toEqual([
+      'task-start:my-team:11111111-1111-4111-8111-111111111111',
+      'task-start:my-team:11111111-1111-4111-8111-111111111111',
+    ]);
+  });
+
+  it('keeps non-durable task-start notification failure best-effort', async () => {
+    const task: TeamTask = {
+      id: 'legacy-task-1',
+      subject: 'Legacy best-effort task',
+      owner: 'lead-agent',
+      status: 'in_progress',
+    };
+    const sendMessage = vi.fn(() => {
+      throw new Error('legacy inbox unavailable');
+    });
+    const service = new TeamDataService(
+      {
+        getConfig: vi.fn(async () => ({
+          name: 'My team',
+          members: [{ name: 'lead-agent', agentType: 'team-lead', role: 'Lead' }],
+        })),
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      null,
+      {} as never,
+      {} as never,
+      () =>
+        ({
+          taskBoard: { createTask: vi.fn(() => task) },
+          messages: { sendMessage },
+        }) as never
+    );
+
+    await expect(
+      service.createTask('my-team', {
+        subject: task.subject,
+        owner: 'lead-agent',
+        startImmediately: true,
+      })
+    ).resolves.toEqual(task);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps derived projectPath outside the durable command payload', async () => {
     const directCreate = vi.fn((input: Record<string, unknown>) => ({
       ...input,
       status: 'pending' as const,
     }));
     const commandFacade = {
-      createTask: vi.fn(async (command: {
-        identity: { commandId: string };
-        payload: Record<string, unknown>;
-        destination: { create(input: Record<string, unknown>): Promise<TeamTask> | TeamTask };
-      }) => ({
-        task: await command.destination.create({
-          ...command.payload,
-          id: command.identity.commandId,
-          creationCommand: {
-            namespace: 'task-board',
-            scopeKey: 'my-team',
-            operation: 'task.create',
-            commandId: command.identity.commandId,
-            payloadHash: 'sha256:test',
-          },
-        }),
-        outcome: 'executed',
-        createdInAttempt: true,
-      })),
+      createTask: vi.fn(
+        async (command: {
+          identity: { commandId: string };
+          payload: Record<string, unknown>;
+          destination: { create(input: Record<string, unknown>): Promise<TeamTask> | TeamTask };
+        }) => ({
+          task: await command.destination.create({
+            ...command.payload,
+            id: command.identity.commandId,
+            creationCommand: {
+              namespace: 'task-board',
+              scopeKey: 'my-team',
+              operation: 'task.create',
+              commandId: command.identity.commandId,
+              payloadHash: 'sha256:test',
+            },
+          }),
+          outcome: 'executed',
+          createdInAttempt: true,
+        })
+      ),
     };
     const service = new TeamDataService(
       {
