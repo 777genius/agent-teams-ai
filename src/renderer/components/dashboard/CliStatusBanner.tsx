@@ -103,6 +103,7 @@ import {
 
 import type { DashboardRateLimitItem } from './providerDashboardRateLimits';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
+import type { AnalyticsProviderCheckReason } from '@renderer/analytics/productAnalytics';
 import type {
   CliProviderAuthMode,
   CliProviderId,
@@ -1959,14 +1960,16 @@ export const CliStatusBanner = ({
   );
 
   const handleProviderRefresh = useCallback(
-    (providerId: CliProviderId) => {
-      void (async () => {
-        await invalidateCliStatus();
-        const refreshed = await fetchCliProviderStatus(providerId);
-        if (refreshed && providerId === 'anthropic') {
-          setAnthropicRateLimitsRefreshVersion((current) => current + 1);
-        }
-      })();
+    async (
+      providerId: CliProviderId,
+      checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
+    ) => {
+      await invalidateCliStatus();
+      const refreshed = await fetchCliProviderStatus(providerId, { checkReason });
+      if (refreshed && providerId === 'anthropic') {
+        setAnthropicRateLimitsRefreshVersion((current) => current + 1);
+      }
+      return refreshed;
     },
     [fetchCliProviderStatus, invalidateCliStatus]
   );
@@ -1990,7 +1993,12 @@ export const CliStatusBanner = ({
       });
 
       try {
-        await fetchCliProviderStatus(providerId);
+        const refreshed = await fetchCliProviderStatus(providerId, {
+          checkReason: 'manual_refresh',
+        });
+        if (!refreshed) {
+          throw new Error('Provider status refresh failed');
+        }
       } catch {
         throw new Error(t('cliStatus.errors.runtimeUpdatedRefreshFailed'));
       }

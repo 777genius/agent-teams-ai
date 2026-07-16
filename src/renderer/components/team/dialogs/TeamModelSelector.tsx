@@ -1326,7 +1326,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
 
     catalogHydrationRequestedRef.current.add(effectiveProviderId);
-    void fetchCliProviderStatus(effectiveProviderId, { silent: false });
+    void fetchCliProviderStatus(effectiveProviderId, {
+      silent: false,
+      checkReason: 'launch_preflight',
+    });
   }, [
     effectiveCliStatus?.flavor,
     catalogHydrationAlreadyRequested,

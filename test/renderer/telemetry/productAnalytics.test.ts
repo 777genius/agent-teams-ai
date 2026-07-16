@@ -20,6 +20,7 @@ import {
   recordCrossTeamMessageSend,
   recordProviderConnectionEnd,
   recordProviderOnboardingStepEnd,
+  recordProviderReadinessStateObserved,
   recordReviewApplyEnd,
   recordTaskCreate,
   recordTeamLaunchStepEnd,
@@ -38,38 +39,87 @@ describe('product analytics event facade', () => {
     expect(bucketDurationMs(8_000)).toBe('5_15s');
     expect(bucketPromptLength(4_500)).toBe('4001_plus');
     expect(bucketBytes(600_000)).toBe('100kb_1mb');
+    expect(
+      classifyAnalyticsError({ code: 'runtime-missing', message: 'Provider check failed' })
+    ).toBe('runtime_missing');
   });
 
   it('normalizes provider mix to a low-cardinality string', () => {
     expect(normalizeAnalyticsProviderId('github-copilot')).toBe('github-copilot');
+    expect(normalizeAnalyticsProviderId('openrouter')).toBe('openrouter');
     expect(buildProviderMix(['xai', 'codex', 'xai'])).toEqual({
       providerMix: 'codex+xai',
       hasMixedProviders: true,
     });
     expect(buildProviderMix(['private-provider'])).toEqual({
-      providerMix: 'unknown',
+      providerMix: 'other',
       hasMixedProviders: false,
     });
   });
 
   it('captures provider connection end with sanitized properties', () => {
     recordProviderConnectionEnd({
+      runtime: 'opencode',
       provider: 'anthropic',
       authMethod: 'claude.ai',
-      success: false,
+      connectionIntent: 'reconnect',
+      outcome: 'failed',
       errorClass: classifyAnalyticsError(new Error('token expired: secret-token')),
       durationMs: 1_200,
     });
 
     expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith('provider_setup:connection_end', {
+      event_schema_version: 2,
+      runtime: 'opencode',
       provider: 'anthropic',
       auth_method: 'browser_session',
+      connection_intent: 'reconnect',
+      outcome: 'failed',
+      model_verified: false,
       success: false,
       error_class: 'auth',
       duration_ms_bucket: '1_5s',
     });
     expect(JSON.stringify(posthogMocks.capturePostHogEvent.mock.calls[0])).not.toContain(
       'secret-token'
+    );
+  });
+
+  it('captures provider readiness separately from explicit connection attempts', () => {
+    recordProviderReadinessStateObserved({
+      provider: 'opencode',
+      readinessState: 'runtime_missing',
+      previousReadinessState: 'unknown',
+      observationKind: 'initial',
+      checkReason: 'startup',
+      checkOutcome: 'completed',
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      providerSupported: false,
+      launchCapable: false,
+      errorClass: 'runtime_missing',
+      durationMs: 350,
+    });
+
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_readiness:state_observed',
+      {
+        event_schema_version: 2,
+        provider: 'opencode',
+        readiness_state: 'runtime_missing',
+        previous_readiness_state: 'unknown',
+        observation_kind: 'initial',
+        check_reason: 'startup',
+        check_outcome: 'completed',
+        authenticated: false,
+        auth_method: 'not_detected',
+        verification_state: 'error',
+        provider_supported: false,
+        launch_capable: false,
+        error_class: 'runtime_missing',
+        duration_ms_bucket: 'lt_1s',
+      }
     );
   });
 
@@ -114,7 +164,7 @@ describe('product analytics event facade', () => {
         success: false,
         duration_ms_bucket: '15_60s',
         member_count_bucket: '6_10',
-        provider_mix: 'xai',
+        provider_mix: 'other+xai',
         error_class: 'timeout',
         partial_failure: true,
       }
@@ -156,7 +206,7 @@ describe('product analytics event facade', () => {
     recordProviderOnboardingStepEnd({
       provider: 'github-copilot',
       step: 'connection_submit',
-      success: false,
+      outcome: 'failed',
       durationMs: 1_500,
       errorClass: 'auth',
     });
@@ -174,8 +224,10 @@ describe('product analytics event facade', () => {
       2,
       'provider_setup:onboarding_step_end',
       {
+        event_schema_version: 2,
         provider: 'github-copilot',
         step: 'connection_submit',
+        outcome: 'failed',
         success: false,
         duration_ms_bucket: '1_5s',
         error_class: 'auth',

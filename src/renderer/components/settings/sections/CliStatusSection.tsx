@@ -64,6 +64,7 @@ import {
 
 import { SettingsSectionHeader } from '../components';
 
+import type { AnalyticsProviderCheckReason } from '@renderer/analytics/productAnalytics';
 import type { CliProviderId, CliProviderStatus } from '@shared/types';
 
 const ProviderDetailSkeleton = (): React.JSX.Element => {
@@ -256,11 +257,12 @@ export const CliStatusSection = (): React.JSX.Element | null => {
   }, [bootstrapCliStatus, fetchCliStatus, invalidateCliStatus, multimodelEnabled]);
 
   const handleProviderRefresh = useCallback(
-    (providerId: CliProviderId) => {
-      void (async () => {
-        await invalidateCliStatus();
-        await fetchCliProviderStatus(providerId);
-      })();
+    async (
+      providerId: CliProviderId,
+      checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
+    ) => {
+      await invalidateCliStatus();
+      return fetchCliProviderStatus(providerId, { checkReason });
     },
     [fetchCliProviderStatus, invalidateCliStatus]
   );
@@ -329,7 +331,12 @@ export const CliStatusSection = (): React.JSX.Element | null => {
       });
 
       try {
-        await fetchCliProviderStatus(providerId);
+        const refreshed = await fetchCliProviderStatus(providerId, {
+          checkReason: 'manual_refresh',
+        });
+        if (!refreshed) {
+          throw new Error('Provider status refresh failed');
+        }
       } catch {
         throw new Error('Runtime updated, but failed to refresh provider status.');
       }

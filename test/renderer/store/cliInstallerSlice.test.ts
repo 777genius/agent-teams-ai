@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const posthogMocks = vi.hoisted(() => ({
+  capturePostHogEvent: vi.fn(),
+}));
+
+vi.mock('@renderer/posthog', () => ({
+  capturePostHogEvent: posthogMocks.capturePostHogEvent,
+}));
+
 // Mock api module
 vi.mock('@renderer/api', () => ({
   api: {
@@ -1499,6 +1507,205 @@ describe('cliInstallerSlice', () => {
   });
 
   describe('fetchCliProviderStatus', () => {
+    it('records provider readiness without mislabeling a status check as a connection attempt', async () => {
+      const loadingProvider = createMultimodelProvider({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        supported: false,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusMessage: 'Checking...',
+        canLoginFromUi: false,
+        capabilities: {
+          teamLaunch: false,
+          oneShot: false,
+          extensions: createDefaultCliExtensionCapabilities(),
+        },
+      });
+      const runtimeMissingProvider = createMultimodelProvider({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        supported: false,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'error',
+        statusMessage: 'OpenCode runtime is not installed',
+        canLoginFromUi: false,
+        capabilities: {
+          teamLaunch: false,
+          oneShot: false,
+          extensions: createDefaultCliExtensionCapabilities(),
+        },
+      });
+      useStore.setState({
+        cliStatus: createMultimodelStatus([loadingProvider]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(runtimeMissingProvider);
+
+      await useStore
+        .getState()
+        .fetchCliProviderStatus('opencode', { checkReason: 'startup' });
+
+      expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+        'provider_readiness:state_observed',
+        {
+          event_schema_version: 2,
+          provider: 'opencode',
+          readiness_state: 'runtime_missing',
+          previous_readiness_state: 'unknown',
+          observation_kind: 'initial',
+          check_reason: 'startup',
+          check_outcome: 'completed',
+          authenticated: false,
+          auth_method: 'not_detected',
+          verification_state: 'error',
+          provider_supported: false,
+          launch_capable: false,
+          error_class: 'runtime_missing',
+          duration_ms_bucket: 'lt_1s',
+        }
+      );
+      expect(posthogMocks.capturePostHogEvent).not.toHaveBeenCalledWith(
+        'provider_setup:connection_end',
+        expect.anything()
+      );
+
+      posthogMocks.capturePostHogEvent.mockClear();
+      await useStore
+        .getState()
+        .fetchCliProviderStatus('opencode', { checkReason: 'manual_refresh' });
+
+      expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+        'provider_readiness:state_observed',
+        expect.objectContaining({
+          readiness_state: 'runtime_missing',
+          previous_readiness_state: 'runtime_missing',
+          observation_kind: 'unchanged',
+          check_reason: 'manual_refresh',
+        })
+      );
+    });
+
+    it('records the first tracked readiness check even after silent hydration', async () => {
+      const loadingProvider = createMultimodelProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        supported: false,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusMessage: 'Checking...',
+      });
+      const readyProvider = createMultimodelProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        supported: true,
+        authenticated: true,
+        authMethod: 'claude-login',
+        verificationState: 'verified',
+        statusMessage: 'Subscription ready',
+      });
+      useStore.setState({
+        cliStatus: createMultimodelStatus([loadingProvider]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(readyProvider);
+
+      await useStore.getState().fetchCliProviderStatus('anthropic', {
+        silent: true,
+        checkReason: 'startup',
+      });
+      expect(posthogMocks.capturePostHogEvent).not.toHaveBeenCalled();
+
+      await useStore.getState().fetchCliProviderStatus('anthropic', {
+        checkReason: 'manual_refresh',
+      });
+      expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+        'provider_readiness:state_observed',
+        expect.objectContaining({
+          readiness_state: 'ready',
+          previous_readiness_state: 'ready',
+          observation_kind: 'unchanged',
+          check_reason: 'manual_refresh',
+        })
+      );
+    });
+
+    it('does not record a stale provider readiness response', async () => {
+      useStore.setState({
+        cliStatus: createMultimodelStatus([
+          createMultimodelProvider({
+            providerId: 'anthropic',
+            displayName: 'Anthropic',
+            supported: false,
+            authenticated: false,
+            authMethod: null,
+            verificationState: 'unknown',
+            statusMessage: 'Checking...',
+          }),
+        ]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(
+        createMultimodelProvider({
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: true,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'verified',
+          statusMessage: 'Not connected',
+        })
+      );
+
+      await useStore.getState().fetchCliProviderStatus('anthropic', {
+        epoch: -1,
+        checkReason: 'startup',
+      });
+
+      expect(posthogMocks.capturePostHogEvent).not.toHaveBeenCalled();
+    });
+
+    it('treats a normal disconnected provider as authentication required, not an error', async () => {
+      useStore.setState({
+        cliStatus: createMultimodelStatus([
+          createMultimodelProvider({
+            providerId: 'anthropic',
+            displayName: 'Anthropic',
+            supported: false,
+            authenticated: false,
+            authMethod: null,
+            verificationState: 'unknown',
+            statusMessage: 'Checking...',
+          }),
+        ]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(
+        createMultimodelProvider({
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: true,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'verified',
+          statusMessage: 'Not connected',
+        })
+      );
+
+      await useStore
+        .getState()
+        .fetchCliProviderStatus('anthropic', { checkReason: 'manual_refresh' });
+
+      expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+        'provider_readiness:state_observed',
+        expect.objectContaining({
+          readiness_state: 'authentication_required',
+          check_reason: 'manual_refresh',
+          check_outcome: 'completed',
+          error_class: 'none',
+        })
+      );
+    });
+
     it('materializes provider fetch failures into provider-scoped error state', async () => {
       useStore.setState({
         cliStatus: createMultimodelStatus([
@@ -1560,7 +1767,9 @@ describe('cliInstallerSlice', () => {
         new Error(CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE)
       );
 
-      await useStore.getState().fetchCliProviderStatus('anthropic');
+      await useStore
+        .getState()
+        .fetchCliProviderStatus('anthropic', { checkReason: 'manual_refresh' });
 
       const provider = useStore
         .getState()
@@ -1575,6 +1784,15 @@ describe('cliInstallerSlice', () => {
       });
       expect(useStore.getState().cliStatus?.authLoggedIn).toBe(true);
       expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
+      expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+        'provider_readiness:state_observed',
+        expect.objectContaining({
+          readiness_state: 'temporarily_unavailable',
+          check_outcome: 'failed',
+          authenticated: true,
+          check_reason: 'manual_refresh',
+        })
+      );
     });
 
     it('ignores hidden Gemini provider failures without keeping global auth checking active', async () => {
@@ -1605,6 +1823,7 @@ describe('cliInstallerSlice', () => {
           .getState()
           .cliStatus?.providers.find((provider) => provider.providerId === 'gemini')
       ).toBeUndefined();
+      expect(posthogMocks.capturePostHogEvent).not.toHaveBeenCalled();
     });
 
     it('ignores hidden Gemini provider success responses in multimodel frontend state', async () => {

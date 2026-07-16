@@ -4,16 +4,32 @@ type AnalyticsPrimitive = string | number | boolean | null;
 type AnalyticsProperties = Record<string, AnalyticsPrimitive>;
 
 export type AnalyticsProviderId =
+  | 'amazon-bedrock'
   | 'anthropic'
+  | 'azure'
+  | 'cerebras'
   | 'codex'
+  | 'cohere'
   | 'cursor-acp'
+  | 'deepseek'
   | 'gemini'
   | 'github-copilot'
+  | 'google'
+  | 'google-vertex'
+  | 'groq'
+  | 'huggingface'
   | 'kiro'
   | 'kimi-for-coding'
   | 'minimax-coding-plan'
+  | 'mistral'
+  | 'nvidia'
+  | 'ollama-cloud'
   | 'openai'
   | 'opencode'
+  | 'openrouter'
+  | 'other'
+  | 'perplexity'
+  | 'togetherai'
   | 'xai'
   | 'xiaomi-token-plan-ams'
   | 'xiaomi-token-plan-cn'
@@ -75,18 +91,56 @@ export type AnalyticsOnboardingStep =
   | 'model_accept'
   | 'credential_open'
   | 'unknown';
+export type AnalyticsOnboardingStepOutcome = 'completed' | 'cancelled' | 'failed';
+export type AnalyticsProviderReadinessState =
+  | 'ready'
+  | 'authentication_required'
+  | 'configuration_required'
+  | 'runtime_missing'
+  | 'temporarily_unavailable'
+  | 'error';
+export type AnalyticsProviderCheckReason =
+  | 'startup'
+  | 'manual_refresh'
+  | 'provider_setup'
+  | 'provider_change'
+  | 'runtime_install'
+  | 'runtime_event'
+  | 'launch_preflight'
+  | 'unknown';
+export type AnalyticsProviderConnectionIntent = 'connect' | 'reconnect' | 'unknown';
+export type AnalyticsProviderConnectionOutcome =
+  | 'verified'
+  | 'connected_unverified'
+  | 'cancelled'
+  | 'failed';
 
 const SAFE_PROVIDER_IDS: ReadonlySet<string> = new Set([
+  'amazon-bedrock',
   'anthropic',
+  'azure',
+  'cerebras',
   'codex',
+  'cohere',
   'cursor-acp',
+  'deepseek',
   'gemini',
   'github-copilot',
+  'google',
+  'google-vertex',
+  'groq',
+  'huggingface',
   'kiro',
   'kimi-for-coding',
   'minimax-coding-plan',
+  'mistral',
+  'nvidia',
+  'ollama-cloud',
   'openai',
   'opencode',
+  'openrouter',
+  'perplexity',
+  'togetherai',
   'xai',
   'xiaomi-token-plan-ams',
   'xiaomi-token-plan-cn',
@@ -158,7 +212,8 @@ export function normalizeAnalyticsProviderId(
   providerId: string | null | undefined
 ): AnalyticsProviderId {
   const normalized = typeof providerId === 'string' ? providerId.trim().toLowerCase() : '';
-  return SAFE_PROVIDER_IDS.has(normalized) ? (normalized as AnalyticsProviderId) : 'unknown';
+  if (!normalized) return 'unknown';
+  return SAFE_PROVIDER_IDS.has(normalized) ? (normalized as AnalyticsProviderId) : 'other';
 }
 
 export function buildProviderMix(providerIds: readonly (string | null | undefined)[]): {
@@ -179,27 +234,38 @@ export function buildProviderMix(providerIds: readonly (string | null | undefine
 
 export function normalizeAuthMethod(authMethod: string | null | undefined): string {
   const normalized = typeof authMethod === 'string' ? authMethod.trim().toLowerCase() : '';
-  if (!normalized) return 'none';
+  if (!normalized) return 'not_detected';
   if (normalized.includes('api')) return 'api_key';
   if (normalized.includes('oauth')) return 'oauth';
   if (normalized.includes('claude') || normalized.includes('chatgpt')) return 'browser_session';
   if (normalized.includes('subscription')) return 'browser_session';
+  if (normalized.includes('managed')) return 'managed';
+  if (normalized.includes('wellknown') || normalized.includes('well_known')) return 'well_known';
+  if (normalized === 'manual') return 'manual';
   return 'unknown';
 }
 
 export function classifyAnalyticsError(error: unknown): AnalyticsErrorClass {
   if (error == null) return 'none';
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === 'string'
-        ? error
-        : typeof error === 'object' && 'message' in error && typeof error.message === 'string'
-          ? error.message
-          : '';
+  const message = (() => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'string') return error;
+    if (typeof error !== 'object') return '';
+    const code = 'code' in error && typeof error.code === 'string' ? error.code : '';
+    const detail = 'message' in error && typeof error.message === 'string' ? error.message : '';
+    return `${code} ${detail}`.trim();
+  })();
   const normalized = message.toLowerCase();
   if (!normalized) return 'unknown';
-  if (normalized.includes('auth') || normalized.includes('login') || normalized.includes('token')) {
+  if (
+    normalized.includes('auth') ||
+    normalized.includes('login') ||
+    normalized.includes('token') ||
+    normalized.includes('api key') ||
+    normalized.includes('credential') ||
+    normalized.includes('unauthorized') ||
+    normalized.includes('forbidden')
+  ) {
     return 'auth';
   }
   if (normalized.includes('timeout') || normalized.includes('timed out')) return 'timeout';
@@ -207,7 +273,8 @@ export function classifyAnalyticsError(error: unknown): AnalyticsErrorClass {
     normalized.includes('network') ||
     normalized.includes('fetch') ||
     normalized.includes('econn') ||
-    normalized.includes('offline')
+    normalized.includes('offline') ||
+    normalized.includes('unavailable')
   ) {
     return 'network';
   }
@@ -237,16 +304,56 @@ export function classifyAnalyticsError(error: unknown): AnalyticsErrorClass {
 }
 
 export function recordProviderConnectionEnd(input: {
+  runtime: 'opencode';
   provider: string | null | undefined;
-  authMethod?: string | null;
-  success: boolean;
+  authMethod: string | null;
+  connectionIntent: AnalyticsProviderConnectionIntent;
+  outcome: AnalyticsProviderConnectionOutcome;
   errorClass?: AnalyticsErrorClass;
   durationMs?: number | null;
 }): void {
   captureProductEvent('provider_setup:connection_end', {
+    event_schema_version: 2,
+    runtime: input.runtime,
     provider: normalizeAnalyticsProviderId(input.provider),
     auth_method: normalizeAuthMethod(input.authMethod),
-    success: input.success,
+    connection_intent: input.connectionIntent,
+    outcome: input.outcome,
+    model_verified: input.outcome === 'verified',
+    success: input.outcome === 'verified' || input.outcome === 'connected_unverified',
+    error_class: input.errorClass ?? 'none',
+    duration_ms_bucket: bucketDurationMs(input.durationMs),
+  });
+}
+
+export function recordProviderReadinessStateObserved(input: {
+  provider: string | null | undefined;
+  readinessState: AnalyticsProviderReadinessState;
+  previousReadinessState: AnalyticsProviderReadinessState | 'unknown';
+  observationKind: 'initial' | 'changed' | 'unchanged';
+  checkReason: AnalyticsProviderCheckReason;
+  checkOutcome: 'completed' | 'failed';
+  authenticated: boolean;
+  authMethod: string | null;
+  verificationState: 'verified' | 'unknown' | 'offline' | 'error';
+  providerSupported: boolean;
+  launchCapable: boolean;
+  errorClass?: AnalyticsErrorClass;
+  durationMs?: number | null;
+}): void {
+  captureProductEvent('provider_readiness:state_observed', {
+    event_schema_version: 2,
+    provider: normalizeAnalyticsProviderId(input.provider),
+    readiness_state: input.readinessState,
+    previous_readiness_state: input.previousReadinessState,
+    observation_kind: input.observationKind,
+    check_reason: input.checkReason,
+    check_outcome: input.checkOutcome,
+    authenticated: input.authenticated,
+    auth_method: normalizeAuthMethod(input.authMethod),
+    verification_state: input.verificationState,
+    provider_supported: input.providerSupported,
+    launch_capable: input.launchCapable,
     error_class: input.errorClass ?? 'none',
     duration_ms_bucket: bucketDurationMs(input.durationMs),
   });
@@ -460,14 +567,16 @@ export function recordReviewApplyEnd(input: {
 export function recordProviderOnboardingStepEnd(input: {
   provider: string | null | undefined;
   step: AnalyticsOnboardingStep;
-  success: boolean;
+  outcome: AnalyticsOnboardingStepOutcome;
   durationMs?: number | null;
   errorClass?: AnalyticsErrorClass;
 }): void {
   captureProductEvent('provider_setup:onboarding_step_end', {
+    event_schema_version: 2,
     provider: normalizeAnalyticsProviderId(input.provider),
     step: input.step,
-    success: input.success,
+    outcome: input.outcome,
+    success: input.outcome === 'completed',
     duration_ms_bucket: bucketDurationMs(input.durationMs),
     error_class: input.errorClass ?? 'none',
   });
