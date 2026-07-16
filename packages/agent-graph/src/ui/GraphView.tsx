@@ -168,7 +168,7 @@ export function isEditableGraphShortcutTarget(event: KeyboardEvent): boolean {
     }
 
     const editableElement = target.closest(
-      'input, textarea, select, [role="textbox"], [contenteditable]'
+      'button, a[href], input, textarea, select, [role="button"], [role="textbox"], [contenteditable]'
     );
     if (!editableElement) {
       return false;

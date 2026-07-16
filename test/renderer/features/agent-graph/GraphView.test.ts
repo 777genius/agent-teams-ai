@@ -269,6 +269,22 @@ describe('GraphView pan interactions', () => {
     host.remove();
   });
 
+  it('recognizes toolbar buttons as interactive shortcut targets', () => {
+    const button = document.createElement('button');
+    const icon = document.createElement('span');
+    button.appendChild(icon);
+    document.body.appendChild(button);
+
+    const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'composedPath', {
+      value: () => [icon, button, document, window],
+    });
+
+    expect(isEditableGraphShortcutTarget(event)).toBe(true);
+
+    button.remove();
+  });
+
   it('toggles graph pause on Space when the graph owns keyboard focus', async () => {
     await act(async () => {
       root.render(
