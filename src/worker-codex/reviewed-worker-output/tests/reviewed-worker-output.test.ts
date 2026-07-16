@@ -30,6 +30,102 @@ afterEach(async () => {
 });
 
 describe("reviewed worker output", () => {
+  it("captures an immutable empty patch only for a reviewed clean merge", async () => {
+    const fixture = await reviewedOutputFixture();
+    await execFileAsync("git", ["-C", fixture.workspacePath, "reset", "--hard", "HEAD"]);
+    await rm(join(fixture.workspacePath, "src", "new.ts"), { force: true });
+    const deps = localReviewedWorkerOutputDeps({ rootDir: fixture.storeRoot });
+    const snapshot = await captureReviewedWorkerOutput(deps, {
+      projectId: "project-1",
+      controllerJobId: "project-1-controller",
+      workerJobId: "project-1-clean-merge-reviewer",
+      taskId: "clean-merge-review",
+      workspacePath: fixture.workspacePath,
+      expectedPatchSha256: sha256(""),
+      decision: ReviewDecisionStatus.Approved,
+      reviewedBy: "project-1-controller",
+      reason: "Reviewed the exact clean merge footprint.",
+      approvedFiles: ["src/from-base.ts"],
+      requiredChecks: [],
+      merge: {
+        sourceRemote: "origin",
+        sourceBranch: "base/current",
+        sourceCommit: "1".repeat(40),
+        expectedTargetCommit: fixture.baseCommit,
+      },
+    });
+
+    expect(snapshot).toMatchObject({
+      patchByteLength: 0,
+      patchSha256: sha256(""),
+      changedFiles: [],
+      reviewDecision: { approvedFiles: ["src/from-base.ts"] },
+    });
+    expect(await readFile(snapshot.patchPath, "utf8")).toBe("");
+
+    await commitReviewedWorkerOutputReviewAttestation({
+      store: deps.store,
+      markerVerifier: {
+        async verify() {
+          return {
+            markerSha256: sha256("clean merge marker"),
+            markerContent: "clean merge marker",
+          };
+        },
+      },
+      snapshot,
+      reviewMarkerPath: "/evidence/clean-merge-review.json",
+    });
+    await expect(resolveReviewedWorkerOutput({
+      store: deps.store,
+      projectId: "project-1",
+      reviewedOutputId: snapshot.reviewedOutputId,
+    })).resolves.toMatchObject({
+      workerOutput: {
+        patchSha256: sha256(""),
+        changedFiles: [],
+      },
+    });
+
+    const manifestPath = join(
+      fixture.storeRoot,
+      snapshot.reviewedOutputId,
+      "manifest.json",
+    );
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as
+      Record<string, unknown>;
+    delete manifest.merge;
+    await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    await expect(resolveReviewedWorkerOutput({
+      store: deps.store,
+      projectId: "project-1",
+      reviewedOutputId: snapshot.reviewedOutputId,
+    })).rejects.toThrow("reviewed_worker_output_manifest_invalid");
+  });
+
+  it("rejects an empty reviewed patch without a merge envelope", async () => {
+    const fixture = await reviewedOutputFixture();
+    await execFileAsync("git", ["-C", fixture.workspacePath, "reset", "--hard", "HEAD"]);
+    await rm(join(fixture.workspacePath, "src", "new.ts"), { force: true });
+
+    await expect(captureReviewedWorkerOutput(
+      localReviewedWorkerOutputDeps({ rootDir: fixture.storeRoot }),
+      {
+        projectId: "project-1",
+        controllerJobId: "project-1-controller",
+        workerJobId: "project-1-worker",
+        taskId: "task-1",
+        workspacePath: fixture.workspacePath,
+        expectedPatchSha256: sha256(""),
+        decision: ReviewDecisionStatus.Approved,
+        reviewedBy: "project-1-controller",
+        reason: "No output must not be reviewable as ordinary worker output.",
+        approvedFiles: ["src/value.ts"],
+        requiredChecks: [],
+      },
+    )).rejects.toThrow("reviewed_worker_output_patch_required");
+  });
+
   it("binds an exact merge source into the immutable reviewed output identity", async () => {
     const fixture = await reviewedOutputFixture();
     const patch = await captureGitWorkspacePatch({

@@ -166,11 +166,13 @@ export function openIntegrationAttempt(
     ? normalizeMergeIntegrationPlan(input.merge, input.workerOutput)
     : undefined;
   if (merge) {
-    assertSameFiles(
-      input.workerOutput.changedFiles,
-      expectedFiles,
-      "reviewed_merge_conflict_set_mismatch",
-    );
+    if (input.workerOutput.changedFiles.length > 0) {
+      assertSameFiles(
+        input.workerOutput.changedFiles,
+        expectedFiles,
+        "reviewed_merge_conflict_set_mismatch",
+      );
+    }
   } else {
     assertFilesWithinExpected(input.workerOutput.changedFiles, expectedFiles);
   }
@@ -188,7 +190,10 @@ export function openIntegrationAttempt(
     status: IntegrationAttemptStatus.Opened,
     workerOutput: {
       ...input.workerOutput,
-      changedFiles: normalizeExpectedFiles(input.workerOutput.changedFiles),
+      changedFiles:
+        merge && input.workerOutput.changedFiles.length === 0
+          ? []
+          : normalizeExpectedFiles(input.workerOutput.changedFiles),
     },
     reviewDecision: {
       ...input.reviewDecision,

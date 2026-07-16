@@ -57,6 +57,7 @@ export class GitReviewedWorkerOutputSnapshotter implements ReviewedWorkerOutputS
 
   async capture(input: {
     readonly workspacePath: string;
+    readonly allowEmptyPatch?: boolean;
   }): Promise<ReviewedWorkerOutputWorkspaceSnapshot> {
     const baseCommit = await readLocalGitHeadCommit(input.workspacePath);
     if (!baseCommit)
@@ -67,12 +68,21 @@ export class GitReviewedWorkerOutputSnapshotter implements ReviewedWorkerOutputS
         ? { gitBinaryPath: this.options.gitBinaryPath }
         : {}),
     });
-    if (!patch.trim()) throw new Error("reviewed_worker_output_patch_required");
     const status = await new LocalGitIntegrationAdapter({
       ...(this.options.gitBinaryPath
         ? { gitBinaryPath: this.options.gitBinaryPath }
         : {}),
     }).getStatus({ workspacePath: input.workspacePath });
+    if (!patch.trim()) {
+      if (
+        input.allowEmptyPatch !== true ||
+        patch.length !== 0 ||
+        status.dirtyFiles.length !== 0
+      ) {
+        throw new Error("reviewed_worker_output_patch_required");
+      }
+      return { patch, baseCommit, changedFiles: [] };
+    }
     if (status.dirtyFiles.length === 0) {
       throw new Error("reviewed_worker_output_changed_files_required");
     }
@@ -143,7 +153,10 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
     readonly patch: string;
   }): Promise<ReviewedWorkerOutputSnapshot> {
     assertSha256(input.snapshot.reviewedOutputId);
-    assertReviewedFileList(input.snapshot.changedFiles);
+    assertReviewedPatchInvariant(input.snapshot, input.patch);
+    assertReviewedFileList(input.snapshot.changedFiles, {
+      allowEmpty: input.snapshot.merge !== undefined,
+    });
     assertReviewedFileList(input.snapshot.reviewDecision.approvedFiles);
     const patchSha256 = sha256(input.patch);
     if (patchSha256 !== input.snapshot.patchSha256) {
@@ -569,6 +582,10 @@ function parseSnapshot(
     "capturedAt",
   ]);
   const reviewDecision = parseReviewDecision(value.reviewDecision);
+  const merge = value.merge === undefined
+    ? undefined
+    : parseMergePlan(value.merge);
+  const patchByteLength = requiredNonNegativeInteger(value.patchByteLength);
   const snapshot: ReviewedWorkerOutputSnapshot = {
     format: reviewedWorkerOutputFormat,
     formatRevision: 1,
@@ -580,11 +597,13 @@ function parseSnapshot(
     sourceWorkspacePath: requiredString(value.sourceWorkspacePath),
     patchPath,
     patchSha256: requiredString(value.patchSha256),
-    patchByteLength: requiredPositiveInteger(value.patchByteLength),
+    patchByteLength,
     baseCommit: requiredString(value.baseCommit),
-    changedFiles: requiredReviewedFileList(value.changedFiles),
+    changedFiles: requiredReviewedFileList(value.changedFiles, {
+      allowEmpty: merge !== undefined,
+    }),
     reviewDecision,
-    ...(value.merge === undefined ? {} : { merge: parseMergePlan(value.merge) }),
+    ...(merge ? { merge } : {}),
     capturedAt: requiredString(value.capturedAt),
   };
   if (
@@ -596,6 +615,7 @@ function parseSnapshot(
   }
   assertSha256(snapshot.reviewedOutputId);
   assertSha256(snapshot.patchSha256);
+  assertReviewedPatchInvariant(snapshot);
   return snapshot;
 }
 
@@ -766,19 +786,28 @@ function requiredStringArray(value: unknown): readonly string[] {
   return value;
 }
 
-function requiredReviewedFileList(value: unknown): readonly string[] {
+function requiredReviewedFileList(
+  value: unknown,
+  options: { readonly allowEmpty?: boolean } = {},
+): readonly string[] {
   if (!Array.isArray(value) || value.length > maxReviewedInputFiles) {
     throw new Error("reviewed_worker_output_manifest_invalid");
   }
   const files = requiredStringArray(value).map(assertReviewedPath);
   const normalized = [...new Set(files)].sort();
-  if (normalized.length === 0 || normalized.length > maxReviewedChangedFiles) {
+  if (
+    (options.allowEmpty !== true && normalized.length === 0) ||
+    normalized.length > maxReviewedChangedFiles
+  ) {
     throw new Error("reviewed_worker_output_manifest_invalid");
   }
   return normalized;
 }
 
-function assertReviewedFileList(value: readonly string[]): void {
+function assertReviewedFileList(
+  value: readonly string[],
+  options: { readonly allowEmpty?: boolean } = {},
+): void {
   if (
     value.length > maxReviewedInputFiles ||
     value.some((path) => {
@@ -789,7 +818,7 @@ function assertReviewedFileList(value: readonly string[]): void {
         return true;
       }
     }) ||
-    [...new Set(value)].length === 0 ||
+    (options.allowEmpty !== true && [...new Set(value)].length === 0) ||
     [...new Set(value)].length > maxReviewedChangedFiles
   ) {
     throw new Error("reviewed_worker_output_changed_file_limit_exceeded");
@@ -810,11 +839,33 @@ function assertReviewedPath(path: string): string {
   return path;
 }
 
-function requiredPositiveInteger(value: unknown): number {
-  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
+function requiredNonNegativeInteger(value: unknown): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
     throw new Error("reviewed_worker_output_manifest_invalid");
   }
   return value;
+}
+
+function assertReviewedPatchInvariant(
+  snapshot: Pick<
+    ReviewedWorkerOutputSnapshot,
+    "patchByteLength" | "changedFiles" | "merge"
+  >,
+  patch?: string,
+): void {
+  if (snapshot.patchByteLength === 0) {
+    if (
+      snapshot.merge === undefined ||
+      snapshot.changedFiles.length !== 0 ||
+      (patch !== undefined && patch.length !== 0)
+    ) {
+      throw new Error("reviewed_worker_output_patch_required");
+    }
+    return;
+  }
+  if (snapshot.changedFiles.length === 0) {
+    throw new Error("reviewed_worker_output_changed_files_required");
+  }
 }
 
 function sha256(value: string): string {

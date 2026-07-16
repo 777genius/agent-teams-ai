@@ -477,6 +477,33 @@ describe("project integration use cases", () => {
     expect(fixture.git.lastAllowAlreadyApplied).toBe(false);
   });
 
+  it("opens and applies a reviewed clean merge with no resolution patch files", async () => {
+    const fixture = createFixture();
+    const candidate = mergeInput();
+    fixture.git.appliedFiles = ["src/base-change.ts"];
+
+    const opened = await openProjectIntegrationAttempt(fixture.deps(), {
+      ...candidate,
+      workerOutput: {
+        ...candidate.workerOutput,
+        changedFiles: [],
+      },
+      reviewDecision: {
+        ...candidate.reviewDecision,
+        approvedFiles: ["src/base-change.ts"],
+      },
+    });
+    const applied = await applyWorkerOutput(fixture.deps(), {
+      attemptId: opened.attemptId,
+    });
+
+    expect(applied).toMatchObject({
+      workerOutput: { changedFiles: [] },
+      expectedFiles: ["src/base-change.ts"],
+      appliedFiles: ["src/base-change.ts"],
+    });
+  });
+
   it("rejects a merge whose reviewed patch is not based on the target parent", async () => {
     const fixture = createFixture();
     const candidate = mergeInput();

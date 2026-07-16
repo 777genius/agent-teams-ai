@@ -55,11 +55,17 @@ export async function captureReviewedWorkerOutputLocked(
 ): Promise<ReviewedWorkerOutputSnapshot> {
   const expectedPatchSha256 = normalizeSha256(input.expectedPatchSha256);
   const approvedFiles = normalizeReviewedFiles(input.approvedFiles);
+  const merge = normalizeReviewedOutputMerge(input.merge);
   const captured = await deps.snapshotter.capture({
     workspacePath: lock.workspacePath,
+    ...(merge ? { allowEmptyPatch: true } : {}),
   });
-  const changedFiles = normalizeReviewedFiles(captured.changedFiles);
-  assertFilesWithinExpected(changedFiles, approvedFiles);
+  const changedFiles = normalizeReviewedFiles(captured.changedFiles, {
+    allowEmpty: merge !== undefined,
+  });
+  if (changedFiles.length > 0) {
+    assertFilesWithinExpected(changedFiles, approvedFiles);
+  }
   const patchSha256 = sha256(captured.patch);
   if (patchSha256 !== expectedPatchSha256) {
     throw new Error("reviewed_worker_output_patch_hash_mismatch");
@@ -71,7 +77,6 @@ export async function captureReviewedWorkerOutputLocked(
     approvedFiles,
     requiredChecks: input.requiredChecks,
   });
-  const merge = normalizeReviewedOutputMerge(input.merge);
   const capturedAt = (deps.clock ?? { now: () => new Date() })
     .now()
     .toISOString();
@@ -111,10 +116,14 @@ export async function captureReviewedWorkerOutputLocked(
   });
 }
 
-function normalizeReviewedFiles(paths: readonly string[]): readonly string[] {
+function normalizeReviewedFiles(
+  paths: readonly string[],
+  options: { readonly allowEmpty?: boolean } = {},
+): readonly string[] {
   if (paths.length > maxReviewedInputFiles) {
     throw new Error("reviewed_worker_output_changed_file_limit_exceeded");
   }
+  if (paths.length === 0 && options.allowEmpty === true) return [];
   const normalized = normalizeExpectedFiles(paths);
   if (normalized.length > maxReviewedChangedFiles) {
     throw new Error("reviewed_worker_output_changed_file_limit_exceeded");
@@ -215,8 +224,11 @@ export async function assertReviewedWorkerOutputStillMatchesLocked(
 ): Promise<void> {
   const current = await deps.snapshotter.capture({
     workspacePath: workspace.workspacePath,
+    ...(snapshot.merge ? { allowEmptyPatch: true } : {}),
   });
-  const currentChangedFiles = normalizeExpectedFiles(current.changedFiles);
+  const currentChangedFiles = current.changedFiles.length === 0
+    ? []
+    : normalizeExpectedFiles(current.changedFiles);
   if (
     current.baseCommit !== snapshot.baseCommit ||
     sha256(current.patch) !== snapshot.patchSha256 ||

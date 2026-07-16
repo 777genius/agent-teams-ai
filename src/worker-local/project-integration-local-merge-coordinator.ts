@@ -61,6 +61,9 @@ export type LocalGitMergeRuntime = {
   ) => Promise<readonly string[]>;
 };
 
+const emptyPatchSha256 =
+  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
 export async function applyReviewedMerge(input: {
   readonly runtime: LocalGitMergeRuntime;
   readonly workspacePath: string;
@@ -79,7 +82,10 @@ export async function applyReviewedMerge(input: {
   if (!input.workerOutput.changedFiles) {
     throw new Error("local_git_integration_merge_changed_files_required");
   }
-  if (!sameFiles(input.workerOutput.changedFiles, input.attempt.expectedFiles)) {
+  if (
+    input.workerOutput.changedFiles.length > 0 &&
+    !sameFiles(input.workerOutput.changedFiles, input.attempt.expectedFiles)
+  ) {
     throw new Error(
       "local_git_integration_merge_reviewed_conflict_set_mismatch",
     );
@@ -189,6 +195,28 @@ export async function applyReviewedMerge(input: {
       throw new Error(
         "local_git_integration_merge_conflicts_missing_from_source_footprint",
       );
+    }
+    if (conflictFiles.length === 0) {
+      if (input.workerOutput.changedFiles.length !== 0) {
+        throw new Error(
+          "local_git_integration_clean_merge_reviewed_changes_must_be_empty",
+        );
+      }
+      if (!sameFiles(mergeFootprint, input.attempt.expectedFiles)) {
+        throw new Error(
+          `local_git_integration_clean_merge_footprint_mismatch:expected=${
+            uniqueSorted(input.attempt.expectedFiles).join(",")
+          };actual=${uniqueSorted(mergeFootprint).join(",")}`,
+        );
+      }
+      if (input.workerOutput.patchSha256 !== emptyPatchSha256) {
+        throw new Error(
+          "local_git_integration_clean_merge_empty_patch_hash_required",
+        );
+      }
+      const patchPath = await runtime.canonicalWorkerPatch(input.workerOutput);
+      await runtime.assertPatchSha256(patchPath, emptyPatchSha256);
+      return { changedFiles: mergeFootprint };
     }
     await restoreConflictFilesToFirstParent(
       runtime,

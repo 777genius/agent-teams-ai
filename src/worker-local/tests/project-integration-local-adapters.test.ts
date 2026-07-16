@@ -23,6 +23,7 @@ import {
   SimpleSecretScanner,
 } from "../index";
 import {
+  createCleanMergeFixture,
   createGitFixture,
   createMergeFixture,
   git,
@@ -143,6 +144,79 @@ describe("local project integration adapters", () => {
       join(fixture.workspacePath, "src", "memory.ts"),
       "utf8",
     )).resolves.toBe("export const value = 3;\n");
+  });
+
+  it("applies a reviewed clean merge from an immutable empty patch", async () => {
+    const fixture = await createCleanMergeFixture();
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+    const attempt = {
+      targetWorkspacePath: fixture.workspacePath,
+      expectedFiles: ["src/from-base.ts"],
+      merge: {
+        sourceRemote: "origin",
+        sourceBranch: "base",
+        sourceCommit: fixture.sourceCommit,
+        expectedTargetCommit: fixture.targetCommit,
+      },
+    };
+    const workerOutput = {
+      workerJobId: "clean-merge-reviewer",
+      workspacePath: fixture.workspacePath,
+      patchPath: fixture.patchPath,
+      patchSha256: fixture.patchSha256,
+      baseCommit: fixture.targetCommit,
+      changedFiles: [],
+    };
+
+    await expect(adapter.applyWorkerOutput({ attempt, workerOutput }))
+      .resolves.toEqual({ changedFiles: ["src/from-base.ts"] });
+    const commit = await adapter.commit({
+      workspacePath: fixture.workspacePath,
+      message: "merge: integrate reviewed clean base",
+      files: ["src/from-base.ts"],
+      identity: { name: "Integrator", email: "integrator@example.com" },
+      expectedParentCommits: [fixture.targetCommit, fixture.sourceCommit],
+    });
+    expect(commit.parentCommits).toEqual([
+      fixture.targetCommit,
+      fixture.sourceCommit,
+    ]);
+  });
+
+  it("aborts a clean merge whose actual footprint was not reviewed", async () => {
+    const fixture = await createCleanMergeFixture();
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+
+    await expect(adapter.applyWorkerOutput({
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/unreviewed.ts"],
+        merge: {
+          sourceRemote: "origin",
+          sourceBranch: "base",
+          sourceCommit: fixture.sourceCommit,
+          expectedTargetCommit: fixture.targetCommit,
+        },
+      },
+      workerOutput: {
+        workerJobId: "clean-merge-reviewer",
+        workspacePath: fixture.workspacePath,
+        patchPath: fixture.patchPath,
+        patchSha256: fixture.patchSha256,
+        baseCommit: fixture.targetCommit,
+        changedFiles: [],
+      },
+    })).rejects.toThrow(
+      "local_git_integration_clean_merge_footprint_mismatch",
+    );
+    expect((await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])).trim())
+      .toBe(fixture.targetCommit);
+    expect(await gitOutput(fixture.workspacePath, ["status", "--porcelain"]))
+      .toBe("");
   });
 
   it("restores reviewed conflicts after a post-patch merge failure", async () => {

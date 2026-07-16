@@ -113,6 +113,71 @@ export async function createMergeFixture(): Promise<{
   };
 }
 
+export async function createCleanMergeFixture(): Promise<{
+  readonly rootDir: string;
+  readonly workspacePath: string;
+  readonly sourceCommit: string;
+  readonly targetCommit: string;
+  readonly patchPath: string;
+  readonly patchSha256: string;
+}> {
+  const rootDir = await mkdtemp(
+    join(tmpdir(), "project-integration-clean-merge-"),
+  );
+  tempRoots.push(rootDir);
+  const workspacePath = join(rootDir, "workspace");
+  const remotePath = join(rootDir, "remote.git");
+  await mkdir(join(workspacePath, "src"), { recursive: true });
+  await git(workspacePath, ["init", "-b", "main"]);
+  await git(workspacePath, ["config", "user.email", "test@example.com"]);
+  await git(workspacePath, ["config", "user.name", "Test User"]);
+  await writeFile(
+    join(workspacePath, "src", "shared.ts"),
+    "export const shared = true;\n",
+  );
+  await git(workspacePath, ["add", "."]);
+  await git(workspacePath, ["commit", "-m", "chore: initial"]);
+  await execFileAsync("git", ["init", "--bare", remotePath]);
+  await git(workspacePath, ["remote", "add", "origin", remotePath]);
+
+  await git(workspacePath, ["checkout", "-b", "base"]);
+  await writeFile(
+    join(workspacePath, "src", "from-base.ts"),
+    "export const fromBase = true;\n",
+  );
+  await git(workspacePath, ["add", "."]);
+  await git(workspacePath, ["commit", "-m", "feat: add base source"]);
+  const sourceCommit = (await gitOutput(
+    workspacePath,
+    ["rev-parse", "HEAD"],
+  )).trim();
+  await git(workspacePath, ["push", "origin", "base"]);
+
+  await git(workspacePath, ["checkout", "main"]);
+  await writeFile(
+    join(workspacePath, "src", "from-target.ts"),
+    "export const fromTarget = true;\n",
+  );
+  await git(workspacePath, ["add", "."]);
+  await git(workspacePath, ["commit", "-m", "feat: add target source"]);
+  const targetCommit = (await gitOutput(
+    workspacePath,
+    ["rev-parse", "HEAD"],
+  )).trim();
+  await git(workspacePath, ["push", "origin", "main"]);
+
+  const patchPath = join(rootDir, "reviewed-empty.patch");
+  await writeFile(patchPath, "");
+  return {
+    rootDir,
+    workspacePath,
+    sourceCommit,
+    targetCommit,
+    patchPath,
+    patchSha256: createHash("sha256").update("").digest("hex"),
+  };
+}
+
 export async function git(cwd: string, args: readonly string[]): Promise<void> {
   await execFileAsync("git", [...args], { cwd });
 }

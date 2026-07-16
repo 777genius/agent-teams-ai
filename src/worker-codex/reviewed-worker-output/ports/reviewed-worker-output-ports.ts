@@ -7,6 +7,7 @@ import type {
 export interface ReviewedWorkerOutputSnapshotterPort {
   capture(input: {
     readonly workspacePath: string;
+    readonly allowEmptyPatch?: boolean;
   }): Promise<ReviewedWorkerOutputWorkspaceSnapshot>;
 }
 
