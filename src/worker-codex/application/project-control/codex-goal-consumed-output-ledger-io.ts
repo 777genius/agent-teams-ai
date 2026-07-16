@@ -33,6 +33,7 @@ export async function assertCodexGoalProjectJobNotTerminal(input: {
   readonly taskId: string;
   readonly workspacePath: string;
   readonly reviewedContinuation?: ReviewedWorkerOutputSnapshot;
+  readonly capacityContinuation?: true;
 }): Promise<void> {
   if (input.roots.length === 0) return;
   const ledger = await readCodexGoalConsumedOutputLedgers({
@@ -52,6 +53,11 @@ export async function assertCodexGoalProjectJobNotTerminal(input: {
       taskId: input.taskId,
       workspacePath: resolve(input.workspacePath),
     });
+    return;
+  }
+  // Preserve failed_no_output as immutable evidence for the prior provider
+  // attempt while permitting an independently validated capacity continuation.
+  if (record.status === "failed_no_output" && input.capacityContinuation) {
     return;
   }
   throw new Error(

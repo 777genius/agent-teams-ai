@@ -277,6 +277,12 @@ function codexProjectControlPorts(
             ...(input.reviewedContinuation
               ? { reviewedContinuation: input.reviewedContinuation }
               : {}),
+            ...(input.startAdmissionWorkspaceMode ===
+                "admitted_input_patch_continuation" ||
+              input.startAdmissionWorkspaceMode ===
+                "clean_capacity_continuation"
+              ? { capacityContinuation: true as const }
+              : {}),
           });
           await prepareCodexGoalLaunchPaths(startLaunch);
           if (!input.startSkipDoctor) {

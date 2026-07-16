@@ -24,7 +24,6 @@ import {
 
 const reservationSchemaVersion = 1 as const;
 const reservationGraceMs = 10 * 60_000;
-const defaultMaxAccountCycles = 5;
 const exclusiveLeaseFlag =
   "SUBSCRIPTION_RUNTIME_PROJECT_ACCOUNT_EXCLUSIVE_LEASES";
 
@@ -416,11 +415,9 @@ function reservedAttemptBudget(input: {
     throw new Error("project_control_continuation_attempt_count_required");
   }
   const previousAttemptCount = input.continuation.previousAttemptCount;
-  const maximumAttemptCount = input.launch.config.accounts.length *
-    (input.launch.config.maxAccountCycles ?? defaultMaxAccountCycles);
-  if (previousAttemptCount + 1 > maximumAttemptCount) {
-    throw new Error("project_control_continuation_attempt_budget_exhausted");
-  }
+  // This broker call authorizes exactly one more provider attempt. The launch
+  // maxAccountCycles value bounds one runner invocation; it is not a lifetime
+  // retry policy for an externally authorized capacity continuation.
   return previousAttemptCount + 1;
 }
 
@@ -443,9 +440,15 @@ function projectEligibleAccountIds(input: {
   readonly launch: CodexGoalLaunchInput;
   readonly excludedAccountIds?: readonly string[];
 }): readonly string[] {
-  const excluded = new Set(input.excludedAccountIds ?? []);
-  const eligible = input.launch.config.accounts
-    .map((account) => account.name)
+  const configured = input.launch.config.accounts.map(
+    (account) => account.name,
+  );
+  // A single configured account remains eligible after its capacity recovers.
+  // With alternatives available, continue rotating away from the last failure.
+  const excluded = new Set(
+    configured.length === 1 ? [] : (input.excludedAccountIds ?? []),
+  );
+  const eligible = configured
     .filter((accountId) => !excluded.has(accountId));
   if (eligible.length === 0) {
     throw new Error("project_control_account_reservation_no_eligible_accounts");
