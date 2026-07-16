@@ -12984,11 +12984,13 @@ describe('Team agent launch matrix safe e2e', () => {
     const run = createMixedLiveRun({ teamName, projectPath });
     run.child = { kill: () => undefined };
     trackLiveRun(svc, run);
-    await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
+    await (svc as any).launchMixedSecondaryLaneIfNeeded(run, {
+      waitForCompletion: true,
+    });
     await waitForCondition(() => adapter.launchInputs.length === 2);
 
-    svc.stopTeam(teamName);
-    await waitForCondition(() => adapter.stopInputs.length === 2);
+    await svc.stopTeam(teamName);
+    expect(adapter.stopInputs).toHaveLength(2);
     await waitForCondition(() => !svc.isTeamAlive(teamName));
     await waitForCondition(async () => {
       const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName);
@@ -14217,7 +14219,9 @@ describe('Team agent launch matrix safe e2e', () => {
     const run = createMixedLiveRun({ teamName, projectPath });
     run.child = { kill: () => undefined };
     trackLiveRun(svc, run);
-    await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
+    await (svc as any).launchMixedSecondaryLaneIfNeeded(run, {
+      waitForCompletion: true,
+    });
     await waitForCondition(() => adapter.launchInputs.length === 2);
     let releaseStop: () => void = () => undefined;
     const stopRelease = new Promise<void>((resolve) => {
@@ -14236,7 +14240,7 @@ describe('Team agent launch matrix safe e2e', () => {
       };
     }) as typeof adapter.stop;
 
-    svc.stopTeam(teamName);
+    const stopTeam = svc.stopTeam(teamName);
     await waitForCondition(() => adapter.stopInputs.length === 1);
     try {
       await expect(
@@ -14252,7 +14256,8 @@ describe('Team agent launch matrix safe e2e', () => {
       expect(adapter.messageInputs).toEqual([]);
     } finally {
       releaseStop();
-      await waitForCondition(() => adapter.stopInputs.length === 2);
+      await stopTeam;
+      expect(adapter.stopInputs).toHaveLength(2);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
     }
   });
