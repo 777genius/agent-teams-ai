@@ -1,7 +1,7 @@
 # Hosted Web execution router
 
-> Current route: `phase-01-p1-f-freeze-router-r2`, authored at clean remote-equal canonical
-> authority `20706bd067ce5ccbf13697700411904faa2a00c8`. It conditionally authorizes exactly one serial,
+> Current route: `phase-01-p1-f-environment-router-r3`, authored at clean remote-equal canonical
+> authority `69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5`. It conditionally authorizes exactly one serial,
 > fresh, independent `P1.F` milestone-freeze worker after this seven-path router is independently
 > accepted, broker-integrated, pushed, and attested. The route launches nothing and ends `HOLD`.
 
@@ -28,20 +28,29 @@ accumulated current-base history and must never substitute for the exact P1.I in
 
 Immutable r1 patch `2f7338a1e7b41955d15106f5fb3994b17db6749158bde8134a0a8e23d2081615` was independently
 `REJECT`ed for only the incorrect merge proof. This r2 route retains every other useful r1 contract.
+The r2 patch `1b9d824436f076f751df91fe2d8abedb88995c5fe8a02f3fc0194921d669d5c1` then received independent
+`ACCEPT` with P0/P1/P2 `0/0/0` and was integrated and pushed as the current authoring authority
+`69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5`. Three clean P1.F attempts subsequently demonstrated
+only the restricted-environment contradiction now repaired by r3.
 
 ## Serial freeze lifecycle
 
 After this router's independent acceptance and exact broker integration/push, root binds and attests
 the pushed authority, then admits one independent P1.F worker using `gpt-5.6-sol`, `xhigh`,
-`serviceTier: "default"`, with Fast disabled. The worker reads the exact 74-path manifest and writes
-only the P1.F handoff and Phase 1 freeze report.
+`serviceTier: "default"`, with Fast disabled. The immutable admission inputs include a fresh
+root/broker remote attestation and, when the sandbox cannot spawn the exact command, a fresh
+root-attested normalizer record. The worker reads the exact 74-path manifest and writes only the P1.F
+handoff and Phase 1 freeze report.
 
-The worker reruns the 60-test Phase 1 suite and focused three-test ratchet suite, classifies typecheck
-as seven inherited/zero owned/zero unexpected, requires full lint success and exact-74 Prettier,
-reproves exact-54 scratch rollback, validates the true merge and current base, and completes
-JSON/hash/link/diff/secret/provider/private-path/text scans. It verifies the exact 14 Phase 1 evidence
-IDs, creates only `P1.F.FREEZE` and `P1.F.PHASE_EXIT`, performs complete self-review, and returns
-explicit `ACCEPT` or `REJECT` before `HOLD`.
+The worker MUST NOT run `git ls-remote` from the restricted worker sandbox. It inspects the remote
+attestation and independently reruns every sandbox-compatible local proof: the 60-test Phase 1 suite,
+focused three-test ratchet suite, full lint, exact-74 Prettier, exact-54 scratch rollback, true merge,
+current base, JSON/hash/link/diff/secret/provider/private-path/text scans, and all local authority and
+byte checks. It obtains the normalizer result locally whenever the sandbox can spawn it; the bounded
+root evidence exception still requires passed exit semantics, seven inherited/zero resolved/zero
+unexpected, exact diagnostics, timestamp/provenance, and reviewer inspection. It creates only
+`P1.F.FREEZE` and `P1.F.PHASE_EXIT`, self-reviews, and returns explicit `ACCEPT` or `REJECT` before
+`HOLD`.
 
 `ACCEPT` requires P0/P1/P2 `0/0/0` and permits only exact-two-path broker integration after root
 `mark_reviewed`. A separate Phase 2 JIT router may be authored only after that integration is pushed

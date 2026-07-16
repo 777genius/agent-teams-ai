@@ -3,10 +3,11 @@
 ## Status and authority
 
 - Phase/current node: `phase-01` / `P1.F`
-- Router revision: `phase-01-p1-f-freeze-router-r2`
-- Lane packet revision: `phase-01-p1-f-freeze-r2`
-- Router `packetBaseSha`: `20706bd067ce5ccbf13697700411904faa2a00c8`
-- Router-base role: clean, remote-equal canonical authority
+- Router revision: `phase-01-p1-f-environment-router-r3`
+- Lane packet revision: `phase-01-p1-f-freeze-r3`
+- Router `packetBaseSha`: `69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5`
+- Router-base role: clean, remote-equal, accepted r2 integration authority
+- Accepted true-merge SHA: `20706bd067ce5ccbf13697700411904faa2a00c8`
 - Accepted P1.I integration SHA: `134f64f0c5c7bbbab0552eddf08df1508118f4bb`
 - Canonical merge second parent: `6bf43f140878f8b79f7ee17349bd21b177df901d`
 - P1.F worker profile: `gpt-5.6-sol`, `xhigh`, `serviceTier: "default"`; Fast is prohibited
@@ -26,6 +27,13 @@ Immutable r1 patch `2f7338a1e7b41955d15106f5fb3994b17db6749158bde8134a0a8e23d208
 `REJECT`ed with exactly one P1 finding for using the second-parent diff as the five-output P1.I proof.
 This r2 packet preserves all other useful r1 contract content and corrects only that proof.
 
+The r2 patch `1b9d824436f076f751df91fe2d8abedb88995c5fe8a02f3fc0194921d669d5c1` received independent
+`ACCEPT` with P0/P1/P2 `0/0/0`, then integration attempt `p1-f-router-r2-accepted-20260716` integrated
+and pushed exactly the seven router paths as `69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5`. Three clean P1.F
+attempts wrote no outputs and ended `HOLD`: the network-disabled sandbox could not perform the
+required remote query, and its child-process boundary returned `EPERM` for the normalizer. This r3
+packet changes only those two evidence routes; P1.F acceptance remains equally strict.
+
 This router creates one bounded Phase 1 exit milestone. This docs job launches, reviews, integrates,
 commits, and pushes nothing. `controller-v17` cannot launch, admit, integrate, restart, replace itself,
 or create a successor.
@@ -39,10 +47,14 @@ Phase 1 paths and writes exactly two evidence records:
 1. `.codex-handoff/phase-01-p1-f.json`
 2. `docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md`
 
-It verifies authority, remote equality, ancestry, ordered two-parent/current-base merge shape, P1.I
-byte preservation, the exact evidence and gate registries, all declared current checks, rollback,
-scans, and self-review. It records evidence IDs `P1.F.FREEZE` and `P1.F.PHASE_EXIT`, returns explicit
-`ACCEPT` or `REJECT` with P0/P1/P2 counts, and ends `HOLD`.
+It inspects a fresh immutable root/broker remote attestation and MUST NOT run `git ls-remote` from the
+restricted worker sandbox. It independently verifies all sandbox-compatible local authority,
+ancestry, ordered two-parent/current-base merge shape, P1.I byte preservation, evidence and gate
+registries, declared current checks, rollback, scans, and self-review. Only when the sandbox cannot
+spawn the exact normalizer command may it use fresh immutable root-attested normalizer evidence with
+the exact command, exit semantics, seven inherited diagnostics, zero resolved/unexpected diagnostics,
+timestamp, authority, and provenance. It records evidence IDs `P1.F.FREEZE` and `P1.F.PHASE_EXIT`,
+returns explicit `ACCEPT` or `REJECT` with P0/P1/P2 counts, and ends `HOLD`.
 
 `ACCEPT` with P0/P1/P2 `0/0/0` permits root mechanical validation and `mark_reviewed`, then exact-two-
 path broker integration/push. `REJECT` permits no integration and only separately admitted remediation
@@ -51,25 +63,54 @@ only after accepted P1.F integration is pushed and attested. Phase 2 work remain
 
 ## Authority transitions
 
-`20706bd...` is immutable authoring provenance, not the later P1.F worker `HEAD`. After router
-acceptance and integration, root resolves the exact broker-returned pushed commit once as
-`postRouterIntegrationAuthoritySha`. Root proves a clean worktree and immutably attests that it is the
-sole result of:
+`69c4219b...` is immutable r3 authoring provenance, while `20706bd...` remains the immutable accepted
+true merge; neither is the later P1.F worker `HEAD`. After r3 router acceptance and integration, root
+resolves the exact broker-returned pushed commit once as `postRouterIntegrationAuthoritySha`. Root
+proves a clean worktree and immutably attests that it is the sole result of:
 
 ```bash
 git ls-remote origin refs/heads/refactor/hosted-web-feature-boundaries
 ```
 
-That exact pushed SHA binds worker `HEAD`, admission `expectedSourceCommit`, and every P1.F handoff
-authority field. It must descend from `20706bd...`, and the diff between them must contain exactly the
-seven router paths. A moving branch, upstream-tracking state, ambiguous result, or stale attestation is
-not authority and ends `HOLD` without launch.
+The broker captures the command, exact one-ref stdout, exit `0`, remote/ref, observed SHA, timestamp,
+root actor/provenance, clean local `HEAD`, and a content SHA-256 as one immutable root/broker remote
+attestation after r3 integration and push. Its observed remote SHA, local `HEAD`, broker-returned
+commit, and `postRouterIntegrationAuthoritySha` must be identical. It is stale after any later push or
+authority/worktree change and then must be regenerated before admission.
 
-The P1.F worker independently rechecks this bounded remote and ancestry proof. It also proves the
-exact five-path P1.I integration range specified above, that `20706bd...` has exactly the ordered
+That exact pushed SHA binds worker `HEAD`, admission `expectedSourceCommit`, and every P1.F handoff
+authority field. It must descend from `69c4219b...`; the diff between them must contain exactly the
+seven router paths. The worker inspects the complete immutable attestation and independently proves
+local `HEAD`, ancestry, cleanliness, and exact-seven scope. A moving branch, upstream-tracking state,
+ambiguous result, missing capture field, hash mismatch, or stale attestation is not authority and ends
+`HOLD` without launch. The restricted worker has no network exception: it MUST NOT run `git ls-remote`
+from the restricted worker sandbox.
+
+The P1.F worker independently rechecks every sandbox-compatible local part of this authority and
+ancestry proof. It also proves the exact five-path P1.I integration range specified above, that
+`20706bd...` has exactly the ordered
 parents above, that `20706bd067ce5ccbf13697700411904faa2a00c8^1` equals the P1.I integration commit,
 and that the exact five output bytes are identical at both commits. Its second-parent-to-merge diff is
 accumulated current-base history and must never be used as the exact P1.I proof.
+
+Root also runs the exact command below at the pushed worker authority and broker-captures its immutable
+structured JSON, stderr/stdout hashes, normalizer exit code, timestamp, clean `HEAD`, and actor/tool
+provenance before admission:
+
+```bash
+node scripts/hosted-web/phase-0/final-gate/normalize-typescript-diagnostics.mjs --mode milestone
+```
+
+The broker capture must classify the normalizer process as `exited` with exit `0`; its structured
+report must say `passed: true`, compiler `rawExitCode: 2`, observed and normalized inherited counts
+`7`, resolved inherited and effective/unexpected counts `0`, no signal, runner error, unexpected
+diagnostic, or unparsed output, and the exact seven inherited diagnostics declared in the execution
+index. The worker first attempts the same exact command locally. If it can spawn, only that fresh local
+result is gate evidence. If and only if the sandbox cannot spawn that exact command, the worker records
+the spawn failure and may use the complete root-attested normalizer record after independently
+inspecting its authority, command, timestamps, provenance, capture hash, exit semantics, structured
+counts, and all seven diagnostics. This is not a bypass or generic root substitution; every other
+sandbox-compatible check remains a mandatory independent worker execution.
 
 ## DAG and capacity
 
@@ -80,10 +121,13 @@ P1.I ACCEPT 0/0/0 -> exact five proven by
                                        6bf43f140878f8b79f7ee17349bd21b177df901d]
      -> first parent equality + exact five byte preservation
      -> second-parent diff classified as accumulated current-base history, never exact P1.I proof
-    -> exact seven-path P1.F router independent review
-      -> broker integrate/push -> root pushed-authority attestation
+    -> accepted r2 router integrated/pushed as 69c4219b...
+    -> exact seven-path r3 environment router independent review
+      -> broker integrate/push -> fresh root/broker remote attestation
+      -> fresh root-attested normalizer capture
         -> one fresh independent P1.F worker
           -> 74 read-only inputs + two output records
+          -> inspect attestations + independent sandbox-compatible local proofs
           -> authority/merge/P1.I-byte/evidence/gate proof
           -> 60 tests + 3 ratchet + typecheck 7/0/0 + lint + exact-74 format
           -> rollback + JSON/hash/link/diff/classified scans + self-review
@@ -119,19 +163,23 @@ P1.I remediation, generated-output, or repository-temporary-file exception exist
 
 Root records one immutable snapshot proving:
 
-1. exact router acceptance, broker integration, push, and seven-path scope;
-2. exact `postRouterIntegrationAuthoritySha`, local `HEAD`, clean worktree, and remote equality;
-3. `20706bd...` ancestry and exact seven-path router delta;
+1. exact r3 router acceptance, broker integration, push, and seven-path scope;
+2. exact `postRouterIntegrationAuthoritySha`, local `HEAD`, clean worktree, and a fresh immutable
+   root/broker remote attestation with exact-one-ref exit-0 equality;
+3. `69c4219b...` ancestry and exact seven-path r3 router delta, plus immutable `20706bd...` true-merge
+   provenance;
 4. historical P1.I lane and exact five outputs byte-preserved;
 5. the exact 74 read-only manifest paths present and both P1.F outputs absent;
 6. no P1.F, remediation, Phase 2, unrelated worker, or successor controller active;
 7. exact worker independence from every router/P1.I actor;
 8. broker-materialized offline dependencies with install/fetch/update disabled; and
-9. only `gpt-5.6-sol`, `xhigh`, `serviceTier: "default"`, with Fast disabled.
+9. only `gpt-5.6-sol`, `xhigh`, `serviceTier: "default"`, with Fast disabled; and
+10. a fresh immutable root-attested normalizer capture at the same authority, available only for a
+    reviewer-observed sandbox spawn failure and otherwise ineligible as gate evidence.
 
 The admission is one `codex_goal_project_refill_worker` with `workerRole: reviewer`,
 `reviewKind: review`, node `P1.F`, lane `p1-f-freeze`, packet revision
-`phase-01-p1-f-freeze-r2`, and every authority binding set to
+`phase-01-p1-f-freeze-r3`, and every authority binding set to
 `postRouterIntegrationAuthoritySha`. There is no alternate model/tier, retry, refill, fallback,
 concurrent reviewer, worker-spawned reviewer, or moving-source binding.
 
@@ -172,7 +220,9 @@ results are:
 
 - Phase 1/team-lifecycle Vitest: 13/13 files and 60/60 tests;
 - focused ratchet Vitest: 1/1 file and 3/3 tests;
-- native TypeScript: 7 inherited/0 owned/0 unexpected exact diagnostics;
+- native TypeScript: local exact-command result, or root-attested normalizer evidence only after an
+  observed sandbox spawn failure; either route must prove 7 inherited/0 resolved/0 unexpected exact
+  diagnostics and all declared exit semantics;
 - full `pnpm lint`: exit `0`, zero errors;
 - pinned Prettier over exact 74 manifest paths: exit `0`, 74 matches; and
 - separate pinned Prettier over exact two P1.F outputs: exit `0`, two matches.
@@ -189,6 +239,11 @@ The worker parses and schema-validates every JSON in the 74 inputs plus two outp
 declared hashes, resolves every repository-relative Markdown link, validates controller/lane and
 historical P1.I packet hashes, and proves exact-two diff/scope with no staged, tracked, product/test, or
 P1.I change.
+
+It also validates and records the immutable attestation schemas and hashes. Remote evidence must come
+only from the fresh root/broker remote attestation. Normalizer evidence must identify either the fresh
+local execution or, only after the recorded sandbox spawn failure, the fresh root-attested normalizer
+capture. Neither route relaxes a count, exit, diagnostic, freshness, provenance, or inspection rule.
 
 It scans the exact 76-path candidate set for secret/credential terms and values, auth/provider payloads,
 private user/home/real-project/task-temporary paths, raw command/runtime bodies, binary/MIME/NUL/symlink
@@ -215,17 +270,19 @@ On `ACCEPT`, root may mechanically validate and call `mark_reviewed`; only then 
 integrate and push the exact two outputs. On `REJECT`, no lifecycle acceptance or integration occurs.
 Only separate same-two-path remediation against immutable findings is legal.
 
-After accepted integration/push and exact clean remote-equality attestation, root may commission a
+Phase 2 remains blocked until P1.F `ACCEPT`. That acceptance is necessary but not sufficient: only
+after accepted integration/push and exact clean remote-equality attestation may root commission a
 separate Phase 2 JIT docs router. Phase 2 product workers remain blocked, and P1.F grants no authority
 to author, review, integrate, or launch that later route itself.
 
 ## Stop policy and non-goals
 
 Stop and end `HOLD` on authority/profile/independence drift, an extra/missing path/parent/evidence ID,
-remote or merge mismatch, P1.I byte drift, gate/check/typecheck/format failure, rollback/current-base
-failure, JSON/hash/link/diff/scope mismatch, unsafe/unclassified scan match, binary/symlink/NUL output,
-false record, incomplete self-review, integration before `ACCEPT` and `mark_reviewed`, or unsupported
-successor claim.
+stale/incomplete/mismatched attestation, remote or merge mismatch, unauthorized sandbox remote query,
+normalizer root substitution without a recorded sandbox spawn failure, P1.I byte drift,
+gate/check/typecheck/format failure, rollback/current-base failure, JSON/hash/link/diff/scope mismatch,
+unsafe/unclassified scan match, binary/symlink/NUL output, false record, incomplete self-review,
+integration before `ACCEPT` and `mark_reviewed`, or unsupported successor claim.
 
 No current action authorizes P1.I repetition, product/test/runtime edits, real-project access,
 dependency install/fetch/update, registry writes, app/server/team/provider flows, stage, commit, merge,
@@ -234,9 +291,10 @@ router authoring, or Phase 2 work.
 
 ## Exact docs-router checks
 
-Run from the repository root with `PATH=/usr/local/bin:/usr/bin:/bin:$PATH`. This docs job uses no Git
-command. The semantic validator proves exact routing, counts, ownership, profile, current frozen P1.I
-bytes, historical-packet preservation, packet hashes, JSON, and local Markdown links:
+Run from the repository root with `PATH=/usr/local/bin:/usr/bin:/bin:$PATH`. The semantic validator
+uses no Git command and proves exact routing, counts, ownership, profile, current frozen P1.I bytes,
+historical-packet preservation, packet hashes, JSON, and local Markdown links. The separately declared
+admission checks use only bounded read-only Git observations for base and seven-path scope:
 
 ```bash
 node <<'NODE'
@@ -245,12 +303,14 @@ const crypto = require('node:crypto')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const base = '20706bd067ce5ccbf13697700411904faa2a00c8'
+const base = '69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5'
+const acceptedMerge = '20706bd067ce5ccbf13697700411904faa2a00c8'
 const p1iIntegration = '134f64f0c5c7bbbab0552eddf08df1508118f4bb'
 const currentBase = '6bf43f140878f8b79f7ee17349bd21b177df901d'
 const rejectedR1Patch = '2f7338a1e7b41955d15106f5fb3994b17db6749158bde8134a0a8e23d2081615'
-const revision = 'phase-01-p1-f-freeze-router-r2'
-const laneRevision = 'phase-01-p1-f-freeze-r2'
+const acceptedR2Patch = '1b9d824436f076f751df91fe2d8abedb88995c5fe8a02f3fc0194921d669d5c1'
+const revision = 'phase-01-p1-f-environment-router-r3'
+const laneRevision = 'phase-01-p1-f-freeze-r3'
 const manifestHash = '0e8e2b82125eb3b8e559f9fa439e8942e0eea89d75da4cccc35d75099e868223'
 const historicalP1IHash = '3f81d6e65f9848b6b3db593dda6eb87e5eeb7276af9e76d2fe79ba3fc6f094fe'
 const outputs = [
@@ -318,12 +378,13 @@ assert(exact(index.currentExecutableNodes, ['P1.F']))
 assert.equal(index.currentRouterRevision, revision)
 assert.equal(index.currentRouterTerminalState, 'HOLD')
 assert.equal(index.canonicalAuthority.packetBaseSha, base)
+assert.equal(index.canonicalAuthority.acceptedTrueMergeSha, acceptedMerge)
 assert.equal(index.acceptedP1I.integrationSha, p1iIntegration)
 assert.equal(index.acceptedP1I.integrationRange, `${p1iIntegration}^..${p1iIntegration}`)
 assert.equal(index.acceptedP1I.exactOutputPathProof, 'integration-range')
 assert.equal(index.acceptedP1I.disposition, 'ACCEPT')
 assert(exact(index.acceptedP1I.findingCounts, { P0: 0, P1: 0, P2: 0 }))
-assert.equal(index.canonicalAuthority.firstParentRef, `${base}^1`)
+assert.equal(index.canonicalAuthority.firstParentRef, `${acceptedMerge}^1`)
 assert.equal(index.canonicalAuthority.mergeParent1, p1iIntegration)
 assert.equal(index.canonicalAuthority.mergeParent2, currentBase)
 assert(index.canonicalAuthority.firstParentEqualsAcceptedP1IIntegrationSha)
@@ -343,6 +404,37 @@ assert.equal(
   index.historicalAuthority.rejectedP1FRouterR1.remediationScope,
   'merge-provenance-proof-only',
 )
+assert.equal(index.historicalAuthority.acceptedP1FRouterR2.patchSha256, acceptedR2Patch)
+assert.equal(index.historicalAuthority.acceptedP1FRouterR2.integrationSha, base)
+assert.equal(index.historicalAuthority.acceptedP1FRouterR2.disposition, 'ACCEPT')
+assert(exact(index.historicalAuthority.acceptedP1FRouterR2.findingCounts, { P0: 0, P1: 0, P2: 0 }))
+assert.equal(index.historicalAuthority.p1fEnvironmentHoldAttempts.attemptCount, 3)
+assert.equal(index.historicalAuthority.p1fEnvironmentHoldAttempts.outputPathCount, 0)
+assert.equal(index.historicalAuthority.p1fEnvironmentHoldAttempts.terminalState, 'HOLD')
+
+const evidenceContract = index.p1fReviewerEvidenceContract
+assert.equal(evidenceContract.remote.source, 'root/broker remote attestation')
+assert.equal(
+  evidenceContract.remote.workerRule,
+  'MUST NOT run `git ls-remote` from the restricted worker sandbox',
+)
+assert(!evidenceContract.remote.workerNetworkAccessAuthorized)
+assert(evidenceContract.remote.localAuthorityAncestryAndScopeChecksRemainIndependent)
+assert.equal(evidenceContract.normalizer.source, 'root-attested normalizer')
+assert.equal(
+  evidenceContract.normalizer.command,
+  'node scripts/hosted-web/phase-0/final-gate/normalize-typescript-diagnostics.mjs --mode milestone',
+)
+assert(evidenceContract.normalizer.usableOnlyAfterRecordedSandboxSpawnFailure)
+assert.equal(evidenceContract.normalizer.normalizerExitCode, 0)
+assert.equal(evidenceContract.normalizer.compilerRawExitCode, 2)
+assert.equal(evidenceContract.normalizer.normalizedInheritedCount, 7)
+assert.equal(evidenceContract.normalizer.resolvedInheritedCount, 0)
+assert.equal(evidenceContract.normalizer.unexpectedDiagnosticCount, 0)
+assert(evidenceContract.sandboxCompatibleChecksIndependentlyExecuted)
+assert(!evidenceContract.genericRootSubstitutionAuthorized)
+assert(!evidenceContract.bypassAuthorized)
+assert(!evidenceContract.networkEnablementAuthorized)
 
 assert(exact(index.p1fWorkerProfile, {
   model: 'gpt-5.6-sol',
@@ -381,6 +473,11 @@ for (const entry of evidenceIndex.evidence) {
 }
 assert.equal(index.requiredGateIds.length, 14)
 assert.equal(new Set(index.requiredGateIds).size, 14)
+assert.equal(index.requiredExactResults.nativeTypeScript.normalizerExitCode, 0)
+assert.equal(index.requiredExactResults.nativeTypeScript.compilerRawExitCode, 2)
+assert.equal(index.requiredExactResults.nativeTypeScript.inherited, 7)
+assert.equal(index.requiredExactResults.nativeTypeScript.resolved, 0)
+assert.equal(index.requiredExactResults.nativeTypeScript.unexpected, 0)
 assert.equal(index.rollbackPayload.paths.length, 54)
 assert.equal(new Set(index.rollbackPayload.paths).size, 54)
 assert(index.rollbackPayload.paths.every((file) => manifest.includes(file)))
@@ -393,9 +490,16 @@ assert(!index.orchestrationAuthority.successorControllerAuthorized)
 assert.equal(index.p1fAdmission.workerCount, 1)
 assert.equal(index.p1fAdmission.workerRole, 'reviewer')
 assert.equal(index.p1fAdmission.repositoryWriterAuthority, 'exact-two-p1f-output-paths-only')
+assert(index.p1fAdmission.normalizerAttestationUseRequiresRecordedSandboxSpawnFailure)
+assert(!index.p1fExecutionPolicy.workerGitLsRemote)
+assert(index.p1fExecutionPolicy.sandboxCompatibleLocalChecksIndependent)
+assert(!index.p1fExecutionPolicy.genericRootSubstitution)
+assert(!index.p1fExecutionPolicy.checkBypass)
 assert.equal(index.authorization.acceptIntegrationPathCount, 2)
 assert.equal(index.authorization.rejectFollowup, 'bounded-same-two-path-remediation-only')
 assert(!index.authorization.phase2WorkerAuthorized)
+assert(index.authorization.phase2BlockedUntilP1FAccept)
+assert(!index.authorization.p1fAcceptAloneSufficientForPhase2Router)
 assert(!index.authorization.p1iRepeatAuthorized)
 
 assert.equal(
@@ -416,7 +520,7 @@ for (const routerPath of routerPaths.filter((file) => file.endsWith('.md'))) {
     assert(fs.existsSync(path.resolve(path.dirname(routerPath), target)), `broken link ${target}`)
   }
 }
-console.log('phase-01-p1-f-freeze-router-r2: semantic-ok')
+console.log('phase-01-p1-f-environment-router-r3: semantic-ok')
 NODE
 ```
 
@@ -472,10 +576,10 @@ auth/provider payload, private or real-project path, raw sensitive command/runti
 unclassified match fails.
 
 Exact scope is frozen by `routerExclusiveOwnership`, the seven explicit patch targets, the validator,
-historical P1.I and five-output hash checks, and final self-review. This router deliberately performs no
-raw Git observation. Do not run source ESLint, Vitest, typecheck, full lint, app/runtime flow, lifecycle
-action, or product writer for the docs transition. After all declared checks and a complete reread of
-the seven final files, return exactly:
+historical P1.I and five-output hash checks, bounded admission Git checks, and final self-review. Do not
+run source ESLint, Vitest, typecheck, full lint, app/runtime flow, lifecycle action, or product writer
+for the docs transition. After all declared checks and a complete reread of the seven final files,
+return exactly:
 
 ```text
 P1_F_ROUTER_RESULT {"status":"VERIFIED","changedPathCount":7,"authorizedNode":"P1.F","nextAction":"independent-router-review","terminalState":"HOLD"}

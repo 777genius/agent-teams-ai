@@ -3,12 +3,13 @@
   "currentExecutablePhase": "phase-01",
   "currentExecutableSubphase": "P1.F",
   "currentExecutableNodes": ["P1.F"],
-  "currentRouterRevision": "phase-01-p1-f-freeze-router-r2",
+  "currentRouterRevision": "phase-01-p1-f-environment-router-r3",
   "currentRouterTerminalState": "HOLD",
   "canonicalAuthority": {
-    "packetBaseSha": "20706bd067ce5ccbf13697700411904faa2a00c8",
-    "packetBaseRole": "clean-remote-equal-canonical-p1f-router-authoring-base",
+    "packetBaseSha": "69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5",
+    "packetBaseRole": "clean-remote-equal-accepted-r2-integration-p1f-r3-authoring-base",
     "acceptedTrueMerge": true,
+    "acceptedTrueMergeSha": "20706bd067ce5ccbf13697700411904faa2a00c8",
     "pullRequest": 252,
     "mergeParentCount": 2,
     "firstParentRef": "20706bd067ce5ccbf13697700411904faa2a00c8^1",
@@ -26,7 +27,25 @@
     "remoteRef": "refs/heads/refactor/hosted-web-feature-boundaries",
     "remoteEqualityCommand": "git ls-remote origin refs/heads/refactor/hosted-web-feature-boundaries",
     "rootImmutableAuthorityAttestationRequired": true,
-    "workerIndependentRemoteAndAncestryRecheckRequired": true,
+    "remoteAttestationAuthority": "root/broker remote attestation",
+    "remoteAttestationMustBeFreshAndImmutable": true,
+    "remoteAttestationRequiredFields": [
+      "command",
+      "exitCode",
+      "exactOneRefOutput",
+      "remote",
+      "ref",
+      "observedSha",
+      "localHeadSha",
+      "brokerReturnedSha",
+      "observedAt",
+      "rootActorProvenance",
+      "brokerCaptureProvenance",
+      "contentSha256"
+    ],
+    "workerIndependentRemoteQueryRequired": false,
+    "workerIndependentLocalAuthorityAndAncestryRecheckRequired": true,
+    "restrictedWorkerRemoteRule": "MUST NOT run `git ls-remote` from the restricted worker sandbox",
     "cleanPostIntegrationWorktreeRequired": true,
     "remoteEqualityToPostIntegrationAuthorityRequired": true,
     "upstreamTrackingEvidenceAuthorized": false,
@@ -65,7 +84,7 @@
     "controllerRestartAuthorized": false,
     "controllerReplacementAuthorized": false,
     "successorControllerAuthorized": false,
-    "p1fWorkerStartAuthority": "root-after-router-independent-accept-broker-integration-push-and-authority-attestation",
+    "p1fWorkerStartAuthority": "root-after-r3-router-independent-accept-broker-integration-push-and-bounded-attestations",
     "acceptedResultMechanicalVerifier": "root",
     "acceptedResultLifecycleAction": "mark_reviewed",
     "acceptedResultIntegrator": "broker"
@@ -76,6 +95,56 @@
     "serviceTier": "default",
     "fastAuthorized": false
   },
+  "p1fReviewerEvidenceContract": {
+    "remote": {
+      "source": "root/broker remote attestation",
+      "freshImmutableAdmissionInputRequired": true,
+      "authoritativeForRemoteEquality": true,
+      "workerInspectionRequired": true,
+      "workerNetworkAccessAuthorized": false,
+      "workerRule": "MUST NOT run `git ls-remote` from the restricted worker sandbox",
+      "localAuthorityAncestryAndScopeChecksRemainIndependent": true
+    },
+    "normalizer": {
+      "source": "root-attested normalizer",
+      "command": "node scripts/hosted-web/phase-0/final-gate/normalize-typescript-diagnostics.mjs --mode milestone",
+      "freshImmutableAdmissionInputRequired": true,
+      "usableOnlyAfterRecordedSandboxSpawnFailure": true,
+      "workerLocalExecutionPreferredAndRequiredWhenSpawnable": true,
+      "workerInspectionRequired": true,
+      "requiredCaptureFields": [
+        "command",
+        "startedAt",
+        "completedAt",
+        "authoritySha",
+        "localHeadSha",
+        "cleanWorktree",
+        "normalizerProcessDisposition",
+        "normalizerExitCode",
+        "stdoutSha256",
+        "stderrSha256",
+        "reportSha256",
+        "rootActorProvenance",
+        "brokerCaptureProvenance"
+      ],
+      "normalizerExitCode": 0,
+      "compilerRawExitCode": 2,
+      "normalizerProcessDisposition": "exited",
+      "passed": true,
+      "observedDiagnosticCount": 7,
+      "normalizedInheritedCount": 7,
+      "resolvedInheritedCount": 0,
+      "effectiveDiagnosticCount": 0,
+      "unexpectedDiagnosticCount": 0,
+      "unparsedOutputLineCount": 0,
+      "timestampAndProvenanceRequired": true,
+      "contentHashesRequired": true
+    },
+    "genericRootSubstitutionAuthorized": false,
+    "sandboxCompatibleChecksIndependentlyExecuted": true,
+    "bypassAuthorized": false,
+    "networkEnablementAuthorized": false
+  },
   "currentRoute": {
     "mode": "single-serial-independent-p1f-milestone-freeze",
     "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
@@ -85,7 +154,7 @@
         "node": "P1.F",
         "laneId": "p1-f-freeze",
         "path": "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md",
-        "packetRevision": "phase-01-p1-f-freeze-r2",
+        "packetRevision": "phase-01-p1-f-freeze-r3",
         "evidenceIds": ["P1.F.FREEZE", "P1.F.PHASE_EXIT"]
       }
     ],
@@ -100,6 +169,8 @@
         "postRouterIntegrationAuthorityAttestationImmutable": true,
         "postRouterIntegrationWorktreeClean": true,
         "postRouterIntegrationAuthorityRemoteEqual": true,
+        "rootBrokerRemoteAttestationFreshImmutable": true,
+        "rootAttestedNormalizerFreshImmutable": true,
         "routerBaseAncestor": true,
         "routerDeltaPathCountExact7": true,
         "acceptedP1IOutputsBytePreserved": true,
@@ -134,6 +205,7 @@
   },
   "phase1FreezeManifest": {
     "authoritySha": "20706bd067ce5ccbf13697700411904faa2a00c8",
+    "authorityRole": "accepted-true-merge-frozen-phase1-content",
     "sourceP1ICanonicalInputPathCount": 69,
     "acceptedP1IOutputPathCount": 5,
     "pathCount": 74,
@@ -274,8 +346,13 @@
     },
     "nativeTypeScript": {
       "command": "node scripts/hosted-web/phase-0/final-gate/normalize-typescript-diagnostics.mjs --mode milestone",
+      "normalizerExitCode": 0,
+      "compilerRawExitCode": 2,
+      "normalizerProcessDisposition": "exited",
+      "passed": true,
       "inherited": 7,
       "owned": 0,
+      "resolved": 0,
       "unexpected": 0
     },
     "fullLint": {
@@ -420,9 +497,16 @@
     "expectedSourceCommitBinding": "postRouterIntegrationAuthoritySha",
     "worktreeHeadShaBinding": "postRouterIntegrationAuthoritySha",
     "handoffAuthorityBindingSource": "postRouterIntegrationAuthoritySha",
-    "packetRevision": "phase-01-p1-f-freeze-r2",
+    "packetRevision": "phase-01-p1-f-freeze-r3",
     "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
     "lanePacket": "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md",
+    "authoritativeEvidenceInputs": [
+      "fresh-immutable-root-broker-remote-attestation",
+      "fresh-immutable-root-attested-normalizer"
+    ],
+    "remoteAttestationReviewerInspectionRequired": true,
+    "normalizerAttestationReviewerInspectionRequiredWhenUsed": true,
+    "normalizerAttestationUseRequiresRecordedSandboxSpawnFailure": true,
     "repositoryWriterAuthority": "exact-two-p1f-output-paths-only",
     "workerDependencyInstallAuthorized": false,
     "selfRetryOrRefillAuthority": false,
@@ -444,7 +528,13 @@
   },
   "p1fExecutionPolicy": {
     "workspace": "isolated-independent-milestone-review-worktree-only",
-    "network": "exact-remote-equality-query-only",
+    "network": "disabled-root-broker-remote-attestation-only",
+    "workerGitLsRemote": false,
+    "rootBrokerRemoteAttestationInspection": true,
+    "rootAttestedNormalizerConditionalInspection": true,
+    "sandboxCompatibleLocalChecksIndependent": true,
+    "genericRootSubstitution": false,
+    "checkBypass": false,
     "githubApiAccess": false,
     "fetch": false,
     "dependencyInstall": false,
@@ -486,6 +576,8 @@
     "p1iOutputModificationAuthorized": false,
     "productTestRuntimeEditAuthorized": false,
     "phase2JitRouterAuthoredByP1F": false,
+    "phase2BlockedUntilP1FAccept": true,
+    "p1fAcceptAloneSufficientForPhase2Router": false,
     "phase2WorkerAuthorized": false,
     "phase2ProductWorkAuthorized": false,
     "controllerReplacementAuthorized": false,
@@ -518,6 +610,36 @@
       "integrationAuthorized": false,
       "remediationScope": "merge-provenance-proof-only"
     },
+    "acceptedP1FRouterR2": {
+      "revision": "phase-01-p1-f-freeze-router-r2",
+      "patchSha256": "1b9d824436f076f751df91fe2d8abedb88995c5fe8a02f3fc0194921d669d5c1",
+      "reviewerJob": "agent-teams-hosted-web-refactor-p1-f-router-review-v17-r2",
+      "disposition": "ACCEPT",
+      "findingCounts": {
+        "P0": 0,
+        "P1": 0,
+        "P2": 0
+      },
+      "integrationAttempt": "p1-f-router-r2-accepted-20260716",
+      "integrationSha": "69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5",
+      "pushed": true,
+      "immutable": true,
+      "currentExecutionAuthority": false
+    },
+    "p1fEnvironmentHoldAttempts": {
+      "job": "agent-teams-hosted-web-refactor-p1-f-freeze-v17-r1",
+      "attemptCount": 3,
+      "authoritySha": "69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5",
+      "initialAndFinalWorktreesClean": true,
+      "outputPathCount": 0,
+      "syntheticReviewDisposition": false,
+      "terminalState": "HOLD",
+      "environmentContradictions": [
+        "network-disabled-worker-required-to-run-remote-query",
+        "sandbox-normalizer-child-spawn-eperm"
+      ],
+      "immutable": true
+    },
     "previousRouterRevision": {
       "revision": "phase-01-p1-i-format-remediation-router-r1",
       "state": "superseded-execution-route-retained-as-provenance",
@@ -544,11 +666,11 @@
     "algorithm": "sha256",
     "controllerPacket": {
       "path": "docs/hosted-web-phases/phase-01/controller-packet.md",
-      "sha256": "096cad7f0aa876ec6d16bb7ddf22b3db93c4ce0247a0413b3ab66b1fe5cf2b52"
+      "sha256": "a39fe79dfc483018b6f798d781dadb70139cd27089eb72524b351eaf898118bd"
     },
     "lanePacket": {
       "path": "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md",
-      "sha256": "2a3e1edd0113307d0b4acba9f5bd81c604ae3963733c31b1e28b9185a1f9ec6e"
+      "sha256": "9a8d4e6572a58ca557b0e2d630f4af9f556732daf82c51be27f2c212f0afe748"
     }
   },
   "authorityTiers": {

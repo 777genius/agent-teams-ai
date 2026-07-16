@@ -5,9 +5,10 @@
 - Project: `agent-teams-hosted-web-refactor`
 - Phase/node: `phase-01` / `P1.F`
 - Lane ID: `p1-f-freeze`
-- Lane packet revision: `phase-01-p1-f-freeze-r2`
-- Router revision: `phase-01-p1-f-freeze-router-r2`
-- Router authoring base: `20706bd067ce5ccbf13697700411904faa2a00c8`
+- Lane packet revision: `phase-01-p1-f-freeze-r3`
+- Router revision: `phase-01-p1-f-environment-router-r3`
+- Router authoring base: `69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5`
+- Accepted true-merge SHA: `20706bd067ce5ccbf13697700411904faa2a00c8`
 - Accepted P1.I integration commit: `134f64f0c5c7bbbab0552eddf08df1508118f4bb`
 - Canonical merge second parent: `6bf43f140878f8b79f7ee17349bd21b177df901d`
 - Evidence IDs: `P1.F.FREEZE` and `P1.F.PHASE_EXIT`
@@ -30,14 +31,21 @@ Immutable r1 patch `2f7338a1e7b41955d15106f5fb3994b17db6749158bde8134a0a8e23d208
 `REJECT`ed with exactly one P1 finding for using the second-parent diff as the five-output P1.I proof.
 This r2 lane preserves every other useful r1 requirement and corrects only that proof.
 
+The r2 patch `1b9d824436f076f751df91fe2d8abedb88995c5fe8a02f3fc0194921d669d5c1` received independent
+`ACCEPT` with P0/P1/P2 `0/0/0`, and integration attempt `p1-f-router-r2-accepted-20260716` integrated
+and pushed its exact seven paths as `69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5`. Three later P1.F
+attempts started clean at that authority, wrote neither output, and ended `HOLD`: the network-disabled
+worker could not query the remote and its sandbox could not spawn the normalizer child (`EPERM`). This
+r3 lane changes only those environment-incompatible evidence routes. It does not relax a P1.F gate.
+
 This lane authorizes exactly one serial, fresh, independent milestone-freeze worker. It verifies the
 integrated Phase 1 result at the current router authority, writes only two freeze records, returns an
 explicit `ACCEPT` or `REJECT`, and ends `HOLD`. It does not repeat P1.I, change product/test/runtime
 source, launch a reviewer, integrate output, or start Phase 2.
 
-This router author starts nothing. The worker cannot start until the exact seven-path router is
+This router author starts nothing. A new worker cannot start until the exact seven-path r3 router is
 independently accepted, broker-integrated, pushed, and root binds the broker-returned pushed commit as
-`postRouterIntegrationAuthoritySha`.
+`postRouterIntegrationAuthoritySha` with both required immutable evidence inputs.
 
 ## Exact mandatory reads
 
@@ -80,18 +88,24 @@ The worker must be fresh and independent of:
 
 Root captures one immutable pre-start snapshot proving:
 
-1. this exact seven-path router is independently accepted, broker-integrated, and pushed;
+1. this exact seven-path r3 router is independently accepted, broker-integrated, and pushed;
 2. `postRouterIntegrationAuthoritySha` is the exact broker-returned pushed commit and equals local
    `HEAD`, admission `expectedSourceCommit`, and all handoff authority fields;
-3. the worktree is clean and the sole explicit remote ref equals that SHA;
-4. `20706bd...` is an ancestor of the pushed router authority and the diff from it is exactly the seven
-   router-owned paths;
+3. the worktree is clean and a fresh immutable root/broker remote attestation proves the sole explicit
+   remote ref equals that SHA with exact command, exit `0`, one-ref output, timestamp, root/broker
+   provenance, and content hash;
+4. `69c4219b...` is an ancestor of the pushed r3 router authority and the diff from it is exactly the
+   seven router-owned paths; `20706bd...` remains the accepted immutable true-merge provenance;
 5. historical `p1-i-integration.md` and the five accepted P1.I outputs remain byte-identical;
 6. both P1.F output paths are absent;
 7. no P1.F worker, remediation worker, Phase 2 worker/router, unrelated worker, or successor controller
    is active;
 8. dependencies are broker-materialized offline and worker install/fetch/update is disabled; and
-9. admission uses exactly the required default-only profile.
+9. admission uses exactly the required default-only profile; and
+10. root ran the exact normalizer command at the same clean pushed authority and the broker captured a
+    fresh immutable root-attested normalizer record containing command, timestamps, runner provenance,
+    normalizer exit `0`, compiler exit `2`, passing structured JSON, the exact seven inherited
+    diagnostics, zero resolved/unexpected diagnostics, no unparsed output, and capture hashes.
 
 Any mismatch ends `HOLD` without launch. Root uses this admission shape:
 
@@ -112,7 +126,7 @@ preStartAdmission.contract.format: 1
 preStartAdmission.contract.canonicalSha: <postRouterIntegrationAuthoritySha>
 preStartAdmission.contract.baseSha: <postRouterIntegrationAuthoritySha>
 preStartAdmission.contract.phaseStartSha: <postRouterIntegrationAuthoritySha>
-preStartAdmission.contract.packetRevision: phase-01-p1-f-freeze-r2
+preStartAdmission.contract.packetRevision: phase-01-p1-f-freeze-r3
 preStartAdmission.contract.controllerPacket: docs/hosted-web-phases/phase-01/controller-packet.md
 preStartAdmission.contract.lanePacket: docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md
 preStartAdmission.contract.phaseId: phase-01
@@ -122,7 +136,9 @@ preStartAdmission.contract.reviewKind: review
 ```
 
 No fallback model, alternate tier, Fast mode, concurrent worker, retry, refill, worker-spawned
-reviewer, moving source ref, or P1.I replay is authorized.
+reviewer, moving source ref, or P1.I replay is authorized. The normalizer record is ineligible unless
+the reviewer records that its sandbox could not spawn the exact command. Neither attestation grants
+network access, bypasses a gate, or permits generic root substitution for local review.
 
 ## Exact ownership
 
@@ -145,21 +161,37 @@ repository-temporary-output, compile-coherence, cleanup, P1.I, or third-path exc
 
 ## Canonical ancestry, remote, and merge proof
 
-The worker independently performs only the bounded read-only repository observations required here.
-No checkout, reset, rebase, fetch, stage, commit, merge, push, apply in the repository worktree, or
-repository-index mutation is authorized.
+The worker independently performs every bounded, read-only, sandbox-compatible repository observation
+required here. No checkout, reset, rebase, fetch, stage, commit, merge, push, apply in the repository
+worktree, repository-index mutation, or network enablement is authorized.
 
-Prove all of the following:
+Remote equality remains mandatory. Root runs exactly:
 
-1. `HEAD` equals `postRouterIntegrationAuthoritySha` and is an ancestor-descendant continuation of
-   `20706bd067ce5ccbf13697700411904faa2a00c8`.
-2. `git ls-remote origin refs/heads/refactor/hosted-web-feature-boundaries` returns exactly one ref and
-   its SHA equals `postRouterIntegrationAuthoritySha`; upstream-tracking state is not evidence.
+```bash
+git ls-remote origin refs/heads/refactor/hosted-web-feature-boundaries
+```
+
+The broker must capture after r3 integration/push the exact command, exit `0`, exact one-ref output,
+remote/ref, observed SHA, clean local `HEAD`, broker-returned commit, ISO-8601 timestamp, root actor and
+tool provenance, and content SHA-256. All SHA fields must equal
+`postRouterIntegrationAuthoritySha`. The record must postdate the push and becomes stale after any
+later remote, authority, or worktree change. This fresh immutable root/broker remote attestation is an
+authoritative reviewer input. The reviewer validates every field and capture hash. Upstream-tracking
+state, a moving branch, a copied summary, or an earlier attestation is not evidence.
+
+MUST NOT run `git ls-remote` from the restricted worker sandbox
+
+The reviewer independently proves all sandbox-compatible local facts:
+
+1. `HEAD` equals `postRouterIntegrationAuthoritySha` and descends from the r3 authoring base
+   `69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5`.
+2. The worktree is clean; local `HEAD`, admission `expectedSourceCommit`, all authority fields, and the
+   inspected remote-attestation SHA are identical.
 3. The exact path diff in
    `134f64f0c5c7bbbab0552eddf08df1508118f4bb^..134f64f0c5c7bbbab0552eddf08df1508118f4bb`
    is the five frozen P1.I outputs in writer order after deterministic path ordering.
-4. The router-base commit has exactly two parents in order: first parent
-   `134f64f0c5c7bbbab0552eddf08df1508118f4bb`, second parent
+4. Accepted true merge `20706bd067ce5ccbf13697700411904faa2a00c8` has exactly two parents in
+   order: first parent `134f64f0c5c7bbbab0552eddf08df1508118f4bb`, second parent
    `6bf43f140878f8b79f7ee17349bd21b177df901d`.
 5. `20706bd067ce5ccbf13697700411904faa2a00c8^1` equals
    `134f64f0c5c7bbbab0552eddf08df1508118f4bb`.
@@ -168,11 +200,13 @@ Prove all of the following:
 7. Each of those five paths at `20706bd...` is byte-identical to the same path at `134f64f...`.
 8. The second-parent-to-merge diff is accumulated current-base history. It is never used or reported
    as the exact five-output P1.I integration proof.
-9. The exact path diff from `20706bd...` to `postRouterIntegrationAuthoritySha` is the seven router
+9. The exact path diff from `69c4219b...` to `postRouterIntegrationAuthoritySha` is the seven router
    paths in `EXECUTION_INDEX.json.routerExclusiveOwnership`; no P1.I or product/test path changed.
 
-Any ambiguity, extra parent/path, missing ancestry, remote drift, or byte difference is a P0/P1
-finding and forces `REJECT`/`HOLD`.
+Any ambiguity, stale or malformed remote attestation, extra parent/path, missing ancestry, remote
+drift, or byte difference is a P0/P1 finding and forces `REJECT`/`HOLD`. The root/broker remote
+attestation replaces only the sandbox-incompatible network observation, never a local independent
+proof.
 
 ## Exact 74-path and P1.I byte proof
 
@@ -229,7 +263,8 @@ have mutated the frozen evidence index or superseded an existing evidence row.
 
 ## Required quality and gate reruns
 
-Rerun and capture exact command, exit code, duration, tool version, and final result:
+Rerun and capture exact command, exit code, duration, tool version, and final result for every
+sandbox-compatible command:
 
 ```bash
 pnpm exec vitest run test/features/team-lifecycle test/architecture/hosted-web/phase-1
@@ -243,14 +278,31 @@ Required exact results:
 
 - Phase 1 plus team-lifecycle Vitest: 13/13 files and 60/60 tests;
 - focused ratchet Vitest: 1/1 file and 3/3 tests;
-- native TypeScript: seven exact inherited diagnostics, zero owned/resolved drift, and zero unexpected;
+- native TypeScript: seven exact inherited diagnostics, zero resolved drift, and zero unexpected;
 - full lint: exit `0` with zero errors; and
 - pinned Prettier: exit `0` with exactly 74 matched paths.
 
-The seven inherited TypeScript diagnostics remain the exact file, code, line, column, and normalized
-message set in the checked-in baseline. Added, missing, moved, or changed diagnostics fail. After both
-P1.F outputs are final, run a separate exact-two-path Prettier check over them; it does not widen or
-replace the required exact-74 proof.
+The worker first runs the exact normalizer command locally. If it spawns, its local structured JSON is
+the only admissible typecheck result. The capture must classify the normalizer process as `exited` with
+exit `0`; the report must have `passed: true`, compiler `rawExitCode: 2`,
+`observedDiagnosticCount: 7`, `normalizedInheritedCount: 7`, `resolvedInheritedCount: 0`,
+`effectiveDiagnosticCount: 0`, empty unexpected/resolved/unparsed arrays, no signal or runner error,
+and the exact file, code, line, column, and normalized message set in the checked-in baseline.
+
+If and only if the restricted sandbox cannot spawn that exact command, the worker records the local
+command, attempted timestamp, process disposition, error code/message, and absence of a valid local
+report. It may then use the fresh immutable root-attested normalizer input captured at the identical
+worker authority. It independently inspects the exact command, root execution start/completion
+timestamps, root/broker actor and tool provenance, clean authority binding, stdout/stderr and record
+hashes, normalizer exit `0`, compiler exit `2`, all structured fields above, and all seven diagnostics.
+A failed root command, stale authority, incomplete provenance, hash mismatch, different command,
+changed diagnostic, unparsed output, or use without a local sandbox spawn failure fails the gate.
+
+This bounded exception is not a bypass, network enablement, or generic root substitution. The worker
+must independently execute the two Vitest commands, full lint, exact-74 and exact-two Prettier, every
+local Git/ancestry/diff/hash/link/scan proof, and every other sandbox-compatible check. After both P1.F
+outputs are final, run a separate exact-two-path Prettier check over them; it does not widen or replace
+the required exact-74 proof.
 
 Independently validate every one of the 14 gate IDs in `EXECUTION_INDEX.json.requiredGateIds`. A gate
 passes only from its current rerun or exact declared structural proof; a P1.I record alone is not a
@@ -294,6 +346,9 @@ the exact two outputs. Require 76 distinct paths. Perform and record:
 7. Classified scans over all 76 paths for secret/credential terms and values, auth/provider payloads,
    private user/home paths, real-project names, task-temporary paths, raw command/runtime bodies,
    binary content, and unresolved placeholders.
+8. Schema, content-hash, timestamp/freshness, authority-binding, and provenance validation of the
+   immutable root/broker remote attestation and root-attested normalizer record; the latter is used as
+   gate evidence only after a recorded local sandbox spawn failure.
 
 The exact scan families include:
 
@@ -313,14 +368,16 @@ project path, raw sensitive body, binary, unexplained placeholder, or unclassifi
 `docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md` is the human-reviewable P1.F freeze record.
 It contains:
 
-1. authority, remote, ancestry, exact-five P1.I integration range, ordered parents, first-parent
-   equality, accumulated current-base history classification, and exact-seven router diff proof;
+1. authority, inspected root/broker remote attestation, independently executed local ancestry,
+   exact-five P1.I integration range, ordered parents, first-parent equality, accumulated current-base
+   history classification, and exact-seven router diff proof;
 2. immutable P1.I independent acceptance/integration provenance and all five byte hashes;
 3. the exact 74-path manifest digest and 74 current content hashes;
 4. all 14 Phase 1 evidence IDs, both P1.I evidence IDs, lint-remediation provenance, and lifecycle
    validation;
 5. all 14 gate IDs with exact current proof;
-6. 60-test, three-ratchet-test, 7/0/0 typecheck, lint, exact-74 and exact-two Prettier results;
+6. 60-test, three-ratchet-test, 7/0/0 typecheck, exact normalizer evidence source plus any local spawn
+   failure, lint, exact-74 and exact-two Prettier results;
 7. exact-54 rollback and current-base proofs;
 8. JSON/hash/link/diff/scope/text and classified scan results;
 9. complete P0/P1/P2 findings with explicit `ACCEPT` or `REJECT` rationale;
@@ -334,15 +391,19 @@ It contains:
   `changedPaths` in writer order;
 - exact 74-path manifest count/digest, 74 content hashes, and five frozen P1.I output hashes;
 - evidence/lifecycle and 14-gate summaries;
-- every exact check, rollback, merge, JSON/hash/link/diff and scan result;
+- every exact check, the remote-attestation inspection, the conditional normalizer-attestation
+  inspection and evidence source when eligible, any local spawn failure, rollback, merge,
+  JSON/hash/link/diff and scan result;
 - complete self-review, unverified claims, blockers, and immutable findings;
 - no claim of broker integration, pushed P1.F evidence, Phase 2 authority, or successor launch; and
 - conditional next action plus terminal `HOLD`.
 
 Before returning, the worker rereads both complete outputs and all observed diffs. Self-review must
-explicitly confirm independence, exact authority, all 74 frozen bytes, all evidence/gates, all check
-counts, rollback/current-base proof, scan classifications, exact-two ownership, no P1.I/product/test
-change, no unsupported claim, and finding counts.
+explicitly confirm independence, exact authority, complete remote-attestation inspection, conditional
+normalizer-attestation inspection when eligible, the bounded normalizer rule, independent execution of
+every sandbox-compatible local check, all 74 frozen bytes, all evidence/gates, all check counts,
+rollback/current-base proof, scan classifications, exact-two ownership, no P1.I/product/test change,
+no unsupported claim, and finding counts.
 
 ## Explicit disposition and lifecycle boundary
 
@@ -363,18 +424,20 @@ authority. On `REJECT`, root may not mark reviewed and no integration or Phase 2
 Only a separately admitted remediation confined to the same two paths and immutable findings is
 permitted, followed by fresh independent verification.
 
-After accepted exact-two integration and a new exact pushed-authority/clean remote-equality
-attestation, root may separately commission a Phase 2 JIT docs router. That is not a Phase 2 worker
+Phase 2 remains blocked until P1.F `ACCEPT`. That acceptance is necessary but not sufficient: only
+after accepted exact-two integration and a new exact pushed-authority/clean remote-equality
+attestation may root separately commission a Phase 2 JIT docs router. That is not a Phase 2 worker
 launch and grants no product authority. Phase 2 remains blocked until its separate router is authored,
 independently accepted, integrated, pushed, and explicitly activated.
 
 ## Stop conditions and HOLD
 
-Stop and end `HOLD` on authority/profile/independence drift, extra/missing path or parent, remote
-mismatch, P1.I byte drift, evidence or lifecycle mismatch, any gate/test/typecheck/lint/format failure,
-rollback/current-base failure, JSON/hash/link/diff/scope mismatch, unsafe or unclassified scan match,
-binary/symlink/NUL content, false output field, incomplete self-review, early integration, or
-unsupported successor claim.
+Stop and end `HOLD` on authority/profile/independence drift, extra/missing path or parent,
+stale/incomplete/mismatched attestation, remote mismatch, any sandbox remote query, normalizer root
+substitution without a recorded sandbox spawn failure, P1.I byte drift, evidence or lifecycle mismatch,
+any gate/test/typecheck/lint/format failure, rollback/current-base failure,
+JSON/hash/link/diff/scope mismatch, unsafe or unclassified scan match, binary/symlink/NUL content,
+false output field, incomplete self-review, early integration, or unsupported successor claim.
 
 No current action authorizes P1.I repetition, product/test/runtime edits, real-project access,
 dependency install/fetch/update, registry writes, app/server/team/provider flows, stage, commit, merge,

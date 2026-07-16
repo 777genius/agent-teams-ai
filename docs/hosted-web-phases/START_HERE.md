@@ -1,7 +1,7 @@
 # Hosted-web execution: start here
 
-> Current route: `phase-01-p1-f-freeze-router-r2`, authored at clean remote-equal canonical
-> authority `20706bd067ce5ccbf13697700411904faa2a00c8`. The only conditionally executable node is
+> Current route: `phase-01-p1-f-environment-router-r3`, authored at clean remote-equal canonical
+> authority `69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5`. The only conditionally executable node is
 > `P1.F`, a serial independent Phase 1 milestone-freeze worker. This docs router launches nothing and
 > ends `HOLD` for independent router review.
 
@@ -17,12 +17,18 @@ current-base history and is never the exact P1.I integration proof.
 
 Immutable r1 patch `2f7338a1e7b41955d15106f5fb3994b17db6749158bde8134a0a8e23d2081615` was independently
 `REJECT`ed for the single P1 merge-proof finding. This r2 route preserves the rest of r1 and replaces
-only that rejected provenance proof.
+only that rejected provenance proof. The r2 patch
+`1b9d824436f076f751df91fe2d8abedb88995c5fe8a02f3fc0194921d669d5c1` was independently accepted,
+integrated, and pushed as `69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5`. Three subsequent clean
+P1.F attempts ended `HOLD` because the restricted reviewer could not perform the required network
+query and could not spawn the TypeScript normalizer child. This r3 route changes only that evidence
+boundary.
 
 Root is the sole orchestrator. `controller-v17` remains `HOLD` and observation-only. It cannot
-launch, admit, integrate, restart, replace itself, or create a successor. No P1.F worker may start
-until this exact seven-path router receives independent acceptance, broker integration and push, and
-root immutably attests the exact pushed authority and clean remote equality.
+launch, admit, integrate, restart, replace itself, or create a successor. No fresh P1.F reviewer may
+start until this exact seven-path r3 router receives independent acceptance, broker integration and
+push, and root immutably attests the exact pushed authority, clean remote equality, and the bounded
+reviewer evidence inputs.
 
 ## Deterministic reading order
 
@@ -58,11 +64,14 @@ P1.I producers, reviewers, and integration actors, owns exactly:
 1. `.codex-handoff/phase-01-p1-f.json`
 2. `docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md`
 
-It uses only `gpt-5.6-sol`, `xhigh`, and `serviceTier: "default"`; Fast is prohibited. It verifies the
-canonical ancestry and remote equality, exact true-merge shape, current-base merge proof, P1.I byte
-preservation, all 14 Phase 1 evidence IDs, the exact 74-path manifest, every declared test and quality
-gate, rollback, JSON/hash/link/diff and classified security scans, and a complete self-review. It then
-records evidence IDs `P1.F.FREEZE` and `P1.F.PHASE_EXIT`, returns explicit `ACCEPT` or `REJECT` with
+It uses only `gpt-5.6-sol`, `xhigh`, and `serviceTier: "default"`; Fast is prohibited. It inspects a
+fresh immutable root/broker remote attestation because it MUST NOT run `git ls-remote` from the
+restricted worker sandbox. It still independently verifies every sandbox-compatible local authority,
+ancestry, true-merge, current-base, byte, manifest, evidence, gate, test, lint, format, rollback, JSON,
+hash, link, diff, and classified-scan proof. Only if the sandbox cannot spawn the exact normalizer
+command may it inspect fresh immutable root-attested normalizer evidence with the command, exit
+semantics, exact seven inherited diagnostics, zero unexpected diagnostics, timestamp, and provenance.
+It records evidence IDs `P1.F.FREEZE` and `P1.F.PHASE_EXIT`, returns explicit `ACCEPT` or `REJECT` with
 P0/P1/P2 counts, and ends `HOLD`.
 
 `ACCEPT` with P0/P1/P2 `0/0/0` allows only root mechanical validation, `mark_reviewed`, and broker
