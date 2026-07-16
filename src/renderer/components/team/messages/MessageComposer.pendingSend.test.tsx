@@ -401,6 +401,7 @@ describe('MessageComposer pending send lifecycle', () => {
     const body = layout?.querySelector('.message-composer-flat-body');
     const footer = layout?.querySelector('.message-composer-flat-footer');
     const sendButton = getSendButton(host);
+    const teamSelector = getButtonContainingText(host, 'This team');
 
     expect(layout).not.toBeNull();
     expect(toolbar).not.toBeNull();
@@ -409,6 +410,7 @@ describe('MessageComposer pending send lifecycle', () => {
     expect(body?.contains(footer ?? null)).toBe(false);
     expect(body?.className).not.toContain('message-composer-orbit-surface');
     expect(sendButton.className).toContain('message-composer-send-button');
+    expect(teamSelector.className).toContain('justify-end');
     expect(toolbar?.textContent).toContain('This team');
     expect(toolbar?.textContent).toContain('alice');
 

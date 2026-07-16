@@ -60,7 +60,7 @@ export const ActionModeSelector = ({
   return (
     <TooltipProvider delayDuration={0} skipDelayDuration={300}>
       <div
-        className="message-composer-action-modes inline-flex h-8 items-stretch overflow-hidden rounded-md border border-[var(--color-border)]"
+        className="message-composer-action-modes inline-flex h-7 items-stretch overflow-hidden rounded-md border border-[var(--color-border)]"
         role="radiogroup"
         aria-label={t('messages.actionMode.label')}
       >
@@ -75,7 +75,7 @@ export const ActionModeSelector = ({
                   role="radio"
                   aria-checked={isActive}
                   className={cn(
-                    'relative min-w-10 px-1.5 text-[11px] font-medium transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:opacity-0 after:transition-opacity',
+                    'relative min-w-9 px-1.5 text-[10px] font-medium transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-px after:opacity-0 after:transition-opacity',
                     idx > 0 && 'border-l border-[var(--color-border)]',
                     disabled && 'cursor-not-allowed opacity-50',
                     isActive

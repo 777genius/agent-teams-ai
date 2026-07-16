@@ -47,8 +47,10 @@ describe('ActionModeSelector', () => {
     const askButton = buttons.find((button) => button.textContent === 'Ask');
 
     expect(group?.className).toContain('message-composer-action-modes');
+    expect(group?.className).toContain('h-7');
     expect(group?.className).not.toContain('rounded-full');
     expect(buttons).toHaveLength(3);
+    expect(buttons.every((button) => button.className.includes('min-w-9'))).toBe(true);
     expect(delegateButton?.getAttribute('aria-checked')).toBe('true');
     expect(delegateButton?.className).toContain('after:opacity-100');
 

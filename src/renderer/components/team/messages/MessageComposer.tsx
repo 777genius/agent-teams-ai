@@ -941,7 +941,7 @@ export const MessageComposer = ({
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex min-w-0 items-center justify-center gap-1 border-r border-r-[var(--color-border)] px-1 text-xs transition-colors',
+                      'inline-flex min-w-0 items-center justify-end gap-1 border-r border-r-[var(--color-border)] px-1 text-xs transition-colors',
                       isCrossTeam
                         ? 'hover:bg-[var(--cross-team-bg)]/80 bg-[var(--cross-team-bg)] text-purple-400'
                         : 'hover:bg-white/[0.025]'

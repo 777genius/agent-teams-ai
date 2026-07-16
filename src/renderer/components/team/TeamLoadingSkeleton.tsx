@@ -68,19 +68,18 @@ const TeamLoadingOfflineBannerSkeleton = (): React.JSX.Element => (
 
 const TeamLoadingMessageComposerSkeleton = (): React.JSX.Element => (
   <div className="message-composer-flat-layout relative mb-2" aria-hidden="true">
-    <div className="message-composer-flat-toolbar grid grid-cols-[32px_56px_minmax(0,1fr)] items-center gap-2 px-2">
+    <div className="message-composer-flat-toolbar grid min-w-0 grid-cols-[32px_minmax(0,1fr)] items-center gap-2 pl-2">
       <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--color-text-muted)] opacity-70">
         <Paperclip size={14} />
       </span>
-      <SkeletonPill className="h-3 w-12 rounded bg-yellow-500/20" />
       <div className="flex h-full min-w-0 items-stretch justify-end">
-        <div className="inline-flex w-full max-w-[430px] items-stretch overflow-hidden">
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5 border-r border-[var(--color-border)] px-3">
-            <SkeletonPill className="size-2.5 bg-[var(--skeleton-base-dim)]" />
-            <SkeletonPill className="h-3 w-16 rounded bg-[var(--skeleton-base-dim)]" />
+        <div className="grid w-full min-w-0 max-w-[430px] grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-stretch overflow-hidden">
+          <div className="flex min-w-0 items-center justify-end gap-1 border-r border-[var(--color-border)] px-1">
+            <SkeletonPill className="size-2 bg-[var(--skeleton-base-dim)]" />
+            <SkeletonPill className="h-3 w-14 rounded bg-[var(--skeleton-base-dim)]" />
             <SkeletonPill className="size-3 rounded bg-[var(--skeleton-base-dim)]" />
           </div>
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5 px-3">
+          <div className="flex min-w-0 items-center justify-end gap-1 px-1">
             <SkeletonPill className="size-5 bg-[var(--skeleton-base-dim)]" />
             <SkeletonPill className="h-3 w-10 rounded bg-[var(--skeleton-base-dim)]" />
             <SkeletonPill className="size-3 rounded bg-[var(--skeleton-base-dim)]" />
@@ -91,15 +90,18 @@ const TeamLoadingMessageComposerSkeleton = (): React.JSX.Element => (
     <div className="message-composer-flat-body relative h-[96px]">
       <SkeletonPill className="absolute left-3 top-3 h-3 w-[62%] rounded bg-[var(--skeleton-base-dim)]" />
       <SkeletonPill className="absolute left-3 top-8 h-3 w-[42%] rounded bg-[var(--skeleton-base-dim)]" />
-      <div className="message-composer-action-modes absolute bottom-2 left-2 flex h-8 w-[152px] overflow-hidden rounded-md border border-[var(--color-border)]">
+      <div className="message-composer-action-modes absolute bottom-2 left-2 flex h-7 w-[124px] overflow-hidden rounded-md border border-[var(--color-border)]">
         <SkeletonPill className="h-full flex-1 rounded-none bg-[var(--skeleton-base-dim)]" />
         <SkeletonPill className="h-full flex-1 rounded-none border-l border-[var(--color-border)] bg-[var(--skeleton-base-dim)]" />
         <SkeletonPill className="h-full flex-1 rounded-none border-l border-[var(--color-border)] bg-yellow-500/20" />
       </div>
-      <div className="absolute bottom-2 right-2 flex items-center gap-2">
+      <div className="absolute bottom-2 right-2 flex items-center">
         <SkeletonPill className="size-8 rounded-md bg-[var(--skeleton-base-dim)]" />
-        <SkeletonPill className="h-8 w-[72px] rounded-md bg-cyan-600/35" />
       </div>
+    </div>
+    <div className="message-composer-flat-footer flex items-center justify-between gap-3">
+      <SkeletonPill className="h-3 w-[58%] rounded bg-[var(--skeleton-base-dim)]" />
+      <SkeletonPill className="h-3 w-10 shrink-0 rounded bg-[var(--skeleton-base-dim)]" />
     </div>
   </div>
 );
