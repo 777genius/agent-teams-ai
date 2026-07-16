@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -11,11 +11,14 @@ import {
 } from '../../../../../scripts/hosted-web/phase-1/check-parity-references';
 import { createParityDriftFixture, ratchetRegressionFixture } from '../fixtures/ratchet-regression';
 
+// The full src corpus, so a duplicated channel/route literal in ANY file trips the ratchet.
 const sourceByPath = Object.fromEntries(
-  ['src/preload/constants/ipcChannels.ts', 'src/main/http/teams.ts'].map((path) => [
-    path,
-    readFileSync(join(process.cwd(), path), 'utf8'),
-  ])
+  readdirSync('src', { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.(?:ts|tsx)$/.test(entry.name))
+    .map((entry) => {
+      const path = join(entry.parentPath, entry.name);
+      return [path, readFileSync(path, 'utf8')];
+    })
 );
 
 describe('P1.1C parity reference scanner', () => {

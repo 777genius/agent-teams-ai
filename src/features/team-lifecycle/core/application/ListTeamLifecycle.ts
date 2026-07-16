@@ -1,4 +1,4 @@
-import { createSafeAppError, type SafeAppError } from '@shared/contracts/hosted';
+import { createSafeAppError, type QueryContext, type SafeAppError } from '@shared/contracts/hosted';
 
 import {
   type ListTeamLifecycleFailure,
@@ -12,7 +12,8 @@ import {
 
 export interface TeamLifecycleReadSource {
   listTeamLifecycle(
-    request: ListTeamLifecycleRequest
+    request: ListTeamLifecycleRequest,
+    context: QueryContext
   ): ListTeamLifecycleResult | Promise<ListTeamLifecycleResult>;
 }
 
@@ -35,12 +36,12 @@ function internalFailure(
 export class ListTeamLifecycle {
   constructor(private readonly source: TeamLifecycleReadSource) {}
 
-  async execute(requestValue: unknown): Promise<ListTeamLifecycleResult> {
+  async execute(requestValue: unknown, context: QueryContext): Promise<ListTeamLifecycleResult> {
     const request = parseListTeamLifecycleRequest(requestValue);
     if (!request.ok) return failure(request.error);
 
     try {
-      const sourceResult = await this.source.listTeamLifecycle(request.value);
+      const sourceResult = await this.source.listTeamLifecycle(request.value, context);
       const parsedResult = parseListTeamLifecycleResult(sourceResult);
       if (!parsedResult.ok) {
         return internalFailure(

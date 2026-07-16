@@ -10,6 +10,9 @@ export function parseAuthorizedScope(value: unknown): AuthorizedScope {
   }
   return value as AuthorizedScope;
 }
+// In-process execution context. The host assembles it from the authenticated principal and
+// runtime (deadline, cancellation); it is never parsed from a wire payload, so client-supplied
+// identity cannot reach the application layer.
 export function createQueryContext(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new TypeError('hosted-contract-query-context-invalid');

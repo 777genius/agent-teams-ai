@@ -2,7 +2,10 @@
 
 ## Document status
 
-- Status: architecture and execution plan, implementation not started
+- Status: reference plan; for the live phase status see
+  [docs/hosted-web-phases/EXECUTION_INDEX.json](hosted-web-phases/EXECUTION_INDEX.json)
+  (single source of truth) — the line below reflects the state at authoring time
+- Status at authoring time (2026-07-11): architecture and execution plan, implementation not started
 - Audited branch: refactor/hosted-web-runtime-boundary
 - Audited commit: 45e115f08eac5b60884b3a00c1c9278857faca06
 - Audited pull request: #250, closed as superseded on 2026-07-11

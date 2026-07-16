@@ -7,6 +7,7 @@ import {
   TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
   type TeamLifecycleReadSource,
 } from '../../../../src/features/team-lifecycle';
+import { createQueryContext, type QueryContext } from '../../../../src/shared/contracts/hosted';
 import manifest from '../../../fixtures/hosted-web/phase-1/team-lifecycle/manifest.json';
 import corrupt from '../../../fixtures/hosted-web/phase-1/team-lifecycle/outcomes/corrupt.json';
 import draft from '../../../fixtures/hosted-web/phase-1/team-lifecycle/outcomes/draft.json';
@@ -75,11 +76,16 @@ const outcomeFixtures = [
 
 class InMemoryTeamLifecycleSource implements TeamLifecycleReadSource {
   readonly requests: ListTeamLifecycleRequest[] = [];
+  readonly contexts: QueryContext[] = [];
 
   constructor(private readonly value: unknown) {}
 
-  listTeamLifecycle(request: ListTeamLifecycleRequest): ListTeamLifecycleResult {
+  listTeamLifecycle(
+    request: ListTeamLifecycleRequest,
+    context: QueryContext
+  ): ListTeamLifecycleResult {
     this.requests.push(request);
+    this.contexts.push(context);
     return this.value as ListTeamLifecycleResult;
   }
 }
@@ -87,14 +93,17 @@ class InMemoryTeamLifecycleSource implements TeamLifecycleReadSource {
 function requestValue(): unknown {
   return {
     schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-    context: {
-      ...manifest.fakePrincipal,
-      deadlineAtMs: manifest.fixedClockMs + 30_000,
-      signal: new AbortController().signal,
-    },
     cursor: null,
     expectedRevision: null,
   };
+}
+
+function executionContext(): QueryContext {
+  return createQueryContext({
+    ...manifest.fakePrincipal,
+    deadlineAtMs: manifest.fixedClockMs + 30_000,
+    signal: new AbortController().signal,
+  });
 }
 
 function sourceValue(oracle: FixtureOracle): unknown {
@@ -173,7 +182,10 @@ describe('ListTeamLifecycle', () => {
     for (const fixture of outcomeFixtures) {
       for (const oracle of fixture.oracles) {
         const source = new InMemoryTeamLifecycleSource(sourceValue(oracle));
-        const result = await new ListTeamLifecycle(source).execute(requestValue());
+        const result = await new ListTeamLifecycle(source).execute(
+          requestValue(),
+          executionContext()
+        );
 
         expect(source.requests).toHaveLength(1);
         expect(source.requests[0].schemaVersion).toBe(TEAM_LIFECYCLE_READ_SCHEMA_VERSION);
@@ -186,7 +198,7 @@ describe('ListTeamLifecycle', () => {
 
   it('returns the valid empty result without inventing an error', async () => {
     const source = new InMemoryTeamLifecycleSource(sourceValue(outcomeFixtures[1].oracles[0]));
-    const result = await new ListTeamLifecycle(source).execute(requestValue());
+    const result = await new ListTeamLifecycle(source).execute(requestValue(), executionContext());
 
     expect(result).toMatchObject({ kind: 'success', items: [], nextCursor: null });
     expect(source.requests).toHaveLength(1);
@@ -201,8 +213,8 @@ describe('ListTeamLifecycle', () => {
     const source = new InMemoryTeamLifecycleSource(reversed);
     const useCase = new ListTeamLifecycle(source);
 
-    const first = await useCase.execute(requestValue());
-    const second = await useCase.execute(requestValue());
+    const first = await useCase.execute(requestValue(), executionContext());
+    const second = await useCase.execute(requestValue(), executionContext());
 
     expect(second).toEqual(first);
     expect(first.kind).toBe('success');
@@ -232,7 +244,7 @@ describe('ListTeamLifecycle', () => {
     };
     const source = new InMemoryTeamLifecycleSource(sourceResult);
 
-    const result = await new ListTeamLifecycle(source).execute(requestValue());
+    const result = await new ListTeamLifecycle(source).execute(requestValue(), executionContext());
 
     expect(result).not.toBe(sourceResult);
     expect(source.requests).toHaveLength(1);
@@ -249,7 +261,10 @@ describe('ListTeamLifecycle', () => {
 
   it('normalizes malformed requests and thrown values without leaking source text', async () => {
     const source = new InMemoryTeamLifecycleSource(sourceValue(outcomeFixtures[0].oracles[0]));
-    const malformed = await new ListTeamLifecycle(source).execute({ schemaVersion: 1 });
+    const malformed = await new ListTeamLifecycle(source).execute(
+      { schemaVersion: 1 },
+      executionContext()
+    );
 
     expect(malformed).toMatchObject({
       kind: 'failure',
@@ -262,7 +277,10 @@ describe('ListTeamLifecycle', () => {
         throw new Error('source detail must stay private');
       },
     };
-    const normalized = await new ListTeamLifecycle(throwingSource).execute(requestValue());
+    const normalized = await new ListTeamLifecycle(throwingSource).execute(
+      requestValue(),
+      executionContext()
+    );
     expect(normalized).toMatchObject({
       kind: 'failure',
       error: { code: 'internal', reason: 'unexpected' },

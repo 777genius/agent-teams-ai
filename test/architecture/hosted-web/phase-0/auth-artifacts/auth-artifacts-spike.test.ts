@@ -730,7 +730,7 @@ describe('ADR-17 artifact and terminal scanner', () => {
       )
     );
     contract.artifacts.find(
-      ({ artifactId }) => artifactId === 'agent-teams-instance-lock'
+      ({ artifactId }: { artifactId: string }) => artifactId === 'agent-teams-instance-lock'
     ).finalImagePath = '/opt/agent-teams/bin/agent-teams-instance-lock';
     expect(evaluateHostedArtifactContract(contract)).toMatchObject({
       contractPasses: false,

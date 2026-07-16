@@ -2,7 +2,10 @@
 
 ## Status and authority
 
-- Status: ready for execution after explicit implementation start
+- Status: historical Phase 0 packet; for the live phase status see
+  [docs/hosted-web-phases/EXECUTION_INDEX.json](hosted-web-phases/EXECUTION_INDEX.json)
+  (single source of truth) — the line below reflects the state at authoring time
+- Status at authoring time: ready for execution after explicit implementation start
 - Packet revision: `phase-00-r2`
 - Scope: Phase 0 only
 - Parent plan: [Hosted Web Runtime: End-to-End Completion Plan](./hosted-web-e2e-completion-plan.md)

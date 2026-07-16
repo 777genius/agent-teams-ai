@@ -175,13 +175,11 @@ import type { SessionInjection } from './session-injection-types';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
-  ApplicationCommandRequestIdentity,
   CreateTaskRequest,
   KanbanColumnId,
   KanbanTaskState,
   MemberSpawnStatusEntry,
   ResolvedTeamMember,
-  TaskRef,
   TeamAgentRuntimeEntry,
   TeamCreateRequest,
   TeamLaunchRequest,
@@ -1400,10 +1398,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     defaultDescription: '',
     defaultOwner: '',
   });
-  const pendingCreateTaskCommandRef = useRef<{
-    fingerprint: string;
-    identity: ApplicationCommandRequestIdentity;
-  } | null>(null);
   const [creatingTask, setCreatingTask] = useState(false);
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [addingMemberLoading, setAddingMemberLoading] = useState(false);
@@ -2145,7 +2139,6 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const openCreateTaskDialog = useCallback(
     (subject = '', description = '', owner = '', startImmediately?: boolean): void => {
-      pendingCreateTaskCommandRef.current = null;
       setCreateTaskDialog({
         open: true,
         defaultSubject: subject,
@@ -2158,7 +2151,6 @@ export const TeamDetailView = memo(function TeamDetailView({
   );
 
   const closeCreateTaskDialog = useCallback((): void => {
-    pendingCreateTaskCommandRef.current = null;
     setCreateTaskDialog({
       open: false,
       defaultSubject: '',
@@ -2667,47 +2659,9 @@ export const TeamDetailView = memo(function TeamDetailView({
     })();
   }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId]);
 
-  const handleCreateTask = async (
-    requestOrSubject: CreateTaskRequest | string,
-    description = '',
-    owner?: string,
-    blockedBy?: string[],
-    related?: string[],
-    prompt?: string,
-    startImmediately?: boolean,
-    descriptionTaskRefs?: TaskRef[],
-    promptTaskRefs?: TaskRef[]
-  ): Promise<void> => {
-    let taskRequest: CreateTaskRequest;
-    if (typeof requestOrSubject === 'string') {
-      const positionalRequest: CreateTaskRequest = {
-        subject: requestOrSubject,
-        description: description || undefined,
-        owner,
-        blockedBy,
-        related,
-        prompt,
-        descriptionTaskRefs,
-        promptTaskRefs,
-        startImmediately,
-      };
-      const fingerprint = JSON.stringify(positionalRequest);
-      let pendingCommand = pendingCreateTaskCommandRef.current;
-      if (pendingCommand?.fingerprint !== fingerprint) {
-        const commandId = crypto.randomUUID();
-        pendingCommand = {
-          fingerprint,
-          identity: { commandId, idempotencyKey: commandId },
-        };
-        pendingCreateTaskCommandRef.current = pendingCommand;
-      }
-      taskRequest = {
-        ...positionalRequest,
-        command: pendingCommand.identity,
-      };
-    } else {
-      taskRequest = requestOrSubject;
-    }
+  // Command identity (idempotency) is resolved by CreateTaskDialog via resolveCreateTaskCommand;
+  // this handler must not mint its own.
+  const handleCreateTask = async (taskRequest: CreateTaskRequest): Promise<void> => {
     const {
       owner: taskOwner,
       prompt: taskPrompt,

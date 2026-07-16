@@ -1,5 +1,4 @@
 import {
-  createQueryContext,
   createSafeAppError,
   type Cursor,
   HOSTED_SCHEMA_VERSION,
@@ -7,7 +6,6 @@ import {
   parseHostedSchemaVersion,
   parseRevision,
   parseSyntheticTeamId,
-  type QueryContext,
   type Revision,
   type SafeAppError,
   SCHEMA_VERSION_DIAGNOSTIC,
@@ -32,9 +30,11 @@ export const TEAM_LIFECYCLE_STATES = Object.freeze([
 
 export type TeamLifecycleState = (typeof TEAM_LIFECYCLE_STATES)[number];
 
+// Wire DTO: fully JSON-serializable. Caller identity, authorization scope, deadline, and
+// cancellation are never parsed from the wire — the host assembles them into a QueryContext
+// from the authenticated principal and passes it to the application separately.
 export interface ListTeamLifecycleRequest {
   readonly schemaVersion: typeof TEAM_LIFECYCLE_READ_SCHEMA_VERSION;
-  readonly context: QueryContext;
   readonly cursor: Cursor | null;
   readonly expectedRevision: Revision | null;
 }
@@ -102,22 +102,7 @@ export type TeamLifecycleReadParseResult<T> =
   | TeamLifecycleReadParseSuccess<T>
   | TeamLifecycleReadParseFailure;
 
-const REQUEST_KEYS = Object.freeze([
-  'schemaVersion',
-  'context',
-  'cursor',
-  'expectedRevision',
-] as const);
-const QUERY_CONTEXT_KEYS = Object.freeze([
-  'actorId',
-  'sessionId',
-  'deploymentId',
-  'bootId',
-  'requestId',
-  'authorizedScope',
-  'deadlineAtMs',
-  'signal',
-] as const);
+const REQUEST_KEYS = Object.freeze(['schemaVersion', 'cursor', 'expectedRevision'] as const);
 const SUCCESS_KEYS = Object.freeze([
   'schemaVersion',
   'kind',
@@ -190,15 +175,10 @@ export function parseListTeamLifecycleRequest(
     if (!hasExactKeys(value, REQUEST_KEYS)) {
       return requestInvalid();
     }
-    const contextValue = value.context;
     const cursorValue = value.cursor;
     const expectedRevisionValue = value.expectedRevision;
-    if (!isRecord(contextValue) || !hasExactKeys(contextValue, QUERY_CONTEXT_KEYS)) {
-      return requestInvalid();
-    }
 
     const schemaVersion = parseHostedSchemaVersion(schemaVersionValue);
-    const context = createQueryContext(contextValue);
     const cursor = cursorValue === null ? null : parseCursor(cursorValue);
     const expectedRevision =
       expectedRevisionValue === null ? null : parseRevision(expectedRevisionValue);
@@ -206,7 +186,6 @@ export function parseListTeamLifecycleRequest(
     return parseSuccess(
       Object.freeze({
         schemaVersion,
-        context,
         cursor,
         expectedRevision,
       }) satisfies ListTeamLifecycleRequest

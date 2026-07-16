@@ -7,11 +7,6 @@ import manifest from '../../../../fixtures/hosted-web/phase-1/team-lifecycle/man
 function validRequest(): unknown {
   return {
     schemaVersion: 1,
-    context: {
-      ...manifest.fakePrincipal,
-      deadlineAtMs: manifest.fixedClockMs + 30_000,
-      signal: new AbortController().signal,
-    },
     cursor: 'cursor_contract_page',
     expectedRevision: 'revision_contract_snapshot',
   };
@@ -73,18 +68,27 @@ function expectRejectedResponse(value: unknown): void {
 }
 
 describe('team-lifecycle read contract', () => {
-  it('parses the versioned request with shared opaque context, cursor, and revision values', () => {
+  it('parses the versioned serializable request with opaque cursor and revision values', () => {
     const parsed = teamLifecycleContracts.parseListTeamLifecycleRequest(validRequest());
 
     expect(parsed.ok).toBe(true);
     if (parsed.ok) {
       expect(parsed.value.schemaVersion).toBe(1);
-      expect(parsed.value.context.actorId).toBe(manifest.fakePrincipal.actorId);
       expect(parsed.value.cursor).toBe('cursor_contract_page');
       expect(parsed.value.expectedRevision).toBe('revision_contract_snapshot');
       expect(Object.isFrozen(parsed.value)).toBe(true);
+      expect(Reflect.ownKeys(parsed.value)).toEqual([
+        'schemaVersion',
+        'cursor',
+        'expectedRevision',
+      ]);
     }
     expect(teamLifecycleContracts.TEAM_LIFECYCLE_READ_UNKNOWN_FIELD_POLICY).toBe('reject');
+
+    const roundTripped = teamLifecycleContracts.parseListTeamLifecycleRequest(
+      JSON.parse(JSON.stringify(validRequest()))
+    );
+    expect(roundTripped.ok).toBe(true);
   });
 
   it('rejects unsupported versions, unknown fields, malformed IDs, revisions, and cursors safely', () => {
@@ -113,13 +117,16 @@ describe('team-lifecycle read contract', () => {
     const topLevelSymbol = validRequest() as Record<PropertyKey, unknown>;
     topLevelSymbol[Symbol('unknown-request-field')] = true;
 
-    const nestedString = validRequest() as Record<PropertyKey, unknown>;
-    (nestedString.context as Record<PropertyKey, unknown>).unknownContextField = true;
+    // Client-supplied identity/cancellation must never enter through the wire payload.
+    const clientSuppliedContext = {
+      ...(validRequest() as Record<string, unknown>),
+      context: {
+        ...manifest.fakePrincipal,
+        deadlineAtMs: manifest.fixedClockMs + 30_000,
+      },
+    };
 
-    const nestedSymbol = validRequest() as Record<PropertyKey, unknown>;
-    (nestedSymbol.context as Record<PropertyKey, unknown>)[Symbol('unknown-context-field')] = true;
-
-    for (const strictUnknown of [topLevelSymbol, nestedString, nestedSymbol]) {
+    for (const strictUnknown of [topLevelSymbol, clientSuppliedContext]) {
       expect(teamLifecycleContracts.parseListTeamLifecycleRequest(strictUnknown)).toMatchObject({
         ok: false,
         error: { code: 'invalid_request', reason: 'request_invalid' },
@@ -127,13 +134,6 @@ describe('team-lifecycle read contract', () => {
     }
 
     const malformedValues = [
-      {
-        ...(validRequest() as Record<string, unknown>),
-        context: {
-          ...((validRequest() as Record<string, unknown>).context as Record<string, unknown>),
-          actorId: 'legacy-name',
-        },
-      },
       { ...(validRequest() as Record<string, unknown>), cursor: 'wrong_cursor' },
       { ...(validRequest() as Record<string, unknown>), expectedRevision: 'wrong_revision' },
     ];
