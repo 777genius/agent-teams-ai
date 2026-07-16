@@ -1,0 +1,416 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-02",
+  "nodeId": "P2.D",
+  "laneId": "p2-d-roster-identity",
+  "packetRevision": "phase-02-jit-router-r1",
+  "remediationRevision": "p2-d-listing-safe-quarantine-v17-r6",
+  "adoptedProducerRevision": "p2-d-quarantine-remediation-v17-r5",
+  "baseSha": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+  "status": "verified",
+  "terminalState": "HOLD",
+  "evidence": [
+    {
+      "id": "P2.D.IDENTITY_FILE",
+      "path": "src/features/team-lifecycle/main/infrastructure/TeamIdentityFileStore.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P2.D.DIRECTORY_LIFECYCLE",
+      "path": "src/features/team-lifecycle/main/infrastructure/TeamDirectoryLifecycleAdapter.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P2.D.BACKUP_COMPATIBILITY",
+      "path": "src/features/team-lifecycle/main/infrastructure/TeamIdentityBackupCompatibility.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P1.NEG.TEST_ROOT_ESCAPE",
+      "path": "test/features/team-lifecycle/main/TeamDirectoryIdentity.test.ts",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "evidenceIds": [
+    "P2.D.IDENTITY_FILE",
+    "P2.D.DIRECTORY_LIFECYCLE",
+    "P2.D.BACKUP_COMPATIBILITY",
+    "P1.NEG.TEST_ROOT_ESCAPE"
+  ],
+  "authority": {
+    "workspaceHeadAtStart": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+    "foundationIntegrationHandoff": ".codex-handoff/phase-02-p2-if.json",
+    "foundationIntegrationStatus": "verified",
+    "foundationAuthority": "activated",
+    "packetRevisionMatchedExecutionIndex": true,
+    "writablePathsMatchedExecutionIndex": true,
+    "mandatoryReadOrderCompleted": true,
+    "r5PatchMatchedAllSevenOwnedPathsAtStart": true,
+    "r5NoPhysicalDeletionBoundaryPreserved": true,
+    "r5DescriptorCappedReadsPreserved": true,
+    "atomicallyStagedOriginalProducerPatchPreserved": true,
+    "remediationLayerLeftUnstaged": true,
+    "gitCommitCreated": false,
+    "gitPushPerformed": false,
+    "successorLaunched": false,
+    "realProjectAccessed": false
+  },
+  "changedPaths": [
+    "src/features/team-lifecycle/core/application/ports/TeamIdentityPersistence.ts",
+    "src/features/team-lifecycle/main/infrastructure/TeamIdentityFileStore.ts",
+    "src/features/team-lifecycle/main/infrastructure/TeamDirectoryLifecycleAdapter.ts",
+    "src/features/team-lifecycle/main/infrastructure/TeamIdentityBackupCompatibility.ts",
+    "test/features/team-lifecycle/main/TeamDirectoryIdentity.test.ts",
+    "test/architecture/hosted-web/phase-2/team-directory-identity-boundaries.test.ts",
+    ".codex-handoff/phase-02-p2-d.json"
+  ],
+  "changedPathCount": 7,
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/features/team-lifecycle/main/TeamDirectoryIdentity.test.ts test/architecture/hosted-web/phase-2/team-directory-identity-boundaries.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 2,
+      "testFilesTotal": 2,
+      "testsPassed": 25,
+      "testsTotal": 25
+    },
+    {
+      "command": "pnpm lint:fast:files -- src/features/team-lifecycle/core/application/ports/TeamIdentityPersistence.ts src/features/team-lifecycle/main/infrastructure/TeamIdentityFileStore.ts src/features/team-lifecycle/main/infrastructure/TeamDirectoryLifecycleAdapter.ts src/features/team-lifecycle/main/infrastructure/TeamIdentityBackupCompatibility.ts test/features/team-lifecycle/main/TeamDirectoryIdentity.test.ts test/architecture/hosted-web/phase-2/team-directory-identity-boundaries.test.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 0,
+      "diagnosticCount": 0,
+      "classification": "clean"
+    },
+    {
+      "command": "pnpm exec prettier --check src/features/team-lifecycle/core/application/ports/TeamIdentityPersistence.ts src/features/team-lifecycle/main/infrastructure/TeamIdentityFileStore.ts src/features/team-lifecycle/main/infrastructure/TeamDirectoryLifecycleAdapter.ts src/features/team-lifecycle/main/infrastructure/TeamIdentityBackupCompatibility.ts test/features/team-lifecycle/main/TeamDirectoryIdentity.test.ts test/architecture/hosted-web/phase-2/team-directory-identity-boundaries.test.ts .codex-handoff/phase-02-p2-d.json",
+      "exitCode": 0,
+      "checkedPathCount": 7
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff HEAD --check",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --cached --check",
+      "exitCode": 0,
+      "classification": "the original seven-path producer patch remains material-whitespace clean in the index"
+    }
+  ],
+  "remediationProof": {
+    "p1DescriptorCappedReads": {
+      "findingId": "P1-01",
+      "descriptorOpenedNoFollow": true,
+      "maximumBytesConsumedPerRead": 4097,
+      "wholeFileReadCallsRemoved": true,
+      "oversizeRejectedBeforeUtf8Decode": true,
+      "concurrentGrowthRejectedBeforeUtf8Decode": true,
+      "beforeAndAfterMetadataStable": true,
+      "parentIdentityRecheckedBeforeAndAfterRead": true,
+      "identityFileConcurrentGrowthRegression": "verified",
+      "attemptOwnershipConcurrentGrowthRegression": "verified"
+    },
+    "quarantineOnlyLogicalDeletion": {
+      "findingId": "P1-03",
+      "validatedLeafAtomicallyQuarantined": true,
+      "singleHiddenContainerPerBoundParent": true,
+      "quarantineContainerPathShape": "parent/.p2-d-removal-quarantine/<uuid>",
+      "quarantineContainerDescriptorBound": true,
+      "quarantineContainerDeviceAndInodeReproved": true,
+      "movedDeviceAndInodeReprovedAgainstOpenDescriptor": true,
+      "originalLeafAbsenceRequired": true,
+      "quarantineContainedByValidatedContainerAndParent": true,
+      "quarantineContainerAndParentSyncedBeforeSuccess": true,
+      "teamsRootContainsNoConfigBearingQuarantineLeaf": true,
+      "realNonrecursiveTeamListingRegression": "verified",
+      "deletedTeamCannotReappearFromNestedQuarantine": true,
+      "identityChangeFailsClosedWithoutPhysicalRemoval": true,
+      "requestPathUnlinkRmdirOrRecursiveRm": false,
+      "physicalRetentionAndGcDeferredToHostedOperations": true,
+      "artifactCleanupLeafSwapRegression": "verified",
+      "teamDeletionLeafSwapRegression": "verified",
+      "artifactLogicalPathDisappearanceAndRecoveryRegression": "verified",
+      "teamLogicalPathDisappearanceAndRecoveryRegression": "verified"
+    },
+    "cleanupOwnership": {
+      "callerPathAndRunIdAreAuthority": false,
+      "durableAttemptRegistryRequired": true,
+      "writeOnceOnDiskProvenanceRequired": true,
+      "registryAndProvenanceRecheckedImmediatelyBeforeQuarantine": true,
+      "forgedExactProvenanceWithoutRegistryRejected": true,
+      "onlyDescriptorProvedNestedQuarantineIgnoredForPristineCheck": true,
+      "nonDirectoryQuarantineImpostorRejected": true
+    },
+    "ancestorSwap": {
+      "linuxDescriptorPath": "/proc/self/fd/<directory-fd>/<child>",
+      "directoryHandlesOpenedNoFollow": true,
+      "identityFilesOpenedNoFollow": true,
+      "exclusivePublication": true,
+      "freshDeviceInodeRealpathRecheckBeforeFallbackMutation": true,
+      "outsideSentinelsUnchangedInReadPublishCleanupAdversarialTests": true
+    },
+    "p2bRecoveryCompatibility": {
+      "states": ["prepared", "file_published", "committed", "tombstoned"],
+      "durableAuthorityLookupRequired": true,
+      "publicationRecordRereadBeforeCommit": true,
+      "lostPublicationRecordBlocksCommit": true,
+      "filePublishedInterruptionCommitsSameIdAndChecksumWithoutRepublish": true,
+      "missingAfterFilePublishedBlocks": true,
+      "p2bOwnedPathEdited": false,
+      "p2bSourceImported": false
+    }
+  },
+  "adversarialRegressionMatrix": [
+    {
+      "case": "identity file grows beyond its cap after descriptor stat and before descriptor read",
+      "expected": "consume exactly maxBytes + 1, reject before decoding and preserve the parent binding",
+      "result": "verified"
+    },
+    {
+      "case": "attempt ownership file grows beyond its cap after descriptor stat and before descriptor read",
+      "expected": "consume exactly maxBytes + 1, reject before decoding and retain the artifact",
+      "result": "verified"
+    },
+    {
+      "case": "validated attempt leaf is replaced at the atomic quarantine rename boundary",
+      "expected": "moved inode mismatch blocks logical success; the original logical path disappears while both the validated object and quarantined replacement sentinel remain physically recoverable",
+      "result": "verified"
+    },
+    {
+      "case": "validated team leaf is replaced at the atomic quarantine rename boundary",
+      "expected": "moved inode mismatch blocks logical success after durable tombstone; the original logical path disappears while both the validated object and quarantined replacement sentinel remain physically recoverable",
+      "result": "verified"
+    },
+    {
+      "case": "successful artifact cleanup and team deletion through nested quarantine containers",
+      "expected": "product-visible logical paths are absent, one config-free hidden container remains under each bound parent, and retained content can be recovered by an out-of-lane hosted operation",
+      "result": "verified"
+    },
+    {
+      "case": "real TeamConfigReader nonrecursive listing after permanent delete",
+      "expected": "the original team is visible before deletion but neither the config-free container nor its nested config-bearing recoverable object is listed after deletion",
+      "result": "verified"
+    },
+    {
+      "case": "attempt artifact pristine check encounters reserved quarantine name",
+      "expected": "ignore only a no-follow descriptor-proved nested directory container; reject a same-name non-directory impostor before ownership publication",
+      "result": "verified"
+    },
+    {
+      "case": "caller supplies matching relativePath and ownerRunId without durable registry",
+      "expected": "artifact_ownership_unproven and no removal",
+      "result": "verified"
+    },
+    {
+      "case": "caller forges exact on-disk ownership bytes without durable registry",
+      "expected": "artifact_ownership_unproven and no removal",
+      "result": "verified"
+    },
+    {
+      "case": "identity-read ancestor replaced after descriptor acquisition",
+      "expected": "blocked with outside sentinel unchanged",
+      "result": "verified"
+    },
+    {
+      "case": "identity-publication ancestor replaced at final-component open",
+      "expected": "blocked with no identity written outside",
+      "result": "verified"
+    },
+    {
+      "case": "cleanup ancestor replaced before final identity recheck",
+      "expected": "blocked before quarantine with outside sentinel unchanged",
+      "result": "verified"
+    },
+    {
+      "case": "process interruption after durable file_published and before commit",
+      "expected": "inspect existing file and commit the same durable publication",
+      "result": "verified"
+    },
+    {
+      "case": "publication method reports success but durable lookup remains prepared",
+      "expected": "publication_not_durable and no commit",
+      "result": "verified"
+    }
+  ],
+  "crashMatrix": [
+    {
+      "state": "prepared_without_file",
+      "result": "absent/read_only awaiting publication"
+    },
+    {
+      "state": "file_exists_with_prepared_intent",
+      "result": "exclusive retry observes the same file, records publication durably, then commits"
+    },
+    {
+      "state": "file_published_before_commit",
+      "result": "matching file remains read_only and commits the stored publication evidence"
+    },
+    {
+      "state": "file_published_without_file",
+      "result": "missing_after_publication blocked"
+    },
+    {
+      "state": "committed_without_file",
+      "result": "missing_after_commit blocked"
+    },
+    {
+      "state": "partial_corrupt_future_mismatch_or_duplicate",
+      "result": "blocked without replacement"
+    }
+  ],
+  "rootNegativeMatrix": [
+    {
+      "case": "unmarked_preexisting_ambient_home_or_current_real_project_root",
+      "result": "root_not_admitted before team access"
+    },
+    {
+      "case": "symlink_escaped_team_directory",
+      "result": "unsafe_team_directory with outside sentinel unchanged"
+    },
+    {
+      "case": "active team-directory ancestor replacement",
+      "result": "descriptor-bound effect or fail-closed binding mismatch; no outside effect"
+    },
+    {
+      "case": "test cleanup",
+      "result": "only exact marker-token roots removed"
+    }
+  ],
+  "backupCompatibilityProof": {
+    "asyncInventoryIncludesCanonicalIdentity": true,
+    "shutdownSyncInventoryIncludesCanonicalIdentity": true,
+    "canonicalIdentityIndependentOfConfigReadiness": true,
+    "legacyIdentityEvidenceKeptDistinct": true,
+    "classification": "legacy_unverified",
+    "recoveryCapability": "not_verified"
+  },
+  "classifiedScans": {
+    "exactScopePathCount": 7,
+    "secretCredentialScan": {
+      "exitCode": 1,
+      "observedMatchLineCount": 0,
+      "allMatchesClassified": true,
+      "classification": "no matching payload indicator"
+    },
+    "privatePathScan": {
+      "exitCode": 0,
+      "observedMatchLineCount": 2,
+      "allMatchesClassified": true,
+      "classification": "negative-control labels only; no path value"
+    },
+    "highConfidenceSecretSignatureScan": {
+      "exitCode": 1,
+      "observedMatchLineCount": 0,
+      "allMatchesClassified": true,
+      "classification": "no high-confidence signature"
+    },
+    "flatQuarantinePrefixScan": {
+      "exitCode": 1,
+      "observedMatchLineCount": 0,
+      "allMatchesClassified": true,
+      "classification": "no former direct-child quarantine-prefix naming remains"
+    },
+    "productionPhysicalDeletionCallScan": {
+      "exitCode": 1,
+      "observedMatchLineCount": 0,
+      "allMatchesClassified": true,
+      "classification": "no rm, unlink or rmdir call in the four P2.D production paths"
+    },
+    "placeholderScan": {
+      "exitCode": 1,
+      "observedMatchLineCount": 0,
+      "allMatchesClassified": true,
+      "classification": "no unresolved placeholder marker"
+    },
+    "textIntegrityScan": {
+      "exitCode": 0,
+      "pathCount": 7,
+      "regularFileCount": 7,
+      "symlinkCount": 0,
+      "nulByteCount": 0,
+      "validUtf8Count": 7
+    }
+  },
+  "scopeProof": {
+    "declaredWritablePathCount": 7,
+    "actualChangedPathCount": 7,
+    "unexpectedPathCount": 0,
+    "stagedOriginalPathCount": 7,
+    "existingTeamServicesEdited": false,
+    "sharedExportOrCompositionEdited": false,
+    "p2bOwnedPathEdited": false,
+    "siblingSourceConsumed": false
+  },
+  "selfReview": {
+    "completeDiffReread": true,
+    "cleanArchitecture": "core defines value-only identity and attempt-registry ports; Node filesystem mechanics remain in main infrastructure; later serial composition selects P2.B-backed implementations",
+    "ddd": "TeamId, LegacyTeamKey, prepared/file_published/committed authority, write-once publication evidence, attempt ownership and durable tombstones are explicit domain language",
+    "solid": "identity registry, attempt ownership registry, identity publication, directory lifecycle and backup compatibility expose separate narrow responsibilities",
+    "filesystemSecurity": "directory descriptors bind effects to admitted directories; no-follow capped reads consume at most maxBytes + 1 and reject size or metadata drift before decoding; request-path deletion ends after atomic rename into one descriptor-proved parent/.p2-d-removal-quarantine/<uuid> container, moved-inode reproof and container/parent fsync, with no unlink, rmdir or recursive rm",
+    "cleanupCorrectness": "logical attempt removal requires matching durable registry state plus canonical write-once provenance, repeats both checks, atomically nests the validated leaf, fails closed unless the moved inode still matches, ignores only a descriptor-proved nested quarantine container during pristine ownership checks, and keeps all quarantined bytes recoverable",
+    "listingInvisibility": "real TeamConfigReader nonrecursive semantics see the team before delete and no team after delete; teamsRoot retains only a config-free hidden container while the config-bearing object stays one level deeper and recoverable",
+    "sameUidRaceBoundary": "pure Node/POSIX check-then-unlink cannot secure a quarantined final name against a same-UID swap; physical retention and GC remain a separate hosted-operations concern outside this product lane",
+    "recoveryCorrectness": "commit consumes only a freshly reread durable file_published record; missing or mismatched publication evidence blocks and committed absence never republishes automatically",
+    "transportBoundary": "no Electron, IPC, HTTP, Fastify, renderer or preload dependency was introduced",
+    "identityImmutability": "exclusive create with mode 0600 only; no overwrite, rename replacement or replacement TeamId path exists",
+    "dependencyDirection": "P2.D depends on its own application ports and the integrated identifier kernel, never on P2.B or P2.C implementation source",
+    "exactScopeConfirmed": true,
+    "scanClassificationsConfirmed": true,
+    "unsupportedClaimsAbsent": true
+  },
+  "findingCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "findings": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "resolvedReviewFindings": [
+    {
+      "id": "P1-01",
+      "severity": "P1",
+      "status": "remediated",
+      "proof": "descriptor-bound no-follow capped reads plus deterministic identity and ownership concurrent-growth regressions"
+    },
+    {
+      "id": "P1-02",
+      "severity": "P1",
+      "status": "remediated",
+      "proof": "quarantine-only logical deletion with moved-inode reproof, parent fsync, no physical request-path removal, and deterministic artifact/team sentinel recovery regressions"
+    },
+    {
+      "id": "P1-03",
+      "severity": "P1",
+      "status": "remediated",
+      "proof": "single nested quarantine container per bound parent with descriptor/container/moved-inode reproof, container and parent fsync, real nonrecursive listing invisibility, recoverability, and no physical request-path removal"
+    }
+  ],
+  "unverifiedClaims": [
+    "existing create, delete, provisioning cleanup and backup call-site routing; those paths remain reserved to serial integration",
+    "the concrete P2.B and P2.C adapters and production composition",
+    "full backup recovery or a coordinated recovery point",
+    "the full ADR-28 openat2 hosted guard and final-runtime active-race topology",
+    "physical quarantine retention policy and garbage collection, which are hosted-operations concerns outside P2.D",
+    "production Electron, transport, provider and runtime behavior",
+    "combined architecture/security acceptance, serial integration, milestone acceptance, commit and push"
+  ],
+  "blockers": [],
+  "adrRecommendations": [],
+  "estimateBuckets": [
+    {
+      "id": "EST-IDENTITY-WORKSPACE",
+      "classification": "bounded P2.D remediation within the existing identity/workspace envelope"
+    }
+  ],
+  "generatedAt": "2026-07-16T18:04:35Z",
+  "nextAction": "controller review of this bounded seven-path remediation only; HOLD with no successor, integration, commit or push initiated"
+}

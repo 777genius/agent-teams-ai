@@ -1,0 +1,355 @@
+{
+  "schemaVersion": 1,
+  "phaseId": "phase-02",
+  "nodeId": "P2.C",
+  "laneId": "p2-c-workspace-binding",
+  "packetRevision": "phase-02-jit-router-r1",
+  "baseSha": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+  "status": "verified",
+  "terminalState": "HOLD",
+  "evidence": [
+    {
+      "id": "P2.C.WORKSPACE_REGISTRY",
+      "path": "test/features/workspace-registry/core/WorkspaceRegistration.test.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P2.C.MOUNT_GENERATION",
+      "path": "test/features/workspace-registry/core/AuthorizeWorkspaceOperation.test.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P2.C.ROOT_ADMISSION",
+      "path": "test/features/workspace-registry/main/ReadOnlyWorkspaceManifestAdapter.test.ts",
+      "proofLevel": "target_verified"
+    },
+    {
+      "id": "P1.NEG.TEST_ROOT_ESCAPE",
+      "path": "test/features/workspace-registry/main/ReadOnlyWorkspaceManifestAdapter.test.ts",
+      "proofLevel": "target_verified"
+    }
+  ],
+  "evidenceIds": [
+    "P2.C.WORKSPACE_REGISTRY",
+    "P2.C.MOUNT_GENERATION",
+    "P2.C.ROOT_ADMISSION",
+    "P1.NEG.TEST_ROOT_ESCAPE"
+  ],
+  "authority": {
+    "workspaceHead": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+    "originalProducerInitialWorktreeClean": true,
+    "remediationInput": "atomically-staged-reviewed-producer-patch",
+    "remediationMutatedGitIndex": false,
+    "mandatoryReadOrderCompleted": true,
+    "packetRevisionMatchesExecutionIndex": true,
+    "p2CDependencyMatchesExecutionIndex": true,
+    "p2COwnershipMatchesExecutionIndex": true,
+    "foundationIntegration": {
+      "handoffPath": ".codex-handoff/phase-02-p2-if.json",
+      "status": "verified",
+      "foundationAuthority": "activated",
+      "findingCounts": {
+        "P0": 0,
+        "P1": 0,
+        "P2": 0
+      }
+    },
+    "authorityMismatchCount": 0
+  },
+  "baseDriftAdoption": {
+    "reviewedProducerBaseSha": "03ac8bc544953110ce4a835eea6aefc65f2a5ba6",
+    "currentCanonicalShaFromAdmissionContract": "bd6ac038c920180ee5398b96f2dbdc3d6f035e77",
+    "workspaceHeadMatchesAdmissionCanonical": true,
+    "reviewedOutputId": "ed509af199e1c657f0a982e543349929bb685c0bda4fe96a2248e2a115126821",
+    "reviewedPatchSha256": "e816bb7faee36976aaa5f4bdb406e36d143ea54e75eec03963da028aef3434ed",
+    "reviewedPatchByteLength": 80116,
+    "reviewedPatchPathCount": 8,
+    "reviewedBytesMatchedBeforeHandoffAuthorityRefresh": true,
+    "reviewedProductionAndTestPathCount": 7,
+    "reviewedProductionAndTestBytesPreserved": true,
+    "baseRangeOwnedPathIntersectionCount": 0,
+    "baseRangeInteraction": "the canonical identifier parser now caches its existing phase-one regular expressions; canonical WorkspaceId parsing and every P2.C contract remain unchanged",
+    "sourceOrTestAdaptationPathCount": 0,
+    "handoffAuthorityRefreshPathCount": 1,
+    "genuineBaseDriftConflictCount": 0,
+    "liveRemoteQueryPerformed": false
+  },
+  "declaredWritablePaths": [
+    "src/features/workspace-registry/contracts/workspace-registration.ts",
+    "src/features/workspace-registry/core/domain/WorkspaceRegistration.ts",
+    "src/features/workspace-registry/core/application/AuthorizeWorkspaceOperation.ts",
+    "src/features/workspace-registry/main/infrastructure/ReadOnlyWorkspaceManifestAdapter.ts",
+    "test/features/workspace-registry/core/WorkspaceRegistration.test.ts",
+    "test/features/workspace-registry/core/AuthorizeWorkspaceOperation.test.ts",
+    "test/features/workspace-registry/main/ReadOnlyWorkspaceManifestAdapter.test.ts",
+    ".codex-handoff/phase-02-p2-c.json"
+  ],
+  "changedPaths": [
+    ".codex-handoff/phase-02-p2-c.json",
+    "src/features/workspace-registry/contracts/workspace-registration.ts",
+    "src/features/workspace-registry/core/application/AuthorizeWorkspaceOperation.ts",
+    "src/features/workspace-registry/core/domain/WorkspaceRegistration.ts",
+    "src/features/workspace-registry/main/infrastructure/ReadOnlyWorkspaceManifestAdapter.ts",
+    "test/features/workspace-registry/core/AuthorizeWorkspaceOperation.test.ts",
+    "test/features/workspace-registry/core/WorkspaceRegistration.test.ts",
+    "test/features/workspace-registry/main/ReadOnlyWorkspaceManifestAdapter.test.ts"
+  ],
+  "changedPathCount": 8,
+  "scopeProof": {
+    "atomicallyStagedOriginalProducerPathCount": 8,
+    "remediatedAggregatePathCount": 8,
+    "undeclaredChangedPathCount": 0,
+    "originalProducerIndexPreserved": true,
+    "stagedDiffCheckExitCode": 0,
+    "aggregateDiffCheckExitCode": 0,
+    "reviewedProductionAndTestBytesPreserved": true,
+    "baseRangeOwnedPathIntersectionCount": 0,
+    "handoffOnlyBaseDriftMetadataRefresh": true
+  },
+  "acceptanceProof": {
+    "workspaceRegistry": {
+      "stableRegistrationKeyMapping": true,
+      "startupBaselineMustExplicitlyDeclareEmptyOrPreviousState": true,
+      "revisionedDisplayChangePreservesWorkspaceId": true,
+      "workspaceIdReplacementRejected": true,
+      "declaredRootChangeRejected": true,
+      "unrevisionedMutationRejected": true,
+      "removalWithoutDisabledTombstoneRejected": true,
+      "duplicateKeyRejected": true,
+      "ambiguousWorkspaceIdRejected": true,
+      "ambiguousDeclaredRootRejected": true,
+      "disabledRegistrationRejected": true,
+      "unknownManifestAndRegistrationVersionsRejected": true
+    },
+    "mountBinding": {
+      "bootScoped": true,
+      "predecessorDerivedOnlyFromPreviousSnapshotBindings": true,
+      "rawManifestPredecessorFieldRemoved": true,
+      "manifestSuppliedPredecessorRejected": true,
+      "forgedEmptyDeploymentPredecessorRejected": true,
+      "forgedNewRegistrationPredecessorRejected": true,
+      "strictNextGenerationRequired": true,
+      "initialGenerationMustBeOne": true,
+      "restartGenerationAdvanceVerified": true,
+      "priorBootRequestRejected": true,
+      "staleGenerationRequestRejected": true,
+      "changedDeclaredRootRejected": true,
+      "unavailableMountRejected": true,
+      "readOnlyMountMutationRejected": true
+    },
+    "authorization": {
+      "operationSpecific": true,
+      "returnedBindingIdentityMustMatchRequestedWorkspace": true,
+      "operationTimeRevalidationPortRequired": true,
+      "uncheckedStartupSnapshotDoesNotImplementAuthorizationPort": true,
+      "intentIssuerIsModulePrivate": true,
+      "intentHasNoEnumerableTransportPayload": true,
+      "jsonSerializationFailsClosed": true,
+      "structuredCloneCarriesNoAuthority": true,
+      "rawHostPathAccessorAbsent": true,
+      "genericFilesystemAccessorAbsent": true
+    },
+    "manifestAdapter": {
+      "injectedSourceOnly": true,
+      "preAdmissionRequiredBeforeSourceRead": true,
+      "forgedAdmissionWrapperRejected": true,
+      "oneStartupReadMaximum": true,
+      "writeAbsent": true,
+      "autoRegistrationAbsent": true,
+      "ambientScanAbsent": true,
+      "compositionAbsent": true,
+      "registrationCollectionLimit": 256,
+      "registrationCollectionDensityCheckedBeforeIteration": true,
+      "operationCollectionLimit": 5,
+      "operationCollectionDensityCheckedBeforeIteration": true,
+      "oversizedSparseDuplicateAndMalformedCollectionsRejected": true
+    }
+  },
+  "resourceExhaustionReview": {
+    "manifestRegistrationsBoundedBeforeElementAccess": true,
+    "domainRegistrationsBoundedBeforeIteration": true,
+    "allowedOperationsBoundedBeforeElementAccess": true,
+    "registrationsMaximum": 256,
+    "allowedOperationsMaximum": 5,
+    "denseOwnIndexesRequired": true,
+    "boundedDuplicateDetection": true,
+    "attackerControlledUnboundedCollectionIterationAbsent": true
+  },
+  "rootAdmissionNegativeMatrix": [
+    {
+      "case": "unmarked",
+      "result": "rejected-before-source-read"
+    },
+    {
+      "case": "pre-existing-or-unowned",
+      "result": "rejected-before-source-read"
+    },
+    {
+      "case": "ambient-temporary-directory",
+      "result": "rejected-before-source-read"
+    },
+    {
+      "case": "home",
+      "result": "rejected-before-source-read"
+    },
+    {
+      "case": "real-project-or-ambient-workspace",
+      "result": "rejected-before-source-read"
+    },
+    {
+      "case": "parent-symlink",
+      "result": "rejected-before-source-read"
+    },
+    {
+      "case": "final-symlink",
+      "result": "rejected-before-source-read"
+    },
+    {
+      "case": "lexical-escape",
+      "result": "rejected-before-source-read"
+    }
+  ],
+  "testRootSafety": {
+    "freshMarkerOwnedProjectRootsOnly": true,
+    "freshMarkerOwnedRuntimeRootsOnly": true,
+    "realProjectAccessed": false,
+    "cleanupNarrow": true,
+    "cleanupRequiresExactMarker": true,
+    "cleanupRejectsSymlinkRoot": true,
+    "cleanupRequiresCanonicalTemporaryContainment": true
+  },
+  "checks": [
+    {
+      "command": "pnpm exec vitest run test/features/workspace-registry/core/WorkspaceRegistration.test.ts test/features/workspace-registry/core/AuthorizeWorkspaceOperation.test.ts test/features/workspace-registry/main/ReadOnlyWorkspaceManifestAdapter.test.ts",
+      "exitCode": 0,
+      "testFilesPassed": 3,
+      "testFilesTotal": 3,
+      "testsPassed": 28,
+      "testsTotal": 28
+    },
+    {
+      "command": "pnpm lint:fast:files -- src/features/workspace-registry/contracts/workspace-registration.ts src/features/workspace-registry/core/domain/WorkspaceRegistration.ts src/features/workspace-registry/core/application/AuthorizeWorkspaceOperation.ts src/features/workspace-registry/main/infrastructure/ReadOnlyWorkspaceManifestAdapter.ts test/features/workspace-registry/core/WorkspaceRegistration.test.ts test/features/workspace-registry/core/AuthorizeWorkspaceOperation.test.ts test/features/workspace-registry/main/ReadOnlyWorkspaceManifestAdapter.test.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 0,
+      "diagnosticCount": 0
+    },
+    {
+      "command": "pnpm exec prettier --check src/features/workspace-registry/contracts/workspace-registration.ts src/features/workspace-registry/core/domain/WorkspaceRegistration.ts src/features/workspace-registry/core/application/AuthorizeWorkspaceOperation.ts src/features/workspace-registry/main/infrastructure/ReadOnlyWorkspaceManifestAdapter.ts test/features/workspace-registry/core/WorkspaceRegistration.test.ts test/features/workspace-registry/core/AuthorizeWorkspaceOperation.test.ts test/features/workspace-registry/main/ReadOnlyWorkspaceManifestAdapter.test.ts .codex-handoff/phase-02-p2-c.json",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff HEAD --check",
+      "exitCode": 0
+    }
+  ],
+  "iterationChecks": [
+    {
+      "command": "initial focused Vitest run",
+      "exitCode": 1,
+      "classification": "test-only unknown-workspace fixture accidentally selected the helper default; corrected without production behavior change"
+    },
+    {
+      "command": "initial exact-path fast lint",
+      "exitCode": 1,
+      "classification": "seven import-order diagnostics; mechanically corrected on the seven owned TypeScript paths"
+    },
+    {
+      "command": "ad hoc tsx dependency-scanner invocation",
+      "exitCode": 1,
+      "classification": "sandbox environment blocked tsx IPC socket creation with listen EPERM; exact-source dependency scanning was moved into the focused adapter Vitest and passed there"
+    }
+  ],
+  "dependencyBoundaryProof": {
+    "coreNodeImportCount": 0,
+    "coreMainImportCount": 0,
+    "coreTransportImportCount": 0,
+    "contractRawHostPathFieldCount": 0,
+    "mainImportsCoreInwardOnly": true,
+    "exactProductionSourceDependencyScannerPassedInFocusedTest": true,
+    "publicBarrelEdited": false,
+    "productionCompositionEdited": false,
+    "siblingLaneImported": false
+  },
+  "toctouReview": {
+    "authorizationBindingReadCountPerRequest": 1,
+    "authorizationCheckHasNoAwaitBoundary": true,
+    "operationTimeRevalidatedBindingRequiredByPort": true,
+    "mountPredecessorReadOnlyFromTrustedPreviousSnapshotBindings": true,
+    "manifestPredecessorAuthorityAbsent": true,
+    "startupManifestSnapshotIntentionallyCannotSatisfyAuthorizationPort": true,
+    "preAdmittedSourceOwnsCanonicalizationAndFilesystemProbePolicy": true,
+    "adapterNeverReceivesOrExposesAWorkspaceRawPath": true,
+    "liveFilesystemRevalidatorCompositionDeferredToSerialIntegration": true
+  },
+  "classifiedScans": {
+    "scopePathCount": 8,
+    "secretCredential": {
+      "command": "rg -n -i '(api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|bearer|cookie|authorization)' <eight-writable-paths>",
+      "exitCode": 0,
+      "observedMatchLineCount": 16,
+      "allMatchesClassified": true,
+      "classification": "authorization domain names, test assertions, scanner command text and explicit prohibited-payload language only; no secret, credential, cookie, bearer, password or authorization payload"
+    },
+    "privatePath": {
+      "command": "rg -n '(/Users/|/home/|/root/|/tmp/|~/|[A-Za-z]:\\\\Users\\\\|real[-_ ]project)' <eight-writable-paths>",
+      "exitCode": 0,
+      "observedMatchLineCount": 4,
+      "allMatchesClassified": true,
+      "classification": "root-admission negative-case labels, scanner command text and explicit real-project prohibition only; no private, home, task-temporary or real-project path value"
+    },
+    "highConfidenceSecretSignature": {
+      "exitCode": 1,
+      "observedMatchLineCount": 0,
+      "allMatchesClassified": true
+    }
+  },
+  "selfReview": {
+    "completeProductionSourceReread": true,
+    "completeFocusedTestReread": true,
+    "completeDiffReread": true,
+    "completeRebasedProductDiffReread": true,
+    "reviewedProductAndTestBytesPreserved": true,
+    "currentBaseBehaviorPreserved": true,
+    "genuineBaseDriftInteractionsResolved": true,
+    "cleanArchitectureConfirmed": true,
+    "dddAggregateInvariantsConfirmed": true,
+    "solidNarrowPortsConfirmed": true,
+    "dependencyInversionConfirmed": true,
+    "authorizationLeastPrivilegeConfirmed": true,
+    "resourceExhaustionBoundsConfirmed": true,
+    "snapshotTrustBoundaryConfirmed": true,
+    "toctouAssumptionsExplicitlyReviewed": true,
+    "transportBoundaryConfirmed": true,
+    "safeStaticErrorsConfirmed": true,
+    "exactEightPathScopeConfirmed": true,
+    "secretAndPrivatePathClassificationsConfirmed": true,
+    "unsupportedClaimsAbsent": true
+  },
+  "findingCounts": {
+    "P0": 0,
+    "P1": 0,
+    "P2": 0
+  },
+  "findings": {
+    "P0": [],
+    "P1": [],
+    "P2": []
+  },
+  "unverifiedClaims": [
+    "public workspace-registry barrels and production registration",
+    "serial composition and persistence reconstruction of the trusted previous startup snapshot",
+    "serial composition of an operation-time filesystem revalidator",
+    "live same-boot mount disappearance, replacement, permission-downgrade and fingerprint probes on production filesystems",
+    "IPC, HTTP, preload, renderer or hosted transport exposure",
+    "independent P2.R1 architecture/security acceptance",
+    "Phase 2 serial integration, milestone acceptance, commit, push or fresh remote equality"
+  ],
+  "blockers": [],
+  "adrRecommendations": [],
+  "estimateBuckets": [],
+  "generatedAt": "2026-07-16T17:35:28Z",
+  "nextAction": "HOLD for controller-directed Phase 2 aggregate adoption; do not launch successors"
+}
