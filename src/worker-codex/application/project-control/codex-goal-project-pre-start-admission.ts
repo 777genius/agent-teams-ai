@@ -306,13 +306,14 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
       : verifiedInputPatch
         ? verifiedInputPatchBindingValid(binding, verifiedInputPatch)
         : binding.workspaceStatus === "";
-  const inputPatchBindingValid = adoptionInput
-    ? contract.inputPatchHash === binding.workspacePatchSha256 &&
-      receipt.workspacePatchSha256 === binding.workspacePatchSha256
-    : dirtyContinuation ||
-      (verifiedInputPatch
+  const inputPatchBindingValid = dirtyContinuation
+    ? true
+    : adoptionInput
+      ? contract.inputPatchHash === binding.workspacePatchSha256 &&
+        receipt.workspacePatchSha256 === binding.workspacePatchSha256
+      : verifiedInputPatch
         ? verifiedInputPatchBindingValid(binding, verifiedInputPatch)
-        : projectInputPatchBindingMatches(binding, contract));
+        : projectInputPatchBindingMatches(binding, contract);
   const mismatches = [
     binding.workspaceHead !== contract.phaseStartSha
       ? "workspace_head"

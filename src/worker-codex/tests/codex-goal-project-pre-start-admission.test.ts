@@ -693,6 +693,51 @@ describe("builtin project pre-start admission", () => {
     })).rejects.toThrow("project_control_pre_start_launch_binding_mismatch");
   });
 
+  it("permits reviewed dirty continuation after an adoption input patch evolves", async () => {
+    const fixture = await createBuiltinFixture();
+    await writeFile(join(fixture.workspacePath, "adopted.md"), "input patch\n");
+    execFileSync("git", ["add", "adopted.md"], { cwd: fixture.workspacePath });
+    const inputPatchHash = sha256(execFileSync(
+      "git",
+      ["diff", "--cached", "--binary", "HEAD", "--"],
+      { cwd: fixture.workspacePath },
+    ));
+    const contract = withWorkKey({
+      ...fixture.contract,
+      inputPatchHash,
+    });
+    const state = {
+      ...fixture.state,
+      records: fixture.state.records.map((record) => ({
+        ...record,
+        workKey: contract.workKey,
+        inputPatchHash,
+      })),
+    };
+    const plan = fixture.plan({ contract, state });
+    const manifest = {
+      ...fixture.storedManifest,
+      tags: ["worker-role-adoption"],
+      projectPreStartAdmission: plan.descriptor,
+    };
+    await prepareProjectPreStartAdmission({
+      plan,
+      manifest,
+      scope: fixture.scope,
+    });
+    await authorizeProjectPreStartAdmissionLaunch({
+      manifest,
+      scope: fixture.scope,
+    });
+    await writeFile(join(fixture.workspacePath, "remediated.md"), "reviewed output\n");
+
+    await expect(assertProjectPreStartAdmissionLaunchBinding({
+      manifest,
+      scope: fixture.scope,
+      workspaceMode: "reviewed_dirty_continuation",
+    })).resolves.toBeUndefined();
+  });
+
   it("rebinds only the repaired manifest for an authorized reviewed dirty continuation", async () => {
     const fixture = await createBuiltinFixture();
     const plan = fixture.plan();
