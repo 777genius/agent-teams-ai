@@ -27,6 +27,26 @@ const INSTALL_TIMEOUT_MS = 45 * 60 * 1_000;
 const LOGIN_TIMEOUT_MS = 10 * 60 * 1_000;
 const PROBE_TIMEOUT_MS = 10_000;
 const MAX_CAPTURED_OUTPUT_CHARS = 32_000;
+const WINDOWS_ISOLATED_COMMAND_HELPER = String.raw`
+const { spawn } = require('node:child_process');
+const [command, ...args] = process.argv.slice(1);
+if (!command) process.exit(1);
+const childEnv = { ...process.env };
+delete childEnv.ELECTRON_RUN_AS_NODE;
+const child = spawn(command, args, {
+  env: childEnv,
+  shell: /\.(?:cmd|bat)$/i.test(command),
+  windowsHide: true,
+  stdio: ['ignore', 'pipe', 'pipe'],
+});
+child.stdout?.pipe(process.stdout);
+child.stderr?.pipe(process.stderr);
+child.once('error', (error) => {
+  process.stderr.write(String(error?.message || error));
+  process.exit(1);
+});
+child.once('close', (code) => process.exit(code ?? 1));
+`;
 
 export interface RuntimeProviderCliCompanionServiceDependencies {
   platform?: NodeJS.Platform;
@@ -59,10 +79,15 @@ async function runCommandDefault(
   options: RuntimeProviderCliCompanionRunCommandOptions
 ): Promise<RuntimeProviderCliCompanionCommandResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, [...args], {
+    const isolateFromHost = process.platform === 'win32' && options.isolateFromHost === true;
+    const launchCommand = isolateFromHost ? process.execPath : command;
+    const launchArgs = isolateFromHost
+      ? ['-e', WINDOWS_ISOLATED_COMMAND_HELPER, command, ...args]
+      : [...args];
+    const child = spawn(launchCommand, launchArgs, {
       detached: process.platform !== 'win32',
-      env: options.env,
-      shell: process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command),
+      env: isolateFromHost ? { ...options.env, ELECTRON_RUN_AS_NODE: '1' } : options.env,
+      shell: !isolateFromHost && process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command),
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -174,11 +199,22 @@ function trimCommandOutput(result: RuntimeProviderCliCompanionCommandResult): st
 
 function summarizeCommandFailure(result: RuntimeProviderCliCompanionCommandResult): string | null {
   const ignored = /^(?:installation failed\. cleaning up\.\.\.|next steps:)$/i;
-  const lines = `${result.stderr}\n${result.stdout}`
-    .split(/\r?\n/)
-    .map((line) => line.replace(/^(?:(?:❌|⚠️|✓|🎉)\s*)+/u, '').trim())
-    .filter((line) => line && !ignored.test(line));
-  return lines.at(-1) ?? trimCommandOutput(result);
+  const toLines = (value: string): string[] =>
+    value
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^(?:(?:❌|⚠️|✓|🎉)\s*)+/u, '').trim())
+      .filter((line) => line && !ignored.test(line));
+  const stderrLines = toLines(result.stderr);
+  const stdoutLines = toLines(result.stdout);
+  return stderrLines[0] ?? stdoutLines.at(-1) ?? trimCommandOutput(result);
+}
+
+function removeInheritedPowerShellModulePath(env: NodeJS.ProcessEnv): void {
+  for (const key of Object.keys(env)) {
+    if (key.toLowerCase() === 'psmodulepath') {
+      delete env[key];
+    }
+  }
 }
 
 async function findLargestInstallerFile(root: string): Promise<number> {
@@ -389,6 +425,12 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
       if (this.#platform === 'win32') {
         installerEnv.TEMP = tempDir;
         installerEnv.TMP = tempDir;
+        if (path.basename(installCommand.command).toLowerCase() === 'powershell.exe') {
+          // PowerShell 7 prepends its module directories to PSModulePath. Passing
+          // that value into Windows PowerShell 5.1 breaks built-in commands such
+          // as Get-FileHash, which the signed Kiro installer requires.
+          removeInheritedPowerShellModulePath(installerEnv);
+        }
       } else {
         installerEnv.TMPDIR = tempDir;
       }
@@ -398,6 +440,9 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
       const result = await this.#runCommand(installCommand.command, installCommand.args, {
         env: installerEnv,
         timeoutMs: INSTALL_TIMEOUT_MS,
+        isolateFromHost:
+          this.#platform === 'win32' &&
+          this.#definition.installer.isolateFromHostOnWindows === true,
         onOutput: (text) => this.#handleInstallerOutput(text),
       }).finally(stopDownloadMonitor);
       if (result.exitCode !== 0) {

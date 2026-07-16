@@ -9940,7 +9940,18 @@ export class TeamProvisioningService {
       });
     }
 
-    return normalizedDefaultModel;
+    if (normalizedDefaultModel) {
+      return normalizedDefaultModel;
+    }
+
+    return this.resolveProviderDefaultModelFromRuntimeStatus(
+      claudePath,
+      cwd,
+      providerId,
+      env,
+      providerArgs,
+      limitContext
+    ).catch(() => null);
   }
 
   private async resolveProviderDefaultModelFromRuntimeStatus(
