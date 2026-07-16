@@ -7,7 +7,10 @@ import {
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
-import { useRuntimeProviderManagement } from './hooks/useRuntimeProviderManagement';
+import {
+  type RuntimeProviderChangeKind,
+  useRuntimeProviderManagement,
+} from './hooks/useRuntimeProviderManagement';
 import { RuntimeProviderManagementPanelView } from './ui/RuntimeProviderManagementPanelView';
 
 import type { RuntimeProviderManagementRuntimeId } from '@features/runtime-provider-management/contracts';
@@ -19,7 +22,9 @@ interface RuntimeProviderManagementPanelProps {
   readonly initialProviderId?: string | null;
   readonly initialProviderAction?: 'connect' | 'reconnect' | 'select' | null;
   readonly disabled?: boolean;
-  readonly onProviderChanged?: () => Promise<void> | void;
+  readonly onProviderChanged?: (
+    changeKind: RuntimeProviderChangeKind
+  ) => Promise<boolean | void> | boolean | void;
   readonly onBlockingOperationChange?: (blocking: boolean) => void;
 }
 

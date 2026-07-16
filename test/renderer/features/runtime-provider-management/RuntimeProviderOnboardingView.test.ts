@@ -66,13 +66,14 @@ function managementState(
     error: null,
     errorDiagnostics: null,
     successMessage: null,
+    warningMessage: null,
     ...overrides,
   };
 }
 
 function managementActions(): RuntimeProviderManagementActions {
   return {
-    refresh: vi.fn(async () => undefined),
+    refresh: vi.fn(async () => true),
     selectProvider: vi.fn(),
     setProviderQuery: vi.fn(),
     loadMoreDirectory: vi.fn(async () => undefined),
@@ -87,7 +88,7 @@ function managementActions(): RuntimeProviderManagementActions {
     setSetupMetadataValue: vi.fn(),
     setOAuthCodeValue: vi.fn(),
     submitOAuthCode: vi.fn(async () => undefined),
-    submitConnect: vi.fn(async () => ({ verifiedModelId: null })),
+    submitConnect: vi.fn(async () => ({ status: 'connected' as const, verifiedModelId: null })),
     forgetProvider: vi.fn(async () => undefined),
     openProviderCredentialPage: vi.fn(async () => undefined),
     openModelPicker: vi.fn(),

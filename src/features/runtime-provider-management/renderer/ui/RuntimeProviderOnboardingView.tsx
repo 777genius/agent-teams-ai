@@ -390,7 +390,9 @@ const ActivePlanFlow = ({
         onCancel();
       },
       submitConnect: async () =>
-        (await actions.submitConnect()) ? { verifiedModelId: null } : null,
+        (await actions.submitConnect())
+          ? { status: 'connected' as const, verifiedModelId: null }
+          : null,
     }),
     [actions, onCancel]
   );

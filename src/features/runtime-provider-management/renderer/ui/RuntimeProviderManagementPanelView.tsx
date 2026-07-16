@@ -446,6 +446,8 @@ export function ProviderSetupFormPanel({
   const secret = authOption?.secret ?? form?.secret ?? null;
   const prompts = authOption?.prompts ?? form?.prompts ?? [];
   const selectedMethod = authOption?.method ?? form?.method ?? null;
+  const verifiesWithModel =
+    selectedMethod === 'api' && form?.verification?.kind === 'model-request';
   const presentation = form
     ? getRuntimeProviderSetupPresentation({
         form,
@@ -455,6 +457,7 @@ export function ProviderSetupFormPanel({
     : null;
   const oauthInProgress = selectedMethod === 'oauth' && busy;
   const oauthProgress = oauthInProgress ? state.oauthProgress : null;
+  const oauthFinalizing = oauthProgress?.phase === 'completing';
   const oauthDeviceCode = extractOAuthDeviceCode(oauthProgress?.instructions);
   const oauthDeviceCodeDestination =
     oauthProgress?.providerId === 'xai'
@@ -492,7 +495,9 @@ export function ProviderSetupFormPanel({
           ? t('runtimeProvider.reconnect.getBrowserCode')
           : t('runtimeProvider.reconnect.continueInBrowser')
         : selectedMethod === 'api'
-          ? 'Connect'
+          ? verifiesWithModel
+            ? 'Connect & verify'
+            : 'Connect'
           : selectedMethod === 'oauth'
             ? selectedAuthLabel.includes('browser code')
               ? 'Get browser code'
@@ -675,6 +680,14 @@ export function ProviderSetupFormPanel({
             </div>
           ) : null}
 
+          {verifiesWithModel ? (
+            <div className="rounded-md border border-sky-400/20 bg-sky-400/[0.04] px-3 py-2 text-[11px] leading-4 text-[var(--color-text-secondary)]">
+              <span className="font-medium text-sky-100">Connection verification: </span>
+              Agent Teams uses a free model when one is available. Otherwise, one minimal request
+              may use a small amount of your plan quota or API balance.
+            </div>
+          ) : null}
+
           {prompts
             .filter((prompt) => setupPromptVisible(prompt, state.setupMetadata))
             .map((prompt) => (
@@ -804,13 +817,22 @@ export function ProviderSetupFormPanel({
           ) : null}
           {busy && selectedMethod !== 'oauth' ? (
             <div
-              className="rounded-md border border-sky-400/20 bg-sky-400/[0.05] px-3 py-2 text-[11px] text-[var(--color-text-secondary)]"
+              className="flex items-start gap-2.5 rounded-md border border-sky-400/20 bg-sky-400/[0.05] px-3 py-2.5 text-[11px] text-[var(--color-text-secondary)]"
               role="status"
               aria-live="polite"
               aria-busy="true"
             >
-              Securely saving your credential and verifying one model request. Keep this window open
-              until verification finishes.
+              <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin text-sky-300" />
+              <div className="min-w-0">
+                <div className="font-medium text-sky-100">
+                  {verifiesWithModel ? 'Verifying connection' : 'Saving credential'}
+                </div>
+                <div className="mt-0.5 leading-4">
+                  {verifiesWithModel
+                    ? 'Saving the credential temporarily, then running one minimal model request. If the check fails, the new credential is removed and the previous connection is restored.'
+                    : 'Saving the credential in the app-managed OpenCode profile.'}
+                </div>
+              </div>
             </div>
           ) : null}
         </div>
@@ -831,10 +853,12 @@ export function ProviderSetupFormPanel({
           type="button"
           size="sm"
           variant="ghost"
-          disabled={busy && !oauthInProgress}
+          disabled={(busy && !oauthInProgress) || oauthFinalizing}
           onClick={actions.cancelConnect}
         >
-          {t('runtimeProvider.actions.cancel')}
+          {oauthFinalizing
+            ? t('providerRuntime.actions.saving')
+            : t('runtimeProvider.actions.cancel')}
         </Button>
         {!oauthInProgress ? (
           <Button type="submit" size="sm" disabled={disabled || busy || loading || !canSubmit}>
@@ -2803,6 +2827,38 @@ export function RuntimeProviderManagementPanelView({
         >
           <CheckCircle2 className="mt-0.5 size-3.5 shrink-0" />
           <span>{state.successMessage}</span>
+        </div>
+      ) : null}
+
+      {state.warningMessage ? (
+        <div
+          data-testid="runtime-provider-warning"
+          className="flex flex-col items-start gap-2 rounded-md border px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between"
+          style={{
+            borderColor: 'rgba(251, 191, 36, 0.3)',
+            backgroundColor: 'rgba(251, 191, 36, 0.08)',
+            color: '#fcd34d',
+          }}
+        >
+          <div className="flex min-w-0 items-start gap-2">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+            <span>{state.warningMessage}</span>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 shrink-0"
+            disabled={disabled || state.directoryLoading || state.directoryRefreshing}
+            onClick={() => void actions.refreshDirectory()}
+          >
+            {state.directoryRefreshing ? (
+              <Loader2 className="mr-1 size-3.5 animate-spin" />
+            ) : (
+              <RefreshCcw className="mr-1 size-3.5" />
+            )}
+            {t('providerRuntime.actions.refresh')}
+          </Button>
         </div>
       ) : null}
 

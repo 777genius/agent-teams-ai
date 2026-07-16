@@ -97,13 +97,14 @@ function createState(
     error: null,
     errorDiagnostics: null,
     successMessage: null,
+    warningMessage: null,
     ...overrides,
   };
 }
 
 function createActions(): RuntimeProviderManagementActions {
   return {
-    refresh: vi.fn(() => Promise.resolve()),
+    refresh: vi.fn(() => Promise.resolve(true)),
     selectProvider: vi.fn(),
     setProviderQuery: vi.fn(),
     loadMoreDirectory: vi.fn(() => Promise.resolve()),
@@ -118,7 +119,9 @@ function createActions(): RuntimeProviderManagementActions {
     setSetupMetadataValue: vi.fn(),
     setOAuthCodeValue: vi.fn(),
     submitOAuthCode: vi.fn(() => Promise.resolve()),
-    submitConnect: vi.fn(() => Promise.resolve({ verifiedModelId: null })),
+    submitConnect: vi.fn(() =>
+      Promise.resolve({ status: 'connected' as const, verifiedModelId: null })
+    ),
     forgetProvider: vi.fn(() => Promise.resolve()),
     openProviderCredentialPage: vi.fn(() => Promise.resolve()),
     openModelPicker: vi.fn(),
@@ -283,6 +286,37 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(details?.textContent).toContain('  opencode providers');
     expect(details?.className).toContain('whitespace-pre-wrap');
     expect(details?.className).toContain('font-mono');
+  });
+
+  it('shows a warning instead of a success alert when the change was saved but refresh failed', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    const actions = createActions();
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            warningMessage:
+              'OpenAI connected. The change is saved, but the latest provider status could not be refreshed.',
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="runtime-provider-warning"]')?.textContent).toContain(
+      'The change is saved'
+    );
+    expect(host.querySelector('[data-testid="runtime-provider-error"]')).toBeNull();
+    const refreshButton = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[data-testid="runtime-provider-warning"] button')
+    )[0];
+    await act(async () => refreshButton?.click());
+    expect(actions.refreshDirectory).toHaveBeenCalledTimes(1);
   });
 
   it('shows the Windows administrator hint only for OpenCode node_modules symlink EPERM errors', async () => {
@@ -1219,6 +1253,11 @@ describe('RuntimeProviderManagementPanelView', () => {
               submitLabel: 'Connect',
               disabledReason: null,
               source: 'curated',
+              verification: {
+                kind: 'model-request',
+                freeModelPreferred: true,
+                mayUseQuotaOrBalance: true,
+              },
               secret: {
                 key: 'key',
                 label: 'API key',
@@ -1399,6 +1438,61 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actions.startConnect).not.toHaveBeenCalled();
   });
 
+  it('explains the real model verification while an API credential is being checked', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+    const provider = state.view!.providers[0];
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: [provider],
+            activeFormProviderId: provider.providerId,
+            savingProviderId: provider.providerId,
+            apiKeyValue: 'sk-verifying',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: provider.providerId,
+              displayName: provider.displayName,
+              method: 'api',
+              supported: true,
+              title: `Connect ${provider.displayName}`,
+              description: null,
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'curated',
+              verification: {
+                kind: 'model-request',
+                freeModelPreferred: true,
+                mayUseQuotaOrBalance: true,
+              },
+              secret: {
+                key: 'key',
+                label: 'API key',
+                placeholder: 'Paste API key',
+                required: true,
+              },
+              prompts: [],
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const status = host.querySelector('[role="status"][aria-busy="true"]');
+    expect(status?.textContent).toContain('Verifying connection');
+    expect(status?.textContent).toContain('running one minimal model request');
+    expect(status?.textContent).toContain('previous connection is restored');
+  });
+
   it('offers retry when provider setup form loading fails', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -1516,6 +1610,61 @@ describe('RuntimeProviderManagementPanelView', () => {
       (button) => button.textContent?.trim() === 'Cancel'
     );
     expect(cancelButton?.disabled).toBe(false);
+  });
+
+  it('prevents misleading cancellation after OAuth credentials enter verification', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: state.view?.providers ?? [],
+            activeFormProviderId: 'openrouter',
+            savingProviderId: 'openrouter',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'OpenRouter',
+              method: 'oauth',
+              supported: true,
+              title: 'Connect OpenRouter',
+              description: null,
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'oauth',
+              secret: null,
+              prompts: [],
+            },
+            oauthProgress: {
+              operationId: 'oauth-operation-finalizing',
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'OpenRouter',
+              authOptionId: 'oauth:0',
+              methodIndex: 0,
+              phase: 'completing',
+              completionMethod: 'auto',
+              instructions: null,
+              message: 'Authorization received. Verifying your plan...',
+            },
+          },
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const finishingButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Saving...'
+    );
+    expect(finishingButton?.disabled).toBe(true);
+    expect(host.textContent).not.toContain('Cancel');
   });
 
   it('updates the submit action when the selected SuperGrok auth method changes', async () => {

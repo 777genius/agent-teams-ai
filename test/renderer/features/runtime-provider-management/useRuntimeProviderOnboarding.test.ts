@@ -375,6 +375,71 @@ describe('useRuntimeProviderOnboarding', () => {
     expect(testModel).toHaveBeenCalledTimes(1);
   });
 
+  it('records an OAuth cancellation separately from an onboarding failure', async () => {
+    loadProviderDirectory.mockResolvedValue(
+      directoryResponse([directoryEntry('xai', 'available')])
+    );
+    loadSetupForm.mockResolvedValue({
+      schemaVersion: 1 as const,
+      runtimeId: 'opencode' as const,
+      setupForm: {
+        runtimeId: 'opencode' as const,
+        providerId: 'xai',
+        displayName: 'SuperGrok',
+        method: 'oauth' as const,
+        supported: true,
+        title: 'Connect SuperGrok',
+        description: null,
+        submitLabel: 'Continue in browser',
+        disabledReason: null,
+        source: 'oauth' as const,
+        secret: null,
+        prompts: [],
+      },
+    });
+    connectProvider.mockResolvedValue({
+      schemaVersion: 1 as const,
+      runtimeId: 'opencode' as const,
+      error: {
+        code: 'auth-failed' as const,
+        message: 'Authorization cancelled',
+        recoverable: true,
+      },
+    });
+
+    await act(async () => root.render(React.createElement(Harness)));
+    await act(async () => currentActions?.beginConnect());
+    await act(async () => {
+      await vi.waitFor(() => expect(loadSetupForm).toHaveBeenCalled());
+    });
+
+    let connected = true;
+    await act(async () => {
+      connected = (await currentActions?.submitConnect()) ?? false;
+    });
+
+    expect(connected).toBe(false);
+    expect(currentState?.stage).toBe('connect');
+    expect(currentState?.management.setupSubmitError).toBe(
+      'SuperGrok connection was cancelled. Your current credential was not changed.'
+    );
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_setup:onboarding_step_end',
+      expect.objectContaining({
+        event_schema_version: 2,
+        provider: 'xai',
+        step: 'connection_submit',
+        outcome: 'cancelled',
+        success: false,
+        error_class: 'none',
+      })
+    );
+    expect(posthogMocks.capturePostHogEvent).not.toHaveBeenCalledWith(
+      'provider_setup:onboarding_step_end',
+      expect.objectContaining({ outcome: 'failed' })
+    );
+  });
+
   it('verifies Cursor through its existing CLI session instead of requesting an API key', async () => {
     loadProviderDirectory.mockResolvedValue(
       directoryResponse([directoryEntry('cursor-acp', 'available', null, true)])
@@ -650,8 +715,9 @@ describe('useRuntimeProviderOnboarding', () => {
     expect(testModel).not.toHaveBeenCalled();
     expect(currentState?.stage).toBe('choose-model');
     expect(currentState?.verifiedModelId).toBe('minimax-coding-plan/MiniMax-M3');
-    expect(currentState?.management.directoryError).toBe(
-      'Provider refresh is temporarily unavailable'
+    expect(currentState?.management.directoryError).toBeNull();
+    expect(currentState?.management.warningMessage).toContain(
+      'The change is saved, but the latest provider status could not be refreshed.'
     );
   });
 

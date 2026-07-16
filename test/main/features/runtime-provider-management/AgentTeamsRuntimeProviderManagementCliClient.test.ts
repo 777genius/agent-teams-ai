@@ -2667,6 +2667,9 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
         completionMethod: 'auto',
       })
     );
+    expect(
+      emitOAuthProgress.mock.calls.filter(([event]) => event.phase === 'waiting-for-browser')
+    ).toHaveLength(1);
     expect(emitOAuthProgress).toHaveBeenCalledWith(
       expect.objectContaining({
         operationId: 'oauth-operation-123',

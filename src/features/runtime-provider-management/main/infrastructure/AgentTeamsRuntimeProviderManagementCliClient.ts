@@ -42,7 +42,9 @@ import type { ChildProcessWithoutNullStreams } from 'child_process';
 
 const PROBE_COMMAND_TIMEOUT_MS = 90_000;
 const COMMAND_TIMEOUT_MS = PROBE_COMMAND_TIMEOUT_MS;
-const OAUTH_COMMAND_TIMEOUT_MS = 6 * 60_000;
+// Outlive the runtime's provider callback window while remaining bounded and
+// cancellable from the UI.
+const OAUTH_COMMAND_TIMEOUT_MS = 17 * 60_000;
 const OAUTH_CANCEL_FORCE_KILL_DELAY_MS = 2_000;
 const COMMAND_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const SPAWN_OUTPUT_TRUNCATED_MARKER = '...[truncated runtime provider command output]';

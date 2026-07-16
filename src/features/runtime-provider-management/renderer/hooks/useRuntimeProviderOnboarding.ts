@@ -35,7 +35,10 @@ import type {
   RuntimeProviderOnboardingStage,
   RuntimeProviderQuickConnectGate,
 } from '../../core/domain';
-import type { AnalyticsOnboardingStep } from '@renderer/analytics/productAnalytics';
+import type {
+  AnalyticsOnboardingStep,
+  AnalyticsOnboardingStepOutcome,
+} from '@renderer/analytics/productAnalytics';
 
 export type RuntimeProviderOnboardingMode = 'provider' | 'wizard';
 
@@ -255,15 +258,17 @@ export function useRuntimeProviderOnboarding({
       success: boolean,
       startedAtMs: number,
       error: unknown = null,
-      providerOverride: string | null = null
+      providerOverride: string | null = null,
+      outcomeOverride?: AnalyticsOnboardingStepOutcome
     ): void => {
+      const outcome = outcomeOverride ?? (success ? 'completed' : 'failed');
       recordProviderOnboardingStepEnd({
         provider:
           providerOverride ?? activePlan?.providerId ?? directPlan?.providerId ?? providerId,
         step,
-        success,
+        outcome,
         durationMs: elapsedMsSince(startedAtMs),
-        errorClass: success ? 'none' : classifyAnalyticsError(error),
+        errorClass: outcome === 'failed' ? classifyAnalyticsError(error) : 'none',
       });
     },
     [activePlan?.providerId, directPlan?.providerId, providerId]
@@ -623,14 +628,17 @@ export function useRuntimeProviderOnboarding({
     try {
       const outcome = await managementActions.submitConnect(activePlan.providerId);
       setPendingConnectionPlanId(null);
+      const connected = outcome?.status === 'connected';
+      const cancelled = outcome?.status === 'cancelled';
       recordOnboardingStep(
         'connection_submit',
-        outcome !== null,
+        connected,
         startedAtMs,
-        outcome ? null : new Error('Provider connection was not accepted'),
-        activePlan.providerId
+        connected || cancelled ? null : new Error('Provider connection was not accepted'),
+        activePlan.providerId,
+        cancelled ? 'cancelled' : undefined
       );
-      if (outcome) {
+      if (connected) {
         setReconnectRequestedPlanId(null);
         setVerificationRequestedPlanId(activePlan.id);
         if (outcome.verifiedModelId) {
@@ -639,7 +647,7 @@ export function useRuntimeProviderOnboarding({
         setStage('verifying');
         setStageError(null);
       }
-      return outcome !== null;
+      return connected;
     } catch (error) {
       setPendingConnectionPlanId(null);
       recordOnboardingStep('connection_submit', false, startedAtMs, error, activePlan.providerId);
