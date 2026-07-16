@@ -38,21 +38,24 @@ describe('legacy pre-sqlite archive recovery', () => {
       filePath,
       records,
       imported,
+      source,
       readArchives,
       makeImporter: () =>
         new ImportLegacyJsonStoreUseCase({
           storeId: 'test-journal',
           source,
-          loadExisting: async () => [...records],
-          replaceAll: async (_teamName, next) => {
+          loadExisting: () => Promise.resolve([...records]),
+          replaceAll: (_teamName, next) => {
             records.splice(0, records.length, ...next);
+            return Promise.resolve();
           },
           recordIdentity: (record) => record.id,
           areEquivalent: (left, right) => JSON.stringify(left) === JSON.stringify(right),
-          recordImport: async () => {
+          recordImport: () => {
             imported.value = true;
+            return Promise.resolve();
           },
-          hasRecordedImport: async () => imported.value,
+          hasRecordedImport: () => Promise.resolve(imported.value),
         }),
     };
   }
@@ -90,6 +93,46 @@ describe('legacy pre-sqlite archive recovery', () => {
       { id: 'd', value: 'generation-10' },
     ]);
     expect(harness.imported.value).toBe(true);
+  });
+
+  it('skips a corrupt older generation and keeps the newest valid record', async () => {
+    const harness = await makeHarness();
+    await writeFile(`${harness.filePath}.pre-sqlite`, '{ not valid json');
+    await writeFile(
+      `${harness.filePath}.pre-sqlite-2`,
+      JSON.stringify([
+        { id: 'a', value: 'generation-2' },
+        { id: 'b', value: 'generation-2' },
+      ])
+    );
+    await writeFile(
+      `${harness.filePath}.pre-sqlite-3`,
+      JSON.stringify([{ id: 'a', value: 'generation-3' }])
+    );
+
+    await harness.makeImporter().ensureImported('demo');
+
+    expect(harness.records).toEqual([
+      { id: 'a', value: 'generation-3' },
+      { id: 'b', value: 'generation-2' },
+    ]);
+    expect(harness.imported.value).toBe(true);
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'skipped unreadable legacy archive team=demo generation=1'
+    );
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it('returns an empty archive snapshot deterministically when every generation is corrupt', async () => {
+    const harness = await makeHarness();
+    await writeFile(`${harness.filePath}.pre-sqlite`, '{ broken generation 1');
+    await writeFile(`${harness.filePath}.pre-sqlite-2`, '{ broken generation 2');
+
+    await expect(harness.source.readArchives('demo')).resolves.toEqual([]);
+    await expect(harness.source.readArchives('demo')).resolves.toEqual([]);
+
+    expect(vi.mocked(console.warn)).toHaveBeenCalledTimes(4);
+    vi.mocked(console.warn).mockClear();
   });
 
   it('combines archived and still-live halves, then skips immutable replay after marking import', async () => {
