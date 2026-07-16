@@ -18,6 +18,7 @@ const hoisted = vi.hoisted(() => ({
   rejectHunks: vi.fn(),
   rejectFile: vi.fn(),
   previewReject: vi.fn(),
+  capturePostHogEvent: vi.fn(),
 }));
 
 vi.mock('@renderer/api', () => ({
@@ -40,7 +41,13 @@ vi.mock('@renderer/api', () => ({
   },
 }));
 
+vi.mock('@renderer/posthog', () => ({
+  capturePostHogEvent: hoisted.capturePostHogEvent,
+}));
+
 function createSliceStore() {
+  // The slice tests intentionally build partial AppState fixtures around this isolated slice.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return create<any>()((set, get, store) => ({
     ...createChangeReviewSlice(set as never, get as never, store as never),
     setSelectedTeamTaskChangePresence: vi.fn(),
@@ -166,6 +173,7 @@ const REVIEW_OPTIONS = {
 describe('changeReviewSlice task changes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    hoisted.capturePostHogEvent.mockClear();
   });
 
   it('does not cache errors as negative task-change results', async () => {
@@ -438,7 +446,9 @@ describe('changeReviewSlice task changes', () => {
         filePaths: [],
         confidence: { tier: 4, label: 'fallback', reason: 'Multi-scope notice only' },
       },
-      warnings: ['Task change ledger skipped attribution because multiple task scopes were active.'],
+      warnings: [
+        'Task change ledger skipped attribution because multiple task scopes were active.',
+      ],
     });
 
     await store.getState().checkTaskHasChanges(teamName, taskId, OPTIONS_A);
@@ -583,8 +593,8 @@ describe('changeReviewSlice task changes', () => {
 
   it('ignores stale fetchTaskChanges responses when a newer task request wins', async () => {
     const store = createSliceStore();
-    const first = deferred<any>();
-    const second = deferred<any>();
+    const first = deferred<unknown>();
+    const second = deferred<unknown>();
     hoisted.getTaskChanges.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
 
     const firstFetch = store.getState().fetchTaskChanges('team-a', '1', OPTIONS_A);
@@ -593,7 +603,16 @@ describe('changeReviewSlice task changes', () => {
     second.resolve({
       teamName: 'team-a',
       taskId: '2',
-      files: [{ filePath: '/repo/new.ts', relativePath: 'new.ts', snippets: [], linesAdded: 1, linesRemoved: 0, isNewFile: true }],
+      files: [
+        {
+          filePath: '/repo/new.ts',
+          relativePath: 'new.ts',
+          snippets: [],
+          linesAdded: 1,
+          linesRemoved: 0,
+          isNewFile: true,
+        },
+      ],
       totalFiles: 1,
       totalLinesAdded: 1,
       totalLinesRemoved: 0,
@@ -617,7 +636,16 @@ describe('changeReviewSlice task changes', () => {
     first.resolve({
       teamName: 'team-a',
       taskId: '1',
-      files: [{ filePath: '/repo/old.ts', relativePath: 'old.ts', snippets: [], linesAdded: 1, linesRemoved: 0, isNewFile: true }],
+      files: [
+        {
+          filePath: '/repo/old.ts',
+          relativePath: 'old.ts',
+          snippets: [],
+          linesAdded: 1,
+          linesRemoved: 0,
+          isNewFile: true,
+        },
+      ],
       totalFiles: 1,
       totalLinesAdded: 1,
       totalLinesRemoved: 0,
@@ -767,9 +795,7 @@ describe('changeReviewSlice task changes', () => {
       });
 
     await store.getState().checkTaskHasChanges(teamName, taskId, OPTIONS_A);
-    await store
-      .getState()
-      .warmTaskChangeSummaries([{ teamName, taskId, options: OPTIONS_A }]);
+    await store.getState().warmTaskChangeSummaries([{ teamName, taskId, options: OPTIONS_A }]);
 
     expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(3);
     expect(
@@ -781,7 +807,7 @@ describe('changeReviewSlice task changes', () => {
 
   it('warms task summaries with bounded concurrency', async () => {
     const store = createSliceStore();
-    const pending = Array.from({ length: 6 }, () => deferred<any>());
+    const pending = Array.from({ length: 6 }, () => deferred<unknown>());
     let callIndex = 0;
     hoisted.getTaskChanges.mockImplementation(() => pending[callIndex++].promise);
 
@@ -884,7 +910,9 @@ describe('changeReviewSlice task changes', () => {
         filePaths: [],
         confidence: { tier: 4, label: 'fallback', reason: 'Multi-scope notice only' },
       },
-      warnings: ['Task change ledger skipped attribution because multiple task scopes were active.'],
+      warnings: [
+        'Task change ledger skipped attribution because multiple task scopes were active.',
+      ],
     });
 
     await store.getState().warmTaskChangeSummaries([{ teamName, taskId, options: OPTIONS_A }]);
@@ -1118,7 +1146,7 @@ describe('changeReviewSlice task changes', () => {
 
   it('ignores stale fetchFileContent responses after change-set replacement', async () => {
     const store = createSliceStore();
-    const pending = deferred<any>();
+    const pending = deferred<unknown>();
     hoisted.getFileContent.mockReturnValueOnce(pending.promise);
     hoisted.getAgentChanges.mockResolvedValueOnce(makeAgentChangeSet('/repo/next.ts'));
 
@@ -1149,7 +1177,7 @@ describe('changeReviewSlice task changes', () => {
 
   it('ignores stale fetchFileContent responses after per-file invalidation', async () => {
     const store = createSliceStore();
-    const pending = deferred<any>();
+    const pending = deferred<unknown>();
     hoisted.getFileContent.mockReturnValueOnce(pending.promise);
 
     store.setState({
@@ -1381,7 +1409,7 @@ describe('changeReviewSlice task changes', () => {
 
   it('ignores stale fetchFileContent responses after removing a review file', async () => {
     const store = createSliceStore();
-    const pending = deferred<any>();
+    const pending = deferred<unknown>();
     hoisted.getFileContent.mockReturnValueOnce(pending.promise);
 
     store.setState({
@@ -1458,7 +1486,7 @@ describe('changeReviewSlice task changes', () => {
 
   it('keeps restored file content when a stale fetch resolves after remove and re-add', async () => {
     const store = createSliceStore();
-    const pending = deferred<any>();
+    const pending = deferred<unknown>();
     hoisted.getFileContent.mockReturnValueOnce(pending.promise);
 
     store.setState({
@@ -1496,7 +1524,7 @@ describe('changeReviewSlice task changes', () => {
 
   it('ignores stale fetchFileContent responses that resolve after saveEditedFile', async () => {
     const store = createSliceStore();
-    const fetchPending = deferred<any>();
+    const fetchPending = deferred<unknown>();
     const savePending = deferred<void>();
     hoisted.getFileContent.mockReturnValueOnce(fetchPending.promise);
     hoisted.saveEditedFile.mockReturnValueOnce(savePending.promise);
@@ -1537,7 +1565,9 @@ describe('changeReviewSlice task changes', () => {
     await flushAsyncWork();
 
     expect(store.getState().editedContents).toEqual({});
-    expect(store.getState().fileContents['/repo/file.ts']?.modifiedFullContent).toBe('saved-content');
+    expect(store.getState().fileContents['/repo/file.ts']?.modifiedFullContent).toBe(
+      'saved-content'
+    );
     expect(store.getState().fileContentsLoading['/repo/file.ts']).toBe(false);
     expect(store.getState().fileChunkCounts).toEqual({});
     expect(store.getState().hunkContextHashesByFile).toEqual({});
@@ -1580,7 +1610,9 @@ describe('changeReviewSlice task changes', () => {
     expect(hoisted.saveEditedFile).toHaveBeenCalledWith('/repo/new.ts', 'saved-content', undefined);
     expect(store.getState().hunkContextHashesByFile).toEqual({});
     expect(store.getState().fileChunkCounts).toEqual({});
-    expect(store.getState().fileContents['/repo/new.ts']?.modifiedFullContent).toBe('saved-content');
+    expect(store.getState().fileContents['/repo/new.ts']?.modifiedFullContent).toBe(
+      'saved-content'
+    );
   });
 
   it('saves edited content through canonical Windows ledger paths and clears aliases', async () => {
@@ -1667,7 +1699,12 @@ describe('changeReviewSlice task changes', () => {
       hunkDecisions: { '/repo/file.ts:0': 'rejected' },
       fileDecisions: { '/repo/file.ts': 'rejected' },
       fileChunkCounts: { '/repo/file.ts': 1 },
-      reviewUndoStack: [{ hunkDecisions: { '/repo/file.ts:0': 'rejected' }, fileDecisions: { '/repo/file.ts': 'rejected' } }],
+      reviewUndoStack: [
+        {
+          hunkDecisions: { '/repo/file.ts:0': 'rejected' },
+          fileDecisions: { '/repo/file.ts': 'rejected' },
+        },
+      ],
       hunkContextHashesByFile: { '/repo/file.ts': { 0: 'ctx' } },
       fileContents: {
         '/repo/file.ts': {
@@ -1807,6 +1844,43 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().activeChangeSet).toEqual(current);
   });
 
+  it('records review apply outcome without leaking file paths or diff content', async () => {
+    const store = createSliceStore();
+    const changeSet = makeAgentChangeSet('/repo/secret-file.ts', {
+      oldString: 'secret-before',
+      newString: 'secret-after',
+    });
+    hoisted.applyDecisions.mockResolvedValueOnce({
+      applied: 1,
+      skipped: 0,
+      conflicts: 0,
+      errors: [],
+    });
+
+    store.setState({
+      activeChangeSet: changeSet,
+      hunkDecisions: { '/repo/secret-file.ts:0': 'rejected' },
+      fileDecisions: { '/repo/secret-file.ts': 'rejected' },
+      fileChunkCounts: { '/repo/secret-file.ts': 1 },
+      changeSetEpoch: 0,
+      fileContentVersionByPath: {},
+    });
+
+    await store.getState().applyReview('team-a');
+
+    expect(hoisted.capturePostHogEvent).toHaveBeenCalledWith('change_review:apply_end', {
+      success: true,
+      decision: 'request_changes',
+      files_count_bucket: '1',
+      accepted_count_bucket: '0',
+      rejected_count_bucket: '1',
+      duration_ms_bucket: expect.any(String),
+      error_class: 'none',
+    });
+    expect(JSON.stringify(hoisted.capturePostHogEvent.mock.calls)).not.toContain('secret-file');
+    expect(JSON.stringify(hoisted.capturePostHogEvent.mock.calls)).not.toContain('secret-before');
+  });
+
   it('does not force re-review when ledger provenance stays stable despite warning changes', async () => {
     const store = createSliceStore();
     const current = {
@@ -1869,7 +1943,12 @@ describe('changeReviewSlice task changes', () => {
       hunkDecisions: { '/repo/file.ts:0': 'rejected' },
       fileDecisions: { '/repo/file.ts': 'rejected' },
       fileChunkCounts: { '/repo/file.ts': 1 },
-      reviewUndoStack: [{ hunkDecisions: { '/repo/file.ts:0': 'rejected' }, fileDecisions: { '/repo/file.ts': 'rejected' } }],
+      reviewUndoStack: [
+        {
+          hunkDecisions: { '/repo/file.ts:0': 'rejected' },
+          fileDecisions: { '/repo/file.ts': 'rejected' },
+        },
+      ],
       changeSetEpoch: 2,
       fileContentVersionByPath: { '/repo/file.ts': 3 },
     });

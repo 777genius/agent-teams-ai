@@ -3,6 +3,14 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const posthogMocks = vi.hoisted(() => ({
+  capturePostHogEvent: vi.fn(),
+}));
+
+vi.mock('@renderer/posthog', () => ({
+  capturePostHogEvent: posthogMocks.capturePostHogEvent,
+}));
+
 import {
   completeRuntimeProviderOnboardingPlan,
   createRuntimeProviderOnboardingProgress,
@@ -93,7 +101,7 @@ describe('useRuntimeProviderOnboarding', () => {
   }: {
     mode?: 'provider' | 'wizard';
     providerId?: string | null;
-    runtimeGate?: 'ready' | 'missing';
+    runtimeGate?: 'ready' | 'missing' | 'error';
     runtimeUpdateRequired?: boolean;
     onInstall?: () => Promise<void> | void;
   }) {
@@ -111,6 +119,7 @@ describe('useRuntimeProviderOnboarding', () => {
   }
 
   beforeEach(() => {
+    posthogMocks.capturePostHogEvent.mockClear();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
     document.body.appendChild(host);
@@ -781,6 +790,94 @@ describe('useRuntimeProviderOnboarding', () => {
     expect(onInstall).toHaveBeenCalledTimes(1);
     expect(currentState?.wizardStarted).toBe(true);
     expect(repository.save).toHaveBeenCalled();
+  });
+
+  it('records runtime preparation success only after the runtime gate reports ready', async () => {
+    const onInstall = vi.fn(async () => undefined);
+    await act(async () =>
+      root.render(
+        React.createElement(Harness, {
+          mode: 'wizard',
+          providerId: null,
+          runtimeGate: 'missing',
+          onInstall,
+        })
+      )
+    );
+
+    await act(async () => currentActions?.startWizard());
+
+    expect(onInstall).toHaveBeenCalledTimes(1);
+    expect(
+      posthogMocks.capturePostHogEvent.mock.calls.filter(
+        ([eventName, properties]) =>
+          eventName === 'provider_setup:onboarding_step_end' &&
+          properties?.step === 'runtime_prepare'
+      )
+    ).toEqual([]);
+
+    await act(async () =>
+      root.render(
+        React.createElement(Harness, {
+          mode: 'wizard',
+          providerId: null,
+          runtimeGate: 'ready',
+          onInstall,
+        })
+      )
+    );
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 25));
+    });
+
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_setup:onboarding_step_end',
+      expect.objectContaining({
+        provider: 'xai',
+        step: 'runtime_prepare',
+        success: true,
+        error_class: 'none',
+      })
+    );
+  });
+
+  it('records runtime preparation failure when installation resolves but the runtime gate reports error', async () => {
+    const onInstall = vi.fn(async () => undefined);
+    await act(async () =>
+      root.render(
+        React.createElement(Harness, {
+          mode: 'wizard',
+          providerId: null,
+          runtimeGate: 'missing',
+          onInstall,
+        })
+      )
+    );
+
+    await act(async () => currentActions?.startWizard());
+    await act(async () =>
+      root.render(
+        React.createElement(Harness, {
+          mode: 'wizard',
+          providerId: null,
+          runtimeGate: 'error',
+          onInstall,
+        })
+      )
+    );
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 25));
+    });
+
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_setup:onboarding_step_end',
+      expect.objectContaining({
+        provider: 'xai',
+        step: 'runtime_prepare',
+        success: false,
+        error_class: 'runtime_missing',
+      })
+    );
   });
 
   it('starts a runtime update before connecting plans that need a newer OpenCode bridge', async () => {

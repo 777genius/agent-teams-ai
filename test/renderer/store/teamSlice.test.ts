@@ -15,6 +15,7 @@ import {
   selectResolvedMembersForTeamName,
   selectTeamDataForName,
   selectTeamMessages,
+  type TeamSlice,
 } from '../../../src/renderer/store/slices/teamSlice';
 import {
   __resetTeamRefreshFanoutDiagnosticsForTests,
@@ -40,12 +41,16 @@ const hoisted = vi.hoisted(() => ({
   sendMessage: vi.fn(),
   getOpenCodeRuntimeDeliveryStatus: vi.fn(),
   retryFailedOpenCodeSecondaryLanes: vi.fn(),
+  createTask: vi.fn(),
+  saveTaskAttachment: vi.fn(),
+  addTaskComment: vi.fn(),
   restartMember: vi.fn(),
   skipMemberForLaunch: vi.fn(),
   requestReview: vi.fn(),
   updateKanban: vi.fn(),
   invalidateTaskChangeSummaries: vi.fn(),
   onProvisioningProgress: vi.fn(() => () => undefined),
+  capturePostHogEvent: vi.fn(),
 }));
 
 const originalWindowAnimationFrame =
@@ -78,6 +83,9 @@ vi.mock('@renderer/api', () => ({
       sendMessage: hoisted.sendMessage,
       getOpenCodeRuntimeDeliveryStatus: hoisted.getOpenCodeRuntimeDeliveryStatus,
       retryFailedOpenCodeSecondaryLanes: hoisted.retryFailedOpenCodeSecondaryLanes,
+      createTask: hoisted.createTask,
+      saveTaskAttachment: hoisted.saveTaskAttachment,
+      addTaskComment: hoisted.addTaskComment,
       restartMember: hoisted.restartMember,
       skipMemberForLaunch: hoisted.skipMemberForLaunch,
       requestReview: hoisted.requestReview,
@@ -88,6 +96,10 @@ vi.mock('@renderer/api', () => ({
       invalidateTaskChangeSummaries: hoisted.invalidateTaskChangeSummaries,
     },
   },
+}));
+
+vi.mock('@renderer/posthog', () => ({
+  capturePostHogEvent: hoisted.capturePostHogEvent,
 }));
 
 vi.mock('../../../src/renderer/utils/unwrapIpc', async (importOriginal) => {
@@ -106,6 +118,8 @@ vi.mock('../../../src/renderer/utils/unwrapIpc', async (importOriginal) => {
 });
 
 function createSliceStore() {
+  // The slice tests intentionally build partial AppState fixtures around this isolated slice.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return create<any>()((set, get, store) => ({
     ...createTeamSlice(set as never, get as never, store as never),
     paneLayout: {
@@ -130,24 +144,31 @@ function createSliceStore() {
   }));
 }
 
-function createTeamSnapshot(overrides: Record<string, unknown> = {}): {
+type TeamSnapshotFixture = {
   teamName: string;
-  config: { name: string; members?: unknown[]; projectPath?: string };
-  tasks: unknown[];
-  members: unknown[];
-  kanbanState: { teamName: string; reviewers: unknown[]; tasks: Record<string, unknown> };
-  processes: unknown[];
+  config: Record<string, unknown> & { name: string };
+  tasks: Record<string, unknown>[];
+  members: Record<string, unknown>[];
+  kanbanState: {
+    teamName: string;
+    reviewers: string[];
+    tasks: Record<string, unknown>;
+  };
+  processes: Record<string, unknown>[];
   isAlive?: boolean;
-} {
-  return {
+  [key: string]: unknown;
+};
+
+function createTeamSnapshot(overrides: Record<string, unknown> = {}): TeamSnapshotFixture {
+  const base: TeamSnapshotFixture = {
     teamName: 'my-team',
     config: { name: 'My Team' },
     tasks: [],
     members: [],
     kanbanState: { teamName: 'my-team', reviewers: [], tasks: {} },
     processes: [],
-    ...overrides,
   };
+  return { ...base, ...overrides } as TeamSnapshotFixture;
 }
 
 function createMemberSpawnStatus(overrides: Record<string, unknown> = {}) {
@@ -277,8 +298,16 @@ async function flushAsyncWork(): Promise<void> {
   await flushMicrotasks();
 }
 
-function createRuntimeSnapshot(overrides: Record<string, unknown> = {}) {
-  return {
+type RuntimeSnapshotFixture = {
+  teamName: string;
+  updatedAt: string;
+  runId: string | null;
+  members: Record<string, Record<string, unknown>>;
+  [key: string]: unknown;
+};
+
+function createRuntimeSnapshot(overrides: Record<string, unknown> = {}): RuntimeSnapshotFixture {
+  const base: RuntimeSnapshotFixture = {
     teamName: 'my-team',
     updatedAt: '2026-03-12T10:00:00.000Z',
     runId: 'runtime-run',
@@ -294,8 +323,8 @@ function createRuntimeSnapshot(overrides: Record<string, unknown> = {}) {
         updatedAt: '2026-03-12T10:00:00.000Z',
       },
     },
-    ...overrides,
   };
+  return { ...base, ...overrides } as RuntimeSnapshotFixture;
 }
 
 describe('teamSlice actions', () => {
@@ -320,6 +349,25 @@ describe('teamSlice actions', () => {
     });
     hoisted.sendMessage.mockResolvedValue({ deliveredToInbox: true, messageId: 'm1' });
     hoisted.getOpenCodeRuntimeDeliveryStatus.mockResolvedValue(null);
+    hoisted.createTask.mockResolvedValue({
+      id: 'task-1',
+      subject: 'Task',
+      status: 'in_progress',
+      owner: 'alice',
+      createdAt: '2026-03-12T10:00:00.000Z',
+      updatedAt: '2026-03-12T10:00:00.000Z',
+      comments: [],
+      attachments: [],
+      historyEvents: [],
+    });
+    hoisted.saveTaskAttachment.mockResolvedValue(undefined);
+    hoisted.addTaskComment.mockResolvedValue({
+      id: 'comment-1',
+      author: 'user',
+      text: 'comment',
+      createdAt: '2026-03-12T10:00:00.000Z',
+      type: 'regular',
+    });
     hoisted.requestReview.mockResolvedValue(undefined);
     hoisted.updateKanban.mockResolvedValue(undefined);
     hoisted.createTeam.mockResolvedValue({ runId: 'run-1' });
@@ -362,6 +410,153 @@ describe('teamSlice actions', () => {
   afterEach(() => {
     restoreWindowAnimationFrame();
     vi.useRealTimers();
+  });
+
+  it('records task first output once through createTask and refresh without leaking prompt text', async () => {
+    const store = createSliceStore();
+    const initialTeamData = createTeamSnapshot({
+      members: [{ name: 'alice', providerId: 'xai' }],
+    });
+    const taskWithFirstOutput = {
+      id: 'task-1',
+      subject: 'Sensitive subject should not leak',
+      status: 'in_progress',
+      owner: 'alice',
+      createdAt: '2026-03-12T10:00:00.000Z',
+      updatedAt: '2026-03-12T10:00:05.000Z',
+      comments: [
+        {
+          id: 'comment-1',
+          author: 'alice',
+          text: 'Sensitive teammate reply should not leak',
+          createdAt: '2026-03-12T10:00:05.000Z',
+          type: 'regular',
+        },
+      ],
+      attachments: [],
+      historyEvents: [],
+    };
+    store.setState({
+      selectedTeamName: 'my-team',
+      selectedTeamData: initialTeamData,
+    });
+    hoisted.getData.mockResolvedValue(
+      createTeamSnapshot({
+        members: [{ name: 'alice', providerId: 'xai' }],
+        tasks: [taskWithFirstOutput],
+      })
+    );
+
+    await store.getState().createTeamTask('my-team', {
+      subject: 'Sensitive subject should not leak',
+      owner: 'alice',
+      prompt: 'Sensitive prompt should not leak',
+      promptTaskRefs: [{ taskId: 'task-0', displayId: 'task-0', teamName: 'my-team' }],
+    });
+    await store.getState().refreshTeamData('my-team');
+
+    const firstOutputCalls = hoisted.capturePostHogEvent.mock.calls.filter(
+      ([eventName]) => eventName === 'task_management:first_output'
+    );
+    expect(firstOutputCalls).toHaveLength(1);
+    expect(firstOutputCalls[0]).toEqual([
+      'task_management:first_output',
+      expect.objectContaining({
+        target_type: 'member',
+        provider: 'xai',
+        team_size_bucket: '1',
+        has_attachments: false,
+        has_task_refs: true,
+      }),
+    ]);
+    expect(JSON.stringify(hoisted.capturePostHogEvent.mock.calls)).not.toContain(
+      'Sensitive prompt'
+    );
+    expect(JSON.stringify(hoisted.capturePostHogEvent.mock.calls)).not.toContain(
+      'Sensitive teammate reply'
+    );
+  });
+
+  it('records task attachment metadata through saveTaskAttachment without leaking file names', async () => {
+    const store = createSliceStore();
+
+    await store.getState().saveTaskAttachment('my-team', 'task-1', {
+      name: 'secret-roadmap.pdf',
+      type: 'application/pdf',
+      base64: 'aGVsbG8=',
+    });
+
+    expect(hoisted.saveTaskAttachment).toHaveBeenCalledWith(
+      'my-team',
+      'task-1',
+      expect.any(String),
+      'secret-roadmap.pdf',
+      'application/pdf',
+      'aGVsbG8='
+    );
+    expect(hoisted.capturePostHogEvent).toHaveBeenCalledWith('attachment_management:attach_end', {
+      source: 'task',
+      success: true,
+      file_count_bucket: '1',
+      size_bucket: '1_100kb',
+      file_type_family: 'document',
+      error_class: 'none',
+    });
+    expect(JSON.stringify(hoisted.capturePostHogEvent.mock.calls)).not.toContain('secret-roadmap');
+  });
+
+  it('records launch step transitions from provisioning progress once per step', () => {
+    const store = createSliceStore();
+    store.setState({
+      selectedTeamName: 'my-team',
+      selectedTeamData: createTeamSnapshot({
+        members: [{ name: 'alice', providerId: 'xai' }],
+      }),
+      currentProvisioningRunIdByTeam: { 'my-team': 'run-analytics' },
+    });
+
+    store.getState().onProvisioningProgress({
+      runId: 'run-analytics',
+      teamName: 'my-team',
+      state: 'validating',
+      message: 'Validating',
+      startedAt: '2026-03-12T10:00:00.000Z',
+      updatedAt: '2026-03-12T10:00:00.000Z',
+    });
+    store.getState().onProvisioningProgress({
+      runId: 'run-analytics',
+      teamName: 'my-team',
+      state: 'spawning',
+      message: 'Spawning',
+      startedAt: '2026-03-12T10:00:00.000Z',
+      updatedAt: '2026-03-12T10:00:02.000Z',
+    });
+    store.getState().onProvisioningProgress({
+      runId: 'run-analytics',
+      teamName: 'my-team',
+      state: 'spawning',
+      message: 'Spawning',
+      startedAt: '2026-03-12T10:00:00.000Z',
+      updatedAt: '2026-03-12T10:00:02.000Z',
+    });
+
+    const launchStepCalls = hoisted.capturePostHogEvent.mock.calls.filter(
+      ([eventName]) => eventName === 'team_management:launch_step_end'
+    );
+    expect(launchStepCalls).toEqual([
+      [
+        'team_management:launch_step_end',
+        expect.objectContaining({
+          step: 'config_validation',
+          success: true,
+          duration_ms_bucket: '1_5s',
+          member_count_bucket: '1',
+          provider_mix: 'xai',
+          error_class: 'none',
+          partial_failure: false,
+        }),
+      ],
+    ]);
   });
 
   it('restores the selected messages panel mode from localStorage', () => {
@@ -2997,7 +3192,7 @@ describe('teamSlice actions', () => {
 
     const p1 = store.getState().refreshMemberActivityMeta('my-team');
 
-    store.setState((state: any) => ({
+    store.setState((state: TeamSlice) => ({
       teamMessagesByName: {
         ...state.teamMessagesByName,
         'my-team': {
@@ -4453,7 +4648,7 @@ describe('teamSlice actions', () => {
         alice: {
           ...createRuntimeSnapshot().members.alice,
           cpuPercent: 4,
-          resourceHistory: [null, validSample] as any,
+          resourceHistory: [null, validSample],
         },
       },
     });
@@ -4466,7 +4661,7 @@ describe('teamSlice actions', () => {
       members: {
         alice: {
           ...snapshot.members.alice,
-          resourceHistory: [null, { ...validSample }] as any,
+          resourceHistory: [null, { ...validSample }],
         },
       },
     });
@@ -4823,8 +5018,8 @@ describe('teamSlice actions', () => {
 
       hoisted.getData.mockResolvedValue({
         ...existingData,
-        tasks: existingData.tasks.map((task: any) => ({ ...task })),
-        members: existingData.members.map((member: any) => ({ ...member })),
+        tasks: existingData.tasks.map((task) => ({ ...task })),
+        members: existingData.members.map((member) => ({ ...member })),
         kanbanState: {
           ...existingData.kanbanState,
           reviewers: [...existingData.kanbanState.reviewers],
@@ -4931,8 +5126,8 @@ describe('teamSlice actions', () => {
 
       hoisted.getData.mockResolvedValue({
         ...existingData,
-        tasks: existingData.tasks.map((task: any) => ({ ...task })),
-        members: existingData.members.map((member: any) => ({ ...member })),
+        tasks: existingData.tasks.map((task) => ({ ...task })),
+        members: existingData.members.map((member) => ({ ...member })),
         kanbanState: {
           ...existingData.kanbanState,
           reviewers: [...existingData.kanbanState.reviewers],
