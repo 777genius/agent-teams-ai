@@ -18,6 +18,8 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const uiRepoRoot = path.resolve(scriptDir, '..');
 const runtimeRepoRoot = process.env.CLAUDE_DEV_RUNTIME_ROOT?.trim() ?? '';
 const explicitRuntimeCliPath = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() ?? '';
+const disableAuthenticatedRuntimeDownload =
+  process.env.CLAUDE_DEV_RUNTIME_DISABLE_GH?.trim() === '1';
 const runtimeLockPath = path.join(uiRepoRoot, 'runtime.lock.json');
 const defaultRuntimeCacheRoot = path.join(os.homedir(), '.agent-teams', 'runtime-cache');
 const runtimeCacheRoot = process.env.CLAUDE_DEV_RUNTIME_CACHE_ROOT?.trim()
@@ -426,7 +428,7 @@ async function downloadWithProgress(download, destinationPath) {
         response,
         lockPath: runtimeLockPath,
         notFoundHint:
-          '404 usually means the runtime release or asset is missing, private, or inaccessible. If the orchestrator repository is private, run gh auth login with access to it or set CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH to a local runtime.',
+          'The pinned public runtime asset is unavailable. Please update the checkout and retry. Do not substitute an older runtime build; report the release and asset names above if the problem persists. For local runtime development, set CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH.',
         ...download,
       })
     );
@@ -509,6 +511,10 @@ async function downloadWithProgress(download, destinationPath) {
 }
 
 function downloadReleaseAssetWithGh(download, destinationPath) {
+  if (disableAuthenticatedRuntimeDownload) {
+    return false;
+  }
+
   fs.mkdirSync(path.dirname(destinationPath), { recursive: true });
   const result = spawnSync(
     'gh',
@@ -783,5 +789,5 @@ async function main() {
 
 main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+  process.exitCode = 1;
 });

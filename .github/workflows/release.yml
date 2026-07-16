@@ -465,8 +465,25 @@ jobs:
           echo "Timed out waiting for terminal-platform assets in release $RELEASE_REPO@$RELEASE_TAG" >&2
           exit 1
 
+  verify-public-runtime:
+    needs: prepare-runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+
+      - name: Verify anonymous runtime bootstrap before packaging
+        run: node ./scripts/ci/verify-public-runtime-bootstrap.mjs
+
   release-mac:
-    needs: [build, prepare-runtime, prepare-terminal-platform-runtime]
+    needs: [build, prepare-runtime, prepare-terminal-platform-runtime, verify-public-runtime]
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -618,7 +635,7 @@ jobs:
           done
 
   release-win:
-    needs: [build, prepare-runtime, prepare-terminal-platform-runtime]
+    needs: [build, prepare-runtime, prepare-terminal-platform-runtime, verify-public-runtime]
     runs-on: windows-latest
     timeout-minutes: 60
 
@@ -761,7 +778,7 @@ jobs:
           done
 
   release-linux:
-    needs: [build, prepare-runtime, prepare-terminal-platform-runtime]
+    needs: [build, prepare-runtime, prepare-terminal-platform-runtime, verify-public-runtime]
     runs-on: ubuntu-latest
     timeout-minutes: 90
 

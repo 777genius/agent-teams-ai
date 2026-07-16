@@ -505,8 +505,8 @@ gh workflow run release-runtime.yml \
   --ref "v$RUNTIME_VERSION" \
   -f source_ref="v$RUNTIME_VERSION" \
   -f runtime_version="$RUNTIME_VERSION" \
-  -f target_release_repo=777genius/agent_teams_orchestrator \
-  -f target_release_tag="v$RUNTIME_VERSION"
+  -f target_release_repo=777genius/agent_teams_orchestrator_binaries \
+  -f target_release_tag="runtime-v$RUNTIME_VERSION"
 
 gh run list \
   --repo 777genius/agent_teams_orchestrator \
@@ -524,9 +524,9 @@ After the runtime workflow succeeds, update this repo's `runtime.lock.json`:
 
 - `version`: the new runtime version, for example `0.0.52`
 - `sourceRef`: the matching runtime tag, for example `v0.0.52`
-- `releaseRepository`: the runtime repository that hosts runtime assets, normally
-  `777genius/agent_teams_orchestrator`
-- `releaseTag`: the matching runtime release tag, for example `v0.0.52`
+- `releaseRepository`: the public repository that hosts runtime assets,
+  `777genius/agent_teams_orchestrator_binaries`
+- `releaseTag`: the namespaced public runtime release tag, for example `runtime-v0.0.52`
 - each `assets.*.file`: replace the old runtime version suffix with the new one
 
 Then verify the lock points at real uploaded assets:
@@ -547,14 +547,14 @@ done
 node scripts/stage-runtime.mjs
 ```
 
-Do not create standalone runtime releases in the frontend repository. The
-canonical runtime release is in `777genius/agent_teams_orchestrator`, for example
-`v0.0.52`. The frontend release workflow stages those archives into packaged app
-installers.
+Do not create standalone runtime releases in the frontend repository. The source tag is in the
+private `777genius/agent_teams_orchestrator` repository, while the downloadable release is in
+public `777genius/agent_teams_orchestrator_binaries`. The frontend release workflow stages those
+archives into packaged app installers.
 
-If the orchestrator repository is private, local `pnpm dev` needs GitHub CLI
-authentication with access to `777genius/agent_teams_orchestrator`, or a local
-runtime override through `CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH`.
+Local `pnpm dev` downloads the pinned runtime anonymously from the public binary repository. GitHub
+CLI authentication is not required. A local runtime override remains available through
+`CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH`.
 
 ### 3. Create tag and build the draft
 
