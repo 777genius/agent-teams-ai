@@ -32,10 +32,10 @@ describe('graph camera geometry', () => {
     expect(longFit!.zoom).toBeLessThan(shortFit!.zoom);
   });
 
-  it('expands overview culling bounds for screen-sized hierarchy badges', () => {
+  it('caps overview culling bounds for compact team badges', () => {
     const bounds = getGraphNodeRenderBounds(teamNode('Platform'), 0.05);
 
-    expect(bounds.right - bounds.left).toBe(4400);
-    expect(bounds.bottom - bounds.top).toBe(640);
+    expect(bounds.right - bounds.left).toBeCloseTo(94 / 0.19);
+    expect(bounds.bottom - bounds.top).toBeCloseTo(28 / 0.19);
   });
 });
