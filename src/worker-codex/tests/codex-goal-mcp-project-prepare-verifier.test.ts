@@ -363,7 +363,7 @@ describe("project verifier preparation", () => {
   });
 
   it.each(["sync", "bounded"] as const)(
-    "uses remote HEAD when the local tracking ref is stale (%s)",
+    "uses pinned remote HEAD when the local branch and tracking ref are stale (%s)",
     async (executionMode) => {
       const root = await mkdtemp(join(tmpdir(), "verifier-remote-head-"));
       const registryRootDir = join(root, "worker-jobs", "registry");
@@ -548,6 +548,13 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
           ]);
         }
 
+        await git(sourceWorkspacePath, ["reset", "--hard", producerBase]);
+        await git(sourceWorkspacePath, [
+          "update-ref",
+          "refs/remotes/origin/main",
+          producerBase,
+        ]);
+
         const result = await prepareVerifier({
           client,
           root,
@@ -558,6 +565,7 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
           canonicalSha,
           patchSha256: handoff.manifest.artifacts.patch.sha256,
           executionMode,
+          expectedSourceCommit: canonicalSha,
         });
 
         expect(result).toMatchObject({
@@ -1274,6 +1282,7 @@ async function prepareVerifier(input: {
   readonly executionMode: "sync" | "bounded";
   readonly jobId?: string;
   readonly baseBranch?: string;
+  readonly expectedSourceCommit?: string;
   readonly accounts?: readonly string[];
   readonly ownedPaths?: readonly string[];
 }): Promise<Record<string, unknown>> {
@@ -1288,6 +1297,9 @@ async function prepareVerifier(input: {
       taskId: jobId,
       sourceWorkspacePath: input.sourceWorkspacePath,
       baseBranch: input.baseBranch ?? "origin/main",
+      ...(input.expectedSourceCommit
+        ? { expectedSourceCommit: input.expectedSourceCommit }
+        : {}),
       newBranch: "review/verifier",
       workspacePath: input.verifierWorkspacePath,
       promptBody: "Review immutable producer output.\n",
