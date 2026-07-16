@@ -161,7 +161,7 @@ async function observeProviderRuntimeRouting(): Promise<ProviderRuntimeRoutingOb
     }
     applyConfiguredRuntimeBackendsEnv(env, {
       providerBackends: { codex: 'fixture-codex', gemini: 'fixture-gemini' },
-    } as Parameters<typeof applyConfiguredRuntimeBackendsEnv>[1]);
+    } as unknown as Parameters<typeof applyConfiguredRuntimeBackendsEnv>[1]);
     applyProviderRuntimeEnv(env, scenario.providerId);
 
     for (const key of ROUTING_KEYS) {
