@@ -259,6 +259,31 @@ describe('ReviewApplierService', () => {
     expect(writeFile).toHaveBeenCalledTimes(1);
   });
 
+  it('creates a missing file exclusively for guarded Undo restoration', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
+    const filePath = '/tmp/undo-restored-file.txt';
+    readFile.mockRejectedValue(Object.assign(new Error('missing'), { code: 'ENOENT' }));
+    writeFile.mockResolvedValueOnce(undefined);
+
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const service = new ReviewApplierService();
+
+    await expect(service.saveEditedFile(filePath, 'restored\n', null)).resolves.toEqual({
+      success: true,
+    });
+    expect(writeFile).toHaveBeenCalledWith(filePath, 'restored\n', {
+      encoding: 'utf8',
+      flag: 'wx',
+    });
+
+    writeFile.mockRejectedValueOnce(Object.assign(new Error('exists'), { code: 'EEXIST' }));
+    await expect(service.saveEditedFile(filePath, 'restored\n', null)).rejects.toThrow(
+      'refusing to overwrite'
+    );
+  });
+
   it('deletes an Undo-restored file only when its content still matches', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
@@ -637,8 +662,9 @@ describe('ReviewApplierService', () => {
     expect(unlink).not.toHaveBeenCalled();
   });
 
-  it('ledger delete reject restores only when file is missing', async () => {
+  it('ledger delete reject restores exclusively and fails closed on a recreation race', async () => {
     const fsPromises = await import('fs/promises');
+    const mkdir = fsPromises.mkdir as unknown as ReturnType<typeof vi.fn>;
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
     const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
 
@@ -649,56 +675,68 @@ describe('ReviewApplierService', () => {
     const svc = new ReviewApplierService();
     const filePath = '/tmp/deleted.txt';
     const original = 'restore me\n';
-
-    const res = await svc.applyReviewDecisions(
-      {
-        teamName: 'team',
-        decisions: [{ filePath, fileDecision: 'rejected', hunkDecisions: { 0: 'rejected' } }],
-      },
-      new Map([
-        [
+    const changes: Map<string, FileChangeWithContent> = new Map([
+      [
+        filePath,
+        {
           filePath,
-          {
-            filePath,
-            relativePath: 'deleted.txt',
-            snippets: [
-              {
-                toolUseId: 'ledger-1',
-                filePath,
-                toolName: 'Bash',
-                type: 'shell-snapshot',
-                oldString: original,
-                newString: '',
-                replaceAll: false,
-                timestamp: '2026-03-01T10:00:00.000Z',
-                isError: false,
-                ledger: {
-                  eventId: 'event-1',
-                  source: 'ledger-snapshot',
-                  confidence: 'high',
-                  originalFullContent: original,
-                  modifiedFullContent: null,
-                  beforeHash: sha(original),
-                  afterHash: null,
-                  operation: 'delete',
-                  beforeState: { exists: true, sha256: sha(original) },
-                  afterState: { exists: false },
-                },
+          relativePath: 'deleted.txt',
+          snippets: [
+            {
+              toolUseId: 'ledger-1',
+              filePath,
+              toolName: 'Bash',
+              type: 'shell-snapshot',
+              oldString: original,
+              newString: '',
+              replaceAll: false,
+              timestamp: '2026-03-01T10:00:00.000Z',
+              isError: false,
+              ledger: {
+                eventId: 'event-1',
+                source: 'ledger-snapshot',
+                confidence: 'high',
+                originalFullContent: original,
+                modifiedFullContent: null,
+                beforeHash: sha(original),
+                afterHash: null,
+                operation: 'delete',
+                beforeState: { exists: true, sha256: sha(original) },
+                afterState: { exists: false },
               },
-            ],
-            linesAdded: 0,
-            linesRemoved: 1,
-            isNewFile: false,
-            originalFullContent: original,
-            modifiedFullContent: '',
-            contentSource: 'ledger-snapshot',
-          },
-        ],
-      ])
-    );
+            },
+          ],
+          linesAdded: 0,
+          linesRemoved: 1,
+          isNewFile: false,
+          originalFullContent: original,
+          modifiedFullContent: '',
+          contentSource: 'ledger-snapshot',
+        },
+      ],
+    ]);
+    const request = {
+      teamName: 'team',
+      decisions: [
+        { filePath, fileDecision: 'rejected' as const, hunkDecisions: { 0: 'rejected' as const } },
+      ],
+    };
+
+    const res = await svc.applyReviewDecisions(request, changes);
 
     expect(res.applied).toBe(1);
-    expect(writeFile).toHaveBeenCalledWith(filePath, original, 'utf8');
+    expect(mkdir).toHaveBeenCalledWith('/tmp', { recursive: true });
+    expect(writeFile).toHaveBeenCalledWith(filePath, original, {
+      encoding: 'utf8',
+      flag: 'wx',
+    });
+
+    writeFile.mockRejectedValueOnce(Object.assign(new Error('exists'), { code: 'EEXIST' }));
+    const raced = await svc.applyReviewDecisions(request, changes);
+
+    expect(raced.applied).toBe(0);
+    expect(raced.conflicts).toBe(1);
+    expect(raced.errors[0]?.code).toBe('conflict');
   });
 
   it('ledger binary or large unavailable content requires manual review', async () => {

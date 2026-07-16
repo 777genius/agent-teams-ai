@@ -14,6 +14,8 @@ import {
   resolveReviewFileIsNew,
   restoreReviewDecisionRecordsForFile,
   restoreReviewDecisionRecordsForFiles,
+  shouldCreateFileWhenUndoingReject,
+  shouldDeleteFileWhenUndoingReject,
 } from '../../../../../src/renderer/components/team/review/reviewActionState';
 
 function makeFile(filePath: string, changeKey?: string) {
@@ -124,6 +126,58 @@ describe('ChangeReviewDialog interaction guards', () => {
         fileDecisions: {},
       })
     ).toBe(true);
+  });
+
+  it('deletes on Undo only for the first rejection of an agent-deleted file', () => {
+    const file = {
+      ...makeFile('/repo/deleted.ts'),
+      ledgerSummary: { latestOperation: 'delete' as const },
+    };
+
+    expect(
+      shouldDeleteFileWhenUndoingReject(file, 2, {
+        hunkDecisions: {},
+        fileDecisions: {},
+      })
+    ).toBe(true);
+    expect(
+      shouldDeleteFileWhenUndoingReject(file, 2, {
+        hunkDecisions: { '/repo/deleted.ts:0': 'rejected' },
+        fileDecisions: {},
+      })
+    ).toBe(false);
+    expect(
+      shouldDeleteFileWhenUndoingReject(makeFile('/repo/modified.ts'), 1, {
+        hunkDecisions: {},
+        fileDecisions: {},
+      })
+    ).toBe(false);
+  });
+
+  it('recreates a new file on Undo only when the rejection removed its final hunk', () => {
+    const file = { ...makeFile('/repo/new.ts'), isNewFile: true };
+
+    expect(
+      shouldCreateFileWhenUndoingReject(file, true, 2, {
+        hunkDecisions: {
+          '/repo/new.ts:0': 'rejected',
+          '/repo/new.ts:1': 'rejected',
+        },
+        fileDecisions: {},
+      })
+    ).toBe(true);
+    expect(
+      shouldCreateFileWhenUndoingReject(file, true, 2, {
+        hunkDecisions: { '/repo/new.ts:0': 'rejected' },
+        fileDecisions: {},
+      })
+    ).toBe(false);
+    expect(
+      shouldCreateFileWhenUndoingReject(file, false, 1, {
+        hunkDecisions: { '/repo/new.ts:0': 'rejected' },
+        fileDecisions: {},
+      })
+    ).toBe(false);
   });
 
   it('captures immutable ledger identity for guarded rename recovery', () => {

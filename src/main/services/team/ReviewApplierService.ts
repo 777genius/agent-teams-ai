@@ -518,6 +518,21 @@ export class ReviewApplierService {
         if (!matchesExpected) {
           throw new Error('File changed since review update; refusing to overwrite');
         }
+        if (expectedCurrentContent === null) {
+          try {
+            await writeFile(filePath, content, { encoding: 'utf8', flag: 'wx' });
+          } catch (error) {
+            const code =
+              error && typeof error === 'object' && 'code' in error
+                ? String((error as { code?: unknown }).code)
+                : '';
+            if (code === 'EEXIST') {
+              throw new Error('File changed since review update; refusing to overwrite');
+            }
+            throw error;
+          }
+          return { success: true };
+        }
       }
       await writeFile(filePath, content, 'utf8');
       return { success: true };
@@ -827,14 +842,22 @@ export class ReviewApplierService {
         };
       }
       try {
-        await writeFile(filePath, original, 'utf8');
+        await mkdir(dirname(filePath), { recursive: true });
+        await writeFile(filePath, original, { encoding: 'utf8', flag: 'wx' });
         return { handled: true, status: 'applied' };
       } catch (err) {
+        const code =
+          err && typeof err === 'object' && 'code' in err
+            ? String((err as { code?: unknown }).code)
+            : '';
         return {
           handled: true,
-          status: 'error',
-          code: 'io-error',
-          error: `Не удалось записать файл: ${String(err)}`,
+          status: code === 'EEXIST' ? 'conflict' : 'error',
+          code: code === 'EEXIST' ? 'conflict' : 'io-error',
+          error:
+            code === 'EEXIST'
+              ? 'Deleted file was recreated while restoring it; refusing overwrite.'
+              : `Не удалось записать файл: ${String(err)}`,
         };
       }
     }

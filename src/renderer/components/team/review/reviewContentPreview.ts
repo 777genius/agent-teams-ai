@@ -58,6 +58,21 @@ export function getResolvedReviewModifiedContent(
   return fileContent?.modifiedFullContent ?? getLastWriteSnippetContent(file);
 }
 
+export function isReviewFileExpectedDeleted(
+  file: Pick<FileChangeSummary, 'ledgerSummary' | 'snippets'> | undefined
+): boolean {
+  if (!file) return false;
+  const latestOperation = file.ledgerSummary?.latestOperation;
+  if (latestOperation) return latestOperation === 'delete';
+  const finalExists = file.ledgerSummary?.afterState?.exists;
+  if (finalExists !== undefined) return !finalExists;
+  const ledgerSnippets = file.snippets.filter((snippet) => snippet.ledger && !snippet.isError);
+  const lastLedger = ledgerSnippets.at(-1)?.ledger;
+  if (lastLedger?.operation) return lastLedger.operation === 'delete';
+  if (lastLedger?.afterState?.exists !== undefined) return !lastLedger.afterState.exists;
+  return file.ledgerSummary?.deletedInTask === true;
+}
+
 export function isReviewFileMissingOnDisk(
   fileContent: Pick<FileChangeWithContent, 'modifiedFullContent'> | null
 ): boolean {

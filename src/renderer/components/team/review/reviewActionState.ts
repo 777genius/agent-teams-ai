@@ -1,7 +1,10 @@
 import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 
-import { getEffectiveReviewFileDecision } from './reviewContentPreview';
+import {
+  getEffectiveReviewFileDecision,
+  isReviewFileExpectedDeleted,
+} from './reviewContentPreview';
 
 import type {
   FileChangeSummary,
@@ -76,6 +79,18 @@ export function hasReviewFileRejections(
   }).some((decision) => decision === 'rejected');
 }
 
+export function shouldDeleteFileWhenUndoingReject(
+  file: FileChangeSummary | undefined,
+  hunkCount: number,
+  decisions: ReviewDecisionRecords
+): boolean {
+  return Boolean(
+    file &&
+    isReviewFileExpectedDeleted(file) &&
+    !hasReviewFileRejections(file, hunkCount, decisions)
+  );
+}
+
 export function isReviewFileFullyRejected(
   file: FileChangeSummary,
   hunkCount: number,
@@ -87,6 +102,15 @@ export function isReviewFileFullyRejected(
     getEffectiveReviewFileDecision(file, hunkCount, decisions.hunkDecisions, fileDecision) ===
     'rejected'
   );
+}
+
+export function shouldCreateFileWhenUndoingReject(
+  file: FileChangeSummary | undefined,
+  isNewFile: boolean,
+  hunkCount: number,
+  decisions: ReviewDecisionRecords
+): boolean {
+  return Boolean(file && isNewFile && isReviewFileFullyRejected(file, hunkCount, decisions));
 }
 
 export function hasUnresolvedReviewExternalChange(

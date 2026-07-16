@@ -51,8 +51,14 @@ import {
   resolveReviewFileIsNew,
   restoreReviewDecisionRecordsForFile,
   restoreReviewDecisionRecordsForFiles,
+  shouldCreateFileWhenUndoingReject,
+  shouldDeleteFileWhenUndoingReject,
 } from './reviewActionState';
-import { getResolvedReviewModifiedContent, isReviewRejectable } from './reviewContentPreview';
+import {
+  getResolvedReviewModifiedContent,
+  isReviewFileExpectedDeleted,
+  isReviewRejectable,
+} from './reviewContentPreview';
 import { resolveReviewFilePath } from './reviewFilePathResolution';
 import { ReviewFileTree } from './ReviewFileTree';
 import { ReviewToolbar } from './ReviewToolbar';
@@ -83,7 +89,12 @@ interface ReviewDiskUndoSnapshot {
   file?: FileChangeSummary;
   fileIndex?: number;
   restoreConflict?: string;
-  restoreMode?: 'content' | 'delete-file' | 'restore-rejected-rename' | 'reapply-rejected-rename';
+  restoreMode?:
+    | 'content'
+    | 'create-file'
+    | 'delete-file'
+    | 'restore-rejected-rename'
+    | 'reapply-rejected-rename';
   renameExpectation?: ReviewRenameRecoveryExpectation;
 }
 
@@ -670,9 +681,10 @@ export const ChangeReviewDialog = ({
     );
     const rejectableFilePaths = new Set(requestedFiles.map((file) => file.filePath));
     if (rejectableFilePaths.size === 0) return;
+    const reviewState = useStore.getState();
     const decisionSnapshot = {
-      hunkDecisions: { ...useStore.getState().hunkDecisions },
-      fileDecisions: { ...useStore.getState().fileDecisions },
+      hunkDecisions: { ...reviewState.hunkDecisions },
+      fileDecisions: { ...reviewState.fileDecisions },
     };
     pushReviewUndoSnapshot();
     const diskUndoSnapshots: ReviewDiskUndoSnapshot[] = [];
@@ -680,7 +692,19 @@ export const ChangeReviewDialog = ({
     for (const file of requestedFiles) {
       const content = fileContents[file.filePath] ?? null;
       const isNewFile = resolveReviewFileIsNew(file, content);
-      const beforeContent = getResolvedReviewModifiedContent(file, content);
+      const hunkCount = getFileHunkCount(
+        file.filePath,
+        file.snippets.length,
+        reviewState.fileChunkCounts
+      );
+      const shouldDeleteOnUndo = shouldDeleteFileWhenUndoingReject(
+        file,
+        hunkCount,
+        decisionSnapshot
+      );
+      const beforeContent =
+        editorViewMapRef.current.get(file.filePath)?.state.doc.toString() ??
+        getResolvedReviewModifiedContent(file, content);
       const afterContent = isNewFile ? null : (content?.originalFullContent ?? null);
       if (beforeContent != null && (afterContent != null || isNewFile)) {
         diskUndoSnapshots.push({
@@ -689,6 +713,7 @@ export const ChangeReviewDialog = ({
           afterContent,
           changeSetEpoch,
           file,
+          restoreMode: shouldDeleteOnUndo ? 'delete-file' : undefined,
           renameExpectation: getReviewRenameRecoveryExpectation(file) ?? undefined,
           fileIndex: isNewFile
             ? activeChangeSet.files.findIndex((candidate) => candidate.filePath === file.filePath)
@@ -819,6 +844,7 @@ export const ChangeReviewDialog = ({
       const file = activeChangeSet?.files.find((candidate) => candidate.filePath === filePath);
       if (!file) return;
       const content = fileContents[filePath] ?? null;
+      const isExpectedDeletion = isReviewFileExpectedDeleted(file);
       const normalizedFilePath = normalizePathForComparison(filePath);
       const sessionSnapshot =
         [...recentDiskUndoActionsRef.current]
@@ -852,13 +878,21 @@ export const ChangeReviewDialog = ({
         hunkDecisions: { ...useStore.getState().hunkDecisions },
         fileDecisions: { ...useStore.getState().fileDecisions },
       };
+      const rejectedHunkCount = getFileHunkCount(
+        file.filePath,
+        file.snippets.length,
+        useStore.getState().fileChunkCounts
+      );
+      const rejectedNewFileWasRemoved =
+        canReconstructCreatedFile &&
+        isReviewFileFullyRejected(file, rejectedHunkCount, decisionSnapshot);
       useStore.setState({ applyError: null });
       fileApplyInFlightRef.current.add(filePath);
       setFileApplying(filePath, true);
       try {
         let rejectedDiskContent =
           sessionSnapshot?.afterContent ?? content?.originalFullContent ?? '';
-        let restoredDiskContent = desiredContent;
+        let restoredDiskContent: string | null = desiredContent;
         let restoreMode: ReviewDiskUndoSnapshot['restoreMode'] = 'content';
         let rollbackRestoredDisk: (() => Promise<unknown>) | null = null;
         let renameExpectation: ReviewRenameRecoveryExpectation | null = null;
@@ -873,17 +907,47 @@ export const ChangeReviewDialog = ({
           restoreMode = 'reapply-rejected-rename';
           rollbackRestoredDisk = () =>
             api.review.reapplyRejectedRename(reviewScope, filePath, renameExpectation!);
+        } else if (isExpectedDeletion) {
+          const expectedRejectedContent =
+            sessionSnapshot?.afterContent ?? content?.originalFullContent;
+          if (expectedRejectedContent === null || expectedRejectedContent === undefined) {
+            throw new Error('Deleted file baseline is unavailable; refusing an unsafe restore.');
+          }
+          await api.review.deleteEditedFile(reviewScope, filePath, expectedRejectedContent);
+          rejectedDiskContent = expectedRejectedContent;
+          restoredDiskContent = null;
+          restoreMode = 'create-file';
+          rollbackRestoredDisk = () =>
+            api.review.saveEditedFile(reviewScope, filePath, expectedRejectedContent, null);
         } else if (resolveReviewFileIsNew(file, content)) {
           const current = await api.review.checkConflict(reviewScope, filePath, '');
           const isMissing = current.hasConflict && current.conflictContent === null;
-          if (!isMissing) {
-            throw new Error('A file now exists at this path; refusing to overwrite it.');
+          if (isMissing) {
+            await api.review.saveEditedFile(reviewScope, filePath, desiredContent, null);
+            rejectedDiskContent = '';
+            restoreMode = 'delete-file';
+            rollbackRestoredDisk = () =>
+              api.review.deleteEditedFile(reviewScope, filePath, desiredContent);
+          } else {
+            if (rejectedNewFileWasRemoved) {
+              throw new Error('A file now exists at this path; refusing to overwrite it.');
+            }
+            if (hasUnresolvedReviewExternalChange(filePath, reviewExternalChangesByFile)) {
+              throw new Error(
+                'Choose Reload from disk or Keep my draft before restoring this file.'
+              );
+            }
+            rejectedDiskContent = current.currentContent;
+            restoredDiskContent = desiredContent;
+            await api.review.saveEditedFile(
+              reviewScope,
+              filePath,
+              desiredContent,
+              current.currentContent
+            );
+            rollbackRestoredDisk = () =>
+              api.review.saveEditedFile(reviewScope, filePath, rejectedDiskContent, desiredContent);
           }
-          await api.review.saveEditedFile(reviewScope, filePath, desiredContent, null);
-          rejectedDiskContent = '';
-          restoreMode = 'delete-file';
-          rollbackRestoredDisk = () =>
-            api.review.deleteEditedFile(reviewScope, filePath, desiredContent);
         } else {
           const baseline = sessionSnapshot?.afterContent ?? content?.originalFullContent;
           if (baseline === null || baseline === undefined) {
@@ -986,6 +1050,7 @@ export const ChangeReviewDialog = ({
       memberName,
       pushReviewUndoAction,
       restoreFileDecisions,
+      reviewExternalChangesByFile,
       reviewScope,
       setFileApplying,
       teamName,
@@ -1056,6 +1121,7 @@ export const ChangeReviewDialog = ({
           fileDecisions: { ...state.fileDecisions },
         };
         const isNew = resolveReviewFileIsNew(file, fileContents[filePath]);
+        const shouldDeleteOnUndo = shouldDeleteFileWhenUndoingReject(file, count, decisionSnapshot);
         const view = editorViewMapRef.current.get(filePath);
         const beforeContent =
           view?.state.doc.toString() ??
@@ -1084,7 +1150,9 @@ export const ChangeReviewDialog = ({
               );
             if (!hasErrorForFile) {
               const restoreContent =
-                getResolvedReviewModifiedContent(file, fileContents[filePath] ?? null) ?? '';
+                beforeContent ??
+                getResolvedReviewModifiedContent(file, fileContents[filePath] ?? null) ??
+                '';
               const index = activeChangeSet?.files.findIndex((f) => f.filePath === filePath) ?? 0;
               const snapshot: ReviewDiskUndoSnapshot = {
                 filePath,
@@ -1134,6 +1202,7 @@ export const ChangeReviewDialog = ({
                   afterContent,
                   changeSetEpoch: operationEpoch,
                   file,
+                  restoreMode: shouldDeleteOnUndo ? 'delete-file' : undefined,
                   renameExpectation: getReviewRenameRecoveryExpectation(file) ?? undefined,
                 };
                 if (!isLedgerRenameReviewFile(file)) {
@@ -1215,7 +1284,19 @@ export const ChangeReviewDialog = ({
       const operationEpoch = changeSetEpoch;
       fileApplyInFlightRef.current.add(filePath);
       setFileApplying(filePath, true);
+      const decisionState = useStore.getState();
+      const file = activeChangeSet?.files.find((candidate) => candidate.filePath === filePath);
+      const hunkCount = file
+        ? getFileHunkCount(file.filePath, file.snippets.length, decisionState.fileChunkCounts)
+        : 0;
+      const shouldDeleteOnUndo = shouldDeleteFileWhenUndoingReject(file, hunkCount, decisionState);
       const originalIndex = setHunkDecision(filePath, hunkIndex, 'rejected');
+      const isNewFileFullyRejected = shouldCreateFileWhenUndoingReject(
+        file,
+        Boolean(file && resolveReviewFileIsNew(file, fileContents[filePath])),
+        hunkCount,
+        useStore.getState()
+      );
       if (!hunkDecisionUndoStackRef.current[filePath]) {
         hunkDecisionUndoStackRef.current[filePath] = [];
       }
@@ -1235,17 +1316,24 @@ export const ChangeReviewDialog = ({
                   normalizePathForComparison(filePath)
               );
             if (result && !hasErrorForFile) {
-              const actualAfterContent = await readCurrentReviewDiskContent(filePath, afterContent);
+              const actualAfterContent = isNewFileFullyRejected
+                ? null
+                : await readCurrentReviewDiskContent(filePath, afterContent);
               const snapshot: ReviewDiskUndoSnapshot = {
                 filePath,
                 beforeContent,
-                afterContent,
+                afterContent: isNewFileFullyRejected ? null : afterContent,
                 changeSetEpoch: operationEpoch,
-                file: activeChangeSet?.files.find((file) => file.filePath === filePath),
+                file,
               };
+              snapshot.restoreMode = isNewFileFullyRejected
+                ? 'create-file'
+                : shouldDeleteOnUndo
+                  ? 'delete-file'
+                  : undefined;
               snapshot.renameExpectation =
                 getReviewRenameRecoveryExpectation(snapshot.file) ?? undefined;
-              if (!isLedgerRenameReviewFile(snapshot.file)) {
+              if (actualAfterContent !== null && !isLedgerRenameReviewFile(snapshot.file)) {
                 alignDiskUndoSnapshotWithAppliedContent(snapshot, actualAfterContent);
               }
               const diskUndoAction: RecentDiskUndoAction = {
@@ -1299,6 +1387,7 @@ export const ChangeReviewDialog = ({
       dropHunkUndoMetadata,
       rollbackEditorContent,
       activeChangeSet,
+      fileContents,
       pushReviewUndoAction,
     ]
   );
@@ -1447,6 +1536,13 @@ export const ChangeReviewDialog = ({
             throw new Error('Undo delete snapshot is missing the expected file content.');
           }
           await api.review.deleteEditedFile(reviewScope, snapshot.filePath, snapshot.afterContent);
+        } else if (restoreMode === 'create-file') {
+          await api.review.saveEditedFile(
+            reviewScope,
+            snapshot.filePath,
+            snapshot.beforeContent,
+            null
+          );
         } else {
           await api.review.saveEditedFile(
             reviewScope,
@@ -1456,7 +1552,7 @@ export const ChangeReviewDialog = ({
           );
         }
         if (useStore.getState().changeSetEpoch !== snapshot.changeSetEpoch) return false;
-        if (snapshot.afterContent === null && snapshot.file) {
+        if (snapshot.afterContent === null && snapshot.file && restoreMode !== 'create-file') {
           addReviewFile(snapshot.file, {
             index: snapshot.fileIndex,
             content: {
