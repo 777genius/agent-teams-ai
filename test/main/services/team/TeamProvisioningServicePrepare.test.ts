@@ -3368,6 +3368,84 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     ).resolves.toBe('opencode/big-pickle');
   });
 
+  it('falls back to OpenCode runtime status when the model list has no default model', async () => {
+    execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
+      if (args[0] === 'model' && args[1] === 'list' && args.includes('opencode')) {
+        return {
+          stdout: JSON.stringify({
+            schemaVersion: 1,
+            providers: {
+              opencode: {
+                defaultModel: null,
+                models: [
+                  {
+                    id: 'opencode/big-pickle',
+                    label: 'Big Pickle',
+                    description: 'Free OpenCode model',
+                  },
+                ],
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        };
+      }
+      if (args[0] === 'runtime' && args[1] === 'status' && args.includes('opencode')) {
+        return {
+          stdout: JSON.stringify({
+            providers: {
+              opencode: {
+                providerId: 'opencode',
+                modelCatalog: {
+                  schemaVersion: 1,
+                  providerId: 'opencode',
+                  source: 'app-server',
+                  status: 'ready',
+                  fetchedAt: new Date(0).toISOString(),
+                  staleAt: new Date(60_000).toISOString(),
+                  defaultModelId: 'opencode/big-pickle',
+                  defaultLaunchModel: 'opencode/big-pickle',
+                  models: [],
+                  diagnostics: {
+                    configReadState: 'ready',
+                    appServerState: 'healthy',
+                  },
+                },
+              },
+            },
+          }),
+          stderr: '',
+          exitCode: 0,
+        };
+      }
+      return defaultExecCliMockImplementation(_binaryPath, args);
+    });
+
+    const svc = new TeamProvisioningService();
+    const serviceWithDefaultModelResolver = svc as unknown as {
+      resolveProviderDefaultModel: (
+        claudePath: string,
+        cwd: string,
+        providerId: string,
+        env: NodeJS.ProcessEnv,
+        providerArgs: string[],
+        limitContext: boolean
+      ) => Promise<string | null>;
+    };
+
+    await expect(
+      serviceWithDefaultModelResolver.resolveProviderDefaultModel(
+        '/fake/claude',
+        tempRoot,
+        'opencode',
+        { PATH: '/usr/bin' },
+        [],
+        false
+      )
+    ).resolves.toBe('opencode/big-pickle');
+  });
+
   it('materializes pure OpenCode runtime adapter Default selections before launch', async () => {
     execCliMock.mockImplementation(async (_binaryPath: string | null, args: string[]) => {
       if (args[0] === 'model' && args[1] === 'list' && args.includes('opencode')) {
