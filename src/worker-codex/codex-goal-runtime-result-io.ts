@@ -90,6 +90,32 @@ export async function captureGitWorkspacePatch(input: {
     .join("");
 }
 
+export async function captureGitWorkspaceChangedFiles(input: {
+  readonly workspacePath: string;
+  readonly gitBinaryPath?: string;
+}): Promise<readonly string[]> {
+  const gitBinaryPath = input.gitBinaryPath ?? "git";
+  const hasHead = await gitHasHead({
+    gitBinaryPath,
+    workspacePath: input.workspacePath,
+  });
+  const tracked = await gitDiff({
+    gitBinaryPath,
+    workspacePath: input.workspacePath,
+    args: hasHead
+      ? ["diff", "--name-only", "-z", "HEAD", "--"]
+      : ["diff", "--name-only", "-z", "--"],
+  });
+  const untracked = await gitUntrackedPaths({
+    gitBinaryPath,
+    workspacePath: input.workspacePath,
+  });
+  return [...new Set([
+    ...tracked.split("\0").filter(Boolean),
+    ...untracked,
+  ])].sort();
+}
+
 function ensureTrailingNewline(value: string): string {
   return value.endsWith("\n") ? value : `${value}\n`;
 }
@@ -156,6 +182,22 @@ async function gitUntrackedPatch(input: {
   readonly gitBinaryPath: string;
   readonly workspacePath: string;
 }): Promise<string> {
+  const paths = await gitUntrackedPaths(input);
+  const patches = await Promise.all(paths.map((path) =>
+    gitDiff({
+      gitBinaryPath: input.gitBinaryPath,
+      workspacePath: input.workspacePath,
+      args: ["diff", "--binary", "--no-index", "--", "/dev/null", path],
+      allowDifferenceExitCode: true,
+    })
+  ));
+  return patches.join("\n");
+}
+
+async function gitUntrackedPaths(input: {
+  readonly gitBinaryPath: string;
+  readonly workspacePath: string;
+}): Promise<readonly string[]> {
   const { stdout } = await execFileAsync(input.gitBinaryPath, [
     "-C",
     input.workspacePath,
@@ -167,16 +209,7 @@ async function gitUntrackedPatch(input: {
     maxBuffer: 16 * 1024 * 1024,
     timeout: defaultGitCommandTimeoutMs,
   });
-  const paths = stdout.split("\0").filter(Boolean);
-  const patches = await Promise.all(paths.map((path) =>
-    gitDiff({
-      gitBinaryPath: input.gitBinaryPath,
-      workspacePath: input.workspacePath,
-      args: ["diff", "--binary", "--no-index", "--", "/dev/null", path],
-      allowDifferenceExitCode: true,
-    })
-  ));
-  return patches.join("\n");
+  return stdout.split("\0").filter(Boolean);
 }
 
 function basenameForTemp(path: string): string {

@@ -1,11 +1,12 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import {
   GitPatchPreserver,
+  captureGitWorkspaceChangedFiles,
   createCodexGoalResultRecorder,
 } from "../codex-goal-runtime-result-io";
 
@@ -105,6 +106,32 @@ describe("codex goal runtime result IO", () => {
       await execFileAsync("git", ["apply", outputPath], { cwd: workspacePath });
       expect(await readFile(join(workspacePath, "tracked.txt"), "utf8")).toBe("after\n\n");
       expect(await readFile(join(workspacePath, "untracked.txt"), "utf8")).toBe("new file\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports net patch paths when a staged input file is moved in the worktree", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-patch-paths-"));
+    try {
+      await execFileAsync("git", ["init"], { cwd: root });
+      await execFileAsync("git", ["config", "user.email", "runtime-test@example.com"], {
+        cwd: root,
+      });
+      await execFileAsync("git", ["config", "user.name", "Runtime Test"], {
+        cwd: root,
+      });
+      await writeFile(join(root, "base.txt"), "base\n");
+      await execFileAsync("git", ["add", "base.txt"], { cwd: root });
+      await execFileAsync("git", ["commit", "-m", "test: initialize fixture"], {
+        cwd: root,
+      });
+      await writeFile(join(root, "rejected.txt"), "preserved output\n");
+      await execFileAsync("git", ["add", "rejected.txt"], { cwd: root });
+      await rename(join(root, "rejected.txt"), join(root, "accepted.txt"));
+
+      await expect(captureGitWorkspaceChangedFiles({ workspacePath: root }))
+        .resolves.toEqual(["accepted.txt"]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
