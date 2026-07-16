@@ -82,3 +82,5 @@ describe('ActionModeSelector', () => {
     });
   });
 });
+
+/* eslint-enable @typescript-eslint/naming-convention -- re-enable after mocked component exports. */

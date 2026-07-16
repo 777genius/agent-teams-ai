@@ -6,8 +6,8 @@ import type { CameraTransform } from '../hooks/useGraphCamera';
 import type { WorldBounds } from '../layout/launchAnchor';
 import type { GraphEdge, GraphNode } from '../ports/types';
 
-const MINIMAP_WIDTH = 196;
-const MINIMAP_HEIGHT = 124;
+const MINIMAP_WIDTH = 170;
+const MINIMAP_HEIGHT = 105;
 const MINIMAP_PADDING = 10;
 
 export interface GraphMinimapSnapshot {
@@ -127,7 +127,7 @@ export const GraphMinimap = forwardRef<GraphMinimapHandle, Readonly<GraphMinimap
         ref={canvasRef}
         width={MINIMAP_WIDTH}
         height={MINIMAP_HEIGHT}
-        className="pointer-events-auto absolute bottom-14 right-4 z-[4] h-[124px] w-[196px] cursor-crosshair rounded-xl border border-sky-300/10 bg-slate-950/50 opacity-75 shadow-lg shadow-black/20 backdrop-blur-sm transition-opacity hover:opacity-95 focus-visible:opacity-95"
+        className="pointer-events-auto absolute bottom-14 right-4 z-[4] h-[105px] w-[170px] cursor-crosshair rounded-lg border border-sky-300/10 bg-slate-950/45 opacity-50 shadow-lg shadow-black/20 backdrop-blur-sm transition-opacity duration-200 hover:opacity-95 focus-visible:opacity-95"
         role="button"
         tabIndex={0}
         aria-label={label}

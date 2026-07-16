@@ -4960,8 +4960,32 @@ export default interface Resources {
         };
         view: {
           hierarchy: 'Hierarchy';
+          overview: 'Overview';
           relations: 'Relations';
           structure: 'Structure';
+        };
+        overviewCard: {
+          activeTasks: '{{count}} active tasks';
+          attention: '{{count}} need attention';
+          summary: '{{groupCount}} groups · {{teamCount}} teams · {{agentCount}} agents';
+          teamsOnline: '{{onlineCount}}/{{teamCount}} teams online';
+        };
+        toolbar: {
+          animation: 'Animation';
+          connections: 'Connections';
+          filters: 'Map filters';
+          fit: 'Fit meaningful overview';
+          reset: 'Reset search, focus, and filters';
+          tasks: 'Tasks';
+          zoomIn: 'Zoom in';
+          zoomOut: 'Zoom out';
+        };
+        legend: {
+          connection: 'Connection';
+          group: 'Group';
+          hierarchy: 'Hierarchy';
+          online: 'Online';
+          organization: 'Organization';
         };
         focus: {
           clearFocus: 'Clear focus';

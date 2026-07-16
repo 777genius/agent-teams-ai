@@ -107,6 +107,7 @@ export interface GraphCanvasHandle {
 
 export interface GraphCanvasProps {
   showHexGrid?: boolean;
+  showDotGrid?: boolean;
   showStarField?: boolean;
   bloomIntensity?: number;
   onWheel?: (e: WheelEvent) => void;
@@ -121,6 +122,7 @@ export interface GraphCanvasProps {
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas(
   {
     showHexGrid = true,
+    showDotGrid = false,
     showStarField = true,
     bloomIntensity = 0.6,
     onWheel,
@@ -293,6 +295,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           lastBackgroundTimeRef.current = state.time;
           drawBackground(ctx, w, h, starsRef.current, shootingStarsRef.current, cam, state.time, {
             showHexGrid,
+            showDotGrid,
             showStarField,
           });
 
@@ -491,7 +494,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         time: lastDrawTimeRef.current,
       }),
     }),
-    [showHexGrid, showStarField, bloomIntensity]
+    [showDotGrid, showHexGrid, showStarField, bloomIntensity]
   );
 
   // Wheel handler (passive: false required for preventDefault)
@@ -651,10 +654,17 @@ function getPreparedGroupFrameDrawStyle(params: {
     strokeAlpha += overviewBoost * (isPrimary ? 0.24 : 0.18);
   }
 
+  let dash = [10 / zoom, 10 / zoom];
+  if (prepared.frame.borderStyle === 'solid') {
+    dash = [];
+  } else if (isPrimary) {
+    dash = [14 / zoom, 10 / zoom];
+  }
+
   return {
     alpha,
     strokeWidth,
-    dash: isPrimary ? [14 / zoom, 10 / zoom] : [10 / zoom, 10 / zoom],
+    dash,
     fillAlpha,
     strokeAlpha,
   };
@@ -671,7 +681,8 @@ function drawPreparedGroupFrame(
     time: number;
   }
 ): void {
-  const color = prepared.frame.color ?? '#8bd3ff';
+  const color =
+    prepared.frame.priority === 'primary' ? (prepared.frame.color ?? '#8bd3ff') : '#7891ad';
   const zoom = Math.max(args.zoom, GROUP_FRAME_RENDER_MIN_ZOOM);
   const selected = args.selectedNodeId === prepared.frame.id;
   const hovered = args.hoveredGroupFrameId === prepared.frame.id;

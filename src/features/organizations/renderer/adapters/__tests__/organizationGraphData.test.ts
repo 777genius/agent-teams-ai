@@ -751,7 +751,7 @@ describe('buildOrganizationGraphData', () => {
     expect(graph.layout?.fitTaskRowsToContent).toBe(true);
     expect(graph.layout?.showEmptyTaskPlaceholders).toBeUndefined();
     expect(graph.nodes.find((node) => node.id === 'agent:alpha:alice')).toMatchObject({
-      taskZoomVisibility: 'overview',
+      taskZoomVisibility: 'summary',
     });
     expect(graph.edges).toEqual(
       expect.arrayContaining([
@@ -944,6 +944,7 @@ describe('buildOrganizationGraphData', () => {
         color: '#8bd3ff',
         depth: 0,
         priority: 'normal',
+        borderStyle: 'solid',
       },
     ]);
     expect(graph.layout?.ownerOrder).toEqual(['team:beta', 'team:alpha']);
@@ -969,6 +970,7 @@ describe('buildOrganizationGraphData', () => {
         color: '#8bd3ff',
         depth: 0,
         priority: 'normal',
+        borderStyle: 'solid',
       },
     ]);
   });
@@ -1014,6 +1016,7 @@ describe('buildOrganizationGraphData', () => {
         color: '#4f8cff',
         depth: 0,
         priority: 'primary',
+        borderStyle: 'solid',
       },
       {
         id: 'org:quality',
@@ -1023,6 +1026,7 @@ describe('buildOrganizationGraphData', () => {
         color: '#4f8cff',
         depth: 0,
         priority: 'primary',
+        borderStyle: 'solid',
       },
     ]);
     expect(graph.edges).toEqual(
@@ -1057,6 +1061,7 @@ describe('buildOrganizationGraphData', () => {
         depth: 0,
         labelLane: 1,
         priority: 'primary',
+        borderStyle: 'solid',
       },
       {
         id: 'unit:product:engineering',
@@ -1066,6 +1071,7 @@ describe('buildOrganizationGraphData', () => {
         color: '#8bd3ff',
         depth: 1,
         priority: 'normal',
+        borderStyle: 'solid',
       },
       {
         id: 'org:quality',
@@ -1075,6 +1081,7 @@ describe('buildOrganizationGraphData', () => {
         color: '#4f8cff',
         depth: 0,
         priority: 'primary',
+        borderStyle: 'solid',
       },
       {
         id: 'unit:__all-organizations__:unassigned-teams',
@@ -1084,6 +1091,7 @@ describe('buildOrganizationGraphData', () => {
         color: '#8bd3ff',
         depth: 0,
         priority: 'normal',
+        borderStyle: 'solid',
       },
     ]);
     expect(getOrganizationIdForNodeId(viewModel, 'unit:product:engineering')).toBe('product');
@@ -1104,7 +1112,7 @@ describe('buildOrganizationGraphData', () => {
     expect(slots['team:beta']?.ringIndex).toBeLessThan(slots['team:gamma']?.ringIndex ?? -1);
     expect(
       (slots['team:gamma']?.ringIndex ?? 0) - (slots['team:beta']?.ringIndex ?? 0)
-    ).toBeGreaterThanOrEqual(6);
+    ).toBeGreaterThanOrEqual(4);
   });
 
   it('packs narrow sibling groups side by side in rows layout', () => {
@@ -1367,10 +1375,10 @@ describe('buildOrganizationGraphData', () => {
     expect(rowsGraph.layout?.mode).toBe('grid-under-lead');
     expect(radialGraph.layout?.mode).toBe('radial');
     expect(rowsGraph.nodes.find((node) => node.kind === 'task')?.taskZoomVisibility).toBe(
-      'overview'
+      'summary'
     );
     expect(radialGraph.nodes.find((node) => node.kind === 'task')?.taskZoomVisibility).toBe(
-      'overview'
+      'summary'
     );
     expect(maxGridColumnIndex).toBeGreaterThan(1);
     expect(maxGridRowIndex).toBeLessThan(5);
@@ -1393,7 +1401,7 @@ describe('buildOrganizationGraphData', () => {
           state: 'active',
           ownerId: 'team:alpha',
           sublabel: 'Build org overview',
-          taskZoomVisibility: 'overview',
+          taskZoomVisibility: 'summary',
         }),
       ])
     );

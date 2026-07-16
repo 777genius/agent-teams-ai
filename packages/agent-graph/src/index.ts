@@ -34,7 +34,11 @@ export type {
   GraphParticle,
   GraphParticleKind,
 } from './ports/types';
-export type { GraphGroupFrameScreenPlacement, GraphViewProps } from './ui/GraphView';
+export type {
+  GraphControlRenderProps,
+  GraphGroupFrameScreenPlacement,
+  GraphViewProps,
+} from './ui/GraphView';
 export { GraphView } from './ui/GraphView';
 export type { TransientHandoffCard } from './ui/transientHandoffs';
 export { getTransientHandoffCardAlpha } from './ui/transientHandoffs';

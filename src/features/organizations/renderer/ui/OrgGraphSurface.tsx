@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { GraphView } from '@claude-teams/agent-graph';
 import { useAppTranslation } from '@features/localization/renderer';
-import { Button } from '@renderer/components/ui/button';
 import { Plus } from 'lucide-react';
 
 import {
@@ -13,11 +12,15 @@ import { buildOrganizationGraphFocusState } from '../adapters/organizationGraphF
 import { getOrganizationIdForNodeId } from '../adapters/organizationMapViewModel';
 
 import { OrgGraphFocusHud } from './OrgGraphFocusHud';
+import { OrgGraphToolbar } from './OrgGraphToolbar';
+import { OrgMapLegendHud } from './OrgMapLegendHud';
+import { OrgOverviewHud } from './OrgOverviewHud';
 
 import type { OrganizationPlacementSelection } from '../../contracts';
 import type { OrganizationGraphFocusMode } from '../adapters/organizationGraphFocus';
 import type { OrganizationMapViewModel } from '../adapters/organizationMapViewModel';
 import type {
+  GraphControlRenderProps,
   GraphDomainRef,
   GraphEdge,
   GraphEventPort,
@@ -27,7 +30,7 @@ import type {
 } from '@claude-teams/agent-graph';
 
 type OrganizationRelationViewMode = 'structure' | 'relations';
-type OrganizationGraphViewMode = 'hierarchy' | OrganizationRelationViewMode;
+type OrganizationGraphViewMode = 'overview' | 'hierarchy' | OrganizationRelationViewMode;
 
 interface OrgGraphSurfaceProps {
   viewModel: OrganizationMapViewModel;
@@ -409,7 +412,10 @@ export const OrgGraphSurface = ({
   const { t } = useAppTranslation('team');
   const [relationViewMode, setRelationViewMode] =
     useState<OrganizationRelationViewMode>('structure');
+  const [isOverviewMode, setIsOverviewMode] = useState(false);
   const [focusMode, setFocusMode] = useState<OrganizationGraphFocusMode>('context');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMinimapVisible, setIsMinimapVisible] = useState(true);
   const [revealNodeRequest, setRevealNodeRequest] = useState<{
     nodeId: string;
     requestId: number;
@@ -487,57 +493,40 @@ export const OrgGraphSurface = ({
     () => buildRelationModeGraphData(relationViewMode, graphData, effectiveFocus.focusNodeIds),
     [effectiveFocus.focusNodeIds, graphData, relationViewMode]
   );
-  const activeViewMode: OrganizationGraphViewMode =
-    relationViewMode === 'relations'
+  const activeViewMode: OrganizationGraphViewMode = isOverviewMode
+    ? 'overview'
+    : relationViewMode === 'relations'
       ? 'relations'
       : layoutMode === 'hierarchical'
         ? 'hierarchy'
         : 'structure';
-  const relationToolbar = useMemo(
-    () => (
-      <div className="mx-auto flex max-w-full flex-col items-center gap-1">
-        <div className="inline-flex max-w-full items-center rounded-lg border border-sky-300/15 bg-[var(--color-surface-overlay)] p-0.5 text-[11px] font-medium shadow-lg shadow-black/20 backdrop-blur-md">
-          {(
-            [
-              ['hierarchy', t('organizations.graph.view.hierarchy')],
-              ['structure', t('organizations.graph.view.structure')],
-              ['relations', t('organizations.graph.view.relations')],
-            ] as const
-          ).map(([mode, label]) => {
-            const active = activeViewMode === mode;
-            return (
-              <Button
-                key={mode}
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-pressed={active}
-                data-organization-map-view-mode={mode}
-                className={`h-6 rounded-md px-2.5 transition-colors ${
-                  active
-                    ? 'bg-sky-400/18 text-sky-100 shadow-sm shadow-sky-500/10'
-                    : 'text-[var(--color-text-muted)] hover:bg-white/5 hover:text-[var(--color-text)]'
-                }`}
-                onClick={() => {
-                  if (mode === 'hierarchy') {
-                    setRelationViewMode('structure');
-                    if (layoutMode !== 'hierarchical') onLayoutModeChange('hierarchical');
-                    return;
-                  }
-                  setRelationViewMode(mode);
-                  if (layoutMode !== 'grid-under-lead') {
-                    onLayoutModeChange('grid-under-lead');
-                  }
-                }}
-              >
-                {label}
-              </Button>
-            );
-          })}
-        </div>
-      </div>
-    ),
-    [activeViewMode, layoutMode, onLayoutModeChange, t]
+  const viewModes = useMemo(
+    () =>
+      [
+        { mode: 'overview', label: t('organizations.graph.view.overview') },
+        { mode: 'hierarchy', label: t('organizations.graph.view.hierarchy') },
+        { mode: 'structure', label: t('organizations.graph.view.structure') },
+        { mode: 'relations', label: t('organizations.graph.view.relations') },
+      ] as const,
+    [t]
+  );
+  const changeViewMode = useCallback(
+    (mode: OrganizationGraphViewMode): void => {
+      if (mode === 'overview') {
+        setIsOverviewMode(true);
+        setRelationViewMode('structure');
+        return;
+      }
+      setIsOverviewMode(false);
+      if (mode === 'hierarchy') {
+        setRelationViewMode('structure');
+        if (layoutMode !== 'hierarchical') onLayoutModeChange('hierarchical');
+        return;
+      }
+      setRelationViewMode(mode);
+      if (layoutMode !== 'grid-under-lead') onLayoutModeChange('grid-under-lead');
+    },
+    [layoutMode, onLayoutModeChange]
   );
   const createTeamFrameId = useMemo(
     () => getCreateTeamFrameId(viewModel, selectedNodeId),
@@ -557,6 +546,27 @@ export const OrgGraphSurface = ({
       onSelectNode(nodeId);
     },
     [onRevealNode, onSelectNode]
+  );
+  const selectNodeFromHud = useCallback(
+    (nodeId: string | null, reveal = false): void => {
+      if (activeViewMode === 'overview' && nodeId) changeViewMode('structure');
+      selectNode(nodeId, reveal);
+    },
+    [activeViewMode, changeViewMode, selectNode]
+  );
+  const graphViewData = useMemo(
+    () =>
+      activeViewMode === 'overview'
+        ? {
+            ...displayedGraphData,
+            nodes: [],
+            edges: [],
+            particles: [],
+            groupFrames: [],
+            layout: undefined,
+          }
+        : displayedGraphData,
+    [activeViewMode, displayedGraphData]
   );
   const events = useMemo<GraphEventPort>(
     () => ({
@@ -588,9 +598,73 @@ export const OrgGraphSurface = ({
     [onToggleNodeCollapse, selectNode, viewModel]
   );
 
+  const renderControls = useCallback(
+    (controls: GraphControlRenderProps): React.ReactNode => (
+      <OrgGraphToolbar
+        {...controls}
+        activeViewMode={activeViewMode}
+        viewModes={viewModes}
+        isSearchOpen={isSearchOpen}
+        isMinimapVisible={isMinimapVisible}
+        canReset={
+          Boolean(selectedNodeId) ||
+          focusMode !== 'context' ||
+          isSearchOpen ||
+          collapsedNodeIds.size > 0 ||
+          activeViewMode !== 'hierarchy' ||
+          !controls.filters.showTasks ||
+          !controls.filters.showEdges ||
+          controls.filters.paused
+        }
+        onViewModeChange={changeViewMode}
+        onSearchToggle={() => setIsSearchOpen((value) => !value)}
+        onMinimapToggle={() => setIsMinimapVisible((value) => !value)}
+        onReset={() => {
+          setFocusMode('context');
+          setIsSearchOpen(false);
+          selectNode(null);
+          [...collapsedNodeIds].forEach(onToggleNodeCollapse);
+          changeViewMode('hierarchy');
+          controls.onFiltersChange({
+            ...controls.filters,
+            showTasks: true,
+            showEdges: true,
+            paused: false,
+          });
+          controls.onZoomToFit();
+        }}
+        labels={{
+          search: t('organizations.graph.focus.searchLabel'),
+          filters: t('organizations.graph.toolbar.filters'),
+          fit: t('organizations.graph.toolbar.fit'),
+          minimap: t('organizations.graph.canvas.minimap'),
+          reset: t('organizations.graph.toolbar.reset'),
+          tasks: t('organizations.graph.toolbar.tasks'),
+          connections: t('organizations.graph.toolbar.connections'),
+          animation: t('organizations.graph.toolbar.animation'),
+          zoomIn: t('organizations.graph.toolbar.zoomIn'),
+          zoomOut: t('organizations.graph.toolbar.zoomOut'),
+        }}
+      />
+    ),
+    [
+      activeViewMode,
+      changeViewMode,
+      collapsedNodeIds,
+      focusMode,
+      isMinimapVisible,
+      isSearchOpen,
+      onToggleNodeCollapse,
+      selectNode,
+      selectedNodeId,
+      t,
+      viewModes,
+    ]
+  );
+
   return (
     <GraphView
-      data={displayedGraphData}
+      data={graphViewData}
       events={events}
       className="size-full"
       suspendAnimation={!isActive}
@@ -604,17 +678,18 @@ export const OrgGraphSurface = ({
         showEdges: true,
         showEdgeLabels: false,
         showHexGrid: false,
+        showDotGrid: true,
         showStarField: false,
         showSpaceEffects: false,
         bloomIntensity: 0.25,
       }}
-      showMinimap
+      showMinimap={activeViewMode !== 'overview' && isMinimapVisible}
       minimapLabel={t('organizations.graph.canvas.minimap')}
-      focusNodeIds={effectiveFocus.focusNodeIds}
-      focusEdgeIds={effectiveFocus.focusEdgeIds}
+      focusNodeIds={activeViewMode === 'overview' ? null : effectiveFocus.focusNodeIds}
+      focusEdgeIds={activeViewMode === 'overview' ? null : effectiveFocus.focusEdgeIds}
       focusOverridesSelection={Boolean(selectedNodeId)}
       revealNodeRequest={revealNodeRequest}
-      renderTopToolbarContent={() => relationToolbar}
+      renderControls={renderControls}
       renderOverlay={renderNodeOverlay}
       renderEdgeOverlay={(overlayProps) => renderEdgeOverlay(overlayProps, edgeOverlayText)}
       renderHud={({ getGroupFrameScreenPlacements, getViewportSize }) => (
@@ -626,11 +701,21 @@ export const OrgGraphSurface = ({
             connectedTeamCount={organizationFocus.connectedTeamCount}
             collapsedNodeIds={collapsedNodeIds}
             onFocusModeChange={setFocusMode}
-            onSelectNode={selectNode}
+            onSelectNode={selectNodeFromHud}
             onToggleNodeCollapse={onToggleNodeCollapse}
+            isSearchOpen={isSearchOpen}
+            onSearchOpenChange={setIsSearchOpen}
+            hideSearchTrigger
           />
-          <OrgRelationLegendHud mode={relationViewMode} />
-          {onCreateTeamHere ? (
+          {activeViewMode === 'overview' ? null : relationViewMode === 'relations' ? (
+            <OrgRelationLegendHud mode={relationViewMode} />
+          ) : (
+            <OrgMapLegendHud />
+          )}
+          {activeViewMode === 'overview' ? (
+            <OrgOverviewHud viewModel={viewModel} onSelectNode={selectNodeFromHud} />
+          ) : null}
+          {activeViewMode !== 'overview' && onCreateTeamHere ? (
             <OrgGroupFrameCreateHud
               viewModel={viewModel}
               isActive={isActive}

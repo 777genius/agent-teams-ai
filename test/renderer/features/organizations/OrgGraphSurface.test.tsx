@@ -13,9 +13,70 @@ vi.mock('@features/localization/renderer', () => ({
   }),
 }));
 
+vi.mock('@features/organizations/renderer/ui/OrgOverviewHud', () => ({
+  OrgOverviewHud: ({
+    onSelectNode,
+  }: {
+    onSelectNode: (nodeId: string, reveal: boolean) => void;
+  }) => (
+    <button
+      type="button"
+      data-organization-overview-hud
+      onClick={() => onSelectNode('org:acme', true)}
+    />
+  ),
+}));
+
 vi.mock('@claude-teams/agent-graph', () => ({
-  GraphView: ({ renderTopToolbarContent }: { renderTopToolbarContent?: () => React.ReactNode }) => (
-    <div>{renderTopToolbarContent?.()}</div>
+  GraphView: ({
+    data,
+    renderControls,
+    renderHud,
+  }: {
+    data: { nodes: unknown[] };
+    renderControls?: (controls: {
+      filters: {
+        showActivity: boolean;
+        showLogs: boolean;
+        showTasks: boolean;
+        showProcesses: boolean;
+        showEdges: boolean;
+        showSpaceEffects: boolean;
+        paused: boolean;
+      };
+      onFiltersChange: () => void;
+      onZoomIn: () => void;
+      onZoomOut: () => void;
+      onZoomToFit: () => void;
+    }) => React.ReactNode;
+    renderHud?: (controls: {
+      getGroupFrameScreenPlacements: () => [];
+      getViewportSize: () => { width: number; height: number };
+      getCameraZoom: () => number;
+    }) => React.ReactNode;
+  }) => (
+    <div data-graph-node-count={data.nodes.length}>
+      {renderControls?.({
+        filters: {
+          showActivity: false,
+          showLogs: false,
+          showTasks: true,
+          showProcesses: false,
+          showEdges: true,
+          showSpaceEffects: false,
+          paused: true,
+        },
+        onFiltersChange: vi.fn(),
+        onZoomIn: vi.fn(),
+        onZoomOut: vi.fn(),
+        onZoomToFit: vi.fn(),
+      })}
+      {renderHud?.({
+        getGroupFrameScreenPlacements: () => [],
+        getViewportSize: () => ({ width: 1200, height: 800 }),
+        getCameraZoom: () => 1,
+      })}
+    </div>
   ),
 }));
 
@@ -50,8 +111,9 @@ describe('OrgGraphSurface', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders hierarchy, structure, and relations as one centered mode switch', async () => {
+  it('keeps the organization overview separate from hierarchy, structure, and relations', async () => {
     const onLayoutModeChange = vi.fn();
+    const onRevealNode = vi.fn();
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -66,7 +128,7 @@ describe('OrgGraphSurface', () => {
           selectedNodeId={null}
           onLayoutModeChange={onLayoutModeChange}
           onSelectNode={vi.fn()}
-          onRevealNode={vi.fn()}
+          onRevealNode={onRevealNode}
           onToggleNodeCollapse={vi.fn()}
         />
       );
@@ -77,26 +139,46 @@ describe('OrgGraphSurface', () => {
       host.querySelectorAll<HTMLButtonElement>('button[data-organization-map-view-mode]')
     );
     expect(modeButtons.map((button) => button.dataset.organizationMapViewMode)).toEqual([
+      'overview',
       'hierarchy',
       'structure',
       'relations',
     ]);
-    expect(modeButtons[0]?.getAttribute('aria-pressed')).toBe('true');
+    expect(modeButtons[1]?.getAttribute('aria-pressed')).toBe('true');
+    expect(host.querySelector('[data-organization-overview-hud]')).toBeNull();
+    expect(
+      host.querySelector<HTMLButtonElement>(
+        'button[aria-label="organizations.graph.toolbar.reset"]'
+      )?.disabled
+    ).toBe(false);
 
     await act(async () => {
-      modeButtons[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      modeButtons[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
+    expect(modeButtons[0]?.getAttribute('aria-pressed')).toBe('true');
+    expect(host.querySelector('[data-organization-overview-hud]')).not.toBeNull();
+    expect(host.querySelector('[data-graph-node-count="0"]')).not.toBeNull();
+    expect(onLayoutModeChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      host
+        .querySelector('[data-organization-overview-hud]')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(host.querySelector('[data-organization-overview-hud]')).toBeNull();
     expect(onLayoutModeChange).toHaveBeenCalledWith('grid-under-lead');
+    expect(onRevealNode).toHaveBeenCalledWith('org:acme');
 
     onLayoutModeChange.mockClear();
     await act(async () => {
-      modeButtons[2]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      modeButtons[3]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
     expect(onLayoutModeChange).toHaveBeenCalledWith('grid-under-lead');
-    expect(modeButtons[2]?.getAttribute('aria-pressed')).toBe('true');
+    expect(modeButtons[3]?.getAttribute('aria-pressed')).toBe('true');
 
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 });

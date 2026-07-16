@@ -23,11 +23,11 @@ const ORGANIZATION_GRID_MAX_COLUMN_COUNT = 12;
 const ORGANIZATION_GRID_TOP_ROW_OFFSET = 0;
 // Group frames extend beyond their owner cards for borders, labels, and semantic summaries.
 // Keep empty grid lanes between sibling frames so those visual bounds cannot overlap.
-const ORGANIZATION_GRID_BLOCK_ROW_GAP = 2;
+const ORGANIZATION_GRID_BLOCK_ROW_GAP = 1;
 const ORGANIZATION_GRID_BLOCK_COLUMN_GAP = 1;
 // Primary organization labels render outside the top edge and retain a readable screen size
 // while zoomed out. Reserve enough physical lanes for the two-line label in mini-map views.
-const ORGANIZATION_GRID_TOP_LEVEL_ORG_ROW_GAP = 5;
+const ORGANIZATION_GRID_TOP_LEVEL_ORG_ROW_GAP = 3;
 const ORGANIZATION_GRID_TOP_LEVEL_ORG_COLUMN_GAP = 1;
 const ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_WIDTH = 3;
 const ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_HEIGHT = 3;
@@ -621,6 +621,7 @@ interface OrganizationGridPackingOptions {
   maxRowWidth?: number;
   rowGap?: number;
   columnGap?: number;
+  alignRowsStart?: boolean;
 }
 
 function canPackOrganizationGridBlockSideBySide(
@@ -720,7 +721,7 @@ function stackOrganizationGridBlocks(
   rows.forEach((rowBlocks, rowIndex) => {
     const rowWidth = getPackedOrganizationGridRowWidth(rowBlocks, columnGap);
     const rowHeight = Math.max(...rowBlocks.map((block) => block.height));
-    let columnOffset = Math.floor((width - rowWidth) / 2);
+    let columnOffset = options.alignRowsStart ? 0 : Math.floor((width - rowWidth) / 2);
 
     for (const block of rowBlocks) {
       assignments.push(
@@ -826,6 +827,7 @@ function buildNestedOrganizationGridBlock(
         : undefined,
     rowGap: packsTopLevelOrganizations ? ORGANIZATION_GRID_TOP_LEVEL_ORG_ROW_GAP : undefined,
     columnGap: packsTopLevelOrganizations ? ORGANIZATION_GRID_TOP_LEVEL_ORG_COLUMN_GAP : undefined,
+    alignRowsStart: packsTopLevelOrganizations,
   });
 }
 
@@ -1333,6 +1335,7 @@ function buildOrganizationGroupFrames(
           depth,
           ...(labelLane > 0 ? { labelLane } : {}),
           priority: node.kind === 'organization' ? ('primary' as const) : ('normal' as const),
+          borderStyle: 'solid' as const,
         };
       }
       const renderedAgentNodeIds = descendantNodeIds.flatMap((descendantNodeId) => {
@@ -1354,6 +1357,7 @@ function buildOrganizationGroupFrames(
         depth,
         ...(labelLane > 0 ? { labelLane } : {}),
         priority: node.kind === 'organization' ? ('primary' as const) : ('normal' as const),
+        borderStyle: 'solid' as const,
       };
     })
     .filter((frame) => frame.nodeIds.length > 0);
@@ -1502,7 +1506,7 @@ function buildHierarchicalOrganizationGraphData(
     context.renderedAgentTeamIds.has(node.id)
   );
   const hierarchyTaskNodes = renderedAgentTeamNodes.flatMap((node) =>
-    buildAgentTaskNodes(node, text, { taskZoomVisibility: 'overview' })
+    buildAgentTaskNodes(node, text, { taskZoomVisibility: 'summary' })
   );
   const hierarchyNodes = [...hierarchyStructureNodes, ...hierarchyTaskNodes];
   const graphNodeIds = new Set(hierarchyNodes.map((node) => node.id));
@@ -1589,7 +1593,7 @@ export function buildOrganizationGraphData(
   );
   const agentNodes = renderedAgentTeamNodes.flatMap((node) =>
     buildAgentTaskNodes(node, text, {
-      taskZoomVisibility: 'overview',
+      taskZoomVisibility: 'summary',
     })
   );
   const nodes = [...orgNodes, ...agentNodes];

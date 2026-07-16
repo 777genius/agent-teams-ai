@@ -67,6 +67,14 @@ export interface GraphGroupFrameScreenPlacement {
   bounds: GraphScreenBounds;
 }
 
+export interface GraphControlRenderProps {
+  filters: GraphFilterState;
+  onFiltersChange: (filters: GraphFilterState) => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onZoomToFit: () => void;
+}
+
 export interface GraphViewProps {
   data: GraphDataPort;
   events?: GraphEventPort;
@@ -86,6 +94,8 @@ export interface GraphViewProps {
   focusOverridesSelection?: boolean;
   revealNodeRequest?: { nodeId: string; requestId: number } | null;
   renderTopToolbarContent?: () => React.ReactNode;
+  /** Replaces the package toolbar while retaining graph-owned camera and filter actions. */
+  renderControls?: (props: GraphControlRenderProps) => React.ReactNode;
   onLayoutModeChange?: (mode: GraphLayoutMode) => void;
   layoutModeCycle?: readonly GraphLayoutMode[];
   layoutModeLabels?: Partial<Record<GraphLayoutMode, string>>;
@@ -158,7 +168,7 @@ export function isEditableGraphShortcutTarget(event: KeyboardEvent): boolean {
     }
 
     const editableElement = target.closest(
-      'input, textarea, select, [role="textbox"], [contenteditable]'
+      'button, a[href], input, textarea, select, [role="button"], [role="textbox"], [contenteditable]'
     );
     if (!editableElement) {
       return false;
@@ -208,6 +218,7 @@ export function GraphView({
   focusOverridesSelection = false,
   revealNodeRequest,
   renderTopToolbarContent,
+  renderControls,
   onLayoutModeChange,
   layoutModeCycle,
   layoutModeLabels,
@@ -218,7 +229,7 @@ export function GraphView({
   renderOverlay,
   renderEdgeOverlay,
   renderHud,
-}: GraphViewProps): React.JSX.Element {
+}: Readonly<GraphViewProps>): React.JSX.Element {
   // ─── React state (user-facing only) ─────────────────────────────────────
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -655,6 +666,9 @@ export function GraphView({
     };
   }, [effectivePaused, animate]);
 
+  const markUserInteracted = useCallback(() => {
+    allowAutoFitRef.current = false;
+  }, []);
   const fitGraphToViewport = useCallback(
     (animated = false) => {
       const el = containerRef.current;
@@ -669,6 +683,18 @@ export function GraphView({
     },
     [camera, data.nodes.length, getFitNodes, simulation]
   );
+  const zoomIn = useCallback(() => {
+    markUserInteracted();
+    camera.zoomIn();
+  }, [camera, markUserInteracted]);
+  const zoomOut = useCallback(() => {
+    markUserInteracted();
+    camera.zoomOut();
+  }, [camera, markUserInteracted]);
+  const zoomToFit = useCallback(() => {
+    markUserInteracted();
+    fitGraphToViewport(false);
+  }, [fitGraphToViewport, markUserInteracted]);
 
   // ─── Auto-fit: until first user interaction, also react to container resizes ─────
   useEffect(() => {
@@ -724,10 +750,6 @@ export function GraphView({
       cancelAnimationFrame(frame);
     };
   }, [data.nodes.length, fitGraphToViewport]);
-
-  const markUserInteracted = useCallback(() => {
-    allowAutoFitRef.current = false;
-  }, []);
 
   const getMinimapSnapshot = useCallback((): GraphMinimapSnapshot => {
     const state = simulationRef.current.stateRef.current;
@@ -1375,12 +1397,14 @@ export function GraphView({
   }, [selectedEdgeId, selectedNodeId, onRequestClose, camera, getFitNodes, simulation]);
 
   // ─── Selected node for overlay ──────────────────────────────────────────
-  const selectedNode: GraphNode | null = selectedNodeId
-    ? (simulation.stateRef.current.nodes.find((n) => n.id === selectedNodeId) ?? null)
-    : null;
-  const selectedEdge: GraphEdge | null = selectedEdgeId
-    ? (simulation.stateRef.current.edges.find((edge) => edge.id === selectedEdgeId) ?? null)
-    : null;
+  const selectedNode: GraphNode | null =
+    selectedNodeId && data.nodes.some((node) => node.id === selectedNodeId)
+      ? (simulation.stateRef.current.nodes.find((n) => n.id === selectedNodeId) ?? null)
+      : null;
+  const selectedEdge: GraphEdge | null =
+    selectedEdgeId && data.edges.some((edge) => edge.id === selectedEdgeId)
+      ? (simulation.stateRef.current.edges.find((edge) => edge.id === selectedEdgeId) ?? null)
+      : null;
   const selectedEdgeNodeMap = useMemo(
     () => getNodeMap(simulation.stateRef.current.nodes),
     [data.nodes, getNodeMap, selectedEdgeId, simulation.stateRef]
@@ -1457,6 +1481,13 @@ export function GraphView({
   }, [camera, getNodeMap, selectedEdgeId, selectedNode, simulation.stateRef]);
 
   // ─── Render ─────────────────────────────────────────────────────────────
+  const customControls = renderControls?.({
+    filters,
+    onFiltersChange: setFilters,
+    onZoomIn: zoomIn,
+    onZoomOut: zoomOut,
+    onZoomToFit: zoomToFit,
+  });
   return (
     <div
       ref={containerRef}
@@ -1465,6 +1496,7 @@ export function GraphView({
       <GraphCanvas
         ref={canvasHandle}
         showHexGrid={filters.showSpaceEffects && (config?.showHexGrid ?? true)}
+        showDotGrid={config?.showDotGrid ?? false}
         showStarField={filters.showSpaceEffects && (config?.showStarField ?? true)}
         bloomIntensity={config?.bloomIntensity ?? 0.6}
         onWheel={handleWheel}
@@ -1474,45 +1506,33 @@ export function GraphView({
         onDoubleClick={handleDoubleClick}
       />
 
-      <GraphControls
-        filters={filters}
-        onFiltersChange={setFilters}
-        onZoomIn={() => {
-          markUserInteracted();
-          camera.zoomIn();
-        }}
-        onZoomOut={() => {
-          markUserInteracted();
-          camera.zoomOut();
-        }}
-        onZoomToFit={() => {
-          markUserInteracted();
-          const el = containerRef.current;
-          if (el)
-            camera.zoomToFit(
-              getFitNodes(simulation.stateRef.current.nodes),
-              el.clientWidth,
-              el.clientHeight,
-              simulation.getExtraWorldBounds()
-            );
-        }}
-        onRequestClose={onRequestClose}
-        onRequestPinAsTab={onRequestPinAsTab}
-        onRequestFullscreen={onRequestFullscreen}
-        onOpenTeamPage={onOpenTeamPage}
-        onCreateTask={onCreateTask}
-        onToggleSidebar={onToggleSidebar}
-        isSidebarVisible={isSidebarVisible}
-        teamName={data.teamName}
-        teamColor={data.teamColor}
-        isAlive={data.isAlive}
-        layoutMode={layoutMode}
-        onLayoutModeChange={onLayoutModeChange}
-        layoutModeCycle={layoutModeCycle}
-        layoutModeLabels={layoutModeLabels}
-        topToolbarContent={renderTopToolbarContent?.()}
-        interactionLocked={interactionLocked}
-      />
+      {renderControls ? (
+        customControls
+      ) : (
+        <GraphControls
+          filters={filters}
+          onFiltersChange={setFilters}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+          onZoomToFit={zoomToFit}
+          onRequestClose={onRequestClose}
+          onRequestPinAsTab={onRequestPinAsTab}
+          onRequestFullscreen={onRequestFullscreen}
+          onOpenTeamPage={onOpenTeamPage}
+          onCreateTask={onCreateTask}
+          onToggleSidebar={onToggleSidebar}
+          isSidebarVisible={isSidebarVisible}
+          teamName={data.teamName}
+          teamColor={data.teamColor}
+          isAlive={data.isAlive}
+          layoutMode={layoutMode}
+          onLayoutModeChange={onLayoutModeChange}
+          layoutModeCycle={layoutModeCycle}
+          layoutModeLabels={layoutModeLabels}
+          topToolbarContent={renderTopToolbarContent?.()}
+          interactionLocked={interactionLocked}
+        />
+      )}
 
       {showMinimap ? (
         <GraphMinimap

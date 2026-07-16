@@ -22,6 +22,9 @@ interface OrgGraphFocusHudProps {
   onFocusModeChange: (mode: OrganizationGraphFocusMode) => void;
   onSelectNode: (nodeId: string | null, reveal?: boolean) => void;
   onToggleNodeCollapse: (nodeId: string) => void;
+  isSearchOpen?: boolean;
+  onSearchOpenChange?: (isOpen: boolean) => void;
+  hideSearchTrigger?: boolean;
 }
 
 const SEARCH_RESULTS_ID = 'organization-map-search-results';
@@ -36,10 +39,18 @@ export const OrgGraphFocusHud = ({
   onFocusModeChange,
   onSelectNode,
   onToggleNodeCollapse,
+  isSearchOpen: controlledSearchOpen,
+  onSearchOpenChange,
+  hideSearchTrigger = false,
 }: OrgGraphFocusHudProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [query, setQuery] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [internalSearchOpen, setInternalSearchOpen] = useState(false);
+  const isSearchOpen = controlledSearchOpen ?? internalSearchOpen;
+  const setIsSearchOpen = (isOpen: boolean): void => {
+    if (controlledSearchOpen === undefined) setInternalSearchOpen(isOpen);
+    onSearchOpenChange?.(isOpen);
+  };
   const [isResultsOpen, setIsResultsOpen] = useState(false);
   const [activeResultIndex, setActiveResultIndex] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -91,11 +102,9 @@ export const OrgGraphFocusHud = ({
   };
 
   const toggleSearch = (): void => {
-    setIsSearchOpen((isOpen) => {
-      const nextIsOpen = !isOpen;
-      setIsResultsOpen(nextIsOpen && query.trim().length > 0);
-      return nextIsOpen;
-    });
+    const nextIsOpen = !isSearchOpen;
+    setIsResultsOpen(nextIsOpen && query.trim().length > 0);
+    setIsSearchOpen(nextIsOpen);
   };
 
   const toggleFocusMode = (mode: Exclude<OrganizationGraphFocusMode, 'context'>): void => {
@@ -105,25 +114,27 @@ export const OrgGraphFocusHud = ({
   return (
     <div
       ref={panelRef}
-      className="pointer-events-none absolute left-3 top-3 z-20 w-[min(430px,calc(100%-1.5rem))]"
+      className={`pointer-events-none absolute left-3 z-20 w-[min(430px,calc(100%-1.5rem))] ${hideSearchTrigger ? 'top-14' : 'top-3'}`}
     >
-      <Button
-        variant="ghost"
-        size="icon"
-        type="button"
-        aria-label={t('organizations.graph.focus.searchLabel')}
-        aria-controls={SEARCH_PANEL_ID}
-        aria-expanded={isSearchOpen}
-        title={t('organizations.graph.focus.searchLabel')}
-        className={`pointer-events-auto flex size-[25px] items-center justify-center rounded-md border backdrop-blur-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 ${
-          isSearchOpen
-            ? 'border-[rgba(100,200,255,0.18)] bg-[rgba(100,200,255,0.14)] text-[#aaeeff]'
-            : 'border-[rgba(100,200,255,0.08)] bg-[rgba(8,12,24,0.8)] text-[#66ccff90] hover:bg-[rgba(100,200,255,0.1)] hover:text-[#aaeeff]'
-        }`}
-        onClick={toggleSearch}
-      >
-        <Search size={10} />
-      </Button>
+      {!hideSearchTrigger ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          aria-label={t('organizations.graph.focus.searchLabel')}
+          aria-controls={SEARCH_PANEL_ID}
+          aria-expanded={isSearchOpen}
+          title={t('organizations.graph.focus.searchLabel')}
+          className={`pointer-events-auto flex size-[25px] items-center justify-center rounded-md border backdrop-blur-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/60 ${
+            isSearchOpen
+              ? 'border-[rgba(100,200,255,0.18)] bg-[rgba(100,200,255,0.14)] text-[#aaeeff]'
+              : 'border-[rgba(100,200,255,0.08)] bg-[rgba(8,12,24,0.8)] text-[#66ccff90] hover:bg-[rgba(100,200,255,0.1)] hover:text-[#aaeeff]'
+          }`}
+          onClick={toggleSearch}
+        >
+          <Search size={10} />
+        </Button>
+      ) : null}
 
       {isSearchOpen ? (
         <div

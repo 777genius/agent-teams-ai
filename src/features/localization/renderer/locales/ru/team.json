@@ -2844,9 +2844,33 @@
         "switchToNested": "Переключить на вложенную карту"
       },
       "view": {
+        "overview": "Обзор",
         "hierarchy": "Иерархия",
         "structure": "Структура",
         "relations": "Связи"
+      },
+      "overviewCard": {
+        "summary": "{{groupCount}} групп · {{teamCount}} команд · {{agentCount}} агентов",
+        "activeTasks": "{{count}} активных задач",
+        "attention": "{{count}} требуют внимания",
+        "teamsOnline": "{{onlineCount}}/{{teamCount}} команд онлайн"
+      },
+      "toolbar": {
+        "filters": "Фильтры карты",
+        "fit": "Смысловой обзор",
+        "reset": "Сбросить поиск, фокус и фильтры",
+        "tasks": "Задачи",
+        "connections": "Связи",
+        "animation": "Анимация",
+        "zoomIn": "Приблизить",
+        "zoomOut": "Отдалить"
+      },
+      "legend": {
+        "organization": "Организация",
+        "group": "Группа",
+        "hierarchy": "Иерархия",
+        "connection": "Связь",
+        "online": "Онлайн"
       },
       "focus": {
         "searchLabel": "Поиск по карте организации",

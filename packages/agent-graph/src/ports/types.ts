@@ -96,6 +96,8 @@ export interface GraphGroupFrame {
   /** Number of nested label rows below this frame's content. */
   labelLane?: number;
   priority?: 'primary' | 'normal';
+  /** Solid hierarchy containers or dashed temporary/logical grouping. */
+  borderStyle?: 'solid' | 'dashed';
 }
 
 // ─── Graph Node ──────────────────────────────────────────────────────────────
