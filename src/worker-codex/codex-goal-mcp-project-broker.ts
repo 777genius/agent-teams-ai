@@ -138,6 +138,20 @@ export function createCodexProjectControlBroker(
         registryRootDir: input.registryRootDir,
         scope: input.scope,
         deps: input.admissionDeps,
+        ...((input.startAdmissionWorkspaceMode ===
+              "admitted_input_patch_continuation" ||
+            input.startAdmissionWorkspaceMode ===
+              "clean_capacity_continuation") &&
+            input.startManifest &&
+            input.startWorkspaceLease
+          ? {
+              capacityContinuationTarget: {
+                jobId: input.startManifest.jobId,
+                workspacePath:
+                  input.startWorkspaceLease.canonicalWorkspacePath,
+              },
+            }
+          : {}),
         ...((input.startAdmissionWorkspaceMode === "admitted_input_patch" &&
               input.startManifest &&
               input.startWorkspaceLease) ||

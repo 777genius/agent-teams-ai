@@ -164,6 +164,111 @@ describe("Codex project admission snapshot", () => {
     }
   });
 
+  it("does not re-admit same-job capacity continuation against sibling held output", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-capacity-continuation-admission-"));
+    const continuationWorkspace = join(root, "worktrees", "project-continuation");
+    const siblingWorkspace = join(root, "worktrees", "project-reviewed-sibling");
+    try {
+      await mkdir(continuationWorkspace, { recursive: true });
+      await mkdir(siblingWorkspace, { recursive: true });
+      const deps: CodexProjectAdmissionDeps = {
+        listJobs: async () => [
+          {
+            jobId: "project-continuation",
+            tags: ["worker-role-producer"],
+            taskId: "project-continuation",
+            workspacePath: continuationWorkspace,
+            promptPath: join(root, "continuation.md"),
+            accountNames: ["account-a"],
+            updatedAt: "2026-07-16T00:00:00.000Z",
+            manifestPath: join(root, "continuation.json"),
+          },
+          {
+            jobId: "project-reviewed-sibling",
+            tags: ["worker-role-producer"],
+            taskId: "project-reviewed-sibling",
+            workspacePath: siblingWorkspace,
+            promptPath: join(root, "sibling.md"),
+            accountNames: ["account-b"],
+            updatedAt: "2026-07-16T00:01:00.000Z",
+            manifestPath: join(root, "sibling.json"),
+          },
+        ],
+        buildOverviewItems: async () => [
+          {
+            ok: true,
+            jobId: "project-continuation",
+            workspacePath: continuationWorkspace,
+            workspaceDirty: false,
+            workerAlive: false,
+            activeWriterRisk: "none",
+          },
+          {
+            ok: true,
+            jobId: "project-reviewed-sibling",
+            workspacePath: siblingWorkspace,
+            workspaceDirty: true,
+            workerAlive: false,
+            activeWriterRisk: "dirty_workspace_without_worker",
+            activeWriterRiskReasons: ["dirty_workspace_without_worker"],
+            resultStatus: "completed",
+            recommendedAction: "review_completed",
+            lifecycleMarkerTypes: ["review"],
+          },
+        ],
+      };
+      const input = {
+        registryRootDir: join(root, "registry"),
+        scope: { projectId: "project", jobIdPrefixes: ["project-"] },
+        deps,
+      };
+      const ordinaryGate = codexProjectAdmissionGate(input);
+      const continuationGate = codexProjectAdmissionGate({
+        ...input,
+        capacityContinuationTarget: {
+          jobId: "project-continuation",
+          workspacePath: continuationWorkspace,
+        },
+      });
+
+      await expect(ordinaryGate.evaluate({
+        operation: ProjectOperation.StartWorker,
+        jobId: "project-continuation",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: continuationWorkspace,
+      })).resolves.toMatchObject({
+        allowed: false,
+        reason: "output_debt_present",
+      });
+      await expect(continuationGate.evaluate({
+        operation: ProjectOperation.StartWorker,
+        jobId: "project-continuation",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: continuationWorkspace,
+      })).resolves.toMatchObject({ allowed: true, debt: [] });
+      await expect(continuationGate.evaluate({
+        operation: ProjectOperation.StartWorker,
+        jobId: "project-new-producer",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: join(root, "worktrees", "project-new-producer"),
+      })).resolves.toMatchObject({
+        allowed: false,
+        reason: "output_debt_present",
+      });
+      await expect(continuationGate.evaluate({
+        operation: ProjectOperation.CreateWorktree,
+        jobId: "project-continuation",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: continuationWorkspace,
+      })).resolves.toMatchObject({
+        allowed: false,
+        reason: "output_debt_present",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps shared-worktree review markers separate from terminal job ledgers", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-shared-review-admission-"));
     const sharedWorkspace = join(root, "worktrees", "project-producer-v1");

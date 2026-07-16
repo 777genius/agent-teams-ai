@@ -51,6 +51,10 @@ type CodexProjectAdmissionInput = {
     readonly jobId: string;
     readonly workspacePath: string;
   };
+  readonly capacityContinuationTarget?: {
+    readonly jobId: string;
+    readonly workspacePath: string;
+  };
 };
 
 type CodexProjectAdmissionSnapshotInput = CodexProjectAdmissionInput & {
@@ -109,10 +113,15 @@ export function codexProjectAdmissionGate(
           ? { requestedWorkspacePath: request.workspacePath }
           : { blockAnyLiveWriter: true }),
       });
-      const snapshot = await withoutAdmittedInputPatchStartDebt({
+      const inputPatchSnapshot = await withoutAdmittedInputPatchStartDebt({
         snapshot: observedSnapshot,
         request,
         binding: input.admittedInputPatchTarget,
+      });
+      const snapshot = await withoutCapacityContinuationSiblingDebt({
+        snapshot: inputPatchSnapshot,
+        request,
+        binding: input.capacityContinuationTarget,
       });
       return evaluateProjectAdmission({
         request: {
@@ -122,6 +131,47 @@ export function codexProjectAdmissionGate(
         snapshot,
       });
     },
+  };
+}
+
+async function withoutCapacityContinuationSiblingDebt(input: {
+  readonly snapshot: ProjectAdmissionSnapshot;
+  readonly request: {
+    readonly operation: ProjectOperation;
+    readonly jobId?: string;
+    readonly workspacePath?: string;
+  };
+  readonly binding: CodexProjectAdmissionInput["capacityContinuationTarget"];
+}): Promise<ProjectAdmissionSnapshot> {
+  const { binding, request } = input;
+  if (
+    !binding ||
+    request.operation !== ProjectOperation.StartWorker ||
+    request.jobId !== binding.jobId ||
+    !request.workspacePath ||
+    !await admissionWorkspacePathsMatch(
+      request.workspacePath,
+      binding.workspacePath,
+    )
+  ) {
+    return input.snapshot;
+  }
+  const debt: ProjectDebtItem[] = [];
+  for (const item of input.snapshot.debt) {
+    const selfDebt = item.subject === binding.jobId ||
+      await admissionWorkspacePathsMatch(item.subject, binding.workspacePath);
+    const unrelatedHeldOutput =
+      item.reason === ProjectDebtReason.UnconsumedCompletedJob && !selfDebt;
+    const unrelatedInactiveOutputRisk =
+      item.reason === ProjectDebtReason.ActiveWriterConflict &&
+      !selfDebt &&
+      item.evidence.includes("dirty_workspace_without_worker");
+    if (!unrelatedHeldOutput && !unrelatedInactiveOutputRisk) debt.push(item);
+  }
+  return {
+    ...input.snapshot,
+    debt,
+    counts: projectAdmissionDebtCounts(debt),
   };
 }
 
