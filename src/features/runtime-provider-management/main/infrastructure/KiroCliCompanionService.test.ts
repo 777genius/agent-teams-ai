@@ -2,8 +2,8 @@ import path from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { KiroCliCompanionService, resolveKiroLinuxArchiveSuffix } from './KiroCliCompanionService';
 import { KIRO_CLI_COMPANION_DEFINITION } from './cli-companion/definitions/KiroCliCompanionDefinition';
+import { KiroCliCompanionService, resolveKiroLinuxArchiveSuffix } from './KiroCliCompanionService';
 
 const VALID_UNIX_INSTALLER = `#!/bin/bash
 # Kiro CLI
