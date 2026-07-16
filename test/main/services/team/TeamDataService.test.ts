@@ -862,6 +862,7 @@ function buildResolvedMember(name: string): ResolvedTeamMember {
 function createDurableTaskStartNotificationHarness(options: {
   task: TeamTask;
   commandResults?: Array<{ outcome: string; createdInAttempt: boolean }>;
+  commandFacadeCreateTask?: ReturnType<typeof vi.fn>;
   sendMessage?: ReturnType<typeof vi.fn>;
 }): {
   service: TeamDataService;
@@ -878,15 +879,17 @@ function createDurableTaskStartNotificationHarness(options: {
     { outcome: 'executed', createdInAttempt: true },
   ];
   let commandAttempt = 0;
-  const commandFacadeCreateTask = vi.fn(async () => {
-    const result = commandResults[Math.min(commandAttempt, commandResults.length - 1)];
-    commandAttempt += 1;
-    return {
-      task: options.task,
-      outcome: result?.outcome ?? 'replayed',
-      createdInAttempt: result?.createdInAttempt ?? false,
-    };
-  });
+  const commandFacadeCreateTask =
+    options.commandFacadeCreateTask ??
+    vi.fn(async () => {
+      const result = commandResults[Math.min(commandAttempt, commandResults.length - 1)];
+      commandAttempt += 1;
+      return {
+        task: options.task,
+        outcome: result?.outcome ?? 'replayed',
+        createdInAttempt: result?.createdInAttempt ?? false,
+      };
+    });
   const service = new TeamDataService(
     {
       getConfig: vi.fn(async () => ({
@@ -2020,27 +2023,58 @@ describe('TeamDataService', () => {
     ]);
   });
 
-  it('surfaces durable notification failure and retries the same message on replay', async () => {
+  it('keeps a post-commit notification failure nonfatal and deduplicates its replay', async () => {
     const task: TeamTask = {
       id: '11111111-1111-4111-8111-111111111111',
       subject: 'Retry notification',
       owner: 'lead-agent',
       status: 'in_progress',
     };
-    const sendMessage = vi
-      .fn()
-      .mockRejectedValueOnce(new Error('inbox unavailable'))
-      .mockResolvedValueOnce({
+    const notificationFailure = {
+      message: 'notification-message-field-marker',
+      stack: 'notification-stack-field-marker',
+      path: '/private/notification-path-field-marker/team.json',
+      details: { value: 'notification-object-field-marker' },
+      cause: { message: 'notification-cause-field-marker' },
+      code: 'notification-code-field-marker',
+      toString: () => 'notification-string-field-marker',
+    };
+    const deliveredMessageIds = new Set<string>();
+    const deliveryDeduplication: boolean[] = [];
+    let deliveryAttempt = 0;
+    const sendMessage = vi.fn(async (_teamName: string, notification: { messageId?: string }) => {
+      const messageId = notification.messageId ?? 'missing-message-id';
+      const deduplicated = deliveredMessageIds.has(messageId);
+      deliveryAttempt += 1;
+      deliveredMessageIds.add(messageId);
+      if (deliveryAttempt === 1) {
+        throw notificationFailure;
+      }
+      deliveryDeduplication.push(deduplicated);
+      return {
         deliveredToInbox: true,
-        messageId: 'task-start:my-team:11111111-1111-4111-8111-111111111111',
+        messageId,
+        ...(deduplicated ? { deduplicated: true } : {}),
+      };
+    });
+    let commitFirstAttempt: ((value: unknown) => void) | undefined;
+    const commandFacadeCreateTask = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            commitFirstAttempt = resolve;
+          })
+      )
+      .mockResolvedValueOnce({
+        task,
+        outcome: 'replayed',
+        createdInAttempt: false,
       });
-    const { service, commandFacadeCreateTask } = createDurableTaskStartNotificationHarness({
+    const { service } = createDurableTaskStartNotificationHarness({
       task,
       sendMessage,
-      commandResults: [
-        { outcome: 'executed', createdInAttempt: true },
-        { outcome: 'replayed', createdInAttempt: false },
-      ],
+      commandFacadeCreateTask,
     });
     const request = {
       subject: task.subject,
@@ -2052,7 +2086,16 @@ describe('TeamDataService', () => {
       },
     };
 
-    await expect(service.createTask('my-team', request)).rejects.toThrow('inbox unavailable');
+    const firstCreate = service.createTask('my-team', request);
+    expect(commandFacadeCreateTask).toHaveBeenCalledTimes(1);
+    expect(sendMessage).not.toHaveBeenCalled();
+
+    commitFirstAttempt?.({
+      task,
+      outcome: 'executed',
+      createdInAttempt: true,
+    });
+    await expect(firstCreate).resolves.toEqual(task);
     await expect(service.createTask('my-team', request)).resolves.toEqual(task);
 
     expect(commandFacadeCreateTask).toHaveBeenCalledTimes(2);
@@ -2061,6 +2104,67 @@ describe('TeamDataService', () => {
       'task-start:my-team:11111111-1111-4111-8111-111111111111',
       'task-start:my-team:11111111-1111-4111-8111-111111111111',
     ]);
+    expect([...deliveredMessageIds]).toEqual([
+      'task-start:my-team:11111111-1111-4111-8111-111111111111',
+    ]);
+    expect(deliveryDeduplication).toEqual([true]);
+
+    const warningCalls = vi.mocked(console.warn).mock.calls;
+    expect(warningCalls).toEqual([
+      [
+        '[Service:TeamDataService]',
+        '[TeamDataService] category=post_commit_notification code=task_start_notification_failed team=my-team task=11111111-1111-4111-8111-111111111111',
+      ],
+    ]);
+    const warningOutput = warningCalls.flat().map(String).join('\n');
+    expect(warningOutput.length).toBeLessThanOrEqual(256);
+    for (const rawValue of [
+      notificationFailure.message,
+      notificationFailure.stack,
+      notificationFailure.path,
+      notificationFailure.details.value,
+      notificationFailure.cause.message,
+      notificationFailure.code,
+      String(notificationFailure),
+    ]) {
+      expect(warningOutput).not.toContain(rawValue);
+    }
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it('rejects a pre-commit persistence failure without sending a notification', async () => {
+    const task: TeamTask = {
+      id: '11111111-1111-4111-8111-111111111111',
+      subject: 'Persistence retry',
+      owner: 'lead-agent',
+      status: 'in_progress',
+    };
+    const persistenceFailure = new Error('pre-commit-persistence-failure');
+    const { service, sendMessage, commandFacadeCreateTask } =
+      createDurableTaskStartNotificationHarness({ task });
+    commandFacadeCreateTask.mockRejectedValueOnce(persistenceFailure);
+    const request = {
+      subject: task.subject,
+      owner: 'lead-agent',
+      startImmediately: true,
+      command: {
+        commandId: task.id,
+        idempotencyKey: 'persistence-retry',
+      },
+    };
+
+    await expect(service.createTask('my-team', request)).rejects.toBe(persistenceFailure);
+    expect(sendMessage).not.toHaveBeenCalled();
+
+    await expect(service.createTask('my-team', request)).resolves.toEqual(task);
+    expect(commandFacadeCreateTask).toHaveBeenCalledTimes(2);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(sendMessage).toHaveBeenCalledWith(
+      'my-team',
+      expect.objectContaining({
+        messageId: 'task-start:my-team:11111111-1111-4111-8111-111111111111',
+      })
+    );
   });
 
   it('keeps non-durable task-start notification failure best-effort', async () => {
