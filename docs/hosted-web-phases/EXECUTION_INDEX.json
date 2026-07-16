@@ -1,698 +1,410 @@
 {
-  "schemaVersion": 1,
-  "currentExecutablePhase": "phase-01",
-  "currentExecutableSubphase": "P1.F",
-  "currentExecutableNodes": ["P1.F"],
-  "currentRouterRevision": "phase-01-p1-f-environment-router-r3",
-  "currentRouterTerminalState": "HOLD",
-  "canonicalAuthority": {
-    "packetBaseSha": "69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5",
-    "packetBaseRole": "clean-remote-equal-accepted-r2-integration-p1f-r3-authoring-base",
-    "acceptedTrueMerge": true,
-    "acceptedTrueMergeSha": "20706bd067ce5ccbf13697700411904faa2a00c8",
-    "pullRequest": 252,
-    "mergeParentCount": 2,
-    "firstParentRef": "20706bd067ce5ccbf13697700411904faa2a00c8^1",
-    "mergeParent1": "134f64f0c5c7bbbab0552eddf08df1508118f4bb",
-    "mergeParent2": "6bf43f140878f8b79f7ee17349bd21b177df901d",
-    "mergeParentOrderRequired": true,
-    "firstParentEqualsAcceptedP1IIntegrationSha": true,
-    "secondParentDiffRole": "accumulated-current-base-history-never-exact-p1i-proof",
-    "postRouterIntegrationAuthoritySha": null,
-    "postRouterIntegrationAuthorityShaState": "resolve-after-router-accept-broker-integration-push",
-    "p1fWorkerAuthorityBinding": "postRouterIntegrationAuthoritySha",
-    "authoritySource": "exact-broker-returned-and-pushed-commit",
-    "remoteName": "origin",
-    "remoteBranch": "refactor/hosted-web-feature-boundaries",
-    "remoteRef": "refs/heads/refactor/hosted-web-feature-boundaries",
-    "remoteEqualityCommand": "git ls-remote origin refs/heads/refactor/hosted-web-feature-boundaries",
-    "rootImmutableAuthorityAttestationRequired": true,
-    "remoteAttestationAuthority": "root/broker remote attestation",
-    "remoteAttestationMustBeFreshAndImmutable": true,
-    "remoteAttestationRequiredFields": [
-      "command",
-      "exitCode",
-      "exactOneRefOutput",
-      "remote",
-      "ref",
-      "observedSha",
-      "localHeadSha",
-      "brokerReturnedSha",
-      "observedAt",
-      "rootActorProvenance",
-      "brokerCaptureProvenance",
-      "contentSha256"
-    ],
-    "workerIndependentRemoteQueryRequired": false,
-    "workerIndependentLocalAuthorityAndAncestryRecheckRequired": true,
-    "restrictedWorkerRemoteRule": "MUST NOT run `git ls-remote` from the restricted worker sandbox",
-    "cleanPostIntegrationWorktreeRequired": true,
-    "remoteEqualityToPostIntegrationAuthorityRequired": true,
-    "upstreamTrackingEvidenceAuthorized": false,
-    "missingOrMismatchedAttestationDisposition": "HOLD"
-  },
-  "acceptedP1I": {
-    "disposition": "ACCEPT",
-    "findingCounts": {
+  "schemaVersion": 2,
+  "packetRevision": "phase-02-jit-router-r1",
+  "currentPhase": "phase-02",
+  "status": "candidate-awaiting-independent-root-review",
+  "terminalState": "HOLD",
+  "authority": {
+    "routerBaseSha": "d5afa87e79b1f2badd69e65262e5699c0fb61de7",
+    "predecessorPhase": "phase-01",
+    "predecessorNode": "P1.F",
+    "predecessorIntegrationCommit": "d5afa87e79b1f2badd69e65262e5699c0fb61de7",
+    "predecessorDisposition": "ACCEPT",
+    "predecessorFindingCounts": {
       "P0": 0,
       "P1": 0,
       "P2": 0
     },
-    "integrationAttempt": "agent-teams-hosted-web-refactor-p1-i-integration-apply-v17-r2",
-    "integrationSha": "134f64f0c5c7bbbab0552eddf08df1508118f4bb",
-    "integrationRange": "134f64f0c5c7bbbab0552eddf08df1508118f4bb^..134f64f0c5c7bbbab0552eddf08df1508118f4bb",
-    "exactOutputPathProof": "integration-range",
-    "outputPathCount": 5,
-    "independentlyReviewed": true,
-    "integrated": true,
-    "modificationAuthorized": false,
-    "regenerationAuthorized": false,
-    "reintegrationAuthorized": false,
-    "unchangedAtPacketBase": true,
-    "outputBytesIdenticalAtIntegrationAndPacketBase": true,
-    "packetBaseSecondParentDiffAuthorizedAsExactP1IProof": false,
-    "historicalLanePacket": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md"
+    "predecessorHandoff": ".codex-handoff/phase-01-p1-f.json",
+    "predecessorReview": "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md",
+    "routerAcceptance": "unverified",
+    "routerIntegration": "unverified"
   },
-  "orchestrationAuthority": {
-    "rootRole": "sole-orchestrator",
-    "durableController": "controller-v17",
-    "controllerState": "HOLD",
-    "controllerMode": "observation-only",
-    "controllerLaunchAuthorized": false,
-    "controllerAdmissionAuthorized": false,
-    "controllerIntegrationAuthorized": false,
-    "controllerRestartAuthorized": false,
-    "controllerReplacementAuthorized": false,
-    "successorControllerAuthorized": false,
-    "p1fWorkerStartAuthority": "root-after-r3-router-independent-accept-broker-integration-push-and-bounded-attestations",
-    "acceptedResultMechanicalVerifier": "root",
-    "acceptedResultLifecycleAction": "mark_reviewed",
-    "acceptedResultIntegrator": "broker"
+  "productAdmission": {
+    "blocked": true,
+    "reason": "This candidate router has not been independently reviewed and broker-integrated into canonical authority.",
+    "releaseCondition": "An independent root review accepts this exact 12-path router and the broker integrates and activates those reviewed bytes.",
+    "firstEligibleNode": "P2.F0.IDENTITY",
+    "successorLaunchAuthorizedNow": false
   },
-  "p1fWorkerProfile": {
-    "model": "gpt-5.6-sol",
-    "reasoningEffort": "xhigh",
-    "serviceTier": "default",
-    "fastAuthorized": false
-  },
-  "p1fReviewerEvidenceContract": {
-    "remote": {
-      "source": "root/broker remote attestation",
-      "freshImmutableAdmissionInputRequired": true,
-      "authoritativeForRemoteEquality": true,
-      "workerInspectionRequired": true,
-      "workerNetworkAccessAuthorized": false,
-      "workerRule": "MUST NOT run `git ls-remote` from the restricted worker sandbox",
-      "localAuthorityAncestryAndScopeChecksRemainIndependent": true
-    },
-    "normalizer": {
-      "source": "root-attested normalizer",
-      "command": "node scripts/hosted-web/phase-0/final-gate/normalize-typescript-diagnostics.mjs --mode milestone",
-      "freshImmutableAdmissionInputRequired": true,
-      "usableOnlyAfterRecordedSandboxSpawnFailure": true,
-      "workerLocalExecutionPreferredAndRequiredWhenSpawnable": true,
-      "workerInspectionRequired": true,
-      "requiredCaptureFields": [
-        "command",
-        "startedAt",
-        "completedAt",
-        "authoritySha",
-        "localHeadSha",
-        "cleanWorktree",
-        "normalizerProcessDisposition",
-        "normalizerExitCode",
-        "stdoutSha256",
-        "stderrSha256",
-        "reportSha256",
-        "rootActorProvenance",
-        "brokerCaptureProvenance"
-      ],
-      "normalizerExitCode": 0,
-      "compilerRawExitCode": 2,
-      "normalizerProcessDisposition": "exited",
-      "passed": true,
-      "observedDiagnosticCount": 7,
-      "normalizedInheritedCount": 7,
-      "resolvedInheritedCount": 0,
-      "effectiveDiagnosticCount": 0,
-      "unexpectedDiagnosticCount": 0,
-      "unparsedOutputLineCount": 0,
-      "timestampAndProvenanceRequired": true,
-      "contentHashesRequired": true
-    },
-    "genericRootSubstitutionAuthorized": false,
-    "sandboxCompatibleChecksIndependentlyExecuted": true,
-    "bypassAuthorized": false,
-    "networkEnablementAuthorized": false
-  },
-  "currentRoute": {
-    "mode": "single-serial-independent-p1f-milestone-freeze",
-    "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
-    "lanePackets": [
-      {
-        "subphase": "P1.F",
-        "node": "P1.F",
-        "laneId": "p1-f-freeze",
-        "path": "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md",
-        "packetRevision": "phase-01-p1-f-freeze-r3",
-        "evidenceIds": ["P1.F.FREEZE", "P1.F.PHASE_EXIT"]
-      }
-    ],
-    "launchGate": {
-      "required": {
-        "routerIndependentlyAccepted": true,
-        "routerBrokerIntegrated": true,
-        "routerPushed": true,
-        "rootRemainsSoleOrchestrator": true,
-        "controllerV17HoldObservationOnly": true,
-        "postRouterIntegrationAuthorityResolvedFromBrokerReturn": true,
-        "postRouterIntegrationAuthorityAttestationImmutable": true,
-        "postRouterIntegrationWorktreeClean": true,
-        "postRouterIntegrationAuthorityRemoteEqual": true,
-        "rootBrokerRemoteAttestationFreshImmutable": true,
-        "rootAttestedNormalizerFreshImmutable": true,
-        "routerBaseAncestor": true,
-        "routerDeltaPathCountExact7": true,
-        "acceptedP1IOutputsBytePreserved": true,
-        "historicalP1IPacketBytePreserved": true,
-        "phase1FreezeManifestPathCountExact74": true,
-        "p1fOutputsInitiallyAbsent": true,
-        "workerIndependenceAttested": true,
-        "noP1FOrPhase2WorkerActive": true,
-        "defaultOnlyProfileVerified": true,
-        "dependenciesBrokerMaterializedOffline": true,
-        "workerDependencyInstallDisabled": true
-      },
-      "attestedByThisDocsTransition": false,
-      "anyFailureDisposition": "HOLD-without-launch"
-    },
-    "completionBoundary": {
-      "workerCount": 1,
-      "workerIsIndependentMilestoneReviewer": true,
-      "additionalReviewerAuthorized": false,
-      "terminalState": "HOLD",
-      "allowedDispositions": ["ACCEPT", "REJECT"],
-      "acceptFindingCounts": {
-        "P0": 0,
-        "P1": 0,
-        "P2": 0
-      },
-      "acceptedIntegrationPathCount": 2,
-      "rejectDisposition": "bounded-same-two-path-remediation-only",
-      "phase2JitRouterRequiresSeparateLifecycle": true,
-      "phase2WorkerAuthorized": false
-    }
-  },
-  "phase1FreezeManifest": {
-    "authoritySha": "20706bd067ce5ccbf13697700411904faa2a00c8",
-    "authorityRole": "accepted-true-merge-frozen-phase1-content",
-    "sourceP1ICanonicalInputPathCount": 69,
-    "acceptedP1IOutputPathCount": 5,
-    "pathCount": 74,
-    "distinctPathCount": 74,
-    "orderedPathArrayHashAlgorithm": "sha256-utf8-compact-json-array",
-    "orderedPathArraySha256": "0e8e2b82125eb3b8e559f9fa439e8942e0eea89d75da4cccc35d75099e868223",
-    "allPathsReadOnlyForP1F": true,
+  "routerExclusiveOwnership": {
+    "pathCount": 12,
     "paths": [
-      "docs/research/hosted-web/phase-1/bootstrap/phase-start.json",
-      "docs/research/hosted-web/phase-1/bootstrap/packet-revision.json",
-      "docs/research/hosted-web/phase-1/bootstrap/ownership-manifest.json",
-      "docs/research/hosted-web/phase-1/bootstrap/baseline-fingerprints.json",
-      "docs/research/hosted-web/phase-1/bootstrap/estimate-allocation.json",
-      "docs/research/hosted-web/phase-1/bootstrap/bootstrap-report.md",
-      ".codex-handoff/phase-01-p1-1a.json",
-      "src/shared/contracts/hosted/app-error.ts",
-      "src/shared/contracts/hosted/identifiers.ts",
-      "src/shared/contracts/hosted/index.ts",
-      "src/shared/contracts/hosted/query-context.ts",
-      "src/shared/contracts/hosted/revision.ts",
-      "test/architecture/hosted-web/phase-1/contracts/app-error.test.ts",
-      "test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json",
-      "test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json",
-      "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
-      "test/architecture/hosted-web/phase-1/contracts/query-context.test.ts",
-      "test/architecture/hosted-web/phase-1/contracts/revision.test.ts",
-      ".codex-handoff/phase-01-p1-s1-schema-version-remediation.json",
-      ".codex-handoff/phase-01-p1-1b.json",
-      "src/main/composition/hosted/routing/RouteCatalog.ts",
-      "src/main/composition/hosted/routing/index.ts",
-      "src/main/composition/hosted/routing/route-types.ts",
-      "test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts",
-      "test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts",
-      "test/architecture/hosted-web/phase-1/routes/fixtures/duplicate-route.ts",
-      "test/architecture/hosted-web/phase-1/routes/fixtures/missing-reference.ts",
-      "test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts",
-      ".codex-handoff/phase-01-p1-1c.json",
-      "scripts/hosted-web/phase-1/check-feature-dependencies.ts",
-      "scripts/hosted-web/phase-1/check-parity-references.ts",
-      "scripts/hosted-web/phase-1/check-renderer-boundaries.ts",
-      "test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts",
-      "test/architecture/hosted-web/phase-1/conformance/semantic-harness.ts",
-      "test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/core-side-effect.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/filesystem-adapter.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/forbidden-core-import.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/hosted-electron-api.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/legacy-god-dto.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/path-secret-leak.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/production-adapter-mount.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/ratchet-regression.ts",
-      "test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
-      "test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/manifest.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/corrupt.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/draft.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/empty.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/not-found-inapplicable.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/partial.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/provisioning-inapplicable.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/stale.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unavailable.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json",
-      "docs/research/hosted-web/phase-1/reviews/routes-ratchets.md",
-      ".codex-handoff/phase-01-p1-1d.json",
-      "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
-      "src/features/team-lifecycle/contracts/index.ts",
-      "src/features/team-lifecycle/core/application/ListTeamLifecycle.ts",
-      "src/features/team-lifecycle/core/application/index.ts",
-      "src/features/team-lifecycle/index.ts",
-      "test/features/team-lifecycle/core/ListTeamLifecycle.test.ts",
-      "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts",
-      "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts",
-      ".codex-handoff/phase-01-p1-r2.json",
-      "docs/research/hosted-web/phase-1/reviews/list-semantics.md",
-      ".codex-handoff/phase-01-p1-i-lint-remediation.json",
-      ".codex-handoff/phase-01-p1-i.json",
-      "docs/research/hosted-web/phase-1/decision-register.json",
-      "docs/research/hosted-web/phase-1/estimate-reconciliation.json",
-      "docs/research/hosted-web/phase-1/evidence-index.json",
-      "docs/research/hosted-web/phase-1/integration-report.json"
-    ],
-    "acceptedP1IOutputSha256": {
-      ".codex-handoff/phase-01-p1-i.json": "be6ca8a01fba06871b9246ae2baaf230e7b95222bb0da3eec8548016c5639903",
-      "docs/research/hosted-web/phase-1/decision-register.json": "1d275a95a189d7840a6d75591d90c138b0ec5399747db41794697de0cde32ba9",
-      "docs/research/hosted-web/phase-1/estimate-reconciliation.json": "941c58195b9955b9807b896aedf7f46ea1a4ed455dc6713241ffefb074405328",
-      "docs/research/hosted-web/phase-1/evidence-index.json": "07a17cb6674916f65713e337f15deeb3f5405d36fbcccbbcdada3b5895724590",
-      "docs/research/hosted-web/phase-1/integration-report.json": "a64cc23427dd049e0ede0ce217a7401a5ec6f6df51ec6cb9b5ca3ef5458f4e8f"
-    }
-  },
-  "requiredPhase1EvidenceIds": [
-    "P1.S0.BASELINE",
-    "P1.S0.BOOTSTRAP",
-    "P1.1A.KERNEL",
-    "P1.1A.VERSION",
-    "P1.1B.ROUTES",
-    "P1.1B.CAPABILITIES",
-    "P1.1C.CONFORMANCE",
-    "P1.1C.RATCHETS",
-    "P1.R1.ARCH_REVIEW",
-    "P1.1D.TEAM_LIFECYCLE_READ_CONTRACT",
-    "P1.1D.TEAM_LIFECYCLE_READ_USE_CASE",
-    "P1.1D.TEAM_LIFECYCLE_SEMANTIC_PROOF",
-    "P1.R2.SEMANTIC_REVIEW",
-    "P1.NEG.RATCHET_REGRESSION"
-  ],
-  "additionalFrozenCatalogIds": ["P1.I.LINT.REMEDIATION", "P1.I.INTEGRATION", "P1.I.ROLLBACK"],
-  "requiredFrozenCatalogRowCount": 17,
-  "requiredGateIds": [
-    "P1.GATE.PROVENANCE",
-    "P1.GATE.PREDECESSORS",
-    "P1.GATE.SCOPE",
-    "P1.GATE.TESTS",
-    "P1.GATE.TYPECHECK",
-    "P1.GATE.LINT",
-    "P1.GATE.FORMAT",
-    "P1.GATE.NEGATIVES",
-    "P1.GATE.RATCHET",
-    "P1.GATE.SECURITY",
-    "P1.GATE.ROLLBACK",
-    "P1.GATE.ESTIMATE",
-    "P1.GATE.DECISIONS",
-    "P1.GATE.EVIDENCE_FREEZE"
-  ],
-  "requiredExactResults": {
-    "fullPhase1Vitest": {
-      "command": "pnpm exec vitest run test/features/team-lifecycle test/architecture/hosted-web/phase-1",
-      "testFiles": 13,
-      "passed": 60,
-      "total": 60
-    },
-    "ratchetRegressionFocused": {
-      "command": "pnpm exec vitest run test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
-      "testFiles": 1,
-      "passed": 3,
-      "total": 3
-    },
-    "nativeTypeScript": {
-      "command": "node scripts/hosted-web/phase-0/final-gate/normalize-typescript-diagnostics.mjs --mode milestone",
-      "normalizerExitCode": 0,
-      "compilerRawExitCode": 2,
-      "normalizerProcessDisposition": "exited",
-      "passed": true,
-      "inherited": 7,
-      "owned": 0,
-      "resolved": 0,
-      "unexpected": 0
-    },
-    "fullLint": {
-      "command": "pnpm lint",
-      "exitCode": 0,
-      "errorCount": 0
-    },
-    "frozenManifestFormat": {
-      "inputPathCount": 74,
-      "exitCode": 0
-    },
-    "p1fOutputFormat": {
-      "outputPathCount": 2,
-      "exitCode": 0
-    },
-    "findingCountsOnAccept": {
-      "P0": 0,
-      "P1": 0,
-      "P2": 0
-    }
-  },
-  "inheritedNativeTypeScriptDiagnostics": [
-    {
-      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
-      "code": "TS7016",
-      "line": 25,
-      "column": 8
-    },
-    {
-      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
-      "code": "TS7031",
-      "line": 66,
-      "column": 31
-    },
-    {
-      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
-      "code": "TS18046",
-      "line": 117,
-      "column": 68
-    },
-    {
-      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
-      "code": "TS7031",
-      "line": 413,
-      "column": 48
-    },
-    {
-      "path": "test/architecture/hosted-web/phase-0/auth-artifacts/auth-artifacts-spike.test.ts",
-      "code": "TS7031",
-      "line": 733,
-      "column": 10
-    },
-    {
-      "path": "test/architecture/hosted-web/phase-0/host-primitives/evidence-scanner.test.ts",
-      "code": "TS7016",
-      "line": 12,
-      "column": 8
-    },
-    {
-      "path": "test/architecture/hosted-web/phase-0/provider-runtime/scan-runtime-surfaces.test.ts",
-      "code": "TS2352",
-      "line": 162,
-      "column": 44
-    }
-  ],
-  "rollbackPayload": {
-    "bootstrapSha": "5f30df49e052d1cc1d0e7efd03aa105673b5b614",
-    "acceptedPayloadSha": "20706bd067ce5ccbf13697700411904faa2a00c8",
-    "pathCount": 54,
-    "allPathsRequiredAbsentAtBootstrap": true,
-    "workspaceApplyAuthorized": false,
-    "scratchRoundTripRequired": true,
-    "paths": [
-      "src/shared/contracts/hosted/app-error.ts",
-      "src/shared/contracts/hosted/identifiers.ts",
-      "src/shared/contracts/hosted/index.ts",
-      "src/shared/contracts/hosted/query-context.ts",
-      "src/shared/contracts/hosted/revision.ts",
-      "test/architecture/hosted-web/phase-1/contracts/app-error.test.ts",
-      "test/architecture/hosted-web/phase-1/contracts/fixtures/invalid-contract-values.json",
-      "test/architecture/hosted-web/phase-1/contracts/fixtures/valid-contract-values.json",
-      "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
-      "test/architecture/hosted-web/phase-1/contracts/query-context.test.ts",
-      "test/architecture/hosted-web/phase-1/contracts/revision.test.ts",
-      "src/main/composition/hosted/routing/RouteCatalog.ts",
-      "src/main/composition/hosted/routing/index.ts",
-      "src/main/composition/hosted/routing/route-types.ts",
-      "test/architecture/hosted-web/phase-1/routes/RouteCatalog.test.ts",
-      "test/architecture/hosted-web/phase-1/routes/capability-descriptors.test.ts",
-      "test/architecture/hosted-web/phase-1/routes/fixtures/duplicate-route.ts",
-      "test/architecture/hosted-web/phase-1/routes/fixtures/missing-reference.ts",
-      "test/architecture/hosted-web/phase-1/routes/fixtures/test-only-production-route.ts",
-      "scripts/hosted-web/phase-1/check-feature-dependencies.ts",
-      "scripts/hosted-web/phase-1/check-parity-references.ts",
-      "scripts/hosted-web/phase-1/check-renderer-boundaries.ts",
-      "test/architecture/hosted-web/phase-1/conformance/semantic-harness.test.ts",
-      "test/architecture/hosted-web/phase-1/conformance/semantic-harness.ts",
-      "test/architecture/hosted-web/phase-1/dependencies/feature-dependencies.test.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/core-side-effect.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/filesystem-adapter.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/forbidden-core-import.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/hosted-electron-api.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/legacy-god-dto.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/path-secret-leak.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/production-adapter-mount.ts",
-      "test/architecture/hosted-web/phase-1/fixtures/ratchet-regression.ts",
-      "test/architecture/hosted-web/phase-1/parity/parity-references.test.ts",
-      "test/architecture/hosted-web/phase-1/renderer-boundaries/renderer-boundaries.test.ts",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/manifest.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/corrupt.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/draft.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/empty.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/not-found-inapplicable.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/partial.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/provisioning-inapplicable.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/stale.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/success.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unavailable.json",
-      "test/fixtures/hosted-web/phase-1/team-lifecycle/outcomes/unexpected.json",
-      "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
-      "src/features/team-lifecycle/contracts/index.ts",
-      "src/features/team-lifecycle/core/application/ListTeamLifecycle.ts",
-      "src/features/team-lifecycle/core/application/index.ts",
-      "src/features/team-lifecycle/index.ts",
-      "test/features/team-lifecycle/core/ListTeamLifecycle.test.ts",
-      "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-contract.test.ts",
-      "test/architecture/hosted-web/phase-1/team-lifecycle/team-lifecycle-read-boundaries.test.ts"
-    ]
-  },
-  "p1fAdmission": {
-    "workerCount": 1,
-    "workerRole": "reviewer",
-    "reviewKind": "review",
-    "node": "P1.F",
-    "model": "gpt-5.6-sol",
-    "reasoningEffort": "xhigh",
-    "serviceTier": "default",
-    "fastAuthorized": false,
-    "projectScopedControlOperation": "codex_goal_project_refill_worker",
-    "sourceRemote": "origin",
-    "sourceBranch": "refactor/hosted-web-feature-boundaries",
-    "expectedSourceCommitBinding": "postRouterIntegrationAuthoritySha",
-    "worktreeHeadShaBinding": "postRouterIntegrationAuthoritySha",
-    "handoffAuthorityBindingSource": "postRouterIntegrationAuthoritySha",
-    "packetRevision": "phase-01-p1-f-freeze-r3",
-    "controllerPacket": "docs/hosted-web-phases/phase-01/controller-packet.md",
-    "lanePacket": "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md",
-    "authoritativeEvidenceInputs": [
-      "fresh-immutable-root-broker-remote-attestation",
-      "fresh-immutable-root-attested-normalizer"
-    ],
-    "remoteAttestationReviewerInspectionRequired": true,
-    "normalizerAttestationReviewerInspectionRequiredWhenUsed": true,
-    "normalizerAttestationUseRequiresRecordedSandboxSpawnFailure": true,
-    "repositoryWriterAuthority": "exact-two-p1f-output-paths-only",
-    "workerDependencyInstallAuthorized": false,
-    "selfRetryOrRefillAuthority": false,
-    "reviewerLaunchAuthority": false,
-    "integrationAuthority": false,
-    "successorLaunchAuthority": false
-  },
-  "p1fOutputs": {
-    "writablePaths": [
-      ".codex-handoff/phase-01-p1-f.json",
-      "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md"
-    ],
-    "evidenceIds": ["P1.F.FREEZE", "P1.F.PHASE_EXIT"],
-    "handoffPath": ".codex-handoff/phase-01-p1-f.json",
-    "freezeReportPath": "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md",
-    "strictResultPrefix": "P1_F_FREEZE_RESULT",
-    "allowedDispositions": ["ACCEPT", "REJECT"],
-    "terminalState": "HOLD"
-  },
-  "p1fExecutionPolicy": {
-    "workspace": "isolated-independent-milestone-review-worktree-only",
-    "network": "disabled-root-broker-remote-attestation-only",
-    "workerGitLsRemote": false,
-    "rootBrokerRemoteAttestationInspection": true,
-    "rootAttestedNormalizerConditionalInspection": true,
-    "sandboxCompatibleLocalChecksIndependent": true,
-    "genericRootSubstitution": false,
-    "checkBypass": false,
-    "githubApiAccess": false,
-    "fetch": false,
-    "dependencyInstall": false,
-    "appRuntimeServerOrTeamLaunch": false,
-    "providerCheck": false,
-    "realProjectAccess": false,
-    "writerScope": "exact-two-p1f-output-paths",
-    "productOrTestEdit": false,
-    "p1iOutputEdit": false,
-    "historicalPacketEdit": false,
-    "registryWrite": false,
-    "agentFlowTest": false,
-    "stage": false,
-    "commit": false,
-    "merge": false,
-    "push": false,
-    "rawGitIntegration": false,
-    "repositoryApply": false,
-    "scratchRollbackApply": true,
-    "reviewerLaunch": false,
-    "reviewIntegration": false
-  },
-  "authorization": {
-    "authorizedNow": [],
-    "conditionallyAuthorizedAfterRouterIndependentAcceptBrokerIntegrationPush": [
-      "one-fresh-independent-p1f-milestone-freeze-worker"
-    ],
-    "conditionallyAuthorizedAfterP1FAccept": [
-      "root-mark_reviewed",
-      "broker-integrate-and-push-exact-two-p1f-outputs"
-    ],
-    "conditionallyAuthorizedAfterAcceptedP1FIntegrationPushAndAttestation": [
-      "commission-separate-phase2-jit-docs-router"
-    ],
-    "maximumConcurrentWorkerCount": 1,
-    "acceptIntegrationPathCount": 2,
-    "rejectFollowup": "bounded-same-two-path-remediation-only",
-    "p1iRepeatAuthorized": false,
-    "p1iOutputModificationAuthorized": false,
-    "productTestRuntimeEditAuthorized": false,
-    "phase2JitRouterAuthoredByP1F": false,
-    "phase2BlockedUntilP1FAccept": true,
-    "p1fAcceptAloneSufficientForPhase2Router": false,
-    "phase2WorkerAuthorized": false,
-    "phase2ProductWorkAuthorized": false,
-    "controllerReplacementAuthorized": false,
-    "successorControllerAuthorized": false,
-    "docsJobLifecycleActionPerformed": false,
-    "docsJobStageAuthorized": false,
-    "docsJobCommitAuthorized": false,
-    "docsJobMergeAuthorized": false,
-    "docsJobPushAuthorized": false,
-    "blocked": [
-      "P1.I repeat or modification",
-      "Phase 2 workers",
-      "Phase 2 product work",
-      "unrelated nodes",
-      "unrelated product workers",
-      "successor controllers"
-    ]
-  },
-  "historicalAuthority": {
-    "rejectedP1FRouterR1": {
-      "revision": "phase-01-p1-f-freeze-router-r1",
-      "patchSha256": "2f7338a1e7b41955d15106f5fb3994b17db6749158bde8134a0a8e23d2081615",
-      "disposition": "REJECT",
-      "findingCounts": {
-        "P0": 0,
-        "P1": 1,
-        "P2": 0
-      },
-      "immutable": true,
-      "integrationAuthorized": false,
-      "remediationScope": "merge-provenance-proof-only"
-    },
-    "acceptedP1FRouterR2": {
-      "revision": "phase-01-p1-f-freeze-router-r2",
-      "patchSha256": "1b9d824436f076f751df91fe2d8abedb88995c5fe8a02f3fc0194921d669d5c1",
-      "reviewerJob": "agent-teams-hosted-web-refactor-p1-f-router-review-v17-r2",
-      "disposition": "ACCEPT",
-      "findingCounts": {
-        "P0": 0,
-        "P1": 0,
-        "P2": 0
-      },
-      "integrationAttempt": "p1-f-router-r2-accepted-20260716",
-      "integrationSha": "69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5",
-      "pushed": true,
-      "immutable": true,
-      "currentExecutionAuthority": false
-    },
-    "p1fEnvironmentHoldAttempts": {
-      "job": "agent-teams-hosted-web-refactor-p1-f-freeze-v17-r1",
-      "attemptCount": 3,
-      "authoritySha": "69c4219b7ce3c7ad99e469ecd537a42e4bb4d2b5",
-      "initialAndFinalWorktreesClean": true,
-      "outputPathCount": 0,
-      "syntheticReviewDisposition": false,
-      "terminalState": "HOLD",
-      "environmentContradictions": [
-        "network-disabled-worker-required-to-run-remote-query",
-        "sandbox-normalizer-child-spawn-eperm"
-      ],
-      "immutable": true
-    },
-    "previousRouterRevision": {
-      "revision": "phase-01-p1-i-format-remediation-router-r1",
-      "state": "superseded-execution-route-retained-as-provenance",
-      "currentExecutionAuthority": false
-    },
-    "p1ILanePacket": {
-      "path": "docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md",
-      "sha256": "3f81d6e65f9848b6b3db593dda6eb87e5eeb7276af9e76d2fe79ba3fc6f094fe",
-      "state": "accepted-history-frozen",
-      "currentExecutionAuthority": false,
-      "modificationAuthorized": false
-    }
-  },
-  "routerExclusiveOwnership": [
-    "docs/hosted-web-phases/EXECUTION_INDEX.json",
-    "docs/hosted-web-phases/README.md",
-    "docs/hosted-web-phases/START_HERE.md",
-    "docs/hosted-web-phases/phase-01/README.md",
-    "docs/hosted-web-phases/phase-01/controller-packet.md",
-    "docs/hosted-web-phases/phase-01/execution-dag.md",
-    "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md"
-  ],
-  "packetHashes": {
-    "algorithm": "sha256",
-    "controllerPacket": {
-      "path": "docs/hosted-web-phases/phase-01/controller-packet.md",
-      "sha256": "a39fe79dfc483018b6f798d781dadb70139cd27089eb72524b351eaf898118bd"
-    },
-    "lanePacket": {
-      "path": "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md",
-      "sha256": "9a8d4e6572a58ca557b0e2d630f4af9f556732daf82c51be27f2c212f0afe748"
-    }
-  },
-  "authorityTiers": {
-    "executionAuthority": [
-      "AGENTS.md",
-      "docs/hosted-web-phases/START_HERE.md",
+      "docs/hosted-web-phases/EXECUTION_INDEX.json",
       "docs/hosted-web-phases/README.md",
-      "docs/hosted-web-phases/EXECUTION_INDEX.json"
+      "docs/hosted-web-phases/START_HERE.md",
+      "docs/hosted-web-phases/phase-02/README.md",
+      "docs/hosted-web-phases/phase-02/controller-packet.md",
+      "docs/hosted-web-phases/phase-02/execution-dag.md",
+      "docs/hosted-web-phases/phase-02/lanes/p2-identity-foundation.md",
+      "docs/hosted-web-phases/phase-02/lanes/p2-a-workspace-identity.md",
+      "docs/hosted-web-phases/phase-02/lanes/p2-b-team-identity.md",
+      "docs/hosted-web-phases/phase-02/lanes/p2-c-workspace-binding.md",
+      "docs/hosted-web-phases/phase-02/lanes/p2-d-roster-identity.md",
+      "docs/hosted-web-phases/phase-02/lanes/p2-e-legacy-adoption.md"
+    ]
+  },
+  "mandatoryReadOrder": [
+    "AGENTS.md",
+    "docs/hosted-web-phases/START_HERE.md",
+    "docs/hosted-web-phases/EVIDENCE_LIFECYCLE.md",
+    "docs/hosted-web-phases/README.md",
+    "docs/hosted-web-phases/EXECUTION_INDEX.json",
+    "docs/hosted-web-phases/phase-02/README.md",
+    "docs/hosted-web-phases/phase-02/controller-packet.md",
+    "docs/hosted-web-phases/phase-02/execution-dag.md",
+    "CLAUDE.md",
+    "AGENT_CRITICAL_GUARDRAILS.md",
+    "docs/FEATURE_ARCHITECTURE_STANDARD.md",
+    "docs/hosted-web-phases/PACKET_STANDARD.md",
+    "docs/hosted-web-phases/ORCHESTRATION_GUARDS.md",
+    ".codex-handoff/phase-01-p1-f.json",
+    "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md",
+    "the assigned node packet",
+    "the assigned node packet's numbered source and test reads"
+  ],
+  "architectureBoundary": {
+    "principles": ["Clean Architecture", "DDD", "SOLID"],
+    "canonicalApi": "The Phase 2 team-lifecycle API facet is transport-neutral. Electron, IPC, HTTP, Fastify and renderer details remain input/output adapters.",
+    "coreForbiddenImports": [
+      "@main",
+      "electron",
+      "fastify",
+      "react",
+      "zustand",
+      "node:fs",
+      "node:path",
+      "child_process"
     ],
-    "currentPhase": [
-      "docs/hosted-web-phases/phase-01/README.md",
-      "docs/hosted-web-phases/phase-01/controller-packet.md",
-      "docs/hosted-web-phases/phase-01/execution-dag.md",
-      "docs/hosted-web-phases/phase-01/lanes/p1-f-freeze.md"
+    "runtimeOwnership": [
+      "execution primitives",
+      "materialization primitives",
+      "admission primitives",
+      "evidence primitives",
+      "integration primitives"
     ],
-    "historicalOnly": ["docs/hosted-web-phases/phase-01/lanes/p1-i-integration.md"],
-    "p1fWriteException": {
-      "evidenceIds": ["P1.F.FREEZE", "P1.F.PHASE_EXIT"],
-      "paths": [
-        ".codex-handoff/phase-01-p1-f.json",
-        "docs/research/hosted-web/phase-1/reviews/phase-1-freeze.md"
-      ]
+    "controllerOwnership": [
+      "DAG ordering",
+      "lane selection and capacity",
+      "dependencies",
+      "review policy",
+      "retry and replacement decisions",
+      "successor authorization"
+    ],
+    "parallelSharedFileRule": "P2.A through P2.E own no barrel, index or composition file. Shared exports and wiring are serial P2.F0 or P2.I work only."
+  },
+  "capacity": {
+    "foundationNodeCount": 1,
+    "foundationProductCapacity": 1,
+    "parallelProductLaneCount": 5,
+    "parallelProductLaneIds": ["P2.A", "P2.B", "P2.C", "P2.D", "P2.E"],
+    "productCapacityDefinition": "A producer changing declared product source and focused tests in one exclusive lane.",
+    "excludedFromProductCapacity": [
+      "documentation workers",
+      "research workers",
+      "evidence workers",
+      "architecture reviewers",
+      "security reviewers",
+      "integration actors",
+      "milestone reviewers"
+    ],
+    "replacementRule": "A replacement must reuse the same lane ID, name the superseded attempt and receive a new controller admission; it never creates a sixth product lane."
+  },
+  "reviewPolicy": {
+    "producerSelfReviewRequired": true,
+    "separatePerLaneCodeReviewer": false,
+    "permittedSeparateReviewerRoles": ["architecture", "security", "integration", "milestone"],
+    "allHandoffsTerminalState": "HOLD"
+  },
+  "nodes": [
+    {
+      "id": "P2.F0.IDENTITY",
+      "kind": "product-foundation",
+      "packet": "docs/hosted-web-phases/phase-02/lanes/p2-identity-foundation.md",
+      "dependsOn": ["P2.ROUTER.INTEGRATED"],
+      "writablePaths": [
+        "src/shared/contracts/hosted/identifiers.ts",
+        "src/shared/contracts/hosted/index.ts",
+        "test/architecture/hosted-web/phase-1/contracts/identifiers.test.ts",
+        "test/architecture/hosted-web/phase-2/identity/canonical-identifiers.test.ts",
+        ".codex-handoff/phase-02-p2-f0.json"
+      ],
+      "handoff": ".codex-handoff/phase-02-p2-f0.json",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P2.R0.ARCH_SECURITY",
+      "kind": "architecture-security-review",
+      "dependsOn": ["P2.F0.IDENTITY"],
+      "productCapacity": 0,
+      "writablePaths": [
+        "docs/research/hosted-web/phase-2/reviews/foundation-architecture-security.md",
+        ".codex-handoff/phase-02-p2-r0.json"
+      ],
+      "requiredReads": [
+        "P2.F0 packet",
+        "P2.F0 handoff",
+        "P2.F0 exact changed paths",
+        "Phase 2 controller architecture and foundation gates"
+      ],
+      "focusedChecks": [
+        "replay P2.F0 focused checks",
+        "identity derivation and dependency-boundary review",
+        "exact scope, diff, secret and private-path review"
+      ],
+      "acceptance": "ACCEPT only compatible opaque canonical identity bytes with complete self-review and zero unresolved P0/P1 finding.",
+      "handoff": ".codex-handoff/phase-02-p2-r0.json",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P2.IF.INTEGRATION",
+      "kind": "foundation-integration",
+      "dependsOn": ["P2.R0.ARCH_SECURITY"],
+      "productCapacity": 0,
+      "materializesAcceptedPathsFrom": ["P2.F0.IDENTITY", "P2.R0.ARCH_SECURITY"],
+      "writablePaths": [
+        "docs/research/hosted-web/phase-2/foundation-integration.json",
+        ".codex-handoff/phase-02-p2-if.json"
+      ],
+      "requiredReads": [
+        "P2.F0 handoff and exact accepted blobs",
+        "P2.R0 review and handoff",
+        "Phase 2 controller foundation and integration gates"
+      ],
+      "focusedChecks": [
+        "accepted-hash reconciliation",
+        "clean materialization/integration attempt",
+        "P2.F0 focused checks at integrated authority",
+        "exact scope, diff, secret and private-path review"
+      ],
+      "acceptance": "Activate only byte-identical accepted F0 and R0 outputs plus the two declared integration evidence paths.",
+      "handoff": ".codex-handoff/phase-02-p2-if.json",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P2.A",
+      "kind": "product-lane",
+      "packet": "docs/hosted-web-phases/phase-02/lanes/p2-a-workspace-identity.md",
+      "dependsOn": ["P2.IF.INTEGRATION"],
+      "writablePaths": [
+        "src/features/runtime-instance-context/contracts/runtime-instance-context.ts",
+        "src/features/runtime-instance-context/core/domain/RuntimeInstanceContext.ts",
+        "test/features/runtime-instance-context/RuntimeInstanceContext.test.ts",
+        "test/architecture/hosted-web/phase-2/runtime-instance-context-boundaries.test.ts",
+        ".codex-handoff/phase-02-p2-a.json"
+      ],
+      "handoff": ".codex-handoff/phase-02-p2-a.json",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P2.B",
+      "kind": "product-lane",
+      "packet": "docs/hosted-web-phases/phase-02/lanes/p2-b-team-identity.md",
+      "dependsOn": ["P2.IF.INTEGRATION"],
+      "writablePaths": [
+        "src/features/internal-storage/contracts/teamIdentityStorageContracts.ts",
+        "src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema.ts",
+        "src/features/internal-storage/main/infrastructure/worker/teamIdentityStorageOps.ts",
+        "test/features/internal-storage/TeamIdentityStorage.test.ts",
+        ".codex-handoff/phase-02-p2-b.json"
+      ],
+      "handoff": ".codex-handoff/phase-02-p2-b.json",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P2.C",
+      "kind": "product-lane",
+      "packet": "docs/hosted-web-phases/phase-02/lanes/p2-c-workspace-binding.md",
+      "dependsOn": ["P2.IF.INTEGRATION"],
+      "writablePaths": [
+        "src/features/workspace-registry/contracts/workspace-registration.ts",
+        "src/features/workspace-registry/core/domain/WorkspaceRegistration.ts",
+        "src/features/workspace-registry/core/application/AuthorizeWorkspaceOperation.ts",
+        "src/features/workspace-registry/main/infrastructure/ReadOnlyWorkspaceManifestAdapter.ts",
+        "test/features/workspace-registry/core/WorkspaceRegistration.test.ts",
+        "test/features/workspace-registry/core/AuthorizeWorkspaceOperation.test.ts",
+        "test/features/workspace-registry/main/ReadOnlyWorkspaceManifestAdapter.test.ts",
+        ".codex-handoff/phase-02-p2-c.json"
+      ],
+      "handoff": ".codex-handoff/phase-02-p2-c.json",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P2.D",
+      "kind": "product-lane",
+      "packet": "docs/hosted-web-phases/phase-02/lanes/p2-d-roster-identity.md",
+      "dependsOn": ["P2.IF.INTEGRATION"],
+      "writablePaths": [
+        "src/features/team-lifecycle/core/application/ports/TeamIdentityPersistence.ts",
+        "src/features/team-lifecycle/main/infrastructure/TeamIdentityFileStore.ts",
+        "src/features/team-lifecycle/main/infrastructure/TeamDirectoryLifecycleAdapter.ts",
+        "src/features/team-lifecycle/main/infrastructure/TeamIdentityBackupCompatibility.ts",
+        "test/features/team-lifecycle/main/TeamDirectoryIdentity.test.ts",
+        "test/architecture/hosted-web/phase-2/team-directory-identity-boundaries.test.ts",
+        ".codex-handoff/phase-02-p2-d.json"
+      ],
+      "handoff": ".codex-handoff/phase-02-p2-d.json",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P2.E",
+      "kind": "product-lane",
+      "packet": "docs/hosted-web-phases/phase-02/lanes/p2-e-legacy-adoption.md",
+      "dependsOn": ["P2.IF.INTEGRATION"],
+      "writablePaths": [
+        "src/features/team-lifecycle/contracts/team-lifecycle-read.ts",
+        "src/features/team-lifecycle/contracts/team-lifecycle-read-api.ts",
+        "src/features/team-lifecycle/core/application/GetTeamLifecycleSnapshot.ts",
+        "src/features/team-lifecycle/core/application/GetRuntimeStateProjection.ts",
+        "src/features/team-lifecycle/core/application/ListAliveTeamProjections.ts",
+        "src/features/team-lifecycle/main/infrastructure/LegacyTeamLifecycleReadSource.ts",
+        "src/features/team-lifecycle/main/adapters/input/TeamLifecycleReadApiAdapter.ts",
+        "test/features/team-lifecycle/TeamLifecycleReadApi.test.ts",
+        "test/architecture/hosted-web/phase-2/team-lifecycle-read-api-boundaries.test.ts",
+        ".codex-handoff/phase-02-p2-e.json"
+      ],
+      "handoff": ".codex-handoff/phase-02-p2-e.json",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P2.R1.ARCH_SECURITY",
+      "kind": "architecture-security-review",
+      "dependsOn": ["P2.A", "P2.B", "P2.C", "P2.D", "P2.E"],
+      "productCapacity": 0,
+      "writablePaths": [
+        "docs/research/hosted-web/phase-2/reviews/parallel-wave-architecture-security.md",
+        ".codex-handoff/phase-02-p2-r1.json"
+      ],
+      "requiredReads": [
+        "P2.A through P2.E packets and handoffs",
+        "all exact A-E changed paths",
+        "P2.IF integrated foundation evidence",
+        "Phase 2 controller architecture and parallel wave gates"
+      ],
+      "focusedChecks": [
+        "replay every lane focused check",
+        "pairwise ownership and sibling-independence proof",
+        "root-admission and transport-neutrality negatives",
+        "exact scope, diff, secret and private-path review"
+      ],
+      "acceptance": "ACCEPT only five independently self-reviewed, pairwise-disjoint lanes satisfying the combined architecture and security gate.",
+      "handoff": ".codex-handoff/phase-02-p2-r1.json",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P2.I.INTEGRATION",
+      "kind": "serial-integration",
+      "dependsOn": ["P2.R1.ARCH_SECURITY"],
+      "productCapacity": 0,
+      "materializesAcceptedPathsFrom": [
+        "P2.A",
+        "P2.B",
+        "P2.C",
+        "P2.D",
+        "P2.E",
+        "P2.R1.ARCH_SECURITY"
+      ],
+      "reservedWritablePaths": [
+        "src/features/runtime-instance-context/contracts/index.ts",
+        "src/features/runtime-instance-context/index.ts",
+        "src/features/workspace-registry/contracts/index.ts",
+        "src/features/workspace-registry/core/index.ts",
+        "src/features/workspace-registry/main/index.ts",
+        "src/features/workspace-registry/index.ts",
+        "src/features/internal-storage/main/infrastructure/worker/internalStorageSchema.ts",
+        "src/features/internal-storage/main/infrastructure/worker/internalStorageMigrations.ts",
+        "src/features/internal-storage/main/infrastructure/worker/internalStorageWorkerProtocol.ts",
+        "src/features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore.ts",
+        "src/features/internal-storage/main/composition/createInternalStorageFeature.ts",
+        "src/features/team-lifecycle/contracts/index.ts",
+        "src/features/team-lifecycle/core/application/index.ts",
+        "src/features/team-lifecycle/index.ts",
+        "src/main/composition/hosted/phase2ReadComposition.ts",
+        "src/main/ipc/teams.ts",
+        "src/main/http/teams.ts",
+        "src/renderer/api/httpClient.ts",
+        "test/architecture/hosted-web/phase-2/ipc-http-read-conformance.test.ts",
+        "docs/research/hosted-web/phase-2/integration-report.json",
+        ".codex-handoff/phase-02-p2-i.json"
+      ],
+      "requiredReads": [
+        "P2.A through P2.E accepted handoffs and exact blobs",
+        "P2.R1 review and handoff",
+        "P2.IF integrated foundation evidence",
+        "Phase 2 controller integration gate"
+      ],
+      "focusedChecks": [
+        "accepted-hash reconciliation",
+        "union of all lane focused checks",
+        "IPC/test-HTTP semantic conformance",
+        "typecheck, fast lint and exact-path Prettier",
+        "exact scope, diff, secret and private-path review"
+      ],
+      "acceptance": "Integrate only accepted lane/review bytes, own every shared export and composition edit, and keep hosted mutation absent.",
+      "handoff": ".codex-handoff/phase-02-p2-i.json",
+      "terminalState": "HOLD"
+    },
+    {
+      "id": "P2.F.MILESTONE",
+      "kind": "milestone-review",
+      "dependsOn": ["P2.I.INTEGRATION"],
+      "productCapacity": 0,
+      "writablePaths": [
+        "docs/research/hosted-web/phase-2/reviews/phase-2-jit-wave.md",
+        ".codex-handoff/phase-02-p2-f.json"
+      ],
+      "requiredReads": [
+        "complete integrated Phase 2 JIT wave and evidence",
+        "P2.I integration report and handoff",
+        "predecessor P1.F evidence",
+        "Phase 2 controller milestone gate"
+      ],
+      "focusedChecks": [
+        "fresh replay of integrated focused and conformance checks",
+        "evidence/hash/scope reconciliation",
+        "architecture, security and deferred-claim review"
+      ],
+      "acceptance": "Record a fresh ACCEPT or REJECT without product edits or successor authorization.",
+      "handoff": ".codex-handoff/phase-02-p2-f.json",
+      "terminalState": "HOLD"
     }
-  }
+  ],
+  "focusedChecks": {
+    "allProductNodes": [
+      "the packet's exact focused Vitest command",
+      "pnpm lint:fast:files -- <exact changed TypeScript paths>",
+      "pnpm typecheck",
+      "pnpm exec prettier --check <exact writable text paths>",
+      "git diff --check",
+      "exact ownership diff",
+      "secret and private-path scan"
+    ],
+    "filesystemLanes": [
+      "fresh marker-owned temporary project/runtime roots only",
+      "reject unmarked, pre-existing, ambient, home, real-project and symlink-escaped roots before access",
+      "marker-checked narrow cleanup only"
+    ]
+  },
+  "handoffContract": {
+    "schema": "docs/hosted-web-phases/PACKET_STANDARD.md",
+    "required": [
+      "exact base and packet revision",
+      "exact changed paths",
+      "commands and exit codes",
+      "self-review result",
+      "evidence and proof levels",
+      "unverified claims",
+      "blockers and findings",
+      "next controller action",
+      "terminalState HOLD"
+    ],
+    "forbiddenClaims": [
+      "independent acceptance",
+      "integration",
+      "push or remote equality",
+      "successor launch",
+      "Phase 2 milestone acceptance"
+    ]
+  },
+  "nextAction": "independent-root-review-and-broker-integration"
 }
