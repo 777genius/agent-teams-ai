@@ -4960,6 +4960,7 @@ export default interface Resources {
         };
         view: {
           hierarchy: 'Hierarchy';
+          overview: 'Overview';
           relations: 'Relations';
           structure: 'Structure';
         };

@@ -2849,6 +2849,7 @@
         "switchToNested": "Switch to nested map"
       },
       "view": {
+        "overview": "Overview",
         "hierarchy": "Hierarchy",
         "structure": "Structure",
         "relations": "Relations"

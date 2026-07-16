@@ -74,47 +74,31 @@ describe('OrgOverviewHud', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders a semantic organization card at overview zoom and drills into groups', async () => {
+  it('renders a semantic organization card in the dedicated overview and drills into groups', async () => {
     const onSelectNode = vi.fn();
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
 
     await act(async () => {
-      root.render(
-        <OrgOverviewHud
-          viewModel={buildViewModel()}
-          getCameraZoom={() => 0.1}
-          getGroupFrameScreenPlacements={() => [
-            {
-              frame: {
-                id: 'org:acme',
-                label: 'Acme Platform',
-                nodeIds: ['team:alpha'],
-                priority: 'primary',
-              },
-              bounds: { left: 100, top: 100, right: 500, bottom: 400, width: 400, height: 300 },
-            },
-          ]}
-          getViewportSize={() => ({ width: 900, height: 600 })}
-          onSelectNode={onSelectNode}
-        />
-      );
+      root.render(<OrgOverviewHud viewModel={buildViewModel()} onSelectNode={onSelectNode} />);
       await Promise.resolve();
     });
 
     const card = host.querySelector<HTMLElement>('[data-organization-overview-card="acme"]');
+    expect(host.querySelector('[data-organization-overview-grid]')).not.toBeNull();
+    expect(card?.classList.contains('absolute')).toBe(false);
     expect(card?.textContent).toContain('Acme Platform');
     expect(card?.textContent).toContain('2 активных задач');
 
     const group = Array.from(card?.querySelectorAll('button') ?? []).find((button) =>
       button.textContent?.includes('Runtime')
     );
-    await act(async () => {
+    act(() => {
       group?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });
     expect(onSelectNode).toHaveBeenCalledWith('group:runtime', true);
 
-    await act(async () => root.unmount());
+    act(() => root.unmount());
   });
 });

@@ -15,7 +15,7 @@ import {
 
 import type { GraphControlRenderProps } from '@claude-teams/agent-graph';
 
-type ViewMode = 'hierarchy' | 'structure' | 'relations';
+type ViewMode = 'overview' | 'hierarchy' | 'structure' | 'relations';
 
 interface OrgGraphToolbarProps extends GraphControlRenderProps {
   activeViewMode: ViewMode;
