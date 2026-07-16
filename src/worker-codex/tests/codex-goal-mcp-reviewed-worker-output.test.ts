@@ -136,7 +136,7 @@ describe("Codex project reviewed worker output", () => {
           jobIdPrefixes: ["project-"],
           tmuxSessionPrefixes: ["project-"],
           allowedAccountIds: ["account-a"],
-          allowedBranches: ["main", "base/current"],
+          allowedBranches: ["main", "base/*"],
           allowedGitRemotes: ["origin"],
         },
       });

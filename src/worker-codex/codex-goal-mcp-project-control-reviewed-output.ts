@@ -1,5 +1,6 @@
 import {
   ReviewDecisionStatus,
+  matchesAnyPattern,
   type ProjectAccessScope,
 } from "@vioxen/subscription-runtime/worker-core";
 import type { ProjectControlMcpArgs } from "./codex-goal-mcp-inputs";
@@ -29,7 +30,7 @@ export function parseReviewedOutputMerge(
   if (!scope.allowedGitRemotes?.includes(sourceRemote)) {
     throw new Error("reviewed_worker_output_merge_source_remote_denied");
   }
-  if (!scope.allowedBranches?.includes(sourceBranch)) {
+  if (!matchesAnyPattern(sourceBranch, scope.allowedBranches ?? [])) {
     throw new Error("reviewed_worker_output_merge_source_branch_denied");
   }
   return { sourceRemote, sourceBranch, sourceCommit, expectedTargetCommit };

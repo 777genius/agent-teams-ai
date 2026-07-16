@@ -2,6 +2,7 @@ import {
   ReviewDecisionStatus,
   applyWorkerOutput,
   commitApprovedChanges,
+  matchesAnyPattern,
   openProjectIntegrationAttempt,
   pushApprovedCommit,
   rejectIntegrationAttempt,
@@ -214,7 +215,7 @@ function parseMergePlan(
   if (!controller.scope.allowedGitRemotes?.includes(sourceRemote)) {
     throw new Error("project_integration_merge_source_remote_denied");
   }
-  if (!controller.scope.allowedBranches?.includes(sourceBranch)) {
+  if (!matchesAnyPattern(sourceBranch, controller.scope.allowedBranches ?? [])) {
     throw new Error("project_integration_merge_source_branch_denied");
   }
   return {

@@ -227,7 +227,7 @@ describe("project integration MCP tool handlers", () => {
       ...controller,
       scope: {
         ...controller.scope,
-        allowedBranches: ["feature/project", "base/current"],
+        allowedBranches: ["feature/project", "base/*"],
         allowedGitRemotes: ["origin"],
       },
     };
