@@ -13,6 +13,12 @@ export interface RuntimeProviderCliCompanionRunCommandOptions {
   env: NodeJS.ProcessEnv;
   timeoutMs: number;
   onOutput?: (text: string) => void;
+  /**
+   * Run the command behind a short-lived Node helper on Windows. This keeps
+   * third-party installers behind a separate Node process so Electron does
+   * not own their native handles while preserving output and cancellation.
+   */
+  isolateFromHost?: boolean;
 }
 
 export interface RuntimeProviderCliCompanionInstallCommand {
@@ -46,6 +52,7 @@ export interface RuntimeProviderCliCompanionDefinition {
     manualUrl: string;
     minimumFreeBytes: number;
     monitorDownload: boolean;
+    isolateFromHostOnWindows?: boolean;
     packageDescription: string;
     parseProgress(text: string): RuntimeProviderCliCompanionProgressUpdate | null;
     fetchPackageSize?(platform: NodeJS.Platform, arch: string): Promise<number | null>;

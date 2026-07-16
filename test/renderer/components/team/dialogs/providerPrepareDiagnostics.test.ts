@@ -1032,6 +1032,69 @@ describe('runProviderPrepareDiagnostics', () => {
     expect(prepareProvisioning).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    {
+      raw: 'Forbidden: unauthorized: not licensed to use Copilot',
+      normalized:
+        'GitHub account connected, but this account does not have an active Copilot license',
+    },
+    {
+      raw: 'Payment Required: team used all available credits or reached its monthly spending limit',
+      normalized: 'Provider account has no available credits or reached its spending limit',
+    },
+    {
+      raw: 'API Error: 401 authentication_error: Invalid authentication credentials',
+      normalized: 'Provider credentials were rejected. Reconnect the account and retry',
+    },
+  ])('keeps account limitation blocking and actionable: $raw', async ({ raw, normalized }) => {
+    const prepareProvisioning = vi.fn(
+      (
+        _cwd?: string,
+        _providerId?: TeamProviderId,
+        _providerIds?: TeamProviderId[],
+        _selectedModels?: string[],
+        _limitContext?: boolean,
+        modelVerificationMode?: 'compatibility' | 'deep'
+      ): Promise<TeamProvisioningPrepareResult> =>
+        Promise.resolve(
+          modelVerificationMode === 'compatibility'
+            ? {
+                ready: true,
+                message: 'CLI is ready to launch',
+                details: [
+                  'Selected model opencode/big-pickle is compatible. Deep verification pending.',
+                ],
+              }
+            : {
+                ready: false,
+                message: raw,
+                details: [raw],
+                issues: [
+                  {
+                    providerId: 'opencode',
+                    scope: 'provider',
+                    severity: 'blocking',
+                    code: 'unknown_error',
+                    message: raw,
+                  },
+                ],
+              }
+        )
+    );
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      selectedModelIds: ['opencode/big-pickle'],
+      prepareProvisioning,
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.details.join('\n')).toContain(normalized);
+    expect(result.warnings).toEqual([]);
+    expect(prepareProvisioning).toHaveBeenCalledTimes(2);
+  });
+
   it('uses structured mcp_unavailable code to explain plain OpenCode connect failures', async () => {
     const prepareProvisioning = vi.fn<
       (
