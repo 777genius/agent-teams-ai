@@ -75,6 +75,7 @@ describe('TeamProvisioningService idempotent launch guards', () => {
       }),
       processKilled: false,
       cancelRequested: false,
+      progress: { state: 'ready' as const },
     };
 
     registerAliveRun(svc, aliveRun);
@@ -96,6 +97,7 @@ describe('TeamProvisioningService idempotent launch guards', () => {
       child: null,
       processKilled: false,
       cancelRequested: false,
+      progress: { state: 'spawning' },
     });
 
     const response = await svc.launchTeam({ teamName, cwd: process.cwd() }, () => undefined);
@@ -173,6 +175,7 @@ describe('TeamProvisioningService idempotent launch guards', () => {
       }),
       processKilled: false,
       cancelRequested: false,
+      progress: { state: 'ready' as const },
     };
 
     registerProvisioningRun(svc, teamName, 'pending-stale-run');
@@ -211,6 +214,7 @@ describe('TeamProvisioningService idempotent launch guards', () => {
       }),
       processKilled: false,
       cancelRequested: false,
+      progress: { state: 'ready' as const },
     };
 
     registerAliveRun(svc, aliveRun);
@@ -245,6 +249,7 @@ describe('TeamProvisioningService idempotent launch guards', () => {
       }),
       processKilled: false,
       cancelRequested: false,
+      progress: { state: 'ready' as const },
       spawnContext: { cwd: '' },
     };
 

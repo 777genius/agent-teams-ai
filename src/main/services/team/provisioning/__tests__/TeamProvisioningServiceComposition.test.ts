@@ -98,7 +98,8 @@ describe('TeamProvisioningServiceComposition', () => {
     >;
     const runs = Reflect.get(service, 'runs') as Map<string, object>;
     provisioningRunByTeam.set('alpha', existingRunId);
-    runs.set(existingRunId, {});
+    // Real runs always carry progress; run tracking reads progress.state to clear terminal runs.
+    runs.set(existingRunId, { progress: { state: 'spawning' } });
 
     await expect(service.createTeam(createRequest, onProgress)).resolves.toEqual({
       runId: existingRunId,
