@@ -27,11 +27,8 @@ vi.mock('../../opencode/store/OpenCodeRuntimeManifestEvidenceReader', () => ({
   upsertOpenCodeRuntimeLaneIndexEntry: vi.fn(async () => undefined),
 }));
 
-type OpenCodeWorktreeLanePlan = Extract<
-  TeamRuntimeLanePlan,
-  { mode: 'pure_opencode_worktree_root_lanes' }
->;
-type OpenCodeWorktreeMember = OpenCodeWorktreeLanePlan['allMembers'][number];
+type OpenCodeMemberLanePlan = Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_member_lanes' }>;
+type OpenCodeMember = OpenCodeMemberLanePlan['allMembers'][number];
 
 function runtimeResult(overrides: Partial<TeamRuntimeLaunchResult> = {}): TeamRuntimeLaunchResult {
   return {
@@ -68,20 +65,20 @@ function request(members: TeamCreateRequest['members']): TeamCreateRequest {
   } as TeamCreateRequest;
 }
 
-function member(name: string): OpenCodeWorktreeMember {
+function member(name: string): OpenCodeMember {
   return {
     name,
     role: 'Engineer',
     providerId: 'opencode',
-  } as OpenCodeWorktreeMember;
+  } as OpenCodeMember;
 }
 
 function lanePlan(input: {
-  primaryMembers: OpenCodeWorktreeMember[];
-  sideMembers?: OpenCodeWorktreeMember[];
-}): OpenCodeWorktreeLanePlan {
+  primaryMembers: OpenCodeMember[];
+  sideMembers?: OpenCodeMember[];
+}): OpenCodeMemberLanePlan {
   return {
-    mode: 'pure_opencode_worktree_root_lanes',
+    mode: 'pure_opencode_member_lanes',
     primaryMembers: input.primaryMembers,
     allMembers: [...input.primaryMembers, ...(input.sideMembers ?? [])],
     sideLanes: (input.sideMembers ?? []).map((sideMember) => ({
@@ -338,7 +335,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
     ]);
   });
 
-  it('wires aggregate launch through host state and secondary lane callbacks', async () => {
+  it('wires aggregate member-lane launch through host state and secondary lane callbacks', async () => {
     const calls: string[] = [];
     const adapter = {} as TeamLaunchRuntimeAdapter;
     const host = createHost(calls, adapter);

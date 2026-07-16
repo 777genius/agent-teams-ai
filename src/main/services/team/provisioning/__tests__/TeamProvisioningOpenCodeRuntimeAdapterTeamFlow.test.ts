@@ -52,12 +52,19 @@ function pureOpenCodePlan(members: TeamCreateRequest['members']): TeamRuntimeLan
   } as TeamRuntimeLanePlan;
 }
 
-function worktreeRootPlan(members: TeamCreateRequest['members']): TeamRuntimeLanePlan {
+function memberLanePlan(input: {
+  primaryMembers: TeamCreateRequest['members'];
+  sideMembers: TeamCreateRequest['members'];
+}): TeamRuntimeLanePlan {
   return {
-    mode: 'pure_opencode_worktree_root_lanes',
-    primaryMembers: members,
-    allMembers: members,
-    sideLanes: [],
+    mode: 'pure_opencode_member_lanes',
+    primaryMembers: input.primaryMembers,
+    allMembers: [...input.primaryMembers, ...input.sideMembers],
+    sideLanes: input.sideMembers.map((member) => ({
+      laneId: `secondary:opencode:${member.name}`,
+      providerId: 'opencode',
+      member: { ...member, providerId: 'opencode' },
+    })),
   } as TeamRuntimeLanePlan;
 }
 
@@ -220,11 +227,20 @@ describe('OpenCode runtime adapter team flow', () => {
     ]);
   });
 
-  it('routes create through the worktree-root aggregate branch with effective members', async () => {
+  it('routes create with a model-distinct member through the aggregate member-lane branch', async () => {
     const calls: string[] = [];
-    const effectiveMembers = [
-      { name: 'alice', role: 'Engineer', providerId: 'opencode', cwd: '/repo/alice' },
+    const primaryMembers = [
+      { name: 'alice', role: 'Engineer', providerId: 'opencode', model: 'gpt-5' },
     ] as TeamCreateRequest['members'];
+    const sideMembers = [
+      {
+        name: 'bob',
+        role: 'Reviewer',
+        providerId: 'opencode',
+        model: 'minimax-m2.5-free',
+      },
+    ] as TeamCreateRequest['members'];
+    const effectiveMembers = [...primaryMembers, ...sideMembers];
 
     const result = await createOpenCodeTeamThroughRuntimeAdapterFlow(
       createRequest(),
@@ -246,14 +262,14 @@ describe('OpenCode runtime adapter team flow', () => {
               { name: 'team-lead', role: 'Team Lead', providerId: 'opencode' },
               { name: 'runtime-only', role: 'Runtime', providerId: 'opencode' },
             ] as TeamCreateRequest['members'],
-            lanePlan: worktreeRootPlan(effectiveMembers),
+            lanePlan: memberLanePlan({ primaryMembers, sideMembers }),
           });
         },
       })
     );
 
     expect(result).toEqual({ runId: 'worktree-run' });
-    expect(calls.at(-1)).toBe('runWorktreeRoot:alice:build it:none');
+    expect(calls.at(-1)).toBe('runWorktreeRoot:alice,bob:build it:none');
   });
 
   it('hydrates launch prompts, propagates expected-member warnings, and launches runtime adapter members', async () => {
@@ -299,11 +315,20 @@ describe('OpenCode runtime adapter team flow', () => {
     expect(calls).toContain('buildPrompt:0:false');
   });
 
-  it('routes launch through the worktree-root aggregate branch with expected-member warnings', async () => {
+  it('routes launch with a model-distinct member through the aggregate member-lane branch', async () => {
     const calls: string[] = [];
-    const effectiveMembers = [
-      { name: 'alice', role: 'Engineer', providerId: 'opencode', cwd: '/repo/alice' },
+    const primaryMembers = [
+      { name: 'alice', role: 'Engineer', providerId: 'opencode', model: 'gpt-5' },
     ] as TeamCreateRequest['members'];
+    const sideMembers = [
+      {
+        name: 'bob',
+        role: 'Reviewer',
+        providerId: 'opencode',
+        model: 'minimax-m2.5-free',
+      },
+    ] as TeamCreateRequest['members'];
+    const effectiveMembers = [...primaryMembers, ...sideMembers];
 
     const result = await launchOpenCodeTeamThroughRuntimeAdapterFlow(
       launchRequest(),
@@ -325,13 +350,13 @@ describe('OpenCode runtime adapter team flow', () => {
               { name: 'team-lead', role: 'Team Lead', providerId: 'opencode' },
               { name: 'runtime-only', role: 'Runtime', providerId: 'opencode' },
             ] as TeamCreateRequest['members'],
-            lanePlan: worktreeRootPlan(effectiveMembers),
+            lanePlan: memberLanePlan({ primaryMembers, sideMembers }),
           });
         },
       })
     );
 
     expect(result).toEqual({ runId: 'worktree-run' });
-    expect(calls.at(-1)).toBe('runWorktreeRoot:alice:hydrated prompt:member warning');
+    expect(calls.at(-1)).toBe('runWorktreeRoot:alice,bob:hydrated prompt:member warning');
   });
 });

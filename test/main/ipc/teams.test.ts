@@ -4157,14 +4157,14 @@ describe('ipc teams handlers', () => {
     });
 
     it('requests persisted runtime detach even when mutable team-alive tracking is absent', async () => {
-      provisioningService.isTeamAlive.mockReturnValueOnce(false);
+      teamHandlerMocks.isTeamAlive.mockReturnValueOnce(false);
       const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
 
       const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
 
       expect(result.success).toBe(true);
-      expect(provisioningService.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
-      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
     });
 
     it('treats repeated removal of a persisted tombstone as a successful no-op', async () => {
@@ -4194,8 +4194,8 @@ describe('ipc teams handlers', () => {
       expect(secondResult.success).toBe(true);
       expect(service.getTeamData).toHaveBeenCalledTimes(2);
       expect(service.removeMember).toHaveBeenCalledTimes(1);
-      expect(provisioningService.detachLiveRosterMember).toHaveBeenCalledTimes(1);
-      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledTimes(1);
+      expect(teamHandlerMocks.detachLiveRosterMember).toHaveBeenCalledTimes(1);
+      expect(teamHandlerMocks.sendMessageToTeam).toHaveBeenCalledTimes(1);
     });
 
     it('rejects invalid team name', async () => {

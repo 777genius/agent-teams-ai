@@ -14,21 +14,18 @@ import type { TeamLaunchRuntimeAdapter, TeamRuntimeLaunchResult } from '../../ru
 import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import type { TeamCreateRequest, TeamProvisioningProgress } from '@shared/types';
 
-type OpenCodeWorktreeLanePlan = Extract<
-  TeamRuntimeLanePlan,
-  { mode: 'pure_opencode_worktree_root_lanes' }
->;
-type OpenCodeWorktreeMember = OpenCodeWorktreeLanePlan['allMembers'][number];
+type OpenCodeMemberLanePlan = Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_member_lanes' }>;
+type OpenCodeMember = OpenCodeMemberLanePlan['allMembers'][number];
 
 const testTeamsBasePath = '/safe-test/teams';
 
-function member(name: string, extra: Partial<OpenCodeWorktreeMember> = {}): OpenCodeWorktreeMember {
+function member(name: string, extra: Partial<OpenCodeMember> = {}): OpenCodeMember {
   return {
     name,
     role: 'Engineer',
     providerId: 'opencode',
     ...extra,
-  } as OpenCodeWorktreeMember;
+  } as OpenCodeMember;
 }
 
 function progress(overrides: Partial<TeamProvisioningProgress> = {}): TeamProvisioningProgress {
@@ -66,11 +63,11 @@ function request(members: TeamCreateRequest['members']): TeamCreateRequest {
 }
 
 function lanePlan(input: {
-  primaryMembers: OpenCodeWorktreeMember[];
-  sideMembers?: OpenCodeWorktreeMember[];
-}): OpenCodeWorktreeLanePlan {
+  primaryMembers: OpenCodeMember[];
+  sideMembers?: OpenCodeMember[];
+}): OpenCodeMemberLanePlan {
   return {
-    mode: 'pure_opencode_worktree_root_lanes',
+    mode: 'pure_opencode_member_lanes',
     primaryMembers: input.primaryMembers,
     allMembers: [...input.primaryMembers, ...(input.sideMembers ?? [])],
     sideLanes: (input.sideMembers ?? []).map((sideMember) => ({
@@ -92,8 +89,8 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       members: [alice],
       description: 'fake launch request',
     } as unknown as TeamCreateRequest;
-    const lanePlan: OpenCodeWorktreeLanePlan = {
-      mode: 'pure_opencode_worktree_root_lanes',
+    const lanePlan: OpenCodeMemberLanePlan = {
+      mode: 'pure_opencode_member_lanes',
       primaryMembers: [alice],
       allMembers: [alice, bob],
       sideLanes: [{ laneId: 'secondary:opencode:bob', providerId: 'opencode', member: bob }],
@@ -230,7 +227,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       })
     ).toMatchObject({
       state: 'ready',
-      message: 'OpenCode worktree lanes are ready',
+      message: 'OpenCode member lanes are ready',
       messageSeverity: undefined,
       updatedAt: '2026-01-01T00:00:02.000Z',
       error: undefined,
@@ -247,7 +244,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       })
     ).toMatchObject({
       state: 'ready',
-      message: 'OpenCode worktree lanes are waiting for runtime evidence or permissions',
+      message: 'OpenCode member lanes are waiting for runtime evidence or permissions',
       messageSeverity: 'warning',
       cliLogsTail: 'waiting for permission',
       error: undefined,
@@ -262,7 +259,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       })
     ).toMatchObject({
       state: 'failed',
-      message: 'OpenCode worktree lane launch failed readiness gate',
+      message: 'OpenCode member lane launch failed readiness gate',
       messageSeverity: 'error',
       error: 'missing bootstrap\npermission denied',
       cliLogsTail: 'missing bootstrap\n\npermission denied',
@@ -276,7 +273,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
         laneDiagnostics: [],
         updatedAt: '2026-01-01T00:00:05.000Z',
       }).error
-    ).toBe('OpenCode worktree lane launch failed');
+    ).toBe('OpenCode member lane launch failed');
 
     expect(
       buildOpenCodeAggregateFailureProgress({
@@ -286,7 +283,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       })
     ).toMatchObject({
       state: 'failed',
-      message: 'OpenCode worktree lane launch failed',
+      message: 'OpenCode member lane launch failed',
       messageSeverity: 'error',
       error: 'runtime exploded',
       cliLogsTail: 'runtime exploded',

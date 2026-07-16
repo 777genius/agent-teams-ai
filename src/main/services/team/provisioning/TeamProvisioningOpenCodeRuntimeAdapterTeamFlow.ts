@@ -1,5 +1,5 @@
 import {
-  isPureOpenCodeWorktreeRootLanePlan,
+  isPureOpenCodeMemberLanePlan,
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
 import * as path from 'path';
@@ -61,7 +61,7 @@ export interface OpenCodeRuntimeAdapterTeamFlowPorts {
   runOpenCodeWorktreeRootAggregateLaunch(input: {
     request: TeamCreateRequest | TeamLaunchRequest;
     members: TeamCreateRequest['members'];
-    lanePlan: Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_worktree_root_lanes' }>;
+    lanePlan: Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_member_lanes' }>;
     prompt: string;
     sourceWarning?: string;
     onProgress: (progress: TeamProvisioningProgress) => void;
@@ -120,7 +120,7 @@ export async function createOpenCodeTeamThroughRuntimeAdapterFlow(
   await ports.writeOpenCodeTeamConfig(launchRequest, effectiveMembers);
 
   const prompt = launchRequest.prompt?.trim() ?? '';
-  if (isPureOpenCodeWorktreeRootLanePlan(lanePlan)) {
+  if (isPureOpenCodeMemberLanePlan(lanePlan)) {
     return ports.runOpenCodeWorktreeRootAggregateLaunch({
       request: launchRequest,
       members: effectiveMembers,
@@ -176,7 +176,7 @@ export async function launchOpenCodeTeamThroughRuntimeAdapterFlow(
     existingTasks,
     false
   );
-  if (isPureOpenCodeWorktreeRootLanePlan(lanePlan)) {
+  if (isPureOpenCodeMemberLanePlan(lanePlan)) {
     return ports.runOpenCodeWorktreeRootAggregateLaunch({
       request: launchRequest,
       members: effectiveMembers,

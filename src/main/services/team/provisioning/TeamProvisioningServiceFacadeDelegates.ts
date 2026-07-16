@@ -91,7 +91,7 @@ export abstract class TeamProvisioningServiceFacadeDelegates extends TeamProvisi
     runOpenCodeWorktreeRootAggregateLaunch(input: {
       request: TeamCreateRequest | TeamLaunchRequest;
       members: TeamCreateRequest['members'];
-      lanePlan: Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_worktree_root_lanes' }>;
+      lanePlan: Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_member_lanes' }>;
       prompt: string;
       sourceWarning?: string;
       onProgress: (progress: TeamProvisioningProgress) => void;
@@ -350,7 +350,7 @@ export abstract class TeamProvisioningServiceFacadeDelegates extends TeamProvisi
   protected async runOpenCodeWorktreeRootAggregateLaunch(input: {
     request: TeamCreateRequest | TeamLaunchRequest;
     members: TeamCreateRequest['members'];
-    lanePlan: Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_worktree_root_lanes' }>;
+    lanePlan: Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_member_lanes' }>;
     prompt: string;
     sourceWarning?: string;
     onProgress: (progress: TeamProvisioningProgress) => void;

@@ -23,7 +23,7 @@ export interface CreateOpenCodeAggregateProvisioningRunParams {
   progress: TeamProvisioningProgress;
   request: TeamCreateRequest | TeamLaunchRequest;
   members: TeamCreateRequest['members'];
-  lanePlan: Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_worktree_root_lanes' }>;
+  lanePlan: Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_member_lanes' }>;
   onProgress: (progress: TeamProvisioningProgress) => void;
 }
 
@@ -160,8 +160,7 @@ export interface OpenCodeWorktreeRootAggregateLaunchPreflightPorts {
   ): TeamLaunchResponse;
 }
 
-export interface OpenCodeWorktreeRootAggregateLaunchPorts
-  extends OpenCodeWorktreeRootAggregateLaunchPreflightPorts {
+export interface OpenCodeWorktreeRootAggregateLaunchPorts extends OpenCodeWorktreeRootAggregateLaunchPreflightPorts {
   randomUUID(): string;
   nowIso(): string;
   setProvisioningRun(teamName: string, runId: string): void;
@@ -220,7 +219,7 @@ export interface RunOpenCodeWorktreeRootAggregateLaunchInput {
   adapter: TeamLaunchRuntimeAdapter;
   request: TeamCreateRequest | TeamLaunchRequest;
   members: TeamCreateRequest['members'];
-  lanePlan: Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_worktree_root_lanes' }>;
+  lanePlan: Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_member_lanes' }>;
   prompt: string;
   sourceWarning?: string;
   onProgress: (progress: TeamProvisioningProgress) => void;
@@ -243,15 +242,14 @@ export function buildOpenCodeAggregateFinalProgress(
     ...input.launching,
     state: success || pending ? 'ready' : 'failed',
     message: success
-      ? 'OpenCode worktree lanes are ready'
+      ? 'OpenCode member lanes are ready'
       : pending
-        ? 'OpenCode worktree lanes are waiting for runtime evidence or permissions'
-        : 'OpenCode worktree lane launch failed readiness gate',
+        ? 'OpenCode member lanes are waiting for runtime evidence or permissions'
+        : 'OpenCode member lane launch failed readiness gate',
     messageSeverity: pending ? 'warning' : failed ? 'error' : undefined,
     updatedAt: input.updatedAt,
     error: failed
-      ? input.laneDiagnostics.filter(Boolean).join('\n') ||
-        'OpenCode worktree lane launch failed'
+      ? input.laneDiagnostics.filter(Boolean).join('\n') || 'OpenCode member lane launch failed'
       : undefined,
     cliLogsTail: input.laneDiagnostics.join('\n') || undefined,
     configReady: true,
@@ -266,7 +264,7 @@ export function buildOpenCodeAggregateFailureProgress(input: {
   return {
     ...input.launching,
     state: 'failed',
-    message: 'OpenCode worktree lane launch failed',
+    message: 'OpenCode member lane launch failed',
     messageSeverity: 'error',
     updatedAt: input.updatedAt,
     error: input.message,
@@ -334,7 +332,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     runId,
     teamName,
     state: 'validating',
-    message: 'Validating OpenCode worktree lane launch gate',
+    message: 'Validating OpenCode member lane launch gate',
     startedAt,
     updatedAt: startedAt,
     warnings: input.sourceWarning ? [input.sourceWarning] : undefined,
@@ -361,7 +359,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     {
       ...initialRuntimeProgress,
       state: 'spawning',
-      message: 'Starting OpenCode worktree runtime lanes',
+      message: 'Starting OpenCode member runtime lanes',
       updatedAt: ports.nowIso(),
     },
     input.onProgress
