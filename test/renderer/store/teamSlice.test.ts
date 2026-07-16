@@ -4411,13 +4411,14 @@ describe('teamSlice actions', () => {
 
     expect(firstSnapshot).toEqual(snapshot);
 
+    // Sub-cadence (<5s) timestamp-only churn must never replace the visible snapshot.
     hoisted.getTeamAgentRuntime.mockResolvedValue({
       ...snapshot,
-      updatedAt: '2026-03-12T10:00:05.000Z',
+      updatedAt: '2026-03-12T10:00:02.000Z',
       members: {
         alice: {
           ...snapshot.members.alice,
-          updatedAt: '2026-03-12T10:00:05.000Z',
+          updatedAt: '2026-03-12T10:00:02.000Z',
         },
       },
     });
@@ -4503,17 +4504,18 @@ describe('teamSlice actions', () => {
     await store.getState().fetchTeamAgentRuntime('my-team');
     const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
 
+    // Sub-cadence timestamp-only observation: remembered for stabilization, not made visible.
     const refreshedLiveSnapshot = createRuntimeSnapshot({
-      updatedAt: '2026-03-12T10:00:10.000Z',
+      updatedAt: '2026-03-12T10:00:02.000Z',
       members: {
         alice: {
           ...firstLiveSnapshot.members.alice,
-          runtimeLastSeenAt: '2026-03-12T10:00:10.000Z',
-          updatedAt: '2026-03-12T10:00:10.000Z',
+          runtimeLastSeenAt: '2026-03-12T10:00:02.000Z',
+          updatedAt: '2026-03-12T10:00:02.000Z',
         },
       },
     });
-    vi.setSystemTime(new Date('2026-03-12T10:00:10.000Z'));
+    vi.setSystemTime(new Date('2026-03-12T10:00:02.000Z'));
     hoisted.getTeamAgentRuntime.mockResolvedValue(refreshedLiveSnapshot);
 
     await store.getState().fetchTeamAgentRuntime('my-team');
@@ -4521,7 +4523,7 @@ describe('teamSlice actions', () => {
     expect(store.getState().teamAgentRuntimeByTeam['my-team']).toBe(firstSnapshot);
 
     const transientOfflineSnapshot = createRuntimeSnapshot({
-      updatedAt: '2026-03-12T10:00:20.000Z',
+      updatedAt: '2026-03-12T10:00:04.000Z',
       members: {
         alice: {
           ...firstLiveSnapshot.members.alice,
@@ -4530,11 +4532,11 @@ describe('teamSlice actions', () => {
           runtimeDiagnostic: 'registered runtime metadata without live process',
           runtimeDiagnosticSeverity: 'warning',
           runtimeLastSeenAt: undefined,
-          updatedAt: '2026-03-12T10:00:20.000Z',
+          updatedAt: '2026-03-12T10:00:04.000Z',
         },
       },
     });
-    vi.setSystemTime(new Date('2026-03-12T10:00:20.000Z'));
+    vi.setSystemTime(new Date('2026-03-12T10:00:04.000Z'));
     hoisted.getTeamAgentRuntime.mockResolvedValue(transientOfflineSnapshot);
 
     await store.getState().fetchTeamAgentRuntime('my-team');
@@ -4580,17 +4582,18 @@ describe('teamSlice actions', () => {
     await store.getState().fetchTeamAgentRuntime('my-team');
     const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
 
+    // Sub-cadence timestamp-only observation seeds the freshness memory without a visible change.
     const refreshedLiveSnapshot = createRuntimeSnapshot({
-      updatedAt: '2026-03-12T10:00:10.000Z',
+      updatedAt: '2026-03-12T10:00:02.000Z',
       members: {
         alice: {
           ...firstLiveSnapshot.members.alice,
-          runtimeLastSeenAt: '2026-03-12T10:00:10.000Z',
-          updatedAt: '2026-03-12T10:00:10.000Z',
+          runtimeLastSeenAt: '2026-03-12T10:00:02.000Z',
+          updatedAt: '2026-03-12T10:00:02.000Z',
         },
       },
     });
-    vi.setSystemTime(new Date('2026-03-12T10:00:10.000Z'));
+    vi.setSystemTime(new Date('2026-03-12T10:00:02.000Z'));
     hoisted.getTeamAgentRuntime.mockResolvedValue(refreshedLiveSnapshot);
 
     await store.getState().fetchTeamAgentRuntime('my-team');
@@ -4676,8 +4679,13 @@ describe('teamSlice actions', () => {
 
     await store.getState().fetchTeamAgentRuntime('my-team');
 
-    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toBe(newerVisibleSnapshot);
-    expect(store.getState().teamAgentRuntimeByTeam['my-team'].members.alice.alive).toBe(true);
+    // The visible snapshot advances (>= cadence), but the transient-offline member must be
+    // stabilized from the NEWER visible entry, never from the older 10:00:00 memory.
+    const result = store.getState().teamAgentRuntimeByTeam['my-team'];
+    expect(result).not.toBe(newerVisibleSnapshot);
+    expect(result.updatedAt).toBe('2026-03-12T10:00:30.000Z');
+    expect(result.members.alice).toBe(newerVisibleSnapshot.members.alice);
+    expect(result.members.alice.alive).toBe(true);
   });
 
   it('keeps runtime freshness memory scoped by team name when run ids collide', async () => {
@@ -4701,18 +4709,19 @@ describe('teamSlice actions', () => {
     await store.getState().fetchTeamAgentRuntime('my-team');
     const firstSnapshot = store.getState().teamAgentRuntimeByTeam['my-team'];
 
+    // Sub-cadence refresh: remembered as my-team's freshness anchor (10:00:02), not visible.
     const refreshedLiveSnapshot = createRuntimeSnapshot({
       runId: 'shared-run',
-      updatedAt: '2026-03-12T10:00:10.000Z',
+      updatedAt: '2026-03-12T10:00:02.000Z',
       members: {
         alice: {
           ...firstLiveSnapshot.members.alice,
-          runtimeLastSeenAt: '2026-03-12T10:00:10.000Z',
-          updatedAt: '2026-03-12T10:00:10.000Z',
+          runtimeLastSeenAt: '2026-03-12T10:00:02.000Z',
+          updatedAt: '2026-03-12T10:00:02.000Z',
         },
       },
     });
-    vi.setSystemTime(new Date('2026-03-12T10:00:10.000Z'));
+    vi.setSystemTime(new Date('2026-03-12T10:00:02.000Z'));
     hoisted.getTeamAgentRuntime.mockResolvedValue(refreshedLiveSnapshot);
 
     await store.getState().fetchTeamAgentRuntime('my-team');
@@ -4722,23 +4731,26 @@ describe('teamSlice actions', () => {
     const otherTeamSnapshot = createRuntimeSnapshot({
       teamName: 'other-team',
       runId: 'shared-run',
-      updatedAt: '2026-03-12T10:00:11.000Z',
+      updatedAt: '2026-03-12T10:00:03.000Z',
       members: {
         alice: {
           ...firstLiveSnapshot.members.alice,
-          runtimeLastSeenAt: '2026-03-12T10:00:11.000Z',
-          updatedAt: '2026-03-12T10:00:11.000Z',
+          runtimeLastSeenAt: '2026-03-12T10:00:03.000Z',
+          updatedAt: '2026-03-12T10:00:03.000Z',
         },
       },
     });
-    vi.setSystemTime(new Date('2026-03-12T10:00:11.000Z'));
+    vi.setSystemTime(new Date('2026-03-12T10:00:03.000Z'));
     hoisted.getTeamAgentRuntime.mockResolvedValue(otherTeamSnapshot);
 
     await store.getState().fetchTeamAgentRuntime('other-team');
 
+    // 10:00:16 is inside the 15s transient-offline grace only when anchored to MY team's
+    // remembered 10:00:02 observation. A memory keyed by run id alone would surface the
+    // other team's snapshot, fail the team check, anchor to 10:00:00, and drop alice.
     const transientOfflineSnapshot = createRuntimeSnapshot({
       runId: 'shared-run',
-      updatedAt: '2026-03-12T10:00:20.000Z',
+      updatedAt: '2026-03-12T10:00:16.000Z',
       members: {
         alice: {
           ...firstLiveSnapshot.members.alice,
@@ -4747,17 +4759,19 @@ describe('teamSlice actions', () => {
           runtimeDiagnostic: 'registered runtime metadata without live process',
           runtimeDiagnosticSeverity: 'warning',
           runtimeLastSeenAt: undefined,
-          updatedAt: '2026-03-12T10:00:20.000Z',
+          updatedAt: '2026-03-12T10:00:16.000Z',
         },
       },
     });
-    vi.setSystemTime(new Date('2026-03-12T10:00:20.000Z'));
+    vi.setSystemTime(new Date('2026-03-12T10:00:16.000Z'));
     hoisted.getTeamAgentRuntime.mockResolvedValue(transientOfflineSnapshot);
 
     await store.getState().fetchTeamAgentRuntime('my-team');
 
-    expect(store.getState().teamAgentRuntimeByTeam['my-team']).toBe(firstSnapshot);
-    expect(store.getState().teamAgentRuntimeByTeam['my-team'].members.alice.alive).toBe(true);
+    const result = store.getState().teamAgentRuntimeByTeam['my-team'];
+    expect(result).not.toBe(firstSnapshot);
+    expect(result.members.alice.alive).toBe(true);
+    expect(result.members.alice.updatedAt).toBe('2026-03-12T10:00:02.000Z');
   });
 
   it('updates runtime snapshots when liveness diagnostics change', async () => {

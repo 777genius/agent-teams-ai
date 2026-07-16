@@ -622,18 +622,19 @@ describe('team slice context races', () => {
     await store.getState().fetchTeamAgentRuntime('shared-team');
     const firstVisibleSnapshot = store.getState().teamAgentRuntimeByTeam['shared-team'];
 
+    // Sub-cadence timestamp-only refresh: remembered, not visible.
     const refreshedLiveSnapshot = {
       ...runtimeSnapshot,
-      updatedAt: '2026-03-12T10:00:10.000Z',
+      updatedAt: '2026-03-12T10:00:02.000Z',
       members: {
         lead: {
           ...runtimeSnapshot.members.lead,
-          runtimeLastSeenAt: '2026-03-12T10:00:10.000Z',
-          updatedAt: '2026-03-12T10:00:10.000Z',
+          runtimeLastSeenAt: '2026-03-12T10:00:02.000Z',
+          updatedAt: '2026-03-12T10:00:02.000Z',
         },
       },
     };
-    vi.setSystemTime(new Date('2026-03-12T10:00:10.000Z'));
+    vi.setSystemTime(new Date('2026-03-12T10:00:02.000Z'));
     apiMock.teams.getTeamAgentRuntime.mockResolvedValue(refreshedLiveSnapshot);
 
     await store.getState().fetchTeamAgentRuntime('shared-team');

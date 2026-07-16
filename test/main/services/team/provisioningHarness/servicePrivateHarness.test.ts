@@ -92,6 +92,7 @@ describe('team provisioning private harness seams', () => {
       child: null,
       processKilled: false,
       cancelRequested: false,
+      progress: { state: 'ready' as const },
     };
     const activeProvisioningRun = {
       runId: 'active-provisioning-run-1',
@@ -100,6 +101,7 @@ describe('team provisioning private harness seams', () => {
       child: null,
       processKilled: false,
       cancelRequested: false,
+      progress: { state: 'spawning' as const },
     };
 
     registerAliveRun(service, aliveRun);

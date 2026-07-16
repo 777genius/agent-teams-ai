@@ -20,6 +20,9 @@ export interface TeamProvisioningServicePrivateRunHarness {
   child: unknown;
   processKilled: boolean;
   cancelRequested: boolean;
+  // Real runs always carry progress (TeamProvisioningRunModel); run-tracking reads
+  // progress.state to clear terminal runs, so harness runs must model it too.
+  progress: Pick<TeamProvisioningProgress, 'state'>;
   spawnContext?: {
     cwd?: string;
   };
