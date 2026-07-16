@@ -8,16 +8,18 @@ The Phase 2 product wave at
 `eee2389f7ee9300df93ef02d92e9ae114949aff4` is accepted and integrated. The Phase 2 milestone and
 the next phase are blocked only by the PR #252 latest-base sync gate. The files under
 `phase-02/` remain read-only accepted product inputs; their earlier candidate/product-launch wording
-is superseded and is not current execution authority.
+is superseded and is not current execution authority. Active router commit
+`81e79295e199bad0e6bf426537564ea7bc67dfcd` is the immutable canonical PR head and materialization
+source; the accepted product-wave commit is its historical ancestor.
 
 ## Stable latest-base rule
 
 No observed PR base SHA is a durable packet pin. At each atomic product-attempt prepare/start,
 `ProjectScopedControl` resolves the live PR #252 base exactly once and records the full 40-hex commit
 in the immutable `pr252.latest-base-binding/v1` product-worker pre-start contract. The runtime
-materializes from canonical `eee2389f7ee9300df93ef02d92e9ae114949aff4`, mechanically merges the
-bound base, records the exact actual conflict paths, and binds that same base as the ordered second
-parent.
+materializes from active router/canonical head `81e79295e199bad0e6bf426537564ea7bc67dfcd`,
+mechanically merges the bound base, records the exact actual conflict paths, and binds the canonical
+head and same base as the ordered first and second parents.
 
 Later base drift invalidates only the bound product attempt. Once that attempt is terminal, the
 controller may prepare one replacement under the same packet and format. Drift never revives an old
@@ -34,8 +36,9 @@ and semantic decision.
 
 Only an independent `ACCEPT` with P0/P1/P2 `0/0/0` lets the broker create the reviewed tree as a
 true two-parent merge ordered
-`[eee2389f7ee9300df93ef02d92e9ae114949aff4, resolvedBaseSha]`, promote and push it, and prove the
-exact pushed head/base pair is non-conflicting on GitHub. Git commit SHAs are primary provenance.
+`[81e79295e199bad0e6bf426537564ea7bc67dfcd, resolvedBaseSha]`, promote and push it with
+`81e79295e199bad0e6bf426537564ea7bc67dfcd` as the expected old PR head, and prove the exact pushed
+head/base pair is non-conflicting on GitHub. Git commit SHAs are primary provenance.
 Repository handoff manifests and hash-of-manifest bookkeeping are forbidden.
 
 ## Ownership and stop boundary

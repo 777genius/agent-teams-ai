@@ -5,7 +5,9 @@ navigation boundary for base-sync control; it does not reopen a Phase 1 product 
 
 Current packet authority is `pr252-latest-base-sync-router-v1`. The Phase 2 product wave at
 `eee2389f7ee9300df93ef02d92e9ae114949aff4` is accepted and integrated. Only latest-base sync blocks
-the Phase 2 milestone and the next phase.
+the Phase 2 milestone and the next phase. Active router commit
+`81e79295e199bad0e6bf426537564ea7bc67dfcd` is the immutable canonical PR head and product
+materialization source; the accepted product-wave commit is its historical ancestor.
 
 ## Supersession
 
@@ -17,7 +19,8 @@ The current route supersedes:
 - every route that needed a new docs revision merely because the live PR base moved.
 
 No currently observed base SHA is recorded as durable authority. The accepted Phase 2 product SHA is
-stable source authority; the base is per-attempt runtime authority.
+historical provenance, the active router/canonical head is stable source authority, and the base is
+per-attempt runtime authority.
 
 ## Current route
 
@@ -27,9 +30,9 @@ Read the detailed [controller packet](controller-packet.md), [execution DAG](exe
 At atomic prepare/start, `ProjectScopedControl` resolves the live PR #252 base exactly once and
 records it as a full 40-hex `resolvedBaseSha` in
 `pr252.latest-base-binding/v1`. The runtime materializes the product attempt from canonical
-`eee2389f7ee9300df93ef02d92e9ae114949aff4`, records the actual conflict paths, and binds the same
-base as the ordered second parent. Symbolic names, abbreviated SHAs, observed prior bases, and
-re-resolution within an attempt are forbidden.
+`81e79295e199bad0e6bf426537564ea7bc67dfcd`, records the actual conflict paths, and binds the
+canonical head and same base as the ordered first and second parents. Symbolic names, abbreviated
+SHAs, observed prior bases, and re-resolution within an attempt are forbidden.
 
 One product producer may resolve only those actual conflicts. It preserves both parent behaviors,
 runs all focused and mechanical checks, self-reviews, and returns `HOLD`. The controller directly
@@ -38,9 +41,9 @@ then returns `ACCEPT` or `REJECT`; there is no separate mechanical reviewer.
 
 On `ACCEPT` with P0/P1/P2 `0/0/0`, the broker alone may build the exact reviewed tree as a true
 merge ordered
-`[eee2389f7ee9300df93ef02d92e9ae114949aff4, resolvedBaseSha]`, promote and push it, and prove
-GitHub sees the exact head/base pair as non-conflicting. A later base mismatch invalidates only the
-attempt and never this stable packet.
+`[81e79295e199bad0e6bf426537564ea7bc67dfcd, resolvedBaseSha]`, promote and push it with the
+canonical head as the expected old PR head, and prove GitHub sees the exact head/base pair as
+non-conflicting. A later base mismatch invalidates only the attempt and never this stable packet.
 
 ## Control boundary
 

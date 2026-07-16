@@ -8,9 +8,11 @@
   "authority": {
     "repository": "777genius/agent-teams-ai",
     "pullRequestNumber": 252,
-    "canonicalProductWaveSha": "eee2389f7ee9300df93ef02d92e9ae114949aff4",
-    "canonicalRemoteHeadSha": "eee2389f7ee9300df93ef02d92e9ae114949aff4",
-    "canonicalRemoteHeadEqualAtRouterAuthoring": true,
+    "historicalAcceptedProductWaveSha": "eee2389f7ee9300df93ef02d92e9ae114949aff4",
+    "activeRouterCanonicalHeadSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
+    "canonicalRemoteHeadSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
+    "canonicalRemoteHeadEqualAtRouterActivation": true,
+    "canonicalProductWaveIsAncestorOfActiveRouter": true,
     "routerAuthoringWorktreeCleanBeforePacketEdits": true,
     "phase2ProductWaveDisposition": "accepted-integrated",
     "latestBaseSha": null,
@@ -51,22 +53,23 @@
         "value": 252
       },
       "routerAuthoritySha": {
-        "type": "lowercase-40-hex-git-commit"
+        "type": "literal",
+        "value": "81e79295e199bad0e6bf426537564ea7bc67dfcd"
       },
       "canonicalHeadSha": {
         "type": "literal",
-        "value": "eee2389f7ee9300df93ef02d92e9ae114949aff4"
+        "value": "81e79295e199bad0e6bf426537564ea7bc67dfcd"
       },
       "materializationSourceSha": {
         "type": "literal",
-        "value": "eee2389f7ee9300df93ef02d92e9ae114949aff4"
+        "value": "81e79295e199bad0e6bf426537564ea7bc67dfcd"
       },
       "resolvedBaseSha": {
         "type": "lowercase-40-hex-git-commit"
       },
       "orderedParentShas": {
         "type": "tuple",
-        "items": ["eee2389f7ee9300df93ef02d92e9ae114949aff4", "same-value-as-resolvedBaseSha"]
+        "items": ["81e79295e199bad0e6bf426537564ea7bc67dfcd", "same-value-as-resolvedBaseSha"]
       },
       "conflictPaths": {
         "type": "sorted-distinct-repository-relative-path-array",
@@ -82,7 +85,8 @@
     "invariants": [
       "ProjectScopedControl reads the live PR #252 base exactly once while atomically preparing and starting one product attempt.",
       "The resolved base is a full exact 40-hex commit SHA; a symbolic ref, branch name, abbreviated SHA, prior observation, or packet-authored value is invalid.",
-      "The product worktree is materialized from canonical eee2389f7ee9300df93ef02d92e9ae114949aff4, never from a router commit or the resolved base.",
+      "routerAuthoritySha, canonicalHeadSha, materializationSourceSha and orderedParentShas[0] all equal active router commit 81e79295e199bad0e6bf426537564ea7bc67dfcd.",
+      "The product worktree is materialized from active router/canonical head 81e79295e199bad0e6bf426537564ea7bc67dfcd, never from historical product-wave ancestor eee2389f7ee9300df93ef02d92e9ae114949aff4 or the resolved base.",
       "The exact resolvedBaseSha is orderedParentShas[1] and can never be re-resolved or substituted inside the attempt.",
       "The runtime performs the ordered mechanical merge materialization before worker start and records its exact actual conflict paths in the same pre-start contract.",
       "ProjectScopedControl selects and freezes the exact focused test commands after conflict discovery and before worker start.",
@@ -145,10 +149,10 @@
       "kind": "bounded-product-merge-resolution",
       "dependsOn": ["PR252.ROUTER.ACTIVE", "PR252.BINDING.ATOMIC"],
       "capacity": 1,
-      "materializationSourceSha": "eee2389f7ee9300df93ef02d92e9ae114949aff4",
+      "materializationSourceSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
       "writablePathRule": "exact-actual-conflictPaths-only",
       "preserve": [
-        "accepted-integrated Phase 2 product-wave behavior from canonicalHeadSha",
+        "accepted-integrated Phase 2 product-wave behavior inherited by canonicalHeadSha from historicalAcceptedProductWaveSha",
         "attempt-bound latest-base behavior from resolvedBaseSha",
         "mechanically materialized non-conflicting merge bytes"
       ],
@@ -191,11 +195,13 @@
       "id": "PR252.SYNC.BROKER_PROMOTION_PROOF",
       "kind": "broker-ordered-two-parent-merge-promotion-push-proof",
       "dependsOn": ["PR252.SYNC.SEMANTIC_REVIEW"],
-      "orderedParents": ["eee2389f7ee9300df93ef02d92e9ae114949aff4", "attempt.resolvedBaseSha"],
+      "expectedOldHeadSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
+      "orderedParents": ["81e79295e199bad0e6bf426537564ea7bc67dfcd", "attempt.resolvedBaseSha"],
       "tree": "exact accepted reviewed resolved tree",
       "requiredProof": [
         "merge commit has exactly the ordered two parents",
         "merge tree equals the accepted reviewed tree",
+        "push uses canonicalHeadSha as the expected old PR head",
         "remote PR head equals the merge commit after push",
         "GitHub PR #252 head OID equals the merge commit and base OID still equals attempt.resolvedBaseSha",
         "GitHub mergeability is resolved and non-conflicting for that exact head/base pair"

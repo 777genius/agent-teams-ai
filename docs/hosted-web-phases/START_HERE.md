@@ -1,7 +1,9 @@
 # Start here: PR #252 latest-base sync
 
 - Revision: `pr252-latest-base-sync-router-v1`
-- Product authority: `eee2389f7ee9300df93ef02d92e9ae114949aff4`, accepted and integrated
+- Router/canonical head: `81e79295e199bad0e6bf426537564ea7bc67dfcd`, active authority
+- Historical product-wave provenance: `eee2389f7ee9300df93ef02d92e9ae114949aff4`, accepted,
+  integrated, and an ancestor of the active router
 - Current blocker: latest-base sync only
 - Terminal state: `HOLD`
 
@@ -38,8 +40,8 @@ dependency mismatch. Return `HOLD`; do not repair authority informally.
 The router author launches nothing. After these exact seven paths become active packet authority,
 `ProjectScopedControl` may atomically prepare/start one product attempt. During that single
 transition it resolves the live PR base once, records the exact full commit, materializes the product
-worker from `eee2389f7ee9300df93ef02d92e9ae114949aff4`, derives the actual conflict set, and binds the
-same base as ordered second parent.
+worker from `81e79295e199bad0e6bf426537564ea7bc67dfcd`, derives the actual conflict set, and binds the
+canonical head and same base as ordered first and second parents.
 
 The producer edits only actual conflict paths, preserves both parent behaviors, runs focused tests and
 all mechanical gates, self-reviews, and ends `HOLD`. The controller reruns the complete mechanical
@@ -47,9 +49,10 @@ gate set directly. There is no mechanical-review worker. Exactly one fresh indep
 integration/architecture/security semantic reviewer may follow.
 
 Only that review's `ACCEPT` with P0/P1/P2 `0/0/0` permits broker construction, promotion, push,
-and GitHub conflict proof of the exact ordered two-parent merge. A live-base mismatch at any later
-gate invalidates only the attempt; the same stable packet admits a new atomic attempt after the old
-one is terminal.
+and GitHub conflict proof of the exact ordered two-parent merge. The broker uses canonical head
+`81e79295e199bad0e6bf426537564ea7bc67dfcd` as the expected old PR head and the merge's first
+parent. A live-base mismatch at any later gate invalidates only the attempt; the same stable packet
+admits a new atomic attempt after the old one is terminal.
 
 ## Safety and provenance
 
