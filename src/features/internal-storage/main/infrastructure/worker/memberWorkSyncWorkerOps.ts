@@ -520,10 +520,7 @@ export class MemberWorkSyncWorkerOps {
     const orm = this.getOrm();
     orm.transaction(() => {
       const current = this.readOutboxRow(input.teamName, input.id);
-      if (
-        current?.attemptGeneration !== input.attemptGeneration ||
-        isOutboxTerminal(current.status)
-      ) {
+      if (current?.attemptGeneration !== input.attemptGeneration || current.status !== 'claimed') {
         return;
       }
       this.replaceOutboxRow({
