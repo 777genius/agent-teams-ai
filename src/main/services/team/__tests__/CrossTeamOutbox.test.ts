@@ -40,14 +40,48 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     }
   });
 
-  it('dedupes a runtime retry with the same trimmed idempotency key', async () => {
+  it('dedupes a runtime retry with the same trimmed caller message id', async () => {
     const outbox = new CrossTeamOutbox();
     const onBeforeAppend = vi.fn(async () => {});
     const message = makeMessage();
     const retry = makeMessage({
-      messageId: 'runtime-message-retry-with-same-idempotency-key',
+      messageId: '\truntime-message-1\n',
+      conversationId: 'runtime-idempotency-2',
+      text: 'Retry payload changed after the caller message id was already recorded',
+      summary: 'Retry summary changed',
+      taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'source-team' }],
+    });
+
+    await expect(
+      outbox.appendIfNotRecent('source-team', message, onBeforeAppend, undefined, {
+        stableIdentity: true,
+        callerMessageId: message.messageId,
+      })
+    ).resolves.toEqual({ duplicate: null });
+    await expect(
+      outbox.appendIfNotRecent('source-team', retry, onBeforeAppend, undefined, {
+        stableIdentity: true,
+        callerMessageId: retry.messageId,
+      })
+    ).resolves.toEqual({
+      duplicate: message,
+    });
+
+    await expect(outbox.read('source-team')).resolves.toEqual([message]);
+    expect(onBeforeAppend).toHaveBeenCalledTimes(1);
+  });
+
+  it('dedupes a runtime retry without a caller message id by conversation identity', async () => {
+    const outbox = new CrossTeamOutbox();
+    const onBeforeAppend = vi.fn(async () => {});
+    const message = makeMessage({
+      messageId: 'generated-message-1',
+      conversationId: 'runtime-idempotency-1',
+    });
+    const retry = makeMessage({
+      messageId: 'generated-message-2',
       conversationId: '\truntime-idempotency-1\n',
-      text: 'Retry payload changed after the runtime key was already recorded',
+      text: 'Retry payload changed after the conversation was already recorded',
       summary: 'Retry summary changed',
       taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'source-team' }],
     });
@@ -61,9 +95,7 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
       outbox.appendIfNotRecent('source-team', retry, onBeforeAppend, undefined, {
         stableIdentity: true,
       })
-    ).resolves.toEqual({
-      duplicate: message,
-    });
+    ).resolves.toEqual({ duplicate: message });
 
     await expect(outbox.read('source-team')).resolves.toEqual([message]);
     expect(onBeforeAppend).toHaveBeenCalledTimes(1);
@@ -122,7 +154,7 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     expect(onBeforeAppend).toHaveBeenCalledTimes(1);
   });
 
-  it('does not dedupe distinct runtime deliveries that reuse the same body', async () => {
+  it('does not dedupe distinct caller message ids in the same conversation', async () => {
     const outbox = new CrossTeamOutbox();
     const onBeforeAppend = vi.fn(async () => {});
     const first = makeMessage({
@@ -131,17 +163,17 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     });
     const second = makeMessage({
       messageId: 'runtime-message-2',
-      conversationId: 'runtime-idempotency-2',
+      conversationId: 'runtime-idempotency-1',
     });
 
-    await expect(outbox.appendIfNotRecent('source-team', first, onBeforeAppend)).resolves.toEqual({
-      duplicate: null,
-    });
-    await expect(
-      outbox.appendIfNotRecent('source-team', second, onBeforeAppend, undefined, {
-        stableIdentity: true,
-      })
-    ).resolves.toEqual({ duplicate: null });
+    for (const message of [first, second]) {
+      await expect(
+        outbox.appendIfNotRecent('source-team', message, onBeforeAppend, undefined, {
+          stableIdentity: true,
+          callerMessageId: message.messageId,
+        })
+      ).resolves.toEqual({ duplicate: null });
+    }
 
     await expect(outbox.read('source-team')).resolves.toEqual([first, second]);
     expect(onBeforeAppend).toHaveBeenCalledTimes(2);

@@ -97,7 +97,8 @@ export class CrossTeamService {
     const { fromTeam, toTeam, toMember, text, taskRefs, summary, actionMode } = request;
     const rawFromMember = request.fromMember;
     const chainDepth = request.chainDepth ?? 0;
-    const messageId = request.messageId?.trim() || randomUUID();
+    const callerMessageId = request.messageId?.trim() || undefined;
+    const messageId = callerMessageId || randomUUID();
     const timestamp = request.timestamp ?? new Date().toISOString();
     const inferredReplyMeta =
       !request.conversationId && !request.replyToConversationId
@@ -113,8 +114,7 @@ export class CrossTeamService {
       replyToConversationId ||
       randomUUID();
     const stableDedupeIdentity = Boolean(
-      request.requireRuntimeDelivery &&
-      (request.messageId?.trim() || request.conversationId?.trim())
+      request.requireRuntimeDelivery && (callerMessageId || request.conversationId?.trim())
     );
 
     // 1. Validate
@@ -199,7 +199,7 @@ export class CrossTeamService {
         });
       },
       undefined,
-      { stableIdentity: stableDedupeIdentity, legacyToMember: leadName }
+      { stableIdentity: stableDedupeIdentity, callerMessageId, legacyToMember: leadName }
     );
 
     if (duplicate) {

@@ -112,13 +112,13 @@ describe('CrossTeamService runtime delivery dedupe', () => {
     }
   });
 
-  it('keeps runtime retries idempotent when the trimmed idempotency key matches', async () => {
+  it('keeps runtime retries idempotent when the trimmed caller message id matches', async () => {
     const { service, inboxWriter, messaging, sentToInbox } = createService();
     const request = runtimeRequest();
     const retry = runtimeRequest({
-      messageId: 'runtime-message-retry-with-same-idempotency-key',
-      conversationId: '\truntime-idempotency-1\n',
-      text: 'Retry payload changed after the runtime idempotency key was already recorded',
+      messageId: '\truntime-message-1\n',
+      conversationId: 'runtime-idempotency-2',
+      text: 'Retry payload changed after the caller message id was already recorded',
       summary: 'Retry summary changed',
       taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'source-team' }],
     });
@@ -142,6 +142,31 @@ describe('CrossTeamService runtime delivery dedupe', () => {
       'team-lead',
       { onlyMessageId: 'runtime-message-1' }
     );
+  });
+
+  it('dedupes runtime retries without caller message ids by conversation identity', async () => {
+    const { service, sentToInbox } = createService();
+    const request = runtimeRequest({
+      messageId: undefined,
+      conversationId: 'runtime-idempotency-1',
+    });
+    const retry = runtimeRequest({
+      messageId: undefined,
+      conversationId: '\truntime-idempotency-1\n',
+      text: 'Retry payload changed after the conversation was already recorded',
+      summary: 'Retry summary changed',
+      taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'source-team' }],
+    });
+
+    const first = await service.send(request);
+    await expect(service.send(retry)).resolves.toMatchObject({
+      messageId: first.messageId,
+      deliveredToInbox: true,
+      deduplicated: true,
+    });
+
+    expect(first.messageId).not.toBe('');
+    expect(sentToInbox.map((entry) => entry.message.messageId)).toEqual([first.messageId]);
   });
 
   it('does not accept unrelated native-lead relay work as runtime proof', async () => {
@@ -223,7 +248,7 @@ describe('CrossTeamService runtime delivery dedupe', () => {
     expect(messaging.relayInboxFileToLiveRecipient).not.toHaveBeenCalled();
   });
 
-  it('delivers distinct runtime messages with identical text and task refs', async () => {
+  it('delivers distinct caller message ids in the same conversation', async () => {
     vi.useFakeTimers({ now: new Date('2026-07-09T00:00:00.000Z') });
     const { service, inboxWriter, messaging, sentToInbox } = createService();
 
@@ -243,7 +268,7 @@ describe('CrossTeamService runtime delivery dedupe', () => {
       service.send(
         runtimeRequest({
           messageId: 'runtime-message-2',
-          conversationId: 'runtime-idempotency-2',
+          conversationId: 'runtime-idempotency-1',
         })
       )
     ).resolves.toMatchObject({

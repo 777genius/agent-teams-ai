@@ -11,6 +11,8 @@ const CROSS_TEAM_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
 
 export interface CrossTeamDedupeOptions {
   stableIdentity?: boolean;
+  /** Trimmed caller-supplied ID; omit for generated IDs so conversation fallback remains active. */
+  callerMessageId?: string;
   legacyToMember?: string;
 }
 
@@ -137,11 +139,17 @@ function hasSameRoute(
   );
 }
 
-function hasMatchingStableIdentity(left: CrossTeamMessage, right: CrossTeamMessage): boolean {
-  const leftMessageId = stableMessageId(left);
-  const rightMessageId = stableMessageId(right);
-  if (leftMessageId && rightMessageId && leftMessageId === rightMessageId) {
-    return true;
+function hasMatchingStableIdentity(
+  left: CrossTeamMessage,
+  right: CrossTeamMessage,
+  callerMessageId?: string
+): boolean {
+  const normalizedCallerMessageId = String(callerMessageId ?? '').trim();
+  if (normalizedCallerMessageId) {
+    return (
+      stableMessageId(left) === normalizedCallerMessageId &&
+      stableMessageId(right) === normalizedCallerMessageId
+    );
   }
 
   const leftConversationId = stableConversationId(left);
@@ -158,7 +166,7 @@ function isDuplicateCrossTeamMessage(
   options: CrossTeamDedupeOptions
 ): boolean {
   if (options.stableIdentity && hasSameRoute(entry, message, options.legacyToMember)) {
-    return hasMatchingStableIdentity(entry, message);
+    return hasMatchingStableIdentity(entry, message, options.callerMessageId);
   }
 
   return buildCrossTeamDedupeKey(entry, options.legacyToMember) === dedupeKey;
