@@ -78,4 +78,4 @@ Nutzen Sie die Referenzseiten, wenn Sie exakte Terminologie, das Anbieterverhalt
 
 ## Produktvorschau
 
-<ZoomImage src="/screenshots/1.jpg" alt="Agent Teams Kanban-Board" caption="Aufgabenstatus, Teamkollegen-Aktivität und Review-Workflow bleiben in einem Arbeitsbereich sichtbar." />
+<ZoomImage src="/screenshots/product-preview.png" alt="Agent Teams Kanban-Board" caption="Aufgabenstatus, Teamkollegen-Aktivität und Review-Workflow bleiben in einem Arbeitsbereich sichtbar." />

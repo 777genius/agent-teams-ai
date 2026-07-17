@@ -162,7 +162,7 @@ export const usePageSeo = (titleKey: string, descriptionKey: string, options: Pa
         author: { "@id": organizationId },
         publisher: { "@id": organizationId },
         image: resolvedImageUrl.value,
-        screenshot: toSiteUrl("/screenshots/1.jpg"),
+        screenshot: toSiteUrl("/screenshots/1.png"),
         softwareVersion: "latest",
         offers: {
           "@type": "Offer",

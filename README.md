@@ -38,12 +38,12 @@
   <img src="docs/screenshots/7.png" alt="Code review with hunk-level controls" width="100%" />
 </td>
 <td width="50%">
-  <img src="docs/screenshots/4.png" alt="Create an AI team with roles and models" width="100%" />
+  <img src="docs/screenshots/4.jpg" alt="Create an AI team with roles and models" width="100%" />
 </td>
 </tr>
 <tr>
 <td width="50%">
-  <img src="docs/screenshots/1.jpg" alt="Kanban board with agent tasks" width="100%" />
+  <img src="docs/screenshots/1.png" alt="Kanban board with agent tasks" width="100%" />
 </td>
 <td width="50%">
   <img src="docs/screenshots/task-detail-animated.gif" alt="Agent Teams AI product demo" width="100%" />
