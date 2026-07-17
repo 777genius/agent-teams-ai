@@ -1,13 +1,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { createLogger } from '@shared/utils/logger';
-
 import type { LegacyJsonStoreSource } from '../../../core/application/ports';
 
 export const PRE_SQLITE_ARCHIVE_SUFFIX = '.pre-sqlite';
 const MAX_ARCHIVE_ATTEMPTS = 100;
-const logger = createLogger('Feature:InternalStorage');
 
 export interface TeamScopedLegacyJsonSourceOptions<TRecord> {
   getFilePath(teamName: string): string;
@@ -52,18 +49,9 @@ export class TeamScopedLegacyJsonSource<TRecord> implements LegacyJsonStoreSourc
 
     const records: TRecord[] = [];
     for (const archive of archives) {
-      try {
-        const raw = await fs.promises.readFile(archive.filePath, 'utf8');
-        records.push(...this.options.parse(raw, teamName));
-      } catch (error) {
-        logger.warn(
-          `internal-storage skipped unreadable legacy archive team=${teamName} generation=${archive.generation} path=${archive.filePath}`,
-          error
-        );
-      }
+      const raw = await fs.promises.readFile(archive.filePath, 'utf8');
+      records.push(...this.options.parse(raw, teamName));
     }
-    // Archives existed even when none were readable. Preserve that distinction
-    // from "no archives" so the importer can record a completed empty recovery.
     return records;
   }
 

@@ -95,8 +95,9 @@ describe('legacy pre-sqlite archive recovery', () => {
     expect(harness.imported.value).toBe(true);
   });
 
-  it('skips a corrupt older generation and keeps the newest valid record', async () => {
+  it('keeps a lost import marker retryable when an archive generation is malformed', async () => {
     const harness = await makeHarness();
+    harness.records.push({ id: 'sqlite-only', value: 'existing' });
     await writeFile(`${harness.filePath}.pre-sqlite`, '{ not valid json');
     await writeFile(
       `${harness.filePath}.pre-sqlite-2`,
@@ -105,34 +106,37 @@ describe('legacy pre-sqlite archive recovery', () => {
         { id: 'b', value: 'generation-2' },
       ])
     );
-    await writeFile(
-      `${harness.filePath}.pre-sqlite-3`,
-      JSON.stringify([{ id: 'a', value: 'generation-3' }])
-    );
 
+    await expect(harness.makeImporter().ensureImported('demo')).rejects.toThrow();
+
+    expect(harness.records).toEqual([{ id: 'sqlite-only', value: 'existing' }]);
+    expect(harness.imported.value).toBe(false);
+
+    await writeFile(
+      `${harness.filePath}.pre-sqlite`,
+      JSON.stringify([
+        { id: 'a', value: 'generation-1' },
+        { id: 'c', value: 'generation-1' },
+      ])
+    );
     await harness.makeImporter().ensureImported('demo');
 
     expect(harness.records).toEqual([
-      { id: 'a', value: 'generation-3' },
+      { id: 'sqlite-only', value: 'existing' },
+      { id: 'a', value: 'generation-2' },
+      { id: 'c', value: 'generation-1' },
       { id: 'b', value: 'generation-2' },
     ]);
     expect(harness.imported.value).toBe(true);
-    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
-      'skipped unreadable legacy archive team=demo generation=1'
-    );
-    vi.mocked(console.warn).mockClear();
   });
 
-  it('returns an empty archive snapshot deterministically when every generation is corrupt', async () => {
+  it('rejects an unreadable archive instead of returning a successful snapshot', async () => {
     const harness = await makeHarness();
-    await writeFile(`${harness.filePath}.pre-sqlite`, '{ broken generation 1');
-    await writeFile(`${harness.filePath}.pre-sqlite-2`, '{ broken generation 2');
+    await mkdir(`${harness.filePath}.pre-sqlite`);
 
-    await expect(harness.source.readArchives('demo')).resolves.toEqual([]);
-    await expect(harness.source.readArchives('demo')).resolves.toEqual([]);
-
-    expect(vi.mocked(console.warn)).toHaveBeenCalledTimes(4);
-    vi.mocked(console.warn).mockClear();
+    await expect(harness.source.readArchives('demo')).rejects.toMatchObject({
+      code: 'EISDIR',
+    });
   });
 
   it('combines archived and still-live halves, then skips immutable replay after marking import', async () => {
