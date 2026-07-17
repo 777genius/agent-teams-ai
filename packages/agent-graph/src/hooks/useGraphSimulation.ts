@@ -9,6 +9,7 @@ import {
   captureGraphNodePositions,
   createGraphLayoutTransition,
   type GraphLayoutTransition,
+  resolveGraphLayoutTargetNodes,
 } from '../layout/layoutTransition';
 import {
   buildStableSlotLayoutSnapshot,
@@ -82,6 +83,8 @@ export interface UseGraphSimulationResult {
   getLogWorldRect: (nodeId: string) => StableRect | null;
   getOwnerColumnGroupRects: () => readonly OwnerColumnGroupRect[];
   getExtraWorldBounds: () => WorldBounds[];
+  /** Returns final layout coordinates for camera fitting while a transition is active. */
+  getLayoutTargetNodes: () => GraphNode[];
 }
 
 export function useGraphSimulation(): UseGraphSimulationResult {
@@ -325,6 +328,11 @@ export function useGraphSimulation(): UseGraphSimulationResult {
     });
   }, []);
 
+  const getLayoutTargetNodes = useCallback(
+    () => resolveGraphLayoutTargetNodes(stateRef.current.nodes, layoutTransitionRef.current),
+    []
+  );
+
   useEffect(() => {
     return () => {
       dragOwnerPositionsRef.current.clear();
@@ -355,6 +363,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       getLogWorldRect: (nodeId: string) => logRectByNodeIdRef.current.get(nodeId) ?? null,
       getOwnerColumnGroupRects: () => ownerColumnGroupRectsRef.current,
       getExtraWorldBounds: () => extraWorldBoundsRef.current,
+      getLayoutTargetNodes,
     }),
     [
       updateData,
@@ -364,6 +373,7 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       clearTransientOwnerPositions,
       resolveNearestOwnerSlot,
       resolveNearestOwnerGridTarget,
+      getLayoutTargetNodes,
     ]
   );
 }

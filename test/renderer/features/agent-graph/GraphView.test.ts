@@ -33,7 +33,9 @@ const hoisted = vi.hoisted(() => ({
     effects: [],
     time: 0,
   },
+  layoutTargetNodes: [] as GraphNode[],
   updateData: vi.fn(),
+  getLayoutTargetNodes: vi.fn(),
   setNodePosition: vi.fn(),
   clearNodePosition: vi.fn(),
   clearTransientOwnerPositions: vi.fn(),
@@ -92,6 +94,7 @@ vi.mock('../../../../packages/agent-graph/src/hooks/useGraphSimulation', () => (
     updateData: hoisted.updateData,
     tick: vi.fn(),
     getExtraWorldBounds: vi.fn(() => []),
+    getLayoutTargetNodes: hoisted.getLayoutTargetNodes,
     getLaunchAnchorWorldPosition: vi.fn(() => null),
     getActivityWorldRect: vi.fn(() => null),
     getLogWorldRect: vi.fn(() => null),
@@ -132,12 +135,14 @@ describe('GraphView pan interactions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hoisted.updateData.mockImplementation(() => undefined);
+    hoisted.getLayoutTargetNodes.mockImplementation(() => hoisted.layoutTargetNodes);
     hoisted.zoomToFit.mockImplementation(() => undefined);
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     hoisted.interaction.hoveredNodeId.current = null;
     hoisted.interaction.dragNodeId.current = null;
     hoisted.interaction.isDragging.current = false;
     hoisted.simulationState.nodes = [];
+    hoisted.layoutTargetNodes = [];
     hoisted.simulationState.edges = [];
     hoisted.interaction.handleMouseDown.mockImplementation(() => undefined);
     hoisted.interaction.handleMouseMove.mockImplementation(() => undefined);
@@ -233,11 +238,12 @@ describe('GraphView pan interactions', () => {
     };
     const events: string[] = [];
     hoisted.updateData.mockImplementation((nodes: GraphNode[]) => {
-      hoisted.simulationState.nodes = nodes;
+      hoisted.simulationState.nodes = nodes.map((node) => ({ ...node, x: -100, y: -100 }));
+      hoisted.layoutTargetNodes = nodes;
       events.push(`update:${nodes.length}`);
     });
     hoisted.zoomToFit.mockImplementation((nodes: GraphNode[]) => {
-      events.push(`fit:${nodes.length}`);
+      events.push(`fit:${nodes.map((node) => node.x).join(',')}`);
     });
 
     await act(async () => {
@@ -271,7 +277,8 @@ describe('GraphView pan interactions', () => {
       );
     });
 
-    expect(events).toEqual(['update:2', 'fit:2']);
+    expect(events).toEqual(['update:2', 'fit:0,200']);
+    expect(hoisted.simulationState.nodes.map((node) => node.x)).toEqual([-100, -100]);
   });
 
   it('preserves an explicit null returned by a custom controls renderer', async () => {

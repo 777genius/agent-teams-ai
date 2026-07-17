@@ -677,7 +677,7 @@ export function GraphView({
     (animated = false) => {
       const el = containerRef.current;
       if (!el || data.nodes.length === 0) return;
-      const fitNodes = getFitNodes(simulation.stateRef.current.nodes);
+      const fitNodes = getFitNodes(simulation.getLayoutTargetNodes());
       const extraBounds = simulation.getExtraWorldBounds();
       if (animated) {
         camera.animateToFit(fitNodes, el.clientWidth, el.clientHeight, extraBounds);
@@ -1390,14 +1390,7 @@ export function GraphView({
         }
       }
       if (e.key === 'f' || e.key === 'F') {
-        const el = containerRef.current;
-        if (el)
-          camera.zoomToFit(
-            getFitNodes(simulation.stateRef.current.nodes),
-            el.clientWidth,
-            el.clientHeight,
-            simulation.getExtraWorldBounds()
-          );
+        fitGraphToViewport(false);
       }
       if (e.key === ' ') {
         e.preventDefault();
@@ -1406,7 +1399,7 @@ export function GraphView({
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selectedEdgeId, selectedNodeId, onRequestClose, camera, getFitNodes, simulation]);
+  }, [selectedEdgeId, selectedNodeId, onRequestClose, fitGraphToViewport]);
 
   // ─── Selected node for overlay ──────────────────────────────────────────
   const selectedNode: GraphNode | null =
