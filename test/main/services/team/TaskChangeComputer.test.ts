@@ -3,6 +3,8 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { FileContentResolver } from '../../../../src/main/services/team/FileContentResolver';
+import { ReviewApplierService } from '../../../../src/main/services/team/ReviewApplierService';
 import { TaskChangeComputer } from '../../../../src/main/services/team/TaskChangeComputer';
 
 import type { TaskChangeTaskMeta } from '../../../../src/main/services/team/taskChangeWorkerTypes';
@@ -226,6 +228,7 @@ describe('TaskChangeComputer', () => {
     expect(result.files).toHaveLength(1);
     expect(result.files[0]?.relativePath).toBe('src/large.ts');
     expect(result.files[0]?.linesAdded).toBe(1001);
+    expect(result.files[0]?.isNewFile).toBe(false);
     expect(result.files[0]?.snippets).toEqual([]);
     expect(JSON.stringify(result)).not.toContain('oom-retention-marker');
   });
@@ -253,6 +256,7 @@ describe('TaskChangeComputer', () => {
     expect(result.files).toHaveLength(1);
     expect(result.files[0]?.relativePath).toBe('src/oversized.ts');
     expect(result.files[0]?.linesAdded).toBe(250);
+    expect(result.files[0]?.isNewFile).toBe(false);
     expect(result.files[0]?.snippets).toEqual([]);
     expect(JSON.stringify(result)).not.toContain('line-249');
   });
@@ -912,6 +916,131 @@ describe('TaskChangeComputer', () => {
     expect(newFile?.snippets[0]?.type).toBe('write-new');
     expect(existingFile?.isNewFile).toBe(false);
     expect(existingFile?.snippets[0]?.type).toBe('edit');
+  });
+
+  it('fails closed from legacy extraction through full reject for a first Write', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const filePath = path.join(tmpDir, 'existing.ts');
+    const logPath = path.join(tmpDir, 'agent.jsonl');
+    const modified = 'export const value = "after";\n';
+    await fs.writeFile(filePath, modified, 'utf8');
+    await writeJsonl(logPath, [writeToolUse('tool-1', filePath, modified)]);
+
+    const logsFinder = {
+      findLogFileRefsForTask: () => Promise.resolve([{ filePath: logPath, memberName: 'alice' }]),
+      findMemberLogPaths: () => Promise.resolve([]),
+    };
+    const boundaryParser = {
+      parseBoundaries: () =>
+        Promise.resolve({
+          boundaries: [],
+          scopes: [],
+          isSingleTaskSession: true,
+          detectedMechanism: 'none' as const,
+        }),
+    };
+    const computer = new TaskChangeComputer(logsFinder as never, boundaryParser as never);
+
+    const changes = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: tmpDir,
+      includeDetails: true,
+    });
+
+    expect(changes.files[0]?.snippets[0]?.type).toBe('write-update');
+    expect(changes.files[0]?.isNewFile).toBe(false);
+
+    const resolver = new FileContentResolver(logsFinder as never);
+    const contents = await resolver.resolveAllFileContents(
+      'team-a',
+      'alice',
+      changes.files
+    );
+    expect(contents.get(filePath)?.isNewFile).toBe(false);
+    expect(contents.get(filePath)?.originalFullContent).toBeNull();
+
+    const applyResult = await new ReviewApplierService().applyReviewDecisions(
+      {
+        teamName: 'team-a',
+        decisions: [
+          {
+            filePath,
+            fileDecision: 'rejected',
+            hunkDecisions: { 0: 'rejected' },
+          },
+        ],
+      },
+      contents
+    );
+
+    expect(applyResult.applied).toBe(0);
+    expect(applyResult.errors).toHaveLength(1);
+    expect(await fs.readFile(filePath, 'utf8')).toBe(modified);
+  });
+
+  it('preserves explicit metadata creation through full reject', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'task-change-computer-'));
+    const filePath = path.join(tmpDir, 'created.ts');
+    const logPath = path.join(tmpDir, 'agent.jsonl');
+    const modified = 'export const created = true;\n';
+    await fs.writeFile(filePath, modified, 'utf8');
+    await writeJsonl(logPath, [
+      metadataOnlyMultiFileEditChangesToolUse('tool-1', [{ filePath, kind: 'add' }]),
+    ]);
+
+    const logsFinder = {
+      findLogFileRefsForTask: () => Promise.resolve([{ filePath: logPath, memberName: 'alice' }]),
+      findMemberLogPaths: () => Promise.resolve([]),
+    };
+    const boundaryParser = {
+      parseBoundaries: () =>
+        Promise.resolve({
+          boundaries: [],
+          scopes: [],
+          isSingleTaskSession: true,
+          detectedMechanism: 'none' as const,
+        }),
+    };
+    const computer = new TaskChangeComputer(logsFinder as never, boundaryParser as never);
+
+    const changes = await computer.computeTaskChanges({
+      teamName: 'team-a',
+      taskId: 'task-1',
+      taskMeta: null,
+      effectiveOptions: {},
+      projectPath: tmpDir,
+      includeDetails: true,
+    });
+    const resolver = new FileContentResolver(logsFinder as never);
+    const contents = await resolver.resolveAllFileContents(
+      'team-a',
+      'alice',
+      changes.files
+    );
+
+    expect(changes.files[0]?.snippets[0]?.type).toBe('write-new');
+    expect(contents.get(filePath)?.isNewFile).toBe(true);
+    expect(contents.get(filePath)?.originalFullContent).toBe('');
+
+    const applyResult = await new ReviewApplierService().applyReviewDecisions(
+      {
+        teamName: 'team-a',
+        decisions: [
+          {
+            filePath,
+            fileDecision: 'rejected',
+            hunkDecisions: { 0: 'rejected' },
+          },
+        ],
+      },
+      contents
+    );
+
+    expect(applyResult.applied).toBe(1);
+    await expect(fs.readFile(filePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
   it('does not include repeated tool ids from outside the scoped source lines', async () => {
