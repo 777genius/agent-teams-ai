@@ -426,6 +426,22 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     ) {
       return { runId };
     }
+    // Genuine launch error after lanes came up: stop the owned primary OpenCode
+    // adapter process (and any secondary lanes) BEFORE clearing their storage.
+    // The adapter-managed process is not covered by run.child (null), so without
+    // an explicit stop it is orphaned when the maps/storage below are cleared
+    // (mirror of the cancellation-boundary stop, runId-gated on ownership).
+    const ownedRuntimeRun = ports.getRuntimeAdapterRun(teamName);
+    const errorStops: Promise<void>[] = [];
+    if (ownedRuntimeRun?.providerId === 'opencode' && ownedRuntimeRun.runId === runId) {
+      errorStops.push(ports.stopOpenCodeRuntimeAdapterTeam(teamName, runId));
+    }
+    if (ports.hasSecondaryRuntimeRuns(teamName)) {
+      errorStops.push(ports.stopMixedSecondaryRuntimeLanes(teamName));
+    }
+    if (errorStops.length > 0) {
+      await Promise.all(errorStops.map((stop) => stop.catch(() => undefined)));
+    }
     for (const lane of run.mixedSecondaryLanes) {
       await ports
         .clearOpenCodeRuntimeLaneStorage({

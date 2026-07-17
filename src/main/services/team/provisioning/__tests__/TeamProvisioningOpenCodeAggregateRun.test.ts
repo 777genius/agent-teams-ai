@@ -484,6 +484,50 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       'invalidateRuntimeSnapshotCaches',
     ]);
   });
+
+  it('stops the owned primary OpenCode adapter process before clearing storage on launch error', async () => {
+    const alice = member('alice');
+    const bob = member('bob');
+    const calls: string[] = [];
+
+    await expect(
+      runOpenCodeWorktreeRootAggregateLaunch(
+        {
+          adapter: {} as TeamLaunchRuntimeAdapter,
+          request: request([alice, bob]),
+          members: [alice, bob],
+          lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [bob] }),
+          prompt: 'launch',
+          onProgress: vi.fn(),
+        },
+        {
+          ...baseAggregatePorts(calls),
+          // The primary lane came up and is owned by this run, then a later step throws.
+          getRuntimeAdapterRun: () => ({ runId: 'run-open-code', providerId: 'opencode' }),
+          hasSecondaryRuntimeRuns: () => true,
+          launchOpenCodeAggregatePrimaryLane: async () => {
+            calls.push('launchPrimary');
+            return runtimeResult();
+          },
+          launchSingleMixedSecondaryLane: async () => {
+            calls.push('launchSecondary');
+            throw new Error('secondary launch failed');
+          },
+        }
+      )
+    ).rejects.toThrow('secondary launch failed');
+
+    // The owned primary adapter process must be stopped in the ERROR handler
+    // (after the launch got as far as the secondary lane), BEFORE its storage is
+    // cleared - otherwise the adapter process is orphaned. The catch-branch stop
+    // is distinguished from the preflight stop by occurring AFTER launchSecondary.
+    const launchSecondaryIdx = calls.indexOf('launchSecondary');
+    const catchStopIdx = calls.lastIndexOf('stopPreviousRuntimeRun');
+    const clearPrimaryIdx = calls.indexOf('clearLaneStorage:primary');
+    expect(launchSecondaryIdx).toBeGreaterThanOrEqual(0);
+    expect(catchStopIdx).toBeGreaterThan(launchSecondaryIdx); // stop happened in the catch
+    expect(clearPrimaryIdx).toBeGreaterThan(catchStopIdx); // stop before storage clear
+  });
 });
 
 function baseAggregatePorts(calls: string[]): OpenCodeWorktreeRootAggregateLaunchPorts {
