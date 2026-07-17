@@ -8,8 +8,10 @@ import {
   symlink,
   writeFile,
 } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import {
   defaultDependencyCacheRoot,
@@ -18,6 +20,8 @@ import {
   runDependencyBootstrap,
 } from "../dependency-bootstrap";
 import { assertProjectControlDependencyBootstrapReady } from "../codex-goal-mcp-project-scope";
+
+const execFileAsync = promisify(execFile);
 
 describe("dependency bootstrap", () => {
   it("detects pnpm without sharing node_modules", async () => {
@@ -295,6 +299,168 @@ describe("dependency bootstrap", () => {
     }
   });
 
+  it("restores pre-existing staged and dirty state after a failed tracked mutation", async () => {
+    const root = await mkGitDependencyWorkspace(
+      "subscription-runtime-deps-transaction-tracked-",
+      "pnpm",
+    );
+    try {
+      const packageJsonPath = join(root, "package.json");
+      const workspaceManifestPath = join(root, "pnpm-workspace.yaml");
+      await writeFile(
+        packageJsonPath,
+        JSON.stringify({ packageManager: "pnpm@9.15.0", staged: true }),
+      );
+      await git(root, ["add", "package.json"]);
+      await writeFile(
+        packageJsonPath,
+        JSON.stringify({
+          packageManager: "pnpm@9.15.0",
+          staged: true,
+          dirty: true,
+        }),
+      );
+      const [statusBefore, stagedBefore, packageJsonBefore] = await Promise.all([
+        git(root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]),
+        git(root, ["diff", "--cached", "--binary", "HEAD", "--"]),
+        readFile(packageJsonPath),
+      ]);
+
+      const result = await runDependencyBootstrap({
+        workspacePath: root,
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async () => {
+          await writeFile(workspaceManifestPath, "packages:\n  - generated/*\n");
+          throw new Error("simulated_install_failure");
+        },
+      });
+
+      expect(result.status).toBe("install_failed");
+      expect(result.warnings).toContain(
+        "dependency_install_failed:simulated_install_failure",
+      );
+      await expect(readFile(workspaceManifestPath, "utf8")).resolves.toBe(
+        "packages:\n  - packages/*\n",
+      );
+      await expect(readFile(packageJsonPath)).resolves.toEqual(packageJsonBefore);
+      await expect(
+        git(root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]),
+      ).resolves.toEqual(statusBefore);
+      await expect(
+        git(root, ["diff", "--cached", "--binary", "HEAD", "--"]),
+      ).resolves.toEqual(stagedBefore);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("restores pre-existing and bootstrap-created untracked files after failure", async () => {
+    const root = await mkGitDependencyWorkspace(
+      "subscription-runtime-deps-transaction-untracked-",
+      "npm",
+    );
+    const existingUntrackedPath = join(root, "operator-notes.txt");
+    const generatedPath = join(root, "bootstrap-generated.yaml");
+    try {
+      await writeFile(existingUntrackedPath, "keep exactly\n");
+      const statusBefore = await git(root, [
+        "status",
+        "--porcelain=v1",
+        "-z",
+        "--untracked-files=all",
+      ]);
+
+      const result = await runDependencyBootstrap({
+        workspacePath: root,
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async () => {
+          await writeFile(existingUntrackedPath, "bootstrap changed this\n");
+          await writeFile(generatedPath, "generated: true\n");
+          throw new Error("simulated_install_failure");
+        },
+      });
+
+      expect(result.status).toBe("install_failed");
+      await expect(readFile(existingUntrackedPath, "utf8")).resolves.toBe(
+        "keep exactly\n",
+      );
+      await expect(access(generatedPath)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(
+        git(root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]),
+      ).resolves.toEqual(statusBefore);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects and rolls back a successful install that mutates source state", async () => {
+    const root = await mkGitDependencyWorkspace(
+      "subscription-runtime-deps-transaction-success-mutation-",
+      "npm",
+    );
+    const sourcePath = join(root, "README.md");
+    try {
+      const result = await runDependencyBootstrap({
+        workspacePath: root,
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async () => {
+          await writeFile(sourcePath, "changed by bootstrap\n");
+          await mkdir(join(root, "node_modules", ".bin"), { recursive: true });
+          await writeFile(join(root, "node_modules", ".bin", "tsc"), "");
+        },
+      });
+
+      expect(result.status).toBe("install_failed");
+      expect(
+        result.warnings.some(
+          (warning) =>
+            warning.includes(
+              "dependency_bootstrap_workspace_mutation_detected:",
+            ) && warning.includes("README.md"),
+        ),
+      ).toBe(true);
+      await expect(readFile(sourcePath, "utf8")).resolves.toBe("fixture\n");
+      await expect(access(join(root, "node_modules"))).resolves.toBeUndefined();
+      await expect(git(root, ["status", "--porcelain=v1"])).resolves.toEqual(
+        Buffer.alloc(0),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("allows a successful install that changes only ignored dependency artifacts", async () => {
+    const root = await mkGitDependencyWorkspace(
+      "subscription-runtime-deps-transaction-success-",
+      "npm",
+    );
+    try {
+      const result = await runDependencyBootstrap({
+        workspacePath: root,
+        mode: "install",
+        confirmInstall: true,
+        runCommand: async () => {
+          const binPath = join(root, "node_modules", ".bin");
+          await mkdir(binPath, { recursive: true });
+          await writeFile(join(binPath, "tsc"), "");
+        },
+      });
+
+      expect(result.status).toBe("installed");
+      await expect(access(join(root, "node_modules"))).resolves.toBeUndefined();
+      await expect(git(root, ["status", "--porcelain=v1"])).resolves.toEqual(
+        Buffer.alloc(0),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("detects and materializes a locked uv environment through the shared cache", async () => {
     const root = await mkTestWorkspace("subscription-runtime-deps-uv-");
     const cacheRoot = join(root, "cache");
@@ -458,4 +624,57 @@ describe("dependency bootstrap", () => {
 
 async function mkTestWorkspace(prefix: string): Promise<string> {
   return mkdtemp(join(tmpdir(), prefix));
+}
+
+async function mkGitDependencyWorkspace(
+  prefix: string,
+  packageManager: "npm" | "pnpm",
+): Promise<string> {
+  const root = await mkTestWorkspace(prefix);
+  await git(root, ["init", "--quiet"]);
+  await Promise.all([
+    writeFile(join(root, ".gitignore"), "node_modules/\n"),
+    writeFile(join(root, "README.md"), "fixture\n"),
+    writeFile(
+      join(root, "package.json"),
+      JSON.stringify({
+        packageManager:
+          packageManager === "pnpm" ? "pnpm@9.15.0" : "npm@11.0.0",
+      }),
+    ),
+    packageManager === "pnpm"
+      ? writeFile(join(root, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n")
+      : writeFile(
+          join(root, "package-lock.json"),
+          JSON.stringify({ lockfileVersion: 3, packages: {} }),
+        ),
+    ...(packageManager === "pnpm"
+      ? [
+          writeFile(
+            join(root, "pnpm-workspace.yaml"),
+            "packages:\n  - packages/*\n",
+          ),
+        ]
+      : []),
+  ]);
+  await git(root, ["add", "."]);
+  await git(root, [
+    "-c",
+    "user.name=Dependency Bootstrap Test",
+    "-c",
+    "user.email=dependency-bootstrap@example.invalid",
+    "commit",
+    "--quiet",
+    "-m",
+    "test: initialize dependency workspace",
+  ]);
+  return root;
+}
+
+async function git(root: string, args: readonly string[]): Promise<Buffer> {
+  const result = await execFileAsync("git", args, {
+    cwd: root,
+    encoding: "buffer",
+  });
+  return result.stdout;
 }
