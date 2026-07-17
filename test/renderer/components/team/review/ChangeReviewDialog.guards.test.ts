@@ -8,6 +8,7 @@ import {
   hasReviewFileRejections,
   hasUnresolvedReviewExternalChange,
   isReviewActionLocked,
+  isReviewDiskPreimageRestored,
   isReviewFileFullyRejected,
   partitionReviewFilesByApplyErrors,
   popOrderedReviewAction,
@@ -402,10 +403,41 @@ describe('ChangeReviewDialog interaction guards', () => {
     expect(undoFirst).toEqual({ stack: [], popped: true });
   });
 
-  it('bounds ordered review history without changing the newest action', () => {
-    const actions = ['first', 'second', 'third'];
+  it('keeps ordered review history beyond the former ten-action limit', () => {
+    const actions = Array.from({ length: 100 }, (_, index) => `action-${index}`);
     let stack: string[] = [];
-    for (const action of actions) stack = appendOrderedReviewAction(stack, action, 2);
-    expect(stack).toEqual(['second', 'third']);
+    for (const action of actions) stack = appendOrderedReviewAction(stack, action, 10);
+    expect(stack).toEqual(actions);
+  });
+
+  it('recognizes an already-restored disk preimage for crash-safe Undo retry', () => {
+    expect(
+      isReviewDiskPreimageRestored(
+        {
+          hasConflict: false,
+          currentContent: 'before',
+          conflictContent: null,
+          originalContent: 'before',
+        },
+        'before'
+      )
+    ).toBe(true);
+    expect(
+      isReviewDiskPreimageRestored(
+        { hasConflict: true, currentContent: '', conflictContent: null, originalContent: '' },
+        null
+      )
+    ).toBe(true);
+    expect(
+      isReviewDiskPreimageRestored(
+        {
+          hasConflict: true,
+          currentContent: 'external',
+          conflictContent: 'external',
+          originalContent: 'before',
+        },
+        'before'
+      )
+    ).toBe(false);
   });
 });

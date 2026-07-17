@@ -7,13 +7,12 @@ import {
 } from './reviewContentPreview';
 
 import type {
+  ConflictCheckResult,
   FileChangeSummary,
   FileChangeWithContent,
   HunkDecision,
   ReviewRenameRecoveryExpectation,
 } from '@shared/types';
-
-const MAX_REVIEW_ACTION_HISTORY = 10;
 
 export interface ReviewDecisionRecords {
   hunkDecisions: Record<string, HunkDecision>;
@@ -32,9 +31,9 @@ export function isReviewActionLocked(state: {
 export function appendOrderedReviewAction<T>(
   stack: readonly T[],
   action: T,
-  maxDepth = MAX_REVIEW_ACTION_HISTORY
+  _legacyMaxDepth?: number
 ): T[] {
-  return [...stack, action].slice(-Math.max(1, maxDepth));
+  return [...stack, action];
 }
 
 export function popOrderedReviewAction<T>(
@@ -43,6 +42,16 @@ export function popOrderedReviewAction<T>(
 ): { stack: T[]; popped: boolean } {
   if (stack.at(-1) !== expected) return { stack: [...stack], popped: false };
   return { stack: stack.slice(0, -1), popped: true };
+}
+
+/** True when a retried Undo finds that its guarded disk preimage was already restored. */
+export function isReviewDiskPreimageRestored(
+  conflict: ConflictCheckResult,
+  expectedContent: string | null
+): boolean {
+  return expectedContent === null
+    ? conflict.hasConflict && conflict.conflictContent === null
+    : !conflict.hasConflict;
 }
 
 export function getReviewCloseBlockReason(input: {
