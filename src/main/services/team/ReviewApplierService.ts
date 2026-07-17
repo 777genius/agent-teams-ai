@@ -32,6 +32,15 @@ type CurrentTextReadResult =
   | { missing: false; content: string }
   | { missing: false; content: ''; error: string };
 
+export type ReviewFileTransitionState = 'before' | 'after' | 'both';
+export type ReviewRenameTransitionState =
+  | 'accepted'
+  | 'rejected'
+  | 'both'
+  | 'restoring'
+  | 'reapplying'
+  | 'legacy-reapplying';
+
 function getCurrentTextReadError(result: CurrentTextReadResult): string | null {
   return 'error' in result ? result.error : null;
 }
@@ -99,6 +108,133 @@ async function withFileMutationKeyLock<T>(key: string, operation: () => Promise<
  * - Batch review application
  */
 export class ReviewApplierService {
+  /**
+   * Read-only CAS classification used before a durable direct mutation and while
+   * recovering it. Existing paths must still be safe regular single-link files.
+   */
+  async classifyEditedFileTransition(
+    filePath: string,
+    beforeContent: string | null,
+    afterContent: string | null
+  ): Promise<ReviewFileTransitionState> {
+    return withFileMutationLock(filePath, async () => {
+      const current = await this.readCurrentText(filePath);
+      const currentError = getCurrentTextReadError(current);
+      if (currentError) throw new Error(currentError);
+      if (!current.missing) {
+        await this.assertSafeExpectedFile(filePath, current.content);
+      }
+
+      const beforeMatches =
+        beforeContent === null
+          ? current.missing
+          : !current.missing && current.content === beforeContent;
+      const afterMatches =
+        afterContent === null
+          ? current.missing
+          : !current.missing && current.content === afterContent;
+      if (beforeMatches && afterMatches) return 'both';
+      if (beforeMatches) return 'before';
+      if (afterMatches) return 'after';
+      throw new Error('File changed since review update; durable mutation state is ambiguous');
+    });
+  }
+
+  /**
+   * Classify both sides of a ledger rename without mutating either path. The
+   * intermediate states are exact crash states understood by the idempotent
+   * rename recovery methods below.
+   */
+  async classifyRejectedRenameTransition(
+    filePath: string,
+    original: string | null,
+    modified: string | null,
+    snippets: SnippetDiff[]
+  ): Promise<ReviewRenameTransitionState> {
+    const ledgerSnippets = snippets.filter((snippet) => snippet.ledger && !snippet.isError);
+    const relation = this.resolveLedgerRelation(ledgerSnippets);
+    if (relation?.kind !== 'rename') {
+      throw new Error('Review file is not a ledger rename.');
+    }
+    const oldSnippet =
+      ledgerSnippets.find(
+        (snippet) =>
+          snippet.ledger?.operation === 'delete' &&
+          this.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
+      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'delete');
+    const newSnippet =
+      ledgerSnippets.find(
+        (snippet) =>
+          snippet.ledger?.operation === 'create' &&
+          this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
+      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'create');
+    const oldFilePath =
+      oldSnippet?.filePath ??
+      this.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
+    const newFilePath = newSnippet?.filePath;
+    const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
+    const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
+    if (!oldFilePath || !newFilePath || oldContent === null || newContent === null) {
+      throw new Error('Ledger rename recovery metadata is incomplete.');
+    }
+    if (
+      ledgerSnippets.some(
+        (snippet) =>
+          snippet.ledger?.beforeState?.unavailableReason ||
+          snippet.ledger?.afterState?.unavailableReason
+      )
+    ) {
+      throw new Error('Ledger rename recovery content is unavailable.');
+    }
+
+    return withFileMutationLocks(
+      this.resolveLedgerMutationPaths(filePath, ledgerSnippets),
+      async () => {
+        const oldCurrent = await this.readCurrentText(oldFilePath);
+        const oldError = getCurrentTextReadError(oldCurrent);
+        if (oldError) throw new Error(oldError);
+        const newCurrent = await this.readCurrentText(newFilePath);
+        const newError = getCurrentTextReadError(newCurrent);
+        if (newError) throw new Error(newError);
+        if (!oldCurrent.missing) {
+          await this.assertSafeExpectedFile(oldFilePath, oldCurrent.content);
+        }
+        if (!newCurrent.missing) {
+          await this.assertSafeExpectedFile(newFilePath, newCurrent.content);
+        }
+
+        const aliased =
+          !oldCurrent.missing &&
+          !newCurrent.missing &&
+          (await this.pathsReferToSameFile(oldFilePath, newFilePath));
+        const accepted = aliased
+          ? newCurrent.content === newContent
+          : oldCurrent.missing && !newCurrent.missing && newCurrent.content === newContent;
+        const rejected = aliased
+          ? oldCurrent.content === oldContent
+          : !oldCurrent.missing && oldCurrent.content === oldContent && newCurrent.missing;
+        if (accepted && rejected) return 'both';
+        if (accepted) return 'accepted';
+        if (rejected) return 'rejected';
+        if (oldCurrent.missing && !newCurrent.missing && newCurrent.content === oldContent) {
+          return 'restoring';
+        }
+        if (newCurrent.missing && !oldCurrent.missing && oldCurrent.content === newContent) {
+          return 'reapplying';
+        }
+        if (
+          !oldCurrent.missing &&
+          oldCurrent.content === oldContent &&
+          !newCurrent.missing &&
+          newCurrent.content === newContent
+        ) {
+          return 'legacy-reapplying';
+        }
+        throw new Error('Ledger rename changed since review update; durable state is ambiguous');
+      }
+    );
+  }
+
   /**
    * Restore the agent side of a previously rejected ledger rename.
    * Both paths are guarded by the same mutation lock and verified before mutation.

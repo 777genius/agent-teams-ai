@@ -12,6 +12,7 @@ import { EditorFileWatcher } from '@main/services/editor';
 import { ReviewDecisionStore } from '@main/services/team/ReviewDecisionStore';
 import {
   type ReviewMutationJournalDiskStep,
+  type ReviewMutationJournalPathPostimage,
   type ReviewMutationJournalRecord,
   ReviewMutationJournalStore,
 } from '@main/services/team/ReviewMutationJournalStore';
@@ -1282,22 +1283,57 @@ function assertPersistedStateIncludesDecisions(
   }
 }
 
-async function readReviewMutationPostimages(
-  decisions: readonly FileReviewDecision[]
-): Promise<Map<string, string | null>> {
-  const postimages = new Map<string, string | null>();
-  for (const decision of decisions) {
+async function readReviewMutationPathPostimages(fileContent: FileChangeWithContent): Promise<{
+  durable: ReviewMutationJournalPathPostimage[];
+  contents: Map<string, string | null>;
+}> {
+  const paths = new Map<string, string>();
+  for (const filePath of [fileContent.filePath, ...fileContent.snippets.map((s) => s.filePath)]) {
+    paths.set(normalizeReviewPathForIdentity(filePath), filePath);
+  }
+  const durable: ReviewMutationJournalPathPostimage[] = [];
+  const contents = new Map<string, string | null>();
+  for (const filePath of paths.values()) {
     try {
-      postimages.set(decision.filePath, await fs.readFile(decision.filePath, 'utf8'));
+      const content = await fs.readFile(filePath, 'utf8');
+      contents.set(filePath, content);
+      durable.push({ filePath, sha256: createHash('sha256').update(content).digest('hex') });
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        postimages.set(decision.filePath, null);
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT' || code === 'ENOTDIR') {
+        contents.set(filePath, null);
+        durable.push({ filePath, sha256: null });
       } else {
         throw error;
       }
     }
   }
-  return postimages;
+  return { durable, contents };
+}
+
+async function assertReviewMutationPathPostimages(
+  postimages: readonly ReviewMutationJournalPathPostimage[]
+): Promise<void> {
+  if (postimages.length === 0) {
+    throw new Error('Applied review mutation has no durable postimage evidence');
+  }
+  for (const postimage of postimages) {
+    let currentSha256: string | null;
+    try {
+      currentSha256 = createHash('sha256')
+        .update(await fs.readFile(postimage.filePath, 'utf8'))
+        .digest('hex');
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT' || code === 'ENOTDIR') currentSha256 = null;
+      else throw error;
+    }
+    if (currentSha256 !== postimage.sha256) {
+      throw new Error(
+        `Review mutation postimage changed after crash; refusing recovery for ${postimage.filePath}`
+      );
+    }
+  }
 }
 
 function reconcileLatestReviewActionPostimages(
@@ -1368,6 +1404,22 @@ async function applyJournalDecisionBatchDisk(
   const initialStatuses =
     current.decisionStatuses ?? current.decisions.map(() => 'pending' as const);
 
+  try {
+    for (const [index, status] of initialStatuses.entries()) {
+      if (status !== 'applied') continue;
+      const postimages = current.decisionPostimages?.[index];
+      if (!postimages) {
+        throw new Error('Applied review mutation is missing durable postimage evidence');
+      }
+      await assertReviewMutationPathPostimages(postimages);
+    }
+  } catch (error) {
+    await reviewMutationJournal.markFailed(current, error).catch((journalError) => {
+      logger.error('Unable to preserve drifted review mutation journal:', journalError);
+    });
+    throw error;
+  }
+
   for (let index = 0; index < current.decisions.length; index++) {
     if (initialStatuses[index] === 'applied') continue;
     const decision = current.decisions[index];
@@ -1405,20 +1457,33 @@ async function applyJournalDecisionBatchDisk(
       throw new ReviewMutationApplyResultError(aggregate);
     }
 
-    const decisionStatuses = [...(current.decisionStatuses ?? initialStatuses)];
-    decisionStatuses[index] = 'applied';
-    let persistedState = current.persistedState;
-    if (persistedState) {
-      persistedState = reconcileLatestReviewActionPostimages(
+    try {
+      const decisionStatuses = [...(current.decisionStatuses ?? initialStatuses)];
+      decisionStatuses[index] = 'applied';
+      const pathPostimages = await readReviewMutationPathPostimages(fileContent);
+      const decisionPostimages = [
+        ...(current.decisionPostimages ?? current.decisions.map(() => null)),
+      ];
+      decisionPostimages[index] = pathPostimages.durable;
+      let persistedState = current.persistedState;
+      if (persistedState) {
+        persistedState = reconcileLatestReviewActionPostimages(
+          persistedState,
+          pathPostimages.contents
+        );
+      }
+      current = await reviewMutationJournal.checkpoint({
+        ...current,
+        decisionStatuses,
+        decisionPostimages,
         persistedState,
-        await readReviewMutationPostimages([decision])
-      );
+      });
+    } catch (error) {
+      await reviewMutationJournal.markFailed(current, error).catch((journalError) => {
+        logger.error('Unable to checkpoint review mutation postimage:', journalError);
+      });
+      throw error;
     }
-    current = await reviewMutationJournal.checkpoint({
-      ...current,
-      decisionStatuses,
-      persistedState,
-    });
     invalidateAuthoritativeReviewContent(fileContent);
   }
 
@@ -1664,12 +1729,87 @@ async function normalizeDirectReviewMutationSteps(
   return normalized;
 }
 
+type DirectReviewMutationState = 'before' | 'after' | 'both' | 'intermediate';
+
+async function classifyDirectReviewMutationStep(
+  step: ReviewMutationJournalDiskStep
+): Promise<DirectReviewMutationState> {
+  if (step.type === 'write') {
+    return getApplier().classifyEditedFileTransition(
+      step.filePath,
+      step.expectedContent,
+      step.content
+    );
+  }
+  if (step.type === 'delete') {
+    return getApplier().classifyEditedFileTransition(step.filePath, step.expectedContent, null);
+  }
+  const content = step.authoritativeContent;
+  if (!content) throw new Error('Rename recovery content is unavailable');
+  const state = await getApplier().classifyRejectedRenameTransition(
+    step.filePath,
+    content.originalFullContent,
+    content.modifiedFullContent,
+    content.snippets
+  );
+  if (state === 'both') return 'both';
+  const beforeState = step.type === 'restore-rejected-rename' ? 'rejected' : 'accepted';
+  const afterState = step.type === 'restore-rejected-rename' ? 'accepted' : 'rejected';
+  if (state === beforeState) return 'before';
+  if (state === afterState) return 'after';
+  const recoverableIntermediate =
+    (step.type === 'restore-rejected-rename' && state === 'restoring') ||
+    (step.type === 'reapply-rejected-rename' &&
+      (state === 'reapplying' || state === 'legacy-reapplying'));
+  if (recoverableIntermediate) return 'intermediate';
+  throw new Error('Ledger rename is not in the expected durable mutation state');
+}
+
+async function assertDirectReviewMutationPreimages(
+  steps: readonly ReviewMutationJournalDiskStep[]
+): Promise<void> {
+  for (const step of steps) {
+    const state = await classifyDirectReviewMutationStep(step);
+    if (state !== 'before' && state !== 'both') {
+      throw new Error('Review mutation preflight failed; no files were changed');
+    }
+  }
+}
+
 async function applyDirectReviewMutationDisk(
   record: ReviewMutationJournalRecord
 ): Promise<ReviewMutationJournalRecord> {
   let current = record;
   const steps = current.diskSteps;
   if (!steps?.length) return current;
+
+  try {
+    const alreadyAtPostimage = new Set<number>();
+    for (const [index, step] of steps.entries()) {
+      const state = await classifyDirectReviewMutationStep(step);
+      if (step.status === 'applied') {
+        if (state !== 'after' && state !== 'both') {
+          throw new Error('Applied review mutation changed after crash; refusing recovery');
+        }
+      } else if (state === 'after' || state === 'both') {
+        alreadyAtPostimage.add(index);
+      }
+    }
+    if (alreadyAtPostimage.size > 0) {
+      current = await reviewMutationJournal.checkpoint({
+        ...current,
+        diskSteps: current.diskSteps!.map((step, index) =>
+          alreadyAtPostimage.has(index) ? { ...step, status: 'applied' as const } : step
+        ),
+      });
+    }
+  } catch (error) {
+    await reviewMutationJournal.markFailed(current, error).catch((journalError) => {
+      logger.error('Unable to preserve drifted direct review mutation:', journalError);
+    });
+    throw error;
+  }
+
   for (let index = 0; index < steps.length; index++) {
     const step = current.diskSteps?.[index];
     if (!step || step.status === 'applied') continue;
@@ -1695,6 +1835,10 @@ async function applyDirectReviewMutationDisk(
             content.snippets
           );
         }
+      }
+      const postState = await classifyDirectReviewMutationStep(step);
+      if (postState !== 'after' && postState !== 'both') {
+        throw new Error('Review mutation did not reach its durable postimage');
       }
     } catch (error) {
       await reviewMutationJournal.markFailed(current, error).catch((journalError) => {
@@ -1765,6 +1909,7 @@ async function handleExecuteReviewMutation(
       // Recovery can change disk state and invalidate authoritative review content.
       // Resolve this operation only after every older WAL record is complete.
       const diskSteps = await normalizeDirectReviewMutationSteps(request, scope, authorization);
+      await assertDirectReviewMutationPreimages(diskSteps);
       await reviewMutationCoordinator.execute(
         {
           teamName: scope.teamName,

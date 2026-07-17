@@ -21,7 +21,7 @@ interface WorkerResult {
 
 interface RecoverySnapshot {
   fileContent: string;
-  decisions: {
+  decisions: null | {
     hunkDecisions: Record<string, string>;
     reviewActionHistory: { id: string }[];
     reviewRedoHistory: unknown[];
@@ -40,7 +40,7 @@ const workerPath = path.resolve('test/fixtures/reviewMutationCrashWorker.ts');
 const tsxPath = path.resolve('node_modules/tsx/dist/cli.mjs');
 
 async function runWorker(
-  mode: 'run' | 'recover',
+  mode: 'run' | 'recover' | 'inspect',
   claudeBasePath: string,
   filePath: string,
   auditPath: string,
@@ -119,6 +119,33 @@ describe('review mutation crash recovery process E2E', () => {
     },
     30_000
   );
+
+  it('refuses to commit decisions when an applied postimage drifts after disk_applied', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'review-applied-drift-'));
+    temporaryRoots.push(root);
+    const claudeBasePath = path.join(root, 'claude-config');
+    const projectPath = path.join(root, 'sandbox-project');
+    const filePath = path.join(projectPath, 'fixture.ts');
+    const auditPath = path.join(root, 'audit.json');
+    await mkdir(projectPath, { recursive: true });
+    await writeFile(filePath, 'before\n', 'utf8');
+
+    const crashed = await runWorker('run', claudeBasePath, filePath, auditPath, 'disk_applied');
+    expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+    await writeFile(filePath, 'external-after-crash\n', 'utf8');
+
+    const refused = await runWorker('recover', claudeBasePath, filePath, auditPath, 'none');
+    expect(refused.code).not.toBe(0);
+    expect(refused.stderr).toContain('applied postimage drifted');
+
+    const inspected = await runWorker('inspect', claudeBasePath, filePath, auditPath, 'none');
+    expect(inspected.code, inspected.stderr).toBe(0);
+    expect(JSON.parse(inspected.stdout) as RecoverySnapshot).toMatchObject({
+      fileContent: 'external-after-crash\n',
+      decisions: null,
+      pendingRecords: 1,
+    });
+  }, 30_000);
 
   it.each([
     'prepared',

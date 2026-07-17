@@ -40,6 +40,7 @@ export class ReviewMutationCoordinator<TRecord extends PhasedReviewMutation, TPr
 
   async resume(record: TRecord, steps: ReviewMutationSteps<TRecord>): Promise<TRecord> {
     let current = record;
+    const resumedFromDiskApplied = current.phase === 'disk_applied';
 
     if (current.phase === 'prepared') {
       current = (await steps.applyDisk(current)) ?? current;
@@ -48,6 +49,12 @@ export class ReviewMutationCoordinator<TRecord extends PhasedReviewMutation, TPr
     }
 
     if (current.phase === 'disk_applied') {
+      // A crash can happen after the durable phase transition and before the
+      // decision commit. Re-run the idempotent disk step on that recovery path
+      // so it verifies every recorded postimage before committing decisions.
+      if (resumedFromDiskApplied) {
+        current = (await steps.applyDisk(current)) ?? current;
+      }
       await steps.commitDecisions(current);
       current = await this.journal.transition(current, 'disk_applied', 'decisions_committed');
       await this.observe(current);

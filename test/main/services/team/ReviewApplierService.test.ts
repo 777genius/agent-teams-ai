@@ -362,6 +362,70 @@ describe('ReviewApplierService', () => {
     expect(atomicWriteMocks.atomicCreateAsync).not.toHaveBeenCalled();
   });
 
+  it('classifies exact file preimages and postimages without mutating disk', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const filePath = '/tmp/durable-transition.txt';
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const service = new ReviewApplierService();
+
+    readFile.mockResolvedValue('before\n');
+    await expect(
+      service.classifyEditedFileTransition(filePath, 'before\n', 'after\n')
+    ).resolves.toBe('before');
+
+    readFile.mockResolvedValue('after\n');
+    await expect(
+      service.classifyEditedFileTransition(filePath, 'before\n', 'after\n')
+    ).resolves.toBe('after');
+
+    readFile.mockResolvedValue('external\n');
+    await expect(
+      service.classifyEditedFileTransition(filePath, 'before\n', 'after\n')
+    ).rejects.toThrow('durable mutation state is ambiguous');
+    expect(atomicWriteMocks.atomicWriteAsync).not.toHaveBeenCalled();
+  });
+
+  it('classifies exact ledger rename states used by crash recovery', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const oldPath = '/repo/src/old.ts';
+    const newPath = '/repo/src/new.ts';
+    const oldContent = 'old\n';
+    const newContent = 'new\n';
+    const relation = { kind: 'rename' as const, oldPath: 'src/old.ts', newPath: 'src/new.ts' };
+    const change = buildLedgerRenameChange(oldPath, newPath, oldContent, newContent, relation);
+    const files = new Map<string, string>();
+    readFile.mockImplementation(async (filePath: string) => {
+      const content = files.get(filePath);
+      if (content === undefined) throw Object.assign(new Error('missing'), { code: 'ENOENT' });
+      return content;
+    });
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+    const service = new ReviewApplierService();
+    const classify = () =>
+      service.classifyRejectedRenameTransition(newPath, oldContent, newContent, change.snippets);
+
+    files.set(newPath, newContent);
+    await expect(classify()).resolves.toBe('accepted');
+    files.clear();
+    files.set(oldPath, oldContent);
+    await expect(classify()).resolves.toBe('rejected');
+    files.clear();
+    files.set(newPath, oldContent);
+    await expect(classify()).resolves.toBe('restoring');
+    files.clear();
+    files.set(oldPath, newContent);
+    await expect(classify()).resolves.toBe('reapplying');
+    files.set(oldPath, oldContent);
+    files.set(newPath, newContent);
+    await expect(classify()).resolves.toBe('legacy-reapplying');
+    files.set(oldPath, 'external\n');
+    await expect(classify()).rejects.toThrow('durable state is ambiguous');
+    expect(atomicWriteMocks.renamePathWithRetry).not.toHaveBeenCalled();
+    expect(atomicWriteMocks.atomicWriteAsync).not.toHaveBeenCalled();
+  });
+
   it('uses strict atomic replacement, preserves mode, and repeats the CAS guard', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;

@@ -21,7 +21,12 @@ interface AuditState {
 
 const [mode, claudeBasePath, filePath, auditPath, crashPointValue, operationShapeValue] =
   process.argv.slice(2);
-if ((mode !== 'run' && mode !== 'recover') || !claudeBasePath || !filePath || !auditPath) {
+if (
+  (mode !== 'run' && mode !== 'recover' && mode !== 'inspect') ||
+  !claudeBasePath ||
+  !filePath ||
+  !auditPath
+) {
   throw new Error('Invalid review mutation crash worker arguments');
 }
 
@@ -105,7 +110,12 @@ async function applyDisk(
   const step = record.diskSteps?.[0];
   if (!step && operationShape === 'decision-only-redo') return record;
   if (!step || step.type !== 'write') throw new Error('Crash fixture disk step is missing');
-  if (step.status === 'applied') return record;
+  if (step.status === 'applied') {
+    if ((await readFile(filePath, 'utf8')) !== afterContent) {
+      throw new Error('Crash fixture applied postimage drifted');
+    }
+    return record;
+  }
   await updateAudit((current) => ({ ...current, diskAttempts: current.diskAttempts + 1 }));
   const currentContent = await readFile(filePath, 'utf8');
   if (currentContent === beforeContent) {
@@ -189,10 +199,13 @@ if (mode === 'run') {
     },
     { applyDisk, commitDecisions }
   );
-} else {
+} else if (mode === 'recover') {
   for (const record of await journal.list(teamName, persistenceScope)) {
     await coordinator.resume(record, { applyDisk, commitDecisions });
   }
+}
+
+if (mode !== 'run') {
   process.stdout.write(
     JSON.stringify({
       fileContent: await readFile(filePath, 'utf8'),

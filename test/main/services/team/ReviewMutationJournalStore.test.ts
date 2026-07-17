@@ -157,6 +157,36 @@ describe('ReviewMutationJournalStore', () => {
     );
   });
 
+  it('round-trips only validated SHA-256 decision postimages', async () => {
+    const { ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    const store = new ReviewMutationJournalStore();
+    const prepared = await store.prepare(makeInput());
+    const checkpointed = await store.checkpoint({
+      ...prepared,
+      decisionStatuses: ['applied'],
+      decisionPostimages: [
+        [
+          {
+            filePath: '/repo/file.ts',
+            sha256: createHash('sha256').update('after').digest('hex'),
+          },
+        ],
+      ],
+    });
+    await expect(store.list('demo', persistenceScope)).resolves.toEqual([checkpointed]);
+
+    const recordPath = findRecordPath(teamsBasePath, prepared.id);
+    const parsed = JSON.parse(await readFile(recordPath, 'utf8')) as {
+      decisionPostimages: { sha256: string | null }[][];
+    };
+    parsed.decisionPostimages[0]![0]!.sha256 = 'not-a-digest';
+    await writeFile(recordPath, JSON.stringify(parsed), 'utf8');
+    await expect(store.list('demo', persistenceScope)).rejects.toThrow(
+      'Invalid review mutation journal record'
+    );
+  });
+
   it('fails closed on symbolic-link journal records', async () => {
     if (process.platform === 'win32') return;
     const { ReviewMutationJournalStore } =

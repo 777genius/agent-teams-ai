@@ -32,6 +32,8 @@ export interface ReviewMutationJournalRecord {
   decisions: (FileReviewDecision & { reviewKey: string })[];
   fileContents: FileChangeWithContent[];
   decisionStatuses?: ('pending' | 'applied')[];
+  /** Exact path postimages captured before an applied decision is checkpointed. */
+  decisionPostimages?: (ReviewMutationJournalPathPostimage[] | null)[];
   diskSteps?: ReviewMutationJournalDiskStep[];
   persistedState?: ReviewPersistedStateSnapshot;
   expectedDecisionRevision?: number;
@@ -59,6 +61,12 @@ export type ReviewMutationJournalDiskStep = ReviewDirectDiskMutationStep & {
   /** Main-resolved immutable rename evidence needed after the renderer is gone. */
   authoritativeContent?: FileChangeWithContent;
 };
+
+export interface ReviewMutationJournalPathPostimage {
+  filePath: string;
+  /** Null means the path must be absent. Existing text is stored by digest only. */
+  sha256: string | null;
+}
 
 interface LegacyReviewMutationJournalRecord {
   version: 1;
@@ -393,11 +401,35 @@ export class ReviewMutationJournalStore {
     if (hasDecisionBatch === hasDirectSteps) return false;
     if (hasDecisionBatch) {
       const statuses = record.decisionStatuses;
+      const postimages = record.decisionPostimages;
       return (
         decisions.length === fileContents.length &&
         (statuses === undefined ||
           (statuses.length === decisions.length &&
             statuses.every((status) => status === 'pending' || status === 'applied'))) &&
+        (postimages === undefined ||
+          (postimages.length === decisions.length &&
+            postimages.every((paths) => {
+              if (paths === null) return true;
+              if (!Array.isArray(paths) || paths.length === 0 || paths.length > 2_000) return false;
+              const seen = new Set<string>();
+              return paths.every((pathState) => {
+                if (
+                  !pathState ||
+                  typeof pathState.filePath !== 'string' ||
+                  pathState.filePath.length === 0 ||
+                  pathState.filePath.length > 32_768 ||
+                  (pathState.sha256 !== null &&
+                    (typeof pathState.sha256 !== 'string' ||
+                      !/^[a-f0-9]{64}$/.test(pathState.sha256))) ||
+                  seen.has(pathState.filePath)
+                ) {
+                  return false;
+                }
+                seen.add(pathState.filePath);
+                return true;
+              });
+            }))) &&
         decisions.every(
           (decision, index) =>
             typeof decision?.reviewKey === 'string' &&

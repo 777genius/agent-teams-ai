@@ -70,11 +70,11 @@ describe('ReviewMutationCoordinator', () => {
 
   it.each([
     ['prepared', 1, 1],
-    ['disk_applied', 0, 1],
+    ['disk_applied', 1, 1],
     ['decisions_committed', 0, 0],
     ['complete', 0, 0],
   ] as const)(
-    'resumes %s without replaying already-proven phases',
+    'resumes %s while re-verifying a disk_applied postimage',
     async (phase, expectedDiskCalls, expectedDecisionCalls) => {
       const harness = createHarness(phase);
       const coordinator = new ReviewMutationCoordinator(harness.journal);
