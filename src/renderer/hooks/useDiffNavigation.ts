@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { acceptChunk, goToNextChunk, goToPreviousChunk } from '@codemirror/merge';
+import { acceptChunk, goToNextChunk, goToPreviousChunk, rejectChunk } from '@codemirror/merge';
 import {
   computeChunkIndexAtPos,
   getChunks,
+  ignoreNextReviewDocChange,
 } from '@renderer/components/team/review/CodeMirrorDiffUtils';
 import { physicalKey } from '@renderer/utils/keyboardUtils';
 
@@ -98,8 +99,13 @@ export function useDiffNavigation(
   onSelectFile: (path: string) => void,
   editorViewRef: React.RefObject<EditorView | null>,
   isDialogOpen: boolean,
-  onHunkAccepted?: (filePath: string, hunkIndex: number) => void,
-  onHunkRejected?: (filePath: string, hunkIndex: number) => void,
+  onHunkAccepted?: (filePath: string, hunkIndex: number) => boolean | void,
+  onHunkRejected?: (
+    filePath: string,
+    hunkIndex: number,
+    beforeContent: string,
+    afterContent: string
+  ) => boolean | void,
   onClose?: () => void,
   onSaveFile?: () => void,
   continuousOptions?: ContinuousNavigationOptions,
@@ -259,10 +265,16 @@ export function useDiffNavigation(
 
   const rejectCurrentHunk = useCallback(() => {
     const path = getActiveFilePath(selectedFilePath, continuousOptionsRef.current);
-    if (path && onHunkRejected) {
-      onHunkRejected(path, currentHunkIndex);
+    const view = getActiveEditorView(editorViewRef, continuousOptionsRef.current);
+    if (!path || !view || !onHunkRejected) return;
+    const beforeContent = view.state.doc.toString();
+    rejectChunk(view);
+    const afterContent = view.state.doc.toString();
+    if (onHunkRejected(path, currentHunkIndex, beforeContent, afterContent) === false) {
+      ignoreNextReviewDocChange(view);
+      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: beforeContent } });
     }
-  }, [selectedFilePath, currentHunkIndex, onHunkRejected]);
+  }, [selectedFilePath, editorViewRef, currentHunkIndex, onHunkRejected]);
 
   // Store refs for stable closure (avoids re-registering keydown on every render)
   const onCloseRef = useRef(onClose);
@@ -338,7 +350,7 @@ export function useDiffNavigation(
           if (filePath && onHunkAcceptedRef.current) {
             const cursorPos = view.state.selection.main.head;
             const idx = computeChunkIndexAtPos(view.state, cursorPos);
-            onHunkAcceptedRef.current(filePath, idx);
+            if (onHunkAcceptedRef.current(filePath, idx) === false) return;
           }
           acceptChunk(view);
           requestAnimationFrame(() => goToNextHunk());
