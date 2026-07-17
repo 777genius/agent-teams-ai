@@ -267,6 +267,7 @@ describe('review IPC path confinement', () => {
         fileDecisions: {},
         hunkContextHashesByFile: undefined,
         reviewActionHistory: [action],
+        reviewRedoHistory: [],
         revision: 1,
       },
     });
@@ -391,6 +392,7 @@ describe('review IPC path confinement', () => {
         fileDecisions: {},
         hunkContextHashesByFile: { 'stable-change-key': { 0: 'context-hash' } },
         reviewActionHistory: [],
+        reviewRedoHistory: [],
         revision: 1,
       },
     });
@@ -467,7 +469,7 @@ describe('review IPC path confinement', () => {
     await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
   });
 
-  it('commits disk Undo and the popped action history through one durable mutation', async () => {
+  it('commits disk Undo and Redo after JSON strips optional action fields', async () => {
     const persistenceScope = {
       scopeKey: 'agent-worker',
       scopeToken: 'agent:worker:content:undo-transaction',
@@ -481,10 +483,23 @@ describe('review IPC path confinement', () => {
           filePath: projectFile,
           beforeContent: 'restored\n',
           afterContent: 'project\n',
+          restoreMode: undefined,
+          renameExpectation: undefined,
+          fileIndex: undefined,
         },
         originalIndex: 0,
       },
     };
+    const redoAction = {
+      action,
+      decisionSnapshot: {
+        hunkDecisions: { [`${projectFile}:0`]: 'rejected' as const },
+        fileDecisions: {},
+      },
+      hunkContextHashesByFile: {},
+    };
+    const durableAction = JSON.parse(JSON.stringify(action)) as typeof action;
+    const durableRedoAction = JSON.parse(JSON.stringify(redoAction)) as typeof redoAction;
     await ipcMain.invoke(
       REVIEW_SAVE_DECISIONS,
       'safe-team',
@@ -516,6 +531,7 @@ describe('review IPC path confinement', () => {
         fileDecisions: {},
         hunkContextHashesByFile: {},
         reviewActionHistory: [],
+        reviewRedoHistory: [redoAction],
       },
       expectedDecisionRevision: 1,
     });
@@ -531,7 +547,56 @@ describe('review IPC path confinement', () => {
       )
     ).resolves.toMatchObject({
       success: true,
-      data: { hunkDecisions: {}, fileDecisions: {}, reviewActionHistory: [] },
+      data: {
+        hunkDecisions: {},
+        fileDecisions: {},
+        reviewActionHistory: [],
+        reviewRedoHistory: [durableRedoAction],
+      },
+    });
+
+    applier.saveEditedFile.mockClear();
+    const redone = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: persistenceScope,
+      kind: 'redo',
+      expectedTopRedoActionId: action.id,
+      diskSteps: [
+        {
+          id: `${action.id}:redo:0`,
+          type: 'write',
+          filePath: projectFile,
+          expectedContent: 'restored\n',
+          content: 'project\n',
+        },
+      ],
+      persistedState: {
+        hunkDecisions: redoAction.decisionSnapshot.hunkDecisions,
+        fileDecisions: {},
+        hunkContextHashesByFile: {},
+        reviewActionHistory: [action],
+        reviewRedoHistory: [],
+      },
+      expectedDecisionRevision: 2,
+    });
+
+    expect(redone).toEqual({ success: true, data: { decisionRevision: 3 } });
+    expect(applier.saveEditedFile).toHaveBeenCalledWith(projectFile, 'project\n', 'restored\n');
+    await expect(
+      ipcMain.invoke(
+        REVIEW_LOAD_DECISIONS,
+        'safe-team',
+        persistenceScope.scopeKey,
+        persistenceScope.scopeToken
+      )
+    ).resolves.toMatchObject({
+      success: true,
+      data: {
+        hunkDecisions: redoAction.decisionSnapshot.hunkDecisions,
+        reviewActionHistory: [durableAction],
+        reviewRedoHistory: [],
+        revision: 3,
+      },
     });
     const { ReviewMutationJournalStore } =
       await import('@main/services/team/ReviewMutationJournalStore');
@@ -545,6 +610,12 @@ describe('review IPC path confinement', () => {
       scopeKey: 'agent-worker',
       scopeToken: 'agent:worker:content:stale-undo',
     };
+    const action = {
+      id: 'newer-action',
+      createdAt: '2026-07-17T12:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
     await ipcMain.invoke(
       REVIEW_SAVE_DECISIONS,
       'safe-team',
@@ -553,14 +624,7 @@ describe('review IPC path confinement', () => {
       {},
       {},
       null,
-      [
-        {
-          id: 'newer-action',
-          createdAt: '2026-07-17T12:00:00.000Z',
-          kind: 'hunk',
-          action: { filePath: projectFile, originalIndex: 0 },
-        },
-      ],
+      [action],
       0
     );
     applier.saveEditedFile.mockClear();
@@ -583,6 +647,7 @@ describe('review IPC path confinement', () => {
         hunkDecisions: {},
         fileDecisions: {},
         reviewActionHistory: [],
+        reviewRedoHistory: [],
       },
       expectedDecisionRevision: 1,
     });
@@ -592,6 +657,203 @@ describe('review IPC path confinement', () => {
       error: 'Review history changed; refusing stale Undo',
     });
     expect(applier.saveEditedFile).not.toHaveBeenCalled();
+
+    const invalidTransition = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: persistenceScope,
+      kind: 'undo',
+      expectedTopActionId: action.id,
+      diskSteps: [],
+      persistedState: {
+        hunkDecisions: {},
+        fileDecisions: {},
+        hunkContextHashesByFile: {},
+        reviewActionHistory: [],
+        reviewRedoHistory: [],
+      },
+      expectedDecisionRevision: 1,
+    });
+    expect(invalidTransition).toEqual({
+      success: false,
+      error: 'Invalid durable Undo history transition',
+    });
+  });
+
+  it('journals decision-only hunk Undo and Redo and rejects a stale Redo top id', async () => {
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:hunk-redo',
+    };
+    const action = {
+      id: 'hunk-action',
+      createdAt: '2026-07-17T12:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    const redoAction = {
+      action,
+      decisionSnapshot: {
+        hunkDecisions: { [`${projectFile}:0`]: 'accepted' as const },
+        fileDecisions: {},
+      },
+      hunkContextHashesByFile: { [projectFile]: { 0: 'context-hash' } },
+    };
+    await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+      redoAction.decisionSnapshot.hunkDecisions,
+      {},
+      redoAction.hunkContextHashesByFile,
+      [action],
+      0
+    );
+
+    const undone = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: persistenceScope,
+      kind: 'undo',
+      expectedTopActionId: action.id,
+      diskSteps: [],
+      persistedState: {
+        hunkDecisions: {},
+        fileDecisions: {},
+        hunkContextHashesByFile: redoAction.hunkContextHashesByFile,
+        reviewActionHistory: [],
+        reviewRedoHistory: [redoAction],
+      },
+      expectedDecisionRevision: 1,
+    });
+    expect(undone).toEqual({ success: true, data: { decisionRevision: 2 } });
+    expect(applier.saveEditedFile).not.toHaveBeenCalled();
+
+    const stale = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: persistenceScope,
+      kind: 'redo',
+      expectedTopRedoActionId: 'stale-action',
+      diskSteps: [],
+      persistedState: {
+        hunkDecisions: redoAction.decisionSnapshot.hunkDecisions,
+        fileDecisions: {},
+        hunkContextHashesByFile: redoAction.hunkContextHashesByFile,
+        reviewActionHistory: [action],
+        reviewRedoHistory: [],
+      },
+      expectedDecisionRevision: 2,
+    });
+    expect(stale).toEqual({
+      success: false,
+      error: 'Review history changed; refusing stale Redo',
+    });
+
+    const tampered = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: persistenceScope,
+      kind: 'redo',
+      expectedTopRedoActionId: action.id,
+      diskSteps: [],
+      persistedState: {
+        hunkDecisions: { [`${projectFile}:0`]: 'rejected' },
+        fileDecisions: {},
+        hunkContextHashesByFile: redoAction.hunkContextHashesByFile,
+        reviewActionHistory: [action],
+        reviewRedoHistory: [],
+      },
+      expectedDecisionRevision: 2,
+    });
+    expect(tampered).toEqual({
+      success: false,
+      error: 'Invalid durable Redo history transition',
+    });
+
+    const redone = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: persistenceScope,
+      kind: 'redo',
+      expectedTopRedoActionId: action.id,
+      diskSteps: [],
+      persistedState: {
+        hunkDecisions: redoAction.decisionSnapshot.hunkDecisions,
+        fileDecisions: {},
+        hunkContextHashesByFile: redoAction.hunkContextHashesByFile,
+        reviewActionHistory: [action],
+        reviewRedoHistory: [],
+      },
+      expectedDecisionRevision: 2,
+    });
+    expect(redone).toEqual({ success: true, data: { decisionRevision: 3 } });
+  });
+
+  it('recovers a prepared decision-only Undo through the production IPC path', async () => {
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:hunk-undo-recovery',
+    };
+    const action = {
+      id: 'recover-hunk-action',
+      createdAt: '2026-07-17T12:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    const redoAction = {
+      action,
+      decisionSnapshot: {
+        hunkDecisions: { [`${projectFile}:0`]: 'accepted' as const },
+        fileDecisions: {},
+      },
+      hunkContextHashesByFile: { [projectFile]: { 0: 'context-hash' } },
+    };
+    await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+      redoAction.decisionSnapshot.hunkDecisions,
+      {},
+      redoAction.hunkContextHashesByFile,
+      [action],
+      0
+    );
+    const { ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    const journal = new ReviewMutationJournalStore();
+    await journal.prepare({
+      teamName: 'safe-team',
+      persistenceScope,
+      reviewScope: { teamName: 'safe-team', memberName: 'worker' },
+      kind: 'undo',
+      decisions: [],
+      fileContents: [],
+      diskSteps: [],
+      persistedState: {
+        hunkDecisions: {},
+        fileDecisions: {},
+        hunkContextHashesByFile: redoAction.hunkContextHashesByFile,
+        reviewActionHistory: [],
+        reviewRedoHistory: [redoAction],
+      },
+      expectedDecisionRevision: 1,
+    });
+
+    const recovered = await ipcMain.invoke(
+      REVIEW_LOAD_DECISIONS,
+      'safe-team',
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken
+    );
+    expect(recovered).toMatchObject({
+      success: true,
+      data: {
+        hunkDecisions: {},
+        reviewActionHistory: [],
+        reviewRedoHistory: [redoAction],
+        revision: 2,
+      },
+    });
+    expect(applier.saveEditedFile).not.toHaveBeenCalled();
+    await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
   });
 
   it('refuses a delayed CAS clear after a newer WAL commit', async () => {
@@ -642,6 +904,13 @@ describe('review IPC path confinement', () => {
         fileDecisions: {},
         hunkContextHashesByFile: {},
         reviewActionHistory: [],
+        reviewRedoHistory: [
+          {
+            action,
+            decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
+            hunkContextHashesByFile: {},
+          },
+        ],
       },
     });
 
@@ -703,7 +972,9 @@ describe('review IPC path confinement', () => {
         hunkDecisions: {},
         fileDecisions: {},
         reviewActionHistory: [],
+        reviewRedoHistory: [],
       },
+      expectedDecisionRevision: 0,
     });
     applier.saveEditedFile.mockClear();
 
@@ -739,6 +1010,7 @@ describe('review IPC path confinement', () => {
       fileDecisions: {},
       hunkContextHashesByFile: {},
       reviewActionHistory: [],
+      reviewRedoHistory: [],
     };
     const prepared = await journal.prepare({
       teamName: 'safe-team',

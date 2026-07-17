@@ -243,6 +243,7 @@ export interface ReviewPersistedStateSnapshot {
   fileDecisions: Record<string, HunkDecision>;
   hunkContextHashesByFile?: Record<string, Record<number, string>>;
   reviewActionHistory: ReviewUndoAction[];
+  reviewRedoHistory: ReviewRedoAction[];
 }
 
 /** Complete inverse decision state carried by a durable review action. */
@@ -296,6 +297,16 @@ export type ReviewUndoAction =
       action: { filePath: string; originalIndex: number };
     });
 
+/** Durable forward state captured when an Accept/Reject action is undone. */
+export interface ReviewRedoAction {
+  /** The original action moves back to the Undo stack after Redo commits. */
+  action: ReviewUndoAction;
+  /** Exact decision state produced by the original action. */
+  decisionSnapshot: ReviewDecisionSnapshot;
+  /** Stable hunk fingerprints from the original post-action state. */
+  hunkContextHashesByFile?: Record<string, Record<number, string>>;
+}
+
 /** Запрос на применение review */
 export interface ApplyReviewRequest {
   teamName: string;
@@ -338,13 +349,15 @@ export type ReviewDirectDiskMutationStep =
 export interface ExecuteReviewMutationRequest {
   scope: ReviewFileScope;
   decisionPersistenceScope: ReviewDecisionPersistenceScope;
-  kind: 'restore' | 'rename' | 'undo';
+  kind: 'restore' | 'rename' | 'undo' | 'redo';
   diskSteps: ReviewDirectDiskMutationStep[];
   persistedState: ReviewPersistedStateSnapshot;
   /** CAS guard preventing an old renderer from overwriting newer durable state. */
   expectedDecisionRevision: number;
   /** Required for Undo so a stale renderer cannot pop a newer durable action. */
   expectedTopActionId?: string;
+  /** Required for Redo so a stale renderer cannot replay a different durable branch. */
+  expectedTopRedoActionId?: string;
 }
 
 /** Authoritative team/task scope used by main to resolve a review file root. */

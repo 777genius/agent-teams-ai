@@ -6,7 +6,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { isDeepStrictEqual } from 'util';
 
-import type { FileReviewDecision, HunkDecision, ReviewUndoAction } from '@shared/types';
+import type {
+  FileReviewDecision,
+  HunkDecision,
+  ReviewRedoAction,
+  ReviewUndoAction,
+} from '@shared/types';
 
 const logger = createLogger('ReviewDecisionStore');
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
@@ -25,6 +30,8 @@ export interface ReviewDecisionsData {
   hunkContextHashesByFile?: Record<string, Record<number, string>>;
   /** Ordered, self-contained Accept/Reject Undo history for this exact scope. */
   reviewActionHistory?: ReviewUndoAction[];
+  /** Durable forward branch created by Undo and cleared by a new review action. */
+  reviewRedoHistory?: ReviewRedoAction[];
   updatedAt: string;
 }
 
@@ -50,11 +57,22 @@ interface ReviewDecisionsDataV4 extends ReviewDecisionsData {
   lastMutationId?: string;
 }
 
+interface ReviewDecisionsDataV5 extends ReviewDecisionsData {
+  version: 5;
+  scopeKey: string;
+  scopeToken: string;
+  reviewActionHistory: ReviewUndoAction[];
+  reviewRedoHistory: ReviewRedoAction[];
+  revision: number;
+  lastMutationId?: string;
+}
+
 export interface LoadedReviewDecisions {
   hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
   hunkContextHashesByFile?: Record<string, Record<number, string>>;
   reviewActionHistory: ReviewUndoAction[];
+  reviewRedoHistory: ReviewRedoAction[];
   revision: number;
 }
 
@@ -70,12 +88,15 @@ export class ReviewDecisionStore {
     fileDecisions: Record<string, HunkDecision>;
     hunkContextHashesByFile?: Record<string, Record<number, string>>;
     reviewActionHistory?: ReviewUndoAction[];
+    reviewRedoHistory?: ReviewRedoAction[];
   }): void {
     if (
       !this.isDecisionRecord(data.hunkDecisions) ||
       !this.isDecisionRecord(data.fileDecisions) ||
       !this.isContextHashRecord(data.hunkContextHashesByFile) ||
-      !this.isReviewActionHistory(data.reviewActionHistory ?? [])
+      !this.isReviewActionHistory(data.reviewActionHistory ?? []) ||
+      !this.isReviewRedoHistory(data.reviewRedoHistory ?? []) ||
+      !this.hasDisjointReviewActionIds(data.reviewActionHistory ?? [], data.reviewRedoHistory ?? [])
     ) {
       throw new Error('Invalid review decisions payload');
     }
@@ -123,6 +144,7 @@ export class ReviewDecisionStore {
     | ReviewDecisionsDataV2
     | ReviewDecisionsDataV3
     | ReviewDecisionsDataV4
+    | ReviewDecisionsDataV5
     | null {
     if (!parsed || typeof parsed !== 'object') {
       return null;
@@ -133,11 +155,12 @@ export class ReviewDecisionStore {
       scopeKey?: unknown;
       scopeToken?: unknown;
       reviewActionHistory?: unknown;
+      reviewRedoHistory?: unknown;
       revision?: unknown;
       lastMutationId?: unknown;
     };
     const isExactScope =
-      (data.version === 2 || data.version === 3 || data.version === 4) &&
+      (data.version === 2 || data.version === 3 || data.version === 4 || data.version === 5) &&
       typeof data.scopeKey === 'string' &&
       typeof data.scopeToken === 'string';
 
@@ -149,9 +172,15 @@ export class ReviewDecisionStore {
       !this.isDecisionRecord(data.hunkDecisions) ||
       !this.isDecisionRecord(data.fileDecisions) ||
       !this.isContextHashRecord(data.hunkContextHashesByFile) ||
-      ((data.version === 3 || data.version === 4) &&
+      ((data.version === 3 || data.version === 4 || data.version === 5) &&
         !this.isReviewActionHistory(data.reviewActionHistory)) ||
-      (data.version === 4 &&
+      (data.version === 5 && !this.isReviewRedoHistory(data.reviewRedoHistory)) ||
+      (data.version === 5 &&
+        !this.hasDisjointReviewActionIds(
+          data.reviewActionHistory as ReviewUndoAction[],
+          data.reviewRedoHistory as ReviewRedoAction[]
+        )) ||
+      ((data.version === 4 || data.version === 5) &&
         (!Number.isSafeInteger(data.revision) ||
           (data.revision as number) < 1 ||
           (data.lastMutationId !== undefined &&
@@ -166,7 +195,8 @@ export class ReviewDecisionStore {
       | ReviewDecisionsData
       | ReviewDecisionsDataV2
       | ReviewDecisionsDataV3
-      | ReviewDecisionsDataV4;
+      | ReviewDecisionsDataV4
+      | ReviewDecisionsDataV5;
   }
 
   private isReviewActionHistory(value: unknown): value is ReviewUndoAction[] {
@@ -202,6 +232,34 @@ export class ReviewDecisionStore {
       }
       return false;
     });
+  }
+
+  private isReviewRedoHistory(value: unknown): value is ReviewRedoAction[] {
+    if (!Array.isArray(value) || value.length > MAX_STORED_REVIEW_ACTIONS) return false;
+    const ids = new Set<string>();
+    return value.every((entry) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return false;
+      const candidate = entry as Partial<ReviewRedoAction>;
+      if (
+        !candidate.action ||
+        !this.isReviewActionHistory([candidate.action]) ||
+        ids.has(candidate.action.id) ||
+        !this.isDecisionSnapshot(candidate.decisionSnapshot) ||
+        !this.isContextHashRecord(candidate.hunkContextHashesByFile)
+      ) {
+        return false;
+      }
+      ids.add(candidate.action.id);
+      return true;
+    });
+  }
+
+  private hasDisjointReviewActionIds(
+    undoHistory: readonly ReviewUndoAction[],
+    redoHistory: readonly ReviewRedoAction[]
+  ): boolean {
+    const undoIds = new Set(undoHistory.map((action) => action.id));
+    return redoHistory.every((entry) => !undoIds.has(entry.action.id));
   }
 
   private isDecisionSnapshot(value: unknown): boolean {
@@ -357,7 +415,8 @@ export class ReviewDecisionStore {
       | ReviewDecisionsData
       | ReviewDecisionsDataV2
       | ReviewDecisionsDataV3
-      | ReviewDecisionsDataV4,
+      | ReviewDecisionsDataV4
+      | ReviewDecisionsDataV5,
     scopeToken?: string
   ): InternalLoadedReviewDecisions | null {
     const hunkDecisions: Record<string, HunkDecision> =
@@ -376,16 +435,18 @@ export class ReviewDecisionStore {
     }
 
     const reviewActionHistory =
-      'version' in data && (data.version === 3 || data.version === 4)
+      'version' in data && (data.version === 3 || data.version === 4 || data.version === 5)
         ? data.reviewActionHistory
         : [];
+    const reviewRedoHistory = 'version' in data && data.version === 5 ? data.reviewRedoHistory : [];
     return {
       hunkDecisions,
       fileDecisions,
       hunkContextHashesByFile,
       reviewActionHistory,
-      revision: 'version' in data && data.version === 4 ? data.revision : 0,
-      ...('version' in data && data.version === 4 && data.lastMutationId
+      reviewRedoHistory,
+      revision: 'version' in data && (data.version === 4 || data.version === 5) ? data.revision : 0,
+      ...('version' in data && (data.version === 4 || data.version === 5) && data.lastMutationId
         ? { lastMutationId: data.lastMutationId }
         : {}),
     };
@@ -453,7 +514,7 @@ export class ReviewDecisionStore {
     }
     if (
       'version' in data &&
-      (data.version === 2 || data.version === 3 || data.version === 4) &&
+      (data.version === 2 || data.version === 3 || data.version === 4 || data.version === 5) &&
       data.scopeKey !== expectedScopeKey
     ) {
       throw new InvalidReviewDecisionDataError(`Mismatched review decision scope at ${filePath}`);
@@ -538,6 +599,7 @@ export class ReviewDecisionStore {
       fileDecisions: Record<string, HunkDecision>;
       hunkContextHashesByFile?: Record<string, Record<number, string>>;
       reviewActionHistory?: ReviewUndoAction[];
+      reviewRedoHistory?: ReviewRedoAction[];
       expectedRevision?: number;
       mutationId?: string;
     }
@@ -562,6 +624,7 @@ export class ReviewDecisionStore {
         fileDecisions: data.fileDecisions,
         hunkContextHashesByFile: data.hunkContextHashesByFile,
         reviewActionHistory: data.reviewActionHistory ?? [],
+        reviewRedoHistory: data.reviewRedoHistory ?? [],
       };
       if (data.expectedRevision !== undefined && data.expectedRevision !== currentRevision) {
         if (
@@ -573,6 +636,7 @@ export class ReviewDecisionStore {
               fileDecisions: current.fileDecisions,
               hunkContextHashesByFile: current.hunkContextHashesByFile,
               reviewActionHistory: current.reviewActionHistory,
+              reviewRedoHistory: current.reviewRedoHistory,
             },
             targetSnapshot
           )
@@ -582,8 +646,8 @@ export class ReviewDecisionStore {
         throw new Error('Review decisions changed; refusing stale state overwrite');
       }
       const revision = currentRevision + 1;
-      const payload: ReviewDecisionsDataV4 = {
-        version: 4,
+      const payload: ReviewDecisionsDataV5 = {
+        version: 5,
         scopeKey,
         scopeToken: data.scopeToken,
         ...targetSnapshot,
@@ -627,6 +691,7 @@ export class ReviewDecisionStore {
       fileDecisions: {},
       hunkContextHashesByFile: {},
       reviewActionHistory: [],
+      reviewRedoHistory: [],
       revision: 0,
     };
     const hunkDecisions = { ...current.hunkDecisions };
@@ -657,6 +722,7 @@ export class ReviewDecisionStore {
       fileDecisions,
       hunkContextHashesByFile,
       reviewActionHistory: current.reviewActionHistory,
+      reviewRedoHistory: current.reviewRedoHistory,
     });
   }
 

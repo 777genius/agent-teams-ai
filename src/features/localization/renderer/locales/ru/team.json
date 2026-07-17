@@ -497,6 +497,7 @@
       "actions": {
         "auto": "Auto",
         "undo": "Отменить",
+        "redo": "Повторить",
         "acceptAll": "Принять всё",
         "rejectAll": "Отклонить всё",
         "applying": "Применение...",
@@ -506,6 +507,7 @@
         "autoOn": "Auto-mark файлов как viewed при прокрутке до конца (ON)",
         "autoOff": "Auto-mark файлов как viewed при прокрутке до конца (OFF)",
         "undo": "Отменить последнюю review operation (Ctrl+Z)",
+        "redo": "Повторить отмененную review operation (Ctrl+Shift+Z)",
         "acceptAll": "Принять все изменения во всех файлах",
         "rejectAll": "Отклонить все безопасно отклоняемые изменения во всех файлах",
         "rejectAllDisabled": "У pending файлов нет безопасного original baseline для отклонения.",

@@ -4,6 +4,8 @@ import { create } from 'zustand';
 import { createChangeReviewSlice } from '../../../src/renderer/store/slices/changeReviewSlice';
 import { buildTaskChangePresenceKey } from '../../../src/renderer/utils/taskChangeRequest';
 
+import type { ReviewRedoAction } from '@shared/types';
+
 const hoisted = vi.hoisted(() => ({
   getTaskChanges: vi.fn(),
   getAgentChanges: vi.fn(),
@@ -1875,6 +1877,7 @@ describe('changeReviewSlice task changes', () => {
         fileDecisions: { '/repo/a.ts': 'rejected' },
         hunkContextHashesByFile: {},
         reviewActionHistory: [],
+        reviewRedoHistory: [],
       },
       decisions: [
         expect.objectContaining({
@@ -2235,7 +2238,65 @@ describe('changeReviewSlice task changes', () => {
       {},
       { '/repo/file.ts': {} },
       history,
-      expect.any(Number)
+      expect.any(Number),
+      []
+    );
+  });
+
+  it('hydrates and deep-clones the durable Redo branch before a queued save', async () => {
+    const store = createSliceStore();
+    const action = {
+      id: 'redo-action',
+      createdAt: '2026-07-17T12:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: '/repo/file.ts', originalIndex: 0 },
+    };
+    const redoHistory: ReviewRedoAction[] = [
+      {
+        action,
+        decisionSnapshot: {
+          hunkDecisions: { '/repo/file.ts:0': 'accepted' as const },
+          fileDecisions: {},
+        },
+        hunkContextHashesByFile: { '/repo/file.ts': { 0: 'hash' } },
+      },
+    ];
+    store.setState({ activeChangeSet: makeAgentChangeSet(), changeSetEpoch: 1 });
+    hoisted.loadDecisions.mockResolvedValueOnce({
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [],
+      reviewRedoHistory: redoHistory,
+      revision: 4,
+    });
+
+    await store.getState().loadDecisionsFromDisk('team-a', 'agent-alice', 'redo-scope');
+    expect(store.getState().reviewRedoHistory).toEqual(redoHistory);
+    store.getState().persistDecisions('team-a', 'agent-alice', 'redo-scope');
+    redoHistory[0]!.decisionSnapshot.hunkDecisions['/repo/file.ts:0'] = 'rejected';
+    redoHistory[0]!.hunkContextHashesByFile!['/repo/file.ts']![0] = 'changed';
+    await expect(
+      store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'redo-scope')
+    ).resolves.toBe(true);
+
+    expect(hoisted.saveDecisions).toHaveBeenLastCalledWith(
+      'team-a',
+      'agent-alice',
+      'redo-scope',
+      {},
+      {},
+      { '/repo/file.ts': {} },
+      [],
+      4,
+      [
+        expect.objectContaining({
+          decisionSnapshot: {
+            hunkDecisions: { '/repo/file.ts:0': 'accepted' },
+            fileDecisions: {},
+          },
+          hunkContextHashesByFile: { '/repo/file.ts': { 0: 'hash' } },
+        }),
+      ]
     );
   });
 
@@ -2412,7 +2473,8 @@ describe('changeReviewSlice task changes', () => {
       { '/repo/file.ts': 'accepted' },
       { '/repo/file.ts': {} },
       [],
-      expect.any(Number)
+      expect.any(Number),
+      []
     );
   });
 
@@ -2437,7 +2499,8 @@ describe('changeReviewSlice task changes', () => {
         {},
         { '/repo/file.ts': {} },
         [],
-        expect.any(Number)
+        expect.any(Number),
+        []
       );
     } finally {
       vi.useRealTimers();
@@ -2469,7 +2532,8 @@ describe('changeReviewSlice task changes', () => {
         { '/repo/file.ts': 'accepted' },
         { '/repo/file.ts': {} },
         [],
-        4
+        4,
+        []
       );
     } finally {
       vi.useRealTimers();
@@ -2552,7 +2616,8 @@ describe('changeReviewSlice task changes', () => {
         { '/repo/file.ts': 'rejected' },
         { '/repo/file.ts': {} },
         [],
-        expect.any(Number)
+        expect.any(Number),
+        []
       );
     } finally {
       vi.useRealTimers();

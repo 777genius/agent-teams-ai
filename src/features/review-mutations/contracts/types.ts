@@ -7,7 +7,14 @@ export const REVIEW_MUTATION_PHASES = [
 
 export type ReviewMutationPhase = (typeof REVIEW_MUTATION_PHASES)[number];
 
-export const REVIEW_MUTATION_KINDS = ['reject', 'restore', 'rename', 'bulk', 'undo'] as const;
+export const REVIEW_MUTATION_KINDS = [
+  'reject',
+  'restore',
+  'rename',
+  'bulk',
+  'undo',
+  'redo',
+] as const;
 
 export type ReviewMutationKind = (typeof REVIEW_MUTATION_KINDS)[number];
 

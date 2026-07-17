@@ -497,6 +497,7 @@
       "actions": {
         "auto": "Auto",
         "undo": "Undo",
+        "redo": "Redo",
         "acceptAll": "Accept All",
         "rejectAll": "Reject All",
         "applying": "Applying...",
@@ -506,6 +507,7 @@
         "autoOn": "Auto-mark files as viewed when scrolled to end (ON)",
         "autoOff": "Auto-mark files as viewed when scrolled to end (OFF)",
         "undo": "Undo last review operation (Ctrl+Z)",
+        "redo": "Redo last undone review operation (Ctrl+Shift+Z)",
         "acceptAll": "Accept all changes across all files",
         "rejectAll": "Reject all safely rejectable changes across all files",
         "rejectAllDisabled": "No pending files have a safe original baseline to reject.",

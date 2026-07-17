@@ -321,6 +321,7 @@ import type {
   ReplaceMembersRequest,
   RetryFailedOpenCodeSecondaryLanesResult,
   ReviewFileScope,
+  ReviewRedoAction,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
   Schedule,
@@ -1619,6 +1620,7 @@ const electronAPI: ElectronAPI = {
         fileDecisions: Record<string, HunkDecision>;
         hunkContextHashesByFile?: Record<string, Record<number, string>>;
         reviewActionHistory: ReviewUndoAction[];
+        reviewRedoHistory: ReviewRedoAction[];
         revision: number;
       } | null>(REVIEW_LOAD_DECISIONS, teamName, scopeKey, scopeToken ?? null);
     },
@@ -1630,7 +1632,8 @@ const electronAPI: ElectronAPI = {
       fileDecisions: Record<string, HunkDecision>,
       hunkContextHashesByFile?: Record<string, Record<number, string>>,
       reviewActionHistory?: ReviewUndoAction[],
-      expectedRevision?: number
+      expectedRevision?: number,
+      reviewRedoHistory?: ReviewRedoAction[]
     ) => {
       return invokeIpcWithResult<{ revision: number }>(
         REVIEW_SAVE_DECISIONS,
@@ -1641,7 +1644,8 @@ const electronAPI: ElectronAPI = {
         fileDecisions,
         hunkContextHashesByFile ?? null,
         reviewActionHistory ?? [],
-        expectedRevision
+        expectedRevision,
+        reviewRedoHistory ?? []
       );
     },
     clearDecisions: async (

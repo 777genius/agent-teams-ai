@@ -19,12 +19,17 @@ interface AuditState {
   decisionAttempts: number;
 }
 
-const [mode, claudeBasePath, filePath, auditPath, crashPointValue] = process.argv.slice(2);
+const [mode, claudeBasePath, filePath, auditPath, crashPointValue, operationShapeValue] =
+  process.argv.slice(2);
 if ((mode !== 'run' && mode !== 'recover') || !claudeBasePath || !filePath || !auditPath) {
   throw new Error('Invalid review mutation crash worker arguments');
 }
 
 const crashPoint = (crashPointValue ?? 'none') as CrashPoint;
+const operationShape =
+  operationShapeValue === 'decision-only-redo' || operationShapeValue === 'disk-redo'
+    ? operationShapeValue
+    : 'disk';
 const teamName = 'review-crash-test';
 const persistenceScope = {
   scopeKey: 'task-task-1',
@@ -32,11 +37,35 @@ const persistenceScope = {
 };
 const beforeContent = 'before\n';
 const afterContent = 'after\n';
+const diskRedoAction = {
+  id: 'fixture-disk-action',
+  createdAt: '2026-07-17T12:00:00.000Z',
+  kind: 'disk' as const,
+  action: {
+    snapshot: { filePath, beforeContent, afterContent },
+    originalIndex: 0,
+  },
+};
 const persistedState = {
-  hunkDecisions: { 'fixture-change:0': 'rejected' as const },
+  hunkDecisions: {
+    'fixture-change:0': operationShape === 'decision-only-redo' ? 'accepted' : 'rejected',
+  } as const,
   fileDecisions: {},
   hunkContextHashesByFile: {},
-  reviewActionHistory: [],
+  reviewActionHistory:
+    operationShape === 'disk-redo'
+      ? [diskRedoAction]
+      : operationShape === 'decision-only-redo'
+        ? [
+            {
+              id: 'fixture-hunk-action',
+              createdAt: '2026-07-17T12:00:00.000Z',
+              kind: 'hunk' as const,
+              action: { filePath, originalIndex: 0 },
+            },
+          ]
+        : [],
+  reviewRedoHistory: [],
 };
 
 setClaudeBasePathOverride(claudeBasePath);
@@ -74,6 +103,7 @@ async function applyDisk(
   record: ReviewMutationJournalRecord
 ): Promise<ReviewMutationJournalRecord> {
   const step = record.diskSteps?.[0];
+  if (!step && operationShape === 'decision-only-redo') return record;
   if (!step || step.type !== 'write') throw new Error('Crash fixture disk step is missing');
   if (step.status === 'applied') return record;
   await updateAudit((current) => ({ ...current, diskAttempts: current.diskAttempts + 1 }));
@@ -113,26 +143,49 @@ const coordinator = new ReviewMutationCoordinator(journal, {
 });
 
 if (mode === 'run') {
+  if (operationShape === 'disk-redo') {
+    await decisions.save(teamName, persistenceScope.scopeKey, {
+      scopeToken: persistenceScope.scopeToken,
+      hunkDecisions: {},
+      fileDecisions: {},
+      hunkContextHashesByFile: {},
+      reviewActionHistory: [],
+      reviewRedoHistory: [
+        {
+          action: diskRedoAction,
+          decisionSnapshot: {
+            hunkDecisions: persistedState.hunkDecisions,
+            fileDecisions: {},
+          },
+          hunkContextHashesByFile: {},
+        },
+      ],
+      expectedRevision: 0,
+    });
+  }
   await coordinator.execute(
     {
       teamName,
       persistenceScope,
       reviewScope: { teamName, taskId: 'task-1' },
-      kind: 'undo',
+      kind: operationShape === 'disk' ? 'undo' : 'redo',
       decisions: [],
       fileContents: [],
-      diskSteps: [
-        {
-          id: 'fixture-step',
-          type: 'write',
-          filePath,
-          expectedContent: beforeContent,
-          content: afterContent,
-          status: 'pending',
-        },
-      ],
+      diskSteps:
+        operationShape === 'decision-only-redo'
+          ? []
+          : [
+              {
+                id: 'fixture-step',
+                type: 'write',
+                filePath,
+                expectedContent: beforeContent,
+                content: afterContent,
+                status: 'pending',
+              },
+            ],
       persistedState,
-      expectedDecisionRevision: 0,
+      expectedDecisionRevision: operationShape === 'disk-redo' ? 1 : 0,
     },
     { applyDisk, commitDecisions }
   );

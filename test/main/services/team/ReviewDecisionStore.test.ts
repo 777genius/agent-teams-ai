@@ -42,6 +42,7 @@ describe('ReviewDecisionStore', () => {
       fileDecisions: { 'file-a': 'rejected' },
       hunkContextHashesByFile: undefined,
       reviewActionHistory: [],
+      reviewRedoHistory: [],
       revision: 1,
     });
     await expect(store.load('demo', 'task-123', 'task:123:req:b:src:two')).resolves.toEqual({
@@ -49,6 +50,7 @@ describe('ReviewDecisionStore', () => {
       fileDecisions: { 'file-b': 'accepted' },
       hunkContextHashesByFile: undefined,
       reviewActionHistory: [],
+      reviewRedoHistory: [],
       revision: 1,
     });
   });
@@ -141,6 +143,7 @@ describe('ReviewDecisionStore', () => {
       fileDecisions: { 'file-b': 'accepted' },
       hunkContextHashesByFile: undefined,
       reviewActionHistory: [],
+      reviewRedoHistory: [],
       revision: 1,
     });
   });
@@ -166,11 +169,12 @@ describe('ReviewDecisionStore', () => {
       fileDecisions: { 'file-a': 'rejected' },
       hunkContextHashesByFile: undefined,
       reviewActionHistory: [],
+      reviewRedoHistory: [],
       revision: 0,
     });
   });
 
-  it('writes revisioned v4 payloads under the scoped directory', async () => {
+  it('writes revisioned v5 payloads under the scoped directory', async () => {
     const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
     const store = new ReviewDecisionStore();
 
@@ -192,7 +196,7 @@ describe('ReviewDecisionStore', () => {
 
     const payload: unknown = JSON.parse(await readFile(path.join(scopeDir, entries[0]!), 'utf8'));
     expect(payload).toMatchObject({
-      version: 4,
+      version: 5,
       scopeKey: 'task-123',
       scopeToken: 'task:123:req:a:src:one',
       revision: 1,
@@ -325,6 +329,7 @@ describe('ReviewDecisionStore', () => {
           action: { filePath: '/repo/stable.ts', originalIndex: 0 },
         },
       ],
+      reviewRedoHistory: [],
       revision: 2,
     });
   });
@@ -351,6 +356,88 @@ describe('ReviewDecisionStore', () => {
     const restored = await store.load('demo', 'task-123', 'task:123:req:many:src:one');
     expect(restored?.reviewActionHistory).toEqual(reviewActionHistory);
     expect(restored?.reviewActionHistory).toHaveLength(100);
+  });
+
+  it('round-trips the durable Redo branch in a v5 snapshot', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const action = {
+      id: 'redo-hunk',
+      createdAt: '2026-07-17T12:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: '/repo/file.ts', originalIndex: 0 },
+    };
+    const reviewRedoHistory = [
+      {
+        action,
+        decisionSnapshot: {
+          hunkDecisions: { 'file:0': 'accepted' as const },
+          fileDecisions: {},
+        },
+        hunkContextHashesByFile: { file: { 0: 'hash' } },
+      },
+    ];
+
+    await store.save('demo', 'task-123', {
+      scopeToken: 'task:123:req:redo:src:one',
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [],
+      reviewRedoHistory,
+    });
+
+    await expect(
+      store.load('demo', 'task-123', 'task:123:req:redo:src:one')
+    ).resolves.toMatchObject({
+      reviewActionHistory: [],
+      reviewRedoHistory,
+      revision: 1,
+    });
+  });
+
+  it('migrates a v4 snapshot with an empty Redo branch on the next CAS write', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:v4:src:one';
+    const scopeDir = path.join(
+      teamsBasePath,
+      'demo',
+      'review-decisions',
+      'v2',
+      encodeURIComponent('task-123')
+    );
+    await mkdir(scopeDir, { recursive: true });
+    const { createHash } = await import('crypto');
+    const scopeHash = createHash('sha256').update(scopeToken).digest('hex');
+    await writeFile(
+      path.join(scopeDir, `${scopeHash}.json`),
+      JSON.stringify({
+        version: 4,
+        scopeKey: 'task-123',
+        scopeToken,
+        hunkDecisions: { 'file:0': 'accepted' },
+        fileDecisions: {},
+        reviewActionHistory: [],
+        revision: 7,
+        updatedAt: '2026-07-17T00:00:00.000Z',
+      }),
+      'utf8'
+    );
+
+    await expect(store.load('demo', 'task-123', scopeToken)).resolves.toMatchObject({
+      reviewRedoHistory: [],
+      revision: 7,
+    });
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken,
+        hunkDecisions: { 'file:0': 'accepted' },
+        fileDecisions: {},
+        reviewActionHistory: [],
+        reviewRedoHistory: [],
+        expectedRevision: 7,
+      })
+    ).resolves.toBe(8);
   });
 
   it('loads an existing v2 exact-scope payload with an empty action history', async () => {
@@ -385,6 +472,7 @@ describe('ReviewDecisionStore', () => {
       fileDecisions: {},
       hunkContextHashesByFile: undefined,
       reviewActionHistory: [],
+      reviewRedoHistory: [],
       revision: 0,
     });
   });
@@ -410,6 +498,21 @@ describe('ReviewDecisionStore', () => {
     await expect(
       store.load('demo', 'task-123', 'task:123:req:invalid:src:one')
     ).resolves.toBeNull();
+
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken: 'task:123:req:invalid:src:cross-branch',
+        hunkDecisions: {},
+        fileDecisions: {},
+        reviewActionHistory: [duplicate],
+        reviewRedoHistory: [
+          {
+            action: duplicate,
+            decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
+          },
+        ],
+      })
+    ).rejects.toThrow('Invalid review decisions payload');
   });
 });
 

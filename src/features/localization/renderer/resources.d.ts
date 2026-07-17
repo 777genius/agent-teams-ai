@@ -5626,6 +5626,7 @@ export default interface Resources {
           applyRejections: 'Apply Rejections';
           applying: 'Applying...';
           auto: 'Auto';
+          redo: 'Redo';
           rejectAll: 'Reject All';
           undo: 'Undo';
         };
@@ -5663,6 +5664,7 @@ export default interface Resources {
           autoOn: 'Auto-mark files as viewed when scrolled to end (ON)';
           rejectAll: 'Reject all safely rejectable changes across all files';
           rejectAllDisabled: 'No pending files have a safe original baseline to reject.';
+          redo: 'Redo last undone review operation (Ctrl+Shift+Z)';
           undo: 'Undo last review operation (Ctrl+Z)';
         };
       };

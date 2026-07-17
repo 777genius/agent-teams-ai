@@ -131,8 +131,13 @@ export class ReviewMutationJournalStore {
     }
     const hasDecisionBatch = input.decisions.length > 0;
     const hasDirectSteps = (input.diskSteps?.length ?? 0) > 0;
+    const isDecisionOnlyHistoryMutation =
+      !hasDecisionBatch &&
+      !hasDirectSteps &&
+      (input.kind === 'undo' || input.kind === 'redo') &&
+      !!input.persistedState;
     if (
-      hasDecisionBatch === hasDirectSteps ||
+      (!isDecisionOnlyHistoryMutation && hasDecisionBatch === hasDirectSteps) ||
       (hasDecisionBatch &&
         (input.decisions.length !== input.fileContents.length ||
           input.decisions.some(
@@ -347,7 +352,8 @@ export class ReviewMutationJournalStore {
         record.kind !== 'restore' &&
         record.kind !== 'rename' &&
         record.kind !== 'bulk' &&
-        record.kind !== 'undo') ||
+        record.kind !== 'undo' &&
+        record.kind !== 'redo') ||
       record.teamName !== expectedTeamName ||
       recordPersistenceScope?.scopeKey !== expectedScope.scopeKey ||
       recordPersistenceScope?.scopeToken !== expectedScope.scopeToken ||
@@ -377,6 +383,13 @@ export class ReviewMutationJournalStore {
     const diskSteps = record.diskSteps ?? [];
     const hasDecisionBatch = decisions.length > 0;
     const hasDirectSteps = diskSteps.length > 0;
+    if (!hasDecisionBatch && !hasDirectSteps) {
+      return (
+        (record.kind === 'undo' || record.kind === 'redo') &&
+        !!record.persistedState &&
+        fileContents.length === 0
+      );
+    }
     if (hasDecisionBatch === hasDirectSteps) return false;
     if (hasDecisionBatch) {
       const statuses = record.decisionStatuses;

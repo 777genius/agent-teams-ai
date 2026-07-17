@@ -47,6 +47,7 @@ function makeInput() {
       hunkDecisions: { 'change-key:0': 'rejected' as const },
       fileDecisions: {},
       reviewActionHistory: [],
+      reviewRedoHistory: [],
     },
   };
 }
@@ -77,6 +78,42 @@ describe('ReviewMutationJournalStore', () => {
     await expect(store.list('demo', persistenceScope)).resolves.toEqual([complete]);
     await store.remove(complete);
     await expect(store.list('demo', persistenceScope)).resolves.toEqual([]);
+  });
+
+  it('persists a decision-only Redo record with no artificial disk step', async () => {
+    const { ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    const store = new ReviewMutationJournalStore();
+    const action = {
+      id: 'redo-hunk',
+      createdAt: '2026-07-17T12:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: '/repo/file.ts', originalIndex: 0 },
+    };
+    const prepared = await store.prepare({
+      teamName: 'demo',
+      persistenceScope,
+      reviewScope: { teamName: 'demo', taskId: 'task-123' },
+      kind: 'redo',
+      decisions: [],
+      fileContents: [],
+      diskSteps: [],
+      persistedState: {
+        hunkDecisions: { 'file:0': 'accepted' },
+        fileDecisions: {},
+        reviewActionHistory: [action],
+        reviewRedoHistory: [],
+      },
+      expectedDecisionRevision: 4,
+    });
+
+    expect(prepared).toMatchObject({
+      kind: 'redo',
+      phase: 'prepared',
+      diskSteps: [],
+      expectedDecisionRevision: 4,
+    });
+    await expect(store.list('demo', persistenceScope)).resolves.toEqual([prepared]);
   });
 
   it('keeps failed mutations visible until explicit scoped discard', async () => {

@@ -3,7 +3,7 @@ import React from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
-import { Check, Eye, EyeOff, GitMerge, Loader2, Pencil, Undo2, X } from 'lucide-react';
+import { Check, Eye, EyeOff, GitMerge, Loader2, Pencil, Redo2, Undo2, X } from 'lucide-react';
 
 import type { ChangeStats } from '@shared/types';
 
@@ -24,6 +24,8 @@ interface ReviewToolbarProps {
   editedCount?: number;
   canUndo?: boolean;
   onUndo?: () => void;
+  canRedo?: boolean;
+  onRedo?: () => void;
 }
 
 export const ReviewToolbar = ({
@@ -43,6 +45,8 @@ export const ReviewToolbar = ({
   editedCount = 0,
   canUndo = false,
   onUndo,
+  canRedo = false,
+  onRedo,
 }: ReviewToolbarProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
   const hasRejected = stats.rejected > 0;
@@ -163,6 +167,22 @@ export const ReviewToolbar = ({
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom">{t('review.toolbar.tooltips.undo')}</TooltipContent>
+        </Tooltip>
+      )}
+
+      {canRedo && onRedo && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onRedo}
+              disabled={applying}
+              className="flex items-center gap-1 rounded bg-zinc-500/15 px-2.5 py-1 text-xs text-zinc-300 transition-colors hover:bg-zinc-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Redo2 className="size-3" />
+              {t('review.toolbar.actions.redo')}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{t('review.toolbar.tooltips.redo')}</TooltipContent>
         </Tooltip>
       )}
 

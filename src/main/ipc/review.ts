@@ -52,6 +52,7 @@ import { createLogger } from '@shared/utils/logger';
 import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { isDeepStrictEqual } from 'util';
 
 import type {
   ReviewDraftHistoryEntry,
@@ -77,6 +78,7 @@ import type {
   ReviewDecisionPersistenceScope,
   ReviewFileScope,
   ReviewPersistedStateSnapshot,
+  ReviewRedoAction,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
   SnippetDiff,
@@ -1462,6 +1464,86 @@ async function assertCurrentReviewDecisionRevision(
   }
 }
 
+function toDurableReviewValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map((entry) => toDurableReviewValue(entry));
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([, entry]) => entry !== undefined)
+      .map(([key, entry]) => [key, toDurableReviewValue(entry)])
+  );
+}
+
+function isDurableReviewEqual(left: unknown, right: unknown): boolean {
+  return isDeepStrictEqual(toDurableReviewValue(left), toDurableReviewValue(right));
+}
+
+function assertExactReviewHistoryTransition(
+  request: ExecuteReviewMutationRequest,
+  current: Awaited<ReturnType<ReviewDecisionStore['load']>>
+): void {
+  if (request.kind !== 'undo' && request.kind !== 'redo') return;
+  const next = request.persistedState;
+  if (!Array.isArray(next.reviewActionHistory) || !Array.isArray(next.reviewRedoHistory)) {
+    throw new Error('Review history transition is incomplete');
+  }
+  if (!current) {
+    throw new Error(
+      `Review history changed; refusing stale ${request.kind === 'undo' ? 'Undo' : 'Redo'}`
+    );
+  }
+
+  if (request.kind === 'undo') {
+    const action = current.reviewActionHistory.at(-1);
+    if (!request.expectedTopActionId) {
+      throw new Error('Review Undo requires the expected durable action id');
+    }
+    if (action?.id !== request.expectedTopActionId) {
+      throw new Error('Review history changed; refusing stale Undo');
+    }
+    const redoEntry = next.reviewRedoHistory.at(-1);
+    const transitionMatches =
+      isDurableReviewEqual(next.reviewActionHistory, current.reviewActionHistory.slice(0, -1)) &&
+      isDurableReviewEqual(next.reviewRedoHistory.slice(0, -1), current.reviewRedoHistory) &&
+      isDurableReviewEqual(redoEntry?.action, action) &&
+      isDurableReviewEqual(redoEntry?.decisionSnapshot, {
+        hunkDecisions: current.hunkDecisions,
+        fileDecisions: current.fileDecisions,
+      }) &&
+      isDurableReviewEqual(
+        redoEntry?.hunkContextHashesByFile ?? {},
+        current.hunkContextHashesByFile ?? {}
+      );
+    if (!transitionMatches) {
+      throw new Error('Invalid durable Undo history transition');
+    }
+    return;
+  }
+
+  const redoEntry = current.reviewRedoHistory.at(-1);
+  if (!request.expectedTopRedoActionId) {
+    throw new Error('Review Redo requires the expected durable action id');
+  }
+  if (redoEntry?.action.id !== request.expectedTopRedoActionId) {
+    throw new Error('Review history changed; refusing stale Redo');
+  }
+  const transitionMatches =
+    isDurableReviewEqual(next.reviewRedoHistory, current.reviewRedoHistory.slice(0, -1)) &&
+    isDurableReviewEqual(next.reviewActionHistory, [
+      ...current.reviewActionHistory,
+      redoEntry.action,
+    ]) &&
+    isDurableReviewEqual(next.hunkDecisions, redoEntry.decisionSnapshot.hunkDecisions) &&
+    isDurableReviewEqual(next.fileDecisions, redoEntry.decisionSnapshot.fileDecisions) &&
+    isDurableReviewEqual(
+      next.hunkContextHashesByFile ?? {},
+      redoEntry.hunkContextHashesByFile ?? current.hunkContextHashesByFile ?? {}
+    );
+  if (!transitionMatches) {
+    throw new Error('Invalid durable Redo history transition');
+  }
+}
+
 async function applyDecisionsWithDurableJournal(
   scope: ReviewFileScope,
   persistenceScope: ReviewDecisionPersistenceScope,
@@ -1587,7 +1669,7 @@ async function applyDirectReviewMutationDisk(
 ): Promise<ReviewMutationJournalRecord> {
   let current = record;
   const steps = current.diskSteps;
-  if (!steps?.length) throw new Error('Review mutation disk plan is unavailable');
+  if (!steps?.length) return current;
   for (let index = 0; index < steps.length; index++) {
     const step = current.diskSteps?.[index];
     if (!step || step.status === 'applied') continue;
@@ -1641,10 +1723,14 @@ async function handleExecuteReviewMutation(
     return { success: false, error: 'Invalid review mutation request' };
   }
   const request = requestValue as ExecuteReviewMutationRequest;
+  const isHistoryMutation = request.kind === 'undo' || request.kind === 'redo';
   if (
-    (request.kind !== 'restore' && request.kind !== 'rename' && request.kind !== 'undo') ||
+    (request.kind !== 'restore' &&
+      request.kind !== 'rename' &&
+      request.kind !== 'undo' &&
+      request.kind !== 'redo') ||
     !Array.isArray(request.diskSteps) ||
-    request.diskSteps.length === 0 ||
+    (!isHistoryMutation && request.diskSteps.length === 0) ||
     request.diskSteps.length > MAX_REVIEW_MUTATION_STEPS
   ) {
     return { success: false, error: 'Invalid review mutation request' };
@@ -1670,22 +1756,15 @@ async function handleExecuteReviewMutation(
         persistenceScope,
         request.expectedDecisionRevision
       );
+      const current = await reviewDecisionStore.load(
+        scope.teamName,
+        persistenceScope.scopeKey,
+        persistenceScope.scopeToken
+      );
+      assertExactReviewHistoryTransition(request, current);
       // Recovery can change disk state and invalidate authoritative review content.
       // Resolve this operation only after every older WAL record is complete.
       const diskSteps = await normalizeDirectReviewMutationSteps(request, scope, authorization);
-      if (request.kind === 'undo') {
-        if (!request.expectedTopActionId) {
-          throw new Error('Review Undo requires the expected durable action id');
-        }
-        const current = await reviewDecisionStore.load(
-          scope.teamName,
-          persistenceScope.scopeKey,
-          persistenceScope.scopeToken
-        );
-        if (current?.reviewActionHistory.at(-1)?.id !== request.expectedTopActionId) {
-          throw new Error('Review history changed; refusing stale Undo');
-        }
-      }
       await reviewMutationCoordinator.execute(
         {
           teamName: scope.teamName,
@@ -1938,10 +2017,26 @@ async function handleGetGitFileLog(
 function assertRecoverableJournalContent(
   record: Awaited<ReturnType<ReviewMutationJournalStore['list']>>[number]
 ): void {
+  if (
+    record.persistedState &&
+    (!Number.isSafeInteger(record.expectedDecisionRevision) ||
+      (record.expectedDecisionRevision as number) < 0)
+  ) {
+    throw new Error('Review mutation recovery revision is unavailable');
+  }
   if (record.diskSteps?.length) {
     if (!record.persistedState) {
       throw new Error('Review mutation recovery state is unavailable');
     }
+    reviewDecisionStore.assertValidSnapshot(record.persistedState);
+    return;
+  }
+  if (
+    (record.kind === 'undo' || record.kind === 'redo') &&
+    record.decisions.length === 0 &&
+    record.fileContents.length === 0 &&
+    record.persistedState
+  ) {
     reviewDecisionStore.assertValidSnapshot(record.persistedState);
     return;
   }
@@ -1987,6 +2082,17 @@ async function recoverReviewMutationJournal(
       throw new Error('Review mutation recovery scope mismatch');
     }
     parseDecisionPersistenceScope(persistenceScope, scope);
+    if (
+      !record.diskSteps?.length &&
+      record.decisions.length === 0 &&
+      (record.kind === 'undo' || record.kind === 'redo')
+    ) {
+      await reviewMutationCoordinator.resume(record, {
+        applyDisk: applyDirectReviewMutationDisk,
+        commitDecisions: commitReviewMutationDecisions,
+      });
+      continue;
+    }
     if (record.diskSteps?.length) {
       const { authorization } = await resolveReviewPathAuthorization(scope, {
         requireIdentity: true,
@@ -2050,6 +2156,7 @@ async function handleLoadDecisions(
     fileDecisions: Record<string, HunkDecision>;
     hunkContextHashesByFile?: Record<string, Record<number, string>>;
     reviewActionHistory: ReviewUndoAction[];
+    reviewRedoHistory: ReviewRedoAction[];
     revision: number;
   } | null>
 > {
@@ -2074,7 +2181,8 @@ async function handleSaveDecisions(
   fileDecisions: Record<string, HunkDecision>,
   hunkContextHashesByFile: Record<string, Record<number, string>> | null = null,
   reviewActionHistory: ReviewUndoAction[] = [],
-  expectedRevision: number | undefined = undefined
+  expectedRevision: number | undefined = undefined,
+  reviewRedoHistory: ReviewRedoAction[] = []
 ): Promise<IpcResult<{ revision: number }>> {
   return wrapReviewHandler('saveDecisions', async () => {
     if (!Number.isSafeInteger(expectedRevision) || (expectedRevision as number) < 0) {
@@ -2089,6 +2197,7 @@ async function handleSaveDecisions(
         fileDecisions,
         hunkContextHashesByFile: hunkContextHashesByFile ?? undefined,
         reviewActionHistory,
+        reviewRedoHistory,
         expectedRevision: expectedRevision as number,
       });
       return { revision };
@@ -2126,6 +2235,7 @@ async function handleClearDecisions(
         fileDecisions: {},
         hunkContextHashesByFile: {},
         reviewActionHistory: [],
+        reviewRedoHistory: [],
         expectedRevision,
       });
       return { revision };

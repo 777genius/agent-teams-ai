@@ -66,6 +66,7 @@ import type {
   ReviewDecisionPersistenceScope,
   ReviewFileScope,
   ReviewPersistedStateSnapshot,
+  ReviewRedoAction,
   ReviewUndoAction,
   TaskChangePresenceState,
   TaskChangeSet,
@@ -109,6 +110,7 @@ function buildReviewPersistedStateSnapshot(
     fileDecisions: Record<string, HunkDecision>;
     hunkContextHashesByFile: Record<string, Record<number, string>>;
     reviewActionHistory: ReviewUndoAction[];
+    reviewRedoHistory: ReviewRedoAction[];
   },
   decisions: readonly FileReviewDecision[]
 ): ReviewPersistedStateSnapshot {
@@ -123,6 +125,7 @@ function buildReviewPersistedStateSnapshot(
     fileDecisions: { ...state.fileDecisions },
     hunkContextHashesByFile,
     reviewActionHistory: [...state.reviewActionHistory],
+    reviewRedoHistory: structuredClone(state.reviewRedoHistory),
   };
 }
 
@@ -292,6 +295,8 @@ export interface ChangeReviewSlice {
   reviewUndoStack: DecisionSnapshot[];
   /** Durable, ordered and self-contained Accept/Reject Undo history. */
   reviewActionHistory: ReviewUndoAction[];
+  /** Durable Redo branch. Cleared by the next successful review action. */
+  reviewRedoHistory: ReviewRedoAction[];
   /** filePath -> (hunkIndex -> contextHash), persisted for robust replay */
   hunkContextHashesByFile: Record<string, Record<number, string>>;
   fileContents: Record<string, FileChangeWithContent>;
@@ -376,6 +381,7 @@ export interface ChangeReviewSlice {
   setFileDecision: (filePath: string, decision: HunkDecision) => void;
   setFileChunkCount: (filePath: string, count: number) => void;
   setReviewActionHistory: (history: ReviewUndoAction[]) => void;
+  setReviewRedoHistory: (history: ReviewRedoAction[]) => void;
   pushReviewUndoSnapshot: () => void;
   undoBulkReview: () => boolean;
   /** Accept only still-pending hunks. Returns false when the file has nothing pending. */
@@ -589,6 +595,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       fileChunkCounts: {},
       reviewUndoStack: [],
       reviewActionHistory: [],
+      reviewRedoHistory: [],
       hunkContextHashesByFile: {},
       applyError: null,
       applying: false,
@@ -617,6 +624,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       fileChunkCounts: {},
       reviewUndoStack: [],
       reviewActionHistory: [],
+      reviewRedoHistory: [],
       hunkContextHashesByFile: {},
       fileContents: {},
       fileContentsLoading: {},
@@ -682,6 +690,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     fileChunkCounts: {},
     reviewUndoStack: [],
     reviewActionHistory: [],
+    reviewRedoHistory: [],
     hunkContextHashesByFile: {},
     fileContents: {},
     fileContentsLoading: {},
@@ -796,6 +805,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         fileChunkCounts: {},
         reviewUndoStack: [],
         reviewActionHistory: [],
+        reviewRedoHistory: [],
         hunkContextHashesByFile: {},
         fileContents: {},
         fileContentsLoading: {},
@@ -826,6 +836,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         fileChunkCounts: {},
         reviewUndoStack: [],
         reviewActionHistory: [],
+        reviewRedoHistory: [],
         hunkContextHashesByFile: {},
         fileContents: {},
         fileContentsLoading: {},
@@ -856,6 +867,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         fileChunkCounts: {},
         reviewUndoStack: [],
         reviewActionHistory: [],
+        reviewRedoHistory: [],
         hunkContextHashesByFile: {},
         fileContents: {},
         fileContentsLoading: {},
@@ -930,6 +942,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           fileDecisions: normalized.fileDecisions,
           hunkContextHashesByFile: normalized.hunkContextHashesByFile,
           reviewActionHistory: data?.reviewActionHistory ?? [],
+          reviewRedoHistory: data?.reviewRedoHistory ?? [],
           decisionHydrationScopeKey: hydrationScopeKey,
           decisionHydrationStatus: 'loaded',
           decisionRevision: data?.revision ?? 0,
@@ -969,6 +982,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         fileDecisions,
         hunkContextHashesByFile,
         reviewActionHistory,
+        reviewRedoHistory,
         activeChangeSet,
         fileContents,
         fileChunkCounts,
@@ -1003,6 +1017,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         Object.entries(mergedHashes).map(([filePath, hashes]) => [filePath, { ...hashes }])
       );
       const persistedReviewActionHistory = structuredClone(reviewActionHistory);
+      const persistedReviewRedoHistory = structuredClone(reviewRedoHistory);
       const write = async (): Promise<void> => {
         const expectedRevision = decisionRevisionByScope.get(scopeStorageKey) ?? 0;
         const saved = await api.review.saveDecisions(
@@ -1013,7 +1028,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           persistedFileDecisions,
           persistedHashes,
           persistedReviewActionHistory,
-          expectedRevision
+          expectedRevision,
+          persistedReviewRedoHistory
         );
         decisionRevisionByScope.set(scopeStorageKey, saved.revision);
         const latest = get();
@@ -1175,6 +1191,10 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
 
     setReviewActionHistory: (history: ReviewUndoAction[]) => {
       set({ reviewActionHistory: history });
+    },
+
+    setReviewRedoHistory: (history: ReviewRedoAction[]) => {
+      set({ reviewRedoHistory: history });
     },
 
     pushReviewUndoSnapshot: () => {

@@ -23,6 +23,8 @@ interface RecoverySnapshot {
   fileContent: string;
   decisions: {
     hunkDecisions: Record<string, string>;
+    reviewActionHistory: { id: string }[];
+    reviewRedoHistory: unknown[];
     revision: number;
   };
   pendingRecords: number;
@@ -42,12 +44,13 @@ async function runWorker(
   claudeBasePath: string,
   filePath: string,
   auditPath: string,
-  crashPoint: CrashPoint | 'none'
+  crashPoint: CrashPoint | 'none',
+  operationShape: 'disk' | 'disk-redo' | 'decision-only-redo' = 'disk'
 ): Promise<WorkerResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(
       process.execPath,
-      [tsxPath, workerPath, mode, claudeBasePath, filePath, auditPath, crashPoint],
+      [tsxPath, workerPath, mode, claudeBasePath, filePath, auditPath, crashPoint, operationShape],
       {
         cwd: process.cwd(),
         env: { ...process.env, NODE_ENV: 'test' },
@@ -110,6 +113,119 @@ describe('review mutation crash recovery process E2E', () => {
         audit: {
           diskWrites: 1,
           diskAttempts: crashPoint === 'after_disk_effect' ? 2 : 1,
+          decisionAttempts: crashPoint === 'after_decision_effect' ? 2 : 1,
+        },
+      });
+    },
+    30_000
+  );
+
+  it.each([
+    'prepared',
+    'after_disk_effect',
+    'disk_applied',
+    'after_decision_effect',
+    'decisions_committed',
+    'complete',
+  ] as const)(
+    'recovers disk Redo and both history branches after SIGKILL at %s',
+    async (crashPoint) => {
+      const root = await mkdtemp(path.join(tmpdir(), `review-disk-redo-crash-${crashPoint}-`));
+      temporaryRoots.push(root);
+      const claudeBasePath = path.join(root, 'claude-config');
+      const projectPath = path.join(root, 'sandbox-project');
+      const filePath = path.join(projectPath, 'fixture.ts');
+      const auditPath = path.join(root, 'audit.json');
+      await mkdir(projectPath, { recursive: true });
+      await writeFile(filePath, 'before\n', 'utf8');
+
+      const crashed = await runWorker(
+        'run',
+        claudeBasePath,
+        filePath,
+        auditPath,
+        crashPoint,
+        'disk-redo'
+      );
+      expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+
+      const recovered = await runWorker(
+        'recover',
+        claudeBasePath,
+        filePath,
+        auditPath,
+        'none',
+        'disk-redo'
+      );
+      expect(recovered.code, recovered.stderr).toBe(0);
+      const snapshot = JSON.parse(recovered.stdout) as RecoverySnapshot;
+      expect(snapshot).toMatchObject({
+        fileContent: 'after\n',
+        decisions: {
+          hunkDecisions: { 'fixture-change:0': 'rejected' },
+          reviewActionHistory: [{ id: 'fixture-disk-action' }],
+          reviewRedoHistory: [],
+          revision: 2,
+        },
+        pendingRecords: 0,
+        audit: {
+          diskWrites: 1,
+          diskAttempts: crashPoint === 'after_disk_effect' ? 2 : 1,
+          decisionAttempts: crashPoint === 'after_decision_effect' ? 2 : 1,
+        },
+      });
+    },
+    30_000
+  );
+
+  it.each([
+    'prepared',
+    'disk_applied',
+    'after_decision_effect',
+    'decisions_committed',
+    'complete',
+  ] as const)(
+    'recovers decision-only Redo after SIGKILL at %s',
+    async (crashPoint) => {
+      const root = await mkdtemp(path.join(tmpdir(), `review-redo-crash-${crashPoint}-`));
+      temporaryRoots.push(root);
+      const claudeBasePath = path.join(root, 'claude-config');
+      const projectPath = path.join(root, 'sandbox-project');
+      const filePath = path.join(projectPath, 'fixture.ts');
+      const auditPath = path.join(root, 'audit.json');
+      await mkdir(projectPath, { recursive: true });
+      await writeFile(filePath, 'before\n', 'utf8');
+
+      const crashed = await runWorker(
+        'run',
+        claudeBasePath,
+        filePath,
+        auditPath,
+        crashPoint,
+        'decision-only-redo'
+      );
+      expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+
+      const recovered = await runWorker(
+        'recover',
+        claudeBasePath,
+        filePath,
+        auditPath,
+        'none',
+        'decision-only-redo'
+      );
+      expect(recovered.code, recovered.stderr).toBe(0);
+      const snapshot = JSON.parse(recovered.stdout) as RecoverySnapshot;
+      expect(snapshot).toMatchObject({
+        fileContent: 'before\n',
+        decisions: {
+          hunkDecisions: { 'fixture-change:0': 'accepted' },
+          revision: 1,
+        },
+        pendingRecords: 0,
+        audit: {
+          diskWrites: 0,
+          diskAttempts: 0,
           decisionAttempts: crashPoint === 'after_decision_effect' ? 2 : 1,
         },
       });
