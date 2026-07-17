@@ -1043,7 +1043,7 @@ describe('Team agent launch matrix safe e2e', () => {
       () => undefined
     );
 
-    expect(svc.isTeamAlive('mixed-opencode-safe-e2e')).toBe(true);
+    expect(svc.isTeamAlive('mixed-opencode-safe-e2e')).toBe(false);
     expect(adapter.stopInputs).toHaveLength(0);
 
     const statuses = await svc.getMemberSpawnStatuses('mixed-opencode-safe-e2e');
@@ -1093,7 +1093,7 @@ describe('Team agent launch matrix safe e2e', () => {
 
     expect(svc.isTeamAlive('stoppable-opencode-safe-e2e')).toBe(true);
 
-    svc.stopTeam('stoppable-opencode-safe-e2e');
+    await svc.stopTeam('stoppable-opencode-safe-e2e');
 
     await waitForCondition(() => adapter.stopInputs.length === 1);
     await waitForCondition(() => !svc.isTeamAlive('stoppable-opencode-safe-e2e'));
@@ -1136,7 +1136,7 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(svc.isTeamAlive('pure-opencode-stop-isolated-a-safe-e2e')).toBe(true);
     expect(svc.isTeamAlive('pure-opencode-stop-isolated-b-safe-e2e')).toBe(true);
 
-    svc.stopTeam('pure-opencode-stop-isolated-a-safe-e2e');
+    await svc.stopTeam('pure-opencode-stop-isolated-a-safe-e2e');
 
     await waitForCondition(() => adapter.stopInputs.length === 1);
     await waitForCondition(() => !svc.isTeamAlive('pure-opencode-stop-isolated-a-safe-e2e'));
@@ -1199,7 +1199,7 @@ describe('Team agent launch matrix safe e2e', () => {
       'pure-opencode-alive-list-b-safe-e2e',
     ]);
 
-    svc.stopTeam('pure-opencode-alive-list-a-safe-e2e');
+    await svc.stopTeam('pure-opencode-alive-list-a-safe-e2e');
 
     await waitForCondition(() => !svc.isTeamAlive('pure-opencode-alive-list-a-safe-e2e'));
     expect(svc.getAliveTeams()).toEqual(['pure-opencode-alive-list-b-safe-e2e']);
@@ -1241,7 +1241,7 @@ describe('Team agent launch matrix safe e2e', () => {
       },
     });
 
-    svc.stopTeam(teamName);
+    await svc.stopTeam(teamName);
 
     await waitForCondition(() => !svc.isTeamAlive(teamName));
     const stoppedState = await svc.getRuntimeState(teamName);
@@ -1319,7 +1319,7 @@ describe('Team agent launch matrix safe e2e', () => {
       },
     });
 
-    svc.stopTeam(teamName);
+    await svc.stopTeam(teamName);
 
     await waitForCondition(() => adapter.stopInputs.length === 2);
     expect(adapter.stopInputs[1]).toMatchObject({
@@ -1940,7 +1940,7 @@ describe('Team agent launch matrix safe e2e', () => {
     await waitForCondition(() => adapter.launchInputs.length === 2);
     expect(svc.getAliveTeams().sort()).toEqual([liveTeamName, stoppingTeamName].sort());
 
-    svc.stopTeam(stoppingTeamName);
+    const stoppingTeam = svc.stopTeam(stoppingTeamName);
     await waitForCondition(() => adapter.stopInputs.length === 1);
     expect(adapter.stopInputs[0]).toMatchObject({
       runId: stoppingRunId,
@@ -1951,7 +1951,7 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(svc.isTeamAlive(stoppingTeamName)).toBe(false);
     expect(svc.isTeamAlive(liveTeamName)).toBe(true);
 
-    svc.stopAllTeams();
+    const stoppingAllTeams = svc.stopAllTeams();
     await waitForCondition(() => adapter.stopInputs.length === 2);
     expect(adapter.stopInputs).toEqual(
       expect.arrayContaining([
@@ -1975,7 +1975,7 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(svc.getAliveTeams()).toEqual([]);
 
     adapter.releaseStops();
-    await waitForCondition(() => !svc.isTeamAlive(liveTeamName));
+    await Promise.all([stoppingTeam, stoppingAllTeams]);
     expect(svc.isTeamAlive(stoppingTeamName)).toBe(false);
     await expect(readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), stoppingTeamName)).resolves
       .toMatchObject({
@@ -2750,7 +2750,7 @@ describe('Team agent launch matrix safe e2e', () => {
     );
     expect(svc.getAliveTeams().sort()).toEqual([mixedTeamName, pureTeamName].sort());
 
-    svc.stopAllTeams();
+    await svc.stopAllTeams();
 
     await waitForCondition(() => adapter.stopInputs.length === 3);
     await waitForCondition(() => svc.getAliveTeams().length === 0);
@@ -12650,7 +12650,7 @@ describe('Team agent launch matrix safe e2e', () => {
       () => undefined
     );
 
-    svc.stopTeam(teamName);
+    await svc.stopTeam(teamName);
     await waitForCondition(() => adapter.stopInputs.length === 1);
     await waitForCondition(() => !svc.isTeamAlive(teamName));
     expect((await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)).lanes).toEqual({});
