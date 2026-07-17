@@ -70,6 +70,7 @@ function makePorts(
   emittedEvents: TeamChangeEvent[];
   progressUpdates: TeamProvisioningProgress[];
   stopMixedSecondaryRuntimeLanes: ReturnType<typeof vi.fn>;
+  stopOpenCodeRuntimeAdapterTeam: ReturnType<typeof vi.fn>;
 } {
   const runs = new Map(input.run ? [[input.run.runId, input.run]] : []);
   const runtimeAdapterProgressByRunId = new Map(
@@ -101,6 +102,7 @@ function makePorts(
     }),
     hasSecondaryRuntimeRuns: vi.fn(() => input.hasSecondaryRuntimeRuns ?? false),
     stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
+    stopOpenCodeRuntimeAdapterTeam: vi.fn(async () => undefined),
     killTeamProcess: vi.fn((child: TestRun['child']) => {
       if (child) {
         child.killed = true;
@@ -162,6 +164,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
       },
       hasSecondaryRuntimeRuns: basePorts.hasSecondaryRuntimeRuns,
       stopMixedSecondaryRuntimeLanes: basePorts.stopMixedSecondaryRuntimeLanes,
+      stopOpenCodeRuntimeAdapterTeam: basePorts.stopOpenCodeRuntimeAdapterTeam,
       cleanupRun: basePorts.cleanupRun,
       toolApprovalFacade: {
         clearOpenCodeRuntimeToolApprovals: basePorts.clearOpenCodeRuntimeToolApprovals,
@@ -194,6 +197,10 @@ describe('TeamProvisioningCancellationBoundary', () => {
     expect(run.cancelRequested).toBe(true);
     expect(basePorts.killTeamProcess).toHaveBeenCalledWith(run.child);
     expect(basePorts.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(run.teamName);
+    // The tracked primary lane is an owned OpenCode adapter run — cancelling must stop it too,
+    // otherwise the adapter-managed primary runtime process is orphaned (run.child is null for
+    // a pure-OpenCode aggregate run, so killTeamProcess alone does not cover it).
+    expect(basePorts.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(run.teamName, run.runId);
     expect(basePorts.cleanupRun).toHaveBeenCalledWith(run);
   });
 
