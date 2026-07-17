@@ -1535,12 +1535,15 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   installOpenCodeRuntime: async () => {
     if (!api.openCodeRuntime) return;
     const installStartedAtMs = Date.now();
+    const previousStatus = get().openCodeRuntimeStatus;
     set({
       openCodeRuntimeStatusLoading: true,
       openCodeRuntimeError: null,
       openCodeRuntimeStatus: {
-        installed: false,
-        source: 'missing',
+        installed: previousStatus?.installed ?? false,
+        ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
+        ...(previousStatus?.version ? { version: previousStatus.version } : {}),
+        source: previousStatus?.source ?? 'missing',
         state: 'checking',
         progress: {
           phase: 'checking',
@@ -1550,12 +1553,13 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     });
     try {
       const status = await api.openCodeRuntime.install();
+      const installSucceeded = status.installed && status.state === 'ready';
       set({ openCodeRuntimeStatus: status, openCodeRuntimeError: status.error ?? null });
       recordRuntimeInstallEnd({
         runtime: 'opencode',
-        success: status.installed,
+        success: installSucceeded,
         source: status.source,
-        errorClass: status.installed ? 'none' : classifyAnalyticsError(status.error),
+        errorClass: installSucceeded ? 'none' : classifyAnalyticsError(status.error),
         durationMs: elapsedMsSince(installStartedAtMs),
       });
       if (status.installed) {

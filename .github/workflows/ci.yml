@@ -215,3 +215,6 @@ jobs:
 
       - name: Test task change ledger
         run: pnpm test:task-change-ledger
+
+      - name: Test OpenCode nvm-windows runtime resolution
+        run: pnpm exec vitest run test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts

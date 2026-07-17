@@ -8,7 +8,7 @@ import { createStore } from 'zustand/vanilla';
 
 import type { CliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
 import type { ElectronAPI } from '@shared/types/api';
-import type { CliProviderReasoningEffort } from '@shared/types/cliInstaller';
+import type { CliProviderReasoningEffort, OpenCodeRuntimeStatus } from '@shared/types/cliInstaller';
 import type { StateCreator } from 'zustand';
 
 function createCliInstallerStore() {
@@ -271,6 +271,62 @@ describe('OpenCode runtime rejection state', () => {
     } finally {
       restoreApi();
       vi.mocked(console.error).mockClear();
+    }
+  });
+
+  it('keeps a working runtime usable while its update request is checking and then fails', async () => {
+    let resolveInstall!: (status: OpenCodeRuntimeStatus) => void;
+    const installResult = new Promise<OpenCodeRuntimeStatus>((resolve) => {
+      resolveInstall = resolve;
+    });
+    const restoreApi = installElectronApi({
+      getStatus: async () => {
+        throw new Error('not used');
+      },
+      install: () => installResult,
+      invalidateStatus: async () => undefined,
+      onProgress: () => () => undefined,
+    });
+    const store = createCliInstallerStore();
+    store.setState({
+      openCodeRuntimeStatus: {
+        installed: true,
+        binaryPath: '/known/opencode',
+        version: '1.16.0',
+        source: 'app-managed',
+        state: 'ready',
+      },
+    });
+
+    try {
+      const request = store.getState().installOpenCodeRuntime();
+      expect(store.getState().openCodeRuntimeStatus).toMatchObject({
+        installed: true,
+        binaryPath: '/known/opencode',
+        version: '1.16.0',
+        source: 'app-managed',
+        state: 'checking',
+      });
+
+      resolveInstall({
+        installed: true,
+        binaryPath: '/known/opencode',
+        version: '1.16.0',
+        source: 'app-managed',
+        state: 'failed',
+        error: 'registry unavailable',
+      });
+      await request;
+
+      expect(store.getState().openCodeRuntimeStatus).toMatchObject({
+        installed: true,
+        binaryPath: '/known/opencode',
+        source: 'app-managed',
+        state: 'failed',
+        error: 'registry unavailable',
+      });
+    } finally {
+      restoreApi();
     }
   });
 });

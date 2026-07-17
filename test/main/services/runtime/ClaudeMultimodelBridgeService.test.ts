@@ -495,6 +495,77 @@ describe('ClaudeMultimodelBridgeService', () => {
     vi.mocked(console.warn).mockClear();
   });
 
+  it('allows the dev source runtime enough time to return OpenCode summary status', async () => {
+    execCliMock.mockImplementation((_binaryPath, args) => {
+      const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+      if (normalizedArgs === 'runtime status --json --provider opencode --summary') {
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            schemaVersion: 2,
+            providers: {
+              opencode: {
+                supported: true,
+                authenticated: true,
+                authMethod: 'opencode_managed',
+                verificationState: 'verified',
+                canLoginFromUi: false,
+                capabilities: { teamLaunch: true, oneShot: false },
+              },
+            },
+          }),
+          stderr: '',
+        });
+      }
+
+      return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.getProviderStatus('/mock/cli-source', 'opencode');
+
+    expect(provider).toMatchObject({
+      providerId: 'opencode',
+      supported: true,
+      authenticated: true,
+      verificationState: 'verified',
+    });
+    expect(execCliMock.mock.calls[0][2]?.timeout).toBe(45_000);
+  });
+
+  it('keeps OpenCode timeout copy concise and preserves saved-connection confidence', async () => {
+    execCliMock.mockImplementation((_binaryPath, args) => {
+      const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
+      if (normalizedArgs === 'runtime status --json --provider opencode --summary') {
+        return Promise.reject(
+          new Error(
+            'Command timed out after 12000ms: /mock/runtime runtime status --json --provider opencode --summary'
+          )
+        );
+      }
+      return Promise.reject(new Error(`Unavailable legacy probe: ${normalizedArgs}`));
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.getProviderStatus('/mock/runtime', 'opencode');
+
+    expect(provider).toMatchObject({
+      providerId: 'opencode',
+      verificationState: 'error',
+      statusMessage: 'OpenCode is still loading',
+      detailMessage:
+        'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.',
+    });
+    expect(provider.detailMessage).not.toContain('/mock/runtime');
+    expect(provider.detailMessage).not.toContain('12000ms');
+    vi.mocked(console.warn).mockClear();
+  });
+
   it('maps runtime-side OpenCode degraded status without replacing it with a generic error', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';

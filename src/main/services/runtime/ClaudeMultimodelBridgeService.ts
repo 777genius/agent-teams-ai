@@ -32,6 +32,7 @@ const PROVIDER_STATUS_TIMEOUT_MS = 90_000;
 const PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 30_000;
 const LEGACY_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 5_000;
 const OPENCODE_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 12_000;
+const OPENCODE_SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 45_000;
 const LEGACY_PROVIDER_AUTH_TIMEOUT_MS = 15_000;
 const PROVIDER_MODELS_TIMEOUT_MS = 25_000;
 const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
@@ -406,19 +407,17 @@ function createRuntimeStatusErrorProviderStatus(
 ): CliProviderStatus {
   const message = error instanceof Error ? error.message : String(error);
   const lower = message.toLowerCase();
-  const detailMessage =
-    providerId === 'opencode' && (lower.includes('timed out') || lower.includes('timeout'))
-      ? [
-          'OpenCode runtime status did not return before the desktop timeout.',
-          'This means the Agent Teams runtime process did not produce provider-status JSON in time, not necessarily that OpenCode auth is missing.',
-          'Likely causes include slow or hung OpenCode CLI startup, provider/model inventory, local OpenCode plugins, cache/profile corruption, stale bundled runtime, or Windows security software delaying child processes.',
-          `Raw timeout detail: ${message}`,
-        ].join(' ')
-      : message;
+  const isOpenCodeTimeout =
+    providerId === 'opencode' && (lower.includes('timed out') || lower.includes('timeout'));
+  const detailMessage = isOpenCodeTimeout
+    ? 'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.'
+    : message;
   return {
     ...createDefaultProviderStatus(providerId),
     verificationState: 'error',
-    statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
+    statusMessage: isOpenCodeTimeout
+      ? 'OpenCode is still loading'
+      : CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
     detailMessage,
   };
 }
@@ -897,9 +896,18 @@ export class ClaudeMultimodelBridgeService {
   }
 
   private getProviderStatusRuntimeTimeout(
+    binaryPath: string,
     providerId: CliProviderId,
     options: { summary?: boolean; timeoutMs?: number }
   ): number {
+    if (
+      options.summary &&
+      providerId === 'opencode' &&
+      options.timeoutMs === undefined &&
+      path.basename(binaryPath).toLowerCase() === 'cli-source'
+    ) {
+      return OPENCODE_SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS;
+    }
     if (options.summary && this.shouldUseLegacyProviderTimeoutFallback(providerId)) {
       const fallbackTimeout =
         providerId === 'opencode'
@@ -1202,7 +1210,7 @@ export class ClaudeMultimodelBridgeService {
     if (options.summary) {
       args.push('--summary');
     }
-    const timeout = this.getProviderStatusRuntimeTimeout(providerId, options);
+    const timeout = this.getProviderStatusRuntimeTimeout(binaryPath, providerId, options);
     const { stdout } = await execCli(binaryPath, args, {
       timeout,
       maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
