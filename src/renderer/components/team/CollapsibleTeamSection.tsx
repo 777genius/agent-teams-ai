@@ -4,8 +4,6 @@ import { Badge } from '@renderer/components/ui/badge';
 import { cn } from '@renderer/lib/utils';
 import { ChevronRight } from 'lucide-react';
 
-export type CollapsibleTeamSectionVariant = 'card' | 'flat';
-
 function scrollAfterExpand(el: HTMLElement): void {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -41,8 +39,6 @@ interface CollapsibleTeamSectionProps {
   headerContentClassName?: string;
   /** Extra classes for the clickable header surface itself (e.g. override rounded corners). */
   headerSurfaceClassName?: string;
-  /** Visual treatment for the section header. */
-  variant?: CollapsibleTeamSectionVariant;
   /** When true, children stay mounted (hidden via CSS) when collapsed. Useful when children drive header state (e.g. online indicators). */
   keepMounted?: boolean;
   children: React.ReactNode;
@@ -65,13 +61,11 @@ export const CollapsibleTeamSection = memo(function CollapsibleTeamSection({
   headerClassName,
   headerContentClassName,
   headerSurfaceClassName,
-  variant = 'card',
   keepMounted,
   children,
 }: CollapsibleTeamSectionProps): React.JSX.Element {
   const [open, setOpen] = useState(defaultOpen);
   const isOpen = forceOpen ? true : open;
-  const isFlat = variant === 'flat';
   const sectionRef = useRef<HTMLElement>(null);
 
   const handleNavigate = useCallback((): void => {
@@ -94,15 +88,11 @@ export const CollapsibleTeamSection = memo(function CollapsibleTeamSection({
     <section
       ref={sectionRef}
       data-section-id={sectionId}
-      className={cn(
-        'min-w-0',
-        isFlat ? '[&:not(:last-child)]:mb-2' : '[&:not(:last-child)]:mb-[10px]'
-      )}
+      className="min-w-0 [&:not(:last-child)]:mb-[10px]"
     >
       <div
         className={cn(
-          'relative -mx-[calc(1rem-5px)] flex w-[calc(100%+2rem-10px)] items-stretch',
-          isFlat ? 'min-h-10 border-b border-[var(--color-border)]' : 'min-h-9 py-1.5',
+          'relative -mx-[calc(1rem-5px)] flex min-h-9 w-[calc(100%+2rem-10px)] items-stretch py-1.5',
           headerClassName
         )}
       >
@@ -110,14 +100,9 @@ export const CollapsibleTeamSection = memo(function CollapsibleTeamSection({
           type="button"
           className={cn(
             'absolute inset-0 z-0 cursor-pointer transition-colors',
-            isFlat
-              ? cn(
-                  'hover:bg-[var(--color-section-hover)]',
-                  isOpen ? 'rounded-t-md bg-[var(--color-section-bg)]' : 'rounded-md bg-transparent'
-                )
-              : isOpen
-                ? 'rounded-t-xl bg-[var(--color-section-bg-open)] hover:bg-[var(--color-section-hover-open)]'
-                : 'rounded-xl bg-[var(--color-section-bg)] hover:bg-[var(--color-section-hover)]',
+            isOpen
+              ? 'rounded-t-xl bg-[var(--color-section-bg-open)] hover:bg-[var(--color-section-hover-open)]'
+              : 'rounded-xl bg-[var(--color-section-bg)] hover:bg-[var(--color-section-hover)]',
             headerSurfaceClassName
           )}
           onClick={() =>
@@ -133,43 +118,20 @@ export const CollapsibleTeamSection = memo(function CollapsibleTeamSection({
         />
         <div
           className={cn(
-            'pointer-events-none relative z-10 flex min-w-0 flex-1 basis-0 items-center gap-2',
-            isFlat ? 'pl-2.5' : 'pl-4',
+            'pointer-events-none relative z-10 flex min-w-0 flex-1 basis-0 items-center gap-2 pl-4',
             headerContentClassName
           )}
         >
-          {!isFlat && (
-            <ChevronRight
-              size={14}
-              className={`shrink-0 text-[var(--color-text-muted)] transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`}
-            />
-          )}
-          {icon ? (
-            <span
-              className={cn(
-                'shrink-0 text-[var(--color-text-muted)]',
-                isFlat &&
-                  'inline-flex size-6 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)]'
-              )}
-            >
-              {icon}
-            </span>
-          ) : null}
-          <span
-            className={cn(
-              'text-sm text-[var(--color-text)]',
-              isFlat ? 'font-semibold' : 'font-medium'
-            )}
-          >
-            {title}
-          </span>
+          <ChevronRight
+            size={14}
+            className={`shrink-0 text-[var(--color-text-muted)] transition-transform duration-150 ${isOpen ? 'rotate-90' : ''}`}
+          />
+          {icon ? <span className="shrink-0 text-[var(--color-text-muted)]">{icon}</span> : null}
+          <span className="text-sm font-medium text-[var(--color-text)]">{title}</span>
           {badge != null && (
             <Badge
               variant="secondary"
-              className={cn(
-                'px-1.5 py-0.5 text-[10px] font-normal leading-none',
-                isFlat && 'border border-[var(--color-border)] bg-transparent'
-              )}
+              className="px-1.5 py-0.5 text-[10px] font-normal leading-none"
             >
               {badge}
             </Badge>
@@ -187,25 +149,7 @@ export const CollapsibleTeamSection = memo(function CollapsibleTeamSection({
           {headerExtra}
         </div>
         {action && (
-          <div
-            className={cn(
-              'relative z-10 flex shrink-0 items-center self-stretch',
-              isFlat && 'pl-2'
-            )}
-          >
-            {action}
-          </div>
-        )}
-        {isFlat && (
-          <span className="pointer-events-none relative z-10 flex shrink-0 items-center px-2.5">
-            <ChevronRight
-              size={14}
-              className={cn(
-                'text-[var(--color-text-muted)] transition-transform duration-150',
-                isOpen && 'rotate-90'
-              )}
-            />
-          </span>
+          <div className="relative z-10 flex shrink-0 items-center self-stretch">{action}</div>
         )}
       </div>
       {keepMounted ? (

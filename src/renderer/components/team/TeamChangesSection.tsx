@@ -7,10 +7,7 @@ import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 import { AlertTriangle, FileDiff, GitCompareArrows, Info, Loader2, RefreshCw } from 'lucide-react';
 
 import { FileIcon } from './editor/FileIcon';
-import {
-  CollapsibleTeamSection,
-  type CollapsibleTeamSectionVariant,
-} from './CollapsibleTeamSection';
+import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 import { MemberBadge } from './MemberBadge';
 import {
   getTeamChangeTaskTimeMs,
@@ -24,7 +21,6 @@ interface TeamChangesSectionProps {
   teamName: string;
   tasks: TeamTaskWithKanban[];
   memberColorMap?: ReadonlyMap<string, string>;
-  sectionVariant?: CollapsibleTeamSectionVariant;
   onOpenTask: (task: TeamTaskWithKanban) => void;
   onViewChanges: (taskId: string, filePath?: string) => void;
 }
@@ -166,7 +162,6 @@ export const TeamChangesSection = memo(function TeamChangesSection({
   teamName,
   tasks,
   memberColorMap = EMPTY_MEMBER_COLOR_MAP,
-  sectionVariant,
   onOpenTask,
   onViewChanges,
 }: TeamChangesSectionProps): React.JSX.Element {
@@ -217,7 +212,6 @@ export const TeamChangesSection = memo(function TeamChangesSection({
   return (
     <CollapsibleTeamSection
       sectionId="changes"
-      variant={sectionVariant}
       title={t('taskDetail.changes.title')}
       icon={<FileDiff size={14} />}
       badge={badge}

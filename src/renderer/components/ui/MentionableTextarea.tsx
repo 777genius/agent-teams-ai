@@ -337,8 +337,6 @@ interface MentionableTextareaProps extends Omit<
   showHint?: boolean;
   /** Content rendered at the right side of the footer row (e.g. "Saved") */
   footerRight?: React.ReactNode;
-  /** Optional layout styling for the footer row. */
-  footerClassName?: string;
   /** Content rendered in the bottom-right corner inside the textarea (e.g. send button) */
   cornerAction?: React.ReactNode;
   /** Content rendered in the bottom-left corner inside the textarea (e.g. mode selector) */
@@ -381,7 +379,6 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
       hintText,
       showHint = true,
       footerRight,
-      footerClassName,
       cornerAction,
       cornerActionLeft,
       cornerActionInset = 'default',
@@ -1400,7 +1397,7 @@ export const MentionableTextarea = React.forwardRef<HTMLTextAreaElement, Mention
         </div>
 
         {showFooter ? (
-          <div className={cn('mt-1 flex items-start justify-between gap-2', footerClassName)}>
+          <div className="mt-1 flex items-start justify-between gap-2">
             {showHintRow ? (
               <span
                 className="block min-h-6 flex-1 overflow-hidden text-[10px] leading-3 text-[var(--color-text-muted)] transition-opacity duration-300"

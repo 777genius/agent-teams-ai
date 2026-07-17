@@ -14,7 +14,7 @@ import { useStore } from '@renderer/store';
 import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { detectOperationalNoise } from '@renderer/utils/agentMessageFormatting';
 import { formatTokensCompact } from '@renderer/utils/formatters';
-import { buildMemberColorMap, resolveMemberIdentityColor } from '@renderer/utils/memberHelpers';
+import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { linkifyAllMentionsInMarkdown } from '@renderer/utils/mentionLinkify';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { extractMarkdownPlainText } from '@shared/utils/markdownTextSearch';
@@ -86,6 +86,7 @@ export const TeammateMessageItem = memo(
     highlightStyle,
   }: TeammateMessageItemProps): React.JSX.Element => {
     const { t } = useAppTranslation('common');
+    const colors = getTeamColorSet(teammateMessage.color);
     const { isLight } = useTheme();
 
     // Get team members for @mention highlighting
@@ -95,9 +96,6 @@ export const TeammateMessageItem = memo(
     const memberColorMap = useMemo(
       () => (members ? buildMemberColorMap(members) : new Map<string, string>()),
       [members]
-    );
-    const colors = getTeamColorSet(
-      resolveMemberIdentityColor(teammateMessage.teammateId, memberColorMap, teammateMessage.color)
     );
 
     // Get team names for @team linkification

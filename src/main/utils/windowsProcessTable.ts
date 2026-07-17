@@ -25,10 +25,6 @@ const PROCESS_TABLE_ARGS = [
   '-Command',
   PROCESS_TABLE_SCRIPT,
 ];
-const PROCESS_TABLE_CACHE_TTL_MS = 1_500;
-
-let cachedProcessTable: { rows: WindowsProcessTableRow[]; expiresAt: number } | null = null;
-let processTableRequest: Promise<WindowsProcessTableRow[]> | null = null;
 
 function parsePositiveInteger(value: unknown): number | null {
   const parsed =
@@ -72,17 +68,7 @@ export function parseWindowsProcessTableJson(stdout: string): WindowsProcessTabl
 export async function listWindowsProcessTable(
   timeoutMs = 4_000
 ): Promise<WindowsProcessTableRow[]> {
-  const cached = cachedProcessTable;
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.rows.map((row) => ({ ...row }));
-  }
-
-  if (processTableRequest) {
-    const rows = await processTableRequest;
-    return rows.map((row) => ({ ...row }));
-  }
-
-  const request = new Promise<WindowsProcessTableRow[]>((resolve, reject) => {
+  return new Promise((resolve, reject) => {
     execFile(
       'powershell.exe',
       PROCESS_TABLE_ARGS,
@@ -105,20 +91,6 @@ export async function listWindowsProcessTable(
       }
     );
   });
-  processTableRequest = request;
-
-  try {
-    const rows = await request;
-    cachedProcessTable = {
-      rows,
-      expiresAt: Date.now() + PROCESS_TABLE_CACHE_TTL_MS,
-    };
-    return rows.map((row) => ({ ...row }));
-  } finally {
-    if (processTableRequest === request) {
-      processTableRequest = null;
-    }
-  }
 }
 
 export function listWindowsProcessTableSync(timeoutMs = 4_000): WindowsProcessTableRow[] {

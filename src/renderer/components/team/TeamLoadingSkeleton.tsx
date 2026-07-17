@@ -1,5 +1,5 @@
 import { useAppTranslation } from '@features/localization/renderer';
-import { getThemedBorder, type TeamColorSet } from '@renderer/constants/teamColors';
+import { getThemedBadge, type TeamColorSet } from '@renderer/constants/teamColors';
 import { cn } from '@renderer/lib/utils';
 import {
   ChevronRight,
@@ -54,52 +54,42 @@ const SkeletonPill = ({ className }: SkeletonClassNameProps): React.JSX.Element 
   />
 );
 
-const TeamLoadingOfflineBannerSkeleton = (): React.JSX.Element => (
-  <div
-    aria-hidden="true"
-    className="relative mb-2.5 flex min-h-11 items-center gap-2.5 overflow-hidden rounded-md border border-amber-500/20 bg-amber-500/[0.055] py-2 pl-3 pr-2.5"
-  >
-    <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-amber-400/50" />
-    <SkeletonBlock className="size-7 shrink-0 border border-amber-500/15 bg-amber-500/10" />
-    <SkeletonPill className="h-3.5 w-28 bg-amber-500/10" />
-    <SkeletonBlock className="ml-auto h-7 w-20 shrink-0 border border-emerald-500/15 bg-emerald-500/10" />
-  </div>
-);
-
 const TeamLoadingMessageComposerSkeleton = (): React.JSX.Element => (
-  <div className="message-composer-flat-layout relative mb-2" aria-hidden="true">
-    <div className="message-composer-flat-toolbar grid grid-cols-[32px_56px_minmax(0,1fr)] items-center gap-2 px-2">
-      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--color-text-muted)] opacity-70">
-        <Paperclip size={14} />
-      </span>
-      <SkeletonPill className="h-3 w-12 rounded bg-yellow-500/20" />
-      <div className="flex h-full min-w-0 items-stretch justify-end">
-        <div className="inline-flex w-full max-w-[430px] items-stretch overflow-hidden">
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5 border-r border-[var(--color-border)] px-3">
-            <SkeletonPill className="size-2.5 bg-[var(--skeleton-base-dim)]" />
-            <SkeletonPill className="h-3 w-16 rounded bg-[var(--skeleton-base-dim)]" />
+  <div className="relative mb-1.5 pb-1.5" aria-hidden="true">
+    <div className="mb-0">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex size-[22px] shrink-0 items-center justify-center rounded p-1 text-[var(--color-text-muted)] opacity-70">
+          <Paperclip size={14} />
+        </span>
+        <SkeletonPill className="h-3 w-20 rounded bg-yellow-500/20" />
+        <div className="ml-auto mr-[15px] inline-flex h-[26px] shrink-0 items-center overflow-hidden rounded-b-none rounded-t-[1.35rem] border border-b-0 border-[var(--color-border)] bg-[var(--color-surface-raised)]">
+          <div className="flex h-full items-center gap-1.5 border-r border-r-[var(--color-border)] px-2.5">
+            <SkeletonPill className="size-2 bg-[var(--skeleton-base-dim)]" />
+            <SkeletonPill className="h-3 w-16 bg-[var(--skeleton-base-dim)]" />
             <SkeletonPill className="size-3 rounded bg-[var(--skeleton-base-dim)]" />
           </div>
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5 px-3">
-            <SkeletonPill className="size-5 bg-[var(--skeleton-base-dim)]" />
-            <SkeletonPill className="h-3 w-10 rounded bg-[var(--skeleton-base-dim)]" />
+          <div className="flex h-full items-center gap-1.5 px-2.5">
+            <SkeletonPill className="h-4 w-14 bg-[var(--skeleton-base-dim)]" />
             <SkeletonPill className="size-3 rounded bg-[var(--skeleton-base-dim)]" />
           </div>
         </div>
       </div>
     </div>
-    <div className="message-composer-flat-body relative h-[96px]">
-      <SkeletonPill className="absolute left-3 top-3 h-3 w-[62%] rounded bg-[var(--skeleton-base-dim)]" />
-      <SkeletonPill className="absolute left-3 top-8 h-3 w-[42%] rounded bg-[var(--skeleton-base-dim)]" />
-      <div className="message-composer-action-modes absolute bottom-2 left-2 flex h-8 w-[152px] overflow-hidden rounded-md border border-[var(--color-border)]">
-        <SkeletonPill className="h-full flex-1 rounded-none bg-[var(--skeleton-base-dim)]" />
-        <SkeletonPill className="h-full flex-1 rounded-none border-l border-[var(--color-border)] bg-[var(--skeleton-base-dim)]" />
-        <SkeletonPill className="h-full flex-1 rounded-none border-l border-[var(--color-border)] bg-yellow-500/20" />
+    <div className="relative z-[2]">
+      <div className="message-composer-shell relative h-[98px] overflow-hidden rounded-md border border-transparent bg-[var(--color-surface-raised)] shadow-[0_8px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.03)]">
+        <div className="pointer-events-none absolute inset-0 rounded-md border border-[var(--color-border-emphasis)]" />
+        <SkeletonPill className="absolute left-3 top-3 h-3 w-[62%] rounded bg-[var(--skeleton-base-dim)]" />
+        <SkeletonPill className="absolute left-3 top-8 h-3 w-[42%] rounded bg-[var(--skeleton-base-dim)]" />
+        <SkeletonPill className="absolute bottom-2 left-2 h-5 w-[68px] border border-[var(--color-border)] bg-[var(--skeleton-base-dim)]" />
+        <div className="absolute bottom-2 right-2 flex items-center gap-2">
+          <SkeletonPill className="size-[26px] bg-[var(--skeleton-base-dim)]" />
+          <SkeletonPill className="h-[30px] w-[72px] bg-blue-600/35" />
+        </div>
       </div>
-      <div className="absolute bottom-2 right-2 flex items-center gap-2">
-        <SkeletonPill className="size-8 rounded-md bg-[var(--skeleton-base-dim)]" />
-        <SkeletonPill className="h-8 w-[72px] rounded-md bg-cyan-600/35" />
-      </div>
+    </div>
+    <div className="mt-1 flex items-start justify-between gap-2">
+      <SkeletonPill className="h-3 w-56 max-w-[68%] rounded bg-[var(--skeleton-base-dim)]" />
+      <SkeletonPill className="h-3 w-12 rounded bg-[var(--skeleton-base-dim)]" />
     </div>
   </div>
 );
@@ -190,7 +180,7 @@ const TeamLoadingSectionHeader = ({
   open = true,
 }: TeamLoadingSectionHeaderProps): React.JSX.Element => (
   <div
-    className="relative flex min-h-10 items-stretch border-b border-[var(--color-border)]"
+    className="relative flex min-h-9 items-stretch py-1.5"
     style={{
       marginInline: 'calc((1rem - 5px) * -1)',
       width: 'calc(100% + 2rem - 10px)',
@@ -199,32 +189,28 @@ const TeamLoadingSectionHeader = ({
     <div
       className={cn(
         'absolute inset-0 z-0',
-        open ? 'rounded-t-md bg-[var(--color-section-bg)]' : 'rounded-md bg-transparent'
+        open
+          ? 'rounded-t-xl bg-[var(--color-section-bg-open)]'
+          : 'rounded-xl bg-[var(--color-section-bg)]'
       )}
     />
-    <div className="relative z-10 flex min-w-0 flex-1 items-center gap-2 pl-2.5">
-      <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]">
-        {icon}
-      </span>
+    <div className="relative z-10 flex min-w-0 flex-1 items-center gap-2 pl-4">
+      <ChevronRight
+        size={14}
+        className={cn(
+          'shrink-0 text-[var(--color-text-muted)] transition-transform duration-150',
+          open && 'rotate-90'
+        )}
+      />
+      <span className="shrink-0 text-[var(--color-text-muted)]">{icon}</span>
       <SkeletonPill className={cn('h-4', titleWidth)} />
-      {badgeWidth ? (
-        <SkeletonPill className={cn('h-5 border border-[var(--color-border)]', badgeWidth)} />
-      ) : null}
+      {badgeWidth ? <SkeletonPill className={cn('h-5', badgeWidth)} /> : null}
     </div>
     {actionWidth ? (
       <div className="relative z-10 flex shrink-0 items-center pr-3">
         <SkeletonPill className={cn('h-5', actionWidth)} />
       </div>
     ) : null}
-    <span className="relative z-10 flex shrink-0 items-center px-2.5">
-      <ChevronRight
-        size={14}
-        className={cn(
-          'text-[var(--color-text-muted)] transition-transform duration-150',
-          open && 'rotate-90'
-        )}
-      />
-    </span>
   </div>
 );
 
@@ -232,7 +218,6 @@ type TeamContentLoadingSkeletonProps = Readonly<{
   teamName: string;
   headerColorSet: TeamColorSet;
   isLight: boolean;
-  showOfflineBanner?: boolean;
   contentRef?: Ref<HTMLDivElement>;
   provisioningBannerRef?: Ref<HTMLDivElement>;
 }>;
@@ -241,7 +226,6 @@ const TeamContentLoadingSkeleton = ({
   teamName,
   headerColorSet,
   isLight,
-  showOfflineBanner = false,
   contentRef,
   provisioningBannerRef,
 }: TeamContentLoadingSkeletonProps): React.JSX.Element => {
@@ -250,17 +234,17 @@ const TeamContentLoadingSkeleton = ({
   return (
     <div
       ref={contentRef}
-      className="size-full min-w-0 overflow-y-auto overflow-x-hidden p-4 [&>section:last-of-type>div:first-child]:border-b-0"
+      className="size-full min-w-0 overflow-y-auto overflow-x-hidden p-4"
       data-team-name={teamName}
       role="status"
       aria-label={t('detail.loading')}
     >
-      <div className="relative -mx-4 -mt-4 mb-3 overflow-hidden border-b border-[var(--color-border-emphasis)] bg-[var(--color-surface)] px-4 py-3.5">
+      <div className="relative -mx-4 -mt-4 mb-3 overflow-hidden border-b border-[var(--color-border)] px-4 py-3">
         <div
-          className="pointer-events-none absolute inset-y-3 left-0 w-0.5 rounded-r-full"
-          style={{ backgroundColor: getThemedBorder(headerColorSet, isLight) }}
+          className="pointer-events-none absolute inset-0 z-0"
+          style={{ backgroundColor: getThemedBadge(headerColorSet, isLight) }}
         />
-        <div className="flex items-start justify-between gap-2">
+        <div className="relative z-10 flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <div className="flex h-6 items-center gap-2">
               <SkeletonPill className="h-5 w-44" />
@@ -269,25 +253,20 @@ const TeamContentLoadingSkeleton = ({
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <SkeletonPill className="h-7 w-16" />
-            <SkeletonPill className="size-7 rounded-full" />
-            <SkeletonPill className="size-7 rounded-full" />
+            <SkeletonPill className="size-7 rounded" />
+            <SkeletonPill className="size-7 rounded" />
           </div>
         </div>
-        <div className="mt-2.5 flex flex-wrap items-center gap-3">
+        <SkeletonPill className="relative z-10 mt-0.5 h-3 w-72 max-w-full" />
+        <div className="relative z-10 mt-1 flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5">
-            <SkeletonPill className="h-3 w-32" />
+            <SkeletonPill className="h-3 w-28" />
+            <SkeletonPill className="h-5 w-24 rounded-md" />
             <SkeletonPill className="h-3 w-16" />
-            <SkeletonPill className="h-3 w-36" />
           </div>
-          <div className="ml-auto flex items-center gap-1.5">
-            <SkeletonPill className="h-8 w-20 rounded-md" />
-            <SkeletonPill className="h-8 w-16 rounded-md" />
-            <SkeletonPill className="h-8 w-24 rounded-md" />
-          </div>
+          <SkeletonPill className="-mt-2 h-8 w-24 shrink-0 rounded-full border border-cyan-300/25 bg-cyan-500/10" />
         </div>
       </div>
-
-      {showOfflineBanner ? <TeamLoadingOfflineBannerSkeleton /> : null}
 
       <div ref={provisioningBannerRef}>
         <TeamProvisioningBanner teamName={teamName} />
@@ -395,7 +374,6 @@ export type TeamLoadingSkeletonProps = Readonly<{
   teamName: string;
   isActive?: boolean;
   isFocused?: boolean;
-  showOfflineBanner?: boolean;
   messagesPanelMode: TeamMessagesPanelMode;
   headerColorSet: TeamColorSet;
   isLight: boolean;
@@ -407,7 +385,6 @@ export const TeamLoadingSkeleton = ({
   teamName,
   isActive,
   isFocused,
-  showOfflineBanner = false,
   messagesPanelMode,
   headerColorSet,
   isLight,
@@ -431,7 +408,6 @@ export const TeamLoadingSkeleton = ({
         teamName={teamName}
         headerColorSet={headerColorSet}
         isLight={isLight}
-        showOfflineBanner={showOfflineBanner}
         contentRef={contentRef}
         provisioningBannerRef={provisioningBannerRef}
       />

@@ -1,8 +1,5 @@
-import path from 'node:path';
-
 import { describe, expect, it, vi } from 'vitest';
 
-import { KIRO_CLI_COMPANION_DEFINITION } from './cli-companion/definitions/KiroCliCompanionDefinition';
 import { KiroCliCompanionService, resolveKiroLinuxArchiveSuffix } from './KiroCliCompanionService';
 
 const VALID_UNIX_INSTALLER = `#!/bin/bash
@@ -113,38 +110,6 @@ describe('KiroCliCompanionService', () => {
     expect(status.error).toContain('changed its installer format');
     expect(status.manualCommand).toContain('https://cli.kiro.dev/install');
     expect(runCommand).not.toHaveBeenCalled();
-  });
-
-  it('discovers the current per-user Windows MSI install location', () => {
-    const candidates = KIRO_CLI_COMPANION_DEFINITION.binary.extraCandidates(
-      'win32',
-      'C:\\Users\\test'
-    );
-
-    expect(candidates).toContain(
-      path.join(process.env.LOCALAPPDATA ?? '', 'Kiro-Cli', 'kiro-cli.exe')
-    );
-  });
-
-  it('surfaces installer stderr instead of the last progress line', async () => {
-    const service = new KiroCliCompanionService({
-      platform: 'win32',
-      arch: 'x64',
-      fetchInstallerScript: async () => VALID_WINDOWS_INSTALLER,
-      fetchPackageSize: async () => 100 * 1024 * 1024,
-      getAvailableBytes: async () => 10 * 1024 * 1024 * 1024,
-      resolveBinary: async () => null,
-      runCommand: async () => ({
-        exitCode: 1,
-        stdout: 'Downloaded\nVerifying checksum...\n',
-        stderr: 'Get-FileHash is not available\nFullyQualifiedErrorId: CommandNotFoundException\n',
-      }),
-    });
-
-    const status = await service.installAndConnect();
-
-    expect(status.phase).toBe('needs-manual-step');
-    expect(status.error).toBe('Get-FileHash is not available');
   });
 
   it('fails before downloading the package when free disk space is unsafe', async () => {
@@ -266,12 +231,6 @@ describe('KiroCliCompanionService', () => {
       ([command]) => command === scenario.installCommand
     );
     expect(installCall?.[2].env[scenario.tempEnvKey]).toContain('agent-teams-kiro-');
-    expect(installCall?.[2].isolateFromHost).toBe(scenario.platform === 'win32');
-    if (scenario.platform === 'win32') {
-      expect(
-        Object.keys(installCall?.[2].env ?? {}).some((key) => key.toLowerCase() === 'psmodulepath')
-      ).toBe(false);
-    }
     expect(status.phase).toBe('connected');
     expect(status.binaryPath).toBe(scenario.binary);
     expect(status.manualCommand).toBe(scenario.manualCommand);

@@ -2,10 +2,10 @@ import { CUSTOM_ROLE, NO_ROLE, PRESET_ROLES } from '@renderer/constants/teamRole
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { normalizeCreateLaunchProviderForUi } from '@renderer/utils/geminiUiFreeze';
 import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
-import { getTeammateParticipantIdentityColor } from '@shared/constants/memberColors';
 import { isTeamEffortLevel, isTeamEffortLevelForProvider } from '@shared/utils/effortLevels';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 import {
@@ -202,19 +202,62 @@ interface ExistingMemberColorInput {
   removedAt?: number | string | null;
 }
 
-export function buildMemberDraftColorMap(
-  members: readonly Pick<MemberDraft, 'id' | 'name' | 'originalName' | 'removedAt'>[],
-  _existingMembers?: readonly ExistingMemberColorInput[],
-  _existingColorMap?: ReadonlyMap<string, string>
-): Map<string, string> {
-  // Keep the compatibility parameters while deriving canonical colors from the
-  // exact active-then-removed order used to assign avatars in the editor.
-  const draftMap = new Map<string, string>();
-  const activeMembers = members.filter((member) => !member.removedAt);
-  const removedMembers = members.filter((member) => member.removedAt);
+function getMemberDraftColorSeedKey(member: Pick<MemberDraft, 'id' | 'originalName'>): string {
+  const originalName = member.originalName?.trim();
+  return originalName || `draft:${member.id}`;
+}
 
-  for (const [index, member] of [...activeMembers, ...removedMembers].entries()) {
-    draftMap.set(member.id, getTeammateParticipantIdentityColor(index));
+export function buildMemberDraftColorMap(
+  members: readonly Pick<MemberDraft, 'id' | 'name' | 'originalName'>[],
+  existingMembers?: readonly ExistingMemberColorInput[],
+  existingColorMap?: ReadonlyMap<string, string>
+): Map<string, string> {
+  const normalizedExistingColorMap = new Map<string, string>(
+    Array.from(existingColorMap?.entries() ?? []).map(([name, color]) => [
+      name.trim().toLowerCase(),
+      color,
+    ])
+  );
+
+  const existingSeedEntries = (existingMembers ?? [])
+    .map((member) => ({
+      ...member,
+      name: member.name.trim(),
+      color:
+        normalizedExistingColorMap.get(member.name.trim().toLowerCase()) ??
+        member.color?.trim() ??
+        undefined,
+    }))
+    .filter((member) => member.name);
+  const existingNames = new Set(existingSeedEntries.map((member) => member.name.toLowerCase()));
+  const uniqueNewDraftEntries = members
+    .filter((member) => {
+      if (member.originalName?.trim()) {
+        return false;
+      }
+      const currentName = member.name.trim();
+      return !currentName || !existingNames.has(currentName.toLowerCase());
+    })
+    .map((member) => ({ name: getMemberDraftColorSeedKey(member) }));
+
+  const fullMap = buildTeamMemberColorMap([...existingSeedEntries, ...uniqueNewDraftEntries], {
+    preferProvidedColors: true,
+  });
+  const fullColorByName = new Map(
+    Array.from(fullMap.entries()).map(([name, color]) => [name.toLowerCase(), color] as const)
+  );
+
+  const draftMap = new Map<string, string>();
+  for (const member of members) {
+    const originalName = member.originalName?.trim();
+    const currentName = member.name.trim();
+    const colorSeedKey = originalName
+      ? originalName
+      : currentName && existingNames.has(currentName.toLowerCase())
+        ? currentName
+        : getMemberDraftColorSeedKey(member);
+    const color = fullColorByName.get(colorSeedKey.toLowerCase());
+    if (color) draftMap.set(member.id, color);
   }
   return draftMap;
 }

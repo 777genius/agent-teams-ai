@@ -21,16 +21,12 @@ import {
 } from '@shared/utils/teamLaunchFailureReason';
 import { getTeamTaskWorkflowColumn } from '@shared/utils/teamTaskState';
 
-import { getPendingMemberDeliveryState } from '../messages/messagesPanelLogic';
-
 import { MemberCard, type RuntimeTelemetryScale } from './MemberCard';
 
-import type { PendingMemberDeliveryState } from '../messages/messagesPanelLogic';
 import type { TeamLaunchParams } from '@renderer/store/slices/teamSlice';
 import type { MemberActivityTimerAnchor } from '@renderer/utils/memberActivityTimer';
 import type { TaskStatusCounts } from '@renderer/utils/pathNormalize';
 import type {
-  InboxMessage,
   LeadActivityState,
   MemberLaunchState,
   MemberSpawnLivenessSource,
@@ -49,7 +45,6 @@ interface MemberListProps {
   memberTaskCounts?: Map<string, TaskStatusCounts>;
   taskMap?: Map<string, TeamTaskWithKanban>;
   pendingRepliesByMember?: Record<string, number>;
-  messages?: InboxMessage[];
   memberSpawnStatuses?: Map<string, MemberSpawnStatusEntry>;
   memberRuntimeEntries?: Map<string, TeamAgentRuntimeEntry>;
   runtimeRunId?: string | null;
@@ -577,7 +572,6 @@ function areMemberListPropsEqual(
     areTaskStatusCountsMapsEquivalent(prev.memberTaskCounts, next.memberTaskCounts) &&
     areMemberTaskMapsEquivalent(prev.taskMap, next.taskMap) &&
     arePendingRepliesEquivalent(prev.pendingRepliesByMember, next.pendingRepliesByMember) &&
-    prev.messages === next.messages &&
     areMemberSpawnStatusesEquivalent(prev.memberSpawnStatuses, next.memberSpawnStatuses) &&
     areMemberRuntimeEntriesEquivalent(prev.memberRuntimeEntries, next.memberRuntimeEntries) &&
     prev.runtimeRunId === next.runtimeRunId &&
@@ -614,7 +608,7 @@ interface MemberCardRowProps {
   reviewTaskTimer: MemberActivityTimerAnchor | null;
   currentTaskTimerRunning: boolean;
   reviewTaskTimerRunning: boolean;
-  pendingDeliveryState?: PendingMemberDeliveryState;
+  awaitingReply: boolean;
   taskCounts?: TaskStatusCounts | null;
   runtimeSummary?: string;
   runtimeEntry?: TeamAgentRuntimeEntry;
@@ -653,7 +647,7 @@ const MemberCardRow = memo(function MemberCardRow({
   reviewTaskTimer,
   currentTaskTimerRunning,
   reviewTaskTimerRunning,
-  pendingDeliveryState,
+  awaitingReply,
   taskCounts,
   runtimeSummary,
   runtimeEntry,
@@ -710,7 +704,7 @@ const MemberCardRow = memo(function MemberCardRow({
       reviewTaskTimer={reviewTaskTimer}
       currentTaskTimerRunning={currentTaskTimerRunning}
       reviewTaskTimerRunning={reviewTaskTimerRunning}
-      pendingDeliveryState={pendingDeliveryState}
+      isAwaitingReply={awaitingReply}
       isRemoved={isRemoved}
       runtimeSummary={runtimeSummary}
       runtimeEntry={runtimeEntry}
@@ -837,7 +831,6 @@ export const MemberList = memo(function MemberList({
   memberTaskCounts,
   taskMap,
   pendingRepliesByMember,
-  messages = [],
   memberSpawnStatuses,
   memberRuntimeEntries,
   runtimeRunId,
@@ -1224,15 +1217,8 @@ export const MemberList = memo(function MemberList({
               reviewTaskTimer={reviewTaskTimer}
               currentTaskTimerRunning={currentTask !== null && activityTimerRunning}
               reviewTaskTimerRunning={reviewTask !== null && activityTimerRunning}
-              pendingDeliveryState={
-                pendingRepliesByMember?.[member.name] != null
-                  ? getPendingMemberDeliveryState(
-                      isTeamAlive,
-                      messages,
-                      member.name,
-                      pendingRepliesByMember[member.name]
-                    )
-                  : undefined
+              awaitingReply={
+                isTeamAlive !== false && Boolean(pendingRepliesByMember?.[member.name])
               }
               taskCounts={memberTaskCounts?.get(member.name.toLowerCase())}
               runtimeSummary={buildRuntimeSummary(member, spawnEntry, displayRuntimeEntry)}
@@ -1286,7 +1272,7 @@ export const MemberList = memo(function MemberList({
                 reviewTaskTimer={null}
                 currentTaskTimerRunning={false}
                 reviewTaskTimerRunning={false}
-                pendingDeliveryState={undefined}
+                awaitingReply={false}
                 taskCounts={memberTaskCounts?.get(member.name.toLowerCase())}
                 runtimeSummary={buildRuntimeSummary(member, undefined, undefined)}
                 runtimeEntry={undefined}

@@ -5,7 +5,6 @@ import { MessagesPanel } from '@renderer/components/team/messages/MessagesPanel'
 import {
   buildRevisionNoticeText,
   findLatestRevisableUserSentMessage,
-  getPendingMemberDeliveryState,
   hasVisibleReplyForSendMessageDiagnostics,
   isRevisableUserSentMessage,
   reconcilePendingRepliesByMember,
@@ -865,38 +864,6 @@ describe('MessagesPanel idle summary invariants', () => {
     ];
 
     expect(reconcilePendingRepliesByMember(pending, messages)).toBe(pending);
-  });
-
-  it('keeps an unread offline message queued until the team starts', () => {
-    const sentAtMs = Date.parse('2026-04-08T12:00:00.000Z');
-    const messages = [
-      makeMessage({
-        from: 'user',
-        to: 'alice',
-        source: 'user_sent',
-        timestamp: '2026-04-08T12:00:01.000Z',
-        read: false,
-      }),
-    ];
-
-    expect(getPendingMemberDeliveryState(false, messages, 'alice', sentAtMs)).toBe('queued');
-    expect(getPendingMemberDeliveryState(true, messages, 'alice', sentAtMs)).toBe('delivering');
-  });
-
-  it('marks a pending member message delivered after its inbox row is read', () => {
-    const sentAtMs = Date.parse('2026-04-08T12:00:00.000Z');
-    const messages = [
-      makeMessage({
-        from: 'user',
-        to: 'alice',
-        source: 'user_sent',
-        timestamp: '2026-04-08T12:00:01.000Z',
-        read: true,
-      }),
-    ];
-
-    expect(getPendingMemberDeliveryState(true, messages, 'alice', sentAtMs)).toBe('delivered');
-    expect(getPendingMemberDeliveryState(false, messages, 'alice', sentAtMs)).toBe('delivered');
   });
 
   it('keeps pending replies when a new local send has not materialized after an older lead answer', () => {

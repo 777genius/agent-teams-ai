@@ -4872,15 +4872,6 @@ async function handleRemoveMember(
     const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
     const previousTeamData = await teamDataService.getTeamData(tn);
     const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
-    const normalizedMemberName = name.trim().toLowerCase();
-    const isAlreadyRemoved = previousMembersMeta?.members.some(
-      (member) =>
-        member.name.trim().toLowerCase() === normalizedMemberName &&
-        typeof member.removedAt === 'number'
-    );
-    if (isAlreadyRemoved) {
-      return;
-    }
     const provisioning = getTeamProvisioningService();
     const isTeamAlive = provisioning.isTeamAlive(tn);
     if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
@@ -4889,21 +4880,21 @@ async function handleRemoveMember(
     await teamDataService.removeMember(tn, name);
     invalidateTeamRosterSnapshotCaches(tn);
 
-    try {
-      await provisioning.detachLiveRosterMember(tn, name);
-    } catch (error) {
-      await rollbackLiveRosterMutation({
-        teamName: tn,
-        teamDataService,
-        provisioning,
-        previousMembers,
-        previousMembersMeta,
-        restoreLiveMemberNames: isTeamAlive ? [name] : [],
-      });
-      throw error;
-    }
-
     if (isTeamAlive) {
+      try {
+        await provisioning.detachLiveRosterMember(tn, name);
+      } catch (error) {
+        await rollbackLiveRosterMutation({
+          teamName: tn,
+          teamDataService,
+          provisioning,
+          previousMembers,
+          previousMembersMeta,
+          restoreLiveMemberNames: [name],
+        });
+        throw error;
+      }
+
       const message =
         `Teammate "${name}" has been removed from the team. ` +
         `They will no longer participate in team activities. Please reassign their tasks if needed.`;

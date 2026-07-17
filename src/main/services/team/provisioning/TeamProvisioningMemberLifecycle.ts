@@ -1,11 +1,9 @@
 import { buildPlannedMemberLaneIdentity } from '@features/team-runtime-lanes';
 import {
   killTmuxPaneForCurrentPlatformSync,
-  listRuntimeProcessTableForCurrentPlatform,
   listTmuxPanePidsForCurrentPlatform,
   listTmuxPaneRuntimeInfoForCurrentPlatform,
   sendKeysToTmuxPaneForCurrentPlatform,
-  type TmuxPaneRuntimeInfo,
 } from '@features/tmux-installer/main';
 import { spawnCli } from '@main/utils/childProcess';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
@@ -36,7 +34,6 @@ import { getConfiguredCliFlavor } from '../cliFlavor';
 import { sanitizeProcessRuntimeEventFilePrefix } from '../ProcessBootstrapTransportEvidence';
 import { TeamConfigReader } from '../TeamConfigReader';
 import { createPersistedLaunchSnapshot } from '../TeamLaunchStateEvaluator';
-import { commandArgEquals } from '../TeamRuntimeLivenessResolver';
 
 import {
   buildDirectTmuxRestartCommand,
@@ -69,7 +66,6 @@ import type { NativeAppManagedBootstrapSpec } from '../bootstrap/NativeAppManage
 import type { TeamRuntimeLaunchResult, TeamRuntimeMemberLaunchEvidence } from '../runtime';
 import type { TeamMcpConfigBuilder } from '../TeamMcpConfigBuilder';
 import type { TeamMembersMetaStore } from '../TeamMembersMetaStore';
-import type { RuntimeTelemetryProcessTableRow } from '../TeamRuntimeTelemetry';
 import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import type { LiveTeamAgentRuntimeMetadata } from './TeamProvisioningRuntimeMetadataPolicy';
 import type {
@@ -1788,35 +1784,7 @@ export class TeamProvisioningMemberLifecycleController {
   }): Promise<void> {
     const pidsToStop = new Set<number>();
     const tmuxPaneIdsToStop = new Set<string>();
-    const persistedTmuxPaneIds = new Set(
-      input.persistedRuntimeMembers
-        .filter((member) => member.backendType?.trim().toLowerCase() === 'tmux')
-        .map((member) => (typeof member.tmuxPaneId === 'string' ? member.tmuxPaneId.trim() : ''))
-        .filter(Boolean)
-    );
     let hasAliveRuntimeWithoutStopHandle = false;
-
-    const readProcessCommandByPid =
-      this.getHostSeam<(pid: number) => string | null>('readProcessCommandByPid');
-    let persistedTmuxPaneInfo = new Map<string, TmuxPaneRuntimeInfo>();
-    if (persistedTmuxPaneIds.size > 0) {
-      try {
-        persistedTmuxPaneInfo = await listTmuxPaneRuntimeInfoForCurrentPlatform([
-          ...persistedTmuxPaneIds,
-        ]);
-      } catch (error) {
-        throw new Error(
-          `${input.actionLabel} cannot verify the persisted tmux runtime identity: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    }
-
-    const hasExactRuntimeIdentity = (command: string | null): boolean =>
-      commandArgEquals(command ?? '', '--team-name', input.teamName) &&
-      (commandArgEquals(command ?? '', '--agent-name', input.memberName) ||
-        commandArgEquals(command ?? '', '--agent-id', `${input.memberName}@${input.teamName}`));
 
     for (const runtimeMember of input.persistedRuntimeMembers) {
       const backendType = runtimeMember.backendType?.trim().toLowerCase();
@@ -1831,64 +1799,12 @@ export class TeamProvisioningMemberLifecycleController {
         Number.isFinite(runtimeMember.runtimePid) &&
         runtimeMember.runtimePid > 0
       ) {
-        const pid = runtimeMember.runtimePid;
-        const command = readProcessCommandByPid?.(pid) ?? null;
-        if (hasExactRuntimeIdentity(command)) {
-          pidsToStop.add(pid);
-        } else if (isProcessAlive(pid)) {
-          hasAliveRuntimeWithoutStopHandle = true;
-          logger.warn(
-            `[${input.teamName}] Refusing to stop persisted teammate pid=${pid} for ${input.memberName}: process identity does not match the exact team and member.`
-          );
-        }
+        pidsToStop.add(runtimeMember.runtimePid);
       }
       const paneId =
         typeof runtimeMember.tmuxPaneId === 'string' ? runtimeMember.tmuxPaneId.trim() : '';
       if (backendType === 'tmux' && paneId) {
-        const paneInfo = persistedTmuxPaneInfo.get(paneId);
-        if (paneInfo) {
-          const paneCommand = readProcessCommandByPid?.(paneInfo.panePid) ?? null;
-          let verifiedRuntimePid = hasExactRuntimeIdentity(paneCommand)
-            ? paneInfo.panePid
-            : undefined;
-          if (verifiedRuntimePid == null) {
-            const processRows = await listRuntimeProcessTableForCurrentPlatform({
-              bypassCache: true,
-            });
-            if (processRows) {
-              const childrenByParent = new Map<number, RuntimeTelemetryProcessTableRow[]>();
-              for (const row of processRows) {
-                const children = childrenByParent.get(row.ppid) ?? [];
-                children.push(row);
-                childrenByParent.set(row.ppid, children);
-              }
-              const queue = [...(childrenByParent.get(paneInfo.panePid) ?? [])];
-              const seen = new Set<number>();
-              while (queue.length > 0) {
-                const row = queue.shift();
-                if (!row || seen.has(row.pid)) continue;
-                seen.add(row.pid);
-                if (
-                  hasExactRuntimeIdentity(row.command) &&
-                  (typeof runtimeMember.runtimePid !== 'number' ||
-                    runtimeMember.runtimePid === row.pid)
-                ) {
-                  verifiedRuntimePid = row.pid;
-                  break;
-                }
-                queue.push(...(childrenByParent.get(row.pid) ?? []));
-              }
-            }
-          }
-          if (verifiedRuntimePid != null) {
-            tmuxPaneIdsToStop.add(paneId);
-          } else {
-            hasAliveRuntimeWithoutStopHandle = true;
-            logger.warn(
-              `[${input.teamName}] Refusing to stop persisted teammate pane=${paneId} for ${input.memberName}: pane runtime identity does not match the exact team and member.`
-            );
-          }
-        }
+        tmuxPaneIdsToStop.add(paneId);
       }
     }
 
@@ -1905,10 +1821,8 @@ export class TeamProvisioningMemberLifecycleController {
       let hasStopHandle = false;
       if (metadata.backendType === 'tmux') {
         const paneId = metadata.tmuxPaneId?.trim();
-        if (paneId && !persistedTmuxPaneIds.has(paneId)) {
+        if (paneId) {
           tmuxPaneIdsToStop.add(paneId);
-          hasStopHandle = true;
-        } else if (paneId && tmuxPaneIdsToStop.has(paneId)) {
           hasStopHandle = true;
         }
       }
@@ -1929,7 +1843,7 @@ export class TeamProvisioningMemberLifecycleController {
       }
     }
 
-    if (hasAliveRuntimeWithoutStopHandle && pidsToStop.size === 0 && tmuxPaneIdsToStop.size === 0) {
+    if (hasAliveRuntimeWithoutStopHandle) {
       throw new Error(
         `${input.actionLabel} cannot stop the existing runtime because it does not expose a pid or tmux pane.`
       );
@@ -2149,32 +2063,7 @@ export class TeamProvisioningMemberLifecycleController {
     teamName: string,
     memberName: string
   ): Promise<void> {
-    const runId = this.getAliveRunId(teamName);
-    const run = runId ? this.runs.get(runId) : undefined;
-    const persistedRuntimeMembers = this.readPersistedRuntimeMembers(teamName).filter((member) => {
-      const candidateName = typeof member.name === 'string' ? member.name.trim() : '';
-      return candidateName.length > 0 && matchesMemberNameOrBase(candidateName, memberName);
-    });
-    const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(teamName).catch(
-      () => new Map<string, LiveTeamAgentRuntimeMetadata>()
-    );
-
-    // A process-backed team can outlive the mutable provisioning run that created it
-    // (for example after the desktop service is recreated). Persisted launch evidence
-    // remains member-scoped and is sufficient to detach that exact runtime without a
-    // team-wide process scan.
-    if (!run || run.processKilled || run.cancelRequested) {
-      await this.stopPrimaryOwnedRosterRuntime({
-        teamName,
-        memberName,
-        persistedRuntimeMembers,
-        liveRuntimeByMember,
-        actionLabel: `Detach for teammate "${memberName}"`,
-      });
-      this.invalidateRuntimeSnapshotCaches(teamName);
-      return;
-    }
-
+    const run = this.getMutableAliveRunOrThrow(teamName);
     const leadProviderId = resolveTeamProviderId(run.request.providerId);
     const config = await this.readConfigForStrictDecision(teamName);
     const metaMembers = await this.membersMetaStore.getMembers(teamName).catch(() => []);
@@ -2195,6 +2084,13 @@ export class TeamProvisioningMemberLifecycleController {
       );
     }
 
+    const persistedRuntimeMembers = this.readPersistedRuntimeMembers(teamName).filter((member) => {
+      const candidateName = typeof member.name === 'string' ? member.name.trim() : '';
+      return candidateName.length > 0 && matchesMemberNameOrBase(candidateName, memberName);
+    });
+    const liveRuntimeByMember = await this.getLiveTeamAgentRuntimeMetadata(teamName).catch(
+      () => new Map<string, LiveTeamAgentRuntimeMetadata>()
+    );
     await this.stopPrimaryOwnedRosterRuntime({
       teamName,
       memberName,

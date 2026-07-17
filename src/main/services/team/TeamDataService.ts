@@ -14,12 +14,7 @@ import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
-import {
-  createCliAutoSuffixNameGuard,
-  createCliProvisionerNameGuard,
-  parseNumericSuffixName,
-  validateTeamMemberNameFormat,
-} from '@shared/utils/teamMemberName';
+import { parseNumericSuffixName, validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
@@ -50,7 +45,7 @@ import { TeamInboxWriter } from './TeamInboxWriter';
 import { TeamKanbanManager } from './TeamKanbanManager';
 import { hasMixedPersistedLaunchMetadata } from './TeamLaunchStateEvaluator';
 import { TeamLaunchStateStore } from './TeamLaunchStateStore';
-import { isMaterializableInboxMemberName, TeamMemberResolver } from './TeamMemberResolver';
+import { TeamMemberResolver } from './TeamMemberResolver';
 import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisoryService';
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMessageFeedService } from './TeamMessageFeedService';
@@ -1886,83 +1881,45 @@ export class TeamDataService {
     teamName: string,
     memberName: string
   ): Promise<{ members: TeamMember[]; member: TeamMember }> {
-    let members = await this.membersMetaStore.getMembers(teamName);
-    const config = await this.configReader.getConfig(teamName);
-    const inboxNames = await this.inboxReader.listInboxNames(teamName);
-    const knownNames = new Set(members.map((member) => member.name.trim().toLowerCase()));
-    const migratedMembers: TeamMember[] = [];
-    const joinedAt = Date.now();
+    const members = await this.membersMetaStore.getMembers(teamName);
+    let member = members.find((m) => m.name === memberName);
 
-    for (const configMember of config?.members ?? []) {
-      const name = typeof configMember?.name === 'string' ? configMember.name.trim() : '';
-      const normalizedName = name.toLowerCase();
-      if (
-        !name ||
-        normalizedName === 'user' ||
-        isLeadMember(configMember) ||
-        knownNames.has(normalizedName)
-      ) {
-        continue;
-      }
-      const providerId = normalizeOptionalTeamProviderId(configMember.providerId);
-      migratedMembers.push({
-        name,
-        role: configMember.role,
-        workflow: configMember.workflow,
-        isolation: configMember.isolation === 'worktree' ? ('worktree' as const) : undefined,
-        providerId,
-        providerBackendId: migrateProviderBackendId(providerId, configMember.providerBackendId),
-        model: configMember.model,
-        effort: isTeamEffortLevel(configMember.effort) ? configMember.effort : undefined,
-        fastMode: configMember.fastMode,
-        mcpPolicy: normalizeTeamMemberMcpPolicy(configMember.mcpPolicy),
-        agentType: configMember.agentType ?? 'general-purpose',
-        color: configMember.color,
-        joinedAt: configMember.joinedAt ?? joinedAt,
-        agentId: configMember.agentId,
-        cwd: configMember.cwd,
-      });
-      knownNames.add(normalizedName);
-    }
-
-    const rosterNames = [
-      ...members.map((member) => member.name),
-      ...migratedMembers.map((member) => member.name),
-      ...inboxNames.map((name) => name.trim()).filter(Boolean),
-    ];
-    const keepAutoSuffix = createCliAutoSuffixNameGuard(rosterNames);
-    const keepProvisioner = createCliProvisionerNameGuard(rosterNames);
-    const explicitNames = new Set(knownNames);
-    for (const inboxName of inboxNames) {
-      const name = inboxName.trim();
-      const normalizedName = name.toLowerCase();
-      if (
-        !name ||
-        normalizedName === 'user' ||
-        isLeadMember({ name, agentType: undefined }) ||
-        knownNames.has(normalizedName) ||
-        !isMaterializableInboxMemberName(name, explicitNames) ||
-        !keepAutoSuffix(name) ||
-        !keepProvisioner(name)
-      ) {
-        continue;
-      }
-      migratedMembers.push({ name, agentType: 'general-purpose', joinedAt });
-      knownNames.add(normalizedName);
-    }
-
-    if (migratedMembers.length > 0) {
-      const nextMembers = applyDistinctRosterColors([...members, ...migratedMembers]);
-      await this.membersMetaStore.writeMembers(teamName, nextMembers);
-      members = nextMembers;
-    }
-
-    const normalizedMemberName = memberName.trim().toLowerCase();
-    const member = members.find(
-      (candidate) => candidate.name.trim().toLowerCase() === normalizedMemberName
-    );
     if (!member) {
-      throw new Error(`Member "${memberName}" not found`);
+      // Try config.json first — it may have role/workflow info.
+      const config = await this.configReader.getConfig(teamName);
+      const configMember = config?.members?.find(
+        (m) => typeof m?.name === 'string' && m.name.trim() === memberName
+      );
+
+      if (configMember) {
+        member = {
+          name: configMember.name.trim(),
+          role: configMember.role,
+          workflow: configMember.workflow,
+          isolation: configMember.isolation === 'worktree' ? ('worktree' as const) : undefined,
+          agentType: configMember.agentType ?? 'general-purpose',
+          color: configMember.color,
+          joinedAt: configMember.joinedAt ?? Date.now(),
+          cwd: configMember.cwd,
+        };
+      } else {
+        // Member may exist only via inbox file (CLI-spawned teammate).
+        // Check if an inbox file exists for this name.
+        const inboxNames = await this.inboxReader.listInboxNames(teamName);
+        if (!inboxNames.includes(memberName)) {
+          throw new Error(`Member "${memberName}" not found`);
+        }
+
+        member = {
+          name: memberName,
+          agentType: 'general-purpose',
+          joinedAt: Date.now(),
+        };
+      }
+
+      const nextMembers = applyDistinctRosterColors([...members, member]);
+      member = nextMembers.find((m) => m.name === memberName) ?? member;
+      await this.membersMetaStore.writeMembers(teamName, nextMembers);
     }
 
     return { members, member };
@@ -2132,9 +2089,9 @@ export class TeamDataService {
   async removeMember(teamName: string, memberName: string): Promise<void> {
     const { members, member } = await this.ensureMemberInMeta(teamName, memberName);
 
-    // Removal is intentionally idempotent. The tombstone is already the durable
-    // success state, so retries after an IPC timeout or service restart are safe.
-    if (member.removedAt) return;
+    if (member.removedAt) {
+      throw new Error(`Member "${memberName}" is already removed`);
+    }
     if (isLeadMember(member)) {
       throw new Error('Cannot remove team lead');
     }

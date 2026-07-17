@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'vitest';
+
 import {
   buildMemberDraftColorMap,
   buildMembersFromDrafts,
@@ -6,10 +8,8 @@ import {
   filterEditableMemberInputs,
   normalizeLeadProviderForMode,
 } from '@renderer/components/team/members/MembersEditorSection';
-import { getTeammateParticipantIdentityColor } from '@shared/constants/memberColors';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
-import { describe, expect, it } from 'vitest';
-
+import { getMemberColorByName } from '@shared/constants/memberColors';
 import type { ResolvedTeamMember } from '@shared/types';
 
 describe('members editor editable input filtering', () => {
@@ -432,22 +432,22 @@ describe('members editor editable input filtering', () => {
     expect(draftColors.get(drafts[2].id)).toBe(expectedColors.get(`draft:${drafts[2].id}`));
   });
 
-  it('replaces stale stored colors with avatar-aligned colors in edit and launch dialogs', () => {
+  it('preserves the resolved team colors in edit and launch dialogs', () => {
     const existingMembers = [
-      { name: 'alice', color: 'pink' },
-      { name: 'bob', color: 'pink' },
-      { name: 'tom', color: 'pink' },
+      { name: 'alice', color: getMemberColorByName('alice') },
+      { name: 'bob', color: getMemberColorByName('bob') },
+      { name: 'tom', color: getMemberColorByName('tom') },
     ];
     const drafts = existingMembers.map((member) => createMemberDraft({ name: member.name }));
 
     const draftColors = buildMemberDraftColorMap(drafts, existingMembers);
 
-    expect(draftColors.get(drafts[0].id)).toBe(getTeammateParticipantIdentityColor(0));
-    expect(draftColors.get(drafts[1].id)).toBe(getTeammateParticipantIdentityColor(1));
-    expect(draftColors.get(drafts[2].id)).toBe(getTeammateParticipantIdentityColor(2));
+    expect(draftColors.get(drafts[0].id)).toBe(existingMembers[0].color);
+    expect(draftColors.get(drafts[1].id)).toBe(existingMembers[1].color);
+    expect(draftColors.get(drafts[2].id)).toBe(existingMembers[2].color);
   });
 
-  it('keeps avatar identity canonical over an outdated resolved color map', () => {
+  it('prefers an explicit resolved member color map from the team screen', () => {
     const existingMembers = [
       { name: 'alice', color: 'brick' },
       { name: 'tom', color: 'forest' },
@@ -460,8 +460,8 @@ describe('members editor editable input filtering', () => {
 
     const draftColors = buildMemberDraftColorMap(drafts, existingMembers, resolvedColorMap);
 
-    expect(draftColors.get(drafts[0].id)).toBe(getTeammateParticipantIdentityColor(0));
-    expect(draftColors.get(drafts[1].id)).toBe(getTeammateParticipantIdentityColor(1));
+    expect(draftColors.get(drafts[0].id)).toBe('blue');
+    expect(draftColors.get(drafts[1].id)).toBe('saffron');
   });
 
   it('keeps an existing teammate color stable while the name is being edited', () => {
@@ -492,17 +492,5 @@ describe('members editor editable input filtering', () => {
     const afterRename = buildMemberDraftColorMap([{ ...draft, name: 'charlie' }]);
 
     expect(afterRename.get(draft.id)).toBe(beforeRename.get(draft.id));
-  });
-
-  it('matches the active-then-removed avatar order used by the roster editor', () => {
-    const activeAlice = createMemberDraft({ id: 'alice', name: 'alice' });
-    const removedBob = createMemberDraft({ id: 'bob', name: 'bob', removedAt: 1 });
-    const activeTom = createMemberDraft({ id: 'tom', name: 'tom' });
-
-    const draftColors = buildMemberDraftColorMap([activeAlice, removedBob, activeTom]);
-
-    expect(draftColors.get(activeAlice.id)).toBe(getTeammateParticipantIdentityColor(0));
-    expect(draftColors.get(activeTom.id)).toBe(getTeammateParticipantIdentityColor(1));
-    expect(draftColors.get(removedBob.id)).toBe(getTeammateParticipantIdentityColor(2));
   });
 });

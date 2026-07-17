@@ -8,7 +8,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   AGENT_TEAMS_ELECTRON_CLAUDE_ROOT_ENV,
   AGENT_TEAMS_ELECTRON_USER_DATA_DIR_ENV,
-  applyElectronDevClaudeRootOverrideForWorker,
   applyElectronDevPathOverrides,
 } from './electronDevPathOverrides';
 import { getClaudeBasePath, setAppDataBasePath, setClaudeBasePathOverride } from './pathDecoder';
@@ -75,18 +74,5 @@ describe('applyElectronDevPathOverrides', () => {
       `${AGENT_TEAMS_ELECTRON_CLAUDE_ROOT_ENV} must be an absolute path.`,
     ]);
     expect(setPathCalls).toEqual([]);
-  });
-
-  it('applies the explicit Claude root inside worker-thread startup', () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-worker-root-'));
-    tempDirs.push(tempRoot);
-    const claudeRoot = path.join(tempRoot, '.claude');
-
-    const result = applyElectronDevClaudeRootOverrideForWorker({
-      [AGENT_TEAMS_ELECTRON_CLAUDE_ROOT_ENV]: claudeRoot,
-    });
-
-    expect(result).toBe(claudeRoot);
-    expect(getClaudeBasePath()).toBe(claudeRoot);
   });
 });

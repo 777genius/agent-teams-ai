@@ -59,10 +59,7 @@ import {
   isLeadThought,
 } from '../activity/LeadThoughtsGroup';
 import { MessageExpandDialog } from '../activity/MessageExpandDialog';
-import {
-  CollapsibleTeamSection,
-  type CollapsibleTeamSectionVariant,
-} from '../CollapsibleTeamSection';
+import { CollapsibleTeamSection } from '../CollapsibleTeamSection';
 import {
   getTeamMessagesSidebarUiState,
   setTeamMessagesSidebarUiState,
@@ -245,8 +242,6 @@ interface MessagesPanelProps {
    * consumers (virtualization); unused in this release.
    */
   inlineScrollContainerRef?: RefObject<HTMLDivElement | null>;
-  /** Visual treatment for the inline section header. */
-  sectionVariant?: CollapsibleTeamSectionVariant;
 }
 
 const MessagesComposerSection = memo(MessageComposer);
@@ -383,7 +378,6 @@ export const MessagesPanel = memo(function MessagesPanel({
   onTaskIdClick,
   onFloatingComposerHeightChange,
   inlineScrollContainerRef,
-  sectionVariant,
 }: MessagesPanelProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const {
@@ -1171,7 +1165,6 @@ export const MessagesPanel = memo(function MessagesPanel({
       members={members}
       tasks={tasks}
       messages={effectiveMessages}
-      isTeamAlive={isTeamAlive}
       pendingRepliesByMember={pendingRepliesByMember}
       layout="flow"
       position="inline"
@@ -1185,7 +1178,6 @@ export const MessagesPanel = memo(function MessagesPanel({
       members={members}
       tasks={tasks}
       messages={effectiveMessages}
-      isTeamAlive={isTeamAlive}
       pendingRepliesByMember={pendingRepliesByMember}
       layout="flow"
       position="sidebar"
@@ -1632,7 +1624,6 @@ export const MessagesPanel = memo(function MessagesPanel({
   return (
     <CollapsibleTeamSection
       sectionId="messages"
-      variant={sectionVariant}
       title={t('messages.title')}
       icon={<MessageSquare size={14} />}
       badge={filteredMessages.length}

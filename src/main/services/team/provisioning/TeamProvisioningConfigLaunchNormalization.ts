@@ -47,20 +47,6 @@ export interface LaunchExpectedMembersResolution {
   warning?: string;
 }
 
-export function mergeMembersMetaForLaunch(
-  activeMembers: readonly TeamMember[],
-  existingMembers: readonly TeamMember[]
-): TeamMember[] {
-  const removedMembers = existingMembers.filter((member) => member.removedAt != null);
-  const removedNames = new Set(
-    removedMembers.map((member) => member.name.trim().toLowerCase()).filter(Boolean)
-  );
-  return [
-    ...activeMembers.filter((member) => !removedNames.has(member.name.trim().toLowerCase())),
-    ...removedMembers,
-  ];
-}
-
 export const PRELAUNCH_CONFIG_BACKUP_SUFFIX = '.prelaunch.bak';
 
 export function getPrelaunchConfigBackupPath(configPath: string): string {

@@ -1,20 +1,10 @@
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from 'react';
+import { memo, useEffect, useMemo, useReducer, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { OngoingIndicator } from '@renderer/components/common/OngoingIndicator';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { UnreadCommentsBadge } from '@renderer/components/team/UnreadCommentsBadge';
 import { Button } from '@renderer/components/ui/button';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@renderer/components/ui/hover-card';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -58,7 +48,6 @@ interface KanbanTaskCardProps {
   kanbanTaskState?: KanbanTaskState;
   hasReviewers: boolean;
   compact?: boolean;
-  flat?: boolean;
   taskMap: Map<string, TeamTask>;
   memberColorMap: Map<string, string>;
   hasLiveTaskLogs?: boolean;
@@ -79,12 +68,6 @@ interface DependencyBadgeProps {
   taskId: string;
   taskMap: Map<string, TeamTask>;
   onScrollToTask?: (taskId: string) => void;
-}
-
-interface FlatDependencyRowProps extends DependencyBadgeProps {
-  label: string;
-  direction: 'backward' | 'forward';
-  tone: 'blocked' | 'depends' | 'blocks';
 }
 
 interface CommentPulseState {
@@ -242,170 +225,40 @@ const DependencyBadge = ({
   );
 };
 
-const FlatDependencyRow = ({
-  taskId,
-  taskMap,
-  onScrollToTask,
-  label,
-  direction,
-  tone,
-}: FlatDependencyRowProps): React.JSX.Element => {
-  const depTask = taskMap.get(taskId);
-  const displayLabel = depTask
-    ? formatTaskDisplayLabel(depTask)
-    : `#${deriveTaskDisplayId(taskId)}`;
-  const toneClass =
-    tone === 'blocked'
-      ? 'text-yellow-700 dark:text-yellow-300'
-      : tone === 'blocks'
-        ? 'text-blue-600 dark:text-blue-400'
-        : 'text-[var(--color-text-muted)]';
-  const DirectionIcon = direction === 'backward' ? ArrowLeftFromLine : ArrowRightFromLine;
-
-  return (
-    <button
-      type="button"
-      className={`flex w-full min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-left text-[10px] leading-4 ${toneClass} ${
-        onScrollToTask ? 'cursor-pointer' : 'cursor-default'
-      }`}
-      onClick={(e) => {
-        e.stopPropagation();
-        onScrollToTask?.(taskId);
-      }}
-    >
-      <DirectionIcon className="size-3 shrink-0" />
-      <span className="shrink-0 font-medium">{label}</span>
-      <span className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden text-[var(--color-text-muted)]">
-        <span className="shrink-0 font-medium">{displayLabel}</span>
-        {depTask ? (
-          <span
-            className="min-w-0 truncate text-[var(--color-text-secondary)]"
-            title={depTask.subject}
-          >
-            {depTask.subject}
-          </span>
-        ) : null}
-      </span>
-    </button>
-  );
-};
-
 const TruncatedTitle = ({
   text,
   className,
-  reserveTwoLines = false,
-  prominent = false,
 }: {
   text: string;
   className?: string;
-  reserveTwoLines?: boolean;
-  prominent?: boolean;
-}): React.JSX.Element => {
-  const titleRef = useRef<HTMLHeadingElement | null>(null);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-  const [tooltipOpen, setTooltipOpen] = useState(false);
-
-  const updateOverflowState = useCallback((): boolean => {
-    const element = titleRef.current;
-    if (!element) return false;
-
-    const nextIsOverflowing =
-      element.scrollHeight > element.clientHeight + 1 ||
-      element.scrollWidth > element.clientWidth + 1;
-    setIsOverflowing((current) => (current === nextIsOverflowing ? current : nextIsOverflowing));
-    if (!nextIsOverflowing) setTooltipOpen(false);
-    return nextIsOverflowing;
-  }, []);
-
-  useLayoutEffect(() => {
-    const element = titleRef.current;
-    if (!element) return undefined;
-
-    updateOverflowState();
-
-    if (typeof ResizeObserver !== 'undefined') {
-      let animationFrame = 0;
-      const resizeObserver = new ResizeObserver(() => {
-        cancelAnimationFrame(animationFrame);
-        animationFrame = requestAnimationFrame(updateOverflowState);
-      });
-      resizeObserver.observe(element);
-      return () => {
-        cancelAnimationFrame(animationFrame);
-        resizeObserver.disconnect();
-      };
-    }
-
-    window.addEventListener('resize', updateOverflowState);
-    return () => window.removeEventListener('resize', updateOverflowState);
-  }, [text, updateOverflowState]);
-
-  const handleTooltipOpenChange = useCallback(
-    (open: boolean): void => {
-      setTooltipOpen(open && updateOverflowState());
-    },
-    [updateOverflowState]
-  );
-
-  const title = (
-    <h5
-      ref={titleRef}
-      data-title-overflow={isOverflowing ? 'true' : 'false'}
-      className={`line-clamp-2 font-medium text-[var(--color-text)] ${
-        prominent ? 'text-sm leading-5' : 'text-xs leading-4'
-      } ${reserveTwoLines ? (prominent ? 'h-10' : 'h-8') : ''} ${className ?? ''}`}
-    >
-      {text}
-    </h5>
-  );
-
-  return (
-    <Tooltip open={tooltipOpen} onOpenChange={handleTooltipOpenChange}>
-      <TooltipTrigger asChild>{title}</TooltipTrigger>
-      <TooltipContent
-        side="top"
-        sideOffset={6}
-        collisionPadding={12}
-        className="max-w-80 text-pretty break-words leading-relaxed"
-        data-testid="kanban-task-title-tooltip"
-      >
-        {text}
-      </TooltipContent>
-    </Tooltip>
-  );
-};
+}): React.JSX.Element => (
+  <h5
+    className={`line-clamp-2 text-xs font-medium text-[var(--color-text)] ${className ?? ''}`}
+    title={text}
+  >
+    {text}
+  </h5>
+);
 
 const CancelTaskButton = ({
   taskId,
   onConfirm,
-  toolbarMode = false,
-  onOpenChange,
 }: {
   taskId: string;
   onConfirm: (taskId: string) => void;
-  toolbarMode?: boolean;
-  onOpenChange?: (open: boolean) => void;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const [open, setOpen] = useState(false);
-  const handleOpenChange = (nextOpen: boolean): void => {
-    setOpen(nextOpen);
-    onOpenChange?.(nextOpen);
-  };
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover open={open} onOpenChange={setOpen}>
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
             <Button
-              variant={toolbarMode ? 'ghost' : 'destructive'}
+              variant="destructive"
               size="icon"
-              className={
-                toolbarMode
-                  ? 'size-6 rounded-none text-red-400 shadow-none hover:bg-red-500/10 hover:text-red-300'
-                  : 'size-6 rounded-full shadow-sm'
-              }
+              className="size-6 rounded-full shadow-sm"
               aria-label={t('kanban.taskCard.cancelTask', { taskId })}
               onClick={(e) => e.stopPropagation()}
             >
@@ -431,18 +284,13 @@ const CancelTaskButton = ({
               size="sm"
               className="flex-1"
               onClick={() => {
-                handleOpenChange(false);
+                setOpen(false);
                 onConfirm(taskId);
               }}
             >
               {t('kanban.taskCard.confirm')}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => handleOpenChange(false)}
-            >
+            <Button variant="outline" size="sm" className="flex-1" onClick={() => setOpen(false)}>
               {t('kanban.taskCard.keep')}
             </Button>
           </div>
@@ -487,7 +335,6 @@ interface TaskMetaActionsProps {
   unreadCount: number;
   commentCount: number;
   pulseKey: number;
-  showComments: boolean;
   canOpenChanges: boolean;
   changesNeedAttention: boolean;
   onViewChanges?: (taskId: string) => void;
@@ -499,7 +346,6 @@ const TaskMetaActions = memo(function TaskMetaActions({
   unreadCount,
   commentCount,
   pulseKey,
-  showComments,
   canOpenChanges,
   changesNeedAttention,
   onViewChanges,
@@ -529,13 +375,11 @@ const TaskMetaActions = memo(function TaskMetaActions({
           }}
         />
       ) : null}
-      {showComments ? (
-        <UnreadCommentsBadge
-          unreadCount={unreadCount}
-          totalCount={commentCount}
-          pulseKey={pulseKey}
-        />
-      ) : null}
+      <UnreadCommentsBadge
+        unreadCount={unreadCount}
+        totalCount={commentCount}
+        pulseKey={pulseKey}
+      />
       {onDeleteTask ? (
         <TaskActionIconButton
           label={t('kanban.taskCard.deleteTask')}
@@ -563,8 +407,6 @@ interface TaskPrimaryActionsProps {
   onStartTask: (taskId: string) => void;
   onCompleteTask: (taskId: string) => void;
   onCancelTask: (taskId: string) => void;
-  toolbarMode?: boolean;
-  onActionPopoverOpenChange?: (open: boolean) => void;
 }
 
 const TaskPrimaryActions = memo(function TaskPrimaryActions({
@@ -578,8 +420,6 @@ const TaskPrimaryActions = memo(function TaskPrimaryActions({
   onStartTask,
   onCompleteTask,
   onCancelTask,
-  toolbarMode = false,
-  onActionPopoverOpenChange,
 }: TaskPrimaryActionsProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
 
@@ -619,12 +459,7 @@ const TaskPrimaryActions = memo(function TaskPrimaryActions({
               onCompleteTask(taskId);
             }}
           />
-          <CancelTaskButton
-            taskId={taskId}
-            onConfirm={onCancelTask}
-            toolbarMode={toolbarMode}
-            onOpenChange={onActionPopoverOpenChange}
-          />
+          <CancelTaskButton taskId={taskId} onConfirm={onCancelTask} />
         </>
       ) : null}
 
@@ -653,7 +488,7 @@ const TaskPrimaryActions = memo(function TaskPrimaryActions({
 
       {columnId === 'review' ? (
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          {isReviewManual && !toolbarMode ? (
+          {isReviewManual ? (
             <div className="whitespace-nowrap text-[11px] text-[var(--color-text-muted)]">
               {t('kanban.taskCard.manualReview')}
             </div>
@@ -671,12 +506,8 @@ const TaskPrimaryActions = memo(function TaskPrimaryActions({
             <TaskActionIconButton
               label={t('kanban.taskCard.requestChanges')}
               icon={<FilePenLine size={11} />}
-              variant={toolbarMode ? 'ghost' : 'destructive'}
-              className={
-                toolbarMode
-                  ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
-                  : 'bg-red-500/90 text-white hover:bg-red-500'
-              }
+              variant="destructive"
+              className="bg-red-500/90 text-white hover:bg-red-500"
               onClick={(e) => {
                 e.stopPropagation();
                 onRequestChanges(taskId);
@@ -709,7 +540,6 @@ export const KanbanTaskCard = memo(
     kanbanTaskState,
     hasReviewers,
     compact,
-    flat = false,
     taskMap,
     memberColorMap,
     hasLiveTaskLogs = false,
@@ -731,12 +561,6 @@ export const KanbanTaskCard = memo(
     const commentPulseTaskKey = `${teamName}/${task.id}`;
     const comments = task.comments ?? EMPTY_TASK_COMMENTS;
     const commentCount = comments.length;
-    const [toolbarOpen, setToolbarOpen] = useState(false);
-    const [actionPopoverOpen, setActionPopoverOpen] = useState(false);
-    const handleActionPopoverOpenChange = useCallback((open: boolean): void => {
-      setActionPopoverOpen(open);
-      if (!open) setToolbarOpen(false);
-    }, []);
     const [commentPulse, syncCommentPulse] = useReducer(
       syncCommentPulseState,
       { taskKey: commentPulseTaskKey, comments },
@@ -748,12 +572,7 @@ export const KanbanTaskCard = memo(
     const blocksIds = task.blocks?.filter((id) => id.length > 0) ?? [];
     const hasBlockedBy = blockedByIds.length > 0;
     const hasBlocks = blocksIds.length > 0;
-    const hasActiveBlocker = blockedByIds.some((id) => {
-      const blocker = taskMap.get(id);
-      return !blocker || !isTeamTaskFinishedForDependency(blocker);
-    });
-    const shouldHighlightBlocked =
-      hasActiveBlocker && columnId !== 'done' && columnId !== 'approved';
+    const shouldHighlightBlocked = hasBlockedBy && columnId !== 'done' && columnId !== 'approved';
     const cardSurfaceClass = isLight ? 'bg-white' : 'bg-[var(--color-surface-raised)]';
 
     const taskChangeRequestOptions = useMemo(() => buildTaskChangeRequestOptions(task), [task]);
@@ -769,65 +588,17 @@ export const KanbanTaskCard = memo(
       (task.changePresence === 'has_changes' || task.changePresence === 'needs_attention');
     const changesNeedAttention = task.changePresence === 'needs_attention';
 
-    const renderActionControls = (toolbarMode: boolean): React.JSX.Element => (
-      <div
-        data-kanban-task-toolbar={toolbarMode ? 'true' : undefined}
-        className={
-          toolbarMode ? 'flex items-center gap-1' : 'flex items-center justify-between gap-2'
-        }
-      >
-        <TaskPrimaryActions
-          taskId={task.id}
-          columnId={columnId}
-          isReviewManual={isReviewManual}
-          onRequestReview={onRequestReview}
-          onApprove={onApprove}
-          onRequestChanges={onRequestChanges}
-          onMoveBackToDone={onMoveBackToDone}
-          onStartTask={onStartTask}
-          onCompleteTask={onCompleteTask}
-          onCancelTask={onCancelTask}
-          toolbarMode={toolbarMode}
-          onActionPopoverOpenChange={toolbarMode ? handleActionPopoverOpenChange : undefined}
-        />
-
-        <div
-          className={`flex shrink-0 flex-nowrap items-center gap-1.5 ${
-            toolbarMode ? 'border-l border-[var(--color-border)] pl-1' : ''
-          }`}
-        >
-          <TaskMetaActions
-            taskId={task.id}
-            unreadCount={unreadCount}
-            commentCount={commentCount}
-            pulseKey={visibleCommentPulseKey}
-            showComments={!toolbarMode}
-            canOpenChanges={canOpenChanges}
-            changesNeedAttention={changesNeedAttention}
-            onViewChanges={onViewChanges}
-            onDeleteTask={onDeleteTask}
-          />
-        </div>
-      </div>
-    );
-
     useEffect(() => {
       syncCommentPulse({ taskKey: commentPulseTaskKey, comments });
     }, [commentCount, commentPulseTaskKey, comments]);
 
-    const cardContent = (
+    return (
       <div
         data-task-id={task.id}
-        className={`kanban-task-card relative cursor-pointer ${
-          flat
-            ? `kanban-task-card-flat group rounded-none bg-transparent py-3 pl-3 pr-1.5 ${
-                shouldHighlightBlocked ? 'kanban-task-card-flat-blocked' : ''
-              }`
-            : `rounded-md border px-1.5 py-3 hover:border-[var(--color-border-emphasis)] ${
-                shouldHighlightBlocked
-                  ? `border-yellow-500/30 ${cardSurfaceClass}`
-                  : `border-[var(--color-border)] ${cardSurfaceClass}`
-              }`
+        className={`kanban-task-card relative cursor-pointer rounded-md border px-1.5 py-3 hover:border-[var(--color-border-emphasis)] ${
+          shouldHighlightBlocked
+            ? `border-yellow-500/30 ${cardSurfaceClass}`
+            : `border-[var(--color-border)] ${cardSurfaceClass}`
         }`}
         role="button"
         tabIndex={0}
@@ -839,52 +610,21 @@ export const KanbanTaskCard = memo(
           }
         }}
       >
-        {flat ? (
-          <div className="absolute left-3 right-1.5 top-1.5 flex min-w-0 items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-1.5 text-[10px] leading-none text-[var(--color-text-muted)]">
-              <span className="truncate">{formatTaskDisplayLabel(task)}</span>
-              <UnreadCommentsBadge
-                unreadCount={unreadCount}
-                totalCount={commentCount}
-                pulseKey={visibleCommentPulseKey}
-                showZero
-                displayMode="inline"
-              />
-              {hasLiveTaskLogs ? (
-                <span aria-label={t('kanban.taskCard.taskLogsActive')} className="inline-flex">
-                  <OngoingIndicator size="sm" title={t('kanban.taskCard.newTaskLogsArriving')} />
-                </span>
-              ) : null}
-            </div>
-            {task.owner ? (
-              <span className="shrink-0">
-                <MemberBadge name={task.owner} color={memberColorMap.get(task.owner)} size="xs" />
-              </span>
-            ) : null}
-          </div>
-        ) : (
-          <>
-            <span className="absolute left-[3px] top-[2px] flex max-w-[calc(100%-72px)] items-center gap-1 text-[9px] leading-none text-[var(--color-text-muted)]">
-              <span className="truncate">{formatTaskDisplayLabel(task)}</span>
-              {hasLiveTaskLogs ? (
-                <span aria-label={t('kanban.taskCard.taskLogsActive')} className="inline-flex">
-                  <OngoingIndicator size="sm" title={t('kanban.taskCard.newTaskLogsArriving')} />
-                </span>
-              ) : null}
+        <span className="absolute left-[3px] top-[2px] flex max-w-[calc(100%-72px)] items-center gap-1 text-[9px] leading-none text-[var(--color-text-muted)]">
+          <span className="truncate">{formatTaskDisplayLabel(task)}</span>
+          {hasLiveTaskLogs ? (
+            <span aria-label={t('kanban.taskCard.taskLogsActive')} className="inline-flex">
+              <OngoingIndicator size="sm" title={t('kanban.taskCard.newTaskLogsArriving')} />
             </span>
-            {task.owner ? (
-              <span className="absolute right-[6px] top-[2px]">
-                <MemberBadge name={task.owner} color={memberColorMap.get(task.owner)} size="xs" />
-              </span>
-            ) : null}
-          </>
-        )}
-        <div className={`mb-2 ${flat ? 'pt-5' : 'pt-[11px]'}`}>
-          {flat ? (
-            <TruncatedTitle text={task.subject} className="min-w-0" reserveTwoLines prominent />
-          ) : !compact ? (
-            <TruncatedTitle text={task.subject} className="min-w-0" />
           ) : null}
+        </span>
+        {task.owner ? (
+          <span className="absolute right-[6px] top-[2px]">
+            <MemberBadge name={task.owner} color={memberColorMap.get(task.owner)} size="xs" />
+          </span>
+        ) : null}
+        <div className="mb-2 pt-[11px]">
+          {!compact && <TruncatedTitle text={task.subject} className="min-w-0" />}
           {task.needsClarification ? (
             <span
               className={`mt-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
@@ -906,115 +646,71 @@ export const KanbanTaskCard = memo(
               {REVIEW_STATE_DISPLAY.needsFix.label}
             </span>
           ) : null}
-          {flat && isReviewManual ? (
-            <span className="mt-1 inline-flex text-[10px] text-[var(--color-text-muted)]">
-              {t('kanban.taskCard.manualReview')}
-            </span>
-          ) : null}
-          {!flat && compact ? <TruncatedTitle text={task.subject} className="mt-1" /> : null}
+          {compact && <TruncatedTitle text={task.subject} className="mt-1" />}
         </div>
 
-        {flat ? (
-          hasBlockedBy || hasBlocks ? (
-            <div className="mb-1.5 space-y-1">
-              {blockedByIds.map((id) => {
-                const blocker = taskMap.get(id);
-                const isFinished = blocker ? isTeamTaskFinishedForDependency(blocker) : false;
-                return (
-                  <FlatDependencyRow
-                    key={`blocked-by:${id}`}
-                    taskId={id}
-                    taskMap={taskMap}
-                    onScrollToTask={onScrollToTask}
-                    label={
-                      isFinished
-                        ? t('organizations.editor.relationKind.dependsOn')
-                        : t('kanban.taskCard.blockedBy')
-                    }
-                    direction={isFinished ? 'forward' : 'backward'}
-                    tone={isFinished ? 'depends' : 'blocked'}
-                  />
-                );
-              })}
-              {blocksIds.map((id) => (
-                <FlatDependencyRow
-                  key={`blocks:${id}`}
-                  taskId={id}
-                  taskMap={taskMap}
-                  onScrollToTask={onScrollToTask}
-                  label={t('kanban.taskCard.blocks')}
-                  direction="forward"
-                  tone="blocks"
-                />
-              ))}
-            </div>
-          ) : null
-        ) : (
-          <>
-            {hasBlockedBy ? (
-              <div className="mb-2 flex flex-wrap items-center gap-1">
-                <span className="inline-flex items-center gap-0.5 text-[10px] text-yellow-700 dark:text-yellow-300">
-                  <ArrowLeftFromLine size={10} />
-                  {t('kanban.taskCard.blockedBy')}
-                </span>
-                {blockedByIds.map((id) => (
-                  <DependencyBadge
-                    key={id}
-                    taskId={id}
-                    taskMap={taskMap}
-                    onScrollToTask={onScrollToTask}
-                  />
-                ))}
-              </div>
-            ) : null}
+        {hasBlockedBy ? (
+          <div className="mb-2 flex flex-wrap items-center gap-1">
+            <span className="inline-flex items-center gap-0.5 text-[10px] text-yellow-700 dark:text-yellow-300">
+              <ArrowLeftFromLine size={10} />
+              {t('kanban.taskCard.blockedBy')}
+            </span>
+            {blockedByIds.map((id) => (
+              <DependencyBadge
+                key={id}
+                taskId={id}
+                taskMap={taskMap}
+                onScrollToTask={onScrollToTask}
+              />
+            ))}
+          </div>
+        ) : null}
 
-            {hasBlocks ? (
-              <div className="mb-2 flex flex-wrap items-center gap-1">
-                <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-600 dark:text-blue-400">
-                  <ArrowRightFromLine size={10} />
-                  {t('kanban.taskCard.blocks')}
-                </span>
-                {blocksIds.map((id) => (
-                  <DependencyBadge
-                    key={id}
-                    taskId={id}
-                    taskMap={taskMap}
-                    onScrollToTask={onScrollToTask}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </>
-        )}
+        {hasBlocks ? (
+          <div className="mb-2 flex flex-wrap items-center gap-1">
+            <span className="inline-flex items-center gap-0.5 text-[10px] text-blue-600 dark:text-blue-400">
+              <ArrowRightFromLine size={10} />
+              {t('kanban.taskCard.blocks')}
+            </span>
+            {blocksIds.map((id) => (
+              <DependencyBadge
+                key={id}
+                taskId={id}
+                taskMap={taskMap}
+                onScrollToTask={onScrollToTask}
+              />
+            ))}
+          </div>
+        ) : null}
 
-        {!flat ? renderActionControls(false) : null}
+        <div className="flex items-center justify-between gap-2">
+          <TaskPrimaryActions
+            taskId={task.id}
+            columnId={columnId}
+            isReviewManual={isReviewManual}
+            onRequestReview={onRequestReview}
+            onApprove={onApprove}
+            onRequestChanges={onRequestChanges}
+            onMoveBackToDone={onMoveBackToDone}
+            onStartTask={onStartTask}
+            onCompleteTask={onCompleteTask}
+            onCancelTask={onCancelTask}
+          />
+
+          <div className="flex shrink-0 flex-nowrap items-center gap-1.5">
+            <TaskMetaActions
+              taskId={task.id}
+              unreadCount={unreadCount}
+              commentCount={commentCount}
+              pulseKey={visibleCommentPulseKey}
+              canOpenChanges={canOpenChanges}
+              changesNeedAttention={changesNeedAttention}
+              onViewChanges={onViewChanges}
+              onDeleteTask={onDeleteTask}
+            />
+          </div>
+        </div>
       </div>
-    );
-
-    if (!flat) {
-      return cardContent;
-    }
-
-    return (
-      <HoverCard
-        open={toolbarOpen || actionPopoverOpen}
-        onOpenChange={setToolbarOpen}
-        openDelay={120}
-        closeDelay={220}
-      >
-        <HoverCardTrigger asChild>{cardContent}</HoverCardTrigger>
-        <HoverCardContent
-          side="top"
-          align="end"
-          sideOffset={0}
-          avoidCollisions={false}
-          className="kanban-task-card-toolbar w-auto min-w-0 rounded-b-none border-b-0 bg-[var(--color-surface-raised)] p-1 shadow-none"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {renderActionControls(true)}
-        </HoverCardContent>
-      </HoverCard>
     );
   },
   (prev, next) =>
@@ -1024,7 +720,6 @@ export const KanbanTaskCard = memo(
     areKanbanTaskStatesEqual(prev.kanbanTaskState, next.kanbanTaskState) &&
     prev.hasReviewers === next.hasReviewers &&
     prev.compact === next.compact &&
-    prev.flat === next.flat &&
     areTaskMapDependenciesEqual(prev.task, next.task, prev.taskMap, next.taskMap) &&
     prev.memberColorMap === next.memberColorMap &&
     prev.hasLiveTaskLogs === next.hasLiveTaskLogs &&

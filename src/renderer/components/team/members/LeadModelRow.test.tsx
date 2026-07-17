@@ -122,7 +122,6 @@ vi.mock('../../ui/button', () => ({
     ),
 }));
 
-import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
 import { ANTHROPIC_LONG_CONTEXT_PRICING_URL, LeadModelRow } from './LeadModelRow';
 
 function renderLeadModelRow(overrides: Partial<React.ComponentProps<typeof LeadModelRow>> = {}): {
@@ -172,22 +171,6 @@ describe('LeadModelRow', () => {
     expect(host.textContent).toContain('lead');
     expect(host.textContent).toContain('Team Lead');
     expect(stripe?.getAttribute('style')).toContain(expectedBorder);
-
-    act(() => {
-      root.unmount();
-    });
-  });
-
-  it('keeps the Team Lead role static in the flat roster layout', () => {
-    const { host, root } = renderLeadModelRow({ layoutVariant: 'flat' });
-    const row = host.querySelector<HTMLElement>('[data-role="lead-row"]')!;
-    const columns = Array.from(row.children);
-
-    expect(host.textContent).toContain('Team Lead');
-    expect(host.querySelector('[role="combobox"]')).toBeNull();
-    expect(row.className).toContain(FLAT_ROSTER_GRID_COLUMNS);
-    expect(columns[2]?.textContent).toBe('Team Lead');
-    expect(columns[3]?.textContent).toContain('Sync model with teammates');
 
     act(() => {
       root.unmount();

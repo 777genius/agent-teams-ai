@@ -400,50 +400,6 @@ describe('MemberCard starting-state visuals', () => {
     });
   });
 
-  it('shows queued and delivered states for pending member messages', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-
-    await act(async () => {
-      root.render(
-        React.createElement(MemberCard, {
-          member,
-          memberColor: 'blue',
-          pendingDeliveryState: 'queued',
-          isTeamAlive: false,
-          isTeamProvisioning: false,
-        })
-      );
-      await Promise.resolve();
-    });
-
-    expect(host.textContent).toContain('Queued');
-    expect(host.textContent).not.toContain('Delivering');
-
-    await act(async () => {
-      root.render(
-        React.createElement(MemberCard, {
-          member,
-          memberColor: 'blue',
-          pendingDeliveryState: 'delivered',
-          isTeamAlive: false,
-          isTeamProvisioning: false,
-        })
-      );
-      await Promise.resolve();
-    });
-
-    expect(host.textContent).toContain('Delivered');
-    expect(host.textContent).not.toContain('Queued');
-
-    await act(async () => {
-      root.unmount();
-      await Promise.resolve();
-    });
-  });
-
   it('does not show the OpenCode advisory relaunch action for protocol-proof warnings', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

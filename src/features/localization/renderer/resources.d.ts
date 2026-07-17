@@ -1083,7 +1083,6 @@ export default interface Resources {
         openAiViaCodex: 'Already available through Codex. OpenCode is optional.';
         openCodeChecking: 'Checking that OpenCode is installed and ready...';
         openCodeError: 'OpenCode could not start. Repair or reinstall it, then retry.';
-        openCodeErrorTitle: 'OpenCode needs attention';
         openCodeInstalling: 'Installing the managed OpenCode runtime...';
         openCodeInstallingPercent: 'Installing the managed OpenCode runtime - {{percent}}%';
         openCodeRequired: 'Install OpenCode to connect and use these providers with Agent Teams.';
@@ -1094,7 +1093,6 @@ export default interface Resources {
         planCredentialUnverified: 'Plan credential not verified';
         providerStatusError: 'Could not load OpenCode provider status. Your saved credentials were not changed.';
         readyToConnect: 'Available to connect';
-        refreshOpenCode: 'Refresh status';
         regionNotSelected: 'Region not selected';
         requiresOpenCode: 'Requires OpenCode';
         retryInstall: 'Retry installation';
@@ -4954,56 +4952,6 @@ export default interface Resources {
         actions: {
           createTeamIn: 'Create team in {{label}}';
         };
-        layout: {
-          switchToHierarchy: 'Switch to hierarchy chart';
-          switchToNested: 'Switch to nested map';
-        };
-        view: {
-          hierarchy: 'Hierarchy';
-          overview: 'Overview';
-          relations: 'Relations';
-          structure: 'Structure';
-        };
-        overviewCard: {
-          activeTasks: '{{count}} active tasks';
-          attention: '{{count}} need attention';
-          summary: '{{groupCount}} groups · {{teamCount}} teams · {{agentCount}} agents';
-          teamsOnline: '{{onlineCount}}/{{teamCount}} teams online';
-        };
-        toolbar: {
-          animation: 'Animation';
-          connections: 'Connections';
-          filters: 'Map filters';
-          fit: 'Fit meaningful overview';
-          reset: 'Reset search, focus, and filters';
-          tasks: 'Tasks';
-          zoomIn: 'Zoom in';
-          zoomOut: 'Zoom out';
-        };
-        legend: {
-          connection: 'Connection';
-          group: 'Group';
-          hierarchy: 'Hierarchy';
-          online: 'Online';
-          organization: 'Organization';
-        };
-        focus: {
-          clearFocus: 'Clear focus';
-          clearSearch: 'Clear search';
-          collapseBranch: 'Collapse branch';
-          connectedOnly: 'Connected ({{count}})';
-          expandBranch: 'Expand branch';
-          kind: {
-            container: 'group';
-            organization: 'organization';
-            team: 'team';
-          };
-          noResults: 'No results found';
-          pathToRoot: 'Path to root';
-          searchLabel: 'Search organization map';
-          searchPlaceholder: 'Organization, group, team, or task...';
-          taskMatch: 'Task: {{task}}';
-        };
         canvas: {
           activeAgents: '{{count}} active agents';
           activeAgents_few: '{{count}} active agents';
@@ -5029,9 +4977,6 @@ export default interface Resources {
           orgsAndTeams: '{{orgCount}} orgs - {{teamCount}} teams';
           teamReference: 'team reference';
           teamRole: '{{memberCount}} agents - {{activeCount}} active';
-          groupSummary: '{{teamCount}} teams · {{activeTeamCount}} active · {{taskCount}} tasks';
-          teamSummary: '{{status}} · {{activeTaskCount}} active · {{taskCount}} tasks';
-          minimap: 'Organization map navigation';
           teams: '{{count}} teams';
           teams_few: '{{count}} teams';
           teams_many: '{{count}} teams';

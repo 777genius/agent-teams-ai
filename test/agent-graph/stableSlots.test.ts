@@ -219,48 +219,6 @@ describe('stable slot layout', () => {
     expect(snapshot.memberSlotFrames.map((frame) => frame.sectorIndex)).toEqual([0, 1, 0, 1, 0, 1]);
   });
 
-  it('gives deliberately empty grid lanes physical clearance', () => {
-    const adjacent = buildOwnerGraph(6, {
-      'member-0': { ringIndex: 0, sectorIndex: 0 },
-      'member-1': { ringIndex: 0, sectorIndex: 1 },
-      'member-2': { ringIndex: 0, sectorIndex: 2 },
-      'member-3': { ringIndex: 1, sectorIndex: 0 },
-      'member-4': { ringIndex: 1, sectorIndex: 1 },
-      'member-5': { ringIndex: 1, sectorIndex: 2 },
-    });
-    const sparse = buildOwnerGraph(6, {
-      'member-0': { ringIndex: 0, sectorIndex: 0 },
-      'member-1': { ringIndex: 0, sectorIndex: 1 },
-      'member-2': { ringIndex: 0, sectorIndex: 2 },
-      'member-3': { ringIndex: 2, sectorIndex: 4 },
-      'member-4': { ringIndex: 2, sectorIndex: 5 },
-      'member-5': { ringIndex: 2, sectorIndex: 6 },
-    });
-    const adjacentSnapshot = getSnapshot(adjacent.nodes, {
-      ...adjacent.layout,
-      mode: 'grid-under-lead',
-      alignGridColumns: true,
-    });
-    const sparseSnapshot = getSnapshot(sparse.nodes, {
-      ...sparse.layout,
-      mode: 'grid-under-lead',
-      alignGridColumns: true,
-    });
-    const adjacentFrames = adjacentSnapshot.memberSlotFrameByOwnerId;
-    const sparseFrames = sparseSnapshot.memberSlotFrameByOwnerId;
-
-    expect(
-      sparseFrames.get('member-3')!.ownerX - sparseFrames.get('member-0')!.ownerX
-    ).toBeGreaterThan(
-      adjacentFrames.get('member-3')!.ownerX - adjacentFrames.get('member-0')!.ownerX
-    );
-    expect(
-      sparseFrames.get('member-3')!.ownerY - sparseFrames.get('member-0')!.ownerY
-    ).toBeGreaterThan(
-      adjacentFrames.get('member-3')!.ownerY - adjacentFrames.get('member-0')!.ownerY
-    );
-  });
-
   it('packs eight radial owners into row-orbit rows without crossing the lead exclusion', () => {
     const { nodes, layout } = buildRowOrbitGraph(8, [3, 2, 3]);
     const snapshot = getSnapshot(nodes, layout);

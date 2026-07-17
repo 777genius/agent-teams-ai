@@ -7,7 +7,6 @@ import type {
   GraphGroupFrame,
   GraphLayoutMode,
   GraphNode,
-  GraphNodePosition,
   GraphNodeState,
   GraphOwnerSlotAssignment,
   GraphParticle,
@@ -20,15 +19,11 @@ const MAX_ACTIVE_AGENT_TASKS_PER_TEAM = 4;
 const COMPACT_LAYOUT_MAX_OWNER_COUNT = 10;
 const ORGANIZATION_GRID_COMPACT_MAX_COLUMN_COUNT = 3;
 const ORGANIZATION_GRID_MAX_COLUMN_COUNT = 12;
-const ORGANIZATION_GRID_TOP_ROW_OFFSET = 0;
-// Group frames extend beyond their owner cards for borders, labels, and semantic summaries.
-// Keep empty grid lanes between sibling frames so those visual bounds cannot overlap.
-const ORGANIZATION_GRID_BLOCK_ROW_GAP = 1;
+const ORGANIZATION_GRID_TOP_ROW_OFFSET = 2;
+const ORGANIZATION_GRID_BLOCK_ROW_GAP = 6;
 const ORGANIZATION_GRID_BLOCK_COLUMN_GAP = 1;
-// Primary organization labels render outside the top edge and retain a readable screen size
-// while zoomed out. Reserve enough physical lanes for the two-line label in mini-map views.
-const ORGANIZATION_GRID_TOP_LEVEL_ORG_ROW_GAP = 3;
-const ORGANIZATION_GRID_TOP_LEVEL_ORG_COLUMN_GAP = 1;
+const ORGANIZATION_GRID_TOP_LEVEL_ORG_ROW_GAP = 10;
+const ORGANIZATION_GRID_TOP_LEVEL_ORG_COLUMN_GAP = 4;
 const ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_WIDTH = 3;
 const ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_BLOCK_HEIGHT = 3;
 const ORGANIZATION_GRID_SIDE_BY_SIDE_MAX_ROW_WIDTH = 7;
@@ -39,12 +34,6 @@ const SELECTIVE_AGENT_DETAILS_TEAM_THRESHOLD = 1;
 const SELECTIVE_AGENT_DETAILS_AGENT_THRESHOLD = 60;
 const SELECTIVE_AGENT_DETAILS_MESSAGE_THRESHOLD = 80;
 const ALL_ORGANIZATIONS_ROOT_NODE_ID = 'org:__all-organizations__';
-// Team cards grow up to 340px. Keep a readable connector gutter between sibling cards.
-const HIERARCHY_HORIZONTAL_GAP = 372;
-const HIERARCHY_VERTICAL_GAP = 164;
-const HIERARCHY_ROOT_GAP_IN_LEAVES = 1;
-const HIERARCHY_TASK_TOP_OFFSET = 112;
-const HIERARCHY_TASK_VERTICAL_GAP = 86;
 
 type OrganizationAgentDto = NonNullable<OrganizationNodeDto['team']>['agents'][number];
 type OrganizationGraphDetailMode = 'active-agent-tasks' | 'hidden-agent-tasks';
@@ -58,8 +47,6 @@ export interface OrganizationGraphText {
   teams: (count: number) => string;
   orgsAndTeams: (orgCount: number, teamCount: number) => string;
   teamRole: (memberCount: number, activeCount: number) => string;
-  groupSummary: (teamCount: number, activeTeamCount: number, taskCount: number) => string;
-  teamSummary: (status: string, activeTaskCount: number, taskCount: number) => string;
   teamReference: string;
   notFound: string;
   online: string;
@@ -103,10 +90,6 @@ const DEFAULT_ORGANIZATION_GRAPH_TEXT: OrganizationGraphText = {
   teams: (count) => `${count} teams`,
   orgsAndTeams: (orgCount, teamCount) => `${orgCount} orgs - ${teamCount} teams`,
   teamRole: (memberCount, activeCount) => `${memberCount} agents - ${activeCount} active`,
-  groupSummary: (teamCount, activeTeamCount, taskCount) =>
-    `${teamCount} teams · ${activeTeamCount} active · ${taskCount} tasks`,
-  teamSummary: (status, activeTaskCount, taskCount) =>
-    `${status} · ${activeTaskCount} active · ${taskCount} tasks`,
   teamReference: 'team reference',
   notFound: 'not found',
   online: 'online',
@@ -205,7 +188,6 @@ function buildTeamNode(node: OrganizationNodeDto, text: OrganizationGraphText): 
       color: node.color ?? '#64748b',
       role: node.title ?? text.teamReference,
       runtimeLabel: text.notFound,
-      semanticSummary: text.teamSummary(text.notFound, 0, 0),
       currentTaskSubject: node.description,
       domainRef: {
         kind: 'member',
@@ -224,11 +206,6 @@ function buildTeamNode(node: OrganizationNodeDto, text: OrganizationGraphText): 
     color: team.color ?? node.color ?? '#8bd3ff',
     role: text.teamRole(team.memberCount, team.taskCounts.inProgress),
     runtimeLabel: team.isOnline ? text.online : text.offline,
-    semanticSummary: text.teamSummary(
-      team.isOnline ? text.online : text.offline,
-      team.taskCounts.inProgress,
-      team.taskCounts.pending + team.taskCounts.inProgress + team.taskCounts.completed
-    ),
     currentTaskSubject: getTeamSummaryLine(team, text),
     domainRef: {
       kind: 'member',
@@ -242,21 +219,9 @@ function collectDescendantTeamStats(
   viewModel: OrganizationMapViewModel,
   nodeId: string,
   seen = new Set<string>()
-): {
-  teamCount: number;
-  activeTeamCount: number;
-  activeAgentCount: number;
-  activeTaskCount: number;
-  taskCount: number;
-} {
+): { teamCount: number; activeAgentCount: number } {
   if (seen.has(nodeId)) {
-    return {
-      teamCount: 0,
-      activeTeamCount: 0,
-      activeAgentCount: 0,
-      activeTaskCount: 0,
-      taskCount: 0,
-    };
+    return { teamCount: 0, activeAgentCount: 0 };
   }
   seen.add(nodeId);
 
@@ -264,14 +229,7 @@ function collectDescendantTeamStats(
   if (node?.kind === 'team') {
     return {
       teamCount: 1,
-      activeTeamCount: node.team?.isOnline ? 1 : 0,
       activeAgentCount: node.team?.agents.filter((agent) => agent.status === 'active').length ?? 0,
-      activeTaskCount: node.team?.taskCounts.inProgress ?? 0,
-      taskCount: node.team
-        ? node.team.taskCounts.pending +
-          node.team.taskCounts.inProgress +
-          node.team.taskCounts.completed
-        : 0,
     };
   }
 
@@ -280,13 +238,10 @@ function collectDescendantTeamStats(
       const childStats = collectDescendantTeamStats(viewModel, childNodeId, seen);
       return {
         teamCount: total.teamCount + childStats.teamCount,
-        activeTeamCount: total.activeTeamCount + childStats.activeTeamCount,
         activeAgentCount: total.activeAgentCount + childStats.activeAgentCount,
-        activeTaskCount: total.activeTaskCount + childStats.activeTaskCount,
-        taskCount: total.taskCount + childStats.taskCount,
       };
     },
-    { teamCount: 0, activeTeamCount: 0, activeAgentCount: 0, activeTaskCount: 0, taskCount: 0 }
+    { teamCount: 0, activeAgentCount: 0 }
   );
 }
 
@@ -306,7 +261,6 @@ function buildCollapsedContainerNode(
     role: text.teams(stats.teamCount),
     runtimeLabel:
       stats.activeAgentCount > 0 ? text.activeAgents(stats.activeAgentCount) : undefined,
-    semanticSummary: text.groupSummary(stats.teamCount, stats.activeTeamCount, stats.taskCount),
     domainRef: {
       kind: 'member',
       teamName: node.id,
@@ -358,11 +312,7 @@ function getRenderableAgentTasks(node: OrganizationNodeDto): RenderableAgentTask
     .slice(0, MAX_ACTIVE_AGENT_TASKS_PER_TEAM);
 }
 
-function buildAgentTaskNodes(
-  node: OrganizationNodeDto,
-  text: OrganizationGraphText,
-  options: { taskZoomVisibility?: GraphNode['taskZoomVisibility'] } = {}
-): GraphNode[] {
+function buildAgentTaskNodes(node: OrganizationNodeDto, text: OrganizationGraphText): GraphNode[] {
   const team = node.team;
   if (!team) return [];
 
@@ -378,7 +328,6 @@ function buildAgentTaskNodes(
       sublabel: task.subject,
       taskStatus: 'in_progress',
       reviewState: 'none',
-      taskZoomVisibility: options.taskZoomVisibility,
       domainRef: {
         kind: 'task',
         teamName: team.teamName,
@@ -621,7 +570,6 @@ interface OrganizationGridPackingOptions {
   maxRowWidth?: number;
   rowGap?: number;
   columnGap?: number;
-  alignRowsStart?: boolean;
 }
 
 function canPackOrganizationGridBlockSideBySide(
@@ -721,7 +669,7 @@ function stackOrganizationGridBlocks(
   rows.forEach((rowBlocks, rowIndex) => {
     const rowWidth = getPackedOrganizationGridRowWidth(rowBlocks, columnGap);
     const rowHeight = Math.max(...rowBlocks.map((block) => block.height));
-    let columnOffset = options.alignRowsStart ? 0 : Math.floor((width - rowWidth) / 2);
+    let columnOffset = Math.floor((width - rowWidth) / 2);
 
     for (const block of rowBlocks) {
       assignments.push(
@@ -827,7 +775,6 @@ function buildNestedOrganizationGridBlock(
         : undefined,
     rowGap: packsTopLevelOrganizations ? ORGANIZATION_GRID_TOP_LEVEL_ORG_ROW_GAP : undefined,
     columnGap: packsTopLevelOrganizations ? ORGANIZATION_GRID_TOP_LEVEL_ORG_COLUMN_GAP : undefined,
-    alignRowsStart: packsTopLevelOrganizations,
   });
 }
 
@@ -1308,34 +1255,14 @@ function buildOrganizationGroupFrames(
         node.id,
         context.visibleOrganizationNodeIds
       );
-      const depth = getGroupFrameDepth(viewModel, node.id);
-      const deepestVisibleFrameDepth = descendantNodeIds.reduce((deepestDepth, descendantId) => {
-        const descendantNode = viewModel.nodeById.get(descendantId);
-        if (
-          !descendantNode ||
-          (descendantNode.kind !== 'container' && descendantNode.kind !== 'organization')
-        ) {
-          return deepestDepth;
-        }
-        return Math.max(deepestDepth, getGroupFrameDepth(viewModel, descendantId));
-      }, depth);
-      const labelLane = Math.max(0, deepestVisibleFrameDepth - depth);
       if (context.collapsedVisibleContainerNodeIds.has(node.id) || descendantNodeIds.length === 0) {
-        const stats = collectDescendantTeamStats(viewModel, node.id);
         return {
           id: node.id,
           label: getOrganizationContainerLabel(node, text),
-          semanticSummary: text.groupSummary(
-            stats.teamCount,
-            stats.activeTeamCount,
-            stats.taskCount
-          ),
           nodeIds: [node.id],
           color: node.color ?? (node.kind === 'organization' ? '#4f8cff' : '#8bd3ff'),
-          depth,
-          ...(labelLane > 0 ? { labelLane } : {}),
+          depth: getGroupFrameDepth(viewModel, node.id),
           priority: node.kind === 'organization' ? ('primary' as const) : ('normal' as const),
-          borderStyle: 'solid' as const,
         };
       }
       const renderedAgentNodeIds = descendantNodeIds.flatMap((descendantNodeId) => {
@@ -1347,219 +1274,16 @@ function buildOrganizationGroupFrames(
           ? getRenderableAgentTasks(descendantNode).map(({ agent }) => agent.id)
           : [];
       });
-      const stats = collectDescendantTeamStats(viewModel, node.id);
       return {
         id: node.id,
         label: getOrganizationContainerLabel(node, text),
-        semanticSummary: text.groupSummary(stats.teamCount, stats.activeTeamCount, stats.taskCount),
         nodeIds: [...descendantNodeIds, ...renderedAgentNodeIds],
         color: node.color ?? (node.kind === 'organization' ? '#4f8cff' : '#8bd3ff'),
-        depth,
-        ...(labelLane > 0 ? { labelLane } : {}),
+        depth: getGroupFrameDepth(viewModel, node.id),
         priority: node.kind === 'organization' ? ('primary' as const) : ('normal' as const),
-        borderStyle: 'solid' as const,
       };
     })
     .filter((frame) => frame.nodeIds.length > 0);
-}
-
-function buildHierarchyGraphNode(
-  node: OrganizationNodeDto,
-  viewModel: OrganizationMapViewModel,
-  text: OrganizationGraphText
-): GraphNode {
-  const hierarchyDepth = getHierarchyNodeDepth(viewModel, node.id);
-  if (node.kind === 'team') {
-    return { ...buildTeamNode(node, text)!, hierarchyDepth };
-  }
-
-  const graphNode = buildCollapsedContainerNode(node, viewModel, text);
-  if (node.id !== viewModel.rootNode?.id) {
-    return { ...graphNode, hierarchyDepth };
-  }
-
-  const role =
-    viewModel.payload.scope === 'all'
-      ? text.orgsAndTeams(viewModel.payload.organizations.length, viewModel.stats.teamCount)
-      : text.teams(viewModel.stats.teamCount);
-  return {
-    ...graphNode,
-    kind: 'lead',
-    visualVariant: 'organization',
-    hierarchyDepth,
-    role,
-    runtimeLabel: undefined,
-    currentTaskSubject: node.description,
-    domainRef: {
-      kind: 'lead',
-      teamName: viewModel.payload.activeOrganizationId,
-      memberName: node.id,
-    },
-  };
-}
-
-function getHierarchyNodeDepth(viewModel: OrganizationMapViewModel, nodeId: string): number {
-  let depth = 0;
-  let currentNodeId = viewModel.parentNodeIdByChildId.get(nodeId);
-  const seen = new Set<string>([nodeId]);
-  while (currentNodeId && !seen.has(currentNodeId)) {
-    seen.add(currentNodeId);
-    depth += 1;
-    currentNodeId = viewModel.parentNodeIdByChildId.get(currentNodeId);
-  }
-  return depth;
-}
-
-function buildHierarchyNodePositions(
-  viewModel: OrganizationMapViewModel,
-  visibleNodeIds: ReadonlySet<string>,
-  renderedAgentTeamNodes: readonly OrganizationNodeDto[]
-): Record<string, GraphNodePosition> {
-  const positions = new Map<string, GraphNodePosition>();
-  const visited = new Set<string>();
-  let nextLeafIndex = 0;
-
-  const visit = (nodeId: string, depth: number, ancestors: ReadonlySet<string>): number => {
-    const existing = positions.get(nodeId);
-    if (existing) {
-      return existing.x;
-    }
-
-    if (ancestors.has(nodeId)) {
-      const cycleX = nextLeafIndex * HIERARCHY_HORIZONTAL_GAP;
-      nextLeafIndex += 1;
-      return cycleX;
-    }
-
-    visited.add(nodeId);
-    const nextAncestors = new Set(ancestors);
-    nextAncestors.add(nodeId);
-    const childNodeIds = (viewModel.childNodeIdsByParentId.get(nodeId) ?? []).filter(
-      (childNodeId) => visibleNodeIds.has(childNodeId) && !nextAncestors.has(childNodeId)
-    );
-    const childXPositions = childNodeIds.map((childNodeId) =>
-      visit(childNodeId, depth + 1, nextAncestors)
-    );
-    const x =
-      childXPositions.length === 0
-        ? nextLeafIndex++ * HIERARCHY_HORIZONTAL_GAP
-        : (Math.min(...childXPositions) + Math.max(...childXPositions)) / 2;
-    positions.set(nodeId, { x, y: depth * HIERARCHY_VERTICAL_GAP });
-    return x;
-  };
-
-  const rootNodeId = viewModel.rootNode?.id;
-  const rootNodeIds =
-    rootNodeId && visibleNodeIds.has(rootNodeId)
-      ? [rootNodeId]
-      : viewModel.nodeDisplayOrder.filter((nodeId) => {
-          if (!visibleNodeIds.has(nodeId)) return false;
-          const parentNodeId = viewModel.parentNodeIdByChildId.get(nodeId);
-          return !parentNodeId || !visibleNodeIds.has(parentNodeId);
-        });
-
-  rootNodeIds.forEach((nodeId, index) => {
-    if (index > 0) nextLeafIndex += HIERARCHY_ROOT_GAP_IN_LEAVES;
-    visit(nodeId, 0, new Set());
-  });
-
-  for (const nodeId of viewModel.nodeDisplayOrder) {
-    if (!visibleNodeIds.has(nodeId) || visited.has(nodeId)) continue;
-    nextLeafIndex += HIERARCHY_ROOT_GAP_IN_LEAVES;
-    visit(nodeId, 0, new Set());
-  }
-
-  const xPositions = [...positions.values()].map((position) => position.x);
-  const centerX =
-    xPositions.length > 0 ? (Math.min(...xPositions) + Math.max(...xPositions)) / 2 : 0;
-  const centeredPositions = new Map<string, GraphNodePosition>(
-    [...positions].map(([nodeId, position]) => [nodeId, { x: position.x - centerX, y: position.y }])
-  );
-
-  for (const teamNode of renderedAgentTeamNodes) {
-    const teamPosition = centeredPositions.get(teamNode.id);
-    if (!teamPosition) continue;
-    getRenderableAgentTasks(teamNode).forEach(({ agent }, index) => {
-      centeredPositions.set(agent.id, {
-        x: teamPosition.x,
-        y: teamPosition.y + HIERARCHY_TASK_TOP_OFFSET + index * HIERARCHY_TASK_VERTICAL_GAP,
-      });
-    });
-  }
-
-  return Object.fromEntries(centeredPositions);
-}
-
-function buildHierarchicalOrganizationGraphData(
-  viewModel: OrganizationMapViewModel,
-  context: OrganizationGraphBuildContext,
-  text: OrganizationGraphText
-): GraphDataPort {
-  const hierarchyStructureNodes = viewModel.nodeDisplayOrder
-    .map((nodeId) => viewModel.nodeById.get(nodeId))
-    .filter(
-      (node): node is OrganizationNodeDto =>
-        node !== undefined && context.visibleOrganizationNodeIds.has(node.id)
-    )
-    .map((node) => buildHierarchyGraphNode(node, viewModel, text));
-  const renderedAgentTeamNodes = context.visibleTeamNodes.filter((node) =>
-    context.renderedAgentTeamIds.has(node.id)
-  );
-  const hierarchyTaskNodes = renderedAgentTeamNodes.flatMap((node) =>
-    buildAgentTaskNodes(node, text, { taskZoomVisibility: 'summary' })
-  );
-  const hierarchyNodes = [...hierarchyStructureNodes, ...hierarchyTaskNodes];
-  const graphNodeIds = new Set(hierarchyNodes.map((node) => node.id));
-  const visibleManualRelations = buildVisibleManualRelations(
-    viewModel,
-    context.visibleOrganizationNodeIds
-  ).filter(
-    (relation) => graphNodeIds.has(relation.sourceNodeId) && graphNodeIds.has(relation.targetNodeId)
-  );
-  const visibleCommunicationRelations = buildVisibleCommunicationRelations(
-    viewModel,
-    context.visibleOrganizationNodeIds
-  ).filter(
-    (relation) => graphNodeIds.has(relation.sourceNodeId) && graphNodeIds.has(relation.targetNodeId)
-  );
-  const containmentEdges = buildContainmentEdges(viewModel)
-    .filter((edge) => graphNodeIds.has(edge.source) && graphNodeIds.has(edge.target))
-    .map((edge) => ({
-      ...edge,
-      color: '#5d7893',
-      alwaysVisible: true,
-      routing: 'orthogonal' as const,
-    }));
-
-  return {
-    teamName: text.organizationMap,
-    teamColor: viewModel.rootNode?.color,
-    isAlive: viewModel.stats.onlineTeamCount > 0,
-    groupFrames: [],
-    nodes: hierarchyNodes,
-    edges: [
-      ...containmentEdges,
-      ...buildAgentOwnershipEdges(renderedAgentTeamNodes),
-      ...buildManualRelationEdges(visibleManualRelations),
-      ...buildCommunicationEdges(visibleCommunicationRelations),
-    ],
-    particles: buildCommunicationParticles(visibleCommunicationRelations, context.maxParticleCount),
-    layout: {
-      version: 'stable-slots-v1',
-      mode: 'hierarchical',
-      showActivity: false,
-      showLogs: false,
-      showTasks: renderedAgentTeamNodes.length > 0,
-      fitTaskRowsToContent: true,
-      ownerOrder: renderedAgentTeamNodes.map((node) => node.id),
-      slotAssignments: {},
-      nodePositions: buildHierarchyNodePositions(
-        viewModel,
-        context.visibleOrganizationNodeIds,
-        renderedAgentTeamNodes
-      ),
-    },
-  };
 }
 
 export function buildOrganizationGraphData(
@@ -1568,9 +1292,6 @@ export function buildOrganizationGraphData(
 ): GraphDataPort {
   const text = options.text ?? DEFAULT_ORGANIZATION_GRAPH_TEXT;
   const context = buildOrganizationGraphContext(viewModel, options);
-  if (context.layoutMode === 'hierarchical') {
-    return buildHierarchicalOrganizationGraphData(viewModel, context, text);
-  }
   const { visibleOrganizationNodeIds, visibleTeamNodes, renderedAgentTeamIds, ownerOrder } =
     context;
   const visibleCommunicationRelations = buildVisibleCommunicationRelations(
@@ -1591,11 +1312,7 @@ export function buildOrganizationGraphData(
   const renderedAgentTeamNodes = visibleTeamNodes.filter((node) =>
     renderedAgentTeamIds.has(node.id)
   );
-  const agentNodes = renderedAgentTeamNodes.flatMap((node) =>
-    buildAgentTaskNodes(node, text, {
-      taskZoomVisibility: 'summary',
-    })
-  );
+  const agentNodes = renderedAgentTeamNodes.flatMap((node) => buildAgentTaskNodes(node, text));
   const nodes = [...orgNodes, ...agentNodes];
   const graphNodeIds = new Set(nodes.map((node) => node.id));
   const renderedManualRelations = visibleManualRelations.filter(
@@ -1632,7 +1349,6 @@ export function buildOrganizationGraphData(
             showActivity: false,
             showLogs: false,
             showTasks: context.renderedAgentTeamIds.size > 0,
-            fitTaskRowsToContent: true,
             alignGridColumns: true,
             ownerOrder,
             slotAssignments: buildLayoutSlotAssignments(viewModel, ownerOrder, context.layoutMode),

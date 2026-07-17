@@ -78,20 +78,10 @@ overrides:
   'vitepress>vite': '7.3.5'
   'ws': '8.21.0'
   'yaml': '2.9.0'
-allowBuilds:
-  '@parcel/watcher': false
-  '@sentry/cli': false
-  '@swc/core': false
-  core-js: false
-  cpu-features: true
-  electron: true
-  electron-winstaller: false
-  esbuild: false
-  node-pty: true
-  ssh2: false
-  tldjs: false
-  unrs-resolver: false
-  vue-demi: false
+onlyBuiltDependencies:
+  - electron
+  - node-pty
+  - cpu-features
 patchedDependencies:
   '@radix-ui/react-presence@1.1.5': 'patches/@radix-ui__react-presence@1.1.5.patch'
   '@radix-ui/react-focus-scope@1.1.7': 'patches/@radix-ui__react-focus-scope@1.1.7.patch'
@@ -104,3 +94,6 @@ patchedDependencies:
   '@radix-ui/react-menu@2.1.16': 'patches/@radix-ui__react-menu@2.1.16.patch'
   '@radix-ui/react-checkbox@1.3.3': 'patches/@radix-ui__react-checkbox@1.3.3.patch'
   'fastmcp@3.35.0': 'patches/fastmcp@3.35.0.patch'
+
+ignoredBuiltDependencies:
+  - esbuild

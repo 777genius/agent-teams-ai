@@ -1,8 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { PARTICIPANT_AVATAR_URLS } from '@renderer/utils/memberAvatarCatalog';
-import { PARTICIPANT_IDENTITY_COLOR_PALETTE } from '@shared/constants/memberColors';
 import { describe, expect, it } from 'vitest';
 
 const AVATAR_DIR = path.join(process.cwd(), 'src/renderer/assets/participant-avatars');
@@ -27,8 +25,6 @@ describe('participant avatar assets', () => {
     let totalBytes = 0;
 
     expect(avatarFiles).toHaveLength(EXPECTED_AVATAR_COUNT);
-    expect(PARTICIPANT_AVATAR_URLS).toHaveLength(EXPECTED_AVATAR_COUNT);
-    expect(PARTICIPANT_IDENTITY_COLOR_PALETTE).toHaveLength(EXPECTED_AVATAR_COUNT);
 
     for (const fileName of avatarFiles) {
       const buffer = readFileSync(path.join(AVATAR_DIR, fileName));

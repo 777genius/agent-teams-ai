@@ -19,6 +19,14 @@
 <table>
 <tr>
 <td width="50%">
+  <img src="docs/screenshots/task-detail-animated.gif" alt="Agent Teams AI product demo" width="100%" />
+</td>
+<td width="50%">
+  <img width="2560" height="1552" alt="telegram-cloud-photo-size-2-5384488731521259756-w" src="https://github.com/user-attachments/assets/276fb24c-478c-4900-826c-476a5aa9e572" />
+</td>
+</tr>
+<tr>
+<td width="50%">
   <img src="https://i.imgur.com/2avkEET.jpeg" alt="Agent Teams AI screenshot" width="100%" />
 </td>
 <td width="50%">
@@ -35,7 +43,9 @@
 </tr>
 <tr>
 <td width="50%">
-  <img src="docs/screenshots/7.png" alt="Code review with hunk-level controls" width="100%" />
+  <!-- <img src="docs/screenshots/7.png" alt="Code review with hunk-level controls" width="100%" /> -->
+  <img width="1312" height="824" alt="image" src="https://github.com/user-attachments/assets/74f4c6fe-9a0e-4631-a283-b894ed9a0263" />
+
 </td>
 <td width="50%">
   <img src="docs/screenshots/4.jpg" alt="Create an AI team with roles and models" width="100%" />
@@ -46,7 +56,7 @@
   <img src="docs/screenshots/1.png" alt="Kanban board with agent tasks" width="100%" />
 </td>
 <td width="50%">
-  <img src="docs/screenshots/task-detail-animated.gif" alt="Agent Teams AI product demo" width="100%" />
+  <img width="1312" height="820" alt="image" src="https://github.com/user-attachments/assets/e78c2229-5d40-4615-bbee-79b0bc611d51" />
 </td>
 </tr>
 </table>
@@ -134,17 +144,15 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
 - [Comparison](#comparison)
 - [Quick start](#quick-start)
 - [FAQ](#faq)
-- [Roadmap (new)](#roadmap-new)
-- [Vision](#vision)
 - [Development](#development)
-- [Tech stack](#tech-stack)
+  - [Developer architecture docs](#developer-architecture-docs)
   - [Terminal Platform integration](#terminal-platform-integration)
+- [Tech stack](#tech-stack)
   - [Debug teammate runtimes](#debug-teammate-runtimes)
   - [Build for distribution](#build-for-distribution)
   - [Scripts](#scripts)
 - [Ideas](#ideas)
 - [Contributing](#contributing)
-- [Partnerships](#partnerships)
 - [Security](#security)
 - [License](#license)
 
@@ -351,20 +359,6 @@ pnpm dev
 ```
 
 `pnpm dev` starts the desktop Electron app. Do not start a browser/web dev server for normal development; that path is limited and is not the supported way to run agent teams locally.
-
-To run the desktop app against a local orchestrator checkout during development, point it at the
-source launcher:
-
-```bash
-CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH=/absolute/path/to/agent_teams_orchestrator/cli-source \
-  pnpm dev
-```
-
-This runs the current orchestrator sources directly through Bun and avoids rebuilding the complete
-runtime bundle on every app start. Do not use `CLAUDE_DEV_RUNTIME_ROOT` for the normal source
-development loop: that override runs `bun run build:dev` before Electron starts and can make the app
-appear stuck at `bun run ./scripts/build.ts --dev`. Use it only when intentionally validating the
-generated development bundle.
 
 Use `pnpm dev:mcp` for automated interactive or visual UI verification. It exposes the current
 Electron renderer through the local Chrome DevTools Protocol endpoint on `127.0.0.1:9222`, avoiding

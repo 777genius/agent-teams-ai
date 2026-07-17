@@ -381,41 +381,4 @@ describe('TmuxWslService', () => {
     expect(result.status.rebootRequired).toBe(true);
     expect(result.status.statusDetail).toContain('restart');
   });
-
-  it('shares the stable Windows feature probe across service instances', async () => {
-    let powershellCalls = 0;
-    const execFileMock = (
-      command: string,
-      _args: string[],
-      _options: {
-        timeout: number;
-        windowsHide: boolean;
-        maxBuffer: number;
-        encoding: 'buffer';
-      },
-      callback: (error: Error | null, stdout: string | Buffer, stderr: string | Buffer) => void
-    ): void => {
-      if (command === 'powershell.exe') {
-        powershellCalls += 1;
-        callback(
-          null,
-          JSON.stringify([
-            { FeatureName: 'Microsoft-Windows-Subsystem-Linux', State: 'Disabled' },
-            { FeatureName: 'VirtualMachinePlatform', State: 'Disabled' },
-          ]),
-          ''
-        );
-        return;
-      }
-      callback(Object.assign(new Error('WSL unavailable'), { code: 1 }), '', '');
-    };
-
-    const first = new TmuxWslService(execFileMock, createPreferenceStore() as never);
-    const second = new TmuxWslService(execFileMock, createPreferenceStore() as never);
-
-    await first.probe();
-    await second.probe();
-
-    expect(powershellCalls).toBe(1);
-  });
 });

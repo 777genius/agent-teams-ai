@@ -116,10 +116,6 @@ export const KIRO_CLI_COMPANION_DEFINITION: RuntimeProviderCliCompanionDefinitio
     manualUrl: KIRO_DOWNLOADS_URL,
     minimumFreeBytes: MINIMUM_INSTALL_FREE_BYTES,
     monitorDownload: true,
-    // The official Windows script launches a signed MSI. Keep that native
-    // installer tree behind a Node helper so a faulty MSI child cannot corrupt
-    // or terminate the Electron host process.
-    isolateFromHostOnWindows: true,
     packageDescription: 'signed Kiro CLI package',
     parseProgress: (text) => {
       const normalized = text.toLowerCase();
@@ -147,7 +143,6 @@ export const KIRO_CLI_COMPANION_DEFINITION: RuntimeProviderCliCompanionDefinitio
     extraCandidates: (platform, homeDir) =>
       platform === 'win32'
         ? [
-            path.join(process.env.LOCALAPPDATA ?? '', 'Kiro-Cli', 'kiro-cli.exe'),
             path.join(process.env.LOCALAPPDATA ?? '', 'Programs', 'Kiro-Cli', 'kiro-cli.exe'),
             path.join(process.env.ProgramFiles ?? 'C:\\Program Files', 'Kiro-Cli', 'kiro-cli.exe'),
           ]

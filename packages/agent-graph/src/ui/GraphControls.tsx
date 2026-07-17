@@ -14,7 +14,6 @@ import {
   EyeOff,
   FileText,
   Maximize2,
-  Network,
   PanelLeftClose,
   PanelLeftOpen,
   Pause,
@@ -60,15 +59,12 @@ export interface GraphControlsProps {
   isAlive?: boolean;
   layoutMode?: GraphLayoutMode;
   onLayoutModeChange?: (mode: GraphLayoutMode) => void;
-  layoutModeCycle?: readonly GraphLayoutMode[];
-  layoutModeLabels?: Partial<Record<GraphLayoutMode, string>>;
   topToolbarContent?: React.ReactNode;
   interactionLocked?: boolean;
 }
 
 const TOPBAR_BUTTON_SIZE = 25;
 const TOPBAR_ICON_SIZE = 10;
-const DEFAULT_LAYOUT_MODE_CYCLE: readonly GraphLayoutMode[] = ['radial', 'grid-under-lead'];
 
 export function GraphControls({
   filters,
@@ -86,8 +82,6 @@ export function GraphControls({
   teamColor,
   layoutMode = 'radial',
   onLayoutModeChange,
-  layoutModeCycle = DEFAULT_LAYOUT_MODE_CYCLE,
-  layoutModeLabels,
   topToolbarContent,
   interactionLocked = false,
 }: GraphControlsProps): React.JSX.Element {
@@ -99,27 +93,12 @@ export function GraphControls({
     },
     [filters, onFiltersChange]
   );
-  const effectiveLayoutModeCycle =
-    layoutModeCycle.length > 0 ? layoutModeCycle : DEFAULT_LAYOUT_MODE_CYCLE;
-  const nextLayoutMode = (() => {
-    const currentIndex = effectiveLayoutModeCycle.indexOf(layoutMode);
-    return effectiveLayoutModeCycle[
-      (currentIndex < 0 ? 0 : currentIndex + 1) % effectiveLayoutModeCycle.length
-    ];
-  })();
   const toggleLayoutMode = useCallback(() => {
     if (!onLayoutModeChange) {
       return;
     }
-    onLayoutModeChange(nextLayoutMode);
-  }, [nextLayoutMode, onLayoutModeChange]);
-  const layoutModeTitle =
-    layoutModeLabels?.[nextLayoutMode] ??
-    (nextLayoutMode === 'grid-under-lead'
-      ? 'Switch to rows layout'
-      : nextLayoutMode === 'hierarchical'
-        ? 'Switch to hierarchy layout'
-        : 'Switch to radial layout');
+    onLayoutModeChange(layoutMode === 'radial' ? 'grid-under-lead' : 'radial');
+  }, [layoutMode, onLayoutModeChange]);
 
   useEffect(() => {
     if (!isSettingsOpen) return;
@@ -249,17 +228,17 @@ export function GraphControls({
               <ToolbarButton
                 onClick={toggleLayoutMode}
                 icon={
-                  nextLayoutMode === 'grid-under-lead' ? (
+                  layoutMode === 'radial' ? (
                     <Columns3 size={TOPBAR_ICON_SIZE} />
-                  ) : nextLayoutMode === 'hierarchical' ? (
-                    <Network size={TOPBAR_ICON_SIZE} />
                   ) : (
                     <Users size={TOPBAR_ICON_SIZE} />
                   )
                 }
-                active={layoutMode !== effectiveLayoutModeCycle[0]}
+                active={layoutMode === 'grid-under-lead'}
                 toolbar
-                title={layoutModeTitle}
+                title={
+                  layoutMode === 'radial' ? 'Switch to rows layout' : 'Switch to radial layout'
+                }
               />
             </div>
           ) : null}

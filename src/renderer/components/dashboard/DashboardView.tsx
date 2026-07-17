@@ -8,10 +8,9 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { RecentProjectsSection } from '@features/recent-projects/renderer';
 import { RunningTeamsSection } from '@features/running-teams/renderer';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useStore } from '@renderer/store';
 import { formatShortcut } from '@renderer/utils/stringUtils';
-import { Search, Users } from 'lucide-react';
+import { Command, Search, Users } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { CliStatusBanner } from './CliStatusBanner';
@@ -64,41 +63,42 @@ const CommandSearch = ({ value, onChange }: Readonly<CommandSearchProps>): React
     return () => window.clearTimeout(timeoutId);
   }, []);
 
-  const commandPaletteLabel = selectedProjectId
-    ? `Search in sessions (${formatShortcut('K')})`
-    : `Search projects (${formatShortcut('K')})`;
-
   return (
     <div className="relative w-full">
       <div
-        className={`relative flex h-14 items-center gap-3 border-b px-4 transition-colors duration-200 ${
-          isFocused ? 'border-zinc-500' : 'border-border hover:border-zinc-600'
-        }`}
+        className={`relative flex items-center gap-3 rounded-sm border bg-surface-raised px-4 py-3 transition-all duration-200 ${
+          isFocused
+            ? 'border-zinc-500 shadow-[0_0_20px_rgba(255,255,255,0.04)] ring-1 ring-zinc-600/30'
+            : 'border-border hover:border-zinc-600'
+        } `}
       >
-        <Search className="size-5 shrink-0 text-text-muted" />
+        <Search className="size-4 shrink-0 text-text-muted" />
         <input
           ref={inputRef}
           type="text"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={t('recentProjects.searchPlaceholder')}
-          className="min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+          className="flex-1 bg-transparent text-sm text-text outline-none placeholder:text-text-muted"
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
         />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label={commandPaletteLabel}
-              onClick={() => openCommandPalette()}
-              className="shrink-0 rounded px-2 py-1 font-mono text-sm text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500"
-            >
-              {formatShortcut('K')}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top">{commandPaletteLabel}</TooltipContent>
-        </Tooltip>
+        <button
+          onClick={() => openCommandPalette()}
+          className="flex shrink-0 items-center gap-1 transition-opacity hover:opacity-80"
+          title={
+            selectedProjectId
+              ? `Search in sessions (${formatShortcut('K')})`
+              : `Search projects (${formatShortcut('K')})`
+          }
+        >
+          <kbd className="flex h-5 items-center justify-center rounded border border-border bg-surface-overlay px-1.5 text-[10px] font-medium text-text-muted">
+            <Command className="size-2.5" />
+          </kbd>
+          <kbd className="flex size-5 items-center justify-center rounded border border-border bg-surface-overlay text-[10px] font-medium text-text-muted">
+            K
+          </kbd>
+        </button>
       </div>
     </div>
   );
@@ -127,28 +127,18 @@ export const DashboardView = ({ isActive = true }: DashboardViewProps): React.JS
         <CliStatusBanner isDashboardActive={isActive} />
         <TmuxStatusBanner />
 
-        <div className="mb-12 flex flex-col items-stretch justify-center gap-2 min-[900px]:flex-row min-[900px]:items-center min-[900px]:gap-0">
+        <div className="mb-12 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
           <button
-            type="button"
             onClick={openTeamsTab}
-            className="flex h-14 w-full shrink-0 items-center justify-center gap-3 px-4 text-base text-text-secondary transition-colors duration-200 hover:text-text focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-500 min-[900px]:w-auto min-[900px]:justify-start"
+            className="flex shrink-0 items-center justify-center gap-2 rounded-sm border border-border bg-surface-raised px-4 py-3 text-sm text-text-secondary transition-all duration-200 hover:border-zinc-500 hover:text-text"
           >
-            <Users className="size-5" />
+            <Users className="size-4" />
             {t('actions.selectTeam')}
           </button>
-          <div
-            className="relative hidden h-14 w-12 shrink-0 items-center justify-center min-[900px]:flex"
-            aria-hidden="true"
-          >
-            <span className="absolute inset-y-0 left-1/2 w-px bg-border" />
-            <span className="relative rounded border border-border bg-surface px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-text-muted">
-              {t('actions.or')}
-            </span>
-          </div>
-          <span className="text-center text-[9px] font-medium uppercase tracking-wider text-text-muted min-[900px]:hidden">
+          <span className="hidden shrink-0 text-xs text-text-muted sm:block">
             {t('actions.or')}
           </span>
-          <div className="min-w-0 flex-1">
+          <div className="flex-1">
             <CommandSearch value={searchQuery} onChange={setSearchQuery} />
           </div>
         </div>

@@ -2671,7 +2671,7 @@
   "organizations": {
     "map": {
       "allOrganizationsTitle": "Все организации",
-      "defaultTitle": "Organization Map",
+      "defaultTitle": "Карта организации",
       "organizationPlaceholder": "Организация",
       "loading": "Загрузка карты организации...",
       "noOrganizationData": "Нет данных организации",
@@ -2839,58 +2839,8 @@
       "actions": {
         "createTeamIn": "Создать команду в {{label}}"
       },
-      "layout": {
-        "switchToHierarchy": "Переключить на иерархическую схему",
-        "switchToNested": "Переключить на вложенную карту"
-      },
-      "view": {
-        "overview": "Обзор",
-        "hierarchy": "Иерархия",
-        "structure": "Структура",
-        "relations": "Связи"
-      },
-      "overviewCard": {
-        "summary": "{{groupCount}} групп · {{teamCount}} команд · {{agentCount}} агентов",
-        "activeTasks": "{{count}} активных задач",
-        "attention": "{{count}} требуют внимания",
-        "teamsOnline": "{{onlineCount}}/{{teamCount}} команд онлайн"
-      },
-      "toolbar": {
-        "filters": "Фильтры карты",
-        "fit": "Смысловой обзор",
-        "reset": "Сбросить поиск, фокус и фильтры",
-        "tasks": "Задачи",
-        "connections": "Связи",
-        "animation": "Анимация",
-        "zoomIn": "Приблизить",
-        "zoomOut": "Отдалить"
-      },
-      "legend": {
-        "organization": "Организация",
-        "group": "Группа",
-        "hierarchy": "Иерархия",
-        "connection": "Связь",
-        "online": "Онлайн"
-      },
-      "focus": {
-        "searchLabel": "Поиск по карте организации",
-        "searchPlaceholder": "Организация, группа, команда или задача...",
-        "clearSearch": "Очистить поиск",
-        "noResults": "Ничего не найдено",
-        "taskMatch": "Задача: {{task}}",
-        "pathToRoot": "Путь к корню",
-        "connectedOnly": "Связанные ({{count}})",
-        "collapseBranch": "Свернуть ветку",
-        "expandBranch": "Развернуть ветку",
-        "clearFocus": "Сбросить фокус",
-        "kind": {
-          "organization": "организация",
-          "container": "группа",
-          "team": "команда"
-        }
-      },
       "canvas": {
-        "organizationMap": "Organization Map",
+        "organizationMap": "Карта организации",
         "allOrganizations": "Все организации",
         "unassignedTeams": "Неразмещенные команды",
         "agents": "{{count}} агентов",
@@ -2910,9 +2860,6 @@
         "teams_other": "{{count}} команд",
         "orgsAndTeams": "{{orgCount}} орг. - {{teamCount}} команд",
         "teamRole": "{{memberCount}} участников - {{activeCount}} активных",
-        "groupSummary": "{{teamCount}} ком. · {{activeTeamCount}} актив. · {{taskCount}} задач",
-        "teamSummary": "{{status}} · {{activeTaskCount}} актив. · {{taskCount}} задач",
-        "minimap": "Навигация по карте организации",
         "teamReference": "ссылка на команду",
         "notFound": "не найдена",
         "online": "онлайн",

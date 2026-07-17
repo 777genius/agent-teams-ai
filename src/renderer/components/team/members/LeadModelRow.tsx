@@ -30,8 +30,6 @@ import { AlertTriangle, ChevronDown, ChevronRight, Info } from 'lucide-react';
 
 import { Button } from '../../ui/button';
 
-import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
-
 import type { EffortLevel, TeamProviderId } from '@shared/types';
 
 export { ANTHROPIC_LONG_CONTEXT_PRICING_URL, ANTHROPIC_SONNET_EXTRA_USAGE_WARNING };
@@ -57,7 +55,6 @@ interface LeadModelRowProps {
   showAnthropicContextLimit?: boolean;
   disableAnthropicContextLimit?: boolean;
   projectPath?: string | null;
-  layoutVariant?: 'default' | 'flat';
 }
 
 export const LeadModelRow = ({
@@ -81,7 +78,6 @@ export const LeadModelRow = ({
   showAnthropicContextLimit = providerId === 'anthropic',
   disableAnthropicContextLimit,
   projectPath,
-  layoutVariant = 'default',
 }: LeadModelRowProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
@@ -123,7 +119,6 @@ export const LeadModelRow = ({
   const contextLimitDisabled =
     disableAnthropicContextLimit ??
     (providerId === 'anthropic' && isAnthropicHaikuTeamModel(model));
-  const isFlatRoster = layoutVariant === 'flat';
 
   useEffect(() => {
     if (hasActiveProviderNotice && !modelExpanded) {
@@ -131,52 +126,18 @@ export const LeadModelRow = ({
     }
   }, [hasActiveProviderNotice, modelExpanded]);
 
-  const syncModelControl = (
-    <div className="flex min-w-0 items-center gap-2">
-      <Checkbox
-        id="sync-models-with-lead"
-        checked={syncModelsWithTeammates}
-        onCheckedChange={(checked) => onSyncModelsWithTeammatesChange(checked === true)}
-      />
-      <Label
-        htmlFor="sync-models-with-lead"
-        className="cursor-pointer truncate text-xs font-normal text-text-secondary"
-      >
-        {t('members.leadModel.syncWithTeammates')}
-      </Label>
-    </div>
-  );
-
   return (
     <div
-      className={cn(
-        'relative grid grid-cols-1 gap-2 md:items-start',
-        isFlatRoster
-          ? cn(
-              'hover:bg-[var(--color-surface-raised)]/45 rounded-sm px-4 py-2 transition-colors',
-              FLAT_ROSTER_GRID_COLUMNS
-            )
-          : 'rounded-md p-2 shadow-sm md:grid-cols-[minmax(220px,1fr)_minmax(230px,1fr)_190px]'
-      )}
-      data-role="lead-row"
+      className="relative grid grid-cols-1 gap-2 rounded-md p-2 shadow-sm md:grid-cols-[minmax(0,1fr)_auto_auto]"
       style={{
-        backgroundColor: isFlatRoster
-          ? undefined
-          : isLight
-            ? 'color-mix(in srgb, var(--color-surface-raised) 22%, white 78%)'
-            : 'var(--color-surface-raised)',
-        boxShadow: isFlatRoster
-          ? undefined
-          : isLight
-            ? '0 1px 2px rgba(15, 23, 42, 0.06)'
-            : '0 1px 2px rgba(0, 0, 0, 0.28)',
+        backgroundColor: isLight
+          ? 'color-mix(in srgb, var(--color-surface-raised) 22%, white 78%)'
+          : 'var(--color-surface-raised)',
+        boxShadow: isLight ? '0 1px 2px rgba(15, 23, 42, 0.06)' : '0 1px 2px rgba(0, 0, 0, 0.28)',
       }}
     >
       <div
-        className={cn(
-          'absolute inset-y-0 left-0 w-1',
-          isFlatRoster ? 'my-2 rounded-full' : 'rounded-l-md'
-        )}
+        className="absolute inset-y-0 left-0 w-1 rounded-l-md"
         style={{ backgroundColor: leadColorSet.border }}
         aria-hidden="true"
       />
@@ -189,64 +150,57 @@ export const LeadModelRow = ({
             loading="lazy"
           />
           <div className="flex h-8 min-w-0 items-center gap-3">
-            <span className="truncate text-sm font-semibold text-[var(--color-text)]">
+            <span className="truncate text-sm font-medium text-[var(--color-text)]">
               {t('members.leadModel.leadShort')}
             </span>
-            {!isFlatRoster ? (
-              <span className="shrink-0 text-xs text-[var(--color-text-secondary)]">
-                {t('members.leadModel.teamLead')}
-              </span>
-            ) : null}
+            <span className="shrink-0 text-xs text-[var(--color-text-secondary)]">
+              {t('members.leadModel.teamLead')}
+            </span>
           </div>
         </div>
       </div>
       <div className="min-w-0">
-        <div className="flex h-8 items-center px-1 text-xs text-[var(--color-text-secondary)]">
-          {isFlatRoster ? t('members.leadModel.teamLead') : syncModelControl}
+        <div className="flex h-8 items-center justify-end px-2 text-xs text-[var(--color-text-secondary)]">
+          <div className="flex min-w-0 items-center gap-2">
+            <Checkbox
+              id="sync-models-with-lead"
+              checked={syncModelsWithTeammates}
+              onCheckedChange={(checked) => onSyncModelsWithTeammatesChange(checked === true)}
+            />
+            <Label
+              htmlFor="sync-models-with-lead"
+              className="cursor-pointer truncate text-xs font-normal text-text-secondary"
+            >
+              {t('members.leadModel.syncWithTeammates')}
+            </Label>
+          </div>
         </div>
       </div>
-      <div className="min-w-0 space-y-1">
-        <div
-          className={cn(
-            'flex flex-col gap-2 sm:flex-row sm:items-start',
-            isFlatRoster && 'sm:flex-wrap sm:gap-1.5'
-          )}
-        >
-          <div
+      <div className="space-y-1">
+        <div className="w-full min-w-0 space-y-1 sm:w-[150px] sm:min-w-[150px]">
+          <Button
+            variant="outline"
+            size="sm"
             className={cn(
-              'w-full min-w-0 space-y-1',
-              isFlatRoster ? 'sm:w-[170px] sm:min-w-[170px]' : 'sm:w-[150px] sm:min-w-[150px]'
+              'h-8 w-full justify-start gap-1 overflow-hidden text-left',
+              hasModelIssue &&
+                'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50',
+              hasModelAdvisory &&
+                'border-amber-300/45 bg-amber-300/10 text-amber-100 hover:border-amber-300/60 hover:bg-amber-300/15 hover:text-amber-50'
             )}
+            aria-label={modelButtonAriaLabel}
+            onClick={() => setModelExpanded((prev) => !prev)}
           >
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(
-                'h-8 w-full justify-start gap-1 overflow-hidden text-left',
-                hasModelIssue &&
-                  'border-red-500/50 bg-red-500/10 text-red-100 hover:border-red-400/60 hover:bg-red-500/15 hover:text-red-50',
-                hasModelAdvisory &&
-                  'border-amber-300/45 bg-amber-300/10 text-amber-100 hover:border-amber-300/60 hover:bg-amber-300/15 hover:text-amber-50'
-              )}
-              aria-label={modelButtonAriaLabel}
-              onClick={() => setModelExpanded((prev) => !prev)}
-            >
-              {modelExpanded ? (
-                <ChevronDown className="size-3.5" />
-              ) : (
-                <ChevronRight className="size-3.5" />
-              )}
-              <ProviderBrandLogo providerId={providerId} className="size-3.5 shrink-0" />
-              <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
-              {hasModelIssue ? <AlertTriangle className="size-3.5 shrink-0 text-red-300" /> : null}
-              {hasModelAdvisory ? <Info className="size-3.5 shrink-0 text-amber-300" /> : null}
-            </Button>
-          </div>
-          {isFlatRoster ? (
-            <div className="flex h-8 min-w-0 items-center px-2 text-xs text-[var(--color-text-secondary)]">
-              {syncModelControl}
-            </div>
-          ) : null}
+            {modelExpanded ? (
+              <ChevronDown className="size-3.5" />
+            ) : (
+              <ChevronRight className="size-3.5" />
+            )}
+            <ProviderBrandLogo providerId={providerId} className="size-3.5 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
+            {hasModelIssue ? <AlertTriangle className="size-3.5 shrink-0 text-red-300" /> : null}
+            {hasModelAdvisory ? <Info className="size-3.5 shrink-0 text-amber-300" /> : null}
+          </Button>
         </div>
       </div>
       {hasWarnings ? (

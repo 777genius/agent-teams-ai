@@ -756,6 +756,7 @@ export const MessageComposer = ({
   const remaining = MAX_TEXT_LENGTH - trimmed.length;
   const hasAttachmentPreviewContent =
     draft.attachments.length > 0 || Boolean(draft.attachmentError ?? fileRestrictionError);
+  const shouldDockRecipientSelector = !hasAttachmentPreviewContent;
   const isCompactLayout = layout === 'compact';
   const isFloatingAdaptiveWidth = widthMode === 'floating-adaptive';
   const [floatingComposerWidth, setFloatingComposerWidth] = useState(FLOATING_COMPOSER_MIN_WIDTH);
@@ -879,7 +880,7 @@ export const MessageComposer = ({
 
   return (
     <div
-      className={cn('message-composer-flat-layout relative', !isCompactLayout && 'mb-2')}
+      className={cn('relative', isCompactLayout ? 'pb-1' : 'mb-1.5 pb-1.5')}
       style={floatingAdaptiveStyle}
       role="group"
       onDragEnter={handleDragEnter}
@@ -888,52 +889,66 @@ export const MessageComposer = ({
       onDrop={handleDropWrapper}
       onPaste={handlePasteWrapper}
     >
-      <div>
-        <div className="message-composer-flat-toolbar grid min-w-0 grid-cols-[32px_minmax(0,1fr)] items-center gap-2 pl-2">
-          <div className="flex size-8 items-center justify-center">
-            {showAttachmentControl ? (
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={attachmentInputAccept}
-                  multiple
-                  className="hidden"
-                  onChange={handleFileInputChange}
-                />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className={cn(
-                        'inline-flex size-8 shrink-0 items-center justify-center rounded-md transition-colors',
-                        canAttach
-                          ? 'text-[var(--color-text-secondary)] hover:bg-white/[0.035] hover:text-[var(--color-text)]'
-                          : 'text-[var(--color-text-muted)] opacity-40'
-                      )}
-                      disabled={!canAttach}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Paperclip size={14} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    {canAttach
-                      ? t('messageComposer.attachments.attachFiles')
-                      : (attachmentRestrictionReason ??
-                        t('messageComposer.attachments.unavailable'))}
-                  </TooltipContent>
-                </Tooltip>
-              </>
-            ) : null}
-          </div>
+      <div
+        className={cn(
+          shouldDockRecipientSelector ? 'mb-0' : 'mb-1',
+          isCompactLayout ? 'space-y-1.5' : 'space-y-2'
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          {showAttachmentControl ? (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={attachmentInputAccept}
+                multiple
+                className="hidden"
+                onChange={handleFileInputChange}
+              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-1 rounded p-1 transition-colors',
+                      canAttach
+                        ? 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+                        : 'text-[var(--color-text-muted)] opacity-40'
+                    )}
+                    disabled={!canAttach}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip size={14} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {canAttach
+                    ? t('messageComposer.attachments.attachFiles')
+                    : (attachmentRestrictionReason ?? t('messageComposer.attachments.unavailable'))}
+                </TooltipContent>
+              </Tooltip>
+            </>
+          ) : null}
 
-          <div className="flex min-w-0 items-stretch justify-end self-stretch">
+          <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-2">
+            {!isTeamAlive && !isLaunchBlocking && (
+              <span
+                className="shrink-0 whitespace-nowrap text-[10px]"
+                style={{ color: 'var(--warning-text)' }}
+              >
+                {t('messageComposer.status.teamOffline')}
+              </span>
+            )}
+
             {/* Combined team + member selector */}
             <div
               className={cn(
-                'grid w-full min-w-0 max-w-[430px] grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-stretch overflow-hidden text-xs',
-                isCrossTeam && 'bg-[var(--cross-team-bg)]'
+                'mr-[15px] inline-flex min-w-0 max-w-[calc(100%_-_15px)] items-center overflow-hidden border text-xs transition-colors',
+                shouldDockRecipientSelector
+                  ? 'relative z-[1] -mb-px overflow-hidden rounded-b-none rounded-t-[1.35rem] border-b-0 bg-[var(--color-surface-raised)]'
+                  : 'rounded-full',
+                isCrossTeam ? 'border-[var(--cross-team-border)]' : 'border-[var(--color-border)]'
               )}
             >
               <Popover open={teamSelectorOpen} onOpenChange={setTeamSelectorOpen}>
@@ -941,10 +956,13 @@ export const MessageComposer = ({
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex min-w-0 items-center justify-center gap-1 border-r border-r-[var(--color-border)] px-1 text-xs transition-colors',
+                      'inline-flex min-w-0 max-w-[160px] items-center gap-1.5 border-r border-r-[var(--color-border)] px-2.5 py-1 text-xs transition-colors',
+                      shouldDockRecipientSelector
+                        ? 'rounded-bl-none rounded-tl-[1.35rem]'
+                        : 'rounded-l-full',
                       isCrossTeam
                         ? 'hover:bg-[var(--cross-team-bg)]/80 bg-[var(--cross-team-bg)] text-purple-400'
-                        : 'hover:bg-white/[0.025]'
+                        : 'hover:bg-[var(--color-surface-raised)]'
                     )}
                   >
                     {isCrossTeam ? (
@@ -964,9 +982,7 @@ export const MessageComposer = ({
                                 : undefined,
                           }}
                         />
-                        <span className="min-w-0 truncate" title={targetDisplayName ?? undefined}>
-                          {targetDisplayName}
-                        </span>
+                        <span className="max-w-[100px] truncate">{targetDisplayName}</span>
                       </>
                     ) : (
                       <>
@@ -1099,10 +1115,13 @@ export const MessageComposer = ({
                   <button
                     type="button"
                     className={cn(
-                      'message-composer-recipient-selector inline-flex min-w-0 items-center justify-end gap-1 overflow-hidden whitespace-nowrap px-1 text-xs transition-colors',
+                      'inline-flex min-w-0 max-w-[150px] items-center gap-1.5 px-2.5 py-1 text-xs transition-colors',
+                      shouldDockRecipientSelector
+                        ? 'rounded-br-none rounded-tr-[1.35rem]'
+                        : 'rounded-r-full',
                       isCrossTeam
                         ? 'cursor-default bg-[var(--cross-team-bg)] opacity-60'
-                        : 'hover:bg-white/[0.025]'
+                        : 'hover:bg-[var(--color-surface-raised)]'
                     )}
                     disabled={isCrossTeam}
                   >
@@ -1214,27 +1233,25 @@ export const MessageComposer = ({
         </div>
 
         {hasAttachmentPreviewContent ? (
-          <div className="px-2 pt-2">
-            <AttachmentPreviewList
-              attachments={draft.attachments}
-              onRemove={draft.removeAttachment}
-              error={
-                draft.attachmentError ?? fileRestrictionError ?? attachmentPayloadRestrictionReason
-              }
-              onDismissError={draft.clearAttachmentError}
-              disabled={attachmentsBlocked}
-              disabledHint={
-                attachmentPayloadRestrictionReason ??
-                attachmentRestrictionReason ??
-                t('messageComposer.attachments.disabledHint')
-              }
-            />
-          </div>
+          <AttachmentPreviewList
+            attachments={draft.attachments}
+            onRemove={draft.removeAttachment}
+            error={
+              draft.attachmentError ?? fileRestrictionError ?? attachmentPayloadRestrictionReason
+            }
+            onDismissError={draft.clearAttachmentError}
+            disabled={attachmentsBlocked}
+            disabledHint={
+              attachmentPayloadRestrictionReason ??
+              attachmentRestrictionReason ??
+              t('messageComposer.attachments.disabledHint')
+            }
+          />
         ) : null}
-        {revisionNotice ? <div className="px-2 pt-2">{revisionNotice}</div> : null}
+        {revisionNotice}
       </div>
 
-      <div className="relative">
+      <div className={cn('relative', shouldDockRecipientSelector && 'z-[2]')}>
         <DropZoneOverlay
           active={isDragOver}
           rejected={!canAttach}
@@ -1268,9 +1285,10 @@ export const MessageComposer = ({
           onShiftTab={handleCycleActionMode}
           dismissMentionsRef={dismissMentionsRef}
           extraTips={[t('messageComposer.input.slashTip')]}
-          surfaceClassName="message-composer-flat-body"
-          surfaceFadeColor="var(--message-composer-flat-bg)"
-          className="rounded-none border-0 shadow-none focus-visible:ring-0"
+          surfaceClassName="message-composer-shell message-composer-orbit-surface border border-transparent bg-[var(--color-surface-raised)] shadow-[0_8px_24px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.03)]"
+          surfaceDecoration="orbit-border"
+          surfaceFadeColor="var(--color-surface-raised)"
+          className="border-transparent shadow-none"
           minRows={isCompactLayout ? 1 : 2}
           maxRows={6}
           maxLength={MAX_TEXT_LENGTH}
@@ -1293,48 +1311,40 @@ export const MessageComposer = ({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-secondary)]"
+                    className="inline-flex shrink-0 items-center rounded-full p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text-secondary)]"
                     onClick={() => void window.electronAPI.openExternal('https://voicetext.site')}
                   >
-                    <Mic size={16} />
+                    <Mic size={14} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   {t('messageComposer.actions.voiceToText')}
                 </TooltipContent>
               </Tooltip>
-              <span
-                className="message-composer-send-slot"
-                data-visible={trimmed.length > 0 ? 'true' : 'false'}
-              >
-                {trimmed.length > 0 ? (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="inline-flex">
-                        <button
-                          type="button"
-                          className="message-composer-send-button inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-45"
-                          disabled={!canSend}
-                          onClick={handleSend}
-                        >
-                          <Send size={14} />
-                          {t('messageComposer.actions.send')}
-                        </button>
-                      </span>
-                    </TooltipTrigger>
-                    {slashCommandRestrictionReason ? (
-                      <TooltipContent side="top">{slashCommandRestrictionReason}</TooltipContent>
-                    ) : isLaunchBlocking && !sending ? (
-                      <TooltipContent side="top">
-                        {t('messageComposer.actions.sendingUnavailableLaunching')}
-                      </TooltipContent>
-                    ) : null}
-                  </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <button
+                      type="button"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!canSend}
+                      onClick={handleSend}
+                    >
+                      <Send size={12} />
+                      {t('messageComposer.actions.send')}
+                    </button>
+                  </span>
+                </TooltipTrigger>
+                {slashCommandRestrictionReason ? (
+                  <TooltipContent side="top">{slashCommandRestrictionReason}</TooltipContent>
+                ) : isLaunchBlocking && !sending ? (
+                  <TooltipContent side="top">
+                    {t('messageComposer.actions.sendingUnavailableLaunching')}
+                  </TooltipContent>
                 ) : null}
-              </span>
+              </Tooltip>
             </div>
           }
-          footerClassName="message-composer-flat-footer"
           footerRight={composerFooterRight}
         />
       </div>

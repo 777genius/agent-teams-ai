@@ -28,7 +28,6 @@ export const UpdateDialog = (): React.JSX.Element | null => {
     releaseNotes,
     downloadUpdate,
     installUpdate,
-    closeUpdateDialog,
     dismissUpdateDialog,
   } = useStore(
     useShallow((s) => ({
@@ -38,7 +37,6 @@ export const UpdateDialog = (): React.JSX.Element | null => {
       releaseNotes: s.releaseNotes,
       downloadUpdate: s.downloadUpdate,
       installUpdate: s.installUpdate,
-      closeUpdateDialog: s.closeUpdateDialog,
       dismissUpdateDialog: s.dismissUpdateDialog,
     }))
   );
@@ -51,13 +49,13 @@ export const UpdateDialog = (): React.JSX.Element | null => {
 
     const handleEscape = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
-        closeUpdateDialog();
+        dismissUpdateDialog();
       }
     };
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [showUpdateDialog, closeUpdateDialog]);
+  }, [showUpdateDialog, dismissUpdateDialog]);
 
   // Focus trap: keep focus within dialog
   useEffect(() => {
@@ -120,7 +118,7 @@ export const UpdateDialog = (): React.JSX.Element | null => {
       <button
         className="absolute inset-0 cursor-default"
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
-        onClick={closeUpdateDialog}
+        onClick={dismissUpdateDialog}
         aria-label={t('updateDialog.closeDialog')}
         tabIndex={-1}
       />

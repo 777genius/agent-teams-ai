@@ -253,7 +253,6 @@ import {
   collectConfigLaunchBaseNamesFromConfigMembers,
   collectConfigLaunchBaseNamesFromMetaMembers,
   getPrelaunchConfigBackupPath,
-  mergeMembersMetaForLaunch,
   planCliAutoSuffixedConfigMemberCleanup,
   planCliAutoSuffixedMetaMemberCleanup,
   planTeamConfigLaunchNormalization,
@@ -9940,18 +9939,7 @@ export class TeamProvisioningService {
       });
     }
 
-    if (normalizedDefaultModel) {
-      return normalizedDefaultModel;
-    }
-
-    return this.resolveProviderDefaultModelFromRuntimeStatus(
-      claudePath,
-      cwd,
-      providerId,
-      env,
-      providerArgs,
-      limitContext
-    ).catch(() => null);
+    return normalizedDefaultModel;
   }
 
   private async resolveProviderDefaultModelFromRuntimeStatus(
@@ -13461,14 +13449,12 @@ export class TeamProvisioningService {
         launchIdentity,
         createdAt: Date.now(),
       });
-      const existingMeta = await this.membersMetaStore.getMeta(request.teamName);
       await this.membersMetaStore.writeMembers(
         request.teamName,
-        mergeMembersMetaForLaunch(
-          buildMembersMetaWritePayload(allEffectiveMemberSpecs),
-          existingMeta?.members ?? []
-        ),
-        { providerBackendId: request.providerBackendId }
+        buildMembersMetaWritePayload(allEffectiveMemberSpecs),
+        {
+          providerBackendId: request.providerBackendId,
+        }
       );
 
       try {
@@ -22368,23 +22354,19 @@ export class TeamProvisioningService {
 
   private async persistMembersMeta(teamName: string, request: TeamCreateRequest): Promise<void> {
     const teammateMembers = selectMembersMetaTeammates(request.members);
+    if (teammateMembers.length === 0) {
+      return;
+    }
 
     const joinedAt = Date.now();
 
     try {
-      const existingMeta = await this.membersMetaStore.getMeta(teamName);
-      const membersToWrite = mergeMembersMetaForLaunch(
-        buildMembersMetaWritePayload(
-          teammateMembers.map((member) => ({
-            ...member,
-            joinedAt,
-          }))
-        ),
-        existingMeta?.members ?? []
+      const membersToWrite = buildMembersMetaWritePayload(
+        teammateMembers.map((member) => ({
+          ...member,
+          joinedAt,
+        }))
       );
-      if (membersToWrite.length === 0 && existingMeta == null) {
-        return;
-      }
       await this.membersMetaStore.writeMembers(teamName, membersToWrite, {
         providerBackendId: request.providerBackendId,
       });
@@ -22432,9 +22414,9 @@ export class TeamProvisioningService {
     ]);
 
     try {
-      const membersMeta = await this.membersMetaStore.getMeta(teamName);
-      if (membersMeta) {
-        const members = buildLaunchMembersFromMeta(membersMeta.members);
+      const metaMembers = await this.membersMetaStore.getMembers(teamName);
+      const members = buildLaunchMembersFromMeta(metaMembers);
+      if (members.length > 0) {
         return {
           level: 'ready',
           rosterSource: 'members-meta',

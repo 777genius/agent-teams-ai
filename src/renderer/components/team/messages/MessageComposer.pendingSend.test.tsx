@@ -153,52 +153,29 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
     {
       value: string;
       disabled?: boolean;
-      className?: string;
-      surfaceClassName?: string;
-      footerClassName?: string;
       cornerAction?: React.ReactNode;
       cornerActionLeft?: React.ReactNode;
       footerRight?: React.ReactNode;
       onBlur?: React.FocusEventHandler<HTMLTextAreaElement>;
       onFocus?: React.FocusEventHandler<HTMLTextAreaElement>;
     }
-  >(
-    (
-      {
-        value,
+  >(({ value, disabled, cornerAction, cornerActionLeft, footerRight, onBlur, onFocus }, ref) =>
+    React.createElement(
+      'div',
+      null,
+      React.createElement('textarea', {
+        'aria-label': 'Message',
         disabled,
-        className,
-        surfaceClassName,
-        footerClassName,
-        cornerAction,
-        cornerActionLeft,
-        footerRight,
         onBlur,
         onFocus,
-      },
-      ref
-    ) =>
-      React.createElement(
-        'div',
-        null,
-        React.createElement(
-          'div',
-          { className: surfaceClassName },
-          React.createElement('textarea', {
-            'aria-label': 'Message',
-            className,
-            disabled,
-            onBlur,
-            onFocus,
-            readOnly: true,
-            ref,
-            value,
-          }),
-          React.createElement('div', null, cornerActionLeft),
-          React.createElement('div', null, cornerAction)
-        ),
-        React.createElement('div', { className: footerClassName }, footerRight)
-      )
+        readOnly: true,
+        ref,
+        value,
+      }),
+      React.createElement('div', null, cornerActionLeft),
+      React.createElement('div', null, cornerAction),
+      React.createElement('div', null, footerRight)
+    )
   );
   MockMentionableTextarea.displayName = 'MockMentionableTextarea';
   return { MentionableTextarea: MockMentionableTextarea };
@@ -340,25 +317,13 @@ function renderComposer(overrides: Partial<React.ComponentProps<typeof MessageCo
 }
 
 function getSendButton(host: HTMLElement): HTMLButtonElement {
-  const button = findSendButton(host);
+  const button = Array.from(host.querySelectorAll('button')).find(
+    (candidate) => candidate.textContent?.trim() === 'Send'
+  );
   if (!(button instanceof HTMLButtonElement)) {
     throw new Error('Send button not found');
   }
   return button;
-}
-
-function findSendButton(host: HTMLElement): HTMLButtonElement | undefined {
-  return Array.from(host.querySelectorAll('button')).find(
-    (candidate) => candidate.textContent?.trim() === 'Send'
-  );
-}
-
-function getSendSlot(host: HTMLElement): HTMLElement {
-  const slot = host.querySelector('.message-composer-send-slot');
-  if (!(slot instanceof HTMLElement)) {
-    throw new Error('Send animation slot not found');
-  }
-  return slot;
 }
 
 function getTextarea(host: HTMLElement): HTMLTextAreaElement {
@@ -392,42 +357,6 @@ describe('MessageComposer pending send lifecycle', () => {
     document.body.innerHTML = '';
     vi.clearAllMocks();
     vi.unstubAllGlobals();
-  });
-
-  it('renders the footer below the flat composer card', () => {
-    const { host, root } = renderComposer();
-    const layout = host.querySelector('.message-composer-flat-layout');
-    const toolbar = layout?.querySelector('.message-composer-flat-toolbar');
-    const body = layout?.querySelector('.message-composer-flat-body');
-    const footer = layout?.querySelector('.message-composer-flat-footer');
-    const sendButton = getSendButton(host);
-
-    expect(layout).not.toBeNull();
-    expect(toolbar).not.toBeNull();
-    expect(body).not.toBeNull();
-    expect(footer).not.toBeNull();
-    expect(body?.contains(footer ?? null)).toBe(false);
-    expect(body?.className).not.toContain('message-composer-orbit-surface');
-    expect(sendButton.className).toContain('message-composer-send-button');
-    expect(toolbar?.textContent).toContain('This team');
-    expect(toolbar?.textContent).toContain('alice');
-
-    act(() => {
-      root.unmount();
-    });
-  });
-
-  it('uses the toolbar width for the target selector instead of offline status', () => {
-    const { host, root } = renderComposer({ isTeamAlive: false });
-    const toolbar = host.querySelector('.message-composer-flat-toolbar');
-
-    expect(toolbar?.textContent).toContain('This team');
-    expect(toolbar?.textContent?.toLowerCase()).not.toContain('offline');
-    expect(toolbar?.className).toContain('grid-cols-[32px_minmax(0,1fr)]');
-
-    act(() => {
-      root.unmount();
-    });
   });
 
   it('hides the submitted draft when sending starts and finalizes it on success', () => {
@@ -673,24 +602,6 @@ describe('MessageComposer pending send lifecycle', () => {
     });
 
     expect(onSend).toHaveBeenCalledOnce();
-
-    act(() => {
-      root.unmount();
-    });
-  });
-
-  it('does not render send until the draft contains non-whitespace text', () => {
-    draftHarness.state.text = '   ';
-    const { host, render, root } = renderComposer();
-
-    expect(findSendButton(host)).toBeUndefined();
-    expect(getSendSlot(host).dataset.visible).toBe('false');
-
-    draftHarness.state.text = 'ready';
-    render();
-
-    expect(getSendButton(host).disabled).toBe(false);
-    expect(getSendSlot(host).dataset.visible).toBe('true');
 
     act(() => {
       root.unmount();

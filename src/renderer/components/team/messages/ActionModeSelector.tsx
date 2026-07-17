@@ -29,21 +29,21 @@ const MODE_CONFIG: {
     mode: 'do',
     label: 'Do',
     tooltip: 'Full execution mode - can change code/state, run commands, or delegate',
-    activeClass: 'text-rose-300 after:bg-rose-400 after:opacity-100',
+    activeClass: 'bg-rose-500/80 text-white',
     tooltipClass: 'bg-rose-500/80 border-rose-600 text-white',
   },
   {
     mode: 'ask',
     label: 'Ask',
     tooltip: 'Read-only discussion mode - no code/state changes or commands',
-    activeClass: 'text-sky-300 after:bg-sky-400 after:opacity-100',
+    activeClass: 'bg-blue-600 text-white',
     tooltipClass: 'bg-blue-600 border-blue-700 text-white',
   },
   {
     mode: 'delegate',
     label: 'Delegate',
     tooltip: 'Lead-only orchestration - delegate everything, do not execute yourself',
-    activeClass: 'text-amber-300 after:bg-amber-400 after:opacity-100',
+    activeClass: 'bg-amber-500/80 text-white',
     tooltipClass: 'bg-amber-500/80 border-amber-600 text-white',
   },
 ];
@@ -60,12 +60,14 @@ export const ActionModeSelector = ({
   return (
     <TooltipProvider delayDuration={0} skipDelayDuration={300}>
       <div
-        className="message-composer-action-modes inline-flex h-8 items-stretch overflow-hidden rounded-md border border-[var(--color-border)]"
+        className="inline-flex items-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)]"
         role="radiogroup"
         aria-label={t('messages.actionMode.label')}
       >
         {modes.map((cfg, idx) => {
           const isActive = value === cfg.mode;
+          const isFirst = idx === 0;
+          const isLast = idx === modes.length - 1;
 
           return (
             <Tooltip key={cfg.mode} disableHoverableContent>
@@ -75,12 +77,13 @@ export const ActionModeSelector = ({
                   role="radio"
                   aria-checked={isActive}
                   className={cn(
-                    'relative min-w-10 px-1.5 text-[11px] font-medium transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:opacity-0 after:transition-opacity',
-                    idx > 0 && 'border-l border-[var(--color-border)]',
+                    'px-2 py-0.5 text-[10px] font-medium transition-colors',
+                    isFirst && 'rounded-l-full',
+                    isLast && 'rounded-r-full',
                     disabled && 'cursor-not-allowed opacity-50',
                     isActive
                       ? cfg.activeClass
-                      : 'text-[var(--color-text-muted)] hover:bg-white/[0.025] hover:text-[var(--color-text-secondary)]'
+                      : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
                   )}
                   disabled={disabled}
                   onClick={() => onChange(cfg.mode)}

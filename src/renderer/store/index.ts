@@ -16,6 +16,7 @@ import {
 import { isTaskLogActivityChangeEvent } from '@renderer/utils/teamChangeEvents';
 import { isDisplayableCurrentTask } from '@renderer/utils/teamTaskDisplayState';
 import { createLogger } from '@shared/utils/logger';
+import { isVersionOlder, normalizeVersion } from '@shared/utils/version';
 import { create } from 'zustand';
 
 import { createChangeReviewSlice } from './slices/changeReviewSlice';
@@ -104,6 +105,8 @@ const STARTUP_GLOBAL_TASKS_MAX_DELAY_MS = 30_000;
 const ACTIVE_PROVISIONING_STATES_FOR_PROCESS_LITE: ReadonlySet<TeamProvisioningProgress['state']> =
   new Set(['validating', 'spawning', 'configuring', 'assembling', 'finalizing', 'verifying']);
 export const TEAM_PROCESS_LITE_FANOUT_STORAGE_KEY = 'team:processLiteFanout';
+const CURRENT_APP_VERSION =
+  typeof __APP_VERSION__ === 'string' ? normalizeVersion(__APP_VERSION__) : '0.0.0';
 const logger = createLogger('Store:index');
 const RELEVANT_TEAM_CHANGE_EVENT_TYPES = new Set<TeamChangeEvent['type']>([
   'task',
@@ -2516,7 +2519,78 @@ export function initializeNotificationListeners(): () => void {
   // Listen for updater status events from main process
   if (api.updater?.onStatus) {
     const cleanup = api.updater.onStatus((_event: unknown, status: unknown) => {
-      useStore.getState().handleUpdaterStatus(status as UpdaterStatus);
+      const s = status as UpdaterStatus;
+      switch (s.type) {
+        case 'checking': {
+          // Don't downgrade status if we already know about an available/downloaded update
+          // or if a download is in progress (prevents UI flash during periodic re-checks)
+          const current = useStore.getState().updateStatus;
+          if (current !== 'available' && current !== 'downloaded' && current !== 'downloading') {
+            useStore.setState({ updateStatus: 'checking' });
+          }
+          break;
+        }
+        case 'available': {
+          // Don't downgrade from downloading/downloaded — the update is already
+          // in progress or ready to install (prevents periodic re-check from
+          // resetting the state after download completes)
+          const currentStatus = useStore.getState().updateStatus;
+          if (currentStatus === 'downloading' || currentStatus === 'downloaded') {
+            break;
+          }
+          const nextVersion = s.version ? normalizeVersion(s.version) : null;
+          if (!nextVersion || !isVersionOlder(CURRENT_APP_VERSION, nextVersion)) {
+            break;
+          }
+          const dismissed = useStore.getState().dismissedUpdateVersion;
+          useStore.setState({
+            updateStatus: 'available',
+            availableVersion: nextVersion,
+            releaseNotes: s.releaseNotes ?? null,
+            showUpdateDialog: nextVersion !== dismissed,
+          });
+          break;
+        }
+        case 'not-available': {
+          // Don't reset status if update is already downloading or downloaded
+          const notAvailCurrent = useStore.getState().updateStatus;
+          if (notAvailCurrent !== 'downloading' && notAvailCurrent !== 'downloaded') {
+            useStore.setState({ updateStatus: 'not-available' });
+          }
+          break;
+        }
+        case 'downloading':
+          useStore.setState({
+            updateStatus: 'downloading',
+            downloadProgress: s.progress?.percent ?? 0,
+          });
+          break;
+        case 'downloaded':
+          if (s.version && !isVersionOlder(CURRENT_APP_VERSION, normalizeVersion(s.version))) {
+            break;
+          }
+          useStore.setState({
+            updateStatus: 'downloaded',
+            downloadProgress: 100,
+            availableVersion: s.version
+              ? normalizeVersion(s.version)
+              : useStore.getState().availableVersion,
+          });
+          break;
+        case 'error': {
+          // Don't lose downloaded state due to a transient check error —
+          // the update is already on disk and ready to install
+          const errCurrent = useStore.getState().updateStatus;
+          if (errCurrent === 'downloaded') {
+            break;
+          }
+          useStore.setState({
+            updateStatus: 'error',
+            updateError: s.error ?? 'Unknown error',
+          });
+          break;
+        }
+      }
     });
     if (typeof cleanup === 'function') {
       cleanupFns.push(cleanup);

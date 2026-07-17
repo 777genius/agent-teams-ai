@@ -118,33 +118,6 @@ describe('UnreadCommentsBadge', () => {
     });
   });
 
-  it('can keep a zero count visible in the inline metadata layout', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-
-    await act(async () => {
-      root.render(
-        React.createElement(UnreadCommentsBadge, {
-          unreadCount: 0,
-          totalCount: 0,
-          showZero: true,
-          displayMode: 'inline',
-        })
-      );
-      await flushReact();
-    });
-
-    expect(host.textContent).toContain('0');
-    expect(host.querySelector('.h-5.items-center.justify-center')).not.toBeNull();
-
-    await act(async () => {
-      root.unmount();
-      await flushReact();
-    });
-  });
-
   it('does not mount tooltip content while closed', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

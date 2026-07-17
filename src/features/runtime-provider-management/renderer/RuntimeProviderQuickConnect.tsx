@@ -38,7 +38,6 @@ interface RuntimeProviderQuickConnectProps {
   projectPath?: string | null;
   refreshKey?: number;
   onInstallOpenCode: () => void;
-  onRefreshOpenCode: () => void;
   onOpenCodeProviderAction: (
     providerId: string,
     action: 'connect' | 'reconnect' | 'select'
@@ -156,7 +155,6 @@ export const RuntimeProviderQuickConnect = ({
   projectPath = null,
   refreshKey = 0,
   onInstallOpenCode,
-  onRefreshOpenCode,
   onOpenCodeProviderAction,
   onBrowseProviders,
   onConnectedCountChange,
@@ -497,7 +495,6 @@ export const RuntimeProviderQuickConnect = ({
         runtimeStatus={openCodeRuntimeStatus}
         directoryError={directory.error}
         onInstallOpenCode={onInstallOpenCode}
-        onRefreshOpenCode={onRefreshOpenCode}
         onRetryDirectory={directory.refresh}
         onBrowseProviders={() => onBrowseProviders()}
       />

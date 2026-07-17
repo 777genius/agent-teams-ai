@@ -158,7 +158,6 @@ describe('RuntimeProviderQuickConnect', () => {
           },
           openCodeRuntimeStatusLoading: false,
           onInstallOpenCode: vi.fn(),
-          onRefreshOpenCode: vi.fn(),
           onOpenCodeProviderAction: vi.fn(),
           onBrowseProviders: vi.fn(),
         })
@@ -228,7 +227,6 @@ describe('RuntimeProviderQuickConnect', () => {
             },
             openCodeRuntimeStatusLoading: state !== 'ready',
             onInstallOpenCode: vi.fn(),
-            onRefreshOpenCode: vi.fn(),
             onOpenCodeProviderAction: vi.fn(),
             onBrowseProviders: vi.fn(),
             onConnectedCountChange,
@@ -320,7 +318,6 @@ describe('RuntimeProviderQuickConnect', () => {
           },
           openCodeRuntimeStatusLoading: false,
           onInstallOpenCode: vi.fn(),
-          onRefreshOpenCode: vi.fn(),
           onOpenCodeProviderAction,
           onBrowseProviders: vi.fn(),
         })
@@ -347,7 +344,10 @@ describe('RuntimeProviderQuickConnect', () => {
         ?.click();
     });
 
-    expect(onOpenCodeProviderAction).toHaveBeenCalledWith('xiaomi-token-plan-sgp', 'reconnect');
+    expect(onOpenCodeProviderAction).toHaveBeenCalledWith(
+      'xiaomi-token-plan-sgp',
+      'reconnect'
+    );
   });
 
   it('warms the provider directory while OpenCode readiness is still checking', async () => {
@@ -368,7 +368,6 @@ describe('RuntimeProviderQuickConnect', () => {
           openCodeRuntimeStatus: null,
           openCodeRuntimeStatusLoading: true,
           onInstallOpenCode: vi.fn(),
-          onRefreshOpenCode: vi.fn(),
           onOpenCodeProviderAction: vi.fn(),
           onBrowseProviders: vi.fn(),
         })

@@ -40,26 +40,34 @@ import type { DragEndEvent } from '@dnd-kit/core';
 import type { Session } from '@renderer/types/data';
 import type { KanbanColumnId, KanbanState, ResolvedTeamMember, TeamTask } from '@shared/types';
 
-const COLUMN_ACCENTS: Record<KanbanColumnId, { accentColor: string; icon: React.ReactNode }> = {
+const COLUMN_ACCENTS: Record<
+  KanbanColumnId,
+  { headerBg: string; bodyBg: string; icon: React.ReactNode }
+> = {
   todo: {
-    accentColor: 'rgb(59, 130, 246)',
-    icon: <ClipboardList size={14} className="shrink-0 text-[var(--kanban-column-accent)]" />,
+    headerBg: 'rgba(59, 130, 246, 0.22)',
+    bodyBg: 'rgba(59, 130, 246, 0.05)',
+    icon: <ClipboardList size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
   },
   in_progress: {
-    accentColor: 'rgb(234, 179, 8)',
-    icon: <PlayCircle size={14} className="shrink-0 text-[var(--kanban-column-accent)]" />,
+    headerBg: 'rgba(234, 179, 8, 0.24)',
+    bodyBg: 'rgba(234, 179, 8, 0.06)',
+    icon: <PlayCircle size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
   },
   done: {
-    accentColor: 'rgb(20, 184, 166)',
-    icon: <CheckCircle2 size={14} className="shrink-0 text-[var(--kanban-column-accent)]" />,
+    headerBg: 'rgba(34, 197, 94, 0.22)',
+    bodyBg: 'rgba(34, 197, 94, 0.05)',
+    icon: <CheckCircle2 size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
   },
   review: {
-    accentColor: 'rgb(139, 92, 246)',
-    icon: <Eye size={14} className="shrink-0 text-[var(--kanban-column-accent)]" />,
+    headerBg: 'rgba(139, 92, 246, 0.22)',
+    bodyBg: 'rgba(139, 92, 246, 0.05)',
+    icon: <Eye size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
   },
   approved: {
-    accentColor: 'rgb(101, 163, 13)',
-    icon: <ShieldCheck size={14} className="shrink-0 text-[var(--kanban-column-accent)]" />,
+    headerBg: 'rgba(34, 197, 94, 0.34)',
+    bodyBg: 'rgba(34, 197, 94, 0.08)',
+    icon: <ShieldCheck size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
   },
 };
 
@@ -150,19 +158,21 @@ function estimateGridSkeletonCardHeight(
   kanbanState: KanbanState,
   hasReviewers: boolean
 ): number {
-  let height = 96;
+  let height = 122;
 
-  if (task.needsClarification) height += 18;
-  if (isTeamTaskNeedsFixActionable(task)) height += 16;
-  height += (task.blockedBy?.length ?? 0) * 20;
-  height += (task.blocks?.length ?? 0) * 20;
+  if (task.subject.length > 54) height += 10;
+  if (task.subject.length > 92) height += 8;
+  if (task.needsClarification) height += 16;
+  if (isTeamTaskNeedsFixActionable(task)) height += 14;
+  if ((task.blockedBy?.length ?? 0) > 0) height += 18;
+  if ((task.blocks?.length ?? 0) > 0) height += 18;
 
   const effectiveReviewer = (kanbanState.tasks[task.id]?.reviewer ?? '').trim();
   if (columnId === 'review' && !hasReviewers && effectiveReviewer.length === 0) {
     height += 14;
   }
 
-  return Math.min(Math.max(height, 96), 320);
+  return Math.min(Math.max(height, 116), 196);
 }
 
 /** Сортирует задачи колонки по сохранённому порядку; задачи без порядка — в конце. */
@@ -287,7 +297,6 @@ const SortableKanbanTaskCard = ({
     // eslint-disable-next-line react/jsx-props-no-spreading -- dnd-kit useSortable requires spreading attributes/listeners
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <KanbanTaskCard
-        flat
         task={task}
         teamName={teamName}
         columnId={columnId}
@@ -601,7 +610,6 @@ export const KanbanBoard = memo(function KanbanBoard({
         <>
           {visibleTasks.map((task) => (
             <KanbanTaskCard
-              flat
               key={task.id}
               task={task}
               teamName={teamName}
@@ -652,7 +660,6 @@ export const KanbanBoard = memo(function KanbanBoard({
       revealNextTasks,
       taskMap,
       teamName,
-      t,
     ]
   );
 
@@ -739,7 +746,8 @@ export const KanbanBoard = memo(function KanbanBoard({
           title: t(column.titleKey),
           count: columnTasks.length,
           icon: accent.icon,
-          accentColor: accent.accentColor,
+          headerBg: accent.headerBg,
+          bodyBg: accent.bodyBg,
           content: renderCards(column.id, columnTasks),
           showAddButton: columnSupportsAddButton(column.id, onAddTask),
           skeletonCards: renderableColumnTasks(column.id, columnTasks).map((task) => ({
@@ -862,24 +870,27 @@ export const KanbanBoard = memo(function KanbanBoard({
               const width = columnWidths.get(column.id) ?? 256;
               const handleProps = getHandleProps(column.id);
               return (
-                <div key={column.id} className="relative shrink-0" style={{ width }}>
-                  <KanbanColumn
-                    title={t(column.titleKey)}
-                    count={columnTasks.length}
-                    icon={accent.icon}
-                    accentColor={accent.accentColor}
-                    bodyClassName="max-h-none overflow-visible"
-                  >
-                    {renderCards(column.id, columnTasks, true)}
-                  </KanbanColumn>
+                <div key={column.id} className="flex shrink-0">
+                  <div style={{ width }}>
+                    <KanbanColumn
+                      title={t(column.titleKey)}
+                      count={columnTasks.length}
+                      icon={accent.icon}
+                      headerBg={accent.headerBg}
+                      bodyBg={accent.bodyBg}
+                      bodyClassName="max-h-none overflow-visible"
+                    >
+                      {renderCards(column.id, columnTasks, true)}
+                    </KanbanColumn>
+                  </div>
                   {index < visibleColumns.length - 1 ? (
                     <div
-                      className="group absolute right-0 top-0 z-20 flex h-full translate-x-1/2 items-center justify-center"
+                      className="group relative mx-0.5 flex items-center justify-center"
                       onPointerDown={handleProps.onPointerDown}
                       style={handleProps.style}
                       aria-label={handleProps['aria-label']}
                     >
-                      <div className="h-full w-px bg-transparent transition-colors group-active:bg-blue-500" />
+                      <div className="h-full w-px bg-[var(--color-border)] transition-colors group-hover:bg-blue-500/50 group-active:bg-blue-500" />
                     </div>
                   ) : null}
                 </div>

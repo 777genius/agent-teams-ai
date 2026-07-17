@@ -406,35 +406,6 @@ Format: `MAJOR.MINOR.PATCH`
 
 ## Release Process
 
-### Critical stable-release invariant
-
-> [!CAUTION]
-> A draft becoming public is not enough to complete a stable release. The only
-> supported publication path is a successful `release.yml` run for the exact
-> release tag with `publish_release=true`. Publishing through GitHub's
-> **Publish release** button or `gh release edit --draft=false` skips the updater
-> feed job. Existing installations then receive no update event, dialog, or
-> banner.
-
-A stable release is complete only when all of these are true:
-
-- The final `release.yml` run used `publish_release=true`.
-- Its `upload-stable-links` job succeeded rather than being skipped.
-- The release is public, non-prerelease, and selected as GitHub's latest release.
-- The release assets contain `latest.yml`, `latest-linux.yml`, and `latest-mac.yml`.
-- All three `/releases/latest/download/latest*.yml` URLs return successfully.
-
-If any condition is false, treat the release as incomplete: do not announce it,
-do not report it as shipped, and use the recovery procedure in step 5.
-
-Two automated guards enforce this invariant:
-
-- The final `release.yml` job runs `scripts/ci/verify-published-updater-release.sh`
-  after publication and returns an incomplete release to draft.
-- `.github/workflows/release-publication-guard.yml` listens for manual
-  `release.published` events and returns a directly published incomplete stable
-  release to draft. This closes the GitHub UI and direct `gh release edit` path.
-
 ### Test Releases And Auto-Update Safety
 
 Packaged apps check GitHub releases through `electron-updater` shortly after startup and then periodically. A normal public release with a higher SemVer and uploaded `latest.yml`, `latest-linux.yml`, or `latest-mac.yml` can be shown to users as an available update.
@@ -616,8 +587,8 @@ Draft releases must be treated as review artifacts:
 
 ### 5. Publish a reviewed draft
 
-The only supported draft-to-stable transition is rerunning the release workflow
-for the exact same tag with `publish_release=true`:
+Publish only by rerunning the release workflow for the exact same tag with
+`publish_release=true`:
 
 ```bash
 gh workflow run release.yml \
@@ -634,50 +605,24 @@ gh run list \
 gh run watch <RUN_ID> --repo 777genius/agent-teams-ai
 ```
 
-Do not use GitHub's **Publish release** button, `gh release edit --draft=false`,
-or any other direct draft-to-public action. Those paths bypass the
-`upload-stable-links` job. That job uploads the stable aliases and canonical
-updater feeds before making the release public.
+Do not use GitHub's **Publish release** button and do not publish with
+`gh release edit --draft=false`. Those paths bypass the `upload-stable-links`
+job. That job uploads the stable aliases and the canonical updater feeds
+`latest.yml`, `latest-linux.yml`, and `latest-mac.yml` before making the release
+public.
 
-After the publish workflow finishes, run this required fail-fast gate. Replace
-`v<VERSION>` with the exact tag that was published:
-
-```bash
-RELEASE_REPOSITORY=777genius/agent-teams-ai \
-RELEASE_TAG=v<VERSION> \
-  bash scripts/ci/verify-published-updater-release.sh
-```
-
-Do not rely only on the overall workflow conclusion. A draft build can succeed
-with `publish_release=false` while `upload-stable-links` is skipped. The gate
-must exit successfully before announcing or closing the release. It verifies
-the public/latest state, updater skip markers, platform installers, feed
-versions and references, and all latest download URLs.
-
-#### Recovery: a draft was published directly or updater feeds are missing
-
-Do not delete the public release and do not create a replacement version only
-to repair its updater metadata. Rerun the workflow for the same tag with the
-publication flag enabled:
+After the publish workflow succeeds, verify both publication state and updater
+metadata:
 
 ```bash
-gh workflow run release.yml \
+gh release view v<VERSION> \
   --repo 777genius/agent-teams-ai \
-  --ref v<VERSION> \
-  -f release_tag=v<VERSION> \
-  -f publish_release=true
-
-gh run list \
-  --repo 777genius/agent-teams-ai \
-  --workflow release.yml \
-  --limit 3
-
-gh run watch <RUN_ID> --repo 777genius/agent-teams-ai
+  --json isDraft,assets \
+  --jq '{isDraft, assets: [.assets[].name]}'
 ```
 
-The publication guard may already have returned the incomplete release to draft.
-After the publish workflow succeeds, run the full fail-fast gate above. The
-incident is not fixed until that gate passes.
+The result must have `isDraft: false` and include all three `latest*.yml`
+assets. If any feed is missing, treat the release as incomplete.
 
 ### 6. Required release closeout gate
 
@@ -852,11 +797,6 @@ all platform assets are uploaded:
 do not upload updater metadata because draft releases are intentionally hidden
 from the stable update channel.
 
-Both the publish workflow and the independent `release.published` workflow run
-the shared updater release guard. A stable release that is missing required
-installers or feeds, contains an updater skip marker, declares the wrong feed
-version, or has broken latest URLs is automatically returned to draft.
-
 ## Quick Reference
 
 ```bash
@@ -868,14 +808,8 @@ gh workflow run release.yml --repo 777genius/agent-teams-ai --ref v1.0.0 \
 # Wait for CI, review the assets, and update the draft notes
 
 # Publish the reviewed draft and generate updater metadata
-# Never publish the draft directly through GitHub UI or gh release edit.
 gh workflow run release.yml --repo 777genius/agent-teams-ai --ref v1.0.0 \
   -f release_tag=v1.0.0 -f publish_release=true
-
-# Watch the publish run, then run the required fail-fast gate from step 5.
-# Do not announce or close the release until that gate passes.
-RELEASE_REPOSITORY=777genius/agent-teams-ai RELEASE_TAG=v1.0.0 \
-  bash scripts/ci/verify-published-updater-release.sh
 
 # Delete a release (if needed)
 gh release delete v1.0.0 --repo 777genius/agent-teams-ai --yes

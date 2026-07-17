@@ -12,7 +12,6 @@ vi.mock('../../../../packages/agent-graph/src/canvas/render-cache', async () => 
 });
 
 import { drawAgents } from '../../../../packages/agent-graph/src/canvas/draw-agents';
-import { getGraphNodeCardSize } from '../../../../packages/agent-graph/src/canvas/node-geometry';
 
 import type { GraphNode } from '@claude-teams/agent-graph';
 
@@ -99,80 +98,6 @@ function createMockContext() {
 }
 
 describe('drawAgents', () => {
-  it('sizes team cards to their content within parent-safe bounds', () => {
-    const baseNode: GraphNode = {
-      id: 'team:adaptive',
-      kind: 'member',
-      visualVariant: 'team',
-      label: 'API',
-      state: 'active',
-      domainRef: { kind: 'member', teamName: 'adaptive', memberName: 'team:adaptive' },
-    };
-    const shortCard = getGraphNodeCardSize(baseNode);
-    const longCard = getGraphNodeCardSize({
-      ...baseNode,
-      label: 'Agent Runtime Platform Integrations',
-      semanticSummary: '12 agents - 4 active - 28 tasks',
-    });
-
-    expect(shortCard).toEqual({ width: 260, height: 84 });
-    expect(longCard?.width).toBeGreaterThan(shortCard!.width);
-    expect(longCard?.width).toBeLessThanOrEqual(340);
-  });
-  it('renders hierarchy cards with semantic text detail across zoom levels', () => {
-    const node: GraphNode = {
-      id: 'team:alpha',
-      kind: 'member',
-      visualVariant: 'team',
-      label: 'Platform Engineering',
-      role: '5 agents - 2 active',
-      semanticSummary: 'online · 2 active · 8 tasks',
-      state: 'active',
-      color: '#38bdf8',
-      domainRef: { kind: 'member', teamName: 'alpha', memberName: 'team:alpha' },
-      x: 320,
-      y: 240,
-    };
-    const far = createMockContext();
-    const medium = createMockContext();
-    const close = createMockContext();
-
-    drawAgents(far.ctx, [node], 0, null, null, null, 0.15);
-    drawAgents(medium.ctx, [node], 0, null, null, null, 0.4);
-    drawAgents(close.ctx, [node], 0, null, null, null, 1);
-
-    expect(far.roundRectCalls).toHaveLength(1);
-    expect(far.fillTextCalls.some((call) => call.text === 'Platform Engineering')).toBe(true);
-    expect(far.fillTextCalls.some((call) => call.text.includes('online · 2 active'))).toBe(true);
-    expect(medium.fillTextCalls.some((call) => call.text === 'Platform Engineering')).toBe(true);
-    expect(medium.fillTextCalls.some((call) => call.text.includes('online · 2 active'))).toBe(true);
-    expect(close.fillTextCalls.some((call) => call.text === 'Platform Engineering')).toBe(true);
-    expect(close.fillTextCalls.some((call) => call.text === '5 agents - 2 active')).toBe(true);
-  });
-
-  it('renders organization aggregates as a compact overview badge', () => {
-    const { ctx, fillTextCalls, roundRectCalls } = createMockContext();
-    const node: GraphNode = {
-      id: 'org:platform',
-      kind: 'lead',
-      visualVariant: 'organization',
-      hierarchyDepth: 0,
-      label: 'Platform',
-      semanticSummary: '12 teams · 4 active · 18 tasks',
-      state: 'active',
-      color: '#38bdf8',
-      domainRef: { kind: 'lead', teamName: 'platform', memberName: 'org:platform' },
-      x: 320,
-      y: 240,
-    };
-
-    drawAgents(ctx, [node], 0, null, null, null, 0.08);
-
-    expect(roundRectCalls).toHaveLength(1);
-    expect(fillTextCalls.some((call) => call.text === 'Platform')).toBe(true);
-    expect(fillTextCalls.some((call) => call.text.includes('12 teams · 4 active'))).toBe(true);
-  });
-
   it('renders the active tool card above the node while keeping labels below it', () => {
     const { ctx, fillTextCalls, roundRectCalls } = createMockContext();
     const node: GraphNode = {

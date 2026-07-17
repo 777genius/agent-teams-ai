@@ -27,7 +27,7 @@ const CURRENT_MANIFEST_SCHEMA_VERSION = 1;
 const MAX_TARBALL_BYTES = 250 * 1024 * 1024;
 const MAX_BINARY_BYTES = 350 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 60_000;
-const VERSION_TIMEOUT_MS = 20_000;
+const VERSION_TIMEOUT_MS = 10_000;
 const VERSION_PROBE_SUCCESS_CACHE_TTL_MS = 30_000;
 const VERSION_PROBE_FAILURE_CACHE_TTL_MS = 5_000;
 const RUNTIME_STATUS_SUCCESS_CACHE_TTL_MS = 30_000;
@@ -122,40 +122,10 @@ function collectPathOpenCodeBinaryCandidates(
 ): string[] {
   return collectRuntimePathBinaryCandidates({
     executableNames: getPathExecutableNames(),
-    // Prefer the environment that launched the desktop app over a cached login-shell
-    // snapshot. On Windows, NVM can leave an older OpenCode shim in the cached shell
-    // PATH while the active npm prefix exposes the current installation.
-    additionalEnvSources:
-      process.platform === 'win32' ? [process.env, ...additionalEnvSources] : additionalEnvSources,
+    additionalEnvSources,
     includeFallbackPathEntries: options.includeFallbackPathEntries,
     extraCandidates: collectNvmOpenCodeBinaryCandidates(),
   });
-}
-
-function collectWindowsNativeOpenCodeBinaryCandidates(binaryPath: string): string[] {
-  if (process.platform !== 'win32' || !/\.(?:cmd|bat)$/i.test(binaryPath)) {
-    return [binaryPath];
-  }
-
-  const shimDirectory = path.dirname(binaryPath);
-  const packageRoot = path.join(shimDirectory, 'node_modules', ROOT_PACKAGE_NAME);
-  const platformPackageNames =
-    process.arch === 'x64'
-      ? ['opencode-windows-x64', 'opencode-windows-x64-baseline']
-      : [`opencode-windows-${process.arch}`];
-  const nativeCandidates = [
-    path.join(packageRoot, 'bin', 'opencode.exe'),
-    ...platformPackageNames.map((packageName) =>
-      path.join(packageRoot, 'node_modules', packageName, 'bin', 'opencode.exe')
-    ),
-  ].filter(isAbsoluteExistingFile);
-
-  // The multimodel runtime launches an explicit OpenCode override without a shell.
-  // Passing an npm .cmd shim therefore fails with spawnSync EINVAL on Windows. Only
-  // return native executables that the external runtime can launch without a shell.
-  // An incomplete npm installation must fall through to the managed runtime instead
-  // of being reported as healthy and failing later during team launch.
-  return nativeCandidates;
 }
 
 function collectNvmOpenCodeBinaryCandidates(): string[] {
@@ -290,22 +260,16 @@ async function probeFirstWorkingOpenCodeBinaryCandidate(
 ): Promise<VerifiedOpenCodeBinaryProbe> {
   let nextFirstFailure = firstFailure;
   for (const binaryPath of candidates) {
-    for (const launchBinaryPath of collectWindowsNativeOpenCodeBinaryCandidates(binaryPath)) {
-      const normalized = normalizeBinaryCandidateForCompare(launchBinaryPath);
-      if (seen.has(normalized)) {
-        continue;
-      }
-      seen.add(normalized);
-      const version = await probeOpenCodeBinaryVersionCached(launchBinaryPath);
-      if (version.ok) {
-        return {
-          ok: true,
-          binaryPath: launchBinaryPath,
-          version: version.version,
-        };
-      }
-      nextFirstFailure ??= { binaryPath: launchBinaryPath, error: version.error };
+    const normalized = normalizeBinaryCandidateForCompare(binaryPath);
+    if (seen.has(normalized)) {
+      continue;
     }
+    seen.add(normalized);
+    const version = await probeOpenCodeBinaryVersionCached(binaryPath);
+    if (version.ok) {
+      return { ok: true, binaryPath, version: version.version };
+    }
+    nextFirstFailure ??= { binaryPath, error: version.error };
   }
 
   return { ok: false, firstFailure: nextFirstFailure };

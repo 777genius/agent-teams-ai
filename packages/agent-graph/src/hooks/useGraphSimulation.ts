@@ -5,12 +5,6 @@ import { ANIM_SPEED, NODE } from '../constants/canvas-constants';
 import { getStateColor } from '../constants/colors';
 import { KanbanLayoutEngine } from '../layout/kanbanLayout';
 import {
-  advanceGraphLayoutTransition,
-  captureGraphNodePositions,
-  createGraphLayoutTransition,
-  type GraphLayoutTransition,
-} from '../layout/layoutTransition';
-import {
   buildStableSlotLayoutSnapshot,
   resolveNearestGridOwnerTarget,
   resolveNearestSlotAssignment,
@@ -102,7 +96,6 @@ export function useGraphSimulation(): UseGraphSimulationResult {
   const logRectByNodeIdRef = useRef(new Map<string, StableRect>());
   const ownerColumnGroupRectsRef = useRef<OwnerColumnGroupRect[]>([]);
   const extraWorldBoundsRef = useRef<WorldBounds[]>([]);
-  const layoutTransitionRef = useRef<GraphLayoutTransition | null>(null);
 
   const prevNodeIdsRef = useRef(new Set<string>());
   const prevNodeStatesRef = useRef(new Map<string, string>());
@@ -110,21 +103,6 @@ export function useGraphSimulation(): UseGraphSimulationResult {
 
   const applyCurrentLayout = useCallback(() => {
     const state = stateRef.current;
-    const currentLayout = layoutRef.current;
-    if (currentLayout?.mode === 'hierarchical' && currentLayout.nodePositions) {
-      commitStaticLayoutGeometry({
-        nodes: state.nodes,
-        nodePositions: currentLayout.nodePositions,
-        layoutSnapshotRef,
-        dragOwnerPositionsRef,
-        launchAnchorPositionsRef,
-        activityRectByNodeIdRef,
-        logRectByNodeIdRef,
-        ownerColumnGroupRectsRef,
-        extraWorldBoundsRef,
-      });
-      return;
-    }
     const nextSnapshot = buildStableSlotLayoutSnapshot({
       teamName: teamNameRef.current,
       nodes: state.nodes,
@@ -196,9 +174,6 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       layout?: GraphLayoutPort
     ) => {
       const state = stateRef.current;
-      const previousMode = layoutRef.current?.mode ?? 'radial';
-      const previousPositions = captureGraphNodePositions(state.nodes);
-      const previousTransition = layoutTransitionRef.current;
       teamNameRef.current = teamName;
       layoutRef.current = layout;
 
@@ -216,22 +191,6 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       state.edges = edges;
       state.particles = mergeParticles(state.particles, particles);
       applyCurrentLayout();
-
-      const nextMode = layout?.mode ?? 'radial';
-      const modeChanged = previousMode !== nextMode;
-      if (modeChanged || previousTransition) {
-        const remainingDuration = previousTransition
-          ? Math.max(0.16, previousTransition.duration - previousTransition.elapsed)
-          : getLayoutTransitionDuration();
-        layoutTransitionRef.current = createGraphLayoutTransition({
-          nodes: state.nodes,
-          edges: state.edges,
-          previousPositions,
-          duration: modeChanged ? getLayoutTransitionDuration() : remainingDuration,
-        });
-      } else {
-        layoutTransitionRef.current = null;
-      }
     },
     [applyCurrentLayout]
   );
@@ -239,11 +198,6 @@ export function useGraphSimulation(): UseGraphSimulationResult {
   const tick = useCallback((dt: number) => {
     const state = stateRef.current;
     state.time += dt;
-
-    const layoutTransition = layoutTransitionRef.current;
-    if (layoutTransition && advanceGraphLayoutTransition(state.nodes, layoutTransition, dt)) {
-      layoutTransitionRef.current = null;
-    }
 
     const nextParticles: GraphParticle[] = [];
     for (const particle of state.particles) {
@@ -270,7 +224,6 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       if (node?.kind !== 'member') {
         return;
       }
-      layoutTransitionRef.current = null;
       dragOwnerPositionsRef.current.set(nodeId, { x, y });
       applyCurrentLayout();
     },
@@ -282,7 +235,6 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       if (!dragOwnerPositionsRef.current.delete(nodeId)) {
         return;
       }
-      layoutTransitionRef.current = null;
       applyCurrentLayout();
     },
     [applyCurrentLayout]
@@ -293,7 +245,6 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       return;
     }
     dragOwnerPositionsRef.current.clear();
-    layoutTransitionRef.current = null;
     applyCurrentLayout();
   }, [applyCurrentLayout]);
 
@@ -333,7 +284,6 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       logRectByNodeIdRef.current.clear();
       ownerColumnGroupRectsRef.current = [];
       extraWorldBoundsRef.current = [];
-      layoutTransitionRef.current = null;
       layoutSnapshotRef.current = null;
       lastValidSnapshotByTeamRef.current.clear();
     };
@@ -366,70 +316,6 @@ export function useGraphSimulation(): UseGraphSimulationResult {
       resolveNearestOwnerGridTarget,
     ]
   );
-}
-
-function getLayoutTransitionDuration(): number {
-  if (
-    typeof window !== 'undefined' &&
-    window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-  ) {
-    return 0;
-  }
-  return 0.58;
-}
-
-function commitStaticLayoutGeometry(args: {
-  nodes: GraphNode[];
-  nodePositions: NonNullable<GraphLayoutPort['nodePositions']>;
-  layoutSnapshotRef: { current: StableSlotLayoutSnapshot | null };
-  dragOwnerPositionsRef: { current: Map<string, { x: number; y: number }> };
-  launchAnchorPositionsRef: { current: Map<string, { x: number; y: number }> };
-  activityRectByNodeIdRef: { current: Map<string, StableRect> };
-  logRectByNodeIdRef: { current: Map<string, StableRect> };
-  ownerColumnGroupRectsRef: { current: OwnerColumnGroupRect[] };
-  extraWorldBoundsRef: { current: WorldBounds[] };
-}): void {
-  const {
-    nodes,
-    nodePositions,
-    layoutSnapshotRef,
-    dragOwnerPositionsRef,
-    launchAnchorPositionsRef,
-    activityRectByNodeIdRef,
-    logRectByNodeIdRef,
-    ownerColumnGroupRectsRef,
-    extraWorldBoundsRef,
-  } = args;
-
-  layoutSnapshotRef.current = null;
-  dragOwnerPositionsRef.current.clear();
-  launchAnchorPositionsRef.current.clear();
-  activityRectByNodeIdRef.current.clear();
-  logRectByNodeIdRef.current.clear();
-  ownerColumnGroupRectsRef.current = [];
-
-  for (const node of nodes) {
-    const position = nodePositions[node.id];
-    if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) {
-      node.x = undefined;
-      node.y = undefined;
-      node.fx = null;
-      node.fy = null;
-      continue;
-    }
-    node.x = position.x;
-    node.y = position.y;
-    node.fx = position.x;
-    node.fy = position.y;
-    node.vx = 0;
-    node.vy = 0;
-  }
-
-  fallbackPositionNodes(nodes);
-  KanbanLayoutEngine.layoutStatic(nodes);
-  // Node bounds are fitted directly by the camera. Keeping them as extra geometry would
-  // re-introduce filtered tasks and processes into the fit calculation.
-  extraWorldBoundsRef.current = [];
 }
 
 function applySnapshotToNodes(

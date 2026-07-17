@@ -41,20 +41,8 @@ describe('group frame hit detection', () => {
       },
     ];
 
-    const prepared = prepareGroupFrame(frames[0]!, nodeMap)!;
-    const frameBounds = getPaddedGroupFrameBounds(prepared.bounds, 1, frames[0]);
-    const labelBounds = getGroupFrameLabelBounds(frames[0]!.label, frameBounds, 1, undefined, {
-      placement: getGroupFrameLabelPlacement(frames[0]!),
-      verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(frames[0]!),
-    });
-    const labelHit = findGroupFrameHitAt(
-      labelBounds.left + labelBounds.width / 2,
-      labelBounds.top + labelBounds.height / 2,
-      frames,
-      nodeMap,
-      1
-    );
-    const borderHit = findGroupFrameHitAt(frameBounds.left, 0, frames, nodeMap, 1);
+    const labelHit = findGroupFrameHitAt(-142, -105, frames, nodeMap, 1);
+    const borderHit = findGroupFrameHitAt(-160, 0, frames, nodeMap, 1);
     const fillHit = findGroupFrameHitAt(0, 0, frames, nodeMap, 1);
 
     expect(labelHit?.frame.id).toBe('unit:product');
@@ -84,23 +72,9 @@ describe('group frame hit detection', () => {
       },
     ];
 
-    const innerPrepared = prepareGroupFrame(frames[1]!, nodeMap)!;
-    const innerBounds = getPaddedGroupFrameBounds(innerPrepared.bounds, 1, frames[1]);
-    const innerLabelBounds = getGroupFrameLabelBounds(frames[1]!.label, innerBounds, 1, undefined, {
-      placement: getGroupFrameLabelPlacement(frames[1]!),
-      verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(frames[1]!),
-    });
-    expect(
-      findGroupFrameAt(
-        innerLabelBounds.left + innerLabelBounds.width / 2,
-        innerLabelBounds.top + innerLabelBounds.height / 2,
-        frames,
-        nodeMap,
-        1
-      )?.id
-    ).toBe('unit:inner');
-    expect(findGroupFrameHitAt(0, 0, frames, nodeMap, 1)?.frame.id).toBe('unit:inner');
-    expect(findGroupFrameHitAt(0, 0, frames, nodeMap, 1)?.target).toBe('fill');
+    expect(findGroupFrameAt(-150, -107, frames, nodeMap, 1)?.id).toBe('unit:inner');
+    expect(findGroupFrameHitAt(0, 90, frames, nodeMap, 1)?.frame.id).toBe('unit:inner');
+    expect(findGroupFrameHitAt(0, 90, frames, nodeMap, 1)?.target).toBe('fill');
   });
 
   it('insets depth-aware nested frames from their parent bounds', () => {
@@ -135,7 +109,7 @@ describe('group frame hit detection', () => {
     expect(parentBounds.bottom).toBeGreaterThan(childBounds.bottom);
   });
 
-  it('reserves a clear bottom lane for a deeply nested frame label', () => {
+  it('keeps frame vertical padding balanced around contained nodes', () => {
     const nodeMap = new Map<string, GraphNode>([['team:alpha', buildTeamNode('team:alpha', 0, 0)]]);
     const frame: GraphGroupFrame = {
       id: 'unit:child',
@@ -149,13 +123,10 @@ describe('group frame hit detection', () => {
     expect(prepared).not.toBeNull();
 
     const paddedBounds = getPaddedGroupFrameBounds(prepared!.bounds, 1, frame);
-    const labelBounds = getGroupFrameLabelBounds(frame.label, paddedBounds, 1, undefined, {
-      placement: getGroupFrameLabelPlacement(frame),
-      verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(frame),
-    });
 
-    expect(labelBounds.top - prepared!.bounds.bottom).toBe(21);
-    expect(paddedBounds.bottom - labelBounds.bottom).toBe(8);
+    expect(prepared!.bounds.top - paddedBounds.top).toBe(
+      paddedBounds.bottom - prepared!.bounds.bottom
+    );
   });
 
   it('caps low-zoom frame padding so nested frames do not balloon into each other', () => {
@@ -199,50 +170,6 @@ describe('group frame hit detection', () => {
     expect(labelBounds.textY).toBeGreaterThan(frameBounds.top);
   });
 
-  it('separates nested frame labels that share the same bottom edge', () => {
-    const parentFrame: GraphGroupFrame = {
-      id: 'unit:parent',
-      label: 'Parent Group',
-      nodeIds: ['team:alpha'],
-      depth: 1,
-      labelLane: 1,
-      priority: 'normal',
-    };
-    const childFrame: GraphGroupFrame = {
-      ...parentFrame,
-      id: 'unit:child',
-      label: 'Child Group',
-      depth: 2,
-      labelLane: 0,
-    };
-    const contentBounds = { left: 0, top: 0, right: 600, bottom: 600 };
-    const parentBounds = getPaddedGroupFrameBounds(contentBounds, 1, parentFrame);
-    const childBounds = getPaddedGroupFrameBounds(contentBounds, 1, childFrame);
-    const parentLabelBounds = getGroupFrameLabelBounds(
-      parentFrame.label,
-      parentBounds,
-      1,
-      undefined,
-      {
-        placement: getGroupFrameLabelPlacement(parentFrame),
-        verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(parentFrame),
-      }
-    );
-    const childLabelBounds = getGroupFrameLabelBounds(
-      childFrame.label,
-      childBounds,
-      1,
-      undefined,
-      {
-        placement: getGroupFrameLabelPlacement(childFrame),
-        verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(childFrame),
-      }
-    );
-
-    expect(childLabelBounds.bottom).toBeLessThan(parentLabelBounds.top);
-    expect(childBounds.bottom).toBeLessThan(parentBounds.bottom);
-  });
-
   it('reveals group frame labels progressively by zoom and depth', () => {
     const primaryFrame: GraphGroupFrame = {
       id: 'org:parent',
@@ -260,8 +187,7 @@ describe('group frame hit detection', () => {
     };
 
     expect(shouldRenderGroupFrameLabel(primaryFrame, 0.14)).toBe(true);
-    expect(shouldRenderGroupFrameLabel(normalFrame, 0.02)).toBe(false);
-    expect(shouldRenderGroupFrameLabel(normalFrame, 0.14)).toBe(true);
+    expect(shouldRenderGroupFrameLabel(normalFrame, 0.02)).toBe(true);
     expect(shouldRenderGroupFrameLabel(normalFrame, 0.45)).toBe(true);
   });
 });

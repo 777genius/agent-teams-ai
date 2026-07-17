@@ -1,5 +1,3 @@
-import { getGraphNodeCardSize } from './node-geometry';
-
 import type { GraphGroupFrame, GraphNode } from '../ports/types';
 
 export interface GroupFrameBounds {
@@ -28,35 +26,20 @@ export interface GroupFrameHit {
 export interface GroupFrameLabelBounds extends GroupFrameBounds {
   textX: number;
   textY: number;
-  secondaryTextY?: number;
   width: number;
   height: number;
 }
 
-export interface GroupFrameLabelLayout {
-  label: string;
-  secondaryLabel?: string;
-  bounds: GroupFrameLabelBounds;
-  fontSize: number;
-}
-
-export type MeasureTextWidth = (label: string, fontSize: number) => number;
+type MeasureTextWidth = (label: string, fontSize: number) => number;
 
 const GROUP_FRAME_PADDING_MIN_ZOOM = 0.42;
 export const GROUP_FRAME_RENDER_MIN_ZOOM = 0.015;
-// Below this zoom labels scale down with the map instead of keeping a fixed screen size.
-// Fixed-size labels collide with neighboring frames in overview/mini-map layouts.
-const GROUP_FRAME_LABEL_MIN_SCALE_ZOOM = 0.16;
-const GROUP_FRAME_SEMANTIC_SUMMARY_MIN_ZOOM = 0.16;
-const GROUP_FRAME_NESTED_LABEL_MIN_ZOOM = 0.14;
-const GROUP_FRAME_DEEP_LABEL_MIN_ZOOM = 0.2;
+const GROUP_FRAME_LABEL_MIN_SCALE_ZOOM = GROUP_FRAME_RENDER_MIN_ZOOM;
 const GROUP_FRAME_PRIMARY_LABEL_MIN_ZOOM = 0.015;
 const GROUP_FRAME_NESTED_PRIMARY_LABEL_MIN_ZOOM = 0.015;
 const GROUP_FRAME_NORMAL_LABEL_MIN_ZOOM = GROUP_FRAME_RENDER_MIN_ZOOM;
 const GROUP_FRAME_NORMAL_LABEL_DEPTH_STEP = 0;
 const GROUP_FRAME_NORMAL_LABEL_MAX_ZOOM = GROUP_FRAME_RENDER_MIN_ZOOM;
-const GROUP_FRAME_BOTTOM_LABEL_BASE_PADDING_PX = 48;
-const GROUP_FRAME_LABEL_LANE_STEP_PX = 28;
 
 function getDepthLevel(frame: GraphGroupFrame, fallbackDepth: number): number {
   if (typeof frame.depth !== 'number' || !Number.isFinite(frame.depth)) {
@@ -65,51 +48,14 @@ function getDepthLevel(frame: GraphGroupFrame, fallbackDepth: number): number {
   return Math.max(0, Math.floor(frame.depth));
 }
 
-export function shouldRenderGroupFrameSemanticSummary(
-  frame: GraphGroupFrame,
-  zoom: number
-): boolean {
-  return (
-    zoom >= GROUP_FRAME_SEMANTIC_SUMMARY_MIN_ZOOM &&
-    zoom < 0.24 &&
-    Boolean(frame.semanticSummary) &&
-    (frame.priority === 'primary' || getDepthLevel(frame, 0) <= 1)
-  );
-}
-
-export function truncateGroupFrameLabel(
-  label: string,
-  maxWidth: number,
-  measureTextWidth: (value: string) => number
-): string {
-  if (maxWidth <= 0) return '';
-  if (measureTextWidth(label) <= maxWidth) return label;
-
-  const ellipsis = '…';
-  if (measureTextWidth(ellipsis) > maxWidth) return '';
-
-  let low = 0;
-  let high = label.length;
-  while (low < high) {
-    const middle = Math.ceil((low + high) / 2);
-    const candidate = `${label.slice(0, middle).trimEnd()}${ellipsis}`;
-    if (measureTextWidth(candidate) <= maxWidth) {
-      low = middle;
-    } else {
-      high = middle - 1;
-    }
-  }
-  return `${label.slice(0, low).trimEnd()}${ellipsis}`;
-}
-
 export function getGroupFrameLabelVerticalOffsetPx(frame: GraphGroupFrame): number {
   if (frame.priority === 'primary') {
     return 6;
   }
-  return 8;
+  return getDepthLevel(frame, 0) > 0 ? 12 : 8;
 }
 
-export function getGroupFrameLabelHorizontalOffsetPx(): number {
+export function getGroupFrameLabelHorizontalOffsetPx(_frame: GraphGroupFrame): number {
   return 0;
 }
 
@@ -122,10 +68,6 @@ export function getGroupFrameLabelPlacement(frame: GraphGroupFrame): GroupFrameL
 
 export function getGroupFrameLabelScaleZoom(zoom: number): number {
   return Math.max(zoom, GROUP_FRAME_LABEL_MIN_SCALE_ZOOM);
-}
-
-export function getGroupFrameLabelFontSizePx(frame: GraphGroupFrame): number {
-  return frame.priority === 'primary' ? 15 : 12;
 }
 
 export function prepareGroupFrame(
@@ -182,27 +124,15 @@ export function getPaddedGroupFrameBounds(
   const paddingZoom = Math.max(safeZoom, GROUP_FRAME_PADDING_MIN_ZOOM);
   const depth = frame ? Math.min(getDepthLevel(frame, 0), 5) : 0;
   const hasDepth = frame?.depth != null;
-  let horizontalPaddingPx = 30;
-  let topPaddingPx = 46;
-  if (hasDepth && frame) {
-    if (frame.priority === 'primary') {
-      horizontalPaddingPx = Math.max(8, 26 - depth * 6);
-      topPaddingPx = Math.max(28, 52 - depth * 10);
-    } else if (depth === 0) {
-      horizontalPaddingPx = 22;
-      topPaddingPx = 44;
-    } else {
-      horizontalPaddingPx = Math.max(1, 25 - depth * 7);
-      topPaddingPx = Math.max(8, 49 - depth * 11);
-    }
-  }
-  const labelLane = Math.max(0, Math.floor(frame?.labelLane ?? 0));
-  const usesBottomLabelLane =
-    Boolean(frame && hasDepth && frame.priority !== 'primary' && depth > 0) || labelLane > 0;
-  const nestedLabelPaddingPx = usesBottomLabelLane
-    ? GROUP_FRAME_BOTTOM_LABEL_BASE_PADDING_PX + labelLane * GROUP_FRAME_LABEL_LANE_STEP_PX
-    : 0;
-  const bottomPaddingPx = Math.max(topPaddingPx, nestedLabelPaddingPx);
+  const horizontalPaddingPx = hasDepth
+    ? Math.max(10, (frame.priority === 'primary' ? 36 : 30) - depth * 12)
+    : 30;
+  const topPaddingPx = hasDepth
+    ? frame.priority === 'primary'
+      ? Math.max(36, 92 - depth * 32)
+      : Math.max(32, 72 - depth * 20)
+    : 46;
+  const bottomPaddingPx = topPaddingPx;
   const horizontalPadding = horizontalPaddingPx / paddingZoom;
   const topPadding = topPaddingPx / paddingZoom;
   const bottomPadding = bottomPaddingPx / paddingZoom;
@@ -215,12 +145,8 @@ export function getPaddedGroupFrameBounds(
 }
 
 export function shouldRenderGroupFrameLabel(frame: GraphGroupFrame, zoom: number): boolean {
-  const safeZoom = Math.max(zoom, GROUP_FRAME_RENDER_MIN_ZOOM);
+  const safeZoom = getGroupFrameLabelScaleZoom(zoom);
   const depth = getDepthLevel(frame, 0);
-  if (frame.depth != null && frame.priority !== 'primary') {
-    if (safeZoom < GROUP_FRAME_NESTED_LABEL_MIN_ZOOM && depth > 0) return false;
-    if (safeZoom < GROUP_FRAME_DEEP_LABEL_MIN_ZOOM && depth > 1) return false;
-  }
   if (frame.priority === 'primary') {
     return (
       safeZoom >=
@@ -243,28 +169,18 @@ export function getGroupFrameLabelBounds(
   zoom: number,
   measureTextWidth: MeasureTextWidth = estimateLabelWidth,
   options: {
-    fontSizePx?: number;
     horizontalOffsetPx?: number;
     verticalOffsetPx?: number;
     placement?: GroupFrameLabelPlacement;
-    secondaryLabel?: string;
   } = {}
 ): GroupFrameLabelBounds {
   const safeZoom = getGroupFrameLabelScaleZoom(zoom);
-  const fontSize = (options.fontSizePx ?? 11) / safeZoom;
+  const fontSize = 11 / safeZoom;
   const horizontalPadding = 7 / safeZoom;
   const verticalPadding = 4 / safeZoom;
   const textX = frameBounds.left + (14 + (options.horizontalOffsetPx ?? 0)) / safeZoom;
-  const secondaryFontSize = fontSize * 0.78;
-  const lineGap = options.secondaryLabel ? 2 / safeZoom : 0;
-  const width =
-    Math.max(
-      measureTextWidth(label, fontSize),
-      options.secondaryLabel ? measureTextWidth(options.secondaryLabel, secondaryFontSize) : 0
-    ) +
-    horizontalPadding * 2;
-  const height =
-    fontSize + (options.secondaryLabel ? secondaryFontSize + lineGap : 0) + verticalPadding * 2;
+  const width = measureTextWidth(label, fontSize) + horizontalPadding * 2;
+  const height = fontSize + verticalPadding * 2;
   const verticalOffset = (options.verticalOffsetPx ?? 0) / safeZoom;
   let top = frameBounds.top + verticalOffset;
 
@@ -273,12 +189,7 @@ export function getGroupFrameLabelBounds(
   } else if (options.placement === 'inside-bottom') {
     top = frameBounds.bottom - verticalOffset - height;
   }
-  let textY = top + height / 2;
-  let secondaryTextY: number | undefined;
-  if (options.secondaryLabel) {
-    textY = top + verticalPadding + fontSize / 2;
-    secondaryTextY = textY + fontSize / 2 + lineGap + secondaryFontSize / 2;
-  }
+  const textY = top + height / 2;
 
   return {
     left: textX - horizontalPadding,
@@ -287,51 +198,8 @@ export function getGroupFrameLabelBounds(
     bottom: top + height,
     textX,
     textY,
-    secondaryTextY,
     width,
     height,
-  };
-}
-
-export function getGroupFrameLabelLayout(
-  frame: GraphGroupFrame,
-  frameBounds: GroupFrameBounds,
-  zoom: number,
-  measureTextWidth: MeasureTextWidth = estimateLabelWidth
-): GroupFrameLabelLayout | null {
-  if (!shouldRenderGroupFrameLabel(frame, zoom)) return null;
-
-  const labelScaleZoom = getGroupFrameLabelScaleZoom(zoom);
-  const fontSizePx = getGroupFrameLabelFontSizePx(frame);
-  const fontSize = fontSizePx / labelScaleZoom;
-  const availableTextWidth = Math.max(
-    0,
-    Math.min(260 / labelScaleZoom, frameBounds.right - frameBounds.left - 28 / labelScaleZoom)
-  );
-  const label = truncateGroupFrameLabel(frame.label, availableTextWidth, (value) =>
-    measureTextWidth(value, fontSize)
-  );
-  const rawSecondaryLabel = shouldRenderGroupFrameSemanticSummary(frame, zoom)
-    ? frame.semanticSummary
-    : undefined;
-  const secondaryLabel = rawSecondaryLabel
-    ? truncateGroupFrameLabel(rawSecondaryLabel, availableTextWidth, (value) =>
-        measureTextWidth(value, fontSize * 0.78)
-      )
-    : undefined;
-  if (!label && !secondaryLabel) return null;
-
-  return {
-    label,
-    secondaryLabel,
-    fontSize,
-    bounds: getGroupFrameLabelBounds(label, frameBounds, zoom, measureTextWidth, {
-      fontSizePx,
-      horizontalOffsetPx: getGroupFrameLabelHorizontalOffsetPx(),
-      placement: getGroupFrameLabelPlacement(frame),
-      verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(frame),
-      secondaryLabel,
-    }),
   };
 }
 
@@ -341,13 +209,9 @@ export function findGroupFrameAt(
   frames: readonly GraphGroupFrame[],
   nodeMap: ReadonlyMap<string, GraphNode>,
   zoom: number,
-  extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId,
-  measureTextWidth?: MeasureTextWidth
+  extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId
 ): GraphGroupFrame | null {
-  return (
-    findGroupFrameHitAt(x, y, frames, nodeMap, zoom, extraBoundsByNodeId, measureTextWidth)
-      ?.frame ?? null
-  );
+  return findGroupFrameHitAt(x, y, frames, nodeMap, zoom, extraBoundsByNodeId)?.frame ?? null;
 }
 
 export function findGroupFrameHitAt(
@@ -356,8 +220,7 @@ export function findGroupFrameHitAt(
   frames: readonly GraphGroupFrame[],
   nodeMap: ReadonlyMap<string, GraphNode>,
   zoom: number,
-  extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId,
-  measureTextWidth?: MeasureTextWidth
+  extraBoundsByNodeId?: GroupFrameExtraBoundsByNodeId
 ): GroupFrameHit | null {
   if (frames.length === 0 || zoom < GROUP_FRAME_RENDER_MIN_ZOOM) {
     return null;
@@ -370,8 +233,17 @@ export function findGroupFrameHitAt(
 
   for (const prepared of preparedFrames) {
     const bounds = getPaddedGroupFrameBounds(prepared.bounds, zoom, prepared.frame);
-    const labelLayout = getGroupFrameLabelLayout(prepared.frame, bounds, zoom, measureTextWidth);
-    const labelHit = labelLayout ? isPointInsideBounds(x, y, labelLayout.bounds) : false;
+    const labelHit = shouldRenderGroupFrameLabel(prepared.frame, zoom)
+      ? isPointInsideBounds(
+          x,
+          y,
+          getGroupFrameLabelBounds(prepared.frame.label, bounds, zoom, undefined, {
+            horizontalOffsetPx: getGroupFrameLabelHorizontalOffsetPx(prepared.frame),
+            placement: getGroupFrameLabelPlacement(prepared.frame),
+            verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(prepared.frame),
+          })
+        )
+      : false;
     if (labelHit) {
       return { frame: prepared.frame, target: 'label' };
     }
@@ -387,10 +259,6 @@ export function findGroupFrameHitAt(
 }
 
 function getNodeGroupBox(node: GraphNode): { halfWidth: number; halfHeight: number } {
-  const cardSize = getGraphNodeCardSize(node);
-  if (cardSize) {
-    return { halfWidth: cardSize.width / 2, halfHeight: cardSize.height / 2 };
-  }
   if (node.kind === 'lead') {
     return { halfWidth: 96, halfHeight: 72 };
   }

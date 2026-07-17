@@ -21,11 +21,7 @@ import { getAppDataPath, getHomeDir, getTeamsBasePath } from '@main/utils/pathDe
 import { safeSendToRenderer } from '@main/utils/safeWebContentsSend';
 import { stripMarkdown } from '@main/utils/textFormatting';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
-import {
-  getMemberColorByName,
-  MEMBER_COLOR_HUE,
-  PARTICIPANT_IDENTITY_COLOR_PALETTE,
-} from '@shared/constants/memberColors';
+import { getMemberColorByName, MEMBER_COLOR_HUE } from '@shared/constants/memberColors';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { nativeImage, Notification as ElectronNotification } from 'electron';
@@ -128,7 +124,7 @@ function setBoundedCacheEntry<K, V>(cache: Map<K, V>, key: K, value: V): void {
   }
   cache.set(key, value);
 }
-const PARTICIPANT_AVATAR_COUNT = PARTICIPANT_IDENTITY_COLOR_PALETTE.length;
+const PARTICIPANT_AVATAR_COUNT = 13;
 const LEAD_PARTICIPANT_AVATAR_NUMBER = 1;
 
 interface TeamNotificationAvatarMember {

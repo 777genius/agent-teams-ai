@@ -9,11 +9,6 @@ const leadRowMockState = vi.hoisted(() => ({
   lastLeadProps: null as {
     showAnthropicContextLimit?: boolean;
     disableAnthropicContextLimit?: boolean;
-    layoutVariant?: 'default' | 'flat';
-  } | null,
-  lastMembersEditorProps: null as {
-    layoutVariant?: 'default' | 'flat';
-    toolbarLeading?: React.ReactNode;
   } | null,
 }));
 
@@ -21,7 +16,6 @@ vi.mock('./LeadModelRow', () => ({
   LeadModelRow: (props: {
     showAnthropicContextLimit?: boolean;
     disableAnthropicContextLimit?: boolean;
-    layoutVariant?: 'default' | 'flat';
   }) => {
     leadRowMockState.lastLeadProps = props;
     return React.createElement(
@@ -33,14 +27,8 @@ vi.mock('./LeadModelRow', () => ({
 }));
 
 vi.mock('./MembersEditorSection', () => ({
-  MembersEditorSection: (props: {
-    headerExtra?: React.ReactNode;
-    toolbarLeading?: React.ReactNode;
-    layoutVariant?: 'default' | 'flat';
-  }) => {
-    leadRowMockState.lastMembersEditorProps = props;
-    return React.createElement('div', null, props.toolbarLeading, props.headerExtra);
-  },
+  MembersEditorSection: ({ headerExtra }: { headerExtra?: React.ReactNode }) =>
+    React.createElement('div', null, headerExtra),
 }));
 
 import { TeamRosterEditorSection } from './TeamRosterEditorSection';
@@ -86,7 +74,6 @@ describe('TeamRosterEditorSection', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     leadRowMockState.lastLeadProps = null;
-    leadRowMockState.lastMembersEditorProps = null;
   });
 
   afterEach(() => {
@@ -109,17 +96,6 @@ describe('TeamRosterEditorSection', () => {
     });
 
     expect(leadRowMockState.lastLeadProps?.showAnthropicContextLimit).toBe(true);
-
-    act(() => {
-      root.unmount();
-    });
-  });
-
-  it('uses the shared flat roster layout for create and launch team surfaces', () => {
-    const { root } = renderTeamRosterEditorSection({});
-
-    expect(leadRowMockState.lastMembersEditorProps?.layoutVariant).toBe('flat');
-    expect(leadRowMockState.lastLeadProps?.layoutVariant).toBe('flat');
 
     act(() => {
       root.unmount();

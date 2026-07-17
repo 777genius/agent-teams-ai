@@ -492,7 +492,6 @@ interface InstalledBannerProps {
   isBusy: boolean;
   onInstall: () => void;
   onOpenCodeInstall: () => void;
-  onOpenCodeRefresh: () => void;
   onCodexInstall: () => void;
   onRefresh: () => void;
   onToggleProvidersCollapsed: () => void;
@@ -901,7 +900,6 @@ const InstalledBanner = ({
   isBusy,
   onInstall,
   onOpenCodeInstall,
-  onOpenCodeRefresh,
   onCodexInstall,
   onRefresh,
   onToggleProvidersCollapsed,
@@ -1105,7 +1103,6 @@ const InstalledBanner = ({
             projectPath={projectPath}
             refreshKey={providerQuickConnectRefreshKey}
             onInstallOpenCode={onOpenCodeInstall}
-            onRefreshOpenCode={onOpenCodeRefresh}
             onOpenCodeProviderAction={onOpenCodeProviderAction}
             onBrowseProviders={onBrowseOpenCodeProviders}
             onConnectedCountChange={onOpenCodeConnectedPlanCountChange}
@@ -1523,10 +1520,8 @@ export const CliStatusBanner = ({
     bootstrapCliStatus,
     fetchCliStatus,
     fetchCliProviderStatus,
-    fetchOpenCodeRuntimeStatus,
     fetchCodexRuntimeStatus,
     invalidateCliStatus,
-    invalidateOpenCodeRuntimeStatus,
     installCli,
     installOpenCodeRuntime,
     installCodexRuntime,
@@ -1824,13 +1819,6 @@ export const CliStatusBanner = ({
       });
     })();
   }, [bootstrapCliStatus, fetchCliStatus, invalidateCliStatus, multimodelEnabled]);
-
-  const handleOpenCodeRefresh = useCallback(() => {
-    void (async () => {
-      await invalidateOpenCodeRuntimeStatus();
-      await fetchOpenCodeRuntimeStatus();
-    })();
-  }, [fetchOpenCodeRuntimeStatus, invalidateOpenCodeRuntimeStatus]);
 
   const handleToggleProvidersCollapsed = useCallback(() => {
     setProvidersCollapsed((current) => {
@@ -2214,7 +2202,6 @@ export const CliStatusBanner = ({
           isBusy={isBusy}
           onInstall={handleInstall}
           onOpenCodeInstall={() => void installOpenCodeRuntime()}
-          onOpenCodeRefresh={handleOpenCodeRefresh}
           onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
           onRefresh={handleRefresh}
           onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
@@ -2473,7 +2460,6 @@ export const CliStatusBanner = ({
             isBusy={isBusy}
             onInstall={handleInstall}
             onOpenCodeInstall={() => void installOpenCodeRuntime()}
-            onOpenCodeRefresh={handleOpenCodeRefresh}
             onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
             onRefresh={handleRefresh}
             onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
@@ -2555,7 +2541,6 @@ export const CliStatusBanner = ({
           isBusy={isBusy}
           onInstall={handleInstall}
           onOpenCodeInstall={() => void installOpenCodeRuntime()}
-          onOpenCodeRefresh={handleOpenCodeRefresh}
           onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
           onRefresh={handleRefresh}
           onToggleProvidersCollapsed={handleToggleProvidersCollapsed}
@@ -2781,7 +2766,6 @@ export const CliStatusBanner = ({
         isBusy={isBusy}
         onInstall={handleInstall}
         onOpenCodeInstall={() => void installOpenCodeRuntime()}
-        onOpenCodeRefresh={handleOpenCodeRefresh}
         onCodexInstall={() => setCodexRuntimeDialogOpen(true)}
         onRefresh={handleRefresh}
         onToggleProvidersCollapsed={handleToggleProvidersCollapsed}

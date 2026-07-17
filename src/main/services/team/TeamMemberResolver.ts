@@ -67,20 +67,6 @@ function looksLikeGeneratedAgentId(name: string): boolean {
   return GENERATED_AGENT_ID_PATTERN.test(name.trim());
 }
 
-export function isMaterializableInboxMemberName(
-  name: string,
-  explicitNames: ReadonlySet<string>
-): boolean {
-  const trimmed = name.trim();
-  const normalized = trimmed.toLowerCase();
-  if (!trimmed) return false;
-  if (looksLikeCrossTeamPseudoRecipient(trimmed) || looksLikeCrossTeamToolRecipient(trimmed)) {
-    return false;
-  }
-  if (explicitNames.has(normalized)) return true;
-  return !looksLikeQualifiedExternalRecipient(trimmed) && !looksLikeGeneratedAgentId(trimmed);
-}
-
 export class TeamMemberResolver {
   resolveMembers(
     config: TeamConfig,
@@ -146,7 +132,19 @@ export class TeamMemberResolver {
     for (const inboxName of inboxNames) {
       if (typeof inboxName === 'string' && inboxName.trim() !== '') {
         const trimmed = inboxName.trim();
-        if (!isMaterializableInboxMemberName(trimmed, explicitNames)) {
+        if (
+          looksLikeCrossTeamPseudoRecipient(trimmed) ||
+          looksLikeCrossTeamToolRecipient(trimmed)
+        ) {
+          continue;
+        }
+        if (
+          !explicitNames.has(trimmed.toLowerCase()) &&
+          looksLikeQualifiedExternalRecipient(trimmed)
+        ) {
+          continue;
+        }
+        if (!explicitNames.has(trimmed.toLowerCase()) && looksLikeGeneratedAgentId(trimmed)) {
           continue;
         }
         addName(trimmed);
