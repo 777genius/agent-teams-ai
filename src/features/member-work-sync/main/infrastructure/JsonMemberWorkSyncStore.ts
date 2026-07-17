@@ -1020,10 +1020,11 @@ export class JsonMemberWorkSyncStore
 
   async markFailed(input: MemberWorkSyncOutboxMarkFailedInput): Promise<void> {
     await this.updateOutboxItem(input.teamName, input.id, (current) => {
-      if (
-        current?.attemptGeneration !== input.attemptGeneration ||
-        isOutboxTerminal(current.status)
-      ) {
+      // Only the in-flight claim may record a failure. If the item was revived to
+      // 'pending' (same attemptGeneration) while delivery was in flight, a late
+      // failure must NOT clobber the revived work. Mirrors markDelivered and the
+      // SQLite worker guard (memberWorkSyncWorkerOps.markFailed).
+      if (current?.attemptGeneration !== input.attemptGeneration || current.status !== 'claimed') {
         return current;
       }
       const next: MemberWorkSyncOutboxItem = {

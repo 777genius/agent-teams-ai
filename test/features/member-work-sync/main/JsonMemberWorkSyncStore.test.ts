@@ -668,6 +668,60 @@ describe('JsonMemberWorkSyncStore', () => {
     expect(reclaimed).toMatchObject({ id: input.id, attemptGeneration: 2 });
   });
 
+  it('does not let a late claim failure overwrite revived pending work', async () => {
+    const input = {
+      id: 'member-work-sync:team-a:bob:agenda:v1:abc',
+      teamName: 'team-a',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      payloadHash: 'hash-a',
+      payload: makeNudgePayload(),
+      nowIso: '2026-04-29T00:00:00.000Z',
+    };
+
+    await store.ensurePending(input);
+    const [claimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-a',
+      nowIso: '2026-04-29T00:01:00.000Z',
+      limit: 1,
+    });
+
+    // A nudge with the SAME payload revives the claimed item back to pending
+    // WITHOUT bumping attemptGeneration (same-payload revive path).
+    const revived = await store.ensurePending({ ...input, nowIso: '2026-04-29T00:02:00.000Z' });
+    expect(revived).toMatchObject({
+      ok: true,
+      outcome: 'existing',
+      item: { status: 'pending', attemptGeneration: claimed.attemptGeneration },
+    });
+
+    // The original in-flight attempt now fails with the SAME generation. It must
+    // NOT clobber the revived pending row (the failure belongs to a claim that no
+    // longer owns the item).
+    await store.markFailed({
+      teamName: 'team-a',
+      id: input.id,
+      attemptGeneration: claimed.attemptGeneration,
+      retryable: false,
+      error: 'member_busy:active_tool_activity',
+      nowIso: '2026-04-29T00:03:00.000Z',
+    });
+
+    // Revived work survives and remains claimable.
+    const [reclaimed] = await store.claimDue({
+      teamName: 'team-a',
+      claimedBy: 'dispatcher-b',
+      nowIso: '2026-04-29T00:04:00.000Z',
+      limit: 1,
+    });
+    expect(reclaimed).toMatchObject({
+      id: input.id,
+      status: 'claimed',
+      attemptGeneration: claimed.attemptGeneration + 1,
+    });
+  });
+
   it('keeps an explicitly requested retry delay when reviving an outbox item', async () => {
     const input = {
       id: 'member-work-sync:team-a:bob:agenda:v1:abc',
