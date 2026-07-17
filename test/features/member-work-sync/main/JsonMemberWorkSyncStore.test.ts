@@ -297,12 +297,15 @@ describe('JsonMemberWorkSyncStore', () => {
     await writeFile(indexPath, JSON.stringify(index), 'utf8');
 
     const pending = await store.listPendingReports('team-a');
-    expect(pending.map((intent) => intent.memberName).sort()).toEqual(['bob', 'tom']);
+    expect(pending.map((intent) => intent.memberName).sort((a, b) => a.localeCompare(b))).toEqual([
+      'bob',
+      'tom',
+    ]);
     const repaired = JSON.parse(await readFile(indexPath, 'utf8'));
     expect(
       Object.values(repaired.items)
         .map((item) => (item as { memberName: string }).memberName)
-        .sort()
+        .sort((a, b) => a.localeCompare(b))
     ).toEqual(['bob', 'tom']);
   });
 
@@ -318,7 +321,7 @@ describe('JsonMemberWorkSyncStore', () => {
 
     await store.appendPendingReport(request, 'control_api_unavailable');
     const [intent] = await store.listPendingReports('team-a');
-    await store.markPendingReportProcessed('team-a', intent!.id, {
+    await store.markPendingReportProcessed('team-a', intent.id, {
       status: 'accepted',
       resultCode: 'accepted',
       processedAt: '2026-04-29T00:01:00.000Z',
@@ -326,18 +329,18 @@ describe('JsonMemberWorkSyncStore', () => {
 
     const reportsPath = join(memberWorkSyncDir(root, 'team-a', 'bob'), 'reports.json');
     const reports = JSON.parse(await readFile(reportsPath, 'utf8'));
-    reports.intents[intent!.id] = {
-      ...reports.intents[intent!.id],
+    reports.intents[intent.id] = {
+      ...reports.intents[intent.id],
       status: 'pending',
     };
-    delete reports.intents[intent!.id].resultCode;
-    delete reports.intents[intent!.id].processedAt;
+    delete reports.intents[intent.id].resultCode;
+    delete reports.intents[intent.id].processedAt;
     await writeFile(reportsPath, JSON.stringify(reports), 'utf8');
 
     const pending = await store.listPendingReports('team-a');
     expect(pending).toHaveLength(1);
     expect(pending[0]).toMatchObject({
-      id: intent!.id,
+      id: intent.id,
       memberName: 'bob',
       status: 'pending',
     });
@@ -361,8 +364,8 @@ describe('JsonMemberWorkSyncStore', () => {
       JSON.stringify({
         schemaVersion: 2,
         intents: {
-          [intent!.id]: {
-            ...intent!,
+          [intent.id]: {
+            ...intent,
             teamName: 'other-team',
             memberName: 'tom',
           },
@@ -378,14 +381,14 @@ describe('JsonMemberWorkSyncStore', () => {
       'pending-reports-index.json'
     );
     const index = JSON.parse(await readFile(indexPath, 'utf8'));
-    index.items[intent!.id] = {
-      ...index.items[intent!.id],
+    index.items[intent.id] = {
+      ...index.items[intent.id],
       memberKey: 'tom',
       memberName: 'tom',
     };
     await writeFile(indexPath, JSON.stringify(index), 'utf8');
 
-    await store.markPendingReportProcessed('team-a', intent!.id, {
+    await store.markPendingReportProcessed('team-a', intent.id, {
       status: 'accepted',
       resultCode: 'accepted',
       processedAt: '2026-04-29T00:01:00.000Z',
@@ -394,13 +397,13 @@ describe('JsonMemberWorkSyncStore', () => {
     const reports = JSON.parse(
       await readFile(join(memberWorkSyncDir(root, 'team-a', 'bob'), 'reports.json'), 'utf8')
     );
-    expect(reports.intents[intent!.id]).toMatchObject({
+    expect(reports.intents[intent.id]).toMatchObject({
       memberName: 'bob',
       status: 'accepted',
       resultCode: 'accepted',
     });
     const repaired = JSON.parse(await readFile(indexPath, 'utf8'));
-    expect(repaired.items[intent!.id]).toMatchObject({
+    expect(repaired.items[intent.id]).toMatchObject({
       memberKey: 'bob',
       memberName: 'bob',
       status: 'accepted',
@@ -1721,7 +1724,10 @@ describe('JsonMemberWorkSyncStore', () => {
       nowIso: '2026-04-29T00:01:00.000Z',
       limit: 5,
     });
-    expect(claimed.map((item) => item.memberName).sort()).toEqual(['bob', 'tom']);
+    expect(claimed.map((item) => item.memberName).sort((a, b) => a.localeCompare(b))).toEqual([
+      'bob',
+      'tom',
+    ]);
   });
 
   it('rewrites stale due outbox member keys while claiming', async () => {
@@ -1792,7 +1798,7 @@ describe('JsonMemberWorkSyncStore', () => {
             teamName: 'other-team',
             memberName: 'tom',
             status: 'claimed',
-            attemptGeneration: claimed!.attemptGeneration,
+            attemptGeneration: claimed.attemptGeneration,
             claimedBy: 'dispatcher-a',
             claimedAt: '2026-04-29T00:01:00.000Z',
             updatedAt: '2026-04-29T00:01:00.000Z',
@@ -1813,7 +1819,7 @@ describe('JsonMemberWorkSyncStore', () => {
     await store.markFailed({
       teamName: 'team-a',
       id: input.id,
-      attemptGeneration: claimed!.attemptGeneration,
+      attemptGeneration: claimed.attemptGeneration,
       error: 'delivery failed',
       retryable: true,
       nextAttemptAt: '2026-04-29T00:10:00.000Z',
@@ -1910,7 +1916,7 @@ describe('JsonMemberWorkSyncStore', () => {
     await store.markDelivered({
       teamName: 'team-a',
       id: input.id,
-      attemptGeneration: claimed!.attemptGeneration,
+      attemptGeneration: claimed.attemptGeneration,
       deliveredMessageId: input.id,
       nowIso: '2026-04-29T00:02:00.000Z',
     });
@@ -1943,8 +1949,9 @@ describe('JsonMemberWorkSyncStore', () => {
     const auditEvents: MemberWorkSyncAuditEvent[] = [];
     store = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(root), {
       auditJournal: {
-        append: async (event) => {
+        append: (event) => {
           auditEvents.push(event);
+          return Promise.resolve();
         },
       },
       now: () => new Date('2026-04-29T00:02:00.000Z'),
@@ -2073,23 +2080,153 @@ describe('JsonMemberWorkSyncStore', () => {
     await expect(store.readSnapshotForImport('team-a')).resolves.toBeNull();
     const recovered = await store.readArchivedSnapshotForImport('team-a');
 
-    expect(recovered?.statuses.map((status) => status.memberName).sort()).toEqual([
-      'alice',
-      'bob',
-      'carol',
-    ]);
+    expect(
+      recovered?.statuses.map((status) => status.memberName).sort((a, b) => a.localeCompare(b))
+    ).toEqual(['alice', 'bob', 'carol']);
     expect(recovered?.statuses.find((status) => status.memberName === 'bob')).toMatchObject({
       state: 'caught_up',
       evaluatedAt: '2026-04-29T00:10:00.000Z',
     });
-    expect(recovered?.outboxItems.map((item) => item.id).sort()).toEqual([
-      'nudge-alice',
-      'nudge-bob',
-      'nudge-carol',
-    ]);
+    expect(
+      recovered?.outboxItems.map((item) => item.id).sort((a, b) => a.localeCompare(b))
+    ).toEqual(['nudge-alice', 'nudge-bob', 'nudge-carol']);
     expect(recovered?.outboxItems.find((item) => item.id === 'nudge-bob')?.payloadHash).toBe(
       'hash-bob-new'
     );
     expect(recovered?.filesToArchive).toEqual([]);
+  });
+
+  it('discovers exact metadata-free payload files and dedupes canonical member keys', async () => {
+    const paths = new MemberWorkSyncStorePaths(root);
+    const liveStatusMember = 'live status/qa';
+    const dedupedStatusMember = 'deduped status/qa';
+    const archivedStatusMember = 'archived status/qa';
+    const liveReportMember = 'live report/qa';
+    const archivedReportMember = 'archived report/qa';
+    const liveOutboxMember = 'live outbox/qa';
+    const archivedOutboxMember = 'archived outbox/qa';
+    const memberNames = [
+      liveStatusMember,
+      dedupedStatusMember,
+      archivedStatusMember,
+      liveReportMember,
+      archivedReportMember,
+      liveOutboxMember,
+      archivedOutboxMember,
+    ];
+    const statusFor = (
+      memberName: string,
+      state: MemberWorkSyncStatus['state'] = 'needs_sync'
+    ): MemberWorkSyncStatus => {
+      const base = makeStatus({});
+      return makeStatus({
+        memberName,
+        state,
+        agenda: { ...base.agenda, memberName },
+      });
+    };
+    const appendReport = async (memberName: string): Promise<void> => {
+      await store.appendPendingReport(
+        {
+          teamName: 'team-a',
+          memberName,
+          state: 'still_working',
+          agendaFingerprint: `agenda:${memberName}`,
+          reportToken: `wrs:v1.${memberName}`,
+          source: 'mcp',
+        },
+        'control_api_unavailable'
+      );
+    };
+    const ensureOutbox = async (memberName: string): Promise<void> => {
+      await store.ensurePending({
+        id: `nudge-${memberName}`,
+        teamName: 'team-a',
+        memberName,
+        agendaFingerprint: `agenda:${memberName}`,
+        payloadHash: `hash-${memberName}`,
+        payload: makeNudgePayload({ to: memberName }),
+        nowIso: '2026-04-29T00:00:00.000Z',
+      });
+    };
+
+    await store.write(statusFor(archivedStatusMember, 'needs_sync'));
+    await archiveFileWithGenerations(paths.getMemberStatusPath('team-a', archivedStatusMember));
+    await store.write(statusFor(archivedStatusMember, 'caught_up'));
+    await archiveFileWithGenerations(paths.getMemberStatusPath('team-a', archivedStatusMember));
+    await store.write(statusFor(liveStatusMember));
+    await store.write(statusFor(dedupedStatusMember));
+
+    await appendReport(archivedReportMember);
+    await archiveFileWithGenerations(paths.getMemberReportsPath('team-a', archivedReportMember));
+    await appendReport(liveReportMember);
+
+    await ensureOutbox(archivedOutboxMember);
+    await archiveFileWithGenerations(paths.getMemberOutboxPath('team-a', archivedOutboxMember));
+    await ensureOutbox(liveOutboxMember);
+
+    for (const memberName of memberNames) {
+      await rm(join(root, 'team-a', 'members', paths.getMemberKey(memberName), 'member.meta.json'));
+    }
+    await rm(join(root, 'team-a', '.member-work-sync'), { recursive: true, force: true });
+
+    for (const alias of ['first-alias', 'second-alias']) {
+      const aliasDir = join(root, 'team-a', 'members', alias);
+      await mkdir(aliasDir, { recursive: true });
+      await writeFile(
+        join(aliasDir, 'member.meta.json'),
+        JSON.stringify({
+          schemaVersion: 1,
+          memberName:
+            alias === 'first-alias'
+              ? ` ${dedupedStatusMember} `
+              : dedupedStatusMember.toUpperCase(),
+          memberKey: paths.getMemberKey(dedupedStatusMember),
+          updatedAt: '2026-04-29T00:00:00.000Z',
+        })
+      );
+    }
+
+    const ignoredStatus = {
+      schemaVersion: 2,
+      status: statusFor('ignored member'),
+    };
+    const nonCanonicalDir = join(
+      root,
+      'team-a',
+      'members',
+      '%69gnored%20member',
+      '.member-work-sync'
+    );
+    await mkdir(nonCanonicalDir, { recursive: true });
+    await writeFile(join(nonCanonicalDir, 'status.json'), JSON.stringify(ignoredStatus));
+    const malformedDir = join(root, 'team-a', 'members', '%E0%A4%A', '.member-work-sync');
+    await mkdir(malformedDir, { recursive: true });
+    await writeFile(join(malformedDir, 'status.json'), JSON.stringify(ignoredStatus));
+    const boundaryDir = memberWorkSyncDir(root, 'team-a', 'boundary only');
+    await mkdir(boundaryDir, { recursive: true });
+    await writeFile(
+      join(boundaryDir, 'status.json.pre-sqlite-copy'),
+      JSON.stringify(ignoredStatus)
+    );
+
+    const active = await store.readSnapshotForImport('team-a');
+    expect(
+      active?.statuses.map((status) => status.memberName).sort((a, b) => a.localeCompare(b))
+    ).toEqual([dedupedStatusMember, liveStatusMember]);
+    expect(active?.reportIntents.map((intent) => intent.memberName)).toEqual([liveReportMember]);
+    expect(active?.outboxItems.map((item) => item.memberName)).toEqual([liveOutboxMember]);
+    expect(active?.filesToArchive).toHaveLength(4);
+    expect(new Set(active?.filesToArchive).size).toBe(4);
+
+    const archived = await store.readArchivedSnapshotForImport('team-a');
+    expect(archived?.statuses).toEqual([
+      expect.objectContaining({ memberName: archivedStatusMember, state: 'caught_up' }),
+    ]);
+    expect(archived?.reportIntents.map((intent) => intent.memberName)).toEqual([
+      archivedReportMember,
+    ]);
+    expect(archived?.outboxItems.map((item) => item.memberName)).toEqual([archivedOutboxMember]);
+    expect(archived?.filesToArchive).toEqual([]);
   });
 });

@@ -1208,6 +1208,7 @@ export class JsonMemberWorkSyncStore
   private async readSnapshotForImportUnqueued(
     teamName: string
   ): Promise<MemberWorkSyncStoreSnapshot | null> {
+    const memberNames = await this.scanMemberNamesForImport(teamName);
     const candidateFiles = [
       this.paths.getLegacyStatusPath(teamName),
       this.paths.getLegacyPendingReportsPath(teamName),
@@ -1216,7 +1217,7 @@ export class JsonMemberWorkSyncStore
       this.paths.getOutboxIndexPath(teamName),
       this.paths.getPendingReportsIndexPath(teamName),
     ];
-    for (const memberName of await this.scanMemberNames(teamName)) {
+    for (const memberName of memberNames) {
       candidateFiles.push(
         this.paths.getMemberStatusPath(teamName, memberName),
         this.paths.getMemberReportsPath(teamName, memberName),
@@ -1240,8 +1241,9 @@ export class JsonMemberWorkSyncStore
     // different team must not leak into another team's imported rows.
     const teamKey = normalizeTeamKey(teamName);
     const statuses = new Map<string, MemberWorkSyncStatus>();
-    for (const status of await this.scanMemberStatuses(teamName)) {
-      if (normalizeTeamKey(status.teamName) !== teamKey) {
+    for (const memberName of memberNames) {
+      const status = (await this.readMemberStatusFile(teamName, memberName))?.status;
+      if (!status || normalizeTeamKey(status.teamName) !== teamKey) {
         continue;
       }
       statuses.set(normalizeMemberKey(status.memberName), status);
@@ -1258,7 +1260,8 @@ export class JsonMemberWorkSyncStore
     }
 
     const reportIntents = new Map<string, MemberWorkSyncReportIntent>();
-    for (const { memberName, reports } of await this.scanMemberReports(teamName)) {
+    for (const memberName of memberNames) {
+      const reports = await this.readMemberReportsFile(teamName, memberName);
       for (const intent of Object.values(reports.intents)) {
         if (isReportIntentOwnedBy(teamName, memberName, intent)) {
           reportIntents.set(intent.id, intent);
@@ -1275,7 +1278,8 @@ export class JsonMemberWorkSyncStore
     }
 
     const outboxItems = new Map<string, MemberWorkSyncOutboxItem>();
-    for (const { memberName, outbox } of await this.scanMemberOutboxes(teamName)) {
+    for (const memberName of memberNames) {
+      const outbox = await this.readMemberOutboxFile(teamName, memberName);
       for (const item of Object.values(outbox.items)) {
         if (isOutboxItemOwnedBy(teamName, memberName, item)) {
           outboxItems.set(item.id, item);
@@ -1313,7 +1317,7 @@ export class JsonMemberWorkSyncStore
     teamName: string
   ): Promise<MemberWorkSyncStoreSnapshot | null> {
     const teamKey = normalizeTeamKey(teamName);
-    const memberNames = await this.scanMemberNames(teamName);
+    const memberNames = await this.scanMemberNamesForImport(teamName);
     const archivePathsByFile = new Map<string, string[]>();
     let archiveCount = 0;
 
@@ -1850,6 +1854,74 @@ export class JsonMemberWorkSyncStore
       }
     }
     return names;
+  }
+
+  /**
+   * Import recovery cannot depend on member.meta.json surviving. Discover
+   * canonical member directories that contain an exact live or pre-SQLite
+   * status/report/outbox generation, while keeping ordinary index repair on
+   * the stricter metadata-backed scan above.
+   */
+  private async scanMemberNamesForImport(teamName: string): Promise<string[]> {
+    const memberNamesByKey = new Map<string, string>();
+    const addMemberName = (memberName: string): void => {
+      const canonicalName = memberName.trim();
+      if (!canonicalName) {
+        return;
+      }
+      const memberKey = this.paths.getMemberKey(canonicalName);
+      if (!memberNamesByKey.has(memberKey)) {
+        memberNamesByKey.set(memberKey, canonicalName);
+      }
+    };
+
+    for (const memberName of await this.scanMemberNames(teamName)) {
+      addMemberName(memberName);
+    }
+
+    const membersDir = join(this.paths.getTeamRootDir(teamName), 'members');
+    const entries = await readdir(membersDir, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      if (!entry.isDirectory() || memberNamesByKey.has(entry.name)) {
+        continue;
+      }
+      let memberName: string;
+      try {
+        memberName = decodeURIComponent(entry.name);
+      } catch {
+        continue;
+      }
+      if (!normalizeMemberKey(memberName) || this.paths.getMemberKey(memberName) !== entry.name) {
+        continue;
+      }
+      if (await this.hasMemberSnapshotFileForImport(teamName, memberName)) {
+        addMemberName(memberName);
+      }
+    }
+    return [...memberNamesByKey.values()];
+  }
+
+  private async hasMemberSnapshotFileForImport(
+    teamName: string,
+    memberName: string
+  ): Promise<boolean> {
+    const filePaths = [
+      this.paths.getMemberStatusPath(teamName, memberName),
+      this.paths.getMemberReportsPath(teamName, memberName),
+      this.paths.getMemberOutboxPath(teamName, memberName),
+    ];
+    for (const filePath of filePaths) {
+      try {
+        await access(filePath);
+        return true;
+      } catch {
+        // An absent live file can still have immutable archive generations.
+      }
+      if ((await listPreSqliteArchiveGenerations(filePath)).length > 0) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private async scanMemberStatuses(teamName: string): Promise<MemberWorkSyncStatus[]> {

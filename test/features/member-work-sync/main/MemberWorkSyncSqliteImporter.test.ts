@@ -52,21 +52,25 @@ describe('MemberWorkSyncSqliteImporter archive recovery', () => {
     let canonical = emptyRecords();
     let imported = false;
     const gateway = {
-      hasStoreImport: vi.fn(async () => imported),
-      listTeamSnapshot: vi.fn(async () => canonical),
-      importTeam: vi.fn(async (_teamName, next) => {
+      hasStoreImport: vi.fn(() => Promise.resolve(imported)),
+      listTeamSnapshot: vi.fn(() => Promise.resolve(canonical)),
+      importTeam: vi.fn((_teamName, next) => {
         canonical = next;
+        return Promise.resolve();
       }),
-      recordStoreImport: vi.fn(async (storeId) => {
+      recordStoreImport: vi.fn((storeId) => {
         expect(storeId).toBe(MEMBER_WORK_SYNC_STORE_ID);
         imported = true;
+        return Promise.resolve();
       }),
     } as unknown as MemberWorkSyncStorageGateway;
     const readActive = vi.fn(
-      async (): Promise<MemberWorkSyncStoreSnapshot | null> =>
-        snapshot([makeStatus('bob', 'caught_up'), makeStatus('carol')])
+      (): Promise<MemberWorkSyncStoreSnapshot | null> =>
+        Promise.resolve(snapshot([makeStatus('bob', 'caught_up'), makeStatus('carol')]))
     );
-    const readArchives = vi.fn(async () => snapshot([makeStatus('alice'), makeStatus('bob')]));
+    const readArchives = vi.fn(() =>
+      Promise.resolve(snapshot([makeStatus('alice'), makeStatus('bob')]))
+    );
 
     await new MemberWorkSyncSqliteImporter({
       gateway,
@@ -110,5 +114,35 @@ describe('MemberWorkSyncSqliteImporter archive recovery', () => {
     expect(canonical.statuses.find((record) => record.memberKey === 'bob')).toMatchObject({
       state: 'blocked',
     });
+  });
+
+  it('recovers an archived-only snapshot when the durable import marker was lost', async () => {
+    let canonical = emptyRecords();
+    const gateway = {
+      hasStoreImport: vi.fn(() => Promise.resolve(false)),
+      listTeamSnapshot: vi.fn(() => Promise.resolve(canonical)),
+      importTeam: vi.fn((_teamName, next) => {
+        canonical = next;
+        return Promise.resolve();
+      }),
+      recordStoreImport: vi.fn(() => Promise.resolve()),
+    } as unknown as MemberWorkSyncStorageGateway;
+    const readActive = vi.fn(() => Promise.resolve(null));
+    const readArchives = vi.fn(() => Promise.resolve(snapshot([makeStatus('archived-only')])));
+
+    await new MemberWorkSyncSqliteImporter({
+      gateway,
+      jsonStore: {
+        readSnapshotForImport: readActive,
+        readArchivedSnapshotForImport: readArchives,
+      },
+    }).ensureImported('team-a');
+
+    expect(readActive).toHaveBeenCalledWith('team-a');
+    expect(readArchives).toHaveBeenCalledWith('team-a');
+    expect(canonical.statuses).toEqual([
+      expect.objectContaining({ memberKey: 'archived-only', memberName: 'archived-only' }),
+    ]);
+    expect(gateway.recordStoreImport).toHaveBeenCalledWith(MEMBER_WORK_SYNC_STORE_ID, 'team-a', 1);
   });
 });
