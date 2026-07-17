@@ -274,13 +274,20 @@ function findRuntimePayloadDir(extractDir, asset) {
 }
 
 function verifyChecksum(archivePath, asset) {
+  // Enforced when a sha256 is present. For the release/download path the pinned
+  // sha256 comes from terminal-platform.lock.json (the committed trust anchor -
+  // see resolveReleaseManifestAsset, which prefers it and skips the network
+  // manifest when present). The explicit local `--archive` override intentionally
+  // carries no sha256 (a locally-built archive won't match the published hash),
+  // so it is not checked here.
   if (!asset.sha256) {
     return;
   }
 
-  const actual = hashFile(archivePath);
-  if (actual !== asset.sha256) {
-    throw new Error(`Checksum mismatch for ${asset.file}. Expected ${asset.sha256}, got ${actual}`);
+  const expected = asset.sha256.trim().toLowerCase();
+  const actual = hashFile(archivePath).toLowerCase();
+  if (actual !== expected) {
+    throw new Error(`Checksum mismatch for ${asset.file}. Expected ${expected}, got ${actual}`);
   }
 }
 
@@ -353,7 +360,10 @@ async function stageRuntime(options) {
     const releaseTag = getReleaseTag(lock, options.releaseTag);
     const workDir = path.join(downloadRoot, `stage-${platformKey}-${process.pid}-${Date.now()}`);
     const asset = options.archive
-      ? lockedAsset
+      ? // Explicit local override: a caller-supplied archive is staged as-is and
+        // is not checked against the published pin (a locally-built archive will
+        // not match it).
+        { ...lockedAsset, sha256: undefined }
       : await resolveReleaseManifestAsset(lock, releaseTag, platformKey, lockedAsset, workDir);
     const archivePath = path.join(workDir, asset.file);
     const extractDir = path.join(workDir, 'extracted');
