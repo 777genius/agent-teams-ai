@@ -264,7 +264,7 @@ Use the desktop app as the primary product. The browser/web path is not needed f
 <details>
 <summary><strong>Does it read or upload my code?</strong></summary>
 <br />
-The app is not a cloud code-sync service. It reads local runtime/session data to power the UI, and your project stays on your machine unless you choose a provider/runtime path that sends data to that provider. During setup, the app may perform provider access and capability checks before launch.
+The app reads local runtime/session data to power the UI, but it does not upload, sync, or send your project or code to Agent Teams servers. There is no Agent Teams cloud backend for storing your code. If you launch an external AI runtime, that runtime communicates directly with its provider under the provider's own terms. Setup checks only verify provider access and capabilities; they do not upload your project to Agent Teams.
 </details>
 
 <details>
