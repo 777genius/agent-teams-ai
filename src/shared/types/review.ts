@@ -237,6 +237,57 @@ export interface ReviewDecisionPersistenceScope {
   scopeToken: string;
 }
 
+/** Complete inverse decision state carried by a durable review action. */
+export interface ReviewDecisionSnapshot {
+  hunkDecisions: Record<string, HunkDecision>;
+  fileDecisions: Record<string, HunkDecision>;
+}
+
+export type ReviewDiskRestoreMode =
+  | 'content'
+  | 'create-file'
+  | 'delete-file'
+  | 'restore-rejected-rename'
+  | 'reapply-rejected-rename';
+
+/** Exact disk pre/post-image required to retry an interrupted review Undo safely. */
+export interface ReviewDiskUndoSnapshot {
+  filePath: string;
+  beforeContent: string;
+  afterContent: string | null;
+  file?: FileChangeSummary;
+  fileIndex?: number;
+  restoreConflict?: string;
+  restoreMode?: ReviewDiskRestoreMode;
+  renameExpectation?: ReviewRenameRecoveryExpectation;
+}
+
+export interface ReviewDiskUndoAction {
+  snapshot: ReviewDiskUndoSnapshot;
+  originalIndex?: number;
+  file?: FileChangeSummary;
+  decisionSnapshot?: ReviewDecisionSnapshot;
+}
+
+interface ReviewUndoActionBase {
+  /** Stable identity used to prevent a stale async Undo from popping a newer action. */
+  id: string;
+  createdAt: string;
+}
+
+/** Self-contained, ordered Accept/Reject history persisted with the decision snapshot. */
+export type ReviewUndoAction =
+  | (ReviewUndoActionBase & {
+      kind: 'bulk';
+      decisionSnapshot: ReviewDecisionSnapshot;
+      diskSnapshots: ReviewDiskUndoSnapshot[];
+    })
+  | (ReviewUndoActionBase & { kind: 'disk'; action: ReviewDiskUndoAction })
+  | (ReviewUndoActionBase & {
+      kind: 'hunk';
+      action: { filePath: string; originalIndex: number };
+    });
+
 /** Запрос на применение review */
 export interface ApplyReviewRequest {
   teamName: string;

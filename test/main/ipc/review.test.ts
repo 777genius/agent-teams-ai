@@ -231,6 +231,42 @@ describe('review IPC path confinement', () => {
     }
   });
 
+  it('round-trips ordered review Undo history with the exact decision scope', async () => {
+    const action = {
+      id: 'accept-hunk-1',
+      createdAt: '2026-07-17T12:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    const saved = await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      'agent:worker:content:history',
+      { [`${projectFile}:0`]: 'accepted' },
+      {},
+      null,
+      [action]
+    );
+    expect(saved).toEqual({ success: true, data: undefined });
+
+    const loaded = await ipcMain.invoke(
+      REVIEW_LOAD_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      'agent:worker:content:history'
+    );
+    expect(loaded).toEqual({
+      success: true,
+      data: {
+        hunkDecisions: { [`${projectFile}:0`]: 'accepted' },
+        fileDecisions: {},
+        hunkContextHashesByFile: undefined,
+        reviewActionHistory: [action],
+      },
+    });
+  });
+
   it('persists and clears exact-scope manual editor history through IPC', async () => {
     const entry = {
       filePath: projectFile,
@@ -282,12 +318,7 @@ describe('review IPC path confinement', () => {
     );
     expect(invalidClear.success).toBe(false);
     await expect(
-      ipcMain.invoke(
-        REVIEW_LOAD_DRAFT_HISTORY,
-        'safe-team',
-        'agent-worker',
-        'scope-token-a'
-      )
+      ipcMain.invoke(REVIEW_LOAD_DRAFT_HISTORY, 'safe-team', 'agent-worker', 'scope-token-a')
     ).resolves.toMatchObject({ success: true, data: { entries: { [projectFile]: entry } } });
 
     const cleared = await ipcMain.invoke(
@@ -299,12 +330,7 @@ describe('review IPC path confinement', () => {
     );
     expect(cleared).toEqual({ success: true, data: undefined });
     await expect(
-      ipcMain.invoke(
-        REVIEW_LOAD_DRAFT_HISTORY,
-        'safe-team',
-        'agent-worker',
-        'scope-token-a'
-      )
+      ipcMain.invoke(REVIEW_LOAD_DRAFT_HISTORY, 'safe-team', 'agent-worker', 'scope-token-a')
     ).resolves.toEqual({ success: true, data: null });
   });
 
@@ -354,6 +380,7 @@ describe('review IPC path confinement', () => {
         hunkDecisions: { 'stable-change-key:0': 'rejected' },
         fileDecisions: {},
         hunkContextHashesByFile: { 'stable-change-key': { 0: 'context-hash' } },
+        reviewActionHistory: [],
       },
     });
     expect(applier.applyReviewDecisions).toHaveBeenCalledTimes(1);

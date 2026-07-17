@@ -41,11 +41,13 @@ describe('ReviewDecisionStore', () => {
       hunkDecisions: { 'file-a:0': 'rejected' },
       fileDecisions: { 'file-a': 'rejected' },
       hunkContextHashesByFile: undefined,
+      reviewActionHistory: [],
     });
     await expect(store.load('demo', 'task-123', 'task:123:req:b:src:two')).resolves.toEqual({
       hunkDecisions: { 'file-b:0': 'accepted' },
       fileDecisions: { 'file-b': 'accepted' },
       hunkContextHashesByFile: undefined,
+      reviewActionHistory: [],
     });
   });
 
@@ -136,6 +138,7 @@ describe('ReviewDecisionStore', () => {
       hunkDecisions: { 'file-b:0': 'accepted' },
       fileDecisions: { 'file-b': 'accepted' },
       hunkContextHashesByFile: undefined,
+      reviewActionHistory: [],
     });
   });
 
@@ -159,10 +162,11 @@ describe('ReviewDecisionStore', () => {
       hunkDecisions: { 'file-a:0': 'rejected' },
       fileDecisions: { 'file-a': 'rejected' },
       hunkContextHashesByFile: undefined,
+      reviewActionHistory: [],
     });
   });
 
-  it('writes versioned v2 payloads under the scoped directory', async () => {
+  it('writes versioned v3 payloads under the scoped directory', async () => {
     const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
     const store = new ReviewDecisionStore();
 
@@ -184,7 +188,7 @@ describe('ReviewDecisionStore', () => {
 
     const payload: unknown = JSON.parse(await readFile(path.join(scopeDir, entries[0]!), 'utf8'));
     expect(payload).toMatchObject({
-      version: 2,
+      version: 3,
       scopeKey: 'task-123',
       scopeToken: 'task:123:req:a:src:one',
     });
@@ -210,6 +214,14 @@ describe('ReviewDecisionStore', () => {
         'stable-file': { 0: 'stable-hash' },
         '/repo/renamed.ts': { 0: 'legacy-hash' },
       },
+      reviewActionHistory: [
+        {
+          id: 'existing-action',
+          createdAt: '2026-07-17T12:00:00.000Z',
+          kind: 'hunk',
+          action: { filePath: '/repo/stable.ts', originalIndex: 0 },
+        },
+      ],
     });
 
     await store.mergeFileDecisionPatch('demo', 'task-123', scopeToken, {
@@ -230,7 +242,97 @@ describe('ReviewDecisionStore', () => {
         'stable-file': { 0: 'stable-hash' },
         'change-key': { 0: 'new-hash', 1: 'pending-hash' },
       },
+      reviewActionHistory: [
+        {
+          id: 'existing-action',
+          createdAt: '2026-07-17T12:00:00.000Z',
+          kind: 'hunk',
+          action: { filePath: '/repo/stable.ts', originalIndex: 0 },
+        },
+      ],
     });
+  });
+
+  it('persists more than ten ordered review actions and restores them exactly', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const reviewActionHistory = Array.from({ length: 100 }, (_, index) => ({
+      id: `action-${index}`,
+      createdAt: new Date(1_700_000_000_000 + index).toISOString(),
+      kind: 'hunk' as const,
+      action: { filePath: '/repo/file.ts', originalIndex: index },
+    }));
+
+    await store.save('demo', 'task-123', {
+      scopeToken: 'task:123:req:many:src:one',
+      hunkDecisions: Object.fromEntries(
+        reviewActionHistory.map((_, index) => [`file:${index}`, 'accepted' as const])
+      ),
+      fileDecisions: {},
+      reviewActionHistory,
+    });
+
+    const restored = await store.load('demo', 'task-123', 'task:123:req:many:src:one');
+    expect(restored?.reviewActionHistory).toEqual(reviewActionHistory);
+    expect(restored?.reviewActionHistory).toHaveLength(100);
+  });
+
+  it('loads an existing v2 exact-scope payload with an empty action history', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:v2:src:one';
+    const scopeDir = path.join(
+      teamsBasePath,
+      'demo',
+      'review-decisions',
+      'v2',
+      encodeURIComponent('task-123')
+    );
+    await mkdir(scopeDir, { recursive: true });
+    const { createHash } = await import('crypto');
+    const scopeHash = createHash('sha256').update(scopeToken).digest('hex');
+    await writeFile(
+      path.join(scopeDir, `${scopeHash}.json`),
+      JSON.stringify({
+        version: 2,
+        scopeKey: 'task-123',
+        scopeToken,
+        hunkDecisions: { 'file:0': 'rejected' },
+        fileDecisions: {},
+        updatedAt: '2026-07-17T00:00:00.000Z',
+      }),
+      'utf8'
+    );
+
+    await expect(store.load('demo', 'task-123', scopeToken)).resolves.toEqual({
+      hunkDecisions: { 'file:0': 'rejected' },
+      fileDecisions: {},
+      hunkContextHashesByFile: undefined,
+      reviewActionHistory: [],
+    });
+  });
+
+  it('rejects malformed or duplicate review action identities before writing', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const duplicate = {
+      id: 'duplicate',
+      createdAt: '2026-07-17T12:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: '/repo/file.ts', originalIndex: 0 },
+    };
+
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken: 'task:123:req:invalid:src:one',
+        hunkDecisions: {},
+        fileDecisions: {},
+        reviewActionHistory: [duplicate, duplicate],
+      })
+    ).rejects.toThrow('Invalid review decisions payload');
+    await expect(
+      store.load('demo', 'task-123', 'task:123:req:invalid:src:one')
+    ).resolves.toBeNull();
   });
 });
 

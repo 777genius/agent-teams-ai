@@ -2192,6 +2192,39 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().applyError).toBeNull();
   });
 
+  it('hydrates and re-persists ordered review history beyond ten actions', async () => {
+    const store = createSliceStore();
+    const history = Array.from({ length: 25 }, (_, index) => ({
+      id: `hunk-${index}`,
+      createdAt: new Date(1_700_000_000_000 + index).toISOString(),
+      kind: 'hunk' as const,
+      action: { filePath: '/repo/file.ts', originalIndex: index },
+    }));
+    store.setState({ activeChangeSet: makeAgentChangeSet(), changeSetEpoch: 1 });
+    hoisted.loadDecisions.mockResolvedValueOnce({
+      hunkDecisions: { '/repo/file.ts:0': 'accepted' },
+      fileDecisions: {},
+      reviewActionHistory: history,
+    });
+
+    await store.getState().loadDecisionsFromDisk('team-a', 'agent-alice', 'history-scope');
+    expect(store.getState().reviewActionHistory).toEqual(history);
+
+    store.getState().persistDecisions('team-a', 'agent-alice', 'history-scope');
+    await expect(
+      store.getState().flushDecisionsToDisk('team-a', 'agent-alice', 'history-scope')
+    ).resolves.toBe(true);
+    expect(hoisted.saveDecisions).toHaveBeenLastCalledWith(
+      'team-a',
+      'agent-alice',
+      'history-scope',
+      { '/repo/file.ts:0': 'accepted' },
+      {},
+      { '/repo/file.ts': {} },
+      history
+    );
+  });
+
   it('does not apply task A decisions after the review scope switches to task B', async () => {
     const store = createSliceStore();
     const pendingFresh = deferred<ReturnType<typeof makeTaskChangeSet>>();
@@ -2363,7 +2396,8 @@ describe('changeReviewSlice task changes', () => {
       'scope-token',
       { '/repo/file.ts:0': 'accepted' },
       { '/repo/file.ts': 'accepted' },
-      { '/repo/file.ts': {} }
+      { '/repo/file.ts': {} },
+      []
     );
   });
 
@@ -2386,7 +2420,8 @@ describe('changeReviewSlice task changes', () => {
         'surviving-scope',
         { '/repo/file.ts:0': 'accepted' },
         {},
-        { '/repo/file.ts': {} }
+        { '/repo/file.ts': {} },
+        []
       );
     } finally {
       vi.useRealTimers();
@@ -2440,7 +2475,8 @@ describe('changeReviewSlice task changes', () => {
         'ordered-scope',
         {},
         { '/repo/file.ts': 'rejected' },
-        { '/repo/file.ts': {} }
+        { '/repo/file.ts': {} },
+        []
       );
     } finally {
       vi.useRealTimers();

@@ -28,6 +28,7 @@ import type {
   RejectResult,
   ReviewFileScope,
   ReviewRenameRecoveryExpectation,
+  ReviewUndoAction,
   SnippetDiff,
   TaskChangeRequestOptions,
   TaskChangeSetV2,
@@ -816,6 +817,7 @@ export interface ReviewAPI {
      * filePath -> (hunkIndex -> contextHash)
      */
     hunkContextHashesByFile?: Record<string, Record<number, string>>;
+    reviewActionHistory: ReviewUndoAction[];
   } | null>;
   saveDecisions: (
     teamName: string,
@@ -823,7 +825,8 @@ export interface ReviewAPI {
     scopeToken: string,
     hunkDecisions: Record<string, HunkDecision>,
     fileDecisions: Record<string, HunkDecision>,
-    hunkContextHashesByFile?: Record<string, Record<number, string>>
+    hunkContextHashesByFile?: Record<string, Record<number, string>>,
+    reviewActionHistory?: ReviewUndoAction[]
   ) => Promise<void>;
   clearDecisions: (teamName: string, scopeKey: string, scopeToken?: string) => Promise<void>;
   loadDraftHistory: (

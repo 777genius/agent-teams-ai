@@ -70,6 +70,7 @@ import type {
   ReviewDecisionPersistenceScope,
   ReviewFileScope,
   ReviewRenameRecoveryExpectation,
+  ReviewUndoAction,
   SnippetDiff,
   TaskChangeRequestOptions,
   TaskChangeSetV2,
@@ -1648,6 +1649,7 @@ async function handleLoadDecisions(
     hunkDecisions: Record<string, HunkDecision>;
     fileDecisions: Record<string, HunkDecision>;
     hunkContextHashesByFile?: Record<string, Record<number, string>>;
+    reviewActionHistory: ReviewUndoAction[];
   } | null>
 > {
   return wrapReviewHandler('loadDecisions', async () => {
@@ -1669,7 +1671,8 @@ async function handleSaveDecisions(
   scopeToken: string,
   hunkDecisions: Record<string, HunkDecision>,
   fileDecisions: Record<string, HunkDecision>,
-  hunkContextHashesByFile: Record<string, Record<number, string>> | null = null
+  hunkContextHashesByFile: Record<string, Record<number, string>> | null = null,
+  reviewActionHistory: ReviewUndoAction[] = []
 ): Promise<IpcResult<void>> {
   return wrapReviewHandler('saveDecisions', async () => {
     const persistenceScope = { scopeKey, scopeToken };
@@ -1679,6 +1682,7 @@ async function handleSaveDecisions(
         hunkDecisions,
         fileDecisions,
         hunkContextHashesByFile: hunkContextHashesByFile ?? undefined,
+        reviewActionHistory,
       });
       await reviewMutationJournal.acknowledge(
         teamName,
