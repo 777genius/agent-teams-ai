@@ -571,7 +571,9 @@ describe("local project integration adapters", () => {
         baseCommit: fixture.targetCommit,
         changedFiles: ["src/not-the-conflict.ts"],
       },
-    })).rejects.toThrow("local_git_integration_merge_conflict_set_mismatch");
+    })).rejects.toThrow(
+      "local_git_integration_merge_conflicts_missing_from_reviewed_patch:src/memory.ts",
+    );
 
     expect((await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])).trim())
       .toBe(fixture.targetCommit);

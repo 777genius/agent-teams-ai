@@ -113,6 +113,107 @@ export async function createMergeFixture(): Promise<{
   };
 }
 
+export async function createSemanticMergeFixture(input: {
+  readonly includeUnrelatedPath?: boolean;
+} = {}): Promise<{
+  readonly rootDir: string;
+  readonly workspacePath: string;
+  readonly sourceCommit: string;
+  readonly targetCommit: string;
+  readonly patchPath: string;
+  readonly patchSha256: string;
+  readonly changedFiles: readonly string[];
+}> {
+  const rootDir = await mkdtemp(join(tmpdir(), "project-integration-semantic-merge-"));
+  tempRoots.push(rootDir);
+  const workspacePath = join(rootDir, "workspace");
+  const remotePath = join(rootDir, "remote.git");
+  await mkdir(join(workspacePath, ".github", "workflows"), { recursive: true });
+  await git(workspacePath, ["init", "-b", "main"]);
+  await git(workspacePath, ["config", "user.email", "test@example.com"]);
+  await git(workspacePath, ["config", "user.name", "Test User"]);
+  await writeFile(join(workspacePath, "package.json"), '{"policy":"initial"}\n');
+  await writeFile(
+    join(workspacePath, ".github", "workflows", "ci.yml"),
+    "name: CI\njobs:\n  test:\n    runs-on: ubuntu-latest\n",
+  );
+  await writeFile(
+    join(workspacePath, "pnpm-workspace.yaml"),
+    "packages:\n  - packages/*\n",
+  );
+  await writeFile(join(workspacePath, "README.md"), "initial\n");
+  await git(workspacePath, ["add", "."]);
+  await git(workspacePath, ["commit", "-m", "chore: initial"]);
+  await execFileAsync("git", ["init", "--bare", remotePath]);
+  await git(workspacePath, ["remote", "add", "origin", remotePath]);
+
+  await git(workspacePath, ["checkout", "-b", "base"]);
+  await writeFile(join(workspacePath, "package.json"), '{"policy":"base"}\n');
+  await writeFile(
+    join(workspacePath, ".github", "workflows", "ci.yml"),
+    "name: CI\njobs:\n  test:\n    runs-on: ubuntu-latest\n    timeout-minutes: 20\n",
+  );
+  await writeFile(
+    join(workspacePath, "pnpm-workspace.yaml"),
+    "packages:\n  - packages/*\nallowBuilds:\n  better-sqlite3: true\n",
+  );
+  await git(workspacePath, ["add", "."]);
+  await git(workspacePath, ["commit", "-m", "feat: update base policy"]);
+  const sourceCommit = (await gitOutput(workspacePath, ["rev-parse", "HEAD"])).trim();
+  await git(workspacePath, ["push", "origin", "base"]);
+
+  await git(workspacePath, ["checkout", "main"]);
+  await writeFile(join(workspacePath, "package.json"), '{"policy":"target"}\n');
+  await writeFile(
+    join(workspacePath, ".github", "workflows", "ci.yml"),
+    "name: Hosted Web CI\njobs:\n  test:\n    runs-on: ubuntu-latest\n",
+  );
+  await writeFile(
+    join(workspacePath, "pnpm-workspace.yaml"),
+    "packages:\n  - packages/*\n  - apps/*\n",
+  );
+  await git(workspacePath, ["add", "."]);
+  await git(workspacePath, ["commit", "-m", "feat: update target policy"]);
+  const targetCommit = (await gitOutput(workspacePath, ["rev-parse", "HEAD"])).trim();
+  await git(workspacePath, ["push", "origin", "main"]);
+
+  await writeFile(
+    join(workspacePath, "package.json"),
+    '{"policy":"hosted-web-merged"}\n',
+  );
+  await writeFile(
+    join(workspacePath, ".github", "workflows", "ci.yml"),
+    "name: Hosted Web CI\njobs:\n  test:\n    runs-on: ubuntu-latest\n    timeout-minutes: 20\n",
+  );
+  await writeFile(
+    join(workspacePath, "pnpm-workspace.yaml"),
+    "packages:\n  - packages/*\n  - apps/*\nallowBuilds:\n  better-sqlite3: true\n",
+  );
+  const changedFiles = [
+    ".github/workflows/ci.yml",
+    "package.json",
+    "pnpm-workspace.yaml",
+    ...(input.includeUnrelatedPath ? ["README.md"] : []),
+  ];
+  if (input.includeUnrelatedPath) {
+    await writeFile(join(workspacePath, "README.md"), "unrelated semantic edit\n");
+  }
+  const patch = await gitOutput(workspacePath, ["diff", "--binary", "--", ...changedFiles]);
+  const patchPath = join(rootDir, "reviewed-semantic-resolution.patch");
+  await writeFile(patchPath, patch);
+  const patchSha256 = createHash("sha256").update(patch).digest("hex");
+  await git(workspacePath, ["checkout", "--", ...changedFiles]);
+  return {
+    rootDir,
+    workspacePath,
+    sourceCommit,
+    targetCommit,
+    patchPath,
+    patchSha256,
+    changedFiles,
+  };
+}
+
 export async function createCleanMergeFixture(): Promise<{
   readonly rootDir: string;
   readonly workspacePath: string;

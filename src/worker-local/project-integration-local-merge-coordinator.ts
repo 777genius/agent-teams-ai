@@ -9,6 +9,7 @@ import {
   type IntegrationAttempt,
   type WorkerOutput,
 } from "@vioxen/subscription-runtime/worker-core";
+import { inspectReviewedMergeScope } from "./project-integration-local-merge-scope";
 
 export type LocalGitMergeWorkerOutput = Pick<WorkerOutput, "workspacePath"> &
   Partial<Omit<WorkerOutput, "workspacePath">>;
@@ -183,25 +184,33 @@ export async function applyReviewedMerge(input: {
       ["diff", "--name-only", "--diff-filter=U", "-z"],
       workspacePath,
     );
-    if (!sameFiles(conflictFiles, input.workerOutput.changedFiles)) {
-      throw new Error(
-        `local_git_integration_merge_conflict_set_mismatch:expected=${
-          uniqueSorted(input.workerOutput.changedFiles).join(",")
-        };actual=${conflictFiles.join(",")}`,
-      );
-    }
     const mergeFootprint = (await runtime.getStatus(workspacePath)).dirtyFiles;
     if (!includesAllFiles(mergeFootprint, conflictFiles)) {
       throw new Error(
         "local_git_integration_merge_conflicts_missing_from_source_footprint",
       );
     }
-    if (conflictFiles.length === 0) {
-      if (input.workerOutput.changedFiles.length !== 0) {
-        throw new Error(
-          "local_git_integration_clean_merge_reviewed_changes_must_be_empty",
-        );
-      }
+    const reviewedScope = await inspectReviewedMergeScope({
+      runtime,
+      workspacePath,
+      targetCommit: merge.expectedTargetCommit,
+      sourceCommit: merge.sourceCommit,
+      conflictFiles,
+      mergeFootprint,
+      reviewedFiles: input.workerOutput.changedFiles,
+    });
+    if (
+      reviewedScope.semanticFiles.length > 0 &&
+      fetchedHead !== merge.sourceCommit.toLowerCase()
+    ) {
+      throw new Error(
+        "local_git_integration_merge_semantic_source_head_mismatch",
+      );
+    }
+    if (
+      conflictFiles.length === 0 &&
+      input.workerOutput.changedFiles.length === 0
+    ) {
       if (!sameFiles(mergeFootprint, input.attempt.expectedFiles)) {
         throw new Error(
           `local_git_integration_clean_merge_footprint_mismatch:expected=${
@@ -218,10 +227,10 @@ export async function applyReviewedMerge(input: {
       await runtime.assertPatchSha256(patchPath, emptyPatchSha256);
       return { changedFiles: mergeFootprint };
     }
-    await restoreConflictFilesToFirstParent(
+    await restoreFilesToFirstParent(
       runtime,
       workspacePath,
-      conflictFiles,
+      input.workerOutput.changedFiles,
     );
 
     const patchPath = await runtime.canonicalWorkerPatch(input.workerOutput);
@@ -230,10 +239,10 @@ export async function applyReviewedMerge(input: {
       input.workerOutput.patchSha256,
     );
     const patchFiles = await runtime.patchChangedFiles(patchPath, workspacePath);
-    if (!sameFiles(patchFiles, conflictFiles)) {
+    if (!sameFiles(patchFiles, input.workerOutput.changedFiles)) {
       throw new Error(
         `local_git_integration_merge_resolution_set_mismatch:expected=${
-          conflictFiles.join(",")
+          uniqueSorted(input.workerOutput.changedFiles).join(",")
         };actual=${patchFiles.join(",")}`,
       );
     }
@@ -262,10 +271,14 @@ export async function applyReviewedMerge(input: {
       );
     }
     const changedFiles = (await runtime.getStatus(workspacePath)).dirtyFiles;
-    if (!sameFiles(changedFiles, mergeFootprint)) {
+    const expectedChangedFiles = uniqueSorted([
+      ...mergeFootprint,
+      ...input.workerOutput.changedFiles,
+    ]);
+    if (!sameFiles(changedFiles, expectedChangedFiles)) {
       throw new Error(
         `local_git_integration_merge_footprint_changed:expected=${
-          uniqueSorted(mergeFootprint).join(",")
+          expectedChangedFiles.join(",")
         };actual=${uniqueSorted(changedFiles).join(",")}`,
       );
     }
@@ -478,12 +491,12 @@ function hasMergeHead(
   ).then((result) => result.exitCode === 0);
 }
 
-async function restoreConflictFilesToFirstParent(
+async function restoreFilesToFirstParent(
   runtime: Pick<LocalGitMergeRuntime, "git" | "tryGit">,
   workspacePath: string,
-  conflictFiles: readonly string[],
+  files: readonly string[],
 ): Promise<void> {
-  for (const file of conflictFiles) {
+  for (const file of files) {
     const tracked = await runtime.tryGit(
       ["cat-file", "-e", `HEAD:${file}`],
       workspacePath,
