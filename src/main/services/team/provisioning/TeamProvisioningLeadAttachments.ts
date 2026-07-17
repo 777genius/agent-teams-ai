@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import {
   buildClaudeAttachmentDeliveryParts,
   buildCodexNativeAttachmentDeliveryParts,
@@ -5,6 +7,20 @@ import {
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type { AttachmentPayload } from '@shared/types';
+
+/**
+ * Deterministic artifact-dir key for a codex-lead attachment delivery. Derived
+ * from the run and the composed attachment identities (each attachment.id is a
+ * stable uuid assigned once at compose time), so a runtime RETRY of the same
+ * send resolves to the SAME on-disk artifact dir instead of leaking a fresh
+ * `Date.now()` dir on every attempt. Distinct composes carry distinct
+ * attachment ids and therefore still get distinct dirs.
+ */
+function buildCodexLeadAttachmentMessageId(runId: string, attachments: AttachmentPayload[]): string {
+  const identity = attachments.map((attachment) => attachment.id).join(',');
+  const digest = createHash('sha256').update(`${runId}\n${identity}`).digest('hex').slice(0, 16);
+  return `lead_${runId}_${digest}`;
+}
 
 export interface LeadAttachmentInput {
   data: string;
@@ -132,7 +148,7 @@ export async function buildCodexLeadAttachmentContentBlocks(input: {
 }): Promise<Record<string, unknown>[]> {
   const prepared = await buildCodexNativeAttachmentDeliveryParts({
     teamName: input.teamName,
-    messageId: `lead_${input.runId}_${Date.now()}`,
+    messageId: buildCodexLeadAttachmentMessageId(input.runId, input.attachments),
     text: input.text,
     attachments: input.attachments,
   });

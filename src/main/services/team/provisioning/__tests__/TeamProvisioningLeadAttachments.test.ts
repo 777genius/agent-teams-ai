@@ -135,7 +135,6 @@ describe('lead attachment helpers', () => {
   });
 
   it('uses Codex native image blocks only for Codex providers with attachments', async () => {
-    vi.spyOn(Date, 'now').mockReturnValue(123456);
     const attachments = toLeadAttachmentPayloads([
       { data: Buffer.from('img').toString('base64'), mimeType: 'image/png', filename: 'img.png' },
     ]);
@@ -170,10 +169,60 @@ describe('lead attachment helpers', () => {
 
     expect(buildCodexNativeAttachmentDeliveryParts).toHaveBeenCalledWith({
       teamName: 'Team',
-      messageId: 'lead_run-1_123456',
+      messageId: expect.stringMatching(/^lead_run-1_[0-9a-f]{16}$/),
       text: 'hello',
       attachments,
     });
     expect(buildClaudeAttachmentDeliveryParts).not.toHaveBeenCalled();
+  });
+
+  it('derives a stable codex-lead artifact messageId so runtime retries reuse the same dir', async () => {
+    const attachments = toLeadAttachmentPayloads([
+      { data: Buffer.from('img').toString('base64'), mimeType: 'image/png', filename: 'img.png' },
+    ]);
+    const codexMock = vi.mocked(buildCodexNativeAttachmentDeliveryParts);
+
+    await buildLeadMessageStdinPayload({
+      teamName: 'Team',
+      runId: 'run-1',
+      providerId: 'codex',
+      text: 'hello',
+      attachments,
+    });
+    const firstId = codexMock.mock.calls[0]?.[0]?.messageId;
+
+    // A runtime retry re-delivers the SAME persisted attachments (stable ids).
+    codexMock.mockClear();
+    await buildLeadMessageStdinPayload({
+      teamName: 'Team',
+      runId: 'run-1',
+      providerId: 'codex',
+      text: 'hello',
+      attachments,
+    });
+    const retryId = codexMock.mock.calls[0]?.[0]?.messageId;
+
+    expect(firstId).toMatch(/^lead_run-1_[0-9a-f]{16}$/);
+    expect(retryId).toBe(firstId); // idempotent: no fresh Date.now() dir per attempt
+
+    // A different compose (distinct attachment ids) resolves to a different dir.
+    codexMock.mockClear();
+    const otherAttachments: AttachmentPayload[] = [
+      {
+        id: 'different-uuid',
+        filename: 'img.png',
+        mimeType: 'image/png',
+        size: 3,
+        data: Buffer.from('img').toString('base64'),
+      },
+    ];
+    await buildLeadMessageStdinPayload({
+      teamName: 'Team',
+      runId: 'run-1',
+      providerId: 'codex',
+      text: 'hello',
+      attachments: otherAttachments,
+    });
+    expect(codexMock.mock.calls[0]?.[0]?.messageId).not.toBe(firstId);
   });
 });
