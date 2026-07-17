@@ -19,6 +19,7 @@ import {
 } from './reviewDiffSafety';
 
 import type { EditorView } from '@codemirror/view';
+import type { ReviewSerializedEditorState } from '@features/change-review-history/contracts';
 import type { FileChangeWithContent } from '@shared/types';
 import type { EditorSelectionInfo } from '@shared/types/editor';
 import type { FileChangeSummary } from '@shared/types/review';
@@ -39,6 +40,9 @@ interface FileSectionDiffProps {
   ) => boolean | void;
   onFullyViewed: (filePath: string) => void;
   onContentChanged: (filePath: string, content: string, previousContent?: string) => void;
+  serializedState?: ReviewSerializedEditorState;
+  onSerializedStateChanged: (filePath: string, state: ReviewSerializedEditorState) => void;
+  onSerializedStateRestoreError: (filePath: string, error: unknown) => void;
   onEditorViewReady: (filePath: string, view: EditorView | null) => void;
   discardCounter: number;
   autoViewed: boolean;
@@ -59,6 +63,9 @@ export const FileSectionDiff = ({
   onHunkRejected,
   onFullyViewed,
   onContentChanged,
+  serializedState,
+  onSerializedStateChanged,
+  onSerializedStateRestoreError,
   onEditorViewReady,
   discardCounter,
   autoViewed,
@@ -266,6 +273,11 @@ export const FileSectionDiff = ({
           onHunkRejected={(idx, before, after) => onHunkRejected(file.filePath, idx, before, after)}
           onContentChanged={(content, previousContent) =>
             onContentChanged(file.filePath, content, previousContent)
+          }
+          serializedState={serializedState}
+          onSerializedStateChanged={(state) => onSerializedStateChanged(file.filePath, state)}
+          onSerializedStateRestoreError={(error) =>
+            onSerializedStateRestoreError(file.filePath, error)
           }
           editorViewRef={localEditorViewRef}
           onViewChange={handleViewChange}

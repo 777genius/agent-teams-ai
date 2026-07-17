@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { rejectChunk } from '@codemirror/merge';
+import { redoDepth, undoDepth } from '@codemirror/commands';
+import { Transaction } from '@codemirror/state';
+import { serializeReviewDraftEditorState } from '@features/change-review-history/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
@@ -32,6 +34,7 @@ import {
   computeChunkIndexAtPos,
   ignoreNextReviewDocChange,
   rejectAllChunks,
+  rejectChunk,
 } from './CodeMirrorDiffUtils';
 import { ContinuousScrollView } from './ContinuousScrollView';
 import { FileEditTimeline } from './FileEditTimeline';
@@ -49,7 +52,6 @@ import {
   isReviewFileFullyRejected,
   popOrderedReviewAction,
   reconcileReviewDecisionRecordsAfterApply,
-  resolveDraftBaselineAfterSave,
   resolveReviewFileIsNew,
   restoreReviewDecisionRecordsForFile,
   restoreReviewDecisionRecordsForFiles,
@@ -72,6 +74,10 @@ import { ViewedProgressBar } from './ViewedProgressBar';
 
 import type { ReviewDecisionRecords } from './reviewActionState';
 import type { EditorView } from '@codemirror/view';
+import type {
+  ReviewDraftHistoryEntry,
+  ReviewSerializedEditorState,
+} from '@features/change-review-history/contracts';
 import type {
   FileChangeSummary,
   HunkDecision,
@@ -113,6 +119,19 @@ interface RecentDiskUndoAction {
 interface RecentReviewWrite {
   at: number;
   expectedContent: string | null;
+}
+
+interface DraftHistoryHydrationState {
+  key: string | null;
+  status: 'idle' | 'loading' | 'loaded' | 'error';
+}
+
+interface PendingDraftHistoryWrite {
+  hydrationKey: string;
+  teamName: string;
+  scopeKey: string;
+  scopeToken: string;
+  entry: Omit<ReviewDraftHistoryEntry, 'updatedAt'>;
 }
 
 type ReviewUndoAction =
@@ -298,6 +317,14 @@ export const ChangeReviewDialog = ({
       changeSet: activeChangeSet,
     });
   }, [activeChangeSet, memberName, mode, taskChangeRequestOptions, taskId]);
+  const [draftHistoryEntries, setDraftHistoryEntries] = useState<
+    Record<string, ReviewDraftHistoryEntry>
+  >({});
+  const [draftHistoryHydration, setDraftHistoryHydration] = useState<DraftHistoryHydrationState>({
+    key: null,
+    status: 'idle',
+  });
+  const [draftHistoryRetryNonce, setDraftHistoryRetryNonce] = useState(0);
   const decisionHydrationKey = decisionScopeToken
     ? `${teamName}:${decisionScopeKey}:${decisionScopeToken}`
     : null;
@@ -309,6 +336,19 @@ export const ChangeReviewDialog = ({
   const decisionHydrationReady = decisionHydrationGuard === 'ready';
   const decisionHydrationFailed = decisionHydrationGuard === 'error';
   const decisionHydrationPending = decisionHydrationGuard === 'pending';
+  const draftHistoryHydrationReady =
+    decisionHydrationKey === null ||
+    (draftHistoryHydration.key === decisionHydrationKey &&
+      draftHistoryHydration.status === 'loaded');
+  const draftHistoryHydrationPending =
+    decisionHydrationKey !== null &&
+    (draftHistoryHydration.key !== decisionHydrationKey ||
+      draftHistoryHydration.status === 'idle' ||
+      draftHistoryHydration.status === 'loading');
+  const draftHistoryHydrationFailed =
+    decisionHydrationKey !== null &&
+    draftHistoryHydration.key === decisionHydrationKey &&
+    draftHistoryHydration.status === 'error';
 
   // Active file from scroll-spy (replaces selectedReviewFilePath for continuous scroll)
   const [activeFilePath, setActiveFilePath] = useState<string | null>(null);
@@ -368,6 +408,12 @@ export const ChangeReviewDialog = ({
   // Exact disk state on which each manual draft started. Map.has() distinguishes
   // a genuinely missing file (null baseline) from an uncaptured baseline.
   const draftDiskBaselineRef = useRef(new Map<string, string | null>());
+  const draftHistoryEntriesRef = useRef<Record<string, ReviewDraftHistoryEntry>>({});
+  const draftHistoryWriteChainsRef = useRef(new Map<string, Promise<void>>());
+  const pendingDraftHistoryWritesRef = useRef(new Map<string, PendingDraftHistoryWrite>());
+  const draftHistoryWriteErrorsRef = useRef(new Map<string, unknown>());
+  const expectedDraftHistoryKeyRef = useRef<string | null>(null);
+  const suppressedDraftHistoryFilesRef = useRef(new Set<string>());
 
   // Proxy ref for useDiffNavigation (points to active file's editor)
   const activeEditorViewRef = useRef<EditorView | null>(null);
@@ -378,6 +424,211 @@ export const ChangeReviewDialog = ({
       recentReviewWritesRef.current.set(normalizePathForComparison(filePath), {
         at: Date.now(),
         expectedContent,
+      });
+    },
+    []
+  );
+
+  useEffect(() => {
+    expectedDraftHistoryKeyRef.current = decisionHydrationKey;
+  }, [decisionHydrationKey]);
+
+  const startDraftHistoryDrain = useCallback((writeKey: string): Promise<void> => {
+    const active = draftHistoryWriteChainsRef.current.get(writeKey);
+    if (active) return active;
+
+    let failedRevision: number | null = null;
+    const drain = (async () => {
+      while (true) {
+        const pending = pendingDraftHistoryWritesRef.current.get(writeKey);
+        if (!pending) return;
+        pendingDraftHistoryWritesRef.current.delete(writeKey);
+        try {
+          const saved = await api.review.saveDraftHistoryEntry(
+            pending.teamName,
+            pending.scopeKey,
+            pending.scopeToken,
+            pending.entry
+          );
+          draftHistoryWriteErrorsRef.current.delete(writeKey);
+          const current = draftHistoryEntriesRef.current[pending.entry.filePath];
+          if (
+            expectedDraftHistoryKeyRef.current === pending.hydrationKey &&
+            current?.revision === saved.revision
+          ) {
+            const updatedEntries = {
+              ...draftHistoryEntriesRef.current,
+              [pending.entry.filePath]: saved,
+            };
+            draftHistoryEntriesRef.current = updatedEntries;
+            setDraftHistoryEntries(updatedEntries);
+          }
+        } catch (error) {
+          failedRevision = pending.entry.revision;
+          if (!pendingDraftHistoryWritesRef.current.has(writeKey)) {
+            pendingDraftHistoryWritesRef.current.set(writeKey, pending);
+          }
+          draftHistoryWriteErrorsRef.current.set(writeKey, error);
+          if (expectedDraftHistoryKeyRef.current === pending.hydrationKey) {
+            useStore.setState({
+              applyError: 'Unable to save manual edit history. Retry Save or keep Changes open.',
+            });
+          }
+          throw error;
+        }
+      }
+    })();
+    draftHistoryWriteChainsRef.current.set(writeKey, drain);
+    void drain
+      .catch(() => undefined)
+      .finally(() => {
+        if (draftHistoryWriteChainsRef.current.get(writeKey) === drain) {
+          draftHistoryWriteChainsRef.current.delete(writeKey);
+        }
+        const pending = pendingDraftHistoryWritesRef.current.get(writeKey);
+        if (pending && failedRevision !== null && pending.entry.revision > failedRevision) {
+          void startDraftHistoryDrain(writeKey);
+        }
+      });
+    return drain;
+  }, []);
+
+  const enqueueDraftHistoryWrite = useCallback(
+    (entry: Omit<ReviewDraftHistoryEntry, 'updatedAt'>): void => {
+      if (!decisionHydrationKey || !decisionScopeToken) return;
+      const writeKey = `${decisionHydrationKey}\0${entry.filePath}`;
+      pendingDraftHistoryWritesRef.current.set(writeKey, {
+        hydrationKey: decisionHydrationKey,
+        teamName,
+        scopeKey: decisionScopeKey,
+        scopeToken: decisionScopeToken,
+        entry,
+      });
+      void startDraftHistoryDrain(writeKey);
+    },
+    [decisionHydrationKey, decisionScopeKey, decisionScopeToken, startDraftHistoryDrain, teamName]
+  );
+
+  const flushDraftHistoryWrites = useCallback(async (): Promise<boolean> => {
+    if (!decisionHydrationKey) return true;
+    const prefix = `${decisionHydrationKey}\0`;
+    const pendingKeys = [...pendingDraftHistoryWritesRef.current.keys()].filter((key) =>
+      key.startsWith(prefix)
+    );
+    for (const key of pendingKeys) void startDraftHistoryDrain(key);
+
+    while (true) {
+      const writes = [...draftHistoryWriteChainsRef.current.entries()]
+        .filter(([key]) => key.startsWith(prefix))
+        .map(([, write]) => write);
+      if (writes.length === 0) break;
+      await Promise.allSettled(writes);
+    }
+    const hasPending = [...pendingDraftHistoryWritesRef.current.keys()].some((key) =>
+      key.startsWith(prefix)
+    );
+    const hasErrors = [...draftHistoryWriteErrorsRef.current.keys()].some((key) =>
+      key.startsWith(prefix)
+    );
+    return !hasPending && !hasErrors;
+  }, [decisionHydrationKey, startDraftHistoryDrain]);
+
+  const clearDraftHistoryForFile = useCallback(
+    (filePath: string): Promise<void> => {
+      const normalizedPath = normalizePathForComparison(filePath);
+      suppressedDraftHistoryFilesRef.current.add(normalizedPath);
+      const entries = { ...draftHistoryEntriesRef.current };
+      delete entries[filePath];
+      draftHistoryEntriesRef.current = entries;
+      setDraftHistoryEntries(entries);
+      if (!decisionHydrationKey || !decisionScopeToken) return Promise.resolve();
+
+      const writeKey = `${decisionHydrationKey}\0${filePath}`;
+      pendingDraftHistoryWritesRef.current.delete(writeKey);
+      const previous = draftHistoryWriteChainsRef.current.get(writeKey) ?? Promise.resolve();
+      const clear = previous
+        .catch(() => undefined)
+        .then(() =>
+          api.review.clearDraftHistory(teamName, decisionScopeKey, decisionScopeToken, filePath)
+        )
+        .then(() => {
+          draftHistoryWriteErrorsRef.current.delete(writeKey);
+        });
+      draftHistoryWriteChainsRef.current.set(writeKey, clear);
+      void clear
+        .catch((error) => {
+          draftHistoryWriteErrorsRef.current.set(writeKey, error);
+          if (expectedDraftHistoryKeyRef.current === decisionHydrationKey) {
+            useStore.setState({
+              applyError: `Unable to discard saved manual edit history: ${String(error)}`,
+            });
+          }
+        })
+        .finally(() => {
+          if (draftHistoryWriteChainsRef.current.get(writeKey) === clear) {
+            draftHistoryWriteChainsRef.current.delete(writeKey);
+          }
+          if (pendingDraftHistoryWritesRef.current.has(writeKey)) {
+            void startDraftHistoryDrain(writeKey);
+          }
+        });
+      return clear;
+    },
+    [decisionHydrationKey, decisionScopeKey, decisionScopeToken, startDraftHistoryDrain, teamName]
+  );
+
+  const publishDraftHistoryCheckpoint = useCallback(
+    (
+      filePath: string,
+      editorState: ReviewSerializedEditorState,
+      diskBaseline: string | null
+    ): void => {
+      if (!decisionHydrationKey || !draftHistoryHydrationReady) return;
+      const current = draftHistoryEntriesRef.current[filePath];
+      if (
+        current?.diskBaseline === diskBaseline &&
+        JSON.stringify(current.editorState) === JSON.stringify(editorState)
+      ) {
+        return;
+      }
+      const entry: ReviewDraftHistoryEntry = {
+        filePath,
+        codec: 'codemirror-history-v1',
+        revision: (current?.revision ?? 0) + 1,
+        diskBaseline,
+        editorState,
+        updatedAt: new Date().toISOString(),
+      };
+      const entries = { ...draftHistoryEntriesRef.current, [filePath]: entry };
+      draftHistoryEntriesRef.current = entries;
+      setDraftHistoryEntries(entries);
+      enqueueDraftHistoryWrite(entry);
+    },
+    [decisionHydrationKey, draftHistoryHydrationReady, enqueueDraftHistoryWrite]
+  );
+
+  const handleSerializedStateChanged = useCallback(
+    (filePath: string, editorState: ReviewSerializedEditorState): void => {
+      const baselineKey = normalizePathForComparison(filePath);
+      if (suppressedDraftHistoryFilesRef.current.has(baselineKey)) return;
+      const existing = draftHistoryEntriesRef.current[filePath];
+      if (!draftDiskBaselineRef.current.has(baselineKey)) {
+        if (!existing) return;
+        draftDiskBaselineRef.current.set(baselineKey, existing.diskBaseline);
+      }
+      publishDraftHistoryCheckpoint(
+        filePath,
+        editorState,
+        draftDiskBaselineRef.current.get(baselineKey) ?? null
+      );
+    },
+    [publishDraftHistoryCheckpoint]
+  );
+
+  const handleSerializedStateRestoreError = useCallback(
+    (filePath: string, error: unknown): void => {
+      useStore.setState({
+        applyError: `Saved manual edit history for ${filePath} is incompatible and was not applied: ${String(error)}`,
       });
     },
     []
@@ -443,6 +694,9 @@ export const ChangeReviewDialog = ({
     lastFocusedEditorRef.current = null;
     recentReviewWritesRef.current.clear();
     draftDiskBaselineRef.current.clear();
+    draftHistoryEntriesRef.current = {};
+    setDraftHistoryEntries({});
+    setDraftHistoryHydration({ key: null, status: 'idle' });
     undoInFlightRef.current = false;
     closingRef.current = false;
     setUndoing(false);
@@ -450,6 +704,94 @@ export const ChangeReviewDialog = ({
     setClosing(false);
     setFilesApplying(new Set());
   }, [changeSetEpoch, scopeKey, teamName]);
+
+  useEffect(() => {
+    if (!open || !decisionHydrationKey || !decisionScopeToken || !activeChangeSet) {
+      if (!decisionHydrationKey) {
+        setDraftHistoryHydration({ key: null, status: 'idle' });
+      }
+      return;
+    }
+    let cancelled = false;
+    const hydrationKey = decisionHydrationKey;
+    setDraftHistoryHydration({ key: hydrationKey, status: 'loading' });
+
+    void (async () => {
+      try {
+        const snapshot = await api.review.loadDraftHistory(
+          teamName,
+          decisionScopeKey,
+          decisionScopeToken
+        );
+        if (cancelled || expectedDraftHistoryKeyRef.current !== hydrationKey) return;
+
+        const allowedFiles = new Map(
+          activeChangeSet.files.map((file) => [normalizePathForComparison(file.filePath), file])
+        );
+        const recoveredEntries: Record<string, ReviewDraftHistoryEntry> = {};
+        const recoveredDrafts: Record<string, string> = {};
+        const externalChanges: Record<string, { type: 'change' }> = {};
+
+        for (const entry of Object.values(snapshot?.entries ?? {})) {
+          const file = allowedFiles.get(normalizePathForComparison(entry.filePath));
+          if (file?.filePath !== entry.filePath) continue;
+          const baselineKey = normalizePathForComparison(file.filePath);
+          const conflict = await api.review.checkConflict(
+            reviewScope,
+            file.filePath,
+            entry.diskBaseline ?? ''
+          );
+          if (cancelled || expectedDraftHistoryKeyRef.current !== hydrationKey) return;
+          const diskMatchesBaseline =
+            entry.diskBaseline === null
+              ? conflict.hasConflict && conflict.conflictContent === null
+              : !conflict.hasConflict;
+
+          recoveredEntries[file.filePath] = entry;
+          draftDiskBaselineRef.current.set(baselineKey, entry.diskBaseline);
+          if (!diskMatchesBaseline || entry.editorState.doc !== entry.diskBaseline) {
+            recoveredDrafts[file.filePath] = entry.editorState.doc;
+          }
+          if (!diskMatchesBaseline) externalChanges[file.filePath] = { type: 'change' };
+        }
+
+        draftHistoryEntriesRef.current = recoveredEntries;
+        setDraftHistoryEntries(recoveredEntries);
+        useStore.setState((state) => ({
+          editedContents: { ...state.editedContents, ...recoveredDrafts },
+          reviewExternalChangesByFile: {
+            ...state.reviewExternalChangesByFile,
+            ...externalChanges,
+          },
+          applyError:
+            Object.keys(externalChanges).length > 0
+              ? 'Recovered manual edits are based on files that changed on disk. Review each conflict before saving.'
+              : state.applyError,
+        }));
+        setDraftHistoryHydration({ key: hydrationKey, status: 'loaded' });
+      } catch (error) {
+        if (cancelled || expectedDraftHistoryKeyRef.current !== hydrationKey) return;
+        setDraftHistoryHydration({ key: hydrationKey, status: 'error' });
+        useStore.setState({
+          applyError: `Unable to load saved manual edit history: ${String(error)}`,
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeChangeSet,
+    changeSetEpoch,
+    decisionHydrationKey,
+    decisionScopeKey,
+    decisionScopeToken,
+    open,
+    reviewScope,
+    teamName,
+    draftHistoryRetryNonce,
+  ]);
 
   const pushReviewUndoAction = useCallback((action: ReviewUndoAction): void => {
     const previous = reviewUndoActionsRef.current;
@@ -541,14 +883,17 @@ export const ChangeReviewDialog = ({
     closing,
   });
   const reviewActionsBusy =
-    reviewMutationBusy || (decisionHydrationKey !== null && !decisionHydrationReady);
+    reviewMutationBusy ||
+    (decisionHydrationKey !== null && (!decisionHydrationReady || !draftHistoryHydrationReady));
 
   const hasReviewActionInFlight = useCallback(() => {
     const state = useStore.getState();
     const hydrationReady =
       decisionHydrationKey === null ||
       (state.decisionHydrationScopeKey === decisionHydrationKey &&
-        state.decisionHydrationStatus === 'loaded');
+        state.decisionHydrationStatus === 'loaded' &&
+        draftHistoryHydration.key === decisionHydrationKey &&
+        draftHistoryHydration.status === 'loaded');
     return (
       !hydrationReady ||
       isReviewActionLocked({
@@ -558,7 +903,7 @@ export const ChangeReviewDialog = ({
         closing: closingRef.current,
       })
     );
-  }, [decisionHydrationKey]);
+  }, [decisionHydrationKey, draftHistoryHydration.key, draftHistoryHydration.status]);
 
   const hasReviewDraft = useCallback(
     (filePath: string): boolean => filePath in useStore.getState().editedContents,
@@ -584,7 +929,10 @@ export const ChangeReviewDialog = ({
     const view = editorViewMapRef.current.get(filePath);
     if (!view?.dom.isConnected) return;
     ignoreNextReviewDocChange(view);
-    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: content } });
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: content },
+      annotations: Transaction.addToHistory.of(false),
+    });
   }, []);
 
   const dropHunkUndoMetadata = useCallback((filePath: string, originalIndex: number): void => {
@@ -728,7 +1076,11 @@ export const ChangeReviewDialog = ({
         if (!file) return;
         const changeType =
           event.type === 'create' ? 'add' : event.type === 'delete' ? 'unlink' : 'change';
-        if (file.filePath in state.editedContents) {
+        const durableDraftHistory = draftHistoryEntriesRef.current[file.filePath];
+        if (file.filePath in state.editedContents || durableDraftHistory) {
+          if (!(file.filePath in state.editedContents) && durableDraftHistory) {
+            state.updateEditedContent(file.filePath, durableDraftHistory.editorState.doc);
+          }
           state.markReviewFileExternallyChanged(file.filePath, changeType);
           return;
         }
@@ -1638,6 +1990,7 @@ export const ChangeReviewDialog = ({
     (filePath: string, content: string, previousContent?: string) => {
       reviewRedoBlockedRef.current = false;
       const baselineKey = normalizePathForComparison(filePath);
+      suppressedDraftHistoryFilesRef.current.delete(baselineKey);
       if (!draftDiskBaselineRef.current.has(baselineKey)) {
         const fileContent = fileContents[filePath] ?? null;
         if (isReviewFileMissingOnDisk(fileContent)) {
@@ -1659,9 +2012,14 @@ export const ChangeReviewDialog = ({
           if (baseline != null) draftDiskBaselineRef.current.set(baselineKey, baseline);
         }
       }
-      updateEditedContent(filePath, content);
+      const diskBaseline = draftDiskBaselineRef.current.get(baselineKey);
+      if (diskBaseline !== null && diskBaseline !== undefined && content === diskBaseline) {
+        discardFileEdits(filePath);
+      } else {
+        updateEditedContent(filePath, content);
+      }
     },
-    [activeChangeSet, fileContents, updateEditedContent]
+    [activeChangeSet, discardFileEdits, fileContents, updateEditedContent]
   );
 
   const handleFullyViewed = useCallback(
@@ -1703,16 +2061,17 @@ export const ChangeReviewDialog = ({
       await saveEditedFile(filePath, reviewScope, expectedCurrentContent);
       const state = useStore.getState();
       if (state.changeSetEpoch === operationEpoch && !state.applyError) {
-        const nextBaseline = resolveDraftBaselineAfterSave(
-          contentToSave,
-          state.editedContents[filePath]
-        );
-        if (nextBaseline === undefined) {
-          draftDiskBaselineRef.current.delete(baselineKey);
-        } else {
-          // A newer edit arrived while Save was in flight. Its next CAS baseline is
-          // the exact content that this completed Save just published.
-          draftDiskBaselineRef.current.set(baselineKey, nextBaseline);
+        // Keep the exact saved baseline even when the buffer is clean. Native history is
+        // still valuable: Undo after Save (or restart) should produce a dirty draft.
+        draftDiskBaselineRef.current.set(baselineKey, contentToSave);
+        const serializedState = draftHistoryEntriesRef.current[filePath]?.editorState;
+        if (serializedState) {
+          publishDraftHistoryCheckpoint(filePath, serializedState, contentToSave);
+          if (!(await flushDraftHistoryWrites())) {
+            useStore.setState({
+              applyError: 'The file was saved, but its durable Undo history could not be updated.',
+            });
+          }
         }
         clearReviewActionHistoryForFile(filePath);
         markRecentReviewWrite(filePath, contentToSave);
@@ -1724,6 +2083,8 @@ export const ChangeReviewDialog = ({
       saveEditedFile,
       reviewScope,
       markRecentReviewWrite,
+      publishDraftHistoryCheckpoint,
+      flushDraftHistoryWrites,
     ]
   );
 
@@ -1740,14 +2101,16 @@ export const ChangeReviewDialog = ({
         await saveEditedFile(filePath, reviewScope, null);
         const state = useStore.getState();
         if (state.changeSetEpoch === operationEpoch && !state.applyError) {
-          const nextBaseline = resolveDraftBaselineAfterSave(
-            content,
-            state.editedContents[filePath]
-          );
-          if (nextBaseline === undefined) {
-            draftDiskBaselineRef.current.delete(baselineKey);
-          } else {
-            draftDiskBaselineRef.current.set(baselineKey, nextBaseline);
+          draftDiskBaselineRef.current.set(baselineKey, content);
+          const serializedState = draftHistoryEntriesRef.current[filePath]?.editorState;
+          if (serializedState) {
+            publishDraftHistoryCheckpoint(filePath, serializedState, content);
+            if (!(await flushDraftHistoryWrites())) {
+              useStore.setState({
+                applyError:
+                  'The file was restored, but its durable Undo history could not be updated.',
+              });
+            }
           }
           clearReviewActionHistoryForFile(filePath);
           markRecentReviewWrite(filePath, content);
@@ -1761,6 +2124,8 @@ export const ChangeReviewDialog = ({
       saveEditedFile,
       reviewScope,
       markRecentReviewWrite,
+      publishDraftHistoryCheckpoint,
+      flushDraftHistoryWrites,
     ]
   );
 
@@ -1768,6 +2133,7 @@ export const ChangeReviewDialog = ({
     (filePath: string) => {
       if (hasReviewActionInFlight()) return;
       draftDiskBaselineRef.current.delete(normalizePathForComparison(filePath));
+      void clearDraftHistoryForFile(filePath);
       clearReviewActionHistoryForFile(filePath);
       reloadReviewFileFromDisk(filePath);
       setDiscardCounters((prev) => ({ ...prev, [filePath]: (prev[filePath] ?? 0) + 1 }));
@@ -1775,6 +2141,7 @@ export const ChangeReviewDialog = ({
     },
     [
       clearReviewActionHistoryForFile,
+      clearDraftHistoryForFile,
       hasReviewActionInFlight,
       reloadReviewFileFromDisk,
       fetchFileContent,
@@ -1801,10 +2168,16 @@ export const ChangeReviewDialog = ({
         try {
           const current = await api.review.checkConflict(reviewScope, filePath, expected);
           if (useStore.getState().changeSetEpoch !== operationEpoch) return;
-          draftDiskBaselineRef.current.set(
-            baselineKey,
-            current.hasConflict && current.conflictContent === null ? null : current.currentContent
-          );
+          const nextBaseline =
+            current.hasConflict && current.conflictContent === null ? null : current.currentContent;
+          draftDiskBaselineRef.current.set(baselineKey, nextBaseline);
+          const serializedState = draftHistoryEntriesRef.current[filePath]?.editorState;
+          if (serializedState) {
+            publishDraftHistoryCheckpoint(filePath, serializedState, nextBaseline);
+            if (!(await flushDraftHistoryWrites())) {
+              throw new Error('Unable to persist the rebased manual edit history');
+            }
+          }
           clearReviewFileExternalChange(filePath);
           useStore.setState({ applyError: null });
         } catch (error) {
@@ -1819,7 +2192,14 @@ export const ChangeReviewDialog = ({
         }
       })();
     },
-    [clearReviewFileExternalChange, hasReviewActionInFlight, reviewScope, setFileApplying]
+    [
+      clearReviewFileExternalChange,
+      flushDraftHistoryWrites,
+      hasReviewActionInFlight,
+      publishDraftHistoryCheckpoint,
+      reviewScope,
+      setFileApplying,
+    ]
   );
 
   const handleDiscardFile = useCallback(
@@ -1831,10 +2211,11 @@ export const ChangeReviewDialog = ({
         return;
       }
       draftDiskBaselineRef.current.delete(normalizePathForComparison(filePath));
+      void clearDraftHistoryForFile(filePath);
       discardFileEdits(filePath);
       setDiscardCounters((prev) => ({ ...prev, [filePath]: (prev[filePath] ?? 0) + 1 }));
     },
-    [discardFileEdits, handleReloadFromDisk, hasReviewActionInFlight]
+    [clearDraftHistoryForFile, discardFileEdits, handleReloadFromDisk, hasReviewActionInFlight]
   );
 
   const restoreDiskSnapshot = useCallback(
@@ -2113,7 +2494,7 @@ export const ChangeReviewDialog = ({
     !changeSetLoading &&
     !changeSetError &&
     !!activeChangeSet &&
-    (decisionHydrationKey === null || decisionHydrationReady);
+    (decisionHydrationKey === null || (decisionHydrationReady && draftHistoryHydrationReady));
   useEffect(() => {
     if (!hasData) return;
     const container = scrollContainerRef.current;
@@ -2164,21 +2545,43 @@ export const ChangeReviewDialog = ({
     const state = useStore.getState();
     if (decisionHydrationKey) {
       const matchesCurrentHydration = state.decisionHydrationScopeKey === decisionHydrationKey;
-      if (matchesCurrentHydration && state.decisionHydrationStatus === 'error') {
+      const matchesDraftHydration = draftHistoryHydration.key === decisionHydrationKey;
+      if (
+        (matchesCurrentHydration && state.decisionHydrationStatus === 'error') ||
+        (matchesDraftHydration && draftHistoryHydration.status === 'error')
+      ) {
         // The persisted state is unknown. Close without overwriting or clearing its last good copy.
         onOpenChange(false);
         return;
       }
-      if (!matchesCurrentHydration || state.decisionHydrationStatus !== 'loaded') {
+      if (
+        !matchesCurrentHydration ||
+        state.decisionHydrationStatus !== 'loaded' ||
+        !matchesDraftHydration ||
+        draftHistoryHydration.status !== 'loaded'
+      ) {
         useStore.setState({
-          applyError: 'Wait for saved review decisions to finish loading before closing Changes.',
+          applyError: 'Wait for saved review state to finish loading before closing Changes.',
+        });
+        return;
+      }
+    }
+    for (const [filePath, view] of editorViewMapRef.current.entries()) {
+      if (filePath in state.editedContents || draftHistoryEntriesRef.current[filePath]) {
+        handleSerializedStateChanged(filePath, serializeReviewDraftEditorState(view.state));
+      }
+    }
+    for (const filePath of Object.keys(state.editedContents)) {
+      if (!draftHistoryEntriesRef.current[filePath]) {
+        useStore.setState({
+          applyError: `Manual edits for ${filePath} are not durable yet. Keep Changes open and retry.`,
         });
         return;
       }
     }
     const blockReason = getReviewCloseBlockReason({
       busy: hasReviewActionInFlight(),
-      draftCount: Object.keys(state.editedContents).length,
+      draftCount: 0,
     });
     if (blockReason) {
       useStore.setState({ applyError: blockReason });
@@ -2188,6 +2591,12 @@ export const ChangeReviewDialog = ({
     closingRef.current = true;
     setClosing(true);
     try {
+      if (!(await flushDraftHistoryWrites())) {
+        useStore.setState({
+          applyError: 'Unable to save manual edit history. Changes remains open.',
+        });
+        return;
+      }
       if (decisionScopeToken) {
         const hasCurrentDecisions =
           Object.keys(state.hunkDecisions).length > 0 ||
@@ -2217,8 +2626,12 @@ export const ChangeReviewDialog = ({
     decisionScopeKey,
     decisionScopeToken,
     decisionHydrationKey,
+    draftHistoryHydration.key,
+    draftHistoryHydration.status,
     flushDecisionsToDisk,
+    flushDraftHistoryWrites,
     hasReviewActionInFlight,
+    handleSerializedStateChanged,
     onOpenChange,
     persistDecisions,
     clearDecisionsFromDisk,
@@ -2230,19 +2643,41 @@ export const ChangeReviewDialog = ({
     closingRef.current = true;
     setClosing(true);
     try {
-      const cleared = await clearDecisionsFromDisk(teamName, decisionScopeKey, decisionScopeToken);
-      if (!cleared) {
-        useStore.setState({
-          applyError: 'Unable to discard the unreadable saved review state.',
-        });
-        return;
+      if (decisionHydrationFailed) {
+        const cleared = await clearDecisionsFromDisk(
+          teamName,
+          decisionScopeKey,
+          decisionScopeToken
+        );
+        if (!cleared) {
+          useStore.setState({
+            applyError: 'Unable to discard the unreadable saved review decisions.',
+          });
+          return;
+        }
+      }
+      if (draftHistoryHydrationFailed) {
+        try {
+          await api.review.clearDraftHistory(teamName, decisionScopeKey, decisionScopeToken);
+        } catch (error) {
+          useStore.setState({
+            applyError: `Unable to discard the unreadable manual edit history: ${String(error)}`,
+          });
+          return;
+        }
+        draftDiskBaselineRef.current.clear();
+        draftHistoryEntriesRef.current = {};
+        setDraftHistoryEntries({});
+        setDraftHistoryHydration({ key: decisionHydrationKey, status: 'loaded' });
       }
       const state = useStore.getState();
-      if (state.decisionHydrationScopeKey !== decisionHydrationKey) return;
+      if (decisionHydrationFailed && state.decisionHydrationScopeKey !== decisionHydrationKey) {
+        return;
+      }
       // Keep any in-memory choice that raced an earlier load. Only the explicitly
       // discarded disk copy is reset; the current review can now become authoritative.
       useStore.setState({
-        decisionHydrationStatus: 'loaded',
+        ...(decisionHydrationFailed ? { decisionHydrationStatus: 'loaded' as const } : {}),
         applyError: null,
       });
     } finally {
@@ -2251,9 +2686,11 @@ export const ChangeReviewDialog = ({
     }
   }, [
     clearDecisionsFromDisk,
+    decisionHydrationFailed,
     decisionHydrationKey,
     decisionScopeKey,
     decisionScopeToken,
+    draftHistoryHydrationFailed,
     reviewMutationBusy,
     teamName,
   ]);
@@ -2484,8 +2921,12 @@ export const ChangeReviewDialog = ({
       const activeElement = document.activeElement;
       const editorFilePath = getEditorFilePathForTarget(activeElement);
       const hasDraftInFocusedEditor = editorFilePath ? hasReviewDraft(editorFilePath) : false;
+      const focusedEditor = editorFilePath
+        ? (editorViewMapRef.current.get(editorFilePath) ?? null)
+        : null;
 
       if (e.shiftKey) {
+        if (focusedEditor && redoDepth(focusedEditor.state) > 0) return;
         if (reviewRedoBlockedRef.current && !hasDraftInFocusedEditor) {
           // A review Undo remounts the diff and intentionally drops native CM redo.
           // Swallow Shift+Z so it cannot replay only the visual half of the action.
@@ -2498,6 +2939,13 @@ export const ChangeReviewDialog = ({
         return;
       }
 
+      if (
+        focusedEditor &&
+        undoDepth(focusedEditor.state) > 0 &&
+        (hasDraftInFocusedEditor || reviewUndoActionsRef.current.length === 0)
+      ) {
+        return;
+      }
       if (hasDraftInFocusedEditor) return;
       if (hasReviewActionInFlight()) {
         e.preventDefault();
@@ -2553,6 +3001,7 @@ export const ChangeReviewDialog = ({
         ignoreNextReviewDocChange(view);
         view.dispatch({
           changes: { from: 0, to: view.state.doc.length, insert: beforeContent },
+          annotations: Transaction.addToHistory.of(false),
         });
         return;
       }
@@ -2682,7 +3131,7 @@ export const ChangeReviewDialog = ({
         </div>
         <button
           onClick={() => void requestClose()}
-          disabled={reviewMutationBusy || decisionHydrationPending}
+          disabled={reviewMutationBusy || decisionHydrationPending || draftHistoryHydrationPending}
           className="rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
@@ -2700,6 +3149,7 @@ export const ChangeReviewDialog = ({
       {!changeSetLoading &&
         !changeSetError &&
         decisionHydrationReady &&
+        draftHistoryHydrationReady &&
         activeChangeSet &&
         hasReviewFiles && (
           <ReviewToolbar
@@ -2740,7 +3190,9 @@ export const ChangeReviewDialog = ({
 
       {/* Content */}
       <div className="flex flex-1 overflow-hidden">
-        {(changeSetLoading || decisionHydrationPending) && <ChangesLoadingAnimation />}
+        {(changeSetLoading || decisionHydrationPending || draftHistoryHydrationPending) && (
+          <ChangesLoadingAnimation />
+        )}
 
         {changeSetError && (
           <div className="flex w-full items-center justify-center text-sm text-red-400">
@@ -2751,6 +3203,7 @@ export const ChangeReviewDialog = ({
         {!changeSetLoading &&
           !changeSetError &&
           decisionHydrationReady &&
+          draftHistoryHydrationReady &&
           activeChangeSet &&
           hasReviewFiles && (
             <>
@@ -2812,6 +3265,7 @@ export const ChangeReviewDialog = ({
                   reviewExternalChangesByFile={reviewExternalChangesByFile}
                   viewedSet={viewedSet}
                   editedContents={editedContents}
+                  draftHistoryEntries={draftHistoryEntries}
                   hunkDecisions={hunkDecisions}
                   fileDecisions={fileDecisions}
                   hunkContextHashesByFile={hunkContextHashesByFile}
@@ -2824,6 +3278,8 @@ export const ChangeReviewDialog = ({
                   onHunkRejected={handleHunkRejected}
                   onFullyViewed={handleFullyViewed}
                   onContentChanged={handleContentChanged}
+                  onSerializedStateChanged={handleSerializedStateChanged}
+                  onSerializedStateRestoreError={handleSerializedStateRestoreError}
                   onDiscard={handleDiscardFile}
                   onSave={handleSaveFile}
                   onReloadFromDisk={handleReloadFromDisk}
@@ -2866,12 +3322,13 @@ export const ChangeReviewDialog = ({
         {!changeSetLoading &&
           !changeSetError &&
           decisionHydrationReady &&
+          draftHistoryHydrationReady &&
           activeChangeSet &&
           !hasReviewFiles && <TaskChangesEmptyState changeSet={taskChangeSet} />}
 
-        {decisionHydrationFailed && (
+        {(decisionHydrationFailed || draftHistoryHydrationFailed) && (
           <div className="flex w-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-red-400">
-            <p>Saved review decisions could not be loaded. The stored copy was left untouched.</p>
+            <p>Saved review state could not be loaded. The stored copy was left untouched.</p>
             <div className="flex items-center gap-2">
               <Button
                 type="button"
@@ -2879,8 +3336,11 @@ export const ChangeReviewDialog = ({
                 size="sm"
                 disabled={reviewMutationBusy}
                 onClick={() => {
-                  if (decisionScopeToken) {
+                  if (decisionScopeToken && decisionHydrationFailed) {
                     void loadDecisionsFromDisk(teamName, decisionScopeKey, decisionScopeToken);
+                  }
+                  if (draftHistoryHydrationFailed) {
+                    setDraftHistoryRetryNonce((value) => value + 1);
                   }
                 }}
               >

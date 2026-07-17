@@ -6,6 +6,10 @@ import { goToNextChunk, goToPreviousChunk, unifiedMergeView } from '@codemirror/
 import { Compartment, EditorState, type Extension, Transaction } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { EditorView, keymap, lineNumbers } from '@codemirror/view';
+import {
+  restoreReviewDraftEditorState,
+  serializeReviewDraftEditorState,
+} from '@features/change-review-history/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   getAsyncLanguageDesc,
@@ -25,6 +29,7 @@ import {
 } from './CodeMirrorDiffUtils';
 import { portionCollapseExtension } from './portionCollapse';
 
+import type { ReviewSerializedEditorState } from '@features/change-review-history/contracts';
 import type { EditorSelectionInfo } from '@shared/types/editor';
 
 interface CodeMirrorDiffViewProps {
@@ -50,6 +55,12 @@ interface CodeMirrorDiffViewProps {
   onViewChange?: (view: EditorView | null) => void;
   /** Called when editor content changes (debounced, only when readOnly=false) */
   onContentChanged?: (content: string, previousContent?: string) => void;
+  /** Publishes the complete native history checkpoint after every manual text transaction. */
+  onSerializedStateChanged?: (state: ReviewSerializedEditorState) => void;
+  /** Reports an invalid/incompatible persisted checkpoint before falling back to fresh state. */
+  onSerializedStateRestoreError?: (error: unknown) => void;
+  /** Serialized state restored with the component's current extensions and callbacks. */
+  serializedState?: ReviewSerializedEditorState;
   /** Cached EditorState to restore (preserves undo history between file switches) */
   initialState?: EditorState;
   /** Use portion collapse instead of CM's collapseUnchanged (Expand N / Expand All buttons) */
@@ -192,6 +203,13 @@ const emptyOriginalOverrideTheme = EditorView.theme({
   },
 });
 
+const reviewDecisionHistoryIsolation = EditorState.transactionExtender.of((transaction) => {
+  const userEvent = transaction.annotation(Transaction.userEvent);
+  return userEvent === 'accept' || userEvent === 'revert'
+    ? { annotations: Transaction.addToHistory.of(false) }
+    : null;
+});
+
 export const CodeMirrorDiffView = ({
   original,
   modified,
@@ -207,6 +225,9 @@ export const CodeMirrorDiffView = ({
   editorViewRef: externalViewRef,
   onViewChange,
   onContentChanged,
+  onSerializedStateChanged,
+  onSerializedStateRestoreError,
+  serializedState,
   initialState,
   usePortionCollapse = false,
   portionSize = 100,
@@ -231,6 +252,9 @@ export const CodeMirrorDiffView = ({
   const onAcceptRef = useRef(onHunkAccepted);
   const onRejectRef = useRef(onHunkRejected);
   const onContentChangedRef = useRef(onContentChanged);
+  const onSerializedStateChangedRef = useRef(onSerializedStateChanged);
+  const onSerializedStateRestoreErrorRef = useRef(onSerializedStateRestoreError);
+  const serializedStateRef = useRef(serializedState);
   const onViewChangeRef = useRef(onViewChange);
   const onSelectionChangeRef = useRef(onSelectionChange);
   const showMergeControlsRef = useRef(showMergeControls);
@@ -238,10 +262,14 @@ export const CodeMirrorDiffView = ({
   const lastModifiedPropRef = useRef<string | null>(null);
   const lastEmittedContentRef = useRef<string | null>(null);
   const userEditedRef = useRef(false);
+  const serializedRestoreFailedRef = useRef(false);
   useEffect(() => {
     onAcceptRef.current = onHunkAccepted;
     onRejectRef.current = onHunkRejected;
     onContentChangedRef.current = onContentChanged;
+    onSerializedStateChangedRef.current = onSerializedStateChanged;
+    onSerializedStateRestoreErrorRef.current = onSerializedStateRestoreError;
+    serializedStateRef.current = serializedState;
     onViewChangeRef.current = onViewChange;
     onSelectionChangeRef.current = onSelectionChange;
     showMergeControlsRef.current = showMergeControls;
@@ -250,6 +278,9 @@ export const CodeMirrorDiffView = ({
     onHunkAccepted,
     onHunkRejected,
     onContentChanged,
+    onSerializedStateChanged,
+    onSerializedStateRestoreError,
+    serializedState,
     onViewChange,
     onSelectionChange,
     showMergeControls,
@@ -436,6 +467,7 @@ export const CodeMirrorDiffView = ({
           ignoreNextReviewDocChange(view);
           view.dispatch({
             changes: { from: 0, to: view.state.doc.length, insert: beforeContent },
+            annotations: Transaction.addToHistory.of(false),
           });
           return;
         }
@@ -542,11 +574,14 @@ export const CodeMirrorDiffView = ({
       foldGutter(),
       EditorView.editable.of(!readOnly),
       EditorState.readOnly.of(readOnly),
+      reviewDecisionHistoryIsolation,
     ];
 
     // Undo/redo support and standard editing keybindings
     if (!readOnly) {
-      extensions.push(history());
+      // The default CodeMirror floor is only 100 groups. Changes keeps a much deeper
+      // branch so restart persistence does not silently collapse ordinary long edits.
+      extensions.push(history({ minDepth: 10_000 }));
       extensions.push(mergeUndoSupport);
       extensions.push(mirrorEditsAfterResolve);
       extensions.push(indentUnit.of('  '));
@@ -593,6 +628,7 @@ export const CodeMirrorDiffView = ({
             liveDocRef.current = content;
             lastEmittedContentRef.current = content;
             onContentChangedRef.current?.(content, previousContent);
+            onSerializedStateChangedRef.current?.(serializeReviewDraftEditorState(update.state));
           }
         })
       );
@@ -695,13 +731,30 @@ export const CodeMirrorDiffView = ({
       liveDocRef.current = modified;
     }
 
-    const view = initialState
-      ? new EditorView({ state: initialState, parent: containerRef.current })
-      : new EditorView({
-          doc: initialDoc,
-          extensions: buildExtensions(),
-          parent: containerRef.current,
-        });
+    const extensions = buildExtensions();
+    const serializedStateAtCreation = serializedStateRef.current;
+    let restoredState = initialState;
+    if (
+      !restoredState &&
+      serializedStateAtCreation &&
+      serializedStateAtCreation.doc !== initialDoc
+    ) {
+      serializedRestoreFailedRef.current = true;
+      onSerializedStateRestoreErrorRef.current?.(
+        new Error('Saved editor document does not match the recovered draft')
+      );
+    } else if (!restoredState && serializedStateAtCreation) {
+      try {
+        restoredState = restoreReviewDraftEditorState(serializedStateAtCreation, extensions);
+        serializedRestoreFailedRef.current = false;
+      } catch (error) {
+        serializedRestoreFailedRef.current = true;
+        onSerializedStateRestoreErrorRef.current?.(error);
+      }
+    }
+    const view = restoredState
+      ? new EditorView({ state: restoredState, parent: containerRef.current })
+      : new EditorView({ doc: initialDoc, extensions, parent: containerRef.current });
 
     viewRef.current = view;
     // Sync to external ref via holder
@@ -714,10 +767,22 @@ export const CodeMirrorDiffView = ({
 
     return () => {
       const finalContent = view.state.doc.toString();
-      liveDocRef.current = finalContent;
-      if (userEditedRef.current && lastEmittedContentRef.current !== finalContent) {
+      const finalContentIsUserOwned = liveDocRef.current === finalContent;
+      if (
+        finalContentIsUserOwned &&
+        userEditedRef.current &&
+        lastEmittedContentRef.current !== finalContent
+      ) {
         lastEmittedContentRef.current = finalContent;
         onContentChangedRef.current?.(finalContent);
+      }
+      if (
+        !readOnly &&
+        finalContentIsUserOwned &&
+        (userEditedRef.current ||
+          (serializedStateAtCreation && !serializedRestoreFailedRef.current))
+      ) {
+        onSerializedStateChangedRef.current?.(serializeReviewDraftEditorState(view.state));
       }
       hideFloatingToolbar();
       view.destroy();
@@ -729,7 +794,7 @@ export const CodeMirrorDiffView = ({
       onViewChangeRef.current?.(null);
     };
     // We intentionally rebuild the entire editor when key props change
-  }, [original, modified, buildExtensions, initialState, hideFloatingToolbar]);
+  }, [original, modified, buildExtensions, initialState, hideFloatingToolbar, readOnly]);
 
   // Inject language extension via compartment after editor creation
   useEffect(() => {

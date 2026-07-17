@@ -19,6 +19,10 @@ import { FullDiffLoadingBanner } from './FullDiffLoadingBanner';
 import { getEffectiveReviewFileDecision } from './reviewContentPreview';
 
 import type { EditorView } from '@codemirror/view';
+import type {
+  ReviewDraftHistoryEntry,
+  ReviewSerializedEditorState,
+} from '@features/change-review-history/contracts';
 import type { FileChangeWithContent, HunkDecision } from '@shared/types';
 import type { EditorSelectionInfo } from '@shared/types/editor';
 import type { FileChangeSummary } from '@shared/types/review';
@@ -37,6 +41,7 @@ interface ContinuousScrollViewProps {
   reviewExternalChangesByFile: Record<string, { type: 'change' | 'add' | 'unlink' }>;
   viewedSet: Set<string>;
   editedContents: Record<string, string>;
+  draftHistoryEntries: Record<string, ReviewDraftHistoryEntry>;
   hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
   hunkContextHashesByFile: Record<string, Record<number, string>>;
@@ -54,6 +59,8 @@ interface ContinuousScrollViewProps {
   ) => boolean | void;
   onFullyViewed: (filePath: string) => void;
   onContentChanged: (filePath: string, content: string, previousContent?: string) => void;
+  onSerializedStateChanged: (filePath: string, state: ReviewSerializedEditorState) => void;
+  onSerializedStateRestoreError: (filePath: string, error: unknown) => void;
   onDiscard: (filePath: string) => void;
   onSave: (filePath: string) => void;
   onReloadFromDisk: (filePath: string) => void;
@@ -93,6 +100,7 @@ export const ContinuousScrollView = ({
   reviewExternalChangesByFile,
   viewedSet,
   editedContents,
+  draftHistoryEntries,
   hunkDecisions,
   fileDecisions,
   hunkContextHashesByFile,
@@ -105,6 +113,8 @@ export const ContinuousScrollView = ({
   onHunkRejected,
   onFullyViewed,
   onContentChanged,
+  onSerializedStateChanged,
+  onSerializedStateRestoreError,
   onDiscard,
   onSave,
   onReloadFromDisk,
@@ -188,10 +198,12 @@ export const ContinuousScrollView = ({
   const fileDecisionsRef = useRef(fileDecisions);
   const hunkDecisionsRef = useRef(hunkDecisions);
   const hunkHashesRef = useRef(hunkContextHashesByFile);
+  const editedContentsRef = useRef(editedContents);
   useEffect(() => {
     fileDecisionsRef.current = fileDecisions;
     hunkDecisionsRef.current = hunkDecisions;
     hunkHashesRef.current = hunkContextHashesByFile;
+    editedContentsRef.current = editedContents;
   });
 
   // Track which views have already had decisions replayed to prevent
@@ -217,6 +229,10 @@ export const ContinuousScrollView = ({
         if (chunks) {
           setFileChunkCount(filePath, chunks.chunks.length);
         }
+
+        // A recovered/manual draft is authoritative for the editor document. Replaying
+        // decisions into it would mutate only the visual buffer and corrupt native Undo.
+        if (filePath in editedContentsRef.current) return;
 
         const fileDecision =
           fileDecisionsRef.current[reviewKey] ?? fileDecisionsRef.current[filePath];
@@ -320,6 +336,9 @@ export const ContinuousScrollView = ({
                 onHunkRejected={onHunkRejected}
                 onFullyViewed={onFullyViewed}
                 onContentChanged={onContentChanged}
+                serializedState={draftHistoryEntries[filePath]?.editorState}
+                onSerializedStateChanged={onSerializedStateChanged}
+                onSerializedStateRestoreError={onSerializedStateRestoreError}
                 onEditorViewReady={handleEditorViewReady}
                 discardCounter={discardCounters[filePath] ?? 0}
                 autoViewed={autoViewed}

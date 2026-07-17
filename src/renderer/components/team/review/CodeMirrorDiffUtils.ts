@@ -1,10 +1,8 @@
 import { invertedEffects } from '@codemirror/commands';
 import {
-  acceptChunk,
   getChunks,
   getOriginalDoc,
   originalDocChangeEffect,
-  rejectChunk,
   updateOriginalDoc,
 } from '@codemirror/merge';
 import {
@@ -42,6 +40,48 @@ export const mergeUndoSupport = invertedEffects.of((tr) => {
   return effects;
 });
 
+/**
+ * Review decisions have their own guarded Undo stack. Keeping them out of CodeMirror's
+ * text history prevents native draft Undo from reverting only the visual half.
+ */
+export function acceptChunk(view: EditorView, pos?: number): boolean {
+  const state = view.state;
+  const at = pos ?? state.selection.main.head;
+  const chunk = getChunks(state)?.chunks.find(
+    (candidate) => candidate.fromB <= at && candidate.endB >= at
+  );
+  if (!chunk) return false;
+  let insert = state.sliceDoc(chunk.fromB, Math.max(chunk.fromB, chunk.toB - 1));
+  const original = getOriginalDoc(state);
+  if (chunk.fromB !== chunk.toB && chunk.toA <= original.length) insert += state.lineBreak;
+  const changes = ChangeSet.of(
+    { from: chunk.fromA, to: Math.min(original.length, chunk.toA), insert },
+    original.length
+  );
+  view.dispatch({
+    effects: updateOriginalDoc.of({ doc: changes.apply(original), changes }),
+    annotations: [Transaction.userEvent.of('accept'), Transaction.addToHistory.of(false)],
+  });
+  return true;
+}
+
+export function rejectChunk(view: EditorView, pos?: number): boolean {
+  const state = view.state;
+  const at = pos ?? state.selection.main.head;
+  const chunk = getChunks(state)?.chunks.find(
+    (candidate) => candidate.fromB <= at && candidate.endB >= at
+  );
+  if (!chunk) return false;
+  const original = getOriginalDoc(state);
+  let insert = original.sliceString(chunk.fromA, Math.max(chunk.fromA, chunk.toA - 1));
+  if (chunk.fromA !== chunk.toA && chunk.toB <= state.doc.length) insert += state.lineBreak;
+  view.dispatch({
+    changes: { from: chunk.fromB, to: Math.min(state.doc.length, chunk.toB), insert },
+    annotations: [Transaction.userEvent.of('revert'), Transaction.addToHistory.of(false)],
+  });
+  return true;
+}
+
 /** Accept all remaining chunks in one transaction (single Cmd+Z to undo) */
 export function acceptAllChunks(view: EditorView): boolean {
   const result = getChunks(view.state);
@@ -57,6 +97,7 @@ export function acceptAllChunks(view: EditorView): boolean {
   );
   view.dispatch({
     effects: updateOriginalDoc.of({ doc: changes.apply(orig), changes }),
+    annotations: [Transaction.userEvent.of('accept'), Transaction.addToHistory.of(false)],
   });
   return true;
 }
@@ -71,7 +112,7 @@ export function rejectAllChunks(view: EditorView): boolean {
   // "restore the current doc to the original baseline" in one edit.
   view.dispatch({
     changes: [{ from: 0, to: view.state.doc.length, insert: orig.toString() }],
-    annotations: Transaction.userEvent.of('revert'),
+    annotations: [Transaction.userEvent.of('revert'), Transaction.addToHistory.of(false)],
   });
   return true;
 }
@@ -249,4 +290,4 @@ export function computeChunkIndexAtPos(state: EditorState, pos: number): number 
   return nearestIndex;
 }
 
-export { acceptChunk, getChunks, rejectChunk };
+export { getChunks };
