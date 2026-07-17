@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import {
   createOpenCodeRuntimeDeliveryPorts,
@@ -8,9 +8,20 @@ import { CROSS_TEAM_SENT_SOURCE } from '../../../../src/shared/constants/crossTe
 
 import type { RuntimeDeliveryEnvelope } from '../../../../src/main/services/team/opencode/delivery/RuntimeDeliveryJournal';
 import type { RuntimeDeliveryDestinationPort } from '../../../../src/main/services/team/opencode/delivery/RuntimeDeliveryService';
-import type { InboxMessage } from '../../../../src/shared/types/team';
+import type { CrossTeamSendResult, InboxMessage } from '../../../../src/shared/types/team';
+
+type VoidCrossTeamSender = (
+  request: Parameters<OpenCodeRuntimeDeliveryCrossTeamSender>[0]
+) => Promise<void>;
 
 describe('OpenCodeRuntimeDeliveryPorts', () => {
+  it('requires exported cross-team senders to return delivery confirmation', () => {
+    expectTypeOf<ReturnType<OpenCodeRuntimeDeliveryCrossTeamSender>>().toEqualTypeOf<
+      Promise<CrossTeamSendResult>
+    >();
+    expectTypeOf<VoidCrossTeamSender>().not.toExtend<OpenCodeRuntimeDeliveryCrossTeamSender>();
+  });
+
   it('requires runtime proof when an OpenCode runtime delivers cross-team', async () => {
     const sentMessages: InboxMessage[] = [];
     const crossTeamSender = vi.fn(
@@ -222,9 +233,7 @@ describe('OpenCodeRuntimeDeliveryPorts', () => {
   });
 });
 
-function getCrossTeamPort(
-  ports: RuntimeDeliveryDestinationPort[]
-): RuntimeDeliveryDestinationPort {
+function getCrossTeamPort(ports: RuntimeDeliveryDestinationPort[]): RuntimeDeliveryDestinationPort {
   const port = ports.find((candidate) => candidate.kind === 'cross_team_outbox');
   if (!port) {
     throw new Error('cross-team runtime delivery port not registered');

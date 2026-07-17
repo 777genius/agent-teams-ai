@@ -19,7 +19,7 @@ export type OpenCodeRuntimeDeliveryCrossTeamSender = (request: {
   timestamp?: string;
   conversationId?: string;
   requireRuntimeDelivery?: boolean;
-}) => Promise<unknown>;
+}) => Promise<CrossTeamSendResult>;
 
 export interface OpenCodeRuntimeDeliveryPortsDependencies {
   sentMessagesStore: Pick<TeamSentMessagesStore, 'appendMessage' | 'readMessages'>;

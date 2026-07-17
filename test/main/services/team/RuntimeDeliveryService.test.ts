@@ -163,9 +163,9 @@ describe('RuntimeDeliveryService', () => {
       memberName: 'CanonicalReviewer',
       messageId: 'canonical-message',
     };
-    destination.writeImpl = async () => {
+    destination.writeImpl = () => {
       destination.messages.set(canonicalLocation.messageId, canonicalLocation);
-      return canonicalLocation;
+      return Promise.resolve(canonicalLocation);
     };
     const service = createService();
 
@@ -511,7 +511,7 @@ describe('RuntimeDeliveryService', () => {
   });
 
   it('commits verified output when the run changes after destination write', async () => {
-    destination.writeImpl = async (input) => {
+    destination.writeImpl = (input) => {
       const location: RuntimeDeliveryLocation = {
         kind: 'member_inbox',
         teamName: input.envelope.teamName,
@@ -523,7 +523,7 @@ describe('RuntimeDeliveryService', () => {
       };
       destination.messages.set(input.destinationMessageId, location);
       runState.currentRunId = 'run-2';
-      return location;
+      return Promise.resolve(location);
     };
     const service = createService();
 
@@ -643,6 +643,53 @@ describe('RuntimeDeliveryService', () => {
       }),
     });
     expect(diagnostics.append).not.toHaveBeenCalled();
+  });
+
+  it('keeps cross-team delivery retryable when the sender does not confirm delivery', async () => {
+    const crossTeamEnvelope = envelope({
+      to: { teamName: 'team-b', memberName: 'Reviewer' },
+    });
+    const destinationMessageId = buildRuntimeDestinationMessageId(crossTeamEnvelope);
+    const crossTeamSender = vi.fn(() =>
+      Promise.resolve({
+        messageId: destinationMessageId,
+        deliveredToInbox: false,
+      })
+    );
+    const service = new RuntimeDeliveryService(
+      runState,
+      journal,
+      new RuntimeDeliveryDestinationRegistry(
+        createOpenCodeRuntimeDeliveryPorts({
+          sentMessagesStore: {
+            appendMessage: vi.fn(),
+            readMessages: vi.fn(() => Promise.resolve([])),
+          },
+          inboxReader: {
+            getMessagesFor: vi.fn(() => Promise.resolve([])),
+          },
+          inboxWriter: {
+            sendMessage: vi.fn(),
+          },
+          getCrossTeamSender: () => crossTeamSender,
+        })
+      ),
+      diagnostics,
+      emitter,
+      () => now
+    );
+
+    await expect(service.deliver(crossTeamEnvelope)).rejects.toThrow(
+      'Cross-team runtime sender did not return a confirmed delivery result'
+    );
+
+    expect(crossTeamSender).toHaveBeenCalledTimes(1);
+    await expect(journal.get(journalKey(crossTeamEnvelope))).resolves.toMatchObject({
+      status: 'failed_retryable',
+      attempts: 1,
+      committedLocation: null,
+      lastError: 'Cross-team runtime sender did not return a confirmed delivery result',
+    });
   });
 
   it('does not commit cross-team retry from sender-copy proof without target runtime proof', async () => {
