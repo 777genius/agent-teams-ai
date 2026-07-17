@@ -20,14 +20,14 @@ jobs:
     runs-on: ubuntu-24.04
     if: ${{ github.event_name == 'workflow_dispatch' || ((github.event_name != 'issue_comment' || github.event.issue.pull_request) && github.event.comment.user.type != 'Bot') }}
     env:
-      REVIEWROUTER_API_URL: "https://api.reviewrouter.site"
-      REVIEWROUTER_ACTION_VERSION: "1603215454b4c5cf3387b40ae674a46eeb7ee96b"
-      REVIEWROUTER_OIDC_AUDIENCE: "reviewrouter"
-      REVIEWROUTER_RUNTIME_CONFIG_MODE: "oidc"
-      REVIEWROUTER_STATIC_CONFIG_FALLBACK: "true"
-      REVIEWROUTER_COMMENT_TOKEN_MODE: "app-oidc"
+      REVIEWROUTER_API_URL: 'https://api.reviewrouter.site'
+      REVIEWROUTER_ACTION_VERSION: '1603215454b4c5cf3387b40ae674a46eeb7ee96b'
+      REVIEWROUTER_OIDC_AUDIENCE: 'reviewrouter'
+      REVIEWROUTER_RUNTIME_CONFIG_MODE: 'oidc'
+      REVIEWROUTER_STATIC_CONFIG_FALLBACK: 'true'
+      REVIEWROUTER_COMMENT_TOKEN_MODE: 'app-oidc'
       CODEX_AUTH_JSON_PRESENT: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON != '' && '1' || '0' }}
-      REVIEW_ROUTER_REVIEW_WORKFLOW_FILE: "reviewrouter-codex.yml"
+      REVIEW_ROUTER_REVIEW_WORKFLOW_FILE: 'reviewrouter-codex.yml'
     steps:
       - name: Fetch ReviewRouter runtime config
         if: ${{ github.event_name != 'merge_group' && (github.event_name == 'workflow_dispatch' || github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
@@ -38,21 +38,29 @@ jobs:
             echo "ReviewRouter OIDC is unavailable. Check id-token: write permission."
             exit 1
           fi
-          echo "ReviewRouter runtime config will be fetched by the action using GitHub OIDC."
+          echo "ReviewRouter runtime config will be fetched by the runtime using GitHub OIDC."
+
+      - name: Checkout ReviewRouter runtime
+        uses: actions/checkout@v6
+        with:
+          repository: 777genius/review-router
+          ref: ${{ env.REVIEWROUTER_ACTION_VERSION }}
+          path: .reviewrouter-runtime
+          persist-credentials: false
+
+      - name: Setup Node.js for ReviewRouter
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
 
       - name: Preflight ReviewRouter interaction
         id: preflight
-        uses: 777genius/review-router@1603215454b4c5cf3387b40ae674a46eeb7ee96b
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          REVIEW_ROUTER_MODE: "interaction-preflight"
+          REVIEW_ROUTER_MODE: 'interaction-preflight'
           REVIEW_ROUTER_DISCUSSION_MODE: ${{ vars.REVIEW_ROUTER_DISCUSSION_MODE || 'off' }}
-
-      - name: Setup Node.js for Codex discussion replies
-        if: ${{ steps.preflight.outputs.needs_discussion == 'true' && env.CODEX_AUTH_JSON_PRESENT == '1' }}
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
+        run: node .reviewrouter-runtime/dist/index.js
 
       - name: Install Codex CLI for discussion replies
         if: ${{ steps.preflight.outputs.needs_discussion == 'true' && env.CODEX_AUTH_JSON_PRESENT == '1' }}
@@ -78,13 +86,14 @@ jobs:
 
       - name: Run ReviewRouter interaction
         if: ${{ steps.preflight.outputs.should_run == 'true' }}
-        uses: 777genius/review-router@1603215454b4c5cf3387b40ae674a46eeb7ee96b
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          REVIEW_ROUTER_MODE: "interaction"
+          REVIEW_ROUTER_MODE: 'interaction'
           REVIEW_ROUTER_DISCUSSION_MODE: ${{ vars.REVIEW_ROUTER_DISCUSSION_MODE || 'off' }}
           REVIEW_ROUTER_DISCUSSION_MAX_PER_PR: ${{ vars.REVIEW_ROUTER_DISCUSSION_MAX_PER_PR || '20' }}
           REVIEW_ROUTER_DISCUSSION_MAX_PER_THREAD: ${{ vars.REVIEW_ROUTER_DISCUSSION_MAX_PER_THREAD || '5' }}
           REVIEW_ROUTER_DISCUSSION_TIMEOUT_SECONDS: ${{ vars.REVIEW_ROUTER_DISCUSSION_TIMEOUT_SECONDS || '60' }}
           CODEX_MODEL: ${{ vars.REVIEW_CODEX_MODEL || 'gpt-5.5' }}
           CODEX_REASONING_EFFORT: ${{ vars.REVIEW_CODEX_EFFORT || 'medium' }}
+        run: node .reviewrouter-runtime/dist/index.js
