@@ -127,7 +127,7 @@ onUnmounted(() => {
       v-if="shouldShowMobilePoster"
       type="button"
       class="hero-video__poster"
-      :style="{ '--hero-video-poster': muxPosterUrl ? `url(${muxPosterUrl})` : 'url(/screenshots/2.jpg)' }"
+      :style="{ '--hero-video-poster': muxPosterUrl ? `url(${muxPosterUrl})` : 'url(/screenshots/2.png)' }"
       :aria-label="videoTitle"
       @click="activatePlayer"
     >
@@ -395,7 +395,7 @@ onUnmounted(() => {
   background:
     linear-gradient(90deg, rgba(2, 6, 16, 0.18), rgba(2, 6, 16, 0.36)),
     linear-gradient(180deg, rgba(0, 234, 255, 0.08), rgba(255, 43, 255, 0.08)),
-    url("/screenshots/2.jpg") center / cover;
+    url("/screenshots/2.png") center / cover;
   opacity: 0.82;
   filter: saturate(0.98) contrast(1.14) brightness(0.72);
   transform: scale(1.035);

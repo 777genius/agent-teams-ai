@@ -81,4 +81,4 @@ Use the reference pages when you need exact terminology, provider behavior, cont
 
 ## Product preview
 
-<ZoomImage src="/screenshots/product-preview.jpg" alt="Agent Teams kanban board" caption="Task status, teammate activity, and review workflow stay visible in one workspace." />
+<ZoomImage src="/screenshots/product-preview.png" alt="Agent Teams kanban board" caption="Task status, teammate activity, and review workflow stay visible in one workspace." />

@@ -78,4 +78,4 @@ Usa las páginas de referencia cuando necesites terminología exacta, el comport
 
 ## Vista previa del producto
 
-<ZoomImage src="/screenshots/1.jpg" alt="Tablero kanban de Agent Teams" caption="El estado de las tareas, la actividad de los compañeros de equipo y el flujo de revisión permanecen visibles en un único espacio de trabajo." />
+<ZoomImage src="/screenshots/product-preview.png" alt="Tablero kanban de Agent Teams" caption="El estado de las tareas, la actividad de los compañeros de equipo y el flujo de revisión permanecen visibles en un único espacio de trabajo." />

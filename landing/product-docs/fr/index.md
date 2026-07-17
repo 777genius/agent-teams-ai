@@ -78,4 +78,4 @@ Utilisez les pages de référence lorsque vous avez besoin de la terminologie ex
 
 ## Aperçu du produit
 
-<ZoomImage src="/screenshots/1.jpg" alt="Tableau kanban d'Agent Teams" caption="Le statut des tâches, l'activité des coéquipiers et le flux de revue restent visibles dans un seul espace de travail." />
+<ZoomImage src="/screenshots/product-preview.png" alt="Tableau kanban d'Agent Teams" caption="Le statut des tâches, l'activité des coéquipiers et le flux de revue restent visibles dans un seul espace de travail." />
