@@ -222,6 +222,8 @@ export type HunkDecision = 'accepted' | 'rejected' | 'pending';
 /** Решение по файлу */
 export interface FileReviewDecision {
   filePath: string;
+  /** Stable renderer decision key (changeKey for grouped ledger changes, otherwise filePath). */
+  reviewKey?: string;
   fileDecision: HunkDecision;
   hunkDecisions: Record<number, HunkDecision>;
   /** Main-issued token for the exact full-content snapshot displayed by the renderer. */
@@ -230,11 +232,18 @@ export interface FileReviewDecision {
   hunkContextHashes?: Record<number, string>;
 }
 
+export interface ReviewDecisionPersistenceScope {
+  scopeKey: string;
+  scopeToken: string;
+}
+
 /** Запрос на применение review */
 export interface ApplyReviewRequest {
   teamName: string;
   taskId?: string;
   memberName?: string;
+  /** Exact durable decision scope used to close disk/decision crash windows. */
+  decisionPersistenceScope?: ReviewDecisionPersistenceScope;
   decisions: FileReviewDecision[];
 }
 

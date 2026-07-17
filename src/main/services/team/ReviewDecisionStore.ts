@@ -5,7 +5,7 @@ import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import type { HunkDecision } from '@shared/types';
+import type { FileReviewDecision, HunkDecision } from '@shared/types';
 
 const logger = createLogger('ReviewDecisionStore');
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
@@ -42,7 +42,10 @@ export class ReviewDecisionStore {
     }
     if (
       scopeToken !== undefined &&
-      (typeof scopeToken !== 'string' || scopeToken.length === 0 || scopeToken.includes('\0'))
+      (typeof scopeToken !== 'string' ||
+        scopeToken.length === 0 ||
+        scopeToken.length > MAX_STORED_DECISIONS_BYTES ||
+        scopeToken.includes('\0'))
     ) {
       throw new Error('Invalid review decision scope token');
     }
@@ -337,6 +340,55 @@ export class ReviewDecisionStore {
       logger.error(`Failed to save review decisions for ${teamName}/${scopeKey}: ${String(error)}`);
       throw error;
     }
+  }
+
+  async mergeFileDecisionPatch(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    decision: FileReviewDecision & { reviewKey: string }
+  ): Promise<void> {
+    this.assertSafeScope(teamName, scopeKey, scopeToken);
+    if (
+      !decision.reviewKey ||
+      decision.reviewKey.length > MAX_STORED_KEY_LENGTH ||
+      decision.reviewKey.includes('\0')
+    ) {
+      throw new Error('Invalid review decision patch key');
+    }
+    const current = (await this.load(teamName, scopeKey, scopeToken)) ?? {
+      hunkDecisions: {},
+      fileDecisions: {},
+      hunkContextHashesByFile: {},
+    };
+    const hunkDecisions = { ...current.hunkDecisions };
+    const fileDecisions = { ...current.fileDecisions };
+    const hunkContextHashesByFile = { ...(current.hunkContextHashesByFile ?? {}) };
+    const prefixes = [`${decision.reviewKey}:`, `${decision.filePath}:`];
+    for (const key of Object.keys(hunkDecisions)) {
+      if (prefixes.some((prefix) => key.startsWith(prefix))) delete hunkDecisions[key];
+    }
+    delete fileDecisions[decision.reviewKey];
+    delete fileDecisions[decision.filePath];
+    delete hunkContextHashesByFile[decision.reviewKey];
+    delete hunkContextHashesByFile[decision.filePath];
+
+    for (const [index, value] of Object.entries(decision.hunkDecisions)) {
+      if (value !== 'pending') hunkDecisions[`${decision.reviewKey}:${index}`] = value;
+    }
+    if (decision.fileDecision !== 'pending') {
+      fileDecisions[decision.reviewKey] = decision.fileDecision;
+    }
+    if (decision.hunkContextHashes) {
+      hunkContextHashesByFile[decision.reviewKey] = decision.hunkContextHashes;
+    }
+
+    await this.save(teamName, scopeKey, {
+      scopeToken,
+      hunkDecisions,
+      fileDecisions,
+      hunkContextHashesByFile,
+    });
   }
 
   async clear(teamName: string, scopeKey: string, scopeToken?: string): Promise<void> {

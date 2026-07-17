@@ -1061,6 +1061,41 @@ describe('ReviewApplierService', () => {
     expect(unlink).toHaveBeenCalledWith(newPath);
   });
 
+  it('replays a crash-left ledger rename reject idempotently after it already reached disk', async () => {
+    const fsPromises = await import('fs/promises');
+    const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;
+    const writeFile = fsPromises.writeFile as unknown as ReturnType<typeof vi.fn>;
+    const unlink = fsPromises.unlink as unknown as ReturnType<typeof vi.fn>;
+    const oldPath = '/repo/src/old.ts';
+    const newPath = '/repo/src/new.ts';
+    const oldContent = 'old\n';
+    const newContent = 'new\n';
+    readFile.mockImplementation(async (filePath: string) => {
+      if (filePath === oldPath) return oldContent;
+      if (filePath === newPath) {
+        throw Object.assign(new Error('missing'), { code: 'ENOENT' });
+      }
+      throw new Error(`unexpected read ${filePath}`);
+    });
+    const relation = { kind: 'rename' as const, oldPath: 'src/old.ts', newPath: 'src/new.ts' };
+    const change = buildLedgerRenameChange(oldPath, newPath, oldContent, newContent, relation);
+    const { ReviewApplierService } = await import('@main/services/team/ReviewApplierService');
+
+    const result = await new ReviewApplierService().applyReviewDecisions(
+      {
+        teamName: 'team',
+        decisions: [
+          { filePath: newPath, fileDecision: 'rejected', hunkDecisions: { 0: 'rejected' } },
+        ],
+      },
+      new Map([[newPath, change]])
+    );
+
+    expect(result).toEqual({ applied: 1, skipped: 0, conflicts: 0, errors: [] });
+    expect(writeFile).not.toHaveBeenCalled();
+    expect(unlink).not.toHaveBeenCalled();
+  });
+
   it('refuses to resurrect the old rename path when both paths disappeared externally', async () => {
     const fsPromises = await import('fs/promises');
     const readFile = fsPromises.readFile as unknown as ReturnType<typeof vi.fn>;

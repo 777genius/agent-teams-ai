@@ -6,8 +6,10 @@ import {
 import {
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
+  REVIEW_CLEAR_DECISIONS,
   REVIEW_DELETE_EDITED_FILE,
   REVIEW_GET_FILE_CONTENT,
+  REVIEW_LOAD_DECISIONS,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
   REVIEW_RESTORE_REJECTED_RENAME,
@@ -21,6 +23,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { IpcResult } from '@shared/types/ipc';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
+
+let decisionTeamsBasePath: string;
+
+vi.mock('@main/utils/pathDecoder', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@main/utils/pathDecoder')>()),
+  getTeamsBasePath: () => decisionTeamsBasePath,
+}));
 
 vi.mock('@shared/utils/logger', () => ({
   createLogger: () => ({
@@ -80,6 +89,7 @@ describe('review IPC path confinement', () => {
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(path.join(os.tmpdir(), 'review-ipc-test-'));
+    decisionTeamsBasePath = path.join(tmpDir, 'teams');
     projectDir = path.join(tmpDir, 'project');
     worktreeDir = path.join(tmpDir, 'worktree');
     outsideDir = path.join(tmpDir, 'outside');
@@ -216,6 +226,122 @@ describe('review IPC path confinement', () => {
     if (!result.success) {
       expect(result.error).toContain('Invalid review decision team name');
     }
+  });
+
+  it('replays a prepared review mutation before hydrating decisions and clears it only after ack', async () => {
+    const { ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    const journal = new ReviewMutationJournalStore();
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:recovery-test',
+    };
+    await journal.prepare({
+      teamName: 'safe-team',
+      persistenceScope,
+      reviewScope: { teamName: 'safe-team', memberName: 'worker' },
+      decision: {
+        filePath: projectFile,
+        reviewKey: 'stable-change-key',
+        fileDecision: 'pending',
+        hunkDecisions: { 0: 'rejected' },
+        hunkContextHashes: { 0: 'context-hash' },
+      },
+      fileContent: {
+        filePath: projectFile,
+        relativePath: 'project.ts',
+        snippets: [],
+        linesAdded: 1,
+        linesRemoved: 1,
+        isNewFile: false,
+        originalFullContent: 'before\n',
+        modifiedFullContent: 'after\n',
+        contentSource: 'ledger-exact',
+      },
+    });
+    applier.applyReviewDecisions.mockClear();
+
+    const recovered = await ipcMain.invoke(
+      REVIEW_LOAD_DECISIONS,
+      'safe-team',
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken
+    );
+
+    expect(recovered).toEqual({
+      success: true,
+      data: {
+        hunkDecisions: { 'stable-change-key:0': 'rejected' },
+        fileDecisions: {},
+        hunkContextHashesByFile: { 'stable-change-key': { 0: 'context-hash' } },
+      },
+    });
+    expect(applier.applyReviewDecisions).toHaveBeenCalledTimes(1);
+    await expect(journal.list('safe-team', persistenceScope)).resolves.toMatchObject([
+      { phase: 'committed', decision: { reviewKey: 'stable-change-key' } },
+    ]);
+
+    const saved = await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+      { 'stable-change-key:0': 'rejected' },
+      {},
+      { 'stable-change-key': { 0: 'context-hash' } }
+    );
+    expect(saved).toEqual({ success: true, data: undefined });
+    await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
+  });
+
+  it('explicitly discards a failed mutation journal with the exact saved-decision scope', async () => {
+    const { ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    const journal = new ReviewMutationJournalStore();
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:failed-recovery',
+    };
+    const prepared = await journal.prepare({
+      teamName: 'safe-team',
+      persistenceScope,
+      reviewScope: { teamName: 'safe-team', memberName: 'worker' },
+      decision: {
+        filePath: projectFile,
+        reviewKey: projectFile,
+        fileDecision: 'rejected',
+        hunkDecisions: { 0: 'rejected' },
+      },
+      fileContent: {
+        filePath: projectFile,
+        relativePath: 'project.ts',
+        snippets: [],
+        linesAdded: 1,
+        linesRemoved: 1,
+        isNewFile: false,
+        originalFullContent: 'before\n',
+        modifiedFullContent: 'after\n',
+        contentSource: 'ledger-exact',
+      },
+    });
+    await journal.markFailed(prepared, new Error('write failed'));
+
+    const load = await ipcMain.invoke(
+      REVIEW_LOAD_DECISIONS,
+      'safe-team',
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken
+    );
+    expect(load.success).toBe(false);
+
+    const clear = await ipcMain.invoke(
+      REVIEW_CLEAR_DECISIONS,
+      'safe-team',
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken
+    );
+    expect(clear).toEqual({ success: true, data: undefined });
+    await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
   });
 
   it('allows content reads inside configured project and member worktree roots', async () => {
@@ -391,6 +517,77 @@ describe('review IPC path confinement', () => {
       modifiedFullContent: 'after\n',
     });
     expect(resolver.getFileContent).toHaveBeenCalledTimes(1);
+  });
+
+  it('journals a durable apply and immediately merges its exact file decision', async () => {
+    const { ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    const contentSnapshotToken = await getDisplayedSnapshotToken(projectFile);
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:apply-test',
+    };
+
+    const result = await ipcMain.invoke(REVIEW_APPLY_DECISIONS, {
+      teamName: 'safe-team',
+      memberName: 'worker',
+      decisionPersistenceScope: persistenceScope,
+      decisions: [
+        {
+          filePath: projectFile,
+          reviewKey: 'stable-change-key',
+          fileDecision: 'rejected',
+          hunkDecisions: { 0: 'rejected' },
+          contentSnapshotToken,
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({ success: true, data: { applied: 1, errors: [] } });
+    const decisions = await ipcMain.invoke(
+      REVIEW_LOAD_DECISIONS,
+      'safe-team',
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken
+    );
+    expect(decisions).toMatchObject({
+      success: true,
+      data: {
+        hunkDecisions: { 'stable-change-key:0': 'rejected' },
+        fileDecisions: { 'stable-change-key': 'rejected' },
+      },
+    });
+    const journal = new ReviewMutationJournalStore();
+    await expect(journal.list('safe-team', persistenceScope)).resolves.toMatchObject([
+      { phase: 'committed', decision: { reviewKey: 'stable-change-key' } },
+    ]);
+  });
+
+  it('rejects a durable decision scope that does not match the authoritative review identity', async () => {
+    const contentSnapshotToken = await getDisplayedSnapshotToken(projectFile);
+    const result = await ipcMain.invoke(REVIEW_APPLY_DECISIONS, {
+      teamName: 'safe-team',
+      memberName: 'worker',
+      decisionPersistenceScope: {
+        scopeKey: 'task-task-1',
+        scopeToken: 'wrong-scope',
+      },
+      decisions: [
+        {
+          filePath: projectFile,
+          reviewKey: projectFile,
+          fileDecision: 'rejected',
+          hunkDecisions: { 0: 'rejected' },
+          contentSnapshotToken,
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      success: false,
+      error: 'Decision persistence scope does not match the authoritative review',
+    });
+    expect(applier.applyReviewDecisions).not.toHaveBeenCalled();
   });
 
   it('fails closed when a non-ledger reject has no displayed snapshot token', async () => {

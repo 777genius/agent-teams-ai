@@ -1859,9 +1859,14 @@ describe('changeReviewSlice task changes', () => {
       teamName: 'team-a',
       taskId: undefined,
       memberName: 'alice',
+      decisionPersistenceScope: {
+        scopeKey: 'agent-alice',
+        scopeToken: expect.stringContaining('agent:alice:content:'),
+      },
       decisions: [
         expect.objectContaining({
           filePath: '/repo/a.ts',
+          reviewKey: '/repo/a.ts',
         }),
       ],
     });
@@ -1942,6 +1947,60 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().applyError).toBeNull();
     expect(hoisted.applyDecisions).toHaveBeenCalledTimes(1);
     expect(store.getState().activeChangeSet).toEqual(current);
+  });
+
+  it('uses task freshness and the exact task persistence scope when memberName is also present', async () => {
+    const store = createSliceStore();
+    const current = {
+      ...makeTaskChangeSet('task-ledger', '/repo/file.ts'),
+      provenance: {
+        sourceKind: 'ledger' as const,
+        sourceFingerprint: 'projected-fp-stable',
+      },
+    };
+    hoisted.getTaskChanges.mockResolvedValueOnce(current);
+    hoisted.applyDecisions.mockResolvedValueOnce({
+      applied: 1,
+      skipped: 0,
+      conflicts: 0,
+      errors: [],
+    });
+    store.setState({
+      activeChangeSet: current,
+      activeTaskChangeRequestOptions: REVIEW_OPTIONS,
+      hunkDecisions: { '/repo/file.ts:0': 'rejected' },
+      fileDecisions: { '/repo/file.ts': 'rejected' },
+      fileChunkCounts: { '/repo/file.ts': 1 },
+      changeSetEpoch: 0,
+      fileContentVersionByPath: {},
+    });
+
+    await store.getState().applyReview('team-a', 'task-ledger', 'alice');
+
+    expect(hoisted.getTaskChanges).toHaveBeenCalledWith('team-a', 'task-ledger', {
+      ...REVIEW_OPTIONS,
+      forceFresh: true,
+    });
+    expect(hoisted.getAgentChanges).not.toHaveBeenCalled();
+    expect(hoisted.applyDecisions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName: 'team-a',
+        taskId: 'task-ledger',
+        memberName: 'alice',
+        decisionPersistenceScope: {
+          scopeKey: 'task-task-ledger',
+          scopeToken: expect.stringContaining(
+            'task:task-ledger:{"owner":"alice","status":"completed"'
+          ),
+        },
+        decisions: [
+          expect.objectContaining({
+            filePath: '/repo/file.ts',
+            reviewKey: '/repo/file.ts',
+          }),
+        ],
+      })
+    );
   });
 
   it('forces re-review when ledger projected provenance changes with the same file paths', async () => {
@@ -2269,6 +2328,15 @@ describe('changeReviewSlice task changes', () => {
 
     expect(result?.conflicts).toBe(1);
     expect(store.getState().applyError).toBe('Concurrent edit conflict');
+    expect(hoisted.applyDecisions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        decisionPersistenceScope: {
+          scopeKey: 'agent-alice',
+          scopeToken: expect.stringContaining('agent:alice:content:'),
+        },
+        decisions: [expect.objectContaining({ reviewKey: '/repo/file.ts' })],
+      })
+    );
   });
 
   it('flushes a pending debounced decision write before close cleanup can cancel it', async () => {

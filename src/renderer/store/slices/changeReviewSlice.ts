@@ -6,6 +6,7 @@ import {
 } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import {
+  buildReviewDecisionScopeToken,
   getReviewChangeSetIdentityToken,
   type ReviewChangeSetLike,
 } from '@renderer/utils/reviewDecisionScope';
@@ -21,6 +22,7 @@ import {
 } from '@renderer/utils/taskChangePresence';
 import {
   buildTaskChangePresenceKey,
+  buildTaskChangeSignature,
   isTaskSummaryCacheableForOptions,
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
@@ -60,6 +62,7 @@ import type {
   FileChangeWithContent,
   FileReviewDecision,
   HunkDecision,
+  ReviewDecisionPersistenceScope,
   ReviewFileScope,
   TaskChangePresenceState,
   TaskChangeSet,
@@ -68,6 +71,34 @@ import type {
 import type { StateCreator } from 'zustand';
 
 const logger = createLogger('changeReviewSlice');
+
+function buildApplyDecisionPersistenceScope(
+  changeSet: ReviewChangeSetLike,
+  taskChangeRequestOptions: TaskChangeRequestOptions | null,
+  taskId?: string,
+  memberName?: string
+): ReviewDecisionPersistenceScope | undefined {
+  const mode = taskId ? 'task' : memberName ? 'agent' : null;
+  if (!mode) return undefined;
+  if (mode === 'task') {
+    if (!('taskId' in changeSet) || changeSet.taskId !== taskId) return undefined;
+  } else if (!('memberName' in changeSet) || changeSet.memberName !== memberName) {
+    return undefined;
+  }
+  const scopeToken = buildReviewDecisionScopeToken({
+    mode,
+    taskId,
+    memberName,
+    requestSignature:
+      mode === 'task' ? buildTaskChangeSignature(taskChangeRequestOptions ?? {}) : undefined,
+    changeSet,
+  });
+  if (!scopeToken) return undefined;
+  return {
+    scopeKey: mode === 'task' ? `task-${taskId}` : `agent-${memberName}`,
+    scopeToken,
+  };
+}
 
 function reviewPathsEqual(left: string, right: string): boolean {
   const caseInsensitive = isWindowsReviewPath(left) || isWindowsReviewPath(right);
@@ -1280,18 +1311,18 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         const staleMessage =
           'Changes have been updated since you started reviewing. Please re-review.';
 
-        if (memberName && current) {
-          const fresh = await api.review.getAgentChanges(teamName, memberName);
+        if (taskId && current) {
+          const fresh = await api.review.getTaskChanges(teamName, taskId, {
+            ...(startState.activeTaskChangeRequestOptions ?? {}),
+            forceFresh: true,
+          });
           if (!isCurrentScope()) return null;
           if (currentFingerprint !== getReviewChangeSetIdentityToken(fresh)) {
             replaceActiveChangeSetAfterStaleRefresh(fresh, staleMessage);
             return null;
           }
-        } else if (taskId && current) {
-          const fresh = await api.review.getTaskChanges(teamName, taskId, {
-            ...(startState.activeTaskChangeRequestOptions ?? {}),
-            forceFresh: true,
-          });
+        } else if (memberName && current) {
+          const fresh = await api.review.getAgentChanges(teamName, memberName);
           if (!isCurrentScope()) return null;
           if (currentFingerprint !== getReviewChangeSetIdentityToken(fresh)) {
             replaceActiveChangeSetAfterStaleRefresh(fresh, staleMessage);
@@ -1362,6 +1393,7 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
                 : undefined;
             decisions.push({
               filePath: file.filePath,
+              reviewKey,
               fileDecision,
               hunkDecisions: hunkDecs,
               contentSnapshotToken: content?.reviewSnapshotToken,
@@ -1400,6 +1432,12 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           teamName,
           taskId,
           memberName,
+          decisionPersistenceScope: buildApplyDecisionPersistenceScope(
+            activeChangeSet,
+            startState.activeTaskChangeRequestOptions,
+            taskId,
+            memberName
+          ),
           decisions,
         };
 
@@ -1540,9 +1578,16 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           teamName,
           taskId,
           memberName,
+          decisionPersistenceScope: buildApplyDecisionPersistenceScope(
+            activeChangeSet,
+            startState.activeTaskChangeRequestOptions,
+            taskId,
+            memberName
+          ),
           decisions: [
             {
               filePath: file.filePath,
+              reviewKey,
               fileDecision,
               hunkDecisions: hunkDecs,
               contentSnapshotToken: content?.reviewSnapshotToken,

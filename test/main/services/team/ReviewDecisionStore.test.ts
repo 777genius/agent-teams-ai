@@ -189,6 +189,49 @@ describe('ReviewDecisionStore', () => {
       scopeToken: 'task:123:req:a:src:one',
     });
   });
+
+  it('merges one journaled file decision without clobbering sibling review state', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:a:src:one';
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: {
+        'stable-file:0': 'accepted',
+        '/repo/renamed.ts:0': 'accepted',
+        'change-key:0': 'accepted',
+      },
+      fileDecisions: {
+        'stable-file': 'accepted',
+        '/repo/renamed.ts': 'accepted',
+        'change-key': 'accepted',
+      },
+      hunkContextHashesByFile: {
+        'stable-file': { 0: 'stable-hash' },
+        '/repo/renamed.ts': { 0: 'legacy-hash' },
+      },
+    });
+
+    await store.mergeFileDecisionPatch('demo', 'task-123', scopeToken, {
+      filePath: '/repo/renamed.ts',
+      reviewKey: 'change-key',
+      fileDecision: 'pending',
+      hunkDecisions: { 0: 'rejected', 1: 'pending' },
+      hunkContextHashes: { 0: 'new-hash', 1: 'pending-hash' },
+    });
+
+    await expect(store.load('demo', 'task-123', scopeToken)).resolves.toEqual({
+      hunkDecisions: {
+        'stable-file:0': 'accepted',
+        'change-key:0': 'rejected',
+      },
+      fileDecisions: { 'stable-file': 'accepted' },
+      hunkContextHashesByFile: {
+        'stable-file': { 0: 'stable-hash' },
+        'change-key': { 0: 'new-hash', 1: 'pending-hash' },
+      },
+    });
+  });
 });
 
 async function fsEntries(dirPath: string): Promise<string[]> {
