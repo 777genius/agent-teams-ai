@@ -72,7 +72,16 @@ for (const source of evidence.baselineSourceClassification.sourceBlobs) {
 }
 assertEqual('targeted_observed', evidence.freshTargetedObservation.observedDiagnosticCount, 7);
 assertEqual('targeted_inherited', evidence.freshTargetedObservation.normalizedInheritedCount, 7);
-assertEqual('targeted_unexpected', evidence.freshTargetedObservation.unexpectedDiagnosticCount, 0);
+// Older evidence carries unexpectedDiagnosticCount; the current normalizer emits the
+// unexpectedDiagnostics array instead. Accept either so regenerated evidence reconciles.
+assertEqual(
+  'targeted_unexpected',
+  evidence.freshTargetedObservation.unexpectedDiagnosticCount ??
+    (Array.isArray(evidence.freshTargetedObservation.unexpectedDiagnostics)
+      ? evidence.freshTargetedObservation.unexpectedDiagnostics.length
+      : undefined),
+  0
+);
 assertEqual('targeted_effective', evidence.freshTargetedObservation.effectiveDiagnosticCount, 0);
 
 const report = {

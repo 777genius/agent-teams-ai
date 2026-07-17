@@ -610,9 +610,13 @@ async function validateMarkerRoot(
     throw new DirectoryBoundaryError('root_not_admitted');
   }
   const rootPath = path.resolve(evidence.rootPath);
+  // Fail-fast containment uses the caller's canonical path: the logical root may sit behind a
+  // symlinked temp dir (macOS /var -> /private/var). The descriptor-bound check below re-derives
+  // the real canonical path and stays authoritative against spoofed evidence.
+  const canonicalRootPath = path.resolve(evidence.canonicalRootPath);
   if (
-    samePath(rootPath, canonicalTemporaryRoot) ||
-    !isPathInside(rootPath, canonicalTemporaryRoot)
+    samePath(canonicalRootPath, canonicalTemporaryRoot) ||
+    !isPathInside(canonicalRootPath, canonicalTemporaryRoot)
   ) {
     throw new DirectoryBoundaryError('root_not_admitted');
   }
@@ -667,7 +671,13 @@ async function openAdmittedTeamsRoot(
     throw new DirectoryBoundaryError('root_not_admitted');
   }
   const teamsRootPath = path.resolve(admission.teamsRootPath);
-  if (!isPathInside(teamsRootPath, runtimeRoot.canonicalPath)) {
+  // Fail-fast: the caller may address the teams root through the logical runtime root (which can
+  // sit behind a symlinked temp dir, e.g. macOS /var -> /private/var). The descriptor-bound
+  // canonical containment check below remains authoritative.
+  if (
+    !isPathInside(teamsRootPath, path.resolve(admission.runtimeRoot.rootPath)) &&
+    !isPathInside(teamsRootPath, runtimeRoot.canonicalPath)
+  ) {
     throw new DirectoryBoundaryError('root_not_admitted');
   }
   const teamsRoot = await openDirectoryBinding(teamsRootPath, teamsRootPath, 'root_not_admitted');
