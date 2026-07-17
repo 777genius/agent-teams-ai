@@ -261,13 +261,22 @@ export function createTeamProvisioningCancellationBoundary<
       // process.
       ports.killTeamProcess(run.child);
       let failedStop: PromiseRejectedResult | undefined;
-      if (ports.getTrackedRunId(run.teamName) === run.runId) {
+      const trackedRunId = ports.getTrackedRunId(run.teamName);
+      const provisioningRunId = ports.provisioningRunByTeam.get(run.teamName) ?? null;
+      const aliveRunId = ports.aliveRunByTeam.get(run.teamName) ?? null;
+      const primaryRun = ports.runtimeAdapterRunByTeam.get(run.teamName);
+      const hasConflictingOwner = [
+        trackedRunId,
+        provisioningRunId,
+        aliveRunId,
+        primaryRun?.runId ?? null,
+      ].some((ownerRunId) => ownerRunId !== null && ownerRunId !== run.runId);
+      if (!hasConflictingOwner) {
         const stops: Promise<void>[] = [];
-        const primaryRun = ports.runtimeAdapterRunByTeam.get(run.teamName);
         if (primaryRun?.providerId === 'opencode' && primaryRun.runId === run.runId) {
           stops.push(ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId));
         }
-        if (ports.hasSecondaryRuntimeRuns(run.teamName)) {
+        if (trackedRunId === run.runId && ports.hasSecondaryRuntimeRuns(run.teamName)) {
           stops.push(ports.stopMixedSecondaryRuntimeLanes(run.teamName));
         }
         if (stops.length > 0) {

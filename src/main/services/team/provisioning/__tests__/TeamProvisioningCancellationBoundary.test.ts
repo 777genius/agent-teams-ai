@@ -78,6 +78,9 @@ function makePorts(
     trackedRunId?: string | null;
     hasSecondaryRuntimeRuns?: boolean;
     adapter?: TeamLaunchRuntimeAdapter | null;
+    runtimeAdapterRunId?: string | null;
+    provisioningRunId?: string | null;
+    aliveRunId?: string | null;
   } = {}
 ): TeamProvisioningCancellationBoundaryPorts<TestRun> & {
   cleanupRun: ReturnType<typeof vi.fn>;
@@ -92,23 +95,39 @@ function makePorts(
   );
   const emittedEvents: TeamChangeEvent[] = [];
   const progressUpdates: TeamProvisioningProgress[] = [];
-  const aliveRunByTeam = new Map([['team-a', 'run-1']]);
+  const runtimeAdapterRunId = Object.prototype.hasOwnProperty.call(input, 'runtimeAdapterRunId')
+    ? input.runtimeAdapterRunId
+    : 'run-1';
+  const provisioningRunId = Object.prototype.hasOwnProperty.call(input, 'provisioningRunId')
+    ? input.provisioningRunId
+    : 'run-1';
+  const aliveRunId = Object.prototype.hasOwnProperty.call(input, 'aliveRunId')
+    ? input.aliveRunId
+    : 'run-1';
+  const runtimeAdapterRunByTeam: TeamProvisioningCancellationBoundaryPorts<TestRun>['runtimeAdapterRunByTeam'] =
+    new Map();
+  if (runtimeAdapterRunId !== null && runtimeAdapterRunId !== undefined) {
+    runtimeAdapterRunByTeam.set('team-a', {
+      runId: runtimeAdapterRunId,
+      providerId: 'opencode' as const,
+      cwd: '/runtime-cwd',
+    });
+  }
+  const provisioningRunByTeam = new Map<string, string>();
+  if (provisioningRunId !== null && provisioningRunId !== undefined) {
+    provisioningRunByTeam.set('team-a', provisioningRunId);
+  }
+  const aliveRunByTeam = new Map<string, string>();
+  if (aliveRunId !== null && aliveRunId !== undefined) {
+    aliveRunByTeam.set('team-a', aliveRunId);
+  }
 
   const ports = {
     runs,
     runtimeAdapterProgressByRunId,
     cancelledRuntimeAdapterRunIds: new Set<string>(),
-    runtimeAdapterRunByTeam: new Map([
-      [
-        'team-a',
-        {
-          runId: 'run-1',
-          providerId: 'opencode' as const,
-          cwd: '/runtime-cwd',
-        },
-      ],
-    ]),
-    provisioningRunByTeam: new Map([['team-a', 'run-1']]),
+    runtimeAdapterRunByTeam,
+    provisioningRunByTeam,
     aliveRunByTeam,
     getTrackedRunId: vi.fn(() => input.trackedRunId ?? null),
     deleteAliveRunId: vi.fn((teamName: string) => {
@@ -248,6 +267,108 @@ describe('TeamProvisioningCancellationBoundary', () => {
     expect(ports.cleanupRun).toHaveBeenCalledWith(run);
     expect(ports.runs.has(run.runId)).toBe(false);
   });
+
+  it.each([
+    ['exact', 'run-1'],
+    ['absent', null],
+  ] as const)(
+    'stops the exact primary but not secondaries without tracking when provisioning is %s',
+    async (_provisioningState, provisioningRunId) => {
+      const run = makeRun();
+      const ports = makePorts({
+        run,
+        trackedRunId: null,
+        runtimeAdapterRunId: run.runId,
+        provisioningRunId,
+        aliveRunId: null,
+        hasSecondaryRuntimeRuns: true,
+      });
+      const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+      await boundary.cancelProvisioning(run.runId);
+
+      expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(run.teamName, run.runId);
+      expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    ['provisioning', 'run-1', null],
+    ['alive', null, 'run-1'],
+  ] as const)(
+    'does not stop runtime lanes for an exact %s owner without an exact primary runtime entry',
+    async (_owner, provisioningRunId, aliveRunId) => {
+      const run = makeRun();
+      const ports = makePorts({
+        run,
+        trackedRunId: null,
+        runtimeAdapterRunId: null,
+        provisioningRunId,
+        aliveRunId,
+        hasSecondaryRuntimeRuns: true,
+      });
+      const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+      await boundary.cancelProvisioning(run.runId);
+
+      expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+      expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    ['absent', null, null, null, false],
+    ['exact', 'run-1', 'run-1', 'run-1', true],
+  ] as const)(
+    'stops secondaries for exact tracking when the other ownership maps are %s',
+    async (_ownerState, provisioningRunId, aliveRunId, runtimeAdapterRunId, stopsPrimary) => {
+      const run = makeRun();
+      const ports = makePorts({
+        run,
+        trackedRunId: run.runId,
+        runtimeAdapterRunId,
+        provisioningRunId,
+        aliveRunId,
+        hasSecondaryRuntimeRuns: true,
+      });
+      const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+      await boundary.cancelProvisioning(run.runId);
+
+      expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(run.teamName);
+      if (stopsPrimary) {
+        expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(run.teamName, run.runId);
+      } else {
+        expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+      }
+    }
+  );
+
+  it.each([
+    ['tracked', 'newer-run', 'run-1', 'run-1', 'run-1'],
+    ['provisioning', 'run-1', 'newer-run', 'run-1', 'run-1'],
+    ['alive', 'run-1', 'run-1', 'newer-run', 'run-1'],
+    ['runtime adapter', 'run-1', 'run-1', 'run-1', 'newer-run'],
+  ] as const)(
+    'does not stop either lane when the %s ownership map belongs to a newer run',
+    async (_conflictingOwner, trackedRunId, provisioningRunId, aliveRunId, runtimeAdapterRunId) => {
+      const run = makeRun();
+      const ports = makePorts({
+        run,
+        trackedRunId,
+        runtimeAdapterRunId,
+        provisioningRunId,
+        aliveRunId,
+        hasSecondaryRuntimeRuns: true,
+      });
+      const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+      await boundary.cancelProvisioning(run.runId);
+
+      expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+      expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    }
+  );
 
   it('awaits every owned runtime lane stop before cancelled progress and cleanup', async () => {
     const primaryStop = createDeferred<void>();
