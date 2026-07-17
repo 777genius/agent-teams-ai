@@ -15,10 +15,10 @@ import {
 import { readGitBlobBatch } from "./git-blob-batch-reader";
 
 const execFileAsync = promisify(execFile);
+const maximumInputPaths = 1024;
 const defaultMaxFileBytes = 1024 * 1024;
 const defaultMaxTotalFileBytes = 16 * 1024 * 1024;
-const defaultMaxChangedFiles = 256;
-const maximumInputPaths = 1024;
+const defaultMaxChangedFiles = maximumInputPaths;
 const maximumByteLimit = 64 * 1024 * 1024;
 
 export type SimpleSecretScannerOptions = {
@@ -52,7 +52,7 @@ export class SimpleSecretScanner implements SecretScannerPort {
     const maxChangedFiles = scannerLimit(
       this.options.maxChangedFiles,
       defaultMaxChangedFiles,
-      defaultMaxChangedFiles,
+      maximumInputPaths,
       "secret_scan_max_changed_files_invalid",
     );
     if (input.files.length > maximumInputPaths) {

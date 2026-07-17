@@ -163,7 +163,30 @@ describe("SimpleSecretScanner security", () => {
     });
   });
 
-  it("deduplicates paths, caps unique paths, and validates maxFileBytes", async () => {
+  it("scans a large bounded merge file set", async () => {
+    const workspacePath = await createGitFixture();
+    const files = Array.from(
+      { length: 604 },
+      (_, index) => `src/merge-file-${index}.ts`,
+    );
+    await Promise.all(files.map((file) =>
+      writeFile(join(workspacePath, file), "export const safe = true;\n")
+    ));
+    const lastFile = files.at(-1) as string;
+    await writeFile(join(workspacePath, lastFile), "merge-tail-sentinel\n");
+
+    await expect(new SimpleSecretScanner({
+      patterns: [/merge-tail-sentinel/],
+    }).scanFiles({
+      workspacePath,
+      files,
+    })).resolves.toEqual({
+      status: SecretScanStatus.Failed,
+      safeMessage: `secret_like_content:${lastFile}`,
+    });
+  });
+
+  it("deduplicates paths, caps unique paths, and validates limits", async () => {
     const workspacePath = await createGitFixture();
     await expect(new SimpleSecretScanner().scanFiles({
       workspacePath,
@@ -172,11 +195,16 @@ describe("SimpleSecretScanner security", () => {
 
     await expect(new SimpleSecretScanner().scanFiles({
       workspacePath,
-      files: Array.from({ length: 257 }, (_, index) => `src/file-${index}.ts`),
+      files: Array.from({ length: 1025 }, (_, index) => `src/file-${index}.ts`),
     })).resolves.toEqual({
       status: SecretScanStatus.Failed,
       safeMessage: "secret_scan_changed_file_limit_exceeded",
     });
+
+    await expect(new SimpleSecretScanner({ maxChangedFiles: 1025 }).scanFiles({
+      workspacePath,
+      files: ["README.md"],
+    })).rejects.toThrow("secret_scan_max_changed_files_invalid");
 
     for (const maxFileBytes of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
       await expect(new SimpleSecretScanner({ maxFileBytes }).scanFiles({
