@@ -82,6 +82,7 @@ allowBuilds:
   '@parcel/watcher': false
   '@sentry/cli': false
   '@swc/core': false
+  better-sqlite3: true
   core-js: false
   cpu-features: true
   electron: true
