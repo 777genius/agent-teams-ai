@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import * as path from 'path';
@@ -174,7 +175,7 @@ describe('ReviewDecisionStore', () => {
     });
   });
 
-  it('writes revisioned v5 payloads under the scoped directory', async () => {
+  it('writes revisioned content-addressed v6 payloads under the scoped directory', async () => {
     const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
     const store = new ReviewDecisionStore();
 
@@ -196,10 +197,12 @@ describe('ReviewDecisionStore', () => {
 
     const payload: unknown = JSON.parse(await readFile(path.join(scopeDir, entries[0]!), 'utf8'));
     expect(payload).toMatchObject({
-      version: 5,
+      version: 6,
       scopeKey: 'task-123',
       scopeToken: 'task:123:req:a:src:one',
       revision: 1,
+      textBlobs: {},
+      fileSummaryBlobs: {},
     });
   });
 
@@ -358,7 +361,118 @@ describe('ReviewDecisionStore', () => {
     expect(restored?.reviewActionHistory).toHaveLength(100);
   });
 
-  it('round-trips the durable Redo branch in a v5 snapshot', async () => {
+  it('deduplicates history contents and garbage-collects unreachable v6 blobs', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:dedup:src:one';
+    const file = {
+      filePath: '/repo/file.ts',
+      relativePath: 'file.ts',
+      snippets: [],
+      linesAdded: 1,
+      linesRemoved: 1,
+      isNewFile: false,
+    };
+    const makeAction = (id: string, beforeContent: string, afterContent: string) => ({
+      id,
+      createdAt: '2026-07-17T12:00:00.000Z',
+      kind: 'disk' as const,
+      action: {
+        snapshot: {
+          filePath: file.filePath,
+          beforeContent,
+          afterContent,
+          file,
+        },
+        file,
+      },
+    });
+    const retained = makeAction('retained-action', 'before-a\n', 'after-a\n');
+    const duplicateContent = makeAction('duplicate-content-action', 'before-a\n', 'after-a\n');
+    const collected = makeAction('collected-action', 'before-b\n', 'after-b\n');
+
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [retained, duplicateContent, collected],
+    });
+    const filePath = exactScopeFilePath('demo', 'task-123', scopeToken);
+    const first = JSON.parse(await readFile(filePath, 'utf8')) as {
+      version: number;
+      textBlobs: Record<string, string>;
+      fileSummaryBlobs: Record<string, unknown>;
+      reviewActionHistory: {
+        action: { snapshot: { beforeBlob: string; beforeContent?: string }; fileRef: string };
+      }[];
+    };
+    expect(first.version).toBe(6);
+    expect(Object.values(first.textBlobs)).toHaveLength(4);
+    expect(Object.values(first.fileSummaryBlobs)).toHaveLength(1);
+    expect(first.reviewActionHistory[0]?.action.snapshot.beforeContent).toBeUndefined();
+    expect(first.reviewActionHistory[0]?.action.fileRef).toBe(
+      first.reviewActionHistory[1]?.action.fileRef
+    );
+    expect(first.reviewActionHistory[0]?.action.snapshot.beforeBlob).toBe(
+      first.reviewActionHistory[1]?.action.snapshot.beforeBlob
+    );
+
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [retained],
+      expectedRevision: 1,
+    });
+    const compacted = JSON.parse(await readFile(filePath, 'utf8')) as {
+      textBlobs: Record<string, string>;
+      fileSummaryBlobs: Record<string, unknown>;
+    };
+    expect(Object.values(compacted.textBlobs).sort()).toEqual(['after-a\n', 'before-a\n']);
+    expect(Object.values(compacted.fileSummaryBlobs)).toHaveLength(1);
+    await expect(store.load('demo', 'task-123', scopeToken)).resolves.toMatchObject({
+      reviewActionHistory: [retained],
+      revision: 2,
+    });
+  });
+
+  it('fails closed when a v6 content-addressed history blob is corrupted', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:corrupt-blob:src:one';
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [
+        {
+          id: 'disk-action',
+          createdAt: '2026-07-17T12:00:00.000Z',
+          kind: 'disk',
+          action: {
+            snapshot: {
+              filePath: '/repo/file.ts',
+              beforeContent: 'before\n',
+              afterContent: 'after\n',
+            },
+          },
+        },
+      ],
+    });
+    const filePath = exactScopeFilePath('demo', 'task-123', scopeToken);
+    const payload = JSON.parse(await readFile(filePath, 'utf8')) as {
+      textBlobs: Record<string, string>;
+    };
+    const [firstRef] = Object.keys(payload.textBlobs);
+    payload.textBlobs[firstRef!] = 'tampered\n';
+    await writeFile(filePath, JSON.stringify(payload), 'utf8');
+
+    await expect(store.load('demo', 'task-123', scopeToken)).rejects.toThrow(
+      'Invalid review decisions payload'
+    );
+  });
+
+  it('round-trips the durable Redo branch in a v6 snapshot', async () => {
     const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
     const store = new ReviewDecisionStore();
     const action = {
@@ -438,6 +552,55 @@ describe('ReviewDecisionStore', () => {
         expectedRevision: 7,
       })
     ).resolves.toBe(8);
+  });
+
+  it('loads an existing v5 full-text history and compacts it on the next CAS write', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:v5:src:one';
+    const filePath = exactScopeFilePath('demo', 'task-123', scopeToken);
+    const action = {
+      id: 'legacy-disk-action',
+      createdAt: '2026-07-17T12:00:00.000Z',
+      kind: 'disk' as const,
+      action: {
+        snapshot: {
+          filePath: '/repo/file.ts',
+          beforeContent: 'before\n',
+          afterContent: 'after\n',
+        },
+      },
+    };
+    await mkdir(path.dirname(filePath), { recursive: true });
+    await writeFile(
+      filePath,
+      JSON.stringify({
+        version: 5,
+        scopeKey: 'task-123',
+        scopeToken,
+        hunkDecisions: {},
+        fileDecisions: {},
+        reviewActionHistory: [action],
+        reviewRedoHistory: [],
+        revision: 4,
+        updatedAt: '2026-07-17T00:00:00.000Z',
+      }),
+      'utf8'
+    );
+
+    await expect(store.load('demo', 'task-123', scopeToken)).resolves.toMatchObject({
+      reviewActionHistory: [action],
+      revision: 4,
+    });
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: {},
+      fileDecisions: {},
+      reviewActionHistory: [action],
+      reviewRedoHistory: [],
+      expectedRevision: 4,
+    });
+    await expect(readFile(filePath, 'utf8')).resolves.toContain('"version": 6');
   });
 
   it('loads an existing v2 exact-scope payload with an empty action history', async () => {
@@ -522,4 +685,16 @@ async function fsEntries(dirPath: string): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+function exactScopeFilePath(teamName: string, scopeKey: string, scopeToken: string): string {
+  const scopeHash = createHash('sha256').update(scopeToken).digest('hex');
+  return path.join(
+    teamsBasePath,
+    teamName,
+    'review-decisions',
+    'v2',
+    encodeURIComponent(scopeKey),
+    `${scopeHash}.json`
+  );
 }
