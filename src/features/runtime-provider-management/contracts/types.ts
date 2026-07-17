@@ -127,6 +127,12 @@ export interface RuntimeProviderSetupFormDto {
   authOptions?: readonly RuntimeProviderSetupAuthOptionDto[];
   /** Optional while older packaged orchestrators are still supported. */
   defaultAuthOptionId?: string | null;
+  /** Optional while older packaged orchestrators are still supported. */
+  verification?: {
+    kind: 'model-request';
+    freeModelPreferred: boolean;
+    mayUseQuotaOrBalance: boolean;
+  } | null;
 }
 
 export type RuntimeProviderOAuthCompletionMethodDto = 'auto' | 'code';

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { buildProviderAwareCliEnv } from '@main/services/runtime/providerAwareCliEnv';
 import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
+import { getHomeDir } from '@main/utils/pathDecoder';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 
 import {
@@ -978,11 +979,19 @@ function runtimeProviderCommandOptions<T extends { env: NodeJS.ProcessEnv }>(
   options: T,
   projectPath: string | null
 ): T & { cwd?: string; maxBuffer: number } {
+  const fallbackHome = [options.env.HOME, options.env.USERPROFILE, getHomeDir()]
+    .map((candidate) => candidate?.trim())
+    .find((candidate): candidate is string => {
+      if (!candidate) return false;
+      const resolved = path.resolve(candidate);
+      return resolved !== path.parse(resolved).root;
+    });
   const commandOptions = {
     ...options,
     maxBuffer: COMMAND_MAX_BUFFER_BYTES,
   };
-  return projectPath ? { ...commandOptions, cwd: projectPath } : commandOptions;
+  const cwd = projectPath ?? fallbackHome;
+  return cwd ? { ...commandOptions, cwd } : commandOptions;
 }
 
 interface BoundedSpawnOutputBuffer {
