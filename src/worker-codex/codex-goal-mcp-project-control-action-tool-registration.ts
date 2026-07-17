@@ -60,11 +60,16 @@ export function registerCodexGoalProjectControlActionTools(server: McpServer): v
           .string()
           .regex(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i)
           .optional(),
+        expectedCurrentCommit: z
+          .string()
+          .regex(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i)
+          .optional(),
         newBranch: z.string().optional(),
         workerRole: z.enum(projectAdmissionWorkerRoleSchemaValues).optional(),
         dependencyBootstrap: z.enum(["off", "preflight", "install"]).optional(),
         confirmDependencyBootstrap: z.boolean().optional(),
         confirmCreateWorktree: z.boolean().optional(),
+        confirmFastForwardExisting: z.boolean().optional(),
       },
     },
     async (args) => withMcpErrors(async () =>

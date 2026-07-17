@@ -589,6 +589,19 @@ export async function projectControlCreateWorktreeView(
   if (expectedSourceCommit && !effectiveSourceRef) {
     throw new Error("project_control_pinned_source_ref_required");
   }
+  const expectedCurrentCommit = stringValue(args.expectedCurrentCommit);
+  if (expectedCurrentCommit) assertSafeGitCommitSha(expectedCurrentCommit);
+  const confirmFastForwardExisting =
+    booleanValue(args.confirmFastForwardExisting) === true;
+  if (confirmFastForwardExisting && !expectedCurrentCommit) {
+    throw new Error("project_control_expected_current_commit_required");
+  }
+  if (expectedCurrentCommit && !expectedSourceCommit) {
+    throw new Error("project_control_fast_forward_pinned_source_required");
+  }
+  if (expectedCurrentCommit && !newBranch) {
+    throw new Error("project_control_fast_forward_branch_required");
+  }
   const workerRole = projectAdmissionWorkerRoleArg(args.workerRole);
   const realSourceWorkspacePath =
     await projectControlRealPathOutsideWorkspaceScope(
@@ -641,6 +654,17 @@ export async function projectControlCreateWorktreeView(
       ],
     };
   }
+  if (expectedCurrentCommit && !confirmFastForwardExisting) {
+    return {
+      ok: false,
+      reason: "confirm_fast_forward_existing_required",
+      controllerJobId: controller.controller.jobId,
+      auditPath: projectControlAuditPath(controller.controller),
+      path,
+      expectedCurrentCommit,
+      expectedSourceCommit,
+    };
+  }
 
   const resolverBroker = deps.codexProjectControlBroker({
     registryRootDir: controller.registryRootDir,
@@ -659,6 +683,9 @@ export async function projectControlCreateWorktreeView(
     ...worktreeAccessInput,
     expectedRevision: sourceRevision.revision,
     ...(sourceRevision.pinned ? { sourceRevisionPinned: true } : {}),
+    ...(expectedCurrentCommit
+      ? { fastForwardExisting: { expectedCurrentRevision: expectedCurrentCommit } }
+      : {}),
     expectedSourceRealPath: resolvedSource.sourceRealPath,
   };
   const broker = deps.codexProjectControlBroker({
@@ -667,11 +694,20 @@ export async function projectControlCreateWorktreeView(
     scope: controller.scope,
     createWorktreeInput,
   });
-  const worktree = await createOrReuseProjectWorktree({
+  const materialize = async () => await createOrReuseProjectWorktree({
     broker,
     scope: controller.scope,
     createWorktreeInput,
   });
+  const worktree = expectedCurrentCommit
+    ? await withValidatedProjectWorkspaceLock({
+        locks: projectControlWorkspaceLocks(controller.registryRootDir),
+        scope: controller.scope,
+        requestedWorkspacePath: path,
+        owner: `project-worktree-fast-forward:${controller.controller.jobId}`,
+        effect: materialize,
+      })
+    : await materialize();
   const result = worktree.result;
   const dependencyPreflight = await withValidatedProjectWorkspaceLock({
     locks: projectControlWorkspaceLocks(controller.registryRootDir),

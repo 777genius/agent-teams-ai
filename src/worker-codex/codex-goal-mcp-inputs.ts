@@ -144,6 +144,7 @@ export type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly baseBranch?: string;
   readonly sourceRef?: string;
   readonly expectedSourceCommit?: string;
+  readonly expectedCurrentCommit?: string;
   readonly newBranch?: string;
   readonly workspacePath?: string;
   readonly branch?: string;
@@ -155,6 +156,7 @@ export type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly commitSha?: string;
   readonly confirmCreate?: boolean;
   readonly confirmCreateWorktree?: boolean;
+  readonly confirmFastForwardExisting?: boolean;
   readonly confirmIntegrate?: boolean;
   readonly confirmUpdate?: boolean;
   readonly confirmPush?: boolean;

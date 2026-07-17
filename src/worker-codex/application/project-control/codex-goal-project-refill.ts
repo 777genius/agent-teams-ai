@@ -61,7 +61,8 @@ export async function createOrReuseProjectWorktree(input: {
   readonly created: boolean;
 }> {
   const result = await input.broker.createWorktree(input.createWorktreeInput);
-  const created = result.status === "applied";
+  const created =
+    result.status === "applied" && !input.createWorktreeInput.expectedRealPath;
   try {
     await assertReusableProjectWorktree({
       createWorktreeInput: input.createWorktreeInput,
