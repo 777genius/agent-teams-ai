@@ -149,6 +149,9 @@ export type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly branch?: string;
   readonly remote?: string;
   readonly force?: boolean;
+  readonly expectedRemoteCommit?: string;
+  readonly expectedLocalCommit?: string;
+  readonly confirmExternalRewriteRecovery?: boolean;
   readonly commitSha?: string;
   readonly confirmCreate?: boolean;
   readonly confirmCreateWorktree?: boolean;

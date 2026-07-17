@@ -63,6 +63,7 @@ import {
   execGitStdout,
   isGitAncestor,
 } from "./codex-goal-mcp-project-git";
+import { pushProjectBranch } from "./application/project-control/codex-goal-project-external-rewrite-recovery";
 
 export type { CodexGoalProjectCreateWorktreeInput } from "./application/project-control/codex-goal-project-control-contracts";
 
@@ -79,6 +80,9 @@ export type CodexGoalProjectPushBranchInput = {
   readonly branch: string;
   readonly remote: string;
   readonly force: boolean;
+  readonly expectedRemoteCommit?: string;
+  readonly expectedLocalCommit?: string;
+  readonly confirmExternalRewriteRecovery?: boolean;
 };
 
 export async function resolveBoundProjectWorktreeSource(input: {
@@ -550,18 +554,7 @@ function codexProjectControlPorts(
         if (!input.pushBranchInput) {
           throw new Error("project_control_push_branch_input_required");
         }
-        await assertGitCurrentBranch({
-          workspacePath: input.pushBranchInput.workspacePath,
-          branch: input.pushBranchInput.branch,
-        });
-        await execGit([
-          "-C",
-          input.pushBranchInput.workspacePath,
-          "push",
-          ...(input.pushBranchInput.force ? ["--force-with-lease"] : []),
-          input.pushBranchInput.remote,
-          input.pushBranchInput.branch,
-        ]);
+        await pushProjectBranch(input.pushBranchInput);
         return operationResult(
           `${input.pushBranchInput.remote}/${input.pushBranchInput.branch}`,
         );

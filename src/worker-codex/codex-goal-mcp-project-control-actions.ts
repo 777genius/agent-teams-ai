@@ -53,6 +53,7 @@ import {
   assertSafeGitRefName,
   assertSafeGitRemoteName,
 } from "./codex-goal-mcp-project-git";
+import { resolveProjectExternalRewriteRecovery } from "./application/project-control/codex-goal-project-external-rewrite-recovery";
 import {
   resolveProjectSourceReference,
   resolveProjectSourceRevision,
@@ -789,8 +790,18 @@ export async function projectControlPushBranchView(
   const branch = requiredRawString(args.branch, "branch");
   const remote = stringValue(args.remote) ?? "origin";
   const force = booleanValue(args.force) ?? false;
+  const expectedRemoteCommit = stringValue(args.expectedRemoteCommit);
+  const expectedLocalCommit = stringValue(args.expectedLocalCommit);
+  const confirmExternalRewriteRecovery =
+    booleanValue(args.confirmExternalRewriteRecovery) ?? false;
   assertSafeGitRefName(branch, "branch");
   assertSafeGitRemoteName(remote, "remote");
+  const recovery = resolveProjectExternalRewriteRecovery({
+    force,
+    expectedRemoteCommit,
+    expectedLocalCommit,
+    confirmExternalRewriteRecovery,
+  });
   const realWorkspacePath = await projectControlRealPathOutsideWorkspaceScope(
     workspacePath,
     controller.scope,
@@ -801,8 +812,12 @@ export async function projectControlPushBranchView(
     branch,
     remote,
     force,
+    ...(expectedRemoteCommit ? { expectedRemoteCommit } : {}),
+    ...(expectedLocalCommit ? { expectedLocalCommit } : {}),
+    ...(confirmExternalRewriteRecovery
+      ? { confirmExternalRewriteRecovery: true }
+      : {}),
   };
-
   if (!args.confirmPush) {
     return {
       ok: false,
@@ -814,9 +829,9 @@ export async function projectControlPushBranchView(
         "-C",
         workspacePath,
         "push",
-        ...(force ? ["--force-with-lease"] : []),
+        ...(recovery ? [`--force-with-lease=refs/heads/${branch}:${recovery.expectedRemoteCommit}`] : force ? ["--force-with-lease"] : []),
         remote,
-        branch,
+        `HEAD:refs/heads/${branch}`,
       ],
     };
   }

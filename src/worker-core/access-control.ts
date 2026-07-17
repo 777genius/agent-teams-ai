@@ -198,6 +198,9 @@ export type ProjectGitAccessRequest = {
   readonly remote?: string;
   readonly force?: boolean;
   readonly commitSha?: string;
+  readonly expectedRemoteCommit?: string;
+  readonly expectedLocalCommit?: string;
+  readonly confirmExternalRewriteRecovery?: boolean;
 };
 
 export type ProjectAccountAccessRequest = {
@@ -667,7 +670,11 @@ class DefaultAccessPolicyService implements AccessPolicyService {
         "git workspace real path is outside project workspace roots",
       ]);
     }
-    if (request.force === true && scope.allowForcePush !== true) {
+    if (
+      request.force === true &&
+      scope.allowForcePush !== true &&
+      !isConfirmedExternalRewriteRecovery(request)
+    ) {
       return this.deny(operation, AccessDecisionReason.ForcePushDenied);
     }
     if (!matchesAnyPattern(request.branch, scope.allowedBranches ?? [])) {
@@ -752,6 +759,18 @@ class DefaultAccessPolicyService implements AccessPolicyService {
       evidence,
     };
   }
+}
+
+function isConfirmedExternalRewriteRecovery(
+  request: ProjectGitAccessRequest,
+): boolean {
+  return request.confirmExternalRewriteRecovery === true &&
+    isFullSha1(request.expectedRemoteCommit) &&
+    isFullSha1(request.expectedLocalCommit);
+}
+
+function isFullSha1(value: string | undefined): value is string {
+  return typeof value === "string" && /^[0-9a-f]{40}$/i.test(value);
 }
 
 function launchEnforcementBlocker(input: LaunchPlanInput): LaunchPlan | null {
