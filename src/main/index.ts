@@ -115,9 +115,12 @@ import { FileContentResolver } from '@main/services/team/FileContentResolver';
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
 import { isInformationalOpenCodeRuntimeDeliveryDiagnostic } from '@main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryDiagnostics';
 import {
+  buildOpenCodeAppScopedMcpOwnershipMarker,
+  buildOpenCodeAppScopedMcpUrl,
   copyOpenCodeLocalMcpLaunchEnv,
   hasOpenCodeLocalMcpLaunchEnv,
   isOpenCodeMcpHttpBridgeEnabled,
+  mergeOpenCodeLocalMcpChildEnvironment,
   shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
@@ -553,6 +556,9 @@ async function createOpenCodeRuntimeAdapterRegistry(
   });
   applyAgentTeamsIdentityEnv(bridgeEnv);
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
+  mergeOpenCodeLocalMcpChildEnvironment(bridgeEnv, {
+    CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+  });
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
   const explicitLocalMcpLaunchEnv = snapshotOpenCodeLocalMcpLaunchEnv(bridgeEnv);
@@ -582,6 +588,9 @@ async function createOpenCodeRuntimeAdapterRegistry(
         targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON = JSON.stringify(
           mcpLaunchSpec.env ?? {}
         );
+        mergeOpenCodeLocalMcpChildEnvironment(targetEnv, {
+          CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+        });
       }
     } catch (error) {
       logger.warn(
@@ -642,7 +651,10 @@ async function createOpenCodeRuntimeAdapterRegistry(
     try {
       reportProgress('runtime-mcp-http', 'Starting Agent Teams MCP server...');
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
+      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = buildOpenCodeAppScopedMcpUrl(
+        mcpHttpServer.url,
+        openCodeManagedHostInstanceId
+      );
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
       reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
     } catch (error) {
@@ -671,9 +683,13 @@ async function createOpenCodeRuntimeAdapterRegistry(
     }
     try {
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
+      const appScopedMcpUrl = buildOpenCodeAppScopedMcpUrl(
+        mcpHttpServer.url,
+        openCodeManagedHostInstanceId
+      );
+      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
-      nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
+      nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
       nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
       await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
     } catch (error) {
@@ -739,7 +755,7 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
       mode: reason === 'shutdown' ? 'force' : 'stale',
       staleAgeMs: reason === 'startup' ? 5 * 60_000 : null,
       leaseStaleAgeMs: reason === 'startup' ? 24 * 60 * 60_000 : null,
-      preflightLeaseStaleAgeMs: reason === 'startup' ? 2 * 60_000 : null,
+      preflightLeaseStaleAgeMs: reason === 'startup' ? 6 * 60_000 : null,
     });
     registryHostPids = new Set(
       result.hosts
@@ -770,12 +786,22 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
   await cleanupOpenCodeHostProcessFallback(`${reason} fallback`, {
     mode: reason === 'shutdown' ? 'force' : 'orphaned',
     excludePids: reason === 'startup' ? registryHostPids : undefined,
-    requiredDetailsMarkers:
-      reason === 'shutdown'
-        ? [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`]
-        : undefined,
+    ...(reason === 'shutdown' ? getOpenCodeShutdownProcessOwnershipMarkers() : {}),
     startedBeforeMs: reason === 'startup' ? appStartedAtMs : null,
   });
+}
+
+function getOpenCodeShutdownProcessOwnershipMarkers(): Pick<
+  Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0],
+  'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny'
+> {
+  return process.platform === 'win32'
+    ? {
+        requiredServeConfigMarkersAny: [
+          buildOpenCodeAppScopedMcpOwnershipMarker(openCodeManagedHostInstanceId),
+        ],
+      }
+    : { requiredDetailsMarkers: [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`] };
 }
 
 async function cleanupOpenCodeHostProcessFallback(
@@ -2777,7 +2803,7 @@ async function shutdownServices(): Promise<void> {
       () =>
         cleanupOpenCodeHostProcessFallback('post-subprocess shutdown fallback', {
           mode: 'force',
-          requiredDetailsMarkers: [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`],
+          ...getOpenCodeShutdownProcessOwnershipMarkers(),
         }),
       5_000
     );

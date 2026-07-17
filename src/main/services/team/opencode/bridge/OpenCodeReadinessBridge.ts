@@ -76,9 +76,8 @@ export interface OpenCodeReadinessBridgeCommandBody {
   requireExecutionProbe: boolean;
 }
 
-const DEFAULT_READINESS_TIMEOUT_MS = 120_000;
+const DEFAULT_READINESS_TIMEOUT_MS = 300_000;
 const DEFAULT_LAUNCH_TIMEOUT_MS = 120_000;
-const NATIVE_SUBSCRIPTION_CLI_READINESS_TIMEOUT_MS = 180_000;
 const NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_PER_MEMBER_MS = 90_000;
 const MAX_NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_MS = 10 * 60_000;
 const DEFAULT_RECONCILE_TIMEOUT_MS = 30_000;
@@ -117,15 +116,13 @@ export function resolveOpenCodeLaunchTimeoutMs(
 }
 
 export function resolveOpenCodeReadinessTimeoutMs(
-  selectedModel: string | null,
+  _selectedModel: string | null,
   configuredTimeoutMs?: number
 ): number {
   if (configuredTimeoutMs !== undefined) {
     return configuredTimeoutMs;
   }
-  return selectedModel?.startsWith('cursor-acp/') || selectedModel?.startsWith('kiro/')
-    ? NATIVE_SUBSCRIPTION_CLI_READINESS_TIMEOUT_MS
-    : DEFAULT_READINESS_TIMEOUT_MS;
+  return DEFAULT_READINESS_TIMEOUT_MS;
 }
 
 function buildSendPayloadHash(input: OpenCodeSendMessageCommandBody): string {
@@ -436,7 +433,11 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
         ? withOpenCodeObservedFallbackDiagnostic(result.data)
         : result.data;
     }
-    if (result.error.kind === 'timeout' || isOpenCodeBridgeEmptyOutputFailure(result)) {
+    if (
+      result.error.kind === 'timeout' ||
+      result.error.kind === 'transport_watchdog_timeout' ||
+      isOpenCodeBridgeEmptyOutputFailure(result)
+    ) {
       const recoveredAfterEmptyOutput = isOpenCodeBridgeEmptyOutputFailure(result);
       const recovered = await this.recoverSendMessageOutcome({
         originalRequestId: activeRequestId,
@@ -745,6 +746,7 @@ function mapBridgeFailureToReadinessState(
     case 'runtime_not_ready':
       return 'adapter_disabled';
     case 'timeout':
+    case 'transport_watchdog_timeout':
     case 'contract_violation':
     case 'provider_error':
     case 'unsupported_schema':

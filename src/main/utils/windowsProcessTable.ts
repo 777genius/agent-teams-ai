@@ -1,9 +1,14 @@
-import { execFile, execFileSync } from 'child_process';
+import { execFile, execFileSync } from 'node:child_process';
 
 export interface WindowsProcessTableRow {
   pid: number;
   ppid: number;
   command: string;
+}
+
+export interface ListWindowsProcessTableOptions {
+  /** Run an independent fresh probe without reading, joining, or populating the shared cache. */
+  bypassCache?: boolean;
 }
 
 interface RawWindowsProcessRow {
@@ -25,6 +30,10 @@ const PROCESS_TABLE_ARGS = [
   '-Command',
   PROCESS_TABLE_SCRIPT,
 ];
+const PROCESS_TABLE_CACHE_TTL_MS = 1_500;
+
+let cachedProcessTable: { rows: WindowsProcessTableRow[]; expiresAt: number } | null = null;
+let processTableRequest: Promise<WindowsProcessTableRow[]> | null = null;
 
 function parsePositiveInteger(value: unknown): number | null {
   const parsed =
@@ -65,9 +74,7 @@ export function parseWindowsProcessTableJson(stdout: string): WindowsProcessTabl
   return result;
 }
 
-export async function listWindowsProcessTable(
-  timeoutMs = 4_000
-): Promise<WindowsProcessTableRow[]> {
+function readWindowsProcessTableUncached(timeoutMs: number): Promise<WindowsProcessTableRow[]> {
   return new Promise((resolve, reject) => {
     execFile(
       'powershell.exe',
@@ -91,6 +98,42 @@ export async function listWindowsProcessTable(
       }
     );
   });
+}
+
+export async function listWindowsProcessTable(
+  timeoutMs = 4_000,
+  options: ListWindowsProcessTableOptions = {}
+): Promise<WindowsProcessTableRow[]> {
+  if (options.bypassCache === true) {
+    const rows = await readWindowsProcessTableUncached(timeoutMs);
+    return rows.map((row) => ({ ...row }));
+  }
+
+  const cached = cachedProcessTable;
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.rows.map((row) => ({ ...row }));
+  }
+
+  if (processTableRequest) {
+    const rows = await processTableRequest;
+    return rows.map((row) => ({ ...row }));
+  }
+
+  const request = readWindowsProcessTableUncached(timeoutMs);
+  processTableRequest = request;
+
+  try {
+    const rows = await request;
+    cachedProcessTable = {
+      rows,
+      expiresAt: Date.now() + PROCESS_TABLE_CACHE_TTL_MS,
+    };
+    return rows.map((row) => ({ ...row }));
+  } finally {
+    if (processTableRequest === request) {
+      processTableRequest = null;
+    }
+  }
 }
 
 export function listWindowsProcessTableSync(timeoutMs = 4_000): WindowsProcessTableRow[] {
