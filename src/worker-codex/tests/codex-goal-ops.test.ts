@@ -24,6 +24,7 @@ import {
   CodexGoalRuntimeResultReconciler,
   listCodexGoalAccountStatuses,
   reconcileCodexGoalRuntimeResult,
+  recommendCodexGoalAction,
   resolveCodexGoalWorkerLiveness,
   startCodexGoalTmux,
   stopCodexGoalDirectProcess,
@@ -40,6 +41,16 @@ import {
 const execFileAsync = promisify(execFile);
 
 describe("codex goal ops", () => {
+  it("routes model_unavailable to account-capacity continuation", () => {
+    expect(recommendCodexGoalAction({
+      resultExists: true,
+      resultStatus: "failed",
+      resultReason: "model_unavailable",
+      workspaceExists: true,
+      workspaceDirty: false,
+    })).toBe("continue_after_capacity");
+  });
+
   it("builds dry-run commands without embedding auth material", async () => {
     const fixture = await createGoalFixture();
     const launch = launchInput(fixture.config, fixture.root);

@@ -52,6 +52,13 @@ describe("admitted input-patch capacity continuation", () => {
     expect(
       isAdmittedInputPatchCapacityContinuation({
         ...status,
+        resultStatus: "failed",
+        resultReason: "model_unavailable",
+      }),
+    ).toBe(true);
+    expect(
+      isAdmittedInputPatchCapacityContinuation({
+        ...status,
         workspaceDirty: false,
       }),
     ).toBe(false);
@@ -332,6 +339,22 @@ describe("clean pre-start capacity continuation", () => {
       progressResultReason: "account_unavailable",
     } as const;
     expect(isCleanPreStartAdmissionCapacityContinuation(status)).toBe(true);
+    expect(
+      isCleanPreStartAdmissionCapacityContinuation({
+        workspaceDirty: false,
+        recommendedAction: "continue_after_capacity",
+        resultStatus: "failed",
+        resultReason: "model_unavailable",
+      }),
+    ).toBe(true);
+    expect(
+      isCleanPreStartAdmissionCapacityContinuation({
+        workspaceDirty: false,
+        recommendedAction: "continue_after_capacity",
+        progressResultStatus: "waiting_capacity",
+        progressResultReason: "model_unavailable",
+      }),
+    ).toBe(true);
     expect(
       isCleanPreStartAdmissionCapacityContinuation({
         ...status,

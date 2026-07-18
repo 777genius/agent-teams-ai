@@ -719,6 +719,7 @@ export function recommendCodexGoalAction(input: {
     input.resultReason === "quota_limited" ||
     input.resultReason === "capacity_unavailable" ||
     input.resultReason === "account_unavailable" ||
+    input.resultReason === "model_unavailable" ||
     input.resultReason === "reconnect_required"
   ) {
     return "continue_after_capacity";

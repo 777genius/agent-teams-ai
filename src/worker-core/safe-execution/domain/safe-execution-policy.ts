@@ -210,6 +210,7 @@ export function safeExecutionWaitingStatusForFailure(
   return reason === "quota_limited" ||
     reason === "capacity_unavailable" ||
     reason === "account_unavailable" ||
+    reason === "model_unavailable" ||
     reason === "reconnect_required"
     ? "waiting_capacity"
     : null;

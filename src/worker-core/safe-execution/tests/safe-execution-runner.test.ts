@@ -987,6 +987,50 @@ describe("SafeExecutionRunner", () => {
       (await journal.readTask({ taskId: "task-wait-capacity" }))?.status,
     ).toBe("waiting_capacity");
   }, 15_000);
+
+  it("parks clean model unavailability but fails closed after workspace changes", async () => {
+    for (const workspaceChanged of [false, true]) {
+      const workspacePath = await gitWorkspace(
+        cleanupPaths,
+        `safe-execution-model-${workspaceChanged ? "dirty" : "clean"}-`,
+      );
+      const journal = new InMemoryAttemptJournal();
+      const runner = new SafeExecutionRunner({
+        ...nodeSafeExecutionAdapters(),
+        lockStore: new InMemoryWorkspaceLockStore(),
+        journal,
+      });
+      const result = await runner.run({
+        taskId: `task-model-${workspaceChanged ? "dirty" : "clean"}`,
+        workspace: { mode: "existing_locked", path: workspacePath },
+        effectMode: "workspace_patch",
+        provider: "codex",
+        pool: {
+          async run(): Promise<PromptResult> {
+            if (workspaceChanged) {
+              await writeFile(join(workspacePath, "partial.txt"), "partial\n");
+            }
+            throw new SubscriptionWorkerError(
+              "subscription_worker_run_failed",
+              "Requested model is unavailable on this account.",
+              { details: { code: "model_unavailable" } },
+            );
+          },
+        },
+        job: { prompt: "Implement feature.", workspacePath },
+        originalPrompt: "Implement feature.",
+        policy: { maxAttempts: 1 },
+      });
+
+      if (result.status === "completed") {
+        throw new Error("expected model_unavailable failure");
+      }
+      expect(result.reason).toBe("model_unavailable");
+      expect(result.status).toBe(
+        workspaceChanged ? "failed" : "waiting_capacity",
+      );
+    }
+  }, 15_000);
 });
 
 function nodeSafeExecutionAdapters() {

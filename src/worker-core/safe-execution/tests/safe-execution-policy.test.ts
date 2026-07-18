@@ -126,7 +126,9 @@ describe("safe execution policy decisions", () => {
     expect(safeExecutionFinalStatusForFailure("model_unavailable")).toBe(
       "failed",
     );
-    expect(safeExecutionWaitingStatusForFailure("model_unavailable")).toBeNull();
+    expect(safeExecutionWaitingStatusForFailure("model_unavailable")).toBe(
+      "waiting_capacity",
+    );
     expect(safeExecutionFinalStatusForFailure("quota_limited")).toBe("partial");
   });
 

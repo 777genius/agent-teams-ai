@@ -146,6 +146,44 @@ describe("Codex provider adapter", () => {
     });
   });
 
+  it("classifies the raw ChatGPT account model rejection as unavailable", () => {
+    expect(
+      classifyCodexFailure({
+        exitCode: 1,
+        stdout: "",
+        stderr: [
+          "codex_cli_exec_failed:1:Codex exited before emitting a result",
+          JSON.stringify({
+            type: "error",
+            message:
+              "The 'gpt-5.6-sol' model is not supported when using Codex with a ChatGPT account",
+          }),
+          JSON.stringify({
+            type: "turn.failed",
+            error: {
+              message:
+                "The 'gpt-5.6-sol' model is not supported when using Codex with a ChatGPT account",
+            },
+          }),
+        ].join("\n"),
+      }),
+    ).toMatchObject({
+      code: "model_unavailable",
+      retryable: true,
+      reconnectRequired: false,
+      safeMessage: "Codex model is unavailable for this account.",
+      details: {
+        exitCode: "1",
+      },
+    });
+    expect(
+      classifyCodexFailure({
+        exitCode: 1,
+        stderr: "The 'gpt-5.6-sol' model is not supported by this runtime",
+      }).code,
+    ).toBe("unknown_runtime_failure");
+  });
+
   it("classifies Codex app-server goal blocks as retryable backend unavailability", () => {
     expect(
       classifyCodexFailure({

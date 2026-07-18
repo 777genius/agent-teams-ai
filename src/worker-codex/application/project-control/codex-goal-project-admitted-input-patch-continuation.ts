@@ -4,6 +4,7 @@ const capacityContinuationReasons = new Set([
   "quota_limited",
   "capacity_unavailable",
   "account_unavailable",
+  "model_unavailable",
   "reconnect_required",
 ]);
 

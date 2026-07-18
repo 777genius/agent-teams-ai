@@ -257,7 +257,7 @@ export async function codexProjectContinuationReservationInput(input: {
   readonly excludedAccountIds: readonly string[];
   readonly continuation?: CodexProjectAccountContinuation;
 }> {
-  if (!isAccountUnavailableContinuation(input.status)) {
+  if (!isAccountRotationContinuation(input.status)) {
     return { excludedAccountIds: [] };
   }
   return continuationAttemptHistory({
@@ -266,19 +266,28 @@ export async function codexProjectContinuationReservationInput(input: {
   });
 }
 
-function isAccountUnavailableContinuation(status: Pick<
+function isAccountRotationContinuation(status: Pick<
   CodexGoalStatus,
   "recommendedAction" | "resultReason" | "progressResultReason"
 >): boolean {
   return status.recommendedAction === "continue_after_capacity" &&
-    (status.resultReason === "account_unavailable" ||
-      status.progressResultReason === "account_unavailable");
+    (isAccountRotationFailure(status.resultReason) ||
+      isAccountRotationFailure(status.progressResultReason));
+}
+
+function isAccountRotationFailure(
+  reason: string | undefined,
+): reason is "account_unavailable" | "model_unavailable" {
+  return reason === "account_unavailable" || reason === "model_unavailable";
 }
 
 function continuationAttemptHistory(input: {
   readonly status: Pick<
     CodexGoalStatus,
-    "progressAttemptCount" | "progressCurrentAccount"
+    | "resultReason"
+    | "progressResultReason"
+    | "progressAttemptCount"
+    | "progressCurrentAccount"
   >;
   readonly task: SafeExecutionTaskRecord | null;
 }): {
@@ -286,11 +295,14 @@ function continuationAttemptHistory(input: {
   readonly continuation: CodexProjectAccountContinuation;
 } {
   const lastAttempt = input.task?.attempts.at(-1);
+  const failureReason = input.task?.lastFailureReason;
   if (
     !input.task ||
     !lastAttempt?.accountId ||
-    input.task.lastFailureReason !== "account_unavailable" ||
-    lastAttempt.failureReason !== "account_unavailable"
+    !isAccountRotationFailure(failureReason) ||
+    lastAttempt.failureReason !== failureReason ||
+    (input.status.resultReason !== failureReason &&
+      input.status.progressResultReason !== failureReason)
   ) {
     throw new Error("project_control_continuation_attempt_history_required");
   }

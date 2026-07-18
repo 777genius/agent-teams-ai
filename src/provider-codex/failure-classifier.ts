@@ -1,6 +1,9 @@
 import type { ProviderFailure } from "@vioxen/subscription-runtime/core";
 import { classifyCodexRuntimeFailure } from "./codex-cli-domain";
-import { isCodexModelUnavailableError } from "./app-server/domain/model-catalog";
+import {
+  isCodexModelUnavailableError,
+  isCodexModelUnavailableMessage,
+} from "./app-server/domain/model-catalog";
 
 export function classifyCodexFailure(error: unknown): ProviderFailure {
   if (isCodexModelUnavailableError(error)) {
@@ -14,6 +17,17 @@ export function classifyCodexFailure(error: unknown): ProviderFailure {
     };
   }
   const message = codexFailureMessage(error);
+  if (isRawChatGptModelUnavailableMessage(message)) {
+    const details = codexFailureDetails(error, message);
+    return {
+      code: "model_unavailable",
+      retryable: true,
+      reconnectRequired: false,
+      safeMessage: "Codex model is unavailable for this account.",
+      causeCategory: "model_unavailable",
+      ...(details === undefined ? {} : { details }),
+    };
+  }
   const state = classifyCodexRuntimeFailure(message);
   const details = codexFailureDetails(error, message);
 
@@ -102,6 +116,15 @@ export function classifyCodexFailure(error: unknown): ProviderFailure {
         ...(details === undefined ? {} : { details }),
       };
   }
+}
+
+function isRawChatGptModelUnavailableMessage(message: string): boolean {
+  return (
+    isCodexModelUnavailableMessage(message) &&
+    /The '[\w.:-]{1,128}' model is not supported when using Codex with a ChatGPT account/.test(
+      message,
+    )
+  );
 }
 
 function codexFailureMessage(error: unknown): string {

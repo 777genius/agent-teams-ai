@@ -15,6 +15,7 @@ import {
   releaseCodexProjectAccount,
   reserveCodexProjectAccount,
 } from "../application/project-control/codex-goal-project-account-reservation";
+import { withProjectContinuationAccounts } from "../application/project-control/codex-goal-project-continuation-accounts";
 import {
   projectControlWorkspaceLocks,
   withValidatedProjectWorkspaceLock,
@@ -69,6 +70,72 @@ describe("project account reservation", () => {
     expect(continued.launch.config.accounts.map((item) => item.name)).toEqual([
       continued.accountId,
     ]);
+    expect(continued.launch.config.maxAccountCycles).toBe(2);
+  });
+
+  it("rotates after terminal model_unavailable result or progress proof", async () => {
+    const root = await mkdtemp(join(tmpdir(), "project-model-excluded-"));
+    roots.push(root);
+    const scoped = fixture(root, "job-1");
+    const deps = {
+      capacityStore: new InMemoryWorkerAccountCapacityStore(),
+      leaseMode: "shared" as const,
+      now: new Date("2026-07-13T00:00:00.000Z"),
+    };
+    const first = await reserveCodexProjectAccount({ ...scoped, deps });
+    const journal = new InMemoryAttemptJournal();
+    await recordFailedAttempt(journal, first.accountId, "model_unavailable");
+    const resultProof = await codexProjectContinuationReservationInput({
+      status: {
+        recommendedAction: "continue_after_capacity",
+        resultReason: "model_unavailable",
+      },
+      launch: scoped.launch,
+      journal,
+    });
+    const progressProof = await codexProjectContinuationReservationInput({
+      status: {
+        recommendedAction: "continue_after_capacity",
+        progressResultReason: "model_unavailable",
+        progressAttemptCount: 1,
+        progressCurrentAccount: first.accountId,
+      },
+      launch: scoped.launch,
+      journal,
+    });
+    expect(progressProof).toEqual(resultProof);
+    if (!resultProof.continuation) {
+      throw new Error("expected model_unavailable continuation proof");
+    }
+
+    const nextAccount = first.accountId === "account-a"
+      ? "account-b"
+      : "account-a";
+    const launch = await withProjectContinuationAccounts({
+      launch: scoped.launch,
+      requestedAccounts: [nextAccount],
+      continuation: resultProof.continuation,
+      excludedAccountIds: resultProof.excludedAccountIds,
+      allowedAccountIds: ["account-a", "account-b"],
+      listAccountStatuses: async () => [{
+        name: nextAccount,
+        authJsonPath: join(root, "auth", nextAccount, "auth.json"),
+        status: "ready",
+        availability: "available",
+        schedulerEligible: true,
+        recommendedAction: "none",
+        warnings: [],
+        safeMessage: "ready",
+      }],
+    });
+    const continued = await reserveCodexProjectAccount({
+      manifest: scoped.manifest,
+      launch,
+      ...resultProof,
+      deps,
+    });
+    expect(resultProof.excludedAccountIds).toEqual([first.accountId]);
+    expect(continued.accountId).toBe(nextAccount);
     expect(continued.launch.config.maxAccountCycles).toBe(2);
   });
 
@@ -380,6 +447,14 @@ async function recordUnavailableAttempt(
   journal: InMemoryAttemptJournal,
   accountId: string,
 ): Promise<void> {
+  await recordFailedAttempt(journal, accountId, "account_unavailable");
+}
+
+async function recordFailedAttempt(
+  journal: InMemoryAttemptJournal,
+  accountId: string,
+  failureReason: "account_unavailable" | "model_unavailable",
+): Promise<void> {
   const now = new Date("2026-07-13T00:00:00.000Z");
   await journal.startTask({
     taskId: "job-1-task",
@@ -398,8 +473,8 @@ async function recordUnavailableAttempt(
       provider: "codex",
       startedAt: now,
       finishedAt: now,
-      status: "blocked",
-      failureReason: "account_unavailable",
+      status: failureReason === "account_unavailable" ? "blocked" : "failed",
+      failureReason,
       workspaceDirtyBefore: true,
       workspaceDirtyAfter: true,
       changedFiles: [],
@@ -408,8 +483,10 @@ async function recordUnavailableAttempt(
   });
   await journal.markPartial({
     taskId: "job-1-task",
-    status: "waiting_capacity",
-    reason: "account_unavailable",
+    status: failureReason === "account_unavailable"
+      ? "waiting_capacity"
+      : "failed",
+    reason: failureReason,
     now,
   });
 }
