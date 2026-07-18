@@ -102,7 +102,13 @@ describe("project external rewrite recovery", () => {
       expect(restoredRemoteCommit).toBe(expectedLocalCommit);
 
       const concurrentWorkspace = join(root, "concurrent");
-      await execFileAsync("git", ["clone", remotePath, concurrentWorkspace]);
+      await execFileAsync("git", [
+        "clone",
+        "--branch",
+        "main",
+        remotePath,
+        concurrentWorkspace,
+      ]);
       await git(concurrentWorkspace, [
         "config",
         "user.email",
