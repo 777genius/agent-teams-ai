@@ -1,3 +1,5 @@
+import { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from './teamIdentityStorageSchema';
+
 import type DatabaseConstructor from 'better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
@@ -164,6 +166,10 @@ const MIGRATIONS: InternalStorageMigration[] = [
       `CREATE INDEX IF NOT EXISTS idx_app_cmd_ledger_operation
         ON application_command_ledger (namespace, scope_key, operation)`,
     ],
+  },
+  {
+    version: 5,
+    statements: [...TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS],
   },
 ];
 

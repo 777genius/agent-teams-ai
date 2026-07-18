@@ -126,6 +126,13 @@ vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
 }));
 
 import {
+  type CanonicalListTeamLifecycleResult,
+  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+} from '../../../src/features/team-lifecycle';
+import { createUnavailablePhase2ReadHost } from '../../../src/main/composition/hosted/phase2ReadComposition';
+import {
+  handlePhase2ListTeamLifecycle,
+  initializePhase2TeamReadHandler,
   initializeTeamHandlers,
   registerTeamHandlers,
   removeTeamHandlers,
@@ -222,6 +229,7 @@ import {
   TEAM_UPDATE_TASK_STATUS,
   TEAM_VALIDATE_CLI_ARGS,
 } from '../../../src/preload/constants/ipcChannels';
+import { parseRevision, parseTeamId, parseWorkspaceId } from '../../../src/shared/contracts/hosted';
 
 import type { TeamIpcHandlerApis } from '../../../src/main/services/team/contracts/TeamProvisioningApis';
 
@@ -649,6 +657,23 @@ describe('ipc teams handlers', () => {
     service.getAllTasks.mockReset();
     service.restoreMember.mockReset();
     service.listTeams.mockResolvedValue([{ teamName: 'my-team', displayName: 'My Team' }]);
+    initializePhase2TeamReadHandler({
+      listTeamLifecycle: vi.fn(() =>
+        Promise.resolve({
+          schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+          kind: 'success' as const,
+          snapshotRevision: parseRevision(`revision_${'f'.repeat(64)}`),
+          items: ['my-team', 'fresh-team', 'background-fresh'].map((displayName, index) => ({
+            workspaceId: parseWorkspaceId(`workspace_${'e'.repeat(32)}`),
+            teamId: parseTeamId(`team_${String(index + 1).repeat(32)}`),
+            displayName,
+            lifecycle: 'ready' as const,
+            revision: parseRevision(`revision_${String(index + 1).repeat(64)}`),
+          })),
+          nextCursor: null,
+        })
+      ),
+    });
     service.getTeamData.mockResolvedValue({
       teamName: 'my-team',
       config: { name: 'My Team' },
@@ -729,6 +754,70 @@ describe('ipc teams handlers', () => {
     expect(new Set(handlers.keys())).toEqual(new Set(TEAM_HANDLER_KEYS));
   });
 
+  it('preserves legacy TEAM_LIST and returns contained canonical Phase 2 envelopes', async () => {
+    const success = {
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      kind: 'success',
+      snapshotRevision: parseRevision(`revision_${'a'.repeat(64)}`),
+      items: [
+        {
+          workspaceId: parseWorkspaceId(`workspace_${'b'.repeat(32)}`),
+          teamId: parseTeamId(`team_${'c'.repeat(32)}`),
+          displayName: 'my-team',
+          lifecycle: 'ready',
+          revision: parseRevision(`revision_${'d'.repeat(64)}`),
+        },
+      ],
+      nextCursor: null,
+    } satisfies CanonicalListTeamLifecycleResult;
+    const listTeamLifecycle = vi.fn(() => Promise.resolve(success));
+    initializePhase2TeamReadHandler({ listTeamLifecycle });
+
+    const legacy = await handlers.get(TEAM_LIST)!({} as never);
+    expect(legacy).toMatchObject({ success: true, data: [{ teamName: 'my-team' }] });
+
+    const phase2 = await handlers.get(TEAM_LIST)!({} as never, {
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      cursor: null,
+      expectedRevision: null,
+    });
+    expect(phase2).toEqual(success);
+    expect(listTeamLifecycle).toHaveBeenCalledTimes(1);
+
+    listTeamLifecycle.mockRejectedValueOnce(new Error('private sqlite diagnostic'));
+    const failure = await handlePhase2ListTeamLifecycle({
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      cursor: null,
+      expectedRevision: null,
+    });
+    expect(failure).toEqual({
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      kind: 'failure',
+      error: { code: 'unavailable', reason: 'transport_unavailable' },
+      retryable: true,
+    });
+    expect(JSON.stringify(failure)).not.toContain('private sqlite diagnostic');
+  });
+
+  it('keeps production legacy TEAM_LIST functional when canonical workspace authority is unavailable', async () => {
+    initializePhase2TeamReadHandler(createUnavailablePhase2ReadHost());
+
+    const legacy = await handlers.get(TEAM_LIST)!({} as never);
+    expect(legacy).toMatchObject({ success: true, data: [{ teamName: 'my-team' }] });
+
+    const canonical = await handlePhase2ListTeamLifecycle({
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      cursor: null,
+      expectedRevision: null,
+    });
+    expect(canonical).toEqual({
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      kind: 'failure',
+      error: { code: 'unavailable', reason: 'identity_storage_unavailable' },
+      retryable: true,
+    });
+  });
+
   it('preserves narrow facade receivers when auto-resume invokes its IPC dependencies', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-17T12:00:00.000Z'));
@@ -761,9 +850,10 @@ describe('ipc teams handlers', () => {
     };
     const messagingFacade = {
       ...teamHandlerApis.messaging,
-      async sendMessageToTeam(teamName: string, message: string): Promise<void> {
+      sendMessageToTeam(teamName: string, message: string): Promise<void> {
         if (this !== messagingFacade) throw new Error('messaging facade receiver lost');
         sentMessages.push(`${teamName}:${message}`);
+        return Promise.resolve();
       },
     };
 
@@ -4168,18 +4258,20 @@ describe('ipc teams handlers', () => {
     });
 
     it('treats repeated removal of a persisted tombstone as a successful no-op', async () => {
-      mockGetMembersMetaFile.mockImplementation(async () =>
-        service.removeMember.mock.calls.length > 0
-          ? {
-              version: 1,
-              providerBackendId: undefined,
-              members: [{ name: 'alice', role: 'Developer', removedAt: 1_752_000_000_000 }],
-            }
-          : {
-              version: 1,
-              providerBackendId: undefined,
-              members: [{ name: 'alice', role: 'Developer' }],
-            }
+      mockGetMembersMetaFile.mockImplementation(() =>
+        Promise.resolve(
+          service.removeMember.mock.calls.length > 0
+            ? {
+                version: 1,
+                providerBackendId: undefined,
+                members: [{ name: 'alice', role: 'Developer', removedAt: 1_752_000_000_000 }],
+              }
+            : {
+                version: 1,
+                providerBackendId: undefined,
+                members: [{ name: 'alice', role: 'Developer' }],
+              }
+        )
       );
       const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
 

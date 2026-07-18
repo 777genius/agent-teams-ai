@@ -112,6 +112,7 @@ describe('createInternalStorageFeature', () => {
     const feature = createInternalStorageFeature({
       userDataPath: path.join(tmpDir, 'user-data'),
     });
+    expect(feature.teamIdentityReadBackend).not.toBeNull();
 
     const entry: TaskStallJournalEntry = {
       epochKey: 'task-a:epoch-1',
@@ -145,5 +146,22 @@ describe('createInternalStorageFeature', () => {
     await feature.dispose();
     nativeModuleUnavailable.mockRestore();
     workerAvailable.mockRestore();
+  });
+
+  it('never publishes a JSON fallback for durable team identity reads', async () => {
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'internal-storage-feature-'));
+    const unavailable = vi
+      .spyOn(InternalStorageWorkerClient.prototype, 'isAvailable')
+      .mockReturnValue(false);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const feature = createInternalStorageFeature({
+      userDataPath: path.join(tmpDir, 'user-data'),
+    });
+
+    expect(feature.teamIdentityReadBackend).toBeNull();
+    expect(feature.getBackendKind()).toBe('json-fallback');
+    await feature.dispose();
+    unavailable.mockRestore();
   });
 });

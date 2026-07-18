@@ -21,6 +21,7 @@ import {
 } from './internalStorageSchema';
 import { parseJournalReplacePayload } from './internalStorageWorkerProtocol';
 import { handleMemberWorkSyncOp, MemberWorkSyncWorkerOps } from './memberWorkSyncWorkerOps';
+import { TeamIdentityStorageOps } from './teamIdentityStorageOps';
 
 import type {
   CommentJournalEntryRecord,
@@ -82,6 +83,7 @@ export class InternalStorageWorkerCore {
     () => this.open().orm
   );
   private readonly memberWorkSyncOps = new MemberWorkSyncWorkerOps(() => this.open().orm);
+  private readonly teamIdentityOps = new TeamIdentityStorageOps(() => this.open().db);
 
   constructor(private readonly options: InternalStorageWorkerCoreOptions) {}
 
@@ -117,6 +119,13 @@ export class InternalStorageWorkerCore {
         const typed = payload as { storeId: string; teamName: string };
         return this.hasStoreImport(typed.storeId, typed.teamName);
       }
+      case 'teamIdentity.list':
+        return this.teamIdentityOps.listIdentities();
+      case 'teamIdentity.get':
+        return this.teamIdentityOps.getIdentity(
+          (payload as Extract<InternalStorageWorkerRequest, { op: 'teamIdentity.get' }>['payload'])
+            .teamId
+        );
       case 'close':
         this.close();
         return null;

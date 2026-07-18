@@ -1,7 +1,14 @@
+import {
+  type CanonicalListTeamLifecycleResult,
+  TEAM_LIFECYCLE_LIST_ROUTE,
+  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+} from '@features/team-lifecycle';
 import { registerTeamRoutes } from '@main/http/teams';
+import { parseRevision, parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted';
 import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { Phase2ReadHost } from '@main/composition/hosted/phase2ReadComposition';
 import type { HttpServices } from '@main/http';
 import type {
   OpenCodeRuntimeControlAck,
@@ -143,6 +150,60 @@ describe('HTTP team runtime routes', () => {
     await app.ready();
     return { app, ...mocks };
   }
+
+  it('returns the canonical Phase 2 read envelope and contains host failures', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    const success = {
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      kind: 'success',
+      snapshotRevision: parseRevision(`revision_${'a'.repeat(64)}`),
+      items: [
+        {
+          workspaceId: parseWorkspaceId(`workspace_${'b'.repeat(32)}`),
+          teamId: parseTeamId(`team_${'c'.repeat(32)}`),
+          displayName: 'demo-team',
+          lifecycle: 'ready',
+          revision: parseRevision(`revision_${'d'.repeat(64)}`),
+        },
+      ],
+      nextCursor: null,
+    } satisfies CanonicalListTeamLifecycleResult;
+    const phase2ReadHost = {
+      listTeamLifecycle: vi.fn(() => Promise.resolve(success)),
+    } satisfies Phase2ReadHost;
+    registerTeamRoutes(app, { ...mocks.services, phase2ReadHost });
+    await app.ready();
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: TEAM_LIFECYCLE_LIST_ROUTE,
+        payload: { schemaVersion: 1, cursor: null, expectedRevision: null },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual(success);
+
+      phase2ReadHost.listTeamLifecycle.mockRejectedValueOnce(
+        new Error('private identity storage diagnostic')
+      );
+      const failure = await app.inject({
+        method: 'POST',
+        url: TEAM_LIFECYCLE_LIST_ROUTE,
+        payload: { schemaVersion: 1, cursor: null, expectedRevision: null },
+      });
+      expect(failure.statusCode).toBe(200);
+      expect(failure.json()).toEqual({
+        schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+        kind: 'failure',
+        error: { code: 'unavailable', reason: 'transport_unavailable' },
+        retryable: true,
+      });
+      expect(failure.body).not.toContain('private identity storage diagnostic');
+    } finally {
+      await app.close();
+    }
+  });
 
   it('lists, gets, and creates draft teams through team data service', async () => {
     const { app, listTeams, getTeamData, createTeamConfig } = await createApp();

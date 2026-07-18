@@ -25,6 +25,7 @@ import { BackendSelectingTaskStallJournalStore } from './BackendSelectingTaskSta
 import { InternalStorageBackendSelector } from './InternalStorageBackendSelector';
 
 import type { InternalStorageBackendKind } from '../../contracts/internalStorageContracts';
+import type { TeamIdentityReadGateway } from '../../contracts/teamIdentityStorageContracts';
 import type { MemberWorkSyncStorageGateway } from '../../core/application/ports';
 import type { ApplicationCommandLedgerStorageGateway } from '@features/application-command-ledger';
 import type { TaskStallJournalStore } from '@main/services/team/stallMonitor/TaskStallJournalStore';
@@ -47,6 +48,10 @@ export interface InternalStorageApplicationCommandLedgerBackend {
   selector: InternalStorageBackendSelector;
 }
 
+export interface InternalStorageTeamIdentityReadBackend {
+  gateway: TeamIdentityReadGateway;
+}
+
 export interface InternalStorageFeature {
   taskStallJournalStore: TaskStallJournalStore;
   taskCommentNotificationJournalStore: TaskCommentNotificationJournalStore;
@@ -61,6 +66,8 @@ export interface InternalStorageFeature {
    * worker bundle is unavailable, so callers must leave durable commands off.
    */
   applicationCommandLedgerBackend: InternalStorageApplicationCommandLedgerBackend | null;
+  /** Durable identity reads never degrade to directory or JSON discovery. */
+  teamIdentityReadBackend: InternalStorageTeamIdentityReadBackend | null;
   getBackendKind(): InternalStorageBackendKind;
   dispose(): Promise<void>;
 }
@@ -88,6 +95,7 @@ export function createInternalStorageFeature(
       taskCommentNotificationJournalStore: jsonCommentStore,
       memberWorkSyncBackend: null,
       applicationCommandLedgerBackend: null,
+      teamIdentityReadBackend: null,
       getBackendKind: () => 'json-fallback',
       dispose: async () => undefined,
     };
@@ -142,6 +150,7 @@ export function createInternalStorageFeature(
     ),
     memberWorkSyncBackend: { gateway: client, selector },
     applicationCommandLedgerBackend: { gateway: client, selector },
+    teamIdentityReadBackend: { gateway: client },
     getBackendKind: () => selector.getBackendKind(),
     dispose: () => client.close(),
   };

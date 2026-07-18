@@ -2,6 +2,7 @@ import type {
   CommentJournalEntryRecord,
   StallJournalEntryRecord,
 } from '../../../contracts/internalStorageContracts';
+import type { TeamId } from '@shared/contracts/hosted';
 
 export interface InternalStorageWorkerData {
   databasePath: string;
@@ -33,6 +34,8 @@ export type InternalStorageWorkerRequest =
       op: 'storeImports.has';
       payload: { storeId: string; teamName: string };
     }
+  | { id: string; op: 'teamIdentity.list'; payload: Record<string, never> }
+  | { id: string; op: 'teamIdentity.get'; payload: { teamId: TeamId } }
   // Member-work-sync ops share one wire shape; the typed client methods and
   // the worker-side dispatcher (memberWorkSyncWorkerOps) own the payloads.
   | { id: string; op: `appCommandLedger.${string}`; payload: unknown }

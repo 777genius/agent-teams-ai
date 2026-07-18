@@ -1,4 +1,9 @@
-import type { TeamId, WorkspaceId } from '@shared/contracts/hosted/identifiers';
+import {
+  parseTeamId,
+  parseWorkspaceId,
+  type TeamId,
+  type WorkspaceId,
+} from '@shared/contracts/hosted/identifiers';
 
 declare const teamIdentityStorageBrand: unique symbol;
 
@@ -100,6 +105,128 @@ export interface TeamIdentityRecord {
   createdAt: string;
   activatedAt: string | null;
   tombstonedAt: string | null;
+}
+
+const TEAM_IDENTITY_RECORD_KEYS = Object.freeze([
+  'teamId',
+  'state',
+  'legacyKey',
+  'directoryFingerprint',
+  'workspaceBinding',
+  'adoptionIntentId',
+  'identityChecksum',
+  'createdAt',
+  'activatedAt',
+  'tombstonedAt',
+] as const);
+
+function parseIdentityTimestamp(value: unknown): string {
+  if (
+    typeof value !== 'string' ||
+    !Number.isFinite(Date.parse(value)) ||
+    new Date(value).toISOString() !== value
+  ) {
+    throw new TypeError('team-identity-timestamp-invalid');
+  }
+  return value;
+}
+
+export function parseTeamIdentityRecord(value: unknown): TeamIdentityRecord {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new TypeError('team-identity-record-invalid');
+  }
+  const record = value as Record<PropertyKey, unknown>;
+  const keys = Reflect.ownKeys(record);
+  if (
+    keys.length !== TEAM_IDENTITY_RECORD_KEYS.length ||
+    keys.some((key) => typeof key !== 'string' || !TEAM_IDENTITY_RECORD_KEYS.includes(key as never))
+  ) {
+    throw new TypeError('team-identity-record-invalid');
+  }
+  const state = record.state;
+  if (
+    state !== 'reserved' &&
+    state !== 'adoption_prepared' &&
+    state !== 'file_published' &&
+    state !== 'active' &&
+    state !== 'tombstoned'
+  ) {
+    throw new TypeError('team-identity-state-unknown');
+  }
+  const workspaceValue = record.workspaceBinding;
+  const workspaceBinding =
+    workspaceValue === null
+      ? null
+      : (() => {
+          if (typeof workspaceValue !== 'object' || Array.isArray(workspaceValue)) {
+            throw new TypeError('team-identity-workspace-binding-invalid');
+          }
+          const candidate = workspaceValue as Record<PropertyKey, unknown>;
+          if (
+            Reflect.ownKeys(candidate).length !== 2 ||
+            !Object.hasOwn(candidate, 'workspaceId') ||
+            !Object.hasOwn(candidate, 'generation') ||
+            !Number.isSafeInteger(candidate.generation) ||
+            (candidate.generation as number) < 1
+          ) {
+            throw new TypeError('team-identity-workspace-binding-invalid');
+          }
+          return Object.freeze({
+            workspaceId: parseWorkspaceId(candidate.workspaceId),
+            generation: candidate.generation as number,
+          });
+        })();
+  const identity: TeamIdentityRecord = Object.freeze({
+    teamId: parseTeamId(record.teamId),
+    state,
+    legacyKey: parseLegacyTeamKey(record.legacyKey),
+    directoryFingerprint: parseDirectoryFingerprint(record.directoryFingerprint),
+    workspaceBinding,
+    adoptionIntentId:
+      record.adoptionIntentId === null ? null : parseTeamAdoptionIntentId(record.adoptionIntentId),
+    identityChecksum:
+      record.identityChecksum === null ? null : parseTeamIdentityChecksum(record.identityChecksum),
+    createdAt: parseIdentityTimestamp(record.createdAt),
+    activatedAt: record.activatedAt === null ? null : parseIdentityTimestamp(record.activatedAt),
+    tombstonedAt: record.tombstonedAt === null ? null : parseIdentityTimestamp(record.tombstonedAt),
+  });
+  const stateFieldsValid =
+    (identity.state === 'reserved' &&
+      identity.adoptionIntentId === null &&
+      identity.identityChecksum === null &&
+      identity.activatedAt === null &&
+      identity.tombstonedAt === null) ||
+    (identity.state === 'adoption_prepared' &&
+      identity.adoptionIntentId !== null &&
+      identity.identityChecksum === null &&
+      identity.activatedAt === null &&
+      identity.tombstonedAt === null) ||
+    (identity.state === 'file_published' &&
+      identity.adoptionIntentId !== null &&
+      identity.identityChecksum !== null &&
+      identity.activatedAt === null &&
+      identity.tombstonedAt === null) ||
+    (identity.state === 'active' &&
+      identity.adoptionIntentId !== null &&
+      identity.identityChecksum !== null &&
+      identity.activatedAt !== null &&
+      identity.tombstonedAt === null) ||
+    (identity.state === 'tombstoned' && identity.tombstonedAt !== null);
+  if (!stateFieldsValid) throw new TypeError('team-identity-state-fields-invalid');
+  return identity;
+}
+
+export const MAX_TEAM_IDENTITY_READ_RECORDS = 1_000;
+
+/**
+ * The hosted read composition receives identity only from the durable SQLite
+ * component. Implementations must validate the complete persisted identity
+ * graph before returning any value; there is deliberately no JSON or
+ * directory-discovery implementation of this port.
+ */
+export interface TeamIdentityReadGateway {
+  listTeamIdentities(): Promise<readonly TeamIdentityRecord[]>;
+  getTeamIdentity(teamId: TeamId): Promise<TeamIdentityRecord | null>;
 }
 
 export type LegacyTeamKeyReservationState = 'active' | 'tombstoned';
@@ -218,6 +345,7 @@ export const TeamIdentityStorageErrorCode = {
   AdoptionIntentMismatch: 'adoption_intent_mismatch',
   ChecksumDisagreement: 'checksum_disagreement',
   TamperingDetected: 'tampering_detected',
+  ReadLimitExceeded: 'read_limit_exceeded',
   IllegalTransition: 'illegal_transition',
 } as const;
 

@@ -356,6 +356,54 @@ describe('TeamIdentityStorage schema and operations', () => {
     });
   });
 
+  it('lists identities deterministically and validates tombstones plus the reservation graph', async () => {
+    const { db, ops } = await makeTestStore();
+    const later = reservationInput({
+      teamId: teamId('d'),
+      legacyKey: parseLegacyTeamKey('legacy-team-d'),
+      directoryFingerprint: fingerprint('4'),
+    });
+    const earlier = reservationInput();
+    ops.reserveIdentity(later);
+    ops.reserveIdentity(earlier);
+    ops.tombstoneLegacyKey({
+      teamId: earlier.teamId,
+      legacyKey: earlier.legacyKey,
+      reason: 'draft_deleted',
+      tombstonedAt: COMMITTED_AT,
+    });
+
+    expect(ops.listIdentities()).toEqual([
+      expect.objectContaining({ teamId: earlier.teamId, state: 'tombstoned' }),
+      expect.objectContaining({ teamId: later.teamId, state: 'reserved' }),
+    ]);
+
+    db.exec('DROP TRIGGER trg_legacy_team_key_no_delete');
+    db.exec('PRAGMA foreign_keys = OFF');
+    db.prepare('DELETE FROM legacy_team_key_reservations WHERE legacy_key = ?').run(
+      later.legacyKey
+    );
+    restoreSchemaObject(db, 'trg_legacy_team_key_no_delete');
+    expectStorageError(() => ops.listIdentities(), TeamIdentityStorageErrorCode.TamperingDetected);
+  });
+
+  it('fails closed when persisted identity chronology diverges from its reservation', async () => {
+    const { db, ops } = await makeTestStore();
+    const input = reservationInput();
+    ops.reserveIdentity(input);
+    db.exec('DROP TRIGGER trg_team_identity_transition');
+    db.prepare('UPDATE team_identity_records SET created_at = ? WHERE team_id = ?').run(
+      '2026-07-16T12:00:01.000Z',
+      input.teamId
+    );
+    restoreSchemaObject(db, 'trg_team_identity_transition');
+
+    expectStorageError(
+      () => ops.getIdentity(input.teamId),
+      TeamIdentityStorageErrorCode.TamperingDetected
+    );
+  });
+
   it('accepts only exact lowercase ASCII legacy keys without silent normalization', () => {
     expect(parseLegacyTeamKey('team-01')).toBe('team-01');
     expect(parseLegacyTeamKey(`a${'-'.repeat(127)}`)).toHaveLength(128);

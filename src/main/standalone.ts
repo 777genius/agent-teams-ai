@@ -17,10 +17,23 @@
 // error tracking can be added later with @sentry/node if needed.
 
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
+import { createQueryContext } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 
+import {
+  PHASE2_READ_BOOTSTRAP_ENV,
+  Phase2ReadBootstrapSource,
+} from './composition/hosted/phase2ReadBootstrapSource';
+import {
+  createPhase2ReadComposition,
+  createPhase2ReadHost,
+  createUnavailablePhase2ReadHost,
+  type Phase2ReadAuthority,
+  type Phase2ReadHost,
+} from './composition/hosted/phase2ReadComposition';
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
+  getAppDataPath,
   getProjectsBasePath,
   getTodosBasePath,
   setClaudeBasePathOverride,
@@ -32,6 +45,7 @@ import type { NotificationManager } from './services/infrastructure/Notification
 import type { ServiceContext } from './services/infrastructure/ServiceContext';
 import type { SshConnectionManager } from './services/infrastructure/SshConnectionManager';
 import type { UpdaterService } from './services/infrastructure/UpdaterService';
+import type { InternalStorageFeature } from '@features/internal-storage/main';
 
 const logger = createLogger('Standalone');
 
@@ -88,6 +102,24 @@ const sshConnectionManagerStub = {
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
+let internalStorageFeature: InternalStorageFeature | null = null;
+
+const phase2ReadNowMs = (): number => Date.now();
+
+function createPhase2ReadQueryContext(authority: Phase2ReadAuthority) {
+  return createQueryContext({
+    actorId: authority.actorId,
+    sessionId: 'session_phase2-standalone',
+    deploymentId: authority.deploymentId,
+    bootId: authority.bootId,
+    requestId: `request_phase2-standalone-${++phase2ReadRequestSequence}`,
+    authorizedScope: authority.authorizedScope,
+    deadlineAtMs: phase2ReadNowMs() + 10_000,
+    signal: new AbortController().signal,
+  });
+}
+
+let phase2ReadRequestSequence = 0;
 
 // =============================================================================
 // Lifecycle
@@ -103,10 +135,18 @@ async function start(): Promise<void> {
   }
 
   // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
-  const [{ HttpServer }, { NotificationManager }, { ServiceContext }] = await Promise.all([
+  const [
+    { HttpServer },
+    { NotificationManager },
+    { ServiceContext },
+    { createInternalStorageFeature },
+    { TeamDataService, TeamProvisioningService },
+  ] = await Promise.all([
     import('./services/infrastructure/HttpServer'),
     import('./services/infrastructure/NotificationManager'),
     import('./services/infrastructure/ServiceContext'),
+    import('@features/internal-storage/main'),
+    import('./services/team'),
   ]);
 
   const projectsDir = getProjectsBasePath();
@@ -136,6 +176,40 @@ async function start(): Promise<void> {
     getLocalContext: () => localContext,
     logger: createLogger('Feature:RecentProjects'),
   });
+  internalStorageFeature = createInternalStorageFeature({ userDataPath: getAppDataPath() });
+
+  let phase2ReadHost: Phase2ReadHost = createUnavailablePhase2ReadHost();
+  const teamIdentityGateway = internalStorageFeature.teamIdentityReadBackend?.gateway ?? null;
+  if (teamIdentityGateway) {
+    try {
+      const bootstrap = await new Phase2ReadBootstrapSource({
+        input: {
+          readSerializedBootstrap: () => process.env[PHASE2_READ_BOOTSTRAP_ENV],
+        },
+        nowMs: phase2ReadNowMs,
+      }).load();
+      const teamDataService = new TeamDataService();
+      const teamRuntimeService = new TeamProvisioningService();
+      const composition = createPhase2ReadComposition({
+        authority: bootstrap.authority,
+        teamIdentities: teamIdentityGateway,
+        legacyData: {
+          listTeams: () => teamDataService.listTeams(),
+          getTeamData: (teamName) => teamDataService.getTeamData(teamName),
+        },
+        legacyRuntime: {
+          getRuntimeState: (teamName) => teamRuntimeService.getRuntimeState(teamName),
+          getAliveTeams: () => teamRuntimeService.getAliveTeams(),
+        },
+        nowMs: phase2ReadNowMs,
+      });
+      phase2ReadHost = createPhase2ReadHost(composition, (authority) =>
+        createPhase2ReadQueryContext(authority)
+      );
+    } catch {
+      logger.warn('Hosted Phase 2 read bootstrap unavailable; canonical reads remain disabled.');
+    }
+  }
 
   // Wire file watcher events to SSE broadcast
   localContext.fileWatcher.on('file-change', (event: unknown) => {
@@ -166,6 +240,7 @@ async function start(): Promise<void> {
     recentProjectsFeature,
     updaterService: updaterServiceStub,
     sshConnectionManager: sshConnectionManagerStub,
+    phase2ReadHost,
   };
 
   // No-op mode switch handler (no SSH in standalone)
@@ -186,6 +261,11 @@ async function shutdown(): Promise<void> {
 
   if (localContext) {
     localContext.dispose();
+  }
+
+  if (internalStorageFeature) {
+    await internalStorageFeature.dispose();
+    internalStorageFeature = null;
   }
 
   logger.info('Shutdown complete');

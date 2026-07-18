@@ -49,7 +49,8 @@ describe('P2.E team-lifecycle read boundaries', () => {
     expect(mutationSurface.test('deleteTeam')).toBe(true);
     expect(api).not.toMatch(forbiddenApiSurface);
     expect(api).not.toMatch(mutationSurface);
-    expect(api.match(/^\s{2}[a-z][A-Za-z]+\(/gm)).toHaveLength(4);
+    expect(api.match(/^\s{2}[a-z][A-Za-z]+\(/gm)).toHaveLength(5);
+    expect(api).toContain('interface TeamLifecycleReadTransportApi');
     expect(api).toContain('listTeamLifecycle(');
     expect(api).toContain('getTeamLifecycleSnapshot(');
     expect(api).toContain('getRuntimeStateProjection(');
@@ -104,5 +105,28 @@ describe('P2.E team-lifecycle read boundaries', () => {
     expect(production).not.toMatch(forbiddenWiring);
     expect(production).not.toContain("from '../../index'");
     expect(production).not.toContain("from '../../../index'");
+  });
+
+  it('routes production composition and renderer transport through public feature entrypoints', () => {
+    const composition = source('src/main/composition/hosted/phase2ReadComposition.ts');
+    const rendererClient = source('src/renderer/api/httpClient.ts');
+
+    expect(composition).toContain("from '@features/internal-storage/contracts'");
+    expect(composition).toContain("from '@features/team-lifecycle/main'");
+    expect(composition).not.toMatch(/@features\/internal-storage\/contracts\//);
+    expect(composition).not.toMatch(/@features\/team-lifecycle\/(?:core|main)\//);
+    expect(rendererClient).toContain("from '@features/team-lifecycle/contracts'");
+    expect(rendererClient).not.toMatch(/from ['"]@features\/team-lifecycle['"]/);
+  });
+
+  it('has one canonical identity port implementation and one legacy lifecycle source', () => {
+    const composition = source('src/main/composition/hosted/phase2ReadComposition.ts');
+
+    expect(composition.match(/implements LegacyTeamIdentityReadPort/g)).toHaveLength(1);
+    expect(composition.match(/new LegacyTeamLifecycleReadSource\(/g)).toHaveLength(1);
+    expect(composition).toContain("type IdentityProjectionPurpose = 'lifecycle' | 'runtime'");
+    expect(composition).toContain('class CanonicalIdentityProjectionReadPort');
+    expect(composition).not.toContain('DurableIdentityReadPort');
+    expect(composition).not.toContain('RuntimeProjectionIdentityReadPort');
   });
 });

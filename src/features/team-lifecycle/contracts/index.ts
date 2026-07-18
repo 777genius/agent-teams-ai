@@ -1,23 +1,6 @@
-export {
-  type ListTeamLifecycleFailure,
-  type ListTeamLifecycleInapplicable,
-  type ListTeamLifecycleRequest,
-  type ListTeamLifecycleResult,
-  type ListTeamLifecycleSuccess,
-  parseListTeamLifecycleRequest,
-  parseListTeamLifecycleResult,
-  TEAM_LIFECYCLE_READ_FAILURE_CODES,
-  TEAM_LIFECYCLE_READ_REQUEST_DIAGNOSTIC,
-  TEAM_LIFECYCLE_READ_RESPONSE_DIAGNOSTIC,
-  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-  TEAM_LIFECYCLE_READ_UNKNOWN_FIELD_POLICY,
-  TEAM_LIFECYCLE_STATES,
-  type TeamLifecycleInapplicableCode,
-  type TeamLifecycleInapplicableReason,
-  type TeamLifecycleListItem,
-  type TeamLifecycleReadFailureCode,
-  type TeamLifecycleReadParseFailure,
-  type TeamLifecycleReadParseResult,
-  type TeamLifecycleReadParseSuccess,
-  type TeamLifecycleState,
-} from './team-lifecycle-read';
+export * from './team-lifecycle-read';
+export type {
+  TeamLifecycleReadApi,
+  TeamLifecycleReadTransportApi,
+} from './team-lifecycle-read-api';
+export { TEAM_LIFECYCLE_LIST_ROUTE } from './team-lifecycle-transport';

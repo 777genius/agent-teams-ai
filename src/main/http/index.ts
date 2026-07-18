@@ -43,6 +43,7 @@ import type {
   TeamHttpHandlerApis,
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { MemberWorkSyncFeatureFacade } from '@features/member-work-sync/main';
+import type { Phase2ReadHost } from '@main/composition/hosted/phase2ReadComposition';
 import type { FastifyInstance } from 'fastify';
 
 const logger = createLogger('HTTP:routes');
@@ -61,6 +62,7 @@ export interface HttpServices {
   sshConnectionManager: SshConnectionManager;
   teamApis?: TeamHttpHandlerApis;
   teamDataApi?: TeamHttpDataApi;
+  phase2ReadHost?: Phase2ReadHost;
 }
 
 export function registerHttpRoutes(
@@ -72,7 +74,7 @@ export function registerHttpRoutes(
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);
   registerSubagentRoutes(app, services);
-  if (services.teamDataApi || services.teamApis) {
+  if (services.teamDataApi || services.teamApis || services.phase2ReadHost) {
     registerTeamRoutes(app, services);
   }
   registerNotificationRoutes(app);

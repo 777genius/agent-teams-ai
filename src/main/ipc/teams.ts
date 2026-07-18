@@ -2,6 +2,11 @@ import {
   estimateAgentAttachmentSerializedPayloadBytes,
   MAX_AGENT_ATTACHMENT_SERIALIZED_PAYLOAD_BYTES,
 } from '@features/agent-attachments/contracts';
+import {
+  type CanonicalListTeamLifecycleResult,
+  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+  type TeamLifecycleReadFailure,
+} from '@features/team-lifecycle/contracts';
 import { addMainBreadcrumb } from '@main/sentry';
 import { setCurrentMainOp } from '@main/services/infrastructure/EventLoopLagMonitor';
 import { markTeamEngaged } from '@main/services/infrastructure/teamWatchScope';
@@ -102,6 +107,7 @@ import {
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
+import { createSafeAppError } from '@shared/contracts/hosted';
 import {
   extractFlagsFromHelp,
   extractUserFlags,
@@ -198,6 +204,7 @@ import type {
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
+import type { Phase2ReadHost } from '@main/composition/hosted/phase2ReadComposition';
 import type {
   AddTaskCommentRequest,
   AgentActionMode,
@@ -808,6 +815,35 @@ const activeTeamNotifications = new Set<Notification>();
 const MAX_ATTACHMENTS = 5;
 const MAX_TOTAL_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20MB total
 
+let phase2ReadHost: Phase2ReadHost | null = null;
+
+export function initializePhase2TeamReadHandler(host: Phase2ReadHost): void {
+  phase2ReadHost = host;
+}
+
+function phase2ReadUnavailable(reason: string): TeamLifecycleReadFailure {
+  const error = createSafeAppError({ code: 'unavailable', reason });
+  return Object.freeze({
+    schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+    kind: 'failure',
+    error: error as TeamLifecycleReadFailure['error'],
+    retryable: true,
+  });
+}
+
+export async function handlePhase2ListTeamLifecycle(
+  request: unknown
+): Promise<CanonicalListTeamLifecycleResult> {
+  if (!phase2ReadHost) {
+    return phase2ReadUnavailable('identity_storage_unavailable');
+  }
+  try {
+    return await phase2ReadHost.listTeamLifecycle(request);
+  } catch {
+    return phase2ReadUnavailable('transport_unavailable');
+  }
+}
+
 export function initializeTeamHandlers(
   service: TeamDataService,
   teamHandlerApis: TeamIpcHandlerApis,
@@ -1251,7 +1287,13 @@ async function handleCreateInitialGitCommit(
   );
 }
 
-async function handleListTeams(_event: IpcMainInvokeEvent): Promise<IpcResult<TeamSummary[]>> {
+async function handleListTeams(
+  _event: IpcMainInvokeEvent,
+  phase2Request?: unknown
+): Promise<IpcResult<TeamSummary[]> | CanonicalListTeamLifecycleResult> {
+  if (phase2Request !== undefined) {
+    return handlePhase2ListTeamLifecycle(phase2Request);
+  }
   setCurrentMainOp('team:list');
   const startedAt = Date.now();
   try {

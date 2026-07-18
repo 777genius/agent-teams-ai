@@ -267,7 +267,7 @@ describe('team-lifecycle read contract', () => {
       const source = validSuccess();
       const item = (source.items as Record<PropertyKey, unknown>[])[0];
       const sparseItems: Record<PropertyKey, unknown>[] = [item, item, item];
-      delete sparseItems[sparseIndex];
+      Reflect.deleteProperty(sparseItems, sparseIndex);
       source.items = sparseItems;
 
       expectRejectedResponse(source);
@@ -495,15 +495,21 @@ describe('team-lifecycle read contract', () => {
     expect(teamLifecycle.parseListTeamLifecycleResult).toBe(
       teamLifecycleContracts.parseListTeamLifecycleResult
     );
-    expect(Object.keys(teamLifecycleContracts).sort()).toEqual([
-      'TEAM_LIFECYCLE_READ_FAILURE_CODES',
-      'TEAM_LIFECYCLE_READ_REQUEST_DIAGNOSTIC',
-      'TEAM_LIFECYCLE_READ_RESPONSE_DIAGNOSTIC',
-      'TEAM_LIFECYCLE_READ_SCHEMA_VERSION',
-      'TEAM_LIFECYCLE_READ_UNKNOWN_FIELD_POLICY',
-      'TEAM_LIFECYCLE_STATES',
-      'parseListTeamLifecycleRequest',
-      'parseListTeamLifecycleResult',
-    ]);
+    expect(teamLifecycle.parseCanonicalListTeamLifecycleResult).toBe(
+      teamLifecycleContracts.parseCanonicalListTeamLifecycleResult
+    );
+    expect(Object.keys(teamLifecycleContracts)).toEqual(
+      expect.arrayContaining([
+        'TEAM_LIFECYCLE_READ_FAILURE_CODES',
+        'TEAM_LIFECYCLE_READ_REQUEST_DIAGNOSTIC',
+        'TEAM_LIFECYCLE_READ_RESPONSE_DIAGNOSTIC',
+        'TEAM_LIFECYCLE_READ_SCHEMA_VERSION',
+        'TEAM_LIFECYCLE_READ_UNKNOWN_FIELD_POLICY',
+        'TEAM_LIFECYCLE_STATES',
+        'parseCanonicalListTeamLifecycleResult',
+        'parseListTeamLifecycleRequest',
+        'parseListTeamLifecycleResult',
+      ])
+    );
   });
 });

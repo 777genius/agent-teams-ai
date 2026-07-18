@@ -33,6 +33,15 @@ import {
   type UpsertOrganizationUnitRequest,
 } from '@features/organizations/contracts';
 import {
+  type CanonicalListTeamLifecycleResult,
+  type ListTeamLifecycleRequest,
+  parseCanonicalListTeamLifecycleResult,
+  parseListTeamLifecycleRequest,
+  TEAM_LIFECYCLE_LIST_ROUTE,
+  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+  type TeamLifecycleReadFailure,
+} from '@features/team-lifecycle/contracts';
+import {
   TOKEN_USAGE_BUDGET_SETTINGS_ROUTE,
   TOKEN_USAGE_SNAPSHOT_CHANGED,
   TOKEN_USAGE_SNAPSHOT_ROUTE,
@@ -41,6 +50,7 @@ import {
   type TokenUsageElectronApi,
   type TokenUsageSnapshotRequest,
 } from '@features/token-usage/contracts';
+import { createSafeAppError } from '@shared/contracts/hosted';
 
 import type {
   CodexAccountSnapshotDto,
@@ -141,6 +151,15 @@ import type {
 import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
 import type { TerminalAPI } from '@shared/types/terminal';
+
+function phase2ReadFailure(error: TeamLifecycleReadFailure['error']): TeamLifecycleReadFailure {
+  return Object.freeze({
+    schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+    kind: 'failure',
+    error,
+    retryable: error.code === 'unavailable',
+  });
+}
 
 function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
   const query = new URLSearchParams();
@@ -278,6 +297,28 @@ export class HttpAPIClient implements ElectronAPI {
       return this.parseJson<T>(res);
     } finally {
       clearTimeout(timeout);
+    }
+  }
+
+  async listTeamLifecycle(
+    requestValue: ListTeamLifecycleRequest
+  ): Promise<CanonicalListTeamLifecycleResult> {
+    const request = parseListTeamLifecycleRequest(requestValue);
+    if (!request.ok) return phase2ReadFailure(request.error as TeamLifecycleReadFailure['error']);
+
+    try {
+      const response = await this.post<unknown>(TEAM_LIFECYCLE_LIST_ROUTE, request.value);
+      const parsed = parseCanonicalListTeamLifecycleResult(response);
+      return parsed.ok
+        ? parsed.value
+        : phase2ReadFailure(parsed.error as TeamLifecycleReadFailure['error']);
+    } catch {
+      return phase2ReadFailure(
+        createSafeAppError({
+          code: 'unavailable',
+          reason: 'transport_unavailable',
+        }) as TeamLifecycleReadFailure['error']
+      );
     }
   }
 

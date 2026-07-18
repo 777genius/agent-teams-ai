@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { parseTeamId, parseWorkspaceId } from '@shared/contracts/hosted/identifiers';
 
 import {
+  MAX_TEAM_IDENTITY_READ_RECORDS,
   parseDirectoryFingerprint,
   parseLegacyTeamKey,
   parseTeamAdoptionIntentChecksum,
@@ -104,7 +105,35 @@ export class TeamIdentityStorageOps {
 
   getIdentity(teamId: TeamId): TeamIdentityRecord | null {
     const parsedTeamId = this.validated(() => parseTeamId(teamId));
-    return this.readIdentityByTeamId(this.database(), parsedTeamId);
+    const db = this.database();
+    const identity = this.readIdentityByTeamId(db, parsedTeamId);
+    if (identity) this.assertReadableIdentityGraph(db, identity);
+    return identity;
+  }
+
+  listIdentities(): readonly TeamIdentityRecord[] {
+    const db = this.database();
+    let rows: TeamIdentityRow[];
+    try {
+      rows = db
+        .prepare(
+          `SELECT team_id, state, legacy_key, directory_fingerprint,
+                  workspace_id, workspace_binding_generation, adoption_intent_id,
+                  identity_checksum, created_at, activated_at, tombstoned_at
+             FROM team_identity_records
+            ORDER BY team_id ASC
+            LIMIT ?`
+        )
+        .all(MAX_TEAM_IDENTITY_READ_RECORDS + 1) as TeamIdentityRow[];
+    } catch {
+      fail(TeamIdentityStorageErrorCode.TamperingDetected);
+    }
+    if (rows.length > MAX_TEAM_IDENTITY_READ_RECORDS) {
+      fail(TeamIdentityStorageErrorCode.ReadLimitExceeded);
+    }
+    const identities = rows.map((row) => this.mapIdentity(row));
+    for (const identity of identities) this.assertReadableIdentityGraph(db, identity);
+    return Object.freeze(identities);
   }
 
   getLegacyKeyReservation(legacyKey: LegacyTeamKey): LegacyTeamKeyReservation | null {
@@ -863,11 +892,51 @@ export class TeamIdentityStorageOps {
     const reservation = this.requireReservation(db, identity.legacyKey);
     if (
       reservation.teamId !== identity.teamId ||
+      reservation.reservedAt !== identity.createdAt ||
+      reservation.tombstonedAt !== identity.tombstonedAt ||
       (identity.state === 'tombstoned') !== (reservation.state === 'tombstoned')
     ) {
       fail(TeamIdentityStorageErrorCode.TamperingDetected);
     }
     return reservation;
+  }
+
+  private assertReadableIdentityGraph(db: SqliteDatabase, identity: TeamIdentityRecord): void {
+    const reservation = this.requireConsistentReservation(db, identity);
+    if (identity.adoptionIntentId === null) {
+      if (
+        (identity.state !== 'reserved' && identity.state !== 'tombstoned') ||
+        identity.identityChecksum !== null ||
+        identity.activatedAt !== null
+      ) {
+        fail(TeamIdentityStorageErrorCode.TamperingDetected);
+      }
+      return;
+    }
+
+    const intent = this.requireIntent(db, identity.adoptionIntentId);
+    if (identity.state !== 'tombstoned') {
+      this.assertIntentGraphConsistent(intent, identity, reservation);
+      return;
+    }
+    if (
+      intent.teamId !== identity.teamId ||
+      intent.legacyKey !== identity.legacyKey ||
+      intent.directoryFingerprint !== identity.directoryFingerprint ||
+      !this.sameWorkspaceBinding(intent.workspaceBinding, identity.workspaceBinding) ||
+      intent.preparedAt !== identity.createdAt ||
+      reservation.state !== 'tombstoned' ||
+      (intent.state === 'prepared' &&
+        (identity.identityChecksum !== null || identity.activatedAt !== null)) ||
+      (intent.state === 'file_published' &&
+        (identity.identityChecksum !== intent.expectedIdentityChecksum ||
+          identity.activatedAt !== null)) ||
+      (intent.state === 'committed' &&
+        (identity.identityChecksum !== intent.expectedIdentityChecksum ||
+          identity.activatedAt !== intent.committedAt))
+    ) {
+      fail(TeamIdentityStorageErrorCode.TamperingDetected);
+    }
   }
 
   private assertIntentGraphConsistent(
@@ -880,6 +949,7 @@ export class TeamIdentityStorageOps {
       intent.legacyKey !== identity.legacyKey ||
       intent.directoryFingerprint !== identity.directoryFingerprint ||
       !this.sameWorkspaceBinding(intent.workspaceBinding, identity.workspaceBinding) ||
+      intent.preparedAt !== identity.createdAt ||
       identity.adoptionIntentId !== intent.intentId ||
       reservation.teamId !== identity.teamId ||
       reservation.legacyKey !== identity.legacyKey
@@ -912,6 +982,7 @@ export class TeamIdentityStorageOps {
       identity.identityChecksum !== intent.publishedIdentityChecksum ||
       identity.identityChecksum !== intent.committedIdentityChecksum ||
       intent.publishedIdentityChecksum !== intent.expectedIdentityChecksum ||
+      identity.activatedAt !== intent.committedAt ||
       (identity.state === 'active' && reservation.state !== 'active')
     ) {
       fail(TeamIdentityStorageErrorCode.TamperingDetected);

@@ -7,6 +7,13 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core';
 
+export {
+  legacyTeamKeyReservations,
+  teamAdoptionIntents,
+  teamIdentityRecords,
+  teamIdentityStorageMetadata,
+} from './teamIdentityStorageSchema';
+
 export const stallJournalEntries = sqliteTable(
   'stall_journal_entries',
   {

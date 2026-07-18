@@ -1,6 +1,7 @@
 import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import * as schema from '@features/internal-storage/main/infrastructure/worker/internalStorageSchema';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import { parseTeamId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
 import { getTableColumns, getTableName } from 'drizzle-orm';
 import * as fs from 'fs/promises';
@@ -75,6 +76,40 @@ describe('InternalStorageWorkerCore', () => {
     expect(info.databasePath).toBe(dbPath);
     expect(info.schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
     expect(info.integrity).toBe('ok');
+  });
+
+  it('migrates identity storage as v5 and serves only validated worker read operations', async () => {
+    const dbPath = await makeTmpDbPath();
+    const core = track(makeCore(dbPath));
+    const teamId = parseTeamId(`team_${'a'.repeat(32)}`);
+
+    expect(core.handle('teamIdentity.list', {})).toEqual([]);
+    const db = new Database(dbPath);
+    try {
+      db.pragma('foreign_keys = ON');
+      db.prepare(
+        `INSERT INTO team_identity_records (
+          team_id, state, legacy_key, directory_fingerprint, workspace_id,
+          workspace_binding_generation, adoption_intent_id, identity_checksum,
+          created_at, activated_at, tombstoned_at
+        ) VALUES (?, 'reserved', 'demo', ?, ?, 1, NULL, NULL, ?, NULL, NULL)`
+      ).run(teamId, '1'.repeat(64), `workspace_${'b'.repeat(32)}`, '2026-07-16T12:00:00.000Z');
+      db.prepare(
+        `INSERT INTO legacy_team_key_reservations (
+          legacy_key, team_id, state, reserved_at, tombstoned_at, tombstone_reason
+        ) VALUES ('demo', ?, 'active', ?, NULL, NULL)`
+      ).run(teamId, '2026-07-16T12:00:00.000Z');
+    } finally {
+      db.close();
+    }
+
+    expect(core.handle('teamIdentity.get', { teamId })).toMatchObject({
+      teamId,
+      state: 'reserved',
+    });
+    expect(core.handle('teamIdentity.list', {})).toEqual([
+      expect.objectContaining({ teamId, legacyKey: 'demo' }),
+    ]);
   });
 
   it('replace + load round-trips records including nullable fields and unicode team names', async () => {

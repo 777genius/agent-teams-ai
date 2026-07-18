@@ -1,6 +1,12 @@
+import {
+  TEAM_LIFECYCLE_LIST_ROUTE,
+  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+  type TeamLifecycleReadFailure,
+} from '@features/team-lifecycle/contracts';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { createSafeAppError } from '@shared/contracts/hosted';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { constants as fsConstants } from 'fs';
@@ -34,6 +40,16 @@ type LaunchBody = Omit<TeamLaunchRequest, 'teamName'>;
 type CreateTeamBody = TeamCreateConfigRequest;
 
 class HttpFeatureUnavailableError extends Error {}
+
+function phase2TransportUnavailable(): TeamLifecycleReadFailure {
+  const error = createSafeAppError({ code: 'unavailable', reason: 'transport_unavailable' });
+  return Object.freeze({
+    schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+    kind: 'failure',
+    error: error as TeamLifecycleReadFailure['error'],
+    retryable: true,
+  });
+}
 
 type TeamHttpProvisioningStartApi = TeamHttpHandlerApis['provisioningStart'];
 type TeamHttpProvisioningStatusApi = TeamHttpHandlerApis['provisioningStatus'];
@@ -225,6 +241,17 @@ async function getTeamDataWithRuntimeOverlay(
 }
 
 export function registerTeamRoutes(app: FastifyInstance, services: HttpServices): void {
+  const phase2ReadHost = services.phase2ReadHost;
+  if (phase2ReadHost) {
+    app.post<{ Body: unknown }>(TEAM_LIFECYCLE_LIST_ROUTE, async (request, reply) => {
+      try {
+        return reply.send(await phase2ReadHost.listTeamLifecycle(request.body));
+      } catch {
+        return reply.send(phase2TransportUnavailable());
+      }
+    });
+  }
+
   app.get('/api/teams', async (_request, reply) => {
     try {
       return reply.send(await getTeamDataApi(services).listTeams());

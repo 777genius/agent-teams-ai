@@ -6,10 +6,19 @@ import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createRecentProjectsBridge } from '@features/recent-projects/preload';
 import { createRuntimeProviderManagementBridge } from '@features/runtime-provider-management/preload';
 import { createTeamImportBridge } from '@features/team-import/preload';
+import {
+  type CanonicalListTeamLifecycleResult,
+  type ListTeamLifecycleRequest,
+  parseCanonicalListTeamLifecycleResult,
+  parseListTeamLifecycleRequest,
+  TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+  type TeamLifecycleReadFailure,
+} from '@features/team-lifecycle/contracts';
 import { createTerminalWorkspaceBridge } from '@features/terminal-workspace/preload';
 import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
+import { createSafeAppError } from '@shared/contracts/hosted';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 import {
@@ -473,6 +482,37 @@ async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Prom
   return result.data as T;
 }
 
+function phase2ReadFailure(error: TeamLifecycleReadFailure['error']): TeamLifecycleReadFailure {
+  return Object.freeze({
+    schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+    kind: 'failure',
+    error,
+    retryable: error.code === 'unavailable',
+  });
+}
+
+async function invokeListTeamLifecycle(
+  requestValue: ListTeamLifecycleRequest
+): Promise<CanonicalListTeamLifecycleResult> {
+  const request = parseListTeamLifecycleRequest(requestValue);
+  if (!request.ok) return phase2ReadFailure(request.error as TeamLifecycleReadFailure['error']);
+
+  try {
+    const response: unknown = await ipcRenderer.invoke(TEAM_LIST, request.value);
+    const parsed = parseCanonicalListTeamLifecycleResult(response);
+    return parsed.ok
+      ? parsed.value
+      : phase2ReadFailure(parsed.error as TeamLifecycleReadFailure['error']);
+  } catch {
+    return phase2ReadFailure(
+      createSafeAppError({
+        code: 'unavailable',
+        reason: 'transport_unavailable',
+      }) as TeamLifecycleReadFailure['error']
+    );
+  }
+}
+
 function formatConsoleArg(arg: unknown): string {
   if (typeof arg === 'string') return arg;
   if (arg instanceof Error) return arg.stack ?? arg.message;
@@ -559,6 +599,7 @@ const electronAPI: ElectronAPI = {
   organizations: createOrganizationsBridge(ipcRenderer),
   terminalWorkspace: createTerminalWorkspaceBridge(ipcRenderer),
   tokenUsage: createTokenUsageBridge(ipcRenderer),
+  listTeamLifecycle: invokeListTeamLifecycle,
   telemetry: {
     getSentryContext: () => ipcRenderer.invoke(TELEMETRY_GET_SENTRY_CONTEXT),
   },

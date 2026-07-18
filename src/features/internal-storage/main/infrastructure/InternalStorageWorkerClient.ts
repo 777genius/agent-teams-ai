@@ -5,6 +5,11 @@ import { Worker } from 'node:worker_threads';
 
 import { createLogger } from '@shared/utils/logger';
 
+import {
+  MAX_TEAM_IDENTITY_READ_RECORDS,
+  parseTeamIdentityRecord,
+} from '../../contracts/teamIdentityStorageContracts';
+
 import type {
   CommentJournalEntryRecord,
   InternalStorageBackendInfo,
@@ -17,6 +22,10 @@ import type {
   MemberWorkSyncTeamSnapshotRecords,
   StallJournalEntryRecord,
 } from '../../contracts/internalStorageContracts';
+import type {
+  TeamIdentityReadGateway,
+  TeamIdentityRecord,
+} from '../../contracts/teamIdentityStorageContracts';
 import type {
   InternalStorageGateway,
   MemberWorkSyncStorageGateway,
@@ -37,6 +46,7 @@ import type {
   ApplicationCommandLedgerRecord,
   ApplicationCommandLedgerStorageGateway,
 } from '@features/application-command-ledger';
+import type { TeamId } from '@shared/contracts/hosted';
 
 const logger = createLogger('Service:InternalStorageWorkerClient');
 
@@ -102,7 +112,8 @@ export class InternalStorageWorkerClient
   implements
     InternalStorageGateway,
     MemberWorkSyncStorageGateway,
-    ApplicationCommandLedgerStorageGateway
+    ApplicationCommandLedgerStorageGateway,
+    TeamIdentityReadGateway
 {
   private worker: Worker | null = null;
   private readonly workerPath: string | null = resolveWorkerPath();
@@ -173,6 +184,24 @@ export class InternalStorageWorkerClient
 
   async hasStoreImport(storeId: string, teamName: string): Promise<boolean> {
     return (await this.call('storeImports.has', { storeId, teamName })) === true;
+  }
+
+  async listTeamIdentities(): Promise<readonly TeamIdentityRecord[]> {
+    const value = await this.call('teamIdentity.list', {});
+    if (!Array.isArray(value) || value.length > MAX_TEAM_IDENTITY_READ_RECORDS) {
+      throw new TypeError('team-identity-list-invalid');
+    }
+    const identities: TeamIdentityRecord[] = [];
+    for (let index = 0; index < value.length; index += 1) {
+      if (!Object.hasOwn(value, index)) throw new TypeError('team-identity-list-invalid');
+      identities.push(parseTeamIdentityRecord(value[index]));
+    }
+    return Object.freeze(identities);
+  }
+
+  async getTeamIdentity(teamId: TeamId): Promise<TeamIdentityRecord | null> {
+    const value = await this.call('teamIdentity.get', { teamId });
+    return value === null ? null : parseTeamIdentityRecord(value);
   }
 
   async statusRead(
