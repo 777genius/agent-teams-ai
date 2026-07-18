@@ -1,10 +1,5 @@
 # Phase 2 JIT execution DAG
 
-> **Historical packet — already executed.** The Phase 2 identity product wave was accepted and
-> integrated in `eee2389f7`, and canonical team lifecycle reads were wired into production
-> (IPC/HTTP/preload/standalone) in `bc893aa16`. Do not re-execute this packet; current authority is
-> `docs/hosted-web-phases/EXECUTION_INDEX.json` (see `phase2PacketDisposition`).
-
 Status: `candidate`; product admission `blocked`; terminal state `HOLD`.
 
 ## Graph

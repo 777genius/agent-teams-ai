@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "packetRevision": "pr252-latest-base-sync-router-v2",
+  "packetRevision": "pr252-latest-base-sync-router-v1",
   "currentPhase": "phase-02",
   "currentNode": "PR252.LATEST_BASE_SYNC",
   "status": "product-wave-accepted-integrated-latest-base-sync-blocked",
@@ -9,8 +9,8 @@
     "repository": "777genius/agent-teams-ai",
     "pullRequestNumber": 252,
     "historicalAcceptedProductWaveSha": "eee2389f7ee9300df93ef02d92e9ae114949aff4",
-    "activeRouterCanonicalHeadSha": "bc893aa16385aab1487049bfd4d5e9365f0a70e0",
-    "canonicalRemoteHeadSha": "bc893aa16385aab1487049bfd4d5e9365f0a70e0",
+    "activeRouterCanonicalHeadSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
+    "canonicalRemoteHeadSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
     "canonicalRemoteHeadEqualAtRouterActivation": true,
     "canonicalProductWaveIsAncestorOfActiveRouter": true,
     "routerAuthoringWorktreeCleanBeforePacketEdits": true,
@@ -19,18 +19,7 @@
     "latestBaseAuthority": "resolve-once-at-each-atomic-product-attempt-prepare-start",
     "durableBasePinForbidden": true,
     "stalePr252SourcePinsSuperseded": true,
-    "phase2CandidateLaunchWordingSuperseded": true,
-    "postRouterAcceptedCommits": [
-      {
-        "sha": "eceeb805c53c7ab00e2ae5347a4e0d5c39acea55",
-        "summary": "fix(teams): harden primary runtime stop delivery"
-      },
-      {
-        "sha": "bc893aa16385aab1487049bfd4d5e9365f0a70e0",
-        "summary": "feat(hosted-web): wire canonical team lifecycle reads into production IPC/HTTP/preload/standalone"
-      }
-    ],
-    "canonicalHeadPolicy": "The first merge parent is the live PR #252 head resolved exactly once at the same atomic prepare/start transition that resolves the base. The SHA above is the authoring-time head; later accepted commits on the branch supersede it without requiring a new router revision."
+    "phase2CandidateLaunchWordingSuperseded": true
   },
   "phaseGate": {
     "phase2ProductWaveComplete": true,
@@ -65,24 +54,22 @@
       },
       "routerAuthoritySha": {
         "type": "literal",
-        "value": "bc893aa16385aab1487049bfd4d5e9365f0a70e0"
+        "value": "81e79295e199bad0e6bf426537564ea7bc67dfcd"
       },
       "canonicalHeadSha": {
-        "type": "live-resolved-once-at-attempt-prepare-start",
-        "authoringTimeValue": "bc893aa16385aab1487049bfd4d5e9365f0a70e0"
+        "type": "literal",
+        "value": "81e79295e199bad0e6bf426537564ea7bc67dfcd"
       },
       "materializationSourceSha": {
-        "type": "same-value-as-canonicalHeadSha"
+        "type": "literal",
+        "value": "81e79295e199bad0e6bf426537564ea7bc67dfcd"
       },
       "resolvedBaseSha": {
         "type": "lowercase-40-hex-git-commit"
       },
       "orderedParentShas": {
         "type": "tuple",
-        "items": [
-          "same-value-as-canonicalHeadSha",
-          "same-value-as-resolvedBaseSha"
-        ]
+        "items": ["81e79295e199bad0e6bf426537564ea7bc67dfcd", "same-value-as-resolvedBaseSha"]
       },
       "conflictPaths": {
         "type": "sorted-distinct-repository-relative-path-array",
@@ -98,8 +85,8 @@
     "invariants": [
       "ProjectScopedControl reads the live PR #252 base exactly once while atomically preparing and starting one product attempt.",
       "The resolved base is a full exact 40-hex commit SHA; a symbolic ref, branch name, abbreviated SHA, prior observation, or packet-authored value is invalid.",
-      "canonicalHeadSha, materializationSourceSha and orderedParentShas[0] all equal the live PR #252 head resolved once at the atomic prepare/start transition; routerAuthoritySha records the router authoring-time head.",
-      "The product worktree is materialized from the live-resolved canonical head, never from a historical product-wave ancestor or the resolved base.",
+      "routerAuthoritySha, canonicalHeadSha, materializationSourceSha and orderedParentShas[0] all equal active router commit 81e79295e199bad0e6bf426537564ea7bc67dfcd.",
+      "The product worktree is materialized from active router/canonical head 81e79295e199bad0e6bf426537564ea7bc67dfcd, never from historical product-wave ancestor eee2389f7ee9300df93ef02d92e9ae114949aff4 or the resolved base.",
       "The exact resolvedBaseSha is orderedParentShas[1] and can never be re-resolved or substituted inside the attempt.",
       "The runtime performs the ordered mechanical merge materialization before worker start and records its exact actual conflict paths in the same pre-start contract.",
       "ProjectScopedControl selects and freezes the exact focused test commands after conflict discovery and before worker start.",
@@ -160,12 +147,9 @@
     {
       "id": "PR252.SYNC.PRODUCER",
       "kind": "bounded-product-merge-resolution",
-      "dependsOn": [
-        "PR252.ROUTER.ACTIVE",
-        "PR252.BINDING.ATOMIC"
-      ],
+      "dependsOn": ["PR252.ROUTER.ACTIVE", "PR252.BINDING.ATOMIC"],
       "capacity": 1,
-      "materializationSourceSha": "attempt.canonicalHeadSha (live-resolved once at prepare/start)",
+      "materializationSourceSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
       "writablePathRule": "exact-actual-conflictPaths-only",
       "preserve": [
         "accepted-integrated Phase 2 product-wave behavior inherited by canonicalHeadSha from historicalAcceptedProductWaveSha",
@@ -184,9 +168,7 @@
     {
       "id": "PR252.SYNC.CONTROLLER_MECHANICAL",
       "kind": "direct-controller-mechanical-rerun",
-      "dependsOn": [
-        "PR252.SYNC.PRODUCER"
-      ],
+      "dependsOn": ["PR252.SYNC.PRODUCER"],
       "worker": false,
       "separateMechanicalReviewer": false,
       "required": "ProjectScopedControl invokes runtime execution primitives and directly evaluates the complete mechanical gate set against the producer's exact resolved tree.",
@@ -195,9 +177,7 @@
     {
       "id": "PR252.SYNC.SEMANTIC_REVIEW",
       "kind": "independent-integration-architecture-security-semantic-review",
-      "dependsOn": [
-        "PR252.SYNC.CONTROLLER_MECHANICAL"
-      ],
+      "dependsOn": ["PR252.SYNC.CONTROLLER_MECHANICAL"],
       "reviewerCount": 1,
       "independentFrom": [
         "router author",
@@ -214,14 +194,9 @@
     {
       "id": "PR252.SYNC.BROKER_PROMOTION_PROOF",
       "kind": "broker-ordered-two-parent-merge-promotion-push-proof",
-      "dependsOn": [
-        "PR252.SYNC.SEMANTIC_REVIEW"
-      ],
-      "expectedOldHeadSha": "attempt.canonicalHeadSha",
-      "orderedParents": [
-        "attempt.canonicalHeadSha",
-        "attempt.resolvedBaseSha"
-      ],
+      "dependsOn": ["PR252.SYNC.SEMANTIC_REVIEW"],
+      "expectedOldHeadSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
+      "orderedParents": ["81e79295e199bad0e6bf426537564ea7bc67dfcd", "attempt.resolvedBaseSha"],
       "tree": "exact accepted reviewed resolved tree",
       "requiredProof": [
         "merge commit has exactly the ordered two parents",
@@ -300,6 +275,5 @@
     "runtime DAG selection or successor authorization"
   ],
   "nextAction": "HOLD_FOR_PROJECT_CONTROLLER_PACKET_INTEGRATION",
-  "launchSuccessor": false,
-  "knownRedLedger": "docs/hosted-web-phases/KNOWN_RED.md"
+  "launchSuccessor": false
 }

@@ -1,10 +1,5 @@
 # P2.A: workspace identity
 
-> **Historical packet — already executed.** The Phase 2 identity product wave was accepted and
-> integrated in `eee2389f7`, and canonical team lifecycle reads were wired into production
-> (IPC/HTTP/preload/standalone) in `bc893aa16`. Do not re-execute this packet; current authority is
-> `docs/hosted-web-phases/EXECUTION_INDEX.json` (see `phase2PacketDisposition`).
-
 - Packet revision: `phase-02-jit-router-r1`.
 - Role: product lane A; one of exactly five parallel product slots.
 - Depends on: accepted and activated `P2.IF.INTEGRATION` foundation authority.

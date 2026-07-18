@@ -1,7 +1,7 @@
 # Hosted-web execution packets
 
 Current authority is the stable [PR #252 latest-base sync gate](phase-01/controller-packet.md),
-revision `pr252-latest-base-sync-router-v2`. Start with [START_HERE.md](START_HERE.md) and treat
+revision `pr252-latest-base-sync-router-v1`. Start with [START_HERE.md](START_HERE.md) and treat
 [EXECUTION_INDEX.json](EXECUTION_INDEX.json) as the machine-readable source of truth.
 
 The Phase 2 product wave at
@@ -9,7 +9,7 @@ The Phase 2 product wave at
 the next phase are blocked only by the PR #252 latest-base sync gate. The files under
 `phase-02/` remain read-only accepted product inputs; their earlier candidate/product-launch wording
 is superseded and is not current execution authority. Active router commit
-`bc893aa16385aab1487049bfd4d5e9365f0a70e0` is the immutable canonical PR head and materialization
+`81e79295e199bad0e6bf426537564ea7bc67dfcd` is the immutable canonical PR head and materialization
 source; the accepted product-wave commit is its historical ancestor.
 
 ## Stable latest-base rule
@@ -17,7 +17,7 @@ source; the accepted product-wave commit is its historical ancestor.
 No observed PR base SHA is a durable packet pin. At each atomic product-attempt prepare/start,
 `ProjectScopedControl` resolves the live PR #252 base exactly once and records the full 40-hex commit
 in the immutable `pr252.latest-base-binding/v1` product-worker pre-start contract. The runtime
-materializes from active router/canonical head `bc893aa16385aab1487049bfd4d5e9365f0a70e0`,
+materializes from active router/canonical head `81e79295e199bad0e6bf426537564ea7bc67dfcd`,
 mechanically merges the bound base, records the exact actual conflict paths, and binds the canonical
 head and same base as the ordered first and second parents.
 
@@ -36,8 +36,8 @@ and semantic decision.
 
 Only an independent `ACCEPT` with P0/P1/P2 `0/0/0` lets the broker create the reviewed tree as a
 true two-parent merge ordered
-`[bc893aa16385aab1487049bfd4d5e9365f0a70e0, resolvedBaseSha]`, promote and push it with
-`bc893aa16385aab1487049bfd4d5e9365f0a70e0` as the expected old PR head, and prove the exact pushed
+`[81e79295e199bad0e6bf426537564ea7bc67dfcd, resolvedBaseSha]`, promote and push it with
+`81e79295e199bad0e6bf426537564ea7bc67dfcd` as the expected old PR head, and prove the exact pushed
 head/base pair is non-conflicting on GitHub. Git commit SHAs are primary provenance.
 Repository handoff manifests and hash-of-manifest bookkeeping are forbidden.
 

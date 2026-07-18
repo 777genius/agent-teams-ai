@@ -95,13 +95,7 @@ Tests on real user projects are forbidden regardless of proof level.
 
 ## Required handoff
 
-Handoff records are **runtime-owned, not repository files**: workers write a worktree-local
-`.codex-handoff/<phase>-<lane>.json` and do not commit it. The `.codex-handoff/*.json` files
-already committed by Phase 0-2 lanes are frozen historical provenance from before this policy was
-settled — read them as history, never as a template for committing new ones (the PR #252 sync
-packets forbid repository handoff manifests outright).
-
-The handoff shape:
+Workers write a worktree-local `.codex-handoff/<phase>-<lane>.json` with this shape:
 
 ```json
 {

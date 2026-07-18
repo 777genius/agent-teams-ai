@@ -72,6 +72,3 @@ remotion/*
 # Local reference captures
 /agent-teams-reference-fix-*.png
 /.tmp-*
-
-# Handoff records are runtime-owned (docs/hosted-web-phases/PACKET_STANDARD.md); committed ones are frozen history.
-.codex-handoff/

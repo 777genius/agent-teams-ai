@@ -3,10 +3,10 @@
 Phase 1 is complete. This directory retains the PR #252 routing paths because they are the established
 navigation boundary for base-sync control; it does not reopen a Phase 1 product node.
 
-Current packet authority is `pr252-latest-base-sync-router-v2`. The Phase 2 product wave at
+Current packet authority is `pr252-latest-base-sync-router-v1`. The Phase 2 product wave at
 `eee2389f7ee9300df93ef02d92e9ae114949aff4` is accepted and integrated. Only latest-base sync blocks
 the Phase 2 milestone and the next phase. Active router commit
-`bc893aa16385aab1487049bfd4d5e9365f0a70e0` is the immutable canonical PR head and product
+`81e79295e199bad0e6bf426537564ea7bc67dfcd` is the immutable canonical PR head and product
 materialization source; the accepted product-wave commit is its historical ancestor.
 
 ## Supersession
@@ -30,7 +30,7 @@ Read the detailed [controller packet](controller-packet.md), [execution DAG](exe
 At atomic prepare/start, `ProjectScopedControl` resolves the live PR #252 base exactly once and
 records it as a full 40-hex `resolvedBaseSha` in
 `pr252.latest-base-binding/v1`. The runtime materializes the product attempt from canonical
-`bc893aa16385aab1487049bfd4d5e9365f0a70e0`, records the actual conflict paths, and binds the
+`81e79295e199bad0e6bf426537564ea7bc67dfcd`, records the actual conflict paths, and binds the
 canonical head and same base as the ordered first and second parents. Symbolic names, abbreviated
 SHAs, observed prior bases, and re-resolution within an attempt are forbidden.
 
@@ -41,7 +41,7 @@ then returns `ACCEPT` or `REJECT`; there is no separate mechanical reviewer.
 
 On `ACCEPT` with P0/P1/P2 `0/0/0`, the broker alone may build the exact reviewed tree as a true
 merge ordered
-`[bc893aa16385aab1487049bfd4d5e9365f0a70e0, resolvedBaseSha]`, promote and push it with the
+`[81e79295e199bad0e6bf426537564ea7bc67dfcd, resolvedBaseSha]`, promote and push it with the
 canonical head as the expected old PR head, and prove GitHub sees the exact head/base pair as
 non-conflicting. A later base mismatch invalidates only the attempt and never this stable packet.
 

@@ -4,10 +4,10 @@
 
 - Phase/node: `phase-02` / `PR252.SYNC.PRODUCER`
 - Lane: `pr252-latest-base-conflict-resolution`
-- Revision: `pr252-latest-base-sync-router-v2`
+- Revision: `pr252-latest-base-sync-router-v1`
 - Repository/PR: `777genius/agent-teams-ai#252`
 - Active router/canonical head and product source:
-  `bc893aa16385aab1487049bfd4d5e9365f0a70e0`
+  `81e79295e199bad0e6bf426537564ea7bc67dfcd`
 - Historical accepted product-wave provenance:
   `eee2389f7ee9300df93ef02d92e9ae114949aff4`, an ancestor of the active router
 - Product-wave disposition: accepted and integrated
@@ -36,11 +36,11 @@ Before the worker starts, the controller/runtime atomically create and validate:
   "productAttemptId": "<unique attempt>",
   "repository": "777genius/agent-teams-ai",
   "pullRequestNumber": 252,
-  "routerAuthoritySha": "bc893aa16385aab1487049bfd4d5e9365f0a70e0",
-  "canonicalHeadSha": "bc893aa16385aab1487049bfd4d5e9365f0a70e0",
-  "materializationSourceSha": "bc893aa16385aab1487049bfd4d5e9365f0a70e0",
+  "routerAuthoritySha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
+  "canonicalHeadSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
+  "materializationSourceSha": "81e79295e199bad0e6bf426537564ea7bc67dfcd",
   "resolvedBaseSha": "<live PR base, exact lowercase 40 hex>",
-  "orderedParentShas": ["bc893aa16385aab1487049bfd4d5e9365f0a70e0", "<same resolvedBaseSha>"],
+  "orderedParentShas": ["81e79295e199bad0e6bf426537564ea7bc67dfcd", "<same resolvedBaseSha>"],
   "conflictPaths": ["<complete sorted actual conflict set>"],
   "focusedTestCommands": ["<exact deterministic focused command>"],
   "resolvedAt": "<RFC 3339>"
@@ -224,13 +224,13 @@ Immediately before promotion, the broker proves:
 The broker creates only a true merge with exactly:
 
 ```text
-parents[0] = bc893aa16385aab1487049bfd4d5e9365f0a70e0
+parents[0] = 81e79295e199bad0e6bf426537564ea7bc67dfcd
 parents[1] = attempt.resolvedBaseSha
 tree       = exact independently accepted resolved tree
 ```
 
 It promotes and pushes that merge with expected-old-head protection fixed to canonical head
-`bc893aa16385aab1487049bfd4d5e9365f0a70e0`. It then proves the remote PR head and GitHub PR head
+`81e79295e199bad0e6bf426537564ea7bc67dfcd`. It then proves the remote PR head and GitHub PR head
 OID equal the merge commit, GitHub's base OID still equals `resolvedBaseSha`, and GitHub mergeability
 is resolved and non-conflicting for the exact pair.
 `UNKNOWN`, `CONFLICTING`, moved base/head, parent/tree mismatch, one-parent/squash/patch-only
@@ -246,7 +246,7 @@ attempt. It invalidates only that attempt and all attempt-bound outputs.
 
 After the invalidated attempt is terminal and capacity is empty, the controller may perform one new
 atomic prepare/start with a new attempt ID and live base. It uses this same
-`pr252.latest-base-binding/v1` format and `pr252-latest-base-sync-router-v2` packet. No docs/router
+`pr252.latest-base-binding/v1` format and `pr252-latest-base-sync-router-v1` packet. No docs/router
 revision, source pin, fixed conflict list, patch continuation, or old worker is needed.
 
 ## Stop and HOLD

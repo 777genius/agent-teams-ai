@@ -1,11 +1,11 @@
 # PR #252 latest-base sync execution DAG
 
-Status: `pr252-latest-base-sync-router-v2`; terminal state: `HOLD`.
+Status: `pr252-latest-base-sync-router-v1`; terminal state: `HOLD`.
 
 The accepted/integrated Phase 2 product wave is
 `eee2389f7ee9300df93ef02d92e9ae114949aff4`. The Phase 2 milestone and next phase are blocked only
 by latest-base sync. Active router/canonical head
-`bc893aa16385aab1487049bfd4d5e9365f0a70e0` descends from that historical product wave. No observed
+`81e79295e199bad0e6bf426537564ea7bc67dfcd` descends from that historical product wave. No observed
 base is packet authority.
 
 ## Ordered DAG
@@ -64,7 +64,7 @@ live base != attempt.resolvedBaseSha
 
 - `ProjectScopedControl` owns the transition and DAG decision.
 - Runtime owns only the selected resolve/materialize/record/start primitives.
-- Canonical PR head must equal `bc893aa16385aab1487049bfd4d5e9365f0a70e0`.
+- Canonical PR head must equal `81e79295e199bad0e6bf426537564ea7bc67dfcd`.
 - Live base is resolved once into an exact full 40-hex `resolvedBaseSha`.
 - Product materialization starts from active router/canonical head `81e79295...`.
 - The same base is the ordered second parent.
@@ -101,10 +101,10 @@ live base != attempt.resolvedBaseSha
 
 - Base and canonical PR head still match immediately before construction/push.
 - Exactly two ordered parents:
-  `[bc893aa16385aab1487049bfd4d5e9365f0a70e0, resolvedBaseSha]`.
+  `[81e79295e199bad0e6bf426537564ea7bc67dfcd, resolvedBaseSha]`.
 - Commit tree exactly equals the accepted reviewed tree.
 - Push uses expected-old-head protection fixed to canonical head
-  `bc893aa16385aab1487049bfd4d5e9365f0a70e0`.
+  `81e79295e199bad0e6bf426537564ea7bc67dfcd`.
 - Remote and GitHub head equal the merge commit; GitHub base equals the bound base.
 - GitHub state is resolved and non-conflicting; `UNKNOWN` or `CONFLICTING` is not proof.
 - Git commit SHA is primary provenance; no repository manifest/manifest hash.
