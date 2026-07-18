@@ -318,8 +318,7 @@ export async function createOrReuseProjectJob(input: {
   readonly manifest: CodexGoalJobManifestInput;
   readonly promptBody: string;
   readonly workerRole?:
-    | ProjectAdmissionWorkerRole
-    | `${ProjectAdmissionWorkerRole}`;
+    ProjectAdmissionWorkerRole | `${ProjectAdmissionWorkerRole}`;
 }): Promise<{
   readonly result: ProjectControlOperationResult;
   readonly manifest: CodexGoalJobManifest;
@@ -634,7 +633,11 @@ export async function reconcileProjectRefillLaunchArtifactTransaction(input: {
   readonly scope: ProjectAccessScope;
 }): Promise<void> {
   const jobRootDir = resolve(input.manifest.jobRootDir);
-  const workerJobsRoot = dirname(resolve(input.scope.registryRoot));
+  const registryRoot = input.scope.registryRoot;
+  if (!registryRoot) {
+    throw new Error("project_control_merge_rebind_registry_root_required");
+  }
+  const workerJobsRoot = dirname(resolve(registryRoot));
   if (
     jobRootDir !== workerJobsRoot &&
     !jobRootDir.startsWith(`${workerJobsRoot}${sep}`)
