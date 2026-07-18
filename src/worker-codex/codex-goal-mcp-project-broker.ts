@@ -55,6 +55,10 @@ import {
   noopOperationResult,
   type CodexGoalProjectCreateWorktreeInput,
 } from "./application/project-control/codex-goal-project-control-contracts";
+import {
+  pushProjectBranch,
+  type CodexGoalProjectPushBranchInput,
+} from "./application/project-control/codex-goal-project-push";
 import { projectControlRealPathOutsideWorkspaceScope } from "./application/project-control/codex-goal-project-workspace-scope";
 import {
   applyVerifiedInputPatch,
@@ -72,13 +76,9 @@ export type CodexGoalProjectIntegrateCommitInput = {
   readonly commitSha: string;
 };
 
-export type CodexGoalProjectPushBranchInput = {
-  readonly workspacePath: string;
-  readonly realWorkspacePath?: string;
-  readonly branch: string;
-  readonly remote: string;
-  readonly force: boolean;
-};
+export type {
+  CodexGoalProjectPushBranchInput,
+} from "./application/project-control/codex-goal-project-push";
 
 export async function resolveBoundProjectWorktreeSource(input: {
   readonly sourceWorkspacePath: string;
@@ -524,21 +524,12 @@ function codexProjectControlPorts(
         if (!input.pushBranchInput) {
           throw new Error("project_control_push_branch_input_required");
         }
+        const pushInput = input.pushBranchInput;
         await assertGitCurrentBranch({
-          workspacePath: input.pushBranchInput.workspacePath,
-          branch: input.pushBranchInput.branch,
+          workspacePath: pushInput.workspacePath,
+          branch: pushInput.branch,
         });
-        await execGit([
-          "-C",
-          input.pushBranchInput.workspacePath,
-          "push",
-          ...(input.pushBranchInput.force ? ["--force-with-lease"] : []),
-          input.pushBranchInput.remote,
-          input.pushBranchInput.branch,
-        ]);
-        return operationResult(
-          `${input.pushBranchInput.remote}/${input.pushBranchInput.branch}`,
-        );
+        return pushProjectBranch(pushInput);
       },
     },
   };

@@ -689,6 +689,12 @@ describe("codex goal MCP project-control server", () => {
       })).resolves.toMatchObject({
         ok: true,
         mode: "project_control_push_branch",
+        result: {
+          status: "applied",
+          outcome: "fast_forwarded",
+          localCommit: commitSha.trim(),
+          remoteCommitAfter: commitSha.trim(),
+        },
       });
 
       await expect(callToolJson(client, "codex_goal_project_push_branch", {
