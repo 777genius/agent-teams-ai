@@ -9,6 +9,7 @@ import { Check, Eye, EyeOff, GitMerge, Loader2, Pencil, Redo2, Undo2, X } from '
 import { ReviewActionHistoryPopover } from './ReviewActionHistoryPopover';
 import { describeReviewAction } from './reviewActionPresentation';
 
+import type { ReviewHistoryRestorePreview } from './ReviewActionHistoryPopover';
 import type { ReviewFileLabelResolver } from './reviewActionPresentation';
 import type { ReviewActionPersistenceStatus } from './reviewActionState';
 import type {
@@ -47,6 +48,7 @@ interface ReviewToolbarProps {
   onRetryHistoryPersistence?: () => void;
   onNavigateToHistoryAction?: (action: ReviewUndoAction) => void;
   onRestoreHistory?: (target: ReviewHistoryRestoreTarget) => Promise<void>;
+  getRestoreHistoryPreview?: (target: ReviewHistoryRestoreTarget) => ReviewHistoryRestorePreview;
   restoreHistoryDisabled?: boolean;
 }
 
@@ -79,6 +81,7 @@ export const ReviewToolbar = ({
   onRetryHistoryPersistence,
   onNavigateToHistoryAction,
   onRestoreHistory,
+  getRestoreHistoryPreview,
   restoreHistoryDisabled,
 }: ReviewToolbarProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
@@ -209,6 +212,7 @@ export const ReviewToolbar = ({
         onRetryPersistence={onRetryHistoryPersistence}
         onNavigateToAction={onNavigateToHistoryAction}
         onRestoreToTarget={onRestoreHistory}
+        getRestorePreview={getRestoreHistoryPreview}
         restoreDisabled={restoreHistoryDisabled}
       />
 

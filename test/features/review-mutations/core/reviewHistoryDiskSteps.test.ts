@@ -1,4 +1,7 @@
-import { buildReviewHistoryRestoreDiskSteps } from '@features/review-mutations';
+import {
+  buildReviewHistoryRestoreDiskImpact,
+  buildReviewHistoryRestoreDiskSteps,
+} from '@features/review-mutations';
 import { describe, expect, it } from 'vitest';
 
 import type { ReviewUndoAction } from '@shared/types';
@@ -7,14 +10,15 @@ function diskAction(
   id: string,
   beforeContent: string,
   afterContent: string | null,
-  filePath = '/repo/file.ts'
+  filePath = '/repo/file.ts',
+  restoreMode?: 'create-file' | 'delete-file'
 ): ReviewUndoAction {
   return {
     id,
     createdAt: '2026-07-18T08:00:00.000Z',
     kind: 'disk',
     action: {
-      snapshot: { filePath, beforeContent, afterContent },
+      snapshot: { filePath, beforeContent, afterContent, restoreMode },
     },
   };
 }
@@ -43,9 +47,7 @@ describe('buildReviewHistoryRestoreDiskSteps', () => {
         { direction: 'redo', action: diskAction('older', 'state-1', 'state-2') },
         { direction: 'redo', action: diskAction('newest', 'state-2', 'state-3') },
       ])
-    ).toEqual([
-      expect.objectContaining({ expectedContent: 'state-1', content: 'state-3' }),
-    ]);
+    ).toEqual([expect.objectContaining({ expectedContent: 'state-1', content: 'state-3' })]);
     expect(
       buildReviewHistoryRestoreDiskSteps([
         { direction: 'undo', action: diskAction('undo', 'same', 'changed') },
@@ -71,7 +73,12 @@ describe('buildReviewHistoryRestoreDiskSteps', () => {
           beforeContent: '',
           afterContent: null,
           restoreMode: 'restore-rejected-rename',
-          renameExpectation: { eventId: 'event', beforeHash: null, afterHash: 'after', relation: { kind: 'rename', oldPath: '/repo/original.ts', newPath: '/repo/renamed.ts' } },
+          renameExpectation: {
+            eventId: 'event',
+            beforeHash: null,
+            afterHash: 'after',
+            relation: { kind: 'rename', oldPath: '/repo/original.ts', newPath: '/repo/renamed.ts' },
+          },
         },
       },
     };
@@ -81,5 +88,52 @@ describe('buildReviewHistoryRestoreDiskSteps', () => {
         { direction: 'undo', action: diskAction('other', 'a', 'b', '/repo/other.ts') },
       ])
     ).toThrow('combine Rename with other disk changes');
+  });
+
+  it('summarizes the exact coalesced create, update, delete, and rename impact', () => {
+    expect(
+      buildReviewHistoryRestoreDiskImpact([
+        { direction: 'undo', action: diskAction('update', 'before', 'after') },
+        {
+          direction: 'undo',
+          action: diskAction('create', 'created', null, '/repo/new.ts', 'create-file'),
+        },
+        {
+          direction: 'redo',
+          action: diskAction('delete', 'removed', null, '/repo/old.ts', 'create-file'),
+        },
+      ])
+    ).toEqual([
+      { filePath: '/repo/file.ts', kind: 'update' },
+      { filePath: '/repo/new.ts', kind: 'create' },
+      { filePath: '/repo/old.ts', kind: 'delete' },
+    ]);
+
+    const rename: ReviewUndoAction = {
+      id: 'rename',
+      createdAt: '2026-07-18T08:00:00.000Z',
+      kind: 'disk',
+      action: {
+        snapshot: {
+          filePath: '/repo/renamed.ts',
+          beforeContent: '',
+          afterContent: null,
+          restoreMode: 'restore-rejected-rename',
+          renameExpectation: {
+            eventId: 'event',
+            beforeHash: null,
+            afterHash: 'after',
+            relation: {
+              kind: 'rename',
+              oldPath: '/repo/original.ts',
+              newPath: '/repo/renamed.ts',
+            },
+          },
+        },
+      },
+    };
+    expect(buildReviewHistoryRestoreDiskImpact([{ direction: 'undo', action: rename }])).toEqual([
+      { filePath: '/repo/renamed.ts', kind: 'rename' },
+    ]);
   });
 });

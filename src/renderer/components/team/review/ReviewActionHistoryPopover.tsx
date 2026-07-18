@@ -22,6 +22,7 @@ import {
 
 import type { ReviewActionTone, ReviewFileLabelResolver } from './reviewActionPresentation';
 import type { ReviewActionPersistenceStatus } from './reviewActionState';
+import type { ReviewHistoryDiskTransition } from '@features/review-mutations';
 import type { ReviewHistoryRestoreTarget, ReviewRedoAction, ReviewUndoAction } from '@shared/types';
 
 const HISTORY_INITIAL_LIMIT = 12;
@@ -35,7 +36,14 @@ interface ReviewActionHistoryPopoverProps {
   onRetryPersistence?: () => void;
   onNavigateToAction?: (action: ReviewUndoAction) => void;
   onRestoreToTarget?: (target: ReviewHistoryRestoreTarget) => Promise<void>;
+  getRestorePreview?: (target: ReviewHistoryRestoreTarget) => ReviewHistoryRestorePreview;
   restoreDisabled?: boolean;
+}
+
+export interface ReviewHistoryRestorePreview {
+  direction: 'undo' | 'redo';
+  actions: readonly ReviewUndoAction[];
+  diskTransitions: readonly ReviewHistoryDiskTransition[];
 }
 
 interface ReviewHistorySectionProps {
@@ -204,6 +212,7 @@ export const ReviewActionHistoryPopover = ({
   onRetryPersistence,
   onNavigateToAction,
   onRestoreToTarget,
+  getRestorePreview,
   restoreDisabled = false,
 }: ReviewActionHistoryPopoverProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false);
@@ -212,6 +221,8 @@ export const ReviewActionHistoryPopover = ({
   const [restoreRequest, setRestoreRequest] = useState<{
     target: ReviewHistoryRestoreTarget;
     actionCount: number;
+    preview: ReviewHistoryRestorePreview | null;
+    preparationError: string | null;
   } | null>(null);
   const [restoreRunning, setRestoreRunning] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
@@ -234,10 +245,31 @@ export const ReviewActionHistoryPopover = ({
   const requestRestore = (target: ReviewHistoryRestoreTarget, actionCount: number): void => {
     setOpen(false);
     setRestoreError(null);
-    setRestoreRequest({ target, actionCount });
+    try {
+      setRestoreRequest({
+        target,
+        actionCount,
+        preview: getRestorePreview?.(target) ?? null,
+        preparationError: null,
+      });
+    } catch (error) {
+      setRestoreRequest({
+        target,
+        actionCount,
+        preview: null,
+        preparationError: error instanceof Error ? error.message : String(error),
+      });
+    }
   };
   const runRestore = async (): Promise<void> => {
-    if (!restoreRequest || !onRestoreToTarget || restoreRunning) return;
+    if (
+      !restoreRequest ||
+      restoreRequest.preparationError ||
+      !onRestoreToTarget ||
+      restoreRunning
+    ) {
+      return;
+    }
     setRestoreRunning(true);
     setRestoreError(null);
     try {
@@ -439,6 +471,70 @@ export const ReviewActionHistoryPopover = ({
               Restore actions may be updated on disk.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {restoreRequest?.preview && (
+            <div
+              data-review-history-impact
+              className="bg-surface-raised/40 max-h-64 space-y-3 overflow-y-auto rounded-md border border-border p-3 text-xs"
+            >
+              <div>
+                <div className="font-medium text-text">Actions in this jump</div>
+                <div className="mt-1 space-y-1 text-text-muted">
+                  {restoreRequest.preview.actions.slice(0, 5).map((action) => {
+                    const presentation = describeReviewAction(action, resolveFileLabel);
+                    return (
+                      <div key={action.id} className="flex min-w-0 items-center gap-1.5">
+                        <ToneIcon tone={presentation.tone} />
+                        <span className="shrink-0 text-text">{presentation.title}</span>
+                        {presentation.detail && (
+                          <span className="truncate">{presentation.detail}</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {restoreRequest.preview.actions.length > 5 && (
+                    <div>+{restoreRequest.preview.actions.length - 5} more actions</div>
+                  )}
+                </div>
+              </div>
+              <div className="border-t border-border pt-2">
+                <div className="font-medium text-text">Net disk impact</div>
+                {restoreRequest.preview.diskTransitions.length === 0 ? (
+                  <div className="mt-1 text-text-muted">No files will be changed on disk.</div>
+                ) : (
+                  <div className="mt-1 space-y-1">
+                    <div className="text-text-muted">
+                      {restoreRequest.preview.diskTransitions.length} net disk transition
+                      {restoreRequest.preview.diskTransitions.length === 1 ? '' : 's'}
+                    </div>
+                    {restoreRequest.preview.diskTransitions.slice(0, 5).map((transition) => (
+                      <div
+                        key={`${transition.kind}:${transition.filePath}`}
+                        className="flex min-w-0 items-center gap-2"
+                      >
+                        {(transition.kind === 'delete' || transition.kind === 'rename') && (
+                          <AlertTriangle className="size-3 shrink-0 text-amber-400" />
+                        )}
+                        <span className="w-12 shrink-0 text-text">
+                          {transition.kind.charAt(0).toUpperCase() + transition.kind.slice(1)}
+                        </span>
+                        <span className="truncate text-text-muted">
+                          {resolveFileLabel?.(transition.filePath) || transition.filePath}
+                        </span>
+                      </div>
+                    ))}
+                    {restoreRequest.preview.diskTransitions.length > 5 && (
+                      <div className="text-text-muted">
+                        +{restoreRequest.preview.diskTransitions.length - 5} more files
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {restoreRequest?.preparationError && (
+            <p className="text-xs text-red-300">{restoreRequest.preparationError}</p>
+          )}
           {restoreError && <p className="text-xs text-red-300">{restoreError}</p>}
           {restoreRunning && (
             <div role="status" aria-live="polite" className="flex items-center gap-2 text-xs">
@@ -453,7 +549,7 @@ export const ReviewActionHistoryPopover = ({
             <Button
               type="button"
               variant="destructive"
-              disabled={restoreRunning}
+              disabled={restoreRunning || Boolean(restoreRequest?.preparationError)}
               onClick={() => void runRestore()}
             >
               {restoreRunning ? 'Restoring...' : restoreError ? 'Retry restore' : 'Restore'}

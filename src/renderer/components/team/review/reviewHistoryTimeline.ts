@@ -8,6 +8,7 @@ import type {
 export {
   buildForwardDiskMutationSteps,
   buildRedoDiskMutationSteps,
+  buildReviewHistoryRestoreDiskImpact,
   buildReviewHistoryRestorePlan,
   buildUndoDiskMutationSteps,
   getReviewActionDiskSnapshots,

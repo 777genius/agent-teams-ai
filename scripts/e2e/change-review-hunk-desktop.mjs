@@ -559,6 +559,26 @@ async function main() {
   await waitForDiskLines(fixture.changedFile, 'before-0', 'before-1');
 
   const historyButton = `document.querySelector('button[aria-label^="Review history:"]')`;
+  const ensureHistoryOpen = async (label) => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (await client.evaluate(`document.body?.innerText.includes('Review action history')`)) {
+        return;
+      }
+      await client.waitFor(historyButton, `${label} trigger`);
+      await client.click(historyButton);
+      try {
+        await client.waitFor(
+          `document.body?.innerText.includes('Review action history')`,
+          label,
+          3_000
+        );
+        return;
+      } catch {
+        // A restart can remount the trigger between its rect lookup and pointer release.
+      }
+    }
+    throw new Error(`Unable to open ${label}`);
+  };
   const restoreConfirm = `Array.from(document.querySelectorAll('[role="alertdialog"] button'))
     .find((button) => button.textContent?.trim() === 'Restore' && !button.disabled)`;
   const enabledUndoCheckpointRestore = `(() => {
@@ -573,11 +593,14 @@ async function main() {
     return Array.from(section?.querySelectorAll('button[data-review-history-restore]') ?? [])
       .find((button) => !button.disabled);
   })()`;
-  await client.domClick(historyButton);
+  await ensureHistoryOpen('history for older Undo checkpoint');
   await client.waitFor(enabledUndoCheckpointRestore, 'older Undo checkpoint restore');
   await client.domClick(enabledUndoCheckpointRestore);
   await client.waitFor(
-    `document.querySelector('[role="alertdialog"]')?.textContent.includes('undo 1 review action')`,
+    `document.querySelector('[role="alertdialog"]')?.textContent.includes('undo 1 review action') &&
+      document.querySelector('[data-review-history-impact]')?.textContent.includes('1 net disk transition') &&
+      document.querySelector('[data-review-history-impact]')?.textContent.includes('Update') &&
+      document.querySelector('[data-review-history-impact]')?.textContent.includes('src/review-history.ts')`,
     'Undo checkpoint confirmation'
   );
   await client.domClick(restoreConfirm);
@@ -596,11 +619,14 @@ async function main() {
     'midpoint history after restart'
   );
   await waitForDiskLines(fixture.changedFile, 'after-0', 'after-1');
-  await client.domClick(historyButton);
+  await ensureHistoryOpen('history for Redo checkpoint');
   await client.waitFor(enabledRedoCheckpointRestore, 'Redo checkpoint restore');
   await client.domClick(enabledRedoCheckpointRestore);
   await client.waitFor(
-    `document.querySelector('[role="alertdialog"]')?.textContent.includes('redo 1 review action')`,
+    `document.querySelector('[role="alertdialog"]')?.textContent.includes('redo 1 review action') &&
+      document.querySelector('[data-review-history-impact]')?.textContent.includes('1 net disk transition') &&
+      document.querySelector('[data-review-history-impact]')?.textContent.includes('Update') &&
+      document.querySelector('[data-review-history-impact]')?.textContent.includes('src/review-history.ts')`,
     'Redo checkpoint confirmation'
   );
   await client.domClick(restoreConfirm);
@@ -619,7 +645,7 @@ async function main() {
   await client.waitFor(`document.body?.innerText.includes('12 pending')`, 'second cleanup Undo');
   await waitForDiskLines(fixture.changedFile, 'after-0', 'after-1');
   if (await client.evaluate(`document.body?.innerText.includes('Review action history')`)) {
-    await client.domClick(historyButton);
+    await client.click(historyButton);
     await client.waitFor(
       `!document.body?.innerText.includes('Review action history')`,
       'closed history after cleanup Undo'
@@ -672,8 +698,7 @@ async function main() {
   );
   await client.waitFor(enabledButtonWithText('Undo'), 'enabled durable Undo after restart');
   await assertDiskLines(fixture.changedFile, 'before-0', 'after-1');
-  await client.waitFor(historyButton, 'durable review history trigger');
-  await client.domClick(historyButton);
+  await ensureHistoryOpen('durable review history');
   await client.waitFor(
     `document.body?.innerText.includes('Review action history') &&
       document.body?.innerText.includes('Reject hunk') &&
@@ -750,8 +775,7 @@ async function main() {
   await startApp(port, fixture);
   await openReview();
   await client.waitFor(enabledButtonWithText('Undo'), 'durable accepted Undo after forced restart');
-  await client.waitFor(historyButton, 'accepted review history after forced restart');
-  await client.domClick(historyButton);
+  await ensureHistoryOpen('accepted review history after forced restart');
   await client.waitFor(
     `document.body?.innerText.includes('Accept hunk') &&
       document.body?.innerText.includes('src/review-history.ts · hunk 1') &&

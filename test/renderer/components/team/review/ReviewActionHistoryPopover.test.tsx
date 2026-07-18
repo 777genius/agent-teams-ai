@@ -167,4 +167,69 @@ describe('ReviewActionHistoryPopover', () => {
     ).toBe(false);
     act(() => root.unmount());
   });
+
+  it('shows the exact actions and net disk impact before confirmation', () => {
+    const root = createRoot(container);
+    const older = makeAction(1);
+    const current = makeAction(2);
+    act(() => {
+      root.render(
+        <ReviewActionHistoryPopover
+          undoHistory={[older, current]}
+          redoHistory={[]}
+          onRestoreToTarget={vi.fn().mockResolvedValue(undefined)}
+          getRestorePreview={() => ({
+            direction: 'undo',
+            actions: [current],
+            diskTransitions: [{ filePath: '/repo/file.ts', kind: 'update' }],
+          })}
+          resolveFileLabel={() => 'src/file.ts'}
+        />
+      );
+    });
+
+    act(() =>
+      container
+        .querySelector<HTMLButtonElement>('[data-review-history-restore="action-1"]')
+        ?.click()
+    );
+    const impact = document.querySelector('[data-review-history-impact]');
+    expect(impact?.textContent).toContain('Actions in this jump');
+    expect(impact?.textContent).toContain('Accept hunk');
+    expect(impact?.textContent).toContain('1 net disk transition');
+    expect(impact?.textContent).toContain('Update');
+    expect(impact?.textContent).toContain('src/file.ts');
+    act(() => root.unmount());
+  });
+
+  it('fails closed when an exact Restore impact cannot be prepared', () => {
+    const root = createRoot(container);
+    const older = makeAction(1);
+    const current = makeAction(2);
+    act(() => {
+      root.render(
+        <ReviewActionHistoryPopover
+          undoHistory={[older, current]}
+          redoHistory={[]}
+          onRestoreToTarget={vi.fn().mockResolvedValue(undefined)}
+          getRestorePreview={() => {
+            throw new Error('Rename ranges must be restored one action at a time.');
+          }}
+        />
+      );
+    });
+
+    act(() =>
+      container
+        .querySelector<HTMLButtonElement>('[data-review-history-restore="action-1"]')
+        ?.click()
+    );
+    const dialog = document.querySelector('[role="alertdialog"]');
+    expect(dialog?.textContent).toContain('Rename ranges must be restored one action at a time.');
+    const confirm = [...(dialog?.querySelectorAll('button') ?? [])].find(
+      (button) => button.textContent === 'Restore'
+    );
+    expect(confirm?.disabled).toBe(true);
+    act(() => root.unmount());
+  });
 });

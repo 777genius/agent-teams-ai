@@ -17,7 +17,10 @@ export {
 export {
   buildForwardDiskMutationSteps,
   buildRedoDiskMutationSteps,
+  buildReviewHistoryRestoreDiskImpact,
   buildReviewHistoryRestoreDiskSteps,
   buildUndoDiskMutationSteps,
   getReviewActionDiskSnapshots,
+  type ReviewHistoryDiskTransition,
+  type ReviewHistoryDiskTransitionKind,
 } from '../core/domain/reviewHistoryDiskSteps';

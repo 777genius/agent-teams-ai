@@ -78,6 +78,7 @@ import { ReviewFileTree } from './ReviewFileTree';
 import {
   buildForwardDiskMutationSteps,
   buildRedoDiskMutationSteps,
+  buildReviewHistoryRestoreDiskImpact,
   buildReviewHistoryRestorePlan,
   buildUndoDiskMutationSteps,
   createReviewRedoAction,
@@ -2945,22 +2946,8 @@ export const ChangeReviewDialog = ({
     teamName,
   ]);
 
-  const handleRestoreReviewHistory = useCallback(
-    async (target: ReviewHistoryRestoreTarget): Promise<void> => {
-      if (hasReviewActionInFlight()) throw new Error('Another review action is still running.');
-      if (editedCount > 0) {
-        throw new Error('Save or discard manual edits before restoring review history.');
-      }
-      if (blockReviewMutationForExternalChange()) {
-        throw new Error('Reload files changed outside Changes before restoring review history.');
-      }
-      if (!decisionScopeToken || !decisionHydrationReady) {
-        throw new Error('Durable review history is not ready yet.');
-      }
-      if (reviewActionPersistenceStatusRef.current !== 'saved') {
-        throw new Error(REVIEW_PERSISTENCE_ERROR);
-      }
-
+  const buildCurrentReviewHistoryRestorePlan = useCallback(
+    (target: ReviewHistoryRestoreTarget) => {
       const state = useStore.getState();
       const plan = buildReviewHistoryRestorePlan(
         {
@@ -2977,6 +2964,46 @@ export const ChangeReviewDialog = ({
               normalizePathForComparison(file.filePath) === normalizePathForComparison(filePath)
           ) ?? null
       );
+      return { state, plan };
+    },
+    [activeChangeSet]
+  );
+
+  const getRestoreReviewHistoryPreview = useCallback(
+    (target: ReviewHistoryRestoreTarget) => {
+      const { plan } = buildCurrentReviewHistoryRestorePlan(target);
+      if (plan.direction === 'none') {
+        throw new Error('This review checkpoint is already current.');
+      }
+      const direction = plan.direction;
+      return {
+        direction,
+        actions: plan.orderedActions,
+        diskTransitions: buildReviewHistoryRestoreDiskImpact(
+          plan.orderedActions.map((action) => ({ direction, action }))
+        ),
+      };
+    },
+    [buildCurrentReviewHistoryRestorePlan]
+  );
+
+  const handleRestoreReviewHistory = useCallback(
+    async (target: ReviewHistoryRestoreTarget): Promise<void> => {
+      if (hasReviewActionInFlight()) throw new Error('Another review action is still running.');
+      if (editedCount > 0) {
+        throw new Error('Save or discard manual edits before restoring review history.');
+      }
+      if (blockReviewMutationForExternalChange()) {
+        throw new Error('Reload files changed outside Changes before restoring review history.');
+      }
+      if (!decisionScopeToken || !decisionHydrationReady) {
+        throw new Error('Durable review history is not ready yet.');
+      }
+      if (reviewActionPersistenceStatusRef.current !== 'saved') {
+        throw new Error(REVIEW_PERSISTENCE_ERROR);
+      }
+
+      const { state, plan } = buildCurrentReviewHistoryRestorePlan(target);
       if (plan.actionCount === 0) return;
       if (plan.direction === 'none')
         throw new Error('Review history restore plan is inconsistent.');
@@ -3059,6 +3086,7 @@ export const ChangeReviewDialog = ({
     [
       activeChangeSet,
       blockReviewMutationForExternalChange,
+      buildCurrentReviewHistoryRestorePlan,
       decisionHydrationReady,
       decisionScopeKey,
       decisionScopeToken,
@@ -3849,6 +3877,7 @@ export const ChangeReviewDialog = ({
             onRetryHistoryPersistence={() => void persistLatestAcceptedReviewAction()}
             onNavigateToHistoryAction={handleHistoryActionNavigation}
             onRestoreHistory={handleRestoreReviewHistory}
+            getRestoreHistoryPreview={getRestoreReviewHistoryPreview}
             restoreHistoryDisabled={
               reviewActionsBusy ||
               editedCount > 0 ||

@@ -11,6 +11,13 @@ interface ReviewHistoryDiskAction {
   action: ReviewUndoAction;
 }
 
+export type ReviewHistoryDiskTransitionKind = 'create' | 'update' | 'delete' | 'rename';
+
+export interface ReviewHistoryDiskTransition {
+  filePath: string;
+  kind: ReviewHistoryDiskTransitionKind;
+}
+
 export function buildUndoDiskMutationSteps(
   actionId: string,
   snapshots: readonly ReviewDiskUndoSnapshot[]
@@ -207,4 +214,22 @@ export function buildReviewHistoryRestoreDiskSteps(
     }
   }
   return netSteps;
+}
+
+/** User-facing net disk effect derived from the exact same coalesced steps main executes. */
+export function buildReviewHistoryRestoreDiskImpact(
+  actions: readonly ReviewHistoryDiskAction[]
+): ReviewHistoryDiskTransition[] {
+  return buildReviewHistoryRestoreDiskSteps(actions).map((step) => {
+    if (step.type === 'delete') {
+      return { filePath: step.filePath, kind: 'delete' };
+    }
+    if (step.type === 'write') {
+      return {
+        filePath: step.filePath,
+        kind: step.expectedContent === null ? 'create' : 'update',
+      };
+    }
+    return { filePath: step.filePath, kind: 'rename' };
+  });
 }
