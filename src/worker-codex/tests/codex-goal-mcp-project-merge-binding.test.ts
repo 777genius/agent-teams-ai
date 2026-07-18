@@ -389,17 +389,19 @@ describe("project merge-bound refill", () => {
         await writeFile(latestResultPath, `${JSON.stringify(invalid)}\n`);
         await expect(
           callToolJson(client, "codex_goal_project_refill_worker", request),
-        ).rejects.toThrow(
-          "project_control_merge_rebind_terminal_result_required",
-        );
+        ).resolves.toMatchObject({
+          ok: false,
+          error: "project_control_merge_rebind_terminal_result_required",
+        });
         await assertOriginalLaunchArtifacts();
       }
       await writeFile(latestResultPath, '{"status":"blocked"\n');
       await expect(
         callToolJson(client, "codex_goal_project_refill_worker", request),
-      ).rejects.toThrow(
-        "project_control_merge_rebind_terminal_result_required",
-      );
+      ).resolves.toMatchObject({
+        ok: false,
+        error: "project_control_merge_rebind_terminal_result_required",
+      });
       await assertOriginalLaunchArtifacts();
       await writeFile(
         latestResultPath,
