@@ -1609,6 +1609,11 @@ a[href],
   transition: border-color 140ms ease;
 }
 
+.message-composer-flat-body-standalone {
+  border-top: 1px solid var(--color-border-emphasis);
+  border-radius: 10px;
+}
+
 .message-composer-flat-footer {
   min-height: 28px;
   margin-top: 4px;

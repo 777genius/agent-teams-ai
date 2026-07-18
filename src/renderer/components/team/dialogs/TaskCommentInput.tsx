@@ -3,14 +3,18 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { MarkdownViewer } from '@renderer/components/chat/viewers/MarkdownViewer';
 import { ImageLightbox } from '@renderer/components/team/attachments/ImageLightbox';
+import {
+  ComposerSurface,
+  ComposerTextarea,
+} from '@renderer/components/team/composer/ComposerSurface';
 import { FileIcon } from '@renderer/components/team/editor/FileIcon';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
-import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
+import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import { buildReplyBlock } from '@renderer/utils/agentMessageFormatting';
@@ -89,6 +93,8 @@ export const TaskCommentInput = ({
     (trimmed.length > 0 || pendingAttachments.length > 0) &&
     trimmed.length <= MAX_TEXT_LENGTH &&
     !addingComment;
+  const replyConnectedToComposer =
+    Boolean(replyTo) && !attachError && pendingAttachments.length === 0;
 
   const addFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -232,7 +238,12 @@ export const TaskCommentInput = ({
   return (
     <div>
       {replyTo ? (
-        <div className="relative overflow-hidden rounded-t-md border border-b-0 border-blue-400/30 bg-blue-100/80 py-2 pl-3 pr-2 dark:border-blue-500/20 dark:bg-blue-950/20">
+        <div
+          className={cn(
+            'relative overflow-hidden border border-blue-400/30 bg-blue-100/80 py-2 pl-3 pr-2 dark:border-blue-500/20 dark:bg-blue-950/20',
+            replyConnectedToComposer ? 'rounded-t-md border-b-0' : 'mb-2 rounded-md'
+          )}
+        >
           {/* Decorative quotation mark */}
           <span className="pointer-events-none absolute -right-1 top-1/2 -translate-y-1/2 select-none font-serif text-[64px] leading-none text-blue-500/[0.08] dark:text-blue-400/[0.08]">
             &ldquo;
@@ -289,11 +300,20 @@ export const TaskCommentInput = ({
             return (
               <div
                 key={att.id}
-                className="group relative size-14 cursor-pointer overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] transition-colors hover:border-[var(--color-border-emphasis)]"
-                onClick={isImage ? () => setLightboxIndex(lightboxIdx) : undefined}
+                className={`group relative size-14 overflow-hidden rounded border border-[var(--color-border)] bg-[var(--color-surface)] transition-colors hover:border-[var(--color-border-emphasis)] ${isImage ? 'cursor-pointer' : ''}`}
               >
                 {isImage ? (
-                  <img src={att.previewUrl} alt={att.filename} className="size-full object-cover" />
+                  <button
+                    type="button"
+                    className="size-full"
+                    onClick={() => setLightboxIndex(lightboxIdx)}
+                  >
+                    <img
+                      src={att.previewUrl}
+                      alt={att.filename}
+                      className="size-full object-cover"
+                    />
+                  </button>
                 ) : (
                   <div className="flex size-full flex-col items-center justify-center gap-0.5">
                     <FileIcon fileName={att.filename} className="size-5" />
@@ -336,7 +356,7 @@ export const TaskCommentInput = ({
 
       {attachError ? <p className="mb-1 text-[10px] text-red-400">{attachError}</p> : null}
 
-      <div className="relative" onPaste={handlePaste}>
+      <ComposerSurface onPaste={handlePaste}>
         <input
           ref={fileInputRef}
           type="file"
@@ -349,9 +369,9 @@ export const TaskCommentInput = ({
             e.target.value = '';
           }}
         />
-        <MentionableTextarea
+        <ComposerTextarea
           id={`task-comment-${taskId}`}
-          className={replyTo ? 'rounded-t-none' : undefined}
+          connectedToHeader={replyConnectedToComposer}
           placeholder={t('taskComments.placeholder')}
           value={draft.value}
           onValueChange={draft.setValue}
@@ -364,20 +384,20 @@ export const TaskCommentInput = ({
           onChipRemove={chipDraft.removeChip}
           onModEnter={() => void handleSubmit()}
           minRows={2}
-          maxRows={8}
+          maxRows={6}
           maxLength={MAX_TEXT_LENGTH}
           disabled={addingComment}
           cornerAction={
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex shrink-0 items-center rounded-full p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text-secondary)]"
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-secondary)] disabled:cursor-not-allowed disabled:opacity-40"
                     disabled={addingComment || pendingAttachments.length >= MAX_ATTACHMENTS}
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <Paperclip size={14} />
+                    <Paperclip size={16} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top">{t('taskComments.attachFile')}</TooltipContent>
@@ -386,23 +406,32 @@ export const TaskCommentInput = ({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex shrink-0 items-center rounded-full p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text-secondary)]"
+                    className="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text-secondary)]"
                     onClick={() => void window.electronAPI.openExternal('https://voicetext.site')}
                   >
-                    <Mic size={14} />
+                    <Mic size={16} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top">{t('taskComments.voiceToText')}</TooltipContent>
               </Tooltip>
-              <button
-                type="button"
-                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!canSubmit}
-                onClick={() => void handleSubmit()}
+              <span
+                className="message-composer-send-slot"
+                data-visible={
+                  trimmed.length > 0 || pendingAttachments.length > 0 ? 'true' : 'false'
+                }
               >
-                <Send size={12} />
-                {t('taskComments.comment')}
-              </button>
+                {trimmed.length > 0 || pendingAttachments.length > 0 ? (
+                  <button
+                    type="button"
+                    className="message-composer-send-button inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-45"
+                    disabled={!canSubmit}
+                    onClick={() => void handleSubmit()}
+                  >
+                    <Send size={14} />
+                    {t('taskComments.comment')}
+                  </button>
+                ) : null}
+              </span>
             </div>
           }
           footerRight={
@@ -422,7 +451,7 @@ export const TaskCommentInput = ({
             </div>
           }
         />
-      </div>
+      </ComposerSurface>
     </div>
   );
 };

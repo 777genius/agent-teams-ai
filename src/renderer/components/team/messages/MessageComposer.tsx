@@ -4,10 +4,13 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { AttachmentPreviewList } from '@renderer/components/team/attachments/AttachmentPreviewList';
 import { DropZoneOverlay } from '@renderer/components/team/attachments/DropZoneOverlay';
+import {
+  ComposerSurface,
+  ComposerTextarea,
+} from '@renderer/components/team/composer/ComposerSurface';
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
 import { OpenCodeDeliveryWarning } from '@renderer/components/team/messages/OpenCodeDeliveryWarning';
-import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
@@ -878,8 +881,8 @@ export const MessageComposer = ({
   const composerFooterRight = isCompactLayout ? compactFooterNotice : nonCompactFooterRight;
 
   return (
-    <div
-      className={cn('message-composer-flat-layout relative', !isCompactLayout && 'mb-2')}
+    <ComposerSurface
+      className={cn(!isCompactLayout && 'mb-2')}
       style={floatingAdaptiveStyle}
       role="group"
       onDragEnter={handleDragEnter}
@@ -932,7 +935,7 @@ export const MessageComposer = ({
             {/* Combined team + member selector */}
             <div
               className={cn(
-                'grid w-full min-w-0 max-w-[430px] grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-stretch overflow-hidden text-xs',
+                'message-composer-target-selectors flex w-fit min-w-0 max-w-full items-stretch overflow-hidden text-xs',
                 isCrossTeam && 'bg-[var(--cross-team-bg)]'
               )}
             >
@@ -941,7 +944,7 @@ export const MessageComposer = ({
                   <button
                     type="button"
                     className={cn(
-                      'inline-flex min-w-0 items-center justify-end gap-1 border-r border-r-[var(--color-border)] px-1 text-xs transition-colors',
+                      'inline-flex min-w-0 items-center justify-end gap-1 border-r border-r-[var(--color-border)] pl-1 pr-2 text-xs transition-colors',
                       isCrossTeam
                         ? 'hover:bg-[var(--cross-team-bg)]/80 bg-[var(--cross-team-bg)] text-purple-400'
                         : 'hover:bg-white/[0.025]'
@@ -1099,7 +1102,7 @@ export const MessageComposer = ({
                   <button
                     type="button"
                     className={cn(
-                      'message-composer-recipient-selector inline-flex min-w-0 items-center justify-end gap-1 overflow-hidden whitespace-nowrap px-1 text-xs transition-colors',
+                      'message-composer-recipient-selector inline-flex min-w-0 items-center justify-end gap-1 overflow-hidden whitespace-nowrap pl-2 pr-1 text-xs transition-colors',
                       isCrossTeam
                         ? 'cursor-default bg-[var(--cross-team-bg)] opacity-60'
                         : 'hover:bg-white/[0.025]'
@@ -1114,6 +1117,7 @@ export const MessageComposer = ({
                         avatarUrl={avatarMap.get(recipient)}
                         hideAvatar={recipient === 'user'}
                         disableHoverCard
+                        variant="text"
                       />
                     ) : (
                       <span className="text-[var(--color-text-muted)]">
@@ -1240,8 +1244,9 @@ export const MessageComposer = ({
           rejected={!canAttach}
           rejectionReason={attachmentRestrictionReason}
         />
-        <MentionableTextarea
+        <ComposerTextarea
           ref={textareaRef}
+          connectedToHeader
           id={`compose-${teamName}`}
           placeholder={
             isLaunchBlocking
@@ -1268,9 +1273,6 @@ export const MessageComposer = ({
           onShiftTab={handleCycleActionMode}
           dismissMentionsRef={dismissMentionsRef}
           extraTips={[t('messageComposer.input.slashTip')]}
-          surfaceClassName="message-composer-flat-body"
-          surfaceFadeColor="var(--message-composer-flat-bg)"
-          className="rounded-none border-0 shadow-none focus-visible:ring-0"
           minRows={isCompactLayout ? 1 : 2}
           maxRows={6}
           maxLength={MAX_TEXT_LENGTH}
@@ -1334,10 +1336,9 @@ export const MessageComposer = ({
               </span>
             </div>
           }
-          footerClassName="message-composer-flat-footer"
           footerRight={composerFooterRight}
         />
       </div>
-    </div>
+    </ComposerSurface>
   );
 };
