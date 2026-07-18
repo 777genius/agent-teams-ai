@@ -12,29 +12,30 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.9.0 -->
-Changes applied during review can now be undone and redone safely after restarting the app. This release also adds guided setup for local OpenAI-compatible models, a clearer organization view for large teams, and more reliable provider setup and OpenCode recovery.
+Redesigned the team page and related workflows, added simple setup for local models, improved Cursor-style control over code changes, and fixed issues in agent setup, launch, and recovery.
 
 ### What's New
 
-- Undo and redo changes applied during review after restarting the app, including edits, renames, deletions, and checkpoint restores.
-- Connect local OpenAI-compatible providers through guided setup and choose whether they apply to one project or all projects.
-- Explore large teams with an organization overview, hierarchy navigation, zoom controls, and a minimap.
-- Run teams with up to 30 teammates and distinguish delivery progress from messages that are waiting for a reply.
+- Review code changes hunk by hunk with Cursor-style accept/reject controls, undo and redo that survives app restarts, and checkpoint previews.
+- Connect local OpenAI-compatible models through guided setup and make them available to one project or all projects.
+- Navigate large teams through a new organization overview with hierarchy controls, zoom, and a minimap.
+- Run teams with up to 30 teammates.
 
 ### Improvements
 
-- Make the team workspace, Kanban board, roster, task changes, loading placeholders, and message composer simpler and more consistent.
-- Show connected providers and available models more clearly during setup.
-- Keep healthy OpenCode teammates available during updates and recover failed team sessions more reliably.
-- Preserve the selected Anthropic connection when a teammate restarts, and use the active AWS profile's region for Bedrock.
-- Highlight new messages, keep sidebar task times current, and notify task owners when users create work.
+- Made the team page, Kanban board, roster, task changes, loading screens, and message composer cleaner and more consistent.
+- Made provider and model setup clearer, including connection status and model availability.
+- Improved agent startup and recovery so healthy OpenCode teammates stay available during updates and failed sessions recover more reliably.
+- Separated message delivery progress from messages waiting for a reply.
+- Made new messages and live task updates easier to notice, and added notifications when users assign new work to a team.
 
 ### Bug Fixes
 
-- Prevent deleted agents from rejoining teams and fix project grouping for single-team workspaces.
-- Keep undo history intact when review actions are interrupted, retried, or involve renamed and deleted files.
-- Fix OpenCode startup on Windows and improve Kiro CLI installation and sign-in checks.
-- Fix updater state, rate-limit refresh feedback, graph fitting, and terminal sheet dragging.
+- Fixed cases where deleted agents could rejoin or single-team projects were grouped incorrectly.
+- Fixed interrupted or retried review actions damaging undo history, including changes involving renamed and deleted files.
+- Fixed Anthropic connection selection after a teammate restart and Bedrock region detection from the active AWS profile.
+- Fixed OpenCode startup on Windows and improved Kiro CLI installation and sign-in checks.
+- Fixed updater state, rate-limit refresh feedback, graph fitting, and terminal sheet dragging.
 
 ### Downloads
 
