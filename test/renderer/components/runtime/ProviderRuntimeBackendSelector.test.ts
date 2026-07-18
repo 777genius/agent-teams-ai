@@ -1,5 +1,3 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   getOptionDisplayLabel,
   getProviderRuntimeBackendAudienceLabel,
@@ -8,6 +6,7 @@ import {
   getVisibleProviderRuntimeBackendOptions,
 } from '@renderer/components/runtime/ProviderRuntimeBackendSelector';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
+import { describe, expect, it } from 'vitest';
 
 import type { CliProviderStatus } from '@shared/types';
 
@@ -55,7 +54,37 @@ function createCodexProvider(
   };
 }
 
+function createAnthropicProvider(
+  overrides?: Partial<CliProviderStatus>
+): CliProviderStatus {
+  return {
+    ...createCodexProvider(),
+    providerId: 'anthropic',
+    displayName: 'Anthropic',
+    authMethod: 'api_key',
+    selectedBackendId: null,
+    resolvedBackendId: null,
+    availableBackends: [],
+    backend: null,
+    ...overrides,
+  };
+}
+
 describe('ProviderRuntimeBackendSelector helpers', () => {
+  it('keeps the direct Anthropic API route visible without backend options', () => {
+    expect(getProviderRuntimeBackendSummary(createAnthropicProvider())).toBe('Anthropic API');
+  });
+
+  it('keeps an externally resolved Anthropic backend visible without backend options', () => {
+    expect(
+      getProviderRuntimeBackendSummary(
+        createAnthropicProvider({
+          backend: { kind: 'bedrock', label: 'Amazon Bedrock' },
+        })
+      )
+    ).toBe('Amazon Bedrock');
+  });
+
   it('exposes explicit internal-audience and locked-state labels', () => {
     const provider = createCodexProvider();
     const option = provider.availableBackends?.find((backend) => backend.id === 'codex-native');

@@ -39,6 +39,40 @@ describe('providerBillingMode', () => {
       })
     ).toBe('free');
     expect(inferProviderBillingMode({ catalogModel: { badgeLabel: 'Free' } })).toBe('free');
+    expect(inferProviderBillingMode({ catalogModel: { metadata: { free: true } } })).toBe('free');
+  });
+
+  it('does not trust stale free metadata on connected provider routes', () => {
+    expect(
+      inferProviderBillingMode({
+        providerId: 'opencode',
+        authenticated: true,
+        model: 'openai/gpt-5.6',
+        catalogModel: {
+          badgeLabel: 'Free',
+          metadata: {
+            free: true,
+            opencode: {
+              accessKind: 'credentialed',
+              routeKind: 'connected_provider',
+            },
+          },
+        },
+      })
+    ).toBe('api');
+    expect(
+      inferProviderBillingMode({
+        model: 'openrouter/community/model:free',
+        catalogModel: {
+          metadata: {
+            opencode: {
+              accessKind: 'credentialed',
+              routeKind: 'connected_provider',
+            },
+          },
+        },
+      })
+    ).toBe('free');
   });
 
   it('treats authenticated opencode fallback as API and otherwise stays unknown', () => {

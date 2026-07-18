@@ -4,6 +4,7 @@ import {
 } from '@shared/utils/openCodeWindowsAccessDenied';
 
 import { isOpenCodeBridgeNoOutputDiagnostic } from '../opencode/bridge/OpenCodeBridgeSupportDiagnostics';
+import { selectRuntimeDiagnosticClassification } from '../runtime/RuntimeDiagnosticClassifier';
 import { createPersistedLaunchSnapshot } from '../TeamLaunchStateEvaluator';
 
 import type { TeamRuntimePrepareResult } from '../runtime';
@@ -58,6 +59,15 @@ export function getOpenCodeLaunchDiagnosticValues(
   member: PersistedTeamLaunchMemberState
 ): readonly unknown[] {
   return [member.hardFailureReason, member.runtimeDiagnostic, ...(member.diagnostics ?? [])];
+}
+
+export function selectOpenCodeLaunchFailureDiagnostic(
+  values: readonly unknown[]
+): string | undefined {
+  const candidates = values.filter(
+    (value): value is string => typeof value === 'string' && value.trim().length > 0
+  );
+  return selectRuntimeDiagnosticClassification(candidates)?.normalizedMessage ?? undefined;
 }
 
 export function hasStaleOpenCodeDiagnostics(values: readonly unknown[] | undefined): boolean {

@@ -118,6 +118,7 @@ import type {
 
 const TASK_CHANGES_AUTO_REFRESH_MS = 20_000;
 const TASK_CHANGES_INITIAL_LOAD_DELAY_MS = 1_500;
+const TASK_SECTION_HEADER_CLASS = '-mx-[calc(1.5rem-5px)] w-[calc(100%+3rem-10px)]';
 
 interface TaskDetailDialogProps {
   open: boolean;
@@ -1148,14 +1149,14 @@ export const TaskDetailDialog = ({
           )}
 
           {/* Sections container with uniform spacing */}
-          <div className="min-w-0 space-y-1">
+          <div className="min-w-0 [&>section:last-of-type>div:first-child]:border-b-0 [&>section]:!mb-0">
             {/* Description */}
             <CollapsibleTeamSection
+              variant="flat"
               title={t('taskDetail.sections.description')}
               icon={<AlignLeft size={14} />}
               contentClassName="pl-2.5"
-              headerClassName="-mx-6 w-[calc(100%+3rem)]"
-              headerContentClassName="pl-6"
+              headerClassName={TASK_SECTION_HEADER_CLASS}
               defaultOpen
             >
               {editingDescription ? (
@@ -1252,12 +1253,12 @@ export const TaskDetailDialog = ({
 
             {/* Attachments */}
             <CollapsibleTeamSection
+              variant="flat"
               title={t('taskDetail.sections.attachments')}
               icon={<ImageIcon size={14} />}
               badge={attachmentCount}
               contentClassName="pl-2.5"
-              headerClassName="-mx-6 w-[calc(100%+3rem)]"
-              headerContentClassName="pl-6"
+              headerClassName={TASK_SECTION_HEADER_CLASS}
               defaultOpen={attachmentCount > 0}
             >
               {currentTask.sourceMessageId && currentTask.sourceMessage ? (
@@ -1285,6 +1286,7 @@ export const TaskDetailDialog = ({
             {variant === 'team' && canShowTaskChanges ? (
               <CollapsibleTeamSection
                 key={`task-changes:${currentTask.id}`}
+                variant="flat"
                 title={t('taskDetail.sections.changes')}
                 icon={<FileDiff size={14} />}
                 badge={taskChangesBadge}
@@ -1320,8 +1322,7 @@ export const TaskDetailDialog = ({
                   ) : null
                 }
                 contentClassName="pl-2.5"
-                headerClassName="-mx-6 w-[calc(100%+3rem)]"
-                headerContentClassName="pl-6"
+                headerClassName={TASK_SECTION_HEADER_CLASS}
                 defaultOpen={false}
                 onOpenChange={handleChangesSectionOpenChange}
               >
@@ -1479,6 +1480,7 @@ export const TaskDetailDialog = ({
             {variant === 'team' ? (
               <CollapsibleTeamSection
                 key={`task-logs:${currentTask.id}`}
+                variant="flat"
                 title={t('taskDetail.sections.taskLogs')}
                 icon={<ScrollText size={14} />}
                 badge={taskLogStreamCount}
@@ -1488,8 +1490,7 @@ export const TaskDetailDialog = ({
                   ) : null
                 }
                 contentClassName="pl-2.5 overflow-visible"
-                headerClassName="-mx-6 w-[calc(100%+3rem)]"
-                headerContentClassName="pl-6"
+                headerClassName={TASK_SECTION_HEADER_CLASS}
                 defaultOpen={false}
                 onOpenChange={setLogsSectionOpen}
                 keepMounted
@@ -1515,7 +1516,7 @@ export const TaskDetailDialog = ({
 
             {/* Review info */}
             {kanbanTaskState?.reviewer || kanbanTaskState?.errorDescription ? (
-              <div className="space-y-1">
+              <div className="mb-2 space-y-1">
                 <div className="flex items-center gap-2">
                   {kanbanTaskState.reviewer ? (
                     <span className="text-xs text-[var(--color-text-secondary)]">
@@ -1532,12 +1533,12 @@ export const TaskDetailDialog = ({
             {/* Workflow History */}
             {currentTask.historyEvents && currentTask.historyEvents.length > 0 ? (
               <CollapsibleTeamSection
+                variant="flat"
                 title={t('taskDetail.sections.workflowHistory')}
                 icon={<History size={14} />}
                 badge={currentTask.historyEvents.length}
                 contentClassName="pl-2.5"
-                headerClassName="-mx-6 w-[calc(100%+3rem)]"
-                headerContentClassName="pl-6"
+                headerClassName={TASK_SECTION_HEADER_CLASS}
                 headerExtra={<TaskImplementationDurationBadge task={currentTask} />}
                 defaultOpen={false}
               >
@@ -1551,6 +1552,7 @@ export const TaskDetailDialog = ({
 
             {/* Comments */}
             <CollapsibleTeamSection
+              variant="flat"
               title={t('taskDetail.sections.comments')}
               icon={<MessageSquare size={14} />}
               badge={
@@ -1559,8 +1561,7 @@ export const TaskDetailDialog = ({
                   : undefined
               }
               contentClassName="overflow-x-visible pl-0"
-              headerClassName="-mx-6 w-[calc(100%+3rem)]"
-              headerContentClassName="pl-6"
+              headerClassName={TASK_SECTION_HEADER_CLASS}
               defaultOpen
             >
               <div className="pl-2.5">

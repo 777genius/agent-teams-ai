@@ -1,4 +1,8 @@
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import {
+  hasExplicitFreeOpenCodeModelId,
+  isOpenCodeLocalProviderId,
+} from '@shared/utils/opencodeModelRoute';
 
 import {
   evaluateOpenCodeSupport,
@@ -11,6 +15,7 @@ import {
 import type { OpenCodeApiCapabilities } from '../capabilities/OpenCodeApiCapabilities';
 import type { OpenCodeMcpToolProof } from '../mcp/OpenCodeMcpToolAvailability';
 import type { RuntimeStoreReadinessCheck } from '../store/RuntimeStoreManifest';
+import type { OpenCodeExecutionProof } from './OpenCodeExecutionProof';
 import type { TeamProvisioningSupportDiagnostic } from '@shared/types/team';
 
 export type OpenCodeTeamLaunchReadinessState =
@@ -59,6 +64,7 @@ export interface OpenCodeTeamLaunchReadiness {
   missing: string[];
   diagnostics: string[];
   supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
+  executionProof?: OpenCodeExecutionProof;
   evidence: {
     capabilitiesReady: boolean;
     mcpToolProofRoute: OpenCodeMcpToolProof['route'];
@@ -111,17 +117,6 @@ const OPENCODE_AUTHLESS_LOCAL_MODEL_DIAGNOSTIC =
   'No connected OpenCode provider found. Proceeding with a configured local OpenCode model route after execution proof.';
 const OPENCODE_UNAUTHENTICATED_PAID_MODEL_DIAGNOSTIC =
   'No connected OpenCode provider found. Choose a free OpenCode model such as Big Pickle, or connect a provider in OpenCode for provider-backed models.';
-const AUTHLESS_LOCAL_OPEN_CODE_PROVIDER_IDS = new Set([
-  'atomic-chat',
-  'llama.cpp',
-  'llamacpp',
-  'lmstudio',
-  'lm-studio',
-  'local',
-  'ollama',
-  'vllm',
-]);
-
 export class OpenCodeTeamLaunchReadinessService {
   constructor(
     private readonly inventory: OpenCodeRuntimeInventoryPort,
@@ -300,18 +295,12 @@ export class OpenCodeTeamLaunchReadinessService {
 }
 
 function isFreeOpenCodeModelRoute(modelId: string): boolean {
-  const normalized = modelId.trim().toLowerCase();
-  return (
-    normalized === 'opencode/big-pickle' ||
-    normalized.includes(':free') ||
-    normalized.endsWith('-free') ||
-    normalized.endsWith('/free')
-  );
+  return hasExplicitFreeOpenCodeModelId(modelId);
 }
 
 function isConfiguredAuthlessOpenCodeModelRoute(modelId: string): boolean {
   const parsed = parseOpenCodeQualifiedModelRef(modelId);
-  return parsed ? AUTHLESS_LOCAL_OPEN_CODE_PROVIDER_IDS.has(parsed.sourceId) : false;
+  return parsed ? isOpenCodeLocalProviderId(parsed.sourceId) : false;
 }
 
 function readiness(input: {

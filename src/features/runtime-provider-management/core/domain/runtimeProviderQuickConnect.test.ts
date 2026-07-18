@@ -38,6 +38,22 @@ describe('resolveOpenCodeQuickConnectGate', () => {
     ).toBe('error');
   });
 
+  it('keeps a usable installed runtime ready when only its update failed', () => {
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: {
+          installed: true,
+          source: 'app-managed',
+          state: 'failed',
+          error: 'registry unavailable',
+        },
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('ready');
+  });
+
   it('keeps an installed runtime ready during a background status refresh', () => {
     expect(
       resolveOpenCodeQuickConnectGate({

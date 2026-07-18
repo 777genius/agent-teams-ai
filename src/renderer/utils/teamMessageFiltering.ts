@@ -7,6 +7,7 @@ import { isInboxNoiseMessage } from '@shared/utils/inboxNoise';
 import {
   isMemberWorkSyncNudgeMessage,
   isReviewPickupEscalationMessage,
+  isRuntimeRecoveryNudgeMessage,
   isTaskStallRemediationMessage,
 } from '@shared/utils/teamAutomationMessages';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
@@ -35,6 +36,7 @@ interface CachedMessageFilterData {
   readonly isTaskCommentNotification: boolean;
   readonly isTaskStallRemediation: boolean;
   readonly isMemberWorkSyncNudge: boolean;
+  readonly isRuntimeRecoveryNudge: boolean;
   readonly isReviewPickupEscalation: boolean;
   readonly isInternalControlEnvelope: boolean;
   readonly isNoiseMessage: boolean;
@@ -97,6 +99,7 @@ function getMessageFilterData(message: InboxMessage): CachedMessageFilterData {
     isTaskCommentNotification: message.messageKind === 'task_comment_notification',
     isTaskStallRemediation: isTaskStallRemediationMessage(message),
     isMemberWorkSyncNudge: isMemberWorkSyncNudgeMessage(message),
+    isRuntimeRecoveryNudge: isRuntimeRecoveryNudgeMessage(message),
     isReviewPickupEscalation: isReviewPickupEscalationMessage(message),
     isInternalControlEnvelope: isTeamInternalControlMessageEnvelope(message),
     isNoiseMessage,
@@ -214,6 +217,7 @@ export function filterTeamMessages(
       data.isTaskCommentNotification ||
       (!includeAutomationEvents && data.isTaskStallRemediation) ||
       (!includeMemberWorkSyncNudges && data.isMemberWorkSyncNudge) ||
+      data.isRuntimeRecoveryNudge ||
       data.isReviewPickupEscalation ||
       data.isInternalControlEnvelope
     ) {

@@ -7,6 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { OrganizationMapPayload } from '@features/organizations/contracts';
 
+const graphViewMock = vi.hoisted(() => ({
+  zoomToFit: vi.fn(),
+}));
+
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
     t: (key: string) => key,
@@ -30,10 +34,12 @@ vi.mock('@features/organizations/renderer/ui/OrgOverviewHud', () => ({
 vi.mock('@claude-teams/agent-graph', () => ({
   GraphView: ({
     data,
+    fitViewRequestId,
     renderControls,
     renderHud,
   }: {
     data: { nodes: unknown[] };
+    fitViewRequestId?: number;
     renderControls?: (controls: {
       filters: {
         showActivity: boolean;
@@ -55,7 +61,7 @@ vi.mock('@claude-teams/agent-graph', () => ({
       getCameraZoom: () => number;
     }) => React.ReactNode;
   }) => (
-    <div data-graph-node-count={data.nodes.length}>
+    <div data-fit-view-request-id={fitViewRequestId} data-graph-node-count={data.nodes.length}>
       {renderControls?.({
         filters: {
           showActivity: false,
@@ -69,7 +75,7 @@ vi.mock('@claude-teams/agent-graph', () => ({
         onFiltersChange: vi.fn(),
         onZoomIn: vi.fn(),
         onZoomOut: vi.fn(),
-        onZoomToFit: vi.fn(),
+        onZoomToFit: () => graphViewMock.zoomToFit(data.nodes.length),
       })}
       {renderHud?.({
         getGroupFrameScreenPlacements: () => [],
@@ -103,6 +109,7 @@ function buildViewModel() {
 
 describe('OrgGraphSurface', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   });
 
@@ -178,6 +185,52 @@ describe('OrgGraphSurface', () => {
     });
     expect(onLayoutModeChange).toHaveBeenCalledWith('grid-under-lead');
     expect(modeButtons[3]?.getAttribute('aria-pressed')).toBe('true');
+
+    act(() => root.unmount());
+  });
+
+  it('requests a fit for restored hierarchy data instead of fitting empty overview data', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <OrgGraphSurface
+          viewModel={buildViewModel()}
+          isActive
+          collapsedNodeIds={new Set()}
+          layoutMode="hierarchical"
+          selectedNodeId={null}
+          onLayoutModeChange={vi.fn()}
+          onSelectNode={vi.fn()}
+          onRevealNode={vi.fn()}
+          onToggleNodeCollapse={vi.fn()}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    const overviewButton = host.querySelector<HTMLButtonElement>(
+      'button[data-organization-map-view-mode="overview"]'
+    );
+    await act(async () => {
+      overviewButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(host.querySelector('[data-graph-node-count="0"]')).not.toBeNull();
+
+    const resetButton = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="organizations.graph.toolbar.reset"]'
+    );
+    await act(async () => {
+      resetButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-graph-node-count="1"]')).not.toBeNull();
+    expect(host.querySelector('[data-fit-view-request-id="1"]')).not.toBeNull();
+    expect(graphViewMock.zoomToFit).not.toHaveBeenCalled();
 
     act(() => root.unmount());
   });

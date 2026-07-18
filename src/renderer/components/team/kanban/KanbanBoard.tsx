@@ -541,7 +541,7 @@ export const KanbanBoard = memo(function KanbanBoard({
       if (columnTasks.length === 0) {
         return (
           addButton ?? (
-            <div className="rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
+            <div className="ml-2 w-[calc(100%_-_0.5rem)] rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
               {t('kanban.board.noTasks')}
             </div>
           )
@@ -769,7 +769,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     <div ref={boardRef} className="min-w-0 max-w-full overflow-x-hidden">
       <div
         className={cn(
-          'flex min-w-0 max-w-full items-center gap-2',
+          'flex min-w-0 max-w-full items-center gap-2 px-2',
           viewMode === 'columns' ? 'mb-0' : 'mb-2',
           toolbarLeft == null && 'justify-end'
         )}

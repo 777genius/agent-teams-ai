@@ -9,6 +9,7 @@ import { ProviderBrandIcon } from '@features/runtime-provider-management/rendere
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { isOpenCodeCatalogHydrating } from '@renderer/components/runtime/providerConnectionUi';
+import { Button } from '@renderer/components/ui/button';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Input } from '@renderer/components/ui/input';
 import { Label } from '@renderer/components/ui/label';
@@ -56,6 +57,11 @@ import {
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import {
+  getOpenCodeModelRoutePresentationStatus,
+  isOpenCodeModelExplicitlyFree,
+  type OpenCodeModelRoutePresentationStatus,
+} from '@shared/utils/opencodeModelRoute';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Command as CommandPrimitive } from 'cmdk';
@@ -99,6 +105,12 @@ interface OpenCodeSourceOption {
   count: number;
 }
 
+interface OpenCodeRouteTagOption {
+  id: OpenCodeRouteFilterTag;
+  label: string;
+  count: number;
+}
+
 interface OpenCodeSourceInfo {
   id: string;
   label: string;
@@ -120,7 +132,8 @@ interface OpenCodeModelGroup {
   options: TeamRuntimeModelOption[];
 }
 
-type OpenCodeModelGroupStatus = 'connected' | 'local' | 'free' | null;
+type OpenCodeModelGroupStatus = OpenCodeModelRoutePresentationStatus;
+type OpenCodeRouteFilterTag = 'connected' | 'configured' | 'local';
 
 interface OpenCodeModelOptionMetadata {
   option: TeamRuntimeModelOption;
@@ -129,6 +142,7 @@ interface OpenCodeModelOptionMetadata {
   sourceInfo: OpenCodeSourceInfo | null;
   routeGroup: OpenCodeRouteGroupInfo;
   routeMetadata: NonNullable<ProviderModelCatalogItem['metadata']>['opencode'] | null;
+  routeTag: OpenCodeRouteFilterTag | null;
   recommendation: ReturnType<typeof getTeamModelRecommendation>;
   pricingInfo: OpenCodeModelPricingInfo | null;
   searchText: string;
@@ -191,6 +205,29 @@ const CURATED_OPENCODE_PROVIDER_TABS = [
   { sourceId: 'zai-coding-plan', label: 'Z.AI' },
   { sourceId: 'minimax-coding-plan', label: 'MiniMax' },
 ] as const;
+
+const OPEN_CODE_ROUTE_FILTER_TAG_ORDER: readonly OpenCodeRouteFilterTag[] = [
+  'local',
+  'configured',
+  'connected',
+];
+const OPEN_CODE_ROUTE_FILTER_TAG_STYLES: Record<
+  OpenCodeRouteFilterTag,
+  { dot: string; selected: string }
+> = {
+  local: {
+    dot: 'bg-cyan-300',
+    selected: 'border-cyan-300/50 bg-cyan-300/10 text-cyan-100',
+  },
+  configured: {
+    dot: 'bg-sky-300',
+    selected: 'border-sky-300/50 bg-sky-300/10 text-sky-100',
+  },
+  connected: {
+    dot: 'bg-emerald-300',
+    selected: 'border-emerald-300/50 bg-emerald-300/10 text-emerald-100',
+  },
+};
 
 function getCuratedOpenCodeProviderTab(
   sourceId: string
@@ -261,6 +298,8 @@ function buildOpenCodeModelSearchText({
   sourceInfo,
   routeGroup,
   routeMetadata,
+  routeTag,
+  routeTagLabel,
   recommendation,
   pricingInfo,
 }: {
@@ -268,6 +307,8 @@ function buildOpenCodeModelSearchText({
   sourceInfo: OpenCodeSourceInfo | null;
   routeGroup: OpenCodeRouteGroupInfo;
   routeMetadata: NonNullable<ProviderModelCatalogItem['metadata']>['opencode'] | null;
+  routeTag: OpenCodeRouteFilterTag | null;
+  routeTagLabel: string;
   recommendation: ReturnType<typeof getTeamModelRecommendation>;
   pricingInfo: OpenCodeModelPricingInfo | null;
 }): string {
@@ -277,6 +318,8 @@ function buildOpenCodeModelSearchText({
     option.badgeLabel ?? '',
     sourceInfo?.label ?? '',
     routeGroup.label,
+    routeTag ?? '',
+    routeTagLabel,
     routeMetadata?.proofState ?? '',
     routeMetadata?.accessKind ?? '',
     recommendation?.label ?? '',
@@ -297,13 +340,14 @@ function isFreeOpenCodeModelOption({
   routeMetadata: NonNullable<ProviderModelCatalogItem['metadata']>['opencode'] | null;
   pricingInfo: OpenCodeModelPricingInfo | null;
 }): boolean {
-  const badgeLabel = option.badgeLabel?.trim().toLowerCase();
-  return (
-    pricingInfo?.free === true ||
-    routeMetadata?.routeKind === 'builtin_free' ||
-    badgeLabel === 'free' ||
-    isFreeOpenCodeModelRoute(option.value)
-  );
+  return isOpenCodeModelExplicitlyFree({
+    modelId: option.value,
+    providerId: routeMetadata?.providerId,
+    routeKind: routeMetadata?.routeKind,
+    accessKind: routeMetadata?.accessKind,
+    free: pricingInfo?.free,
+    badgeLabel: option.badgeLabel,
+  });
 }
 
 function getOpenCodeModelGridColumnCount(width: number): number {
@@ -359,17 +403,36 @@ function buildOpenCodeVirtualRows({
 }
 
 function getOpenCodeModelGroupStatus(
-  routeMetadata: OpenCodeModelOptionMetadata['routeMetadata']
+  routeMetadata: OpenCodeModelOptionMetadata['routeMetadata'],
+  modelId: string
 ): OpenCodeModelGroupStatus {
-  switch (routeMetadata?.routeKind) {
-    case 'connected_provider':
-      return 'connected';
-    case 'configured_local':
-      return 'local';
-    case 'builtin_free':
-      return 'free';
-    default:
-      return null;
+  return getOpenCodeModelRoutePresentationStatus({
+    modelId,
+    providerId: routeMetadata?.providerId,
+    routeKind: routeMetadata?.routeKind,
+    accessKind: routeMetadata?.accessKind,
+  });
+}
+
+function getOpenCodeRouteFilterTag(
+  routeMetadata: OpenCodeModelOptionMetadata['routeMetadata'],
+  modelId: string
+): OpenCodeRouteFilterTag | null {
+  const status = getOpenCodeModelGroupStatus(routeMetadata, modelId);
+  return status === 'connected' || status === 'configured' || status === 'local' ? status : null;
+}
+
+function getOpenCodeRouteFilterTagLabel(
+  routeTag: OpenCodeRouteFilterTag,
+  t: TeamTranslator
+): string {
+  switch (routeTag) {
+    case 'connected':
+      return t('modelSelector.badges.connected');
+    case 'configured':
+      return t('modelSelector.badges.configured');
+    case 'local':
+      return t('modelSelector.badges.local');
   }
 }
 
@@ -477,21 +540,29 @@ function getOpenCodeModelPricingInfo(
   }
 
   const rates = extractOpenCodeCostRates(metadata.cost);
+  const explicitlyFree = isOpenCodeModelExplicitlyFree({
+    modelId: catalogModel?.launchModel,
+    catalogId: catalogModel?.id,
+    providerId: metadata.opencode?.providerId,
+    routeKind: metadata.opencode?.routeKind,
+    accessKind: metadata.opencode?.accessKind,
+    free: metadata.free,
+    badgeLabel: catalogModel?.badgeLabel,
+  });
+  const displayRates =
+    rates && !explicitlyFree
+      ? {
+          input: rates.input === 0 ? null : rates.input,
+          output: rates.output === 0 ? null : rates.output,
+          cacheRead: rates.cacheRead === 0 ? null : rates.cacheRead,
+          cacheWrite: rates.cacheWrite === 0 ? null : rates.cacheWrite,
+        }
+      : rates;
   return {
-    free: metadata.free === true,
-    summary: rates ? formatOpenCodeCostSummary(rates, t) : null,
-    title: rates ? formatOpenCodeCostTitle(rates, t) : undefined,
+    free: explicitlyFree,
+    summary: displayRates ? formatOpenCodeCostSummary(displayRates, t) : null,
+    title: displayRates ? formatOpenCodeCostTitle(displayRates, t) : undefined,
   };
-}
-
-function isFreeOpenCodeModelRoute(model: string): boolean {
-  const normalized = model.trim().toLowerCase();
-  return (
-    normalized === 'opencode/big-pickle' ||
-    normalized.includes(':free') ||
-    normalized.endsWith('-free') ||
-    normalized.endsWith('/free')
-  );
 }
 
 function getModelReleaseTimestamp(
@@ -547,19 +618,22 @@ function hasFreeOpenCodeModelRoute(providerStatus: CliProviderStatus | null | un
     return false;
   }
 
-  if (providerStatus.models.some(isFreeOpenCodeModelRoute)) {
+  if (providerStatus.models.some((modelId) => isOpenCodeModelExplicitlyFree({ modelId }))) {
     return true;
   }
 
   return (
     providerStatus.modelCatalog?.models.some((model) => {
-      const badgeLabel = model.badgeLabel?.trim().toLowerCase();
-      return (
-        model.metadata?.free === true ||
-        badgeLabel === 'free' ||
-        isFreeOpenCodeModelRoute(model.launchModel) ||
-        isFreeOpenCodeModelRoute(model.id)
-      );
+      const route = model.metadata?.opencode;
+      return isOpenCodeModelExplicitlyFree({
+        modelId: model.launchModel,
+        catalogId: model.id,
+        providerId: route?.providerId,
+        routeKind: route?.routeKind,
+        accessKind: route?.accessKind,
+        free: model.metadata?.free,
+        badgeLabel: model.badgeLabel,
+      });
     }) ?? false
   );
 }
@@ -773,13 +847,19 @@ const OpenCodeModelGroupHeader = ({
             dotClassName: 'bg-cyan-300',
             textClassName: 'text-cyan-200',
           }
-        : group.status === 'free'
+        : group.status === 'configured'
           ? {
-              label: t('modelSelector.badges.free'),
-              dotClassName: 'bg-emerald-300',
-              textClassName: 'text-emerald-300',
+              label: t('modelSelector.badges.configured'),
+              dotClassName: 'bg-sky-300',
+              textClassName: 'text-sky-200',
             }
-          : null;
+          : group.status === 'free'
+            ? {
+                label: t('modelSelector.badges.free'),
+                dotClassName: 'bg-emerald-300',
+                textClassName: 'text-emerald-300',
+              }
+            : null;
 
   return (
     <div className="flex min-h-9 items-center gap-2 border-y border-[var(--color-border-subtle)] px-2 py-1.5">
@@ -1069,6 +1149,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     disableGeminiOption && isGeminiUiFrozen() && providerId === 'gemini' ? 'anthropic' : providerId;
   const [recommendedOnly, setRecommendedOnly] = useState(false);
   const [freeOnly, setFreeOnly] = useState(false);
+  const [selectedOpenCodeRouteTags, setSelectedOpenCodeRouteTags] = useState<
+    Set<OpenCodeRouteFilterTag>
+  >(() => new Set());
   const [modelQuery, setModelQuery] = useState('');
   const [openCodeSourceFilterOpen, setOpenCodeSourceFilterOpen] = useState(false);
   const [openCodeSourceQuery, setOpenCodeSourceQuery] = useState('');
@@ -1419,6 +1502,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       const pricingInfo = getOpenCodeModelPricingInfo(catalogModel, t);
       const routeGroup = getOpenCodeRouteGroup(catalogModel, t);
       const routeMetadata = catalogModel?.metadata?.opencode ?? null;
+      const routeTag = getOpenCodeRouteFilterTag(routeMetadata, option.value);
 
       return {
         option,
@@ -1427,6 +1511,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         sourceInfo,
         routeGroup,
         routeMetadata,
+        routeTag,
         recommendation,
         pricingInfo,
         searchText: buildOpenCodeModelSearchText({
@@ -1434,6 +1519,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           sourceInfo,
           routeGroup,
           routeMetadata,
+          routeTag,
+          routeTagLabel: routeTag ? getOpenCodeRouteFilterTagLabel(routeTag, t) : '',
           recommendation,
           pricingInfo,
         }),
@@ -1462,6 +1549,32 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const hasFreeOpenCodeModels = useMemo(
     () => openCodeModelMetadata.some((metadata) => metadata.isFree),
     [openCodeModelMetadata]
+  );
+  const openCodeRouteTagOptions = useMemo<OpenCodeRouteTagOption[]>(() => {
+    const counts = new Map<OpenCodeRouteFilterTag, number>();
+    for (const metadata of openCodeModelMetadata) {
+      if (!metadata.option.value.trim() || !metadata.routeTag) {
+        continue;
+      }
+      counts.set(metadata.routeTag, (counts.get(metadata.routeTag) ?? 0) + 1);
+    }
+
+    return OPEN_CODE_ROUTE_FILTER_TAG_ORDER.flatMap((routeTag) => {
+      const count = counts.get(routeTag) ?? 0;
+      return count > 0
+        ? [
+            {
+              id: routeTag,
+              label: getOpenCodeRouteFilterTagLabel(routeTag, t),
+              count,
+            },
+          ]
+        : [];
+    });
+  }, [openCodeModelMetadata, t]);
+  const availableOpenCodeRouteTags = useMemo(
+    () => new Set(openCodeRouteTagOptions.map((option) => option.id)),
+    [openCodeRouteTagOptions]
   );
 
   useEffect(() => {
@@ -1522,12 +1635,22 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     if (effectiveProviderId === 'opencode') {
       return;
     }
-    if (selectedOpenCodeSourceIds.size === 0 && !openCodeSourceFilterOpen) {
+    if (
+      selectedOpenCodeSourceIds.size === 0 &&
+      selectedOpenCodeRouteTags.size === 0 &&
+      !openCodeSourceFilterOpen
+    ) {
       return;
     }
     setSelectedOpenCodeSourceIds(new Set());
+    setSelectedOpenCodeRouteTags(new Set());
     setOpenCodeSourceFilterOpen(false);
-  }, [effectiveProviderId, openCodeSourceFilterOpen, selectedOpenCodeSourceIds]);
+  }, [
+    effectiveProviderId,
+    openCodeSourceFilterOpen,
+    selectedOpenCodeRouteTags,
+    selectedOpenCodeSourceIds,
+  ]);
 
   useEffect(() => {
     if (!openCodeSourceFilterOpen && openCodeSourceQuery) {
@@ -1599,6 +1722,34 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     shouldAwaitRuntimeModelList,
   ]);
 
+  useEffect(() => {
+    if (
+      selectedOpenCodeRouteTags.size === 0 ||
+      effectiveProviderId !== 'opencode' ||
+      providerModelCatalogLoading ||
+      shouldAwaitRuntimeModelList ||
+      isOpenCodeCatalogHydrating(runtimeProviderStatus)
+    ) {
+      return;
+    }
+
+    const nextSelectedRouteTags = new Set(
+      Array.from(selectedOpenCodeRouteTags).filter((routeTag) =>
+        availableOpenCodeRouteTags.has(routeTag)
+      )
+    );
+    if (nextSelectedRouteTags.size !== selectedOpenCodeRouteTags.size) {
+      setSelectedOpenCodeRouteTags(nextSelectedRouteTags);
+    }
+  }, [
+    availableOpenCodeRouteTags,
+    effectiveProviderId,
+    providerModelCatalogLoading,
+    runtimeProviderStatus,
+    selectedOpenCodeRouteTags,
+    shouldAwaitRuntimeModelList,
+  ]);
+
   const filteredOpenCodeSourceOptions = useMemo(() => {
     const query = openCodeSourceQuery.trim().toLowerCase();
     if (!query) {
@@ -1638,6 +1789,18 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     });
   };
 
+  const toggleOpenCodeRouteTag = (routeTag: OpenCodeRouteFilterTag): void => {
+    setSelectedOpenCodeRouteTags((previous) => {
+      const next = new Set(previous);
+      if (next.has(routeTag)) {
+        next.delete(routeTag);
+      } else {
+        next.add(routeTag);
+      }
+      return next;
+    });
+  };
+
   const visibleOpenCodeModelMetadata = useMemo(() => {
     if (effectiveProviderId !== 'opencode') {
       return [];
@@ -1651,6 +1814,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       .filter((metadata) => metadata.option.value.trim().length > 0)
       .filter((metadata) => !recommendedOnly || metadata.isRecommended)
       .filter((metadata) => !freeOnly || metadata.isFree)
+      .filter(
+        (metadata) =>
+          selectedOpenCodeRouteTags.size === 0 ||
+          Boolean(metadata.routeTag && selectedOpenCodeRouteTags.has(metadata.routeTag))
+      )
       .filter((metadata) => {
         if (selectedOpenCodeSourceIds.size === 0) {
           return true;
@@ -1679,7 +1847,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         return left.index - right.index;
       });
 
-    if (recommendedOnly || freeOnly) {
+    if (recommendedOnly || freeOnly || selectedOpenCodeRouteTags.size > 0) {
       return concreteOptions;
     }
 
@@ -1695,6 +1863,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     modelQuery,
     openCodeModelMetadata,
     recommendedOnly,
+    selectedOpenCodeRouteTags,
     selectedOpenCodeSourceIds,
   ]);
 
@@ -1758,7 +1927,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       const sourceGroup = metadata.sourceInfo;
       const groupId = sourceGroup ? `source:${sourceGroup.id}` : `route:${metadata.routeGroup.id}`;
       const groupLabel = sourceGroup?.label ?? metadata.routeGroup.label;
-      const groupStatus = getOpenCodeModelGroupStatus(metadata.routeMetadata);
+      const groupStatus = getOpenCodeModelGroupStatus(metadata.routeMetadata, option.value);
       const existingGroup = groups.get(groupId);
       if (existingGroup) {
         existingGroup.options.push(option);
@@ -1802,6 +1971,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     ((effectiveProviderId === 'opencode' &&
       openCodeSourceOptions.length > 1 &&
       !selectedOpenCodeSourceTab) ||
+      openCodeRouteTagOptions.length > 0 ||
       hasRecommendedOpenCodeModels ||
       hasFreeOpenCodeModels);
   const trimmedModelQuery = modelQuery.trim();
@@ -1812,13 +1982,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     visibleConcreteModelOptionCount > OPENCODE_MODEL_VIRTUALIZATION_THRESHOLD;
   const emptyModelListMessage = trimmedModelQuery
     ? t('modelSelector.empty.noSearchMatches')
-    : effectiveProviderId === 'opencode' && recommendedOnly && freeOnly
-      ? t('modelSelector.empty.recommendedFreeOpenCode')
-      : effectiveProviderId === 'opencode' && freeOnly
-        ? t('modelSelector.empty.freeOpenCode')
-        : effectiveProviderId === 'opencode' && recommendedOnly
-          ? t('modelSelector.empty.recommendedOpenCode')
-          : t('modelSelector.empty.noModels');
+    : effectiveProviderId === 'opencode' && selectedOpenCodeRouteTags.size > 0
+      ? t('modelSelector.empty.noSearchMatches')
+      : effectiveProviderId === 'opencode' && recommendedOnly && freeOnly
+        ? t('modelSelector.empty.recommendedFreeOpenCode')
+        : effectiveProviderId === 'opencode' && freeOnly
+          ? t('modelSelector.empty.freeOpenCode')
+          : effectiveProviderId === 'opencode' && recommendedOnly
+            ? t('modelSelector.empty.recommendedOpenCode')
+            : t('modelSelector.empty.noModels');
   const activeProviderDisabledReason = activeProviderSelectable
     ? null
     : getProviderDisabledReason(effectiveProviderId);
@@ -1920,6 +2092,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     const openCodeRouteMetadata =
       effectiveProviderId === 'opencode' ? (openCodeMetadata?.routeMetadata ?? null) : null;
     const openCodeRouteKind = openCodeRouteMetadata?.routeKind ?? null;
+    const openCodeRouteStatus = getOpenCodeModelGroupStatus(openCodeRouteMetadata, opt.value);
     const openCodeProofState = openCodeRouteMetadata?.proofState ?? null;
     const modelButtonDescription =
       modelStatusMessage ?? (opt.value === '' ? defaultModelTooltip : undefined);
@@ -2008,17 +2181,17 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               </span>
             </ModelTooltip>
           ) : null}
-          {!isFlatOpenCodeCell && openCodeRouteKind === 'configured_local' ? (
+          {!isFlatOpenCodeCell && openCodeRouteStatus === 'local' ? (
             <span className="inline-flex items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-cyan-200">
               {t('modelSelector.badges.local')}
             </span>
           ) : null}
-          {!isFlatOpenCodeCell && openCodeRouteKind === 'configured_local' ? (
+          {!isFlatOpenCodeCell && openCodeRouteStatus === 'configured' ? (
             <span className="inline-flex items-center justify-center rounded-full border border-sky-300/30 bg-sky-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-sky-200">
               {t('modelSelector.badges.configured')}
             </span>
           ) : null}
-          {!isFlatOpenCodeCell && openCodeRouteKind === 'connected_provider' ? (
+          {!isFlatOpenCodeCell && openCodeRouteStatus === 'connected' ? (
             <span className="inline-flex items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-300/10 px-1.5 py-0 text-[9px] font-semibold uppercase text-emerald-100">
               {t('modelSelector.badges.connected')}
             </span>
@@ -2495,7 +2668,34 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       </div>
                     ) : null}
                     {shouldShowOpenCodeFilters ? (
-                      <div className="flex shrink-0 items-center gap-2">
+                      <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        {openCodeRouteTagOptions.map((routeTag) => {
+                          const selected = selectedOpenCodeRouteTags.has(routeTag.id);
+                          const styles = OPEN_CODE_ROUTE_FILTER_TAG_STYLES[routeTag.id];
+                          return (
+                            <Button
+                              key={routeTag.id}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              data-testid={`team-model-selector-opencode-route-tag-${routeTag.id}`}
+                              aria-pressed={selected}
+                              aria-label={`${routeTag.label}: ${routeTag.count}`}
+                              className={cn(
+                                'inline-flex h-7 items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-transparent px-2 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]',
+                                selected && styles.selected
+                              )}
+                              onClick={() => toggleOpenCodeRouteTag(routeTag.id)}
+                            >
+                              <span
+                                className={cn('size-1.5 rounded-full', styles.dot)}
+                                aria-hidden="true"
+                              />
+                              <span>{routeTag.label}</span>
+                              <span className="text-[10px] opacity-65">{routeTag.count}</span>
+                            </Button>
+                          );
+                        })}
                         {effectiveProviderId === 'opencode' &&
                         openCodeSourceOptions.length > 1 &&
                         !selectedOpenCodeSourceTab ? (

@@ -1,5 +1,6 @@
 export {
   isOpenCodeProviderOAuthBridgeOutdated,
+  isOpenCodeRuntimeUsable,
   resolveOpenCodeQuickConnectGate,
 } from '../core/domain';
 export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOnboarding';

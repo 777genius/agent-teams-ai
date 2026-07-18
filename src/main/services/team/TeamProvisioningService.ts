@@ -444,6 +444,7 @@ import {
   isPersistedOpenCodeSecondaryLaneMember,
   normalizeOpenCodePrepareDiagnostic,
   promoteOpenCodePersistedFailureReasonsFromDiagnostics,
+  selectOpenCodeLaunchFailureDiagnostic,
   selectOpenCodePrepareProviderDiagnostic,
 } from './provisioning/TeamProvisioningOpenCodeDiagnosticsPolicy';
 import { resolveOpenCodeMemberIdentityFromDirectory as resolveOpenCodeMemberIdentityFromDirectoryHelper } from './provisioning/TeamProvisioningOpenCodeMemberIdentity';
@@ -1215,6 +1216,9 @@ interface ProvisioningRun {
     startedAt: string;
     textParts: string[];
     textJoinMode?: 'block' | 'stream';
+    recoveryMessageId?: string;
+    requireTerminalResult?: boolean;
+    terminalResultSucceeded?: boolean;
     replyVisibility?: 'user' | 'internal_activity';
     hasVisibleSendMessage?: boolean;
     hasUserVisibleSendMessage?: boolean;
@@ -1333,6 +1337,22 @@ interface ProvisioningRun {
   lastMemberSpawnAuditMissingWarningAt: Map<string, number>;
   /** Prevents duplicate Team Launched notifications for the same live run. */
   teamLaunchedNotificationFired?: boolean;
+}
+
+export interface LeadRuntimeFailureObservation {
+  teamName: string;
+  memberName: string;
+  runId: string;
+  runtimeSessionId?: string;
+  providerId?: TeamProviderId;
+  providerBackendId?: string;
+  model?: string;
+  phase: 'sdk_retrying' | 'terminal';
+  detail: string;
+  observedAt: string;
+  statusCode?: number;
+  retryAfterMs?: number;
+  causedByRecoveryMessageId?: string;
 }
 
 interface MixedSecondaryRuntimeLaneState {
@@ -1806,6 +1826,28 @@ type MemberWorkSyncAcceptedReportChecker = (input: {
   memberName: string;
 }) => Promise<boolean> | boolean;
 
+function isOpenCodeBridgeStaleManifestError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  const staleManifestMessage = 'Bridge server runtime manifest high watermark is stale';
+  return (
+    message === staleManifestMessage ||
+    message === `OpenCode bridge failed: ${staleManifestMessage}`
+  );
+}
+
+function appendOpenCodeLaunchDiagnostics(
+  result: TeamRuntimeLaunchResult,
+  diagnostics: readonly string[]
+): TeamRuntimeLaunchResult {
+  let nextDiagnostics = result.diagnostics;
+  for (const diagnostic of diagnostics) {
+    nextDiagnostics = appendDiagnosticOnce(nextDiagnostics, diagnostic);
+  }
+  return nextDiagnostics === result.diagnostics
+    ? result
+    : { ...result, diagnostics: nextDiagnostics };
+}
+
 export class TeamProvisioningService {
   private readonly runtimeLaneCoordinator = createTeamRuntimeLaneCoordinator();
   private readonly providerConnectionService = ProviderConnectionService.getInstance();
@@ -1911,6 +1953,7 @@ export class TeamProvisioningService {
   private readonly teamOpLocks = new Map<string, Promise<void>>();
   private readonly leadInboxRelayInFlight = new Map<string, Promise<number>>();
   private readonly relayedLeadInboxMessageIds = new Map<string, Set<string>>();
+  private readonly successfulLeadRecoveryMessageIds = new Map<string, Set<string>>();
   private readonly memberInboxRelayInFlight = new Map<string, Promise<number>>();
   private readonly openCodeMemberInboxRelayInFlight = new Map<
     string,
@@ -2050,6 +2093,9 @@ export class TeamProvisioningService {
     PersistedTeamLaunchSnapshot | null
   >();
   private teamChangeEmitter: ((event: TeamChangeEvent) => void) | null = null;
+  private runtimeRecoveryFailureObserver:
+    | ((failure: LeadRuntimeFailureObservation) => void)
+    | null = null;
   private helpOutputCache: string | null = null;
   private helpOutputCacheTime = 0;
   private toolApprovalSettingsByTeam = new Map<string, ToolApprovalSettings>();
@@ -6023,6 +6069,7 @@ export class TeamProvisioningService {
     this.persistedTranscriptClaudeLogsCache.delete(teamName);
     this.leadInboxRelayInFlight.delete(teamName);
     this.relayedLeadInboxMessageIds.delete(teamName);
+    this.successfulLeadRecoveryMessageIds.delete(teamName);
     this.pendingCrossTeamFirstReplies.delete(teamName);
     this.recentCrossTeamLeadDeliveryMessageIds.delete(teamName);
     this.recentSameTeamNativeFingerprints.delete(teamName);
@@ -6109,6 +6156,12 @@ export class TeamProvisioningService {
 
   setTeamChangeEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void {
     this.teamChangeEmitter = emitter;
+  }
+
+  setRuntimeRecoveryFailureObserver(
+    observer: ((failure: LeadRuntimeFailureObservation) => void) | null
+  ): void {
+    this.runtimeRecoveryFailureObserver = observer;
   }
 
   private parseCrossTeamRecipient(
@@ -6531,16 +6584,25 @@ export class TeamProvisioningService {
     return `opencode:${this.getMemberRelayKey(teamName, memberName)}`;
   }
 
-  private getOpenCodeMemberSendLaneKey(teamName: string, laneId: string): string {
-    return `opencode-send:${teamName}:${laneId.trim()}`;
+  private getOpenCodeMemberSendLaneKey(
+    teamName: string,
+    laneId: string,
+    memberName: string
+  ): string {
+    return `opencode-send:${teamName}:${laneId.trim()}:${memberName.trim().toLowerCase()}`;
   }
 
   private async sendOpenCodeMemberMessageToRuntimeSerialized(input: {
     teamName: string;
     laneId: string;
+    memberName: string;
     send: () => Promise<OpenCodeTeamRuntimeMessageResult>;
   }): Promise<OpenCodeTeamRuntimeMessageResult> {
-    const laneKey = this.getOpenCodeMemberSendLaneKey(input.teamName, input.laneId);
+    const laneKey = this.getOpenCodeMemberSendLaneKey(
+      input.teamName,
+      input.laneId,
+      input.memberName
+    );
     const previous = this.openCodeMemberSendInFlightByLane.get(laneKey);
     const work = (async (): Promise<OpenCodeTeamRuntimeMessageResult> => {
       if (previous) {
@@ -7509,7 +7571,9 @@ export class TeamProvisioningService {
     }
 
     const foregroundMessages = inboxMessages.filter(
-      (message) => message.messageKind !== 'member_work_sync_nudge'
+      (message) =>
+        message.messageKind !== 'member_work_sync_nudge' &&
+        message.messageKind !== 'runtime_recovery_nudge'
     );
     const agendaSyncRecoveryBypassMessageIds =
       await this.getOpenCodeAgendaSyncRecoveryBypassMessageIds({
@@ -9237,6 +9301,7 @@ export class TeamProvisioningService {
       const result = await this.sendOpenCodeMemberMessageToRuntimeSerialized({
         teamName: run.teamName,
         laneId: lane.laneId,
+        memberName,
         send: async () =>
           await adapter.sendMessageToMember({
             runId: laneRunId,
@@ -9940,7 +10005,18 @@ export class TeamProvisioningService {
       });
     }
 
-    return normalizedDefaultModel;
+    if (normalizedDefaultModel) {
+      return normalizedDefaultModel;
+    }
+
+    return this.resolveProviderDefaultModelFromRuntimeStatus(
+      claudePath,
+      cwd,
+      providerId,
+      env,
+      providerArgs,
+      limitContext
+    ).catch(() => null);
   }
 
   private async resolveProviderDefaultModelFromRuntimeStatus(
@@ -10216,7 +10292,12 @@ export class TeamProvisioningService {
     members: TeamCreateRequest['members'],
     lanePlan?: TeamRuntimeLanePlan
   ): TeamCreateRequest['members'] {
-    if (resolveTeamProviderId(request.providerId) !== 'opencode') {
+    if (
+      !isPureOpenCodeProvisioningRequest({
+        providerId: request.providerId,
+        members,
+      })
+    ) {
       return members;
     }
     const runtimeMembers: TeamCreateRequest['members'] = [...members];
@@ -11077,6 +11158,7 @@ export class TeamProvisioningService {
     // Set immediately to prevent TOCTOU (defense in depth alongside withTeamLock)
     const pendingKey = `pending-${randomUUID()}`;
     this.provisioningRunByTeam.set(request.teamName, pendingKey);
+    let pendingAnthropicApiKeyHelper: AnthropicTeamApiKeyHelperMaterial | null = null;
 
     try {
       const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
@@ -11106,6 +11188,7 @@ export class TeamProvisioningService {
         request.providerBackendId,
         { includeCodexTeammateAuth: teamRequestIncludesCodexMember(request), teamRuntimeAuth }
       );
+      pendingAnthropicApiKeyHelper = provisioningEnv.anthropicApiKeyHelper ?? null;
       const {
         env: shellEnv,
         geminiRuntimeAuth,
@@ -11184,6 +11267,12 @@ export class TeamProvisioningService {
         effectiveMemberSpecs,
         { teamRuntimeAuth }
       );
+      const runAnthropicApiKeyHelper =
+        provisioningEnv.anthropicApiKeyHelper ??
+        crossProviderMemberArgs.anthropicApiKeyHelper ??
+        null;
+      pendingAnthropicApiKeyHelper = runAnthropicApiKeyHelper;
+      provisioningEnv.anthropicApiKeyHelper = runAnthropicApiKeyHelper;
       const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
         ? await this.collectWorkspaceTrustWorkspaces({
             cwd: request.cwd,
@@ -11330,7 +11419,7 @@ export class TeamProvisioningService {
         authFailureRetried: false,
         authRetryInProgress: false,
         spawnContext: null,
-        anthropicApiKeyHelper: provisioningEnv.anthropicApiKeyHelper ?? null,
+        anthropicApiKeyHelper: runAnthropicApiKeyHelper,
         pendingApprovals: new Map(),
         processedPermissionRequestIds: new Set(),
         pendingPostCompactReminder: false,
@@ -11487,9 +11576,9 @@ export class TeamProvisioningService {
       } catch (error) {
         this.runs.delete(runId);
         this.provisioningRunByTeam.delete(request.teamName);
-        if (provisioningEnv.anthropicApiKeyHelper) {
+        if (run.anthropicApiKeyHelper) {
           await cleanupAnthropicTeamApiKeyHelperMaterial({
-            directory: provisioningEnv.anthropicApiKeyHelper.directory,
+            directory: run.anthropicApiKeyHelper.directory,
           }).catch(() => undefined);
         }
         await this.teamMetaStore.deleteMeta(request.teamName).catch(() => {});
@@ -11613,9 +11702,9 @@ export class TeamProvisioningService {
           run.mcpConfigPath = null;
         }
         await this.removeRunMemberMcpConfigFiles(run).catch(() => {});
-        if (provisioningEnv.anthropicApiKeyHelper) {
+        if (run.anthropicApiKeyHelper) {
           await cleanupAnthropicTeamApiKeyHelperMaterial({
-            directory: provisioningEnv.anthropicApiKeyHelper.directory,
+            directory: run.anthropicApiKeyHelper.directory,
           }).catch(() => undefined);
         }
         this.runs.delete(runId);
@@ -11695,6 +11784,11 @@ export class TeamProvisioningService {
       // Ensure the per-team lock doesn't get stuck on failures.
       if (this.provisioningRunByTeam.get(request.teamName) === pendingKey) {
         this.provisioningRunByTeam.delete(request.teamName);
+      }
+      if (pendingAnthropicApiKeyHelper) {
+        await cleanupAnthropicTeamApiKeyHelperMaterial({
+          directory: pendingAnthropicApiKeyHelper.directory,
+        }).catch(() => undefined);
       }
       throw error;
     }
@@ -11988,18 +12082,12 @@ export class TeamProvisioningService {
       teamName,
       laneId: 'primary',
     });
-    await upsertOpenCodeRuntimeLaneIndexEntry({
-      teamsBasePath: getTeamsBasePath(),
-      teamName,
-      laneId: 'primary',
-      state: migration.degraded ? 'degraded' : 'active',
-      diagnostics: migration.diagnostics,
-    });
-    await setOpenCodeRuntimeActiveRunManifest({
+    const launchPreparation = await prepareOpenCodeRuntimeLaneForLaunchGeneration({
       teamsBasePath: getTeamsBasePath(),
       teamName,
       laneId: 'primary',
       runId,
+      reason: 'aggregate_primary_launch',
     });
 
     const expectedMembers: TeamRuntimeMemberSpec[] = params.run.effectiveMembers.map((member) => ({
@@ -12025,9 +12113,29 @@ export class TeamProvisioningService {
       expectedMembers,
       previousLaunchState: params.previousLaunchState,
     };
+    const launchPrimaryLane = () => params.adapter.launch(launchInput);
     let launchResult: TeamRuntimeLaunchResult;
     try {
-      launchResult = await params.adapter.launch(launchInput);
+      try {
+        launchResult = await launchPrimaryLane();
+      } catch (error) {
+        if (!isOpenCodeBridgeStaleManifestError(error)) {
+          throw error;
+        }
+        const recovery = await prepareOpenCodeRuntimeLaneForLaunchGeneration({
+          teamsBasePath: getTeamsBasePath(),
+          teamName,
+          laneId: 'primary',
+          runId,
+          reason: 'aggregate_primary_launch_stale_manifest_recovery',
+          forceReset: true,
+        });
+        launchPreparation.diagnostics.push(
+          ...recovery.diagnostics,
+          'Retried OpenCode primary launch after resetting stale runtime manifest.'
+        );
+        launchResult = await launchPrimaryLane();
+      }
     } catch (error) {
       await this.stopUnretainableOpenCodeRuntimeLane({
         adapter: params.adapter,
@@ -12039,6 +12147,10 @@ export class TeamProvisioningService {
       });
       throw error;
     }
+    launchResult = appendOpenCodeLaunchDiagnostics(launchResult, [
+      ...migration.diagnostics,
+      ...launchPreparation.diagnostics,
+    ]);
     const { snapshot, result } = await this.persistOpenCodeRuntimeAdapterLaunchResult(
       launchResult,
       launchInput
@@ -12278,6 +12390,20 @@ export class TeamProvisioningService {
       const partialTeamCanContinue =
         failed && retainableResults.some((result) => hasRetainableOpenCodeRuntimeMember(result));
       const terminalFailure = failed && !partialTeamCanContinue;
+      const aggregateFailureDiagnostics = run.mixedSecondaryLanes.flatMap(
+        (lane) => lane.diagnostics
+      );
+      const terminalFailureError = selectOpenCodeLaunchFailureDiagnostic([
+        ...retainableResults.flatMap((launchResult) => [
+          ...Object.values(launchResult.members).flatMap((member) => [
+            member.hardFailureReason,
+            member.runtimeDiagnostic,
+            ...member.diagnostics,
+          ]),
+          ...launchResult.diagnostics,
+        ]),
+        ...aggregateFailureDiagnostics,
+      ]);
       const finalProgress = this.setRuntimeAdapterProgress(
         {
           ...launching,
@@ -12293,13 +12419,9 @@ export class TeamProvisioningService {
             pending || partialTeamCanContinue ? 'warning' : failed ? 'error' : undefined,
           updatedAt: nowIso(),
           error: terminalFailure
-            ? run.mixedSecondaryLanes
-                .flatMap((lane) => lane.diagnostics)
-                .filter(Boolean)
-                .join('\n') || 'OpenCode member lane launch failed'
+            ? terminalFailureError || 'OpenCode member lane launch failed'
             : undefined,
-          cliLogsTail:
-            run.mixedSecondaryLanes.flatMap((lane) => lane.diagnostics).join('\n') || undefined,
+          cliLogsTail: aggregateFailureDiagnostics.join('\n') || undefined,
           configReady: true,
         },
         input.onProgress
@@ -12424,16 +12546,10 @@ export class TeamProvisioningService {
     this.resetTeamScopedTransientStateForNewRun(input.request.teamName);
     const previousLaunchState = await this.launchStateStore.read(input.request.teamName);
     await this.clearPersistedLaunchState(input.request.teamName);
-    await migrateLegacyOpenCodeRuntimeState({
+    const migration = await migrateLegacyOpenCodeRuntimeState({
       teamsBasePath: getTeamsBasePath(),
       teamName: input.request.teamName,
       laneId: 'primary',
-    });
-    await upsertOpenCodeRuntimeLaneIndexEntry({
-      teamsBasePath: getTeamsBasePath(),
-      teamName: input.request.teamName,
-      laneId: 'primary',
-      state: 'active',
     });
     const launchCwd = this.getOpenCodeRuntimeLaunchCwd(input.request.cwd, input.members);
     const launchInput: TeamRuntimeLaunchInput = {
@@ -12470,13 +12586,39 @@ export class TeamProvisioningService {
     );
 
     try {
-      await setOpenCodeRuntimeActiveRunManifest({
+      const launchPreparation = await prepareOpenCodeRuntimeLaneForLaunchGeneration({
         teamsBasePath: getTeamsBasePath(),
         teamName: input.request.teamName,
         laneId: 'primary',
         runId,
+        reason: 'primary_launch',
       });
-      const launchResult = await adapter.launch(launchInput);
+      const launchPrimaryLane = () => adapter.launch(launchInput);
+      let launchResult: TeamRuntimeLaunchResult;
+      try {
+        launchResult = await launchPrimaryLane();
+      } catch (error) {
+        if (!isOpenCodeBridgeStaleManifestError(error)) {
+          throw error;
+        }
+        const recovery = await prepareOpenCodeRuntimeLaneForLaunchGeneration({
+          teamsBasePath: getTeamsBasePath(),
+          teamName: input.request.teamName,
+          laneId: 'primary',
+          runId,
+          reason: 'primary_launch_stale_manifest_recovery',
+          forceReset: true,
+        });
+        launchPreparation.diagnostics.push(
+          ...recovery.diagnostics,
+          'Retried OpenCode primary launch after resetting stale runtime manifest.'
+        );
+        launchResult = await launchPrimaryLane();
+      }
+      launchResult = appendOpenCodeLaunchDiagnostics(launchResult, [
+        ...migration.diagnostics,
+        ...launchPreparation.diagnostics,
+      ]);
       if (
         this.cancelledRuntimeAdapterRunIds.delete(runId) ||
         this.provisioningRunByTeam.get(input.request.teamName) !== runId
@@ -12506,6 +12648,14 @@ export class TeamProvisioningService {
       const failed = result.teamLaunchState === 'partial_failure';
       const partialTeamCanContinue = failed && shouldRetainOpenCodeRuntimeLaunch(result);
       const terminalFailure = failed && !partialTeamCanContinue;
+      const terminalFailureError = selectOpenCodeLaunchFailureDiagnostic([
+        ...Object.values(result.members).flatMap((member) => [
+          member.hardFailureReason,
+          member.runtimeDiagnostic,
+          ...member.diagnostics,
+        ]),
+        ...result.diagnostics,
+      ]);
       const finalProgress = this.setRuntimeAdapterProgress(
         {
           ...launching,
@@ -12521,9 +12671,7 @@ export class TeamProvisioningService {
             pending || partialTeamCanContinue ? 'warning' : terminalFailure ? 'error' : undefined,
           updatedAt: nowIso(),
           warnings: result.warnings.length > 0 ? result.warnings : launching.warnings,
-          error: terminalFailure
-            ? result.diagnostics.join('\n') || 'OpenCode launch failed'
-            : undefined,
+          error: terminalFailure ? terminalFailureError || 'OpenCode launch failed' : undefined,
           cliLogsTail: result.diagnostics.join('\n') || undefined,
           configReady: true,
         },
@@ -12792,6 +12940,7 @@ export class TeamProvisioningService {
     // Set immediately to prevent TOCTOU (defense in depth alongside withTeamLock)
     const pendingKey = `pending-${randomUUID()}`;
     this.provisioningRunByTeam.set(request.teamName, pendingKey);
+    let pendingAnthropicApiKeyHelper: AnthropicTeamApiKeyHelperMaterial | null = null;
 
     try {
       // Verify config.json exists — team must already be provisioned
@@ -12923,6 +13072,7 @@ export class TeamProvisioningService {
         request.providerBackendId,
         { includeCodexTeammateAuth: teamRequestIncludesCodexMember(request), teamRuntimeAuth }
       );
+      pendingAnthropicApiKeyHelper = provisioningEnv.anthropicApiKeyHelper ?? null;
       const {
         env: shellEnv,
         geminiRuntimeAuth,
@@ -13006,6 +13156,12 @@ export class TeamProvisioningService {
         effectiveMemberSpecs,
         { teamRuntimeAuth }
       );
+      const runAnthropicApiKeyHelper =
+        provisioningEnv.anthropicApiKeyHelper ??
+        crossProviderMemberArgs.anthropicApiKeyHelper ??
+        null;
+      pendingAnthropicApiKeyHelper = runAnthropicApiKeyHelper;
+      provisioningEnv.anthropicApiKeyHelper = runAnthropicApiKeyHelper;
       const workspaceTrustFullWorkspaces = workspaceTrustFeatureFlags.enabled
         ? await this.collectWorkspaceTrustWorkspaces({
             cwd: request.cwd,
@@ -13177,7 +13333,7 @@ export class TeamProvisioningService {
         authFailureRetried: false,
         authRetryInProgress: false,
         spawnContext: null,
-        anthropicApiKeyHelper: provisioningEnv.anthropicApiKeyHelper ?? null,
+        anthropicApiKeyHelper: runAnthropicApiKeyHelper,
         pendingApprovals: new Map(),
         processedPermissionRequestIds: new Set(),
         pendingPostCompactReminder: false,
@@ -13327,9 +13483,9 @@ export class TeamProvisioningService {
       } catch (error) {
         this.runs.delete(runId);
         this.provisioningRunByTeam.delete(request.teamName);
-        if (provisioningEnv.anthropicApiKeyHelper) {
+        if (run.anthropicApiKeyHelper) {
           await cleanupAnthropicTeamApiKeyHelperMaterial({
-            directory: provisioningEnv.anthropicApiKeyHelper.directory,
+            directory: run.anthropicApiKeyHelper.directory,
           }).catch(() => undefined);
         }
         await removeDeterministicBootstrapSpecFile(run.bootstrapSpecPath).catch(() => {});
@@ -13494,9 +13650,9 @@ export class TeamProvisioningService {
         );
         run.bootstrapUserPromptPath = null;
         await this.removeRunMemberMcpConfigFiles(run).catch(() => {});
-        if (provisioningEnv.anthropicApiKeyHelper) {
+        if (run.anthropicApiKeyHelper) {
           await cleanupAnthropicTeamApiKeyHelperMaterial({
-            directory: provisioningEnv.anthropicApiKeyHelper.directory,
+            directory: run.anthropicApiKeyHelper.directory,
           }).catch(() => undefined);
         }
         this.runs.delete(runId);
@@ -13579,6 +13735,11 @@ export class TeamProvisioningService {
       // Clean up pending key if failure occurred before runId was set
       if (this.provisioningRunByTeam.get(request.teamName) === pendingKey) {
         this.provisioningRunByTeam.delete(request.teamName);
+      }
+      if (pendingAnthropicApiKeyHelper) {
+        await cleanupAnthropicTeamApiKeyHelperMaterial({
+          directory: pendingAnthropicApiKeyHelper.directory,
+        }).catch(() => undefined);
       }
       throw error;
     }
@@ -14132,9 +14293,26 @@ export class TeamProvisioningService {
           lastDelivery: relay.lastDelivery,
         };
       }
+      const relayed = this.isTeamAlive(teamName)
+        ? await this.relayLeadInboxMessages(teamName, {
+            ...(options.onlyMessageId ? { onlyMessageId: options.onlyMessageId } : {}),
+          })
+        : 0;
+      const responseProven = options.onlyMessageId
+        ? this.hasSuccessfulLeadRecoveryMessage(teamName, options.onlyMessageId)
+        : false;
       return {
         kind: 'native_lead',
-        relayed: this.isTeamAlive(teamName) ? await this.relayLeadInboxMessages(teamName) : 0,
+        relayed,
+        ...(options.onlyMessageId
+          ? {
+              lastDelivery: {
+                delivered: relayed > 0 || responseProven,
+                accepted: relayed > 0 || responseProven,
+                responsePending: !responseProven,
+              },
+            }
+          : {}),
       };
     }
 
@@ -14892,11 +15070,15 @@ export class TeamProvisioningService {
     }
   }
 
-  async relayLeadInboxMessages(teamName: string): Promise<number> {
+  async relayLeadInboxMessages(
+    teamName: string,
+    options: { onlyMessageId?: string } = {}
+  ): Promise<number> {
     const existing = this.leadInboxRelayInFlight.get(teamName);
     if (existing) {
+      let relayed = 0;
       try {
-        return await this.waitForInboxRelayInFlight({
+        relayed = await this.waitForInboxRelayInFlight({
           promise: existing,
           relayName: 'lead_inbox_relay',
           relayKey: teamName,
@@ -14912,6 +15094,24 @@ export class TeamProvisioningService {
           this.leadInboxRelayInFlight.delete(teamName);
         }
       }
+      if (
+        options.onlyMessageId &&
+        !this.hasSuccessfulLeadRecoveryMessage(teamName, options.onlyMessageId)
+      ) {
+        const activeRunId = this.getAliveRunId(teamName) ?? this.getProvisioningRunId(teamName);
+        const activeRun = activeRunId ? this.runs.get(activeRunId) : undefined;
+        if (activeRun) {
+          const target = (
+            await this.inboxReader
+              .getMessagesFor(teamName, this.getRunLeadName(activeRun))
+              .catch(() => [])
+          ).find((message) => message.messageId === options.onlyMessageId);
+          if (target && !target.read) {
+            return this.relayLeadInboxMessages(teamName, options);
+          }
+        }
+      }
+      return relayed;
     }
 
     const work = (async (): Promise<number> => {
@@ -15168,12 +15368,29 @@ export class TeamProvisioningService {
 
       if (actionableUnread.length === 0) return 0;
 
+      const requestedMessage = options.onlyMessageId
+        ? actionableUnread.find((message) => message.messageId === options.onlyMessageId)
+        : undefined;
+      const firstRecoveryMessage = actionableUnread.find(
+        (message) => message.messageKind === 'runtime_recovery_nudge'
+      );
+      const scopedActionableUnread = options.onlyMessageId
+        ? requestedMessage
+          ? [requestedMessage]
+          : []
+        : firstRecoveryMessage
+          ? [firstRecoveryMessage]
+          : actionableUnread;
+      if (scopedActionableUnread.length === 0) return 0;
       const { batch, replyVisibility, hasPendingFollowUpRelay } = selectLeadInboxRelayBatch({
-        actionableUnread,
+        actionableUnread: scopedActionableUnread,
         unread,
         readOnlyIgnoredIds,
         maxRelay: DEFAULT_INBOX_RELAY_BATCH_SIZE,
       });
+      const recoveryMessageId = batch.find(
+        (message) => message.messageKind === 'runtime_recovery_nudge'
+      )?.messageId;
       const teammateRoster = (config.members ?? [])
         .filter((member) => {
           const name = member.name?.trim();
@@ -15210,6 +15427,7 @@ export class TeamProvisioningService {
           leadName,
           startedAt: nowIso(),
           textParts: [] as string[],
+          ...(recoveryMessageId ? { recoveryMessageId, requireTerminalResult: true } : {}),
           replyVisibility,
           hasVisibleSendMessage: false,
           hasUserVisibleSendMessage: false,
@@ -15259,10 +15477,12 @@ export class TeamProvisioningService {
       );
 
       let replyText: string | null = null;
+      let terminalResultSucceeded = false;
       let capturedVisibleSendMessage = false;
       let capturedUserVisibleSendMessage = false;
       try {
         replyText = (await capturePromise).trim() || null;
+        terminalResultSucceeded = run.leadRelayCapture?.terminalResultSucceeded === true;
       } catch {
         // Best-effort: if we captured some text but never got result.success, keep it.
         const partial = run.leadRelayCapture
@@ -15280,6 +15500,10 @@ export class TeamProvisioningService {
           clearTimeout(run.leadRelayCapture.timeoutHandle);
           run.leadRelayCapture = null;
         }
+      }
+
+      if (recoveryMessageId && terminalResultSucceeded) {
+        this.rememberSuccessfulLeadRecoveryMessage(teamName, recoveryMessageId);
       }
 
       const readCommitBatch = await getLeadRelayReadCommitBatch({
@@ -15526,6 +15750,16 @@ export class TeamProvisioningService {
     const tail = Array.from(set).slice(-MAX_IDS);
     for (const id of tail) next.add(id);
     return next;
+  }
+
+  private rememberSuccessfulLeadRecoveryMessage(teamName: string, messageId: string): void {
+    const ids = this.successfulLeadRecoveryMessageIds.get(teamName) ?? new Set<string>();
+    ids.add(messageId);
+    this.successfulLeadRecoveryMessageIds.set(teamName, this.trimRelayedSet(ids));
+  }
+
+  private hasSuccessfulLeadRecoveryMessage(teamName: string, messageId: string): boolean {
+    return this.successfulLeadRecoveryMessageIds.get(teamName)?.has(messageId) === true;
   }
 
   /**
@@ -20062,6 +20296,19 @@ export class TeamProvisioningService {
         this.markUnconfirmedBootstrapMembersFailed(run, reason, options),
       stopPersistentTeamMembers: (teamName) => this.stopPersistentTeamMembers(teamName),
       persistLaunchStateSnapshot: (run, phase) => this.persistLaunchStateSnapshot(run, phase),
+      observeRuntimeFailure: (run, failure) => {
+        const providerId = normalizeOptionalTeamProviderId(run.request.providerId);
+        this.runtimeRecoveryFailureObserver?.({
+          teamName: run.teamName,
+          memberName: this.getRunLeadName(run),
+          runId: run.runId,
+          runtimeSessionId: run.detectedSessionId ?? undefined,
+          providerId,
+          providerBackendId: run.request.providerBackendId,
+          model: run.request.model,
+          ...failure,
+        });
+      },
     };
   }
 

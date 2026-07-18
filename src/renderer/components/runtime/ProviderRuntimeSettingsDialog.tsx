@@ -46,6 +46,7 @@ import {
 } from '@renderer/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { useStore } from '@renderer/store';
+import { ANTHROPIC_EXTERNAL_BACKEND_IDS } from '@shared/constants/anthropicConnectionMode';
 import { AlertTriangle, Download, Key, Link2, Loader2, Save, Trash2 } from 'lucide-react';
 
 import {
@@ -67,6 +68,7 @@ import {
   ProviderRuntimeBackendSelector,
 } from './ProviderRuntimeBackendSelector';
 
+import type { ProviderRuntimeBackendSummaryText } from './ProviderRuntimeBackendSelector';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { AnalyticsProviderCheckReason } from '@renderer/analytics/productAnalytics';
 import type { CliProviderAuthMode, CliProviderId, CliProviderStatus } from '@shared/types';
@@ -716,14 +718,27 @@ const CodexRateLimitWindowCard = ({
 
 function getConnectionMethodCardOptions(
   provider: CliProviderStatus,
-  t: ReturnType<typeof useAppTranslation>['t']
+  t: ReturnType<typeof useAppTranslation>['t'],
+  runtimeBackendSummaryText: ProviderRuntimeBackendSummaryText
 ): ConnectionMethodCardOption[] | null {
   switch (provider.providerId) {
-    case 'anthropic':
+    case 'anthropic': {
+      const resolvedBackendId = provider.resolvedBackendId?.trim() ?? '';
+      const resolvedExternalBackendLabel =
+        provider.connection?.compatibleEndpoint?.enabled !== true &&
+        ANTHROPIC_EXTERNAL_BACKEND_IDS.some((backendId) => backendId === resolvedBackendId)
+          ? provider.backend?.label.trim() || resolvedBackendId
+          : null;
+      const autoTitle = resolvedExternalBackendLabel
+        ? provider.connection?.configuredAuthMode === 'auto'
+          ? runtimeBackendSummaryText.autoCurrently(resolvedExternalBackendLabel)
+          : `${t('providerRuntime.connectionCards.auto.title')} (${resolvedExternalBackendLabel})`
+        : t('providerRuntime.connectionCards.auto.title');
+
       return [
         {
           authMode: 'auto',
-          title: t('providerRuntime.connectionCards.auto.title'),
+          title: autoTitle,
           description: t('providerRuntime.connectionCards.anthropic.autoDescription'),
         },
         {
@@ -737,6 +752,7 @@ function getConnectionMethodCardOptions(
           description: t('providerRuntime.connectionCards.anthropic.apiKeyDescription'),
         },
       ];
+    }
     case 'codex':
       return [
         {
@@ -1165,7 +1181,7 @@ export const ProviderRuntimeSettingsDialog = ({
   const configuredAuthMode: CliProviderAuthMode | undefined =
     selectedProvider?.connection?.configuredAuthMode ?? configurableAuthModes[0] ?? undefined;
   const connectionMethodCardOptions = selectedProvider
-    ? getConnectionMethodCardOptions(selectedProvider, t)
+    ? getConnectionMethodCardOptions(selectedProvider, t, runtimeBackendSummaryText)
     : null;
   const showConnectionMethodCards =
     connectionMethodCardOptions !== null && typeof configuredAuthMode !== 'undefined';

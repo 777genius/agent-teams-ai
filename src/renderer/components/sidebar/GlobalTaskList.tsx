@@ -767,6 +767,7 @@ function areTaskSidebarArraysEqual(
 interface ProjectTaskGroupProps {
   group: ProjectTaskGroupData;
   isCollapsed: boolean;
+  showTeamHeader: boolean;
   visibleCount: number;
   noProjectGroupColor: ReturnType<typeof projectColor>;
   showMoreLabel: string;
@@ -793,6 +794,7 @@ const ProjectTaskGroup = memo(
   function ProjectTaskGroup({
     group,
     isCollapsed,
+    showTeamHeader,
     visibleCount,
     noProjectGroupColor,
     showMoreLabel,
@@ -865,7 +867,7 @@ const ProjectTaskGroup = memo(
             isLight={isLight}
             hideTeamName
             hideProjectName
-            showTeamHeader
+            showTeamHeader={showTeamHeader}
             formatTeamHeader={formatTeamHeader}
             renamingKey={renamingKey}
             onTogglePin={onTogglePin}
@@ -918,6 +920,7 @@ const ProjectTaskGroup = memo(
     prev.group.projectLabel === next.group.projectLabel &&
     prev.group.tasks.length === next.group.tasks.length &&
     prev.isCollapsed === next.isCollapsed &&
+    prev.showTeamHeader === next.showTeamHeader &&
     prev.visibleCount === next.visibleCount &&
     prev.noProjectGroupColor === next.noProjectGroupColor &&
     prev.showMoreLabel === next.showMoreLabel &&
@@ -1444,6 +1447,16 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
     () => (groupingMode === 'project' ? groupTasksByProject(normalTasks) : EMPTY_PROJECT_GROUPS),
     [groupingMode, normalTasks]
   );
+  const projectTeamCountByKey = useMemo(
+    () =>
+      new Map(
+        groupTasksByProject(globalTasks).map((group) => [
+          group.projectKey,
+          new Set(group.tasks.map((task) => task.teamName)).size,
+        ])
+      ),
+    [globalTasks]
+  );
 
   // Collapsed group keys for each grouping mode
   const projectGroupKeys = useMemo(
@@ -1777,6 +1790,7 @@ export const GlobalTaskList = memo<GlobalTaskListProps>(function GlobalTaskList(
                 key={group.projectKey}
                 group={group}
                 isCollapsed={isProjectGroupCollapsed(group.projectKey)}
+                showTeamHeader={(projectTeamCountByKey.get(group.projectKey) ?? 0) > 1}
                 visibleCount={visibleCount}
                 noProjectGroupColor={noProjectGroupColor}
                 showMoreLabel={t('tasksPanel.showMore')}

@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 
+import type { OpenCodeExecutionProof } from '../readiness/OpenCodeExecutionProof';
 import type {
   OpenCodeAppManagedBootstrapCandidate,
   OpenCodeBootstrapEvidenceSource,
@@ -7,6 +8,7 @@ import type {
 } from '@shared/types/team';
 
 export const OPEN_CODE_BRIDGE_SCHEMA_VERSION = 1 as const;
+export const OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS = 25_000;
 export const OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION = 1 as const;
 export const OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION = 1 as const;
 export const OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION = 2 as const;
@@ -70,6 +72,7 @@ export interface OpenCodeLaunchTeamCommandBody {
   expectedCapabilitySnapshotId: string | null;
   manifestHighWatermark: number | null;
   capabilitySnapshotRecoveryAttemptId?: string;
+  executionProof?: OpenCodeExecutionProof;
 }
 
 export interface OpenCodeRuntimePermissionCommandData {
@@ -228,6 +231,7 @@ export interface OpenCodeSendMessageCommandBody {
     | 'task_comment_notification'
     | 'task_stall_remediation'
     | 'member_work_sync_nudge'
+    | 'runtime_recovery_nudge'
     | 'agent_error';
   taskRefs?: { taskId: string; displayId: string; teamName: string }[];
   agent?: string;
@@ -407,6 +411,7 @@ export type OpenCodeBridgeFailureKind =
   | 'runtime_not_ready'
   | 'provider_error'
   | 'timeout'
+  | 'transport_watchdog_timeout'
   | 'contract_violation'
   | 'internal_error';
 
@@ -558,6 +563,7 @@ const VALID_FAILURE_KINDS: ReadonlySet<OpenCodeBridgeFailureKind> = new Set([
   'runtime_not_ready',
   'provider_error',
   'timeout',
+  'transport_watchdog_timeout',
   'contract_violation',
   'internal_error',
 ]);

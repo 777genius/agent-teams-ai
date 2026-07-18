@@ -575,7 +575,6 @@ export class TaskChangeComputer {
     const snippets: ParsedSnippetRecord[] = [];
     const snippetsByToolUseId = new Map<string, ParsedSnippetRecord[]>();
     const erroredIds = new Set<string>();
-    const seenFiles = new Set<string>();
 
     const markErroredToolUseId = (toolUseId: string): void => {
       erroredIds.add(toolUseId);
@@ -635,7 +634,6 @@ export class TaskChangeComputer {
           const oversizedSnippets = this.extractOversizedSummarySnippets(
             lineNumber,
             trimmed,
-            seenFiles,
             erroredIds
           );
           for (const oversized of oversizedSnippets) {
@@ -694,7 +692,6 @@ export class TaskChangeComputer {
                   : [];
 
             for (const target of targetPaths) {
-              seenFiles.add(this.normalizeFilePathKey(target.filePath));
               const snippetType: SnippetDiff['type'] =
                 !hasTextPayload && target.kind === 'add' ? 'write-new' : 'edit';
               addSnippet(lineNumber, {
@@ -717,14 +714,14 @@ export class TaskChangeComputer {
             const writeContent = typeof input.content === 'string' ? input.content : '';
 
             if (targetPath) {
-              const normalizedTargetPath = this.normalizeFilePathKey(targetPath);
-              const isNew = !seenFiles.has(normalizedTargetPath);
-              seenFiles.add(normalizedTargetPath);
               addSnippet(lineNumber, {
                 toolUseId,
                 filePath: targetPath,
                 toolName: 'Write',
-                type: isNew ? 'write-new' : 'write-update',
+                // A first-seen legacy Write is not proof that the file did not exist before
+                // the task. Treat it as an update unless a separate lifecycle signal (for
+                // example metadata kind=add or a ledger create event) proves creation.
+                type: 'write-update',
                 oldString: '',
                 newString: writeContent,
                 replaceAll: false,
@@ -738,7 +735,6 @@ export class TaskChangeComputer {
             const edits = Array.isArray(input.edits) ? input.edits : [];
 
             if (targetPath) {
-              seenFiles.add(this.normalizeFilePathKey(targetPath));
               for (const edit of edits) {
                 if (!edit || typeof edit !== 'object') continue;
                 const editObj = edit as Record<string, unknown>;
@@ -779,7 +775,6 @@ export class TaskChangeComputer {
   private extractOversizedSummarySnippets(
     lineNumber: number,
     rawLine: string,
-    seenFiles: Set<string>,
     erroredIds: Set<string>
   ): Array<{ snippet: SnippetDiff; lineCounts: { added: number; removed: number } }> {
     if (!this.rawLineLooksLikeAssistantToolUse(rawLine)) {
@@ -802,7 +797,6 @@ export class TaskChangeComputer {
       const snippet = this.extractOversizedSummarySnippetInRange({
         lineNumber,
         rawLine,
-        seenFiles,
         erroredIds,
         toolUseIndex,
         toolUseEndIndex,
@@ -821,23 +815,14 @@ export class TaskChangeComputer {
   private extractOversizedSummarySnippetInRange(input: {
     lineNumber: number;
     rawLine: string;
-    seenFiles: Set<string>;
     erroredIds: Set<string>;
     toolUseIndex: number;
     toolUseEndIndex: number;
     timestamp: string;
     ordinal: number;
   }): { snippet: SnippetDiff; lineCounts: { added: number; removed: number } } | null {
-    const {
-      lineNumber,
-      rawLine,
-      seenFiles,
-      erroredIds,
-      toolUseIndex,
-      toolUseEndIndex,
-      timestamp,
-      ordinal,
-    } = input;
+    const { lineNumber, rawLine, erroredIds, toolUseIndex, toolUseEndIndex, timestamp, ordinal } =
+      input;
     const rawToolName =
       this.extractRawJsonStringValue(rawLine, 'name', toolUseIndex, toolUseEndIndex)?.value ?? '';
     const toolName = rawToolName.startsWith('proxy_') ? rawToolName.slice(6) : rawToolName;
@@ -862,9 +847,9 @@ export class TaskChangeComputer {
     if (toolName === 'Write') {
       added =
         this.countRawJsonStringDiffLines(rawLine, 'content', toolUseIndex, toolUseEndIndex) ?? 0;
-      const normalizedTargetPath = this.normalizeFilePathKey(filePath);
-      snippetType = seenFiles.has(normalizedTargetPath) ? 'write-update' : 'write-new';
-      seenFiles.add(normalizedTargetPath);
+      // Summary parsing must follow the same fail-closed lifecycle semantics as the
+      // full parser. Encounter order alone cannot distinguish create from overwrite.
+      snippetType = 'write-update';
     } else if (toolName === 'MultiEdit') {
       added = this.countAllRawJsonStringDiffLines(
         rawLine,
@@ -879,13 +864,11 @@ export class TaskChangeComputer {
         toolUseEndIndex
       );
       snippetType = 'multi-edit';
-      seenFiles.add(this.normalizeFilePathKey(filePath));
     } else {
       added =
         this.countRawJsonStringDiffLines(rawLine, 'new_string', toolUseIndex, toolUseEndIndex) ?? 0;
       removed =
         this.countRawJsonStringDiffLines(rawLine, 'old_string', toolUseIndex, toolUseEndIndex) ?? 0;
-      seenFiles.add(this.normalizeFilePathKey(filePath));
     }
 
     return {

@@ -1,6 +1,85 @@
 # Release Guide
 
-## Draft: v2.8.0 (2026-07-13)
+## Draft: v2.9.0 (2026-07-18)
+
+Target branch: `dev`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.67`.
+- Terminal Platform runtime: `v0.3.2`.
+
+Draft body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.9.0 -->
+Review changes are now safe to undo and redo across restarts, while larger teams are easier to navigate through a new organization overview and a flatter workspace. This release also strengthens runtime recovery, provider readiness, and OpenCode support on Windows.
+
+### What's New
+
+- Keep an ordered Changes history with restart-safe undo and redo for applied hunks, file edits, renames, and deletions.
+- Navigate large organizations through a responsive overview, multiscale hierarchy, semantic zoom, minimap, and focused graph controls.
+- Run deterministic teams with up to 30 teammates and see pending message delivery states before replies arrive.
+- Highlight newly arrived messages and show live relative task updates in the sidebar.
+
+### Improvements
+
+- Flatten the team workspace, navigation, kanban board, roster editor, and message composer for faster everyday use.
+- Make model selection clearer and surface connected-provider and model lifecycle status directly in setup flows.
+- Recover failed team runtimes more reliably, keep working OpenCode runtimes available during updates, and harden provisioning.
+- Notify task owners when users create work for their teams and keep participant identity colors consistent.
+- Update the bundled runtime with stronger provider verification, execution proof, credential handling, and persistent host lifecycle management.
+
+### Bug Fixes
+
+- Prevent deleted agents from rejoining teams and fix single-team project grouping.
+- Recover interrupted review mutations safely and prevent stale decisions, ambiguous writes, keyboard hunk rejection, renames, or file lifecycle changes from corrupting undo history.
+- Fix OpenCode launch and readiness on Windows, isolate tmux probes, and improve Kiro companion installation and verification.
+- Fix updater banner and dialog state, graph reset and layout fitting, terminal sheet dragging, and duplicate heartbeat cleanup listeners.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.9.0/Agent.Teams.AI-2.9.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.9.0/Agent.Teams.AI-2.9.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.9.0/Agent.Teams.AI.Setup.2.9.0.exe">
+    <img src="https://img.shields.io/badge/Windows-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.9.0/Agent.Teams.AI-2.9.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.9.0/agent-teams-ai_2.9.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.9.0/agent-teams-ai-2.9.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat&logoColor=white" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.9.0/agent-teams-ai-2.9.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux&logoColor=white" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.9.0 -->
+
+## Published: v2.8.0 (2026-07-13)
+
+GitHub release: [v2.8.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.8.0).
 
 Target branch: `dev`.
 
@@ -488,8 +567,8 @@ RUNTIME_VERSION=0.0.52
 RUNTIME_REPO=/Users/belief/dev/projects/claude/agent_teams_orchestrator
 
 cd "$RUNTIME_REPO"
-git checkout main
-git pull --ff-only origin main
+git checkout dev
+git pull --ff-only origin dev
 
 # Bump the runtime package version to RUNTIME_VERSION.
 RUNTIME_VERSION="$RUNTIME_VERSION" node -e "const fs=require('fs'); const p='package.json'; const j=JSON.parse(fs.readFileSync(p,'utf8')); j.version=process.env.RUNTIME_VERSION; fs.writeFileSync(p, JSON.stringify(j, null, 2)+'\n');"
@@ -497,22 +576,30 @@ RUNTIME_VERSION="$RUNTIME_VERSION" node -e "const fs=require('fs'); const p='pac
 bun test src/utils/renderOptions.test.ts src/utils/headlessInputPrompt.test.ts
 git add package.json
 git commit -m "chore(release): bump runtime to $RUNTIME_VERSION"
-git tag "v$RUNTIME_VERSION"
-git push origin main "v$RUNTIME_VERSION"
+git push origin dev
 
-gh workflow run release-runtime.yml \
-  --repo 777genius/agent_teams_orchestrator \
-  --ref "v$RUNTIME_VERSION" \
-  -f source_ref="v$RUNTIME_VERSION" \
-  -f runtime_version="$RUNTIME_VERSION" \
-  -f target_release_repo=777genius/agent_teams_orchestrator \
-  -f target_release_tag="v$RUNTIME_VERSION"
+# Keep the release source branches identical without rewriting history.
+git checkout main
+git pull --ff-only origin main
+git merge --ff-only dev
+git push origin main
+git checkout dev
+
+git tag "v$RUNTIME_VERSION"
+git push origin "v$RUNTIME_VERSION"
 
 gh run list \
   --repo 777genius/agent_teams_orchestrator \
   --workflow release-runtime.yml \
+  --branch "v$RUNTIME_VERSION" \
   --limit 1
 ```
+
+Pushing the runtime tag automatically starts `release-runtime.yml`. Do not also
+dispatch the workflow manually after pushing the tag: the two runs can race and
+create duplicate target releases. Use `gh workflow run` only as recovery when no
+tag-triggered run exists, and first confirm that there is no active or successful
+run for the same runtime tag.
 
 Watch the returned run until it succeeds:
 
@@ -524,9 +611,9 @@ After the runtime workflow succeeds, update this repo's `runtime.lock.json`:
 
 - `version`: the new runtime version, for example `0.0.52`
 - `sourceRef`: the matching runtime tag, for example `v0.0.52`
-- `releaseRepository`: the runtime repository that hosts runtime assets, normally
-  `777genius/agent_teams_orchestrator`
-- `releaseTag`: the matching runtime release tag, for example `v0.0.52`
+- `releaseRepository`: the public repository that hosts runtime assets,
+  `777genius/agent_teams_orchestrator_binaries`
+- `releaseTag`: the namespaced public runtime release tag, for example `runtime-v0.0.52`
 - each `assets.*.file`: replace the old runtime version suffix with the new one
 
 Then verify the lock points at real uploaded assets:
@@ -547,14 +634,14 @@ done
 node scripts/stage-runtime.mjs
 ```
 
-Do not create standalone runtime releases in the frontend repository. The
-canonical runtime release is in `777genius/agent_teams_orchestrator`, for example
-`v0.0.52`. The frontend release workflow stages those archives into packaged app
-installers.
+Do not create standalone runtime releases in the frontend repository. The source tag is in the
+private `777genius/agent_teams_orchestrator` repository, while the downloadable release is in
+public `777genius/agent_teams_orchestrator_binaries`. The frontend release workflow stages those
+archives into packaged app installers.
 
-If the orchestrator repository is private, local `pnpm dev` needs GitHub CLI
-authentication with access to `777genius/agent_teams_orchestrator`, or a local
-runtime override through `CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH`.
+Local `pnpm dev` downloads the pinned runtime anonymously from the public binary repository. GitHub
+CLI authentication is not required. A local runtime override remains available through
+`CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH`.
 
 ### 3. Create tag and build the draft
 

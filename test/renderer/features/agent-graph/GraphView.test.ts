@@ -33,6 +33,9 @@ const hoisted = vi.hoisted(() => ({
     effects: [],
     time: 0,
   },
+  layoutTargetNodes: [] as GraphNode[],
+  updateData: vi.fn(),
+  getLayoutTargetNodes: vi.fn(),
   setNodePosition: vi.fn(),
   clearNodePosition: vi.fn(),
   clearTransientOwnerPositions: vi.fn(),
@@ -88,9 +91,10 @@ vi.mock('../../../../packages/agent-graph/src/hooks/useGraphInteraction', () => 
 vi.mock('../../../../packages/agent-graph/src/hooks/useGraphSimulation', () => ({
   useGraphSimulation: () => ({
     stateRef: { current: hoisted.simulationState },
-    updateData: vi.fn(),
+    updateData: hoisted.updateData,
     tick: vi.fn(),
     getExtraWorldBounds: vi.fn(() => []),
+    getLayoutTargetNodes: hoisted.getLayoutTargetNodes,
     getLaunchAnchorWorldPosition: vi.fn(() => null),
     getActivityWorldRect: vi.fn(() => null),
     getLogWorldRect: vi.fn(() => null),
@@ -130,11 +134,15 @@ describe('GraphView pan interactions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    hoisted.updateData.mockImplementation(() => undefined);
+    hoisted.getLayoutTargetNodes.mockImplementation(() => hoisted.layoutTargetNodes);
+    hoisted.zoomToFit.mockImplementation(() => undefined);
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     hoisted.interaction.hoveredNodeId.current = null;
     hoisted.interaction.dragNodeId.current = null;
     hoisted.interaction.isDragging.current = false;
     hoisted.simulationState.nodes = [];
+    hoisted.layoutTargetNodes = [];
     hoisted.simulationState.edges = [];
     hoisted.interaction.handleMouseDown.mockImplementation(() => undefined);
     hoisted.interaction.handleMouseMove.mockImplementation(() => undefined);
@@ -207,6 +215,70 @@ describe('GraphView pan interactions', () => {
     });
 
     expect((hoisted.graphControlsProps?.filters as { showEdges: boolean }).showEdges).toBe(true);
+  });
+
+  it('processes fit requests after syncing the requested graph data', async () => {
+    const firstNode: GraphNode = {
+      id: 'member:alice',
+      kind: 'member',
+      label: 'alice',
+      state: 'idle',
+      x: 0,
+      y: 0,
+      domainRef: { kind: 'member', teamName: 'demo-team', memberName: 'alice' },
+    };
+    const secondNode: GraphNode = {
+      id: 'member:bob',
+      kind: 'member',
+      label: 'bob',
+      state: 'idle',
+      x: 200,
+      y: 0,
+      domainRef: { kind: 'member', teamName: 'demo-team', memberName: 'bob' },
+    };
+    const events: string[] = [];
+    hoisted.updateData.mockImplementation((nodes: GraphNode[]) => {
+      hoisted.simulationState.nodes = nodes.map((node) => ({ ...node, x: -100, y: -100 }));
+      hoisted.layoutTargetNodes = nodes;
+      events.push(`update:${nodes.length}`);
+    });
+    hoisted.zoomToFit.mockImplementation((nodes: GraphNode[]) => {
+      events.push(`fit:${nodes.map((node) => node.x).join(',')}`);
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [firstNode],
+            edges: [],
+            particles: [],
+          },
+          config: { animationEnabled: false },
+          fitViewRequestId: 0,
+        })
+      );
+    });
+
+    events.length = 0;
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [firstNode, secondNode],
+            edges: [],
+            particles: [],
+          },
+          config: { animationEnabled: false },
+          fitViewRequestId: 1,
+        })
+      );
+    });
+
+    expect(events).toEqual(['update:2', 'fit:0,200']);
+    expect(hoisted.simulationState.nodes.map((node) => node.x)).toEqual([-100, -100]);
   });
 
   it('preserves an explicit null returned by a custom controls renderer', async () => {

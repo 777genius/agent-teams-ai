@@ -69,6 +69,7 @@ describe('TmuxStatusSourceAdapter', () => {
       return {} as never;
     }) as never);
 
+    const invalidateOptionalFeatureProbeCache = vi.fn();
     const adapter = new TmuxStatusSourceAdapter(
       {
         resolve: vi.fn(async () => ({ platform: 'darwin', nativeSupported: true })),
@@ -86,11 +87,12 @@ describe('TmuxStatusSourceAdapter', () => {
           ({ effective }: { effective: TmuxStatus['effective'] }) => effective.detail
         ),
       } as never,
-      {} as never
+      { invalidateOptionalFeatureProbeCache } as never
     );
 
     const firstStatusPromise = adapter.getStatus();
     adapter.invalidateStatus();
+    expect(invalidateOptionalFeatureProbeCache).toHaveBeenCalledOnce();
     const secondStatus = await adapter.getStatus();
 
     expect(secondStatus.host.version).toBe('tmux second');

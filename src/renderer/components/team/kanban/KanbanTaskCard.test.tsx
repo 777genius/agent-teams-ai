@@ -20,7 +20,8 @@ const unreadCommentCountMock = vi.hoisted(() => ({
 }));
 
 vi.mock('@renderer/components/team/MemberBadge', () => ({
-  MemberBadge: ({ name }: { name: string }) => React.createElement('span', null, name),
+  MemberBadge: ({ name, variant }: { name: string; variant?: 'badge' | 'text' }) =>
+    React.createElement('span', { 'data-member-badge-variant': variant ?? 'badge' }, name),
 }));
 
 vi.mock('@renderer/components/team/UnreadCommentsBadge', () => ({
@@ -727,6 +728,7 @@ describe('KanbanTaskCard flat board appearance', () => {
     });
     expect(host.textContent).toContain('Implement safer onboarding flow');
     expect(host.textContent).toContain('alice');
+    expect(host.querySelector('[data-member-badge-variant="text"]')?.textContent).toBe('alice');
     expect(host.querySelector('[aria-label="Complete"]')).not.toBeNull();
 
     await act(async () => {
@@ -775,6 +777,7 @@ describe('KanbanTaskCard flat board appearance', () => {
     expect(card?.className).toContain('bg-[var(--color-surface-raised)]');
     expect(card?.className).toContain('border-[var(--color-border)]');
     expect(host.querySelector('h5')?.className).not.toContain('h-8');
+    expect(host.querySelector('[data-member-badge-variant="badge"]')?.textContent).toBe('alice');
     expect(host.querySelector('[data-kanban-task-toolbar="true"]')).toBeNull();
 
     await act(async () => {

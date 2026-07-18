@@ -6,6 +6,7 @@ import {
   isInteractiveShellCommand,
   shellQuote,
 } from '@main/services/team/provisioning/TeamProvisioningDirectRestart';
+import { AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV } from '@shared/constants/anthropicConnectionMode';
 import { describe, expect, it } from 'vitest';
 
 describe('TeamProvisioningDirectRestart', () => {
@@ -104,6 +105,66 @@ describe('TeamProvisioningDirectRestart', () => {
     expect(firstPartyAssignments).toContain("ANTHROPIC_BASE_URL='https://api.anthropic.com'");
     expect(firstPartyAssignments).toContain("ANTHROPIC_AUTH_TOKEN=''");
     expect(firstPartyAssignments).not.toContain('stale-token');
+  });
+
+  it('preserves the app-owned Anthropic connection intent across direct restart', () => {
+    const assignments = buildDirectTmuxRestartEnvAssignments(
+      {
+        [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'api_key',
+        CLAUDE_CODE_ENTRY_PROVIDER: 'bedrock',
+        CLAUDE_CODE_USE_BEDROCK: '1',
+      },
+      'anthropic'
+    );
+
+    expect(assignments).toContain(
+      `${AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV}='api_key'`
+    );
+    expect(assignments).toContain("CLAUDE_CODE_ENTRY_PROVIDER='anthropic'");
+    expect(assignments).toContain("CLAUDE_CODE_USE_BEDROCK=''");
+  });
+
+  it('scrubs inherited endpoint and model routing for an explicit API-key restart', () => {
+    const assignments = buildDirectTmuxRestartEnvAssignments(
+      {
+        [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'api_key',
+        ANTHROPIC_API_KEY: 'sk-ant-direct',
+        ANTHROPIC_AUTH_TOKEN: 'ambient-token',
+        ANTHROPIC_BASE_URL: 'https://gateway.example/anthropic',
+        ANTHROPIC_CUSTOM_HEADERS: 'Authorization: Bearer ambient-token',
+        ANTHROPIC_DEFAULT_SONNET_MODEL: 'bedrock-model-id',
+        CLAUDE_CODE_OAUTH_TOKEN: 'ambient-oauth-token',
+      },
+      'anthropic'
+    );
+
+    expect(assignments).toContain(
+      `${AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV}='api_key'`
+    );
+    expect(assignments).toContain("ANTHROPIC_API_KEY='sk-ant-direct'");
+    expect(assignments).toContain("ANTHROPIC_AUTH_TOKEN=''");
+    expect(assignments).toContain("ANTHROPIC_BASE_URL=''");
+    expect(assignments).toContain("ANTHROPIC_CUSTOM_HEADERS=''");
+    expect(assignments).toContain("ANTHROPIC_DEFAULT_SONNET_MODEL=''");
+    expect(assignments).toContain("CLAUDE_CODE_OAUTH_TOKEN=''");
+  });
+
+  it('keeps the configured compatible endpoint while scrubbing external model aliases', () => {
+    const assignments = buildDirectTmuxRestartEnvAssignments(
+      {
+        [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'compatible',
+        ANTHROPIC_BASE_URL: 'http://localhost:1234',
+        ANTHROPIC_AUTH_TOKEN: 'local-token',
+        ANTHROPIC_CUSTOM_HEADERS: 'X-Gateway-Tenant: team-1',
+        ANTHROPIC_DEFAULT_OPUS_MODEL: 'bedrock-opus-id',
+      },
+      'anthropic'
+    );
+
+    expect(assignments).toContain("ANTHROPIC_BASE_URL='http://localhost:1234'");
+    expect(assignments).toContain("ANTHROPIC_AUTH_TOKEN='local-token'");
+    expect(assignments).toContain("ANTHROPIC_CUSTOM_HEADERS='X-Gateway-Tenant: team-1'");
+    expect(assignments).toContain("ANTHROPIC_DEFAULT_OPUS_MODEL=''");
   });
 
   it('blanks competing Anthropic helper auth carriers for direct restart helper mode', () => {

@@ -40,6 +40,7 @@ describe('ConfigManager notification config shape', () => {
     const config = configManager.getConfig();
 
     expect(config.notifications.autoResumeOnRateLimit).toBe(true);
+    expect(config.teamRuntimeRecovery.rateLimitsEnabled).toBe(true);
     expect(config.notifications.notifyOnTeamLaunched).toBe(false);
     expect('notifyOnInboxMessages' in config.notifications).toBe(false);
 
@@ -50,6 +51,45 @@ describe('ConfigManager notification config shape', () => {
       expect(persisted.notifications.autoResumeOnRateLimit).toBe(true);
       expect(persisted.notifications.notifyOnTeamLaunched).toBe(false);
       expect('notifyOnInboxMessages' in persisted.notifications).toBe(false);
+    });
+  });
+
+  it('prefers explicit recovery settings over the legacy rate-limit toggle and clamps persisted bounds', async () => {
+    vi.resetModules();
+    overrideRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'config-recovery-'));
+    const configPath = path.join(overrideRoot, 'agent-teams-config.json');
+    const pathDecoder = await import('../../../../src/main/utils/pathDecoder');
+    pathDecoder.setClaudeBasePathOverride(overrideRoot);
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify({
+        notifications: { autoResumeOnRateLimit: true },
+        teamRuntimeRecovery: {
+          transientErrorsEnabled: true,
+          rateLimitsEnabled: false,
+          initialDelaySeconds: 1,
+          maxAttempts: 99,
+        },
+      })
+    );
+
+    const { configManager } =
+      await import('../../../../src/main/services/infrastructure/ConfigManager');
+
+    expect(configManager.getConfig().teamRuntimeRecovery).toEqual({
+      transientErrorsEnabled: true,
+      rateLimitsEnabled: false,
+      initialDelaySeconds: 15,
+      maxAttempts: 5,
+    });
+    await vi.waitFor(() => {
+      const persisted = JSON.parse(fs.readFileSync(configPath, 'utf8')) as {
+        teamRuntimeRecovery: { initialDelaySeconds: number; maxAttempts: number };
+      };
+      expect(persisted.teamRuntimeRecovery).toMatchObject({
+        initialDelaySeconds: 15,
+        maxAttempts: 5,
+      });
     });
   });
 

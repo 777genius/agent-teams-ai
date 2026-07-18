@@ -10,6 +10,7 @@ import {
   RepositoryDropdown,
   SelectedRepositoryItem,
 } from '@renderer/components/common/RepositoryDropdown';
+import { Input } from '@renderer/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   AlertTriangle,
@@ -94,9 +95,11 @@ interface NotificationsSectionProps {
       | 'notifyOnUsageBudgetWarning'
       | 'notifyOnUsageBudgetCritical'
       | 'notifyOnUsageBudgetNativeToast'
-      | 'autoResumeOnRateLimit'
       | 'statusChangeOnlySolo',
     value: boolean
+  ) => void;
+  readonly onTeamRuntimeRecoveryUpdate: (
+    update: Partial<SafeConfig['teamRuntimeRecovery']>
   ) => void;
   readonly onStatusChangeStatusesUpdate: (statuses: string[]) => void;
   readonly onSnooze: (minutes: number) => Promise<void>;
@@ -118,6 +121,7 @@ export const NotificationsSection = ({
   ignoredRepositoryItems,
   excludedRepositoryIds,
   onNotificationToggle,
+  onTeamRuntimeRecoveryUpdate,
   onSnooze,
   onClearSnooze,
   onAddIgnoredRepository,
@@ -187,6 +191,74 @@ export const NotificationsSection = ({
           </div>
         </div>
       ) : null}
+
+      <SettingsSectionHeader
+        title={t('notifications.recovery.title')}
+        icon={<Clock className="size-3.5" />}
+      />
+      <SettingRow
+        label={t('notifications.recovery.transient.label')}
+        description={t('notifications.recovery.transient.description')}
+        icon={<AlertTriangle className="size-4" />}
+      >
+        <SettingsToggle
+          enabled={safeConfig.teamRuntimeRecovery.transientErrorsEnabled}
+          onChange={(value) => onTeamRuntimeRecoveryUpdate({ transientErrorsEnabled: value })}
+          disabled={saving}
+        />
+      </SettingRow>
+      <SettingRow
+        label={t('notifications.recovery.rateLimits.label')}
+        description={t('notifications.recovery.rateLimits.description')}
+        icon={<Clock className="size-4" />}
+      >
+        <SettingsToggle
+          enabled={safeConfig.teamRuntimeRecovery.rateLimitsEnabled}
+          onChange={(value) => onTeamRuntimeRecoveryUpdate({ rateLimitsEnabled: value })}
+          disabled={saving}
+        />
+      </SettingRow>
+      <SettingRow
+        label={t('notifications.recovery.delay.label')}
+        description={t('notifications.recovery.delay.description')}
+        icon={<Clock className="size-4" />}
+      >
+        <Input
+          type="number"
+          min={15}
+          max={900}
+          step={15}
+          value={safeConfig.teamRuntimeRecovery.initialDelaySeconds}
+          onChange={(event) =>
+            onTeamRuntimeRecoveryUpdate({
+              initialDelaySeconds: Math.min(900, Math.max(15, Number(event.target.value))),
+            })
+          }
+          disabled={saving}
+          aria-label={t('notifications.recovery.delay.label')}
+          className="w-20"
+        />
+      </SettingRow>
+      <SettingRow
+        label={t('notifications.recovery.attempts.label')}
+        description={t('notifications.recovery.attempts.description')}
+        icon={<ArrowRightLeft className="size-4" />}
+      >
+        <Input
+          type="number"
+          min={1}
+          max={5}
+          value={safeConfig.teamRuntimeRecovery.maxAttempts}
+          onChange={(event) =>
+            onTeamRuntimeRecoveryUpdate({
+              maxAttempts: Math.min(5, Math.max(1, Number(event.target.value))),
+            })
+          }
+          disabled={saving}
+          aria-label={t('notifications.recovery.attempts.label')}
+          className="w-20"
+        />
+      </SettingRow>
 
       {/* Notification Settings */}
       <SettingsSectionHeader
@@ -480,18 +552,6 @@ export const NotificationsSection = ({
               disabled={saving || !safeConfig.notifications.enabled}
             />
           </SettingRow>
-          <SettingRow
-            label={t('notifications.team.autoResumeOnRateLimit.label')}
-            description={t('notifications.team.autoResumeOnRateLimit.description')}
-            icon={<Clock className="size-4" />}
-          >
-            <SettingsToggle
-              enabled={safeConfig.notifications.autoResumeOnRateLimit}
-              onChange={(v) => onNotificationToggle('autoResumeOnRateLimit', v)}
-              disabled={saving || !safeConfig.notifications.enabled}
-            />
-          </SettingRow>
-
           {/* Task Status Change Notifications — nested within team card */}
           <div className="*:last:border-b-0 lg:col-span-2">
             <SettingRow

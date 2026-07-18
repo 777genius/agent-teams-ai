@@ -805,6 +805,7 @@ type TeamProvisioningServicePrivateHarness = {
   sendOpenCodeMemberMessageToRuntimeSerialized: (input: {
     teamName: string;
     laneId: string;
+    memberName: string;
     send: () => Promise<OpenCodeTeamRuntimeMessageResult>;
   }) => Promise<OpenCodeTeamRuntimeMessageResult>;
   runtimeProcessRowsForUsageSnapshotByTeam: Map<
@@ -8892,7 +8893,7 @@ describe('TeamProvisioningService', () => {
       );
     });
 
-    it('serializes OpenCode runtime sends by lane', async () => {
+    it('serializes OpenCode runtime sends by member lane', async () => {
       const svc = new TeamProvisioningService();
       const harness = privateHarness(svc);
       const firstStarted = createDeferred<void>();
@@ -8902,6 +8903,7 @@ describe('TeamProvisioningService', () => {
       const first = harness.sendOpenCodeMemberMessageToRuntimeSerialized({
         teamName: 'team-a',
         laneId: 'primary',
+        memberName: 'bob',
         send: async () => {
           firstStarted.resolve(undefined);
           await releaseFirst.promise;
@@ -8918,6 +8920,7 @@ describe('TeamProvisioningService', () => {
       const second = harness.sendOpenCodeMemberMessageToRuntimeSerialized({
         teamName: 'team-a',
         laneId: 'primary',
+        memberName: 'bob',
         send: async () => {
           secondStarted();
           return {
@@ -8947,6 +8950,7 @@ describe('TeamProvisioningService', () => {
       const first = harness.sendOpenCodeMemberMessageToRuntimeSerialized({
         teamName: 'team-a',
         laneId: 'primary',
+        memberName: 'bob',
         send: async () => {
           firstStarted.resolve(undefined);
           await releaseFirst.promise;
@@ -8958,6 +8962,7 @@ describe('TeamProvisioningService', () => {
       const second = harness.sendOpenCodeMemberMessageToRuntimeSerialized({
         teamName: 'team-a',
         laneId: 'primary',
+        memberName: 'bob',
         send: async () => {
           secondStarted();
           return {

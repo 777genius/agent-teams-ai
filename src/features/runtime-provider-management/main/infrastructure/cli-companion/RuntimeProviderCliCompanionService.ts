@@ -3,6 +3,7 @@ import { promises as fsp } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { killProcessTree } from '@main/utils/childProcess';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import {
   findFirstRuntimePathBinaryCandidate,
@@ -27,6 +28,26 @@ const INSTALL_TIMEOUT_MS = 45 * 60 * 1_000;
 const LOGIN_TIMEOUT_MS = 10 * 60 * 1_000;
 const PROBE_TIMEOUT_MS = 10_000;
 const MAX_CAPTURED_OUTPUT_CHARS = 32_000;
+const WINDOWS_ISOLATED_COMMAND_HELPER = String.raw`
+const { spawn } = require('node:child_process');
+const [command, ...args] = process.argv.slice(1);
+if (!command) process.exit(1);
+const childEnv = { ...process.env };
+delete childEnv.ELECTRON_RUN_AS_NODE;
+const child = spawn(command, args, {
+  env: childEnv,
+  shell: /\.(?:cmd|bat)$/i.test(command),
+  windowsHide: true,
+  stdio: ['ignore', 'pipe', 'pipe'],
+});
+child.stdout?.pipe(process.stdout);
+child.stderr?.pipe(process.stderr);
+child.once('error', (error) => {
+  process.stderr.write(String(error?.message || error));
+  process.exit(1);
+});
+child.once('close', (code) => process.exit(code ?? 1));
+`;
 
 export interface RuntimeProviderCliCompanionServiceDependencies {
   platform?: NodeJS.Platform;
@@ -59,10 +80,15 @@ async function runCommandDefault(
   options: RuntimeProviderCliCompanionRunCommandOptions
 ): Promise<RuntimeProviderCliCompanionCommandResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, [...args], {
+    const isolateFromHost = process.platform === 'win32' && options.isolateFromHost === true;
+    const launchCommand = isolateFromHost ? process.execPath : command;
+    const launchArgs = isolateFromHost
+      ? ['-e', WINDOWS_ISOLATED_COMMAND_HELPER, command, ...args]
+      : [...args];
+    const child = spawn(launchCommand, launchArgs, {
       detached: process.platform !== 'win32',
-      env: options.env,
-      shell: process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command),
+      env: isolateFromHost ? { ...options.env, ELECTRON_RUN_AS_NODE: '1' } : options.env,
+      shell: !isolateFromHost && process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command),
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -72,12 +98,7 @@ async function runCommandDefault(
     const timer = setTimeout(() => {
       if (settled) return;
       if (process.platform === 'win32' && child.pid) {
-        const taskkill = spawn(
-          path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'taskkill.exe'),
-          ['/pid', String(child.pid), '/T', '/F'],
-          { windowsHide: true, stdio: 'ignore' }
-        );
-        taskkill.unref();
+        killProcessTree(child, 'SIGKILL');
       } else if (child.pid) {
         try {
           process.kill(-child.pid, 'SIGTERM');
@@ -174,11 +195,29 @@ function trimCommandOutput(result: RuntimeProviderCliCompanionCommandResult): st
 
 function summarizeCommandFailure(result: RuntimeProviderCliCompanionCommandResult): string | null {
   const ignored = /^(?:installation failed\. cleaning up\.\.\.|next steps:)$/i;
-  const lines = `${result.stderr}\n${result.stdout}`
-    .split(/\r?\n/)
-    .map((line) => line.replace(/^(?:(?:❌|⚠️|✓|🎉)\s*)+/u, '').trim())
-    .filter((line) => line && !ignored.test(line));
-  return lines.at(-1) ?? trimCommandOutput(result);
+  const actionableFailure =
+    /\b(?:failed|failure|error|mismatch|unavailable)\b|\bnot (?:available|found)\b|\bno .+ found\b|\b(?:exit|exited)(?: with)? code\b/i;
+  const toLines = (value: string): string[] =>
+    value
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^(?:(?:❌|⚠️|✓|🎉)\s*)+/u, '').trim())
+      .filter((line) => line && !ignored.test(line));
+  const stderrLines = toLines(result.stderr);
+  const stdoutLines = toLines(result.stdout);
+  return (
+    stderrLines[0] ??
+    stdoutLines.find((line) => actionableFailure.test(line)) ??
+    stdoutLines.at(-1) ??
+    trimCommandOutput(result)
+  );
+}
+
+function removeInheritedPowerShellModulePath(env: NodeJS.ProcessEnv): void {
+  for (const key of Object.keys(env)) {
+    if (key.toLowerCase() === 'psmodulepath') {
+      delete env[key];
+    }
+  }
 }
 
 async function findLargestInstallerFile(root: string): Promise<number> {
@@ -219,6 +258,11 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
   readonly #runCommand: NonNullable<RuntimeProviderCliCompanionServiceDependencies['runCommand']>;
   readonly #emitProgress: (status: RuntimeProviderCompanionStatusDto) => void;
   #operation: Promise<RuntimeProviderCompanionStatusDto> | null = null;
+  #statusGeneration = 0;
+  #statusProbe: {
+    generation: number;
+    promise: Promise<RuntimeProviderCompanionStatusDto>;
+  } | null = null;
   #status: RuntimeProviderCompanionStatusDto;
 
   constructor(
@@ -259,11 +303,22 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
 
   async getStatus(): Promise<RuntimeProviderCompanionStatusDto> {
     if (this.#operation) return this.#operation;
-    return this.#probeStatus(true);
+    const generation = this.#statusGeneration;
+    if (this.#statusProbe?.generation === generation) {
+      return this.#statusProbe.promise;
+    }
+    const promise = this.#probeStatus(true, generation).finally(() => {
+      if (this.#statusProbe?.promise === promise) {
+        this.#statusProbe = null;
+      }
+    });
+    this.#statusProbe = { generation, promise };
+    return promise;
   }
 
   installAndConnect(): Promise<RuntimeProviderCompanionStatusDto> {
     if (this.#operation) return this.#operation;
+    this.#invalidateStatusProbes();
     const operation = this.#installAndConnectImpl().finally(() => {
       if (this.#operation === operation) this.#operation = null;
     });
@@ -273,6 +328,7 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
 
   connect(): Promise<RuntimeProviderCompanionStatusDto> {
     if (this.#operation) return this.#operation;
+    this.#invalidateStatusProbes();
     const operation = this.#connectImpl().finally(() => {
       if (this.#operation === operation) this.#operation = null;
     });
@@ -281,6 +337,7 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
   }
 
   setModelVerificationPending(): RuntimeProviderCompanionStatusDto {
+    this.#invalidateStatusProbes();
     return this.#publish({
       phase: 'verifying-model',
       authenticated: true,
@@ -292,6 +349,7 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
   }
 
   setModelVerificationResult(ok: boolean, detail: string): RuntimeProviderCompanionStatusDto {
+    this.#invalidateStatusProbes();
     return this.#publish({
       phase: ok ? 'connected' : 'error',
       authenticated: true,
@@ -389,6 +447,12 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
       if (this.#platform === 'win32') {
         installerEnv.TEMP = tempDir;
         installerEnv.TMP = tempDir;
+        if (path.basename(installCommand.command).toLowerCase() === 'powershell.exe') {
+          // PowerShell 7 prepends its module directories to PSModulePath. Passing
+          // that value into Windows PowerShell 5.1 breaks built-in commands such
+          // as Get-FileHash, which the signed Kiro installer requires.
+          removeInheritedPowerShellModulePath(installerEnv);
+        }
       } else {
         installerEnv.TMPDIR = tempDir;
       }
@@ -398,6 +462,9 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
       const result = await this.#runCommand(installCommand.command, installCommand.args, {
         env: installerEnv,
         timeoutMs: INSTALL_TIMEOUT_MS,
+        isolateFromHost:
+          this.#platform === 'win32' &&
+          this.#definition.installer.isolateFromHostOnWindows === true,
         onOutput: (text) => this.#handleInstallerOutput(text),
       }).finally(stopDownloadMonitor);
       if (result.exitCode !== 0) {
@@ -525,7 +592,10 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
     return this.#probeStatus(true);
   }
 
-  async #probeStatus(emit: boolean): Promise<RuntimeProviderCompanionStatusDto> {
+  async #probeStatus(
+    emit: boolean,
+    generation = this.#statusGeneration
+  ): Promise<RuntimeProviderCompanionStatusDto> {
     const binaryPath = await this.#resolveBinary();
     if (!binaryPath) {
       const missing = this.#createStatus({
@@ -539,9 +609,7 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
         detail: 'Agent Teams can install it and then open the official browser sign-in.',
         error: null,
       });
-      this.#status = missing;
-      if (emit) this.#emitProgress(missing);
-      return { ...missing };
+      return this.#commitProbedStatus(missing, emit, generation);
     }
 
     const env = buildEnrichedEnv(binaryPath);
@@ -569,6 +637,22 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
         : `Sign in once in your browser. ${this.#definition.displayName} keeps the session in its normal local credential store.`,
       error: null,
     });
+    return this.#commitProbedStatus(next, emit, generation);
+  }
+
+  #invalidateStatusProbes(): void {
+    this.#statusGeneration += 1;
+    this.#statusProbe = null;
+  }
+
+  #commitProbedStatus(
+    next: RuntimeProviderCompanionStatusDto,
+    emit: boolean,
+    generation: number
+  ): RuntimeProviderCompanionStatusDto {
+    if (generation !== this.#statusGeneration) {
+      return { ...this.#status };
+    }
     this.#status = next;
     if (emit) this.#emitProgress(next);
     return { ...next };

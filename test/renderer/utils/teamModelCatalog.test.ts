@@ -208,7 +208,19 @@ describe('teamModelCatalog', () => {
                 upgrade: false,
                 source: 'app-server',
                 badgeLabel: null,
-                metadata: { free: false },
+                metadata: {
+                  free: true,
+                  opencode: {
+                    providerId: 'openai',
+                    modelId: 'gpt-5.4',
+                    sourceLabel: 'OpenAI',
+                    accessKind: 'credentialed',
+                    routeKind: 'connected_provider',
+                    proofState: 'not_required',
+                    requiresExecutionProof: false,
+                    reason: null,
+                  },
+                },
               },
               {
                 id: 'openrouter/openai/gpt-oss-20b',

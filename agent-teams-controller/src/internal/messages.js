@@ -221,6 +221,16 @@ function sendMessage(context, flags) {
   return messageStore.sendInboxMessage(context.paths, normalized);
 }
 
+function sendTrustedMessage(context, flags) {
+  const normalized = normalizeMessageSendFlags(
+    { ...context, allowUserMessageSender: true },
+    normalizePlaceholderTaskRefPrefixes(flags),
+  );
+  assertUserDirectedMessageHasSender(context, normalized);
+  assertOpenCodeMessageIsNotBootstrapNoise(context, normalized);
+  return messageStore.sendInboxMessage(context.paths, normalized);
+}
+
 function appendSentMessage(context, flags) {
   return messageStore.appendSentMessage(context.paths, flags);
 }
@@ -233,4 +243,5 @@ module.exports = {
   appendSentMessage,
   lookupMessage,
   sendMessage,
+  sendTrustedMessage,
 };

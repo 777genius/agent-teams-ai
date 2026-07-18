@@ -1,5 +1,8 @@
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
+import { KIRO_CLI_COMPANION_DEFINITION } from './cli-companion/definitions/KiroCliCompanionDefinition';
 import { KiroCliCompanionService, resolveKiroLinuxArchiveSuffix } from './KiroCliCompanionService';
 
 const VALID_UNIX_INSTALLER = `#!/bin/bash
@@ -16,6 +19,14 @@ $expectedSha = $artifact.sha256
 Get-FileHash -Algorithm SHA256
 msiexec /i kiro.msi
 `;
+
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
 
 describe('KiroCliCompanionService', () => {
   it('matches the official glibc and musl Linux archive thresholds', () => {
@@ -112,6 +123,63 @@ describe('KiroCliCompanionService', () => {
     expect(runCommand).not.toHaveBeenCalled();
   });
 
+  it('discovers the current per-user Windows MSI install location', () => {
+    const candidates = KIRO_CLI_COMPANION_DEFINITION.binary.extraCandidates(
+      'win32',
+      'C:\\Users\\test'
+    );
+
+    expect(candidates).toContain(
+      path.join(process.env.LOCALAPPDATA ?? '', 'Kiro-Cli', 'kiro-cli.exe')
+    );
+  });
+
+  it('surfaces installer stderr instead of the last progress line', async () => {
+    const service = new KiroCliCompanionService({
+      platform: 'win32',
+      arch: 'x64',
+      fetchInstallerScript: async () => VALID_WINDOWS_INSTALLER,
+      fetchPackageSize: async () => 100 * 1024 * 1024,
+      getAvailableBytes: async () => 10 * 1024 * 1024 * 1024,
+      resolveBinary: async () => null,
+      runCommand: async () => ({
+        exitCode: 1,
+        stdout: 'Downloaded\nVerifying checksum...\n',
+        stderr: 'Get-FileHash is not available\nFullyQualifiedErrorId: CommandNotFoundException\n',
+      }),
+    });
+
+    const status = await service.installAndConnect();
+
+    expect(status.phase).toBe('needs-manual-step');
+    expect(status.error).toBe('Get-FileHash is not available');
+  });
+
+  it('surfaces the official MSI exit code instead of the trailing manual-install hint', async () => {
+    const service = new KiroCliCompanionService({
+      platform: 'win32',
+      arch: 'x64',
+      fetchInstallerScript: async () => VALID_WINDOWS_INSTALLER,
+      fetchPackageSize: async () => 100 * 1024 * 1024,
+      getAvailableBytes: async () => 10 * 1024 * 1024 * 1024,
+      resolveBinary: async () => null,
+      runCommand: async () => ({
+        exitCode: 1,
+        stdout: [
+          'Installing Kiro CLI...',
+          'Installation failed with exit code 1603',
+          'You can try installing manually: C:\\Temp\\kiro-cli-installer.msi',
+        ].join('\n'),
+        stderr: '',
+      }),
+    });
+
+    const status = await service.installAndConnect();
+
+    expect(status.phase).toBe('needs-manual-step');
+    expect(status.error).toBe('Installation failed with exit code 1603');
+  });
+
   it('fails before downloading the package when free disk space is unsafe', async () => {
     const runCommand = vi.fn();
     const service = new KiroCliCompanionService({
@@ -177,6 +245,55 @@ describe('KiroCliCompanionService', () => {
     expect(status.phase).toBe('connected');
   });
 
+  it('does not let a status refresh started before connect overwrite the connected result', async () => {
+    const firstBinaryProbe = deferred<string | null>();
+    const progress: string[] = [];
+    let binaryProbeCalls = 0;
+    let authenticated = false;
+    const service = new KiroCliCompanionService({
+      platform: 'darwin',
+      resolveBinary: () => {
+        binaryProbeCalls += 1;
+        return binaryProbeCalls === 1
+          ? firstBinaryProbe.promise
+          : Promise.resolve('/Users/test/.local/bin/kiro-cli');
+      },
+      runCommand: async (_command, args) => {
+        if (args[0] === 'login') {
+          authenticated = true;
+          return { exitCode: 0, stdout: '', stderr: '' };
+        }
+        if (args[0] === 'whoami') {
+          return authenticated
+            ? { exitCode: 0, stdout: '{"account":"test"}', stderr: '' }
+            : { exitCode: 1, stdout: '', stderr: 'Not logged in' };
+        }
+        return { exitCode: 0, stdout: 'kiro-cli 2.12.1', stderr: '' };
+      },
+      sleep: async () => {},
+      emitProgress: (status) => progress.push(status.phase),
+    });
+
+    const staleStatus = service.getStatus();
+    await vi.waitFor(() => expect(binaryProbeCalls).toBe(1));
+
+    await expect(service.installAndConnect()).resolves.toMatchObject({
+      phase: 'connected',
+      authenticated: true,
+    });
+    firstBinaryProbe.resolve(null);
+
+    await expect(staleStatus).resolves.toMatchObject({
+      phase: 'connected',
+      authenticated: true,
+    });
+    expect(service.getCurrentStatus()).toMatchObject({
+      phase: 'connected',
+      authenticated: true,
+    });
+    expect(progress).not.toContain('missing');
+  });
+
   it.each([
     {
       platform: 'linux' as const,
@@ -231,6 +348,12 @@ describe('KiroCliCompanionService', () => {
       ([command]) => command === scenario.installCommand
     );
     expect(installCall?.[2].env[scenario.tempEnvKey]).toContain('agent-teams-kiro-');
+    expect(installCall?.[2].isolateFromHost).toBe(scenario.platform === 'win32');
+    if (scenario.platform === 'win32') {
+      expect(
+        Object.keys(installCall?.[2].env ?? {}).some((key) => key.toLowerCase() === 'psmodulepath')
+      ).toBe(false);
+    }
     expect(status.phase).toBe('connected');
     expect(status.binaryPath).toBe(scenario.binary);
     expect(status.manualCommand).toBe(scenario.manualCommand);

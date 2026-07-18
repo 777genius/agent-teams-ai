@@ -248,6 +248,8 @@ interface ActivityItemProps {
   recipientColor?: string;
   /** When true, show a blue unread dot. */
   isUnread?: boolean;
+  /** Briefly tint a newly arrived message using the sidebar unread color. */
+  isNewMessageHighlighted?: boolean;
   /** Map of member name → color name for @mention badge rendering. */
   memberColorMap?: Map<string, string>;
   /** Team color mapping for team:// links rendered inside markdown. */
@@ -990,6 +992,7 @@ export const ActivityItem = memo(
     memberColor,
     recipientColor,
     isUnread,
+    isNewMessageHighlighted,
     memberColorMap,
     teamColorByName,
     onTeamClick,
@@ -1505,7 +1508,15 @@ export const ActivityItem = memo(
 
     return (
       <article
-        className="activity-timeline-card group overflow-hidden"
+        className={[
+          'activity-timeline-card group relative overflow-hidden',
+          "after:pointer-events-none after:absolute after:inset-0 after:z-[1] after:bg-blue-500 after:transition-opacity after:duration-300 after:content-['']",
+          isNewMessageHighlighted
+            ? isLight
+              ? 'after:opacity-[0.03]'
+              : 'after:opacity-[0.05]'
+            : 'after:opacity-0',
+        ].join(' ')}
         style={{
           borderRadius: getTimelineCardBorderRadius(timelineCardPosition),
           marginLeft: isSlashCommandResult ? 26 : isUserSent ? 15 : undefined,
@@ -1983,6 +1994,7 @@ export const ActivityItem = memo(
     prev.memberColor === next.memberColor &&
     prev.recipientColor === next.recipientColor &&
     prev.isUnread === next.isUnread &&
+    prev.isNewMessageHighlighted === next.isNewMessageHighlighted &&
     prev.memberColorMap === next.memberColorMap &&
     areStringArraysEqual(prev.teamNames, next.teamNames) &&
     areStringMapsEqual(prev.teamColorByName, next.teamColorByName) &&

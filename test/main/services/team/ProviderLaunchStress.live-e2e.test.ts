@@ -592,7 +592,8 @@ function buildStressMembers(
         providerId === 'codex'
           ? selection.codexModel
           : providerId === 'opencode'
-            ? selection.openCodeModel
+            ? selection.openCodeModels[index % selection.openCodeModels.length] ??
+              selection.openCodeModel
             : selection.anthropicModel,
       effort: providerId === 'codex' ? selection.codexEffort : undefined,
       fastMode: providerId === 'codex' ? 'off' : undefined,
@@ -614,15 +615,21 @@ function resolveScenarioSelection(_scenario: ProviderLaunchStressScenario): {
   codexModel: string;
   codexEffort: 'low' | 'medium' | 'high' | 'xhigh';
   openCodeModel: string;
+  openCodeModels: string[];
 } {
+  const openCodeModel =
+    process.env.PROVIDER_LAUNCH_STRESS_OPENCODE_MODEL?.trim() || DEFAULT_OPENCODE_MODEL;
+  const openCodeModels = process.env.PROVIDER_LAUNCH_STRESS_OPENCODE_MODELS?.split(',')
+    .map((model) => model.trim())
+    .filter(Boolean);
   return {
     anthropicModel:
       process.env.PROVIDER_LAUNCH_STRESS_ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL,
     codexModel: process.env.PROVIDER_LAUNCH_STRESS_CODEX_MODEL?.trim() || DEFAULT_CODEX_MODEL,
     codexEffort: (process.env.PROVIDER_LAUNCH_STRESS_CODEX_EFFORT?.trim() ||
       DEFAULT_CODEX_EFFORT) as 'low' | 'medium' | 'high' | 'xhigh',
-    openCodeModel:
-      process.env.PROVIDER_LAUNCH_STRESS_OPENCODE_MODEL?.trim() || DEFAULT_OPENCODE_MODEL,
+    openCodeModel,
+    openCodeModels: openCodeModels?.length ? openCodeModels : [openCodeModel],
   };
 }
 

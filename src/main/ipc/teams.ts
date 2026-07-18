@@ -134,10 +134,6 @@ import {
   isAgentActionMode,
 } from '../services/team/actionModeInstructions';
 import {
-  getAutoResumeService,
-  initializeAutoResumeService,
-} from '../services/team/AutoResumeService';
-import {
   cloneLaunchIoGovernorPayload,
   type LaunchIoGovernor,
 } from '../services/team/LaunchIoGovernor';
@@ -802,7 +798,6 @@ export function initializeTeamHandlers(
 ): void {
   teamDataService = service;
   teamProvisioningService = provisioningService;
-  initializeAutoResumeService(provisioningService);
   teamMemberLogsFinder = logsFinder ?? null;
   memberStatsComputer = statsComputer ?? null;
   teamBackupService = backupService ?? null;
@@ -1453,7 +1448,6 @@ async function handleDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('deleteTeam', async () => {
-    getAutoResumeService().cancelPendingAutoResume(validated.value!);
     await getTeamProvisioningService().stopTeam(validated.value!);
     await getTeamDataService().deleteTeam(validated.value!);
     getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
@@ -1483,7 +1477,6 @@ async function handlePermanentlyDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('permanentlyDeleteTeam', async () => {
-    getAutoResumeService().cancelPendingAutoResume(validated.value!);
     await getTeamDataService().permanentlyDeleteTeam(validated.value!);
     getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
     // Clean up app-owned data (attachments, task-attachments) that lives outside ~/.claude/
@@ -4425,7 +4418,6 @@ async function handleStopTeam(
   }
   return wrapTeamHandler('stop', async () => {
     addMainBreadcrumb('team', 'stop', { teamName: validated.value! });
-    getAutoResumeService().cancelPendingAutoResume(validated.value!);
     await getTeamProvisioningService().stopTeam(validated.value!);
   });
 }

@@ -1,7 +1,6 @@
 import { ConfigManager } from '@main/services/infrastructure/ConfigManager';
 import { NotificationManager } from '@main/services/infrastructure/NotificationManager';
 import {
-  getAutoResumeService,
   planRateLimitAutoResume,
   type RateLimitAutoResumePlan,
 } from '@main/services/team/AutoResumeService';
@@ -38,6 +37,9 @@ interface ConfigReader {
     notifications: {
       autoResumeOnRateLimit: boolean;
     };
+    teamRuntimeRecovery?: {
+      rateLimitsEnabled: boolean;
+    };
   };
 }
 
@@ -73,10 +75,14 @@ function formatNotificationClockTime(date: Date): string {
 
 function buildRateLimitNotificationBody(
   plan: RateLimitAutoResumePlan,
-  formatClockTime: (date: Date) => string
+  formatClockTime: (date: Date) => string,
+  recoveryEvaluationEnabled: boolean
 ): string {
   if (plan.kind === 'scheduled') {
     return `Auto-resume scheduled at ${formatClockTime(new Date(plan.fireAtMs))}`;
+  }
+  if (recoveryEvaluationEnabled) {
+    return 'Automatic recovery will evaluate this rate limit';
   }
   return 'Manual restart needed';
 }
@@ -127,7 +133,9 @@ export class TeamMessageNotificationScanner {
     context: TeamMessageNotificationContext
   ): void {
     const observedAt = this.#now();
-    const autoResumeEnabled = this.#configReader.getConfig().notifications.autoResumeOnRateLimit;
+    const config = this.#configReader.getConfig();
+    const autoResumeEnabled =
+      config.teamRuntimeRecovery?.rateLimitsEnabled ?? config.notifications.autoResumeOnRateLimit;
 
     for (const msg of messages) {
       if (msg.from === 'user') continue;
@@ -161,7 +169,11 @@ export class TeamMessageNotificationScanner {
             teamDisplayName: context.teamDisplayName,
             from: msg.from,
             summary: 'Rate limit',
-            body: buildRateLimitNotificationBody(autoResumePlan, this.#formatClockTime),
+            body: buildRateLimitNotificationBody(
+              autoResumePlan,
+              this.#formatClockTime,
+              autoResumeEnabled && this.#autoResumeSink == null
+            ),
             dedupeKey,
             target: {
               kind: 'member',
@@ -175,8 +187,7 @@ export class TeamMessageNotificationScanner {
       }
 
       if (autoResumePlan.kind === 'scheduled') {
-        const autoResumeSink = this.#autoResumeSink ?? getAutoResumeService();
-        autoResumeSink.handleRateLimitMessage(
+        this.#autoResumeSink?.handleRateLimitMessage(
           context.teamName,
           msg.text,
           observedAt,
@@ -202,7 +213,7 @@ export class TeamMessageNotificationScanner {
       this.#seenApiErrorKeys.add(dedupeKey);
       evictOldestIfNeeded(this.#seenApiErrorKeys, SEEN_API_ERROR_KEYS_MAX);
 
-      const statusMatch = /^API Error:\s*(\d{3})/.exec(msg.text);
+      const statusMatch = /\bAPI\s*Error:\s*(?:API\s*Error:\s*)?(\d{3})\b/i.exec(msg.text);
       const statusCode = statusMatch?.[1] ?? '???';
 
       void this.#notificationSink

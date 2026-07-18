@@ -59,7 +59,6 @@ const TeamLoadingOfflineBannerSkeleton = (): React.JSX.Element => (
     aria-hidden="true"
     className="relative mb-2.5 flex min-h-11 items-center gap-2.5 overflow-hidden rounded-md border border-amber-500/20 bg-amber-500/[0.055] py-2 pl-3 pr-2.5"
   >
-    <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-amber-400/50" />
     <SkeletonBlock className="size-7 shrink-0 border border-amber-500/15 bg-amber-500/10" />
     <SkeletonPill className="h-3.5 w-28 bg-amber-500/10" />
     <SkeletonBlock className="ml-auto h-7 w-20 shrink-0 border border-emerald-500/15 bg-emerald-500/10" />

@@ -35,6 +35,12 @@ vi.mock('../../../../src/main/services/infrastructure/ConfigManager', () => ({
           codex: 'codex-native',
         },
       },
+      providerConnections: {
+        anthropic: {
+          authMode: 'auto',
+          compatibleEndpoint: { enabled: false },
+        },
+      },
     }),
   },
 }));
@@ -149,6 +155,7 @@ describe('buildProviderAwareCliEnv', () => {
         EXTRA_FLAG: '1',
         CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST: '1',
         CLAUDE_CODE_ENTRY_PROVIDER: 'anthropic',
+        AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE: 'auto',
       }),
       'anthropic',
       undefined

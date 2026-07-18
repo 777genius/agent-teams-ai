@@ -363,6 +363,9 @@ function createAnthropicProvider(
   overrides?: Partial<CliProviderStatus['connection']> & {
     authenticated?: boolean;
     authMethod?: string | null;
+    selectedBackendId?: string | null;
+    resolvedBackendId?: string | null;
+    backend?: CliProviderStatus['backend'];
   }
 ): CliProviderStatus {
   return {
@@ -380,11 +383,11 @@ function createAnthropicProvider(
       oneShot: true,
       extensions: createDefaultCliExtensionCapabilities(),
     },
-    selectedBackendId: null,
-    resolvedBackendId: null,
+    selectedBackendId: overrides?.selectedBackendId ?? null,
+    resolvedBackendId: overrides?.resolvedBackendId ?? null,
     availableBackends: [],
     externalRuntimeDiagnostics: [],
-    backend: null,
+    backend: overrides?.backend ?? null,
     connection: {
       supportsOAuth: true,
       supportsApiKey: true,
@@ -689,6 +692,138 @@ describe('ProviderRuntimeSettingsDialog', () => {
       },
     });
     expect(onRefreshProvider).toHaveBeenCalledWith('anthropic', 'provider_change');
+  });
+
+  it('surfaces detected Bedrock on the Auto card and can switch to it from API key mode', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onRefreshProvider = vi.fn(() => Promise.resolve(undefined));
+    storeState.appConfig.providerConnections.anthropic.authMode = 'api_key';
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [
+            createAnthropicProvider({
+              authenticated: false,
+              authMethod: null,
+              configuredAuthMode: 'api_key',
+              selectedBackendId: 'bedrock',
+              resolvedBackendId: 'bedrock',
+              backend: {
+                kind: 'bedrock',
+                label: 'Amazon Bedrock',
+                endpointLabel: 'AWS region us-east-1',
+                authMethodDetail: 'aws_credentials',
+              },
+            }),
+          ],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const autoButton = findButtonByText(host, 'Auto (Amazon Bedrock)');
+    expect(autoButton.textContent).not.toContain('Selected');
+    expect(findButtonByText(host, 'API key').textContent).toContain('Selected');
+
+    await act(async () => {
+      autoButton.click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).toHaveBeenCalledWith('providerConnections', {
+      anthropic: {
+        authMode: 'auto',
+      },
+    });
+    expect(onRefreshProvider).toHaveBeenCalledWith('anthropic', 'provider_change');
+  });
+
+  it('shows Bedrock as the currently resolved backend when Auto is selected', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [
+            createAnthropicProvider({
+              configuredAuthMode: 'auto',
+              selectedBackendId: 'bedrock',
+              resolvedBackendId: 'bedrock',
+              backend: {
+                kind: 'bedrock',
+                label: 'Amazon Bedrock',
+                endpointLabel: 'AWS region us-east-1',
+                authMethodDetail: 'aws_credentials',
+              },
+            }),
+          ],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(findButtonByText(host, 'Auto (currently: Amazon Bedrock)').textContent).toContain(
+      'Selected'
+    );
+  });
+
+  it('does not present a configured compatible endpoint as an Auto route', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    storeState.appConfig.providerConnections.anthropic.compatibleEndpoint = {
+      enabled: true,
+      baseUrl: 'http://localhost:1234',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProviderRuntimeSettingsDialog, {
+          open: true,
+          onOpenChange: vi.fn(),
+          providers: [
+            createAnthropicProvider({
+              configuredAuthMode: 'auto',
+              resolvedBackendId: 'anthropic-compatible',
+              backend: {
+                kind: 'anthropic-compatible',
+                label: 'Local gateway',
+              },
+              compatibleEndpoint: {
+                enabled: true,
+                baseUrl: 'http://localhost:1234',
+                tokenConfigured: true,
+                tokenSource: 'stored',
+                tokenSourceLabel: 'Stored in app',
+              },
+            }),
+          ],
+          initialProviderId: 'anthropic',
+          onSelectBackend: vi.fn(),
+          onRefreshProvider: vi.fn(() => Promise.resolve(undefined)),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const autoButton = findButtonByText(host, 'Auto');
+    expect(autoButton.textContent).not.toContain('Local gateway');
+    expect(host.textContent).toContain('Local / compatible endpoint');
   });
 
   it('shows Anthropic API key usage when API key mode is selected even if the local CLI has a subscription session', async () => {

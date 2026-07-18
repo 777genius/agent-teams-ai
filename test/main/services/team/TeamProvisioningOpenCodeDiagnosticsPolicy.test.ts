@@ -16,6 +16,7 @@ import {
   OPENCODE_APP_MCP_UNREACHABLE_DIAGNOSTIC,
   OPENCODE_RUNTIME_BINARY_UNREACHABLE_DIAGNOSTIC,
   promoteOpenCodePersistedFailureReasonsFromDiagnostics,
+  selectOpenCodeLaunchFailureDiagnostic,
   selectOpenCodeModelPreparePrimaryReason,
   selectOpenCodePersistedFailureReasonFromDiagnostics,
   selectOpenCodePrepareProviderDiagnostic,
@@ -142,6 +143,19 @@ describe('TeamProvisioningOpenCodeDiagnosticsPolicy', () => {
     });
 
     expect(selectOpenCodePersistedFailureReasonFromDiagnostics(member)).toBe(cursorQuota);
+  });
+
+  it('selects a member quota failure over unrelated launch diagnostics', () => {
+    const cursorQuota = "cursor-acp error: You've hit your Cursor usage limit";
+
+    expect(
+      selectOpenCodeLaunchFailureDiagnostic([
+        'CLI-authenticated providers missing from live host (github-copilot)',
+        'OpenCode session status busy',
+        'opencode_app_mcp_tool_proof_persisted_cache_hit',
+        cursorQuota,
+      ])
+    ).toBe(cursorQuota);
   });
 
   it('filters stale overlay diagnostics and recognizes file lock timeouts', () => {

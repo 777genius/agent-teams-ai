@@ -33,6 +33,7 @@ export interface RuntimeProcessTableRow {
 }
 
 export interface ListRuntimeProcessesOptions {
+  /** Run an independent fresh probe without reading, joining, or populating the shared cache. */
   bypassCache?: boolean;
 }
 
@@ -54,6 +55,12 @@ const RUNTIME_PROCESS_TABLE_CACHE_TTL_MS = 30_000;
 interface RuntimeProcessTableCacheEntry {
   rows: RuntimeProcessTableRow[];
   expiresAtMs: number;
+}
+
+function cloneRuntimeProcessRows(
+  rows: readonly RuntimeProcessTableRow[]
+): RuntimeProcessTableRow[] {
+  return rows.map((row) => ({ ...row }));
 }
 
 export function parseRuntimeProcessTable(output: string): RuntimeProcessTableRow[] {
@@ -225,12 +232,18 @@ export class TmuxPlatformCommandExecutor {
   async listRuntimeProcesses(
     options: ListRuntimeProcessesOptions = {}
   ): Promise<RuntimeProcessTableRow[]> {
+    if (options.bypassCache === true) {
+      const rows = await this.#readRuntimeProcessesUncached();
+      return cloneRuntimeProcessRows(rows);
+    }
+
     const cached = this.#runtimeProcessTableCache;
-    if (options.bypassCache !== true && cached && cached.expiresAtMs > Date.now()) {
-      return cached.rows;
+    if (cached && cached.expiresAtMs > Date.now()) {
+      return cloneRuntimeProcessRows(cached.rows);
     }
     if (this.#runtimeProcessTableInFlight) {
-      return this.#runtimeProcessTableInFlight;
+      const rows = await this.#runtimeProcessTableInFlight;
+      return cloneRuntimeProcessRows(rows);
     }
     const request = this.#readRuntimeProcessesUncached()
       .then((rows) => {
@@ -246,7 +259,8 @@ export class TmuxPlatformCommandExecutor {
         }
       });
     this.#runtimeProcessTableInFlight = request;
-    return request;
+    const rows = await request;
+    return cloneRuntimeProcessRows(rows);
   }
 
   async #readRuntimeProcessesUncached(): Promise<RuntimeProcessTableRow[]> {

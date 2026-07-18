@@ -93,6 +93,8 @@ export interface GraphViewProps {
   focusEdgeIds?: ReadonlySet<string> | null;
   focusOverridesSelection?: boolean;
   revealNodeRequest?: { nodeId: string; requestId: number } | null;
+  /** Increment to fit the graph after the matching data update reaches the simulation. */
+  fitViewRequestId?: number;
   renderTopToolbarContent?: () => React.ReactNode;
   /** Replaces the package toolbar while retaining graph-owned camera and filter actions. */
   renderControls?: (props: GraphControlRenderProps) => React.ReactNode;
@@ -217,6 +219,7 @@ export function GraphView({
   focusEdgeIds,
   focusOverridesSelection = false,
   revealNodeRequest,
+  fitViewRequestId,
   renderTopToolbarContent,
   renderControls,
   onLayoutModeChange,
@@ -278,6 +281,7 @@ export function GraphView({
   const runningRef = useRef(false);
   const hasAutoFit = useRef(false);
   const allowAutoFitRef = useRef(true);
+  const handledFitViewRequestIdRef = useRef(fitViewRequestId);
   const previousLayoutModeRef = useRef(layoutMode);
   const animateNextLayoutFitRef = useRef(false);
   const nodeMapRef = useRef(new Map<string, GraphNode>());
@@ -673,7 +677,7 @@ export function GraphView({
     (animated = false) => {
       const el = containerRef.current;
       if (!el || data.nodes.length === 0) return;
-      const fitNodes = getFitNodes(simulation.stateRef.current.nodes);
+      const fitNodes = getFitNodes(simulation.getLayoutTargetNodes());
       const extraBounds = simulation.getExtraWorldBounds();
       if (animated) {
         camera.animateToFit(fitNodes, el.clientWidth, el.clientHeight, extraBounds);
@@ -695,6 +699,14 @@ export function GraphView({
     markUserInteracted();
     fitGraphToViewport(false);
   }, [fitGraphToViewport, markUserInteracted]);
+
+  useEffect(() => {
+    if (fitViewRequestId === undefined || fitViewRequestId === handledFitViewRequestIdRef.current) {
+      return;
+    }
+    handledFitViewRequestIdRef.current = fitViewRequestId;
+    zoomToFit();
+  }, [fitViewRequestId, zoomToFit]);
 
   // ─── Auto-fit: until first user interaction, also react to container resizes ─────
   useEffect(() => {
@@ -1378,14 +1390,7 @@ export function GraphView({
         }
       }
       if (e.key === 'f' || e.key === 'F') {
-        const el = containerRef.current;
-        if (el)
-          camera.zoomToFit(
-            getFitNodes(simulation.stateRef.current.nodes),
-            el.clientWidth,
-            el.clientHeight,
-            simulation.getExtraWorldBounds()
-          );
+        fitGraphToViewport(false);
       }
       if (e.key === ' ') {
         e.preventDefault();
@@ -1394,7 +1399,7 @@ export function GraphView({
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selectedEdgeId, selectedNodeId, onRequestClose, camera, getFitNodes, simulation]);
+  }, [selectedEdgeId, selectedNodeId, onRequestClose, fitGraphToViewport]);
 
   // ─── Selected node for overlay ──────────────────────────────────────────
   const selectedNode: GraphNode | null =

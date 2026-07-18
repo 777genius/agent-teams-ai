@@ -1,3 +1,10 @@
+import {
+  AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV,
+  ANTHROPIC_CONNECTION_MODES,
+  ANTHROPIC_DIRECT_ROUTE_ENV_KEYS,
+  ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS,
+  type AnthropicConnectionMode,
+} from '@shared/constants/anthropicConnectionMode';
 import * as path from 'path';
 
 import {
@@ -13,6 +20,7 @@ const DIRECT_TMUX_RESTART_ENV_KEYS = [
   'CLAUDE_CONFIG_DIR',
   'CLAUDE_TEAM_CONTROL_URL',
   'CLAUDE_TEAM_RUNTIME_SETTINGS_PATH',
+  AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV,
   'CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST',
   'CLAUDE_CODE_USE_OPENAI',
   'CLAUDE_CODE_USE_BEDROCK',
@@ -28,6 +36,7 @@ const DIRECT_TMUX_RESTART_ENV_KEYS = [
   CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_ENV,
   CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH_ENV,
   'ANTHROPIC_BASE_URL',
+  'ANTHROPIC_CUSTOM_HEADERS',
   'ANTHROPIC_AWS_WORKSPACE_ID',
   'ANTHROPIC_AWS_API_KEY',
   'ANTHROPIC_API_KEY',
@@ -119,6 +128,44 @@ export function hasAnthropicCompatibleAuthTokenEnv(env: NodeJS.ProcessEnv): bool
   );
 }
 
+function getAnthropicConnectionMode(env: NodeJS.ProcessEnv): AnthropicConnectionMode | null {
+  const value = env[AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]?.trim();
+  return ANTHROPIC_CONNECTION_MODES.includes(value as AnthropicConnectionMode)
+    ? (value as AnthropicConnectionMode)
+    : null;
+}
+
+function applyAnthropicRestartConnectionPolicy(
+  assignments: Map<string, string>,
+  env: NodeJS.ProcessEnv,
+  providerId: TeamProviderId
+): void {
+  if (providerId !== 'anthropic') {
+    return;
+  }
+  const connectionMode = getAnthropicConnectionMode(env);
+  if (!connectionMode || connectionMode === 'auto') {
+    return;
+  }
+
+  for (const key of ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS) {
+    assignments.set(key, '');
+  }
+  if (connectionMode !== 'compatible') {
+    for (const key of ANTHROPIC_DIRECT_ROUTE_ENV_KEYS) {
+      assignments.set(key, '');
+    }
+  }
+  if (connectionMode === 'subscription') {
+    assignments.set('ANTHROPIC_API_KEY', '');
+    assignments.set('ANTHROPIC_AUTH_TOKEN', '');
+  } else if (connectionMode === 'api_key') {
+    assignments.set('ANTHROPIC_AUTH_TOKEN', '');
+    assignments.set('CLAUDE_CODE_OAUTH_TOKEN', '');
+    assignments.set('CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR', '');
+  }
+}
+
 export function buildDirectTmuxRestartEnvAssignments(
   env: NodeJS.ProcessEnv,
   providerId: TeamProviderId
@@ -150,6 +197,7 @@ export function buildDirectTmuxRestartEnvAssignments(
       assignments.set('ANTHROPIC_AUTH_TOKEN', '');
     }
   }
+  applyAnthropicRestartConnectionPolicy(assignments, env, providerId);
   if (
     providerId === 'anthropic' &&
     env[CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_ENV] === CLAUDE_TEAM_ANTHROPIC_AUTH_MODE_API_KEY_HELPER

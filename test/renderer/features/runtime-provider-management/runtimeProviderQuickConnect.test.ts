@@ -422,7 +422,15 @@ describe('runtimeProviderQuickConnect domain policy', () => {
     ).toBe('installing');
     expect(
       resolveOpenCodeQuickConnectGate({
-        runtimeStatus: runtimeStatus({ state: 'failed', error: 'broken' }),
+        runtimeStatus: runtimeStatus({ state: 'failed', error: 'update failed' }),
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('ready');
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: runtimeStatus({ installed: false, state: 'failed', error: 'broken' }),
         runtimeStatusLoading: false,
         provider: null,
         cliStatusLoading: false,

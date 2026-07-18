@@ -64,6 +64,12 @@ export interface SafeConfig {
     statusChangeStatuses: string[];
     triggers: AppConfig['notifications']['triggers'];
   };
+  teamRuntimeRecovery: {
+    transientErrorsEnabled: boolean;
+    rateLimitsEnabled: boolean;
+    initialDelaySeconds: number;
+    maxAttempts: number;
+  };
   display: {
     showTimestamps: boolean;
     compactMode: boolean;
@@ -216,6 +222,15 @@ export function useSettingsConfig(): UseSettingsConfigReturn {
           'completed',
         ],
         triggers: displayConfig?.notifications?.triggers ?? [],
+      },
+      teamRuntimeRecovery: {
+        transientErrorsEnabled: displayConfig?.teamRuntimeRecovery?.transientErrorsEnabled ?? false,
+        rateLimitsEnabled:
+          displayConfig?.teamRuntimeRecovery?.rateLimitsEnabled ??
+          displayConfig?.notifications?.autoResumeOnRateLimit ??
+          false,
+        initialDelaySeconds: displayConfig?.teamRuntimeRecovery?.initialDelaySeconds ?? 60,
+        maxAttempts: displayConfig?.teamRuntimeRecovery?.maxAttempts ?? 2,
       },
       display: {
         showTimestamps: displayConfig?.display?.showTimestamps ?? true,

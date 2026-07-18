@@ -1,5 +1,7 @@
 import type { ProviderBillingMode, TeamProviderBackendId, TeamProviderId } from '@shared/types';
 
+import { isOpenCodeModelExplicitlyFree } from './opencodeModelRoute';
+
 export interface ProviderBillingModeCatalogModel {
   badgeLabel?: string | null;
   metadata?: {
@@ -39,17 +41,15 @@ export function inferProviderBillingMode(
     return explicitBillingMode;
   }
 
-  const normalizedModel = input.model?.trim().toLowerCase() ?? '';
-  const badgeLabel = input.catalogModel?.badgeLabel?.trim().toLowerCase();
   const openCodeRoute = input.catalogModel?.metadata?.opencode;
   if (
-    input.catalogModel?.metadata?.free === true ||
-    badgeLabel === 'free' ||
-    openCodeRoute?.accessKind === 'builtin_free' ||
-    openCodeRoute?.routeKind === 'builtin_free' ||
-    normalizedModel.includes(':free') ||
-    normalizedModel.endsWith('-free') ||
-    normalizedModel.endsWith('/free')
+    isOpenCodeModelExplicitlyFree({
+      modelId: input.model,
+      routeKind: openCodeRoute?.routeKind,
+      accessKind: openCodeRoute?.accessKind,
+      free: input.catalogModel?.metadata?.free,
+      badgeLabel: input.catalogModel?.badgeLabel,
+    })
   ) {
     return 'free';
   }

@@ -19,6 +19,7 @@ import { CodexRuntimeUpdateDialog } from '@features/codex-runtime-installer/rend
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   isOpenCodeProviderOAuthBridgeOutdated,
+  isOpenCodeRuntimeUsable,
   resolveOpenCodeQuickConnectGate,
   RuntimeProviderOnboardingDialog,
   RuntimeProviderQuickConnect,
@@ -75,6 +76,7 @@ import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus
 import { getRuntimeDisplayName as getHumanRuntimeDisplayName } from '@renderer/utils/runtimeDisplayName';
 import { getVisibleTeamProviderModels } from '@renderer/utils/teamModelCatalog';
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
+import { getOpenCodeModelRoutePresentationStatus } from '@shared/utils/opencodeModelRoute';
 import {
   AlertTriangle,
   CheckCircle,
@@ -655,14 +657,6 @@ function isOpenCodeProviderEffectivelyReady(provider: CliProviderStatus): boolea
   );
 }
 
-function isOpenCodeRuntimeReady(openCodeRuntimeStatus: OpenCodeRuntimeStatus | null): boolean {
-  return (
-    openCodeRuntimeStatus?.installed === true &&
-    (openCodeRuntimeStatus.source === 'path' ||
-      (openCodeRuntimeStatus.source === 'app-managed' && openCodeRuntimeStatus.state !== 'failed'))
-  );
-}
-
 function shouldShowOpenCodeInstallAction(
   provider: CliProviderStatus,
   showSkeleton: boolean,
@@ -672,7 +666,7 @@ function shouldShowOpenCodeInstallAction(
     provider.providerId === 'opencode' &&
     !showSkeleton &&
     ((!isOpenCodeProviderEffectivelyReady(provider) &&
-      !isOpenCodeRuntimeReady(openCodeRuntimeStatus)) ||
+      !isOpenCodeRuntimeUsable(openCodeRuntimeStatus)) ||
       isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus))
   );
 }
@@ -747,7 +741,18 @@ function getOpenCodeDashboardChips(
   const catalogModels = provider.modelCatalog?.models ?? [];
   const configuredLocalCount = new Set(
     catalogModels
-      .filter((model) => model.metadata?.opencode?.routeKind === 'configured_local')
+      .filter((model) => {
+        const route = model.metadata?.opencode;
+        return (
+          getOpenCodeModelRoutePresentationStatus({
+            modelId: model.launchModel,
+            catalogId: model.id,
+            providerId: route?.providerId,
+            routeKind: route?.routeKind,
+            accessKind: route?.accessKind,
+          }) === 'local'
+        );
+      })
       .map((model) => model.launchModel)
   ).size;
   const verifiedCount = new Set(

@@ -21,6 +21,10 @@ export type RuntimeProviderQuickPlanState =
 
 const MINIMUM_OPENCODE_PROVIDER_OAUTH_VERSION = [1, 15, 7] as const;
 
+export function isOpenCodeRuntimeUsable(runtimeStatus: OpenCodeRuntimeStatus | null): boolean {
+  return runtimeStatus?.installed === true;
+}
+
 function isProviderCheckPending(provider: CliProviderStatus | null): boolean {
   return Boolean(
     provider &&
@@ -64,7 +68,7 @@ export function resolveOpenCodeQuickConnectGate(input: {
     return 'installing';
   }
   if (runtimeStatus?.state === 'failed') {
-    return 'error';
+    return isOpenCodeRuntimeUsable(runtimeStatus) ? 'ready' : 'error';
   }
   if (runtimeStatus?.state === 'ready' && runtimeStatus.installed) {
     return 'ready';

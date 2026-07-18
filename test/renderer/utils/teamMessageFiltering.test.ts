@@ -15,6 +15,30 @@ function makeMessage(overrides: Partial<InboxMessage> = {}): InboxMessage {
 }
 
 describe('filterTeamMessages', () => {
+  it('always hides raw runtime recovery nudges from the user message feed', () => {
+    const result = filterTeamMessages(
+      [
+        makeMessage({
+          messageId: 'recovery-1',
+          messageKind: 'runtime_recovery_nudge',
+          from: 'system',
+          to: 'bob',
+          text: 'Private continuation instructions',
+        }),
+        makeMessage({ messageId: 'visible-1', text: 'Visible result' }),
+      ],
+      {
+        includeAutomationEvents: true,
+        includeMemberWorkSyncNudges: true,
+        timeWindow: null,
+        filter: { from: new Set(), to: new Set(), showNoise: true },
+        searchQuery: '',
+      }
+    );
+
+    expect(result.map((message) => message.messageId)).toEqual(['visible-1']);
+  });
+
   it('keeps lead-to-user messages visible', () => {
     const messages = [
       makeMessage({

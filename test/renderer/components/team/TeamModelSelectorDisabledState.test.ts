@@ -840,7 +840,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     const groupLabels = Array.from(
       host.querySelectorAll('[data-testid="team-model-selector-opencode-group"] h4')
     ).map((heading) => heading.textContent ?? '');
-    expect(groupLabels).toContain('OpenCode');
+    expect(groupLabels).toContain('OpenCode Zen');
     expect(groupLabels).toContain('OpenRouter');
     expect(host.textContent).toContain('OpenCode');
     expect(host.textContent).toContain('OpenRouter');
@@ -3097,7 +3097,7 @@ describe('TeamModelSelector disabled Codex models', () => {
         free: false,
         opencode: {
           ...cursorModel.metadata.opencode,
-          providerId: 'kiro',
+          providerId: null,
           modelId: 'auto',
           sourceLabel: 'Kiro',
         },
@@ -3220,6 +3220,21 @@ describe('TeamModelSelector disabled Codex models', () => {
     await renderSelector('kiro/auto');
     expect(host.querySelector('[data-tabs-value="opencode-source:kiro"]')).not.toBeNull();
     expect(scrollTo).toHaveBeenCalledWith({ left: 410, behavior: 'auto' });
+    const kiroGroup = Array.from(
+      host.querySelectorAll<HTMLElement>('[data-testid="team-model-selector-opencode-group"]')
+    ).find((group) => group.querySelector('h4')?.textContent === 'Kiro');
+    expect(
+      kiroGroup?.querySelector('[data-testid="team-model-selector-opencode-group-status"]')
+        ?.textContent
+    ).toContain('Configured');
+    expect(kiroGroup?.textContent).not.toContain('Local');
+    expect(
+      host.querySelector('[data-testid="team-model-selector-opencode-route-tag-configured"]')
+        ?.textContent
+    ).toContain('Configured');
+    expect(
+      host.querySelector('[data-testid="team-model-selector-opencode-route-tag-local"]')
+    ).toBeNull();
 
     await act(async () => {
       tabsList?.dispatchEvent(new Event('scroll'));
@@ -3353,7 +3368,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           capabilities: {
             teamLaunch: true,
           },
-          models: ['opencode/big-pickle', 'opencode/minimax-m2.7'],
+          models: ['community/community-model', 'opencode/minimax-m2.7', 'openai/gpt-5.6'],
           modelCatalog: {
             schemaVersion: 1,
             providerId: 'opencode',
@@ -3365,9 +3380,9 @@ describe('TeamModelSelector disabled Codex models', () => {
             defaultLaunchModel: null,
             models: [
               {
-                id: 'opencode/big-pickle',
-                launchModel: 'opencode/big-pickle',
-                displayName: 'big-pickle',
+                id: 'community/community-model',
+                launchModel: 'community/community-model',
+                displayName: 'community-model',
                 hidden: false,
                 supportedReasoningEfforts: [],
                 defaultReasoningEffort: null,
@@ -3402,6 +3417,36 @@ describe('TeamModelSelector disabled Codex models', () => {
                   free: false,
                 },
               },
+              {
+                id: 'openai/gpt-5.6',
+                launchModel: 'openai/gpt-5.6',
+                displayName: 'gpt-5.6',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: 'Free',
+                metadata: {
+                  cost: { input: 0, output: 0, cache_read: 0, cache_write: 0 },
+                  context: 200000,
+                  limits: null,
+                  free: true,
+                  opencode: {
+                    providerId: 'openai',
+                    modelId: 'gpt-5.6',
+                    sourceLabel: 'OpenAI',
+                    accessKind: 'credentialed',
+                    routeKind: 'connected_provider',
+                    proofState: 'not_required',
+                    requiresExecutionProof: false,
+                    reason: null,
+                  },
+                },
+              },
             ],
             diagnostics: {
               configReadState: 'ready',
@@ -3433,6 +3478,13 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).toContain('in Free · out Free / 1M');
     expect(host.textContent).toContain('in $0.30 · out $1.20 / 1M');
     expect(host.textContent).toContain('Free');
+    const connectedOpenAiButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('gpt-5.6')
+    );
+    expect(connectedOpenAiButton?.textContent).not.toContain('Free');
+    expect(
+      connectedOpenAiButton?.querySelector('[data-testid="team-model-selector-model-pricing"]')
+    ).toBeNull();
 
     const pricingRows = Array.from(
       host.querySelectorAll<HTMLElement>('[data-testid="team-model-selector-model-pricing"]')
@@ -3449,6 +3501,16 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(freeBadges).toHaveLength(1);
     expect(freeBadges[0]?.className).toContain('w-[40px]');
     expect(freeBadges[0]?.className).toContain('text-[5px]');
+
+    const freeOnlyFilter = host.querySelector<HTMLElement>('#opencode-team-model-free-only');
+    expect(freeOnlyFilter).not.toBeNull();
+    await act(async () => {
+      freeOnlyFilter?.click();
+      await Promise.resolve();
+    });
+    expect(host.textContent).toContain('community-model');
+    expect(host.textContent).not.toContain('minimax-m2.7');
+    expect(host.textContent).not.toContain('gpt-5.6');
 
     await act(async () => {
       root.unmount();
@@ -3799,11 +3861,13 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
 
-    const sourceGroupLabels = Array.from(
-      host.querySelectorAll('[data-testid="team-model-selector-opencode-group"] h4')
-    ).map((heading) => heading.textContent ?? '');
+    const getSourceGroupLabels = (): string[] =>
+      Array.from(
+        host.querySelectorAll('[data-testid="team-model-selector-opencode-group"] h4')
+      ).map((heading) => heading.textContent ?? '');
+    const sourceGroupLabels = getSourceGroupLabels();
     expect(sourceGroupLabels).toEqual(
-      expect.arrayContaining(['llama.cpp', 'OpenCode', 'OpenRouter', 'DeepSeek'])
+      expect.arrayContaining(['llama.cpp', 'OpenCode Zen', 'OpenRouter', 'DeepSeek'])
     );
     expect(sourceGroupLabels).not.toContain('OpenCode config');
     expect(sourceGroupLabels).not.toContain('Connected providers');
@@ -3814,7 +3878,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     const findSourceGroup = (label: string): HTMLElement | undefined =>
       sourceGroups.find((group) => group.querySelector('h4')?.textContent === label);
     const llamaGroup = findSourceGroup('llama.cpp');
-    const openCodeGroup = findSourceGroup('OpenCode');
+    const openCodeGroup = findSourceGroup('OpenCode Zen');
     const openRouterGroup = findSourceGroup('OpenRouter');
     const deepSeekGroup = findSourceGroup('DeepSeek');
 
@@ -3857,6 +3921,43 @@ describe('TeamModelSelector disabled Codex models', () => {
     );
     expect(filterButton?.getAttribute('aria-label')).toBe('Filter OpenCode sources');
     expect(filterButton?.textContent).toContain('All OpenCode sources');
+
+    const localTagFilter = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-opencode-route-tag-local"]'
+    );
+    const connectedTagFilter = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-opencode-route-tag-connected"]'
+    );
+    expect(localTagFilter?.getAttribute('aria-label')).toBe('Local: 1');
+    expect(connectedTagFilter?.getAttribute('aria-label')).toBe('Connected: 1');
+    expect(localTagFilter?.getAttribute('aria-pressed')).toBe('false');
+
+    await act(async () => {
+      localTagFilter?.click();
+      await Promise.resolve();
+    });
+    expect(getSourceGroupLabels()).toEqual(['llama.cpp']);
+    expect(localTagFilter?.getAttribute('aria-pressed')).toBe('true');
+
+    await act(async () => {
+      connectedTagFilter?.click();
+      await Promise.resolve();
+    });
+    expect(getSourceGroupLabels()).toEqual(['llama.cpp', 'OpenRouter']);
+
+    await act(async () => {
+      localTagFilter?.click();
+      await Promise.resolve();
+    });
+    expect(getSourceGroupLabels()).toEqual(['OpenRouter']);
+
+    await act(async () => {
+      connectedTagFilter?.click();
+      await Promise.resolve();
+    });
+    expect(getSourceGroupLabels()).toEqual(
+      expect.arrayContaining(['llama.cpp', 'OpenCode Zen', 'OpenRouter', 'DeepSeek'])
+    );
 
     await act(async () => {
       root.unmount();

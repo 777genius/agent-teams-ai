@@ -85,6 +85,10 @@ import {
   removeTeamImportIpc,
   type TeamImportFeatureFacade,
 } from '@features/team-import/main';
+import {
+  createTeamRuntimeRecoveryFeature,
+  type TeamRuntimeRecoveryFeatureFacade,
+} from '@features/team-runtime-recovery/main';
 import { TOKEN_USAGE_SNAPSHOT_CHANGED } from '@features/token-usage/contracts';
 import {
   createTokenUsageFeature,
@@ -115,9 +119,12 @@ import { FileContentResolver } from '@main/services/team/FileContentResolver';
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
 import { isInformationalOpenCodeRuntimeDeliveryDiagnostic } from '@main/services/team/opencode/delivery/OpenCodeRuntimeDeliveryDiagnostics';
 import {
+  buildOpenCodeAppScopedMcpOwnershipMarker,
+  buildOpenCodeAppScopedMcpUrl,
   copyOpenCodeLocalMcpLaunchEnv,
   hasOpenCodeLocalMcpLaunchEnv,
   isOpenCodeMcpHttpBridgeEnabled,
+  mergeOpenCodeLocalMcpChildEnvironment,
   shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
@@ -189,7 +196,6 @@ import {
 import { applyAgentTeamsIdentityEnv } from './services/identity/AgentTeamsIdentityStore';
 import { startEventLoopLagMonitor } from './services/infrastructure/EventLoopLagMonitor';
 import { HttpServer } from './services/infrastructure/HttpServer';
-import { clearAutoResumeService } from './services/team/AutoResumeService';
 import { agentTeamsMcpHttpServer } from './services/team/AgentTeamsMcpHttpServer';
 import { LaunchIoGovernor } from './services/team/LaunchIoGovernor';
 import { OpenCodeBridgeCommandClient } from './services/team/opencode/bridge/OpenCodeBridgeCommandClient';
@@ -553,6 +559,9 @@ async function createOpenCodeRuntimeAdapterRegistry(
   });
   applyAgentTeamsIdentityEnv(bridgeEnv);
   bridgeEnv.CLAUDE_TEAM_APP_INSTANCE_ID = openCodeManagedHostInstanceId;
+  mergeOpenCodeLocalMcpChildEnvironment(bridgeEnv, {
+    CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+  });
   bridgeEnv.AGENT_TEAMS_MCP_CLAUDE_DIR = getClaudeBasePath();
   const useHttpMcpBridge = isOpenCodeMcpHttpBridgeEnabled(bridgeEnv);
   const explicitLocalMcpLaunchEnv = snapshotOpenCodeLocalMcpLaunchEnv(bridgeEnv);
@@ -582,6 +591,9 @@ async function createOpenCodeRuntimeAdapterRegistry(
         targetEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON = JSON.stringify(
           mcpLaunchSpec.env ?? {}
         );
+        mergeOpenCodeLocalMcpChildEnvironment(targetEnv, {
+          CLAUDE_TEAM_APP_INSTANCE_ID: openCodeManagedHostInstanceId,
+        });
       }
     } catch (error) {
       logger.warn(
@@ -642,7 +654,10 @@ async function createOpenCodeRuntimeAdapterRegistry(
     try {
       reportProgress('runtime-mcp-http', 'Starting Agent Teams MCP server...');
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
+      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = buildOpenCodeAppScopedMcpUrl(
+        mcpHttpServer.url,
+        openCodeManagedHostInstanceId
+      );
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
       reportProgress('runtime-mcp-http-ready', 'Agent Teams MCP server is ready...');
     } catch (error) {
@@ -671,9 +686,13 @@ async function createOpenCodeRuntimeAdapterRegistry(
     }
     try {
       const mcpHttpServer = await agentTeamsMcpHttpServer.ensureStarted();
-      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
+      const appScopedMcpUrl = buildOpenCodeAppScopedMcpUrl(
+        mcpHttpServer.url,
+        openCodeManagedHostInstanceId
+      );
+      bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
       bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
-      nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = mcpHttpServer.url;
+      nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = appScopedMcpUrl;
       nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
       await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
     } catch (error) {
@@ -739,7 +758,7 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
       mode: reason === 'shutdown' ? 'force' : 'stale',
       staleAgeMs: reason === 'startup' ? 5 * 60_000 : null,
       leaseStaleAgeMs: reason === 'startup' ? 24 * 60 * 60_000 : null,
-      preflightLeaseStaleAgeMs: reason === 'startup' ? 2 * 60_000 : null,
+      preflightLeaseStaleAgeMs: reason === 'startup' ? 6 * 60_000 : null,
     });
     registryHostPids = new Set(
       result.hosts
@@ -770,12 +789,22 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
   await cleanupOpenCodeHostProcessFallback(`${reason} fallback`, {
     mode: reason === 'shutdown' ? 'force' : 'orphaned',
     excludePids: reason === 'startup' ? registryHostPids : undefined,
-    requiredDetailsMarkers:
-      reason === 'shutdown'
-        ? [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`]
-        : undefined,
+    ...(reason === 'shutdown' ? getOpenCodeShutdownProcessOwnershipMarkers() : {}),
     startedBeforeMs: reason === 'startup' ? appStartedAtMs : null,
   });
+}
+
+function getOpenCodeShutdownProcessOwnershipMarkers(): Pick<
+  Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0],
+  'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny'
+> {
+  return process.platform === 'win32'
+    ? {
+        requiredServeConfigMarkersAny: [
+          buildOpenCodeAppScopedMcpOwnershipMarker(openCodeManagedHostInstanceId),
+        ],
+      }
+    : { requiredDetailsMarkers: [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`] };
 }
 
 async function cleanupOpenCodeHostProcessFallback(
@@ -1056,6 +1085,7 @@ let runtimeProviderManagementFeature: RuntimeProviderManagementFeatureFacade;
 let terminalWorkspaceFeature: TerminalWorkspaceFeatureFacade | null = null;
 let tokenUsageFeature: TokenUsageFeatureFacade | null = null;
 let memberWorkSyncFeature: MemberWorkSyncFeatureFacade | null = null;
+let teamRuntimeRecoveryFeature: TeamRuntimeRecoveryFeatureFacade | null = null;
 let teamDataService: TeamDataService;
 let teamProvisioningService: TeamProvisioningService;
 let launchIoGovernor: LaunchIoGovernor | null = null;
@@ -1188,6 +1218,10 @@ function notifyCoreTeamChangeObservers(event: TeamChangeEvent): void {
       {
         name: 'memberWorkSyncFeature',
         notify: (teamChange) => memberWorkSyncFeature?.noteTeamChange(teamChange),
+      },
+      {
+        name: 'teamRuntimeRecoveryFeature',
+        notify: (teamChange) => teamRuntimeRecoveryFeature?.noteTeamChange(teamChange),
       },
       { name: 'team-message-feed-invalidation', notify: invalidateTeamChangeMessageFeed },
     ],
@@ -1657,6 +1691,7 @@ async function handleModeSwitch(mode: 'local' | 'ssh'): Promise<void> {
  * Used for renderer-initiated switches where the renderer already handles state.
  */
 export function rewireContextEvents(context: ServiceContext): void {
+  void teamRuntimeRecoveryFeature?.cancelAll('context_changed');
   wireFileWatcherEvents(context);
 }
 
@@ -1848,6 +1883,32 @@ async function initializeServices(): Promise<void> {
       },
     })
   );
+  teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
+    teamsBasePath: getTeamsBasePath(),
+    configManager,
+    getCurrentContextId: () => contextRegistry.getActive().id,
+    listActiveTeamNames: async () => teamProvisioningService.getAliveTeams(),
+    isTeamActive: async (teamName) => teamProvisioningService.isTeamAlive(teamName),
+    getRuntimeState: (teamName) => teamProvisioningService.getRuntimeState(teamName),
+    getRuntimeSnapshot: (teamName) => teamProvisioningService.getTeamAgentRuntimeSnapshot(teamName),
+    getLeadName: (teamName) => teamDataService.getLeadMemberName(teamName),
+    getTeamDisplayName: (teamName) => teamDataService.getTeamDisplayName(teamName),
+    getInboxMessages: (teamName, memberName) =>
+      teamInboxReader.getMessagesFor(teamName, memberName),
+    inboxWriter: teamInboxWriter,
+    relay: (teamName, memberName, options) =>
+      teamProvisioningService.relayInboxFileToLiveRecipient(teamName, memberName, options),
+    getTask: (teamName, taskId) => teamDataService.getTask(teamName, taskId),
+    getMemberAdvisory: (teamName, memberName, options) =>
+      teamMemberRuntimeAdvisoryService.getMemberAdvisory(teamName, memberName, options),
+    getOpenCodeBusyStatus: (input) =>
+      teamProvisioningService.getOpenCodeMemberDeliveryBusyStatus(input),
+    addNotification: (payload) => notificationManager.addTeamNotification(payload),
+    logger: createLogger('Feature:TeamRuntimeRecovery'),
+  });
+  teamProvisioningService.setRuntimeRecoveryFailureObserver((failure) =>
+    teamRuntimeRecoveryFeature?.observeLeadFailure(failure)
+  );
   teamProvisioningService.setMemberRuntimeAdvisoryInvalidator((teamName, memberName) => {
     teamDataService?.invalidateMemberRuntimeAdvisory(teamName, memberName);
     getTeamDataWorkerClient().invalidateMemberRuntimeAdvisory(teamName, memberName);
@@ -1861,6 +1922,7 @@ async function initializeServices(): Promise<void> {
       publishStartupStatus({ phase, message })
     )
   );
+  teamRuntimeRecoveryFeature.start();
   scheduleStartupTask(() => {
     void cleanupOpenCodeHostsForLifecycle('startup').catch((error: unknown) =>
       logger.warn(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
@@ -2004,6 +2066,10 @@ async function initializeServices(): Promise<void> {
             name: 'memberWorkSyncFeature',
             notify: (teamChange) => memberWorkSyncFeature?.noteTeamChange(teamChange),
           },
+          {
+            name: 'teamRuntimeRecoveryFeature',
+            notify: (teamChange) => teamRuntimeRecoveryFeature?.noteTeamChange(teamChange),
+          },
         ],
         logger
       );
@@ -2022,6 +2088,10 @@ async function initializeServices(): Promise<void> {
         {
           name: 'memberWorkSyncFeature',
           notify: (teamChange) => memberWorkSyncFeature?.noteTeamChange(teamChange),
+        },
+        {
+          name: 'teamRuntimeRecoveryFeature',
+          notify: (teamChange) => teamRuntimeRecoveryFeature?.noteTeamChange(teamChange),
         },
         {
           name: 'teammateToolTrackerOffline',
@@ -2751,9 +2821,11 @@ async function shutdownServices(): Promise<void> {
     clearStartupTimers();
     clearInboxNotifyTimers();
 
-    // Clear pending auto-resume timers before anything else. Dangling timers can
-    // keep the event loop alive and fire against a torn-down provisioning service.
-    clearAutoResumeService();
+    await runShutdownStep('team runtime recovery scheduler cleanup', async () => {
+      teamProvisioningService?.setRuntimeRecoveryFailureObserver(null);
+      await teamRuntimeRecoveryFeature?.dispose();
+      teamRuntimeRecoveryFeature = null;
+    });
 
     // Kill all team CLI processes via SIGKILL before anything else.
     // This must happen before the OS closes stdin pipes on app exit, because
@@ -2777,7 +2849,7 @@ async function shutdownServices(): Promise<void> {
       () =>
         cleanupOpenCodeHostProcessFallback('post-subprocess shutdown fallback', {
           mode: 'force',
-          requiredDetailsMarkers: [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`],
+          ...getOpenCodeShutdownProcessOwnershipMarkers(),
         }),
       5_000
     );

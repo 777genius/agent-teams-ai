@@ -67,7 +67,8 @@ export function buildRuntimeBaseEnv(options: BuildRuntimeBaseEnvOptions = {}): {
     env.PATH = mergedPath;
   }
 
-  applyConfiguredRuntimeBackendsEnv(env, configManager.getConfig().runtime);
+  const appConfig = configManager.getConfig();
+  applyConfiguredRuntimeBackendsEnv(env, appConfig.runtime);
   Object.assign(env, options.env ?? {});
   if (mergedPath) {
     env.PATH = mergedPath;
@@ -105,7 +106,7 @@ export function buildRuntimeBaseEnv(options: BuildRuntimeBaseEnvOptions = {}): {
   }
 
   const runtimeProviderId = resolveRuntimeProviderId(options.providerId);
-  applyProviderRuntimeEnv(env, options.providerId);
+  applyProviderRuntimeEnv(env, options.providerId, appConfig.providerConnections.anthropic);
 
   if (runtimeProviderId === 'codex' && options.providerBackendId?.trim()) {
     env.CLAUDE_CODE_CODEX_BACKEND = options.providerBackendId.trim();

@@ -171,6 +171,66 @@ describe('ProviderModelBadges', () => {
     expect(host.textContent?.match(/Free/g)).toHaveLength(1);
   });
 
+  it('ignores a stale Free badge on a connected OpenCode provider route', () => {
+    const host = render(
+      <ProviderModelBadges
+        providerId="opencode"
+        models={['openai/gpt-5.6']}
+        providerStatus={{
+          providerId: 'opencode',
+          authMethod: 'opencode_managed',
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-07-17T00:00:00.000Z',
+            staleAt: '2026-07-17T00:10:00.000Z',
+            defaultModelId: null,
+            defaultLaunchModel: null,
+            models: [
+              {
+                id: 'openai/gpt-5.6',
+                launchModel: 'openai/gpt-5.6',
+                displayName: 'gpt-5.6',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: true,
+                isDefault: false,
+                upgrade: false,
+                source: 'app-server',
+                badgeLabel: 'Free',
+                metadata: {
+                  free: true,
+                  opencode: {
+                    providerId: 'openai',
+                    modelId: 'gpt-5.6',
+                    sourceLabel: 'OpenAI',
+                    accessKind: 'credentialed',
+                    routeKind: 'connected_provider',
+                    proofState: 'not_required',
+                    requiresExecutionProof: false,
+                    reason: null,
+                  },
+                },
+              },
+            ],
+            diagnostics: {
+              configReadState: 'ready',
+              appServerState: 'healthy',
+            },
+          },
+        }}
+      />
+    );
+
+    expect(host.textContent).toContain('gpt-5.6');
+    expect(host.textContent).not.toContain('Free');
+  });
+
   it('uses the OpenCode catalog when provider models are summary-only', () => {
     const host = render(
       <ProviderModelBadges

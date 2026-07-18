@@ -64,6 +64,19 @@ export function createGraphLayoutTransition(args: {
   };
 }
 
+export function resolveGraphLayoutTargetNodes(
+  nodes: GraphNode[],
+  transition: GraphLayoutTransition | null
+): GraphNode[] {
+  if (!transition) return nodes;
+
+  return nodes.map((node) => {
+    const target = transition.toByNodeId.get(node.id);
+    if (!target) return node;
+    return { ...node, x: target.x, y: target.y };
+  });
+}
+
 export function advanceGraphLayoutTransition(
   nodes: GraphNode[],
   transition: GraphLayoutTransition,

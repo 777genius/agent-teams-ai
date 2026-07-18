@@ -127,6 +127,12 @@ export interface RuntimeProviderSetupFormDto {
   authOptions?: readonly RuntimeProviderSetupAuthOptionDto[];
   /** Optional while older packaged orchestrators are still supported. */
   defaultAuthOptionId?: string | null;
+  /** Optional while older packaged orchestrators are still supported. */
+  verification?: {
+    kind: 'model-request';
+    freeModelPreferred: boolean;
+    mayUseQuotaOrBalance: boolean;
+  } | null;
 }
 
 export type RuntimeProviderOAuthCompletionMethodDto = 'auto' | 'code';
@@ -371,6 +377,8 @@ export type RuntimeProviderModelProofStateDto =
   | 'verified'
   | 'failed';
 
+export type RuntimeProviderModelCatalogStatusDto = 'active' | 'alpha' | 'beta' | 'deprecated';
+
 export interface RuntimeProviderModelDto {
   modelId: string;
   providerId: string;
@@ -378,6 +386,8 @@ export interface RuntimeProviderModelDto {
   sourceLabel: string;
   free: boolean;
   default: boolean;
+  /** Optional while older packaged orchestrators are still supported. */
+  catalogStatus?: RuntimeProviderModelCatalogStatusDto;
   availability: RuntimeProviderModelAvailabilityDto;
   accessKind?: RuntimeProviderModelAccessKindDto;
   routeKind?: RuntimeProviderModelRouteKindDto;

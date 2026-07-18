@@ -5,6 +5,39 @@ import { RESOLVED_APP_LOCALES } from '../../../src/features/localization/contrac
 import { validateConfigUpdatePayload } from '../../../src/main/ipc/configValidation';
 
 describe('configValidation', () => {
+  it('accepts bounded team runtime recovery settings', () => {
+    const result = validateConfigUpdatePayload('teamRuntimeRecovery', {
+      transientErrorsEnabled: true,
+      rateLimitsEnabled: true,
+      initialDelaySeconds: 120,
+      maxAttempts: 3,
+    });
+
+    expect(result).toEqual({
+      valid: true,
+      section: 'teamRuntimeRecovery',
+      data: {
+        transientErrorsEnabled: true,
+        rateLimitsEnabled: true,
+        initialDelaySeconds: 120,
+        maxAttempts: 3,
+      },
+    });
+  });
+
+  it.each([
+    [{ initialDelaySeconds: 14 }, 'between 15 and 900'],
+    [{ initialDelaySeconds: 901 }, 'between 15 and 900'],
+    [{ maxAttempts: 0 }, 'between 1 and 5'],
+    [{ maxAttempts: 6 }, 'between 1 and 5'],
+    [{ transientErrorsEnabled: 'yes' }, 'boolean'],
+    [{ unknown: true }, 'not a valid setting'],
+  ])('rejects invalid team runtime recovery update %j', (update, error) => {
+    const result = validateConfigUpdatePayload('teamRuntimeRecovery', update);
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain(error);
+  });
+
   it('accepts valid general updates', () => {
     const result = validateConfigUpdatePayload('general', {
       theme: 'system',

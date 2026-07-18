@@ -278,7 +278,10 @@ export function initializeNotificationListeners(): () => void {
                   useStore.getState().cliStatus
                 );
                 for (const providerId of providerIds) {
-                  void useStore.getState().fetchCliProviderStatus(providerId, { silent: false });
+                  void useStore.getState().fetchCliProviderStatus(providerId, {
+                    silent: false,
+                    checkReason: 'startup',
+                  });
                 }
                 deferredProviderStatusCleanup = null;
               },
@@ -2452,7 +2455,10 @@ export function initializeNotificationListeners(): () => void {
               };
             });
             for (const providerId of modelOnlyFallbackProviderIds) {
-              void useStore.getState().fetchCliProviderStatus(providerId, { silent: false });
+              void useStore.getState().fetchCliProviderStatus(providerId, {
+                silent: false,
+                checkReason: 'runtime_event',
+              });
             }
           }
           break;

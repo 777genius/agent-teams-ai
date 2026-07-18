@@ -18,6 +18,7 @@ import type {
   RuntimeConfig,
   SshPersistConfig,
 } from '../services';
+import type { TeamRuntimeRecoveryConfig } from '@features/team-runtime-recovery/contracts';
 
 type ConfigSection = keyof AppConfig;
 
@@ -34,6 +35,7 @@ interface ValidationFailure {
 
 export type ConfigUpdateValidationResult =
   | ValidationSuccess<'notifications'>
+  | ValidationSuccess<'teamRuntimeRecovery'>
   | ValidationSuccess<'general'>
   | ValidationSuccess<'providerConnections'>
   | ValidationSuccess<'runtime'>
@@ -44,6 +46,7 @@ export type ConfigUpdateValidationResult =
 
 const VALID_SECTIONS = new Set<ConfigSection>([
   'notifications',
+  'teamRuntimeRecovery',
   'general',
   'providerConnections',
   'runtime',
@@ -394,6 +397,54 @@ function validateNotificationsSection(
     section: 'notifications',
     data: result,
   };
+}
+
+function validateTeamRuntimeRecoverySection(
+  data: unknown
+): ValidationSuccess<'teamRuntimeRecovery'> | ValidationFailure {
+  if (!isPlainObject(data)) {
+    return { valid: false, error: 'teamRuntimeRecovery update must be an object' };
+  }
+  const allowedKeys: (keyof TeamRuntimeRecoveryConfig)[] = [
+    'transientErrorsEnabled',
+    'rateLimitsEnabled',
+    'initialDelaySeconds',
+    'maxAttempts',
+  ];
+  const result: Partial<TeamRuntimeRecoveryConfig> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (!allowedKeys.includes(key as keyof TeamRuntimeRecoveryConfig)) {
+      return { valid: false, error: `teamRuntimeRecovery.${key} is not a valid setting` };
+    }
+    if (key === 'transientErrorsEnabled' || key === 'rateLimitsEnabled') {
+      if (typeof value !== 'boolean') {
+        return { valid: false, error: `teamRuntimeRecovery.${key} must be a boolean` };
+      }
+      result[key] = value;
+      continue;
+    }
+    if (!isFiniteNumber(value) || !Number.isInteger(value)) {
+      return { valid: false, error: `teamRuntimeRecovery.${key} must be an integer` };
+    }
+    if (key === 'initialDelaySeconds') {
+      if (value < 15 || value > 900) {
+        return {
+          valid: false,
+          error: 'teamRuntimeRecovery.initialDelaySeconds must be between 15 and 900',
+        };
+      }
+      result.initialDelaySeconds = value;
+    } else {
+      if (value < 1 || value > 5) {
+        return {
+          valid: false,
+          error: 'teamRuntimeRecovery.maxAttempts must be between 1 and 5',
+        };
+      }
+      result.maxAttempts = value;
+    }
+  }
+  return { valid: true, section: 'teamRuntimeRecovery', data: result };
 }
 
 function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | ValidationFailure {
@@ -972,13 +1023,15 @@ export function validateConfigUpdatePayload(
     return {
       valid: false,
       error:
-        'Section must be one of: notifications, general, providerConnections, runtime, display, httpServer, ssh',
+        'Section must be one of: notifications, teamRuntimeRecovery, general, providerConnections, runtime, display, httpServer, ssh',
     };
   }
 
   switch (section as ConfigSection) {
     case 'notifications':
       return validateNotificationsSection(data);
+    case 'teamRuntimeRecovery':
+      return validateTeamRuntimeRecoverySection(data);
     case 'general':
       return validateGeneralSection(data);
     case 'providerConnections':

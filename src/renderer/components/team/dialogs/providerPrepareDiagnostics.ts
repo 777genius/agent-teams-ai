@@ -1,4 +1,5 @@
 import { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
+import { getOpenCodeQualifiedModelSourceLabel } from '@shared/utils/opencodeModelRef';
 import {
   isOpenCodeWindowsAccessDeniedDiagnostic,
   normalizeOpenCodeWindowsAccessDeniedDiagnostic,
@@ -279,10 +280,43 @@ function decodeQuotedJsonString(value: string): string {
   }
 }
 
-function normalizeModelReason(rawReason: string | null | undefined): string | null {
+function normalizeProviderAccountFailure(rawReason: string): string | null {
+  if (/not licensed to use copilot/i.test(rawReason)) {
+    return 'GitHub account connected, but this account does not have an active Copilot license';
+  }
+  if (
+    /payment required|used all available credits|monthly spending limit|insufficient credits/i.test(
+      rawReason
+    )
+  ) {
+    return 'Provider account has no available credits or reached its spending limit';
+  }
+  if (/invalid authentication credentials/i.test(rawReason)) {
+    return 'Provider credentials were rejected. Reconnect the account and retry';
+  }
+  return null;
+}
+
+function normalizeModelReason(
+  rawReason: string | null | undefined,
+  modelId?: string
+): string | null {
   const trimmed = rawReason?.trim() ?? '';
   if (!trimmed) {
     return null;
+  }
+
+  const credentialProviderLabel = getOpenCodeQualifiedModelSourceLabel(modelId) ?? null;
+  if (
+    /\binvalid[\s_-]+api[\s_-]*key\b/i.test(trimmed) ||
+    /\bapi[\s_-]*key\s+(?:is\s+)?(?:invalid|expired|revoked)\b/i.test(trimmed)
+  ) {
+    const providerLabel = credentialProviderLabel ?? 'OpenCode provider';
+    return `${providerLabel} rejected its API key. Reconnect ${providerLabel} in Plans & providers`;
+  }
+  if (/access denied by security policy/i.test(trimmed)) {
+    const providerLabel = credentialProviderLabel ?? 'OpenCode provider';
+    return `${providerLabel} blocked the request by account or security policy. Review its key restrictions, then reconnect it in Plans & providers`;
   }
 
   if (
@@ -292,6 +326,10 @@ function normalizeModelReason(rawReason: string | null | undefined): string | nu
   }
   if (/The requested model is not available for your account\./i.test(trimmed)) {
     return 'Not available for this account';
+  }
+  const accountFailure = normalizeProviderAccountFailure(trimmed);
+  if (accountFailure) {
+    return accountFailure;
   }
   if (/token refresh failed:\s*401/i.test(trimmed)) {
     return 'OpenCode provider authentication failed (token refresh 401)';
@@ -309,7 +347,7 @@ function normalizeModelReason(rawReason: string | null | undefined): string | nu
 
   const detailMatch = /"detail":"((?:\\"|[^"])*)"/i.exec(trimmed);
   if (detailMatch?.[1]) {
-    return normalizeModelReason(detailMatch[1].replace(/\\"/g, '"').trim());
+    return normalizeModelReason(detailMatch[1].replace(/\\"/g, '"').trim(), modelId);
   }
 
   const messageMatch = /"message":"((?:\\"|[^"])*)"/i.exec(trimmed);
@@ -317,9 +355,9 @@ function normalizeModelReason(rawReason: string | null | undefined): string | nu
     const decodedMessage = messageMatch[1].replace(/\\"/g, '"');
     const nestedDetailMatch = /"detail":"([^"]+)"/i.exec(decodedMessage);
     if (nestedDetailMatch?.[1]) {
-      return normalizeModelReason(nestedDetailMatch[1].trim());
+      return normalizeModelReason(nestedDetailMatch[1].trim(), modelId);
     }
-    return normalizeModelReason(decodeQuotedJsonString(decodedMessage).trim());
+    return normalizeModelReason(decodeQuotedJsonString(decodedMessage).trim(), modelId);
   }
 
   return trimmed;
@@ -385,6 +423,11 @@ function isAdvisoryOpenCodeDeepVerificationIssue(
     lower.includes('authentication') ||
     lower.includes('credential') ||
     lower.includes('api key') ||
+    lower.includes('not licensed') ||
+    lower.includes('payment required') ||
+    lower.includes('available credits') ||
+    lower.includes('spending limit') ||
+    lower.includes('insufficient credits') ||
     lower.includes('/experimental/tool') ||
     lower.includes('runtime store') ||
     lower.includes('opencode cli') ||
@@ -444,7 +487,7 @@ function getResultReason(modelId: string, result: TeamProvisioningPrepareResult)
   for (const candidate of candidates) {
     const stripped = stripSelectedModelPrefix(modelId, candidate);
     if (stripped) {
-      return normalizeModelReason(stripped);
+      return normalizeModelReason(stripped, modelId);
     }
   }
 
@@ -498,7 +541,7 @@ function getScopedModelReason(modelId: string, entries: string[]): string | null
     if (!stripped) {
       continue;
     }
-    const normalized = normalizeModelReason(stripped);
+    const normalized = normalizeModelReason(stripped, modelId);
     if (normalized) {
       return normalized;
     }
@@ -571,6 +614,11 @@ function normalizeRuntimeFailureDetailLine(
 
   if (/opencode cli (?:not detected on path|not found)/i.test(trimmed)) {
     return 'OpenCode runtime binary is not installed or not reachable by launch preflight.';
+  }
+
+  const accountFailure = normalizeProviderAccountFailure(trimmed);
+  if (accountFailure) {
+    return accountFailure;
   }
 
   const lower = trimmed.toLowerCase();
@@ -717,7 +765,7 @@ function resolveModelResultFromBatch(
   const hasModelScopedEntries = modelScopedEntries.length > 0;
   const scopedReason = getScopedModelReason(modelId, modelScopedEntries);
   const fallbackBatchReason = isOnlyModel
-    ? (getResultReason(modelId, result) ?? normalizeModelReason(result.message))
+    ? (getResultReason(modelId, result) ?? normalizeModelReason(result.message, modelId))
     : null;
 
   const hasVerifiedLine = modelScopedEntries.some((entry) =>
@@ -848,7 +896,7 @@ function resolveModelResultFromCompatibilityBatch(
   const modelScopedEntries = getModelScopedEntries(modelId, result);
   const scopedReason = getScopedModelReason(modelId, modelScopedEntries);
   const fallbackBatchReason = isOnlyModel
-    ? (getResultReason(modelId, result) ?? normalizeModelReason(result.message))
+    ? (getResultReason(modelId, result) ?? normalizeModelReason(result.message, modelId))
     : null;
 
   const hasVerifiedLine = modelScopedEntries.some((entry) =>
@@ -969,6 +1017,11 @@ function looksLikeSingleModelCredentialFailure(result: TeamProvisioningPrepareRe
     combined.includes('token refresh failed') ||
     combined.includes('authentication failed') ||
     combined.includes('not_authenticated') ||
+    combined.includes('not licensed') ||
+    combined.includes('payment required') ||
+    combined.includes('available credits') ||
+    combined.includes('spending limit') ||
+    combined.includes('insufficient credits') ||
     (hasCredentialContext && hasAuthStatus)
   );
 }

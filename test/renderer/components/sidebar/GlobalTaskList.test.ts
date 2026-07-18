@@ -470,6 +470,59 @@ describe('GlobalTaskList project grouping', () => {
     });
   });
 
+  it('hides team headers when a project has tasks from only one team', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.globalTasks = [makeTask(1), makeTask(2)];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    expect(host.textContent).not.toContain('Team: Alpha Team');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
+  it('keeps team headers when a project has tasks from multiple teams', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.globalTasks = [
+      makeTask(1),
+      makeTask(2, {
+        teamName: 'beta-team',
+        teamDisplayName: 'Beta Team',
+      }),
+    ];
+    storeState.teams = [
+      { teamName: 'alpha-team', displayName: 'Alpha Team' },
+      { teamName: 'beta-team', displayName: 'Beta Team' },
+    ];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(GlobalTaskList));
+      await flushMicrotasks();
+    });
+
+    expect(host.textContent).toContain('Team: Alpha Team');
+    expect(host.textContent).toContain('Team: Beta Team');
+
+    await act(async () => {
+      root.unmount();
+      await flushMicrotasks();
+    });
+  });
+
   it('marks task cards as offline when the owning team has gone offline', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.globalTasks = [makeTask(1)];

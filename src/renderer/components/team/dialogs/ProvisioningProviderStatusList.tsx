@@ -83,7 +83,7 @@ export function getProvisioningProviderBackendSummary(
     : (provider.backend?.label ?? null);
 
   if (!baseSummary) {
-    return null;
+    return provider.providerId === 'anthropic' ? 'Anthropic API' : null;
   }
 
   const suffixes: string[] = [];

@@ -22,6 +22,10 @@ export function isMemberWorkSyncNudgeMessage(message: AutomationMessageLike): bo
   return message.messageKind === 'member_work_sync_nudge';
 }
 
+export function isRuntimeRecoveryNudgeMessage(message: AutomationMessageLike): boolean {
+  return message.messageKind === 'runtime_recovery_nudge';
+}
+
 export function isReviewPickupEscalationMessage(message: AutomationMessageLike): boolean {
   return (
     message.source === 'system_notification' &&

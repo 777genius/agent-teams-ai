@@ -654,6 +654,25 @@ describe('ProvisioningProviderStatusList', () => {
     ).toBe('Codex native');
   });
 
+  it('keeps direct and external Anthropic routes visible in provisioning summaries', () => {
+    const directProvider = {
+      providerId: 'anthropic' as const,
+      selectedBackendId: null,
+      resolvedBackendId: null,
+      backend: null,
+      availableBackends: [],
+    };
+
+    expect(getProvisioningProviderBackendSummary(directProvider)).toBe('Anthropic API');
+    expect(
+      getProvisioningProviderBackendSummary({
+        ...directProvider,
+        resolvedBackendId: 'bedrock',
+        backend: { kind: 'bedrock', label: 'Amazon Bedrock' },
+      })
+    ).toBe('Amazon Bedrock');
+  });
+
   it('does not show non-blocking Codex degraded backend state in provisioning summaries', () => {
     expect(
       getProvisioningProviderBackendSummary({

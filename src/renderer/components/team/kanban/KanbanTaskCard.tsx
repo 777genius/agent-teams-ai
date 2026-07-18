@@ -872,7 +872,12 @@ export const KanbanTaskCard = memo(
             </div>
             {task.owner ? (
               <span className="shrink-0">
-                <MemberBadge name={task.owner} color={memberColorMap.get(task.owner)} size="xs" />
+                <MemberBadge
+                  name={task.owner}
+                  color={memberColorMap.get(task.owner)}
+                  size="xs"
+                  variant="text"
+                />
               </span>
             ) : null}
           </div>

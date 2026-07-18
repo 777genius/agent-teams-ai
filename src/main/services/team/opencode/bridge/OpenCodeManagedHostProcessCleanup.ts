@@ -2,7 +2,7 @@ import {
   listRuntimeProcessTableForCurrentPlatform,
   type RuntimeProcessTableRow,
 } from '@features/tmux-installer/main';
-import { killProcessByPid } from '@main/utils/processKill';
+import { killProcessByPid, killProcessByPidAndWait } from '@main/utils/processKill';
 import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
 import { execFile, type ExecFileException } from 'child_process';
 
@@ -26,14 +26,16 @@ export interface OpenCodeManagedHostProcessCleanupOptions {
   mode: OpenCodeManagedHostCleanupMode;
   excludePids?: ReadonlySet<number>;
   requiredDetailsMarkers?: readonly string[];
+  requiredServeConfigMarkersAny?: readonly string[];
   startedBeforeMs?: number | null;
   platform?: NodeJS.Platform;
   listProcessRows?: () => Promise<RuntimeProcessTableRow[]>;
   readProcessDetails?: (pid: number) => Promise<string | null>;
   readProcessStartTimeMs?: (pid: number) => Promise<number | null>;
+  readServeHostConfig?: (baseUrl: string) => Promise<string | null>;
   disposeServeHost?: (baseUrl: string) => Promise<void>;
-  killProcess?: (pid: number) => void;
-  forceKillProcess?: (pid: number) => void;
+  killProcess?: (pid: number) => void | Promise<void>;
+  forceKillProcess?: (pid: number) => void | Promise<void>;
   isProcessAlive?: (pid: number) => boolean;
   sleepMs?: (ms: number) => Promise<void>;
 }
@@ -68,11 +70,12 @@ export async function cleanupManagedOpenCodeServeProcesses(
   const listProcessRows =
     options.listProcessRows ??
     (platform === 'win32'
-      ? listWindowsProcessTable
+      ? () => listWindowsProcessTable(4_000, { bypassCache: true })
       : () => listRuntimeProcessTableForCurrentPlatform({ bypassCache: true }));
   const rows = await listProcessRows();
   const excludePids = options.excludePids ?? new Set<number>();
   const requiredDetailsMarkers = options.requiredDetailsMarkers ?? [];
+  const requiredServeConfigMarkersAny = options.requiredServeConfigMarkersAny ?? [];
   const readDetails =
     options.readProcessDetails ??
     (platform === 'win32' ? async () => null : readNativeProcessCommandWithEnv);
@@ -80,7 +83,8 @@ export async function cleanupManagedOpenCodeServeProcesses(
     options.readProcessStartTimeMs ??
     (platform === 'win32' ? readWindowsProcessStartTimeMs : readNativeProcessStartTimeMs);
   const disposeServeHost = options.disposeServeHost ?? disposeOpenCodeServeHost;
-  const killProcess = options.killProcess ?? killProcessByPid;
+  const readServeHostConfig = options.readServeHostConfig ?? readOpenCodeServeHostConfig;
+  const killProcess = options.killProcess;
   const forceKillProcess =
     options.forceKillProcess ?? ((pid: number) => process.kill(pid, 'SIGKILL'));
   const isProcessAlive = options.isProcessAlive ?? isNativeProcessAlive;
@@ -102,6 +106,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
       continue;
     }
 
+    const baseUrl = getOpenCodeServeLoopbackBaseUrl(row.command);
     const details = await readDetails(row.pid);
     const isManagedByWindowsCommand =
       platform === 'win32' && isAppManagedWindowsOpenCodeServeCommand(row.command);
@@ -111,22 +116,59 @@ export async function cleanupManagedOpenCodeServeProcesses(
     const hasRequiredDetailsMarkers =
       requiredDetailsMarkers.length === 0 ||
       Boolean(details && processDetailsIncludeMarkers(details, requiredDetailsMarkers));
-    if (!isManaged || !hasRequiredDetailsMarkers) {
+    const serveConfig =
+      requiredServeConfigMarkersAny.length > 0 && baseUrl
+        ? await readServeHostConfig(baseUrl).catch(() => null)
+        : null;
+    const hasRequiredServeConfigMarker =
+      requiredServeConfigMarkersAny.length === 0 ||
+      Boolean(serveConfig && stringIncludesAnyMarker(serveConfig, requiredServeConfigMarkersAny));
+    if (!isManaged || !hasRequiredDetailsMarkers || !hasRequiredServeConfigMarker) {
       result.candidates.push({
         pid: row.pid,
         ppid: row.ppid,
         action: 'kept_unmanaged',
-        reason:
-          platform === 'win32'
+        reason: !isManaged
+          ? platform === 'win32'
             ? 'process is not an app-managed Windows OpenCode serve command'
-            : 'process does not carry Agent Teams managed OpenCode environment markers',
+            : 'process does not carry Agent Teams managed OpenCode environment markers'
+          : 'process ownership markers do not match the current app instance',
       });
       continue;
     }
 
+    const shouldTrackStartTime =
+      platform === 'win32' ||
+      typeof options.startedBeforeMs === 'number' ||
+      requiredDetailsMarkers.length > 0 ||
+      requiredServeConfigMarkersAny.length > 0;
+    const startedAtMs = shouldTrackStartTime ? await readStartTimeMs(row.pid) : null;
+    if (shouldTrackStartTime && !Number.isFinite(startedAtMs)) {
+      if (!isProcessAlive(row.pid)) {
+        result.killed += 1;
+        result.candidates.push({
+          pid: row.pid,
+          ppid: row.ppid,
+          action: 'killed',
+          reason: 'managed OpenCode serve exited before cleanup signal',
+        });
+        continue;
+      }
+      if (platform === 'win32') {
+        const reason = 'Windows process start time could not be verified';
+        result.diagnostics.push(
+          `Skipped managed OpenCode serve pid=${row.pid}: ${reason.toLowerCase()}`
+        );
+        result.candidates.push({
+          pid: row.pid,
+          ppid: row.ppid,
+          action: 'failed',
+          reason,
+        });
+        continue;
+      }
+    }
     if (options.mode === 'orphaned') {
-      const startedAtMs =
-        typeof options.startedBeforeMs === 'number' ? await readStartTimeMs(row.pid) : null;
       if (
         typeof options.startedBeforeMs === 'number' &&
         (!Number.isFinite(startedAtMs) ||
@@ -155,22 +197,145 @@ export async function cleanupManagedOpenCodeServeProcesses(
     }
 
     try {
-      const baseUrl = getOpenCodeServeLoopbackBaseUrl(row.command);
+      const confirmCandidateIdentity = async (): Promise<'confirmed' | 'gone' | 'changed'> => {
+        let startTimeMatches = false;
+        let ownershipMarkerMatches = false;
+        if (Number.isFinite(startedAtMs) && startedAtMs !== null) {
+          const currentStartedAtMs = await readStartTimeMs(row.pid);
+          if (currentStartedAtMs !== startedAtMs) {
+            return isProcessAlive(row.pid) ? 'changed' : 'gone';
+          }
+          startTimeMatches = true;
+        }
+        if (requiredDetailsMarkers.length > 0) {
+          const currentDetails = await readDetails(row.pid);
+          if (currentDetails) {
+            if (!processDetailsIncludeMarkers(currentDetails, requiredDetailsMarkers)) {
+              return isProcessAlive(row.pid) ? 'changed' : 'gone';
+            }
+            ownershipMarkerMatches = true;
+          }
+        }
+        if (requiredServeConfigMarkersAny.length > 0) {
+          const currentServeConfig = baseUrl
+            ? await readServeHostConfig(baseUrl).catch(() => null)
+            : null;
+          if (currentServeConfig) {
+            if (!stringIncludesAnyMarker(currentServeConfig, requiredServeConfigMarkersAny)) {
+              return isProcessAlive(row.pid) ? 'changed' : 'gone';
+            }
+            ownershipMarkerMatches = true;
+          }
+        }
+        if (startTimeMatches) {
+          return 'confirmed';
+        }
+        if (ownershipMarkerMatches) {
+          return isProcessAlive(row.pid) ? 'confirmed' : 'gone';
+        }
+        if (
+          !shouldTrackStartTime &&
+          requiredDetailsMarkers.length === 0 &&
+          requiredServeConfigMarkersAny.length === 0
+        ) {
+          return 'confirmed';
+        }
+        return isProcessAlive(row.pid) ? 'changed' : 'gone';
+      };
+
+      const identityBeforeDispose = await confirmCandidateIdentity();
+      if (identityBeforeDispose === 'gone') {
+        result.killed += 1;
+        result.candidates.push({
+          pid: row.pid,
+          ppid: row.ppid,
+          action: 'killed',
+          reason: 'managed OpenCode serve exited before graceful dispose',
+        });
+        continue;
+      }
+      if (identityBeforeDispose === 'changed') {
+        result.candidates.push({
+          pid: row.pid,
+          ppid: row.ppid,
+          action: 'kept_unmanaged',
+          reason: 'pid identity changed before graceful dispose',
+        });
+        continue;
+      }
+
       if (baseUrl) {
         await disposeServeHost(baseUrl).catch(() => undefined);
       }
-      killProcess(row.pid);
+
+      const identityBeforeKill = await confirmCandidateIdentity();
+      if (identityBeforeKill === 'gone') {
+        result.killed += 1;
+        result.candidates.push({
+          pid: row.pid,
+          ppid: row.ppid,
+          action: 'killed',
+          reason: 'managed OpenCode serve exited during graceful dispose',
+        });
+        continue;
+      }
+      if (identityBeforeKill === 'changed') {
+        result.candidates.push({
+          pid: row.pid,
+          ppid: row.ppid,
+          action: 'kept_unmanaged',
+          reason: 'pid identity changed before cleanup signal',
+        });
+        continue;
+      }
+
+      try {
+        if (killProcess) {
+          await killProcess(row.pid);
+        } else if (platform === 'win32') {
+          await killProcessByPidAndWait(row.pid, {
+            platform,
+            confirmTargetIdentity: async () =>
+              Number.isFinite(startedAtMs) &&
+              startedAtMs !== null &&
+              (await readStartTimeMs(row.pid)) === startedAtMs,
+          });
+        } else {
+          killProcessByPid(row.pid);
+        }
+      } catch (error) {
+        if (isProcessAlive(row.pid)) {
+          throw error;
+        }
+      }
       if (options.mode === 'force' && isProcessAlive(row.pid)) {
         await sleepMs(250);
         if (isProcessAlive(row.pid)) {
-          try {
-            forceKillProcess(row.pid);
-          } catch (error) {
-            if (isProcessAlive(row.pid)) {
-              throw error;
+          const identityBeforeForceKill = await confirmCandidateIdentity();
+          if (identityBeforeForceKill === 'confirmed') {
+            try {
+              await forceKillProcess(row.pid);
+            } catch (error) {
+              if (isProcessAlive(row.pid)) {
+                throw error;
+              }
             }
+          } else if (identityBeforeForceKill === 'changed') {
+            result.diagnostics.push(
+              `Skipped force kill for managed OpenCode serve pid=${row.pid}: pid identity changed`
+            );
+            result.candidates.push({
+              pid: row.pid,
+              ppid: row.ppid,
+              action: 'kept_unmanaged',
+              reason: 'pid identity changed before force kill',
+            });
+            continue;
           }
         }
+      }
+      if (isProcessAlive(row.pid)) {
+        throw new Error(`managed OpenCode serve pid=${row.pid} remained alive after cleanup`);
       }
       result.killed += 1;
       result.candidates.push({
@@ -242,6 +407,10 @@ function processDetailsIncludeMarker(details: string, marker: string): boolean {
   return new RegExp(`(^|\\s)${escapeRegExp(marker)}${valueBoundary}`).test(details);
 }
 
+function stringIncludesAnyMarker(value: string, markers: readonly string[]): boolean {
+  return markers.some((marker) => marker.length > 0 && value.includes(marker));
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -263,6 +432,22 @@ async function disposeOpenCodeServeHost(baseUrl: string): Promise<void> {
       method: 'POST',
       signal: controller.signal,
     });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function readOpenCodeServeHostConfig(baseUrl: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1_000);
+  try {
+    const response = await fetch(`${baseUrl}/config`, { signal: controller.signal });
+    if (!response.ok) {
+      return null;
+    }
+    return await response.text();
+  } catch {
+    return null;
   } finally {
     clearTimeout(timeout);
   }

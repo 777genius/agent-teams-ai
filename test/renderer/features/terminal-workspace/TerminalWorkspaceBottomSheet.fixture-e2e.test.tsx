@@ -12,9 +12,12 @@ import type { TeamViewSnapshot } from '@shared/types';
 
 const sheetFixture = vi.hoisted(() => ({
   adapterProps: [] as Array<Record<string, unknown>>,
+  headerProps: [] as Array<Record<string, unknown>>,
   panelProps: [] as Array<Record<string, unknown>>,
   snapTo: vi.fn(),
+  yListeners: new Set<(value: number) => void>(),
   ySet: vi.fn(),
+  yValue: 0,
 }));
 
 vi.mock('react-modal-sheet', async () => {
@@ -24,7 +27,18 @@ vi.mock('react-modal-sheet', async () => {
   const sheetContext = {
     snapTo: sheetFixture.snapTo,
     y: {
-      set: sheetFixture.ySet,
+      get: () => sheetFixture.yValue,
+      on: (_event: 'change', listener: (value: number) => void) => {
+        sheetFixture.yListeners.add(listener);
+        return () => {
+          sheetFixture.yListeners.delete(listener);
+        };
+      },
+      set: (value: number) => {
+        sheetFixture.yValue = value;
+        sheetFixture.ySet(value);
+        sheetFixture.yListeners.forEach((listener) => listener(value));
+      },
     },
   };
 
@@ -106,7 +120,18 @@ vi.mock('react-modal-sheet', async () => {
         className,
         'data-testid': 'mock-terminal-sheet-drag-indicator',
       }),
-    Header: passthrough('mock-terminal-sheet-header'),
+    Header: (props: Record<string, unknown>) => {
+      sheetFixture.headerProps.push(props);
+      return React.createElement(
+        'div',
+        {
+          className: props.className,
+          'data-testid': 'mock-terminal-sheet-header',
+          style: props.style as React.CSSProperties | undefined,
+        },
+        props.children as React.ReactNode
+      );
+    },
     useContext: () => sheetContext,
   });
 
@@ -176,6 +201,8 @@ describe('terminal workspace bottom sheet fixture-e2e', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    sheetFixture.yListeners.clear();
+    sheetFixture.yValue = 0;
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.stubGlobal(
       'ResizeObserver',
@@ -263,31 +290,41 @@ describe('terminal workspace bottom sheet fixture-e2e', () => {
     expect(container.style.height).toBe('660px');
   });
 
-  it('snaps from pointer drag gestures on the sheet handle', async () => {
+  it('starts Motion drag from the handle and resizes content with the sheet position', async () => {
     await renderBottomSheet({ open: true, mountPoint });
     const handle = getRequiredElement('terminal-workspace-sheet-drag-handle');
+    const contentFrame = getRequiredElement('terminal-workspace-sheet-content-frame');
+    const dragControls = sheetFixture.headerProps.at(-1)?.dragControls as
+      | { start: (event: PointerEvent) => Promise<void> }
+      | undefined;
+    expect(dragControls).toBeTruthy();
+    const dragStart = vi.spyOn(dragControls!, 'start').mockResolvedValue();
 
-    sheetFixture.snapTo.mockClear();
-    sheetFixture.ySet.mockClear();
     await act(async () => {
       handle.dispatchEvent(createPointerEvent('pointerdown', { button: 0, clientY: 500 }));
-      window.dispatchEvent(createPointerEvent('pointermove', { clientY: 120 }));
-      window.dispatchEvent(createPointerEvent('pointerup', { clientY: 120 }));
       await flushMicrotasks();
     });
 
-    expect(sheetFixture.snapTo).toHaveBeenLastCalledWith(4);
-    expect(sheetFixture.ySet).toHaveBeenCalledWith(0);
+    expect(dragStart).toHaveBeenCalledOnce();
+    expect(sheetFixture.headerProps.at(-1)?.dragListener).toBe(false);
+    expect(sheetFixture.headerProps.at(-1)?.dragControls).toBeTruthy();
+    expect(
+      getRequiredElement('mock-terminal-sheet-root').getAttribute('data-terminal-sheet-settling')
+    ).toBe('false');
 
-    sheetFixture.snapTo.mockClear();
     await act(async () => {
-      handle.dispatchEvent(createPointerEvent('pointerdown', { button: 0, clientY: 120 }));
-      window.dispatchEvent(createPointerEvent('pointermove', { clientY: 820 }));
-      window.dispatchEvent(createPointerEvent('pointerup', { clientY: 820 }));
+      setMockSheetY(50);
       await flushMicrotasks();
     });
 
-    expect(sheetFixture.snapTo).toHaveBeenLastCalledWith(1);
+    expect(contentFrame.style.height).toBe('766px');
+
+    await act(async () => {
+      setMockSheetY(700);
+      await flushMicrotasks();
+    });
+
+    expect(contentFrame.style.height).toBe('116px');
   });
 
   it('toggles settings and forwards the state into the terminal panel', async () => {
@@ -623,4 +660,10 @@ function createPointerEvent(
     cancelable: true,
     ...options,
   });
+}
+
+function setMockSheetY(value: number): void {
+  sheetFixture.yValue = value;
+  sheetFixture.ySet(value);
+  sheetFixture.yListeners.forEach((listener) => listener(value));
 }

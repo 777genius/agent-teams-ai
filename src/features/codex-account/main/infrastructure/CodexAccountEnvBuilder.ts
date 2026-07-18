@@ -1,11 +1,13 @@
 import { buildRuntimeBaseEnv } from '@main/services/runtime/buildRuntimeBaseEnv';
 import { getCachedShellEnv } from '@main/utils/shellEnv';
+import { AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV } from '@shared/constants/anthropicConnectionMode';
 
 import type { CodexAccountEffectiveAuthMode } from '@features/codex-account/contracts';
 
 const CODEX_API_KEY_ENV_VAR = 'CODEX_API_KEY';
 const OPENAI_API_KEY_ENV_VAR = 'OPENAI_API_KEY';
 const PROVIDER_ROUTING_ENV_KEYS = [
+  AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV,
   'CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST',
   'CLAUDE_CODE_ENTRY_PROVIDER',
   'CLAUDE_CODE_USE_OPENAI',

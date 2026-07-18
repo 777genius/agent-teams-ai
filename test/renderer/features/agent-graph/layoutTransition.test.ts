@@ -4,6 +4,7 @@ import {
   advanceGraphLayoutTransition,
   createGraphLayoutTransition,
   easeGraphLayoutTransition,
+  resolveGraphLayoutTargetNodes,
 } from '../../../../packages/agent-graph/src/layout/layoutTransition';
 
 import type { GraphEdge, GraphNode } from '@claude-teams/agent-graph';
@@ -64,5 +65,21 @@ describe('layout transitions', () => {
     expect(container).toMatchObject({ x: 40, y: 60 });
     expect(organization).toMatchObject({ x: 40, y: 60 });
     expect(team).toMatchObject({ x: 40, y: 60 });
+  });
+
+  it('projects final coordinates for camera fitting without advancing the transition', () => {
+    const team = node('team:alpha', 100, 200, 'team');
+    const transition = createGraphLayoutTransition({
+      nodes: [team],
+      edges: [],
+      previousPositions: new Map([['team:alpha', { x: 0, y: 0 }]]),
+      duration: 1,
+    });
+
+    const targetNodes = resolveGraphLayoutTargetNodes([team], transition);
+
+    expect(team).toMatchObject({ x: 0, y: 0 });
+    expect(targetNodes[0]).not.toBe(team);
+    expect(targetNodes[0]).toMatchObject({ x: 100, y: 200 });
   });
 });

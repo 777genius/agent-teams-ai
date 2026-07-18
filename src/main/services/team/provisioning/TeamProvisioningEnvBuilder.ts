@@ -7,6 +7,11 @@ import {
   getHomeDir,
 } from '@main/utils/pathDecoder';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
+import {
+  AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV,
+  ANTHROPIC_DIRECT_ROUTE_ENV_KEYS,
+  ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS,
+} from '@shared/constants/anthropicConnectionMode';
 import * as os from 'os';
 
 import {
@@ -64,6 +69,7 @@ export interface CrossProviderMemberArgsResult {
   providerArgsByProvider: Map<TeamProviderId, string[]>;
   envPatch: NodeJS.ProcessEnv;
   usesAnthropicApiKeyHelper: boolean;
+  anthropicApiKeyHelper: AnthropicTeamApiKeyHelperMaterial | null;
 }
 
 interface TeamProvisioningProviderConnectionPort {
@@ -159,6 +165,68 @@ function buildAnthropicCrossProviderDirectAuthEnvPatch(
       envPatch[key] = '';
     }
   }
+  return envPatch;
+}
+
+const ANTHROPIC_AUTO_PROVIDER_SELECTION_ENV_KEYS = [
+  'CLAUDE_CODE_USE_BEDROCK',
+  'CLAUDE_CODE_USE_VERTEX',
+  'CLAUDE_CODE_USE_FOUNDRY',
+] as const;
+
+const ANTHROPIC_AUTO_CREDENTIAL_ENV_KEYS = [
+  'ANTHROPIC_API_KEY',
+  'ANTHROPIC_AUTH_TOKEN',
+  'CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR',
+  'CLAUDE_CODE_OAUTH_TOKEN',
+  'CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR',
+  'AWS_PROFILE',
+  'AWS_REGION',
+  'AWS_DEFAULT_REGION',
+  'AWS_ACCESS_KEY_ID',
+  'AWS_SECRET_ACCESS_KEY',
+  'AWS_SESSION_TOKEN',
+  'GOOGLE_APPLICATION_CREDENTIALS',
+  'GOOGLE_CLOUD_PROJECT',
+  'GOOGLE_CLOUD_PROJECT_ID',
+  'GCLOUD_PROJECT',
+] as const;
+
+function copyDefinedEnvKeys(
+  target: NodeJS.ProcessEnv,
+  source: NodeJS.ProcessEnv,
+  keys: readonly string[]
+): void {
+  for (const key of keys) {
+    if (source[key] !== undefined) {
+      target[key] = source[key];
+    }
+  }
+}
+
+function buildAnthropicCrossProviderConnectionEnvPatch(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const connectionMode = env[AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]?.trim();
+  const envPatch: NodeJS.ProcessEnv = connectionMode
+    ? { [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: connectionMode }
+    : {};
+
+  if (!connectionMode || connectionMode === 'auto') {
+    copyDefinedEnvKeys(envPatch, env, ANTHROPIC_AUTO_PROVIDER_SELECTION_ENV_KEYS);
+    copyDefinedEnvKeys(envPatch, env, ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS);
+    copyDefinedEnvKeys(envPatch, env, ANTHROPIC_DIRECT_ROUTE_ENV_KEYS);
+    copyDefinedEnvKeys(envPatch, env, ANTHROPIC_AUTO_CREDENTIAL_ENV_KEYS);
+    return envPatch;
+  }
+
+  if (connectionMode === 'compatible') {
+    envPatch.ANTHROPIC_BASE_URL = env.ANTHROPIC_BASE_URL?.trim() ?? '';
+    envPatch.ANTHROPIC_AUTH_TOKEN = env.ANTHROPIC_AUTH_TOKEN?.trim() ?? '';
+    envPatch.ANTHROPIC_API_KEY = env.ANTHROPIC_API_KEY?.trim() ?? '';
+    if (env.ANTHROPIC_CUSTOM_HEADERS !== undefined) {
+      envPatch.ANTHROPIC_CUSTOM_HEADERS = env.ANTHROPIC_CUSTOM_HEADERS;
+    }
+  }
+
   return envPatch;
 }
 
@@ -447,49 +515,89 @@ export async function buildCrossProviderMemberArgs({
   const providerArgsByProvider = new Map<TeamProviderId, string[]>();
   const envPatch: NodeJS.ProcessEnv = {};
   let usesAnthropicApiKeyHelper = false;
-  for (const providerId of crossProviderIds) {
-    let env: ProvisioningEnvResolution;
-    try {
-      env = await ports.buildProvisioningEnv(providerId, undefined, {
-        teamRuntimeAuth: options?.teamRuntimeAuth,
-      });
-    } catch (error) {
-      ports.logger.error(
-        `[TeamProvisioningService] Failed to build cross-provider args for provider "${providerId}"`,
-        error
-      );
-      // Best-effort: don't block launch if cross-provider env resolution fails
-      // before the provider can report a concrete auth/readiness issue.
-      continue;
-    }
-    if (env.warning) {
-      throw new Error(`${getTeamProviderLabel(providerId)}: ${env.warning}`);
-    }
-    args.push(...(await ports.buildRuntimeTurnSettledHookSettingsArgs(providerId)));
-    const providerArgs = env.providerArgs ?? [];
-    providerArgsByProvider.set(providerId, providerArgs);
-    if (providerId === 'codex') {
-      Object.assign(envPatch, buildCodexCrossProviderSafeEnvPatch(env.env));
-    }
-    if (env.anthropicApiKeyHelper) {
-      usesAnthropicApiKeyHelper = true;
-      Object.assign(envPatch, env.anthropicApiKeyHelper.envPatch);
-    } else if (
-      providerId === 'anthropic' &&
-      isAnthropicDirectCredentialAuthSource(env.authSource)
-    ) {
-      Object.assign(
-        envPatch,
-        buildAnthropicCrossProviderDirectAuthEnvPatch(env.env, env.authSource)
-      );
-    }
-    const flattenedArgs =
-      providerId === 'anthropic' && env.anthropicApiKeyHelper
-        ? filterOutSettingsPathArgs(providerArgs, env.anthropicApiKeyHelper.settingsPath)
-        : providerArgs;
-    if (flattenedArgs.length > 0) {
-      args.push(...flattenedArgs);
-    }
+  let anthropicApiKeyHelper: AnthropicTeamApiKeyHelperMaterial | null = null;
+  const providersToPrepare = new Set(crossProviderIds);
+  const prepareAnthropicForDynamicSpawn =
+    primaryProviderId !== 'anthropic' && !crossProviderIds.has('anthropic');
+  if (prepareAnthropicForDynamicSpawn) {
+    providersToPrepare.add('anthropic');
   }
-  return { args, providerArgsByProvider, envPatch, usesAnthropicApiKeyHelper };
+
+  try {
+    for (const providerId of providersToPrepare) {
+      const dynamicSpawnOnly = providerId === 'anthropic' && prepareAnthropicForDynamicSpawn;
+      let env: ProvisioningEnvResolution;
+      try {
+        env = await ports.buildProvisioningEnv(providerId, undefined, {
+          teamRuntimeAuth: options?.teamRuntimeAuth,
+        });
+      } catch (error) {
+        ports.logger.error(
+          `[TeamProvisioningService] Failed to build cross-provider args for provider "${providerId}"`,
+          error
+        );
+        // Best-effort: don't block launch if cross-provider env resolution fails
+        // before the provider can report a concrete auth/readiness issue.
+        continue;
+      }
+      if (env.warning) {
+        if (dynamicSpawnOnly) {
+          ports.logger.error(
+            `[TeamProvisioningService] Dynamic Anthropic spawn auth was not pre-materialized: ${env.warning}`
+          );
+          continue;
+        }
+        throw new Error(`${getTeamProviderLabel(providerId)}: ${env.warning}`);
+      }
+      if (!dynamicSpawnOnly) {
+        args.push(...(await ports.buildRuntimeTurnSettledHookSettingsArgs(providerId)));
+      }
+      const providerArgs = env.providerArgs ?? [];
+      if (!dynamicSpawnOnly) {
+        providerArgsByProvider.set(providerId, providerArgs);
+      }
+      if (providerId === 'codex') {
+        Object.assign(envPatch, buildCodexCrossProviderSafeEnvPatch(env.env));
+      }
+      if (providerId === 'anthropic') {
+        Object.assign(envPatch, buildAnthropicCrossProviderConnectionEnvPatch(env.env));
+      }
+      if (env.anthropicApiKeyHelper) {
+        usesAnthropicApiKeyHelper = true;
+        anthropicApiKeyHelper = env.anthropicApiKeyHelper;
+        Object.assign(envPatch, env.anthropicApiKeyHelper.envPatch);
+      } else if (
+        providerId === 'anthropic' &&
+        isAnthropicDirectCredentialAuthSource(env.authSource)
+      ) {
+        Object.assign(
+          envPatch,
+          buildAnthropicCrossProviderDirectAuthEnvPatch(env.env, env.authSource)
+        );
+      }
+      if (!dynamicSpawnOnly) {
+        const flattenedArgs =
+          providerId === 'anthropic' && env.anthropicApiKeyHelper
+            ? filterOutSettingsPathArgs(providerArgs, env.anthropicApiKeyHelper.settingsPath)
+            : providerArgs;
+        if (flattenedArgs.length > 0) {
+          args.push(...flattenedArgs);
+        }
+      }
+    }
+    return {
+      args,
+      providerArgsByProvider,
+      envPatch,
+      usesAnthropicApiKeyHelper,
+      anthropicApiKeyHelper,
+    };
+  } catch (error) {
+    if (anthropicApiKeyHelper) {
+      await cleanupAnthropicTeamApiKeyHelperMaterial({
+        directory: anthropicApiKeyHelper.directory,
+      }).catch(() => undefined);
+    }
+    throw error;
+  }
 }

@@ -77,6 +77,7 @@ export class TmuxStatusSourceAdapter implements TmuxStatusSourcePort {
     this.#cacheVersion += 1;
     this.#cachedStatus = null;
     this.#inFlightStatus = null;
+    this.#wslService.invalidateOptionalFeatureProbeCache();
   }
 
   async #probeStatus(): Promise<TmuxStatus> {

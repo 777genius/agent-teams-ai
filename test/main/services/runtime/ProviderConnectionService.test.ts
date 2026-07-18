@@ -1035,7 +1035,7 @@ describe('ProviderConnectionService', () => {
         apiKeySourceLabel: 'Stored in app',
       },
     });
-    expect(verifyAnthropicApiKey).toHaveBeenCalledWith('stored-key', null);
+    expect(verifyAnthropicApiKey).toHaveBeenCalledWith('stored-key');
   });
 
   it('reports Anthropic API key mode as connected after direct API verification succeeds', async () => {
@@ -1095,7 +1095,70 @@ describe('ProviderConnectionService', () => {
     expect(verifyAnthropicApiKey).toHaveBeenCalledTimes(1);
   });
 
-  it('verifies Anthropic API keys against ANTHROPIC_BASE_URL when configured', async () => {
+  it.each([
+    ['api_key', 'API key'],
+    ['oauth', 'Anthropic subscription'],
+  ] as const)(
+    'fails closed when %s mode unexpectedly resolves to Bedrock',
+    async (authMode, modeLabel) => {
+      const { ProviderConnectionService } =
+        await import('@main/services/runtime/ProviderConnectionService');
+      const verifyAnthropicApiKey = vi.fn().mockResolvedValue({ state: 'valid', status: 200 });
+      const service = new ProviderConnectionService(
+        {
+          lookupPreferred: vi.fn().mockResolvedValue({
+            envVarName: 'ANTHROPIC_API_KEY',
+            value: 'stored-key',
+          }),
+        } as never,
+        {
+          getConfig: () => createConfig(authMode),
+        } as never,
+        undefined,
+        verifyAnthropicApiKey
+      );
+
+      const status = await service.enrichProviderStatus({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        supported: true,
+        authenticated: true,
+        authMethod: 'aws_credentials',
+        verificationState: 'verified',
+        statusMessage: 'Configured for Amazon Bedrock',
+        detailMessage: null,
+        models: ['claude-sonnet-4-6'],
+        canLoginFromUi: true,
+        capabilities: {
+          teamLaunch: true,
+          oneShot: true,
+          extensions: { mcp: 'unsupported', skills: 'unsupported', plugins: 'unsupported' },
+        },
+        selectedBackendId: 'bedrock',
+        resolvedBackendId: 'bedrock',
+        availableBackends: [],
+        externalRuntimeDiagnostics: [],
+        backend: {
+          kind: 'bedrock',
+          label: 'Amazon Bedrock',
+          endpointLabel: 'AWS region us-east-1',
+          authMethodDetail: 'aws_credentials',
+        },
+        connection: null,
+      } as never);
+
+      expect(status).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'error',
+        statusMessage: `${modeLabel} mode resolved to Amazon Bedrock.`,
+        detailMessage: `${modeLabel} mode requires the direct Anthropic API. Switch to Auto to use Amazon Bedrock.`,
+      });
+      expect(verifyAnthropicApiKey).not.toHaveBeenCalled();
+    }
+  );
+
+  it('verifies explicit Anthropic API keys against the first-party API', async () => {
     getCachedShellEnvMock.mockReturnValue({
       ANTHROPIC_BASE_URL: 'https://gateway.example/anthropic/',
     });
@@ -1141,7 +1204,7 @@ describe('ProviderConnectionService', () => {
       } as never);
 
       expect(fetchMock).toHaveBeenCalledWith(
-        'https://gateway.example/anthropic/v1/models',
+        'https://api.anthropic.com/v1/models',
         expect.objectContaining({
           headers: expect.objectContaining({
             'x-api-key': 'stored-key',

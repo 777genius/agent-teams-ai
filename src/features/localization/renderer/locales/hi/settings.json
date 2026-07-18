@@ -257,6 +257,25 @@
     }
   },
   "notifications": {
+    "recovery": {
+      "title": "Automatic agent recovery",
+      "transient": {
+        "label": "Recover transient runtime errors",
+        "description": "Continue the failed lead or teammate turn after safe transient provider and network errors"
+      },
+      "rateLimits": {
+        "label": "Recover rate limits with a reset time",
+        "description": "Continue after a trusted Retry-After or reset time, with a safety buffer"
+      },
+      "delay": {
+        "label": "Initial retry delay (seconds)",
+        "description": "Base delay before the first recovery attempt (15-900 seconds)"
+      },
+      "attempts": {
+        "label": "Maximum recovery attempts",
+        "description": "Accepted runtime turns per failure chain (1-5)"
+      }
+    },
     "dev": {
       "descriptionPrefix": "अधिसूचनाएं विकास मोड में काम नहीं कर सकती हैं। मैकओएस ऐप को \"इलेक्ट्रोन\" (बंडल आईडी) के रूप में पहचानता है",
       "descriptionSuffix": ") उत्पादन ऐप नाम के बजाय। सिस्टम सेटिंग> अधिसूचनाओं की जाँच करें > अनुमतियों को सत्यापित करने के लिए इलेक्ट्रॉन।",

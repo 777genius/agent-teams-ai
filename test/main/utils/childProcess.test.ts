@@ -2,6 +2,7 @@
 import {
   execCli,
   killProcessTree,
+  killProcessTreeAndWait,
   killTrackedCliProcesses,
   quoteWindowsCmdArg,
   spawnCli,
@@ -456,8 +457,8 @@ describe('cli child process helpers', () => {
       const execMock = child.exec as unknown as Mock;
       execFileMock.mockImplementation(
         (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
-        cb(null, '0.0.8', '');
-        return createMockProcess<ExecChild>();
+          cb(null, '0.0.8', '');
+          return createMockProcess<ExecChild>();
         }
       );
 
@@ -501,8 +502,8 @@ describe('cli child process helpers', () => {
       const execMock = child.exec as unknown as Mock;
       execFileMock.mockImplementation(
         (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
-        cb(null, 'ok', '');
-        return createMockProcess<ExecChild>();
+          cb(null, 'ok', '');
+          return createMockProcess<ExecChild>();
         }
       );
       const { dir, launcher } = createGeneratedBunLauncher();
@@ -574,8 +575,8 @@ describe('cli child process helpers', () => {
       const execMock = child.exec as unknown as Mock;
       execFileMock.mockImplementation(
         (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
-        cb(null, '1.2.3', '');
-        return createMockProcess<ExecChild>();
+          cb(null, '1.2.3', '');
+          return createMockProcess<ExecChild>();
         }
       );
 
@@ -597,8 +598,8 @@ describe('cli child process helpers', () => {
       const execFileMock = child.execFile as unknown as Mock;
       execFileMock.mockImplementation(
         (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
-        cb(null, 'ok', '');
-        return createMockProcess<ExecChild>();
+          cb(null, 'ok', '');
+          return createMockProcess<ExecChild>();
         }
       );
 
@@ -618,8 +619,8 @@ describe('cli child process helpers', () => {
       const execFileMock = child.execFile as unknown as Mock;
       execFileMock.mockImplementation(
         (_cmd: string, _args: string[], _opts: unknown, cb: ExecCallback) => {
-        cb(null, 'ok', '');
-        return createMockProcess<ExecChild>();
+          cb(null, 'ok', '');
+          return createMockProcess<ExecChild>();
         }
       );
 
@@ -705,12 +706,7 @@ describe('cli child process helpers', () => {
       ).resolves.toMatchObject({ stdout: 'ok' });
       expect(execFileMock).toHaveBeenCalledWith(
         expect.stringMatching(/cmd\.exe$/i),
-        [
-          '/d',
-          '/s',
-          '/c',
-          expect.stringContaining('"C:\\Users\\R&D\\bin\\claude.cmd"'),
-        ],
+        ['/d', '/s', '/c', expect.stringContaining('"C:\\Users\\R&D\\bin\\claude.cmd"')],
         expect.any(Object),
         expect.any(Function)
       );
@@ -734,6 +730,81 @@ describe('cli child process helpers', () => {
         stdout: '{"error":"bad"}',
         stderr: 'bun: not found',
       });
+    });
+
+    it('kills the process tree before rejecting when maxBuffer is exceeded', async () => {
+      setPlatform('darwin');
+      const execFileMock = child.execFile as unknown as Mock;
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const childProcess = new EventEmitter() as EventEmitter & {
+        pid: number;
+        stdout: EventEmitter;
+        stderr: EventEmitter;
+      };
+      childProcess.pid = 799;
+      childProcess.stdout = new EventEmitter();
+      childProcess.stderr = new EventEmitter();
+      spawnSyncMock.mockReturnValue({ status: 0, stdout: ['799 1', '800 799'].join('\n') });
+      execFileMock.mockImplementation(() => childProcess);
+
+      try {
+        const result = execCli('/tmp/agent-teams-controller', ['runtime', 'opencode-command'], {
+          maxBuffer: 16,
+        });
+        childProcess.stdout.emit('data', Buffer.from('output larger than sixteen bytes'));
+
+        await expect(result).rejects.toMatchObject({
+          code: 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
+          killed: true,
+          signal: 'SIGTERM',
+          processOutcomeUnknown: true,
+        });
+        expect(execFileMock.mock.calls[0][2]).toMatchObject({
+          maxBuffer: 1024 * 1024 + 16,
+        });
+        expect(killSpy.mock.calls.map(([pid]) => pid)).toEqual(
+          expect.arrayContaining([799, 800])
+        );
+      } finally {
+        killSpy.mockRestore();
+      }
+    });
+
+    it('enforces independent stdout and stderr output limits', async () => {
+      setPlatform('darwin');
+      const execFileMock = child.execFile as unknown as Mock;
+      const spawnSyncMock = child.spawnSync as unknown as Mock;
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+      const childProcess = new EventEmitter() as EventEmitter & {
+        pid: number;
+        stdout: EventEmitter;
+        stderr: EventEmitter;
+      };
+      childProcess.pid = 801;
+      childProcess.stdout = new EventEmitter();
+      childProcess.stderr = new EventEmitter();
+      spawnSyncMock.mockReturnValue({ status: 0, stdout: '801 1' });
+      execFileMock.mockImplementation(() => childProcess);
+
+      try {
+        const result = execCli('/tmp/agent-teams-controller', ['runtime', 'opencode-command'], {
+          stdoutMaxBuffer: 32,
+          stderrMaxBuffer: 8,
+        });
+        childProcess.stderr.emit('data', Buffer.from('ninebytes'));
+
+        await expect(result).rejects.toMatchObject({
+          message: 'stderr maxBuffer length exceeded',
+          code: 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
+          processOutcomeUnknown: true,
+        });
+        expect(execFileMock.mock.calls[0][2]).toMatchObject({
+          maxBuffer: 1024 * 1024 + 32,
+        });
+      } finally {
+        killSpy.mockRestore();
+      }
     });
 
     it('kills the launcher process tree on manual execFile timeout', async () => {
@@ -773,6 +844,96 @@ describe('cli child process helpers', () => {
         expect(killSpy.mock.calls.map(([pid]) => pid)).toEqual(
           expect.arrayContaining([100, 101, 102, 103])
         );
+      } finally {
+        killSpy.mockRestore();
+        vi.useRealTimers();
+      }
+    });
+
+    it('waits for Windows taskkill before rejecting a timed out execCli request', async () => {
+      setPlatform('win32');
+      vi.useFakeTimers();
+      const execFileMock = child.execFile as unknown as Mock;
+      const childProcess = new EventEmitter() as EventEmitter & {
+        pid: number;
+        stdout: EventEmitter;
+        stderr: EventEmitter;
+      };
+      childProcess.pid = 700;
+      childProcess.stdout = new EventEmitter();
+      childProcess.stderr = new EventEmitter();
+      let taskkillCallback: ExecCallback | null = null;
+      execFileMock.mockImplementation(
+        (cmd: string, _args: string[], _opts: unknown, callback: ExecCallback) => {
+          if (/taskkill\.exe$/iu.test(cmd)) {
+            taskkillCallback = callback;
+            return createMockProcess<ExecChild>();
+          }
+          return childProcess;
+        }
+      );
+
+      try {
+        const result = execCli('C:\\bin\\opencode.exe', ['--version'], { timeout: 100 });
+        let settled = false;
+        void result.finally(() => {
+          settled = true;
+        }).catch(() => undefined);
+        await vi.advanceTimersByTimeAsync(100);
+
+        expect(taskkillCallback).not.toBeNull();
+        expect(settled).toBe(false);
+        taskkillCallback!(null, '', '');
+
+        await expect(result).rejects.toMatchObject({
+          killed: true,
+          signal: 'SIGTERM',
+        });
+        expect(settled).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('reports a Windows process-tree termination failure on timeout', async () => {
+      setPlatform('win32');
+      vi.useFakeTimers();
+      const execFileMock = child.execFile as unknown as Mock;
+      const childProcess = new EventEmitter() as EventEmitter & {
+        pid: number;
+        stdout: EventEmitter;
+        stderr: EventEmitter;
+      };
+      childProcess.pid = 701;
+      childProcess.stdout = new EventEmitter();
+      childProcess.stderr = new EventEmitter();
+      let taskkillCallback: ExecCallback | null = null;
+      execFileMock.mockImplementation(
+        (cmd: string, _args: string[], _opts: unknown, callback: ExecCallback) => {
+          if (/taskkill\.exe$/iu.test(cmd)) {
+            taskkillCallback = callback;
+            return createMockProcess<ExecChild>();
+          }
+          return childProcess;
+        }
+      );
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => {
+        throw Object.assign(new Error('operation not permitted'), { code: 'EPERM' });
+      });
+
+      try {
+        const result = execCli('C:\\bin\\opencode.exe', ['--version'], { timeout: 100 });
+        await vi.advanceTimersByTimeAsync(100);
+        expect(taskkillCallback).not.toBeNull();
+        taskkillCallback!(new Error('Access is denied'), '', 'ERROR: Access is denied');
+
+        await expect(result).rejects.toMatchObject({
+          killed: true,
+          signal: 'SIGTERM',
+          processTerminationError: expect.stringContaining(
+            'Failed to verify termination of Windows process tree 701'
+          ),
+        });
       } finally {
         killSpy.mockRestore();
         vi.useRealTimers();
@@ -923,6 +1084,79 @@ describe('cli child process helpers', () => {
   });
 
   describe('killProcessTree', () => {
+    it('uses best-effort taskkill process-tree termination on Windows', () => {
+      setPlatform('win32');
+      const execFileMock = child.execFile as unknown as Mock;
+      execFileMock.mockReturnValue(createMockProcess());
+
+      killProcessTree({ pid: 200 } as Parameters<typeof killProcessTree>[0], 'SIGKILL');
+
+      expect(execFileMock).toHaveBeenCalledWith(
+        path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'taskkill.exe'),
+        ['/T', '/F', '/PID', '200'],
+        { windowsHide: true, timeout: 10_000 },
+        expect.any(Function)
+      );
+    });
+
+    it('reports an unknown tree outcome when taskkill fails after direct launcher termination', async () => {
+      setPlatform('win32');
+      const execFileMock = child.execFile as unknown as Mock;
+      let launcherAlive = true;
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation((_pid, signal) => {
+        if (signal === 0) {
+          if (launcherAlive) return true;
+          throw Object.assign(new Error('process exited'), { code: 'ESRCH' });
+        }
+        launcherAlive = false;
+        return true;
+      });
+      execFileMock.mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, callback: ExecCallback) => {
+          callback(new Error('Access is denied'), '', 'ERROR: Access is denied');
+          return createMockProcess<ExecChild>();
+        }
+      );
+
+      try {
+        await expect(
+          killProcessTreeAndWait(
+            { pid: 200 } as Parameters<typeof killProcessTreeAndWait>[0],
+            'SIGKILL'
+          )
+        ).rejects.toThrow('descendant outcome is unknown');
+
+        expect(killSpy).toHaveBeenCalledWith(200, 'SIGKILL');
+      } finally {
+        killSpy.mockRestore();
+      }
+    });
+
+    it('rejects awaited Windows termination when taskkill and direct kill both fail', async () => {
+      setPlatform('win32');
+      const execFileMock = child.execFile as unknown as Mock;
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => {
+        throw Object.assign(new Error('operation not permitted'), { code: 'EPERM' });
+      });
+      execFileMock.mockImplementation(
+        (_cmd: string, _args: string[], _opts: unknown, callback: ExecCallback) => {
+          callback(new Error('Access is denied'), '', 'ERROR: Access is denied');
+          return createMockProcess<ExecChild>();
+        }
+      );
+
+      try {
+        await expect(
+          killProcessTreeAndWait(
+            { pid: 201 } as Parameters<typeof killProcessTreeAndWait>[0],
+            'SIGKILL'
+          )
+        ).rejects.toThrow('Failed to verify termination of Windows process tree 201');
+      } finally {
+        killSpy.mockRestore();
+      }
+    });
+
     it('kills POSIX descendants discovered from ps output', () => {
       setPlatform('darwin');
       const spawnSyncMock = child.spawnSync as unknown as Mock;

@@ -7,8 +7,64 @@ const LOCAL_MCP_LAUNCH_ENV_KEYS = [
 ] as const;
 const OPTIONAL_LOCAL_MCP_LAUNCH_ENV_KEYS = ['CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON'] as const;
 const LEGACY_LOCAL_MCP_CHILD_ENV_KEYS = ['ELECTRON_RUN_AS_NODE'] as const;
+const MANAGED_HOST_APP_INSTANCE_FRAGMENT_KEY = 'agent-teams-app-instance';
 
 export type OpenCodeMcpBridgeEnv = Record<string, string | undefined>;
+
+function normalizeOpenCodeAppInstanceId(appInstanceId: string): string {
+  const normalizedAppInstanceId = appInstanceId.trim();
+  if (!normalizedAppInstanceId) {
+    throw new Error('OpenCode app instance id is required');
+  }
+  return normalizedAppInstanceId;
+}
+
+export function buildOpenCodeAppScopedMcpOwnershipMarker(appInstanceId: string): string {
+  const fragment = new URLSearchParams();
+  fragment.set(
+    MANAGED_HOST_APP_INSTANCE_FRAGMENT_KEY,
+    normalizeOpenCodeAppInstanceId(appInstanceId)
+  );
+  return fragment.toString();
+}
+
+export function buildOpenCodeAppScopedMcpUrl(baseUrl: string, appInstanceId: string): string {
+  const url = new URL(baseUrl);
+  const fragment = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : url.hash);
+  fragment.set(
+    MANAGED_HOST_APP_INSTANCE_FRAGMENT_KEY,
+    normalizeOpenCodeAppInstanceId(appInstanceId)
+  );
+  url.hash = fragment.toString();
+  return url.toString();
+}
+
+export function mergeOpenCodeLocalMcpChildEnvironment(
+  env: OpenCodeMcpBridgeEnv,
+  additions: Readonly<Record<string, string>>
+): void {
+  const rawEnvironment = env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON?.trim();
+  let currentEnvironment: Record<string, string> = {};
+  if (rawEnvironment) {
+    try {
+      const parsed = JSON.parse(rawEnvironment) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        currentEnvironment = Object.fromEntries(
+          Object.entries(parsed).filter((entry): entry is [string, string] => {
+            return typeof entry[1] === 'string';
+          })
+        );
+      }
+    } catch {
+      // Replace malformed optional child environment with the required safe values.
+    }
+  }
+
+  env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON = JSON.stringify({
+    ...currentEnvironment,
+    ...additions,
+  });
+}
 
 export function isOpenCodeMcpHttpBridgeEnabled(env: OpenCodeMcpBridgeEnv = process.env): boolean {
   const rawValue = env.CLAUDE_TEAM_OPENCODE_MCP_HTTP?.trim().toLowerCase();

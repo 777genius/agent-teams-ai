@@ -602,14 +602,14 @@ describe('cliInstallerSlice', () => {
 
       const merged = mergeCliStatusPreservingHydratedProviders(current, incoming);
 
-      expect(merged.providers.find((provider) => provider.providerId === 'anthropic')).toMatchObject(
-        {
-          authenticated: true,
-          authMethod: 'oauth_token',
-          statusMessage: 'Connected via Anthropic subscription',
-          models: ['claude-sonnet-4-5'],
-        }
-      );
+      expect(
+        merged.providers.find((provider) => provider.providerId === 'anthropic')
+      ).toMatchObject({
+        authenticated: true,
+        authMethod: 'oauth_token',
+        statusMessage: 'Connected via Anthropic subscription',
+        models: ['claude-sonnet-4-5'],
+      });
       expect(merged.providers.find((provider) => provider.providerId === 'opencode')).toMatchObject(
         {
           authenticated: true,
@@ -807,6 +807,54 @@ describe('cliInstallerSlice', () => {
         supported: true,
         authenticated: true,
         models: ['opencode/big-pickle'],
+      });
+    });
+
+    it('records an update failure as failed when the existing runtime remains installed', async () => {
+      const provider = createMultimodelProvider({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        supported: true,
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        models: ['opencode/big-pickle'],
+        canLoginFromUi: false,
+        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+      });
+      useStore.setState({
+        cliStatus: createMultimodelStatus([provider]),
+        openCodeRuntimeStatus: {
+          installed: true,
+          binaryPath: '/known/opencode',
+          version: '1.16.0',
+          source: 'app-managed',
+          state: 'ready',
+        },
+      });
+      vi.mocked(api.openCodeRuntime.install).mockResolvedValue({
+        installed: true,
+        binaryPath: '/known/opencode',
+        version: '1.16.0',
+        source: 'app-managed',
+        state: 'failed',
+        error: 'registry unavailable',
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(provider);
+
+      await useStore.getState().installOpenCodeRuntime();
+
+      expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith('runtime_setup:install_end', {
+        runtime: 'opencode',
+        success: false,
+        source: 'app-managed',
+        error_class: 'network',
+        duration_ms_bucket: 'lt_1s',
+      });
+      expect(useStore.getState().openCodeRuntimeStatus).toMatchObject({
+        installed: true,
+        source: 'app-managed',
+        state: 'failed',
+        error: 'registry unavailable',
       });
     });
 
@@ -1543,9 +1591,7 @@ describe('cliInstallerSlice', () => {
       });
       vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(runtimeMissingProvider);
 
-      await useStore
-        .getState()
-        .fetchCliProviderStatus('opencode', { checkReason: 'startup' });
+      await useStore.getState().fetchCliProviderStatus('opencode', { checkReason: 'startup' });
 
       expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
         'provider_readiness:state_observed',
@@ -2071,9 +2117,7 @@ describe('cliInstallerSlice', () => {
 
       expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
       expect(
-        useStore
-          .getState()
-          .cliStatus?.providers.find((provider) => provider.providerId === 'codex')
+        useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'codex')
           ?.modelCatalogRefreshState
       ).toBe('loading');
 
@@ -2081,9 +2125,7 @@ describe('cliInstallerSlice', () => {
 
       expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2);
       expect(
-        useStore
-          .getState()
-          .cliStatus?.providers.find((provider) => provider.providerId === 'codex')
+        useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'codex')
       ).toMatchObject({
         authenticated: true,
         statusMessage: 'ChatGPT account ready',
@@ -2099,11 +2141,7 @@ describe('cliInstallerSlice', () => {
         authenticated: true,
         authMethod: 'opencode_managed',
         statusMessage: null,
-        models: [
-          'opencode/big-pickle',
-          'openai/gpt-5.4',
-          'openrouter/openai/gpt-oss-20b:free',
-        ],
+        models: ['opencode/big-pickle', 'openai/gpt-5.4', 'openrouter/openai/gpt-oss-20b:free'],
         modelCatalogRefreshState: 'ready',
         modelCatalog: {
           schemaVersion: 1,
