@@ -69,6 +69,8 @@ describe("codex goal MCP server", () => {
     const childWorkspace = join(root, "worktrees", "infinity-context-memory-fastgate-v1");
     const childJobRoot = join(root, "worker-jobs", "infinity-context-memory-fastgate-v1");
     const childBranch = "test/infinity-context-memory-fastgate-v1";
+    const sourceBaseBranch = "refactor/hosted-web-feature-boundaries";
+    const remotePath = join(root, "origin.git");
     const server = createCodexGoalMcpServer();
     const client = new Client({
       name: "subscription-runtime-test",
@@ -109,6 +111,15 @@ describe("codex goal MCP server", () => {
         sourceWorkspacePath,
         ["rev-parse", "HEAD"],
       )).trim();
+      await git(root, ["init", "--bare", remotePath]);
+      await git(sourceWorkspacePath, ["remote", "add", "origin", remotePath]);
+      await git(sourceWorkspacePath, ["branch", sourceBaseBranch, phaseStartSha]);
+      await git(sourceWorkspacePath, [
+        "push",
+        "origin",
+        "HEAD:main",
+        `${sourceBaseBranch}:${sourceBaseBranch}`,
+      ]);
       await git(sourceWorkspacePath, [
         "update-ref",
         "refs/remotes/origin/main",
@@ -140,7 +151,12 @@ describe("codex goal MCP server", () => {
           authRoot: join(root, "auth"),
           jobIdPrefixes: ["infinity-context-"],
           tmuxSessionPrefixes: ["infinity-context-"],
-          allowedBranches: ["main", "HEAD", "test/infinity-context-*"],
+          allowedBranches: [
+            "main",
+            "HEAD",
+            sourceBaseBranch,
+            "test/infinity-context-*",
+          ],
           allowedGitRemotes: ["origin"],
           allowedAccountIds: ["account-a"],
           deniedRoots: [join(root, "real-user-project")],
@@ -184,6 +200,8 @@ describe("codex goal MCP server", () => {
         controllerJobId: "infinity-context-controller-v1",
         jobId: "infinity-context-memory-fastgate-v1",
         sourceWorkspacePath,
+        baseBranch: sourceBaseBranch,
+        expectedSourceCommit: phaseStartSha,
         newBranch: childBranch,
         workspacePath: childWorkspace,
         promptBody: "Run a focused memory fastgate and report cleanly.\n",
@@ -205,7 +223,7 @@ describe("codex goal MCP server", () => {
         jobId: "infinity-context-memory-fastgate-v1",
         targetJobId: "infinity-context-memory-fastgate-v1",
         startSkipped: true,
-        baseBranch: "origin/main",
+        baseBranch: sourceBaseBranch,
         manifest: {
           jobRootDir: childJobRoot,
           authRootDir: join(root, "auth"),
@@ -275,6 +293,9 @@ describe("codex goal MCP server", () => {
         workKey: materializedContract.workKey,
       });
       await expect(access(join(childWorkspace, "README.md"))).resolves.toBeUndefined();
+      await expect(
+        gitStdout(childWorkspace, ["rev-parse", "HEAD"]),
+      ).resolves.toBe(`${phaseStartSha}\n`);
       const dependencyPreflight = JSON.parse(
         await readFile(join(childJobRoot, "dependency-preflight.json"), "utf8"),
       ) as Record<string, unknown>;
@@ -290,6 +311,8 @@ describe("codex goal MCP server", () => {
         jobRootDir: childJobRoot,
         authRootDir: join(root, "auth"),
         sourceWorkspacePath,
+        baseBranch: sourceBaseBranch,
+        expectedSourceCommit: phaseStartSha,
         workspacePath: childWorkspace,
         promptBody: "Run a focused memory fastgate and report cleanly.\n",
         taskId: "infinity-context-memory-fastgate-v1",
@@ -542,6 +565,7 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
         sourceRef: expect.any(Object),
         newBranch: expect.any(Object),
         producerJobId: expect.any(Object),
+        mergeBinding: expect.any(Object),
       });
       const refillSchema = refillTool?.inputSchema.properties
         ?.preStartAdmission as TestJsonSchema;
@@ -563,9 +587,7 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
       const declarativeFields = [
         "kind",
         "format",
-        "canonicalSha",
         "baseSha",
-        "phaseStartSha",
         "packetRevision",
         "controllerPacket",
         "lanePacket",
@@ -582,7 +604,7 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
       ];
       expect(contractSchema?.required).toEqual(declarativeFields);
       expect(Object.keys(contractSchema?.properties ?? {}).sort()).toEqual(
-        [...declarativeFields].sort(),
+        [...declarativeFields, "canonicalSha", "phaseStartSha", "merge"].sort(),
       );
       expect(contractSchema).toMatchObject({
         type: "object",

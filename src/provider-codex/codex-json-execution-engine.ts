@@ -14,6 +14,7 @@ import { createCodexRuntimeTempRoot } from "./codex-runtime-temp";
 import { classifyCodexFailure } from "./failure-classifier";
 import { pruneCodexChildEnv } from "./codex-cli-domain";
 import { composeCodexPrompt } from "./codex-prompt-composer";
+import { codexProviderEgressCliConfigArgs } from "./codex-provider-egress-policy";
 import { parseCodexStructuredOutput } from "./structured-output";
 
 export type CodexReasoningEffort =
@@ -283,6 +284,8 @@ export function buildCodexJsonExecArgs(input: {
     "--config",
     'approval_policy="never"',
     "--config",
+    'cli_auth_credentials_store="file"',
+    "--config",
     `model_reasoning_effort=${JSON.stringify(input.reasoningEffort)}`,
     ...(input.serviceTier
       ? [
@@ -309,6 +312,7 @@ export function buildCodexJsonExecArgs(input: {
     "features.shell_snapshot=false",
     "--config",
     "features.skill_mcp_dependency_install=false",
+    ...codexProviderEgressCliConfigArgs(),
     ...(input.outputSchemaPath ? ["--output-schema", input.outputSchemaPath] : []),
     "--ephemeral",
     "--ignore-user-config",

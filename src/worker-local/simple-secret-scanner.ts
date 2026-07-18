@@ -12,13 +12,16 @@ import {
   type SecretScannerPort,
   type SecretScanResult,
 } from "@vioxen/subscription-runtime/worker-core";
-import { readGitBlobBatch } from "./git-blob-batch-reader";
+import {
+  maximumGitBlobBatchObjects,
+  readGitBlobBatch,
+} from "./git-blob-batch-reader";
 
 const execFileAsync = promisify(execFile);
-const defaultMaxFileBytes = 2 * 1024 * 1024;
-const defaultMaxTotalFileBytes = 16 * 1024 * 1024;
-const defaultMaxChangedFiles = 256;
 const maximumInputPaths = 1024;
+const defaultMaxFileBytes = 1024 * 1024;
+const defaultMaxTotalFileBytes = 64 * 1024 * 1024;
+const defaultMaxChangedFiles = maximumInputPaths;
 const maximumByteLimit = 64 * 1024 * 1024;
 
 export type SimpleSecretScannerOptions = {
@@ -52,16 +55,19 @@ export class SimpleSecretScanner implements SecretScannerPort {
     const maxChangedFiles = scannerLimit(
       this.options.maxChangedFiles,
       defaultMaxChangedFiles,
-      defaultMaxChangedFiles,
+      maximumInputPaths,
       "secret_scan_max_changed_files_invalid",
     );
     if (input.files.length > maximumInputPaths) {
       return failed("secret_scan_changed_file_limit_exceeded");
     }
     const files = uniqueSorted(input.files.map(normalizeProjectRelativePath));
-    if (files.some((file) =>
-      Buffer.byteLength(file) > 4096 || /[\u0000-\u001f\u007f]/.test(file)
-    )) {
+    if (
+      files.some(
+        (file) =>
+          Buffer.byteLength(file) > 4096 || /[\u0000-\u001f\u007f]/.test(file),
+      )
+    ) {
       return failed("secret_scan_file_path_invalid");
     }
     if (files.length > maxChangedFiles) {
@@ -107,29 +113,45 @@ export class SimpleSecretScanner implements SecretScannerPort {
 
     let baseBlobs: readonly (Buffer | undefined)[];
     try {
-      const baseObjects = files.length === 0
-        ? new Map<string, string>()
-        : await this.gitBaseBlobObjects(workspacePath, baseCommit, files);
-      const objectIds = [...new Set(files.flatMap((file) => {
-        const objectId = baseObjects.get(file);
-        return objectId === undefined ? [] : [objectId];
-      }))];
-      const objectBlobs = objectIds.length === 0
-        ? []
-        : await readGitBlobBatch({
+      const baseObjects =
+        files.length === 0
+          ? new Map<string, string>()
+          : await this.gitBaseBlobObjects(workspacePath, baseCommit, files);
+      const objectIds = [
+        ...new Set(
+          files.flatMap((file) => {
+            const objectId = baseObjects.get(file);
+            return objectId === undefined ? [] : [objectId];
+          }),
+        ),
+      ];
+      const bytesByObject = new Map<string, Buffer>();
+      let remainingBaseBytes = maxTotalFileBytes - totalBytes;
+      for (
+        let offset = 0;
+        offset < objectIds.length;
+        offset += maximumGitBlobBatchObjects
+      ) {
+        const batchObjectIds = objectIds.slice(
+          offset,
+          offset + maximumGitBlobBatchObjects,
+        );
+        const batchBlobs = await readGitBlobBatch({
           workspacePath,
-          objectNames: objectIds,
+          objectNames: batchObjectIds,
           maxBlobBytes: maxFileBytes,
-          maxTotalBytes: maxTotalFileBytes - totalBytes,
+          maxTotalBytes: remainingBaseBytes,
           ...(this.options.gitBinaryPath === undefined
             ? {}
             : { gitBinaryPath: this.options.gitBinaryPath }),
         });
-      const bytesByObject = new Map<string, Buffer>();
-      for (const [index, objectId] of objectIds.entries()) {
-        const bytes = objectBlobs[index];
-        if (bytes === undefined) throw new Error("secret_scan_base_blob_missing");
-        bytesByObject.set(objectId, bytes);
+        for (const [index, objectId] of batchObjectIds.entries()) {
+          const bytes = batchBlobs[index];
+          if (bytes === undefined)
+            throw new Error("secret_scan_base_blob_missing");
+          remainingBaseBytes -= bytes.byteLength;
+          bytesByObject.set(objectId, bytes);
+        }
       }
       baseBlobs = files.map((file) => {
         const objectId = baseObjects.get(file);
@@ -154,11 +176,18 @@ export class SimpleSecretScanner implements SecretScannerPort {
       if (blobs.length === 0) {
         return failed(`secret_scan_missing_file_and_base:${file}`);
       }
-      if (blobs.some((contents) =>
-        detectSecretLikeContent(contents, { filePath: file }) !== undefined ||
-        (this.options.patterns !== undefined &&
-          matchesSecretLikeContentPatterns(contents, this.options.patterns))
-      )) {
+      if (
+        blobs.some(
+          (contents) =>
+            detectSecretLikeContent(contents, { filePath: file }) !==
+              undefined ||
+            (this.options.patterns !== undefined &&
+              matchesSecretLikeContentPatterns(
+                contents,
+                this.options.patterns,
+              )),
+        )
+      ) {
         matches.push(file);
       }
     }
@@ -196,7 +225,15 @@ export class SimpleSecretScanner implements SecretScannerPort {
   ): Promise<ReadonlyMap<string, string>> {
     const { stdout } = await execFileAsync(
       this.options.gitBinaryPath ?? "git",
-      ["-c", "core.quotepath=false", "ls-tree", "-z", baseCommit, "--", ...files],
+      [
+        "-c",
+        "core.quotepath=false",
+        "ls-tree",
+        "-z",
+        baseCommit,
+        "--",
+        ...files,
+      ],
       {
         cwd: workspacePath,
         encoding: "utf8",
@@ -229,13 +266,13 @@ export class SimpleSecretScanner implements SecretScannerPort {
 type CurrentFileRead =
   | { readonly kind: "read"; readonly contents: Buffer }
   | {
-    readonly kind:
-      | "missing"
-      | "outside"
-      | "too_large"
-      | "total_too_large"
-      | "unreadable";
-  };
+      readonly kind:
+        | "missing"
+        | "outside"
+        | "too_large"
+        | "total_too_large"
+        | "unreadable";
+    };
 
 async function readCurrentRegularFile(input: {
   readonly workspacePath: string;
@@ -253,7 +290,8 @@ async function readCurrentRegularFile(input: {
       return { kind: "total_too_large" };
     }
     const realFilePath = await realpath(filePath);
-    if (!isPathInside(realFilePath, input.workspacePath)) return { kind: "outside" };
+    if (!isPathInside(realFilePath, input.workspacePath))
+      return { kind: "outside" };
     const handle = await open(
       realFilePath,
       constants.O_RDONLY | constants.O_NOFOLLOW,
@@ -339,7 +377,8 @@ function scannerLimit(
 
 function gitBlobScanSafeMessage(error: unknown): string {
   if (error instanceof Error) {
-    if (error.message.includes("blob_limit")) return "secret_scan_file_too_large";
+    if (error.message.includes("blob_limit"))
+      return "secret_scan_file_too_large";
     if (
       error.message.includes("total_limit") ||
       error.message.includes("output_limit")
@@ -364,7 +403,9 @@ function uniqueSorted(values: readonly string[]): readonly string[] {
 }
 
 function isNodeErrorCode(error: unknown, code: string): boolean {
-  return error instanceof Error &&
+  return (
+    error instanceof Error &&
     "code" in error &&
-    (error as NodeJS.ErrnoException).code === code;
+    (error as NodeJS.ErrnoException).code === code
+  );
 }

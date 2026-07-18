@@ -13,7 +13,7 @@ import {
 import { withLiteralGitPathspecs } from "../../git-literal-pathspecs";
 
 const execFileAsync = promisify(execFile);
-const MAX_STAGED_PATCH_BYTES = 16 * 1024 * 1024;
+export const MAX_STAGED_PATCH_BYTES = 16 * 1024 * 1024;
 
 export async function stagedPatchSha256(
   workspacePath: string,
@@ -137,6 +137,38 @@ export async function assertGitCurrentBranch(input: {
   ]);
   if (current.trim() !== input.branch) {
     throw new Error("project_control_branch_mismatch");
+  }
+}
+
+export async function isGitAncestor(input: {
+  readonly workspacePath: string;
+  readonly ancestor: string;
+  readonly descendant: string;
+}): Promise<boolean> {
+  try {
+    await execFileAsync("git", withLiteralGitPathspecs([
+      "-C",
+      input.workspacePath,
+      "merge-base",
+      "--is-ancestor",
+      input.ancestor,
+      input.descendant,
+    ]), {
+      timeout: 120_000,
+      maxBuffer: 1024 * 1024,
+    });
+    return true;
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      (error as { readonly code?: unknown }).code === 1
+    ) {
+      return false;
+    }
+    throw new Error(
+      `project_control_git_failed:merge-base:${gitErrorSummary(error)}`,
+    );
   }
 }
 
@@ -470,6 +502,8 @@ function gitOperationLabel(args: readonly string[]): string {
   const command = args.find(
     (arg) =>
       arg === "worktree" ||
+      arg === "merge-base" ||
+      arg === "merge" ||
       arg === "cherry-pick" ||
       arg === "push" ||
       arg === "apply" ||

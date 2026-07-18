@@ -330,6 +330,32 @@ export async function resolveReviewedWorkerOutput(input: {
   };
 }
 
+/**
+ * Resolves an attested rejected snapshot as immutable input for a new
+ * remediation worker. This does not approve the output and deliberately does
+ * not bind it to the current controller, so a durable authority handoff can
+ * continue the same project-owned evidence.
+ */
+export async function resolveRejectedReviewedWorkerOutputForRemediation(input: {
+  readonly store: ReviewedWorkerOutputStorePort;
+  readonly projectId: string;
+  readonly reviewedOutputId: string;
+  readonly expectedWorkerJobId: string;
+}): Promise<ReviewedWorkerOutputSnapshot> {
+  const snapshot = await input.store.get(normalizeSha256(input.reviewedOutputId));
+  if (!snapshot) throw new Error("reviewed_worker_output_not_found");
+  if (snapshot.projectId !== input.projectId) {
+    throw new Error("reviewed_worker_output_project_mismatch");
+  }
+  if (snapshot.workerJobId !== input.expectedWorkerJobId) {
+    throw new Error("reviewed_worker_output_job_mismatch");
+  }
+  if (snapshot.reviewDecision.decision !== ReviewDecisionStatus.Rejected) {
+    throw new Error("reviewed_worker_output_rejected_remediation_required");
+  }
+  return snapshot;
+}
+
 export async function resolveReviewedWorkerContinuation(input: {
   readonly store: ReviewedWorkerOutputStorePort;
   readonly projectId: string;

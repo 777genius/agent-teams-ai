@@ -14,6 +14,7 @@ import {
   resolveCanonicalRemoteHead,
   resolveCanonicalRemoteWorktreeSource,
 } from "../application/project-control/codex-goal-project-git";
+import { resolveProjectSourceReference } from "../application/project-control/codex-goal-project-source-revision";
 import {
   readVerifiableProducerHandoff,
   readVerifiedProducerHandoff,
@@ -275,12 +276,9 @@ describe("project verifier handoff", () => {
       remoteTrackingRef: "origin/main",
       worktreeSourceRef: "main",
     });
-    expect(await gitText(workspacePath, [
-      "rev-parse",
-      source.worktreeSourceRef,
-    ])).toBe(
-      canonicalRevision,
-    );
+    expect(
+      await gitText(workspacePath, ["rev-parse", source.worktreeSourceRef]),
+    ).toBe(canonicalRevision);
   });
 
   it("normalizes scoped local and remote-tracking slash branches", () => {
@@ -290,28 +288,36 @@ describe("project verifier handoff", () => {
       allowedGitRemotes: ["origin"],
     };
 
-    expect(resolveCanonicalRemoteWorktreeSource({
-      requestedRef: "refactor/hosted-web-feature-boundaries",
-      scope,
-    })).toEqual({
+    expect(
+      resolveCanonicalRemoteWorktreeSource({
+        requestedRef: "refactor/hosted-web-feature-boundaries",
+        scope,
+      }),
+    ).toEqual({
       remoteTrackingRef: "origin/refactor/hosted-web-feature-boundaries",
       worktreeSourceRef: "refactor/hosted-web-feature-boundaries",
     });
-    expect(resolveCanonicalRemoteWorktreeSource({
-      requestedRef: "origin/refactor/hosted-web-feature-boundaries",
-      scope,
-    })).toEqual({
+    expect(
+      resolveCanonicalRemoteWorktreeSource({
+        requestedRef: "origin/refactor/hosted-web-feature-boundaries",
+        scope,
+      }),
+    ).toEqual({
       remoteTrackingRef: "origin/refactor/hosted-web-feature-boundaries",
       worktreeSourceRef: "refactor/hosted-web-feature-boundaries",
     });
-    expect(() => resolveCanonicalRemoteWorktreeSource({
-      requestedRef: "upstream/refactor/hosted-web-feature-boundaries",
-      scope,
-    })).toThrow("project_control_denied:remote_denied");
-    expect(() => resolveCanonicalRemoteWorktreeSource({
-      requestedRef: "release/private",
-      scope,
-    })).toThrow("project_control_denied:branch_denied");
+    expect(() =>
+      resolveCanonicalRemoteWorktreeSource({
+        requestedRef: "upstream/refactor/hosted-web-feature-boundaries",
+        scope,
+      }),
+    ).toThrow("project_control_denied:remote_denied");
+    expect(() =>
+      resolveCanonicalRemoteWorktreeSource({
+        requestedRef: "release/private",
+        scope,
+      }),
+    ).toThrow("project_control_denied:branch_denied");
   });
 
   it.each([
@@ -360,6 +366,24 @@ describe("project verifier handoff", () => {
         branch: "refactor/hosted-web-feature-boundaries",
         oid: expectedCommit,
       },
+    });
+  });
+
+  it("normalizes a local slash branch before pinned remote verification", () => {
+    expect(
+      resolveProjectSourceReference({
+        requestedRef: "refactor/hosted-web-feature-boundaries",
+        scope: {
+          projectId: "project",
+          allowedBranches: ["refactor/hosted-web-*"],
+          allowedGitRemotes: ["origin"],
+        },
+        remoteVerificationRequired: true,
+      }),
+    ).toEqual({
+      remoteTrackingRef: "origin/refactor/hosted-web-feature-boundaries",
+      worktreeSourceRef: "refactor/hosted-web-feature-boundaries",
+      remoteVerified: true,
     });
   });
 

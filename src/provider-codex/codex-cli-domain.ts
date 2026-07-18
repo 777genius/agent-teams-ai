@@ -2,6 +2,7 @@ import { accessSync, constants } from "node:fs";
 import { createHash } from "node:crypto";
 import { delimiter, dirname, isAbsolute } from "node:path";
 import { codexEnvironmentPolicy } from "./capabilities";
+import { codexProviderEgressCliConfigArgs } from "./codex-provider-egress-policy";
 
 export const codexAuthJsonMaxBytes = 32 * 1024;
 
@@ -286,6 +287,7 @@ export function buildCodexRefreshBootstrapPlan(input: {
     args: [
       "exec",
       ...(model ? ["--model", model] : []),
+      ...codexProviderEgressCliConfigArgs(),
       "--sandbox",
       "read-only",
       "--ignore-rules",

@@ -215,6 +215,35 @@ describe("project access control", () => {
       allowed: false,
       reason: AccessDecisionReason.ForcePushDenied,
     });
+    expect(policy.canPushBranch({
+      branch: "main",
+      remote: "origin",
+      force: true,
+      expectedRemoteCommit: "1".repeat(40),
+      expectedLocalCommit: "2".repeat(40),
+      confirmExternalRewriteRecovery: true,
+    })).toMatchObject({ allowed: true });
+    expect(policy.canPushBranch({
+      branch: "main",
+      remote: "origin",
+      force: true,
+      expectedRemoteCommit: "1".repeat(40),
+      expectedLocalCommit: "2".repeat(40),
+    })).toMatchObject({
+      allowed: false,
+      reason: AccessDecisionReason.ForcePushDenied,
+    });
+    expect(policy.canPushBranch({
+      branch: "main",
+      remote: "origin",
+      force: true,
+      expectedRemoteCommit: "short",
+      expectedLocalCommit: "2".repeat(40),
+      confirmExternalRewriteRecovery: true,
+    })).toMatchObject({
+      allowed: false,
+      reason: AccessDecisionReason.ForcePushDenied,
+    });
   });
 
   it("limits account use to the configured project account scope", () => {

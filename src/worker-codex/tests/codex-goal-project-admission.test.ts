@@ -1,6 +1,8 @@
+import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import {
   ProjectAdmissionWorkerRole,
@@ -13,6 +15,8 @@ import {
   codexProjectAdmissionGate,
   type CodexProjectAdmissionDeps,
 } from "../application/project-control/codex-goal-project-admission";
+
+const execFileAsync = promisify(execFile);
 
 describe("Codex project admission snapshot", () => {
   it("admits a disjoint writer and denies a writer targeting the active workspace", async () => {
@@ -155,6 +159,396 @@ describe("Codex project admission snapshot", () => {
         workspacePath,
       })).resolves.toMatchObject({
         allowed: false,
+        debt: [expect.objectContaining({
+          reason: ProjectDebtReason.ActiveWriterConflict,
+        })],
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("admits a bound input patch past only unrelated held output debt", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-admitted-patch-debt-"));
+    const worktreeRoot = join(root, "worktrees");
+    const workspacePath = join(worktreeRoot, "project-remediation");
+    const siblingWorkspacePath = join(worktreeRoot, "project-held-sibling");
+    const previousMinFreeKb = process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_MIN_FREE_KB;
+    try {
+      await mkdir(workspacePath, { recursive: true });
+      await mkdir(siblingWorkspacePath, { recursive: true });
+      const summary = (jobId: string, path: string) => ({
+        jobId,
+        tags: ["worker-role-producer"],
+        taskId: jobId,
+        workspacePath: path,
+        promptPath: join(root, `${jobId}.md`),
+        accountNames: ["account-a"],
+        updatedAt: "2026-07-16T00:00:00.000Z",
+        manifestPath: join(root, `${jobId}.json`),
+      });
+      const targetOverview = (overrides: Record<string, unknown> = {}) => ({
+        ok: true,
+        jobId: "project-remediation",
+        workspacePath,
+        workspaceDirty: true,
+        workerAlive: false,
+        activeWriterRisk: "dirty_workspace_without_worker",
+        activeWriterRiskReasons: ["dirty_workspace_without_worker"],
+        lifecycleMarkerTypes: [],
+        ...overrides,
+      });
+      const heldSiblingOverview = {
+        ok: true,
+        jobId: "project-held-sibling",
+        workspacePath: siblingWorkspacePath,
+        workspaceDirty: true,
+        workerAlive: false,
+        activeWriterRisk: "dirty_workspace_without_worker",
+        activeWriterRiskReasons: ["dirty_workspace_without_worker"],
+        resultStatus: "completed",
+        recommendedAction: "review_completed",
+        lifecycleMarkerTypes: ["review"],
+      };
+      const deps = (
+        target: Readonly<Record<string, unknown>> = targetOverview(),
+        sibling: Readonly<Record<string, unknown>> = heldSiblingOverview,
+      ): CodexProjectAdmissionDeps => ({
+        listJobs: async () => [
+          summary("project-remediation", workspacePath),
+          summary("project-held-sibling", siblingWorkspacePath),
+        ],
+        buildOverviewItems: async () => [target, sibling],
+      });
+      const gate = (admissionDeps: CodexProjectAdmissionDeps) =>
+        codexProjectAdmissionGate({
+          registryRootDir: join(root, "registry"),
+          scope: {
+            projectId: "project",
+            jobIdPrefixes: ["project-"],
+          },
+          deps: admissionDeps,
+          admittedInputPatchTarget: {
+            jobId: "project-remediation",
+            workspacePath,
+          },
+        });
+      const request = (operation: ProjectOperation) => ({
+        operation,
+        jobId: "project-remediation",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath,
+      });
+
+      await expect(codexProjectAdmissionGate({
+        registryRootDir: join(root, "registry"),
+        scope: { projectId: "project", jobIdPrefixes: ["project-"] },
+        deps: deps(),
+      }).evaluate(request(ProjectOperation.StartWorker))).resolves.toMatchObject({
+        allowed: false,
+        reason: "output_debt_present",
+      });
+      await expect(gate(deps()).evaluate(
+        request(ProjectOperation.CreateWorktree),
+      )).resolves.toMatchObject({ allowed: true, debt: [] });
+      await expect(gate(deps()).evaluate(
+        request(ProjectOperation.StartWorker),
+      )).resolves.toMatchObject({ allowed: true, debt: [] });
+      await expect(gate(deps()).evaluate({
+        ...request(ProjectOperation.StartWorker),
+        jobId: "project-other",
+      })).resolves.toMatchObject({ allowed: false });
+      await expect(gate(deps()).evaluate({
+        ...request(ProjectOperation.StartWorker),
+        workspacePath: siblingWorkspacePath,
+      })).resolves.toMatchObject({ allowed: false });
+      await expect(gate(deps()).evaluate(
+        request(ProjectOperation.CreateJob),
+      )).resolves.toMatchObject({
+        allowed: false,
+        debt: expect.arrayContaining([
+          expect.objectContaining({
+            reason: ProjectDebtReason.UnconsumedCompletedJob,
+            subject: siblingWorkspacePath,
+          }),
+          expect.objectContaining({
+            reason: ProjectDebtReason.ActiveWriterConflict,
+            subject: "project-held-sibling",
+          }),
+        ]),
+      });
+
+      const orphanJobId = "project-orphan-remediation";
+      const orphanWorkspacePath = join(worktreeRoot, orphanJobId);
+      await mkdir(orphanWorkspacePath, { recursive: true });
+      await execFileAsync("git", ["init"], { cwd: orphanWorkspacePath });
+      await writeFile(join(orphanWorkspacePath, "seeded.txt"), "seeded output\n");
+      const orphanGate = codexProjectAdmissionGate({
+        registryRootDir: join(root, "registry"),
+        scope: {
+          projectId: "project",
+          jobIdPrefixes: ["project-"],
+          worktreeRoots: [worktreeRoot],
+        },
+        deps: {
+          listJobs: async () => [],
+          buildOverviewItems: async () => [],
+        },
+        admittedInputPatchTarget: {
+          jobId: orphanJobId,
+          workspacePath: orphanWorkspacePath,
+        },
+      });
+      await expect(orphanGate.evaluate({
+        operation: ProjectOperation.CreateJob,
+        jobId: orphanJobId,
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: orphanWorkspacePath,
+      })).resolves.toMatchObject({ allowed: true, debt: [] });
+
+      await expect(gate(deps(targetOverview(), {
+        ...heldSiblingOverview,
+        resultStatus: undefined,
+        recommendedAction: undefined,
+        lifecycleMarkerTypes: [],
+      })).evaluate(request(ProjectOperation.StartWorker))).resolves.toMatchObject({
+        allowed: false,
+        debt: [expect.objectContaining({
+          reason: ProjectDebtReason.InactiveDirtyWorkspace,
+          subject: siblingWorkspacePath,
+        })],
+      });
+
+      await expect(gate(deps(targetOverview({
+        resultStatus: "completed",
+        recommendedAction: "review_completed",
+        lifecycleMarkerTypes: ["review"],
+      }))).evaluate(request(ProjectOperation.StartWorker))).resolves.toMatchObject({
+        allowed: false,
+        debt: [expect.objectContaining({
+          reason: ProjectDebtReason.UnconsumedCompletedJob,
+          subject: workspacePath,
+        })],
+      });
+
+      await expect(gate(deps(targetOverview(), {
+        ...heldSiblingOverview,
+        workspacePath,
+        workerAlive: true,
+        activeWriterRisk: "active_worker",
+        activeWriterRiskReasons: ["active worker overlaps admitted workspace"],
+      })).evaluate(request(ProjectOperation.StartWorker))).resolves.toMatchObject({
+        allowed: false,
+        debt: [expect.objectContaining({
+          reason: ProjectDebtReason.ActiveWriterConflict,
+        })],
+      });
+
+      await expect(gate({
+        listJobs: async () => {
+          throw new Error("registry unavailable");
+        },
+        buildOverviewItems: async () => [],
+      }).evaluate(request(ProjectOperation.StartWorker))).resolves.toMatchObject({
+        allowed: false,
+        reason: "unreadable_project_state",
+      });
+
+      process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_MIN_FREE_KB =
+        String(Number.MAX_SAFE_INTEGER);
+      await expect(codexProjectAdmissionGate({
+        registryRootDir: join(root, "registry"),
+        scope: {
+          projectId: "project",
+          jobIdPrefixes: ["project-"],
+          worktreeRoots: [worktreeRoot],
+        },
+        deps: deps(),
+        admittedInputPatchTarget: {
+          jobId: "project-remediation",
+          workspacePath,
+        },
+      }).evaluate(request(ProjectOperation.StartWorker))).resolves.toMatchObject({
+        allowed: false,
+        reason: "disk_pressure",
+      });
+    } finally {
+      if (previousMinFreeKb === undefined) {
+        delete process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_MIN_FREE_KB;
+      } else {
+        process.env.SUBSCRIPTION_RUNTIME_PROJECT_ADMISSION_MIN_FREE_KB = previousMinFreeKb;
+      }
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not re-admit same-job capacity continuation against sibling held output", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-capacity-continuation-admission-"));
+    const continuationWorkspace = join(root, "worktrees", "project-continuation");
+    const siblingWorkspace = join(root, "worktrees", "project-reviewed-sibling");
+    try {
+      await mkdir(continuationWorkspace, { recursive: true });
+      await mkdir(siblingWorkspace, { recursive: true });
+      const deps: CodexProjectAdmissionDeps = {
+        listJobs: async () => [
+          {
+            jobId: "project-continuation",
+            tags: ["worker-role-producer"],
+            taskId: "project-continuation",
+            workspacePath: continuationWorkspace,
+            promptPath: join(root, "continuation.md"),
+            accountNames: ["account-a"],
+            updatedAt: "2026-07-16T00:00:00.000Z",
+            manifestPath: join(root, "continuation.json"),
+          },
+          {
+            jobId: "project-reviewed-sibling",
+            tags: ["worker-role-producer"],
+            taskId: "project-reviewed-sibling",
+            workspacePath: siblingWorkspace,
+            promptPath: join(root, "sibling.md"),
+            accountNames: ["account-b"],
+            updatedAt: "2026-07-16T00:01:00.000Z",
+            manifestPath: join(root, "sibling.json"),
+          },
+        ],
+        buildOverviewItems: async () => [
+          {
+            ok: true,
+            jobId: "project-continuation",
+            workspacePath: continuationWorkspace,
+            workspaceDirty: true,
+            workerAlive: false,
+            activeWriterRisk: "dirty_workspace_without_worker",
+            activeWriterRiskReasons: ["dirty_workspace_without_worker"],
+            resultStatus: "blocked",
+            resultReason: "account_unavailable",
+            recommendedAction: "continue_after_capacity",
+          },
+          {
+            ok: true,
+            jobId: "project-reviewed-sibling",
+            workspacePath: siblingWorkspace,
+            workspaceDirty: true,
+            workerAlive: false,
+            activeWriterRisk: "dirty_workspace_without_worker",
+            activeWriterRiskReasons: ["dirty_workspace_without_worker"],
+            resultStatus: "completed",
+            recommendedAction: "review_completed",
+            lifecycleMarkerTypes: ["review"],
+          },
+        ],
+      };
+      const input = {
+        registryRootDir: join(root, "registry"),
+        scope: { projectId: "project", jobIdPrefixes: ["project-"] },
+        deps,
+      };
+      const ordinaryGate = codexProjectAdmissionGate(input);
+      const continuationGate = codexProjectAdmissionGate({
+        ...input,
+        capacityContinuationTarget: {
+          jobId: "project-continuation",
+          workspacePath: continuationWorkspace,
+        },
+      });
+
+      await expect(ordinaryGate.evaluate({
+        operation: ProjectOperation.StartWorker,
+        jobId: "project-continuation",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: continuationWorkspace,
+      })).resolves.toMatchObject({
+        allowed: false,
+        reason: "output_debt_present",
+      });
+      await expect(continuationGate.evaluate({
+        operation: ProjectOperation.StartWorker,
+        jobId: "project-continuation",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: continuationWorkspace,
+      })).resolves.toMatchObject({ allowed: true, debt: [] });
+      await expect(continuationGate.evaluate({
+        operation: ProjectOperation.StartWorker,
+        jobId: "project-new-producer",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: join(root, "worktrees", "project-new-producer"),
+      })).resolves.toMatchObject({
+        allowed: false,
+        reason: "output_debt_present",
+      });
+      await expect(continuationGate.evaluate({
+        operation: ProjectOperation.CreateWorktree,
+        jobId: "project-continuation",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: continuationWorkspace,
+      })).resolves.toMatchObject({
+        allowed: false,
+        reason: "output_debt_present",
+      });
+
+      const completedTargetGate = codexProjectAdmissionGate({
+        ...input,
+        deps: {
+          ...deps,
+          buildOverviewItems: async () => [{
+            ok: true,
+            jobId: "project-continuation",
+            workspacePath: continuationWorkspace,
+            workspaceDirty: true,
+            workerAlive: false,
+            activeWriterRisk: "dirty_workspace_without_worker",
+            activeWriterRiskReasons: ["dirty_workspace_without_worker"],
+            resultStatus: "completed",
+            recommendedAction: "review_completed",
+            lifecycleMarkerTypes: ["review"],
+          }],
+        },
+        capacityContinuationTarget: {
+          jobId: "project-continuation",
+          workspacePath: continuationWorkspace,
+        },
+      });
+      await expect(completedTargetGate.evaluate({
+        operation: ProjectOperation.StartWorker,
+        jobId: "project-continuation",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: continuationWorkspace,
+      })).resolves.toMatchObject({
+        allowed: false,
+        reason: "output_debt_present",
+        debt: [expect.objectContaining({
+          reason: ProjectDebtReason.UnconsumedCompletedJob,
+        })],
+      });
+
+      const liveTargetGate = codexProjectAdmissionGate({
+        ...input,
+        deps: {
+          ...deps,
+          buildOverviewItems: async () => [{
+            ok: true,
+            jobId: "project-continuation",
+            workspacePath: continuationWorkspace,
+            workspaceDirty: true,
+            workerAlive: true,
+            activeWriterRisk: "active_worker",
+            activeWriterRiskReasons: ["active worker overlaps workspace"],
+          }],
+        },
+        capacityContinuationTarget: {
+          jobId: "project-continuation",
+          workspacePath: continuationWorkspace,
+        },
+      });
+      await expect(liveTargetGate.evaluate({
+        operation: ProjectOperation.StartWorker,
+        jobId: "project-continuation",
+        workerRole: ProjectAdmissionWorkerRole.Producer,
+        workspacePath: continuationWorkspace,
+      })).resolves.toMatchObject({
+        allowed: false,
+        reason: "output_debt_present",
         debt: [expect.objectContaining({
           reason: ProjectDebtReason.ActiveWriterConflict,
         })],

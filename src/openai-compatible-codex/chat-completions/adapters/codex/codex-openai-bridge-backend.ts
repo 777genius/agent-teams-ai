@@ -4,6 +4,7 @@ import { DefaultRedactor } from "../../../../core/index.js";
 import {
   PackagedCodexJsonExecutionEngine,
   classifyCodexRuntimeFailure,
+  codexProviderEgressEnv,
   type CodexMaterializedSession,
   type CodexReasoningEffort,
   type CodexServiceTier,
@@ -168,6 +169,7 @@ export class CodexOpenAiBridgeBackend implements OpenAiBridgeChatBackend {
       env: {
         HOME: account.home,
         CODEX_HOME: account.codexHome,
+        ...codexProviderEgressEnv(),
       },
       release: async () => {},
     };
@@ -191,6 +193,7 @@ export class CodexOpenAiBridgeBackend implements OpenAiBridgeChatBackend {
       code === "quota_limited" ||
       code === "needs_reconnect" ||
       code === "provider_session_invalid" ||
+      code === "unknown_auth_state" ||
       code === "permission_required"
     );
   }

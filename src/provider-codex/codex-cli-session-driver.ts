@@ -32,6 +32,7 @@ import {
   codexSessionCapabilities,
 } from "./capabilities";
 import { classifyCodexFailure } from "./failure-classifier";
+import { codexProviderEgressConfigToml } from "./codex-provider-egress-policy";
 
 export type CodexCliSessionDriverOptions = {
   readonly codexBinaryPath?: string;
@@ -267,6 +268,7 @@ async function writeCodexHomeSnapshot(input: {
     'inherit = "none"',
     'include_only = ["PATH", "HOME", "CI", "CODEX_HOME"]',
     "",
+    codexProviderEgressConfigToml(),
   ].join("\n");
   await writeFile(join(input.codexHome, "config.toml"), config, {
     mode: 0o600,

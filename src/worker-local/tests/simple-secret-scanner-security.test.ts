@@ -22,9 +22,11 @@ const cleanup: string[] = [];
 
 describe("SimpleSecretScanner security", () => {
   afterEach(async () => {
-    await Promise.all(cleanup.splice(0).map((path) =>
-      rm(path, { recursive: true, force: true })
-    ));
+    await Promise.all(
+      cleanup
+        .splice(0)
+        .map((path) => rm(path, { recursive: true, force: true })),
+    );
   });
 
   it("keeps configured scanner patterns authoritative in fixture files", async () => {
@@ -40,10 +42,12 @@ describe("SimpleSecretScanner security", () => {
       patterns: [new RegExp(["test-", "fixture"].join(""), "g")],
     });
 
-    await expect(scanner.scanFiles({
-      workspacePath,
-      files: [relativePath],
-    })).resolves.toEqual({
+    await expect(
+      scanner.scanFiles({
+        workspacePath,
+        files: [relativePath],
+      }),
+    ).resolves.toEqual({
       status: SecretScanStatus.Failed,
       safeMessage: `secret_like_content:${relativePath}`,
     });
@@ -59,14 +63,18 @@ describe("SimpleSecretScanner security", () => {
     await writeFile(join(workspacePath, productionPath), content, "utf8");
     const scanner = new SimpleSecretScanner();
 
-    await expect(scanner.scanFiles({
-      workspacePath,
-      files: [fixturePath],
-    })).resolves.toEqual({ status: SecretScanStatus.Passed });
-    await expect(scanner.scanFiles({
-      workspacePath,
-      files: [productionPath],
-    })).resolves.toEqual({
+    await expect(
+      scanner.scanFiles({
+        workspacePath,
+        files: [fixturePath],
+      }),
+    ).resolves.toEqual({ status: SecretScanStatus.Passed });
+    await expect(
+      scanner.scanFiles({
+        workspacePath,
+        files: [productionPath],
+      }),
+    ).resolves.toEqual({
       status: SecretScanStatus.Failed,
       safeMessage: `secret_like_content:${productionPath}`,
     });
@@ -87,10 +95,12 @@ describe("SimpleSecretScanner security", () => {
     await rm(filePath);
     const scanner = new SimpleSecretScanner();
 
-    await expect(scanner.scanFiles({
-      workspacePath,
-      files: [relativePath],
-    })).resolves.toEqual({
+    await expect(
+      scanner.scanFiles({
+        workspacePath,
+        files: [relativePath],
+      }),
+    ).resolves.toEqual({
       status: SecretScanStatus.Failed,
       safeMessage: `secret_like_content:${relativePath}`,
     });
@@ -105,10 +115,12 @@ describe("SimpleSecretScanner security", () => {
     );
     const scanner = new SimpleSecretScanner();
 
-    await expect(scanner.scanFiles({
-      workspacePath,
-      files: [relativePath],
-    })).resolves.toEqual({
+    await expect(
+      scanner.scanFiles({
+        workspacePath,
+        files: [relativePath],
+      }),
+    ).resolves.toEqual({
       status: SecretScanStatus.Failed,
       safeMessage: `secret_like_content:${relativePath}`,
     });
@@ -122,10 +134,12 @@ describe("SimpleSecretScanner security", () => {
     const scanner = new SimpleSecretScanner();
 
     for (const relativePath of ["src/linked.ts", "src/directory.ts"]) {
-      await expect(scanner.scanFiles({
-        workspacePath,
-        files: [relativePath],
-      })).resolves.toEqual({
+      await expect(
+        scanner.scanFiles({
+          workspacePath,
+          files: [relativePath],
+        }),
+      ).resolves.toEqual({
         status: SecretScanStatus.Failed,
         safeMessage: `secret_scan_unreadable_file:${relativePath}`,
       });
@@ -137,10 +151,12 @@ describe("SimpleSecretScanner security", () => {
     const relativePath = "src/oversized.ts";
     await writeFile(join(workspacePath, relativePath), "x".repeat(65));
 
-    await expect(new SimpleSecretScanner({ maxFileBytes: 64 }).scanFiles({
-      workspacePath,
-      files: [relativePath],
-    })).resolves.toEqual({
+    await expect(
+      new SimpleSecretScanner({ maxFileBytes: 64 }).scanFiles({
+        workspacePath,
+        files: [relativePath],
+      }),
+    ).resolves.toEqual({
       status: SecretScanStatus.Failed,
       safeMessage: `secret_scan_file_too_large:${relativePath}`,
     });
@@ -224,13 +240,15 @@ describe("SimpleSecretScanner security", () => {
     await writeFile(join(workspacePath, "src", "first.txt"), "a".repeat(40));
     await writeFile(join(workspacePath, "src", "second.txt"), "b".repeat(40));
 
-    await expect(new SimpleSecretScanner({
-      maxFileBytes: 64,
-      maxTotalFileBytes: 64,
-    }).scanFiles({
-      workspacePath,
-      files: ["src/first.txt", "src/second.txt"],
-    })).resolves.toEqual({
+    await expect(
+      new SimpleSecretScanner({
+        maxFileBytes: 64,
+        maxTotalFileBytes: 64,
+      }).scanFiles({
+        workspacePath,
+        files: ["src/first.txt", "src/second.txt"],
+      }),
+    ).resolves.toEqual({
       status: SecretScanStatus.Failed,
       safeMessage: "secret_scan_total_file_bytes_exceeded",
     });
@@ -256,59 +274,180 @@ describe("SimpleSecretScanner security", () => {
     });
   });
 
-  it("deduplicates paths, caps unique paths, and validates maxFileBytes", async () => {
+  it("scans a large bounded merge file set", async () => {
     const workspacePath = await createGitFixture();
-    await expect(new SimpleSecretScanner().scanFiles({
-      workspacePath,
-      files: Array.from({ length: 300 }, () => "README.md"),
-    })).resolves.toEqual({ status: SecretScanStatus.Passed });
+    const files = Array.from(
+      { length: 604 },
+      (_, index) => `src/merge-file-${index}.ts`,
+    );
+    await Promise.all(
+      files.map((file) =>
+        writeFile(join(workspacePath, file), "export const safe = true;\n"),
+      ),
+    );
+    const lastFile = files.at(-1) as string;
+    await writeFile(join(workspacePath, lastFile), "merge-tail-sentinel\n");
 
-    await expect(new SimpleSecretScanner().scanFiles({
-      workspacePath,
-      files: Array.from({ length: 257 }, (_, index) => `src/file-${index}.ts`),
-    })).resolves.toEqual({
+    await expect(
+      new SimpleSecretScanner({
+        patterns: [/merge-tail-sentinel/],
+      }).scanFiles({
+        workspacePath,
+        files,
+      }),
+    ).resolves.toEqual({
+      status: SecretScanStatus.Failed,
+      safeMessage: `secret_like_content:${lastFile}`,
+    });
+  });
+
+  it("scans both sides of a merge larger than the legacy aggregate budget", async () => {
+    const workspacePath = await createGitFixture();
+    const files = Array.from(
+      { length: 17 },
+      (_, index) => `src/aggregate-merge-${index}.ts`,
+    );
+    const before = "// safe base merge content\n".repeat(20_200);
+    const after = "// safe current merge content\n".repeat(18_100);
+    await Promise.all(
+      files.map((file) => writeFile(join(workspacePath, file), before)),
+    );
+    await git(workspacePath, ["add", "src"]);
+    await git(workspacePath, ["commit", "-m", "test: large aggregate base"]);
+    await Promise.all(
+      files.map((file) => writeFile(join(workspacePath, file), after)),
+    );
+
+    await expect(
+      new SimpleSecretScanner().scanFiles({
+        workspacePath,
+        files,
+      }),
+    ).resolves.toEqual({ status: SecretScanStatus.Passed });
+  });
+
+  it("scans committed preimages beyond the Git blob batch limit", async () => {
+    const workspacePath = await createGitFixture();
+    const files = Array.from(
+      { length: 513 },
+      (_, index) => `src/base-batch-${String(index).padStart(3, "0")}.ts`,
+    );
+    const lastFile = files.at(-1) as string;
+    await Promise.all(
+      files.map((file) =>
+        writeFile(
+          join(workspacePath, file),
+          file === lastFile
+            ? "base-batch-secret-sentinel\n"
+            : `safe base ${file}\n`,
+        ),
+      ),
+    );
+    await git(workspacePath, ["add", "src"]);
+    await git(workspacePath, ["commit", "-m", "test: multi-batch base"]);
+    await writeFile(join(workspacePath, lastFile), "safe current\n");
+
+    await expect(
+      new SimpleSecretScanner({
+        patterns: [/base-batch-secret-sentinel/],
+      }).scanFiles({
+        workspacePath,
+        files,
+      }),
+    ).resolves.toEqual({
+      status: SecretScanStatus.Failed,
+      safeMessage: `secret_like_content:${lastFile}`,
+    });
+  });
+
+  it("deduplicates paths, caps unique paths, and validates limits", async () => {
+    const workspacePath = await createGitFixture();
+    await expect(
+      new SimpleSecretScanner().scanFiles({
+        workspacePath,
+        files: Array.from({ length: 300 }, () => "README.md"),
+      }),
+    ).resolves.toEqual({ status: SecretScanStatus.Passed });
+
+    await expect(
+      new SimpleSecretScanner().scanFiles({
+        workspacePath,
+        files: Array.from(
+          { length: 1025 },
+          (_, index) => `src/file-${index}.ts`,
+        ),
+      }),
+    ).resolves.toEqual({
       status: SecretScanStatus.Failed,
       safeMessage: "secret_scan_changed_file_limit_exceeded",
     });
 
-    for (const maxFileBytes of [0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
-      await expect(new SimpleSecretScanner({ maxFileBytes }).scanFiles({
+    await expect(
+      new SimpleSecretScanner({ maxChangedFiles: 1025 }).scanFiles({
         workspacePath,
         files: ["README.md"],
-      })).rejects.toThrow("secret_scan_max_file_bytes_invalid");
+      }),
+    ).rejects.toThrow("secret_scan_max_changed_files_invalid");
+
+    for (const maxFileBytes of [
+      0,
+      -1,
+      1.5,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+    ]) {
+      await expect(
+        new SimpleSecretScanner({ maxFileBytes }).scanFiles({
+          workspacePath,
+          files: ["README.md"],
+        }),
+      ).rejects.toThrow("secret_scan_max_file_bytes_invalid");
     }
   });
 
   it("uses one bounded batch Git read for every base blob", async () => {
     const workspacePath = await createGitFixture();
     for (const name of ["one.ts", "two.ts", "three.ts"]) {
-      await writeFile(join(workspacePath, "src", name), "export const before = 1;\n");
+      await writeFile(
+        join(workspacePath, "src", name),
+        "export const before = 1;\n",
+      );
     }
     await git(workspacePath, ["add", "src"]);
     await git(workspacePath, ["commit", "-m", "test: base files"]);
     for (const name of ["one.ts", "two.ts", "three.ts"]) {
-      await writeFile(join(workspacePath, "src", name), "export const after = 2;\n");
+      await writeFile(
+        join(workspacePath, "src", name),
+        "export const after = 2;\n",
+      );
     }
     const logPath = join(workspacePath, "git-calls.log");
     const wrapperPath = join(workspacePath, "git-wrapper.sh");
-    await writeFile(wrapperPath, [
-      "#!/bin/sh",
-      `printf '%s\\n' \"$*\" >> ${JSON.stringify(logPath)}`,
-      "exec git \"$@\"",
-      "",
-    ].join("\n"));
+    await writeFile(
+      wrapperPath,
+      [
+        "#!/bin/sh",
+        `printf '%s\\n' \"$*\" >> ${JSON.stringify(logPath)}`,
+        'exec git "$@"',
+        "",
+      ].join("\n"),
+    );
     await chmod(wrapperPath, 0o700);
 
-    await expect(new SimpleSecretScanner({
-      gitBinaryPath: wrapperPath,
-    }).scanFiles({
-      workspacePath,
-      files: ["src/one.ts", "src/two.ts", "src/three.ts"],
-    })).resolves.toEqual({ status: SecretScanStatus.Passed });
+    await expect(
+      new SimpleSecretScanner({
+        gitBinaryPath: wrapperPath,
+      }).scanFiles({
+        workspacePath,
+        files: ["src/one.ts", "src/two.ts", "src/three.ts"],
+      }),
+    ).resolves.toEqual({ status: SecretScanStatus.Passed });
 
     const calls = (await readFile(logPath, "utf8")).trim().split("\n");
     expect(calls.filter((call) => call === "cat-file --batch")).toHaveLength(1);
-    expect(calls.some((call) => /^cat-file (?:-s|blob) /.test(call))).toBe(false);
+    expect(calls.some((call) => /^cat-file (?:-s|blob) /.test(call))).toBe(
+      false,
+    );
   });
 
   it("rejects a batch response that substitutes another object identity", async () => {
@@ -321,13 +460,15 @@ describe("SimpleSecretScanner security", () => {
       `${substituted} blob 1\nX\n`,
     );
 
-    await expect(readGitBlobBatch({
-      workspacePath,
-      objectNames: [requested],
-      maxBlobBytes: 16,
-      maxTotalBytes: 16,
-      gitBinaryPath: executablePath,
-    })).rejects.toThrow("git_blob_batch_output_invalid");
+    await expect(
+      readGitBlobBatch({
+        workspacePath,
+        objectNames: [requested],
+        maxBlobBytes: 16,
+        maxTotalBytes: 16,
+        gitBinaryPath: executablePath,
+      }),
+    ).rejects.toThrow("git_blob_batch_output_invalid");
   });
 
   it("rejects reordered batch responses even when every object was requested", async () => {
@@ -340,13 +481,15 @@ describe("SimpleSecretScanner security", () => {
       `${second} blob 1\nB\n${first} blob 1\nA\n`,
     );
 
-    await expect(readGitBlobBatch({
-      workspacePath,
-      objectNames: [first, second],
-      maxBlobBytes: 16,
-      maxTotalBytes: 16,
-      gitBinaryPath: executablePath,
-    })).rejects.toThrow("git_blob_batch_output_invalid");
+    await expect(
+      readGitBlobBatch({
+        workspacePath,
+        objectNames: [first, second],
+        maxBlobBytes: 16,
+        maxTotalBytes: 16,
+        gitBinaryPath: executablePath,
+      }),
+    ).rejects.toThrow("git_blob_batch_output_invalid");
   });
 
   it("terminates a batch child before consuming a blob over its declared limit", async () => {
@@ -356,17 +499,23 @@ describe("SimpleSecretScanner security", () => {
       "declared",
     );
 
-    await expect(readGitBlobBatch({
-      workspacePath,
-      objectNames: ["a".repeat(40)],
-      maxBlobBytes: 16,
-      maxTotalBytes: 16,
-      gitBinaryPath: adversary.executablePath,
-      timeoutMs: 5_000,
-    })).rejects.toThrow("git_blob_batch_blob_limit_exceeded");
+    await expect(
+      readGitBlobBatch({
+        workspacePath,
+        objectNames: ["a".repeat(40)],
+        maxBlobBytes: 16,
+        maxTotalBytes: 16,
+        gitBinaryPath: adversary.executablePath,
+        timeoutMs: 5_000,
+      }),
+    ).rejects.toThrow("git_blob_batch_blob_limit_exceeded");
 
-    await expect(readProgress(adversary.progressPath)).resolves.toBeLessThan(65_536);
-    await expect(readFile(adversary.completionPath, "utf8")).rejects.toMatchObject({
+    await expect(readProgress(adversary.progressPath)).resolves.toBeLessThan(
+      65_536,
+    );
+    await expect(
+      readFile(adversary.completionPath, "utf8"),
+    ).rejects.toMatchObject({
       code: "ENOENT",
     });
   });
@@ -378,18 +527,26 @@ describe("SimpleSecretScanner security", () => {
       "streamed",
     );
 
-    await expect(readGitBlobBatch({
-      workspacePath,
-      objectNames: ["a".repeat(40)],
-      maxBlobBytes: 16,
-      maxTotalBytes: 16,
-      gitBinaryPath: adversary.executablePath,
-      timeoutMs: 5_000,
-    })).rejects.toThrow("git_blob_batch_output_invalid");
+    await expect(
+      readGitBlobBatch({
+        workspacePath,
+        objectNames: ["a".repeat(40)],
+        maxBlobBytes: 16,
+        maxTotalBytes: 16,
+        gitBinaryPath: adversary.executablePath,
+        timeoutMs: 5_000,
+      }),
+    ).rejects.toThrow("git_blob_batch_output_invalid");
 
-    await expect(readFile(adversary.streamStartPath, "utf8")).resolves.toBe("started");
-    await expect(readProgress(adversary.progressPath)).resolves.toBeLessThan(65_536);
-    await expect(readFile(adversary.completionPath, "utf8")).rejects.toMatchObject({
+    await expect(readFile(adversary.streamStartPath, "utf8")).resolves.toBe(
+      "started",
+    );
+    await expect(readProgress(adversary.progressPath)).resolves.toBeLessThan(
+      65_536,
+    );
+    await expect(
+      readFile(adversary.completionPath, "utf8"),
+    ).rejects.toMatchObject({
       code: "ENOENT",
     });
   });
@@ -411,22 +568,25 @@ async function createAdversarialBatchExecutable(
   const headerSize = mode === "declared" ? 1024 : 4;
   const initialBody = mode === "streamed" ? "ABCD" : "";
   const header = `${"a".repeat(40)} blob ${headerSize}\n${initialBody}`;
-  await writeFile(executablePath, [
-    "#!/bin/sh",
-    "IFS= read -r request",
-    `header=${shellSingleQuoted(header)}`,
-    `chunk=${shellSingleQuoted("x".repeat(1024))}`,
-    'printf "%s" "$header"',
-    `printf started > ${shellSingleQuoted(streamStartPath)}`,
-    "index=0",
-    "while [ \"$index\" -lt 65536 ]; do",
-    '  printf "%s" "$chunk"',
-    `  printf x >> ${shellSingleQuoted(progressPath)}`,
-    "  index=$((index + 1))",
-    "done",
-    `printf complete > ${shellSingleQuoted(completionPath)}`,
-    "",
-  ].join("\n"));
+  await writeFile(
+    executablePath,
+    [
+      "#!/bin/sh",
+      "IFS= read -r request",
+      `header=${shellSingleQuoted(header)}`,
+      `chunk=${shellSingleQuoted("x".repeat(1024))}`,
+      'printf "%s" "$header"',
+      `printf started > ${shellSingleQuoted(streamStartPath)}`,
+      "index=0",
+      'while [ "$index" -lt 65536 ]; do',
+      '  printf "%s" "$chunk"',
+      `  printf x >> ${shellSingleQuoted(progressPath)}`,
+      "  index=$((index + 1))",
+      "done",
+      `printf complete > ${shellSingleQuoted(completionPath)}`,
+      "",
+    ].join("\n"),
+  );
   await chmod(executablePath, 0o700);
   return { executablePath, progressPath, streamStartPath, completionPath };
 }
@@ -437,12 +597,15 @@ async function createBatchResponseExecutable(
   response: string,
 ): Promise<string> {
   const executablePath = join(workspacePath, `batch-${name}-git.sh`);
-  await writeFile(executablePath, [
-    "#!/bin/sh",
-    "while IFS= read -r request; do :; done",
-    `printf %s ${shellSingleQuoted(response)}`,
-    "",
-  ].join("\n"));
+  await writeFile(
+    executablePath,
+    [
+      "#!/bin/sh",
+      "while IFS= read -r request; do :; done",
+      `printf %s ${shellSingleQuoted(response)}`,
+      "",
+    ].join("\n"),
+  );
   await chmod(executablePath, 0o700);
   return executablePath;
 }

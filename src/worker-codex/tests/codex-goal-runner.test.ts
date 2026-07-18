@@ -11,10 +11,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
+import { LocalFileWorkerControlInboxStore } from "@vioxen/subscription-runtime/store-local-file";
 import {
   AccessBoundary,
   NetworkAccessMode,
   SubscriptionWorkerError,
+  WorkerControlService,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
   codexGoalAccountSlots,
@@ -25,10 +27,107 @@ import {
   buildCodexGoalExecutorOptions,
   type CodexGoalRunConfig,
 } from "../codex-goal-runner";
+import {
+  createLinkedGitWorktree,
+  readJsonLines,
+  waitForProgressStatus,
+} from "./codex-goal-runner-fixtures";
 
 const execFileAsync = promisify(execFile);
 
 describe("codex goal runner", () => {
+  it("interrupts an active executor attempt from the durable control inbox", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-goal-control-"));
+    const promptPath = join(root, "prompt.md");
+    const stateRootDir = join(root, "state");
+    const config: CodexGoalRunConfig = {
+      jobId: "job-durable-guidance",
+      jobRootDir: join(root, "job"),
+      stateRootDir,
+      authRootDir: join(root, "auth"),
+      workspacePath: join(root, "workspace"),
+      promptPath,
+      taskId: "task-durable-guidance",
+      accounts: codexGoalAccountSlots(["account-a"]),
+      outputPath: join(root, "job", "task-durable-guidance.latest-result.json"),
+    };
+    let startedRun: (() => void) | undefined;
+    const runStarted = new Promise<void>((resolve) => {
+      startedRun = resolve;
+    });
+    let observedAbortReason: unknown;
+
+    try {
+      await mkdir(config.jobRootDir, { recursive: true });
+      await mkdir(config.workspacePath, { recursive: true });
+      await writeFile(promptPath, "Finish the existing output.\n");
+
+      const running = runCodexGoal(config, {
+        createExecutor: (options) => ({
+          async run() {
+            if (!options.activeAttemptRegistry) {
+              throw new Error("active_attempt_registry_missing");
+            }
+            const abortController = new AbortController();
+            const lease = options.activeAttemptRegistry.register({
+              taskId: config.taskId,
+              attemptNumber: 1,
+              provider: "codex",
+              workspacePath: config.workspacePath,
+              target: {
+                jobId: config.jobId!,
+                taskId: config.taskId,
+                workspaceId: config.workspacePath,
+                attemptId: `${config.taskId}:attempt-1`,
+              },
+              startedAt: new Date("2026-07-16T00:00:00.000Z"),
+              abortController,
+            });
+            startedRun?.();
+            await new Promise<void>((resolve) => {
+              abortController.signal.addEventListener("abort", () => {
+                observedAbortReason = abortController.signal.reason;
+                resolve();
+              }, { once: true });
+            });
+            lease.release();
+            return {
+              status: "completed",
+              attempts: [],
+              task: { outputText: "continued" },
+            } as never;
+          },
+          async dispose() {},
+        }),
+      });
+
+      await runStarted;
+      const externalControl = new WorkerControlService({
+        store: new LocalFileWorkerControlInboxStore({ rootDir: stateRootDir }),
+      });
+      const signal = await externalControl.enqueueSignal({
+        target: {
+          jobId: config.jobId!,
+          taskId: config.taskId,
+          workspaceId: config.workspacePath,
+        },
+        intent: "guidance",
+        deliveryMode: "interrupt_then_continue",
+        body: "Finalize the immutable output and return a strict result.",
+        createdBy: "orchestrator",
+      });
+
+      await running;
+      expect(observedAbortReason).toMatchObject({
+        code: "runtime_controlled_interrupt",
+        signalId: signal.signalId,
+        requestedBy: "orchestrator",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("writes heartbeat progress while a sandbox executor is still running", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-goal-runner-"));
     const promptPath = join(root, "prompt.md");
@@ -873,53 +972,3 @@ describe("codex goal runner", () => {
     }
   });
 });
-
-async function createLinkedGitWorktree(
-  root: string,
-  worktreePath: string,
-): Promise<void> {
-  const repoPath = join(root, "repo");
-  await mkdir(repoPath, { recursive: true });
-  await execFileAsync("git", ["init"], { cwd: repoPath });
-  await execFileAsync("git", ["config", "user.email", "test@example.com"], {
-    cwd: repoPath,
-  });
-  await execFileAsync("git", ["config", "user.name", "Test User"], {
-    cwd: repoPath,
-  });
-  await writeFile(join(repoPath, "README.md"), "fixture\n");
-  await execFileAsync("git", ["add", "README.md"], { cwd: repoPath });
-  await execFileAsync("git", ["commit", "-m", "test fixture"], {
-    cwd: repoPath,
-  });
-  await execFileAsync("git", ["worktree", "add", "-b", "worker", worktreePath], {
-    cwd: repoPath,
-  });
-}
-
-async function waitForProgressStatus(
-  progressPath: string,
-  status: string,
-): Promise<Record<string, unknown>> {
-  const deadline = Date.now() + 2_000;
-  let lastError: unknown;
-  while (Date.now() < deadline) {
-    try {
-      const parsed = JSON.parse(await readFile(progressPath, "utf8")) as
-        Record<string, unknown>;
-      if (parsed.status === status) return parsed;
-    } catch (error) {
-      lastError = error;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-  throw new Error(`progress status ${status} was not observed: ${String(lastError)}`);
-}
-
-async function readJsonLines(path: string): Promise<readonly Record<string, unknown>[]> {
-  const text = await readFile(path, "utf8");
-  return text
-    .split(/\r?\n/)
-    .filter((line) => line.trim())
-    .map((line) => JSON.parse(line) as Record<string, unknown>);
-}

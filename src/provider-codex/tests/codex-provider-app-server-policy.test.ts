@@ -382,7 +382,7 @@ describe("Codex provider app-server adapter", () => {
         approvalPolicy: expectedApprovalPolicy,
         sandboxPolicy: {
           type: "readOnly",
-          networkAccess: false,
+          networkAccess: true,
         },
       });
     } finally {
@@ -425,7 +425,7 @@ describe("Codex provider app-server adapter", () => {
         sandboxPolicy: {
           type: "workspaceWrite",
           writableRoots: [workspace],
-          networkAccess: false,
+          networkAccess: true,
           excludeSlashTmp: true,
           excludeTmpdirEnvVar: true,
         },

@@ -27,6 +27,9 @@ export function registerCodexGoalProjectControlActionTools(server: McpServer): v
         ...jobIdInputSchema(),
         controllerJobId: z.string().optional(),
         reviewedOutputId: z.string().regex(/^[a-fA-F0-9]{64}$/).optional(),
+        continuationAccounts: z
+          .union([z.string(), z.array(z.string())])
+          .optional(),
         confirmStart: z.boolean().optional(),
         forceStart: z.boolean().optional(),
         skipDoctor: z.boolean().optional(),
@@ -57,11 +60,16 @@ export function registerCodexGoalProjectControlActionTools(server: McpServer): v
           .string()
           .regex(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i)
           .optional(),
+        expectedCurrentCommit: z
+          .string()
+          .regex(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i)
+          .optional(),
         newBranch: z.string().optional(),
         workerRole: z.enum(projectAdmissionWorkerRoleSchemaValues).optional(),
         dependencyBootstrap: z.enum(["off", "preflight", "install"]).optional(),
         confirmDependencyBootstrap: z.boolean().optional(),
         confirmCreateWorktree: z.boolean().optional(),
+        confirmFastForwardExisting: z.boolean().optional(),
       },
     },
     async (args) => withMcpErrors(async () =>
@@ -94,7 +102,7 @@ export function registerCodexGoalProjectControlActionTools(server: McpServer): v
     {
       title: "Project Control Push Git Branch",
       description:
-        "Push an allowed project branch through broker policy. Force uses --force-with-lease and must be allowed by scope.",
+        "Push an allowed project branch through broker policy. External rewrite recovery requires exact local and remote commits and uses an exact force-with-lease.",
       inputSchema: {
         ...jobRegistryInputSchema(),
         controllerJobId: z.string().optional(),
@@ -102,6 +110,9 @@ export function registerCodexGoalProjectControlActionTools(server: McpServer): v
         branch: z.string().optional(),
         remote: z.string().optional(),
         force: z.boolean().optional(),
+        expectedRemoteCommit: z.string().regex(/^[0-9a-fA-F]{40}$/).optional(),
+        expectedLocalCommit: z.string().regex(/^[0-9a-fA-F]{40}$/).optional(),
+        confirmExternalRewriteRecovery: z.boolean().optional(),
         confirmPush: z.boolean().optional(),
       },
     },

@@ -217,6 +217,15 @@ describe("project failed_no_output lifecycle", () => {
       })).rejects.toThrow(
         "project_control_terminal_job_start_denied:failed_no_output",
       );
+      await expect(assertCodexGoalProjectJobNotTerminal({
+        roots: [ledgerRoot],
+        projectId: "project",
+        controllerJobId,
+        jobId: freshWorkerJobId,
+        taskId: freshWorkerJobId,
+        workspacePath: join(worktreeRoot, freshWorkerJobId),
+        capacityContinuation: true,
+      })).resolves.toBeUndefined();
       await expect(projectControlRecordFailedNoOutputView({
         ...freshArgs,
         confirmFailedNoOutput: true,

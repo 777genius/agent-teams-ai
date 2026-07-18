@@ -31,6 +31,7 @@ import {
   withValidatedProjectWorkspaceLock,
 } from "./codex-goal-project-workspace-lock";
 import { rebindProjectPreStartAdmissionManifest } from "./application/project-control/codex-goal-project-pre-start-admission";
+import { isAdmittedInputPatchCapacityContinuation } from "./application/project-control/codex-goal-project-admitted-input-patch-continuation";
 import {
   parseCodexGoalProjectAccessScope,
 } from "./codex-goal-access-plan";
@@ -272,7 +273,8 @@ export async function projectControlRepairJobManifestView(
   }
 
   const rebindPreStartAdmission =
-    args.serviceTier !== undefined && existing.projectPreStartAdmission !== undefined;
+    existing.projectPreStartAdmission !== undefined &&
+    (Object.keys(patch).length > 0 || args.serviceTier !== undefined);
   if (Object.keys(patch).length === 0 && !rebindPreStartAdmission) {
     return {
       ok: true,
@@ -310,7 +312,6 @@ export async function projectControlRepairJobManifestView(
     ? await rebindRepairedProjectJobManifest({
         controller,
         manifest,
-        workspaceDirty: serviceTierWorkspaceDirty === true,
         reviewedOutputId: stringValue(args.reviewedOutputId),
       })
     : undefined;
@@ -329,7 +330,6 @@ export async function projectControlRepairJobManifestView(
 async function rebindRepairedProjectJobManifest(input: {
   readonly controller: LoadedProjectControlController;
   readonly manifest: CodexGoalJobManifest;
-  readonly workspaceDirty: boolean;
   readonly reviewedOutputId: string | undefined;
 }): Promise<JsonObject> {
   const locks = projectControlWorkspaceLocks(input.controller.registryRootDir);
@@ -349,10 +349,10 @@ async function rebindRepairedProjectJobManifest(input: {
       if (resolveCodexGoalWorkerLiveness({ status, progressStale }).alive) {
         throw new Error("project_control_repair_live_worker_profile_denied");
       }
-      if ((status.workspaceDirty === true) !== input.workspaceDirty) {
-        throw new Error("project_control_repair_workspace_state_changed");
-      }
-      if (input.workspaceDirty) {
+      const workspaceDirty = status.workspaceDirty === true;
+      const admittedInputPatchContinuation =
+        workspaceDirty && isAdmittedInputPatchCapacityContinuation(status);
+      if (workspaceDirty && !admittedInputPatchContinuation) {
         const reviewedOutputId = input.reviewedOutputId;
         if (!reviewedOutputId) {
           throw new Error("project_control_repair_reviewed_output_required");
@@ -383,9 +383,11 @@ async function rebindRepairedProjectJobManifest(input: {
       return await rebindProjectPreStartAdmissionManifest({
         manifest: input.manifest,
         scope: input.controller.scope,
-        workspaceMode: input.workspaceDirty
-          ? "reviewed_dirty_continuation"
-          : "clean_capacity_continuation",
+        workspaceMode: admittedInputPatchContinuation
+          ? "admitted_input_patch_continuation"
+          : workspaceDirty
+            ? "reviewed_dirty_continuation"
+            : "clean_capacity_continuation",
       });
     },
   });

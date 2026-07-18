@@ -63,7 +63,21 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
           .string()
           .regex(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i)
           .optional(),
+        mergeBinding: z.object({
+          sourceRemote: z.string().min(1),
+          sourceBranch: z.string().min(1),
+        }).strict().optional().describe(
+          "Atomically bind this worker to the current canonical target and exact remote merge source. Requires requireCanonicalRemoteHead=true and omitted canonicalSha/phaseStartSha; runtime pins both commits into the immutable admission receipt.",
+        ),
+        requireCanonicalRemoteHead: z.boolean().optional(),
         producerJobId: z.string().optional(),
+        reviewedOutputId: z
+          .string()
+          .regex(/^[a-fA-F0-9]{64}$/)
+          .optional()
+          .describe(
+            "Attested rejected output from producerJobId to materialize as immutable remediation input. Requires workerRole=producer and a remediation admission contract.",
+          ),
         newBranch: z.string().optional(),
         promptBody: z.string().optional(),
         preStartAdmission: workerLaunchAdmissionSchema
@@ -99,14 +113,23 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
         ...goalInputSchema(),
         ...jobRegistryInputSchema(),
         controllerJobId: z.string().optional(),
-        producerJobId: z.string(),
+        producerJobId: z.string().optional(),
+        reviewedOutputIds: z
+          .array(z.string().regex(/^[a-fA-F0-9]{64}$/))
+          .min(1)
+          .max(10)
+          .optional(),
         sourceWorkspacePath: z.string().optional(),
         baseBranch: z.string().optional(),
+        expectedSourceCommit: z
+          .string()
+          .regex(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/i)
+          .optional(),
         newBranch: z.string().optional(),
         promptBody: z.string().optional(),
         preStartAdmission: workerLaunchAdmissionSchema
           .describe(
-            "Declarative verifier launch admission. Runtime computes job identity, workKey, paths and state. phaseStartSha must match canonical source HEAD; inputPatchHash must match the terminal producer handoff.",
+            "Declarative verifier launch admission. Runtime computes job identity, workKey, paths and state. phaseStartSha must match canonical source HEAD; inputPatchHash must match the terminal producer handoff or exact ordered reviewed-output aggregate artifact.",
           )
           .optional(),
         confirmPreStartAdmission: z.boolean().optional(),

@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 
-const maxBatchObjects = 512;
+export const maximumGitBlobBatchObjects = 512;
 const maxObjectNameBytes = 8 * 1024;
 const maxBatchBlobBytes = 64 * 1024 * 1024;
 const maxStderrBytes = 64 * 1024;
@@ -24,11 +24,19 @@ export type GitBlobBatchOptions = {
 export async function readGitBlobBatch(
   input: GitBlobBatchOptions,
 ): Promise<readonly (Buffer | undefined)[]> {
-  assertBatchLimit(input.maxBlobBytes, false, "git_blob_batch_file_limit_invalid");
-  assertBatchLimit(input.maxTotalBytes, true, "git_blob_batch_total_limit_invalid");
+  assertBatchLimit(
+    input.maxBlobBytes,
+    false,
+    "git_blob_batch_file_limit_invalid",
+  );
+  assertBatchLimit(
+    input.maxTotalBytes,
+    true,
+    "git_blob_batch_total_limit_invalid",
+  );
   if (
     input.objectNames.length === 0 ||
-    input.objectNames.length > maxBatchObjects
+    input.objectNames.length > maximumGitBlobBatchObjects
   ) {
     throw new Error("git_blob_batch_object_limit_exceeded");
   }
@@ -65,83 +73,86 @@ function assertBatchLimit(
 async function runGitBlobBatch(
   input: GitBlobBatchOptions & { readonly request: string },
 ): Promise<readonly (Buffer | undefined)[]> {
-  return await new Promise<readonly (Buffer | undefined)[]>((resolve, reject) => {
-    const child = spawn(
-      input.gitBinaryPath ?? "git",
-      ["cat-file", "--batch"],
-      {
-        cwd: input.workspacePath,
-        env: input.env,
-        stdio: ["pipe", "pipe", "pipe"],
-      },
-    );
-    const parser = new GitBlobBatchStreamParser({
-      objectNames: input.objectNames,
-      maxBlobBytes: input.maxBlobBytes,
-      maxTotalBytes: input.maxTotalBytes,
-    });
-    let stderrBytes = 0;
-    let failure: Error | undefined;
-    const fail = (error: Error): void => {
-      if (failure !== undefined) return;
-      failure = error;
-      child.stdin.destroy();
-      child.stdout.destroy();
-      child.stderr.destroy();
-      child.kill("SIGKILL");
-    };
-    const timer = setTimeout(
-      () => fail(new Error("git_blob_batch_timeout")),
-      input.timeoutMs ?? 15_000,
-    );
-    child.stdout.on("data", (chunk: Buffer | string) => {
-      if (failure !== undefined) return;
-      try {
-        parser.write(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-      } catch (error) {
-        fail(asError(error, "git_blob_batch_output_invalid"));
-      }
-    });
-    child.stderr.on("data", (chunk: Buffer | string) => {
-      stderrBytes += Buffer.byteLength(chunk);
-      if (stderrBytes > maxStderrBytes) {
-        fail(new Error("git_blob_batch_stderr_limit_exceeded"));
-      }
-    });
-    child.stdin.on("error", () => {
-      if (failure === undefined) fail(new Error("git_blob_batch_input_failed"));
-    });
-    child.once("error", () => {
-      fail(new Error("git_blob_batch_start_failed"));
-    });
-    child.once("close", (code) => {
-      clearTimeout(timer);
-      if (failure !== undefined) {
-        reject(failure);
-        return;
-      }
-      if (code !== 0) {
-        reject(new Error("git_blob_batch_failed"));
-        return;
-      }
-      try {
-        resolve(parser.finish());
-      } catch (error) {
-        reject(asError(error, "git_blob_batch_output_invalid"));
-      }
-    });
-    child.stdin.end(input.request);
-  });
+  return await new Promise<readonly (Buffer | undefined)[]>(
+    (resolve, reject) => {
+      const child = spawn(
+        input.gitBinaryPath ?? "git",
+        ["cat-file", "--batch"],
+        {
+          cwd: input.workspacePath,
+          env: input.env,
+          stdio: ["pipe", "pipe", "pipe"],
+        },
+      );
+      const parser = new GitBlobBatchStreamParser({
+        objectNames: input.objectNames,
+        maxBlobBytes: input.maxBlobBytes,
+        maxTotalBytes: input.maxTotalBytes,
+      });
+      let stderrBytes = 0;
+      let failure: Error | undefined;
+      const fail = (error: Error): void => {
+        if (failure !== undefined) return;
+        failure = error;
+        child.stdin.destroy();
+        child.stdout.destroy();
+        child.stderr.destroy();
+        child.kill("SIGKILL");
+      };
+      const timer = setTimeout(
+        () => fail(new Error("git_blob_batch_timeout")),
+        input.timeoutMs ?? 15_000,
+      );
+      child.stdout.on("data", (chunk: Buffer | string) => {
+        if (failure !== undefined) return;
+        try {
+          parser.write(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        } catch (error) {
+          fail(asError(error, "git_blob_batch_output_invalid"));
+        }
+      });
+      child.stderr.on("data", (chunk: Buffer | string) => {
+        stderrBytes += Buffer.byteLength(chunk);
+        if (stderrBytes > maxStderrBytes) {
+          fail(new Error("git_blob_batch_stderr_limit_exceeded"));
+        }
+      });
+      child.stdin.on("error", () => {
+        if (failure === undefined)
+          fail(new Error("git_blob_batch_input_failed"));
+      });
+      child.once("error", () => {
+        fail(new Error("git_blob_batch_start_failed"));
+      });
+      child.once("close", (code) => {
+        clearTimeout(timer);
+        if (failure !== undefined) {
+          reject(failure);
+          return;
+        }
+        if (code !== 0) {
+          reject(new Error("git_blob_batch_failed"));
+          return;
+        }
+        try {
+          resolve(parser.finish());
+        } catch (error) {
+          reject(asError(error, "git_blob_batch_output_invalid"));
+        }
+      });
+      child.stdin.end(input.request);
+    },
+  );
 }
 
 type ParserState =
   | { readonly kind: "header" }
   | {
-    readonly kind: "blob";
-    readonly size: number;
-    readonly buffer: Buffer;
-    bytes: number;
-  }
+      readonly kind: "blob";
+      readonly size: number;
+      readonly buffer: Buffer;
+      bytes: number;
+    }
   | { readonly kind: "delimiter"; readonly blob: Buffer };
 
 class GitBlobBatchStreamParser {
@@ -151,11 +162,13 @@ class GitBlobBatchStreamParser {
   private headerBytes = 0;
   private declaredTotalBytes = 0;
 
-  constructor(private readonly limits: {
-    readonly objectNames: readonly string[];
-    readonly maxBlobBytes: number;
-    readonly maxTotalBytes: number;
-  }) {}
+  constructor(
+    private readonly limits: {
+      readonly objectNames: readonly string[];
+      readonly maxBlobBytes: number;
+      readonly maxTotalBytes: number;
+    },
+  ) {}
 
   write(chunk: Buffer): void {
     let offset = 0;
@@ -221,7 +234,9 @@ class GitBlobBatchStreamParser {
   }
 
   private acceptHeader(): void {
-    const header = Buffer.concat(this.headerChunks, this.headerBytes).toString("utf8");
+    const header = Buffer.concat(this.headerChunks, this.headerBytes).toString(
+      "utf8",
+    );
     this.headerChunks = [];
     this.headerBytes = 0;
     const expectedObjectName = this.limits.objectNames[this.results.length];

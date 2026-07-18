@@ -40,6 +40,11 @@ export interface GitPort {
     readonly workspacePath: string;
   }): Promise<GitDiffCheckResult> | GitDiffCheckResult;
 
+  changedFilesSinceCommit(input: {
+    readonly workspacePath: string;
+    readonly commit: string;
+  }): Promise<readonly string[]> | readonly string[];
+
   commit(input: {
     readonly workspacePath: string;
     readonly message: string;
@@ -62,6 +67,7 @@ export interface GitPort {
     readonly branch: string;
     readonly commitSha: string;
     readonly force: boolean;
+    readonly expectedRemoteCommit?: string;
   }): Promise<void> | void;
 
   remoteBranchCommit(input: {

@@ -5,12 +5,14 @@ type JsonObject = Readonly<Record<string, unknown>>;
 export function assertProjectRefillInputPatchSource(input: {
   readonly contract: JsonObject | undefined;
   readonly producerJobId: string | undefined;
+  readonly reviewedOutputId?: string | undefined;
   readonly workerRole: string;
 }): void {
   const producerJobId = input.producerJobId?.trim();
+  const reviewedOutputId = input.reviewedOutputId?.trim();
   const inputPatchHash = input.contract?.inputPatchHash;
   if (inputPatchHash === null || inputPatchHash === undefined) {
-    if (producerJobId) {
+    if (producerJobId || reviewedOutputId) {
       throw new Error("project_control_refill_input_patch_hash_required");
     }
     return;
@@ -18,8 +20,20 @@ export function assertProjectRefillInputPatchSource(input: {
   if (!producerJobId) {
     throw new Error("project_control_refill_input_patch_source_required");
   }
-  if (input.workerRole !== "producer") {
+  if (input.workerRole !== "producer" && input.workerRole !== "adoption") {
     throw new Error("project_control_refill_input_patch_producer_role_required");
+  }
+  if (reviewedOutputId) {
+    if (input.workerRole !== "producer") {
+      throw new Error(
+        "project_control_refill_reviewed_output_producer_role_required",
+      );
+    }
+    if (input.contract?.reviewKind !== "remediation") {
+      throw new Error(
+        "project_control_refill_reviewed_output_remediation_required",
+      );
+    }
   }
 }
 

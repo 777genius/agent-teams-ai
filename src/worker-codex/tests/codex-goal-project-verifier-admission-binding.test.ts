@@ -32,6 +32,60 @@ afterEach(async () => {
 });
 
 describe("project verifier admission binding", () => {
+  it("binds adoption provenance separately from its canonical staged patch", async () => {
+    const fixture = await createFixture({ adoption: true });
+    const sourcePath = join(fixture.workspacePath, "README.md");
+    await writeFile(sourcePath, "adopted existing file\n");
+    await git(fixture.workspacePath, ["add", "README.md"]);
+    const stagedDigest = await stagedPatchSha256(fixture.workspacePath);
+    expect(stagedDigest).not.toBe(fixture.artifactSha256);
+
+    await prepareProjectPreStartAdmission({
+      plan: fixture.plan,
+      manifest: fixture.manifest,
+      scope: fixture.scope,
+      verifiedInputPatchArtifactSha256: fixture.artifactSha256,
+      verifiedInputPatchStagedSha256: stagedDigest,
+    });
+    expect(
+      JSON.parse(await readFile(fixture.plan.descriptor.receiptPath, "utf8")),
+    ).toMatchObject({
+      workspaceMode: "verified_input_patch",
+      inputPatchArtifactSha256: fixture.artifactSha256,
+      expectedWorkspaceStagedPatchSha256: stagedDigest,
+      workspaceStagedPatchSha256: stagedDigest,
+    });
+    await expect(
+      validateStoredProjectPreStartAdmission({
+        manifest: fixture.manifest,
+        scope: fixture.scope,
+      }),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertProjectPreStartAdmissionLaunchBinding({
+        manifest: fixture.manifest,
+        scope: fixture.scope,
+      }),
+    ).resolves.toBeUndefined();
+
+    await writeFile(sourcePath, "attacker replaced staged adoption\n");
+    await git(fixture.workspacePath, ["add", "README.md"]);
+    await expect(
+      validateStoredProjectPreStartAdmission({
+        manifest: fixture.manifest,
+        scope: fixture.scope,
+      }),
+    ).rejects.toThrow("project_control_pre_start_input_patch_hash_mismatch");
+    await expect(
+      assertProjectPreStartAdmissionLaunchBinding({
+        manifest: fixture.manifest,
+        scope: fixture.scope,
+      }),
+    ).rejects.toThrow(
+      "project_control_pre_start_launch_binding_mismatch:input_patch_binding",
+    );
+  });
+
   it("binds verified artifact bytes separately from the normalized staged patch", async () => {
     const fixture = await createFixture();
     const sourcePath = join(fixture.workspacePath, "src", "example.ts");
@@ -219,7 +273,7 @@ describe("project verifier admission binding", () => {
   });
 });
 
-async function createFixture() {
+async function createFixture(input: { readonly adoption?: boolean } = {}) {
   const root = await mkdtemp(join(tmpdir(), "verifier-admission-binding-"));
   roots.push(root);
   const workspacePath = join(root, "workspace");
@@ -250,6 +304,7 @@ async function createFixture() {
     accounts: ["account-a"],
     accessBoundary: AccessBoundary.IsolatedWorkspaceWrite,
     networkAccess: NetworkAccessMode.Restricted,
+    ...(input.adoption ? { tags: ["worker-role-adoption"] } : {}),
   } as const;
   const contract = withWorkKey({
     kind: "worker-launch",

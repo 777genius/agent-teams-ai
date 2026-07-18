@@ -84,7 +84,7 @@ describe("worker launch spec", () => {
         legacyContractSchema: "worker-start-v1",
       }),
     ).toThrow(
-      /missing_field_canonicalSha.*missing_field_baseSha.*unexpected_field_legacyContractSchema/,
+      /missing_field_baseSha.*missing_field_packetRevision.*unexpected_field_legacyContractSchema/,
     );
   });
 

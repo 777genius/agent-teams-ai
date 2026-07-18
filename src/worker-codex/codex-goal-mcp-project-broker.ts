@@ -1,5 +1,5 @@
 import { appendFile, mkdir, realpath, stat } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 import {
   AccessBoundary,
   ProjectControlBroker,
@@ -31,13 +31,9 @@ import {
   codexProjectAdmissionGate,
   type CodexProjectAdmissionDeps,
 } from "./application/project-control/codex-goal-project-admission";
-import {
-  withProjectPreStartAdmissionLaunchAuthorization,
-} from "./application/project-control/codex-goal-project-pre-start-launch-authorization";
+import { withProjectPreStartAdmissionLaunchAuthorization } from "./application/project-control/codex-goal-project-pre-start-launch-authorization";
 import type { ProjectPreStartAdmissionLaunchWorkspaceMode } from "./application/project-control/codex-goal-project-pre-start-admission";
-import {
-  assertCodexGoalProjectJobNotTerminal,
-} from "./application/project-control/codex-goal-consumed-output-ledger-io";
+import { assertCodexGoalProjectJobNotTerminal } from "./application/project-control/codex-goal-consumed-output-ledger-io";
 import { decideCodexGoalProjectStop } from "./application/project-control/codex-goal-project-stop-policy";
 import type {
   CaptureReviewedWorkerOutputInput,
@@ -56,8 +52,9 @@ import {
   type CodexGoalProjectCreateWorktreeInput,
 } from "./application/project-control/codex-goal-project-control-contracts";
 import {
-  pushProjectBranch,
-  type CodexGoalProjectPushBranchInput,
+  ProjectControlPushOutcome,
+  pushProjectBranch as pushProjectBranchRemoteAuthoritative,
+  type CodexGoalProjectPushBranchInput as RemoteAuthoritativePushBranchInput,
 } from "./application/project-control/codex-goal-project-push";
 import { projectControlRealPathOutsideWorkspaceScope } from "./application/project-control/codex-goal-project-workspace-scope";
 import {
@@ -65,7 +62,9 @@ import {
   assertGitCurrentBranch,
   execGit,
   execGitStdout,
+  isGitAncestor,
 } from "./codex-goal-mcp-project-git";
+import { pushProjectBranch as pushProjectBranchWithExternalRewriteRecovery } from "./application/project-control/codex-goal-project-external-rewrite-recovery";
 
 export type { CodexGoalProjectCreateWorktreeInput } from "./application/project-control/codex-goal-project-control-contracts";
 
@@ -76,9 +75,12 @@ export type CodexGoalProjectIntegrateCommitInput = {
   readonly commitSha: string;
 };
 
-export type {
-  CodexGoalProjectPushBranchInput,
-} from "./application/project-control/codex-goal-project-push";
+export type CodexGoalProjectPushBranchInput =
+  RemoteAuthoritativePushBranchInput & {
+    readonly expectedRemoteCommit?: string;
+    readonly expectedLocalCommit?: string;
+    readonly confirmExternalRewriteRecovery?: boolean;
+  };
 
 export async function resolveBoundProjectWorktreeSource(input: {
   readonly sourceWorkspacePath: string;
@@ -106,6 +108,10 @@ export type CodexProjectControlBrokerInput = {
   readonly createManifest?: CodexGoalJobManifestInput;
   readonly createOverwrite?: boolean;
   readonly createWorktreeInput?: CodexGoalProjectCreateWorktreeInput;
+  readonly admittedInputPatchTarget?: {
+    readonly jobId: string;
+    readonly workspacePath: string;
+  };
   readonly integrateCommitInput?: CodexGoalProjectIntegrateCommitInput;
   readonly pushBranchInput?: CodexGoalProjectPushBranchInput;
   readonly startLaunch?: CodexGoalLaunchInput;
@@ -127,6 +133,23 @@ export type CodexProjectControlBrokerInput = {
 export function createCodexProjectControlBroker(
   input: CodexProjectControlBrokerInput,
 ): ProjectControlBroker {
+  const admittedInputPatchTarget =
+    input.admittedInputPatchTarget ??
+    ((input.startAdmissionWorkspaceMode === "admitted_input_patch" &&
+      input.startManifest &&
+      input.startWorkspaceLease) ||
+    (input.createWorktreeInput?.inputPatch && input.createWorktreeInput.jobId)
+      ? {
+          jobId:
+            input.startManifest?.jobId ??
+            input.createWorktreeInput?.jobId ??
+            "",
+          workspacePath:
+            input.startWorkspaceLease?.canonicalWorkspacePath ??
+            input.createWorktreeInput?.path ??
+            "",
+        }
+      : undefined);
   return new ProjectControlBroker(
     {
       boundary: AccessBoundary.ProjectScopedControl,
@@ -138,21 +161,20 @@ export function createCodexProjectControlBroker(
         registryRootDir: input.registryRootDir,
         scope: input.scope,
         deps: input.admissionDeps,
-        ...((input.startAdmissionWorkspaceMode === "admitted_input_patch" &&
-              input.startManifest &&
-              input.startWorkspaceLease) ||
-            (input.createWorktreeInput?.inputPatch &&
-              input.createWorktreeInput.jobId)
+        ...((input.startAdmissionWorkspaceMode ===
+          "admitted_input_patch_continuation" ||
+          input.startAdmissionWorkspaceMode ===
+            "clean_capacity_continuation") &&
+        input.startManifest &&
+        input.startWorkspaceLease
           ? {
-              admittedInputPatchTarget: {
-                jobId: input.startManifest?.jobId ??
-                  input.createWorktreeInput?.jobId ?? "",
-                workspacePath: input.startWorkspaceLease
-                  ?.canonicalWorkspacePath ??
-                  input.createWorktreeInput?.path ?? "",
+              capacityContinuationTarget: {
+                jobId: input.startManifest.jobId,
+                workspacePath: input.startWorkspaceLease.canonicalWorkspacePath,
               },
             }
           : {}),
+        ...(admittedInputPatchTarget ? { admittedInputPatchTarget } : {}),
       }),
     },
   );
@@ -199,9 +221,11 @@ function codexProjectControlPorts(
         });
         if (input.reviewedOutputCapture) {
           assertReviewedOutputWorkerStopped(input.reviewLaunch, status);
-          await reviewedOutputDeps.continuationEnvironment.sanitizeDependencyRootLinks({
-            workspacePath: input.reviewLaunch.config.workspacePath,
-          });
+          await reviewedOutputDeps.continuationEnvironment.sanitizeDependencyRootLinks(
+            {
+              workspacePath: input.reviewLaunch.config.workspacePath,
+            },
+          );
           reviewedOutput = await captureReviewedWorkerOutputLocked(
             reviewedOutputDeps,
             {
@@ -277,6 +301,11 @@ function codexProjectControlPorts(
             ...(input.reviewedContinuation
               ? { reviewedContinuation: input.reviewedContinuation }
               : {}),
+            ...(input.startAdmissionWorkspaceMode ===
+              "admitted_input_patch_continuation" ||
+            input.startAdmissionWorkspaceMode === "clean_capacity_continuation"
+              ? { capacityContinuation: true as const }
+              : {}),
           });
           await prepareCodexGoalLaunchPaths(startLaunch);
           if (!input.startSkipDoctor) {
@@ -302,15 +331,15 @@ function codexProjectControlPorts(
           try {
             command = input.startManifest
               ? await withProjectPreStartAdmissionLaunchAuthorization(
-                {
-                  manifest: input.startManifest,
-                  scope: input.scope,
-                  ...(input.startAdmissionWorkspaceMode
-                    ? { workspaceMode: input.startAdmissionWorkspaceMode }
-                    : {}),
-                },
-                async () => await startCodexGoalTmux(startLaunch),
-              )
+                  {
+                    manifest: input.startManifest,
+                    scope: input.scope,
+                    ...(input.startAdmissionWorkspaceMode
+                      ? { workspaceMode: input.startAdmissionWorkspaceMode }
+                      : {}),
+                  },
+                  async () => await startCodexGoalTmux(startLaunch),
+                )
               : await startCodexGoalTmux(startLaunch);
           } finally {
             if (previousBrokeredStart === undefined) {
@@ -429,6 +458,15 @@ function codexProjectControlPorts(
         if (
           await codexProjectControlPathExists(input.createWorktreeInput.path)
         ) {
+          if (input.createWorktreeInput.fastForwardExisting) {
+            const fastForwarded = await fastForwardExistingProjectWorktree({
+              input: input.createWorktreeInput,
+              scope: input.scope,
+            });
+            if (fastForwarded) {
+              return operationResult(input.createWorktreeInput.path);
+            }
+          }
           return noopOperationResult(
             input.createWorktreeInput.path,
             "existing worktree candidate delegated for exact identity validation",
@@ -511,12 +549,17 @@ function codexProjectControlPorts(
           workspacePath: input.integrateCommitInput.workspacePath,
           branch: input.integrateCommitInput.branch,
         });
+        const targetIsDescendant = await isGitAncestor({
+          workspacePath: input.integrateCommitInput.workspacePath,
+          ancestor: "HEAD",
+          descendant: input.integrateCommitInput.commitSha,
+        });
         await execGit([
           "-C",
           input.integrateCommitInput.workspacePath,
-          "cherry-pick",
-          "--ff",
-          input.integrateCommitInput.commitSha,
+          ...(targetIsDescendant
+            ? ["merge", "--ff-only", input.integrateCommitInput.commitSha]
+            : ["cherry-pick", "--ff", input.integrateCommitInput.commitSha]),
         ]);
         return operationResult(input.integrateCommitInput.commitSha);
       },
@@ -529,10 +572,212 @@ function codexProjectControlPorts(
           workspacePath: pushInput.workspacePath,
           branch: pushInput.branch,
         });
-        return pushProjectBranch(pushInput);
+        if (
+          pushInput.expectedRemoteCommit !== undefined ||
+          pushInput.expectedLocalCommit !== undefined ||
+          pushInput.confirmExternalRewriteRecovery === true
+        ) {
+          await pushProjectBranchWithExternalRewriteRecovery(pushInput);
+          const confirmed =
+            await pushProjectBranchRemoteAuthoritative(pushInput);
+          return confirmed.outcome === ProjectControlPushOutcome.RemoteChanged
+            ? confirmed
+            : {
+                ...confirmed,
+                status: "applied",
+                safeMessage: "project_control_external_rewrite_recovered",
+              };
+        }
+        return pushProjectBranchRemoteAuthoritative(pushInput);
       },
     },
   };
+}
+
+export async function fastForwardExistingProjectWorktree(input: {
+  readonly input: CodexGoalProjectCreateWorktreeInput;
+  readonly scope: ProjectAccessScope;
+  readonly afterFastForwardForTest?: () => Promise<void>;
+}): Promise<boolean> {
+  const request = input.input;
+  const fastForward = request.fastForwardExisting;
+  if (!fastForward) return false;
+  if (!request.sourceRevisionPinned) {
+    throw new Error("project_control_existing_worktree_fast_forward_unpinned");
+  }
+  if (!request.newBranch || request.sourceRef !== request.newBranch) {
+    throw new Error(
+      "project_control_existing_worktree_fast_forward_branch_required",
+    );
+  }
+  if (request.inputPatch) {
+    throw new Error(
+      "project_control_existing_worktree_fast_forward_patch_forbidden",
+    );
+  }
+  const materializedRealPath = await realpath(request.path);
+  if (
+    !request.expectedRealPath ||
+    materializedRealPath !== request.expectedRealPath
+  ) {
+    throw new Error(
+      "project_control_existing_worktree_fast_forward_real_path_changed",
+    );
+  }
+  if (
+    await projectControlRealPathOutsideWorkspaceScope(
+      materializedRealPath,
+      input.scope,
+    )
+  ) {
+    throw new Error(
+      "project_control_existing_worktree_real_path_outside_scope",
+    );
+  }
+  const [sourceCommonDir, worktreeCommonDir] = await Promise.all([
+    resolveGitCommonDir(request.expectedSourceRealPath),
+    resolveGitCommonDir(materializedRealPath),
+  ]);
+  if (sourceCommonDir !== worktreeCommonDir) {
+    throw new Error("project_control_existing_worktree_foreign_repository");
+  }
+  const statusBefore = await execGitStdout([
+    "-C",
+    materializedRealPath,
+    "status",
+    "--porcelain",
+  ]);
+  if (statusBefore.trim().length > 0) {
+    throw new Error("project_control_existing_worktree_fast_forward_dirty");
+  }
+  await assertGitCurrentBranch({
+    workspacePath: materializedRealPath,
+    branch: request.newBranch,
+  });
+  const current = (
+    await execGitStdout(["-C", materializedRealPath, "rev-parse", "HEAD"])
+  )
+    .trim()
+    .toLowerCase();
+  const expectedCurrent = fastForward.expectedCurrentRevision.toLowerCase();
+  const expectedNext = request.expectedRevision.toLowerCase();
+  if (current === expectedNext) {
+    if (expectedCurrent === expectedNext) return false;
+    try {
+      if (
+        await isGitAncestor({
+          workspacePath: materializedRealPath,
+          ancestor: expectedCurrent,
+          descendant: expectedNext,
+        })
+      )
+        return false;
+    } catch {
+      // The regular current-mismatch error below is the stable public result.
+    }
+  }
+  if (current !== expectedCurrent) {
+    throw new Error(
+      "project_control_existing_worktree_fast_forward_current_mismatch",
+    );
+  }
+  if (
+    !(await isGitAncestor({
+      workspacePath: materializedRealPath,
+      ancestor: expectedCurrent,
+      descendant: expectedNext,
+    }))
+  ) {
+    throw new Error(
+      "project_control_existing_worktree_fast_forward_non_ancestor",
+    );
+  }
+  await execGit([
+    "-c",
+    "core.hooksPath=/dev/null",
+    "-C",
+    materializedRealPath,
+    "merge",
+    "--ff-only",
+    "--no-stat",
+    expectedNext,
+  ]);
+  await input.afterFastForwardForTest?.();
+  try {
+    const confirmed = (
+      await execGitStdout(["-C", materializedRealPath, "rev-parse", "HEAD"])
+    )
+      .trim()
+      .toLowerCase();
+    const statusAfter = await execGitStdout([
+      "-C",
+      materializedRealPath,
+      "status",
+      "--porcelain",
+    ]);
+    if (confirmed !== expectedNext || statusAfter.trim().length > 0) {
+      throw new Error(
+        "project_control_existing_worktree_fast_forward_verification_failed",
+      );
+    }
+  } catch (error) {
+    const rollback = await rollbackFastForwardRevision({
+      workspacePath: materializedRealPath,
+      expectedCurrent,
+      expectedNext,
+    });
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${message}; rollback=${rollback}`);
+  }
+  return true;
+}
+
+async function resolveGitCommonDir(workspacePath: string): Promise<string> {
+  const commonDir = (
+    await execGitStdout(["-C", workspacePath, "rev-parse", "--git-common-dir"])
+  ).trim();
+  return await realpath(
+    isAbsolute(commonDir) ? commonDir : join(workspacePath, commonDir),
+  );
+}
+
+async function rollbackFastForwardRevision(input: {
+  readonly workspacePath: string;
+  readonly expectedCurrent: string;
+  readonly expectedNext: string;
+}): Promise<string> {
+  const observed = (
+    await execGitStdout(["-C", input.workspacePath, "rev-parse", "HEAD"])
+  )
+    .trim()
+    .toLowerCase();
+  if (observed !== input.expectedNext) return "skipped_head_changed";
+  const status = await execGitStdout([
+    "-C",
+    input.workspacePath,
+    "status",
+    "--porcelain",
+  ]);
+  if (status.trim().length > 0) return "skipped_dirty";
+  try {
+    await execGit([
+      "-c",
+      "core.hooksPath=/dev/null",
+      "-C",
+      input.workspacePath,
+      "reset",
+      "--merge",
+      input.expectedCurrent,
+    ]);
+  } catch {
+    return "failed_preserved";
+  }
+  const restored = (
+    await execGitStdout(["-C", input.workspacePath, "rev-parse", "HEAD"])
+  )
+    .trim()
+    .toLowerCase();
+  return restored === input.expectedCurrent ? "revision" : "failed_preserved";
 }
 
 async function codexProjectControlPathExists(path: string): Promise<boolean> {

@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export type CodexOpenAiBridgeAccount = {
@@ -19,14 +19,28 @@ export async function discoverCodexBridgeAccounts(input: {
     ? new Set(input.accountNames.map((name) => name.trim()).filter(Boolean))
     : null;
   const entries = await readdir(input.authRootDir, { withFileTypes: true });
-  return entries
-    .filter((entry) => entry.isDirectory())
-    .filter((entry) => !allow || allow.has(entry.name))
-    .map((entry) => ({
-      name: entry.name,
-      sourceCodexHome: join(input.authRootDir, entry.name),
-    }))
+  const accounts = await Promise.all(
+    entries
+      .filter((entry) => entry.isDirectory())
+      .filter((entry) => !allow || allow.has(entry.name))
+      .map(async (entry) => {
+        const sourceCodexHome = join(input.authRootDir, entry.name);
+        if (!(await hasReadableCodexAuthJson(sourceCodexHome))) return null;
+        return { name: entry.name, sourceCodexHome };
+      }),
+  );
+  return accounts
+    .filter((account): account is CodexOpenAiBridgeAccount => account !== null)
     .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+async function hasReadableCodexAuthJson(sourceCodexHome: string): Promise<boolean> {
+  try {
+    await access(join(sourceCodexHome, "auth.json"));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function seedIsolatedBridgeAccount(input: {

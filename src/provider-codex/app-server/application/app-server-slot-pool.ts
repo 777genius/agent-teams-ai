@@ -67,9 +67,13 @@ export class AppServerSlotPool {
     }
 
     throwIfAborted(input.abortSignal);
+    const sourceEnv = {
+      ...(this.options.sourceEnv ?? process.env),
+      ...input.session.env,
+    };
     const client = new CodexAppServerClient({
       codexBinaryPath: this.options.codexBinaryPath,
-      sourceEnv: this.options.sourceEnv ?? process.env,
+      sourceEnv,
       processFactory: this.options.processFactory,
       signalChildProcess: this.options.signalChildProcess,
       session: input.session,

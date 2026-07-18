@@ -17,6 +17,9 @@ import {
   inspectNodeDependencyEnvironment,
   sanitizeNodeDependencyEnvironment,
 } from "./dependency-environment-safety";
+import {
+  withDependencyBootstrapWorkspaceTransaction,
+} from "./dependency-bootstrap-workspace-transaction";
 
 export {
   defaultDependencyCacheRoot,
@@ -275,21 +278,25 @@ async function runPackageManagerInstall(input: {
   if (input.cacheRoot) {
     await mkdir(input.cacheRoot, { recursive: true, mode: 0o700 });
   }
-  const install = async (): Promise<readonly string[]> => {
-    const sanitized =
-      input.packageManager.name === "uv"
-        ? { removedPaths: [] as readonly string[] }
-        : await sanitizeNodeDependencyEnvironment({
-            workspacePath: input.workspacePath,
+  const install = async (): Promise<readonly string[]> =>
+    withDependencyBootstrapWorkspaceTransaction({
+      workspacePath: input.workspacePath,
+      action: async () => {
+        const sanitized =
+          input.packageManager.name === "uv"
+            ? { removedPaths: [] as readonly string[] }
+            : await sanitizeNodeDependencyEnvironment({
+                workspacePath: input.workspacePath,
+              });
+        for (const command of commands) {
+          await runCommand(command[0] ?? "", command.slice(1), {
+            cwd: input.workspacePath,
+            timeoutMs: 120_000,
           });
-    for (const command of commands) {
-      await runCommand(command[0] ?? "", command.slice(1), {
-        cwd: input.workspacePath,
-        timeoutMs: 120_000,
-      });
-    }
-    return sanitized.removedPaths;
-  };
+        }
+        return sanitized.removedPaths;
+      },
+    });
   if (!input.cacheRoot || !input.fingerprint) {
     return { sanitizedDependencyPaths: await install() };
   }

@@ -271,7 +271,7 @@ describe("codex goal MCP server", () => {
       });
       expect(legacyTarget).toMatchObject({
         ok: false,
-        error: "project_control_workspace_outside_scope",
+        error: "project_control_denied:path_outside_scope",
       });
     } finally {
       await client.close();

@@ -19,11 +19,13 @@ import {
   type WorkspaceLockPort,
 } from "@vioxen/subscription-runtime/worker-core";
 import {
-  LocalGitIntegrationAdapter,
   LocalWorkspaceIntegrationLock,
 } from "@vioxen/subscription-runtime/worker-local";
 import { readLocalGitHeadCommit } from "../../codex-goal-git-revision";
-import { captureGitWorkspacePatch } from "../../codex-goal-runtime-result-io";
+import {
+  captureGitWorkspaceChangedFiles,
+  captureGitWorkspacePatch,
+} from "../../codex-goal-runtime-result-io";
 import {
   inspectNodeDependencyEnvironment,
   sanitizeNodeDependencyEnvironment,
@@ -69,34 +71,35 @@ export class GitReviewedWorkerOutputSnapshotter implements ReviewedWorkerOutputS
         ? { gitBinaryPath: this.options.gitBinaryPath }
         : {}),
     });
-    const status = await new LocalGitIntegrationAdapter({
+    const changedFiles = await captureGitWorkspaceChangedFiles({
+      workspacePath: input.workspacePath,
       ...(this.options.gitBinaryPath
         ? { gitBinaryPath: this.options.gitBinaryPath }
         : {}),
-    }).getStatus({ workspacePath: input.workspacePath });
+    });
     if (!patch.trim()) {
       if (
         input.allowEmptyPatch !== true ||
         patch.length !== 0 ||
-        status.dirtyFiles.length !== 0
+        changedFiles.length !== 0
       ) {
         throw new Error("reviewed_worker_output_patch_required");
       }
       return { patch, baseCommit, changedFiles: [] };
     }
-    if (status.dirtyFiles.length === 0) {
+    if (changedFiles.length === 0) {
       throw new Error("reviewed_worker_output_changed_files_required");
     }
     await this.assertPatchAppliesToBase({
       workspacePath: input.workspacePath,
       baseCommit,
       patch,
-      changedFiles: status.dirtyFiles,
+      changedFiles,
     });
     return {
       patch,
       baseCommit,
-      changedFiles: status.dirtyFiles,
+      changedFiles,
     };
   }
 
@@ -315,6 +318,30 @@ export class LocalReviewedWorkerOutputStore implements ReviewedWorkerOutputStore
       );
     }
     return snapshot;
+  }
+
+  async readPatch(snapshot: ReviewedWorkerOutputSnapshot): Promise<string> {
+    const itemDir = this.itemDir(snapshot.reviewedOutputId);
+    const expectedPatchPath = join(itemDir, "output.patch");
+    if (snapshot.patchPath !== expectedPatchPath) {
+      throw new Error("reviewed_worker_output_patch_path_mismatch");
+    }
+    const item = await lstat(expectedPatchPath);
+    if (
+      item.isSymbolicLink() ||
+      !item.isFile() ||
+      item.size > maxReviewedPatchBytes
+    ) {
+      throw new Error("reviewed_worker_output_artifact_unsafe");
+    }
+    const patch = await readFile(expectedPatchPath, "utf8");
+    if (
+      Buffer.byteLength(patch) !== snapshot.patchByteLength ||
+      sha256(patch) !== snapshot.patchSha256
+    ) {
+      throw new Error("reviewed_worker_output_manifest_patch_hash_mismatch");
+    }
+    return patch;
   }
 
   private async readSnapshot(

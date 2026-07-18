@@ -1,5 +1,4 @@
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
 import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -30,6 +29,7 @@ import {
   gitOutput,
   tempRoots,
 } from "./project-integration-local-adapters.fixture";
+import { writeWorkerCommitPatch } from "./project-integration-local-patch.fixture";
 
 const execFileAsync = promisify(execFile);
 
@@ -91,6 +91,130 @@ describe("local project integration adapters", () => {
       ["ls-remote", "origin", "refs/heads/main"],
     );
     expect(pushed).toContain(commit.commitSha);
+  });
+
+  it("promotes a fast-forward commit with an exact remote lease", async () => {
+    const fixture = await createGitFixture();
+    const adapter = new LocalGitIntegrationAdapter();
+    const expectedRemoteCommit = (await gitOutput(
+      fixture.workspacePath,
+      ["rev-parse", "HEAD"],
+    )).trim();
+    await git(fixture.workspacePath, ["push", "origin", "main:canonical"]);
+    await adapter.applyWorkerOutput({
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/memory.ts"],
+      },
+      workerOutput: {
+        workspacePath: fixture.workspacePath,
+        commitSha: fixture.workerCommitSha,
+      },
+    });
+    const commit = await adapter.commit({
+      workspacePath: fixture.workspacePath,
+      message: "fix(memory): integrate worker output",
+      files: ["src/memory.ts"],
+      identity: {
+        name: "Approved Integrator",
+        email: "integrator@example.com",
+      },
+    });
+
+    await adapter.push({
+      workspacePath: fixture.workspacePath,
+      remote: "origin",
+      branch: "canonical",
+      commitSha: commit.commitSha,
+      force: false,
+      expectedRemoteCommit,
+    });
+
+    const promoted = await gitOutput(
+      fixture.workspacePath,
+      ["ls-remote", "origin", "refs/heads/canonical"],
+    );
+    expect(promoted).toContain(commit.commitSha);
+  });
+
+  it("rejects promotion when the exact remote lease changed", async () => {
+    const fixture = await createGitFixture();
+    const adapter = new LocalGitIntegrationAdapter();
+    const expectedRemoteCommit = (await gitOutput(
+      fixture.workspacePath,
+      ["rev-parse", "HEAD"],
+    )).trim();
+    await git(fixture.workspacePath, ["push", "origin", "main:canonical"]);
+    await adapter.applyWorkerOutput({
+      attempt: {
+        targetWorkspacePath: fixture.workspacePath,
+        expectedFiles: ["src/memory.ts"],
+      },
+      workerOutput: {
+        workspacePath: fixture.workspacePath,
+        commitSha: fixture.workerCommitSha,
+      },
+    });
+    const commit = await adapter.commit({
+      workspacePath: fixture.workspacePath,
+      message: "fix(memory): integrate worker output",
+      files: ["src/memory.ts"],
+      identity: {
+        name: "Approved Integrator",
+        email: "integrator@example.com",
+      },
+    });
+    await git(fixture.workspacePath, ["push", "origin", "worker:canonical"]);
+
+    await expect(adapter.push({
+      workspacePath: fixture.workspacePath,
+      remote: "origin",
+      branch: "canonical",
+      commitSha: commit.commitSha,
+      force: false,
+      expectedRemoteCommit,
+    })).rejects.toThrow();
+    const unchanged = await gitOutput(
+      fixture.workspacePath,
+      ["ls-remote", "origin", "refs/heads/canonical"],
+    );
+    expect(unchanged).toContain(fixture.workerCommitSha);
+  });
+
+  it("rejects a non-ancestor promotion without changing the remote", async () => {
+    const fixture = await createGitFixture();
+    const adapter = new LocalGitIntegrationAdapter();
+    const expectedRemoteCommit = (await gitOutput(
+      fixture.workspacePath,
+      ["rev-parse", "HEAD"],
+    )).trim();
+    await git(fixture.workspacePath, ["push", "origin", "main:canonical"]);
+    await git(fixture.workspacePath, ["checkout", "--orphan", "unrelated"]);
+    await git(fixture.workspacePath, ["rm", "-rf", "."]);
+    await writeFile(
+      join(fixture.workspacePath, "UNRELATED.md"),
+      "unrelated history\n",
+    );
+    await git(fixture.workspacePath, ["add", "UNRELATED.md"]);
+    await git(fixture.workspacePath, ["commit", "-m", "test: unrelated history"]);
+    const unrelatedCommit = (await gitOutput(
+      fixture.workspacePath,
+      ["rev-parse", "HEAD"],
+    )).trim();
+
+    await expect(adapter.push({
+      workspacePath: fixture.workspacePath,
+      remote: "origin",
+      branch: "canonical",
+      commitSha: unrelatedCommit,
+      force: false,
+      expectedRemoteCommit,
+    })).rejects.toThrow("local_git_integration_promotion_not_fast_forward");
+    const unchanged = await gitOutput(
+      fixture.workspacePath,
+      ["ls-remote", "origin", "refs/heads/canonical"],
+    );
+    expect(unchanged).toContain(expectedRemoteCommit);
   });
 
   it("applies an immutable conflict resolution and creates an exact two-parent merge", async () => {
@@ -447,7 +571,9 @@ describe("local project integration adapters", () => {
         baseCommit: fixture.targetCommit,
         changedFiles: ["src/not-the-conflict.ts"],
       },
-    })).rejects.toThrow("local_git_integration_merge_conflict_set_mismatch");
+    })).rejects.toThrow(
+      "local_git_integration_merge_conflicts_missing_from_reviewed_patch:src/memory.ts",
+    );
 
     expect((await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])).trim())
       .toBe(fixture.targetCommit);
@@ -462,13 +588,10 @@ describe("local project integration adapters", () => {
     const fixture = await createGitFixture();
     const patchRoot = join(fixture.rootDir, "worker-jobs");
     await mkdir(patchRoot);
-    const patchPath = join(patchRoot, "worker-output.patch");
-    const patch = await gitOutput(fixture.workspacePath, [
-      "show",
-      "--format=",
-      fixture.workerCommitSha,
-    ]);
-    await writeFile(patchPath, patch);
+    const { patchPath } = await writeWorkerCommitPatch(
+      fixture,
+      join(patchRoot, "worker-output.patch"),
+    );
 
     const adapter = new LocalGitIntegrationAdapter({
       allowedPatchRoots: [patchRoot],
@@ -488,12 +611,10 @@ describe("local project integration adapters", () => {
 
   it("rejects patch paths outside exact expected files before mutating the target", async () => {
     const fixture = await createGitFixture();
-    const patchPath = join(fixture.rootDir, "worker-output.patch");
-    await writeFile(patchPath, await gitOutput(fixture.workspacePath, [
-      "show",
-      "--format=",
-      fixture.workerCommitSha,
-    ]));
+    const { patchPath } = await writeWorkerCommitPatch(
+      fixture,
+      join(fixture.rootDir, "worker-output.patch"),
+    );
     const adapter = new LocalGitIntegrationAdapter({
       allowedPatchRoots: [fixture.rootDir],
     });
@@ -519,13 +640,10 @@ describe("local project integration adapters", () => {
 
   it("rejects an attempt-owned patch when its stored SHA-256 no longer matches", async () => {
     const fixture = await createGitFixture();
-    const patchPath = join(fixture.rootDir, "snapshot.patch");
-    const patch = await gitOutput(fixture.workspacePath, [
-      "show",
-      "--format=",
-      fixture.workerCommitSha,
-    ]);
-    const patchSha256 = createHash("sha256").update(patch).digest("hex");
+    const { patch, patchPath, patchSha256 } = await writeWorkerCommitPatch(
+      fixture,
+      join(fixture.rootDir, "snapshot.patch"),
+    );
     await writeFile(patchPath, `${patch}\nsubstituted\n`);
     const adapter = new LocalGitIntegrationAdapter({
       allowedPatchRoots: [fixture.rootDir],
@@ -548,12 +666,10 @@ describe("local project integration adapters", () => {
 
   it("recognizes a fully applied patch only when idempotent recovery is allowed", async () => {
     const fixture = await createGitFixture();
-    const patchPath = join(fixture.rootDir, "worker-output.patch");
-    await writeFile(patchPath, await gitOutput(fixture.workspacePath, [
-      "show",
-      "--format=",
-      fixture.workerCommitSha,
-    ]));
+    const { patchPath } = await writeWorkerCommitPatch(
+      fixture,
+      join(fixture.rootDir, "worker-output.patch"),
+    );
     await git(fixture.workspacePath, ["apply", patchPath]);
     const adapter = new LocalGitIntegrationAdapter({
       allowedPatchRoots: [fixture.rootDir],
@@ -617,13 +733,10 @@ describe("local project integration adapters", () => {
     const fixture = await createGitFixture();
     const patchRoot = join(fixture.rootDir, "worker-jobs");
     await mkdir(patchRoot);
-    const patchPath = join(patchRoot, "worker-output.patch");
-    const patch = await gitOutput(fixture.workspacePath, [
-      "show",
-      "--format=",
-      fixture.workerCommitSha,
-    ]);
-    await writeFile(patchPath, patch);
+    const { patchPath } = await writeWorkerCommitPatch(
+      fixture,
+      join(patchRoot, "worker-output.patch"),
+    );
     const adapter = new LocalGitIntegrationAdapter({
       allowedPatchRoots: [
         join(fixture.rootDir, "removed-legacy-root"),
@@ -650,14 +763,9 @@ describe("local project integration adapters", () => {
     const siblingJobRoot = join(jobsRoot, "worker-2");
     await mkdir(workerJobRoot, { recursive: true });
     await mkdir(siblingJobRoot, { recursive: true });
-    const patch = await gitOutput(fixture.workspacePath, [
-      "show",
-      "--format=",
-      fixture.workerCommitSha,
-    ]);
     const approvedPatch = join(workerJobRoot, "worker-output.patch");
     const siblingPatch = join(siblingJobRoot, "worker-output.patch");
-    await writeFile(approvedPatch, patch);
+    const { patch } = await writeWorkerCommitPatch(fixture, approvedPatch);
     await writeFile(siblingPatch, patch);
     const adapter = new LocalGitIntegrationAdapter({
       workerJobRootParent: jobsRoot,

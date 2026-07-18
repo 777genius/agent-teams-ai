@@ -8,6 +8,11 @@ import {
   mergeDeveloperInstructions,
 } from "../codex-app-server-policy";
 import { readGoal } from "../codex-app-server-protocol";
+import {
+  codexProviderApiEgressProfileId,
+  codexProviderEgressEnv,
+  codexProviderEgressProfileEnvVar,
+} from "../codex-provider-egress-policy";
 
 describe("Codex app-server boundary helpers", () => {
   it("builds a strict workspace-write sandbox policy from the scoped environment", () => {
@@ -26,6 +31,35 @@ describe("Codex app-server boundary helpers", () => {
       networkAccess: false,
       excludeSlashTmp: true,
       excludeTmpdirEnvVar: true,
+    });
+  });
+
+  it("enables app-server network access only for the generated provider egress profile", () => {
+    const sourceEnv = codexProviderEgressEnv();
+    expect(sourceEnv[codexProviderEgressProfileEnvVar]).toBe(
+      codexProviderApiEgressProfileId,
+    );
+    expect(codexAppServerSandboxPolicy({
+      sandboxMode: "read-only",
+      workspacePath: "/work/repo",
+      sourceEnv,
+    })).toEqual({ type: "readOnly", networkAccess: true });
+    expect(codexAppServerSandboxPolicy({
+      sandboxMode: "workspace-write",
+      workspacePath: "/work/repo",
+      sourceEnv,
+    })).toMatchObject({
+      type: "workspaceWrite",
+      writableRoots: ["/work/repo"],
+      networkAccess: true,
+    });
+    expect(codexAppServerSandboxPolicy({
+      sandboxMode: "workspace-write",
+      workspacePath: "/work/repo",
+      sourceEnv: { [codexProviderEgressProfileEnvVar]: "unknown-profile" },
+    })).toMatchObject({
+      type: "workspaceWrite",
+      networkAccess: false,
     });
   });
 

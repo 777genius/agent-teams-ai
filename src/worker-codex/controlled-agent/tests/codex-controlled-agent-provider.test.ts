@@ -106,6 +106,8 @@ describe("CodexControlledAgentProvider", () => {
       expect(configToml).toContain("codex_goal_project_start");
       expect(configToml).toContain("codex_goal_project_operation_status");
       expect(configToml).toContain("codex_goal_project_controller_consume_guidance");
+      expect(configToml).toContain("[features.network_proxy]");
+      expect(configToml).toContain('domains = { "api.openai.com" = "allow" }');
       expect(configToml).not.toContain("danger-full-access");
     } finally {
       await provider.stop({

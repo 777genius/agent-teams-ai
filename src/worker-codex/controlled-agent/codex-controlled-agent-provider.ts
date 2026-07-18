@@ -31,7 +31,10 @@ import {
   type ControlledAgentProviderStopInput,
   type ControlledAgentProviderStopResult,
 } from "@vioxen/subscription-runtime/worker-core";
-import type { CodexControlledAgentProfile } from "./codex-controlled-agent-profile";
+import {
+  codexControlledAgentProviderEgressEnv,
+  type CodexControlledAgentProfile,
+} from "./codex-controlled-agent-profile";
 
 export type CodexControlledAgentProviderOptions = {
   readonly profile: CodexControlledAgentProfile;
@@ -310,6 +313,7 @@ class ControlledCodexSessionMaterializer implements CodexSessionMaterializer {
       env: {
         HOME: home,
         CODEX_HOME: codexHome,
+        ...codexControlledAgentProviderEgressEnv(),
       },
       snapshotSession: async () =>
         sessionArtifactFromCodexAuthJson(await readFile(join(codexHome, "auth.json"), "utf8")),

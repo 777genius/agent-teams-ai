@@ -87,9 +87,18 @@ export async function commitApprovedChanges(
       });
     }
     assertIntegrationCommitFiles(attempt, dirtyFiles);
+    const sourceDeltaFiles = attempt.merge
+      ? new Set(await deps.git.changedFilesSinceCommit({
+          workspacePath: attempt.targetWorkspacePath,
+          commit: attempt.merge.sourceCommit,
+        }))
+      : undefined;
+    const scanFiles = sourceDeltaFiles === undefined
+      ? dirtyFiles
+      : dirtyFiles.filter((file) => sourceDeltaFiles.has(file));
     const scan = await deps.scanner.scanFiles({
       workspacePath: attempt.targetWorkspacePath,
-      files: dirtyFiles,
+      files: scanFiles,
     });
     if (scan.status !== SecretScanStatus.Passed) {
       throw new IntegrationError({

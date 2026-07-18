@@ -17,6 +17,14 @@ const laneIdSchema = z.string().regex(/^[a-z][a-z0-9-]*$/, {
   error: "contract_laneId_invalid",
 });
 const nonNegativeIntegerSchema = z.number().int().nonnegative();
+const mergeIntegrationPlanSchema = z
+  .object({
+    sourceRemote: z.string().min(1),
+    sourceBranch: z.string().min(1),
+    sourceCommit: sha1Schema,
+    expectedTargetCommit: sha1Schema,
+  })
+  .strict();
 
 const relativePathSchema = z.string().check((context) => {
   const value = context.value;
@@ -132,6 +140,13 @@ const workerLaunchDeclarativeShape = {
       }
     }),
   executionPolicy: workerLaunchExecutionPolicySchema,
+  merge: mergeIntegrationPlanSchema.optional(),
+} as const;
+
+const workerLaunchRequestShape = {
+  ...workerLaunchDeclarativeShape,
+  canonicalSha: workerLaunchDeclarativeShape.canonicalSha.optional(),
+  phaseStartSha: workerLaunchDeclarativeShape.phaseStartSha.optional(),
 } as const;
 
 const workerLaunchMaterializedShape = {
@@ -201,14 +216,14 @@ function addWorkerLaunchCrossFieldIssues(context: {
  */
 export const workerLaunchRequestSchema = z
   .object({
-    ...workerLaunchDeclarativeShape,
+    ...workerLaunchRequestShape,
   })
   .strict()
   .check(addWorkerLaunchCrossFieldIssues);
 
 const workerLaunchMaterializationInputSchema = z
   .object({
-    ...workerLaunchDeclarativeShape,
+    ...workerLaunchRequestShape,
     jobId: workerLaunchMaterializedShape.jobId.optional(),
     workerId: workerLaunchMaterializedShape.workerId.optional(),
     revision: workerLaunchMaterializedShape.revision.optional(),

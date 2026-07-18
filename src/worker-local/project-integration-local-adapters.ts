@@ -250,6 +250,27 @@ export class LocalGitIntegrationAdapter implements GitPort {
     };
   }
 
+  async changedFilesSinceCommit(input: {
+    readonly workspacePath: string;
+    readonly commit: string;
+  }): Promise<readonly string[]> {
+    const workspacePath = await canonicalDirectory(input.workspacePath);
+    if (!/^[a-f0-9]{40,64}$/i.test(input.commit)) {
+      throw new Error("local_git_integration_commit_invalid");
+    }
+    const changedFiles = await this.gitNullTerminatedPaths(
+      ["diff", "--name-only", "--no-renames", "-z", input.commit, "--"],
+      workspacePath,
+    );
+    const untrackedFiles = await this.gitNullTerminatedPaths(
+      ["ls-files", "--others", "--exclude-standard", "-z"],
+      workspacePath,
+    );
+    return uniqueSorted([...changedFiles, ...untrackedFiles]).map(
+      normalizeProjectRelativePath,
+    );
+  }
+
   async commit(input: {
     readonly workspacePath: string;
     readonly message: string;
@@ -374,6 +395,7 @@ export class LocalGitIntegrationAdapter implements GitPort {
     readonly branch: string;
     readonly commitSha: string;
     readonly force: boolean;
+    readonly expectedRemoteCommit?: string;
   }): Promise<void> {
     const workspacePath = await canonicalDirectory(input.workspacePath);
     const head = (
@@ -382,10 +404,36 @@ export class LocalGitIntegrationAdapter implements GitPort {
     if (head !== input.commitSha) {
       throw new Error("local_git_integration_push_commit_mismatch");
     }
+    if (input.expectedRemoteCommit) {
+      if (input.force) {
+        throw new Error("local_git_integration_promotion_force_forbidden");
+      }
+      if (!/^[a-f0-9]{40}$/i.test(input.expectedRemoteCommit)) {
+        throw new Error("local_git_integration_expected_remote_commit_invalid");
+      }
+      const ancestor = await this.tryGit(
+        [
+          "merge-base",
+          "--is-ancestor",
+          input.expectedRemoteCommit,
+          input.commitSha,
+        ],
+        workspacePath,
+      );
+      if (ancestor.exitCode !== 0) {
+        throw new Error("local_git_integration_promotion_not_fast_forward");
+      }
+    }
     await this.git(
       [
         "push",
-        ...(input.force ? ["--force-with-lease"] : []),
+        ...(input.expectedRemoteCommit
+          ? [
+              `--force-with-lease=refs/heads/${input.branch}:${input.expectedRemoteCommit}`,
+            ]
+          : input.force
+            ? ["--force-with-lease"]
+            : []),
         input.remote,
         `HEAD:${input.branch}`,
       ],

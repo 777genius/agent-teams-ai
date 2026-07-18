@@ -8,9 +8,7 @@ import {
   type ProjectIntegrationMcpController,
 } from "../index";
 import { reviewedWorkerOutputFormat } from "../../reviewed-worker-output";
-import {
-  createFixture,
-} from "../../../worker-core/integration/tests/project-integration-use-cases.fixture";
+import { createFixture } from "../../../worker-core/integration/tests/project-integration-use-cases.fixture";
 
 const controller: ProjectIntegrationMcpController = {
   registryRootDir: "/registry",
@@ -31,7 +29,8 @@ describe("project integration MCP tool handlers", () => {
     const handlers = createProjectIntegrationMcpToolHandlers({
       loadController: async () => controller,
       resolvePathArg: (_args, value, fieldName) => {
-        if (typeof value !== "string") throw new Error(`${fieldName} is required`);
+        if (typeof value !== "string")
+          throw new Error(`${fieldName} is required`);
         return `/resolved/${value}`;
       },
       integrationDeps: () => {
@@ -55,11 +54,13 @@ describe("project integration MCP tool handlers", () => {
       changedFiles: "src/worker-codex/project-integration-mcp/index.ts",
       allowedPathPrefixes: "src/worker-codex/project-integration-mcp/",
       requiredCheckIds: "unit",
-      requiredChecks: [{
-        checkId: "unit",
-        command: ["npm", "test"],
-        timeoutMs: 30_000,
-      }],
+      requiredChecks: [
+        {
+          checkId: "unit",
+          command: ["npm", "test"],
+          timeoutMs: 30_000,
+        },
+      ],
       allowStaleBase: true,
     });
 
@@ -108,11 +109,13 @@ describe("project integration MCP tool handlers", () => {
         decision: ReviewDecisionStatus.Approved,
         reason: "project_integration_reviewed",
         approvedFiles: ["src/worker-codex/project-integration-mcp/index.ts"],
-        requiredChecks: [{
-          checkId: "unit",
-          command: ["npm", "test"],
-          timeoutMs: 30_000,
-        }],
+        requiredChecks: [
+          {
+            checkId: "unit",
+            command: ["npm", "test"],
+            timeoutMs: 30_000,
+          },
+        ],
       },
     });
   });
@@ -121,7 +124,8 @@ describe("project integration MCP tool handlers", () => {
     const handlers = createProjectIntegrationMcpToolHandlers({
       loadController: async () => controller,
       resolvePathArg: (_args, value, fieldName) => {
-        if (typeof value !== "string") throw new Error(`${fieldName} is required`);
+        if (typeof value !== "string")
+          throw new Error(`${fieldName} is required`);
         return value;
       },
       integrationDeps: () => {
@@ -129,16 +133,18 @@ describe("project integration MCP tool handlers", () => {
       },
     });
 
-    await expect(handlers.openAttempt({
-      attemptId: "attempt-1",
-      workerJobId: "worker-1",
-      workerWorkspacePath: "worker",
-      targetWorkspacePath: "target",
-      targetBranch: "feature/project",
-      workerCommitSha: "abcdef1",
-      baseStatus: "bad",
-      changedFiles: ["src/file.ts"],
-    })).rejects.toThrow("project_integration_base_status_invalid");
+    await expect(
+      handlers.openAttempt({
+        attemptId: "attempt-1",
+        workerJobId: "worker-1",
+        workerWorkspacePath: "worker",
+        targetWorkspacePath: "target",
+        targetBranch: "feature/project",
+        workerCommitSha: "abcdef1",
+        baseStatus: "bad",
+        changedFiles: ["src/file.ts"],
+      }),
+    ).rejects.toThrow("project_integration_base_status_invalid");
   });
 
   it("resolves immutable reviewed output without duplicating source arguments", async () => {
@@ -147,7 +153,8 @@ describe("project integration MCP tool handlers", () => {
     const handlers = createProjectIntegrationMcpToolHandlers({
       loadController: async () => controller,
       resolvePathArg: (_args, value, fieldName) => {
-        if (typeof value !== "string") throw new Error(`${fieldName} is required`);
+        if (typeof value !== "string")
+          throw new Error(`${fieldName} is required`);
         return `/resolved/${value}`;
       },
       resolveReviewedOutput: async () => ({
@@ -212,13 +219,15 @@ describe("project integration MCP tool handlers", () => {
       },
     });
 
-    await expect(handlers.openAttempt({
-      attemptId: "attempt-conflict",
-      reviewedOutputId,
-      workerPatchPath: "/caller/patch",
-      targetWorkspacePath: "target",
-      targetBranch: "feature/project",
-    })).rejects.toThrow("reviewed_worker_output_explicit_source_conflict");
+    await expect(
+      handlers.openAttempt({
+        attemptId: "attempt-conflict",
+        reviewedOutputId,
+        workerPatchPath: "/caller/patch",
+        targetWorkspacePath: "target",
+        targetBranch: "feature/project",
+      }),
+    ).rejects.toThrow("reviewed_worker_output_explicit_source_conflict");
   });
 
   it("previews and opens a glob-allowed pinned merge while denying a non-match", async () => {
@@ -234,56 +243,58 @@ describe("project integration MCP tool handlers", () => {
         workspaceRoots: ["/resolved/target", "/worker"],
         worktreeRoots: ["/worker"],
         jobIdPrefixes: ["merge-"],
-        allowedBranches: ["feature/project", "fix/hosted-web-*"],
+        allowedBranches: ["feature/project", "fix/hosted-web-*", "base/*"],
         allowedGitRemotes: ["origin"],
       },
     };
-    const reviewedOutput = (reviewedSourceBranch: string) => ({
-      snapshot: {
-        format: reviewedWorkerOutputFormat,
-        formatRevision: 1,
-        reviewedOutputId,
-        projectId: "project-1",
-        controllerJobId: "controller-1",
-        workerJobId: "merge-worker",
-        taskId: "merge-task",
-        sourceWorkspacePath: "/worker",
-        patchPath: "/evidence/output.patch",
-        patchSha256,
-        patchByteLength: 100,
-        baseCommit: targetCommit,
-        changedFiles: ["src/conflict.ts"],
-        reviewDecision: {
-          reviewedBy: "reviewer",
-          decision: ReviewDecisionStatus.Approved,
-          reason: "merge conflict resolution accepted",
-          approvedFiles: ["src/conflict.ts"],
-          requiredChecks: [],
+    const reviewedOutput = (reviewedSourceBranch: string) =>
+      ({
+        snapshot: {
+          format: reviewedWorkerOutputFormat,
+          formatRevision: 1,
+          reviewedOutputId,
+          projectId: "project-1",
+          controllerJobId: "controller-1",
+          workerJobId: "merge-worker",
+          taskId: "merge-task",
+          sourceWorkspacePath: "/worker",
+          patchPath: "/evidence/output.patch",
+          patchSha256,
+          patchByteLength: 100,
+          baseCommit: targetCommit,
+          changedFiles: ["src/conflict.ts"],
+          reviewDecision: {
+            reviewedBy: "reviewer",
+            decision: ReviewDecisionStatus.Approved,
+            reason: "merge conflict resolution accepted",
+            approvedFiles: ["src/conflict.ts"],
+            requiredChecks: [],
+          },
+          merge: {
+            sourceRemote: "origin",
+            sourceBranch: reviewedSourceBranch,
+            sourceCommit,
+            expectedTargetCommit: targetCommit,
+          },
+          capturedAt: "2026-07-13T00:00:00.000Z",
         },
-        merge: {
-          sourceRemote: "origin",
-          sourceBranch: reviewedSourceBranch,
-          sourceCommit,
-          expectedTargetCommit: targetCommit,
+        workerOutput: {
+          workerJobId: "merge-worker",
+          workspacePath: "/worker",
+          patchPath: "/evidence/output.patch",
+          patchSha256,
+          baseCommit: targetCommit,
+          changedFiles: ["src/conflict.ts"],
         },
-        capturedAt: "2026-07-13T00:00:00.000Z",
-      },
-      workerOutput: {
-        workerJobId: "merge-worker",
-        workspacePath: "/worker",
-        patchPath: "/evidence/output.patch",
-        patchSha256,
-        baseCommit: targetCommit,
-        changedFiles: ["src/conflict.ts"],
-      },
-    } as const);
+      }) as const;
     const fixture = createFixture();
     const options: Parameters<
       typeof createProjectIntegrationMcpToolHandlers
     >[0] = {
       loadController: async () => mergeController,
       resolvePathArg: (_args, value, fieldName) => {
-        if (typeof value !== "string") throw new Error(`${fieldName} is required`);
+        if (typeof value !== "string")
+          throw new Error(`${fieldName} is required`);
         return `/resolved/${value}`;
       },
       resolveReviewedOutput: async () => reviewedOutput(sourceBranch),
@@ -340,34 +351,40 @@ describe("project integration MCP tool handlers", () => {
       ...options,
       resolveReviewedOutput: async () => reviewedOutput("feature/unrelated"),
     });
-    await expect(deniedHandlers.openAttempt({
-      attemptId: "denied-merge-attempt",
-      reviewedOutputId,
-      targetWorkspacePath: "target",
-      targetBranch: "feature/project",
-    })).rejects.toThrow("project_integration_merge_source_branch_denied");
+    await expect(
+      deniedHandlers.openAttempt({
+        attemptId: "denied-merge-attempt",
+        reviewedOutputId,
+        targetWorkspacePath: "target",
+        targetBranch: "feature/project",
+      }),
+    ).rejects.toThrow("project_integration_merge_source_branch_denied");
 
-    await expect(handlers.openAttempt({
-      attemptId: "unreviewed-merge",
-      workerJobId: "merge-worker",
-      workerWorkspacePath: "worker",
-      workerPatchPath: "/evidence/output.patch",
-      workerBaseCommit: targetCommit,
-      changedFiles: ["src/conflict.ts"],
-      targetWorkspacePath: "target",
-      targetBranch: "feature/project",
-      merge,
-    })).rejects.toThrow(
+    await expect(
+      handlers.openAttempt({
+        attemptId: "unreviewed-merge",
+        workerJobId: "merge-worker",
+        workerWorkspacePath: "worker",
+        workerPatchPath: "/evidence/output.patch",
+        workerBaseCommit: targetCommit,
+        changedFiles: ["src/conflict.ts"],
+        targetWorkspacePath: "target",
+        targetBranch: "feature/project",
+        merge,
+      }),
+    ).rejects.toThrow(
       "project_integration_merge_must_be_bound_to_reviewed_output",
     );
 
-    await expect(handlers.openAttempt({
-      attemptId: "wrong-target-merge",
-      reviewedOutputId,
-      targetWorkspacePath: "target",
-      targetBranch: "feature/project",
-      targetCommit: "3".repeat(40),
-    })).rejects.toThrow("project_integration_merge_target_commit_mismatch");
+    await expect(
+      handlers.openAttempt({
+        attemptId: "wrong-target-merge",
+        reviewedOutputId,
+        targetWorkspacePath: "target",
+        targetBranch: "feature/project",
+        targetCommit: "3".repeat(40),
+      }),
+    ).rejects.toThrow("project_integration_merge_target_commit_mismatch");
   });
 
   it("previews rejection reasons before invoking integration use cases", async () => {
@@ -375,7 +392,8 @@ describe("project integration MCP tool handlers", () => {
     const handlers = createProjectIntegrationMcpToolHandlers({
       loadController: async () => controller,
       resolvePathArg: (_args, value, fieldName) => {
-        if (typeof value !== "string") throw new Error(`${fieldName} is required`);
+        if (typeof value !== "string")
+          throw new Error(`${fieldName} is required`);
         return value;
       },
       integrationDeps: () => {

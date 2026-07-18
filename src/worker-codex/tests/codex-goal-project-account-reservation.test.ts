@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -11,7 +11,6 @@ import type { CodexGoalJobManifest } from "../codex-goal-jobs";
 import type { CodexGoalLaunchInput } from "../codex-goal-ops";
 import {
   codexProjectContinuationReservationInput,
-  codexProjectAccountReservationPath,
   codexProjectAccountLeaseMode,
   releaseCodexProjectAccount,
   reserveCodexProjectAccount,
@@ -103,12 +102,11 @@ describe("project account reservation", () => {
     })).resolves.toMatchObject({ status: "granted" });
   });
 
-  it("validates an exhausted continuation before mutating exclusive leases", async () => {
+  it("grants one brokered continuation after a single account recovers", async () => {
     const root = await mkdtemp(join(tmpdir(), "project-account-exhausted-"));
     roots.push(root);
-    const leaseStore = new InMemoryWorkerAccountLeaseStore();
     const now = new Date("2026-07-13T00:00:00.000Z");
-    const scoped = fixture(root, "job-1");
+    const scoped = singleAccountFixture(root, "job-1");
     const bounded = {
       ...scoped,
       launch: {
@@ -118,34 +116,20 @@ describe("project account reservation", () => {
     };
     const deps = {
       capacityStore: new InMemoryWorkerAccountCapacityStore(),
-      leaseStore,
-      leaseMode: "exclusive" as const,
+      leaseMode: "shared" as const,
       now,
     };
     const first = await reserveCodexProjectAccount({ ...bounded, deps });
-    const receiptPath = codexProjectAccountReservationPath(bounded.manifest);
-    const receiptBefore = await readFile(receiptPath, "utf8");
-
-    await expect(reserveCodexProjectAccount({
+    const continued = await reserveCodexProjectAccount({
       ...bounded,
       excludedAccountIds: [first.accountId],
-      continuation: { previousAttemptCount: 2 },
+      continuation: { previousAttemptCount: 1 },
       deps: { ...deps, now: new Date(now.getTime() + 60_000) },
-    })).rejects.toThrow("project_control_continuation_attempt_budget_exhausted");
+    });
 
-    expect(await readFile(receiptPath, "utf8")).toBe(receiptBefore);
-    await expect(leaseStore.acquire({
-      accountId: first.accountId,
-      ownerId: "independent-job",
-      ttlMs: 60_000,
-      now,
-    })).resolves.toMatchObject({ status: "denied", reason: "leased" });
-    await expect(leaseStore.acquire({
-      accountId: "account-b",
-      ownerId: "independent-job",
-      ttlMs: 60_000,
-      now,
-    })).resolves.toMatchObject({ status: "granted" });
+    expect(continued.accountId).toBe(first.accountId);
+    expect(continued.launch.config.accounts).toEqual([{ name: "account-a" }]);
+    expect(continued.launch.config.maxAccountCycles).toBe(2);
   });
 
   it("shares an account across concurrent jobs by default", async () => {

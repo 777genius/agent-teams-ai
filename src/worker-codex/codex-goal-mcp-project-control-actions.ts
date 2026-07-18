@@ -55,7 +55,11 @@ import {
   assertSafeGitRefName,
   assertSafeGitRemoteName,
 } from "./codex-goal-mcp-project-git";
-import { resolveProjectSourceRevision } from "./application/project-control/codex-goal-project-source-revision";
+import { resolveProjectExternalRewriteRecovery } from "./application/project-control/codex-goal-project-external-rewrite-recovery";
+import {
+  resolveProjectSourceReference,
+  resolveProjectSourceRevision,
+} from "./application/project-control/codex-goal-project-source-revision";
 import {
   writeCodexGoalStopEvent,
   writeCodexGoalStoppedProgress,
@@ -93,6 +97,7 @@ import {
   reserveCodexProjectAccount,
 } from "./application/project-control/codex-goal-project-account-reservation";
 import { decideCodexGoalProjectStop } from "./application/project-control/codex-goal-project-stop-policy";
+import { withProjectContinuationAccounts } from "./application/project-control/codex-goal-project-continuation-accounts";
 import {
   projectControlWorkspaceLocks,
   withValidatedProjectWorkspaceLock,
@@ -126,6 +131,7 @@ export type CodexGoalMcpProjectControlActionsDeps = {
   readonly safeExecutionJournal?: ReturnType<
     typeof localCodexProjectSafeExecutionJournal
   >;
+  readonly listAccountStatuses?: typeof listCodexGoalAccountStatuses;
 };
 
 export async function projectControlStartStoredJobView(
@@ -494,9 +500,28 @@ export async function projectControlStartStoredJobView(
             deps.safeExecutionJournal ??
             localCodexProjectSafeExecutionJournal(canonicalLaunch),
         });
+      const continuationLaunch = await withProjectContinuationAccounts({
+        launch: canonicalLaunch,
+        ...(args.continuationAccounts === undefined
+          ? {}
+          : {
+              requestedAccounts:
+                typeof args.continuationAccounts === "string"
+                  ? [args.continuationAccounts]
+                  : args.continuationAccounts,
+            }),
+        ...(continuationReservation.continuation
+          ? { continuation: continuationReservation.continuation }
+          : {}),
+        excludedAccountIds: continuationReservation.excludedAccountIds,
+        allowedAccountIds: controller.scope.allowedAccountIds ?? [],
+        ...(deps.listAccountStatuses
+          ? { listAccountStatuses: deps.listAccountStatuses }
+          : {}),
+      });
       const accountReservation = await reserveCodexProjectAccount({
         manifest: loaded.manifest,
-        launch: canonicalLaunch,
+        launch: continuationLaunch,
         ...continuationReservation,
       });
       const reservedLaunch = accountReservation.launch;
@@ -600,6 +625,19 @@ export async function projectControlCreateWorktreeView(
   if (expectedSourceCommit && !effectiveSourceRef) {
     throw new Error("project_control_pinned_source_ref_required");
   }
+  const expectedCurrentCommit = stringValue(args.expectedCurrentCommit);
+  if (expectedCurrentCommit) assertSafeGitCommitSha(expectedCurrentCommit);
+  const confirmFastForwardExisting =
+    booleanValue(args.confirmFastForwardExisting) === true;
+  if (confirmFastForwardExisting && !expectedCurrentCommit) {
+    throw new Error("project_control_expected_current_commit_required");
+  }
+  if (expectedCurrentCommit && !expectedSourceCommit) {
+    throw new Error("project_control_fast_forward_pinned_source_required");
+  }
+  if (expectedCurrentCommit && !newBranch) {
+    throw new Error("project_control_fast_forward_branch_required");
+  }
   const workerRole = projectAdmissionWorkerRoleArg(args.workerRole);
   const realSourceWorkspacePath =
     await projectControlRealPathOutsideWorkspaceScope(
@@ -611,6 +649,13 @@ export async function projectControlCreateWorktreeView(
     controller.scope,
   );
   const expectedRealPath = await projectControlRealPathIfExists(path);
+  const sourceReference = effectiveSourceRef
+    ? resolveProjectSourceReference({
+        requestedRef: effectiveSourceRef,
+        scope: controller.scope,
+        remoteVerificationRequired: expectedSourceCommit !== undefined,
+      })
+    : undefined;
   const worktreeAccessInput = {
     sourceWorkspacePath,
     ...(realSourceWorkspacePath ? { realSourceWorkspacePath } : {}),
@@ -618,7 +663,11 @@ export async function projectControlCreateWorktreeView(
     ...(realPath ? { realPath } : {}),
     ...(expectedRealPath ? { expectedRealPath } : {}),
     ...(baseBranch ? { baseBranch } : {}),
-    ...(sourceRef ? { sourceRef } : {}),
+    ...(sourceReference?.remoteVerified
+      ? { sourceRef: sourceReference.worktreeSourceRef }
+      : sourceRef
+        ? { sourceRef }
+        : {}),
     ...(newBranch ? { newBranch } : {}),
     ...(workerRole ? { workerRole } : {}),
   };
@@ -641,6 +690,17 @@ export async function projectControlCreateWorktreeView(
       ],
     };
   }
+  if (expectedCurrentCommit && !confirmFastForwardExisting) {
+    return {
+      ok: false,
+      reason: "confirm_fast_forward_existing_required",
+      controllerJobId: controller.controller.jobId,
+      auditPath: projectControlAuditPath(controller.controller),
+      path,
+      expectedCurrentCommit,
+      expectedSourceCommit,
+    };
+  }
 
   const resolverBroker = deps.codexProjectControlBroker({
     registryRootDir: controller.registryRootDir,
@@ -652,7 +712,7 @@ export async function projectControlCreateWorktreeView(
   assertSafeGitCommitSha(resolvedSource.revision);
   const sourceRevision = await resolveProjectSourceRevision({
     resolvedSource,
-    remoteTrackingRef: effectiveSourceRef ?? "HEAD",
+    remoteTrackingRef: sourceReference?.remoteTrackingRef ?? "HEAD",
     scope: controller.scope,
     ...(expectedSourceCommit ? { expectedSourceCommit } : {}),
   });
@@ -660,6 +720,13 @@ export async function projectControlCreateWorktreeView(
     ...worktreeAccessInput,
     expectedRevision: sourceRevision.revision,
     ...(sourceRevision.pinned ? { sourceRevisionPinned: true } : {}),
+    ...(expectedCurrentCommit
+      ? {
+          fastForwardExisting: {
+            expectedCurrentRevision: expectedCurrentCommit,
+          },
+        }
+      : {}),
     expectedSourceRealPath: resolvedSource.sourceRealPath,
   };
   const broker = deps.codexProjectControlBroker({
@@ -668,11 +735,21 @@ export async function projectControlCreateWorktreeView(
     scope: controller.scope,
     createWorktreeInput,
   });
-  const worktree = await createOrReuseProjectWorktree({
-    broker,
-    scope: controller.scope,
-    createWorktreeInput,
-  });
+  const materialize = async () =>
+    await createOrReuseProjectWorktree({
+      broker,
+      scope: controller.scope,
+      createWorktreeInput,
+    });
+  const worktree = expectedCurrentCommit
+    ? await withValidatedProjectWorkspaceLock({
+        locks: projectControlWorkspaceLocks(controller.registryRootDir),
+        scope: controller.scope,
+        requestedWorkspacePath: path,
+        owner: `project-worktree-fast-forward:${controller.controller.jobId}`,
+        effect: materialize,
+      })
+    : await materialize();
   const result = worktree.result;
   const dependencyPreflight = await withValidatedProjectWorkspaceLock({
     locks: projectControlWorkspaceLocks(controller.registryRootDir),
@@ -730,14 +807,34 @@ export async function projectControlIntegrateCommitView(
       reason: "confirm_integrate_required",
       controllerJobId: controller.controller.jobId,
       auditPath: projectControlAuditPath(controller.controller),
-      commandPreview: [
-        "git",
-        "-C",
-        workspacePath,
-        "cherry-pick",
-        "--ff",
-        commitSha,
-      ],
+      integrationStrategy: "fast_forward_descendant_or_cherry_pick_commit",
+      commandPreview: {
+        ancestryCheck: [
+          "git",
+          "-C",
+          workspacePath,
+          "merge-base",
+          "--is-ancestor",
+          "HEAD",
+          commitSha,
+        ],
+        descendant: [
+          "git",
+          "-C",
+          workspacePath,
+          "merge",
+          "--ff-only",
+          commitSha,
+        ],
+        nonDescendant: [
+          "git",
+          "-C",
+          workspacePath,
+          "cherry-pick",
+          "--ff",
+          commitSha,
+        ],
+      },
     };
   }
 
@@ -771,8 +868,18 @@ export async function projectControlPushBranchView(
   const branch = requiredRawString(args.branch, "branch");
   const remote = stringValue(args.remote) ?? "origin";
   const force = booleanValue(args.force) ?? false;
+  const expectedRemoteCommit = stringValue(args.expectedRemoteCommit);
+  const expectedLocalCommit = stringValue(args.expectedLocalCommit);
+  const confirmExternalRewriteRecovery =
+    booleanValue(args.confirmExternalRewriteRecovery) ?? false;
   assertSafeGitRefName(branch, "branch");
   assertSafeGitRemoteName(remote, "remote");
+  const recovery = resolveProjectExternalRewriteRecovery({
+    force,
+    expectedRemoteCommit,
+    expectedLocalCommit,
+    confirmExternalRewriteRecovery,
+  });
   const realWorkspacePath = await projectControlRealPathOutsideWorkspaceScope(
     workspacePath,
     controller.scope,
@@ -783,8 +890,12 @@ export async function projectControlPushBranchView(
     branch,
     remote,
     force,
+    ...(expectedRemoteCommit ? { expectedRemoteCommit } : {}),
+    ...(expectedLocalCommit ? { expectedLocalCommit } : {}),
+    ...(confirmExternalRewriteRecovery
+      ? { confirmExternalRewriteRecovery: true }
+      : {}),
   };
-
   if (!args.confirmPush) {
     return {
       ok: false,
@@ -796,9 +907,15 @@ export async function projectControlPushBranchView(
         "-C",
         workspacePath,
         "push",
-        ...(force ? ["--force-with-lease"] : []),
+        ...(recovery
+          ? [
+              `--force-with-lease=refs/heads/${branch}:${recovery.expectedRemoteCommit}`,
+            ]
+          : force
+            ? ["--force-with-lease"]
+            : []),
         remote,
-        branch,
+        `HEAD:refs/heads/${branch}`,
       ],
     };
   }

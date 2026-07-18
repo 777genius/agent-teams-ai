@@ -31,6 +31,12 @@ describe("buildCodexControlledAgentProfile", () => {
     expect(profile.configToml).toContain("disable_response_storage = true");
     expect(profile.configToml).toContain("[features]");
     expect(profile.configToml).toContain("multi_agent = false");
+    expect(profile.configToml).toContain("[features.network_proxy]");
+    expect(profile.configToml).toContain("enabled = true");
+    expect(profile.configToml).toContain(
+      'domains = { "api.openai.com" = "allow" }',
+    );
+    expect(profile.configToml).not.toContain('"*" = "allow"');
     expect(profile.configToml).toContain("[history]");
     expect(profile.configToml).toContain('persistence = "none"');
     expect(profile.configToml).toContain("[otel]");

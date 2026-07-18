@@ -171,7 +171,7 @@ describe("Codex project reviewed worker output", () => {
           jobIdPrefixes: ["project-"],
           tmuxSessionPrefixes: ["project-"],
           allowedAccountIds: ["account-a"],
-          allowedBranches: ["main", "base/current"],
+          allowedBranches: ["main", "base/*"],
           allowedGitRemotes: ["origin"],
         },
       });
@@ -371,7 +371,7 @@ describe("Codex project reviewed worker output", () => {
       const rejectedOutputId = String(rejected.reviewedOutputId);
       expect(rejectedOutputId).toMatch(/^[a-f0-9]{64}$/);
       expect(rejectedOutputId).not.toBe(reviewedOutputId);
-      expect(rejected).toMatchObject({
+      expect(rejected, JSON.stringify(rejected)).toMatchObject({
         consumedOutputLedger: {
           decision: {
             jobId: workerJobId,
@@ -508,6 +508,221 @@ describe("Codex project reviewed worker output", () => {
       );
       expect(continuation).toMatchObject({ ok: false });
       expect(String(continuation.error)).toContain("doctor");
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
+  it("quarantines an over-limit rejected workspace without a reviewed snapshot", async () => {
+    const root = await mkdtemp(
+      join(tmpdir(), "subscription-runtime-rejected-uncaptured-mcp-"),
+    );
+    roots.push(root);
+    const registryRootDir = join(root, "worker-jobs", "registry");
+    const ledgerRoot = join(root, "control", "consumed-output-ledger");
+    const controllerJobId = "project-controller";
+    const workerJobId = "project-over-limit-worker";
+    const controllerJobRoot = join(root, "worker-jobs", controllerJobId);
+    const workerJobRoot = join(root, "worker-jobs", workerJobId);
+    const workerWorkspacePath = join(root, "worktrees", workerJobId);
+    const targetWorkspacePath = join(root, "workspaces", "canonical");
+    await Promise.all([
+      mkdir(workerWorkspacePath, { recursive: true }),
+      mkdir(targetWorkspacePath, { recursive: true }),
+      mkdir(workerJobRoot, { recursive: true }),
+    ]);
+    await gitInitRepository(workerWorkspacePath);
+    await gitInitRepository(targetWorkspacePath);
+    await writeFile(join(workerWorkspacePath, "tracked.txt"), "base\n");
+    await git(workerWorkspacePath, ["add", "."]);
+    await git(workerWorkspacePath, ["commit", "-m", "test: base"]);
+    await writeFile(join(workerWorkspacePath, "tracked.txt"), "changed\n");
+    await mkdir(join(workerWorkspacePath, "untracked"), { recursive: true });
+    await Promise.all(
+      Array.from({ length: 256 }, (_, index) =>
+        writeFile(
+          join(
+            workerWorkspacePath,
+            "untracked",
+            `${String(index).padStart(3, "0")}.txt`,
+          ),
+          `change ${index}\n`,
+        ),
+      ),
+    );
+    const changedFiles = [
+      "tracked.txt",
+      ...Array.from(
+        { length: 256 },
+        (_, index) => `untracked/${String(index).padStart(3, "0")}.txt`,
+      ),
+    ];
+    await writeFile(
+      join(workerJobRoot, `${workerJobId}.latest-result.json`),
+      `${JSON.stringify({
+        status: "done",
+        updatedAt: "2026-07-17T00:00:00.000Z",
+        changedFiles,
+        evidence: [],
+        blockers: [],
+        nextAction: "review_completed",
+      })}\n`,
+    );
+    const patch = await captureGitWorkspacePatch({
+      workspacePath: workerWorkspacePath,
+    });
+
+    const server = createCodexGoalMcpServer();
+    const client = new Client({
+      name: "rejected-uncaptured-output-test",
+      version: "0.0.0",
+    });
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    try {
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
+        jobId: workerJobId,
+        jobRootDir: workerJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: workerWorkspacePath,
+        promptPath: join(workerJobRoot, "prompt.md"),
+        taskId: workerJobId,
+        accounts: ["account-a"],
+        tmuxSession: workerJobId,
+        codexBinaryPath: join(root, "missing-codex"),
+        networkAccess: NetworkAccessMode.Restricted,
+      });
+      await callToolJson(client, "codex_goal_create_job", {
+        registryRootDir,
+        jobId: controllerJobId,
+        jobRootDir: controllerJobRoot,
+        authRootDir: join(root, "auth"),
+        workspacePath: targetWorkspacePath,
+        promptPath: join(controllerJobRoot, "prompt.md"),
+        taskId: controllerJobId,
+        accounts: ["account-a"],
+        accessBoundary: AccessBoundary.ProjectScopedControl,
+        networkAccess: NetworkAccessMode.Restricted,
+        projectAccessScope: {
+          projectId: "project",
+          workspaceRoots: [targetWorkspacePath],
+          worktreeRoots: [join(root, "worktrees")],
+          registryRoot: registryRootDir,
+          consumedOutputLedgerRoots: [ledgerRoot],
+          jobIdPrefixes: ["project-"],
+          tmuxSessionPrefixes: ["project-"],
+          allowedAccountIds: ["account-a"],
+          allowedBranches: ["main"],
+          allowedGitRemotes: ["origin"],
+        },
+      });
+
+      await expect(
+        callToolJson(client, "codex_goal_project_mark_reviewed", {
+          registryRootDir,
+          controllerJobId,
+          jobId: workerJobId,
+          captureReviewedOutput: false,
+          reviewDecision: "approved",
+          note: "invalid approval",
+        }),
+      ).resolves.toMatchObject({
+        ok: false,
+        error: "project_control_reviewed_output_capture_required",
+      });
+      await expect(
+        callToolJson(client, "codex_goal_project_mark_reviewed", {
+          registryRootDir,
+          controllerJobId,
+          jobId: workerJobId,
+          captureReviewedOutput: true,
+          expectedPatchSha256: sha256(patch),
+          reviewDecision: "rejected",
+          reviewedBy: controllerJobId,
+          reviewReason: "Over the reviewed snapshot path limit.",
+          approvedFiles: changedFiles,
+          requiredChecks: [],
+          note: "REJECT over limit",
+        }),
+      ).resolves.toMatchObject({
+        ok: false,
+        error: "reviewed_worker_output_changed_file_limit_exceeded",
+      });
+
+      const rejectionArgs = {
+        registryRootDir,
+        controllerJobId,
+        jobId: workerJobId,
+        captureReviewedOutput: false,
+        reviewDecision: "rejected",
+        reviewedBy: controllerJobId,
+        reviewReason: "Over-limit output quarantined without integration.",
+        note: "FORMAL REJECT",
+      };
+      const rejected = await callToolJson(
+        client,
+        "codex_goal_project_mark_reviewed",
+        rejectionArgs,
+      );
+      expect(rejected, JSON.stringify(rejected)).toMatchObject({
+        ok: true,
+        jobId: workerJobId,
+        consumedOutputLedger: {
+          decision: { jobId: workerJobId, status: "rejected" },
+          idempotentReplay: false,
+        },
+      });
+      expect(rejected).not.toHaveProperty("reviewedOutputId");
+      const ledger = rejected.consumedOutputLedger as {
+        decision: { backup: { patchPath: string } };
+      };
+      const archivedPatch = await readFile(
+        ledger.decision.backup.patchPath,
+        "utf8",
+      );
+      expect(archivedPatch).toContain("tracked.txt");
+      expect(archivedPatch).toContain("untracked/000.txt");
+      expect(archivedPatch).toContain("untracked/255.txt");
+      expect(
+        await captureGitWorkspacePatch({
+          workspacePath: workerWorkspacePath,
+        }),
+      ).toBe(patch);
+
+      const replay = await callToolJson(
+        client,
+        "codex_goal_project_mark_reviewed",
+        rejectionArgs,
+      );
+      expect(replay).toMatchObject({
+        consumedOutputLedger: { idempotentReplay: true },
+      });
+      const admission = await callToolJson(
+        client,
+        "codex_goal_project_admission_snapshot",
+        {
+          registryRootDir,
+          controllerJobId,
+          operation: "create_job",
+          workerRole: "producer",
+          includeDetails: true,
+        },
+      );
+      expect(admission).toMatchObject({
+        snapshot: {
+          counts: {
+            activeWriterConflicts: 0,
+            unconsumedCompletedJobs: 0,
+          },
+        },
+        decision: { allowed: true },
+      });
     } finally {
       await client.close();
       await server.close();

@@ -622,6 +622,12 @@ describe("codex goal MCP project-control server", () => {
       await writeFile(join(sourceWorkspacePath, "feature.txt"), "feature\n");
       await git(sourceWorkspacePath, ["add", "feature.txt"]);
       await git(sourceWorkspacePath, ["commit", "-m", "test: feature"]);
+      await writeFile(
+        join(sourceWorkspacePath, "feature-followup.txt"),
+        "followup\n",
+      );
+      await git(sourceWorkspacePath, ["add", "feature-followup.txt"]);
+      await git(sourceWorkspacePath, ["commit", "-m", "test: feature followup"]);
       const commitSha = await gitStdout(sourceWorkspacePath, ["rev-parse", "HEAD"]);
       await git(sourceWorkspacePath, ["checkout", "main"]);
       await execFileAsync("git", ["init", "--bare", remotePath]);
@@ -673,11 +679,56 @@ describe("codex goal MCP project-control server", () => {
         workspacePath: worktreePath,
         branch: "integration-target",
         commitSha: commitSha.trim(),
+      })).resolves.toMatchObject({
+        ok: false,
+        reason: "confirm_integrate_required",
+        integrationStrategy: "fast_forward_descendant_or_cherry_pick_commit",
+        commandPreview: {
+          ancestryCheck: [
+            "git",
+            "-C",
+            worktreePath,
+            "merge-base",
+            "--is-ancestor",
+            "HEAD",
+            commitSha.trim(),
+          ],
+          descendant: [
+            "git",
+            "-C",
+            worktreePath,
+            "merge",
+            "--ff-only",
+            commitSha.trim(),
+          ],
+          nonDescendant: [
+            "git",
+            "-C",
+            worktreePath,
+            "cherry-pick",
+            "--ff",
+            commitSha.trim(),
+          ],
+        },
+      });
+
+      await expect(callToolJson(client, "codex_goal_project_integrate_commit", {
+        registryRootDir,
+        controllerJobId: "infinity-context-controller-v1",
+        workspacePath: worktreePath,
+        branch: "integration-target",
+        commitSha: commitSha.trim(),
         confirmIntegrate: true,
       })).resolves.toMatchObject({
         ok: true,
         mode: "project_control_integrate_commit",
       });
+      await expect(gitStdout(worktreePath, ["rev-parse", "HEAD"]))
+        .resolves.toBe(commitSha);
+      await expect(readFile(join(worktreePath, "feature.txt"), "utf8"))
+        .resolves.toBe("feature\n");
+      await expect(readFile(join(worktreePath, "feature-followup.txt"), "utf8"))
+        .resolves.toBe("followup\n");
 
       await expect(callToolJson(client, "codex_goal_project_push_branch", {
         registryRootDir,

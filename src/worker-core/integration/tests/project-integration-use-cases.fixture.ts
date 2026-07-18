@@ -130,6 +130,7 @@ function scope(): ProjectAccessScope {
 export function createFixture(options: {
   readonly checkStatus?: CheckRunStatus;
   readonly secretScanStatus?: SecretScanStatus;
+  readonly clockNow?: () => Date;
 } = {}) {
   const events: IntegrationAuditEvent[] = [];
   const store = new MemoryAttemptStore(events);
@@ -161,7 +162,10 @@ export function createFixture(options: {
         locks,
         checks,
         scanner,
-        clock: { now: () => new Date("2026-01-01T00:00:00.000Z") },
+        clock: {
+          now: options.clockNow ??
+            (() => new Date("2026-01-01T00:00:00.000Z")),
+        },
       };
     },
   };
@@ -173,6 +177,7 @@ export class FakeIntegratedOutputLedger implements IntegratedOutputLedgerPort {
   finalizeError?: Error;
   prepareCalls = 0;
   finalizeCalls = 0;
+  readonly finalizedAt: string[] = [];
   prepareRejectionCalls = 0;
   finalizeRejectionCalls = 0;
   lastRejectedAt?: string;
@@ -197,8 +202,10 @@ export class FakeIntegratedOutputLedger implements IntegratedOutputLedgerPort {
 
   async finalize(input: {
     readonly preparation: IntegratedOutputLedgerPreparation;
+    readonly pushedAt: string;
   }) {
     this.finalizeCalls += 1;
+    this.finalizedAt.push(input.pushedAt);
     if (this.finalizeError) throw this.finalizeError;
     return {
       ledgerPath: "/ledger/item.json",
@@ -282,7 +289,11 @@ export class FakeGit implements GitPort {
   commitParents: readonly string[] | undefined;
   lastExpectedParentCommits: readonly string[] | undefined;
   lastCommittedFiles: readonly string[] | undefined;
+  lastPushedBranch: string | undefined;
+  lastExpectedRemoteCommit: string | undefined;
   abortMergeError: Error | undefined;
+  changedSinceCommitFiles: readonly string[] | undefined;
+  lastChangedSinceCommit: string | undefined;
 
   getStatus() {
     this.calls.push("status");
@@ -302,6 +313,12 @@ export class FakeGit implements GitPort {
   diffCheck() {
     this.calls.push("diffCheck");
     return { ok: true };
+  }
+
+  changedFilesSinceCommit(input: { readonly commit: string }) {
+    this.calls.push("changedSinceCommit");
+    this.lastChangedSinceCommit = input.commit;
+    return this.changedSinceCommitFiles ?? this.dirtyFiles;
   }
 
   commit(input: {
@@ -327,8 +344,14 @@ export class FakeGit implements GitPort {
     this.dirtyFiles = [];
   }
 
-  push(input: { readonly commitSha: string }) {
+  push(input: {
+    readonly branch: string;
+    readonly commitSha: string;
+    readonly expectedRemoteCommit?: string;
+  }) {
     this.calls.push("push");
+    this.lastPushedBranch = input.branch;
+    this.lastExpectedRemoteCommit = input.expectedRemoteCommit;
     this.remoteCommit = input.commitSha;
   }
 

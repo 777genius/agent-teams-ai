@@ -11,6 +11,10 @@ import {
 } from "./codex-auth-json-codec";
 import { cleanupCodexRuntimeTempRoot } from "./codex-cli-temp-cleanup";
 import { createCodexRuntimeTempRoot } from "./codex-runtime-temp";
+import {
+  codexProviderEgressConfigToml,
+  codexProviderEgressEnv,
+} from "./codex-provider-egress-policy";
 import type { CodexMaterializedSession } from "./codex-json-execution-engine";
 
 export type CodexSessionPrewarmResult = {
@@ -69,6 +73,7 @@ export class CodexEphemeralSessionMaterializer implements CodexSessionMaterializ
       env: {
         HOME: home,
         CODEX_HOME: codexHome,
+        ...codexProviderEgressEnv(),
       },
       snapshotSession: () => snapshotCodexSession({ codexHome }),
       release: once(async () => {
@@ -163,6 +168,7 @@ export class CodexWorkerCacheSessionMaterializer implements CodexSessionMaterial
         env: {
           HOME: entry.home,
           CODEX_HOME: entry.codexHome,
+          ...codexProviderEgressEnv(),
         },
         snapshotSession: () =>
           snapshotCodexSession({ codexHome: entry.codexHome }),
@@ -227,6 +233,8 @@ export class CodexWorkerCacheSessionMaterializer implements CodexSessionMaterial
       entry.initialized = true;
       return entry;
     }
+
+    await writeCodexJsonConfig({ codexHome: entry.codexHome });
 
     if (entry.sessionHash !== sessionHash) {
       await writeCodexAuthJson({
@@ -381,7 +389,30 @@ export async function writeCodexJsonHomeSnapshot(input: {
   readonly codexHome: string;
   readonly authJson: string;
 }): Promise<void> {
-  const config = [
+  await writeCodexJsonConfig({ codexHome: input.codexHome });
+  await writeCodexAuthJson(input);
+}
+
+async function writeCodexJsonConfig(input: { readonly codexHome: string }): Promise<void> {
+  await writeFileAtomic(join(input.codexHome, "config.toml"), codexJsonHomeConfigToml());
+}
+
+export async function writeCodexAuthJson(input: {
+  readonly codexHome: string;
+  readonly authJson: string;
+}): Promise<void> {
+  await writeFileAtomic(join(input.codexHome, "auth.json"), input.authJson);
+}
+
+async function snapshotCodexSession(input: {
+  readonly codexHome: string;
+}): Promise<SessionArtifact> {
+  const authJson = await readFile(join(input.codexHome, "auth.json"), "utf8");
+  return sessionArtifactFromCodexAuthJson(authJson);
+}
+
+function codexJsonHomeConfigToml(): string {
+  return [
     'cli_auth_credentials_store = "file"',
     'approval_policy = "never"',
     'sandbox_mode = "read-only"',
@@ -410,24 +441,8 @@ export async function writeCodexJsonHomeSnapshot(input: {
     'inherit = "none"',
     'include_only = ["PATH", "HOME", "CI", "CODEX_HOME"]',
     "",
+    codexProviderEgressConfigToml(),
   ].join("\n");
-
-  await writeFileAtomic(join(input.codexHome, "config.toml"), config);
-  await writeCodexAuthJson(input);
-}
-
-export async function writeCodexAuthJson(input: {
-  readonly codexHome: string;
-  readonly authJson: string;
-}): Promise<void> {
-  await writeFileAtomic(join(input.codexHome, "auth.json"), input.authJson);
-}
-
-async function snapshotCodexSession(input: {
-  readonly codexHome: string;
-}): Promise<SessionArtifact> {
-  const authJson = await readFile(join(input.codexHome, "auth.json"), "utf8");
-  return sessionArtifactFromCodexAuthJson(authJson);
 }
 
 export function sessionArtifactHash(session: SessionArtifact): string {

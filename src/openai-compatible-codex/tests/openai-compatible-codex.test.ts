@@ -19,7 +19,11 @@ import {
   renderOpenAiBridgeChat,
   type OpenAiBridgeChatBackend,
 } from "../index.js";
-import { PackagedCodexJsonExecutionEngine } from "../../provider-codex/index.js";
+import {
+  PackagedCodexJsonExecutionEngine,
+  codexProviderApiEgressProfileId,
+  codexProviderEgressProfileEnvVar,
+} from "../../provider-codex/index.js";
 
 describe("OpenAI-compatible Codex bridge", () => {
   it("renders json_object requests into a JSON-only system prompt", () => {
@@ -127,16 +131,67 @@ describe("OpenAI-compatible Codex bridge", () => {
     expect(result.outputText).toBe("OK");
   });
 
+  it("retries the next isolated account after an unknown auth state", async () => {
+    const root = await mkdtemp(join(tmpdir(), "subscription-runtime-openai-bridge-"));
+    const authRoot = join(root, "auth");
+    const stateDir = join(root, "state");
+    const codexBinaryPath = join(root, "fake-codex");
+    const authJson = JSON.stringify({ tokens: { access_token: "test-token" } });
+
+    try {
+      for (const accountName of ["account-a", "account-b"]) {
+        const sourceCodexHome = join(authRoot, accountName);
+        await mkdir(sourceCodexHome, { recursive: true });
+        await writeFile(join(sourceCodexHome, "auth.json"), authJson);
+      }
+      await writeFile(
+        codexBinaryPath,
+        [
+          "#!/bin/sh",
+          "case \"$CODEX_HOME\" in *account-a*) printf '%s\\n' unknown_auth_state >&2; exit 1;; esac",
+          "while IFS= read -r _; do :; done",
+          "printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"OK\"}}'",
+        ].join("\n"),
+      );
+      await chmod(codexBinaryPath, 0o700);
+
+      const backend = new CodexOpenAiBridgeBackend({
+        codexBinaryPath,
+        authRootDir: authRoot,
+        stateDir,
+        accountNames: ["account-a", "account-b"],
+        timeoutMs: 10_000,
+        quotaCooldownMs: 1_000,
+        maxAccountCycles: 1,
+        maxConcurrentRequests: 1,
+        reasoningEffort: "low",
+      });
+
+      const result = await backend.complete({
+        prompt: "Reply OK",
+        model: "gpt-5.5",
+        requestId: "bridge-retry-test",
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result.text).toBe("OK");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("runs Codex bridge requests with isolated state CODEX_HOME copies", async () => {
     const root = await mkdtemp(join(tmpdir(), "subscription-runtime-openai-bridge-"));
     const authRoot = join(root, "auth");
     const sourceCodexHome = join(authRoot, "account-a");
     const stateDir = join(root, "state");
     const capturePath = join(root, "captured-codex-home.txt");
+    const envCapturePath = join(root, "captured-provider-egress-profile.txt");
     const codexBinaryPath = join(root, "fake-codex");
     const authJson = JSON.stringify({ tokens: { access_token: "test-token" } });
 
     try {
+      await mkdir(join(authRoot, ".not-an-account"), { recursive: true });
       await mkdir(sourceCodexHome, { recursive: true });
       await writeFile(join(sourceCodexHome, "auth.json"), authJson);
       await writeFile(
@@ -148,6 +203,7 @@ describe("OpenAI-compatible Codex bridge", () => {
           "while IFS= read -r _; do :; done",
           "kill \"$watchdog\" 2>/dev/null || true",
           `printf '%s\\n' "$CODEX_HOME" > ${JSON.stringify(capturePath)}`,
+          `printf '%s\\n' "${codexProviderEgressProfileEnvVar}=$${codexProviderEgressProfileEnvVar}" > ${JSON.stringify(envCapturePath)}`,
           "printf '%s\\n' '{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"OK\"}}'",
         ].join("\n"),
       );
@@ -173,9 +229,13 @@ describe("OpenAI-compatible Codex bridge", () => {
       });
 
       const capturedCodexHome = (await readFile(capturePath, "utf8")).trim();
+      const capturedEgressProfile = (await readFile(envCapturePath, "utf8")).trim();
       expect(result.text).toBe("OK");
       expect(capturedCodexHome).toBe(join(stateDir, "codex-home", "account-a"));
       expect(capturedCodexHome).not.toBe(sourceCodexHome);
+      expect(capturedEgressProfile).toBe(
+        `${codexProviderEgressProfileEnvVar}=${codexProviderApiEgressProfileId}`,
+      );
       await expect(readFile(join(capturedCodexHome, "auth.json"), "utf8"))
         .resolves.toBe(authJson);
     } finally {

@@ -17,6 +17,7 @@ import {
   AccessBoundary,
   InMemoryAttemptJournal,
   NetworkAccessMode,
+  ReviewDecisionStatus,
   type ProjectControlBroker,
 } from "@vioxen/subscription-runtime/worker-core";
 import { materializeCodexGoalHandoffArtifacts } from "../codex-goal-handoff-artifacts";
@@ -34,6 +35,12 @@ import {
 import { assertProjectPreStartAdmissionLaunchBinding } from "../application/project-control/codex-goal-project-pre-start-admission";
 import { authorizeProjectPreStartAdmissionLaunch } from "../application/project-control/codex-goal-project-pre-start-launch-authorization";
 import {
+  captureReviewedWorkerOutput,
+  commitReviewedWorkerOutputReviewAttestation,
+  localReviewedWorkerOutputDeps,
+  reviewedWorkerOutputRoot,
+} from "../reviewed-worker-output";
+import {
   callToolJson,
   git,
   gitInitRepository,
@@ -47,8 +54,316 @@ import {
 } from "./codex-goal-mcp-project-prepare-verifier-test-support";
 
 describe("project verifier preparation", () => {
+  it("previews and atomically materializes two ordered reviewed outputs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "verifier-reviewed-aggregate-"));
+    const registryRootDir = join(root, "worker-jobs", "registry");
+    const controllerJobRoot = join(root, "worker-jobs", "controller");
+    const sourceWorkspacePath = join(root, "workspaces", "canonical");
+    const verifierWorkspacePath = join(root, "worktrees", "verifier");
+    const remotePath = join(root, "remote.git");
+    const server = createCodexGoalMcpServer();
+    const client = new Client({ name: "test", version: "0.0.0" });
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+
+    try {
+      await git(root, ["init", "--bare", remotePath]);
+      await Promise.all([
+        mkdir(sourceWorkspacePath, { recursive: true }),
+        mkdir(join(root, "control", "consumed-output-ledger", "items"), {
+          recursive: true,
+        }),
+      ]);
+      await gitInitRepository(sourceWorkspacePath);
+      await Promise.all([
+        writeFile(join(sourceWorkspacePath, "README.md"), "base\n"),
+        writeFile(join(sourceWorkspacePath, "controller.md"), "controller\n"),
+        writeFile(join(sourceWorkspacePath, "lane.md"), "lane\n"),
+        writeFile(join(sourceWorkspacePath, "a.txt"), "base a\n"),
+        writeFile(join(sourceWorkspacePath, "b.txt"), "base b\n"),
+        mkdir(join(sourceWorkspacePath, "checks")),
+      ]);
+      await writeFile(join(sourceWorkspacePath, "checks", ".keep"), "");
+      await git(sourceWorkspacePath, ["add", "."]);
+      await git(sourceWorkspacePath, ["commit", "-m", "test: base"]);
+      const canonicalSha = await revision(sourceWorkspacePath);
+      await git(sourceWorkspacePath, ["remote", "add", "origin", remotePath]);
+      await git(sourceWorkspacePath, ["push", "-u", "origin", "HEAD:main"]);
+
+      const reviewedRoot = reviewedWorkerOutputRoot(registryRootDir);
+      const a = await createApprovedReviewedOutput({
+        root,
+        sourceWorkspacePath,
+        reviewedRoot,
+        workerJobId: "worker-a",
+        changedFile: "a.txt",
+        content: "reviewed a\n",
+      });
+      const b = await createApprovedReviewedOutput({
+        root,
+        sourceWorkspacePath,
+        reviewedRoot,
+        workerJobId: "worker-b",
+        changedFile: "b.txt",
+        content: "reviewed b\n",
+      });
+      const overlap = await createApprovedReviewedOutput({
+        root,
+        sourceWorkspacePath,
+        reviewedRoot,
+        workerJobId: "worker-overlap",
+        changedFile: "a.txt",
+        content: "overlap a\n",
+      });
+      const differentBase = await createApprovedReviewedOutput({
+        root,
+        sourceWorkspacePath,
+        reviewedRoot,
+        workerJobId: "worker-different-base",
+        changedFile: "different-base.txt",
+        content: "different base\n",
+        advanceBase: true,
+      });
+
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+      await createControllerJob({
+        client,
+        root,
+        registryRootDir,
+        controllerJobRoot,
+        sourceWorkspacePath,
+      });
+      const baseArgs = {
+        registryRootDir,
+        controllerJobId: "project-controller",
+        reviewedOutputIds: [a.reviewedOutputId, b.reviewedOutputId],
+        jobId: "project-aggregate-verifier",
+        taskId: "project-aggregate-verifier",
+        sourceWorkspacePath,
+        baseBranch: "origin/main",
+        newBranch: "review/project-aggregate-verifier",
+        workspacePath: verifierWorkspacePath,
+        promptBody: "Review ordered immutable outputs.\n",
+        accounts: ["account-a"],
+        workerRole: "reviewer",
+        startWorker: false,
+        executionMode: "sync",
+      };
+      const preview = await callToolJson(
+        client,
+        "codex_goal_project_prepare_verifier",
+        baseArgs,
+      );
+      expect(preview).toMatchObject({
+        ok: false,
+        reason: "confirm_refill_required",
+        requiredInputPatchHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        reviewedOutputAggregate: {
+          reviewedOutputIds: [a.reviewedOutputId, b.reviewedOutputId],
+          baseCommit: canonicalSha,
+          changedFiles: ["a.txt", "b.txt"],
+        },
+      });
+      const requiredInputPatchHash = String(preview.requiredInputPatchHash);
+      await expect(
+        callToolJson(client, "codex_goal_project_prepare_verifier", {
+          ...baseArgs,
+          producerJobId: "project-producer",
+        }),
+      ).resolves.toMatchObject({
+        ok: false,
+        error: "project_control_verifier_input_source_conflict",
+      });
+      await expect(
+        callToolJson(client, "codex_goal_project_prepare_verifier", {
+          ...baseArgs,
+          reviewedOutputIds: [a.reviewedOutputId, "f".repeat(64)],
+        }),
+      ).resolves.toMatchObject({
+        ok: false,
+        error: "reviewed_worker_output_not_found",
+      });
+      await expect(
+        callToolJson(client, "codex_goal_project_prepare_verifier", {
+          ...baseArgs,
+          reviewedOutputIds: [a.reviewedOutputId, overlap.reviewedOutputId],
+        }),
+      ).resolves.toMatchObject({
+        ok: false,
+        error: "reviewed_output_aggregate_changed_file_overlap:a.txt",
+      });
+      await expect(
+        callToolJson(client, "codex_goal_project_prepare_verifier", {
+          ...baseArgs,
+          reviewedOutputIds: [
+            a.reviewedOutputId,
+            differentBase.reviewedOutputId,
+          ],
+        }),
+      ).resolves.toMatchObject({
+        ok: false,
+        error: "reviewed_output_aggregate_base_commit_mismatch",
+      });
+      const aPatch = await readFile(a.patchPath, "utf8");
+      await writeFile(a.patchPath, `${aPatch}tampered\n`);
+      await expect(
+        callToolJson(client, "codex_goal_project_prepare_verifier", baseArgs),
+      ).resolves.toMatchObject({
+        ok: false,
+        error: "reviewed_worker_output_manifest_patch_hash_mismatch",
+      });
+      await writeFile(a.patchPath, aPatch);
+
+      const admission = (inputPatchHash: string, sandboxRoot: string) => ({
+        mode: "serial-builtin",
+        contract: {
+          kind: "worker-launch",
+          format: 1,
+          canonicalSha,
+          baseSha: canonicalSha,
+          phaseStartSha: canonicalSha,
+          packetRevision: "aggregate-review-r1",
+          controllerPacket: "controller.md",
+          lanePacket: "lane.md",
+          phaseId: "phase-02",
+          laneId: "aggregate-review",
+          inputPatchHash,
+          reviewKind: "review",
+          ownedPaths: ["a.txt", "b.txt"],
+          mandatoryDocs: ["README.md", "controller.md", "lane.md"],
+          mandatoryScripts: [],
+          mandatoryFixtures: [],
+          requiredChecks: [
+            {
+              id: "focused",
+              cwd: "checks",
+              command: "cd .. && git diff --check",
+            },
+          ],
+          executionPolicy: {
+            mode: "sandbox-only",
+            sandboxRoot,
+            forbiddenRealProjects: [join(root, "real-user-project")],
+          },
+        },
+      });
+      const rollbackWorkspacePath = join(
+        root,
+        "worktrees",
+        "rollback-verifier",
+      );
+      await expect(
+        callToolJson(client, "codex_goal_project_prepare_verifier", {
+          ...baseArgs,
+          reviewedOutputIds: [b.reviewedOutputId, a.reviewedOutputId],
+          jobId: "project-rollback-verifier",
+          taskId: "project-rollback-verifier",
+          newBranch: "review/project-rollback-verifier",
+          workspacePath: rollbackWorkspacePath,
+          preStartAdmission: admission(
+            requiredInputPatchHash,
+            rollbackWorkspacePath,
+          ),
+          confirmPreStartAdmission: true,
+          confirmRefill: true,
+        }),
+      ).resolves.toMatchObject({
+        ok: false,
+        error: expect.stringContaining(
+          "project_control_pre_start_verified_input_patch_mismatch",
+        ),
+      });
+      await expect(
+        readFile(
+          join(registryRootDir, "project-rollback-verifier", "job.json"),
+          "utf8",
+        ),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(
+        readFile(
+          join(
+            root,
+            "worker-jobs",
+            "project-rollback-verifier",
+            "reviewed-output-aggregate",
+            "input.patch",
+          ),
+          "utf8",
+        ),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+      expect(
+        await gitStdout(sourceWorkspacePath, [
+          "worktree",
+          "list",
+          "--porcelain",
+        ]),
+      ).not.toContain(rollbackWorkspacePath);
+
+      const result = await callToolJson(
+        client,
+        "codex_goal_project_prepare_verifier",
+        {
+          ...baseArgs,
+          preStartAdmission: admission(
+            requiredInputPatchHash,
+            verifierWorkspacePath,
+          ),
+          confirmPreStartAdmission: true,
+          confirmRefill: true,
+        },
+      );
+
+      expect(result.ok, JSON.stringify(result)).toBe(true);
+      expect(result).toMatchObject({
+        ok: true,
+        mode: "project_control_prepare_verifier",
+        reviewedOutputAggregate: {
+          reviewedOutputIds: [a.reviewedOutputId, b.reviewedOutputId],
+          patchSha256: requiredInputPatchHash,
+        },
+        worktree: { status: "applied" },
+        startSkipped: true,
+      });
+      expect(await readFile(join(verifierWorkspacePath, "a.txt"), "utf8")).toBe(
+        "reviewed a\n",
+      );
+      expect(await readFile(join(verifierWorkspacePath, "b.txt"), "utf8")).toBe(
+        "reviewed b\n",
+      );
+      const manifest = await readCodexGoalJob({
+        registryRootDir,
+        jobId: "project-aggregate-verifier",
+      });
+      const receipt = JSON.parse(
+        await readFile(manifest.projectPreStartAdmission!.receiptPath, "utf8"),
+      ) as Record<string, unknown>;
+      expect(receipt.inputPatchArtifactSha256).toBe(requiredInputPatchHash);
+      expect(receipt.workspaceStagedPatchSha256).toMatch(/^[a-f0-9]{64}$/);
+      const provenance = JSON.parse(
+        await readFile(
+          join(
+            manifest.jobRootDir,
+            "reviewed-output-aggregate",
+            "provenance.json",
+          ),
+          "utf8",
+        ),
+      ) as Record<string, unknown>;
+      expect(provenance).toMatchObject({
+        reviewedOutputIds: [a.reviewedOutputId, b.reviewedOutputId],
+        patchSha256: requiredInputPatchHash,
+      });
+    } finally {
+      await Promise.allSettled([client.close(), server.close()]);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it.each(["sync", "bounded"] as const)(
-    "uses remote HEAD when the local tracking ref is stale (%s)",
+    "uses pinned remote HEAD when the local branch and tracking ref are stale (%s)",
     async (executionMode) => {
       const root = await mkdtemp(join(tmpdir(), "verifier-remote-head-"));
       const registryRootDir = join(root, "worker-jobs", "registry");
@@ -233,6 +548,13 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
           ]);
         }
 
+        await git(sourceWorkspacePath, ["reset", "--hard", producerBase]);
+        await git(sourceWorkspacePath, [
+          "update-ref",
+          "refs/remotes/origin/main",
+          producerBase,
+        ]);
+
         const result = await prepareVerifier({
           client,
           root,
@@ -243,6 +565,7 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
           canonicalSha,
           patchSha256: handoff.manifest.artifacts.patch.sha256,
           executionMode,
+          expectedSourceCommit: canonicalSha,
         });
 
         expect(result).toMatchObject({
@@ -272,27 +595,37 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
           expect(await stagedPatchSha256(remediationWorkspacePath)).toBe(
             handoff.manifest.artifacts.patch.sha256,
           );
-          expect(await gitStdout(remediationWorkspacePath, [
-            "diff",
-            "--name-only",
-            "--",
-          ])).toBe("");
-          expect(await gitStdout(remediationWorkspacePath, [
-            "ls-files",
-            "--others",
-            "--exclude-standard",
-          ])).toBe("");
+          expect(
+            await gitStdout(remediationWorkspacePath, [
+              "diff",
+              "--name-only",
+              "--",
+            ]),
+          ).toBe("");
+          expect(
+            await gitStdout(remediationWorkspacePath, [
+              "ls-files",
+              "--others",
+              "--exclude-standard",
+            ]),
+          ).toBe("");
           const remediationManifest = await readCodexGoalJob({
             registryRootDir,
             jobId: "project-remediation",
           });
-          await expect(assertProjectPreStartAdmissionLaunchBinding({
-            manifest: remediationManifest,
-            scope: projectScope({ root, registryRootDir, sourceWorkspacePath }),
-            workspaceMode: "admitted_input_patch",
-            expectedInputPatchArtifactSha256:
-              handoff.manifest.artifacts.patch.sha256,
-          })).resolves.toBeUndefined();
+          await expect(
+            assertProjectPreStartAdmissionLaunchBinding({
+              manifest: remediationManifest,
+              scope: projectScope({
+                root,
+                registryRootDir,
+                sourceWorkspacePath,
+              }),
+              workspaceMode: "admitted_input_patch",
+              expectedInputPatchArtifactSha256:
+                handoff.manifest.artifacts.patch.sha256,
+            }),
+          ).resolves.toBeUndefined();
           expect(await revision(verifierWorkspacePath)).toBe(canonicalSha);
           const verifierManifest = parseCodexGoalJobManifest(
             JSON.parse(
@@ -558,6 +891,7 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
       ]);
       await git(producerWorkspacePath, ["config", "user.name", "Test User"]);
       await writeFile(join(producerWorkspacePath, "feature.txt"), "producer\n");
+      await writeFile(join(producerWorkspacePath, "added.txt"), "added\n");
       const handoff = await materializeCodexGoalHandoffArtifacts({
         workerJobId: "project-producer",
         taskId: "project-producer",
@@ -608,14 +942,15 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
         canonicalSha,
         patchSha256: handoff.manifest.artifacts.patch.sha256,
         executionMode: "sync",
-        accounts: allowedAccountIds,
+        accounts: ["account-c"],
+        ownedPaths: ["feature.txt", "added.txt"],
       });
 
       const verifierManifestPath = codexGoalJobManifestPath({
         registryRootDir,
         jobId: "project-verifier",
       });
-      const verifierManifest = await readCodexGoalJob({
+      const initialVerifierManifest = await readCodexGoalJob({
         registryRootDir,
         jobId: "project-verifier",
       });
@@ -630,31 +965,35 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
         allowedAccountIds,
       });
       await authorizeProjectPreStartAdmissionLaunch({
-        manifest: verifierManifest,
+        manifest: initialVerifierManifest,
         scope,
         workspaceMode: "admitted_input_patch",
       });
-      await writeFile(
-        join(
-          verifierManifest.jobRootDir,
-          `${verifierManifest.taskId}.latest-result.json`,
-        ),
-        `${JSON.stringify({
-          status: "blocked",
-          reason: "account_unavailable",
-          changedFiles: [],
-          evidence: ["safe_execution_status:waiting_capacity"],
-          blockers: ["account_unavailable"],
-          nextAction: "wait",
-        })}\n`,
+      expect(await stagedPatchSha256(verifierWorkspacePath)).not.toBe(
+        handoff.manifest.artifacts.patch.sha256,
       );
+      const latestResultPath = join(
+        initialVerifierManifest.jobRootDir,
+        `${initialVerifierManifest.taskId}.latest-result.json`,
+      );
+      const accountUnavailableResult = `${JSON.stringify({
+        status: "blocked",
+        reason: "account_unavailable",
+        changedFiles: [],
+        evidence: ["safe_execution_status:waiting_capacity"],
+        blockers: ["account_unavailable"],
+        nextAction: "wait",
+      })}\n`;
+      await writeFile(latestResultPath, accountUnavailableResult);
       const journal = new InMemoryAttemptJournal();
       await recordUnavailableAttempt({
         journal,
-        taskId: verifierManifest.taskId,
-        workspacePath: verifierManifest.workspacePath,
+        taskId: initialVerifierManifest.taskId,
+        workspacePath: initialVerifierManifest.workspacePath,
         accountId: "account-c",
       });
+
+      const verifierManifest = initialVerifierManifest;
 
       const stagedPatchBefore = await stagedPatchSha256(verifierWorkspacePath);
       const manifestBefore = await readFile(verifierManifestPath, "utf8");
@@ -678,6 +1017,19 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
           throw new Error("unexpected_load_job_launch");
         },
         safeExecutionJournal: journal,
+        listAccountStatuses: async (input) => {
+          expect(input).toEqual({ authRootDir: join(root, "auth") });
+          return allowedAccountIds.map((accountId) => ({
+            name: accountId,
+            authJsonPath: join(root, "auth", accountId, "auth.json"),
+            status: "ready" as const,
+            availability: "available" as const,
+            schedulerEligible: true,
+            recommendedAction: "none" as const,
+            warnings: [],
+            safeMessage: "ready",
+          }));
+        },
         dependencyBootstrap: async () => ({
           mode: "install",
           workspacePath: verifierWorkspacePath,
@@ -714,8 +1066,27 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
         registryRootDir,
         controllerJobId: controller.jobId,
         jobId: verifierManifest.jobId,
+        continuationAccounts: ["account-g"],
         confirmStart: true,
       };
+      await writeFile(
+        latestResultPath,
+        `${JSON.stringify({
+          status: "blocked",
+          reason: "quota_limited",
+          changedFiles: [],
+          evidence: ["safe_execution_status:waiting_capacity"],
+          blockers: ["quota_limited"],
+          nextAction: "wait",
+        })}\n`,
+      );
+      await expect(
+        projectControlStartStoredJobView(startArgs, deps),
+      ).rejects.toThrow(
+        "project_control_continuation_accounts_account_unavailable_proof_required",
+      );
+      expect(brokerCalls).toBe(0);
+      await writeFile(latestResultPath, accountUnavailableResult);
       const started = await projectControlStartStoredJobView(startArgs, deps);
 
       expect(started).toMatchObject({
@@ -733,11 +1104,16 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
       expect(reservedLaunch?.config.workspacePath).toBe(
         await realpath(verifierManifest.workspacePath),
       );
-      expect(reservedLaunch?.config.accounts).toEqual([{ name: "account-g" }]);
+      expect(reservedLaunch?.config.accounts).toEqual([{
+        name: "account-g",
+        authJsonPath: join(root, "auth", "account-g", "auth.json"),
+      }]);
       expect(await stagedPatchSha256(verifierWorkspacePath)).toBe(
         stagedPatchBefore,
       );
-      expect(stagedPatchBefore).toBe(handoff.manifest.artifacts.patch.sha256);
+      expect(stagedPatchBefore).not.toBe(
+        handoff.manifest.artifacts.patch.sha256,
+      );
       expect(await readFile(verifierManifestPath, "utf8")).toBe(manifestBefore);
       expect(await directoryEntries(registryRootDir)).toEqual(
         registryEntriesBefore,
@@ -779,6 +1155,65 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
     }
   });
 });
+
+async function createApprovedReviewedOutput(input: {
+  readonly root: string;
+  readonly sourceWorkspacePath: string;
+  readonly reviewedRoot: string;
+  readonly workerJobId: string;
+  readonly changedFile: string;
+  readonly content: string;
+  readonly advanceBase?: boolean;
+}) {
+  const workspacePath = join(input.root, "worktrees", input.workerJobId);
+  await git(input.root, ["clone", input.sourceWorkspacePath, workspacePath]);
+  if (input.advanceBase) {
+    await git(workspacePath, ["config", "user.email", "test@example.com"]);
+    await git(workspacePath, ["config", "user.name", "Test User"]);
+    await writeFile(join(workspacePath, ".different-base"), "different\n");
+    await writeFile(join(workspacePath, input.changedFile), "base\n");
+    await git(workspacePath, ["add", ".different-base", input.changedFile]);
+    await git(workspacePath, ["commit", "-m", "test: different base"]);
+  }
+  await writeFile(join(workspacePath, input.changedFile), input.content);
+  const patch = await gitStdout(workspacePath, [
+    "diff",
+    "--binary",
+    "HEAD",
+    "--",
+  ]);
+  const deps = localReviewedWorkerOutputDeps({ rootDir: input.reviewedRoot });
+  const snapshot = await captureReviewedWorkerOutput(deps, {
+    projectId: "project",
+    controllerJobId: "project-controller",
+    workerJobId: input.workerJobId,
+    taskId: input.workerJobId,
+    workspacePath,
+    expectedPatchSha256: createHash("sha256").update(patch).digest("hex"),
+    decision: ReviewDecisionStatus.Approved,
+    reviewedBy: "project-controller",
+    reason: "approved",
+    approvedFiles: [input.changedFile],
+    requiredChecks: [],
+  });
+  const markerContent = `approved:${input.workerJobId}`;
+  await commitReviewedWorkerOutputReviewAttestation({
+    store: deps.store,
+    markerVerifier: {
+      async verify() {
+        return {
+          markerSha256: createHash("sha256")
+            .update(markerContent)
+            .digest("hex"),
+          markerContent,
+        };
+      },
+    },
+    snapshot,
+    reviewMarkerPath: `/evidence/${input.workerJobId}.json`,
+  });
+  return snapshot;
+}
 
 async function createProducerJob(input: {
   readonly client: Client;
@@ -847,7 +1282,9 @@ async function prepareVerifier(input: {
   readonly executionMode: "sync" | "bounded";
   readonly jobId?: string;
   readonly baseBranch?: string;
+  readonly expectedSourceCommit?: string;
   readonly accounts?: readonly string[];
+  readonly ownedPaths?: readonly string[];
 }): Promise<Record<string, unknown>> {
   const jobId = input.jobId ?? "project-verifier";
   const response = await input.client.callTool({
@@ -860,6 +1297,9 @@ async function prepareVerifier(input: {
       taskId: jobId,
       sourceWorkspacePath: input.sourceWorkspacePath,
       baseBranch: input.baseBranch ?? "origin/main",
+      ...(input.expectedSourceCommit
+        ? { expectedSourceCommit: input.expectedSourceCommit }
+        : {}),
       newBranch: "review/verifier",
       workspacePath: input.verifierWorkspacePath,
       promptBody: "Review immutable producer output.\n",
@@ -880,17 +1320,15 @@ async function prepareVerifier(input: {
           laneId: "review",
           inputPatchHash: input.patchSha256,
           reviewKind: "review",
-          ownedPaths: ["feature.txt"],
+          ownedPaths: input.ownedPaths ?? ["feature.txt"],
           mandatoryDocs: ["README.md", "controller.md", "lane.md"],
           mandatoryScripts: [],
           mandatoryFixtures: [],
-          requiredChecks: [
-            {
-              id: "focused",
-              cwd: "checks",
-              command: "cd .. && git diff --check",
-            },
-          ],
+          requiredChecks: [{
+            id: "focused",
+            cwd: "checks",
+            command: "cd .. && git diff --check",
+          }],
           executionPolicy: {
             mode: "sandbox-only",
             sandboxRoot: input.verifierWorkspacePath,
@@ -957,11 +1395,13 @@ async function prepareRemediation(input: {
           mandatoryDocs: ["README.md", "controller.md", "lane.md"],
           mandatoryScripts: [],
           mandatoryFixtures: [],
-          requiredChecks: [{
-            id: "focused",
-            cwd: "checks",
-            command: "cd .. && git diff --check",
-          }],
+          requiredChecks: [
+            {
+              id: "focused",
+              cwd: "checks",
+              command: "cd .. && git diff --check",
+            },
+          ],
           executionPolicy: {
             mode: "sandbox-only",
             sandboxRoot: input.remediationWorkspacePath,

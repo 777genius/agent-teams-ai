@@ -1,4 +1,5 @@
 import { isAbsolute, join, relative, resolve } from "node:path";
+import { codexProviderEgressNetworkAccessFromEnv } from "../../codex-provider-egress-policy";
 import type {
   AgentUsage,
   ManagedRunInputRequest,
@@ -86,11 +87,11 @@ export type CodexAppServerCommandApprovalPolicy = {
 
 export type CodexAppServerSandboxPolicy =
   | { readonly type: "dangerFullAccess" }
-  | { readonly type: "readOnly"; readonly networkAccess: false }
+  | { readonly type: "readOnly"; readonly networkAccess: boolean }
   | {
       readonly type: "workspaceWrite";
       readonly writableRoots: readonly string[];
-      readonly networkAccess: false;
+      readonly networkAccess: boolean;
       readonly excludeSlashTmp: true;
       readonly excludeTmpdirEnvVar: boolean;
     };
@@ -196,6 +197,7 @@ export function codexAppServerSandboxPolicy(input: {
   readonly sourceEnv?: Readonly<Record<string, string | undefined>>;
 }): CodexAppServerSandboxPolicy {
   const sandboxMode = input.sandboxMode ?? "read-only";
+  const networkAccess = codexProviderEgressNetworkAccessFromEnv(input.sourceEnv);
   if (sandboxMode === "danger-full-access") {
     return { type: "dangerFullAccess" };
   }
@@ -208,10 +210,10 @@ export function codexAppServerSandboxPolicy(input: {
         ...agentTempRoots,
         ...codexExtraWritableRootsFromEnv(input.sourceEnv),
       ]),
-      networkAccess: false,
+      networkAccess,
       excludeSlashTmp: true,
       excludeTmpdirEnvVar: agentTempRoots.length === 0,
     };
   }
-  return { type: "readOnly", networkAccess: false };
+  return { type: "readOnly", networkAccess };
 }

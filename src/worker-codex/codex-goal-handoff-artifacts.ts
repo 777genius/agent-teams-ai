@@ -1,14 +1,12 @@
 import { execFile } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import {
-  link,
   lstat,
   mkdir,
   open,
   readFile,
   realpath,
-  unlink,
   writeFile,
 } from "node:fs/promises";
 import {
@@ -28,6 +26,7 @@ import {
 import { readGitBlobBatch } from "@vioxen/subscription-runtime/worker-local";
 import { assertGitPatchBlobsSecretSafe } from "./git-patch-secret-validator";
 import { withLiteralGitPathspecs } from "./git-literal-pathspecs";
+import { publishImmutableTextArtifact } from "./local-immutable-text-artifact";
 
 const execFileAsync = promisify(execFile);
 const maximumHandoffByteLimit = 64 * 1024 * 1024;
@@ -579,29 +578,12 @@ function handoffPatchValidationError(error: unknown): Error {
 }
 
 async function publishExactFile(path: string, content: string): Promise<void> {
-  const tempPath = join(
-    dirname(path),
-    `.${basename(path)}.${process.pid}.${randomUUID()}.tmp`,
-  );
-  await writeFile(tempPath, content, { encoding: "utf8", mode: 0o600, flag: "wx" });
-  try {
-    try {
-      await link(tempPath, path);
-    } catch (error) {
-      if (!isNodeError(error, "EEXIST")) throw error;
-      const item = await lstat(path);
-      if (!item.isFile() || item.isSymbolicLink()) {
-        throw new Error("handoff_artifact_existing_path_unsafe");
-      }
-      if ((await readFile(path, "utf8")) !== content) {
-        throw new Error("handoff_artifact_content_mismatch");
-      }
-    }
-  } finally {
-    await unlink(tempPath).catch((error: unknown) => {
-      if (!isNodeError(error, "ENOENT")) throw error;
-    });
-  }
+  await publishImmutableTextArtifact({
+    path,
+    content,
+    existingPathUnsafeError: "handoff_artifact_existing_path_unsafe",
+    contentMismatchError: "handoff_artifact_content_mismatch",
+  });
 }
 
 async function canonicalOwnedDirectory(path: string, label: string): Promise<string> {

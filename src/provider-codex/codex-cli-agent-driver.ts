@@ -16,6 +16,10 @@ import { createCodexRuntimeTempRoot } from "./codex-runtime-temp";
 import { composeCodexPrompt } from "./codex-prompt-composer";
 import { codexSandboxModeForControls } from "./codex-json-execution-engine";
 import {
+  codexProviderEgressConfigToml,
+  codexProviderEgressEnv,
+} from "./codex-provider-egress-policy";
+import {
   codexAgentCapabilities,
   codexAgentId,
   codexProviderId,
@@ -97,6 +101,7 @@ export class CodexCliAgentDriver implements AgentDriver {
           ...pruneCodexChildEnv(this.options.sourceEnv ?? process.env),
           HOME: tempHome,
           CODEX_HOME: tempCodexHome,
+          ...codexProviderEgressEnv(),
           CI: "true",
         },
         stdin: new TextEncoder().encode(
@@ -163,6 +168,7 @@ async function writeCodexHomeSnapshot(input: {
     'inherit = "none"',
     'include_only = ["PATH", "HOME", "CI", "CODEX_HOME"]',
     "",
+    codexProviderEgressConfigToml(),
   ].join("\n");
   await writeFile(join(input.codexHome, "config.toml"), config, {
     mode: 0o600,

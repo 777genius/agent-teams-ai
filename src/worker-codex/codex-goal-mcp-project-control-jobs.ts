@@ -1,6 +1,6 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { lstat, mkdir, realpath, rm, rmdir, writeFile } from "node:fs/promises";
 import { hostname } from "node:os";
-import { dirname } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
   AccessBoundary,
   NetworkAccessMode,
@@ -60,10 +60,17 @@ import {
 } from "./codex-goal-mcp-project-scope";
 import {
   assertSafeGitRefName,
-  resolveCanonicalRemoteWorktreeSource,
   stagedPatchSha256ForRevision,
 } from "./codex-goal-mcp-project-git";
-import { resolveProjectSourceRevision } from "./application/project-control/codex-goal-project-source-revision";
+import { publishImmutableTextArtifact } from "./local-immutable-text-artifact";
+import {
+  resolveProjectSourceReference,
+  resolveProjectSourceRevision,
+} from "./application/project-control/codex-goal-project-source-revision";
+import {
+  finalizeProjectMergeBoundSource,
+  parseProjectMergeBindingRequest,
+} from "./application/project-control/codex-goal-project-merge-binding";
 import { assertProjectRefillInputPatchSource } from "./application/project-control/codex-goal-project-input-patch-policy";
 import {
   matchesProjectControlPrefix,
@@ -112,6 +119,19 @@ import {
   reserveCodexProjectAccount,
   type CodexProjectAccountReservation,
 } from "./application/project-control/codex-goal-project-account-reservation";
+import {
+  resolveReviewedOutputAggregate,
+  reviewedOutputAggregateView,
+  type ReviewedOutputAggregate,
+} from "./application/project-control/reviewed-output-aggregate-materializer";
+import {
+  LocalReviewedWorkerOutputStore,
+  reviewedWorkerOutputRoot,
+} from "./reviewed-worker-output";
+import {
+  rejectedReviewedOutputRemediationView,
+  resolveRejectedReviewedOutputRemediation,
+} from "./application/project-control/rejected-reviewed-output-remediation";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 
@@ -150,7 +170,7 @@ export async function projectControlRefillWorkerView(
   if (args.allowDangerFullAccess === true) {
     throw new Error("project_control_child_danger_full_access_denied");
   }
-  const promptBody = requiredRawString(args.promptBody, "promptBody");
+  let promptBody = requiredRawString(args.promptBody, "promptBody");
   const sourceWorkspacePath = projectControlPathArg(
     args,
     args.sourceWorkspacePath,
@@ -181,6 +201,13 @@ export async function projectControlRefillWorkerView(
   }
   const role = projectControlWorkerRole(args.workerRole);
   const producerJobId = stringValue(args.producerJobId);
+  const reviewedOutputId = stringValue(args.reviewedOutputId);
+  const reviewedOutputIds = reviewedOutputIdValues(args.reviewedOutputIds);
+  assertVerifierInputSource({
+    operationToolName: boundedToolName,
+    producerJobId,
+    reviewedOutputIds,
+  });
   const accessBoundary =
     requested.accessBoundary ?? AccessBoundary.IsolatedWorkspaceWrite;
   const baseCreateManifest: CodexGoalJobManifestInput = {
@@ -201,31 +228,12 @@ export async function projectControlRefillWorkerView(
     reasoningEffort: requested.reasoningEffort ?? "high",
     serviceTier: requested.serviceTier ?? "default",
   };
-  const preStartAdmission = planProjectPreStartAdmission({
-    value: args.preStartAdmission,
-    confirmed: booleanValue(args.confirmPreStartAdmission) === true,
-    scope: controller.scope,
-    manifest: baseCreateManifest,
-  });
-  if (boundedToolName === "codex_goal_project_refill_worker") {
-    if (role !== "adoption") {
-      assertProjectRefillInputPatchSource({
-        contract: preStartAdmission?.contract,
-        producerJobId,
-        workerRole: role,
-      });
-    }
-  }
-  const createManifest: CodexGoalJobManifestInput = {
-    ...baseCreateManifest,
-    ...(preStartAdmission
-      ? { projectPreStartAdmission: preStartAdmission.descriptor }
-      : {}),
-  };
-  assertProjectControlCreateManifestPaths({
-    scope: controller.scope,
-    registryRootDir: controller.registryRootDir,
-    manifest: createManifest,
+  const mergeBinding = parseProjectMergeBindingRequest({
+    value: args.mergeBinding,
+    admission: args.preStartAdmission,
+    requireCanonicalRemoteHead:
+      booleanValue(args.requireCanonicalRemoteHead) === true,
+    expectedSourceCommit: args.expectedSourceCommit,
   });
 
   const baseBranch = stringValue(args.baseBranch) ?? "origin/main";
@@ -241,23 +249,23 @@ export async function projectControlRefillWorkerView(
       controller.scope,
     );
   const realPath = await projectControlRealPathOutsideWorkspaceScope(
-    createManifest.workspacePath,
+    baseCreateManifest.workspacePath,
     controller.scope,
   );
   const expectedRealPath = await projectControlRealPathIfExists(
-    createManifest.workspacePath,
+    baseCreateManifest.workspacePath,
   );
   const requestedWorktreeAccessInput = {
     sourceWorkspacePath,
     ...(realSourceWorkspacePath ? { realSourceWorkspacePath } : {}),
-    path: createManifest.workspacePath,
+    path: baseCreateManifest.workspacePath,
     ...(realPath ? { realPath } : {}),
     ...(expectedRealPath ? { expectedRealPath } : {}),
     baseBranch,
     ...(sourceRef ? { sourceRef } : {}),
     ...(newBranch ? { newBranch } : {}),
     workerRole: role,
-    ...(createManifest.tags ? { tags: createManifest.tags } : {}),
+    ...(baseCreateManifest.tags ? { tags: baseCreateManifest.tags } : {}),
   };
 
   if (!args.confirmRefill) {
@@ -266,13 +274,13 @@ export async function projectControlRefillWorkerView(
       reason: "confirm_refill_required",
       mode: "project_control_refill_worker",
       controllerJobId: controller.controller.jobId,
-      targetJobId: createManifest.jobId,
+      targetJobId: baseCreateManifest.jobId,
       auditPath: projectControlAuditPath(controller.controller),
       workerRole: role,
       startWorker: booleanValue(args.startWorker) !== false,
       worktreePreview: requestedWorktreeAccessInput,
-      manifestPreview: createManifest as unknown as JsonObject,
-      promptPath: createManifest.promptPath,
+      manifestPreview: baseCreateManifest as unknown as JsonObject,
+      promptPath: baseCreateManifest.promptPath,
     };
   }
 
@@ -288,55 +296,161 @@ export async function projectControlRefillWorkerView(
           controller.scope,
         )
       : undefined;
-  const canonicalSource = canonicalSourceWorkspacePath
-    ? resolveCanonicalRemoteWorktreeSource({
-        requestedRef: baseBranch,
-        scope: controller.scope,
-      })
-    : undefined;
-  const worktreeAccessInput = canonicalSource
+  const sourceReference = resolveProjectSourceReference({
+    requestedRef: canonicalSourceWorkspacePath
+      ? baseBranch
+      : (sourceRef ?? baseBranch),
+    scope: controller.scope,
+    remoteVerificationRequired:
+      canonicalSourceWorkspacePath !== undefined ||
+      expectedSourceCommit !== undefined,
+  });
+  const worktreeAccessInput = sourceReference.remoteVerified
     ? {
         ...requestedWorktreeAccessInput,
-        sourceRef: canonicalSource.worktreeSourceRef,
+        sourceRef: sourceReference.worktreeSourceRef,
       }
     : requestedWorktreeAccessInput;
   const resolvedSource =
     await resolverBroker.resolveWorktreeRevision(worktreeAccessInput);
-  const sourceRevision = await resolveProjectSourceRevision({
+  const finalizedSource = await finalizeProjectMergeBoundSource({
+    binding: mergeBinding,
+    jobRootDir: baseCreateManifest.jobRootDir,
+    admission: args.preStartAdmission,
     resolvedSource,
-    remoteTrackingRef: canonicalSource
-      ? canonicalSource.remoteTrackingRef
-      : (sourceRef ?? baseBranch),
     scope: controller.scope,
+    targetRemoteTrackingRef: sourceReference.remoteTrackingRef,
     ...(expectedSourceCommit ? { expectedSourceCommit } : {}),
     requireRemoteHead: canonicalSourceWorkspacePath !== undefined,
   });
-  const producerHandoff = producerJobId
-    ? await resolveProducerHandoffForVerifier({
+  const { merge, sourceRevision } = finalizedSource;
+  const preStartAdmission = planProjectPreStartAdmission({
+    value: finalizedSource.admission,
+    confirmed: booleanValue(args.confirmPreStartAdmission) === true,
+    scope: controller.scope,
+    manifest: baseCreateManifest,
+  });
+  if (
+    boundedToolName === "codex_goal_project_refill_worker" &&
+    role !== "adoption"
+  ) {
+    assertProjectRefillInputPatchSource({
+      contract: preStartAdmission?.contract,
+      producerJobId,
+      reviewedOutputId,
+      workerRole: role,
+    });
+  }
+  const createManifest: CodexGoalJobManifestInput = {
+    ...baseCreateManifest,
+    ...(preStartAdmission
+      ? { projectPreStartAdmission: preStartAdmission.descriptor }
+      : {}),
+  };
+  assertProjectControlCreateManifestPaths({
+    scope: controller.scope,
+    registryRootDir: controller.registryRootDir,
+    manifest: createManifest,
+  });
+  promptBody += finalizedSource.promptSuffix;
+  const producerHandoff =
+    producerJobId && !reviewedOutputId
+      ? await resolveProducerHandoffForVerifier({
+          registryRootDir: controller.registryRootDir,
+          producerJobId,
+          expectedInputPatchHash: preStartAdmission?.contract.inputPatchHash,
+          allowProviderOutputInvalid:
+            boundedToolName === "codex_goal_project_prepare_verifier",
+        })
+      : undefined;
+  const reviewedOutputAggregate = reviewedOutputIds
+    ? await resolveLocalReviewedOutputAggregate({
         registryRootDir: controller.registryRootDir,
-        producerJobId,
-        expectedInputPatchHash: preStartAdmission?.contract.inputPatchHash,
-        allowProviderOutputInvalid:
-          boundedToolName === "codex_goal_project_prepare_verifier",
+        projectId: controller.scope.projectId,
+        reviewedOutputIds,
+        expectedBaseCommit: sourceRevision.revision,
       })
     : undefined;
+  const rejectedReviewedOutputStore =
+    reviewedOutputId && producerJobId
+      ? new LocalReviewedWorkerOutputStore({
+          rootDir: reviewedWorkerOutputRoot(controller.registryRootDir),
+        })
+      : undefined;
+  const rejectedReviewedOutput =
+    reviewedOutputId && producerJobId && rejectedReviewedOutputStore
+      ? await resolveRejectedReviewedOutputRemediation(
+          {
+            store: rejectedReviewedOutputStore,
+            readPatch: async (snapshot) =>
+              await rejectedReviewedOutputStore.readPatch(snapshot),
+            stagedPatchSha256ForRevision,
+          },
+          {
+            projectId: controller.scope.projectId,
+            reviewedOutputId,
+            expectedWorkerJobId: producerJobId,
+            expectedBaseCommit: sourceRevision.revision,
+            expectedPatchSha256: preStartAdmission?.contract.inputPatchHash,
+            sourceWorkspacePath: resolvedSource.sourceRealPath,
+          },
+        )
+      : undefined;
   assertProjectPreStartAdmissionSourceRevision({
     plan: preStartAdmission,
     sourceRevision: sourceRevision.revision,
   });
-  const producerInputPatch = producerHandoff
-    ? {
-        path: producerHandoff.patchPath,
-        sha256: producerHandoff.patchSha256,
+  let aggregateArtifactCreatedPaths: readonly string[] = [];
+  let aggregateInputPatch:
+    | {
+        readonly path: string;
+        readonly sha256: string;
+        readonly stagedSha256: string;
+        readonly baseCommit: string;
+        readonly changedPaths: readonly string[];
+      }
+    | undefined;
+  if (reviewedOutputAggregate) {
+    const artifacts = await materializeReviewedOutputAggregateArtifacts({
+      jobRootDir: createManifest.jobRootDir,
+      aggregate: reviewedOutputAggregate,
+    });
+    aggregateArtifactCreatedPaths = artifacts.createdPaths;
+    try {
+      aggregateInputPatch = {
+        path: artifacts.patchPath,
+        sha256: reviewedOutputAggregate.patchSha256,
         stagedSha256: await stagedPatchSha256ForRevision({
           workspacePath: resolvedSource.sourceRealPath,
           revision: sourceRevision.revision,
-          patchPath: producerHandoff.patchPath,
+          patchPath: artifacts.patchPath,
         }),
-        baseCommit: producerHandoff.baseCommit,
-        changedPaths: producerHandoff.changedPaths,
-      }
-    : undefined;
+        baseCommit: reviewedOutputAggregate.baseCommit,
+        changedPaths: reviewedOutputAggregate.changedFiles,
+      };
+    } catch (error) {
+      await removeReviewedOutputAggregateArtifacts(
+        aggregateArtifactCreatedPaths,
+      );
+      throw error;
+    }
+  }
+  const producerInputPatch =
+    aggregateInputPatch ??
+    rejectedReviewedOutput?.inputPatch ??
+    (producerHandoff
+      ? {
+          path: producerHandoff.patchPath,
+          sha256: producerHandoff.patchSha256,
+          stagedSha256: await stagedPatchSha256ForRevision({
+            workspacePath: resolvedSource.sourceRealPath,
+            revision: sourceRevision.revision,
+            patchPath: producerHandoff.patchPath,
+          }),
+          baseCommit: producerHandoff.baseCommit,
+          changedPaths: producerHandoff.changedPaths,
+        }
+      : undefined);
   const createWorktreeInput: CodexGoalProjectCreateWorktreeInput = {
     jobId: requested.jobId,
     ...worktreeAccessInput,
@@ -412,6 +526,14 @@ export async function projectControlRefillWorkerView(
       scope: controller.scope,
       createManifest,
       createOverwrite: booleanValue(args.overwrite) ?? false,
+      ...(producerInputPatch
+        ? {
+            admittedInputPatchTarget: {
+              jobId: createManifest.jobId,
+              workspacePath: createManifest.workspacePath,
+            },
+          }
+        : {}),
     });
     const createResult = await createOrReuseProjectJob({
       broker: createBroker,
@@ -433,10 +555,11 @@ export async function projectControlRefillWorkerView(
       scope: controller.scope,
       manifest,
       expectedCanonicalWorkspacePath,
-      admittedInputPatch: Boolean(producerHandoff),
+      admittedInputPatch: Boolean(producerInputPatch),
     });
   } catch (error) {
     await removeProjectPreStartAdmissionPaths(admissionCreatedPaths);
+    await removeReviewedOutputAggregateArtifacts(aggregateArtifactCreatedPaths);
     const rolledBack = await rollbackProjectRefillPartial({
       expectedSourceRealPath: createWorktreeInput.expectedSourceRealPath,
       workspacePath: createManifest.workspacePath,
@@ -567,6 +690,20 @@ export async function projectControlRefillWorkerView(
       ? { canonicalRemoteHead: sourceRevision.remoteHead }
       : {}),
     ...(producerHandoff ? { producerHandoff } : {}),
+    ...(reviewedOutputAggregate
+      ? {
+          reviewedOutputAggregate: reviewedOutputAggregateView(
+            reviewedOutputAggregate,
+          ),
+        }
+      : {}),
+    ...(rejectedReviewedOutput
+      ? {
+          rejectedReviewedOutput: rejectedReviewedOutputRemediationView(
+            rejectedReviewedOutput.snapshot,
+          ),
+        }
+      : {}),
     prompt,
     accountCapacityFacts,
     ...(accountReservation
@@ -599,7 +736,31 @@ export async function projectControlPrepareVerifierView(
   args: ProjectControlMcpArgs,
   deps: CodexGoalMcpProjectControlJobsDeps,
 ): Promise<JsonObject> {
-  requiredRawString(args.producerJobId, "producerJobId");
+  const producerJobId = stringValue(args.producerJobId);
+  const reviewedOutputIds = reviewedOutputIdValues(args.reviewedOutputIds);
+  assertVerifierInputSource({
+    operationToolName: "codex_goal_project_prepare_verifier",
+    producerJobId,
+    reviewedOutputIds,
+  });
+  if (reviewedOutputIds && booleanValue(args.confirmRefill) !== true) {
+    const controller = await deps.loadProjectControlController(args);
+    const aggregate = await resolveLocalReviewedOutputAggregate({
+      registryRootDir: controller.registryRootDir,
+      projectId: controller.scope.projectId,
+      reviewedOutputIds,
+    });
+    return {
+      ok: false,
+      reason: "confirm_refill_required",
+      mode: "project_control_prepare_verifier_preview",
+      controllerJobId: controller.controller.jobId,
+      targetJobId: stringValue(args.jobId),
+      requiredInputPatchHash: aggregate.patchSha256,
+      reviewedOutputAggregate: reviewedOutputAggregateView(aggregate),
+      requiredConfirmation: "confirmRefill",
+    };
+  }
   if (args.preStartAdmission === undefined) {
     throw new Error("project_control_verifier_pre_start_admission_required");
   }
@@ -620,6 +781,138 @@ export async function projectControlPrepareVerifierView(
     ...result,
     mode: "project_control_prepare_verifier",
   };
+}
+
+function reviewedOutputIdValues(value: unknown): readonly string[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new Error("reviewed_output_aggregate_ids_invalid");
+  }
+  return value;
+}
+
+function assertVerifierInputSource(input: {
+  readonly operationToolName: ProjectControlOperationToolName;
+  readonly producerJobId: string | undefined;
+  readonly reviewedOutputIds: readonly string[] | undefined;
+}): void {
+  if (input.operationToolName !== "codex_goal_project_prepare_verifier") {
+    if (input.reviewedOutputIds) {
+      throw new Error(
+        "project_control_reviewed_output_aggregate_verifier_only",
+      );
+    }
+    return;
+  }
+  if (input.producerJobId && input.reviewedOutputIds) {
+    throw new Error("project_control_verifier_input_source_conflict");
+  }
+  if (!input.producerJobId && !input.reviewedOutputIds) {
+    throw new Error("project_control_verifier_input_source_required");
+  }
+}
+
+async function resolveLocalReviewedOutputAggregate(input: {
+  readonly registryRootDir: string;
+  readonly projectId: string;
+  readonly reviewedOutputIds: readonly string[];
+  readonly expectedBaseCommit?: string;
+}): Promise<ReviewedOutputAggregate> {
+  const store = new LocalReviewedWorkerOutputStore({
+    rootDir: reviewedWorkerOutputRoot(input.registryRootDir),
+  });
+  return await resolveReviewedOutputAggregate(
+    {
+      store,
+      readPatch: async (snapshot) => await store.readPatch(snapshot),
+    },
+    {
+      projectId: input.projectId,
+      reviewedOutputIds: input.reviewedOutputIds,
+      ...(input.expectedBaseCommit
+        ? { expectedBaseCommit: input.expectedBaseCommit }
+        : {}),
+    },
+  );
+}
+
+async function materializeReviewedOutputAggregateArtifacts(input: {
+  readonly jobRootDir: string;
+  readonly aggregate: ReviewedOutputAggregate;
+}): Promise<{
+  readonly patchPath: string;
+  readonly provenancePath: string;
+  readonly createdPaths: readonly string[];
+}> {
+  const requestedJobRootParent = dirname(input.jobRootDir);
+  const jobRootParentItem = await lstat(requestedJobRootParent);
+  if (jobRootParentItem.isSymbolicLink() || !jobRootParentItem.isDirectory()) {
+    throw new Error("reviewed_output_aggregate_artifact_root_unsafe");
+  }
+  const canonicalJobRootParent = await realpath(requestedJobRootParent);
+  const requestedJobRoot = join(
+    canonicalJobRootParent,
+    basename(input.jobRootDir),
+  );
+  await mkdir(requestedJobRoot, { recursive: true, mode: 0o700 });
+  const jobRootItem = await lstat(requestedJobRoot);
+  if (jobRootItem.isSymbolicLink() || !jobRootItem.isDirectory()) {
+    throw new Error("reviewed_output_aggregate_artifact_root_unsafe");
+  }
+  const canonicalJobRoot = await realpath(requestedJobRoot);
+  if (dirname(canonicalJobRoot) !== canonicalJobRootParent) {
+    throw new Error("reviewed_output_aggregate_artifact_root_unsafe");
+  }
+  const root = join(canonicalJobRoot, "reviewed-output-aggregate");
+  await mkdir(root, { recursive: true, mode: 0o700 });
+  const rootItem = await lstat(root);
+  if (rootItem.isSymbolicLink() || !rootItem.isDirectory()) {
+    throw new Error("reviewed_output_aggregate_artifact_root_unsafe");
+  }
+  const canonicalRoot = await realpath(root);
+  if (dirname(canonicalRoot) !== canonicalJobRoot) {
+    throw new Error("reviewed_output_aggregate_artifact_root_unsafe");
+  }
+  const patchPath = join(canonicalRoot, "input.patch");
+  const provenancePath = join(canonicalRoot, "provenance.json");
+  const createdPaths: string[] = [];
+  try {
+    const patchArtifact = await publishImmutableTextArtifact({
+      path: patchPath,
+      content: input.aggregate.patch,
+      existingPathUnsafeError: "reviewed_output_aggregate_artifact_unsafe",
+      contentMismatchError: "reviewed_output_aggregate_immutable_conflict",
+    });
+    if (patchArtifact.created) {
+      createdPaths.push(patchPath);
+    }
+    const provenance = `${JSON.stringify(
+      reviewedOutputAggregateView(input.aggregate),
+      null,
+      2,
+    )}\n`;
+    const provenanceArtifact = await publishImmutableTextArtifact({
+      path: provenancePath,
+      content: provenance,
+      existingPathUnsafeError: "reviewed_output_aggregate_artifact_unsafe",
+      contentMismatchError: "reviewed_output_aggregate_immutable_conflict",
+    });
+    if (provenanceArtifact.created) {
+      createdPaths.push(provenancePath);
+    }
+    return { patchPath, provenancePath, createdPaths };
+  } catch (error) {
+    await removeReviewedOutputAggregateArtifacts(createdPaths);
+    throw error;
+  }
+}
+
+async function removeReviewedOutputAggregateArtifacts(
+  paths: readonly string[],
+): Promise<void> {
+  for (const path of [...paths].reverse()) await rm(path, { force: true });
+  const root = paths[0] ? dirname(paths[0]) : undefined;
+  if (root) await rmdir(root).catch(() => undefined);
 }
 
 async function resolveProducerHandoffForVerifier(input: {
@@ -706,16 +999,32 @@ async function projectControlRefillWorkerBoundedView(
     allowDangerFullAccess: false,
     networkAccess: requested.networkAccess ?? NetworkAccessMode.Restricted,
   };
-  const preStartAdmission = planProjectPreStartAdmission({
-    value: args.preStartAdmission,
-    confirmed: booleanValue(args.confirmPreStartAdmission) === true,
-    scope: controller.scope,
-    manifest: createManifest,
+  const mergeBinding = parseProjectMergeBindingRequest({
+    value: args.mergeBinding,
+    admission: args.preStartAdmission,
+    requireCanonicalRemoteHead:
+      booleanValue(args.requireCanonicalRemoteHead) === true,
+    expectedSourceCommit: args.expectedSourceCommit,
   });
-  if (operationToolName === "codex_goal_project_refill_worker") {
+  // Dynamic merge revisions are resolved by the immutable sync operation. The
+  // bounded wrapper cannot materialize that contract before it has pinned both
+  // remote heads, so it validates only the request shape here.
+  const preStartAdmission = mergeBinding
+    ? undefined
+    : planProjectPreStartAdmission({
+        value: args.preStartAdmission,
+        confirmed: booleanValue(args.confirmPreStartAdmission) === true,
+        scope: controller.scope,
+        manifest: createManifest,
+      });
+  if (
+    operationToolName === "codex_goal_project_refill_worker" &&
+    !mergeBinding
+  ) {
     assertProjectRefillInputPatchSource({
       contract: preStartAdmission?.contract,
       producerJobId: stringValue(args.producerJobId),
+      reviewedOutputId: stringValue(args.reviewedOutputId),
       workerRole: projectControlWorkerRole(args.workerRole),
     });
   }
@@ -762,25 +1071,26 @@ async function projectControlRefillWorkerBoundedView(
       ...(sourceRef ? { sourceRef } : {}),
       ...(newBranch ? { newBranch } : {}),
     };
-    const canonicalSource = canonicalSourceWorkspacePath
-      ? resolveCanonicalRemoteWorktreeSource({
-          requestedRef: baseBranch,
-          scope: controller.scope,
-        })
-      : undefined;
-    const worktreeAccessInput = canonicalSource
+    const sourceReference = resolveProjectSourceReference({
+      requestedRef: canonicalSourceWorkspacePath
+        ? baseBranch
+        : (sourceRef ?? baseBranch),
+      scope: controller.scope,
+      remoteVerificationRequired:
+        canonicalSourceWorkspacePath !== undefined ||
+        expectedSourceCommit !== undefined,
+    });
+    const worktreeAccessInput = sourceReference.remoteVerified
       ? {
           ...requestedWorktreeAccessInput,
-          sourceRef: canonicalSource.worktreeSourceRef,
+          sourceRef: sourceReference.worktreeSourceRef,
         }
       : requestedWorktreeAccessInput;
     const resolvedSource =
       await resolverBroker.resolveWorktreeRevision(worktreeAccessInput);
     const sourceRevision = await resolveProjectSourceRevision({
       resolvedSource,
-      remoteTrackingRef: canonicalSource
-        ? canonicalSource.remoteTrackingRef
-        : (sourceRef ?? baseBranch),
+      remoteTrackingRef: sourceReference.remoteTrackingRef,
       scope: controller.scope,
       ...(expectedSourceCommit ? { expectedSourceCommit } : {}),
       requireRemoteHead: canonicalSourceWorkspacePath !== undefined,

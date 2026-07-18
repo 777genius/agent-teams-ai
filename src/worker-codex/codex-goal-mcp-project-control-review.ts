@@ -1,8 +1,11 @@
 import {
   ReviewDecisionStatus,
+  type MergeIntegrationPlan,
   type ProjectAccessScope,
   type ProjectControlBroker,
 } from "@vioxen/subscription-runtime/worker-core";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import type { CodexGoalJobManifest } from "./codex-goal-jobs";
 import type { CodexGoalLaunchInput } from "./codex-goal-ops";
 import type { CodexProjectControlBrokerInput } from "./codex-goal-mcp-project-broker";
@@ -12,6 +15,7 @@ import {
   localReviewedWorkerOutputDeps,
   reviewedWorkerOutputRoot,
 } from "./reviewed-worker-output";
+import { codexGoalStatusInputFromLaunch } from "./application/codex-goal-status-input";
 import {
   booleanValue,
   requiredRawString,
@@ -32,8 +36,15 @@ import {
   parseReviewedOutputMerge,
   requiredReviewDecision,
 } from "./codex-goal-mcp-project-control-reviewed-output";
-import { recordRejectedReviewedOutput } from "./codex-goal-mcp-project-control-reviewed-rejection";
+import {
+  recordRejectedReviewedOutput,
+  recordRejectedUncapturedOutput,
+} from "./codex-goal-mcp-project-control-reviewed-rejection";
 import { projectControlRealPathOutsideWorkspaceScope } from "./codex-goal-mcp-project-scope";
+import {
+  collectCodexGoalStatus,
+  resolveCodexGoalWorkerLiveness,
+} from "./codex-goal-ops";
 
 type JsonObject = Readonly<Record<string, unknown>>;
 
@@ -73,11 +84,19 @@ export async function projectControlMarkReviewedView(
   });
   const captureReviewedOutput =
     booleanValue(args.captureReviewedOutput) === true;
-  const reviewDecision = captureReviewedOutput
-    ? requiredReviewDecision(args.reviewDecision)
-    : undefined;
-  if (!captureReviewedOutput) {
-    await ensureTerminalCodexGoalHandoffArtifacts({ launch: loaded.launch });
+  const reviewDecision =
+    args.reviewDecision === undefined
+      ? undefined
+      : requiredReviewDecision(args.reviewDecision);
+  if (captureReviewedOutput && reviewDecision === undefined) {
+    throw new Error("review_decision_required");
+  }
+  if (
+    !captureReviewedOutput &&
+    reviewDecision !== undefined &&
+    reviewDecision !== ReviewDecisionStatus.Rejected
+  ) {
+    throw new Error("project_control_reviewed_output_capture_required");
   }
   const reviewNote = stringValue(args.note) ?? "project_control_reviewed";
   return await withValidatedProjectWorkspaceLock({
@@ -94,6 +113,38 @@ export async function projectControlMarkReviewedView(
           workspacePath: workspace.canonicalWorkspacePath,
         },
       };
+      const terminalStatus = captureReviewedOutput
+        ? undefined
+        : reviewDecision === ReviewDecisionStatus.Rejected
+          ? await collectCodexGoalStatus(
+              codexGoalStatusInputFromLaunch(lockedLaunch),
+            )
+          : await ensureTerminalCodexGoalHandoffArtifacts({
+              launch: lockedLaunch,
+            });
+      if (reviewDecision === ReviewDecisionStatus.Rejected && terminalStatus) {
+        if (resolveCodexGoalWorkerLiveness({ status: terminalStatus }).alive) {
+          throw new Error("uncaptured_rejected_output_worker_still_alive");
+        }
+        if (
+          terminalStatus.workspaceDirty !== true ||
+          (terminalStatus.changedFiles ?? []).length === 0
+        ) {
+          throw new Error(
+            "uncaptured_rejected_output_authored_output_required",
+          );
+        }
+      }
+      const admittedMerge = captureReviewedOutput
+        ? await readAdmittedMergeBinding(loaded.manifest, controller.scope)
+        : undefined;
+      const requestedMerge = args.merge
+        ? parseReviewedOutputMerge(controller.scope, args.merge)
+        : undefined;
+      const selectedMerge = selectReviewedOutputMerge(
+        admittedMerge,
+        requestedMerge,
+      );
       const broker = deps.codexProjectControlBroker({
         registryRootDir: controller.registryRootDir,
         controller: controller.controller,
@@ -123,13 +174,8 @@ export async function projectControlMarkReviewedView(
                 requiredChecks: parseProjectIntegrationChecks(
                   args.requiredChecks,
                 ),
-                ...(args.merge
-                  ? {
-                      merge: parseReviewedOutputMerge(
-                        controller.scope,
-                        args.merge,
-                      ),
-                    }
+                ...(selectedMerge
+                  ? { merge: selectedMerge }
                   : {}),
               },
             }
@@ -168,6 +214,18 @@ export async function projectControlMarkReviewedView(
           workspacePath: workspace.canonicalWorkspacePath,
           snapshot,
         });
+      } else if (
+        !captureReviewedOutput &&
+        reviewDecision === ReviewDecisionStatus.Rejected
+      ) {
+        consumedOutputLedger = await recordRejectedUncapturedOutput({
+          scope: controller.scope,
+          jobId: loaded.manifest.jobId,
+          jobRootDir: loaded.manifest.jobRootDir,
+          workspacePath: workspace.canonicalWorkspacePath,
+          closedAt: loaded.manifest.updatedAt,
+          reason: stringValue(args.reviewReason) ?? reviewNote,
+        });
       }
       const accountReservationReleased = await releaseCodexProjectAccount({
         manifest: loaded.manifest,
@@ -190,4 +248,63 @@ export async function projectControlMarkReviewedView(
       };
     },
   });
+}
+
+export async function readAdmittedMergeBinding(
+  manifest: CodexGoalJobManifest,
+  scope: ProjectAccessScope,
+): Promise<MergeIntegrationPlan | undefined> {
+  const descriptor = manifest.projectPreStartAdmission;
+  if (!descriptor || !("mode" in descriptor) || descriptor.mode !== "serial-builtin") {
+    return undefined;
+  }
+  let receipt: unknown;
+  let contractBody: Buffer;
+  try {
+    receipt = JSON.parse(await readFile(descriptor.receiptPath, "utf8"));
+    contractBody = await readFile(descriptor.contractPath);
+  } catch {
+    throw new Error("project_control_review_merge_receipt_invalid");
+  }
+  if (typeof receipt !== "object" || receipt === null || Array.isArray(receipt)) {
+    throw new Error("project_control_review_merge_receipt_invalid");
+  }
+  const receiptRecord = receipt as Readonly<Record<string, unknown>>;
+  const merge = receiptRecord.merge;
+  if (merge === undefined) return undefined;
+  const contractSha256 = createHash("sha256").update(contractBody).digest("hex");
+  if (receiptRecord.contractSha256 !== contractSha256) {
+    throw new Error("project_control_review_merge_receipt_invalid");
+  }
+  let contract: unknown;
+  try {
+    contract = JSON.parse(contractBody.toString("utf8"));
+  } catch {
+    throw new Error("project_control_review_merge_receipt_invalid");
+  }
+  if (
+    typeof contract !== "object" || contract === null || Array.isArray(contract) ||
+    JSON.stringify((contract as Readonly<Record<string, unknown>>).merge) !==
+      JSON.stringify(merge)
+  ) {
+    throw new Error("project_control_review_merge_receipt_invalid");
+  }
+  try {
+    return parseReviewedOutputMerge(
+      scope,
+      merge as NonNullable<ProjectControlMcpArgs["merge"]>,
+    );
+  } catch {
+    throw new Error("project_control_review_merge_receipt_invalid");
+  }
+}
+
+export function selectReviewedOutputMerge(
+  admitted: MergeIntegrationPlan | undefined,
+  requested: MergeIntegrationPlan | undefined,
+): MergeIntegrationPlan | undefined {
+  if (admitted && requested && JSON.stringify(admitted) !== JSON.stringify(requested)) {
+    throw new Error("project_control_review_merge_binding_mismatch");
+  }
+  return admitted ?? requested;
 }

@@ -10,6 +10,7 @@ import { captureGitWorkspacePatch } from "../../codex-goal-runtime-result-io";
 import {
   captureReviewedWorkerOutput,
   commitReviewedWorkerOutputReviewAttestation,
+  resolveRejectedReviewedWorkerOutputForRemediation,
   resolveReviewedWorkerContinuation,
   resolveReviewedWorkerOutput,
   withReviewedWorkerOutputStillMatching,
@@ -86,6 +87,12 @@ describe("reviewed worker output", () => {
         changedFiles: [],
       },
     });
+    await expect(resolveRejectedReviewedWorkerOutputForRemediation({
+      store: deps.store,
+      projectId: "project-1",
+      expectedWorkerJobId: "project-1-clean-merge-reviewer",
+      reviewedOutputId: snapshot.reviewedOutputId,
+    })).rejects.toThrow("reviewed_worker_output_rejected_remediation_required");
 
     const manifestPath = join(
       fixture.storeRoot,
@@ -433,7 +440,7 @@ describe("reviewed worker output", () => {
     });
   });
 
-  it("uses an attested rejected snapshot only for the same dirty worker continuation", async () => {
+  it("separates rejected successor remediation from same-worker continuation", async () => {
     const fixture = await reviewedOutputFixture();
     const deps = localReviewedWorkerOutputDeps({ rootDir: fixture.storeRoot });
     const patch = await captureGitWorkspacePatch({ workspacePath: fixture.workspacePath });
@@ -487,6 +494,18 @@ describe("reviewed worker output", () => {
       workspacePath: fixture.workspacePath,
       reviewedOutputId: snapshot.reviewedOutputId,
     })).rejects.toThrow("reviewed_worker_output_controller_mismatch");
+    await expect(resolveRejectedReviewedWorkerOutputForRemediation({
+      store: deps.store,
+      projectId: "project-1",
+      expectedWorkerJobId: "project-1-worker",
+      reviewedOutputId: snapshot.reviewedOutputId,
+    })).resolves.toEqual(snapshot);
+    await expect(resolveRejectedReviewedWorkerOutputForRemediation({
+      store: deps.store,
+      projectId: "project-1",
+      expectedWorkerJobId: "another-worker",
+      reviewedOutputId: snapshot.reviewedOutputId,
+    })).rejects.toThrow("reviewed_worker_output_job_mismatch");
   });
 
   it("holds the continuation lock across exact verification and the launch effect", async () => {

@@ -133,6 +133,7 @@ export type IntegrationAttempt = {
   readonly checkRuns: readonly CheckRun[];
   readonly commitCandidate?: CommitCandidate;
   readonly pushAttempt?: PushAttempt;
+  readonly promotionAttempts?: readonly PushAttempt[];
   readonly rejectReason?: string;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -524,6 +525,36 @@ export function markPushed(
     ...attempt,
     status: IntegrationAttemptStatus.Pushed,
     pushAttempt: input.pushAttempt,
+    updatedAt: input.now,
+  };
+}
+
+export function markPromoted(
+  attempt: IntegrationAttempt,
+  input: {
+    readonly promotionAttempt: PushAttempt;
+    readonly now: string;
+  },
+): IntegrationAttempt {
+  assertStatus(attempt, [IntegrationAttemptStatus.Pushed]);
+  if (!attempt.commitCandidate || !attempt.pushAttempt) {
+    throw new IntegrationError({
+      reason: IntegrationErrorReason.InvalidTransition,
+      message: "pushed_commit_candidate_required",
+    });
+  }
+  if (input.promotionAttempt.commitSha !== attempt.commitCandidate.commitSha) {
+    throw new IntegrationError({
+      reason: IntegrationErrorReason.InvalidTransition,
+      message: "promotion_commit_sha_mismatch",
+    });
+  }
+  return {
+    ...attempt,
+    promotionAttempts: [
+      ...(attempt.promotionAttempts ?? []),
+      input.promotionAttempt,
+    ],
     updatedAt: input.now,
   };
 }

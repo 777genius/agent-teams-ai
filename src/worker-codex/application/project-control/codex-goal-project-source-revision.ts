@@ -2,8 +2,8 @@ import type { ProjectAccessScope } from "@vioxen/subscription-runtime/worker-cor
 import {
   assertCanonicalRemoteRevision,
   materializePinnedRemoteCommit,
-  resolveCanonicalRemoteHead,
   resolveCanonicalRemoteWorktreeSource,
+  resolveCanonicalRemoteHead,
   type CanonicalRemoteHead,
 } from "./codex-goal-project-git";
 
@@ -13,6 +13,34 @@ export type ResolvedProjectSourceRevision = {
   readonly pinned: boolean;
   readonly remoteHead?: CanonicalRemoteHead;
 };
+
+export type ResolvedProjectSourceReference = {
+  readonly remoteTrackingRef: string;
+  readonly worktreeSourceRef: string;
+  readonly remoteVerified: boolean;
+};
+
+export function resolveProjectSourceReference(input: {
+  readonly requestedRef: string;
+  readonly scope: ProjectAccessScope;
+  readonly remoteVerificationRequired: boolean;
+}): ResolvedProjectSourceReference {
+  if (!input.remoteVerificationRequired) {
+    return {
+      remoteTrackingRef: input.requestedRef,
+      worktreeSourceRef: input.requestedRef,
+      remoteVerified: false,
+    };
+  }
+  const canonical = resolveCanonicalRemoteWorktreeSource({
+    requestedRef: input.requestedRef,
+    scope: input.scope,
+  });
+  return {
+    ...canonical,
+    remoteVerified: true,
+  };
+}
 
 export async function resolveProjectSourceRevision(input: {
   readonly resolvedSource: {

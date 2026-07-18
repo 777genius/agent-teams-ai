@@ -4,6 +4,10 @@ import {
   projectScopedControllerToolNames,
   type ControlledAgentProviderEnforcementCapabilities,
 } from "@vioxen/subscription-runtime/worker-core";
+import {
+  codexProviderEgressConfigToml,
+  codexProviderEgressEnv,
+} from "@vioxen/subscription-runtime/provider-codex";
 
 export type CodexControlledAgentProfileInput = {
   readonly stateDir: string;
@@ -110,6 +114,7 @@ function codexConfigToml(input: {
     "[permissions.controlled_project_controller.network]",
     "enabled = false",
     "",
+    codexProviderEgressConfigToml(),
   ];
   return `${lines.join("\n")}\n`;
 }
@@ -163,3 +168,5 @@ function tomlStringArray(values: readonly string[]): string {
 function starlarkStringArray(values: readonly string[]): string {
   return `[${values.map(tomlString).join(", ")}]`;
 }
+
+export const codexControlledAgentProviderEgressEnv = codexProviderEgressEnv;

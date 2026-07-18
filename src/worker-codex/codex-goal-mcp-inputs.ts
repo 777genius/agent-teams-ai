@@ -144,18 +144,24 @@ export type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly baseBranch?: string;
   readonly sourceRef?: string;
   readonly expectedSourceCommit?: string;
+  readonly expectedCurrentCommit?: string;
   readonly newBranch?: string;
   readonly workspacePath?: string;
   readonly branch?: string;
   readonly remote?: string;
   readonly force?: boolean;
+  readonly expectedRemoteCommit?: string;
+  readonly expectedLocalCommit?: string;
+  readonly confirmExternalRewriteRecovery?: boolean;
   readonly commitSha?: string;
   readonly confirmCreate?: boolean;
   readonly confirmCreateWorktree?: boolean;
+  readonly confirmFastForwardExisting?: boolean;
   readonly confirmIntegrate?: boolean;
   readonly confirmUpdate?: boolean;
   readonly confirmPush?: boolean;
   readonly confirmStart?: boolean;
+  readonly continuationAccounts?: string | readonly string[];
   readonly confirmStop?: boolean;
   readonly forceStart?: boolean;
   readonly forceStop?: boolean;
@@ -179,7 +185,12 @@ export type ProjectControlMcpArgs = GoalMcpArgs & JobRegistryMcpArgs & {
   readonly includeResult?: boolean;
   readonly confirmRecoverOperations?: boolean;
   readonly producerJobId?: string;
+  readonly reviewedOutputIds?: readonly string[];
   readonly requireCanonicalRemoteHead?: boolean;
+  readonly mergeBinding?: {
+    readonly sourceRemote?: string;
+    readonly sourceBranch?: string;
+  };
   readonly captureReviewedOutput?: boolean;
   readonly reviewedOutputId?: string;
   readonly expectedPatchSha256?: string;
