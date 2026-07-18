@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import http from 'node:http';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -38,6 +39,9 @@ const visibleElement = (expression) => `(() => {
   const rect = element.getBoundingClientRect();
   return rect.width > 0 && rect.height > 0 ? element : null;
 })()`;
+const historyPopover = `Array.from(document.querySelectorAll('[data-radix-popper-content-wrapper]'))
+  .find((wrapper) => wrapper.textContent?.includes('Review action history'))`;
+const visibleHistoryPopover = visibleElement(historyPopover);
 const visibleRejectHunkButton = `Array.from(document.querySelectorAll('button[title^="Reject change"]'))
   .find((button) => {
     const rect = button.getBoundingClientRect();
@@ -107,6 +111,40 @@ function seedFixture() {
   return JSON.parse(result.stdout);
 }
 
+function readCdpTargets(port) {
+  return new Promise((resolve, reject) => {
+    const request = http.get(
+      {
+        host: '127.0.0.1',
+        port,
+        path: '/json/list',
+        agent: false,
+        headers: { Connection: 'close' },
+      },
+      (response) => {
+        let body = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => {
+          body += chunk;
+        });
+        response.once('end', () => {
+          if (response.statusCode !== 200) {
+            reject(new Error(`CDP returned HTTP ${response.statusCode ?? 'unknown'}`));
+            return;
+          }
+          try {
+            resolve(JSON.parse(body));
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
+    );
+    request.setTimeout(1_000, () => request.destroy(new Error('CDP request timed out')));
+    request.once('error', reject);
+  });
+}
+
 async function waitForCdp(port, timeoutMs = 45_000) {
   const deadline = Date.now() + timeoutMs;
   let lastError = null;
@@ -115,8 +153,7 @@ async function waitForCdp(port, timeoutMs = 45_000) {
       throw new Error(`Electron exited before CDP became ready (${appProcess.exitCode})`);
     }
     try {
-      const response = await fetch(`http://127.0.0.1:${port}/json/list`);
-      const targets = await response.json();
+      const targets = await readCdpTargets(port);
       const page = targets.find(
         (target) =>
           target.type === 'page' &&
@@ -571,20 +608,21 @@ async function main() {
   await client.waitFor(`document.body?.innerText.includes('12 rejected')`, 'file Reject action');
   await waitForDiskLines(fixture.changedFile, 'before-0', 'before-1');
 
-  const historyButton = `document.querySelector('button[aria-label^="Review history:"]')`;
+  const historyButton = visibleElement(`Array.from(
+    document.querySelectorAll('button[aria-label^="Review history:"]')
+  ).find((button) => {
+    const rect = button.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  })`);
   const ensureHistoryOpen = async (label) => {
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      if (await client.evaluate(`document.body?.innerText.includes('Review action history')`)) {
+      if (await client.evaluate(`Boolean(${visibleHistoryPopover})`)) {
         return;
       }
       await client.waitFor(historyButton, `${label} trigger`);
       await client.click(historyButton);
       try {
-        await client.waitFor(
-          `document.body?.innerText.includes('Review action history')`,
-          label,
-          3_000
-        );
+        await client.waitFor(visibleHistoryPopover, label, 3_000);
         return;
       } catch {
         // A restart can remount the trigger between its rect lookup and pointer release.
@@ -594,21 +632,37 @@ async function main() {
   };
   const ensureHistoryClosed = async (label) => {
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      if (!(await client.evaluate(`document.body?.innerText.includes('Review action history')`))) {
+      if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) {
         return;
       }
-      // Escape closes the currently mounted Radix layer without racing a trigger click
-      // against an outside-click dismissal already queued by the preceding toolbar action.
       await client.pressEscape();
       try {
-        await client.waitFor(
-          `!document.body?.innerText.includes('Review action history')`,
-          label,
-          1_000
-        );
+        await client.waitFor(`!(${visibleHistoryPopover})`, label, 750);
         return;
       } catch {
-        // A restart or async toolbar update can remount the layer; retry the current layer.
+        // An action can remount the Radix layer after Escape was delivered to the old content.
+      }
+      if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) {
+        return;
+      }
+      await client.domClick(historyButton);
+      try {
+        await client.waitFor(`!(${visibleHistoryPopover})`, label, 1_000);
+        return;
+      } catch {
+        // The toolbar can remount its trigger after a history action; retry the live trigger.
+      }
+      const navigationButton = `(${visibleHistoryPopover})?.querySelector(
+        'button[data-review-history-action]'
+      )`;
+      if (await client.evaluate(`Boolean(${navigationButton})`)) {
+        await client.domClick(navigationButton);
+        try {
+          await client.waitFor(`!(${visibleHistoryPopover})`, label, 1_000);
+          return;
+        } catch {
+          // Navigating from a live history row explicitly closes the controlled popover.
+        }
       }
     }
     throw new Error(`Unable to close ${label}`);
