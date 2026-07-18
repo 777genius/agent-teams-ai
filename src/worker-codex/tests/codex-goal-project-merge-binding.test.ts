@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { ProjectAccessScope } from "@vioxen/subscription-runtime/worker-core";
 import {
   bindProjectMergeAdmission,
+  parseProjectMergeBindingRequest,
   projectMergePromptBinding,
   readExistingProjectMergeBinding,
   resolveProjectMergeBinding,
@@ -103,6 +104,7 @@ describe("project merge binding", () => {
       merge,
     }) as { readonly contract: Record<string, unknown> };
     expect(admission.contract).toMatchObject({
+      canonicalSha: targetCommit,
       phaseStartSha: targetCommit,
       merge,
     });
@@ -204,6 +206,49 @@ describe("project merge binding", () => {
         merge,
       }),
     ).toThrow("project_control_merge_binding_canonicalSha_must_be_omitted");
+    expect(() =>
+      bindProjectMergeAdmission({
+        admission: {
+          mode: "serial-builtin",
+          contract: {
+            ...contractWithoutPhaseStart(root, root),
+            merge,
+          },
+        },
+        merge,
+      }),
+    ).toThrow("project_control_merge_binding_merge_override_denied");
+  });
+
+  it("rejects caller-owned merge revisions and expected source commits", () => {
+    const mergeBinding = {
+      sourceRemote: "origin",
+      sourceBranch: "base/current",
+    };
+    expect(
+      parseProjectMergeBindingRequest({
+        value: mergeBinding,
+        admission: { mode: "serial-builtin", contract: {} },
+        requireCanonicalRemoteHead: true,
+        expectedSourceCommit: undefined,
+      }),
+    ).toEqual(mergeBinding);
+    expect(() =>
+      parseProjectMergeBindingRequest({
+        value: mergeBinding,
+        admission: { mode: "serial-builtin", contract: {} },
+        requireCanonicalRemoteHead: true,
+        expectedSourceCommit: "4".repeat(40),
+      }),
+    ).toThrow("project_control_merge_binding_expected_source_conflict");
+    expect(() =>
+      parseProjectMergeBindingRequest({
+        value: undefined,
+        admission: { mode: "serial-builtin", contract: { merge: {} } },
+        requireCanonicalRemoteHead: true,
+        expectedSourceCommit: undefined,
+      }),
+    ).toThrow("project_control_merge_binding_runtime_owned");
   });
 });
 

@@ -567,6 +567,13 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
         producerJobId: expect.any(Object),
         mergeBinding: expect.any(Object),
       });
+      expect(verifierTool?.inputSchema.properties).toMatchObject({
+        mergeBinding: {
+          type: "object",
+          required: ["sourceRemote", "sourceBranch"],
+          additionalProperties: false,
+        },
+      });
       const refillSchema = refillTool?.inputSchema.properties
         ?.preStartAdmission as TestJsonSchema;
       const verifierSchema = verifierTool?.inputSchema.properties
