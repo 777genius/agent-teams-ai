@@ -541,6 +541,40 @@ describe("project integration use cases", () => {
     expect(pushed.status).toBe(IntegrationAttemptStatus.Pushed);
   });
 
+  it("pushes a topology-only merge exactly once when the remote is its pinned source parent", async () => {
+    const fixture = createFixture();
+    fixture.git.appliedFiles = [];
+    const opened = await openProjectIntegrationAttempt(
+      fixture.deps(),
+      { ...topologyOnlyMergeInput(), attemptId: "attempt-source-parent" },
+    );
+    await applyWorkerOutput(fixture.deps(), { attemptId: opened.attemptId });
+    await runRequiredChecks(fixture.deps(), { attemptId: opened.attemptId });
+    await commitApprovedChanges(fixture.deps(), {
+      attemptId: opened.attemptId,
+      message: "chore(git): preserve reviewed merge topology",
+      policy: policy(),
+    });
+
+    fixture.git.remoteCommit = MERGE_SOURCE_COMMIT;
+    const pushed = await pushApprovedCommit(fixture.deps(), {
+      attemptId: opened.attemptId,
+      force: false,
+      policy: policy(),
+    });
+    const replayed = await pushApprovedCommit(fixture.deps(), {
+      attemptId: opened.attemptId,
+      force: false,
+      policy: policy(),
+    });
+
+    expect(pushed.status).toBe(IntegrationAttemptStatus.Pushed);
+    expect(replayed).toEqual(pushed);
+    expect(fixture.git.calls.filter((call) => call === "push"))
+      .toEqual(["push"]);
+    expect(fixture.git.remoteCommit).toBe(pushed.commitCandidate?.commitSha);
+  });
+
   it("rejects incomplete or force-pushed topology-only merge envelopes", async () => {
     const incomplete = createFixture();
     const candidate = topologyOnlyMergeInput();

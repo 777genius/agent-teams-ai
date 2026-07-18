@@ -115,13 +115,14 @@ export async function pushApprovedCommit(
   if (
     isTopologyOnlyReviewedMerge(attempt) &&
     remoteCommit !== attempt.merge!.expectedTargetCommit &&
+    remoteCommit !== attempt.merge!.sourceCommit &&
     remoteCommit !== attempt.commitCandidate.commitSha
   ) {
     throw new IntegrationError({
       reason: IntegrationErrorReason.StaleBase,
       message: "topology_only_merge_remote_changed",
       evidence: [
-        `expected:${attempt.merge!.expectedTargetCommit}`,
+        `expected:${attempt.merge!.expectedTargetCommit}|${attempt.merge!.sourceCommit}|${attempt.commitCandidate.commitSha}`,
         `actual:${remoteCommit ?? "missing"}`,
       ],
     });
