@@ -108,6 +108,45 @@ describe('ReviewDecisionStore', () => {
     await expect(readFile(legacyPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
+  it('discards only unreadable exact decisions and preserves a readable replacement', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeToken = 'task:123:req:recovery-race:src:one';
+    const exactPath = path.join(
+      teamsBasePath,
+      'demo',
+      'review-decisions',
+      'v2',
+      'task-123',
+      `${createHash('sha256').update(scopeToken).digest('hex')}.json`
+    );
+    await mkdir(path.dirname(exactPath), { recursive: true });
+    await writeFile(exactPath, '{not-json', 'utf8');
+    await expect(
+      store.clearUnreadableExactScope('demo', 'task-123', scopeToken)
+    ).resolves.toBeUndefined();
+    await expect(readFile(exactPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+
+    await writeFile(exactPath, '{not-json-again', 'utf8');
+    await expect(store.load('demo', 'task-123', scopeToken)).rejects.toBeTruthy();
+    await store.clear('demo', 'task-123', scopeToken);
+    await store.save('demo', 'task-123', {
+      scopeToken,
+      hunkDecisions: { 'new-file:0': 'accepted' },
+      fileDecisions: {},
+    });
+
+    await expect(
+      store.clearUnreadableExactScope('demo', 'task-123', scopeToken)
+    ).rejects.toThrow(
+      'Saved review decisions became readable; refusing destructive recovery discard'
+    );
+    await expect(store.load('demo', 'task-123', scopeToken)).resolves.toMatchObject({
+      hunkDecisions: { 'new-file:0': 'accepted' },
+      revision: 1,
+    });
+  });
+
   it('rejects malformed decision values before persisting them', async () => {
     const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
     const store = new ReviewDecisionStore();

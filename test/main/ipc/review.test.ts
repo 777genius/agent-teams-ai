@@ -561,6 +561,108 @@ describe('review IPC path confinement', () => {
     ).resolves.toEqual({ success: true, data: null });
   });
 
+  it('refuses destructive recovery after another window replaces unreadable state', async () => {
+    const scopeKey = 'agent-worker';
+    const scopeToken = 'agent:worker:content:recovery-race';
+    const scopeHash = createHash('sha256').update(scopeToken).digest('hex');
+    const decisionPath = path.join(
+      decisionTeamsBasePath,
+      'safe-team',
+      'review-decisions',
+      'v2',
+      scopeKey,
+      `${scopeHash}.json`
+    );
+    const decisionStore = new ReviewDecisionStore();
+    await decisionStore.save('safe-team', scopeKey, {
+      scopeToken,
+      hunkDecisions: { [`${projectFile}:0`]: 'accepted' },
+      fileDecisions: {},
+    });
+    await writeFile(decisionPath, '{broken-decisions', 'utf8');
+    await expect(
+      ipcMain.invoke(REVIEW_LOAD_DECISIONS, 'safe-team', scopeKey, scopeToken)
+    ).resolves.toMatchObject({ success: false });
+    await decisionStore.clear('safe-team', scopeKey, scopeToken);
+    await decisionStore.save('safe-team', scopeKey, {
+      scopeToken,
+      hunkDecisions: { [`${projectFile}:1`]: 'rejected' },
+      fileDecisions: {},
+    });
+
+    await expect(
+      ipcMain.invoke(REVIEW_CLEAR_DECISIONS, 'safe-team', scopeKey, scopeToken)
+    ).resolves.toEqual({
+      success: false,
+      error: 'Saved review decisions became readable; refusing destructive recovery discard',
+    });
+    await expect(
+      ipcMain.invoke(REVIEW_LOAD_DECISIONS, 'safe-team', scopeKey, scopeToken)
+    ).resolves.toMatchObject({
+      success: true,
+      data: { hunkDecisions: { [`${projectFile}:1`]: 'rejected' } },
+    });
+
+    const { ReviewDraftHistoryStore } = await import(
+      '@features/change-review-history/main'
+    );
+    const draftPath = path.join(
+      decisionTeamsBasePath,
+      'safe-team',
+      'review-decisions',
+      'draft-history',
+      'v1',
+      scopeKey,
+      `${scopeHash}.json`
+    );
+    const draftStore = new ReviewDraftHistoryStore();
+    await draftStore.saveEntry('safe-team', scopeKey, scopeToken, {
+      filePath: projectFile,
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'project\n',
+      editorState: {
+        doc: 'old draft\n',
+        history: { done: ['old'], undone: [] },
+      },
+    });
+    await writeFile(draftPath, '{broken-draft', 'utf8');
+    await expect(
+      ipcMain.invoke(REVIEW_LOAD_DRAFT_HISTORY, 'safe-team', scopeKey, scopeToken)
+    ).resolves.toMatchObject({ success: false });
+    await draftStore.clearScope('safe-team', scopeKey, scopeToken);
+    const replacement = await draftStore.saveEntry('safe-team', scopeKey, scopeToken, {
+      filePath: projectFile,
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'project\n',
+      editorState: {
+        doc: 'new draft\n',
+        history: { done: ['new'], undone: [] },
+      },
+    });
+
+    await expect(
+      ipcMain.invoke(REVIEW_CLEAR_DRAFT_HISTORY, 'safe-team', scopeKey, scopeToken)
+    ).resolves.toEqual({
+      success: false,
+      error:
+        'Saved manual edit history became readable; refusing destructive recovery discard',
+    });
+    await expect(
+      ipcMain.invoke(REVIEW_LOAD_DRAFT_HISTORY, 'safe-team', scopeKey, scopeToken)
+    ).resolves.toMatchObject({
+      success: true,
+      data: {
+        entries: { [projectFile]: { generation: replacement.generation, editorState: { doc: 'new draft\n' } } },
+      },
+    });
+  });
+
   it('replays and completes a prepared review mutation before hydrating decisions', async () => {
     const { ReviewMutationJournalStore } =
       await import('@main/services/team/ReviewMutationJournalStore');

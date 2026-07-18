@@ -466,4 +466,24 @@ export class ReviewDraftHistoryStore {
       }
     );
   }
+
+  async clearUnreadableScope(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ): Promise<void> {
+    this.assertSafeScope(teamName, scopeKey, scopeToken);
+    try {
+      const current = await this.readStored(teamName, scopeKey, scopeToken);
+      if (current) {
+        throw new Error(
+          'Saved manual edit history became readable; refusing destructive recovery discard'
+        );
+      }
+      return;
+    } catch (error) {
+      if (!(error instanceof InvalidReviewDraftHistoryError)) throw error;
+    }
+    await this.clearScope(teamName, scopeKey, scopeToken);
+  }
 }

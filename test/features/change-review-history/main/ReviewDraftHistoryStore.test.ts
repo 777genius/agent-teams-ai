@@ -351,6 +351,44 @@ describe('ReviewDraftHistoryStore', () => {
     );
   });
 
+  it('discards only an unreadable scope and preserves a readable replacement', async () => {
+    const { ReviewDraftHistoryStore } = await import(
+      '@features/change-review-history/main'
+    );
+    const store = new ReviewDraftHistoryStore();
+    const target = storedPath('demo', 'task-123', 'scope-a');
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, '{broken', 'utf8');
+    await expect(
+      store.clearUnreadableScope('demo', 'task-123', 'scope-a')
+    ).resolves.toBeUndefined();
+    await expect(store.load('demo', 'task-123', 'scope-a')).resolves.toBeNull();
+
+    await writeFile(target, '{broken-again', 'utf8');
+    await expect(store.load('demo', 'task-123', 'scope-a')).rejects.toThrow(
+      'Corrupted review draft history file'
+    );
+    await store.clearScope('demo', 'task-123', 'scope-a');
+    const replacement = await store.saveEntry('demo', 'task-123', 'scope-a', {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'new',
+      editorState: editorState('newer', ['newer']),
+    });
+
+    await expect(
+      store.clearUnreadableScope('demo', 'task-123', 'scope-a')
+    ).rejects.toThrow(
+      'Saved manual edit history became readable; refusing destructive recovery discard'
+    );
+    await expect(store.load('demo', 'task-123', 'scope-a')).resolves.toMatchObject({
+      entries: { '/repo/a.ts': { generation: replacement.generation, editorState: { doc: 'newer' } } },
+    });
+  });
+
   it('rejects path-like identities and malformed editor states before writing', async () => {
     const { ReviewDraftHistoryStore } = await import(
       '@features/change-review-history/main'

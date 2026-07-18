@@ -1199,4 +1199,60 @@ export class ReviewDecisionStore {
       }
     }
   }
+
+  async clearUnreadableExactScope(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ): Promise<void> {
+    this.assertSafeScope(teamName, scopeKey, scopeToken);
+    const exactPath = this.getV2FilePath(teamName, scopeKey, scopeToken);
+    const legacyPath = this.getLegacyFilePath(teamName, scopeKey);
+    let exactUnreadable = false;
+    let legacyUnreadable = false;
+    let exact: InternalLoadedReviewDecisions | null = null;
+    let legacy: InternalLoadedReviewDecisions | null = null;
+
+    try {
+      exact = await this.loadFromPath(exactPath, scopeToken, scopeKey);
+    } catch (error) {
+      if (!(error instanceof InvalidReviewDecisionDataError)) throw error;
+      exactUnreadable = true;
+    }
+    if (exact) {
+      throw new Error(
+        'Saved review decisions became readable; refusing destructive recovery discard'
+      );
+    }
+
+    try {
+      legacy = await this.loadFromPath(legacyPath, scopeToken, scopeKey);
+    } catch (error) {
+      if (!(error instanceof InvalidReviewDecisionDataError)) throw error;
+      legacyUnreadable = true;
+    }
+    if (legacy) {
+      // A corrupt exact snapshot can hide a valid legacy fallback. Remove only the corrupt
+      // blocker and make the renderer hydrate the readable state instead of deleting it.
+      if (exactUnreadable) {
+        await unlinkPathDurably(exactPath).catch((error: NodeJS.ErrnoException) => {
+          if (error.code !== 'ENOENT') throw error;
+        });
+      }
+      throw new Error(
+        'Saved review decisions became readable; refusing destructive recovery discard'
+      );
+    }
+
+    if (exactUnreadable) {
+      await unlinkPathDurably(exactPath).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== 'ENOENT') throw error;
+      });
+    }
+    if (legacyUnreadable) {
+      await unlinkPathDurably(legacyPath).catch((error: NodeJS.ErrnoException) => {
+        if (error.code !== 'ENOENT') throw error;
+      });
+    }
+  }
 }

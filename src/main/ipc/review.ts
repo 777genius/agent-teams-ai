@@ -3930,8 +3930,8 @@ async function handleClearDecisions(
             'Cannot discard a disk mutation that may be partially applied. Retry recovery instead.'
           );
         }
+        await reviewDecisionStore.clearUnreadableExactScope(teamName, scopeKey, scopeToken);
         await reviewMutationJournal.clearScope(teamName, persistenceScope);
-        await reviewDecisionStore.clear(teamName, scopeKey, scopeToken);
         return { revision: 0 };
       }
       if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
@@ -4012,7 +4012,7 @@ async function handleClearDraftHistory(
           expectedGeneration
         );
       } else {
-        await reviewDraftHistoryStore.clearScope(teamName, scopeKey, scopeToken);
+        await reviewDraftHistoryStore.clearUnreadableScope(teamName, scopeKey, scopeToken);
       }
     });
   });
