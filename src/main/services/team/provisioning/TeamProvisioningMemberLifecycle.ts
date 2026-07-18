@@ -21,6 +21,7 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { cleanupAnthropicTeamApiKeyHelperMaterial } from '../../runtime/anthropicTeamApiKeyHelper';
 import { mergeJsonSettingsArgs } from '../../runtime/cliSettingsArgs';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 import { atomicWriteAsync } from '../atomicWrite';
@@ -207,6 +208,30 @@ async function ensureCwdExists(cwd: string): Promise<void> {
   if (!stat?.isDirectory()) {
     throw new Error(`Project path is not available for teammate restart: ${cwd}`);
   }
+}
+
+async function cleanupPendingAnthropicApiKeyHelper(
+  envResolution: ProvisioningEnvResolution,
+  contextLabel: string
+): Promise<void> {
+  const helper = (
+    envResolution as ProvisioningEnvResolution & {
+      anthropicApiKeyHelper?: { directory: string } | null;
+    }
+  ).anthropicApiKeyHelper;
+  if (!helper) {
+    return;
+  }
+  await cleanupAnthropicTeamApiKeyHelperMaterial({
+    directory: helper.directory,
+    skipIfLiveProcessReferences: true,
+  }).catch((cleanupError: unknown) => {
+    logger.warn(
+      `[${contextLabel}] Failed to clean pending Anthropic API-key helper: ${
+        cleanupError instanceof Error ? cleanupError.message : String(cleanupError)
+      }`
+    );
+  });
 }
 
 export type { OpenCodeSecondaryRetryCandidate } from './TeamProvisioningCollectFailedOpenCodeSecondaryRetryCandidatesUseCase';
@@ -650,148 +675,161 @@ export class TeamProvisioningMemberLifecycleController {
         allowAnthropicApiKeyHelper: true,
       },
     });
-    if (provisioningEnv.warning) {
-      throw new Error(provisioningEnv.warning);
-    }
+    let directTmuxLaunchSucceeded = false;
+    try {
+      if (provisioningEnv.warning) {
+        throw new Error(provisioningEnv.warning);
+      }
 
-    const [materializedMemberSpec] = await this.materializeEffectiveTeamMemberSpecs({
-      claudePath,
-      cwd,
-      members: [preliminaryMemberSpec],
-      defaults: {
-        providerId: resolveTeamProviderId(input.run.request.providerId),
-        model: input.run.request.model,
-        effort: input.run.request.effort,
-      },
-      primaryProviderId: providerId,
-      primaryEnv: provisioningEnv,
-      teamRuntimeAuth: {
+      const [materializedMemberSpec] = await this.materializeEffectiveTeamMemberSpecs({
+        claudePath,
+        cwd,
+        members: [preliminaryMemberSpec],
+        defaults: {
+          providerId: resolveTeamProviderId(input.run.request.providerId),
+          model: input.run.request.model,
+          effort: input.run.request.effort,
+        },
+        primaryProviderId: providerId,
+        primaryEnv: provisioningEnv,
+        teamRuntimeAuth: {
+          teamName: input.teamName,
+          authMaterialId: `${input.run.runId}-direct-${operation}-${input.configuredMember.name}-defaults-${randomUUID()}`,
+          allowAnthropicApiKeyHelper: true,
+        },
+      });
+      const memberSpec = materializedMemberSpec ?? preliminaryMemberSpec;
+      const launchIdentity = await this.resolveDirectMemberLaunchIdentity({
+        claudePath,
+        cwd,
+        providerId,
+        ...(providerBackendId ? { providerBackendId } : {}),
+        provisioningEnv,
+        memberSpec,
+        run: input.run,
+      });
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+      const memberMcpPolicy = normalizeTeamMemberMcpPolicy(memberSpec.mcpPolicy);
+      const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(cwd, {
+        mcpPolicy: memberMcpPolicy,
+        controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
+      });
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+      const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
+      input.run.memberMcpConfigPaths = memberMcpConfigPaths;
+      memberMcpConfigPaths.push(mcpConfigPath);
+      const memberMcpSettingSources = buildTeamMemberMcpSettingSources(memberMcpPolicy);
+      const strictMemberMcpConfig = requiresStrictTeamMemberMcpConfig(memberMcpPolicy);
+      const agentId = `${input.configuredMember.name}@${input.teamName}`;
+      const color =
+        input.config.members
+          ?.find((member) => matchesExactTeamMemberName(member.name, input.memberName))
+          ?.color?.trim() || getMemberColorByName(input.configuredMember.name);
+      const parentSessionId =
+        input.run.detectedSessionId?.trim() ||
+        input.config.leadSessionId?.trim() ||
+        input.run.runId;
+      const prompt = buildMemberSpawnPrompt(
+        memberSpec,
+        input.displayName,
+        input.teamName,
+        input.leadName,
+        { restart: true }
+      );
+      const bootstrapExpectedAfter = nowIso();
+      const runtimeArgsPlan = await this.buildTeamRuntimeLaunchArgsPlan({
         teamName: input.teamName,
-        authMaterialId: `${input.run.runId}-direct-${operation}-${input.configuredMember.name}-defaults-${randomUUID()}`,
-        allowAnthropicApiKeyHelper: true,
-      },
-    });
-    const memberSpec = materializedMemberSpec ?? preliminaryMemberSpec;
-    const launchIdentity = await this.resolveDirectMemberLaunchIdentity({
-      claudePath,
-      cwd,
-      providerId,
-      ...(providerBackendId ? { providerBackendId } : {}),
-      provisioningEnv,
-      memberSpec,
-      run: input.run,
-    });
-    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
-    const memberMcpPolicy = normalizeTeamMemberMcpPolicy(memberSpec.mcpPolicy);
-    const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(cwd, {
-      mcpPolicy: memberMcpPolicy,
-      controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
-    });
-    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
-    const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
-    input.run.memberMcpConfigPaths = memberMcpConfigPaths;
-    memberMcpConfigPaths.push(mcpConfigPath);
-    const memberMcpSettingSources = buildTeamMemberMcpSettingSources(memberMcpPolicy);
-    const strictMemberMcpConfig = requiresStrictTeamMemberMcpConfig(memberMcpPolicy);
-    const agentId = `${input.configuredMember.name}@${input.teamName}`;
-    const color =
-      input.config.members
-        ?.find((member) => matchesExactTeamMemberName(member.name, input.memberName))
-        ?.color?.trim() || getMemberColorByName(input.configuredMember.name);
-    const parentSessionId =
-      input.run.detectedSessionId?.trim() || input.config.leadSessionId?.trim() || input.run.runId;
-    const prompt = buildMemberSpawnPrompt(
-      memberSpec,
-      input.displayName,
-      input.teamName,
-      input.leadName,
-      { restart: true }
-    );
-    const bootstrapExpectedAfter = nowIso();
-    const runtimeArgsPlan = await this.buildTeamRuntimeLaunchArgsPlan({
-      teamName: input.teamName,
-      providerId,
-      launchIdentity,
-      envResolution: provisioningEnv,
-      extraArgs: [],
-      includeAnthropicHelper: providerId === 'anthropic',
-      contextLabel: `Direct teammate restart (${input.configuredMember.name})`,
-    });
-    applyAppManagedRuntimeSettingsPathEnv(
-      provisioningEnv.env,
-      runtimeArgsPlan.appManagedSettingsPath
-    );
+        providerId,
+        launchIdentity,
+        envResolution: provisioningEnv,
+        extraArgs: [],
+        includeAnthropicHelper: providerId === 'anthropic',
+        contextLabel: `Direct teammate restart (${input.configuredMember.name})`,
+      });
+      applyAppManagedRuntimeSettingsPathEnv(
+        provisioningEnv.env,
+        runtimeArgsPlan.appManagedSettingsPath
+      );
 
-    const runtimeArgs = mergeJsonSettingsArgs([
-      '--agent-id',
-      agentId,
-      '--agent-name',
-      input.configuredMember.name,
-      '--team-name',
-      input.teamName,
-      '--agent-color',
-      color,
-      '--parent-session-id',
-      parentSessionId,
-      ...(input.configuredMember.agentType
-        ? ['--agent-type', input.configuredMember.agentType]
-        : []),
-      '--setting-sources',
-      memberMcpSettingSources,
-      '--mcp-config',
-      mcpConfigPath,
-      ...(strictMemberMcpConfig ? ['--strict-mcp-config'] : []),
-      '--disallowedTools',
-      APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
-      ...(input.run.request.skipPermissions !== false
-        ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
-        : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
-      ...(memberSpec.model ? ['--model', memberSpec.model] : []),
-      ...(memberSpec.effort ? ['--effort', memberSpec.effort] : []),
-      ...runtimeArgsPlan.providerArgs,
-      ...runtimeArgsPlan.fastModeArgs,
-      ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
-      ...runtimeArgsPlan.settingsArgs,
-    ]);
-    const command = buildDirectTmuxRestartCommand({
-      cwd,
-      env: provisioningEnv.env,
-      providerId,
-      binaryPath: claudePath,
-      args: runtimeArgs,
-    });
+      const runtimeArgs = mergeJsonSettingsArgs([
+        '--agent-id',
+        agentId,
+        '--agent-name',
+        input.configuredMember.name,
+        '--team-name',
+        input.teamName,
+        '--agent-color',
+        color,
+        '--parent-session-id',
+        parentSessionId,
+        ...(input.configuredMember.agentType
+          ? ['--agent-type', input.configuredMember.agentType]
+          : []),
+        '--setting-sources',
+        memberMcpSettingSources,
+        '--mcp-config',
+        mcpConfigPath,
+        ...(strictMemberMcpConfig ? ['--strict-mcp-config'] : []),
+        '--disallowedTools',
+        APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
+        ...(input.run.request.skipPermissions !== false
+          ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
+          : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
+        ...(memberSpec.model ? ['--model', memberSpec.model] : []),
+        ...(memberSpec.effort ? ['--effort', memberSpec.effort] : []),
+        ...runtimeArgsPlan.providerArgs,
+        ...runtimeArgsPlan.fastModeArgs,
+        ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
+        ...runtimeArgsPlan.settingsArgs,
+      ]);
+      const command = buildDirectTmuxRestartCommand({
+        cwd,
+        env: provisioningEnv.env,
+        providerId,
+        binaryPath: claudePath,
+        args: runtimeArgs,
+      });
 
-    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
-    await this.updateDirectTmuxRestartMemberConfig({
-      teamName: input.teamName,
-      memberName: input.memberName,
-      member: memberSpec,
-      agentId,
-      color,
-      prompt,
-      paneId: input.paneId,
-      cwd,
-      providerId,
-      joinedAt: Date.now(),
-      bootstrapExpectedAfter,
-      assertStillCurrent: this.createRunStillCurrentGuard(input.run, input.teamName),
-    });
-    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
-    this.enqueueDirectRestartPrompt({
-      teamName: input.teamName,
-      memberName: input.configuredMember.name,
-      leadName: input.leadName,
-      leadSessionId: parentSessionId,
-      prompt,
-      operation,
-    });
-    await sendKeysToTmuxPaneForCurrentPlatform(input.paneId, command);
-    this.appendMemberBootstrapDiagnostic(
-      input.run,
-      input.memberName,
-      `restart command delivered to tmux pane ${input.paneId}`
-    );
-    this.setMemberSpawnStatus(input.run, input.memberName, 'waiting');
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+      await this.updateDirectTmuxRestartMemberConfig({
+        teamName: input.teamName,
+        memberName: input.memberName,
+        member: memberSpec,
+        agentId,
+        color,
+        prompt,
+        paneId: input.paneId,
+        cwd,
+        providerId,
+        joinedAt: Date.now(),
+        bootstrapExpectedAfter,
+        assertStillCurrent: this.createRunStillCurrentGuard(input.run, input.teamName),
+      });
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+      this.enqueueDirectRestartPrompt({
+        teamName: input.teamName,
+        memberName: input.configuredMember.name,
+        leadName: input.leadName,
+        leadSessionId: parentSessionId,
+        prompt,
+        operation,
+      });
+      await sendKeysToTmuxPaneForCurrentPlatform(input.paneId, command);
+      this.appendMemberBootstrapDiagnostic(
+        input.run,
+        input.memberName,
+        `restart command delivered to tmux pane ${input.paneId}`
+      );
+      this.setMemberSpawnStatus(input.run, input.memberName, 'waiting');
+      directTmuxLaunchSucceeded = true;
+    } finally {
+      if (!directTmuxLaunchSucceeded) {
+        await cleanupPendingAnthropicApiKeyHelper(
+          provisioningEnv,
+          `${input.teamName} direct tmux restart for ${input.configuredMember.name}`
+        );
+      }
+    }
   }
 
   private async launchDirectProcessMemberRestart(
@@ -838,302 +876,322 @@ export class TeamProvisioningMemberLifecycleController {
         allowAnthropicApiKeyHelper: true,
       },
     });
-    if (provisioningEnv.warning) {
-      throw new Error(provisioningEnv.warning);
-    }
-
-    const [materializedMemberSpec] = await this.materializeEffectiveTeamMemberSpecs({
-      claudePath,
-      cwd,
-      members: [preliminaryMemberSpec],
-      defaults: {
-        providerId: resolveTeamProviderId(input.run.request.providerId),
-        model: input.run.request.model,
-        effort: input.run.request.effort,
-      },
-      primaryProviderId: providerId,
-      primaryEnv: provisioningEnv,
-      teamRuntimeAuth: {
-        teamName: input.teamName,
-        authMaterialId: `${input.run.runId}-process-${operation}-${input.configuredMember.name}-defaults-${randomUUID()}`,
-        allowAnthropicApiKeyHelper: true,
-      },
-    });
-    const memberSpec = materializedMemberSpec ?? preliminaryMemberSpec;
-    const launchIdentity = await this.resolveDirectMemberLaunchIdentity({
-      claudePath,
-      cwd,
-      providerId,
-      ...(providerBackendId ? { providerBackendId } : {}),
-      provisioningEnv,
-      memberSpec,
-      run: input.run,
-    });
-    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
-    const memberMcpPolicy = normalizeTeamMemberMcpPolicy(memberSpec.mcpPolicy);
-    const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(cwd, {
-      mcpPolicy: memberMcpPolicy,
-      controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
-    });
-    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
-    const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
-    input.run.memberMcpConfigPaths = memberMcpConfigPaths;
-    memberMcpConfigPaths.push(mcpConfigPath);
-    const memberMcpSettingSources = buildTeamMemberMcpSettingSources(memberMcpPolicy);
-    const strictMemberMcpConfig = requiresStrictTeamMemberMcpConfig(memberMcpPolicy);
-    const agentId = `${input.configuredMember.name}@${input.teamName}`;
-    const color =
-      input.config.members
-        ?.find((member) => matchesExactTeamMemberName(member.name, input.memberName))
-        ?.color?.trim() || getMemberColorByName(input.configuredMember.name);
-    const parentSessionId =
-      input.run.detectedSessionId?.trim() || input.config.leadSessionId?.trim() || input.run.runId;
-    const prompt = buildMemberSpawnPrompt(
-      memberSpec,
-      input.displayName,
-      input.teamName,
-      input.leadName,
-      operation === 'manual_restart' ? { restart: true } : undefined
-    );
-    const bootstrapExpectedAfter = nowIso();
-    const bootstrapProofToken = randomUUID();
-    const runtimePaths = this.getDirectProcessRestartRuntimePaths(
-      input.teamName,
-      input.configuredMember.name
-    );
-    await atomicWriteAsync(runtimePaths.eventsPath, '', { mode: 0o600 });
-
-    const nativeBootstrapSpec =
-      (
-        await buildNativeAppManagedBootstrapSpecs({
-          teamName: input.teamName,
-          cwd,
-          members: [memberSpec],
-        })
-      ).get(input.configuredMember.name) ?? null;
-    const nativeBootstrapEnv = await this.materializeDirectProcessNativeBootstrapContext({
-      teamName: input.teamName,
-      memberName: input.configuredMember.name,
-      agentId,
-      providerId,
-      runId: input.run.runId,
-      bootstrapProofToken,
-      spec: nativeBootstrapSpec,
-    });
-
-    const runtimeArgsPlan = await this.buildTeamRuntimeLaunchArgsPlan({
-      teamName: input.teamName,
-      providerId,
-      launchIdentity,
-      envResolution: provisioningEnv,
-      extraArgs: [],
-      includeAnthropicHelper: providerId === 'anthropic',
-      contextLabel: `Direct process teammate ${operation} (${input.configuredMember.name})`,
-    });
-    applyAppManagedRuntimeSettingsPathEnv(
-      provisioningEnv.env,
-      runtimeArgsPlan.appManagedSettingsPath
-    );
-
-    const runtimeArgs = mergeJsonSettingsArgs([
-      '--teammate-runtime',
-      'headless',
-      '--agent-id',
-      agentId,
-      '--agent-name',
-      input.configuredMember.name,
-      '--team-name',
-      input.teamName,
-      '--agent-color',
-      color,
-      '--parent-session-id',
-      parentSessionId,
-      ...(input.configuredMember.agentType
-        ? ['--agent-type', input.configuredMember.agentType]
-        : []),
-      '--setting-sources',
-      memberMcpSettingSources,
-      '--mcp-config',
-      mcpConfigPath,
-      ...(strictMemberMcpConfig ? ['--strict-mcp-config'] : []),
-      '--disallowedTools',
-      APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
-      ...(input.run.request.skipPermissions !== false
-        ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
-        : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
-      ...(memberSpec.model ? ['--model', memberSpec.model] : []),
-      ...(memberSpec.effort ? ['--effort', memberSpec.effort] : []),
-      ...runtimeArgsPlan.providerArgs,
-      ...runtimeArgsPlan.fastModeArgs,
-      ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
-      ...runtimeArgsPlan.settingsArgs,
-    ]);
-
-    this.assertRunStillCurrentAndAlive(input.run, input.teamName);
-    const stdoutLog = fs.createWriteStream(runtimePaths.stdoutPath, { flags: 'a', mode: 0o600 });
-    const stderrLog = fs.createWriteStream(runtimePaths.stderrPath, { flags: 'a', mode: 0o600 });
-    const child = spawnCli(claudePath, runtimeArgs, {
-      cwd,
-      detached: true,
-      env: {
-        ...provisioningEnv.env,
-        ...nativeBootstrapEnv,
-        [TEAMMATE_RUNTIME_ENV]: 'headless',
-        [TEAMMATE_RUNTIME_EVENTS_ENV]: runtimePaths.eventsPath,
-        [TEAMMATE_BOOTSTRAP_PROOF_TOKEN_ENV]: bootstrapProofToken,
-      },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    if (!child.pid) {
-      stdoutLog.destroy();
-      stderrLog.destroy();
-      throw new Error(`Failed to spawn teammate process for ${agentId}: missing pid`);
-    }
-
-    const runtimePid = child.pid;
-    const processPaneId = `process:${runtimePid}`;
-    const runtimeEventSource = `TeamProvisioningService.direct_process_${operation}`;
-    child.stdout?.pipe(stdoutLog);
-    child.stderr?.pipe(stderrLog);
-    child.stdin?.on('error', (error) => {
-      logger.debug(
-        `[${input.teamName}] Direct process ${operation} stdin failed for ${agentId}: ${error.message}`
-      );
-    });
-    child.once('close', (code, signal) => {
-      void this.appendDirectProcessRuntimeEvent({
-        type: 'exited',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-        detail:
-          code !== null
-            ? `process exited with code ${code}`
-            : signal
-              ? `process exited from signal ${signal}`
-              : 'process exited',
-      });
-      stdoutLog.end();
-      stderrLog.end();
-    });
-    child.once('error', (error) => {
-      void this.appendDirectProcessRuntimeEvent({
-        type: 'failed',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-        detail: `process error: ${error.message}`,
-      });
-    });
-    (child.stdin as { unref?: () => void } | null)?.unref?.();
-    (child.stdout as { unref?: () => void } | null)?.unref?.();
-    (child.stderr as { unref?: () => void } | null)?.unref?.();
-    child.unref();
-
+    let directProcessLaunchSucceeded = false;
     try {
-      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
-      await this.appendDirectProcessRuntimeEvent({
-        type: 'process_spawned',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-        detail: 'process spawned',
+      if (provisioningEnv.warning) {
+        throw new Error(provisioningEnv.warning);
+      }
+
+      const [materializedMemberSpec] = await this.materializeEffectiveTeamMemberSpecs({
+        claudePath,
+        cwd,
+        members: [preliminaryMemberSpec],
+        defaults: {
+          providerId: resolveTeamProviderId(input.run.request.providerId),
+          model: input.run.request.model,
+          effort: input.run.request.effort,
+        },
+        primaryProviderId: providerId,
+        primaryEnv: provisioningEnv,
+        teamRuntimeAuth: {
+          teamName: input.teamName,
+          authMaterialId: `${input.run.runId}-process-${operation}-${input.configuredMember.name}-defaults-${randomUUID()}`,
+          allowAnthropicApiKeyHelper: true,
+        },
       });
-      await this.appendDirectProcessRuntimeEvent({
-        type: 'stdout_attached',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
-        agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
-        detail: 'stdout and stderr attached',
-      });
-      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
-      await this.updateDirectTmuxRestartMemberConfig({
-        teamName: input.teamName,
-        memberName: input.memberName,
-        member: memberSpec,
-        agentId,
-        color,
-        prompt,
-        paneId: processPaneId,
+      const memberSpec = materializedMemberSpec ?? preliminaryMemberSpec;
+      const launchIdentity = await this.resolveDirectMemberLaunchIdentity({
+        claudePath,
         cwd,
         providerId,
-        joinedAt: Date.now(),
-        bootstrapExpectedAfter,
-        backendType: 'process',
-        runtimePid,
-        bootstrapRuntimeEventsPath: runtimePaths.eventsPath,
-        bootstrapProofToken,
-        bootstrapRunId: input.run.runId,
-        ...(nativeBootstrapSpec
-          ? {
-              bootstrapContextHash: nativeBootstrapSpec.contextHash,
-              bootstrapBriefingHash: nativeBootstrapSpec.briefingHash,
-            }
-          : {}),
-        assertStillCurrent: this.createRunStillCurrentGuard(input.run, input.teamName),
+        ...(providerBackendId ? { providerBackendId } : {}),
+        provisioningEnv,
+        memberSpec,
+        run: input.run,
       });
       this.assertRunStillCurrentAndAlive(input.run, input.teamName);
-      this.enqueueDirectRestartPrompt({
+      const memberMcpPolicy = normalizeTeamMemberMcpPolicy(memberSpec.mcpPolicy);
+      const mcpConfigPath = await this.mcpConfigBuilder.writeConfigFile(cwd, {
+        mcpPolicy: memberMcpPolicy,
+        controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
+      });
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+      const memberMcpConfigPaths = input.run.memberMcpConfigPaths ?? [];
+      input.run.memberMcpConfigPaths = memberMcpConfigPaths;
+      memberMcpConfigPaths.push(mcpConfigPath);
+      const memberMcpSettingSources = buildTeamMemberMcpSettingSources(memberMcpPolicy);
+      const strictMemberMcpConfig = requiresStrictTeamMemberMcpConfig(memberMcpPolicy);
+      const agentId = `${input.configuredMember.name}@${input.teamName}`;
+      const color =
+        input.config.members
+          ?.find((member) => matchesExactTeamMemberName(member.name, input.memberName))
+          ?.color?.trim() || getMemberColorByName(input.configuredMember.name);
+      const parentSessionId =
+        input.run.detectedSessionId?.trim() ||
+        input.config.leadSessionId?.trim() ||
+        input.run.runId;
+      const prompt = buildMemberSpawnPrompt(
+        memberSpec,
+        input.displayName,
+        input.teamName,
+        input.leadName,
+        operation === 'manual_restart' ? { restart: true } : undefined
+      );
+      const bootstrapExpectedAfter = nowIso();
+      const bootstrapProofToken = randomUUID();
+      const runtimePaths = this.getDirectProcessRestartRuntimePaths(
+        input.teamName,
+        input.configuredMember.name
+      );
+      await atomicWriteAsync(runtimePaths.eventsPath, '', { mode: 0o600 });
+
+      const nativeBootstrapSpec =
+        (
+          await buildNativeAppManagedBootstrapSpecs({
+            teamName: input.teamName,
+            cwd,
+            members: [memberSpec],
+          })
+        ).get(input.configuredMember.name) ?? null;
+      const nativeBootstrapEnv = await this.materializeDirectProcessNativeBootstrapContext({
         teamName: input.teamName,
         memberName: input.configuredMember.name,
-        leadName: input.leadName,
-        leadSessionId: parentSessionId,
-        prompt,
-        operation,
-      });
-      await this.appendDirectProcessRuntimeEvent({
-        type: 'mailbox_bootstrap_written',
-        eventsPath: runtimePaths.eventsPath,
-        pid: runtimePid,
-        teamName: input.teamName,
-        agentName: input.configuredMember.name,
         agentId,
-        runId: parentSessionId,
-        bootstrapRunId: input.run.runId,
-        source: runtimeEventSource,
+        providerId,
+        runId: input.run.runId,
+        bootstrapProofToken,
+        spec: nativeBootstrapSpec,
       });
-      this.upsertRunAllEffectiveMember(input.run, memberSpec);
-      this.appendMemberBootstrapDiagnostic(
-        input.run,
-        input.memberName,
-        operation === 'manual_restart'
-          ? `restart process spawned with pid ${runtimePid}`
-          : `runtime process spawned with pid ${runtimePid}`
+
+      const runtimeArgsPlan = await this.buildTeamRuntimeLaunchArgsPlan({
+        teamName: input.teamName,
+        providerId,
+        launchIdentity,
+        envResolution: provisioningEnv,
+        extraArgs: [],
+        includeAnthropicHelper: providerId === 'anthropic',
+        contextLabel: `Direct process teammate ${operation} (${input.configuredMember.name})`,
+      });
+      applyAppManagedRuntimeSettingsPathEnv(
+        provisioningEnv.env,
+        runtimeArgsPlan.appManagedSettingsPath
       );
-      this.setMemberSpawnStatus(input.run, input.memberName, 'waiting');
-    } catch (error) {
+
+      const runtimeArgs = mergeJsonSettingsArgs([
+        '--teammate-runtime',
+        'headless',
+        '--agent-id',
+        agentId,
+        '--agent-name',
+        input.configuredMember.name,
+        '--team-name',
+        input.teamName,
+        '--agent-color',
+        color,
+        '--parent-session-id',
+        parentSessionId,
+        ...(input.configuredMember.agentType
+          ? ['--agent-type', input.configuredMember.agentType]
+          : []),
+        '--setting-sources',
+        memberMcpSettingSources,
+        '--mcp-config',
+        mcpConfigPath,
+        ...(strictMemberMcpConfig ? ['--strict-mcp-config'] : []),
+        '--disallowedTools',
+        APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
+        ...(input.run.request.skipPermissions !== false
+          ? ['--dangerously-skip-permissions', '--permission-mode', 'bypassPermissions']
+          : ['--permission-prompt-tool', 'stdio', '--permission-mode', 'default']),
+        ...(memberSpec.model ? ['--model', memberSpec.model] : []),
+        ...(memberSpec.effort ? ['--effort', memberSpec.effort] : []),
+        ...runtimeArgsPlan.providerArgs,
+        ...runtimeArgsPlan.fastModeArgs,
+        ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
+        ...runtimeArgsPlan.settingsArgs,
+      ]);
+
+      this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+      const stdoutLog = fs.createWriteStream(runtimePaths.stdoutPath, { flags: 'a', mode: 0o600 });
+      const stderrLog = fs.createWriteStream(runtimePaths.stderrPath, { flags: 'a', mode: 0o600 });
+      let child: ReturnType<typeof spawnCli>;
       try {
-        killProcessByPid(runtimePid);
-      } catch (killError) {
-        logger.warn(
-          `[${input.teamName}] Failed to stop orphaned direct process ${agentId} pid=${runtimePid}: ${
-            killError instanceof Error ? killError.message : String(killError)
-          }`
+        child = spawnCli(claudePath, runtimeArgs, {
+          cwd,
+          detached: true,
+          env: {
+            ...provisioningEnv.env,
+            ...nativeBootstrapEnv,
+            [TEAMMATE_RUNTIME_ENV]: 'headless',
+            [TEAMMATE_RUNTIME_EVENTS_ENV]: runtimePaths.eventsPath,
+            [TEAMMATE_BOOTSTRAP_PROOF_TOKEN_ENV]: bootstrapProofToken,
+          },
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+      } catch (error) {
+        stdoutLog.destroy();
+        stderrLog.destroy();
+        throw error;
+      }
+      if (!child.pid) {
+        stdoutLog.destroy();
+        stderrLog.destroy();
+        throw new Error(`Failed to spawn teammate process for ${agentId}: missing pid`);
+      }
+
+      const runtimePid = child.pid;
+      const processPaneId = `process:${runtimePid}`;
+      const runtimeEventSource = `TeamProvisioningService.direct_process_${operation}`;
+      child.stdout?.pipe(stdoutLog);
+      child.stderr?.pipe(stderrLog);
+      child.stdin?.on('error', (error) => {
+        logger.debug(
+          `[${input.teamName}] Direct process ${operation} stdin failed for ${agentId}: ${error.message}`
+        );
+      });
+      child.once('close', (code, signal) => {
+        void this.appendDirectProcessRuntimeEvent({
+          type: 'exited',
+          eventsPath: runtimePaths.eventsPath,
+          pid: runtimePid,
+          teamName: input.teamName,
+          agentName: input.configuredMember.name,
+          agentId,
+          runId: parentSessionId,
+          bootstrapRunId: input.run.runId,
+          source: runtimeEventSource,
+          detail:
+            code !== null
+              ? `process exited with code ${code}`
+              : signal
+                ? `process exited from signal ${signal}`
+                : 'process exited',
+        });
+        stdoutLog.end();
+        stderrLog.end();
+      });
+      child.once('error', (error) => {
+        void this.appendDirectProcessRuntimeEvent({
+          type: 'failed',
+          eventsPath: runtimePaths.eventsPath,
+          pid: runtimePid,
+          teamName: input.teamName,
+          agentName: input.configuredMember.name,
+          agentId,
+          runId: parentSessionId,
+          bootstrapRunId: input.run.runId,
+          source: runtimeEventSource,
+          detail: `process error: ${error.message}`,
+        });
+      });
+      (child.stdin as { unref?: () => void } | null)?.unref?.();
+      (child.stdout as { unref?: () => void } | null)?.unref?.();
+      (child.stderr as { unref?: () => void } | null)?.unref?.();
+      child.unref();
+
+      try {
+        this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+        await this.appendDirectProcessRuntimeEvent({
+          type: 'process_spawned',
+          eventsPath: runtimePaths.eventsPath,
+          pid: runtimePid,
+          teamName: input.teamName,
+          agentName: input.configuredMember.name,
+          agentId,
+          runId: parentSessionId,
+          bootstrapRunId: input.run.runId,
+          source: runtimeEventSource,
+          detail: 'process spawned',
+        });
+        await this.appendDirectProcessRuntimeEvent({
+          type: 'stdout_attached',
+          eventsPath: runtimePaths.eventsPath,
+          pid: runtimePid,
+          teamName: input.teamName,
+          agentName: input.configuredMember.name,
+          agentId,
+          runId: parentSessionId,
+          bootstrapRunId: input.run.runId,
+          source: runtimeEventSource,
+          detail: 'stdout and stderr attached',
+        });
+        this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+        await this.updateDirectTmuxRestartMemberConfig({
+          teamName: input.teamName,
+          memberName: input.memberName,
+          member: memberSpec,
+          agentId,
+          color,
+          prompt,
+          paneId: processPaneId,
+          cwd,
+          providerId,
+          joinedAt: Date.now(),
+          bootstrapExpectedAfter,
+          backendType: 'process',
+          runtimePid,
+          bootstrapRuntimeEventsPath: runtimePaths.eventsPath,
+          bootstrapProofToken,
+          bootstrapRunId: input.run.runId,
+          ...(nativeBootstrapSpec
+            ? {
+                bootstrapContextHash: nativeBootstrapSpec.contextHash,
+                bootstrapBriefingHash: nativeBootstrapSpec.briefingHash,
+              }
+            : {}),
+          assertStillCurrent: this.createRunStillCurrentGuard(input.run, input.teamName),
+        });
+        this.assertRunStillCurrentAndAlive(input.run, input.teamName);
+        this.enqueueDirectRestartPrompt({
+          teamName: input.teamName,
+          memberName: input.configuredMember.name,
+          leadName: input.leadName,
+          leadSessionId: parentSessionId,
+          prompt,
+          operation,
+        });
+        await this.appendDirectProcessRuntimeEvent({
+          type: 'mailbox_bootstrap_written',
+          eventsPath: runtimePaths.eventsPath,
+          pid: runtimePid,
+          teamName: input.teamName,
+          agentName: input.configuredMember.name,
+          agentId,
+          runId: parentSessionId,
+          bootstrapRunId: input.run.runId,
+          source: runtimeEventSource,
+        });
+        this.upsertRunAllEffectiveMember(input.run, memberSpec);
+        this.appendMemberBootstrapDiagnostic(
+          input.run,
+          input.memberName,
+          operation === 'manual_restart'
+            ? `restart process spawned with pid ${runtimePid}`
+            : `runtime process spawned with pid ${runtimePid}`
+        );
+        this.setMemberSpawnStatus(input.run, input.memberName, 'waiting');
+      } catch (error) {
+        try {
+          killProcessByPid(runtimePid);
+        } catch (killError) {
+          logger.warn(
+            `[${input.teamName}] Failed to stop orphaned direct process ${agentId} pid=${runtimePid}: ${
+              killError instanceof Error ? killError.message : String(killError)
+            }`
+          );
+        }
+        stdoutLog.end();
+        stderrLog.end();
+        throw error;
+      }
+      directProcessLaunchSucceeded = true;
+    } finally {
+      if (!directProcessLaunchSucceeded) {
+        await cleanupPendingAnthropicApiKeyHelper(
+          provisioningEnv,
+          `${input.teamName} direct process ${operation} rollback for ${input.configuredMember.name}`
         );
       }
-      stdoutLog.end();
-      stderrLog.end();
-      throw error;
     }
   }
 
