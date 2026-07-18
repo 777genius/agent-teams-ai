@@ -146,6 +146,34 @@ describe("SimpleSecretScanner security", () => {
     });
   });
 
+  it("fully scans text files above one MiB within the bounded default", async () => {
+    const workspacePath = await createGitFixture();
+    const relativePath = "src/large-generated.test.ts";
+    const safePrefix = "x".repeat(1024 * 1024 + 64);
+    await writeFile(join(workspacePath, relativePath), safePrefix, "utf8");
+    const scanner = new SimpleSecretScanner();
+
+    await expect(scanner.scanFiles({
+      workspacePath,
+      files: [relativePath],
+    })).resolves.toEqual({ status: SecretScanStatus.Passed });
+
+    const providerShapedToken = ["\n", "s", "k", "-", "q".repeat(24)].join("");
+    await writeFile(
+      join(workspacePath, relativePath),
+      `${safePrefix}${providerShapedToken}`,
+      "utf8",
+    );
+
+    await expect(scanner.scanFiles({
+      workspacePath,
+      files: [relativePath],
+    })).resolves.toEqual({
+      status: SecretScanStatus.Failed,
+      safeMessage: `secret_like_content:${relativePath}`,
+    });
+  });
+
   it("enforces the remaining aggregate current-file budget before allocation", async () => {
     const workspacePath = await createGitFixture();
     await writeFile(join(workspacePath, "src", "first.txt"), "a".repeat(40));

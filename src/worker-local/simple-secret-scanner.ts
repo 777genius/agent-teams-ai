@@ -15,7 +15,7 @@ import {
 import { readGitBlobBatch } from "./git-blob-batch-reader";
 
 const execFileAsync = promisify(execFile);
-const defaultMaxFileBytes = 1024 * 1024;
+const defaultMaxFileBytes = 2 * 1024 * 1024;
 const defaultMaxTotalFileBytes = 16 * 1024 * 1024;
 const defaultMaxChangedFiles = 256;
 const maximumInputPaths = 1024;
