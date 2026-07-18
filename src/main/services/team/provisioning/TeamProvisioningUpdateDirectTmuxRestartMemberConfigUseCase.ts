@@ -13,6 +13,15 @@ import type { TeamConfig, TeamCreateRequest, TeamProviderId } from '@shared/type
 
 const TEAM_JSON_READ_TIMEOUT_MS = 5_000;
 const TEAM_CONFIG_MAX_BYTES = 10 * 1024 * 1024;
+const PROCESS_BACKEND_OPTIONAL_METADATA_FIELDS = [
+  'runtimePid',
+  'bootstrapRuntimeEventsPath',
+  'bootstrapProofToken',
+  'bootstrapRunId',
+  'bootstrapProofMode',
+  'bootstrapContextHash',
+  'bootstrapBriefingHash',
+] as const;
 
 export interface DirectTmuxRestartMemberConfigInput {
   teamName: string;
@@ -129,8 +138,15 @@ export function createUpdateDirectTmuxRestartMemberConfigUseCase(
     });
     const existing: Record<string, unknown> =
       existingIndex >= 0 ? (members[existingIndex] ?? {}) : {};
+    const backendType = input.backendType ?? 'tmux';
+    const existingForRestart = { ...existing };
+    if (existing.backendType === 'process' && backendType === 'tmux') {
+      for (const field of PROCESS_BACKEND_OPTIONAL_METADATA_FIELDS) {
+        delete existingForRestart[field];
+      }
+    }
     const nextMember = {
-      ...existing,
+      ...existingForRestart,
       agentId: input.agentId,
       name: input.member.name,
       ...(input.member.role ? { role: input.member.role } : {}),
@@ -162,7 +178,7 @@ export function createUpdateDirectTmuxRestartMemberConfigUseCase(
       ...(typeof input.runtimePid === 'number' ? { runtimePid: input.runtimePid } : {}),
       cwd: input.cwd,
       subscriptions: Array.isArray(existing.subscriptions) ? existing.subscriptions : [],
-      backendType: input.backendType ?? 'tmux',
+      backendType,
     };
 
     if (existingIndex >= 0) {
