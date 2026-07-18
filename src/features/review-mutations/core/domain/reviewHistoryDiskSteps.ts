@@ -1,3 +1,4 @@
+import { countLineChanges } from '@shared/utils/lineDiffStats';
 import { normalizePathForComparison } from '@shared/utils/platformPath';
 
 import type {
@@ -12,11 +13,22 @@ interface ReviewHistoryDiskAction {
 }
 
 export type ReviewHistoryDiskTransitionKind = 'create' | 'update' | 'delete' | 'rename';
+export type ReviewHistoryLineStatsStatus =
+  | 'exact'
+  | 'omitted-large-update'
+  | 'omitted-display-limit'
+  | 'unavailable-rename';
 
 export interface ReviewHistoryDiskTransition {
   filePath: string;
   kind: ReviewHistoryDiskTransitionKind;
+  lineStatsStatus: ReviewHistoryLineStatsStatus;
+  linesAdded?: number;
+  linesRemoved?: number;
 }
+
+const MAX_EXACT_LINE_STATS_TRANSITIONS = 5;
+const MAX_EXACT_UPDATE_DIFF_CHARACTERS = 512 * 1024;
 
 export function buildUndoDiskMutationSteps(
   actionId: string,
@@ -220,16 +232,55 @@ export function buildReviewHistoryRestoreDiskSteps(
 export function buildReviewHistoryRestoreDiskImpact(
   actions: readonly ReviewHistoryDiskAction[]
 ): ReviewHistoryDiskTransition[] {
-  return buildReviewHistoryRestoreDiskSteps(actions).map((step) => {
+  return buildReviewHistoryRestoreDiskSteps(actions).map((step, index) => {
+    if (index >= MAX_EXACT_LINE_STATS_TRANSITIONS) {
+      return {
+        filePath: step.filePath,
+        kind:
+          step.type === 'delete'
+            ? 'delete'
+            : step.type === 'write'
+              ? step.expectedContent === null
+                ? 'create'
+                : 'update'
+              : 'rename',
+        lineStatsStatus: 'omitted-display-limit',
+      };
+    }
     if (step.type === 'delete') {
-      return { filePath: step.filePath, kind: 'delete' };
+      const { added, removed } = countLineChanges(step.expectedContent, '');
+      return {
+        filePath: step.filePath,
+        kind: 'delete',
+        lineStatsStatus: 'exact',
+        linesAdded: added,
+        linesRemoved: removed,
+      };
     }
     if (step.type === 'write') {
+      if (
+        step.expectedContent !== null &&
+        step.expectedContent.length + step.content.length > MAX_EXACT_UPDATE_DIFF_CHARACTERS
+      ) {
+        return {
+          filePath: step.filePath,
+          kind: 'update',
+          lineStatsStatus: 'omitted-large-update',
+        };
+      }
+      const { added, removed } = countLineChanges(step.expectedContent ?? '', step.content);
       return {
         filePath: step.filePath,
         kind: step.expectedContent === null ? 'create' : 'update',
+        lineStatsStatus: 'exact',
+        linesAdded: added,
+        linesRemoved: removed,
       };
     }
-    return { filePath: step.filePath, kind: 'rename' };
+    return {
+      filePath: step.filePath,
+      kind: 'rename',
+      lineStatsStatus: 'unavailable-rename',
+    };
   });
 }

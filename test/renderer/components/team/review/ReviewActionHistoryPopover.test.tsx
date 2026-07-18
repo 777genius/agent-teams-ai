@@ -181,7 +181,25 @@ describe('ReviewActionHistoryPopover', () => {
           getRestorePreview={() => ({
             direction: 'undo',
             actions: [current],
-            diskTransitions: [{ filePath: '/repo/file.ts', kind: 'update' }],
+            diskTransitions: [
+              {
+                filePath: '/repo/file.ts',
+                kind: 'update',
+                lineStatsStatus: 'exact',
+                linesAdded: 3,
+                linesRemoved: 2,
+              },
+              {
+                filePath: '/repo/renamed.ts',
+                kind: 'rename',
+                lineStatsStatus: 'unavailable-rename',
+              },
+              {
+                filePath: '/repo/large.ts',
+                kind: 'update',
+                lineStatsStatus: 'omitted-large-update',
+              },
+            ],
           })}
           resolveFileLabel={() => 'src/file.ts'}
         />
@@ -196,9 +214,15 @@ describe('ReviewActionHistoryPopover', () => {
     const impact = document.querySelector('[data-review-history-impact]');
     expect(impact?.textContent).toContain('Actions in this jump');
     expect(impact?.textContent).toContain('Accept hunk');
-    expect(impact?.textContent).toContain('1 net disk transition');
+    expect(impact?.textContent).toContain('3 net disk transitions');
     expect(impact?.textContent).toContain('Update');
     expect(impact?.textContent).toContain('src/file.ts');
+    expect(impact?.textContent).toContain('+3');
+    expect(impact?.textContent).toContain('-2');
+    expect(impact?.textContent).toContain('Counts unavailable');
+    expect(impact?.textContent).toContain('Large diff');
+    expect(impact?.textContent).not.toContain('+0');
+    expect(impact?.textContent).not.toContain('-0');
     act(() => root.unmount());
   });
 

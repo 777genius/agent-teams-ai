@@ -18,6 +18,7 @@ export {
   getReviewActionDiskSnapshots,
   type ReviewHistoryDiskTransition,
   type ReviewHistoryDiskTransitionKind,
+  type ReviewHistoryLineStatsStatus,
 } from './core/domain/reviewHistoryDiskSteps';
 export {
   assertReviewMutationTransition,

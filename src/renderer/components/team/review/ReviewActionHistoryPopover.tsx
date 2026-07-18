@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui
 import { cn } from '@renderer/lib/utils';
 import { AlertTriangle, Check, CircleDot, History, Loader2, RotateCcw, X } from 'lucide-react';
 
+import { ChangeStatsBadge } from './ChangeStatsBadge';
 import {
   describeReviewAction,
   getReviewActionFilePath,
@@ -509,6 +510,7 @@ export const ReviewActionHistoryPopover = ({
                     {restoreRequest.preview.diskTransitions.slice(0, 5).map((transition) => (
                       <div
                         key={`${transition.kind}:${transition.filePath}`}
+                        data-review-history-disk-transition={transition.kind}
                         className="flex min-w-0 items-center gap-2"
                       >
                         {(transition.kind === 'delete' || transition.kind === 'rename') && (
@@ -520,6 +522,24 @@ export const ReviewActionHistoryPopover = ({
                         <span className="truncate text-text-muted">
                           {resolveFileLabel?.(transition.filePath) || transition.filePath}
                         </span>
+                        {transition.linesAdded !== undefined &&
+                          transition.linesRemoved !== undefined && (
+                            <ChangeStatsBadge
+                              linesAdded={transition.linesAdded}
+                              linesRemoved={transition.linesRemoved}
+                              className="ml-auto shrink-0"
+                            />
+                          )}
+                        {transition.lineStatsStatus === 'omitted-large-update' && (
+                          <span className="ml-auto shrink-0 text-[10px] text-text-muted">
+                            Large diff
+                          </span>
+                        )}
+                        {transition.lineStatsStatus === 'unavailable-rename' && (
+                          <span className="ml-auto shrink-0 text-[10px] text-text-muted">
+                            Counts unavailable
+                          </span>
+                        )}
                       </div>
                     ))}
                     {restoreRequest.preview.diskTransitions.length > 5 && (
