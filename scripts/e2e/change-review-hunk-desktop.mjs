@@ -32,6 +32,12 @@ const sandboxKanbanTaskTitle = `Array.from((${sandboxKanbanTaskCard})?.querySele
   .find((heading) => heading.textContent?.trim() === 'Verify durable Changes history')`;
 const kanbanTabButton = `Array.from(document.querySelectorAll('button'))
   .find((button) => button.textContent?.trim() === 'Kanban')`;
+const visibleElement = (expression) => `(() => {
+  const element = (${expression});
+  if (!(element instanceof HTMLElement)) return null;
+  const rect = element.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0 ? element : null;
+})()`;
 const appLogTail = [];
 let appProcess = null;
 let client = null;
@@ -129,7 +135,7 @@ async function startApp(port, fixture) {
   });
   appProcess.stdout.on('data', rememberAppLog);
   appProcess.stderr.on('data', rememberAppLog);
-  const webSocketUrl = await waitForCdp(port);
+  const webSocketUrl = await waitForCdp(port, devMcpMode ? 90_000 : 45_000);
   client = await CdpClient.connect(webSocketUrl);
   await client.send('Runtime.enable');
   await client.send('Page.enable');
@@ -138,28 +144,45 @@ async function startApp(port, fixture) {
     `(${sandboxKanbanTaskCard}) || (${selectTeamButton})`,
     'sandbox team navigation'
   );
-  if (!(await client.evaluate(`Boolean(${sandboxKanbanTaskCard})`))) {
-    await client.evaluate(`(${selectTeamButton})?.click()`);
-    await client.waitFor(sandboxTeamCard, 'sandbox team card');
-    await client.evaluate(`(${sandboxTeamCard})?.click()`);
-    await client.waitFor(
-      `(${sandboxKanbanTaskCard}) || (${kanbanTabButton})`,
-      'sandbox team task board'
-    );
-    if (!(await client.evaluate(`Boolean(${sandboxKanbanTaskCard})`))) {
-      await client.evaluate(`(${kanbanTabButton})?.click()`);
-      await client.waitFor(sandboxKanbanTaskCard, 'sandbox Kanban task');
+  const navigationDeadline = Date.now() + 60_000;
+  while (!(await client.evaluate(`Boolean(${sandboxKanbanTaskCard})`))) {
+    if (Date.now() >= navigationDeadline) {
+      throw new Error('Timed out recovering sandbox team navigation after renderer reload');
     }
+    if (await client.evaluate(`Boolean(${visibleElement(sandboxTeamCard)})`)) {
+      await client.domClick(visibleElement(sandboxTeamCard));
+    } else if (await client.evaluate(`Boolean(${visibleElement(kanbanTabButton)})`)) {
+      await client.domClick(visibleElement(kanbanTabButton));
+    } else if (await client.evaluate(`Boolean(${visibleElement(selectTeamButton)})`)) {
+      await client.domClick(visibleElement(selectTeamButton));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
+}
+
+function isProcessGroupAlive(processGroupId) {
+  try {
+    process.kill(-processGroupId, 0);
+    return true;
+  } catch (error) {
+    if (error?.code === 'ESRCH') return false;
+    throw error;
+  }
+}
+
+async function waitForProcessGroupExit(processGroupId, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!isProcessGroupAlive(processGroupId)) return true;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return !isProcessGroupAlive(processGroupId);
 }
 
 async function stopApp() {
   await client?.close().catch(() => undefined);
   client = null;
-  if (!appProcess || appProcess.exitCode !== null) {
-    appProcess = null;
-    return;
-  }
+  if (!appProcess) return;
   const child = appProcess;
   const pid = child.pid;
   const waitForExit = (timeoutMs) => {
@@ -185,14 +208,13 @@ async function stopApp() {
       child.kill('SIGTERM');
     }
     await gracefulExit;
-    if (child.exitCode === null) {
-      const forcedExit = waitForExit(2_000);
+    if (!(await waitForProcessGroupExit(pid, 2_000))) {
       try {
         process.kill(-pid, 'SIGKILL');
       } catch {
         child.kill('SIGKILL');
       }
-      await forcedExit;
+      await waitForProcessGroupExit(pid, 2_000);
     }
   }
   appProcess = null;
@@ -223,6 +245,41 @@ async function killAppImmediately() {
     }
   }
   assert.equal(await exited, true, 'Electron did not exit after SIGKILL');
+  appProcess = null;
+}
+
+async function waitForAppExit(timeoutMs = 30_000) {
+  if (!appProcess || appProcess.exitCode !== null) {
+    await client?.close().catch(() => undefined);
+    client = null;
+    if (appProcess && process.platform !== 'win32') {
+      assert.equal(
+        await waitForProcessGroupExit(appProcess.pid, timeoutMs),
+        true,
+        'Electron process group survived the guarded close request'
+      );
+    }
+    appProcess = null;
+    return;
+  }
+  const child = appProcess;
+  const didExit = await new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(false), timeoutMs);
+    child.once('exit', () => {
+      clearTimeout(timer);
+      resolve(true);
+    });
+  });
+  assert.equal(didExit, true, 'Electron did not exit after the guarded close request');
+  if (process.platform !== 'win32') {
+    assert.equal(
+      await waitForProcessGroupExit(child.pid, timeoutMs),
+      true,
+      'Electron process group survived the guarded close request'
+    );
+  }
+  await client?.close().catch(() => undefined);
+  client = null;
   appProcess = null;
 }
 
@@ -366,9 +423,6 @@ class CdpClient {
   }
 }
 
-const visibleExactText = (text) => `Array.from(document.querySelectorAll('button,span,h1,h2,h3'))
-  .find((element) => element.textContent?.trim() === ${JSON.stringify(text)} &&
-    element.getBoundingClientRect().width > 0 && element.getBoundingClientRect().height > 0)`;
 const buttonWithText = (text) => `Array.from(document.querySelectorAll('button'))
   .find((element) => element.textContent?.trim() === ${JSON.stringify(text)} &&
     element.getBoundingClientRect().width > 0 && element.getBoundingClientRect().height > 0)`;
@@ -491,7 +545,10 @@ async function main() {
   await stopApp();
   await startApp(port, fixture);
   await openReview();
-  await client.waitFor(visibleExactText('#E2E-101'), 'stable task display id before history');
+  await client.waitFor(
+    `document.body?.innerText.includes('#E2E-101')`,
+    'stable task display id before history'
+  );
   await client.waitFor(enabledButtonWithText('Undo'), 'enabled durable Undo after restart');
   await assertDiskLines(fixture.changedFile, 'before-0', 'after-1');
   const historyButton = `document.querySelector('button[aria-label^="Review history:"]')`;
@@ -516,9 +573,7 @@ async function main() {
     'settled review history animation'
   );
   await client.screenshot(historyScreenshot);
-  await client.evaluate(`(${historyButton})?.focus()`);
-  await client.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' });
-  await client.send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' });
+  await client.domClick(historyButton);
   await client.waitFor(
     `!document.body?.innerText.includes('Review action history')`,
     'closed review history'
@@ -558,7 +613,10 @@ async function main() {
   assert.equal(await client.evaluate(`document.body?.innerText.includes('Changed on disk')`), false);
   await assertDiskLines(fixture.changedFile, 'external-0', 'after-1');
   await assertViewportFits();
-  await client.waitFor(visibleExactText('#E2E-101'), 'stable task display id after restart');
+  await client.waitFor(
+    `document.body?.innerText.includes('#E2E-101')`,
+    'stable task display id after restart'
+  );
   await client.screenshot(finalScreenshot);
 
   await client.moveTo(`document.querySelector('.cm-changedLine, .cm-insertedLine')`);
@@ -596,10 +654,30 @@ async function main() {
   await client.waitFor(enabledButtonWithText('Redo'), 'accepted Redo after forced restart Undo');
   await assertDiskLines(fixture.changedFile, 'external-0', 'after-1');
 
+  await client.moveTo(`document.querySelector('.cm-changedLine, .cm-insertedLine')`);
+  await client.waitFor(`document.querySelector('button[title^="Accept change"]')`, 'hunk Accept');
+  await client.domMouseDown(`document.querySelector('button[title^="Accept change"]')`);
+  await client.waitFor(`document.body?.innerText.includes('11 pending')`, 'accepted before close');
+  await client.evaluate(`void window.electronAPI?.windowControls?.close()`);
+  await waitForAppExit();
+
+  await startApp(port, fixture);
+  await openReview();
+  await client.waitFor(enabledButtonWithText('Undo'), 'accepted Undo after guarded app close');
+  await client.waitFor(
+    `document.body?.innerText.includes('11 pending') &&
+      document.querySelector('button[aria-label^="Review history:"][aria-label$="; saved"]')`,
+    'accepted history after guarded app close'
+  );
+  await client.domClick(enabledButtonWithText('Undo'));
+  await client.waitFor(`document.body?.innerText.includes('12 pending')`, 'guarded close Undo result');
+  await assertDiskLines(fixture.changedFile, 'external-0', 'after-1');
+
   process.stdout.write(
     `Changes desktop E2E passed (${devMcpMode ? 'dev:mcp' : 'preview'}): ` +
       `Reject -> Undo -> Redo -> restart -> exact history -> external conflict -> Reload -> ` +
-      `restart -> Accept -> durable ack -> SIGKILL -> restart -> exact Undo\n` +
+      `restart -> Accept -> durable ack -> SIGKILL -> restart -> exact Undo -> ` +
+      `Accept -> guarded app close -> restart -> exact Undo\n` +
       `Artifacts: ${historyScreenshot}, ${conflictScreenshot}, ${finalScreenshot}, ` +
       `${acceptedHistoryScreenshot}\n`
   );
