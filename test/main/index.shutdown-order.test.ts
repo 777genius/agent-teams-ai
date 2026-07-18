@@ -2,6 +2,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 const electronMock = vi.hoisted(() => ({
   app: {
+    // eslint-disable-next-line sonarjs/publicly-writable-directories -- Isolated test-only Electron userData path.
     getPath: vi.fn(() => '/tmp/agent-teams-index-shutdown-test'),
     getVersion: vi.fn(() => '1.3.0'),
     isPackaged: false,
@@ -15,7 +16,9 @@ const electronMock = vi.hoisted(() => ({
   },
   ipcMain: {
     handle: vi.fn(),
+    on: vi.fn(),
     removeHandler: vi.fn(),
+    removeListener: vi.fn(),
   },
 }));
 
@@ -62,18 +65,21 @@ describe('internal storage shutdown order', () => {
         },
       },
       teamTaskStallMonitor: {
-        stop: async () => {
+        stop: () => {
           order.push('stall-monitor-drain');
+          return Promise.resolve();
         },
       },
       memberWorkSyncFeature: {
-        dispose: async () => {
+        dispose: () => {
           order.push('member-work-sync-drain');
+          return Promise.resolve();
         },
       },
       internalStorageFeature: {
-        dispose: async () => {
+        dispose: () => {
           order.push('internal-storage-dispose');
+          return Promise.resolve();
         },
       },
     });
@@ -91,8 +97,9 @@ describe('internal storage shutdown order', () => {
     const order: string[] = [];
     const stallMonitorDrain = createDeferred();
     const memberWorkSyncDrain = createDeferred();
-    const internalStorageDispose = vi.fn(async () => {
+    const internalStorageDispose = vi.fn(() => {
       order.push('internal-storage-dispose');
+      return Promise.resolve();
     });
 
     const shutdown = disposeInternalStorageAfterWriterDrains(
