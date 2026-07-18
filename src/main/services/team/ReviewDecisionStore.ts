@@ -504,19 +504,25 @@ export class ReviewDecisionStore {
         ids.has(candidate.id) ||
         typeof candidate.createdAt !== 'string' ||
         candidate.createdAt.length === 0 ||
-        candidate.createdAt.length > 128
+        candidate.createdAt.length > 128 ||
+        (candidate.descriptor !== undefined &&
+          !this.isReviewActionDescriptor(candidate.descriptor))
       ) {
         return false;
       }
       ids.add(candidate.id);
       if (candidate.kind === 'hunk') {
-        return this.isHunkUndoAction(candidate.action);
+        return (
+          this.isHunkUndoAction(candidate.action) &&
+          this.isReviewActionDescriptorConsistent(candidate as ReviewUndoAction)
+        );
       }
       if (candidate.kind === 'disk') {
         diskSnapshotCount++;
         return (
           diskSnapshotCount <= MAX_STORED_DECISION_ENTRIES &&
-          this.isDiskUndoAction(candidate.action)
+          this.isDiskUndoAction(candidate.action) &&
+          this.isReviewActionDescriptorConsistent(candidate as ReviewUndoAction)
         );
       }
       if (candidate.kind === 'bulk') {
@@ -525,11 +531,95 @@ export class ReviewDecisionStore {
         return (
           diskSnapshotCount <= MAX_STORED_DECISION_ENTRIES &&
           this.isDecisionSnapshot(candidate.decisionSnapshot) &&
-          candidate.diskSnapshots.every((snapshot) => this.isDiskUndoSnapshot(snapshot))
+          candidate.diskSnapshots.every((snapshot) => this.isDiskUndoSnapshot(snapshot)) &&
+          this.isReviewActionDescriptorConsistent(candidate as ReviewUndoAction)
         );
       }
       return false;
     });
+  }
+
+  private isReviewActionDescriptor(value: unknown): boolean {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const candidate = value as {
+      intent?: unknown;
+      filePath?: unknown;
+      hunkIndex?: unknown;
+      fileCount?: unknown;
+    };
+    const hasSafeFilePath =
+      typeof candidate.filePath === 'string' &&
+      candidate.filePath.length > 0 &&
+      candidate.filePath.length <= MAX_STORED_KEY_LENGTH &&
+      !candidate.filePath.includes('\0');
+    const hasSafeHunkIndex =
+      Number.isSafeInteger(candidate.hunkIndex) && Number(candidate.hunkIndex) >= 0;
+    const hasSafeFileCount =
+      Number.isSafeInteger(candidate.fileCount) &&
+      Number(candidate.fileCount) > 0 &&
+      Number(candidate.fileCount) <= MAX_STORED_DECISION_ENTRIES;
+
+    switch (candidate.intent) {
+      case 'accept-hunk':
+      case 'reject-hunk':
+        return (
+          hasSafeFilePath &&
+          hasSafeHunkIndex &&
+          candidate.fileCount === undefined
+        );
+      case 'accept-file':
+      case 'reject-file':
+      case 'restore-file':
+      case 'restore-rename':
+        return (
+          hasSafeFilePath &&
+          candidate.hunkIndex === undefined &&
+          candidate.fileCount === undefined
+        );
+      case 'accept-all':
+      case 'reject-all':
+        return (
+          candidate.filePath === undefined &&
+          candidate.hunkIndex === undefined &&
+          hasSafeFileCount
+        );
+      default:
+        return false;
+    }
+  }
+
+  private isReviewActionDescriptorConsistent(action: ReviewUndoAction): boolean {
+    const descriptor = action.descriptor;
+    if (!descriptor) return true;
+    if (action.kind === 'hunk') {
+      return (
+        (descriptor.intent === 'accept-hunk' || descriptor.intent === 'reject-hunk') &&
+        descriptor.filePath === action.action.filePath &&
+        descriptor.hunkIndex === action.action.originalIndex
+      );
+    }
+    if (action.kind === 'disk') {
+      const { snapshot, originalIndex } = action.action;
+      if (originalIndex !== undefined) {
+        return (
+          descriptor.intent === 'reject-hunk' &&
+          descriptor.filePath === snapshot.filePath &&
+          descriptor.hunkIndex === originalIndex
+        );
+      }
+      return (
+        (descriptor.intent === 'reject-file' ||
+          descriptor.intent === 'restore-file' ||
+          descriptor.intent === 'restore-rename') &&
+        descriptor.filePath === snapshot.filePath
+      );
+    }
+    if (action.diskSnapshots.length > 0) {
+      return (
+        descriptor.intent === 'reject-all' && descriptor.fileCount === action.diskSnapshots.length
+      );
+    }
+    return descriptor.intent === 'accept-all' || descriptor.intent === 'accept-file';
   }
 
   private isReviewRedoHistory(value: unknown): value is ReviewRedoAction[] {

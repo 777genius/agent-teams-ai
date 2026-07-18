@@ -280,10 +280,28 @@ export interface ReviewDiskUndoAction {
   decisionSnapshot?: ReviewDecisionSnapshot;
 }
 
+/** Stable user intent used to explain a durable Undo/Redo entry after restart. */
+export type ReviewActionDescriptor =
+  | {
+      intent: 'accept-hunk' | 'reject-hunk';
+      filePath: string;
+      /** Stable original hunk index, displayed to users as one-based. */
+      hunkIndex: number;
+    }
+  | {
+      intent: 'accept-file' | 'reject-file' | 'restore-file' | 'restore-rename';
+      filePath: string;
+    }
+  | { intent: 'accept-all' | 'reject-all'; fileCount: number };
+
+export type ReviewActionIntent = ReviewActionDescriptor['intent'];
+
 interface ReviewUndoActionBase {
   /** Stable identity used to prevent a stale async Undo from popping a newer action. */
   id: string;
   createdAt: string;
+  /** Optional for backward compatibility with history written before action previews. */
+  descriptor?: ReviewActionDescriptor;
 }
 
 /** Self-contained, ordered Accept/Reject history persisted with the decision snapshot. */

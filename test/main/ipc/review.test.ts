@@ -914,11 +914,40 @@ describe('review IPC path confinement', () => {
     });
   });
 
+  it('rejects a generic hunk descriptor that mislabels the decision intent', async () => {
+    const result = await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      'agent:worker:content:forged-generic-descriptor',
+      { [`${projectFile}:0`]: 'accepted' },
+      {},
+      {},
+      [
+        {
+          id: 'forged-generic-descriptor-action',
+          createdAt: '2026-07-18T12:00:00.000Z',
+          kind: 'hunk',
+          descriptor: { intent: 'reject-hunk', filePath: projectFile, hunkIndex: 0 },
+          action: { filePath: projectFile, originalIndex: 0 },
+        },
+      ],
+      0,
+      []
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Generic hunk history descriptor does not match its decision transition',
+    });
+  });
+
   it('ties a forward Restore step to its newly appended durable action', async () => {
     const persistenceScope = {
       scopeKey: 'agent-worker',
       scopeToken: 'agent:worker:content:restore-step-integrity',
     };
+    const aliasedProjectFile = `${path.dirname(projectFile)}${path.sep}..${path.sep}src${path.sep}${path.basename(projectFile)}`;
     const file = {
       filePath: projectFile,
       relativePath: 'src/project.ts',
@@ -937,9 +966,10 @@ describe('review IPC path confinement', () => {
       id: 'restore-step-integrity-action',
       createdAt: '2026-07-17T12:00:00.000Z',
       kind: 'disk' as const,
+      descriptor: { intent: 'restore-file' as const, filePath: aliasedProjectFile },
       action: {
         snapshot: {
-          filePath: projectFile,
+          filePath: aliasedProjectFile,
           beforeContent: 'project\n',
           afterContent: 'restored\n',
           file,
@@ -969,7 +999,7 @@ describe('review IPC path confinement', () => {
         {
           id: `${action.id}:0`,
           type: 'write',
-          filePath: projectFile,
+          filePath: aliasedProjectFile,
           expectedContent: 'project\n',
           content: 'forged\n',
         },
@@ -998,7 +1028,7 @@ describe('review IPC path confinement', () => {
         {
           id: `${action.id}:0`,
           type: 'write',
-          filePath: projectFile,
+          filePath: aliasedProjectFile,
           expectedContent: 'project\n',
           content: 'forged\n',
         },
@@ -1020,7 +1050,7 @@ describe('review IPC path confinement', () => {
         {
           id: `${action.id}:0`,
           type: 'write',
-          filePath: projectFile,
+          filePath: aliasedProjectFile,
           expectedContent: 'project\n',
           content: 'restored\n',
         },
@@ -1032,13 +1062,37 @@ describe('review IPC path confinement', () => {
     });
     expect(applier.saveEditedFile).not.toHaveBeenCalled();
 
+    const forgedDescriptor = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
+      ...baseRequest,
+      persistedState: {
+        ...persistedState,
+        reviewActionHistory: [
+          { ...action, descriptor: { intent: 'reject-file', filePath: aliasedProjectFile } },
+        ],
+      },
+      diskSteps: [
+        {
+          id: `${action.id}:0`,
+          type: 'write',
+          filePath: aliasedProjectFile,
+          expectedContent: 'project\n',
+          content: 'restored\n',
+        },
+      ],
+    });
+    expect(forgedDescriptor).toEqual({
+      success: false,
+      error: 'Invalid durable Restore history transition',
+    });
+    expect(applier.saveEditedFile).not.toHaveBeenCalled();
+
     const restored = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
       ...baseRequest,
       diskSteps: [
         {
           id: `${action.id}:0`,
           type: 'write',
-          filePath: projectFile,
+          filePath: aliasedProjectFile,
           expectedContent: 'project\n',
           content: 'restored\n',
         },
@@ -1051,6 +1105,7 @@ describe('review IPC path confinement', () => {
         committedReviewAction: {
           id: action.id,
           kind: 'disk',
+          descriptor: { intent: 'restore-file', filePath: projectFile },
           action: { snapshot: { authoritativeBeforeSha256: expect.any(String) } },
         },
       },
@@ -2318,6 +2373,7 @@ describe('review IPC path confinement', () => {
       id: 'apply-file-reject',
       createdAt: '2026-07-17T12:00:00.000Z',
       kind: 'disk' as const,
+      descriptor: { intent: 'reject-file' as const, filePath: projectFile },
       action: {
         snapshot: { filePath: projectFile, beforeContent: 'project\n', afterContent: 'before\n', file },
         file,
@@ -2361,6 +2417,7 @@ describe('review IPC path confinement', () => {
         errors: [],
         committedReviewAction: {
           id: action.id,
+          descriptor: action.descriptor,
           action: {
             snapshot: {
               authoritativeBeforeSha256: createHash('sha256').update('project\n').digest('hex'),
@@ -3336,6 +3393,56 @@ describe('review IPC path confinement', () => {
     expect(result).toEqual({
       success: false,
       error: 'Durable hunk Reject history index does not match the decision transition',
+    });
+    expect(applier.applyReviewDecisions).not.toHaveBeenCalled();
+  });
+
+  it('rejects a durable Reject descriptor that claims a Restore intent', async () => {
+    const contentSnapshotToken = await getDisplayedSnapshotToken(projectFile);
+    const result = await ipcMain.invoke(REVIEW_APPLY_DECISIONS, {
+      teamName: 'safe-team',
+      memberName: 'worker',
+      decisionPersistenceScope: {
+        scopeKey: 'agent-worker',
+        scopeToken: 'agent:worker:content:forged-reject-descriptor',
+      },
+      expectedDecisionRevision: 0,
+      persistedState: {
+        hunkDecisions: {},
+        fileDecisions: { [projectFile]: 'rejected' },
+        hunkContextHashesByFile: {},
+        reviewActionHistory: [
+          {
+            id: 'forged-reject-descriptor-action',
+            createdAt: '2026-07-18T12:00:00.000Z',
+            kind: 'disk',
+            descriptor: { intent: 'restore-file', filePath: projectFile },
+            action: {
+              snapshot: {
+                filePath: projectFile,
+                beforeContent: 'project\n',
+                afterContent: 'before\n',
+              },
+              decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
+            },
+          },
+        ],
+        reviewRedoHistory: [],
+      },
+      decisions: [
+        {
+          filePath: projectFile,
+          reviewKey: projectFile,
+          fileDecision: 'rejected',
+          hunkDecisions: {},
+          contentSnapshotToken,
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Durable Reject history descriptor does not match the decision transition',
     });
     expect(applier.applyReviewDecisions).not.toHaveBeenCalled();
   });

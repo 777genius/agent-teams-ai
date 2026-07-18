@@ -1854,6 +1854,28 @@ function assertExactApplyReviewHistoryTransition(
   if ((decisions.length === 1) !== (action.kind === 'disk')) {
     throw new Error('Durable Reject history action kind does not match the decision batch');
   }
+  if (action.descriptor) {
+    const descriptor = action.descriptor;
+    let descriptorMatches = false;
+    if (action.kind === 'bulk') {
+      descriptorMatches =
+        descriptor.intent === 'reject-all' && descriptor.fileCount === filesByPath.size;
+    } else if (action.action.originalIndex !== undefined) {
+      descriptorMatches =
+        descriptor.intent === 'reject-hunk' &&
+        descriptor.hunkIndex === action.action.originalIndex &&
+        normalizeReviewPathForIdentity(descriptor.filePath) ===
+          normalizeReviewPathForIdentity(action.action.snapshot.filePath);
+    } else {
+      descriptorMatches =
+        descriptor.intent === 'reject-file' &&
+        normalizeReviewPathForIdentity(descriptor.filePath) ===
+          normalizeReviewPathForIdentity(action.action.snapshot.filePath);
+    }
+    if (!descriptorMatches) {
+      throw new Error('Durable Reject history descriptor does not match the decision transition');
+    }
+  }
 
   const currentDecisions = {
     hunkDecisions: current?.hunkDecisions ?? {},
@@ -2050,6 +2072,15 @@ async function bindNewReviewDiskSnapshot(
   };
 }
 
+function rebindReviewActionDescriptorPath(
+  action: ReviewUndoAction,
+  filePath: string
+): ReviewUndoAction['descriptor'] {
+  return action.descriptor && 'filePath' in action.descriptor
+    ? { ...action.descriptor, filePath }
+    : action.descriptor;
+}
+
 async function bindNewReviewAction(
   action: ReviewUndoAction,
   current: Awaited<ReturnType<ReviewDecisionStore['load']>>,
@@ -2082,6 +2113,7 @@ async function bindNewReviewAction(
   const snapshot = await bindNewReviewDiskSnapshot(action.action.snapshot, scope, authorization);
   return {
     ...action,
+    descriptor: rebindReviewActionDescriptorPath(action, snapshot.filePath),
     action: {
       ...action.action,
       snapshot,
@@ -2200,6 +2232,13 @@ function assertExactGenericReviewHistoryTransition(
     }
     return false;
   };
+  const resolveHunkReviewKey = (key: string): string | null => {
+    for (const reviewKey of canonicalFiles.keys()) {
+      const prefix = `${reviewKey}:`;
+      if (key.startsWith(prefix) && /^\d+$/.test(key.slice(prefix.length))) return reviewKey;
+    }
+    return null;
+  };
   let working = {
     hunkDecisions: { ...state.hunkDecisions },
     fileDecisions: { ...state.fileDecisions },
@@ -2219,6 +2258,20 @@ function assertExactGenericReviewHistoryTransition(
         (value !== 'accepted' && value !== 'rejected')
       ) {
         throw new Error('Generic hunk history does not match its decision transition');
+      }
+      if (action.descriptor) {
+        const descriptor = action.descriptor;
+        if (
+          !('hunkIndex' in descriptor) ||
+          descriptor.intent !== (value === 'accepted' ? 'accept-hunk' : 'reject-hunk') ||
+          normalizeReviewPathForIdentity(descriptor.filePath) !==
+            normalizeReviewPathForIdentity(action.action.filePath) ||
+          descriptor.hunkIndex !== action.action.originalIndex
+        ) {
+          throw new Error(
+            'Generic hunk history descriptor does not match its decision transition'
+          );
+        }
       }
       touchedHunkKeys.add(key);
       delete working.hunkDecisions[key];
@@ -2255,6 +2308,25 @@ function assertExactGenericReviewHistoryTransition(
       )
     ) {
       throw new Error('Generic bulk history does not match an authoritative Accept transition');
+    }
+    if (action.descriptor) {
+      const affectedReviewKeys = new Set<string>(changedFiles);
+      for (const key of changedHunks) {
+        const reviewKey = resolveHunkReviewKey(key);
+        if (reviewKey) affectedReviewKeys.add(reviewKey);
+      }
+      const descriptorMatches =
+        action.descriptor.intent === 'accept-all'
+          ? action.descriptor.fileCount === affectedReviewKeys.size
+          : action.descriptor.intent === 'accept-file' &&
+            affectedReviewKeys.size === 1 &&
+            normalizeReviewPathForIdentity(action.descriptor.filePath) ===
+              normalizeReviewPathForIdentity(
+                canonicalFiles.get([...affectedReviewKeys][0]!)?.filePath ?? ''
+              );
+      if (!descriptorMatches) {
+        throw new Error('Generic bulk history descriptor does not match its Accept transition');
+      }
     }
     working = {
       hunkDecisions: { ...snapshot.hunkDecisions },
@@ -2343,6 +2415,11 @@ function assertExactReviewHistoryTransition(
       action.action.file.changeKey === authoritativeFile.changeKey &&
       snapshot?.file?.filePath === authoritativeFile.filePath &&
       snapshot.file.changeKey === authoritativeFile.changeKey &&
+      (action.descriptor === undefined ||
+        (action.descriptor.intent ===
+          (request.kind === 'rename' ? 'restore-rename' : 'restore-file') &&
+          normalizeReviewPathForIdentity(action.descriptor.filePath) ===
+            normalizeReviewPathForIdentity(snapshot.filePath))) &&
       isDurableReviewEqual(next.reviewActionHistory.slice(0, -1), previousActions) &&
       next.reviewRedoHistory.length === 0 &&
       isDurableReviewEqual(action.action.decisionSnapshot, {
@@ -2513,6 +2590,7 @@ async function assertAuthoritativeForwardReviewMutation(
         ...request.persistedState.reviewActionHistory.slice(0, -1),
         {
           ...action,
+          descriptor: rebindReviewActionDescriptorPath(action, boundSnapshot.filePath),
           action: { ...action.action, snapshot: boundSnapshot, file: authoritativeFile },
         },
       ],
@@ -2606,6 +2684,7 @@ async function assertAuthoritativeForwardReviewMutation(
       ...request.persistedState.reviewActionHistory.slice(0, -1),
       {
         ...action,
+        descriptor: rebindReviewActionDescriptorPath(action, boundSnapshot.filePath),
         action: { ...action.action, snapshot: boundSnapshot, file: authoritativeFile },
       },
     ],

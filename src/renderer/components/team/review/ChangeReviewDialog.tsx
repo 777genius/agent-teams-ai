@@ -1027,6 +1027,21 @@ export const ChangeReviewDialog = ({
     () => sortItemsAsTree(activeChangeSet?.files ?? [], (f) => f.relativePath),
     [activeChangeSet]
   );
+  const reviewFileLabels = useMemo(
+    () =>
+      new Map(
+        sortedFiles.map((file) => [
+          normalizePathForComparison(file.filePath),
+          file.relativePath || file.filePath,
+        ])
+      ),
+    [sortedFiles]
+  );
+  const resolveReviewFileLabel = useCallback(
+    (filePath: string): string =>
+      reviewFileLabels.get(normalizePathForComparison(filePath)) ?? filePath,
+    [reviewFileLabels]
+  );
   // A content-derived key avoids tearing down/recreating the main-process watcher
   // when Zustand returns a new array containing the exact same review paths.
   const watchedReviewFilePathsKey = useMemo(
@@ -1257,7 +1272,12 @@ export const ChangeReviewDialog = ({
       if (acceptAllFile(file.filePath)) acceptedFiles.add(file.filePath);
     }
     if (acceptedFiles.size === 0) return;
-    pushReviewUndoAction({ kind: 'bulk', decisionSnapshot, diskSnapshots: [] });
+    pushReviewUndoAction({
+      kind: 'bulk',
+      descriptor: { intent: 'accept-all', fileCount: acceptedFiles.size },
+      decisionSnapshot,
+      diskSnapshots: [],
+    });
     requestAnimationFrame(() => {
       for (const [filePath, view] of editorViewMapRef.current.entries()) {
         if (!acceptedFiles.has(filePath)) continue;
@@ -1328,6 +1348,7 @@ export const ChangeReviewDialog = ({
     }
     const preparedAction = pushReviewUndoAction({
       kind: 'bulk',
+      descriptor: { intent: 'reject-all', fileCount: requestedFiles.length },
       decisionSnapshot,
       diskSnapshots: diskUndoSnapshots,
     });
@@ -1402,6 +1423,17 @@ export const ChangeReviewDialog = ({
           if (successfulFiles.length === 0) {
             discardLatestReviewAction(preparedAction);
             return;
+          }
+          const retainedAction = reviewUndoActionsRef.current.at(-1);
+          if (
+            retainedAction?.id === preparedAction.id &&
+            retainedAction.kind === 'bulk' &&
+            retainedAction.descriptor?.intent === 'reject-all'
+          ) {
+            retainedAction.descriptor = {
+              intent: 'reject-all',
+              fileCount: diskUndoSnapshots.length,
+            };
           }
 
           setUndoInFlight(true);
@@ -1628,7 +1660,14 @@ export const ChangeReviewDialog = ({
           file,
           decisionSnapshot,
         };
-        const preparedAction = pushReviewUndoAction({ kind: 'disk', action: undoAction });
+        const preparedAction = pushReviewUndoAction({
+          kind: 'disk',
+          descriptor: {
+            intent: isLedgerRenameReviewFile(file) ? 'restore-rename' : 'restore-file',
+            filePath,
+          },
+          action: undoAction,
+        });
         try {
           const state = useStore.getState();
           markRecentReviewWrite(filePath, restoredDiskContent);
@@ -1755,7 +1794,12 @@ export const ChangeReviewDialog = ({
         fileDecisions: { ...state.fileDecisions },
       };
       if (!acceptAllFile(filePath)) return;
-      pushReviewUndoAction({ kind: 'bulk', decisionSnapshot, diskSnapshots: [] });
+      pushReviewUndoAction({
+        kind: 'bulk',
+        descriptor: { intent: 'accept-file', filePath },
+        decisionSnapshot,
+        diskSnapshots: [],
+      });
       const view = editorViewMapRef.current.get(filePath);
       if (view) {
         requestAnimationFrame(() => acceptAllChunks(view));
@@ -1839,6 +1883,7 @@ export const ChangeReviewDialog = ({
         }
         const preparedAction = pushReviewUndoAction({
           kind: 'disk',
+          descriptor: { intent: 'reject-file', filePath },
           action: { snapshot, file, decisionSnapshot },
         });
 
@@ -1971,7 +2016,11 @@ export const ChangeReviewDialog = ({
       }
       const originalIndex = setHunkDecision(filePath, hunkIndex, 'accepted');
       const undoAction: RecentHunkUndoAction = { filePath, originalIndex };
-      pushReviewUndoAction({ kind: 'hunk', action: undoAction });
+      pushReviewUndoAction({
+        kind: 'hunk',
+        descriptor: { intent: 'accept-hunk', filePath, hunkIndex: originalIndex },
+        action: undoAction,
+      });
       return true;
     },
     [
@@ -2034,6 +2083,7 @@ export const ChangeReviewDialog = ({
         };
         const preparedAction = pushReviewUndoAction({
           kind: 'disk',
+          descriptor: { intent: 'reject-hunk', filePath, hunkIndex: originalIndex },
           action: { snapshot, originalIndex },
         });
         markRecentReviewWrite(filePath, isNewFileFullyRejected ? null : afterContent);
@@ -2091,7 +2141,11 @@ export const ChangeReviewDialog = ({
       } else {
         fileApplyInFlightRef.current.delete(filePath);
         setFileApplying(filePath, false);
-        pushReviewUndoAction({ kind: 'hunk', action: hunkUndoAction });
+        pushReviewUndoAction({
+          kind: 'hunk',
+          descriptor: { intent: 'reject-hunk', filePath, hunkIndex: originalIndex },
+          action: hunkUndoAction,
+        });
       }
       return true;
     },
@@ -3453,11 +3507,20 @@ export const ChangeReviewDialog = ({
             canRejectAll={canRejectAll}
             instantApply={REVIEW_INSTANT_APPLY}
             editedCount={editedCount}
-            canUndo={reviewUndoDepth > 0 && editedCount === 0}
+            canUndo={reviewUndoDepth > 0}
             onUndo={() => void handleUndoLatestReviewAction()}
-            canRedo={reviewRedoDepth > 0 && editedCount === 0}
+            canRedo={reviewRedoDepth > 0}
             onRedo={() => void handleRedoLatestReviewAction()}
             mutationBlocked={reviewMutationBlockedByExternalChange}
+            undoHistory={reviewActionHistory}
+            redoHistory={reviewRedoHistory}
+            resolveFileLabel={resolveReviewFileLabel}
+            undoDisabledReason={
+              editedCount > 0 ? 'Save or discard manual edits before undoing a review action.' : undefined
+            }
+            redoDisabledReason={
+              editedCount > 0 ? 'Save or discard manual edits before redoing a review action.' : undefined
+            }
           />
         )}
 

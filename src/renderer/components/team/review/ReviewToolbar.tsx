@@ -3,9 +3,14 @@ import React from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { cn } from '@renderer/lib/utils';
+import { shortcutLabel } from '@renderer/utils/platformKeys';
 import { Check, Eye, EyeOff, GitMerge, Loader2, Pencil, Redo2, Undo2, X } from 'lucide-react';
 
-import type { ChangeStats } from '@shared/types';
+import { ReviewActionHistoryPopover } from './ReviewActionHistoryPopover';
+import { describeReviewAction } from './reviewActionPresentation';
+
+import type { ReviewFileLabelResolver } from './reviewActionPresentation';
+import type { ChangeStats, ReviewRedoAction, ReviewUndoAction } from '@shared/types';
 
 interface ReviewToolbarProps {
   stats: { pending: number; accepted: number; rejected: number };
@@ -27,6 +32,11 @@ interface ReviewToolbarProps {
   canRedo?: boolean;
   onRedo?: () => void;
   mutationBlocked?: boolean;
+  undoHistory?: readonly ReviewUndoAction[];
+  redoHistory?: readonly ReviewRedoAction[];
+  resolveFileLabel?: ReviewFileLabelResolver;
+  undoDisabledReason?: string;
+  redoDisabledReason?: string;
 }
 
 export const ReviewToolbar = ({
@@ -49,6 +59,11 @@ export const ReviewToolbar = ({
   canRedo = false,
   onRedo,
   mutationBlocked = false,
+  undoHistory = [],
+  redoHistory = [],
+  resolveFileLabel,
+  undoDisabledReason,
+  redoDisabledReason,
 }: ReviewToolbarProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
   const hasRejected = stats.rejected > 0;
@@ -59,6 +74,18 @@ export const ReviewToolbar = ({
   const acceptAllDisabled = applying || mutationBlocked || !canAcceptAll;
   const externalMutationBlockedLabel =
     'Reload files changed outside Changes before continuing review actions.';
+  const nextUndo = undoHistory.at(-1);
+  const nextRedo = redoHistory.at(-1)?.action;
+  const undoPreview = nextUndo ? describeReviewAction(nextUndo, resolveFileLabel) : null;
+  const redoPreview = nextRedo ? describeReviewAction(nextRedo, resolveFileLabel) : null;
+  const formatPreview = (
+    direction: 'Undo' | 'Redo',
+    preview: ReturnType<typeof describeReviewAction> | null,
+    shortcut: string
+  ): string => {
+    if (!preview) return `${direction} last review operation (${shortcut})`;
+    return `${direction}: ${preview.title}${preview.detail ? ` · ${preview.detail}` : ''} (${shortcut})`;
+  };
 
   return (
     <div className="flex items-center gap-3 border-b border-border bg-surface-sidebar px-4 py-2">
@@ -158,12 +185,18 @@ export const ReviewToolbar = ({
 
       {editedCount > 0 && <div className="h-4 w-px bg-border" />}
 
+      <ReviewActionHistoryPopover
+        undoHistory={undoHistory}
+        redoHistory={redoHistory}
+        resolveFileLabel={resolveFileLabel}
+      />
+
       {canUndo && onUndo && (
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               onClick={onUndo}
-              disabled={applying || mutationBlocked}
+              disabled={applying || mutationBlocked || Boolean(undoDisabledReason)}
               className="flex items-center gap-1 rounded bg-zinc-500/15 px-2.5 py-1 text-xs text-zinc-300 transition-colors hover:bg-zinc-500/25 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Undo2 className="size-3" />
@@ -171,7 +204,11 @@ export const ReviewToolbar = ({
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {mutationBlocked ? externalMutationBlockedLabel : t('review.toolbar.tooltips.undo')}
+            {mutationBlocked
+              ? externalMutationBlockedLabel
+              : undoDisabledReason
+                ? undoDisabledReason
+              : formatPreview('Undo', undoPreview, shortcutLabel('⌘ Z', 'Ctrl+Z'))}
           </TooltipContent>
         </Tooltip>
       )}
@@ -181,7 +218,7 @@ export const ReviewToolbar = ({
           <TooltipTrigger asChild>
             <button
               onClick={onRedo}
-              disabled={applying || mutationBlocked}
+              disabled={applying || mutationBlocked || Boolean(redoDisabledReason)}
               className="flex items-center gap-1 rounded bg-zinc-500/15 px-2.5 py-1 text-xs text-zinc-300 transition-colors hover:bg-zinc-500/25 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Redo2 className="size-3" />
@@ -189,7 +226,11 @@ export const ReviewToolbar = ({
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {mutationBlocked ? externalMutationBlockedLabel : t('review.toolbar.tooltips.redo')}
+            {mutationBlocked
+              ? externalMutationBlockedLabel
+              : redoDisabledReason
+                ? redoDisabledReason
+              : formatPreview('Redo', redoPreview, shortcutLabel('⌘ ⇧ Z', 'Ctrl+Shift+Z'))}
           </TooltipContent>
         </Tooltip>
       )}

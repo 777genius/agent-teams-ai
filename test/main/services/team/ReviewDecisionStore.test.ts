@@ -361,6 +361,46 @@ describe('ReviewDecisionStore', () => {
     expect(restored?.reviewActionHistory).toHaveLength(100);
   });
 
+  it('round-trips exact action descriptors and rejects misleading history labels', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const describedAction = {
+      id: 'described-action',
+      createdAt: '2026-07-18T12:00:00.000Z',
+      kind: 'hunk' as const,
+      descriptor: {
+        intent: 'reject-hunk' as const,
+        filePath: '/repo/file.ts',
+        hunkIndex: 3,
+      },
+      action: { filePath: '/repo/file.ts', originalIndex: 3 },
+    };
+
+    await store.save('demo', 'task-123', {
+      scopeToken: 'task:123:req:described:src:one',
+      hunkDecisions: { 'file:3': 'rejected' },
+      fileDecisions: {},
+      reviewActionHistory: [describedAction],
+    });
+    await expect(
+      store.load('demo', 'task-123', 'task:123:req:described:src:one')
+    ).resolves.toMatchObject({ reviewActionHistory: [describedAction] });
+
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken: 'task:123:req:misleading:src:one',
+        hunkDecisions: {},
+        fileDecisions: {},
+        reviewActionHistory: [
+          {
+            ...describedAction,
+            descriptor: { ...describedAction.descriptor, filePath: '/repo/other.ts' },
+          },
+        ],
+      })
+    ).rejects.toThrow('Invalid review decisions payload');
+  });
+
   it('deduplicates history contents and garbage-collects unreachable v6 blobs', async () => {
     const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
     const store = new ReviewDecisionStore();
