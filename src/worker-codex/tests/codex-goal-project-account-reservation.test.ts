@@ -70,7 +70,7 @@ describe("project account reservation", () => {
     expect(continued.launch.config.accounts.map((item) => item.name)).toEqual([
       continued.accountId,
     ]);
-    expect(continued.launch.config.maxAccountCycles).toBe(2);
+    expect(continued.launch.config.maxAccountCycles).toBe(1);
   });
 
   it("rotates after terminal model_unavailable result or progress proof", async () => {
@@ -136,7 +136,7 @@ describe("project account reservation", () => {
     });
     expect(resultProof.excludedAccountIds).toEqual([first.accountId]);
     expect(continued.accountId).toBe(nextAccount);
-    expect(continued.launch.config.maxAccountCycles).toBe(2);
+    expect(continued.launch.config.maxAccountCycles).toBe(1);
   });
 
   it("releases an excluded exclusive reservation before selecting another account", async () => {
@@ -196,7 +196,7 @@ describe("project account reservation", () => {
 
     expect(continued.accountId).toBe(first.accountId);
     expect(continued.launch.config.accounts).toEqual([{ name: "account-a" }]);
-    expect(continued.launch.config.maxAccountCycles).toBe(2);
+    expect(continued.launch.config.maxAccountCycles).toBe(1);
   });
 
   it("shares an account across concurrent jobs by default", async () => {

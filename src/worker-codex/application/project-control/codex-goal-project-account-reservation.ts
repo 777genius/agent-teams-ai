@@ -426,11 +426,10 @@ function reservedAttemptBudget(input: {
     input.continuation.previousAttemptCount < 1) {
     throw new Error("project_control_continuation_attempt_count_required");
   }
-  const previousAttemptCount = input.continuation.previousAttemptCount;
   // This broker call authorizes exactly one more provider attempt. The launch
   // maxAccountCycles value bounds one runner invocation; it is not a lifetime
   // retry policy for an externally authorized capacity continuation.
-  return previousAttemptCount + 1;
+  return 1;
 }
 
 function projectAccountDemand(

@@ -338,10 +338,7 @@ export class SafeExecutionRunner {
         effectiveOriginalPrompt = controlledStartup.originalPrompt;
       }
 
-      let maxAttemptNumber =
-        existing && hasStartupControl
-          ? firstAttemptNumber + policy.maxAttempts - 1
-          : policy.maxAttempts;
+      let maxAttemptNumber = firstAttemptNumber + policy.maxAttempts - 1;
       for (
         let attemptNumber = firstAttemptNumber;
         attemptNumber <= maxAttemptNumber;

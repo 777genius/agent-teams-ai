@@ -91,7 +91,7 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
       },
       job: { prompt: "Implement capacity-resume feature.", workspacePath },
       originalPrompt: "Implement capacity-resume feature.",
-      policy: { maxAttempts: 2 },
+      policy: { maxAttempts: 1 },
     });
 
     expect(resumed.status).toBe("completed");
@@ -397,6 +397,70 @@ describe("SafeExecutionRunner resumed tasks and snapshots", () => {
     expect(await readFile(join(workspacePath, "journal.txt"), "utf8")).toBe(
       "done\n",
     );
+  }, 15_000);
+
+  it("reclassifies a resumed partial task within a fresh invocation budget", async () => {
+    const workspacePath = await gitWorkspace(
+      cleanupPaths,
+      "safe-execution-reclassify-",
+    );
+    const journal = new InMemoryAttemptJournal();
+    const runner = () => new SafeExecutionRunner({
+      ...nodeSafeExecutionAdapters(),
+      lockStore: new InMemoryWorkspaceLockStore(),
+      journal,
+    });
+
+    const first = await runner().run({
+      taskId: "task-reclassify",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(): Promise<PromptResult> {
+          throw new SubscriptionWorkerError(
+            "subscription_worker_run_failed",
+            "Legacy runtime failure.",
+            { details: { reason: "unknown_runtime_failure" } },
+          );
+        },
+      },
+      job: { prompt: "classify task", workspacePath },
+      originalPrompt: "classify task",
+      policy: { maxAttempts: 1, retryUnknownCleanWorkspace: false },
+    });
+    expect(first.status).toBe("failed");
+    expect(first.attempts).toHaveLength(1);
+    expect(first.attempts[0]?.failureReason).toBe("unknown_error");
+
+    const resumed = await runner().run({
+      taskId: "task-reclassify",
+      workspace: { mode: "existing_locked", path: workspacePath },
+      effectMode: "workspace_patch",
+      provider: "codex",
+      pool: {
+        async run(job: PromptJob): Promise<PromptResult> {
+          expect(job.prompt).toContain(
+            "Previous attempt stopped because: unknown_error",
+          );
+          throw new SubscriptionWorkerError(
+            "subscription_worker_run_failed",
+            "Codex model is unavailable for this account.",
+            { details: { reason: "model_unavailable" } },
+          );
+        },
+      },
+      job: { prompt: "classify task", workspacePath },
+      originalPrompt: "classify task",
+      policy: { maxAttempts: 1 },
+    });
+
+    if (resumed.status !== "waiting_capacity") {
+      throw new Error("expected waiting_capacity");
+    }
+    expect(resumed.reason).toBe("model_unavailable");
+    expect(resumed.attempts).toHaveLength(2);
+    expect(resumed.attempts[1]?.failureReason).toBe("model_unavailable");
   }, 15_000);
 
   it("uses only safe read-only git snapshot commands", async () => {

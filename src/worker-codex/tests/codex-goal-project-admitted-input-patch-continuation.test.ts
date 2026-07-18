@@ -308,7 +308,7 @@ describe("admitted input-patch capacity continuation", () => {
       accountReservation: { accountId: "account-g" },
     });
     expect(reservedLaunch?.config.accounts).toEqual([{ name: "account-g" }]);
-    expect(reservedLaunch?.config.maxAccountCycles).toBe(2);
+    expect(reservedLaunch?.config.maxAccountCycles).toBe(1);
     expect(
       sha256(
         execFileSync("git", ["diff", "--cached", "--binary", "--no-ext-diff"], {
@@ -620,7 +620,7 @@ describe("clean pre-start capacity continuation", () => {
     });
     expect(bootstrapCalls).toBe(3);
     expect(reservedLaunch?.config.accounts).toEqual([{ name: "account-g" }]);
-    expect(reservedLaunch?.config.maxAccountCycles).toBe(2);
+    expect(reservedLaunch?.config.maxAccountCycles).toBe(1);
     expect(startAdmissionWorkspaceMode).toBe("clean_capacity_continuation");
     expect(capacitySupervisorReapCalls).toBe(1);
     await authorizeProjectPreStartAdmissionLaunch({
