@@ -11,7 +11,8 @@ import type { ReviewActionTone, ReviewFileLabelResolver } from './reviewActionPr
 import type { ReviewActionPersistenceStatus } from './reviewActionState';
 import type { ReviewRedoAction, ReviewUndoAction } from '@shared/types';
 
-const HISTORY_PREVIEW_LIMIT = 12;
+const HISTORY_INITIAL_LIMIT = 12;
+const HISTORY_REVEAL_BATCH = 50;
 
 interface ReviewActionHistoryPopoverProps {
   undoHistory: readonly ReviewUndoAction[];
@@ -22,12 +23,14 @@ interface ReviewActionHistoryPopoverProps {
 }
 
 interface ReviewHistorySectionProps {
+  stackName: 'undo' | 'redo';
   title: string;
   emptyLabel: string;
   actions: readonly ReviewUndoAction[];
   totalCount: number;
   nextLabel: string;
   resolveFileLabel?: ReviewFileLabelResolver;
+  onShowOlder: () => void;
 }
 
 function formatActionTime(createdAt: string): string | null {
@@ -44,14 +47,17 @@ const ToneIcon = ({ tone }: { tone: ReviewActionTone }): React.ReactElement => {
 }
 
 const ReviewHistorySection = ({
+  stackName,
   title,
   emptyLabel,
   actions,
   totalCount,
   nextLabel,
   resolveFileLabel,
+  onShowOlder,
 }: ReviewHistorySectionProps): React.ReactElement => {
   const hiddenCount = Math.max(0, totalCount - actions.length);
+  const revealCount = Math.min(hiddenCount, HISTORY_REVEAL_BATCH);
   return (
     <section>
       <div className="flex items-center justify-between px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-text-muted">
@@ -68,6 +74,7 @@ const ReviewHistorySection = ({
             return (
               <div
                 key={action.id}
+                data-review-history-action={action.id}
                 className={cn(
                   'flex min-w-0 items-start gap-2 rounded px-2 py-1.5',
                   index === 0 && 'bg-surface-raised'
@@ -101,9 +108,17 @@ const ReviewHistorySection = ({
             );
           })}
           {hiddenCount > 0 && (
-            <div className="px-2 pt-1 text-[10px] text-text-muted">
-              +{hiddenCount} older action{hiddenCount === 1 ? '' : 's'} retained
-            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 w-full justify-center px-2 text-[10px] text-text-muted"
+              aria-label={`Show ${revealCount} older ${stackName} action${revealCount === 1 ? '' : 's'}`}
+              onClick={onShowOlder}
+            >
+              Show {revealCount} older action{revealCount === 1 ? '' : 's'}
+              <span className="ml-1 opacity-70">({hiddenCount} retained)</span>
+            </Button>
           )}
         </div>
       )}
@@ -119,17 +134,19 @@ export const ReviewActionHistoryPopover = ({
   onRetryPersistence,
 }: ReviewActionHistoryPopoverProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false);
+  const [undoVisibleLimit, setUndoVisibleLimit] = useState(HISTORY_INITIAL_LIMIT);
+  const [redoVisibleLimit, setRedoVisibleLimit] = useState(HISTORY_INITIAL_LIMIT);
   const undoActions = useMemo(
-    () => takeRecentReviewActions(undoHistory, HISTORY_PREVIEW_LIMIT),
-    [undoHistory]
+    () => takeRecentReviewActions(undoHistory, undoVisibleLimit),
+    [undoHistory, undoVisibleLimit]
   );
   const redoActions = useMemo(
     () =>
       takeRecentReviewActions(
-        redoHistory.slice(-HISTORY_PREVIEW_LIMIT).map((entry) => entry.action),
-        HISTORY_PREVIEW_LIMIT
+        redoHistory.slice(-redoVisibleLimit).map((entry) => entry.action),
+        redoVisibleLimit
       ),
-    [redoHistory]
+    [redoHistory, redoVisibleLimit]
   );
   const totalCount = undoHistory.length + redoHistory.length;
   if (totalCount === 0) return null;
@@ -201,21 +218,33 @@ export const ReviewActionHistoryPopover = ({
           </div>
         </div>
         <ReviewHistorySection
+          stackName="undo"
           title="Undo stack"
           emptyLabel="No actions available to undo."
           actions={undoActions}
           totalCount={undoHistory.length}
           nextLabel="Next undo"
           resolveFileLabel={resolveFileLabel}
+          onShowOlder={() => {
+            setUndoVisibleLimit((current) =>
+              Math.min(undoHistory.length, current + HISTORY_REVEAL_BATCH)
+            );
+          }}
         />
         <div className="border-t border-border" />
         <ReviewHistorySection
+          stackName="redo"
           title="Redo stack"
           emptyLabel="No actions available to redo."
           actions={redoActions}
           totalCount={redoHistory.length}
           nextLabel="Next redo"
           resolveFileLabel={resolveFileLabel}
+          onShowOlder={() => {
+            setRedoVisibleLimit((current) =>
+              Math.min(redoHistory.length, current + HISTORY_REVEAL_BATCH)
+            );
+          }}
         />
       </PopoverContent>
     </Popover>
