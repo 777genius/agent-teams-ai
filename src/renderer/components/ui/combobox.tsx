@@ -16,6 +16,7 @@ export interface ComboboxOption {
 }
 
 interface ComboboxProps {
+  id?: string;
   options: ComboboxOption[];
   value: string;
   onValueChange: (value: string) => void;
@@ -35,6 +36,7 @@ interface ComboboxProps {
 }
 
 export const Combobox = ({
+  id,
   options,
   value,
   onValueChange,
@@ -66,6 +68,7 @@ export const Combobox = ({
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
+          id={id}
           type="button"
           role="combobox"
           aria-expanded={open}

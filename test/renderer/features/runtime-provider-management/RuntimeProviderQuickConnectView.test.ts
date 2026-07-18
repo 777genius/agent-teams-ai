@@ -88,6 +88,39 @@ describe('RuntimeProviderQuickConnectView', () => {
     vi.unstubAllGlobals();
   });
 
+  it('places local model setup beside the provider catalog action', async () => {
+    const onSetupLocalModel = vi.fn();
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnectView, {
+          cards: [],
+          gate: 'ready',
+          runtimeStatus: null,
+          directoryError: null,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onRetryDirectory: vi.fn(),
+          onSetupLocalModel,
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+
+    const localButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Set up local model')
+    );
+    const browseButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Browse all providers')
+    );
+    expect(localButton).toBeDefined();
+    expect(browseButton).toBeDefined();
+    expect(localButton?.parentElement).toBe(browseButton?.parentElement);
+    expect(localButton?.nextElementSibling).toBe(browseButton);
+
+    await act(async () => localButton?.click());
+    expect(onSetupLocalModel).toHaveBeenCalledTimes(1);
+  });
+
   it('shows one clear OpenCode prerequisite action instead of repeating install per plan', async () => {
     const onInstallOpenCode = vi.fn();
     await act(async () => {
@@ -106,6 +139,7 @@ describe('RuntimeProviderQuickConnectView', () => {
           onInstallOpenCode,
           onRefreshOpenCode: vi.fn(),
           onRetryDirectory: vi.fn(),
+          onSetupLocalModel: vi.fn(),
           onBrowseProviders: vi.fn(),
         })
       );
@@ -122,6 +156,9 @@ describe('RuntimeProviderQuickConnectView', () => {
     );
     expect(
       buttons.find((button) => button.textContent?.includes('Browse all providers'))?.disabled
+    ).toBe(true);
+    expect(
+      buttons.find((button) => button.textContent?.includes('Set up local model'))?.disabled
     ).toBe(true);
     expect(host.querySelectorAll('[data-testid^="provider-quick-card-"]')).toHaveLength(5);
     expect(host.querySelector('[data-testid="provider-quick-card-claude"]')).toBeNull();
@@ -159,6 +196,7 @@ describe('RuntimeProviderQuickConnectView', () => {
           onInstallOpenCode: vi.fn(),
           onRefreshOpenCode: vi.fn(),
           onRetryDirectory: vi.fn(),
+          onSetupLocalModel: vi.fn(),
           onBrowseProviders: vi.fn(),
         })
       );
@@ -194,6 +232,7 @@ describe('RuntimeProviderQuickConnectView', () => {
           onInstallOpenCode: vi.fn(),
           onRefreshOpenCode: vi.fn(),
           onRetryDirectory: vi.fn(),
+          onSetupLocalModel: vi.fn(),
           onBrowseProviders: vi.fn(),
         })
       );
@@ -221,6 +260,7 @@ describe('RuntimeProviderQuickConnectView', () => {
           onInstallOpenCode,
           onRefreshOpenCode,
           onRetryDirectory: vi.fn(),
+          onSetupLocalModel: vi.fn(),
           onBrowseProviders: vi.fn(),
         })
       );
@@ -333,6 +373,7 @@ describe('RuntimeProviderQuickConnectView', () => {
           onInstallOpenCode: vi.fn(),
           onRefreshOpenCode: vi.fn(),
           onRetryDirectory,
+          onSetupLocalModel: vi.fn(),
           onBrowseProviders: vi.fn(),
         })
       );

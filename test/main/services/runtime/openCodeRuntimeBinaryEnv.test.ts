@@ -62,4 +62,20 @@ describe('applyOpenCodeRuntimeBinaryEnv', () => {
 
     expect(env.PATH?.split(path.delimiter)).toEqual([path.dirname(binaryPath), '/usr/bin']);
   });
+
+  it('moves an existing binary directory ahead of stale PATH entries', () => {
+    const binaryPath = path.join(process.cwd(), 'managed opencode', 'opencode');
+    const binaryDirectory = path.dirname(binaryPath);
+    const env: NodeJS.ProcessEnv = {
+      PATH: ['/opt/stale-opencode/bin', binaryDirectory, '/usr/bin'].join(path.delimiter),
+    };
+
+    applyOpenCodeRuntimeBinaryEnv(env, binaryPath);
+
+    expect(env.PATH?.split(path.delimiter)).toEqual([
+      binaryDirectory,
+      '/opt/stale-opencode/bin',
+      '/usr/bin',
+    ]);
+  });
 });

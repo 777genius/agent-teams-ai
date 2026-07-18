@@ -3007,25 +3007,27 @@ export function RuntimeProviderManagementPanelView({
                 />
               </div>
             ) : null}
-            {state.directorySupported ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                title={
-                  state.directorySummary ? 'Load the full OpenCode provider catalog' : undefined
-                }
-                disabled={disabled || state.directoryLoading || state.directoryRefreshing}
-                onClick={() => void actions.refreshDirectory()}
-              >
-                {state.directoryRefreshing ? (
-                  <Loader2 className="mr-1 size-3.5 animate-spin" />
-                ) : (
-                  <RefreshCcw className="mr-1 size-3.5" />
-                )}
-                {t('runtimeProvider.providers.refreshCatalog')}
-              </Button>
-            ) : null}
+            <div className="flex justify-end gap-1.5">
+              {state.directorySupported ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  title={
+                    state.directorySummary ? 'Load the full OpenCode provider catalog' : undefined
+                  }
+                  disabled={disabled || state.directoryLoading || state.directoryRefreshing}
+                  onClick={() => void actions.refreshDirectory()}
+                >
+                  {state.directoryRefreshing ? (
+                    <Loader2 className="mr-1 size-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCcw className="mr-1 size-3.5" />
+                  )}
+                  {t('runtimeProvider.providers.refreshCatalog')}
+                </Button>
+              ) : null}
+            </div>
           </div>
 
           {state.directoryError ? (

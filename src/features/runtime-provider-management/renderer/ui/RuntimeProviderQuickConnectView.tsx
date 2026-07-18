@@ -51,6 +51,7 @@ interface RuntimeProviderQuickConnectViewProps {
   onInstallOpenCode: () => void;
   onRefreshOpenCode: () => void;
   onRetryDirectory: () => void;
+  onSetupLocalModel: () => void;
   onBrowseProviders: () => void;
 }
 
@@ -292,6 +293,7 @@ export const RuntimeProviderQuickConnectView = ({
   onInstallOpenCode,
   onRefreshOpenCode,
   onRetryDirectory,
+  onSetupLocalModel,
   onBrowseProviders,
 }: RuntimeProviderQuickConnectViewProps): JSX.Element => {
   const { t } = useAppTranslation('dashboard');
@@ -319,6 +321,17 @@ export const RuntimeProviderQuickConnectView = ({
           </p>
         </div>
         <div className="flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-[10.5px]"
+            disabled={gate !== 'ready'}
+            onClick={onSetupLocalModel}
+          >
+            <Plus className="mr-1.5 size-3" />
+            Set up local model
+          </Button>
           <Button
             type="button"
             variant="ghost"

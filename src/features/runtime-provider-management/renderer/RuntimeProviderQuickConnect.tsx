@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
+import {
+  loadProjectPathProjects,
+  type ProjectPathProject,
+} from '@renderer/components/team/dialogs/projectPathProjects';
+import { useStore } from '@renderer/store';
 
 import {
   getRuntimeProviderOnboardingPlan,
@@ -23,6 +28,7 @@ import {
   RuntimeProviderQuickConnectView,
 } from './ui/RuntimeProviderQuickConnectView';
 import { XiaomiMiMoTokenPlanSetupDialog } from './ui/XiaomiMiMoTokenPlanSetupDialog';
+import { RuntimeLocalProviderSetupDialog } from './RuntimeLocalProviderSetupDialog';
 
 import type { RuntimeProviderDirectoryEntryDto } from '../contracts';
 import type { RuntimeProviderOnboardingPlanId } from '../core/domain';
@@ -162,6 +168,7 @@ export const RuntimeProviderQuickConnect = ({
   onConnectedCountChange,
 }: RuntimeProviderQuickConnectProps): JSX.Element => {
   const { t } = useAppTranslation('dashboard');
+  const repositoryGroups = useStore((state) => state.repositoryGroups);
   const providerMap = useMemo(
     () => new Map(providers.map((provider) => [provider.providerId, provider])),
     [providers]
@@ -194,7 +201,35 @@ export const RuntimeProviderQuickConnect = ({
   );
   const [activeCompanionPlanId, setActiveCompanionPlanId] = useState<CompanionPlanId | null>(null);
   const [xiaomiDialogOpen, setXiaomiDialogOpen] = useState(false);
+  const [localProviderSetupOpen, setLocalProviderSetupOpen] = useState(false);
+  const [localProviderProjectPath, setLocalProviderProjectPath] = useState<string | null>(
+    projectPath?.trim() || null
+  );
+  const [localProviderProjects, setLocalProviderProjects] = useState<ProjectPathProject[]>([]);
   const oauthBridgeOutdated = isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus);
+
+  useEffect(() => {
+    if (!localProviderSetupOpen) return;
+    setLocalProviderProjectPath(projectPath?.trim() || null);
+  }, [localProviderSetupOpen, projectPath]);
+
+  useEffect(() => {
+    if (!localProviderSetupOpen) return;
+    let cancelled = false;
+    void loadProjectPathProjects({
+      defaultProjectPath: localProviderProjectPath ?? projectPath,
+      repositoryGroups,
+    })
+      .then((projects) => {
+        if (!cancelled) setLocalProviderProjects(projects);
+      })
+      .catch(() => {
+        if (!cancelled) setLocalProviderProjects([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [localProviderProjectPath, localProviderSetupOpen, projectPath, repositoryGroups]);
 
   const getCompanionState = useCallback(
     (planId: CompanionPlanId): RuntimeProviderCompanionState =>
@@ -499,7 +534,16 @@ export const RuntimeProviderQuickConnect = ({
         onInstallOpenCode={onInstallOpenCode}
         onRefreshOpenCode={onRefreshOpenCode}
         onRetryDirectory={directory.refresh}
+        onSetupLocalModel={() => setLocalProviderSetupOpen(true)}
         onBrowseProviders={() => onBrowseProviders()}
+      />
+      <RuntimeLocalProviderSetupDialog
+        open={localProviderSetupOpen}
+        onOpenChange={setLocalProviderSetupOpen}
+        projectPath={localProviderProjectPath}
+        projects={localProviderProjects}
+        onProjectPathChange={setLocalProviderProjectPath}
+        onConfigured={() => directory.refresh()}
       />
       <RuntimeProviderCompanionSetupDialog
         open={activeCompanionPlanId !== null}

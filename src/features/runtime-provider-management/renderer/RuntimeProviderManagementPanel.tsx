@@ -47,9 +47,7 @@ export const RuntimeProviderManagementPanel = ({
   const backgroundHydrationKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
     setActiveProjectPath(initialProjectPath);
   }, [initialProjectPath, open]);
 
@@ -151,15 +149,17 @@ export const RuntimeProviderManagementPanel = ({
   );
 
   return (
-    <RuntimeProviderManagementPanelView
-      state={state}
-      actions={actions}
-      disabled={disabled}
-      projectPath={activeProjectPath}
-      projectContextProjects={projectContextProjects}
-      projectContextLoading={projectContextLoading}
-      projectContextError={projectContextError}
-      onProjectContextChange={setActiveProjectPath}
-    />
+    <>
+      <RuntimeProviderManagementPanelView
+        state={state}
+        actions={actions}
+        disabled={disabled}
+        projectPath={activeProjectPath}
+        projectContextProjects={projectContextProjects}
+        projectContextLoading={projectContextLoading}
+        projectContextError={projectContextError}
+        onProjectContextChange={setActiveProjectPath}
+      />
+    </>
   );
 };
