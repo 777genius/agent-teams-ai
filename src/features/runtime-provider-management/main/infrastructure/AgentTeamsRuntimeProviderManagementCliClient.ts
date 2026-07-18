@@ -979,18 +979,20 @@ function runtimeProviderCommandOptions<T extends { env: NodeJS.ProcessEnv }>(
   options: T,
   projectPath: string | null
 ): T & { cwd?: string; maxBuffer: number } {
+  const isUsableCwd = (candidate: string | null | undefined): candidate is string => {
+    const normalized = candidate?.trim();
+    if (!normalized) return false;
+    const resolved = path.resolve(normalized);
+    return resolved !== path.parse(resolved).root;
+  };
   const fallbackHome = [options.env.HOME, options.env.USERPROFILE, getHomeDir()]
     .map((candidate) => candidate?.trim())
-    .find((candidate): candidate is string => {
-      if (!candidate) return false;
-      const resolved = path.resolve(candidate);
-      return resolved !== path.parse(resolved).root;
-    });
+    .find(isUsableCwd);
   const commandOptions = {
     ...options,
     maxBuffer: COMMAND_MAX_BUFFER_BYTES,
   };
-  const cwd = projectPath ?? fallbackHome;
+  const cwd = isUsableCwd(projectPath) ? projectPath.trim() : fallbackHome;
   return cwd ? { ...commandOptions, cwd } : commandOptions;
 }
 

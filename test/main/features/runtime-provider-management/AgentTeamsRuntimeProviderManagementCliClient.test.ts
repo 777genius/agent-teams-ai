@@ -250,6 +250,43 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     );
   });
 
+  it('never uses a filesystem-root project path as the verification cwd', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValueOnce({
+      env: { HOME: '/Users/test', PATH: '/usr/bin' },
+      connectionIssues: {},
+      providerArgs: [],
+    });
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        result: {
+          providerId: 'kiro',
+          modelId: 'kiro/auto',
+          ok: true,
+          availability: 'available',
+          message: 'Verified',
+          diagnostics: [],
+        },
+      }),
+      stderr: '',
+    });
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    await client.testModel({
+      runtimeId: 'opencode',
+      providerId: 'kiro',
+      modelId: 'kiro/auto',
+      projectPath: '/',
+    });
+
+    expect(execCliMock).toHaveBeenCalledWith(
+      '/repo/cli-dev',
+      expect.arrayContaining(['--project-path', '/']),
+      expect.objectContaining({ cwd: '/Users/test' })
+    );
+  });
+
   it('redacts secrets from generic command stderr details', async () => {
     const error = new Error('Command failed: /repo/cli-dev runtime providers view');
     Object.assign(error, {
