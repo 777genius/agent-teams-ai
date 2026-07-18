@@ -11,7 +11,6 @@ import {
 } from '@features/review-mutations';
 import { api, isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
-import { Button } from '@renderer/components/ui/button';
 import { useContinuousScrollNav } from '@renderer/hooks/useContinuousScrollNav';
 import { useDiffNavigation } from '@renderer/hooks/useDiffNavigation';
 import { useViewedFiles } from '@renderer/hooks/useViewedFiles';
@@ -89,6 +88,7 @@ import {
   markReviewMutationDiskPostimages,
 } from './reviewHistoryTimeline';
 import { ReviewToolbar } from './ReviewToolbar';
+import { SavedReviewStateRecoveryGate } from './SavedReviewStateRecoveryGate';
 import { ScopeWarningBanner } from './ScopeWarningBanner';
 import { ViewedProgressBar } from './ViewedProgressBar';
 
@@ -3503,7 +3503,9 @@ export const ChangeReviewDialog = ({
   ]);
 
   const handleDiscardSavedDecisionState = useCallback(async (): Promise<void> => {
-    if (!decisionScopeToken || !decisionHydrationKey || reviewMutationBusy) return;
+    if (!decisionScopeToken || !decisionHydrationKey || reviewMutationBusy) {
+      throw new Error('Saved review state is not ready to be discarded.');
+    }
     closingRef.current = true;
     setClosing(true);
     try {
@@ -3515,20 +3517,18 @@ export const ChangeReviewDialog = ({
           true
         );
         if (!cleared) {
-          useStore.setState({
-            applyError: 'Unable to discard the unreadable saved review decisions.',
-          });
-          return;
+          const message = 'Unable to discard the unreadable saved review decisions.';
+          useStore.setState({ applyError: message });
+          throw new Error(message);
         }
       }
       if (draftHistoryHydrationFailed) {
         try {
           await api.review.clearDraftHistory(teamName, decisionScopeKey, decisionScopeToken);
         } catch (error) {
-          useStore.setState({
-            applyError: `Unable to discard the unreadable manual edit history: ${String(error)}`,
-          });
-          return;
+          const message = `Unable to discard the unreadable manual edit history: ${String(error)}`;
+          useStore.setState({ applyError: message });
+          throw new Error(message, { cause: error });
         }
         draftDiskBaselineRef.current.clear();
         draftHistoryEntriesRef.current = {};
@@ -3537,7 +3537,7 @@ export const ChangeReviewDialog = ({
       }
       const state = useStore.getState();
       if (decisionHydrationFailed && state.decisionHydrationScopeKey !== decisionHydrationKey) {
-        return;
+        throw new Error('Saved review scope changed before it could be discarded.');
       }
       // Keep any in-memory choice that raced an earlier load. Only the explicitly
       // discarded disk copy is reset; the current review can now become authoritative.
@@ -4244,30 +4244,14 @@ export const ChangeReviewDialog = ({
           !hasReviewFiles && <TaskChangesEmptyState changeSet={taskChangeSet} />}
 
         {(decisionHydrationFailed || draftHistoryHydrationFailed) && (
-          <div className="flex w-full flex-col items-center justify-center gap-3 px-6 text-center text-sm text-red-400">
-            <p>Saved review state could not be loaded. The stored copy was left untouched.</p>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={reviewMutationBusy}
-                onClick={() => void handleRetrySavedReviewState()}
-              >
-                Retry
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={reviewMutationBusy}
-                onClick={() => void handleDiscardSavedDecisionState()}
-                className="border-red-500/30 text-red-300 hover:bg-red-500/10"
-              >
-                Discard saved state
-              </Button>
-            </div>
-          </div>
+          <SavedReviewStateRecoveryGate
+            key={decisionHydrationKey ?? 'unscoped'}
+            decisionStateUnreadable={decisionHydrationFailed}
+            draftHistoryUnreadable={draftHistoryHydrationFailed}
+            busy={reviewMutationBusy}
+            onRetry={() => void handleRetrySavedReviewState()}
+            onDiscard={handleDiscardSavedDecisionState}
+          />
         )}
       </div>
     </div>
