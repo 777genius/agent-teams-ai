@@ -430,6 +430,17 @@ class CdpClient {
     assert.equal(dispatched, true, `Element cannot receive mouse down: ${expression}`);
   }
 
+  async pressEscape() {
+    const key = {
+      key: 'Escape',
+      code: 'Escape',
+      windowsVirtualKeyCode: 27,
+      nativeVirtualKeyCode: 27,
+    };
+    await this.send('Input.dispatchKeyEvent', { type: 'keyDown', ...key });
+    await this.send('Input.dispatchKeyEvent', { type: 'keyUp', ...key });
+  }
+
   async screenshot(filePath) {
     const result = await this.send('Page.captureScreenshot', { format: 'png', fromSurface: true });
     await writeFile(filePath, Buffer.from(result.data, 'base64'));
@@ -582,15 +593,25 @@ async function main() {
     throw new Error(`Unable to open ${label}`);
   };
   const ensureHistoryClosed = async (label) => {
-    if (!(await client.evaluate(`document.body?.innerText.includes('Review action history')`))) {
-      return;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (!(await client.evaluate(`document.body?.innerText.includes('Review action history')`))) {
+        return;
+      }
+      // Escape closes the currently mounted Radix layer without racing a trigger click
+      // against an outside-click dismissal already queued by the preceding toolbar action.
+      await client.pressEscape();
+      try {
+        await client.waitFor(
+          `!document.body?.innerText.includes('Review action history')`,
+          label,
+          1_000
+        );
+        return;
+      } catch {
+        // A restart or async toolbar update can remount the layer; retry the current layer.
+      }
     }
-    await client.domClick(historyButton);
-    await client.waitFor(
-      `!document.body?.innerText.includes('Review action history')`,
-      label,
-      3_000
-    );
+    throw new Error(`Unable to close ${label}`);
   };
   const activateFirstHunkAction = async (buttonExpression, label) => {
     for (let attempt = 0; attempt < 8; attempt += 1) {
