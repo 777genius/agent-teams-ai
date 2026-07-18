@@ -39,7 +39,8 @@ const crashPoint = (crashPointValue ?? 'none') as CrashPoint;
 const operationShape =
   operationShapeValue === 'decision-only-redo' ||
   operationShapeValue === 'disk-redo' ||
-  operationShapeValue === 'disk-undo-after-redo'
+  operationShapeValue === 'disk-undo-after-redo' ||
+  operationShapeValue === 'history-restore'
     ? operationShapeValue
     : 'disk';
 const teamName = 'review-crash-test';
@@ -210,7 +211,11 @@ if (mode === 'run') {
       persistenceScope,
       reviewScope: { teamName, taskId: 'task-1' },
       kind:
-        operationShape === 'disk' || operationShape === 'disk-undo-after-redo' ? 'undo' : 'redo',
+        operationShape === 'history-restore'
+          ? 'restore-history'
+          : operationShape === 'disk' || operationShape === 'disk-undo-after-redo'
+            ? 'undo'
+            : 'redo',
       decisions: [],
       fileContents: [],
       diskSteps:
@@ -223,18 +228,13 @@ if (mode === 'run') {
                 filePath,
                 expectedContent:
                   operationShape === 'disk-undo-after-redo' ? afterContent : beforeContent,
-                content:
-                  operationShape === 'disk-undo-after-redo' ? beforeContent : afterContent,
+                content: operationShape === 'disk-undo-after-redo' ? beforeContent : afterContent,
                 status: 'pending',
               },
             ],
       persistedState,
       expectedDecisionRevision:
-        operationShape === 'disk-redo'
-          ? 1
-          : operationShape === 'disk-undo-after-redo'
-            ? 2
-            : 0,
+        operationShape === 'disk-redo' ? 1 : operationShape === 'disk-undo-after-redo' ? 2 : 0,
     },
     { applyDisk, commitDecisions }
   );

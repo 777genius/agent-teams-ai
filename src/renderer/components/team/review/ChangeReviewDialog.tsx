@@ -78,6 +78,7 @@ import { ReviewFileTree } from './ReviewFileTree';
 import {
   buildForwardDiskMutationSteps,
   buildRedoDiskMutationSteps,
+  buildReviewHistoryRestorePlan,
   buildUndoDiskMutationSteps,
   createReviewRedoAction,
   executeWithPreparedReviewWriteExpectations,
@@ -88,10 +89,7 @@ import { ReviewToolbar } from './ReviewToolbar';
 import { ScopeWarningBanner } from './ScopeWarningBanner';
 import { ViewedProgressBar } from './ViewedProgressBar';
 
-import type {
-  ReviewActionPersistenceStatus,
-  ReviewDecisionRecords,
-} from './reviewActionState';
+import type { ReviewActionPersistenceStatus, ReviewDecisionRecords } from './reviewActionState';
 import type { EditorView } from '@codemirror/view';
 import type {
   ReviewDraftHistoryEntry,
@@ -104,6 +102,7 @@ import type {
   ReviewDiskUndoAction,
   ReviewDiskUndoSnapshot,
   ReviewFileScope,
+  ReviewHistoryRestoreTarget,
   ReviewRedoAction,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
@@ -929,11 +928,7 @@ export const ChangeReviewDialog = ({
   const bindCommittedReviewAction = useCallback(
     (optimistic: ReviewUndoAction, committed: ReviewUndoAction | undefined): boolean => {
       if (!committed) return false;
-      const result = replaceLatestReviewAction(
-        reviewUndoActionsRef.current,
-        optimistic,
-        committed
-      );
+      const result = replaceLatestReviewAction(reviewUndoActionsRef.current, optimistic, committed);
       if (!result.replaced) return false;
       reviewUndoActionsRef.current = result.stack;
       setReviewActionHistory(result.stack);
@@ -1265,8 +1260,7 @@ export const ChangeReviewDialog = ({
   } = useViewedFiles(teamName, scopeKey, allFilePaths);
 
   const editedCount = Object.keys(editedContents).length;
-  const reviewMutationBlockedByExternalChange =
-    Object.keys(reviewExternalChangesByFile).length > 0;
+  const reviewMutationBlockedByExternalChange = Object.keys(reviewExternalChangesByFile).length > 0;
   const blockReviewMutationForExternalChange = useCallback((filePath?: string): boolean => {
     const externalChanges = useStore.getState().reviewExternalChangesByFile;
     const blocked = filePath
@@ -1274,8 +1268,7 @@ export const ChangeReviewDialog = ({
       : Object.keys(externalChanges).length > 0;
     if (blocked) {
       useStore.setState({
-        applyError:
-          'Reload files changed outside Changes before continuing review actions.',
+        applyError: 'Reload files changed outside Changes before continuing review actions.',
       });
     }
     return blocked;
@@ -1389,8 +1382,7 @@ export const ChangeReviewDialog = ({
       if (!actionFilePath) return;
       const targetFile = sortedFiles.find(
         (file) =>
-          normalizePathForComparison(file.filePath) ===
-          normalizePathForComparison(actionFilePath)
+          normalizePathForComparison(file.filePath) === normalizePathForComparison(actionFilePath)
       );
       if (!targetFile) {
         useStore.setState({
@@ -1449,11 +1441,7 @@ export const ChangeReviewDialog = ({
   ]);
 
   const handleRejectAll = useCallback(() => {
-    if (
-      !activeChangeSet ||
-      hasReviewActionInFlight() ||
-      blockReviewMutationForExternalChange()
-    ) {
+    if (!activeChangeSet || hasReviewActionInFlight() || blockReviewMutationForExternalChange()) {
       return;
     }
     const currentDrafts = useStore.getState().editedContents;
@@ -2801,11 +2789,7 @@ export const ChangeReviewDialog = ({
   );
 
   const handleUndoLatestReviewAction = useCallback(async (): Promise<void> => {
-    if (
-      hasReviewActionInFlight() ||
-      editedCount > 0 ||
-      blockReviewMutationForExternalChange()
-    ) {
+    if (hasReviewActionInFlight() || editedCount > 0 || blockReviewMutationForExternalChange()) {
       return;
     }
     const action = reviewUndoActionsRef.current.at(-1);
@@ -2880,11 +2864,7 @@ export const ChangeReviewDialog = ({
   ]);
 
   const handleRedoLatestReviewAction = useCallback(async (): Promise<void> => {
-    if (
-      hasReviewActionInFlight() ||
-      editedCount > 0 ||
-      blockReviewMutationForExternalChange()
-    ) {
+    if (hasReviewActionInFlight() || editedCount > 0 || blockReviewMutationForExternalChange()) {
       return;
     }
     const redoAction = reviewRedoActionsRef.current.at(-1);
@@ -2964,6 +2944,139 @@ export const ChangeReviewDialog = ({
     setUndoInFlight,
     teamName,
   ]);
+
+  const handleRestoreReviewHistory = useCallback(
+    async (target: ReviewHistoryRestoreTarget): Promise<void> => {
+      if (hasReviewActionInFlight()) throw new Error('Another review action is still running.');
+      if (editedCount > 0) {
+        throw new Error('Save or discard manual edits before restoring review history.');
+      }
+      if (blockReviewMutationForExternalChange()) {
+        throw new Error('Reload files changed outside Changes before restoring review history.');
+      }
+      if (!decisionScopeToken || !decisionHydrationReady) {
+        throw new Error('Durable review history is not ready yet.');
+      }
+      if (reviewActionPersistenceStatusRef.current !== 'saved') {
+        throw new Error(REVIEW_PERSISTENCE_ERROR);
+      }
+
+      const state = useStore.getState();
+      const plan = buildReviewHistoryRestorePlan(
+        {
+          hunkDecisions: state.hunkDecisions,
+          fileDecisions: state.fileDecisions,
+          hunkContextHashesByFile: state.hunkContextHashesByFile,
+          reviewActionHistory: reviewUndoActionsRef.current,
+          reviewRedoHistory: reviewRedoActionsRef.current,
+        },
+        target,
+        (filePath) =>
+          activeChangeSet?.files.find(
+            (file) =>
+              normalizePathForComparison(file.filePath) === normalizePathForComparison(filePath)
+          ) ?? null
+      );
+      if (plan.actionCount === 0) return;
+      if (plan.direction === 'none')
+        throw new Error('Review history restore plan is inconsistent.');
+      const direction = plan.direction;
+      const diskSnapshots = plan.orderedActions.flatMap((action) =>
+        getReviewActionDiskSnapshots(action)
+      );
+
+      setUndoInFlight(true);
+      try {
+        if (!(await quiesceDecisionPersistence(teamName, decisionScopeKey, decisionScopeToken))) {
+          throw new Error('Unable to finish saving the previous review state. Retry Restore.');
+        }
+        const committed = await executeWithPreparedReviewWriteExpectations(
+          diskSnapshots,
+          direction,
+          markRecentReviewWrite,
+          () =>
+            api.review.restoreHistory({
+              scope: reviewScope,
+              decisionPersistenceScope: {
+                scopeKey: decisionScopeKey,
+                scopeToken: decisionScopeToken,
+              },
+              target,
+              expectedDecisionRevision: state.decisionRevision,
+            })
+        );
+        recordDecisionRevision(
+          teamName,
+          decisionScopeKey,
+          decisionScopeToken,
+          committed.decisionRevision
+        );
+        const restored = committed.persistedState;
+        reviewUndoActionsRef.current = restored.reviewActionHistory;
+        reviewRedoActionsRef.current = restored.reviewRedoHistory;
+        setReviewActionHistory(restored.reviewActionHistory);
+        setReviewRedoHistory(restored.reviewRedoHistory);
+        setReviewUndoDepth(restored.reviewActionHistory.length);
+        setReviewRedoDepth(restored.reviewRedoHistory.length);
+        useStore.setState({
+          hunkDecisions: restored.hunkDecisions,
+          fileDecisions: restored.fileDecisions,
+          hunkContextHashesByFile: restored.hunkContextHashesByFile ?? {},
+          applyError: null,
+        });
+        if (direction === 'undo' && diskSnapshots.length > 0) {
+          refreshAfterDurableUndo(diskSnapshots);
+        } else if (direction === 'redo') {
+          for (const action of plan.orderedActions) refreshAfterDurableRedo(action);
+        }
+        const affectedPaths = plan.orderedActions.flatMap((action) =>
+          action.kind === 'bulk'
+            ? (activeChangeSet?.files.map((file) => file.filePath) ?? [])
+            : action.kind === 'disk'
+              ? [action.action.snapshot.filePath]
+              : [action.action.filePath]
+        );
+        setDiscardCounters((previous) => {
+          const next = { ...previous };
+          for (const filePath of affectedPaths) next[filePath] = (next[filePath] ?? 0) + 1;
+          return next;
+        });
+        if (target.kind === 'after-action') {
+          const targetAction =
+            restored.reviewActionHistory.find((action) => action.id === target.actionId) ??
+            restored.reviewRedoHistory.find((entry) => entry.action.id === target.actionId)?.action;
+          if (targetAction) handleHistoryActionNavigation(targetAction);
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to restore the selected review history.';
+        useStore.setState({ applyError: message });
+        throw error instanceof Error ? error : new Error(message);
+      } finally {
+        setUndoInFlight(false);
+      }
+    },
+    [
+      activeChangeSet,
+      blockReviewMutationForExternalChange,
+      decisionHydrationReady,
+      decisionScopeKey,
+      decisionScopeToken,
+      editedCount,
+      handleHistoryActionNavigation,
+      hasReviewActionInFlight,
+      markRecentReviewWrite,
+      quiesceDecisionPersistence,
+      recordDecisionRevision,
+      refreshAfterDurableRedo,
+      refreshAfterDurableUndo,
+      reviewScope,
+      setReviewActionHistory,
+      setReviewRedoHistory,
+      setUndoInFlight,
+      teamName,
+    ]
+  );
 
   // Selection change handler (debounced for non-empty, immediate for clear)
   const handleSelectionChange = useCallback((info: EditorSelectionInfo | null) => {
@@ -3732,16 +3845,25 @@ export const ChangeReviewDialog = ({
             undoHistory={reviewActionHistory}
             redoHistory={reviewRedoHistory}
             resolveFileLabel={resolveReviewFileLabel}
-            historyPersistenceStatus={
-              reviewMutationBusy ? 'saving' : reviewActionPersistenceStatus
-            }
+            historyPersistenceStatus={reviewMutationBusy ? 'saving' : reviewActionPersistenceStatus}
             onRetryHistoryPersistence={() => void persistLatestAcceptedReviewAction()}
             onNavigateToHistoryAction={handleHistoryActionNavigation}
+            onRestoreHistory={handleRestoreReviewHistory}
+            restoreHistoryDisabled={
+              reviewActionsBusy ||
+              editedCount > 0 ||
+              reviewMutationBlockedByExternalChange ||
+              reviewActionPersistenceStatus !== 'saved'
+            }
             undoDisabledReason={
-              editedCount > 0 ? 'Save or discard manual edits before undoing a review action.' : undefined
+              editedCount > 0
+                ? 'Save or discard manual edits before undoing a review action.'
+                : undefined
             }
             redoDisabledReason={
-              editedCount > 0 ? 'Save or discard manual edits before redoing a review action.' : undefined
+              editedCount > 0
+                ? 'Save or discard manual edits before redoing a review action.'
+                : undefined
             }
           />
         )}

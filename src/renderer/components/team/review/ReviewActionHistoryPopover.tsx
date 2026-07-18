@@ -1,5 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@renderer/components/ui/alert-dialog';
 import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { cn } from '@renderer/lib/utils';
@@ -13,7 +22,7 @@ import {
 
 import type { ReviewActionTone, ReviewFileLabelResolver } from './reviewActionPresentation';
 import type { ReviewActionPersistenceStatus } from './reviewActionState';
-import type { ReviewRedoAction, ReviewUndoAction } from '@shared/types';
+import type { ReviewHistoryRestoreTarget, ReviewRedoAction, ReviewUndoAction } from '@shared/types';
 
 const HISTORY_INITIAL_LIMIT = 12;
 const HISTORY_REVEAL_BATCH = 50;
@@ -25,6 +34,8 @@ interface ReviewActionHistoryPopoverProps {
   persistenceStatus?: ReviewActionPersistenceStatus;
   onRetryPersistence?: () => void;
   onNavigateToAction?: (action: ReviewUndoAction) => void;
+  onRestoreToTarget?: (target: ReviewHistoryRestoreTarget) => Promise<void>;
+  restoreDisabled?: boolean;
 }
 
 interface ReviewHistorySectionProps {
@@ -37,12 +48,20 @@ interface ReviewHistorySectionProps {
   resolveFileLabel?: ReviewFileLabelResolver;
   onShowOlder: () => void;
   onNavigateToAction?: (action: ReviewUndoAction) => void;
+  getRestoreCount?: (action: ReviewUndoAction) => number;
+  onRequestRestore?: (action: ReviewUndoAction, actionCount: number) => void;
+  restoreDisabled?: boolean;
 }
 
 function formatActionTime(createdAt: string): string | null {
   const timestamp = new Date(createdAt);
   if (Number.isNaN(timestamp.getTime())) return null;
-  return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return timestamp.toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 const ToneIcon = ({ tone }: { tone: ReviewActionTone }): React.ReactElement => {
@@ -50,7 +69,7 @@ const ToneIcon = ({ tone }: { tone: ReviewActionTone }): React.ReactElement => {
   if (tone === 'reject') return <X className="size-3.5 text-red-400" />;
   if (tone === 'restore') return <RotateCcw className="size-3.5 text-blue-400" />;
   return <CircleDot className="size-3.5 text-text-muted" />;
-}
+};
 
 const ReviewHistorySection = ({
   stackName,
@@ -62,6 +81,9 @@ const ReviewHistorySection = ({
   resolveFileLabel,
   onShowOlder,
   onNavigateToAction,
+  getRestoreCount,
+  onRequestRestore,
+  restoreDisabled,
 }: ReviewHistorySectionProps): React.ReactElement => {
   const hiddenCount = Math.max(0, totalCount - actions.length);
   const revealCount = Math.min(hiddenCount, HISTORY_REVEAL_BATCH);
@@ -79,19 +101,9 @@ const ReviewHistorySection = ({
             const presentation = describeReviewAction(action, resolveFileLabel);
             const timestamp = formatActionTime(action.createdAt);
             const canNavigate = Boolean(onNavigateToAction && getReviewActionFilePath(action));
-            return (
-              <button
-                key={action.id}
-                type="button"
-                data-review-history-action={action.id}
-                disabled={!canNavigate}
-                onClick={() => onNavigateToAction?.(action)}
-                className={cn(
-                  'flex w-full min-w-0 items-start gap-2 rounded px-2 py-1.5 text-left',
-                  canNavigate && 'hover:bg-surface-raised/70',
-                  index === 0 && 'bg-surface-raised'
-                )}
-              >
+            const restoreCount = getRestoreCount?.(action) ?? 0;
+            const actionContent = (
+              <>
                 <span className="mt-0.5 shrink-0">
                   <ToneIcon tone={presentation.tone} />
                 </span>
@@ -116,7 +128,53 @@ const ReviewHistorySection = ({
                     </div>
                   )}
                 </div>
-              </button>
+              </>
+            );
+            return (
+              <div
+                key={action.id}
+                data-review-history-row={action.id}
+                className={cn(
+                  'flex w-full min-w-0 items-stretch rounded',
+                  index === 0 && 'bg-surface-raised'
+                )}
+              >
+                {canNavigate ? (
+                  <button
+                    type="button"
+                    data-review-history-action={action.id}
+                    onClick={() => onNavigateToAction?.(action)}
+                    className="hover:bg-surface-raised/70 flex min-w-0 flex-1 items-start gap-2 rounded-l px-2 py-1.5 text-left"
+                  >
+                    {actionContent}
+                  </button>
+                ) : (
+                  <div
+                    data-review-history-action={action.id}
+                    className="flex min-w-0 flex-1 items-start gap-2 px-2 py-1.5 text-left"
+                  >
+                    {actionContent}
+                  </div>
+                )}
+                {onRequestRestore && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    data-review-history-restore={action.id}
+                    aria-label={
+                      restoreCount === 0
+                        ? 'Current review checkpoint'
+                        : `Restore ${restoreCount} action${restoreCount === 1 ? '' : 's'} to this checkpoint`
+                    }
+                    disabled={restoreDisabled || restoreCount === 0}
+                    className="h-auto shrink-0 rounded-l-none px-2 text-[10px] text-blue-300"
+                    onClick={() => onRequestRestore(action, restoreCount)}
+                  >
+                    {restoreCount === 0 ? 'Current' : 'Restore'}
+                  </Button>
+                )}
+              </div>
             );
           })}
           {hiddenCount > 0 && (
@@ -136,7 +194,7 @@ const ReviewHistorySection = ({
       )}
     </section>
   );
-}
+};
 
 export const ReviewActionHistoryPopover = ({
   undoHistory,
@@ -145,10 +203,19 @@ export const ReviewActionHistoryPopover = ({
   persistenceStatus = 'saved',
   onRetryPersistence,
   onNavigateToAction,
+  onRestoreToTarget,
+  restoreDisabled = false,
 }: ReviewActionHistoryPopoverProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false);
   const [undoVisibleLimit, setUndoVisibleLimit] = useState(HISTORY_INITIAL_LIMIT);
   const [redoVisibleLimit, setRedoVisibleLimit] = useState(HISTORY_INITIAL_LIMIT);
+  const [restoreRequest, setRestoreRequest] = useState<{
+    target: ReviewHistoryRestoreTarget;
+    actionCount: number;
+  } | null>(null);
+  const [restoreRunning, setRestoreRunning] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const cancelRestoreRef = useRef<HTMLButtonElement | null>(null);
   const undoActions = useMemo(
     () => takeRecentReviewActions(undoHistory, undoVisibleLimit),
     [undoHistory, undoVisibleLimit]
@@ -164,118 +231,236 @@ export const ReviewActionHistoryPopover = ({
   const totalCount = undoHistory.length + redoHistory.length;
   if (totalCount === 0) return null;
 
+  const requestRestore = (target: ReviewHistoryRestoreTarget, actionCount: number): void => {
+    setOpen(false);
+    setRestoreError(null);
+    setRestoreRequest({ target, actionCount });
+  };
+  const runRestore = async (): Promise<void> => {
+    if (!restoreRequest || !onRestoreToTarget || restoreRunning) return;
+    setRestoreRunning(true);
+    setRestoreError(null);
+    try {
+      await onRestoreToTarget(restoreRequest.target);
+      setRestoreRequest(null);
+    } catch (error) {
+      setRestoreError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setRestoreRunning(false);
+    }
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Review history: ${undoHistory.length} undo, ${redoHistory.length} redo; ${persistenceStatus}`}
-          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
-        >
-          <History className="size-3.5" />
-          <span>History</span>
-          <span className="rounded bg-zinc-500/15 px-1 text-[10px] text-zinc-300">
-            {totalCount}
-          </span>
-          {persistenceStatus === 'saving' && (
-            <Loader2 className="size-3 animate-spin text-blue-400" aria-hidden="true" />
-          )}
-          {persistenceStatus === 'error' && (
-            <AlertTriangle className="size-3 text-red-400" aria-hidden="true" />
-          )}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="max-h-[min(70vh,32rem)] w-[22rem] p-0"
-        onEscapeKeyDown={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          setOpen(false);
-        }}
-      >
-        <div className="sticky top-0 z-10 border-b border-border bg-surface px-3 py-2.5">
-          <div className="text-xs font-medium text-text">Review action history</div>
-          <div
-            data-review-history-persistence={persistenceStatus}
-            className={cn(
-              'mt-1 flex items-center gap-1.5 text-[10px]',
-              persistenceStatus === 'error' ? 'text-red-300' : 'text-text-muted'
-            )}
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Review history: ${undoHistory.length} undo, ${redoHistory.length} redo; ${persistenceStatus}`}
+            className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
           >
+            <History className="size-3.5" />
+            <span>History</span>
+            <span className="rounded bg-zinc-500/15 px-1 text-[10px] text-zinc-300">
+              {totalCount}
+            </span>
             {persistenceStatus === 'saving' && (
-              <Loader2 className="size-3 shrink-0 animate-spin text-blue-400" aria-hidden="true" />
+              <Loader2 className="size-3 animate-spin text-blue-400" aria-hidden="true" />
             )}
             {persistenceStatus === 'error' && (
-              <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
+              <AlertTriangle className="size-3 text-red-400" aria-hidden="true" />
             )}
-            <span>
-              {persistenceStatus === 'saving'
-                ? 'Saving latest action...'
-                : persistenceStatus === 'error'
-                  ? 'Latest action is not saved yet.'
-                  : 'Saved actions are restored after restart.'}{' '}
-              The highlighted action runs next.
-            </span>
-            {persistenceStatus === 'error' && onRetryPersistence && (
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          className="max-h-[min(70vh,32rem)] w-[22rem] p-0"
+          onEscapeKeyDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+          }}
+        >
+          <div className="sticky top-0 z-10 border-b border-border bg-surface px-3 py-2.5">
+            <div className="text-xs font-medium text-text">Review action history</div>
+            <div
+              data-review-history-persistence={persistenceStatus}
+              className={cn(
+                'mt-1 flex items-center gap-1.5 text-[10px]',
+                persistenceStatus === 'error' ? 'text-red-300' : 'text-text-muted'
+              )}
+            >
+              {persistenceStatus === 'saving' && (
+                <Loader2
+                  className="size-3 shrink-0 animate-spin text-blue-400"
+                  aria-hidden="true"
+                />
+              )}
+              {persistenceStatus === 'error' && (
+                <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
+              )}
+              <span>
+                {persistenceStatus === 'saving'
+                  ? 'Saving latest action...'
+                  : persistenceStatus === 'error'
+                    ? 'Latest action is not saved yet.'
+                    : 'Saved actions are restored after restart.'}{' '}
+                The highlighted action runs next.
+              </span>
+              {persistenceStatus === 'error' && onRetryPersistence && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto h-6 shrink-0 px-2 text-[10px]"
+                  onClick={onRetryPersistence}
+                >
+                  Retry
+                </Button>
+              )}
+            </div>
+          </div>
+          <ReviewHistorySection
+            stackName="undo"
+            title="Undo stack"
+            emptyLabel="No actions available to undo."
+            actions={undoActions}
+            totalCount={undoHistory.length}
+            nextLabel="Next undo"
+            resolveFileLabel={resolveFileLabel}
+            onNavigateToAction={
+              onNavigateToAction
+                ? (action) => {
+                    setOpen(false);
+                    onNavigateToAction(action);
+                  }
+                : undefined
+            }
+            getRestoreCount={(action) => {
+              const index = undoHistory.findIndex((candidate) => candidate.id === action.id);
+              return index < 0 ? 0 : undoHistory.length - index - 1;
+            }}
+            onRequestRestore={
+              onRestoreToTarget
+                ? (action, actionCount) =>
+                    requestRestore(
+                      { kind: 'after-action', stack: 'undo', actionId: action.id },
+                      actionCount
+                    )
+                : undefined
+            }
+            restoreDisabled={restoreDisabled}
+            onShowOlder={() => {
+              setUndoVisibleLimit((current) =>
+                Math.min(undoHistory.length, current + HISTORY_REVEAL_BATCH)
+              );
+            }}
+          />
+          {onRestoreToTarget && (
+            <div className="border-t border-border px-1.5 py-1.5">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="ml-auto h-6 shrink-0 px-2 text-[10px]"
-                onClick={onRetryPersistence}
+                data-review-history-restore="start"
+                className="h-8 w-full justify-between px-2 text-xs"
+                disabled={restoreDisabled || undoHistory.length === 0}
+                onClick={() => requestRestore({ kind: 'start' }, undoHistory.length)}
               >
-                Retry
+                <span>Start of review</span>
+                <span className="text-[10px] text-blue-300">Restore</span>
               </Button>
-            )}
-          </div>
-        </div>
-        <ReviewHistorySection
-          stackName="undo"
-          title="Undo stack"
-          emptyLabel="No actions available to undo."
-          actions={undoActions}
-          totalCount={undoHistory.length}
-          nextLabel="Next undo"
-          resolveFileLabel={resolveFileLabel}
-          onNavigateToAction={
-            onNavigateToAction
-              ? (action) => {
-                  setOpen(false);
-                  onNavigateToAction(action);
-                }
-              : undefined
-          }
-          onShowOlder={() => {
-            setUndoVisibleLimit((current) =>
-              Math.min(undoHistory.length, current + HISTORY_REVEAL_BATCH)
-            );
+            </div>
+          )}
+          <div className="border-t border-border" />
+          <ReviewHistorySection
+            stackName="redo"
+            title="Redo stack"
+            emptyLabel="No actions available to redo."
+            actions={redoActions}
+            totalCount={redoHistory.length}
+            nextLabel="Next redo"
+            resolveFileLabel={resolveFileLabel}
+            onNavigateToAction={
+              onNavigateToAction
+                ? (action) => {
+                    setOpen(false);
+                    onNavigateToAction(action);
+                  }
+                : undefined
+            }
+            getRestoreCount={(action) => {
+              const index = redoHistory.findIndex((entry) => entry.action.id === action.id);
+              return index < 0 ? 0 : redoHistory.length - index;
+            }}
+            onRequestRestore={
+              onRestoreToTarget
+                ? (action, actionCount) =>
+                    requestRestore(
+                      { kind: 'after-action', stack: 'redo', actionId: action.id },
+                      actionCount
+                    )
+                : undefined
+            }
+            restoreDisabled={restoreDisabled}
+            onShowOlder={() => {
+              setRedoVisibleLimit((current) =>
+                Math.min(redoHistory.length, current + HISTORY_REVEAL_BATCH)
+              );
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+      <AlertDialog
+        open={restoreRequest !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !restoreRunning) setRestoreRequest(null);
+        }}
+      >
+        <AlertDialogContent
+          onEscapeKeyDown={(event) => {
+            if (restoreRunning) event.preventDefault();
           }}
-        />
-        <div className="border-t border-border" />
-        <ReviewHistorySection
-          stackName="redo"
-          title="Redo stack"
-          emptyLabel="No actions available to redo."
-          actions={redoActions}
-          totalCount={redoHistory.length}
-          nextLabel="Next redo"
-          resolveFileLabel={resolveFileLabel}
-          onNavigateToAction={
-            onNavigateToAction
-              ? (action) => {
-                  setOpen(false);
-                  onNavigateToAction(action);
-                }
-              : undefined
-          }
-          onShowOlder={() => {
-            setRedoVisibleLimit((current) =>
-              Math.min(redoHistory.length, current + HISTORY_REVEAL_BATCH)
-            );
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            cancelRestoreRef.current?.focus();
           }}
-        />
-      </PopoverContent>
-    </Popover>
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore this review checkpoint?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will{' '}
+              {restoreRequest?.target.kind === 'after-action' &&
+              restoreRequest.target.stack === 'redo'
+                ? 'redo'
+                : 'undo'}{' '}
+              {restoreRequest?.actionCount ?? 0} review action
+              {(restoreRequest?.actionCount ?? 0) === 1 ? '' : 's'}. Files changed by Reject or
+              Restore actions may be updated on disk.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {restoreError && <p className="text-xs text-red-300">{restoreError}</p>}
+          {restoreRunning && (
+            <div role="status" aria-live="polite" className="flex items-center gap-2 text-xs">
+              <Loader2 className="size-3.5 animate-spin" />
+              Restoring {restoreRequest?.actionCount ?? 0} actions...
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel ref={cancelRestoreRef} disabled={restoreRunning}>
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={restoreRunning}
+              onClick={() => void runRestore()}
+            >
+              {restoreRunning ? 'Restoring...' : restoreError ? 'Retry restore' : 'Restore'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };

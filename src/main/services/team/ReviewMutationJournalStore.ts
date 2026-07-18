@@ -153,7 +153,10 @@ export class ReviewMutationJournalStore {
     const isDecisionOnlyHistoryMutation =
       !hasDecisionBatch &&
       !hasDirectSteps &&
-      (input.kind === 'undo' || input.kind === 'redo' || input.kind === 'reload-external') &&
+      (input.kind === 'undo' ||
+        input.kind === 'redo' ||
+        input.kind === 'reload-external' ||
+        input.kind === 'restore-history') &&
       !!input.persistedState;
     if (
       (!isDecisionOnlyHistoryMutation && hasDecisionBatch === hasDirectSteps) ||
@@ -391,7 +394,8 @@ export class ReviewMutationJournalStore {
         record.kind !== 'bulk' &&
         record.kind !== 'undo' &&
         record.kind !== 'redo' &&
-        record.kind !== 'reload-external') ||
+        record.kind !== 'reload-external' &&
+        record.kind !== 'restore-history') ||
       record.teamName !== expectedTeamName ||
       recordPersistenceScope?.scopeKey !== expectedScope.scopeKey ||
       recordPersistenceScope?.scopeToken !== expectedScope.scopeToken ||
@@ -425,7 +429,8 @@ export class ReviewMutationJournalStore {
       return (
         (record.kind === 'undo' ||
           record.kind === 'redo' ||
-          record.kind === 'reload-external') &&
+          record.kind === 'reload-external' ||
+          record.kind === 'restore-history') &&
         !!record.persistedState &&
         fileContents.length === 0
       );
@@ -477,8 +482,7 @@ export class ReviewMutationJournalStore {
                   pathState.filePath.length > 32_768 ||
                   (pathState.beforeContent !== null &&
                     typeof pathState.beforeContent !== 'string') ||
-                  (pathState.afterContent !== null &&
-                    typeof pathState.afterContent !== 'string') ||
+                  (pathState.afterContent !== null && typeof pathState.afterContent !== 'string') ||
                   (pathState.operation !== undefined &&
                     !['replace', 'delete', 'move'].includes(pathState.operation)) ||
                   (pathState.transactionId !== undefined &&

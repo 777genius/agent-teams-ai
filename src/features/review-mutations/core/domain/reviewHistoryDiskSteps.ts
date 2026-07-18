@@ -1,8 +1,15 @@
+import { normalizePathForComparison } from '@shared/utils/platformPath';
+
 import type {
   ReviewDirectDiskMutationStep,
   ReviewDiskUndoSnapshot,
   ReviewUndoAction,
 } from '@shared/types';
+
+interface ReviewHistoryDiskAction {
+  direction: 'undo' | 'redo';
+  action: ReviewUndoAction;
+}
 
 export function buildUndoDiskMutationSteps(
   actionId: string,
@@ -131,4 +138,73 @@ export function getReviewActionDiskSnapshots(action: ReviewUndoAction): ReviewDi
   if (action.kind === 'bulk') return action.diskSnapshots;
   if (action.kind === 'disk') return [action.action.snapshot];
   return [];
+}
+
+/**
+ * Collapses a history range into one current-to-target CAS transition per path.
+ * This is required when several actions touch the same file: concatenating their
+ * individual Undo steps would preflight every intermediate state against the same disk image.
+ */
+export function buildReviewHistoryRestoreDiskSteps(
+  actions: readonly ReviewHistoryDiskAction[]
+): ReviewDirectDiskMutationStep[] {
+  const logicalSteps = actions.flatMap(({ action, direction }) => {
+    const snapshots = getReviewActionDiskSnapshots(action);
+    return direction === 'undo'
+      ? buildUndoDiskMutationSteps(action.id, snapshots)
+      : buildRedoDiskMutationSteps(action.id, snapshots);
+  });
+  const renameSteps = logicalSteps.filter(
+    (step) => step.type === 'restore-rejected-rename' || step.type === 'reapply-rejected-rename'
+  );
+  if (renameSteps.length > 0) {
+    if (logicalSteps.length !== 1) {
+      throw new Error(
+        'History ranges that combine Rename with other disk changes must be restored one action at a time.'
+      );
+    }
+    return logicalSteps;
+  }
+
+  const byPath = new Map<string, { filePath: string; steps: ReviewDirectDiskMutationStep[] }>();
+  for (const step of logicalSteps) {
+    const key = normalizePathForComparison(step.filePath);
+    const existing = byPath.get(key) ?? { filePath: step.filePath, steps: [] };
+    existing.steps.push(step);
+    byPath.set(key, existing);
+  }
+
+  const netSteps: ReviewDirectDiskMutationStep[] = [];
+  let index = 0;
+  for (const { filePath, steps } of byPath.values()) {
+    const first = steps[0];
+    if (!first || (first.type !== 'write' && first.type !== 'delete')) continue;
+    const initialContent = first.expectedContent;
+    let targetContent: string | null = first.type === 'write' ? first.content : null;
+    for (const step of steps.slice(1)) {
+      if (step.type !== 'write' && step.type !== 'delete') {
+        throw new Error('Unsupported Rename transition in a composed history range');
+      }
+      if (step.expectedContent !== targetContent) {
+        throw new Error('Review history disk snapshots do not form one continuous transition');
+      }
+      targetContent = step.type === 'write' ? step.content : null;
+    }
+    if (initialContent === targetContent) continue;
+    const id = `history-restore:${index++}`;
+    if (targetContent === null) {
+      if (initialContent !== null) {
+        netSteps.push({ id, type: 'delete', filePath, expectedContent: initialContent });
+      }
+    } else {
+      netSteps.push({
+        id,
+        type: 'write',
+        filePath,
+        expectedContent: initialContent,
+        content: targetContent,
+      });
+    }
+  }
+  return netSteps;
 }

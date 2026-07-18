@@ -11,7 +11,12 @@ import { describeReviewAction } from './reviewActionPresentation';
 
 import type { ReviewFileLabelResolver } from './reviewActionPresentation';
 import type { ReviewActionPersistenceStatus } from './reviewActionState';
-import type { ChangeStats, ReviewRedoAction, ReviewUndoAction } from '@shared/types';
+import type {
+  ChangeStats,
+  ReviewHistoryRestoreTarget,
+  ReviewRedoAction,
+  ReviewUndoAction,
+} from '@shared/types';
 
 interface ReviewToolbarProps {
   stats: { pending: number; accepted: number; rejected: number };
@@ -41,6 +46,8 @@ interface ReviewToolbarProps {
   historyPersistenceStatus?: ReviewActionPersistenceStatus;
   onRetryHistoryPersistence?: () => void;
   onNavigateToHistoryAction?: (action: ReviewUndoAction) => void;
+  onRestoreHistory?: (target: ReviewHistoryRestoreTarget) => Promise<void>;
+  restoreHistoryDisabled?: boolean;
 }
 
 export const ReviewToolbar = ({
@@ -71,6 +78,8 @@ export const ReviewToolbar = ({
   historyPersistenceStatus = 'saved',
   onRetryHistoryPersistence,
   onNavigateToHistoryAction,
+  onRestoreHistory,
+  restoreHistoryDisabled,
 }: ReviewToolbarProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
   const hasRejected = stats.rejected > 0;
@@ -199,6 +208,8 @@ export const ReviewToolbar = ({
         persistenceStatus={historyPersistenceStatus}
         onRetryPersistence={onRetryHistoryPersistence}
         onNavigateToAction={onNavigateToHistoryAction}
+        onRestoreToTarget={onRestoreHistory}
+        restoreDisabled={restoreHistoryDisabled}
       />
 
       {canUndo && onUndo && (
@@ -218,7 +229,7 @@ export const ReviewToolbar = ({
               ? externalMutationBlockedLabel
               : undoDisabledReason
                 ? undoDisabledReason
-              : formatPreview('Undo', undoPreview, shortcutLabel('⌘ Z', 'Ctrl+Z'))}
+                : formatPreview('Undo', undoPreview, shortcutLabel('⌘ Z', 'Ctrl+Z'))}
           </TooltipContent>
         </Tooltip>
       )}
@@ -240,7 +251,7 @@ export const ReviewToolbar = ({
               ? externalMutationBlockedLabel
               : redoDisabledReason
                 ? redoDisabledReason
-              : formatPreview('Redo', redoPreview, shortcutLabel('⌘ ⇧ Z', 'Ctrl+Shift+Z'))}
+                : formatPreview('Redo', redoPreview, shortcutLabel('⌘ ⇧ Z', 'Ctrl+Shift+Z'))}
           </TooltipContent>
         </Tooltip>
       )}
@@ -263,8 +274,8 @@ export const ReviewToolbar = ({
               {mutationBlocked
                 ? externalMutationBlockedLabel
                 : canAcceptAll
-                ? t('review.toolbar.tooltips.acceptAll')
-                : 'Wait until every file has a safe, complete review snapshot.'}
+                  ? t('review.toolbar.tooltips.acceptAll')
+                  : 'Wait until every file has a safe, complete review snapshot.'}
             </TooltipContent>
           </Tooltip>
 
@@ -290,8 +301,8 @@ export const ReviewToolbar = ({
               {mutationBlocked
                 ? externalMutationBlockedLabel
                 : canRejectAll
-                ? t('review.toolbar.tooltips.rejectAll')
-                : t('review.toolbar.tooltips.rejectAllDisabled')}
+                  ? t('review.toolbar.tooltips.rejectAll')
+                  : t('review.toolbar.tooltips.rejectAllDisabled')}
             </TooltipContent>
           </Tooltip>
         </>

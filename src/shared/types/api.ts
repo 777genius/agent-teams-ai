@@ -28,6 +28,8 @@ import type {
   FileChangeWithContent,
   HunkDecision,
   RejectResult,
+  RestoreReviewHistoryRequest,
+  RestoreReviewHistoryResult,
   RetryReviewMutationRecoveryRequest,
   RetryReviewMutationRecoveryResult,
   ReviewFileScope,
@@ -770,6 +772,7 @@ export interface ReviewAPI {
   retryMutationRecovery: (
     request: RetryReviewMutationRecoveryRequest
   ) => Promise<RetryReviewMutationRecoveryResult>;
+  restoreHistory: (request: RestoreReviewHistoryRequest) => Promise<RestoreReviewHistoryResult>;
   // Phase 2
   checkConflict: (
     scope: ReviewFileScope,

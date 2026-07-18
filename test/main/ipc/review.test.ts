@@ -16,6 +16,7 @@ import {
   REVIEW_LOAD_DRAFT_HISTORY,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
+  REVIEW_RESTORE_HISTORY,
   REVIEW_RESTORE_REJECTED_RENAME,
   REVIEW_RETRY_MUTATION_RECOVERY,
   REVIEW_SAVE_DECISIONS,
@@ -863,9 +864,7 @@ describe('review IPC path confinement', () => {
               snapshot: {
                 beforeContent: 'project\n',
                 afterContent: 'project\n',
-                authoritativeBeforeSha256: createHash('sha256')
-                  .update('project\n')
-                  .digest('hex'),
+                authoritativeBeforeSha256: createHash('sha256').update('project\n').digest('hex'),
               },
             },
           },
@@ -1805,6 +1804,117 @@ describe('review IPC path confinement', () => {
     await expect(journal.list('safe-team', persistenceScope)).resolves.toEqual([]);
   });
 
+  it('restores multiple same-file actions through one main-authoritative net transition', async () => {
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:history-restore-net-transition',
+    };
+    const fileSummary = {
+      filePath: projectFile,
+      relativePath: 'src/project.ts',
+      snippets: [],
+      linesAdded: 3,
+      linesRemoved: 3,
+      isNewFile: false,
+    };
+    const firstAction = {
+      id: 'history-action-0',
+      createdAt: '2026-07-18T08:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    const secondAction = {
+      id: 'history-action-1',
+      createdAt: '2026-07-18T08:00:01.000Z',
+      kind: 'disk' as const,
+      action: {
+        originalIndex: 1,
+        snapshot: {
+          filePath: projectFile,
+          beforeContent: 'state-1\n',
+          afterContent: 'state-2\n',
+          authoritativeBeforeSha256: createHash('sha256').update('state-1\n').digest('hex'),
+          file: fileSummary,
+        },
+      },
+    };
+    const thirdAction = {
+      id: 'history-action-2',
+      createdAt: '2026-07-18T08:00:02.000Z',
+      kind: 'disk' as const,
+      action: {
+        originalIndex: 2,
+        snapshot: {
+          filePath: projectFile,
+          beforeContent: 'state-2\n',
+          afterContent: 'state-3\n',
+          authoritativeBeforeSha256: createHash('sha256').update('state-2\n').digest('hex'),
+          file: fileSummary,
+        },
+      },
+    };
+    await writeFile(projectFile, 'state-3\n', 'utf8');
+    await new ReviewDecisionStore().save('safe-team', persistenceScope.scopeKey, {
+      scopeToken: persistenceScope.scopeToken,
+      hunkDecisions: {
+        [`${projectFile}:0`]: 'accepted',
+        [`${projectFile}:1`]: 'rejected',
+        [`${projectFile}:2`]: 'rejected',
+      },
+      fileDecisions: {},
+      hunkContextHashesByFile: { [projectFile]: { 0: 'a', 1: 'b', 2: 'c' } },
+      reviewActionHistory: [firstAction, secondAction, thirdAction],
+      reviewRedoHistory: [],
+      expectedRevision: 0,
+    });
+
+    const restored = await ipcMain.invoke(REVIEW_RESTORE_HISTORY, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: persistenceScope,
+      target: { kind: 'after-action', stack: 'undo', actionId: firstAction.id },
+      expectedDecisionRevision: 1,
+    });
+    if (!restored.success) throw new Error(restored.error);
+
+    expect(restored).toMatchObject({
+      success: true,
+      data: {
+        decisionRevision: 2,
+        direction: 'undo',
+        actionCount: 2,
+        persistedState: {
+          hunkDecisions: { [`${projectFile}:0`]: 'accepted' },
+          reviewActionHistory: [{ id: firstAction.id }],
+          reviewRedoHistory: [
+            { action: { id: thirdAction.id } },
+            { action: { id: secondAction.id } },
+          ],
+        },
+      },
+    });
+    expect(applier.saveEditedFile).toHaveBeenCalledTimes(1);
+    expect(applier.saveEditedFile).toHaveBeenCalledWith(projectFile, 'state-1\n', 'state-3\n');
+    await expect(readFile(projectFile, 'utf8')).resolves.toBe('state-1\n');
+    const { ReviewMutationJournalStore } =
+      await import('@main/services/team/ReviewMutationJournalStore');
+    await expect(
+      new ReviewMutationJournalStore().list('safe-team', persistenceScope)
+    ).resolves.toEqual([]);
+
+    applier.saveEditedFile.mockClear();
+    const stale = await ipcMain.invoke(REVIEW_RESTORE_HISTORY, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: persistenceScope,
+      target: { kind: 'start' },
+      expectedDecisionRevision: 1,
+    });
+    expect(stale).toEqual({
+      success: false,
+      error: 'Review decisions changed; refusing stale state overwrite',
+    });
+    expect(applier.saveEditedFile).not.toHaveBeenCalled();
+  });
+
   it('refuses a delayed CAS clear after a newer WAL commit', async () => {
     const persistenceScope = {
       scopeKey: 'agent-worker',
@@ -2438,7 +2548,12 @@ describe('review IPC path confinement', () => {
       kind: 'disk' as const,
       descriptor: { intent: 'reject-file' as const, filePath: projectFile },
       action: {
-        snapshot: { filePath: projectFile, beforeContent: 'project\n', afterContent: 'before\n', file },
+        snapshot: {
+          filePath: projectFile,
+          beforeContent: 'project\n',
+          afterContent: 'before\n',
+          file,
+        },
         file,
         decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
       },
@@ -2908,9 +3023,7 @@ describe('review IPC path confinement', () => {
         snapshot: {
           beforeContent: expectedUndoContent,
           afterContent: concurrentRejectedContent,
-          authoritativeBeforeSha256: createHash('sha256')
-            .update(expectedUndoContent)
-            .digest('hex'),
+          authoritativeBeforeSha256: createHash('sha256').update(expectedUndoContent).digest('hex'),
         },
       },
     });
@@ -3085,7 +3198,10 @@ describe('review IPC path confinement', () => {
       },
     });
 
-    expect(undone).toMatchObject({ success: false, error: expect.stringContaining('did not prove') });
+    expect(undone).toMatchObject({
+      success: false,
+      error: expect.stringContaining('did not prove'),
+    });
     expect(applier.saveEditedFile).not.toHaveBeenCalled();
   });
 
@@ -3216,7 +3332,10 @@ describe('review IPC path confinement', () => {
       },
     });
 
-    expect(undone).toMatchObject({ success: false, error: expect.stringContaining('did not prove') });
+    expect(undone).toMatchObject({
+      success: false,
+      error: expect.stringContaining('did not prove'),
+    });
     expect(applier.saveEditedFile).not.toHaveBeenCalled();
   });
 

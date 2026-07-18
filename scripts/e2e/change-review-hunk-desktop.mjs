@@ -38,6 +38,18 @@ const visibleElement = (expression) => `(() => {
   const rect = element.getBoundingClientRect();
   return rect.width > 0 && rect.height > 0 ? element : null;
 })()`;
+const visibleRejectHunkButton = `Array.from(document.querySelectorAll('button[title^="Reject change"]'))
+  .find((button) => {
+    const rect = button.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  })`;
+const visibleAcceptHunkButton = `Array.from(document.querySelectorAll('button[title^="Accept change"]'))
+  .find((button) => {
+    const rect = button.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  })`;
+const reviewedLine = (index, value) => `Array.from(document.querySelectorAll('.cm-line'))
+  .find((line) => line.textContent?.includes(${JSON.stringify(`reviewed_${index} = '${value}'`)}))`;
 const appLogTail = [];
 let appProcess = null;
 let client = null;
@@ -78,11 +90,15 @@ async function findAvailablePort(start = 9410) {
 }
 
 function seedFixture() {
-  const result = spawnSync(process.execPath, [path.join(repoRoot, 'scripts/seed-change-review-e2e.mjs')], {
-    cwd: repoRoot,
-    env: { ...process.env, AGENT_TEAMS_CHANGES_E2E_ROOT: fixtureRoot },
-    encoding: 'utf8',
-  });
+  const result = spawnSync(
+    process.execPath,
+    [path.join(repoRoot, 'scripts/seed-change-review-e2e.mjs')],
+    {
+      cwd: repoRoot,
+      env: { ...process.env, AGENT_TEAMS_CHANGES_E2E_ROOT: fixtureRoot },
+      encoding: 'utf8',
+    }
+  );
   if (result.status !== 0) {
     throw new Error(`Unable to seed Changes fixture: ${result.stderr || result.stdout}`);
   }
@@ -166,6 +182,7 @@ function isProcessGroupAlive(processGroupId) {
     return true;
   } catch (error) {
     if (error?.code === 'ESRCH') return false;
+    if (error?.code === 'EPERM') return false;
     throw error;
   }
 }
@@ -327,7 +344,9 @@ class CdpClient {
       returnByValue: true,
     });
     if (response.exceptionDetails) {
-      throw new Error(response.exceptionDetails.exception?.description ?? 'Renderer evaluation failed');
+      throw new Error(
+        response.exceptionDetails.exception?.description ?? 'Renderer evaluation failed'
+      );
     }
     return response.result.value;
   }
@@ -451,7 +470,7 @@ async function openReview() {
   }
   await client.domClick(fileRow);
   await client.waitFor(
-    `document.body?.innerText.includes('12 pending') || document.body?.innerText.includes('11 pending')`,
+    `/\\b\\d+ (?:pending|accepted|rejected)\\b/.test(document.body?.innerText ?? '')`,
     'hunk review dialog',
     45_000
   );
@@ -526,9 +545,111 @@ async function main() {
   await assertViewportFits();
   await assertDiskLines(fixture.changedFile, 'after-0', 'after-1');
 
-  await client.moveTo(`document.querySelector('.cm-changedLine, .cm-insertedLine')`);
-  await client.waitFor(`document.querySelector('button[title^="Reject change"]')`, 'hunk Reject');
-  await client.domMouseDown(`document.querySelector('button[title^="Reject change"]')`);
+  await client.waitFor(enabledButtonWithText('Accept All'), 'Accept All for history restore');
+  await client.domClick(enabledButtonWithText('Accept All'));
+  await client.waitFor(`document.body?.innerText.includes('12 accepted')`, 'bulk Accept action');
+  await waitForDiskLines(fixture.changedFile, 'after-0', 'after-1');
+
+  // Build a mixed bulk/file history, jump backward in one durable transaction,
+  // restart at the midpoint, then jump forward through Redo. Same-file disk-chain
+  // composition is covered by the IPC and SIGKILL suites without relying on hover order.
+  await client.waitFor(enabledButtonWithText('Reject'), 'file Reject after bulk Accept');
+  await client.domClick(enabledButtonWithText('Reject'));
+  await client.waitFor(`document.body?.innerText.includes('12 rejected')`, 'file Reject action');
+  await waitForDiskLines(fixture.changedFile, 'before-0', 'before-1');
+
+  const historyButton = `document.querySelector('button[aria-label^="Review history:"]')`;
+  const restoreConfirm = `Array.from(document.querySelectorAll('[role="alertdialog"] button'))
+    .find((button) => button.textContent?.trim() === 'Restore' && !button.disabled)`;
+  const enabledUndoCheckpointRestore = `(() => {
+    const section = Array.from(document.querySelectorAll('section'))
+      .find((candidate) => candidate.textContent?.includes('Undo stack'));
+    return Array.from(section?.querySelectorAll('button[data-review-history-restore]') ?? [])
+      .find((button) => !button.disabled);
+  })()`;
+  const enabledRedoCheckpointRestore = `(() => {
+    const section = Array.from(document.querySelectorAll('section'))
+      .find((candidate) => candidate.textContent?.includes('Redo stack'));
+    return Array.from(section?.querySelectorAll('button[data-review-history-restore]') ?? [])
+      .find((button) => !button.disabled);
+  })()`;
+  await client.domClick(historyButton);
+  await client.waitFor(enabledUndoCheckpointRestore, 'older Undo checkpoint restore');
+  await client.domClick(enabledUndoCheckpointRestore);
+  await client.waitFor(
+    `document.querySelector('[role="alertdialog"]')?.textContent.includes('undo 1 review action')`,
+    'Undo checkpoint confirmation'
+  );
+  await client.domClick(restoreConfirm);
+  await client.waitFor(
+    `document.body?.innerText.includes('12 accepted') &&
+      document.querySelector('button[aria-label^="Review history: 1 undo, 1 redo"]')`,
+    'durable midpoint history restore'
+  );
+  await waitForDiskLines(fixture.changedFile, 'after-0', 'after-1');
+
+  await stopApp();
+  await startApp(port, fixture);
+  await openReview();
+  await client.waitFor(
+    `document.querySelector('button[aria-label^="Review history: 1 undo, 1 redo"]')`,
+    'midpoint history after restart'
+  );
+  await waitForDiskLines(fixture.changedFile, 'after-0', 'after-1');
+  await client.domClick(historyButton);
+  await client.waitFor(enabledRedoCheckpointRestore, 'Redo checkpoint restore');
+  await client.domClick(enabledRedoCheckpointRestore);
+  await client.waitFor(
+    `document.querySelector('[role="alertdialog"]')?.textContent.includes('redo 1 review action')`,
+    'Redo checkpoint confirmation'
+  );
+  await client.domClick(restoreConfirm);
+  await client.waitFor(
+    `document.body?.innerText.includes('12 rejected') &&
+      document.querySelector('button[aria-label^="Review history: 2 undo, 0 redo"]')`,
+    'durable forward history restore'
+  );
+  await waitForDiskLines(fixture.changedFile, 'before-0', 'before-1');
+
+  // Return to the seeded state so the existing single-action recovery matrix remains independent.
+  await client.domClick(enabledButtonWithText('Undo'));
+  await client.waitFor(`document.body?.innerText.includes('12 accepted')`, 'first cleanup Undo');
+  await waitForDiskLines(fixture.changedFile, 'after-0', 'after-1');
+  await client.domClick(enabledButtonWithText('Undo'));
+  await client.waitFor(`document.body?.innerText.includes('12 pending')`, 'second cleanup Undo');
+  await waitForDiskLines(fixture.changedFile, 'after-0', 'after-1');
+  if (await client.evaluate(`document.body?.innerText.includes('Review action history')`)) {
+    await client.domClick(historyButton);
+    await client.waitFor(
+      `!document.body?.innerText.includes('Review action history')`,
+      'closed history after cleanup Undo'
+    );
+  }
+
+  // dev:mcp adds Vite reload/focus timing that is unrelated to the hunk-hover controls.
+  // Keep this mode focused on the new durable Restore workflow; the production-preview
+  // path below continues to exercise the complete hunk and guarded-close matrix.
+  if (devMcpMode) {
+    await stopApp();
+    await startApp(port, fixture);
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('12 pending') &&
+        document.querySelector('button[aria-label^="Review history: 0 undo, 2 redo"]')`,
+      'restored start checkpoint after final dev restart'
+    );
+    await assertDiskLines(fixture.changedFile, 'after-0', 'after-1');
+    await assertViewportFits();
+    process.stdout.write(
+      'Changes desktop E2E passed (dev:mcp): Accept All -> Reject file -> Restore back -> ' +
+        'restart -> Restore forward -> Undo to start -> restart -> exact disk/history\n'
+    );
+    return;
+  }
+
+  await client.moveTo(reviewedLine(0, 'after-0'));
+  await client.waitFor(visibleRejectHunkButton, 'hunk Reject');
+  await client.click(visibleRejectHunkButton);
   await client.waitFor(`document.body?.innerText.includes('11 pending')`, 'one rejected hunk');
   await waitForDiskLines(fixture.changedFile, 'before-0', 'after-1');
 
@@ -551,7 +672,6 @@ async function main() {
   );
   await client.waitFor(enabledButtonWithText('Undo'), 'enabled durable Undo after restart');
   await assertDiskLines(fixture.changedFile, 'before-0', 'after-1');
-  const historyButton = `document.querySelector('button[aria-label^="Review history:"]')`;
   await client.waitFor(historyButton, 'durable review history trigger');
   await client.domClick(historyButton);
   await client.waitFor(
@@ -567,19 +687,13 @@ async function main() {
         const rect = wrapper.getBoundingClientRect();
         return wrapper.textContent?.includes('Review action history') &&
           rect.width > 0 && rect.height > 0 &&
-          wrapper.getAnimations({ subtree: true }).every((animation) =>
+          wrapper.getAnimations().every((animation) =>
             animation.playState === 'finished' || animation.playState === 'idle');
       })`,
     'settled review history animation'
   );
   await client.screenshot(historyScreenshot);
-  await client.domClick(historyButton);
-  await client.waitFor(
-    `!document.body?.innerText.includes('Review action history')`,
-    'closed review history'
-  );
-
-  await client.domClick(enabledButtonWithText('Undo'));
+  await client.click(enabledButtonWithText('Undo'));
   await client.waitFor(enabledButtonWithText('Redo'), 'enabled durable Redo after restart Undo');
   await waitForDiskLines(fixture.changedFile, 'after-0', 'after-1');
 
@@ -610,7 +724,10 @@ async function main() {
   await startApp(port, fixture);
   await openReview();
   assert.equal(await client.evaluate(`Boolean(${buttonWithText('Redo')})`), false);
-  assert.equal(await client.evaluate(`document.body?.innerText.includes('Changed on disk')`), false);
+  assert.equal(
+    await client.evaluate(`document.body?.innerText.includes('Changed on disk')`),
+    false
+  );
   await assertDiskLines(fixture.changedFile, 'external-0', 'after-1');
   await assertViewportFits();
   await client.waitFor(
@@ -619,9 +736,9 @@ async function main() {
   );
   await client.screenshot(finalScreenshot);
 
-  await client.moveTo(`document.querySelector('.cm-changedLine, .cm-insertedLine')`);
-  await client.waitFor(`document.querySelector('button[title^="Accept change"]')`, 'hunk Accept');
-  await client.domMouseDown(`document.querySelector('button[title^="Accept change"]')`);
+  await client.moveTo(reviewedLine(0, 'after-0'));
+  await client.waitFor(visibleAcceptHunkButton, 'hunk Accept');
+  await client.click(visibleAcceptHunkButton);
   await client.waitFor(`document.body?.innerText.includes('11 pending')`, 'one accepted hunk');
   await client.waitFor(
     `document.querySelector('button[aria-label^="Review history:"][aria-label$="; saved"]')`,
@@ -642,21 +759,14 @@ async function main() {
     'exact accepted action after forced restart'
   );
   await client.screenshot(acceptedHistoryScreenshot);
-  // Escape propagation is already verified above. Toggle the controlled trigger here so
-  // this crash-recovery leg stays focused on persistence rather than window focus state.
-  await client.domClick(historyButton);
-  await client.waitFor(
-    `!document.body?.innerText.includes('Review action history')`,
-    'closed accepted review history'
-  );
-  await client.domClick(enabledButtonWithText('Undo'));
+  await client.click(enabledButtonWithText('Undo'));
   await client.waitFor(`document.body?.innerText.includes('12 pending')`, 'accepted Undo result');
   await client.waitFor(enabledButtonWithText('Redo'), 'accepted Redo after forced restart Undo');
   await assertDiskLines(fixture.changedFile, 'external-0', 'after-1');
 
-  await client.moveTo(`document.querySelector('.cm-changedLine, .cm-insertedLine')`);
-  await client.waitFor(`document.querySelector('button[title^="Accept change"]')`, 'hunk Accept');
-  await client.domMouseDown(`document.querySelector('button[title^="Accept change"]')`);
+  await client.moveTo(reviewedLine(0, 'after-0'));
+  await client.waitFor(visibleAcceptHunkButton, 'hunk Accept');
+  await client.click(visibleAcceptHunkButton);
   await client.waitFor(`document.body?.innerText.includes('11 pending')`, 'accepted before close');
   await client.evaluate(`void window.electronAPI?.windowControls?.close()`);
   await waitForAppExit();
@@ -670,11 +780,16 @@ async function main() {
     'accepted history after guarded app close'
   );
   await client.domClick(enabledButtonWithText('Undo'));
-  await client.waitFor(`document.body?.innerText.includes('12 pending')`, 'guarded close Undo result');
+  await client.waitFor(
+    `document.body?.innerText.includes('12 pending')`,
+    'guarded close Undo result'
+  );
   await assertDiskLines(fixture.changedFile, 'external-0', 'after-1');
 
   process.stdout.write(
     `Changes desktop E2E passed (${devMcpMode ? 'dev:mcp' : 'preview'}): ` +
+      `Accept All -> Reject file -> Restore back -> restart -> Restore forward -> ` +
+      `exact disk/history -> ` +
       `Reject -> Undo -> Redo -> restart -> exact history -> external conflict -> Reload -> ` +
       `restart -> Accept -> durable ack -> SIGKILL -> restart -> exact Undo -> ` +
       `Accept -> guarded app close -> restart -> exact Undo\n` +
@@ -689,11 +804,13 @@ try {
   process.stderr.write(`Changes desktop E2E failed: ${error.stack ?? error}\n`);
   if (client) {
     const diagnostics = await client
-      .evaluate(`({
+      .evaluate(
+        `({
         url: location.href,
         title: document.title,
         bodyTail: document.body?.innerText.slice(-3000) ?? '',
-      })`)
+      })`
+      )
       .catch((diagnosticError) => ({ diagnosticError: String(diagnosticError) }));
     process.stderr.write(`Renderer diagnostics:\n${JSON.stringify(diagnostics, null, 2)}\n`);
   }

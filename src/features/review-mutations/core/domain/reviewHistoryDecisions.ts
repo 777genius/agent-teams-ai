@@ -4,13 +4,22 @@ import type {
   FileChangeSummary,
   HunkDecision,
   ReviewDecisionSnapshot,
+  ReviewHistoryRestoreTarget,
   ReviewPersistedStateSnapshot,
+  ReviewRedoAction,
   ReviewUndoAction,
 } from '@shared/types';
 
 export interface ReviewDecisionRecords {
   hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
+}
+
+export interface ReviewHistoryRestorePlan {
+  direction: 'undo' | 'redo' | 'none';
+  actionCount: number;
+  orderedActions: ReviewUndoAction[];
+  persistedState: ReviewPersistedStateSnapshot;
 }
 
 function getFileReviewKey(file: Pick<FileChangeSummary, 'filePath' | 'changeKey'>): string {
@@ -87,7 +96,8 @@ export function buildReviewUndoDecisionState(
     };
   }
 
-  const filePath = action.kind === 'disk' ? action.action.snapshot.filePath : action.action.filePath;
+  const filePath =
+    action.kind === 'disk' ? action.action.snapshot.filePath : action.action.filePath;
   const file = resolveFile(filePath);
   if (!file) return null;
 
@@ -102,6 +112,109 @@ export function buildReviewUndoDecisionState(
   const decisionSnapshot = action.action.decisionSnapshot;
   if (!decisionSnapshot) return null;
   return restoreReviewDecisionRecordsForFile(file, current, decisionSnapshot);
+}
+
+function cloneDecisionSnapshot(snapshot: ReviewDecisionRecords): ReviewDecisionSnapshot {
+  return {
+    hunkDecisions: { ...snapshot.hunkDecisions },
+    fileDecisions: { ...snapshot.fileDecisions },
+  };
+}
+
+function assertUniqueReviewHistoryIds(current: ReviewPersistedStateSnapshot): void {
+  const ids = [
+    ...current.reviewActionHistory.map((action) => action.id),
+    ...current.reviewRedoHistory.map((entry) => entry.action.id),
+  ];
+  if (new Set(ids).size !== ids.length) {
+    throw new Error('Review history contains duplicate action ids');
+  }
+}
+
+/**
+ * Builds the exact final stacks and decision state for one history jump.
+ * A row denotes the checkpoint after that action: Undo keeps the target applied,
+ * while Redo replays through the target inclusively.
+ */
+export function buildReviewHistoryRestorePlan(
+  current: ReviewPersistedStateSnapshot,
+  target: ReviewHistoryRestoreTarget,
+  resolveFile: (filePath: string) => FileChangeSummary | null
+): ReviewHistoryRestorePlan {
+  assertUniqueReviewHistoryIds(current);
+  const undoHistory = current.reviewActionHistory.map((action) => structuredClone(action));
+  const redoHistory = current.reviewRedoHistory.map((entry) => structuredClone(entry));
+  let hunkDecisions = { ...current.hunkDecisions };
+  let fileDecisions = { ...current.fileDecisions };
+  let hunkContextHashesByFile = structuredClone(current.hunkContextHashesByFile ?? {});
+  let direction: ReviewHistoryRestorePlan['direction'];
+  let undoCount = 0;
+  let redoCount = 0;
+
+  if (target.kind === 'start') {
+    direction = undoHistory.length > 0 ? 'undo' : 'none';
+    undoCount = undoHistory.length;
+  } else if (target.stack === 'undo') {
+    const targetIndex = undoHistory.findIndex((action) => action.id === target.actionId);
+    if (targetIndex < 0) throw new Error('The selected Undo checkpoint is no longer available');
+    undoCount = undoHistory.length - targetIndex - 1;
+    direction = undoCount > 0 ? 'undo' : 'none';
+  } else {
+    const targetIndex = redoHistory.findIndex((entry) => entry.action.id === target.actionId);
+    if (targetIndex < 0) throw new Error('The selected Redo checkpoint is no longer available');
+    redoCount = redoHistory.length - targetIndex;
+    direction = redoCount > 0 ? 'redo' : 'none';
+  }
+
+  const orderedActions: ReviewUndoAction[] = [];
+  for (let index = 0; index < undoCount; index++) {
+    const action = undoHistory.at(-1);
+    if (!action) throw new Error('Review Undo history changed while building the restore plan');
+    const nextDecisions = buildReviewUndoDecisionState(
+      action,
+      { hunkDecisions, fileDecisions },
+      resolveFile
+    );
+    if (!nextDecisions) {
+      throw new Error('The selected history range cannot be restored safely');
+    }
+    const redoEntry: ReviewRedoAction = {
+      action: structuredClone(action),
+      decisionSnapshot: cloneDecisionSnapshot({ hunkDecisions, fileDecisions }),
+      hunkContextHashesByFile: structuredClone(hunkContextHashesByFile),
+    };
+    undoHistory.pop();
+    redoHistory.push(redoEntry);
+    orderedActions.push(action);
+    hunkDecisions = nextDecisions.hunkDecisions;
+    fileDecisions = nextDecisions.fileDecisions;
+  }
+
+  for (let index = 0; index < redoCount; index++) {
+    const entry = redoHistory.at(-1);
+    if (!entry) throw new Error('Review Redo history changed while building the restore plan');
+    redoHistory.pop();
+    undoHistory.push(structuredClone(entry.action));
+    orderedActions.push(entry.action);
+    hunkDecisions = { ...entry.decisionSnapshot.hunkDecisions };
+    fileDecisions = { ...entry.decisionSnapshot.fileDecisions };
+    hunkContextHashesByFile = structuredClone(
+      entry.hunkContextHashesByFile ?? hunkContextHashesByFile
+    );
+  }
+
+  return {
+    direction,
+    actionCount: orderedActions.length,
+    orderedActions,
+    persistedState: {
+      hunkDecisions,
+      fileDecisions,
+      hunkContextHashesByFile,
+      reviewActionHistory: undoHistory,
+      reviewRedoHistory: redoHistory,
+    },
+  };
 }
 
 function reviewActionTouchesFile(action: ReviewUndoAction, filePath: string): boolean {

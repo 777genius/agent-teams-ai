@@ -8,6 +8,7 @@ import type {
 export {
   buildForwardDiskMutationSteps,
   buildRedoDiskMutationSteps,
+  buildReviewHistoryRestorePlan,
   buildUndoDiskMutationSteps,
   getReviewActionDiskSnapshots,
 } from '@features/review-mutations';

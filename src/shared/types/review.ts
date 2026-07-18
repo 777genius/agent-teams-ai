@@ -430,6 +430,25 @@ export interface RetryReviewMutationRecoveryResult {
   retried: boolean;
 }
 
+/** A durable checkpoint in the linear Accept/Reject history. */
+export type ReviewHistoryRestoreTarget =
+  | { kind: 'start' }
+  | { kind: 'after-action'; stack: 'undo' | 'redo'; actionId: string };
+
+export interface RestoreReviewHistoryRequest {
+  scope: ReviewFileScope;
+  decisionPersistenceScope: ReviewDecisionPersistenceScope;
+  target: ReviewHistoryRestoreTarget;
+  expectedDecisionRevision: number;
+}
+
+export interface RestoreReviewHistoryResult {
+  decisionRevision: number;
+  persistedState: ReviewPersistedStateSnapshot;
+  direction: 'undo' | 'redo' | 'none';
+  actionCount: number;
+}
+
 /** Exact main-process disk transition used to bind durable Undo history. */
 export interface ApplyReviewDiskTransition {
   filePath: string;

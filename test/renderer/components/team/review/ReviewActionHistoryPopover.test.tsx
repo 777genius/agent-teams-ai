@@ -90,4 +90,81 @@ describe('ReviewActionHistoryPopover', () => {
     expect(onNavigateToAction).toHaveBeenCalledWith(action);
     act(() => root.unmount());
   });
+
+  it('confirms restoring an older checkpoint without conflating it with navigation', async () => {
+    const root = createRoot(container);
+    const onNavigateToAction = vi.fn();
+    const onRestoreToTarget = vi.fn().mockResolvedValue(undefined);
+    const older = makeAction(1);
+    const current = makeAction(2);
+    act(() => {
+      root.render(
+        <ReviewActionHistoryPopover
+          undoHistory={[older, current]}
+          redoHistory={[]}
+          onNavigateToAction={onNavigateToAction}
+          onRestoreToTarget={onRestoreToTarget}
+        />
+      );
+    });
+
+    const currentRestore = container.querySelector<HTMLButtonElement>(
+      '[data-review-history-restore="action-2"]'
+    );
+    const olderRestore = container.querySelector<HTMLButtonElement>(
+      '[data-review-history-restore="action-1"]'
+    );
+    expect(currentRestore?.disabled).toBe(true);
+    expect(olderRestore?.disabled).toBe(false);
+    act(() => olderRestore?.click());
+    expect(onNavigateToAction).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('undo 1 review action');
+
+    const dialog = document.querySelector('[role="alertdialog"]');
+    const confirm = [...(dialog?.querySelectorAll('button') ?? [])].find(
+      (button) => button.textContent === 'Restore'
+    );
+    await act(async () => {
+      confirm?.click();
+      await Promise.resolve();
+    });
+    expect(onRestoreToTarget).toHaveBeenCalledWith({
+      kind: 'after-action',
+      stack: 'undo',
+      actionId: older.id,
+    });
+    act(() => root.unmount());
+  });
+
+  it('keeps a bulk checkpoint restorable even though it has no navigation target', () => {
+    const root = createRoot(container);
+    const bulk: ReviewUndoAction = {
+      id: 'bulk-action',
+      createdAt: '2026-07-18T08:00:00.000Z',
+      kind: 'bulk',
+      descriptor: { intent: 'accept-all', fileCount: 2 },
+      decisionSnapshot: { hunkDecisions: {}, fileDecisions: {} },
+      diskSnapshots: [],
+    };
+    act(() => {
+      root.render(
+        <ReviewActionHistoryPopover
+          undoHistory={[bulk, makeAction(4)]}
+          redoHistory={[]}
+          onNavigateToAction={vi.fn()}
+          onRestoreToTarget={vi.fn().mockResolvedValue(undefined)}
+        />
+      );
+    });
+
+    expect(container.querySelector('button[data-review-history-action="bulk-action"]')).toBeNull();
+    expect(
+      container.querySelector<HTMLButtonElement>('[data-review-history-restore="bulk-action"]')
+        ?.disabled
+    ).toBe(false);
+    expect(
+      container.querySelector<HTMLButtonElement>('[data-review-history-restore="start"]')?.disabled
+    ).toBe(false);
+    act(() => root.unmount());
+  });
 });
