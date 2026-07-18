@@ -159,7 +159,7 @@ function isLoopbackHostname(hostname: string): boolean {
   if (normalized === 'localhost' || normalized.endsWith('.localhost') || normalized === '::1') {
     return true;
   }
-  const ipv4 = normalized.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(normalized);
   if (!ipv4) {
     return false;
   }
