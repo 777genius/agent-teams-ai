@@ -452,6 +452,7 @@ local packaging.
 - [x] Limited standalone dashboard for local or trusted-network use. It does not provide the full desktop runtime and should not be exposed directly to the internet without authentication and a reverse proxy.
 - [ ] 2 modes: current (agent teams), and a new mode: regular subagents (no communication between them)
 - [ ] Curate what context each agent sees (files, docs, MCP servers, skills)
+- [ ] User-managed runtime profiles and built-in presets: choose a profile per team launch or schedule, isolate provider credentials and config roots (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`, OpenCode XDG roots), optionally isolate the child-process `HOME`, and pin running teams to an immutable profile snapshot
 - [x] Slash commands
 - [ ] Outgoing message queue — queue user messages while the lead (or agent) is busy; clear agent-busy status in the UI; flush to stdin or relay from inbox when idle (durable queue on disk for the lead inbox path)
 - [ ] `createTasksBatch` — IPC/service API to create many team tasks in one call (playbooks, markdown checklist import, scripts); complements single `createTask`
