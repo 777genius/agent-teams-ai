@@ -54,7 +54,7 @@ export function createOpenCodeAggregateProvisioningRun(
     timeoutHandle: null,
     fsMonitorHandle: null,
     onProgress: params.onProgress,
-    expectedMembers: params.members.map((member) => member.name),
+    expectedMembers: params.lanePlan.primaryMembers.map((member) => member.name),
     request: {
       ...params.request,
       members: params.members,
@@ -310,6 +310,65 @@ export async function prepareOpenCodeWorktreeRootAggregateLaunchPreflight(
   return null;
 }
 
+async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
+  run: OpenCodeAggregateProvisioningRun,
+  ports: OpenCodeWorktreeRootAggregateLaunchPorts
+): Promise<void> {
+  const ownedRuntimeRun = ports.getRuntimeAdapterRun(run.teamName);
+  const stops: Promise<void>[] = [];
+  if (ownedRuntimeRun?.providerId === 'opencode' && ownedRuntimeRun.runId === run.runId) {
+    stops.push(ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId));
+  }
+  if (ports.hasSecondaryRuntimeRuns(run.teamName)) {
+    stops.push(ports.stopMixedSecondaryRuntimeLanes(run.teamName));
+  }
+  if (stops.length > 0) {
+    await Promise.all(stops.map((stop) => stop.catch(() => undefined)));
+  }
+
+  // The stop flows clear lane storage themselves, but repeat the rollback here
+  // best-effort so a rejected or partially completed stop cannot leave launch
+  // artifacts behind. Lane storage deletion is intentionally idempotent.
+  for (const lane of run.mixedSecondaryLanes) {
+    await ports
+      .clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: ports.getTeamsBasePath(),
+        teamName: run.teamName,
+        laneId: lane.laneId,
+      })
+      .catch(() => undefined);
+    ports.deleteSecondaryRuntimeRun(run.teamName, lane.laneId);
+  }
+  if (run.effectiveMembers.length > 0) {
+    await ports
+      .clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: ports.getTeamsBasePath(),
+        teamName: run.teamName,
+        laneId: 'primary',
+      })
+      .catch(() => undefined);
+  }
+}
+
+function deleteOpenCodeAggregateRuntimeTrackingIfOwned(
+  teamName: string,
+  runId: string,
+  ports: OpenCodeWorktreeRootAggregateLaunchPorts
+): void {
+  const currentRuntimeRun = ports.getRuntimeAdapterRun(teamName);
+  const hasConflictingRuntimeOwner =
+    currentRuntimeRun !== undefined &&
+    (currentRuntimeRun.providerId !== 'opencode' || currentRuntimeRun.runId !== runId);
+  if (hasConflictingRuntimeOwner) {
+    return;
+  }
+
+  ports.deleteRuntimeAdapterRun(teamName);
+  if (ports.getProvisioningRun(teamName) === runId) {
+    ports.deleteAliveRunId(teamName);
+  }
+}
+
 export async function runOpenCodeWorktreeRootAggregateLaunch(
   input: RunOpenCodeWorktreeRootAggregateLaunchInput,
   ports: OpenCodeWorktreeRootAggregateLaunchPorts
@@ -421,11 +480,14 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     if (success || pending) {
       ports.setAliveRunId(teamName, runId);
     } else {
+      // A summarized terminal failure is non-throwing, but it owns the same
+      // adapter-managed processes and rollback obligations as the catch path.
+      // Stop all lanes before cleanupRun removes their tracking.
+      await stopAndRollbackOpenCodeAggregateRuntimeLanes(run, ports);
       // Terminal failure: tear the run down fully. Removing it from the runs map
       // and clearing its timers/watchdogs/pending approvals (cleanupRun) is what a
       // clean-success run intentionally skips, but a failed one must not leak.
-      ports.deleteAliveRunId(teamName);
-      ports.deleteRuntimeAdapterRun(teamName);
+      deleteOpenCodeAggregateRuntimeTrackingIfOwned(teamName, runId, ports);
       ports.cleanupRun(run);
     }
     ports.deleteProvisioningRunIfCurrent(teamName, runId);
@@ -447,38 +509,8 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     // Genuine launch error after lanes came up: stop the owned primary OpenCode
     // adapter process (and any secondary lanes) BEFORE clearing their storage.
     // The adapter-managed process is not covered by run.child (null), so without
-    // an explicit stop it is orphaned when the maps/storage below are cleared
-    // (mirror of the cancellation-boundary stop, runId-gated on ownership).
-    const ownedRuntimeRun = ports.getRuntimeAdapterRun(teamName);
-    const errorStops: Promise<void>[] = [];
-    if (ownedRuntimeRun?.providerId === 'opencode' && ownedRuntimeRun.runId === runId) {
-      errorStops.push(ports.stopOpenCodeRuntimeAdapterTeam(teamName, runId));
-    }
-    if (ports.hasSecondaryRuntimeRuns(teamName)) {
-      errorStops.push(ports.stopMixedSecondaryRuntimeLanes(teamName));
-    }
-    if (errorStops.length > 0) {
-      await Promise.all(errorStops.map((stop) => stop.catch(() => undefined)));
-    }
-    for (const lane of run.mixedSecondaryLanes) {
-      await ports
-        .clearOpenCodeRuntimeLaneStorage({
-          teamsBasePath: ports.getTeamsBasePath(),
-          teamName,
-          laneId: lane.laneId,
-        })
-        .catch(() => undefined);
-      ports.deleteSecondaryRuntimeRun(teamName, lane.laneId);
-    }
-    if (run.effectiveMembers.length > 0) {
-      await ports
-        .clearOpenCodeRuntimeLaneStorage({
-          teamsBasePath: ports.getTeamsBasePath(),
-          teamName,
-          laneId: 'primary',
-        })
-        .catch(() => undefined);
-    }
+    // an explicit stop it is orphaned when the maps/storage below are cleared.
+    await stopAndRollbackOpenCodeAggregateRuntimeLanes(run, ports);
     const message = error instanceof Error ? error.message : String(error);
     const failedProgress = ports.setRuntimeAdapterProgress(
       buildOpenCodeAggregateFailureProgress({
@@ -489,9 +521,8 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       input.onProgress
     );
     run.progress = failedProgress;
+    deleteOpenCodeAggregateRuntimeTrackingIfOwned(teamName, runId, ports);
     ports.deleteProvisioningRunIfCurrent(teamName, runId);
-    ports.deleteRuntimeAdapterRun(teamName);
-    ports.deleteAliveRunId(teamName);
     // Genuine launch error: remove the run from the runs map and clear its
     // timers/watchdogs/pending approvals so a failed aggregate launch does not
     // leak a dead run (cleanupRun internally no-ops team-scoped work if a newer

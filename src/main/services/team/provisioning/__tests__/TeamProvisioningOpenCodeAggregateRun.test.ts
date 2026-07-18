@@ -79,7 +79,7 @@ function lanePlan(input: {
 }
 
 describe('TeamProvisioningOpenCodeAggregateRun', () => {
-  it('builds the OpenCode aggregate provisioning run defaults without launching runtime work', () => {
+  it('builds aggregate defaults with expected members scoped to the primary lane', () => {
     const alice = member('alice', { cwd: '/fake/project' });
     const bob = member('bob', { cwd: '/fake/project/bob' });
     const request = {
@@ -130,7 +130,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       child: null,
       timeoutHandle: null,
       fsMonitorHandle: null,
-      expectedMembers: ['alice', 'bob'],
+      expectedMembers: ['alice'],
       allEffectiveMembers: [alice, bob],
       effectiveMembers: [alice],
       launchIdentity: null,
@@ -403,12 +403,25 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     expect(runById.get('run-open-code')?.provisioningComplete).toBe(true);
   });
 
-  it('records failed aggregate progress and deletes runtime tracking on readiness failure', async () => {
+  it('stops owned lanes before rollback and cleanup on non-throwing partial failure', async () => {
     const alice = member('alice');
     const bob = member('bob');
     const calls: string[] = [];
+    let primaryStarted = false;
+    let secondaryStarted = false;
+    const stopOwnedPrimary = vi.fn(async () => {
+      calls.push('stopOwnedPrimary');
+      throw new Error('primary stop failed');
+    });
+    const stopOwnedSecondaries = vi.fn(async () => {
+      calls.push('stopOwnedSecondaries');
+      throw new Error('secondary stop failed');
+    });
+    const cleanupRun = vi.fn(() => {
+      calls.push('cleanupRun');
+    });
 
-    await runOpenCodeWorktreeRootAggregateLaunch(
+    const result = await runOpenCodeWorktreeRootAggregateLaunch(
       {
         adapter: {} as TeamLaunchRuntimeAdapter,
         request: request([alice, bob]),
@@ -419,8 +432,19 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       },
       {
         ...baseAggregatePorts(calls),
+        getRuntimeAdapterRun: () =>
+          primaryStarted ? { runId: 'run-open-code', providerId: 'opencode' } : undefined,
+        stopOpenCodeRuntimeAdapterTeam: stopOwnedPrimary,
+        hasSecondaryRuntimeRuns: () => secondaryStarted,
+        stopMixedSecondaryRuntimeLanes: stopOwnedSecondaries,
+        launchOpenCodeAggregatePrimaryLane: async () => {
+          calls.push('launchPrimary');
+          primaryStarted = true;
+          return runtimeResult();
+        },
         launchSingleMixedSecondaryLane: async (_run, lane) => {
           calls.push(`launchSecondary:${lane.laneId}`);
+          secondaryStarted = true;
           lane.diagnostics.push('secondary failed');
           lane.result = runtimeResult({ teamLaunchState: 'partial_failure' });
         },
@@ -428,12 +452,32 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
           calls.push('summarizeLaunchState');
           return 'partial_failure';
         },
+        cleanupRun,
       }
     );
 
+    expect(result).toEqual({ runId: 'run-open-code' });
+    expect(stopOwnedPrimary).toHaveBeenCalledTimes(1);
+    expect(stopOwnedPrimary).toHaveBeenCalledWith('open-code-team', 'run-open-code');
+    expect(stopOwnedSecondaries).toHaveBeenCalledTimes(1);
+    expect(stopOwnedSecondaries).toHaveBeenCalledWith('open-code-team');
+    expect(cleanupRun).toHaveBeenCalledTimes(1);
+
+    const stopPrimaryIndex = calls.indexOf('stopOwnedPrimary');
+    const stopSecondariesIndex = calls.indexOf('stopOwnedSecondaries');
+    const clearSecondaryIndex = calls.indexOf('clearLaneStorage:secondary:opencode:bob');
+    const clearPrimaryIndex = calls.indexOf('clearLaneStorage:primary');
+    const cleanupIndex = calls.indexOf('cleanupRun');
+    expect(stopPrimaryIndex).toBeGreaterThan(calls.indexOf('persistLaunchState:finished'));
+    expect(stopSecondariesIndex).toBeGreaterThan(calls.indexOf('persistLaunchState:finished'));
+    expect(clearSecondaryIndex).toBeGreaterThan(stopPrimaryIndex);
+    expect(clearSecondaryIndex).toBeGreaterThan(stopSecondariesIndex);
+    expect(clearPrimaryIndex).toBeGreaterThan(clearSecondaryIndex);
+    expect(cleanupIndex).toBeGreaterThan(clearPrimaryIndex);
     expect(calls).toContain('setProgress:failed');
     expect(calls).toContain('deleteAliveRun');
     expect(calls).toContain('deleteRuntimeRun');
+    expect(calls).not.toContain('setAliveRun');
     expect(calls).toContain('emitTeamProcessChange:failed');
   });
 
@@ -478,9 +522,9 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       'getTeamsBasePath',
       'clearLaneStorage:primary',
       'setProgress:failed',
-      'deleteProvisioningRunIfCurrent',
       'deleteRuntimeRun',
       'deleteAliveRun',
+      'deleteProvisioningRunIfCurrent',
       'cleanupRun',
       'invalidateRuntimeSnapshotCaches',
     ]);
@@ -554,6 +598,43 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
 
     expect(calls).toContain('cleanupRun');
     expect(calls).not.toContain('setAliveRun');
+  });
+
+  it('does not stop or delete a conflicting primary runtime owner on partial failure', async () => {
+    const alice = member('alice');
+    const calls: string[] = [];
+    let primaryStarted = false;
+    const stopPrimary = vi.fn(async () => {
+      calls.push('stopPrimary');
+    });
+
+    await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {} as TeamLaunchRuntimeAdapter,
+        request: request([alice]),
+        members: [alice],
+        lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [] }),
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        getRuntimeAdapterRun: () =>
+          primaryStarted ? { runId: 'newer-run', providerId: 'opencode' } : undefined,
+        stopOpenCodeRuntimeAdapterTeam: stopPrimary,
+        launchOpenCodeAggregatePrimaryLane: async () => {
+          calls.push('launchPrimary');
+          primaryStarted = true;
+          return runtimeResult();
+        },
+        summarizeOpenCodeAggregateLaunchState: () => 'partial_failure',
+      }
+    );
+
+    expect(stopPrimary).not.toHaveBeenCalled();
+    expect(calls).not.toContain('deleteRuntimeRun');
+    expect(calls).not.toContain('deleteAliveRun');
+    expect(calls).toContain('cleanupRun');
   });
 
   it('does not register alive when the run was superseded/stopped during the launch tail', async () => {
