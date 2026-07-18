@@ -57,7 +57,7 @@ function isTruthyEnvValue(value: string | undefined): boolean {
   return Boolean(normalized && normalized !== '0' && normalized !== 'false' && normalized !== 'no');
 }
 
-function resolveAnthropicRuntimeBackendFromEnv(
+export function resolveAnthropicRuntimeBackendFromEnv(
   env: NodeJS.ProcessEnv
 ): AnthropicRuntimeBackendProviderId {
   if (isTruthyEnvValue(env.CLAUDE_CODE_USE_BEDROCK)) {

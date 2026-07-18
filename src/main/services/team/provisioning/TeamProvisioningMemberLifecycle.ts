@@ -40,7 +40,7 @@ import { createPersistedLaunchSnapshot } from '../TeamLaunchStateEvaluator';
 import { commandArgEquals } from '../TeamRuntimeLivenessResolver';
 
 import {
-  buildDirectTmuxRestartCommand,
+  buildDirectTmuxRestartLauncher,
   isInteractiveShellCommand,
 } from './TeamProvisioningDirectRestart';
 import {
@@ -1226,7 +1226,7 @@ export class TeamProvisioningMemberLifecycleController {
           ...runtimeArgsPlan.runtimeTurnSettledHookArgs,
           ...runtimeArgsPlan.settingsArgs,
         ]);
-        const command = buildDirectTmuxRestartCommand({
+        const launcher = await buildDirectTmuxRestartLauncher({
           cwd,
           env: provisioningEnv.env,
           providerId,
@@ -1234,28 +1234,33 @@ export class TeamProvisioningMemberLifecycleController {
           args: runtimeArgs,
         });
 
-        await this.updateDirectTmuxRestartMemberConfig({
-          teamName: input.teamName,
-          memberName: input.memberName,
-          member: memberSpec,
-          agentId,
-          color,
-          prompt,
-          paneId: input.paneId,
-          cwd,
-          providerId,
-          joinedAt: Date.now(),
-          bootstrapExpectedAfter,
-        });
-        this.enqueueDirectRestartPrompt({
-          teamName: input.teamName,
-          memberName: input.configuredMember.name,
-          leadName: input.leadName,
-          leadSessionId: parentSessionId,
-          prompt,
-          operation,
-        });
-        await sendKeysToTmuxPaneForCurrentPlatform(input.paneId, command);
+        try {
+          await this.updateDirectTmuxRestartMemberConfig({
+            teamName: input.teamName,
+            memberName: input.memberName,
+            member: memberSpec,
+            agentId,
+            color,
+            prompt,
+            paneId: input.paneId,
+            cwd,
+            providerId,
+            joinedAt: Date.now(),
+            bootstrapExpectedAfter,
+          });
+          this.enqueueDirectRestartPrompt({
+            teamName: input.teamName,
+            memberName: input.configuredMember.name,
+            leadName: input.leadName,
+            leadSessionId: parentSessionId,
+            prompt,
+            operation,
+          });
+          await sendKeysToTmuxPaneForCurrentPlatform(input.paneId, launcher.command);
+        } catch (error) {
+          await launcher.cleanup();
+          throw error;
+        }
       }
     );
     this.appendMemberBootstrapDiagnostic(

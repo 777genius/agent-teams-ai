@@ -69,6 +69,12 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
   });
 
   afterEach(() => {
+    for (const [, command] of vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mock.calls) {
+      if (command?.startsWith("/bin/sh '") && command.endsWith("'")) {
+        const scriptPath = command.slice(9, -1).replace(/'\\''/g, "'");
+        fs.rmSync(path.dirname(scriptPath), { recursive: true, force: true });
+      }
+    }
     fs.rmSync(testRoot, { recursive: true, force: true });
   });
 

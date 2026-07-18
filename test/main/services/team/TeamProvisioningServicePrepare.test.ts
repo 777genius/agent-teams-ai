@@ -460,7 +460,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
 
     expect(assignments).toContain("ANTHROPIC_AWS_WORKSPACE_ID='wrkspc_123'");
     expect(assignments).toContain("ANTHROPIC_AWS_API_KEY='aws-platform-key'");
-    expect(assignments).toContain("CLAUDE_CODE_ENTRY_PROVIDER='anthropic'");
+    expect(assignments).toContain("CLAUDE_CODE_ENTRY_PROVIDER='claude-platform-aws'");
   });
 
   it('preserves Anthropic-compatible direct restart env while blanking stale first-party tokens', () => {

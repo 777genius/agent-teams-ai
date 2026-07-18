@@ -729,17 +729,31 @@ function getConnectionMethodCardOptions(
         ANTHROPIC_EXTERNAL_BACKEND_IDS.some((backendId) => backendId === resolvedBackendId)
           ? provider.backend?.label.trim() || resolvedBackendId
           : null;
+      const bedrockEndpointLabelCandidate =
+        resolvedBackendId === 'bedrock' && resolvedExternalBackendLabel
+          ? provider.backend?.endpointLabel?.trim() || null
+          : null;
+      const bedrockEndpointLabel =
+        bedrockEndpointLabelCandidate === resolvedExternalBackendLabel
+          ? null
+          : bedrockEndpointLabelCandidate;
       const autoTitle = resolvedExternalBackendLabel
         ? provider.connection?.configuredAuthMode === 'auto'
           ? runtimeBackendSummaryText.autoCurrently(resolvedExternalBackendLabel)
           : `${t('providerRuntime.connectionCards.auto.title')} (${resolvedExternalBackendLabel})`
         : t('providerRuntime.connectionCards.auto.title');
+      const autoDescription = [
+        t('providerRuntime.connectionCards.anthropic.autoDescription'),
+        bedrockEndpointLabel,
+      ]
+        .filter((part): part is string => Boolean(part))
+        .join(' ');
 
       return [
         {
           authMode: 'auto',
           title: autoTitle,
-          description: t('providerRuntime.connectionCards.anthropic.autoDescription'),
+          description: autoDescription,
         },
         {
           authMode: 'oauth',
@@ -800,7 +814,7 @@ const ConnectionMethodCards = ({
   onSelect,
 }: Readonly<{
   options: ConnectionMethodCardOption[];
-  selectedAuthMode: CliProviderAuthMode;
+  selectedAuthMode?: CliProviderAuthMode;
   disabled: boolean;
   connectionSaving: boolean;
   pendingConnectionAction: PendingConnectionAction;
@@ -1503,7 +1517,9 @@ export const ProviderRuntimeSettingsDialog = ({
     }
 
     const nextAuthMode = authMode as CliProviderAuthMode;
-    if (nextAuthMode === configuredAuthMode) {
+    const shouldDisableCompatibleEndpoint =
+      selectedProvider.providerId === 'anthropic' && anthropicCompatibleEndpointEnabled;
+    if (nextAuthMode === configuredAuthMode && !shouldDisableCompatibleEndpoint) {
       return;
     }
 
@@ -1516,6 +1532,14 @@ export const ProviderRuntimeSettingsDialog = ({
         await updateConfig('providerConnections', {
           anthropic: {
             authMode: nextAuthMode,
+            ...(shouldDisableCompatibleEndpoint
+              ? {
+                  compatibleEndpoint: {
+                    enabled: false,
+                    baseUrl: anthropicCompatibleConfig.baseUrl.trim(),
+                  },
+                }
+              : {}),
           },
         });
       } else if (nextAuthMode !== 'oauth') {
@@ -2075,7 +2099,9 @@ export const ProviderRuntimeSettingsDialog = ({
                     <Label className="text-xs">{t('providerRuntime.connection.method')}</Label>
                     <ConnectionMethodCards
                       options={connectionMethodCardOptions}
-                      selectedAuthMode={configuredAuthMode}
+                      selectedAuthMode={
+                        anthropicCompatibleEndpointEnabled ? undefined : configuredAuthMode
+                      }
                       disabled={connectionBusy}
                       connectionSaving={connectionSaving}
                       pendingConnectionAction={pendingConnectionAction}

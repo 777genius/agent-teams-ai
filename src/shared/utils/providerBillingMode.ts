@@ -1,6 +1,6 @@
-import type { ProviderBillingMode, TeamProviderBackendId, TeamProviderId } from '@shared/types';
-
 import { isOpenCodeModelExplicitlyFree } from './opencodeModelRoute';
+
+import type { ProviderBillingMode, TeamProviderBackendId, TeamProviderId } from '@shared/types';
 
 export interface ProviderBillingModeCatalogModel {
   badgeLabel?: string | null;

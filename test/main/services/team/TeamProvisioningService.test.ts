@@ -1017,6 +1017,29 @@ async function waitForFile(filePath: string, timeoutMs = 2_000): Promise<void> {
   throw new Error(`Timed out waiting for file: ${filePath}`);
 }
 
+function parseDirectTmuxRestartLauncherPath(command: string | undefined): string | null {
+  if (!command?.startsWith("/bin/sh '") || !command.endsWith("'")) {
+    return null;
+  }
+  const scriptPath = command.slice(9, -1).replace(/'\\''/g, "'");
+  const scriptDir = path.dirname(scriptPath);
+  return path.basename(scriptPath) === 'launch.sh' &&
+    path.basename(scriptDir).startsWith('claude-team-direct-restart-')
+    ? scriptPath
+    : null;
+}
+
+function readDirectTmuxRestartLauncher(command: string | undefined): {
+  scriptPath: string;
+  script: string;
+} {
+  const scriptPath = parseDirectTmuxRestartLauncherPath(command);
+  if (!scriptPath) {
+    throw new Error(`Unexpected direct tmux restart launcher: ${command ?? '<missing>'}`);
+  }
+  return { scriptPath, script: fs.readFileSync(scriptPath, 'utf8') };
+}
+
 describe('TeamProvisioningService', () => {
   beforeEach(() => {
     process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED = '1';
@@ -1050,6 +1073,12 @@ describe('TeamProvisioningService', () => {
   });
 
   afterEach(() => {
+    for (const [, command] of vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mock.calls) {
+      const scriptPath = parseDirectTmuxRestartLauncherPath(command);
+      if (scriptPath) {
+        fs.rmSync(path.dirname(scriptPath), { recursive: true, force: true });
+      }
+    }
     restoreRuntimeTelemetryPlatformAfterTest();
     restoreRuntimePidusageTelemetryEnv();
     clearAutoResumeService();
@@ -7212,18 +7241,20 @@ describe('TeamProvisioningService', () => {
       expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
       const [paneId, command] = vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mock.calls[0] ?? [];
       expect(paneId).toBe('%1');
-      expect(command).toContain("cd '");
-      expect(command).toContain(projectPath);
-      expect(command).toContain("'/mock/claude'");
-      expect(command).toContain("'--agent-id' 'bob@forge-labs-10'");
-      expect(command).toContain("'--team-name' 'forge-labs-10'");
-      expect(command).toContain("'--parent-session-id' 'lead-session-1'");
-      expect(command).toContain("'--setting-sources' 'user,project,local'");
-      expect(command).toContain("'--mcp-config' '/mock/mcp-config.json'");
-      expect(command).not.toContain('--strict-mcp-config');
-      expect(command).toContain("'--model' 'gpt-5.4'");
-      expect(command).toContain("'--effort' 'high'");
-      expect(command).toContain('__CLAUDE_TEAMMATE_EXIT__');
+      const launcher = readDirectTmuxRestartLauncher(command);
+      expect(command).not.toContain('--agent-id');
+      expect(launcher.script).toContain("cd '");
+      expect(launcher.script).toContain(projectPath);
+      expect(launcher.script).toContain("'/mock/claude'");
+      expect(launcher.script).toContain("'--agent-id' 'bob@forge-labs-10'");
+      expect(launcher.script).toContain("'--team-name' 'forge-labs-10'");
+      expect(launcher.script).toContain("'--parent-session-id' 'lead-session-1'");
+      expect(launcher.script).toContain("'--setting-sources' 'user,project,local'");
+      expect(launcher.script).toContain("'--mcp-config' '/mock/mcp-config.json'");
+      expect(launcher.script).not.toContain('--strict-mcp-config');
+      expect(launcher.script).toContain("'--model' 'gpt-5.4'");
+      expect(launcher.script).toContain("'--effort' 'high'");
+      expect(launcher.script).toContain('__CLAUDE_TEAMMATE_EXIT__');
       expect(run.pendingMemberRestarts.has('bob')).toBe(true);
       expect(run.memberSpawnStatuses.get('bob')).toMatchObject({
         status: 'waiting',

@@ -694,7 +694,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
     expect(onRefreshProvider).toHaveBeenCalledWith('anthropic', 'provider_change');
   });
 
-  it('surfaces detected Bedrock on the Auto card and can switch to it from API key mode', async () => {
+  it('keeps a previously detected Bedrock route visible while switching back to Auto', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -731,6 +731,7 @@ describe('ProviderRuntimeSettingsDialog', () => {
 
     const autoButton = findButtonByText(host, 'Auto (Amazon Bedrock)');
     expect(autoButton.textContent).not.toContain('Selected');
+    expect(autoButton.textContent).toContain('AWS region us-east-1');
     expect(findButtonByText(host, 'API key').textContent).toContain('Selected');
 
     await act(async () => {
@@ -777,9 +778,9 @@ describe('ProviderRuntimeSettingsDialog', () => {
       await Promise.resolve();
     });
 
-    expect(findButtonByText(host, 'Auto (currently: Amazon Bedrock)').textContent).toContain(
-      'Selected'
-    );
+    const autoButton = findButtonByText(host, 'Auto (currently: Amazon Bedrock)');
+    expect(autoButton.textContent).toContain('Selected');
+    expect(autoButton.textContent).toContain('AWS region us-east-1');
   });
 
   it('does not present a configured compatible endpoint as an Auto route', async () => {
@@ -823,7 +824,23 @@ describe('ProviderRuntimeSettingsDialog', () => {
 
     const autoButton = findButtonByText(host, 'Auto');
     expect(autoButton.textContent).not.toContain('Local gateway');
+    expect(autoButton.textContent).not.toContain('Selected');
     expect(host.textContent).toContain('Local / compatible endpoint');
+
+    await act(async () => {
+      autoButton.click();
+      await Promise.resolve();
+    });
+
+    expect(storeState.updateConfig).toHaveBeenCalledWith('providerConnections', {
+      anthropic: {
+        authMode: 'auto',
+        compatibleEndpoint: {
+          enabled: false,
+          baseUrl: 'http://localhost:1234',
+        },
+      },
+    });
   });
 
   it('shows Anthropic API key usage when API key mode is selected even if the local CLI has a subscription session', async () => {
@@ -866,6 +883,12 @@ describe('ProviderRuntimeSettingsDialog', () => {
 
     expect(host.textContent).toContain('Using API key');
     expect(host.textContent).not.toContain('Using Anthropic subscription');
+    expect(findButtonByText(host, 'Auto').textContent).toContain(
+      'including Amazon Bedrock when configured'
+    );
+    expect(findButtonByText(host, 'API key').textContent).toContain(
+      'Use ANTHROPIC_API_KEY and Anthropic API billing.'
+    );
 
     await act(async () => {
       root.unmount();

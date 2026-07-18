@@ -377,6 +377,8 @@ describe('TeamProvisioningEnvBuilder', () => {
             CLAUDE_CODE_USE_BEDROCK: '1',
             AWS_PROFILE: 'bedrock-profile',
             AWS_REGION: 'us-east-1',
+            AWS_CONFIG_FILE: '/tmp/aws-config',
+            AWS_SHARED_CREDENTIALS_FILE: '/tmp/aws-credentials',
             ANTHROPIC_DEFAULT_SONNET_MODEL: 'bedrock-sonnet-id',
           },
           authSource: 'none' as const,
@@ -393,6 +395,8 @@ describe('TeamProvisioningEnvBuilder', () => {
       CLAUDE_CODE_USE_BEDROCK: '1',
       AWS_PROFILE: 'bedrock-profile',
       AWS_REGION: 'us-east-1',
+      AWS_CONFIG_FILE: '/tmp/aws-config',
+      AWS_SHARED_CREDENTIALS_FILE: '/tmp/aws-credentials',
       ANTHROPIC_DEFAULT_SONNET_MODEL: 'bedrock-sonnet-id',
     });
   });
