@@ -481,6 +481,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       'deleteProvisioningRunIfCurrent',
       'deleteRuntimeRun',
       'deleteAliveRun',
+      'cleanupRun',
       'invalidateRuntimeSnapshotCaches',
     ]);
   });
@@ -527,6 +528,32 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     expect(launchSecondaryIdx).toBeGreaterThanOrEqual(0);
     expect(catchStopIdx).toBeGreaterThan(launchSecondaryIdx); // stop happened in the catch
     expect(clearPrimaryIdx).toBeGreaterThan(catchStopIdx); // stop before storage clear
+  });
+
+  it('cleans up the run on terminal failure so it does not leak in the runs map', async () => {
+    const alice = member('alice');
+    const calls: string[] = [];
+
+    await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {} as TeamLaunchRuntimeAdapter,
+        request: request([alice]),
+        members: [alice],
+        lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [] }),
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        // A terminal failure (not clean_success / partial_pending) takes the
+        // else-branch, which must tear the run down (cleanupRun) rather than
+        // register it alive.
+        summarizeOpenCodeAggregateLaunchState: () => 'partial_failure',
+      }
+    );
+
+    expect(calls).toContain('cleanupRun');
+    expect(calls).not.toContain('setAliveRun');
   });
 });
 
@@ -606,6 +633,9 @@ function baseAggregatePorts(calls: string[]): OpenCodeWorktreeRootAggregateLaunc
     },
     deleteRuntimeAdapterRun: () => {
       calls.push('deleteRuntimeRun');
+    },
+    cleanupRun: () => {
+      calls.push('cleanupRun');
     },
     deleteProvisioningRunIfCurrent: (teamName, runId) => {
       calls.push('deleteProvisioningRunIfCurrent');

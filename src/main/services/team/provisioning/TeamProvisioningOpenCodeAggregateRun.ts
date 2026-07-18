@@ -199,6 +199,7 @@ export interface OpenCodeWorktreeRootAggregateLaunchPorts extends OpenCodeWorktr
   deleteAliveRunId(teamName: string): void;
   deleteRuntimeAdapterRun(teamName: string): void;
   deleteProvisioningRunIfCurrent(teamName: string, runId: string): void;
+  cleanupRun(run: OpenCodeAggregateProvisioningRun): void;
   emitTeamProcessChange(input: {
     type: 'process';
     teamName: string;
@@ -407,8 +408,12 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     if (success || pending) {
       ports.setAliveRunId(teamName, runId);
     } else {
+      // Terminal failure: tear the run down fully. Removing it from the runs map
+      // and clearing its timers/watchdogs/pending approvals (cleanupRun) is what a
+      // clean-success run intentionally skips, but a failed one must not leak.
       ports.deleteAliveRunId(teamName);
       ports.deleteRuntimeAdapterRun(teamName);
+      ports.cleanupRun(run);
     }
     ports.deleteProvisioningRunIfCurrent(teamName, runId);
     ports.invalidateRuntimeSnapshotCaches(teamName);
@@ -474,6 +479,11 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     ports.deleteProvisioningRunIfCurrent(teamName, runId);
     ports.deleteRuntimeAdapterRun(teamName);
     ports.deleteAliveRunId(teamName);
+    // Genuine launch error: remove the run from the runs map and clear its
+    // timers/watchdogs/pending approvals so a failed aggregate launch does not
+    // leak a dead run (cleanupRun internally no-ops team-scoped work if a newer
+    // run has since taken over).
+    ports.cleanupRun(run);
     ports.invalidateRuntimeSnapshotCaches(teamName);
     throw error;
   }

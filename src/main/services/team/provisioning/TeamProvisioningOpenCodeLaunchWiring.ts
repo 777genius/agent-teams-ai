@@ -67,6 +67,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
   stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void>;
   hasSecondaryRuntimeRuns(teamName: string): boolean;
   stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
+  cleanupRun(run: Run): void;
   isCancellableRuntimeAdapterProgress(progress: TeamProvisioningProgress): boolean;
   cancelRuntimeAdapterProvisioning(
     runId: string,
@@ -161,6 +162,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringServiceHost<Run> {
   stopOpenCodeRuntimeAdapterTeam: TeamProvisioningOpenCodeLaunchWiringHost<Run>['stopOpenCodeRuntimeAdapterTeam'];
   hasSecondaryRuntimeRuns: TeamProvisioningOpenCodeLaunchWiringHost<Run>['hasSecondaryRuntimeRuns'];
   stopMixedSecondaryRuntimeLanes: TeamProvisioningOpenCodeLaunchWiringHost<Run>['stopMixedSecondaryRuntimeLanes'];
+  cleanupRun: TeamProvisioningOpenCodeLaunchWiringHost<Run>['cleanupRun'];
   resetTeamScopedTransientStateForNewRun: TeamProvisioningOpenCodeLaunchWiringHost<Run>['resetTeamScopedTransientStateForNewRun'];
   clearPersistedLaunchState: TeamProvisioningOpenCodeLaunchWiringHost<Run>['clearPersistedLaunchState'];
   invalidateRuntimeSnapshotCaches: TeamProvisioningOpenCodeLaunchWiringHost<Run>['invalidateRuntimeSnapshotCaches'];
@@ -200,6 +202,7 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
       service.stopOpenCodeRuntimeAdapterTeam(teamName, runId),
     hasSecondaryRuntimeRuns: (teamName) => service.hasSecondaryRuntimeRuns(teamName),
     stopMixedSecondaryRuntimeLanes: (teamName) => service.stopMixedSecondaryRuntimeLanes(teamName),
+    cleanupRun: (run) => service.cleanupRun(run),
     isCancellableRuntimeAdapterProgress: (progress) =>
       service.cancellationBoundary.isCancellableRuntimeAdapterProgress(progress),
     cancelRuntimeAdapterProvisioning: (runId, progress) =>
@@ -259,6 +262,7 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           hasSecondaryRuntimeRuns: (teamName) => host.hasSecondaryRuntimeRuns(teamName),
           stopMixedSecondaryRuntimeLanes: (teamName) =>
             host.stopMixedSecondaryRuntimeLanes(teamName),
+          cleanupRun: (run) => host.cleanupRun(run as Run),
           getProvisioningRun: (teamName) => host.provisioningRunByTeam.get(teamName),
           getRuntimeAdapterProgress: (runId) => host.runtimeAdapterProgressByRunId.get(runId),
           isCancellableRuntimeAdapterProgress: (progress) =>

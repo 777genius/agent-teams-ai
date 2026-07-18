@@ -131,6 +131,9 @@ function createHost(
     stopMixedSecondaryRuntimeLanes: async () => {
       calls.push('stopMixedSecondaryLanes');
     },
+    cleanupRun: () => {
+      calls.push('cleanupRun');
+    },
     isCancellableRuntimeAdapterProgress: () => false,
     cancelRuntimeAdapterProvisioning: async () => {
       calls.push('cancelPreviousPendingRun');
@@ -235,6 +238,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       stopOpenCodeRuntimeAdapterTeam: baseHost.stopOpenCodeRuntimeAdapterTeam,
       hasSecondaryRuntimeRuns: baseHost.hasSecondaryRuntimeRuns,
       stopMixedSecondaryRuntimeLanes: baseHost.stopMixedSecondaryRuntimeLanes,
+      cleanupRun: baseHost.cleanupRun,
       resetTeamScopedTransientStateForNewRun: baseHost.resetTeamScopedTransientStateForNewRun,
       clearPersistedLaunchState: baseHost.clearPersistedLaunchState,
       invalidateRuntimeSnapshotCaches: baseHost.invalidateRuntimeSnapshotCaches,
