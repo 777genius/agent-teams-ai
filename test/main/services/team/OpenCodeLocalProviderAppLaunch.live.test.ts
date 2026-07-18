@@ -5,6 +5,7 @@ import * as path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { OpenCodeLocalProviderConnector } from '../../../../src/features/runtime-provider-management/main';
 import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
@@ -248,7 +249,17 @@ async function startFakeOpenAiCompatibleServer(): Promise<FakeOpenAiCompatibleSe
   const chatBodies: unknown[] = [];
   const server = http.createServer(async (request, response) => {
     requests.push(`${request.method ?? 'GET'} ${request.url ?? '/'}`);
+    if (request.method === 'OPTIONS' && request.url === '/v1/models') {
+      response.writeHead(204, {
+        'access-control-allow-origin': '*',
+        'access-control-allow-methods': 'GET',
+        'access-control-allow-headers': 'accept',
+      });
+      response.end();
+      return;
+    }
     if (request.url === '/v1/models') {
+      response.setHeader('access-control-allow-origin', '*');
       sendJson(response, 200, {
         object: 'list',
         data: [{ id: 'qwen-test:0.5b', object: 'model' }],
@@ -333,30 +344,17 @@ async function writeFakeLocalOpenCodeConfig(input: {
   projectPath: string;
   baseUrl: string;
 }): Promise<void> {
-  const configPath = path.join(input.projectPath, 'opencode.json');
-  await fs.writeFile(
-    configPath,
-    `${JSON.stringify(
-      {
-        provider: {
-          'llama.cpp': {
-            npm: '@ai-sdk/openai-compatible',
-            options: {
-              baseURL: `${input.baseUrl}/v1`,
-            },
-            models: {
-              'qwen-test:0.5b': {},
-            },
-          },
-        },
-        model: LOCAL_MODEL,
-        small_model: LOCAL_MODEL,
-      },
-      null,
-      2
-    )}\n`,
-    'utf8'
-  );
+  const response = await new OpenCodeLocalProviderConnector().configureLocalProvider({
+    runtimeId: 'opencode',
+    projectPath: input.projectPath,
+    presetId: 'llama.cpp',
+    baseUrl: input.baseUrl,
+    defaultModelId: 'qwen-test:0.5b',
+    setAsProjectDefault: true,
+  });
+  if (response.error) {
+    throw new Error(`Local provider onboarding failed: ${response.error.message}`);
+  }
 }
 
 async function readRequestBody(request: http.IncomingMessage): Promise<string> {

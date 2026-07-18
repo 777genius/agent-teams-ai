@@ -8,10 +8,20 @@ import {
   KiroCliCompanionService,
   type KiroCliCompanionServiceDependencies,
 } from '../infrastructure/KiroCliCompanionService';
+import { OpenCodeLocalProviderConnector } from '../infrastructure/OpenCodeLocalProviderConnector';
 
-import type { RuntimeProviderManagementPort } from '../../core/application';
+import type {
+  RuntimeLocalProviderConnectorPort,
+  RuntimeProviderManagementPort,
+} from '../../core/application';
 import type { RuntimeProviderCompanionRegistry } from '../infrastructure/cli-companion/types';
 import type {
+  RuntimeLocalProviderConfigureInput,
+  RuntimeLocalProviderConfigureResponse,
+  RuntimeLocalProviderProbeInput,
+  RuntimeLocalProviderProbeResponse,
+  RuntimeLocalProviderScanInput,
+  RuntimeLocalProviderScanResponse,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementApi,
@@ -43,6 +53,7 @@ export type RuntimeProviderManagementFeatureFacade = RuntimeProviderManagementAp
 export function createRuntimeProviderManagementFeature(
   deps: {
     port?: RuntimeProviderManagementPort;
+    localProviderConnector?: RuntimeLocalProviderConnectorPort;
     companionRegistry?: RuntimeProviderCompanionRegistry;
     /** @deprecated Use companionRegistry. Kept for focused tests and packaged integrations. */
     companionService?: KiroCliCompanionService;
@@ -50,6 +61,8 @@ export function createRuntimeProviderManagementFeature(
     Pick<KiroCliCompanionServiceDependencies, 'emitProgress'> = {}
 ): RuntimeProviderManagementFeatureFacade {
   const port = deps.port ?? new AgentTeamsRuntimeProviderManagementCliClient(deps);
+  const localProviderConnector =
+    deps.localProviderConnector ?? new OpenCodeLocalProviderConnector();
   const companionRegistry =
     deps.companionRegistry ??
     (() => {
@@ -66,6 +79,18 @@ export function createRuntimeProviderManagementFeature(
   const companionCoordinator = new RuntimeProviderCompanionCoordinator(port, companionRegistry);
 
   return {
+    scanLocalProviders: (
+      input: RuntimeLocalProviderScanInput
+    ): Promise<RuntimeLocalProviderScanResponse> =>
+      localProviderConnector.scanLocalProviders(input),
+    probeLocalProvider: (
+      input: RuntimeLocalProviderProbeInput
+    ): Promise<RuntimeLocalProviderProbeResponse> =>
+      localProviderConnector.probeLocalProvider(input),
+    configureLocalProvider: (
+      input: RuntimeLocalProviderConfigureInput
+    ): Promise<RuntimeLocalProviderConfigureResponse> =>
+      localProviderConnector.configureLocalProvider(input),
     getCompanionStatus: async (
       input: RuntimeProviderCompanionInput
     ): Promise<RuntimeProviderCompanionStatusDto> => {

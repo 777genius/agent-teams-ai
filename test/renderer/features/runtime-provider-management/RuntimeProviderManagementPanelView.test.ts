@@ -178,6 +178,34 @@ describe('RuntimeProviderManagementPanelView', () => {
     vi.unstubAllGlobals();
   });
 
+  it('opens the local provider wizard from the provider catalog toolbar', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onAddLocalProvider = vi.fn();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({ directoryLoaded: true }),
+          actions: createActions(),
+          disabled: false,
+          onAddLocalProvider,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const addButton = Array.from(host.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Add local model')
+    );
+    expect(addButton).toBeDefined();
+    await act(async () => {
+      addButton?.click();
+    });
+    expect(onAddLocalProvider).toHaveBeenCalledTimes(1);
+  });
+
   it('renders provider loading without a duplicate OpenCode runtime summary', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -1806,7 +1834,9 @@ describe('RuntimeProviderManagementPanelView', () => {
     });
 
     expect(
-      [...host.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Connect')
+      [...host.querySelectorAll('button')].some(
+        (button) => button.textContent?.trim() === 'Connect'
+      )
     ).toBe(true);
     expect(host.textContent).not.toContain('Get browser code');
     expect(host.textContent).toContain(
@@ -1998,9 +2028,9 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     const buttons = Array.from(host.querySelectorAll('button'));
     expect(buttons.some((button) => button.textContent?.includes('Connect'))).toBe(true);
-    expect(buttons.some((button) => button.textContent?.includes('Remove managed credential'))).toBe(
-      true
-    );
+    expect(
+      buttons.some((button) => button.textContent?.includes('Remove managed credential'))
+    ).toBe(true);
 
     await act(async () => {
       buttons
@@ -3051,9 +3081,7 @@ describe('RuntimeProviderManagementPanelView', () => {
       const virtualList = host.querySelector<HTMLElement>(
         '[data-testid="runtime-provider-model-virtual-list"]'
       );
-      const renderedRows = host.querySelectorAll(
-        '[data-testid^="runtime-provider-model-row-"]'
-      );
+      const renderedRows = host.querySelectorAll('[data-testid^="runtime-provider-model-row-"]');
 
       expect(virtualList).not.toBeNull();
       expect(Number.parseFloat(virtualList?.style.height ?? '0')).toBeGreaterThan(300);

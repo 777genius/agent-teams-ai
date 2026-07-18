@@ -361,6 +361,9 @@ importers:
       isbinaryfile:
         specifier: ^6.0.0
         version: 6.0.0
+      jsonc-parser:
+        specifier: 3.3.1
+        version: 3.3.1
       json-schema-ref-resolver:
         specifier: ^3.0.0
         version: 3.0.0

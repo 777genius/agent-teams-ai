@@ -6,3 +6,4 @@ export {
   createRuntimeProviderManagementFeature,
   type RuntimeProviderManagementFeatureFacade,
 } from './composition/createRuntimeProviderManagementFeature';
+export { OpenCodeLocalProviderConnector } from './infrastructure/OpenCodeLocalProviderConnector';

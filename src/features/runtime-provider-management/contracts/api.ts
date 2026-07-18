@@ -1,4 +1,10 @@
 import type {
+  RuntimeLocalProviderConfigureInput,
+  RuntimeLocalProviderConfigureResponse,
+  RuntimeLocalProviderProbeInput,
+  RuntimeLocalProviderProbeResponse,
+  RuntimeLocalProviderScanInput,
+  RuntimeLocalProviderScanResponse,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementCancelOAuthInput,
@@ -25,6 +31,15 @@ import type {
 } from './types';
 
 export interface RuntimeProviderManagementApi {
+  scanLocalProviders(
+    input: RuntimeLocalProviderScanInput
+  ): Promise<RuntimeLocalProviderScanResponse>;
+  probeLocalProvider(
+    input: RuntimeLocalProviderProbeInput
+  ): Promise<RuntimeLocalProviderProbeResponse>;
+  configureLocalProvider(
+    input: RuntimeLocalProviderConfigureInput
+  ): Promise<RuntimeLocalProviderConfigureResponse>;
   getCompanionStatus(
     input: RuntimeProviderCompanionInput
   ): Promise<RuntimeProviderCompanionStatusDto>;

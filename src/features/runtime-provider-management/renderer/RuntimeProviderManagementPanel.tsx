@@ -12,6 +12,7 @@ import {
   useRuntimeProviderManagement,
 } from './hooks/useRuntimeProviderManagement';
 import { RuntimeProviderManagementPanelView } from './ui/RuntimeProviderManagementPanelView';
+import { RuntimeLocalProviderSetupDialog } from './RuntimeLocalProviderSetupDialog';
 
 import type { RuntimeProviderManagementRuntimeId } from '@features/runtime-provider-management/contracts';
 
@@ -44,10 +45,12 @@ export const RuntimeProviderManagementPanel = ({
   const [projectContextProjects, setProjectContextProjects] = useState<ProjectPathProject[]>([]);
   const [projectContextLoading, setProjectContextLoading] = useState(false);
   const [projectContextError, setProjectContextError] = useState<string | null>(null);
+  const [localProviderSetupOpen, setLocalProviderSetupOpen] = useState(false);
   const backgroundHydrationKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open) {
+      setLocalProviderSetupOpen(false);
       return;
     }
     setActiveProjectPath(initialProjectPath);
@@ -151,15 +154,28 @@ export const RuntimeProviderManagementPanel = ({
   );
 
   return (
-    <RuntimeProviderManagementPanelView
-      state={state}
-      actions={actions}
-      disabled={disabled}
-      projectPath={activeProjectPath}
-      projectContextProjects={projectContextProjects}
-      projectContextLoading={projectContextLoading}
-      projectContextError={projectContextError}
-      onProjectContextChange={setActiveProjectPath}
-    />
+    <>
+      <RuntimeProviderManagementPanelView
+        state={state}
+        actions={actions}
+        disabled={disabled}
+        projectPath={activeProjectPath}
+        projectContextProjects={projectContextProjects}
+        projectContextLoading={projectContextLoading}
+        projectContextError={projectContextError}
+        onProjectContextChange={setActiveProjectPath}
+        onAddLocalProvider={() => setLocalProviderSetupOpen(true)}
+      />
+      <RuntimeLocalProviderSetupDialog
+        open={localProviderSetupOpen}
+        onOpenChange={setLocalProviderSetupOpen}
+        projectPath={activeProjectPath}
+        projects={projectContextProjects}
+        onProjectPathChange={setActiveProjectPath}
+        onConfigured={async () => {
+          await Promise.all([actions.refreshDirectory(), actions.refresh()]);
+        }}
+      />
+    </>
   );
 };

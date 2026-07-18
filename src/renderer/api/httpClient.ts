@@ -1512,6 +1512,33 @@ export class HttpAPIClient implements ElectronAPI {
   };
 
   runtimeProviderManagement: RuntimeProviderManagementApi = {
+    scanLocalProviders: async (input) => ({
+      schemaVersion: 1,
+      runtimeId: input.runtimeId,
+      error: {
+        code: 'endpoint-unreachable',
+        message: 'Local provider discovery is available only in the desktop app.',
+        recoverable: true,
+      },
+    }),
+    probeLocalProvider: async (input) => ({
+      schemaVersion: 1,
+      runtimeId: input.runtimeId,
+      error: {
+        code: 'endpoint-unreachable',
+        message: 'Local provider discovery is available only in the desktop app.',
+        recoverable: true,
+      },
+    }),
+    configureLocalProvider: async (input) => ({
+      schemaVersion: 1,
+      runtimeId: input.runtimeId,
+      error: {
+        code: 'write-failed',
+        message: 'Local provider configuration is available only in the desktop app.',
+        recoverable: true,
+      },
+    }),
     getCompanionStatus: async (input) => createBrowserCompanionStatus(input, 'status'),
     installAndConnectCompanion: async (input) => createBrowserCompanionStatus(input, 'install'),
     connectCompanion: async (input) => createBrowserCompanionStatus(input, 'connect'),

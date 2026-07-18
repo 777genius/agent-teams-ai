@@ -534,6 +534,109 @@ export interface RuntimeProviderManagementConfigureModelLimitsInput {
   projectPath?: string | null;
 }
 
+export const RUNTIME_LOCAL_PROVIDER_PRESET_IDS = [
+  'ollama',
+  'lm-studio',
+  'atomic-chat',
+  'llama.cpp',
+  'custom',
+] as const;
+
+export type RuntimeLocalProviderPresetIdDto = (typeof RUNTIME_LOCAL_PROVIDER_PRESET_IDS)[number];
+
+export interface RuntimeLocalProviderPresetDto {
+  id: RuntimeLocalProviderPresetIdDto;
+  providerId: string;
+  displayName: string;
+  defaultBaseUrl: string;
+  description: string;
+  scannable: boolean;
+}
+
+export interface RuntimeLocalProviderModelDto {
+  id: string;
+  displayName: string;
+}
+
+export type RuntimeLocalProviderProbeStateDto = 'available' | 'unavailable';
+
+export interface RuntimeLocalProviderProbeDto {
+  preset: RuntimeLocalProviderPresetDto;
+  providerId: string;
+  baseUrl: string;
+  state: RuntimeLocalProviderProbeStateDto;
+  models: readonly RuntimeLocalProviderModelDto[];
+  latencyMs: number | null;
+  message: string;
+}
+
+export type RuntimeLocalProviderErrorCodeDto =
+  | 'invalid-input'
+  | 'endpoint-unreachable'
+  | 'invalid-response'
+  | 'project-required'
+  | 'config-conflict'
+  | 'config-invalid'
+  | 'write-failed';
+
+export interface RuntimeLocalProviderErrorDto {
+  code: RuntimeLocalProviderErrorCodeDto;
+  message: string;
+  recoverable: boolean;
+}
+
+export interface RuntimeLocalProviderScanInput {
+  runtimeId: RuntimeProviderManagementRuntimeId;
+}
+
+export interface RuntimeLocalProviderScanResponse {
+  schemaVersion: 1;
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  probes?: readonly RuntimeLocalProviderProbeDto[];
+  error?: RuntimeLocalProviderErrorDto;
+}
+
+export interface RuntimeLocalProviderProbeInput {
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  presetId: RuntimeLocalProviderPresetIdDto;
+  baseUrl?: string | null;
+  providerId?: string | null;
+}
+
+export interface RuntimeLocalProviderProbeResponse {
+  schemaVersion: 1;
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  probe?: RuntimeLocalProviderProbeDto;
+  error?: RuntimeLocalProviderErrorDto;
+}
+
+export interface RuntimeLocalProviderConfigureInput {
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  projectPath: string;
+  presetId: RuntimeLocalProviderPresetIdDto;
+  baseUrl?: string | null;
+  providerId?: string | null;
+  defaultModelId: string;
+  setAsProjectDefault: boolean;
+}
+
+export interface RuntimeLocalProviderConfigurationDto {
+  providerId: string;
+  baseUrl: string;
+  modelIds: readonly string[];
+  defaultModelId: string;
+  modelRoute: string;
+  configPath: string;
+  setAsProjectDefault: boolean;
+}
+
+export interface RuntimeLocalProviderConfigureResponse {
+  schemaVersion: 1;
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  configuration?: RuntimeLocalProviderConfigurationDto;
+  error?: RuntimeLocalProviderErrorDto;
+}
+
 export interface RuntimeProviderModelLimitsResultDto {
   providerId: string;
   modelId: string;

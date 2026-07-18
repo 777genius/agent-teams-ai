@@ -1,4 +1,7 @@
 import {
+  RUNTIME_LOCAL_PROVIDER_CONFIGURE,
+  RUNTIME_LOCAL_PROVIDER_PROBE,
+  RUNTIME_LOCAL_PROVIDER_SCAN,
   RUNTIME_PROVIDER_COMPANION_CONNECT,
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_PROGRESS,
@@ -20,6 +23,12 @@ import {
 } from '@features/runtime-provider-management/contracts';
 
 import type {
+  RuntimeLocalProviderConfigureInput,
+  RuntimeLocalProviderConfigureResponse,
+  RuntimeLocalProviderProbeInput,
+  RuntimeLocalProviderProbeResponse,
+  RuntimeLocalProviderScanInput,
+  RuntimeLocalProviderScanResponse,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementCancelOAuthInput,
@@ -50,6 +59,18 @@ export function createRuntimeProviderManagementBridge(
   ipcRenderer: IpcRenderer
 ): RuntimeProviderManagementApi {
   return {
+    scanLocalProviders: (
+      input: RuntimeLocalProviderScanInput
+    ): Promise<RuntimeLocalProviderScanResponse> =>
+      ipcRenderer.invoke(RUNTIME_LOCAL_PROVIDER_SCAN, input),
+    probeLocalProvider: (
+      input: RuntimeLocalProviderProbeInput
+    ): Promise<RuntimeLocalProviderProbeResponse> =>
+      ipcRenderer.invoke(RUNTIME_LOCAL_PROVIDER_PROBE, input),
+    configureLocalProvider: (
+      input: RuntimeLocalProviderConfigureInput
+    ): Promise<RuntimeLocalProviderConfigureResponse> =>
+      ipcRenderer.invoke(RUNTIME_LOCAL_PROVIDER_CONFIGURE, input),
     getCompanionStatus: (
       input: RuntimeProviderCompanionInput
     ): Promise<RuntimeProviderCompanionStatusDto> =>
