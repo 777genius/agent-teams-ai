@@ -351,7 +351,9 @@ export type ReviewDirectDiskMutationStep =
 export interface ExecuteReviewMutationRequest {
   scope: ReviewFileScope;
   decisionPersistenceScope: ReviewDecisionPersistenceScope;
-  kind: 'restore' | 'rename' | 'undo' | 'redo';
+  kind: 'restore' | 'rename' | 'undo' | 'redo' | 'reload-external';
+  /** Reviewed file whose stale decisions/history are explicitly discarded on Reload. */
+  externalFilePath?: string;
   diskSteps: ReviewDirectDiskMutationStep[];
   persistedState: ReviewPersistedStateSnapshot;
   /** CAS guard preventing an old renderer from overwriting newer durable state. */

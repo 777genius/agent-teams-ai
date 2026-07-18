@@ -153,7 +153,7 @@ export class ReviewMutationJournalStore {
     const isDecisionOnlyHistoryMutation =
       !hasDecisionBatch &&
       !hasDirectSteps &&
-      (input.kind === 'undo' || input.kind === 'redo') &&
+      (input.kind === 'undo' || input.kind === 'redo' || input.kind === 'reload-external') &&
       !!input.persistedState;
     if (
       (!isDecisionOnlyHistoryMutation && hasDecisionBatch === hasDirectSteps) ||
@@ -372,7 +372,8 @@ export class ReviewMutationJournalStore {
         record.kind !== 'rename' &&
         record.kind !== 'bulk' &&
         record.kind !== 'undo' &&
-        record.kind !== 'redo') ||
+        record.kind !== 'redo' &&
+        record.kind !== 'reload-external') ||
       record.teamName !== expectedTeamName ||
       recordPersistenceScope?.scopeKey !== expectedScope.scopeKey ||
       recordPersistenceScope?.scopeToken !== expectedScope.scopeToken ||
@@ -404,7 +405,9 @@ export class ReviewMutationJournalStore {
     const hasDirectSteps = diskSteps.length > 0;
     if (!hasDecisionBatch && !hasDirectSteps) {
       return (
-        (record.kind === 'undo' || record.kind === 'redo') &&
+        (record.kind === 'undo' ||
+          record.kind === 'redo' ||
+          record.kind === 'reload-external') &&
         !!record.persistedState &&
         fileContents.length === 0
       );

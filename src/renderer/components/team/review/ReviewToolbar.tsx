@@ -26,6 +26,7 @@ interface ReviewToolbarProps {
   onUndo?: () => void;
   canRedo?: boolean;
   onRedo?: () => void;
+  mutationBlocked?: boolean;
 }
 
 export const ReviewToolbar = ({
@@ -47,14 +48,17 @@ export const ReviewToolbar = ({
   onUndo,
   canRedo = false,
   onRedo,
+  mutationBlocked = false,
 }: ReviewToolbarProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
   const hasRejected = stats.rejected > 0;
-  const canApply = hasRejected && !applying;
+  const canApply = hasRejected && !applying && !mutationBlocked;
   const totalChanges = stats.pending + stats.accepted + stats.rejected;
   const reviewedCount = stats.accepted + stats.rejected;
-  const rejectAllDisabled = applying || !canRejectAll;
-  const acceptAllDisabled = applying || !canAcceptAll;
+  const rejectAllDisabled = applying || mutationBlocked || !canRejectAll;
+  const acceptAllDisabled = applying || mutationBlocked || !canAcceptAll;
+  const externalMutationBlockedLabel =
+    'Reload files changed outside Changes before continuing review actions.';
 
   return (
     <div className="flex items-center gap-3 border-b border-border bg-surface-sidebar px-4 py-2">
@@ -159,14 +163,16 @@ export const ReviewToolbar = ({
           <TooltipTrigger asChild>
             <button
               onClick={onUndo}
-              disabled={applying}
+              disabled={applying || mutationBlocked}
               className="flex items-center gap-1 rounded bg-zinc-500/15 px-2.5 py-1 text-xs text-zinc-300 transition-colors hover:bg-zinc-500/25 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Undo2 className="size-3" />
               {t('review.toolbar.actions.undo')}
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">{t('review.toolbar.tooltips.undo')}</TooltipContent>
+          <TooltipContent side="bottom">
+            {mutationBlocked ? externalMutationBlockedLabel : t('review.toolbar.tooltips.undo')}
+          </TooltipContent>
         </Tooltip>
       )}
 
@@ -175,14 +181,16 @@ export const ReviewToolbar = ({
           <TooltipTrigger asChild>
             <button
               onClick={onRedo}
-              disabled={applying}
+              disabled={applying || mutationBlocked}
               className="flex items-center gap-1 rounded bg-zinc-500/15 px-2.5 py-1 text-xs text-zinc-300 transition-colors hover:bg-zinc-500/25 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Redo2 className="size-3" />
               {t('review.toolbar.actions.redo')}
             </button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">{t('review.toolbar.tooltips.redo')}</TooltipContent>
+          <TooltipContent side="bottom">
+            {mutationBlocked ? externalMutationBlockedLabel : t('review.toolbar.tooltips.redo')}
+          </TooltipContent>
         </Tooltip>
       )}
 
@@ -201,7 +209,9 @@ export const ReviewToolbar = ({
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              {canAcceptAll
+              {mutationBlocked
+                ? externalMutationBlockedLabel
+                : canAcceptAll
                 ? t('review.toolbar.tooltips.acceptAll')
                 : 'Wait until every file has a safe, complete review snapshot.'}
             </TooltipContent>
@@ -226,7 +236,9 @@ export const ReviewToolbar = ({
               </span>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              {canRejectAll
+              {mutationBlocked
+                ? externalMutationBlockedLabel
+                : canRejectAll
                 ? t('review.toolbar.tooltips.rejectAll')
                 : t('review.toolbar.tooltips.rejectAllDisabled')}
             </TooltipContent>
@@ -258,7 +270,9 @@ export const ReviewToolbar = ({
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {t('review.toolbar.tooltips.applyRejections')}
+            {mutationBlocked
+              ? externalMutationBlockedLabel
+              : t('review.toolbar.tooltips.applyRejections')}
           </TooltipContent>
         </Tooltip>
       )}

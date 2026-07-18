@@ -1,5 +1,6 @@
 export type * from './contracts';
 export {
+  buildReviewExternalReloadState,
   buildReviewRestoreDecisionState,
   buildReviewUndoDecisionState,
   restoreReviewDecisionRecordsForFile,

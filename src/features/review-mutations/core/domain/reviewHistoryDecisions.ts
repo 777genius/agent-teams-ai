@@ -1,7 +1,10 @@
+import { normalizePathForComparison } from '@shared/utils/platformPath';
+
 import type {
   FileChangeSummary,
   HunkDecision,
   ReviewDecisionSnapshot,
+  ReviewPersistedStateSnapshot,
   ReviewUndoAction,
 } from '@shared/types';
 
@@ -99,4 +102,44 @@ export function buildReviewUndoDecisionState(
   const decisionSnapshot = action.action.decisionSnapshot;
   if (!decisionSnapshot) return null;
   return restoreReviewDecisionRecordsForFile(file, current, decisionSnapshot);
+}
+
+function reviewActionTouchesFile(action: ReviewUndoAction, filePath: string): boolean {
+  if (action.kind === 'bulk') return true;
+  const actionPath =
+    action.kind === 'disk' ? action.action.snapshot.filePath : action.action.filePath;
+  return normalizePathForComparison(actionPath) === normalizePathForComparison(filePath);
+}
+
+/**
+ * Canonical state after the user explicitly reloads a file changed outside Changes.
+ * Redo is scope-wide because every entry contains a full decision snapshot, while a
+ * bulk action cannot be split safely. Independent per-file Undo actions are retained.
+ */
+export function buildReviewExternalReloadState(
+  file: FileChangeSummary,
+  current: ReviewPersistedStateSnapshot
+): ReviewPersistedStateSnapshot {
+  const decisions = restoreReviewDecisionRecordsForFile(file, current, {
+    hunkDecisions: {},
+    fileDecisions: {},
+  });
+  const hasBulkHistory =
+    current.reviewActionHistory.some((action) => action.kind === 'bulk') ||
+    current.reviewRedoHistory.some((entry) => entry.action.kind === 'bulk');
+  const reviewActionHistory = hasBulkHistory
+    ? []
+    : current.reviewActionHistory.filter(
+        (action) => !reviewActionTouchesFile(action, file.filePath)
+      );
+  const hunkContextHashesByFile = { ...(current.hunkContextHashesByFile ?? {}) };
+  delete hunkContextHashesByFile[getFileReviewKey(file)];
+  delete hunkContextHashesByFile[file.filePath];
+
+  return {
+    ...decisions,
+    hunkContextHashesByFile,
+    reviewActionHistory,
+    reviewRedoHistory: [],
+  };
 }

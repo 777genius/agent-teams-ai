@@ -68,9 +68,14 @@ export const FileSectionHeader = ({
   const manualLedgerReviewRequired = requiresManualLedgerReview(file);
   const rejectBlockReason = getReviewRejectBlockReason(file, fileContent);
   const rejectDisabled =
-    !contentResolved || rejectBlockReason !== null || hasEdits || fileDecision === 'rejected';
+    !contentResolved ||
+    rejectBlockReason !== null ||
+    hasEdits ||
+    !!externalChange ||
+    fileDecision === 'rejected';
   const acceptDisabled =
     !contentResolved ||
+    !!externalChange ||
     isReviewAcceptDisabled({
       hasEdits,
       isMissingOnDisk,
@@ -81,7 +86,13 @@ export const FileSectionHeader = ({
     defaultValue: 'Save or discard manual edits before accepting or rejecting.',
   });
   const canRestore =
-    !!onRestoreMissingFile && isMissingOnDisk && !hasEdits && restoreContent != null;
+    !!onRestoreMissingFile &&
+    isMissingOnDisk &&
+    !hasEdits &&
+    !externalChange &&
+    restoreContent != null;
+  const externalMutationDisabledLabel =
+    'Reload the external file change before continuing review actions.';
   const externalChangeLabel =
     externalChange?.type === 'unlink'
       ? t('review.fileHeader.externalChange.deletedOnDisk')
@@ -260,7 +271,7 @@ export const FileSectionHeader = ({
       )}
 
       <div className="ml-auto flex items-center gap-1.5" data-no-collapse>
-        {externalChange && onReloadFromDisk && onKeepDraft && (
+        {externalChange && onReloadFromDisk && (
           <div className="mr-1 flex items-center gap-1.5">
             <button
               onClick={() => onReloadFromDisk(file.filePath)}
@@ -269,13 +280,15 @@ export const FileSectionHeader = ({
             >
               {t('review.fileHeader.actions.reloadFromDisk')}
             </button>
-            <button
-              onClick={() => onKeepDraft(file.filePath)}
-              disabled={applying}
-              className="rounded bg-amber-500/15 px-2 py-1 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/25 disabled:opacity-50"
-            >
-              {t('review.fileHeader.actions.keepMyDraft')}
-            </button>
+            {hasEdits && onKeepDraft && (
+              <button
+                onClick={() => onKeepDraft(file.filePath)}
+                disabled={applying}
+                className="rounded bg-amber-500/15 px-2 py-1 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/25 disabled:opacity-50"
+              >
+                {t('review.fileHeader.actions.keepMyDraft')}
+              </button>
+            )}
           </div>
         )}
 
@@ -301,7 +314,9 @@ export const FileSectionHeader = ({
                 </TooltipTrigger>
                 {acceptDisabled && (
                   <TooltipContent side="bottom">
-                    {hasEdits
+                    {externalChange
+                      ? externalMutationDisabledLabel
+                      : hasEdits
                       ? draftDecisionDisabledLabel
                       : isContentUnavailable
                         ? t('review.fileHeader.disabled.acceptRejectContentUnavailable')
@@ -330,7 +345,9 @@ export const FileSectionHeader = ({
                 </TooltipTrigger>
                 {rejectDisabled && fileDecision !== 'rejected' && (
                   <TooltipContent side="bottom">
-                    {hasEdits
+                    {externalChange
+                      ? externalMutationDisabledLabel
+                      : hasEdits
                       ? draftDecisionDisabledLabel
                       : rejectBlockReason === 'manual-ledger-review'
                         ? t('review.fileHeader.disabled.rejectManualLedgerReview')

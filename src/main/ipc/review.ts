@@ -8,6 +8,7 @@ import { ReviewDraftHistoryStore } from '@features/change-review-history/main';
 import {
   buildForwardDiskMutationSteps,
   buildRedoDiskMutationSteps,
+  buildReviewExternalReloadState,
   buildReviewRestoreDecisionState,
   buildReviewUndoDecisionState,
   buildUndoDiskMutationSteps,
@@ -2299,6 +2300,24 @@ function assertExactReviewHistoryTransition(
     throw new Error('Review history transition is incomplete');
   }
 
+  if (request.kind === 'reload-external') {
+    if (typeof request.externalFilePath !== 'string' || request.diskSteps.length !== 0) {
+      throw new Error('External review reload requires one reviewed file and no disk mutation');
+    }
+    const file = getAuthoritativeReviewedFile(authorization, request.externalFilePath);
+    const expected = buildReviewExternalReloadState(file, {
+      hunkDecisions: current?.hunkDecisions ?? {},
+      fileDecisions: current?.fileDecisions ?? {},
+      hunkContextHashesByFile: current?.hunkContextHashesByFile ?? {},
+      reviewActionHistory: current?.reviewActionHistory ?? [],
+      reviewRedoHistory: current?.reviewRedoHistory ?? [],
+    });
+    if (!isDurableReviewEqual(next, expected)) {
+      throw new Error('Invalid durable external file reload transition');
+    }
+    return;
+  }
+
   if (request.kind === 'restore' || request.kind === 'rename') {
     const previousActions = current?.reviewActionHistory ?? [];
     const action = next.reviewActionHistory.at(-1);
@@ -2905,14 +2924,16 @@ async function handleExecuteReviewMutation(
     return { success: false, error: 'Invalid review mutation request' };
   }
   const request = requestValue as ExecuteReviewMutationRequest;
-  const isHistoryMutation = request.kind === 'undo' || request.kind === 'redo';
+  const allowsEmptyDiskMutation =
+    request.kind === 'undo' || request.kind === 'redo' || request.kind === 'reload-external';
   if (
     (request.kind !== 'restore' &&
       request.kind !== 'rename' &&
       request.kind !== 'undo' &&
-      request.kind !== 'redo') ||
+      request.kind !== 'redo' &&
+      request.kind !== 'reload-external') ||
     !Array.isArray(request.diskSteps) ||
-    (!isHistoryMutation && request.diskSteps.length === 0) ||
+    (!allowsEmptyDiskMutation && request.diskSteps.length === 0) ||
     request.diskSteps.length > MAX_REVIEW_MUTATION_STEPS
   ) {
     return { success: false, error: 'Invalid review mutation request' };

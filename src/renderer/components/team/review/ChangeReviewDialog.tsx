@@ -4,7 +4,10 @@ import { redoDepth, undoDepth } from '@codemirror/commands';
 import { Transaction } from '@codemirror/state';
 import { serializeReviewDraftEditorState } from '@features/change-review-history/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
-import { buildReviewRestoreDecisionState } from '@features/review-mutations';
+import {
+  buildReviewExternalReloadState,
+  buildReviewRestoreDecisionState,
+} from '@features/review-mutations';
 import { api, isElectronMode } from '@renderer/api';
 import { EditorSelectionMenu } from '@renderer/components/team/editor/EditorSelectionMenu';
 import { Button } from '@renderer/components/ui/button';
@@ -1114,6 +1117,21 @@ export const ChangeReviewDialog = ({
   } = useViewedFiles(teamName, scopeKey, allFilePaths);
 
   const editedCount = Object.keys(editedContents).length;
+  const reviewMutationBlockedByExternalChange =
+    Object.keys(reviewExternalChangesByFile).length > 0;
+  const blockReviewMutationForExternalChange = useCallback((filePath?: string): boolean => {
+    const externalChanges = useStore.getState().reviewExternalChangesByFile;
+    const blocked = filePath
+      ? hasUnresolvedReviewExternalChange(filePath, externalChanges)
+      : Object.keys(externalChanges).length > 0;
+    if (blocked) {
+      useStore.setState({
+        applyError:
+          'Reload files changed outside Changes before continuing review actions.',
+      });
+    }
+    return blocked;
+  }, []);
 
   // Scroll-spy handler
   const handleVisibleFileChange = useCallback((filePath: string) => {
@@ -1143,12 +1161,13 @@ export const ChangeReviewDialog = ({
             state.updateEditedContent(file.filePath, durableDraftHistory.editorState.doc);
           }
           state.markReviewFileExternallyChanged(file.filePath, changeType);
-          return;
+        } else {
+          state.markReviewFileExternallyChanged(file.filePath, changeType);
         }
-        clearReviewActionHistoryForFile(file.filePath);
-        // External bytes invalidate both the diff snapshot and every decision keyed to it.
-        state.clearReviewStateForFile(file.filePath);
-        void state.fetchFileContent(teamName, memberName, file.filePath);
+        useStore.setState({
+          applyError:
+            'A reviewed file changed outside Changes. Reload it from disk before continuing review actions.',
+        });
       };
 
       const recentWrite = recentReviewWritesRef.current.get(normalizedPath);
@@ -1199,7 +1218,7 @@ export const ChangeReviewDialog = ({
       unsubscribe();
       void api.review.unwatchFiles();
     };
-  }, [clearReviewActionHistoryForFile, open, projectPath, reviewScope, teamName, memberName]);
+  }, [open, projectPath, reviewScope]);
 
   useEffect(() => {
     if (!open || !projectPath || !isElectronMode()) return;
@@ -1218,7 +1237,14 @@ export const ChangeReviewDialog = ({
 
   // Accept/Reject all across all files
   const handleAcceptAll = useCallback(() => {
-    if (!activeChangeSet || !canAcceptAll || hasReviewActionInFlight()) return;
+    if (
+      !activeChangeSet ||
+      !canAcceptAll ||
+      hasReviewActionInFlight() ||
+      blockReviewMutationForExternalChange()
+    ) {
+      return;
+    }
     const reviewState = useStore.getState();
     const currentDrafts = reviewState.editedContents;
     const decisionSnapshot: ReviewDecisionSnapshot = {
@@ -1238,10 +1264,23 @@ export const ChangeReviewDialog = ({
         acceptAllChunks(view);
       }
     });
-  }, [activeChangeSet, acceptAllFile, canAcceptAll, hasReviewActionInFlight, pushReviewUndoAction]);
+  }, [
+    acceptAllFile,
+    activeChangeSet,
+    blockReviewMutationForExternalChange,
+    canAcceptAll,
+    hasReviewActionInFlight,
+    pushReviewUndoAction,
+  ]);
 
   const handleRejectAll = useCallback(() => {
-    if (!activeChangeSet || hasReviewActionInFlight()) return;
+    if (
+      !activeChangeSet ||
+      hasReviewActionInFlight() ||
+      blockReviewMutationForExternalChange()
+    ) {
+      return;
+    }
     const currentDrafts = useStore.getState().editedContents;
     const requestedFiles = rejectablePendingFiles.filter(
       (file) => !(file.filePath in currentDrafts)
@@ -1419,6 +1458,7 @@ export const ChangeReviewDialog = ({
   }, [
     activeChangeSet,
     bindCommittedReviewAction,
+    blockReviewMutationForExternalChange,
     rejectablePendingFiles,
     rejectAllFile,
     applyReview,
@@ -1442,7 +1482,13 @@ export const ChangeReviewDialog = ({
   // File-level accept/reject (Cursor-style)
   const handleRestoreRejectedFileAsAccepted = useCallback(
     async (filePath: string): Promise<void> => {
-      if (hasReviewDraft(filePath) || hasReviewActionInFlight()) return;
+      if (
+        hasReviewDraft(filePath) ||
+        hasReviewActionInFlight() ||
+        blockReviewMutationForExternalChange(filePath)
+      ) {
+        return;
+      }
       const operationEpoch = changeSetEpoch;
       const file = activeChangeSet?.files.find((candidate) => candidate.filePath === filePath);
       if (!file) return;
@@ -1645,6 +1691,7 @@ export const ChangeReviewDialog = ({
     [
       activeChangeSet,
       bindCommittedReviewAction,
+      blockReviewMutationForExternalChange,
       changeSetEpoch,
       clearReviewFileExternalChange,
       fetchFileContent,
@@ -1669,7 +1716,13 @@ export const ChangeReviewDialog = ({
 
   const handleAcceptFile = useCallback(
     (filePath: string) => {
-      if (hasReviewDraft(filePath) || hasReviewActionInFlight()) return;
+      if (
+        hasReviewDraft(filePath) ||
+        hasReviewActionInFlight() ||
+        blockReviewMutationForExternalChange(filePath)
+      ) {
+        return;
+      }
       const file = activeChangeSet?.files.find((candidate) => candidate.filePath === filePath);
       if (!file) return;
       const state = useStore.getState();
@@ -1711,6 +1764,7 @@ export const ChangeReviewDialog = ({
     [
       acceptAllFile,
       activeChangeSet,
+      blockReviewMutationForExternalChange,
       hasReviewActionInFlight,
       hasReviewDraft,
       handleRestoreRejectedFileAsAccepted,
@@ -1720,7 +1774,13 @@ export const ChangeReviewDialog = ({
 
   const handleRejectFile = useCallback(
     async (filePath: string) => {
-      if (hasReviewDraft(filePath) || hasReviewActionInFlight()) return;
+      if (
+        hasReviewDraft(filePath) ||
+        hasReviewActionInFlight() ||
+        blockReviewMutationForExternalChange(filePath)
+      ) {
+        return;
+      }
       fileApplyInFlightRef.current.add(filePath);
       setFileApplying(filePath, true);
       const operationEpoch = changeSetEpoch;
@@ -1869,6 +1929,7 @@ export const ChangeReviewDialog = ({
       bindCommittedReviewAction,
       teamName,
       taskId,
+      blockReviewMutationForExternalChange,
       memberName,
       markRecentReviewWrite,
       fileContents,
@@ -1890,7 +1951,11 @@ export const ChangeReviewDialog = ({
   // Per-file callbacks for ContinuousScrollView
   const handleHunkAccepted = useCallback(
     (filePath: string, hunkIndex: number) => {
-      if (hasReviewDraft(filePath) || hasReviewActionInFlight()) {
+      if (
+        hasReviewDraft(filePath) ||
+        hasReviewActionInFlight() ||
+        blockReviewMutationForExternalChange(filePath)
+      ) {
         // Older navigation adapters ignored the callback's `false` result and still
         // mutated CodeMirror. Restore the guarded document after that synchronous call.
         const view = editorViewMapRef.current.get(filePath);
@@ -1912,6 +1977,7 @@ export const ChangeReviewDialog = ({
     [
       hasReviewActionInFlight,
       hasReviewDraft,
+      blockReviewMutationForExternalChange,
       pushReviewUndoAction,
       rollbackEditorContent,
       setHunkDecision,
@@ -1920,7 +1986,11 @@ export const ChangeReviewDialog = ({
 
   const handleHunkRejected = useCallback(
     (filePath: string, hunkIndex: number, beforeContent?: string, afterContent?: string) => {
-      if (hasReviewDraft(filePath) || hasReviewActionInFlight()) {
+      if (
+        hasReviewDraft(filePath) ||
+        hasReviewActionInFlight() ||
+        blockReviewMutationForExternalChange(filePath)
+      ) {
         return false;
       }
       if (beforeContent === undefined || afterContent === undefined) {
@@ -2042,6 +2112,7 @@ export const ChangeReviewDialog = ({
       readCurrentReviewDiskContent,
       rollbackEditorContent,
       activeChangeSet,
+      blockReviewMutationForExternalChange,
       fileContents,
       pushReviewUndoAction,
       discardLatestReviewAction,
@@ -2195,21 +2266,101 @@ export const ChangeReviewDialog = ({
   const handleReloadFromDisk = useCallback(
     (filePath: string) => {
       if (hasReviewActionInFlight()) return;
-      draftDiskBaselineRef.current.delete(normalizePathForComparison(filePath));
-      void clearDraftHistoryForFile(filePath);
-      clearReviewActionHistoryForFile(filePath);
-      reloadReviewFileFromDisk(filePath);
-      setDiscardCounters((prev) => ({ ...prev, [filePath]: (prev[filePath] ?? 0) + 1 }));
-      void fetchFileContent(teamName, memberName, filePath);
+      const operationEpoch = useStore.getState().changeSetEpoch;
+      fileApplyInFlightRef.current.add(filePath);
+      setFileApplying(filePath, true);
+      void (async () => {
+        try {
+          if (!decisionScopeToken) {
+            throw new Error('Durable review scope is unavailable; refusing an unsafe reload.');
+          }
+          if (!(await quiesceDecisionPersistence(teamName, decisionScopeKey, decisionScopeToken))) {
+            throw new Error('Unable to finish saving the previous review state. Retry Reload.');
+          }
+          const state = useStore.getState();
+          const file = state.activeChangeSet?.files.find(
+            (candidate) =>
+              normalizePathForComparison(candidate.filePath) ===
+              normalizePathForComparison(filePath)
+          );
+          if (!file) throw new Error('Reviewed file is unavailable for Reload.');
+          const next = buildReviewExternalReloadState(file, {
+            hunkDecisions: state.hunkDecisions,
+            fileDecisions: state.fileDecisions,
+            hunkContextHashesByFile: state.hunkContextHashesByFile,
+            reviewActionHistory: reviewUndoActionsRef.current,
+            reviewRedoHistory: reviewRedoActionsRef.current,
+          });
+          const committed = await api.review.executeMutation({
+            scope: reviewScope,
+            decisionPersistenceScope: {
+              scopeKey: decisionScopeKey,
+              scopeToken: decisionScopeToken,
+            },
+            kind: 'reload-external',
+            externalFilePath: filePath,
+            diskSteps: [],
+            persistedState: next,
+            expectedDecisionRevision: state.decisionRevision,
+          });
+          if (useStore.getState().changeSetEpoch !== operationEpoch) return;
+          reviewUndoActionsRef.current = next.reviewActionHistory;
+          reviewRedoActionsRef.current = next.reviewRedoHistory;
+          redoHistoryBeforePreparedActionRef.current = null;
+          setReviewActionHistory(next.reviewActionHistory);
+          setReviewRedoHistory(next.reviewRedoHistory);
+          setReviewUndoDepth(next.reviewActionHistory.length);
+          setReviewRedoDepth(next.reviewRedoHistory.length);
+          recordDecisionRevision(
+            teamName,
+            decisionScopeKey,
+            decisionScopeToken,
+            committed.decisionRevision
+          );
+          draftDiskBaselineRef.current.delete(normalizePathForComparison(filePath));
+          useStore.setState({
+            hunkDecisions: next.hunkDecisions,
+            fileDecisions: next.fileDecisions,
+            hunkContextHashesByFile: next.hunkContextHashesByFile ?? {},
+            applyError: null,
+          });
+          // Never destroy recoverable draft history before the durable review mutation
+          // commits. If cleanup fails, the external-change barrier stays visible and the
+          // user can retry without losing the draft across a restart.
+          await clearDraftHistoryForFile(filePath);
+          reloadReviewFileFromDisk(filePath);
+          setDiscardCounters((prev) => ({ ...prev, [filePath]: (prev[filePath] ?? 0) + 1 }));
+          void fetchFileContent(teamName, memberName, filePath);
+        } catch (error) {
+          if (useStore.getState().changeSetEpoch === operationEpoch) {
+            useStore.setState({
+              applyError:
+                error instanceof Error ? error.message : 'Unable to reload the external file.',
+            });
+          }
+        } finally {
+          fileApplyInFlightRef.current.delete(filePath);
+          if (useStore.getState().changeSetEpoch === operationEpoch) {
+            setFileApplying(filePath, false);
+          }
+        }
+      })();
     },
     [
-      clearReviewActionHistoryForFile,
       clearDraftHistoryForFile,
-      hasReviewActionInFlight,
-      reloadReviewFileFromDisk,
+      decisionScopeKey,
+      decisionScopeToken,
       fetchFileContent,
-      teamName,
+      hasReviewActionInFlight,
       memberName,
+      quiesceDecisionPersistence,
+      recordDecisionRevision,
+      reloadReviewFileFromDisk,
+      reviewScope,
+      setFileApplying,
+      setReviewActionHistory,
+      setReviewRedoHistory,
+      teamName,
     ]
   );
 
@@ -2437,7 +2588,13 @@ export const ChangeReviewDialog = ({
   );
 
   const handleUndoLatestReviewAction = useCallback(async (): Promise<void> => {
-    if (hasReviewActionInFlight() || editedCount > 0) return;
+    if (
+      hasReviewActionInFlight() ||
+      editedCount > 0 ||
+      blockReviewMutationForExternalChange()
+    ) {
+      return;
+    }
     const action = reviewUndoActionsRef.current.at(-1);
     if (!action) return;
     const state = useStore.getState();
@@ -2502,6 +2659,7 @@ export const ChangeReviewDialog = ({
     });
   }, [
     activeChangeSet,
+    blockReviewMutationForExternalChange,
     commitUndoMutation,
     completeReviewUndoAction,
     editedCount,
@@ -2509,7 +2667,13 @@ export const ChangeReviewDialog = ({
   ]);
 
   const handleRedoLatestReviewAction = useCallback(async (): Promise<void> => {
-    if (hasReviewActionInFlight() || editedCount > 0) return;
+    if (
+      hasReviewActionInFlight() ||
+      editedCount > 0 ||
+      blockReviewMutationForExternalChange()
+    ) {
+      return;
+    }
     const redoAction = reviewRedoActionsRef.current.at(-1);
     if (!redoAction || !decisionScopeToken) return;
     setUndoInFlight(true);
@@ -2574,6 +2738,7 @@ export const ChangeReviewDialog = ({
     }
   }, [
     completeReviewRedoAction,
+    blockReviewMutationForExternalChange,
     decisionScopeKey,
     decisionScopeToken,
     editedCount,
@@ -3176,7 +3341,7 @@ export const ChangeReviewDialog = ({
   }, [activeChangeSet]);
 
   const handleApply = useCallback(async () => {
-    if (hasReviewActionInFlight()) return;
+    if (hasReviewActionInFlight() || blockReviewMutationForExternalChange()) return;
     await applyReview(teamName, taskId, memberName);
     // Only cleanup if apply succeeded (no error in store)
     const state = useStore.getState();
@@ -3186,6 +3351,7 @@ export const ChangeReviewDialog = ({
     }
   }, [
     applyReview,
+    blockReviewMutationForExternalChange,
     teamName,
     taskId,
     memberName,
@@ -3291,6 +3457,7 @@ export const ChangeReviewDialog = ({
             onUndo={() => void handleUndoLatestReviewAction()}
             canRedo={reviewRedoDepth > 0 && editedCount === 0}
             onRedo={() => void handleRedoLatestReviewAction()}
+            mutationBlocked={reviewMutationBlockedByExternalChange}
           />
         )}
 

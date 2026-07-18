@@ -1514,6 +1514,109 @@ describe('review IPC path confinement', () => {
     expect(redone).toEqual({ success: true, data: { decisionRevision: 3 } });
   });
 
+  it('atomically reloads an externally changed file without silently dropping independent Undo', async () => {
+    const persistenceScope = {
+      scopeKey: 'agent-worker',
+      scopeToken: 'agent:worker:content:external-reload',
+    };
+    const missingFile = path.join(projectDir, 'src', 'missing.ts');
+    const changedAction = {
+      id: 'changed-action',
+      createdAt: '2026-07-18T08:00:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    const independentAction = {
+      id: 'independent-action',
+      createdAt: '2026-07-18T08:00:01.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: missingFile, originalIndex: 0 },
+    };
+    const redoEntry = {
+      action: {
+        ...changedAction,
+        id: 'redo-changed-action',
+        createdAt: '2026-07-18T08:00:02.000Z',
+      },
+      decisionSnapshot: {
+        hunkDecisions: { [`${projectFile}:0`]: 'rejected' as const },
+        fileDecisions: {},
+      },
+      hunkContextHashesByFile: { [projectFile]: { 0: 'changed-hash' } },
+    };
+    await new ReviewDecisionStore().save('safe-team', persistenceScope.scopeKey, {
+      scopeToken: persistenceScope.scopeToken,
+      hunkDecisions: {
+        [`${projectFile}:0`]: 'rejected',
+        [`${missingFile}:0`]: 'accepted',
+      },
+      fileDecisions: { [projectFile]: 'rejected', [missingFile]: 'accepted' },
+      hunkContextHashesByFile: {
+        [projectFile]: { 0: 'changed-hash' },
+        [missingFile]: { 0: 'independent-hash' },
+      },
+      reviewActionHistory: [changedAction, independentAction],
+      reviewRedoHistory: [redoEntry],
+      expectedRevision: 0,
+    });
+
+    const forged = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: persistenceScope,
+      kind: 'reload-external',
+      externalFilePath: projectFile,
+      diskSteps: [],
+      persistedState: {
+        hunkDecisions: { [`${missingFile}:0`]: 'accepted' },
+        fileDecisions: { [missingFile]: 'accepted' },
+        hunkContextHashesByFile: { [missingFile]: { 0: 'independent-hash' } },
+        reviewActionHistory: [],
+        reviewRedoHistory: [],
+      },
+      expectedDecisionRevision: 1,
+    });
+    expect(forged).toEqual({
+      success: false,
+      error: 'Invalid durable external file reload transition',
+    });
+
+    const reloaded = await ipcMain.invoke(REVIEW_EXECUTE_MUTATION, {
+      scope: { teamName: 'safe-team', memberName: 'worker' },
+      decisionPersistenceScope: persistenceScope,
+      kind: 'reload-external',
+      externalFilePath: projectFile,
+      diskSteps: [],
+      persistedState: {
+        hunkDecisions: { [`${missingFile}:0`]: 'accepted' },
+        fileDecisions: { [missingFile]: 'accepted' },
+        hunkContextHashesByFile: { [missingFile]: { 0: 'independent-hash' } },
+        reviewActionHistory: [independentAction],
+        reviewRedoHistory: [],
+      },
+      expectedDecisionRevision: 1,
+    });
+
+    expect(reloaded).toEqual({ success: true, data: { decisionRevision: 2 } });
+    expect(applier.saveEditedFile).not.toHaveBeenCalled();
+    await expect(
+      ipcMain.invoke(
+        REVIEW_LOAD_DECISIONS,
+        'safe-team',
+        persistenceScope.scopeKey,
+        persistenceScope.scopeToken
+      )
+    ).resolves.toMatchObject({
+      success: true,
+      data: {
+        hunkDecisions: { [`${missingFile}:0`]: 'accepted' },
+        fileDecisions: { [missingFile]: 'accepted' },
+        reviewActionHistory: [independentAction],
+        reviewRedoHistory: [],
+        revision: 2,
+      },
+    });
+  });
+
   it('recovers a prepared decision-only Undo through the production IPC path', async () => {
     const persistenceScope = {
       scopeKey: 'agent-worker',

@@ -5,6 +5,7 @@ export {
   type ReviewMutationSteps,
 } from '../core/application/ReviewMutationCoordinator';
 export {
+  buildReviewExternalReloadState,
   buildReviewRestoreDecisionState,
   buildReviewUndoDecisionState,
   restoreReviewDecisionRecordsForFile,
