@@ -8,6 +8,7 @@ import { cn } from '@renderer/lib/utils';
 import { browserGridLayoutRepository } from '@renderer/services/layout-system/BrowserGridLayoutRepository';
 
 import { KanbanColumn } from './KanbanColumn';
+import { KanbanTaskCardSkeleton } from './KanbanTaskCardSkeleton';
 
 import type { PersistedGridLayoutItem } from '@renderer/services/layout-system/gridLayoutTypes';
 import type { KanbanColumnId } from '@shared/types';
@@ -131,33 +132,6 @@ function renderResizeHandle(axis: ResizeHandleAxis, ref: Ref<HTMLElement>): Reac
   );
 }
 
-const KanbanTaskCardSkeleton = ({ height }: { height: number }): ReactElement => (
-  <div
-    className="kanban-task-card-skeleton relative shrink-0 overflow-hidden bg-transparent"
-    style={{ height }}
-  >
-    <div className="absolute left-3 top-1.5 flex items-center gap-1.5">
-      <div className="bg-[var(--color-surface-overlay)]/30 h-2 w-14 rounded" />
-      <div className="bg-[var(--color-surface-overlay)]/20 size-3 rounded-full" />
-      <div className="bg-[var(--color-surface-overlay)]/20 h-2 w-2 rounded" />
-    </div>
-    <div className="bg-[var(--color-surface-overlay)]/25 absolute right-[6px] top-[4px] h-5 w-16 rounded-full" />
-    <div className="flex h-full flex-col py-3 pl-3 pr-1.5">
-      <div className="pt-5">
-        <div className="bg-[var(--color-surface-overlay)]/25 h-4 w-[84%] rounded" />
-        <div className="bg-[var(--color-surface-overlay)]/18 mt-2 h-4 w-[68%] rounded" />
-      </div>
-      {height > 110 ? (
-        <div className="mt-3 flex items-center gap-1.5">
-          <div className="bg-[var(--color-surface-overlay)]/20 size-3 rounded" />
-          <div className="bg-[var(--color-surface-overlay)]/20 h-2 w-16 rounded" />
-          <div className="bg-[var(--color-surface-overlay)]/15 h-2 flex-1 rounded" />
-        </div>
-      ) : null}
-    </div>
-  </div>
-);
-
 const LoadingKanbanGridLayout = ({
   columns,
   visibleItems,
@@ -249,21 +223,25 @@ const LoadingKanbanGridLayout = ({
               >
                 {hasTasks ? (
                   <>
-                    {skeletonCards.map((card) => (
-                      <KanbanTaskCardSkeleton key={card.key} height={card.height} />
+                    {skeletonCards.map((card, index) => (
+                      <KanbanTaskCardSkeleton
+                        key={card.key}
+                        height={card.height}
+                        showSeparator={index < skeletonCards.length - 1}
+                      />
                     ))}
                     {showAddButton ? (
-                      <div className="bg-[var(--color-surface-overlay)]/15 flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] px-3 text-xs text-[var(--color-text-muted)]">
+                      <div className="ml-2 flex w-[calc(100%_-_0.5rem)] shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
                         {t('kanban.grid.addTask')}
                       </div>
                     ) : null}
                   </>
                 ) : showAddButton ? (
-                  <div className="bg-[var(--color-surface-overlay)]/15 flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] px-3 text-xs text-[var(--color-text-muted)]">
+                  <div className="ml-2 flex w-[calc(100%_-_0.5rem)] shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
                     {t('kanban.grid.addTask')}
                   </div>
                 ) : (
-                  <div className="rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
+                  <div className="ml-2 w-[calc(100%_-_0.5rem)] rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
                     {t('kanban.grid.noTasks')}
                   </div>
                 )}

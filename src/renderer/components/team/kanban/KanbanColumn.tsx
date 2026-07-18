@@ -3,7 +3,7 @@ import { memo } from 'react';
 import { cn } from '@renderer/lib/utils';
 
 interface KanbanColumnProps {
-  title: string;
+  title: React.ReactNode;
   count: number;
   icon?: React.ReactNode;
   accentColor: string;

@@ -2,16 +2,23 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { getThemedBorder, type TeamColorSet } from '@renderer/constants/teamColors';
 import { cn } from '@renderer/lib/utils';
 import {
+  CheckCircle2,
   ChevronRight,
+  ClipboardList,
   Columns3,
   Expand,
+  Eye,
   History,
   MessageSquare,
   MoreHorizontal,
   Paperclip,
+  PlayCircle,
+  ShieldCheck,
   Users,
 } from 'lucide-react';
 
+import { KanbanColumn } from './kanban/KanbanColumn';
+import { KanbanTaskCardSkeleton } from './kanban/KanbanTaskCardSkeleton';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 
@@ -23,18 +30,53 @@ const TEAM_LOADING_MEMBER_ACCENTS = ['#46d93b', '#3b82f6', '#facc15', '#14b8a6',
 const TEAM_LOADING_KANBAN_COLUMNS = [
   {
     id: 'todo',
-    headerBg: 'rgba(59, 130, 246, 0.28)',
-    bodyBg: 'rgba(59, 130, 246, 0.06)',
+    accentColor: 'rgb(59, 130, 246)',
+    icon: ClipboardList,
+    titleWidth: 'w-16',
+    gridColumn: '1 / span 4',
+    gridRow: '1 / span 14',
+    cardHeights: [96, 116],
+    showAddButton: true,
   },
   {
     id: 'inProgress',
-    headerBg: 'rgba(234, 179, 8, 0.28)',
-    bodyBg: 'rgba(234, 179, 8, 0.07)',
+    accentColor: 'rgb(234, 179, 8)',
+    icon: PlayCircle,
+    titleWidth: 'w-28',
+    gridColumn: '5 / span 4',
+    gridRow: '1 / span 14',
+    cardHeights: [96, 96],
+    showAddButton: true,
   },
   {
     id: 'review',
-    headerBg: 'rgba(139, 92, 246, 0.28)',
-    bodyBg: 'rgba(139, 92, 246, 0.07)',
+    accentColor: 'rgb(139, 92, 246)',
+    icon: Eye,
+    titleWidth: 'w-16',
+    gridColumn: '9 / span 4',
+    gridRow: '1 / span 14',
+    cardHeights: [116],
+    showAddButton: false,
+  },
+  {
+    id: 'done',
+    accentColor: 'rgb(20, 184, 166)',
+    icon: CheckCircle2,
+    titleWidth: 'w-14',
+    gridColumn: '1 / span 6',
+    gridRow: '15 / span 14',
+    cardHeights: [96, 96],
+    showAddButton: false,
+  },
+  {
+    id: 'approved',
+    accentColor: 'rgb(101, 163, 13)',
+    icon: ShieldCheck,
+    titleWidth: 'w-20',
+    gridColumn: '7 / span 6',
+    gridRow: '15 / span 14',
+    cardHeights: [116],
+    showAddButton: false,
   },
 ] as const;
 
@@ -350,40 +392,50 @@ const TeamContentLoadingSkeleton = ({
           badgeWidth="w-8"
           actionWidth="w-16"
         />
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="relative h-9 min-w-[220px] max-w-sm flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-sidebar)]">
-            <SkeletonPill className="absolute left-3 top-1/2 size-4 -translate-y-1/2 rounded" />
-            <SkeletonPill className="absolute left-10 top-1/2 h-4 w-44 -translate-y-1/2" />
+        <div className="mt-3 flex min-w-0 max-w-full items-center gap-2 px-2">
+          <div className="relative h-8 min-w-0 max-w-full flex-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] sm:max-w-[33.333333%]">
+            <SkeletonPill className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 rounded" />
+            <SkeletonPill className="absolute left-8 top-1/2 h-3 w-[58%] -translate-y-1/2 rounded" />
           </div>
-          <div className="flex items-center gap-2">
-            <SkeletonBlock className="h-9 w-20" />
-            <SkeletonBlock className="h-9 w-28" />
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <SkeletonBlock className="h-7 w-[62px]" />
+            <SkeletonBlock className="h-7 w-[66px]" />
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-12 gap-3">
+        <div className="mt-2 grid grid-cols-12 gap-y-3" style={{ gridAutoRows: '18px' }}>
           {TEAM_LOADING_KANBAN_COLUMNS.map((column) => (
             <div
               key={column.id}
-              className="col-span-4 flex h-[400px] min-h-0 flex-col overflow-hidden rounded-md border border-[var(--color-border)]"
-              style={{ backgroundColor: column.bodyBg }}
+              className="min-h-0"
+              style={{ gridColumn: column.gridColumn, gridRow: column.gridRow }}
             >
-              <div
-                className="flex shrink-0 items-center gap-2 px-3 py-2"
-                style={{ backgroundColor: column.headerBg }}
+              <KanbanColumn
+                title={<SkeletonPill className={cn('h-3', column.titleWidth)} />}
+                count={0}
+                icon={
+                  <column.icon size={14} className="shrink-0 text-[var(--kanban-column-accent)]" />
+                }
+                accentColor={column.accentColor}
+                headerAccessory={
+                  <SkeletonPill className="h-2.5 w-3 rounded bg-[var(--skeleton-base-dim)]" />
+                }
+                className="flex h-full min-h-0 animate-pulse flex-col"
+                headerClassName="shrink-0"
+                bodyClassName="min-h-0 max-h-none flex-1 overflow-hidden"
               >
-                <SkeletonPill className="size-4 rounded" />
-                <SkeletonPill className={cn('h-4', column.id === 'inProgress' ? 'w-32' : 'w-20')} />
-              </div>
-              <div className="min-h-0 flex-1 overflow-hidden p-2">
-                <div
-                  className="flex h-12 items-center justify-center rounded-md border border-dashed border-[var(--color-border)]"
-                  style={{
-                    backgroundColor: 'color-mix(in srgb, var(--color-surface) 35%, transparent)',
-                  }}
-                >
-                  <SkeletonPill className="h-4 w-28" />
-                </div>
-              </div>
+                {column.cardHeights.map((height, index) => (
+                  <KanbanTaskCardSkeleton
+                    key={`${column.id}:${height}:${index}`}
+                    height={height}
+                    showSeparator={index < column.cardHeights.length - 1}
+                  />
+                ))}
+                {column.showAddButton ? (
+                  <div className="ml-2 flex w-[calc(100%_-_0.5rem)] shrink-0 items-center justify-center rounded-md border border-dashed border-[var(--color-border)] p-3">
+                    <SkeletonPill className="h-4 w-28" />
+                  </div>
+                ) : null}
+              </KanbanColumn>
             </div>
           ))}
         </div>
