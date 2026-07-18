@@ -89,6 +89,7 @@ export type RuntimeDeliveryAck =
 
 // The runtime boundary creates a service per request, so in-flight turns must be shared.
 const runtimeDeliveryTurns = new Map<string, Promise<void>>();
+const CROSS_TEAM_IDEMPOTENCY_CONFLICT = 'CROSS_TEAM_IDEMPOTENCY_CONFLICT';
 
 export class RuntimeDeliveryDestinationRegistry {
   private readonly ports = new Map<
@@ -272,6 +273,37 @@ export class RuntimeDeliveryService {
         return staleRunAfterDeliveryFailure;
       }
 
+      if (isCrossTeamIdempotencyConflict(error)) {
+        await this.journal.markFailed({
+          idempotencyKey: envelope.idempotencyKey,
+          runId: envelope.runId,
+          teamName: envelope.teamName,
+          status: 'failed_terminal',
+          error: CROSS_TEAM_IDEMPOTENCY_CONFLICT,
+          updatedAt: this.clock().toISOString(),
+        });
+        await this.diagnostics.append({
+          type: 'runtime_delivery_conflict',
+          providerId: 'opencode',
+          teamName: envelope.teamName,
+          runId: envelope.runId,
+          severity: 'error',
+          message: 'Runtime delivery destination reported an idempotency conflict',
+          data: {
+            idempotencyKey: envelope.idempotencyKey,
+            destination,
+            error: stringifyError(error),
+          },
+          createdAt: this.clock().toISOString(),
+        });
+        return {
+          ok: false,
+          delivered: false,
+          reason: 'idempotency_conflict',
+          idempotencyKey: envelope.idempotencyKey,
+        };
+      }
+
       await this.journal.markFailed({
         idempotencyKey: envelope.idempotencyKey,
         runId: envelope.runId,
@@ -437,4 +469,15 @@ export class RuntimeDeliveryReconciler {
 
 function stringifyError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isCrossTeamIdempotencyConflict(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const structuredError = error as { code?: unknown; name?: unknown; message?: unknown };
+  return [structuredError.code, structuredError.name, structuredError.message].some(
+    (value) => value === CROSS_TEAM_IDEMPOTENCY_CONFLICT
+  );
 }

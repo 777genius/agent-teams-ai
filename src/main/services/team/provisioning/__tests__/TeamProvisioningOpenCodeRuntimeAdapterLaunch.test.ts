@@ -320,6 +320,79 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
     });
     expect(aliveRuns.get('team-a')).toBe('run-1');
   });
+
+  it('retains a partial-failure adapter run when another member has usable runtime evidence', async () => {
+    const calls: string[] = [];
+    const request = {
+      teamName: 'team-a',
+      cwd: '/repo',
+      providerId: 'opencode',
+      members: [
+        { name: 'alice', role: 'Engineer', providerId: 'opencode' },
+        { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
+      ],
+    } as TeamCreateRequest;
+    const partialResult = runtimeResult({
+      teamLaunchState: 'partial_failure',
+      members: {
+        alice: {
+          memberName: 'alice',
+          providerId: 'opencode',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          runtimePid: 1001,
+          sessionId: 'session-alice',
+          diagnostics: [],
+        },
+        bob: {
+          memberName: 'bob',
+          providerId: 'opencode',
+          launchState: 'failed_to_start',
+          agentToolAccepted: false,
+          runtimeAlive: false,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          diagnostics: ['failed'],
+        },
+      },
+      diagnostics: ['bob failed'],
+    });
+    const provisioningRuns = new Map<string, string>();
+
+    await runOpenCodeTeamRuntimeAdapterLaunch(
+      {
+        adapter: {
+          launch: vi.fn(async () => partialResult),
+        } as unknown as TeamLaunchRuntimeAdapter,
+        request,
+        members: request.members,
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...basePorts(calls),
+        setProvisioningRun: (teamName, runId) => {
+          calls.push('setProvisioningRun');
+          provisioningRuns.set(teamName, runId);
+        },
+        getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+        deleteProvisioningRunIfCurrent: (teamName, runId) => {
+          calls.push('deleteProvisioningRunIfCurrent');
+          if (provisioningRuns.get(teamName) === runId) provisioningRuns.delete(teamName);
+        },
+      }
+    );
+
+    expect(calls).toContain('setProgress:failed');
+    expect(calls).toContain('setRuntimeRun');
+    expect(calls).toContain('setAliveRun');
+    expect(calls).not.toContain('clearLaneStorage');
+    expect(calls).not.toContain('deleteRuntimeRun');
+    expect(calls).not.toContain('deleteAliveRun');
+  });
 });
 
 function basePorts(calls: string[]): OpenCodeRuntimeAdapterLaunchPorts {

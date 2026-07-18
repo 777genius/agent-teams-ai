@@ -95,8 +95,7 @@ export class WorkspaceRegistrationRegistry {
     const byWorkspaceId = new Map<WorkspaceId, WorkspaceRegistration>();
     const byDeclaredRootHash = new Map<string, WorkspaceRegistration>();
 
-    for (let index = 0; index < registrations.length; index += 1) {
-      const registration = registrations[index];
+    for (const registration of registrations) {
       if (byRegistrationKey.has(registration.registrationKey)) {
         throw new Error('workspace-registration-key-duplicate');
       }

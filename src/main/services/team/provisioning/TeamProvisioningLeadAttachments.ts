@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import {
   buildClaudeAttachmentDeliveryParts,
   buildCodexNativeAttachmentDeliveryParts,
@@ -5,6 +7,27 @@ import {
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import type { AttachmentPayload } from '@shared/types';
+
+/** Deterministic artifact-dir key for one ordered Codex attachment payload. */
+function buildCodexLeadAttachmentMessageId(
+  runId: string,
+  attachments: AttachmentPayload[]
+): string {
+  const hash = createHash('sha256').update(`${runId}\n${attachments.length}\n`);
+  attachments.forEach((attachment, index) => {
+    const bytes = Buffer.from(attachment.data, 'base64');
+    const metadata = JSON.stringify({
+      index,
+      filename: attachment.filename.trim(),
+      mimeType: attachment.mimeType.trim().toLowerCase(),
+      size: bytes.byteLength,
+    });
+    hash.update(`${Buffer.byteLength(metadata)}:${metadata}${bytes.byteLength}:`);
+    hash.update(bytes);
+  });
+  const digest = hash.digest('hex');
+  return `lead_${runId}_${digest}`;
+}
 
 export interface LeadAttachmentInput {
   data: string;
@@ -132,7 +155,7 @@ export async function buildCodexLeadAttachmentContentBlocks(input: {
 }): Promise<Record<string, unknown>[]> {
   const prepared = await buildCodexNativeAttachmentDeliveryParts({
     teamName: input.teamName,
-    messageId: `lead_${input.runId}_${Date.now()}`,
+    messageId: buildCodexLeadAttachmentMessageId(input.runId, input.attachments),
     text: input.text,
     attachments: input.attachments,
   });

@@ -15388,9 +15388,28 @@ describe('TeamProvisioningService', () => {
       ).resolves.toContain('delivery-1');
     });
 
-    it('removes lane index entries when mixed secondary lanes are stopped without an OpenCode adapter', async () => {
+    it('removes lane index entries after the OpenCode adapter confirms mixed secondary lane stops', async () => {
       const svc = new TeamProvisioningService();
       const teamName = 'mixed-team';
+      const adapterStop = vi.fn(async (input: { runId: string }) => ({
+        runId: input.runId,
+        teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: vi.fn(),
+            reconcile: vi.fn(),
+            stop: adapterStop,
+          } as any,
+        ])
+      );
 
       (svc as any).setSecondaryRuntimeRun({
         teamName,
@@ -15449,6 +15468,7 @@ describe('TeamProvisioningService', () => {
 
       await (svc as any).stopMixedSecondaryRuntimeLanes(teamName);
 
+      expect(adapterStop).toHaveBeenCalledTimes(2);
       await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
         lanes: {},
       });
@@ -15468,6 +15488,25 @@ describe('TeamProvisioningService', () => {
 
     it('clears provider-local lane storage when a single mixed secondary lane is stopped during controlled reattach', async () => {
       const svc = new TeamProvisioningService();
+      const adapterStop = vi.fn(async (input: { runId: string }) => ({
+        runId: input.runId,
+        teamName: 'mixed-team',
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
+      svc.setRuntimeAdapterRegistry(
+        new TeamRuntimeAdapterRegistry([
+          {
+            providerId: 'opencode',
+            prepare: vi.fn(),
+            launch: vi.fn(),
+            reconcile: vi.fn(),
+            stop: adapterStop,
+          } as any,
+        ])
+      );
       const run = createMemberSpawnRun({
         teamName: 'mixed-team',
         expectedMembers: ['alice'],
@@ -15522,6 +15561,14 @@ describe('TeamProvisioningService', () => {
 
       await (svc as any).stopSingleMixedSecondaryRuntimeLane(run, lane, 'relaunch');
 
+      expect(adapterStop).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runId: 'opencode-run-1',
+          laneId: lane.laneId,
+          teamName: run.teamName,
+          reason: 'relaunch',
+        })
+      );
       await expect(
         readOpenCodeRuntimeLaneIndex(tempTeamsBase, run.teamName)
       ).resolves.toMatchObject({
@@ -15543,7 +15590,7 @@ describe('TeamProvisioningService', () => {
       expect(lane.state).toBe('finished');
     });
 
-    it('removes the primary lane index entry when a pure OpenCode team is stopped without an adapter', async () => {
+    it('preserves primary runtime evidence when no OpenCode adapter can confirm the stop', async () => {
       const svc = new TeamProvisioningService();
       const teamName = 'opencode-team';
 
@@ -15586,10 +15633,14 @@ describe('TeamProvisioningService', () => {
         'utf8'
       );
 
-      await (svc as any).stopOpenCodeRuntimeAdapterTeam(teamName, 'opencode-run-1');
+      await expect(
+        (svc as any).stopOpenCodeRuntimeAdapterTeam(teamName, 'opencode-run-1')
+      ).rejects.toThrow('OpenCode runtime adapter is unavailable; stop was not confirmed');
 
       await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
-        lanes: {},
+        lanes: {
+          primary: expect.objectContaining({ state: 'active' }),
+        },
       });
       await expect(
         fsPromises.stat(
@@ -15602,10 +15653,21 @@ describe('TeamProvisioningService', () => {
             })
           )
         )
-      ).rejects.toThrow();
-      expect((svc as any).runtimeAdapterRunByTeam.has(teamName)).toBe(false);
-      expect((svc as any).aliveRunByTeam.has(teamName)).toBe(false);
-      expect((svc as any).provisioningRunByTeam.has(teamName)).toBe(false);
+      ).resolves.toBeTruthy();
+      expect((svc as any).runtimeAdapterRunByTeam.has(teamName)).toBe(true);
+      expect((svc as any).aliveRunByTeam.has(teamName)).toBe(true);
+      expect((svc as any).provisioningRunByTeam.has(teamName)).toBe(true);
+      expect((svc as any).stoppingPrimaryRuntimeTeams.has(teamName)).toBe(true);
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'alice',
+          text: 'must remain blocked after an unconfirmed stop',
+          messageId: 'msg-unconfirmed-primary-stop',
+        })
+      ).resolves.toEqual({
+        delivered: false,
+        reason: 'opencode_runtime_not_active',
+      });
     });
 
     it('clears primary lane storage when OpenCode runtime adapter launch fails', async () => {
@@ -17952,13 +18014,29 @@ describe('TeamProvisioningService', () => {
       await svc.cancelProvisioning(runId);
     });
 
-    it('routes a pure OpenCode team directly through the runtime adapter without spawning the CLI lane', async () => {
+    it('routes a pure OpenCode team through member runtime lanes without spawning the CLI lane', async () => {
       allowConsoleLogs();
       const adapterLaunch = vi.fn(async (input: Record<string, unknown>) => {
         const expectedMembers = input.expectedMembers as Array<{ name: string }>;
+        const teamName = String(input.teamName);
+        const laneId = String(input.laneId);
+        const runId = String(input.runId);
+        await writeCommittedOpenCodeSessionStore({
+          teamName,
+          laneId,
+          runId,
+          sessions: expectedMembers.map((member) => ({
+            id: `oc-session-${laneId}-${member.name}`,
+            teamName,
+            memberName: member.name,
+            laneId,
+            runId,
+            source: 'runtime_bootstrap_checkin',
+          })),
+        });
         return {
-          runId: String(input.runId),
-          teamName: String(input.teamName),
+          runId,
+          teamName,
           launchPhase: 'finished',
           teamLaunchState: 'clean_success',
           leadSessionId: 'opencode-lead-session',
@@ -18025,6 +18103,7 @@ describe('TeamProvisioningService', () => {
       expect(runId).toEqual(expect.any(String));
       expect(spawnCli).not.toHaveBeenCalled();
       expect(ClaudeBinaryResolver.resolve).not.toHaveBeenCalled();
+      expect(adapterLaunch).toHaveBeenCalledTimes(2);
       expect(adapterLaunch).toHaveBeenCalledWith(
         expect.objectContaining({
           laneId: 'primary',
@@ -18034,15 +18113,18 @@ describe('TeamProvisioningService', () => {
           cwd: tempClaudeRoot,
           expectedMembers: [
             expect.objectContaining({
-              name: 'team-lead',
-              providerId: 'opencode',
-              model: 'big-pickle',
-            }),
-            expect.objectContaining({
               name: 'bob',
               providerId: 'opencode',
               model: 'minimax-m2.5-free',
             }),
+          ],
+        })
+      );
+      expect(adapterLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          laneId: 'secondary:opencode:tom',
+          cwd: tempClaudeRoot,
+          expectedMembers: [
             expect.objectContaining({
               name: 'tom',
               providerId: 'opencode',
@@ -18146,7 +18228,14 @@ describe('TeamProvisioningService', () => {
           diagnostics: [],
         };
       });
-      const adapterStop = vi.fn(async () => {});
+      const adapterStop = vi.fn(async (input: Record<string, unknown>) => ({
+        runId: String(input.runId),
+        teamName: String(input.teamName),
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
 
       const { svc, membersMetaStore } = createSafeLaunchService();
       svc.setRuntimeAdapterRegistry(
@@ -18393,6 +18482,14 @@ describe('TeamProvisioningService', () => {
       });
 
       const { svc } = createSafeLaunchService();
+      const adapterStop = vi.fn(async (input: Record<string, unknown>) => ({
+        runId: String(input.runId),
+        teamName: String(input.teamName),
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([
           {
@@ -18400,7 +18497,7 @@ describe('TeamProvisioningService', () => {
             prepare: vi.fn(),
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: vi.fn(),
+            stop: adapterStop,
           } as any,
         ])
       );
@@ -18773,6 +18870,14 @@ describe('TeamProvisioningService', () => {
       const { svc, membersMetaStore } = createSafeLaunchService({
         memberWorktreeManager: worktreeManager,
       });
+      const adapterStop = vi.fn(async (input: Record<string, unknown>) => ({
+        runId: String(input.runId),
+        teamName: String(input.teamName),
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }));
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([
           {
@@ -18780,7 +18885,7 @@ describe('TeamProvisioningService', () => {
             prepare: vi.fn(),
             launch: adapterLaunch,
             reconcile: vi.fn(),
-            stop: vi.fn(),
+            stop: adapterStop,
           } as any,
         ])
       );
@@ -18950,19 +19055,6 @@ describe('TeamProvisioningService', () => {
       expect(adapterLaunch).toHaveBeenCalledTimes(2);
       expect(adapterLaunch).toHaveBeenCalledWith(
         expect.objectContaining({
-          laneId: 'primary',
-          cwd: tempClaudeRoot,
-          expectedMembers: [
-            expect.objectContaining({
-              name: 'tom',
-              providerId: 'opencode',
-              cwd: tempClaudeRoot,
-            }),
-          ],
-        })
-      );
-      expect(adapterLaunch).toHaveBeenCalledWith(
-        expect.objectContaining({
           laneId: 'secondary:opencode:bob',
           cwd: bobWorktree,
           expectedMembers: [
@@ -18975,12 +19067,30 @@ describe('TeamProvisioningService', () => {
           ],
         })
       );
+      expect(adapterLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          laneId: 'secondary:opencode:tom',
+          cwd: tempClaudeRoot,
+          expectedMembers: [
+            expect.objectContaining({
+              name: 'tom',
+              providerId: 'opencode',
+              cwd: tempClaudeRoot,
+            }),
+          ],
+        })
+      );
       const run = (svc as any).runs.get(runId);
       expect(run?.mixedSecondaryLanes).toEqual([
         expect.objectContaining({
           laneId: 'secondary:opencode:bob',
           state: 'finished',
           member: expect.objectContaining({ name: 'bob', cwd: bobWorktree }),
+        }),
+        expect.objectContaining({
+          laneId: 'secondary:opencode:tom',
+          state: 'finished',
+          member: expect.objectContaining({ name: 'tom' }),
         }),
       ]);
     });

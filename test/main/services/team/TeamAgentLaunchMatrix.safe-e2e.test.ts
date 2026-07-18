@@ -1093,7 +1093,7 @@ describe('Team agent launch matrix safe e2e', () => {
 
     expect(svc.isTeamAlive('stoppable-opencode-safe-e2e')).toBe(true);
 
-    svc.stopTeam('stoppable-opencode-safe-e2e');
+    await svc.stopTeam('stoppable-opencode-safe-e2e');
 
     await waitForCondition(() => adapter.stopInputs.length === 1);
     await waitForCondition(() => !svc.isTeamAlive('stoppable-opencode-safe-e2e'));
@@ -1136,7 +1136,7 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(svc.isTeamAlive('pure-opencode-stop-isolated-a-safe-e2e')).toBe(true);
     expect(svc.isTeamAlive('pure-opencode-stop-isolated-b-safe-e2e')).toBe(true);
 
-    svc.stopTeam('pure-opencode-stop-isolated-a-safe-e2e');
+    await svc.stopTeam('pure-opencode-stop-isolated-a-safe-e2e');
 
     await waitForCondition(() => adapter.stopInputs.length === 1);
     await waitForCondition(() => !svc.isTeamAlive('pure-opencode-stop-isolated-a-safe-e2e'));
@@ -1199,7 +1199,7 @@ describe('Team agent launch matrix safe e2e', () => {
       'pure-opencode-alive-list-b-safe-e2e',
     ]);
 
-    svc.stopTeam('pure-opencode-alive-list-a-safe-e2e');
+    await svc.stopTeam('pure-opencode-alive-list-a-safe-e2e');
 
     await waitForCondition(() => !svc.isTeamAlive('pure-opencode-alive-list-a-safe-e2e'));
     expect(svc.getAliveTeams()).toEqual(['pure-opencode-alive-list-b-safe-e2e']);
@@ -1241,7 +1241,7 @@ describe('Team agent launch matrix safe e2e', () => {
       },
     });
 
-    svc.stopTeam(teamName);
+    await svc.stopTeam(teamName);
 
     await waitForCondition(() => !svc.isTeamAlive(teamName));
     const stoppedState = await svc.getRuntimeState(teamName);
@@ -1319,7 +1319,7 @@ describe('Team agent launch matrix safe e2e', () => {
       },
     });
 
-    svc.stopTeam(teamName);
+    await svc.stopTeam(teamName);
 
     await waitForCondition(() => adapter.stopInputs.length === 2);
     expect(adapter.stopInputs[1]).toMatchObject({
@@ -1534,7 +1534,7 @@ describe('Team agent launch matrix safe e2e', () => {
     });
     expect(adapter.pendingLaunchInputs).toHaveLength(1);
     expect(adapter.launchInputs).toHaveLength(1);
-    expect(svc.getAliveTeams()).toEqual([]);
+    expect(svc.getAliveTeams()).toEqual([teamName]);
 
     adapter.releaseStops();
     const second = await secondPromise;
@@ -1563,6 +1563,67 @@ describe('Team agent launch matrix safe e2e', () => {
     });
   });
 
+  it('rolls back a rejected reentrant launch intent during matching OpenCode relaunch progress', async () => {
+    const teamName = 'pure-opencode-reentrant-progress-relaunch-safe-e2e';
+    const adapter = new FakeOpenCodeRuntimeAdapter();
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+
+    const first = await svc.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: true,
+        members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+      },
+      () => undefined
+    );
+    let reentrantLaunch: Promise<unknown> | null = null;
+    const relaunchRequest = {
+      teamName,
+      cwd: projectPath,
+      providerId: 'opencode' as const,
+      model: 'opencode/big-pickle',
+      skipPermissions: true,
+    };
+
+    const relaunched = await svc.launchTeam(relaunchRequest, (progress) => {
+      if (progress.message !== 'Validating OpenCode team launch gate' || reentrantLaunch) {
+        return;
+      }
+      reentrantLaunch = svc
+        .launchTeam(relaunchRequest, () => undefined)
+        .catch((error: unknown) => error);
+    });
+
+    expect(reentrantLaunch).not.toBeNull();
+    const reentrantError = await reentrantLaunch!;
+    expect(reentrantError).toBeInstanceOf(Error);
+    expect((reentrantError as Error).message).toBe(
+      `Reentrant team provisioning request for "${teamName}"`
+    );
+    expect(relaunched.runId).not.toBe(first.runId);
+    expect(adapter.stopInputs.map((input) => input.runId)).toEqual([first.runId]);
+    expect((svc as any).runtimeAdapterRunByTeam.get(teamName)?.runId).toBe(relaunched.runId);
+    expect((svc as any).stoppingPrimaryRuntimeTeams.has(teamName)).toBe(false);
+    await expectOpenCodeTrackedPendingDelivery(
+      svc.deliverOpenCodeMemberMessage(teamName, {
+        memberName: 'alice',
+        text: 'delivery reaches the new run after rejected reentrant launch',
+        messageId: 'msg-after-rejected-reentrant-launch',
+      })
+    );
+    expect(adapter.messageInputs).toHaveLength(1);
+    expect(adapter.messageInputs[0]).toMatchObject({
+      runId: relaunched.runId,
+      teamName,
+      laneId: 'primary',
+      memberName: 'alice',
+    });
+  });
+
   it('serializes manual stop and same-team OpenCode relaunch behind a slow runtime stop', async () => {
     const teamName = 'pure-opencode-stop-then-relaunch-slow-stop-safe-e2e';
     const adapter = new BlockingStopOpenCodeRuntimeAdapter();
@@ -1588,7 +1649,7 @@ describe('Team agent launch matrix safe e2e', () => {
     await waitForCondition(() => adapter.launchInputs.length === 1);
     expect(svc.getAliveTeams()).toEqual([teamName]);
 
-    svc.stopTeam(teamName);
+    const manualStop = svc.stopTeam(teamName);
     await waitForCondition(() => adapter.stopInputs.length === 1);
     expect(adapter.stopInputs[0]).toMatchObject({
       runId: firstRunId,
@@ -1598,7 +1659,7 @@ describe('Team agent launch matrix safe e2e', () => {
       reason: 'user_requested',
       force: true,
     });
-    expect(svc.getAliveTeams()).toEqual([]);
+    expect(svc.getAliveTeams()).toEqual([teamName]);
 
     const secondPromise = svc.launchTeam(
       {
@@ -1616,17 +1677,167 @@ describe('Team agent launch matrix safe e2e', () => {
 
     adapter.releaseStops();
     const second = await secondPromise;
+    await manualStop;
     expect(second.runId).toBeTruthy();
     expect(second.runId).not.toBe(firstRunId);
     await waitForCondition(() => adapter.launchInputs.length === 2);
 
+    expect(adapter.stopInputs.map((input) => input.runId)).toEqual([firstRunId]);
     expect(svc.getAliveTeams()).toEqual([teamName]);
+    expect((svc as any).runtimeAdapterRunByTeam.get(teamName)?.runId).toBe(second.runId);
+    expect((svc as any).stoppingPrimaryRuntimeTeams.has(teamName)).toBe(false);
     await expect(svc.getProvisioningStatus(second.runId)).resolves.toMatchObject({
       runId: second.runId,
       teamName,
       state: 'ready',
       message: 'OpenCode team launch is ready',
     });
+    await expectOpenCodeTrackedPendingDelivery(
+      svc.deliverOpenCodeMemberMessage(teamName, {
+        memberName: 'alice',
+        text: 'delivery resumes after the newer replacement launch',
+        messageId: 'msg-after-newer-replacement-launch',
+      })
+    );
+    expect(adapter.messageInputs).toHaveLength(1);
+    expect(adapter.messageInputs[0]).toMatchObject({
+      runId: second.runId,
+      teamName,
+      laneId: 'primary',
+      memberName: 'alice',
+    });
+  });
+
+  it('allows a later explicit OpenCode relaunch to supersede an unconfirmed manual stop', async () => {
+    const teamName = 'pure-opencode-failed-stop-then-relaunch-safe-e2e';
+    const adapter = new FakeOpenCodeRuntimeAdapter();
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+
+    const first = await svc.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: true,
+        members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+      },
+      () => undefined
+    );
+    const stopAfterFirstFailure = adapter.stop.bind(adapter);
+    let stopAttempt = 0;
+    adapter.stop = (async (input) => {
+      stopAttempt += 1;
+      if (stopAttempt === 1) {
+        adapter.stopInputs.push(input);
+        throw new Error('fake unconfirmed manual stop');
+      }
+      return stopAfterFirstFailure(input);
+    }) as typeof adapter.stop;
+
+    await expect(svc.stopTeam(teamName)).rejects.toThrow('fake unconfirmed manual stop');
+    expect((svc as any).runtimeAdapterRunByTeam.get(teamName)?.runId).toBe(first.runId);
+    expect((svc as any).stoppingPrimaryRuntimeTeams.has(teamName)).toBe(true);
+    await expect(
+      svc.deliverOpenCodeMemberMessage(teamName, {
+        memberName: 'alice',
+        text: 'must remain blocked after the unconfirmed manual stop',
+      })
+    ).resolves.toEqual({
+      delivered: false,
+      reason: 'opencode_runtime_not_active',
+    });
+
+    const relaunched = await svc.launchTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: true,
+      },
+      () => undefined
+    );
+
+    expect(relaunched.runId).not.toBe(first.runId);
+    expect(adapter.stopInputs.map((input) => input.runId)).toEqual([first.runId, first.runId]);
+    expect((svc as any).runtimeAdapterRunByTeam.get(teamName)?.runId).toBe(relaunched.runId);
+    expect((svc as any).stoppingPrimaryRuntimeTeams.has(teamName)).toBe(false);
+    await expectOpenCodeTrackedPendingDelivery(
+      svc.deliverOpenCodeMemberMessage(teamName, {
+        memberName: 'alice',
+        text: 'delivery resumes only on the matching replacement run',
+        messageId: 'msg-after-explicit-relaunch',
+      })
+    );
+    expect(adapter.messageInputs).toHaveLength(1);
+    expect(adapter.messageInputs[0]).toMatchObject({
+      runId: relaunched.runId,
+      teamName,
+      laneId: 'primary',
+      memberName: 'alice',
+    });
+  });
+
+  it('keeps a manual stop authoritative when it follows an in-flight same-team OpenCode relaunch', async () => {
+    const teamName = 'pure-opencode-relaunch-then-stop-slow-stop-safe-e2e';
+    const adapter = new BlockingStopOpenCodeRuntimeAdapter();
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+
+    const firstPromise = svc.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: true,
+        members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+      },
+      () => undefined
+    );
+    await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
+    const firstRunId = adapter.pendingLaunchInputs[0]?.runId;
+    expect(firstRunId).toBeTruthy();
+    adapter.releaseLaunches();
+    await expect(firstPromise).resolves.toEqual({ runId: firstRunId });
+
+    const relaunchPromise = svc.launchTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: true,
+      },
+      () => undefined
+    );
+    await waitForCondition(() => adapter.stopInputs.length === 1);
+    expect(adapter.stopInputs[0]?.runId).toBe(firstRunId);
+
+    const manualStop = svc.stopTeam(teamName);
+    await Promise.resolve();
+    expect(adapter.stopInputs).toHaveLength(1);
+
+    adapter.releaseStops();
+    const relaunched = await relaunchPromise;
+    await manualStop;
+
+    expect(relaunched.runId).not.toBe(firstRunId);
+    expect(adapter.launchInputs.map((input) => input.runId)).toEqual([
+      firstRunId,
+      relaunched.runId,
+    ]);
+    expect(adapter.stopInputs.map((input) => input.runId)).toEqual([
+      firstRunId,
+      relaunched.runId,
+    ]);
+    expect(svc.isTeamAlive(teamName)).toBe(false);
+    expect((svc as any).runtimeAdapterRunByTeam.has(teamName)).toBe(false);
+    await expect(readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)).resolves.toMatchObject(
+      { lanes: {} }
+    );
   });
 
   it('keeps slow OpenCode stop scoped to one team while another team relaunches', async () => {
@@ -1673,7 +1884,7 @@ describe('Team agent launch matrix safe e2e', () => {
       laneId: 'primary',
       reason: 'user_requested',
     });
-    expect(svc.isTeamAlive(stoppingTeamName)).toBe(false);
+    expect(svc.isTeamAlive(stoppingTeamName)).toBe(true);
     expect(svc.isTeamAlive(relaunchTeamName)).toBe(true);
 
     const relaunchSecondPromise = svc.launchTeam(
@@ -1737,7 +1948,7 @@ describe('Team agent launch matrix safe e2e', () => {
       laneId: 'primary',
       reason: 'user_requested',
     });
-    expect(svc.getAliveTeams()).toEqual([]);
+    expect(svc.getAliveTeams()).toEqual([teamName]);
     await Promise.resolve();
     expect(adapter.stopInputs).toHaveLength(1);
 
@@ -1849,9 +2060,10 @@ describe('Team agent launch matrix safe e2e', () => {
       () => undefined
     );
     await waitForCondition(() => adapter.stopInputs.length === 1);
-    svc.stopAllTeams();
+    const stoppingAllTeams = svc.stopAllTeams();
     adapter.releaseStops();
     const cancelledRelaunch = await cancelledRelaunchPromise;
+    await stoppingAllTeams;
 
     expect(adapter.launchInputs).toHaveLength(1);
     await expect(svc.getProvisioningStatus(cancelledRelaunch.runId)).resolves.toMatchObject({
@@ -1940,7 +2152,7 @@ describe('Team agent launch matrix safe e2e', () => {
     await waitForCondition(() => adapter.launchInputs.length === 2);
     expect(svc.getAliveTeams().sort()).toEqual([liveTeamName, stoppingTeamName].sort());
 
-    svc.stopTeam(stoppingTeamName);
+    const stoppingTeam = svc.stopTeam(stoppingTeamName);
     await waitForCondition(() => adapter.stopInputs.length === 1);
     expect(adapter.stopInputs[0]).toMatchObject({
       runId: stoppingRunId,
@@ -1948,10 +2160,10 @@ describe('Team agent launch matrix safe e2e', () => {
       laneId: 'primary',
       reason: 'user_requested',
     });
-    expect(svc.isTeamAlive(stoppingTeamName)).toBe(false);
+    expect(svc.isTeamAlive(stoppingTeamName)).toBe(true);
     expect(svc.isTeamAlive(liveTeamName)).toBe(true);
 
-    svc.stopAllTeams();
+    const stoppingAllTeams = svc.stopAllTeams();
     await waitForCondition(() => adapter.stopInputs.length === 2);
     expect(adapter.stopInputs).toEqual(
       expect.arrayContaining([
@@ -1972,10 +2184,10 @@ describe('Team agent launch matrix safe e2e', () => {
     expect(adapter.stopInputs.filter((input) => input.teamName === stoppingTeamName)).toHaveLength(
       1
     );
-    expect(svc.getAliveTeams()).toEqual([]);
+    expect(svc.getAliveTeams().sort()).toEqual([liveTeamName, stoppingTeamName].sort());
 
     adapter.releaseStops();
-    await waitForCondition(() => !svc.isTeamAlive(liveTeamName));
+    await Promise.all([stoppingTeam, stoppingAllTeams]);
     expect(svc.isTeamAlive(stoppingTeamName)).toBe(false);
     await expect(readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), stoppingTeamName)).resolves
       .toMatchObject({
@@ -2750,7 +2962,7 @@ describe('Team agent launch matrix safe e2e', () => {
     );
     expect(svc.getAliveTeams().sort()).toEqual([mixedTeamName, pureTeamName].sort());
 
-    svc.stopAllTeams();
+    await svc.stopAllTeams();
 
     await waitForCondition(() => adapter.stopInputs.length === 3);
     await waitForCondition(() => svc.getAliveTeams().length === 0);
@@ -10452,7 +10664,7 @@ describe('Team agent launch matrix safe e2e', () => {
       },
     });
 
-    svc.stopTeam(stoppedTeamName);
+    await svc.stopTeam(stoppedTeamName);
 
     expect(await svc.getRuntimeState(stoppedTeamName)).toMatchObject({
       teamName: stoppedTeamName,
@@ -12650,7 +12862,7 @@ describe('Team agent launch matrix safe e2e', () => {
       () => undefined
     );
 
-    svc.stopTeam(teamName);
+    await svc.stopTeam(teamName);
     await waitForCondition(() => adapter.stopInputs.length === 1);
     await waitForCondition(() => !svc.isTeamAlive(teamName));
     expect((await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)).lanes).toEqual({});
@@ -12701,9 +12913,18 @@ describe('Team agent launch matrix safe e2e', () => {
       };
     }) as typeof adapter.stop;
 
-    svc.stopTeam(teamName);
+    const stopTeam = svc.stopTeam(teamName);
     await waitForCondition(() => adapter.stopInputs.length === 1);
     try {
+      expect((svc as any).aliveRunByTeam.has(teamName)).toBe(true);
+      expect((svc as any).runtimeAdapterRunByTeam.has(teamName)).toBe(true);
+      await expect(
+        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+      ).resolves.toMatchObject({
+        lanes: {
+          primary: { state: 'active' },
+        },
+      });
       await expect(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'alice',
@@ -12717,8 +12938,79 @@ describe('Team agent launch matrix safe e2e', () => {
       expect(adapter.messageInputs).toEqual([]);
     } finally {
       releaseStop();
-      await waitForCondition(() => !svc.isTeamAlive(teamName));
+      await stopTeam;
+      expect(svc.isTeamAlive(teamName)).toBe(false);
     }
+  });
+
+  it('does not dispatch a direct OpenCode delivery admitted just before primary stop begins', async () => {
+    const teamName = 'pure-opencode-direct-message-overlap-stop-safe-e2e';
+    const adapter = new FakeOpenCodeRuntimeAdapter();
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    await svc.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+        skipPermissions: true,
+        members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+      },
+      () => undefined
+    );
+
+    let releaseQueuedSend: () => void = () => undefined;
+    const queuedSendBlocker = new Promise<OpenCodeTeamRuntimeMessageResult>((resolve) => {
+      releaseQueuedSend = () =>
+        resolve({
+          ok: true,
+          providerId: 'opencode',
+          memberName: 'previous',
+          diagnostics: [],
+        });
+    });
+    const sendKey = `opencode-send:${teamName}:primary`;
+    const sends = (svc as any).openCodeMemberSendInFlightByLane as Map<
+      string,
+      Promise<OpenCodeTeamRuntimeMessageResult>
+    >;
+    sends.set(sendKey, queuedSendBlocker);
+
+    const delivery = svc.deliverOpenCodeMemberMessage(teamName, {
+      memberName: 'alice',
+      text: 'must not cross the primary stop boundary',
+    });
+    await waitForCondition(() => sends.get(sendKey) !== queuedSendBlocker);
+
+    let releaseStop: () => void = () => undefined;
+    const stopRelease = new Promise<void>((resolve) => {
+      releaseStop = resolve;
+    });
+    adapter.stop = (async (input) => {
+      adapter.stopInputs.push(input);
+      await stopRelease;
+      return {
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: ['delayed fake stop'],
+      };
+    }) as typeof adapter.stop;
+
+    const stopTeam = svc.stopTeam(teamName);
+    await waitForCondition(() => adapter.stopInputs.length === 1);
+    releaseQueuedSend();
+    await expect(delivery).resolves.toEqual({
+      delivered: false,
+      reason: 'opencode_runtime_not_active',
+    });
+    expect(adapter.messageInputs).toEqual([]);
+
+    releaseStop();
+    await stopTeam;
   });
 
   it('does not deliver direct OpenCode member messages to removed pure OpenCode teammates', async () => {
@@ -15022,7 +15314,7 @@ describe('Team agent launch matrix safe e2e', () => {
 
     const killTracker = trackProcessKillsForPids([63101, 63102]);
     try {
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
 
       expectProcessKillCount(killTracker.killedPids, 63101, 0);
       expectProcessKillCount(killTracker.killedPids, 63102, 1);
@@ -15936,7 +16228,7 @@ describe('Team agent launch matrix safe e2e', () => {
       delivered.push({ teamName: run.teamName, message });
     };
 
-    svc.stopTeam(stoppedTeamName);
+    await svc.stopTeam(stoppedTeamName);
 
     await expect(svc.sendMessageToTeam(stoppedTeamName, 'should not send')).rejects.toThrow(
       `No active process for team "${stoppedTeamName}"`
@@ -16087,7 +16379,7 @@ describe('Team agent launch matrix safe e2e', () => {
       rssBytes: 60_101_000,
     });
 
-    svc.stopTeam(stoppedTeamName);
+    await svc.stopTeam(stoppedTeamName);
 
     const stoppedSnapshot = await svc.getTeamAgentRuntimeSnapshot(stoppedTeamName);
     const liveSnapshot = await svc.getTeamAgentRuntimeSnapshot(liveTeamName);
@@ -19571,7 +19863,7 @@ describe('Team agent launch matrix safe e2e', () => {
       pendingPermissionRequestIds: ['perm-alice'],
     });
 
-    svc.stopTeam('pending-then-relaunch-opencode-safe-e2e');
+    await svc.stopTeam('pending-then-relaunch-opencode-safe-e2e');
     await waitForCondition(() => adapter.stopInputs.length === 1);
     adapter.setLaunchResult('clean_success');
 

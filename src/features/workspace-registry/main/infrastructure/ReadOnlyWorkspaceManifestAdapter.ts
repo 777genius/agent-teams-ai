@@ -186,8 +186,7 @@ function parseManifest(value: unknown): RawManifest {
   assertBoundedDenseManifestRegistrations(value.registrations);
 
   const registrations: RawManifestRegistration[] = [];
-  for (let index = 0; index < value.registrations.length; index += 1) {
-    const entry = value.registrations[index];
+  for (const entry of value.registrations) {
     if (!isRecord(entry) || typeof entry.registrationKey !== 'string') {
       throw new TypeError('workspace-manifest-registration-invalid');
     }

@@ -156,6 +156,7 @@ describe('team provisioning stop flow', () => {
 
   it('stops primary and secondary OpenCode lanes owned by an aggregate run', async () => {
     const teamName = 'opencode-team';
+    const events: string[] = [];
     const currentRun = makeRun('aggregate-run', teamName);
     const runs = new Map([[currentRun.runId, currentRun]]);
     const aliveRunByTeam = new Map([[teamName, currentRun.runId]]);
@@ -165,12 +166,75 @@ describe('team provisioning stop flow', () => {
       providerId: 'opencode',
     });
     vi.mocked(ports.hasSecondaryRuntimeRuns).mockReturnValue(true);
+    vi.mocked(ports.stopOpenCodeRuntimeAdapterTeam).mockImplementation(async () => {
+      events.push('primary stopped');
+    });
+    vi.mocked(ports.stopMixedSecondaryRuntimeLanes).mockImplementation(async () => {
+      events.push('secondaries stopped');
+    });
+    ports.cleanupRun.mockImplementation(() => {
+      events.push('cleanup');
+    });
 
     await stopTeamFlow(teamName, ports);
 
     expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(teamName, currentRun.runId);
     expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(teamName);
     expect(ports.cleanupRun).toHaveBeenCalledWith(currentRun);
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    expect(events).toEqual(['primary stopped', 'secondaries stopped', 'cleanup']);
+  });
+
+  it('preserves run and secondary tracking when the required primary stop rejects', async () => {
+    const teamName = 'opencode-primary-stop-failure';
+    const stopFailure = new Error('primary stop failed');
+    const currentRun = makeRun('aggregate-run-primary-failure', teamName);
+    const runs = new Map([[currentRun.runId, currentRun]]);
+    const aliveRunByTeam = new Map([[teamName, currentRun.runId]]);
+    const ports = makePorts(teamName, runs, new Map(), aliveRunByTeam);
+    ports.runtimeAdapterRunByTeam.set(teamName, {
+      runId: currentRun.runId,
+      providerId: 'opencode',
+    });
+    vi.mocked(ports.hasSecondaryRuntimeRuns).mockReturnValue(true);
+    vi.mocked(ports.stopOpenCodeRuntimeAdapterTeam).mockRejectedValue(stopFailure);
+
+    await expect(stopTeamFlow(teamName, ports)).rejects.toBe(stopFailure);
+
+    expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(runs.get(currentRun.runId)).toBe(currentRun);
+    expect(aliveRunByTeam.get(teamName)).toBe(currentRun.runId);
+    expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledOnce();
+  });
+
+  it('preserves run tracking and rejects when secondary stop fails after primary success', async () => {
+    const teamName = 'opencode-secondary-stop-failure';
+    const stopFailure = new Error('secondary stop failed');
+    const events: string[] = [];
+    const currentRun = makeRun('aggregate-run-secondary-failure', teamName);
+    const runs = new Map([[currentRun.runId, currentRun]]);
+    const aliveRunByTeam = new Map([[teamName, currentRun.runId]]);
+    const ports = makePorts(teamName, runs, new Map(), aliveRunByTeam);
+    ports.runtimeAdapterRunByTeam.set(teamName, {
+      runId: currentRun.runId,
+      providerId: 'opencode',
+    });
+    vi.mocked(ports.hasSecondaryRuntimeRuns).mockReturnValue(true);
+    vi.mocked(ports.stopOpenCodeRuntimeAdapterTeam).mockImplementation(async () => {
+      events.push('primary stopped');
+    });
+    vi.mocked(ports.stopMixedSecondaryRuntimeLanes).mockImplementation(async () => {
+      events.push('secondary stop failed');
+      throw stopFailure;
+    });
+
+    await expect(stopTeamFlow(teamName, ports)).rejects.toBe(stopFailure);
+
+    expect(events).toEqual(['primary stopped', 'secondary stop failed']);
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(runs.get(currentRun.runId)).toBe(currentRun);
+    expect(aliveRunByTeam.get(teamName)).toBe(currentRun.runId);
   });
 
   it('retries aggregate lane cleanup when the tracked run was already marked stopped', async () => {

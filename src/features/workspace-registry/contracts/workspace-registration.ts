@@ -122,8 +122,8 @@ export function parseAllowedWorkspaceOperations(value: unknown): readonly Worksp
 
   const operations: WorkspaceOperation[] = [];
   const seen = new Set<WorkspaceOperation>();
-  for (let index = 0; index < value.length; index += 1) {
-    const operation = parseWorkspaceOperation(value[index]);
+  for (const item of value) {
+    const operation = parseWorkspaceOperation(item);
     if (seen.has(operation)) {
       throw new TypeError('workspace-allowed-operation-duplicate');
     }

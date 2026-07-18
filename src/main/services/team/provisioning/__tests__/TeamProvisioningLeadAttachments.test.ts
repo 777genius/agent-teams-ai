@@ -135,7 +135,6 @@ describe('lead attachment helpers', () => {
   });
 
   it('uses Codex native image blocks only for Codex providers with attachments', async () => {
-    vi.spyOn(Date, 'now').mockReturnValue(123456);
     const attachments = toLeadAttachmentPayloads([
       { data: Buffer.from('img').toString('base64'), mimeType: 'image/png', filename: 'img.png' },
     ]);
@@ -170,10 +169,75 @@ describe('lead attachment helpers', () => {
 
     expect(buildCodexNativeAttachmentDeliveryParts).toHaveBeenCalledWith({
       teamName: 'Team',
-      messageId: 'lead_run-1_123456',
+      messageId: expect.stringMatching(/^lead_run-1_[0-9a-f]{64}$/),
       text: 'hello',
       attachments,
     });
     expect(buildClaudeAttachmentDeliveryParts).not.toHaveBeenCalled();
+  });
+
+  it('derives the same Codex artifact identity when production payload conversion is retried', async () => {
+    const attachmentInputs = [
+      { data: Buffer.from('img').toString('base64'), mimeType: 'image/png', filename: 'img.png' },
+    ];
+    const codexMock = vi.mocked(buildCodexNativeAttachmentDeliveryParts);
+
+    await buildLeadMessageStdinPayload({
+      teamName: 'Team',
+      runId: 'run-1',
+      providerId: 'codex',
+      text: 'hello',
+      attachments: toLeadAttachmentPayloads(attachmentInputs),
+    });
+    const firstId = codexMock.mock.calls[0]?.[0]?.messageId;
+
+    codexMock.mockClear();
+    await buildLeadMessageStdinPayload({
+      teamName: 'Team',
+      runId: 'run-1',
+      providerId: 'codex',
+      text: 'hello',
+      attachments: toLeadAttachmentPayloads(attachmentInputs),
+    });
+    const retryId = codexMock.mock.calls[0]?.[0]?.messageId;
+
+    expect(firstId).toMatch(/^lead_run-1_[0-9a-f]{64}$/);
+    expect(retryId).toBe(firstId);
+  });
+
+  it('derives different Codex artifact identities for different ordered production payloads', async () => {
+    const codexMock = vi.mocked(buildCodexNativeAttachmentDeliveryParts);
+    const firstInputs = [
+      { data: Buffer.from('first').toString('base64'), mimeType: 'image/png', filename: 'img.png' },
+      {
+        data: Buffer.from('second').toString('base64'),
+        mimeType: 'text/plain',
+        filename: 'note.txt',
+      },
+    ];
+    const secondInputs = [...firstInputs].reverse();
+
+    await buildLeadMessageStdinPayload({
+      teamName: 'Team',
+      runId: 'run-1',
+      providerId: 'codex',
+      text: 'hello',
+      attachments: toLeadAttachmentPayloads(firstInputs),
+    });
+    const firstId = codexMock.mock.calls[0]?.[0]?.messageId;
+
+    codexMock.mockClear();
+    await buildLeadMessageStdinPayload({
+      teamName: 'Team',
+      runId: 'run-1',
+      providerId: 'codex',
+      text: 'hello',
+      attachments: toLeadAttachmentPayloads(secondInputs),
+    });
+    const secondId = codexMock.mock.calls[0]?.[0]?.messageId;
+
+    expect(firstId).toMatch(/^lead_run-1_[0-9a-f]{64}$/);
+    expect(secondId).toMatch(/^lead_run-1_[0-9a-f]{64}$/);
+    expect(secondId).not.toBe(firstId);
   });
 });

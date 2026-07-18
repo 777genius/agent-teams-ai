@@ -51,7 +51,7 @@
     },
     {
       "id": "topology-pure-opencode",
-      "mode": "pure_opencode|pure_opencode_solo|pure_opencode_worktree_root_lanes",
+      "mode": "pure_opencode|pure_opencode_solo|pure_opencode_member_lanes",
       "processUnits": "OpenCode adapter primary, with deterministic per-member side lanes for distinct worktree roots",
       "ordering": "adapter-specific ordering; no provisioning CLI primary for pure OpenCode",
       "source": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts"

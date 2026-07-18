@@ -11,6 +11,7 @@ import {
 import {
   appendDiagnosticOnce,
   promoteCommittedOpenCodeAppManagedBootstrapEvidence,
+  shouldRetainOpenCodeRuntimeLaunch,
   summarizeRuntimeLaunchResultMembers,
   toOpenCodePersistedLaunchMember,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
@@ -37,6 +38,7 @@ export interface OpenCodeAggregatePrimaryLaneRun {
   request: TeamCreateRequest;
   effectiveMembers: TeamCreateRequest['members'];
   memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;
+  mixedSecondaryLanes?: readonly MixedSecondaryRuntimeLaneState[];
 }
 
 export interface PersistOpenCodeRuntimeAdapterLaunchResultPorts {
@@ -50,10 +52,7 @@ export interface PersistOpenCodeRuntimeAdapterLaunchResultPorts {
 
 export interface LaunchOpenCodeAggregatePrimaryLanePorts {
   getTeamsBasePath(): string;
-  getOpenCodeRuntimeLaunchCwd(
-    baseCwd: string,
-    members: TeamCreateRequest['members']
-  ): string;
+  getOpenCodeRuntimeLaunchCwd(baseCwd: string, members: TeamCreateRequest['members']): string;
   migrateLegacyOpenCodeRuntimeState(input: {
     teamsBasePath: string;
     teamName: string;
@@ -98,6 +97,32 @@ export interface LaunchOpenCodeAggregatePrimaryLanePorts {
       members: TeamRuntimeLaunchResult['members'];
     }
   ): void;
+}
+
+function collectOpenCodeAggregateRuntimeMemberEvidence(
+  primaryMembers: TeamRuntimeLaunchResult['members'],
+  secondaryLanes: readonly MixedSecondaryRuntimeLaneState[]
+): TeamRuntimeLaunchResult['members'] {
+  const members = { ...primaryMembers };
+
+  for (const lane of secondaryLanes) {
+    delete members[lane.member.name];
+  }
+
+  for (const lane of secondaryLanes) {
+    const memberName = lane.member.name;
+    const laneResult = lane.result;
+    if (lane.state !== 'finished' || !lane.runId || laneResult?.runId !== lane.runId) {
+      continue;
+    }
+
+    const memberEvidence = laneResult.members[memberName];
+    if (memberEvidence?.memberName === memberName) {
+      members[memberName] = memberEvidence;
+    }
+  }
+
+  return members;
 }
 
 export async function launchOpenCodeAggregatePrimaryLane(
@@ -183,12 +208,16 @@ export async function launchOpenCodeAggregatePrimaryLane(
     teamColor: params.run.request.color,
     teamDisplayName: params.run.request.displayName,
   });
-  if (result.teamLaunchState !== 'partial_failure') {
+  if (shouldRetainOpenCodeRuntimeLaunch(result)) {
+    const primaryMembers = result.members;
+    const secondaryLanes = params.run.mixedSecondaryLanes ?? [];
     ports.setRuntimeAdapterRunByTeam(teamName, {
       runId,
       providerId: 'opencode',
       cwd: launchCwd,
-      members: result.members,
+      get members() {
+        return collectOpenCodeAggregateRuntimeMemberEvidence(primaryMembers, secondaryLanes);
+      },
     });
   }
   return result;
@@ -235,7 +264,7 @@ export async function persistOpenCodeRuntimeAdapterLaunchResult(
     const evidence = committedResult.members[member.name];
     members[member.name] = toOpenCodePersistedLaunchMember(member, evidence, {
       runId: committedResult.runId,
-      nowIso: ports.nowIso,
+      nowIso: () => ports.nowIso(),
     });
   }
   const snapshot = createPersistedLaunchSnapshot({

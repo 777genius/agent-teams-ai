@@ -210,14 +210,12 @@ function policyFailure(): TeamLifecycleReadFailure {
   });
 }
 
-function listProvisioning(): ListTeamLifecycleInapplicable {
-  return Object.freeze({
-    schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-    kind: 'inapplicable',
-    code: 'unsupported',
-    reason: 'unknown_lifecycle_provisioning',
-  });
-}
+const PROVISIONING_INAPPLICABLE = Object.freeze({
+  schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+  kind: 'inapplicable',
+  code: 'unsupported',
+  reason: 'unknown_lifecycle_provisioning',
+}) satisfies ListTeamLifecycleInapplicable & TeamLifecycleEntityInapplicable;
 
 function entityNotFound(): TeamLifecycleEntityInapplicable {
   return Object.freeze({
@@ -225,15 +223,6 @@ function entityNotFound(): TeamLifecycleEntityInapplicable {
     kind: 'inapplicable',
     code: 'not_applicable',
     reason: 'team_not_found',
-  });
-}
-
-function entityProvisioning(): TeamLifecycleEntityInapplicable {
-  return Object.freeze({
-    schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
-    kind: 'inapplicable',
-    code: 'unsupported',
-    reason: 'unknown_lifecycle_provisioning',
   });
 }
 
@@ -437,7 +426,7 @@ export class LegacyTeamLifecycleReadSource
     if (identityPreflight) return identityPreflight;
     const pageValue = await this.dependencies.identities.listTeamBindings(request, context);
     if (isReadOutcome(pageValue)) {
-      return pageValue as TeamLifecycleReadFailure | ListTeamLifecycleInapplicable;
+      return pageValue;
     }
 
     let page: ParsedBindingPage;
@@ -468,7 +457,7 @@ export class LegacyTeamLifecycleReadSource
     for (const binding of page.bindings) {
       const availabilityOutcome = availabilityFailure(binding.availability);
       if (availabilityOutcome) return availabilityOutcome;
-      if (binding.availability === 'provisioning') return listProvisioning();
+      if (binding.availability === 'provisioning') return PROVISIONING_INAPPLICABLE;
 
       let lifecycle: TeamLifecycleState = 'draft';
       if (binding.availability !== 'draft') {
@@ -505,7 +494,7 @@ export class LegacyTeamLifecycleReadSource
     const bindingValue = await this.dependencies.identities.getTeamBinding(request, context);
     if (bindingValue === null) return entityNotFound();
     if (isReadOutcome(bindingValue)) {
-      return bindingValue as TeamLifecycleReadFailure | TeamLifecycleEntityInapplicable;
+      return bindingValue;
     }
 
     let binding: ParsedBinding;
@@ -521,7 +510,7 @@ export class LegacyTeamLifecycleReadSource
     if (conflict) return conflict;
     const availabilityOutcome = availabilityFailure(binding.availability);
     if (availabilityOutcome) return availabilityOutcome;
-    if (binding.availability === 'provisioning') return entityProvisioning();
+    if (binding.availability === 'provisioning') return PROVISIONING_INAPPLICABLE;
 
     let lifecycle: TeamLifecycleState = 'draft';
     if (binding.availability !== 'draft') {
@@ -563,7 +552,7 @@ export class LegacyTeamLifecycleReadSource
     const bindingValue = await this.dependencies.identities.getTeamBinding(request, context);
     if (bindingValue === null) return entityNotFound();
     if (isReadOutcome(bindingValue)) {
-      return bindingValue as TeamLifecycleReadFailure | TeamLifecycleEntityInapplicable;
+      return bindingValue;
     }
 
     let binding: ParsedBinding;
@@ -579,7 +568,7 @@ export class LegacyTeamLifecycleReadSource
     if (conflict) return conflict;
     const availabilityOutcome = availabilityFailure(binding.availability);
     if (availabilityOutcome) return availabilityOutcome;
-    if (binding.availability === 'provisioning') return entityProvisioning();
+    if (binding.availability === 'provisioning') return PROVISIONING_INAPPLICABLE;
 
     let isAlive = false;
     if (binding.availability !== 'draft') {
@@ -640,7 +629,7 @@ export class LegacyTeamLifecycleReadSource
       request,
       context
     );
-    if (isReadOutcome(pageValue)) return pageValue as TeamLifecycleReadFailure;
+    if (isReadOutcome(pageValue)) return pageValue;
 
     let page: ParsedBindingPage;
     try {

@@ -70,6 +70,7 @@ import {
   shouldReadProcessTableForLiveRuntimeMetadata,
 } from './TeamProvisioningRuntimeMetadataPolicy';
 import { resolveTeamProvisioningRuntimeSnapshotLiveness } from './TeamProvisioningRuntimeSnapshotResolver';
+import { type MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondaryRuntimeRuns';
 
 import type { TeamRuntimeMemberLaunchEvidence } from '../runtime';
 import type { TeamProvisioningRuntimeSnapshotResourceSamplingPorts } from './TeamProvisioningRuntimeResourceSampling';
@@ -133,11 +134,7 @@ export interface TeamProvisioningRuntimeSnapshotRun {
   allEffectiveMembers?: TeamCreateRequest['members'];
   effectiveMembers?: TeamCreateRequest['members'];
   memberSpawnStatuses?: Map<string, MemberSpawnStatusEntry>;
-  mixedSecondaryLanes?: readonly {
-    laneId?: string;
-    member: TeamCreateRequest['members'][number];
-    result?: { members?: Record<string, TeamRuntimeMemberLaunchEvidence> } | null;
-  }[];
+  mixedSecondaryLanes?: readonly MixedSecondaryRuntimeLaneState[];
 }
 
 interface TeamMetaRuntimeSnapshotSource {
@@ -208,6 +205,35 @@ function shouldUseRuntimeAdapterRunEvidence(
     return true;
   }
   return adapterRunId.length > 0 && adapterRunId === activeRuntimeRunId;
+}
+
+function findActiveRuntimeAdapterMemberEvidence(
+  run: TeamProvisioningRuntimeSnapshotRun | null,
+  runtimeAdapterRun: RuntimeAdapterRunSnapshotSource | undefined,
+  memberName: string
+): TeamRuntimeMemberLaunchEvidence | undefined {
+  const primaryEvidence = runtimeAdapterRun?.members?.[memberName];
+  if (primaryEvidence) {
+    return primaryEvidence;
+  }
+
+  const normalizedMemberName = memberName.trim().toLowerCase();
+  if (!normalizedMemberName) {
+    return undefined;
+  }
+  for (const lane of run?.mixedSecondaryLanes ?? []) {
+    const laneMemberName = lane.member.name?.trim() ?? '';
+    if (!laneMemberName || laneMemberName.toLowerCase() !== normalizedMemberName) {
+      continue;
+    }
+    const laneResult = lane.result;
+    if (lane.state !== 'finished' || !lane.runId || laneResult?.runId !== lane.runId) {
+      return undefined;
+    }
+    const evidence = laneResult.members?.[laneMemberName] ?? laneResult.members?.[memberName];
+    return evidence?.memberName === laneMemberName ? evidence : undefined;
+  }
+  return undefined;
 }
 
 function shouldUsePersistedRuntimeMemberRuntimeEvidence(
@@ -933,7 +959,11 @@ export async function buildTeamAgentRuntimeSnapshot(
     )
       ? launchSnapshot?.members[memberName]
       : undefined;
-    const candidateRuntimeAdapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
+    const candidateRuntimeAdapterEvidence = findActiveRuntimeAdapterMemberEvidence(
+      run,
+      currentRuntimeAdapterRun,
+      memberName
+    );
     const leadRuntimeProviderId =
       normalizeOptionalTeamProviderId(candidateRuntimeAdapterEvidence?.providerId) ??
       normalizeOptionalTeamProviderId(candidateLaunchMember?.providerId) ??
@@ -1020,7 +1050,11 @@ export async function buildTeamAgentRuntimeSnapshot(
       ? launchSnapshot?.members[memberName]
       : undefined;
     const activeRunLaneIdentity = resolveActiveRunLaneIdentity(run, memberName);
-    const runtimeAdapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
+    const runtimeAdapterEvidence = findActiveRuntimeAdapterMemberEvidence(
+      run,
+      currentRuntimeAdapterRun,
+      memberName
+    );
     const activeRunMember = activeRunMemberByName.get(memberName);
     const activeRunModel = activeRunMember?.model?.trim();
     const activeRunProviderId =
@@ -1518,7 +1552,7 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     if (!memberName || isMemberRemovedInMeta(metaMembers, memberName)) {
       continue;
     }
-    const evidence = lane.result?.members?.[memberName];
+    const evidence = findActiveRuntimeAdapterMemberEvidence(run, undefined, memberName);
     const runtimeModel = lane.member.model?.trim() || undefined;
     const laneMemberCwd =
       typeof (lane.member as { cwd?: unknown }).cwd === 'string'
@@ -1559,7 +1593,11 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     }
     const activeRunMember = findEffectiveRunMember(run, memberName);
     const activeRunModel = activeRunMember?.model?.trim();
-    const evidenceModel = currentRuntimeAdapterRun?.members?.[memberName]?.model?.trim();
+    const evidenceModel = findActiveRuntimeAdapterMemberEvidence(
+      run,
+      currentRuntimeAdapterRun,
+      memberName
+    )?.model?.trim();
     const activeRunProviderId =
       normalizeOptionalTeamProviderId(activeRunMember?.providerId) ??
       inferTeamProviderIdFromModel(activeRunModel ?? evidenceModel);
@@ -1685,7 +1723,11 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     )
       ? persistedLaunchSnapshot?.members[memberName]
       : undefined;
-    const adapterEvidence = currentRuntimeAdapterRun?.members?.[memberName];
+    const adapterEvidence = findActiveRuntimeAdapterMemberEvidence(
+      run,
+      currentRuntimeAdapterRun,
+      memberName
+    );
     const adapterStatus: MemberSpawnStatusEntry | undefined = adapterEvidence
       ? {
           status: adapterEvidence.hardFailure
@@ -1719,8 +1761,8 @@ export async function buildLiveTeamAgentRuntimeMetadata(
       (metadata.providerId === 'opencode' ||
         launchMember?.providerId === 'opencode' ||
         metadata.backendType !== 'tmux') &&
-      currentRuntimeAdapterRun?.members?.[memberName]?.runtimeAlive !== true &&
-      currentRuntimeAdapterRun?.members?.[memberName]?.bootstrapConfirmed !== true;
+      adapterEvidence?.runtimeAlive !== true &&
+      adapterEvidence?.bootstrapConfirmed !== true;
     const hostProcessRows = shouldUseWindowsHostRows ? await getWindowsHostProcessRows() : [];
     const memberProcessRows = shouldUseWindowsHostRows
       ? [...hostProcessRows, ...processRows]

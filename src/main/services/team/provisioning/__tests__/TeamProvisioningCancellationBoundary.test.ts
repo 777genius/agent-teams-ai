@@ -78,6 +78,9 @@ function makePorts(
     trackedRunId?: string | null;
     hasSecondaryRuntimeRuns?: boolean;
     adapter?: TeamLaunchRuntimeAdapter | null;
+    runtimeAdapterRunId?: string | null;
+    provisioningRunId?: string | null;
+    aliveRunId?: string | null;
   } = {}
 ): TeamProvisioningCancellationBoundaryPorts<TestRun> & {
   cleanupRun: ReturnType<typeof vi.fn>;
@@ -92,23 +95,39 @@ function makePorts(
   );
   const emittedEvents: TeamChangeEvent[] = [];
   const progressUpdates: TeamProvisioningProgress[] = [];
-  const aliveRunByTeam = new Map([['team-a', 'run-1']]);
+  const runtimeAdapterRunId = Object.prototype.hasOwnProperty.call(input, 'runtimeAdapterRunId')
+    ? input.runtimeAdapterRunId
+    : 'run-1';
+  const provisioningRunId = Object.prototype.hasOwnProperty.call(input, 'provisioningRunId')
+    ? input.provisioningRunId
+    : 'run-1';
+  const aliveRunId = Object.prototype.hasOwnProperty.call(input, 'aliveRunId')
+    ? input.aliveRunId
+    : 'run-1';
+  const runtimeAdapterRunByTeam: TeamProvisioningCancellationBoundaryPorts<TestRun>['runtimeAdapterRunByTeam'] =
+    new Map();
+  if (runtimeAdapterRunId !== null && runtimeAdapterRunId !== undefined) {
+    runtimeAdapterRunByTeam.set('team-a', {
+      runId: runtimeAdapterRunId,
+      providerId: 'opencode' as const,
+      cwd: '/runtime-cwd',
+    });
+  }
+  const provisioningRunByTeam = new Map<string, string>();
+  if (provisioningRunId !== null && provisioningRunId !== undefined) {
+    provisioningRunByTeam.set('team-a', provisioningRunId);
+  }
+  const aliveRunByTeam = new Map<string, string>();
+  if (aliveRunId !== null && aliveRunId !== undefined) {
+    aliveRunByTeam.set('team-a', aliveRunId);
+  }
 
   const ports = {
     runs,
     runtimeAdapterProgressByRunId,
     cancelledRuntimeAdapterRunIds: new Set<string>(),
-    runtimeAdapterRunByTeam: new Map([
-      [
-        'team-a',
-        {
-          runId: 'run-1',
-          providerId: 'opencode' as const,
-          cwd: '/runtime-cwd',
-        },
-      ],
-    ]),
-    provisioningRunByTeam: new Map([['team-a', 'run-1']]),
+    runtimeAdapterRunByTeam,
+    provisioningRunByTeam,
     aliveRunByTeam,
     getTrackedRunId: vi.fn(() => input.trackedRunId ?? null),
     deleteAliveRunId: vi.fn((teamName: string) => {
@@ -249,6 +268,108 @@ describe('TeamProvisioningCancellationBoundary', () => {
     expect(ports.runs.has(run.runId)).toBe(false);
   });
 
+  it.each([
+    ['exact', 'run-1'],
+    ['absent', null],
+  ] as const)(
+    'stops the exact primary but not secondaries without tracking when provisioning is %s',
+    async (_provisioningState, provisioningRunId) => {
+      const run = makeRun();
+      const ports = makePorts({
+        run,
+        trackedRunId: null,
+        runtimeAdapterRunId: run.runId,
+        provisioningRunId,
+        aliveRunId: null,
+        hasSecondaryRuntimeRuns: true,
+      });
+      const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+      await boundary.cancelProvisioning(run.runId);
+
+      expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(run.teamName, run.runId);
+      expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    ['provisioning', 'run-1', null],
+    ['alive', null, 'run-1'],
+  ] as const)(
+    'does not stop runtime lanes for an exact %s owner without an exact primary runtime entry',
+    async (_owner, provisioningRunId, aliveRunId) => {
+      const run = makeRun();
+      const ports = makePorts({
+        run,
+        trackedRunId: null,
+        runtimeAdapterRunId: null,
+        provisioningRunId,
+        aliveRunId,
+        hasSecondaryRuntimeRuns: true,
+      });
+      const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+      await boundary.cancelProvisioning(run.runId);
+
+      expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+      expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    ['absent', null, null, null, false],
+    ['exact', 'run-1', 'run-1', 'run-1', true],
+  ] as const)(
+    'stops secondaries for exact tracking when the other ownership maps are %s',
+    async (_ownerState, provisioningRunId, aliveRunId, runtimeAdapterRunId, stopsPrimary) => {
+      const run = makeRun();
+      const ports = makePorts({
+        run,
+        trackedRunId: run.runId,
+        runtimeAdapterRunId,
+        provisioningRunId,
+        aliveRunId,
+        hasSecondaryRuntimeRuns: true,
+      });
+      const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+      await boundary.cancelProvisioning(run.runId);
+
+      expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(run.teamName);
+      if (stopsPrimary) {
+        expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(run.teamName, run.runId);
+      } else {
+        expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+      }
+    }
+  );
+
+  it.each([
+    ['tracked', 'newer-run', 'run-1', 'run-1', 'run-1'],
+    ['provisioning', 'run-1', 'newer-run', 'run-1', 'run-1'],
+    ['alive', 'run-1', 'run-1', 'newer-run', 'run-1'],
+    ['runtime adapter', 'run-1', 'run-1', 'run-1', 'newer-run'],
+  ] as const)(
+    'does not stop either lane when the %s ownership map belongs to a newer run',
+    async (_conflictingOwner, trackedRunId, provisioningRunId, aliveRunId, runtimeAdapterRunId) => {
+      const run = makeRun();
+      const ports = makePorts({
+        run,
+        trackedRunId,
+        runtimeAdapterRunId,
+        provisioningRunId,
+        aliveRunId,
+        hasSecondaryRuntimeRuns: true,
+      });
+      const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+      await boundary.cancelProvisioning(run.runId);
+
+      expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
+      expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    }
+  );
+
   it('awaits every owned runtime lane stop before cancelled progress and cleanup', async () => {
     const primaryStop = createDeferred<void>();
     const secondaryStops = createDeferred<void>();
@@ -279,31 +400,32 @@ describe('TeamProvisioningCancellationBoundary', () => {
     const cancellation = boundary.cancelProvisioning(run.runId);
 
     expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(run.teamName, run.runId);
-    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(run.teamName);
+    expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
     expect(events).toEqual([]);
 
-    secondaryStops.resolve();
-    await secondaryStops.promise;
+    primaryStop.resolve();
+    await primaryStop.promise;
     await Promise.resolve();
 
-    expect(events).toEqual(['secondaries stopped']);
+    expect(events).toEqual(['primary stopped']);
+    expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(run.teamName);
     expect(ports.updateProgress).not.toHaveBeenCalled();
     expect(ports.cleanupRun).not.toHaveBeenCalled();
 
-    primaryStop.resolve();
+    secondaryStops.resolve();
     await cancellation;
 
     expect(events).toEqual([
-      'secondaries stopped',
       'primary stopped',
+      'secondaries stopped',
       'cancelled progress',
       'cleanup',
     ]);
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
   });
 
-  it('awaits remaining stops and performs required cleanup before rejecting a stop failure', async () => {
+  it('preserves run and secondary tracking when the required primary stop rejects', async () => {
     const primaryStop = createDeferred<void>();
-    const secondaryStops = createDeferred<void>();
     const events: string[] = [];
     const run = makeRun({
       onProgress: vi.fn(() => {
@@ -323,10 +445,6 @@ describe('TeamProvisioningCancellationBoundary', () => {
         throw error;
       }
     });
-    ports.stopMixedSecondaryRuntimeLanes.mockImplementation(async () => {
-      await secondaryStops.promise;
-      events.push('secondaries stopped');
-    });
     ports.cleanupRun.mockImplementation(() => {
       events.push('cleanup');
     });
@@ -345,29 +463,44 @@ describe('TeamProvisioningCancellationBoundary', () => {
     );
 
     primaryStop.reject(new Error('primary stop failed'));
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(events).toEqual(['primary stop failed']);
-    expect(cancellationSettled).toBe(false);
-    expect(ports.updateProgress).not.toHaveBeenCalled();
-    expect(ports.cleanupRun).not.toHaveBeenCalled();
-
-    secondaryStops.resolve();
     const result = await cancellation;
 
+    expect(cancellationSettled).toBe(true);
     expect(result).toMatchObject({
       status: 'rejected',
       error: expect.objectContaining({ message: 'primary stop failed' }),
     });
-    expect(events).toEqual([
-      'primary stop failed',
-      'secondaries stopped',
-      'cancelled progress',
-      'cleanup',
-      'cancellation rejected',
-    ]);
-    expect(ports.cleanupRun).toHaveBeenCalledWith(run);
+    expect(events).toEqual(['primary stop failed', 'cancellation rejected']);
+    expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    expect(ports.updateProgress).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.runs.get(run.runId)).toBe(run);
+  });
+
+  it('preserves run tracking when a secondary stop rejects after primary success', async () => {
+    const stopFailure = new Error('secondary stop failed');
+    const events: string[] = [];
+    const run = makeRun();
+    const ports = makePorts({
+      run,
+      trackedRunId: run.runId,
+      hasSecondaryRuntimeRuns: true,
+    });
+    ports.stopOpenCodeRuntimeAdapterTeam.mockImplementation(async () => {
+      events.push('primary stopped');
+    });
+    ports.stopMixedSecondaryRuntimeLanes.mockImplementation(async () => {
+      events.push('secondary stop failed');
+      throw stopFailure;
+    });
+    const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+    await expect(boundary.cancelProvisioning(run.runId)).rejects.toBe(stopFailure);
+
+    expect(events).toEqual(['primary stopped', 'secondary stop failed']);
+    expect(run.onProgress).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.runs.get(run.runId)).toBe(run);
   });
 
   it.each(['ready', 'disconnected', 'failed', 'cancelled'] as const)(

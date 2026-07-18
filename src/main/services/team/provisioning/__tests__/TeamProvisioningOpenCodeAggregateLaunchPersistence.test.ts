@@ -12,6 +12,7 @@ import type {
   TeamLaunchRuntimeAdapter,
   TeamRuntimeLaunchInput,
   TeamRuntimeLaunchResult,
+  TeamRuntimeMemberLaunchEvidence,
 } from '../../runtime';
 import type { OpenCodeRuntimeBootstrapEvidencePorts } from '../TeamProvisioningOpenCodeBootstrapEvidence';
 import type { MixedSecondaryRuntimeLaneState } from '../TeamProvisioningSecondaryRuntimeRuns';
@@ -49,6 +50,113 @@ function launchInput(overrides: Partial<TeamRuntimeLaunchInput> = {}): TeamRunti
     ],
     ...overrides,
   } as TeamRuntimeLaunchInput;
+}
+
+function confirmedMemberEvidence(
+  memberName: string,
+  model: string
+): TeamRuntimeMemberLaunchEvidence {
+  return {
+    memberName,
+    providerId: 'opencode',
+    model,
+    launchState: 'confirmed_alive',
+    agentToolAccepted: true,
+    runtimeAlive: true,
+    bootstrapConfirmed: true,
+    hardFailure: false,
+    diagnostics: [],
+  };
+}
+
+async function launchAggregateRuntimeEvidenceFixture(): Promise<{
+  lane: MixedSecondaryRuntimeLaneState;
+  primaryResult: TeamRuntimeLaunchResult;
+  runtimeRun: Parameters<LaunchOpenCodeAggregatePrimaryLanePorts['setRuntimeAdapterRunByTeam']>[1];
+}> {
+  const alice = { name: 'alice', role: 'Engineer', providerId: 'opencode' as const };
+  const bob = { name: 'bob', role: 'Reviewer', providerId: 'opencode' as const };
+  const request = {
+    teamName: 'team-a',
+    cwd: '/repo',
+    providerId: 'opencode',
+    members: [alice, bob],
+  } as TeamCreateRequest;
+  const primaryResult: TeamRuntimeLaunchResult = {
+    runId: 'aggregate-run',
+    teamName: 'team-a',
+    launchPhase: 'finished',
+    teamLaunchState: 'clean_success',
+    members: {
+      alice: confirmedMemberEvidence('alice', 'primary-alice-model'),
+      bob: confirmedMemberEvidence('bob', 'stale-primary-bob-model'),
+    },
+    warnings: [],
+    diagnostics: [],
+  };
+  const lane: MixedSecondaryRuntimeLaneState = {
+    laneId: 'secondary:opencode:bob',
+    providerId: 'opencode',
+    member: bob,
+    runId: 'secondary-run',
+    state: 'finished',
+    result: {
+      runId: 'secondary-run',
+      teamName: 'team-a',
+      launchPhase: 'finished',
+      teamLaunchState: 'clean_success',
+      members: {
+        bob: confirmedMemberEvidence('bob', 'secondary-bob-model'),
+      },
+      warnings: [],
+      diagnostics: [],
+    },
+    warnings: [],
+    diagnostics: [],
+  };
+  let runtimeRun:
+    | Parameters<LaunchOpenCodeAggregatePrimaryLanePorts['setRuntimeAdapterRunByTeam']>[1]
+    | undefined;
+
+  await launchOpenCodeAggregatePrimaryLane(
+    {
+      run: {
+        runId: 'aggregate-run',
+        teamName: 'team-a',
+        request,
+        effectiveMembers: [alice],
+        memberSpawnStatuses: new Map(),
+        mixedSecondaryLanes: [lane],
+      },
+      adapter: {
+        launch: vi.fn(async () => primaryResult),
+      } as unknown as TeamLaunchRuntimeAdapter,
+      prompt: 'launch',
+      previousLaunchState: null,
+    },
+    {
+      getTeamsBasePath: () => '/workspace/teams',
+      getOpenCodeRuntimeLaunchCwd: () => '/repo',
+      migrateLegacyOpenCodeRuntimeState: async () => ({}),
+      upsertOpenCodeRuntimeLaneIndexEntry: async () => {},
+      setOpenCodeRuntimeActiveRunManifest: async () => {},
+      persistOpenCodeRuntimeAdapterLaunchResult: (result, input) =>
+        persistOpenCodeRuntimeAdapterLaunchResult(result, input, {
+          createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
+          nowIso: () => '2026-01-01T00:00:00.000Z',
+          writeLaunchStateSnapshot: async (_teamName, snapshot) => snapshot,
+        }),
+      syncOpenCodeRuntimeToolApprovals: () => {},
+      setRuntimeAdapterRunByTeam: (_teamName, nextRuntimeRun) => {
+        runtimeRun = nextRuntimeRun;
+      },
+    }
+  );
+
+  if (!runtimeRun) {
+    throw new Error('Expected aggregate primary launch to publish its runtime run');
+  }
+  return { lane, primaryResult, runtimeRun };
 }
 
 describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
@@ -147,11 +255,21 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       diagnostics: [],
     };
 
-    const persisted = await persistOpenCodeRuntimeAdapterLaunchResult(result, launchInput(), {
+    const persistencePorts: PersistOpenCodeRuntimeAdapterLaunchResultPorts & {
+      expectedNow: string;
+    } = {
+      expectedNow: '2026-01-01T00:00:00.000Z',
       createOpenCodeRuntimeBootstrapEvidencePorts: bootstrapEvidencePorts,
-      nowIso: () => '2026-01-01T00:00:00.000Z',
+      nowIso() {
+        return this.expectedNow;
+      },
       writeLaunchStateSnapshot,
-    });
+    };
+    const persisted = await persistOpenCodeRuntimeAdapterLaunchResult(
+      result,
+      launchInput(),
+      persistencePorts
+    );
 
     expect(writeLaunchStateSnapshot).toHaveBeenCalledTimes(1);
     expect(writeLaunchStateSnapshot.mock.calls[0][0]).toBe('team-a');
@@ -293,6 +411,71 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       runId: 'run-1',
       providerId: 'opencode',
       cwd: '/repo',
+    });
+  });
+
+  it.each([
+    [
+      'stale copied primary evidence',
+      (lane: MixedSecondaryRuntimeLaneState) => {
+        lane.state = 'queued';
+        lane.runId = null;
+        lane.result = null;
+      },
+    ],
+    [
+      'a stale lane runId',
+      (lane: MixedSecondaryRuntimeLaneState) => {
+        lane.result = { ...lane.result!, runId: 'stale-secondary-run' };
+      },
+    ],
+    [
+      'an unfinished lane',
+      (lane: MixedSecondaryRuntimeLaneState) => {
+        lane.state = 'launching';
+      },
+    ],
+    [
+      'wrong member evidence',
+      (lane: MixedSecondaryRuntimeLaneState) => {
+        lane.result = {
+          ...lane.result!,
+          members: {
+            bob: {
+              ...lane.result!.members.bob,
+              memberName: 'not-bob',
+            },
+          },
+        };
+      },
+    ],
+  ])('does not report a secondary alive from %s', async (_caseName, invalidateLane) => {
+    const { lane, primaryResult, runtimeRun } = await launchAggregateRuntimeEvidenceFixture();
+    const validLaneState = lane.state;
+    const validLaneRunId = lane.runId;
+    const validLaneResult = lane.result;
+
+    expect(runtimeRun.members).toMatchObject({
+      alice: { memberName: 'alice', model: 'primary-alice-model' },
+      bob: { memberName: 'bob', model: 'secondary-bob-model' },
+    });
+    expect(primaryResult.members.bob).toMatchObject({ model: 'stale-primary-bob-model' });
+
+    invalidateLane(lane);
+
+    expect(runtimeRun.members.alice).toMatchObject({
+      memberName: 'alice',
+      model: 'primary-alice-model',
+    });
+    expect(runtimeRun.members.bob).toBeUndefined();
+    expect(primaryResult.members.bob).toMatchObject({ model: 'stale-primary-bob-model' });
+
+    lane.state = validLaneState;
+    lane.runId = validLaneRunId;
+    lane.result = validLaneResult;
+    expect(runtimeRun.members.bob).toMatchObject({
+      memberName: 'bob',
+      model: 'secondary-bob-model',
     });
   });
 });

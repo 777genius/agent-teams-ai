@@ -1,5 +1,6 @@
 import {
   assertAbsoluteCwd,
+  assertOptionalExtraCliArgs,
   assertOptionalString,
   assertProvisioningTeamName,
   HttpBadRequestError,
@@ -18,6 +19,24 @@ function expectBadRequest(fn: () => unknown, message: string): void {
 }
 
 describe('HTTP team route parsers', () => {
+  it('rejects protected extraCliArgs flags whether space- or =-delimited', () => {
+    // Space form was already caught; the =value form must be too (blocklist bypass).
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('--mcp-config /evil/config.json'),
+      'app-managed flags'
+    );
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('--mcp-config=/evil/config.json'),
+      'app-managed flags'
+    );
+    expectBadRequest(
+      () => assertOptionalExtraCliArgs('--dangerously-skip-permissions=1'),
+      'app-managed flags'
+    );
+    // A genuinely user-safe flag (not app-managed) passes through untouched.
+    expect(assertOptionalExtraCliArgs('--max-turns=5')).toBe('--max-turns=5');
+  });
+
   it('validates common string and cwd fields with the route error messages', () => {
     expect(assertProvisioningTeamName(' demo-team ')).toBe('demo-team');
     expect(assertAbsoluteCwd(' /Users/test/project ')).toBe('/Users/test/project');

@@ -4,7 +4,7 @@ import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CrossTeamOutbox } from '../CrossTeamOutbox';
+import { CrossTeamIdempotencyConflictError, CrossTeamOutbox } from '../CrossTeamOutbox';
 
 import type { CrossTeamMessage } from '@shared/types';
 
@@ -34,19 +34,20 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     setClaudeBasePathOverride(null);
     if (tempRoot) {
       fs.rmSync(tempRoot, { recursive: true, force: true });
     }
   });
 
-  it('dedupes a runtime retry with the same trimmed caller message id', async () => {
+  it('returns a conflict when a stable cross-run key is reused with a changed payload', async () => {
     const outbox = new CrossTeamOutbox();
     const onBeforeAppend = vi.fn(async () => {});
     const message = makeMessage();
     const retry = makeMessage({
-      messageId: '\truntime-message-1\n',
-      conversationId: 'runtime-idempotency-2',
+      messageId: 'runtime-message-2',
+      conversationId: '\truntime-idempotency-1\n',
       text: 'Retry payload changed after the caller message id was already recorded',
       summary: 'Retry summary changed',
       taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'source-team' }],
@@ -58,15 +59,18 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
         callerMessageId: message.messageId,
       })
     ).resolves.toEqual({ duplicate: null });
-    await expect(
-      outbox.appendIfNotRecent('source-team', retry, onBeforeAppend, undefined, {
+    const conflict = await outbox
+      .appendIfNotRecent('source-team', retry, onBeforeAppend, undefined, {
         stableIdentity: true,
         callerMessageId: retry.messageId,
       })
-    ).resolves.toEqual({
-      duplicate: message,
-    });
+      .catch((error: unknown) => error);
 
+    expect(conflict).toBeInstanceOf(CrossTeamIdempotencyConflictError);
+    expect(conflict).toMatchObject({
+      code: 'CROSS_TEAM_IDEMPOTENCY_CONFLICT',
+      existingMessageId: message.messageId,
+    });
     await expect(outbox.read('source-team')).resolves.toEqual([message]);
     expect(onBeforeAppend).toHaveBeenCalledTimes(1);
   });
@@ -81,9 +85,8 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     const retry = makeMessage({
       messageId: 'generated-message-2',
       conversationId: '\truntime-idempotency-1\n',
-      text: 'Retry payload changed after the conversation was already recorded',
-      summary: 'Retry summary changed',
-      taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'source-team' }],
+      text: '  ship   THE same payload ',
+      summary: ' runtime DELIVERY ',
     });
 
     await expect(
@@ -113,7 +116,6 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     });
     const retry = makeMessage({
       messageId: 'runtime-message-retry',
-      text: 'Retry payload changed after the original delivery',
     });
 
     for (const nextMessage of [message, staleInterveningMessage]) {
@@ -154,16 +156,51 @@ describe('CrossTeamOutbox runtime delivery dedupe', () => {
     expect(onBeforeAppend).toHaveBeenCalledTimes(1);
   });
 
-  it('does not dedupe distinct caller message ids in the same conversation', async () => {
+  it('dedupes the same normalized stable payload beyond the legacy five-minute window', async () => {
+    vi.useFakeTimers({ now: new Date('2026-07-09T00:00:00.000Z') });
     const outbox = new CrossTeamOutbox();
     const onBeforeAppend = vi.fn(async () => {});
+    // Runtime cross-team caller messageId is the run-scoped destinationMessageId
+    // (hash of idempotencyKey + runId + team); conversationId is the stable
+    // idempotencyKey. A relaunch re-delivers the SAME logical message with a new
+    // run-scoped id but the same conversationId - it must dedupe.
     const first = makeMessage({
-      messageId: 'runtime-message-1',
+      messageId: 'runtime-delivery-run1-abc',
       conversationId: 'runtime-idempotency-1',
     });
     const second = makeMessage({
-      messageId: 'runtime-message-2',
+      messageId: 'runtime-delivery-run2-def',
       conversationId: 'runtime-idempotency-1',
+    });
+
+    await expect(
+      outbox.appendIfNotRecent('source-team', first, onBeforeAppend, undefined, {
+        stableIdentity: true,
+        callerMessageId: first.messageId,
+      })
+    ).resolves.toEqual({ duplicate: null });
+    vi.advanceTimersByTime(5 * 60 * 1000 + 1);
+    await expect(
+      outbox.appendIfNotRecent('source-team', second, onBeforeAppend, undefined, {
+        stableIdentity: true,
+        callerMessageId: second.messageId,
+      })
+    ).resolves.toEqual({ duplicate: first });
+
+    await expect(outbox.read('source-team')).resolves.toEqual([first]);
+    expect(onBeforeAppend).toHaveBeenCalledTimes(1);
+  });
+
+  it('delivers distinct runtime messages that carry distinct conversation identities', async () => {
+    const outbox = new CrossTeamOutbox();
+    const onBeforeAppend = vi.fn(async () => {});
+    const first = makeMessage({
+      messageId: 'runtime-delivery-run1-abc',
+      conversationId: 'runtime-idempotency-1',
+    });
+    const second = makeMessage({
+      messageId: 'runtime-delivery-run1-def',
+      conversationId: 'runtime-idempotency-2',
     });
 
     for (const message of [first, second]) {

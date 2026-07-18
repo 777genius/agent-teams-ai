@@ -124,5 +124,15 @@ export function extractFlagsFromHelp(helpOutput: string): Set<string> {
  */
 export function extractUserFlags(raw: string): string[] {
   const tokens = parseCliArgs(raw);
-  return tokens.filter((token) => token.startsWith('-'));
+  return tokens
+    .filter((token) => token.startsWith('-'))
+    .map((token) => {
+      // Normalize the `--flag=value` form to the bare flag name so protected-flag
+      // checks (PROTECTED_CLI_FLAGS.has(...)) cannot be bypassed by appending
+      // `=value` (e.g. `--mcp-config=/evil`, `--dangerously-skip-permissions=1`).
+      // parseCliArgs splits only on whitespace/quotes, so `--flag=value` arrives
+      // as a single token and would otherwise miss an exact-match blocklist.
+      const equalsIndex = token.indexOf('=');
+      return equalsIndex === -1 ? token : token.slice(0, equalsIndex);
+    });
 }

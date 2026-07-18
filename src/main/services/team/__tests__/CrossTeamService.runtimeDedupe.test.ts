@@ -112,12 +112,12 @@ describe('CrossTeamService runtime delivery dedupe', () => {
     }
   });
 
-  it('keeps runtime retries idempotent when the trimmed caller message id matches', async () => {
+  it('returns a conflict when a stable cross-run key is reused with a changed payload', async () => {
     const { service, inboxWriter, messaging, sentToInbox } = createService();
     const request = runtimeRequest();
     const retry = runtimeRequest({
-      messageId: '\truntime-message-1\n',
-      conversationId: 'runtime-idempotency-2',
+      messageId: 'runtime-message-2',
+      conversationId: '\truntime-idempotency-1\n',
       text: 'Retry payload changed after the caller message id was already recorded',
       summary: 'Retry summary changed',
       taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'source-team' }],
@@ -127,21 +127,15 @@ describe('CrossTeamService runtime delivery dedupe', () => {
       messageId: 'runtime-message-1',
       deliveredToInbox: true,
     });
-    await expect(service.send(retry)).resolves.toMatchObject({
-      messageId: 'runtime-message-1',
-      deliveredToInbox: true,
-      deduplicated: true,
+    await expect(service.send(retry)).rejects.toMatchObject({
+      name: 'CrossTeamIdempotencyConflictError',
+      code: 'CROSS_TEAM_IDEMPOTENCY_CONFLICT',
+      existingMessageId: 'runtime-message-1',
     });
 
     expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
     expect(sentToInbox.map((entry) => entry.message.messageId)).toEqual(['runtime-message-1']);
-    expect(messaging.relayInboxFileToLiveRecipient).toHaveBeenCalledTimes(2);
-    expect(messaging.relayInboxFileToLiveRecipient).toHaveBeenNthCalledWith(
-      2,
-      'target-team',
-      'team-lead',
-      { onlyMessageId: 'runtime-message-1' }
-    );
+    expect(messaging.relayInboxFileToLiveRecipient).toHaveBeenCalledTimes(1);
   });
 
   it('dedupes runtime retries without caller message ids by conversation identity', async () => {
@@ -153,9 +147,8 @@ describe('CrossTeamService runtime delivery dedupe', () => {
     const retry = runtimeRequest({
       messageId: undefined,
       conversationId: '\truntime-idempotency-1\n',
-      text: 'Retry payload changed after the conversation was already recorded',
-      summary: 'Retry summary changed',
-      taskRefs: [{ taskId: 'task-2', displayId: '#2', teamName: 'source-team' }],
+      text: '  ship   THE same payload ',
+      summary: ' runtime DELIVERY ',
     });
 
     const first = await service.send(request);
@@ -248,7 +241,7 @@ describe('CrossTeamService runtime delivery dedupe', () => {
     expect(messaging.relayInboxFileToLiveRecipient).not.toHaveBeenCalled();
   });
 
-  it('delivers distinct caller message ids in the same conversation', async () => {
+  it('delivers distinct runtime messages that carry distinct conversation identities', async () => {
     vi.useFakeTimers({ now: new Date('2026-07-09T00:00:00.000Z') });
     const { service, inboxWriter, messaging, sentToInbox } = createService();
 
@@ -264,11 +257,13 @@ describe('CrossTeamService runtime delivery dedupe', () => {
       deliveredToInbox: true,
     });
     vi.advanceTimersByTime(3_001);
+    // A genuinely distinct logical delivery carries its own idempotencyKey, hence
+    // its own conversationId. It must be delivered, not deduped.
     await expect(
       service.send(
         runtimeRequest({
           messageId: 'runtime-message-2',
-          conversationId: 'runtime-idempotency-1',
+          conversationId: 'runtime-idempotency-2',
         })
       )
     ).resolves.toMatchObject({
@@ -288,5 +283,47 @@ describe('CrossTeamService runtime delivery dedupe', () => {
       'team-lead',
       { onlyMessageId: 'runtime-message-2' }
     );
+  });
+
+  it('dedupes the same normalized cross-run payload beyond five minutes', async () => {
+    vi.useFakeTimers({ now: new Date('2026-07-09T00:00:00.000Z') });
+    const { service, inboxWriter, sentToInbox } = createService();
+
+    // Run R1: destinationMessageId is hash(idempotencyKey, runId, team) - run-scoped.
+    await expect(
+      service.send(
+        runtimeRequest({
+          messageId: 'runtime-delivery-run1-abc',
+          conversationId: 'runtime-idempotency-1',
+        })
+      )
+    ).resolves.toMatchObject({
+      messageId: 'runtime-delivery-run1-abc',
+      deliveredToInbox: true,
+    });
+
+    // Run R2 relaunch re-delivers the SAME logical message: same idempotencyKey
+    // (=conversationId) but a DIFFERENT run-scoped destinationMessageId. The
+    // journal does not carry cross-team entries across runs, so the outbox
+    // conversationId proof must dedupe it - otherwise the target inbox receives
+    // the message twice.
+    vi.advanceTimersByTime(5 * 60 * 1000 + 1);
+    await expect(
+      service.send(
+        runtimeRequest({
+          messageId: 'runtime-delivery-run2-def',
+          conversationId: 'runtime-idempotency-1',
+        })
+      )
+    ).resolves.toMatchObject({
+      messageId: 'runtime-delivery-run1-abc',
+      deliveredToInbox: true,
+      deduplicated: true,
+    });
+
+    expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+    expect(sentToInbox.map((entry) => entry.message.messageId)).toEqual([
+      'runtime-delivery-run1-abc',
+    ]);
   });
 });

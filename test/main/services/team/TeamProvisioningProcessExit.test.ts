@@ -6,13 +6,163 @@ import {
   decideProcessExitAfterParserFlush,
   decideProcessExitBeforeParserFlush,
   decideTimeoutCompletion,
+  handleProvisioningProcessExit,
   hasIncompleteClaudeStdoutCarry,
   isProvisioningRunFailed,
+  type TeamProvisioningProcessExitPorts,
+  type TeamProvisioningProcessExitRun,
   waitForValidConfig,
 } from '@main/services/team/provisioning/TeamProvisioningProcessExit';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { TeamProvisioningProgress } from '@shared/types';
+
+function makeProcessExitProgress(
+  overrides: Partial<TeamProvisioningProgress> = {}
+): TeamProvisioningProgress {
+  return {
+    runId: 'run-1',
+    teamName: 'team-a',
+    state: 'ready',
+    message: 'Ready',
+    startedAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:01.000Z',
+    ...overrides,
+  };
+}
+
+function makeProcessExitRun(
+  overrides: Partial<TeamProvisioningProcessExitRun> = {}
+): TeamProvisioningProcessExitRun {
+  return {
+    runId: 'run-1',
+    teamName: 'team-a',
+    progress: makeProcessExitProgress(),
+    stdoutBuffer: '',
+    stderrBuffer: '',
+    deterministicBootstrap: false,
+    deterministicBootstrapMemberSpawnSeen: false,
+    memberSpawnStatuses: new Map(),
+    stdoutParserCarry: '',
+    stdoutParserCarryIsCompleteJson: false,
+    stdoutParserCarryLooksLikeClaudeJson: false,
+    processKilled: false,
+    finalizingByTimeout: false,
+    cancelRequested: false,
+    provisioningComplete: true,
+    processClosed: false,
+    authRetryInProgress: false,
+    isLaunch: true,
+    teamsBasePathsToProbe: [],
+    expectedMembers: [],
+    request: {
+      teamName: 'team-a',
+      members: [],
+      cwd: '/test/project',
+    },
+    allEffectiveMembers: [],
+    detectedSessionId: null,
+    onProgress: vi.fn(),
+    ...overrides,
+  };
+}
+
+function makeProcessExitHarness(
+  run: TeamProvisioningProcessExitRun,
+  lifecycleEvents: string[]
+): {
+  ports: TeamProvisioningProcessExitPorts<TeamProvisioningProcessExitRun>;
+  trackedRuns: Map<string, TeamProvisioningProcessExitRun>;
+} {
+  const trackedRuns = new Map([[run.runId, run]]);
+  const ports = {
+    logger: {
+      info: vi.fn(),
+      warn: vi.fn(),
+    },
+    buildStdoutCarryDiagnostic: vi.fn(() => ({})),
+    flushStdoutParserCarry: vi.fn(),
+    stopStallWatchdog: vi.fn(),
+    hasSecondaryRuntimeRuns: vi.fn(() => true),
+    stopMixedSecondaryRuntimeLanes: vi.fn(async () => {
+      lifecycleEvents.push('secondaries stopped');
+    }),
+    waitForValidConfig: vi.fn(async () => ({ ok: false as const })),
+    waitForTeamInList: vi.fn(async () => false),
+    waitForMissingInboxes: vi.fn(async () => []),
+    persistMembersMeta: vi.fn(async () => undefined),
+    updateProgress: vi.fn((targetRun, state, message, extras) => {
+      lifecycleEvents.push('progress updated');
+      const nextProgress = makeProcessExitProgress({
+        ...targetRun.progress,
+        ...extras,
+        runId: targetRun.runId,
+        teamName: targetRun.teamName,
+        state,
+        message,
+        updatedAt: '2026-01-01T00:00:02.000Z',
+      });
+      targetRun.progress = nextProgress;
+      return nextProgress;
+    }),
+    cleanupRun: vi.fn((targetRun) => {
+      lifecycleEvents.push('cleanup');
+      trackedRuns.delete(targetRun.runId);
+    }),
+    getTeamsBasePath: vi.fn(() => '/configured/teams'),
+    getAutoDetectedClaudeBasePath: vi.fn(() => '/default'),
+    getConfiguredCliCommandLabel: vi.fn(() => 'claude'),
+    getRunRuntimeFailureLabel: vi.fn(() => 'Claude runtime'),
+    getVerificationTimeoutMs: vi.fn(() => 15_000),
+    extractCliLogsFromRun: vi.fn(() => undefined),
+    logsSuggestShutdownOrCleanup: vi.fn(() => false),
+    finalizeIncompleteLaunchStateBeforeCleanup: vi.fn(async () => undefined),
+  } satisfies TeamProvisioningProcessExitPorts<TeamProvisioningProcessExitRun>;
+
+  return { ports, trackedRuns };
+}
+
 describe('TeamProvisioningProcessExit', () => {
+  it('stops secondary runtimes before successful process-exit cleanup', async () => {
+    const lifecycleEvents: string[] = [];
+    const run = makeProcessExitRun({
+      onProgress: vi.fn(() => {
+        lifecycleEvents.push('progress emitted');
+      }),
+    });
+    const { ports, trackedRuns } = makeProcessExitHarness(run, lifecycleEvents);
+
+    await handleProvisioningProcessExit(run, 0, ports);
+
+    expect(lifecycleEvents).toEqual([
+      'secondaries stopped',
+      'progress updated',
+      'progress emitted',
+      'cleanup',
+    ]);
+    expect(ports.cleanupRun).toHaveBeenCalledOnce();
+    expect(trackedRuns.has(run.runId)).toBe(false);
+  });
+
+  it('propagates secondary stop rejection and preserves process-exit tracking', async () => {
+    const lifecycleEvents: string[] = [];
+    const stopFailure = new Error('secondary process-exit stop failed');
+    const run = makeProcessExitRun();
+    const { ports, trackedRuns } = makeProcessExitHarness(run, lifecycleEvents);
+    vi.mocked(ports.stopMixedSecondaryRuntimeLanes).mockImplementation(async () => {
+      lifecycleEvents.push('secondary stop failed');
+      throw stopFailure;
+    });
+
+    await expect(handleProvisioningProcessExit(run, 0, ports)).rejects.toBe(stopFailure);
+
+    expect(lifecycleEvents).toEqual(['secondary stop failed']);
+    expect(ports.updateProgress).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(trackedRuns.get(run.runId)).toBe(run);
+    expect(ports.logger.warn).not.toHaveBeenCalled();
+  });
+
   it('classifies process exit guards before parser flushing', () => {
     expect(
       decideProcessExitBeforeParserFlush({

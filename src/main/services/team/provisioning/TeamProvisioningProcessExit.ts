@@ -537,14 +537,7 @@ export async function handleProvisioningProcessExit<TRun extends TeamProvisionin
   // otherwise the external runtime keeps orphan lane sessions that nothing in
   // the UI can stop any more.
   if (ports.hasSecondaryRuntimeRuns(run.teamName)) {
-    try {
-      await ports.stopMixedSecondaryRuntimeLanes(run.teamName);
-    } catch (error) {
-      ports.logger.warn(
-        `[${run.teamName}] Failed to stop secondary runtime lanes after lead process exit`,
-        error
-      );
-    }
+    await ports.stopMixedSecondaryRuntimeLanes(run.teamName);
   }
 
   if (run.provisioningComplete) {

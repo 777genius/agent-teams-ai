@@ -260,21 +260,29 @@ export function createTeamProvisioningCancellationBoundary<
       // 'spawning', after the primary lane came up) orphans the primary runtime
       // process.
       ports.killTeamProcess(run.child);
-      let failedStop: PromiseRejectedResult | undefined;
-      if (ports.getTrackedRunId(run.teamName) === run.runId) {
-        const stops: Promise<void>[] = [];
-        const primaryRun = ports.runtimeAdapterRunByTeam.get(run.teamName);
-        if (primaryRun?.providerId === 'opencode' && primaryRun.runId === run.runId) {
-          stops.push(ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId));
+      const trackedRunId = ports.getTrackedRunId(run.teamName);
+      const provisioningRunId = ports.provisioningRunByTeam.get(run.teamName) ?? null;
+      const aliveRunId = ports.aliveRunByTeam.get(run.teamName) ?? null;
+      const primaryRun = ports.runtimeAdapterRunByTeam.get(run.teamName);
+      const hasConflictingOwner = [
+        trackedRunId,
+        provisioningRunId,
+        aliveRunId,
+        primaryRun?.runId ?? null,
+      ].some((ownerRunId) => ownerRunId !== null && ownerRunId !== run.runId);
+      if (!hasConflictingOwner) {
+        const shouldStopPrimaryRuntime =
+          primaryRun?.providerId === 'opencode' && primaryRun.runId === run.runId;
+        const shouldStopSecondaryRuntimes =
+          trackedRunId === run.runId && ports.hasSecondaryRuntimeRuns(run.teamName);
+
+        // Stop in a stable order so a primary rejection cannot be followed by
+        // secondary-lane cleanup. cleanupRun must only observe confirmed stops.
+        if (shouldStopPrimaryRuntime) {
+          await ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId);
         }
-        if (ports.hasSecondaryRuntimeRuns(run.teamName)) {
-          stops.push(ports.stopMixedSecondaryRuntimeLanes(run.teamName));
-        }
-        if (stops.length > 0) {
-          const stopResults = await Promise.allSettled(stops);
-          failedStop = stopResults.find(
-            (result): result is PromiseRejectedResult => result.status === 'rejected'
-          );
+        if (shouldStopSecondaryRuntimes) {
+          await ports.stopMixedSecondaryRuntimeLanes(run.teamName);
         }
       }
       try {
@@ -282,9 +290,6 @@ export function createTeamProvisioningCancellationBoundary<
         run.onProgress(progress);
       } finally {
         ports.cleanupRun(run);
-      }
-      if (failedStop) {
-        throw failedStop.reason;
       }
     },
 

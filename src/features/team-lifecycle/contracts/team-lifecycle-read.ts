@@ -419,8 +419,7 @@ export function parseCanonicalListTeamLifecycleResult(
   if (!parsed.ok) return parsed;
   if (parsed.value.kind !== 'success') return parseSuccess(parsed.value);
 
-  for (let index = 0; index < parsed.value.items.length; index += 1) {
-    const item = parsed.value.items[index];
+  for (const item of parsed.value.items) {
     if (!Object.hasOwn(item, 'workspaceId')) return responseInvalid();
     try {
       parseWorkspaceId(item.workspaceId);

@@ -16,6 +16,15 @@ export interface CrossTeamDedupeOptions {
   legacyToMember?: string;
 }
 
+export class CrossTeamIdempotencyConflictError extends Error {
+  readonly code = 'CROSS_TEAM_IDEMPOTENCY_CONFLICT';
+
+  constructor(readonly existingMessageId: string) {
+    super('Cross-team idempotency key was reused with a different normalized payload');
+    this.name = 'CrossTeamIdempotencyConflictError';
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -128,30 +137,30 @@ function buildCrossTeamDedupeKey(message: CrossTeamMessage, legacyToMember?: str
   ].join('||');
 }
 
-function hasSameRoute(
-  left: CrossTeamMessage,
-  right: CrossTeamMessage,
-  legacyToMember?: string
-): boolean {
-  return (
-    buildCrossTeamRouteKey(left, legacyToMember).join('||') ===
-    buildCrossTeamRouteKey(right).join('||')
-  );
-}
-
 function hasMatchingStableIdentity(
   left: CrossTeamMessage,
   right: CrossTeamMessage,
   callerMessageId?: string
 ): boolean {
   const normalizedCallerMessageId = String(callerMessageId ?? '').trim();
-  if (normalizedCallerMessageId) {
-    return (
-      stableMessageId(left) === normalizedCallerMessageId &&
-      stableMessageId(right) === normalizedCallerMessageId
-    );
+  if (
+    normalizedCallerMessageId &&
+    stableMessageId(left) === normalizedCallerMessageId &&
+    stableMessageId(right) === normalizedCallerMessageId
+  ) {
+    return true;
   }
 
+  // conversationId is the cross-run duplicate proof. On the runtime cross-team
+  // path the caller messageId is the run-scoped destinationMessageId
+  // (hash of idempotencyKey + runId + teamName), so the SAME logical delivery
+  // gets a DIFFERENT messageId after a relaunch while conversationId
+  // (= idempotencyKey) stays stable. The RuntimeDeliveryJournal deliberately
+  // does not carry cross-team entries across runs and relies on this fallback
+  // ("Cross-team sends retain run-scoped message ids and use conversationId for
+  // duplicate proof"). Skipping it would double-deliver on relaunch. Distinct
+  // logical messages carry distinct idempotencyKeys, hence distinct
+  // conversationIds, so this cannot over-dedupe them.
   const leftConversationId = stableConversationId(left);
   const rightConversationId = stableConversationId(right);
   return Boolean(
@@ -159,26 +168,28 @@ function hasMatchingStableIdentity(
   );
 }
 
-function isDuplicateCrossTeamMessage(
-  entry: CrossTeamMessage,
-  message: CrossTeamMessage,
-  dedupeKey: string,
-  options: CrossTeamDedupeOptions
-): boolean {
-  if (options.stableIdentity && hasSameRoute(entry, message, options.legacyToMember)) {
-    return hasMatchingStableIdentity(entry, message, options.callerMessageId);
-  }
-
-  return buildCrossTeamDedupeKey(entry, options.legacyToMember) === dedupeKey;
-}
-
-function findRecentDuplicate(
+function findDedupeMatch(
   list: unknown[],
   message: CrossTeamMessage,
   windowMs: number,
   options: CrossTeamDedupeOptions
-): CrossTeamMessage | null {
+): { duplicate: CrossTeamMessage | null; conflict: CrossTeamMessage | null } {
   const dedupeKey = buildCrossTeamDedupeKey(message);
+
+  if (options.stableIdentity) {
+    for (let i = list.length - 1; i >= 0; i -= 1) {
+      const entry = normalizePersistedMessage(list[i]);
+      if (!entry || !hasMatchingStableIdentity(entry, message, options.callerMessageId)) {
+        continue;
+      }
+      if (buildCrossTeamDedupeKey(entry, options.legacyToMember) === dedupeKey) {
+        return { duplicate: entry, conflict: null };
+      }
+      return { duplicate: null, conflict: entry };
+    }
+    return { duplicate: null, conflict: null };
+  }
+
   const cutoff = Date.now() - windowMs;
 
   for (let i = list.length - 1; i >= 0; i -= 1) {
@@ -188,12 +199,12 @@ function findRecentDuplicate(
     if (!Number.isFinite(ts) || ts < cutoff) {
       continue;
     }
-    if (isDuplicateCrossTeamMessage(entry, message, dedupeKey, options)) {
-      return entry;
+    if (buildCrossTeamDedupeKey(entry, options.legacyToMember) === dedupeKey) {
+      return { duplicate: entry, conflict: null };
     }
   }
 
-  return null;
+  return { duplicate: null, conflict: null };
 }
 
 export class CrossTeamOutbox {
@@ -233,7 +244,11 @@ export class CrossTeamOutbox {
 
     await withFileLock(outboxPath, async () => {
       const list = await this.readUnlocked(outboxPath);
-      duplicate = findRecentDuplicate(list, message, windowMs, options);
+      const match = findDedupeMatch(list, message, windowMs, options);
+      if (match.conflict) {
+        throw new CrossTeamIdempotencyConflictError(match.conflict.messageId);
+      }
+      duplicate = match.duplicate;
       if (duplicate) return;
 
       await onBeforeAppend();

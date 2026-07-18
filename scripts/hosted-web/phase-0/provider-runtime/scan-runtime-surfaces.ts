@@ -35,7 +35,7 @@ const EXPECTED_MODES = [
   'primary_only',
   'pure_opencode',
   'pure_opencode_solo',
-  'pure_opencode_worktree_root_lanes',
+  'pure_opencode_member_lanes',
   'mixed_opencode_side_lanes',
   'unsupported_opencode_led_mixed_team',
 ] as const;

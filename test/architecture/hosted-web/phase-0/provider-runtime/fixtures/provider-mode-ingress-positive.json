@@ -128,7 +128,7 @@
     },
     {
       "provider": "opencode",
-      "mode": "pure_opencode_worktree_root_lanes",
+      "mode": "pure_opencode_member_lanes",
       "disposition": "current_source_observed_runtime_ingress",
       "operations": [
         "runtime.bootstrap-checkin",
@@ -144,7 +144,7 @@
         },
         {
           "path": "src/features/team-runtime-lanes/core/domain/planTeamRuntimeLanes.ts",
-          "token": "mode: 'pure_opencode_worktree_root_lanes'"
+          "token": "mode: 'pure_opencode_member_lanes'"
         },
         {
           "path": "src/main/http/teams.ts",

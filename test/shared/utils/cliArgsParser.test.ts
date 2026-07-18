@@ -1,11 +1,10 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   extractFlagsFromHelp,
   extractUserFlags,
   parseCliArgs,
   PROTECTED_CLI_FLAGS,
 } from '@shared/utils/cliArgsParser';
+import { describe, expect, it } from 'vitest';
 
 describe('parseCliArgs', () => {
   it('returns empty array for undefined', () => {
@@ -116,10 +115,7 @@ This is a non-interactive tool for automated workflows.
 
 describe('extractUserFlags', () => {
   it('extracts flags from mixed input', () => {
-    expect(extractUserFlags('--verbose --max-turns 5 foo')).toEqual([
-      '--verbose',
-      '--max-turns',
-    ]);
+    expect(extractUserFlags('--verbose --max-turns 5 foo')).toEqual(['--verbose', '--max-turns']);
   });
 
   it('extracts short flags', () => {
@@ -132,6 +128,24 @@ describe('extractUserFlags', () => {
 
   it('returns empty when no flags present', () => {
     expect(extractUserFlags('hello world')).toEqual([]);
+  });
+
+  it('normalizes the --flag=value form to the bare flag name', () => {
+    expect(extractUserFlags('--mcp-config=/evil/config.json')).toEqual(['--mcp-config']);
+    expect(extractUserFlags('--dangerously-skip-permissions=1')).toEqual([
+      '--dangerously-skip-permissions',
+    ]);
+    expect(extractUserFlags('--max-turns=5 --model=gpt')).toEqual(['--max-turns', '--model']);
+  });
+
+  it('detects protected flags supplied in the --flag=value form (blocklist bypass guard)', () => {
+    // A protected flag with an appended =value must still be caught by an exact
+    // PROTECTED_CLI_FLAGS membership check; otherwise arg-injection bypasses it.
+    const injected = '--mcp-config=/evil/config.json --permission-mode=bypassPermissions';
+    const protectedHits = extractUserFlags(injected).filter((flag) =>
+      PROTECTED_CLI_FLAGS.has(flag)
+    );
+    expect(protectedHits).toEqual(['--mcp-config', '--permission-mode']);
   });
 });
 

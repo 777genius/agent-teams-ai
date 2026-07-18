@@ -328,6 +328,68 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
     expect(sendMessageToMember).not.toHaveBeenCalled();
   });
 
+  it('preserves acceptance-unknown semantics while a delivery retry is not yet due', async () => {
+    const sendMessageToMember = vi.fn();
+    const acceptanceUnknownRecord = makeLedgerRecord({
+      status: 'failed_retryable',
+      responseState: 'not_observed',
+      acceptanceUnknown: true,
+      nextAttemptAt: '2999-05-09T12:01:00.000Z',
+      lastReason: 'opencode_prompt_acceptance_unknown_missing_runtime_prompt_id',
+      diagnostics: ['opencode_prompt_acceptance_missing_runtime_prompt_id'],
+    });
+    const ledger = {
+      getActiveForMember: vi.fn(async () => acceptanceUnknownRecord),
+      ensurePending: vi.fn(async () => acceptanceUnknownRecord),
+    };
+    const scheduleOpenCodePromptDeliveryWatchdog = vi.fn();
+    const deps = makeDeps({
+      getOpenCodeRuntimeMessageAdapter: () => makeAdapter(sendMessageToMember),
+      createOpenCodePromptDeliveryLedger: vi.fn(() => ledger as never),
+      openCodePromptDeliveryWatchdogScheduler: { isEnabled: vi.fn(() => true) },
+      openCodeVisibleReplyProofService: {
+        applyDestinationProof: vi.fn(async () => ({
+          ledgerRecord: acceptanceUnknownRecord,
+          visibleReply: null,
+        })),
+        materializePlainTextReplyIfNeeded: vi.fn(async () => ({
+          ledgerRecord: acceptanceUnknownRecord,
+          visibleReply: null,
+        })),
+        findByRelayOfMessageId: vi.fn(async () => null),
+      },
+      isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async () => false),
+      requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded: vi.fn(
+        async () => acceptanceUnknownRecord
+      ),
+      scheduleOpenCodePromptDeliveryWatchdog,
+    });
+
+    const delivery = await new OpenCodeMemberMessageDeliveryService(deps).deliver('team-a', {
+      memberName: 'alice',
+      text: 'ship this',
+      messageId: 'msg-1',
+      source: 'ui-send',
+    });
+
+    expect(delivery).toMatchObject({
+      delivered: true,
+      accepted: false,
+      responsePending: true,
+      acceptanceUnknown: true,
+      ledgerStatus: 'failed_retryable',
+      reason: 'opencode_prompt_acceptance_unknown_missing_runtime_prompt_id',
+    });
+    expect(scheduleOpenCodePromptDeliveryWatchdog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamName: 'team-a',
+        memberName: 'alice',
+        messageId: 'msg-1',
+      })
+    );
+    expect(sendMessageToMember).not.toHaveBeenCalled();
+  });
+
   it('returns a terminal response when send-exception follow-up exhausts retries', async () => {
     const pendingRecord = makeLedgerRecord({});
     const failedRetryableRecord = makeLedgerRecord({
