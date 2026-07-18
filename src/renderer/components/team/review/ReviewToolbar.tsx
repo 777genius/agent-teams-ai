@@ -10,6 +10,7 @@ import { ReviewActionHistoryPopover } from './ReviewActionHistoryPopover';
 import { describeReviewAction } from './reviewActionPresentation';
 
 import type { ReviewFileLabelResolver } from './reviewActionPresentation';
+import type { ReviewActionPersistenceStatus } from './reviewActionState';
 import type { ChangeStats, ReviewRedoAction, ReviewUndoAction } from '@shared/types';
 
 interface ReviewToolbarProps {
@@ -37,6 +38,8 @@ interface ReviewToolbarProps {
   resolveFileLabel?: ReviewFileLabelResolver;
   undoDisabledReason?: string;
   redoDisabledReason?: string;
+  historyPersistenceStatus?: ReviewActionPersistenceStatus;
+  onRetryHistoryPersistence?: () => void;
 }
 
 export const ReviewToolbar = ({
@@ -64,6 +67,8 @@ export const ReviewToolbar = ({
   resolveFileLabel,
   undoDisabledReason,
   redoDisabledReason,
+  historyPersistenceStatus = 'saved',
+  onRetryHistoryPersistence,
 }: ReviewToolbarProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
   const hasRejected = stats.rejected > 0;
@@ -189,6 +194,8 @@ export const ReviewToolbar = ({
         undoHistory={undoHistory}
         redoHistory={redoHistory}
         resolveFileLabel={resolveFileLabel}
+        persistenceStatus={historyPersistenceStatus}
+        onRetryPersistence={onRetryHistoryPersistence}
       />
 
       {canUndo && onUndo && (

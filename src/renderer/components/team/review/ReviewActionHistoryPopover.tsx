@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
 
+import { Button } from '@renderer/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { cn } from '@renderer/lib/utils';
-import { Check, CircleDot, History, RotateCcw, X } from 'lucide-react';
+import { AlertTriangle, Check, CircleDot, History, Loader2, RotateCcw, X } from 'lucide-react';
 
 import { describeReviewAction, takeRecentReviewActions } from './reviewActionPresentation';
 
 import type { ReviewActionTone, ReviewFileLabelResolver } from './reviewActionPresentation';
+import type { ReviewActionPersistenceStatus } from './reviewActionState';
 import type { ReviewRedoAction, ReviewUndoAction } from '@shared/types';
 
 const HISTORY_PREVIEW_LIMIT = 12;
@@ -15,6 +17,8 @@ interface ReviewActionHistoryPopoverProps {
   undoHistory: readonly ReviewUndoAction[];
   redoHistory: readonly ReviewRedoAction[];
   resolveFileLabel?: ReviewFileLabelResolver;
+  persistenceStatus?: ReviewActionPersistenceStatus;
+  onRetryPersistence?: () => void;
 }
 
 interface ReviewHistorySectionProps {
@@ -111,6 +115,8 @@ export const ReviewActionHistoryPopover = ({
   undoHistory,
   redoHistory,
   resolveFileLabel,
+  persistenceStatus = 'saved',
+  onRetryPersistence,
 }: ReviewActionHistoryPopoverProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false);
   const undoActions = useMemo(
@@ -133,7 +139,7 @@ export const ReviewActionHistoryPopover = ({
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={`Review history: ${undoHistory.length} undo, ${redoHistory.length} redo`}
+          aria-label={`Review history: ${undoHistory.length} undo, ${redoHistory.length} redo; ${persistenceStatus}`}
           className="flex items-center gap-1 rounded px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-raised hover:text-text"
         >
           <History className="size-3.5" />
@@ -141,6 +147,12 @@ export const ReviewActionHistoryPopover = ({
           <span className="rounded bg-zinc-500/15 px-1 text-[10px] text-zinc-300">
             {totalCount}
           </span>
+          {persistenceStatus === 'saving' && (
+            <Loader2 className="size-3 animate-spin text-blue-400" aria-hidden="true" />
+          )}
+          {persistenceStatus === 'error' && (
+            <AlertTriangle className="size-3 text-red-400" aria-hidden="true" />
+          )}
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -154,8 +166,38 @@ export const ReviewActionHistoryPopover = ({
       >
         <div className="sticky top-0 z-10 border-b border-border bg-surface px-3 py-2.5">
           <div className="text-xs font-medium text-text">Review action history</div>
-          <div className="mt-0.5 text-[10px] text-text-muted">
-            Saved actions are restored after restart. The highlighted action runs next.
+          <div
+            data-review-history-persistence={persistenceStatus}
+            className={cn(
+              'mt-1 flex items-center gap-1.5 text-[10px]',
+              persistenceStatus === 'error' ? 'text-red-300' : 'text-text-muted'
+            )}
+          >
+            {persistenceStatus === 'saving' && (
+              <Loader2 className="size-3 shrink-0 animate-spin text-blue-400" aria-hidden="true" />
+            )}
+            {persistenceStatus === 'error' && (
+              <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
+            )}
+            <span>
+              {persistenceStatus === 'saving'
+                ? 'Saving latest action...'
+                : persistenceStatus === 'error'
+                  ? 'Latest action is not saved yet.'
+                  : 'Saved actions are restored after restart.'}{' '}
+              The highlighted action runs next.
+            </span>
+            {persistenceStatus === 'error' && onRetryPersistence && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="ml-auto h-6 shrink-0 px-2 text-[10px]"
+                onClick={onRetryPersistence}
+              >
+                Retry
+              </Button>
+            )}
           </div>
         </div>
         <ReviewHistorySection

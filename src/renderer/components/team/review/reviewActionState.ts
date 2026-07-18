@@ -35,6 +35,14 @@ export function isReviewActionLocked(state: {
   return state.applying || state.fileApplyCount > 0 || state.undoing || state.closing;
 }
 
+export type ReviewActionPersistenceStatus = 'saved' | 'saving' | 'error';
+
+export function isReviewActionPersistenceBlocking(
+  status: ReviewActionPersistenceStatus
+): boolean {
+  return status !== 'saved';
+}
+
 export function appendOrderedReviewAction<T>(
   stack: readonly T[],
   action: T,

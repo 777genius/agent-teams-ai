@@ -8,6 +8,7 @@ import {
   hasReviewFileRejections,
   hasUnresolvedReviewExternalChange,
   isReviewActionLocked,
+  isReviewActionPersistenceBlocking,
   isReviewDiskPreimageRestored,
   isReviewFileFullyRejected,
   partitionReviewFilesByApplyErrors,
@@ -53,6 +54,12 @@ describe('ChangeReviewDialog interaction guards', () => {
         closing: false,
       })
     ).toBe(false);
+  });
+
+  it('blocks follow-up review actions until the latest accepted action is durably saved', () => {
+    expect(isReviewActionPersistenceBlocking('saving')).toBe(true);
+    expect(isReviewActionPersistenceBlocking('error')).toBe(true);
+    expect(isReviewActionPersistenceBlocking('saved')).toBe(false);
   });
 
   it('blocks close for drafts and in-flight actions instead of silently discarding state', () => {
