@@ -214,6 +214,20 @@ function execFileAsync(
 }
 
 /**
+ * With `/s`, cmd.exe parses its /c argument by stripping only the first and
+ * last quote characters of the whole string (not the matching pair around
+ * the executable name). For a command like `"C:\path with space\a.exe" arg`
+ * that strips both quotes entirely, leaving the path's embedded space
+ * unprotected and causing cmd to split on it. Wrapping the whole command in
+ * one more quote pair makes the outer strip remove that wrapper instead,
+ * leaving the inner `"exe" args` quoting intact. See `cmd /?` for the /s
+ * quote-stripping rules.
+ */
+function wrapForCmdSlashS(cmd: string): string {
+  return `"${cmd}"`;
+}
+
+/**
  * cmd.exe fallback implemented through execFile so Node does not invoke an
  * additional shell around the guarded command string.
  */
@@ -222,7 +236,20 @@ function execShellAsync(
   options: ExecFileOptions = {},
   outputLimits: { stdoutMaxBuffer?: number; stderrMaxBuffer?: number } = {}
 ): Promise<{ stdout: string; stderr: string }> {
-  return execFileAsync(getWindowsCmdPath(), ['/d', '/s', '/c', cmd], options, outputLimits);
+  // windowsVerbatimArguments prevents Node from re-quoting `cmd`, which is
+  // already quoted for cmd.exe by buildWindowsShellFallbackCommand. Without
+  // this, Node wraps the pre-quoted string in another layer of quotes,
+  // corrupting the command cmd.exe sees (e.g. "not recognized as an
+  // internal or external command").
+  return execFileAsync(
+    getWindowsCmdPath(),
+    ['/d', '/s', '/c', wrapForCmdSlashS(cmd)],
+    {
+      ...options,
+      windowsVerbatimArguments: true,
+    },
+    outputLimits
+  );
 }
 
 function cleanupTimedCliProcess(
@@ -415,9 +442,13 @@ function spawnWindowsShellFallback(
   cmd: string,
   options: ReturnType<typeof withCliProcessDefaults<SpawnOptions>>
 ): ReturnType<typeof spawn> {
-  return spawn(getWindowsCmdPath(), ['/d', '/s', '/c', cmd], {
+  // See execShellAsync/wrapForCmdSlashS above: windowsVerbatimArguments
+  // avoids double-quoting the already-quoted `cmd` string, and the extra
+  // quote wrapper survives cmd.exe's /s quote-stripping.
+  return spawn(getWindowsCmdPath(), ['/d', '/s', '/c', wrapForCmdSlashS(cmd)], {
     ...options,
     shell: false,
+    windowsVerbatimArguments: true,
   });
 }
 
