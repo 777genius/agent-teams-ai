@@ -207,7 +207,9 @@ export function shiftProvisioningOutputIndexesAfterRemoval(
   removedIndex: number
 ): void {
   for (const [messageId, index] of run.provisioningOutputIndexByMessageId.entries()) {
-    if (index > removedIndex) {
+    if (index === removedIndex) {
+      run.provisioningOutputIndexByMessageId.delete(messageId);
+    } else if (index > removedIndex) {
       run.provisioningOutputIndexByMessageId.set(messageId, index - 1);
     }
   }

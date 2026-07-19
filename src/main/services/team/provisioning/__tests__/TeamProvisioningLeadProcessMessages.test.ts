@@ -106,23 +106,49 @@ describe('lead process message helpers', () => {
     );
   });
 
-  it('shifts stable assistant output indexes after a removed part', () => {
+  it('removes the deleted assistant mapping and shifts later indexes into their new order', () => {
     const run = {
       provisioningOutputParts: ['a', 'b', 'c'],
       provisioningOutputIndexByMessageId: new Map([
-        ['a', 0],
-        ['b', 1],
-        ['c', 2],
+        ['lead-thought-a', 0],
+        ['lead-thought-b', 1],
+        ['lead-thought-c', 2],
       ]),
       stallWarningIndex: null,
       apiRetryWarningIndex: null,
     };
 
+    run.provisioningOutputParts.splice(1, 1);
+    shiftProvisioningOutputIndexesAfterRemoval(run, 1);
+
+    expect(run.provisioningOutputIndexByMessageId.get('lead-thought-a')).toBe(0);
+    expect(run.provisioningOutputIndexByMessageId.has('lead-thought-b')).toBe(false);
+    expect(run.provisioningOutputIndexByMessageId.get('lead-thought-c')).toBe(1);
+
+    appendProvisioningAssistantText(run, { uuid: 'b' }, 'b-replayed');
+
+    expect(run.provisioningOutputParts).toEqual(['a', 'c', 'b-replayed']);
+    expect(run.provisioningOutputIndexByMessageId.get('lead-thought-b')).toBe(2);
+  });
+
+  it('drops a removed first mapping instead of aliasing it to the shifted first output', () => {
+    const run = {
+      provisioningOutputParts: ['a', 'b', 'c'],
+      provisioningOutputIndexByMessageId: new Map([
+        ['lead-thought-a', 0],
+        ['lead-thought-b', 1],
+        ['lead-thought-c', 2],
+      ]),
+      stallWarningIndex: null,
+      apiRetryWarningIndex: null,
+    };
+
+    run.provisioningOutputParts.splice(0, 1);
     shiftProvisioningOutputIndexesAfterRemoval(run, 0);
 
-    expect(run.provisioningOutputIndexByMessageId.get('a')).toBe(0);
-    expect(run.provisioningOutputIndexByMessageId.get('b')).toBe(0);
-    expect(run.provisioningOutputIndexByMessageId.get('c')).toBe(1);
+    expect(run.provisioningOutputIndexByMessageId.has('lead-thought-a')).toBe(false);
+    expect(run.provisioningOutputIndexByMessageId.get('lead-thought-b')).toBe(0);
+    expect(run.provisioningOutputIndexByMessageId.get('lead-thought-c')).toBe(1);
   });
 
   it('caches live lead process messages with session enrichment and id replacement', () => {

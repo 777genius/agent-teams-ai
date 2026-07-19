@@ -96,6 +96,8 @@ export async function respondToToolApprovalResponse<
 
   const { run, approval } = leadResponse;
 
+  // The lead boundary transfers its response claim with a non-lead redirect. Keep that
+  // claim for the whole teammate response, then release it on every exit below.
   // Teammate permission requests: apply permission_suggestions to project settings.
   try {
     await respondToTeammatePermission(
@@ -111,14 +113,14 @@ export async function respondToToolApprovalResponse<
       },
       ports.teammatePermissionResponsePorts
     );
-    ports.leadToolApprovalResponsePorts.inFlightResponses.delete(requestId);
     run.pendingApprovals.delete(requestId);
     ports.leadToolApprovalResponsePorts.dismissApprovalNotification(requestId);
   } catch (error) {
-    ports.leadToolApprovalResponsePorts.inFlightResponses.delete(requestId);
     if (run.pendingApprovals.has(requestId)) {
       ports.leadToolApprovalResponsePorts.startApprovalTimeout(run, requestId);
     }
     throw error;
+  } finally {
+    ports.leadToolApprovalResponsePorts.inFlightResponses.delete(requestId);
   }
 }

@@ -43,7 +43,7 @@ describe('tool approval response boundary', () => {
   });
 
   it('responds to teammate permission requests and clears approval state', async () => {
-    const run = buildRun();
+    const run = buildRun({ leadName: 'Exact Lead Identity' });
     run.pendingApprovals.set('req-worker', buildApproval({ requestId: 'req-worker' }));
     const persistedMessages: InboxMessage[] = [];
     const dismissApprovalNotification = vi.fn();
@@ -70,7 +70,7 @@ describe('tool approval response boundary', () => {
 
     expect(persistedMessages).toHaveLength(1);
     expect(persistedMessages[0]).toMatchObject({
-      from: 'Lead',
+      from: 'Exact Lead Identity',
       to: 'Worker',
       summary: 'Denied Bash request',
       source: 'lead_process',
@@ -78,6 +78,62 @@ describe('tool approval response boundary', () => {
     expect(run.pendingApprovals.has('req-worker')).toBe(false);
     expect(ports.leadToolApprovalResponsePorts.inFlightResponses.has('req-worker')).toBe(false);
     expect(dismissApprovalNotification).toHaveBeenCalledWith('req-worker');
+  });
+
+  it('holds the non-lead claim across an allow redirect and releases it after completion', async () => {
+    const run = buildRun();
+    run.pendingApprovals.set(
+      'req-worker',
+      buildApproval({
+        requestId: 'req-worker',
+        permissionSuggestions: [{ type: 'addRules', rules: [{ toolName: 'Edit' }] }],
+      })
+    );
+    let releaseConfigRead: (() => void) | undefined;
+    const configRead = new Promise<void>((resolve) => {
+      releaseConfigRead = resolve;
+    });
+    const ports = createResponsePorts({
+      run,
+      teammatePorts: {
+        readConfigForStrictDecision: vi.fn(async () => {
+          await configRead;
+          return null;
+        }),
+      },
+    });
+
+    const firstResponse = respondToToolApprovalResponse(
+      {
+        teamName: 'alpha',
+        runId: 'run-1',
+        requestId: 'req-worker',
+        allow: true,
+      },
+      ports
+    );
+    await vi.waitFor(() => {
+      expect(ports.leadToolApprovalResponsePorts.inFlightResponses.has('req-worker')).toBe(true);
+    });
+
+    await expect(
+      respondToToolApprovalResponse(
+        {
+          teamName: 'alpha',
+          runId: 'run-1',
+          requestId: 'req-worker',
+          allow: false,
+        },
+        ports
+      )
+    ).resolves.toBeUndefined();
+    expect(run.pendingApprovals.has('req-worker')).toBe(true);
+
+    releaseConfigRead?.();
+    await firstResponse;
+
+    expect(run.pendingApprovals.has('req-worker')).toBe(false);
+    expect(ports.leadToolApprovalResponsePorts.inFlightResponses.has('req-worker')).toBe(false);
   });
 
   it('restores timeout tracking when teammate permission response fails', async () => {
@@ -109,6 +165,34 @@ describe('tool approval response boundary', () => {
     expect(run.pendingApprovals.has('req-worker')).toBe(true);
     expect(ports.leadToolApprovalResponsePorts.inFlightResponses.has('req-worker')).toBe(false);
     expect(startApprovalTimeout).toHaveBeenCalledWith(run, 'req-worker');
+  });
+
+  it('releases the non-lead claim when successful delivery cleanup throws', async () => {
+    const run = buildRun();
+    run.pendingApprovals.set('req-worker', buildApproval({ requestId: 'req-worker' }));
+    const ports = createResponsePorts({
+      run,
+      leadPorts: {
+        dismissApprovalNotification: vi.fn(() => {
+          throw new Error('notification cleanup failed');
+        }),
+      },
+    });
+
+    await expect(
+      respondToToolApprovalResponse(
+        {
+          teamName: 'alpha',
+          runId: 'run-1',
+          requestId: 'req-worker',
+          allow: false,
+        },
+        ports
+      )
+    ).rejects.toThrow('notification cleanup failed');
+
+    expect(run.pendingApprovals.has('req-worker')).toBe(false);
+    expect(ports.leadToolApprovalResponsePorts.inFlightResponses.has('req-worker')).toBe(false);
   });
 
   it('delegates runtime approval answers through the extracted runtime answer use case', async () => {
@@ -199,14 +283,14 @@ function createResponsePorts(
   };
 }
 
-function buildRun(): TestRun {
+function buildRun(options: { leadName?: string } = {}): TestRun {
   return {
     runId: 'run-1',
     teamName: 'alpha',
     request: {
       color: 'blue',
       displayName: 'Alpha Team',
-      members: [{ name: 'Lead', role: 'lead' }],
+      members: [{ name: options.leadName ?? 'Lead', role: 'lead' }],
     },
     child: {
       stdin: {
