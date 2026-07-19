@@ -15,6 +15,7 @@ import type {
   CodexGoalJobManifestInput,
   CodexGoalProjectPreStartAdmission,
 } from "../../codex-goal-jobs";
+import { captureCodexGoalHandoffPatchFingerprint } from "../../codex-goal-handoff-artifacts";
 import {
   materializeBuiltinWorkerLaunchSpec,
   validateBuiltinWorkerLaunchSpec,
@@ -369,8 +370,7 @@ async function controlledRuntimeInputPatchBindingValid(input: {
   readonly contract: JsonObject;
   readonly binding: Awaited<ReturnType<typeof captureProjectPreStartBinding>>;
   readonly verifiedInputPatch:
-    | ReturnType<typeof verifiedInputPatchFromReceipt>
-    | undefined;
+    ReturnType<typeof verifiedInputPatchFromReceipt> | undefined;
 }): Promise<boolean> {
   if (!isBuiltinDescriptor(input.descriptor)) {
     return false;
@@ -385,12 +385,26 @@ async function controlledRuntimeInputPatchBindingValid(input: {
   const handoff = await readControlledRuntimeInterruptionHandoff({
     producer: input.manifest,
   });
+  const fresh = await captureCodexGoalHandoffPatchFingerprint({
+    workspacePath: input.manifest.workspacePath,
+    expectedBaseCommit: launch.phaseStartSha,
+  });
   const ownedPaths = new Set(launch.ownedPaths);
   return (
+    fresh !== null &&
     handoff.baseCommit === launch.phaseStartSha &&
-    handoff.patchSha256 === input.binding.workspacePatchSha256 &&
+    fresh.baseCommit === handoff.baseCommit &&
+    fresh.patchSha256 === handoff.patchSha256 &&
     handoff.changedPaths.length > 0 &&
+    samePaths(fresh.changedPaths, handoff.changedPaths) &&
     handoff.changedPaths.every((path) => ownedPaths.has(path))
+  );
+}
+
+function samePaths(left: readonly string[], right: readonly string[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((path, index) => path === right[index])
   );
 }
 

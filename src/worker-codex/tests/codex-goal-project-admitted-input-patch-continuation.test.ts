@@ -446,7 +446,7 @@ describe("clean-first producer runtime interruption continuation", () => {
       ...fixture.contract,
       reviewKind: "implementation",
       inputPatchHash: null,
-      ownedPaths: ["src/example.ts"],
+      ownedPaths: ["src/example.ts", "src/second.ts"],
     });
     const state = {
       ...fixture.state,
@@ -491,6 +491,10 @@ describe("clean-first producer runtime interruption continuation", () => {
       join(manifest.workspacePath, "src", "example.ts"),
       "export const value = 1;\n",
     );
+    await writeFile(
+      join(manifest.workspacePath, "src", "second.ts"),
+      "export const second = 1;\n",
+    );
     const handoff = await materializeCodexGoalHandoffArtifacts({
       workerJobId: manifest.jobId,
       taskId: manifest.taskId,
@@ -506,7 +510,7 @@ describe("clean-first producer runtime interruption continuation", () => {
         status: "partial",
         reason: "runtime_interrupted",
         updatedAt: new Date().toISOString(),
-        changedFiles: ["src/example.ts"],
+        changedFiles: ["src/example.ts", "src/second.ts"],
         evidence: ["safe_execution_status:partial"],
         blockers: ["runtime_interrupted"],
         nextAction: "preserve_patch",
