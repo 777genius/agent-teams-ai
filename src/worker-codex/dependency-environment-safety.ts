@@ -1,8 +1,9 @@
-import { lstat, readdir, realpath, rm } from "node:fs/promises";
-import { join, relative, resolve, sep } from "node:path";
+import { lstat, readdir, readlink, realpath, rm } from "node:fs/promises";
+import { dirname, join, relative, resolve, sep } from "node:path";
 
 const MAX_PACKAGE_ROOTS_SCAN = 10_000;
 const MAX_DEPENDENCY_ENTRIES_SCAN = 250_000;
+const MAX_LINK_RESOLUTION_CONCURRENCY = 32;
 const PACKAGE_SCAN_EXCLUDED_DIRS = new Set([
   ".git",
   ".cache",
@@ -122,14 +123,18 @@ async function dependencyRootIsUnsafe(
   }
   const dependencyRealPath = await realpath(dependencyRoot);
   if (!pathWithin(workspaceRealPath, dependencyRealPath)) return true;
-  return dependencyTreeContainsEscapingLink(dependencyRoot, workspaceRealPath);
+  return dependencyTreeContainsEscapingLink(
+    dependencyRoot,
+    new DependencyLinkTargetResolver(workspaceRealPath),
+  );
 }
 
 async function dependencyTreeContainsEscapingLink(
   dependencyRoot: string,
-  workspaceRealPath: string,
+  linkTargetResolver: DependencyLinkTargetResolver,
 ): Promise<boolean> {
   const queue = [dependencyRoot];
+  const linkPaths: string[] = [];
   let cursor = 0;
   let scanned = 0;
   while (cursor < queue.length) {
@@ -143,20 +148,72 @@ async function dependencyTreeContainsEscapingLink(
       }
       const entryPath = join(directory, entry.name);
       if (entry.isSymbolicLink()) {
-        let targetRealPath: string;
-        try {
-          targetRealPath = await realpath(entryPath);
-        } catch (error) {
-          if (isMissingError(error)) return true;
-          throw error;
-        }
-        if (!pathWithin(workspaceRealPath, targetRealPath)) return true;
+        linkPaths.push(entryPath);
         continue;
       }
       if (entry.isDirectory()) queue.push(entryPath);
     }
   }
-  return false;
+  return linkTargetResolver.containsUnsafeLink(linkPaths);
+}
+
+class DependencyLinkTargetResolver {
+  readonly #workspaceRealPath: string;
+  readonly #targetRealPathCache = new Map<string, Promise<string>>();
+
+  constructor(workspaceRealPath: string) {
+    this.#workspaceRealPath = workspaceRealPath;
+  }
+
+  async containsUnsafeLink(linkPaths: readonly string[]): Promise<boolean> {
+    let cursor = 0;
+    let unsafe = false;
+    const workers = Array.from(
+      {
+        length: Math.min(MAX_LINK_RESOLUTION_CONCURRENCY, linkPaths.length),
+      },
+      async () => {
+        while (!unsafe) {
+          const linkPath = linkPaths[cursor++];
+          if (!linkPath) return;
+          if (await this.#linkIsUnsafe(linkPath)) {
+            unsafe = true;
+            return;
+          }
+        }
+      },
+    );
+    await Promise.all(workers);
+    return unsafe;
+  }
+
+  async #linkIsUnsafe(linkPath: string): Promise<boolean> {
+    let rawTarget: string;
+    try {
+      rawTarget = await readlink(linkPath);
+    } catch (error) {
+      if (isMissingError(error) || isInvalidSymlinkError(error)) return true;
+      throw error;
+    }
+
+    const lexicalTargetPath = resolve(dirname(linkPath), rawTarget);
+    let targetRealPath: string;
+    try {
+      targetRealPath = await this.#resolveTargetRealPath(lexicalTargetPath);
+    } catch (error) {
+      if (isMissingError(error)) return true;
+      throw error;
+    }
+    return !pathWithin(this.#workspaceRealPath, targetRealPath);
+  }
+
+  #resolveTargetRealPath(lexicalTargetPath: string): Promise<string> {
+    const cached = this.#targetRealPathCache.get(lexicalTargetPath);
+    if (cached) return cached;
+    const resolution = realpath(lexicalTargetPath);
+    this.#targetRealPathCache.set(lexicalTargetPath, resolution);
+    return resolution;
+  }
 }
 
 function pathWithin(root: string, candidate: string): boolean {
@@ -170,4 +227,8 @@ function pathWithin(root: string, candidate: string): boolean {
 
 function isMissingError(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === "ENOENT";
+}
+
+function isInvalidSymlinkError(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException).code === "EINVAL";
 }
