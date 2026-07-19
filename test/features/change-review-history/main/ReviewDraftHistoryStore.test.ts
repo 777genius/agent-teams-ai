@@ -2,7 +2,18 @@
 import { history, isolateHistory, undo, undoDepth } from '@codemirror/commands';
 import { EditorState, Transaction } from '@codemirror/state';
 import { createHash } from 'crypto';
-import { link, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'fs/promises';
+import * as fs from 'fs';
+import {
+  link,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from 'fs/promises';
 import { tmpdir } from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -243,6 +254,447 @@ describe('ReviewDraftHistoryStore', () => {
     await expect(store.load('demo', 'task-123', 'scope-a')).resolves.toMatchObject({
       entries: { '/repo/a.ts': { editorState: { doc: 'ABC' }, revision: 2 } },
     });
+  });
+
+  it('durably preserves and explicitly recovers a divergent editor branch', async () => {
+    const { ReviewDraftHistoryStore } = await import(
+      '@features/change-review-history/main'
+    );
+    const first = new ReviewDraftHistoryStore();
+    const saved = await first.saveEntry('demo', 'task-123', 'scope-conflict', {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'A',
+      editorState: editorState('AB', ['B']),
+    });
+    await expect(
+      first.saveEntry('demo', 'task-123', 'scope-conflict', {
+        filePath: '/repo/a.ts',
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'A',
+        editorState: editorState('AC', ['C']),
+      })
+    ).rejects.toThrow('Review draft history changed; refusing stale state overwrite');
+
+    const restarted = new ReviewDraftHistoryStore();
+    const [candidate] = await restarted.loadConflictCandidates(
+      'demo',
+      'task-123',
+      'scope-conflict'
+    );
+    expect(candidate).toMatchObject({
+      filePath: '/repo/a.ts',
+      expectedRevision: 0,
+      observedCurrentRevision: 1,
+      entry: { editorState: { doc: 'AC' } },
+    });
+    if (process.platform !== 'win32') {
+      const candidateStats = await stat(
+        path.join(
+          teamsBasePath,
+          'demo',
+          'review-decisions',
+          'draft-history',
+          'conflicts',
+          'v1',
+          'task-123',
+          createHash('sha256').update('scope-conflict').digest('hex'),
+          candidate!.id + '.json'
+        )
+      );
+      expect(candidateStats.mode & 0o777).toBe(0o600);
+    }
+
+    await expect(
+      restarted.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        'scope-conflict',
+        candidate!.id,
+        'recover-candidate',
+        1,
+        saved.generation
+      )
+    ).resolves.toMatchObject({ revision: 2, editorState: { doc: 'AC' } });
+    await expect(restarted.load('demo', 'task-123', 'scope-conflict')).resolves.toMatchObject({
+      entries: { '/repo/a.ts': { revision: 2, editorState: { doc: 'AC' } } },
+    });
+    const [canonicalBackup] = await restarted.loadConflictCandidates(
+      'demo',
+      'task-123',
+      'scope-conflict'
+    );
+    expect(canonicalBackup).toMatchObject({
+      observedCurrentRevision: 2,
+      entry: { editorState: { doc: 'AB' } },
+    });
+    const recoveredCanonical = await restarted.resolveConflictCandidate(
+      'demo',
+      'task-123',
+      'scope-conflict',
+      canonicalBackup!.id,
+      'recover-candidate',
+      2,
+      (await restarted.load('demo', 'task-123', 'scope-conflict'))!.entries['/repo/a.ts']!
+        .generation
+    );
+    expect(recoveredCanonical).toMatchObject({
+      revision: 3,
+      editorState: { doc: 'AB' },
+    });
+  });
+
+  it('keeps authoritative editor history when a conflict candidate is dismissed', async () => {
+    const { ReviewDraftHistoryStore } = await import(
+      '@features/change-review-history/main'
+    );
+    const store = new ReviewDraftHistoryStore();
+    const saved = await store.saveEntry('demo', 'task-123', 'scope-dismiss', {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'A',
+      editorState: editorState('AB', ['B']),
+    });
+    await expect(
+      store.saveEntry('demo', 'task-123', 'scope-dismiss', {
+        filePath: '/repo/a.ts',
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'A',
+        editorState: editorState('AC', ['C']),
+      })
+    ).rejects.toThrow();
+    const [candidate] = await store.loadConflictCandidates(
+      'demo',
+      'task-123',
+      'scope-dismiss'
+    );
+
+    await expect(
+      store.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        'scope-dismiss',
+        candidate!.id,
+        'keep-current',
+        1,
+        saved.generation
+      )
+    ).resolves.toMatchObject({ revision: 1, editorState: { doc: 'AB' } });
+  });
+
+  it('atomically promotes the newest local descendant into the durable conflict branch', async () => {
+    const { ReviewDraftHistoryStore } = await import(
+      '@features/change-review-history/main'
+    );
+    const store = new ReviewDraftHistoryStore();
+    const saved = await store.saveEntry('demo', 'task-123', 'scope-promote', {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'A',
+      editorState: editorState('AB', ['B']),
+    });
+    await expect(
+      store.saveEntry('demo', 'task-123', 'scope-promote', {
+        filePath: '/repo/a.ts',
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'A',
+        editorState: editorState('AC', ['C']),
+      })
+    ).rejects.toThrow();
+    const [candidate] = await store.loadConflictCandidates(
+      'demo',
+      'task-123',
+      'scope-promote'
+    );
+
+    const promoted = await store.replaceConflictCandidate(
+      'demo',
+      'task-123',
+      'scope-promote',
+      candidate!.entry,
+      {
+        filePath: '/repo/a.ts',
+        codec: 'codemirror-history-v1',
+        revision: 3,
+        diskBaseline: 'A',
+        editorState: editorState('ACD', ['C', 'D']),
+      },
+      1,
+      saved.generation
+    );
+
+    const restarted = new ReviewDraftHistoryStore();
+    await expect(
+      restarted.loadConflictCandidates('demo', 'task-123', 'scope-promote')
+    ).resolves.toMatchObject([
+      {
+        id: promoted.id,
+        observedCurrentRevision: 1,
+        entry: { revision: 3, editorState: { doc: 'ACD' } },
+      },
+    ]);
+  });
+
+  it('retains a manual-edit recovery branch when the canonical generation changes again', async () => {
+    const { ReviewDraftHistoryStore } = await import(
+      '@features/change-review-history/main'
+    );
+    const store = new ReviewDraftHistoryStore();
+    const saved = await store.saveEntry('demo', 'task-123', 'scope-stale-resolve', {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'A',
+      editorState: editorState('AB', ['B']),
+    });
+    await expect(
+      store.saveEntry('demo', 'task-123', 'scope-stale-resolve', {
+        filePath: '/repo/a.ts',
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'A',
+        editorState: editorState('AC', ['C']),
+      })
+    ).rejects.toThrow();
+    const [candidate] = await store.loadConflictCandidates(
+      'demo',
+      'task-123',
+      'scope-stale-resolve'
+    );
+    await store.saveEntry('demo', 'task-123', 'scope-stale-resolve', {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 1,
+      expectedGeneration: saved.generation,
+      revision: 2,
+      diskBaseline: 'A',
+      editorState: editorState('ABD', ['B', 'D']),
+    });
+
+    await expect(
+      store.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        'scope-stale-resolve',
+        candidate!.id,
+        'recover-candidate',
+        1,
+        saved.generation
+      )
+    ).rejects.toThrow('Saved manual edit history changed again');
+    await expect(
+      store.loadConflictCandidates('demo', 'task-123', 'scope-stale-resolve')
+    ).resolves.toMatchObject([{ id: candidate!.id, observedCurrentRevision: 2 }]);
+  });
+
+  it('never prunes an unresolved manual-edit branch when the recovery quota is full', async () => {
+    const { ReviewDraftHistoryStore } = await import(
+      '@features/change-review-history/main'
+    );
+    const store = new ReviewDraftHistoryStore();
+    await store.saveEntry('demo', 'task-123', 'scope-conflict-quota', {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'A',
+      editorState: editorState('canonical', []),
+    });
+    for (let index = 0; index < 32; index++) {
+      await expect(
+        store.saveEntry('demo', 'task-123', 'scope-conflict-quota', {
+          filePath: '/repo/a.ts',
+          codec: 'codemirror-history-v1',
+          expectedRevision: 0,
+          expectedGeneration: null,
+          revision: 1,
+          diskBaseline: 'A',
+          editorState: editorState('branch-' + index, []),
+        })
+      ).rejects.toThrow('Review draft history changed');
+    }
+    const before = await store.loadConflictCandidates(
+      'demo',
+      'task-123',
+      'scope-conflict-quota'
+    );
+    expect(before).toHaveLength(32);
+    await expect(
+      store.saveEntry('demo', 'task-123', 'scope-conflict-quota', {
+        filePath: '/repo/a.ts',
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'A',
+        editorState: editorState('branch-overflow', []),
+      })
+    ).rejects.toThrow('Too many unresolved manual-edit recovery copies');
+    await expect(
+      store.loadConflictCandidates('demo', 'task-123', 'scope-conflict-quota')
+    ).resolves.toEqual(before);
+  });
+
+  it('refuses a symlinked manual-edit recovery directory without touching external files', async () => {
+    const { ReviewDraftHistoryStore } = await import(
+      '@features/change-review-history/main'
+    );
+    const store = new ReviewDraftHistoryStore();
+    const scopeToken = 'scope-symlink-conflict';
+    await store.saveEntry('demo', 'task-123', scopeToken, {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'A',
+      editorState: editorState('canonical', []),
+    });
+    const external = path.join(teamsBasePath, 'external-draft-candidate-target');
+    const sentinelName = 'b'.repeat(64) + '.json';
+    await mkdir(external, { recursive: true });
+    await writeFile(path.join(external, sentinelName), 'sentinel', 'utf8');
+    const conflictParent = path.join(
+      teamsBasePath,
+      'demo',
+      'review-decisions',
+      'draft-history',
+      'conflicts',
+      'v1',
+      'task-123'
+    );
+    await mkdir(conflictParent, { recursive: true });
+    await symlink(
+      external,
+      path.join(conflictParent, createHash('sha256').update(scopeToken).digest('hex')),
+      'dir'
+    );
+
+    await expect(
+      store.saveEntry('demo', 'task-123', scopeToken, {
+        filePath: '/repo/a.ts',
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'A',
+        editorState: editorState('local', []),
+      })
+    ).rejects.toThrow('Unsafe persistence directory');
+    await expect(readFile(path.join(external, sentinelName), 'utf8')).resolves.toBe('sentinel');
+  });
+
+  it('quarantines an unreadable draft candidate without hiding valid recovery branches', async () => {
+    const { ReviewDraftHistoryStore } = await import(
+      '@features/change-review-history/main'
+    );
+    const store = new ReviewDraftHistoryStore();
+    const scopeToken = 'scope-corrupt-conflict';
+    await store.saveEntry('demo', 'task-123', scopeToken, {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'A',
+      editorState: editorState('canonical', []),
+    });
+    await expect(
+      store.saveEntry('demo', 'task-123', scopeToken, {
+        filePath: '/repo/a.ts',
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'A',
+        editorState: editorState('local', []),
+      })
+    ).rejects.toThrow();
+    const conflictDir = path.join(
+      teamsBasePath,
+      'demo',
+      'review-decisions',
+      'draft-history',
+      'conflicts',
+      'v1',
+      'task-123',
+      createHash('sha256').update(scopeToken).digest('hex')
+    );
+    await writeFile(path.join(conflictDir, 'd'.repeat(64) + '.json'), '{broken', 'utf8');
+
+    await expect(
+      store.loadConflictCandidates('demo', 'task-123', scopeToken)
+    ).rejects.toThrow('was quarantined');
+    await expect(
+      store.loadConflictCandidates('demo', 'task-123', scopeToken)
+    ).resolves.toMatchObject([{ entry: { editorState: { doc: 'local' } } }]);
+    await expect(readdir(path.join(conflictDir, 'quarantine'))).resolves.toHaveLength(1);
+  });
+
+  it('keeps a valid manual-edit branch after a transient directory read failure', async () => {
+    const { ReviewDraftHistoryStore } = await import(
+      '@features/change-review-history/main'
+    );
+    const store = new ReviewDraftHistoryStore();
+    const scopeToken = 'scope-transient-conflict';
+    const saved = await store.saveEntry('demo', 'task-123', scopeToken, {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'base',
+      editorState: editorState('current', ['current']),
+    });
+    await expect(
+      store.saveEntry('demo', 'task-123', scopeToken, {
+        filePath: '/repo/a.ts',
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'base',
+        editorState: editorState('recovery', ['recovery']),
+      })
+    ).rejects.toThrow('refusing stale state overwrite');
+    expect(saved.revision).toBe(1);
+
+    const failure = Object.assign(new Error('temporary recovery read failure'), { code: 'EIO' });
+    const readdirSpy = vi.spyOn(fs.promises, 'readdir').mockRejectedValueOnce(failure);
+    try {
+      await expect(
+        store.loadConflictCandidates('demo', 'task-123', scopeToken)
+      ).rejects.toThrow('temporary recovery read failure');
+    } finally {
+      readdirSpy.mockRestore();
+    }
+
+    await expect(
+      store.loadConflictCandidates('demo', 'task-123', scopeToken)
+    ).resolves.toHaveLength(1);
   });
 
   it('rejects an ABA clear after the same file is cleared and recreated at revision one', async () => {

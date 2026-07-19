@@ -1,5 +1,9 @@
 import { atomicWriteAsync, unlinkPathDurably } from '@main/utils/atomicWrite';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import {
+  ensureConstrainedPersistenceDirectory,
+  quarantineConstrainedPersistenceFile,
+} from '@main/utils/safePersistenceDirectory';
 import { createLogger } from '@shared/utils/logger';
 import { createHash } from 'crypto';
 import * as fs from 'fs';
@@ -10,8 +14,12 @@ import type {
   FileChangeSummary,
   FileReviewDecision,
   HunkDecision,
+  ReviewConflictResolution,
+  ReviewDecisionConflictCandidate,
+  ReviewDecisionConflictCandidateSummary,
   ReviewDiskUndoAction,
   ReviewDiskUndoSnapshot,
+  ReviewPersistedStateSnapshot,
   ReviewRedoAction,
   ReviewUndoAction,
 } from '@shared/types';
@@ -25,6 +33,7 @@ const MAX_STORED_CONTEXT_FILES = 2_000;
 const MAX_STORED_KEY_LENGTH = 32_768;
 const MAX_STORED_REVIEW_ACTIONS = 100_000;
 const MAX_RETAINED_DECISION_SCOPES = 16;
+const MAX_RETAINED_CONFLICT_CANDIDATES = 8;
 const EXACT_SCOPE_FILE_PATTERN = /^[a-f0-9]{64}\.json$/;
 const EXACT_SCOPE_HASH_PATTERN = /^[a-f0-9]{64}$/;
 
@@ -125,6 +134,23 @@ interface ParsedReviewDecisionsDataV6 extends ReviewDecisionsData {
   lastMutationId?: string;
 }
 
+interface StoredReviewDecisionConflictCandidateV1 {
+  version: 1;
+  id: string;
+  scopeKey: string;
+  scopeTokenHash: string;
+  capturedAt: string;
+  expectedRevision: number;
+  observedCurrentRevision: number;
+  hunkDecisions: Record<string, HunkDecision>;
+  fileDecisions: Record<string, HunkDecision>;
+  hunkContextHashesByFile?: Record<string, Record<number, string>>;
+  reviewActionHistory: StoredReviewUndoActionV6[];
+  reviewRedoHistory: StoredReviewRedoActionV6[];
+  textBlobs: Record<string, string>;
+  fileSummaryBlobs: Record<string, FileChangeSummary>;
+}
+
 export interface LoadedReviewDecisions {
   hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
@@ -139,6 +165,16 @@ interface InternalLoadedReviewDecisions extends LoadedReviewDecisions {
 }
 
 class InvalidReviewDecisionDataError extends Error {}
+
+function shouldQuarantineDecisionConflictCandidate(error: unknown): boolean {
+  if (error instanceof InvalidReviewDecisionDataError) return true;
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message.startsWith('Unsafe review decision conflict candidate') ||
+    error.message === 'Unsafe or oversized review decision conflict candidate' ||
+    error.message === 'Review decision conflict candidate changed while being read'
+  );
+}
 
 export class ReviewDecisionStore {
   assertValidSnapshot(data: {
@@ -193,6 +229,46 @@ export class ReviewDecisionStore {
   private getV2FilePath(teamName: string, scopeKey: string, scopeToken: string): string {
     const scopeHash = createHash('sha256').update(scopeToken).digest('hex');
     return path.join(this.getV2DirPath(teamName, scopeKey), `${scopeHash}.json`);
+  }
+
+  private getConflictCandidateDir(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ): string {
+    const scopeHash = createHash('sha256').update(scopeToken).digest('hex');
+    return path.join(
+      this.getLegacyDirPath(teamName),
+      'conflicts',
+      'v1',
+      encodeURIComponent(scopeKey),
+      scopeHash
+    );
+  }
+
+  private getConflictCandidatePath(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    candidateId: string
+  ): string {
+    if (!EXACT_SCOPE_HASH_PATTERN.test(candidateId)) {
+      throw new Error('Invalid review decision conflict candidate id');
+    }
+    return path.join(
+      this.getConflictCandidateDir(teamName, scopeKey, scopeToken),
+      `${candidateId}.json`
+    );
+  }
+
+  private async ensureConflictCandidateDir(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ): Promise<string> {
+    const dirPath = this.getConflictCandidateDir(teamName, scopeKey, scopeToken);
+    await ensureConstrainedPersistenceDirectory(getTeamsBasePath(), dirPath);
+    return dirPath;
   }
 
   private hashHistoryBlob(kind: 'text' | 'file-summary', value: string): string {
@@ -390,6 +466,234 @@ export class ReviewDecisionStore {
       return null;
     }
     return { undo: undo as ReviewUndoAction[], redo: redo as ReviewRedoAction[] };
+  }
+
+  private getConflictCandidateIdentityPayload(
+    candidate: Omit<StoredReviewDecisionConflictCandidateV1, 'version' | 'id' | 'capturedAt' | 'observedCurrentRevision'>
+  ): object {
+    return {
+      scopeKey: candidate.scopeKey,
+      scopeTokenHash: candidate.scopeTokenHash,
+      expectedRevision: candidate.expectedRevision,
+      hunkDecisions: candidate.hunkDecisions,
+      fileDecisions: candidate.fileDecisions,
+      hunkContextHashesByFile: candidate.hunkContextHashesByFile,
+      reviewActionHistory: candidate.reviewActionHistory,
+      reviewRedoHistory: candidate.reviewRedoHistory,
+      textBlobs: candidate.textBlobs,
+      fileSummaryBlobs: candidate.fileSummaryBlobs,
+    };
+  }
+
+  private parseConflictCandidate(
+    value: unknown,
+    scopeKey: string,
+    scopeToken: string
+  ): ReviewDecisionConflictCandidate {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new InvalidReviewDecisionDataError('Invalid review decision conflict candidate');
+    }
+    const candidate = value as Partial<StoredReviewDecisionConflictCandidateV1>;
+    const expectedScopeTokenHash = createHash('sha256').update(scopeToken).digest('hex');
+    if (
+      candidate.version !== 1 ||
+      candidate.scopeKey !== scopeKey ||
+      candidate.scopeTokenHash !== expectedScopeTokenHash ||
+      typeof candidate.id !== 'string' ||
+      !EXACT_SCOPE_HASH_PATTERN.test(candidate.id) ||
+      typeof candidate.capturedAt !== 'string' ||
+      !Number.isFinite(Date.parse(candidate.capturedAt)) ||
+      !Number.isSafeInteger(candidate.expectedRevision) ||
+      (candidate.expectedRevision as number) < 0 ||
+      !Number.isSafeInteger(candidate.observedCurrentRevision) ||
+      (candidate.observedCurrentRevision as number) < 0 ||
+      !this.isDecisionRecord(candidate.hunkDecisions) ||
+      !this.isDecisionRecord(candidate.fileDecisions) ||
+      !this.isContextHashRecord(candidate.hunkContextHashesByFile)
+    ) {
+      throw new InvalidReviewDecisionDataError('Invalid review decision conflict candidate');
+    }
+    const decoded = this.decodeHistoryV6(candidate);
+    if (
+      !decoded ||
+      !this.isReviewActionHistory(decoded.undo) ||
+      !this.isReviewRedoHistory(decoded.redo) ||
+      !this.hasDisjointReviewActionIds(decoded.undo, decoded.redo)
+    ) {
+      throw new InvalidReviewDecisionDataError(
+        'Invalid review decision conflict candidate history'
+      );
+    }
+    const identityPayload = this.getConflictCandidateIdentityPayload({
+      scopeKey,
+      scopeTokenHash: expectedScopeTokenHash,
+      expectedRevision: candidate.expectedRevision as number,
+      hunkDecisions: candidate.hunkDecisions,
+      fileDecisions: candidate.fileDecisions,
+      hunkContextHashesByFile: candidate.hunkContextHashesByFile,
+      reviewActionHistory: candidate.reviewActionHistory as StoredReviewUndoActionV6[],
+      reviewRedoHistory: candidate.reviewRedoHistory as StoredReviewRedoActionV6[],
+      textBlobs: candidate.textBlobs as Record<string, string>,
+      fileSummaryBlobs: candidate.fileSummaryBlobs as Record<string, FileChangeSummary>,
+    });
+    const expectedId = createHash('sha256').update(JSON.stringify(identityPayload)).digest('hex');
+    if (candidate.id !== expectedId) {
+      throw new InvalidReviewDecisionDataError(
+        'Mismatched review decision conflict candidate identity'
+      );
+    }
+    const state = {
+      hunkDecisions: candidate.hunkDecisions,
+      fileDecisions: candidate.fileDecisions,
+      hunkContextHashesByFile: candidate.hunkContextHashesByFile,
+      reviewActionHistory: decoded.undo,
+      reviewRedoHistory: decoded.redo,
+    };
+    this.assertValidSnapshot(state);
+    return {
+      id: candidate.id,
+      capturedAt: candidate.capturedAt,
+      expectedRevision: candidate.expectedRevision as number,
+      observedCurrentRevision: candidate.observedCurrentRevision as number,
+      state,
+    };
+  }
+
+  private async loadConflictCandidateFromPath(
+    filePath: string,
+    scopeKey: string,
+    scopeToken: string
+  ): Promise<ReviewDecisionConflictCandidate> {
+    let handle: fs.promises.FileHandle | null = null;
+    try {
+      const pathStats = await fs.promises.lstat(filePath);
+      if (pathStats.isSymbolicLink()) {
+        throw new Error('Unsafe review decision conflict candidate symlink');
+      }
+      handle = await fs.promises.open(filePath, 'r');
+      const stats = await handle.stat();
+      if (
+        !stats.isFile() ||
+        stats.nlink !== 1 ||
+        stats.size > MAX_STORED_DECISIONS_BYTES ||
+        stats.dev !== pathStats.dev ||
+        stats.ino !== pathStats.ino
+      ) {
+        throw new Error('Unsafe or oversized review decision conflict candidate');
+      }
+      const raw = await handle.readFile({ encoding: 'utf8' });
+      const latestPathStats = await fs.promises.lstat(filePath);
+      if (
+        latestPathStats.isSymbolicLink() ||
+        latestPathStats.dev !== stats.dev ||
+        latestPathStats.ino !== stats.ino
+      ) {
+        throw new Error('Review decision conflict candidate changed while being read');
+      }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw) as unknown;
+      } catch (error) {
+        throw new InvalidReviewDecisionDataError(
+          'Corrupted review decision conflict candidate',
+          { cause: error }
+        );
+      }
+      const candidate = this.parseConflictCandidate(parsed, scopeKey, scopeToken);
+      if (path.basename(filePath) !== `${candidate.id}.json`) {
+        throw new InvalidReviewDecisionDataError(
+          'Mismatched review decision conflict candidate filename'
+        );
+      }
+      return candidate;
+    } finally {
+      await handle?.close().catch(() => undefined);
+    }
+  }
+
+  private async assertConflictCandidateCapacity(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    protectedPath: string
+  ): Promise<void> {
+    const dirPath = this.getConflictCandidateDir(teamName, scopeKey, scopeToken);
+    let entries: string[];
+    try {
+      entries = await fs.promises.readdir(dirPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw error;
+    }
+    const candidates = await Promise.all(
+      entries
+        .filter((entry) => EXACT_SCOPE_FILE_PATTERN.test(entry))
+        .map(async (entry) => {
+          const filePath = path.join(dirPath, entry);
+          try {
+            const stats = await fs.promises.lstat(filePath);
+            return stats.isFile() && !stats.isSymbolicLink() ? filePath : null;
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+            throw error;
+          }
+        })
+    );
+    const existing = candidates.filter((entry): entry is string => entry !== null);
+    if (
+      !existing.includes(protectedPath) &&
+      existing.length >= MAX_RETAINED_CONFLICT_CANDIDATES
+    ) {
+      throw new Error(
+        `Too many unresolved review recovery copies (${MAX_RETAINED_CONFLICT_CANDIDATES}). Resolve one before saving another branch.`
+      );
+    }
+  }
+
+  private async writeConflictCandidate(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    expectedRevision: number,
+    observedCurrentRevision: number,
+    state: ReviewPersistedStateSnapshot
+  ): Promise<void> {
+    const encodedHistory = this.encodeHistoryV6(
+      state.reviewActionHistory,
+      state.reviewRedoHistory
+    );
+    const scopeTokenHash = createHash('sha256').update(scopeToken).digest('hex');
+    const identityFields = {
+      scopeKey,
+      scopeTokenHash,
+      expectedRevision,
+      hunkDecisions: state.hunkDecisions,
+      fileDecisions: state.fileDecisions,
+      hunkContextHashesByFile: state.hunkContextHashesByFile,
+      ...encodedHistory,
+    };
+    const id = createHash('sha256')
+      .update(JSON.stringify(this.getConflictCandidateIdentityPayload(identityFields)))
+      .digest('hex');
+    const candidate: StoredReviewDecisionConflictCandidateV1 = {
+      version: 1,
+      id,
+      ...identityFields,
+      capturedAt: new Date().toISOString(),
+      observedCurrentRevision,
+    };
+    const serialized = JSON.stringify(candidate);
+    if (Buffer.byteLength(serialized, 'utf8') > MAX_STORED_DECISIONS_BYTES) {
+      throw new Error('Review decision recovery candidate exceeds the durable storage limit');
+    }
+    const filePath = this.getConflictCandidatePath(teamName, scopeKey, scopeToken, id);
+    await this.ensureConflictCandidateDir(teamName, scopeKey, scopeToken);
+    await this.assertConflictCandidateCapacity(teamName, scopeKey, scopeToken, filePath);
+    await atomicWriteAsync(filePath, serialized, {
+      mode: 0o600,
+      durability: 'strict',
+      syncDirectory: true,
+    });
   }
 
   private parseStoredData(
@@ -659,6 +963,22 @@ export class ReviewDecisionStore {
   ): boolean {
     const undoIds = new Set(undoHistory.map((action) => action.id));
     return redoHistory.every((entry) => !undoIds.has(entry.action.id));
+  }
+
+  private getDiskBackedHistory(snapshot: {
+    reviewActionHistory: readonly ReviewUndoAction[];
+    reviewRedoHistory: readonly ReviewRedoAction[];
+  }): object[] {
+    const hasDiskEffect = (action: ReviewUndoAction): boolean =>
+      action.kind === 'disk' || (action.kind === 'bulk' && action.diskSnapshots.length > 0);
+    return [
+      ...snapshot.reviewActionHistory
+        .filter(hasDiskEffect)
+        .map((action) => ({ stack: 'undo', action })),
+      ...snapshot.reviewRedoHistory
+        .filter((entry) => hasDiskEffect(entry.action))
+        .map((entry) => ({ stack: 'redo', entry })),
+    ];
   }
 
   private isDecisionSnapshot(value: unknown): boolean {
@@ -1058,6 +1378,206 @@ export class ReviewDecisionStore {
     return publicSnapshot;
   }
 
+  private async mapConflictCandidates<T extends { id: string; capturedAt: string }>(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    mapCandidate: (candidate: ReviewDecisionConflictCandidate) => T
+  ): Promise<T[]> {
+    this.assertSafeScope(teamName, scopeKey, scopeToken);
+    const dirPath = this.getConflictCandidateDir(teamName, scopeKey, scopeToken);
+    try {
+      const stats = await fs.promises.lstat(dirPath);
+      if (!stats.isDirectory() || stats.isSymbolicLink()) {
+        throw new Error(`Unsafe persistence directory: ${dirPath}`);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw error;
+    }
+    await this.ensureConflictCandidateDir(teamName, scopeKey, scopeToken);
+    let entries: string[];
+    try {
+      entries = await fs.promises.readdir(dirPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw error;
+    }
+    const currentRevision = (await this.loadInternal(teamName, scopeKey, scopeToken))?.revision ?? 0;
+    const candidates: T[] = [];
+    let quarantinedCount = 0;
+    for (const entry of entries.filter((name) => EXACT_SCOPE_FILE_PATTERN.test(name))) {
+      const candidatePath = path.join(dirPath, entry);
+      try {
+        const candidate = await this.loadConflictCandidateFromPath(
+          candidatePath,
+          scopeKey,
+          scopeToken
+        );
+        candidates.push(mapCandidate({ ...candidate, observedCurrentRevision: currentRevision }));
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+        if (!shouldQuarantineDecisionConflictCandidate(error)) throw error;
+        try {
+          await quarantineConstrainedPersistenceFile(
+            getTeamsBasePath(),
+            candidatePath,
+            path.join(dirPath, 'quarantine')
+          );
+        } catch (quarantineError) {
+          if ((quarantineError as NodeJS.ErrnoException).code === 'ENOENT') continue;
+          throw quarantineError;
+        }
+        quarantinedCount += 1;
+        logger.warn(`Quarantined unreadable review recovery copy: ${String(error)}`);
+      }
+    }
+    if (quarantinedCount > 0) {
+      throw new InvalidReviewDecisionDataError(
+        `${quarantinedCount} unreadable review recovery copy was quarantined; retry recovery check`
+      );
+    }
+    return candidates.sort(
+      (left, right) =>
+        Date.parse(right.capturedAt) - Date.parse(left.capturedAt) ||
+        left.id.localeCompare(right.id)
+    );
+  }
+
+  async loadConflictCandidates(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ): Promise<ReviewDecisionConflictCandidate[]> {
+    return this.mapConflictCandidates(teamName, scopeKey, scopeToken, (candidate) => candidate);
+  }
+
+  async loadConflictCandidateSummaries(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ): Promise<ReviewDecisionConflictCandidateSummary[]> {
+    return this.mapConflictCandidates(teamName, scopeKey, scopeToken, (candidate) => ({
+        id: candidate.id,
+        capturedAt: candidate.capturedAt,
+        expectedRevision: candidate.expectedRevision,
+        observedCurrentRevision: candidate.observedCurrentRevision,
+        hunkDecisionCount: Object.keys(candidate.state.hunkDecisions).length,
+        fileDecisionCount: Object.keys(candidate.state.fileDecisions).length,
+        undoDepth: candidate.state.reviewActionHistory.length,
+        redoDepth: candidate.state.reviewRedoHistory.length,
+      }));
+  }
+
+  async loadConflictCandidate(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    candidateId: string
+  ): Promise<ReviewDecisionConflictCandidate> {
+    this.assertSafeScope(teamName, scopeKey, scopeToken);
+    const candidatePath = this.getConflictCandidatePath(
+      teamName,
+      scopeKey,
+      scopeToken,
+      candidateId
+    );
+    await this.ensureConflictCandidateDir(teamName, scopeKey, scopeToken);
+    const candidate = await this.loadConflictCandidateFromPath(
+      candidatePath,
+      scopeKey,
+      scopeToken
+    );
+    const observedCurrentRevision =
+      (await this.loadInternal(teamName, scopeKey, scopeToken))?.revision ?? 0;
+    return { ...candidate, observedCurrentRevision };
+  }
+
+  async resolveConflictCandidate(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    candidateId: string,
+    resolution: ReviewConflictResolution,
+    expectedCurrentRevision: number
+  ): Promise<number> {
+    this.assertSafeScope(teamName, scopeKey, scopeToken);
+    if (
+      (resolution !== 'recover-candidate' && resolution !== 'keep-current') ||
+      !Number.isSafeInteger(expectedCurrentRevision) ||
+      expectedCurrentRevision < 0
+    ) {
+      throw new Error('Invalid review decision conflict resolution');
+    }
+    const candidatePath = this.getConflictCandidatePath(
+      teamName,
+      scopeKey,
+      scopeToken,
+      candidateId
+    );
+    await this.ensureConflictCandidateDir(teamName, scopeKey, scopeToken);
+    const candidate = await this.loadConflictCandidateFromPath(
+      candidatePath,
+      scopeKey,
+      scopeToken
+    );
+    const current = await this.loadInternal(teamName, scopeKey, scopeToken);
+    const currentRevision = current?.revision ?? 0;
+    if (currentRevision !== expectedCurrentRevision) {
+      throw new Error('Saved review state changed again; reload recovery choices');
+    }
+    if (resolution === 'keep-current') {
+      await unlinkPathDurably(candidatePath);
+      return currentRevision;
+    }
+    const currentSnapshot: ReviewPersistedStateSnapshot = current
+      ? {
+          hunkDecisions: current.hunkDecisions,
+          fileDecisions: current.fileDecisions,
+          hunkContextHashesByFile: current.hunkContextHashesByFile,
+          reviewActionHistory: current.reviewActionHistory,
+          reviewRedoHistory: current.reviewRedoHistory,
+        }
+      : {
+          hunkDecisions: {},
+          fileDecisions: {},
+          hunkContextHashesByFile: {},
+          reviewActionHistory: [],
+          reviewRedoHistory: [],
+        };
+    if (isDeepStrictEqual(candidate.state, currentSnapshot)) {
+      await unlinkPathDurably(candidatePath);
+      return currentRevision;
+    }
+    if (
+      !isDeepStrictEqual(
+        this.getDiskBackedHistory(candidate.state),
+        this.getDiskBackedHistory(currentSnapshot)
+      )
+    ) {
+      throw new Error(
+        'Recovery branches contain different disk-backed history; refusing unsafe replacement'
+      );
+    }
+    // Recover is an explicit branch swap, not a destructive overwrite. Publish the
+    // current canonical branch first so a crash or a mistaken choice remains reversible.
+    await this.writeConflictCandidate(
+      teamName,
+      scopeKey,
+      scopeToken,
+      currentRevision,
+      currentRevision + 1,
+      currentSnapshot
+    );
+    const revision = await this.save(teamName, scopeKey, {
+      scopeToken,
+      ...candidate.state,
+      expectedRevision: currentRevision,
+    });
+    await unlinkPathDurably(candidatePath);
+    return revision;
+  }
+
   async save(
     teamName: string,
     scopeKey: string,
@@ -1106,16 +1626,25 @@ export class ReviewDecisionStore {
           currentSnapshot !== null && isDeepStrictEqual(currentSnapshot, targetSnapshot);
         const committedMutationRetry =
           data.mutationId !== undefined && current?.lastMutationId === data.mutationId;
-        // Generic Accept/Reject and clear requests do not have a mutation id. A single
-        // revision advance with the exact full snapshot is the only safe evidence that
-        // this request committed and merely lost its IPC response. Larger gaps may hide
-        // intervening writers even if the scope later returned to equivalent state.
+        // Generic Accept/Reject and clear requests do not have a mutation id. Exact
+        // equality of the complete durable snapshot proves the requested outcome is
+        // already canonical, even if later idempotent writers advanced the revision.
         const committedGenericRetry =
           data.mutationId === undefined &&
-          currentRevision === data.expectedRevision + 1 &&
+          currentRevision > data.expectedRevision &&
           exactSnapshotMatches;
         if ((committedMutationRetry && exactSnapshotMatches) || committedGenericRetry) {
           return currentRevision;
+        }
+        if (!exactSnapshotMatches && data.mutationId === undefined) {
+          await this.writeConflictCandidate(
+            teamName,
+            scopeKey,
+            data.scopeToken,
+            data.expectedRevision,
+            currentRevision,
+            targetSnapshot
+          );
         }
         throw new Error('Review decisions changed; refusing stale state overwrite');
       }

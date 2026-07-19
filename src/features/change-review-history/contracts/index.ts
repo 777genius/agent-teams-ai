@@ -1,4 +1,6 @@
 export type {
+  ReviewDraftHistoryConflictCandidate,
+  ReviewDraftHistoryConflictCandidateSummary,
   ReviewDraftHistoryEntry,
   ReviewDraftHistoryJsonValue,
   ReviewDraftHistorySnapshot,

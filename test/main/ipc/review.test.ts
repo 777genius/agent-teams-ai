@@ -12,10 +12,15 @@ import {
   REVIEW_DELETE_EDITED_FILE,
   REVIEW_EXECUTE_MUTATION,
   REVIEW_GET_FILE_CONTENT,
+  REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
   REVIEW_LOAD_DECISIONS,
   REVIEW_LOAD_DRAFT_HISTORY,
+  REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
+  REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
   REVIEW_RESTORE_HISTORY,
   REVIEW_RESTORE_REJECTED_RENAME,
   REVIEW_RETRY_MUTATION_RECOVERY,
@@ -315,6 +320,30 @@ describe('review IPC path confinement', () => {
     }
   });
 
+  it('rejects manual-edit history outside the authoritative review file set', async () => {
+    const result = await ipcMain.invoke(
+      REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
+      'safe-team',
+      'agent-worker',
+      'scope-token-outside',
+      {
+        filePath: outsideFile,
+        codec: 'codemirror-history-v1',
+        revision: 1,
+        diskBaseline: 'outside\n',
+        editorState: {
+          doc: 'outside edited\n',
+          history: { done: [], undone: [] },
+        },
+      },
+      0,
+      null
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toContain('not part of the reviewed scope');
+  });
+
   it('round-trips ordered review Undo history with the exact decision scope', async () => {
     const action = {
       id: 'accept-hunk-1',
@@ -348,6 +377,12 @@ describe('review IPC path confinement', () => {
     );
     expect(responseLostRetry).toEqual({ success: true, data: { revision: 1 } });
 
+    const divergentAction = {
+      id: 'reject-hunk-2',
+      createdAt: '2026-07-17T12:00:01.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
     const divergentRetry = await ipcMain.invoke(
       REVIEW_SAVE_DECISIONS,
       'safe-team',
@@ -356,12 +391,60 @@ describe('review IPC path confinement', () => {
       { [`${projectFile}:0`]: 'rejected' },
       {},
       null,
-      [action],
+      [divergentAction],
       0
     );
     expect(divergentRetry).toEqual({
       success: false,
       error: 'Review decisions changed; refusing stale state overwrite',
+    });
+
+    const conflicts = await ipcMain.invoke(
+      REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+      'safe-team',
+      'agent-worker',
+      'agent:worker:content:history'
+    );
+    expect(conflicts).toMatchObject({
+      success: true,
+      data: [
+        {
+          expectedRevision: 0,
+          hunkDecisionCount: 1,
+          undoDepth: 1,
+          redoDepth: 0,
+        },
+      ],
+    });
+    const decisionCandidateId = (conflicts as { data: { id: string }[] }).data[0]!.id;
+    await expect(
+      ipcMain.invoke(
+        REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+        'safe-team',
+        'agent-worker',
+        'agent:worker:content:history',
+        decisionCandidateId,
+        'recover-candidate',
+        1
+      )
+    ).resolves.toEqual({ success: true, data: { revision: 2 } });
+
+    const branchBackup = await ipcMain.invoke(
+      REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+      'safe-team',
+      'agent-worker',
+      'agent:worker:content:history'
+    );
+    expect(branchBackup).toMatchObject({
+      success: true,
+      data: [
+        {
+          observedCurrentRevision: 2,
+          hunkDecisionCount: 1,
+          undoDepth: 1,
+          redoDepth: 0,
+        },
+      ],
     });
 
     const loaded = await ipcMain.invoke(
@@ -373,14 +456,163 @@ describe('review IPC path confinement', () => {
     expect(loaded).toEqual({
       success: true,
       data: {
-        hunkDecisions: { [`${projectFile}:0`]: 'accepted' },
+        hunkDecisions: { [`${projectFile}:0`]: 'rejected' },
         fileDecisions: {},
         hunkContextHashesByFile: undefined,
-        reviewActionHistory: [action],
+        reviewActionHistory: [divergentAction],
         reviewRedoHistory: [],
-        revision: 1,
+        revision: 2,
       },
     });
+  });
+
+  it('does not preserve a stale branch whose Undo metadata contradicts its decisions', async () => {
+    const acceptedAction = {
+      id: 'valid-accepted-hunk',
+      createdAt: '2026-07-17T12:10:00.000Z',
+      kind: 'hunk' as const,
+      descriptor: {
+        intent: 'accept-hunk' as const,
+        filePath: projectFile,
+        hunkIndex: 0,
+      },
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    const scopeToken = 'agent:worker:content:invalid-conflict';
+    await expect(
+      ipcMain.invoke(
+        REVIEW_SAVE_DECISIONS,
+        'safe-team',
+        'agent-worker',
+        scopeToken,
+        { [projectFile + ':0']: 'accepted' },
+        {},
+        null,
+        [acceptedAction],
+        0
+      )
+    ).resolves.toEqual({ success: true, data: { revision: 1 } });
+
+    const invalidBranch = {
+      ...acceptedAction,
+      id: 'invalid-rejected-hunk',
+      createdAt: '2026-07-17T12:10:01.000Z',
+    };
+    const rejected = await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      scopeToken,
+      { [projectFile + ':0']: 'rejected' },
+      {},
+      null,
+      [invalidBranch],
+      0
+    );
+    expect(rejected).toMatchObject({
+      success: false,
+      error: expect.stringContaining('descriptor does not match'),
+    });
+    await expect(
+      ipcMain.invoke(
+        REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+        'safe-team',
+        'agent-worker',
+        scopeToken
+      )
+    ).resolves.toEqual({ success: true, data: [] });
+
+  });
+
+  it('accepts a lost-response retry when the canonical branch is a proven append-only superset', async () => {
+    const scopeToken = 'agent:worker:content:response-loss-superset';
+    const firstAction = {
+      id: 'superset-hunk-1',
+      createdAt: '2026-07-17T12:20:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    const secondAction = {
+      id: 'superset-hunk-2',
+      createdAt: '2026-07-17T12:20:01.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 1 },
+    };
+    await expect(
+      ipcMain.invoke(
+        REVIEW_SAVE_DECISIONS,
+        'safe-team',
+        'agent-worker',
+        scopeToken,
+        { [projectFile + ':0']: 'accepted' },
+        {},
+        null,
+        [firstAction],
+        0
+      )
+    ).resolves.toEqual({ success: true, data: { revision: 1 } });
+    await expect(
+      ipcMain.invoke(
+        REVIEW_SAVE_DECISIONS,
+        'safe-team',
+        'agent-worker',
+        scopeToken,
+        {
+          [projectFile + ':0']: 'accepted',
+          [projectFile + ':1']: 'rejected',
+        },
+        {},
+        null,
+        [firstAction, secondAction],
+        1
+      )
+    ).resolves.toEqual({ success: true, data: { revision: 2 } });
+
+    await expect(
+      ipcMain.invoke(
+        REVIEW_SAVE_DECISIONS,
+        'safe-team',
+        'agent-worker',
+        scopeToken,
+        { [projectFile + ':0']: 'accepted' },
+        {},
+        null,
+        [firstAction],
+        0
+      )
+    ).resolves.toEqual({ success: true, data: { revision: 2 } });
+    await expect(
+      ipcMain.invoke(
+        REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+        'safe-team',
+        'agent-worker',
+        scopeToken
+      )
+    ).resolves.toEqual({ success: true, data: [] });
+
+    const incompletePrefix = await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      scopeToken,
+      {},
+      {},
+      null,
+      [firstAction],
+      0
+    );
+    expect(incompletePrefix).toMatchObject({
+      success: false,
+      error: expect.stringContaining('Generic hunk history'),
+    });
+    await expect(
+      ipcMain.invoke(
+        REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+        'safe-team',
+        'agent-worker',
+        scopeToken
+      )
+    ).resolves.toEqual({ success: true, data: [] });
   });
 
   it('makes an exact clear retry idempotent without deleting newer review state', async () => {
@@ -502,6 +734,63 @@ describe('review IPC path confinement', () => {
       success: false,
       error: 'Review draft history changed; refusing stale state overwrite',
     });
+
+    const draftConflicts = await ipcMain.invoke(
+      REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+      'safe-team',
+      'agent-worker',
+      'scope-token-a'
+    );
+    expect(draftConflicts).toMatchObject({
+      success: true,
+      data: [{ filePath: projectFile, entryRevision: 2 }],
+    });
+    const latestConflict = await ipcMain.invoke(
+      REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+      'safe-team',
+      'agent-worker',
+      'scope-token-a',
+      {
+        ...entry,
+        revision: 2,
+        editorState: { ...entry.editorState, doc: 'stale writer\n' },
+      },
+      {
+        ...entry,
+        revision: 3,
+        editorState: { ...entry.editorState, doc: 'latest local\n' },
+      },
+      1,
+      generation
+    );
+    expect(latestConflict).toMatchObject({
+      success: true,
+      data: { entryRevision: 3 },
+    });
+    const latestCandidateId = (latestConflict as { data: { id: string } }).data.id;
+    await expect(
+      ipcMain.invoke(
+        REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+        'safe-team',
+        'agent-worker',
+        'scope-token-a'
+      )
+    ).resolves.toMatchObject({
+      success: true,
+      data: [{ id: latestCandidateId, entryRevision: 3 }],
+    });
+    await expect(
+      ipcMain.invoke(
+        REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+        'safe-team',
+        'agent-worker',
+        'scope-token-a',
+        latestCandidateId,
+        'keep-current',
+        1,
+        generation
+      )
+    ).resolves.toMatchObject({ success: true, data: { editorState: { doc: 'project edited\n' } } });
 
     const loaded = await ipcMain.invoke(
       REVIEW_LOAD_DRAFT_HISTORY,

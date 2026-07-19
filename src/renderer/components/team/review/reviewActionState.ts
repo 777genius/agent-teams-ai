@@ -11,10 +11,14 @@ import {
 } from './reviewContentPreview';
 
 import type {
+  ReviewDraftHistoryConflictCandidateSummary,
+} from '@features/change-review-history/contracts';
+import type {
   ConflictCheckResult,
   FileChangeSummary,
   FileChangeWithContent,
   HunkDecision,
+  ReviewDecisionConflictCandidateSummary,
   ReviewRenameRecoveryExpectation,
   ReviewUndoAction,
 } from '@shared/types';
@@ -22,6 +26,40 @@ import type {
 export interface ReviewDecisionRecords {
   hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
+}
+
+export type ReviewConflictCandidateSelection =
+  | { kind: 'decision'; value: ReviewDecisionConflictCandidateSummary }
+  | { kind: 'draft'; value: ReviewDraftHistoryConflictCandidateSummary };
+
+export function selectLatestReviewConflictCandidate(
+  decisions: readonly ReviewDecisionConflictCandidateSummary[],
+  drafts: readonly ReviewDraftHistoryConflictCandidateSummary[]
+): ReviewConflictCandidateSelection | null {
+  const decision = decisions[0];
+  const draft = drafts[0];
+  if (!decision) return draft ? { kind: 'draft', value: draft } : null;
+  if (!draft) return { kind: 'decision', value: decision };
+  return Date.parse(decision.capturedAt) >= Date.parse(draft.capturedAt)
+    ? { kind: 'decision', value: decision }
+    : { kind: 'draft', value: draft };
+}
+
+export function replaceReviewScopedRecord<T>(
+  current: Readonly<Record<string, T>>,
+  scopeFilePaths: Iterable<string>,
+  recovered: Readonly<Record<string, T>>
+): Record<string, T> {
+  const normalizedScopePaths = new Set(
+    [...scopeFilePaths].map((filePath) => normalizePathForComparison(filePath))
+  );
+  const next = { ...current };
+  for (const filePath of Object.keys(next)) {
+    if (normalizedScopePaths.has(normalizePathForComparison(filePath))) {
+      delete next[filePath];
+    }
+  }
+  return { ...next, ...recovered };
 }
 
 export { restoreReviewDecisionRecordsForFile, restoreReviewDecisionRecordsForFiles };

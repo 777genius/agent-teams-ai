@@ -16,10 +16,12 @@ import {
   popOrderedReviewAction,
   reconcileReviewDecisionRecordsAfterApply,
   replaceLatestReviewAction,
+  replaceReviewScopedRecord,
   resolveDraftBaselineAfterSave,
   resolveReviewFileIsNew,
   restoreReviewDecisionRecordsForFile,
   restoreReviewDecisionRecordsForFiles,
+  selectLatestReviewConflictCandidate,
   shouldCreateFileWhenUndoingReject,
   shouldDeleteFileWhenUndoingReject,
 } from '../../../../../src/renderer/components/team/review/reviewActionState';
@@ -100,6 +102,52 @@ describe('ChangeReviewDialog interaction guards', () => {
     ]) {
       expect(hasUnscopedLocalReviewState({ ...clean, ...dirty })).toBe(true);
     }
+  });
+
+  it('shows recovery copies newest-first across decision and manual-edit conflicts', () => {
+    const decision = {
+      id: 'decision',
+      capturedAt: '2026-07-19T10:00:00.000Z',
+      expectedRevision: 0,
+      observedCurrentRevision: 1,
+      hunkDecisionCount: 0,
+      fileDecisionCount: 0,
+      undoDepth: 0,
+      redoDepth: 0,
+    };
+    const draft = {
+      id: 'draft',
+      capturedAt: '2026-07-19T10:01:00.000Z',
+      filePath: '/repo/a.ts',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      observedCurrentRevision: 1,
+      observedCurrentGeneration: 'generation-1',
+      entryRevision: 1,
+    };
+
+    expect(selectLatestReviewConflictCandidate([decision], [draft])).toEqual({
+      kind: 'draft',
+      value: draft,
+    });
+    expect(selectLatestReviewConflictCandidate([decision], [])).toEqual({
+      kind: 'decision',
+      value: decision,
+    });
+  });
+
+  it('replaces stale scoped drafts while preserving unrelated review state', () => {
+    expect(
+      replaceReviewScopedRecord(
+        {
+          '/repo/a.ts': 'stale-a',
+          '/repo/b.ts': 'keep-b',
+          'C:\\Repo\\C.ts': 'stale-c',
+        },
+        ['/repo/a.ts', 'c:/repo/c.ts'],
+        { '/repo/a.ts': 'saved-a' }
+      )
+    ).toEqual({ '/repo/a.ts': 'saved-a', '/repo/b.ts': 'keep-b' });
   });
 
   it('distinguishes pending, ready, and failed persisted-decision hydration', () => {

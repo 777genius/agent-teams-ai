@@ -92,12 +92,17 @@ import {
   REVIEW_GET_TASK_CHANGES,
   REVIEW_GET_TEAM_TASK_CHANGE_SUMMARIES,
   REVIEW_INVALIDATE_TASK_CHANGE_SUMMARIES,
+  REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
   REVIEW_LOAD_DECISIONS,
   REVIEW_LOAD_DRAFT_HISTORY,
+  REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
   REVIEW_PREVIEW_REJECT,
   REVIEW_REAPPLY_REJECTED_RENAME,
   REVIEW_REJECT_FILE,
   REVIEW_REJECT_HUNKS,
+  REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+  REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
   REVIEW_RESTORE_HISTORY,
   REVIEW_RESTORE_REJECTED_RENAME,
   REVIEW_RETRY_MUTATION_RECOVERY,
@@ -270,6 +275,7 @@ import {
 } from './constants/ipcChannels';
 
 import type {
+  ReviewDraftHistoryConflictCandidateSummary,
   ReviewDraftHistoryEntry,
   ReviewDraftHistorySnapshot,
 } from '@features/change-review-history/contracts';
@@ -328,6 +334,8 @@ import type {
   RetryFailedOpenCodeSecondaryLanesResult,
   RetryReviewMutationRecoveryRequest,
   RetryReviewMutationRecoveryResult,
+  ReviewConflictResolution,
+  ReviewDecisionConflictCandidateSummary,
   ReviewFileScope,
   ReviewRedoAction,
   ReviewRenameRecoveryExpectation,
@@ -1680,6 +1688,36 @@ const electronAPI: ElectronAPI = {
         expectedRevision
       );
     },
+    loadDecisionConflictCandidates: async (
+      teamName: string,
+      scopeKey: string,
+      scopeToken: string
+    ) => {
+      return invokeIpcWithResult<ReviewDecisionConflictCandidateSummary[]>(
+        REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+        teamName,
+        scopeKey,
+        scopeToken
+      );
+    },
+    resolveDecisionConflictCandidate: async (
+      teamName: string,
+      scopeKey: string,
+      scopeToken: string,
+      candidateId: string,
+      resolution: ReviewConflictResolution,
+      expectedCurrentRevision: number
+    ) => {
+      return invokeIpcWithResult<{ revision: number }>(
+        REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+        teamName,
+        scopeKey,
+        scopeToken,
+        candidateId,
+        resolution,
+        expectedCurrentRevision
+      );
+    },
     loadDraftHistory: async (teamName: string, scopeKey: string, scopeToken: string) => {
       return invokeIpcWithResult<ReviewDraftHistorySnapshot | null>(
         REVIEW_LOAD_DRAFT_HISTORY,
@@ -1722,6 +1760,58 @@ const electronAPI: ElectronAPI = {
         filePath ?? null,
         expectedRevision ?? null,
         expectedGeneration ?? null
+      );
+    },
+    loadDraftHistoryConflictCandidates: async (
+      teamName: string,
+      scopeKey: string,
+      scopeToken: string
+    ) => {
+      return invokeIpcWithResult<ReviewDraftHistoryConflictCandidateSummary[]>(
+        REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+        teamName,
+        scopeKey,
+        scopeToken
+      );
+    },
+    resolveDraftHistoryConflictCandidate: async (
+      teamName: string,
+      scopeKey: string,
+      scopeToken: string,
+      candidateId: string,
+      resolution: ReviewConflictResolution,
+      expectedCurrentRevision: number,
+      expectedCurrentGeneration: string | null
+    ) => {
+      return invokeIpcWithResult<ReviewDraftHistoryEntry | null>(
+        REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+        teamName,
+        scopeKey,
+        scopeToken,
+        candidateId,
+        resolution,
+        expectedCurrentRevision,
+        expectedCurrentGeneration
+      );
+    },
+    replaceDraftHistoryConflictCandidate: async (
+      teamName: string,
+      scopeKey: string,
+      scopeToken: string,
+      expectedEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
+      replacementEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
+      expectedCurrentRevision: number,
+      expectedCurrentGeneration: string | null
+    ) => {
+      return invokeIpcWithResult<ReviewDraftHistoryConflictCandidateSummary>(
+        REVIEW_REPLACE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+        teamName,
+        scopeKey,
+        scopeToken,
+        expectedEntry,
+        replacementEntry,
+        expectedCurrentRevision,
+        expectedCurrentGeneration
       );
     },
     onCmdN: (callback: () => void): (() => void) => {

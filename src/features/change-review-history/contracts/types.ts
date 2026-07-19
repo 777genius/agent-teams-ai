@@ -35,3 +35,27 @@ export interface ReviewDraftHistoryEntry {
 export interface ReviewDraftHistorySnapshot {
   entries: Record<string, ReviewDraftHistoryEntry>;
 }
+
+/** Durable local editor branch preserved after a per-file CAS conflict. */
+export interface ReviewDraftHistoryConflictCandidate {
+  id: string;
+  capturedAt: string;
+  filePath: string;
+  expectedRevision: number;
+  expectedGeneration: string | null;
+  observedCurrentRevision: number;
+  observedCurrentGeneration: string | null;
+  entry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>;
+}
+
+/** Metadata-only renderer view of a durable manual-edit recovery branch. */
+export interface ReviewDraftHistoryConflictCandidateSummary {
+  id: string;
+  capturedAt: string;
+  filePath: string;
+  expectedRevision: number;
+  expectedGeneration: string | null;
+  observedCurrentRevision: number;
+  observedCurrentGeneration: string | null;
+  entryRevision: number;
+}

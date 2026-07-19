@@ -1,16 +1,23 @@
 import { atomicWriteAsync, unlinkPathDurably } from '@main/utils/atomicWrite';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import {
+  ensureConstrainedPersistenceDirectory,
+  quarantineConstrainedPersistenceFile,
+} from '@main/utils/safePersistenceDirectory';
 import { createLogger } from '@shared/utils/logger';
 import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import type {
+  ReviewDraftHistoryConflictCandidate,
+  ReviewDraftHistoryConflictCandidateSummary,
   ReviewDraftHistoryEntry,
   ReviewDraftHistoryJsonValue,
   ReviewDraftHistorySnapshot,
   ReviewSerializedEditorState,
 } from '@features/change-review-history/contracts';
+import type { ReviewConflictResolution } from '@shared/types';
 
 const logger = createLogger('ReviewDraftHistoryStore');
 const STORE_VERSION = 1;
@@ -25,6 +32,7 @@ const MAX_HISTORY_ENTRY_BYTES = 32 * 1024 * 1024;
 const MAX_HISTORY_ENTRIES = 512;
 const MAX_GENERATION_LENGTH = 128;
 const MAX_EXACT_SCOPES_PER_LOGICAL_SCOPE = 16;
+const MAX_CONFLICT_CANDIDATES_PER_SCOPE = 32;
 const MAX_JSON_DEPTH = 100;
 const MAX_JSON_NODES = 1_000_000;
 
@@ -34,6 +42,13 @@ interface StoredReviewDraftHistory {
   scopeTokenHash: string;
   entries: Record<string, ReviewDraftHistoryEntry>;
   updatedAt: string;
+}
+
+interface StoredReviewDraftHistoryConflictCandidateV1
+  extends ReviewDraftHistoryConflictCandidate {
+  version: 1;
+  scopeKey: string;
+  scopeTokenHash: string;
 }
 
 export interface SaveReviewDraftHistoryEntryInput {
@@ -49,6 +64,16 @@ export interface SaveReviewDraftHistoryEntryInput {
 }
 
 class InvalidReviewDraftHistoryError extends Error {}
+
+function shouldQuarantineDraftConflictCandidate(error: unknown): boolean {
+  if (error instanceof InvalidReviewDraftHistoryError) return true;
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message.startsWith('Unsafe review draft conflict candidate') ||
+    error.message === 'Unsafe or oversized review draft conflict candidate' ||
+    error.message === 'Review draft conflict candidate changed while being read'
+  );
+}
 
 function getScopeTokenHash(scopeToken: string): string {
   return createHash('sha256').update(scopeToken).digest('hex');
@@ -117,6 +142,19 @@ function entriesEqual(
     existing.revision === incoming.revision &&
     existing.diskBaseline === incoming.diskBaseline &&
     JSON.stringify(existing.editorState) === JSON.stringify(incoming.editorState)
+  );
+}
+
+function conflictEntriesEqual(
+  left: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
+  right: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>
+): boolean {
+  return (
+    left.filePath === right.filePath &&
+    left.codec === right.codec &&
+    left.revision === right.revision &&
+    left.diskBaseline === right.diskBaseline &&
+    JSON.stringify(left.editorState) === JSON.stringify(right.editorState)
   );
 }
 
@@ -189,6 +227,48 @@ export class ReviewDraftHistoryStore {
 
   private getFilePath(teamName: string, scopeKey: string, scopeToken: string): string {
     return path.join(this.getScopeDir(teamName, scopeKey), `${getScopeTokenHash(scopeToken)}.json`);
+  }
+
+  private getConflictCandidateDir(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ): string {
+    return path.join(
+      getTeamsBasePath(),
+      teamName,
+      'review-decisions',
+      'draft-history',
+      'conflicts',
+      'v1',
+      encodeURIComponent(scopeKey),
+      getScopeTokenHash(scopeToken)
+    );
+  }
+
+  private getConflictCandidatePath(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    candidateId: string
+  ): string {
+    if (!/^[a-f0-9]{64}$/.test(candidateId)) {
+      throw new Error('Invalid review draft history conflict candidate id');
+    }
+    return path.join(
+      this.getConflictCandidateDir(teamName, scopeKey, scopeToken),
+      `${candidateId}.json`
+    );
+  }
+
+  private async ensureConflictCandidateDir(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ): Promise<string> {
+    const dirPath = this.getConflictCandidateDir(teamName, scopeKey, scopeToken);
+    await ensureConstrainedPersistenceDirectory(getTeamsBasePath(), dirPath);
+    return dirPath;
   }
 
   private parseStoredData(
@@ -342,8 +422,9 @@ export class ReviewDraftHistoryStore {
             return stats.isFile() && !stats.isSymbolicLink()
               ? { filePath, mtimeMs: stats.mtimeMs }
               : null;
-          } catch {
-            return null;
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+            throw error;
           }
         })
     );
@@ -360,6 +441,250 @@ export class ReviewDraftHistoryStore {
     );
   }
 
+  private getConflictCandidateIdentityPayload(input: {
+    scopeKey: string;
+    scopeTokenHash: string;
+    expectedRevision: number;
+    expectedGeneration: string | null;
+    entry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>;
+  }): object {
+    return {
+      scopeKey: input.scopeKey,
+      scopeTokenHash: input.scopeTokenHash,
+      expectedRevision: input.expectedRevision,
+      expectedGeneration: input.expectedGeneration,
+      entry: input.entry,
+    };
+  }
+
+  private parseConflictCandidate(
+    value: unknown,
+    scopeKey: string,
+    scopeToken: string
+  ): ReviewDraftHistoryConflictCandidate {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw new InvalidReviewDraftHistoryError('Invalid review draft conflict candidate');
+    }
+    const candidate = value as Partial<StoredReviewDraftHistoryConflictCandidateV1>;
+    const scopeTokenHash = getScopeTokenHash(scopeToken);
+    if (
+      candidate.version !== 1 ||
+      candidate.scopeKey !== scopeKey ||
+      candidate.scopeTokenHash !== scopeTokenHash ||
+      typeof candidate.id !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(candidate.id) ||
+      typeof candidate.capturedAt !== 'string' ||
+      !Number.isFinite(Date.parse(candidate.capturedAt)) ||
+      typeof candidate.filePath !== 'string' ||
+      !Number.isSafeInteger(candidate.expectedRevision) ||
+      (candidate.expectedRevision as number) < 0 ||
+      ((candidate.expectedRevision as number) === 0
+        ? candidate.expectedGeneration !== null
+        : !isValidGeneration(candidate.expectedGeneration)) ||
+      !Number.isSafeInteger(candidate.observedCurrentRevision) ||
+      (candidate.observedCurrentRevision as number) < 0 ||
+      ((candidate.observedCurrentRevision as number) === 0
+        ? candidate.observedCurrentGeneration !== null
+        : !isValidGeneration(candidate.observedCurrentGeneration)) ||
+      !candidate.entry ||
+      typeof candidate.entry !== 'object' ||
+      Array.isArray(candidate.entry)
+    ) {
+      throw new InvalidReviewDraftHistoryError('Invalid review draft conflict candidate');
+    }
+    const entry = candidate.entry as Omit<
+      ReviewDraftHistoryEntry,
+      'updatedAt' | 'generation'
+    >;
+    this.assertEntry({
+      ...entry,
+      expectedRevision: candidate.expectedRevision as number,
+      expectedGeneration: candidate.expectedGeneration as string | null,
+    });
+    if (candidate.filePath !== entry.filePath) {
+      throw new InvalidReviewDraftHistoryError('Mismatched review draft conflict file');
+    }
+    const identity = this.getConflictCandidateIdentityPayload({
+      scopeKey,
+      scopeTokenHash,
+      expectedRevision: candidate.expectedRevision as number,
+      expectedGeneration: candidate.expectedGeneration as string | null,
+      entry,
+    });
+    const expectedId = createHash('sha256').update(JSON.stringify(identity)).digest('hex');
+    if (candidate.id !== expectedId) {
+      throw new InvalidReviewDraftHistoryError('Mismatched review draft conflict identity');
+    }
+    return {
+      id: candidate.id,
+      capturedAt: candidate.capturedAt,
+      filePath: candidate.filePath,
+      expectedRevision: candidate.expectedRevision as number,
+      expectedGeneration: candidate.expectedGeneration as string | null,
+      observedCurrentRevision: candidate.observedCurrentRevision as number,
+      observedCurrentGeneration: candidate.observedCurrentGeneration as string | null,
+      entry,
+    };
+  }
+
+  private async loadConflictCandidateFromPath(
+    filePath: string,
+    scopeKey: string,
+    scopeToken: string
+  ): Promise<ReviewDraftHistoryConflictCandidate> {
+    let handle: fs.promises.FileHandle | null = null;
+    try {
+      const pathStats = await fs.promises.lstat(filePath);
+      if (pathStats.isSymbolicLink()) {
+        throw new Error('Unsafe review draft conflict candidate symlink');
+      }
+      handle = await fs.promises.open(filePath, 'r');
+      const stats = await handle.stat();
+      if (
+        !stats.isFile() ||
+        stats.nlink !== 1 ||
+        stats.size > MAX_HISTORY_ENTRY_BYTES ||
+        stats.dev !== pathStats.dev ||
+        stats.ino !== pathStats.ino
+      ) {
+        throw new Error('Unsafe or oversized review draft conflict candidate');
+      }
+      const raw = await handle.readFile({ encoding: 'utf8' });
+      const latestPathStats = await fs.promises.lstat(filePath);
+      if (
+        latestPathStats.isSymbolicLink() ||
+        latestPathStats.dev !== stats.dev ||
+        latestPathStats.ino !== stats.ino
+      ) {
+        throw new Error('Review draft conflict candidate changed while being read');
+      }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw) as unknown;
+      } catch (error) {
+        throw new InvalidReviewDraftHistoryError('Corrupted review draft conflict candidate', {
+          cause: error,
+        });
+      }
+      const candidate = this.parseConflictCandidate(parsed, scopeKey, scopeToken);
+      if (path.basename(filePath) !== `${candidate.id}.json`) {
+        throw new InvalidReviewDraftHistoryError(
+          'Mismatched review draft conflict candidate filename'
+        );
+      }
+      return candidate;
+    } finally {
+      await handle?.close().catch(() => undefined);
+    }
+  }
+
+  private async assertConflictCandidateCapacity(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    protectedPath: string,
+    replacementPath?: string
+  ): Promise<void> {
+    const dirPath = this.getConflictCandidateDir(teamName, scopeKey, scopeToken);
+    let entries: string[];
+    try {
+      entries = await fs.promises.readdir(dirPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      throw error;
+    }
+    const candidates = await Promise.all(
+      entries
+        .filter((entry) => /^[a-f0-9]{64}\.json$/.test(entry))
+        .map(async (entry) => {
+          const filePath = path.join(dirPath, entry);
+          try {
+            const stats = await fs.promises.lstat(filePath);
+            return stats.isFile() && !stats.isSymbolicLink() ? filePath : null;
+          } catch {
+            return null;
+          }
+        })
+    );
+    const existing = candidates.filter(
+      (entry): entry is string => entry !== null && entry !== replacementPath
+    );
+    if (
+      !existing.includes(protectedPath) &&
+      existing.length >= MAX_CONFLICT_CANDIDATES_PER_SCOPE
+    ) {
+      throw new Error(
+        `Too many unresolved manual-edit recovery copies (${MAX_CONFLICT_CANDIDATES_PER_SCOPE}). Resolve one before saving another branch.`
+      );
+    }
+  }
+
+  private async writeConflictCandidate(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    input: SaveReviewDraftHistoryEntryInput,
+    observedCurrentRevision: number,
+    observedCurrentGeneration: string | null,
+    replacementPath?: string
+  ): Promise<ReviewDraftHistoryConflictCandidate> {
+    const {
+      expectedRevision,
+      expectedGeneration,
+      ...entry
+    } = input;
+    const scopeTokenHash = getScopeTokenHash(scopeToken);
+    const identity = this.getConflictCandidateIdentityPayload({
+      scopeKey,
+      scopeTokenHash,
+      expectedRevision,
+      expectedGeneration,
+      entry,
+    });
+    const id = createHash('sha256').update(JSON.stringify(identity)).digest('hex');
+    const candidate: StoredReviewDraftHistoryConflictCandidateV1 = {
+      version: 1,
+      id,
+      scopeKey,
+      scopeTokenHash,
+      capturedAt: new Date().toISOString(),
+      filePath: entry.filePath,
+      expectedRevision,
+      expectedGeneration,
+      observedCurrentRevision,
+      observedCurrentGeneration,
+      entry,
+    };
+    const serialized = JSON.stringify(candidate);
+    if (Buffer.byteLength(serialized, 'utf8') > MAX_HISTORY_ENTRY_BYTES) {
+      throw new Error('Review draft recovery candidate exceeds the durable storage limit');
+    }
+    const filePath = this.getConflictCandidatePath(teamName, scopeKey, scopeToken, id);
+    await this.ensureConflictCandidateDir(teamName, scopeKey, scopeToken);
+    await this.assertConflictCandidateCapacity(
+      teamName,
+      scopeKey,
+      scopeToken,
+      filePath,
+      replacementPath
+    );
+    await atomicWriteAsync(filePath, serialized, {
+      mode: 0o600,
+      durability: 'strict',
+      syncDirectory: true,
+    });
+    return {
+      id,
+      capturedAt: candidate.capturedAt,
+      filePath: entry.filePath,
+      expectedRevision,
+      expectedGeneration,
+      observedCurrentRevision,
+      observedCurrentGeneration,
+      entry,
+    };
+  }
+
   async load(
     teamName: string,
     scopeKey: string,
@@ -368,6 +693,274 @@ export class ReviewDraftHistoryStore {
     this.assertSafeScope(teamName, scopeKey, scopeToken);
     const stored = await this.readStored(teamName, scopeKey, scopeToken);
     return stored ? { entries: stored.entries } : null;
+  }
+
+  private async mapConflictCandidates<T extends { id: string; capturedAt: string }>(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    mapCandidate: (candidate: ReviewDraftHistoryConflictCandidate) => T
+  ): Promise<T[]> {
+    this.assertSafeScope(teamName, scopeKey, scopeToken);
+    const dirPath = this.getConflictCandidateDir(teamName, scopeKey, scopeToken);
+    try {
+      const stats = await fs.promises.lstat(dirPath);
+      if (!stats.isDirectory() || stats.isSymbolicLink()) {
+        throw new Error(`Unsafe persistence directory: ${dirPath}`);
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw error;
+    }
+    await this.ensureConflictCandidateDir(teamName, scopeKey, scopeToken);
+    let entries: string[];
+    try {
+      entries = await fs.promises.readdir(dirPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw error;
+    }
+    const stored = await this.readStored(teamName, scopeKey, scopeToken);
+    const candidates: T[] = [];
+    let quarantinedCount = 0;
+    for (const entry of entries.filter((name) => /^[a-f0-9]{64}\.json$/.test(name))) {
+      const candidatePath = path.join(dirPath, entry);
+      try {
+        const candidate = await this.loadConflictCandidateFromPath(
+          candidatePath,
+          scopeKey,
+          scopeToken
+        );
+        const current = stored?.entries[candidate.filePath];
+        candidates.push(
+          mapCandidate({
+            ...candidate,
+            observedCurrentRevision: current?.revision ?? 0,
+            observedCurrentGeneration: current?.generation ?? null,
+          })
+        );
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+        if (!shouldQuarantineDraftConflictCandidate(error)) throw error;
+        try {
+          await quarantineConstrainedPersistenceFile(
+            getTeamsBasePath(),
+            candidatePath,
+            path.join(dirPath, 'quarantine')
+          );
+        } catch (quarantineError) {
+          if ((quarantineError as NodeJS.ErrnoException).code === 'ENOENT') continue;
+          throw quarantineError;
+        }
+        quarantinedCount += 1;
+        logger.warn(`Quarantined unreadable manual-edit recovery copy: ${String(error)}`);
+      }
+    }
+    if (quarantinedCount > 0) {
+      throw new InvalidReviewDraftHistoryError(
+        `${quarantinedCount} unreadable manual-edit recovery copy was quarantined; retry recovery check`
+      );
+    }
+    return candidates.sort(
+      (left, right) =>
+        Date.parse(right.capturedAt) - Date.parse(left.capturedAt) ||
+        left.id.localeCompare(right.id)
+    );
+  }
+
+  async loadConflictCandidates(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ): Promise<ReviewDraftHistoryConflictCandidate[]> {
+    return this.mapConflictCandidates(teamName, scopeKey, scopeToken, (candidate) => candidate);
+  }
+
+  async loadConflictCandidateSummaries(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ): Promise<ReviewDraftHistoryConflictCandidateSummary[]> {
+    return this.mapConflictCandidates(teamName, scopeKey, scopeToken, (candidate) => ({
+        id: candidate.id,
+        capturedAt: candidate.capturedAt,
+        filePath: candidate.filePath,
+        expectedRevision: candidate.expectedRevision,
+        expectedGeneration: candidate.expectedGeneration,
+        observedCurrentRevision: candidate.observedCurrentRevision,
+        observedCurrentGeneration: candidate.observedCurrentGeneration,
+        entryRevision: candidate.entry.revision,
+      }));
+  }
+
+  async loadConflictCandidate(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    candidateId: string
+  ): Promise<ReviewDraftHistoryConflictCandidate> {
+    this.assertSafeScope(teamName, scopeKey, scopeToken);
+    const candidatePath = this.getConflictCandidatePath(
+      teamName,
+      scopeKey,
+      scopeToken,
+      candidateId
+    );
+    await this.ensureConflictCandidateDir(teamName, scopeKey, scopeToken);
+    const candidate = await this.loadConflictCandidateFromPath(
+      candidatePath,
+      scopeKey,
+      scopeToken
+    );
+    const stored = await this.readStored(teamName, scopeKey, scopeToken);
+    const current = stored?.entries[candidate.filePath];
+    return {
+      ...candidate,
+      observedCurrentRevision: current?.revision ?? 0,
+      observedCurrentGeneration: current?.generation ?? null,
+    };
+  }
+
+  async resolveConflictCandidate(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    candidateId: string,
+    resolution: ReviewConflictResolution,
+    expectedCurrentRevision: number,
+    expectedCurrentGeneration: string | null
+  ): Promise<ReviewDraftHistoryEntry | null> {
+    this.assertSafeScope(teamName, scopeKey, scopeToken);
+    if (
+      (resolution !== 'recover-candidate' && resolution !== 'keep-current') ||
+      !Number.isSafeInteger(expectedCurrentRevision) ||
+      expectedCurrentRevision < 0 ||
+      (expectedCurrentRevision === 0
+        ? expectedCurrentGeneration !== null
+        : !isValidGeneration(expectedCurrentGeneration))
+    ) {
+      throw new Error('Invalid review draft conflict resolution');
+    }
+    const candidatePath = this.getConflictCandidatePath(
+      teamName,
+      scopeKey,
+      scopeToken,
+      candidateId
+    );
+    await this.ensureConflictCandidateDir(teamName, scopeKey, scopeToken);
+    const candidate = await this.loadConflictCandidateFromPath(
+      candidatePath,
+      scopeKey,
+      scopeToken
+    );
+    const stored = await this.readStored(teamName, scopeKey, scopeToken);
+    const current = stored?.entries[candidate.filePath];
+    if (
+      (current?.revision ?? 0) !== expectedCurrentRevision ||
+      (current?.generation ?? null) !== expectedCurrentGeneration
+    ) {
+      throw new Error('Saved manual edit history changed again; reload recovery choices');
+    }
+    if (resolution === 'keep-current') {
+      await unlinkPathDurably(candidatePath);
+      return current ?? null;
+    }
+    if (
+      current &&
+      current.filePath === candidate.entry.filePath &&
+      current.codec === candidate.entry.codec &&
+      current.diskBaseline === candidate.entry.diskBaseline &&
+      JSON.stringify(current.editorState) === JSON.stringify(candidate.entry.editorState)
+    ) {
+      await unlinkPathDurably(candidatePath);
+      return current;
+    }
+    if (current) {
+      // Preserve the canonical editor branch before publishing the selected recovery
+      // branch. The backup is itself a normal candidate, so switching remains reversible.
+      await this.writeConflictCandidate(
+        teamName,
+        scopeKey,
+        scopeToken,
+        {
+          filePath: current.filePath,
+          codec: current.codec,
+          revision: current.revision + 1,
+          diskBaseline: current.diskBaseline,
+          editorState: current.editorState,
+          expectedRevision: current.revision,
+          expectedGeneration: current.generation,
+        },
+        current.revision + 1,
+        current.generation
+      );
+    }
+    const recovered = await this.saveEntry(teamName, scopeKey, scopeToken, {
+      ...candidate.entry,
+      expectedRevision: expectedCurrentRevision,
+      expectedGeneration: expectedCurrentGeneration,
+      revision: expectedCurrentRevision + 1,
+    });
+    await unlinkPathDurably(candidatePath);
+    return recovered;
+  }
+
+  async replaceConflictCandidate(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    expectedEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
+    replacementEntry: Omit<ReviewDraftHistoryEntry, 'updatedAt' | 'generation'>,
+    expectedCurrentRevision: number,
+    expectedCurrentGeneration: string | null
+  ): Promise<ReviewDraftHistoryConflictCandidate> {
+    this.assertSafeScope(teamName, scopeKey, scopeToken);
+    const candidate = (
+      await this.mapConflictCandidates(teamName, scopeKey, scopeToken, (entry) => ({
+        id: entry.id,
+        capturedAt: entry.capturedAt,
+        candidate: conflictEntriesEqual(entry.entry, expectedEntry) ? entry : null,
+      }))
+    ).find((entry) => entry.candidate)?.candidate;
+    if (!candidate) throw new Error('Manual-edit recovery predecessor is unavailable');
+    const candidateId = candidate.id;
+    const candidatePath = this.getConflictCandidatePath(
+      teamName,
+      scopeKey,
+      scopeToken,
+      candidateId
+    );
+    await this.ensureConflictCandidateDir(teamName, scopeKey, scopeToken);
+    if (replacementEntry.filePath !== candidate.filePath) {
+      throw new Error('Manual-edit recovery update changed file identity');
+    }
+    const input: SaveReviewDraftHistoryEntryInput = {
+      ...replacementEntry,
+      expectedRevision: candidate.expectedRevision,
+      expectedGeneration: candidate.expectedGeneration,
+    };
+    this.assertEntry(input);
+    const stored = await this.readStored(teamName, scopeKey, scopeToken);
+    const current = stored?.entries[candidate.filePath];
+    if (
+      (current?.revision ?? 0) !== expectedCurrentRevision ||
+      (current?.generation ?? null) !== expectedCurrentGeneration
+    ) {
+      throw new Error('Saved manual edit history changed again; reload recovery choices');
+    }
+    const replacement = await this.writeConflictCandidate(
+      teamName,
+      scopeKey,
+      scopeToken,
+      input,
+      expectedCurrentRevision,
+      expectedCurrentGeneration,
+      candidatePath
+    );
+    if (replacement.id !== candidateId) {
+      await unlinkPathDurably(candidatePath);
+    }
+    return replacement;
   }
 
   async saveEntry(
@@ -388,6 +981,14 @@ export class ReviewDraftHistoryStore {
       input.expectedGeneration !== currentGeneration
     ) {
       if (existing && entriesEqual(existing, input)) return existing;
+      await this.writeConflictCandidate(
+        teamName,
+        scopeKey,
+        scopeToken,
+        input,
+        currentRevision,
+        currentGeneration
+      );
       throw new Error('Review draft history changed; refusing stale state overwrite');
     }
     if (existing && entriesEqual(existing, input)) {
