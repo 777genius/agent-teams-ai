@@ -287,6 +287,25 @@ describe('primary bootstrap truth reporting', () => {
     });
   });
 
+  it('reports confirmed primary bootstrap truth as runtime alive', async () => {
+    const targetRun = run();
+    const targetSnapshot = snapshot({
+      members: { Builder: member({ runtimeAlive: false }) },
+    });
+
+    const reconciled = await applyPrimaryBootstrapTruthToLaunchReportingSnapshot(
+      targetRun,
+      targetSnapshot,
+      ports(confirmedBootstrapSnapshot({ runtimeAlive: false }))
+    );
+
+    expect(reconciled?.members.Builder).toMatchObject({
+      launchState: 'confirmed_alive',
+      runtimeAlive: true,
+      bootstrapConfirmed: true,
+    });
+  });
+
   it('is stable when the same primary bootstrap truth is applied repeatedly', async () => {
     const targetRun = run({
       memberSpawnStatuses: new Map([['Builder', status()]]),

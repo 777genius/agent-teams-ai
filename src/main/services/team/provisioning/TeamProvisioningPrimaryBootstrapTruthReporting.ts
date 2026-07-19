@@ -98,7 +98,8 @@ export async function overlayPrimaryBootstrapTruthIntoRunStatusesFromBootstrapSt
     if (bootstrapMember?.bootstrapConfirmed !== true) {
       continue;
     }
-    const current = run.memberSpawnStatuses.get(memberName) ?? createInitialMemberSpawnStatusEntry();
+    const current =
+      run.memberSpawnStatuses.get(memberName) ?? createInitialMemberSpawnStatusEntry();
     if (
       !isBootstrapMemberEvidenceCurrentForMember(
         { ...current, runtimeRunId: run.runId },
@@ -255,10 +256,7 @@ export async function applyPrimaryBootstrapTruthToLaunchReportingSnapshot<
       ...current,
       launchState: 'confirmed_alive',
       agentToolAccepted: true,
-      runtimeAlive:
-        current.runtimeAlive === true ||
-        bootstrapMember.runtimeAlive === true ||
-        provisionedButNotAliveFailure,
+      runtimeAlive: true,
       bootstrapConfirmed: true,
       hardFailure: false,
       hardFailureReason: undefined,
