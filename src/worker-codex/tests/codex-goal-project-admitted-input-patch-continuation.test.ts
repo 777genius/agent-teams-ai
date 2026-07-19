@@ -25,6 +25,10 @@ import {
 import { isAdmittedInputPatchCapacityContinuation } from "../application/project-control/codex-goal-project-admitted-input-patch-continuation";
 import { isCleanPreStartAdmissionCapacityContinuation } from "../application/project-control/codex-goal-project-clean-capacity-continuation";
 import {
+  codexGoalWorkerControlService,
+  codexGoalWorkerControlTarget,
+} from "../application/codex-goal-worker-control";
+import {
   planProjectPreStartAdmission,
   prepareProjectPreStartAdmission,
 } from "../application/project-control/codex-goal-project-pre-start-admission";
@@ -276,7 +280,7 @@ describe("admitted input-patch capacity continuation", () => {
     expect(bootstrapCalls).toBe(1);
 
     let reservedLaunch: CodexGoalLaunchInput | undefined;
-    const started = await projectControlStartStoredJobView(args, {
+    const continuationDeps: CodexGoalMcpProjectControlActionsDeps = {
       ...deps,
       safeExecutionJournal: journal,
       dependencyBootstrap: async () => ({
@@ -295,7 +299,11 @@ describe("admitted input-patch capacity continuation", () => {
           startWorker: async () => ({ status: "started" }),
         } as unknown as ProjectControlBroker;
       },
-    });
+    };
+    const started = await projectControlStartStoredJobView(
+      args,
+      continuationDeps,
+    );
     expect(started).toMatchObject({
       ok: true,
       accountReservation: { accountId: "account-g" },
@@ -310,10 +318,60 @@ describe("admitted input-patch capacity continuation", () => {
       ),
     ).toBe(patchSha256);
 
-    await writeFile(join(workspacePath, "UNTRACKED.txt"), "drift\n");
-    await expect(projectControlStartStoredJobView(args, deps)).rejects.toThrow(
-      "project_control_pre_start_launch_binding_mismatch",
+    if (!reservedLaunch) throw new Error("expected reserved launch");
+    const signal = await codexGoalWorkerControlService(
+      reservedLaunch,
+    ).enqueueSignal({
+      target: codexGoalWorkerControlTarget({
+        manifest,
+        launch: reservedLaunch,
+      }),
+      intent: "guidance",
+      deliveryMode: "interrupt_then_continue",
+      body: "Continue the exact admitted task.",
+      createdBy: "orchestrator",
+      priority: "high",
+      signalId: "runtime-interrupt-signal-1",
+    });
+    await writeFile(
+      join(manifest.jobRootDir, `${manifest.taskId}.latest-result.json`),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        taskId: manifest.taskId,
+        status: "partial",
+        reason: "runtime_interrupted",
+        updatedAt: new Date().toISOString(),
+        changedFiles: ["src/example.ts"],
+        evidence: ["safe_execution_status:partial"],
+        blockers: ["runtime_interrupted"],
+        nextAction: "preserve_patch",
+        details: {
+          runtimeControl: "interrupt_then_continue",
+          signalId: signal.signalId,
+        },
+      })}\n`,
     );
+    await expect(
+      projectControlStartStoredJobView(args, continuationDeps),
+    ).resolves.toMatchObject({
+      ok: false,
+      reason: "status_requires_review",
+      requiredOverride: "forceStart",
+    });
+    await expect(
+      projectControlStartStoredJobView(
+        { ...args, forceStart: true },
+        continuationDeps,
+      ),
+    ).resolves.toMatchObject({ ok: true });
+
+    await writeFile(join(workspacePath, "UNTRACKED.txt"), "drift\n");
+    await expect(
+      projectControlStartStoredJobView(
+        { ...args, forceStart: true },
+        continuationDeps,
+      ),
+    ).rejects.toThrow("project_control_pre_start_launch_binding_mismatch");
     expect(bootstrapCalls).toBe(1);
     expect(await readFile(plan.descriptor.receiptPath, "utf8")).toContain(
       '"status": "launch_authorized"',
