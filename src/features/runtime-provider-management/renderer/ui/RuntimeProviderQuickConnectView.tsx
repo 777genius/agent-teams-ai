@@ -169,22 +169,6 @@ const QuickProviderCard = ({
           {card.actionLabel}
         </Button>
       ) : null}
-      {card.progress && card.state !== 'connected' ? (
-        <div
-          className="absolute inset-x-0 bottom-0 h-0.5 bg-black/20"
-          title={card.progress.detail ?? `${card.progress.percent}%`}
-        >
-          <div
-            role="progressbar"
-            aria-label={card.stateLabel}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={card.progress.percent}
-            className="h-full bg-sky-400 transition-[width] duration-300"
-            style={{ width: `${Math.max(0, Math.min(100, card.progress.percent))}%` }}
-          />
-        </div>
-      ) : null}
     </article>
   );
 };

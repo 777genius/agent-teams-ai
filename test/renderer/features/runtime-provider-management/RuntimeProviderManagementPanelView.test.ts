@@ -2635,6 +2635,54 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(row?.textContent).not.toContain('Configured local');
   });
 
+  it('does not label an available authless companion bridge as local', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [
+              {
+                providerId: 'cursor-acp',
+                displayName: 'Cursor ACP',
+                state: 'available',
+                setupKind: 'available-readonly',
+                ownership: ['managed'],
+                recommended: false,
+                modelCount: 1,
+                defaultModelId: 'cursor-acp/auto',
+                authMethods: [],
+                actions: [],
+                sources: ['config-provider'],
+                sourceLabel: 'configured',
+                providerSource: 'config',
+                detail: 'Configured through the managed OpenCode bridge',
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: false,
+                  supportedInlineAuth: false,
+                  configuredAuthless: true,
+                },
+              },
+            ],
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector('[data-testid="runtime-provider-directory-row-cursor-acp"]');
+    expect(row?.textContent).toContain('Configured');
+    expect(row?.textContent).not.toContain('Configured local');
+  });
+
   it('uses the unified provider search when compact search has no matches', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

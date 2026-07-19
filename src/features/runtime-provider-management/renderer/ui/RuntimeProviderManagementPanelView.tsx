@@ -29,6 +29,7 @@ import {
 } from '@renderer/utils/openCodeModelRecommendations';
 import {
   getOpenCodeModelRoutePresentationStatus,
+  isOpenCodeLocalProviderId,
   isOpenCodeModelExplicitlyFree,
 } from '@shared/utils/opencodeModelRoute';
 import { isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic } from '@shared/utils/openCodeWindowsAccessDenied';
@@ -152,7 +153,7 @@ function formatDirectorySetupKind(provider: RuntimeProviderDirectoryEntryDto): s
     return 'Connected';
   }
   if (provider.metadata.configuredAuthless) {
-    return 'Configured local';
+    return isOpenCodeLocalProviderId(provider.providerId) ? 'Configured local' : 'Configured';
   }
   switch (provider.setupKind) {
     case 'connect-oauth':

@@ -176,21 +176,21 @@ const SetupStep = ({
 
 interface SetupProgressProps {
   readonly serverComplete: boolean;
-  readonly availabilityComplete: boolean;
+  readonly scopeComplete: boolean;
   readonly modelComplete: boolean;
 }
 
 const SetupProgress = ({
   serverComplete,
-  availabilityComplete,
+  scopeComplete,
   modelComplete,
 }: SetupProgressProps): JSX.Element => {
   const steps = [
     { number: 1, label: 'Server', complete: serverComplete },
-    { number: 2, label: 'Availability', complete: availabilityComplete },
+    { number: 2, label: 'Scope', complete: scopeComplete },
     { number: 3, label: 'Model', complete: modelComplete },
   ];
-  const activeStep = !serverComplete ? 1 : !availabilityComplete ? 2 : 3;
+  const activeStep = !serverComplete ? 1 : !scopeComplete ? 2 : 3;
 
   return (
     <ol aria-label="Local model setup progress" className="grid grid-cols-3 px-2">
@@ -399,6 +399,7 @@ export const RuntimeLocalProviderSetupDialog = ({
   }, [projectPath, projectsForOptions]);
   const serverConnected = probe?.state === 'available';
   const serverHasModels = serverConnected && (probe?.models.length ?? 0) > 0;
+  const scopeProgressComplete = serverConnected && availabilityComplete;
   const readyToSave = Boolean(availabilityComplete && selectedModelId && serverHasModels);
 
   const showProviderView = useCallback((view: ProviderView): void => {
@@ -1131,8 +1132,8 @@ export const RuntimeLocalProviderSetupDialog = ({
               <div className="mt-4">
                 <SetupProgress
                   serverComplete={serverConnected}
-                  availabilityComplete={availabilityComplete}
-                  modelComplete={Boolean(availabilityComplete && selectedModelId)}
+                  scopeComplete={scopeProgressComplete}
+                  modelComplete={Boolean(scopeProgressComplete && selectedModelId)}
                 />
               </div>
 
@@ -1313,7 +1314,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                   number={2}
                   title="Available for"
                   description="Use this provider everywhere, or save it for one project."
-                  complete={availabilityComplete}
+                  complete={scopeProgressComplete}
                   icon={<FolderOpen className="size-4.5" aria-hidden="true" />}
                 >
                   <ProviderScopeSelector
@@ -1404,7 +1405,7 @@ export const RuntimeLocalProviderSetupDialog = ({
                   number={3}
                   title="Model"
                   description="Pick a model and run one short verification request."
-                  complete={Boolean(availabilityComplete && selectedModelId)}
+                  complete={Boolean(scopeProgressComplete && selectedModelId)}
                   icon={<Box className="size-4.5" aria-hidden="true" />}
                 >
                   {serverHasModels ? (

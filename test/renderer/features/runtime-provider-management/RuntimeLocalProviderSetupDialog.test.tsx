@@ -140,6 +140,43 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     vi.unstubAllGlobals();
   });
 
+  it('keeps Scope neutral until a local server connection is verified', async () => {
+    mocks.scanLocalProviders.mockResolvedValue({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      probes: [],
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        <RuntimeLocalProviderSetupDialog
+          open
+          onOpenChange={vi.fn()}
+          projectPath={null}
+          projects={[]}
+          onProjectPathChange={vi.fn()}
+          onConfigured={vi.fn()}
+        />
+      );
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => {
+      expect(host.textContent).toContain('No local server found automatically');
+    });
+    const progress = host.querySelector('[aria-label="Local model setup progress"]');
+    expect(progress?.textContent).toContain('1Server2Scope3Model');
+    expect(progress?.querySelector('[aria-label="Scope"]')).not.toBeNull();
+    expect(progress?.querySelector('[aria-label="Scope complete"]')).toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it('defaults to all projects, writes global config, and runs OpenCode verification', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -165,7 +202,7 @@ describe('RuntimeLocalProviderSetupDialog', () => {
     });
     expect(host.querySelector('[data-layout="flat-workspace"]')).not.toBeNull();
     expect(host.querySelector('[aria-label="Local model setup progress"]')?.textContent).toContain(
-      'ServerAvailabilityModel'
+      'ServerScopeModel'
     );
     const flatSteps = Array.from(
       host.querySelectorAll<HTMLElement>('[data-testid^="runtime-local-provider-step-"]')
