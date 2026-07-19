@@ -303,7 +303,7 @@ describe('cli child process helpers', () => {
         '/s',
         '/v:off',
         '/c',
-        `"${binaryPath.replaceAll(' ', '^ ')} ^"--version^""`,
+        `""${binaryPath}" ^"--version^""`,
       ]);
       expect(spawnMock.mock.calls[0][2]).toMatchObject({
         shell: false,
@@ -353,7 +353,7 @@ describe('cli child process helpers', () => {
       ).not.toThrow();
       expect(spawnMock).toHaveBeenCalledTimes(1);
       const shellCmd = spawnMock.mock.calls[0][1].at(-1) as string;
-      expect(shellCmd).toContain('R^&D');
+      expect(shellCmd).toContain('"C:\\Users\\Алексей\\R&D\\bin\\claude.exe"');
       for (const escapedShellArg of ['safe^&bad', 'safe^|bad', 'safe^<bad', 'safe^>bad']) {
         expect(shellCmd).toContain(escapedShellArg);
       }
@@ -600,7 +600,7 @@ describe('cli child process helpers', () => {
       const result = await execCli(binaryPath, ['--version']);
       expect(execFileMock).toHaveBeenCalledWith(
         expect.stringMatching(/cmd\.exe$/i),
-        ['/d', '/s', '/v:off', '/c', `"${binaryPath.replaceAll(' ', '^ ')} ^"--version^""`],
+        ['/d', '/s', '/v:off', '/c', `""${binaryPath}" ^"--version^""`],
         expect.objectContaining({ windowsVerbatimArguments: true }),
         expect.any(Function)
       );
@@ -645,7 +645,7 @@ describe('cli child process helpers', () => {
         '/s',
         '/v:off',
         '/c',
-        `"${binaryPath} ^"TOKEN={\\^"k\\^":\\^"x^&echo^ injected^&rem^ \\^"}^""`,
+        `""${binaryPath}" ^"TOKEN={\\^"k\\^":\\^"x^&echo^ injected^&rem^ \\^"}^""`,
       ]);
       expect(execFileMock.mock.calls[0][2]).toMatchObject({
         windowsVerbatimArguments: true,
@@ -758,7 +758,13 @@ describe('cli child process helpers', () => {
       ).resolves.toMatchObject({ stdout: 'ok' });
       expect(execFileMock).toHaveBeenCalledWith(
         expect.stringMatching(/cmd\.exe$/i),
-        ['/d', '/s', '/v:off', '/c', expect.stringContaining('R^&D')],
+        [
+          '/d',
+          '/s',
+          '/v:off',
+          '/c',
+          expect.stringContaining('"C:\\Users\\Алексей\\R&D\\bin\\claude.exe"'),
+        ],
         expect.any(Object),
         expect.any(Function)
       );
