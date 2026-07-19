@@ -63,7 +63,7 @@ describe("local semantic merge integration", () => {
     ).resolves.toContain("better-sqlite3: true");
   });
 
-  it("rejects a semantic merge path outside both pinned parent deltas", async () => {
+  it("applies an explicitly reviewed semantic path outside both pinned parent deltas", async () => {
     const fixture = await createSemanticMergeFixture({
       includeUnrelatedPath: true,
     });
@@ -92,8 +92,45 @@ describe("local semantic merge integration", () => {
           changedFiles: fixture.changedFiles,
         },
       }),
+    ).resolves.toEqual({ changedFiles: [...fixture.changedFiles].sort() });
+    await expect(
+      readFile(join(fixture.workspacePath, "README.md"), "utf8"),
+    ).resolves.toBe("unrelated semantic edit\n");
+  });
+
+  it("rejects an unapproved semantic path outside both pinned parent deltas", async () => {
+    const fixture = await createSemanticMergeFixture({
+      includeUnrelatedPath: true,
+    });
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+
+    await expect(
+      adapter.applyWorkerOutput({
+        attempt: {
+          targetWorkspacePath: fixture.workspacePath,
+          expectedFiles: fixture.changedFiles.filter(
+            (file) => file !== "README.md",
+          ),
+          merge: {
+            sourceRemote: "origin",
+            sourceBranch: "base",
+            sourceCommit: fixture.sourceCommit,
+            expectedTargetCommit: fixture.targetCommit,
+          },
+        },
+        workerOutput: {
+          workerJobId: "semantic-merge-resolution-worker",
+          workspacePath: fixture.workspacePath,
+          patchPath: fixture.patchPath,
+          patchSha256: fixture.patchSha256,
+          baseCommit: fixture.targetCommit,
+          changedFiles: fixture.changedFiles,
+        },
+      }),
     ).rejects.toThrow(
-      "local_git_integration_merge_semantic_files_outside_parent_delta:README.md",
+      "local_git_integration_merge_reviewed_conflict_set_mismatch",
     );
     expect(
       (await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])).trim(),

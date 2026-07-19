@@ -92,16 +92,6 @@ export async function inspectReviewedMergeScope(input: {
       )}`,
     );
   }
-  const unrelatedSemanticFiles = semanticFiles.filter(
-    (file) => !parentPaths.has(file),
-  );
-  if (unrelatedSemanticFiles.length > 0) {
-    throw new Error(
-      `local_git_integration_merge_semantic_files_outside_parent_delta:${unrelatedSemanticFiles.join(
-        ",",
-      )}`,
-    );
-  }
   return { parentFootprint, semanticFiles };
 }
 
