@@ -989,7 +989,7 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
       await recordUnavailableAttempt({
         journal,
         taskId: initialVerifierManifest.taskId,
-        workspacePath: initialVerifierManifest.workspacePath,
+        workspacePath: await realpath(initialVerifierManifest.workspacePath),
         accountId: "account-c",
       });
 
@@ -1083,10 +1083,32 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
       await expect(
         projectControlStartStoredJobView(startArgs, deps),
       ).rejects.toThrow(
-        "project_control_continuation_accounts_account_unavailable_proof_required",
+        "project_control_continuation_attempt_history_required",
       );
       expect(brokerCalls).toBe(0);
-      await writeFile(latestResultPath, accountUnavailableResult);
+      const quotaAttemptAt = new Date("2026-07-19T00:00:00.000Z");
+      await journal.appendAttempt({
+        taskId: verifierManifest.taskId,
+        attempt: {
+          taskId: verifierManifest.taskId,
+          attemptNumber: 2,
+          provider: "codex",
+          startedAt: quotaAttemptAt,
+          finishedAt: quotaAttemptAt,
+          status: "blocked",
+          failureReason: "quota_limited",
+          workspaceDirtyBefore: true,
+          workspaceDirtyAfter: true,
+          changedFiles: [],
+        },
+        now: quotaAttemptAt,
+      });
+      await journal.markPartial({
+        taskId: verifierManifest.taskId,
+        status: "waiting_capacity",
+        reason: "quota_limited",
+        now: quotaAttemptAt,
+      });
       const started = await projectControlStartStoredJobView(startArgs, deps);
 
       expect(started).toMatchObject({
@@ -1104,6 +1126,7 @@ await writeFile(file, JSON.stringify(operation, null, 2) + "\\n");
       expect(reservedLaunch?.config.workspacePath).toBe(
         await realpath(verifierManifest.workspacePath),
       );
+      expect(reservedLaunch?.config.maxAccountCycles).toBe(3);
       expect(reservedLaunch?.config.accounts).toEqual([{
         name: "account-g",
         authJsonPath: join(root, "auth", "account-g", "auth.json"),

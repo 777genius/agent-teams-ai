@@ -16,10 +16,11 @@ export function isCleanPreStartAdmissionCapacityContinuation(
     | "progressResultReason"
   >,
 ): boolean {
+  const failureReason = capacityContinuationFailureReason(status.resultReason);
   if (
     status.workspaceDirty !== false ||
     status.recommendedAction !== "continue_after_capacity" ||
-    status.resultReason !== "account_unavailable"
+    !failureReason
   ) {
     return false;
   }
@@ -27,6 +28,14 @@ export function isCleanPreStartAdmissionCapacityContinuation(
   return (
     status.resultStatus === "blocked" &&
     status.progressResultStatus === "waiting_capacity" &&
-    status.progressResultReason === "account_unavailable"
+    status.progressResultReason === failureReason
   );
+}
+
+function capacityContinuationFailureReason(
+  value: string | undefined,
+): "account_unavailable" | "quota_limited" | undefined {
+  return value === "account_unavailable" || value === "quota_limited"
+    ? value
+    : undefined;
 }

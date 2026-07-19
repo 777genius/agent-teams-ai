@@ -257,22 +257,53 @@ export async function codexProjectContinuationReservationInput(input: {
   readonly excludedAccountIds: readonly string[];
   readonly continuation?: CodexProjectAccountContinuation;
 }> {
-  if (!isAccountUnavailableContinuation(input.status)) {
+  const failureReason = capacityContinuationFailureReason(input.status);
+  if (!failureReason) {
     return { excludedAccountIds: [] };
   }
   return continuationAttemptHistory({
     status: input.status,
+    failureReason,
+    taskId: input.launch.config.taskId,
+    workspacePath: input.launch.config.workspacePath,
+    launchAccountIds: input.launch.config.accounts.map(
+      (account) => account.name,
+    ),
     task: await input.journal.readTask({ taskId: input.launch.config.taskId }),
   });
 }
 
-function isAccountUnavailableContinuation(status: Pick<
+type ProvenCapacityContinuationFailureReason =
+  | "account_unavailable"
+  | "quota_limited";
+
+function capacityContinuationFailureReason(status: Pick<
   CodexGoalStatus,
   "recommendedAction" | "resultReason" | "progressResultReason"
->): boolean {
-  return status.recommendedAction === "continue_after_capacity" &&
-    (status.resultReason === "account_unavailable" ||
-      status.progressResultReason === "account_unavailable");
+>): ProvenCapacityContinuationFailureReason | undefined {
+  if (status.recommendedAction !== "continue_after_capacity") return undefined;
+  if (
+    status.resultReason &&
+    status.progressResultReason &&
+    status.resultReason !== status.progressResultReason
+  ) {
+    throw new Error("project_control_continuation_attempt_history_mismatch");
+  }
+  const resultReason = provenCapacityContinuationFailureReason(
+    status.resultReason,
+  );
+  const progressReason = provenCapacityContinuationFailureReason(
+    status.progressResultReason,
+  );
+  return resultReason ?? progressReason;
+}
+
+function provenCapacityContinuationFailureReason(
+  value: string | undefined,
+): ProvenCapacityContinuationFailureReason | undefined {
+  return value === "account_unavailable" || value === "quota_limited"
+    ? value
+    : undefined;
 }
 
 function continuationAttemptHistory(input: {
@@ -280,6 +311,10 @@ function continuationAttemptHistory(input: {
     CodexGoalStatus,
     "progressAttemptCount" | "progressCurrentAccount"
   >;
+  readonly failureReason: ProvenCapacityContinuationFailureReason;
+  readonly taskId: string;
+  readonly workspacePath: string;
+  readonly launchAccountIds: readonly string[];
   readonly task: SafeExecutionTaskRecord | null;
 }): {
   readonly excludedAccountIds: readonly string[];
@@ -288,22 +323,38 @@ function continuationAttemptHistory(input: {
   const lastAttempt = input.task?.attempts.at(-1);
   if (
     !input.task ||
-    !lastAttempt?.accountId ||
-    input.task.lastFailureReason !== "account_unavailable" ||
-    lastAttempt.failureReason !== "account_unavailable"
+    !lastAttempt ||
+    input.task.taskId !== input.taskId ||
+    input.task.workspacePath !== input.workspacePath ||
+    input.task.provider !== "codex" ||
+    lastAttempt.taskId !== input.taskId ||
+    lastAttempt.provider !== "codex" ||
+    lastAttempt.attemptNumber !== input.task.attempts.length ||
+    lastAttempt.status !== "blocked" ||
+    !lastAttempt.finishedAt ||
+    input.task.lastFailureReason !== input.failureReason ||
+    lastAttempt.failureReason !== input.failureReason
   ) {
+    throw new Error("project_control_continuation_attempt_history_required");
+  }
+  const failedAccountId =
+    lastAttempt.accountId ??
+    (input.launchAccountIds.length === 1
+      ? input.launchAccountIds[0]
+      : undefined);
+  if (!failedAccountId) {
     throw new Error("project_control_continuation_attempt_history_required");
   }
   if (
     (input.status.progressAttemptCount !== undefined &&
       input.status.progressAttemptCount !== input.task.attempts.length) ||
     (input.status.progressCurrentAccount !== undefined &&
-      input.status.progressCurrentAccount !== lastAttempt.accountId)
+      input.status.progressCurrentAccount !== failedAccountId)
   ) {
     throw new Error("project_control_continuation_attempt_history_mismatch");
   }
   return {
-    excludedAccountIds: [lastAttempt.accountId],
+    excludedAccountIds: [failedAccountId],
     continuation: { previousAttemptCount: input.task.attempts.length },
   };
 }

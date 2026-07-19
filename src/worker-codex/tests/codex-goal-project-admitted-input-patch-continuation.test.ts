@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -235,7 +235,11 @@ describe("admitted input-patch capacity continuation", () => {
       })}\n`,
     );
     const journal = new InMemoryAttemptJournal();
-    await recordUnavailableAttempt(journal, manifest.taskId, workspacePath);
+    await recordUnavailableAttempt(
+      journal,
+      manifest.taskId,
+      await realpath(workspacePath),
+    );
 
     const controller = {
       schemaVersion: 1,
@@ -393,14 +397,21 @@ describe("clean pre-start capacity continuation", () => {
     expect(
       isCleanPreStartAdmissionCapacityContinuation({
         ...status,
+        resultReason: "quota_limited",
+        progressResultReason: "quota_limited",
+      }),
+    ).toBe(true);
+    expect(
+      isCleanPreStartAdmissionCapacityContinuation({
+        ...status,
         workspaceDirty: true,
       }),
     ).toBe(false);
     expect(
       isCleanPreStartAdmissionCapacityContinuation({
         ...status,
-        resultReason: "provider_failure",
-        progressResultReason: "provider_failure",
+        resultReason: "quota_limited",
+        progressResultReason: "account_unavailable",
       }),
     ).toBe(false);
     expect(
@@ -519,7 +530,7 @@ describe("clean pre-start capacity continuation", () => {
     await recordUnavailableAttempt(
       journal,
       manifest.taskId,
-      manifest.workspacePath,
+      await realpath(manifest.workspacePath),
       false,
     );
     const controller = {

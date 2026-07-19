@@ -6,6 +6,7 @@ import {
   InMemoryAttemptJournal,
   InMemoryWorkerAccountCapacityStore,
   InMemoryWorkerAccountLeaseStore,
+  type SafeExecutionTaskRecord,
 } from "@vioxen/subscription-runtime/worker-core";
 import type { CodexGoalJobManifest } from "../codex-goal-jobs";
 import type { CodexGoalLaunchInput } from "../codex-goal-ops";
@@ -41,7 +42,11 @@ describe("project account reservation", () => {
     };
     const first = await reserveCodexProjectAccount({ ...scoped, deps });
     const journal = new InMemoryAttemptJournal();
-    await recordUnavailableAttempt(journal, first.accountId);
+    await recordUnavailableAttempt(
+      journal,
+      first.accountId,
+      scoped.launch.config.workspacePath,
+    );
     const continuation = await codexProjectContinuationReservationInput({
       status: {
         recommendedAction: "continue_after_capacity",
@@ -70,6 +75,109 @@ describe("project account reservation", () => {
       continued.accountId,
     ]);
     expect(continued.launch.config.maxAccountCycles).toBe(2);
+  });
+
+  it("proves quota_limited continuation from a singleton launch account", async () => {
+    const root = await mkdtemp(join(tmpdir(), "project-quota-continuation-"));
+    roots.push(root);
+    const scoped = singleAccountFixture(root, "job-1");
+    const journal = new InMemoryAttemptJournal();
+    await recordQuotaLimitedAttemptWithoutAccount(
+      journal,
+      scoped.launch.config.workspacePath,
+    );
+
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "continue_after_capacity",
+          resultReason: "quota_limited",
+          progressAttemptCount: 1,
+        },
+        launch: scoped.launch,
+        journal,
+      }),
+    ).resolves.toEqual({
+      excludedAccountIds: ["account-a"],
+      continuation: { previousAttemptCount: 1 },
+    });
+
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "continue_after_capacity",
+          resultReason: "account_unavailable",
+        },
+        launch: scoped.launch,
+        journal,
+      }),
+    ).rejects.toThrow("project_control_continuation_attempt_history_required");
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "continue_after_capacity",
+          resultReason: "quota_limited",
+        },
+        launch: fixture(root, "job-1").launch,
+        journal,
+      }),
+    ).rejects.toThrow("project_control_continuation_attempt_history_required");
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "continue_after_capacity",
+          resultReason: "quota_limited",
+          progressResultReason: "provider_failure",
+        },
+        launch: scoped.launch,
+        journal,
+      }),
+    ).rejects.toThrow("project_control_continuation_attempt_history_mismatch");
+    await expect(
+      codexProjectContinuationReservationInput({
+        status: {
+          recommendedAction: "continue_after_capacity",
+          resultReason: "quota_limited",
+          progressCurrentAccount: "account-b",
+        },
+        launch: scoped.launch,
+        journal,
+      }),
+    ).rejects.toThrow("project_control_continuation_attempt_history_mismatch");
+
+    const recorded = await journal.readTask({ taskId: "job-1-task" });
+    if (!recorded) throw new Error("expected recorded quota task");
+    const lastAttempt = recorded.attempts.at(-1)!;
+    const invalidTasks: readonly SafeExecutionTaskRecord[] = [
+      { ...recorded, workspacePath: `${recorded.workspacePath}-stale` },
+      {
+        ...recorded,
+        attempts: [{ ...lastAttempt, provider: "other-provider" }],
+      },
+      {
+        ...recorded,
+        attempts: [
+          lastAttempt,
+          {
+            ...lastAttempt,
+            attemptNumber: 2,
+            failureReason: "account_unavailable",
+          },
+        ],
+      },
+    ];
+    for (const invalidTask of invalidTasks) {
+      await expect(
+        codexProjectContinuationReservationInput({
+          status: {
+            recommendedAction: "continue_after_capacity",
+            resultReason: "quota_limited",
+          },
+          launch: scoped.launch,
+          journal: { readTask: async () => invalidTask },
+        }),
+      ).rejects.toThrow("project_control_continuation_attempt_history_required");
+    }
   });
 
   it("releases an excluded exclusive reservation before selecting another account", async () => {
@@ -379,12 +487,13 @@ function fixture(
 async function recordUnavailableAttempt(
   journal: InMemoryAttemptJournal,
   accountId: string,
+  workspacePath: string,
 ): Promise<void> {
   const now = new Date("2026-07-13T00:00:00.000Z");
   await journal.startTask({
     taskId: "job-1-task",
     workspaceRunId: "workspace-run",
-    workspacePath: "/workspace",
+    workspacePath,
     effectMode: "workspace_patch",
     provider: "codex",
     now,
@@ -410,6 +519,43 @@ async function recordUnavailableAttempt(
     taskId: "job-1-task",
     status: "waiting_capacity",
     reason: "account_unavailable",
+    now,
+  });
+}
+
+async function recordQuotaLimitedAttemptWithoutAccount(
+  journal: InMemoryAttemptJournal,
+  workspacePath: string,
+): Promise<void> {
+  const now = new Date("2026-07-13T00:00:00.000Z");
+  await journal.startTask({
+    taskId: "job-1-task",
+    workspaceRunId: "workspace-run",
+    workspacePath,
+    effectMode: "workspace_patch",
+    provider: "codex",
+    now,
+  });
+  await journal.appendAttempt({
+    taskId: "job-1-task",
+    attempt: {
+      taskId: "job-1-task",
+      attemptNumber: 1,
+      provider: "codex",
+      startedAt: now,
+      finishedAt: now,
+      status: "blocked",
+      failureReason: "quota_limited",
+      workspaceDirtyBefore: false,
+      workspaceDirtyAfter: false,
+      changedFiles: [],
+    },
+    now,
+  });
+  await journal.markPartial({
+    taskId: "job-1-task",
+    status: "waiting_capacity",
+    reason: "quota_limited",
     now,
   });
 }
