@@ -3,9 +3,35 @@ import { describe, expect, it } from 'vitest';
 import {
   buildReviewDecisionScopeToken,
   fingerprintReviewChangeSet,
+  reviewChangeSetMatchesScope,
 } from '../../../src/renderer/utils/reviewDecisionScope';
 
 describe('buildReviewDecisionScopeToken', () => {
+  it('rejects stale change sets from another team or review target', () => {
+    const changeSet = {
+      teamName: 'team-a',
+      memberName: 'alice',
+      files: [],
+      totalLinesAdded: 0,
+      totalLinesRemoved: 0,
+      totalFiles: 0,
+      computedAt: '2026-07-19T00:00:00.000Z',
+    };
+
+    expect(
+      reviewChangeSetMatchesScope(changeSet, { teamName: 'team-a', memberName: 'alice' })
+    ).toBe(true);
+    expect(
+      reviewChangeSetMatchesScope(changeSet, { teamName: 'team-b', memberName: 'alice' })
+    ).toBe(false);
+    expect(
+      reviewChangeSetMatchesScope(changeSet, { teamName: 'team-a', memberName: 'bob' })
+    ).toBe(false);
+    expect(
+      reviewChangeSetMatchesScope(changeSet, { teamName: 'team-a', taskId: 'task-1' })
+    ).toBe(false);
+  });
+
   it('includes task request signature so filtered task variants do not collide', () => {
     const baseChangeSet = {
       teamName: 'demo',

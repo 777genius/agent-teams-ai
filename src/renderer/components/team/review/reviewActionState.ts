@@ -89,6 +89,34 @@ export function getReviewCloseBlockReason(input: {
   return null;
 }
 
+export function hasUnscopedLocalReviewState(input: {
+  editedContentCount: number;
+  hunkDecisionCount: number;
+  fileDecisionCount: number;
+  undoHistoryCount: number;
+  redoHistoryCount: number;
+  pendingDraftWriteCount: number;
+  draftWriteChainCount: number;
+  draftWriteErrorCount: number;
+  pendingApplyCleanup: boolean;
+  pendingDecisionClear: boolean;
+  persistenceStatus: ReviewActionPersistenceStatus;
+}): boolean {
+  return (
+    input.editedContentCount > 0 ||
+    input.hunkDecisionCount > 0 ||
+    input.fileDecisionCount > 0 ||
+    input.undoHistoryCount > 0 ||
+    input.redoHistoryCount > 0 ||
+    input.pendingDraftWriteCount > 0 ||
+    input.draftWriteChainCount > 0 ||
+    input.draftWriteErrorCount > 0 ||
+    input.pendingApplyCleanup ||
+    input.pendingDecisionClear ||
+    input.persistenceStatus !== 'saved'
+  );
+}
+
 export function getReviewDecisionHydrationGuard(input: {
   expectedScopeKey: string | null;
   hydratedScopeKey: string | null;

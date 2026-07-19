@@ -4,6 +4,20 @@ import type { AgentChangeSet, SnippetDiff, TaskChangeSet, TaskChangeSetV2 } from
 
 export type ReviewChangeSetLike = AgentChangeSet | TaskChangeSet | TaskChangeSetV2;
 
+export function reviewChangeSetMatchesScope(
+  changeSet: ReviewChangeSetLike | null | undefined,
+  scope: { teamName: string; taskId?: string; memberName?: string }
+): changeSet is ReviewChangeSetLike {
+  if (!changeSet || changeSet.teamName !== scope.teamName) return false;
+  if (scope.taskId !== undefined) {
+    return 'taskId' in changeSet && changeSet.taskId === scope.taskId;
+  }
+  if (scope.memberName !== undefined) {
+    return 'memberName' in changeSet && changeSet.memberName === scope.memberName;
+  }
+  return true;
+}
+
 function encodeFingerprintField(value: string): string {
   return `${value.length}:${value}`;
 }

@@ -2415,6 +2415,29 @@ describe('changeReviewSlice task changes', () => {
     expect(store.getState().applying).toBe(false);
   });
 
+  it('refuses to apply a stale change set owned by another team', async () => {
+    const store = createSliceStore();
+    store.setState({
+      activeChangeSet: makeAgentChangeSet(),
+      hunkDecisions: { '/repo/file.ts:0': 'rejected' },
+      fileChunkCounts: { '/repo/file.ts': 1 },
+      changeSetEpoch: 1,
+    });
+
+    const allResult = await store.getState().applyReview('team-b', undefined, 'alice');
+    const fileResult = await store
+      .getState()
+      .applySingleFileDecision('team-b', '/repo/file.ts', undefined, 'alice');
+
+    expect(allResult).toBeNull();
+    expect(fileResult).toBeNull();
+    expect(hoisted.getAgentChanges).not.toHaveBeenCalled();
+    expect(hoisted.applyDecisions).not.toHaveBeenCalled();
+    expect(store.getState().applyError).toBe(
+      'Review scope changed. Reload Changes before applying.'
+    );
+  });
+
   it('surfaces instant single-file apply errors returned without throwing', async () => {
     const store = createSliceStore();
     hoisted.applyDecisions.mockResolvedValueOnce({

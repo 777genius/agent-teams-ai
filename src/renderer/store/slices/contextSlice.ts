@@ -8,6 +8,7 @@
 import { api } from '@renderer/api';
 import { contextStorage } from '@renderer/services/contextStorage';
 import { draftStorage } from '@renderer/services/draftStorage';
+import { requestCloseActiveChangeReviewLifecycle } from '@renderer/utils/changeReviewLifecycleCoordinator';
 
 import {
   captureContextScopedRequestEpoch,
@@ -292,6 +293,14 @@ export const createContextSlice: StateCreator<AppState, [], [], ContextSlice> = 
       const previousContextId = get().activeContextId;
       const contextChanged = activeContextId !== previousContextId;
       if (contextChanged) {
+        const lifecycleClose = requestCloseActiveChangeReviewLifecycle();
+        if (lifecycleClose !== true && !(await lifecycleClose)) {
+          set({ contextSnapshotsReady: true });
+          await get().fetchAvailableContexts();
+          return;
+        }
+      }
+      if (contextChanged) {
         invalidateContextScopedRequestEpoch();
       }
 
@@ -342,7 +351,7 @@ export const createContextSlice: StateCreator<AppState, [], [], ContextSlice> = 
 
   // Switch to a different context
   switchContext: async (targetContextId: string) => {
-    const state = get();
+    let state = get();
 
     // Early return if already on target context
     if (targetContextId === state.activeContextId) {
@@ -353,6 +362,13 @@ export const createContextSlice: StateCreator<AppState, [], [], ContextSlice> = 
     if (state.isContextSwitching) {
       return;
     }
+
+    const lifecycleClose = requestCloseActiveChangeReviewLifecycle();
+    if (lifecycleClose !== true && !(await lifecycleClose)) return;
+
+    // The flush is asynchronous. Re-check in case another switch won the race.
+    state = get();
+    if (targetContextId === state.activeContextId || state.isContextSwitching) return;
 
     set({
       isContextSwitching: true,

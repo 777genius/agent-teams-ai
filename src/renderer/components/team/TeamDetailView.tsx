@@ -44,6 +44,11 @@ import {
   selectTeamMemberSnapshotsForName,
   selectTeamMessages,
 } from '@renderer/store/slices/teamSlice';
+import {
+  buildChangeReviewLifecycleSessionId,
+  requestChangeReviewLifecycleReservation,
+  requestCloseChangeReviewLifecycleHost,
+} from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import * as tokenMath from '@renderer/utils/contextMath';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
@@ -328,6 +333,15 @@ interface TeamDetailViewProps {
   teamName: string;
   isActive?: boolean;
   isPaneFocused?: boolean;
+}
+
+interface TeamReviewDialogState {
+  open: boolean;
+  mode: 'agent' | 'task';
+  memberName?: string;
+  taskId?: string;
+  initialFilePath?: string;
+  taskChangeRequestOptions?: TaskChangeRequestOptions;
 }
 
 interface CreateTaskDialogState {
@@ -1394,6 +1408,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 }: TeamDetailViewProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
+  const reviewLifecycleHostId = useId();
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<ResolvedTeamMember | null>(null);
   const [selectedMemberView, setSelectedMemberView] = useState<{
@@ -1518,14 +1533,10 @@ export const TeamDetailView = memo(function TeamDetailView({
   const [replyQuote, setReplyQuote] = useState<{ from: string; text: string } | undefined>(
     undefined
   );
-  const [reviewDialogState, setReviewDialogState] = useState<{
-    open: boolean;
-    mode: 'agent' | 'task';
-    memberName?: string;
-    taskId?: string;
-    initialFilePath?: string;
-    taskChangeRequestOptions?: TaskChangeRequestOptions;
-  }>({ open: false, mode: 'task' });
+  const [reviewDialogState, setReviewDialogState] = useState<TeamReviewDialogState>({
+    open: false,
+    mode: 'task',
+  });
 
   // Active teams for conflict warning in LaunchTeamDialog
   const [activeTeamsForLaunch, setActiveTeamsForLaunch] = useState<
@@ -1660,6 +1671,24 @@ export const TeamDetailView = memo(function TeamDetailView({
   );
 
   const tabId = useOptionalTabId();
+  const focusReviewLifecycleHost = useCallback((): void => {
+    if (tabId) useStore.getState().setActiveTab(tabId);
+  }, [tabId]);
+  const requestOpenChangeReview = useCallback(
+    async (next: Omit<TeamReviewDialogState, 'open'>): Promise<boolean> => {
+      const sessionId = buildChangeReviewLifecycleSessionId({ teamName, ...next });
+      const reserved = await requestChangeReviewLifecycleReservation({
+        hostId: reviewLifecycleHostId,
+        sessionId,
+        tabId: tabId ?? undefined,
+      });
+      if (!reserved) return false;
+      setReviewDialogState({ ...next, open: true });
+      if (next.initialFilePath) selectReviewFile(next.initialFilePath);
+      return true;
+    },
+    [reviewLifecycleHostId, selectReviewFile, tabId, teamName]
+  );
   const isThisTabActive = isActive;
   const wasInteractiveRef = useRef(false);
   const memberRosterHydrationRetryRef = useRef<string | null>(null);
@@ -2413,18 +2442,20 @@ export const TeamDetailView = memo(function TeamDetailView({
   useEffect(() => {
     if (!isThisTabActive) return;
     if (!pendingReviewRequest) return;
-    setReviewDialogState({
-      open: true,
-      mode: 'task',
-      taskId: pendingReviewRequest.taskId,
-      initialFilePath: pendingReviewRequest.filePath,
-      taskChangeRequestOptions: pendingReviewRequest.requestOptions,
-    });
-    if (pendingReviewRequest.filePath) {
-      selectReviewFile(pendingReviewRequest.filePath);
-    }
+    const request = pendingReviewRequest;
     setPendingReviewRequest(null);
-  }, [isThisTabActive, pendingReviewRequest, selectReviewFile, setPendingReviewRequest]);
+    void requestOpenChangeReview({
+      mode: 'task',
+      taskId: request.taskId,
+      initialFilePath: request.filePath,
+      taskChangeRequestOptions: request.requestOptions,
+    });
+  }, [
+    isThisTabActive,
+    pendingReviewRequest,
+    requestOpenChangeReview,
+    setPendingReviewRequest,
+  ]);
 
   const pendingTeamSectionFocus = useStore((s) => s.pendingTeamSectionFocus);
   const clearTeamSectionFocus = useStore((s) => s.clearTeamSectionFocus);
@@ -2500,31 +2531,26 @@ export const TeamDetailView = memo(function TeamDetailView({
   const handleViewChanges = useCallback(
     (taskId: string) => {
       const task = taskMap.get(taskId);
-      setReviewDialogState({
-        open: true,
+      void requestOpenChangeReview({
         mode: 'task',
         taskId,
         taskChangeRequestOptions: task ? buildTaskChangeRequestOptions(task) : {},
       });
     },
-    [taskMap]
+    [requestOpenChangeReview, taskMap]
   );
 
   const handleViewChangesForFile = useCallback(
     (taskId: string, filePath?: string) => {
       const task = taskMap.get(taskId);
-      setReviewDialogState({
-        open: true,
+      void requestOpenChangeReview({
         mode: 'task',
         taskId,
         initialFilePath: filePath,
         taskChangeRequestOptions: task ? buildTaskChangeRequestOptions(task) : {},
       });
-      if (filePath) {
-        selectReviewFile(filePath);
-      }
     },
-    [selectReviewFile, taskMap]
+    [requestOpenChangeReview, taskMap]
   );
 
   const handleRequestReview = useCallback(
@@ -2705,6 +2731,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     setDeleteConfirmOpen(false);
     void (async () => {
       try {
+        if (!(await requestCloseChangeReviewLifecycleHost(reviewLifecycleHostId))) return;
         await deleteTeam(teamName);
         if (tabId) closeTab(tabId);
         openTeamsTab();
@@ -2712,7 +2739,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         // error is shown via store
       }
     })();
-  }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId]);
+  }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId]);
 
   const handleCreateTask = (
     subject: string,
@@ -3513,8 +3540,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 }}
                 onViewMemberChanges={(memberName, filePath) => {
                   closeSelectedMemberDialog();
-                  setReviewDialogState({
-                    open: true,
+                  void requestOpenChangeReview({
                     mode: 'agent',
                     memberName,
                     initialFilePath: filePath,
@@ -3756,6 +3782,9 @@ export const TeamDetailView = memo(function TeamDetailView({
                     taskChangeRequestOptions={reviewDialogState.taskChangeRequestOptions}
                     projectPath={data.config.projectPath}
                     onEditorAction={handleEditorAction}
+                    lifecycleHostId={reviewLifecycleHostId}
+                    lifecycleTabId={tabId ?? undefined}
+                    onLifecycleFocus={focusReviewLifecycleHost}
                   />
                 </Suspense>
               )}

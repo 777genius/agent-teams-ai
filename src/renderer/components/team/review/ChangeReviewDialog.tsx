@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { redoDepth, undoDepth } from '@codemirror/commands';
 import { Transaction } from '@codemirror/state';
@@ -21,10 +29,17 @@ import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { getFileHunkCount, REVIEW_INSTANT_APPLY } from '@renderer/store/slices/changeReviewSlice';
 import { buildSelectionAction } from '@renderer/utils/buildSelectionAction';
+import {
+  buildChangeReviewLifecycleSessionId,
+  registerChangeReviewLifecycleOwner,
+} from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { buildSelectionInfo, SELECTION_DEBOUNCE_MS } from '@renderer/utils/codemirrorSelectionInfo';
 import { sortItemsAsTree } from '@renderer/utils/fileTreeBuilder';
 import { displayMemberName } from '@renderer/utils/memberHelpers';
-import { buildReviewDecisionScopeToken } from '@renderer/utils/reviewDecisionScope';
+import {
+  buildReviewDecisionScopeToken,
+  reviewChangeSetMatchesScope,
+} from '@renderer/utils/reviewDecisionScope';
 import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
 import {
   buildTaskChangeSignature,
@@ -56,6 +71,7 @@ import {
   getReviewRenameRecoveryExpectation,
   hasReviewFileRejections,
   hasUnresolvedReviewExternalChange,
+  hasUnscopedLocalReviewState,
   isReviewActionLocked,
   isReviewActionPersistenceBlocking,
   isReviewFileFullyRejected,
@@ -248,6 +264,9 @@ interface ChangeReviewDialogProps {
   taskChangeRequestOptions?: TaskChangeRequestOptions;
   projectPath?: string;
   onEditorAction?: (action: EditorSelectionAction) => void;
+  lifecycleHostId?: string;
+  lifecycleTabId?: string;
+  onLifecycleFocus?: () => void;
 }
 
 function isTaskChangeSetV2(cs: { teamName: string }): cs is TaskChangeSetV2 {
@@ -324,8 +343,25 @@ export const ChangeReviewDialog = ({
   taskChangeRequestOptions,
   projectPath,
   onEditorAction,
+  lifecycleHostId,
+  lifecycleTabId,
+  onLifecycleFocus,
 }: ChangeReviewDialogProps): React.ReactElement | null => {
   const { t } = useAppTranslation('team');
+  const generatedLifecycleHostId = useId();
+  const resolvedLifecycleHostId = lifecycleHostId ?? generatedLifecycleHostId;
+  const reviewLifecycleSessionId = useMemo(
+    () =>
+      buildChangeReviewLifecycleSessionId({
+        teamName,
+        mode,
+        memberName,
+        taskId,
+        taskChangeRequestOptions,
+      }),
+    [memberName, mode, taskChangeRequestOptions, taskId, teamName]
+  );
+  const [lifecycleAuthorized, setLifecycleAuthorized] = useState(false);
   const {
     activeChangeSet,
     changeSetLoading,
@@ -380,12 +416,13 @@ export const ChangeReviewDialog = ({
   // Filesystem-safe: use `-` instead of `:` for decision persistence key
   const decisionScopeKey = mode === 'task' ? `task-${taskId ?? ''}` : `agent-${memberName ?? ''}`;
   const decisionScopeToken = useMemo(() => {
-    if (!activeChangeSet) return null;
-    if (mode === 'task') {
-      if (!('taskId' in activeChangeSet) || activeChangeSet.taskId !== taskId) {
-        return null;
-      }
-    } else if (!('memberName' in activeChangeSet) || activeChangeSet.memberName !== memberName) {
+    if (
+      !reviewChangeSetMatchesScope(activeChangeSet, {
+        teamName,
+        taskId: mode === 'task' ? taskId : undefined,
+        memberName: mode === 'agent' ? memberName : undefined,
+      })
+    ) {
       return null;
     }
 
@@ -397,7 +434,7 @@ export const ChangeReviewDialog = ({
         mode === 'task' ? buildTaskChangeSignature(taskChangeRequestOptions ?? {}) : undefined,
       changeSet: activeChangeSet,
     });
-  }, [activeChangeSet, memberName, mode, taskChangeRequestOptions, taskId]);
+  }, [activeChangeSet, memberName, mode, taskChangeRequestOptions, taskId, teamName]);
   const [draftHistoryEntries, setDraftHistoryEntries] = useState<
     Record<string, ReviewDraftHistoryEntry>
   >({});
@@ -489,6 +526,7 @@ export const ChangeReviewDialog = ({
   const undoInFlightRef = useRef(false);
   const closingRef = useRef(false);
   const pendingApplyCleanupKeyRef = useRef<string | null>(null);
+  const pendingAutoDecisionClearKeyRef = useRef<string | null>(null);
   const reviewActionPersistenceStatusRef = useRef<ReviewActionPersistenceStatus>('saved');
   const reviewActionPersistenceGenerationRef = useRef(0);
   const immediatelyPersistedReviewSnapshotRef = useRef<ReviewPersistenceSnapshotIdentity | null>(
@@ -546,6 +584,9 @@ export const ChangeReviewDialog = ({
     immediatelyPersistedReviewSnapshotRef.current = null;
     if (pendingApplyCleanupKeyRef.current !== decisionHydrationKey) {
       pendingApplyCleanupKeyRef.current = null;
+    }
+    if (pendingAutoDecisionClearKeyRef.current !== decisionHydrationKey) {
+      pendingAutoDecisionClearKeyRef.current = null;
     }
     publishReviewActionPersistenceStatus('saved');
   }, [decisionHydrationKey, publishReviewActionPersistenceStatus]);
@@ -3378,6 +3419,7 @@ export const ChangeReviewDialog = ({
 
   // Scroll repositioning - re-query coords when parent scrolls (rAF-throttled)
   const hasData =
+    lifecycleAuthorized &&
     !changeSetLoading &&
     !changeSetError &&
     !!activeChangeSet &&
@@ -3430,6 +3472,25 @@ export const ChangeReviewDialog = ({
 
   const flushReviewStateForClose = useCallback(async (): Promise<ReviewCloseFlushResult> => {
     const state = useStore.getState();
+    const localStateRequiresScope = hasUnscopedLocalReviewState({
+      editedContentCount: Object.keys(state.editedContents).length,
+      hunkDecisionCount: Object.keys(state.hunkDecisions).length,
+      fileDecisionCount: Object.keys(state.fileDecisions).length,
+      undoHistoryCount: state.reviewActionHistory.length,
+      redoHistoryCount: state.reviewRedoHistory.length,
+      pendingDraftWriteCount: draftHistoryWriteBufferRef.current.keys('').length,
+      draftWriteChainCount: draftHistoryWriteChainsRef.current.size,
+      draftWriteErrorCount: draftHistoryWriteErrorsRef.current.size,
+      pendingApplyCleanup: pendingApplyCleanupKeyRef.current !== null,
+      pendingDecisionClear: pendingAutoDecisionClearKeyRef.current !== null,
+      persistenceStatus: reviewActionPersistenceStatusRef.current,
+    });
+    if (!decisionHydrationKey && localStateRequiresScope) {
+      const blocker =
+        'Manual edit history lost its saved review scope. Keep Changes open and retry recovery.';
+      useStore.setState({ applyError: blocker });
+      return { ok: false, blocker };
+    }
     if (decisionHydrationKey) {
       const matchesCurrentHydration = state.decisionHydrationScopeKey === decisionHydrationKey;
       const matchesDraftHydration = draftHistoryHydration.key === decisionHydrationKey;
@@ -3437,7 +3498,30 @@ export const ChangeReviewDialog = ({
         (matchesCurrentHydration && state.decisionHydrationStatus === 'error') ||
         (matchesDraftHydration && draftHistoryHydration.status === 'error')
       ) {
-        // The persisted state is unknown. Preserve its last good copy without overwriting it.
+        const draftPrefix = `${decisionHydrationKey}\0`;
+        const hasLocalState =
+          Object.keys(state.editedContents).length > 0 ||
+          Object.keys(state.hunkDecisions).length > 0 ||
+          Object.keys(state.fileDecisions).length > 0 ||
+          state.reviewActionHistory.length > 0 ||
+          state.reviewRedoHistory.length > 0 ||
+          draftHistoryWriteBufferRef.current.keys(draftPrefix).length > 0 ||
+          [...draftHistoryWriteChainsRef.current.keys()].some((key) =>
+            key.startsWith(draftPrefix)
+          ) ||
+          [...draftHistoryWriteErrorsRef.current.keys()].some((key) =>
+            key.startsWith(draftPrefix)
+          ) ||
+          pendingApplyCleanupKeyRef.current === decisionHydrationKey ||
+          pendingAutoDecisionClearKeyRef.current === decisionHydrationKey ||
+          reviewActionPersistenceStatusRef.current !== 'saved';
+        if (hasLocalState) {
+          const blocker =
+            'Saved review state could not be reconciled with local changes. Retry recovery before closing Changes.';
+          useStore.setState({ applyError: blocker });
+          return { ok: false, blocker };
+        }
+        // With no local branch to lose, preserve the last readable disk copy and close.
         return { ok: true };
       }
       if (
@@ -3486,6 +3570,24 @@ export const ChangeReviewDialog = ({
         useStore.setState({ applyError: blocker });
         return { ok: false, blocker };
       }
+      if (
+        decisionScopeToken &&
+        pendingApplyCleanupKeyRef.current === decisionHydrationKey
+      ) {
+        const cleared = await clearDecisionsFromDisk(
+          teamName,
+          decisionScopeKey,
+          decisionScopeToken
+        );
+        if (!cleared) {
+          const blocker =
+            'Review was applied, but its saved state could not be cleared. Changes remains open.';
+          useStore.setState({ applyError: blocker });
+          return { ok: false, blocker };
+        }
+        pendingApplyCleanupKeyRef.current = null;
+        return { ok: true };
+      }
       if (decisionScopeToken) {
         const latestState = useStore.getState();
         const hasCurrentReviewState =
@@ -3523,15 +3625,56 @@ export const ChangeReviewDialog = ({
     teamName,
   ]);
 
-  const requestClose = useCallback(async (): Promise<void> => {
-    if ((await flushReviewStateForClose()).ok) onOpenChange(false);
+  const requestLifecycleClose = useCallback(async (): Promise<boolean> => {
+    const result = await flushReviewStateForClose();
+    if (result.ok) onOpenChange(false);
+    return result.ok;
   }, [flushReviewStateForClose, onOpenChange]);
 
+  const requestClose = useCallback(async (): Promise<void> => {
+    await requestLifecycleClose();
+  }, [requestLifecycleClose]);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setLifecycleAuthorized(false);
+      return;
+    }
+    const registration = registerChangeReviewLifecycleOwner({
+      hostId: resolvedLifecycleHostId,
+      sessionId: reviewLifecycleSessionId,
+      tabId: lifecycleTabId,
+      requestClose: requestLifecycleClose,
+      focus: onLifecycleFocus,
+    });
+    setLifecycleAuthorized(registration.accepted);
+    if (!registration.accepted) onOpenChange(false);
+    return () => {
+      registration.unregister();
+      setLifecycleAuthorized(false);
+    };
+  }, [
+    lifecycleTabId,
+    onLifecycleFocus,
+    onOpenChange,
+    open,
+    requestLifecycleClose,
+    resolvedLifecycleHostId,
+    reviewLifecycleSessionId,
+  ]);
+
   useEffect(() => {
-    if (!open) return;
+    if (!open || !lifecycleAuthorized) return;
     const participantId = `changes:${teamName}:${decisionHydrationKey ?? scopeKey}`;
     return registerAppCloseParticipant(participantId, async () => flushReviewStateForClose());
-  }, [decisionHydrationKey, flushReviewStateForClose, open, scopeKey, teamName]);
+  }, [
+    decisionHydrationKey,
+    flushReviewStateForClose,
+    lifecycleAuthorized,
+    open,
+    scopeKey,
+    teamName,
+  ]);
 
   const handleRetrySavedReviewState = useCallback(async (): Promise<void> => {
     if (!decisionScopeToken || reviewMutationBusy) return;
@@ -3709,7 +3852,7 @@ export const ChangeReviewDialog = ({
 
   // Load data on open
   useEffect(() => {
-    if (!open) return;
+    if (!open || !lifecycleAuthorized) return;
 
     resetAllReviewState();
 
@@ -3724,6 +3867,7 @@ export const ChangeReviewDialog = ({
     return () => clearChangeReviewCache();
   }, [
     open,
+    lifecycleAuthorized,
     mode,
     teamName,
     memberName,
@@ -3737,9 +3881,16 @@ export const ChangeReviewDialog = ({
   ]);
 
   useEffect(() => {
-    if (!open || !decisionScopeToken) return;
+    if (!open || !lifecycleAuthorized || !decisionScopeToken) return;
     void loadDecisionsFromDisk(teamName, decisionScopeKey, decisionScopeToken);
-  }, [decisionScopeKey, decisionScopeToken, loadDecisionsFromDisk, open, teamName]);
+  }, [
+    decisionScopeKey,
+    decisionScopeToken,
+    lifecycleAuthorized,
+    loadDecisionsFromDisk,
+    open,
+    teamName,
+  ]);
 
   // Persist decisions to disk on change (debounced via store action).
   // When decisions go from non-empty to empty (e.g. undo to clean state),
@@ -3754,7 +3905,7 @@ export const ChangeReviewDialog = ({
     hadDurableReviewStateRef.current = false;
   }, [decisionScopeToken]);
   useEffect(() => {
-    if (!open || !decisionScopeToken) return;
+    if (!open || !lifecycleAuthorized || !decisionScopeToken) return;
     // Never persist a decision before its instant disk mutation has completed.
     // On failure the decision is reconciled/rolled back first; when the busy state
     // clears this effect runs again with the authoritative post-operation state.
@@ -3778,12 +3929,32 @@ export const ChangeReviewDialog = ({
       }
       immediatelyPersistedReviewSnapshotRef.current = null;
       persistDecisions(teamName, decisionScopeKey, decisionScopeToken);
-    } else if (hadDurableReviewStateRef.current) {
-      hadDurableReviewStateRef.current = false;
-      void clearDecisionsFromDisk(teamName, decisionScopeKey, decisionScopeToken);
+    } else if (
+      hadDurableReviewStateRef.current &&
+      pendingAutoDecisionClearKeyRef.current !== decisionHydrationKey
+    ) {
+      pendingAutoDecisionClearKeyRef.current = decisionHydrationKey;
+      void clearDecisionsFromDisk(teamName, decisionScopeKey, decisionScopeToken).then(
+        (cleared) => {
+          if (pendingAutoDecisionClearKeyRef.current === decisionHydrationKey) {
+            pendingAutoDecisionClearKeyRef.current = null;
+          }
+          if (expectedDraftHistoryKeyRef.current !== decisionHydrationKey) return;
+          if (cleared) {
+            hadDurableReviewStateRef.current = false;
+            return;
+          }
+          publishReviewActionPersistenceStatus('error');
+          useStore.setState({
+            applyError:
+              'Unable to clear saved review decisions. Retry from History or keep Changes open.',
+          });
+        }
+      );
     }
   }, [
     open,
+    lifecycleAuthorized,
     hasDurableReviewState,
     hunkDecisions,
     fileDecisions,
@@ -3796,6 +3967,8 @@ export const ChangeReviewDialog = ({
     decisionScopeToken,
     persistDecisions,
     clearDecisionsFromDisk,
+    decisionHydrationKey,
+    publishReviewActionPersistenceStatus,
     reviewActionsBusy,
     decisionHydrationReady,
   ]);

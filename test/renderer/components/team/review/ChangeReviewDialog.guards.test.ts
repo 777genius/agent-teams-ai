@@ -7,6 +7,7 @@ import {
   getReviewRenameRecoveryExpectation,
   hasReviewFileRejections,
   hasUnresolvedReviewExternalChange,
+  hasUnscopedLocalReviewState,
   isReviewActionLocked,
   isReviewActionPersistenceBlocking,
   isReviewDiskPreimageRestored,
@@ -66,6 +67,39 @@ describe('ChangeReviewDialog interaction guards', () => {
     expect(getReviewCloseBlockReason({ busy: true, draftCount: 0 })).toContain('current');
     expect(getReviewCloseBlockReason({ busy: false, draftCount: 1 })).toContain('Save or discard');
     expect(getReviewCloseBlockReason({ busy: false, draftCount: 0 })).toBeNull();
+  });
+
+  it('does not close an unscoped review while any local or pending durable state remains', () => {
+    const clean = {
+      editedContentCount: 0,
+      hunkDecisionCount: 0,
+      fileDecisionCount: 0,
+      undoHistoryCount: 0,
+      redoHistoryCount: 0,
+      pendingDraftWriteCount: 0,
+      draftWriteChainCount: 0,
+      draftWriteErrorCount: 0,
+      pendingApplyCleanup: false,
+      pendingDecisionClear: false,
+      persistenceStatus: 'saved' as const,
+    };
+
+    expect(hasUnscopedLocalReviewState(clean)).toBe(false);
+    for (const dirty of [
+      { editedContentCount: 1 },
+      { hunkDecisionCount: 1 },
+      { fileDecisionCount: 1 },
+      { undoHistoryCount: 1 },
+      { redoHistoryCount: 1 },
+      { pendingDraftWriteCount: 1 },
+      { draftWriteChainCount: 1 },
+      { draftWriteErrorCount: 1 },
+      { pendingApplyCleanup: true },
+      { pendingDecisionClear: true },
+      { persistenceStatus: 'error' as const },
+    ]) {
+      expect(hasUnscopedLocalReviewState({ ...clean, ...dirty })).toBe(true);
+    }
   });
 
   it('distinguishes pending, ready, and failed persisted-decision hydration', () => {
