@@ -419,7 +419,10 @@ function escapeWindowsCmdMetaCharacters(value: string): string {
  * argv value changes how cmd locates paths that contain spaces.
  */
 function escapeWindowsCmdCommand(command: string): string {
-  return escapeWindowsCmdMetaCharacters(command);
+  // Unlike argv, the executable token must retain real quote characters so
+  // cmd.exe groups a path containing spaces as one command. Caret-escaping
+  // those quotes/spaces makes cmd pass the tail of the path as argv instead.
+  return quoteWindowsCmdArg(command);
 }
 
 /**
@@ -438,13 +441,13 @@ function escapeWindowsCmdFallbackArg(arg: string, doubleEscapeMetaCharacters: bo
   return escaped;
 }
 
-/** Batch launchers that substitute %1..%9, their %~ modifiers, or %* parse argv again. */
+/** Batch launchers that forward %* parse cmd metacharacters a second time. */
 function windowsBatchLauncherReparsesArgs(binaryPath: string): boolean {
   if (!isWindowsBatchLauncher(binaryPath)) {
     return false;
   }
   try {
-    return /%(?:\*|[1-9]|~[^\s%]*[1-9])/.test(readFileSync(binaryPath, 'utf8'));
+    return /%\*/.test(readFileSync(binaryPath, 'utf8'));
   } catch {
     // A launcher that cannot be inspected is safer with the additional escape
     // layer than with metacharacters becoming active during a second parse.
