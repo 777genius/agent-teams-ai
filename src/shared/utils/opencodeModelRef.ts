@@ -12,7 +12,9 @@ const OPEN_CODE_SOURCE_LABELS: Record<string, string> = {
   bedrock: 'Bedrock',
   deepseek: 'DeepSeek',
   gemini: 'Gemini',
-  google: 'Google',
+  google: 'Google Gemini API',
+  'google-vertex': 'Google Vertex AI',
+  'google-vertex-anthropic': 'Claude via Google Vertex',
   groq: 'Groq',
   'llama.cpp': 'llama.cpp',
   llamacpp: 'llama.cpp',
@@ -27,21 +29,31 @@ const OPEN_CODE_SOURCE_LABELS: Record<string, string> = {
   'openai-compatible': 'OpenAI Compatible',
   openrouter: 'OpenRouter',
   together: 'Together',
-  vertex: 'Vertex',
+  vercel: 'Vercel AI Gateway',
+  'vercel-ai-gateway': 'Vercel AI Gateway',
+  vertex: 'Google Vertex AI',
   vllm: 'vLLM',
   xai: 'xAI',
   'z-ai': 'Z.AI',
 };
 
-function humanizeOpenCodeSourceId(sourceId: string): string {
+export function getOpenCodeSourceDisplayName(
+  sourceId: string,
+  fallbackDisplayName?: string | null
+): string {
   const normalized = sourceId.trim().toLowerCase();
   if (!normalized) {
-    return sourceId;
+    return fallbackDisplayName?.trim() || sourceId;
   }
 
   const knownLabel = OPEN_CODE_SOURCE_LABELS[normalized];
   if (knownLabel) {
     return knownLabel;
+  }
+
+  const fallback = fallbackDisplayName?.trim();
+  if (fallback) {
+    return fallback;
   }
 
   return normalized
@@ -85,5 +97,5 @@ export function getOpenCodeQualifiedModelSourceLabel(
     return null;
   }
 
-  return humanizeOpenCodeSourceId(parsed.sourceId);
+  return getOpenCodeSourceDisplayName(parsed.sourceId);
 }

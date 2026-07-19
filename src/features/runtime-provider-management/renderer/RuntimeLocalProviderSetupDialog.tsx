@@ -1024,10 +1024,11 @@ export const RuntimeLocalProviderSetupDialog = ({
                   <Button
                     type="button"
                     size="sm"
+                    className="gap-1.5"
                     disabled={!availabilityComplete || providerListLoading}
                     onClick={beginAddProvider}
                   >
-                    <Plus className="mr-1.5 size-3.5" />
+                    <Plus className="size-3.5" />
                     Add provider
                   </Button>
                 </div>
@@ -1581,8 +1582,13 @@ export const RuntimeLocalProviderSetupDialog = ({
                   </Button>
                 ) : null}
                 {phase === 'done' ? (
-                  <Button type="button" variant="outline" onClick={beginAddProvider}>
-                    <Plus className="mr-1.5 size-3.5" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={beginAddProvider}
+                  >
+                    <Plus className="size-3.5" />
                     Add another provider
                   </Button>
                 ) : null}

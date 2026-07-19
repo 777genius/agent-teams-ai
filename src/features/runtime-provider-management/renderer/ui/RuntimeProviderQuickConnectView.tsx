@@ -309,11 +309,11 @@ export const RuntimeProviderQuickConnectView = ({
             type="button"
             variant="outline"
             size="sm"
-            className="h-7 px-2 text-[10.5px]"
+            className="h-7 gap-1.5 px-2 text-[10.5px]"
             disabled={gate !== 'ready'}
             onClick={onSetupLocalModel}
           >
-            <Plus className="mr-1.5 size-3" />
+            <Plus className="size-3" />
             Set up local model
           </Button>
           <Button

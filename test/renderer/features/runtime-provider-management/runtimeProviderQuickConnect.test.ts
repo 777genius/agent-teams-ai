@@ -227,6 +227,8 @@ describe('RuntimeProviderQuickConnect', () => {
   it('keeps last-known connected cards actionable during a refresh error', async () => {
     mocks.directory = {
       entries: [
+        entry('openrouter'),
+        entry('vercel'),
         entry('xai'),
         entry('kiro', { metadata: { ...entry('kiro').metadata, configuredAuthless: true } }),
         entry('cursor-acp', {
@@ -255,6 +257,8 @@ describe('RuntimeProviderQuickConnect', () => {
     const onConnectedCountChange = vi.fn();
     mocks.directory = {
       entries: [
+        entry('openrouter'),
+        entry('vercel'),
         entry('xai'),
         entry('github-copilot'),
         entry('kiro', { metadata: { ...entry('kiro').metadata, configuredAuthless: true } }),
@@ -297,9 +301,63 @@ describe('RuntimeProviderQuickConnect', () => {
     };
 
     await renderWithStatus('ready');
-    expect(onConnectedCountChange).toHaveBeenLastCalledWith(8);
+    expect(onConnectedCountChange).toHaveBeenLastCalledWith(10);
     await renderWithStatus('installing');
-    expect(onConnectedCountChange).toHaveBeenLastCalledWith(8);
+    expect(onConnectedCountChange).toHaveBeenLastCalledWith(10);
+  });
+
+  it('routes OpenRouter management and Vercel setup through the verified provider flow', async () => {
+    const onOpenCodeProviderAction = vi.fn();
+    mocks.directory = {
+      entries: [
+        entry('openrouter'),
+        entry('vercel', {
+          state: 'available',
+          connectedAuthHint: null,
+          setupKind: 'connect-api-key',
+          authMethods: ['api'],
+        }),
+      ],
+      loaded: true,
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnect, {
+          enabled: true,
+          cliStatusLoading: false,
+          providers: [openCodeProvider],
+          openCodeRuntimeStatus: runtimeStatus(),
+          openCodeRuntimeStatusLoading: false,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onOpenCodeProviderAction,
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+
+    expect(
+      host.querySelector('[data-testid="provider-quick-card-openrouter"]')?.textContent
+    ).toContain('OpenRouter');
+    expect(host.querySelector('[data-testid="provider-quick-card-vercel"]')?.textContent).toContain(
+      'Vercel AI Gateway'
+    );
+
+    await act(async () => {
+      host
+        .querySelector<HTMLButtonElement>('[data-testid="provider-quick-action-openrouter"]')
+        ?.click();
+      host
+        .querySelector<HTMLButtonElement>('[data-testid="provider-quick-action-vercel"]')
+        ?.click();
+    });
+
+    expect(onOpenCodeProviderAction).toHaveBeenNthCalledWith(1, 'openrouter', 'select');
+    expect(onOpenCodeProviderAction).toHaveBeenNthCalledWith(2, 'vercel', 'settings-connect');
   });
 
   it('re-verifies a signed-in companion when its OpenCode bridge is not ready', async () => {

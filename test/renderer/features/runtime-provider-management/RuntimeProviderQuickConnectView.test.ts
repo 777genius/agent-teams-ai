@@ -116,6 +116,8 @@ describe('RuntimeProviderQuickConnectView', () => {
     expect(browseButton).toBeDefined();
     expect(localButton?.parentElement).toBe(browseButton?.parentElement);
     expect(localButton?.nextElementSibling).toBe(browseButton);
+    expect(localButton?.classList.contains('gap-1.5')).toBe(true);
+    expect(localButton?.querySelector('svg')?.classList.contains('mr-1.5')).toBe(false);
 
     await act(async () => localButton?.click());
     expect(onSetupLocalModel).toHaveBeenCalledTimes(1);
@@ -343,6 +345,8 @@ describe('RuntimeProviderQuickConnectView', () => {
       'zai-coding-plan',
       'minimax-token-plan',
       'xiaomi-mimo-token-plan',
+      'openrouter',
+      'vercel',
     ]);
   });
 
