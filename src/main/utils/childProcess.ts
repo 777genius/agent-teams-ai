@@ -447,7 +447,8 @@ function windowsBatchLauncherReparsesArgs(binaryPath: string): boolean {
     return false;
   }
   try {
-    return readFileSync(binaryPath, 'utf8').includes('%*');
+    const launcherContent = readFileSync(binaryPath, 'utf8');
+    return launcherContent.includes('%*');
   } catch {
     // A launcher that cannot be inspected is safer with the additional escape
     // layer than with metacharacters becoming active during a second parse.

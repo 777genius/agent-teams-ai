@@ -12,30 +12,30 @@ Runtime gate:
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.9.0 -->
-Review changes are now safe to undo and redo across restarts, local OpenAI-compatible providers can be connected directly in the app, and larger teams are easier to navigate through a new organization overview and flatter workspace. This release also strengthens runtime recovery, provider readiness, and OpenCode support on Windows.
+Redesigned the team page and related workflows, added simple setup for local models, improved Cursor-style control over code changes, and fixed issues in agent setup, launch, and recovery.
 
 ### What's New
 
-- Keep an ordered Changes history with restart-safe undo and redo for applied hunks, file edits, renames, and deletions, including checkpoint previews and restore impact.
-- Connect and manage scoped local OpenAI-compatible providers and models through a guided setup flow.
-- Navigate large organizations through a responsive overview, multiscale hierarchy, semantic zoom, minimap, and focused graph controls.
-- Run deterministic teams with up to 30 teammates and see pending message delivery states before replies arrive.
-- Highlight newly arrived messages and show live relative task updates in the sidebar.
+- Review code changes hunk by hunk with Cursor-style accept/reject controls, undo and redo that survives app restarts, and checkpoint previews.
+- Connect local OpenAI-compatible models through guided setup and make them available to one project or all projects.
+- Navigate large teams through a new organization overview with hierarchy controls, zoom, and a minimap.
+- Run teams with up to 30 teammates.
 
 ### Improvements
 
-- Flatten the team workspace, navigation, kanban board, roster editor, task changes, loading states, and message composer for faster everyday use.
-- Make model selection clearer and surface connected-provider and model lifecycle status directly in setup flows.
-- Recover failed team runtimes more reliably, keep working OpenCode runtimes available during updates, preserve Anthropic backend selection across restarts, and harden provisioning.
-- Notify task owners when users create work for their teams and keep participant identity colors consistent.
-- Update the bundled runtime with stronger provider verification, AWS profile region resolution, execution proof, credential handling, and persistent host lifecycle management.
+- Made the team page, Kanban board, roster, task changes, loading screens, and message composer cleaner and more consistent.
+- Made provider and model setup clearer, including connection status and model availability.
+- Improved agent startup and recovery so healthy OpenCode teammates stay available during updates and failed sessions recover more reliably.
+- Separated message delivery progress from messages waiting for a reply.
+- Made new messages and live task updates easier to notice, and added notifications when users assign new work to a team.
 
 ### Bug Fixes
 
-- Prevent deleted agents from rejoining teams and fix single-team project grouping.
-- Recover interrupted review mutations safely and prevent stale decisions, ambiguous writes, keyboard hunk rejection, renames, or file lifecycle changes from corrupting undo history.
-- Fix OpenCode launch and readiness on Windows, isolate tmux probes, and improve Kiro companion installation and verification.
-- Fix updater banner and dialog state, rate-limit refresh feedback, graph reset and layout fitting, terminal sheet dragging, and duplicate heartbeat cleanup listeners.
+- Fixed cases where deleted agents could rejoin or single-team projects were grouped incorrectly.
+- Fixed interrupted or retried review actions damaging undo history, including changes involving renamed and deleted files.
+- Fixed Anthropic connection selection after a teammate restart and Bedrock region detection from the active AWS profile.
+- Fixed OpenCode startup on Windows and improved Kiro CLI installation and sign-in checks.
+- Fixed updater state, rate-limit refresh feedback, graph fitting, and terminal sheet dragging.
 
 ### Downloads
 
@@ -57,7 +57,7 @@ Review changes are now safe to undo and redo across restarts, local OpenAI-compa
   <br />
   <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
   <br />
-  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+  <sub>Run normally. Use Administrator mode only if the app reports a Windows permission problem during OpenCode setup.</sub>
 </td>
 <td align="center">
   <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.9.0/Agent.Teams.AI-2.9.0.AppImage">
