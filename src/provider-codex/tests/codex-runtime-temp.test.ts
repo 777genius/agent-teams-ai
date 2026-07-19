@@ -2,7 +2,7 @@ import { lstat, mkdtemp, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { createCodexRuntimeTempRoot, ensureCodexAgentTempRoot, removeCodexAgentTempRoot } from '../codex-runtime-temp';
+import { createCodexRuntimeTempRoot, createTrustedCodexRuntimeTempRoot, ensureCodexAgentTempRoot, removeCodexAgentTempRoot } from '../codex-runtime-temp';
 
 describe('createCodexRuntimeTempRoot', () => {
   it('uses SUBSCRIPTION_RUNTIME_TMPDIR when provided', async () => {
@@ -60,6 +60,24 @@ describe('createCodexRuntimeTempRoot', () => {
         SUBSCRIPTION_RUNTIME_TMPDIR: join(jobRoot, 'tmp'),
         TMPDIR: join(jobRoot, 'tmp', 'agent'),
       } })).rejects.toThrow('codex_agent_temp_runtime_root_symlink');
+    } finally {
+      await rm(jobRoot, { recursive: true, force: true });
+      await rm(outsideRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a symlinked trusted refresh bootstrap temp root', async () => {
+    const jobRoot = await mkdtemp(join(tmpdir(), 'codex-refresh-temp-job-'));
+    const outsideRoot = await mkdtemp(join(tmpdir(), 'codex-refresh-temp-outside-'));
+    try {
+      await symlink(outsideRoot, join(jobRoot, 'tmp'));
+      await expect(createTrustedCodexRuntimeTempRoot({
+        prefix: 'subscription-runtime-codex-',
+        sourceEnv: {
+          SUBSCRIPTION_RUNTIME_JOB_ROOT: jobRoot,
+          SUBSCRIPTION_RUNTIME_TMPDIR: join(jobRoot, 'tmp'),
+        },
+      })).rejects.toThrow('codex_refresh_bootstrap_temp_root_symlink');
     } finally {
       await rm(jobRoot, { recursive: true, force: true });
       await rm(outsideRoot, { recursive: true, force: true });

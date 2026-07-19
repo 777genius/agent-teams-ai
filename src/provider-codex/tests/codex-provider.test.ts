@@ -409,7 +409,7 @@ describe("Codex provider adapter", () => {
     expect(artifact.formatVersion).toBe("codex-auth-json-v1");
   });
 
-  it("refreshes by writing an isolated Codex home and reading refreshed auth", async () => {
+  it("falls back to the runtime runner for an isolated Codex auth refresh", async () => {
     const runner = new RefreshingRunner(refreshedAuthJson);
     const workspace = await mkdtemp(join(tmpdir(), "codex-provider-test-"));
     const driver = new CodexCliSessionDriver({
@@ -438,6 +438,61 @@ describe("Codex provider adapter", () => {
       expect(new TextDecoder().decode(result.artifact.bytes)).toContain(
         ["refreshed", "refresh", "token"].join("-"),
       );
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the dedicated bootstrap runner only for Codex auth refresh", async () => {
+    const refreshBootstrapRunner = new RefreshingRunner(refreshedAuthJson);
+    const taskRunner = new StaticRunner("task-runner-must-not-run");
+    const workspace = await mkdtemp(join(tmpdir(), "codex-provider-test-"));
+    const runtimeTempRoot = join(workspace, "tmp");
+    const driver = new CodexCliSessionDriver({
+      codexBinaryPath: "codex",
+      sourceEnv: {
+        SUBSCRIPTION_RUNTIME_JOB_ROOT: workspace,
+        SUBSCRIPTION_RUNTIME_TMPDIR: runtimeTempRoot,
+      },
+      refreshBootstrapRunner,
+    });
+
+    try {
+      const result = await driver.refreshSession({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        workspace: { path: workspace },
+        runner: taskRunner,
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      });
+
+      expect(result.providerState).toBe("refreshed");
+      expect(refreshBootstrapRunner.lastArgs).toContain("exec");
+      expect(taskRunner.lastArgs).toEqual([]);
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a custom Codex binary on the runtime-provided runner", async () => {
+    const refreshBootstrapRunner = new RefreshingRunner(refreshedAuthJson);
+    const taskRunner = new RefreshingRunner(refreshedAuthJson);
+    const workspace = await mkdtemp(join(tmpdir(), "codex-provider-test-"));
+    const driver = new CodexCliSessionDriver({
+      codexBinaryPath: "/tmp/caller-controlled-codex",
+      refreshBootstrapRunner,
+    });
+
+    try {
+      await expect(driver.refreshSession({
+        session: sessionArtifactFromCodexAuthJson(validAuthJson),
+        workspace: { path: workspace },
+        runner: taskRunner,
+        redactor: new DefaultRedactor(),
+        abortSignal: new AbortController().signal,
+      })).resolves.toMatchObject({ providerState: "refreshed" });
+      expect(refreshBootstrapRunner.lastArgs).toEqual([]);
+      expect(taskRunner.lastArgs).toContain("exec");
     } finally {
       await rm(workspace, { recursive: true, force: true });
     }

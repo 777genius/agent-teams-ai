@@ -24,7 +24,10 @@ import {
   pruneCodexChildEnv,
 } from "./codex-cli-domain";
 import { cleanupCodexRuntimeTempRoot } from "./codex-cli-temp-cleanup";
-import { createCodexRuntimeTempRoot } from "./codex-runtime-temp";
+import {
+  createCodexRuntimeTempRoot,
+  createTrustedCodexRuntimeTempRoot,
+} from "./codex-runtime-temp";
 import {
   codexAuthJsonFormatVersion,
   defaultCodexModel,
@@ -39,6 +42,13 @@ export type CodexCliSessionDriverOptions = {
   readonly model?: string;
   readonly sourceEnv?: Readonly<Record<string, string | undefined>>;
   readonly refreshMode?: ProviderCapabilities["refreshMode"];
+  /**
+   * Runs the fixed, adapter-authored refresh bootstrap only. Task and
+   * model-authored commands continue to use the runtime-provided runner.
+   */
+  readonly refreshBootstrapRunner?: Parameters<
+    ProviderSessionDriver["refreshSession"]
+  >[0]["runner"];
 };
 
 export class CodexCliSessionDriver implements ProviderSessionDriver {
@@ -75,10 +85,18 @@ export class CodexCliSessionDriver implements ProviderSessionDriver {
     const authJson = codexAuthJsonFromArtifact(input.session);
     input.redactor.registerSecret(authJson, "codex-auth-json");
 
-    const tempRoot = await createCodexRuntimeTempRoot({
-      prefix: "subscription-runtime-codex-",
-      sourceEnv: this.options.sourceEnv,
-    });
+    const useTrustedBootstrapRunner =
+      this.options.refreshBootstrapRunner !== undefined &&
+      (this.options.codexBinaryPath ?? "codex") === "codex";
+    const tempRoot = useTrustedBootstrapRunner
+      ? await createTrustedCodexRuntimeTempRoot({
+          prefix: "subscription-runtime-codex-",
+          sourceEnv: this.options.sourceEnv ?? process.env,
+        })
+      : await createCodexRuntimeTempRoot({
+          prefix: "subscription-runtime-codex-",
+          sourceEnv: this.options.sourceEnv,
+        });
     const tempHome = join(tempRoot, "home");
     const tempCodexHome = join(tempRoot, "codex-home");
     const emptyWorkingDirectory = join(tempRoot, "empty-workdir");
@@ -98,7 +116,11 @@ export class CodexCliSessionDriver implements ProviderSessionDriver {
         model: this.options.model ?? defaultCodexModel,
       });
 
-      await input.runner.run({
+      const refreshRunner =
+        useTrustedBootstrapRunner && this.options.refreshBootstrapRunner
+          ? this.options.refreshBootstrapRunner
+          : input.runner;
+      await refreshRunner.run({
         command: plan.command,
         args: plan.args,
         cwd: plan.cwd,

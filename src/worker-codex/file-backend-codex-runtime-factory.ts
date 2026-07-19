@@ -56,11 +56,12 @@ export function createFileBackendCodexWorkerRuntime(input: {
   readonly clock: ClockPort;
 }): FileBackendCodexWorkerRuntimeParts {
   const { options } = input;
-  const runner = createWorkerRunner({
+  const runners = createWorkerRunners({
     options,
     workerId: input.workerId,
     observability: input.observability,
   });
+  const runner = runners.taskRunner;
   const workspaces = createWorkerWorkspaces({
     options,
     workerId: input.workerId,
@@ -79,6 +80,9 @@ export function createFileBackendCodexWorkerRuntime(input: {
     model: options.model ?? defaultCodexModel,
     ...(options.sourceEnv ? { sourceEnv: options.sourceEnv } : {}),
     refreshMode: "lazy-refresh",
+    ...(runners.refreshBootstrapRunner
+      ? { refreshBootstrapRunner: runners.refreshBootstrapRunner }
+      : {}),
   });
   const agentDriver = createCodexAgentDriver({
     options,
@@ -129,13 +133,16 @@ export function createFileBackendCodexWorkerRuntime(input: {
   };
 }
 
-function createWorkerRunner(input: {
+function createWorkerRunners(input: {
   readonly options: FileBackendCodexWorkerOptions;
   readonly workerId: string;
   readonly observability: ObservabilityPort;
-}): RuntimeDeps["runner"] {
+}): {
+  readonly taskRunner: RuntimeDeps["runner"];
+  readonly refreshBootstrapRunner?: RuntimeDeps["runner"];
+} {
   const baseRunner = input.options.runner ?? new NodeProcessRunner();
-  return input.options.commandPolicy?.validateCommands
+  const taskRunner = input.options.commandPolicy?.validateCommands
     ? new CommandPolicyRunner(baseRunner, input.options.commandPolicy, {
         observability: input.observability,
         providerId: "codex",
@@ -145,6 +152,15 @@ function createWorkerRunner(input: {
         },
       })
     : baseRunner;
+  const refreshBootstrapRunner =
+    input.options.commandPolicy?.validateCommands &&
+    input.options.codexBinaryPath === "codex"
+      ? baseRunner
+      : undefined;
+  return {
+    taskRunner,
+    ...(refreshBootstrapRunner ? { refreshBootstrapRunner } : {}),
+  };
 }
 
 function createWorkerWorkspaces(input: {
