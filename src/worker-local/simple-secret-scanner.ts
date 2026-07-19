@@ -19,7 +19,7 @@ import {
 
 const execFileAsync = promisify(execFile);
 const maximumInputPaths = 1024;
-const defaultMaxFileBytes = 1024 * 1024;
+const defaultMaxFileBytes = 2 * 1024 * 1024;
 const defaultMaxTotalFileBytes = 64 * 1024 * 1024;
 const defaultMaxChangedFiles = maximumInputPaths;
 const maximumByteLimit = 64 * 1024 * 1024;

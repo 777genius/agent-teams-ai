@@ -162,6 +162,38 @@ describe("SimpleSecretScanner security", () => {
     });
   });
 
+  it("scans current files beyond the legacy one MiB default cap", async () => {
+    const workspacePath = await createGitFixture();
+    const relativePath = "src/large-reviewed-merge.test.ts";
+    const legacyLimit = 1024 * 1024;
+    const safePrefix = "x".repeat(legacyLimit + 1);
+    const scanner = new SimpleSecretScanner({
+      patterns: [/large-reviewed-merge-secret-sentinel/],
+    });
+    await writeFile(join(workspacePath, relativePath), safePrefix);
+
+    await expect(
+      scanner.scanFiles({
+        workspacePath,
+        files: [relativePath],
+      }),
+    ).resolves.toEqual({ status: SecretScanStatus.Passed });
+
+    await writeFile(
+      join(workspacePath, relativePath),
+      `${safePrefix}large-reviewed-merge-secret-sentinel\n`,
+    );
+    await expect(
+      scanner.scanFiles({
+        workspacePath,
+        files: [relativePath],
+      }),
+    ).resolves.toEqual({
+      status: SecretScanStatus.Failed,
+      safeMessage: `secret_like_content:${relativePath}`,
+    });
+  });
+
   it("enforces the remaining aggregate current-file budget before allocation", async () => {
     const workspacePath = await createGitFixture();
     await writeFile(join(workspacePath, "src", "first.txt"), "a".repeat(40));
@@ -295,6 +327,12 @@ describe("SimpleSecretScanner security", () => {
         files: ["README.md"],
       }),
     ).rejects.toThrow("secret_scan_max_changed_files_invalid");
+
+    await expect(
+      new SimpleSecretScanner({
+        maxTotalFileBytes: 64 * 1024 * 1024 + 1,
+      }).scanFiles({ workspacePath, files: ["README.md"] }),
+    ).rejects.toThrow("secret_scan_max_total_file_bytes_invalid");
 
     for (const maxFileBytes of [
       0,
