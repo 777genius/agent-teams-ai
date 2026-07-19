@@ -236,14 +236,12 @@ export const RuntimeProviderQuickConnect = ({
   }, [localProviderProjectPath, localProviderSetupOpen, projectPath, repositoryGroups]);
 
   const refreshConfiguredLocalProvider = useCallback(async (): Promise<void> => {
-    await Promise.all([
-      directory.refresh(),
-      fetchCliProviderStatus('opencode', {
-        silent: false,
-        checkReason: 'manual_refresh',
-        projectPath: localProviderProjectPath,
-      }),
-    ]);
+    directory.refresh();
+    await fetchCliProviderStatus('opencode', {
+      silent: false,
+      checkReason: 'manual_refresh',
+      projectPath: localProviderProjectPath,
+    });
   }, [directory, fetchCliProviderStatus, localProviderProjectPath]);
 
   const getCompanionState = useCallback(

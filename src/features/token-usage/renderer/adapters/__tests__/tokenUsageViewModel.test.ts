@@ -381,15 +381,15 @@ describe('toTokenUsageDashboardViewModel', () => {
       lastKiroCredits: 0.08,
       kiroCreditsUnit: 'credit',
     });
-    Object.assign(input.byTeam[0]!.summary, {
+    Object.assign(input.byTeam[0].summary, {
       kiroCredits: 0.11,
       kiroCreditEventCount: 2,
     });
-    Object.assign(input.byAgent[0]!.summary, {
+    Object.assign(input.byAgent[0].summary, {
       kiroCredits: 0.11,
       kiroCreditEventCount: 2,
     });
-    Object.assign(input.sessionRuns[0]!.summary, {
+    Object.assign(input.sessionRuns[0].summary, {
       kiroCredits: 0.11,
       kiroCreditEventCount: 2,
     });
