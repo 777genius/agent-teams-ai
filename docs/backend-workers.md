@@ -23,10 +23,11 @@ runs provider probes when `--probe` is passed. Use this for relogin alerts,
 limit reset visibility and duplicate account-slot detection. See
 `docs/account-diagnostics.md`.
 
-Claude Code workers should follow the same backend-worker shape, but require
-capacity-aware slot selection before they are used for production scheduling.
-See `docs/claude-worker-pool-rfc.md` for the proposed Claude worker pool,
-prewarm and limit-rotation design.
+Claude Code workers use the same backend-worker shape through
+`FileBackendClaudeWorker`. The worker exposes capacity snapshots, rate-limit
+telemetry, control-inbox continuation and logical thread handoff. See
+`docs/claude-worker-pool-rfc.md` for the original design background; the
+`worker-claude` public subpath and source are the current API reference.
 
 For an operational Codex worker-pool runbook, including native `/goal`,
 account-slot login, worktree isolation, monitoring commands and restart policy,

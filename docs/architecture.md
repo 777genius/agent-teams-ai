@@ -35,9 +35,9 @@ in `subscription-runtime`. See `docs/agent-account-observability.md`.
 See `docs/pluggable-agent-runtime.md` for the proposed Claude, Codex and
 multi-agent reviewer/tribunal architecture.
 
-See `docs/claude-worker-pool-rfc.md` for the proposed Claude Code backend
-worker pool, including prewarm, capacity-aware slot selection and limit
-rotation.
+See `docs/claude-worker-pool-rfc.md` for the original design background for the
+implemented Claude Code backend worker pool, including prewarm,
+capacity-aware slot selection and limit rotation.
 
 See `docs/host-app-integration-strategy.md` for the cross-repository adapter
 contract for `qa-rig`, `hib-pr-reviewer`, `quanta-pr-reviewer` and
