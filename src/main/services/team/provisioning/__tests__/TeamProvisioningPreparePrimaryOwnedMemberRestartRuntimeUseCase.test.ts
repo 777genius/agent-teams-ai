@@ -79,6 +79,104 @@ function createPorts(
 }
 
 describe('TeamProvisioningPreparePrimaryOwnedMemberRestartRuntimeUseCase', () => {
+  it('ignores persisted backend types owned by unrelated members', async () => {
+    const { calls, ports } = createPorts();
+    const prepareRestartRuntime = createPreparePrimaryOwnedMemberRestartRuntimeUseCase(ports);
+
+    await expect(
+      prepareRestartRuntime({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        persistedRuntimeMembers: [
+          { name: 'Other', backendType: 'in-process' },
+          { name: 'Other-2', backendType: 'process' },
+        ],
+        invalidateRuntimeSnapshotCaches: () => undefined,
+        loadLiveRuntimeByMember: async () => new Map(),
+      })
+    ).resolves.toEqual({
+      directTmuxRestartPaneId: null,
+      shouldDirectProcessRestart: false,
+    });
+
+    expect(calls.listedPaneIds).toEqual([]);
+    expect(calls.killedPanes).toEqual([]);
+    expect(calls.killedPids).toEqual([]);
+  });
+
+  it('never probes an unrelated persisted tmux pane even when it contains the target command', async () => {
+    const { calls, ports } = createPorts({
+      paneRuntimeInfo: new Map([['pane-other', { panePid: 400, currentCommand: 'node' }]]),
+      processRows: [
+        {
+          pid: 401,
+          ppid: 400,
+          command: 'bun cli.js --team-name team-a --agent-name Worker --agent-id Worker@team-a',
+        },
+      ],
+    });
+    const prepareRestartRuntime = createPreparePrimaryOwnedMemberRestartRuntimeUseCase(ports);
+
+    await expect(
+      prepareRestartRuntime({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        persistedRuntimeMembers: [
+          {
+            name: 'Other',
+            backendType: 'tmux',
+            tmuxPaneId: 'pane-other',
+            runtimePid: 401,
+          },
+        ],
+        invalidateRuntimeSnapshotCaches: () => undefined,
+        loadLiveRuntimeByMember: async () => new Map(),
+      })
+    ).resolves.toEqual({
+      directTmuxRestartPaneId: null,
+      shouldDirectProcessRestart: false,
+    });
+
+    expect(calls.listedPaneIds).toEqual([]);
+    expect(calls.processTableReads).toEqual([]);
+    expect(calls.killedPanes).toEqual([]);
+    expect(calls.waitPaneCalls).toEqual([]);
+  });
+
+  it('uses normalized target and suffixed base identities for persisted backend selection', async () => {
+    const exactPorts = createPorts();
+    const prepareExactRestart = createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
+      exactPorts.ports
+    );
+
+    await expect(
+      prepareExactRestart({
+        teamName: 'team-a',
+        memberName: ' Worker ',
+        persistedRuntimeMembers: [{ name: ' Worker ', backendType: 'process' }],
+        invalidateRuntimeSnapshotCaches: () => undefined,
+        loadLiveRuntimeByMember: async () => new Map(),
+      })
+    ).resolves.toEqual({
+      directTmuxRestartPaneId: null,
+      shouldDirectProcessRestart: true,
+    });
+
+    const basePorts = createPorts();
+    const prepareBaseRestart = createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
+      basePorts.ports
+    );
+    await expect(
+      prepareBaseRestart({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        persistedRuntimeMembers: [{ name: 'Worker-2', backendType: 'in-process' }],
+        invalidateRuntimeSnapshotCaches: () => undefined,
+        loadLiveRuntimeByMember: async () => new Map(),
+      })
+    ).rejects.toThrow('Member "Worker" uses an in-process runtime and cannot be restarted here');
+  });
+
   it('keeps an idle tmux pane reusable while stopping matching live process handles', async () => {
     const { calls, ports } = createPorts({
       paneRuntimeInfo: new Map([['pane-a', { panePid: 410, currentCommand: 'bash' }]]),

@@ -102,8 +102,13 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
   ports: PreparePrimaryOwnedMemberRestartRuntimeUseCasePorts
 ): PreparePrimaryOwnedMemberRestartRuntimeUseCase {
   return async (input) => {
+    const targetMemberName = input.memberName.trim();
+    const targetPersistedRuntimeMembers = input.persistedRuntimeMembers.filter((member) => {
+      const candidateName = typeof member.name === 'string' ? member.name.trim() : '';
+      return candidateName.length > 0 && matchesMemberNameOrBase(candidateName, targetMemberName);
+    });
     const backendTypes = new Set(
-      input.persistedRuntimeMembers
+      targetPersistedRuntimeMembers
         .map((member) => member.backendType?.trim().toLowerCase())
         .filter((value): value is string => Boolean(value))
     );
@@ -141,8 +146,8 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
 
     let directTmuxRestartPaneId: string | null = null;
     const directTmuxRestartCandidatePaneId = getDirectTmuxRestartPaneId(
-      input.persistedRuntimeMembers,
-      input.memberName
+      targetPersistedRuntimeMembers,
+      targetMemberName
     );
     if (directTmuxRestartCandidatePaneId) {
       try {
@@ -164,12 +169,12 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
 
     const hasExactRuntimeIdentity = (command: string | null): boolean =>
       commandArgEquals(command ?? '', '--team-name', input.teamName) &&
-      (commandArgEquals(command ?? '', '--agent-name', input.memberName) ||
-        commandArgEquals(command ?? '', '--agent-id', `${input.memberName}@${input.teamName}`));
+      (commandArgEquals(command ?? '', '--agent-name', targetMemberName) ||
+        commandArgEquals(command ?? '', '--agent-id', `${targetMemberName}@${input.teamName}`));
 
     const tmuxPaneIdsToVerify: string[] = [];
     if (!directTmuxRestartPaneId) {
-      const tmuxRuntimeMembers = input.persistedRuntimeMembers.flatMap((member) => {
+      const tmuxRuntimeMembers = targetPersistedRuntimeMembers.flatMap((member) => {
         const paneId = typeof member.tmuxPaneId === 'string' ? member.tmuxPaneId.trim() : '';
         return paneId && member.backendType?.trim().toLowerCase() === 'tmux'
           ? [{ member, paneId }]

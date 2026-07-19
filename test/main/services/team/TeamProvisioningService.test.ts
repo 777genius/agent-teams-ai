@@ -15930,12 +15930,23 @@ describe('TeamProvisioningService', () => {
           agentId: 'forge@tmux-team',
           backendType: 'tmux',
           tmuxPaneId: '%2',
+          runtimePid: 999,
         },
       ]);
       (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
       (svc as any).aliveRunByTeam.set('tmux-team', run.runId);
       (svc as any).runs.set(run.runId, run);
 
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
+        new Map([['%2', { paneId: '%2', panePid: 998, currentCommand: 'node' }]])
+      );
+      vi.mocked(listRuntimeProcessTableForCurrentPlatform).mockResolvedValue([
+        {
+          pid: 999,
+          ppid: 998,
+          command: 'bun cli.js --team-name tmux-team --agent-name forge --agent-id forge@tmux-team',
+        },
+      ]);
       vi.mocked(listTmuxPanePidsForCurrentPlatform).mockImplementation(
         async () => new Map([['%2', 999]])
       );
@@ -15985,12 +15996,23 @@ describe('TeamProvisioningService', () => {
           agentId: 'forge@tmux-team',
           backendType: 'tmux',
           tmuxPaneId: '%2',
+          runtimePid: 999,
         },
       ]);
       (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
       (svc as any).aliveRunByTeam.set('tmux-team', run.runId);
       (svc as any).runs.set(run.runId, run);
 
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
+        new Map([['%2', { paneId: '%2', panePid: 998, currentCommand: 'node' }]])
+      );
+      vi.mocked(listRuntimeProcessTableForCurrentPlatform).mockResolvedValue([
+        {
+          pid: 999,
+          ppid: 998,
+          command: 'bun cli.js --team-name tmux-team --agent-name forge --agent-id forge@tmux-team',
+        },
+      ]);
       vi.mocked(killTmuxPaneForCurrentPlatformSync).mockImplementation(() => {
         throw new Error('pane kill failed');
       });
@@ -16043,12 +16065,23 @@ describe('TeamProvisioningService', () => {
           agentId: 'forge@tmux-team',
           backendType: 'tmux',
           tmuxPaneId: '%2',
+          runtimePid: 999,
         },
       ]);
       (svc as any).getLiveTeamAgentRuntimeMetadata = vi.fn(async () => new Map());
       (svc as any).aliveRunByTeam.set('tmux-team', run.runId);
       (svc as any).runs.set(run.runId, run);
 
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
+        new Map([['%2', { paneId: '%2', panePid: 998, currentCommand: 'node' }]])
+      );
+      vi.mocked(listRuntimeProcessTableForCurrentPlatform).mockResolvedValue([
+        {
+          pid: 999,
+          ppid: 998,
+          command: 'bun cli.js --team-name tmux-team --agent-name forge --agent-id forge@tmux-team',
+        },
+      ]);
       vi.mocked(listTmuxPanePidsForCurrentPlatform).mockRejectedValue(
         new Error('tmux list-panes failed')
       );
