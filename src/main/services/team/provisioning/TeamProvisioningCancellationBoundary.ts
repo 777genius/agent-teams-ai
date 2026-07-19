@@ -276,7 +276,15 @@ export function createTeamProvisioningCancellationBoundary<
         if (primaryRun?.providerId === 'opencode' && primaryRun.runId === run.runId) {
           stops.push(ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId));
         }
-        if (trackedRunId === run.runId && ports.hasSecondaryRuntimeRuns(run.teamName)) {
+        // Secondary runtime registration happens before adapter.launch, so the
+        // secondary-run store is the cleanup ownership handoff for every lane
+        // that can have spawned. Do not wait for primary/tracked ownership: an
+        // aggregate with no primary lane (or cancellation during primary
+        // promotion) can already own live secondary processes here. The
+        // conflicting-owner fence above still protects a newer run, while the
+        // secondary stop flow preserves each lane's exact runId and blocks
+        // rejoin until its process and storage rollback has completed.
+        if (ports.hasSecondaryRuntimeRuns(run.teamName)) {
           stops.push(ports.stopMixedSecondaryRuntimeLanes(run.teamName));
         }
         if (stops.length > 0) {

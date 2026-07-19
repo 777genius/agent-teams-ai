@@ -7,8 +7,13 @@ import {
   type TeamProvisioningCancellationBoundaryServiceHost,
   type TeamProvisioningCancellationRun,
 } from '../TeamProvisioningCancellationBoundary';
+import {
+  type OpenCodeRuntimeStopFlowPorts,
+  stopMixedSecondaryRuntimeLanes,
+} from '../TeamProvisioningOpenCodeRuntimeStopFlow';
 
 import type { TeamLaunchRuntimeAdapter } from '../../runtime';
+import type { SecondaryRuntimeRunEntry } from '../TeamProvisioningSecondaryRuntimeRuns';
 import type { TeamChangeEvent, TeamProvisioningProgress } from '@shared/types';
 
 interface TestRun extends TeamProvisioningCancellationRun {
@@ -40,20 +45,22 @@ function makeRun(overrides: Partial<TestRun> = {}): TestRun {
   };
 }
 
-function makeAdapter(): TeamLaunchRuntimeAdapter {
+function makeAdapter(
+  stop: TeamLaunchRuntimeAdapter['stop'] = vi.fn(async (input) => ({
+    runId: input.runId,
+    teamName: input.teamName,
+    stopped: true,
+    members: {},
+    warnings: [],
+    diagnostics: [],
+  }))
+): TeamLaunchRuntimeAdapter {
   return {
     providerId: 'opencode',
     prepare: vi.fn(),
     launch: vi.fn(),
     reconcile: vi.fn(),
-    stop: vi.fn(async (input) => ({
-      runId: input.runId,
-      teamName: input.teamName,
-      stopped: true,
-      members: {},
-      warnings: [],
-      diagnostics: [],
-    })),
+    stop,
   } as unknown as TeamLaunchRuntimeAdapter;
 }
 
@@ -272,7 +279,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
     ['exact', 'run-1'],
     ['absent', null],
   ] as const)(
-    'stops the exact primary but not secondaries without tracking when provisioning is %s',
+    'stops the exact primary and registered secondaries without tracking when provisioning is %s',
     async (_provisioningState, provisioningRunId) => {
       const run = makeRun();
       const ports = makePorts({
@@ -288,7 +295,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
       await boundary.cancelProvisioning(run.runId);
 
       expect(ports.stopOpenCodeRuntimeAdapterTeam).toHaveBeenCalledWith(run.teamName, run.runId);
-      expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+      expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(run.teamName);
     }
   );
 
@@ -296,7 +303,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
     ['provisioning', 'run-1', null],
     ['alive', null, 'run-1'],
   ] as const)(
-    'does not stop runtime lanes for an exact %s owner without an exact primary runtime entry',
+    'stops registered secondaries for an exact %s owner before primary runtime tracking',
     async (_owner, provisioningRunId, aliveRunId) => {
       const run = makeRun();
       const ports = makePorts({
@@ -312,7 +319,115 @@ describe('TeamProvisioningCancellationBoundary', () => {
       await boundary.cancelProvisioning(run.runId);
 
       expect(ports.stopOpenCodeRuntimeAdapterTeam).not.toHaveBeenCalled();
-      expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+      expect(ports.stopMixedSecondaryRuntimeLanes).toHaveBeenCalledWith(run.teamName);
+    }
+  );
+
+  it.each([
+    ['before every primary ownership map', null, null],
+    ['after provisioning ownership', 'run-1', null],
+    ['after exact primary registration', 'run-1', 'run-1'],
+  ] as const)(
+    'rolls back exact secondary processes and artifacts %s but before tracked ownership',
+    async (_boundary, provisioningRunId, runtimeAdapterRunId) => {
+      const run = makeRun();
+      const secondaryRuns = new Map<string, SecondaryRuntimeRunEntry>([
+        [
+          'lane-a',
+          {
+            runId: 'lane-run-a',
+            providerId: 'opencode',
+            laneId: 'lane-a',
+            memberName: 'A',
+            cwd: '/lane-a',
+          },
+        ],
+        [
+          'lane-b',
+          {
+            runId: 'lane-run-b',
+            providerId: 'opencode',
+            laneId: 'lane-b',
+            memberName: 'B',
+            cwd: '/lane-b',
+          },
+        ],
+      ]);
+      const liveProcesses = new Map([
+        ['lane-a', 'lane-run-a'],
+        ['lane-b', 'lane-run-b'],
+      ]);
+      const laneArtifacts = new Set(['lane-a', 'lane-b']);
+      const stoppingSecondaryRuntimeTeams = new Set<string>();
+      const stopInputs: Array<{ laneId: string; runId: string }> = [];
+      const adapter = makeAdapter(
+        vi.fn(async (input) => {
+          expect(stoppingSecondaryRuntimeTeams.has(run.teamName)).toBe(true);
+          expect(liveProcesses.get(input.laneId)).toBe(input.runId);
+          stopInputs.push({ laneId: input.laneId, runId: input.runId });
+          liveProcesses.delete(input.laneId);
+          return {
+            runId: input.runId,
+            teamName: input.teamName,
+            stopped: true,
+            members: {},
+            warnings: [],
+            diagnostics: [],
+          };
+        })
+      );
+      const secondaryStopPorts: OpenCodeRuntimeStopFlowPorts = {
+        teamsBasePath: '/teams',
+        getSecondaryRuntimeRuns: () => [...secondaryRuns.values()],
+        stoppingSecondaryRuntimeTeams,
+        getOpenCodeRuntimeAdapter: () => adapter,
+        readLaunchState: async () => null,
+        writeLaunchStateSnapshot: async (_teamName, snapshot) => snapshot,
+        readPersistedTeamProjectPath: () => '/repo',
+        clearOpenCodeRuntimeLaneStorage: async ({ laneId }) => {
+          laneArtifacts.delete(laneId);
+        },
+        deleteSecondaryRuntimeRun: (_teamName, laneId) => {
+          secondaryRuns.delete(laneId);
+        },
+        clearSecondaryRuntimeRuns: () => {
+          secondaryRuns.clear();
+        },
+        runtimeAdapterRunByTeam: new Map(),
+        runtimeAdapterProgressByRunId: new Map(),
+        setRuntimeAdapterProgress: (nextProgress) => nextProgress,
+        clearOpenCodeRuntimeToolApprovals: vi.fn(),
+        deleteAliveRunId: vi.fn(),
+        provisioningRunByTeam: new Map(),
+        invalidateRuntimeSnapshotCaches: vi.fn(),
+        emitTeamChange: vi.fn(),
+        logger: { warn: vi.fn() },
+        nowIso: () => '2026-01-01T00:00:02.000Z',
+      };
+      const ports = makePorts({
+        run,
+        trackedRunId: null,
+        runtimeAdapterRunId,
+        provisioningRunId,
+        aliveRunId: null,
+        hasSecondaryRuntimeRuns: true,
+      });
+      ports.stopMixedSecondaryRuntimeLanes.mockImplementation((teamName: string) =>
+        stopMixedSecondaryRuntimeLanes(teamName, secondaryStopPorts)
+      );
+      const boundary = createTeamProvisioningCancellationBoundary(ports);
+
+      await boundary.cancelProvisioning(run.runId);
+
+      expect(stopInputs).toEqual([
+        { laneId: 'lane-a', runId: 'lane-run-a' },
+        { laneId: 'lane-b', runId: 'lane-run-b' },
+      ]);
+      expect(liveProcesses.size).toBe(0);
+      expect(laneArtifacts.size).toBe(0);
+      expect(secondaryRuns.size).toBe(0);
+      expect(stoppingSecondaryRuntimeTeams.has(run.teamName)).toBe(false);
+      expect(ports.cleanupRun).toHaveBeenCalledWith(run);
     }
   );
 
