@@ -33,6 +33,11 @@ interface OpenCodeMessageRow {
   data: string;
 }
 
+interface OpenCodePartRow {
+  message_id: string;
+  data: string;
+}
+
 export class OpenCodeSqliteUsageImporter implements TokenUsageImporterPort {
   readonly #runLookbackMs: number;
   readonly #logger?: Pick<TokenUsageLoggerPort, 'warn'>;
@@ -103,6 +108,10 @@ async function importDatabaseUsage(
 
   const sourceBySessionId = new Map(sources.map((source) => [source.sessionId, source]));
   const rows: OpenCodeMessageRow[] = [];
+  const kiroCreditsByMessageId = new Map<
+    string,
+    NonNullable<TokenUsageEventDto['providerUsage']>['kiro']
+  >();
   const database = new DatabaseSync(databasePath, { readOnly: true });
   try {
     const sessionIds = [...sourceBySessionId.keys()];
@@ -114,6 +123,7 @@ async function importDatabaseUsage(
       );
       rows.push(...(statement.all(...batch) as unknown as OpenCodeMessageRow[]));
     }
+    collectKiroCredits(database, rows, kiroCreditsByMessageId);
   } finally {
     database.close();
   }
@@ -123,7 +133,13 @@ async function importDatabaseUsage(
   for (const row of rows) {
     const source = sourceBySessionId.get(row.session_id);
     if (!source) continue;
-    const event = toUsageEvent(row, source, databasePath, importedAt);
+    const event = toUsageEvent(
+      row,
+      source,
+      databasePath,
+      importedAt,
+      kiroCreditsByMessageId.get(row.id)
+    );
     if (!event || seenEventIds.has(event.id)) continue;
     seenEventIds.add(event.id);
     events.push(event);
@@ -135,7 +151,8 @@ function toUsageEvent(
   row: OpenCodeMessageRow,
   source: OpenCodeRunSource,
   databasePath: string,
-  importedAt: string
+  importedAt: string,
+  kiroCredits: NonNullable<TokenUsageEventDto['providerUsage']>['kiro'] | undefined
 ): TokenUsageEventDto | null {
   const data = safeParseRecord(row.data);
   if (data?.role !== 'assistant') return null;
@@ -157,8 +174,6 @@ function toUsageEvent(
     ),
     totalTokens: readNumber(rawTokens?.total ?? rawTokens?.totalTokens ?? rawTokens?.total_tokens),
   });
-  if (tokens.totalTokens <= 0) return null;
-
   const providerId = readString(data.providerID ?? data.providerId);
   const modelId = readString(data.modelID ?? data.modelId);
   const model = providerId && modelId ? `${providerId}/${modelId}` : source.run.model;
@@ -167,6 +182,9 @@ function toUsageEvent(
   const rawTime = asRecord(data.time);
   const occurredAt = readIsoTimestamp(rawTime?.completed ?? rawTime?.created ?? row.time_created);
   if (!occurredAt) return null;
+  const modelUsesKiro = providerId === 'kiro' || model?.toLowerCase().startsWith('kiro/');
+  const providerUsage = modelUsesKiro && kiroCredits ? { kiro: kiroCredits } : undefined;
+  if (tokens.totalTokens <= 0 && !providerUsage) return null;
 
   return {
     id: createHash('sha256')
@@ -188,6 +206,7 @@ function toUsageEvent(
     nativeLogPath: databasePath,
     tokens,
     cost: buildCost(model, tokens, rawCostUsd, billingMode),
+    providerUsage,
     usageSourceKind: 'sdk_exact',
     rawUsageJson: {
       sourceName: 'opencode-sqlite',
@@ -195,10 +214,44 @@ function toUsageEvent(
       messageId: row.id,
       providerId,
       finish: readString(data.finish),
+      kiroCredits: providerUsage?.kiro.credits,
+      kiroCreditsUnit: providerUsage?.kiro.creditsUnit,
     },
     occurredAt,
     createdAt: importedAt,
   };
+}
+
+function collectKiroCredits(
+  database: DatabaseSync,
+  messages: readonly OpenCodeMessageRow[],
+  destination: Map<string, NonNullable<TokenUsageEventDto['providerUsage']>['kiro']>
+): void {
+  const messageIds = messages.map((message) => message.id);
+  try {
+    for (let index = 0; index < messageIds.length; index += MAX_SESSION_IDS_PER_QUERY) {
+      const batch = messageIds.slice(index, index + MAX_SESSION_IDS_PER_QUERY);
+      if (batch.length === 0) continue;
+      const placeholders = batch.map(() => '?').join(',');
+      const rows = database
+        .prepare(`SELECT message_id, data FROM part WHERE message_id IN (${placeholders})`)
+        .all(...batch) as unknown as OpenCodePartRow[];
+      for (const row of rows) {
+        const data = safeParseRecord(row.data);
+        const metadata = asRecord(data?.metadata ?? data?.providerMetadata);
+        const kiro = asRecord(metadata?.kiro);
+        const credits = readNonNegativeNumber(kiro?.credits);
+        if (credits === null) continue;
+        const creditsUnit = readString(kiro?.creditsUnit) ?? 'credit';
+        const current = destination.get(row.message_id);
+        if (!current || credits > current.credits) {
+          destination.set(row.message_id, { credits, creditsUnit });
+        }
+      }
+    }
+  } catch {
+    // Older OpenCode databases may not have a part table yet. Token usage still imports.
+  }
 }
 
 function buildCost(
@@ -244,6 +297,10 @@ function readString(value: unknown): string | undefined {
 
 function readNumber(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function readNonNegativeNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
 function readIsoTimestamp(value: unknown): string | undefined {

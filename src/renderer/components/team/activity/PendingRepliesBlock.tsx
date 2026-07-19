@@ -102,11 +102,14 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
           );
           const advisoryLabel = getMemberRuntimeAdvisoryLabel(
             member.runtimeAdvisory,
-            member.providerId
+            member.providerId,
+            Date.now(),
+            member.model
           );
           const advisoryTitle = getMemberRuntimeAdvisoryTitle(
             member.runtimeAdvisory,
-            member.providerId
+            member.providerId,
+            member.model
           );
           const deliveryState = getPendingMemberDeliveryState(
             isTeamAlive,

@@ -1,11 +1,68 @@
 import path from 'node:path';
 
-import type { RuntimeProviderCliCompanionDefinition } from '../types';
+import type {
+  RuntimeProviderCliCompanionCommandResult,
+  RuntimeProviderCliCompanionDefinition,
+} from '../types';
+import type { RuntimeProviderCompanionAccountDto } from '@features/runtime-provider-management/contracts';
 
 const KIRO_INSTALL_URL = 'https://cli.kiro.dev/install';
 const KIRO_WINDOWS_INSTALL_URL = 'https://cli.kiro.dev/install.ps1';
 const KIRO_DOWNLOADS_URL = 'https://kiro.dev/downloads/';
 const MINIMUM_INSTALL_FREE_BYTES = 3 * 1024 * 1024 * 1024;
+
+function extractFirstJsonObject(text: string): string | null {
+  const start = text.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = start; index < text.length; index += 1) {
+    const character = text[index];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === '"') inString = false;
+      continue;
+    }
+    if (character === '"') {
+      inString = true;
+    } else if (character === '{') {
+      depth += 1;
+    } else if (character === '}') {
+      depth -= 1;
+      if (depth === 0) return text.slice(start, index + 1);
+    }
+  }
+  return null;
+}
+
+function parseKiroAccountText(text: string): RuntimeProviderCompanionAccountDto | null {
+  const json = extractFirstJsonObject(text);
+  if (!json) return null;
+  try {
+    const value = JSON.parse(json) as Record<string, unknown>;
+    const accountType = typeof value.accountType === 'string' ? value.accountType.trim() : '';
+    if (!accountType) return null;
+    const email = typeof value.email === 'string' && value.email.trim() ? value.email.trim() : null;
+    const region =
+      typeof value.region === 'string' && value.region.trim() ? value.region.trim() : null;
+    return {
+      display: email ?? accountType,
+      email,
+      accountType,
+      region,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function parseKiroWhoamiAccount(
+  result: RuntimeProviderCliCompanionCommandResult
+): RuntimeProviderCompanionAccountDto | null {
+  return parseKiroAccountText(result.stdout) ?? parseKiroAccountText(result.stderr);
+}
 
 export function resolveKiroLinuxArchiveSuffix(arch: string, glibcVersion: string | null): string {
   const normalizedArch = arch === 'arm64' ? 'aarch64' : arch === 'x64' ? 'x86_64' : arch;
@@ -162,6 +219,12 @@ export const KIRO_CLI_COMPANION_DEFINITION: RuntimeProviderCliCompanionDefinitio
   auth: {
     loginArgs: ['login'],
     statusArgs: ['whoami', '--format', 'json'],
-    isAuthenticated: (result) => result.exitCode === 0 && result.stdout.trim().length > 0,
+    isAuthenticated: (result) => parseKiroWhoamiAccount(result) !== null,
+    parseAccount: parseKiroWhoamiAccount,
+  },
+  actions: {
+    logoutArgs: ['logout'],
+    doctorArgs: ['doctor', '--all', '--format', 'json'],
+    updateArgs: ['update', '--non-interactive'],
   },
 };

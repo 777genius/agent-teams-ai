@@ -494,7 +494,8 @@ function normalizeRuntimeReasoningEffort(
     value === 'medium' ||
     value === 'high' ||
     value === 'xhigh' ||
-    value === 'max'
+    value === 'max' ||
+    value === 'ultra'
     ? value
     : null;
 }

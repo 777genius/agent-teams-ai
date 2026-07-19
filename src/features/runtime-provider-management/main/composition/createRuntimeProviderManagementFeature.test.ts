@@ -48,7 +48,11 @@ describe('createRuntimeProviderManagementFeature companion flow', () => {
       resolveBinary: async () => '/Users/test/.local/bin/kiro-cli',
       runCommand: async (_command, args) =>
         args[0] === 'whoami'
-          ? { exitCode: 0, stdout: '{"account":"test"}', stderr: '' }
+          ? {
+              exitCode: 0,
+              stdout: '{"accountType":"BuilderId","email":"test@example.com"}',
+              stderr: '',
+            }
           : { exitCode: 0, stdout: 'kiro-cli 1.26.0', stderr: '' },
       emitProgress: (status) => progress.push(status.phase),
     });
@@ -181,7 +185,11 @@ describe('createRuntimeProviderManagementFeature companion flow', () => {
       resolveBinary: async () => '/Users/test/.local/bin/kiro-cli',
       runCommand: async (_command, args) =>
         args[0] === 'whoami'
-          ? { exitCode: 0, stdout: '{"account":"test"}', stderr: '' }
+          ? {
+              exitCode: 0,
+              stdout: '{"accountType":"BuilderId","email":"test@example.com"}',
+              stderr: '',
+            }
           : { exitCode: 0, stdout: 'kiro-cli 1.26.0', stderr: '' },
     });
     const feature = createRuntimeProviderManagementFeature({ port, companionService });

@@ -299,6 +299,29 @@ export function isLegacySafeEffort(effort: EffortLevel): boolean {
   return effort === 'low' || effort === 'medium' || effort === 'high';
 }
 
+function getExactCatalogModelForLaunchSelection(
+  facts: Pick<RuntimeProviderLaunchFacts, 'modelCatalog'>,
+  explicitModel: string | undefined
+): CliProviderModelCatalog['models'][number] | null {
+  const catalog = facts.modelCatalog;
+  if (!catalog) {
+    return null;
+  }
+  if (explicitModel) {
+    return (
+      catalog.models.find(
+        (model) => model.launchModel === explicitModel || model.id === explicitModel
+      ) ?? null
+    );
+  }
+  return (
+    catalog.models.find((model) => model.id === catalog.defaultModelId) ??
+    catalog.models.find((model) => model.launchModel === catalog.defaultLaunchModel) ??
+    catalog.models.find((model) => model.isDefault) ??
+    null
+  );
+}
+
 export function isCodexEffortRuntimeSupported(
   effort: EffortLevel,
   capabilities: CliProviderRuntimeCapabilities | null
@@ -811,7 +834,20 @@ export function validateRuntimeLaunchSelection(params: {
   }
 
   if (params.providerId !== 'codex') {
-    if (params.effort && !isLegacySafeEffort(params.effort)) {
+    const catalogModel = getExactCatalogModelForLaunchSelection(params.facts, explicitModel);
+    if (
+      params.effort &&
+      catalogModel &&
+      !catalogModel.supportedReasoningEfforts.includes(params.effort)
+    ) {
+      const supported = catalogModel.supportedReasoningEfforts.length
+        ? ` Supported efforts: ${catalogModel.supportedReasoningEfforts.join(', ')}.`
+        : ' This model does not support configurable effort.';
+      throw new Error(
+        `${params.actorLabel} uses effort "${params.effort}", but ${catalogModel.displayName} does not support it.${supported}`
+      );
+    }
+    if (params.effort && !catalogModel && !isLegacySafeEffort(params.effort)) {
       throw new Error(
         `${params.actorLabel} uses effort "${params.effort}", but ${params.getProviderLabel(
           params.providerId

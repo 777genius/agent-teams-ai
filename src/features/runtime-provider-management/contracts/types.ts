@@ -22,9 +22,35 @@ export type RuntimeProviderCompanionPhaseDto =
   | 'signing-in'
   | 'verifying-auth'
   | 'verifying-model'
+  | 'running-action'
   | 'connected'
   | 'needs-manual-step'
   | 'error';
+
+export interface RuntimeProviderCompanionAccountDto {
+  display: string;
+  email: string | null;
+  accountType: string;
+  region: string | null;
+}
+
+export const RUNTIME_PROVIDER_COMPANION_ACTIONS = [
+  'switch-account',
+  'logout',
+  'doctor',
+  'update',
+] as const;
+
+export type RuntimeProviderCompanionActionDto = (typeof RUNTIME_PROVIDER_COMPANION_ACTIONS)[number];
+
+export function isRuntimeProviderCompanionAction(
+  value: unknown
+): value is RuntimeProviderCompanionActionDto {
+  return (
+    typeof value === 'string' &&
+    (RUNTIME_PROVIDER_COMPANION_ACTIONS as readonly string[]).includes(value)
+  );
+}
 
 export interface RuntimeProviderCompanionStatusDto {
   companionId: RuntimeProviderCompanionIdDto;
@@ -32,6 +58,10 @@ export interface RuntimeProviderCompanionStatusDto {
   phase: RuntimeProviderCompanionPhaseDto;
   installed: boolean;
   authenticated: boolean;
+  /** Optional while older packaged runtime bridges are still supported. */
+  account?: RuntimeProviderCompanionAccountDto | null;
+  supportedActions?: readonly RuntimeProviderCompanionActionDto[];
+  actionOutput?: string | null;
   binaryPath: string | null;
   version: string | null;
   percent: number | null;
@@ -46,6 +76,10 @@ export interface RuntimeProviderCompanionStatusDto {
 export interface RuntimeProviderCompanionInput {
   companionId: RuntimeProviderCompanionIdDto;
   projectPath?: string | null;
+}
+
+export interface RuntimeProviderCompanionActionInput extends RuntimeProviderCompanionInput {
+  action: RuntimeProviderCompanionActionDto;
 }
 
 export type RuntimeProviderStateDto = 'ready' | 'needs-auth' | 'needs-setup' | 'degraded';

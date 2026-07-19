@@ -359,7 +359,10 @@ function appendRuntimeAdvisoryRetryHint(
   return `${base} Waiting for OpenCode retry or quota reset around ${retryAt}.`;
 }
 
-function getRuntimeAdvisoryProviderLabel(providerId: TeamProviderId | undefined): string | null {
+function getRuntimeAdvisoryProviderLabel(
+  providerId: TeamProviderId | undefined,
+  model?: string
+): string | null {
   switch (providerId) {
     case 'anthropic':
       return 'Anthropic';
@@ -368,7 +371,7 @@ function getRuntimeAdvisoryProviderLabel(providerId: TeamProviderId | undefined)
     case 'gemini':
       return 'Gemini';
     case 'opencode':
-      return 'OpenCode';
+      return model?.trim().toLowerCase().startsWith('kiro/') ? 'Kiro' : 'OpenCode';
     default:
       return null;
   }
@@ -535,9 +538,10 @@ function formatRuntimeAdvisoryDisplayMessage(
 
 function formatRuntimeAdvisoryBaseLabel(
   advisory: MemberRuntimeAdvisory,
-  providerId: TeamProviderId | undefined
+  providerId: TeamProviderId | undefined,
+  model?: string
 ): string {
-  const providerLabel = getRuntimeAdvisoryProviderLabel(providerId);
+  const providerLabel = getRuntimeAdvisoryProviderLabel(providerId, model);
   if (advisory.kind === 'api_error') {
     if (providerId === 'opencode' && canTreatAdvisoryAsOpenCodeSessionRefresh(advisory)) {
       return 'OpenCode session refresh';
@@ -600,9 +604,10 @@ function formatRuntimeAdvisoryBaseLabel(
 
 function formatRuntimeAdvisoryTitle(
   advisory: MemberRuntimeAdvisory,
-  providerId: TeamProviderId | undefined
+  providerId: TeamProviderId | undefined,
+  model?: string
 ): string {
-  const providerLabel = getRuntimeAdvisoryProviderLabel(providerId);
+  const providerLabel = getRuntimeAdvisoryProviderLabel(providerId, model);
   if (advisory.kind === 'api_error') {
     if (providerId === 'opencode' && canTreatAdvisoryAsOpenCodeSessionRefresh(advisory)) {
       return appendRuntimeAdvisoryRawMessage(
@@ -761,12 +766,13 @@ function formatRuntimeAdvisoryTitle(
 export function getMemberRuntimeAdvisoryLabel(
   advisory: MemberRuntimeAdvisory | undefined,
   providerId?: TeamProviderId,
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  model?: string
 ): string | null {
   if (!advisory) {
     return null;
   }
-  const baseLabel = formatRuntimeAdvisoryBaseLabel(advisory, providerId);
+  const baseLabel = formatRuntimeAdvisoryBaseLabel(advisory, providerId, model);
   const remainingMs = getRuntimeAdvisoryRetryRemainingMs(advisory, nowMs);
   if (advisory.kind === 'api_error') {
     if (remainingMs && isRetryTimedApiAdvisory(advisory, providerId)) {
@@ -785,12 +791,13 @@ export function getMemberRuntimeAdvisoryLabel(
 
 export function getMemberRuntimeAdvisoryTitle(
   advisory: MemberRuntimeAdvisory | undefined,
-  providerId?: TeamProviderId
+  providerId?: TeamProviderId,
+  model?: string
 ): string | undefined {
   if (!advisory || (advisory.kind !== 'sdk_retrying' && advisory.kind !== 'api_error')) {
     return undefined;
   }
-  return formatRuntimeAdvisoryTitle(advisory, providerId);
+  return formatRuntimeAdvisoryTitle(advisory, providerId, model);
 }
 
 export function getMemberRuntimeAdvisoryTone(
@@ -842,7 +849,12 @@ export function getLaunchAwarePresenceLabel(
   ) {
     return basePresenceLabel;
   }
-  const advisoryLabel = getMemberRuntimeAdvisoryLabel(runtimeAdvisory, member.providerId);
+  const advisoryLabel = getMemberRuntimeAdvisoryLabel(
+    runtimeAdvisory,
+    member.providerId,
+    Date.now(),
+    member.model
+  );
   return advisoryLabel ?? basePresenceLabel;
 }
 
@@ -1496,11 +1508,14 @@ export function buildMemberLaunchPresentation({
   );
   const runtimeAdvisoryLabel = getMemberRuntimeAdvisoryLabel(
     displayRuntimeAdvisory,
-    member.providerId
+    member.providerId,
+    nowMs,
+    member.model
   );
   const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(
     displayRuntimeAdvisory,
-    member.providerId
+    member.providerId,
+    member.model
   );
   const runtimeAdvisoryTone = getMemberRuntimeAdvisoryTone(
     displayRuntimeAdvisory,

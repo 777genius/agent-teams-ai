@@ -101,6 +101,14 @@ export function normalizeTokenUsageSummary(value: unknown): TokenUsageSummaryDto
     unknownBillingTokens: readNumber(record.unknownBillingTokens),
     exactEventCount: readNumber(record.exactEventCount),
     estimatedEventCount: readNumber(record.estimatedEventCount),
+    kiroCredits: readNumber(record.kiroCredits),
+    kiroCreditEventCount: readNumber(record.kiroCreditEventCount),
+    lastKiroCredits:
+      typeof record.lastKiroCredits === 'number' && Number.isFinite(record.lastKiroCredits)
+        ? Math.max(0, record.lastKiroCredits)
+        : undefined,
+    lastKiroCreditsAt: readString(record.lastKiroCreditsAt),
+    kiroCreditsUnit: readString(record.kiroCreditsUnit),
   };
 }
 

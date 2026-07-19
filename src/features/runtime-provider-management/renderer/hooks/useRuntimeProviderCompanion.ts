@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@renderer/api';
 
 import type {
+  RuntimeProviderCompanionActionDto,
   RuntimeProviderCompanionIdDto,
   RuntimeProviderCompanionStatusDto,
 } from '../../contracts';
@@ -12,6 +13,7 @@ export interface RuntimeProviderCompanionState {
   loading: boolean;
   runInstallAndConnect: () => Promise<void>;
   runConnect: () => Promise<void>;
+  runAction: (action: RuntimeProviderCompanionActionDto) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -32,6 +34,9 @@ function companionErrorStatus(
     phase: 'error',
     installed: current?.installed ?? false,
     authenticated: current?.authenticated ?? false,
+    account: current?.account ?? null,
+    supportedActions: current?.supportedActions ?? [],
+    actionOutput: current?.actionOutput ?? null,
     binaryPath: current?.binaryPath ?? null,
     version: current?.version ?? null,
     percent: null,
@@ -92,6 +97,7 @@ export function useRuntimeProviderCompanion(
             'signing-in',
             'verifying-auth',
             'verifying-model',
+            'running-action',
           ].includes(next.phase)
         );
       }
@@ -128,5 +134,26 @@ export function useRuntimeProviderCompanion(
   const runInstallAndConnect = useCallback(() => run('install'), [run]);
   const runConnect = useCallback(() => run('connect'), [run]);
 
-  return { status, loading, runInstallAndConnect, runConnect, refresh };
+  const runAction = useCallback(
+    async (action: RuntimeProviderCompanionActionDto): Promise<void> => {
+      setLoading(true);
+      try {
+        const next = await api.runtimeProviderManagement.runCompanionAction({
+          companionId,
+          projectPath,
+          action,
+        });
+        if (mountedRef.current) setStatus(next);
+      } catch (error) {
+        if (mountedRef.current) {
+          setStatus((current) => companionErrorStatus(companionId, error, current));
+        }
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
+    },
+    [companionId, projectPath]
+  );
+
+  return { status, loading, runInstallAndConnect, runConnect, runAction, refresh };
 }

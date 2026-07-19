@@ -373,6 +373,39 @@ function snapshot(): TokenUsageAnalyticsSnapshotDto {
 }
 
 describe('toTokenUsageDashboardViewModel', () => {
+  it('shows exact Kiro credits separately from tokens and dollars', () => {
+    const input = snapshot();
+    Object.assign(input.summary, {
+      kiroCredits: 0.11,
+      kiroCreditEventCount: 2,
+      lastKiroCredits: 0.08,
+      kiroCreditsUnit: 'credit',
+    });
+    Object.assign(input.byTeam[0]!.summary, {
+      kiroCredits: 0.11,
+      kiroCreditEventCount: 2,
+    });
+    Object.assign(input.byAgent[0]!.summary, {
+      kiroCredits: 0.11,
+      kiroCreditEventCount: 2,
+    });
+    Object.assign(input.sessionRuns[0]!.summary, {
+      kiroCredits: 0.11,
+      kiroCreditEventCount: 2,
+    });
+
+    const viewModel = toTokenUsageDashboardViewModel(input, { locale: 'en-US' });
+
+    expect(viewModel.metrics.find((metric) => metric.id === 'billing')?.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Kiro credits', value: '0.11 cr', detail: '2 turns' }),
+      ])
+    );
+    expect(viewModel.teamRows[0]?.kiroCredits).toBe('0.11 cr');
+    expect(viewModel.agentRows[0]?.kiroCredits).toBe('0.11 cr');
+    expect(viewModel.sessionRuns[0]?.kiroCredits).toBe('0.11 cr');
+  });
+
   it('builds numeric chart models with cache tokens when explicitly enabled', () => {
     const viewModel = toTokenUsageDashboardViewModel(snapshot(), { includeCacheTokens: true });
 

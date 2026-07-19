@@ -81,7 +81,8 @@ function entry(
 
 function companion(
   companionId: 'kiro-cli' | 'cursor-agent',
-  runConnect = vi.fn(async () => undefined)
+  runConnect = vi.fn(async () => undefined),
+  runAction = vi.fn(async () => undefined)
 ): RuntimeProviderCompanionState {
   const status: RuntimeProviderCompanionStatusDto = {
     companionId,
@@ -89,6 +90,14 @@ function companion(
     phase: 'connected',
     installed: true,
     authenticated: true,
+    account: {
+      display: 'test@example.com',
+      email: 'test@example.com',
+      accountType: 'BuilderId',
+      region: null,
+    },
+    supportedActions:
+      companionId === 'kiro-cli' ? ['switch-account', 'logout', 'doctor', 'update'] : [],
     binaryPath: '/tmp/companion',
     version: '1.0.0',
     percent: 100,
@@ -104,6 +113,7 @@ function companion(
     loading: false,
     runInstallAndConnect: vi.fn(async () => undefined),
     runConnect,
+    runAction,
     refresh: vi.fn(async () => undefined),
   };
 }
@@ -267,15 +277,12 @@ describe('RuntimeProviderQuickConnect', () => {
     expect(runConnect).toHaveBeenCalledTimes(1);
   });
 
-  it('reuses the companion dialog to sign in again after Cursor is connected', async () => {
-    const runConnect = vi.fn(async () => undefined);
-    mocks.companions.set('cursor-agent', companion('cursor-agent', runConnect));
+  it('switches a connected Kiro account through the explicit global-session action', async () => {
+    const runAction = vi.fn(async () => undefined);
+    mocks.companions.set('kiro-cli', companion('kiro-cli', undefined, runAction));
     mocks.directory = {
       entries: [
         entry('kiro', { metadata: { ...entry('kiro').metadata, configuredAuthless: true } }),
-        entry('cursor-acp', {
-          metadata: { ...entry('cursor-acp').metadata, configuredAuthless: true },
-        }),
       ],
       loaded: true,
       loading: false,
@@ -285,16 +292,18 @@ describe('RuntimeProviderQuickConnect', () => {
 
     await renderQuickConnect();
     await act(async () => {
-      host
-        .querySelector<HTMLButtonElement>('[data-testid="provider-quick-action-cursor"]')
-        ?.click();
+      host.querySelector<HTMLButtonElement>('[data-testid="provider-quick-action-kiro"]')?.click();
     });
-    const signIn = [...document.body.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('cliStatus.quickConnect.signIn')
+    const switchAccount = [...document.body.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Switch account')
     );
-    await act(async () => signIn?.click());
+    await act(async () => switchAccount?.click());
+    const confirm = [...document.body.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Sign out and continue')
+    );
+    await act(async () => confirm?.click());
 
-    expect(runConnect).toHaveBeenCalledTimes(1);
+    expect(runAction).toHaveBeenCalledWith('switch-account');
   });
 
   it('routes the current MiMo endpoint through the reusable reconnect flow', async () => {

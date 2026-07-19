@@ -218,6 +218,43 @@ describe('buildTokenUsageSnapshot', () => {
     ).toBe('subscription');
   });
 
+  it('aggregates exact Kiro credits and keeps the latest turn value separately', () => {
+    const snapshot = buildTokenUsageSnapshot({
+      runs: [run({ runtimeKind: 'opencode', providerId: 'opencode', model: 'kiro/auto' })],
+      events: [
+        event({
+          id: 'kiro-event-1',
+          runtimeKind: 'opencode',
+          providerId: 'opencode',
+          model: 'kiro/auto',
+          providerUsage: { kiro: { credits: 0.03, creditsUnit: 'credit' } },
+          occurredAt: '2026-06-30T00:01:00.000Z',
+        }),
+        event({
+          id: 'kiro-event-2',
+          runtimeKind: 'opencode',
+          providerId: 'opencode',
+          model: 'kiro/auto',
+          providerUsage: { kiro: { credits: 0.08, creditsUnit: 'credit' } },
+          occurredAt: '2026-06-30T00:02:00.000Z',
+        }),
+      ],
+      nowIso: NOW,
+    });
+
+    expect(snapshot.summary).toEqual(
+      expect.objectContaining({
+        kiroCredits: 0.11,
+        kiroCreditEventCount: 2,
+        lastKiroCredits: 0.08,
+        lastKiroCreditsAt: '2026-06-30T00:02:00.000Z',
+        kiroCreditsUnit: 'credit',
+      })
+    );
+    expect(snapshot.byAgent[0]?.summary.kiroCredits).toBe(0.11);
+    expect(snapshot.byTeam[0]?.summary.lastKiroCredits).toBe(0.08);
+  });
+
   it('filters by team before aggregating agent/runtime/model breakdowns', () => {
     const snapshot = buildTokenUsageSnapshot({
       runs: [

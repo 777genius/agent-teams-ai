@@ -70,6 +70,65 @@ function createProviderStatus(
 }
 
 describe('team effort options', () => {
+  it('uses exact Kiro catalog efforts including xhigh, max, and ultra', () => {
+    const providerStatus = createProviderStatus('opencode', {
+      id: 'kiro/auto',
+      launchModel: 'kiro/auto',
+      displayName: 'Kiro Auto',
+      hidden: false,
+      supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+      defaultReasoningEffort: 'high',
+      inputModalities: ['text', 'image'],
+      supportsPersonality: false,
+      isDefault: true,
+      upgrade: false,
+      source: 'app-server',
+    });
+
+    const params = { providerId: 'opencode' as const, model: 'kiro/auto', providerStatus };
+    expect(getTeamEffortSelectorPresentation(params)).toMatchObject({
+      disabled: false,
+      canValidateValue: true,
+    });
+    expect(getTeamEffortOptions(params)).toEqual([
+      { value: '', label: 'Default (High)' },
+      { value: 'low', label: 'Low' },
+      { value: 'medium', label: 'Medium' },
+      { value: 'high', label: 'High' },
+      { value: 'xhigh', label: 'XHigh' },
+      { value: 'max', label: 'Max' },
+      { value: 'ultra', label: 'Ultra' },
+    ]);
+  });
+
+  it('disables effort when the exact OpenCode catalog model exposes none', () => {
+    const providerStatus = createProviderStatus('opencode', {
+      id: 'kiro/no-effort',
+      launchModel: 'kiro/no-effort',
+      displayName: 'Kiro No Effort',
+      hidden: false,
+      supportedReasoningEfforts: [],
+      defaultReasoningEffort: null,
+      inputModalities: ['text'],
+      supportsPersonality: false,
+      isDefault: true,
+      upgrade: false,
+      source: 'app-server',
+    });
+
+    expect(
+      getTeamEffortSelectorPresentation({
+        providerId: 'opencode',
+        model: 'kiro/no-effort',
+        providerStatus,
+      })
+    ).toMatchObject({
+      options: [{ value: '', label: 'Not supported' }],
+      disabled: true,
+      canValidateValue: true,
+    });
+  });
+
   it('keeps extended Codex efforts when runtime catalog and passthrough say they are valid', () => {
     const providerStatus = createProviderStatus(
       'codex',

@@ -30,7 +30,10 @@ import {
 import { XiaomiMiMoTokenPlanSetupDialog } from './ui/XiaomiMiMoTokenPlanSetupDialog';
 import { RuntimeLocalProviderSetupDialog } from './RuntimeLocalProviderSetupDialog';
 
-import type { RuntimeProviderDirectoryEntryDto } from '../contracts';
+import type {
+  RuntimeProviderCompanionActionDto,
+  RuntimeProviderDirectoryEntryDto,
+} from '../contracts';
 import type { RuntimeProviderOnboardingPlanId } from '../core/domain';
 import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
 import type { JSX } from 'react';
@@ -246,6 +249,15 @@ export const RuntimeProviderQuickConnect = ({
       } else {
         await companion.runConnect();
       }
+      directory.refresh();
+    },
+    [directory, getCompanionState]
+  );
+
+  const runCompanionAction = useCallback(
+    async (planId: CompanionPlanId, action: RuntimeProviderCompanionActionDto): Promise<void> => {
+      setActiveCompanionPlanId(planId);
+      await getCompanionState(planId).runAction(action);
       directory.refresh();
     },
     [directory, getCompanionState]
@@ -572,6 +584,16 @@ export const RuntimeProviderQuickConnect = ({
             void runCompanionOperation(activeCompanionPlanId, 'connect');
           }
         }}
+        onAction={(action) => {
+          if (activeCompanionPlanId) {
+            void runCompanionAction(activeCompanionPlanId, action);
+          }
+        }}
+        onOpenUsage={
+          activeCompanionPlanId === 'kiro'
+            ? () => void api.openExternal('https://app.kiro.dev/account/usage')
+            : undefined
+        }
         onManage={() => {
           if (!activeCompanionPlanId) return;
           onOpenCodeProviderAction(

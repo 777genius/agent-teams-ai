@@ -32,6 +32,8 @@ export const ZERO_TOKEN_USAGE_SUMMARY: TokenUsageSummaryDto = {
   unknownBillingTokens: 0,
   exactEventCount: 0,
   estimatedEventCount: 0,
+  kiroCredits: 0,
+  kiroCreditEventCount: 0,
 };
 
 export function normalizeTokenBreakdown(
@@ -95,6 +97,12 @@ export function addEventToSummary(
   const cost = normalizeCostBreakdown(event.cost);
   const billingMode = normalizeBillingMode(event.billingMode ?? cost.billingMode);
   const billingCounts = billingSummaryDelta(billingMode, event.tokens.totalTokens);
+  const kiroUsage = event.providerUsage?.kiro;
+  const previousKiroOccurredAt = summary.lastKiroCreditsAt;
+  const hasNewerKiroUsage = Boolean(
+    kiroUsage &&
+    (!previousKiroOccurredAt || event.occurredAt.localeCompare(previousKiroOccurredAt) >= 0)
+  );
   return {
     requestCount: summary.requestCount + 1,
     runCount: summary.runCount,
@@ -122,6 +130,11 @@ export function addEventToSummary(
     unknownBillingTokens: summary.unknownBillingTokens + billingCounts.unknownTokens,
     exactEventCount: summary.exactEventCount + (exact ? 1 : 0),
     estimatedEventCount: summary.estimatedEventCount + (exact ? 0 : 1),
+    kiroCredits: (summary.kiroCredits ?? 0) + (kiroUsage?.credits ?? 0),
+    kiroCreditEventCount: (summary.kiroCreditEventCount ?? 0) + (kiroUsage ? 1 : 0),
+    lastKiroCredits: hasNewerKiroUsage ? kiroUsage?.credits : summary.lastKiroCredits,
+    lastKiroCreditsAt: hasNewerKiroUsage ? event.occurredAt : summary.lastKiroCreditsAt,
+    kiroCreditsUnit: hasNewerKiroUsage ? kiroUsage?.creditsUnit : summary.kiroCreditsUnit,
   };
 }
 
