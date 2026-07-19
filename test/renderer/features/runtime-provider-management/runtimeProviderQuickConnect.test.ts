@@ -23,7 +23,29 @@ const mocks = vi.hoisted(() => ({
   companions: new Map<string, RuntimeProviderCompanionState>(),
   quickConnectOptions: null as { enabled: boolean } | null,
   companionOptions: new Map<string, boolean>(),
+  fetchCliProviderStatus: vi.fn(async () => true),
+  localProviderDialogProps: null as {
+    onConfigured: () => Promise<void> | void;
+  } | null,
 }));
+
+vi.mock('@renderer/store', () => ({
+  useStore: (selector: (state: unknown) => unknown) =>
+    selector({
+      repositoryGroups: [],
+      fetchCliProviderStatus: mocks.fetchCliProviderStatus,
+    }),
+}));
+
+vi.mock(
+  '../../../../src/features/runtime-provider-management/renderer/RuntimeLocalProviderSetupDialog',
+  () => ({
+    RuntimeLocalProviderSetupDialog: (props: { onConfigured: () => Promise<void> | void }) => {
+      mocks.localProviderDialogProps = props;
+      return null;
+    },
+  })
+);
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
@@ -131,6 +153,8 @@ describe('RuntimeProviderQuickConnect', () => {
     root = createRoot(host);
     mocks.quickConnectOptions = null;
     mocks.companionOptions.clear();
+    mocks.fetchCliProviderStatus.mockClear();
+    mocks.localProviderDialogProps = null;
     mocks.companions = new Map([
       ['kiro-cli', companion('kiro-cli')],
       ['cursor-agent', companion('cursor-agent')],
@@ -143,7 +167,7 @@ describe('RuntimeProviderQuickConnect', () => {
     vi.unstubAllGlobals();
   });
 
-  const renderQuickConnect = async (): Promise<void> => {
+  const renderQuickConnect = async (projectPath: string | null = null): Promise<void> => {
     await act(async () => {
       root.render(
         React.createElement(RuntimeProviderQuickConnect, {
@@ -157,6 +181,7 @@ describe('RuntimeProviderQuickConnect', () => {
             version: '1.17.18',
           },
           openCodeRuntimeStatusLoading: false,
+          projectPath,
           onInstallOpenCode: vi.fn(),
           onRefreshOpenCode: vi.fn(),
           onOpenCodeProviderAction: vi.fn(),
@@ -165,6 +190,29 @@ describe('RuntimeProviderQuickConnect', () => {
       );
     });
   };
+
+  it('refreshes both the provider directory and project model catalog after local setup', async () => {
+    const refresh = vi.fn(async () => undefined);
+    mocks.directory = {
+      entries: [],
+      loaded: true,
+      loading: false,
+      error: null,
+      refresh,
+    };
+
+    await renderQuickConnect('/tmp/local-model-project');
+    await act(async () => {
+      await mocks.localProviderDialogProps?.onConfigured();
+    });
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(mocks.fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
+      silent: false,
+      checkReason: 'manual_refresh',
+      projectPath: '/tmp/local-model-project',
+    });
+  });
 
   it('keeps last-known connected cards actionable during a refresh error', async () => {
     mocks.directory = {

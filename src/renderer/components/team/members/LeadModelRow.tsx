@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { OpenCodeLocalModelLimitsCard } from '@features/runtime-provider-management/renderer';
-import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import {
   ANTHROPIC_LONG_CONTEXT_PRICING_URL,
   ANTHROPIC_SONNET_EXTRA_USAGE_WARNING,
@@ -10,6 +9,7 @@ import {
 } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
+import { TeamModelBrandIcon } from '@renderer/components/team/dialogs/TeamModelBrandIcon';
 import {
   getProviderScopedTeamModelLabel,
   getTeamProviderLabel,
@@ -50,6 +50,7 @@ interface LeadModelRowProps {
   warningText?: string | null;
   disableGeminiOption?: boolean;
   providerNoticeById?: Partial<Record<TeamProviderId, React.ReactNode>>;
+  providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
   modelIssueText?: string | null;
   modelAdvisoryReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
@@ -74,6 +75,7 @@ export const LeadModelRow = ({
   warningText,
   disableGeminiOption = false,
   providerNoticeById,
+  providerReadyById,
   modelIssueText,
   modelAdvisoryReasonByValue,
   modelIssueReasonByValue,
@@ -236,7 +238,7 @@ export const LeadModelRow = ({
               ) : (
                 <ChevronRight className="size-3.5" />
               )}
-              <ProviderBrandLogo providerId={providerId} className="size-3.5 shrink-0" />
+              <TeamModelBrandIcon providerId={providerId} model={model} />
               <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
               {hasModelIssue ? <AlertTriangle className="size-3.5 shrink-0 text-red-300" /> : null}
               {hasModelAdvisory ? <Info className="size-3.5 shrink-0 text-amber-300" /> : null}
@@ -269,9 +271,11 @@ export const LeadModelRow = ({
             onProviderChange={onProviderChange}
             value={model}
             onValueChange={onModelChange}
+            projectPath={projectPath}
             id="lead-model"
             disableGeminiOption={disableGeminiOption}
             providerNoticeById={providerNoticeById}
+            providerReadyById={providerReadyById}
             modelAdvisoryReasonByValue={modelAdvisoryReasonByValue}
             modelIssueReasonByValue={{
               ...(modelIssueReasonByValue ?? {}),

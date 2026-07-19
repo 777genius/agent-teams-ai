@@ -132,6 +132,7 @@ import {
   getProvisioningFailureHint,
   getProvisioningProviderBackendSummary,
   getProvisioningProviderProgressMessage,
+  getProvisioningProviderReadyById,
   type ProvisioningProviderCheck,
   ProvisioningProviderStatusList,
   shouldHideProvisioningProviderStatusList,
@@ -484,6 +485,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [prepareMessage, setPrepareMessage] = useState<string | null>(null);
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
   const [prepareChecks, setPrepareChecks] = useState<ProvisioningProviderCheck[]>([]);
+  const providerReadyById = useMemo(
+    () => getProvisioningProviderReadyById(prepareChecks),
+    [prepareChecks]
+  );
   const [prepareProviderInvalidationEpochById, setPrepareProviderInvalidationEpochById] = useState<
     Partial<Record<TeamProviderId, number>>
   >({});
@@ -2827,6 +2832,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   effort={(selectedEffortForCurrentSelection as EffortLevel) || undefined}
                   limitContext={effectiveAnthropicRuntimeLimitContext}
                   runtimeProviderStatusById={runtimeProviderStatusById}
+                  providerReadyById={providerReadyById}
                   leadProviderNoticeById={teammateRuntimeProviderNoticeById}
                   onProviderChange={setSelectedProviderId}
                   onModelChange={setSelectedModel}
@@ -3013,6 +3019,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   onProviderChange={setSelectedProviderId}
                   value={selectedModel}
                   onValueChange={setSelectedModel}
+                  projectPath={effectiveCwd || null}
                   id="dialog-model"
                   disableGeminiOption={isGeminiUiFrozen()}
                   providerDisabledReasonById={{

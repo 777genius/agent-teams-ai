@@ -6,6 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@features/runtime-provider-management/renderer', () => ({
   OpenCodeLocalModelLimitsCard: () => React.createElement('div', null, 'local-model-limits-card'),
+  ProviderBrandIcon: ({ provider }: { provider: { providerId: string } }) =>
+    React.createElement('span', {
+      'data-testid': 'model-source-logo',
+      'data-provider-id': provider.providerId,
+    }),
 }));
 
 vi.mock('@renderer/components/common/ProviderBrandLogo', () => ({
@@ -179,6 +184,26 @@ describe('MemberDraftRow', () => {
     expect(nameInput.className).not.toContain('border-transparent');
     expect(nameInput.className).not.toContain('shadow-none');
     expect(nameInput.className).not.toContain('font-semibold');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('shows the concrete OpenCode source logo for a selected source model', () => {
+    const { host, root } = renderMemberDraftRow({
+      member: createMemberDraft({
+        id: 'member-1',
+        name: 'alice',
+        roleSelection: 'developer',
+        providerId: 'opencode',
+        model: 'lmstudio/qwen-test:0.5b',
+      }),
+    });
+
+    expect(
+      host.querySelector('[data-testid="model-source-logo"]')?.getAttribute('data-provider-id')
+    ).toBe('lmstudio');
 
     act(() => {
       root.unmount();

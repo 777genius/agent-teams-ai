@@ -51,6 +51,7 @@ export interface CliProviderStatusFetchOptions {
   epoch?: number;
   verifyModels?: boolean;
   checkReason?: AnalyticsProviderCheckReason;
+  projectPath?: string | null;
 }
 
 function isActiveMultimodelProviderId(providerId: CliProviderId): boolean {
@@ -1230,7 +1231,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       return false;
     }
     const verifyModels = options?.verifyModels === true && providerId !== 'opencode';
-    const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}`;
+    const projectPath = options?.projectPath?.trim() || null;
+    const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}:${projectPath ?? ''}`;
     const inFlight = cliProviderStatusInFlight.get(requestKey);
     if (inFlight) return inFlight;
 
@@ -1269,7 +1271,9 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       try {
         const providerStatus = verifyModels
           ? await api.cliInstaller.verifyProviderModels(providerId)
-          : await api.cliInstaller.getProviderStatus(providerId);
+          : projectPath
+            ? await api.cliInstaller.getProviderStatus(providerId, { projectPath })
+            : await api.cliInstaller.getProviderStatus(providerId);
         const requestIsCurrent =
           requestEpoch === cliStatusEpoch && cliProviderStatusSeq.get(providerId) === requestSeq;
         if (

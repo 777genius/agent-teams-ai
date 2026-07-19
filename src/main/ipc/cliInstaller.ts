@@ -7,6 +7,8 @@
  * - cliInstaller:progress: Progress events (main → renderer, not a handler)
  */
 
+import path from 'node:path';
+
 import {
   CLI_INSTALLER_GET_PROVIDER_STATUS,
   CLI_INSTALLER_GET_STATUS,
@@ -29,6 +31,7 @@ import type {
   CliInstallerProviderStatusMode,
   CliProviderId,
   CliProviderStatus,
+  CliProviderStatusRequestOptions,
   IpcResult,
 } from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
@@ -37,7 +40,7 @@ const logger = createLogger('IPC:cliInstaller');
 
 let service: CliInstallerService;
 const statusInFlight = new Map<CliInstallerProviderStatusMode, Promise<CliInstallationStatus>>();
-const providerStatusInFlight = new Map<CliProviderId, Promise<CliProviderStatus | null>>();
+const providerStatusInFlight = new Map<string, Promise<CliProviderStatus | null>>();
 const providerRuntimeRequestTails = new Map<CliProviderId, Promise<void>>();
 const providerRuntimeRequestQueue: Array<() => void> = [];
 let activeProviderRuntimeRequestCount = 0;
@@ -51,6 +54,48 @@ const MAX_PARALLEL_PROVIDER_RUNTIME_REQUESTS = 3;
 const PARALLEL_PROVIDER_STATUS_ENV = 'CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS';
 const FRONTEND_MULTIMODEL_PROVIDER_IDS = new Set<CliProviderId>(['anthropic', 'codex', 'opencode']);
 const INDEPENDENT_PROVIDER_RUNTIME_REQUEST_IDS = new Set<CliProviderId>(['opencode']);
+const MAX_PROVIDER_STATUS_PROJECT_PATH_LENGTH = 4_096;
+
+function normalizeProviderStatusOptions(options: unknown): CliProviderStatusRequestOptions {
+  if (options === undefined || options === null) {
+    return {};
+  }
+  if (typeof options !== 'object' || Array.isArray(options)) {
+    throw new Error('Provider status options must be an object');
+  }
+
+  const projectPath = (options as { projectPath?: unknown }).projectPath;
+  if (projectPath === undefined || projectPath === null || projectPath === '') {
+    return {};
+  }
+  if (
+    typeof projectPath !== 'string' ||
+    projectPath.length > MAX_PROVIDER_STATUS_PROJECT_PATH_LENGTH
+  ) {
+    throw new Error('Provider status project path is invalid');
+  }
+
+  const trimmedProjectPath = projectPath.trim();
+  if (!trimmedProjectPath) {
+    return {};
+  }
+  if (!path.isAbsolute(trimmedProjectPath)) {
+    throw new Error('Provider status project path must be absolute');
+  }
+
+  const resolvedProjectPath = path.resolve(trimmedProjectPath);
+  if (resolvedProjectPath === path.parse(resolvedProjectPath).root) {
+    throw new Error('Provider status project path cannot be a filesystem root');
+  }
+  return { projectPath: resolvedProjectPath };
+}
+
+function getProviderStatusRequestKey(
+  providerId: CliProviderId,
+  options: CliProviderStatusRequestOptions
+): string {
+  return `${providerId}\0${options.projectPath ?? ''}`;
+}
 
 function isFrontendMultimodelProviderId(providerId: CliProviderId): boolean {
   return FRONTEND_MULTIMODEL_PROVIDER_IDS.has(providerId);
@@ -323,10 +368,13 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
 
 async function handleGetProviderStatus(
   _event: IpcMainInvokeEvent,
-  providerId: CliProviderId
+  providerId: CliProviderId,
+  rawOptions?: unknown
 ): Promise<IpcResult<CliProviderStatus | null>> {
   try {
-    const inFlight = providerStatusInFlight.get(providerId);
+    const options = normalizeProviderStatusOptions(rawOptions);
+    const requestKey = getProviderStatusRequestKey(providerId, options);
+    const inFlight = providerStatusInFlight.get(requestKey);
     if (inFlight) {
       const status = await inFlight;
       return { success: true, data: status };
@@ -335,7 +383,7 @@ async function handleGetProviderStatus(
     const generation = statusCacheGeneration;
     const currentService = service;
     const request = runProviderRuntimeRequest(providerId, () =>
-      currentService.getProviderStatus(providerId)
+      currentService.getProviderStatus(providerId, options)
     )
       .then((status) => {
         if (generation === statusCacheGeneration) {
@@ -344,12 +392,12 @@ async function handleGetProviderStatus(
         return status;
       })
       .finally(() => {
-        if (providerStatusInFlight.get(providerId) === request) {
-          providerStatusInFlight.delete(providerId);
+        if (providerStatusInFlight.get(requestKey) === request) {
+          providerStatusInFlight.delete(requestKey);
         }
       });
 
-    providerStatusInFlight.set(providerId, request);
+    providerStatusInFlight.set(requestKey, request);
     const status = await request;
     return { success: true, data: status };
   } catch (error) {

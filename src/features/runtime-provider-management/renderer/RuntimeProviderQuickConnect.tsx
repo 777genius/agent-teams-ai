@@ -169,6 +169,7 @@ export const RuntimeProviderQuickConnect = ({
 }: RuntimeProviderQuickConnectProps): JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   const repositoryGroups = useStore((state) => state.repositoryGroups);
+  const fetchCliProviderStatus = useStore((state) => state.fetchCliProviderStatus);
   const providerMap = useMemo(
     () => new Map(providers.map((provider) => [provider.providerId, provider])),
     [providers]
@@ -230,6 +231,17 @@ export const RuntimeProviderQuickConnect = ({
       cancelled = true;
     };
   }, [localProviderProjectPath, localProviderSetupOpen, projectPath, repositoryGroups]);
+
+  const refreshConfiguredLocalProvider = useCallback(async (): Promise<void> => {
+    await Promise.all([
+      directory.refresh(),
+      fetchCliProviderStatus('opencode', {
+        silent: false,
+        checkReason: 'manual_refresh',
+        projectPath: localProviderProjectPath,
+      }),
+    ]);
+  }, [directory, fetchCliProviderStatus, localProviderProjectPath]);
 
   const getCompanionState = useCallback(
     (planId: CompanionPlanId): RuntimeProviderCompanionState =>
@@ -543,7 +555,7 @@ export const RuntimeProviderQuickConnect = ({
         projectPath={localProviderProjectPath}
         projects={localProviderProjects}
         onProjectPathChange={setLocalProviderProjectPath}
-        onConfigured={() => directory.refresh()}
+        onConfigured={refreshConfiguredLocalProvider}
       />
       <RuntimeProviderCompanionSetupDialog
         open={activeCompanionPlanId !== null}

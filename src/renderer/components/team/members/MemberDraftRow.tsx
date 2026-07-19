@@ -2,10 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { OpenCodeLocalModelLimitsCard } from '@features/runtime-provider-management/renderer';
-import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
 import { AnthropicExtraUsageWarning } from '@renderer/components/team/dialogs/AnthropicExtraUsageWarning';
 import { EffortLevelSelector } from '@renderer/components/team/dialogs/EffortLevelSelector';
 import { LimitContextCheckbox } from '@renderer/components/team/dialogs/LimitContextCheckbox';
+import { TeamModelBrandIcon } from '@renderer/components/team/dialogs/TeamModelBrandIcon';
 import {
   formatTeamModelSummary,
   getProviderScopedTeamModelLabel,
@@ -105,6 +105,7 @@ interface MemberDraftRowProps {
   warningText?: string | null;
   infoText?: string | null;
   disableGeminiOption?: boolean;
+  providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
   modelIssueText?: string | null;
   modelAdvisoryReasonByProvider?: Partial<
     Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
@@ -169,6 +170,7 @@ export const MemberDraftRow = ({
   warningText,
   infoText,
   disableGeminiOption = false,
+  providerReadyById,
   modelIssueText,
   modelAdvisoryReasonByProvider,
   modelIssueReasonByProvider,
@@ -596,7 +598,7 @@ export const MemberDraftRow = ({
                 ) : (
                   <ChevronRight className="size-3.5" />
                 )}
-                <ProviderBrandLogo providerId={effectiveProviderId} className="size-3.5 shrink-0" />
+                <TeamModelBrandIcon providerId={effectiveProviderId} model={effectiveModel ?? ''} />
                 <span className="min-w-0 flex-1 truncate">{modelButtonLabel}</span>
                 {hasModelIssue ? (
                   <AlertTriangle className="size-3.5 shrink-0 text-red-300" />
@@ -949,8 +951,10 @@ export const MemberDraftRow = ({
                   if (lockProviderModel) return;
                   onModelChange(member.id, value);
                 }}
+                projectPath={projectPath}
                 id={`member-${member.id}-model`}
                 disableGeminiOption={disableGeminiOption}
+                providerReadyById={providerReadyById}
                 modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[effectiveProviderId]}
                 modelIssueReasonByValue={{
                   ...(modelIssueReasonByProvider?.[effectiveProviderId] ?? {}),

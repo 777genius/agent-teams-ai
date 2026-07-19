@@ -45,6 +45,18 @@ export function createInitialProviderChecks(
   }));
 }
 
+export function getProvisioningProviderReadyById(
+  checks: readonly ProvisioningProviderCheck[]
+): Partial<Record<TeamProviderId, boolean>> {
+  const readyById: Partial<Record<TeamProviderId, boolean>> = {};
+  for (const check of checks) {
+    if (check.status === 'ready' || check.status === 'notes') {
+      readyById[check.providerId] = true;
+    }
+  }
+  return readyById;
+}
+
 export function getProvisioningProviderBackendSummary(
   provider:
     | Pick<

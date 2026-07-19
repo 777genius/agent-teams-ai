@@ -476,6 +476,7 @@ vi.mock('@renderer/components/team/dialogs/ProvisioningProviderStatusList', () =
   getProvisioningFailureHint: () => 'hint',
   getProvisioningProviderProgressMessage: () => 'Checking selected providers in parallel...',
   getProvisioningProviderBackendSummary: () => null,
+  getProvisioningProviderReadyById: () => ({}),
   shouldHideProvisioningProviderStatusList: () => false,
   updateProviderCheck: (
     checks: {

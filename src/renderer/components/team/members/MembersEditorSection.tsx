@@ -140,6 +140,7 @@ export interface MembersEditorSectionProps {
   limitContext?: boolean;
   onLimitContextChange?: (value: boolean) => void;
   runtimeProviderStatusById?: ReadonlyMap<TeamProviderId, CliProviderStatus | null | undefined>;
+  providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
   inheritModelSettingsByDefault?: boolean;
   forceInheritedModelSettings?: boolean;
   modelLockReason?: string;
@@ -193,6 +194,7 @@ export const MembersEditorSection = ({
   limitContext = false,
   onLimitContextChange,
   runtimeProviderStatusById,
+  providerReadyById,
   inheritModelSettingsByDefault = false,
   forceInheritedModelSettings = false,
   modelLockReason,
@@ -647,6 +649,7 @@ export const MembersEditorSection = ({
                   modelAdvisoryReasonByProvider={modelAdvisoryReasonByProvider}
                   modelIssueReasonByProvider={modelIssueReasonByProvider}
                   modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
+                  providerReadyById={providerReadyById}
                   layoutVariant={layoutVariant}
                 />
               ))}

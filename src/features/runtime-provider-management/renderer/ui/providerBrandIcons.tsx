@@ -69,6 +69,30 @@ const VERCEL_PATH = 'm12 1.608 12 20.784H0Z';
 // 16.17.0 entries whose source URLs point to the provider's official site/press kit.
 // Providers without a verified compact mark use branded initials instead of approximate logos.
 const BRAND_ICONS: Record<string, BrandIconDescriptor> = {
+  ollama: {
+    kind: 'image',
+    src: 'https://raw.githubusercontent.com/ollama/ollama/main/docs/favicon-dark.svg',
+    background: '#ffffff',
+    border: 'rgba(255, 255, 255, 0.5)',
+  },
+  lmstudio: {
+    kind: 'image',
+    src: 'https://lmstudio.ai/assets/marketing/brand/download/logos/lm-studio-icon-color.svg',
+    background: '#ffffff',
+    border: 'rgba(255, 255, 255, 0.5)',
+  },
+  'atomic-chat': {
+    kind: 'image',
+    src: 'https://raw.githubusercontent.com/AtomicBot-ai/Atomic-Chat/main/src-tauri/icons/icon.png',
+    background: '#ffffff',
+    border: 'rgba(255, 255, 255, 0.5)',
+  },
+  'llama-cpp': {
+    kind: 'image',
+    src: 'https://raw.githubusercontent.com/ggml-org/llama.cpp/master/media/llama1-icon-transparent.svg',
+    background: '#ffffff',
+    border: 'rgba(255, 255, 255, 0.5)',
+  },
   kiro: {
     kind: 'svg',
     viewBox: '0 0 1200 1200',
@@ -416,6 +440,7 @@ const BRAND_ALIASES: Record<string, string> = {
   'google-vertex': 'google-vertex',
   'hugging-face': 'huggingface',
   'minimax-coding-plan': 'minimax',
+  'lm-studio': 'lmstudio',
   'mistral-ai': 'mistral',
   'ollama-cloud': 'ollama-cloud',
   'opencode-zen': 'opencode',
@@ -671,10 +696,11 @@ export function ProviderBrandIcon({
   size = 'default',
 }: {
   readonly provider: ProviderBrand;
-  readonly size?: 'default' | 'large';
+  readonly size?: 'small' | 'default' | 'large';
 }): JSX.Element {
   const descriptor = descriptorFor(provider);
   const isLarge = size === 'large';
+  const isSmall = size === 'small';
   const [imageFailed, setImageFailed] = useState(false);
   const imageSrc = descriptor.kind === 'image' ? descriptor.src : null;
 
@@ -692,7 +718,9 @@ export function ProviderBrandIcon({
       className={
         isLarge
           ? 'runtime-provider-brand-icon inline-flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border'
-          : 'runtime-provider-brand-icon inline-flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md border'
+          : isSmall
+            ? 'runtime-provider-brand-icon inline-flex size-3.5 shrink-0 items-center justify-center overflow-hidden rounded-[4px] border'
+            : 'runtime-provider-brand-icon inline-flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md border'
       }
       style={shellStyle(renderedDescriptor)}
     >
@@ -700,7 +728,7 @@ export function ProviderBrandIcon({
         <img
           src={renderedDescriptor.src}
           alt=""
-          className="size-5 object-contain"
+          className={isSmall ? 'size-3 object-contain' : 'size-5 object-contain'}
           draggable={false}
           onError={() => setImageFailed(true)}
         />
@@ -708,7 +736,7 @@ export function ProviderBrandIcon({
       {renderedDescriptor.kind === 'svg' ? (
         <svg
           viewBox={renderedDescriptor.viewBox}
-          className={isLarge ? 'size-5' : 'size-[18px]'}
+          className={isSmall ? 'size-3' : isLarge ? 'size-5' : 'size-[18px]'}
           focusable="false"
         >
           {renderedDescriptor.paths.map((path) => (
@@ -721,7 +749,9 @@ export function ProviderBrandIcon({
           className={
             isLarge
               ? 'text-[11px] font-semibold leading-none'
-              : 'text-[10px] font-semibold leading-none'
+              : isSmall
+                ? 'text-[7px] font-semibold leading-none'
+                : 'text-[10px] font-semibold leading-none'
           }
         >
           {renderedDescriptor.label}

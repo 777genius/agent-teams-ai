@@ -535,6 +535,39 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(execCliMock.mock.calls[0][2]?.timeout).toBe(45_000);
   });
 
+  it('resolves project-scoped OpenCode catalogs from the selected project cwd', async () => {
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 2,
+        providers: {
+          opencode: {
+            supported: true,
+            authenticated: true,
+            authMethod: 'opencode_configured_local',
+            verificationState: 'verified',
+            canLoginFromUi: false,
+            capabilities: { teamLaunch: true, oneShot: false },
+          },
+        },
+      }),
+      stderr: '',
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    await service.getProviderStatus('/mock/agent_teams_orchestrator', 'opencode', undefined, {
+      projectPath: '/tmp/local-model-project',
+    });
+
+    expect(execCliMock).toHaveBeenCalledWith(
+      '/mock/agent_teams_orchestrator',
+      ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
+      expect.objectContaining({ cwd: '/tmp/local-model-project' })
+    );
+  });
+
   it('keeps OpenCode timeout copy concise and preserves saved-connection confidence', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';

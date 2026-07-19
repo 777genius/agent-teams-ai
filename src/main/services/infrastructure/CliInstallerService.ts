@@ -57,6 +57,7 @@ import type {
   CliProviderId,
   CliProviderModelAvailability,
   CliProviderStatus,
+  CliProviderStatusRequestOptions,
 } from '@shared/types';
 import type { BrowserWindow } from 'electron';
 import type { IncomingMessage } from 'http';
@@ -907,7 +908,10 @@ export class CliInstallerService {
     }
   }
 
-  async getProviderStatus(providerId: CliProviderId): Promise<CliProviderStatus | null> {
+  async getProviderStatus(
+    providerId: CliProviderId,
+    options: CliProviderStatusRequestOptions = {}
+  ): Promise<CliProviderStatus | null> {
     await resolveInteractiveShellEnvBestEffort({
       timeoutMs: 1_500,
       fallbackEnv: process.env,
@@ -926,18 +930,26 @@ export class CliInstallerService {
     }
 
     const generation = this.statusGatherGeneration;
-    const providerStatus = await this.multimodelBridgeService.getProviderStatus(
-      binaryPath,
-      providerId,
-      (hydratedProviderStatus) => {
-        if (!this.updateLatestProviderStatusIfCurrent(hydratedProviderStatus, generation)) {
-          return;
-        }
-        if (this.latestStatusSnapshot) {
-          this.publishStatusSnapshot(this.latestStatusSnapshot);
-        }
+    const handleCatalogUpdate = (hydratedProviderStatus: CliProviderStatus): void => {
+      if (!this.updateLatestProviderStatusIfCurrent(hydratedProviderStatus, generation)) {
+        return;
       }
-    );
+      if (this.latestStatusSnapshot) {
+        this.publishStatusSnapshot(this.latestStatusSnapshot);
+      }
+    };
+    const providerStatus = options.projectPath
+      ? await this.multimodelBridgeService.getProviderStatus(
+          binaryPath,
+          providerId,
+          handleCatalogUpdate,
+          options
+        )
+      : await this.multimodelBridgeService.getProviderStatus(
+          binaryPath,
+          providerId,
+          handleCatalogUpdate
+        );
     this.updateLatestProviderStatusIfCurrent(providerStatus, generation);
     return providerStatus;
   }

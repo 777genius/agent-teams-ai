@@ -372,6 +372,14 @@ export interface CliInstallerGetStatusOptions {
   providerStatusMode?: CliInstallerProviderStatusMode;
 }
 
+export interface CliProviderStatusRequestOptions {
+  /**
+   * Project whose runtime configuration should be resolved. OpenCode uses the
+   * command cwd to merge global and project-local provider configuration.
+   */
+  projectPath?: string | null;
+}
+
 // =============================================================================
 // Preload API
 // =============================================================================
@@ -383,7 +391,10 @@ export interface CliInstallerAPI {
   /** Get current CLI installation status */
   getStatus: (options?: CliInstallerGetStatusOptions) => Promise<CliInstallationStatus>;
   /** Get current runtime/auth status for a single provider */
-  getProviderStatus: (providerId: CliProviderId) => Promise<CliProviderStatus | null>;
+  getProviderStatus: (
+    providerId: CliProviderId,
+    options?: CliProviderStatusRequestOptions
+  ) => Promise<CliProviderStatus | null>;
   /** Start on-demand model verification for a single runtime provider */
   verifyProviderModels: (providerId: CliProviderId) => Promise<CliProviderStatus | null>;
   /** Start install/update flow. Progress sent via onProgress events. */

@@ -8,6 +8,7 @@ import {
   getProvisioningFailureHint,
   getProvisioningProviderBackendSummary,
   getProvisioningProviderProgressMessage,
+  getProvisioningProviderReadyById,
   ProvisioningProviderStatusList,
 } from '@renderer/components/team/dialogs/ProvisioningProviderStatusList';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -749,6 +750,16 @@ describe('ProvisioningProviderStatusList', () => {
       state: 'ready',
       message: 'All selected providers are ready.',
     });
+  });
+
+  it('exposes only terminal successful providers as ready for model selectors', () => {
+    expect(
+      getProvisioningProviderReadyById([
+        { providerId: 'anthropic', status: 'ready', details: [] },
+        { providerId: 'codex', status: 'notes', details: ['Ready with notes'] },
+        { providerId: 'opencode', status: 'checking', details: [] },
+      ])
+    ).toEqual({ anthropic: true, codex: true });
   });
 
   it('promotes loading to failed once a terminal provider failure is already known', () => {

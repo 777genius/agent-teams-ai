@@ -295,6 +295,7 @@ import type {
   CliInstallerGetStatusOptions,
   CliInstallerProgress,
   CliProviderId,
+  CliProviderStatusRequestOptions,
   ConflictCheckResult,
   ContextInfo,
   CreateScheduleInput,
@@ -1746,8 +1747,11 @@ const electronAPI: ElectronAPI = {
     getStatus: async (options?: CliInstallerGetStatusOptions): Promise<CliInstallationStatus> => {
       return invokeIpcWithResult<CliInstallationStatus>(CLI_INSTALLER_GET_STATUS, options);
     },
-    getProviderStatus: async (providerId: CliProviderId) => {
-      return invokeIpcWithResult(CLI_INSTALLER_GET_PROVIDER_STATUS, providerId);
+    getProviderStatus: async (
+      providerId: CliProviderId,
+      options?: CliProviderStatusRequestOptions
+    ) => {
+      return invokeIpcWithResult(CLI_INSTALLER_GET_PROVIDER_STATUS, providerId, options);
     },
     verifyProviderModels: async (providerId: CliProviderId) => {
       return invokeIpcWithResult(CLI_INSTALLER_VERIFY_PROVIDER_MODELS, providerId);

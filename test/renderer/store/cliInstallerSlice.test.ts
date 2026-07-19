@@ -1555,6 +1555,26 @@ describe('cliInstallerSlice', () => {
   });
 
   describe('fetchCliProviderStatus', () => {
+    it('forwards the selected project when refreshing the OpenCode model catalog', async () => {
+      const provider = createMultimodelProvider({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+      });
+      useStore.setState({
+        cliStatus: createMultimodelStatus([provider]),
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(provider);
+
+      await useStore.getState().fetchCliProviderStatus('opencode', {
+        checkReason: 'launch_preflight',
+        projectPath: '/tmp/local-model-project',
+      });
+
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledWith('opencode', {
+        projectPath: '/tmp/local-model-project',
+      });
+    });
+
     it('records provider readiness without mislabeling a status check as a connection attempt', async () => {
       const loadingProvider = createMultimodelProvider({
         providerId: 'opencode',
