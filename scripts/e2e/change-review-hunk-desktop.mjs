@@ -2,7 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import net from 'node:net';
 import os from 'node:os';
@@ -30,8 +30,6 @@ const sandboxTeamCard = `Array.from(document.querySelectorAll('[role="button"]')
 const sandboxKanbanTaskCard = `document.querySelector(
   '.kanban-task-card[data-task-id="changes-history-e2e"]'
 )`;
-const sandboxKanbanTaskTitle = `Array.from((${sandboxKanbanTaskCard})?.querySelectorAll('h5') ?? [])
-  .find((heading) => heading.textContent?.trim() === 'Verify durable Changes history')`;
 const kanbanTabButton = `Array.from(document.querySelectorAll('button'))
   .find((button) => button.textContent?.trim() === 'Kanban')`;
 const visibleElement = (expression) => `(() => {
@@ -184,9 +182,13 @@ async function startApp(port, fixture) {
       AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
       AGENT_TEAMS_ELECTRON_CLAUDE_ROOT: fixture.claudeRoot,
       AGENT_TEAMS_ELECTRON_USER_DATA_DIR: fixture.userDataRoot,
-      // Node keeps runtime discovery deterministic. The E2E never launches agents.
+      // Changes does not exercise the OpenCode MCP transport. Avoid coupling this
+      // renderer E2E to a second background service and its independent startup timeout.
+      CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
+      // Keep the local MCP Node probe deterministic. The E2E never launches agents.
       NODE_BINARY: process.execPath,
-      CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: process.execPath,
+      CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH:
+        process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim() || process.execPath,
     },
   });
   appProcess.stdout.on('data', rememberAppLog);
@@ -202,7 +204,8 @@ async function startApp(port, fixture) {
 async function ensureSandboxNavigation() {
   await client.waitFor(
     `(${sandboxKanbanTaskCard}) || (${selectTeamButton})`,
-    'sandbox team navigation'
+    'sandbox team navigation',
+    devMcpMode ? 90_000 : 30_000
   );
   const navigationDeadline = Date.now() + 60_000;
   while (!(await client.evaluate(`Boolean(${sandboxKanbanTaskCard})`))) {
@@ -557,13 +560,13 @@ const enabledButtonWithText = (text) => `(() => {
 })()`;
 
 async function openReview() {
-  await client.evaluate(`(${sandboxKanbanTaskTitle})?.click()`);
+  await client.domClick(sandboxKanbanTaskCard);
   const taskDialog = `Array.from(document.querySelectorAll('[role="dialog"]'))
     .find((dialog) => Array.from(dialog.querySelectorAll('h2'))
       .some((heading) => heading.textContent?.trim() === 'Verify durable Changes history'))`;
   await client.waitFor(taskDialog, 'task dialog');
   const fileRow = `(${taskDialog})?.querySelector(
-    '[role="button"][title="src/review-history.ts"]'
+    '[role="button"][aria-label="src/review-history.ts"]'
   )`;
   const expandChanges = `Array.from((${taskDialog})?.querySelectorAll('section') ?? [])
     .find((section) => Array.from(section.querySelectorAll('span'))
@@ -611,6 +614,61 @@ async function waitForDiskLines(filePath, expectedFirst, expectedSecond, timeout
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   return assertDiskLines(filePath, expectedFirst, expectedSecond);
+}
+
+async function readPersistedReviewScope(fixture) {
+  const scopeKey = 'task-changes-history-e2e';
+  const scopeDir = path.join(
+    fixture.claudeRoot,
+    'teams',
+    fixture.teamName,
+    'review-decisions',
+    'v2',
+    scopeKey
+  );
+  const entries = (await readdir(scopeDir)).filter((entry) => entry.endsWith('.json'));
+  assert.equal(entries.length, 1, 'Expected one exact persisted Changes scope');
+  const persisted = JSON.parse(await readFile(path.join(scopeDir, entries[0]), 'utf8'));
+  assert.equal(persisted.scopeKey, scopeKey, 'Persisted Changes scope key mismatch');
+  assert.equal(typeof persisted.scopeToken, 'string', 'Persisted Changes scope token missing');
+  return { scopeKey, scopeToken: persisted.scopeToken };
+}
+
+async function invokeReviewApi(method, args) {
+  return client.evaluate(
+    `window.electronAPI.review[${JSON.stringify(method)}](...${JSON.stringify(args)})`
+  );
+}
+
+async function waitForReviewDecisions(scope, predicate, label, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastSnapshot = null;
+  while (Date.now() < deadline) {
+    lastSnapshot = await invokeReviewApi('loadDecisions', [
+      'changes-e2e',
+      scope.scopeKey,
+      scope.scopeToken,
+    ]);
+    if (lastSnapshot && predicate(lastSnapshot)) return lastSnapshot;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`${label}: ${JSON.stringify(lastSnapshot)}`);
+}
+
+async function waitForStableReviewDecisions(scope, label, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  let previous = null;
+  while (Date.now() < deadline) {
+    const current = await invokeReviewApi('loadDecisions', [
+      'changes-e2e',
+      scope.scopeKey,
+      scope.scopeToken,
+    ]);
+    if (current && previous?.revision === current.revision) return current;
+    previous = current;
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`${label}: ${JSON.stringify(previous)}`);
 }
 
 async function assertViewportFits() {
@@ -679,7 +737,7 @@ async function main() {
         return;
       }
       await client.waitFor(historyButton, `${label} trigger`);
-      await client.click(historyButton);
+      await client.domClick(historyButton);
       try {
         await client.waitFor(visibleHistoryPopover, label, 3_000);
         return;
@@ -810,8 +868,8 @@ async function main() {
   await ensureHistoryClosed('closed history after cleanup Undo');
 
   // dev:mcp adds Vite reload/focus timing that is unrelated to the hunk-hover controls.
-  // Keep this mode focused on the new durable Restore workflow; the production-preview
-  // path below continues to exercise the complete hunk and guarded-close matrix.
+  // Keep this mode focused on durable Restore and divergent-branch recovery; the
+  // production-preview path below continues to exercise guarded process-close recovery.
   if (devMcpMode) {
     await restartApp(port, fixture);
     await openReview();
@@ -822,10 +880,166 @@ async function main() {
     );
     await assertDiskLines(fixture.changedFile, 'after-0', 'after-1');
     await assertViewportFits();
+
+    const persistenceScope = await readPersistedReviewScope(fixture);
+    await client.waitFor(
+      `Boolean(document.querySelector('button[aria-label*="; saved"]'))`,
+      'hydrated history persistence acknowledgement'
+    );
+    const reviewCloseButton = `Array.from(document.querySelectorAll('h2'))
+      .find((heading) => heading.textContent?.startsWith('Changes for task #'))
+      ?.parentElement?.parentElement?.querySelector('button')`;
+    await client.domClick(reviewCloseButton);
+    await client.waitFor(
+      `!Array.from(document.querySelectorAll('h2'))
+        .some((heading) => heading.textContent?.startsWith('Changes for task #'))`,
+      'closed review before conflict-test reset'
+    );
+    const restoredStart = await waitForStableReviewDecisions(
+      persistenceScope,
+      'Closed durable history revision did not settle'
+    );
+    const cleared = await invokeReviewApi('clearDecisions', [
+      fixture.teamName,
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+      restoredStart.revision,
+    ]);
+    assert.equal(cleared.revision, restoredStart.revision + 1, 'Exact clear must advance revision');
+
+    await reloadRenderer();
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('12 pending') &&
+        !document.body?.innerText.includes('A conflicting recovery branch is safe on disk')`,
+      'empty conflict-test base revision'
+    );
+
+    await activateFirstHunkAction(visibleAcceptHunkButton, 'conflict branch hunk Accept');
+    await client.domMouseDown(visibleAcceptHunkButton);
+    await client.waitFor(
+      `document.body?.innerText.includes('11 pending') &&
+        document.body?.innerText.includes('1 accepted')`,
+      'one-hunk recovery branch'
+    );
+    const recoveryBranch = await waitForReviewDecisions(
+      persistenceScope,
+      (snapshot) =>
+        snapshot.revision > cleared.revision &&
+        snapshot.reviewActionHistory.length === 1 &&
+        Object.values(snapshot.hunkDecisions).includes('accepted'),
+      'one-hunk branch was not persisted'
+    );
+
+    await client.domClick(enabledButtonWithText('Undo'));
+    await client.waitFor(`document.body?.innerText.includes('12 pending')`, 'conflict branch Undo');
+    const conflictBase = await waitForReviewDecisions(
+      persistenceScope,
+      (snapshot) =>
+        snapshot.revision > recoveryBranch.revision &&
+        snapshot.reviewActionHistory.length === 0 &&
+        snapshot.reviewRedoHistory.length === 1,
+      'conflict base Undo was not persisted'
+    );
+
+    await client.domClick(enabledButtonWithText('Accept All'));
+    await client.waitFor(`document.body?.innerText.includes('12 accepted')`, 'current branch');
+    const currentBranch = await waitForReviewDecisions(
+      persistenceScope,
+      (snapshot) =>
+        snapshot.revision > conflictBase.revision &&
+        snapshot.reviewActionHistory.length === 1 &&
+        snapshot.reviewRedoHistory.length === 0 &&
+        Object.values(snapshot.fileDecisions).includes('accepted'),
+      'current Accept All branch was not persisted'
+    );
+
+    const staleSave = await client.evaluate(`(async () => {
+      try {
+        const value = await window.electronAPI.review.saveDecisions(...${JSON.stringify([
+          fixture.teamName,
+          persistenceScope.scopeKey,
+          persistenceScope.scopeToken,
+          recoveryBranch.hunkDecisions,
+          recoveryBranch.fileDecisions,
+          recoveryBranch.hunkContextHashesByFile,
+          recoveryBranch.reviewActionHistory,
+          cleared.revision,
+          recoveryBranch.reviewRedoHistory,
+        ])});
+        return { ok: true, value };
+      } catch (error) {
+        return { ok: false, error: String(error) };
+      }
+    })()`);
+    assert.equal(staleSave.ok, false, 'Divergent stale save must not replace the current branch');
+    assert.match(staleSave.error, /revision|changed|stale/i, 'Expected an explicit stale CAS error');
+    const capturedCandidates = await invokeReviewApi('loadDecisionConflictCandidates', [
+      fixture.teamName,
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+    ]);
+    assert.equal(capturedCandidates.length, 1, 'Losing branch must be durable before reload');
+    assert.equal(
+      capturedCandidates[0].observedCurrentRevision,
+      currentBranch.revision,
+      'Recovery choice must bind to the exact visible revision'
+    );
+
+    await reloadRenderer();
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('A conflicting recovery branch is safe on disk') &&
+        document.body?.innerText.includes('12 accepted')`,
+      'durable recovery banner after reload'
+    );
+    await client.waitFor(
+      `(${buttonWithText('Undo')})?.disabled === true &&
+        (${buttonWithText('Reject')})?.disabled === true`,
+      'review actions locked by recovery choice'
+    );
+
+    await client.domClick(enabledButtonWithText('Switch to recovery'));
+    await client.waitFor(
+      `document.body?.innerText.includes('11 pending') &&
+        document.body?.innerText.includes('1 accepted') &&
+        Boolean(${enabledButtonWithText('Switch to recovery')})`,
+      'recovered one-hunk branch and current backup'
+    );
+    await client.domClick(enabledButtonWithText('Switch to recovery'));
+    await client.waitFor(
+      `document.body?.innerText.includes('12 accepted') &&
+        Boolean(${enabledButtonWithText('Keep current branch')})`,
+      'reversible switch back to current branch'
+    );
+    await client.domClick(enabledButtonWithText('Keep current branch'));
+    await client.waitFor(
+      `!document.body?.innerText.includes('A conflicting recovery branch is safe on disk') &&
+        document.body?.innerText.includes('12 accepted') &&
+        Boolean(${enabledButtonWithText('Reject')})`,
+      'explicit current-branch resolution'
+    );
+
+    await reloadRenderer();
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('12 accepted') &&
+        !document.body?.innerText.includes('A conflicting recovery branch is safe on disk')`,
+      'resolved branch after final reload'
+    );
+    const remainingCandidates = await invokeReviewApi('loadDecisionConflictCandidates', [
+      fixture.teamName,
+      persistenceScope.scopeKey,
+      persistenceScope.scopeToken,
+    ]);
+    assert.equal(remainingCandidates.length, 0, 'Resolved recovery copies must stay cleared');
+    await assertDiskLines(fixture.changedFile, 'after-0', 'after-1');
+    await assertViewportFits();
     process.stdout.write(
       `Changes desktop E2E passed (dev:mcp${singleWindowMode ? ', single-window' : ''}): ` +
         'Accept All -> Reject file -> Restore back -> hydrate -> Restore forward -> ' +
-        'Undo to start -> hydrate -> exact disk/history\n'
+        'Undo to start -> hydrate -> stale branch -> reload -> reversible recovery -> ' +
+        'Keep current -> reload -> exact disk/history\n'
     );
     return;
   }
