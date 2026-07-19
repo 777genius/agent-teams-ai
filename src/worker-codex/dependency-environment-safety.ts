@@ -3,6 +3,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 
 const MAX_PACKAGE_ROOTS_SCAN = 10_000;
 const MAX_DEPENDENCY_ENTRIES_SCAN = 250_000;
+const MAX_DIRECTORY_SCAN_CONCURRENCY = 32;
 const MAX_LINK_RESOLUTION_CONCURRENCY = 32;
 const PACKAGE_SCAN_EXCLUDED_DIRS = new Set([
   ".git",
@@ -86,21 +87,35 @@ async function nodeDependencyRoots(
   let cursor = 0;
   let scanned = 0;
   while (cursor < queue.length) {
-    const directory = queue[cursor++];
-    if (!directory) break;
-    scanned += 1;
-    if (scanned > MAX_PACKAGE_ROOTS_SCAN) {
+    if (scanned >= MAX_PACKAGE_ROOTS_SCAN) {
       throw new Error("dependency_environment_package_scan_limit_exceeded");
     }
-    const entries = await readdir(directory, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.name === "node_modules") {
-        roots.push(join(directory, entry.name));
-        continue;
+    const directories = queue.slice(
+      cursor,
+      cursor +
+        Math.min(
+          MAX_DIRECTORY_SCAN_CONCURRENCY,
+          MAX_PACKAGE_ROOTS_SCAN - scanned,
+        ),
+    );
+    cursor += directories.length;
+    scanned += directories.length;
+    const batches = await Promise.all(
+      directories.map(async (directory) => ({
+        directory,
+        entries: await readdir(directory, { withFileTypes: true }),
+      })),
+    );
+    for (const { directory, entries } of batches) {
+      for (const entry of entries) {
+        if (entry.name === "node_modules") {
+          roots.push(join(directory, entry.name));
+          continue;
+        }
+        if (!entry.isDirectory() || PACKAGE_SCAN_EXCLUDED_DIRS.has(entry.name))
+          continue;
+        queue.push(join(directory, entry.name));
       }
-      if (!entry.isDirectory() || PACKAGE_SCAN_EXCLUDED_DIRS.has(entry.name))
-        continue;
-      queue.push(join(directory, entry.name));
     }
   }
   return roots.sort();
@@ -138,20 +153,30 @@ async function dependencyTreeContainsEscapingLink(
   let cursor = 0;
   let scanned = 0;
   while (cursor < queue.length) {
-    const directory = queue[cursor++];
-    if (!directory) break;
-    const entries = await readdir(directory, { withFileTypes: true });
-    for (const entry of entries) {
-      scanned += 1;
-      if (scanned > MAX_DEPENDENCY_ENTRIES_SCAN) {
-        throw new Error("dependency_environment_tree_scan_limit_exceeded");
+    const directories = queue.slice(
+      cursor,
+      cursor + MAX_DIRECTORY_SCAN_CONCURRENCY,
+    );
+    cursor += directories.length;
+    const batches = await Promise.all(
+      directories.map(async (directory) => ({
+        directory,
+        entries: await readdir(directory, { withFileTypes: true }),
+      })),
+    );
+    for (const { directory, entries } of batches) {
+      for (const entry of entries) {
+        scanned += 1;
+        if (scanned > MAX_DEPENDENCY_ENTRIES_SCAN) {
+          throw new Error("dependency_environment_tree_scan_limit_exceeded");
+        }
+        const entryPath = join(directory, entry.name);
+        if (entry.isSymbolicLink()) {
+          linkPaths.push(entryPath);
+          continue;
+        }
+        if (entry.isDirectory()) queue.push(entryPath);
       }
-      const entryPath = join(directory, entry.name);
-      if (entry.isSymbolicLink()) {
-        linkPaths.push(entryPath);
-        continue;
-      }
-      if (entry.isDirectory()) queue.push(entryPath);
     }
   }
   return linkTargetResolver.containsUnsafeLink(linkPaths);
