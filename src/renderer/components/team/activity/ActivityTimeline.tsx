@@ -152,6 +152,7 @@ const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
 const DEFAULT_COLLAPSE_MODE = 'default' as const;
 const VIRTUALIZER_OVERSCAN = 8;
 const VIRTUALIZATION_ROW_GAP_PX = 0;
+const NEW_MESSAGE_HIGHLIGHT_MS = 3_000;
 
 /**
  * Row count above which virtualization is worth its complexity cost. Below
@@ -259,6 +260,14 @@ function getCardPositionForRow(
   );
 }
 
+function getNewMessageHighlightRemainingMs(timestamp: string): number {
+  const timestampMs = Date.parse(timestamp);
+  if (!Number.isFinite(timestampMs)) return NEW_MESSAGE_HIGHLIGHT_MS;
+
+  const ageMs = Math.max(0, Date.now() - timestampMs);
+  return Math.max(0, NEW_MESSAGE_HIGHLIGHT_MS - ageMs);
+}
+
 interface ItemCollapseProps {
   collapseMode: 'default' | 'managed';
   isCollapsed: boolean;
@@ -297,6 +306,7 @@ const MessageRowWithObserver = ({
   recipientColor,
   isUnread,
   isNew,
+  isNewlyAdded,
   zebraShade,
   memberColorMap,
   localMemberNames,
@@ -330,6 +340,7 @@ const MessageRowWithObserver = ({
   recipientColor?: string;
   isUnread?: boolean;
   isNew?: boolean;
+  isNewlyAdded?: boolean;
   zebraShade?: boolean;
   memberColorMap?: Map<string, string>;
   localMemberNames?: Set<string>;
@@ -360,6 +371,25 @@ const MessageRowWithObserver = ({
   const reportedRef = useRef(false);
   const messageRef = useRef(message);
   const onVisibleRef = useRef(onVisible);
+  const [isNewMessageHighlighted, setIsNewMessageHighlighted] = useState(() => {
+    if (!isNewlyAdded) return false;
+    return getNewMessageHighlightRemainingMs(message.timestamp) > 0;
+  });
+
+  useEffect(() => {
+    if (!isNewMessageHighlighted) return;
+
+    const remainingMs = getNewMessageHighlightRemainingMs(message.timestamp);
+    if (remainingMs <= 0) {
+      queueMicrotask(() => setIsNewMessageHighlighted(false));
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsNewMessageHighlighted(false);
+    }, remainingMs);
+    return () => window.clearTimeout(timeoutId);
+  }, [isNewMessageHighlighted, message.timestamp]);
 
   useEffect(() => {
     messageRef.current = message;
@@ -399,6 +429,7 @@ const MessageRowWithObserver = ({
         memberColor={memberColor}
         recipientColor={recipientColor}
         isUnread={isUnread}
+        isNewMessageHighlighted={isNewMessageHighlighted}
         zebraShade={zebraShade}
         memberColorMap={memberColorMap}
         localMemberNames={localMemberNames}
@@ -436,6 +467,7 @@ const MemoizedMessageRowWithObserver = React.memo(
     prev.recipientColor === next.recipientColor &&
     prev.isUnread === next.isUnread &&
     prev.isNew === next.isNew &&
+    prev.isNewlyAdded === next.isNewlyAdded &&
     prev.zebraShade === next.zebraShade &&
     prev.memberColorMap === next.memberColorMap &&
     prev.localMemberNames === next.localMemberNames &&
@@ -902,6 +934,7 @@ export const ActivityTimeline = React.memo(function ActivityTimeline({
             recipientColor={renderProps.recipientColor}
             isUnread={isUnread}
             isNew={!suppressEntry && newItemKeys.has(key)}
+            isNewlyAdded={newItemKeys.has(key)}
             zebraShade={zebraShadeSet.has(itemIndex)}
             memberColorMap={colorMap}
             localMemberNames={localMemberNames}

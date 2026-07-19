@@ -3,6 +3,14 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const posthogMocks = vi.hoisted(() => ({
+  capturePostHogEvent: vi.fn(),
+}));
+
+vi.mock('@renderer/posthog', () => ({
+  capturePostHogEvent: posthogMocks.capturePostHogEvent,
+}));
+
 import {
   completeRuntimeProviderOnboardingPlan,
   createRuntimeProviderOnboardingProgress,
@@ -93,7 +101,7 @@ describe('useRuntimeProviderOnboarding', () => {
   }: {
     mode?: 'provider' | 'wizard';
     providerId?: string | null;
-    runtimeGate?: 'ready' | 'missing';
+    runtimeGate?: 'ready' | 'missing' | 'error';
     runtimeUpdateRequired?: boolean;
     onInstall?: () => Promise<void> | void;
   }) {
@@ -111,6 +119,7 @@ describe('useRuntimeProviderOnboarding', () => {
   }
 
   beforeEach(() => {
+    posthogMocks.capturePostHogEvent.mockClear();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
     document.body.appendChild(host);
@@ -364,6 +373,71 @@ describe('useRuntimeProviderOnboarding', () => {
     expect(currentState?.management.activeFormProviderId).toBe('xai');
     expect(currentState?.stage).toBe('connect');
     expect(testModel).toHaveBeenCalledTimes(1);
+  });
+
+  it('records an OAuth cancellation separately from an onboarding failure', async () => {
+    loadProviderDirectory.mockResolvedValue(
+      directoryResponse([directoryEntry('xai', 'available')])
+    );
+    loadSetupForm.mockResolvedValue({
+      schemaVersion: 1 as const,
+      runtimeId: 'opencode' as const,
+      setupForm: {
+        runtimeId: 'opencode' as const,
+        providerId: 'xai',
+        displayName: 'SuperGrok',
+        method: 'oauth' as const,
+        supported: true,
+        title: 'Connect SuperGrok',
+        description: null,
+        submitLabel: 'Continue in browser',
+        disabledReason: null,
+        source: 'oauth' as const,
+        secret: null,
+        prompts: [],
+      },
+    });
+    connectProvider.mockResolvedValue({
+      schemaVersion: 1 as const,
+      runtimeId: 'opencode' as const,
+      error: {
+        code: 'auth-failed' as const,
+        message: 'Authorization cancelled',
+        recoverable: true,
+      },
+    });
+
+    await act(async () => root.render(React.createElement(Harness)));
+    await act(async () => currentActions?.beginConnect());
+    await act(async () => {
+      await vi.waitFor(() => expect(loadSetupForm).toHaveBeenCalled());
+    });
+
+    let connected = true;
+    await act(async () => {
+      connected = (await currentActions?.submitConnect()) ?? false;
+    });
+
+    expect(connected).toBe(false);
+    expect(currentState?.stage).toBe('connect');
+    expect(currentState?.management.setupSubmitError).toBe(
+      'SuperGrok connection was cancelled. Your current credential was not changed.'
+    );
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_setup:onboarding_step_end',
+      expect.objectContaining({
+        event_schema_version: 2,
+        provider: 'xai',
+        step: 'connection_submit',
+        outcome: 'cancelled',
+        success: false,
+        error_class: 'none',
+      })
+    );
+    expect(posthogMocks.capturePostHogEvent).not.toHaveBeenCalledWith(
+      'provider_setup:onboarding_step_end',
+      expect.objectContaining({ outcome: 'failed' })
+    );
   });
 
   it('verifies Cursor through its existing CLI session instead of requesting an API key', async () => {
@@ -641,8 +715,9 @@ describe('useRuntimeProviderOnboarding', () => {
     expect(testModel).not.toHaveBeenCalled();
     expect(currentState?.stage).toBe('choose-model');
     expect(currentState?.verifiedModelId).toBe('minimax-coding-plan/MiniMax-M3');
-    expect(currentState?.management.directoryError).toBe(
-      'Provider refresh is temporarily unavailable'
+    expect(currentState?.management.directoryError).toBeNull();
+    expect(currentState?.management.warningMessage).toContain(
+      'The change is saved, but the latest provider status could not be refreshed.'
     );
   });
 
@@ -781,6 +856,94 @@ describe('useRuntimeProviderOnboarding', () => {
     expect(onInstall).toHaveBeenCalledTimes(1);
     expect(currentState?.wizardStarted).toBe(true);
     expect(repository.save).toHaveBeenCalled();
+  });
+
+  it('records runtime preparation success only after the runtime gate reports ready', async () => {
+    const onInstall = vi.fn(async () => undefined);
+    await act(async () =>
+      root.render(
+        React.createElement(Harness, {
+          mode: 'wizard',
+          providerId: null,
+          runtimeGate: 'missing',
+          onInstall,
+        })
+      )
+    );
+
+    await act(async () => currentActions?.startWizard());
+
+    expect(onInstall).toHaveBeenCalledTimes(1);
+    expect(
+      posthogMocks.capturePostHogEvent.mock.calls.filter(
+        ([eventName, properties]) =>
+          eventName === 'provider_setup:onboarding_step_end' &&
+          properties?.step === 'runtime_prepare'
+      )
+    ).toEqual([]);
+
+    await act(async () =>
+      root.render(
+        React.createElement(Harness, {
+          mode: 'wizard',
+          providerId: null,
+          runtimeGate: 'ready',
+          onInstall,
+        })
+      )
+    );
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 25));
+    });
+
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_setup:onboarding_step_end',
+      expect.objectContaining({
+        provider: 'xai',
+        step: 'runtime_prepare',
+        success: true,
+        error_class: 'none',
+      })
+    );
+  });
+
+  it('records runtime preparation failure when installation resolves but the runtime gate reports error', async () => {
+    const onInstall = vi.fn(async () => undefined);
+    await act(async () =>
+      root.render(
+        React.createElement(Harness, {
+          mode: 'wizard',
+          providerId: null,
+          runtimeGate: 'missing',
+          onInstall,
+        })
+      )
+    );
+
+    await act(async () => currentActions?.startWizard());
+    await act(async () =>
+      root.render(
+        React.createElement(Harness, {
+          mode: 'wizard',
+          providerId: null,
+          runtimeGate: 'error',
+          onInstall,
+        })
+      )
+    );
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 25));
+    });
+
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_setup:onboarding_step_end',
+      expect.objectContaining({
+        provider: 'xai',
+        step: 'runtime_prepare',
+        success: false,
+        error_class: 'runtime_missing',
+      })
+    );
   });
 
   it('starts a runtime update before connecting plans that need a newer OpenCode bridge', async () => {

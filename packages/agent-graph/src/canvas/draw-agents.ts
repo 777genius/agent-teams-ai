@@ -14,7 +14,13 @@ import {
 import { alphaHex, COLORS, getStateColor } from '../constants/colors';
 
 import { drawHexagon } from './draw-misc';
+import {
+  getGraphNodeCardSize,
+  getGraphNodeOverviewSize,
+  type GraphNodeVisualSize,
+} from './node-geometry';
 import { getAgentGlowSprite, hexWithAlpha } from './render-cache';
+import { getGraphSemanticZoomLevel, shouldRenderOverviewHierarchyNode } from './semantic-zoom';
 
 import type { GraphNode } from '../ports/types';
 
@@ -33,7 +39,10 @@ export function drawAgents(
   const simplify = zoom < 0.19;
   for (const node of nodes) {
     if (node.kind !== 'member' && node.kind !== 'lead') continue;
-    const opacity = getNodeOpacity(node) * getFocusOpacity(node.id, focusNodeIds);
+    const cardSize = getGraphNodeCardSize(node);
+    const opacity =
+      (cardSize ? getHierarchyCardOpacity(node) : getNodeOpacity(node)) *
+      getFocusOpacity(node.id, focusNodeIds);
     if (opacity < MIN_VISIBLE_OPACITY) continue;
 
     const x = node.x ?? 0;
@@ -46,6 +55,20 @@ export function drawAgents(
 
     ctx.save();
     ctx.globalAlpha = opacity;
+
+    if (cardSize) {
+      const semanticLevel = getGraphSemanticZoomLevel(zoom);
+      if (
+        semanticLevel === 'overview' &&
+        !shouldRenderOverviewHierarchyNode(node, zoom, isSelected || isHovered)
+      ) {
+        ctx.restore();
+        continue;
+      }
+      drawHierarchyCard(ctx, node, x, y, cardSize, color, time, isSelected, isHovered, zoom);
+      ctx.restore();
+      continue;
+    }
 
     if (simplify) {
       if (hasErrorException) {
@@ -235,6 +258,261 @@ function getNodeOpacity(node: GraphNode): number {
 
 function getFocusOpacity(nodeId: string, focusNodeIds?: ReadonlySet<string> | null): number {
   return focusNodeIds && !focusNodeIds.has(nodeId) ? 0.25 : 1;
+}
+
+function getHierarchyCardOpacity(node: GraphNode): number {
+  if (node.spawnStatus === 'offline') return 0.72;
+  if (node.state === 'terminated' || node.state === 'complete') return 0.72;
+  return 1;
+}
+
+function drawHierarchyCard(
+  ctx: CanvasRenderingContext2D,
+  node: GraphNode,
+  x: number,
+  y: number,
+  size: GraphNodeVisualSize,
+  color: string,
+  time: number,
+  isSelected: boolean,
+  isHovered: boolean,
+  zoom: number
+): void {
+  const semanticLevel = getGraphSemanticZoomLevel(zoom);
+  if (semanticLevel === 'overview') {
+    drawHierarchyOverviewBadge(ctx, node, x, y, color, isSelected, isHovered, zoom);
+    return;
+  }
+
+  const left = x - size.width / 2;
+  const top = y - size.height / 2;
+  const radius = node.visualVariant === 'organization' ? 12 : 10;
+  const isActive =
+    node.state === 'active' || node.state === 'thinking' || node.state === 'tool_calling';
+  const showTitle = true;
+  const showMetadata = true;
+
+  ctx.save();
+  ctx.shadowColor = hexWithAlpha(color, isSelected ? 0.32 : isHovered ? 0.2 : 0.1);
+  ctx.shadowBlur = isSelected ? 18 : isHovered ? 13 : 9;
+  ctx.beginPath();
+  ctx.roundRect(left, top, size.width, size.height, radius);
+  const background = ctx.createLinearGradient(left, top, left + size.width, top + size.height);
+  background.addColorStop(0, 'rgba(10, 21, 39, 0.98)');
+  background.addColorStop(1, 'rgba(7, 14, 29, 0.98)');
+  ctx.fillStyle = background;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.strokeStyle = hexWithAlpha(color, isSelected ? 0.9 : isHovered ? 0.68 : 0.38);
+  ctx.lineWidth = isSelected ? 2 : 1.2;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.roundRect(left + 7, top + 10, 4, size.height - 20, 2);
+  ctx.fillStyle = hexWithAlpha(color, isActive ? 0.95 : 0.66);
+  ctx.fill();
+
+  if (isActive && zoom >= 0.3) {
+    const pulse = 0.16 + 0.08 * Math.sin(time * 3.2);
+    ctx.beginPath();
+    ctx.roundRect(left + 1, top + 1, size.width - 2, size.height - 2, radius - 1);
+    ctx.strokeStyle = hexWithAlpha(color, pulse);
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+
+  const iconSize = node.visualVariant === 'organization' ? 34 : 30;
+  const iconX = left + 14;
+  const iconY = y - iconSize / 2;
+  ctx.beginPath();
+  ctx.roundRect(iconX, iconY, iconSize, iconSize, 8);
+  ctx.fillStyle = hexWithAlpha(color, 0.1);
+  ctx.fill();
+  ctx.strokeStyle = hexWithAlpha(color, 0.34);
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  drawHierarchyCardIcon(ctx, node.visualVariant, iconX, iconY, iconSize, color);
+
+  const statusColor = node.state === 'active' ? '#34d399' : getStateColor(node.state);
+  ctx.beginPath();
+  ctx.arc(left + size.width - 15, top + 14, 4.5, 0, Math.PI * 2);
+  ctx.fillStyle = statusColor;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(4, 10, 20, 0.9)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  if (showTitle) {
+    const textX = iconX + iconSize + 14;
+    const maxTextWidth = size.width - (textX - left) - 24;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font =
+      node.visualVariant === 'organization' ? '600 15px sans-serif' : '600 14px sans-serif';
+    ctx.fillStyle = 'rgba(228, 240, 255, 0.96)';
+    ctx.fillText(
+      truncateCardText(ctx, node.label, maxTextWidth),
+      textX,
+      y - (showMetadata ? 8 : 0)
+    );
+
+    if (showMetadata) {
+      const metadata = getHierarchyCardMetadata(node, semanticLevel);
+      if (metadata) {
+        ctx.font = '11px sans-serif';
+        ctx.fillStyle = 'rgba(142, 166, 197, 0.78)';
+        ctx.fillText(truncateCardText(ctx, metadata, maxTextWidth), textX, y + 12);
+      }
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawHierarchyOverviewBadge(
+  ctx: CanvasRenderingContext2D,
+  node: GraphNode,
+  x: number,
+  y: number,
+  color: string,
+  isSelected: boolean,
+  isHovered: boolean,
+  zoom: number
+): void {
+  const overviewSize = getGraphNodeOverviewSize(node, zoom);
+  if (!overviewSize) return;
+  const effectiveZoom =
+    node.visualVariant === 'team' ? Math.max(zoom, 0.19) : Math.max(zoom, 0.015);
+  const inverseZoom = 1 / effectiveZoom;
+  const isTeam = node.visualVariant === 'team';
+  const titleFontSize = (isTeam ? 9 : 12) * inverseZoom;
+  const summaryFontSize = (isTeam ? 6.5 : 9.5) * inverseZoom;
+  const paddingX = (isTeam ? 6 : 8) * inverseZoom;
+  const height = overviewSize.height;
+  const radius = (isTeam ? 5 : 6) * inverseZoom;
+
+  ctx.save();
+  const maxWidth = overviewSize.width;
+  ctx.font = `600 ${titleFontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  const renderedTitle = truncateCardText(ctx, node.label, maxWidth - paddingX * 2);
+  const titleWidth = ctx.measureText(renderedTitle).width;
+  ctx.font = `500 ${summaryFontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  const renderedSummary = node.semanticSummary
+    ? truncateCardText(ctx, node.semanticSummary, maxWidth - paddingX * 2)
+    : '';
+  const summaryWidth = ctx.measureText(renderedSummary).width;
+  const width = isTeam
+    ? maxWidth
+    : Math.min(maxWidth, Math.max(titleWidth, summaryWidth) + paddingX * 2);
+  const left = x - width / 2;
+  const top = y - height / 2;
+
+  ctx.beginPath();
+  ctx.roundRect(left, top, width, height, radius);
+  ctx.fillStyle = isTeam ? 'rgba(7, 14, 29, 0.9)' : 'rgba(7, 14, 29, 0.94)';
+  ctx.fill();
+  let borderAlpha = 0.5;
+  if (isSelected) borderAlpha = 0.92;
+  else if (isHovered) borderAlpha = 0.72;
+  ctx.strokeStyle = hexWithAlpha(color, borderAlpha);
+  ctx.lineWidth = (isSelected ? 1.8 : 1) * inverseZoom;
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(
+    left + (isTeam ? 6 : 8) * inverseZoom,
+    y - (isTeam ? 4.5 : 5) * inverseZoom,
+    (isTeam ? 1.8 : 2.5) * inverseZoom,
+    0,
+    Math.PI * 2
+  );
+  ctx.fillStyle = node.state === 'active' ? '#34d399' : getStateColor(node.state);
+  ctx.fill();
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.font = `600 ${titleFontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  ctx.fillStyle = 'rgba(228, 240, 255, 0.96)';
+  ctx.fillText(
+    renderedTitle,
+    left + (isTeam ? 11 : 15) * inverseZoom,
+    y - (isTeam ? 4.5 : 5) * inverseZoom
+  );
+  if (renderedSummary) {
+    ctx.font = `500 ${summaryFontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    ctx.fillStyle = 'rgba(174, 199, 227, 0.84)';
+    ctx.fillText(renderedSummary, left + paddingX, y + 7 * inverseZoom);
+  }
+  ctx.restore();
+}
+
+function getHierarchyCardMetadata(
+  node: GraphNode,
+  semanticLevel: ReturnType<typeof getGraphSemanticZoomLevel>
+): string | undefined {
+  if (semanticLevel === 'summary') {
+    return node.semanticSummary ?? node.runtimeLabel ?? node.role;
+  }
+  return node.role ?? node.semanticSummary ?? node.runtimeLabel ?? node.currentTaskSubject;
+}
+
+function drawHierarchyCardIcon(
+  ctx: CanvasRenderingContext2D,
+  variant: GraphNode['visualVariant'],
+  x: number,
+  y: number,
+  size: number,
+  color: string
+): void {
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  ctx.save();
+  ctx.strokeStyle = hexWithAlpha(color, 0.88);
+  ctx.fillStyle = hexWithAlpha(color, 0.14);
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  if (variant === 'team') {
+    ctx.beginPath();
+    ctx.moveTo(cx - 1, cy - 4);
+    ctx.arc(cx - 4, cy - 4, 3, 0, Math.PI * 2);
+    ctx.moveTo(cx + 7.5, cy - 3);
+    ctx.arc(cx + 5, cy - 3, 2.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - 10, cy + 5);
+    ctx.arc(cx - 4, cy + 5, 6, Math.PI, 0);
+    ctx.moveTo(cx, cy + 5);
+    ctx.arc(cx + 5, cy + 5, 5, Math.PI, 0);
+    ctx.stroke();
+  } else if (variant === 'container') {
+    ctx.beginPath();
+    ctx.roundRect(cx - 9, cy - 6, 18, 13, 3);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - 7, cy - 7);
+    ctx.lineTo(cx - 2, cy - 7);
+    ctx.lineTo(cx, cy - 5);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.roundRect(cx - 3, cy - 9, 6, 6, 1.5);
+    ctx.roundRect(cx - 10, cy + 4, 6, 6, 1.5);
+    ctx.roundRect(cx + 4, cy + 4, 6, 6, 1.5);
+    ctx.moveTo(cx, cy - 3);
+    ctx.lineTo(cx, cy + 1);
+    ctx.moveTo(cx - 7, cy + 1);
+    ctx.lineTo(cx + 7, cy + 1);
+    ctx.moveTo(cx - 7, cy + 1);
+    ctx.lineTo(cx - 7, cy + 4);
+    ctx.moveTo(cx + 7, cy + 1);
+    ctx.lineTo(cx + 7, cy + 4);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawExceptionPip(

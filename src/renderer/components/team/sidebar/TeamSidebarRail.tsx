@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 
 import { ClaudeLogsSection } from '../ClaudeLogsSection';
 import { MessagesPanel } from '../messages/MessagesPanel';
@@ -28,6 +28,10 @@ export const TeamSidebarRail = memo(function TeamSidebarRail({
   onLogsResizeMouseDown,
 }: TeamSidebarRailProps): React.JSX.Element {
   const [logsOpen, setLogsOpen] = useState(false);
+  const { onPositionChange } = messagesPanelProps;
+  const moveMessagesToInline = useCallback(() => {
+    onPositionChange('inline');
+  }, [onPositionChange]);
   const logsSeparator = logsOpen ? (
     <div
       className={`group relative h-3 shrink-0 cursor-row-resize border-t border-[var(--color-border)] ${isLogsResizing ? 'bg-blue-500/10' : ''}`}
@@ -53,6 +57,7 @@ export const TeamSidebarRail = memo(function TeamSidebarRail({
           position="sidebar"
           sidebarViewerMaxHeight={logsHeight}
           onOpenChange={setLogsOpen}
+          onMoveToInline={moveMessagesToInline}
         />
       </div>
       {logsSeparator}

@@ -26,12 +26,10 @@ import { drawHexagon } from '../canvas/draw-misc';
 import { drawParticles } from '../canvas/draw-particles';
 import { drawProcesses } from '../canvas/draw-processes';
 import { drawColumnHeaders, drawTasks } from '../canvas/draw-tasks';
+import { getGraphNodeRenderBounds } from '../canvas/node-geometry';
 import {
-  getGroupFrameLabelBounds,
-  getGroupFrameLabelHorizontalOffsetPx,
-  getGroupFrameLabelPlacement,
+  getGroupFrameLabelLayout,
   getGroupFrameLabelScaleZoom,
-  getGroupFrameLabelVerticalOffsetPx,
   getPaddedGroupFrameBounds,
   GROUP_FRAME_RENDER_MIN_ZOOM,
   type GroupFrameBounds,
@@ -41,8 +39,13 @@ import {
   shouldRenderGroupFrameLabel,
 } from '../canvas/group-frames';
 import { hexWithAlpha } from '../canvas/render-cache';
+import {
+  getGraphSemanticZoomLevel,
+  shouldRenderParticlesAtZoom,
+  shouldRenderTaskAtZoom,
+} from '../canvas/semantic-zoom';
 import { NODE } from '../constants/canvas-constants';
-import { KanbanLayoutEngine } from '../layout/kanbanLayout';
+import { KanbanLayoutEngine, type KanbanZoneInfo } from '../layout/kanbanLayout';
 
 import {
   computeAdaptiveParticleBudget,
@@ -77,6 +80,7 @@ export interface GraphDrawState {
   hoveredEdgeId: string | null;
   focusNodeIds: ReadonlySet<string> | null;
   focusEdgeIds: ReadonlySet<string> | null;
+  animateOverviewParticles: boolean;
   ownerColumnGroupRects: readonly OwnerColumnGroupRect[];
   dragPreview: {
     nodeId: string;
@@ -103,6 +107,7 @@ export interface GraphCanvasHandle {
 
 export interface GraphCanvasProps {
   showHexGrid?: boolean;
+  showDotGrid?: boolean;
   showStarField?: boolean;
   bloomIntensity?: number;
   onWheel?: (e: WheelEvent) => void;
@@ -117,6 +122,7 @@ export interface GraphCanvasProps {
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas(
   {
     showHexGrid = true,
+    showDotGrid = false,
     showStarField = true,
     bloomIntensity = 0.6,
     onWheel,
@@ -190,6 +196,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const visibleNodeIdsCache = useRef(new Set<string>());
   const visibleEdgeIdsCache = useRef(new Set<string>());
   const activeParticleEdgesCache = useRef(new Set<string>());
+  const renderableTaskZoneOwnerIdsCache = useRef(new Set<string>());
   const handoffStateRef = useRef(createTransientHandoffState());
   const lastTeamNameRef = useRef<string | null>(null);
   const lastDrawTimeRef = useRef(0);
@@ -219,6 +226,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
 
           const cam = state.camera;
           const zoom = cam.zoom;
+          const semanticLevel = getGraphSemanticZoomLevel(zoom);
 
           // ─── Frustum culling: compute visible world-space bounds ──────────
           const viewLeft = -cam.x / zoom;
@@ -229,8 +237,16 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
 
           // ─── Reuse cached maps (avoid per-frame allocation) ───────────────
           const nodeMap = nodeMapCache.current;
-          nodeMap.clear();
-          for (const n of state.nodes) nodeMap.set(n.id, n);
+          const renderableTaskZoneOwnerIds = prepareNodeMapAndTaskZoneOwners({
+            nodeMap,
+            targetOwnerIds: renderableTaskZoneOwnerIdsCache.current,
+            nodes: state.nodes,
+            zones: KanbanLayoutEngine.zones,
+            zoom,
+            semanticLevel,
+            selectedNodeId: state.selectedNodeId,
+            hoveredNodeId: state.hoveredNodeId,
+          });
 
           const edgeMap = edgeMapCache.current;
           edgeMap.clear();
@@ -240,13 +256,12 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           const visibleNodes = visibleNodesCache.current;
           visibleNodes.length = 0;
           for (const n of state.nodes) {
-            const x = n.x ?? 0;
-            const y = n.y ?? 0;
+            const bounds = getGraphNodeRenderBounds(n, zoom);
             if (
-              x > viewLeft - pad &&
-              x < viewRight + pad &&
-              y > viewTop - pad &&
-              y < viewBottom + pad
+              bounds.right > viewLeft - pad &&
+              bounds.left < viewRight + pad &&
+              bounds.bottom > viewTop - pad &&
+              bounds.top < viewBottom + pad
             ) {
               visibleNodes.push(n);
             }
@@ -280,6 +295,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           lastBackgroundTimeRef.current = state.time;
           drawBackground(ctx, w, h, starsRef.current, shootingStarsRef.current, cam, state.time, {
             showHexGrid,
+            showDotGrid,
             showStarField,
           });
 
@@ -292,6 +308,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             groups: state.ownerColumnGroupRects,
             zoom,
             focusNodeIds: state.focusNodeIds,
+            renderableTaskZoneOwnerIds,
           });
           drawGroupFrames(ctx, {
             frames: state.groupFrames,
@@ -341,25 +358,30 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             hasFocusedEdges: (prioritizedEdgeIds?.size ?? 0) > 0,
             zoom,
           });
-          const renderableParticles = selectRenderableParticles({
-            particles: state.particles,
-            visibleEdgeIds,
-            focusEdgeIds: prioritizedEdgeIds,
-            budget: particleBudget,
-          });
+          const renderableParticles = shouldRenderParticlesAtZoom(
+            zoom,
+            state.animateOverviewParticles
+          )
+            ? selectRenderableParticles({
+                particles: state.particles,
+                visibleEdgeIds,
+                focusEdgeIds: prioritizedEdgeIds,
+                budget: particleBudget,
+              })
+            : [];
           updateTransientHandoffState(handoffStateRef.current, {
             particles: state.particles,
             edgeMap,
             nodeMap,
             time: state.time,
           });
-          const renderableHandoffCards = selectRenderableTransientHandoffCards(
-            handoffStateRef.current,
-            {
-              focusNodeIds: state.focusNodeIds,
-              focusEdgeIds: prioritizedEdgeIds ?? state.focusEdgeIds,
-            }
-          ).filter((card) => card.anchorKind !== 'lead' && card.anchorKind !== 'member');
+          const renderableHandoffCards =
+            semanticLevel === 'detail'
+              ? selectRenderableTransientHandoffCards(handoffStateRef.current, {
+                  focusNodeIds: state.focusNodeIds,
+                  focusEdgeIds: prioritizedEdgeIds ?? state.focusEdgeIds,
+                }).filter((card) => card.anchorKind !== 'lead' && card.anchorKind !== 'member')
+              : [];
           drawParticles(ctx, renderableParticles, edgeMap, nodeMap, state.time, prioritizedEdgeIds);
 
           // 2c. Visible nodes only (back to front: process → task → member/lead)
@@ -380,7 +402,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             state.hoveredNodeId,
             state.focusNodeIds
           );
-          drawColumnHeaders(ctx, KanbanLayoutEngine.zones, zoom);
+          drawColumnHeaders(ctx, KanbanLayoutEngine.zones, zoom, renderableTaskZoneOwnerIds);
           drawTasks(
             ctx,
             visibleNodes,
@@ -472,7 +494,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         time: lastDrawTimeRef.current,
       }),
     }),
-    [showHexGrid, showStarField, bloomIntensity]
+    [showDotGrid, showHexGrid, showStarField, bloomIntensity]
   );
 
   // Wheel handler (passive: false required for preventDefault)
@@ -502,6 +524,43 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     </div>
   );
 });
+
+function prepareNodeMapAndTaskZoneOwners(args: {
+  nodeMap: Map<string, GraphNode>;
+  targetOwnerIds: Set<string>;
+  nodes: readonly GraphNode[];
+  zones: readonly KanbanZoneInfo[];
+  zoom: number;
+  semanticLevel: ReturnType<typeof getGraphSemanticZoomLevel>;
+  selectedNodeId: string | null;
+  hoveredNodeId: string | null;
+}): ReadonlySet<string> {
+  args.nodeMap.clear();
+  args.targetOwnerIds.clear();
+
+  for (const node of args.nodes) {
+    args.nodeMap.set(node.id, node);
+    if (
+      node.kind === 'task' &&
+      node.taskStatus !== 'deleted' &&
+      shouldRenderTaskAtZoom(
+        args.zoom,
+        node.id === args.selectedNodeId || node.id === args.hoveredNodeId,
+        node.taskZoomVisibility
+      )
+    ) {
+      args.targetOwnerIds.add(node.ownerId ?? '__unassigned__');
+    }
+  }
+
+  if (args.semanticLevel === 'detail') {
+    for (const zone of args.zones) {
+      if (zone.emptyPlaceholder) args.targetOwnerIds.add(zone.ownerId);
+    }
+  }
+
+  return args.targetOwnerIds;
+}
 
 function drawGroupFrames(
   ctx: CanvasRenderingContext2D,
@@ -595,10 +654,17 @@ function getPreparedGroupFrameDrawStyle(params: {
     strokeAlpha += overviewBoost * (isPrimary ? 0.24 : 0.18);
   }
 
+  let dash = [10 / zoom, 10 / zoom];
+  if (prepared.frame.borderStyle === 'solid') {
+    dash = [];
+  } else if (isPrimary) {
+    dash = [14 / zoom, 10 / zoom];
+  }
+
   return {
     alpha,
     strokeWidth,
-    dash: isPrimary ? [14 / zoom, 10 / zoom] : [10 / zoom, 10 / zoom],
+    dash,
     fillAlpha,
     strokeAlpha,
   };
@@ -615,7 +681,8 @@ function drawPreparedGroupFrame(
     time: number;
   }
 ): void {
-  const color = prepared.frame.color ?? '#8bd3ff';
+  const color =
+    prepared.frame.priority === 'primary' ? (prepared.frame.color ?? '#8bd3ff') : '#7891ad';
   const zoom = Math.max(args.zoom, GROUP_FRAME_RENDER_MIN_ZOOM);
   const selected = args.selectedNodeId === prepared.frame.id;
   const hovered = args.hoveredGroupFrameId === prepared.frame.id;
@@ -668,24 +735,18 @@ function drawGroupFrameLabel(
   }
 
   const labelScaleZoom = getGroupFrameLabelScaleZoom(zoom);
-  const fontSize = (prepared.frame.priority === 'primary' ? 12 : 11) / labelScaleZoom;
-  const label = prepared.frame.label;
-
   ctx.save();
-  ctx.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  const labelBounds = getGroupFrameLabelBounds(
-    label,
-    bounds,
-    zoom,
-    (value) => ctx.measureText(value).width,
-    {
-      horizontalOffsetPx: getGroupFrameLabelHorizontalOffsetPx(prepared.frame),
-      placement: getGroupFrameLabelPlacement(prepared.frame),
-      verticalOffsetPx: getGroupFrameLabelVerticalOffsetPx(prepared.frame),
-    }
-  );
+  const labelLayout = getGroupFrameLabelLayout(prepared.frame, bounds, zoom, (value, fontSize) => {
+    ctx.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    return ctx.measureText(value).width;
+  });
+  if (!labelLayout) {
+    ctx.restore();
+    return;
+  }
+  const { bounds: labelBounds, fontSize, label, secondaryLabel } = labelLayout;
 
   ctx.beginPath();
   ctx.roundRect(
@@ -700,8 +761,14 @@ function drawGroupFrameLabel(
   ctx.strokeStyle = hexWithAlpha(color, selected ? 0.7 : 0.42);
   ctx.lineWidth = 1 / labelScaleZoom;
   ctx.stroke();
+  ctx.font = `600 ${fontSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
   ctx.fillStyle = hexWithAlpha(color, selected ? 0.98 : 0.86);
   ctx.fillText(label, labelBounds.textX, labelBounds.textY);
+  if (secondaryLabel && labelBounds.secondaryTextY != null) {
+    ctx.font = `500 ${fontSize * 0.78}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    ctx.fillStyle = 'rgba(190, 211, 235, 0.82)';
+    ctx.fillText(secondaryLabel, labelBounds.textX, labelBounds.secondaryTextY);
+  }
   ctx.restore();
 }
 
@@ -711,6 +778,7 @@ function drawOwnerColumnGroups(
     groups: readonly OwnerColumnGroupRect[];
     zoom: number;
     focusNodeIds: ReadonlySet<string> | null;
+    renderableTaskZoneOwnerIds: ReadonlySet<string>;
   }
 ): void {
   if (args.groups.length === 0 || args.zoom < 0.1) {
@@ -721,6 +789,7 @@ function drawOwnerColumnGroups(
   const radius = 8;
 
   for (const group of args.groups) {
+    if (!args.renderableTaskZoneOwnerIds.has(group.ownerId)) continue;
     const rect = group.rect;
     if (rect.width <= 0 || rect.height <= 0) {
       continue;

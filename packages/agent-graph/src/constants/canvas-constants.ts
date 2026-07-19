@@ -76,9 +76,9 @@ export const TASK_PILL = {
   statusDotRadius: 4,
   statusDotX: 12,
   /** Font size for the task title */
-  idFontSize: 16.5,
+  idFontSize: 19,
   /** Font size for the display ID */
-  subjectFontSize: 10,
+  subjectFontSize: 12,
   /** Max chars for subject before truncation */
   subjectMaxChars: 32,
   /** X offset for text content */

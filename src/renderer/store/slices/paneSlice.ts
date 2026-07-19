@@ -4,6 +4,7 @@
  */
 
 import { MAX_PANES } from '@renderer/types/panes';
+import { deferTabMutationForActiveChangeReview } from '@renderer/utils/changeReviewLifecycleCoordinator';
 
 import {
   createEmptyPane,
@@ -112,6 +113,13 @@ export const createPaneSlice: StateCreator<AppState, [], [], PaneSlice> = (set, 
   },
 
   splitPane: (sourcePaneId: string, tabId: string, direction: 'left' | 'right') => {
+    if (
+      deferTabMutationForActiveChangeReview(new Set([tabId]), () =>
+        get().splitPane(sourcePaneId, tabId, direction)
+      )
+    ) {
+      return;
+    }
     const state = get();
     const { paneLayout } = state;
 
@@ -179,6 +187,14 @@ export const createPaneSlice: StateCreator<AppState, [], [], PaneSlice> = (set, 
 
     const pane = findPane(paneLayout, paneId);
     if (!pane) return;
+    if (
+      deferTabMutationForActiveChangeReview(
+        new Set(pane.tabs.map((tab) => tab.id)),
+        () => get().closePane(paneId)
+      )
+    ) {
+      return;
+    }
 
     // Cleanup tab UI state and session data for all tabs in the pane
     for (const tab of pane.tabs) {
@@ -202,6 +218,13 @@ export const createPaneSlice: StateCreator<AppState, [], [], PaneSlice> = (set, 
     targetPaneId: string,
     insertIndex?: number
   ) => {
+    if (
+      deferTabMutationForActiveChangeReview(new Set([tabId]), () =>
+        get().moveTabToPane(tabId, sourcePaneId, targetPaneId, insertIndex)
+      )
+    ) {
+      return;
+    }
     const state = get();
     const { paneLayout } = state;
 
@@ -259,6 +282,13 @@ export const createPaneSlice: StateCreator<AppState, [], [], PaneSlice> = (set, 
     adjacentPaneId: string,
     direction: 'left' | 'right'
   ) => {
+    if (
+      deferTabMutationForActiveChangeReview(new Set([tabId]), () =>
+        get().moveTabToNewPane(tabId, sourcePaneId, adjacentPaneId, direction)
+      )
+    ) {
+      return;
+    }
     const state = get();
     const { paneLayout } = state;
 

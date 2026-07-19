@@ -1,4 +1,13 @@
 import type {
+  RuntimeLocalProviderConfigureInput,
+  RuntimeLocalProviderConfigureResponse,
+  RuntimeLocalProviderListInput,
+  RuntimeLocalProviderListResponse,
+  RuntimeLocalProviderProbeInput,
+  RuntimeLocalProviderProbeResponse,
+  RuntimeLocalProviderScanInput,
+  RuntimeLocalProviderScanResponse,
+  RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementCancelOAuthInput,
@@ -25,6 +34,18 @@ import type {
 } from './types';
 
 export interface RuntimeProviderManagementApi {
+  listLocalProviders(
+    input: RuntimeLocalProviderListInput
+  ): Promise<RuntimeLocalProviderListResponse>;
+  scanLocalProviders(
+    input: RuntimeLocalProviderScanInput
+  ): Promise<RuntimeLocalProviderScanResponse>;
+  probeLocalProvider(
+    input: RuntimeLocalProviderProbeInput
+  ): Promise<RuntimeLocalProviderProbeResponse>;
+  configureLocalProvider(
+    input: RuntimeLocalProviderConfigureInput
+  ): Promise<RuntimeLocalProviderConfigureResponse>;
   getCompanionStatus(
     input: RuntimeProviderCompanionInput
   ): Promise<RuntimeProviderCompanionStatusDto>;
@@ -33,6 +54,9 @@ export interface RuntimeProviderManagementApi {
   ): Promise<RuntimeProviderCompanionStatusDto>;
   connectCompanion(
     input: RuntimeProviderCompanionInput
+  ): Promise<RuntimeProviderCompanionStatusDto>;
+  runCompanionAction(
+    input: RuntimeProviderCompanionActionInput
   ): Promise<RuntimeProviderCompanionStatusDto>;
   onCompanionProgress(listener: (event: RuntimeProviderCompanionStatusDto) => void): () => void;
   loadView(

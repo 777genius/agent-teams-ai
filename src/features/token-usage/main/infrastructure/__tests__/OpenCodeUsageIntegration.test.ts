@@ -104,6 +104,109 @@ describe('OpenCode usage integration', () => {
     expect(snapshot.recentRuns[0]?.sources[0]?.nativeLogPath).toBe(fixture.databasePath);
   });
 
+  it('imports Kiro credits once per assistant turn when text and reasoning parts mirror metadata', async () => {
+    const fixture = await createFixture({ includeLaunchState: false, model: 'kiro/auto' });
+    const completedAt = Date.now() - 1_000;
+    insertMessage(fixture.databasePath, {
+      id: 'msg-kiro-credits',
+      sessionId: fixture.sessionId,
+      createdAt: completedAt - 1_000,
+      data: {
+        role: 'assistant',
+        providerID: 'kiro',
+        modelID: 'auto',
+        time: { created: completedAt - 1_000, completed: completedAt },
+        tokens: { total: 9, input: 6, output: 3, cache: { read: 0, write: 0 } },
+        cost: 0,
+        finish: 'stop',
+      },
+    });
+    insertPart(fixture.databasePath, {
+      id: 'part-reasoning',
+      messageId: 'msg-kiro-credits',
+      sessionId: fixture.sessionId,
+      data: {
+        type: 'reasoning',
+        text: 'thinking',
+        metadata: { kiro: { credits: 0.07, creditsUnit: 'credit' } },
+      },
+    });
+    insertPart(fixture.databasePath, {
+      id: 'part-text',
+      messageId: 'msg-kiro-credits',
+      sessionId: fixture.sessionId,
+      data: {
+        type: 'text',
+        text: 'done',
+        metadata: { kiro: { credits: 0.07, creditsUnit: 'credit' } },
+      },
+    });
+
+    const snapshot = await fixture.feature.refreshSnapshot();
+
+    expect(snapshot.summary).toEqual(
+      expect.objectContaining({
+        requestCount: 1,
+        kiroCredits: 0.07,
+        kiroCreditEventCount: 1,
+        lastKiroCredits: 0.07,
+        kiroCreditsUnit: 'credit',
+      })
+    );
+    expect(snapshot.byTeam[0]?.summary.kiroCredits).toBe(0.07);
+    expect(snapshot.byAgent[0]?.summary.kiroCredits).toBe(0.07);
+    expect(snapshot.bySession[0]?.summary.kiroCredits).toBe(0.07);
+    expect(snapshot.sessionRuns[0]?.summary.kiroCredits).toBe(0.07);
+  });
+
+  it('imports a credit-only Kiro turn and ignores malformed or non-Kiro metadata', async () => {
+    const fixture = await createFixture({ includeLaunchState: false, model: 'kiro/auto' });
+    const now = Date.now();
+    insertMessage(fixture.databasePath, {
+      id: 'msg-kiro-credit-only',
+      sessionId: fixture.sessionId,
+      createdAt: now - 2_000,
+      data: {
+        role: 'assistant',
+        providerID: 'kiro',
+        modelID: 'auto',
+        time: { created: now - 2_000, completed: now - 1_000 },
+        tokens: { input: 0, output: 0 },
+        cost: 0,
+      },
+    });
+    insertPart(fixture.databasePath, {
+      id: 'part-credit-only',
+      messageId: 'msg-kiro-credit-only',
+      sessionId: fixture.sessionId,
+      data: { type: 'text', metadata: { kiro: { credits: 0.03, creditsUnit: 'credit' } } },
+    });
+    insertMessage(fixture.databasePath, {
+      id: 'msg-non-kiro',
+      sessionId: fixture.sessionId,
+      createdAt: now,
+      data: {
+        role: 'assistant',
+        providerID: 'xai',
+        modelID: 'grok-4.3',
+        time: { created: now, completed: now },
+        tokens: { total: 1, input: 1, output: 0 },
+      },
+    });
+    insertPart(fixture.databasePath, {
+      id: 'part-non-kiro',
+      messageId: 'msg-non-kiro',
+      sessionId: fixture.sessionId,
+      data: { type: 'text', metadata: { kiro: { credits: 99, creditsUnit: 'credit' } } },
+    });
+
+    const snapshot = await fixture.feature.refreshSnapshot();
+
+    expect(snapshot.summary.kiroCredits).toBe(0.03);
+    expect(snapshot.summary.kiroCreditEventCount).toBe(1);
+    expect(snapshot.summary.requestCount).toBe(2);
+  });
+
   it('resolves the orchestrator data home consistently across desktop platforms', () => {
     expect(
       resolveClaudeMultimodelDataHomePath({
@@ -136,7 +239,13 @@ describe('OpenCode usage integration', () => {
   });
 });
 
-async function createFixture({ includeLaunchState }: { includeLaunchState: boolean }): Promise<{
+async function createFixture({
+  includeLaunchState,
+  model = 'xai/grok-4.3',
+}: {
+  includeLaunchState: boolean;
+  model?: string;
+}): Promise<{
   databasePath: string;
   sessionId: string;
   feature: ReturnType<typeof createTokenUsageFeature>;
@@ -170,7 +279,7 @@ async function createFixture({ includeLaunchState }: { includeLaunchState: boole
         {
           name: 'worker',
           providerId: 'opencode',
-          model: 'xai/grok-4.3',
+          model,
         },
       ],
     })
@@ -209,9 +318,7 @@ async function createFixture({ includeLaunchState }: { includeLaunchState: boole
           teamId: teamName,
           memberName: 'worker',
           providerId: 'opencode',
-          selectedModel: includeLaunchState
-            ? 'xiaomi-token-plan-sgp/mimo-v2.5-pro'
-            : 'xai/grok-4.3',
+          selectedModel: includeLaunchState ? 'xiaomi-token-plan-sgp/mimo-v2.5-pro' : model,
           projectPath,
           profileRootKey,
           opencodeSessionId: sessionId,
@@ -229,6 +336,12 @@ async function createFixture({ includeLaunchState }: { includeLaunchState: boole
       session_id text NOT NULL,
       time_created integer NOT NULL,
       time_updated integer NOT NULL,
+      data text NOT NULL
+    );
+    CREATE TABLE part (
+      id text PRIMARY KEY,
+      message_id text NOT NULL,
+      session_id text NOT NULL,
       data text NOT NULL
     )
   `);
@@ -250,6 +363,20 @@ async function createFixture({ includeLaunchState }: { includeLaunchState: boole
       openCodeDataHomePath: dataHomePath,
     }),
   };
+}
+
+function insertPart(
+  databasePath: string,
+  input: { id: string; messageId: string; sessionId: string; data: unknown }
+): void {
+  const database = new DatabaseSync(databasePath);
+  try {
+    database
+      .prepare('INSERT INTO part (id, message_id, session_id, data) VALUES (?, ?, ?, ?)')
+      .run(input.id, input.messageId, input.sessionId, JSON.stringify(input.data));
+  } finally {
+    database.close();
+  }
 }
 
 function insertMessage(

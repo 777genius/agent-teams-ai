@@ -3,9 +3,11 @@
  * Adapted from agent-flow's hit-detection.ts (Apache 2.0).
  */
 
-import { BEAM, HIT_DETECTION, KANBAN_ZONE, NODE, TASK_PILL } from '../constants/canvas-constants';
+import { BEAM, HIT_DETECTION, NODE } from '../constants/canvas-constants';
 
-import { bezierPoint, computeControlPoints } from './draw-edges';
+import { bezierPoint, computeControlPoints, computeOrthogonalRoute } from './draw-edges';
+import { getGraphNodeCardSize, getGraphNodeRenderBounds } from './node-geometry';
+import { getGraphSemanticZoomLevel, shouldRenderNodeAtZoom } from './semantic-zoom';
 
 import type { GraphEdge, GraphNode } from '../ports/types';
 
@@ -18,18 +20,35 @@ export function findNodeAt(
   worldX: number,
   worldY: number,
   nodes: GraphNode[],
+  zoom = 1
 ): string | null {
   // Check in reverse priority order, return last match (highest priority wins)
   let hit: string | null = null;
 
   for (const node of nodes) {
+    if (!shouldRenderNodeAtZoom(node, zoom)) continue;
     const x = node.x ?? 0;
     const y = node.y ?? 0;
+    const cardSize = getGraphNodeCardSize(node);
+    if (cardSize) {
+      const bounds = getGraphNodeRenderBounds(node, zoom);
+      if (
+        worldX >= bounds.left - HIT_DETECTION.agentPadding &&
+        worldX <= bounds.right + HIT_DETECTION.agentPadding &&
+        worldY >= bounds.top - HIT_DETECTION.agentPadding &&
+        worldY <= bounds.bottom + HIT_DETECTION.agentPadding
+      ) {
+        hit = node.id;
+        if (node.kind === 'lead') return hit;
+      }
+      continue;
+    }
 
     switch (node.kind) {
       case 'lead':
       case 'member': {
-        const r = (node.kind === 'lead' ? NODE.radiusLead : NODE.radiusMember) + HIT_DETECTION.agentPadding;
+        const r =
+          (node.kind === 'lead' ? NODE.radiusLead : NODE.radiusMember) + HIT_DETECTION.agentPadding;
         const dx = worldX - x;
         const dy = worldY - y;
         if (dx * dx + dy * dy <= r * r) {
@@ -40,14 +59,12 @@ export function findNodeAt(
         break;
       }
       case 'task': {
-        const halfW = TASK_PILL.width / 2 + HIT_DETECTION.taskPadding;
-        const taskHeight = node.isOverflowStack ? KANBAN_ZONE.overflowHeight : TASK_PILL.height;
-        const halfH = taskHeight / 2 + HIT_DETECTION.taskPadding;
+        const bounds = getGraphNodeRenderBounds(node, zoom);
         if (
-          worldX >= x - halfW &&
-          worldX <= x + halfW &&
-          worldY >= y - halfH &&
-          worldY <= y + halfH
+          worldX >= bounds.left - HIT_DETECTION.taskPadding &&
+          worldX <= bounds.right + HIT_DETECTION.taskPadding &&
+          worldY >= bounds.top - HIT_DETECTION.taskPadding &&
+          worldY <= bounds.bottom + HIT_DETECTION.taskPadding
         ) {
           hit = node.id;
         }
@@ -55,7 +72,9 @@ export function findNodeAt(
       }
       case 'process':
       case 'crossteam': {
-        const r = (node.kind === 'crossteam' ? NODE.radiusCrossTeam : NODE.radiusProcess) + HIT_DETECTION.agentPadding;
+        const r =
+          (node.kind === 'crossteam' ? NODE.radiusCrossTeam : NODE.radiusProcess) +
+          HIT_DETECTION.agentPadding;
         const dx = worldX - x;
         const dy = worldY - y;
         if (dx * dx + dy * dy <= r * r) {
@@ -81,7 +100,9 @@ const EDGE_HIT_PRIORITY: Record<GraphEdge['type'], number> = {
 function getBaseEdgeHitRadius(edgeType: GraphEdge['type']): number {
   switch (edgeType) {
     case 'parent-child':
-      return Math.max(BEAM.parentChild.startW, BEAM.parentChild.endW) * 0.5 + HIT_DETECTION.edgePadding;
+      return (
+        Math.max(BEAM.parentChild.startW, BEAM.parentChild.endW) * 0.5 + HIT_DETECTION.edgePadding
+      );
     case 'ownership':
       return Math.max(BEAM.ownership.startW, BEAM.ownership.endW) * 0.5 + HIT_DETECTION.edgePadding;
     case 'blocking':
@@ -166,6 +187,62 @@ function getBezierBounds(
   return { left, top, right, bottom };
 }
 
+function getPolylineBounds(
+  points: readonly { x: number; y: number }[],
+  padding: number
+): { left: number; top: number; right: number; bottom: number } {
+  return {
+    left: Math.min(...points.map((point) => point.x)) - padding,
+    top: Math.min(...points.map((point) => point.y)) - padding,
+    right: Math.max(...points.map((point) => point.x)) + padding,
+    bottom: Math.max(...points.map((point) => point.y)) + padding,
+  };
+}
+
+function distanceToPolylineSquared(
+  px: number,
+  py: number,
+  points: readonly { x: number; y: number }[]
+): number {
+  let best = Number.POSITIVE_INFINITY;
+  for (let index = 1; index < points.length; index += 1) {
+    best = Math.min(
+      best,
+      distanceToSegmentSquared(
+        px,
+        py,
+        points[index - 1].x,
+        points[index - 1].y,
+        points[index].x,
+        points[index].y
+      )
+    );
+  }
+  return best;
+}
+
+function getPolylineMidpoint(points: readonly { x: number; y: number }[]): {
+  x: number;
+  y: number;
+} {
+  const lengths = points
+    .slice(1)
+    .map((point, index) => Math.hypot(point.x - points[index].x, point.y - points[index].y));
+  const halfway = lengths.reduce((sum, length) => sum + length, 0) / 2;
+  let traversed = 0;
+  for (let index = 0; index < lengths.length; index += 1) {
+    if (traversed + lengths[index] >= halfway) {
+      const ratio = lengths[index] === 0 ? 0 : (halfway - traversed) / lengths[index];
+      return {
+        x: points[index].x + (points[index + 1].x - points[index].x) * ratio,
+        y: points[index].y + (points[index + 1].y - points[index].y) * ratio,
+      };
+    }
+    traversed += lengths[index];
+  }
+  return points.at(-1) ?? { x: 0, y: 0 };
+}
+
 function boundsIntersect(
   left: number,
   top: number,
@@ -180,24 +257,25 @@ export function collectInteractiveEdgesInViewport(
   edges: GraphEdge[],
   nodeMap: Map<string, GraphNode>,
   bounds: { left: number; top: number; right: number; bottom: number },
-  zoom = 1,
+  zoom = 1
 ): GraphEdge[] {
   const candidates: GraphEdge[] = [];
 
   for (const edge of edges) {
+    if (edge.type === 'ownership' && getGraphSemanticZoomLevel(zoom) !== 'detail') continue;
     const source = nodeMap.get(edge.source);
     const target = nodeMap.get(edge.target);
     if (!source || !target) continue;
     if (source.x == null || source.y == null || target.x == null || target.y == null) continue;
 
-    const edgeBounds = getBezierBounds(
-      source.x,
-      source.y,
-      target.x,
-      target.y,
-      getEdgeHitRadius(edge.type, zoom) + 24
-    );
-    if (!boundsIntersect(edgeBounds.left, edgeBounds.top, edgeBounds.right, edgeBounds.bottom, bounds)) {
+    const padding = getEdgeHitRadius(edge.type, zoom) + 24;
+    const edgeBounds =
+      edge.routing === 'orthogonal'
+        ? getPolylineBounds(computeOrthogonalRoute(source, target), padding)
+        : getBezierBounds(source.x, source.y, target.x, target.y, padding);
+    if (
+      !boundsIntersect(edgeBounds.left, edgeBounds.top, edgeBounds.right, edgeBounds.bottom, bounds)
+    ) {
       continue;
     }
 
@@ -212,18 +290,23 @@ export function findEdgeAt(
   worldY: number,
   edges: GraphEdge[],
   nodeMap: Map<string, GraphNode>,
-  zoom = 1,
+  zoom = 1
 ): string | null {
   let bestHit: { id: string; distanceSquared: number; priority: number } | null = null;
 
   for (const edge of edges) {
+    if (edge.type === 'ownership' && getGraphSemanticZoomLevel(zoom) !== 'detail') continue;
     const source = nodeMap.get(edge.source);
     const target = nodeMap.get(edge.target);
     if (!source || !target) continue;
     if (source.x == null || source.y == null || target.x == null || target.y == null) continue;
 
     const radius = getEdgeHitRadius(edge.type, zoom);
-    const bounds = getBezierBounds(source.x, source.y, target.x, target.y, radius);
+    const orthogonalRoute =
+      edge.routing === 'orthogonal' ? computeOrthogonalRoute(source, target) : null;
+    const bounds = orthogonalRoute
+      ? getPolylineBounds(orthogonalRoute, radius)
+      : getBezierBounds(source.x, source.y, target.x, target.y, radius);
     if (
       worldX < bounds.left ||
       worldX > bounds.right ||
@@ -232,14 +315,9 @@ export function findEdgeAt(
     ) {
       continue;
     }
-    const distanceSquared = distanceToBezierSquared(
-      worldX,
-      worldY,
-      source.x,
-      source.y,
-      target.x,
-      target.y
-    );
+    const distanceSquared = orthogonalRoute
+      ? distanceToPolylineSquared(worldX, worldY, orthogonalRoute)
+      : distanceToBezierSquared(worldX, worldY, source.x, source.y, target.x, target.y);
     if (distanceSquared > radius * radius) {
       continue;
     }
@@ -266,6 +344,9 @@ export function getEdgeMidpoint(
   if (!source || !target) return null;
   if (source.x == null || source.y == null || target.x == null || target.y == null) return null;
 
+  if (edge.routing === 'orthogonal') {
+    return getPolylineMidpoint(computeOrthogonalRoute(source, target));
+  }
   const cp = computeControlPoints(source.x, source.y, target.x, target.y);
   return bezierPoint(source.x, source.y, cp, target.x, target.y, 0.5);
 }

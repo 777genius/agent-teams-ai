@@ -10,6 +10,8 @@ import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 
 const EXEC_CLI_TIMEOUT_OUTPUT_BUFFER_LIMIT = 128 * 1024;
+const EXEC_CLI_NATIVE_MAX_BUFFER_HEADROOM_BYTES = 1024 * 1024;
+const WINDOWS_PROCESS_TREE_KILL_TIMEOUT_MS = 10_000;
 
 function boundExecCliTimeoutOutput(text: string): string {
   if (text.length <= EXEC_CLI_TIMEOUT_OUTPUT_BUFFER_LIMIT) {
@@ -33,20 +35,66 @@ function boundExecCliTimeoutOutput(text: string): string {
 function execFileAsync(
   cmd: string,
   args: string[],
-  options: ExecFileOptions = {}
+  options: ExecFileOptions = {},
+  outputLimits: { stdoutMaxBuffer?: number; stderrMaxBuffer?: number } = {}
 ): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const { timeout, killSignal, signal, ...execOptions } = options;
+    const { timeout, killSignal, signal, maxBuffer, ...baseExecOptions } = options;
     const timeoutMs = typeof timeout === 'number' && timeout > 0 ? timeout : 0;
+    const legacyOutputLimitBytes =
+      typeof maxBuffer === 'number' && Number.isFinite(maxBuffer) && maxBuffer > 0
+        ? Math.trunc(maxBuffer)
+        : 0;
+    const normalizeOutputLimit = (value: number | undefined): number =>
+      typeof value === 'number' && Number.isFinite(value) && value > 0
+        ? Math.trunc(value)
+        : legacyOutputLimitBytes;
+    const stdoutLimitBytes = normalizeOutputLimit(outputLimits.stdoutMaxBuffer);
+    const stderrLimitBytes = normalizeOutputLimit(outputLimits.stderrMaxBuffer);
+    const nativeOutputLimitBytes = Math.max(stdoutLimitBytes, stderrLimitBytes);
+    // Node kills only the immediate execFile child when its native maxBuffer is
+    // exceeded. Keep bounded headroom and enforce the caller's limit ourselves
+    // while the launcher PID is still available for process-tree cleanup.
+    const execOptions: ExecFileOptions =
+      nativeOutputLimitBytes > 0
+        ? {
+            ...baseExecOptions,
+            maxBuffer: Math.min(
+              Number.MAX_SAFE_INTEGER,
+              Math.max(
+                nativeOutputLimitBytes * 2,
+                nativeOutputLimitBytes + EXEC_CLI_NATIVE_MAX_BUFFER_HEADROOM_BYTES
+              )
+            ),
+          }
+        : maxBuffer === undefined
+          ? baseExecOptions
+          : { ...baseExecOptions, maxBuffer };
     const timeoutSignal = normalizeKillSignal(killSignal);
     let child: ChildProcess | null = null;
     let settled = false;
     let stdoutText = '';
     let stderrText = '';
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
     let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
     const cleanup = (): void => {
       timeoutHandle = cleanupTimedCliProcess(child, timeoutHandle);
       signal?.removeEventListener('abort', handleAbort);
+    };
+    const rejectAfterProcessTreeTermination = (error: Error): void => {
+      void killProcessTreeAndWait(child, timeoutSignal).then(
+        () => reject(error),
+        (terminationError) => {
+          Object.assign(error, {
+            processTerminationError:
+              terminationError instanceof Error
+                ? terminationError.message
+                : String(terminationError),
+          });
+          reject(error);
+        }
+      );
     };
     const rejectAborted = (): void => {
       const error = new Error(`Command aborted: ${cmd} ${args.join(' ')}`);
@@ -57,7 +105,7 @@ function execFileAsync(
         stdout: stdoutText,
         stderr: stderrText,
       });
-      reject(error);
+      rejectAfterProcessTreeTermination(error);
     };
     const handleAbort = (): void => {
       if (settled) {
@@ -65,8 +113,24 @@ function execFileAsync(
       }
       settled = true;
       cleanup();
-      killProcessTree(child, timeoutSignal);
       rejectAborted();
+    };
+    const rejectOutputOverflow = (stream: 'stdout' | 'stderr'): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      const error = new RangeError(`${stream} maxBuffer length exceeded`);
+      Object.assign(error, {
+        code: 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER',
+        killed: true,
+        signal: timeoutSignal,
+        processOutcomeUnknown: true,
+        stdout: stdoutText,
+        stderr: stderrText,
+      });
+      rejectAfterProcessTreeTermination(error);
     };
     if (signal?.aborted) {
       settled = true;
@@ -86,18 +150,43 @@ function execFileAsync(
           stdout: String(stdout),
           stderr: String(stderr),
         });
-        reject(normalizedError);
+        if ((err as NodeJS.ErrnoException).code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+          Object.assign(normalizedError, {
+            killed: true,
+            signal: timeoutSignal,
+            processOutcomeUnknown: true,
+          });
+          rejectAfterProcessTreeTermination(normalizedError);
+        } else {
+          reject(normalizedError);
+        }
       } else resolve({ stdout: String(stdout), stderr: String(stderr) });
     });
     if (!settled) {
       trackCliProcess(child);
       signal?.addEventListener('abort', handleAbort, { once: true });
-      if (timeoutMs > 0 || signal) {
+      if (timeoutMs > 0 || signal || stdoutLimitBytes > 0 || stderrLimitBytes > 0) {
         child.stdout?.on('data', (chunk: Buffer | string) => {
-          stdoutText = boundExecCliTimeoutOutput(stdoutText + chunk.toString());
+          if (settled) {
+            return;
+          }
+          const text = chunk.toString();
+          stdoutBytes += Buffer.byteLength(text);
+          stdoutText = boundExecCliTimeoutOutput(stdoutText + text);
+          if (stdoutLimitBytes > 0 && stdoutBytes > stdoutLimitBytes) {
+            rejectOutputOverflow('stdout');
+          }
         });
         child.stderr?.on('data', (chunk: Buffer | string) => {
-          stderrText = boundExecCliTimeoutOutput(stderrText + chunk.toString());
+          if (settled) {
+            return;
+          }
+          const text = chunk.toString();
+          stderrBytes += Buffer.byteLength(text);
+          stderrText = boundExecCliTimeoutOutput(stderrText + text);
+          if (stderrLimitBytes > 0 && stderrBytes > stderrLimitBytes) {
+            rejectOutputOverflow('stderr');
+          }
         });
       }
       if (timeoutMs > 0) {
@@ -107,7 +196,6 @@ function execFileAsync(
           }
           settled = true;
           cleanup();
-          killProcessTree(child, timeoutSignal);
           const error = new Error(
             `Command timed out after ${timeoutMs}ms: ${cmd} ${args.join(' ')}`
           );
@@ -117,7 +205,7 @@ function execFileAsync(
             stdout: stdoutText,
             stderr: stderrText,
           });
-          reject(error);
+          rejectAfterProcessTreeTermination(error);
         }, timeoutMs);
         timeoutHandle.unref?.();
       }
@@ -126,14 +214,42 @@ function execFileAsync(
 }
 
 /**
+ * With `/s`, cmd.exe parses its /c argument by stripping only the first and
+ * last quote characters of the whole string (not the matching pair around
+ * the executable name). For a command like `"C:\path with space\a.exe" arg`
+ * that strips both quotes entirely, leaving the path's embedded space
+ * unprotected and causing cmd to split on it. Wrapping the whole command in
+ * one more quote pair makes the outer strip remove that wrapper instead,
+ * leaving the inner `"exe" args` quoting intact. See `cmd /?` for the /s
+ * quote-stripping rules.
+ */
+function wrapForCmdSlashS(cmd: string): string {
+  return `"${cmd}"`;
+}
+
+/**
  * cmd.exe fallback implemented through execFile so Node does not invoke an
  * additional shell around the guarded command string.
  */
 function execShellAsync(
   cmd: string,
-  options: ExecFileOptions = {}
+  options: ExecFileOptions = {},
+  outputLimits: { stdoutMaxBuffer?: number; stderrMaxBuffer?: number } = {}
 ): Promise<{ stdout: string; stderr: string }> {
-  return execFileAsync(getWindowsCmdPath(), ['/d', '/s', '/c', cmd], options);
+  // windowsVerbatimArguments prevents Node from re-quoting `cmd`, which is
+  // already quoted for cmd.exe by buildWindowsShellFallbackCommand. Without
+  // this, Node wraps the pre-quoted string in another layer of quotes,
+  // corrupting the command cmd.exe sees (e.g. "not recognized as an
+  // internal or external command").
+  return execFileAsync(
+    getWindowsCmdPath(),
+    ['/d', '/s', '/v:off', '/c', wrapForCmdSlashS(cmd)],
+    {
+      ...options,
+      windowsVerbatimArguments: true,
+    },
+    outputLimits
+  );
 }
 
 function cleanupTimedCliProcess(
@@ -291,8 +407,75 @@ export function quoteWindowsCmdArg(arg: string): string {
   return arg;
 }
 
-function quoteArg(arg: string): string {
-  return quoteWindowsCmdArg(arg);
+const WINDOWS_CMD_META_CHARACTERS = /([()\][%!^"`<>&|;, *?])/g;
+
+function escapeWindowsCmdMetaCharacters(value: string): string {
+  return value.replace(WINDOWS_CMD_META_CHARACTERS, '^$1');
+}
+
+/**
+ * Escape the executable token for a command line that cmd.exe will parse.
+ * The executable and argv use different encodings: quoting the command as an
+ * argv value changes how cmd locates paths that contain spaces.
+ */
+function escapeWindowsCmdCommand(command: string): string {
+  // Unlike argv, the executable token must retain real quote characters so
+  // cmd.exe groups a path containing spaces as one command. Caret-escaping
+  // those quotes/spaces makes cmd pass the tail of the path as argv instead.
+  return quoteWindowsCmdArg(command);
+}
+
+/**
+ * Encode one argv value through both cmd.exe parsing and the target process'
+ * Windows argv parser. Caret-escaping the quotes and shell metacharacters is
+ * essential once windowsVerbatimArguments disables Node's escaping.
+ */
+function escapeWindowsCmdFallbackArg(arg: string, doubleEscapeMetaCharacters: boolean): string {
+  const quoted = `"${arg
+    .replace(/(?=(\\+?)?)\1"/g, '$1$1\\"')
+    .replace(/(?=(\\+?)?)\1$/g, '$1$1')}"`;
+  let escaped = escapeWindowsCmdMetaCharacters(quoted);
+  if (doubleEscapeMetaCharacters) {
+    escaped = escapeWindowsCmdMetaCharacters(escaped);
+  }
+  return escaped;
+}
+
+/** Batch launchers that forward %* parse cmd metacharacters a second time. */
+function windowsBatchLauncherReparsesArgs(binaryPath: string): boolean {
+  if (!isWindowsBatchLauncher(binaryPath)) {
+    return false;
+  }
+  try {
+    return /%\*/.test(readFileSync(binaryPath, 'utf8'));
+  } catch {
+    // A launcher that cannot be inspected is safer with the additional escape
+    // layer than with metacharacters becoming active during a second parse.
+    return true;
+  }
+}
+
+/** `%1`/`%~1` substitution can reactivate shell syntax embedded in argv. */
+function windowsBatchLauncherUsesPositionalArgs(binaryPath: string): boolean {
+  if (!isWindowsBatchLauncher(binaryPath)) {
+    return false;
+  }
+  try {
+    return /%(?:[1-9]|~[^\s%]*[1-9])/.test(readFileSync(binaryPath, 'utf8'));
+  } catch {
+    return false;
+  }
+}
+
+function assertSafeWindowsBatchPositionalArgs(command: string, args: string[]): void {
+  if (!windowsBatchLauncherUsesPositionalArgs(command)) {
+    return;
+  }
+  if (args.some((arg) => /[()\][%!^"`<>&|;,]/.test(arg))) {
+    throw new Error(
+      'Unsafe Windows batch positional argument: launcher reparses %1..%9 shell syntax'
+    );
+  }
 }
 
 function containsWindowsShellUnsafeControlChar(part: string): boolean {
@@ -315,7 +498,16 @@ function buildWindowsShellFallbackCommand(parts: string[]): string {
   for (const part of parts) {
     assertSafeWindowsShellFallbackPart(part);
   }
-  return parts.map(quoteArg).join(' ');
+  const [command, ...args] = parts;
+  if (command === undefined) {
+    return '';
+  }
+  assertSafeWindowsBatchPositionalArgs(command, args);
+  const doubleEscapeMetaCharacters = windowsBatchLauncherReparsesArgs(command);
+  return [
+    escapeWindowsCmdCommand(command),
+    ...args.map((arg) => escapeWindowsCmdFallbackArg(arg, doubleEscapeMetaCharacters)),
+  ].join(' ');
 }
 
 function getWindowsCmdPath(): string {
@@ -326,9 +518,13 @@ function spawnWindowsShellFallback(
   cmd: string,
   options: ReturnType<typeof withCliProcessDefaults<SpawnOptions>>
 ): ReturnType<typeof spawn> {
-  return spawn(getWindowsCmdPath(), ['/d', '/s', '/c', cmd], {
+  // See execShellAsync/wrapForCmdSlashS above: windowsVerbatimArguments
+  // avoids double-quoting the already-quoted `cmd` string, and the extra
+  // quote wrapper survives cmd.exe's /s quote-stripping.
+  return spawn(getWindowsCmdPath(), ['/d', '/s', '/v:off', '/c', wrapForCmdSlashS(cmd)], {
     ...options,
     shell: false,
+    windowsVerbatimArguments: true,
   });
 }
 
@@ -393,6 +589,9 @@ export interface ExecCliOptions extends ExecFileOptions {
    * force the .cmd/.bat path when they need the launcher environment exactly.
    */
   preferShellForWindowsBatch?: boolean;
+  /** Enforce stdout and stderr limits independently before killing the process tree. */
+  stdoutMaxBuffer?: number;
+  stderrMaxBuffer?: number;
 }
 
 export async function execCli(
@@ -406,7 +605,13 @@ export async function execCli(
     );
   }
   const target = binaryPath;
-  const { preferShellForWindowsBatch = false, ...execOptions } = options;
+  const {
+    preferShellForWindowsBatch = false,
+    stdoutMaxBuffer,
+    stderrMaxBuffer,
+    ...execOptions
+  } = options;
+  const outputLimits = { stdoutMaxBuffer, stderrMaxBuffer };
   const opts = withCliProcessDefaults(execOptions);
   const directLauncher =
     preferShellForWindowsBatch && isWindowsBatchLauncher(target)
@@ -416,7 +621,8 @@ export async function execCli(
     const result = await execFileAsync(
       directLauncher.command,
       [...directLauncher.argsPrefix, ...args],
-      opts
+      opts,
+      outputLimits
     );
     return { stdout: String(result.stdout), stderr: String(result.stderr) };
   }
@@ -424,7 +630,7 @@ export async function execCli(
   // attempt the normal execFile path first
   if (!needsShell(target)) {
     try {
-      const result = await execFileAsync(target, args, opts);
+      const result = await execFileAsync(target, args, opts, outputLimits);
       return { stdout: String(result.stdout), stderr: String(result.stderr) };
     } catch (err: unknown) {
       // fall through to shell fallback only when the error matches the
@@ -441,7 +647,7 @@ export async function execCli(
 
   // shell fallback (Windows only; others shouldn't reach here)
   const cmd = buildWindowsShellFallbackCommand([target, ...args]);
-  const shellResult = await execShellAsync(cmd, opts);
+  const shellResult = await execShellAsync(cmd, opts, outputLimits);
   return { stdout: String(shellResult.stdout), stderr: String(shellResult.stderr) };
 }
 
@@ -498,25 +704,81 @@ export function killProcessTree(
   child: ChildProcess | null | undefined,
   signal?: NodeJS.Signals
 ): void {
+  void killProcessTreeAndWait(child, signal).catch(() => undefined);
+}
+
+/**
+ * Kill a child process tree and wait for the bounded Windows taskkill attempt.
+ * Callers handling a timeout should await this before starting replacement work.
+ */
+export async function killProcessTreeAndWait(
+  child: ChildProcess | null | undefined,
+  signal?: NodeJS.Signals
+): Promise<void> {
   if (!child?.pid) {
     // Process is null, never started, or already exited
     return;
   }
 
   if (process.platform === 'win32') {
+    let taskkillError: unknown = null;
     try {
       const taskkillPath = path.join(
         process.env.SystemRoot ?? 'C:\\Windows',
         'System32',
         'taskkill.exe'
       );
-      execFile(taskkillPath, ['/T', '/F', '/PID', String(child.pid)], { windowsHide: true }, () => {
-        // Best-effort - ignore errors (process may have already exited)
+      await new Promise<void>((resolve, reject) => {
+        execFile(
+          taskkillPath,
+          ['/T', '/F', '/PID', String(child.pid)],
+          {
+            windowsHide: true,
+            timeout: WINDOWS_PROCESS_TREE_KILL_TIMEOUT_MS,
+          },
+          (error) => {
+            if (error) {
+              reject(
+                error instanceof Error ? error : new Error('Unknown Windows taskkill failure')
+              );
+              return;
+            }
+            resolve();
+          }
+        );
       });
+      // A successful taskkill /T /F result is the Windows process-tree
+      // termination acknowledgement. Do not probe and signal this PID again:
+      // Windows may already have reused it for an unrelated process.
       return;
-    } catch {
-      // taskkill failed, fall through to standard kill
+    } catch (error) {
+      taskkillError = error;
     }
+
+    let fallbackError: unknown = null;
+    try {
+      process.kill(child.pid, signal ?? 'SIGTERM');
+    } catch (error) {
+      fallbackError = error;
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as NodeJS.ErrnoException).code === 'ESRCH'
+      ) {
+        fallbackError = null;
+      }
+    }
+
+    const taskkillMessage =
+      taskkillError instanceof Error ? taskkillError.message : String(taskkillError);
+    const fallbackMessage =
+      fallbackError instanceof Error
+        ? `direct termination failed (${fallbackError.message})`
+        : 'direct termination targeted only the launcher; descendant outcome is unknown';
+    throw new Error(
+      `Failed to verify termination of Windows process tree ${child.pid}: ` +
+        `taskkill failed (${taskkillMessage}); ${fallbackMessage}`
+    );
   }
 
   const childPid = child.pid;

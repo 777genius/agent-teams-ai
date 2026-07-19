@@ -133,4 +133,51 @@ describe('drawEdges', () => {
     expect(ctx.stroke).toHaveBeenCalled();
     expect(ctx.lineWidth).toBeGreaterThan(1);
   });
+
+  it('draws hierarchy containment edges as orthogonal connectors', () => {
+    const ctx = createMockContext();
+    const source = { ...createNode('org:root', 0, 0), visualVariant: 'organization' as const };
+    const target = { ...createNode('team:alpha', 220, 164), visualVariant: 'team' as const };
+    const edge: GraphEdge = {
+      id: 'contains:root:alpha',
+      source: source.id,
+      target: target.id,
+      type: 'parent-child',
+      routing: 'orthogonal',
+      alwaysVisible: true,
+    };
+    const nodeMap = new Map<string, GraphNode>([
+      [source.id, source],
+      [target.id, target],
+    ]);
+
+    drawEdges(ctx, [edge], nodeMap, 0, new Set());
+
+    expect(ctx.lineTo).toHaveBeenCalledTimes(3);
+    expect(ctx.bezierCurveTo).not.toHaveBeenCalled();
+    expect(ctx.stroke).toHaveBeenCalled();
+  });
+
+  it('reveals task ownership connectors only at detail zoom', () => {
+    const summary = createMockContext();
+    const detail = createMockContext();
+    const source = createNode('team:alpha', 0, 0);
+    const target = { ...createNode('task:alpha', 100, 0), kind: 'task' as const };
+    const edge: GraphEdge = {
+      id: 'ownership:alpha',
+      source: source.id,
+      target: target.id,
+      type: 'ownership',
+    };
+    const nodeMap = new Map<string, GraphNode>([
+      [source.id, source],
+      [target.id, target],
+    ]);
+
+    drawEdges(summary, [edge], nodeMap, 0, new Set(), null, null, null, 0.4);
+    drawEdges(detail, [edge], nodeMap, 0, new Set(), null, null, null, 0.8);
+
+    expect(summary.beginPath).not.toHaveBeenCalled();
+    expect(detail.beginPath).toHaveBeenCalled();
+  });
 });

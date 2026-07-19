@@ -1,7 +1,13 @@
 export {
   isOpenCodeProviderOAuthBridgeOutdated,
+  isOpenCodeRuntimeUsable,
   resolveOpenCodeQuickConnectGate,
 } from '../core/domain';
+export {
+  mergeOpenCodeLocalProviders,
+  resolveOpenCodeLocalProviderLookup,
+  useOpenCodeLocalProviders,
+} from './hooks/useOpenCodeLocalProviders';
 export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOnboarding';
 export type { OpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';
 export { resolveOpenCodeLocalModelLimitSuggestion } from './openCodeLocalModelLimits';

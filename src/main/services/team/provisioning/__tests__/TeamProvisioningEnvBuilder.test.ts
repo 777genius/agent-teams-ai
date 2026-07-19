@@ -1,5 +1,9 @@
 /* eslint-disable sonarjs/publicly-writable-directories -- Test fixtures intentionally use temp paths. */
 
+import { AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV } from '@shared/constants/anthropicConnectionMode';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -175,6 +179,226 @@ describe('TeamProvisioningEnvBuilder', () => {
       CODEX_HOME: '/tmp/codex-home',
     });
     expect(result.usesAnthropicApiKeyHelper).toBe(false);
+  });
+
+  it('carries Anthropic connection intent through a non-Anthropic primary runtime', async () => {
+    const buildProvisioningEnvForMember = vi.fn(async () => ({
+      env: {
+        [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'subscription',
+        CLAUDE_CODE_ENTRY_PROVIDER: 'anthropic',
+      },
+      authSource: 'none' as const,
+      geminiRuntimeAuth: null,
+      providerArgs: [],
+    }));
+
+    const result = await buildCrossProviderMemberArgs({
+      primaryProviderId: 'codex',
+      memberSpecs: [
+        { name: 'Codex', providerId: 'codex', role: 'primary member' },
+        { name: 'Claude', providerId: 'anthropic', role: 'anthropic member' },
+      ],
+      ports: {
+        buildProvisioningEnv: buildProvisioningEnvForMember,
+        buildRuntimeTurnSettledHookSettingsArgs: vi.fn(async () => []),
+        logger: { error: vi.fn() },
+      },
+    });
+
+    expect(result.envPatch).toEqual({
+      [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'subscription',
+    });
+    expect(result.usesAnthropicApiKeyHelper).toBe(false);
+  });
+
+  it('pre-materializes app-managed Anthropic helper auth for a future dynamic spawn', async () => {
+    const helper = {
+      teamName: 'mixed-team',
+      directory: '/tmp/team-runtime-auth/mixed-team/run-1',
+      helperPath: '/tmp/team-runtime-auth/mixed-team/run-1/helper.sh',
+      keyPath: '/tmp/team-runtime-auth/mixed-team/run-1/key',
+      settingsPath: '/tmp/team-runtime-auth/mixed-team/run-1/settings.json',
+      settingsObject: { apiKeyHelper: "'/tmp/team-runtime-auth/mixed-team/run-1/helper.sh'" },
+      settingsArgs: ['--settings', '/tmp/team-runtime-auth/mixed-team/run-1/settings.json'],
+      envPatch: {
+        CLAUDE_TEAM_ANTHROPIC_AUTH_MODE: 'api_key_helper',
+        CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH:
+          '/tmp/team-runtime-auth/mixed-team/run-1/settings.json',
+      },
+    };
+    const buildProvisioningEnvForMember = vi.fn(async () => ({
+      env: {
+        [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'api_key',
+        ...helper.envPatch,
+      },
+      authSource: 'anthropic_api_key_helper' as const,
+      geminiRuntimeAuth: null,
+      providerArgs: helper.settingsArgs,
+      anthropicApiKeyHelper: helper,
+    }));
+    const buildRuntimeTurnSettledHookSettingsArgs = vi.fn(async () => ['--runtime-hook-arg']);
+
+    const result = await buildCrossProviderMemberArgs({
+      primaryProviderId: 'codex',
+      memberSpecs: [{ name: 'Codex', providerId: 'codex', role: 'only initial member' }],
+      options: {
+        teamRuntimeAuth: {
+          teamName: 'mixed-team',
+          authMaterialId: 'run-1',
+          allowAnthropicApiKeyHelper: true,
+        },
+      },
+      ports: {
+        buildProvisioningEnv: buildProvisioningEnvForMember,
+        buildRuntimeTurnSettledHookSettingsArgs,
+        logger: { error: vi.fn() },
+      },
+    });
+
+    expect(buildProvisioningEnvForMember).toHaveBeenCalledWith('anthropic', undefined, {
+      teamRuntimeAuth: {
+        teamName: 'mixed-team',
+        authMaterialId: 'run-1',
+        allowAnthropicApiKeyHelper: true,
+      },
+    });
+    expect(buildRuntimeTurnSettledHookSettingsArgs).not.toHaveBeenCalled();
+    expect(result.args).toEqual([]);
+    expect(result.providerArgsByProvider.has('anthropic')).toBe(false);
+    expect(result.anthropicApiKeyHelper).toBe(helper);
+    expect(result.envPatch).toMatchObject({
+      [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'api_key',
+      CLAUDE_TEAM_ANTHROPIC_AUTH_MODE: 'api_key_helper',
+      CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH:
+        '/tmp/team-runtime-auth/mixed-team/run-1/settings.json',
+    });
+  });
+
+  it('cleans Anthropic helper material when a later cross-provider validation fails', async () => {
+    const helperDirectory = await fs.promises.mkdtemp(
+      path.join(os.tmpdir(), 'anthropic-cross-provider-helper-')
+    );
+    const helper = {
+      teamName: 'mixed-team',
+      directory: helperDirectory,
+      helperPath: path.join(helperDirectory, 'helper.sh'),
+      keyPath: path.join(helperDirectory, 'key'),
+      settingsPath: path.join(helperDirectory, 'settings.json'),
+      settingsObject: { apiKeyHelper: `'${path.join(helperDirectory, 'helper.sh')}'` },
+      settingsArgs: ['--settings', path.join(helperDirectory, 'settings.json')],
+      envPatch: {
+        CLAUDE_TEAM_ANTHROPIC_AUTH_MODE: 'api_key_helper',
+        CLAUDE_TEAM_ANTHROPIC_API_KEY_HELPER_SETTINGS_PATH: path.join(
+          helperDirectory,
+          'settings.json'
+        ),
+      },
+    };
+    await Promise.all([
+      fs.promises.writeFile(helper.helperPath, '#!/bin/sh\n'),
+      fs.promises.writeFile(helper.keyPath, 'sk-ant-test\n'),
+      fs.promises.writeFile(helper.settingsPath, '{}\n'),
+    ]);
+
+    try {
+      await expect(
+        buildCrossProviderMemberArgs({
+          primaryProviderId: 'gemini',
+          memberSpecs: [
+            { name: 'Claude', providerId: 'anthropic', role: 'anthropic member' },
+            { name: 'Codex', providerId: 'codex', role: 'codex member' },
+          ],
+          ports: {
+            buildProvisioningEnv: vi.fn(async (providerId) =>
+              providerId === 'anthropic'
+                ? {
+                    env: helper.envPatch,
+                    authSource: 'anthropic_api_key_helper' as const,
+                    geminiRuntimeAuth: null,
+                    providerArgs: helper.settingsArgs,
+                    anthropicApiKeyHelper: helper,
+                  }
+                : {
+                    env: {},
+                    authSource: 'configured_api_key_missing' as const,
+                    geminiRuntimeAuth: null,
+                    providerArgs: [],
+                    warning: 'Codex auth is unavailable',
+                  }
+            ),
+            buildRuntimeTurnSettledHookSettingsArgs: vi.fn(async () => []),
+            logger: { error: vi.fn() },
+          },
+        })
+      ).rejects.toThrow('Codex: Codex auth is unavailable');
+
+      await expect(fs.promises.stat(helperDirectory)).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      await fs.promises.rm(helperDirectory, { recursive: true, force: true });
+    }
+  });
+
+  it('prepares an authless compatible endpoint for a future dynamic Anthropic spawn', async () => {
+    const result = await buildCrossProviderMemberArgs({
+      primaryProviderId: 'gemini',
+      memberSpecs: [{ name: 'Gemini', providerId: 'gemini', role: 'only initial member' }],
+      ports: {
+        buildProvisioningEnv: vi.fn(async () => ({
+          env: {
+            [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'compatible',
+            ANTHROPIC_BASE_URL: 'http://localhost:1234',
+            ANTHROPIC_API_KEY: '',
+          },
+          authSource: 'none' as const,
+          geminiRuntimeAuth: null,
+          providerArgs: [],
+        })),
+        buildRuntimeTurnSettledHookSettingsArgs: vi.fn(async () => []),
+        logger: { error: vi.fn() },
+      },
+    });
+
+    expect(result.envPatch).toMatchObject({
+      [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'compatible',
+      ANTHROPIC_BASE_URL: 'http://localhost:1234',
+      ANTHROPIC_API_KEY: '',
+      ANTHROPIC_AUTH_TOKEN: '',
+    });
+  });
+
+  it('preserves Auto Bedrock routing for a future dynamic Anthropic spawn', async () => {
+    const result = await buildCrossProviderMemberArgs({
+      primaryProviderId: 'codex',
+      memberSpecs: [{ name: 'Codex', providerId: 'codex', role: 'only initial member' }],
+      ports: {
+        buildProvisioningEnv: vi.fn(async () => ({
+          env: {
+            [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'auto',
+            CLAUDE_CODE_USE_BEDROCK: '1',
+            AWS_PROFILE: 'bedrock-profile',
+            AWS_REGION: 'us-east-1',
+            AWS_CONFIG_FILE: '/tmp/aws-config',
+            AWS_SHARED_CREDENTIALS_FILE: '/tmp/aws-credentials',
+            ANTHROPIC_DEFAULT_SONNET_MODEL: 'bedrock-sonnet-id',
+          },
+          authSource: 'none' as const,
+          geminiRuntimeAuth: null,
+          providerArgs: [],
+        })),
+        buildRuntimeTurnSettledHookSettingsArgs: vi.fn(async () => []),
+        logger: { error: vi.fn() },
+      },
+    });
+
+    expect(result.envPatch).toMatchObject({
+      [AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE_ENV]: 'auto',
+      CLAUDE_CODE_USE_BEDROCK: '1',
+      AWS_PROFILE: 'bedrock-profile',
+      AWS_REGION: 'us-east-1',
+      AWS_CONFIG_FILE: '/tmp/aws-config',
+      AWS_SHARED_CREDENTIALS_FILE: '/tmp/aws-credentials',
+      ANTHROPIC_DEFAULT_SONNET_MODEL: 'bedrock-sonnet-id',
+    });
   });
 });
 /* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after temp-path fixtures. */

@@ -6,7 +6,6 @@ import { isTeamInternalControlMessageText } from '@shared/utils/teamInternalCont
 import { extractToolPreview } from '@shared/utils/toolSummary';
 
 import { isAgentTeamsToolUse } from '../agentTeamsToolNames';
-import { peekAutoResumeService } from '../AutoResumeService';
 import { isWorkspaceTrustLaunchFailureText } from '../TeamLaunchFailureArtifactPack';
 
 import {
@@ -61,6 +60,9 @@ export interface TeamProvisioningStreamRun {
   leadRelayCapture: {
     textParts: string[];
     textJoinMode?: 'block' | 'stream';
+    recoveryMessageId?: string;
+    requireTerminalResult?: boolean;
+    terminalResultSucceeded?: boolean;
     hasVisibleSendMessage?: boolean;
     hasUserVisibleSendMessage?: boolean;
     settled: boolean;
@@ -190,6 +192,17 @@ export interface TeamProvisioningStreamEventPorts<TRun extends TeamProvisioningS
   ): void;
   stopPersistentTeamMembers(teamName: string): void;
   persistLaunchStateSnapshot(run: TRun, phase: 'finished'): Promise<unknown>;
+  observeRuntimeFailure(
+    run: TRun,
+    failure: {
+      phase: 'sdk_retrying' | 'terminal';
+      detail: string;
+      observedAt: string;
+      statusCode?: number;
+      retryAfterMs?: number;
+      causedByRecoveryMessageId?: string;
+    }
+  ): void;
 }
 
 export function shouldAcceptDeterministicBootstrapEvent(params: {
@@ -732,10 +745,12 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
         if (capture.idleHandle) {
           clearTimeout(capture.idleHandle);
         }
-        capture.idleHandle = setTimeout(() => {
-          const combined = joinLeadRelayCaptureText(capture);
-          capture.resolveOnce(combined);
-        }, capture.idleMs);
+        if (!capture.requireTerminalResult) {
+          capture.idleHandle = setTimeout(() => {
+            const combined = joinLeadRelayCaptureText(capture);
+            capture.resolveOnce(combined);
+          }, capture.idleMs);
+        }
       } else if (run.provisioningComplete) {
         if (
           !run.silentUserDmForward &&
@@ -960,6 +975,7 @@ function handleSuccessResultMessage<TRun extends TeamProvisioningStreamRun>(
   }
   if (run.leadRelayCapture) {
     const capture = run.leadRelayCapture;
+    capture.terminalResultSucceeded = true;
     const combined = joinLeadRelayCaptureText(capture);
     capture.resolveOnce(combined);
   }
@@ -998,6 +1014,7 @@ function handleErrorResultMessage<TRun extends TeamProvisioningStreamRun>(
   const errorMsg =
     typeof msg.error === 'string' ? msg.error : JSON.stringify(msg.error ?? 'unknown');
   logger.warn(`[${run.teamName}] stream-json result: error — ${errorMsg}`);
+  const causedByRecoveryMessageId = run.leadRelayCapture?.recoveryMessageId;
   if (run.leadRelayCapture) {
     run.leadRelayCapture.rejectOnce(errorMsg);
   }
@@ -1025,6 +1042,15 @@ function handleErrorResultMessage<TRun extends TeamProvisioningStreamRun>(
     ports.killTeamProcess(run.child);
     ports.cleanupRun(run);
   } else if (run.provisioningComplete) {
+    ports.observeRuntimeFailure(run, {
+      phase: 'terminal',
+      detail: errorMsg,
+      observedAt:
+        typeof msg.timestamp === 'string' && Number.isFinite(Date.parse(msg.timestamp))
+          ? msg.timestamp
+          : new Date().toISOString(),
+      ...(causedByRecoveryMessageId ? { causedByRecoveryMessageId } : {}),
+    });
     if (run.pendingPostCompactReminder || run.postCompactReminderInFlight) {
       const wasInFlight = run.postCompactReminderInFlight;
       clearPostCompactReminderState(run);
@@ -1122,18 +1148,17 @@ function handleApiRetry<TRun extends TeamProvisioningStreamRun>(
   const looksLikeQuotaRetry =
     errorLabel === 'rate limit' || ports.isQuotaRetryMessage(errorMessage);
 
-  if (looksLikeQuotaRetry && rawErrorMessage) {
-    const observedAt = new Date();
-    const messageTimestamp =
-      typeof msg.timestamp === 'string' && Number.isFinite(Date.parse(msg.timestamp))
-        ? new Date(msg.timestamp)
-        : observedAt;
-    peekAutoResumeService()?.handleRateLimitMessage(
-      run.teamName,
-      rawErrorMessage,
-      observedAt,
-      messageTimestamp
-    );
+  if (run.provisioningComplete) {
+    ports.observeRuntimeFailure(run, {
+      phase: 'sdk_retrying',
+      detail: rawErrorMessage ?? errorMessage ?? errorLabel ?? 'API retry in progress',
+      observedAt:
+        typeof msg.timestamp === 'string' && Number.isFinite(Date.parse(msg.timestamp))
+          ? msg.timestamp
+          : new Date().toISOString(),
+      statusCode: errorStatus,
+      retryAfterMs: retryDelay,
+    });
   }
 
   const statusLabel = looksLikeQuotaRetry

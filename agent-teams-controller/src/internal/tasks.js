@@ -196,7 +196,7 @@ function maybeNotifyAssignedOwner(context, task, options = {}) {
     const leadName = runtimeHelpers.inferLeadName(context.paths);
     const sender = normalizeActorName(options.from) || leadName;
     const leadSessionId = runtimeHelpers.resolveLeadSessionId(context.paths);
-    if (isSameMember(owner, leadName) || isSameMember(owner, sender)) {
+    if (isSameMember(owner, sender)) {
         return;
     }
 
@@ -208,7 +208,10 @@ function maybeNotifyAssignedOwner(context, task, options = {}) {
 
     const summary = options.summary || `New task #${task.displayId || task.id} assigned`;
     try {
-        messages.sendMessage(context, {
+        const sendAssignmentMessage = isSameMember(sender, 'user')
+            ? messages.sendTrustedMessage
+            : messages.sendMessage;
+        sendAssignmentMessage(context, {
             member: owner,
             from: sender,
             text: buildAssignmentMessage(context, task, {
@@ -277,7 +280,7 @@ function createTask(context, input) {
                 ...(Array.isArray(taskInput.descriptionTaskRefs) ? taskInput.descriptionTaskRefs : []),
                 ...(Array.isArray(taskInput.promptTaskRefs) ? taskInput.promptTaskRefs : []),
             ],
-            from: taskInput.from,
+            from: taskInput.from || taskInput.createdBy,
         });
     }
     return task;

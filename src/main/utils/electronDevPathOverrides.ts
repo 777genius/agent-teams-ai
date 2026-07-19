@@ -51,6 +51,20 @@ export function getAppliedElectronDevClaudeRootOverride(): string | null {
   return appliedElectronDevClaudeRootOverride;
 }
 
+/**
+ * Worker threads skip Electron startup, so they need to mirror the explicit
+ * dev-only Claude root before constructing path-dependent services.
+ */
+export function applyElectronDevClaudeRootOverrideForWorker(
+  env: NodeJS.ProcessEnv = process.env
+): string | null {
+  const claudeRoot = resolveElectronDevClaudeRootOverride(env);
+  if (claudeRoot) {
+    setClaudeBasePathOverride(claudeRoot);
+  }
+  return claudeRoot;
+}
+
 export function applyElectronDevPathOverrides(
   app: ElectronDevPathOverrideApp,
   env: NodeJS.ProcessEnv = process.env

@@ -303,9 +303,18 @@ describe('team change throttling', () => {
       resolveBootstrap();
       await Promise.resolve();
       await vi.advanceTimersByTimeAsync(2_000);
-      expect(fetchCliProviderStatus).toHaveBeenCalledWith('opencode', { silent: false });
-      expect(fetchCliProviderStatus).toHaveBeenCalledWith('anthropic', { silent: false });
-      expect(fetchCliProviderStatus).toHaveBeenCalledWith('codex', { silent: false });
+      expect(fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
+        silent: false,
+        checkReason: 'startup',
+      });
+      expect(fetchCliProviderStatus).toHaveBeenCalledWith('anthropic', {
+        silent: false,
+        checkReason: 'startup',
+      });
+      expect(fetchCliProviderStatus).toHaveBeenCalledWith('codex', {
+        silent: false,
+        checkReason: 'startup',
+      });
       expect(
         fetchCliProviderStatus.mock.calls.filter(([providerId]) => providerId === 'opencode')
       ).toHaveLength(1);

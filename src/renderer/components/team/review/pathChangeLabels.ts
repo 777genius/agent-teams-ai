@@ -1,5 +1,7 @@
 import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
 
+import { isReviewFileExpectedDeleted } from './reviewContentPreview';
+
 import type { FileChangeSummary, FileChangeWithContent } from '@shared/types';
 
 export type PathChangeLabel =
@@ -53,7 +55,7 @@ export function buildPathChangeLabels(
       }
     }
 
-    if (file.ledgerSummary?.deletedInTask || file.ledgerSummary?.latestOperation === 'delete') {
+    if (isReviewFileExpectedDeleted(file)) {
       out[file.filePath] = { kind: 'deleted' };
     }
   }

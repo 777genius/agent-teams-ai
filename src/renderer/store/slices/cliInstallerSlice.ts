@@ -3,9 +3,12 @@
  */
 
 import {
+  type AnalyticsErrorClass,
+  type AnalyticsProviderCheckReason,
+  type AnalyticsProviderReadinessState,
   classifyAnalyticsError,
   elapsedMsSince,
-  recordProviderConnectionEnd,
+  recordProviderReadinessStateObserved,
   recordRuntimeInstallEnd,
 } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
@@ -42,6 +45,14 @@ export const MULTIMODEL_PROVIDER_IDS: CliProviderId[] = isGeminiUiFrozen()
   ? ['anthropic', 'codex', 'opencode']
   : ['anthropic', 'codex', 'gemini', 'opencode'];
 const MULTIMODEL_PROVIDER_ID_SET = new Set<CliProviderId>(MULTIMODEL_PROVIDER_IDS);
+
+export interface CliProviderStatusFetchOptions {
+  silent?: boolean;
+  epoch?: number;
+  verifyModels?: boolean;
+  checkReason?: AnalyticsProviderCheckReason;
+  projectPath?: string | null;
+}
 
 function isActiveMultimodelProviderId(providerId: CliProviderId): boolean {
   return MULTIMODEL_PROVIDER_ID_SET.has(providerId);
@@ -560,30 +571,147 @@ export function mergeCliStatusPreservingHydratedProviders(
   return merged;
 }
 
-function shouldRecordProviderConnectionOutcome(
-  previousProvider: CliProviderStatus | undefined,
-  nextProvider: CliProviderStatus | null
+interface ProviderReadinessSnapshot {
+  readinessState: AnalyticsProviderReadinessState;
+  authenticated: boolean;
+  authMethod: string | null;
+  verificationState: CliProviderStatus['verificationState'];
+  providerSupported: boolean;
+  launchCapable: boolean;
+  errorClass: AnalyticsErrorClass;
+}
+
+function getProviderStatusErrorClass(provider: CliProviderStatus | null): AnalyticsErrorClass {
+  if (!provider) {
+    return 'unknown';
+  }
+  if (provider.authenticated && provider.verificationState === 'verified') {
+    return 'none';
+  }
+  const errorClass = classifyAnalyticsError(
+    `${provider.statusMessage ?? ''} ${provider.detailMessage ?? ''}`
+  );
+  if (errorClass !== 'unknown') {
+    return errorClass;
+  }
+  return provider.verificationState === 'error' || provider.verificationState === 'offline'
+    ? 'unknown'
+    : 'none';
+}
+
+function buildProviderReadinessSnapshot(
+  provider: CliProviderStatus | null,
+  errorClassOverride?: AnalyticsErrorClass
+): ProviderReadinessSnapshot {
+  const errorClass = errorClassOverride ?? getProviderStatusErrorClass(provider);
+  const verificationState = provider?.verificationState ?? 'error';
+  const authenticated = provider?.authenticated === true;
+  const providerSupported = provider?.supported === true;
+  const launchCapable = provider?.capabilities.teamLaunch === true;
+
+  let readinessState: AnalyticsProviderReadinessState;
+  if (errorClass === 'runtime_missing') {
+    readinessState = 'runtime_missing';
+  } else if (
+    verificationState === 'offline' ||
+    errorClass === 'network' ||
+    errorClass === 'timeout'
+  ) {
+    readinessState = 'temporarily_unavailable';
+  } else if (authenticated && providerSupported && launchCapable && verificationState !== 'error') {
+    readinessState = 'ready';
+  } else if (
+    errorClass === 'auth' ||
+    (providerSupported && !authenticated && verificationState !== 'error')
+  ) {
+    readinessState = 'authentication_required';
+  } else if (provider && (!providerSupported || !launchCapable)) {
+    readinessState = 'configuration_required';
+  } else {
+    readinessState = 'error';
+  }
+
+  return {
+    readinessState,
+    authenticated,
+    authMethod: provider?.authMethod ?? null,
+    verificationState,
+    providerSupported,
+    launchCapable,
+    errorClass,
+  };
+}
+
+function providerReadinessSnapshotsMatch(
+  previousSnapshot: ProviderReadinessSnapshot,
+  nextSnapshot: ProviderReadinessSnapshot
 ): boolean {
-  if (!nextProvider) {
-    return true;
-  }
-
-  if (!previousProvider || !isHydratedMultimodelProviderStatus(previousProvider)) {
-    return true;
-  }
-
   return (
-    previousProvider.authenticated !== nextProvider.authenticated ||
-    previousProvider.authMethod !== nextProvider.authMethod ||
-    (previousProvider.verificationState !== nextProvider.verificationState &&
-      nextProvider.verificationState === 'error')
+    previousSnapshot.readinessState === nextSnapshot.readinessState &&
+    previousSnapshot.authenticated === nextSnapshot.authenticated &&
+    previousSnapshot.authMethod === nextSnapshot.authMethod &&
+    previousSnapshot.verificationState === nextSnapshot.verificationState &&
+    previousSnapshot.providerSupported === nextSnapshot.providerSupported &&
+    previousSnapshot.launchCapable === nextSnapshot.launchCapable &&
+    previousSnapshot.errorClass === nextSnapshot.errorClass
   );
 }
 
-function shouldRecordProviderConnectionError(
-  previousProvider: CliProviderStatus | undefined
-): boolean {
-  return !previousProvider || previousProvider.verificationState !== 'error';
+function getFailedProviderCheckReadinessState(
+  errorClass: AnalyticsErrorClass
+): AnalyticsProviderReadinessState {
+  if (errorClass === 'runtime_missing') return 'runtime_missing';
+  if (errorClass === 'auth') return 'authentication_required';
+  if (errorClass === 'network' || errorClass === 'timeout') {
+    return 'temporarily_unavailable';
+  }
+  return 'error';
+}
+
+function recordProviderReadinessObservation(input: {
+  providerId: CliProviderId;
+  previousProvider: CliProviderStatus | undefined;
+  nextProvider: CliProviderStatus | null;
+  checkReason: AnalyticsProviderCheckReason;
+  checkOutcome: 'completed' | 'failed';
+  durationMs: number | null;
+  errorClassOverride?: AnalyticsErrorClass;
+}): void {
+  const observedSnapshot = buildProviderReadinessSnapshot(
+    input.nextProvider,
+    input.errorClassOverride
+  );
+  const nextSnapshot =
+    input.checkOutcome === 'failed'
+      ? {
+          ...observedSnapshot,
+          readinessState: getFailedProviderCheckReadinessState(observedSnapshot.errorClass),
+        }
+      : observedSnapshot;
+  const previousSnapshot = isHydratedMultimodelProviderStatus(input.previousProvider)
+    ? buildProviderReadinessSnapshot(input.previousProvider ?? null)
+    : null;
+  const observationKind = !previousSnapshot
+    ? 'initial'
+    : providerReadinessSnapshotsMatch(previousSnapshot, nextSnapshot)
+      ? 'unchanged'
+      : 'changed';
+
+  recordProviderReadinessStateObserved({
+    provider: input.nextProvider?.providerId ?? input.providerId,
+    readinessState: nextSnapshot.readinessState,
+    previousReadinessState: previousSnapshot?.readinessState ?? 'unknown',
+    observationKind,
+    checkReason: input.checkReason,
+    checkOutcome: input.checkOutcome,
+    authenticated: nextSnapshot.authenticated,
+    authMethod: nextSnapshot.authMethod,
+    verificationState: nextSnapshot.verificationState,
+    providerSupported: nextSnapshot.providerSupported,
+    launchCapable: nextSnapshot.launchCapable,
+    errorClass: nextSnapshot.errorClass,
+    durationMs: input.durationMs,
+  });
 }
 
 export async function refreshOpenCodeProviderStatusAfterRuntimeInstall(
@@ -597,7 +725,11 @@ export async function refreshOpenCodeProviderStatusAfterRuntimeInstall(
     await api.cliInstaller.invalidateStatus();
     clearCliProviderStatusInFlight('opencode');
     const epoch = ++cliStatusEpoch;
-    await get().fetchCliProviderStatus('opencode', { silent: false, epoch });
+    await get().fetchCliProviderStatus('opencode', {
+      silent: false,
+      epoch,
+      checkReason: 'runtime_install',
+    });
 
     if (hasOpenCodeModels(getProviderStatus(get().cliStatus, 'opencode'))) {
       return;
@@ -620,7 +752,11 @@ export async function refreshCodexProviderStatusAfterRuntimeInstall(
     await api.cliInstaller.invalidateStatus();
     clearCliProviderStatusInFlight('codex');
     const epoch = ++cliStatusEpoch;
-    await get().fetchCliProviderStatus('codex', { silent: false, epoch });
+    await get().fetchCliProviderStatus('codex', {
+      silent: false,
+      epoch,
+      checkReason: 'runtime_install',
+    });
 
     if (hasCodexRuntimeReady(getProviderStatus(get().cliStatus, 'codex'))) {
       return;
@@ -774,7 +910,7 @@ export interface CliInstallerSlice {
   fetchCliStatus: () => Promise<void>;
   fetchCliProviderStatus: (
     providerId: CliProviderId,
-    options?: { silent?: boolean; epoch?: number; verifyModels?: boolean }
+    options?: CliProviderStatusFetchOptions
   ) => Promise<boolean>;
   invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
@@ -1009,6 +1145,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           get().fetchCliProviderStatus(providerId, {
             silent: false,
             epoch,
+            checkReason: 'startup',
           })
         )
       );
@@ -1024,6 +1161,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
             get().fetchCliProviderStatus(providerId, {
               silent: false,
               epoch,
+              checkReason: 'startup',
             })
           )
         );
@@ -1093,7 +1231,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       return false;
     }
     const verifyModels = options?.verifyModels === true && providerId !== 'opencode';
-    const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}`;
+    const projectPath = options?.projectPath?.trim() || null;
+    const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}:${projectPath ?? ''}`;
     const inFlight = cliProviderStatusInFlight.get(requestKey);
     if (inFlight) return inFlight;
 
@@ -1132,22 +1271,23 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       try {
         const providerStatus = verifyModels
           ? await api.cliInstaller.verifyProviderModels(providerId)
-          : await api.cliInstaller.getProviderStatus(providerId);
+          : projectPath
+            ? await api.cliInstaller.getProviderStatus(providerId, { projectPath })
+            : await api.cliInstaller.getProviderStatus(providerId);
+        const requestIsCurrent =
+          requestEpoch === cliStatusEpoch && cliProviderStatusSeq.get(providerId) === requestSeq;
         if (
           !silent &&
           !verifyModels &&
-          shouldRecordProviderConnectionOutcome(previousProviderStatus, providerStatus)
+          requestIsCurrent &&
+          isActiveMultimodelProviderId(providerId)
         ) {
-          const providerErrorClass = providerStatus?.authenticated
-            ? 'none'
-            : classifyAnalyticsError(
-                `${providerStatus?.statusMessage ?? ''} ${providerStatus?.detailMessage ?? ''}`
-              );
-          recordProviderConnectionEnd({
-            provider: providerStatus?.providerId ?? providerId,
-            authMethod: providerStatus?.authMethod,
-            success: providerStatus?.authenticated === true,
-            errorClass: providerErrorClass,
+          recordProviderReadinessObservation({
+            providerId,
+            previousProvider: previousProviderStatus,
+            nextProvider: providerStatus,
+            checkReason: options?.checkReason ?? 'unknown',
+            checkOutcome: providerStatus ? 'completed' : 'failed',
             durationMs: elapsedMsSince(requestStartedAtMs),
           });
         }
@@ -1223,20 +1363,31 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         scheduleCodexCatalogLoadingRefresh(get, providerId);
         return true;
       } catch (error) {
+        const message =
+          error instanceof Error ? error.message : `Failed to refresh ${providerId} status`;
+        const failedProviderStatus = createProviderStatusErrorSnapshot({
+          providerId,
+          message,
+          currentProvider: previousProviderStatus,
+        });
+        const requestIsCurrent =
+          requestEpoch === cliStatusEpoch && cliProviderStatusSeq.get(providerId) === requestSeq;
         if (
           !silent &&
           !verifyModels &&
-          shouldRecordProviderConnectionError(previousProviderStatus)
+          requestIsCurrent &&
+          isActiveMultimodelProviderId(providerId)
         ) {
-          recordProviderConnectionEnd({
-            provider: providerId,
-            success: false,
-            errorClass: classifyAnalyticsError(error),
+          recordProviderReadinessObservation({
+            providerId,
+            previousProvider: previousProviderStatus,
+            nextProvider: failedProviderStatus,
+            checkReason: options?.checkReason ?? 'unknown',
+            checkOutcome: 'failed',
             durationMs: elapsedMsSince(requestStartedAtMs),
+            errorClassOverride: classifyAnalyticsError(error),
           });
         }
-        const message =
-          error instanceof Error ? error.message : `Failed to refresh ${providerId} status`;
         logger.error(`Failed to fetch ${providerId} CLI status:`, error);
         set((state) => {
           const currentCliStatus = state.cliStatus;
@@ -1388,12 +1539,15 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   installOpenCodeRuntime: async () => {
     if (!api.openCodeRuntime) return;
     const installStartedAtMs = Date.now();
+    const previousStatus = get().openCodeRuntimeStatus;
     set({
       openCodeRuntimeStatusLoading: true,
       openCodeRuntimeError: null,
       openCodeRuntimeStatus: {
-        installed: false,
-        source: 'missing',
+        installed: previousStatus?.installed ?? false,
+        ...(previousStatus?.binaryPath ? { binaryPath: previousStatus.binaryPath } : {}),
+        ...(previousStatus?.version ? { version: previousStatus.version } : {}),
+        source: previousStatus?.source ?? 'missing',
         state: 'checking',
         progress: {
           phase: 'checking',
@@ -1403,12 +1557,13 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     });
     try {
       const status = await api.openCodeRuntime.install();
+      const installSucceeded = status.installed && status.state === 'ready';
       set({ openCodeRuntimeStatus: status, openCodeRuntimeError: status.error ?? null });
       recordRuntimeInstallEnd({
         runtime: 'opencode',
-        success: status.installed,
+        success: installSucceeded,
         source: status.source,
-        errorClass: status.installed ? 'none' : classifyAnalyticsError(status.error),
+        errorClass: installSucceeded ? 'none' : classifyAnalyticsError(status.error),
         durationMs: elapsedMsSince(installStartedAtMs),
       });
       if (status.installed) {

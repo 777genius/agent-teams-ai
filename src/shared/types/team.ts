@@ -457,7 +457,44 @@ export type InboxMessageKind =
   | 'task_comment_notification'
   | 'task_stall_remediation'
   | 'member_work_sync_nudge'
+  | 'runtime_recovery_nudge'
   | 'agent_error';
+
+export type RuntimeRecoveryReasonCode =
+  | 'quota_exhausted'
+  | 'rate_limited'
+  | 'auth_error'
+  | 'codex_native_timeout'
+  | 'network_error'
+  | 'filesystem_error'
+  | 'provider_overloaded'
+  | 'protocol_proof_missing'
+  | 'backend_error'
+  | 'request_timeout'
+  | 'request_conflict'
+  | 'client_error'
+  | 'user_cancelled'
+  | 'unknown';
+
+export interface AgentErrorMetadataV1 {
+  schemaVersion: 1;
+  type: 'api_error' | 'codex_native_timeout';
+  phase: 'terminal';
+  detail: string;
+  failedMessageId: string;
+  runtimeSessionId?: string;
+  bootstrapRunId?: string;
+  innerRecoveryAttempts: number;
+}
+
+export interface RuntimeRecoveryNudgeMetadataV1 {
+  schemaVersion: 1;
+  recoveryId: string;
+  sourceFailureId: string;
+  attempt: number;
+  reasonCode: RuntimeRecoveryReasonCode;
+  payloadHash: string;
+}
 
 export interface SlashCommandMeta {
   name: string;
@@ -678,6 +715,10 @@ export interface InboxMessage {
   toolCalls?: ToolCallMeta[];
   /** Renderer-friendly semantic kind. Defaults to "default" when absent. */
   messageKind?: InboxMessageKind;
+  /** Structured terminal runtime failure emitted by a teammate runtime. */
+  agentError?: AgentErrorMetadataV1;
+  /** Idempotency and outcome-correlation metadata for hidden recovery nudges. */
+  runtimeRecovery?: RuntimeRecoveryNudgeMetadataV1;
   /** Structured member-work-sync intent for runtime delivery and audit. */
   workSyncIntent?: 'agenda_sync' | 'review_pickup';
   /** Stable intent key, e.g. one review request event or a small review-request group. */
@@ -730,6 +771,8 @@ export interface SendMessageRequest {
   toolSummary?: string;
   toolCalls?: ToolCallMeta[];
   messageKind?: InboxMessageKind;
+  agentError?: AgentErrorMetadataV1;
+  runtimeRecovery?: RuntimeRecoveryNudgeMetadataV1;
   workSyncIntent?: InboxMessage['workSyncIntent'];
   workSyncIntentKey?: string;
   workSyncReviewRequestEventIds?: string[];

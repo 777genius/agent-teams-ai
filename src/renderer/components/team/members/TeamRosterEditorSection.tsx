@@ -36,6 +36,7 @@ interface TeamRosterEditorSectionProps {
   effort?: EffortLevel;
   limitContext: boolean;
   runtimeProviderStatusById?: ReadonlyMap<TeamProviderId, CliProviderStatus | null | undefined>;
+  providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
   onProviderChange: (providerId: TeamProviderId) => void;
   onModelChange: (model: string) => void;
   onEffortChange: (effort: string) => void;
@@ -94,6 +95,7 @@ const TeamRosterEditorSectionImpl = ({
   effort,
   limitContext,
   runtimeProviderStatusById,
+  providerReadyById,
   onProviderChange,
   onModelChange,
   onEffortChange,
@@ -158,6 +160,8 @@ const TeamRosterEditorSectionImpl = ({
       taskSuggestions={taskSuggestions}
       teamSuggestions={teamSuggestions}
       onWorkflowSuggestionsNeeded={onWorkflowSuggestionsNeeded}
+      toolbarLeading={headerTop}
+      layoutVariant="flat"
       hideContent={hideMembersContent}
       existingMembers={existingMembers}
       defaultProviderId={defaultProviderId}
@@ -167,6 +171,7 @@ const TeamRosterEditorSectionImpl = ({
       limitContext={limitContext}
       onLimitContextChange={onLimitContextChange}
       runtimeProviderStatusById={runtimeProviderStatusById}
+      providerReadyById={providerReadyById}
       inheritModelSettingsByDefault={inheritModelSettingsByDefault}
       lockProviderModel={lockProviderModel}
       forceInheritedModelSettings={forceInheritedModelSettings}
@@ -183,7 +188,6 @@ const TeamRosterEditorSectionImpl = ({
       onTeammateWorktreeDefaultChange={onTeammateWorktreeDefaultChange}
       headerExtra={
         <div className="space-y-3">
-          {headerTop}
           <LeadModelRow
             projectPath={projectPath}
             providerId={providerId}
@@ -199,12 +203,14 @@ const TeamRosterEditorSectionImpl = ({
             warningText={leadWarningText}
             disableGeminiOption={disableGeminiOption}
             providerNoticeById={leadProviderNoticeById}
+            providerReadyById={providerReadyById}
             modelIssueText={leadModelIssueText}
             modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[providerId]}
             modelIssueReasonByValue={modelIssueReasonByProvider?.[providerId]}
             modelUnavailableReasonByValue={modelUnavailableReasonByProvider?.[providerId]}
             showAnthropicContextLimit={hasAnthropicRuntime}
             disableAnthropicContextLimit={disableAnthropicContextLimit}
+            layoutVariant="flat"
           />
           {headerBottom}
         </div>

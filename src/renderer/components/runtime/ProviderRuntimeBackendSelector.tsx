@@ -167,7 +167,9 @@ export function getProviderRuntimeBackendSummary(
 ): string | null {
   const options = provider.availableBackends ?? [];
   if (options.length === 0) {
-    return null;
+    return (
+      provider.backend?.label ?? (provider.providerId === 'anthropic' ? 'Anthropic API' : null)
+    );
   }
 
   const selectedBackendId = provider.selectedBackendId ?? options[0]?.id ?? '';

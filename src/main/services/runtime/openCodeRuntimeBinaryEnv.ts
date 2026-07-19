@@ -17,16 +17,10 @@ function prependPathEntry(env: NodeJS.ProcessEnv, directory: string): void {
   const currentPath = env.PATH ?? '';
   const currentEntries = currentPath.split(path.delimiter).filter(Boolean);
   const normalizedDirectory = normalizePathEntryForCompare(trimmedDirectory);
-  const alreadyPresent = currentEntries.some(
-    (entry) => normalizePathEntryForCompare(entry) === normalizedDirectory
+  const remainingEntries = currentEntries.filter(
+    (entry) => normalizePathEntryForCompare(entry) !== normalizedDirectory
   );
-
-  if (alreadyPresent) {
-    env.PATH = currentEntries.join(path.delimiter);
-    return;
-  }
-
-  env.PATH = [trimmedDirectory, ...currentEntries].join(path.delimiter);
+  env.PATH = [trimmedDirectory, ...remainingEntries].join(path.delimiter);
 }
 
 export function applyOpenCodeRuntimeBinaryEnv(

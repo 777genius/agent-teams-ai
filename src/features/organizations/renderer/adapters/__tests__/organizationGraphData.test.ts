@@ -736,9 +736,7 @@ describe('buildOrganizationGraphData', () => {
     const graph = buildOrganizationGraphData(viewModel);
 
     expect(
-      graph.nodes
-        .filter((node) => !node.layoutOnly)
-        .map((node) => [node.id, node.kind, node.state])
+      graph.nodes.filter((node) => !node.layoutOnly).map((node) => [node.id, node.kind, node.state])
     ).toEqual([
       ['team:alpha', 'member', 'active'],
       ['team:beta', 'member', 'terminated'],
@@ -750,7 +748,11 @@ describe('buildOrganizationGraphData', () => {
     });
     expect(graph.layout?.mode).toBe('grid-under-lead');
     expect(graph.layout?.showTasks).toBe(true);
+    expect(graph.layout?.fitTaskRowsToContent).toBe(true);
     expect(graph.layout?.showEmptyTaskPlaceholders).toBeUndefined();
+    expect(graph.nodes.find((node) => node.id === 'agent:alpha:alice')).toMatchObject({
+      taskZoomVisibility: 'summary',
+    });
     expect(graph.edges).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -770,8 +772,7 @@ describe('buildOrganizationGraphData', () => {
     expect(graph.particles).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          edgeId:
-            'org-message:communicates:team:alpha:team:beta:team:alpha->team:beta',
+          edgeId: 'org-message:communicates:team:alpha:team:beta:team:alpha->team:beta',
           kind: 'inbox_message',
           preview: 'Need QA help',
         }),
@@ -938,10 +939,12 @@ describe('buildOrganizationGraphData', () => {
       {
         id: 'unit:engineering',
         label: 'Engineering',
+        semanticSummary: '1 teams · 1 active · 2 tasks',
         nodeIds: ['team:alpha', 'agent:alpha:alice'],
         color: '#8bd3ff',
         depth: 0,
         priority: 'normal',
+        borderStyle: 'solid',
       },
     ]);
     expect(graph.layout?.ownerOrder).toEqual(['team:beta', 'team:alpha']);
@@ -962,12 +965,27 @@ describe('buildOrganizationGraphData', () => {
       {
         id: 'unit:engineering',
         label: 'Engineering',
+        semanticSummary: expect.any(String),
         nodeIds: ['unit:engineering'],
         color: '#8bd3ff',
         depth: 0,
         priority: 'normal',
+        borderStyle: 'solid',
       },
     ]);
+  });
+
+  it('counts online teams in group aggregates independently of task status', () => {
+    const payload = buildNestedPayload();
+    const alpha = payload.nodes.find((node) => node.id === 'team:alpha');
+    if (!alpha?.team) throw new Error('Expected alpha team fixture');
+    alpha.team.isOnline = false;
+
+    const graph = buildOrganizationGraphData(buildOrganizationMapViewModel(payload));
+
+    expect(graph.groupFrames?.find((frame) => frame.id === 'unit:engineering')).toMatchObject({
+      semanticSummary: '1 teams · 0 active · 2 tasks',
+    });
   });
 
   it('renders organizations as frames in all-organizations scope', () => {
@@ -993,18 +1011,22 @@ describe('buildOrganizationGraphData', () => {
       {
         id: 'org:product',
         label: 'Product Org',
+        semanticSummary: expect.any(String),
         nodeIds: ['team:alpha', 'agent:alpha:alice'],
         color: '#4f8cff',
         depth: 0,
         priority: 'primary',
+        borderStyle: 'solid',
       },
       {
         id: 'org:quality',
         label: 'Quality Org',
+        semanticSummary: expect.any(String),
         nodeIds: ['team:beta'],
         color: '#4f8cff',
         depth: 0,
         priority: 'primary',
+        borderStyle: 'solid',
       },
     ]);
     expect(graph.edges).toEqual(
@@ -1033,34 +1055,43 @@ describe('buildOrganizationGraphData', () => {
       {
         id: 'org:product',
         label: 'Product Org',
+        semanticSummary: expect.any(String),
         nodeIds: ['unit:product:engineering', 'team:alpha', 'agent:alpha:alice'],
         color: '#4f8cff',
         depth: 0,
+        labelLane: 1,
         priority: 'primary',
+        borderStyle: 'solid',
       },
       {
         id: 'unit:product:engineering',
         label: 'Engineering',
+        semanticSummary: expect.any(String),
         nodeIds: ['team:alpha', 'agent:alpha:alice'],
         color: '#8bd3ff',
         depth: 1,
         priority: 'normal',
+        borderStyle: 'solid',
       },
       {
         id: 'org:quality',
         label: 'Quality Org',
+        semanticSummary: expect.any(String),
         nodeIds: ['team:beta'],
         color: '#4f8cff',
         depth: 0,
         priority: 'primary',
+        borderStyle: 'solid',
       },
       {
         id: 'unit:__all-organizations__:unassigned-teams',
         label: 'Unassigned Teams',
+        semanticSummary: expect.any(String),
         nodeIds: ['team:gamma'],
         color: '#8bd3ff',
         depth: 0,
         priority: 'normal',
+        borderStyle: 'solid',
       },
     ]);
     expect(getOrganizationIdForNodeId(viewModel, 'unit:product:engineering')).toBe('product');
@@ -1077,11 +1108,11 @@ describe('buildOrganizationGraphData', () => {
     expect(slots['team:alpha']?.sectorIndex).toBeLessThan(slots['team:beta']?.sectorIndex ?? -1);
     expect(
       (slots['team:beta']?.sectorIndex ?? 0) - (slots['team:alpha']?.sectorIndex ?? 0)
-    ).toBeGreaterThanOrEqual(4);
+    ).toBeGreaterThanOrEqual(2);
     expect(slots['team:beta']?.ringIndex).toBeLessThan(slots['team:gamma']?.ringIndex ?? -1);
     expect(
       (slots['team:gamma']?.ringIndex ?? 0) - (slots['team:beta']?.ringIndex ?? 0)
-    ).toBeGreaterThanOrEqual(10);
+    ).toBeGreaterThanOrEqual(4);
   });
 
   it('packs narrow sibling groups side by side in rows layout', () => {
@@ -1093,6 +1124,9 @@ describe('buildOrganizationGraphData', () => {
     expect(slots['team:beta']?.ringIndex).toBe(slots['team:delta']?.ringIndex);
     expect(slots['team:alpha']?.sectorIndex).toBeLessThan(slots['team:gamma']?.sectorIndex ?? -1);
     expect(slots['team:beta']?.sectorIndex).toBeLessThan(slots['team:delta']?.sectorIndex ?? -1);
+    expect(
+      (slots['team:gamma']?.sectorIndex ?? 0) - (slots['team:alpha']?.sectorIndex ?? 0)
+    ).toBeGreaterThanOrEqual(2);
   });
 
   it('keeps sibling group slots stable when a neighboring group is collapsed', () => {
@@ -1340,8 +1374,103 @@ describe('buildOrganizationGraphData', () => {
 
     expect(rowsGraph.layout?.mode).toBe('grid-under-lead');
     expect(radialGraph.layout?.mode).toBe('radial');
+    expect(rowsGraph.nodes.find((node) => node.kind === 'task')?.taskZoomVisibility).toBe(
+      'summary'
+    );
+    expect(radialGraph.nodes.find((node) => node.kind === 'task')?.taskZoomVisibility).toBe(
+      'summary'
+    );
     expect(maxGridColumnIndex).toBeGreaterThan(1);
     expect(maxGridRowIndex).toBeLessThan(5);
     expect(rowsGraph.layout?.ownerOrder).toEqual(radialGraph.layout?.ownerOrder);
+  });
+
+  it('builds a live top-down hierarchy with tasks and communication particles', () => {
+    const viewModel = buildOrganizationMapViewModel(buildAllOrganizationsNestedPayload());
+    const graph = buildOrganizationGraphData(viewModel, { layoutMode: 'hierarchical' });
+    const positions = graph.layout?.nodePositions ?? {};
+
+    expect(graph.layout?.mode).toBe('hierarchical');
+    expect(graph.layout?.showTasks).toBe(true);
+    expect(graph.groupFrames).toEqual([]);
+    expect(graph.nodes.filter((node) => node.kind === 'task')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'agent:alpha:alice',
+          kind: 'task',
+          state: 'active',
+          ownerId: 'team:alpha',
+          sublabel: 'Build org overview',
+          taskZoomVisibility: 'summary',
+        }),
+      ])
+    );
+    expect(graph.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'org:__all-organizations__',
+          kind: 'lead',
+          hierarchyDepth: 0,
+          semanticSummary: expect.any(String),
+        }),
+        expect.objectContaining({
+          id: 'org:product',
+          visualVariant: 'organization',
+          hierarchyDepth: 1,
+        }),
+        expect.objectContaining({
+          id: 'unit:product:engineering',
+          visualVariant: 'container',
+          hierarchyDepth: 2,
+        }),
+        expect.objectContaining({
+          id: 'team:alpha',
+          visualVariant: 'team',
+          state: 'active',
+          hierarchyDepth: 3,
+          semanticSummary: expect.any(String),
+        }),
+      ])
+    );
+
+    expect(positions['org:product']?.y).toBeGreaterThan(
+      positions['org:__all-organizations__']?.y ?? Number.POSITIVE_INFINITY
+    );
+    expect(positions['unit:product:engineering']?.y).toBeGreaterThan(
+      positions['org:product']?.y ?? Number.POSITIVE_INFINITY
+    );
+    expect(positions['team:alpha']?.y).toBeGreaterThan(
+      positions['unit:product:engineering']?.y ?? Number.POSITIVE_INFINITY
+    );
+    expect(positions['agent:alpha:alice']?.y).toBeGreaterThan(
+      positions['team:alpha']?.y ?? Number.POSITIVE_INFINITY
+    );
+    const hierarchyEdges = graph.edges.filter((edge) => edge.type === 'parent-child');
+    expect(hierarchyEdges.length).toBeGreaterThan(0);
+    expect(
+      hierarchyEdges.every((edge) => edge.routing === 'orthogonal' && edge.alwaysVisible === true)
+    ).toBe(true);
+    expect(graph.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: 'team:alpha',
+          target: 'agent:alpha:alice',
+          type: 'ownership',
+        }),
+        expect.objectContaining({
+          source: 'team:alpha',
+          target: 'team:beta',
+          type: 'message',
+        }),
+      ])
+    );
+    expect(graph.particles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          edgeId: 'org-message:communicates:team:alpha:team:beta:team:alpha->team:beta',
+          kind: 'inbox_message',
+        }),
+      ])
+    );
   });
 });

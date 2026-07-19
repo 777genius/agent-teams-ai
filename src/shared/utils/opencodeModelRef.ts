@@ -22,7 +22,7 @@ const OPEN_CODE_SOURCE_LABELS: Record<string, string> = {
   mistral: 'Mistral',
   moonshot: 'Moonshot',
   ollama: 'Ollama',
-  opencode: 'OpenCode',
+  opencode: 'OpenCode Zen',
   openai: 'OpenAI',
   'openai-compatible': 'OpenAI Compatible',
   openrouter: 'OpenRouter',

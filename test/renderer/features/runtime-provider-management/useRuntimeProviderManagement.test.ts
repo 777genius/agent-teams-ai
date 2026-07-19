@@ -3,7 +3,16 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const posthogMocks = vi.hoisted(() => ({
+  capturePostHogEvent: vi.fn(),
+}));
+
+vi.mock('../../../../src/renderer/posthog', () => ({
+  capturePostHogEvent: posthogMocks.capturePostHogEvent,
+}));
+
 import {
+  type RuntimeProviderChangeKind,
   type RuntimeProviderManagementActions,
   type RuntimeProviderManagementState,
   useRuntimeProviderManagement,
@@ -146,7 +155,9 @@ describe('useRuntimeProviderManagement', () => {
     searchDirectoryOnQueryChange?: boolean;
     initialProviderId?: string | null;
     initialProviderAction?: 'connect' | 'reconnect' | 'select' | null;
-    onProviderChanged?: () => Promise<void> | void;
+    onProviderChanged?: (
+      changeKind: RuntimeProviderChangeKind
+    ) => Promise<boolean | void> | boolean | void;
   }): React.ReactElement {
     const hook = useRuntimeProviderManagement({
       runtimeId: 'opencode',
@@ -170,6 +181,7 @@ describe('useRuntimeProviderManagement', () => {
     host = document.createElement('div');
     document.body.appendChild(host);
     window.localStorage.clear();
+    posthogMocks.capturePostHogEvent.mockClear();
     state = null;
     actions = null;
   });
@@ -1437,7 +1449,10 @@ describe('useRuntimeProviderManagement', () => {
       ],
       detail: null,
     };
-    const connectedProvider = createOpenAiLocalProvider();
+    const connectedProvider = {
+      ...createOpenAiLocalProvider(),
+      verifiedModelId: 'openai/gpt-4.1',
+    };
     const initialViewResponse = {
       schemaVersion: 1 as const,
       runtimeId: 'opencode' as const,
@@ -1581,6 +1596,9 @@ describe('useRuntimeProviderManagement', () => {
       })
     ).toHaveLength(1);
     expect(state?.savingProviderId).toBeNull();
+    expect(state?.successMessage).toBe(
+      'OpenAI connected and verified with openai/gpt-4.1.'
+    );
 
     await act(async () => {
       root.unmount();
@@ -1932,8 +1950,25 @@ describe('useRuntimeProviderManagement', () => {
       projectPath: null,
     });
     expect(state?.error).toBeNull();
-    expect(state?.setupSubmitError).toBe('Invalid API key');
+    expect(state?.setupSubmitError).toBe(
+      'OpenRouter rejected this API key. The new credential was not kept. Copy the key from the correct account or subscription plan, then try again.'
+    );
     expect(state?.apiKeyValue).toBe('sk-bad-value');
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_setup:connection_end',
+      {
+        event_schema_version: 2,
+        runtime: 'opencode',
+        provider: 'openrouter',
+        auth_method: 'api_key',
+        connection_intent: 'connect',
+        outcome: 'failed',
+        model_verified: false,
+        success: false,
+        error_class: 'auth',
+        duration_ms_bucket: 'lt_1s',
+      }
+    );
   });
 
   it('keeps setup form diagnostics available when submit is attempted after form load failure', async () => {
@@ -1999,6 +2034,7 @@ describe('useRuntimeProviderManagement', () => {
   });
 
   it('submits a supported setup form without a secret as a null API key', async () => {
+    const onProviderChanged = vi.fn(() => false);
     const loadSetupForm = vi.fn(() =>
       Promise.resolve({
         schemaVersion: 1,
@@ -2038,7 +2074,12 @@ describe('useRuntimeProviderManagement', () => {
 
     const root = createRoot(host);
     await act(async () => {
-      root.render(React.createElement(Harness));
+      root.render(
+        React.createElement(ConfigurableHarness, {
+          enabled: false,
+          onProviderChanged,
+        })
+      );
       await Promise.resolve();
     });
 
@@ -2065,10 +2106,90 @@ describe('useRuntimeProviderManagement', () => {
       projectPath: null,
     });
     expect(state?.setupSubmitError).toBeNull();
+    expect(state?.error).toBeNull();
+    expect(state?.successMessage).toBeNull();
+    expect(state?.warningMessage).toContain(
+      'The change is saved, but the latest provider status could not be refreshed.'
+    );
+    expect(onProviderChanged).toHaveBeenCalledWith('connection');
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_setup:connection_end',
+      {
+        event_schema_version: 2,
+        runtime: 'opencode',
+        provider: 'openai',
+        auth_method: 'oauth',
+        connection_intent: 'connect',
+        outcome: 'connected_unverified',
+        model_verified: false,
+        success: true,
+        error_class: 'none',
+        duration_ms_bucket: 'lt_1s',
+      }
+    );
 
     await act(async () => {
       root.unmount();
     });
+  });
+
+  it('keeps setup open when the backend does not confirm a connected provider', async () => {
+    const loadSetupForm = vi.fn(() =>
+      Promise.resolve({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        setupForm: {
+          runtimeId: 'opencode',
+          providerId: 'openai',
+          displayName: 'OpenAI',
+          method: 'oauth',
+          supported: true,
+          title: 'Connect OpenAI',
+          description: null,
+          submitLabel: 'Connect',
+          disabledReason: null,
+          source: 'oauth',
+          secret: null,
+          prompts: [],
+        },
+      })
+    );
+    const connectProvider = vi.fn(() =>
+      Promise.resolve({ schemaVersion: 1, runtimeId: 'opencode' as const })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        runtimeProviderManagement: { loadSetupForm, connectProvider },
+      } as unknown as ElectronAPI,
+    });
+
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(Harness));
+      await Promise.resolve();
+    });
+    act(() => actions?.startConnect('openai'));
+    await act(async () => {
+      await vi.waitFor(() => expect(loadSetupForm).toHaveBeenCalled());
+    });
+    await act(async () => {
+      await actions?.submitConnect('openai');
+    });
+
+    expect(state?.activeFormProviderId).toBe('openai');
+    expect(state?.setupSubmitError).toContain('did not confirm the connection');
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_setup:connection_end',
+      expect.objectContaining({
+        provider: 'openai',
+        outcome: 'failed',
+        success: false,
+        error_class: 'unknown',
+      })
+    );
+
+    await act(async () => root.unmount());
   });
 
   it('keeps the actual API credential hint when xAI refresh fails after connect', async () => {
@@ -2214,7 +2335,10 @@ describe('useRuntimeProviderManagement', () => {
 
     expect(state?.directoryEntries[0]?.state).toBe('connected');
     expect(state?.directoryEntries[0]?.connectedAuthHint).toBe('api');
-    expect(state?.directoryError).toBe('Catalog refresh failed');
+    expect(state?.directoryError).toBeNull();
+    expect(state?.warningMessage).toContain(
+      'The change is saved, but the latest provider status could not be refreshed.'
+    );
 
     await act(async () => root.unmount());
   });
@@ -2303,7 +2427,9 @@ describe('useRuntimeProviderManagement', () => {
       resolveCancel?.();
       await Promise.resolve();
     });
-    await vi.waitFor(() => expect(onProviderChanged).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() =>
+      expect(onProviderChanged).toHaveBeenCalledWith('oauth_cancelled')
+    );
 
     await act(async () => {
       resolveConnect?.({
@@ -2312,8 +2438,24 @@ describe('useRuntimeProviderManagement', () => {
         error: { code: 'auth-failed', message: 'Authorization cancelled', recoverable: true },
       });
       await submitPromise;
-      root.unmount();
     });
+    expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith(
+      'provider_setup:connection_end',
+      expect.objectContaining({
+        event_schema_version: 2,
+        provider: 'xai',
+        auth_method: 'oauth',
+        outcome: 'cancelled',
+        success: false,
+        error_class: 'none',
+      })
+    );
+    expect(posthogMocks.capturePostHogEvent).not.toHaveBeenCalledWith(
+      'provider_setup:connection_end',
+      expect.objectContaining({ outcome: 'failed' })
+    );
+
+    await act(async () => root.unmount());
   });
 
   it('clears model loading when switching from model picker to setup form', async () => {

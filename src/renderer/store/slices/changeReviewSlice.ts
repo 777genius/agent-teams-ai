@@ -1,8 +1,15 @@
-import { recordReviewSubmit } from '@renderer/analytics/productAnalytics';
+import {
+  classifyAnalyticsError,
+  elapsedMsSince,
+  recordReviewApplyEnd,
+  recordReviewSubmit,
+} from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import {
+  buildReviewDecisionScopeToken,
   getReviewChangeSetIdentityToken,
   type ReviewChangeSetLike,
+  reviewChangeSetMatchesScope,
 } from '@renderer/utils/reviewDecisionScope';
 import {
   buildHunkDecisionKey,
@@ -16,13 +23,13 @@ import {
 } from '@renderer/utils/taskChangePresence';
 import {
   buildTaskChangePresenceKey,
+  buildTaskChangeSignature,
   isTaskSummaryCacheableForOptions,
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
-import { computeDiffContextHash } from '@shared/utils/diffContextHash';
 import { createLogger } from '@shared/utils/logger';
 import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
-import { structuredPatch } from 'diff';
+import { buildReviewChunkContextHashes } from '@shared/utils/reviewChunks';
 
 /** Tracks in-flight checkTaskHasChanges calls to avoid duplicate requests */
 const taskChangesCheckInFlight = new Set<string>();
@@ -42,7 +49,24 @@ let latestDecisionLoadRequestToken = 0;
 
 /** Debounce timer for persisting decisions to disk */
 const persistDebounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const pendingPersistDecisionWrites = new Map<string, () => Promise<void>>();
+const persistDecisionWriteChains = new Map<string, Promise<void>>();
+const decisionRevisionByScope = new Map<string, number>();
 const PERSIST_DEBOUNCE_MS = 500;
+
+function reviewPersistedSnapshotsEqual(
+  left: ReviewPersistedStateSnapshot,
+  right: ReviewPersistedStateSnapshot
+): boolean {
+  return (
+    JSON.stringify(left.hunkDecisions) === JSON.stringify(right.hunkDecisions) &&
+    JSON.stringify(left.fileDecisions) === JSON.stringify(right.fileDecisions) &&
+    JSON.stringify(left.hunkContextHashesByFile ?? {}) ===
+      JSON.stringify(right.hunkContextHashesByFile ?? {}) &&
+    JSON.stringify(left.reviewActionHistory) === JSON.stringify(right.reviewActionHistory) &&
+    JSON.stringify(left.reviewRedoHistory) === JSON.stringify(right.reviewRedoHistory)
+  );
+}
 
 import type { AppState } from '../types';
 import type {
@@ -54,6 +78,11 @@ import type {
   FileChangeWithContent,
   FileReviewDecision,
   HunkDecision,
+  ReviewDecisionPersistenceScope,
+  ReviewFileScope,
+  ReviewPersistedStateSnapshot,
+  ReviewRedoAction,
+  ReviewUndoAction,
   TaskChangePresenceState,
   TaskChangeSet,
   TaskChangeSetV2,
@@ -61,6 +90,58 @@ import type {
 import type { StateCreator } from 'zustand';
 
 const logger = createLogger('changeReviewSlice');
+
+function buildApplyDecisionPersistenceScope(
+  changeSet: ReviewChangeSetLike,
+  teamName: string,
+  taskChangeRequestOptions: TaskChangeRequestOptions | null,
+  taskId?: string,
+  memberName?: string
+): ReviewDecisionPersistenceScope | undefined {
+  const mode = taskId ? 'task' : memberName ? 'agent' : null;
+  if (!mode) return undefined;
+  if (!reviewChangeSetMatchesScope(changeSet, { teamName, taskId, memberName })) {
+    return undefined;
+  }
+  const scopeToken = buildReviewDecisionScopeToken({
+    mode,
+    taskId,
+    memberName,
+    requestSignature:
+      mode === 'task' ? buildTaskChangeSignature(taskChangeRequestOptions ?? {}) : undefined,
+    changeSet,
+  });
+  if (!scopeToken) return undefined;
+  return {
+    scopeKey: mode === 'task' ? `task-${taskId}` : `agent-${memberName}`,
+    scopeToken,
+  };
+}
+
+function buildReviewPersistedStateSnapshot(
+  state: {
+    hunkDecisions: Record<string, HunkDecision>;
+    fileDecisions: Record<string, HunkDecision>;
+    hunkContextHashesByFile: Record<string, Record<number, string>>;
+    reviewActionHistory: ReviewUndoAction[];
+    reviewRedoHistory: ReviewRedoAction[];
+  },
+  decisions: readonly FileReviewDecision[]
+): ReviewPersistedStateSnapshot {
+  const hunkContextHashesByFile = { ...state.hunkContextHashesByFile };
+  for (const decision of decisions) {
+    if (decision.reviewKey && decision.hunkContextHashes) {
+      hunkContextHashesByFile[decision.reviewKey] = decision.hunkContextHashes;
+    }
+  }
+  return {
+    hunkDecisions: { ...state.hunkDecisions },
+    fileDecisions: { ...state.fileDecisions },
+    hunkContextHashesByFile,
+    reviewActionHistory: [...state.reviewActionHistory],
+    reviewRedoHistory: structuredClone(state.reviewRedoHistory),
+  };
+}
 
 function reviewPathsEqual(left: string, right: string): boolean {
   const caseInsensitive = isWindowsReviewPath(left) || isWindowsReviewPath(right);
@@ -96,8 +177,6 @@ export interface ReviewExternalChange {
   type: 'change' | 'add' | 'unlink';
 }
 
-const MAX_REVIEW_UNDO_DEPTH = 10;
-
 /**
  * When true, rejected hunks are immediately applied to disk (no need for "Apply All Changes").
  * When false, decisions are batched and applied manually via "Apply All Changes" button.
@@ -114,9 +193,35 @@ function mapReviewError(error: unknown): string {
 
 function clearPersistDecisionTimer(scopeStorageKey: string): void {
   const timer = persistDebounceTimers.get(scopeStorageKey);
-  if (!timer) return;
-  clearTimeout(timer);
-  persistDebounceTimers.delete(scopeStorageKey);
+  if (timer) {
+    clearTimeout(timer);
+    persistDebounceTimers.delete(scopeStorageKey);
+  }
+  pendingPersistDecisionWrites.delete(scopeStorageKey);
+}
+
+function enqueuePersistDecisionWrite(
+  scopeStorageKey: string,
+  write: () => Promise<void>
+): Promise<void> {
+  const previous = persistDecisionWriteChains.get(scopeStorageKey) ?? Promise.resolve();
+  // A newer snapshot supersedes a failed older write, but must never overtake an older
+  // in-flight write or that write could later restore stale decisions on disk.
+  const current = previous.catch(() => undefined).then(write);
+  persistDecisionWriteChains.set(scopeStorageKey, current);
+  void current.then(
+    () => {
+      if (persistDecisionWriteChains.get(scopeStorageKey) === current) {
+        persistDecisionWriteChains.delete(scopeStorageKey);
+      }
+    },
+    () => {
+      if (persistDecisionWriteChains.get(scopeStorageKey) === current) {
+        persistDecisionWriteChains.delete(scopeStorageKey);
+      }
+    }
+  );
+  return current;
 }
 
 function buildPersistDecisionScopeKey(
@@ -125,13 +230,6 @@ function buildPersistDecisionScopeKey(
   scopeToken?: string
 ): string {
   return scopeToken ? `${teamName}:${scopeKey}:${scopeToken}` : `${teamName}:${scopeKey}`;
-}
-
-function clearAllPersistDecisionTimers(): void {
-  for (const timer of persistDebounceTimers.values()) {
-    clearTimeout(timer);
-  }
-  persistDebounceTimers.clear();
 }
 
 function applyTaskChangePresenceCacheUpdate(
@@ -209,6 +307,10 @@ export interface ChangeReviewSlice {
   fileChunkCounts: Record<string, number>;
   /** Undo stack for bulk review operations (Accept All / Reject All) */
   reviewUndoStack: DecisionSnapshot[];
+  /** Durable, ordered and self-contained Accept/Reject Undo history. */
+  reviewActionHistory: ReviewUndoAction[];
+  /** Durable Redo branch. Cleared by the next successful review action. */
+  reviewRedoHistory: ReviewRedoAction[];
   /** filePath -> (hunkIndex -> contextHash), persisted for robust replay */
   hunkContextHashesByFile: Record<string, Record<number, string>>;
   fileContents: Record<string, FileChangeWithContent>;
@@ -219,6 +321,9 @@ export interface ChangeReviewSlice {
   collapseUnchanged: boolean;
   applyError: string | null;
   applying: boolean;
+  decisionHydrationScopeKey: string | null;
+  decisionHydrationStatus: 'idle' | 'loading' | 'loaded' | 'error';
+  decisionRevision: number;
 
   // Editable diff state
   editedContents: Record<string, string>;
@@ -256,11 +361,28 @@ export interface ChangeReviewSlice {
   // Decision persistence actions
   loadDecisionsFromDisk: (teamName: string, scopeKey: string, scopeToken: string) => Promise<void>;
   persistDecisions: (teamName: string, scopeKey: string, scopeToken: string) => void;
+  flushDecisionsToDisk: (
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ) => Promise<boolean>;
+  quiesceDecisionPersistence: (
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string
+  ) => Promise<boolean>;
   clearDecisionsFromDisk: (
     teamName: string,
     scopeKey: string,
-    scopeToken?: string
-  ) => Promise<void>;
+    scopeToken?: string,
+    forceDiscard?: boolean
+  ) => Promise<boolean>;
+  recordDecisionRevision: (
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    revision: number
+  ) => void;
 
   // Phase 2 actions
   /**
@@ -272,9 +394,12 @@ export interface ChangeReviewSlice {
   clearHunkDecisionByOriginalIndex: (filePath: string, originalIndex: number) => void;
   setFileDecision: (filePath: string, decision: HunkDecision) => void;
   setFileChunkCount: (filePath: string, count: number) => void;
+  setReviewActionHistory: (history: ReviewUndoAction[]) => void;
+  setReviewRedoHistory: (history: ReviewRedoAction[]) => void;
   pushReviewUndoSnapshot: () => void;
   undoBulkReview: () => boolean;
-  acceptAllFile: (filePath: string) => void;
+  /** Accept only still-pending hunks. Returns false when the file has nothing pending. */
+  acceptAllFile: (filePath: string) => boolean;
   rejectAllFile: (filePath: string) => void;
   acceptAll: () => void;
   rejectAll: () => void;
@@ -284,7 +409,11 @@ export interface ChangeReviewSlice {
     memberName: string | undefined,
     filePath: string
   ) => Promise<void>;
-  applyReview: (teamName: string, taskId?: string, memberName?: string) => Promise<void>;
+  applyReview: (
+    teamName: string,
+    taskId?: string,
+    memberName?: string
+  ) => Promise<ApplyReviewResult | null>;
   applySingleFileDecision: (
     teamName: string,
     filePath: string,
@@ -313,7 +442,11 @@ export interface ChangeReviewSlice {
   updateEditedContent: (filePath: string, content: string) => void;
   discardFileEdits: (filePath: string) => void;
   discardAllEdits: () => void;
-  saveEditedFile: (filePath: string, projectPath?: string) => Promise<void>;
+  saveEditedFile: (
+    filePath: string,
+    scope: ReviewFileScope,
+    expectedCurrentContent: string | null
+  ) => Promise<void>;
 
   // Task change availability
   checkTaskHasChanges: (
@@ -392,25 +525,10 @@ function buildHunkContextHashesForFile(
   if (original === null || original === undefined) return undefined;
   if (modified === null || modified === undefined) return undefined;
 
-  const patch = structuredPatch('file', 'file', original, modified);
-  const hunks = patch.hunks ?? [];
-  if (hunks.length === 0) return undefined;
-  if (hunks.length !== expectedHunkCount) return undefined;
-
-  const out: Record<number, string> = {};
-  for (let i = 0; i < hunks.length; i++) {
-    const hunk = hunks[i];
-    const oldSideContent = hunk.lines
-      .filter((l) => !l.startsWith('+'))
-      .map((l) => l.slice(1))
-      .join('\n');
-    const newSideContent = hunk.lines
-      .filter((l) => !l.startsWith('-'))
-      .map((l) => l.slice(1))
-      .join('\n');
-    out[i] = computeDiffContextHash(oldSideContent, newSideContent);
-  }
-  return out;
+  const hashes = buildReviewChunkContextHashes(original, modified);
+  const count = Object.keys(hashes).length;
+  if (count === 0 || count !== expectedHunkCount) return undefined;
+  return hashes;
 }
 
 export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeReviewSlice> = (
@@ -490,8 +608,14 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       fileContentsLoading: {},
       fileChunkCounts: {},
       reviewUndoStack: [],
+      reviewActionHistory: [],
+      reviewRedoHistory: [],
       hunkContextHashesByFile: {},
       applyError: null,
+      applying: false,
+      decisionHydrationScopeKey: null,
+      decisionHydrationStatus: 'idle',
+      decisionRevision: 0,
       editedContents: {},
       changeSetEpoch: s.changeSetEpoch + 1,
       fileContentVersionByPath: {},
@@ -513,10 +637,15 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       fileDecisions: {},
       fileChunkCounts: {},
       reviewUndoStack: [],
+      reviewActionHistory: [],
+      reviewRedoHistory: [],
       hunkContextHashesByFile: {},
       fileContents: {},
       fileContentsLoading: {},
       editedContents: {},
+      decisionHydrationScopeKey: null,
+      decisionHydrationStatus: 'idle',
+      decisionRevision: 0,
       changeSetEpoch: s.changeSetEpoch + 1,
       fileContentVersionByPath: {},
       reviewExternalChangesByFile: {},
@@ -574,6 +703,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     fileDecisions: {},
     fileChunkCounts: {},
     reviewUndoStack: [],
+    reviewActionHistory: [],
+    reviewRedoHistory: [],
     hunkContextHashesByFile: {},
     fileContents: {},
     fileContentsLoading: {},
@@ -583,6 +714,9 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     collapseUnchanged: true,
     applyError: null,
     applying: false,
+    decisionHydrationScopeKey: null,
+    decisionHydrationStatus: 'idle',
+    decisionRevision: 0,
 
     // Editable diff initial state
     editedContents: {},
@@ -674,7 +808,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       latestAgentChangesRequestToken++;
       latestTaskChangesRequestToken++;
       latestDecisionLoadRequestToken++;
-      clearAllPersistDecisionTimers();
       set((s) => ({
         activeChangeSet: null,
         changeSetLoading: false,
@@ -685,6 +818,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         fileDecisions: {},
         fileChunkCounts: {},
         reviewUndoStack: [],
+        reviewActionHistory: [],
+        reviewRedoHistory: [],
         hunkContextHashesByFile: {},
         fileContents: {},
         fileContentsLoading: {},
@@ -693,6 +828,9 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         reviewExternalChangesByFile: {},
         applyError: null,
         applying: false,
+        decisionHydrationScopeKey: null,
+        decisionHydrationStatus: 'idle',
+        decisionRevision: 0,
         editedContents: {},
       }));
     },
@@ -701,7 +839,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       latestAgentChangesRequestToken++;
       latestTaskChangesRequestToken++;
       latestDecisionLoadRequestToken++;
-      clearAllPersistDecisionTimers();
       set((s) => ({
         activeChangeSet: null,
         changeSetLoading: false,
@@ -712,6 +849,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         fileDecisions: {},
         fileChunkCounts: {},
         reviewUndoStack: [],
+        reviewActionHistory: [],
+        reviewRedoHistory: [],
         hunkContextHashesByFile: {},
         fileContents: {},
         fileContentsLoading: {},
@@ -720,6 +859,9 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         reviewExternalChangesByFile: {},
         applyError: null,
         applying: false,
+        decisionHydrationScopeKey: null,
+        decisionHydrationStatus: 'idle',
+        decisionRevision: 0,
         editedContents: {},
       }));
     },
@@ -728,7 +870,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       latestAgentChangesRequestToken++;
       latestTaskChangesRequestToken++;
       latestDecisionLoadRequestToken++;
-      clearAllPersistDecisionTimers();
       set((s) => ({
         activeChangeSet: null,
         changeSetLoading: false,
@@ -739,6 +880,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         fileDecisions: {},
         fileChunkCounts: {},
         reviewUndoStack: [],
+        reviewActionHistory: [],
+        reviewRedoHistory: [],
         hunkContextHashesByFile: {},
         fileContents: {},
         fileContentsLoading: {},
@@ -747,6 +890,9 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         reviewExternalChangesByFile: {},
         applyError: null,
         applying: false,
+        decisionHydrationScopeKey: null,
+        decisionHydrationStatus: 'idle',
+        decisionRevision: 0,
         editedContents: {},
       }));
     },
@@ -755,10 +901,50 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
 
     loadDecisionsFromDisk: async (teamName: string, scopeKey: string, scopeToken: string) => {
       const requestToken = ++latestDecisionLoadRequestToken;
+      const hydrationScopeKey = buildPersistDecisionScopeKey(teamName, scopeKey, scopeToken);
+      const startState = get();
+      const changeSetEpoch = startState.changeSetEpoch;
+      const initialHunkDecisions = startState.hunkDecisions;
+      const initialFileDecisions = startState.fileDecisions;
+      const preserveInMemoryRecovery =
+        startState.decisionHydrationStatus === 'error' &&
+        (Object.keys(initialHunkDecisions).length > 0 ||
+          Object.keys(initialFileDecisions).length > 0);
+      set({
+        decisionHydrationScopeKey: hydrationScopeKey,
+        decisionHydrationStatus: 'loading',
+      });
       try {
         const data = await api.review.loadDecisions(teamName, scopeKey, scopeToken);
         if (requestToken !== latestDecisionLoadRequestToken) return;
-        const normalized = normalizePersistedReviewState(get().activeChangeSet?.files ?? [], {
+        const latest = get();
+        if (latest.changeSetEpoch !== changeSetEpoch) return;
+        decisionRevisionByScope.set(hydrationScopeKey, data?.revision ?? 0);
+        // A user decision made while the disk read was in flight must win over persisted state.
+        if (
+          latest.hunkDecisions !== initialHunkDecisions ||
+          latest.fileDecisions !== initialFileDecisions
+        ) {
+          set({
+            decisionHydrationScopeKey: hydrationScopeKey,
+            decisionHydrationStatus: 'error',
+            applyError:
+              'Review changed before saved decisions loaded. Reload Changes before continuing.',
+          });
+          return;
+        }
+        if (preserveInMemoryRecovery) {
+          // A choice that beat or survived a failed hydration is newer than disk.
+          // Retry verifies the store is readable, then keeps that user-owned state.
+          set({
+            decisionHydrationScopeKey: hydrationScopeKey,
+            decisionHydrationStatus: 'loaded',
+            decisionRevision: data?.revision ?? 0,
+            applyError: null,
+          });
+          return;
+        }
+        const normalized = normalizePersistedReviewState(latest.activeChangeSet?.files ?? [], {
           hunkDecisions: data?.hunkDecisions,
           fileDecisions: data?.fileDecisions,
           hunkContextHashesByFile: data?.hunkContextHashesByFile,
@@ -769,14 +955,34 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           hunkDecisions: normalized.hunkDecisions,
           fileDecisions: normalized.fileDecisions,
           hunkContextHashesByFile: normalized.hunkContextHashesByFile,
+          reviewActionHistory: data?.reviewActionHistory ?? [],
+          reviewRedoHistory: data?.reviewRedoHistory ?? [],
+          decisionHydrationScopeKey: hydrationScopeKey,
+          decisionHydrationStatus: 'loaded',
+          decisionRevision: data?.revision ?? 0,
+          applyError: null,
         });
       } catch (error) {
         if (requestToken !== latestDecisionLoadRequestToken) return;
+        const latest = get();
+        if (latest.changeSetEpoch !== changeSetEpoch) return;
+        if (
+          latest.hunkDecisions !== initialHunkDecisions ||
+          latest.fileDecisions !== initialFileDecisions
+        ) {
+          set({
+            decisionHydrationScopeKey: hydrationScopeKey,
+            decisionHydrationStatus: 'error',
+            applyError:
+              'Review changed while saved decisions failed to load. Reload Changes before continuing.',
+          });
+          return;
+        }
         logger.error('loadDecisionsFromDisk error:', error);
         set({
-          hunkDecisions: {},
-          fileDecisions: {},
-          hunkContextHashesByFile: {},
+          decisionHydrationScopeKey: hydrationScopeKey,
+          decisionHydrationStatus: 'error',
+          applyError: 'Unable to load saved review decisions. Reload Changes before reviewing.',
         });
       }
     },
@@ -789,6 +995,8 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         hunkDecisions,
         fileDecisions,
         hunkContextHashesByFile,
+        reviewActionHistory,
+        reviewRedoHistory,
         activeChangeSet,
         fileContents,
         fileChunkCounts,
@@ -819,29 +1027,163 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
 
       const persistedHunkDecisions = { ...hunkDecisions };
       const persistedFileDecisions = { ...fileDecisions };
-      const persistedHashes = { ...mergedHashes };
-
-      const timer = setTimeout(() => {
-        persistDebounceTimers.delete(scopeStorageKey);
-        void api.review.saveDecisions(
+      const persistedHashes = Object.fromEntries(
+        Object.entries(mergedHashes).map(([filePath, hashes]) => [filePath, { ...hashes }])
+      );
+      const persistedReviewActionHistory = structuredClone(reviewActionHistory);
+      const persistedReviewRedoHistory = structuredClone(reviewRedoHistory);
+      const queuedSnapshot: ReviewPersistedStateSnapshot = {
+        hunkDecisions: persistedHunkDecisions,
+        fileDecisions: persistedFileDecisions,
+        hunkContextHashesByFile: persistedHashes,
+        reviewActionHistory: persistedReviewActionHistory,
+        reviewRedoHistory: persistedReviewRedoHistory,
+      };
+      const write = async (): Promise<void> => {
+        const expectedRevision = decisionRevisionByScope.get(scopeStorageKey) ?? 0;
+        const saved = await api.review.saveDecisions(
           teamName,
           scopeKey,
           scopeToken,
           persistedHunkDecisions,
           persistedFileDecisions,
-          persistedHashes
+          persistedHashes,
+          persistedReviewActionHistory,
+          expectedRevision,
+          persistedReviewRedoHistory
+        );
+        decisionRevisionByScope.set(scopeStorageKey, saved.revision);
+        const latest = get();
+        if (
+          saved.reconciledState &&
+          latest.decisionHydrationScopeKey === scopeStorageKey &&
+          latest.decisionHydrationStatus === 'loaded'
+        ) {
+          const liveSnapshot: ReviewPersistedStateSnapshot = {
+            hunkDecisions: latest.hunkDecisions,
+            fileDecisions: latest.fileDecisions,
+            hunkContextHashesByFile: latest.hunkContextHashesByFile,
+            reviewActionHistory: latest.reviewActionHistory,
+            reviewRedoHistory: latest.reviewRedoHistory,
+          };
+          if (!reviewPersistedSnapshotsEqual(liveSnapshot, queuedSnapshot)) {
+            set({
+              decisionHydrationStatus: 'error',
+              applyError:
+                'Saved review advanced while local actions changed. Reload Changes before continuing.',
+            });
+            throw new Error('Review reconciliation raced a newer local action');
+          }
+          const normalized = normalizePersistedReviewState(
+            latest.activeChangeSet?.files ?? [],
+            saved.reconciledState
+          );
+          set({
+            hunkDecisions: normalized.hunkDecisions,
+            fileDecisions: normalized.fileDecisions,
+            hunkContextHashesByFile: normalized.hunkContextHashesByFile,
+            reviewActionHistory: saved.reconciledState.reviewActionHistory,
+            reviewRedoHistory: saved.reconciledState.reviewRedoHistory,
+            decisionRevision: saved.revision,
+          });
+          return;
+        }
+        if (
+          latest.decisionHydrationScopeKey === scopeStorageKey &&
+          latest.decisionHydrationStatus === 'loaded'
+        ) {
+          set({ decisionRevision: saved.revision });
+        }
+      };
+      pendingPersistDecisionWrites.set(scopeStorageKey, write);
+
+      const timer = setTimeout(() => {
+        persistDebounceTimers.delete(scopeStorageKey);
+        pendingPersistDecisionWrites.delete(scopeStorageKey);
+        void enqueuePersistDecisionWrite(scopeStorageKey, write).catch((error) =>
+          logger.error('persistDecisions error:', error)
         );
       }, PERSIST_DEBOUNCE_MS);
 
       persistDebounceTimers.set(scopeStorageKey, timer);
     },
 
-    clearDecisionsFromDisk: async (teamName: string, scopeKey: string, scopeToken?: string) => {
-      clearPersistDecisionTimer(buildPersistDecisionScopeKey(teamName, scopeKey, scopeToken));
+    flushDecisionsToDisk: async (teamName: string, scopeKey: string, scopeToken: string) => {
+      const scopeStorageKey = buildPersistDecisionScopeKey(teamName, scopeKey, scopeToken);
+      const write = pendingPersistDecisionWrites.get(scopeStorageKey);
       try {
-        await api.review.clearDecisions(teamName, scopeKey, scopeToken);
+        if (write) {
+          const timer = persistDebounceTimers.get(scopeStorageKey);
+          if (timer) clearTimeout(timer);
+          persistDebounceTimers.delete(scopeStorageKey);
+          pendingPersistDecisionWrites.delete(scopeStorageKey);
+          await enqueuePersistDecisionWrite(scopeStorageKey, write);
+        } else {
+          await persistDecisionWriteChains.get(scopeStorageKey);
+        }
+        return true;
+      } catch (error) {
+        logger.error('flushDecisionsToDisk error:', error);
+        return false;
+      }
+    },
+
+    quiesceDecisionPersistence: async (teamName: string, scopeKey: string, scopeToken: string) => {
+      const scopeStorageKey = buildPersistDecisionScopeKey(teamName, scopeKey, scopeToken);
+      // Drop a debounced post-click snapshot: the WAL will commit that state only
+      // after its disk effects. Already-started older writes must finish first.
+      clearPersistDecisionTimer(scopeStorageKey);
+      try {
+        await persistDecisionWriteChains.get(scopeStorageKey);
+        const revision = decisionRevisionByScope.get(scopeStorageKey) ?? 0;
+        if (get().decisionHydrationScopeKey === scopeStorageKey) {
+          set({ decisionRevision: revision });
+        }
+        return true;
+      } catch (error) {
+        logger.error('quiesceDecisionPersistence error:', error);
+        return false;
+      }
+    },
+
+    clearDecisionsFromDisk: async (
+      teamName: string,
+      scopeKey: string,
+      scopeToken?: string,
+      forceDiscard = false
+    ) => {
+      const scopeStorageKey = buildPersistDecisionScopeKey(teamName, scopeKey, scopeToken);
+      clearPersistDecisionTimer(scopeStorageKey);
+      try {
+        await enqueuePersistDecisionWrite(scopeStorageKey, async () => {
+          const cleared = await api.review.clearDecisions(
+            teamName,
+            scopeKey,
+            scopeToken,
+            forceDiscard ? undefined : (decisionRevisionByScope.get(scopeStorageKey) ?? 0)
+          );
+          decisionRevisionByScope.set(scopeStorageKey, cleared.revision);
+          if (get().decisionHydrationScopeKey === scopeStorageKey) {
+            set({ decisionRevision: cleared.revision });
+          }
+        });
+        return true;
       } catch (error) {
         logger.error('clearDecisionsFromDisk error:', error);
+        return false;
+      }
+    },
+
+    recordDecisionRevision: (
+      teamName: string,
+      scopeKey: string,
+      scopeToken: string,
+      revision: number
+    ) => {
+      const scopeStorageKey = buildPersistDecisionScopeKey(teamName, scopeKey, scopeToken);
+      decisionRevisionByScope.set(scopeStorageKey, revision);
+      if (get().decisionHydrationScopeKey === scopeStorageKey) {
+        set({ decisionRevision: revision });
       }
     },
 
@@ -902,6 +1244,14 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       }));
     },
 
+    setReviewActionHistory: (history: ReviewUndoAction[]) => {
+      set({ reviewActionHistory: history });
+    },
+
+    setReviewRedoHistory: (history: ReviewRedoAction[]) => {
+      set({ reviewRedoHistory: history });
+    },
+
     pushReviewUndoSnapshot: () => {
       const state = get();
       const snapshot: DecisionSnapshot = {
@@ -909,9 +1259,6 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         fileDecisions: { ...state.fileDecisions },
       };
       const stack = [...state.reviewUndoStack, snapshot];
-      if (stack.length > MAX_REVIEW_UNDO_DEPTH) {
-        stack.shift();
-      }
       set({ reviewUndoStack: stack });
     },
 
@@ -931,18 +1278,51 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     acceptAllFile: (filePath: string) => {
       const state = get();
       const file = findReviewFileByPath(state.activeChangeSet?.files, filePath);
-      if (!file) return;
+      if (!file) return false;
 
       const count = getFileHunkCount(file.filePath, file.snippets.length, state.fileChunkCounts);
       const newHunkDecisions = { ...state.hunkDecisions };
       const reviewKey = getFileReviewKey(file);
+      const fileDecision =
+        state.fileDecisions[reviewKey] ?? state.fileDecisions[file.filePath] ?? 'pending';
+      if (fileDecision !== 'pending') return false;
+
+      if (count === 0) {
+        set({
+          fileDecisions: { ...state.fileDecisions, [reviewKey]: 'accepted' },
+        });
+        return true;
+      }
+
+      let acceptedPending = false;
+      let hasRejected = false;
       for (let i = 0; i < count; i++) {
-        newHunkDecisions[buildHunkDecisionKey(reviewKey, i)] = 'accepted';
+        const key = buildHunkDecisionKey(reviewKey, i);
+        const decision =
+          state.hunkDecisions[key] ??
+          state.hunkDecisions[buildHunkDecisionKey(file.filePath, i)] ??
+          'pending';
+        if (decision === 'rejected') {
+          hasRejected = true;
+        } else if (decision === 'pending') {
+          newHunkDecisions[key] = 'accepted';
+          acceptedPending = true;
+        }
+      }
+
+      if (!acceptedPending) return false;
+
+      const newFileDecisions = { ...state.fileDecisions };
+      if (hasRejected) {
+        delete newFileDecisions[reviewKey];
+      } else {
+        newFileDecisions[reviewKey] = 'accepted';
       }
       set({
         hunkDecisions: newHunkDecisions,
-        fileDecisions: { ...state.fileDecisions, [reviewKey]: 'accepted' },
+        fileDecisions: newFileDecisions,
       });
+      return true;
     },
 
     rejectAllFile: (filePath: string) => {
@@ -1099,40 +1479,76 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
     },
 
     applyReview: async (teamName: string, taskId?: string, memberName?: string) => {
+      const applyStartedAtMs = Date.now();
+      let applyDecision: 'approve' | 'request_changes' | 'mixed' | 'unknown' = 'unknown';
+      let applyFilesCount: number | null = null;
+      let applyAcceptedCount: number | null = null;
+      let applyRejectedCount: number | null = null;
+      const startState = get();
+      const changeSetEpoch = startState.changeSetEpoch;
+      const current = startState.activeChangeSet;
+      if (!reviewChangeSetMatchesScope(current, { teamName, taskId, memberName })) {
+        set({ applyError: 'Review scope changed. Reload Changes before applying.' });
+        return null;
+      }
+      const currentFingerprint = getReviewChangeSetIdentityToken(current);
+      const isCurrentScope = (): boolean => {
+        const latest = get();
+        return (
+          latest.changeSetEpoch === changeSetEpoch &&
+          reviewChangeSetMatchesScope(latest.activeChangeSet, {
+            teamName,
+            taskId,
+            memberName,
+          }) &&
+          getReviewChangeSetIdentityToken(latest.activeChangeSet) === currentFingerprint
+        );
+      };
+
       set({ applying: true, applyError: null });
 
       try {
         // Stale check: re-fetch changes and compare content fingerprint
-        const state = get();
-        const current = state.activeChangeSet;
-        const currentFingerprint = getReviewChangeSetIdentityToken(current);
         const staleMessage =
           'Changes have been updated since you started reviewing. Please re-review.';
 
-        if (memberName && current) {
-          const fresh = await api.review.getAgentChanges(teamName, memberName);
-          if (currentFingerprint !== getReviewChangeSetIdentityToken(fresh)) {
-            replaceActiveChangeSetAfterStaleRefresh(fresh, staleMessage);
-            return;
-          }
-        } else if (taskId && current) {
+        if (taskId && current) {
           const fresh = await api.review.getTaskChanges(teamName, taskId, {
-            ...(state.activeTaskChangeRequestOptions ?? {}),
+            ...(startState.activeTaskChangeRequestOptions ?? {}),
             forceFresh: true,
           });
+          if (!isCurrentScope()) return null;
+          if (!reviewChangeSetMatchesScope(fresh, { teamName, taskId })) {
+            set({ applyError: 'Review scope changed. Reload Changes before applying.' });
+            return null;
+          }
           if (currentFingerprint !== getReviewChangeSetIdentityToken(fresh)) {
             replaceActiveChangeSetAfterStaleRefresh(fresh, staleMessage);
-            return;
+            return null;
+          }
+        } else if (memberName && current) {
+          const fresh = await api.review.getAgentChanges(teamName, memberName);
+          if (!isCurrentScope()) return null;
+          if (!reviewChangeSetMatchesScope(fresh, { teamName, memberName })) {
+            set({ applyError: 'Review scope changed. Reload Changes before applying.' });
+            return null;
+          }
+          if (currentFingerprint !== getReviewChangeSetIdentityToken(fresh)) {
+            replaceActiveChangeSetAfterStaleRefresh(fresh, staleMessage);
+            return null;
           }
         }
+
+        if (!isCurrentScope()) return null;
 
         // Build FileReviewDecision[] from hunkDecisions/fileDecisions
         const { hunkDecisions, fileDecisions, fileChunkCounts, activeChangeSet, fileContents } =
           get();
         if (!activeChangeSet) {
           set({ applying: false });
-          return;
+          return null;
         }
+        applyFilesCount = activeChangeSet.files.length;
 
         const decisions: FileReviewDecision[] = [];
         let acceptedCount = 0;
@@ -1167,6 +1583,13 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           const hasRejected =
             fileDecision === 'rejected' || Object.values(hunkDecs).some((d) => d === 'rejected');
           if (hasRejected) {
+            if (file.filePath in get().editedContents) {
+              set({
+                applying: false,
+                applyError: 'Save or discard manual edits before reviewing this file.',
+              });
+              return null;
+            }
             requestChangesCount++;
             const content = fileContents[file.filePath];
             const hunkContextHashes =
@@ -1179,21 +1602,20 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
                 : undefined;
             decisions.push({
               filePath: file.filePath,
+              reviewKey,
               fileDecision,
               hunkDecisions: hunkDecs,
+              contentSnapshotToken: content?.reviewSnapshotToken,
               hunkContextHashes,
-              // Provide optional context so main can apply without re-resolving.
-              // If full contents are missing (lazy not loaded yet), still pass snippets.
-              snippets: content?.snippets ?? file.snippets,
-              originalFullContent: content?.originalFullContent,
-              modifiedFullContent: content?.modifiedFullContent,
-              isNewFile: content?.isNewFile ?? file.isNewFile,
             });
           }
         }
 
         if (decisions.length === 0) {
           if (acceptedCount > 0) {
+            applyDecision = 'approve';
+            applyAcceptedCount = acceptedCount;
+            applyRejectedCount = rejectedCount;
             recordReviewSubmit({
               decision: 'approve',
               filesCount: activeChangeSet.files.length,
@@ -1201,34 +1623,112 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
               rejectedCount,
               requestChangesCount,
             });
+            recordReviewApplyEnd({
+              success: true,
+              decision: applyDecision,
+              filesCount: activeChangeSet.files.length,
+              acceptedCount,
+              rejectedCount,
+              durationMs: elapsedMsSince(applyStartedAtMs),
+              errorClass: 'none',
+            });
           }
           set({ applying: false });
-          return;
+          return null;
         }
 
+        const decisionPersistenceScope = buildApplyDecisionPersistenceScope(
+          activeChangeSet,
+          teamName,
+          startState.activeTaskChangeRequestOptions,
+          taskId,
+          memberName
+        );
+        if (
+          decisionPersistenceScope &&
+          !(await get().quiesceDecisionPersistence(
+            teamName,
+            decisionPersistenceScope.scopeKey,
+            decisionPersistenceScope.scopeToken
+          ))
+        ) {
+          throw new Error('Unable to finish saving the previous review state. Retry Apply.');
+        }
         const request: ApplyReviewRequest = {
           teamName,
           taskId,
           memberName,
+          decisionPersistenceScope,
+          persistedState: buildReviewPersistedStateSnapshot(get(), decisions),
+          ...(decisionPersistenceScope ? { expectedDecisionRevision: get().decisionRevision } : {}),
           decisions,
         };
 
-        await api.review.applyDecisions(request);
+        const result = await api.review.applyDecisions(request);
+        if (!isCurrentScope()) return result;
+        if (result.decisionRevision !== undefined && decisionPersistenceScope) {
+          get().recordDecisionRevision(
+            teamName,
+            decisionPersistenceScope.scopeKey,
+            decisionPersistenceScope.scopeToken,
+            result.decisionRevision
+          );
+        }
+        if (result.errors.length > 0) {
+          set({
+            applying: false,
+            applyError: result.errors.map((entry) => entry.error).join('\n'),
+          });
+          recordReviewApplyEnd({
+            success: false,
+            decision: 'request_changes',
+            filesCount: activeChangeSet.files.length,
+            acceptedCount,
+            rejectedCount,
+            durationMs: elapsedMsSince(applyStartedAtMs),
+            errorClass: result.conflicts > 0 ? 'validation' : 'unknown',
+          });
+          return result;
+        }
+        applyDecision = acceptedCount > 0 && rejectedCount > 0 ? 'mixed' : 'request_changes';
+        applyAcceptedCount = acceptedCount;
+        applyRejectedCount = rejectedCount;
         recordReviewSubmit({
-          decision: acceptedCount > 0 && rejectedCount > 0 ? 'mixed' : 'request_changes',
+          decision: applyDecision,
           filesCount: activeChangeSet.files.length,
           acceptedCount,
           rejectedCount,
           requestChangesCount,
         });
+        recordReviewApplyEnd({
+          success: true,
+          decision: applyDecision,
+          filesCount: activeChangeSet.files.length,
+          acceptedCount,
+          rejectedCount,
+          durationMs: elapsedMsSince(applyStartedAtMs),
+          errorClass: 'none',
+        });
 
         set({ applying: false });
+        return result;
       } catch (error) {
+        recordReviewApplyEnd({
+          success: false,
+          decision: applyDecision,
+          filesCount: applyFilesCount ?? get().activeChangeSet?.files.length ?? null,
+          acceptedCount: applyAcceptedCount,
+          rejectedCount: applyRejectedCount,
+          durationMs: elapsedMsSince(applyStartedAtMs),
+          errorClass: classifyAnalyticsError(error),
+        });
         logger.error('applyReview error:', error);
+        if (!isCurrentScope()) return null;
         set({
           applying: false,
           applyError: mapReviewError(error),
         });
+        return null;
       }
     },
 
@@ -1238,12 +1738,39 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       taskId?: string,
       memberName?: string
     ) => {
-      const { hunkDecisions, fileDecisions, fileChunkCounts, activeChangeSet, fileContents } =
-        get();
-      if (!activeChangeSet) return null;
+      const startState = get();
+      const {
+        hunkDecisions,
+        fileDecisions,
+        fileChunkCounts,
+        activeChangeSet,
+        fileContents,
+        changeSetEpoch,
+      } = startState;
+      if (!reviewChangeSetMatchesScope(activeChangeSet, { teamName, taskId, memberName })) {
+        set({ applyError: 'Review scope changed. Reload Changes before applying.' });
+        return null;
+      }
 
       const file = findReviewFileByPath(activeChangeSet.files, filePath);
       if (!file) return null;
+      if (file.filePath in startState.editedContents || filePath in startState.editedContents) {
+        set({ applyError: 'Save or discard manual edits before reviewing this file.' });
+        return null;
+      }
+      const scopeFingerprint = getReviewChangeSetIdentityToken(activeChangeSet);
+      const isCurrentScope = (): boolean => {
+        const latest = get();
+        return (
+          latest.changeSetEpoch === changeSetEpoch &&
+          reviewChangeSetMatchesScope(latest.activeChangeSet, {
+            teamName,
+            taskId,
+            memberName,
+          }) &&
+          getReviewChangeSetIdentityToken(latest.activeChangeSet) === scopeFingerprint
+        );
+      };
 
       const reviewKey = getFileReviewKey(file);
       const fileDecision = fileDecisions[reviewKey] ?? 'pending';
@@ -1258,6 +1785,17 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
       const hasRejected =
         fileDecision === 'rejected' || Object.values(hunkDecs).some((d) => d === 'rejected');
       if (!hasRejected) return null;
+      set({ applyError: null });
+
+      const applyStartedAtMs = Date.now();
+      const acceptedCount =
+        fileDecision === 'accepted'
+          ? count
+          : Object.values(hunkDecs).filter((decision) => decision === 'accepted').length;
+      const rejectedCount =
+        fileDecision === 'rejected'
+          ? count
+          : Object.values(hunkDecs).filter((decision) => decision === 'rejected').length;
 
       try {
         const content = fileContents[file.filePath] ?? fileContents[filePath];
@@ -1275,27 +1813,86 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
                 innerBaseCount
               )
             : undefined;
+        const decision: FileReviewDecision = {
+          filePath: file.filePath,
+          reviewKey,
+          fileDecision,
+          hunkDecisions: hunkDecs,
+          contentSnapshotToken: content?.reviewSnapshotToken,
+          hunkContextHashes,
+        };
+        const decisionPersistenceScope = buildApplyDecisionPersistenceScope(
+          activeChangeSet,
+          teamName,
+          startState.activeTaskChangeRequestOptions,
+          taskId,
+          memberName
+        );
+        if (
+          decisionPersistenceScope &&
+          !(await get().quiesceDecisionPersistence(
+            teamName,
+            decisionPersistenceScope.scopeKey,
+            decisionPersistenceScope.scopeToken
+          ))
+        ) {
+          throw new Error('Unable to finish saving the previous review state. Retry Apply.');
+        }
         const result = await api.review.applyDecisions({
           teamName,
           taskId,
           memberName,
-          decisions: [
-            {
-              filePath: file.filePath,
-              fileDecision,
-              hunkDecisions: hunkDecs,
-              hunkContextHashes,
-              snippets: content?.snippets ?? file.snippets,
-              originalFullContent: content?.originalFullContent,
-              modifiedFullContent: content?.modifiedFullContent,
-              isNewFile: content?.isNewFile ?? file.isNewFile,
-            },
-          ],
+          decisionPersistenceScope,
+          persistedState: buildReviewPersistedStateSnapshot(get(), [decision]),
+          ...(decisionPersistenceScope ? { expectedDecisionRevision: get().decisionRevision } : {}),
+          decisions: [decision],
+        });
+        if (!isCurrentScope()) return result;
+        if (result.decisionRevision !== undefined && decisionPersistenceScope) {
+          get().recordDecisionRevision(
+            teamName,
+            decisionPersistenceScope.scopeKey,
+            decisionPersistenceScope.scopeToken,
+            result.decisionRevision
+          );
+        }
+        if (result.errors.length > 0) {
+          set({ applyError: result.errors.map((entry) => entry.error).join('\n') });
+          recordReviewApplyEnd({
+            success: false,
+            decision: 'single_file',
+            filesCount: 1,
+            acceptedCount,
+            rejectedCount,
+            durationMs: elapsedMsSince(applyStartedAtMs),
+            errorClass: result.conflicts > 0 ? 'validation' : 'unknown',
+          });
+          return result;
+        }
+        recordReviewApplyEnd({
+          success: true,
+          decision: 'single_file',
+          filesCount: 1,
+          acceptedCount,
+          rejectedCount,
+          durationMs: elapsedMsSince(applyStartedAtMs),
+          errorClass: 'none',
         });
         return result;
       } catch (error) {
+        recordReviewApplyEnd({
+          success: false,
+          decision: 'single_file',
+          filesCount: 1,
+          acceptedCount,
+          rejectedCount,
+          durationMs: elapsedMsSince(applyStartedAtMs),
+          errorClass: classifyAnalyticsError(error),
+        });
         logger.error('applySingleFileDecision error:', error);
-        set({ applyError: mapReviewError(error) });
+        if (isCurrentScope()) {
+          set({ applyError: mapReviewError(error) });
+        }
         return null;
       }
     },
@@ -1446,15 +2043,11 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         const reviewKey = getReviewKeyForFilePath(s.activeChangeSet?.files, filePath);
         const prefix = `${reviewKey}:`;
         for (const key of Object.keys(nextHunkDecisions)) {
-          if (key.startsWith(prefix) && nextHunkDecisions[key] === 'rejected') {
-            delete nextHunkDecisions[key];
-          }
+          if (key.startsWith(prefix)) delete nextHunkDecisions[key];
         }
 
         const nextFileDecisions = { ...s.fileDecisions };
-        if (nextFileDecisions[reviewKey] === 'rejected') {
-          delete nextFileDecisions[reviewKey];
-        }
+        delete nextFileDecisions[reviewKey];
 
         const nextEditedContents = { ...s.editedContents };
         delete nextEditedContents[filePath];
@@ -1525,8 +2118,14 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
 
     discardAllEdits: () => set({ editedContents: {} }),
 
-    saveEditedFile: async (filePath: string, projectPath?: string) => {
+    saveEditedFile: async (
+      filePath: string,
+      scope: ReviewFileScope,
+      expectedCurrentContent: string | null
+    ) => {
       const state = get();
+      const changeSetEpoch = state.changeSetEpoch;
+      const scopeFingerprint = getReviewChangeSetIdentityToken(state.activeChangeSet);
       const fileEntry = findReviewFileByPath(state.activeChangeSet?.files, filePath);
       const canonicalFilePath = fileEntry?.filePath ?? filePath;
       const hasRequestedDraft = filePath in state.editedContents;
@@ -1551,8 +2150,14 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
         },
       }));
       try {
-        await api.review.saveEditedFile(canonicalFilePath, content, projectPath);
+        await api.review.saveEditedFile(scope, canonicalFilePath, content, expectedCurrentContent);
         set((s) => {
+          if (
+            s.changeSetEpoch !== changeSetEpoch ||
+            getReviewChangeSetIdentityToken(s.activeChangeSet) !== scopeFingerprint
+          ) {
+            return s;
+          }
           const aliases = new Set([filePath, canonicalFilePath]);
           addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.editedContents);
           addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileChunkCounts);
@@ -1571,7 +2176,11 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           addMatchingReviewPathAliases(aliases, filePath, canonicalFilePath, s.fileContents);
 
           const nextEdited = { ...s.editedContents };
-          for (const alias of aliases) delete nextEdited[alias];
+          const currentDraft = s.editedContents[filePath] ?? s.editedContents[canonicalFilePath];
+          const draftStillMatchesSavedContent = currentDraft === content;
+          if (draftStillMatchesSavedContent) {
+            for (const alias of aliases) delete nextEdited[alias];
+          }
 
           const nextFileChunkCounts = { ...s.fileChunkCounts };
           for (const alias of aliases) delete nextFileChunkCounts[alias];
@@ -1580,6 +2189,19 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
           const reviewKey = getReviewKeyForFilePath(s.activeChangeSet?.files, canonicalFilePath);
           delete nextHunkContextHashesByFile[reviewKey];
           for (const alias of aliases) delete nextHunkContextHashesByFile[alias];
+
+          // A manual Save finalizes the user's current file version. Previously stored
+          // decisions refer to the pre-edit diff and cannot be replayed or undone safely.
+          const decisionPrefixes = new Set([reviewKey, ...aliases].map((key) => `${key}:`));
+          const nextHunkDecisions = { ...s.hunkDecisions };
+          for (const key of Object.keys(nextHunkDecisions)) {
+            if ([...decisionPrefixes].some((prefix) => key.startsWith(prefix))) {
+              delete nextHunkDecisions[key];
+            }
+          }
+          const nextFileDecisions = { ...s.fileDecisions };
+          delete nextFileDecisions[reviewKey];
+          for (const alias of aliases) delete nextFileDecisions[alias];
 
           const nextReviewExternalChangesByFile = { ...s.reviewExternalChangesByFile };
           for (const alias of aliases) delete nextReviewExternalChangesByFile[alias];
@@ -1604,13 +2226,21 @@ export const createChangeReviewSlice: StateCreator<AppState, [], [], ChangeRevie
             editedContents: nextEdited,
             fileChunkCounts: nextFileChunkCounts,
             hunkContextHashesByFile: nextHunkContextHashesByFile,
+            hunkDecisions: nextHunkDecisions,
+            fileDecisions: nextFileDecisions,
             fileContents: nextContents,
             reviewExternalChangesByFile: nextReviewExternalChangesByFile,
             applying: false,
           };
         });
       } catch (error) {
-        set({ applying: false, applyError: mapReviewError(error) });
+        const latest = get();
+        if (
+          latest.changeSetEpoch === changeSetEpoch &&
+          getReviewChangeSetIdentityToken(latest.activeChangeSet) === scopeFingerprint
+        ) {
+          set({ applying: false, applyError: mapReviewError(error) });
+        }
       }
     },
 

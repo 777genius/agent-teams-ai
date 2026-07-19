@@ -96,10 +96,20 @@ export function isQuotaRetryMessage(text: string | undefined): boolean {
     lower.includes('quota will reset after') ||
     lower.includes('exhausted your capacity on this model') ||
     lower.includes('resource exhausted') ||
+    lower.includes('resource_exhausted') ||
+    lower.includes('resource-exhausted') ||
+    lower.includes('resourceexhausted') ||
+    lower.includes('usage limit') ||
+    lower.includes('freeusagelimit') ||
+    lower.includes('free_usage_limit') ||
+    lower.includes('free-usage-limit') ||
     lower.includes('model cooldown') ||
     lower.includes('cooling down') ||
     lower.includes('rate limit') ||
-    lower.includes('rate_limit')
+    lower.includes('rate_limit') ||
+    lower.includes('rate-limit') ||
+    lower.includes('ratelimiterror') ||
+    /\bgrpc[_\s-]*code["']?\s*(?::|=|is)\s*["']?8\b/.test(lower)
   );
 }
 

@@ -1164,6 +1164,45 @@ describe('terminal workspace panel fixture-e2e', () => {
     expect(getLatestScreenCommandMetadata()[0]?.durationMs).toBeGreaterThanOrEqual(0);
   });
 
+  it('keeps a fast command settled when transport acknowledgement arrives after completion', async () => {
+    const tabs = [
+      createTab('tab-1', 'Terminal UI Smoke', 'pane-1'),
+      createTab('tab-prewarmed', '__tp_prewarmed_shell__', 'pane-prewarmed'),
+    ];
+    nextSnapshot = createWorkspaceSnapshot({ tabs });
+    await renderPanel();
+
+    const eventDetail = {
+      clientEventId: 'fast-command',
+      command: "print 'hello world'",
+      paneId: 'pane-1',
+      sessionId: 'session-1',
+      startedAtMs: Date.now() - 120,
+    };
+    await dispatchCommandDockEvent('tp-terminal-command-started', eventDetail);
+
+    currentKernel().__snapshot = createWorkspaceSnapshot({
+      focusedLines: [
+        { text: "print 'hello world'" },
+        { text: 'hello world' },
+        { text: '~/dev/projects/claude/claude_team %' },
+      ],
+      sequence: 44,
+      tabs,
+    });
+    await renderPanel();
+
+    const settledDuration = getLatestScreenCommandMetadata()[0]?.durationMs;
+    expect(getLatestScreenCommandMetadata()[0]).toMatchObject({ status: 'succeeded' });
+
+    await dispatchCommandDockEvent('tp-terminal-command-submitted', eventDetail);
+
+    expect(getLatestScreenCommandMetadata()[0]).toMatchObject({
+      durationMs: settledDuration,
+      status: 'succeeded',
+    });
+  });
+
   it('settles from restored history when the focused screen is stale', async () => {
     const tabs = [
       createTab('tab-1', 'Terminal UI Smoke', 'pane-1'),

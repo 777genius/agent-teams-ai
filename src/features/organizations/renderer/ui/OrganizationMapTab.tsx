@@ -11,6 +11,7 @@ import {
 } from '@renderer/components/ui/select';
 import { Bot, Building2, Link2, Network, Pencil, RadioTower, RefreshCw, Users } from 'lucide-react';
 
+import { DEFAULT_ORGANIZATION_MAP_LAYOUT_MODE } from '../adapters/organizationMapLayout';
 import { getOrganizationIdForNodeId } from '../adapters/organizationMapViewModel';
 import { useOrganizationCreateTeamDialog } from '../hooks/useOrganizationCreateTeamDialog';
 import { useOrganizationMap } from '../hooks/useOrganizationMap';
@@ -40,7 +41,9 @@ export const OrganizationMapTab = ({
   const { t } = useAppTranslation('team');
   const [collapsedNodeIds, setCollapsedNodeIds] = useState<ReadonlySet<string>>(() => new Set());
   const [editMode, setEditMode] = useState(false);
-  const [layoutMode, setLayoutMode] = useState<GraphLayoutMode>('grid-under-lead');
+  const [layoutMode, setLayoutMode] = useState<GraphLayoutMode>(
+    DEFAULT_ORGANIZATION_MAP_LAYOUT_MODE
+  );
   const [mapScope, setMapScope] = useState<OrganizationMapScope>('all');
   const [activeOrganizationId, setActiveOrganizationId] = useState<string | undefined>(undefined);
   const [createTeamPlacement, setCreateTeamPlacement] =
@@ -161,6 +164,26 @@ export const OrganizationMapTab = ({
       }
     },
     [mapScope, setSelectedNodeId, viewModel]
+  );
+  const revealOrganizationNode = useCallback(
+    (nodeId: string) => {
+      if (!viewModel) return;
+      setCollapsedNodeIds((current) => {
+        const next = new Set(current);
+        const seen = new Set<string>();
+        let currentNodeId: string | undefined = nodeId;
+        while (currentNodeId && !seen.has(currentNodeId)) {
+          seen.add(currentNodeId);
+          const parentNodeId = viewModel.parentNodeIdByChildId.get(currentNodeId);
+          if (!parentNodeId) break;
+          next.delete(parentNodeId);
+          currentNodeId = parentNodeId;
+        }
+        return next;
+      });
+      selectOrganizationNode(nodeId);
+    },
+    [selectOrganizationNode, viewModel]
   );
 
   return (
@@ -291,6 +314,7 @@ export const OrganizationMapTab = ({
               showSelectedTeamDetails={!editMode}
               onLayoutModeChange={setLayoutMode}
               onSelectNode={selectOrganizationNode}
+              onRevealNode={revealOrganizationNode}
               onToggleNodeCollapse={toggleNodeCollapse}
             />
           ) : (

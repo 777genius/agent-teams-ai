@@ -16,6 +16,7 @@ import {
   OPENCODE_APP_MCP_UNREACHABLE_DIAGNOSTIC,
   OPENCODE_RUNTIME_BINARY_UNREACHABLE_DIAGNOSTIC,
   promoteOpenCodePersistedFailureReasonsFromDiagnostics,
+  selectOpenCodeLaunchFailureDiagnostic,
   selectOpenCodeModelPreparePrimaryReason,
   selectOpenCodePersistedFailureReasonFromDiagnostics,
   selectOpenCodePrepareProviderDiagnostic,
@@ -67,6 +68,10 @@ describe('TeamProvisioningOpenCodeDiagnosticsPolicy', () => {
     expect(
       hasRealOpenCodeFailureDiagnostic("cursor-acp error: You've hit your Cursor usage limit")
     ).toBe(true);
+    expect(hasRealOpenCodeFailureDiagnostic('grpc_code=RESOURCE_EXHAUSTED')).toBe(true);
+    expect(hasRealOpenCodeFailureDiagnostic('{"grpcCode":8}')).toBe(true);
+    expect(hasRealOpenCodeFailureDiagnostic('HTTP 429 Too Many Requests')).toBe(true);
+    expect(hasRealOpenCodeFailureDiagnostic('{"usage":{"input_tokens":429}}')).toBe(false);
     expect(
       hasRealOpenCodeLaunchDiagnostic(
         makeMember({ runtimeDiagnostic: 'OpenCode bridge reported member launch failure' })
@@ -136,12 +141,35 @@ describe('TeamProvisioningOpenCodeDiagnosticsPolicy', () => {
         'OpenCode command timed out after 10000ms',
         'CLI-authenticated providers missing from live host (github-copilot)',
         'OpenCode session status busy',
+        'OpenCode prompt start exposed a terminal provider error in 1700ms',
+        'OpenCode retry status exposed a terminal provider error',
+        'OpenCode session messages request exposed a terminal provider error',
+        'OpenCode retry/error payload exposed a terminal provider failure in 1800ms',
+        'OpenCode assistant payload exposed a terminal provider failure in 1900ms',
+        'Cursor native failure probe will retry after a transient failure in 2000ms',
+        'Cursor native execution preflight hit a transient failure; falling back to the OpenCode execution probe',
+        'Cursor native failure probe failed: temporary spawn failure',
+        'Cursor native failure probe confirmed a terminal provider error in 2150ms',
+        'Connection reset by server',
         'opencode_app_mcp_tool_proof_persisted_cache_hit',
         cursorQuota,
       ],
     });
 
     expect(selectOpenCodePersistedFailureReasonFromDiagnostics(member)).toBe(cursorQuota);
+  });
+
+  it('selects a member quota failure over unrelated launch diagnostics', () => {
+    const cursorQuota = "cursor-acp error: You've hit your Cursor usage limit";
+
+    expect(
+      selectOpenCodeLaunchFailureDiagnostic([
+        'CLI-authenticated providers missing from live host (github-copilot)',
+        'OpenCode session status busy',
+        'opencode_app_mcp_tool_proof_persisted_cache_hit',
+        cursorQuota,
+      ])
+    ).toBe(cursorQuota);
   });
 
   it('filters stale overlay diagnostics and recognizes file lock timeouts', () => {

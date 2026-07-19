@@ -8,6 +8,7 @@ import { cn } from '@renderer/lib/utils';
 import { browserGridLayoutRepository } from '@renderer/services/layout-system/BrowserGridLayoutRepository';
 
 import { KanbanColumn } from './KanbanColumn';
+import { KanbanTaskCardSkeleton } from './KanbanTaskCardSkeleton';
 
 import type { PersistedGridLayoutItem } from '@renderer/services/layout-system/gridLayoutTypes';
 import type { KanbanColumnId } from '@shared/types';
@@ -16,7 +17,7 @@ import type { Layout, LayoutItem, ResizeHandleAxis } from 'react-grid-layout/leg
 
 const GRID_COLS = 12;
 const GRID_ROW_HEIGHT = 18;
-const GRID_MARGIN: [number, number] = [12, 12];
+const GRID_MARGIN: [number, number] = [0, 12];
 const DEFAULT_ITEM_WIDTH = 4;
 const DEFAULT_ITEM_HEIGHT_PX = 400;
 const DEFAULT_ITEM_HEIGHT = Math.max(
@@ -36,8 +37,7 @@ export interface KanbanGridColumn {
   title: string;
   count: number;
   icon?: React.ReactNode;
-  headerBg?: string;
-  bodyBg?: string;
+  accentColor: string;
   content: React.ReactNode;
   showAddButton?: boolean;
   skeletonCards?: {
@@ -132,32 +132,6 @@ function renderResizeHandle(axis: ResizeHandleAxis, ref: Ref<HTMLElement>): Reac
   );
 }
 
-const KanbanTaskCardSkeleton = ({ height }: { height: number }): ReactElement => (
-  <div
-    className="relative shrink-0 overflow-hidden rounded-md border border-[var(--color-border)] bg-white dark:bg-[var(--color-surface-raised)]"
-    style={{ height }}
-  >
-    <div className="bg-[var(--color-surface-overlay)]/30 absolute left-[3px] top-[4px] h-2 w-14 rounded" />
-    <div className="bg-[var(--color-surface-overlay)]/25 absolute right-[6px] top-[4px] h-5 w-16 rounded-full" />
-    <div className="flex h-full flex-col px-1.5 py-3">
-      <div className="pt-[11px]">
-        <div className="bg-[var(--color-surface-overlay)]/25 h-4 w-[84%] rounded" />
-        <div className="bg-[var(--color-surface-overlay)]/18 mt-2 h-4 w-[68%] rounded" />
-      </div>
-      <div className="mt-auto flex items-center justify-between gap-2">
-        <div className="flex gap-2">
-          <div className="bg-[var(--color-surface-overlay)]/18 size-6 rounded-full border border-[var(--color-border)]" />
-          <div className="bg-[var(--color-surface-overlay)]/18 size-6 rounded-full border border-[var(--color-border)]" />
-        </div>
-        <div className="flex gap-1.5">
-          <div className="bg-[var(--color-surface-overlay)]/12 size-6 rounded-full border border-[var(--color-border)]" />
-          <div className="bg-[var(--color-surface-overlay)]/12 size-6 rounded-full border border-[var(--color-border)]" />
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
 const LoadingKanbanGridLayout = ({
   columns,
   visibleItems,
@@ -214,7 +188,7 @@ const LoadingKanbanGridLayout = ({
   return (
     <div ref={containerRef} className={cn('min-w-0 max-w-full', className)}>
       <div
-        className="grid gap-3"
+        className="grid gap-y-3"
         style={{
           gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))`,
           gridAutoRows: `${GRID_ROW_HEIGHT}px`,
@@ -242,29 +216,32 @@ const LoadingKanbanGridLayout = ({
                 title={column.title}
                 count={column.count}
                 icon={column.icon}
-                headerBg={column.headerBg}
-                bodyBg={column.bodyBg}
+                accentColor={column.accentColor}
                 className="flex h-full min-h-0 animate-pulse flex-col"
                 headerClassName="shrink-0"
                 bodyClassName="min-h-0 max-h-none flex-1 overflow-hidden"
               >
                 {hasTasks ? (
                   <>
-                    {skeletonCards.map((card) => (
-                      <KanbanTaskCardSkeleton key={card.key} height={card.height} />
+                    {skeletonCards.map((card, index) => (
+                      <KanbanTaskCardSkeleton
+                        key={card.key}
+                        height={card.height}
+                        showSeparator={index < skeletonCards.length - 1}
+                      />
                     ))}
                     {showAddButton ? (
-                      <div className="bg-[var(--color-surface-overlay)]/15 flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] px-3 text-xs text-[var(--color-text-muted)]">
+                      <div className="ml-2 flex w-[calc(100%_-_0.5rem)] shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
                         {t('kanban.grid.addTask')}
                       </div>
                     ) : null}
                   </>
                 ) : showAddButton ? (
-                  <div className="bg-[var(--color-surface-overlay)]/15 flex h-12 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] px-3 text-xs text-[var(--color-text-muted)]">
+                  <div className="ml-2 flex w-[calc(100%_-_0.5rem)] shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
                     {t('kanban.grid.addTask')}
                   </div>
                 ) : (
-                  <div className="rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
+                  <div className="ml-2 w-[calc(100%_-_0.5rem)] rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
                     {t('kanban.grid.noTasks')}
                   </div>
                 )}
@@ -372,8 +349,7 @@ const LoadedKanbanGridLayout = ({
                 title={column.title}
                 count={column.count}
                 icon={column.icon}
-                headerBg={column.headerBg}
-                bodyBg={column.bodyBg}
+                accentColor={column.accentColor}
                 className="flex h-full min-h-0 flex-col"
                 headerClassName="shrink-0"
                 bodyClassName="kanban-grid-no-drag min-h-0 max-h-none flex-1"

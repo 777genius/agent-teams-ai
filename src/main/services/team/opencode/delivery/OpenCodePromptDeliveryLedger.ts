@@ -1175,6 +1175,7 @@ function isOptionalNullableInboxMessageKind(
     value === 'task_comment_notification' ||
     value === 'task_stall_remediation' ||
     value === 'member_work_sync_nudge' ||
+    value === 'runtime_recovery_nudge' ||
     value === 'agent_error'
   );
 }

@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  classifyAnalyticsError,
+  elapsedMsSince,
+  recordProviderConnectionEnd,
+} from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 
 import {
@@ -19,6 +24,7 @@ import type {
   RuntimeProviderDirectoryEntryDto,
   RuntimeProviderDirectoryFilterDto,
   RuntimeProviderManagementErrorDiagnosticsDto,
+  RuntimeProviderManagementErrorDto,
   RuntimeProviderManagementRuntimeId,
   RuntimeProviderManagementViewDto,
   RuntimeProviderModelDto,
@@ -38,14 +44,22 @@ interface UseRuntimeProviderManagementOptions {
   projectPath?: string | null;
   initialProviderId?: string | null;
   initialProviderAction?: RuntimeProviderConnectionIntent | 'select' | null;
-  onProviderChanged?: () => Promise<void> | void;
+  onProviderChanged?: (
+    changeKind: RuntimeProviderChangeKind
+  ) => Promise<boolean | void> | boolean | void;
 }
 
 export type RuntimeProviderModelPickerMode = 'use' | 'runtime-default';
+export type RuntimeProviderChangeKind =
+  | 'connection'
+  | 'credential_removed'
+  | 'configuration'
+  | 'oauth_cancelled';
 
 const DEFAULT_DIRECTORY_FILTER: RuntimeProviderDirectoryFilterDto = 'all';
 const MODEL_PAGE_SIZE = 250;
 const MODEL_SEARCH_DEBOUNCE_MS = 300;
+const OAUTH_CONNECT_UI_TIMEOUT_MS = 18 * 60_000;
 
 interface ProjectContextSnapshot {
   path: string | null;
@@ -111,10 +125,11 @@ export interface RuntimeProviderManagementState {
   error: string | null;
   errorDiagnostics: RuntimeProviderManagementErrorDiagnosticsDto | null;
   successMessage: string | null;
+  warningMessage: string | null;
 }
 
 export interface RuntimeProviderManagementActions {
-  refresh: () => Promise<void>;
+  refresh: () => Promise<boolean>;
   selectProvider: (providerId: string) => void;
   setProviderQuery: (value: string) => void;
   loadMoreDirectory: () => Promise<void>;
@@ -147,6 +162,7 @@ export interface RuntimeProviderManagementActions {
 }
 
 export interface RuntimeProviderConnectOutcome {
+  readonly status: 'connected' | 'cancelled';
   readonly verifiedModelId: string | null;
 }
 
@@ -208,6 +224,59 @@ function withUiTimeout<T>(promise: Promise<T>, message: string, timeoutMs = 70_0
       }
     );
   });
+}
+
+function formatProviderConnectError(
+  displayName: string,
+  error: RuntimeProviderManagementErrorDto
+): string {
+  const normalizedMessage = error.message.toLowerCase();
+  const invalidApiKey =
+    /\binvalid[\s_-]+api[\s_-]*key\b/.test(normalizedMessage) ||
+    /\bapi[\s_-]*key\s+(?:is\s+)?(?:invalid|expired|revoked)\b/.test(normalizedMessage);
+  if (invalidApiKey) {
+    return `${displayName} rejected this API key. The new credential was not kept. Copy the key from the correct account or subscription plan, then try again.`;
+  }
+
+  const blockedByPolicy =
+    normalizedMessage.includes('access denied by security policy') ||
+    normalizedMessage.includes('forbidden');
+  if (blockedByPolicy) {
+    return `${displayName} rejected the verification request because of an account or security policy. The new credential was not kept. Check the key permissions and account restrictions, then try again.`;
+  }
+
+  if (error.code === 'auth-failed') {
+    return `${displayName} could not verify this credential with a real model request. The new credential was not kept.\n${error.message}`;
+  }
+
+  return error.message;
+}
+
+function formatProviderConnectSuccess(provider: RuntimeProviderConnectionDto): string {
+  return provider.verifiedModelId
+    ? `${provider.displayName} connected and verified with ${provider.verifiedModelId}.`
+    : `${provider.displayName} connected. Model execution was not verified during setup.`;
+}
+
+function formatProviderConnectCancellation(displayName: string): string {
+  return `${displayName} connection was cancelled. Your current credential was not changed.`;
+}
+
+function formatPostOperationRefreshWarning(successMessage: string): string {
+  return `${successMessage} The change is saved, but the latest provider status could not be refreshed. Refresh provider status to see the current state.`;
+}
+
+function isProviderConnectCancellation(error: unknown): boolean {
+  const value = (() => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'string') return error;
+    if (!error || typeof error !== 'object') return '';
+    const code = 'code' in error && typeof error.code === 'string' ? error.code : '';
+    const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
+    return `${code} ${message}`;
+  })().toLowerCase();
+
+  return /cancel(?:l)?ed/.test(value) || /access[\s_-]denied/.test(value);
 }
 
 function normalizeProjectContextPath(projectPath: string | null | undefined): string | null {
@@ -379,6 +448,7 @@ export function useRuntimeProviderManagement(
   const [errorDiagnostics, setErrorDiagnostics] =
     useState<RuntimeProviderManagementErrorDiagnosticsDto | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const viewLoadRequestSeq = useRef(0);
   const viewRequestedRef = useRef(false);
   const directoryRequestSeq = useRef(0);
@@ -389,6 +459,7 @@ export function useRuntimeProviderManagement(
   const appliedInitialProviderRef = useRef<string | null>(null);
   const activeOAuthOperationRef = useRef<string | null>(null);
   const activeOAuthPhaseRef = useRef<RuntimeProviderOAuthProgressDto['phase'] | null>(null);
+  const cancelledOAuthOperationIdsRef = useRef(new Set<string>());
   const providerViewRef = useRef(view);
   const directoryEntriesRef = useRef(directoryEntries);
   providerViewRef.current = view;
@@ -405,6 +476,7 @@ export function useRuntimeProviderManagement(
     if (!operationId) {
       return null;
     }
+    cancelledOAuthOperationIdsRef.current.add(operationId);
     const cancelOAuth = api.runtimeProviderManagement.cancelOAuth;
     if (!cancelOAuth) {
       return Promise.resolve();
@@ -520,12 +592,13 @@ export function useRuntimeProviderManagement(
     setSavingDefaultModelId(null);
     setModelResults({});
     setSuccessMessage(null);
+    setWarningMessage(null);
   }, [cancelActiveOAuthBestEffort, currentProjectPath]);
 
   const refresh = useCallback(
-    async (input: { silent?: boolean } = {}): Promise<void> => {
+    async (input: { silent?: boolean } = {}): Promise<boolean> => {
       if (!options.enabled) {
-        return;
+        return true;
       }
       viewRequestedRef.current = true;
       const projectContext = getProjectContextSnapshot();
@@ -545,7 +618,7 @@ export function useRuntimeProviderManagement(
           projectPath: projectContext.path,
         });
         if (!requestIsCurrent()) {
-          return;
+          return false;
         }
         if (response.error) {
           if (!silent) {
@@ -553,7 +626,7 @@ export function useRuntimeProviderManagement(
           }
           setError(response.error.message);
           setErrorDiagnostics(response.error.diagnostics ?? null);
-          return;
+          return false;
         }
         const nextView = response.view ?? null;
         setView(nextView);
@@ -563,15 +636,17 @@ export function useRuntimeProviderManagement(
           }
           return selectInitialProviderId(nextView);
         });
+        return true;
       } catch (loadError) {
         if (!requestIsCurrent()) {
-          return;
+          return false;
         }
         if (!silent) {
           setView(null);
         }
         setError(loadError instanceof Error ? loadError.message : 'Failed to load providers');
         setErrorDiagnostics(null);
+        return false;
       } finally {
         if (!silent && requestIsCurrent()) {
           setLoading(false);
@@ -591,9 +666,9 @@ export function useRuntimeProviderManagement(
         cursor?: string | null;
         summary?: boolean;
       } = {}
-    ): Promise<void> => {
+    ): Promise<boolean> => {
       if (!options.enabled || !directorySupported) {
-        return;
+        return true;
       }
 
       const append = input.append === true;
@@ -630,7 +705,7 @@ export function useRuntimeProviderManagement(
           refresh: refreshDirectoryData,
         });
         if (!requestIsCurrent()) {
-          return;
+          return false;
         }
         if (response.error) {
           setDirectoryError(response.error.message);
@@ -641,13 +716,13 @@ export function useRuntimeProviderManagement(
           ) {
             setDirectorySupported(false);
           }
-          return;
+          return false;
         }
         const directory = response.directory;
         if (!directory) {
           setDirectoryError('Provider directory response was empty');
           setDirectoryErrorDiagnostics(null);
-          return;
+          return false;
         }
         setDirectoryLoaded(true);
         setDirectorySummary(summary);
@@ -656,6 +731,7 @@ export function useRuntimeProviderManagement(
         setDirectoryEntries((current) =>
           append ? [...current, ...directory.entries] : directory.entries
         );
+        return true;
       } catch (loadError) {
         if (requestIsCurrent()) {
           setDirectoryError(
@@ -663,6 +739,7 @@ export function useRuntimeProviderManagement(
           );
           setDirectoryErrorDiagnostics(null);
         }
+        return false;
       } finally {
         if (requestIsCurrent()) {
           setDirectoryLoading(false);
@@ -702,6 +779,7 @@ export function useRuntimeProviderManagement(
       setError(null);
       setErrorDiagnostics(null);
       setSuccessMessage(null);
+      setWarningMessage(null);
       setDirectoryLoading(false);
       setDirectoryRefreshing(false);
       setDirectoryError(null);
@@ -969,6 +1047,7 @@ export function useRuntimeProviderManagement(
 
   const refreshDirectory = useCallback(async (): Promise<void> => {
     setSuccessMessage(null);
+    setWarningMessage(null);
     await Promise.all([
       viewRequestedRef.current ? refresh({ silent: true }) : Promise.resolve(),
       loadDirectoryPage({
@@ -1055,6 +1134,7 @@ export function useRuntimeProviderManagement(
       setError(null);
       setErrorDiagnostics(null);
       setSuccessMessage(null);
+      setWarningMessage(null);
       const connectedAuthHint =
         providerViewRef.current?.providers.find((provider) => provider.providerId === providerId)
           ?.connectedAuthHint ??
@@ -1179,7 +1259,7 @@ export function useRuntimeProviderManagement(
     setError(null);
     setErrorDiagnostics(null);
     if (cancellation) {
-      void cancellation.then(() => onProviderChanged?.()).catch(() => undefined);
+      void cancellation.then(() => onProviderChanged?.('oauth_cancelled')).catch(() => undefined);
     }
   }, [cancelActiveOAuthBestEffort, onProviderChanged]);
 
@@ -1257,9 +1337,33 @@ export function useRuntimeProviderManagement(
       setSetupSubmitError(null);
       setSetupSubmitErrorDiagnostics(null);
       setSuccessMessage(null);
+      setWarningMessage(null);
       const projectContext = getProjectContextSnapshot();
       const method = authOption?.method ?? setupForm.method;
+      const connectionStartedAtMs = Date.now();
+      const connectionAttemptIntent = connectionIntent ?? 'unknown';
       const oauthOperationId = method === 'oauth' ? createOAuthOperationId() : null;
+      const recordUnsuccessfulConnection = (error: unknown): boolean => {
+        const cancelled =
+          method === 'oauth' &&
+          ((oauthOperationId !== null &&
+            cancelledOAuthOperationIdsRef.current.has(oauthOperationId)) ||
+            isProviderConnectCancellation(error));
+        recordProviderConnectionEnd({
+          runtime: options.runtimeId,
+          provider: providerId,
+          authMethod: method,
+          connectionIntent: connectionAttemptIntent,
+          outcome: cancelled ? 'cancelled' : 'failed',
+          errorClass: cancelled
+            ? 'none'
+            : error == null
+              ? 'unknown'
+              : classifyAnalyticsError(error),
+          durationMs: elapsedMsSince(connectionStartedAtMs),
+        });
+        return cancelled;
+      };
       activeOAuthOperationRef.current = oauthOperationId;
       activeOAuthPhaseRef.current = null;
       setOAuthProgress(null);
@@ -1279,29 +1383,54 @@ export function useRuntimeProviderManagement(
             projectPath: projectContext.path,
           }),
           'Provider connect timed out',
-          method === 'oauth' ? 370_000 : 100_000
+          method === 'oauth' ? OAUTH_CONNECT_UI_TIMEOUT_MS : 100_000
         );
+        if (response.error) {
+          const cancelled = recordUnsuccessfulConnection(response.error);
+          if (!isProjectContextCurrent(projectContext)) {
+            return null;
+          }
+          setSetupSubmitError(
+            cancelled
+              ? formatProviderConnectCancellation(setupForm.displayName)
+              : formatProviderConnectError(setupForm.displayName, response.error)
+          );
+          setSetupSubmitErrorDiagnostics(cancelled ? null : (response.error.diagnostics ?? null));
+          return cancelled ? { status: 'cancelled', verifiedModelId: null } : null;
+        }
+        const connectedProvider =
+          response.provider?.state === 'connected' ? response.provider : null;
+        if (!connectedProvider) {
+          const cancelled = recordUnsuccessfulConnection(null);
+          if (!isProjectContextCurrent(projectContext)) {
+            return null;
+          }
+          setSetupSubmitError(
+            cancelled
+              ? formatProviderConnectCancellation(setupForm.displayName)
+              : `${setupForm.displayName} did not confirm the connection. Your current credential was not changed. Try again or refresh provider status.`
+          );
+          setSetupSubmitErrorDiagnostics(null);
+          return cancelled ? { status: 'cancelled', verifiedModelId: null } : null;
+        }
+        recordProviderConnectionEnd({
+          runtime: options.runtimeId,
+          provider: providerId,
+          authMethod: method,
+          connectionIntent: connectionAttemptIntent,
+          outcome: connectedProvider.verifiedModelId ? 'verified' : 'connected_unverified',
+          errorClass: 'none',
+          durationMs: elapsedMsSince(connectionStartedAtMs),
+        });
         if (!isProjectContextCurrent(projectContext)) {
           return null;
         }
-        if (response.error) {
-          setSetupSubmitError(response.error.message);
-          setSetupSubmitErrorDiagnostics(response.error.diagnostics ?? null);
-          return null;
-        }
-        if (response.provider) {
-          setView((current) => replaceProvider(current, response.provider!));
-          setDirectoryEntries((current) =>
-            replaceDirectoryProvider(
-              current,
-              response.provider!,
-              method === 'manual' ? null : method
-            )
-          );
-        }
+        setView((current) => replaceProvider(current, connectedProvider));
+        setDirectoryEntries((current) =>
+          replaceDirectoryProvider(current, connectedProvider, method === 'manual' ? null : method)
+        );
         setActiveFormProviderId(null);
         setConnectionIntent(null);
-        setSuccessMessage(null);
         setApiKeyValue('');
         setSelectedAuthOptionId(null);
         setOAuthProgress(null);
@@ -1314,35 +1443,60 @@ export function useRuntimeProviderManagement(
         setSetupFormErrorDiagnostics(null);
         setSetupSubmitError(null);
         setSetupSubmitErrorDiagnostics(null);
+        const success = formatProviderConnectSuccess(connectedProvider);
         try {
-          await options.onProviderChanged?.();
+          const externalRefreshResult = await options.onProviderChanged?.('connection');
           if (!isProjectContextCurrent(projectContext)) {
             return null;
           }
-          await Promise.all([
-            viewRequestedRef.current ? refresh({ silent: true }) : Promise.resolve(),
+          const [viewRefreshed, directoryRefreshed] = await Promise.all([
+            viewRequestedRef.current ? refresh({ silent: true }) : Promise.resolve(true),
             loadDirectoryPage({ refresh: true, cursor: null }),
           ]);
-        } catch (refreshError) {
+          if (externalRefreshResult === false || !viewRefreshed || !directoryRefreshed) {
+            setError(null);
+            setErrorDiagnostics(null);
+            setDirectoryError(null);
+            setDirectoryErrorDiagnostics(null);
+            setSuccessMessage(null);
+            setWarningMessage(formatPostOperationRefreshWarning(success));
+          } else {
+            setWarningMessage(null);
+            setSuccessMessage(success);
+          }
+        } catch {
           if (!isProjectContextCurrent(projectContext)) {
             return null;
           }
-          setError(
-            refreshError instanceof Error ? refreshError.message : 'Failed to refresh providers'
-          );
+          setError(null);
           setErrorDiagnostics(null);
+          setDirectoryError(null);
+          setDirectoryErrorDiagnostics(null);
+          setSuccessMessage(null);
+          setWarningMessage(formatPostOperationRefreshWarning(success));
         }
-        return { verifiedModelId: response.provider?.verifiedModelId ?? null };
+        return {
+          status: 'connected',
+          verifiedModelId: connectedProvider.verifiedModelId ?? null,
+        };
       } catch (connectError) {
+        const cancelled = recordUnsuccessfulConnection(connectError);
         if (!isProjectContextCurrent(projectContext)) {
           return null;
         }
         setSetupSubmitError(
-          connectError instanceof Error ? connectError.message : 'Failed to connect provider'
+          cancelled
+            ? formatProviderConnectCancellation(setupForm.displayName)
+            : connectError instanceof Error
+              ? connectError.message
+              : 'Failed to connect provider'
         );
         setSetupSubmitErrorDiagnostics(null);
-        return null;
+        return cancelled ? { status: 'cancelled', verifiedModelId: null } : null;
       } finally {
+        if (oauthOperationId) {
+          cancelledOAuthOperationIdsRef.current.delete(oauthOperationId);
+        }
         if (activeOAuthOperationRef.current === oauthOperationId) {
           activeOAuthOperationRef.current = null;
           activeOAuthPhaseRef.current = null;
@@ -1354,6 +1508,7 @@ export function useRuntimeProviderManagement(
     },
     [
       apiKeyValue,
+      connectionIntent,
       getProjectContextSnapshot,
       isProjectContextCurrent,
       loadDirectoryPage,
@@ -1373,6 +1528,7 @@ export function useRuntimeProviderManagement(
       setError(null);
       setErrorDiagnostics(null);
       setSuccessMessage(null);
+      setWarningMessage(null);
       const projectContext = getProjectContextSnapshot();
       try {
         const response = await withUiTimeout(
@@ -1396,27 +1552,39 @@ export function useRuntimeProviderManagement(
         }
         const success = formatCredentialRemovedMessage(response.provider ?? null);
         try {
-          await options.onProviderChanged?.();
+          const externalRefreshResult = await options.onProviderChanged?.('credential_removed');
           if (!isProjectContextCurrent(projectContext)) {
             return;
           }
-          await Promise.all([
-            viewRequestedRef.current ? refresh({ silent: true }) : Promise.resolve(),
+          const [viewRefreshed, directoryRefreshed] = await Promise.all([
+            viewRequestedRef.current ? refresh({ silent: true }) : Promise.resolve(true),
             loadDirectoryPage({ refresh: true, cursor: null }),
           ]);
-        } catch (refreshError) {
+          if (externalRefreshResult === false || !viewRefreshed || !directoryRefreshed) {
+            setError(null);
+            setErrorDiagnostics(null);
+            setDirectoryError(null);
+            setDirectoryErrorDiagnostics(null);
+            setSuccessMessage(null);
+            setWarningMessage(formatPostOperationRefreshWarning(success));
+          } else {
+            setWarningMessage(null);
+            setSuccessMessage(success);
+          }
+        } catch {
           if (!isProjectContextCurrent(projectContext)) {
             return;
           }
-          setError(
-            refreshError instanceof Error ? refreshError.message : 'Failed to refresh providers'
-          );
+          setError(null);
           setErrorDiagnostics(null);
+          setDirectoryError(null);
+          setDirectoryErrorDiagnostics(null);
+          setSuccessMessage(null);
+          setWarningMessage(formatPostOperationRefreshWarning(success));
         }
         if (!isProjectContextCurrent(projectContext)) {
           return;
         }
-        setSuccessMessage(success);
       } catch (forgetError) {
         if (!isProjectContextCurrent(projectContext)) {
           return;
@@ -1443,6 +1611,7 @@ export function useRuntimeProviderManagement(
       setError(null);
       setErrorDiagnostics(null);
       setSuccessMessage(null);
+      setWarningMessage(null);
     },
     [openModelPickerState]
   );
@@ -1462,6 +1631,7 @@ export function useRuntimeProviderManagement(
     saveOpenCodeModelForNewTeams(modelId);
     setSelectedModelId(modelId);
     setSuccessMessage(null);
+    setWarningMessage(null);
     setError(null);
     setErrorDiagnostics(null);
   }, []);
@@ -1481,6 +1651,7 @@ export function useRuntimeProviderManagement(
       setError(null);
       setErrorDiagnostics(null);
       setSuccessMessage(null);
+      setWarningMessage(null);
       try {
         const response = await withUiTimeout(
           api.runtimeProviderManagement.testModel({
@@ -1561,6 +1732,7 @@ export function useRuntimeProviderManagement(
       setError(null);
       setErrorDiagnostics(null);
       setSuccessMessage(null);
+      setWarningMessage(null);
       const projectContext = getProjectContextSnapshot();
       try {
         const response = await withUiTimeout(
@@ -1611,14 +1783,29 @@ export function useRuntimeProviderManagement(
             )
           )
         );
-        setSuccessMessage(
+        const success =
           scope === 'all_projects'
             ? `All-projects OpenCode default set to ${modelId}`
-            : `Project OpenCode default set to ${modelId}`
-        );
-        await options.onProviderChanged?.();
-        if (!isProjectContextCurrent(projectContext)) {
-          return;
+            : `Project OpenCode default set to ${modelId}`;
+        try {
+          const externalRefreshResult = await options.onProviderChanged?.('configuration');
+          if (!isProjectContextCurrent(projectContext)) {
+            return;
+          }
+          if (externalRefreshResult === false) {
+            setError(null);
+            setErrorDiagnostics(null);
+            setWarningMessage(formatPostOperationRefreshWarning(success));
+          } else {
+            setSuccessMessage(success);
+          }
+        } catch {
+          if (!isProjectContextCurrent(projectContext)) {
+            return;
+          }
+          setError(null);
+          setErrorDiagnostics(null);
+          setWarningMessage(formatPostOperationRefreshWarning(success));
         }
       } catch (defaultError) {
         if (!isProjectContextCurrent(projectContext)) {
@@ -1755,6 +1942,7 @@ export function useRuntimeProviderManagement(
       error,
       errorDiagnostics,
       successMessage,
+      warningMessage,
     }),
     [
       activeFormProviderId,
@@ -1801,6 +1989,7 @@ export function useRuntimeProviderManagement(
       selectedModelId,
       selectedProviderId,
       successMessage,
+      warningMessage,
       testingModelIds,
       view,
     ]

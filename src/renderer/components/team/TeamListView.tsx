@@ -2,6 +2,7 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
+import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Badge } from '@renderer/components/ui/badge';
@@ -53,6 +54,7 @@ import {
   Loader2,
   Network,
   Play,
+  Plus,
   RotateCcw,
   Search,
   Square,
@@ -376,21 +378,21 @@ const ActiveTeamCard = ({
         }
       }}
     >
-      <div className="pointer-events-none absolute right-4 top-4 z-10">
-        <StatusBadge status={status} t={t} />
-      </div>
       <div className="flex flex-1 flex-col">
         <div className="space-y-2">
-          <div className="flex items-start gap-2.5 pr-44">
+          <div className="flex min-w-0 items-start gap-2.5">
             <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface-overlay)] transition-colors group-hover:border-[var(--color-border-emphasis)]">
               <UsersRound
                 className="size-4 transition-colors"
                 style={{ color: getThemedBorder(teamColorSet, isLight) }}
               />
             </div>
-            <h3 className="min-w-0 flex-1 break-words text-sm font-semibold leading-snug text-[var(--color-text)]">
+            <h3 className="line-clamp-2 min-w-0 flex-1 break-words text-sm font-semibold leading-snug text-[var(--color-text)]">
               {team.displayName}
             </h3>
+            <div className="pointer-events-none shrink-0">
+              <StatusBadge status={status} t={t} />
+            </div>
           </div>
           <div className="flex min-h-6 items-center justify-between gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -938,8 +940,20 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     setStoppingTeamName(teamName);
     try {
       await api.teams.stop(teamName);
+      recordTeamStop({
+        source: 'list',
+        success: true,
+        runtimeActive: true,
+        errorClass: 'none',
+      });
       setAliveTeams((prev) => prev.filter((n) => n !== teamName));
     } catch (err) {
+      recordTeamStop({
+        source: 'list',
+        success: false,
+        runtimeActive: true,
+        errorClass: classifyAnalyticsError(err),
+      });
       console.error('Failed to stop team:', err);
     } finally {
       setStoppingTeamName(null);
@@ -1011,7 +1025,25 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           isTeamAlive: true,
           request,
           members,
-          stopTeam: (nextTeamName) => api.teams.stop(nextTeamName),
+          stopTeam: async (nextTeamName) => {
+            try {
+              await api.teams.stop(nextTeamName);
+              recordTeamStop({
+                source: 'relaunch',
+                success: true,
+                runtimeActive: true,
+                errorClass: 'none',
+              });
+            } catch (error) {
+              recordTeamStop({
+                source: 'relaunch',
+                success: false,
+                runtimeActive: true,
+                errorClass: classifyAnalyticsError(error),
+              });
+              throw error;
+            }
+          },
           replaceMembers: (nextTeamName, nextRequest) =>
             api.teams.replaceMembers(nextTeamName, nextRequest),
           launchTeam,
@@ -1178,6 +1210,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           <Button
             variant="outline"
             size="sm"
+            className="gap-1.5"
             onClick={() =>
               openTab({ type: 'organizations', label: t('organizations.map.defaultTitle') })
             }
@@ -1188,6 +1221,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           <Button
             variant="outline"
             size="sm"
+            className="gap-1.5"
             disabled={!canCreate}
             onClick={() => setShowImportDialog(true)}
           >
@@ -1195,11 +1229,12 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
             {t('list.actions.importTeam')}
           </Button>
           <Button
-            variant="outline"
             size="sm"
+            className="gap-1.5"
             disabled={!canCreate}
             onClick={() => setShowCreateDialog(true)}
           >
+            <Plus size={13} />
             {t('list.actions.createTeam')}
           </Button>
         </div>

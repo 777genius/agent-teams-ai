@@ -27,6 +27,11 @@ import {
   getOpenCodeTeamModelRecommendation,
   isOpenCodeTeamModelRecommended,
 } from '@renderer/utils/openCodeModelRecommendations';
+import {
+  getOpenCodeModelRoutePresentationStatus,
+  isOpenCodeLocalProviderId,
+  isOpenCodeModelExplicitlyFree,
+} from '@shared/utils/opencodeModelRoute';
 import { isOpenCodeWindowsNodeModulesSymlinkPermissionDiagnostic } from '@shared/utils/openCodeWindowsAccessDenied';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
@@ -148,7 +153,7 @@ function formatDirectorySetupKind(provider: RuntimeProviderDirectoryEntryDto): s
     return 'Connected';
   }
   if (provider.metadata.configuredAuthless) {
-    return 'Configured local';
+    return isOpenCodeLocalProviderId(provider.providerId) ? 'Configured local' : 'Configured';
   }
   switch (provider.setupKind) {
     case 'connect-oauth':
@@ -446,6 +451,8 @@ export function ProviderSetupFormPanel({
   const secret = authOption?.secret ?? form?.secret ?? null;
   const prompts = authOption?.prompts ?? form?.prompts ?? [];
   const selectedMethod = authOption?.method ?? form?.method ?? null;
+  const verifiesWithModel =
+    selectedMethod === 'api' && form?.verification?.kind === 'model-request';
   const presentation = form
     ? getRuntimeProviderSetupPresentation({
         form,
@@ -455,6 +462,7 @@ export function ProviderSetupFormPanel({
     : null;
   const oauthInProgress = selectedMethod === 'oauth' && busy;
   const oauthProgress = oauthInProgress ? state.oauthProgress : null;
+  const oauthFinalizing = oauthProgress?.phase === 'completing';
   const oauthDeviceCode = extractOAuthDeviceCode(oauthProgress?.instructions);
   const oauthDeviceCodeDestination =
     oauthProgress?.providerId === 'xai'
@@ -492,7 +500,9 @@ export function ProviderSetupFormPanel({
           ? t('runtimeProvider.reconnect.getBrowserCode')
           : t('runtimeProvider.reconnect.continueInBrowser')
         : selectedMethod === 'api'
-          ? 'Connect'
+          ? verifiesWithModel
+            ? 'Connect & verify'
+            : 'Connect'
           : selectedMethod === 'oauth'
             ? selectedAuthLabel.includes('browser code')
               ? 'Get browser code'
@@ -675,6 +685,14 @@ export function ProviderSetupFormPanel({
             </div>
           ) : null}
 
+          {verifiesWithModel ? (
+            <div className="rounded-md border border-sky-400/20 bg-sky-400/[0.04] px-3 py-2 text-[11px] leading-4 text-[var(--color-text-secondary)]">
+              <span className="font-medium text-sky-100">Connection verification: </span>
+              Agent Teams uses a free model when one is available. Otherwise, one minimal request
+              may use a small amount of your plan quota or API balance.
+            </div>
+          ) : null}
+
           {prompts
             .filter((prompt) => setupPromptVisible(prompt, state.setupMetadata))
             .map((prompt) => (
@@ -804,13 +822,22 @@ export function ProviderSetupFormPanel({
           ) : null}
           {busy && selectedMethod !== 'oauth' ? (
             <div
-              className="rounded-md border border-sky-400/20 bg-sky-400/[0.05] px-3 py-2 text-[11px] text-[var(--color-text-secondary)]"
+              className="flex items-start gap-2.5 rounded-md border border-sky-400/20 bg-sky-400/[0.05] px-3 py-2.5 text-[11px] text-[var(--color-text-secondary)]"
               role="status"
               aria-live="polite"
               aria-busy="true"
             >
-              Securely saving your credential and verifying one model request. Keep this window open
-              until verification finishes.
+              <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin text-sky-300" />
+              <div className="min-w-0">
+                <div className="font-medium text-sky-100">
+                  {verifiesWithModel ? 'Verifying connection' : 'Saving credential'}
+                </div>
+                <div className="mt-0.5 leading-4">
+                  {verifiesWithModel
+                    ? 'Saving the credential temporarily, then running one minimal model request. If the check fails, the new credential is removed and the previous connection is restored.'
+                    : 'Saving the credential in the app-managed OpenCode profile.'}
+                </div>
+              </div>
             </div>
           ) : null}
         </div>
@@ -831,10 +858,12 @@ export function ProviderSetupFormPanel({
           type="button"
           size="sm"
           variant="ghost"
-          disabled={busy && !oauthInProgress}
+          disabled={(busy && !oauthInProgress) || oauthFinalizing}
           onClick={actions.cancelConnect}
         >
-          {t('runtimeProvider.actions.cancel')}
+          {oauthFinalizing
+            ? t('providerRuntime.actions.saving')
+            : t('runtimeProvider.actions.cancel')}
         </Button>
         {!oauthInProgress ? (
           <Button type="submit" size="sm" disabled={disabled || busy || loading || !canSubmit}>
@@ -1714,8 +1743,10 @@ function ModelBadges({
 }): JSX.Element | null {
   const { t } = useAppTranslation('settings');
   const modelRecommendation = getOpenCodeTeamModelRecommendation(model.modelId);
-  const localRoute = model.routeKind === 'configured_local';
-  const connectedRoute = model.routeKind === 'connected_provider';
+  const routeStatus = getOpenCodeModelRoutePresentationStatus(model);
+  const localRoute = routeStatus === 'local';
+  const configuredRoute = routeStatus === 'configured';
+  const connectedRoute = routeStatus === 'connected';
   const freeModel = isFreeRuntimeProviderModel(model);
   const verified =
     model.proofState === 'verified' ||
@@ -1728,6 +1759,7 @@ function ModelBadges({
     model.availability === 'unavailable' ||
     model.availability === 'not-authenticated';
   const unknown = model.accessKind === 'unknown_model' || model.accessKind === 'no_model';
+  const lifecycleStatus = model.catalogStatus ?? 'active';
 
   if (
     !freeModel &&
@@ -1735,11 +1767,13 @@ function ModelBadges({
     !usedForNewTeams &&
     !modelRecommendation &&
     !localRoute &&
+    !configuredRoute &&
     !connectedRoute &&
     !verified &&
     !needsTest &&
     !failed &&
-    !unknown
+    !unknown &&
+    lifecycleStatus === 'active'
   ) {
     return null;
   }
@@ -1786,15 +1820,27 @@ function ModelBadges({
           {t('runtimeProvider.badges.free')}
         </Badge>
       ) : null}
+      {lifecycleStatus === 'deprecated' ? (
+        <Badge className="bg-red-400/15 px-1.5 py-0 text-[10px] text-red-200">deprecated</Badge>
+      ) : lifecycleStatus === 'alpha' ? (
+        <Badge className="bg-violet-400/15 px-1.5 py-0 text-[10px] text-violet-200">alpha</Badge>
+      ) : lifecycleStatus === 'beta' ? (
+        <Badge className="bg-sky-400/15 px-1.5 py-0 text-[10px] text-sky-200">beta</Badge>
+      ) : null}
       {localRoute ? (
-        <>
-          <Badge className="bg-cyan-400/15 px-1.5 py-0 text-[10px] text-cyan-200">
-            {t('runtimeProvider.badges.local')}
-          </Badge>
-          <Badge className="bg-sky-400/15 px-1.5 py-0 text-[10px] text-sky-200">
-            {t('runtimeProvider.badges.knownRoute')}
-          </Badge>
-        </>
+        <Badge className="bg-cyan-400/15 px-1.5 py-0 text-[10px] text-cyan-200">
+          {t('runtimeProvider.badges.local')}
+        </Badge>
+      ) : null}
+      {configuredRoute ? (
+        <Badge className="bg-sky-400/15 px-1.5 py-0 text-[10px] text-sky-200">
+          {t('runtimeProvider.badges.configured')}
+        </Badge>
+      ) : null}
+      {localRoute || configuredRoute ? (
+        <Badge className="bg-sky-400/15 px-1.5 py-0 text-[10px] text-sky-200">
+          {t('runtimeProvider.badges.knownRoute')}
+        </Badge>
       ) : null}
       {connectedRoute ? (
         <Badge className="bg-emerald-400/15 px-1.5 py-0 text-[10px] text-emerald-100">
@@ -1831,16 +1877,7 @@ function ModelBadges({
 }
 
 function isFreeRuntimeProviderModel(model: RuntimeProviderModelDto): boolean {
-  const normalizedModelId = model.modelId.trim().toLowerCase();
-  return (
-    model.free ||
-    model.routeKind === 'builtin_free' ||
-    model.accessKind === 'builtin_free' ||
-    normalizedModelId === 'opencode/big-pickle' ||
-    normalizedModelId.includes(':free') ||
-    normalizedModelId.endsWith('-free') ||
-    normalizedModelId.endsWith('/free')
-  );
+  return isOpenCodeModelExplicitlyFree(model);
 }
 
 function isUnknownOpenCodeModelRoute(model: RuntimeProviderModelDto): boolean {
@@ -1853,6 +1890,7 @@ function canTestOpenCodeModelRoute(model: RuntimeProviderModelDto): boolean {
 
 function canUseOpenCodeModelRoute(model: RuntimeProviderModelDto): boolean {
   return (
+    model.catalogStatus !== 'deprecated' &&
     !isUnknownOpenCodeModelRoute(model) &&
     model.accessKind !== 'not_authenticated' &&
     model.accessKind !== 'execution_failed' &&
@@ -1864,6 +1902,9 @@ function getOpenCodeRouteUnavailableTitle(
   model: RuntimeProviderModelDto,
   t: SettingsT
 ): string | undefined {
+  if (model.catalogStatus === 'deprecated') {
+    return 'OpenCode marks this model as deprecated. Refresh the catalog and choose an active model.';
+  }
   if (isUnknownOpenCodeModelRoute(model)) {
     return t('runtimeProvider.models.routeUnavailableUnknown');
   }
@@ -1907,14 +1948,16 @@ function getDisabledActionReason(input: {
 
 function getOpenCodeModelSearchText(model: RuntimeProviderModelDto): string {
   const recommendation = getOpenCodeTeamModelRecommendation(model.modelId);
+  const routeStatus = getOpenCodeModelRoutePresentationStatus(model);
   return [
     model.providerId,
     model.modelId,
     model.displayName,
     model.sourceLabel,
     model.accessKind,
-    model.routeKind,
+    routeStatus ?? '',
     model.proofState,
+    model.catalogStatus,
     model.availability,
     model.accessReason ?? '',
     isFreeRuntimeProviderModel(model) ? 'free' : '',
@@ -1966,8 +2009,10 @@ function ModelRow({
   readonly actions: RuntimeProviderManagementActions;
 }): JSX.Element {
   const { t } = useAppTranslation('settings');
+  const modelDisabled = disabled || !canUseOpenCodeModelRoute(model);
+  const unavailableTitle = getOpenCodeRouteUnavailableTitle(model, t);
   const chooseModel = (): void => {
-    if (!disabled) {
+    if (!modelDisabled) {
       actions.useModelForNewTeams(model.modelId);
     }
   };
@@ -1985,13 +2030,14 @@ function ModelRow({
 
   return (
     <div
-      role={disabled ? undefined : 'button'}
-      tabIndex={disabled ? -1 : 0}
-      aria-disabled={disabled || undefined}
-      aria-pressed={disabled ? undefined : selected}
+      role={modelDisabled ? undefined : 'button'}
+      tabIndex={modelDisabled ? -1 : 0}
+      aria-disabled={modelDisabled || undefined}
+      aria-pressed={modelDisabled ? undefined : selected}
+      aria-label={unavailableTitle}
       data-testid={`runtime-provider-model-row-${model.modelId}`}
       className={`rounded-md border px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/45 ${
-        disabled ? 'cursor-default' : 'cursor-pointer'
+        modelDisabled ? 'cursor-default' : 'cursor-pointer'
       }`}
       onClick={(event) => {
         event.stopPropagation();
@@ -2806,6 +2852,38 @@ export function RuntimeProviderManagementPanelView({
         </div>
       ) : null}
 
+      {state.warningMessage ? (
+        <div
+          data-testid="runtime-provider-warning"
+          className="flex flex-col items-start gap-2 rounded-md border px-3 py-2 text-xs sm:flex-row sm:items-center sm:justify-between"
+          style={{
+            borderColor: 'rgba(251, 191, 36, 0.3)',
+            backgroundColor: 'rgba(251, 191, 36, 0.08)',
+            color: '#fcd34d',
+          }}
+        >
+          <div className="flex min-w-0 items-start gap-2">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+            <span>{state.warningMessage}</span>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 shrink-0"
+            disabled={disabled || state.directoryLoading || state.directoryRefreshing}
+            onClick={() => void actions.refreshDirectory()}
+          >
+            {state.directoryRefreshing ? (
+              <Loader2 className="mr-1 size-3.5 animate-spin" />
+            ) : (
+              <RefreshCcw className="mr-1 size-3.5" />
+            )}
+            {t('providerRuntime.actions.refresh')}
+          </Button>
+        </div>
+      ) : null}
+
       <Tabs
         value={activeSection}
         onValueChange={(value) => {
@@ -2930,25 +3008,27 @@ export function RuntimeProviderManagementPanelView({
                 />
               </div>
             ) : null}
-            {state.directorySupported ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                title={
-                  state.directorySummary ? 'Load the full OpenCode provider catalog' : undefined
-                }
-                disabled={disabled || state.directoryLoading || state.directoryRefreshing}
-                onClick={() => void actions.refreshDirectory()}
-              >
-                {state.directoryRefreshing ? (
-                  <Loader2 className="mr-1 size-3.5 animate-spin" />
-                ) : (
-                  <RefreshCcw className="mr-1 size-3.5" />
-                )}
-                {t('runtimeProvider.providers.refreshCatalog')}
-              </Button>
-            ) : null}
+            <div className="flex justify-end gap-1.5">
+              {state.directorySupported ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  title={
+                    state.directorySummary ? 'Load the full OpenCode provider catalog' : undefined
+                  }
+                  disabled={disabled || state.directoryLoading || state.directoryRefreshing}
+                  onClick={() => void actions.refreshDirectory()}
+                >
+                  {state.directoryRefreshing ? (
+                    <Loader2 className="mr-1 size-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCcw className="mr-1 size-3.5" />
+                  )}
+                  {t('runtimeProvider.providers.refreshCatalog')}
+                </Button>
+              ) : null}
+            </div>
           </div>
 
           {state.directoryError ? (

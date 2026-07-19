@@ -310,6 +310,17 @@ function expectExplicitFastModeWithoutFlexCommand(command: string | undefined): 
   expect(command).not.toContain('service_tier="flex"');
 }
 
+function readDirectTmuxRestartLauncher(command: string | undefined): {
+  scriptPath: string;
+  script: string;
+} {
+  if (!command?.startsWith("/bin/sh '") || !command.endsWith("'")) {
+    throw new Error(`Unexpected direct tmux restart launcher: ${command ?? '<missing>'}`);
+  }
+  const scriptPath = command.slice(9, -1).replace(/'\\''/g, "'");
+  return { scriptPath, script: fs.readFileSync(scriptPath, 'utf8') };
+}
+
 function configureExplicitFastRuntimeArgsPlan(svc: TeamProvisioningService): void {
   (
     svc as unknown as {
@@ -829,6 +840,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     configureLaunchStubs(svc);
 
     let runId: string | undefined;
+    let launcherScriptPath: string | undefined;
     try {
       const created = await svc.createTeam(
         {
@@ -898,15 +910,23 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       const [paneId, command] =
         vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mock.calls[0] ?? [];
       expect(paneId).toBe('%7');
-      expect(command).toContain("'--agent-id' 'alice@codex-fast-tier-tmux-restart'");
-      expect(command).toContain("'--mcp-config'");
-      expectExplicitFastModeWithoutFlexCommand(command);
+      const launcher = readDirectTmuxRestartLauncher(command);
+      launcherScriptPath = launcher.scriptPath;
+      expect(command).not.toContain('--agent-id');
+      expect(launcher.script).toContain(
+        "'--agent-id' 'alice@codex-fast-tier-tmux-restart'"
+      );
+      expect(launcher.script).toContain("'--mcp-config'");
+      expectExplicitFastModeWithoutFlexCommand(launcher.script);
 
       await svc.cancelProvisioning(runId);
       runId = undefined;
     } finally {
       if (runId) {
         await svc.cancelProvisioning(runId);
+      }
+      if (launcherScriptPath) {
+        fs.rmSync(path.dirname(launcherScriptPath), { recursive: true, force: true });
       }
       fs.rmSync(projectDir, { recursive: true, force: true });
     }

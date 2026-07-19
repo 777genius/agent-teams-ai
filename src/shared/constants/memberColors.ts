@@ -1,12 +1,9 @@
 /**
- * Pre-ordered color palette for team members.
- * Colors are arranged so that consecutive entries are maximally distant
- * on the hue wheel — the first N members always get visually distinct colors.
- * Generated via greedy max-min-distance algorithm over hue angles.
- * Intentionally excludes purple-family tones.
+ * Accent colors paired with participant avatars 02-13.
+ * Keep this order aligned with the local avatar catalog: roster teammates use
+ * the same positional assignment for both their avatar and identity color.
  */
-export const MEMBER_COLOR_PALETTE = [
-  // ── First 12: intentionally distinct visual families for roster readability ──
+export const TEAMMATE_PARTICIPANT_COLOR_PALETTE = [
   'blue',
   'saffron',
   'turquoise',
@@ -19,6 +16,24 @@ export const MEMBER_COLOR_PALETTE = [
   'olive',
   'copper',
   'steel',
+] as const;
+
+/** Avatar 01 is reserved for the team lead and is visually green. */
+export const PARTICIPANT_IDENTITY_COLOR_PALETTE = [
+  'green',
+  ...TEAMMATE_PARTICIPANT_COLOR_PALETTE,
+] as const;
+
+/**
+ * Pre-ordered color palette for team members.
+ * Colors are arranged so that consecutive entries are maximally distant
+ * on the hue wheel — the first N members always get visually distinct colors.
+ * Generated via greedy max-min-distance algorithm over hue angles.
+ * Intentionally excludes purple-family tones.
+ */
+export const MEMBER_COLOR_PALETTE = [
+  // ── First 12: paired with participant avatars 02-13 ──
+  ...TEAMMATE_PARTICIPANT_COLOR_PALETTE,
 
   // ── Next 12: secondary accents after the core distinct set ──
   'gold',
@@ -121,6 +136,28 @@ function hashStringToIndex(str: string): number {
   return Math.abs(hash);
 }
 
+export function normalizeParticipantIdentityIndex(index: number): number {
+  const count = PARTICIPANT_IDENTITY_COLOR_PALETTE.length;
+  return ((Math.trunc(index) % count) + count) % count;
+}
+
+export function getParticipantIdentityIndexByName(name: string): number {
+  return normalizeParticipantIdentityIndex(hashStringToIndex(name.trim().toLowerCase()));
+}
+
+export function getParticipantIdentityColor(index: number): MemberColorName {
+  return PARTICIPANT_IDENTITY_COLOR_PALETTE[normalizeParticipantIdentityIndex(index)];
+}
+
+export function getTeammateParticipantIdentityIndex(index: number): number {
+  const teammateCount = TEAMMATE_PARTICIPANT_COLOR_PALETTE.length;
+  return 1 + (((Math.trunc(index) % teammateCount) + teammateCount) % teammateCount);
+}
+
+export function getTeammateParticipantIdentityColor(index: number): MemberColorName {
+  return getParticipantIdentityColor(getTeammateParticipantIdentityIndex(index));
+}
+
 export function normalizeMemberColorName(colorName: string): string {
   const normalized = colorName.trim().toLowerCase();
   if (!normalized) return MEMBER_COLOR_PALETTE[0];
@@ -134,5 +171,9 @@ export function normalizeMemberColorName(colorName: string): string {
  * regardless of member order or team size.
  */
 export function getMemberColorByName(name: string): string {
-  return MEMBER_COLOR_PALETTE[hashStringToIndex(name) % MEMBER_COLOR_PALETTE.length];
+  const normalized = name.trim().toLowerCase();
+  if (normalized === TEAM_LEAD_MEMBER_COLOR_ID || normalized === 'lead') {
+    return getParticipantIdentityColor(0);
+  }
+  return getParticipantIdentityColor(getParticipantIdentityIndexByName(normalized));
 }

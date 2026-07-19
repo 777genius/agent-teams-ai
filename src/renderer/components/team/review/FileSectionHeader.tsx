@@ -9,6 +9,7 @@ import { ChevronDown, ChevronRight, FilePlus, GitBranch, Loader2, Save, Undo2 } 
 import {
   getResolvedReviewModifiedContent,
   getReviewRejectBlockReason,
+  isReviewAcceptDisabled,
   isReviewFileMissingOnDisk,
   isReviewTextContentUnavailable,
   requiresManualLedgerReview,
@@ -20,6 +21,7 @@ import type { FileChangeSummary } from '@shared/types/review';
 interface FileSectionHeaderProps {
   file: FileChangeSummary;
   fileContent: FileChangeWithContent | null;
+  contentResolved: boolean;
   fileDecision: HunkDecision | undefined;
   externalChange?: { type: 'change' | 'add' | 'unlink' };
   pathChangeLabel?:
@@ -41,6 +43,7 @@ interface FileSectionHeaderProps {
 export const FileSectionHeader = ({
   file,
   fileContent,
+  contentResolved,
   fileDecision,
   externalChange,
   pathChangeLabel,
@@ -58,14 +61,38 @@ export const FileSectionHeader = ({
 }: FileSectionHeaderProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
   const restoreContent = getResolvedReviewModifiedContent(file, fileContent);
+  const isNewFile = fileContent?.isNewFile ?? file.isNewFile;
   const isMissingOnDisk = isReviewFileMissingOnDisk(fileContent);
   const isContentUnavailable = isReviewTextContentUnavailable(file, fileContent);
   const isPreviewOnly = isMissingOnDisk || isContentUnavailable;
   const manualLedgerReviewRequired = requiresManualLedgerReview(file);
   const rejectBlockReason = getReviewRejectBlockReason(file, fileContent);
-  const rejectDisabled = rejectBlockReason !== null;
+  const rejectDisabled =
+    !contentResolved ||
+    rejectBlockReason !== null ||
+    hasEdits ||
+    !!externalChange ||
+    fileDecision === 'rejected';
+  const acceptDisabled =
+    !contentResolved ||
+    !!externalChange ||
+    isReviewAcceptDisabled({
+      hasEdits,
+      isMissingOnDisk,
+      isContentUnavailable,
+      fileDecision,
+    });
+  const draftDecisionDisabledLabel = t('review.fileHeader.disabled.saveOrDiscardDraft', {
+    defaultValue: 'Save or discard manual edits before accepting or rejecting.',
+  });
   const canRestore =
-    !!onRestoreMissingFile && isMissingOnDisk && !hasEdits && restoreContent != null;
+    !!onRestoreMissingFile &&
+    isMissingOnDisk &&
+    !hasEdits &&
+    !externalChange &&
+    restoreContent != null;
+  const externalMutationDisabledLabel =
+    'Reload the external file change before continuing review actions.';
   const externalChangeLabel =
     externalChange?.type === 'unlink'
       ? t('review.fileHeader.externalChange.deletedOnDisk')
@@ -83,13 +110,14 @@ export const FileSectionHeader = ({
 
   const handleHeaderClick = (e: React.MouseEvent): void => {
     // Don't collapse when clicking action buttons
-    if ((e.target as HTMLElement).closest('[data-no-collapse]')) return;
+    if (applying || (e.target as HTMLElement).closest('[data-no-collapse]')) return;
     onToggleCollapse(file.filePath);
   };
 
   const handleHeaderKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
+      if (applying) return;
       onToggleCollapse(file.filePath);
     }
   };
@@ -97,7 +125,8 @@ export const FileSectionHeader = ({
   return (
     <div
       role="button"
-      tabIndex={0}
+      tabIndex={applying ? -1 : 0}
+      aria-disabled={applying}
       onClick={handleHeaderClick}
       onKeyDown={handleHeaderKeyDown}
       className="hover:bg-surface-raised/50 sticky top-0 z-10 flex cursor-pointer select-none items-center gap-2 border-b border-border bg-surface-sidebar px-4 py-2"
@@ -108,7 +137,7 @@ export const FileSectionHeader = ({
       <FileIcon fileName={file.relativePath} className="size-3.5" />
       <span className="text-xs font-medium text-text">{file.relativePath}</span>
 
-      {file.isNewFile && (
+      {isNewFile && (
         <span className="rounded bg-green-500/20 px-1.5 py-0.5 text-[10px] text-green-400">
           {t('review.fileHeader.badges.new')}
         </span>
@@ -242,7 +271,7 @@ export const FileSectionHeader = ({
       )}
 
       <div className="ml-auto flex items-center gap-1.5" data-no-collapse>
-        {externalChange && onReloadFromDisk && onKeepDraft && (
+        {externalChange && onReloadFromDisk && (
           <div className="mr-1 flex items-center gap-1.5">
             <button
               onClick={() => onReloadFromDisk(file.filePath)}
@@ -251,13 +280,15 @@ export const FileSectionHeader = ({
             >
               {t('review.fileHeader.actions.reloadFromDisk')}
             </button>
-            <button
-              onClick={() => onKeepDraft(file.filePath)}
-              disabled={applying}
-              className="rounded bg-amber-500/15 px-2 py-1 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/25 disabled:opacity-50"
-            >
-              {t('review.fileHeader.actions.keepMyDraft')}
-            </button>
+            {hasEdits && onKeepDraft && (
+              <button
+                onClick={() => onKeepDraft(file.filePath)}
+                disabled={applying}
+                className="rounded bg-amber-500/15 px-2 py-1 text-xs font-medium text-amber-300 transition-colors hover:bg-amber-500/25 disabled:opacity-50"
+              >
+                {t('review.fileHeader.actions.keepMyDraft')}
+              </button>
+            )}
           </div>
         )}
 
@@ -269,7 +300,7 @@ export const FileSectionHeader = ({
                   <span>
                     <button
                       onClick={() => onAcceptFile(file.filePath)}
-                      disabled={applying || isPreviewOnly}
+                      disabled={applying || acceptDisabled}
                       className={[
                         'rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50',
                         fileDecision === 'accepted'
@@ -281,11 +312,15 @@ export const FileSectionHeader = ({
                     </button>
                   </span>
                 </TooltipTrigger>
-                {isPreviewOnly && (
+                {acceptDisabled && (
                   <TooltipContent side="bottom">
-                    {isContentUnavailable
-                      ? t('review.fileHeader.disabled.acceptRejectContentUnavailable')
-                      : t('review.fileHeader.disabled.acceptRejectMissingOnDisk')}
+                    {externalChange
+                      ? externalMutationDisabledLabel
+                      : hasEdits
+                      ? draftDecisionDisabledLabel
+                      : isContentUnavailable
+                        ? t('review.fileHeader.disabled.acceptRejectContentUnavailable')
+                        : t('review.fileHeader.disabled.acceptRejectMissingOnDisk')}
                   </TooltipContent>
                 )}
               </Tooltip>
@@ -308,15 +343,19 @@ export const FileSectionHeader = ({
                     </button>
                   </span>
                 </TooltipTrigger>
-                {rejectDisabled && (
+                {rejectDisabled && fileDecision !== 'rejected' && (
                   <TooltipContent side="bottom">
-                    {rejectBlockReason === 'manual-ledger-review'
-                      ? t('review.fileHeader.disabled.rejectManualLedgerReview')
-                      : rejectBlockReason === 'content-unavailable'
-                        ? t('review.fileHeader.disabled.rejectContentUnavailable')
-                        : rejectBlockReason === 'missing-on-disk'
-                          ? t('review.fileHeader.disabled.acceptRejectMissingOnDisk')
-                          : t('review.fileHeader.disabled.rejectBaselineUnavailable')}
+                    {externalChange
+                      ? externalMutationDisabledLabel
+                      : hasEdits
+                      ? draftDecisionDisabledLabel
+                      : rejectBlockReason === 'manual-ledger-review'
+                        ? t('review.fileHeader.disabled.rejectManualLedgerReview')
+                        : rejectBlockReason === 'content-unavailable'
+                          ? t('review.fileHeader.disabled.rejectContentUnavailable')
+                          : rejectBlockReason === 'missing-on-disk'
+                            ? t('review.fileHeader.disabled.acceptRejectMissingOnDisk')
+                            : t('review.fileHeader.disabled.rejectBaselineUnavailable')}
                   </TooltipContent>
                 )}
               </Tooltip>
@@ -346,7 +385,8 @@ export const FileSectionHeader = ({
               <TooltipTrigger asChild>
                 <button
                   onClick={() => onDiscard(file.filePath)}
-                  className="flex items-center gap-1 rounded bg-orange-500/15 px-2 py-1 text-xs text-orange-400 transition-colors hover:bg-orange-500/25"
+                  disabled={applying}
+                  className="flex items-center gap-1 rounded bg-orange-500/15 px-2 py-1 text-xs text-orange-400 transition-colors hover:bg-orange-500/25 disabled:opacity-50"
                 >
                   <Undo2 className="size-3" />
                   {t('review.fileHeader.actions.discard')}
@@ -360,7 +400,7 @@ export const FileSectionHeader = ({
               <TooltipTrigger asChild>
                 <button
                   onClick={() => onSave(file.filePath)}
-                  disabled={applying}
+                  disabled={applying || !!externalChange}
                   className="flex items-center gap-1 rounded bg-green-500/15 px-2 py-1 text-xs text-green-400 transition-colors hover:bg-green-500/25 disabled:opacity-50"
                 >
                   {applying ? (
@@ -372,7 +412,11 @@ export const FileSectionHeader = ({
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                <span>{t('review.fileHeader.actions.saveFileTooltip')}</span>
+                <span>
+                  {externalChange
+                    ? `${t('review.fileHeader.actions.reloadFromDisk')} / ${t('review.fileHeader.actions.keepMyDraft')}`
+                    : t('review.fileHeader.actions.saveFileTooltip')}
+                </span>
                 <kbd className="ml-2 rounded border border-border bg-surface-raised px-1 py-0.5 font-mono text-[10px] text-text-muted">
                   {shortcutLabel('⌘ S', 'Ctrl+S')}
                 </kbd>

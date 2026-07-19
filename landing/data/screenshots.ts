@@ -13,7 +13,7 @@ export type Screenshot = {
 export const screenshots: (Omit<Screenshot, "src"> & { path: string })[] = [
   { path: "screenshots/13.jpg", alt: "Connected AI coding providers and subscription limits", ruAlt: "Подключённые AI-провайдеры и лимиты подписок", width: 2560, height: 1606 },
   { path: "screenshots/14.png", alt: "Token usage, costs, runs, and budget analytics", ruAlt: "Аналитика токенов, расходов, запусков и бюджетов", width: 1854, height: 1156 },
-  { path: "screenshots/1.png", alt: "Kanban board with agent tasks and team messages", ruAlt: "Канбан-доска с задачами агентов и сообщениями команды", width: 2624, height: 1652 },
+  { path: "screenshots/1.jpg", alt: "Kanban board with agent tasks and team messages", ruAlt: "Канбан-доска с задачами агентов и сообщениями команды", width: 2624, height: 1648 },
   { path: "screenshots/2.png", alt: "Organization hierarchy with teams, agents, and active tasks", ruAlt: "Иерархия организации с командами, агентами и активными задачами", width: 2624, height: 1634 },
   { path: "screenshots/3.png", alt: "Task discussion and review comments", ruAlt: "Обсуждение задачи и комментарии ревью", width: 2622, height: 1646 },
   { path: "screenshots/4.jpg", alt: "Create an AI team with roles, providers, and models", ruAlt: "Создание команды ИИ с ролями, провайдерами и моделями", width: 2560, height: 1552 },

@@ -6,7 +6,8 @@ import {
 } from '@shared/utils/taskChangeReviewability';
 import { createHash } from 'crypto';
 import { diffLines } from 'diff';
-import { open, readFile } from 'fs/promises';
+import { constants as fsConstants } from 'fs';
+import { lstat, open, realpath, stat } from 'fs/promises';
 import * as path from 'path';
 
 import type {
@@ -31,6 +32,13 @@ const TASK_CHANGE_FRESHNESS_SCHEMA_VERSION = 2;
 const TASK_CHANGE_LEDGER_DIRNAME = '.board-task-changes';
 const TASK_CHANGE_FRESHNESS_DIRNAME = '.board-task-change-freshness';
 const MAX_TASK_ID_ARTIFACT_SEGMENT_LENGTH = 120;
+export const TASK_CHANGE_LEDGER_READ_LIMITS = Object.freeze({
+  metadataBytes: 16 * 1024 * 1024,
+  journalBytes: 32 * 1024 * 1024,
+  journalEntries: 10_000,
+  blobBytes: 8 * 1024 * 1024,
+  blobConcurrency: 8,
+});
 
 function isWindowsReservedArtifactSegment(segment: string): boolean {
   const stem = segment.split('.')[0]?.toUpperCase() ?? '';
@@ -78,6 +86,11 @@ function decodeLedgerTextBlob(buffer: Buffer): string | null {
   }
   const text = buffer.toString('utf8');
   return Buffer.from(text, 'utf8').equals(buffer) ? text : null;
+}
+
+function isPathWithinLedgerRoot(targetPath: string, rootPath: string): boolean {
+  const relative = path.relative(rootPath, targetPath);
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
 type LedgerConfidence = 'exact' | 'high' | 'medium' | 'low' | 'ambiguous';
@@ -300,6 +313,7 @@ interface LedgerFreshnessV2 {
 interface JournalReadResult<T> {
   entries: T[];
   recovered: boolean;
+  rejected: boolean;
 }
 
 interface JournalData {
@@ -316,6 +330,141 @@ interface SummaryBundleRead {
 }
 
 export class TaskChangeLedgerReader {
+  private activeBlobReads = 0;
+  private readonly pendingBlobReads: (() => void)[] = [];
+
+  private async withBlobReadPermit<T>(read: () => Promise<T>): Promise<T> {
+    if (this.activeBlobReads >= TASK_CHANGE_LEDGER_READ_LIMITS.blobConcurrency) {
+      await new Promise<void>((resolve) => this.pendingBlobReads.push(resolve));
+    } else {
+      this.activeBlobReads++;
+    }
+    try {
+      return await read();
+    } finally {
+      const next = this.pendingBlobReads.shift();
+      if (next) {
+        next();
+      } else {
+        this.activeBlobReads--;
+      }
+    }
+  }
+
+  private async resolveConfinedLedgerFile(
+    projectDir: string,
+    filePath: string,
+    containmentRoot = projectDir
+  ): Promise<string | null> {
+    try {
+      const lexicalProjectRoot = path.resolve(path.normalize(projectDir));
+      const lexicalContainmentRoot = path.resolve(path.normalize(containmentRoot));
+      const lexicalFilePath = path.resolve(path.normalize(filePath));
+      if (
+        !isPathWithinLedgerRoot(lexicalContainmentRoot, lexicalProjectRoot) ||
+        !isPathWithinLedgerRoot(lexicalFilePath, lexicalContainmentRoot)
+      ) {
+        return null;
+      }
+
+      const containmentStat = await stat(lexicalContainmentRoot);
+      if (!containmentStat.isDirectory()) {
+        return null;
+      }
+      const [realProjectRoot, realContainmentRoot, realFilePath] = await Promise.all([
+        realpath(lexicalProjectRoot),
+        realpath(lexicalContainmentRoot),
+        realpath(lexicalFilePath),
+      ]);
+      if (
+        !isPathWithinLedgerRoot(realContainmentRoot, realProjectRoot) ||
+        !isPathWithinLedgerRoot(realFilePath, realContainmentRoot)
+      ) {
+        return null;
+      }
+      return realFilePath;
+    } catch {
+      return null;
+    }
+  }
+
+  private async readConfinedLedgerFile(
+    projectDir: string,
+    filePath: string,
+    maxBytes: number,
+    containmentRoot = projectDir
+  ): Promise<Buffer | null> {
+    const realFilePath = await this.resolveConfinedLedgerFile(
+      projectDir,
+      filePath,
+      containmentRoot
+    );
+    if (!realFilePath) {
+      return null;
+    }
+
+    let handle: Awaited<ReturnType<typeof open>> | null = null;
+    try {
+      try {
+        handle = await open(realFilePath, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (!['EINVAL', 'ENOTSUP', 'EOPNOTSUPP'].includes(code ?? '')) {
+          throw error;
+        }
+        const revalidatedPath = await this.resolveConfinedLedgerFile(
+          projectDir,
+          filePath,
+          containmentRoot
+        );
+        if (revalidatedPath !== realFilePath) {
+          return null;
+        }
+        handle = await open(realFilePath, fsConstants.O_RDONLY);
+      }
+      const revalidatedPath = await this.resolveConfinedLedgerFile(
+        projectDir,
+        filePath,
+        containmentRoot
+      );
+      if (revalidatedPath !== realFilePath) {
+        return null;
+      }
+      const initialStat = await handle.stat();
+      if (
+        !initialStat.isFile() ||
+        !Number.isSafeInteger(initialStat.size) ||
+        initialStat.size < 0 ||
+        initialStat.size > maxBytes
+      ) {
+        return null;
+      }
+
+      const buffer = Buffer.alloc(initialStat.size);
+      let offset = 0;
+      while (offset < buffer.length) {
+        const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+        if (bytesRead === 0) {
+          return null;
+        }
+        offset += bytesRead;
+      }
+      const finalStat = await handle.stat();
+      if (
+        finalStat.size !== initialStat.size ||
+        finalStat.mtimeMs !== initialStat.mtimeMs ||
+        finalStat.ctimeMs !== initialStat.ctimeMs
+      ) {
+        return null;
+      }
+      return buffer;
+    } catch {
+      return null;
+    } finally {
+      await handle?.close().catch(() => undefined);
+    }
+  }
+
   async readTaskChanges(params: {
     teamName: string;
     taskId: string;
@@ -497,7 +646,13 @@ export class TaskChangeLedgerReader {
     );
     for (const bundlePath of bundlePaths) {
       try {
-        const raw = await readFile(bundlePath, 'utf8');
+        const buffer = await this.readConfinedLedgerFile(
+          projectDir,
+          bundlePath,
+          TASK_CHANGE_LEDGER_READ_LIMITS.metadataBytes
+        );
+        if (!buffer) continue;
+        const raw = buffer.toString('utf8');
         const parsed = JSON.parse(raw) as Partial<LedgerSummaryBundleV2>;
         if (
           parsed?.schemaVersion !== TASK_CHANGE_SUMMARY_SCHEMA_VERSION ||
@@ -529,7 +684,13 @@ export class TaskChangeLedgerReader {
     );
     for (const freshnessPath of freshnessPaths) {
       try {
-        const raw = await readFile(freshnessPath, 'utf8');
+        const buffer = await this.readConfinedLedgerFile(
+          projectDir,
+          freshnessPath,
+          TASK_CHANGE_LEDGER_READ_LIMITS.metadataBytes
+        );
+        if (!buffer) continue;
+        const raw = buffer.toString('utf8');
         const parsed = JSON.parse(raw) as Partial<LedgerFreshnessV2>;
         if (
           parsed?.schemaVersion !== TASK_CHANGE_FRESHNESS_SCHEMA_VERSION ||
@@ -559,13 +720,20 @@ export class TaskChangeLedgerReader {
     );
     for (const bundlePath of bundlePaths) {
       try {
-        const raw = await readFile(bundlePath, 'utf8');
+        const buffer = await this.readConfinedLedgerFile(
+          projectDir,
+          bundlePath,
+          TASK_CHANGE_LEDGER_READ_LIMITS.metadataBytes
+        );
+        if (!buffer) continue;
+        const raw = buffer.toString('utf8');
         const parsed = JSON.parse(raw) as Partial<LedgerBundleV1>;
         if (
           parsed?.schemaVersion !== 1 ||
           parsed.source !== 'task-change-ledger' ||
           parsed.taskId !== taskId ||
-          !Array.isArray(parsed.events)
+          !Array.isArray(parsed.events) ||
+          parsed.events.length > TASK_CHANGE_LEDGER_READ_LIMITS.journalEntries
         ) {
           return null;
         }
@@ -580,6 +748,7 @@ export class TaskChangeLedgerReader {
   private async readJournalData(projectDir: string, taskId: string): Promise<JournalData | null> {
     const [events, notices] = await Promise.all([
       this.readJournalEntries<LedgerEvent>({
+        projectDir,
         filePath: taskArtifactPathCandidates(
           projectDir,
           taskId,
@@ -591,6 +760,7 @@ export class TaskChangeLedgerReader {
         idField: 'eventId',
       }),
       this.readJournalEntries<LedgerNotice>({
+        projectDir,
         filePath: taskArtifactPathCandidates(
           projectDir,
           taskId,
@@ -603,6 +773,9 @@ export class TaskChangeLedgerReader {
       }),
     ]);
 
+    if (events.rejected || notices.rejected) {
+      return null;
+    }
     if (events.entries.length === 0 && notices.entries.length === 0) {
       return null;
     }
@@ -615,6 +788,7 @@ export class TaskChangeLedgerReader {
   }
 
   private async readJournalEntries<T extends { taskId: string; schemaVersion: number }>(params: {
+    projectDir: string;
     filePath: string | string[];
     taskId: string;
     schemaVersion: number;
@@ -622,22 +796,40 @@ export class TaskChangeLedgerReader {
   }): Promise<JournalReadResult<T>> {
     let raw: string | null = null;
     for (const filePath of Array.isArray(params.filePath) ? params.filePath : [params.filePath]) {
+      let artifactExists = false;
       try {
-        raw = await readFile(filePath, 'utf8');
-        break;
+        await lstat(filePath);
+        artifactExists = true;
       } catch {
-        continue;
+        // Try the next backwards-compatible task-id path.
+      }
+      const buffer = await this.readConfinedLedgerFile(
+        params.projectDir,
+        filePath,
+        TASK_CHANGE_LEDGER_READ_LIMITS.journalBytes
+      );
+      if (buffer) {
+        raw = buffer.toString('utf8');
+        break;
+      }
+      if (artifactExists) {
+        return { entries: [], recovered: true, rejected: true };
       }
     }
     if (raw === null) {
-      return { entries: [], recovered: false };
+      return { entries: [], recovered: false, rejected: false };
     }
 
     const entries: T[] = [];
     const seenIds = new Set<string>();
     let recovered = false;
+    let inspectedEntries = 0;
     for (const line of raw.split('\n')) {
       if (!line.trim()) continue;
+      inspectedEntries++;
+      if (inspectedEntries > TASK_CHANGE_LEDGER_READ_LIMITS.journalEntries) {
+        return { entries: [], recovered: true, rejected: true };
+      }
       try {
         const parsed = JSON.parse(line) as T & Record<string, unknown>;
         const id = parsed?.[params.idField];
@@ -659,7 +851,7 @@ export class TaskChangeLedgerReader {
         recovered = true;
       }
     }
-    return { entries, recovered };
+    return { entries, recovered, rejected: false };
   }
 
   private bundleMatchesFreshness(
@@ -793,9 +985,33 @@ export class TaskChangeLedgerReader {
       let handle: Awaited<ReturnType<typeof open>> | null = null;
       for (const filePath of filePaths) {
         try {
-          handle = await open(filePath, 'r');
+          const realFilePath = await this.resolveConfinedLedgerFile(projectDir, filePath);
+          if (!realFilePath) {
+            continue;
+          }
+          try {
+            handle = await open(realFilePath, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
+          } catch (error) {
+            const code = (error as NodeJS.ErrnoException).code;
+            if (!['EINVAL', 'ENOTSUP', 'EOPNOTSUPP'].includes(code ?? '')) {
+              throw error;
+            }
+            const fallbackPath = await this.resolveConfinedLedgerFile(projectDir, filePath);
+            if (fallbackPath !== realFilePath) {
+              continue;
+            }
+            handle = await open(realFilePath, fsConstants.O_RDONLY);
+          }
+          const revalidatedPath = await this.resolveConfinedLedgerFile(projectDir, filePath);
+          if (revalidatedPath !== realFilePath) {
+            continue;
+          }
           const fileStat = await handle.stat();
-          if (!fileStat.isFile()) {
+          if (
+            !fileStat.isFile() ||
+            fileStat.size < 0 ||
+            fileStat.size > TASK_CHANGE_LEDGER_READ_LIMITS.journalBytes
+          ) {
             continue;
           }
           const tailLength = Math.min(fileStat.size, 4096);
@@ -1193,13 +1409,27 @@ export class TaskChangeLedgerReader {
   }
 
   private async buildSnippets(projectDir: string, events: LedgerEvent[]): Promise<SnippetDiff[]> {
-    return Promise.all(
-      events.map(async (event) => {
+    const snippets = new Array<SnippetDiff>(events.length);
+    let nextIndex = 0;
+    const worker = async (): Promise<void> => {
+      for (;;) {
+        const index = nextIndex++;
+        if (index >= events.length) return;
+        const event = events[index]!;
         const beforeContent = await this.readContentRef(projectDir, event.before);
         const afterContent = await this.readContentRef(projectDir, event.after);
-        return this.eventToSnippet(event, beforeContent, afterContent);
-      })
+        snippets[index] = this.eventToSnippet(event, beforeContent, afterContent);
+      }
+    };
+    await Promise.all(
+      Array.from(
+        {
+          length: Math.min(TASK_CHANGE_LEDGER_READ_LIMITS.blobConcurrency, events.length),
+        },
+        worker
+      )
     );
+    return snippets;
   }
 
   private projectJournalEventsForUi(events: LedgerEvent[]): LedgerEvent[] {
@@ -1287,9 +1517,40 @@ export class TaskChangeLedgerReader {
       return null;
     }
     try {
-      const buffer = await readFile(
-        path.join(projectDir, TASK_CHANGE_LEDGER_DIRNAME, 'blobs', ref.blobRef)
+      if (
+        typeof ref.blobRef !== 'string' ||
+        !ref.blobRef.trim() ||
+        path.isAbsolute(ref.blobRef) ||
+        typeof ref.sha256 !== 'string' ||
+        !/^[a-f0-9]{64}$/i.test(ref.sha256) ||
+        !Number.isSafeInteger(ref.sizeBytes) ||
+        ref.sizeBytes < 0 ||
+        ref.sizeBytes > TASK_CHANGE_LEDGER_READ_LIMITS.blobBytes
+      ) {
+        return null;
+      }
+
+      const blobsRoot = path.resolve(projectDir, TASK_CHANGE_LEDGER_DIRNAME, 'blobs');
+      const blobPath = path.resolve(blobsRoot, ref.blobRef);
+      if (!isPathWithinLedgerRoot(blobPath, blobsRoot)) {
+        return null;
+      }
+
+      const buffer = await this.withBlobReadPermit(() =>
+        this.readConfinedLedgerFile(
+          projectDir,
+          blobPath,
+          TASK_CHANGE_LEDGER_READ_LIMITS.blobBytes,
+          blobsRoot
+        )
       );
+      if (
+        !buffer ||
+        buffer.byteLength !== ref.sizeBytes ||
+        createHash('sha256').update(buffer).digest('hex') !== ref.sha256.toLowerCase()
+      ) {
+        return null;
+      }
       return decodeLedgerTextBlob(buffer);
     } catch {
       return null;

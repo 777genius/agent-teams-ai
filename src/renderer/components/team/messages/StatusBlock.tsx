@@ -15,6 +15,7 @@ interface StatusBlockProps {
   tasks: TeamTaskWithKanban[];
   messages: InboxMessage[];
   pendingRepliesByMember: Record<string, number>;
+  isTeamAlive?: boolean;
   /** Where the Messages panel is rendered — 'sidebar' hides "In progress" (already visible in MemberList). */
   position?: 'sidebar' | 'inline';
   /** Overlay keeps the toggle hovering over the previous section, flow keeps it in normal layout. */
@@ -34,6 +35,7 @@ export const StatusBlock = ({
   tasks,
   messages,
   pendingRepliesByMember,
+  isTeamAlive,
   position,
   layout = 'overlay',
   onMemberClick,
@@ -107,6 +109,8 @@ export const StatusBlock = ({
           {hasPendingReplies ? (
             <PendingRepliesBlock
               members={members}
+              messages={messages}
+              isTeamAlive={isTeamAlive}
               pendingRepliesByMember={pendingRepliesByMember}
               pendingCrossTeamReplies={pendingCrossTeamReplies}
               headerRight={flowInlineToggle}

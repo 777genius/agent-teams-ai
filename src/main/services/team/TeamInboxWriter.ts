@@ -148,6 +148,8 @@ export class TeamInboxWriter {
       ...(request.toolSummary && { toolSummary: request.toolSummary }),
       ...(request.toolCalls && { toolCalls: request.toolCalls }),
       ...(request.messageKind && { messageKind: request.messageKind }),
+      ...(request.agentError && { agentError: request.agentError }),
+      ...(request.runtimeRecovery && { runtimeRecovery: request.runtimeRecovery }),
       ...(request.workSyncIntent && { workSyncIntent: request.workSyncIntent }),
       ...(request.workSyncIntentKey && { workSyncIntentKey: request.workSyncIntentKey }),
       ...(request.workSyncReviewRequestEventIds?.length

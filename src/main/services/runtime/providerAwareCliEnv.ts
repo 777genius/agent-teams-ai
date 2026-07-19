@@ -5,7 +5,11 @@ import { resolveVerifiedOpenCodeRuntimeBinaryPath } from '../infrastructure/Open
 
 import { ensureAgentTeamsMcpLocalLaunchEnv } from './agentTeamsMcpLaunchEnv';
 import { buildRuntimeBaseEnv } from './buildRuntimeBaseEnv';
-import { applyOpenCodeRuntimeBinaryEnv } from './openCodeRuntimeBinaryEnv';
+import {
+  applyOpenCodeRuntimeBinaryEnv,
+  OPENCODE_LEGACY_BINARY_PATH_ENV,
+  OPENCODE_RUNTIME_BINARY_PATH_ENV,
+} from './openCodeRuntimeBinaryEnv';
 import { providerConnectionService } from './ProviderConnectionService';
 
 import type { CliProviderId, TeamProviderId } from '@shared/types';
@@ -83,7 +87,23 @@ export async function buildProviderAwareCliEnv(
     mergePathFallbacks: true,
   });
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
-    const openCodeBinary = await resolveVerifiedOpenCodeRuntimeBinaryPath();
+    const explicitOpenCodeBinary = [
+      options.env?.[OPENCODE_RUNTIME_BINARY_PATH_ENV],
+      options.env?.[OPENCODE_LEGACY_BINARY_PATH_ENV],
+      process.env[OPENCODE_RUNTIME_BINARY_PATH_ENV],
+      process.env[OPENCODE_LEGACY_BINARY_PATH_ENV],
+    ]
+      .find((candidate): candidate is string => Boolean(candidate?.trim()))
+      ?.trim();
+    const openCodeBinary =
+      explicitOpenCodeBinary ?? (await resolveVerifiedOpenCodeRuntimeBinaryPath());
+    if (openCodeBinary) {
+      // Login-shell snapshots can contain an older OpenCode override than the
+      // app-managed runtime shown in the UI. Keep deliberate process/call
+      // overrides, otherwise make the verified runtime authoritative.
+      delete env[OPENCODE_RUNTIME_BINARY_PATH_ENV];
+      delete env[OPENCODE_LEGACY_BINARY_PATH_ENV];
+    }
     applyOpenCodeRuntimeBinaryEnv(env, openCodeBinary);
   }
   const appManagedCodexBinary = await resolveVerifiedAppManagedCodexRuntimeBinaryPath();

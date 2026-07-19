@@ -257,6 +257,25 @@
     }
   },
   "notifications": {
+    "recovery": {
+      "title": "Автоматическое восстановление агентов",
+      "transient": {
+        "label": "Восстанавливать после временных runtime-ошибок",
+        "description": "Продолжать упавший turn lead или teammate после безопасных временных ошибок провайдера и сети"
+      },
+      "rateLimits": {
+        "label": "Восстанавливать после rate limit с временем сброса",
+        "description": "Продолжать после надежного Retry-After или времени сброса с защитным буфером"
+      },
+      "delay": {
+        "label": "Начальная задержка повтора (секунды)",
+        "description": "Базовая задержка перед первой попыткой восстановления (15-900 секунд)"
+      },
+      "attempts": {
+        "label": "Максимум попыток восстановления",
+        "description": "Принятые runtime turns на одну цепочку ошибки (1-5)"
+      }
+    },
     "dev": {
       "descriptionPrefix": "В режиме разработки уведомления могут работать некорректно. macOS определяет приложение как \"Electron\" (bundle ID",
       "descriptionSuffix": "), а не как production-приложение. Проверьте разрешения в System Settings > Notifications > Electron.",

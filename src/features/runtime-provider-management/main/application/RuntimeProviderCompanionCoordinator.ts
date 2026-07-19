@@ -6,13 +6,21 @@ import type {
   RuntimeProviderCompanionRegistryEntry,
 } from '../infrastructure/cli-companion/types';
 import type {
+  RuntimeProviderCompanionActionInput,
+  RuntimeProviderCompanionIdDto,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
 } from '@features/runtime-provider-management/contracts';
 
+interface CompanionOperationQueue {
+  tail: Promise<void>;
+  activeByRequest: Map<string, Promise<RuntimeProviderCompanionStatusDto>>;
+}
+
 export class RuntimeProviderCompanionCoordinator {
   readonly #port: RuntimeProviderManagementPort;
   readonly #registry: RuntimeProviderCompanionRegistry;
+  readonly #operationQueues = new Map<RuntimeProviderCompanionIdDto, CompanionOperationQueue>();
 
   constructor(port: RuntimeProviderManagementPort, registry: RuntimeProviderCompanionRegistry) {
     this.#port = port;
@@ -22,19 +30,75 @@ export class RuntimeProviderCompanionCoordinator {
   async getStatus(
     input: RuntimeProviderCompanionInput
   ): Promise<RuntimeProviderCompanionStatusDto> {
-    return this.#getEntry(input).service.getStatus();
+    const entry = this.#getEntry(input);
+    if (this.#operationQueues.has(input.companionId)) {
+      return entry.service.getCurrentStatus();
+    }
+    return entry.service.getStatus();
   }
 
   async installAndConnect(
     input: RuntimeProviderCompanionInput
   ): Promise<RuntimeProviderCompanionStatusDto> {
     const entry = this.#getEntry(input);
-    return this.#verifyConnectedCompanion(input, entry, await entry.service.installAndConnect());
+    return this.#runCompanionOperation(input, 'install-and-connect', async () =>
+      this.#verifyConnectedCompanion(input, entry, await entry.service.installAndConnect())
+    );
   }
 
   async connect(input: RuntimeProviderCompanionInput): Promise<RuntimeProviderCompanionStatusDto> {
     const entry = this.#getEntry(input);
-    return this.#verifyConnectedCompanion(input, entry, await entry.service.connect());
+    return this.#runCompanionOperation(input, 'connect', async () =>
+      this.#verifyConnectedCompanion(input, entry, await entry.service.connect())
+    );
+  }
+
+  async runAction(
+    input: RuntimeProviderCompanionActionInput
+  ): Promise<RuntimeProviderCompanionStatusDto> {
+    const entry = this.#getEntry(input);
+    return this.#runCompanionOperation(input, `action:${input.action}`, async () => {
+      const status = await entry.service.runAction(input.action);
+      return (input.action === 'switch-account' || input.action === 'update') &&
+        status.authenticated
+        ? this.#verifyConnectedCompanion(input, entry, status)
+        : status;
+    });
+  }
+
+  #runCompanionOperation(
+    input: RuntimeProviderCompanionInput,
+    operation: string,
+    run: () => Promise<RuntimeProviderCompanionStatusDto>
+  ): Promise<RuntimeProviderCompanionStatusDto> {
+    const requestKey = `${operation}\0${input.projectPath?.trim() ?? ''}`;
+    let queue = this.#operationQueues.get(input.companionId);
+    if (!queue) {
+      queue = { tail: Promise.resolve(), activeByRequest: new Map() };
+      this.#operationQueues.set(input.companionId, queue);
+    }
+    const active = queue.activeByRequest.get(requestKey);
+    if (active) return active;
+
+    const promise = queue.tail.then(run);
+    queue.activeByRequest.set(requestKey, promise);
+    queue.tail = promise.then(
+      () => undefined,
+      () => undefined
+    );
+    const clearRequest = (): void => {
+      if (queue.activeByRequest.get(requestKey) === promise) {
+        queue.activeByRequest.delete(requestKey);
+      }
+      if (
+        queue.activeByRequest.size === 0 &&
+        this.#operationQueues.get(input.companionId) === queue
+      ) {
+        this.#operationQueues.delete(input.companionId);
+      }
+    };
+    void promise.then(clearRequest, clearRequest);
+    return promise;
   }
 
   #getEntry(input: RuntimeProviderCompanionInput): RuntimeProviderCompanionRegistryEntry {

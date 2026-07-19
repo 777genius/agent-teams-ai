@@ -1,26 +1,44 @@
-import { computeDiffContextHash } from '@shared/utils/diffContextHash';
-import { createLogger } from '@shared/utils/logger';
+import {
+  atomicCreateAsync,
+  executeReviewFileTransaction,
+  finalizePreparedReviewFileTransaction,
+  finalizeReviewFileTransaction,
+  inspectReviewFileTransaction,
+  prepareReviewFileTransaction,
+  resumePreparedReviewFileTransaction,
+} from '@main/utils/atomicWrite';
 import { isWindowsishPath, normalizePathForComparison } from '@shared/utils/platformPath';
+import { buildReviewChunkContextHashes, rejectReviewChunks } from '@shared/utils/reviewChunks';
+import { threeWayTextMerge } from '@shared/utils/threeWayTextMerge';
+import { AsyncLocalStorage } from 'async_hooks';
 import { createHash } from 'crypto';
-import { applyPatch, structuredPatch } from 'diff';
-import { mkdir, readFile, unlink, writeFile } from 'fs/promises';
-import { diff3Merge } from 'node-diff3';
+import { lstat, mkdir, readFile } from 'fs/promises';
 import { dirname } from 'path';
 
-import { HunkSnippetMatcher } from './HunkSnippetMatcher';
-
 import type {
+  ApplyReviewDiskTransition,
   ApplyReviewRequest,
   ApplyReviewResult,
   ConflictCheckResult,
   FileChangeWithContent,
   LedgerChangeRelation,
   RejectResult,
+  ReviewMutationDiskPostimage,
   SnippetDiff,
 } from '@shared/types';
-import type { StructuredPatchHunk } from 'diff';
 
-const logger = createLogger('Service:ReviewApplierService');
+export interface ReviewApplyMutationHooks {
+  checkpointDiskTransitions: (transitions: readonly ApplyReviewDiskTransition[]) => Promise<void>;
+  initialDiskTransitions?: readonly ApplyReviewDiskTransition[];
+}
+
+interface ReviewApplyMutationContext {
+  hooks?: ReviewApplyMutationHooks;
+  observedPreimages: Map<string, ApplyReviewDiskTransition>;
+  plannedTransitions: Map<string, ApplyReviewDiskTransition>;
+}
+
+const reviewApplyMutationContext = new AsyncLocalStorage<ReviewApplyMutationContext>();
 
 type ApplyErrorCode = NonNullable<ApplyReviewResult['errors'][number]['code']>;
 type LedgerApplyOutcome =
@@ -33,8 +51,69 @@ type CurrentTextReadResult =
   | { missing: false; content: string }
   | { missing: false; content: ''; error: string };
 
+export type ReviewFileTransitionState = 'before' | 'after' | 'both';
+export type ReviewRenameTransitionState =
+  | 'accepted'
+  | 'rejected'
+  | 'both'
+  | 'restoring'
+  | 'reapplying'
+  | 'legacy-reapplying';
+
 function getCurrentTextReadError(result: CurrentTextReadResult): string | null {
   return 'error' in result ? result.error : null;
+}
+
+const fileMutationQueues = new Map<string, Promise<void>>();
+
+async function withFileMutationLock<T>(filePath: string, operation: () => Promise<T>): Promise<T> {
+  return withFileMutationLocks([filePath], operation);
+}
+
+async function withFileMutationLocks<T>(
+  filePaths: readonly string[],
+  operation: () => Promise<T>
+): Promise<T> {
+  const keys = [
+    ...new Set(
+      filePaths.map((filePath) => {
+        const normalized = normalizePathForComparison(filePath).normalize('NFC');
+        return process.platform === 'darwin' || process.platform === 'win32'
+          ? normalized.toLowerCase()
+          : normalized;
+      })
+    ),
+  ].sort();
+
+  const acquire = (index: number): Promise<T> => {
+    const key = keys[index];
+    return key ? withFileMutationKeyLock(key, () => acquire(index + 1)) : operation();
+  };
+
+  return acquire(0);
+}
+
+async function withFileMutationKeyLock<T>(key: string, operation: () => Promise<T>): Promise<T> {
+  const previous = fileMutationQueues.get(key) ?? Promise.resolve();
+  let release = (): void => undefined;
+  const current = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const queueTail = previous.then(
+    () => current,
+    () => current
+  );
+  fileMutationQueues.set(key, queueTail);
+
+  await previous.catch(() => undefined);
+  try {
+    return await operation();
+  } finally {
+    release();
+    if (fileMutationQueues.get(key) === queueTail) {
+      fileMutationQueues.delete(key);
+    }
+  }
 }
 
 /**
@@ -48,7 +127,276 @@ function getCurrentTextReadError(result: CurrentTextReadResult): string | null {
  * - Batch review application
  */
 export class ReviewApplierService {
-  private readonly matcher = new HunkSnippetMatcher();
+  /**
+   * Read-only CAS classification used before a durable direct mutation and while
+   * recovering it. Existing paths must still be safe regular single-link files.
+   */
+  async classifyEditedFileTransition(
+    filePath: string,
+    beforeContent: string | null,
+    afterContent: string | null
+  ): Promise<ReviewFileTransitionState> {
+    return withFileMutationLock(filePath, async () => {
+      const resumedTransaction =
+        beforeContent === null
+          ? null
+          : await resumePreparedReviewFileTransaction({
+              kind: afterContent === null ? 'delete' : 'replace',
+              sourcePath: filePath,
+              targetPath: filePath,
+              expectedContent: beforeContent,
+              nextContent: afterContent,
+            });
+      const ownsPublishedTarget = resumedTransaction
+        ? (await inspectReviewFileTransaction(resumedTransaction)) === 'published'
+        : false;
+      if (resumedTransaction && !ownsPublishedTarget) {
+        throw new Error('Review file transaction evidence is unavailable or conflicted');
+      }
+      const current = await this.readCurrentText(filePath);
+      const currentError = getCurrentTextReadError(current);
+      if (currentError) throw new Error(currentError);
+      if (!current.missing && !ownsPublishedTarget) {
+        await this.assertSafeExpectedFile(filePath, current.content);
+      }
+
+      const beforeMatches =
+        beforeContent === null
+          ? current.missing
+          : !current.missing && current.content === beforeContent;
+      const afterMatches =
+        afterContent === null
+          ? current.missing
+          : !current.missing && current.content === afterContent;
+      if (beforeMatches && afterMatches) return 'both';
+      if (beforeMatches) return 'before';
+      if (afterMatches) return 'after';
+      throw new Error('File changed since review update; durable mutation state is ambiguous');
+    });
+  }
+
+  /**
+   * Classify both sides of a ledger rename without mutating either path. The
+   * intermediate states are exact crash states understood by the idempotent
+   * rename recovery methods below.
+   */
+  async classifyRejectedRenameTransition(
+    filePath: string,
+    original: string | null,
+    modified: string | null,
+    snippets: SnippetDiff[]
+  ): Promise<ReviewRenameTransitionState> {
+    const ledgerSnippets = snippets.filter((snippet) => snippet.ledger && !snippet.isError);
+    const relation = this.resolveLedgerRelation(ledgerSnippets);
+    if (relation?.kind !== 'rename') {
+      throw new Error('Review file is not a ledger rename.');
+    }
+    const oldSnippet =
+      ledgerSnippets.find(
+        (snippet) =>
+          snippet.ledger?.operation === 'delete' &&
+          this.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
+      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'delete');
+    const newSnippet =
+      ledgerSnippets.find(
+        (snippet) =>
+          snippet.ledger?.operation === 'create' &&
+          this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
+      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'create');
+    const oldFilePath =
+      oldSnippet?.filePath ??
+      this.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
+    const newFilePath = newSnippet?.filePath;
+    const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
+    const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
+    if (!oldFilePath || !newFilePath || oldContent === null || newContent === null) {
+      throw new Error('Ledger rename recovery metadata is incomplete.');
+    }
+    if (
+      ledgerSnippets.some(
+        (snippet) =>
+          snippet.ledger?.beforeState?.unavailableReason ||
+          snippet.ledger?.afterState?.unavailableReason
+      )
+    ) {
+      throw new Error('Ledger rename recovery content is unavailable.');
+    }
+
+    return withFileMutationLocks(
+      this.resolveLedgerMutationPaths(filePath, ledgerSnippets),
+      async () => {
+        const oldCurrent = await this.readCurrentText(oldFilePath);
+        const oldError = getCurrentTextReadError(oldCurrent);
+        if (oldError) throw new Error(oldError);
+        const newCurrent = await this.readCurrentText(newFilePath);
+        const newError = getCurrentTextReadError(newCurrent);
+        if (newError) throw new Error(newError);
+        if (!oldCurrent.missing) {
+          await this.assertSafeExpectedFile(oldFilePath, oldCurrent.content);
+        }
+        if (!newCurrent.missing) {
+          await this.assertSafeExpectedFile(newFilePath, newCurrent.content);
+        }
+
+        const aliased =
+          !oldCurrent.missing &&
+          !newCurrent.missing &&
+          (await this.pathsReferToSameFile(oldFilePath, newFilePath));
+        const accepted = aliased
+          ? newCurrent.content === newContent
+          : oldCurrent.missing && !newCurrent.missing && newCurrent.content === newContent;
+        const rejected = aliased
+          ? oldCurrent.content === oldContent
+          : !oldCurrent.missing && oldCurrent.content === oldContent && newCurrent.missing;
+        if (accepted && rejected) return 'both';
+        if (accepted) return 'accepted';
+        if (rejected) return 'rejected';
+        if (oldCurrent.missing && !newCurrent.missing && newCurrent.content === oldContent) {
+          return 'restoring';
+        }
+        if (newCurrent.missing && !oldCurrent.missing && oldCurrent.content === newContent) {
+          return 'reapplying';
+        }
+        if (
+          !oldCurrent.missing &&
+          oldCurrent.content === oldContent &&
+          !newCurrent.missing &&
+          newCurrent.content === newContent
+        ) {
+          return 'legacy-reapplying';
+        }
+        throw new Error('Ledger rename changed since review update; durable state is ambiguous');
+      }
+    );
+  }
+
+  /**
+   * Restore the agent side of a previously rejected ledger rename.
+   * Both paths are guarded by the same mutation lock and verified before mutation.
+   */
+  async restoreRejectedRename(
+    filePath: string,
+    original: string | null,
+    modified: string | null,
+    snippets: SnippetDiff[]
+  ): Promise<{ success: true }> {
+    const ledgerSnippets = snippets.filter((snippet) => snippet.ledger && !snippet.isError);
+    const relation = this.resolveLedgerRelation(ledgerSnippets);
+    if (relation?.kind !== 'rename') {
+      throw new Error('Review file is not a ledger rename.');
+    }
+
+    return withFileMutationLocks(
+      this.resolveLedgerMutationPaths(filePath, ledgerSnippets),
+      async () => {
+        await this.restoreRejectedLedgerRename(ledgerSnippets, relation, original, modified);
+        return { success: true };
+      }
+    );
+  }
+
+  /** Re-apply the rejected side of a rename when undoing a later restore/accept action. */
+  async reapplyRejectedRename(
+    filePath: string,
+    original: string | null,
+    snippets: SnippetDiff[]
+  ): Promise<{ success: true }> {
+    const ledgerSnippets = snippets.filter((snippet) => snippet.ledger && !snippet.isError);
+    const relation = this.resolveLedgerRelation(ledgerSnippets);
+    if (relation?.kind !== 'rename') {
+      throw new Error('Review file is not a ledger rename.');
+    }
+    const hasUnavailableState = ledgerSnippets.some(
+      (snippet) =>
+        snippet.ledger?.beforeState?.unavailableReason ||
+        snippet.ledger?.afterState?.unavailableReason
+    );
+
+    return withFileMutationLocks(
+      this.resolveLedgerMutationPaths(filePath, ledgerSnippets),
+      async () => {
+        const outcome = await this.rejectLedgerRename(
+          ledgerSnippets,
+          relation,
+          original,
+          hasUnavailableState
+        );
+        if (outcome.handled && (outcome.status === 'applied' || outcome.status === 'skipped')) {
+          return { success: true };
+        }
+        throw new Error(
+          outcome.handled && 'error' in outcome
+            ? outcome.error
+            : 'Ledger rename reject was not handled.'
+        );
+      }
+    );
+  }
+
+  /**
+   * Resolve the exact watched-path postimage of a rename without reading file contents
+   * after the mutation. Case-only aliases intentionally report both lexical paths.
+   */
+  async getRejectedRenamePostimages(
+    original: string | null,
+    modified: string | null,
+    snippets: SnippetDiff[],
+    direction: 'restore' | 'reapply'
+  ): Promise<ReviewMutationDiskPostimage[]> {
+    const ledgerSnippets = snippets.filter((snippet) => snippet.ledger && !snippet.isError);
+    const relation = this.resolveLedgerRelation(ledgerSnippets);
+    if (relation?.kind !== 'rename') {
+      throw new Error('Review file is not a ledger rename.');
+    }
+    const oldSnippet =
+      ledgerSnippets.find(
+        (snippet) =>
+          snippet.ledger?.operation === 'delete' &&
+          this.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
+      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'delete');
+    const newSnippet =
+      ledgerSnippets.find(
+        (snippet) =>
+          snippet.ledger?.operation === 'create' &&
+          this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
+      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'create');
+    const oldFilePath =
+      oldSnippet?.filePath ??
+      this.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
+    const newFilePath = newSnippet?.filePath;
+    const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
+    const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
+    if (!oldFilePath || !newFilePath || oldContent === null || newContent === null) {
+      throw new Error('Ledger rename recovery metadata is incomplete.');
+    }
+    if (
+      ledgerSnippets.some(
+        (snippet) =>
+          snippet.ledger?.beforeState?.unavailableReason ||
+          snippet.ledger?.afterState?.unavailableReason
+      )
+    ) {
+      throw new Error('Ledger rename recovery content is unavailable.');
+    }
+
+    const aliased = await this.pathsReferToSameFile(oldFilePath, newFilePath);
+    const finalContent = direction === 'restore' ? newContent : oldContent;
+    if (aliased) {
+      return [...new Set([oldFilePath, newFilePath])].map((filePath) => ({
+        filePath,
+        content: finalContent,
+      }));
+    }
+    return direction === 'restore'
+      ? [
+          { filePath: oldFilePath, content: null },
+          { filePath: newFilePath, content: newContent },
+        ]
+      : [
+          { filePath: oldFilePath, content: oldContent },
+          { filePath: newFilePath, content: null },
+        ];
+  }
 
   /**
    * Check if the file on disk has been modified since the review was computed.
@@ -79,9 +427,7 @@ export class ReviewApplierService {
 
   /**
    * Reject specific hunks from a file's changes.
-   *
-   * PRIMARY approach: snippet-level replacement with positional reverse.
-   * FALLBACK: hunk-level inverse patch when snippet replacement fails.
+   * Uses the exact CodeMirror chunk model that produced the renderer indexes.
    */
   async rejectHunks(
     _teamName: string,
@@ -89,66 +435,92 @@ export class ReviewApplierService {
     original: string,
     modified: string,
     hunkIndices: number[],
-    snippets: SnippetDiff[]
+    _snippets: SnippetDiff[],
+    hunkContextHashes?: Record<number, string>
   ): Promise<RejectResult> {
-    // Try snippet-level reverse first (most accurate)
-    const snippetResult = this.trySnippetLevelReject(original, modified, hunkIndices, snippets);
-    if (snippetResult) {
-      try {
-        await writeFile(filePath, snippetResult.newContent, 'utf8');
-        return snippetResult;
-      } catch (err) {
+    let mappedHunkIndices = hunkIndices;
+    if (hunkContextHashes) {
+      const strictHunks = mapRejectedHunkIndicesByHashStrict(
+        original,
+        modified,
+        hunkIndices,
+        hunkContextHashes
+      );
+      if (!strictHunks.ok) {
         return {
           success: false,
           newContent: modified,
-          hadConflicts: false,
-          conflictDescription: `Не удалось записать файл: ${String(err)}`,
+          hadConflicts: true,
+          conflictDescription: strictHunks.error,
         };
       }
+      mappedHunkIndices = strictHunks.indices;
+    }
+    const rejectedBaseline = rejectReviewChunks(original, modified, mappedHunkIndices);
+    if (rejectedBaseline === null) {
+      return {
+        success: false,
+        newContent: modified,
+        hadConflicts: true,
+        conflictDescription: 'Не удалось применить reject: индекс CodeMirror chunk недействителен',
+      };
     }
 
-    // Fallback: hunk-level inverse patch
-    const patchResult = this.tryHunkLevelReject(original, modified, hunkIndices);
-    if (patchResult) {
-      try {
-        await writeFile(filePath, patchResult.newContent, 'utf8');
-        return patchResult;
-      } catch (err) {
+    return withFileMutationLock(filePath, async () => {
+      const current = await this.readCurrentText(filePath);
+      if (current.missing) {
         return {
           success: false,
-          newContent: modified,
-          hadConflicts: false,
-          conflictDescription: `Не удалось записать файл: ${String(err)}`,
+          newContent: '',
+          hadConflicts: true,
+          conflictDescription: 'Файл отсутствует на диске; partial reject отменён',
         };
       }
-    }
+      const currentError = getCurrentTextReadError(current);
+      if (currentError) {
+        return {
+          success: false,
+          newContent: '',
+          hadConflicts: false,
+          conflictDescription: currentError,
+        };
+      }
 
-    // Both approaches failed — try three-way merge as last resort
-    const mergeResult = threeWayMerge(original, modified, original);
-    if (!mergeResult.hasConflicts) {
+      let newContent = rejectedBaseline;
+      if (current.content !== modified) {
+        const mergeResult = threeWayTextMerge(modified, current.content, rejectedBaseline);
+        if (mergeResult.hasConflicts) {
+          return {
+            success: false,
+            newContent: current.content,
+            hadConflicts: true,
+            conflictDescription:
+              'Файл был изменён после вычисления review, и partial reject конфликтует с текущими изменениями',
+          };
+        }
+        newContent = mergeResult.content;
+      }
+
+      if (newContent === current.content) {
+        return { success: true, newContent, hadConflicts: false };
+      }
+
       try {
-        await writeFile(filePath, mergeResult.content, 'utf8');
+        await this.atomicReplaceTextFile(filePath, current.content, newContent);
         return {
           success: true,
-          newContent: mergeResult.content,
+          newContent,
           hadConflicts: false,
         };
       } catch (err) {
         return {
           success: false,
-          newContent: modified,
+          newContent: current.content,
           hadConflicts: false,
           conflictDescription: `Не удалось записать файл: ${String(err)}`,
         };
       }
-    }
-
-    return {
-      success: false,
-      newContent: modified,
-      hadConflicts: true,
-      conflictDescription: 'Не удалось применить reject: все стратегии завершились неудачно',
-    };
+    });
   }
 
   /**
@@ -160,56 +532,75 @@ export class ReviewApplierService {
     original: string,
     modified: string
   ): Promise<RejectResult> {
-    // Check for conflicts first
-    const conflict = await this.checkConflict(filePath, modified);
-    if (conflict.hasConflict) {
-      // File was modified since review — try three-way merge
-      const currentContent = conflict.currentContent;
-      const mergeResult = threeWayMerge(modified, currentContent, original);
-
-      if (mergeResult.hasConflicts) {
+    return withFileMutationLock(filePath, async () => {
+      const current = await this.readCurrentText(filePath);
+      if (current.missing) {
         return {
           success: false,
-          newContent: currentContent,
+          newContent: '',
           hadConflicts: true,
-          conflictDescription:
-            'Файл был изменён после вычисления review, и три-сторонний merge обнаружил конфликты',
+          conflictDescription: 'Файл отсутствует на диске; reject отменён',
+        };
+      }
+      const currentError = getCurrentTextReadError(current);
+      if (currentError) {
+        return {
+          success: false,
+          newContent: '',
+          hadConflicts: false,
+          conflictDescription: currentError,
         };
       }
 
+      if (current.content !== modified) {
+        // File was modified since review — try three-way merge
+        const currentContent = current.content;
+        const mergeResult = threeWayTextMerge(modified, currentContent, original);
+
+        if (mergeResult.hasConflicts) {
+          return {
+            success: false,
+            newContent: currentContent,
+            hadConflicts: true,
+            conflictDescription:
+              'Файл был изменён после вычисления review, и три-сторонний merge обнаружил конфликты',
+          };
+        }
+
+        try {
+          await this.atomicReplaceTextFile(filePath, currentContent, mergeResult.content);
+          return {
+            success: true,
+            newContent: mergeResult.content,
+            hadConflicts: false,
+          };
+        } catch (err) {
+          return {
+            success: false,
+            newContent: currentContent,
+            hadConflicts: false,
+            conflictDescription: `Не удалось записать файл: ${String(err)}`,
+          };
+        }
+      }
+
+      // No conflict — simply write original content
       try {
-        await writeFile(filePath, mergeResult.content, 'utf8');
+        await this.atomicReplaceTextFile(filePath, modified, original);
         return {
           success: true,
-          newContent: mergeResult.content,
+          newContent: original,
           hadConflicts: false,
         };
       } catch (err) {
         return {
           success: false,
-          newContent: currentContent,
+          newContent: modified,
           hadConflicts: false,
           conflictDescription: `Не удалось записать файл: ${String(err)}`,
         };
       }
-    }
-
-    // No conflict — simply write original content
-    try {
-      await writeFile(filePath, original, 'utf8');
-      return {
-        success: true,
-        newContent: original,
-        hadConflicts: false,
-      };
-    } catch (err) {
-      return {
-        success: false,
-        newContent: modified,
-        hadConflicts: false,
-        conflictDescription: `Не удалось записать файл: ${String(err)}`,
-      };
-    }
+    });
   }
 
   /**
@@ -222,21 +613,11 @@ export class ReviewApplierService {
     hunkIndices: number[],
     snippets: SnippetDiff[]
   ): Promise<{ preview: string; hasConflicts: boolean }> {
-    // Try snippet-level reverse
-    const snippetResult = this.trySnippetLevelReject(original, modified, hunkIndices, snippets);
-    if (snippetResult) {
-      return { preview: snippetResult.newContent, hasConflicts: false };
-    }
-
-    // Fallback: hunk-level inverse patch
-    const patchResult = this.tryHunkLevelReject(original, modified, hunkIndices);
-    if (patchResult) {
-      return { preview: patchResult.newContent, hasConflicts: patchResult.hadConflicts };
-    }
-
-    // Final fallback — three-way merge
-    const mergeResult = threeWayMerge(original, modified, original);
-    return { preview: mergeResult.content, hasConflicts: mergeResult.hasConflicts };
+    void snippets;
+    const rejected = rejectReviewChunks(original, modified, hunkIndices);
+    return rejected === null
+      ? { preview: modified, hasConflicts: true }
+      : { preview: rejected, hasConflicts: false };
   }
 
   /**
@@ -244,7 +625,33 @@ export class ReviewApplierService {
    */
   async applyReviewDecisions(
     request: ApplyReviewRequest,
-    fileContents = new Map<string, FileChangeWithContent>()
+    fileContents = new Map<string, FileChangeWithContent>(),
+    hooks?: ReviewApplyMutationHooks
+  ): Promise<ApplyReviewResult> {
+    const context: ReviewApplyMutationContext = {
+      hooks,
+      observedPreimages: new Map(),
+      plannedTransitions: new Map(
+        (hooks?.initialDiskTransitions ?? []).map((transition) => [transition.filePath, transition])
+      ),
+    };
+    return reviewApplyMutationContext.run(context, async () => {
+      await this.resumeInitialReviewFileTransactions(context);
+      const result = await this.applyReviewDecisionsInContext(request, fileContents);
+      const diskTransitions = new Map(context.plannedTransitions);
+      for (const [filePath, observed] of context.observedPreimages) {
+        if (!diskTransitions.has(filePath)) diskTransitions.set(filePath, observed);
+      }
+      if (result.errors.length === 0 && diskTransitions.size > 0) {
+        await hooks?.checkpointDiskTransitions([...diskTransitions.values()]);
+      }
+      return result;
+    });
+  }
+
+  private async applyReviewDecisionsInContext(
+    request: ApplyReviewRequest,
+    fileContents: Map<string, FileChangeWithContent>
   ): Promise<ApplyReviewResult> {
     let applied = 0;
     let skipped = 0;
@@ -313,49 +720,18 @@ export class ReviewApplierService {
       }
 
       if (shouldDeleteNewFile) {
-        // If we have an expected modified baseline, guard against deleting a user-modified file.
-        if (modified !== null) {
-          const conflict = await this.checkConflict(decision.filePath, modified);
-          if (conflict.hasConflict) {
-            conflicts++;
-            errors.push({
-              filePath: decision.filePath,
-              error:
-                'File was modified since review was computed; refusing to delete new file automatically.',
-              code: 'conflict',
-            });
-            continue;
-          }
+        const outcome = await withFileMutationLock(decision.filePath, () =>
+          this.rejectNonLedgerNewFile(decision.filePath, modified)
+        );
+        if (outcome.status === 'applied') {
+          applied++;
         } else {
-          // No baseline — safest behavior is to only treat "already missing" as success.
-          try {
-            await readFile(decision.filePath, 'utf8');
-          } catch {
-            applied++;
-            continue;
-          }
+          if (outcome.status === 'conflict') conflicts++;
           errors.push({
             filePath: decision.filePath,
-            error: 'Cannot delete new file: expected modified content is unavailable.',
-            code: 'unavailable',
+            error: outcome.error,
+            code: outcome.code,
           });
-          continue;
-        }
-
-        try {
-          await unlink(decision.filePath);
-          applied++;
-        } catch (err) {
-          const msg = String(err);
-          if (msg.includes('ENOENT')) {
-            applied++;
-          } else {
-            errors.push({
-              filePath: decision.filePath,
-              error: `Failed to delete new file: ${msg}`,
-              code: 'io-error',
-            });
-          }
         }
         continue;
       }
@@ -393,24 +769,24 @@ export class ReviewApplierService {
             skipped++;
             continue;
           }
-
-          const mappedRejected =
-            decision.hunkContextHashes && Object.keys(decision.hunkContextHashes).length > 0
-              ? mapRejectedHunkIndicesByHash(
-                  original,
-                  modified,
-                  rejectedHunkIndices,
-                  decision.hunkContextHashes
-                )
-              : rejectedHunkIndices;
+          if (!decision.hunkContextHashes) {
+            conflicts++;
+            errors.push({
+              filePath: decision.filePath,
+              error: 'Partial reject requires stable hunk context hashes.',
+              code: 'conflict',
+            });
+            continue;
+          }
 
           const result = await this.rejectHunks(
             request.teamName,
             decision.filePath,
             original,
             modified,
-            mappedRejected,
-            fileContent.snippets
+            rejectedHunkIndices,
+            fileContent.snippets,
+            decision.hunkContextHashes
           );
 
           if (result.success) {
@@ -437,12 +813,138 @@ export class ReviewApplierService {
   /**
    * Save edited file content directly to disk.
    */
-  async saveEditedFile(filePath: string, content: string): Promise<{ success: boolean }> {
-    await writeFile(filePath, content, 'utf8');
-    return { success: true };
+  async saveEditedFile(
+    filePath: string,
+    content: string,
+    expectedCurrentContent: string | null
+  ): Promise<{ success: boolean }> {
+    return withFileMutationLock(filePath, async () => {
+      if (expectedCurrentContent !== null) {
+        await resumePreparedReviewFileTransaction({
+          kind: 'replace',
+          sourcePath: filePath,
+          targetPath: filePath,
+          expectedContent: expectedCurrentContent,
+          nextContent: content,
+        });
+      }
+      const current = await this.readCurrentText(filePath);
+      const currentError = getCurrentTextReadError(current);
+      if (currentError) {
+        throw new Error(currentError);
+      }
+      if (expectedCurrentContent !== null && !current.missing && current.content === content) {
+        // Idempotent retry after an atomic replacement succeeded but its IPC response
+        // was lost. Missing-file restoration intentionally stays non-idempotent because
+        // an identical file may have been created independently and must not be claimed.
+        return { success: true };
+      }
+      const matchesExpected =
+        expectedCurrentContent === null
+          ? current.missing
+          : !current.missing && current.content === expectedCurrentContent;
+      if (!matchesExpected) {
+        throw new Error('File changed since review update; refusing to overwrite');
+      }
+      if (expectedCurrentContent === null) {
+        try {
+          await atomicCreateAsync(filePath, content);
+        } catch (error) {
+          const code =
+            error && typeof error === 'object' && 'code' in error
+              ? String((error as { code?: unknown }).code)
+              : '';
+          if (code === 'EEXIST') {
+            throw new Error('File changed since review update; refusing to overwrite');
+          }
+          throw error;
+        }
+        return { success: true };
+      }
+      await this.atomicReplaceTextFile(filePath, expectedCurrentContent, content);
+      return { success: true };
+    });
+  }
+
+  /** Delete a reviewed file only when its content still matches the Undo snapshot. */
+  async deleteEditedFile(
+    filePath: string,
+    expectedCurrentContent: string
+  ): Promise<{ success: boolean }> {
+    return withFileMutationLock(filePath, async () => {
+      await resumePreparedReviewFileTransaction({
+        kind: 'delete',
+        sourcePath: filePath,
+        targetPath: filePath,
+        expectedContent: expectedCurrentContent,
+        nextContent: null,
+      });
+      const current = await this.readCurrentText(filePath);
+      const currentError = getCurrentTextReadError(current);
+      if (currentError) throw new Error(currentError);
+      if (current.missing) {
+        // Idempotent retry after a successful delete whose IPC response was lost.
+        return { success: true };
+      }
+      if (current.content !== expectedCurrentContent) {
+        throw new Error('File changed since review update; refusing to delete');
+      }
+      await this.deleteExpectedTextFile(filePath, expectedCurrentContent);
+      return { success: true };
+    });
   }
 
   // ── Private: Rejection strategies ──
+
+  private async rejectNonLedgerNewFile(
+    filePath: string,
+    modified: string | null
+  ): Promise<
+    { status: 'applied' } | { status: 'conflict' | 'error'; error: string; code: ApplyErrorCode }
+  > {
+    if (modified === null) {
+      const current = await this.readCurrentText(filePath);
+      if (current.missing) return { status: 'applied' };
+      const currentError = getCurrentTextReadError(current);
+      return {
+        status: 'error',
+        error: currentError ?? 'Cannot delete new file: expected modified content is unavailable.',
+        code: currentError ? 'io-error' : 'unavailable',
+      };
+    }
+
+    const current = await this.readCurrentText(filePath);
+    if (current.missing) return { status: 'applied' };
+    const currentError = getCurrentTextReadError(current);
+    if (currentError) {
+      return { status: 'error', error: currentError, code: 'io-error' };
+    }
+    if (current.content !== modified) {
+      return {
+        status: 'conflict',
+        error:
+          'File was modified since review was computed; refusing to delete new file automatically.',
+        code: 'conflict',
+      };
+    }
+
+    try {
+      await this.deleteExpectedTextFile(filePath, current.content);
+      return { status: 'applied' };
+    } catch (err) {
+      const code =
+        err && typeof err === 'object' && 'code' in err
+          ? String((err as { code?: unknown }).code)
+          : '';
+      return code === 'ENOENT'
+        ? { status: 'applied' }
+        : {
+            status: 'error',
+            error: `Failed to delete new file: ${String(err)}`,
+            code: 'io-error',
+          };
+    }
+  }
 
   private async tryApplyLedgerDecision(
     filePath: string,
@@ -459,6 +961,30 @@ export class ReviewApplierService {
       return { handled: false };
     }
 
+    return withFileMutationLocks(this.resolveLedgerMutationPaths(filePath, ledgerSnippets), () =>
+      this.tryApplyLedgerDecisionLocked(
+        filePath,
+        original,
+        modified,
+        fileRejected,
+        allHunksRejected,
+        rejectedHunkIndices,
+        hunkContextHashes,
+        ledgerSnippets
+      )
+    );
+  }
+
+  private async tryApplyLedgerDecisionLocked(
+    filePath: string,
+    original: string | null,
+    modified: string | null,
+    fileRejected: boolean,
+    allHunksRejected: boolean,
+    rejectedHunkIndices: number[],
+    hunkContextHashes: Record<number, string> | undefined,
+    ledgerSnippets: SnippetDiff[]
+  ): Promise<LedgerApplyOutcome> {
     const firstLedger = ledgerSnippets[0]?.ledger;
     const lastLedger = ledgerSnippets[ledgerSnippets.length - 1]?.ledger;
     if (!firstLedger || !lastLedger) {
@@ -513,13 +1039,6 @@ export class ReviewApplierService {
           error: strictHunks.error,
         };
       }
-      const guard = await this.checkLedgerCurrentHash(
-        filePath,
-        lastLedger.afterState?.sha256 ?? lastLedger.afterHash ?? undefined
-      );
-      if (!guard.ok) {
-        return guard.outcome;
-      }
       const patchResult = this.tryStrictHunkLevelReject(original, modified, strictHunks.indices);
       if (!patchResult) {
         return {
@@ -529,8 +1048,53 @@ export class ReviewApplierService {
           error: 'Ledger partial reject could not be applied safely.',
         };
       }
+
+      const expectedHash = lastLedger.afterState?.sha256 ?? lastLedger.afterHash ?? undefined;
+      if (!expectedHash) {
+        return {
+          handled: true,
+          status: 'error',
+          code: 'manual-review-required',
+          error: 'Ledger expected content hash is unavailable; refusing automatic apply.',
+        };
+      }
+      const current = await this.readCurrentText(filePath);
+      if (current.missing) {
+        return {
+          handled: true,
+          status: 'conflict',
+          code: 'conflict',
+          error: 'File is missing on disk; refusing ledger apply.',
+        };
+      }
+      const currentError = getCurrentTextReadError(current);
+      if (currentError) {
+        return {
+          handled: true,
+          status: 'error',
+          code: 'io-error',
+          error: currentError,
+        };
+      }
+
+      let newContent = patchResult.newContent;
+      if (this.hashText(current.content) !== expectedHash) {
+        const mergeResult = threeWayTextMerge(modified, current.content, patchResult.newContent);
+        if (mergeResult.hasConflicts) {
+          return {
+            handled: true,
+            status: 'conflict',
+            code: 'conflict',
+            error: 'Current file edits conflict with the requested ledger hunk reject.',
+          };
+        }
+        newContent = mergeResult.content;
+      }
+      if (newContent === current.content) {
+        return { handled: true, status: 'applied' };
+      }
       try {
-        await writeFile(filePath, patchResult.newContent, 'utf8');
+        await this.atomicReplaceTextFile(filePath, current.content, newContent);
         return { handled: true, status: 'applied' };
       } catch (err) {
         return {
@@ -579,7 +1143,7 @@ export class ReviewApplierService {
         };
       }
       try {
-        await unlink(filePath);
+        await this.deleteExpectedTextFile(filePath, current.content);
         return { handled: true, status: 'applied' };
       } catch (err) {
         const msg = String(err);
@@ -607,6 +1171,9 @@ export class ReviewApplierService {
       const current = await this.readCurrentText(filePath);
       if (!current.missing) {
         const currentError = getCurrentTextReadError(current);
+        if (!currentError && current.content === original) {
+          return { handled: true, status: 'applied' };
+        }
         return {
           handled: true,
           status: 'conflict',
@@ -616,14 +1183,27 @@ export class ReviewApplierService {
         };
       }
       try {
-        await writeFile(filePath, original, 'utf8');
+        await mkdir(dirname(filePath), { recursive: true });
+        await this.checkpointPlannedDiskTransition({
+          filePath,
+          beforeContent: null,
+          afterContent: original,
+        });
+        await atomicCreateAsync(filePath, original);
         return { handled: true, status: 'applied' };
       } catch (err) {
+        const code =
+          err && typeof err === 'object' && 'code' in err
+            ? String((err as { code?: unknown }).code)
+            : '';
         return {
           handled: true,
-          status: 'error',
-          code: 'io-error',
-          error: `Не удалось записать файл: ${String(err)}`,
+          status: code === 'EEXIST' ? 'conflict' : 'error',
+          code: code === 'EEXIST' ? 'conflict' : 'io-error',
+          error:
+            code === 'EEXIST'
+              ? 'Deleted file was recreated while restoring it; refusing overwrite.'
+              : `Не удалось записать файл: ${String(err)}`,
         };
       }
     }
@@ -637,6 +1217,19 @@ export class ReviewApplierService {
           'Ledger before content is unavailable; rejecting this change requires manual review.',
       };
     }
+    const current = await this.readCurrentText(filePath);
+    const currentError = getCurrentTextReadError(current);
+    if (currentError) {
+      return {
+        handled: true,
+        status: 'error',
+        code: 'io-error',
+        error: currentError,
+      };
+    }
+    if (!current.missing && current.content === original) {
+      return { handled: true, status: 'applied' };
+    }
     const guard = await this.checkLedgerCurrentHash(
       filePath,
       lastLedger.afterState?.sha256 ?? lastLedger.afterHash ?? undefined
@@ -645,7 +1238,7 @@ export class ReviewApplierService {
       return guard.outcome;
     }
     try {
-      await writeFile(filePath, original, 'utf8');
+      await this.atomicReplaceTextFile(filePath, current.content, original);
       return { handled: true, status: 'applied' };
     } catch (err) {
       return {
@@ -678,6 +1271,36 @@ export class ReviewApplierService {
     return snippets.find((snippet) => snippet.ledger?.relation)?.ledger?.relation;
   }
 
+  private resolveLedgerMutationPaths(filePath: string, snippets: SnippetDiff[]): string[] {
+    const paths = new Set<string>([filePath]);
+    for (const snippet of snippets) {
+      paths.add(snippet.filePath);
+    }
+
+    const relation = this.resolveLedgerRelation(snippets);
+    if (relation?.kind === 'rename') {
+      const newSnippet = snippets.find(
+        (snippet) =>
+          snippet.ledger?.operation === 'create' &&
+          this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
+      );
+      const oldSnippet = snippets.find(
+        (snippet) =>
+          snippet.ledger?.operation === 'delete' &&
+          this.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
+      );
+      const inferredOldPath = this.resolveRelatedLedgerPath(
+        newSnippet?.filePath,
+        relation.newPath,
+        relation.oldPath
+      );
+      if (oldSnippet?.filePath) paths.add(oldSnippet.filePath);
+      if (inferredOldPath) paths.add(inferredOldPath);
+    }
+
+    return [...paths];
+  }
+
   private async rejectLedgerRename(
     snippets: SnippetDiff[],
     relation: LedgerChangeRelation,
@@ -701,6 +1324,7 @@ export class ReviewApplierService {
       this.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
     const newFilePath = newSnippet?.filePath;
     const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
+    const authoritativeNewContent = newSnippet?.ledger?.modifiedFullContent;
     const newHash = newSnippet?.ledger?.afterState?.sha256 ?? newSnippet?.ledger?.afterHash;
     const oldHash = oldSnippet?.ledger?.beforeState?.sha256 ?? oldSnippet?.ledger?.beforeHash;
 
@@ -721,39 +1345,97 @@ export class ReviewApplierService {
       };
     }
 
+    if (typeof authoritativeNewContent === 'string') {
+      await resumePreparedReviewFileTransaction({
+        kind: 'move',
+        sourcePath: newFilePath,
+        targetPath: oldFilePath,
+        expectedContent: authoritativeNewContent,
+        nextContent: oldContent,
+      });
+    }
+
     const newCurrent = await this.readCurrentText(newFilePath);
-    if (!newCurrent.missing) {
-      const newCurrentError = getCurrentTextReadError(newCurrent);
-      if (newCurrentError) {
-        return {
-          handled: true,
-          status: 'error',
-          code: 'io-error',
-          error: newCurrentError,
-        };
-      }
-      if (this.hashText(newCurrent.content) !== newHash) {
+    const newCurrentError = newCurrent.missing ? null : getCurrentTextReadError(newCurrent);
+    if (newCurrentError) {
+      return { handled: true, status: 'error', code: 'io-error', error: newCurrentError };
+    }
+    const oldCurrent = await this.readCurrentText(oldFilePath);
+    const oldCurrentError = oldCurrent.missing ? null : getCurrentTextReadError(oldCurrent);
+    if (oldCurrentError) {
+      return {
+        handled: true,
+        status: 'error',
+        code: 'io-error',
+        error: oldCurrentError,
+      };
+    }
+    const oldMatchesExpected =
+      !oldCurrent.missing &&
+      (oldHash ? this.hashText(oldCurrent.content) === oldHash : oldCurrent.content === oldContent);
+    const newMatchesExpected = !newCurrent.missing && this.hashText(newCurrent.content) === newHash;
+    const aliased =
+      !oldCurrent.missing &&
+      !newCurrent.missing &&
+      (await this.pathsReferToSameFile(oldFilePath, newFilePath));
+
+    if (aliased) {
+      if (!newMatchesExpected && !oldMatchesExpected) {
         return {
           handled: true,
           status: 'conflict',
           code: 'conflict',
-          error: 'Renamed file was modified since review was computed; refusing ledger reject.',
+          error: 'Case-only rename content changed; refusing ledger reject.',
         };
       }
-    }
-
-    const oldCurrent = await this.readCurrentText(oldFilePath);
-    if (!oldCurrent.missing) {
-      const oldCurrentError = getCurrentTextReadError(oldCurrent);
-      if (oldCurrentError) {
+      const currentContent = newMatchesExpected ? newCurrent.content : oldCurrent.content;
+      try {
+        await this.moveExpectedTextFile(newFilePath, oldFilePath, currentContent, oldContent);
+        return { handled: true, status: 'applied' };
+      } catch (error) {
         return {
           handled: true,
           status: 'error',
           code: 'io-error',
-          error: oldCurrentError,
+          error: `Failed to reject case-only ledger rename: ${String(error)}`,
         };
       }
-      if (!oldHash || this.hashText(oldCurrent.content) !== oldHash) {
+    }
+
+    if (newCurrent.missing) {
+      if (oldMatchesExpected) return { handled: true, status: 'applied' };
+      // Crash after the durable path move but before the content replacement.
+      if (!oldCurrent.missing && this.hashText(oldCurrent.content) === newHash) {
+        try {
+          await this.atomicReplaceTextFile(oldFilePath, oldCurrent.content, oldContent);
+          return { handled: true, status: 'applied' };
+        } catch (error) {
+          return {
+            handled: true,
+            status: 'error',
+            code: 'io-error',
+            error: `Failed to finish interrupted ledger rename reject: ${String(error)}`,
+          };
+        }
+      }
+      return {
+        handled: true,
+        status: 'conflict',
+        code: 'conflict',
+        error: 'Renamed target path is missing; refusing to recreate the original path.',
+      };
+    }
+    if (!newMatchesExpected) {
+      return {
+        handled: true,
+        status: 'conflict',
+        code: 'conflict',
+        error: 'Renamed file was modified since review was computed; refusing ledger reject.',
+      };
+    }
+    // Compatibility recovery for the old create-then-delete implementation.
+    if (!oldCurrent.missing) {
+      if (!oldMatchesExpected) {
         return {
           handled: true,
           status: 'conflict',
@@ -761,24 +1443,122 @@ export class ReviewApplierService {
           error: 'Original rename path already exists with different content; refusing overwrite.',
         };
       }
+      try {
+        await this.deleteExpectedTextFile(newFilePath, newCurrent.content);
+        return { handled: true, status: 'applied' };
+      } catch (error) {
+        return {
+          handled: true,
+          status: 'error',
+          code: 'io-error',
+          error: `Failed to finish legacy ledger rename reject: ${String(error)}`,
+        };
+      }
     }
 
     try {
-      if (oldCurrent.missing) {
-        await mkdir(dirname(oldFilePath), { recursive: true });
-        await writeFile(oldFilePath, oldContent, 'utf8');
-      }
-      if (!newCurrent.missing) {
-        await unlink(newFilePath);
-      }
+      await this.moveExpectedTextFile(newFilePath, oldFilePath, newCurrent.content, oldContent);
       return { handled: true, status: 'applied' };
-    } catch (err) {
+    } catch (error) {
       return {
         handled: true,
         status: 'error',
         code: 'io-error',
-        error: `Failed to reject ledger rename: ${String(err)}`,
+        error: `Failed to reject ledger rename: ${String(error)}`,
       };
+    }
+  }
+
+  private async restoreRejectedLedgerRename(
+    snippets: SnippetDiff[],
+    relation: LedgerChangeRelation,
+    original: string | null,
+    modified: string | null
+  ): Promise<void> {
+    const oldSnippet =
+      snippets.find(
+        (snippet) =>
+          snippet.ledger?.operation === 'delete' &&
+          this.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
+      ) ?? snippets.find((snippet) => snippet.ledger?.operation === 'delete');
+    const newSnippet =
+      snippets.find(
+        (snippet) =>
+          snippet.ledger?.operation === 'create' &&
+          this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
+      ) ?? snippets.find((snippet) => snippet.ledger?.operation === 'create');
+    const oldFilePath =
+      oldSnippet?.filePath ??
+      this.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
+    const newFilePath = newSnippet?.filePath;
+    const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
+    const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
+
+    if (!oldFilePath || !newFilePath || oldContent === null || newContent === null) {
+      throw new Error('Ledger rename recovery metadata is incomplete.');
+    }
+    if (
+      snippets.some(
+        (snippet) =>
+          snippet.ledger?.beforeState?.unavailableReason ||
+          snippet.ledger?.afterState?.unavailableReason
+      )
+    ) {
+      throw new Error('Ledger rename recovery content is unavailable.');
+    }
+
+    await resumePreparedReviewFileTransaction({
+      kind: 'move',
+      sourcePath: oldFilePath,
+      targetPath: newFilePath,
+      expectedContent: oldContent,
+      nextContent: newContent,
+    });
+
+    const oldCurrent = await this.readCurrentText(oldFilePath);
+    const oldReadError = getCurrentTextReadError(oldCurrent);
+    if (oldReadError) throw new Error(oldReadError);
+    const newCurrent = await this.readCurrentText(newFilePath);
+    const newReadError = getCurrentTextReadError(newCurrent);
+    if (newReadError) throw new Error(newReadError);
+    const aliased =
+      !oldCurrent.missing &&
+      !newCurrent.missing &&
+      (await this.pathsReferToSameFile(oldFilePath, newFilePath));
+
+    if (aliased) {
+      if (newCurrent.content === newContent) return;
+      if (newCurrent.content !== oldContent) {
+        throw new Error('Case-only rename content changed after rejection; refusing Undo.');
+      }
+      try {
+        await this.moveExpectedTextFile(oldFilePath, newFilePath, oldContent, newContent);
+        return;
+      } catch (error) {
+        throw new Error(`Failed to restore case-only ledger rename: ${String(error)}`);
+      }
+    }
+
+    if (oldCurrent.missing) {
+      if (!newCurrent.missing && newCurrent.content === newContent) return;
+      // Crash after the path move but before publishing the target content.
+      if (!newCurrent.missing && newCurrent.content === oldContent) {
+        await this.atomicReplaceTextFile(newFilePath, oldContent, newContent);
+        return;
+      }
+      throw new Error('Original rename path changed after rejection; refusing Undo.');
+    }
+    if (oldCurrent.content !== oldContent) {
+      throw new Error('Original rename path changed after rejection; refusing Undo.');
+    }
+    if (!newCurrent.missing) {
+      throw new Error('Renamed target path already exists; refusing Undo.');
+    }
+
+    try {
+      await this.moveExpectedTextFile(oldFilePath, newFilePath, oldContent, newContent);
+    } catch (error) {
+      throw new Error(`Failed to restore ledger rename: ${String(error)}`);
     }
   }
 
@@ -889,17 +1669,311 @@ export class ReviewApplierService {
   }
 
   private async readCurrentText(filePath: string): Promise<CurrentTextReadResult> {
+    let result: CurrentTextReadResult;
     try {
-      return { missing: false, content: await readFile(filePath, 'utf8') };
+      result = { missing: false, content: await readFile(filePath, 'utf8') };
     } catch (err) {
       const code =
         err && typeof err === 'object' && 'code' in err
           ? String((err as { code?: unknown }).code)
           : '';
       if (code === 'ENOENT') {
-        return { missing: true, content: '' };
+        result = { missing: true, content: '' };
+      } else {
+        result = {
+          missing: false,
+          content: '',
+          error: `Не удалось прочитать файл: ${String(err)}`,
+        };
       }
-      return { missing: false, content: '', error: `Не удалось прочитать файл: ${String(err)}` };
+    }
+    const context = reviewApplyMutationContext.getStore();
+    if (context && !('error' in result) && !context.observedPreimages.has(filePath)) {
+      const content = result.missing ? null : result.content;
+      context.observedPreimages.set(filePath, {
+        filePath,
+        beforeContent: content,
+        afterContent: content,
+      });
+    }
+    return result;
+  }
+
+  private getReviewFileTransactionFromTransition(
+    transition: ApplyReviewDiskTransition
+  ): Parameters<typeof executeReviewFileTransaction>[0] | null {
+    const { operation, transactionId, beforeContent, afterContent } = transition;
+    if (!operation || !transactionId || beforeContent === null) return null;
+    if (operation === 'move') {
+      if (!transition.relatedFilePath || afterContent === null) return null;
+      return {
+        id: transactionId,
+        kind: 'move',
+        sourcePath: transition.filePath,
+        targetPath: transition.relatedFilePath,
+        expectedContent: beforeContent,
+        nextContent: afterContent,
+      };
+    }
+    return {
+      id: transactionId,
+      kind: operation,
+      sourcePath: transition.filePath,
+      targetPath: transition.filePath,
+      expectedContent: beforeContent,
+      nextContent: operation === 'delete' ? null : afterContent,
+    };
+  }
+
+  private async resumeInitialReviewFileTransactions(
+    context: ReviewApplyMutationContext
+  ): Promise<void> {
+    for (const transition of context.plannedTransitions.values()) {
+      const transaction = this.getReviewFileTransactionFromTransition(transition);
+      if (!transaction) continue;
+      const state = await inspectReviewFileTransaction(transaction);
+      if (state === 'missing' || state === 'conflict') {
+        throw new Error('Review file transaction evidence is unavailable or conflicted');
+      }
+      if (state !== 'published') {
+        await context.hooks?.checkpointDiskTransitions([...context.plannedTransitions.values()]);
+        await executeReviewFileTransaction(transaction);
+      }
+    }
+  }
+
+  async finalizeReviewDiskTransitions(
+    transitions: readonly ApplyReviewDiskTransition[]
+  ): Promise<void> {
+    for (const transition of transitions) {
+      const transaction = this.getReviewFileTransactionFromTransition(transition);
+      if (transaction) await finalizeReviewFileTransaction(transaction);
+    }
+  }
+
+  async finalizeEditedFileTransaction(
+    filePath: string,
+    expectedContent: string | null,
+    nextContent: string | null
+  ): Promise<void> {
+    if (expectedContent === null) return;
+    await finalizePreparedReviewFileTransaction({
+      kind: nextContent === null ? 'delete' : 'replace',
+      sourcePath: filePath,
+      targetPath: filePath,
+      expectedContent,
+      nextContent,
+    });
+  }
+
+  async finalizeRejectedRenameTransaction(
+    filePath: string,
+    original: string | null,
+    modified: string | null,
+    snippets: SnippetDiff[],
+    direction: 'restore' | 'reapply'
+  ): Promise<void> {
+    const ledgerSnippets = snippets.filter((snippet) => snippet.ledger && !snippet.isError);
+    const relation = this.resolveLedgerRelation(ledgerSnippets);
+    if (relation?.kind !== 'rename') return;
+    const oldSnippet =
+      ledgerSnippets.find(
+        (snippet) =>
+          snippet.ledger?.operation === 'delete' &&
+          this.pathMatchesRelationPath(snippet.filePath, relation.oldPath)
+      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'delete');
+    const newSnippet =
+      ledgerSnippets.find(
+        (snippet) =>
+          snippet.ledger?.operation === 'create' &&
+          this.pathMatchesRelationPath(snippet.filePath, relation.newPath)
+      ) ?? ledgerSnippets.find((snippet) => snippet.ledger?.operation === 'create');
+    const oldFilePath =
+      oldSnippet?.filePath ??
+      this.resolveRelatedLedgerPath(newSnippet?.filePath, relation.newPath, relation.oldPath);
+    const newFilePath = newSnippet?.filePath ?? filePath;
+    const oldContent = oldSnippet?.ledger?.originalFullContent ?? original;
+    const newContent = newSnippet?.ledger?.modifiedFullContent ?? modified;
+    if (!oldFilePath || oldContent === null || newContent === null) return;
+    const sourcePath = direction === 'restore' ? oldFilePath : newFilePath;
+    const targetPath = direction === 'restore' ? newFilePath : oldFilePath;
+    const expectedContent = direction === 'restore' ? oldContent : newContent;
+    const nextContent = direction === 'restore' ? newContent : oldContent;
+    if (
+      await finalizePreparedReviewFileTransaction({
+        kind: 'move',
+        sourcePath,
+        targetPath,
+        expectedContent,
+        nextContent,
+      })
+    ) {
+      return;
+    }
+    await finalizePreparedReviewFileTransaction({
+      kind: 'replace',
+      sourcePath: targetPath,
+      targetPath,
+      expectedContent,
+      nextContent,
+    });
+    if (direction === 'reapply') {
+      await finalizePreparedReviewFileTransaction({
+        kind: 'delete',
+        sourcePath: newFilePath,
+        targetPath: newFilePath,
+        expectedContent: newContent,
+        nextContent: null,
+      });
+    }
+  }
+
+  private async checkpointPlannedDiskTransition(
+    transition: ApplyReviewDiskTransition
+  ): Promise<void> {
+    const context = reviewApplyMutationContext.getStore();
+    if (!context) return;
+    const existing = context.plannedTransitions.get(transition.filePath);
+    const cumulative = existing
+      ? {
+          ...existing,
+          filePath: transition.filePath,
+          beforeContent: existing.beforeContent,
+          afterContent: transition.afterContent,
+          ...(transition.operation === undefined ? {} : { operation: transition.operation }),
+          ...(transition.transactionId === undefined
+            ? {}
+            : { transactionId: transition.transactionId }),
+          ...(transition.relatedFilePath === undefined
+            ? {}
+            : { relatedFilePath: transition.relatedFilePath }),
+        }
+      : transition;
+    context.plannedTransitions.set(transition.filePath, cumulative);
+    await context.hooks?.checkpointDiskTransitions([...context.plannedTransitions.values()]);
+  }
+
+  private async atomicReplaceTextFile(
+    filePath: string,
+    expectedCurrentContent: string,
+    nextContent: string
+  ): Promise<void> {
+    const initial = await this.assertSafeExpectedFile(filePath, expectedCurrentContent);
+    const transaction = await prepareReviewFileTransaction(
+      {
+        kind: 'replace',
+        sourcePath: filePath,
+        targetPath: filePath,
+        expectedContent: expectedCurrentContent,
+        nextContent,
+      },
+      { mode: initial.mode & 0o7777 }
+    );
+    const transition: ApplyReviewDiskTransition = {
+      filePath,
+      beforeContent: expectedCurrentContent,
+      afterContent: nextContent,
+      operation: 'replace',
+      transactionId: transaction.id,
+    };
+    await this.checkpointPlannedDiskTransition(transition);
+    await executeReviewFileTransaction(transaction, { expectedIdentity: initial });
+  }
+
+  private async moveExpectedTextFile(
+    sourcePath: string,
+    targetPath: string,
+    expectedSourceContent: string,
+    finalTargetContent: string
+  ): Promise<void> {
+    const initial = await this.assertSafeExpectedFile(sourcePath, expectedSourceContent);
+    const transaction = await prepareReviewFileTransaction(
+      {
+        kind: 'move',
+        sourcePath,
+        targetPath,
+        expectedContent: expectedSourceContent,
+        nextContent: finalTargetContent,
+      },
+      { mode: initial.mode & 0o7777 }
+    );
+    await this.checkpointPlannedDiskTransition({
+      filePath: sourcePath,
+      beforeContent: expectedSourceContent,
+      afterContent: finalTargetContent,
+      operation: 'move',
+      transactionId: transaction.id,
+      relatedFilePath: targetPath,
+    });
+    await executeReviewFileTransaction(transaction, { expectedIdentity: initial });
+  }
+
+  private async assertSafeExpectedFile(
+    filePath: string,
+    expectedCurrentContent: string
+  ): Promise<{ dev: number; ino: number; mode: number }> {
+    let stats;
+    try {
+      stats = await lstat(filePath);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT' || code === 'ENOTDIR') {
+        throw Object.assign(new Error('File changed during review update; refusing to overwrite'), {
+          code,
+        });
+      }
+      throw error;
+    }
+    if (stats.isSymbolicLink() || !stats.isFile() || stats.nlink > 1) {
+      throw new Error('Review mutation refuses symbolic or multiply-linked files');
+    }
+    const current = await this.readCurrentText(filePath);
+    const currentError = getCurrentTextReadError(current);
+    if (current.missing || currentError || current.content !== expectedCurrentContent) {
+      throw new Error(currentError ?? 'File changed during review update; refusing to overwrite');
+    }
+    return { dev: stats.dev, ino: stats.ino, mode: stats.mode };
+  }
+
+  private async deleteExpectedTextFile(
+    filePath: string,
+    expectedCurrentContent: string
+  ): Promise<void> {
+    const initial = await this.assertSafeExpectedFile(filePath, expectedCurrentContent);
+    const transaction = await prepareReviewFileTransaction({
+      kind: 'delete',
+      sourcePath: filePath,
+      targetPath: filePath,
+      expectedContent: expectedCurrentContent,
+      nextContent: null,
+    });
+    await this.checkpointPlannedDiskTransition({
+      filePath,
+      beforeContent: expectedCurrentContent,
+      afterContent: null,
+      operation: 'delete',
+      transactionId: transaction.id,
+    });
+    await executeReviewFileTransaction(transaction, { expectedIdentity: initial });
+  }
+
+  private async pathsReferToSameFile(firstPath: string, secondPath: string): Promise<boolean> {
+    if (firstPath === secondPath) return true;
+
+    const firstNormalized = normalizePathForComparison(firstPath).normalize('NFC');
+    const secondNormalized = normalizePathForComparison(secondPath).normalize('NFC');
+    if (firstNormalized.toLowerCase() !== secondNormalized.toLowerCase()) {
+      // Equal inode alone can mean an arbitrary hardlink, not a case-only rename alias.
+      return false;
+    }
+
+    try {
+      const [first, second] = await Promise.all([lstat(firstPath), lstat(secondPath)]);
+      return Boolean(
+        first && second && first.ino !== 0 && first.ino === second.ino && first.dev === second.dev
+      );
+    } catch {
+      return false;
     }
   }
 
@@ -907,239 +1981,27 @@ export class ReviewApplierService {
     return createHash('sha256').update(content).digest('hex');
   }
 
-  /**
-   * Snippet-level rejection: reverse specific snippets by position (most accurate).
-   *
-   * Uses HunkSnippetMatcher with content overlap analysis to map
-   * hunk indices → snippet indices, then reverses matched snippets.
-   */
-  private trySnippetLevelReject(
-    original: string,
-    modified: string,
-    hunkIndices: number[],
-    snippets: SnippetDiff[]
-  ): RejectResult | null {
-    // Safety: never use full-file Write snippets for snippet-level rejection.
-    // They are not localized, and matching a single hunk to a full-file write
-    // can incorrectly delete/overwrite large parts of the file.
-    const validSnippets = snippets.filter(
-      (s) =>
-        !s.isError &&
-        s.type !== 'write-new' &&
-        s.type !== 'write-update' &&
-        s.type !== 'notebook-edit' &&
-        s.type !== 'shell-snapshot' &&
-        s.type !== 'hook-snapshot'
-    );
-    if (validSnippets.length === 0) return null;
-
-    // Pass pre-filtered snippets — matcher returns indices relative to this array
-    const hunkToSnippets = this.matcher.matchHunksToSnippets(
-      original,
-      modified,
-      hunkIndices,
-      validSnippets
-    );
-
-    // Safety: if any requested hunk maps ambiguously, do NOT attempt snippet-level replacement.
-    // Fall back to hunk-level inverse patch which is positional and safer.
-    for (const hunkIdx of hunkIndices) {
-      const set = hunkToSnippets.get(hunkIdx);
-      if (set?.size !== 1) {
-        return null;
-      }
-    }
-
-    // Collect all unique snippet indices to reject
-    const snippetIndices = new Set<number>();
-    for (const indices of hunkToSnippets.values()) {
-      indices.forEach((idx) => snippetIndices.add(idx));
-    }
-
-    const snippetsToReject = Array.from(snippetIndices)
-      .map((idx) => validSnippets[idx])
-      .filter(Boolean);
-
-    if (snippetsToReject.length === 0) return null;
-
-    let content = modified;
-
-    // Find positions using disambiguation and sort descending for safe replacement
-    const positioned = snippetsToReject
-      .map((snippet) => {
-        const pos = this.matcher.findSnippetPosition(snippet, content);
-        return { snippet, pos };
-      })
-      .filter((item) => item.pos !== -1)
-      .sort((a, b) => b.pos - a.pos);
-
-    if (positioned.length !== snippetsToReject.length) {
-      // Some snippets' newStrings not found — can't do snippet-level
-      return null;
-    }
-
-    for (const { snippet, pos } of positioned) {
-      if (snippet.type === 'write-new') {
-        // Can't partially reject a file creation at snippet level
-        continue;
-      }
-
-      if (snippet.replaceAll) {
-        content = content.split(snippet.newString).join(snippet.oldString);
-      } else {
-        content =
-          content.substring(0, pos) +
-          snippet.oldString +
-          content.substring(pos + snippet.newString.length);
-      }
-    }
-
-    return {
-      success: true,
-      newContent: content,
-      hadConflicts: false,
-    };
-  }
-
-  /**
-   * Hunk-level rejection: create inverse patch for rejected hunks and apply it.
-   */
-  private tryHunkLevelReject(
-    original: string,
-    modified: string,
-    hunkIndices: number[]
-  ): RejectResult | null {
-    // Create structured patch
-    const patch = structuredPatch('file', 'file', original, modified);
-
-    if (!patch.hunks || patch.hunks.length === 0) return null;
-
-    // Validate hunk indices
-    const validIndices = hunkIndices.filter((idx) => idx >= 0 && idx < patch.hunks.length);
-    if (validIndices.length === 0) return null;
-
-    // Build a partial inverse patch: only reverse the rejected hunks
-    const inversedHunks: StructuredPatchHunk[] = [];
-    for (const idx of validIndices) {
-      const hunk = patch.hunks[idx];
-      if (!hunk) continue;
-      inversedHunks.push(invertHunk(hunk));
-    }
-
-    if (inversedHunks.length === 0) return null;
-
-    // Create a partial inverse patch with the inverted hunks
-    const inversePatch = {
-      oldFileName: 'file',
-      newFileName: 'file',
-      oldHeader: undefined,
-      newHeader: undefined,
-      hunks: inversedHunks,
-    };
-
-    // Apply the inverse patch to the modified content
-    const result = applyPatch(modified, inversePatch, { fuzzFactor: 2 });
-
-    if (result === false) {
-      logger.debug('Hunk-level inverse patch не удался');
-      return null;
-    }
-
-    return {
-      success: true,
-      newContent: result,
-      hadConflicts: false,
-    };
-  }
-
   private tryStrictHunkLevelReject(
     original: string,
     modified: string,
     hunkIndices: number[]
   ): RejectResult | null {
-    const patch = structuredPatch('file', 'file', original, modified);
-
-    if (!patch.hunks || patch.hunks.length === 0) return null;
-
-    const validIndices = hunkIndices.filter((idx) => idx >= 0 && idx < patch.hunks.length);
-    if (validIndices.length !== hunkIndices.length || validIndices.length === 0) return null;
-
-    const inversedHunks: StructuredPatchHunk[] = [];
-    for (const idx of validIndices) {
-      const hunk = patch.hunks[idx];
-      if (!hunk) return null;
-      inversedHunks.push(invertHunk(hunk));
-    }
-
-    const inversePatch = {
-      oldFileName: 'file',
-      newFileName: 'file',
-      oldHeader: undefined,
-      newHeader: undefined,
-      hunks: inversedHunks,
-    };
-
-    const result = applyPatch(modified, inversePatch, { fuzzFactor: 0 });
-    if (result === false) {
-      logger.debug('Strict ledger hunk-level inverse patch не удался');
-      return null;
-    }
-
-    return {
-      success: true,
-      newContent: result,
-      hadConflicts: false,
-    };
+    const newContent = rejectReviewChunks(original, modified, hunkIndices);
+    return newContent === null ? null : { success: true, newContent, hadConflicts: false };
   }
 }
 
-function buildHunkHashIndexMap(original: string, modified: string): Map<string, number[]> {
-  const patch = structuredPatch('file', 'file', original, modified);
-  const hunks = patch.hunks ?? [];
+function buildReviewChunkHashIndexMap(original: string, modified: string): Map<string, number[]> {
   const map = new Map<string, number[]>();
-  for (let i = 0; i < hunks.length; i++) {
-    const hunk = hunks[i];
-    const oldSideContent = hunk.lines
-      .filter((l) => !l.startsWith('+'))
-      .map((l) => l.slice(1))
-      .join('\n');
-    const newSideContent = hunk.lines
-      .filter((l) => !l.startsWith('-'))
-      .map((l) => l.slice(1))
-      .join('\n');
-    const hash = computeDiffContextHash(oldSideContent, newSideContent);
+  for (const [rawIndex, hash] of Object.entries(
+    buildReviewChunkContextHashes(original, modified)
+  )) {
+    const index = Number(rawIndex);
     const arr = map.get(hash);
-    if (arr) arr.push(i);
-    else map.set(hash, [i]);
+    if (arr) arr.push(index);
+    else map.set(hash, [index]);
   }
   return map;
-}
-
-function mapRejectedHunkIndicesByHash(
-  original: string,
-  modified: string,
-  rejectedIndices: number[],
-  hunkContextHashes: Record<number, string>
-): number[] {
-  const hashMap = buildHunkHashIndexMap(original, modified);
-  const out = new Set<number>();
-
-  for (const idx of rejectedIndices) {
-    const hash = hunkContextHashes[idx];
-    if (!hash) {
-      out.add(idx);
-      continue;
-    }
-    const candidates = hashMap.get(hash);
-    if (candidates?.length === 1) {
-      out.add(candidates[0]);
-    } else {
-      // Ambiguous or missing — fall back to index to preserve prior behavior.
-      out.add(idx);
-    }
-  }
-
-  return [...out].sort((a, b) => a - b);
 }
 
 function mapRejectedHunkIndicesByHashStrict(
@@ -1155,11 +2017,11 @@ function mapRejectedHunkIndicesByHashStrict(
     return {
       ok: false,
       code: 'manual-review-required',
-      error: 'Ledger partial reject requires stable hunk context hashes.',
+      error: 'Partial reject requires stable hunk context hashes.',
     };
   }
 
-  const hashMap = buildHunkHashIndexMap(original, modified);
+  const hashMap = buildReviewChunkHashIndexMap(original, modified);
   const out = new Set<number>();
   for (const idx of rejectedIndices) {
     const hash = hunkContextHashes[idx];
@@ -1167,7 +2029,7 @@ function mapRejectedHunkIndicesByHashStrict(
       return {
         ok: false,
         code: 'manual-review-required',
-        error: 'Ledger partial reject is missing a hunk context hash.',
+        error: 'Partial reject is missing a hunk context hash.',
       };
     }
     const candidates = hashMap.get(hash);
@@ -1175,40 +2037,19 @@ function mapRejectedHunkIndicesByHashStrict(
       return {
         ok: false,
         code: 'conflict',
-        error: 'Ledger partial reject hunk context changed; please re-review.',
+        error: 'Partial reject hunk context changed; please re-review.',
       };
     }
     if (candidates.length > 1) {
       return {
         ok: false,
         code: 'conflict',
-        error: 'Ledger partial reject hunk context is ambiguous; please re-review.',
+        error: 'Partial reject hunk context is ambiguous; please re-review.',
       };
     }
     out.add(candidates[0]);
   }
   return { ok: true, indices: [...out].sort((a, b) => a - b) };
-}
-
-// ── Module-level helpers ──
-
-/**
- * Invert a single hunk: swap added/removed lines, swap old/new start/lines.
- */
-function invertHunk(hunk: StructuredPatchHunk): StructuredPatchHunk {
-  const invertedLines = hunk.lines.map((line) => {
-    if (line.startsWith('+')) return '-' + line.substring(1);
-    if (line.startsWith('-')) return '+' + line.substring(1);
-    return line; // context lines remain unchanged
-  });
-
-  return {
-    oldStart: hunk.newStart,
-    oldLines: hunk.newLines,
-    newStart: hunk.oldStart,
-    newLines: hunk.oldLines,
-    lines: invertedLines,
-  };
 }
 
 /**
@@ -1219,31 +2060,3 @@ function invertHunk(hunk: StructuredPatchHunk): StructuredPatchHunk {
  * @param theirs "their" version (desired state)
  * @returns merged content and conflict indicator
  */
-function threeWayMerge(
-  base: string,
-  ours: string,
-  theirs: string
-): { content: string; hasConflicts: boolean } {
-  const regions = diff3Merge(ours, base, theirs);
-  let hasConflicts = false;
-  const parts: string[] = [];
-
-  for (const region of regions) {
-    if (region.ok) {
-      parts.push(region.ok.join('\n'));
-    } else if (region.conflict) {
-      hasConflicts = true;
-      // Include conflict markers for visibility
-      parts.push('<<<<<<< current');
-      parts.push(region.conflict.a.join('\n'));
-      parts.push('=======');
-      parts.push(region.conflict.b.join('\n'));
-      parts.push('>>>>>>> original');
-    }
-  }
-
-  return {
-    content: parts.join('\n'),
-    hasConflicts,
-  };
-}

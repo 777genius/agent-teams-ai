@@ -142,7 +142,7 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
     expect(result.diagnostics.warning).toMatch(/Large native team startup context/);
   });
 
-  it('compacts twenty large native contexts within the aggregate budget', async () => {
+  it('compacts thirty large native contexts within the aggregate budget', async () => {
     const hugeRole = 'x'.repeat(40_000);
     await new TeamMetaStore().writeMeta('large-native-team', {
       cwd: '/tmp/workspace',
@@ -152,7 +152,7 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
     });
     await new TeamMembersMetaStore().writeMembers(
       'large-native-team',
-      Array.from({ length: 20 }, (_, index) => ({
+      Array.from({ length: 30 }, (_, index) => ({
         name: `member-${index}`,
         providerId: 'anthropic' as const,
         role: hugeRole,
@@ -162,7 +162,7 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
     const result = await buildNativeAppManagedBootstrapSpecsWithDiagnostics({
       teamName: 'large-native-team',
       cwd: '/tmp/workspace',
-      members: Array.from({ length: 20 }, (_, index) => ({
+      members: Array.from({ length: 30 }, (_, index) => ({
         name: `member-${index}`,
         providerId: 'anthropic' as const,
         role: hugeRole,
@@ -174,7 +174,7 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
     );
     const firstContext = result.specs.get('member-0')?.contextText ?? '';
 
-    expect(result.specs.size).toBe(20);
+    expect(result.specs.size).toBe(30);
     expect(totalContextChars).toBeLessThanOrEqual(MAX_NATIVE_BOOTSTRAP_TOTAL_CONTEXT_CHARS);
     expect(firstContext).toContain('The app loaded compact startup context');
     expect(firstContext).toContain('Startup rules:');

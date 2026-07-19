@@ -235,6 +235,12 @@ function makeAppConfig(multimodelEnabled: boolean): AppConfig {
       statusChangeStatuses: [],
       triggers: [],
     },
+    teamRuntimeRecovery: {
+      transientErrorsEnabled: false,
+      rateLimitsEnabled: false,
+      initialDelaySeconds: 60,
+      maxAttempts: 2,
+    },
     general: {
       launchAtLogin: false,
       showDockIcon: true,

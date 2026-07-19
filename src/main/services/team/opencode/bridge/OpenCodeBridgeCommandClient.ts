@@ -8,6 +8,7 @@ import * as path from 'path';
 import {
   extractRunId,
   OPEN_CODE_BRIDGE_SCHEMA_VERSION,
+  OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
   type OpenCodeBridgeCommandEnvelope,
   type OpenCodeBridgeCommandName,
   type OpenCodeBridgeDiagnosticEvent,
@@ -33,6 +34,7 @@ export interface OpenCodeBridgeProcessRunResult {
   stderr: string;
   exitCode: number | null;
   timedOut: boolean;
+  outcomeUnknownReason?: 'transport_timeout' | 'output_limit' | 'termination_failed';
 }
 
 export interface OpenCodeBridgeProcessRunner {
@@ -112,7 +114,8 @@ export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcess
       const result = await execCli(input.binaryPath, input.args, {
         cwd: input.cwd,
         timeout: input.timeoutMs,
-        maxBuffer: input.stdoutLimitBytes + input.stderrLimitBytes,
+        stdoutMaxBuffer: input.stdoutLimitBytes,
+        stderrMaxBuffer: input.stderrLimitBytes,
         env: input.env,
         preferShellForWindowsBatch: shouldPreferShellForOpenCodeBridgeCommand(
           input.binaryPath,
@@ -131,16 +134,36 @@ export class ExecCliOpenCodeBridgeProcessRunner implements OpenCodeBridgeProcess
         stderr?: string | Buffer;
         killed?: boolean;
         signal?: string;
+        processOutcomeUnknown?: boolean;
+        processTerminationError?: string;
       };
       const message = failure.message ?? '';
+      const outputLimitExceeded =
+        failure.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' ||
+        failure.processOutcomeUnknown === true;
+      const timedOut =
+        outputLimitExceeded ||
+        failure.killed === true ||
+        failure.signal === 'SIGTERM' ||
+        /timed out|timeout/i.test(message);
+      const terminationDiagnostic = failure.processTerminationError
+        ? `Process termination failed: ${failure.processTerminationError}`
+        : '';
+      const stderr = [bufferToString(failure.stderr) || message, terminationDiagnostic]
+        .filter(Boolean)
+        .join('\n');
       return {
         stdout: bufferToString(failure.stdout),
-        stderr: bufferToString(failure.stderr) || message,
+        stderr,
         exitCode: typeof failure.code === 'number' ? failure.code : null,
-        timedOut:
-          failure.killed === true ||
-          failure.signal === 'SIGTERM' ||
-          /timed out|timeout/i.test(message),
+        timedOut,
+        outcomeUnknownReason: failure.processTerminationError
+          ? 'termination_failed'
+          : outputLimitExceeded
+            ? 'output_limit'
+            : timedOut
+              ? 'transport_timeout'
+              : undefined,
       };
     }
   }
@@ -213,7 +236,7 @@ export class OpenCodeBridgeCommandClient {
           binaryPath: this.binaryPath,
           args: bridgeArgs,
           cwd: resolveOpenCodeBridgeProcessCwd(this.binaryPath, options.cwd),
-          timeoutMs: options.timeoutMs,
+          timeoutMs: options.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
           stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
           stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
           env: await this.resolveEnv(),
@@ -230,14 +253,25 @@ export class OpenCodeBridgeCommandClient {
         };
 
         if (processResult.timedOut) {
+          const unknownOutcomeMessage =
+            processResult.outcomeUnknownReason === 'output_limit'
+              ? 'OpenCode bridge output exceeded its safety limit; process outcome is unknown'
+              : processResult.outcomeUnknownReason === 'termination_failed'
+                ? 'OpenCode bridge process could not be terminated; process outcome is unknown'
+                : 'OpenCode bridge transport watchdog timed out';
           return this.contractFailure(
             envelope,
-            'timeout',
-            'OpenCode bridge command timed out',
+            'transport_watchdog_timeout',
+            unknownOutcomeMessage,
             true,
             {
               stderr: redactBridgeDiagnosticText(processResult.stderr),
               attempts: attempt,
+              runtimeTimeoutMs: options.timeoutMs,
+              transportWatchdogGraceMs: OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
+              transportWatchdogTimeoutMs:
+                options.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
+              outcomeUnknownReason: processResult.outcomeUnknownReason ?? 'transport_timeout',
               ...processDetails,
             }
           );
@@ -385,7 +419,7 @@ export class OpenCodeBridgeCommandClient {
     const diagnostic: OpenCodeBridgeDiagnosticEvent = {
       id: this.diagnosticIdFactory(),
       type:
-        kind === 'timeout'
+        kind === 'timeout' || kind === 'transport_watchdog_timeout'
           ? 'opencode_bridge_unknown_outcome'
           : 'opencode_bridge_contract_violation',
       providerId: 'opencode',

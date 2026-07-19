@@ -181,11 +181,38 @@ function normalizeInboxMessageItem(item: unknown): InboxMessage | null {
       row.messageKind === 'task_comment_notification' ||
       row.messageKind === 'task_stall_remediation' ||
       row.messageKind === 'member_work_sync_nudge' ||
+      row.messageKind === 'runtime_recovery_nudge' ||
       row.messageKind === 'agent_error'
         ? row.messageKind
         : row.messageKind === 'default'
           ? 'default'
           : undefined,
+    agentError:
+      row.agentError?.schemaVersion === 1 &&
+      (row.agentError.type === 'api_error' || row.agentError.type === 'codex_native_timeout') &&
+      row.agentError.phase === 'terminal' &&
+      typeof row.agentError.detail === 'string' &&
+      typeof row.agentError.failedMessageId === 'string' &&
+      typeof row.agentError.innerRecoveryAttempts === 'number' &&
+      Number.isInteger(row.agentError.innerRecoveryAttempts) &&
+      row.agentError.innerRecoveryAttempts >= 0 &&
+      (row.agentError.runtimeSessionId == null ||
+        typeof row.agentError.runtimeSessionId === 'string') &&
+      (row.agentError.bootstrapRunId == null || typeof row.agentError.bootstrapRunId === 'string')
+        ? row.agentError
+        : undefined,
+    runtimeRecovery:
+      row.runtimeRecovery?.schemaVersion === 1 &&
+      typeof row.runtimeRecovery.recoveryId === 'string' &&
+      typeof row.runtimeRecovery.sourceFailureId === 'string' &&
+      typeof row.runtimeRecovery.attempt === 'number' &&
+      Number.isInteger(row.runtimeRecovery.attempt) &&
+      row.runtimeRecovery.attempt >= 1 &&
+      typeof row.runtimeRecovery.reasonCode === 'string' &&
+      row.runtimeRecovery.reasonCode.length > 0 &&
+      typeof row.runtimeRecovery.payloadHash === 'string'
+        ? row.runtimeRecovery
+        : undefined,
     workSyncIntent:
       row.workSyncIntent === 'agenda_sync' || row.workSyncIntent === 'review_pickup'
         ? row.workSyncIntent

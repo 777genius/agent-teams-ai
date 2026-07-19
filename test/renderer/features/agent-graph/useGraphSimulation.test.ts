@@ -1,6 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  KANBAN_ZONE,
+  TASK_PILL,
+} from '../../../../packages/agent-graph/src/constants/canvas-constants';
+import { ACTIVITY_LANE } from '../../../../packages/agent-graph/src/layout/activityLane';
+import { KanbanLayoutEngine } from '../../../../packages/agent-graph/src/layout/kanbanLayout';
+import {
+  STABLE_SLOT_GEOMETRY,
+  STABLE_SLOT_SECTOR_VECTORS,
+} from '../../../../packages/agent-graph/src/layout/stableSlotGeometry';
+import {
   buildStableSlotLayoutSnapshot,
   computeOwnerFootprints,
   computeProcessBandWidth,
@@ -10,16 +20,6 @@ import {
   translateSlotFrame,
   validateStableSlotLayout,
 } from '../../../../packages/agent-graph/src/layout/stableSlots';
-import { KanbanLayoutEngine } from '../../../../packages/agent-graph/src/layout/kanbanLayout';
-import {
-  KANBAN_ZONE,
-  TASK_PILL,
-} from '../../../../packages/agent-graph/src/constants/canvas-constants';
-import { ACTIVITY_LANE } from '../../../../packages/agent-graph/src/layout/activityLane';
-import {
-  STABLE_SLOT_GEOMETRY,
-  STABLE_SLOT_SECTOR_VECTORS,
-} from '../../../../packages/agent-graph/src/layout/stableSlotGeometry';
 
 import type { GraphLayoutPort, GraphNode } from '@claude-teams/agent-graph';
 
@@ -408,6 +408,106 @@ describe('stable slot layout planner', () => {
     expect(frame?.logColumnRect.width).toBe(0);
     expect(frame?.logColumnRect.height).toBe(0);
     expect(frame?.kanbanBandRect.left).toBe(frame?.boardBandRect.left);
+  });
+
+  it('reserves the adaptive team card width in compact owner slots', () => {
+    const teamName = 'team-adaptive-card';
+    const lead = createLead(teamName);
+    const team = {
+      ...createMember(
+        teamName,
+        'platform-runtime',
+        'Platform Runtime and Orchestration Engineering Team'
+      ),
+      visualVariant: 'team' as const,
+    };
+    const layout: GraphLayoutPort = {
+      version: 'stable-slots-v1',
+      ownerOrder: [team.id],
+      slotAssignments: { [team.id]: { ringIndex: 0, sectorIndex: 0 } },
+      showActivity: false,
+      showLogs: false,
+      showTasks: false,
+    };
+
+    const [footprint] = computeOwnerFootprints([lead, team], layout);
+
+    expect(footprint?.slotWidth).toBeGreaterThanOrEqual(
+      340 + STABLE_SLOT_GEOMETRY.memberSlotInnerPadding * 2
+    );
+  });
+
+  it('fits task band height to rendered rows when compact content sizing is enabled', () => {
+    const teamName = 'team-compact-task-slot';
+    const lead = createLead(teamName);
+    const alice = createMember(teamName, 'agent-alice', 'alice');
+    const task = createTask(teamName, 'active-task', alice.id, {
+      taskStatus: 'in_progress',
+    });
+    const baseLayout: GraphLayoutPort = {
+      version: 'stable-slots-v1',
+      mode: 'grid-under-lead',
+      showActivity: false,
+      showLogs: false,
+      showTasks: true,
+      ownerOrder: [alice.id],
+      slotAssignments: {
+        [alice.id]: { ringIndex: 0, sectorIndex: 0 },
+      },
+    };
+    const [reservedFootprint] = computeOwnerFootprints([lead, alice, task], baseLayout);
+    const compactLayout = { ...baseLayout, fitTaskRowsToContent: true };
+    const [compactFootprint] = computeOwnerFootprints([lead, alice, task], compactLayout);
+    const snapshot = buildStableSlotLayoutSnapshot({
+      teamName,
+      nodes: [lead, alice, task],
+      layout: compactLayout,
+    });
+
+    expect(compactFootprint?.kanbanBandHeight).toBe(
+      KANBAN_ZONE.headerHeight + TASK_PILL.height / 2
+    );
+    expect(compactFootprint?.slotHeight).toBeLessThan((reservedFootprint?.slotHeight ?? 0) - 150);
+    expect(snapshot).not.toBeNull();
+    expect(validateStableSlotLayout(snapshot!)).toEqual({ valid: true });
+    const frame = snapshot?.memberSlotFrameByOwnerId.get(alice.id);
+    expect(frame).toBeDefined();
+    alice.x = frame!.ownerX;
+    alice.y = frame!.ownerY;
+    KanbanLayoutEngine.layout([lead, alice, task], {
+      memberSlotFrames: snapshot!.memberSlotFrames,
+      leadSlotFrame: snapshot!.leadSlotFrame,
+    });
+    expect((task.y ?? 0) + TASK_PILL.height / 2).toBeLessThanOrEqual(frame!.kanbanBandRect.bottom);
+  });
+
+  it('reuses kanban headers for statically positioned hierarchy tasks', () => {
+    const teamName = 'team-static-hierarchy';
+    const alice = createMember(teamName, 'agent-alice', 'alice');
+    const task = createTask(teamName, 'active-task', alice.id, {
+      taskStatus: 'in_progress',
+    });
+    alice.x = 40;
+    alice.y = 100;
+    task.x = 40;
+    task.y = 212;
+
+    KanbanLayoutEngine.layoutStatic([alice, task]);
+
+    expect(task.x).toBe(40);
+    expect(task.y).toBe(212);
+    expect(KanbanLayoutEngine.zones).toEqual([
+      expect.objectContaining({
+        ownerId: alice.id,
+        headers: [
+          expect.objectContaining({
+            label: 'In Progress',
+            x: 40,
+            y: 212 - KANBAN_ZONE.headerHeight,
+          }),
+        ],
+      }),
+    ]);
   });
 
   it('keeps the reserved log column when logs are shown and activity is hidden', () => {

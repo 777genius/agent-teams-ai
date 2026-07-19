@@ -222,18 +222,141 @@ export type HunkDecision = 'accepted' | 'rejected' | 'pending';
 /** Решение по файлу */
 export interface FileReviewDecision {
   filePath: string;
+  /** Stable renderer decision key (changeKey for grouped ledger changes, otherwise filePath). */
+  reviewKey?: string;
   fileDecision: HunkDecision;
   hunkDecisions: Record<number, HunkDecision>;
+  /** Main-issued token for the exact full-content snapshot displayed by the renderer. */
+  contentSnapshotToken?: string;
   /** Optional stable hunk fingerprints (index → contextHash). Used to map decisions when indices drift. */
   hunkContextHashes?: Record<number, string>;
-  /**
-   * Optional context to apply decisions without re-resolving content in main process.
-   * When present, main can use these values directly (safer in task mode where memberName may be unknown).
-   */
-  snippets?: SnippetDiff[];
-  originalFullContent?: string | null;
-  modifiedFullContent?: string | null;
-  isNewFile?: boolean;
+}
+
+export interface ReviewDecisionPersistenceScope {
+  scopeKey: string;
+  scopeToken: string;
+}
+
+/** Exact renderer state committed by main only after the related disk mutation. */
+export interface ReviewPersistedStateSnapshot {
+  hunkDecisions: Record<string, HunkDecision>;
+  fileDecisions: Record<string, HunkDecision>;
+  hunkContextHashesByFile?: Record<string, Record<number, string>>;
+  reviewActionHistory: ReviewUndoAction[];
+  reviewRedoHistory: ReviewRedoAction[];
+}
+
+/** Save acknowledgement that can reconcile a response-loss retry with a newer canonical suffix. */
+export interface SaveReviewDecisionsResult {
+  revision: number;
+  reconciledState?: ReviewPersistedStateSnapshot;
+}
+
+/** Durable renderer branch preserved after a decision CAS conflict. */
+export interface ReviewDecisionConflictCandidate {
+  id: string;
+  capturedAt: string;
+  origin: 'current-snapshot' | 'prior-snapshot';
+  expectedRevision: number;
+  observedCurrentRevision: number;
+  state: ReviewPersistedStateSnapshot;
+}
+
+/** Metadata-only renderer view; full recovery state never crosses IPC until selected. */
+export interface ReviewDecisionConflictCandidateSummary {
+  id: string;
+  capturedAt: string;
+  origin: 'current-snapshot' | 'prior-snapshot';
+  recoverability: 'recoverable' | 'different-review-snapshot';
+  expectedRevision: number;
+  observedCurrentRevision: number;
+  hunkDecisionCount: number;
+  fileDecisionCount: number;
+  undoDepth: number;
+  redoDepth: number;
+}
+
+export type ReviewConflictResolution = 'recover-candidate' | 'keep-current';
+
+/** Complete inverse decision state carried by a durable review action. */
+export interface ReviewDecisionSnapshot {
+  hunkDecisions: Record<string, HunkDecision>;
+  fileDecisions: Record<string, HunkDecision>;
+}
+
+export type ReviewDiskRestoreMode =
+  | 'content'
+  | 'create-file'
+  | 'delete-file'
+  | 'restore-rejected-rename'
+  | 'reapply-rejected-rename';
+
+/** Exact disk pre/post-image required to retry an interrupted review Undo safely. */
+export interface ReviewDiskUndoSnapshot {
+  filePath: string;
+  beforeContent: string;
+  afterContent: string | null;
+  /** Main-observed preimage binding. Undefined snapshots predate authoritative history. */
+  authoritativeBeforeSha256?: string | null;
+  file?: FileChangeSummary;
+  fileIndex?: number;
+  restoreConflict?: string;
+  restoreMode?: ReviewDiskRestoreMode;
+  renameExpectation?: ReviewRenameRecoveryExpectation;
+}
+
+export interface ReviewDiskUndoAction {
+  snapshot: ReviewDiskUndoSnapshot;
+  originalIndex?: number;
+  file?: FileChangeSummary;
+  decisionSnapshot?: ReviewDecisionSnapshot;
+}
+
+/** Stable user intent used to explain a durable Undo/Redo entry after restart. */
+export type ReviewActionDescriptor =
+  | {
+      intent: 'accept-hunk' | 'reject-hunk';
+      filePath: string;
+      /** Stable original hunk index, displayed to users as one-based. */
+      hunkIndex: number;
+    }
+  | {
+      intent: 'accept-file' | 'reject-file' | 'restore-file' | 'restore-rename';
+      filePath: string;
+    }
+  | { intent: 'accept-all' | 'reject-all'; fileCount: number };
+
+export type ReviewActionIntent = ReviewActionDescriptor['intent'];
+
+interface ReviewUndoActionBase {
+  /** Stable identity used to prevent a stale async Undo from popping a newer action. */
+  id: string;
+  createdAt: string;
+  /** Optional for backward compatibility with history written before action previews. */
+  descriptor?: ReviewActionDescriptor;
+}
+
+/** Self-contained, ordered Accept/Reject history persisted with the decision snapshot. */
+export type ReviewUndoAction =
+  | (ReviewUndoActionBase & {
+      kind: 'bulk';
+      decisionSnapshot: ReviewDecisionSnapshot;
+      diskSnapshots: ReviewDiskUndoSnapshot[];
+    })
+  | (ReviewUndoActionBase & { kind: 'disk'; action: ReviewDiskUndoAction })
+  | (ReviewUndoActionBase & {
+      kind: 'hunk';
+      action: { filePath: string; originalIndex: number };
+    });
+
+/** Durable forward state captured when an Accept/Reject action is undone. */
+export interface ReviewRedoAction {
+  /** The original action moves back to the Undo stack after Redo commits. */
+  action: ReviewUndoAction;
+  /** Exact decision state produced by the original action. */
+  decisionSnapshot: ReviewDecisionSnapshot;
+  /** Stable hunk fingerprints from the original post-action state. */
+  hunkContextHashesByFile?: Record<string, Record<number, string>>;
 }
 
 /** Запрос на применение review */
@@ -241,7 +364,69 @@ export interface ApplyReviewRequest {
   teamName: string;
   taskId?: string;
   memberName?: string;
+  /** Exact durable decision scope used to close disk/decision crash windows. */
+  decisionPersistenceScope?: ReviewDecisionPersistenceScope;
+  /**
+   * Full post-operation state. Main persists it only after every requested disk
+   * effect reaches its postimage. Required for durable mutations.
+   */
+  persistedState?: ReviewPersistedStateSnapshot;
+  /** CAS guard for the exact decision snapshot the renderer hydrated. */
+  expectedDecisionRevision?: number;
   decisions: FileReviewDecision[];
+}
+
+export type ReviewDirectDiskMutationStep =
+  | {
+      id: string;
+      type: 'write';
+      filePath: string;
+      expectedContent: string | null;
+      content: string;
+    }
+  | {
+      id: string;
+      type: 'delete';
+      filePath: string;
+      expectedContent: string;
+    }
+  | {
+      id: string;
+      type: 'restore-rejected-rename' | 'reapply-rejected-rename';
+      filePath: string;
+      expectation: ReviewRenameRecoveryExpectation;
+    };
+
+/** Main-authoritative Restore/Rename/Undo transaction. */
+export interface ExecuteReviewMutationRequest {
+  scope: ReviewFileScope;
+  decisionPersistenceScope: ReviewDecisionPersistenceScope;
+  kind: 'restore' | 'rename' | 'undo' | 'redo' | 'reload-external';
+  /** Reviewed file whose stale decisions/history are explicitly discarded on Reload. */
+  externalFilePath?: string;
+  diskSteps: ReviewDirectDiskMutationStep[];
+  persistedState: ReviewPersistedStateSnapshot;
+  /** CAS guard preventing an old renderer from overwriting newer durable state. */
+  expectedDecisionRevision: number;
+  /** Required for Undo so a stale renderer cannot pop a newer durable action. */
+  expectedTopActionId?: string;
+  /** Required for Redo so a stale renderer cannot replay a different durable branch. */
+  expectedTopRedoActionId?: string;
+}
+
+/** Authoritative team/task scope used by main to resolve a review file root. */
+export interface ReviewFileScope {
+  teamName: string;
+  taskId?: string;
+  memberName?: string;
+}
+
+/** Immutable ledger identity used to reject stale rename recovery requests. */
+export interface ReviewRenameRecoveryExpectation {
+  eventId: string;
+  beforeHash: string | null;
+  afterHash: string | null;
+  relation: LedgerChangeRelation;
 }
 
 /** Результат применения review */
@@ -254,10 +439,95 @@ export interface ApplyReviewResult {
     error: string;
     code?: 'conflict' | 'unavailable' | 'manual-review-required' | 'io-error';
   }[];
+  /** Revision committed together with the disk mutation. */
+  decisionRevision?: number;
+  /** Main-bound action that must replace the renderer's optimistic history entry. */
+  committedReviewAction?: ReviewUndoAction;
+  /** Exact watched-path state produced by a durable disk mutation. */
+  diskPostimages?: ReviewMutationDiskPostimage[];
+}
+
+/** Exact text state expected at one watched path after a review disk mutation. */
+export interface ReviewMutationDiskPostimage {
+  filePath: string;
+  /** Null means the path is absent. */
+  content: string | null;
+}
+
+export interface ExecuteReviewMutationResult {
+  decisionRevision: number;
+  diskPostimages: ReviewMutationDiskPostimage[];
+  /** Present for Restore/Rename because main binds their authoritative disk snapshot. */
+  committedReviewAction?: ReviewUndoAction;
+}
+
+/** Explicitly resumes one failed durable mutation in its exact review scope. */
+export interface RetryReviewMutationRecoveryRequest {
+  scope: ReviewFileScope;
+  decisionPersistenceScope: ReviewDecisionPersistenceScope;
+  /** Optional fingerprint used by checkpoint Restore so it never resumes a different WAL. */
+  expectedRestore?: {
+    expectedDecisionRevision: number;
+    persistedState: ReviewPersistedStateSnapshot;
+    diskSteps: ReviewDirectDiskMutationStep[];
+  };
+}
+
+export interface RetryReviewMutationRecoveryResult {
+  decisionRevision: number;
+  /** True when this call found and finished a journaled mutation. */
+  recoveredMutation: boolean;
+  /** True only when that journal belonged to a checkpoint Restore. */
+  recoveredRestoreHistory: boolean;
+  /** A WAL exists, but it is not the exact Restore fingerprint supplied by this caller. */
+  differentMutationPending: boolean;
+  /** Exact state after recovery, or null when this scope has no persisted review state. */
+  persistedState: ReviewPersistedStateSnapshot | null;
+  /** True only when the caller's exact checkpoint Restore is durably complete. */
+  expectedRestoreCompleted: boolean;
+  /** Exact watched-path state for the recovered mutation or completed expected Restore. */
+  diskPostimages: ReviewMutationDiskPostimage[];
+  /** Kept separate so callers can explain that a previously blocked mutation was retried. */
+  retried: boolean;
+}
+
+/** A durable checkpoint in the linear Accept/Reject history. */
+export type ReviewHistoryRestoreTarget =
+  | { kind: 'start' }
+  | { kind: 'after-action'; stack: 'undo' | 'redo'; actionId: string };
+
+export interface RestoreReviewHistoryRequest {
+  scope: ReviewFileScope;
+  decisionPersistenceScope: ReviewDecisionPersistenceScope;
+  target: ReviewHistoryRestoreTarget;
+  expectedDecisionRevision: number;
+}
+
+export interface RestoreReviewHistoryResult {
+  decisionRevision: number;
+  persistedState: ReviewPersistedStateSnapshot;
+  direction: 'undo' | 'redo' | 'none';
+  actionCount: number;
+  diskPostimages: ReviewMutationDiskPostimage[];
+}
+
+/** Exact main-process disk transition used to bind durable Undo history. */
+export interface ApplyReviewDiskTransition {
+  filePath: string;
+  beforeContent: string | null;
+  afterContent: string | null;
+  /** Kernel-level mutation shape used to verify exact no-op provenance after a crash. */
+  operation?: 'replace' | 'delete' | 'move';
+  /** App-owned filesystem transaction retained until the WAL postimage checkpoint. */
+  transactionId?: string;
+  /** Destination path for a move transaction. */
+  relatedFilePath?: string;
 }
 
 /** Полный file content для CodeMirror */
 export interface FileChangeWithContent extends FileChangeSummary {
+  /** Opaque main-process identity for this exact displayed content generation. */
+  reviewSnapshotToken?: string;
   originalFullContent: string | null;
   modifiedFullContent: string | null;
   contentSource:

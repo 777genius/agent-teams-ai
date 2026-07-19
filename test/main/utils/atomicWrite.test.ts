@@ -11,13 +11,21 @@ vi.mock('fs', () => ({
     mkdir: vi.fn(),
     writeFile: vi.fn(),
     open: vi.fn(),
+    lstat: vi.fn(),
+    link: vi.fn(),
+    readdir: vi.fn(),
     rename: vi.fn(),
     copyFile: vi.fn(),
     unlink: vi.fn(),
   },
 }));
 
-import { atomicWriteAsync, renamePathWithRetry } from '../../../src/main/utils/atomicWrite';
+import {
+  atomicCreateAsync,
+  atomicWriteAsync,
+  cleanupAtomicCreateTempLinks,
+  renamePathWithRetry,
+} from '../../../src/main/utils/atomicWrite';
 
 // =============================================================================
 // Setup
@@ -26,6 +34,9 @@ import { atomicWriteAsync, renamePathWithRetry } from '../../../src/main/utils/a
 const mockMkdir = vi.mocked(fs.promises.mkdir);
 const mockWriteFile = vi.mocked(fs.promises.writeFile);
 const mockOpen = vi.mocked(fs.promises.open);
+const mockLstat = vi.mocked(fs.promises.lstat);
+const mockLink = vi.mocked(fs.promises.link);
+const mockReaddir = vi.mocked(fs.promises.readdir);
 const mockRename = vi.mocked(fs.promises.rename);
 const mockCopyFile = vi.mocked(fs.promises.copyFile);
 const mockUnlink = vi.mocked(fs.promises.unlink);
@@ -37,7 +48,9 @@ const CONTENT = 'export const hello = "world";';
 /** Extract the tmp path from writeFile calls */
 function getTmpPath(): string {
   const call = mockWriteFile.mock.calls[0];
-  return String(call[0]);
+  const filePath = call?.[0];
+  if (typeof filePath !== 'string') throw new Error('Expected a string temporary path');
+  return filePath;
 }
 
 beforeEach(() => {
@@ -50,6 +63,13 @@ beforeEach(() => {
     sync: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
   } as unknown as fs.promises.FileHandle);
+  mockLstat.mockResolvedValue({
+    dev: 1,
+    ino: 2,
+    nlink: 1,
+  } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>);
+  mockLink.mockResolvedValue(undefined);
+  mockReaddir.mockResolvedValue([]);
   mockRename.mockResolvedValue(undefined);
   mockUnlink.mockResolvedValue(undefined);
 });
@@ -81,7 +101,10 @@ describe('atomicWriteAsync', () => {
   it('writes content with utf8 encoding', async () => {
     await atomicWriteAsync(TARGET_PATH, CONTENT);
 
-    expect(mockWriteFile).toHaveBeenCalledWith(expect.any(String), CONTENT, 'utf8');
+    expect(mockWriteFile).toHaveBeenCalledWith(expect.any(String), CONTENT, {
+      encoding: 'utf8',
+      flag: 'wx',
+    });
   });
 
   it('preserves requested file mode on tmp writes', async () => {
@@ -89,6 +112,7 @@ describe('atomicWriteAsync', () => {
 
     expect(mockWriteFile).toHaveBeenCalledWith(expect.any(String), CONTENT, {
       encoding: 'utf8',
+      flag: 'wx',
       mode: 0o600,
     });
   });
@@ -117,26 +141,26 @@ describe('atomicWriteAsync', () => {
     expect(mockRename).toHaveBeenCalled();
   });
 
-  it('falls back to copyFile + unlink on EXDEV error', async () => {
-    const exdevError = Object.assign(new Error('Cross-device link'), { code: 'EXDEV' });
-    mockRename.mockRejectedValue(exdevError);
+  it('fails closed before publish when strict fsync fails', async () => {
+    mockOpen.mockRejectedValue(new Error('fsync unavailable'));
 
-    await atomicWriteAsync(TARGET_PATH, CONTENT);
+    await expect(atomicWriteAsync(TARGET_PATH, CONTENT, { durability: 'strict' })).rejects.toThrow(
+      'fsync unavailable'
+    );
 
-    const tmpPath = getTmpPath();
-    expect(mockCopyFile).toHaveBeenCalledWith(tmpPath, TARGET_PATH);
-    expect(mockUnlink).toHaveBeenCalledWith(tmpPath);
+    expect(mockRename).not.toHaveBeenCalled();
+    expect(mockUnlink).toHaveBeenCalledWith(getTmpPath());
   });
 
-  it('still succeeds EXDEV fallback even if tmp cleanup fails', async () => {
+  it('fails closed instead of copying over the target on impossible same-dir EXDEV', async () => {
     const exdevError = Object.assign(new Error('Cross-device link'), { code: 'EXDEV' });
     mockRename.mockRejectedValue(exdevError);
-    mockUnlink.mockRejectedValue(new Error('permission denied'));
 
-    // Should not throw
-    await atomicWriteAsync(TARGET_PATH, CONTENT);
+    await expect(atomicWriteAsync(TARGET_PATH, CONTENT)).rejects.toThrow('Cross-device link');
 
-    expect(mockCopyFile).toHaveBeenCalled();
+    const tmpPath = getTmpPath();
+    expect(mockCopyFile).not.toHaveBeenCalled();
+    expect(mockUnlink).toHaveBeenCalledWith(tmpPath);
   });
 
   it.each(['EPERM', 'EACCES', 'EBUSY'])(
@@ -156,6 +180,79 @@ describe('atomicWriteAsync', () => {
       expect(mockUnlink).not.toHaveBeenCalled();
     }
   );
+
+  it('revalidates compare-and-swap state before every rename retry', async () => {
+    const transientError = Object.assign(new Error('Transient EPERM'), { code: 'EPERM' });
+    const beforeCommit = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('external edit'));
+    mockRename.mockRejectedValueOnce(transientError);
+
+    await expect(atomicWriteAsync(TARGET_PATH, CONTENT, { beforeCommit })).rejects.toThrow(
+      'external edit'
+    );
+
+    expect(beforeCommit).toHaveBeenCalledTimes(2);
+    expect(mockRename).toHaveBeenCalledTimes(1);
+    expect(mockUnlink).toHaveBeenCalledWith(getTmpPath());
+  });
+
+  it('syncs the parent directory only when requested', async () => {
+    await atomicWriteAsync(TARGET_PATH, CONTENT, { syncDirectory: true });
+
+    expect(mockOpen).toHaveBeenNthCalledWith(1, getTmpPath(), 'r+');
+    expect(mockOpen).toHaveBeenNthCalledWith(2, TARGET_DIR, 'r');
+  });
+
+  it('reports a strict directory fsync failure after publish', async () => {
+    const fileHandle = {
+      sync: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const directoryHandle = {
+      sync: vi
+        .fn()
+        .mockRejectedValue(Object.assign(new Error('directory device failure'), { code: 'EIO' })),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    mockOpen
+      .mockResolvedValueOnce(fileHandle as unknown as fs.promises.FileHandle)
+      .mockResolvedValueOnce(directoryHandle as unknown as fs.promises.FileHandle);
+
+    await expect(
+      atomicWriteAsync(TARGET_PATH, CONTENT, {
+        durability: 'strict',
+        syncDirectory: true,
+      })
+    ).rejects.toThrow('directory device failure');
+
+    expect(mockRename).toHaveBeenCalledWith(getTmpPath(), TARGET_PATH);
+    expect(directoryHandle.close).toHaveBeenCalled();
+  });
+
+  it('accepts an explicitly unsupported directory fsync result in strict mode', async () => {
+    const fileHandle = {
+      sync: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    const directoryHandle = {
+      sync: vi
+        .fn()
+        .mockRejectedValue(Object.assign(new Error('unsupported directory sync'), { code: 'EINVAL' })),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    mockOpen
+      .mockResolvedValueOnce(fileHandle as unknown as fs.promises.FileHandle)
+      .mockResolvedValueOnce(directoryHandle as unknown as fs.promises.FileHandle);
+
+    await expect(
+      atomicWriteAsync(TARGET_PATH, CONTENT, {
+        durability: 'strict',
+        syncDirectory: true,
+      })
+    ).resolves.toBeUndefined();
+  });
 
   it('continues retrying beyond short antivirus-style locks', async () => {
     const transientError = Object.assign(new Error('Transient EPERM'), { code: 'EPERM' });
@@ -242,5 +339,54 @@ describe('atomicWriteAsync', () => {
     await atomicWriteAsync(deepPath, CONTENT);
 
     expect(mockMkdir).toHaveBeenCalledWith(path.dirname(deepPath), { recursive: true });
+  });
+});
+
+describe('atomicCreateAsync', () => {
+  it('publishes a fully-synced temp file without overwriting an existing target', async () => {
+    const result = await atomicCreateAsync(TARGET_PATH, CONTENT);
+
+    const tmpPath = getTmpPath();
+    expect(tmpPath).toMatch(/\.review-create\.[a-f0-9-]+\.tmp$/);
+    expect(mockLink).toHaveBeenCalledWith(tmpPath, TARGET_PATH);
+    expect(mockUnlink).toHaveBeenCalledWith(tmpPath);
+    expect(result).toEqual({ dev: 1, ino: 2 });
+  });
+
+  it('cleans the complete temp file and preserves the raced target on EEXIST', async () => {
+    mockLink.mockRejectedValue(Object.assign(new Error('exists'), { code: 'EEXIST' }));
+
+    await expect(atomicCreateAsync(TARGET_PATH, CONTENT)).rejects.toMatchObject({
+      code: 'EEXIST',
+    });
+
+    expect(mockUnlink).toHaveBeenCalledWith(getTmpPath());
+    expect(mockUnlink).not.toHaveBeenCalledWith(TARGET_PATH);
+  });
+
+  it('reports terminal success when only crash-temp cleanup fails after publish', async () => {
+    mockUnlink.mockRejectedValueOnce(Object.assign(new Error('temporary lock'), { code: 'EBUSY' }));
+
+    await expect(atomicCreateAsync(TARGET_PATH, CONTENT)).resolves.toEqual({ dev: 1, ino: 2 });
+
+    expect(mockLink).toHaveBeenCalledWith(getTmpPath(), TARGET_PATH);
+    expect(mockUnlink).not.toHaveBeenCalledWith(TARGET_PATH);
+  });
+
+  it('removes only a crash-left owned temp hardlink', async () => {
+    mockLstat.mockResolvedValue({
+      dev: 7,
+      ino: 9,
+      nlink: 2,
+    } as unknown as Awaited<ReturnType<typeof fs.promises.lstat>>);
+    mockReaddir.mockResolvedValue([
+      '.review-create.12345678-1234-1234-1234-123456789abc.tmp',
+      'user-file.tmp',
+    ] as unknown as Awaited<ReturnType<typeof fs.promises.readdir>>);
+
+    await cleanupAtomicCreateTempLinks(TARGET_PATH);
+
+    expect(mockUnlink).toHaveBeenCalledTimes(1);
+    expect(String(mockUnlink.mock.calls[0]?.[0])).toContain('.review-create.');
   });
 });

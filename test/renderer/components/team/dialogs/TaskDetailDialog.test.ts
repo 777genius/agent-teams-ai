@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
@@ -296,6 +297,42 @@ describe('TaskDetailDialog changes summary loading', () => {
     });
   });
 
+  it('does not render the legacy reviewer row below task logs', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TaskDetailDialog, {
+          open: true,
+          variant: 'team',
+          teamName: 'team-a',
+          task: { ...makeTask('task-review'), workIntervals: [] },
+          kanbanTaskState: {
+            column: 'review',
+            reviewer: 'reviewer',
+            errorDescription: 'Review failed',
+            movedAt: '2026-04-20T10:00:00.000Z',
+          },
+          taskMap: new Map<string, TeamTaskWithKanban>(),
+          members: [],
+          onClose: vi.fn(),
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain('Reviewer: reviewer');
+    expect(host.textContent).toContain('Review failed');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('does not drop a new task changes request while another task summary is still in flight', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const first = deferred<TaskChangeSetV2>();
@@ -433,6 +470,12 @@ describe('TaskDetailDialog changes summary loading', () => {
     );
     expect(host.textContent).toContain('No file changes were recorded for this task.');
     expect(host.textContent).toContain('No reviewable file changes recovered');
+    const warningText = [...host.querySelectorAll('span')].find(
+      (element) => element.textContent === 'No file changes were recorded for this task.'
+    );
+    const warningRow = warningText?.parentElement?.parentElement;
+    expect(warningRow?.className).toContain('border-b');
+    expect(warningRow?.className).not.toContain('rounded');
     expect(host.querySelector('[data-testid="section-badge-Changes"]')?.textContent).toBe(
       'attention'
     );
@@ -508,6 +551,12 @@ describe('TaskDetailDialog changes summary loading', () => {
 
     expect(hoisted.getTaskChanges).toHaveBeenCalledTimes(1);
     expect(host.textContent).toContain('src/task-autoload.ts');
+    const fileRow = host.querySelector<HTMLElement>(
+      '[role="button"][aria-label="src/task-autoload.ts"]'
+    );
+    expect(fileRow).not.toBeNull();
+    expect(fileRow?.className).not.toContain('rounded');
+    expect(fileRow?.parentElement?.parentElement?.className).toContain('border-y');
 
     await act(async () => {
       root.unmount();

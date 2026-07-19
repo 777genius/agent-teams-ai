@@ -1,3 +1,4 @@
+import { getParticipantIdentityIndexByName } from '@shared/constants/memberColors';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import {
   hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext,
@@ -37,14 +38,6 @@ export function displayMemberName(name: string): string {
   return name === 'team-lead' ? 'lead' : name;
 }
 
-function hashStringToIndex(str: string): number {
-  let hash = 5381;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash);
-}
-
 export function agentAvatarUrl(name: string, size = 64): string {
   void size;
   const normalized = name.trim().toLowerCase();
@@ -54,9 +47,7 @@ export function agentAvatarUrl(name: string, size = 64): string {
 
   // Temporarily disabled external avatar API.
   // return `https://robohash.org/${encodeURIComponent(name)}?size=${size}x${size}`;
-  return getParticipantAvatarUrlByIndex(
-    hashStringToIndex(normalized) % PARTICIPANT_AVATAR_URLS.length
-  );
+  return getParticipantAvatarUrlByIndex(getParticipantIdentityIndexByName(normalized));
 }
 
 export const STATUS_DOT_COLORS: Record<MemberStatus, string> = {
@@ -368,7 +359,10 @@ function appendRuntimeAdvisoryRetryHint(
   return `${base} Waiting for OpenCode retry or quota reset around ${retryAt}.`;
 }
 
-function getRuntimeAdvisoryProviderLabel(providerId: TeamProviderId | undefined): string | null {
+function getRuntimeAdvisoryProviderLabel(
+  providerId: TeamProviderId | undefined,
+  model?: string
+): string | null {
   switch (providerId) {
     case 'anthropic':
       return 'Anthropic';
@@ -377,7 +371,7 @@ function getRuntimeAdvisoryProviderLabel(providerId: TeamProviderId | undefined)
     case 'gemini':
       return 'Gemini';
     case 'opencode':
-      return 'OpenCode';
+      return model?.trim().toLowerCase().startsWith('kiro/') ? 'Kiro' : 'OpenCode';
     default:
       return null;
   }
@@ -544,9 +538,10 @@ function formatRuntimeAdvisoryDisplayMessage(
 
 function formatRuntimeAdvisoryBaseLabel(
   advisory: MemberRuntimeAdvisory,
-  providerId: TeamProviderId | undefined
+  providerId: TeamProviderId | undefined,
+  model?: string
 ): string {
-  const providerLabel = getRuntimeAdvisoryProviderLabel(providerId);
+  const providerLabel = getRuntimeAdvisoryProviderLabel(providerId, model);
   if (advisory.kind === 'api_error') {
     if (providerId === 'opencode' && canTreatAdvisoryAsOpenCodeSessionRefresh(advisory)) {
       return 'OpenCode session refresh';
@@ -609,9 +604,10 @@ function formatRuntimeAdvisoryBaseLabel(
 
 function formatRuntimeAdvisoryTitle(
   advisory: MemberRuntimeAdvisory,
-  providerId: TeamProviderId | undefined
+  providerId: TeamProviderId | undefined,
+  model?: string
 ): string {
-  const providerLabel = getRuntimeAdvisoryProviderLabel(providerId);
+  const providerLabel = getRuntimeAdvisoryProviderLabel(providerId, model);
   if (advisory.kind === 'api_error') {
     if (providerId === 'opencode' && canTreatAdvisoryAsOpenCodeSessionRefresh(advisory)) {
       return appendRuntimeAdvisoryRawMessage(
@@ -770,12 +766,13 @@ function formatRuntimeAdvisoryTitle(
 export function getMemberRuntimeAdvisoryLabel(
   advisory: MemberRuntimeAdvisory | undefined,
   providerId?: TeamProviderId,
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  model?: string
 ): string | null {
   if (!advisory) {
     return null;
   }
-  const baseLabel = formatRuntimeAdvisoryBaseLabel(advisory, providerId);
+  const baseLabel = formatRuntimeAdvisoryBaseLabel(advisory, providerId, model);
   const remainingMs = getRuntimeAdvisoryRetryRemainingMs(advisory, nowMs);
   if (advisory.kind === 'api_error') {
     if (remainingMs && isRetryTimedApiAdvisory(advisory, providerId)) {
@@ -794,12 +791,13 @@ export function getMemberRuntimeAdvisoryLabel(
 
 export function getMemberRuntimeAdvisoryTitle(
   advisory: MemberRuntimeAdvisory | undefined,
-  providerId?: TeamProviderId
+  providerId?: TeamProviderId,
+  model?: string
 ): string | undefined {
   if (!advisory || (advisory.kind !== 'sdk_retrying' && advisory.kind !== 'api_error')) {
     return undefined;
   }
-  return formatRuntimeAdvisoryTitle(advisory, providerId);
+  return formatRuntimeAdvisoryTitle(advisory, providerId, model);
 }
 
 export function getMemberRuntimeAdvisoryTone(
@@ -851,7 +849,12 @@ export function getLaunchAwarePresenceLabel(
   ) {
     return basePresenceLabel;
   }
-  const advisoryLabel = getMemberRuntimeAdvisoryLabel(runtimeAdvisory, member.providerId);
+  const advisoryLabel = getMemberRuntimeAdvisoryLabel(
+    runtimeAdvisory,
+    member.providerId,
+    Date.now(),
+    member.model
+  );
   return advisoryLabel ?? basePresenceLabel;
 }
 
@@ -1505,11 +1508,14 @@ export function buildMemberLaunchPresentation({
   );
   const runtimeAdvisoryLabel = getMemberRuntimeAdvisoryLabel(
     displayRuntimeAdvisory,
-    member.providerId
+    member.providerId,
+    nowMs,
+    member.model
   );
   const runtimeAdvisoryTitle = getMemberRuntimeAdvisoryTitle(
     displayRuntimeAdvisory,
-    member.providerId
+    member.providerId,
+    member.model
   );
   const runtimeAdvisoryTone = getMemberRuntimeAdvisoryTone(
     displayRuntimeAdvisory,
@@ -1650,14 +1656,43 @@ interface MemberAvatarInput {
 }
 
 /**
- * Build a consistent name→colorName map for all members.
- * Active members receive colors sequentially from MEMBER_COLOR_PALETTE,
- * which is pre-ordered for maximum visual contrast between consecutive entries.
- * If a member has a stored color that hasn't been assigned yet, it is used instead.
- * Maps "user" to a reserved color.
+ * Build the canonical name→identity-color map used by renderer surfaces.
+ * Stored colors are intentionally ignored so legacy values cannot drift from
+ * the participant avatar assigned by buildMemberAvatarMap().
  */
 export function buildMemberColorMap(members: MemberColorInput[]): Map<string, string> {
-  return buildTeamMemberColorMap(members, { preferProvidedColors: true });
+  return buildTeamMemberColorMap(members, { preferProvidedColors: false });
+}
+
+/**
+ * Resolve a canonical roster color before falling back to runtime metadata.
+ * Runtime protocols may retain historical colors that no longer match the
+ * participant avatar catalog, so they must not override a known member.
+ */
+export function resolveMemberIdentityColor(
+  memberName: string,
+  memberColorMap: ReadonlyMap<string, string>,
+  fallbackColor = ''
+): string {
+  const exactColor = memberColorMap.get(memberName);
+  if (exactColor) return exactColor;
+
+  const normalizedName = memberName.trim().toLowerCase();
+  const aliasName =
+    normalizedName === 'lead'
+      ? 'team-lead'
+      : normalizedName === 'team-lead'
+        ? 'lead'
+        : normalizedName;
+
+  for (const [candidateName, color] of memberColorMap) {
+    const normalizedCandidate = candidateName.trim().toLowerCase();
+    if (normalizedCandidate === normalizedName || normalizedCandidate === aliasName) {
+      return color;
+    }
+  }
+
+  return fallbackColor;
 }
 
 export function buildMemberAvatarMap(members: readonly MemberAvatarInput[]): Map<string, string> {

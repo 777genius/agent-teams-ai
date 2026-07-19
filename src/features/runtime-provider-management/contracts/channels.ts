@@ -1,4 +1,8 @@
 export const RUNTIME_PROVIDER_MANAGEMENT_VIEW = 'runtimeProviderManagement:view';
+export const RUNTIME_LOCAL_PROVIDER_LIST = 'runtimeProviderManagement:localProviderList';
+export const RUNTIME_LOCAL_PROVIDER_SCAN = 'runtimeProviderManagement:localProviderScan';
+export const RUNTIME_LOCAL_PROVIDER_PROBE = 'runtimeProviderManagement:localProviderProbe';
+export const RUNTIME_LOCAL_PROVIDER_CONFIGURE = 'runtimeProviderManagement:localProviderConfigure';
 export const RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY = 'runtimeProviderManagement:directory';
 export const RUNTIME_PROVIDER_MANAGEMENT_SETUP_FORM = 'runtimeProviderManagement:setupForm';
 export const RUNTIME_PROVIDER_MANAGEMENT_CONNECT = 'runtimeProviderManagement:connect';
@@ -17,4 +21,5 @@ export const RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CANCEL = 'runtimeProviderManageme
 export const RUNTIME_PROVIDER_COMPANION_STATUS = 'runtimeProviderManagement:companionStatus';
 export const RUNTIME_PROVIDER_COMPANION_INSTALL = 'runtimeProviderManagement:companionInstall';
 export const RUNTIME_PROVIDER_COMPANION_CONNECT = 'runtimeProviderManagement:companionConnect';
+export const RUNTIME_PROVIDER_COMPANION_ACTION = 'runtimeProviderManagement:companionAction';
 export const RUNTIME_PROVIDER_COMPANION_PROGRESS = 'runtimeProviderManagement:companionProgress';

@@ -91,10 +91,11 @@ export class FileContentResolver {
       return { original: cached.original, modified: cached.modified, source: cached.source };
     }
 
-    // Fast path: if the agent created the file and it still exists on disk,
-    // the original content is definitely empty, so skip expensive history lookup.
-    const hasWriteNew = snippets.some((s) => !s.isError && s.type === 'write-new');
-    if (hasWriteNew && currentContent !== null) {
+    // Fast path only for creation backed by explicit lifecycle evidence. Older legacy
+    // summaries may label the first observed Write as write-new even when it overwrote
+    // an existing file, so that label alone must never synthesize an empty baseline.
+    const hasProvenCreation = this.isNetNewFile(snippets);
+    if (hasProvenCreation && currentContent !== null) {
       const result = {
         original: '',
         modified: currentContent,
@@ -106,7 +107,7 @@ export class FileContentResolver {
 
     // Strategy 1: Try file-history backup
     const historyResult = await this.tryFileHistoryBackup(teamName, memberName, filePath);
-    if (historyResult) {
+    if (historyResult !== null) {
       const result = {
         original: historyResult,
         modified: currentContent,
@@ -131,7 +132,7 @@ export class FileContentResolver {
     // Strategy 3 (Phase 4): Git fallback
     if (this.gitFallback) {
       const gitResult = await this.tryGitFallback(filePath, currentContent, snippets);
-      if (gitResult) {
+      if (gitResult !== null) {
         const result = {
           original: gitResult,
           modified: currentContent,
@@ -188,9 +189,7 @@ export class FileContentResolver {
       }
     }
 
-    const isNewFile = snippets.some(
-      (s) => s.type === 'write-new' || s.ledger?.operation === 'create'
-    );
+    const isNewFile = this.isNetNewFile(snippets);
 
     return {
       filePath,
@@ -250,7 +249,8 @@ export class FileContentResolver {
         snippets: file.snippets,
         linesAdded,
         linesRemoved,
-        isNewFile: file.isNewFile,
+        // Re-evaluate lifecycle evidence instead of trusting persisted legacy summaries.
+        isNewFile: this.isNetNewFile(file.snippets),
         originalFullContent: resolved.original,
         modifiedFullContent: resolved.modified,
         contentSource: resolved.source,
@@ -474,8 +474,10 @@ export class FileContentResolver {
     for (const snippet of sorted) {
       switch (snippet.type) {
         case 'write-new': {
-          // File was created by agent -> original was empty
-          return '';
+          // Legacy caches may contain first-seen Write events misclassified as creation.
+          // Only explicit lifecycle evidence makes an empty baseline safe.
+          if (this.isProvenCreationSnippet(snippet)) return '';
+          return null;
         }
 
         case 'write-update': {
@@ -520,6 +522,40 @@ export class FileContentResolver {
     }
 
     return content;
+  }
+
+  // ── Private: Lifecycle evidence ──
+
+  private hasProvenCreationEvidence(snippets: SnippetDiff[]): boolean {
+    return snippets.some((snippet) => !snippet.isError && this.isProvenCreationSnippet(snippet));
+  }
+
+  /**
+   * Whether the reviewed path is absent before the first ledger event and present
+   * after the last one. Looking for any intermediate create is insufficient:
+   * delete-existing -> recreate-same-path is a modification, not a new file.
+   */
+  private isNetNewFile(snippets: SnippetDiff[]): boolean {
+    const ledgerSnippets = snippets.filter((snippet) => !snippet.isError && snippet.ledger);
+    if (ledgerSnippets.length > 0) {
+      const first = ledgerSnippets[0]?.ledger;
+      const last = ledgerSnippets[ledgerSnippets.length - 1]?.ledger;
+      if (
+        typeof first?.beforeState?.exists === 'boolean' &&
+        typeof last?.afterState?.exists === 'boolean'
+      ) {
+        return first.beforeState.exists === false && last.afterState.exists === true;
+      }
+    }
+    return this.hasProvenCreationEvidence(snippets);
+  }
+
+  private isProvenCreationSnippet(snippet: SnippetDiff): boolean {
+    if (snippet.ledger?.operation === 'create') return true;
+
+    // TaskChangeComputer emits write-new for explicit metadata `kind: add` using
+    // the Edit tool name. A bare legacy Write has no pre-task existence evidence.
+    return snippet.type === 'write-new' && snippet.toolName === 'Edit';
   }
 
   // ── Private: Git fallback (Phase 4) ──

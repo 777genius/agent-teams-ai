@@ -11,6 +11,7 @@ import { parentPort } from 'node:worker_threads';
 import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { TeamDataService } from '@main/services/team/TeamDataService';
 import { TeamMemberLogsFinder } from '@main/services/team/TeamMemberLogsFinder';
+import { applyElectronDevClaudeRootOverrideForWorker } from '@main/utils/electronDevPathOverrides';
 import { createLogger } from '@shared/utils/logger';
 
 import type {
@@ -20,6 +21,12 @@ import type {
 import type { MemberLogSummary } from '@shared/types';
 
 const logger = createLogger('Worker:TeamData');
+
+// Worker threads do not execute the Electron startup path that normally applies
+// the explicit dev root. Mirror that single override before constructing any
+// path-dependent services so dev:mcp reads teams, tasks, and messages from the
+// same isolated profile as the main process.
+applyElectronDevClaudeRootOverrideForWorker();
 
 // Instantiate services with default dependencies — worker has its own event loop
 const teamDataService = new TeamDataService();

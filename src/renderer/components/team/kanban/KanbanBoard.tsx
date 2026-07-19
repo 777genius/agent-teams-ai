@@ -40,34 +40,26 @@ import type { DragEndEvent } from '@dnd-kit/core';
 import type { Session } from '@renderer/types/data';
 import type { KanbanColumnId, KanbanState, ResolvedTeamMember, TeamTask } from '@shared/types';
 
-const COLUMN_ACCENTS: Record<
-  KanbanColumnId,
-  { headerBg: string; bodyBg: string; icon: React.ReactNode }
-> = {
+const COLUMN_ACCENTS: Record<KanbanColumnId, { accentColor: string; icon: React.ReactNode }> = {
   todo: {
-    headerBg: 'rgba(59, 130, 246, 0.22)',
-    bodyBg: 'rgba(59, 130, 246, 0.05)',
-    icon: <ClipboardList size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
+    accentColor: 'rgb(59, 130, 246)',
+    icon: <ClipboardList size={14} className="shrink-0 text-[var(--kanban-column-accent)]" />,
   },
   in_progress: {
-    headerBg: 'rgba(234, 179, 8, 0.24)',
-    bodyBg: 'rgba(234, 179, 8, 0.06)',
-    icon: <PlayCircle size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
+    accentColor: 'rgb(234, 179, 8)',
+    icon: <PlayCircle size={14} className="shrink-0 text-[var(--kanban-column-accent)]" />,
   },
   done: {
-    headerBg: 'rgba(34, 197, 94, 0.22)',
-    bodyBg: 'rgba(34, 197, 94, 0.05)',
-    icon: <CheckCircle2 size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
+    accentColor: 'rgb(20, 184, 166)',
+    icon: <CheckCircle2 size={14} className="shrink-0 text-[var(--kanban-column-accent)]" />,
   },
   review: {
-    headerBg: 'rgba(139, 92, 246, 0.22)',
-    bodyBg: 'rgba(139, 92, 246, 0.05)',
-    icon: <Eye size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
+    accentColor: 'rgb(139, 92, 246)',
+    icon: <Eye size={14} className="shrink-0 text-[var(--kanban-column-accent)]" />,
   },
   approved: {
-    headerBg: 'rgba(34, 197, 94, 0.34)',
-    bodyBg: 'rgba(34, 197, 94, 0.08)',
-    icon: <ShieldCheck size={14} className="shrink-0 text-[var(--color-text-muted)]" />,
+    accentColor: 'rgb(101, 163, 13)',
+    icon: <ShieldCheck size={14} className="shrink-0 text-[var(--kanban-column-accent)]" />,
   },
 };
 
@@ -158,21 +150,19 @@ function estimateGridSkeletonCardHeight(
   kanbanState: KanbanState,
   hasReviewers: boolean
 ): number {
-  let height = 122;
+  let height = 96;
 
-  if (task.subject.length > 54) height += 10;
-  if (task.subject.length > 92) height += 8;
-  if (task.needsClarification) height += 16;
-  if (isTeamTaskNeedsFixActionable(task)) height += 14;
-  if ((task.blockedBy?.length ?? 0) > 0) height += 18;
-  if ((task.blocks?.length ?? 0) > 0) height += 18;
+  if (task.needsClarification) height += 18;
+  if (isTeamTaskNeedsFixActionable(task)) height += 16;
+  height += (task.blockedBy?.length ?? 0) * 20;
+  height += (task.blocks?.length ?? 0) * 20;
 
   const effectiveReviewer = (kanbanState.tasks[task.id]?.reviewer ?? '').trim();
   if (columnId === 'review' && !hasReviewers && effectiveReviewer.length === 0) {
     height += 14;
   }
 
-  return Math.min(Math.max(height, 116), 196);
+  return Math.min(Math.max(height, 96), 320);
 }
 
 /** Сортирует задачи колонки по сохранённому порядку; задачи без порядка — в конце. */
@@ -245,6 +235,7 @@ interface SortableKanbanTaskCardProps {
   teamName: string;
   kanbanState: KanbanState;
   compact?: boolean;
+  showSeparator: boolean;
   taskMap: Map<string, TeamTask>;
   memberColorMap: Map<string, string>;
   hasLiveTaskLogs?: boolean;
@@ -267,6 +258,7 @@ const SortableKanbanTaskCard = ({
   teamName,
   kanbanState,
   compact,
+  showSeparator,
   taskMap,
   memberColorMap,
   hasLiveTaskLogs,
@@ -297,12 +289,14 @@ const SortableKanbanTaskCard = ({
     // eslint-disable-next-line react/jsx-props-no-spreading -- dnd-kit useSortable requires spreading attributes/listeners
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <KanbanTaskCard
+        flat
         task={task}
         teamName={teamName}
         columnId={columnId}
         kanbanTaskState={kanbanState.tasks[task.id]}
         hasReviewers={kanbanState.reviewers.length > 0}
         compact={compact}
+        showSeparator={showSeparator}
         taskMap={taskMap}
         memberColorMap={memberColorMap}
         hasLiveTaskLogs={hasLiveTaskLogs}
@@ -537,7 +531,7 @@ export const KanbanBoard = memo(function KanbanBoard({
         <button
           type="button"
           onClick={addHandler}
-          className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-border-emphasis)] hover:text-[var(--color-text-secondary)]"
+          className="ml-2 flex w-[calc(100%_-_0.5rem)] items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)] transition-colors hover:border-[var(--color-border-emphasis)] hover:text-[var(--color-text-secondary)]"
         >
           <Plus size={13} />
           {t('kanban.board.addTask')}
@@ -547,7 +541,7 @@ export const KanbanBoard = memo(function KanbanBoard({
       if (columnTasks.length === 0) {
         return (
           addButton ?? (
-            <div className="rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
+            <div className="ml-2 w-[calc(100%_-_0.5rem)] rounded-md border border-dashed border-[var(--color-border)] p-3 text-xs text-[var(--color-text-muted)]">
               {t('kanban.board.noTasks')}
             </div>
           )
@@ -576,7 +570,7 @@ export const KanbanBoard = memo(function KanbanBoard({
         return (
           <>
             <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-              {visibleTasks.map((task) => (
+              {visibleTasks.map((task, index) => (
                 <SortableKanbanTaskCard
                   key={task.id}
                   task={task}
@@ -584,6 +578,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                   teamName={teamName}
                   kanbanState={kanbanState}
                   compact={compact}
+                  showSeparator={index < visibleTasks.length - 1}
                   taskMap={taskMap}
                   memberColorMap={memberColorMap}
                   hasLiveTaskLogs={Boolean(activeTaskLogActivity?.[task.id])}
@@ -608,8 +603,9 @@ export const KanbanBoard = memo(function KanbanBoard({
       }
       return (
         <>
-          {visibleTasks.map((task) => (
+          {visibleTasks.map((task, index) => (
             <KanbanTaskCard
+              flat
               key={task.id}
               task={task}
               teamName={teamName}
@@ -617,6 +613,7 @@ export const KanbanBoard = memo(function KanbanBoard({
               kanbanTaskState={kanbanState.tasks[task.id]}
               hasReviewers={hasReviewers}
               compact={compact}
+              showSeparator={index < visibleTasks.length - 1}
               taskMap={taskMap}
               memberColorMap={memberColorMap}
               hasLiveTaskLogs={Boolean(activeTaskLogActivity?.[task.id])}
@@ -660,6 +657,7 @@ export const KanbanBoard = memo(function KanbanBoard({
       revealNextTasks,
       taskMap,
       teamName,
+      t,
     ]
   );
 
@@ -746,8 +744,7 @@ export const KanbanBoard = memo(function KanbanBoard({
           title: t(column.titleKey),
           count: columnTasks.length,
           icon: accent.icon,
-          headerBg: accent.headerBg,
-          bodyBg: accent.bodyBg,
+          accentColor: accent.accentColor,
           content: renderCards(column.id, columnTasks),
           showAddButton: columnSupportsAddButton(column.id, onAddTask),
           skeletonCards: renderableColumnTasks(column.id, columnTasks).map((task) => ({
@@ -772,7 +769,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     <div ref={boardRef} className="min-w-0 max-w-full overflow-x-hidden">
       <div
         className={cn(
-          'flex min-w-0 max-w-full items-center gap-2',
+          'flex min-w-0 max-w-full items-center gap-2 px-2',
           viewMode === 'columns' ? 'mb-0' : 'mb-2',
           toolbarLeft == null && 'justify-end'
         )}
@@ -862,35 +859,32 @@ export const KanbanBoard = memo(function KanbanBoard({
           columns={gridColumns}
         />
       ) : (
-        <div className="w-full min-w-0 max-w-full overflow-x-auto overflow-y-hidden px-1 pb-6 pr-4 pt-2">
-          <div className="flex min-w-max items-start pr-1">
+        <div className="w-full min-w-0 max-w-full overflow-x-auto overflow-y-hidden pb-6 pt-2">
+          <div className="flex min-w-max items-start">
             {visibleColumns.map((column, index) => {
               const columnTasks = groupedOrdered.get(column.id) ?? [];
               const accent = COLUMN_ACCENTS[column.id];
               const width = columnWidths.get(column.id) ?? 256;
               const handleProps = getHandleProps(column.id);
               return (
-                <div key={column.id} className="flex shrink-0">
-                  <div style={{ width }}>
-                    <KanbanColumn
-                      title={t(column.titleKey)}
-                      count={columnTasks.length}
-                      icon={accent.icon}
-                      headerBg={accent.headerBg}
-                      bodyBg={accent.bodyBg}
-                      bodyClassName="max-h-none overflow-visible"
-                    >
-                      {renderCards(column.id, columnTasks, true)}
-                    </KanbanColumn>
-                  </div>
+                <div key={column.id} className="relative shrink-0" style={{ width }}>
+                  <KanbanColumn
+                    title={t(column.titleKey)}
+                    count={columnTasks.length}
+                    icon={accent.icon}
+                    accentColor={accent.accentColor}
+                    bodyClassName="max-h-none overflow-visible"
+                  >
+                    {renderCards(column.id, columnTasks, true)}
+                  </KanbanColumn>
                   {index < visibleColumns.length - 1 ? (
                     <div
-                      className="group relative mx-0.5 flex items-center justify-center"
+                      className="group absolute right-0 top-0 z-20 flex h-full translate-x-1/2 items-center justify-center"
                       onPointerDown={handleProps.onPointerDown}
                       style={handleProps.style}
                       aria-label={handleProps['aria-label']}
                     >
-                      <div className="h-full w-px bg-[var(--color-border)] transition-colors group-hover:bg-blue-500/50 group-active:bg-blue-500" />
+                      <div className="h-full w-px bg-transparent transition-colors group-active:bg-blue-500" />
                     </div>
                   ) : null}
                 </div>

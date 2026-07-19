@@ -13,6 +13,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { getProvisioningProviderLabel } from './ProvisioningProviderStatusList';
 
+import type { AnalyticsProviderCheckReason } from '@renderer/analytics/productAnalytics';
 import type { CliProviderId, CliProviderStatus } from '@shared/types';
 
 interface ProvisioningProviderRuntimeSettingsDialogProps {
@@ -99,7 +100,13 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
       });
 
       try {
-        await fetchCliProviderStatus(providerId, { silent: false });
+        const refreshed = await fetchCliProviderStatus(providerId, {
+          silent: false,
+          checkReason: 'launch_preflight',
+        });
+        if (!refreshed) {
+          throw new Error('Provider status refresh failed');
+        }
         onProviderRuntimeChanged?.(providerId);
       } catch {
         throw new Error('Runtime updated, but failed to refresh provider status.');
@@ -114,9 +121,16 @@ export const ProvisioningProviderRuntimeSettingsDialog = ({
   );
 
   const handleProviderRefresh = useCallback(
-    async (providerId: CliProviderId) => {
-      await fetchCliProviderStatus(providerId, { silent: false });
+    async (
+      providerId: CliProviderId,
+      checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
+    ) => {
+      const refreshed = await fetchCliProviderStatus(providerId, {
+        silent: false,
+        checkReason,
+      });
       onProviderRuntimeChanged?.(providerId);
+      return refreshed;
     },
     [fetchCliProviderStatus, onProviderRuntimeChanged]
   );

@@ -5,6 +5,8 @@ import 'react-resizable/css/styles.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 
+import { initializeAppCloseCoordination } from '@features/app-close-coordination/renderer';
+
 import { registerDynamicImportRecovery } from './utils/dynamicImportRecovery';
 import { App } from './App';
 import { initSentryRenderer } from './sentry';
@@ -194,7 +196,14 @@ function mountApp(): void {
   if (!window.__claudeTeamsUiDidInit) {
     window.__claudeTeamsUiDidInit = true;
     // Keep the cleanup reachable for hot module reload / shutdown paths.
-    window.__claudeTeamsUiCleanup = initializeNotificationListeners();
+    const cleanupNotifications = initializeNotificationListeners();
+    const cleanupAppCloseCoordination = initializeAppCloseCoordination(
+      window.electronAPI?.appCloseCoordination
+    );
+    window.__claudeTeamsUiCleanup = (): void => {
+      cleanupAppCloseCoordination();
+      cleanupNotifications();
+    };
   }
 
   root = ReactDOM.createRoot(document.getElementById('root')!);

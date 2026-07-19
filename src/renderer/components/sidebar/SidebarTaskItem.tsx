@@ -1,7 +1,9 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
+import { useRelativeTimeClock } from '@renderer/hooks/useRelativeTimeClock';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useUnreadCommentCount } from '@renderer/hooks/useUnreadCommentCount';
 import { cn } from '@renderer/lib/utils';
@@ -19,6 +21,12 @@ import {
 import { format, isThisYear, isToday, isYesterday } from 'date-fns';
 import { CheckCircle2, Circle, Eye, Loader2, ShieldCheck, Trash2 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
+
+import {
+  formatExactTaskDateTime,
+  formatTaskUpdatedRelativeTime,
+  getMeaningfulTaskUpdatedAt,
+} from './sidebarTaskTime';
 
 import type { GlobalTask, TeamTaskStatus } from '@shared/types';
 import type { LucideIcon } from 'lucide-react';
@@ -38,31 +46,6 @@ function formatTaskDate(dateStr: string | undefined, yesterdayLabel: string): st
   if (isYesterday(d)) return yesterdayLabel;
   if (isThisYear(d)) return format(d, 'MMM d');
   return format(d, 'MMM d, yyyy');
-}
-
-function formatUpdatedLabel(
-  task: GlobalTask,
-  updatedPrefix: string,
-  updatedYesterdayLabel: string
-): string | null {
-  const updatedStr = task.updatedAt;
-  if (!updatedStr) return null;
-  const updated = new Date(updatedStr);
-  if (isNaN(updated.getTime())) return null;
-
-  // Don't show "updated" if there's no createdAt to compare, or times are within 60s
-  const createdStr = task.createdAt;
-  if (createdStr) {
-    const created = new Date(createdStr);
-    if (!isNaN(created.getTime()) && Math.abs(updated.getTime() - created.getTime()) < 60_000) {
-      return null;
-    }
-  }
-
-  if (isToday(updated)) return `${updatedPrefix} ${format(updated, 'HH:mm')}`;
-  if (isYesterday(updated)) return updatedYesterdayLabel;
-  if (isThisYear(updated)) return `${updatedPrefix} ${format(updated, 'MMM d')}`;
-  return `${updatedPrefix} ${format(updated, 'MMM d, yyyy')}`;
 }
 
 interface SidebarTaskItemProps {
@@ -104,7 +87,7 @@ const SidebarTaskItemContent = ({
   ownerColorName,
 }: SidebarTaskItemProps & { isLight: boolean }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const { t: tCommon } = useAppTranslation('common');
+  const { t: tCommon, resolvedLanguage } = useAppTranslation('common');
   const openGlobalTaskDetail = useStore((s) => s.openGlobalTaskDetail);
   const shouldResolveOwnerColorFromStore = ownerColorName === undefined;
   const teamMembers = useStore(
@@ -150,11 +133,14 @@ const SidebarTaskItemContent = ({
     cfg.color,
     shouldAnimateStatusIcon && 'animate-spin'
   );
-  const updatedLabel = formatUpdatedLabel(
-    task,
-    tCommon('tasks.date.updatedPrefix'),
-    tCommon('tasks.date.updatedYesterday')
-  );
+  const meaningfulUpdatedAt = getMeaningfulTaskUpdatedAt(task);
+  const relativeTimeNowMs = useRelativeTimeClock(meaningfulUpdatedAt !== null);
+  const updatedLabel = meaningfulUpdatedAt
+    ? formatTaskUpdatedRelativeTime(meaningfulUpdatedAt, resolvedLanguage, relativeTimeNowMs)
+    : null;
+  const updatedExactLabel = meaningfulUpdatedAt
+    ? formatExactTaskDateTime(meaningfulUpdatedAt, resolvedLanguage)
+    : null;
   const dateLabel = updatedLabel ?? formatTaskDate(task.createdAt, tCommon('tasks.date.yesterday'));
 
   const resolvedOwnerColorName = useMemo(() => {
@@ -278,7 +264,7 @@ const SidebarTaskItemContent = ({
         {task.teamDeleted && <Trash2 className="size-2.5 shrink-0 text-zinc-500" />}
         {projectLabel && (
           <span
-            className="shrink-0"
+            className="min-w-0 truncate"
             style={projectColorSet ? { color: projectColorSet.text } : undefined}
           >
             {projectLabel}
@@ -299,13 +285,24 @@ const SidebarTaskItemContent = ({
             </span>
           </>
         )}
-        {dateLabel && (
-          <span
-            className={`ml-auto shrink-0 ${updatedLabel ? 'italic opacity-100 dark:opacity-70' : ''}`}
-          >
-            {dateLabel}
-          </span>
-        )}
+        {dateLabel && updatedExactLabel ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                data-testid="sidebar-task-relative-time"
+                dir="auto"
+                className="ml-auto max-w-[55%] shrink-0 truncate italic opacity-100 dark:opacity-70"
+              >
+                {dateLabel}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="whitespace-nowrap">
+              {updatedExactLabel}
+            </TooltipContent>
+          </Tooltip>
+        ) : dateLabel ? (
+          <span className="ml-auto shrink-0">{dateLabel}</span>
+        ) : null}
       </div>
 
       {/* Row 3: Team: name · owner */}

@@ -1,9 +1,8 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   getRuntimeMemorySourceLabel,
   resolveMemberRuntimeSummary,
 } from '@renderer/utils/memberRuntimeSummary';
+import { describe, expect, it } from 'vitest';
 
 import type { MemberSpawnStatusEntry, ResolvedTeamMember } from '@shared/types';
 
@@ -392,7 +391,7 @@ describe('resolveMemberRuntimeSummary', () => {
         },
         undefined
       )
-    ).toBe('nemotron-3-super-free · via OpenCode');
+    ).toBe('nemotron-3-super-free · via OpenCode Zen');
   });
 
   it('infers OpenCode from an OpenCode model when member provider metadata is missing', () => {
@@ -415,7 +414,7 @@ describe('resolveMemberRuntimeSummary', () => {
         },
         undefined
       )
-    ).toBe('minimax-m2.5-free · via OpenCode');
+    ).toBe('minimax-m2.5-free · via OpenCode Zen');
   });
 
   it('appends memory for OpenCode side-lane runtime snapshots without adding Codex backend text', () => {
@@ -446,7 +445,7 @@ describe('resolveMemberRuntimeSummary', () => {
           updatedAt: '2026-04-18T18:00:00.000Z',
         }
       )
-    ).toBe('minimax-m2.5-free · via OpenCode · 183.9 MB');
+    ).toBe('minimax-m2.5-free · via OpenCode Zen · 183.9 MB');
   });
 });
 

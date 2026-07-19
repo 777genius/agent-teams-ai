@@ -27,6 +27,12 @@ vi.mock('../../../../src/main/services/infrastructure/ConfigManager', () => ({
           gemini: 'cli',
         },
       },
+      providerConnections: {
+        anthropic: {
+          authMode: 'auto',
+          compatibleEndpoint: { enabled: false },
+        },
+      },
     }),
   },
 }));

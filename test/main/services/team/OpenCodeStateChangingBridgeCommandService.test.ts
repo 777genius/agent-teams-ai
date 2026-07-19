@@ -349,52 +349,56 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     ).toBe(200);
   });
 
-  it('records unknown outcome after timeout and blocks retry before a duplicate bridge call', async () => {
-    bridge.resultFactory = ({ body, command, options }) => ({
-      ok: false,
-      schemaVersion: 1,
-      requestId: options.requestId,
-      command,
-      completedAt: '2026-04-21T12:00:10.000Z',
-      durationMs: 10_000,
-      error: {
-        kind: 'timeout',
-        message: 'timeout',
-        retryable: true,
-      },
-      diagnostics: [],
-      data: body,
-    } as OpenCodeBridgeResult<unknown>);
-    const service = createService();
+  it.each(['timeout', 'transport_watchdog_timeout'] as const)(
+    'records unknown outcome after %s and blocks retry before a duplicate bridge call',
+    async (failureKind) => {
+      bridge.resultFactory = ({ body, command, options }) =>
+        ({
+          ok: false,
+          schemaVersion: 1,
+          requestId: options.requestId,
+          command,
+          completedAt: '2026-04-21T12:00:10.000Z',
+          durationMs: 10_000,
+          error: {
+            kind: failureKind,
+            message: failureKind,
+            retryable: true,
+          },
+          diagnostics: [],
+          data: body,
+        }) as OpenCodeBridgeResult<unknown>;
+      const service = createService();
 
-    const first = await service.execute(buildLaunchInput());
+      const first = await service.execute(buildLaunchInput());
 
-    expect(first).toMatchObject({
-      ok: false,
-      error: { kind: 'timeout' },
-    });
-    const idempotencyKey = bridge.calls[0].body.preconditions.idempotencyKey;
-    await expect(ledger.getByIdempotencyKey(idempotencyKey)).resolves.toMatchObject({
-      status: 'unknown_after_timeout',
-      retryable: false,
-      lastError: 'timeout',
-    });
-    expect(diagnostics.append).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'opencode_bridge_unknown_outcome',
-        data: expect.objectContaining({
-          idempotencyKey,
-          leaseId: 'lease-1',
-        }),
-      })
-    );
+      expect(first).toMatchObject({
+        ok: false,
+        error: { kind: failureKind },
+      });
+      const idempotencyKey = bridge.calls[0].body.preconditions.idempotencyKey;
+      await expect(ledger.getByIdempotencyKey(idempotencyKey)).resolves.toMatchObject({
+        status: 'unknown_after_timeout',
+        retryable: false,
+        lastError: failureKind,
+      });
+      expect(diagnostics.append).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'opencode_bridge_unknown_outcome',
+          data: expect.objectContaining({
+            idempotencyKey,
+            leaseId: 'lease-1',
+          }),
+        })
+      );
 
-    await expect(service.execute(buildLaunchInput())).rejects.toThrow(
-      'OpenCode bridge command outcome must be reconciled before retry'
-    );
-    expect(bridge.calls).toHaveLength(1);
-    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
-  });
+      await expect(service.execute(buildLaunchInput())).rejects.toThrow(
+        'OpenCode bridge command outcome must be reconciled before retry'
+      );
+      expect(bridge.calls).toHaveLength(1);
+      await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+    }
+  );
 
   it('records empty bridge output as unknown outcome and blocks duplicate retry', async () => {
     bridge.resultFactory = ({ body, command, options }) => ({

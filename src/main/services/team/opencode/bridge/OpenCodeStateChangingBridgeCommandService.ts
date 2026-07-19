@@ -4,6 +4,7 @@ import {
   assertBridgeEvidenceCanCommitToRuntimeStores,
   createOpenCodeBridgeIdempotencyKey,
   extractRunId,
+  OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS,
   type OpenCodeBridgeCommandName,
   type OpenCodeBridgeCommandPreconditions,
   type OpenCodeBridgeDiagnosticEvent,
@@ -159,7 +160,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       laneId: normalizedLaneId,
       runId: input.runId,
       command: input.command,
-      ttlMs: input.timeoutMs + 5_000,
+      ttlMs: input.timeoutMs + OPEN_CODE_BRIDGE_TRANSPORT_WATCHDOG_GRACE_MS + 5_000,
     });
 
     try {
@@ -406,7 +407,10 @@ function isActiveOpenCodeBridgeCommandLeaseError(error: OpenCodeBridgeCommandLea
 
 function isOpenCodeBridgeUnknownOutcomeFailure(result: OpenCodeBridgeResult<unknown>): boolean {
   return (
-    !result.ok && (result.error.kind === 'timeout' || isOpenCodeBridgeEmptyOutputFailure(result))
+    !result.ok &&
+    (result.error.kind === 'timeout' ||
+      result.error.kind === 'transport_watchdog_timeout' ||
+      isOpenCodeBridgeEmptyOutputFailure(result))
   );
 }
 

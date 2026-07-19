@@ -204,6 +204,7 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
   sendOpenCodeMemberMessageToRuntimeSerialized(input: {
     teamName: string;
     laneId: string;
+    memberName: string;
     send: () => Promise<OpenCodeTeamRuntimeMessageResult>;
   }): Promise<OpenCodeTeamRuntimeMessageResult>;
   rememberOpenCodeRuntimePidFromBridge(input: {
@@ -587,6 +588,7 @@ export class OpenCodeMemberMessageDeliveryService {
       const result = await this.deps.sendOpenCodeMemberMessageToRuntimeSerialized({
         teamName,
         laneId: laneIdentity.laneId,
+        memberName: canonicalMemberName,
         send: async () =>
           await adapter.sendMessageToMember({
             ...(runtimeRunId ? { runId: runtimeRunId } : {}),
@@ -1197,6 +1199,7 @@ export class OpenCodeMemberMessageDeliveryService {
       result = await this.deps.sendOpenCodeMemberMessageToRuntimeSerialized({
         teamName,
         laneId: laneIdentity.laneId,
+        memberName: canonicalMemberName,
         send: async () =>
           await adapter.sendMessageToMember({
             ...(runtimeRunId ? { runId: runtimeRunId } : {}),

@@ -187,4 +187,67 @@ describe('TmuxPlatformCommandExecutor', () => {
 
     expect(execInPreferredDistro).toHaveBeenCalledTimes(2);
   });
+
+  it('protects cached runtime process rows from caller mutations', async () => {
+    setPlatform('win32');
+    const execInPreferredDistro = vi.fn(async () => ({
+      exitCode: 0,
+      stdout: '  42   1  1.0  128 opencode serve --port 4200\n',
+      stderr: '',
+    }));
+    const executor = new TmuxPlatformCommandExecutor(
+      {
+        execInPreferredDistro,
+        getPersistedPreferredDistroSync: () => 'Ubuntu',
+      } as never,
+      {} as never
+    );
+
+    const first = await executor.listRuntimeProcesses();
+    first[0]!.command = 'mutated';
+    first.push({ pid: 99, ppid: 1, command: 'injected' });
+
+    await expect(executor.listRuntimeProcesses()).resolves.toEqual([
+      expect.objectContaining({ pid: 42, command: 'opencode serve --port 4200' }),
+    ]);
+    expect(execInPreferredDistro).toHaveBeenCalledOnce();
+  });
+
+  it('does not reuse an in-flight process table request when bypassing the cache', async () => {
+    setPlatform('win32');
+    type ExecResult = { exitCode: number; stdout: string; stderr: string };
+    let resolveFirstRequest!: (value: ExecResult) => void;
+    const firstRequest = new Promise<ExecResult>((resolve) => {
+      resolveFirstRequest = resolve;
+    });
+    const execInPreferredDistro = vi.fn().mockReturnValueOnce(firstRequest).mockResolvedValueOnce({
+      exitCode: 0,
+      stdout: '  43   1  1.0  128 opencode serve --port 4300\n',
+      stderr: '',
+    });
+    const executor = new TmuxPlatformCommandExecutor(
+      {
+        execInPreferredDistro,
+        getPersistedPreferredDistroSync: () => 'Ubuntu',
+      } as never,
+      {} as never
+    );
+
+    const cachedRequest = executor.listRuntimeProcesses();
+    const freshRequest = executor.listRuntimeProcesses({ bypassCache: true });
+
+    await expect(freshRequest).resolves.toEqual([expect.objectContaining({ pid: 43 })]);
+    expect(execInPreferredDistro).toHaveBeenCalledTimes(2);
+
+    resolveFirstRequest({
+      exitCode: 0,
+      stdout: '  42   1  1.0  128 opencode serve --port 4200\n',
+      stderr: '',
+    });
+    await expect(cachedRequest).resolves.toEqual([expect.objectContaining({ pid: 42 })]);
+    await expect(executor.listRuntimeProcesses()).resolves.toEqual([
+      expect.objectContaining({ pid: 42 }),
+    ]);
+    expect(execInPreferredDistro).toHaveBeenCalledTimes(2);
+  });
 });

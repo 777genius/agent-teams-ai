@@ -4,6 +4,10 @@ import { evaluateCodexLaunchReadiness } from '@features/codex-account';
 import { execCli } from '@main/utils/childProcess';
 import { getCachedShellEnv } from '@main/utils/shellEnv';
 import {
+  ANTHROPIC_COMPATIBLE_BACKEND_IDS,
+  ANTHROPIC_EXTERNAL_BACKEND_IDS,
+} from '@shared/constants/anthropicConnectionMode';
+import {
   isDynamicCodexModelCatalog,
   isUsableCodexModelCatalog,
 } from '@shared/utils/codexModelCatalog';
@@ -102,6 +106,8 @@ const ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS = 10_000;
 const ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS = 60_000;
 const ANTHROPIC_DEFAULT_API_BASE_URL = 'https://api.anthropic.com';
 const FIRST_PARTY_ANTHROPIC_HOSTS = new Set(['api.anthropic.com', 'api-staging.anthropic.com']);
+const ANTHROPIC_EXTERNAL_BACKEND_ID_SET = new Set<string>(ANTHROPIC_EXTERNAL_BACKEND_IDS);
+const ANTHROPIC_COMPATIBLE_BACKEND_ID_SET = new Set<string>(ANTHROPIC_COMPATIBLE_BACKEND_IDS);
 
 type CodexCliLoginStatus = 'logged_in' | 'not_logged_in' | 'unknown';
 
@@ -1285,6 +1291,49 @@ export class ProviderConnectionService {
     provider: CliProviderStatus
   ): Promise<CliProviderStatus> {
     const connection = provider.connection;
+    const resolvedBackendId = provider.resolvedBackendId?.trim() ?? null;
+    const resolvedBackendLabel = provider.backend?.label ?? resolvedBackendId;
+    const incompatibleResolvedBackend =
+      resolvedBackendId && ANTHROPIC_EXTERNAL_BACKEND_ID_SET.has(resolvedBackendId)
+        ? resolvedBackendId
+        : null;
+
+    if (
+      connection?.compatibleEndpoint?.enabled === true &&
+      incompatibleResolvedBackend &&
+      !ANTHROPIC_COMPATIBLE_BACKEND_ID_SET.has(incompatibleResolvedBackend)
+    ) {
+      return {
+        ...provider,
+        authenticated: false,
+        authMethod: null,
+        subscriptionRateLimits: null,
+        verificationState: 'error',
+        statusMessage: `Compatible endpoint mode resolved to ${resolvedBackendLabel}.`,
+        detailMessage:
+          'The selected Anthropic-compatible endpoint was not applied. Refresh the connection or switch to Auto before launching.',
+      };
+    }
+
+    if (
+      connection?.compatibleEndpoint?.enabled !== true &&
+      (connection?.configuredAuthMode === 'api_key' ||
+        connection?.configuredAuthMode === 'oauth') &&
+      incompatibleResolvedBackend
+    ) {
+      const selectedMode =
+        connection.configuredAuthMode === 'api_key' ? 'API key' : 'Anthropic subscription';
+      return {
+        ...provider,
+        authenticated: false,
+        authMethod: null,
+        subscriptionRateLimits: null,
+        verificationState: 'error',
+        statusMessage: `${selectedMode} mode resolved to ${resolvedBackendLabel}.`,
+        detailMessage: `${selectedMode} mode requires the direct Anthropic API. Switch to Auto to use ${resolvedBackendLabel}.`,
+      };
+    }
+
     if (connection?.compatibleEndpoint?.enabled === true) {
       return {
         ...provider,
@@ -1377,14 +1426,16 @@ export class ProviderConnectionService {
       return null;
     }
 
-    const baseUrl = this.getExternalEnvValue('ANTHROPIC_BASE_URL');
-    const cacheKey = hashCredentialForCache(`${apiKey}\0${baseUrl ?? ''}`);
+    // Explicit API-key mode is a first-party Anthropic route. Ambient shell or
+    // Claude settings endpoints belong to Auto/compatible routing and must not
+    // make the direct API-key status look healthy against a different backend.
+    const cacheKey = hashCredentialForCache(`${apiKey}\0${ANTHROPIC_DEFAULT_API_BASE_URL}`);
     const cached = this.anthropicApiKeyVerificationCache.get(cacheKey);
     if (cached && Date.now() - cached.at < ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS) {
       return cached.result;
     }
 
-    const result = await this.anthropicApiKeyVerifier(apiKey, baseUrl);
+    const result = await this.anthropicApiKeyVerifier(apiKey);
     this.anthropicApiKeyVerificationCache.set(cacheKey, { result, at: Date.now() });
     return result;
   }

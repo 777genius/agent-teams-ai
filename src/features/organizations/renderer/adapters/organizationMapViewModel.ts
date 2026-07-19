@@ -14,6 +14,28 @@ export interface OrganizationMapStats {
   linkCount: number;
 }
 
+export interface OrganizationOverviewGroup {
+  nodeId: string;
+  label: string;
+  teamCount: number;
+}
+
+export interface OrganizationOverviewSummary {
+  organizationId: string;
+  rootNodeId: string;
+  name: string;
+  color: string;
+  groupCount: number;
+  teamCount: number;
+  onlineTeamCount: number;
+  agentCount: number;
+  activeTaskCount: number;
+  taskCount: number;
+  attentionCount: number;
+  healthPercent: number;
+  largestGroups: OrganizationOverviewGroup[];
+}
+
 export interface OrganizationMapViewModel {
   payload: OrganizationMapPayload;
   rootNode: OrganizationNodeDto | null;
@@ -26,7 +48,123 @@ export interface OrganizationMapViewModel {
   childNodeIdsByParentId: ReadonlyMap<string, readonly string[]>;
   parentNodeIdByChildId: ReadonlyMap<string, string>;
   nodeDisplayOrder: string[];
+  organizationOverviews: OrganizationOverviewSummary[];
   stats: OrganizationMapStats;
+}
+
+interface DescendantOverviewStats {
+  groupCount: number;
+  teamCount: number;
+  onlineTeamCount: number;
+  agentCount: number;
+  activeTaskCount: number;
+  taskCount: number;
+}
+
+function collectOverviewStats(
+  nodeId: string,
+  nodeById: ReadonlyMap<string, OrganizationNodeDto>,
+  childNodeIdsByParentId: ReadonlyMap<string, readonly string[]>,
+  seen = new Set<string>()
+): DescendantOverviewStats {
+  if (seen.has(nodeId)) {
+    return {
+      groupCount: 0,
+      teamCount: 0,
+      onlineTeamCount: 0,
+      agentCount: 0,
+      activeTaskCount: 0,
+      taskCount: 0,
+    };
+  }
+  seen.add(nodeId);
+
+  const node = nodeById.get(nodeId);
+  if (node?.kind === 'team') {
+    const team = node.team;
+    return {
+      groupCount: 0,
+      teamCount: 1,
+      onlineTeamCount: team?.isOnline ? 1 : 0,
+      agentCount: team?.memberCount ?? 0,
+      activeTaskCount: team?.taskCounts.inProgress ?? 0,
+      taskCount: team
+        ? team.taskCounts.pending + team.taskCounts.inProgress + team.taskCounts.completed
+        : 0,
+    };
+  }
+
+  return (childNodeIdsByParentId.get(nodeId) ?? []).reduce<DescendantOverviewStats>(
+    (total, childNodeId) => {
+      const child = collectOverviewStats(childNodeId, nodeById, childNodeIdsByParentId, seen);
+      return {
+        groupCount: total.groupCount + child.groupCount,
+        teamCount: total.teamCount + child.teamCount,
+        onlineTeamCount: total.onlineTeamCount + child.onlineTeamCount,
+        agentCount: total.agentCount + child.agentCount,
+        activeTaskCount: total.activeTaskCount + child.activeTaskCount,
+        taskCount: total.taskCount + child.taskCount,
+      };
+    },
+    {
+      groupCount: node ? 1 : 0,
+      teamCount: 0,
+      onlineTeamCount: 0,
+      agentCount: 0,
+      activeTaskCount: 0,
+      taskCount: 0,
+    }
+  );
+}
+
+function buildOrganizationOverviews(
+  payload: OrganizationMapPayload,
+  nodeById: ReadonlyMap<string, OrganizationNodeDto>,
+  childNodeIdsByParentId: ReadonlyMap<string, readonly string[]>
+): OrganizationOverviewSummary[] {
+  return payload.organizations.flatMap((organization) => {
+    const rootNode = nodeById.get(organization.rootNodeId);
+    if (!rootNode) return [];
+
+    const stats = collectOverviewStats(rootNode.id, nodeById, childNodeIdsByParentId);
+    const groups = (childNodeIdsByParentId.get(rootNode.id) ?? []).flatMap((nodeId) => {
+      const node = nodeById.get(nodeId);
+      if (!node || node.kind === 'team') return [];
+      return [
+        {
+          nodeId,
+          label: getNodeDisplayLabel(node),
+          teamCount: collectOverviewStats(nodeId, nodeById, childNodeIdsByParentId).teamCount,
+        },
+      ];
+    });
+    const largestGroups = groups
+      .toSorted(
+        (left, right) => right.teamCount - left.teamCount || left.label.localeCompare(right.label)
+      )
+      .slice(0, 5);
+    const attentionCount = Math.max(0, stats.teamCount - stats.onlineTeamCount);
+    const healthPercent =
+      stats.teamCount === 0 ? 100 : Math.round((stats.onlineTeamCount / stats.teamCount) * 100);
+
+    return [
+      {
+        organizationId: organization.id,
+        rootNodeId: rootNode.id,
+        name: organization.name || getNodeDisplayLabel(rootNode),
+        color: rootNode.color ?? '#4f8cff',
+        groupCount: Math.max(0, stats.groupCount - 1),
+        teamCount: stats.teamCount,
+        onlineTeamCount: stats.onlineTeamCount,
+        agentCount: stats.agentCount,
+        activeTaskCount: stats.activeTaskCount,
+        taskCount: stats.taskCount,
+        attentionCount,
+        healthPercent,
+        largestGroups,
+      },
+    ];
+  });
 }
 
 function getTimeMs(value: string | undefined): number {
@@ -65,6 +203,11 @@ export function buildOrganizationMapViewModel(
   const manualRelations = payload.relations.filter(
     (relation) => relation.sourceKind === 'manual' && relation.kind !== 'contains'
   );
+  const organizationOverviews = buildOrganizationOverviews(
+    payload,
+    nodeById,
+    childNodeIdsByParentId
+  );
 
   let agentCount = 0;
   let activeAgentCount = 0;
@@ -90,6 +233,7 @@ export function buildOrganizationMapViewModel(
     childNodeIdsByParentId,
     parentNodeIdByChildId,
     nodeDisplayOrder,
+    organizationOverviews,
     stats: {
       teamCount: teamNodes.length,
       onlineTeamCount,

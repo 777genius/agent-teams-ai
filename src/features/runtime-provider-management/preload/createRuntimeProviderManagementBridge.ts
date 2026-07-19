@@ -1,4 +1,9 @@
 import {
+  RUNTIME_LOCAL_PROVIDER_CONFIGURE,
+  RUNTIME_LOCAL_PROVIDER_LIST,
+  RUNTIME_LOCAL_PROVIDER_PROBE,
+  RUNTIME_LOCAL_PROVIDER_SCAN,
+  RUNTIME_PROVIDER_COMPANION_ACTION,
   RUNTIME_PROVIDER_COMPANION_CONNECT,
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_PROGRESS,
@@ -20,6 +25,15 @@ import {
 } from '@features/runtime-provider-management/contracts';
 
 import type {
+  RuntimeLocalProviderConfigureInput,
+  RuntimeLocalProviderConfigureResponse,
+  RuntimeLocalProviderListInput,
+  RuntimeLocalProviderListResponse,
+  RuntimeLocalProviderProbeInput,
+  RuntimeLocalProviderProbeResponse,
+  RuntimeLocalProviderScanInput,
+  RuntimeLocalProviderScanResponse,
+  RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementCancelOAuthInput,
@@ -50,6 +64,22 @@ export function createRuntimeProviderManagementBridge(
   ipcRenderer: IpcRenderer
 ): RuntimeProviderManagementApi {
   return {
+    listLocalProviders: (
+      input: RuntimeLocalProviderListInput
+    ): Promise<RuntimeLocalProviderListResponse> =>
+      ipcRenderer.invoke(RUNTIME_LOCAL_PROVIDER_LIST, input),
+    scanLocalProviders: (
+      input: RuntimeLocalProviderScanInput
+    ): Promise<RuntimeLocalProviderScanResponse> =>
+      ipcRenderer.invoke(RUNTIME_LOCAL_PROVIDER_SCAN, input),
+    probeLocalProvider: (
+      input: RuntimeLocalProviderProbeInput
+    ): Promise<RuntimeLocalProviderProbeResponse> =>
+      ipcRenderer.invoke(RUNTIME_LOCAL_PROVIDER_PROBE, input),
+    configureLocalProvider: (
+      input: RuntimeLocalProviderConfigureInput
+    ): Promise<RuntimeLocalProviderConfigureResponse> =>
+      ipcRenderer.invoke(RUNTIME_LOCAL_PROVIDER_CONFIGURE, input),
     getCompanionStatus: (
       input: RuntimeProviderCompanionInput
     ): Promise<RuntimeProviderCompanionStatusDto> =>
@@ -62,6 +92,10 @@ export function createRuntimeProviderManagementBridge(
       input: RuntimeProviderCompanionInput
     ): Promise<RuntimeProviderCompanionStatusDto> =>
       ipcRenderer.invoke(RUNTIME_PROVIDER_COMPANION_CONNECT, input),
+    runCompanionAction: (
+      input: RuntimeProviderCompanionActionInput
+    ): Promise<RuntimeProviderCompanionStatusDto> =>
+      ipcRenderer.invoke(RUNTIME_PROVIDER_COMPANION_ACTION, input),
     onCompanionProgress: (
       listener: (event: RuntimeProviderCompanionStatusDto) => void
     ): (() => void) => {

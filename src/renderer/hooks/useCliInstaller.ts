@@ -9,6 +9,7 @@ import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
+import type { CliProviderStatusFetchOptions } from '@renderer/store/slices/cliInstallerSlice';
 import type {
   CliInstallationStatus,
   CliInstallerProviderStatusMode,
@@ -49,7 +50,7 @@ export function useCliInstaller(): {
   fetchCliStatus: () => Promise<void>;
   fetchCliProviderStatus: (
     providerId: CliProviderId,
-    options?: { silent?: boolean; epoch?: number; verifyModels?: boolean }
+    options?: CliProviderStatusFetchOptions
   ) => Promise<boolean>;
   invalidateCliStatus: () => Promise<void>;
   installCli: () => void;

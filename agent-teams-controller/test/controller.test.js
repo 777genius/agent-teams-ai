@@ -1796,6 +1796,28 @@ controller.messages.sendMessage({
     ]);
   });
 
+  it('notifies the lead when a user-created task starts immediately through the agent controller', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({
+      teamName: 'my-team',
+      claudeDir,
+      allowUserMessageSender: false,
+    });
+
+    const task = controller.tasks.createTask({
+      subject: 'Lead-owned runtime task',
+      owner: 'alice',
+      createdBy: 'user',
+      startImmediately: true,
+    });
+
+    const inboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
+    const rows = JSON.parse(fs.readFileSync(inboxPath, 'utf8'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].from).toBe('user');
+    expect(rows[0].summary).toBe(`New task #${task.displayId} assigned`);
+  });
+
   it('uses Codex-native MCP wording in owner assignment notifications for Codex members', () => {
     const claudeDir = makeClaudeDir();
     const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');

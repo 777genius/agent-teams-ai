@@ -118,6 +118,7 @@ import type {
 
 const TASK_CHANGES_AUTO_REFRESH_MS = 20_000;
 const TASK_CHANGES_INITIAL_LOAD_DELAY_MS = 1_500;
+const TASK_SECTION_HEADER_CLASS = '-mx-[calc(1.5rem-5px)] w-[calc(100%+3rem-10px)]';
 
 interface TaskDetailDialogProps {
   open: boolean;
@@ -1148,14 +1149,14 @@ export const TaskDetailDialog = ({
           )}
 
           {/* Sections container with uniform spacing */}
-          <div className="min-w-0 space-y-1">
+          <div className="min-w-0 [&>section:last-of-type>div:first-child]:border-b-0 [&>section]:!mb-0">
             {/* Description */}
             <CollapsibleTeamSection
+              variant="flat"
               title={t('taskDetail.sections.description')}
               icon={<AlignLeft size={14} />}
               contentClassName="pl-2.5"
-              headerClassName="-mx-6 w-[calc(100%+3rem)]"
-              headerContentClassName="pl-6"
+              headerClassName={TASK_SECTION_HEADER_CLASS}
               defaultOpen
             >
               {editingDescription ? (
@@ -1252,12 +1253,12 @@ export const TaskDetailDialog = ({
 
             {/* Attachments */}
             <CollapsibleTeamSection
+              variant="flat"
               title={t('taskDetail.sections.attachments')}
               icon={<ImageIcon size={14} />}
               badge={attachmentCount}
               contentClassName="pl-2.5"
-              headerClassName="-mx-6 w-[calc(100%+3rem)]"
-              headerContentClassName="pl-6"
+              headerClassName={TASK_SECTION_HEADER_CLASS}
               defaultOpen={attachmentCount > 0}
             >
               {currentTask.sourceMessageId && currentTask.sourceMessage ? (
@@ -1285,6 +1286,7 @@ export const TaskDetailDialog = ({
             {variant === 'team' && canShowTaskChanges ? (
               <CollapsibleTeamSection
                 key={`task-changes:${currentTask.id}`}
+                variant="flat"
                 title={t('taskDetail.sections.changes')}
                 icon={<FileDiff size={14} />}
                 badge={taskChangesBadge}
@@ -1320,8 +1322,7 @@ export const TaskDetailDialog = ({
                   ) : null
                 }
                 contentClassName="pl-2.5"
-                headerClassName="-mx-6 w-[calc(100%+3rem)]"
-                headerContentClassName="pl-6"
+                headerClassName={TASK_SECTION_HEADER_CLASS}
                 defaultOpen={false}
                 onOpenChange={handleChangesSectionOpenChange}
               >
@@ -1333,13 +1334,17 @@ export const TaskDetailDialog = ({
                 ) : taskChangesError ? (
                   <p className="text-xs text-red-400">{taskChangesError}</p>
                 ) : taskChangesFiles ? (
-                  <div className="space-y-2">
+                  <div
+                    className={
+                      taskChangesWarnings.length > 0 || taskChangesFiles.length > 0
+                        ? 'border-y border-[var(--color-border-subtle)]'
+                        : undefined
+                    }
+                  >
                     {taskChangesWarnings.length > 0 ? (
                       <div
-                        className={`space-y-1 rounded-md border px-2 py-1.5 ${
-                          taskChangesReviewability === 'attention_required'
-                            ? 'border-amber-500/20 bg-amber-500/10'
-                            : 'border-[var(--color-border)] bg-[var(--color-bg-secondary)]'
+                        className={`space-y-1 border-b border-[var(--color-border-subtle)] px-2 py-1.5 ${
+                          taskChangesReviewability === 'attention_required' ? 'bg-amber-500/5' : ''
                         }`}
                       >
                         {taskChangesWarnings.slice(0, 2).map((warning) => (
@@ -1370,14 +1375,15 @@ export const TaskDetailDialog = ({
                     ) : null}
 
                     {taskChangesFiles.length > 0 ? (
-                      <div className="max-h-[200px] space-y-0.5 overflow-y-auto">
+                      <div className="max-h-[200px] overflow-y-auto">
                         {taskChangesFiles.map((file) => (
                           <div
                             key={file.filePath}
-                            role={onViewChanges ? 'button' : undefined}
-                            tabIndex={onViewChanges ? 0 : undefined}
-                            title={file.relativePath}
-                            className={`group flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs transition-colors hover:bg-[var(--color-surface-raised)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] ${
+                            role="button"
+                            aria-disabled={!onViewChanges}
+                            aria-label={file.relativePath}
+                            tabIndex={onViewChanges ? 0 : -1}
+                            className={`group flex w-full items-center gap-2 border-b border-[var(--color-border-subtle)] px-2 py-1.5 text-left text-xs transition-colors last:border-b-0 hover:bg-[var(--color-surface-raised)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)] ${
                               onViewChanges ? 'cursor-pointer' : ''
                             }`}
                             onClick={
@@ -1479,6 +1485,7 @@ export const TaskDetailDialog = ({
             {variant === 'team' ? (
               <CollapsibleTeamSection
                 key={`task-logs:${currentTask.id}`}
+                variant="flat"
                 title={t('taskDetail.sections.taskLogs')}
                 icon={<ScrollText size={14} />}
                 badge={taskLogStreamCount}
@@ -1488,8 +1495,7 @@ export const TaskDetailDialog = ({
                   ) : null
                 }
                 contentClassName="pl-2.5 overflow-visible"
-                headerClassName="-mx-6 w-[calc(100%+3rem)]"
-                headerContentClassName="pl-6"
+                headerClassName={TASK_SECTION_HEADER_CLASS}
                 defaultOpen={false}
                 onOpenChange={setLogsSectionOpen}
                 keepMounted
@@ -1513,31 +1519,20 @@ export const TaskDetailDialog = ({
               </CollapsibleTeamSection>
             ) : null}
 
-            {/* Review info */}
-            {kanbanTaskState?.reviewer || kanbanTaskState?.errorDescription ? (
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  {kanbanTaskState.reviewer ? (
-                    <span className="text-xs text-[var(--color-text-secondary)]">
-                      {t('taskDetail.review.reviewer', { reviewer: kanbanTaskState.reviewer })}
-                    </span>
-                  ) : null}
-                  {kanbanTaskState.errorDescription ? (
-                    <span className="text-xs text-red-400">{kanbanTaskState.errorDescription}</span>
-                  ) : null}
-                </div>
-              </div>
+            {/* Review error */}
+            {kanbanTaskState?.errorDescription ? (
+              <div className="mb-2 text-xs text-red-400">{kanbanTaskState.errorDescription}</div>
             ) : null}
 
             {/* Workflow History */}
             {currentTask.historyEvents && currentTask.historyEvents.length > 0 ? (
               <CollapsibleTeamSection
+                variant="flat"
                 title={t('taskDetail.sections.workflowHistory')}
                 icon={<History size={14} />}
                 badge={currentTask.historyEvents.length}
                 contentClassName="pl-2.5"
-                headerClassName="-mx-6 w-[calc(100%+3rem)]"
-                headerContentClassName="pl-6"
+                headerClassName={TASK_SECTION_HEADER_CLASS}
                 headerExtra={<TaskImplementationDurationBadge task={currentTask} />}
                 defaultOpen={false}
               >
@@ -1551,6 +1546,7 @@ export const TaskDetailDialog = ({
 
             {/* Comments */}
             <CollapsibleTeamSection
+              variant="flat"
               title={t('taskDetail.sections.comments')}
               icon={<MessageSquare size={14} />}
               badge={
@@ -1559,8 +1555,7 @@ export const TaskDetailDialog = ({
                   : undefined
               }
               contentClassName="overflow-x-visible pl-0"
-              headerClassName="-mx-6 w-[calc(100%+3rem)]"
-              headerContentClassName="pl-6"
+              headerClassName={TASK_SECTION_HEADER_CLASS}
               defaultOpen
             >
               <div className="pl-2.5">

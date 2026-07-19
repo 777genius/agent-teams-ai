@@ -21,9 +21,11 @@ import {
 import { useTabUI } from '@renderer/hooks/useTabUI';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
+import { selectResolvedMembersForTeamName } from '@renderer/store/slices/teamSlice';
 import { buildDisplayItemsFromMessages, buildSummary } from '@renderer/utils/aiGroupEnhancer';
 import { computeSubagentPhaseBreakdown } from '@renderer/utils/aiGroupHelpers';
 import { formatDuration, formatTokensCompact } from '@renderer/utils/formatters';
+import { buildMemberColorMap, resolveMemberIdentityColor } from '@renderer/utils/memberHelpers';
 import { getHighlightProps, type TriggerColor } from '@shared/constants/triggerColors';
 import { getModelColorClass, parseModelString } from '@shared/utils/modelParser';
 import { format } from 'date-fns';
@@ -43,6 +45,7 @@ import { ExecutionTrace } from './ExecutionTrace';
 import { MetricsPill } from './MetricsPill';
 
 import type { Process, SemanticStep } from '@renderer/types/data';
+import type { ResolvedTeamMember } from '@shared/types';
 
 // =============================================================================
 // Types
@@ -63,6 +66,8 @@ interface SubagentItemProps {
   /** Optional callback to register tool element refs for scroll targeting */
   registerToolRef?: (toolId: string, el: HTMLDivElement | null) => void;
 }
+
+const EMPTY_TEAM_MEMBERS: ResolvedTeamMember[] = [];
 
 // =============================================================================
 // Main Component - Linear-style DevTools Card
@@ -90,7 +95,23 @@ export const SubagentItem: React.FC<SubagentItemProps> = React.memo(
     const agentConfigs = useStore(useShallow((s) => s.agentConfigs));
 
     // Team member colors (when this subagent is a team member)
-    const teamColors = subagent.team ? getTeamColorSet(subagent.team.memberColor) : null;
+    const teamMembers = useStore(
+      useShallow((s) =>
+        subagent.team
+          ? selectResolvedMembersForTeamName(s, subagent.team.teamName)
+          : EMPTY_TEAM_MEMBERS
+      )
+    );
+    const teamMemberColorMap = useMemo(() => buildMemberColorMap(teamMembers), [teamMembers]);
+    const teamColors = subagent.team
+      ? getTeamColorSet(
+          resolveMemberIdentityColor(
+            subagent.team.memberName,
+            teamMemberColorMap,
+            subagent.team.memberColor
+          )
+        )
+      : null;
     const { isLight } = useTheme();
     // Type-based colors for non-team subagents (from agent config or deterministic hash)
     const typeColors = !teamColors ? getSubagentTypeColorSet(subagentType, agentConfigs) : null;

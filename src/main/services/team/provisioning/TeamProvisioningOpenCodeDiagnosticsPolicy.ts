@@ -4,6 +4,8 @@ import {
 } from '@shared/utils/openCodeWindowsAccessDenied';
 
 import { isOpenCodeBridgeNoOutputDiagnostic } from '../opencode/bridge/OpenCodeBridgeSupportDiagnostics';
+import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
+import { selectRuntimeDiagnosticClassification } from '../runtime/RuntimeDiagnosticClassifier';
 import { createPersistedLaunchSnapshot } from '../TeamLaunchStateEvaluator';
 
 import type { TeamRuntimePrepareResult } from '../runtime';
@@ -19,6 +21,8 @@ const OPEN_CODE_SECRET_FLAG_PATTERN =
 const OPEN_CODE_BEARER_TOKEN_PATTERN = /\bBearer\s+[A-Z0-9._~+/=-]+/gi;
 const OPEN_CODE_SECRET_KEY_PATTERN = /\bsk-[A-Za-z0-9_-]{16,}\b/g;
 const OPEN_CODE_APP_MANAGED_BRIEFING_MAX_CHARS = 12_000;
+const OPEN_CODE_HTTP_RATE_LIMIT_PATTERN =
+  /^\s*(?:error\s*[:=-]?\s*)?429\b|\b(?:http(?:[\s_-]*status)?|status(?:[\s_-]*code)?|error(?:[\s_-]*code)?|code)["']?\s*(?::|=|is|of)?\s*["']?429\b|\b429\s+(?:too many requests|rate limit(?:ed)?|resource exhausted)\b/im;
 export const OPENCODE_RUNTIME_BINARY_UNREACHABLE_DIAGNOSTIC =
   'OpenCode runtime binary is not installed or not reachable by launch preflight.';
 export const OPENCODE_APP_MCP_UNREACHABLE_DIAGNOSTIC =
@@ -60,6 +64,15 @@ export function getOpenCodeLaunchDiagnosticValues(
   return [member.hardFailureReason, member.runtimeDiagnostic, ...(member.diagnostics ?? [])];
 }
 
+export function selectOpenCodeLaunchFailureDiagnostic(
+  values: readonly unknown[]
+): string | undefined {
+  const candidates = values.filter(
+    (value): value is string => typeof value === 'string' && value.trim().length > 0
+  );
+  return selectRuntimeDiagnosticClassification(candidates)?.normalizedMessage ?? undefined;
+}
+
 export function hasStaleOpenCodeDiagnostics(values: readonly unknown[] | undefined): boolean {
   const text = (values ?? [])
     .filter((value): value is string => typeof value === 'string')
@@ -90,25 +103,39 @@ export function isFileLockTimeoutError(error: unknown): boolean {
 }
 
 export function hasRealOpenCodeFailureDiagnostic(text: string): boolean {
+  const normalized = text.toLowerCase();
   return (
-    /\bauth(?:entication|orization)?\b/.test(text) ||
-    text.includes('api key') ||
-    text.includes('unauthorized') ||
-    text.includes('forbidden') ||
-    text.includes('invalid_request') ||
-    text.includes('model not found') ||
-    text.includes('not found in live opencode catalog') ||
-    text.includes('provider unavailable') ||
-    text.includes('quota') ||
-    text.includes('usage limit') ||
-    text.includes('credits') ||
-    text.includes('max_tokens') ||
-    text.includes('rate limit') ||
-    text.includes('member removed') ||
-    text.includes('session conflict') ||
-    text.includes('run tombstoned') ||
-    text.includes('stop requested') ||
-    text.includes('relaunch started')
+    /\bauth(?:entication|orization)?\b/.test(normalized) ||
+    normalized.includes('api key') ||
+    normalized.includes('unauthorized') ||
+    normalized.includes('forbidden') ||
+    normalized.includes('invalid_request') ||
+    normalized.includes('model not found') ||
+    normalized.includes('not found in live opencode catalog') ||
+    normalized.includes('provider unavailable') ||
+    normalized.includes('quota') ||
+    normalized.includes('usage limit') ||
+    normalized.includes('freeusagelimit') ||
+    normalized.includes('free_usage_limit') ||
+    normalized.includes('free-usage-limit') ||
+    normalized.includes('resource exhausted') ||
+    normalized.includes('resource_exhausted') ||
+    normalized.includes('resource-exhausted') ||
+    normalized.includes('resourceexhausted') ||
+    /\bgrpc[_\s-]*code["']?\s*(?::|=|is)\s*["']?8\b/.test(normalized) ||
+    normalized.includes('credits') ||
+    normalized.includes('max_tokens') ||
+    normalized.includes('rate limit') ||
+    normalized.includes('rate_limit') ||
+    normalized.includes('rate-limit') ||
+    normalized.includes('ratelimiterror') ||
+    normalized.includes('too many requests') ||
+    OPEN_CODE_HTTP_RATE_LIMIT_PATTERN.test(normalized) ||
+    normalized.includes('member removed') ||
+    normalized.includes('session conflict') ||
+    normalized.includes('run tombstoned') ||
+    normalized.includes('stop requested') ||
+    normalized.includes('relaunch started')
   );
 }
 
@@ -282,6 +309,7 @@ export function isGenericOpenCodePersistedFailureReason(value: string | undefine
     normalized?.startsWith('OpenCode command timed out after') === true ||
     normalized?.startsWith('CLI-authenticated providers missing from live host') === true ||
     normalized?.startsWith('OpenCode session status') === true ||
+    isOpenCodeTerminalProbeTechnicalDiagnostic(normalized ?? '') ||
     (normalized?.startsWith('opencode_app_mcp_tool_proof_') === true &&
       normalized.includes('cache_hit')) ||
     normalized?.startsWith('info:opencode_launch_member_timing:') === true ||
@@ -301,14 +329,12 @@ export function selectOpenCodePersistedFailureReasonFromDiagnostics(
   if (!isGenericOpenCodePersistedFailureReason(member.hardFailureReason)) {
     return undefined;
   }
-  for (const value of member.diagnostics ?? []) {
-    const normalized = normalizeOpenCodePersistedFailureReason(value);
-    if (!normalized || isGenericOpenCodePersistedFailureReason(normalized)) {
-      continue;
-    }
-    return normalized;
-  }
-  return undefined;
+  const candidates = (member.diagnostics ?? [])
+    .map(normalizeOpenCodePersistedFailureReason)
+    .filter(
+      (value): value is string => Boolean(value) && !isGenericOpenCodePersistedFailureReason(value)
+    );
+  return selectRuntimeDiagnosticClassification(candidates)?.normalizedMessage ?? undefined;
 }
 
 export function promoteOpenCodePersistedFailureReasonsFromDiagnostics(

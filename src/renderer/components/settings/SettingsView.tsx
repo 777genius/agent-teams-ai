@@ -123,7 +123,11 @@ export const SettingsView = (): React.JSX.Element | null => {
 
   return (
     <div className="flex-1 overflow-auto" style={{ backgroundColor: 'var(--color-surface)' }}>
-      <div className="mx-auto max-w-2xl px-6 py-8">
+      <div
+        className={`mx-auto w-full px-6 py-8 transition-[max-width] duration-200 ${
+          activeSection === 'notifications' ? 'max-w-7xl' : 'max-w-2xl'
+        }`}
+      >
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-lg font-medium" style={{ color: 'var(--color-text)' }}>
@@ -165,6 +169,7 @@ export const SettingsView = (): React.JSX.Element | null => {
               ignoredRepositoryItems={ignoredRepositoryItems}
               excludedRepositoryIds={excludedRepositoryIds}
               onNotificationToggle={handlers.handleNotificationToggle}
+              onTeamRuntimeRecoveryUpdate={handlers.handleTeamRuntimeRecoveryUpdate}
               onSnooze={handlers.handleSnooze}
               onClearSnooze={handlers.handleClearSnooze}
               onAddIgnoredRepository={handlers.handleAddIgnoredRepository}

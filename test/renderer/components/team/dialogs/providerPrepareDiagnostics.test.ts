@@ -568,6 +568,48 @@ describe('runProviderPrepareDiagnostics', () => {
     });
   });
 
+  it.each([
+    {
+      modelId: 'opencode/big-pickle',
+      providerError: 'Invalid API key.',
+      expected:
+        'OpenCode Zen rejected its API key. Reconnect OpenCode Zen in Plans & providers',
+    },
+    {
+      modelId: 'openrouter/openrouter/free',
+      providerError: 'Forbidden: Access denied by security policy.',
+      expected:
+        'OpenRouter blocked the request by account or security policy. Review its key restrictions, then reconnect it in Plans & providers',
+    },
+  ])('identifies the exact credential provider for $modelId failures', async (testCase) => {
+    const prepareProvisioning = vi.fn<
+      (
+        cwd?: string,
+        providerId?: TeamProviderId,
+        providerIds?: TeamProviderId[],
+        selectedModels?: string[]
+      ) => Promise<TeamProvisioningPrepareResult>
+    >(() =>
+      Promise.resolve({
+        ready: false,
+        message: `Selected model ${testCase.modelId} could not be verified. ${testCase.providerError}`,
+        warnings: [
+          `Selected model ${testCase.modelId} could not be verified. ${testCase.providerError}`,
+        ],
+      })
+    );
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      selectedModelIds: [testCase.modelId],
+      prepareProvisioning,
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.modelResultsById[testCase.modelId]?.line).toContain(testCase.expected);
+  });
+
   it('treats OpenCode busy model verification as deferred notes', async () => {
     const prepareProvisioning = vi.fn<
       (
@@ -1029,6 +1071,69 @@ describe('runProviderPrepareDiagnostics', () => {
     expect(result.status).toBe('failed');
     expect(result.details).toEqual(['OpenCode: mcp_unavailable']);
     expect(result.modelResultsById).toEqual({});
+    expect(prepareProvisioning).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    {
+      raw: 'Forbidden: unauthorized: not licensed to use Copilot',
+      normalized:
+        'GitHub account connected, but this account does not have an active Copilot license',
+    },
+    {
+      raw: 'Payment Required: team used all available credits or reached its monthly spending limit',
+      normalized: 'Provider account has no available credits or reached its spending limit',
+    },
+    {
+      raw: 'API Error: 401 authentication_error: Invalid authentication credentials',
+      normalized: 'Provider credentials were rejected. Reconnect the account and retry',
+    },
+  ])('keeps account limitation blocking and actionable: $raw', async ({ raw, normalized }) => {
+    const prepareProvisioning = vi.fn(
+      (
+        _cwd?: string,
+        _providerId?: TeamProviderId,
+        _providerIds?: TeamProviderId[],
+        _selectedModels?: string[],
+        _limitContext?: boolean,
+        modelVerificationMode?: 'compatibility' | 'deep'
+      ): Promise<TeamProvisioningPrepareResult> =>
+        Promise.resolve(
+          modelVerificationMode === 'compatibility'
+            ? {
+                ready: true,
+                message: 'CLI is ready to launch',
+                details: [
+                  'Selected model opencode/big-pickle is compatible. Deep verification pending.',
+                ],
+              }
+            : {
+                ready: false,
+                message: raw,
+                details: [raw],
+                issues: [
+                  {
+                    providerId: 'opencode',
+                    scope: 'provider',
+                    severity: 'blocking',
+                    code: 'unknown_error',
+                    message: raw,
+                  },
+                ],
+              }
+        )
+    );
+
+    const result = await runProviderPrepareDiagnostics({
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      selectedModelIds: ['opencode/big-pickle'],
+      prepareProvisioning,
+    });
+
+    expect(result.status).toBe('failed');
+    expect(result.details.join('\n')).toContain(normalized);
+    expect(result.warnings).toEqual([]);
     expect(prepareProvisioning).toHaveBeenCalledTimes(2);
   });
 

@@ -15,6 +15,7 @@ import {
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
+import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import { SessionPanel } from '@renderer/components/chat/session-panel';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
@@ -28,7 +29,7 @@ import {
   DialogTitle,
 } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
+import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useBranchSync } from '@renderer/hooks/useBranchSync';
 import { useOptionalTabId } from '@renderer/hooks/useOptionalTabId';
 import { useResizablePanel } from '@renderer/hooks/useResizablePanel';
@@ -41,7 +42,13 @@ import {
   selectResolvedMemberForTeamName,
   selectResolvedMembersForTeamName,
   selectTeamMemberSnapshotsForName,
+  selectTeamMessages,
 } from '@renderer/store/slices/teamSlice';
+import {
+  buildChangeReviewLifecycleSessionId,
+  requestChangeReviewLifecycleReservation,
+  requestCloseChangeReviewLifecycleHost,
+} from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { createChipFromSelection } from '@renderer/utils/chipUtils';
 import * as tokenMath from '@renderer/utils/contextMath';
 import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
@@ -64,7 +71,6 @@ import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
-  AlertTriangle,
   BarChart3,
   Clock,
   Code,
@@ -76,6 +82,7 @@ import {
   Pencil,
   Play,
   Plus,
+  Power,
   Square,
   Terminal,
   Trash2,
@@ -328,6 +335,15 @@ interface TeamDetailViewProps {
   isPaneFocused?: boolean;
 }
 
+interface TeamReviewDialogState {
+  open: boolean;
+  mode: 'agent' | 'task';
+  memberName?: string;
+  taskId?: string;
+  initialFilePath?: string;
+  taskChangeRequestOptions?: TaskChangeRequestOptions;
+}
+
 interface CreateTaskDialogState {
   open: boolean;
   defaultSubject: string;
@@ -547,21 +563,19 @@ const TeamOfflineStatusBanner = memo(function TeamOfflineStatusBanner({
 
   return (
     <div
-      className="mb-3 flex items-center justify-between gap-3 rounded-md border px-3 py-2"
-      style={{
-        backgroundColor: 'var(--warning-bg)',
-        borderColor: 'var(--warning-border)',
-        color: 'var(--warning-text)',
-      }}
+      role="status"
+      className="relative mb-2.5 flex min-h-11 items-center gap-2.5 overflow-hidden rounded-md border border-amber-500/20 bg-amber-500/[0.055] py-2 pl-3 pr-2.5"
     >
-      <span className="flex items-center gap-1.5 text-xs">
-        <AlertTriangle size={14} className="shrink-0" />
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-300">
+        <Power size={14} />
+      </span>
+      <span className="min-w-0 flex-1 text-xs font-medium text-[var(--color-text-secondary)]">
         {message}
       </span>
       <Button
         variant="ghost"
         size="sm"
-        className="h-7 shrink-0 gap-1 px-2 text-xs text-[var(--step-done-text)] hover:bg-[var(--step-done-bg)]"
+        className="h-7 shrink-0 gap-1.5 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2.5 text-xs font-medium text-emerald-700 hover:border-emerald-500/40 hover:bg-emerald-500/15 hover:text-emerald-700 dark:text-emerald-300 dark:hover:text-emerald-200"
         onClick={onLaunch}
       >
         <Play size={12} />
@@ -660,8 +674,8 @@ function useTeamPendingReplies(teamName: string): Record<string, number> {
 }
 
 const EMPTY_MESSAGES_PANEL_TASKS: TeamTaskWithKanban[] = [];
-const TEAM_HEADER_INLINE_ACTION_CLASS =
-  'flex shrink-0 items-center gap-0.5 rounded border border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-border-emphasis)] hover:text-[var(--color-text)]';
+const TEAM_HEADER_NAV_ACTION_CLASS =
+  'inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md border border-[var(--color-border-emphasis)] bg-transparent px-2.5 text-[11px] font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-raised)] hover:text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-border-emphasis)]';
 
 function buildMessagesPanelTasksSignature(tasks: readonly TeamTaskWithKanban[]): string {
   return JSON.stringify(
@@ -1071,16 +1085,23 @@ const TeamMemberListBridge = memo(function TeamMemberListBridge({
   ...props
 }: TeamMemberListBridgeProps): React.JSX.Element {
   const pendingRepliesByMember = useTeamPendingReplies(teamName);
-  const { leadActivity, progress, memberSpawnStatuses, memberSpawnSnapshot, runtimeSnapshot } =
-    useStore(
-      useShallow((s) => ({
-        leadActivity: s.leadActivityByTeam[teamName],
-        progress: getCurrentProvisioningProgressForTeam(s, teamName),
-        memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
-        memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
-        runtimeSnapshot: s.teamAgentRuntimeByTeam[teamName],
-      }))
-    );
+  const {
+    leadActivity,
+    progress,
+    memberSpawnStatuses,
+    memberSpawnSnapshot,
+    runtimeSnapshot,
+    messages,
+  } = useStore(
+    useShallow((s) => ({
+      leadActivity: s.leadActivityByTeam[teamName],
+      progress: getCurrentProvisioningProgressForTeam(s, teamName),
+      memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
+      memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
+      runtimeSnapshot: s.teamAgentRuntimeByTeam[teamName],
+      messages: selectTeamMessages(s, teamName),
+    }))
+  );
   const memberSpawnStatusMap = useMemo(
     () => buildMemberSpawnStatusMap(memberSpawnStatuses),
     [memberSpawnStatuses]
@@ -1111,6 +1132,7 @@ const TeamMemberListBridge = memo(function TeamMemberListBridge({
       teamName={teamName}
       leadActivity={leadActivity}
       pendingRepliesByMember={pendingRepliesByMember}
+      messages={messages}
       memberSpawnStatuses={memberSpawnStatusMap}
       memberRuntimeEntries={memberRuntimeMap}
       runtimeRunId={runtimeRunId}
@@ -1386,6 +1408,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 }: TeamDetailViewProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
+  const reviewLifecycleHostId = useId();
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<ResolvedTeamMember | null>(null);
   const [selectedMemberView, setSelectedMemberView] = useState<{
@@ -1462,16 +1485,16 @@ export const TeamDetailView = memo(function TeamDetailView({
         ? {
             background:
               'linear-gradient(135deg, rgba(59,130,246,0.14) 0%, rgba(34,197,94,0.16) 100%)',
-            borderColor: 'rgba(59,130,246,0.30)',
+            borderColor: 'rgba(59,130,246,0.34)',
             color: '#0f172a',
-            boxShadow: '0 10px 24px rgba(59,130,246,0.12)',
+            boxShadow: '0 8px 20px rgba(59,130,246,0.14)',
           }
         : {
             background:
-              'linear-gradient(135deg, rgba(56,189,248,0.18) 0%, rgba(16,185,129,0.16) 100%)',
-            borderColor: 'rgba(56,189,248,0.34)',
-            color: 'rgba(236,253,255,0.96)',
-            boxShadow: '0 12px 28px rgba(8,145,178,0.22)',
+              'linear-gradient(135deg, rgba(56,189,248,0.22) 0%, rgba(16,185,129,0.19) 100%)',
+            borderColor: 'rgba(56,189,248,0.42)',
+            color: 'rgba(236,253,255,0.98)',
+            boxShadow: '0 9px 24px rgba(8,145,178,0.24)',
           },
     [isLight]
   );
@@ -1510,14 +1533,10 @@ export const TeamDetailView = memo(function TeamDetailView({
   const [replyQuote, setReplyQuote] = useState<{ from: string; text: string } | undefined>(
     undefined
   );
-  const [reviewDialogState, setReviewDialogState] = useState<{
-    open: boolean;
-    mode: 'agent' | 'task';
-    memberName?: string;
-    taskId?: string;
-    initialFilePath?: string;
-    taskChangeRequestOptions?: TaskChangeRequestOptions;
-  }>({ open: false, mode: 'task' });
+  const [reviewDialogState, setReviewDialogState] = useState<TeamReviewDialogState>({
+    open: false,
+    mode: 'task',
+  });
 
   // Active teams for conflict warning in LaunchTeamDialog
   const [activeTeamsForLaunch, setActiveTeamsForLaunch] = useState<
@@ -1586,6 +1605,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     pendingReviewRequest,
     setPendingReviewRequest,
     summaryKnownTeammateCount,
+    isTeamKnownOffline,
     teamSummaryColor,
     teamSummaryDisplayName,
   } = useStore(
@@ -1620,6 +1640,10 @@ export const TeamDetailView = memo(function TeamDetailView({
       summaryKnownTeammateCount: teamName
         ? getSummaryKnownTeammateCount(s.teamByName[teamName])
         : 0,
+      isTeamKnownOffline: teamName
+        ? s.teamDataCacheByName[teamName]?.isAlive === false ||
+          s.leadActivityByTeam[teamName] === 'offline'
+        : false,
       teamSummaryColor: teamName ? s.teamByName[teamName]?.color : undefined,
       teamSummaryDisplayName: teamName ? s.teamByName[teamName]?.displayName : undefined,
       loading: s.selectedTeamName === teamName ? s.selectedTeamLoading : false,
@@ -1647,6 +1671,24 @@ export const TeamDetailView = memo(function TeamDetailView({
   );
 
   const tabId = useOptionalTabId();
+  const focusReviewLifecycleHost = useCallback((): void => {
+    if (tabId) useStore.getState().setActiveTab(tabId);
+  }, [tabId]);
+  const requestOpenChangeReview = useCallback(
+    async (next: Omit<TeamReviewDialogState, 'open'>): Promise<boolean> => {
+      const sessionId = buildChangeReviewLifecycleSessionId({ teamName, ...next });
+      const reserved = await requestChangeReviewLifecycleReservation({
+        hostId: reviewLifecycleHostId,
+        sessionId,
+        tabId: tabId ?? undefined,
+      });
+      if (!reserved) return false;
+      setReviewDialogState({ ...next, open: true });
+      if (next.initialFilePath) selectReviewFile(next.initialFilePath);
+      return true;
+    },
+    [reviewLifecycleHostId, selectReviewFile, tabId, teamName]
+  );
   const isThisTabActive = isActive;
   const wasInteractiveRef = useRef(false);
   const memberRosterHydrationRetryRef = useRef<string | null>(null);
@@ -2204,13 +2246,37 @@ export const TeamDetailView = memo(function TeamDetailView({
         isTeamAlive: data?.isAlive === true,
         request,
         members: nextMembers,
-        stopTeam: (nextTeamName) => api.teams.stop(nextTeamName),
+        stopTeam: async (nextTeamName) => {
+          try {
+            await api.teams.stop(nextTeamName);
+            recordTeamStop({
+              source: 'relaunch',
+              success: true,
+              memberCount: data?.members.length ?? null,
+              providerIds: data?.members.map((member) => member.providerId ?? null),
+              runtimeActive: data?.isAlive ?? null,
+              hadRunningTasks: data?.tasks.some((task) => task.status === 'in_progress') ?? null,
+              errorClass: 'none',
+            });
+          } catch (error) {
+            recordTeamStop({
+              source: 'relaunch',
+              success: false,
+              memberCount: data?.members.length ?? null,
+              providerIds: data?.members.map((member) => member.providerId ?? null),
+              runtimeActive: data?.isAlive ?? null,
+              hadRunningTasks: data?.tasks.some((task) => task.status === 'in_progress') ?? null,
+              errorClass: classifyAnalyticsError(error),
+            });
+            throw error;
+          }
+        },
         replaceMembers: (nextTeamName, nextRequest) =>
           api.teams.replaceMembers(nextTeamName, nextRequest),
         launchTeam,
       });
     },
-    [data?.isAlive, launchTeam, teamName]
+    [data?.isAlive, data?.members, data?.tasks, launchTeam, teamName]
   );
 
   const handleChangeLeadRuntime = useCallback(() => {
@@ -2344,32 +2410,52 @@ export const TeamDetailView = memo(function TeamDetailView({
     setStoppingTeam(true);
     try {
       await api.teams.stop(teamName);
+      recordTeamStop({
+        source: 'detail',
+        success: true,
+        memberCount: data?.members.length ?? null,
+        providerIds: data?.members.map((member) => member.providerId ?? null),
+        runtimeActive: data?.isAlive ?? null,
+        hadRunningTasks: data?.tasks.some((task) => task.status === 'in_progress') ?? null,
+        errorClass: 'none',
+      });
       // Backend sends 'disconnected' progress which triggers store refresh,
       // but refresh here too as a safety net (e.g. if progress event is missed).
       await refreshTeamData(teamName);
     } catch (err) {
+      recordTeamStop({
+        source: 'detail',
+        success: false,
+        memberCount: data?.members.length ?? null,
+        providerIds: data?.members.map((member) => member.providerId ?? null),
+        runtimeActive: data?.isAlive ?? null,
+        hadRunningTasks: data?.tasks.some((task) => task.status === 'in_progress') ?? null,
+        errorClass: classifyAnalyticsError(err),
+      });
       console.error('Failed to stop team:', err);
     } finally {
       setStoppingTeam(false);
     }
-  }, [teamName, refreshTeamData]);
+  }, [data?.isAlive, data?.members, data?.tasks, teamName, refreshTeamData]);
 
   // Pick up pending review request from GlobalTaskDetailDialog
   useEffect(() => {
     if (!isThisTabActive) return;
     if (!pendingReviewRequest) return;
-    setReviewDialogState({
-      open: true,
-      mode: 'task',
-      taskId: pendingReviewRequest.taskId,
-      initialFilePath: pendingReviewRequest.filePath,
-      taskChangeRequestOptions: pendingReviewRequest.requestOptions,
-    });
-    if (pendingReviewRequest.filePath) {
-      selectReviewFile(pendingReviewRequest.filePath);
-    }
+    const request = pendingReviewRequest;
     setPendingReviewRequest(null);
-  }, [isThisTabActive, pendingReviewRequest, selectReviewFile, setPendingReviewRequest]);
+    void requestOpenChangeReview({
+      mode: 'task',
+      taskId: request.taskId,
+      initialFilePath: request.filePath,
+      taskChangeRequestOptions: request.requestOptions,
+    });
+  }, [
+    isThisTabActive,
+    pendingReviewRequest,
+    requestOpenChangeReview,
+    setPendingReviewRequest,
+  ]);
 
   const pendingTeamSectionFocus = useStore((s) => s.pendingTeamSectionFocus);
   const clearTeamSectionFocus = useStore((s) => s.clearTeamSectionFocus);
@@ -2445,31 +2531,26 @@ export const TeamDetailView = memo(function TeamDetailView({
   const handleViewChanges = useCallback(
     (taskId: string) => {
       const task = taskMap.get(taskId);
-      setReviewDialogState({
-        open: true,
+      void requestOpenChangeReview({
         mode: 'task',
         taskId,
         taskChangeRequestOptions: task ? buildTaskChangeRequestOptions(task) : {},
       });
     },
-    [taskMap]
+    [requestOpenChangeReview, taskMap]
   );
 
   const handleViewChangesForFile = useCallback(
     (taskId: string, filePath?: string) => {
       const task = taskMap.get(taskId);
-      setReviewDialogState({
-        open: true,
+      void requestOpenChangeReview({
         mode: 'task',
         taskId,
         initialFilePath: filePath,
         taskChangeRequestOptions: task ? buildTaskChangeRequestOptions(task) : {},
       });
-      if (filePath) {
-        selectReviewFile(filePath);
-      }
     },
-    [selectReviewFile, taskMap]
+    [requestOpenChangeReview, taskMap]
   );
 
   const handleRequestReview = useCallback(
@@ -2650,6 +2731,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     setDeleteConfirmOpen(false);
     void (async () => {
       try {
+        if (!(await requestCloseChangeReviewLifecycleHost(reviewLifecycleHostId))) return;
         await deleteTeam(teamName);
         if (tabId) closeTab(tabId);
         openTeamsTab();
@@ -2657,7 +2739,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         // error is shown via store
       }
     })();
-  }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId]);
+  }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId]);
 
   const handleCreateTask = (
     subject: string,
@@ -2764,11 +2846,8 @@ export const TeamDetailView = memo(function TeamDetailView({
             variant="ghost"
             size="sm"
             className={cn(
-              'h-8 shrink-0 rounded-full border px-3.5 text-xs font-semibold tracking-[0.02em] transition-all',
-              'hover:-translate-y-0.5 hover:brightness-[1.03] active:translate-y-0 active:brightness-[0.98]',
-              isLight
-                ? 'hover:border-sky-400/50'
-                : 'hover:border-cyan-300/50 hover:shadow-[0_14px_32px_rgba(8,145,178,0.28)]'
+              TEAM_HEADER_NAV_ACTION_CLASS,
+              'font-semibold tracking-[0.01em] transition-[transform,filter,box-shadow] hover:-translate-y-px hover:brightness-110 active:translate-y-0 active:brightness-95'
             )}
             style={visualizeButtonStyle}
             onClick={handleOpenGraphTab}
@@ -2813,6 +2892,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           teamName={teamName}
           isActive={isThisTabActive}
           isFocused={isPaneFocused}
+          showOfflineBanner={isTeamKnownOffline}
           messagesPanelMode={messagesPanelMode}
           headerColorSet={loadingHeaderColorSet}
           isLight={isLight}
@@ -2964,50 +3044,43 @@ export const TeamDetailView = memo(function TeamDetailView({
           <div className="relative min-h-0 min-w-0 flex-1">
             <div
               ref={contentRef}
-              className="size-full min-w-0 overflow-y-auto overflow-x-hidden p-4"
+              className="size-full min-w-0 overflow-y-auto overflow-x-hidden p-4 [&>section:last-of-type>div:first-child]:border-b-0"
               style={{ paddingBottom: floatingComposerScrollReserve }}
               data-team-name={teamName}
             >
-              <div className="relative -mx-4 -mt-4 mb-3 overflow-hidden border-b border-[var(--color-border)] px-4 py-4">
-                {headerColorSet ? (
-                  <div
-                    className="pointer-events-none absolute inset-0 z-0"
-                    style={{ backgroundColor: getThemedBadge(headerColorSet, isLight) }}
-                  />
-                ) : null}
+              <div className="relative -mx-4 -mt-4 mb-3 overflow-hidden border-b border-[var(--color-border-emphasis)] bg-[var(--color-surface)] px-4 py-3.5">
                 <div
-                  className={cn(
-                    'flex flex-wrap items-start justify-between gap-x-2 gap-y-2',
-                    headerColorSet && 'relative z-10'
-                  )}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-base font-semibold text-[var(--color-text)]">
-                        {data.config.name}
-                      </h2>
-                      {data.isAlive && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
-                          <span className="size-1.5 rounded-full bg-emerald-400" />
-                          {t('detail.status.running')}
-                        </span>
-                      )}
-                      {!data.isAlive && isTeamProvisioning && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400">
-                          <span className="size-1.5 animate-pulse rounded-full bg-yellow-400" />
-                          {t('detail.status.launching')}
-                        </span>
-                      )}
-                    </div>
+                  className="pointer-events-none absolute inset-y-3 left-0 w-0.5 rounded-r-full"
+                  style={{ backgroundColor: getThemedBorder(headerColorSet, isLight) }}
+                />
+
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <h2 className="min-w-0 truncate text-base font-semibold text-[var(--color-text)]">
+                      {data.config.name}
+                    </h2>
+                    {data.isAlive && (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
+                        <span className="size-1.5 rounded-full bg-emerald-400" />
+                        {t('detail.status.running')}
+                      </span>
+                    )}
+                    {!data.isAlive && isTeamProvisioning && (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400">
+                        <span className="size-1.5 animate-pulse rounded-full bg-yellow-400" />
+                        {t('detail.status.launching')}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
+
+                  <div className="flex shrink-0 items-center gap-1">
                     {data.isAlive && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 gap-1 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                            className="h-7 gap-1 rounded-md border border-red-500/25 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
                             disabled={stoppingTeam}
                             onClick={() => void handleStopTeam()}
                           >
@@ -3025,7 +3098,12 @@ export const TeamDetailView = memo(function TeamDetailView({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 gap-1 px-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                          className="size-7 rounded-full p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+                          aria-label={
+                            isTeamProvisioning
+                              ? t('detail.tooltips.editUnavailableProvisioning')
+                              : t('detail.tooltips.editTeam')
+                          }
                           disabled={isTeamProvisioning}
                           onClick={() => setEditDialogOpen(true)}
                         >
@@ -3043,7 +3121,8 @@ export const TeamDetailView = memo(function TeamDetailView({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 gap-1 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          className="size-7 rounded-full p-0 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          aria-label={t('detail.tooltips.deleteTeam')}
                           onClick={handleDeleteTeam}
                         >
                           <Trash2 size={12} />
@@ -3055,13 +3134,9 @@ export const TeamDetailView = memo(function TeamDetailView({
                     </Tooltip>
                   </div>
                 </div>
-                <div
-                  className={cn(
-                    'mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2',
-                    headerColorSet && 'relative z-10'
-                  )}
-                >
-                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5">
+
+                <div className="mt-2.5 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
                     {data.config.projectPath && (
                       <span className="flex min-w-0 max-w-full items-center gap-1 text-[11px] text-[var(--color-text-secondary)]">
                         <FolderOpen size={11} className="shrink-0 text-[var(--color-text-muted)]" />
@@ -3081,28 +3156,67 @@ export const TeamDetailView = memo(function TeamDetailView({
                             </span>
                           </TooltipContent>
                         </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={() => setEditorOpen(true)}
-                              className={cn('ml-1', TEAM_HEADER_INLINE_ACTION_CLASS)}
-                            >
-                              <Code size={10} className="shrink-0" /> {t('detail.actions.editCode')}
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>{t('detail.tooltips.openBuiltInEditor')}</TooltipContent>
-                        </Tooltip>
                       </span>
+                    )}
+                    {leadBranch && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="flex min-w-0 items-center gap-1 text-[11px] text-[var(--color-text-secondary)]">
+                            <GitBranch
+                              size={11}
+                              className="shrink-0 text-[var(--color-text-muted)]"
+                            />
+                            <span className="min-w-0 max-w-32 truncate">{leadBranch}</span>
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <span className="font-mono text-xs">{leadBranch}</span>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {(() => {
+                      const currentPath = data.config.projectPath;
+                      const history = data.config.projectPathHistory?.filter(
+                        (path) => path !== currentPath
+                      );
+                      if (!history || history.length === 0) return null;
+                      return (
+                        <div className="flex min-w-0 items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
+                          <History size={10} className="shrink-0" />
+                          <span className="max-w-64 truncate">
+                            {t('detail.previous', {
+                              paths: history.map((path) => formatProjectPath(path)).join(', '),
+                            })}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-1.5">
+                    {data.config.projectPath && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => setEditorOpen(true)}
+                            className={TEAM_HEADER_NAV_ACTION_CLASS}
+                          >
+                            <Code size={11} className="shrink-0" />
+                            {t('detail.actions.editCode')}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>{t('detail.tooltips.openBuiltInEditor')}</TooltipContent>
+                      </Tooltip>
                     )}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           type="button"
                           onClick={handleOpenUsageTab}
-                          className={TEAM_HEADER_INLINE_ACTION_CLASS}
+                          className={TEAM_HEADER_NAV_ACTION_CLASS}
                         >
-                          <BarChart3 size={10} className="shrink-0" />
+                          <BarChart3 size={11} className="shrink-0" />
                           {t('detail.actions.usage', { defaultValue: 'Usage' })}
                         </button>
                       </TooltipTrigger>
@@ -3112,43 +3226,11 @@ export const TeamDetailView = memo(function TeamDetailView({
                         })}
                       </TooltipContent>
                     </Tooltip>
-                    {leadBranch && (
-                      <span
-                        className="flex min-w-0 items-center gap-1 text-[11px] text-[var(--color-text-secondary)]"
-                        title={leadBranch}
-                      >
-                        <GitBranch size={11} className="shrink-0 text-[var(--color-text-muted)]" />
-                        <span className="min-w-0 max-w-32 truncate">{leadBranch}</span>
-                      </span>
-                    )}
-                  </div>
-                  <div
-                    ref={visualizeButtonAnchorRef}
-                    className="flex h-8 shrink-0 self-start justify-self-end"
-                  >
-                    {pinnedVisualizeButtonPosition ? null : renderTeamActionButtons(false)}
+                    <div ref={visualizeButtonAnchorRef} className="flex h-8 shrink-0">
+                      {pinnedVisualizeButtonPosition ? null : renderTeamActionButtons(false)}
+                    </div>
                   </div>
                 </div>
-                {(() => {
-                  const currentPath = data.config.projectPath;
-                  const history = data.config.projectPathHistory?.filter((p) => p !== currentPath);
-                  if (!history || history.length === 0) return null;
-                  return (
-                    <div
-                      className={cn(
-                        'mt-0.5 flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]',
-                        headerColorSet && 'relative z-10'
-                      )}
-                    >
-                      <History size={10} className="shrink-0" />
-                      <span className="truncate">
-                        {t('detail.previous', {
-                          paths: history.map((p) => formatProjectPath(p)).join(', '),
-                        })}
-                      </span>
-                    </div>
-                  );
-                })()}
               </div>
 
               {!data.isAlive && !isTeamProvisioning ? (
@@ -3176,6 +3258,7 @@ export const TeamDetailView = memo(function TeamDetailView({
               <div className="runtime-telemetry-hover-scope">
                 <CollapsibleTeamSection
                   sectionId="team"
+                  variant="flat"
                   title={t('detail.sections.team')}
                   icon={<Users size={14} />}
                   badge={activeTeammateCount === 0 ? t('detail.solo') : activeTeammateCount}
@@ -3233,6 +3316,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 
               <CollapsibleTeamSection
                 sectionId="sessions"
+                variant="flat"
                 title={t('sessions.title')}
                 icon={<History size={14} />}
                 defaultOpen={false}
@@ -3250,11 +3334,13 @@ export const TeamDetailView = memo(function TeamDetailView({
 
               <CollapsibleTeamSection
                 sectionId="kanban"
+                variant="flat"
                 title={t('kanban.title')}
                 icon={<Columns3 size={14} />}
                 badge={filteredTasks.length}
                 defaultOpen
                 forceOpen={isKanbanSearchActive}
+                contentWrapperClassName="-mx-4 w-[calc(100%+2rem)]"
                 action={
                   <Button
                     variant="ghost"
@@ -3310,6 +3396,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 
               <TeamChangesSection
                 teamName={teamName}
+                sectionVariant="flat"
                 tasks={data.tasks}
                 memberColorMap={resolvedMemberColorMap}
                 onOpenTask={openTaskDetailDialog}
@@ -3318,6 +3405,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 
               <CollapsibleTeamSection
                 sectionId="schedules"
+                variant="flat"
                 title={t('schedule.title')}
                 icon={<Clock size={14} />}
                 defaultOpen={false}
@@ -3325,11 +3413,16 @@ export const TeamDetailView = memo(function TeamDetailView({
                 <ScheduleSection teamName={teamName} />
               </CollapsibleTeamSection>
 
-              <LiveRuntimeStatusBridge teamName={teamName} members={membersWithLiveBranches} />
+              <LiveRuntimeStatusBridge
+                teamName={teamName}
+                members={membersWithLiveBranches}
+                sectionVariant="flat"
+              />
 
               {(data.processes?.length ?? 0) > 0 && (
                 <CollapsibleTeamSection
                   sectionId="processes"
+                  variant="flat"
                   title={t('processes.title')}
                   icon={<Terminal size={14} />}
                   badge={data.processes.filter((p) => !p.stoppedAt).length}
@@ -3354,10 +3447,16 @@ export const TeamDetailView = memo(function TeamDetailView({
                 </CollapsibleTeamSection>
               )}
 
-              {messagesPanelMode !== 'sidebar' && <ClaudeLogsSection teamName={teamName} />}
+              {messagesPanelMode !== 'sidebar' && (
+                <ClaudeLogsSection teamName={teamName} sectionVariant="flat" />
+              )}
 
               {messagesPanelMode === 'inline' && (
-                <TeamMessagesPanelBridge position="inline" {...sharedMessagesPanelProps} />
+                <TeamMessagesPanelBridge
+                  position="inline"
+                  {...sharedMessagesPanelProps}
+                  sectionVariant="flat"
+                />
               )}
 
               {requestChangesTaskId !== null && (
@@ -3441,8 +3540,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 }}
                 onViewMemberChanges={(memberName, filePath) => {
                   closeSelectedMemberDialog();
-                  setReviewDialogState({
-                    open: true,
+                  void requestOpenChangeReview({
                     mode: 'agent',
                     memberName,
                     initialFilePath: filePath,
@@ -3684,6 +3782,9 @@ export const TeamDetailView = memo(function TeamDetailView({
                     taskChangeRequestOptions={reviewDialogState.taskChangeRequestOptions}
                     projectPath={data.config.projectPath}
                     onEditorAction={handleEditorAction}
+                    lifecycleHostId={reviewLifecycleHostId}
+                    lifecycleTabId={tabId ?? undefined}
+                    onLifecycleFocus={focusReviewLifecycleHost}
                   />
                 </Suspense>
               )}

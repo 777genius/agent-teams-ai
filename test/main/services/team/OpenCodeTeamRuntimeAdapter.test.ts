@@ -97,6 +97,15 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
           'OpenCode command timed out after 10000ms',
           'CLI-authenticated providers missing from live host (github-copilot)',
           'OpenCode session status busy',
+          'OpenCode prompt start exposed a terminal provider error in 1700ms',
+          'OpenCode retry status exposed a terminal provider error',
+          'OpenCode session messages request exposed a terminal provider error',
+          'OpenCode retry/error payload exposed a terminal provider failure before polling completed',
+          'OpenCode assistant payload exposed a terminal provider failure after polling completed',
+          'Cursor native failure probe will retry after a transient failure in 2040ms',
+          'Cursor native execution preflight was inconclusive; falling back to the OpenCode execution probe',
+          'Cursor native failure probe failed: temporary spawn failure',
+          'Cursor native failure probe confirmed a terminal provider error in 2150ms',
           cursorQuota,
         ],
       })
@@ -524,12 +533,92 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     }
 
     expect(checkReadiness).toHaveBeenCalledTimes(2);
-    expect(getLastOpenCodeRuntimeSnapshot).toHaveBeenCalledWith('/repo');
+    expect(getLastOpenCodeRuntimeSnapshot).toHaveBeenCalledWith(
+      '/repo',
+      'openai/gpt-5.4-mini',
+      true
+    );
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
         expectedCapabilitySnapshotId: 'cap-fresh',
       })
     );
+  });
+
+  it('reuses an exact short-lived execution proof from prepare during launch', async () => {
+    const executionProof = reusableExecutionProof();
+    const checkReadiness = vi.fn(async () =>
+      readiness({ state: 'ready', launchAllowed: true, executionProof })
+    );
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >(() => Promise.resolve(successfulOpenCodeLaunchData()));
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-proof')),
+      launchOpenCodeTeam,
+    });
+
+    await adapter.prepare(launchInput());
+    await adapter.launch(launchInput());
+
+    expect(checkReadiness).toHaveBeenCalledTimes(1);
+    expect(launchOpenCodeTeam).toHaveBeenCalledWith(
+      expect.objectContaining({ executionProof })
+    );
+  });
+
+  it('does not reuse OAuth execution proof across prepare and launch', async () => {
+    const oauthProof = {
+      ...reusableExecutionProof(),
+      credentialMode: 'oauth' as const,
+      reusable: false,
+    };
+    const checkReadiness = vi.fn(async () =>
+      readiness({ state: 'ready', launchAllowed: true, executionProof: oauthProof })
+    );
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >(() => Promise.resolve(successfulOpenCodeLaunchData()));
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-proof')),
+      launchOpenCodeTeam,
+    });
+
+    await adapter.prepare(launchInput());
+    await adapter.launch(launchInput());
+
+    expect(checkReadiness).toHaveBeenCalledTimes(2);
+    expect(launchOpenCodeTeam).toHaveBeenCalledWith(
+      expect.not.objectContaining({ executionProof: expect.anything() })
+    );
+  });
+
+  it('singleflights concurrent readiness for the same project model and depth', async () => {
+    let resolveReadiness!: (value: OpenCodeTeamLaunchReadiness) => void;
+    const checkReadiness = vi.fn(
+      () =>
+        new Promise<OpenCodeTeamLaunchReadiness>((resolve) => {
+          resolveReadiness = resolve;
+        })
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+    });
+
+    const first = adapter.prepare(launchInput());
+    const second = adapter.prepare(launchInput());
+    resolveReadiness(
+      readiness({
+        state: 'ready',
+        launchAllowed: true,
+        executionProof: reusableExecutionProof(),
+      })
+    );
+
+    await expect(Promise.all([first, second])).resolves.toHaveLength(2);
+    expect(checkReadiness).toHaveBeenCalledTimes(1);
   });
 
   it('passes manual tool approval intent with a fresh capability precondition', async () => {
@@ -2050,6 +2139,28 @@ function runtimeSnapshot(capabilitySnapshotId: string) {
     binaryFingerprint: 'version:1.14.19',
     version: '1.14.19',
     capabilitySnapshotId,
+  };
+}
+
+function reusableExecutionProof() {
+  return {
+    schemaVersion: 1 as const,
+    providerId: 'opencode' as const,
+    modelId: 'openai/gpt-5.4-mini',
+    projectPath: '/repo',
+    profileRootKey: 'profile-root',
+    projectBehaviorFingerprint: 'behavior-v1',
+    managedConfigFingerprint: 'config-v1',
+    managedAuthFingerprint: 'auth-v1',
+    binaryPath: '/opt/homebrew/bin/opencode',
+    binaryFingerprint: 'binary-v1',
+    opencodeVersion: '1.14.19',
+    capabilitySnapshotId: 'cap-proof',
+    credentialMode: 'api' as const,
+    reusable: true,
+    verifiedAt: new Date(Date.now() - 1_000).toISOString(),
+    expiresAt: new Date(Date.now() + 45_000).toISOString(),
+    proofHash: 'proof-hash',
   };
 }
 

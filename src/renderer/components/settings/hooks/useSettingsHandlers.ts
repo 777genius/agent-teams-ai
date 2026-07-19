@@ -36,6 +36,7 @@ interface SettingsHandlers {
 
   // Notification handlers
   handleNotificationToggle: (key: keyof AppConfig['notifications'], value: boolean) => void;
+  handleTeamRuntimeRecoveryUpdate: (update: Partial<AppConfig['teamRuntimeRecovery']>) => void;
   handleStatusChangeStatusesUpdate: (statuses: string[]) => void;
   handleSnooze: (minutes: number) => Promise<void>;
   handleClearSnooze: () => Promise<void>;
@@ -115,6 +116,13 @@ export function useSettingsHandlers({
   const handleNotificationToggle = useCallback(
     (key: keyof AppConfig['notifications'], value: boolean) => {
       fireAndForgetConfigUpdate('notifications', { [key]: value });
+    },
+    [fireAndForgetConfigUpdate]
+  );
+
+  const handleTeamRuntimeRecoveryUpdate = useCallback(
+    (update: Partial<AppConfig['teamRuntimeRecovery']>) => {
+      fireAndForgetConfigUpdate('teamRuntimeRecovery', update);
     },
     [fireAndForgetConfigUpdate]
   );
@@ -328,6 +336,12 @@ export function useSettingsHandlers({
           statusChangeStatuses: ['in_progress', 'completed'],
           triggers: defaultTriggers,
         },
+        teamRuntimeRecovery: {
+          transientErrorsEnabled: false,
+          rateLimitsEnabled: false,
+          initialDelaySeconds: 60,
+          maxAttempts: 2,
+        },
         general: {
           launchAtLogin: false,
           showDockIcon: true,
@@ -429,6 +443,9 @@ export function useSettingsHandlers({
         if (importedConfig.notifications) {
           await api.config.update('notifications', importedConfig.notifications);
         }
+        if (importedConfig.teamRuntimeRecovery) {
+          await api.config.update('teamRuntimeRecovery', importedConfig.teamRuntimeRecovery);
+        }
         if (importedConfig.general) {
           await api.config.update('general', importedConfig.general);
         }
@@ -456,6 +473,7 @@ export function useSettingsHandlers({
     handleAppLocaleChange,
     handleDefaultTabChange,
     handleNotificationToggle,
+    handleTeamRuntimeRecoveryUpdate,
     handleStatusChangeStatusesUpdate,
     handleSnooze,
     handleClearSnooze,

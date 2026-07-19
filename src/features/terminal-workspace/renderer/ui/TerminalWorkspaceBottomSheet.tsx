@@ -15,6 +15,7 @@ import { Button } from '@renderer/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { HEADER_ROW1_HEIGHT } from '@renderer/constants/layout';
 import { PanelBottomClose, PanelBottomOpen, Settings2, Terminal, X } from 'lucide-react';
+import { useDragControls } from 'motion/react';
 
 import { TerminalWorkspacePanel } from './TerminalWorkspacePanel';
 
@@ -45,6 +46,7 @@ const TERMINAL_SHEET_OPEN_SNAP_INDEX = TERMINAL_SHEET_PREVIEW_SNAP_INDEX;
 
 interface TerminalSheetControllerBridgeProps {
   active: boolean;
+  contentFrameRef: RefObject<HTMLDivElement | null>;
   mountHeight: number;
   sheetApiRef: RefObject<SheetContext | null>;
   snapPoints: number[];
@@ -54,6 +56,7 @@ interface TerminalSheetControllerBridgeProps {
 
 const TerminalSheetControllerBridge = ({
   active,
+  contentFrameRef,
   mountHeight,
   sheetApiRef,
   snapPoints,
@@ -70,6 +73,21 @@ const TerminalSheetControllerBridge = ({
       }
     };
   }, [sheet, sheetApiRef]);
+
+  useEffect(() => {
+    const syncContentHeight = (y: number): void => {
+      if (!contentFrameRef.current) {
+        return;
+      }
+      contentFrameRef.current.style.height = `${Math.max(
+        mountHeight - y - TERMINAL_SHEET_HEADER_HEIGHT,
+        0
+      )}px`;
+    };
+
+    syncContentHeight(sheet.y.get());
+    return sheet.y.on('change', syncContentHeight);
+  }, [contentFrameRef, mountHeight, sheet]);
 
   useEffect(() => {
     if (!active) {
@@ -122,28 +140,6 @@ function resolveSheetYForSnap(
   return Math.max(sheetHeight - snapHeight, 0);
 }
 
-function resolveNearestSheetSnapIndex(
-  y: number,
-  snapPoints: number[],
-  mountHeight: number
-): number {
-  const snapIndexes = [
-    TERMINAL_SHEET_COLLAPSED_SNAP_INDEX,
-    TERMINAL_SHEET_PREVIEW_SNAP_INDEX,
-    TERMINAL_SHEET_EXPANDED_SNAP_INDEX,
-    TERMINAL_SHEET_FULL_SNAP_INDEX,
-  ];
-  return snapIndexes.reduce((nearestIndex, candidateIndex) => {
-    const nearestDistance = Math.abs(
-      resolveSheetYForSnap(nearestIndex, snapPoints, mountHeight) - y
-    );
-    const candidateDistance = Math.abs(
-      resolveSheetYForSnap(candidateIndex, snapPoints, mountHeight) - y
-    );
-    return candidateDistance < nearestDistance ? candidateIndex : nearestIndex;
-  }, TERMINAL_SHEET_PREVIEW_SNAP_INDEX);
-}
-
 function syncSheetYToSnap(
   sheet: SheetContext,
   snapIndex: number,
@@ -169,12 +165,13 @@ export const TerminalWorkspaceBottomSheet = ({
 }: TerminalWorkspaceBottomSheetProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   const sheetApiRef = useRef<SheetContext | null>(null);
+  const terminalContentFrameRef = useRef<HTMLDivElement | null>(null);
+  const terminalSheetDragControls = useDragControls();
   const [mountHeight, setMountHeight] = useState(0);
   const [snapIndex, setSnapIndex] = useState(TERMINAL_SHEET_OPEN_SNAP_INDEX);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [headerTabsElement, setHeaderTabsElement] = useState<HTMLDivElement | null>(null);
   const [forceOpenSnapActive, setForceOpenSnapActive] = useState(false);
-  const [dragY, setDragY] = useState<number | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -250,7 +247,6 @@ export const TerminalWorkspaceBottomSheet = ({
     : Math.max(activeSheetHeight - TERMINAL_SHEET_HEADER_HEIGHT, 0);
   const snapTo = useCallback(
     (nextIndex: number): void => {
-      setDragY(null);
       setSnapIndex(nextIndex);
       const sheet = sheetApiRef.current;
       if (!sheet) {
@@ -296,44 +292,15 @@ export const TerminalWorkspaceBottomSheet = ({
     ? t('terminalWorkspace.closeTerminalSettings')
     : t('terminalWorkspace.openTerminalSettings');
   const closeSheetLabel = t('terminalWorkspace.closeTerminalSheet');
-  const controlledSheetY =
-    dragY ?? resolveSheetYForSnap(normalizedSnapIndex, snapPoints, mountHeight);
   const handleDragPointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>): void => {
       if (event.button !== 0 || mountHeight <= 0) {
         return;
       }
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const startClientY = event.clientY;
-      const startY = controlledSheetY;
-      const minY = resolveSheetYForSnap(TERMINAL_SHEET_FULL_SNAP_INDEX, snapPoints, mountHeight);
-      const maxY = resolveSheetYForSnap(
-        TERMINAL_SHEET_COLLAPSED_SNAP_INDEX,
-        snapPoints,
-        mountHeight
-      );
-
-      const handlePointerMove = (moveEvent: PointerEvent): void => {
-        const nextY = Math.min(Math.max(startY + moveEvent.clientY - startClientY, minY), maxY);
-        setDragY(nextY);
-      };
-      const handlePointerUp = (upEvent: PointerEvent): void => {
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', handlePointerUp);
-        window.removeEventListener('pointercancel', handlePointerUp);
-
-        const finalY = Math.min(Math.max(startY + upEvent.clientY - startClientY, minY), maxY);
-        snapTo(resolveNearestSheetSnapIndex(finalY, snapPoints, mountHeight));
-      };
-
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp, { once: true });
-      window.addEventListener('pointercancel', handlePointerUp, { once: true });
+      setForceOpenSnapActive(false);
+      terminalSheetDragControls.start(event);
     },
-    [controlledSheetY, mountHeight, snapPoints, snapTo]
+    [mountHeight, terminalSheetDragControls]
   );
 
   if (!open || !mountPoint) {
@@ -357,7 +324,6 @@ export const TerminalWorkspaceBottomSheet = ({
       data-terminal-sheet-settling={forceOpenSnapActive ? 'true' : 'false'}
       style={
         {
-          '--terminal-sheet-y': `${controlledSheetY}px`,
           zIndex: 34,
           top: HEADER_ROW1_HEIGHT,
           right: 0,
@@ -377,7 +343,6 @@ export const TerminalWorkspaceBottomSheet = ({
           }
 
           .agent-team-terminal-sheet-root > .react-modal-sheet-container {
-            transform: translateY(var(--terminal-sheet-y, 0px)) !important;
             width: 100% !important;
             max-width: none !important;
           }
@@ -385,6 +350,7 @@ export const TerminalWorkspaceBottomSheet = ({
       </style>
       <TerminalSheetControllerBridge
         active={open && forceOpenSnapActive}
+        contentFrameRef={terminalContentFrameRef}
         mountHeight={mountHeight}
         onSnapIndexChange={setSnapIndex}
         sheetApiRef={sheetApiRef}
@@ -399,6 +365,8 @@ export const TerminalWorkspaceBottomSheet = ({
       >
         <Sheet.Header
           unstyled
+          dragControls={terminalSheetDragControls}
+          dragListener={false}
           className="shrink-0 cursor-grab select-none border-b border-white/[0.07] bg-transparent active:cursor-grabbing"
         >
           <div className="relative h-11 px-3">
@@ -500,7 +468,9 @@ export const TerminalWorkspaceBottomSheet = ({
             disableScroll
           >
             <div
+              ref={terminalContentFrameRef}
               className="flex min-h-0 shrink-0 flex-col p-0"
+              data-testid="terminal-workspace-sheet-content-frame"
               style={{ height: activeContentHeight }}
             >
               <TerminalWorkspacePanel

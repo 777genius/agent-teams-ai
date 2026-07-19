@@ -1,4 +1,16 @@
+import { useState } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@renderer/components/ui/alert-dialog';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -8,9 +20,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@renderer/components/ui/dialog';
-import { AlertTriangle, CheckCircle2, Copy, ExternalLink, Loader2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  Loader2,
+  LogOut,
+  RefreshCw,
+  Stethoscope,
+  UserRoundCog,
+} from 'lucide-react';
 
-import type { RuntimeProviderCompanionStatusDto } from '../../contracts';
+import type {
+  RuntimeProviderCompanionActionDto,
+  RuntimeProviderCompanionStatusDto,
+} from '../../contracts';
 import type { JSX } from 'react';
 
 interface RuntimeProviderCompanionSetupDialogProps {
@@ -22,7 +47,9 @@ interface RuntimeProviderCompanionSetupDialogProps {
   onOpenChange: (open: boolean) => void;
   onInstallAndConnect: () => void;
   onConnect: () => void;
+  onAction: (action: RuntimeProviderCompanionActionDto) => void;
   onManage?: () => void;
+  onOpenUsage?: () => void;
   onCopyManualCommand: () => void;
   onOpenManualGuide: () => void;
 }
@@ -35,6 +62,7 @@ const BUSY_PHASES = new Set<RuntimeProviderCompanionStatusDto['phase']>([
   'signing-in',
   'verifying-auth',
   'verifying-model',
+  'running-action',
 ]);
 
 export const RuntimeProviderCompanionSetupDialog = ({
@@ -46,17 +74,22 @@ export const RuntimeProviderCompanionSetupDialog = ({
   onOpenChange,
   onInstallAndConnect,
   onConnect,
+  onAction,
   onManage,
+  onOpenUsage,
   onCopyManualCommand,
   onOpenManualGuide,
 }: RuntimeProviderCompanionSetupDialogProps): JSX.Element => {
   const { t } = useAppTranslation('dashboard');
+  const [confirmAction, setConfirmAction] = useState<Extract<
+    RuntimeProviderCompanionActionDto,
+    'logout' | 'switch-account'
+  > | null>(null);
   const phaseBusy = busy || (status ? BUSY_PHASES.has(status.phase) : false);
   const connected = status?.phase === 'connected';
   const hasManualFallback = Boolean(status?.manualCommand?.trim() || status?.manualUrl?.trim());
   const showFallback =
-    hasManualFallback &&
-    (status?.phase === 'needs-manual-step' || (status?.phase === 'error' && !status.installed));
+    hasManualFallback && (status?.phase === 'needs-manual-step' || status?.phase === 'error');
   const needsInstall = !status?.installed;
   const percent = status?.percent;
 
@@ -130,6 +163,96 @@ export const RuntimeProviderCompanionSetupDialog = ({
           ) : null}
         </div>
 
+        {status?.authenticated && status.account ? (
+          <div className="rounded-lg border border-sky-300/15 bg-sky-300/[0.04] p-3">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+              Connected account
+            </p>
+            <p className="mt-1 text-sm font-semibold text-[var(--color-text)]">
+              {status.account.display}
+            </p>
+            <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">
+              {[status.account.accountType, status.account.region].filter(Boolean).join(' · ')}
+            </p>
+          </div>
+        ) : null}
+
+        {connected && status?.supportedActions?.length ? (
+          <div className="grid grid-cols-2 gap-2">
+            {status.supportedActions.includes('switch-account') ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={phaseBusy}
+                onClick={() => setConfirmAction('switch-account')}
+              >
+                <UserRoundCog className="mr-1.5 size-3.5" />
+                Switch account
+              </Button>
+            ) : null}
+            {status.supportedActions.includes('logout') ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={phaseBusy}
+                onClick={() => setConfirmAction('logout')}
+              >
+                <LogOut className="mr-1.5 size-3.5" />
+                Sign out
+              </Button>
+            ) : null}
+            {status.supportedActions.includes('doctor') ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={phaseBusy}
+                onClick={() => onAction('doctor')}
+              >
+                <Stethoscope className="mr-1.5 size-3.5" />
+                Diagnostics
+              </Button>
+            ) : null}
+            {status.supportedActions.includes('update') ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={phaseBusy}
+                onClick={() => onAction('update')}
+              >
+                <RefreshCw className="mr-1.5 size-3.5" />
+                Update CLI
+              </Button>
+            ) : null}
+            {onOpenUsage ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="col-span-2"
+                onClick={onOpenUsage}
+              >
+                <ExternalLink className="mr-1.5 size-3.5" />
+                Usage, plan and remaining quota
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+
+        {status?.actionOutput ? (
+          <details className="rounded-lg border border-[var(--color-border-subtle)] bg-black/15 p-3">
+            <summary className="cursor-pointer text-[11px] font-medium text-[var(--color-text-secondary)]">
+              CLI output
+            </summary>
+            <pre className="mt-2 max-h-44 overflow-auto whitespace-pre-wrap break-words text-[10px] text-[var(--color-text-muted)]">
+              {status.actionOutput}
+            </pre>
+          </details>
+        ) : null}
+
         {phaseBusy ? (
           <p className="text-center text-[11px] text-[var(--color-text-muted)]">
             Setup continues in the background if you close this window. Reopen the card to check
@@ -169,9 +292,6 @@ export const RuntimeProviderCompanionSetupDialog = ({
                   {t('cliStatus.actions.manage')}
                 </Button>
               ) : null}
-              <Button type="button" disabled={phaseBusy} onClick={onConnect}>
-                {t('cliStatus.quickConnect.signIn')}
-              </Button>
             </>
           ) : needsInstall ? (
             <Button type="button" disabled={phaseBusy} onClick={onInstallAndConnect}>
@@ -188,6 +308,36 @@ export const RuntimeProviderCompanionSetupDialog = ({
           )}
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog
+        open={confirmAction !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setConfirmAction(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction === 'switch-account' ? 'Switch Kiro account?' : 'Sign out of Kiro?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Kiro CLI authentication is user-wide. This affects OpenCode and other local tools that
+              use the same Kiro CLI session.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmAction) onAction(confirmAction);
+                setConfirmAction(null);
+              }}
+            >
+              {confirmAction === 'switch-account' ? 'Sign out and continue' : 'Sign out'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

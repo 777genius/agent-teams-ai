@@ -192,6 +192,7 @@ jobs:
   task-change-ledger-windows:
     name: Task change ledger Windows smoke
     runs-on: windows-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -213,5 +214,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Test Windows CLI shell fallback
+        run: pnpm exec vitest run test/main/utils/childProcess.windows.test.ts
+
       - name: Test task change ledger
         run: pnpm test:task-change-ledger
+
+      - name: Test OpenCode nvm-windows runtime resolution
+        run: pnpm exec vitest run test/main/services/runtime/OpenCodeRuntimeNvmResolution.safe-e2e.test.ts

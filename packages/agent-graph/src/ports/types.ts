@@ -57,7 +57,12 @@ export interface GraphActivityItem {
 }
 
 export type GraphLayoutVersion = 'stable-slots-v1';
-export type GraphLayoutMode = 'radial' | 'grid-under-lead';
+export type GraphLayoutMode = 'radial' | 'grid-under-lead' | 'hierarchical';
+
+export interface GraphNodePosition {
+  x: number;
+  y: number;
+}
 
 export interface GraphOwnerSlotAssignment {
   ringIndex: number;
@@ -71,18 +76,28 @@ export interface GraphLayoutPort {
   showLogs?: boolean;
   showTasks?: boolean;
   showEmptyTaskPlaceholders?: boolean;
+  /** Size task bands from their rendered rows instead of reserving the maximum height. */
+  fitTaskRowsToContent?: boolean;
   alignGridColumns?: boolean;
   ownerOrder: string[];
   slotAssignments: Record<string, GraphOwnerSlotAssignment>;
+  /** Optional host-computed coordinates for deterministic layouts. */
+  nodePositions?: Record<string, GraphNodePosition>;
 }
 
 export interface GraphGroupFrame {
   id: string;
   label: string;
+  /** Preformatted aggregate shown in the overview semantic zoom level. */
+  semanticSummary?: string;
   nodeIds: string[];
   color?: string;
   depth?: number;
+  /** Number of nested label rows below this frame's content. */
+  labelLane?: number;
   priority?: 'primary' | 'normal';
+  /** Solid hierarchy containers or dashed temporary/logical grouping. */
+  borderStyle?: 'solid' | 'dashed';
 }
 
 // ─── Graph Node ──────────────────────────────────────────────────────────────
@@ -100,6 +115,12 @@ export interface GraphNode {
   visualVariant?: GraphNodeVisualVariant;
   /** Participates in layout/simulation but is not drawn, hit-tested, selected, or used for camera fit. */
   layoutOnly?: boolean;
+  /** Preformatted status/count summary used by semantic zoom cards. */
+  semanticSummary?: string;
+  /** Earliest semantic zoom level where a task card remains visible. */
+  taskZoomVisibility?: 'overview' | 'summary' | 'detail';
+  /** Hierarchy depth used to progressively reveal aggregate nodes at overview scale. */
+  hierarchyDepth?: number;
 
   // ─── Member/Lead-specific ──────────────────────────────────────────────
   /** Agent role description */
@@ -229,6 +250,8 @@ export interface GraphEdge {
   aggregateCount?: number;
   /** Draw this edge even when the global edge filter is off or a message edge has no active particle. */
   alwaysVisible?: boolean;
+  /** Optional visual routing. Hierarchy containment edges use orthogonal connectors. */
+  routing?: 'bezier' | 'orthogonal';
   /** Raw source-side task ids represented by this visual edge */
   sourceTaskIds?: string[];
   /** Raw target-side task ids represented by this visual edge */

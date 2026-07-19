@@ -1,13 +1,30 @@
-import React from 'react';
-import { act } from 'react';
+import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { InboxMessage } from '@shared/types';
 
+const timelineTestState = vi.hoisted(() => ({
+  newItemKeys: new Set<string>(),
+}));
+
 vi.mock('@renderer/components/team/activity/ActivityItem', () => ({
-  ActivityItem: ({ message }: { message: InboxMessage }) =>
-    React.createElement('div', { 'data-testid': 'activity-item' }, message.text),
+  ActivityItem: ({
+    message,
+    isNewMessageHighlighted,
+  }: {
+    message: InboxMessage;
+    isNewMessageHighlighted?: boolean;
+  }) =>
+    React.createElement(
+      'div',
+      {
+        'data-testid': 'activity-item',
+        'data-new-message-highlighted': String(isNewMessageHighlighted === true),
+      },
+      message.text
+    ),
   isNoiseMessage: () => false,
 }));
 
@@ -23,7 +40,7 @@ vi.mock('@renderer/components/team/activity/AnimatedHeightReveal', () => ({
 }));
 
 vi.mock('@renderer/components/team/activity/useNewItemKeys', () => ({
-  useNewItemKeys: () => new Set<string>(),
+  useNewItemKeys: () => timelineTestState.newItemKeys,
 }));
 
 import { ActivityTimeline } from '@renderer/components/team/activity/ActivityTimeline';
@@ -40,6 +57,56 @@ function makeMessage(overrides: Partial<InboxMessage> = {}): InboxMessage {
     ...overrides,
   };
 }
+
+beforeEach(() => {
+  timelineTestState.newItemKeys = new Set<string>();
+});
+
+describe('ActivityTimeline new message highlight', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
+  });
+
+  it('highlights a newly added message only for the remainder of its three-second age window', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-04-18T13:00:03.000Z'));
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    timelineTestState.newItemKeys = new Set(['fresh-message']);
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const message = makeMessage({
+      messageId: 'fresh-message',
+      timestamp: '2026-04-18T13:00:01.000Z',
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityTimeline, { messages: [message], teamName: 'demo-team' })
+      );
+    });
+
+    const item = container.querySelector('[data-testid="activity-item"]');
+    expect(item?.getAttribute('data-new-message-highlighted')).toBe('true');
+
+    act(() => {
+      vi.advanceTimersByTime(999);
+    });
+    expect(item?.getAttribute('data-new-message-highlighted')).toBe('true');
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(item?.getAttribute('data-new-message-highlighted')).toBe('false');
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+});
 
 describe('ActivityTimeline session separators', () => {
   let container: HTMLDivElement;

@@ -12,6 +12,8 @@ const hoisted = vi.hoisted(() => ({
   handlePanMove: vi.fn(),
   handlePanEnd: vi.fn(),
   zoomToFit: vi.fn(),
+  animateToFit: vi.fn(),
+  centerOn: vi.fn(),
   zoomIn: vi.fn(),
   zoomOut: vi.fn(),
   updateInertia: vi.fn(),
@@ -31,6 +33,9 @@ const hoisted = vi.hoisted(() => ({
     effects: [],
     time: 0,
   },
+  layoutTargetNodes: [] as GraphNode[],
+  updateData: vi.fn(),
+  getLayoutTargetNodes: vi.fn(),
   setNodePosition: vi.fn(),
   clearNodePosition: vi.fn(),
   clearTransientOwnerPositions: vi.fn(),
@@ -71,6 +76,8 @@ vi.mock('../../../../packages/agent-graph/src/hooks/useGraphCamera', () => ({
     handlePanMove: hoisted.handlePanMove,
     handlePanEnd: hoisted.handlePanEnd,
     zoomToFit: hoisted.zoomToFit,
+    animateToFit: hoisted.animateToFit,
+    centerOn: hoisted.centerOn,
     zoomIn: hoisted.zoomIn,
     zoomOut: hoisted.zoomOut,
     updateInertia: hoisted.updateInertia,
@@ -84,9 +91,10 @@ vi.mock('../../../../packages/agent-graph/src/hooks/useGraphInteraction', () => 
 vi.mock('../../../../packages/agent-graph/src/hooks/useGraphSimulation', () => ({
   useGraphSimulation: () => ({
     stateRef: { current: hoisted.simulationState },
-    updateData: vi.fn(),
+    updateData: hoisted.updateData,
     tick: vi.fn(),
     getExtraWorldBounds: vi.fn(() => []),
+    getLayoutTargetNodes: hoisted.getLayoutTargetNodes,
     getLaunchAnchorWorldPosition: vi.fn(() => null),
     getActivityWorldRect: vi.fn(() => null),
     getLogWorldRect: vi.fn(() => null),
@@ -126,11 +134,15 @@ describe('GraphView pan interactions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    hoisted.updateData.mockImplementation(() => undefined);
+    hoisted.getLayoutTargetNodes.mockImplementation(() => hoisted.layoutTargetNodes);
+    hoisted.zoomToFit.mockImplementation(() => undefined);
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     hoisted.interaction.hoveredNodeId.current = null;
     hoisted.interaction.dragNodeId.current = null;
     hoisted.interaction.isDragging.current = false;
     hoisted.simulationState.nodes = [];
+    hoisted.layoutTargetNodes = [];
     hoisted.simulationState.edges = [];
     hoisted.interaction.handleMouseDown.mockImplementation(() => undefined);
     hoisted.interaction.handleMouseMove.mockImplementation(() => undefined);
@@ -205,6 +217,87 @@ describe('GraphView pan interactions', () => {
     expect((hoisted.graphControlsProps?.filters as { showEdges: boolean }).showEdges).toBe(true);
   });
 
+  it('processes fit requests after syncing the requested graph data', async () => {
+    const firstNode: GraphNode = {
+      id: 'member:alice',
+      kind: 'member',
+      label: 'alice',
+      state: 'idle',
+      x: 0,
+      y: 0,
+      domainRef: { kind: 'member', teamName: 'demo-team', memberName: 'alice' },
+    };
+    const secondNode: GraphNode = {
+      id: 'member:bob',
+      kind: 'member',
+      label: 'bob',
+      state: 'idle',
+      x: 200,
+      y: 0,
+      domainRef: { kind: 'member', teamName: 'demo-team', memberName: 'bob' },
+    };
+    const events: string[] = [];
+    hoisted.updateData.mockImplementation((nodes: GraphNode[]) => {
+      hoisted.simulationState.nodes = nodes.map((node) => ({ ...node, x: -100, y: -100 }));
+      hoisted.layoutTargetNodes = nodes;
+      events.push(`update:${nodes.length}`);
+    });
+    hoisted.zoomToFit.mockImplementation((nodes: GraphNode[]) => {
+      events.push(`fit:${nodes.map((node) => node.x).join(',')}`);
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [firstNode],
+            edges: [],
+            particles: [],
+          },
+          config: { animationEnabled: false },
+          fitViewRequestId: 0,
+        })
+      );
+    });
+
+    events.length = 0;
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [firstNode, secondNode],
+            edges: [],
+            particles: [],
+          },
+          config: { animationEnabled: false },
+          fitViewRequestId: 1,
+        })
+      );
+    });
+
+    expect(events).toEqual(['update:2', 'fit:0,200']);
+    expect(hoisted.simulationState.nodes.map((node) => node.x)).toEqual([-100, -100]);
+  });
+
+  it('preserves an explicit null returned by a custom controls renderer', async () => {
+    const renderControls = vi.fn(() => null);
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: { teamName: 'demo-team', nodes: [], edges: [], particles: [] },
+          config: { animationEnabled: false },
+          renderControls,
+        })
+      );
+    });
+
+    expect(renderControls).toHaveBeenCalledOnce();
+    expect(hoisted.graphControlsProps).toBeNull();
+  });
+
   it('can opt out of animated space effects through config', async () => {
     await act(async () => {
       root.render(
@@ -246,6 +339,22 @@ describe('GraphView pan interactions', () => {
     expect(isEditableGraphShortcutTarget(event)).toBe(true);
 
     host.remove();
+  });
+
+  it('recognizes toolbar buttons as interactive shortcut targets', () => {
+    const button = document.createElement('button');
+    const icon = document.createElement('span');
+    button.appendChild(icon);
+    document.body.appendChild(button);
+
+    const event = new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'composedPath', {
+      value: () => [icon, button, document, window],
+    });
+
+    expect(isEditableGraphShortcutTarget(event)).toBe(true);
+
+    button.remove();
   });
 
   it('toggles graph pause on Space when the graph owns keyboard focus', async () => {
@@ -397,6 +506,97 @@ describe('GraphView pan interactions', () => {
 
     expect(hoisted.handlePanStart).toHaveBeenCalledWith(midpoint!.x, midpoint!.y);
     expect(hoisted.handlePanMove).toHaveBeenCalledWith(midpoint!.x + 24, midpoint!.y + 4);
+  });
+
+  it('removes a selected edge overlay when the edge disappears from graph data', async () => {
+    const source: GraphNode = {
+      id: 'member:alice',
+      kind: 'member',
+      label: 'alice',
+      state: 'idle',
+      x: 0,
+      y: 0,
+      domainRef: { kind: 'member', teamName: 'demo-team', memberName: 'alice' },
+    };
+    const target: GraphNode = {
+      id: 'task:1',
+      kind: 'task',
+      label: 'Task 1',
+      state: 'idle',
+      x: 300,
+      y: 180,
+      domainRef: { kind: 'task', teamName: 'demo-team', taskId: 'task:1' },
+    };
+    const edge: GraphEdge = {
+      id: 'edge:blocking',
+      source: source.id,
+      target: target.id,
+      type: 'blocking',
+    };
+    const midpoint = getEdgeMidpoint(
+      edge,
+      new Map([
+        [source.id, source],
+        [target.id, target],
+      ])
+    );
+    const renderEdgeOverlay = vi.fn(() =>
+      React.createElement('div', { 'data-selected-edge-overlay': true })
+    );
+    hoisted.simulationState.nodes = [source, target];
+    hoisted.simulationState.edges = [edge];
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: {
+            teamName: 'demo-team',
+            nodes: [source, target],
+            edges: [edge],
+            particles: [],
+          },
+          config: { animationEnabled: false, showEdges: true },
+          renderEdgeOverlay,
+        })
+      );
+    });
+
+    const canvas = container.querySelector('canvas');
+    expect(canvas).not.toBeNull();
+    expect(midpoint).not.toBeNull();
+    await act(async () => {
+      canvas!.dispatchEvent(
+        new MouseEvent('mousedown', {
+          bubbles: true,
+          button: 0,
+          clientX: midpoint!.x,
+          clientY: midpoint!.y,
+        })
+      );
+      canvas!.dispatchEvent(
+        new MouseEvent('mouseup', {
+          bubbles: true,
+          button: 0,
+          clientX: midpoint!.x,
+          clientY: midpoint!.y,
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(container.querySelector('[data-selected-edge-overlay]')).not.toBeNull();
+
+    await act(async () => {
+      root.render(
+        React.createElement(GraphView, {
+          data: { teamName: 'demo-team', nodes: [], edges: [], particles: [] },
+          config: { animationEnabled: false, showEdges: true },
+          renderEdgeOverlay,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(container.querySelector('[data-selected-edge-overlay]')).toBeNull();
   });
 
   it('does not clear pan state on the rerender triggered by interaction lock', async () => {

@@ -5,6 +5,7 @@ import * as path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { OpenCodeLocalProviderConnector } from '../../../../src/features/runtime-provider-management/main';
 import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
@@ -60,180 +61,171 @@ liveDescribe('OpenCode local provider app launch live e2e', () => {
     clearBenignSlowConfigReadWarnings();
   }, 90_000);
 
-  it(
-    'creates and stops an OpenCode team through the app service using a configured authless local provider',
-    async () => {
-      const projectPath = path.join(tempDir, 'project');
-      await fs.mkdir(projectPath, { recursive: true });
-      await fs.writeFile(
-        path.join(projectPath, 'README.md'),
-        '# OpenCode local provider app launch live e2e\n',
-        'utf8'
-      );
-      fakeServer = await startFakeOpenAiCompatibleServer();
-      await writeFakeLocalOpenCodeConfig({
-        projectPath,
-        baseUrl: fakeServer.baseUrl,
-      });
+  it('creates and stops an OpenCode team through the app service using a configured authless local provider', async () => {
+    const projectPath = path.join(tempDir, 'project');
+    await fs.mkdir(projectPath, { recursive: true });
+    await fs.writeFile(
+      path.join(projectPath, 'README.md'),
+      '# OpenCode local provider app launch live e2e\n',
+      'utf8'
+    );
+    fakeServer = await startFakeOpenAiCompatibleServer();
+    await writeFakeLocalOpenCodeConfig({
+      projectPath,
+      baseUrl: fakeServer.baseUrl,
+    });
 
-      harness = await createOpenCodeLiveHarness({
-        tempDir,
-        selectedModel: LOCAL_MODEL,
-        projectPath,
-      });
+    harness = await createOpenCodeLiveHarness({
+      tempDir,
+      selectedModel: LOCAL_MODEL,
+      projectPath,
+    });
 
-      teamName = `opencode-local-provider-app-${Date.now()}`;
-      const progressEvents: TeamProvisioningProgress[] = [];
-      const { runId } = await harness.svc.createTeam(
-        {
-          teamName,
-          cwd: projectPath,
-          providerId: 'opencode',
-          model: LOCAL_MODEL,
-          skipPermissions: true,
-          members: [
-            {
-              name: 'bob',
-              role: 'Developer',
-              providerId: 'opencode',
-              model: LOCAL_MODEL,
-              mcpPolicy: { mode: 'appOnly' },
-            },
-          ],
-        },
-        (progress) => progressEvents.push(progress)
-      );
-
-      const progressDump = formatProgressDump(progressEvents);
-      expect(runId, progressDump).toBeTruthy();
-      expect(
-        progressEvents.some((progress) =>
-          progress.message.includes('OpenCode team launch is ready')
-        ),
-        progressDump
-      ).toBe(true);
-      expect(progressDump).not.toContain('provider not connected');
-      expect(progressDump).not.toContain('not authenticated');
-      expect(progressDump).not.toContain('OpenCode team launch is not enabled');
-      expect(fakeServer.requests, progressDump).toContain('POST /v1/chat/completions');
-
-      const runtimeSnapshot = await harness.svc.getTeamAgentRuntimeSnapshot(teamName);
-      expect(runtimeSnapshot.runId).toBe(runId);
-      expect(runtimeSnapshot.members.bob).toMatchObject({
-        alive: true,
+    teamName = `opencode-local-provider-app-${Date.now()}`;
+    const progressEvents: TeamProvisioningProgress[] = [];
+    const { runId } = await harness.svc.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
         providerId: 'opencode',
-        laneId: 'primary',
-        laneKind: 'primary',
-        runtimeModel: LOCAL_MODEL,
-        historicalBootstrapConfirmed: true,
-      });
+        model: LOCAL_MODEL,
+        skipPermissions: true,
+        members: [
+          {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: LOCAL_MODEL,
+            mcpPolicy: { mode: 'appOnly' },
+          },
+        ],
+      },
+      (progress) => progressEvents.push(progress)
+    );
 
-      const deliveryMarker = `local-provider-delivery-${Date.now()}`;
-      const chatBodyCountBeforeDelivery = fakeServer.chatBodies.length;
-      const delivery = await harness.svc.deliverOpenCodeMemberMessage(teamName, {
-        memberName: 'bob',
-        messageId: `local-provider-delivery-${Date.now()}`,
-        replyRecipient: 'user',
-        source: 'manual',
-        text: [
-          `Local provider delivery marker: ${deliveryMarker}`,
-          'Answer with PONG. Do not edit files.',
-        ].join('\n'),
-      });
-      expect(delivery.delivered, JSON.stringify(delivery, null, 2)).toBe(true);
-      await waitUntil(
-        async () =>
-          fakeServer!.chatBodies.length > chatBodyCountBeforeDelivery &&
-          fakeServer!.chatBodies.some((body) => JSON.stringify(body).includes(deliveryMarker)),
-        60_000,
-        500
-      );
+    const progressDump = formatProgressDump(progressEvents);
+    expect(runId, progressDump).toBeTruthy();
+    expect(
+      progressEvents.some((progress) => progress.message.includes('OpenCode team launch is ready')),
+      progressDump
+    ).toBe(true);
+    expect(progressDump).not.toContain('provider not connected');
+    expect(progressDump).not.toContain('not authenticated');
+    expect(progressDump).not.toContain('OpenCode team launch is not enabled');
+    expect(fakeServer.requests, progressDump).toContain('POST /v1/chat/completions');
 
-      await harness.svc.stopTeam(teamName);
-      await waitForOpenCodeLanesStopped(teamName);
-      clearBenignSlowConfigReadWarnings();
-    },
-    300_000
-  );
+    const runtimeSnapshot = await harness.svc.getTeamAgentRuntimeSnapshot(teamName);
+    expect(runtimeSnapshot.runId).toBe(runId);
+    expect(runtimeSnapshot.members.bob).toMatchObject({
+      alive: true,
+      providerId: 'opencode',
+      laneId: 'primary',
+      laneKind: 'primary',
+      runtimeModel: LOCAL_MODEL,
+      historicalBootstrapConfirmed: true,
+    });
 
-  it(
-    'fails app service launch for an unknown local model before creating OpenCode lanes',
-    async () => {
-      const projectPath = path.join(tempDir, 'unknown-model-project');
-      await fs.mkdir(projectPath, { recursive: true });
-      fakeServer = await startFakeOpenAiCompatibleServer();
-      await writeFakeLocalOpenCodeConfig({
-        projectPath,
-        baseUrl: fakeServer.baseUrl,
-      });
+    const deliveryMarker = `local-provider-delivery-${Date.now()}`;
+    const chatBodyCountBeforeDelivery = fakeServer.chatBodies.length;
+    const delivery = await harness.svc.deliverOpenCodeMemberMessage(teamName, {
+      memberName: 'bob',
+      messageId: `local-provider-delivery-${Date.now()}`,
+      replyRecipient: 'user',
+      source: 'manual',
+      text: [
+        `Local provider delivery marker: ${deliveryMarker}`,
+        'Answer with PONG. Do not edit files.',
+      ].join('\n'),
+    });
+    expect(delivery.delivered, JSON.stringify(delivery, null, 2)).toBe(true);
+    await waitUntil(
+      async () =>
+        fakeServer!.chatBodies.length > chatBodyCountBeforeDelivery &&
+        fakeServer!.chatBodies.some((body) => JSON.stringify(body).includes(deliveryMarker)),
+      60_000,
+      500
+    );
 
-      harness = await createOpenCodeLiveHarness({
-        tempDir,
-        selectedModel: 'llama.cpp/missing-test:0.5b',
-        projectPath,
-      });
+    await harness.svc.stopTeam(teamName);
+    await waitForOpenCodeLanesStopped(teamName);
+    clearBenignSlowConfigReadWarnings();
+  }, 300_000);
 
-      teamName = `opencode-local-provider-unknown-${Date.now()}`;
-      const progressEvents: TeamProvisioningProgress[] = [];
-      const { runId } = await harness.svc.createTeam(
-        {
-          teamName,
-          cwd: projectPath,
-          providerId: 'opencode',
-          model: 'llama.cpp/missing-test:0.5b',
-          skipPermissions: true,
-          members: [
-            {
-              name: 'bob',
-              role: 'Developer',
-              providerId: 'opencode',
-              model: 'llama.cpp/missing-test:0.5b',
-            },
-          ],
-        },
-        (progress) => progressEvents.push(progress)
-      );
-      expect(runId).toBeTruthy();
-      await waitUntil(
-        async () => progressEvents.some((progress) => progress.state === 'failed'),
-        30_000,
-        500
-      );
+  it('fails app service launch for an unknown local model before creating OpenCode lanes', async () => {
+    const projectPath = path.join(tempDir, 'unknown-model-project');
+    await fs.mkdir(projectPath, { recursive: true });
+    fakeServer = await startFakeOpenAiCompatibleServer();
+    await writeFakeLocalOpenCodeConfig({
+      projectPath,
+      baseUrl: fakeServer.baseUrl,
+    });
 
-      const progressDump = formatProgressDump(progressEvents);
-      expect(progressEvents.some((progress) => progress.state === 'failed'), progressDump).toBe(
-        true
-      );
-      expect(progressDump).toMatch(/missing-test:0\.5b|not available|unavailable/i);
-      expect(fakeServer.requests, progressDump).not.toContain('POST /v1/chat/completions');
-      await waitUntil(
-        async () => {
-          const laneIndexPath = path.join(
-            getTeamsBasePath(),
-            teamName!,
-            'runtime',
-            'opencode',
-            'lanes.json'
-          );
-          try {
-            const parsed = JSON.parse(await fs.readFile(laneIndexPath, 'utf8')) as {
-              lanes?: Record<string, unknown>;
-            };
-            return Object.keys(parsed.lanes ?? {}).length === 0;
-          } catch (error) {
-            if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-              return true;
-            }
-            throw error;
+    harness = await createOpenCodeLiveHarness({
+      tempDir,
+      selectedModel: 'llama.cpp/missing-test:0.5b',
+      projectPath,
+    });
+
+    teamName = `opencode-local-provider-unknown-${Date.now()}`;
+    const progressEvents: TeamProvisioningProgress[] = [];
+    const { runId } = await harness.svc.createTeam(
+      {
+        teamName,
+        cwd: projectPath,
+        providerId: 'opencode',
+        model: 'llama.cpp/missing-test:0.5b',
+        skipPermissions: true,
+        members: [
+          {
+            name: 'bob',
+            role: 'Developer',
+            providerId: 'opencode',
+            model: 'llama.cpp/missing-test:0.5b',
+          },
+        ],
+      },
+      (progress) => progressEvents.push(progress)
+    );
+    expect(runId).toBeTruthy();
+    await waitUntil(
+      async () => progressEvents.some((progress) => progress.state === 'failed'),
+      30_000,
+      500
+    );
+
+    const progressDump = formatProgressDump(progressEvents);
+    expect(
+      progressEvents.some((progress) => progress.state === 'failed'),
+      progressDump
+    ).toBe(true);
+    expect(progressDump).toMatch(/missing-test:0\.5b|not available|unavailable/i);
+    expect(fakeServer.requests, progressDump).not.toContain('POST /v1/chat/completions');
+    await waitUntil(
+      async () => {
+        const laneIndexPath = path.join(
+          getTeamsBasePath(),
+          teamName!,
+          'runtime',
+          'opencode',
+          'lanes.json'
+        );
+        try {
+          const parsed = JSON.parse(await fs.readFile(laneIndexPath, 'utf8')) as {
+            lanes?: Record<string, unknown>;
+          };
+          return Object.keys(parsed.lanes ?? {}).length === 0;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            return true;
           }
-        },
-        15_000,
-        500
-      );
-      clearBenignSlowConfigReadWarnings();
-    },
-    180_000
-  );
+          throw error;
+        }
+      },
+      15_000,
+      500
+    );
+    clearBenignSlowConfigReadWarnings();
+  }, 180_000);
 });
 
 interface FakeOpenAiCompatibleServer {
@@ -248,7 +240,17 @@ async function startFakeOpenAiCompatibleServer(): Promise<FakeOpenAiCompatibleSe
   const chatBodies: unknown[] = [];
   const server = http.createServer(async (request, response) => {
     requests.push(`${request.method ?? 'GET'} ${request.url ?? '/'}`);
+    if (request.method === 'OPTIONS' && request.url === '/v1/models') {
+      response.writeHead(204, {
+        'access-control-allow-origin': '*',
+        'access-control-allow-methods': 'GET',
+        'access-control-allow-headers': 'accept',
+      });
+      response.end();
+      return;
+    }
     if (request.url === '/v1/models') {
+      response.setHeader('access-control-allow-origin', '*');
       sendJson(response, 200, {
         object: 'list',
         data: [{ id: 'qwen-test:0.5b', object: 'model' }],
@@ -333,30 +335,18 @@ async function writeFakeLocalOpenCodeConfig(input: {
   projectPath: string;
   baseUrl: string;
 }): Promise<void> {
-  const configPath = path.join(input.projectPath, 'opencode.json');
-  await fs.writeFile(
-    configPath,
-    `${JSON.stringify(
-      {
-        provider: {
-          'llama.cpp': {
-            npm: '@ai-sdk/openai-compatible',
-            options: {
-              baseURL: `${input.baseUrl}/v1`,
-            },
-            models: {
-              'qwen-test:0.5b': {},
-            },
-          },
-        },
-        model: LOCAL_MODEL,
-        small_model: LOCAL_MODEL,
-      },
-      null,
-      2
-    )}\n`,
-    'utf8'
-  );
+  const response = await new OpenCodeLocalProviderConnector().configureLocalProvider({
+    runtimeId: 'opencode',
+    scope: 'project',
+    projectPath: input.projectPath,
+    presetId: 'llama.cpp',
+    baseUrl: input.baseUrl,
+    defaultModelId: 'qwen-test:0.5b',
+    setAsDefault: true,
+  });
+  if (response.error) {
+    throw new Error(`Local provider onboarding failed: ${response.error.message}`);
+  }
 }
 
 async function readRequestBody(request: http.IncomingMessage): Promise<string> {
@@ -383,7 +373,10 @@ function clearBenignSlowConfigReadWarnings(): void {
   if (
     warn.mock.calls.length > 0 &&
     warn.mock.calls.every((call) =>
-      call.map((part) => String(part)).join(' ').includes('[getConfig] slow read diag=')
+      call
+        .map((part) => String(part))
+        .join(' ')
+        .includes('[getConfig] slow read diag=')
     )
   ) {
     warn.mockClear();

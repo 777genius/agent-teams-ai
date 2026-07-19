@@ -2215,7 +2215,7 @@ describe('ipc teams handlers', () => {
     }
   });
 
-  it('does not let a live duplicate of the same session rate-limit reply delay auto-resume', async () => {
+  it('does not schedule legacy auto-resume from duplicate rate-limit messages', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-17T12:00:30.000Z'));
     const configManager = ConfigManager.getInstance();
@@ -2284,7 +2284,7 @@ describe('ipc teams handlers', () => {
       expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(1100);
-      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledTimes(1);
+      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
     } finally {
       getConfigSpy.mockRestore();
     }
@@ -2629,7 +2629,7 @@ describe('ipc teams handlers', () => {
     expect(result.error).toContain('TEAM_DATA_WORKER_FAILED');
   });
 
-  it('rebuilds only the remaining auto-resume delay from persisted rate-limit history', async () => {
+  it('does not rebuild legacy auto-resume from persisted rate-limit history', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-17T12:02:00.000Z'));
     const configManager = ConfigManager.getInstance();
@@ -2681,13 +2681,13 @@ describe('ipc teams handlers', () => {
       expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(1100);
-      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledTimes(1);
+      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
     } finally {
       getConfigSpy.mockRestore();
     }
   });
 
-  it('can schedule auto-resume when the setting is enabled after an earlier history scan', async () => {
+  it('does not schedule legacy auto-resume when the old setting is enabled later', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-17T12:02:00.000Z'));
     const configManager = ConfigManager.getInstance();
@@ -2747,13 +2747,13 @@ describe('ipc teams handlers', () => {
       expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(1100);
-      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledTimes(1);
+      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
     } finally {
       getConfigSpy.mockRestore();
     }
   });
 
-  it('retries a previously over-ceiling history message once it becomes schedulable', async () => {
+  it('does not retry legacy auto-resume from persisted over-ceiling history', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-04-17T00:00:00.000Z'));
@@ -2813,7 +2813,7 @@ describe('ipc teams handlers', () => {
       expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(1500);
-      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledTimes(1);
+      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
     } finally {
       warnSpy.mockRestore();
       getConfigSpy.mockRestore();
@@ -3763,6 +3763,48 @@ describe('ipc teams handlers', () => {
       const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
       expect(result.success).toBe(true);
       expect(service.removeMember).toHaveBeenCalledWith('my-team', 'alice');
+    });
+
+    it('requests persisted runtime detach even when mutable team-alive tracking is absent', async () => {
+      provisioningService.isTeamAlive.mockReturnValueOnce(false);
+      const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
+
+      const result = (await handler({} as never, 'my-team', 'alice')) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(provisioningService.detachLiveRosterMember).toHaveBeenCalledWith('my-team', 'alice');
+      expect(provisioningService.sendMessageToTeam).not.toHaveBeenCalled();
+    });
+
+    it('treats repeated removal of a persisted tombstone as a successful no-op', async () => {
+      mockGetMembersMetaFile.mockImplementation(async () =>
+        service.removeMember.mock.calls.length > 0
+          ? {
+              version: 1,
+              providerBackendId: undefined,
+              members: [{ name: 'alice', role: 'Developer', removedAt: 1_752_000_000_000 }],
+            }
+          : {
+              version: 1,
+              providerBackendId: undefined,
+              members: [{ name: 'alice', role: 'Developer' }],
+            }
+      );
+      const handler = handlers.get(TEAM_REMOVE_MEMBER)!;
+
+      const firstResult = (await handler({} as never, 'my-team', 'alice')) as {
+        success: boolean;
+      };
+      const secondResult = (await handler({} as never, 'my-team', 'alice')) as {
+        success: boolean;
+      };
+
+      expect(firstResult.success).toBe(true);
+      expect(secondResult.success).toBe(true);
+      expect(service.getTeamData).toHaveBeenCalledTimes(2);
+      expect(service.removeMember).toHaveBeenCalledTimes(1);
+      expect(provisioningService.detachLiveRosterMember).toHaveBeenCalledTimes(1);
+      expect(provisioningService.sendMessageToTeam).toHaveBeenCalledTimes(1);
     });
 
     it('rejects invalid team name', async () => {

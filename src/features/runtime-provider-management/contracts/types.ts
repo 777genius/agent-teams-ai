@@ -22,9 +22,35 @@ export type RuntimeProviderCompanionPhaseDto =
   | 'signing-in'
   | 'verifying-auth'
   | 'verifying-model'
+  | 'running-action'
   | 'connected'
   | 'needs-manual-step'
   | 'error';
+
+export interface RuntimeProviderCompanionAccountDto {
+  display: string;
+  email: string | null;
+  accountType: string;
+  region: string | null;
+}
+
+export const RUNTIME_PROVIDER_COMPANION_ACTIONS = [
+  'switch-account',
+  'logout',
+  'doctor',
+  'update',
+] as const;
+
+export type RuntimeProviderCompanionActionDto = (typeof RUNTIME_PROVIDER_COMPANION_ACTIONS)[number];
+
+export function isRuntimeProviderCompanionAction(
+  value: unknown
+): value is RuntimeProviderCompanionActionDto {
+  return (
+    typeof value === 'string' &&
+    (RUNTIME_PROVIDER_COMPANION_ACTIONS as readonly string[]).includes(value)
+  );
+}
 
 export interface RuntimeProviderCompanionStatusDto {
   companionId: RuntimeProviderCompanionIdDto;
@@ -32,6 +58,10 @@ export interface RuntimeProviderCompanionStatusDto {
   phase: RuntimeProviderCompanionPhaseDto;
   installed: boolean;
   authenticated: boolean;
+  /** Optional while older packaged runtime bridges are still supported. */
+  account?: RuntimeProviderCompanionAccountDto | null;
+  supportedActions?: readonly RuntimeProviderCompanionActionDto[];
+  actionOutput?: string | null;
   binaryPath: string | null;
   version: string | null;
   percent: number | null;
@@ -46,6 +76,10 @@ export interface RuntimeProviderCompanionStatusDto {
 export interface RuntimeProviderCompanionInput {
   companionId: RuntimeProviderCompanionIdDto;
   projectPath?: string | null;
+}
+
+export interface RuntimeProviderCompanionActionInput extends RuntimeProviderCompanionInput {
+  action: RuntimeProviderCompanionActionDto;
 }
 
 export type RuntimeProviderStateDto = 'ready' | 'needs-auth' | 'needs-setup' | 'degraded';
@@ -127,6 +161,12 @@ export interface RuntimeProviderSetupFormDto {
   authOptions?: readonly RuntimeProviderSetupAuthOptionDto[];
   /** Optional while older packaged orchestrators are still supported. */
   defaultAuthOptionId?: string | null;
+  /** Optional while older packaged orchestrators are still supported. */
+  verification?: {
+    kind: 'model-request';
+    freeModelPreferred: boolean;
+    mayUseQuotaOrBalance: boolean;
+  } | null;
 }
 
 export type RuntimeProviderOAuthCompletionMethodDto = 'auto' | 'code';
@@ -371,6 +411,8 @@ export type RuntimeProviderModelProofStateDto =
   | 'verified'
   | 'failed';
 
+export type RuntimeProviderModelCatalogStatusDto = 'active' | 'alpha' | 'beta' | 'deprecated';
+
 export interface RuntimeProviderModelDto {
   modelId: string;
   providerId: string;
@@ -378,6 +420,8 @@ export interface RuntimeProviderModelDto {
   sourceLabel: string;
   free: boolean;
   default: boolean;
+  /** Optional while older packaged orchestrators are still supported. */
+  catalogStatus?: RuntimeProviderModelCatalogStatusDto;
   availability: RuntimeProviderModelAvailabilityDto;
   accessKind?: RuntimeProviderModelAccessKindDto;
   routeKind?: RuntimeProviderModelRouteKindDto;
@@ -522,6 +566,144 @@ export interface RuntimeProviderManagementConfigureModelLimitsInput {
   contextTokens: number;
   outputTokens: number;
   projectPath?: string | null;
+}
+
+export const RUNTIME_LOCAL_PROVIDER_PRESET_IDS = [
+  'ollama',
+  'lm-studio',
+  'atomic-chat',
+  'llama.cpp',
+  'custom',
+] as const;
+
+export type RuntimeLocalProviderPresetIdDto = (typeof RUNTIME_LOCAL_PROVIDER_PRESET_IDS)[number];
+
+export interface RuntimeLocalProviderPresetDto {
+  id: RuntimeLocalProviderPresetIdDto;
+  providerId: string;
+  displayName: string;
+  defaultBaseUrl: string;
+  description: string;
+  scannable: boolean;
+}
+
+export interface RuntimeLocalProviderModelDto {
+  id: string;
+  displayName: string;
+}
+
+export type RuntimeLocalProviderProbeStateDto = 'available' | 'unavailable';
+
+export interface RuntimeLocalProviderProbeDto {
+  preset: RuntimeLocalProviderPresetDto;
+  providerId: string;
+  baseUrl: string;
+  state: RuntimeLocalProviderProbeStateDto;
+  models: readonly RuntimeLocalProviderModelDto[];
+  latencyMs: number | null;
+  message: string;
+}
+
+export type RuntimeLocalProviderErrorCodeDto =
+  | 'invalid-input'
+  | 'endpoint-unreachable'
+  | 'invalid-response'
+  | 'project-required'
+  | 'config-conflict'
+  | 'config-invalid'
+  | 'write-failed';
+
+export interface RuntimeLocalProviderErrorDto {
+  code: RuntimeLocalProviderErrorCodeDto;
+  message: string;
+  recoverable: boolean;
+}
+
+export interface RuntimeLocalProviderScanInput {
+  runtimeId: RuntimeProviderManagementRuntimeId;
+}
+
+export interface RuntimeLocalProviderScanResponse {
+  schemaVersion: 1;
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  probes?: readonly RuntimeLocalProviderProbeDto[];
+  error?: RuntimeLocalProviderErrorDto;
+}
+
+export const RUNTIME_LOCAL_PROVIDER_SCOPES = ['global', 'project'] as const;
+
+export type RuntimeLocalProviderScopeDto = (typeof RUNTIME_LOCAL_PROVIDER_SCOPES)[number];
+
+export interface RuntimeLocalProviderListInput {
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  scope: RuntimeLocalProviderScopeDto;
+  projectPath?: string | null;
+}
+
+export interface RuntimeLocalProviderListEntryDto {
+  preset: RuntimeLocalProviderPresetDto;
+  providerId: string;
+  baseUrl: string;
+  configuredModelIds: readonly string[];
+  defaultModelId: string | null;
+  isDefault: boolean;
+  state: RuntimeLocalProviderProbeStateDto;
+  liveModels: readonly RuntimeLocalProviderModelDto[];
+  latencyMs: number | null;
+  message: string;
+}
+
+export interface RuntimeLocalProviderListResponse {
+  schemaVersion: 1;
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  scope?: RuntimeLocalProviderScopeDto;
+  projectPath?: string;
+  configPath?: string;
+  providers?: readonly RuntimeLocalProviderListEntryDto[];
+  error?: RuntimeLocalProviderErrorDto;
+}
+
+export interface RuntimeLocalProviderProbeInput {
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  presetId: RuntimeLocalProviderPresetIdDto;
+  baseUrl?: string | null;
+  providerId?: string | null;
+}
+
+export interface RuntimeLocalProviderProbeResponse {
+  schemaVersion: 1;
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  probe?: RuntimeLocalProviderProbeDto;
+  error?: RuntimeLocalProviderErrorDto;
+}
+
+export interface RuntimeLocalProviderConfigureInput {
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  scope: RuntimeLocalProviderScopeDto;
+  projectPath?: string | null;
+  presetId: RuntimeLocalProviderPresetIdDto;
+  baseUrl?: string | null;
+  providerId?: string | null;
+  defaultModelId: string;
+  setAsDefault: boolean;
+}
+
+export interface RuntimeLocalProviderConfigurationDto {
+  providerId: string;
+  baseUrl: string;
+  modelIds: readonly string[];
+  defaultModelId: string;
+  modelRoute: string;
+  configPath: string;
+  scope: RuntimeLocalProviderScopeDto;
+  setAsDefault: boolean;
+}
+
+export interface RuntimeLocalProviderConfigureResponse {
+  schemaVersion: 1;
+  runtimeId: RuntimeProviderManagementRuntimeId;
+  configuration?: RuntimeLocalProviderConfigurationDto;
+  error?: RuntimeLocalProviderErrorDto;
 }
 
 export interface RuntimeProviderModelLimitsResultDto {

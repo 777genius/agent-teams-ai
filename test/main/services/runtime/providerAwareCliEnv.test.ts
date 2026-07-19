@@ -35,6 +35,12 @@ vi.mock('../../../../src/main/services/infrastructure/ConfigManager', () => ({
           codex: 'codex-native',
         },
       },
+      providerConnections: {
+        anthropic: {
+          authMode: 'auto',
+          compatibleEndpoint: { enabled: false },
+        },
+      },
     }),
   },
 }));
@@ -149,6 +155,7 @@ describe('buildProviderAwareCliEnv', () => {
         EXTRA_FLAG: '1',
         CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST: '1',
         CLAUDE_CODE_ENTRY_PROVIDER: 'anthropic',
+        AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE: 'auto',
       }),
       'anthropic',
       undefined
@@ -616,12 +623,20 @@ describe('buildProviderAwareCliEnv', () => {
       'current',
       'opencode'
     );
+    const staleShellBinaryPath = path.join(process.cwd(), 'old shell opencode', 'opencode');
     resolveVerifiedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(appManagedBinaryPath);
 
     const { buildProviderAwareCliEnv } =
       await import('../../../../src/main/services/runtime/providerAwareCliEnv');
     const result = await buildProviderAwareCliEnv({
       providerId: 'opencode',
+      shellEnv: {
+        CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH: staleShellBinaryPath,
+        OPENCODE_BIN_PATH: staleShellBinaryPath,
+        PATH: [path.dirname(staleShellBinaryPath), path.dirname(appManagedBinaryPath)].join(
+          path.delimiter
+        ),
+      },
     });
 
     expect(applyConfiguredConnectionEnvMock).toHaveBeenCalledWith(
@@ -635,6 +650,11 @@ describe('buildProviderAwareCliEnv', () => {
     expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(appManagedBinaryPath);
     expect(result.env.OPENCODE_BIN_PATH).toBe(appManagedBinaryPath);
     expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(appManagedBinaryPath));
+    expect(
+      result.env.PATH
+        ?.split(path.delimiter)
+        .filter((entry) => entry === path.dirname(appManagedBinaryPath))
+    ).toHaveLength(1);
   });
 
   it('exposes an explicit OpenCode binary override on PATH when the app-managed resolver is cold', async () => {

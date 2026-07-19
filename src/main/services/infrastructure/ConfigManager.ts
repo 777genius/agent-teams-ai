@@ -22,6 +22,7 @@ import * as path from 'path';
 import { DEFAULT_TRIGGERS, TriggerManager } from './TriggerManager';
 
 import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
+import type { TeamRuntimeRecoveryConfig } from '@features/team-runtime-recovery/contracts';
 import type { TriggerColor } from '@shared/constants/triggerColors';
 import type { SshConnectionProfile } from '@shared/types/api';
 
@@ -344,6 +345,7 @@ export interface HttpServerConfig {
 
 export interface AppConfig {
   notifications: NotificationConfig;
+  teamRuntimeRecovery: TeamRuntimeRecoveryConfig;
   general: GeneralConfig;
   providerConnections: ProviderConnectionsConfig;
   runtime: RuntimeConfig;
@@ -390,6 +392,12 @@ const DEFAULT_CONFIG: AppConfig = {
     statusChangeOnlySolo: false,
     statusChangeStatuses: ['in_progress', 'completed'],
     triggers: DEFAULT_TRIGGERS,
+  },
+  teamRuntimeRecovery: {
+    transientErrorsEnabled: false,
+    rateLimitsEnabled: false,
+    initialDelaySeconds: 60,
+    maxAttempts: 2,
   },
   general: {
     launchAtLogin: false,
@@ -545,6 +553,7 @@ export class ConfigManager {
   private readonly configPath: string;
   private static instance: ConfigManager | null = null;
   private triggerManager: TriggerManager;
+  private readonly configChangeListeners = new Set<(section: ConfigSection | 'reload') => void>();
 
   constructor(configPath?: string) {
     this.configPath = configPath ?? getDefaultConfigPath();
@@ -636,6 +645,7 @@ export class ConfigManager {
    */
   private mergeWithDefaults(loaded: Partial<AppConfig>): AppConfig {
     const loadedNotifications = loaded.notifications ?? ({} as Partial<NotificationConfig>);
+    const loadedRecovery: Partial<TeamRuntimeRecoveryConfig> = loaded.teamRuntimeRecovery ?? {};
     const loadedTriggers = loadedNotifications.triggers ?? [];
 
     const mergedGeneral: GeneralConfig = {
@@ -714,6 +724,16 @@ export class ConfigManager {
           DEFAULT_CONFIG.notifications.statusChangeStatuses,
         triggers: mergedTriggers,
       },
+      teamRuntimeRecovery: {
+        transientErrorsEnabled: loadedRecovery.transientErrorsEnabled ?? false,
+        rateLimitsEnabled:
+          loadedRecovery.rateLimitsEnabled ?? loadedNotifications.autoResumeOnRateLimit ?? false,
+        initialDelaySeconds: Math.min(
+          900,
+          Math.max(15, Math.round(loadedRecovery.initialDelaySeconds ?? 60))
+        ),
+        maxAttempts: Math.min(5, Math.max(1, Math.round(loadedRecovery.maxAttempts ?? 2))),
+      },
       general: mergedGeneral,
       providerConnections: {
         anthropic: {
@@ -787,6 +807,21 @@ export class ConfigManager {
     return this.configPath;
   }
 
+  onConfigChanged(listener: (section: ConfigSection | 'reload') => void): () => void {
+    this.configChangeListeners.add(listener);
+    return () => this.configChangeListeners.delete(listener);
+  }
+
+  private notifyConfigChanged(section: ConfigSection | 'reload'): void {
+    for (const listener of this.configChangeListeners) {
+      try {
+        listener(section);
+      } catch (error) {
+        logger.warn('Config change listener failed', error);
+      }
+    }
+  }
+
   // ===========================================================================
   // Config Updates
   // ===========================================================================
@@ -808,6 +843,7 @@ export class ConfigManager {
     }
 
     this.saveConfig();
+    this.notifyConfigChanged(section);
     return this.getConfig();
   }
 
@@ -902,6 +938,7 @@ export class ConfigManager {
 
     this.config.notifications.ignoredRegex.push(trimmedPattern);
     this.saveConfig();
+    this.notifyConfigChanged('reload');
     return this.getConfig();
   }
 
@@ -1335,6 +1372,7 @@ export class ConfigManager {
     this.config = this.deepClone(DEFAULT_CONFIG);
     applyConfiguredClaudeRootPath(this.config.general.claudeRootPath);
     this.triggerManager.setTriggers(this.config.notifications.triggers);
+    this.notifyConfigChanged('reload');
     this.saveConfig();
     logger.info('Config reset to defaults');
     return this.getConfig();
@@ -1349,6 +1387,7 @@ export class ConfigManager {
     this.config = this.loadConfig();
     applyConfiguredClaudeRootPath(this.config.general.claudeRootPath);
     this.triggerManager.setTriggers(this.config.notifications.triggers);
+    this.notifyConfigChanged('reload');
     logger.info('Config reloaded from disk');
     return this.getConfig();
   }

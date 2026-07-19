@@ -4,6 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { useLazyFileContent } from '@renderer/hooks/useLazyFileContent';
 import { useVisibleFileSection } from '@renderer/hooks/useVisibleFileSection';
 import { useStore } from '@renderer/store';
+import { getFileHunkCount } from '@renderer/store/slices/changeReviewSlice';
 import { getFileReviewKey } from '@renderer/utils/reviewKey';
 
 import {
@@ -15,8 +16,13 @@ import {
 import { FileSectionDiff } from './FileSectionDiff';
 import { FileSectionHeader } from './FileSectionHeader';
 import { FullDiffLoadingBanner } from './FullDiffLoadingBanner';
+import { getEffectiveReviewFileDecision } from './reviewContentPreview';
 
 import type { EditorView } from '@codemirror/view';
+import type {
+  ReviewDraftHistoryEntry,
+  ReviewSerializedEditorState,
+} from '@features/change-review-history/contracts';
 import type { FileChangeWithContent, HunkDecision } from '@shared/types';
 import type { EditorSelectionInfo } from '@shared/types/editor';
 import type { FileChangeSummary } from '@shared/types/review';
@@ -35,17 +41,26 @@ interface ContinuousScrollViewProps {
   reviewExternalChangesByFile: Record<string, { type: 'change' | 'add' | 'unlink' }>;
   viewedSet: Set<string>;
   editedContents: Record<string, string>;
+  draftHistoryEntries: Record<string, ReviewDraftHistoryEntry>;
   hunkDecisions: Record<string, HunkDecision>;
   fileDecisions: Record<string, HunkDecision>;
   hunkContextHashesByFile: Record<string, Record<number, string>>;
   collapseUnchanged: boolean;
   applying: boolean;
+  filesApplying?: ReadonlySet<string>;
   autoViewed: boolean;
   discardCounters: Record<string, number>;
-  onHunkAccepted: (filePath: string, hunkIndex: number) => void;
-  onHunkRejected: (filePath: string, hunkIndex: number) => void;
+  onHunkAccepted: (filePath: string, hunkIndex: number) => boolean | void;
+  onHunkRejected: (
+    filePath: string,
+    hunkIndex: number,
+    beforeContent: string,
+    afterContent: string
+  ) => boolean | void;
   onFullyViewed: (filePath: string) => void;
-  onContentChanged: (filePath: string, content: string) => void;
+  onContentChanged: (filePath: string, content: string, previousContent?: string) => void;
+  onSerializedStateChanged: (filePath: string, state: ReviewSerializedEditorState) => void;
+  onSerializedStateRestoreError: (filePath: string, error: unknown) => void;
   onDiscard: (filePath: string) => void;
   onSave: (filePath: string) => void;
   onReloadFromDisk: (filePath: string) => void;
@@ -85,17 +100,21 @@ export const ContinuousScrollView = ({
   reviewExternalChangesByFile,
   viewedSet,
   editedContents,
+  draftHistoryEntries,
   hunkDecisions,
   fileDecisions,
   hunkContextHashesByFile,
   collapseUnchanged,
   applying,
+  filesApplying,
   autoViewed,
   discardCounters,
   onHunkAccepted,
   onHunkRejected,
   onFullyViewed,
   onContentChanged,
+  onSerializedStateChanged,
+  onSerializedStateRestoreError,
   onDiscard,
   onSave,
   onReloadFromDisk,
@@ -119,6 +138,7 @@ export const ContinuousScrollView = ({
 }: ContinuousScrollViewProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
   const setFileChunkCount = useStore((s) => s.setFileChunkCount);
+  const fileChunkCounts = useStore((s) => s.fileChunkCounts);
   const [localCollapsedFiles, setLocalCollapsedFiles] = useState<Set<string>>(() => new Set());
   const collapsedFiles = collapsedFilesProp ?? localCollapsedFiles;
 
@@ -178,17 +198,19 @@ export const ContinuousScrollView = ({
   const fileDecisionsRef = useRef(fileDecisions);
   const hunkDecisionsRef = useRef(hunkDecisions);
   const hunkHashesRef = useRef(hunkContextHashesByFile);
+  const editedContentsRef = useRef(editedContents);
   useEffect(() => {
     fileDecisionsRef.current = fileDecisions;
     hunkDecisionsRef.current = hunkDecisions;
     hunkHashesRef.current = hunkContextHashesByFile;
+    editedContentsRef.current = editedContents;
   });
 
   // Track which views have already had decisions replayed to prevent
   // cascading re-replays on every render (useEffect in FileSectionDiff has no deps).
   // When a view is destroyed/recreated (discard, lazy remount), the identity changes
   // and replay runs once for the new instance.
-  const replayedViewsRef = useRef(new Set<EditorView>());
+  const replayedViewsRef = useRef(new WeakSet<EditorView>());
 
   const handleEditorViewReady = useCallback(
     (filePath: string, view: EditorView | null) => {
@@ -207,6 +229,10 @@ export const ContinuousScrollView = ({
         if (chunks) {
           setFileChunkCount(filePath, chunks.chunks.length);
         }
+
+        // A recovered/manual draft is authoritative for the editor document. Replaying
+        // decisions into it would mutate only the visual buffer and corrupt native Undo.
+        if (filePath in editedContentsRef.current) return;
 
         const fileDecision =
           fileDecisionsRef.current[reviewKey] ?? fileDecisionsRef.current[filePath];
@@ -266,6 +292,13 @@ export const ContinuousScrollView = ({
         const hasEdits = filePath in editedContents;
         const isViewed = viewedSet.has(filePath);
         const decision = fileDecisions[reviewKey] ?? fileDecisions[filePath];
+        const effectiveDecision = getEffectiveReviewFileDecision(
+          file,
+          getFileHunkCount(filePath, file.snippets.length, fileChunkCounts),
+          hunkDecisions,
+          decision
+        );
+        const fileApplying = applying || filesApplying?.has(filePath) === true;
 
         const isCollapsed = collapsedFiles.has(filePath);
 
@@ -274,11 +307,12 @@ export const ContinuousScrollView = ({
             <FileSectionHeader
               file={file}
               fileContent={content}
-              fileDecision={decision}
+              contentResolved={hasContent}
+              fileDecision={effectiveDecision}
               externalChange={reviewExternalChangesByFile[filePath]}
               pathChangeLabel={pathChangeLabels?.[filePath]}
               hasEdits={hasEdits}
-              applying={applying}
+              applying={fileApplying}
               isCollapsed={isCollapsed}
               onToggleCollapse={handleToggleCollapse}
               onDiscard={onDiscard}
@@ -294,12 +328,17 @@ export const ContinuousScrollView = ({
               <FileSectionDiff
                 file={file}
                 fileContent={content}
+                draftContent={editedContents[filePath]}
                 isLoading={!hasContent}
+                applying={fileApplying}
                 collapseUnchanged={collapseUnchanged}
                 onHunkAccepted={onHunkAccepted}
                 onHunkRejected={onHunkRejected}
                 onFullyViewed={onFullyViewed}
                 onContentChanged={onContentChanged}
+                serializedState={draftHistoryEntries[filePath]?.editorState}
+                onSerializedStateChanged={onSerializedStateChanged}
+                onSerializedStateRestoreError={onSerializedStateRestoreError}
                 onEditorViewReady={handleEditorViewReady}
                 discardCounter={discardCounters[filePath] ?? 0}
                 autoViewed={autoViewed}

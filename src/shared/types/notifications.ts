@@ -22,6 +22,7 @@ import type { TriggerColor } from '@shared/constants/triggerColors';
 export type TeamEventType =
   | 'rate_limit'
   | 'api_error'
+  | 'runtime_recovery'
   | 'lead_inbox'
   | 'user_inbox'
   | 'task_clarification'
@@ -339,6 +340,13 @@ export interface AppConfig {
     statusChangeStatuses: string[];
     /** Notification triggers - define when to generate notifications */
     triggers: NotificationTrigger[];
+  };
+  /** Runtime-turn recovery is independent from the master notification switch. */
+  teamRuntimeRecovery: {
+    transientErrorsEnabled: boolean;
+    rateLimitsEnabled: boolean;
+    initialDelaySeconds: number;
+    maxAttempts: number;
   };
   /** General application settings */
   general: {

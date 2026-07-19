@@ -1346,7 +1346,7 @@ describe('TeamProvisioningService auto-resume cleanup', () => {
     vi.useRealTimers();
   });
 
-  it('cancels pending auto-resume timers when a run is cleaned up', async () => {
+  it('does not couple run cleanup to the legacy auto-resume singleton', async () => {
     const service = new TeamProvisioningService();
     seedConfig('my-team');
     const run = attachRun(service, 'my-team', { provisioningComplete: true });
@@ -1381,7 +1381,7 @@ describe('TeamProvisioningService auto-resume cleanup', () => {
       (service as unknown as { cleanupRun: (runLike: unknown) => void }).cleanupRun(run);
 
       await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 30 * 1000 + 100);
-      expect(autoResumeProvisioning.sendMessageToTeam).not.toHaveBeenCalled();
+      expect(autoResumeProvisioning.sendMessageToTeam).toHaveBeenCalledTimes(1);
     } finally {
       getConfigSpy.mockRestore();
     }
@@ -1566,7 +1566,7 @@ describe('TeamProvisioningService auto-resume cleanup', () => {
     }
   });
 
-  it('schedules auto-resume from api_retry model_cooldown payloads during provisioning', async () => {
+  it('does not schedule legacy auto-resume from api_retry model_cooldown payloads', async () => {
     vi.setSystemTime(new Date('2026-04-17T12:00:00.000Z'));
 
     const service = new TeamProvisioningService();
@@ -1622,11 +1622,7 @@ describe('TeamProvisioningService auto-resume cleanup', () => {
       expect(autoResumeProvisioning.sendMessageToTeam).not.toHaveBeenCalled();
 
       await vi.advanceTimersByTimeAsync(1500);
-      expect(autoResumeProvisioning.sendMessageToTeam).toHaveBeenCalledTimes(1);
-      expect(autoResumeProvisioning.sendMessageToTeam).toHaveBeenCalledWith(
-        'my-team',
-        expect.stringContaining('rate limit has reset')
-      );
+      expect(autoResumeProvisioning.sendMessageToTeam).not.toHaveBeenCalled();
     } finally {
       getConfigSpy.mockRestore();
     }

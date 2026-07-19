@@ -4,6 +4,7 @@ import {
   getOpenCodeQualifiedModelSourceLabel,
   parseOpenCodeQualifiedModelRef,
 } from '@shared/utils/opencodeModelRef';
+import { isOpenCodeModelExplicitlyFree } from '@shared/utils/opencodeModelRoute';
 import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
 
 import type { CliProviderId, CliProviderStatus, TeamProviderId } from '@shared/types';
@@ -589,16 +590,6 @@ export function getRuntimeAwareTeamModelBadgeLabel(
   return getTeamModelBadgeLabel(providerId, model);
 }
 
-function hasExplicitFreeOpenCodeModelMarker(model: string): boolean {
-  const normalized = model.trim().toLowerCase();
-  return (
-    normalized === 'opencode/big-pickle' ||
-    normalized.includes(':free') ||
-    normalized.endsWith('-free') ||
-    normalized.endsWith('/free')
-  );
-}
-
 function isFreeOpenCodeModelForOrdering(
   providerId: SupportedProviderId,
   model: string,
@@ -609,16 +600,16 @@ function isFreeOpenCodeModelForOrdering(
   }
 
   const runtimeModel = getRuntimeCatalogModel(providerId, model, providerStatus);
-  if (runtimeModel?.metadata?.free === true) {
-    return true;
-  }
-
-  const badgeLabel = runtimeModel?.badgeLabel?.trim().toLowerCase();
-  if (badgeLabel) {
-    return badgeLabel === 'free';
-  }
-
-  return hasExplicitFreeOpenCodeModelMarker(model);
+  const route = runtimeModel?.metadata?.opencode;
+  return isOpenCodeModelExplicitlyFree({
+    modelId: model,
+    catalogId: runtimeModel?.id,
+    providerId: route?.providerId,
+    routeKind: route?.routeKind,
+    accessKind: route?.accessKind,
+    free: runtimeModel?.metadata?.free,
+    badgeLabel: runtimeModel?.badgeLabel,
+  });
 }
 
 export function sortTeamProviderModels(

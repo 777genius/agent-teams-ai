@@ -13,6 +13,7 @@ import {
   findTabBySessionAndProject,
   truncateLabel,
 } from '@renderer/types/tabs';
+import { deferTabMutationForActiveChangeReview } from '@renderer/utils/changeReviewLifecycleCoordinator';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 
 import {
@@ -154,6 +155,14 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
       // Replace active tab if replaceActiveTab option is set or active tab is a dashboard
       const activeTab = focusedPane.tabs.find((t) => t.id === focusedPane.activeTabId);
       if (activeTab && (options?.replaceActiveTab || activeTab.type === 'dashboard')) {
+        if (
+          deferTabMutationForActiveChangeReview(
+            new Set([activeTab.id]),
+            () => get().openTab(tab, options)
+          )
+        ) {
+          return;
+        }
         // Cleanup old tab's state if it was a session tab
         if (activeTab.type === 'session') {
           state.cleanupTabUIState(activeTab.id);
@@ -197,6 +206,11 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
 
   // Close a tab by ID in whichever pane contains it
   closeTab: (tabId: string) => {
+    if (
+      deferTabMutationForActiveChangeReview(new Set([tabId]), () => get().closeTab(tabId))
+    ) {
+      return;
+    }
     const state = get();
     const { paneLayout } = state;
     const pane = findPaneByTabId(paneLayout, tabId);
@@ -587,6 +601,14 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
     if (!pane) return;
 
     const tabsToClose = pane.tabs.filter((t) => t.id !== tabId);
+    if (
+      deferTabMutationForActiveChangeReview(
+        new Set(tabsToClose.map((tab) => tab.id)),
+        () => get().closeOtherTabs(tabId)
+      )
+    ) {
+      return;
+    }
     for (const tab of tabsToClose) {
       state.cleanupTabUIState(tab.id);
       state.cleanupTabSessionData(tab.id);
@@ -619,6 +641,14 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
     if (index === -1) return;
 
     const tabsToClose = pane.tabs.slice(index + 1);
+    if (
+      deferTabMutationForActiveChangeReview(
+        new Set(tabsToClose.map((tab) => tab.id)),
+        () => get().closeTabsToRight(tabId)
+      )
+    ) {
+      return;
+    }
     for (const tab of tabsToClose) {
       state.cleanupTabUIState(tab.id);
       state.cleanupTabSessionData(tab.id);
@@ -644,6 +674,7 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
 
   // Close all tabs across all panes, reset to initial state
   closeAllTabs: () => {
+    if (deferTabMutationForActiveChangeReview(null, () => get().closeAllTabs())) return;
     const state = get();
     const allTabs = getAllTabs(state.paneLayout);
     for (const tab of allTabs) {
@@ -674,6 +705,11 @@ export const createTabSlice: StateCreator<AppState, [], [], TabSlice> = (set, ge
 
   // Close multiple tabs by ID (within the pane containing them)
   closeTabs: (tabIds: string[]) => {
+    if (
+      deferTabMutationForActiveChangeReview(new Set(tabIds), () => get().closeTabs(tabIds))
+    ) {
+      return;
+    }
     const state = get();
     const idSet = new Set(tabIds);
 

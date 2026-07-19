@@ -134,10 +134,6 @@ import {
   isAgentActionMode,
 } from '../services/team/actionModeInstructions';
 import {
-  getAutoResumeService,
-  initializeAutoResumeService,
-} from '../services/team/AutoResumeService';
-import {
   cloneLaunchIoGovernorPayload,
   type LaunchIoGovernor,
 } from '../services/team/LaunchIoGovernor';
@@ -802,7 +798,6 @@ export function initializeTeamHandlers(
 ): void {
   teamDataService = service;
   teamProvisioningService = provisioningService;
-  initializeAutoResumeService(provisioningService);
   teamMemberLogsFinder = logsFinder ?? null;
   memberStatsComputer = statsComputer ?? null;
   teamBackupService = backupService ?? null;
@@ -1453,7 +1448,6 @@ async function handleDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('deleteTeam', async () => {
-    getAutoResumeService().cancelPendingAutoResume(validated.value!);
     await getTeamProvisioningService().stopTeam(validated.value!);
     await getTeamDataService().deleteTeam(validated.value!);
     getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
@@ -1483,7 +1477,6 @@ async function handlePermanentlyDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('permanentlyDeleteTeam', async () => {
-    getAutoResumeService().cancelPendingAutoResume(validated.value!);
     await getTeamDataService().permanentlyDeleteTeam(validated.value!);
     getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
     // Clean up app-owned data (attachments, task-attachments) that lives outside ~/.claude/
@@ -4425,7 +4418,6 @@ async function handleStopTeam(
   }
   return wrapTeamHandler('stop', async () => {
     addMainBreadcrumb('team', 'stop', { teamName: validated.value! });
-    getAutoResumeService().cancelPendingAutoResume(validated.value!);
     await getTeamProvisioningService().stopTeam(validated.value!);
   });
 }
@@ -4872,6 +4864,15 @@ async function handleRemoveMember(
     const previousMembersMeta = await new TeamMembersMetaStore().getMeta(tn).catch(() => null);
     const previousTeamData = await teamDataService.getTeamData(tn);
     const previousMembers = previousTeamData.members as RuntimeRosterMutationMember[];
+    const normalizedMemberName = name.trim().toLowerCase();
+    const isAlreadyRemoved = previousMembersMeta?.members.some(
+      (member) =>
+        member.name.trim().toLowerCase() === normalizedMemberName &&
+        typeof member.removedAt === 'number'
+    );
+    if (isAlreadyRemoved) {
+      return;
+    }
     const provisioning = getTeamProvisioningService();
     const isTeamAlive = provisioning.isTeamAlive(tn);
     if (isTeamAlive && isOpenCodeLedRoster(previousMembers)) {
@@ -4880,21 +4881,21 @@ async function handleRemoveMember(
     await teamDataService.removeMember(tn, name);
     invalidateTeamRosterSnapshotCaches(tn);
 
-    if (isTeamAlive) {
-      try {
-        await provisioning.detachLiveRosterMember(tn, name);
-      } catch (error) {
-        await rollbackLiveRosterMutation({
-          teamName: tn,
-          teamDataService,
-          provisioning,
-          previousMembers,
-          previousMembersMeta,
-          restoreLiveMemberNames: [name],
-        });
-        throw error;
-      }
+    try {
+      await provisioning.detachLiveRosterMember(tn, name);
+    } catch (error) {
+      await rollbackLiveRosterMutation({
+        teamName: tn,
+        teamDataService,
+        provisioning,
+        previousMembers,
+        previousMembersMeta,
+        restoreLiveMemberNames: isTeamAlive ? [name] : [],
+      });
+      throw error;
+    }
 
+    if (isTeamAlive) {
       const message =
         `Teammate "${name}" has been removed from the team. ` +
         `They will no longer participate in team activities. Please reassign their tasks if needed.`;

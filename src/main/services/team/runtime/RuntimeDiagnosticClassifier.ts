@@ -35,7 +35,7 @@ const OPENCODE_SESSION_REFRESH_REASON_PATTERN =
   /\b(?:resolved_behavior_changed|opencode_app_mcp_transport_changed):[-a-z0-9._~/=]+->[-a-z0-9._~/=]+/i;
 const OPENCODE_SESSION_REFRESH_FAILURE_PATTERN =
   // eslint-disable-next-line sonarjs/regex-complexity -- Keyword taxonomy is kept literal to preserve diagnostic behavior.
-  /(?:^|[_\s:;.\/()-])(?:permission[_\s-]?denied|permission[_\s-]?blocked|access[_\s-]?denied|auth[_\s-]?unavailable|authentication[_\s-]?failed|unauthorized|forbidden|401|403|login[_\s-]?required|not\s+logged\s+in|missing\s+credentials?|invalid\s+credentials?|credentials?[_\s-]?required|credentials?[_\s-]?unavailable|no auth available|authorization|auth(?:entication)?(?:[_\s-]?(?:failed|unavailable))?|invalid api[_\s-]?key|api[_\s-]?key|does not have access|quota|rate[_\s-]?(?:limit|limited)|too many requests|429|model cooldown|cooling down|enospc|no space left|disk is full|capacity exceeded|quota exhausted|usage exceeded|free usage exceeded|key limit exceeded|total limit|insufficient credits|subscribe to go|error|failed|failure|timeout|timed\s+out|network|connection|unable\s+to\s+connect|connect\s+failed|econn[a-z_]*|enotfound|fetch[_\s-]?failed|connection[_\s-]?(?:refused|reset)|aborted|cancel(?:ed|led)|interrupted|service[_\s-]?unavailable|temporarily\s+unavailable|overloaded|visible[_\s-]?reply(?:[_\s-][a-z0-9]+)*|task[_\s-]?refs|relayofmessageid|relay[_\s-]?of[_\s-]?message[_\s-]?id|message[_\s-]?send|non[_\s-]?visible[_\s-]?tool(?:[_\s-][a-z0-9]+)*|protocol[_\s-]?proof)(?=$|[_\s:;.\/(),-])/i;
+  /(?:^|[_\s:;./()-])(?:permission[_\s-]?denied|permission[_\s-]?blocked|access[_\s-]?denied|auth[_\s-]?unavailable|authentication[_\s-]?failed|unauthorized|forbidden|401|403|login[_\s-]?required|not\s+logged\s+in|missing\s+credentials?|invalid\s+credentials?|credentials?[_\s-]?required|credentials?[_\s-]?unavailable|no auth available|authorization|auth(?:entication)?(?:[_\s-]?(?:failed|unavailable))?|invalid api[_\s-]?key|api[_\s-]?key|does not have access|quota|rate[_\s-]?(?:limit|limited)|too many requests|429|model cooldown|cooling down|enospc|no space left|disk is full|capacity exceeded|quota exhausted|usage exceeded|free usage exceeded|key limit exceeded|total limit|insufficient credits|subscribe to go|error|failed|failure|timeout|timed\s+out|network|connection|unable\s+to\s+connect|connect\s+failed|econn[a-z_]*|enotfound|fetch[_\s-]?failed|connection[_\s-]?(?:refused|reset)|aborted|cancel(?:ed|led)|interrupted|service[_\s-]?unavailable|temporarily\s+unavailable|overloaded|visible[_\s-]?reply(?:[_\s-][a-z0-9]+)*|task[_\s-]?refs|relayofmessageid|relay[_\s-]?of[_\s-]?message[_\s-]?id|message[_\s-]?send|non[_\s-]?visible[_\s-]?tool(?:[_\s-][a-z0-9]+)*|protocol[_\s-]?proof)(?=$|[_\s:;./(),-])/i;
 const OPENCODE_SESSION_REFRESH_ANY_REASON_PATTERN =
   /\b(?:resolved_behavior_changed|opencode_app_mcp_transport_changed):[-a-z0-9._~/=]+->[-a-z0-9._~/=]+/gi;
 const OPENCODE_SESSION_REFRESH_SAFE_MARKER_STATE_PATTERN =
@@ -94,7 +94,22 @@ function hasOpenCodeSessionRefreshFailureConflict(value: string): boolean {
 }
 
 function hasDelimitedHttpAuthStatusCode(message: string): boolean {
-  return /(?:^|[_\s:;.\/()-])(?:401|403)(?=$|[_\s:;.\/(),-])/i.test(message);
+  return /(?:^|[_\s:;./()-])(?:401|403)(?=$|[_\s:;./(),-])/i.test(message);
+}
+
+function hasGrpcResourceExhaustedCode(message: string): boolean {
+  return /\bgrpc[_\s-]*code["']?\s*(?::|=|is)\s*["']?8\b/i.test(message);
+}
+
+function hasHttpRateLimitStatusCode(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return (
+    /^\s*(?:error\s*[:=-]?\s*)?429\b/m.test(normalized) ||
+    /\b(?:http(?:[\s_-]*status)?|status(?:[\s_-]*code)?|error(?:[\s_-]*code)?|code)["']?\s*(?::|=|is|of)?\s*["']?429\b/.test(
+      normalized
+    ) ||
+    /\b429\s+(?:too many requests|rate limit(?:ed)?|resource exhausted)\b/.test(normalized)
+  );
 }
 
 const RUNTIME_DIAGNOSTIC_RULES: readonly RuntimeDiagnosticRule[] = [
@@ -122,13 +137,35 @@ const RUNTIME_DIAGNOSTIC_RULES: readonly RuntimeDiagnosticRule[] = [
       'usage limit',
       'usage exceeded',
       'free usage exceeded',
+      'freeusagelimit',
+      'free_usage_limit',
+      'free-usage-limit',
+      'resource exhausted',
+      'resource_exhausted',
+      'resource-exhausted',
+      'resourceexhausted',
       'insufficient credits',
       'key limit exceeded',
       'total limit',
       'subscribe to go',
     ],
+    match: hasGrpcResourceExhaustedCode,
     priority: 95,
     actionRequired: true,
+  },
+  {
+    reasonCode: 'rate_limited',
+    tokens: [
+      'rate limit',
+      'rate_limit',
+      'rate-limit',
+      'ratelimiterror',
+      'too many requests',
+      'model cooldown',
+      'cooling down',
+    ],
+    match: hasHttpRateLimitStatusCode,
+    priority: 85,
   },
   {
     reasonCode: 'auth_error',
@@ -158,11 +195,6 @@ const RUNTIME_DIAGNOSTIC_RULES: readonly RuntimeDiagnosticRule[] = [
     match: hasDelimitedHttpAuthStatusCode,
     priority: 94,
     actionRequired: true,
-  },
-  {
-    reasonCode: 'rate_limited',
-    tokens: ['rate limit', 'too many requests', '429', 'model cooldown', 'cooling down'],
-    priority: 85,
   },
   {
     reasonCode: 'codex_native_timeout',

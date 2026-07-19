@@ -6,6 +6,11 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  registerChangeReviewLifecycleOwner,
+  requestChangeReviewLifecycleReservation,
+  resetChangeReviewLifecycleCoordinatorForTests,
+} from '../../../src/renderer/utils/changeReviewLifecycleCoordinator';
 import { installMockElectronAPI, type MockElectronAPI } from '../../mocks/electronAPI';
 
 import { createTestStore, type TestStore } from './storeTestUtils';
@@ -29,6 +34,7 @@ describe('tabSlice', () => {
   });
 
   afterEach(() => {
+    resetChangeReviewLifecycleCoordinatorForTests();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -154,6 +160,54 @@ describe('tabSlice', () => {
   });
 
   describe('closeTab', () => {
+    it('waits for the active Changes flush before removing its tab', async () => {
+      vi.useRealTimers();
+      store.getState().openTab({ type: 'team', teamName: 'demo', label: 'Demo' });
+      const tabId = store.getState().activeTabId!;
+      await requestChangeReviewLifecycleReservation({
+        hostId: 'changes-host',
+        sessionId: 'changes-session',
+        tabId,
+      });
+      registerChangeReviewLifecycleOwner({
+        hostId: 'changes-host',
+        sessionId: 'changes-session',
+        tabId,
+        requestClose: vi.fn().mockResolvedValue(true),
+      });
+
+      store.getState().closeTab(tabId);
+      expect(store.getState().openTabs).toHaveLength(1);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(store.getState().openTabs).toHaveLength(0);
+    });
+
+    it('keeps the tab mounted when the active Changes flush fails', async () => {
+      vi.useRealTimers();
+      store.getState().openTab({ type: 'team', teamName: 'demo', label: 'Demo' });
+      const tabId = store.getState().activeTabId!;
+      const focus = vi.fn();
+      await requestChangeReviewLifecycleReservation({
+        hostId: 'changes-host',
+        sessionId: 'changes-session',
+        tabId,
+      });
+      registerChangeReviewLifecycleOwner({
+        hostId: 'changes-host',
+        sessionId: 'changes-session',
+        tabId,
+        requestClose: vi.fn().mockResolvedValue(false),
+        focus,
+      });
+
+      store.getState().closeAllTabs();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(store.getState().openTabs).toHaveLength(1);
+      expect(focus).toHaveBeenCalledTimes(1);
+    });
+
     it('should focus adjacent tab when closing active tab', () => {
       // Open 3 tabs
       store.getState().openTab({

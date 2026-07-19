@@ -23,9 +23,12 @@ vi.mock('@shared/utils/logger', () => ({
   }),
 }));
 
+import {
+  configureWindowLifecycleActions,
+  registerWindowHandlers,
+  removeWindowHandlers,
+} from '@main/ipc/window';
 import { app, BrowserWindow } from 'electron';
-
-import { registerWindowHandlers, removeWindowHandlers } from '@main/ipc/window';
 
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
@@ -70,6 +73,13 @@ describe('window IPC handlers', () => {
     vi.mocked(BrowserWindow.fromWebContents).mockReturnValue(null);
     vi.mocked(BrowserWindow.getFocusedWindow).mockReturnValue(null);
     vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([]);
+    configureWindowLifecycleActions({
+      quit: () => app.quit(),
+      relaunch: () => {
+        app.relaunch();
+        app.quit();
+      },
+    });
   });
 
   it('quits the app when the custom close control is clicked', async () => {
@@ -89,6 +99,22 @@ describe('window IPC handlers', () => {
 
     expect(app.relaunch).toHaveBeenCalledTimes(1);
     expect(app.quit).toHaveBeenCalledTimes(1);
+  });
+
+  it('awaits configured guarded lifecycle actions before resolving window commands', async () => {
+    const ipcMain = createMockIpcMain();
+    const quit = vi.fn(async () => undefined);
+    const relaunch = vi.fn(async () => undefined);
+    configureWindowLifecycleActions({ quit, relaunch });
+    registerWindowHandlers(ipcMain);
+
+    await ipcMain.invoke('window:close');
+    await ipcMain.invoke('app:relaunch');
+
+    expect(quit).toHaveBeenCalledTimes(1);
+    expect(relaunch).toHaveBeenCalledTimes(1);
+    expect(app.quit).not.toHaveBeenCalled();
+    expect(app.relaunch).not.toHaveBeenCalled();
   });
 
   it('uses the window that sent the IPC event for window-specific controls', async () => {

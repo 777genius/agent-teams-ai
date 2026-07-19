@@ -61,6 +61,8 @@ eslint-fix/
 remotion/*
 
 .home/
+.board-task-changes/
+.board-task-change-freshness/
 .board-task-log-freshness/
 
 .serena/

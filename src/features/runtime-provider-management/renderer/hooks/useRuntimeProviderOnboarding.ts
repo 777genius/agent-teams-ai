@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  classifyAnalyticsError,
+  elapsedMsSince,
+  recordProviderOnboardingStepEnd,
+} from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 
 import {
@@ -30,6 +35,10 @@ import type {
   RuntimeProviderOnboardingStage,
   RuntimeProviderQuickConnectGate,
 } from '../../core/domain';
+import type {
+  AnalyticsOnboardingStep,
+  AnalyticsOnboardingStepOutcome,
+} from '@renderer/analytics/productAnalytics';
 
 export type RuntimeProviderOnboardingMode = 'provider' | 'wizard';
 
@@ -157,6 +166,7 @@ export function useRuntimeProviderOnboarding({
   const connectStartedPlanRef = useRef<RuntimeProviderOnboardingPlanId | null>(null);
   const transientSetupRetryPlanRef = useRef<RuntimeProviderOnboardingPlanId | null>(null);
   const activePlanRef = useRef<RuntimeProviderOnboardingPlanId | null>(null);
+  const runtimePrepareStartedAtRef = useRef<number | null>(null);
   const probeSequenceRef = useRef(0);
 
   const [management, managementActions] = useRuntimeProviderManagement({
@@ -197,6 +207,7 @@ export function useRuntimeProviderOnboarding({
     connectStartedPlanRef.current = null;
     transientSetupRetryPlanRef.current = null;
     activePlanRef.current = null;
+    runtimePrepareStartedAtRef.current = null;
     probeSequenceRef.current += 1;
 
     if (mode === 'provider') {
@@ -232,17 +243,6 @@ export function useRuntimeProviderOnboarding({
     }
   }, [mode, progress]);
 
-  useEffect(() => {
-    if (runtimeGate === 'ready' && runtimePreparing) {
-      setRuntimePreparing(false);
-      void managementActions.refreshDirectory();
-      return;
-    }
-    if (runtimeGate === 'error' && runtimePreparing) {
-      setRuntimePreparing(false);
-    }
-  }, [managementActions, runtimeGate, runtimePreparing]);
-
   const activePlan = useMemo(() => {
     if (mode === 'provider') {
       return directPlan;
@@ -251,6 +251,55 @@ export function useRuntimeProviderOnboarding({
       ? getRuntimeProviderOnboardingPlan(progress.currentPlanId)
       : null;
   }, [directPlan, mode, progress?.currentPlanId]);
+
+  const recordOnboardingStep = useCallback(
+    (
+      step: AnalyticsOnboardingStep,
+      success: boolean,
+      startedAtMs: number,
+      error: unknown = null,
+      providerOverride: string | null = null,
+      outcomeOverride?: AnalyticsOnboardingStepOutcome
+    ): void => {
+      const outcome = outcomeOverride ?? (success ? 'completed' : 'failed');
+      recordProviderOnboardingStepEnd({
+        provider:
+          providerOverride ?? activePlan?.providerId ?? directPlan?.providerId ?? providerId,
+        step,
+        outcome,
+        durationMs: elapsedMsSince(startedAtMs),
+        errorClass: outcome === 'failed' ? classifyAnalyticsError(error) : 'none',
+      });
+    },
+    [activePlan?.providerId, directPlan?.providerId, providerId]
+  );
+
+  useEffect(() => {
+    if (!runtimePreparing) {
+      return;
+    }
+
+    if (runtimeGate === 'ready') {
+      const startedAtMs = runtimePrepareStartedAtRef.current ?? Date.now();
+      runtimePrepareStartedAtRef.current = null;
+      recordOnboardingStep('runtime_prepare', true, startedAtMs);
+      setRuntimePreparing(false);
+      void managementActions.refreshDirectory();
+      return;
+    }
+
+    if (runtimeGate === 'error') {
+      const startedAtMs = runtimePrepareStartedAtRef.current ?? Date.now();
+      runtimePrepareStartedAtRef.current = null;
+      recordOnboardingStep(
+        'runtime_prepare',
+        false,
+        startedAtMs,
+        new Error(stageError ?? 'OpenCode runtime is not ready')
+      );
+      setRuntimePreparing(false);
+    }
+  }, [managementActions, recordOnboardingStep, runtimeGate, runtimePreparing, stageError]);
 
   useEffect(() => {
     const nextActivePlanId = activePlan?.id ?? null;
@@ -473,34 +522,50 @@ export function useRuntimeProviderOnboarding({
   }, []);
 
   const installOrUpdateRuntime = useCallback(async (): Promise<void> => {
+    const startedAtMs = Date.now();
+    runtimePrepareStartedAtRef.current = startedAtMs;
     setRuntimePreparing(true);
     setStageError(null);
     try {
       await onInstallOrUpdateRuntime();
     } catch (error) {
+      runtimePrepareStartedAtRef.current = null;
+      recordOnboardingStep('runtime_prepare', false, startedAtMs, error);
       setRuntimePreparing(false);
       setStage('error');
       setStageError(error instanceof Error ? error.message : 'Failed to prepare OpenCode.');
     }
-  }, [onInstallOrUpdateRuntime]);
+  }, [onInstallOrUpdateRuntime, recordOnboardingStep]);
 
   const startWizard = useCallback(async (): Promise<void> => {
+    const startedAtMs = Date.now();
     if (selectedPlanIds.length === 0) {
       setStageError('Select at least one subscription plan.');
       return;
     }
+    const firstSelectedProviderId =
+      RUNTIME_PROVIDER_ONBOARDING_PLANS.find((plan) => plan.id === selectedPlanIds[0])
+        ?.providerId ?? null;
     const nextProgress = createRuntimeProviderOnboardingProgress(selectedPlanIds);
     setProgress(nextProgress);
     setWizardStarted(true);
     setResumable(false);
     setStageError(null);
     repositoryRef.current?.save(nextProgress);
+    recordOnboardingStep('wizard_start', true, startedAtMs, null, firstSelectedProviderId);
     if (runtimeGate !== 'ready' || runtimeUpdateRequired) {
       await installOrUpdateRuntime();
     }
-  }, [installOrUpdateRuntime, runtimeGate, runtimeUpdateRequired, selectedPlanIds]);
+  }, [
+    installOrUpdateRuntime,
+    recordOnboardingStep,
+    runtimeGate,
+    runtimeUpdateRequired,
+    selectedPlanIds,
+  ]);
 
   const restartWizard = useCallback((): void => {
+    const startedAtMs = Date.now();
     repositoryRef.current?.clear();
     setProgress(null);
     setWizardStarted(false);
@@ -513,9 +578,11 @@ export function useRuntimeProviderOnboarding({
     setVerificationRequestedPlanId(null);
     setReconnectRequestedPlanId(null);
     managementActions.cancelConnect();
-  }, [managementActions]);
+    recordOnboardingStep('wizard_restart', true, startedAtMs);
+  }, [managementActions, recordOnboardingStep]);
 
   const beginConnect = useCallback((): void => {
+    const startedAtMs = Date.now();
     if (!activePlan) {
       return;
     }
@@ -530,9 +597,17 @@ export function useRuntimeProviderOnboarding({
     }
     connectStartedPlanRef.current = activePlan.id;
     managementActions.startConnect(activePlan.providerId);
-  }, [activePlan, management.directoryError, management.directoryLoaded, managementActions]);
+    recordOnboardingStep('connect_start', true, startedAtMs, null, activePlan.providerId);
+  }, [
+    activePlan,
+    management.directoryError,
+    management.directoryLoaded,
+    managementActions,
+    recordOnboardingStep,
+  ]);
 
   const beginVerification = useCallback((): void => {
+    const startedAtMs = Date.now();
     if (!activePlan) {
       return;
     }
@@ -540,33 +615,53 @@ export function useRuntimeProviderOnboarding({
     setVerificationRequestedPlanId(activePlan.id);
     setStage('verifying');
     setStageError(null);
-  }, [activePlan]);
+    recordOnboardingStep('verification_start', true, startedAtMs, null, activePlan.providerId);
+  }, [activePlan, recordOnboardingStep]);
 
   const submitConnect = useCallback(async (): Promise<boolean> => {
+    const startedAtMs = Date.now();
     if (!activePlan) {
       return false;
     }
     setPendingConnectionPlanId(activePlan.id);
     setAcceptedConnectionProof(null);
-    const outcome = await managementActions.submitConnect(activePlan.providerId);
-    setPendingConnectionPlanId(null);
-    if (outcome) {
-      setReconnectRequestedPlanId(null);
-      setVerificationRequestedPlanId(activePlan.id);
-      if (outcome.verifiedModelId) {
-        setAcceptedConnectionProof({ planId: activePlan.id, modelId: outcome.verifiedModelId });
+    try {
+      const outcome = await managementActions.submitConnect(activePlan.providerId);
+      setPendingConnectionPlanId(null);
+      const connected = outcome?.status === 'connected';
+      const cancelled = outcome?.status === 'cancelled';
+      recordOnboardingStep(
+        'connection_submit',
+        connected,
+        startedAtMs,
+        connected || cancelled ? null : new Error('Provider connection was not accepted'),
+        activePlan.providerId,
+        cancelled ? 'cancelled' : undefined
+      );
+      if (connected) {
+        setReconnectRequestedPlanId(null);
+        setVerificationRequestedPlanId(activePlan.id);
+        if (outcome.verifiedModelId) {
+          setAcceptedConnectionProof({ planId: activePlan.id, modelId: outcome.verifiedModelId });
+        }
+        setStage('verifying');
+        setStageError(null);
       }
-      setStage('verifying');
-      setStageError(null);
+      return connected;
+    } catch (error) {
+      setPendingConnectionPlanId(null);
+      recordOnboardingStep('connection_submit', false, startedAtMs, error, activePlan.providerId);
+      throw error;
     }
-    return outcome !== null;
-  }, [activePlan, managementActions]);
+  }, [activePlan, managementActions, recordOnboardingStep]);
 
   const acceptVerifiedModel = useCallback((): void => {
+    const startedAtMs = Date.now();
     if (!activePlan || !verifiedModelId) {
       return;
     }
     managementActions.useModelForNewTeams(verifiedModelId);
+    recordOnboardingStep('model_accept', true, startedAtMs, null, activePlan.providerId);
     if (mode === 'provider') {
       setStage('ready');
       return;
@@ -576,14 +671,21 @@ export function useRuntimeProviderOnboarding({
         ? completeRuntimeProviderOnboardingPlan(current, activePlan.id, verifiedModelId)
         : current
     );
-  }, [activePlan, managementActions, mode, verifiedModelId]);
+  }, [activePlan, managementActions, mode, recordOnboardingStep, verifiedModelId]);
 
   const openCredentialPage = useCallback(async (): Promise<void> => {
+    const startedAtMs = Date.now();
     if (!activePlan?.credentialUrl) {
       return;
     }
-    await api.openExternal(activePlan.credentialUrl);
-  }, [activePlan]);
+    try {
+      await api.openExternal(activePlan.credentialUrl);
+      recordOnboardingStep('credential_open', true, startedAtMs, null, activePlan.providerId);
+    } catch (error) {
+      recordOnboardingStep('credential_open', false, startedAtMs, error, activePlan.providerId);
+      throw error;
+    }
+  }, [activePlan, recordOnboardingStep]);
 
   const clearCompletedWizard = useCallback((): void => {
     repositoryRef.current?.clear();

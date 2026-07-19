@@ -172,8 +172,8 @@ vi.mock('agent-teams-controller', () => ({
 
 import { buildLegacyInboxMessageId } from '../../../../src/main/services/team/inboxMessageIdentity';
 import { isOpenCodePromptAcceptedByObservation } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryReadCommitPolicy';
-import { inferOpenCodeInboxMessageTaskRefs } from '../../../../src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy';
 import * as OpenCodeRuntimeStore from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { inferOpenCodeInboxMessageTaskRefs } from '../../../../src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy';
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
@@ -425,6 +425,91 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
     expect(payload).toContain('"type":"user"');
     expect(payload).toContain('Please assign this to Alice.');
     expect(service.getLiveLeadProcessMessages(teamName)).toHaveLength(1);
+  });
+
+  it('reports native lead recovery proof only after a successful terminal result', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedLeadInbox(teamName, [
+      {
+        from: 'system',
+        to: 'team-lead',
+        text: 'Inspect state and continue unfinished work.',
+        timestamp: '2026-02-23T10:00:00.000Z',
+        read: false,
+        messageId: 'runtime-recovery-1',
+        messageKind: 'runtime_recovery_nudge',
+      },
+    ]);
+    attachAliveRun(service, teamName);
+
+    const relayPromise = service.relayInboxFileToLiveRecipient(teamName, 'team-lead', {
+      onlyMessageId: 'runtime-recovery-1',
+      source: 'manual',
+    });
+    const run = await waitForCapture(service);
+    expect(run.leadRelayCapture).toMatchObject({
+      recoveryMessageId: 'runtime-recovery-1',
+      requireTerminalResult: true,
+    });
+    (service as any).handleStreamJsonMessage(run, { type: 'result', subtype: 'success' });
+
+    await expect(relayPromise).resolves.toMatchObject({
+      kind: 'native_lead',
+      relayed: 1,
+      lastDelivery: {
+        delivered: true,
+        accepted: true,
+        responsePending: false,
+      },
+    });
+  });
+
+  it('correlates a failed native lead recovery result without claiming success', async () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'my-team';
+    seedConfig(teamName);
+    seedLeadInbox(teamName, [
+      {
+        from: 'system',
+        to: 'team-lead',
+        text: 'Inspect state and continue unfinished work.',
+        timestamp: '2026-02-23T10:00:00.000Z',
+        read: false,
+        messageId: 'runtime-recovery-2',
+        messageKind: 'runtime_recovery_nudge',
+      },
+    ]);
+    attachAliveRun(service, teamName);
+    const observeFailure = vi.fn();
+    service.setRuntimeRecoveryFailureObserver(observeFailure);
+
+    const relayPromise = service.relayInboxFileToLiveRecipient(teamName, 'team-lead', {
+      onlyMessageId: 'runtime-recovery-2',
+      source: 'manual',
+    });
+    const run = await waitForCapture(service);
+    (service as any).handleStreamJsonMessage(run, {
+      type: 'result',
+      subtype: 'error',
+      error: 'API Error: 529 overloaded_error',
+    });
+
+    await expect(relayPromise).resolves.toMatchObject({
+      kind: 'native_lead',
+      lastDelivery: { responsePending: true },
+    });
+    expect(observeFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phase: 'terminal',
+        causedByRecoveryMessageId: 'runtime-recovery-2',
+      })
+    );
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'stream-json result: error'
+    );
+    vi.mocked(console.warn).mockClear();
   });
 
   it('does not persist echoed lead relay prompts as user-visible replies', async () => {

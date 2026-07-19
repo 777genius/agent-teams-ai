@@ -233,6 +233,12 @@ and checkboxes. Avoid hand-rolled or native controls when a shared Radix-based
 primitive exists; add or extend the shared primitive instead of styling a one-off
 control inside a feature.
 
+For user-facing hover or focus help, use the shared Radix Tooltip primitives from
+`src/renderer/components/ui/tooltip.tsx`. Do not use the native HTML `title`
+attribute as a tooltip: it cannot follow the app theme or reliably avoid dialog,
+popover, and viewport boundaries. Keep accessible names and descriptions in
+`aria-label`, `aria-description`, or an explicit `aria-describedby` relationship.
+
 ## Import Rules
 
 ### Public entrypoints only

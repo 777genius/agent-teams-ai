@@ -12,6 +12,11 @@ on:
         required: true
         default: false
         type: boolean
+      reuse_existing_draft_assets:
+        description: Promote an existing validated draft without rebuilding platform installers
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -27,6 +32,7 @@ env:
 
 jobs:
   build:
+    if: ${{ !inputs.reuse_existing_draft_assets }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -151,6 +157,7 @@ jobs:
           retention-days: 1
 
   prepare-runtime:
+    if: ${{ !inputs.reuse_existing_draft_assets }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -325,6 +332,7 @@ jobs:
           exit 1
 
   prepare-terminal-platform-runtime:
+    if: ${{ !inputs.reuse_existing_draft_assets }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -928,194 +936,45 @@ jobs:
     needs: [release-mac, release-win, release-linux]
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release && !inputs.reuse_existing_draft_assets }}
 
     steps:
-      - name: Upload stable download aliases
+      - name: Checkout release promotion
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Promote validated release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_REPOSITORY: ${{ github.repository }}
+          PUBLISH_RELEASE: 'true'
+          ALLOW_PUBLISHED_RELEASE_RECOVERY: 'true'
+          REDRAFT_INCOMPLETE_RELEASE: 'true'
+        run: node scripts/ci/promote-existing-draft.mjs
+
+  promote-existing-draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.reuse_existing_draft_assets }}
+
+    steps:
+      - name: Checkout release promotion
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Require publication mode
+        if: ${{ !inputs.publish_release }}
         run: |
-          set -euo pipefail
-          VERSION="${RELEASE_TAG#v}"
-          TAG="${RELEASE_TAG}"
-          REPO="${GITHUB_REPOSITORY}"
-          TMP_DIR="$(mktemp -d)"
-          trap 'rm -rf "$TMP_DIR"' EXIT
+          echo "reuse_existing_draft_assets requires publish_release=true" >&2
+          exit 1
 
-          declare -A STABLE_ALIASES=(
-            ["Agent.Teams.AI-arm64.dmg"]="Agent.Teams.AI-${VERSION}-arm64.dmg"
-            ["Agent.Teams.AI-x64.dmg"]="Agent.Teams.AI-${VERSION}-x64.dmg"
-            ["Agent.Teams.AI.Setup.exe"]="Agent.Teams.AI.Setup.${VERSION}.exe"
-            ["Agent.Teams.AI.AppImage"]="Agent.Teams.AI-${VERSION}.AppImage"
-            ["agent-teams-ai-amd64.deb"]="agent-teams-ai_${VERSION}_amd64.deb"
-            ["agent-teams-ai-x86_64.rpm"]="agent-teams-ai-${VERSION}.x86_64.rpm"
-            ["agent-teams-ai.pacman"]="agent-teams-ai-${VERSION}.pacman"
-          )
-
-          declare -A LEGACY_STABLE_ALIASES=(
-            ["Claude-Agent-Teams-UI-arm64.dmg"]="Agent.Teams.AI-${VERSION}-arm64.dmg"
-            ["Claude-Agent-Teams-UI-x64.dmg"]="Agent.Teams.AI-${VERSION}-x64.dmg"
-            ["Claude-Agent-Teams-UI-Setup.exe"]="Agent.Teams.AI.Setup.${VERSION}.exe"
-            ["Claude-Agent-Teams-UI.AppImage"]="Agent.Teams.AI-${VERSION}.AppImage"
-            ["Claude-Agent-Teams-UI-amd64.deb"]="agent-teams-ai_${VERSION}_amd64.deb"
-            ["Claude-Agent-Teams-UI-x86_64.rpm"]="agent-teams-ai-${VERSION}.x86_64.rpm"
-            ["Claude-Agent-Teams-UI.pacman"]="agent-teams-ai-${VERSION}.pacman"
-          )
-
-          declare -A LEGACY_UPDATER_ALIASES=(
-            ["Claude.Agent.Teams.UI-${VERSION}-arm64-mac.zip"]="Agent.Teams.AI-${VERSION}-arm64-mac.zip"
-            ["Claude.Agent.Teams.UI-${VERSION}-arm64.dmg"]="Agent.Teams.AI-${VERSION}-arm64.dmg"
-            ["Claude.Agent.Teams.UI-${VERSION}-mac.zip"]="Agent.Teams.AI-${VERSION}-x64-mac.zip"
-            ["Claude.Agent.Teams.UI-${VERSION}.dmg"]="Agent.Teams.AI-${VERSION}-x64.dmg"
-            ["Claude.Agent.Teams.UI.Setup.${VERSION}.exe"]="Agent.Teams.AI.Setup.${VERSION}.exe"
-            ["Claude.Agent.Teams.UI-${VERSION}.AppImage"]="Agent.Teams.AI-${VERSION}.AppImage"
-          )
-
-          upload_aliases() {
-            local label="$1"
-            local -n aliases="$2"
-
-            for ALIAS_NAME in "${!aliases[@]}"; do
-              VERSIONED_NAME="${aliases[$ALIAS_NAME]}"
-              echo "Uploading ${label} alias: ${ALIAS_NAME} -> ${VERSIONED_NAME}"
-              download_once "${VERSIONED_NAME}"
-              cp "${TMP_DIR}/${VERSIONED_NAME}" "${TMP_DIR}/${ALIAS_NAME}"
-              upload_release_asset "${TMP_DIR}/${ALIAS_NAME}"
-            done
-          }
-
-          upload_release_asset() {
-            local path="$1"
-            timeout 300s gh release upload "${TAG}" "${path}" --repo "$REPO" --clobber || {
-              echo "Retrying upload for ${path}"
-              sleep 5
-              timeout 300s gh release upload "${TAG}" "${path}" --repo "$REPO" --clobber
-            }
-          }
-
-          download_once() {
-            local name="$1"
-            if [[ -f "${TMP_DIR}/${name}" ]]; then
-              return
-            fi
-            gh release download "${TAG}" \
-              --repo "$REPO" \
-              --pattern "${name}" \
-              --dir "$TMP_DIR" \
-              --clobber
-          }
-
-          upload_aliases "stable" STABLE_ALIASES
-          upload_aliases "legacy stable" LEGACY_STABLE_ALIASES
-          upload_aliases "legacy updater" LEGACY_UPDATER_ALIASES
-
-      - name: Publish canonical updater metadata
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          VERSION="${RELEASE_TAG#v}"
-          TAG="${RELEASE_TAG}"
-          REPO="${GITHUB_REPOSITORY}"
-          RELEASE_DATE="$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")"
-          TMP_DIR="$(mktemp -d)"
-          cd "$TMP_DIR"
-
-          sha512_base64() {
-            openssl dgst -sha512 -binary "$1" | openssl base64 -A
-          }
-
-          file_size() {
-            wc -c < "$1" | tr -d '[:space:]'
-          }
-
-          download_asset() {
-            local name="$1"
-            gh release download "${TAG}" \
-              --repo "${REPO}" \
-              --pattern "$name" \
-              --dir . \
-              --clobber
-          }
-
-          # Canonical Windows feed
-          WIN_ASSET="Agent.Teams.AI.Setup.${VERSION}.exe"
-          download_asset "${WIN_ASSET}"
-          WIN_SHA="$(sha512_base64 "${WIN_ASSET}")"
-          WIN_SIZE="$(file_size "${WIN_ASSET}")"
-          cat > latest.yml <<EOF
-          version: ${VERSION}
-          files:
-            - url: ${WIN_ASSET}
-              sha512: ${WIN_SHA}
-              size: ${WIN_SIZE}
-          path: ${WIN_ASSET}
-          sha512: ${WIN_SHA}
-          releaseDate: '${RELEASE_DATE}'
-          EOF
-
-          # Canonical Linux feed
-          LINUX_ASSET="Agent.Teams.AI-${VERSION}.AppImage"
-          download_asset "${LINUX_ASSET}"
-          LINUX_SHA="$(sha512_base64 "${LINUX_ASSET}")"
-          LINUX_SIZE="$(file_size "${LINUX_ASSET}")"
-          cat > latest-linux.yml <<EOF
-          version: ${VERSION}
-          files:
-            - url: ${LINUX_ASSET}
-              sha512: ${LINUX_SHA}
-              size: ${LINUX_SIZE}
-          path: ${LINUX_ASSET}
-          sha512: ${LINUX_SHA}
-          releaseDate: '${RELEASE_DATE}'
-          EOF
-
-          # Canonical macOS feed.
-          # Include both architectures so legacy Intel builds can see the
-          # update without downloading the Apple Silicon zip.
-          download_asset "Agent.Teams.AI-${VERSION}-arm64-mac.zip"
-          download_asset "Agent.Teams.AI-${VERSION}-arm64.dmg"
-          download_asset "Agent.Teams.AI-${VERSION}-x64-mac.zip"
-          download_asset "Agent.Teams.AI-${VERSION}-x64.dmg"
-          MAC_ARM64_ZIP_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-arm64-mac.zip")"
-          MAC_ARM64_ZIP_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-arm64-mac.zip")"
-          MAC_ARM64_DMG_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-arm64.dmg")"
-          MAC_ARM64_DMG_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-arm64.dmg")"
-          MAC_X64_ZIP_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-x64-mac.zip")"
-          MAC_X64_ZIP_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-x64-mac.zip")"
-          MAC_X64_DMG_SHA="$(sha512_base64 "Agent.Teams.AI-${VERSION}-x64.dmg")"
-          MAC_X64_DMG_SIZE="$(file_size "Agent.Teams.AI-${VERSION}-x64.dmg")"
-          cat > latest-mac.yml <<EOF
-          version: ${VERSION}
-          files:
-            - url: Agent.Teams.AI-${VERSION}-arm64-mac.zip
-              sha512: ${MAC_ARM64_ZIP_SHA}
-              size: ${MAC_ARM64_ZIP_SIZE}
-            - url: Agent.Teams.AI-${VERSION}-arm64.dmg
-              sha512: ${MAC_ARM64_DMG_SHA}
-              size: ${MAC_ARM64_DMG_SIZE}
-            - url: Agent.Teams.AI-${VERSION}-x64-mac.zip
-              sha512: ${MAC_X64_ZIP_SHA}
-              size: ${MAC_X64_ZIP_SIZE}
-            - url: Agent.Teams.AI-${VERSION}-x64.dmg
-              sha512: ${MAC_X64_DMG_SHA}
-              size: ${MAC_X64_DMG_SIZE}
-          path: Agent.Teams.AI-${VERSION}-arm64-mac.zip
-          sha512: ${MAC_ARM64_ZIP_SHA}
-          releaseDate: '${RELEASE_DATE}'
-          EOF
-
-          gh release upload "${TAG}" latest.yml latest-linux.yml latest-mac.yml --repo "${REPO}" --clobber
-
-      - name: Publish release
+      - name: Promote existing validated draft
         if: ${{ inputs.publish_release }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          TAG="${RELEASE_TAG}"
-          gh release edit "${TAG}" --repo "${GITHUB_REPOSITORY}" --draft=false --latest
-
-      - name: Keep release as draft
-        if: ${{ github.event_name == 'workflow_dispatch' && !inputs.publish_release }}
-        run: echo "Draft release ${RELEASE_TAG} is ready. It was not published because publish_release=false."
+          RELEASE_REPOSITORY: ${{ github.repository }}
+          PUBLISH_RELEASE: 'true'
+          REDRAFT_INCOMPLETE_RELEASE: 'true'
+        run: node scripts/ci/promote-existing-draft.mjs

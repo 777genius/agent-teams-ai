@@ -7,6 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@features/runtime-provider-management/renderer', () => ({
   OpenCodeLocalModelLimitsCard: () => React.createElement('div', null, 'local-model-limits-card'),
+  ProviderBrandIcon: ({ provider }: { provider: { providerId: string } }) =>
+    React.createElement('span', {
+      'data-testid': 'model-source-logo',
+      'data-provider-id': provider.providerId,
+    }),
 }));
 
 vi.mock('@renderer/components/common/ProviderBrandLogo', () => ({
@@ -96,6 +101,8 @@ vi.mock('@renderer/hooks/useTheme', () => ({
 }));
 
 vi.mock('@renderer/utils/teamModelCatalog', () => ({
+  getTeamModelSourceBadgeLabel: (_providerId: string, model: string) =>
+    model.split('/')[0] || undefined,
   isAnthropicHaikuTeamModel: () => false,
   isAnthropicSonnetOneMillionContextTeamModel: (model: string | undefined) =>
     model === 'sonnet[1m]' || model === 'claude-sonnet-4-6' || model === 'claude-sonnet-4-6[1m]',
@@ -122,6 +129,7 @@ vi.mock('../../ui/button', () => ({
     ),
 }));
 
+import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
 import { ANTHROPIC_LONG_CONTEXT_PRICING_URL, LeadModelRow } from './LeadModelRow';
 
 function renderLeadModelRow(overrides: Partial<React.ComponentProps<typeof LeadModelRow>> = {}): {
@@ -171,6 +179,37 @@ describe('LeadModelRow', () => {
     expect(host.textContent).toContain('lead');
     expect(host.textContent).toContain('Team Lead');
     expect(stripe?.getAttribute('style')).toContain(expectedBorder);
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('shows the concrete OpenCode source logo for a selected source model', () => {
+    const { host, root } = renderLeadModelRow({
+      providerId: 'opencode',
+      model: 'cursor-acp/auto',
+    });
+
+    expect(
+      host.querySelector('[data-testid="model-source-logo"]')?.getAttribute('data-provider-id')
+    ).toBe('cursor-acp');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('keeps the Team Lead role static in the flat roster layout', () => {
+    const { host, root } = renderLeadModelRow({ layoutVariant: 'flat' });
+    const row = host.querySelector<HTMLElement>('[data-role="lead-row"]')!;
+    const columns = Array.from(row.children);
+
+    expect(host.textContent).toContain('Team Lead');
+    expect(host.querySelector('[role="combobox"]')).toBeNull();
+    expect(row.className).toContain(FLAT_ROSTER_GRID_COLUMNS);
+    expect(columns[2]?.textContent).toBe('Team Lead');
+    expect(columns[3]?.textContent).toContain('Sync model with teammates');
 
     act(() => {
       root.unmount();

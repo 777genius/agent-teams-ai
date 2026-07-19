@@ -7,7 +7,10 @@ import {
 import { useStore } from '@renderer/store';
 import { useShallow } from 'zustand/react/shallow';
 
-import { useRuntimeProviderManagement } from './hooks/useRuntimeProviderManagement';
+import {
+  type RuntimeProviderChangeKind,
+  useRuntimeProviderManagement,
+} from './hooks/useRuntimeProviderManagement';
 import { RuntimeProviderManagementPanelView } from './ui/RuntimeProviderManagementPanelView';
 
 import type { RuntimeProviderManagementRuntimeId } from '@features/runtime-provider-management/contracts';
@@ -19,7 +22,9 @@ interface RuntimeProviderManagementPanelProps {
   readonly initialProviderId?: string | null;
   readonly initialProviderAction?: 'connect' | 'reconnect' | 'select' | null;
   readonly disabled?: boolean;
-  readonly onProviderChanged?: () => Promise<void> | void;
+  readonly onProviderChanged?: (
+    changeKind: RuntimeProviderChangeKind
+  ) => Promise<boolean | void> | boolean | void;
   readonly onBlockingOperationChange?: (blocking: boolean) => void;
 }
 
@@ -42,9 +47,7 @@ export const RuntimeProviderManagementPanel = ({
   const backgroundHydrationKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
     setActiveProjectPath(initialProjectPath);
   }, [initialProjectPath, open]);
 
@@ -146,15 +149,17 @@ export const RuntimeProviderManagementPanel = ({
   );
 
   return (
-    <RuntimeProviderManagementPanelView
-      state={state}
-      actions={actions}
-      disabled={disabled}
-      projectPath={activeProjectPath}
-      projectContextProjects={projectContextProjects}
-      projectContextLoading={projectContextLoading}
-      projectContextError={projectContextError}
-      onProjectContextChange={setActiveProjectPath}
-    />
+    <>
+      <RuntimeProviderManagementPanelView
+        state={state}
+        actions={actions}
+        disabled={disabled}
+        projectPath={activeProjectPath}
+        projectContextProjects={projectContextProjects}
+        projectContextLoading={projectContextLoading}
+        projectContextError={projectContextError}
+        onProjectContextChange={setActiveProjectPath}
+      />
+    </>
   );
 };

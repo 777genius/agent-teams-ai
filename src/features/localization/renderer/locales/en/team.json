@@ -497,6 +497,7 @@
       "actions": {
         "auto": "Auto",
         "undo": "Undo",
+        "redo": "Redo",
         "acceptAll": "Accept All",
         "rejectAll": "Reject All",
         "applying": "Applying...",
@@ -506,6 +507,7 @@
         "autoOn": "Auto-mark files as viewed when scrolled to end (ON)",
         "autoOff": "Auto-mark files as viewed when scrolled to end (OFF)",
         "undo": "Undo last review operation (Ctrl+Z)",
+        "redo": "Redo last undone review operation (Ctrl+Shift+Z)",
         "acceptAll": "Accept all changes across all files",
         "rejectAll": "Reject all safely rejectable changes across all files",
         "rejectAllDisabled": "No pending files have a safe original baseline to reject.",
@@ -831,7 +833,7 @@
     },
     "openCodeStatus": {
       "notReadyTitle": "OpenCode is not ready for team launch",
-      "freeModelsAvailableTitle": "OpenCode free models are available",
+      "freeModelsAvailableTitle": "Free models are in OpenCode Zen",
       "providerNotConnectedTitle": "OpenCode provider is not connected",
       "readyTitle": "OpenCode is ready",
       "readyMessage": "OpenCode passed provider readiness. Select it to use OpenCode models for this team.",
@@ -860,7 +862,7 @@
       "messages": {
         "checking": "The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.",
         "unsupported": "OpenCode is not installed, not found, or the detected runtime is not supported. Install or update OpenCode, then refresh provider status. You can also use the Install button on the home page.",
-        "freeAvailable": "OpenCode is detected. You can use free OpenCode models such as Big Pickle without connecting a provider. Connect a provider only when you want provider-backed models.",
+        "freeAvailable": "Choose OpenCode Zen in the sidebar to use free models without connecting a provider. Local models and connected providers use their own setup.",
         "noFreeListed": "OpenCode is detected, but no free OpenCode model is listed yet. Refresh provider status, or connect a provider in OpenCode for provider-backed models.",
         "launchBlocked": "OpenCode is installed and authenticated, but Agent Teams launch readiness is blocked.",
         "ready": "OpenCode is ready for team launch."
@@ -945,7 +947,7 @@
       "title": "Changes",
       "fileCount_few": "{{count}} files",
       "fileCount_many": "{{count}} files",
-      "fileCount_one": "{{count}} files",
+      "fileCount_one": "{{count}} file",
       "fileCount_other": "{{count}} files",
       "fileRowsHidden_few": "{{count}} file rows hidden",
       "fileRowsHidden_many": "{{count}} file rows hidden",
@@ -2844,6 +2846,56 @@
       "actions": {
         "createTeamIn": "Create team in {{label}}"
       },
+      "layout": {
+        "switchToHierarchy": "Switch to hierarchy chart",
+        "switchToNested": "Switch to nested map"
+      },
+      "view": {
+        "overview": "Overview",
+        "hierarchy": "Hierarchy",
+        "structure": "Structure",
+        "relations": "Relations"
+      },
+      "overviewCard": {
+        "summary": "{{groupCount}} groups · {{teamCount}} teams · {{agentCount}} agents",
+        "activeTasks": "{{count}} active tasks",
+        "attention": "{{count}} need attention",
+        "teamsOnline": "{{onlineCount}}/{{teamCount}} teams online"
+      },
+      "toolbar": {
+        "filters": "Map filters",
+        "fit": "Fit meaningful overview",
+        "reset": "Reset search, focus, and filters",
+        "tasks": "Tasks",
+        "connections": "Connections",
+        "animation": "Animation",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out"
+      },
+      "legend": {
+        "organization": "Organization",
+        "group": "Group",
+        "hierarchy": "Hierarchy",
+        "connection": "Connection",
+        "online": "Online"
+      },
+      "focus": {
+        "searchLabel": "Search organization map",
+        "searchPlaceholder": "Organization, group, team, or task...",
+        "clearSearch": "Clear search",
+        "noResults": "No results found",
+        "taskMatch": "Task: {{task}}",
+        "pathToRoot": "Path to root",
+        "connectedOnly": "Connected ({{count}})",
+        "collapseBranch": "Collapse branch",
+        "expandBranch": "Expand branch",
+        "clearFocus": "Clear focus",
+        "kind": {
+          "organization": "organization",
+          "container": "group",
+          "team": "team"
+        }
+      },
       "canvas": {
         "organizationMap": "Organization Map",
         "allOrganizations": "All Organizations",
@@ -2865,6 +2917,9 @@
         "teams_other": "{{count}} teams",
         "orgsAndTeams": "{{orgCount}} orgs - {{teamCount}} teams",
         "teamRole": "{{memberCount}} agents - {{activeCount}} active",
+        "groupSummary": "{{teamCount}} teams · {{activeTeamCount}} active · {{taskCount}} tasks",
+        "teamSummary": "{{status}} · {{activeTaskCount}} active · {{taskCount}} tasks",
+        "minimap": "Organization map navigation",
         "teamReference": "team reference",
         "notFound": "not found",
         "online": "online",

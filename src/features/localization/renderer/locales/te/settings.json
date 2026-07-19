@@ -257,6 +257,25 @@
     }
   },
   "notifications": {
+    "recovery": {
+      "title": "Automatic agent recovery",
+      "transient": {
+        "label": "Recover transient runtime errors",
+        "description": "Continue the failed lead or teammate turn after safe transient provider and network errors"
+      },
+      "rateLimits": {
+        "label": "Recover rate limits with a reset time",
+        "description": "Continue after a trusted Retry-After or reset time, with a safety buffer"
+      },
+      "delay": {
+        "label": "Initial retry delay (seconds)",
+        "description": "Base delay before the first recovery attempt (15-900 seconds)"
+      },
+      "attempts": {
+        "label": "Maximum recovery attempts",
+        "description": "Accepted runtime turns per failure chain (1-5)"
+      }
+    },
     "dev": {
       "descriptionPrefix": "డెవలప్‌మెంట్ మోడ్‌లో నోటిఫికేషన్‌లు పనిచేయకపోవచ్చు. macOS యాప్‌ను \"Electron\" గా గుర్తిస్తుంది (bundle ID",
       "descriptionSuffix": ") ప్రొడక్షన్ యాప్ పేరుకు బదులుగా. అనుమతులను ధృవీకరించడానికి System Settings > Notifications > Electron ను తనిఖీ చేయండి.",

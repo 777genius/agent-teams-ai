@@ -10,6 +10,8 @@ export interface GraphConfigPort {
   backgroundColor?: string;
   /** Whether to show hex grid on background */
   showHexGrid?: boolean;
+  /** Whether to show a subtle cartography dot grid */
+  showDotGrid?: boolean;
   /** Whether to show depth star field */
   showStarField?: boolean;
   /** Whether to show animated/decorative space effects by default */

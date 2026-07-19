@@ -6,6 +6,7 @@ import {
   getTeamModelBadgeLabel,
   getVisibleTeamProviderModels,
 } from '@renderer/utils/teamModelCatalog';
+import { isOpenCodeModelExplicitlyFree } from '@shared/utils/opencodeModelRoute';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
 import type {
@@ -52,16 +53,30 @@ function getAvailabilityChip(
 
 function getCatalogBadgeLabel(
   model: string,
-  providerStatus: Pick<CliProviderStatus, 'modelCatalog'> | null | undefined
+  providerStatus: Pick<CliProviderStatus, 'modelCatalog' | 'providerId'> | null | undefined
 ): string | null {
   const catalogItem = providerStatus?.modelCatalog?.models.find(
     (item) => item.launchModel === model || item.id === model
   );
   const badgeLabel = catalogItem?.badgeLabel?.trim();
-  if (badgeLabel) {
+  if (providerStatus?.providerId !== 'opencode') {
+    return badgeLabel || (catalogItem?.metadata?.free === true ? 'Free' : null);
+  }
+  if (badgeLabel && badgeLabel.toLowerCase() !== 'free') {
     return badgeLabel;
   }
-  return catalogItem?.metadata?.free === true ? 'Free' : null;
+  const route = catalogItem?.metadata?.opencode;
+  return isOpenCodeModelExplicitlyFree({
+    modelId: catalogItem?.launchModel ?? model,
+    catalogId: catalogItem?.id,
+    providerId: route?.providerId,
+    routeKind: route?.routeKind,
+    accessKind: route?.accessKind,
+    free: catalogItem?.metadata?.free,
+    badgeLabel,
+  })
+    ? (badgeLabel ?? 'Free')
+    : null;
 }
 
 function normalizeBadgeText(value: string): string {

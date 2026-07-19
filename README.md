@@ -148,15 +148,17 @@ No prerequisites - the app can detect installed Claude Code, Codex, and OpenCode
 - [Comparison](#comparison)
 - [Quick start](#quick-start)
 - [FAQ](#faq)
+- [Roadmap (new)](#roadmap-new)
+- [Vision](#vision)
 - [Development](#development)
-  - [Developer architecture docs](#developer-architecture-docs)
-  - [Terminal Platform integration](#terminal-platform-integration)
 - [Tech stack](#tech-stack)
+  - [Terminal Platform integration](#terminal-platform-integration)
   - [Debug teammate runtimes](#debug-teammate-runtimes)
   - [Build for distribution](#build-for-distribution)
   - [Scripts](#scripts)
 - [Ideas](#ideas)
 - [Contributing](#contributing)
+- [Partnerships](#partnerships)
 - [Security](#security)
 - [License](#license)
 
@@ -276,7 +278,7 @@ Use the desktop app as the primary product. The browser/web path is not needed f
 <details>
 <summary><strong>Does it read or upload my code?</strong></summary>
 <br />
-The app is not a cloud code-sync service. It reads local runtime/session data to power the UI, and your project stays on your machine unless you choose a provider/runtime path that sends data to that provider. During setup, the app may perform provider access and capability checks before launch.
+The app reads local runtime/session data to power the UI, but it does not upload, sync, or send your project or code to Agent Teams servers. There is no Agent Teams cloud backend for storing your code. If you launch an external AI runtime, that runtime communicates directly with its provider under the provider's own terms. Setup checks only verify provider access and capabilities; they do not upload your project to Agent Teams.
 </details>
 
 <details>
@@ -364,6 +366,20 @@ pnpm dev
 
 `pnpm dev` starts the desktop Electron app. Do not start a browser/web dev server for normal development; that path is limited and is not the supported way to run agent teams locally.
 
+To run the desktop app against a local orchestrator checkout during development, point it at the
+source launcher:
+
+```bash
+CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH=/absolute/path/to/agent_teams_orchestrator/cli-source \
+  pnpm dev
+```
+
+This runs the current orchestrator sources directly through Bun and avoids rebuilding the complete
+runtime bundle on every app start. Do not use `CLAUDE_DEV_RUNTIME_ROOT` for the normal source
+development loop: that override runs `bun run build:dev` before Electron starts and can make the app
+appear stuck at `bun run ./scripts/build.ts --dev`. Use it only when intentionally validating the
+generated development bundle.
+
 Use `pnpm dev:mcp` for automated interactive or visual UI verification. It exposes the current
 Electron renderer through the local Chrome DevTools Protocol endpoint on `127.0.0.1:9222`, avoiding
 window-selection ambiguity when packaged or other Electron apps are also open.
@@ -450,6 +466,7 @@ local packaging.
 - [x] Limited standalone dashboard for local or trusted-network use. It does not provide the full desktop runtime and should not be exposed directly to the internet without authentication and a reverse proxy.
 - [ ] 2 modes: current (agent teams), and a new mode: regular subagents (no communication between them)
 - [ ] Curate what context each agent sees (files, docs, MCP servers, skills)
+- [ ] User-managed runtime profiles and built-in presets: choose a profile per team launch or schedule, isolate provider credentials and config roots (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`, OpenCode XDG roots), optionally isolate the child-process `HOME`, and pin running teams to an immutable profile snapshot
 - [x] Slash commands
 - [ ] Outgoing message queue — queue user messages while the lead (or agent) is busy; clear agent-busy status in the UI; flush to stdin or relay from inbox when idle (durable queue on disk for the lead inbox path)
 - [ ] `createTasksBatch` — IPC/service API to create many team tasks in one call (playbooks, markdown checklist import, scripts); complements single `createTask`

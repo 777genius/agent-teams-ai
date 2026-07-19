@@ -3,6 +3,7 @@ import { promises as fsp } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { killProcessTree } from '@main/utils/childProcess';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
 import {
   findFirstRuntimePathBinaryCandidate,
@@ -18,6 +19,7 @@ import type {
   RuntimeProviderCompanionService,
 } from './types';
 import type {
+  RuntimeProviderCompanionActionDto,
   RuntimeProviderCompanionPhaseDto,
   RuntimeProviderCompanionStatusDto,
 } from '@features/runtime-provider-management/contracts';
@@ -26,7 +28,28 @@ const MAX_INSTALLER_SCRIPT_BYTES = 512 * 1024;
 const INSTALL_TIMEOUT_MS = 45 * 60 * 1_000;
 const LOGIN_TIMEOUT_MS = 10 * 60 * 1_000;
 const PROBE_TIMEOUT_MS = 10_000;
+const ACTION_TIMEOUT_MS = 2 * 60 * 1_000;
 const MAX_CAPTURED_OUTPUT_CHARS = 32_000;
+const WINDOWS_ISOLATED_COMMAND_HELPER = String.raw`
+const { spawn } = require('node:child_process');
+const [command, ...args] = process.argv.slice(1);
+if (!command) process.exit(1);
+const childEnv = { ...process.env };
+delete childEnv.ELECTRON_RUN_AS_NODE;
+const child = spawn(command, args, {
+  env: childEnv,
+  shell: /\.(?:cmd|bat)$/i.test(command),
+  windowsHide: true,
+  stdio: ['ignore', 'pipe', 'pipe'],
+});
+child.stdout?.pipe(process.stdout);
+child.stderr?.pipe(process.stderr);
+child.once('error', (error) => {
+  process.stderr.write(String(error?.message || error));
+  process.exit(1);
+});
+child.once('close', (code) => process.exit(code ?? 1));
+`;
 
 export interface RuntimeProviderCliCompanionServiceDependencies {
   platform?: NodeJS.Platform;
@@ -59,10 +82,15 @@ async function runCommandDefault(
   options: RuntimeProviderCliCompanionRunCommandOptions
 ): Promise<RuntimeProviderCliCompanionCommandResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, [...args], {
+    const isolateFromHost = process.platform === 'win32' && options.isolateFromHost === true;
+    const launchCommand = isolateFromHost ? process.execPath : command;
+    const launchArgs = isolateFromHost
+      ? ['-e', WINDOWS_ISOLATED_COMMAND_HELPER, command, ...args]
+      : [...args];
+    const child = spawn(launchCommand, launchArgs, {
       detached: process.platform !== 'win32',
-      env: options.env,
-      shell: process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command),
+      env: isolateFromHost ? { ...options.env, ELECTRON_RUN_AS_NODE: '1' } : options.env,
+      shell: !isolateFromHost && process.platform === 'win32' && /\.(?:cmd|bat)$/i.test(command),
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -72,12 +100,7 @@ async function runCommandDefault(
     const timer = setTimeout(() => {
       if (settled) return;
       if (process.platform === 'win32' && child.pid) {
-        const taskkill = spawn(
-          path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'taskkill.exe'),
-          ['/pid', String(child.pid), '/T', '/F'],
-          { windowsHide: true, stdio: 'ignore' }
-        );
-        taskkill.unref();
+        killProcessTree(child, 'SIGKILL');
       } else if (child.pid) {
         try {
           process.kill(-child.pid, 'SIGTERM');
@@ -174,11 +197,29 @@ function trimCommandOutput(result: RuntimeProviderCliCompanionCommandResult): st
 
 function summarizeCommandFailure(result: RuntimeProviderCliCompanionCommandResult): string | null {
   const ignored = /^(?:installation failed\. cleaning up\.\.\.|next steps:)$/i;
-  const lines = `${result.stderr}\n${result.stdout}`
-    .split(/\r?\n/)
-    .map((line) => line.replace(/^(?:(?:❌|⚠️|✓|🎉)\s*)+/u, '').trim())
-    .filter((line) => line && !ignored.test(line));
-  return lines.at(-1) ?? trimCommandOutput(result);
+  const actionableFailure =
+    /\b(?:failed|failure|error|mismatch|unavailable)\b|\bnot (?:available|found)\b|\bno .+ found\b|\b(?:exit|exited)(?: with)? code\b/i;
+  const toLines = (value: string): string[] =>
+    value
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^(?:(?:❌|⚠️|✓|🎉)\s*)+/u, '').trim())
+      .filter((line) => line && !ignored.test(line));
+  const stderrLines = toLines(result.stderr);
+  const stdoutLines = toLines(result.stdout);
+  return (
+    stderrLines[0] ??
+    stdoutLines.find((line) => actionableFailure.test(line)) ??
+    stdoutLines.at(-1) ??
+    trimCommandOutput(result)
+  );
+}
+
+function removeInheritedPowerShellModulePath(env: NodeJS.ProcessEnv): void {
+  for (const key of Object.keys(env)) {
+    if (key.toLowerCase() === 'psmodulepath') {
+      delete env[key];
+    }
+  }
 }
 
 async function findLargestInstallerFile(root: string): Promise<number> {
@@ -219,6 +260,11 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
   readonly #runCommand: NonNullable<RuntimeProviderCliCompanionServiceDependencies['runCommand']>;
   readonly #emitProgress: (status: RuntimeProviderCompanionStatusDto) => void;
   #operation: Promise<RuntimeProviderCompanionStatusDto> | null = null;
+  #statusGeneration = 0;
+  #statusProbe: {
+    generation: number;
+    promise: Promise<RuntimeProviderCompanionStatusDto>;
+  } | null = null;
   #status: RuntimeProviderCompanionStatusDto;
 
   constructor(
@@ -259,11 +305,22 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
 
   async getStatus(): Promise<RuntimeProviderCompanionStatusDto> {
     if (this.#operation) return this.#operation;
-    return this.#probeStatus(true);
+    const generation = this.#statusGeneration;
+    if (this.#statusProbe?.generation === generation) {
+      return this.#statusProbe.promise;
+    }
+    const promise = this.#probeStatus(true, generation).finally(() => {
+      if (this.#statusProbe?.promise === promise) {
+        this.#statusProbe = null;
+      }
+    });
+    this.#statusProbe = { generation, promise };
+    return promise;
   }
 
   installAndConnect(): Promise<RuntimeProviderCompanionStatusDto> {
     if (this.#operation) return this.#operation;
+    this.#invalidateStatusProbes();
     const operation = this.#installAndConnectImpl().finally(() => {
       if (this.#operation === operation) this.#operation = null;
     });
@@ -273,6 +330,7 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
 
   connect(): Promise<RuntimeProviderCompanionStatusDto> {
     if (this.#operation) return this.#operation;
+    this.#invalidateStatusProbes();
     const operation = this.#connectImpl().finally(() => {
       if (this.#operation === operation) this.#operation = null;
     });
@@ -280,7 +338,18 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
     return operation;
   }
 
+  runAction(action: RuntimeProviderCompanionActionDto): Promise<RuntimeProviderCompanionStatusDto> {
+    if (this.#operation) return this.#operation;
+    this.#invalidateStatusProbes();
+    const operation = this.#runActionImpl(action).finally(() => {
+      if (this.#operation === operation) this.#operation = null;
+    });
+    this.#operation = operation;
+    return operation;
+  }
+
   setModelVerificationPending(): RuntimeProviderCompanionStatusDto {
+    this.#invalidateStatusProbes();
     return this.#publish({
       phase: 'verifying-model',
       authenticated: true,
@@ -292,6 +361,7 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
   }
 
   setModelVerificationResult(ok: boolean, detail: string): RuntimeProviderCompanionStatusDto {
+    this.#invalidateStatusProbes();
     return this.#publish({
       phase: ok ? 'connected' : 'error',
       authenticated: true,
@@ -389,6 +459,12 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
       if (this.#platform === 'win32') {
         installerEnv.TEMP = tempDir;
         installerEnv.TMP = tempDir;
+        if (path.basename(installCommand.command).toLowerCase() === 'powershell.exe') {
+          // PowerShell 7 prepends its module directories to PSModulePath. Passing
+          // that value into Windows PowerShell 5.1 breaks built-in commands such
+          // as Get-FileHash, which the signed Kiro installer requires.
+          removeInheritedPowerShellModulePath(installerEnv);
+        }
       } else {
         installerEnv.TMPDIR = tempDir;
       }
@@ -398,6 +474,9 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
       const result = await this.#runCommand(installCommand.command, installCommand.args, {
         env: installerEnv,
         timeoutMs: INSTALL_TIMEOUT_MS,
+        isolateFromHost:
+          this.#platform === 'win32' &&
+          this.#definition.installer.isolateFromHostOnWindows === true,
         onOutput: (text) => this.#handleInstallerOutput(text),
       }).finally(stopDownloadMonitor);
       if (result.exitCode !== 0) {
@@ -525,7 +604,118 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
     return this.#probeStatus(true);
   }
 
-  async #probeStatus(emit: boolean): Promise<RuntimeProviderCompanionStatusDto> {
+  async #runActionImpl(
+    action: RuntimeProviderCompanionActionDto
+  ): Promise<RuntimeProviderCompanionStatusDto> {
+    const actions = this.#definition.actions;
+    if (!actions) {
+      return this.#publish({
+        phase: 'error',
+        percent: null,
+        message: `${this.#definition.displayName} does not support this action`,
+        detail: null,
+        error: `Unsupported ${this.#definition.companionId} action: ${action}`,
+      });
+    }
+    const before = await this.#probeStatus(false);
+    if (!before.binaryPath) return before;
+    const env = buildEnrichedEnv(before.binaryPath);
+
+    if (action === 'switch-account') {
+      const logout = await this.#runCommand(before.binaryPath, actions.logoutArgs, {
+        env,
+        timeoutMs: PROBE_TIMEOUT_MS,
+      });
+      if (logout.exitCode !== 0) {
+        return this.#actionFailure(before, action, logout);
+      }
+      return this.#connectImpl();
+    }
+
+    const args =
+      action === 'logout'
+        ? actions.logoutArgs
+        : action === 'doctor'
+          ? actions.doctorArgs
+          : actions.updateArgs;
+    const actionLabel =
+      action === 'logout'
+        ? 'Signing out'
+        : action === 'doctor'
+          ? 'Running diagnostics'
+          : 'Updating';
+    this.#publish({
+      phase: 'running-action',
+      percent: null,
+      message: `${actionLabel} ${this.#definition.displayName}...`,
+      detail: action === 'doctor' ? 'Running all diagnostic checks without applying fixes.' : null,
+      error: null,
+      actionOutput: null,
+    });
+    const result = await this.#runCommand(before.binaryPath, args, {
+      env,
+      timeoutMs:
+        action === 'update'
+          ? INSTALL_TIMEOUT_MS
+          : action === 'doctor'
+            ? ACTION_TIMEOUT_MS
+            : PROBE_TIMEOUT_MS,
+    });
+    if (result.exitCode !== 0) return this.#actionFailure(before, action, result);
+
+    if (action === 'logout') {
+      await this.#probeStatus(false);
+      return this.#publish({
+        phase: 'sign-in-required',
+        installed: true,
+        authenticated: false,
+        account: null,
+        percent: null,
+        message: `${this.#definition.displayName} signed out`,
+        detail: 'This user-wide CLI session is no longer available to OpenCode.',
+        error: null,
+        actionOutput: trimCommandOutput(result),
+      });
+    }
+
+    const refreshed = await this.#probeStatus(false);
+    return this.#publish({
+      ...refreshed,
+      message:
+        action === 'doctor'
+          ? `${this.#definition.displayName} diagnostics completed`
+          : `${this.#definition.displayName} update completed`,
+      detail:
+        action === 'doctor'
+          ? 'Review the diagnostic output below. No automatic fixes were applied.'
+          : refreshed.detail,
+      error: null,
+      actionOutput: `${result.stdout}\n${result.stderr}`.trim() || null,
+    });
+  }
+
+  #actionFailure(
+    before: RuntimeProviderCompanionStatusDto,
+    action: RuntimeProviderCompanionActionDto,
+    result: RuntimeProviderCliCompanionCommandResult
+  ): RuntimeProviderCompanionStatusDto {
+    const failure =
+      summarizeCommandFailure(result) ?? `${action} exited with code ${result.exitCode}`;
+    return this.#publish({
+      ...before,
+      phase: 'error',
+      percent: null,
+      message: `${this.#definition.displayName} ${action} failed`,
+      detail: 'Retry the action or use the official CLI fallback.',
+      error: failure,
+      actionOutput: `${result.stdout}\n${result.stderr}`.trim() || null,
+    });
+  }
+
+  async #probeStatus(
+    emit: boolean,
+    generation = this.#statusGeneration
+  ): Promise<RuntimeProviderCompanionStatusDto> {
     const binaryPath = await this.#resolveBinary();
     if (!binaryPath) {
       const missing = this.#createStatus({
@@ -539,9 +729,7 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
         detail: 'Agent Teams can install it and then open the official browser sign-in.',
         error: null,
       });
-      this.#status = missing;
-      if (emit) this.#emitProgress(missing);
-      return { ...missing };
+      return this.#commitProbedStatus(missing, emit, generation);
     }
 
     const env = buildEnrichedEnv(binaryPath);
@@ -553,10 +741,14 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
       this.#probeAuthentication(binaryPath, env),
     ]);
     const authenticated = Boolean(authResult && this.#definition.auth.isAuthenticated(authResult));
+    const account = authenticated
+      ? (this.#definition.auth.parseAccount?.(authResult!) ?? null)
+      : null;
     const next = this.#createStatus({
       phase: authenticated ? 'connected' : 'sign-in-required',
       installed: true,
       authenticated,
+      account,
       binaryPath,
       version:
         versionResult && versionResult.exitCode === 0 ? trimCommandOutput(versionResult) : null,
@@ -569,6 +761,22 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
         : `Sign in once in your browser. ${this.#definition.displayName} keeps the session in its normal local credential store.`,
       error: null,
     });
+    return this.#commitProbedStatus(next, emit, generation);
+  }
+
+  #invalidateStatusProbes(): void {
+    this.#statusGeneration += 1;
+    this.#statusProbe = null;
+  }
+
+  #commitProbedStatus(
+    next: RuntimeProviderCompanionStatusDto,
+    emit: boolean,
+    generation: number
+  ): RuntimeProviderCompanionStatusDto {
+    if (generation !== this.#statusGeneration) {
+      return { ...this.#status };
+    }
     this.#status = next;
     if (emit) this.#emitProgress(next);
     return { ...next };
@@ -611,6 +819,11 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
       phase: patch.phase,
       installed: patch.installed ?? false,
       authenticated: patch.authenticated ?? false,
+      account: patch.account ?? null,
+      supportedActions: this.#definition.actions
+        ? ['switch-account', 'logout', 'doctor', 'update']
+        : [],
+      actionOutput: patch.actionOutput ?? null,
       binaryPath: patch.binaryPath ?? null,
       version: patch.version ?? null,
       percent: patch.percent ?? null,

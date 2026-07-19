@@ -101,7 +101,7 @@ export function mergeProvisioningWarnings(
 }
 
 const DETERMINISTIC_BOOTSTRAP_LARGE_TEAM_WARNING_THRESHOLD = 8;
-const DETERMINISTIC_BOOTSTRAP_MAX_PRIMARY_MEMBERS = 20;
+const DETERMINISTIC_BOOTSTRAP_MAX_PRIMARY_MEMBERS = 30;
 
 export function buildLargeDeterministicBootstrapWarning(memberCount: number): string | null {
   if (memberCount <= DETERMINISTIC_BOOTSTRAP_LARGE_TEAM_WARNING_THRESHOLD) {

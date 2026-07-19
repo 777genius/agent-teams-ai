@@ -119,7 +119,7 @@ export const OptionalSettingsSection = ({
   };
 
   return (
-    <div className={cn('border-y border-[var(--color-border)]', className)}>
+    <div className={cn('border-t border-[var(--color-border)]', className)}>
       <button
         type="button"
         className="flex min-h-12 w-full items-center gap-2.5 px-2 py-2 text-left transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--color-border-emphasis)]"

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   formatCodexCreditsValue,
@@ -46,6 +46,7 @@ import {
 } from '@renderer/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@renderer/components/ui/tabs';
 import { useStore } from '@renderer/store';
+import { ANTHROPIC_EXTERNAL_BACKEND_IDS } from '@shared/constants/anthropicConnectionMode';
 import { AlertTriangle, Download, Key, Link2, Loader2, Save, Trash2 } from 'lucide-react';
 
 import {
@@ -67,7 +68,9 @@ import {
   ProviderRuntimeBackendSelector,
 } from './ProviderRuntimeBackendSelector';
 
+import type { ProviderRuntimeBackendSummaryText } from './ProviderRuntimeBackendSelector';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
+import type { AnalyticsProviderCheckReason } from '@renderer/analytics/productAnalytics';
 import type { CliProviderAuthMode, CliProviderId, CliProviderStatus } from '@shared/types';
 import type { ApiKeyEntry } from '@shared/types/extensions';
 
@@ -101,7 +104,10 @@ interface Props {
   readonly codexRuntimeStatusLoading?: boolean;
   readonly onInstallCodexRuntime?: () => Promise<void> | void;
   readonly onSelectBackend: (providerId: CliProviderId, backendId: string) => Promise<void> | void;
-  readonly onRefreshProvider?: (providerId: CliProviderId) => Promise<void> | void;
+  readonly onRefreshProvider?: (
+    providerId: CliProviderId,
+    checkReason?: AnalyticsProviderCheckReason
+  ) => Promise<boolean | void> | boolean | void;
   readonly onRequestLogin?: (providerId: CliProviderId) => void;
 }
 
@@ -712,15 +718,42 @@ const CodexRateLimitWindowCard = ({
 
 function getConnectionMethodCardOptions(
   provider: CliProviderStatus,
-  t: ReturnType<typeof useAppTranslation>['t']
+  t: ReturnType<typeof useAppTranslation>['t'],
+  runtimeBackendSummaryText: ProviderRuntimeBackendSummaryText
 ): ConnectionMethodCardOption[] | null {
   switch (provider.providerId) {
-    case 'anthropic':
+    case 'anthropic': {
+      const resolvedBackendId = provider.resolvedBackendId?.trim() ?? '';
+      const resolvedExternalBackendLabel =
+        provider.connection?.compatibleEndpoint?.enabled !== true &&
+        ANTHROPIC_EXTERNAL_BACKEND_IDS.some((backendId) => backendId === resolvedBackendId)
+          ? provider.backend?.label.trim() || resolvedBackendId
+          : null;
+      const bedrockEndpointLabelCandidate =
+        resolvedBackendId === 'bedrock' && resolvedExternalBackendLabel
+          ? provider.backend?.endpointLabel?.trim() || null
+          : null;
+      const bedrockEndpointLabel =
+        bedrockEndpointLabelCandidate === resolvedExternalBackendLabel
+          ? null
+          : bedrockEndpointLabelCandidate;
+      const autoTitle = resolvedExternalBackendLabel
+        ? provider.connection?.configuredAuthMode === 'auto'
+          ? runtimeBackendSummaryText.autoCurrently(resolvedExternalBackendLabel)
+          : `${t('providerRuntime.connectionCards.auto.title')} (${resolvedExternalBackendLabel})`
+        : t('providerRuntime.connectionCards.auto.title');
+      const autoDescription = [
+        t('providerRuntime.connectionCards.anthropic.autoDescription'),
+        bedrockEndpointLabel,
+      ]
+        .filter((part): part is string => Boolean(part))
+        .join(' ');
+
       return [
         {
           authMode: 'auto',
-          title: t('providerRuntime.connectionCards.auto.title'),
-          description: t('providerRuntime.connectionCards.anthropic.autoDescription'),
+          title: autoTitle,
+          description: autoDescription,
         },
         {
           authMode: 'oauth',
@@ -733,6 +766,7 @@ function getConnectionMethodCardOptions(
           description: t('providerRuntime.connectionCards.anthropic.apiKeyDescription'),
         },
       ];
+    }
     case 'codex':
       return [
         {
@@ -780,7 +814,7 @@ const ConnectionMethodCards = ({
   onSelect,
 }: Readonly<{
   options: ConnectionMethodCardOption[];
-  selectedAuthMode: CliProviderAuthMode;
+  selectedAuthMode?: CliProviderAuthMode;
   disabled: boolean;
   connectionSaving: boolean;
   pendingConnectionAction: PendingConnectionAction;
@@ -908,6 +942,20 @@ export const ProviderRuntimeSettingsDialog = ({
     enabled: open && selectedProviderId === 'codex',
     includeRateLimits: true,
   });
+
+  const refreshProviderStatus = useCallback(
+    async (
+      providerId: CliProviderId,
+      checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
+    ): Promise<boolean> => {
+      const refreshed = await onRefreshProvider?.(providerId, checkReason);
+      if (refreshed === false) {
+        throw new Error('Provider status refresh failed');
+      }
+      return true;
+    },
+    [onRefreshProvider]
+  );
 
   useEffect(() => {
     if (!open) {
@@ -1147,7 +1195,7 @@ export const ProviderRuntimeSettingsDialog = ({
   const configuredAuthMode: CliProviderAuthMode | undefined =
     selectedProvider?.connection?.configuredAuthMode ?? configurableAuthModes[0] ?? undefined;
   const connectionMethodCardOptions = selectedProvider
-    ? getConnectionMethodCardOptions(selectedProvider, t)
+    ? getConnectionMethodCardOptions(selectedProvider, t, runtimeBackendSummaryText)
     : null;
   const showConnectionMethodCards =
     connectionMethodCardOptions !== null && typeof configuredAuthMode !== 'undefined';
@@ -1431,7 +1479,7 @@ export const ProviderRuntimeSettingsDialog = ({
     setApiKeyValue('');
 
     try {
-      await onRefreshProvider?.(selectedProvider.providerId);
+      await refreshProviderStatus(selectedProvider.providerId, 'provider_change');
     } catch {
       setConnectionError(t('providerRuntime.errors.apiKeySavedRefreshFailed'));
     }
@@ -1457,7 +1505,7 @@ export const ProviderRuntimeSettingsDialog = ({
     setApiKeyValue('');
 
     try {
-      await onRefreshProvider?.(selectedProvider.providerId);
+      await refreshProviderStatus(selectedProvider.providerId, 'provider_change');
     } catch {
       setConnectionError(t('providerRuntime.errors.apiKeyDeletedRefreshFailed'));
     }
@@ -1469,7 +1517,9 @@ export const ProviderRuntimeSettingsDialog = ({
     }
 
     const nextAuthMode = authMode as CliProviderAuthMode;
-    if (nextAuthMode === configuredAuthMode) {
+    const shouldDisableCompatibleEndpoint =
+      selectedProvider.providerId === 'anthropic' && anthropicCompatibleEndpointEnabled;
+    if (nextAuthMode === configuredAuthMode && !shouldDisableCompatibleEndpoint) {
       return;
     }
 
@@ -1482,6 +1532,14 @@ export const ProviderRuntimeSettingsDialog = ({
         await updateConfig('providerConnections', {
           anthropic: {
             authMode: nextAuthMode,
+            ...(shouldDisableCompatibleEndpoint
+              ? {
+                  compatibleEndpoint: {
+                    enabled: false,
+                    baseUrl: anthropicCompatibleConfig.baseUrl.trim(),
+                  },
+                }
+              : {}),
           },
         });
       } else if (nextAuthMode !== 'oauth') {
@@ -1501,7 +1559,7 @@ export const ProviderRuntimeSettingsDialog = ({
     } finally {
       if (updateSucceeded) {
         try {
-          await onRefreshProvider?.(selectedProvider.providerId);
+          await refreshProviderStatus(selectedProvider.providerId, 'provider_change');
         } catch {
           setConnectionError(t('providerRuntime.errors.connectionUpdatedRefreshFailed'));
         }
@@ -1565,7 +1623,7 @@ export const ProviderRuntimeSettingsDialog = ({
     } finally {
       if (updateSucceeded) {
         try {
-          await onRefreshProvider?.('anthropic');
+          await refreshProviderStatus('anthropic', 'provider_change');
         } catch {
           setConnectionError(t('providerRuntime.errors.endpointSavedRefreshFailed'));
         }
@@ -1609,7 +1667,7 @@ export const ProviderRuntimeSettingsDialog = ({
     } finally {
       if (updateSucceeded) {
         try {
-          await onRefreshProvider?.('anthropic');
+          await refreshProviderStatus('anthropic', 'provider_change');
         } catch {
           setConnectionError(t('providerRuntime.errors.endpointDisabledRefreshFailed'));
         }
@@ -1703,7 +1761,7 @@ export const ProviderRuntimeSettingsDialog = ({
       if (updateSucceeded) {
         try {
           await codexAccount.refresh({ includeRateLimits: true, forceRefreshToken: true });
-          await onRefreshProvider?.('codex');
+          await refreshProviderStatus('codex', 'provider_change');
         } catch {
           setConnectionError('Codex custom endpoint saved, but provider status refresh failed.');
         }
@@ -1749,7 +1807,7 @@ export const ProviderRuntimeSettingsDialog = ({
       if (updateSucceeded) {
         try {
           await codexAccount.refresh({ includeRateLimits: true, forceRefreshToken: true });
-          await onRefreshProvider?.('codex');
+          await refreshProviderStatus('codex', 'provider_change');
         } catch {
           setConnectionError('Codex custom endpoint disabled, but provider status refresh failed.');
         }
@@ -1764,7 +1822,7 @@ export const ProviderRuntimeSettingsDialog = ({
     setConnectionError(null);
     try {
       await codexAccount.refresh({ includeRateLimits: true, forceRefreshToken: true });
-      await onRefreshProvider?.('codex');
+      await refreshProviderStatus('codex');
     } catch (error) {
       setConnectionError(
         error instanceof Error ? error.message : t('providerRuntime.errors.refreshCodexAccount')
@@ -1786,7 +1844,7 @@ export const ProviderRuntimeSettingsDialog = ({
     setConnectionError(null);
     const success = await codexAccount.cancelChatgptLogin();
     if (success) {
-      await onRefreshProvider?.('codex');
+      await refreshProviderStatus('codex', 'provider_change');
     } else if (codexAccount.error) {
       setConnectionError(codexAccount.error);
     }
@@ -1796,7 +1854,7 @@ export const ProviderRuntimeSettingsDialog = ({
     setConnectionError(null);
     const success = await codexAccount.logout();
     if (success) {
-      await onRefreshProvider?.('codex');
+      await refreshProviderStatus('codex', 'provider_change');
     } else if (codexAccount.error) {
       setConnectionError(codexAccount.error);
     }
@@ -1832,7 +1890,7 @@ export const ProviderRuntimeSettingsDialog = ({
           fastModeDefault: enabled,
         },
       });
-      await onRefreshProvider?.('anthropic');
+      await refreshProviderStatus('anthropic', 'provider_change');
     } catch (error) {
       setConnectionError(
         error instanceof Error ? error.message : t('providerRuntime.errors.updateAnthropicFastMode')
@@ -1991,7 +2049,12 @@ export const ProviderRuntimeSettingsDialog = ({
                 initialProviderId={initialRuntimeProviderId}
                 initialProviderAction={initialRuntimeProviderAction}
                 disabled={disabled || selectedProviderLoading}
-                onProviderChanged={() => onRefreshProvider?.('opencode')}
+                onProviderChanged={(changeKind) =>
+                  refreshProviderStatus(
+                    'opencode',
+                    changeKind === 'connection' ? 'provider_setup' : 'provider_change'
+                  )
+                }
                 onBlockingOperationChange={setRuntimeProviderOperationBlocking}
               />
             ) : (
@@ -2036,7 +2099,9 @@ export const ProviderRuntimeSettingsDialog = ({
                     <Label className="text-xs">{t('providerRuntime.connection.method')}</Label>
                     <ConnectionMethodCards
                       options={connectionMethodCardOptions}
-                      selectedAuthMode={configuredAuthMode}
+                      selectedAuthMode={
+                        anthropicCompatibleEndpointEnabled ? undefined : configuredAuthMode
+                      }
                       disabled={connectionBusy}
                       connectionSaving={connectionSaving}
                       pendingConnectionAction={pendingConnectionAction}

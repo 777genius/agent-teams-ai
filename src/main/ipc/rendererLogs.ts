@@ -8,6 +8,7 @@ const RENDERER_HEARTBEAT = 'renderer:heartbeat';
 const lastHeartbeatByWebContentsId = new Map<number, number>();
 const lastHeartbeatWarnedAtByWebContentsId = new Map<number, number>();
 const hasReceivedHeartbeatByWebContentsId = new Set<number>();
+const sendersWithDestroyCleanup = new WeakSet<object>();
 let heartbeatMonitorStarted = false;
 let heartbeatMonitorInterval: ReturnType<typeof setInterval> | null = null;
 let rendererLogHandlersRegistered = false;
@@ -52,15 +53,20 @@ export function registerRendererLogHandlers(ipcMain: IpcMain): void {
   });
 
   ipcMain.on(RENDERER_BOOT, (event) => {
-    const id = event.sender.id;
+    const sender = event.sender;
+    const id = sender.id;
     lastHeartbeatByWebContentsId.set(id, Date.now());
     lastHeartbeatWarnedAtByWebContentsId.delete(id);
     hasReceivedHeartbeatByWebContentsId.delete(id);
-    event.sender.once('destroyed', () => {
-      lastHeartbeatByWebContentsId.delete(id);
-      lastHeartbeatWarnedAtByWebContentsId.delete(id);
-      hasReceivedHeartbeatByWebContentsId.delete(id);
-    });
+    if (!sendersWithDestroyCleanup.has(sender)) {
+      sendersWithDestroyCleanup.add(sender);
+      sender.once('destroyed', () => {
+        sendersWithDestroyCleanup.delete(sender);
+        lastHeartbeatByWebContentsId.delete(id);
+        lastHeartbeatWarnedAtByWebContentsId.delete(id);
+        hasReceivedHeartbeatByWebContentsId.delete(id);
+      });
+    }
   });
 
   ipcMain.on(RENDERER_HEARTBEAT, (event) => {

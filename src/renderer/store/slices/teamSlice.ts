@@ -3,10 +3,15 @@ import {
   classifyAnalyticsError,
   elapsedMsBetweenIso,
   elapsedMsSince,
+  recordAttachmentAttachEnd,
+  recordCrossTeamMessageSend,
   recordTaskCreate,
   recordTaskEnd,
+  recordTaskFirstOutput,
   recordTeamCreate,
+  recordTeamDelete,
   recordTeamLaunchEnd,
+  recordTeamLaunchStepEnd,
 } from '@renderer/analytics/productAnalytics';
 import { api } from '@renderer/api';
 import { mergeTeamMessages } from '@renderer/utils/mergeTeamMessages';
@@ -24,6 +29,7 @@ import {
 import { IpcError, unwrapIpc } from '@renderer/utils/unwrapIpc';
 import { DEFAULT_TEAM_GRAPH_LAYOUT_MODE } from '@shared/constants/teamGraphLayoutMode';
 import { DEFAULT_TOOL_APPROVAL_SETTINGS } from '@shared/types/team';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { calculateTaskImplementationDuration } from '@shared/utils/taskWorkDuration';
 import { buildTeamGraphDefaultLayoutSeed } from '@shared/utils/teamGraphDefaultLayout';
@@ -264,8 +270,12 @@ let inFlightGlobalTasksRefresh: Promise<void> | null = null;
 let inFlightGlobalTasksRefreshScope: ContextRequestScope | null = null;
 let pendingFreshGlobalTasksRefresh = false;
 const reportedTaskEndKeys = new Set<string>();
+const reportedTaskFirstOutputKeys = new Set<string>();
 const reportedTeamLaunchEndRunIds = new Set<string>();
+const reportedTeamLaunchStepKeys = new Set<string>();
 const teamLaunchAnalyticsByRunId = new Map<string, TeamLaunchAnalyticsContext>();
+const teamLaunchStepStartedAtByKey = new Map<string, number>();
+const taskFirstOutputAnalyticsByKey = new Map<string, TaskFirstOutputAnalyticsContext>();
 
 type GlobalTaskNotificationParams = Parameters<typeof processGlobalTaskNotifications>[0];
 
@@ -273,6 +283,15 @@ interface TeamLaunchAnalyticsContext {
   startedAtMs: number;
   memberCount: number | null;
   providerIds: (string | null)[];
+}
+
+interface TaskFirstOutputAnalyticsContext {
+  startedAtMs: number;
+  targetType: 'member' | 'team';
+  provider: string | null;
+  teamSize: number | null;
+  hasAttachments: boolean;
+  hasTaskRefs: boolean;
 }
 
 interface RefreshTeamDataOptions {
@@ -327,8 +346,12 @@ export function __resetTeamSliceModuleStateForTests(): void {
   inFlightGlobalTasksRefresh = null;
   pendingFreshGlobalTasksRefresh = false;
   reportedTaskEndKeys.clear();
+  reportedTaskFirstOutputKeys.clear();
   reportedTeamLaunchEndRunIds.clear();
+  reportedTeamLaunchStepKeys.clear();
+  teamLaunchStepStartedAtByKey.clear();
   teamLaunchAnalyticsByRunId.clear();
+  taskFirstOutputAnalyticsByKey.clear();
   clearAllPendingReplyRefreshWaits();
   clearAllLastResolvedTeamDataRefreshes();
   clearAllTeamLocalStateEpochs();
@@ -847,9 +870,18 @@ function hasCreateTaskRefs(request: CreateTaskRequest): boolean {
   );
 }
 
+function getTaskAnalyticsKey(teamName: string, taskId: string): string {
+  return `${teamName}:${taskId}`;
+}
+
 function getTaskProviderId(data: TeamViewSnapshot, task: TeamTask): string | null {
   if (!task.owner) return null;
   return data.members.find((member) => member.name === task.owner)?.providerId ?? null;
+}
+
+function getProviderIdForMember(data: TeamViewSnapshot | null, memberName?: string): string | null {
+  if (!data || !memberName) return null;
+  return data.members.find((member) => member.name === memberName)?.providerId ?? null;
 }
 
 function getKnownChangedFilesCount(task: TeamTask): number | null {
@@ -866,6 +898,33 @@ function isTaskReviewRequired(task: TeamTask): boolean {
     ('changePresence' in task &&
       (task.changePresence === 'has_changes' || task.changePresence === 'needs_attention'))
   );
+}
+
+function isTeammateTaskComment(comment: TaskComment): boolean {
+  const author = comment.author.trim();
+  if (!author) return false;
+  if (author.toLowerCase() === 'user') return false;
+  return !isLeadMember({ name: author });
+}
+
+function recordTaskFirstOutputTransitions(teamName: string, nextData: TeamViewSnapshot): void {
+  for (const task of nextData.tasks) {
+    const eventKey = getTaskAnalyticsKey(teamName, task.id);
+    const context = taskFirstOutputAnalyticsByKey.get(eventKey);
+    if (!context || reportedTaskFirstOutputKeys.has(eventKey)) continue;
+    if (!task.comments?.some(isTeammateTaskComment)) continue;
+
+    reportedTaskFirstOutputKeys.add(eventKey);
+    taskFirstOutputAnalyticsByKey.delete(eventKey);
+    recordTaskFirstOutput({
+      targetType: context.targetType,
+      durationMs: elapsedMsSince(context.startedAtMs),
+      provider: context.provider ?? getTaskProviderId(nextData, task),
+      teamSize: context.teamSize,
+      hasAttachments: context.hasAttachments,
+      hasTaskRefs: context.hasTaskRefs,
+    });
+  }
 }
 
 function recordTaskEndTransitions(
@@ -895,6 +954,147 @@ function recordTaskEndTransitions(
   }
 }
 
+function getProgressTimestampMs(value: string | undefined): number | null {
+  const timestamp = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function getLaunchStepForState(
+  state: TeamProvisioningProgress['state']
+): 'config_validation' | 'runtime_prepare' | 'member_spawn' | 'bootstrap' | 'ready_check' {
+  if (state === 'validating') return 'config_validation';
+  if (state === 'spawning') return 'runtime_prepare';
+  if (state === 'configuring' || state === 'assembling') return 'member_spawn';
+  if (state === 'finalizing') return 'bootstrap';
+  return 'ready_check';
+}
+
+function isTerminalLaunchState(state: TeamProvisioningProgress['state']): boolean {
+  return (
+    state === 'ready' || state === 'disconnected' || state === 'failed' || state === 'cancelled'
+  );
+}
+
+function recordTeamLaunchStepTransition(
+  existingProgress: TeamProvisioningProgress | undefined,
+  progress: TeamProvisioningProgress,
+  data: TeamViewSnapshot | null
+): void {
+  const step = getLaunchStepForState(progress.state);
+  const stepKey = `${progress.runId}:${step}`;
+  const progressStartedAtMs = getProgressTimestampMs(progress.startedAt) ?? Date.now();
+  if (!teamLaunchStepStartedAtByKey.has(stepKey) && !isTerminalLaunchState(progress.state)) {
+    teamLaunchStepStartedAtByKey.set(stepKey, progressStartedAtMs);
+  }
+  if (!existingProgress || existingProgress.state === progress.state) return;
+
+  const previousStep = getLaunchStepForState(existingProgress.state);
+  const previousStepKey = `${progress.runId}:${previousStep}`;
+  if (reportedTeamLaunchStepKeys.has(previousStepKey)) return;
+
+  const endedAtMs =
+    getProgressTimestampMs(progress.updatedAt) ??
+    getProgressTimestampMs(existingProgress.updatedAt) ??
+    Date.now();
+  const startedAtMs =
+    teamLaunchStepStartedAtByKey.get(previousStepKey) ??
+    getProgressTimestampMs(existingProgress.updatedAt) ??
+    getProgressTimestampMs(existingProgress.startedAt) ??
+    progressStartedAtMs;
+  const analyticsContext = teamLaunchAnalyticsByRunId.get(progress.runId) ?? null;
+  const providerIds = analyticsContext?.providerIds.length
+    ? analyticsContext.providerIds
+    : getProviderIdsFromTeamData(data);
+  const failedTransition =
+    progress.state === 'failed' ||
+    progress.state === 'cancelled' ||
+    progress.state === 'disconnected';
+
+  reportedTeamLaunchStepKeys.add(previousStepKey);
+  teamLaunchStepStartedAtByKey.delete(previousStepKey);
+  recordTeamLaunchStepEnd({
+    step: previousStep,
+    success: !failedTransition,
+    durationMs: Math.max(0, endedAtMs - startedAtMs),
+    memberCount: analyticsContext?.memberCount ?? data?.members.length ?? null,
+    providerIds,
+    errorClass: failedTransition
+      ? classifyAnalyticsError(progress.error ?? progress.message)
+      : 'none',
+    partialFailure:
+      progress.state === 'disconnected' ||
+      progress.launchDiagnostics?.some((item) => item.severity === 'error') === true,
+  });
+
+  if (!isTerminalLaunchState(progress.state)) {
+    teamLaunchStepStartedAtByKey.set(stepKey, endedAtMs);
+  }
+}
+
+function estimateBase64Bytes(base64: string | null | undefined): number | null {
+  if (typeof base64 !== 'string' || !base64) return null;
+  const normalized = base64.includes(',') ? (base64.split(',').pop() ?? '') : base64;
+  const padding = normalized.endsWith('==') ? 2 : normalized.endsWith('=') ? 1 : 0;
+  return Math.max(0, Math.floor((normalized.length * 3) / 4) - padding);
+}
+
+function getAttachmentTotalSizeBytes(
+  attachments:
+    | readonly { size?: number; data?: string; base64Data?: string; base64?: string }[]
+    | undefined
+): number | null {
+  if (!attachments?.length) return null;
+  let total = 0;
+  let hasKnownSize = false;
+  for (const attachment of attachments) {
+    const size =
+      typeof attachment.size === 'number'
+        ? attachment.size
+        : estimateBase64Bytes(attachment.data ?? attachment.base64Data ?? attachment.base64);
+    if (typeof size === 'number' && Number.isFinite(size) && size >= 0) {
+      total += size;
+      hasKnownSize = true;
+    }
+  }
+  return hasKnownSize ? total : null;
+}
+
+function getAttachmentMimeTypes(
+  attachments: readonly { mimeType?: string; type?: string }[] | undefined
+): (string | null)[] {
+  return attachments?.map((attachment) => attachment.mimeType ?? attachment.type ?? null) ?? [];
+}
+
+function getTeamLifecycleAnalyticsContext(data: TeamViewSnapshot | null): {
+  memberCount: number | null;
+  providerIds: (string | null)[];
+  runtimeActive: boolean | null;
+  hadRunningTasks: boolean | null;
+} {
+  return {
+    memberCount: data?.members.length ?? null,
+    providerIds: getProviderIdsFromTeamData(data),
+    runtimeActive: typeof data?.isAlive === 'boolean' ? data.isAlive : null,
+    hadRunningTasks: data ? data.tasks.some((task) => task.status === 'in_progress') : null,
+  };
+}
+
+function clearTeamLaunchStepTracking(runId: string): void {
+  for (const key of teamLaunchStepStartedAtByKey.keys()) {
+    if (key.startsWith(`${runId}:`)) {
+      teamLaunchStepStartedAtByKey.delete(key);
+    }
+  }
+}
+
+function clearTaskFirstOutputTrackingForTeam(teamName: string): void {
+  for (const key of taskFirstOutputAnalyticsByKey.keys()) {
+    if (key.startsWith(`${teamName}:`)) {
+      taskFirstOutputAnalyticsByKey.delete(key);
+    }
+  }
+}
+
 function recordTeamLaunchTerminalProgress(
   progress: TeamProvisioningProgress,
   data: TeamViewSnapshot | null
@@ -921,6 +1121,7 @@ function recordTeamLaunchTerminalProgress(
       : classifyAnalyticsError(progress.error ?? progress.message),
     partialFailure,
   });
+  clearTeamLaunchStepTracking(progress.runId);
 }
 
 function recordTeamLaunchIpcFailure(
@@ -2889,6 +3090,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         };
       });
       recordTaskEndTransitions(teamName, previousData, nextTeamData);
+      recordTaskFirstOutputTransitions(teamName, nextTeamData);
       if (projectedGlobalTaskNotifications) {
         processGlobalTaskNotifications(projectedGlobalTaskNotifications);
       }
@@ -3397,12 +3599,22 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       );
       const runtimeDeliveryFailed = isOpenCodeRuntimeDeliveryHardUxFailure(result.runtimeDelivery);
       const runtimeDeliveryDiagnostics = buildOpenCodeRuntimeDeliveryDiagnostics(result);
+      if (request.attachments?.length) {
+        recordAttachmentAttachEnd({
+          source: 'message',
+          success: !runtimeDeliveryFailed,
+          fileCount: request.attachments.length,
+          totalSizeBytes: getAttachmentTotalSizeBytes(request.attachments),
+          mimeTypes: getAttachmentMimeTypes(request.attachments),
+          errorClass: runtimeDeliveryFailed ? 'runtime_missing' : 'none',
+        });
+      }
       const optimisticMessage: InboxMessage = {
         from: request.from ?? 'user',
         to: request.to ?? request.member,
         text: request.text,
         timestamp: request.timestamp ?? nowIso(),
-        read: true,
+        read: result.deliveredViaStdin === true,
         taskRefs: request.taskRefs?.length ? request.taskRefs : undefined,
         actionMode: request.actionMode,
         summary: request.summary,
@@ -3437,6 +3649,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       await get().refreshTeamMessagesHead(teamName);
       return result;
     } catch (error) {
+      if (request.attachments?.length) {
+        recordAttachmentAttachEnd({
+          source: 'message',
+          success: false,
+          fileCount: request.attachments.length,
+          totalSizeBytes: getAttachmentTotalSizeBytes(request.attachments),
+          mimeTypes: getAttachmentMimeTypes(request.attachments),
+          errorClass: classifyAnalyticsError(error),
+        });
+      }
       set({
         sendingMessage: false,
         lastSendMessageResult: null,
@@ -3535,6 +3757,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     });
     try {
       const result = await api.crossTeam.send(request);
+      recordCrossTeamMessageSend({
+        source: request.fromMember === 'user' ? 'user' : 'runtime',
+        success: true,
+        hasReplyTo: Boolean(request.replyToConversationId),
+        conversationDepth: request.chainDepth ?? null,
+        hasTaskRefs: (request.taskRefs?.length ?? 0) > 0,
+        errorClass: 'none',
+      });
       set({
         sendingMessage: false,
         sendMessageError: null,
@@ -3548,6 +3778,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       });
       await get().refreshTeamMessagesHead(request.fromTeam);
     } catch (error) {
+      recordCrossTeamMessageSend({
+        source: request.fromMember === 'user' ? 'user' : 'runtime',
+        success: false,
+        hasReplyTo: Boolean(request.replyToConversationId),
+        conversationDepth: request.chainDepth ?? null,
+        hasTaskRefs: (request.taskRefs?.length ?? 0) > 0,
+        errorClass: classifyAnalyticsError(error),
+      });
       set({
         sendingMessage: false,
         lastSendMessageResult: null,
@@ -3573,15 +3811,25 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   createTeamTask: async (teamName: string, request: CreateTaskRequest) => {
+    const taskStartedAtMs = Date.now();
     const task = await unwrapIpc('team:createTask', () => api.teams.createTask(teamName, request));
     const teamData = selectTeamDataForName(get(), teamName);
+    const hasTaskRefs = hasCreateTaskRefs(request);
     recordTaskCreate({
       source: 'dialog',
       targetType: request.owner ? 'member' : 'team',
       hasAttachments: false,
-      hasTaskRefs: hasCreateTaskRefs(request),
+      hasTaskRefs,
       promptLength: request.prompt?.length ?? 0,
       teamSize: teamData?.members.length ?? null,
+    });
+    taskFirstOutputAnalyticsByKey.set(getTaskAnalyticsKey(teamName, task.id), {
+      startedAtMs: taskStartedAtMs,
+      targetType: request.owner ? 'member' : 'team',
+      provider: getProviderIdForMember(teamData, request.owner),
+      teamSize: teamData?.members.length ?? null,
+      hasAttachments: false,
+      hasTaskRefs,
     });
     await get().refreshTeamData(teamName);
     return task;
@@ -3653,10 +3901,30 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   saveTaskAttachment: async (teamName, taskId, file) => {
     const id = crypto.randomUUID();
-    await unwrapIpc('team:saveTaskAttachment', () =>
-      api.teams.saveTaskAttachment(teamName, taskId, id, file.name, file.type, file.base64)
-    );
-    await get().refreshTeamData(teamName);
+    try {
+      await unwrapIpc('team:saveTaskAttachment', () =>
+        api.teams.saveTaskAttachment(teamName, taskId, id, file.name, file.type, file.base64)
+      );
+      recordAttachmentAttachEnd({
+        source: 'task',
+        success: true,
+        fileCount: 1,
+        totalSizeBytes: getAttachmentTotalSizeBytes([file]),
+        mimeTypes: getAttachmentMimeTypes([file]),
+        errorClass: 'none',
+      });
+      await get().refreshTeamData(teamName);
+    } catch (error) {
+      recordAttachmentAttachEnd({
+        source: 'task',
+        success: false,
+        fileCount: 1,
+        totalSizeBytes: getAttachmentTotalSizeBytes([file]),
+        mimeTypes: getAttachmentMimeTypes([file]),
+        errorClass: classifyAnalyticsError(error),
+      });
+      throw error;
+    }
   },
 
   deleteTaskAttachment: async (teamName, taskId, attachmentId, mimeType) => {
@@ -3678,10 +3946,30 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       const comment = await unwrapIpc('team:addTaskComment', () =>
         api.teams.addTaskComment(teamName, taskId, request)
       );
+      if (request.attachments?.length) {
+        recordAttachmentAttachEnd({
+          source: 'comment',
+          success: true,
+          fileCount: request.attachments.length,
+          totalSizeBytes: getAttachmentTotalSizeBytes(request.attachments),
+          mimeTypes: getAttachmentMimeTypes(request.attachments),
+          errorClass: 'none',
+        });
+      }
       set({ addingComment: false });
       await get().refreshTeamData(teamName);
       return comment;
     } catch (error) {
+      if (request.attachments?.length) {
+        recordAttachmentAttachEnd({
+          source: 'comment',
+          success: false,
+          fileCount: request.attachments.length,
+          totalSizeBytes: getAttachmentTotalSizeBytes(request.attachments),
+          mimeTypes: getAttachmentMimeTypes(request.attachments),
+          errorClass: classifyAnalyticsError(error),
+        });
+      }
       const msg = error instanceof Error ? error.message : 'Failed to add comment';
       set({ addingComment: false, addCommentError: msg });
       throw error;
@@ -3779,8 +4067,28 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
   },
 
   deleteTeam: async (teamName: string) => {
-    await unwrapIpc('team:deleteTeam', () => api.teams.deleteTeam(teamName));
+    const analyticsContext = getTeamLifecycleAnalyticsContext(
+      selectTeamDataForName(get(), teamName)
+    );
+    try {
+      await unwrapIpc('team:deleteTeam', () => api.teams.deleteTeam(teamName));
+      recordTeamDelete({
+        source: 'store',
+        success: true,
+        ...analyticsContext,
+        errorClass: 'none',
+      });
+    } catch (error) {
+      recordTeamDelete({
+        source: 'store',
+        success: false,
+        ...analyticsContext,
+        errorClass: classifyAnalyticsError(error),
+      });
+      throw error;
+    }
     invalidateTeamLocalStateEpoch(teamName);
+    clearTaskFirstOutputTrackingForTeam(teamName);
     clearPendingReplyRefreshTimer(teamName);
     clearPendingReplyRefreshWaits(teamName);
     clearTeamScopedTransientState(teamName);
@@ -4285,6 +4593,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
 
   clearMissingProvisioningRun: (runId: string) => {
     teamLaunchAnalyticsByRunId.delete(runId);
+    clearTeamLaunchStepTracking(runId);
     set((state) => {
       const existing = state.provisioningRuns[runId];
       if (!existing) {
@@ -4382,6 +4691,17 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       shouldIgnoreProvisioningProgressRegression(existingProgress.state, progress.state)
     ) {
       return;
+    }
+    if (
+      !currentRunId ||
+      currentRunId === progress.runId ||
+      (isPendingProvisioningRunId(currentRunId) && !isPendingProvisioningRunId(progress.runId))
+    ) {
+      recordTeamLaunchStepTransition(
+        existingProgress,
+        progress,
+        selectTeamDataForName(get(), progress.teamName)
+      );
     }
 
     set((state) => {

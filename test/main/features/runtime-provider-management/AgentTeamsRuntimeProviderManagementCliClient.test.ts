@@ -176,6 +176,117 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     );
   });
 
+  it('runs projectless model verification from the user home instead of the packaged app cwd', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValueOnce({
+      env: { HOME: '/Users/test', PATH: '/Users/test/.bun/bin:/usr/bin' },
+      connectionIssues: {},
+      providerArgs: [],
+    });
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        result: {
+          providerId: 'kiro',
+          modelId: 'kiro/auto',
+          ok: true,
+          availability: 'available',
+          message: 'Verified',
+          diagnostics: [],
+        },
+      }),
+      stderr: '',
+    });
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    await client.testModel({
+      runtimeId: 'opencode',
+      providerId: 'kiro',
+      modelId: 'kiro/auto',
+      projectPath: null,
+    });
+
+    expect(execCliMock).toHaveBeenCalledWith(
+      '/repo/cli-dev',
+      expect.not.arrayContaining(['--project-path']),
+      expect.objectContaining({ cwd: '/Users/test' })
+    );
+  });
+
+  it('rejects a filesystem-root HOME when choosing the projectless verification cwd', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValueOnce({
+      env: { HOME: '/', USERPROFILE: '/Users/fallback', PATH: '/usr/bin' },
+      connectionIssues: {},
+      providerArgs: [],
+    });
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        result: {
+          providerId: 'kiro',
+          modelId: 'kiro/auto',
+          ok: true,
+          availability: 'available',
+          message: 'Verified',
+          diagnostics: [],
+        },
+      }),
+      stderr: '',
+    });
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    await client.testModel({
+      runtimeId: 'opencode',
+      providerId: 'kiro',
+      modelId: 'kiro/auto',
+      projectPath: null,
+    });
+
+    expect(execCliMock).toHaveBeenCalledWith(
+      '/repo/cli-dev',
+      expect.any(Array),
+      expect.objectContaining({ cwd: '/Users/fallback' })
+    );
+  });
+
+  it('never uses a filesystem-root project path as the verification cwd', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValueOnce({
+      env: { HOME: '/Users/test', PATH: '/usr/bin' },
+      connectionIssues: {},
+      providerArgs: [],
+    });
+    execCliMock.mockResolvedValue({
+      stdout: JSON.stringify({
+        schemaVersion: 1,
+        runtimeId: 'opencode',
+        result: {
+          providerId: 'kiro',
+          modelId: 'kiro/auto',
+          ok: true,
+          availability: 'available',
+          message: 'Verified',
+          diagnostics: [],
+        },
+      }),
+      stderr: '',
+    });
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    await client.testModel({
+      runtimeId: 'opencode',
+      providerId: 'kiro',
+      modelId: 'kiro/auto',
+      projectPath: '/',
+    });
+
+    expect(execCliMock).toHaveBeenCalledWith(
+      '/repo/cli-dev',
+      expect.arrayContaining(['--project-path', '/']),
+      expect.objectContaining({ cwd: '/Users/test' })
+    );
+  });
+
   it('redacts secrets from generic command stderr details', async () => {
     const error = new Error('Command failed: /repo/cli-dev runtime providers view');
     Object.assign(error, {
@@ -2667,6 +2778,9 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
         completionMethod: 'auto',
       })
     );
+    expect(
+      emitOAuthProgress.mock.calls.filter(([event]) => event.phase === 'waiting-for-browser')
+    ).toHaveLength(1);
     expect(emitOAuthProgress).toHaveBeenCalledWith(
       expect.objectContaining({
         operationId: 'oauth-operation-123',

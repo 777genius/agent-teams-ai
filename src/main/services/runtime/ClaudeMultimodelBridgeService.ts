@@ -22,6 +22,7 @@ import type {
   CliProviderId,
   CliProviderReasoningEffort,
   CliProviderStatus,
+  CliProviderStatusRequestOptions,
   CliProviderSubscriptionRateLimitSnapshot,
   OpenCodeModelRouteMetadata,
 } from '@shared/types';
@@ -32,10 +33,20 @@ const PROVIDER_STATUS_TIMEOUT_MS = 90_000;
 const PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 30_000;
 const LEGACY_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 5_000;
 const OPENCODE_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 12_000;
+const OPENCODE_SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 45_000;
 const LEGACY_PROVIDER_AUTH_TIMEOUT_MS = 15_000;
 const PROVIDER_MODELS_TIMEOUT_MS = 25_000;
 const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const PROVIDER_MODELS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
+
+function getProviderStatusCommandCwd(projectPath: string | null | undefined): string | undefined {
+  const normalized = projectPath?.trim();
+  if (!normalized || !path.isAbsolute(normalized)) {
+    return undefined;
+  }
+  const resolved = path.resolve(normalized);
+  return resolved === path.parse(resolved).root ? undefined : resolved;
+}
 
 interface RuntimeExtensionCapabilityResponse {
   status?: 'supported' | 'read-only' | 'unsupported';
@@ -406,19 +417,17 @@ function createRuntimeStatusErrorProviderStatus(
 ): CliProviderStatus {
   const message = error instanceof Error ? error.message : String(error);
   const lower = message.toLowerCase();
-  const detailMessage =
-    providerId === 'opencode' && (lower.includes('timed out') || lower.includes('timeout'))
-      ? [
-          'OpenCode runtime status did not return before the desktop timeout.',
-          'This means the Agent Teams runtime process did not produce provider-status JSON in time, not necessarily that OpenCode auth is missing.',
-          'Likely causes include slow or hung OpenCode CLI startup, provider/model inventory, local OpenCode plugins, cache/profile corruption, stale bundled runtime, or Windows security software delaying child processes.',
-          `Raw timeout detail: ${message}`,
-        ].join(' ')
-      : message;
+  const isOpenCodeTimeout =
+    providerId === 'opencode' && (lower.includes('timed out') || lower.includes('timeout'));
+  const detailMessage = isOpenCodeTimeout
+    ? 'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.'
+    : message;
   return {
     ...createDefaultProviderStatus(providerId),
     verificationState: 'error',
-    statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
+    statusMessage: isOpenCodeTimeout
+      ? 'OpenCode is still loading'
+      : CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
     detailMessage,
   };
 }
@@ -495,7 +504,8 @@ function normalizeRuntimeReasoningEffort(
     value === 'medium' ||
     value === 'high' ||
     value === 'xhigh' ||
-    value === 'max'
+    value === 'max' ||
+    value === 'ultra'
     ? value
     : null;
 }
@@ -815,7 +825,8 @@ export class ClaudeMultimodelBridgeService {
   private getProviderCatalogHydration(
     binaryPath: string,
     providerId: CliProviderId,
-    generation: number
+    generation: number,
+    options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus | null> {
     const inFlight = this.providerStatusHydrationInFlight.get(providerId);
     if (inFlight) {
@@ -829,17 +840,17 @@ export class ClaudeMultimodelBridgeService {
           if (!this.isProviderStatusHydrationCurrent(providerId, generation)) {
             return null;
           }
-          return this.getProviderCatalogHydration(binaryPath, providerId, generation);
+          return this.getProviderCatalogHydration(binaryPath, providerId, generation, options);
         });
     }
 
-    const request = this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId).finally(
-      () => {
-        if (this.providerStatusHydrationInFlight.get(providerId)?.promise === request) {
-          this.providerStatusHydrationInFlight.delete(providerId);
-        }
+    const request = this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
+      projectPath: options.projectPath,
+    }).finally(() => {
+      if (this.providerStatusHydrationInFlight.get(providerId)?.promise === request) {
+        this.providerStatusHydrationInFlight.delete(providerId);
       }
-    );
+    });
     this.providerStatusHydrationInFlight.set(providerId, { generation, promise: request });
     return request;
   }
@@ -897,9 +908,18 @@ export class ClaudeMultimodelBridgeService {
   }
 
   private getProviderStatusRuntimeTimeout(
+    binaryPath: string,
     providerId: CliProviderId,
     options: { summary?: boolean; timeoutMs?: number }
   ): number {
+    if (
+      options.summary &&
+      providerId === 'opencode' &&
+      options.timeoutMs === undefined &&
+      path.basename(binaryPath).toLowerCase() === 'cli-source'
+    ) {
+      return OPENCODE_SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS;
+    }
     if (options.summary && this.shouldUseLegacyProviderTimeoutFallback(providerId)) {
       const fallbackTimeout =
         providerId === 'opencode'
@@ -962,7 +982,8 @@ export class ClaudeMultimodelBridgeService {
 
   private async getProviderStatusFromLegacyProbes(
     binaryPath: string,
-    providerId: CliProviderId
+    providerId: CliProviderId,
+    options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus> {
     const { env, connectionIssues } = await this.buildProviderCliEnv(binaryPath, providerId);
     let provider = createDefaultProviderStatus(providerId);
@@ -984,6 +1005,7 @@ export class ClaudeMultimodelBridgeService {
         timeout: PROVIDER_MODELS_TIMEOUT_MS,
         maxBuffer: PROVIDER_MODELS_MAX_BUFFER_BYTES,
         env,
+        cwd: getProviderStatusCommandCwd(options.projectPath),
       }
     );
 
@@ -1043,10 +1065,11 @@ export class ClaudeMultimodelBridgeService {
   private async getProviderStatusFromLegacyProbesOrError(
     binaryPath: string,
     providerId: CliProviderId,
-    originalError: unknown
+    originalError: unknown,
+    options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus> {
     try {
-      return await this.getProviderStatusFromLegacyProbes(binaryPath, providerId);
+      return await this.getProviderStatusFromLegacyProbes(binaryPath, providerId, options);
     } catch (fallbackError) {
       logger.warn(
         `Legacy provider probes unavailable for ${providerId}: ${
@@ -1196,17 +1219,18 @@ export class ClaudeMultimodelBridgeService {
     providerId: CliProviderId,
     env: NodeJS.ProcessEnv,
     connectionIssues: Partial<Record<CliProviderId, string>>,
-    options: { summary?: boolean; timeoutMs?: number } = {}
+    options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
     const args = ['runtime', 'status', '--json', '--provider', providerId];
     if (options.summary) {
       args.push('--summary');
     }
-    const timeout = this.getProviderStatusRuntimeTimeout(providerId, options);
+    const timeout = this.getProviderStatusRuntimeTimeout(binaryPath, providerId, options);
     const { stdout } = await execCli(binaryPath, args, {
       timeout,
       maxBuffer: PROVIDER_STATUS_MAX_BUFFER_BYTES,
       env,
+      cwd: getProviderStatusCommandCwd(options.projectPath),
     });
     const parsed = extractJsonObject<UnifiedRuntimeStatusResponse>(stdout);
     return providerConnectionService.enrichProviderStatus(
@@ -1221,7 +1245,7 @@ export class ClaudeMultimodelBridgeService {
   private async getProviderStatusFromScopedRuntimeStatus(
     binaryPath: string,
     providerId: CliProviderId,
-    options: { summary?: boolean; timeoutMs?: number } = {}
+    options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
     const { env, connectionIssues } = await this.buildProviderCliEnv(binaryPath, providerId);
     return this.getProviderStatusFromRuntimeStatusCommand(
@@ -1463,7 +1487,8 @@ export class ClaudeMultimodelBridgeService {
   async getProviderStatus(
     binaryPath: string,
     providerId: CliProviderId,
-    onCatalogUpdate?: (provider: CliProviderStatus) => void
+    onCatalogUpdate?: (provider: CliProviderStatus) => void,
+    options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus> {
     await resolveInteractiveShellEnvBestEffort({
       timeoutMs: 1_500,
@@ -1475,9 +1500,10 @@ export class ClaudeMultimodelBridgeService {
       const generation = this.beginProviderStatusHydration([providerId]);
       const provider = await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
         summary: true,
+        projectPath: options.projectPath,
       });
       if (provider.runtimeCapabilities?.modelCatalog?.dynamic === true && onCatalogUpdate) {
-        void this.getProviderCatalogHydration(binaryPath, provider.providerId, generation)
+        void this.getProviderCatalogHydration(binaryPath, provider.providerId, generation, options)
           .then((hydratedProvider) => {
             if (!hydratedProvider) {
               return;
@@ -1515,7 +1541,9 @@ export class ClaudeMultimodelBridgeService {
           }`
         );
         try {
-          return await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId);
+          return await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
+            projectPath: options.projectPath,
+          });
         } catch (fullError) {
           if (
             this.isRuntimeStatusTimeoutError(fullError) &&
@@ -1526,7 +1554,12 @@ export class ClaudeMultimodelBridgeService {
                 fullError instanceof Error ? fullError.message : String(fullError)
               }`
             );
-            return this.getProviderStatusFromLegacyProbesOrError(binaryPath, providerId, fullError);
+            return this.getProviderStatusFromLegacyProbesOrError(
+              binaryPath,
+              providerId,
+              fullError,
+              options
+            );
           }
           logger.warn(
             `Provider-scoped full runtime status unavailable for ${providerId}, returning scoped error: ${
@@ -1550,7 +1583,12 @@ export class ClaudeMultimodelBridgeService {
             summaryStatusError
           }`
         );
-        return this.getProviderStatusFromLegacyProbesOrError(binaryPath, providerId, error);
+        return this.getProviderStatusFromLegacyProbesOrError(
+          binaryPath,
+          providerId,
+          error,
+          options
+        );
       }
       logger.warn(
         `Provider-scoped summary runtime status unavailable for ${providerId}: ${summaryStatusError}`

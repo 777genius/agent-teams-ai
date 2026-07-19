@@ -45,6 +45,45 @@ describe('RuntimeDiagnosticClassifier', () => {
     });
   });
 
+  it('classifies compact provider quota and rate-limit error types', () => {
+    expect(classifyRuntimeDiagnostic('FreeUsageLimitError')).toMatchObject({
+      reasonCode: 'quota_exhausted',
+      actionRequired: true,
+    });
+    expect(classifyRuntimeDiagnostic('RateLimitError')).toMatchObject({
+      reasonCode: 'rate_limited',
+    });
+  });
+
+  it('requires HTTP context before classifying numeric 429 as rate limited', () => {
+    expect(classifyRuntimeDiagnostic('HTTP 429 Too Many Requests')).toMatchObject({
+      reasonCode: 'rate_limited',
+    });
+    expect(classifyRuntimeDiagnostic('{"statusCode":429}')).toMatchObject({
+      reasonCode: 'rate_limited',
+    });
+    expect(classifyRuntimeDiagnostic('{"usage":{"input_tokens":429}}')).toMatchObject({
+      reasonCode: 'backend_error',
+    });
+    expect(classifyRuntimeDiagnostic('HTTP 403 Forbidden: RateLimitError')).toMatchObject({
+      reasonCode: 'rate_limited',
+    });
+  });
+
+  it.each([
+    'grpc_code=RESOURCE_EXHAUSTED error_code=upgrade',
+    'grpc_code=resource-exhausted error_code=upgrade',
+    'ResourceExhaustedError',
+    'grpc_code=8 error_code=upgrade',
+    '{"grpcCode":8}',
+  ])('classifies provider resource exhaustion as exhausted quota: %s', (message) => {
+    expect(classifyRuntimeDiagnostic(message)).toMatchObject({
+      reasonCode: 'quota_exhausted',
+      actionRequired: true,
+      generic: false,
+    });
+  });
+
   it('classifies OpenCode free usage retry status as quota exhausted', () => {
     const selected = selectRuntimeDiagnosticClassification([
       'empty_assistant_turn',

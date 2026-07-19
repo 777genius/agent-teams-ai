@@ -169,6 +169,51 @@ describe('TeamMessageNotificationScanner', () => {
     );
   });
 
+  it('extracts an API status from a wrapped teammate execution error', () => {
+    const scanner = createScanner({
+      isRateLimit: () => false,
+      isApiError: () => true,
+    });
+
+    scanner.checkApiErrorMessages(
+      [
+        createMessage({
+          from: 'worker-1',
+          text: 'worker-1 hit a mailbox turn execution error. API Error: API Error: 529 overloaded',
+          messageId: 'wrapped-529',
+        }),
+      ],
+      { teamName: 'my-team', teamDisplayName: 'My Team' }
+    );
+
+    expect(notificationSink.addTeamNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ summary: 'API Error 529' })
+    );
+  });
+
+  it('does not claim a legacy timer was scheduled when production has no legacy sink', () => {
+    const scanner = new TeamMessageNotificationScanner({
+      configReader: {
+        getConfig: () => ({
+          notifications: { autoResumeOnRateLimit: false },
+          teamRuntimeRecovery: { rateLimitsEnabled: true },
+        }),
+      },
+      notificationSink,
+      isRateLimit: () => true,
+      planAutoResume: () => ({ kind: 'manual', reason: 'disabled' }),
+    });
+
+    scanner.checkRateLimitMessages([createMessage()], {
+      teamName: 'my-team',
+      teamDisplayName: 'My Team',
+    });
+
+    expect(notificationSink.addTeamNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ body: 'Automatic recovery will evaluate this rate limit' })
+    );
+  });
+
   it('uses a strict default api-error predicate that ignores ordinary prose', () => {
     // Construct directly (not via createScanner) so the real default
     // isActionableApiErrorMessage predicate is exercised end-to-end.

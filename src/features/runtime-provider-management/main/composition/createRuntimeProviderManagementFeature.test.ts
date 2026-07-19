@@ -48,7 +48,11 @@ describe('createRuntimeProviderManagementFeature companion flow', () => {
       resolveBinary: async () => '/Users/test/.local/bin/kiro-cli',
       runCommand: async (_command, args) =>
         args[0] === 'whoami'
-          ? { exitCode: 0, stdout: '{"account":"test"}', stderr: '' }
+          ? {
+              exitCode: 0,
+              stdout: '{"accountType":"BuilderId","email":"test@example.com"}',
+              stderr: '',
+            }
           : { exitCode: 0, stdout: 'kiro-cli 1.26.0', stderr: '' },
       emitProgress: (status) => progress.push(status.phase),
     });
@@ -136,5 +140,81 @@ describe('createRuntimeProviderManagementFeature companion flow', () => {
     });
     expect(result.phase).toBe('connected');
     expect(result.message).toContain('verified');
+  });
+
+  it('keeps model verification visible and coalesces only equivalent requests', async () => {
+    let finishVerification!: () => void;
+    const verificationBarrier = new Promise<void>((resolve) => {
+      finishVerification = resolve;
+    });
+    const testModel = vi.fn(async () => {
+      await verificationBarrier;
+      return {
+        schemaVersion: 1 as const,
+        runtimeId: 'opencode' as const,
+        result: {
+          providerId: 'kiro',
+          modelId: 'kiro/auto',
+          ok: true,
+          availability: 'available' as const,
+          message: 'Kiro verification completed.',
+          diagnostics: [],
+        },
+      };
+    });
+    const unsupported = vi.fn(async () => {
+      throw new Error('not used');
+    });
+    const port: RuntimeProviderManagementPort = {
+      loadView: unsupported,
+      loadProviderDirectory: unsupported,
+      loadSetupForm: unsupported,
+      connectProvider: unsupported,
+      connectWithApiKey: unsupported,
+      forgetCredential: unsupported,
+      loadModels: unsupported,
+      testModel,
+      setDefaultModel: unsupported,
+      configureModelLimits: unsupported,
+      submitOAuthCode: unsupported,
+      cancelOAuth: unsupported,
+      onOAuthProgress: () => () => {},
+    };
+    const companionService = new KiroCliCompanionService({
+      platform: 'darwin',
+      resolveBinary: async () => '/Users/test/.local/bin/kiro-cli',
+      runCommand: async (_command, args) =>
+        args[0] === 'whoami'
+          ? {
+              exitCode: 0,
+              stdout: '{"accountType":"BuilderId","email":"test@example.com"}',
+              stderr: '',
+            }
+          : { exitCode: 0, stdout: 'kiro-cli 1.26.0', stderr: '' },
+    });
+    const feature = createRuntimeProviderManagementFeature({ port, companionService });
+    const input = { companionId: 'kiro-cli' as const, projectPath: '/test/project' };
+
+    const firstConnect = feature.connectCompanion(input);
+    await vi.waitFor(() => expect(testModel).toHaveBeenCalledTimes(1));
+
+    await expect(feature.getCompanionStatus(input)).resolves.toMatchObject({
+      phase: 'verifying-model',
+    });
+    const installAndConnect = feature.installAndConnectCompanion(input);
+    const duplicateConnect = feature.connectCompanion(input);
+    const duplicateInstallAndConnect = feature.installAndConnectCompanion(input);
+    expect(testModel).toHaveBeenCalledTimes(1);
+
+    finishVerification();
+    await expect(
+      Promise.all([firstConnect, duplicateConnect, installAndConnect, duplicateInstallAndConnect])
+    ).resolves.toEqual([
+      expect.objectContaining({ phase: 'connected' }),
+      expect.objectContaining({ phase: 'connected' }),
+      expect.objectContaining({ phase: 'connected' }),
+      expect.objectContaining({ phase: 'connected' }),
+    ]);
+    expect(testModel).toHaveBeenCalledTimes(2);
   });
 });

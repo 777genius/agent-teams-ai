@@ -23,7 +23,29 @@ const mocks = vi.hoisted(() => ({
   companions: new Map<string, RuntimeProviderCompanionState>(),
   quickConnectOptions: null as { enabled: boolean } | null,
   companionOptions: new Map<string, boolean>(),
+  fetchCliProviderStatus: vi.fn(async () => true),
+  localProviderDialogProps: null as {
+    onConfigured: () => Promise<void> | void;
+  } | null,
 }));
+
+vi.mock('@renderer/store', () => ({
+  useStore: (selector: (state: unknown) => unknown) =>
+    selector({
+      repositoryGroups: [],
+      fetchCliProviderStatus: mocks.fetchCliProviderStatus,
+    }),
+}));
+
+vi.mock(
+  '../../../../src/features/runtime-provider-management/renderer/RuntimeLocalProviderSetupDialog',
+  () => ({
+    RuntimeLocalProviderSetupDialog: (props: { onConfigured: () => Promise<void> | void }) => {
+      mocks.localProviderDialogProps = props;
+      return null;
+    },
+  })
+);
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
@@ -81,7 +103,8 @@ function entry(
 
 function companion(
   companionId: 'kiro-cli' | 'cursor-agent',
-  runConnect = vi.fn(async () => undefined)
+  runConnect = vi.fn(async () => undefined),
+  runAction = vi.fn(async () => undefined)
 ): RuntimeProviderCompanionState {
   const status: RuntimeProviderCompanionStatusDto = {
     companionId,
@@ -89,6 +112,14 @@ function companion(
     phase: 'connected',
     installed: true,
     authenticated: true,
+    account: {
+      display: 'test@example.com',
+      email: 'test@example.com',
+      accountType: 'BuilderId',
+      region: null,
+    },
+    supportedActions:
+      companionId === 'kiro-cli' ? ['switch-account', 'logout', 'doctor', 'update'] : [],
     binaryPath: '/tmp/companion',
     version: '1.0.0',
     percent: 100,
@@ -104,6 +135,7 @@ function companion(
     loading: false,
     runInstallAndConnect: vi.fn(async () => undefined),
     runConnect,
+    runAction,
     refresh: vi.fn(async () => undefined),
   };
 }
@@ -131,6 +163,8 @@ describe('RuntimeProviderQuickConnect', () => {
     root = createRoot(host);
     mocks.quickConnectOptions = null;
     mocks.companionOptions.clear();
+    mocks.fetchCliProviderStatus.mockClear();
+    mocks.localProviderDialogProps = null;
     mocks.companions = new Map([
       ['kiro-cli', companion('kiro-cli')],
       ['cursor-agent', companion('cursor-agent')],
@@ -143,7 +177,7 @@ describe('RuntimeProviderQuickConnect', () => {
     vi.unstubAllGlobals();
   });
 
-  const renderQuickConnect = async (): Promise<void> => {
+  const renderQuickConnect = async (projectPath: string | null = null): Promise<void> => {
     await act(async () => {
       root.render(
         React.createElement(RuntimeProviderQuickConnect, {
@@ -157,13 +191,38 @@ describe('RuntimeProviderQuickConnect', () => {
             version: '1.17.18',
           },
           openCodeRuntimeStatusLoading: false,
+          projectPath,
           onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
           onOpenCodeProviderAction: vi.fn(),
           onBrowseProviders: vi.fn(),
         })
       );
     });
   };
+
+  it('refreshes both the provider directory and project model catalog after local setup', async () => {
+    const refresh = vi.fn(async () => undefined);
+    mocks.directory = {
+      entries: [],
+      loaded: true,
+      loading: false,
+      error: null,
+      refresh,
+    };
+
+    await renderQuickConnect('/tmp/local-model-project');
+    await act(async () => {
+      await mocks.localProviderDialogProps?.onConfigured();
+    });
+
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(mocks.fetchCliProviderStatus).toHaveBeenCalledWith('opencode', {
+      silent: false,
+      checkReason: 'manual_refresh',
+      projectPath: '/tmp/local-model-project',
+    });
+  });
 
   it('keeps last-known connected cards actionable during a refresh error', async () => {
     mocks.directory = {
@@ -227,6 +286,7 @@ describe('RuntimeProviderQuickConnect', () => {
             },
             openCodeRuntimeStatusLoading: state !== 'ready',
             onInstallOpenCode: vi.fn(),
+            onRefreshOpenCode: vi.fn(),
             onOpenCodeProviderAction: vi.fn(),
             onBrowseProviders: vi.fn(),
             onConnectedCountChange,
@@ -265,15 +325,12 @@ describe('RuntimeProviderQuickConnect', () => {
     expect(runConnect).toHaveBeenCalledTimes(1);
   });
 
-  it('reuses the companion dialog to sign in again after Cursor is connected', async () => {
-    const runConnect = vi.fn(async () => undefined);
-    mocks.companions.set('cursor-agent', companion('cursor-agent', runConnect));
+  it('switches a connected Kiro account through the explicit global-session action', async () => {
+    const runAction = vi.fn(async () => undefined);
+    mocks.companions.set('kiro-cli', companion('kiro-cli', undefined, runAction));
     mocks.directory = {
       entries: [
         entry('kiro', { metadata: { ...entry('kiro').metadata, configuredAuthless: true } }),
-        entry('cursor-acp', {
-          metadata: { ...entry('cursor-acp').metadata, configuredAuthless: true },
-        }),
       ],
       loaded: true,
       loading: false,
@@ -283,16 +340,18 @@ describe('RuntimeProviderQuickConnect', () => {
 
     await renderQuickConnect();
     await act(async () => {
-      host
-        .querySelector<HTMLButtonElement>('[data-testid="provider-quick-action-cursor"]')
-        ?.click();
+      host.querySelector<HTMLButtonElement>('[data-testid="provider-quick-action-kiro"]')?.click();
     });
-    const signIn = [...document.body.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('cliStatus.quickConnect.signIn')
+    const switchAccount = [...document.body.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Switch account')
     );
-    await act(async () => signIn?.click());
+    await act(async () => switchAccount?.click());
+    const confirm = [...document.body.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Sign out and continue')
+    );
+    await act(async () => confirm?.click());
 
-    expect(runConnect).toHaveBeenCalledTimes(1);
+    expect(runAction).toHaveBeenCalledWith('switch-account');
   });
 
   it('routes the current MiMo endpoint through the reusable reconnect flow', async () => {
@@ -318,6 +377,7 @@ describe('RuntimeProviderQuickConnect', () => {
           },
           openCodeRuntimeStatusLoading: false,
           onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
           onOpenCodeProviderAction,
           onBrowseProviders: vi.fn(),
         })
@@ -344,10 +404,7 @@ describe('RuntimeProviderQuickConnect', () => {
         ?.click();
     });
 
-    expect(onOpenCodeProviderAction).toHaveBeenCalledWith(
-      'xiaomi-token-plan-sgp',
-      'reconnect'
-    );
+    expect(onOpenCodeProviderAction).toHaveBeenCalledWith('xiaomi-token-plan-sgp', 'reconnect');
   });
 
   it('warms the provider directory while OpenCode readiness is still checking', async () => {
@@ -368,6 +425,7 @@ describe('RuntimeProviderQuickConnect', () => {
           openCodeRuntimeStatus: null,
           openCodeRuntimeStatusLoading: true,
           onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
           onOpenCodeProviderAction: vi.fn(),
           onBrowseProviders: vi.fn(),
         })
@@ -421,7 +479,15 @@ describe('runtimeProviderQuickConnect domain policy', () => {
     ).toBe('installing');
     expect(
       resolveOpenCodeQuickConnectGate({
-        runtimeStatus: runtimeStatus({ state: 'failed', error: 'broken' }),
+        runtimeStatus: runtimeStatus({ state: 'failed', error: 'update failed' }),
+        runtimeStatusLoading: false,
+        provider: null,
+        cliStatusLoading: false,
+      })
+    ).toBe('ready');
+    expect(
+      resolveOpenCodeQuickConnectGate({
+        runtimeStatus: runtimeStatus({ installed: false, state: 'failed', error: 'broken' }),
         runtimeStatusLoading: false,
         provider: null,
         cliStatusLoading: false,

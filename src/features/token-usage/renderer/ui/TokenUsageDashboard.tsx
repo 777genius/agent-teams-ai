@@ -1791,7 +1791,12 @@ const BreakdownPanel = ({
                   </div>
                 </div>
                 <div className="hidden min-w-16 text-right font-medium text-text-secondary sm:block">
-                  {row.cost}
+                  <div>{row.cost}</div>
+                  {row.kiroCredits ? (
+                    <div className="mt-0.5 text-xs font-medium text-violet-300">
+                      {row.kiroCredits} Kiro
+                    </div>
+                  ) : null}
                 </div>
               </>
             );
@@ -1912,6 +1917,11 @@ const RunsPanel = ({
               </div>
               <div className="hidden min-w-16 text-right sm:block">
                 <div className="font-medium text-text-secondary">{row.cost}</div>
+                {row.kiroCredits ? (
+                  <div className="mt-0.5 text-xs font-medium text-violet-300">
+                    {row.kiroCredits} Kiro
+                  </div>
+                ) : null}
               </div>
             </div>
           ))

@@ -117,6 +117,10 @@ export interface MembersEditorSectionProps {
   onWorkflowSuggestionsNeeded?: () => void;
   /** Extra content rendered right below the "Members" label row */
   headerExtra?: React.ReactNode;
+  /** Content rendered at the start of the flat roster toolbar. */
+  toolbarLeading?: React.ReactNode;
+  /** Visual treatment for the shared create/launch roster. */
+  layoutVariant?: 'default' | 'flat';
   /** When true, hides member rows and action buttons (label + headerExtra still visible) */
   hideContent?: boolean;
   /** Existing team members — used to reserve their colors so drafts get the next available ones */
@@ -136,6 +140,7 @@ export interface MembersEditorSectionProps {
   limitContext?: boolean;
   onLimitContextChange?: (value: boolean) => void;
   runtimeProviderStatusById?: ReadonlyMap<TeamProviderId, CliProviderStatus | null | undefined>;
+  providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
   inheritModelSettingsByDefault?: boolean;
   forceInheritedModelSettings?: boolean;
   modelLockReason?: string;
@@ -174,6 +179,8 @@ export const MembersEditorSection = ({
   teamSuggestions,
   onWorkflowSuggestionsNeeded,
   headerExtra,
+  toolbarLeading,
+  layoutVariant = 'default',
   hideContent = false,
   existingMembers,
   existingMemberColorMap,
@@ -187,6 +194,7 @@ export const MembersEditorSection = ({
   limitContext = false,
   onLimitContextChange,
   runtimeProviderStatusById,
+  providerReadyById,
   inheritModelSettingsByDefault = false,
   forceInheritedModelSettings = false,
   modelLockReason,
@@ -485,32 +493,81 @@ export const MembersEditorSection = ({
     () => buildMemberDraftSuggestions(members, memberColorMap),
     [members, memberColorMap]
   );
+  const isFlatRoster = layoutVariant === 'flat';
+  const editorActions = !hideContent ? (
+    <div className="flex gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1.5"
+        onClick={addMember}
+        disabled={disableAddMember}
+        title={disableAddMember ? addMemberLockReason : undefined}
+      >
+        <Plus className="size-3.5" />
+        {t('members.editor.addMember')}
+      </Button>
+      {showJsonEditor && !jsonEditorOpen ? (
+        <Button variant="ghost" size="sm" onClick={toggleJsonEditor}>
+          {t('members.editor.editAsJson')}
+        </Button>
+      ) : null}
+    </div>
+  ) : null;
+  const masterRosterControls = showWorktreeIsolationControls ? (
+    <>
+      <div
+        className="flex min-w-0 items-center gap-2"
+        title={worktreeIsolationDisabledReason ?? undefined}
+      >
+        <Checkbox
+          id={worktreeDefaultControlId}
+          checked={teammateWorktreeDefaultChecked}
+          disabled={worktreeDefaultDisabled}
+          onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
+        />
+        <Label
+          htmlFor={worktreeDefaultControlId}
+          className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
+        >
+          {!isFlatRoster ? <GitBranch className="size-3.5 shrink-0" /> : null}
+          <span className="truncate">{t('members.editor.runInSeparateWorktrees')}</span>
+        </Label>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Checkbox
+          id={agentTeamsMcpDefaultControlId}
+          checked={agentTeamsMcpLockedForAll}
+          onCheckedChange={(checked) => updateAgentTeamsMcpLock(checked === true)}
+        />
+        <Label
+          htmlFor={agentTeamsMcpDefaultControlId}
+          className="flex cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
+        >
+          {!isFlatRoster ? <Plug className="size-3.5 shrink-0" /> : null}
+          <span className="whitespace-nowrap">{t('members.editor.agentTeamsMcpOnly')}</span>
+        </Label>
+      </div>
+    </>
+  ) : null;
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5" data-layout={isFlatRoster ? 'flat-roster' : undefined}>
       <div className="flex items-center justify-between">
         <Label>{t('members.editor.title')}</Label>
-        {!hideContent && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={addMember}
-              disabled={disableAddMember}
-              title={disableAddMember ? addMemberLockReason : undefined}
-            >
-              <Plus className="size-3.5" />
-              {t('members.editor.addMember')}
-            </Button>
-            {showJsonEditor && !jsonEditorOpen ? (
-              <Button variant="ghost" size="sm" onClick={toggleJsonEditor}>
-                {t('members.editor.editAsJson')}
-              </Button>
-            ) : null}
-          </div>
-        )}
+        {!isFlatRoster ? editorActions : null}
       </div>
+      {isFlatRoster ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] py-2.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-3">
+            {toolbarLeading}
+            {masterRosterControls}
+          </div>
+          {editorActions}
+        </div>
+      ) : (
+        toolbarLeading
+      )}
       {headerExtra}
       {!hideContent && (
         <>
@@ -527,50 +584,25 @@ export const MembersEditorSection = ({
           ) : null}
           <div
             className={
-              showWorktreeIsolationControls
+              showWorktreeIsolationControls && !isFlatRoster
                 ? 'overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]'
                 : undefined
             }
           >
-            {showWorktreeIsolationControls ? (
+            {showWorktreeIsolationControls && !isFlatRoster ? (
               <div
                 className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-2.5 py-2"
                 title={worktreeIsolationDisabledReason ?? undefined}
               >
-                <div className="flex min-w-0 items-center gap-2">
-                  <Checkbox
-                    id={worktreeDefaultControlId}
-                    checked={teammateWorktreeDefaultChecked}
-                    disabled={worktreeDefaultDisabled}
-                    onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
-                  />
-                  <Label
-                    htmlFor={worktreeDefaultControlId}
-                    className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
-                  >
-                    <GitBranch className="size-3.5 shrink-0" />
-                    <span className="truncate">{t('members.editor.runInSeparateWorktrees')}</span>
-                  </Label>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Checkbox
-                    id={agentTeamsMcpDefaultControlId}
-                    checked={agentTeamsMcpLockedForAll}
-                    onCheckedChange={(checked) => updateAgentTeamsMcpLock(checked === true)}
-                  />
-                  <Label
-                    htmlFor={agentTeamsMcpDefaultControlId}
-                    className="flex cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
-                  >
-                    <Plug className="size-3.5 shrink-0" />
-                    <span className="whitespace-nowrap">
-                      {t('members.editor.agentTeamsMcpOnly')}
-                    </span>
-                  </Label>
-                </div>
+                {masterRosterControls}
               </div>
             ) : null}
-            <div className={cn('space-y-2', showWorktreeIsolationControls && 'p-2')}>
+            <div
+              className={cn(
+                isFlatRoster ? 'space-y-1' : 'space-y-2',
+                showWorktreeIsolationControls && !isFlatRoster && 'p-2'
+              )}
+            >
               {activeMembers.map((member, index) => (
                 <MemberDraftRow
                   key={member.id}
@@ -617,6 +649,8 @@ export const MembersEditorSection = ({
                   modelAdvisoryReasonByProvider={modelAdvisoryReasonByProvider}
                   modelIssueReasonByProvider={modelIssueReasonByProvider}
                   modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
+                  providerReadyById={providerReadyById}
+                  layoutVariant={layoutVariant}
                 />
               ))}
               {softDeleteMembers && removedMembers.length > 0 ? (
@@ -666,6 +700,7 @@ export const MembersEditorSection = ({
                         warningText={null}
                         disableGeminiOption={disableGeminiOption}
                         modelIssueText={null}
+                        layoutVariant={layoutVariant}
                       />
                     ))}
                   </div>

@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   loadOpenCodeProjectModels,
   resolveOpenCodeLocalModelLimitSuggestion,
+  resolveOpenCodeLocalProviderId,
 } from './openCodeLocalModelLimits';
 import { OpenCodeLocalModelLimitsCard } from './OpenCodeLocalModelLimitsCard';
 
@@ -132,6 +133,34 @@ describe('OpenCodeLocalModelLimitsCard', () => {
         'openrouter/model'
       )
     ).toBeNull();
+    expect(
+      resolveOpenCodeLocalModelLimitSuggestion(
+        [
+          makeModel('kiro/auto', {
+            free: true,
+            accessKind: 'credentialed',
+            proofState: 'verified',
+            requiresExecutionProof: false,
+          }),
+        ],
+        'kiro/auto'
+      )
+    ).toBeNull();
+  });
+
+  it('does not load local-model limits for Kiro or other cloud routes', async () => {
+    expect(resolveOpenCodeLocalProviderId('kiro/auto')).toBeNull();
+    expect(resolveOpenCodeLocalProviderId('cursor-acp/auto')).toBeNull();
+    expect(resolveOpenCodeLocalProviderId('ollama/qwen')).toBe('ollama');
+
+    const projectPath = path.join(process.cwd(), '.test-projects', 'kiro-not-local');
+    const { root } = await renderCard({ model: 'kiro/auto', projectPath });
+
+    expect(mocks.loadModels).not.toHaveBeenCalled();
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
   });
 
   it('deduplicates project-scoped model loading for repeated teammate cards', async () => {

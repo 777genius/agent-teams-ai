@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -41,6 +41,17 @@ import { setAppDataBasePath } from '@main/utils/pathDecoder';
 
 let tempRoot: string | null = null;
 let originalPath: string | undefined;
+let originalAppData: string | undefined;
+let originalNvmHome: string | undefined;
+let originalNvmSymlink: string | undefined;
+
+function restoreEnvValue(name: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+}
 
 function deferred<T>(): {
   promise: Promise<T>;
@@ -54,6 +65,12 @@ function deferred<T>(): {
     reject = promiseReject;
   });
   return { promise, resolve, reject };
+}
+
+function getTestNvmOpenCodeBinaryPath(version: string): string {
+  return process.platform === 'win32'
+    ? path.join(tempRoot!, 'nvm', version, 'opencode.exe')
+    : path.join(tempRoot!, '.nvm', 'versions', 'node', version, 'bin', 'opencode');
 }
 
 function writeOctal(header: Buffer, offset: number, length: number, value: number): void {
@@ -98,7 +115,13 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     tempRoot = await mkdtemp(path.join(os.tmpdir(), 'opencode-runtime-resolver-'));
     setAppDataBasePath(tempRoot);
     originalPath = process.env.PATH;
+    originalAppData = process.env.APPDATA;
+    originalNvmHome = process.env.NVM_HOME;
+    originalNvmSymlink = process.env.NVM_SYMLINK;
     process.env.PATH = '';
+    process.env.APPDATA = tempRoot;
+    delete process.env.NVM_HOME;
+    delete process.env.NVM_SYMLINK;
     clearOpenCodeRuntimeBinaryResolverCache();
     execCliMock.mockReset();
     execCliMock.mockResolvedValue({ stdout: 'opencode 1.0.0\n', stderr: '' });
@@ -113,6 +136,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   });
 
   afterEach(async () => {
+    vi.unstubAllGlobals();
     clearOpenCodeRuntimeBinaryResolverCache();
     setAppDataBasePath(null);
     if (originalPath === undefined) {
@@ -120,7 +144,17 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     } else {
       process.env.PATH = originalPath;
     }
+    if (originalAppData === undefined) {
+      delete process.env.APPDATA;
+    } else {
+      process.env.APPDATA = originalAppData;
+    }
+    restoreEnvValue('NVM_HOME', originalNvmHome);
+    restoreEnvValue('NVM_SYMLINK', originalNvmSymlink);
     originalPath = undefined;
+    originalAppData = undefined;
+    originalNvmHome = undefined;
+    originalNvmSymlink = undefined;
     if (tempRoot) {
       await rm(tempRoot, { recursive: true, force: true });
       tempRoot = null;
@@ -207,7 +241,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
 
     await expect(resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath()).resolves.toBe(binaryPath);
     expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 10_000,
+      timeout: 20_000,
       windowsHide: true,
     });
 
@@ -276,7 +310,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       })
     );
     expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 10_000,
+      timeout: 20_000,
       windowsHide: true,
     });
   });
@@ -412,7 +446,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       })
     );
     expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 10_000,
+      timeout: 20_000,
       windowsHide: true,
     });
   });
@@ -428,7 +462,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     ).resolves.toBe(binaryPath);
     expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
     expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 10_000,
+      timeout: 20_000,
       windowsHide: true,
     });
   });
@@ -448,24 +482,8 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   });
 
   it('returns a verified OpenCode binary from nvm when desktop PATH misses npm globals', async () => {
-    const olderBinaryPath = path.join(
-      tempRoot!,
-      '.nvm',
-      'versions',
-      'node',
-      'v20.10.0',
-      'bin',
-      'opencode'
-    );
-    const binaryPath = path.join(
-      tempRoot!,
-      '.nvm',
-      'versions',
-      'node',
-      'v22.22.1',
-      'bin',
-      'opencode'
-    );
+    const olderBinaryPath = getTestNvmOpenCodeBinaryPath('v20.10.0');
+    const binaryPath = getTestNvmOpenCodeBinaryPath('v22.22.1');
     await mkdir(path.dirname(olderBinaryPath), { recursive: true });
     await mkdir(path.dirname(binaryPath), { recursive: true });
     await writeFile(olderBinaryPath, 'older binary', { mode: 0o755 });
@@ -478,12 +496,12 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     );
     expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
     expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-      timeout: 10_000,
+      timeout: 20_000,
       windowsHide: true,
     });
   });
 
-  it('returns a verified OpenCode cmd shim from nvm-windows when desktop PATH misses npm globals', async () => {
+  it('returns the native executable behind an nvm-windows cmd shim when desktop PATH misses npm globals', async () => {
     const originalPlatform = process.platform;
     const originalAppData = process.env.APPDATA;
 
@@ -496,10 +514,22 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       process.env.APPDATA = tempRoot!;
 
       const olderBinaryPath = path.join(tempRoot!, 'nvm', 'v20.10.0', 'opencode.cmd');
-      const binaryPath = path.join(tempRoot!, 'nvm', 'v22.22.1', 'opencode.cmd');
+      const shimPath = path.join(tempRoot!, 'nvm', 'v22.22.1', 'opencode.cmd');
+      const binaryPath = path.join(
+        tempRoot!,
+        'nvm',
+        'v22.22.1',
+        'node_modules',
+        'opencode-ai',
+        'node_modules',
+        `opencode-windows-${process.arch}`,
+        'bin',
+        'opencode.exe'
+      );
       await mkdir(path.dirname(olderBinaryPath), { recursive: true });
       await mkdir(path.dirname(binaryPath), { recursive: true });
       await writeFile(olderBinaryPath, 'older binary', { mode: 0o755 });
+      await writeFile(shimPath, 'npm shim', { mode: 0o755 });
       await writeFile(binaryPath, 'binary', { mode: 0o755 });
 
       await expect(
@@ -507,9 +537,10 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       ).resolves.toBe(binaryPath);
       expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
       expect(execCliMock).toHaveBeenCalledWith(binaryPath, ['--version'], {
-        timeout: 10_000,
+        timeout: 20_000,
         windowsHide: true,
       });
+      expect(execCliMock).not.toHaveBeenCalledWith(shimPath, expect.anything(), expect.anything());
     } finally {
       Object.defineProperty(process, 'platform', {
         value: originalPlatform,
@@ -524,25 +555,171 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     }
   });
 
+  it('prefers the active NVM_SYMLINK runtime over newer installs in a custom NVM_HOME', async () => {
+    const originalPlatform = process.platform;
+    const originalAppData = process.env.APPDATA;
+    const originalNvmHome = process.env.NVM_HOME;
+    const originalNvmSymlink = process.env.NVM_SYMLINK;
+
+    try {
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        configurable: true,
+        writable: true,
+      });
+      process.env.APPDATA = path.join(tempRoot!, 'empty-appdata');
+      process.env.NVM_HOME = path.join(tempRoot!, 'custom-nvm');
+      process.env.NVM_SYMLINK = path.join(tempRoot!, 'active-node');
+
+      const activeShimPath = path.join(process.env.NVM_SYMLINK, 'opencode.cmd');
+      const activeNativePath = path.join(
+        process.env.NVM_SYMLINK,
+        'node_modules',
+        'opencode-ai',
+        'bin',
+        'opencode.exe'
+      );
+      const newerShimPath = path.join(process.env.NVM_HOME, 'v99.0.0', 'opencode.cmd');
+      const newerNativePath = path.join(
+        process.env.NVM_HOME,
+        'v99.0.0',
+        'node_modules',
+        'opencode-ai',
+        'bin',
+        'opencode.exe'
+      );
+      await mkdir(path.dirname(activeNativePath), { recursive: true });
+      await mkdir(path.dirname(newerNativePath), { recursive: true });
+      await writeFile(activeShimPath, 'active npm shim', { mode: 0o755 });
+      await writeFile(activeNativePath, 'active native binary', { mode: 0o755 });
+      await writeFile(newerShimPath, 'newer npm shim', { mode: 0o755 });
+      await writeFile(newerNativePath, 'newer native binary', { mode: 0o755 });
+
+      await expect(
+        resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })
+      ).resolves.toBe(activeNativePath);
+      expect(execCliMock).not.toHaveBeenCalledWith(
+        newerNativePath,
+        expect.anything(),
+        expect.anything()
+      );
+    } finally {
+      Object.defineProperty(process, 'platform', {
+        value: originalPlatform,
+        configurable: true,
+        writable: true,
+      });
+      restoreEnvValue('APPDATA', originalAppData);
+      restoreEnvValue('NVM_HOME', originalNvmHome);
+      restoreEnvValue('NVM_SYMLINK', originalNvmSymlink);
+    }
+  });
+
+  it('prefers the active npm OpenCode native executable over a stale nvm-windows cmd shim', async () => {
+    const originalPlatform = process.platform;
+    const originalAppData = process.env.APPDATA;
+
+    try {
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        configurable: true,
+        writable: true,
+      });
+      process.env.APPDATA = tempRoot!;
+
+      const activeNpmDirectory = path.join(tempRoot!, 'npm');
+      const activeShimPath = path.join(activeNpmDirectory, 'opencode.cmd');
+      const activeNativePath = path.join(
+        activeNpmDirectory,
+        'node_modules',
+        'opencode-ai',
+        'bin',
+        'opencode.exe'
+      );
+      const staleNvmDirectory = path.join(tempRoot!, 'nvm', 'v20.20.0');
+      const staleNvmShimPath = path.join(staleNvmDirectory, 'opencode.cmd');
+      const staleNvmNativePath = path.join(
+        staleNvmDirectory,
+        'node_modules',
+        'opencode-ai',
+        'bin',
+        'opencode.exe'
+      );
+      await mkdir(path.dirname(activeNativePath), { recursive: true });
+      await mkdir(path.dirname(staleNvmNativePath), { recursive: true });
+      await writeFile(activeShimPath, 'active npm shim', { mode: 0o755 });
+      await writeFile(activeNativePath, 'active native binary', { mode: 0o755 });
+      await writeFile(staleNvmShimPath, 'stale nvm shim', { mode: 0o755 });
+      await writeFile(staleNvmNativePath, 'stale native binary', { mode: 0o755 });
+      process.env.PATH = activeNpmDirectory;
+      getCachedShellEnvMock.mockReturnValue({ PATH: staleNvmDirectory });
+      execCliMock.mockImplementation(async (binaryPath: string) => ({
+        stdout: binaryPath === activeNativePath ? '1.15.10\n' : '1.14.29\n',
+        stderr: '',
+      }));
+
+      await expect(
+        resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })
+      ).resolves.toBe(activeNativePath);
+      expect(execCliMock).toHaveBeenCalledWith(activeNativePath, ['--version'], {
+        timeout: 20_000,
+        windowsHide: true,
+      });
+      expect(execCliMock).not.toHaveBeenCalledWith(
+        staleNvmNativePath,
+        expect.anything(),
+        expect.anything()
+      );
+    } finally {
+      Object.defineProperty(process, 'platform', {
+        value: originalPlatform,
+        configurable: true,
+        writable: true,
+      });
+      if (originalAppData === undefined) {
+        delete process.env.APPDATA;
+      } else {
+        process.env.APPDATA = originalAppData;
+      }
+    }
+  });
+
+  it('does not report a Windows cmd-only OpenCode installation as runtime-ready', async () => {
+    const originalPlatform = process.platform;
+
+    try {
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        configurable: true,
+        writable: true,
+      });
+
+      const shimDirectory = path.join(tempRoot!, 'npm');
+      const shimPath = path.join(shimDirectory, 'opencode.cmd');
+      await mkdir(shimDirectory, { recursive: true });
+      await writeFile(shimPath, 'incomplete npm shim', { mode: 0o755 });
+      process.env.PATH = shimDirectory;
+      getCachedShellEnvMock.mockReturnValue({ PATH: shimDirectory });
+
+      await expect(
+        resolveVerifiedOpenCodeRuntimeBinaryPath({
+          includeShellEnv: false,
+          shellEnvTimeoutMs: 0,
+        })
+      ).resolves.toBeNull();
+      expect(execCliMock).not.toHaveBeenCalledWith(shimPath, expect.anything(), expect.anything());
+    } finally {
+      Object.defineProperty(process, 'platform', {
+        value: originalPlatform,
+        configurable: true,
+        writable: true,
+      });
+    }
+  });
+
   it('skips a broken newer nvm OpenCode binary and reports the next working install', async () => {
-    const brokenBinaryPath = path.join(
-      tempRoot!,
-      '.nvm',
-      'versions',
-      'node',
-      'v23.0.0',
-      'bin',
-      'opencode'
-    );
-    const workingBinaryPath = path.join(
-      tempRoot!,
-      '.nvm',
-      'versions',
-      'node',
-      'v22.22.1',
-      'bin',
-      'opencode'
-    );
+    const brokenBinaryPath = getTestNvmOpenCodeBinaryPath('v23.0.0');
+    const workingBinaryPath = getTestNvmOpenCodeBinaryPath('v22.22.1');
     await mkdir(path.dirname(brokenBinaryPath), { recursive: true });
     await mkdir(path.dirname(workingBinaryPath), { recursive: true });
     await writeFile(brokenBinaryPath, 'broken binary', { mode: 0o755 });
@@ -569,15 +746,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
   });
 
   it('falls through to shell PATH when all fast nvm candidates are broken', async () => {
-    const brokenBinaryPath = path.join(
-      tempRoot!,
-      '.nvm',
-      'versions',
-      'node',
-      'v23.0.0',
-      'bin',
-      'opencode'
-    );
+    const brokenBinaryPath = getTestNvmOpenCodeBinaryPath('v23.0.0');
     const shellBinaryPath = path.join(tempRoot!, 'custom-npm-prefix', 'bin', 'opencode');
     await mkdir(path.dirname(brokenBinaryPath), { recursive: true });
     await mkdir(path.dirname(shellBinaryPath), { recursive: true });
@@ -669,6 +838,225 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
       binaryPath: pathBinaryPath,
       version: 'opencode 1.0.0',
     });
+  });
+
+  it('keeps an existing working runtime available when an update fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const binaryPath = path.join(
+      tempRoot!,
+      'data',
+      'runtimes',
+      'opencode',
+      'versions',
+      '1.0.0',
+      'opencode-test',
+      'opencode'
+    );
+    const manifestPath = path.join(tempRoot!, 'data', 'runtimes', 'opencode', 'current.json');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'working binary', { mode: 0o755 });
+    await writeFile(
+      manifestPath,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        version: '1.0.0',
+        platformPackage: 'opencode-test',
+        binaryPath,
+        integrity: 'sha512-test',
+        installedAt: '2026-05-12T00:00:00.000Z',
+      })}\n`,
+      'utf8'
+    );
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('registry unavailable')));
+    const service = new OpenCodeRuntimeInstallerService();
+
+    await expect(service.install()).resolves.toMatchObject({
+      installed: true,
+      source: 'app-managed',
+      state: 'failed',
+      binaryPath,
+      error: 'registry unavailable',
+    });
+    await expect(service.getStatus()).resolves.toMatchObject({
+      installed: true,
+      source: 'app-managed',
+      binaryPath,
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      '[OpenCodeRuntimeInstallerService]',
+      'Failed to install OpenCode runtime:',
+      'registry unavailable'
+    );
+  });
+
+  it('does not preserve a cached installed status after the runtime binary disappears', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const binaryPath = path.join(
+      tempRoot!,
+      'data',
+      'runtimes',
+      'opencode',
+      'versions',
+      '1.0.0',
+      'opencode-test',
+      'opencode'
+    );
+    const manifestPath = path.join(tempRoot!, 'data', 'runtimes', 'opencode', 'current.json');
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'working binary', { mode: 0o755 });
+    await writeFile(
+      manifestPath,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        version: '1.0.0',
+        platformPackage: 'opencode-test',
+        binaryPath,
+        integrity: 'sha512-test',
+        installedAt: '2026-05-12T00:00:00.000Z',
+      })}\n`,
+      'utf8'
+    );
+    const service = new OpenCodeRuntimeInstallerService();
+    await expect(service.getStatus()).resolves.toMatchObject({
+      installed: true,
+      source: 'app-managed',
+      binaryPath,
+    });
+
+    await rm(binaryPath, { force: true });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('registry unavailable')));
+
+    await expect(service.install()).resolves.toMatchObject({
+      installed: false,
+      source: 'missing',
+      state: 'failed',
+      error: 'registry unavailable',
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      '[OpenCodeRuntimeInstallerService]',
+      'Failed to install OpenCode runtime:',
+      'registry unavailable'
+    );
+  });
+
+  it('does not replace a verified identical runtime during reinstall', async () => {
+    const platformPackage = getOpenCodeRuntimePlatformCandidates()[0]!.packageName;
+    const executableName = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
+    const binaryPath = path.join(
+      tempRoot!,
+      'data',
+      'runtimes',
+      'opencode',
+      'versions',
+      '1.0.0',
+      platformPackage,
+      executableName
+    );
+    const manifestPath = path.join(tempRoot!, 'data', 'runtimes', 'opencode', 'current.json');
+    const tarball = createTarball([
+      { name: `package/bin/${executableName}`, data: 'downloaded replacement' },
+    ]);
+    const integrity = `sha512-${createHash('sha512').update(tarball).digest('base64')}`;
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(binaryPath, 'existing working runtime', { mode: 0o755 });
+    await writeFile(
+      manifestPath,
+      `${JSON.stringify({
+        schemaVersion: 1,
+        version: '1.0.0',
+        platformPackage,
+        binaryPath,
+        integrity,
+        installedAt: '2026-05-12T00:00:00.000Z',
+      })}\n`,
+      'utf8'
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request): Promise<Response> => {
+        const url = String(input);
+        if (url.endsWith('/opencode-ai/latest')) {
+          return Response.json({
+            version: '1.0.0',
+            dist: { tarball: 'https://example.test/root.tgz', integrity },
+            optionalDependencies: { [platformPackage]: '1.0.0' },
+          });
+        }
+        if (url.includes(`/${platformPackage}/1.0.0`)) {
+          return Response.json({
+            version: '1.0.0',
+            dist: { tarball: 'https://example.test/platform.tgz', integrity },
+          });
+        }
+        if (url === 'https://example.test/platform.tgz') {
+          return new Response(new Uint8Array(tarball), {
+            headers: { 'content-length': String(tarball.length) },
+          });
+        }
+        throw new Error(`Unexpected fetch: ${url}`);
+      })
+    );
+
+    await expect(new OpenCodeRuntimeInstallerService().install()).resolves.toMatchObject({
+      installed: true,
+      source: 'app-managed',
+      state: 'ready',
+      binaryPath,
+    });
+    await expect(readFile(binaryPath, 'utf8')).resolves.toBe('existing working runtime');
+
+    const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'opencode');
+    const entries = await readdir(runtimeRoot);
+    expect(entries.filter((entry) => entry.startsWith('installing-'))).toEqual([]);
+  });
+
+  it('removes a partially extracted runtime when binary verification fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const platformPackage = getOpenCodeRuntimePlatformCandidates()[0]!.packageName;
+    const executableName = process.platform === 'win32' ? 'opencode.exe' : 'opencode';
+    const tarball = createTarball([
+      { name: `package/bin/${executableName}`, data: 'broken runtime' },
+    ]);
+    const integrity = `sha512-${createHash('sha512').update(tarball).digest('base64')}`;
+    const fetchMock = vi.fn(async (input: string | URL | Request): Promise<Response> => {
+      const url = String(input);
+      if (url.endsWith('/opencode-ai/latest')) {
+        return Response.json({
+          version: '1.0.0',
+          dist: { tarball: 'https://example.test/root.tgz', integrity },
+          optionalDependencies: { [platformPackage]: '1.0.0' },
+        });
+      }
+      if (url.includes(`/${platformPackage}/1.0.0`)) {
+        return Response.json({
+          version: '1.0.0',
+          dist: { tarball: 'https://example.test/platform.tgz', integrity },
+        });
+      }
+      if (url === 'https://example.test/platform.tgz') {
+        return new Response(new Uint8Array(tarball), {
+          headers: { 'content-length': String(tarball.length) },
+        });
+      }
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    execCliMock.mockRejectedValueOnce(new Error('binary verification failed'));
+
+    await expect(new OpenCodeRuntimeInstallerService().install()).resolves.toMatchObject({
+      installed: false,
+      state: 'failed',
+      error: 'binary verification failed',
+    });
+
+    const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'opencode');
+    const entries = await readdir(runtimeRoot);
+    expect(entries.filter((entry) => entry.startsWith('installing-'))).toEqual([]);
+    expect(consoleError).toHaveBeenCalledWith(
+      '[OpenCodeRuntimeInstallerService]',
+      'Failed to install OpenCode runtime:',
+      'binary verification failed'
+    );
   });
 });
 

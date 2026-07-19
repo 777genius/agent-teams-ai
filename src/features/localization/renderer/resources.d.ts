@@ -1083,6 +1083,7 @@ export default interface Resources {
         openAiViaCodex: 'Already available through Codex. OpenCode is optional.';
         openCodeChecking: 'Checking that OpenCode is installed and ready...';
         openCodeError: 'OpenCode could not start. Repair or reinstall it, then retry.';
+        openCodeErrorTitle: 'OpenCode needs attention';
         openCodeInstalling: 'Installing the managed OpenCode runtime...';
         openCodeInstallingPercent: 'Installing the managed OpenCode runtime - {{percent}}%';
         openCodeRequired: 'Install OpenCode to connect and use these providers with Agent Teams.';
@@ -1093,6 +1094,7 @@ export default interface Resources {
         planCredentialUnverified: 'Plan credential not verified';
         providerStatusError: 'Could not load OpenCode provider status. Your saved credentials were not changed.';
         readyToConnect: 'Available to connect';
+        refreshOpenCode: 'Refresh status';
         regionNotSelected: 'Region not selected';
         requiresOpenCode: 'Requires OpenCode';
         retryInstall: 'Retry installation';
@@ -2674,6 +2676,25 @@ export default interface Resources {
       };
     };
     notifications: {
+      recovery: {
+        title: 'Automatic agent recovery';
+        transient: {
+          label: 'Recover transient runtime errors';
+          description: 'Continue the failed lead or teammate turn after safe transient provider and network errors';
+        };
+        rateLimits: {
+          label: 'Recover rate limits with a reset time';
+          description: 'Continue after a trusted Retry-After or reset time, with a safety buffer';
+        };
+        delay: {
+          label: 'Initial retry delay (seconds)';
+          description: 'Base delay before the first recovery attempt (15-900 seconds)';
+        };
+        attempts: {
+          label: 'Maximum recovery attempts';
+          description: 'Accepted runtime turns per failure chain (1-5)';
+        };
+      };
       dev: {
         descriptionPrefix: 'Notifications may not work in development mode. macOS identifies the app as "Electron" (bundle ID';
         descriptionSuffix: ') instead of the production app name. Check System Settings > Notifications > Electron to verify permissions.';
@@ -2979,7 +3000,7 @@ export default interface Resources {
       connectionCards: {
         anthropic: {
           apiKeyDescription: 'Use ANTHROPIC_API_KEY and Anthropic API billing.';
-          autoDescription: 'Use Anthropic runtime defaults and the best local credential available.';
+          autoDescription: 'Use Anthropic runtime defaults and the best local credential available, including Amazon Bedrock when configured.';
           hint: 'Auto keeps Anthropic on its default local credential resolution.';
           subscriptionDescription: 'Use your local Anthropic sign-in session and subscription access.';
           subscriptionTitle: 'Anthropic subscription';
@@ -4803,11 +4824,11 @@ export default interface Resources {
           install: 'Install';
           setup: 'Setup';
         };
-        freeModelsAvailableTitle: 'OpenCode free models are available';
+        freeModelsAvailableTitle: 'Free models are in OpenCode Zen';
         loadingRuntime: 'OpenCode runtime status is still loading.';
         messages: {
           checking: 'The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.';
-          freeAvailable: 'OpenCode is detected. You can use free OpenCode models such as Big Pickle without connecting a provider. Connect a provider only when you want provider-backed models.';
+          freeAvailable: 'Choose OpenCode Zen in the sidebar to use free models without connecting a provider. Local models and connected providers use their own setup.';
           launchBlocked: 'OpenCode is installed and authenticated, but Agent Teams launch readiness is blocked.';
           noFreeListed: 'OpenCode is detected, but no free OpenCode model is listed yet. Refresh provider status, or connect a provider in OpenCode for provider-backed models.';
           ready: 'OpenCode is ready for team launch.';
@@ -4952,6 +4973,56 @@ export default interface Resources {
         actions: {
           createTeamIn: 'Create team in {{label}}';
         };
+        layout: {
+          switchToHierarchy: 'Switch to hierarchy chart';
+          switchToNested: 'Switch to nested map';
+        };
+        view: {
+          hierarchy: 'Hierarchy';
+          overview: 'Overview';
+          relations: 'Relations';
+          structure: 'Structure';
+        };
+        overviewCard: {
+          activeTasks: '{{count}} active tasks';
+          attention: '{{count}} need attention';
+          summary: '{{groupCount}} groups · {{teamCount}} teams · {{agentCount}} agents';
+          teamsOnline: '{{onlineCount}}/{{teamCount}} teams online';
+        };
+        toolbar: {
+          animation: 'Animation';
+          connections: 'Connections';
+          filters: 'Map filters';
+          fit: 'Fit meaningful overview';
+          reset: 'Reset search, focus, and filters';
+          tasks: 'Tasks';
+          zoomIn: 'Zoom in';
+          zoomOut: 'Zoom out';
+        };
+        legend: {
+          connection: 'Connection';
+          group: 'Group';
+          hierarchy: 'Hierarchy';
+          online: 'Online';
+          organization: 'Organization';
+        };
+        focus: {
+          clearFocus: 'Clear focus';
+          clearSearch: 'Clear search';
+          collapseBranch: 'Collapse branch';
+          connectedOnly: 'Connected ({{count}})';
+          expandBranch: 'Expand branch';
+          kind: {
+            container: 'group';
+            organization: 'organization';
+            team: 'team';
+          };
+          noResults: 'No results found';
+          pathToRoot: 'Path to root';
+          searchLabel: 'Search organization map';
+          searchPlaceholder: 'Organization, group, team, or task...';
+          taskMatch: 'Task: {{task}}';
+        };
         canvas: {
           activeAgents: '{{count}} active agents';
           activeAgents_few: '{{count}} active agents';
@@ -4977,6 +5048,9 @@ export default interface Resources {
           orgsAndTeams: '{{orgCount}} orgs - {{teamCount}} teams';
           teamReference: 'team reference';
           teamRole: '{{memberCount}} agents - {{activeCount}} active';
+          groupSummary: '{{teamCount}} teams · {{activeTeamCount}} active · {{taskCount}} tasks';
+          teamSummary: '{{status}} · {{activeTaskCount}} active · {{taskCount}} tasks';
+          minimap: 'Organization map navigation';
           teams: '{{count}} teams';
           teams_few: '{{count}} teams';
           teams_many: '{{count}} teams';
@@ -5571,6 +5645,7 @@ export default interface Resources {
           applyRejections: 'Apply Rejections';
           applying: 'Applying...';
           auto: 'Auto';
+          redo: 'Redo';
           rejectAll: 'Reject All';
           undo: 'Undo';
         };
@@ -5608,6 +5683,7 @@ export default interface Resources {
           autoOn: 'Auto-mark files as viewed when scrolled to end (ON)';
           rejectAll: 'Reject all safely rejectable changes across all files';
           rejectAllDisabled: 'No pending files have a safe original baseline to reject.';
+          redo: 'Redo last undone review operation (Ctrl+Shift+Z)';
           undo: 'Undo last review operation (Ctrl+Z)';
         };
       };
@@ -5805,7 +5881,7 @@ export default interface Resources {
         fileCount: '{{count}} files';
         fileCount_few: '{{count}} files';
         fileCount_many: '{{count}} files';
-        fileCount_one: '{{count}} files';
+        fileCount_one: '{{count}} file';
         fileCount_other: '{{count}} files';
         fileRowsHidden: '{{count}} file rows hidden';
         fileRowsHidden_few: '{{count}} file rows hidden';

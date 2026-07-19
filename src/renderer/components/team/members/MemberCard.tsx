@@ -33,6 +33,8 @@ import {
   Activity,
   AlertTriangle,
   Ban,
+  Check,
+  Clock3,
   Cpu,
   GitBranch,
   HardDrive,
@@ -49,6 +51,7 @@ import { CurrentTaskIndicator } from './CurrentTaskIndicator';
 import { MemberLaunchDiagnosticsButton } from './MemberLaunchDiagnosticsButton';
 import { MemberPresenceDot } from './MemberPresenceDot';
 
+import type { PendingMemberDeliveryState } from '../messages/messagesPanelLogic';
 import type { MemberActivityTimerAnchor } from '@renderer/utils/memberActivityTimer';
 import type { TaskStatusCounts } from '@renderer/utils/pathNormalize';
 import type {
@@ -88,6 +91,7 @@ interface MemberCardProps {
   currentTaskTimerRunning?: boolean;
   reviewTaskTimerRunning?: boolean;
   isAwaitingReply?: boolean;
+  pendingDeliveryState?: PendingMemberDeliveryState;
   isRemoved?: boolean;
   spawnStatus?: MemberSpawnStatus;
   spawnEntry?: MemberSpawnStatusEntry;
@@ -700,6 +704,7 @@ export const MemberCard = memo(function MemberCard({
   currentTaskTimerRunning = isTeamAlive !== false,
   reviewTaskTimerRunning = isTeamAlive !== false,
   isAwaitingReply,
+  pendingDeliveryState,
   isRemoved,
   spawnStatus,
   spawnEntry,
@@ -783,6 +788,8 @@ export const MemberCard = memo(function MemberCard({
   const runtimeAdvisoryLabel = launchPresentation.runtimeAdvisoryLabel;
   const runtimeAdvisoryTitle = launchPresentation.runtimeAdvisoryTitle;
   const runtimeAdvisoryTone = launchPresentation.runtimeAdvisoryTone;
+  const effectiveDeliveryState =
+    pendingDeliveryState ?? (isAwaitingReply ? ('delivering' as const) : undefined);
   const presenceLabel = launchPresentation.presenceLabel;
   const spawnCardClass = launchPresentation.cardClass;
   const launchVisualState = launchPresentation.launchVisualState;
@@ -1028,9 +1035,11 @@ export const MemberCard = memo(function MemberCard({
     !showLaunchBadge &&
     !isFailedLaunch &&
     !isSkippedLaunch &&
-    (Boolean(activityTask) || !isAwaitingReply);
+    (Boolean(activityTask) || !effectiveDeliveryState);
   const canRelaunchRuntimeAdvisoryOpenCode =
     Boolean(runtimeAdvisoryLabel) &&
+    effectiveDeliveryState !== 'queued' &&
+    effectiveDeliveryState !== 'delivered' &&
     runtimeAdvisoryTone === 'error' &&
     member.providerId === 'opencode' &&
     hasRestartMemberControl &&
@@ -1204,9 +1213,13 @@ export const MemberCard = memo(function MemberCard({
                   onOpenTask={onOpenReviewTask}
                 />
               ) : null}
-              {!activityTask && isAwaitingReply ? (
+              {!activityTask && effectiveDeliveryState ? (
                 <>
-                  {runtimeAdvisoryTone === 'error' ? (
+                  {effectiveDeliveryState === 'queued' ? (
+                    <Clock3 className="size-3 shrink-0 text-amber-400" />
+                  ) : effectiveDeliveryState === 'delivered' ? (
+                    <Check className="size-3 shrink-0 text-emerald-400" />
+                  ) : runtimeAdvisoryTone === 'error' ? (
                     <AlertTriangle className="size-3 shrink-0 text-red-400" />
                   ) : (
                     <SyncedLoader2
@@ -1216,15 +1229,30 @@ export const MemberCard = memo(function MemberCard({
                   )}
                   <span
                     className={`shrink-0 text-[10px] ${
-                      runtimeAdvisoryTone === 'error'
-                        ? 'text-red-300'
-                        : runtimeAdvisoryLabel
-                          ? 'text-amber-300'
-                          : 'text-[var(--color-text-muted)]'
+                      effectiveDeliveryState === 'queued'
+                        ? 'text-amber-300'
+                        : effectiveDeliveryState === 'delivered'
+                          ? 'text-emerald-300'
+                          : runtimeAdvisoryTone === 'error'
+                            ? 'text-red-300'
+                            : runtimeAdvisoryLabel
+                              ? 'text-amber-300'
+                              : 'text-[var(--color-text-muted)]'
                     }`}
-                    title={runtimeAdvisoryTitle ?? 'Message sent, awaiting reply'}
+                    title={
+                      effectiveDeliveryState === 'queued'
+                        ? 'Queued - will be delivered after the team starts'
+                        : effectiveDeliveryState === 'delivered'
+                          ? 'The member runtime has read this message'
+                          : (runtimeAdvisoryTitle ??
+                            'Team is online - waiting for the member runtime to read this message')
+                    }
                   >
-                    {runtimeAdvisoryLabel ?? 'awaiting reply'}
+                    {effectiveDeliveryState === 'queued'
+                      ? 'Queued'
+                      : effectiveDeliveryState === 'delivered'
+                        ? 'Delivered'
+                        : (runtimeAdvisoryLabel ?? 'Delivering')}
                   </span>
                   {canRelaunchRuntimeAdvisoryOpenCode ? (
                     <Tooltip>

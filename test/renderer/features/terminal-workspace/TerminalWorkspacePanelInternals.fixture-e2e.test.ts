@@ -180,6 +180,33 @@ describe('terminal workspace panel internals fixture-e2e', () => {
     expect(appended[0]?.clientEventId).toBe('event-3');
   });
 
+  it('does not reopen a settled command when its delayed submitted event arrives', () => {
+    const settled = createRun({
+      durationMs: 125,
+      status: 'succeeded',
+    });
+    const submitted = normalizeTerminalCommandRunEventDetail(
+      new CustomEvent('tp-terminal-command-submitted', {
+        detail: {
+          clientEventId: settled.clientEventId,
+          command: settled.command,
+          paneId: settled.paneId,
+          sessionId: settled.sessionId,
+          startedAtMs: settled.startedAtMs,
+        },
+      })
+    );
+
+    expect(submitted).not.toBeNull();
+    const next = upsertTerminalCommandRun([settled], submitted!, 'running');
+
+    expect(next[0]).toBe(settled);
+    expect(next[0]).toMatchObject({
+      durationMs: 125,
+      status: 'succeeded',
+    });
+  });
+
   it('caps command presentation metadata per pane during busy multi-tab sessions', () => {
     let runs = [
       createRun({

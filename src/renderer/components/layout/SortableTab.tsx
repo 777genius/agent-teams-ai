@@ -9,12 +9,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
-import {
-  getTeamColorSet,
-  getThemedBadge,
-  getThemedBorder,
-  getThemedText,
-} from '@renderer/constants/teamColors';
+import { getTeamColorSet, getThemedBorder } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
 import { useStore } from '@renderer/store';
 import { nameColorSet } from '@renderer/utils/projectColor';
@@ -102,10 +97,9 @@ export const SortableTab = ({
       return nameColorSet(displayName, isLight);
     })
   );
-  const activeBorderColor = teamColorSet
+  const iconColor = teamColorSet
     ? getThemedBorder(teamColorSet, isLight)
     : 'var(--color-accent, #6366f1)';
-  const inactiveTeamTextColor = teamColorSet ? getThemedText(teamColorSet, isLight) : null;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: tab.id,
@@ -122,28 +116,20 @@ export const SortableTab = ({
     transition: isDragging ? 'none' : transition,
     opacity: isDragging ? 0.3 : 1,
     backgroundColor: isActive
-      ? teamColorSet
-        ? getThemedBadge(teamColorSet, isLight)
-        : 'var(--color-surface-raised)'
+      ? 'var(--color-surface-raised)'
       : isHovered
-        ? teamColorSet
-          ? getThemedBadge(teamColorSet, isLight)
-          : 'var(--color-surface-overlay)'
-        : teamColorSet
-          ? getThemedBadge(teamColorSet, isLight)
-          : 'transparent',
+        ? 'var(--color-surface-overlay)'
+        : 'transparent',
     color: isActive
       ? 'var(--color-text)'
-      : inactiveTeamTextColor
-        ? inactiveTeamTextColor
-        : isHovered
-          ? 'var(--color-text)'
-          : 'var(--color-text-muted)',
+      : isHovered
+        ? 'var(--color-text)'
+        : 'var(--color-text-muted)',
     outline: isSelected ? '1px solid var(--color-border-emphasis)' : 'none',
     outlineOffset: '-1px',
-    borderTop: isActive ? `1px solid ${activeBorderColor}` : '1px solid transparent',
-    borderLeft: isActive ? `1px solid ${activeBorderColor}` : '1px solid transparent',
-    borderRight: isActive ? `1px solid ${activeBorderColor}` : '1px solid transparent',
+    borderTop: isActive ? '1px solid var(--color-border-emphasis)' : '1px solid transparent',
+    borderLeft: isActive ? '1px solid var(--color-border-emphasis)' : '1px solid transparent',
+    borderRight: isActive ? '1px solid var(--color-border-emphasis)' : '1px solid transparent',
     borderBottom: isActive ? '1px solid var(--color-surface-raised)' : '1px solid transparent',
     borderTopLeftRadius: '8px',
     borderTopRightRadius: '8px',
@@ -190,7 +176,7 @@ export const SortableTab = ({
         }
       }}
     >
-      <Icon className="size-4 shrink-0" />
+      <Icon className="size-4 shrink-0" style={{ color: iconColor }} />
       {tab.fromSearch && (
         <span title={t('layout.openedFromSearch')}>
           <Search className="size-3 shrink-0 text-amber-400" />

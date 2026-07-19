@@ -1,14 +1,43 @@
 import {
+  buildOpenCodeAppScopedMcpOwnershipMarker,
+  buildOpenCodeAppScopedMcpUrl,
   clearOpenCodeLocalMcpLaunchEnv,
   copyOpenCodeLocalMcpLaunchEnv,
   hasOpenCodeLocalMcpLaunchEnv,
   isOpenCodeMcpHttpBridgeEnabled,
+  mergeOpenCodeLocalMcpChildEnvironment,
   shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
 import { describe, expect, it } from 'vitest';
 
 describe('OpenCodeMcpBridgeEnv', () => {
+  it('adds an app-instance marker without changing the MCP network endpoint', () => {
+    const scopedUrl = buildOpenCodeAppScopedMcpUrl('http://127.0.0.1:41001/mcp', '123-456');
+    const parsed = new URL(scopedUrl);
+
+    expect(`${parsed.origin}${parsed.pathname}${parsed.search}`).toBe('http://127.0.0.1:41001/mcp');
+    expect(parsed.hash).toBe('#agent-teams-app-instance=123-456');
+    expect(buildOpenCodeAppScopedMcpOwnershipMarker('123-456')).toBe(
+      'agent-teams-app-instance=123-456'
+    );
+  });
+
+  it('preserves existing URL fragments when adding the app-instance marker', () => {
+    expect(
+      buildOpenCodeAppScopedMcpUrl('http://127.0.0.1:41001/mcp#transport=http', '123-456')
+    ).toBe('http://127.0.0.1:41001/mcp#transport=http&agent-teams-app-instance=123-456');
+  });
+
+  it('rejects an empty app-instance marker', () => {
+    expect(() => buildOpenCodeAppScopedMcpUrl('http://127.0.0.1:41001/mcp', '  ')).toThrow(
+      'OpenCode app instance id is required'
+    );
+    expect(() => buildOpenCodeAppScopedMcpOwnershipMarker('  ')).toThrow(
+      'OpenCode app instance id is required'
+    );
+  });
+
   it('uses the app-owned HTTP MCP bridge by default', () => {
     expect(isOpenCodeMcpHttpBridgeEnabled({})).toBe(true);
     expect(isOpenCodeMcpHttpBridgeEnabled({ CLAUDE_TEAM_OPENCODE_MCP_HTTP: '1' })).toBe(true);
@@ -68,10 +97,37 @@ describe('OpenCodeMcpBridgeEnv', () => {
     expect(target.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBe('node');
     expect(target.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY).toBe('mcp-server/dist/index.js');
     expect(target.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON).toBe('["mcp-server/dist/index.js"]');
-    expect(target.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON).toBe(
-      '{"ELECTRON_RUN_AS_NODE":"1"}'
-    );
+    expect(target.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON).toBe('{"ELECTRON_RUN_AS_NODE":"1"}');
     expect(target.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBe('http://127.0.0.1:41001/mcp');
+  });
+
+  it('merges app ownership into the local MCP child environment', () => {
+    const env: NodeJS.ProcessEnv = {
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: '{"ELECTRON_RUN_AS_NODE":"1"}',
+    };
+
+    mergeOpenCodeLocalMcpChildEnvironment(env, {
+      CLAUDE_TEAM_APP_INSTANCE_ID: '123-456',
+    });
+
+    expect(JSON.parse(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON ?? '{}')).toEqual({
+      ELECTRON_RUN_AS_NODE: '1',
+      CLAUDE_TEAM_APP_INSTANCE_ID: '123-456',
+    });
+  });
+
+  it('replaces malformed optional local MCP child environment safely', () => {
+    const env: NodeJS.ProcessEnv = {
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: '{broken',
+    };
+
+    mergeOpenCodeLocalMcpChildEnvironment(env, {
+      CLAUDE_TEAM_APP_INSTANCE_ID: '123-456',
+    });
+
+    expect(JSON.parse(env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON ?? '{}')).toEqual({
+      CLAUDE_TEAM_APP_INSTANCE_ID: '123-456',
+    });
   });
 
   it('resolves local MCP launch env even when HTTP MCP already has a URL', () => {

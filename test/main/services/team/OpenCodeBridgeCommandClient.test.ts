@@ -69,7 +69,7 @@ describe('OpenCodeBridgeCommandClient', () => {
         expect.any(String),
       ],
       cwd: '/tmp/project',
-      timeoutMs: 10_000,
+      timeoutMs: 35_000,
       env: expect.objectContaining({
         OPENCODE_DISABLE_AUTOUPDATE: '1',
       }),
@@ -214,7 +214,7 @@ describe('OpenCodeBridgeCommandClient', () => {
     );
   });
 
-  it('records bridge timeout as unknown outcome with redacted diagnostics', async () => {
+  it('classifies only the outer process deadline as a transport watchdog timeout', async () => {
     runner.nextResult = {
       stdout: '',
       stderr: 'Authorization: Bearer live-token',
@@ -235,10 +235,13 @@ describe('OpenCodeBridgeCommandClient', () => {
     expect(result).toMatchObject({
       ok: false,
       error: {
-        kind: 'timeout',
+        kind: 'transport_watchdog_timeout',
         retryable: true,
         details: {
           stderr: 'Authorization: Bearer [redacted]',
+          runtimeTimeoutMs: 10_000,
+          transportWatchdogGraceMs: 25_000,
+          transportWatchdogTimeoutMs: 35_000,
         },
       },
       diagnostics: [
@@ -248,6 +251,86 @@ describe('OpenCodeBridgeCommandClient', () => {
         }),
       ],
     });
+    expect(runner.calls[0]?.timeoutMs).toBe(35_000);
+    expect(JSON.parse(await runner.readInputEnvelope(0))).toMatchObject({ timeoutMs: 10_000 });
+  });
+
+  it('classifies bridge output overflow as an unknown outcome instead of a provider error', async () => {
+    runner.nextResult = {
+      stdout: '',
+      stderr: 'stdout maxBuffer length exceeded',
+      exitCode: null,
+      timedOut: true,
+      outcomeUnknownReason: 'output_limit',
+    };
+    const client = createClient();
+
+    const result = await client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-1' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+      }
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        kind: 'transport_watchdog_timeout',
+        message: 'OpenCode bridge output exceeded its safety limit; process outcome is unknown',
+        retryable: true,
+        details: {
+          outcomeUnknownReason: 'output_limit',
+          stderr: 'stdout maxBuffer length exceeded',
+        },
+      },
+      diagnostics: [
+        expect.objectContaining({
+          type: 'opencode_bridge_unknown_outcome',
+          severity: 'warning',
+        }),
+      ],
+    });
+  });
+
+  it('preserves a structured runtime timeout returned before the transport watchdog', async () => {
+    runner.nextResult = {
+      stdout: `${JSON.stringify({
+        ok: false,
+        schemaVersion: 1,
+        requestId: 'req-1',
+        command: 'opencode.readiness',
+        completedAt: '2026-04-21T12:00:01.000Z',
+        durationMs: 1_000,
+        error: {
+          kind: 'timeout',
+          message: 'OpenCode readiness deadline expired in execution_poll',
+          retryable: true,
+          details: { phase: 'execution_poll' },
+        },
+        diagnostics: [],
+      })}\n`,
+      stderr: '',
+      exitCode: 0,
+      timedOut: false,
+    };
+    const client = createClient();
+
+    const result = await client.execute(
+      'opencode.readiness',
+      { projectPath: '/tmp/project' },
+      { cwd: '/tmp/project', timeoutMs: 10_000 }
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        kind: 'timeout',
+        details: { phase: 'execution_poll' },
+      },
+    });
+    expect(runner.calls[0]?.timeoutMs).toBe(35_000);
   });
 
   it('keeps bridge failures best-effort when the diagnostics sink fails', async () => {

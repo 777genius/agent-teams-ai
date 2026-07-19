@@ -1,17 +1,20 @@
 import { invertedEffects } from '@codemirror/commands';
 import {
-  acceptChunk,
   getChunks,
   getOriginalDoc,
   originalDocChangeEffect,
-  rejectChunk,
   updateOriginalDoc,
 } from '@codemirror/merge';
-import { ChangeSet, type ChangeSpec, EditorState, type StateEffect } from '@codemirror/state';
+import {
+  ChangeSet,
+  type ChangeSpec,
+  EditorState,
+  type StateEffect,
+  Transaction,
+} from '@codemirror/state';
 import { type EditorView } from '@codemirror/view';
 import { buildHunkDecisionKey } from '@renderer/utils/reviewKey';
-import { computeDiffContextHash } from '@shared/utils/diffContextHash';
-import { structuredPatch } from 'diff';
+import { buildReviewChunkContextHashes } from '@shared/utils/reviewChunks';
 
 /**
  * Teaches CM history to undo acceptChunk operations (updateOriginalDoc effects).
@@ -37,6 +40,48 @@ export const mergeUndoSupport = invertedEffects.of((tr) => {
   return effects;
 });
 
+/**
+ * Review decisions have their own guarded Undo stack. Keeping them out of CodeMirror's
+ * text history prevents native draft Undo from reverting only the visual half.
+ */
+export function acceptChunk(view: EditorView, pos?: number): boolean {
+  const state = view.state;
+  const at = pos ?? state.selection.main.head;
+  const chunk = getChunks(state)?.chunks.find(
+    (candidate) => candidate.fromB <= at && candidate.endB >= at
+  );
+  if (!chunk) return false;
+  let insert = state.sliceDoc(chunk.fromB, Math.max(chunk.fromB, chunk.toB - 1));
+  const original = getOriginalDoc(state);
+  if (chunk.fromB !== chunk.toB && chunk.toA <= original.length) insert += state.lineBreak;
+  const changes = ChangeSet.of(
+    { from: chunk.fromA, to: Math.min(original.length, chunk.toA), insert },
+    original.length
+  );
+  view.dispatch({
+    effects: updateOriginalDoc.of({ doc: changes.apply(original), changes }),
+    annotations: [Transaction.userEvent.of('accept'), Transaction.addToHistory.of(false)],
+  });
+  return true;
+}
+
+export function rejectChunk(view: EditorView, pos?: number): boolean {
+  const state = view.state;
+  const at = pos ?? state.selection.main.head;
+  const chunk = getChunks(state)?.chunks.find(
+    (candidate) => candidate.fromB <= at && candidate.endB >= at
+  );
+  if (!chunk) return false;
+  const original = getOriginalDoc(state);
+  let insert = original.sliceString(chunk.fromA, Math.max(chunk.fromA, chunk.toA - 1));
+  if (chunk.fromA !== chunk.toA && chunk.toB <= state.doc.length) insert += state.lineBreak;
+  view.dispatch({
+    changes: { from: chunk.fromB, to: Math.min(state.doc.length, chunk.toB), insert },
+    annotations: [Transaction.userEvent.of('revert'), Transaction.addToHistory.of(false)],
+  });
+  return true;
+}
+
 /** Accept all remaining chunks in one transaction (single Cmd+Z to undo) */
 export function acceptAllChunks(view: EditorView): boolean {
   const result = getChunks(view.state);
@@ -52,6 +97,7 @@ export function acceptAllChunks(view: EditorView): boolean {
   );
   view.dispatch({
     effects: updateOriginalDoc.of({ doc: changes.apply(orig), changes }),
+    annotations: [Transaction.userEvent.of('accept'), Transaction.addToHistory.of(false)],
   });
   return true;
 }
@@ -66,7 +112,22 @@ export function rejectAllChunks(view: EditorView): boolean {
   // "restore the current doc to the original baseline" in one edit.
   view.dispatch({
     changes: [{ from: 0, to: view.state.doc.length, insert: orig.toString() }],
+    annotations: [Transaction.userEvent.of('revert'), Transaction.addToHistory.of(false)],
   });
+  return true;
+}
+
+const ignoredReviewDocChangeViews = new WeakSet<EditorView>();
+
+/** Ignore one programmatic document change in the editable-draft listener. */
+export function ignoreNextReviewDocChange(view: EditorView): void {
+  ignoredReviewDocChangeViews.add(view);
+}
+
+/** Consume a one-shot programmatic-change marker for a review editor. */
+export function consumeIgnoredReviewDocChange(view: EditorView): boolean {
+  if (!ignoredReviewDocChangeViews.has(view)) return false;
+  ignoredReviewDocChangeViews.delete(view);
   return true;
 }
 
@@ -149,21 +210,11 @@ export function replayHunkDecisionsSmart(
   if (hunkContextHashes && Object.keys(hunkContextHashes).length > 0) {
     const original = getOriginalDoc(view.state).toString();
     const modified = view.state.doc.toString();
-    const patch = structuredPatch('file', 'file', original, modified);
-    const hunks = patch.hunks ?? [];
-    if (hunks.length === chunkCount) {
+    const hashes = buildReviewChunkContextHashes(original, modified);
+    if (Object.keys(hashes).length === chunkCount) {
       hashToIndices = new Map<string, number[]>();
-      for (let i = 0; i < hunks.length; i++) {
-        const hunk = hunks[i];
-        const oldSideContent = hunk.lines
-          .filter((l) => !l.startsWith('+'))
-          .map((l) => l.slice(1))
-          .join('\n');
-        const newSideContent = hunk.lines
-          .filter((l) => !l.startsWith('-'))
-          .map((l) => l.slice(1))
-          .join('\n');
-        const hash = computeDiffContextHash(oldSideContent, newSideContent);
+      for (const [rawIndex, hash] of Object.entries(hashes)) {
+        const i = Number(rawIndex);
         const arr = hashToIndices.get(hash);
         if (arr) arr.push(i);
         else hashToIndices.set(hash, [i]);
@@ -239,4 +290,4 @@ export function computeChunkIndexAtPos(state: EditorState, pos: number): number 
   return nearestIndex;
 }
 
-export { acceptChunk, getChunks, rejectChunk };
+export { getChunks };

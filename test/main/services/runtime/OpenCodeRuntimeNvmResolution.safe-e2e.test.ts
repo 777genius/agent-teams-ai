@@ -1,12 +1,13 @@
 // @vitest-environment node
 /* eslint-disable security/detect-non-literal-fs-filename */
-import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  clearOpenCodeRuntimeBinaryResolverCache,
   OpenCodeRuntimeInstallerService,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from '../../../../src/main/services/infrastructure/OpenCodeRuntimeInstallerService';
@@ -16,6 +17,7 @@ import { setAppDataBasePath } from '../../../../src/main/utils/pathDecoder';
 import { clearShellEnvCache } from '../../../../src/main/utils/shellEnv';
 
 const describePosix = process.platform === 'win32' ? describe.skip : describe;
+const describeWindows = process.platform === 'win32' ? describe : describe.skip;
 
 describePosix('OpenCode nvm runtime resolution safe e2e', () => {
   let tempDir: string | null = null;
@@ -111,6 +113,91 @@ describePosix('OpenCode nvm runtime resolution safe e2e', () => {
     await chmod(binaryPath, 0o755);
     return binaryPath;
   }
+});
+
+describeWindows('OpenCode nvm-windows runtime resolution safe e2e', () => {
+  let tempDir: string | null = null;
+  let originalAppData: string | undefined;
+  let originalNvmHome: string | undefined;
+  let originalNvmSymlink: string | undefined;
+  let originalPath: string | undefined;
+
+  beforeEach(async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), 'opencode-nvm-windows-resolution-e2e-'));
+    setAppDataBasePath(path.join(tempDir, 'app-data'));
+    clearOpenCodeRuntimeBinaryResolverCache();
+    clearShellEnvCache();
+
+    originalAppData = process.env.APPDATA;
+    originalNvmHome = process.env.NVM_HOME;
+    originalNvmSymlink = process.env.NVM_SYMLINK;
+    originalPath = process.env.PATH;
+    process.env.APPDATA = path.join(tempDir, 'empty-appdata');
+    process.env.NVM_HOME = path.join(tempDir, 'custom-nvm');
+    delete process.env.NVM_SYMLINK;
+    process.env.PATH = '';
+  });
+
+  afterEach(async () => {
+    clearOpenCodeRuntimeBinaryResolverCache();
+    clearShellEnvCache();
+    setAppDataBasePath(null);
+
+    restoreEnvValue('APPDATA', originalAppData);
+    restoreEnvValue('NVM_HOME', originalNvmHome);
+    restoreEnvValue('NVM_SYMLINK', originalNvmSymlink);
+    restoreEnvValue('PATH', originalPath);
+
+    if (tempDir) {
+      await rm(tempDir, { recursive: true, force: true });
+      tempDir = null;
+    }
+  });
+
+  it('selects the native OpenCode executable behind an nvm cmd shim', async () => {
+    const versionDir = path.join(process.env.NVM_HOME!, 'v20.20.0');
+    const shimPath = path.join(versionDir, 'opencode.cmd');
+    const nativeBinaryPath = path.join(
+      versionDir,
+      'node_modules',
+      'opencode-ai',
+      'node_modules',
+      `opencode-windows-${process.arch}`,
+      'bin',
+      'opencode.exe'
+    );
+    await mkdir(path.dirname(nativeBinaryPath), { recursive: true });
+    await writeFile(shimPath, '@echo off\r\nexit /b 1\r\n', 'utf8');
+    await copyFile(process.execPath, nativeBinaryPath);
+
+    await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
+      nativeBinaryPath
+    );
+
+    const status = await new OpenCodeRuntimeInstallerService().getStatus();
+    expect(status).toMatchObject({
+      installed: true,
+      source: 'path',
+      state: 'ready',
+      binaryPath: nativeBinaryPath,
+    });
+
+    const bridgeEnv: NodeJS.ProcessEnv = { PATH: '' };
+    await ensureOpenCodeBridgeRuntimeBinaryEnv({
+      targetEnv: bridgeEnv,
+      bridgeEnv,
+      resolveVerifiedOpenCodeRuntimeBinaryPath,
+    });
+    expect(bridgeEnv.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(nativeBinaryPath);
+    expect(bridgeEnv.OPENCODE_BIN_PATH).toBe(nativeBinaryPath);
+
+    const version = await execCli(nativeBinaryPath, ['--version'], {
+      env: bridgeEnv,
+      timeout: 2_000,
+      windowsHide: true,
+    });
+    expect(version.stdout.trim()).toMatch(/^v\d+\./);
+  });
 });
 
 function restoreEnvValue(name: string, value: string | undefined): void {

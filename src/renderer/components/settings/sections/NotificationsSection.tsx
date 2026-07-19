@@ -10,6 +10,7 @@ import {
   RepositoryDropdown,
   SelectedRepositoryItem,
 } from '@renderer/components/common/RepositoryDropdown';
+import { Input } from '@renderer/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import {
   AlertTriangle,
@@ -94,9 +95,11 @@ interface NotificationsSectionProps {
       | 'notifyOnUsageBudgetWarning'
       | 'notifyOnUsageBudgetCritical'
       | 'notifyOnUsageBudgetNativeToast'
-      | 'autoResumeOnRateLimit'
       | 'statusChangeOnlySolo',
     value: boolean
+  ) => void;
+  readonly onTeamRuntimeRecoveryUpdate: (
+    update: Partial<SafeConfig['teamRuntimeRecovery']>
   ) => void;
   readonly onStatusChangeStatusesUpdate: (statuses: string[]) => void;
   readonly onSnooze: (minutes: number) => Promise<void>;
@@ -118,6 +121,7 @@ export const NotificationsSection = ({
   ignoredRepositoryItems,
   excludedRepositoryIds,
   onNotificationToggle,
+  onTeamRuntimeRecoveryUpdate,
   onSnooze,
   onClearSnooze,
   onAddIgnoredRepository,
@@ -187,6 +191,74 @@ export const NotificationsSection = ({
           </div>
         </div>
       ) : null}
+
+      <SettingsSectionHeader
+        title={t('notifications.recovery.title')}
+        icon={<Clock className="size-3.5" />}
+      />
+      <SettingRow
+        label={t('notifications.recovery.transient.label')}
+        description={t('notifications.recovery.transient.description')}
+        icon={<AlertTriangle className="size-4" />}
+      >
+        <SettingsToggle
+          enabled={safeConfig.teamRuntimeRecovery.transientErrorsEnabled}
+          onChange={(value) => onTeamRuntimeRecoveryUpdate({ transientErrorsEnabled: value })}
+          disabled={saving}
+        />
+      </SettingRow>
+      <SettingRow
+        label={t('notifications.recovery.rateLimits.label')}
+        description={t('notifications.recovery.rateLimits.description')}
+        icon={<Clock className="size-4" />}
+      >
+        <SettingsToggle
+          enabled={safeConfig.teamRuntimeRecovery.rateLimitsEnabled}
+          onChange={(value) => onTeamRuntimeRecoveryUpdate({ rateLimitsEnabled: value })}
+          disabled={saving}
+        />
+      </SettingRow>
+      <SettingRow
+        label={t('notifications.recovery.delay.label')}
+        description={t('notifications.recovery.delay.description')}
+        icon={<Clock className="size-4" />}
+      >
+        <Input
+          type="number"
+          min={15}
+          max={900}
+          step={15}
+          value={safeConfig.teamRuntimeRecovery.initialDelaySeconds}
+          onChange={(event) =>
+            onTeamRuntimeRecoveryUpdate({
+              initialDelaySeconds: Math.min(900, Math.max(15, Number(event.target.value))),
+            })
+          }
+          disabled={saving}
+          aria-label={t('notifications.recovery.delay.label')}
+          className="w-20"
+        />
+      </SettingRow>
+      <SettingRow
+        label={t('notifications.recovery.attempts.label')}
+        description={t('notifications.recovery.attempts.description')}
+        icon={<ArrowRightLeft className="size-4" />}
+      >
+        <Input
+          type="number"
+          min={1}
+          max={5}
+          value={safeConfig.teamRuntimeRecovery.maxAttempts}
+          onChange={(event) =>
+            onTeamRuntimeRecoveryUpdate({
+              maxAttempts: Math.min(5, Math.max(1, Number(event.target.value))),
+            })
+          }
+          disabled={saving}
+          aria-label={t('notifications.recovery.attempts.label')}
+          className="w-20"
+        />
+      </SettingRow>
 
       {/* Notification Settings */}
       <SettingsSectionHeader
@@ -380,176 +452,166 @@ export const NotificationsSection = ({
           backgroundColor: 'var(--color-surface-raised)',
         }}
       >
-        <SettingRow
-          label={t('notifications.team.leadInbox.label')}
-          description={t('notifications.team.leadInbox.description')}
-          icon={<Inbox className="size-4" />}
-        >
-          <SettingsToggle
-            enabled={safeConfig.notifications.notifyOnLeadInbox}
-            onChange={(v) => onNotificationToggle('notifyOnLeadInbox', v)}
-            disabled={saving || !safeConfig.notifications.enabled}
-          />
-        </SettingRow>
-        <SettingRow
-          label={t('notifications.team.userInbox.label')}
-          description={t('notifications.team.userInbox.description')}
-          icon={<Mail className="size-4" />}
-        >
-          <SettingsToggle
-            enabled={safeConfig.notifications.notifyOnUserInbox}
-            onChange={(v) => onNotificationToggle('notifyOnUserInbox', v)}
-            disabled={saving || !safeConfig.notifications.enabled}
-          />
-        </SettingRow>
-        <SettingRow
-          label={t('notifications.team.clarifications.label')}
-          description={t('notifications.team.clarifications.description')}
-          icon={<HelpCircle className="size-4" />}
-        >
-          <SettingsToggle
-            enabled={safeConfig.notifications.notifyOnClarifications}
-            onChange={(v) => onNotificationToggle('notifyOnClarifications', v)}
-            disabled={saving || !safeConfig.notifications.enabled}
-          />
-        </SettingRow>
-        <SettingRow
-          label={t('notifications.team.taskComments.label')}
-          description={t('notifications.team.taskComments.description')}
-          icon={<MessageSquare className="size-4" />}
-        >
-          <SettingsToggle
-            enabled={safeConfig.notifications.notifyOnTaskComments}
-            onChange={(v) => onNotificationToggle('notifyOnTaskComments', v)}
-            disabled={saving || !safeConfig.notifications.enabled}
-          />
-        </SettingRow>
-        <SettingRow
-          label={t('notifications.team.taskCreated.label')}
-          description={t('notifications.team.taskCreated.description')}
-          icon={<CirclePlus className="size-4" />}
-        >
-          <SettingsToggle
-            enabled={safeConfig.notifications.notifyOnTaskCreated}
-            onChange={(v) => onNotificationToggle('notifyOnTaskCreated', v)}
-            disabled={saving || !safeConfig.notifications.enabled}
-          />
-        </SettingRow>
-        <SettingRow
-          label={t('notifications.team.allTasksCompleted.label')}
-          description={t('notifications.team.allTasksCompleted.description')}
-          icon={<CheckCircle2 className="size-4" />}
-        >
-          <SettingsToggle
-            enabled={safeConfig.notifications.notifyOnAllTasksCompleted}
-            onChange={(v) => onNotificationToggle('notifyOnAllTasksCompleted', v)}
-            disabled={saving || !safeConfig.notifications.enabled}
-          />
-        </SettingRow>
-        <SettingRow
-          label={t('notifications.team.crossTeamMessage.label')}
-          description={t('notifications.team.crossTeamMessage.description')}
-          icon={<GitBranch className="size-4" />}
-        >
-          <SettingsToggle
-            enabled={safeConfig.notifications.notifyOnCrossTeamMessage}
-            onChange={(v) => onNotificationToggle('notifyOnCrossTeamMessage', v)}
-            disabled={saving || !safeConfig.notifications.enabled}
-          />
-        </SettingRow>
-        <SettingRow
-          label={t('notifications.team.teamLaunched.label')}
-          description={t('notifications.team.teamLaunched.description')}
-          icon={<Rocket className="size-4" />}
-        >
-          <SettingsToggle
-            enabled={safeConfig.notifications.notifyOnTeamLaunched}
-            onChange={(v) => onNotificationToggle('notifyOnTeamLaunched', v)}
-            disabled={saving || !safeConfig.notifications.enabled}
-          />
-        </SettingRow>
-        <SettingRow
-          label={t('notifications.team.toolApproval.label')}
-          description={t('notifications.team.toolApproval.description')}
-          icon={<ShieldQuestion className="size-4" />}
-        >
-          <SettingsToggle
-            enabled={safeConfig.notifications.notifyOnToolApproval}
-            onChange={(v) => onNotificationToggle('notifyOnToolApproval', v)}
-            disabled={saving || !safeConfig.notifications.enabled}
-          />
-        </SettingRow>
-        <SettingRow
-          label={t('notifications.team.autoResumeOnRateLimit.label')}
-          description={t('notifications.team.autoResumeOnRateLimit.description')}
-          icon={<Clock className="size-4" />}
-        >
-          <SettingsToggle
-            enabled={safeConfig.notifications.autoResumeOnRateLimit}
-            onChange={(v) => onNotificationToggle('autoResumeOnRateLimit', v)}
-            disabled={saving || !safeConfig.notifications.enabled}
-          />
-        </SettingRow>
-
-        {/* Task Status Change Notifications — nested within team card */}
-        <div className="last:*:border-b-0">
+        <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-2">
           <SettingRow
-            label={t('notifications.team.statusChange.label')}
-            description={t('notifications.team.statusChange.description')}
-            icon={<ArrowRightLeft className="size-4" />}
+            label={t('notifications.team.leadInbox.label')}
+            description={t('notifications.team.leadInbox.description')}
+            icon={<Inbox className="size-4" />}
           >
             <SettingsToggle
-              enabled={safeConfig.notifications.notifyOnStatusChange}
-              onChange={(v) => onNotificationToggle('notifyOnStatusChange', v)}
+              enabled={safeConfig.notifications.notifyOnLeadInbox}
+              onChange={(v) => onNotificationToggle('notifyOnLeadInbox', v)}
               disabled={saving || !safeConfig.notifications.enabled}
             />
           </SettingRow>
-          {safeConfig.notifications.notifyOnStatusChange && safeConfig.notifications.enabled ? (
-            <div
-              className="flex flex-col gap-3 border-b pb-3"
-              style={{ borderColor: 'var(--color-border-subtle)', paddingLeft: 30 }}
+          <SettingRow
+            label={t('notifications.team.userInbox.label')}
+            description={t('notifications.team.userInbox.description')}
+            icon={<Mail className="size-4" />}
+          >
+            <SettingsToggle
+              enabled={safeConfig.notifications.notifyOnUserInbox}
+              onChange={(v) => onNotificationToggle('notifyOnUserInbox', v)}
+              disabled={saving || !safeConfig.notifications.enabled}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t('notifications.team.clarifications.label')}
+            description={t('notifications.team.clarifications.description')}
+            icon={<HelpCircle className="size-4" />}
+          >
+            <SettingsToggle
+              enabled={safeConfig.notifications.notifyOnClarifications}
+              onChange={(v) => onNotificationToggle('notifyOnClarifications', v)}
+              disabled={saving || !safeConfig.notifications.enabled}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t('notifications.team.taskComments.label')}
+            description={t('notifications.team.taskComments.description')}
+            icon={<MessageSquare className="size-4" />}
+          >
+            <SettingsToggle
+              enabled={safeConfig.notifications.notifyOnTaskComments}
+              onChange={(v) => onNotificationToggle('notifyOnTaskComments', v)}
+              disabled={saving || !safeConfig.notifications.enabled}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t('notifications.team.taskCreated.label')}
+            description={t('notifications.team.taskCreated.description')}
+            icon={<CirclePlus className="size-4" />}
+          >
+            <SettingsToggle
+              enabled={safeConfig.notifications.notifyOnTaskCreated}
+              onChange={(v) => onNotificationToggle('notifyOnTaskCreated', v)}
+              disabled={saving || !safeConfig.notifications.enabled}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t('notifications.team.allTasksCompleted.label')}
+            description={t('notifications.team.allTasksCompleted.description')}
+            icon={<CheckCircle2 className="size-4" />}
+          >
+            <SettingsToggle
+              enabled={safeConfig.notifications.notifyOnAllTasksCompleted}
+              onChange={(v) => onNotificationToggle('notifyOnAllTasksCompleted', v)}
+              disabled={saving || !safeConfig.notifications.enabled}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t('notifications.team.crossTeamMessage.label')}
+            description={t('notifications.team.crossTeamMessage.description')}
+            icon={<GitBranch className="size-4" />}
+          >
+            <SettingsToggle
+              enabled={safeConfig.notifications.notifyOnCrossTeamMessage}
+              onChange={(v) => onNotificationToggle('notifyOnCrossTeamMessage', v)}
+              disabled={saving || !safeConfig.notifications.enabled}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t('notifications.team.teamLaunched.label')}
+            description={t('notifications.team.teamLaunched.description')}
+            icon={<Rocket className="size-4" />}
+          >
+            <SettingsToggle
+              enabled={safeConfig.notifications.notifyOnTeamLaunched}
+              onChange={(v) => onNotificationToggle('notifyOnTeamLaunched', v)}
+              disabled={saving || !safeConfig.notifications.enabled}
+            />
+          </SettingRow>
+          <SettingRow
+            label={t('notifications.team.toolApproval.label')}
+            description={t('notifications.team.toolApproval.description')}
+            icon={<ShieldQuestion className="size-4" />}
+          >
+            <SettingsToggle
+              enabled={safeConfig.notifications.notifyOnToolApproval}
+              onChange={(v) => onNotificationToggle('notifyOnToolApproval', v)}
+              disabled={saving || !safeConfig.notifications.enabled}
+            />
+          </SettingRow>
+          {/* Task Status Change Notifications — nested within team card */}
+          <div className="*:last:border-b-0 lg:col-span-2">
+            <SettingRow
+              label={t('notifications.team.statusChange.label')}
+              description={t('notifications.team.statusChange.description')}
+              icon={<ArrowRightLeft className="size-4" />}
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div
-                    className="text-sm font-medium"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {t('notifications.team.statusChange.onlySolo.label')}
+              <SettingsToggle
+                enabled={safeConfig.notifications.notifyOnStatusChange}
+                onChange={(v) => onNotificationToggle('notifyOnStatusChange', v)}
+                disabled={saving || !safeConfig.notifications.enabled}
+              />
+            </SettingRow>
+            {safeConfig.notifications.notifyOnStatusChange && safeConfig.notifications.enabled ? (
+              <div
+                className="flex flex-col gap-3 border-b pb-3"
+                style={{ borderColor: 'var(--color-border-subtle)', paddingLeft: 30 }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div
+                      className="text-sm font-medium"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      {t('notifications.team.statusChange.onlySolo.label')}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('notifications.team.statusChange.onlySolo.description')}
+                    </div>
                   </div>
-                  <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                    {t('notifications.team.statusChange.onlySolo.description')}
+                  <div className="shrink-0">
+                    <SettingsToggle
+                      enabled={safeConfig.notifications.statusChangeOnlySolo}
+                      onChange={(v) => onNotificationToggle('statusChangeOnlySolo', v)}
+                      disabled={saving}
+                    />
                   </div>
                 </div>
-                <div className="shrink-0">
-                  <SettingsToggle
-                    enabled={safeConfig.notifications.statusChangeOnlySolo}
-                    onChange={(v) => onNotificationToggle('statusChangeOnlySolo', v)}
+                <div className="flex flex-col gap-1.5">
+                  <div>
+                    <div
+                      className="text-sm font-medium"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                    >
+                      {t('notifications.team.statusChange.statuses.label')}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      {t('notifications.team.statusChange.statuses.description')}
+                    </div>
+                  </div>
+                  <StatusCheckboxGroup
+                    selected={safeConfig.notifications.statusChangeStatuses}
+                    onChange={onStatusChangeStatusesUpdate}
                     disabled={saving}
+                    t={t}
                   />
                 </div>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <div>
-                  <div
-                    className="text-sm font-medium"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                  >
-                    {t('notifications.team.statusChange.statuses.label')}
-                  </div>
-                  <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                    {t('notifications.team.statusChange.statuses.description')}
-                  </div>
-                </div>
-                <StatusCheckboxGroup
-                  selected={safeConfig.notifications.statusChangeStatuses}
-                  onChange={onStatusChangeStatusesUpdate}
-                  disabled={saving}
-                  t={t}
-                />
-              </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </div>
 

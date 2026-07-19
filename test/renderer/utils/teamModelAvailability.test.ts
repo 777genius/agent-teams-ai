@@ -254,7 +254,7 @@ describe('teamModelAvailability', () => {
       {
         value: 'opencode/big-pickle',
         label: 'big-pickle',
-        badgeLabel: 'OpenCode',
+        badgeLabel: 'OpenCode Zen',
         availabilityStatus: 'available',
         availabilityReason: null,
       },
@@ -348,7 +348,7 @@ describe('teamModelAvailability', () => {
       {
         value: 'opencode/big-pickle',
         label: 'big-pickle',
-        badgeLabel: 'OpenCode',
+        badgeLabel: 'OpenCode Zen',
         availabilityStatus: 'available',
         availabilityReason: null,
       },

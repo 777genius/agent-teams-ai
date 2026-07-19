@@ -12,10 +12,10 @@ export interface UseGraphInteractionResult {
   hoveredNodeId: React.RefObject<string | null>;
   dragNodeId: React.RefObject<string | null>;
   isDragging: React.RefObject<boolean>;
-  handleMouseDown: (wx: number, wy: number, nodes: GraphNode[]) => void;
-  handleMouseMove: (wx: number, wy: number, nodes: GraphNode[]) => void;
+  handleMouseDown: (wx: number, wy: number, nodes: GraphNode[], zoom?: number) => void;
+  handleMouseMove: (wx: number, wy: number, nodes: GraphNode[], zoom?: number) => void;
   handleMouseUp: () => string | null;
-  handleDoubleClick: (wx: number, wy: number, nodes: GraphNode[]) => string | null;
+  handleDoubleClick: (wx: number, wy: number, nodes: GraphNode[], zoom?: number) => string | null;
 }
 
 export interface UseGraphInteractionOptions {
@@ -34,9 +34,9 @@ export function useGraphInteraction(
   const canDragNode = options?.canDragNode;
 
   const handleMouseDown = useCallback(
-    (wx: number, wy: number, nodes: GraphNode[]) => {
+    (wx: number, wy: number, nodes: GraphNode[], zoom = 1) => {
       mouseDownPos.current = { x: wx, y: wy };
-      const hit = findNodeAt(wx, wy, nodes);
+      const hit = findNodeAt(wx, wy, nodes, zoom);
       clickedNodeId.current = hit;
 
       if (hit) {
@@ -51,7 +51,7 @@ export function useGraphInteraction(
   );
 
   const handleMouseMove = useCallback(
-    (wx: number, wy: number, nodes: GraphNode[]) => {
+    (wx: number, wy: number, nodes: GraphNode[], zoom = 1) => {
       // Check drag threshold
       if (mouseDownPos.current && dragNodeId.current) {
         const dx = wx - mouseDownPos.current.x;
@@ -68,7 +68,7 @@ export function useGraphInteraction(
       }
 
       // Hover detection
-      hoveredNodeId.current = findNodeAt(wx, wy, nodes);
+      hoveredNodeId.current = findNodeAt(wx, wy, nodes, zoom);
     },
     [onDragNode]
   );
@@ -90,8 +90,8 @@ export function useGraphInteraction(
   }, []);
 
   const handleDoubleClick = useCallback(
-    (wx: number, wy: number, nodes: GraphNode[]): string | null => {
-      return findNodeAt(wx, wy, nodes);
+    (wx: number, wy: number, nodes: GraphNode[], zoom = 1): string | null => {
+      return findNodeAt(wx, wy, nodes, zoom);
     },
     []
   );

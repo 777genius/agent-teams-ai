@@ -1,4 +1,6 @@
-import type { FileChangeWithContent } from '@shared/types';
+import { buildHunkDecisionKey, getFileReviewKey } from '@renderer/utils/reviewKey';
+
+import type { FileChangeWithContent, HunkDecision } from '@shared/types';
 import type { FileChangeSummary } from '@shared/types/review';
 
 export type ReviewRejectBlockReason =
@@ -11,6 +13,26 @@ type ReviewContentAvailability = Pick<
   FileChangeWithContent,
   'contentSource' | 'originalFullContent' | 'modifiedFullContent'
 >;
+
+export function getEffectiveReviewFileDecision(
+  file: FileChangeSummary,
+  hunkCount: number,
+  hunkDecisions: Record<string, HunkDecision>,
+  fileDecision: HunkDecision | undefined
+): HunkDecision | undefined {
+  if (fileDecision === 'accepted' || fileDecision === 'rejected' || hunkCount === 0) {
+    return fileDecision;
+  }
+  const reviewKey = getFileReviewKey(file);
+  const allRejected = Array.from({ length: hunkCount }, (_, index) => {
+    return (
+      hunkDecisions[buildHunkDecisionKey(reviewKey, index)] ??
+      hunkDecisions[buildHunkDecisionKey(file.filePath, index)] ??
+      'pending'
+    );
+  }).every((decision) => decision === 'rejected');
+  return allRejected ? 'rejected' : fileDecision;
+}
 
 export function hasReviewSnippetText(file: Pick<FileChangeSummary, 'snippets'>): boolean {
   return file.snippets.some(
@@ -34,6 +56,21 @@ export function getResolvedReviewModifiedContent(
   fileContent: Pick<FileChangeWithContent, 'modifiedFullContent'> | null
 ): string | null {
   return fileContent?.modifiedFullContent ?? getLastWriteSnippetContent(file);
+}
+
+export function isReviewFileExpectedDeleted(
+  file: Pick<FileChangeSummary, 'ledgerSummary' | 'snippets'> | undefined
+): boolean {
+  if (!file) return false;
+  const latestOperation = file.ledgerSummary?.latestOperation;
+  if (latestOperation) return latestOperation === 'delete';
+  const finalExists = file.ledgerSummary?.afterState?.exists;
+  if (finalExists !== undefined) return !finalExists;
+  const ledgerSnippets = file.snippets.filter((snippet) => snippet.ledger && !snippet.isError);
+  const lastLedger = ledgerSnippets.at(-1)?.ledger;
+  if (lastLedger?.operation) return lastLedger.operation === 'delete';
+  if (lastLedger?.afterState?.exists !== undefined) return !lastLedger.afterState.exists;
+  return file.ledgerSummary?.deletedInTask === true;
 }
 
 export function isReviewFileMissingOnDisk(
@@ -71,7 +108,7 @@ export function getReviewRejectBlockReason(
   if (requiresManualLedgerReview(file)) return 'manual-ledger-review';
 
   if (!fileContent) {
-    return file.snippets.length > 0 && !hasReviewSnippetText(file) ? 'baseline-unavailable' : null;
+    return 'baseline-unavailable';
   }
 
   const modified = getResolvedReviewModifiedContent(file, fileContent);
@@ -85,6 +122,19 @@ export function isReviewRejectable(
   fileContent: ReviewContentAvailability | null
 ): boolean {
   return getReviewRejectBlockReason(file, fileContent) === null;
+}
+
+export function isReviewAcceptDisabled(input: {
+  hasEdits: boolean;
+  isMissingOnDisk: boolean;
+  isContentUnavailable: boolean;
+  fileDecision: HunkDecision | undefined;
+}): boolean {
+  return (
+    input.hasEdits ||
+    input.isContentUnavailable ||
+    (input.isMissingOnDisk && input.fileDecision !== 'rejected')
+  );
 }
 
 export function shouldRenderCurrentDiskContextPreview(

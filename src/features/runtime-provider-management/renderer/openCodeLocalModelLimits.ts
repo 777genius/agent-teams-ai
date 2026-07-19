@@ -1,5 +1,9 @@
 import { api } from '@renderer/api';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import {
+  getOpenCodeModelRoutePresentationStatus,
+  isOpenCodeLocalProviderId,
+} from '@shared/utils/opencodeModelRoute';
 
 import type {
   RuntimeProviderManagementModelsResponse,
@@ -26,7 +30,8 @@ export interface OpenCodeLocalModelLimitSuggestion {
 }
 
 export function resolveOpenCodeLocalProviderId(selectedModel: string): string | null {
-  return parseOpenCodeQualifiedModelRef(selectedModel.trim())?.sourceId ?? null;
+  const sourceId = parseOpenCodeQualifiedModelRef(selectedModel.trim())?.sourceId ?? null;
+  return isOpenCodeLocalProviderId(sourceId) ? sourceId : null;
 }
 
 export function resolveOpenCodeLocalModelLimitSuggestion(
@@ -36,7 +41,7 @@ export function resolveOpenCodeLocalModelLimitSuggestion(
   const modelId = selectedModel.trim();
   if (!modelId) return null;
   const model = models?.find((candidate) => candidate.modelId === modelId);
-  if (!model || model.routeKind !== 'configured_local') return null;
+  if (!model || getOpenCodeModelRoutePresentationStatus(model) !== 'local') return null;
   const providerId = model.providerId.trim() || resolveOpenCodeLocalProviderId(modelId);
   if (!providerId) return null;
   const managed = model.managedContextTokens != null && model.managedOutputTokens != null;

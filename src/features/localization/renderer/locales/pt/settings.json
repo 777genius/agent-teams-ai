@@ -257,6 +257,25 @@
     }
   },
   "notifications": {
+    "recovery": {
+      "title": "Automatic agent recovery",
+      "transient": {
+        "label": "Recover transient runtime errors",
+        "description": "Continue the failed lead or teammate turn after safe transient provider and network errors"
+      },
+      "rateLimits": {
+        "label": "Recover rate limits with a reset time",
+        "description": "Continue after a trusted Retry-After or reset time, with a safety buffer"
+      },
+      "delay": {
+        "label": "Initial retry delay (seconds)",
+        "description": "Base delay before the first recovery attempt (15-900 seconds)"
+      },
+      "attempts": {
+        "label": "Maximum recovery attempts",
+        "description": "Accepted runtime turns per failure chain (1-5)"
+      }
+    },
     "dev": {
       "descriptionPrefix": "Notificações podem não funcionar no modo de desenvolvimento. macOS identifica o aplicativo como \"Electron\" (bundle ID",
       "descriptionSuffix": ") em vez do nome do aplicativo de produção. Verificar configurações do sistema > Notificações > Elétron para verificar permissões.",

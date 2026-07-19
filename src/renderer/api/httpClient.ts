@@ -50,6 +50,7 @@ import type { CodexRuntimeAPI } from '@features/codex-runtime-installer/contract
 import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
 import type {
+  RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementApi,
@@ -162,7 +163,7 @@ function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): stri
 
 function createBrowserCompanionStatus(
   input: RuntimeProviderCompanionInput,
-  operation: 'status' | 'install' | 'connect'
+  operation: 'status' | 'install' | 'connect' | 'action'
 ): RuntimeProviderCompanionStatusDto {
   const cursor = input.companionId === 'cursor-agent';
   const displayName = cursor ? 'Cursor Agent CLI' : 'Kiro CLI';
@@ -173,6 +174,7 @@ function createBrowserCompanionStatus(
     phase: 'needs-manual-step',
     installed: false,
     authenticated: false,
+    account: null,
     binaryPath: null,
     version: null,
     percent: null,
@@ -1368,6 +1370,15 @@ export class HttpAPIClient implements ElectronAPI {
     applyDecisions: async (): Promise<never> => {
       throw new Error('Review is not available in browser mode');
     },
+    executeMutation: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    retryMutationRecovery: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    restoreHistory: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
     // Phase 2 stubs
     checkConflict: async (): Promise<never> => {
       throw new Error('Review is not available in browser mode');
@@ -1383,6 +1394,15 @@ export class HttpAPIClient implements ElectronAPI {
     },
     // Editable diff stubs
     saveEditedFile: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    deleteEditedFile: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    restoreRejectedRename: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    reapplyRejectedRename: async (): Promise<never> => {
       throw new Error('Review is not available in browser mode');
     },
     watchFiles: async (): Promise<never> => {
@@ -1409,6 +1429,30 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Review is not available in browser mode');
     },
     clearDecisions: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    loadDecisionConflictCandidates: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    resolveDecisionConflictCandidate: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    loadDraftHistory: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    saveDraftHistoryEntry: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    clearDraftHistory: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    loadDraftHistoryConflictCandidates: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    resolveDraftHistoryConflictCandidate: async (): Promise<never> => {
+      throw new Error('Review is not available in browser mode');
+    },
+    replaceDraftHistoryConflictCandidate: async (): Promise<never> => {
       throw new Error('Review is not available in browser mode');
     },
     // Phase 4 stubs
@@ -1491,9 +1535,47 @@ export class HttpAPIClient implements ElectronAPI {
   };
 
   runtimeProviderManagement: RuntimeProviderManagementApi = {
+    listLocalProviders: async (input) => ({
+      schemaVersion: 1,
+      runtimeId: input.runtimeId,
+      error: {
+        code: 'config-invalid',
+        message: 'Local provider management is available only in the desktop app.',
+        recoverable: true,
+      },
+    }),
+    scanLocalProviders: async (input) => ({
+      schemaVersion: 1,
+      runtimeId: input.runtimeId,
+      error: {
+        code: 'endpoint-unreachable',
+        message: 'Local provider discovery is available only in the desktop app.',
+        recoverable: true,
+      },
+    }),
+    probeLocalProvider: async (input) => ({
+      schemaVersion: 1,
+      runtimeId: input.runtimeId,
+      error: {
+        code: 'endpoint-unreachable',
+        message: 'Local provider discovery is available only in the desktop app.',
+        recoverable: true,
+      },
+    }),
+    configureLocalProvider: async (input) => ({
+      schemaVersion: 1,
+      runtimeId: input.runtimeId,
+      error: {
+        code: 'write-failed',
+        message: 'Local provider configuration is available only in the desktop app.',
+        recoverable: true,
+      },
+    }),
     getCompanionStatus: async (input) => createBrowserCompanionStatus(input, 'status'),
     installAndConnectCompanion: async (input) => createBrowserCompanionStatus(input, 'install'),
     connectCompanion: async (input) => createBrowserCompanionStatus(input, 'connect'),
+    runCompanionAction: async (input: RuntimeProviderCompanionActionInput) =>
+      createBrowserCompanionStatus(input, 'action'),
     onCompanionProgress: () => () => {},
     loadView: async (input) => ({
       schemaVersion: 1,

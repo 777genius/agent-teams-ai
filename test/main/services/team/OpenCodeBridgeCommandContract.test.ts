@@ -119,6 +119,34 @@ describe('OpenCodeBridgeCommandContract', () => {
     });
   });
 
+  it('accepts the additive transport watchdog timeout failure kind', () => {
+    const envelope: OpenCodeBridgeCommandEnvelope<Record<string, never>> = {
+      schemaVersion: 1,
+      requestId: 'req-1',
+      command: 'opencode.readiness',
+      cwd: '/tmp/project',
+      startedAt: '2026-04-21T12:00:00.000Z',
+      timeoutMs: 300_000,
+      body: {},
+    };
+    const failure = {
+      ok: false as const,
+      schemaVersion: 1 as const,
+      requestId: 'req-1',
+      command: 'opencode.readiness' as const,
+      completedAt: '2026-04-21T12:05:25.000Z',
+      durationMs: 325_000,
+      error: {
+        kind: 'transport_watchdog_timeout' as const,
+        message: 'OpenCode bridge transport watchdog timed out',
+        retryable: true,
+      },
+      diagnostics: [],
+    };
+
+    expect(validateBridgeResultEnvelope(failure, envelope)).toEqual({ ok: true });
+  });
+
   it('does not allow state mutation when capability snapshot mismatches', () => {
     const result = bridgeSuccess({
       runtime: { capabilitySnapshotId: 'old-snapshot' },

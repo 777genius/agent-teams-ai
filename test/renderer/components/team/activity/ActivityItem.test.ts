@@ -56,6 +56,53 @@ describe('ActivityItem compact header preview', () => {
     vi.unstubAllGlobals();
   });
 
+  it('uses the sidebar unread tint for a newly highlighted message', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message: InboxMessage = {
+      from: 'alice',
+      text: 'A fresh message',
+      timestamp: new Date('2026-04-18T16:30:00.000Z').toISOString(),
+      read: false,
+      source: 'inbox',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'my-team',
+          isNewMessageHighlighted: true,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const article = host.querySelector('article');
+    expect(article?.className).toContain('after:bg-blue-500');
+    expect(article?.className).toContain('after:opacity-[0.05]');
+
+    await act(async () => {
+      root.render(
+        React.createElement(ActivityItem, {
+          message,
+          teamName: 'my-team',
+          isNewMessageHighlighted: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(article?.className).toContain('after:opacity-0');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('uses a two-line clamped preview in compact mode', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

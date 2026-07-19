@@ -220,6 +220,36 @@ describe('TeamInboxWriter', () => {
     });
   });
 
+  it('persists structured runtime recovery metadata without changing message identity', async () => {
+    await writer.sendMessage('my-team', {
+      member: 'alice',
+      from: 'system',
+      text: 'Continue safely',
+      messageId: 'runtime-recovery-1-attempt-1',
+      source: 'system_notification',
+      messageKind: 'runtime_recovery_nudge',
+      runtimeRecovery: {
+        schemaVersion: 1,
+        recoveryId: 'runtime-recovery-1',
+        sourceFailureId: 'failure-1',
+        attempt: 1,
+        reasonCode: 'provider_overloaded',
+        payloadHash: 'sha256:payload',
+      },
+    });
+
+    const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<string, unknown>[];
+    expect(persisted[0]).toMatchObject({
+      messageId: 'runtime-recovery-1-attempt-1',
+      messageKind: 'runtime_recovery_nudge',
+      runtimeRecovery: {
+        recoveryId: 'runtime-recovery-1',
+        attempt: 1,
+        payloadHash: 'sha256:payload',
+      },
+    });
+  });
+
   it('updates an existing member-work-sync row text when message kind and payload hash match', async () => {
     await writer.sendMessage('my-team', {
       member: 'alice',

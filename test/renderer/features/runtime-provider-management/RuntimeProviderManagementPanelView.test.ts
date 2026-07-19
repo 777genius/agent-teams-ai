@@ -97,13 +97,14 @@ function createState(
     error: null,
     errorDiagnostics: null,
     successMessage: null,
+    warningMessage: null,
     ...overrides,
   };
 }
 
 function createActions(): RuntimeProviderManagementActions {
   return {
-    refresh: vi.fn(() => Promise.resolve()),
+    refresh: vi.fn(() => Promise.resolve(true)),
     selectProvider: vi.fn(),
     setProviderQuery: vi.fn(),
     loadMoreDirectory: vi.fn(() => Promise.resolve()),
@@ -118,7 +119,9 @@ function createActions(): RuntimeProviderManagementActions {
     setSetupMetadataValue: vi.fn(),
     setOAuthCodeValue: vi.fn(),
     submitOAuthCode: vi.fn(() => Promise.resolve()),
-    submitConnect: vi.fn(() => Promise.resolve({ verifiedModelId: null })),
+    submitConnect: vi.fn(() =>
+      Promise.resolve({ status: 'connected' as const, verifiedModelId: null })
+    ),
     forgetProvider: vi.fn(() => Promise.resolve()),
     openProviderCredentialPage: vi.fn(() => Promise.resolve()),
     openModelPicker: vi.fn(),
@@ -283,6 +286,37 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(details?.textContent).toContain('  opencode providers');
     expect(details?.className).toContain('whitespace-pre-wrap');
     expect(details?.className).toContain('font-mono');
+  });
+
+  it('shows a warning instead of a success alert when the change was saved but refresh failed', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    const actions = createActions();
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            warningMessage:
+              'OpenAI connected. The change is saved, but the latest provider status could not be refreshed.',
+          }),
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(host.querySelector('[data-testid="runtime-provider-warning"]')?.textContent).toContain(
+      'The change is saved'
+    );
+    expect(host.querySelector('[data-testid="runtime-provider-error"]')).toBeNull();
+    const refreshButton = Array.from(
+      host.querySelectorAll<HTMLButtonElement>('[data-testid="runtime-provider-warning"] button')
+    )[0];
+    await act(async () => refreshButton?.click());
+    expect(actions.refreshDirectory).toHaveBeenCalledTimes(1);
   });
 
   it('shows the Windows administrator hint only for OpenCode node_modules symlink EPERM errors', async () => {
@@ -799,6 +833,74 @@ describe('RuntimeProviderManagementPanelView', () => {
     );
   });
 
+  it('renders Kiro as configured instead of local or free across route badges and search', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const kiroModel = {
+      providerId: 'kiro',
+      modelId: 'kiro/auto',
+      displayName: 'auto',
+      sourceLabel: 'Kiro',
+      free: true,
+      default: false,
+      availability: 'available' as const,
+      accessKind: 'credentialed' as const,
+      routeKind: 'configured_local' as const,
+      proofState: 'verified' as const,
+      requiresExecutionProof: false,
+      accessReason: null,
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [kiroModel],
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+          projectPath: '/tmp/project',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await selectOpenCodeTab(host, 'Models');
+
+    const row = host.querySelector<HTMLElement>(
+      '[data-testid="configured-opencode-model-row-kiro/auto"]'
+    );
+    expect(row?.textContent).toContain('configured');
+    expect(row?.textContent).toContain('known route');
+    expect(row?.textContent).not.toContain('local');
+    expect(row?.textContent).not.toContain('free');
+
+    const searchInput = host.querySelector<HTMLInputElement>(
+      'input[placeholder="Search model routes"]'
+    );
+    expect(searchInput).not.toBeNull();
+
+    await act(async () => {
+      setInputValue(searchInput!, 'local');
+      await Promise.resolve();
+    });
+    expect(
+      host.querySelector('[data-testid="configured-opencode-model-row-kiro/auto"]')
+    ).toBeNull();
+
+    await act(async () => {
+      setInputValue(searchInput!, 'configured');
+      await Promise.resolve();
+    });
+    expect(
+      host.querySelector('[data-testid="configured-opencode-model-row-kiro/auto"]')
+    ).not.toBeNull();
+  });
+
   it('can set an all-projects OpenCode default from the model scope controls', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -1219,6 +1321,11 @@ describe('RuntimeProviderManagementPanelView', () => {
               submitLabel: 'Connect',
               disabledReason: null,
               source: 'curated',
+              verification: {
+                kind: 'model-request',
+                freeModelPreferred: true,
+                mayUseQuotaOrBalance: true,
+              },
               secret: {
                 key: 'key',
                 label: 'API key',
@@ -1399,6 +1506,61 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actions.startConnect).not.toHaveBeenCalled();
   });
 
+  it('explains the real model verification while an API credential is being checked', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const state = createState();
+    const provider = state.view!.providers[0];
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: [provider],
+            activeFormProviderId: provider.providerId,
+            savingProviderId: provider.providerId,
+            apiKeyValue: 'sk-verifying',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: provider.providerId,
+              displayName: provider.displayName,
+              method: 'api',
+              supported: true,
+              title: `Connect ${provider.displayName}`,
+              description: null,
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'curated',
+              verification: {
+                kind: 'model-request',
+                freeModelPreferred: true,
+                mayUseQuotaOrBalance: true,
+              },
+              secret: {
+                key: 'key',
+                label: 'API key',
+                placeholder: 'Paste API key',
+                required: true,
+              },
+              prompts: [],
+            },
+          },
+          actions,
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const status = host.querySelector('[role="status"][aria-busy="true"]');
+    expect(status?.textContent).toContain('Verifying connection');
+    expect(status?.textContent).toContain('running one minimal model request');
+    expect(status?.textContent).toContain('previous connection is restored');
+  });
+
   it('offers retry when provider setup form loading fails', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -1518,6 +1680,61 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(cancelButton?.disabled).toBe(false);
   });
 
+  it('prevents misleading cancellation after OAuth credentials enter verification', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const state = createState();
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: {
+            ...state,
+            providers: state.view?.providers ?? [],
+            activeFormProviderId: 'openrouter',
+            savingProviderId: 'openrouter',
+            setupForm: {
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'OpenRouter',
+              method: 'oauth',
+              supported: true,
+              title: 'Connect OpenRouter',
+              description: null,
+              submitLabel: 'Connect',
+              disabledReason: null,
+              source: 'oauth',
+              secret: null,
+              prompts: [],
+            },
+            oauthProgress: {
+              operationId: 'oauth-operation-finalizing',
+              runtimeId: 'opencode',
+              providerId: 'openrouter',
+              displayName: 'OpenRouter',
+              authOptionId: 'oauth:0',
+              methodIndex: 0,
+              phase: 'completing',
+              completionMethod: 'auto',
+              instructions: null,
+              message: 'Authorization received. Verifying your plan...',
+            },
+          },
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const finishingButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Saving...'
+    );
+    expect(finishingButton?.disabled).toBe(true);
+    expect(host.textContent).not.toContain('Cancel');
+  });
+
   it('updates the submit action when the selected SuperGrok auth method changes', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -1589,7 +1806,9 @@ describe('RuntimeProviderManagementPanelView', () => {
     });
 
     expect(
-      [...host.querySelectorAll('button')].some((button) => button.textContent?.trim() === 'Connect')
+      [...host.querySelectorAll('button')].some(
+        (button) => button.textContent?.trim() === 'Connect'
+      )
     ).toBe(true);
     expect(host.textContent).not.toContain('Get browser code');
     expect(host.textContent).toContain(
@@ -1781,9 +2000,9 @@ describe('RuntimeProviderManagementPanelView', () => {
 
     const buttons = Array.from(host.querySelectorAll('button'));
     expect(buttons.some((button) => button.textContent?.includes('Connect'))).toBe(true);
-    expect(buttons.some((button) => button.textContent?.includes('Remove managed credential'))).toBe(
-      true
-    );
+    expect(
+      buttons.some((button) => button.textContent?.includes('Remove managed credential'))
+    ).toBe(true);
 
     await act(async () => {
       buttons
@@ -2416,6 +2635,54 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(row?.textContent).not.toContain('Configured local');
   });
 
+  it('does not label an available authless companion bridge as local', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            directoryLoaded: true,
+            directoryTotalCount: 1,
+            directoryEntries: [
+              {
+                providerId: 'cursor-acp',
+                displayName: 'Cursor ACP',
+                state: 'available',
+                setupKind: 'available-readonly',
+                ownership: ['managed'],
+                recommended: false,
+                modelCount: 1,
+                defaultModelId: 'cursor-acp/auto',
+                authMethods: [],
+                actions: [],
+                sources: ['config-provider'],
+                sourceLabel: 'configured',
+                providerSource: 'config',
+                detail: 'Configured through the managed OpenCode bridge',
+                metadata: {
+                  hasKnownModels: true,
+                  requiresManualConfig: false,
+                  supportedInlineAuth: false,
+                  configuredAuthless: true,
+                },
+              },
+            ],
+          }),
+          actions: createActions(),
+          disabled: false,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector('[data-testid="runtime-provider-directory-row-cursor-acp"]');
+    expect(row?.textContent).toContain('Configured');
+    expect(row?.textContent).not.toContain('Configured local');
+  });
+
   it('uses the unified provider search when compact search has no matches', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -2704,6 +2971,81 @@ describe('RuntimeProviderManagementPanelView', () => {
     expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
   });
 
+  it('marks deprecated catalog models and prevents selecting them for new teams', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const actions = createActions();
+    const connectedProvider = {
+      providerId: 'google',
+      displayName: 'Google',
+      state: 'connected' as const,
+      ownership: ['managed'] as const,
+      recommended: false,
+      modelCount: 1,
+      defaultModelId: null,
+      authMethods: ['api'] as const,
+      actions: [
+        {
+          id: 'use' as const,
+          label: 'Use',
+          enabled: true,
+          disabledReason: null,
+          requiresSecret: false,
+          ownershipScope: 'runtime' as const,
+        },
+      ],
+      detail: null,
+    };
+    const state = createState({
+      view: {
+        ...createState().view!,
+        providers: [connectedProvider],
+      },
+      providers: [connectedProvider],
+      selectedProviderId: 'google',
+      modelPickerProviderId: 'google',
+      modelPickerMode: 'use',
+      models: [
+        {
+          providerId: 'google',
+          modelId: 'google/gemini-old',
+          displayName: 'gemini-old',
+          sourceLabel: 'Google',
+          free: false,
+          default: false,
+          catalogStatus: 'deprecated',
+          availability: 'untested',
+        },
+      ],
+    });
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state,
+          actions,
+          disabled: false,
+          projectPath: '/tmp/project',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const row = host.querySelector<HTMLElement>(
+      '[data-testid="runtime-provider-model-row-google/gemini-old"]'
+    );
+    expect(row?.textContent).toContain('deprecated');
+    expect(row?.getAttribute('aria-disabled')).toBe('true');
+    expect(row?.getAttribute('aria-label')).toContain('OpenCode marks this model as deprecated');
+
+    await act(async () => {
+      row?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(actions.useModelForNewTeams).not.toHaveBeenCalled();
+  });
+
   it('virtualizes large provider model lists while keeping the full scroll range', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -2759,9 +3101,7 @@ describe('RuntimeProviderManagementPanelView', () => {
       const virtualList = host.querySelector<HTMLElement>(
         '[data-testid="runtime-provider-model-virtual-list"]'
       );
-      const renderedRows = host.querySelectorAll(
-        '[data-testid^="runtime-provider-model-row-"]'
-      );
+      const renderedRows = host.querySelectorAll('[data-testid^="runtime-provider-model-row-"]');
 
       expect(virtualList).not.toBeNull();
       expect(Number.parseFloat(virtualList?.style.height ?? '0')).toBeGreaterThan(300);
@@ -3000,7 +3340,7 @@ describe('RuntimeProviderManagementPanelView', () => {
                 free: true,
                 default: false,
                 availability: 'untested',
-                routeKind: 'connected_provider',
+                routeKind: 'builtin_free',
               },
               {
                 providerId: 'openrouter',

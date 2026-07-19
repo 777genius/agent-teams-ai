@@ -60,6 +60,12 @@ describe('team provisioning output error policy', () => {
     expect(isQuotaRetryMessage('Quota will reset after 1h')).toBe(true);
     expect(isQuotaRetryMessage('model cooldown in effect')).toBe(true);
     expect(isQuotaRetryMessage('RATE_LIMIT exceeded')).toBe(true);
+    expect(isQuotaRetryMessage("You've hit your Cursor usage limit")).toBe(true);
+    expect(isQuotaRetryMessage('grpc_code=RESOURCE_EXHAUSTED')).toBe(true);
+    expect(isQuotaRetryMessage('{"grpcCode":8}')).toBe(true);
+    expect(isQuotaRetryMessage('FreeUsageLimitError')).toBe(true);
+    expect(isQuotaRetryMessage('RateLimitError')).toBe(true);
+    expect(isQuotaRetryMessage('{"usage":{"input_tokens":8}}')).toBe(false);
     expect(isQuotaRetryMessage(undefined)).toBe(false);
     expect(isQuotaRetryMessage('authentication failed')).toBe(false);
   });

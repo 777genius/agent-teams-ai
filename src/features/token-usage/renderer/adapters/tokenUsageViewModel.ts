@@ -36,6 +36,7 @@ export interface TokenUsageBreakdownRowViewModel {
   taskDisplayId?: string;
   tokens: string;
   cost: string;
+  kiroCredits?: string;
   requests: string;
   lastActivity: string;
   tokenValue: number;
@@ -51,6 +52,7 @@ export interface TokenUsageRunRowViewModel {
   duration: string;
   tokens: string;
   cost: string;
+  kiroCredits?: string;
   status: string;
   statusLabel: string;
   badge: string;
@@ -382,6 +384,15 @@ export function toTokenUsageDashboardViewModel(
           value: formatUsd(summary.apiEquivalentCostUsd, locale),
           detail: formatCostCoverage(summary, text, locale),
         },
+        ...((summary.kiroCreditEventCount ?? 0) > 0
+          ? [
+              {
+                label: 'Kiro credits',
+                value: formatKiroCredits(summary.kiroCredits ?? 0, locale),
+                detail: `${formatCompactNumber(summary.kiroCreditEventCount ?? 0, locale)} turns`,
+              },
+            ]
+          : []),
       ],
     },
     {
@@ -803,6 +814,10 @@ function toBreakdownRow(
     agentName: item.agentName,
     tokens: formatCompactNumber(visibleTokens, locale),
     cost: formatCostLabel(item.summary, text, locale),
+    kiroCredits:
+      (item.summary.kiroCreditEventCount ?? 0) > 0
+        ? formatKiroCredits(item.summary.kiroCredits ?? 0, locale)
+        : undefined,
     requests: formatCompactNumber(item.summary.requestCount, locale),
     lastActivity: formatDateTime(item.lastActivityAt, text, locale),
     tokenValue: visibleTokens,
@@ -893,6 +908,10 @@ function toRunRow(
     duration: formatDuration(undefined, text),
     tokens: formatCompactNumber(visibleTokenTotal(run.summary, includeCacheTokens), locale),
     cost: formatUsd(run.summary.apiEquivalentCostUsd, locale),
+    kiroCredits:
+      (run.summary.kiroCreditEventCount ?? 0) > 0
+        ? formatKiroCredits(run.summary.kiroCredits ?? 0, locale)
+        : undefined,
     status: run.status,
     statusLabel: formatStatusLabel(run.status, text),
     badge: text.sourceCount(formatCompactNumber(run.sources.length, locale)),
@@ -916,6 +935,10 @@ function toCommandRunRow(
     duration: formatDuration(run.durationMs, text),
     tokens: formatCompactNumber(visibleTokenTotal(run.summary, includeCacheTokens), locale),
     cost: formatUsd(run.summary.apiEquivalentCostUsd, locale),
+    kiroCredits:
+      (run.summary.kiroCreditEventCount ?? 0) > 0
+        ? formatKiroCredits(run.summary.kiroCredits ?? 0, locale)
+        : undefined,
     status: run.status,
     statusLabel: formatStatusLabel(run.status, text),
     badge: text.runCount(formatCompactNumber(run.runCount, locale)),
@@ -938,6 +961,10 @@ function toSessionRunRow(
     duration: formatDuration(run.durationMs, text),
     tokens: formatCompactNumber(visibleTokenTotal(run.summary, includeCacheTokens), locale),
     cost: formatUsd(run.summary.apiEquivalentCostUsd, locale),
+    kiroCredits:
+      (run.summary.kiroCreditEventCount ?? 0) > 0
+        ? formatKiroCredits(run.summary.kiroCredits ?? 0, locale)
+        : undefined,
     status: run.status,
     statusLabel: formatStatusLabel(run.status, text),
     badge: text.sourceCount(formatCompactNumber(run.sources.length, locale)),
@@ -1341,6 +1368,14 @@ function formatCostLabel(
   if (summary.apiEquivalentCostUsd > 0) return formatUsd(summary.apiEquivalentCostUsd, locale);
   if (summary.totalTokens > 0 && summary.costKnownEventCount === 0) return text.notAvailable;
   return formatUsd(summary.apiEquivalentCostUsd, locale);
+}
+
+export function formatKiroCredits(value: number, locale?: string): string {
+  const safeValue = Number.isFinite(value) && value >= 0 ? value : 0;
+  return `${new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(safeValue)} cr`;
 }
 
 function formatCostCoverage(

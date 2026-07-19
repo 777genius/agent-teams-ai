@@ -1,6 +1,9 @@
-import { TaskChangeLedgerReader } from '@main/services/team/TaskChangeLedgerReader';
+import {
+  TASK_CHANGE_LEDGER_READ_LIMITS,
+  TaskChangeLedgerReader,
+} from '@main/services/team/TaskChangeLedgerReader';
 import { createHash } from 'crypto';
-import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
+import { mkdir, mkdtemp, rm, symlink, truncate, writeFile } from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -260,8 +263,14 @@ describe('TaskChangeLedgerReader', () => {
           toolStatus: 'succeeded',
           before: null,
           after: null,
-          beforeState: { exists: true, unavailableReason: 'opencode-apply-patch-before-content-unavailable' },
-          afterState: { exists: true, unavailableReason: 'opencode-apply-patch-final-content-unavailable' },
+          beforeState: {
+            exists: true,
+            unavailableReason: 'opencode-apply-patch-before-content-unavailable',
+          },
+          afterState: {
+            exists: true,
+            unavailableReason: 'opencode-apply-patch-final-content-unavailable',
+          },
           linesAdded: 0,
           linesRemoved: 0,
         },
@@ -329,14 +338,26 @@ describe('TaskChangeLedgerReader', () => {
           ...baseEvent,
           eventId: 'event-partial',
           before: null,
-          after: { sha256: sha(afterContent), sizeBytes: afterContent.length, blobRef: 'after.txt' },
+          after: {
+            sha256: sha(afterContent),
+            sizeBytes: afterContent.length,
+            blobRef: 'after.txt',
+          },
         },
         {
           ...baseEvent,
           eventId: 'event-full',
           supersedesEventId: 'event-partial',
-          before: { sha256: sha(beforeContent), sizeBytes: beforeContent.length, blobRef: 'before.txt' },
-          after: { sha256: sha(afterContent), sizeBytes: afterContent.length, blobRef: 'after.txt' },
+          before: {
+            sha256: sha(beforeContent),
+            sizeBytes: beforeContent.length,
+            blobRef: 'before.txt',
+          },
+          after: {
+            sha256: sha(afterContent),
+            sizeBytes: afterContent.length,
+            blobRef: 'after.txt',
+          },
         },
       ]
         .map((entry) => JSON.stringify(entry))
@@ -359,6 +380,274 @@ describe('TaskChangeLedgerReader', () => {
     expect(snippets[0]?.ledger?.eventId).toBe('event-full');
     expect(snippets[0]?.ledger?.originalFullContent).toBe(beforeContent);
     expect(snippets[0]?.ledger?.modifiedFullContent).toBe(afterContent);
+  });
+
+  it('accepts a confined ledger blob only when its declared hash and byte size match', async () => {
+    const content = 'export const value = "✓";\n';
+    tmpDir = await makeLedgerBundle({
+      events: [
+        makeBlobEvent({
+          sha256: sha(content),
+          sizeBytes: Buffer.byteLength(content),
+          blobRef: 'after.txt',
+        }),
+      ],
+    });
+    const blobsDir = path.join(tmpDir, '.board-task-changes', 'blobs');
+    await mkdir(blobsDir, { recursive: true });
+    await writeFile(path.join(blobsDir, 'after.txt'), content, 'utf8');
+
+    const result = await new TaskChangeLedgerReader().readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result?.files[0]?.snippets[0]?.ledger?.modifiedFullContent).toBe(content);
+  });
+
+  it('rejects traversal blob refs outside the ledger blobs directory', async () => {
+    const content = 'outside\n';
+    tmpDir = await makeLedgerBundle({
+      events: [
+        makeBlobEvent({
+          sha256: sha(content),
+          sizeBytes: Buffer.byteLength(content),
+          blobRef: '../../outside.txt',
+        }),
+      ],
+    });
+    await mkdir(path.join(tmpDir, '.board-task-changes', 'blobs'), { recursive: true });
+    await writeFile(path.join(tmpDir, 'outside.txt'), content, 'utf8');
+
+    const result = await new TaskChangeLedgerReader().readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result?.files[0]?.snippets[0]?.ledger?.modifiedFullContent).toBeNull();
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'rejects ledger blob symlinks that escape the blobs directory',
+    async () => {
+      const content = 'outside\n';
+      tmpDir = await makeLedgerBundle({
+        events: [
+          makeBlobEvent({
+            sha256: sha(content),
+            sizeBytes: Buffer.byteLength(content),
+            blobRef: 'escape.txt',
+          }),
+        ],
+      });
+      const blobsDir = path.join(tmpDir, '.board-task-changes', 'blobs');
+      const outsidePath = path.join(tmpDir, 'outside.txt');
+      await mkdir(blobsDir, { recursive: true });
+      await writeFile(outsidePath, content, 'utf8');
+      await symlink(outsidePath, path.join(blobsDir, 'escape.txt'));
+
+      const result = await new TaskChangeLedgerReader().readTaskChanges({
+        teamName: 'team',
+        taskId: TASK_ID,
+        projectDir: tmpDir,
+        projectPath: '/repo',
+        includeDetails: true,
+      });
+
+      expect(result?.files[0]?.snippets[0]?.ledger?.modifiedFullContent).toBeNull();
+    }
+  );
+
+  it('rejects a ledger blob whose declared hash does not match its bytes', async () => {
+    const content = 'actual\n';
+    tmpDir = await makeLedgerBundle({
+      events: [
+        makeBlobEvent({
+          sha256: sha('tampered\n'),
+          sizeBytes: Buffer.byteLength(content),
+          blobRef: 'after.txt',
+        }),
+      ],
+    });
+    const blobsDir = path.join(tmpDir, '.board-task-changes', 'blobs');
+    await mkdir(blobsDir, { recursive: true });
+    await writeFile(path.join(blobsDir, 'after.txt'), content, 'utf8');
+
+    const result = await new TaskChangeLedgerReader().readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result?.files[0]?.snippets[0]?.ledger?.modifiedFullContent).toBeNull();
+  });
+
+  it('rejects a ledger blob whose declared byte size does not match', async () => {
+    const content = 'actual\n';
+    tmpDir = await makeLedgerBundle({
+      events: [
+        makeBlobEvent({
+          sha256: sha(content),
+          sizeBytes: Buffer.byteLength(content) + 1,
+          blobRef: 'after.txt',
+        }),
+      ],
+    });
+    const blobsDir = path.join(tmpDir, '.board-task-changes', 'blobs');
+    await mkdir(blobsDir, { recursive: true });
+    await writeFile(path.join(blobsDir, 'after.txt'), content, 'utf8');
+
+    const result = await new TaskChangeLedgerReader().readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result?.files[0]?.snippets[0]?.ledger?.modifiedFullContent).toBeNull();
+  });
+
+  it('rejects blobs larger than the bounded blob-read limit', async () => {
+    const declaredSize = TASK_CHANGE_LEDGER_READ_LIMITS.blobBytes + 1;
+    tmpDir = await makeLedgerBundle({
+      events: [
+        makeBlobEvent({
+          sha256: sha('oversized'),
+          sizeBytes: declaredSize,
+          blobRef: 'oversized.txt',
+        }),
+      ],
+    });
+    const blobsDir = path.join(tmpDir, '.board-task-changes', 'blobs');
+    await mkdir(blobsDir, { recursive: true });
+    const oversizedBlobPath = path.join(blobsDir, 'oversized.txt');
+    await writeFile(oversizedBlobPath, '');
+    await truncate(oversizedBlobPath, declaredSize);
+
+    const result = await new TaskChangeLedgerReader().readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result?.files[0]?.snippets[0]?.ledger?.modifiedFullContent).toBeNull();
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'rejects a blobs directory whose ancestor symlink escapes the project',
+    async () => {
+      const content = 'outside blob\n';
+      tmpDir = await makeLedgerBundle({
+        events: [
+          makeBlobEvent({
+            sha256: sha(content),
+            sizeBytes: Buffer.byteLength(content),
+            blobRef: 'outside.txt',
+          }),
+        ],
+      });
+      const outsideBlobs = await mkdtemp(path.join(os.tmpdir(), 'ledger-outside-blobs-'));
+      try {
+        await writeFile(path.join(outsideBlobs, 'outside.txt'), content, 'utf8');
+        await symlink(outsideBlobs, path.join(tmpDir, '.board-task-changes', 'blobs'));
+
+        const result = await new TaskChangeLedgerReader().readTaskChanges({
+          teamName: 'team',
+          taskId: TASK_ID,
+          projectDir: tmpDir,
+          projectPath: '/repo',
+          includeDetails: true,
+        });
+
+        expect(result?.files[0]?.snippets[0]?.ledger?.modifiedFullContent).toBeNull();
+      } finally {
+        await rm(outsideBlobs, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it('bounds concurrent blob reads while preserving event order', async () => {
+    const content = 'shared blob\n';
+    const events = Array.from(
+      { length: TASK_CHANGE_LEDGER_READ_LIMITS.blobConcurrency * 3 },
+      (_, index) => ({
+        ...makeBlobEvent({
+          sha256: sha(content),
+          sizeBytes: Buffer.byteLength(content),
+          blobRef: 'shared.txt',
+        }),
+        eventId: `event-${index}`,
+        toolUseId: `tool-${index}`,
+        executionSeq: index + 1,
+        filePath: `/repo/src/blob-${index}.ts`,
+        relativePath: `src/blob-${index}.ts`,
+      })
+    );
+    tmpDir = await makeLedgerBundle({ events });
+    const blobsDir = path.join(tmpDir, '.board-task-changes', 'blobs');
+    await mkdir(blobsDir, { recursive: true });
+    await writeFile(path.join(blobsDir, 'shared.txt'), content, 'utf8');
+
+    const reader = new TaskChangeLedgerReader();
+    const instrumentedReader = reader as unknown as {
+      readConfinedLedgerFile: (
+        projectDir: string,
+        filePath: string,
+        maxBytes: number,
+        containmentRoot?: string
+      ) => Promise<Buffer | null>;
+    };
+    const originalReadConfinedFile = instrumentedReader.readConfinedLedgerFile.bind(reader);
+    let activeReads = 0;
+    let maximumActiveReads = 0;
+    instrumentedReader.readConfinedLedgerFile = async (
+      projectDir,
+      filePath,
+      maxBytes,
+      containmentRoot
+    ) => {
+      const isBlobRead = containmentRoot?.endsWith(path.join('.board-task-changes', 'blobs'));
+      if (!isBlobRead) {
+        return originalReadConfinedFile(projectDir, filePath, maxBytes, containmentRoot);
+      }
+      activeReads += 1;
+      maximumActiveReads = Math.max(maximumActiveReads, activeReads);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      try {
+        return await originalReadConfinedFile(projectDir, filePath, maxBytes, containmentRoot);
+      } finally {
+        activeReads -= 1;
+      }
+    };
+
+    const readParams = {
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: true,
+    } as const;
+    const [result] = await Promise.all([
+      reader.readTaskChanges(readParams),
+      reader.readTaskChanges(readParams),
+    ]);
+
+    expect(maximumActiveReads).toBeGreaterThan(1);
+    expect(maximumActiveReads).toBeLessThanOrEqual(TASK_CHANGE_LEDGER_READ_LIMITS.blobConcurrency);
+    expect(result?.files.map((file) => file.snippets[0]?.toolUseId)).toEqual(
+      events.map((event) => event.toolUseId)
+    );
   });
 
   it('hides suppressed OpenCode journal imports without hiding legitimate same-file imports', async () => {
@@ -407,7 +696,11 @@ describe('TaskChangeLedgerReader', () => {
           eventId: 'event-stale',
           toolUseId: 'part-stale',
           sourceImportKey: staleSourceImportKey,
-          before: { sha256: sha(beforeContent), sizeBytes: beforeContent.length, blobRef: 'before.txt' },
+          before: {
+            sha256: sha(beforeContent),
+            sizeBytes: beforeContent.length,
+            blobRef: 'before.txt',
+          },
           after: {
             sha256: sha(staleAfterContent),
             sizeBytes: staleAfterContent.length,
@@ -445,7 +738,11 @@ describe('TaskChangeLedgerReader', () => {
           eventId: 'event-legit',
           toolUseId: 'part-legit',
           sourceImportKey: legitSourceImportKey,
-          before: { sha256: sha(beforeContent), sizeBytes: beforeContent.length, blobRef: 'before.txt' },
+          before: {
+            sha256: sha(beforeContent),
+            sizeBytes: beforeContent.length,
+            blobRef: 'before.txt',
+          },
           after: {
             sha256: sha(legitAfterContent),
             sizeBytes: legitAfterContent.length,
@@ -1215,7 +1512,124 @@ describe('TaskChangeLedgerReader', () => {
     expect(result?.files[0]?.filePath).toBe('/repo/journal.ts');
     expect(result?.warnings).toContain('Task change summary fell back to journal reconstruction.');
   });
+
+  it('rejects a journal larger than the bounded journal-read limit', async () => {
+    tmpDir = await fsTempDir();
+    const eventsDir = path.join(tmpDir, '.board-task-changes', 'events');
+    await mkdir(eventsDir, { recursive: true });
+    const journalPath = path.join(eventsDir, `${encodeURIComponent(TASK_ID)}.jsonl`);
+    await writeFile(journalPath, '');
+    await truncate(journalPath, TASK_CHANGE_LEDGER_READ_LIMITS.journalBytes + 1);
+
+    const result = await new TaskChangeLedgerReader().readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it('rejects a journal that exceeds the bounded event count', async () => {
+    tmpDir = await fsTempDir();
+    const eventsDir = path.join(tmpDir, '.board-task-changes', 'events');
+    await mkdir(eventsDir, { recursive: true });
+    const baseEvent = {
+      ...makeBlobEvent({ sha256: sha('unused'), sizeBytes: 0, blobRef: 'unused.txt' }),
+      operation: 'modify',
+      before: null,
+      after: null,
+      beforeState: { exists: true },
+      afterState: { exists: true },
+    };
+    const lines = Array.from(
+      { length: TASK_CHANGE_LEDGER_READ_LIMITS.journalEntries + 1 },
+      (_, index) =>
+        JSON.stringify({
+          ...baseEvent,
+          eventId: `event-${index}`,
+          toolUseId: `tool-${index}`,
+          executionSeq: index + 1,
+        })
+    );
+    await writeFile(
+      path.join(eventsDir, `${encodeURIComponent(TASK_ID)}.jsonl`),
+      `${lines.join('\n')}\n`,
+      'utf8'
+    );
+
+    const result = await new TaskChangeLedgerReader().readTaskChanges({
+      teamName: 'team',
+      taskId: TASK_ID,
+      projectDir: tmpDir,
+      projectPath: '/repo',
+      includeDetails: true,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'rejects journals whose ledger-directory symlink escapes the project',
+    async () => {
+      tmpDir = await fsTempDir();
+      const projectDir = path.join(tmpDir, 'project');
+      const outsideLedger = path.join(tmpDir, 'outside-ledger');
+      const outsideEvents = path.join(outsideLedger, 'events');
+      await mkdir(projectDir, { recursive: true });
+      await mkdir(outsideEvents, { recursive: true });
+      await writeFile(
+        path.join(outsideEvents, `${encodeURIComponent(TASK_ID)}.jsonl`),
+        `${JSON.stringify({
+          ...makeBlobEvent({ sha256: sha('unused'), sizeBytes: 0, blobRef: 'unused.txt' }),
+          after: null,
+        })}\n`,
+        'utf8'
+      );
+      await symlink(outsideLedger, path.join(projectDir, '.board-task-changes'));
+
+      const result = await new TaskChangeLedgerReader().readTaskChanges({
+        teamName: 'team',
+        taskId: TASK_ID,
+        projectDir,
+        projectPath: '/repo',
+        includeDetails: true,
+      });
+
+      expect(result).toBeNull();
+    }
+  );
 });
+
+function makeBlobEvent(after: { sha256: string; sizeBytes: number; blobRef: string }) {
+  return {
+    schemaVersion: 1,
+    eventId: 'event-blob',
+    taskId: TASK_ID,
+    taskRef: TASK_ID,
+    taskRefKind: 'canonical',
+    phase: 'work',
+    executionSeq: 1,
+    sessionId: 'session-blob',
+    toolUseId: 'tool-blob',
+    source: 'shell_snapshot',
+    operation: 'create',
+    confidence: 'exact',
+    workspaceRoot: '/repo',
+    filePath: '/repo/src/blob.ts',
+    relativePath: 'src/blob.ts',
+    timestamp: '2026-03-01T10:00:00.000Z',
+    toolStatus: 'succeeded',
+    before: null,
+    after,
+    beforeState: { exists: false },
+    afterState: { exists: true, sha256: after.sha256, sizeBytes: after.sizeBytes },
+    linesAdded: 1,
+    linesRemoved: 0,
+  };
+}
 
 async function makeLedgerBundle(params: {
   events: unknown[];
@@ -1265,10 +1679,12 @@ async function makeLedgerBundle(params: {
   return dir;
 }
 
-async function makeSummaryLedgerBundleV2(params: {
-  bundle?: Record<string, unknown>;
-  file?: Record<string, unknown>;
-} = {}): Promise<string> {
+async function makeSummaryLedgerBundleV2(
+  params: {
+    bundle?: Record<string, unknown>;
+    file?: Record<string, unknown>;
+  } = {}
+): Promise<string> {
   const dir = await fsTempDir();
   const bundleDir = path.join(dir, '.board-task-changes', 'bundles');
   await mkdir(bundleDir, { recursive: true });

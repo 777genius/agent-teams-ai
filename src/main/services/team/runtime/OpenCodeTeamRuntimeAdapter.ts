@@ -1,5 +1,8 @@
 import { randomUUID } from 'crypto';
 
+import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
+import { normalizeOpenCodeProjectIdentity } from '../opencode/readiness/OpenCodeProjectIdentity';
+
 import type {
   OpenCodeAnswerPermissionCommandBody,
   OpenCodeBridgeRuntimeSnapshot,
@@ -17,6 +20,7 @@ import type {
   OpenCodeStopTeamCommandData,
   OpenCodeTeamMemberLaunchBridgeState,
 } from '../opencode/bridge/OpenCodeBridgeCommandContract';
+import type { OpenCodeExecutionProof } from '../opencode/readiness/OpenCodeExecutionProof';
 import type { OpenCodeTeamLaunchReadiness } from '../opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type {
   TeamLaunchRuntimeAdapter,
@@ -48,7 +52,11 @@ export interface OpenCodeTeamRuntimeBridgePort {
     selectedModel: string | null;
     requireExecutionProbe: boolean;
   }): Promise<OpenCodeTeamLaunchReadiness>;
-  getLastOpenCodeRuntimeSnapshot?(projectPath: string): OpenCodeBridgeRuntimeSnapshot | null;
+  getLastOpenCodeRuntimeSnapshot?(
+    projectPath: string,
+    selectedModel?: string | null,
+    requireExecutionProbe?: boolean
+  ): OpenCodeBridgeRuntimeSnapshot | null;
   launchOpenCodeTeam?(input: OpenCodeLaunchTeamCommandBody): Promise<OpenCodeLaunchTeamCommandData>;
   reconcileOpenCodeTeam?(
     input: OpenCodeReconcileTeamCommandBody
@@ -128,6 +136,38 @@ type OpenCodeTeamLaunchReadinessInput = Parameters<
   OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']
 >[0];
 
+function openCodeReadinessArtifactKey(input: OpenCodeTeamLaunchReadinessInput): string {
+  return JSON.stringify([
+    normalizeOpenCodeProjectIdentity(input.projectPath),
+    input.selectedModel?.trim() ?? null,
+    input.requireExecutionProbe,
+  ]);
+}
+
+function reusableOpenCodeExecutionProof(
+  readiness: OpenCodeTeamLaunchReadiness | undefined,
+  input: OpenCodeTeamLaunchReadinessInput
+): OpenCodeExecutionProof | null {
+  const proof = readiness?.executionProof;
+  if (
+    !proof ||
+    !proof.reusable ||
+    (proof.credentialMode !== 'api' && proof.credentialMode !== 'none')
+  ) {
+    return null;
+  }
+  const normalizedExpected = normalizeOpenCodeProjectIdentity(input.projectPath);
+  const normalizedProofProject = normalizeOpenCodeProjectIdentity(proof.projectPath);
+  if (
+    proof.modelId !== readiness?.modelId ||
+    normalizedProofProject !== normalizedExpected ||
+    Date.parse(proof.expiresAt) <= Date.now() + 1_000
+  ) {
+    return null;
+  }
+  return proof;
+}
+
 function getOpenCodeReadinessDiagnosticText(readiness: OpenCodeTeamLaunchReadiness): string {
   return [...readiness.diagnostics, ...readiness.missing].join('\n');
 }
@@ -193,18 +233,21 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   readonly providerId = 'opencode' as const;
   private readonly lastProjectPathByTeamName = new Map<string, string>();
   private readonly lastReadinessByProjectPath = new Map<string, OpenCodeTeamLaunchReadiness>();
+  private readonly lastReadinessByArtifactKey = new Map<string, OpenCodeTeamLaunchReadiness>();
+  private readonly readinessInFlightByArtifactKey = new Map<
+    string,
+    Promise<OpenCodeTeamLaunchReadiness>
+  >();
 
   constructor(private readonly bridge: OpenCodeTeamRuntimeBridgePort) {}
 
   async prepare(input: TeamRuntimeLaunchInput): Promise<TeamRuntimePrepareResult> {
     const runtimeOnly = input.runtimeOnly === true;
-    const readiness = await this.checkOpenCodeReadinessWithTransientRetry({
+    const readiness = await this.resolveOpenCodeReadinessArtifact({
       projectPath: input.cwd,
       selectedModel: input.model ?? null,
       requireExecutionProbe: !runtimeOnly,
     });
-    this.lastReadinessByProjectPath.set(input.cwd, readiness);
-
     if (!readiness.launchAllowed) {
       return {
         ok: false,
@@ -232,7 +275,9 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   }
 
   getLastOpenCodeTeamLaunchReadiness(projectPath: string): OpenCodeTeamLaunchReadiness | null {
-    return this.lastReadinessByProjectPath.get(projectPath) ?? null;
+    return (
+      this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(projectPath)) ?? null
+    );
   }
 
   private async checkOpenCodeReadinessWithTransientRetry(
@@ -247,6 +292,38 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       readiness = await this.bridge.checkOpenCodeTeamLaunchReadiness(input);
     }
     return readiness;
+  }
+
+  private async resolveOpenCodeReadinessArtifact(
+    input: OpenCodeTeamLaunchReadinessInput
+  ): Promise<OpenCodeTeamLaunchReadiness> {
+    const artifactKey = openCodeReadinessArtifactKey(input);
+    const cached = this.lastReadinessByArtifactKey.get(artifactKey);
+    if (cached?.launchAllowed && reusableOpenCodeExecutionProof(cached, input)) {
+      return cached;
+    }
+
+    const inFlight = this.readinessInFlightByArtifactKey.get(artifactKey);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const request = this.checkOpenCodeReadinessWithTransientRetry(input)
+      .then((readiness) => {
+        this.lastReadinessByProjectPath.set(
+          normalizeOpenCodeProjectIdentity(input.projectPath),
+          readiness
+        );
+        this.lastReadinessByArtifactKey.set(artifactKey, readiness);
+        return readiness;
+      })
+      .finally(() => {
+        if (this.readinessInFlightByArtifactKey.get(artifactKey) === request) {
+          this.readinessInFlightByArtifactKey.delete(artifactKey);
+        }
+      });
+    this.readinessInFlightByArtifactKey.set(artifactKey, request);
+    return request;
   }
 
   async launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult> {
@@ -292,9 +369,26 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       ]);
     }
 
+    const readinessInput: OpenCodeTeamLaunchReadinessInput = {
+      projectPath: input.cwd,
+      selectedModel: input.model ?? null,
+      requireExecutionProbe: true,
+    };
     let runtimeSnapshot = skipReadinessPreflight
       ? null
-      : (this.bridge.getLastOpenCodeRuntimeSnapshot?.(input.cwd) ?? null);
+      : (this.bridge.getLastOpenCodeRuntimeSnapshot?.(
+          input.cwd,
+          readinessInput.selectedModel,
+          readinessInput.requireExecutionProbe
+        ) ?? null);
+    let executionProof = reusableOpenCodeExecutionProof(
+      this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
+        this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
+      readinessInput
+    );
+    if (executionProof?.capabilitySnapshotId !== runtimeSnapshot?.capabilitySnapshotId) {
+      executionProof = null;
+    }
     if (
       !skipReadinessPreflight &&
       this.bridge.getLastOpenCodeRuntimeSnapshot &&
@@ -325,6 +419,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       leadPrompt: input.prompt?.trim() ?? '',
       expectedCapabilitySnapshotId: snapshot?.capabilitySnapshotId ?? null,
       manifestHighWatermark: null,
+      ...(executionProof ? { executionProof } : {}),
       ...(recoveryAttemptId ? { capabilitySnapshotRecoveryAttemptId: recoveryAttemptId } : {}),
     });
 
@@ -351,9 +446,22 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         );
       }
       selectedModel = refreshed.modelId ?? selectedModel;
-      const refreshedSnapshot = this.bridge.getLastOpenCodeRuntimeSnapshot?.(input.cwd) ?? null;
+      const refreshedSnapshot =
+        this.bridge.getLastOpenCodeRuntimeSnapshot?.(
+          input.cwd,
+          readinessInput.selectedModel,
+          readinessInput.requireExecutionProbe
+        ) ?? null;
       if (refreshedSnapshot?.capabilitySnapshotId) {
         runtimeSnapshot = refreshedSnapshot;
+        executionProof = reusableOpenCodeExecutionProof(
+          this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
+            this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
+          readinessInput
+        );
+        if (executionProof?.capabilitySnapshotId !== runtimeSnapshot.capabilitySnapshotId) {
+          executionProof = null;
+        }
         launchWarnings = mergeDiagnostics(launchWarnings, [
           ...refreshed.warnings,
           OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_WARNING,
@@ -1099,6 +1207,7 @@ function isGenericOpenCodeFailureMessage(message: string): boolean {
     message.startsWith('OpenCode command timed out after') ||
     message.startsWith('CLI-authenticated providers missing from live host') ||
     message.startsWith('OpenCode session status') ||
+    isOpenCodeTerminalProbeTechnicalDiagnostic(message) ||
     (message.startsWith('opencode_app_mcp_tool_proof_') && message.includes('cache_hit')) ||
     isOpenCodeLaunchTimingDiagnostic(message)
   );

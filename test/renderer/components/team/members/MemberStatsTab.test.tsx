@@ -1,8 +1,8 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { MemberStatsTab } from '@renderer/components/team/members/MemberStatsTab';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { MemberFullStats } from '@shared/types';
 
@@ -11,6 +11,12 @@ vi.mock('@renderer/api', () => ({
     teams: {
       getMemberStats: vi.fn(),
     },
+    tokenUsage: {
+      getSnapshot: vi.fn().mockResolvedValue(null),
+      refreshSnapshot: vi.fn().mockResolvedValue(null),
+      onSnapshotChanged: vi.fn(() => () => {}),
+    },
+    openExternal: vi.fn().mockResolvedValue(undefined),
   },
 }));
 

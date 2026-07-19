@@ -1,13 +1,13 @@
 /**
- * UpdateBanner - Slim top banner for download progress and restart prompt.
+ * UpdateBanner - Global app update banner.
  *
- * Visible during download and after the update is ready to install.
+ * Visible when an update is available, during download, and when ready to install.
  */
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { useStore } from '@renderer/store';
-import { CheckCircle, Loader2, X } from 'lucide-react';
+import { ArrowUpCircle, CheckCircle, Loader2, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 export const UpdateBanner = (): React.JSX.Element | null => {
@@ -17,6 +17,7 @@ export const UpdateBanner = (): React.JSX.Element | null => {
     updateStatus,
     downloadProgress,
     availableVersion,
+    openUpdateDialog,
     installUpdate,
     dismissUpdateBanner,
   } = useStore(
@@ -25,15 +26,22 @@ export const UpdateBanner = (): React.JSX.Element | null => {
       updateStatus: s.updateStatus,
       downloadProgress: s.downloadProgress,
       availableVersion: s.availableVersion,
+      openUpdateDialog: s.openUpdateDialog,
       installUpdate: s.installUpdate,
       dismissUpdateBanner: s.dismissUpdateBanner,
     }))
   );
 
-  if (!showUpdateBanner || (updateStatus !== 'downloading' && updateStatus !== 'downloaded')) {
+  if (
+    !showUpdateBanner ||
+    (updateStatus !== 'available' &&
+      updateStatus !== 'downloading' &&
+      updateStatus !== 'downloaded')
+  ) {
     return null;
   }
 
+  const isAvailable = updateStatus === 'available';
   const isDownloading = updateStatus === 'downloading';
   const percent = Math.round(downloadProgress);
   const clampedPercent = Math.max(0, Math.min(percent, 100));
@@ -52,7 +60,32 @@ export const UpdateBanner = (): React.JSX.Element | null => {
         } as React.CSSProperties
       }
     >
-      {isDownloading ? (
+      {isAvailable ? (
+        <div className="flex items-center gap-2 pr-8">
+          <ArrowUpCircle className="size-4 shrink-0 text-green-400" />
+          <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('updates.newVersionAvailable')}
+            {availableVersion ? (
+              <span className="ml-1 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                v{availableVersion}
+              </span>
+            ) : null}
+          </span>
+          <button
+            onClick={openUpdateDialog}
+            className="ml-auto rounded-md border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-white/5"
+            style={
+              {
+                borderColor: 'rgba(34, 197, 94, 0.35)',
+                color: '#4ade80',
+                WebkitAppRegion: isMacElectron ? 'no-drag' : undefined,
+              } as React.CSSProperties
+            }
+          >
+            {t('updates.updateApp')}
+          </button>
+        </div>
+      ) : isDownloading ? (
         <div className="pr-8">
           <div
             className="mb-1.5 flex items-center gap-2 text-xs"
@@ -104,6 +137,7 @@ export const UpdateBanner = (): React.JSX.Element | null => {
       {/* Dismiss */}
       <button
         onClick={dismissUpdateBanner}
+        aria-label={t('updateDialog.closeDialog')}
         className="absolute right-3 top-1/2 shrink-0 -translate-y-1/2 rounded p-0.5 transition-colors hover:bg-white/10"
         style={
           {

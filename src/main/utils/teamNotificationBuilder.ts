@@ -62,6 +62,7 @@ interface TeamNotificationConfig {
 const TEAM_NOTIFICATION_CONFIG: Record<TeamEventType, TeamNotificationConfig> = {
   rate_limit: { triggerName: 'Rate Limit', triggerColor: 'red' },
   api_error: { triggerName: 'API Error', triggerColor: 'red' },
+  runtime_recovery: { triggerName: 'Agent Recovery', triggerColor: 'orange' },
   lead_inbox: { triggerName: 'Team Inbox', triggerColor: 'blue' },
   user_inbox: { triggerName: 'User Inbox', triggerColor: 'green' },
   task_clarification: { triggerName: 'Clarification', triggerColor: 'orange' },

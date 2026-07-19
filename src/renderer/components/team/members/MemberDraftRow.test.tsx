@@ -6,6 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@features/runtime-provider-management/renderer', () => ({
   OpenCodeLocalModelLimitsCard: () => React.createElement('div', null, 'local-model-limits-card'),
+  ProviderBrandIcon: ({ provider }: { provider: { providerId: string } }) =>
+    React.createElement('span', {
+      'data-testid': 'model-source-logo',
+      'data-provider-id': provider.providerId,
+    }),
 }));
 
 vi.mock('@renderer/components/common/ProviderBrandLogo', () => ({
@@ -121,6 +126,7 @@ vi.mock('@renderer/hooks/useTheme', () => ({
   useTheme: () => ({ isLight: false }),
 }));
 
+import { FLAT_ROSTER_GRID_COLUMNS } from './flatRosterLayout';
 import { MemberDraftRow } from './MemberDraftRow';
 import { createMemberDraft } from './membersEditorUtils';
 
@@ -166,6 +172,42 @@ describe('MemberDraftRow', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
+  });
+
+  it('uses the compact shared grid while keeping the editable name visibly field-like', () => {
+    const { host, root } = renderMemberDraftRow({ layoutVariant: 'flat' });
+    const row = host.querySelector<HTMLElement>('[data-role="member-row"]')!;
+    const nameInput = host.querySelector<HTMLInputElement>('input[type="text"]')!;
+
+    expect(row.className).toContain(FLAT_ROSTER_GRID_COLUMNS);
+    expect(nameInput.value).toBe('alice');
+    expect(nameInput.className).not.toContain('border-transparent');
+    expect(nameInput.className).not.toContain('shadow-none');
+    expect(nameInput.className).not.toContain('font-semibold');
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it('shows the concrete OpenCode source logo for a selected source model', () => {
+    const { host, root } = renderMemberDraftRow({
+      member: createMemberDraft({
+        id: 'member-1',
+        name: 'alice',
+        roleSelection: 'developer',
+        providerId: 'opencode',
+        model: 'lmstudio/qwen-test:0.5b',
+      }),
+    });
+
+    expect(
+      host.querySelector('[data-testid="model-source-logo"]')?.getAttribute('data-provider-id')
+    ).toBe('lmstudio');
+
+    act(() => {
+      root.unmount();
+    });
   });
 
   it('does not show the sync tooltip copy when model controls are unlocked', () => {

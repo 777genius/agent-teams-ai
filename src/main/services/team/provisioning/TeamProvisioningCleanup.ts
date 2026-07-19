@@ -1,5 +1,3 @@
-import { peekAutoResumeService } from '../AutoResumeService';
-
 import {
   removeDeterministicBootstrapSpecFile,
   removeDeterministicBootstrapUserPromptFile,
@@ -181,10 +179,6 @@ export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
     isNewerTrackedRunId(currentProvisioningRunId) ||
     isNewerTrackedRunId(currentAliveRunId);
   const retainedClaudeLogs = hasNewerTrackedRun ? null : ports.buildRetainedClaudeLogsSnapshot(run);
-
-  if (!hasNewerTrackedRun) {
-    peekAutoResumeService()?.cancelPendingAutoResume(run.teamName);
-  }
 
   if (!hasNewerTrackedRun && ports.shouldFinalizeIncompleteLaunchState(run)) {
     const cleanupReason = ports.buildIncompleteLaunchCleanupReason(run);

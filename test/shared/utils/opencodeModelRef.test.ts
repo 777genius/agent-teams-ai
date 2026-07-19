@@ -32,5 +32,6 @@ describe('opencodeModelRef', () => {
     expect(getOpenCodeQualifiedModelSourceLabel('lmstudio/google/gemma-3n-e4b')).toBe(
       'LM Studio'
     );
+    expect(getOpenCodeQualifiedModelSourceLabel('opencode/big-pickle')).toBe('OpenCode Zen');
   });
 });

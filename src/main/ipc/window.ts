@@ -11,6 +11,23 @@ const WINDOW_IS_FULLSCREEN = 'window:isFullScreen';
 
 const logger = createLogger('IPC:window');
 
+interface WindowLifecycleActions {
+  quit: () => Promise<void> | void;
+  relaunch: () => Promise<void> | void;
+}
+
+let lifecycleActions: WindowLifecycleActions = {
+  quit: () => app.quit(),
+  relaunch: () => {
+    app.relaunch();
+    app.quit();
+  },
+};
+
+export function configureWindowLifecycleActions(actions: WindowLifecycleActions): void {
+  lifecycleActions = actions;
+}
+
 function getMainWindow(): BrowserWindow | null {
   const win = BrowserWindow.getFocusedWindow();
   if (win && !win.isDestroyed()) return win;
@@ -38,8 +55,8 @@ export function registerWindowHandlers(ipcMain: IpcMain): void {
     }
   });
 
-  ipcMain.handle('window:close', () => {
-    app.quit();
+  ipcMain.handle('window:close', async () => {
+    await lifecycleActions.quit();
   });
 
   ipcMain.handle('window:isMaximized', (event): boolean => {
@@ -52,9 +69,8 @@ export function registerWindowHandlers(ipcMain: IpcMain): void {
     return win != null && !win.isDestroyed() && win.isFullScreen();
   });
 
-  ipcMain.handle('app:relaunch', () => {
-    app.relaunch();
-    app.quit();
+  ipcMain.handle('app:relaunch', async () => {
+    await lifecycleActions.relaunch();
   });
 
   logger.info('Window handlers registered');

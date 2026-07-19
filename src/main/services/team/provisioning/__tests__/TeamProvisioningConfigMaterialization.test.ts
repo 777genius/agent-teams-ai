@@ -10,7 +10,10 @@ import {
   hasIncompleteOpenCodeLaunchCompatibilityMember,
   updateTeamConfigPostLaunch,
 } from '../TeamProvisioningConfigMaterialization';
-import { getMixedLaunchFallbackRecoveryError } from '../TeamProvisioningLaunchCompatibility';
+import {
+  getMixedLaunchFallbackRecoveryError,
+  isPureOpenCodeProvisioningRequest,
+} from '../TeamProvisioningLaunchCompatibility';
 
 describe('team provisioning config materialization', () => {
   it('applies effective launch provider, model, and effort to lead and member config entries', () => {
@@ -345,5 +348,20 @@ describe('team provisioning config materialization', () => {
       blockers: [],
       repairAction: 'materialize-members-meta',
     });
+  });
+
+  it('recognizes legacy OpenCode teams from their member providers when root provider is absent', () => {
+    expect(
+      isPureOpenCodeProvisioningRequest({
+        members: [{ providerId: 'opencode' }, { providerId: 'opencode' }],
+      })
+    ).toBe(true);
+
+    expect(
+      isPureOpenCodeProvisioningRequest({
+        providerId: 'anthropic',
+        members: [{ providerId: 'opencode' }],
+      })
+    ).toBe(false);
   });
 });
