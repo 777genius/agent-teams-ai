@@ -153,9 +153,17 @@ const reviewMutationCoordinator = new ReviewMutationCoordinator(reviewMutationJo
 const reviewDecisionPersistenceQueues = new Map<string, Promise<void>>();
 // Review is backed by a point-in-time diff. Unlike the editor watcher, ignoring
 // the first few seconds can silently miss an external write and make Undo unsafe.
-const reviewFileWatcher = new EditorFileWatcher({ ignoreStartupChanges: false });
+export type ReviewFileWatcher = Pick<
+  EditorFileWatcher,
+  'isWatching' | 'setWatchedFiles' | 'start' | 'stop'
+>;
+const defaultReviewFileWatcher = new EditorFileWatcher({ ignoreStartupChanges: false });
+let reviewFileWatcher: ReviewFileWatcher = defaultReviewFileWatcher;
 let reviewWatcherProjectRoot: string | null = null;
+let reviewWatcherRequestGeneration = 0;
 let reviewMainWindowRef: BrowserWindow | null = null;
+let reviewProjectPathValidator: (projectPath: string) => Promise<string> =
+  validateReviewProjectPath;
 
 async function withReviewDecisionPersistenceLock<T>(
   teamName: string,
@@ -881,14 +889,26 @@ export interface ReviewHandlerDeps {
   contentResolver?: FileContentResolver;
   gitFallback?: GitDiffFallback;
   configReader?: Pick<TeamConfigReader, 'getConfig'>;
+  fileWatcher?: ReviewFileWatcher;
+  projectPathValidator?: (projectPath: string) => Promise<string>;
 }
 
 export function initializeReviewHandlers(deps: ReviewHandlerDeps): void {
+  // Handler reinitialization supersedes validation still pending from the
+  // previous registration, even when both registrations reuse one watcher.
+  reviewWatcherRequestGeneration += 1;
   changeExtractor = deps.extractor;
   if (deps.applier) reviewApplier = deps.applier;
   if (deps.contentResolver) fileContentResolver = deps.contentResolver;
   if (deps.gitFallback) gitDiffFallback = deps.gitFallback;
   reviewConfigReader = deps.configReader ?? new TeamConfigReader();
+  const nextFileWatcher = deps.fileWatcher ?? defaultReviewFileWatcher;
+  if (reviewFileWatcher !== nextFileWatcher) {
+    reviewFileWatcher.stop();
+    reviewWatcherProjectRoot = null;
+    reviewFileWatcher = nextFileWatcher;
+  }
+  reviewProjectPathValidator = deps.projectPathValidator ?? validateReviewProjectPath;
 }
 
 export function registerReviewHandlers(ipcMain: IpcMain): void {
@@ -983,6 +1003,7 @@ export function removeReviewHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(REVIEW_CLEAR_DRAFT_HISTORY);
   reviewFileWatcher.stop();
   reviewWatcherProjectRoot = null;
+  reviewWatcherRequestGeneration += 1;
 }
 
 export function setReviewMainWindow(win: BrowserWindow | null): void {
@@ -3658,8 +3679,10 @@ async function handleWatchReviewFiles(
   projectPath: string,
   filePaths: string[]
 ): Promise<IpcResult<void>> {
+  const requestGeneration = ++reviewWatcherRequestGeneration;
   return wrapReviewHandler('watchFiles', async () => {
-    const normalizedProjectPath = await validateReviewProjectPath(projectPath);
+    const normalizedProjectPath = await reviewProjectPathValidator(projectPath);
+    if (requestGeneration !== reviewWatcherRequestGeneration) return;
     const shouldRestart =
       reviewWatcherProjectRoot !== normalizedProjectPath || !reviewFileWatcher.isWatching();
 
@@ -3676,6 +3699,7 @@ async function handleWatchReviewFiles(
 }
 
 async function handleUnwatchReviewFiles(): Promise<IpcResult<void>> {
+  reviewWatcherRequestGeneration += 1;
   return wrapReviewHandler('unwatchFiles', async () => {
     reviewFileWatcher.stop();
     reviewWatcherProjectRoot = null;

@@ -27,6 +27,8 @@ import {
   REVIEW_SAVE_DECISIONS,
   REVIEW_SAVE_DRAFT_HISTORY_ENTRY,
   REVIEW_SAVE_EDITED_FILE,
+  REVIEW_UNWATCH_FILES,
+  REVIEW_WATCH_FILES,
 } from '@preload/constants/ipcChannels';
 import { createHash } from 'crypto';
 import { link, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'fs/promises';
@@ -300,6 +302,53 @@ describe('review IPC path confinement', () => {
     if (!token) throw new Error('Review snapshot token was not returned');
     return token;
   }
+
+  it('ignores a late watch request after unwatch and a newer project subscription', async () => {
+    let resolveOldProject!: (projectPath: string) => void;
+    const oldProjectValidation = new Promise<string>((resolve) => {
+      resolveOldProject = resolve;
+    });
+    let watching = false;
+    const fileWatcher = {
+      isWatching: vi.fn(() => watching),
+      start: vi.fn(() => {
+        watching = true;
+      }),
+      stop: vi.fn(() => {
+        watching = false;
+      }),
+      setWatchedFiles: vi.fn(),
+    };
+    const projectPathValidator = vi.fn((candidate: string) =>
+      candidate === projectDir ? oldProjectValidation : Promise.resolve(candidate)
+    );
+    initializeReviewHandlers({
+      extractor: extractor as never,
+      applier: applier as never,
+      contentResolver: resolver as never,
+      fileWatcher,
+      projectPathValidator,
+      configReader: {
+        getConfig: vi.fn().mockResolvedValue({
+          name: 'safe-team',
+          projectPath: projectDir,
+          members: [{ name: 'worker', cwd: worktreeDir }],
+        }),
+      },
+    });
+
+    const lateOldWatch = ipcMain.invoke(REVIEW_WATCH_FILES, projectDir, [projectFile]);
+    await vi.waitFor(() => expect(projectPathValidator).toHaveBeenCalledWith(projectDir));
+    await ipcMain.invoke(REVIEW_UNWATCH_FILES);
+    await ipcMain.invoke(REVIEW_WATCH_FILES, worktreeDir, [worktreeFile]);
+    resolveOldProject(projectDir);
+    await lateOldWatch;
+
+    expect(fileWatcher.start).toHaveBeenCalledTimes(1);
+    expect(fileWatcher.start).toHaveBeenCalledWith(worktreeDir, expect.any(Function));
+    expect(fileWatcher.setWatchedFiles).toHaveBeenCalledTimes(1);
+    expect(fileWatcher.setWatchedFiles).toHaveBeenCalledWith([worktreeFile]);
+  });
 
   it('rejects path traversal in persisted review decision identities', async () => {
     const result = await ipcMain.invoke(
