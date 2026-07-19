@@ -309,6 +309,57 @@ describe("local project integration adapters", () => {
     ]);
   });
 
+  it("commits an allowed source deletion with exact merge parents", async () => {
+    const fixture = await createCleanMergeFixture({
+      deleteSourcePath: true,
+    });
+    const adapter = new LocalGitIntegrationAdapter({
+      allowedPatchRoots: [fixture.rootDir],
+    });
+    const expectedFiles = [
+      "src/deleted-by-base.ts",
+      "src/from-base.ts",
+    ];
+    const attempt = {
+      targetWorkspacePath: fixture.workspacePath,
+      expectedFiles,
+      merge: {
+        sourceRemote: "origin",
+        sourceBranch: "base",
+        sourceCommit: fixture.sourceCommit,
+        expectedTargetCommit: fixture.targetCommit,
+      },
+    };
+
+    await expect(adapter.applyWorkerOutput({
+      attempt,
+      workerOutput: {
+        workerJobId: "clean-merge-deletion-reviewer",
+        workspacePath: fixture.workspacePath,
+        patchPath: fixture.patchPath,
+        patchSha256: fixture.patchSha256,
+        baseCommit: fixture.targetCommit,
+        changedFiles: [],
+      },
+    })).resolves.toEqual({ changedFiles: expectedFiles });
+    const commit = await adapter.commit({
+      workspacePath: fixture.workspacePath,
+      message: "merge: integrate reviewed source deletion",
+      files: expectedFiles,
+      identity: { name: "Integrator", email: "integrator@example.com" },
+      expectedParentCommits: [fixture.targetCommit, fixture.sourceCommit],
+    });
+
+    expect(commit.parentCommits).toEqual([
+      fixture.targetCommit,
+      fixture.sourceCommit,
+    ]);
+    await expect(readFile(
+      join(fixture.workspacePath, "src", "deleted-by-base.ts"),
+      "utf8",
+    )).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
   it("aborts a clean merge whose actual footprint was not reviewed", async () => {
     const fixture = await createCleanMergeFixture();
     const adapter = new LocalGitIntegrationAdapter({

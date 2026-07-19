@@ -214,7 +214,9 @@ export async function createSemanticMergeFixture(input: {
   };
 }
 
-export async function createCleanMergeFixture(): Promise<{
+export async function createCleanMergeFixture(input: {
+  readonly deleteSourcePath?: boolean;
+} = {}): Promise<{
   readonly rootDir: string;
   readonly workspacePath: string;
   readonly sourceCommit: string;
@@ -236,6 +238,12 @@ export async function createCleanMergeFixture(): Promise<{
     join(workspacePath, "src", "shared.ts"),
     "export const shared = true;\n",
   );
+  if (input.deleteSourcePath) {
+    await writeFile(
+      join(workspacePath, "src", "deleted-by-base.ts"),
+      "export const deletedByBase = true;\n",
+    );
+  }
   await git(workspacePath, ["add", "."]);
   await git(workspacePath, ["commit", "-m", "chore: initial"]);
   await execFileAsync("git", ["init", "--bare", remotePath]);
@@ -246,6 +254,9 @@ export async function createCleanMergeFixture(): Promise<{
     join(workspacePath, "src", "from-base.ts"),
     "export const fromBase = true;\n",
   );
+  if (input.deleteSourcePath) {
+    await git(workspacePath, ["rm", "src/deleted-by-base.ts"]);
+  }
   await git(workspacePath, ["add", "."]);
   await git(workspacePath, ["commit", "-m", "feat: add base source"]);
   const sourceCommit = (await gitOutput(

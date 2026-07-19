@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { readFile, realpath } from "node:fs/promises";
+import { lstat, readFile, realpath } from "node:fs/promises";
 import {
   basename,
   dirname,
@@ -280,6 +280,9 @@ export class LocalGitIntegrationAdapter implements GitPort {
   }): Promise<GitCommitResult> {
     const workspacePath = await canonicalDirectory(input.workspacePath);
     const files = input.files.map(normalizeProjectRelativePath);
+    if (files.length === 0) {
+      throw new Error("local_git_integration_commit_files_required");
+    }
     if (input.expectedParentCommits) {
       const existing = await adoptExistingReviewedMergeCommit({
         runtime: this.mergeRuntime(),
@@ -296,7 +299,24 @@ export class LocalGitIntegrationAdapter implements GitPort {
         input.expectedParentCommits,
       );
     }
-    await this.git(["add", "--", ...files], workspacePath);
+    const stagedDeletions = new Set(
+      await this.gitNullTerminatedPaths(
+        ["diff", "--cached", "--name-only", "--diff-filter=D", "-z", "--", ...files],
+        workspacePath,
+      ),
+    );
+    const filesToStage: string[] = [];
+    for (const file of files) {
+      if (
+        !stagedDeletions.has(file) ||
+        await pathExists(join(workspacePath, file))
+      ) {
+        filesToStage.push(file);
+      }
+    }
+    if (filesToStage.length > 0) {
+      await this.git(["add", "-A", "--", ...filesToStage], workspacePath);
+    }
     const unmerged = await this.gitNullTerminatedPaths(
       ["diff", "--name-only", "--diff-filter=U", "-z"],
       workspacePath,
@@ -799,6 +819,16 @@ async function runCommand(input: {
 
 async function canonicalDirectory(path: string): Promise<string> {
   return await realpath(path);
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await lstat(path);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
 }
 
 async function canonicalPatchPath(input: {
