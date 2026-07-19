@@ -1401,6 +1401,15 @@ interface PendingMemberRestartContext {
   >;
 }
 
+interface OpenCodeAggregatePrimaryRestartLease {
+  teamName: string;
+  runId: string;
+  memberName: string;
+  completion: Promise<void>;
+  precedingLifecycleOperations: Promise<void>[];
+  cancelRequested: boolean;
+}
+
 interface MemberSpawnInboxCursor {
   timestamp: string;
   messageId: string;
@@ -1930,6 +1939,18 @@ export class TeamProvisioningService {
     >
   >();
   private readonly stoppingSecondaryRuntimeTeams = new Set<string>();
+  private readonly openCodeAggregatePrimaryRestartByTeam = new Map<
+    string,
+    OpenCodeAggregatePrimaryRestartLease
+  >();
+  private readonly openCodeRuntimeAdapterStopInFlightByTeam = new Map<
+    string,
+    { teamName: string; runId: string; promise: Promise<void> }
+  >();
+  private readonly memberLifecycleCompletionByKey = new Map<
+    string,
+    { teamKey: string; token: symbol; completion: Promise<void> }
+  >();
   private readonly retainedClaudeLogsByTeam = new Map<string, RetainedClaudeLogsSnapshot>();
   private readonly persistedTranscriptClaudeLogsCache = new Map<
     string,
@@ -2311,6 +2332,66 @@ export class TeamProvisioningService {
     this.memberLifecycleController.persistOpenCodeMemberRestartSystemMessageInternal(input);
   }
 
+  private beginOpenCodeAggregatePrimaryRestart(
+    teamName: string,
+    memberName: string,
+    runId: string
+  ): { lease: OpenCodeAggregatePrimaryRestartLease; release: () => void } {
+    const teamKey = teamName.trim().toLowerCase();
+    const activeRestart = this.openCodeAggregatePrimaryRestartByTeam.get(teamKey);
+    if (activeRestart) {
+      throw new Error(
+        `OpenCode aggregate primary restart for teammate "${activeRestart.memberName}" is already in progress for team "${teamName}"`
+      );
+    }
+
+    const memberKey = `${teamKey}\0${memberName.trim().toLowerCase()}`;
+    const precedingLifecycleOperations = Array.from(this.memberLifecycleCompletionByKey.entries())
+      .filter(([operationKey, entry]) => entry.teamKey === teamKey && operationKey !== memberKey)
+      .map(([, entry]) => entry.completion);
+    let resolveCompletion!: () => void;
+    const completion = new Promise<void>((resolve) => {
+      resolveCompletion = resolve;
+    });
+    const lease: OpenCodeAggregatePrimaryRestartLease = {
+      teamName,
+      runId,
+      memberName,
+      completion,
+      precedingLifecycleOperations,
+      cancelRequested: false,
+    };
+    this.openCodeAggregatePrimaryRestartByTeam.set(teamKey, lease);
+    return {
+      lease,
+      release: () => {
+        resolveCompletion();
+        if (this.openCodeAggregatePrimaryRestartByTeam.get(teamKey) === lease) {
+          this.openCodeAggregatePrimaryRestartByTeam.delete(teamKey);
+        }
+      },
+    };
+  }
+
+  private isOpenCodeAggregatePrimaryRestartCandidate(
+    teamName: string,
+    memberName: string
+  ): { runId: string } | null {
+    const runtimeRun = this.runtimeAdapterRunByTeam.get(teamName);
+    if (runtimeRun?.providerId !== 'opencode') {
+      return null;
+    }
+    const aliveRunId = this.getAliveRunId(teamName);
+    const run = aliveRunId ? this.runs.get(aliveRunId) : null;
+    if (!run || run.processKilled || run.cancelRequested) {
+      return { runId: runtimeRun.runId };
+    }
+    const memberHasSecondaryLane = run.mixedSecondaryLanes.some((lane) =>
+      matchesTeamMemberIdentity(lane.member.name, memberName)
+    );
+    return memberHasSecondaryLane ? null : { runId: run.runId };
+  }
+
   private runMemberLifecycleOperation<T>(
     teamName: string,
     memberName: string,
@@ -2321,7 +2402,29 @@ export class TeamProvisioningService {
       teamName,
       memberName,
       kind,
-      operation
+      async () => {
+        const teamKey = teamName.trim().toLowerCase();
+        const operationKey = `${teamKey}\0${memberName.trim().toLowerCase()}`;
+        const token = Symbol(`${kind}:${operationKey}`);
+        let resolveCompletion!: () => void;
+        const completion = new Promise<void>((resolve) => {
+          resolveCompletion = resolve;
+        });
+        this.memberLifecycleCompletionByKey.set(operationKey, {
+          teamKey,
+          token,
+          completion,
+        });
+        try {
+          await this.waitForOpenCodeAggregatePrimaryRestart(teamName, memberName);
+          return await operation();
+        } finally {
+          resolveCompletion();
+          if (this.memberLifecycleCompletionByKey.get(operationKey)?.token === token) {
+            this.memberLifecycleCompletionByKey.delete(operationKey);
+          }
+        }
+      }
     );
   }
 
@@ -4964,8 +5067,7 @@ export class TeamProvisioningService {
       !run ||
       run.processKilled ||
       run.cancelRequested ||
-      resolveTeamProviderId(run.request.providerId) !== 'opencode' ||
-      run.mixedSecondaryLanes.length === 0
+      resolveTeamProviderId(run.request.providerId) !== 'opencode'
     ) {
       return false;
     }
@@ -4979,13 +5081,106 @@ export class TeamProvisioningService {
     if (run.pendingMemberRestarts.has(memberName)) {
       throw new Error(`Restart for teammate "${memberName}" is already in progress`);
     }
-    if (!this.getOpenCodeRuntimeAdapter()) {
+    const adapter = this.getOpenCodeRuntimeAdapter();
+    if (!adapter) {
       throw new Error('OpenCode runtime adapter is not available for member restart.');
     }
 
+    const restartKey = teamName.trim().toLowerCase();
+    const existingLease = this.openCodeAggregatePrimaryRestartByTeam.get(restartKey);
+    if (existingLease && existingLease.memberName.trim().toLowerCase() !== normalizedMemberName) {
+      throw new Error(
+        `OpenCode aggregate primary restart for teammate "${existingLease.memberName}" is already in progress for team "${teamName}"`
+      );
+    }
+    const ownedLease = existingLease
+      ? null
+      : this.beginOpenCodeAggregatePrimaryRestart(teamName, memberName, run.runId);
+    const restartLease = existingLease ?? ownedLease!.lease;
+    try {
+      await Promise.all(restartLease.precedingLifecycleOperations);
+      return await this.restartPureOpenCodeAggregatePrimaryMemberExclusive({
+        teamName,
+        memberName,
+        normalizedMemberName,
+        primaryMember,
+        run,
+        adapter,
+        restartLease,
+      });
+    } finally {
+      ownedLease?.release();
+    }
+  }
+
+  private async restartPureOpenCodeAggregatePrimaryMemberExclusive(params: {
+    teamName: string;
+    memberName: string;
+    normalizedMemberName: string;
+    primaryMember: TeamCreateRequest['members'][number];
+    run: ProvisioningRun;
+    adapter: TeamLaunchRuntimeAdapter;
+    restartLease: OpenCodeAggregatePrimaryRestartLease;
+  }): Promise<boolean> {
+    const {
+      teamName,
+      memberName,
+      normalizedMemberName,
+      primaryMember,
+      run,
+      adapter,
+      restartLease,
+    } = params;
+    const restartNoLongerCurrent = (): boolean =>
+      restartLease.cancelRequested ||
+      run.processKilled ||
+      run.cancelRequested ||
+      this.runs.get(run.runId) !== run;
+    const assertRestartCurrent = (): void => {
+      if (restartNoLongerCurrent()) {
+        throw new Error(
+          `OpenCode aggregate primary restart for teammate "${memberName}" was cancelled because team "${teamName}" is no longer running`
+        );
+      }
+    };
+    const assertRestartCurrentAfterPersistence = async (): Promise<void> => {
+      if (restartNoLongerCurrent()) {
+        await this.clearPersistedOpenCodeLaunchStateIfOwned(teamName, run.runId).catch(
+          (error: unknown) => {
+            logger.warn(
+              `[${teamName}] Failed to clear late launch state after cancelled primary restart: ${getErrorMessage(error)}`
+            );
+          }
+        );
+      }
+      assertRestartCurrent();
+    };
+
+    const previousLaunchState = await this.launchStateStore.read(teamName);
+    assertRestartCurrent();
+    const previousEffectiveMembers = [...run.effectiveMembers];
+    const previousExpectedMembers = [...run.expectedMembers];
+    const previousSecondaryLanes = [...run.mixedSecondaryLanes];
+    const leadMemberName = this.getRunLeadName(run).trim().toLowerCase();
+    const hasRetainablePrimaryLead = (result: TeamRuntimeLaunchResult | null): boolean => {
+      if (!result) {
+        return false;
+      }
+      const leadEvidence = Object.entries(result.members).find(
+        ([name, evidence]) =>
+          (evidence.memberName?.trim() || name.trim()).toLowerCase() === leadMemberName
+      )?.[1];
+      return Boolean(
+        leadEvidence &&
+        leadEvidence.launchState !== 'failed_to_start' &&
+        leadEvidence.hardFailure !== true &&
+        isRecoverableOpenCodeRuntimeEvidence(leadEvidence)
+      );
+    };
     const currentPrimaryRun = this.runtimeAdapterRunByTeam.get(teamName);
     if (currentPrimaryRun?.providerId === 'opencode' && currentPrimaryRun.runId === run.runId) {
       await this.stopOpenCodeRuntimeAdapterTeam(teamName, run.runId);
+      assertRestartCurrent();
       this.setAliveRunId(teamName, run.runId);
     }
 
@@ -5005,7 +5200,7 @@ export class TeamProvisioningService {
       warnings: [],
       diagnostics: ['controlled_reattach:manual_restart', 'migrated_from_failed_primary_lane'],
     };
-    run.mixedSecondaryLanes.push(lane);
+    run.mixedSecondaryLanes = [...run.mixedSecondaryLanes, lane];
     this.persistOpenCodeMemberRestartSystemMessage({
       teamName,
       leadName: this.getRunLeadName(run),
@@ -5017,19 +5212,117 @@ export class TeamProvisioningService {
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.resetRuntimeToolActivity(run, memberName);
     this.clearMemberSpawnToolTracking(run, memberName);
+    let primaryRelaunchResult: TeamRuntimeLaunchResult | null;
+    try {
+      primaryRelaunchResult = await this.launchOpenCodeAggregatePrimaryLane({
+        run,
+        adapter,
+        prompt: '',
+        previousLaunchState,
+        shouldAbort: restartNoLongerCurrent,
+      });
+      assertRestartCurrent();
+      if (!hasRetainablePrimaryLead(primaryRelaunchResult)) {
+        throw new Error('OpenCode primary member restart did not retain the team lead runtime.');
+      }
+    } catch (restartError) {
+      if (restartNoLongerCurrent()) {
+        throw restartError;
+      }
+      run.effectiveMembers = previousEffectiveMembers;
+      run.expectedMembers = previousExpectedMembers;
+      run.mixedSecondaryLanes = previousSecondaryLanes;
+      this.invalidateRuntimeSnapshotCaches(teamName);
+
+      try {
+        const rollbackResult = await this.launchOpenCodeAggregatePrimaryLane({
+          run,
+          adapter,
+          prompt: '',
+          previousLaunchState,
+          shouldAbort: restartNoLongerCurrent,
+        });
+        assertRestartCurrent();
+        if (!hasRetainablePrimaryLead(rollbackResult)) {
+          throw new Error('Primary rollback did not restore a retainable OpenCode team lead.');
+        }
+        await this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));
+        await assertRestartCurrentAfterPersistence();
+        this.setAliveRunId(teamName, run.runId);
+        run.progress = this.setRuntimeAdapterProgress(
+          {
+            ...run.progress,
+            state: 'ready',
+            message: 'OpenCode member restart failed; original primary lane was restored',
+            messageSeverity: 'warning',
+            updatedAt: nowIso(),
+            error: undefined,
+            cliLogsTail: getErrorMessage(restartError),
+          },
+          run.onProgress
+        );
+      } catch (rollbackError) {
+        if (restartNoLongerCurrent()) {
+          throw rollbackError;
+        }
+        const restartMessage = getErrorMessage(restartError);
+        const rollbackMessage = getErrorMessage(rollbackError);
+        await this.stopUnretainableOpenCodeRuntimeLane({
+          adapter,
+          runId: run.runId,
+          laneId: 'primary',
+          teamName,
+          cwd: this.getOpenCodeRuntimeLaunchCwd(run.request.cwd, previousEffectiveMembers),
+          previousLaunchState,
+        });
+        await this.stopMixedSecondaryRuntimeLanes(teamName);
+        await this.clearPersistedLaunchState(teamName, { expectedRunId: run.runId }).catch(
+          (error: unknown) => {
+            logger.warn(
+              `[${teamName}] Failed to clear stale launch state after primary rollback failure: ${getErrorMessage(error)}`
+            );
+          }
+        );
+        await this.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName, run.runId);
+        run.processKilled = true;
+        run.progress = this.setRuntimeAdapterProgress(
+          {
+            ...run.progress,
+            state: 'failed',
+            message: 'OpenCode member restart and primary rollback failed',
+            messageSeverity: 'error',
+            updatedAt: nowIso(),
+            error: `${restartMessage} Rollback failed: ${rollbackMessage}`,
+            cliLogsTail: `${restartMessage}\n${rollbackMessage}`,
+          },
+          run.onProgress
+        );
+        if (this.runs.get(run.runId) === run) {
+          this.cleanupRun(run);
+        }
+        throw new Error(
+          `OpenCode member restart failed: ${restartMessage}. Primary rollback failed: ${rollbackMessage}`
+        );
+      }
+      throw restartError;
+    }
     await this.launchSingleMixedSecondaryLane(run, lane);
+    await assertRestartCurrentAfterPersistence();
     await this.persistLaunchStateSnapshot(run, this.getMixedSecondaryLaunchPhase(run));
+    await assertRestartCurrentAfterPersistence();
     if (this.isTeamAlive(teamName)) {
       const memberRestartRetained =
         lane.result != null && hasRetainableOpenCodeRuntimeMember(lane.result);
+      const primaryRelaunchRetained = hasRetainablePrimaryLead(primaryRelaunchResult);
+      const restartRetained = memberRestartRetained && primaryRelaunchRetained;
       run.progress = this.setRuntimeAdapterProgress(
         {
           ...run.progress,
           state: 'ready',
-          message: memberRestartRetained
+          message: restartRetained
             ? 'OpenCode member lane restart is ready'
             : 'OpenCode team is running with unavailable members',
-          messageSeverity: memberRestartRetained ? undefined : 'warning',
+          messageSeverity: restartRetained ? undefined : 'warning',
           updatedAt: nowIso(),
           error: undefined,
         },
@@ -5039,6 +5332,24 @@ export class TeamProvisioningService {
       this.deleteAliveRunId(teamName);
     }
     return true;
+  }
+
+  private async waitForOpenCodeAggregatePrimaryRestart(
+    teamName: string,
+    currentMemberName?: string
+  ): Promise<string | null> {
+    const restart = this.openCodeAggregatePrimaryRestartByTeam.get(teamName.trim().toLowerCase());
+    if (!restart) {
+      return null;
+    }
+    if (
+      currentMemberName &&
+      restart.memberName.trim().toLowerCase() === currentMemberName.trim().toLowerCase()
+    ) {
+      return restart.runId;
+    }
+    await restart.completion;
+    return restart.runId;
   }
 
   private upsertRunAllEffectiveMember(
@@ -6152,6 +6463,33 @@ export class TeamProvisioningService {
         this.teamOpLocks.delete(teamName);
       }
     }
+  }
+
+  private runAfterInFlightTeamOperation<T>(
+    teamName: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    const pendingTeamOperation = this.teamOpLocks.get(teamName);
+    return pendingTeamOperation ? pendingTeamOperation.then(operation) : operation();
+  }
+
+  private async waitForMemberLifecycleOperations(teamName: string): Promise<void> {
+    const teamKey = teamName.trim().toLowerCase();
+    const completions = Array.from(this.memberLifecycleCompletionByKey.values())
+      .filter((entry) => entry.teamKey === teamKey)
+      .map((entry) => entry.completion);
+    const failedLaneRetry = Array.from(
+      this.failedOpenCodeSecondaryRetryInFlightByTeam.entries()
+    ).find(([candidateTeamName]) => candidateTeamName.trim().toLowerCase() === teamKey)?.[1];
+    if (failedLaneRetry) {
+      completions.push(
+        failedLaneRetry.then(
+          () => undefined,
+          () => undefined
+        )
+      );
+    }
+    await Promise.all(completions);
   }
 
   setTeamChangeEmitter(emitter: ((event: TeamChangeEvent) => void) | null): void {
@@ -8796,21 +9134,54 @@ export class TeamProvisioningService {
     memberName: string,
     options?: { reason?: LiveRosterAttachReason }
   ): Promise<void> {
-    return this.memberLifecycleController.attachLiveRosterMember(teamName, memberName, options);
+    return this.runAfterInFlightTeamOperation(teamName, () =>
+      this.memberLifecycleController.attachLiveRosterMember(teamName, memberName, options)
+    );
   }
 
   async detachLiveRosterMember(teamName: string, memberName: string): Promise<void> {
-    return this.memberLifecycleController.detachLiveRosterMember(teamName, memberName);
+    return this.runAfterInFlightTeamOperation(teamName, () =>
+      this.memberLifecycleController.detachLiveRosterMember(teamName, memberName)
+    );
   }
 
   async restartMember(teamName: string, memberName: string): Promise<void> {
-    return this.memberLifecycleController.restartMember(teamName, memberName);
+    return this.runAfterInFlightTeamOperation(teamName, async () => {
+      const activeAggregateRestart = this.openCodeAggregatePrimaryRestartByTeam.get(
+        teamName.trim().toLowerCase()
+      );
+      if (activeAggregateRestart) {
+        throw new Error(
+          `OpenCode aggregate primary restart for teammate "${activeAggregateRestart.memberName}" is already in progress for team "${teamName}"`
+        );
+      }
+      const aggregateCandidate = this.isOpenCodeAggregatePrimaryRestartCandidate(
+        teamName,
+        memberName
+      );
+      if (!aggregateCandidate) {
+        return this.memberLifecycleController.restartMember(teamName, memberName);
+      }
+
+      const restart = this.beginOpenCodeAggregatePrimaryRestart(
+        teamName,
+        memberName,
+        aggregateCandidate.runId
+      );
+      try {
+        await this.memberLifecycleController.restartMember(teamName, memberName);
+      } finally {
+        restart.release();
+      }
+    });
   }
 
   async retryFailedOpenCodeSecondaryLanes(
     teamName: string
   ): Promise<RetryFailedOpenCodeSecondaryLanesResult> {
-    return this.memberLifecycleController.retryFailedOpenCodeSecondaryLanes(teamName);
+    return this.runAfterInFlightTeamOperation(teamName, () =>
+      this.memberLifecycleController.retryFailedOpenCodeSecondaryLanes(teamName)
+    );
   }
 
   async skipMemberForLaunch(teamName: string, memberName: string): Promise<void> {
@@ -8822,15 +9193,15 @@ export class TeamProvisioningService {
     memberName: string,
     options?: { reason?: 'member_added' | 'member_updated' | 'manual_restart' }
   ): Promise<void> {
-    return this.memberLifecycleController.reattachOpenCodeOwnedMemberLane(
-      teamName,
-      memberName,
-      options
+    return this.runAfterInFlightTeamOperation(teamName, () =>
+      this.memberLifecycleController.reattachOpenCodeOwnedMemberLane(teamName, memberName, options)
     );
   }
 
   async detachOpenCodeOwnedMemberLane(teamName: string, memberName: string): Promise<void> {
-    return this.memberLifecycleController.detachOpenCodeOwnedMemberLane(teamName, memberName);
+    return this.runAfterInFlightTeamOperation(teamName, () =>
+      this.memberLifecycleController.detachOpenCodeOwnedMemberLane(teamName, memberName)
+    );
   }
 
   private getMemberLaunchGraceKey(run: ProvisioningRun, memberName: string): string {
@@ -11127,6 +11498,8 @@ export class TeamProvisioningService {
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamCreateResponse> {
     return this.withTeamLock(request.teamName, async () => {
+      await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
+      await this.waitForMemberLifecycleOperations(request.teamName);
       return this._createTeamInner(request, onProgress);
     });
   }
@@ -11819,7 +12192,7 @@ export class TeamProvisioningService {
       leadProviderId: launchRequest.providerId,
       members: materialized.members,
     });
-    const lanePlan = this.planRuntimeLanesOrThrow(
+    const configuredLanePlan = this.planRuntimeLanesOrThrow(
       launchRequest.providerId,
       launchRequest.model,
       effectiveMembers,
@@ -11828,7 +12201,13 @@ export class TeamProvisioningService {
     const runtimeLaunchMembers = this.buildOpenCodeRuntimeAdapterLaunchMembers(
       launchRequest,
       effectiveMembers,
-      lanePlan
+      configuredLanePlan
+    );
+    const lanePlan = this.planRuntimeLanesOrThrow(
+      launchRequest.providerId,
+      launchRequest.model,
+      runtimeLaunchMembers,
+      launchRequest.cwd
     );
     const teamDir = path.join(getTeamsBasePath(), launchRequest.teamName);
     const tasksDir = path.join(getTasksBasePath(), launchRequest.teamName);
@@ -11858,7 +12237,7 @@ export class TeamProvisioningService {
     if (isPureOpenCodeMemberLanePlan(lanePlan)) {
       return this.runOpenCodeMemberLaneAggregateLaunch({
         request: launchRequest,
-        members: effectiveMembers,
+        members: runtimeLaunchMembers,
         lanePlan,
         prompt: launchRequest.prompt?.trim() ?? '',
         sourceWarning: undefined,
@@ -11904,7 +12283,7 @@ export class TeamProvisioningService {
       leadProviderId: launchRequest.providerId,
       members: materialized.members,
     });
-    const lanePlan = this.planRuntimeLanesOrThrow(
+    const configuredLanePlan = this.planRuntimeLanesOrThrow(
       launchRequest.providerId,
       launchRequest.model,
       effectiveMembers,
@@ -11913,7 +12292,13 @@ export class TeamProvisioningService {
     const runtimeLaunchMembers = this.buildOpenCodeRuntimeAdapterLaunchMembers(
       launchRequest,
       effectiveMembers,
-      lanePlan
+      configuredLanePlan
+    );
+    const lanePlan = this.planRuntimeLanesOrThrow(
+      launchRequest.providerId,
+      launchRequest.model,
+      runtimeLaunchMembers,
+      launchRequest.cwd
     );
     await this.updateConfigProjectPath(launchRequest.teamName, launchRequest.cwd);
 
@@ -11934,7 +12319,7 @@ export class TeamProvisioningService {
     if (isPureOpenCodeMemberLanePlan(lanePlan)) {
       return this.runOpenCodeMemberLaneAggregateLaunch({
         request: launchRequest,
-        members: effectiveMembers,
+        members: runtimeLaunchMembers,
         lanePlan,
         prompt,
         sourceWarning: warning,
@@ -12066,6 +12451,7 @@ export class TeamProvisioningService {
     adapter: TeamLaunchRuntimeAdapter;
     prompt: string;
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
+    shouldAbort?: () => boolean;
   }): Promise<TeamRuntimeLaunchResult | null> {
     if (params.run.effectiveMembers.length === 0) {
       return null;
@@ -12089,6 +12475,35 @@ export class TeamProvisioningService {
       runId,
       reason: 'aggregate_primary_launch',
     });
+    const abortLaunchIfNeeded = async (runtimeMayHaveStarted: boolean): Promise<void> => {
+      if (!params.shouldAbort?.()) {
+        return;
+      }
+      if (runtimeMayHaveStarted) {
+        await this.stopUnretainableOpenCodeRuntimeLane({
+          adapter: params.adapter,
+          runId,
+          laneId: 'primary',
+          teamName,
+          cwd: launchCwd,
+          previousLaunchState: params.previousLaunchState,
+        });
+      }
+      await clearOpenCodeRuntimeLaneStorage({
+        teamsBasePath: getTeamsBasePath(),
+        teamName,
+        laneId: 'primary',
+      }).catch(() => undefined);
+      await this.clearPersistedLaunchState(teamName).catch((error: unknown) => {
+        logger.warn(
+          `[${teamName}] Failed to clear cancelled OpenCode aggregate primary launch state: ${getErrorMessage(error)}`
+        );
+      });
+      throw new Error(
+        `OpenCode aggregate primary launch for team "${teamName}" was cancelled because the owning run is no longer active`
+      );
+    };
+    await abortLaunchIfNeeded(false);
 
     const expectedMembers: TeamRuntimeMemberSpec[] = params.run.effectiveMembers.map((member) => ({
       name: member.name,
@@ -12145,8 +12560,10 @@ export class TeamProvisioningService {
         cwd: launchCwd,
         previousLaunchState: params.previousLaunchState,
       });
+      await abortLaunchIfNeeded(false);
       throw error;
     }
+    await abortLaunchIfNeeded(true);
     launchResult = appendOpenCodeLaunchDiagnostics(launchResult, [
       ...migration.diagnostics,
       ...launchPreparation.diagnostics,
@@ -12155,6 +12572,7 @@ export class TeamProvisioningService {
       launchResult,
       launchInput
     );
+    await abortLaunchIfNeeded(true);
     const snapshotStatuses = snapshotToMemberSpawnStatuses(snapshot);
     for (const member of expectedMembers) {
       const status = snapshotStatuses[member.name];
@@ -12501,15 +12919,33 @@ export class TeamProvisioningService {
     sourceWarning?: string;
     onProgress: (progress: TeamProvisioningProgress) => void;
   }): Promise<TeamLaunchResponse> {
+    const aggregateRestart = this.openCodeAggregatePrimaryRestartByTeam.get(
+      input.request.teamName.trim().toLowerCase()
+    );
+    const createAggregateRestartCancelledError = (): Error =>
+      new Error(
+        `OpenCode aggregate primary restart for teammate "${aggregateRestart?.memberName ?? 'unknown'}" was cancelled because team "${input.request.teamName}" is no longer running`
+      );
+    const assertAggregateRestartCurrent = (): void => {
+      if (aggregateRestart?.cancelRequested) {
+        throw createAggregateRestartCancelledError();
+      }
+    };
+    assertAggregateRestartCurrent();
     const adapter = this.getOpenCodeRuntimeAdapter();
     if (!adapter) {
       throw new Error('OpenCode runtime adapter is not registered');
     }
+    const runtimeMembers = this.buildOpenCodeRuntimeAdapterLaunchMembers(
+      input.request,
+      input.members
+    );
 
     const stopAllGenerationAtStart = this.stopAllTeamsGeneration;
     const previousRuntimeRun = this.runtimeAdapterRunByTeam.get(input.request.teamName);
     if (previousRuntimeRun?.providerId === 'opencode') {
       await this.stopOpenCodeRuntimeAdapterTeam(input.request.teamName, previousRuntimeRun.runId);
+      assertAggregateRestartCurrent();
     }
     const previousPendingRunId = this.provisioningRunByTeam.get(input.request.teamName);
     const previousRuntimeProgress = previousPendingRunId
@@ -12521,7 +12957,9 @@ export class TeamProvisioningService {
       this.isCancellableRuntimeAdapterProgress(previousRuntimeProgress)
     ) {
       await this.cancelRuntimeAdapterProvisioning(previousPendingRunId, previousRuntimeProgress);
+      assertAggregateRestartCurrent();
     }
+    assertAggregateRestartCurrent();
     if (this.stopAllTeamsGeneration !== stopAllGenerationAtStart) {
       return this.recordCancelledOpenCodeRuntimeAdapterLaunch(
         input.request.teamName,
@@ -12551,7 +12989,7 @@ export class TeamProvisioningService {
       teamName: input.request.teamName,
       laneId: 'primary',
     });
-    const launchCwd = this.getOpenCodeRuntimeLaunchCwd(input.request.cwd, input.members);
+    const launchCwd = this.getOpenCodeRuntimeLaunchCwd(input.request.cwd, runtimeMembers);
     const launchInput: TeamRuntimeLaunchInput = {
       runId,
       laneId: 'primary',
@@ -12562,7 +13000,7 @@ export class TeamProvisioningService {
       model: input.request.model,
       effort: input.request.effort,
       skipPermissions: input.request.skipPermissions !== false,
-      expectedMembers: input.members.map((member) => ({
+      expectedMembers: runtimeMembers.map((member) => ({
         name: member.name,
         role: member.role,
         workflow: member.workflow,
@@ -12586,6 +13024,7 @@ export class TeamProvisioningService {
     );
 
     try {
+      assertAggregateRestartCurrent();
       const launchPreparation = await prepareOpenCodeRuntimeLaneForLaunchGeneration({
         teamsBasePath: getTeamsBasePath(),
         teamName: input.request.teamName,
@@ -12593,7 +13032,10 @@ export class TeamProvisioningService {
         runId,
         reason: 'primary_launch',
       });
-      const launchPrimaryLane = () => adapter.launch(launchInput);
+      const launchPrimaryLane = () => {
+        assertAggregateRestartCurrent();
+        return adapter.launch(launchInput);
+      };
       let launchResult: TeamRuntimeLaunchResult;
       try {
         launchResult = await launchPrimaryLane();
@@ -12621,15 +13063,36 @@ export class TeamProvisioningService {
       ]);
       if (
         this.cancelledRuntimeAdapterRunIds.delete(runId) ||
-        this.provisioningRunByTeam.get(input.request.teamName) !== runId
+        this.provisioningRunByTeam.get(input.request.teamName) !== runId ||
+        aggregateRestart?.cancelRequested
       ) {
         await this.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(input.request.teamName, runId);
+        await this.clearPersistedOpenCodeLaunchStateIfOwned(input.request.teamName, runId).catch(
+          () => undefined
+        );
+        if (aggregateRestart?.cancelRequested) {
+          throw createAggregateRestartCancelledError();
+        }
         return { runId };
       }
       const { result } = await this.persistOpenCodeRuntimeAdapterLaunchResult(
         launchResult,
         launchInput
       );
+      if (
+        this.cancelledRuntimeAdapterRunIds.delete(runId) ||
+        this.provisioningRunByTeam.get(input.request.teamName) !== runId ||
+        aggregateRestart?.cancelRequested
+      ) {
+        await this.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(input.request.teamName, runId);
+        await this.clearPersistedOpenCodeLaunchStateIfOwned(input.request.teamName, runId).catch(
+          () => undefined
+        );
+        if (aggregateRestart?.cancelRequested) {
+          throw createAggregateRestartCancelledError();
+        }
+        return { runId };
+      }
       const requestTeamColor = 'color' in input.request ? input.request.color : undefined;
       const requestTeamDisplayName =
         'displayName' in input.request ? input.request.displayName : undefined;
@@ -12707,11 +13170,19 @@ export class TeamProvisioningService {
       });
       return { runId };
     } catch (error) {
+      const aggregateRestartWasCancelled = aggregateRestart?.cancelRequested === true;
       if (
         this.cancelledRuntimeAdapterRunIds.delete(runId) ||
-        this.provisioningRunByTeam.get(input.request.teamName) !== runId
+        this.provisioningRunByTeam.get(input.request.teamName) !== runId ||
+        aggregateRestartWasCancelled
       ) {
         await this.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(input.request.teamName, runId);
+        await this.clearPersistedOpenCodeLaunchStateIfOwned(input.request.teamName, runId).catch(
+          () => undefined
+        );
+        if (aggregateRestartWasCancelled) {
+          throw createAggregateRestartCancelledError();
+        }
         return { runId };
       }
       await clearOpenCodeRuntimeLaneStorage({
@@ -12914,6 +13385,8 @@ export class TeamProvisioningService {
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
     return this.withTeamLock(request.teamName, async () => {
+      await this.waitForOpenCodeAggregatePrimaryRestart(request.teamName);
+      await this.waitForMemberLifecycleOperations(request.teamName);
       return this._launchTeamInner(request, onProgress);
     });
   }
@@ -15615,17 +16088,15 @@ export class TeamProvisioningService {
   isTeamAlive(teamName: string): boolean {
     const runId = this.getAliveRunId(teamName);
     if (!runId) return false;
+    const hasPrimaryRuntime = this.runtimeAdapterRunByTeam.get(teamName)?.runId === runId;
     const run = this.runs.get(runId);
     if (!run) {
-      return (
-        this.runtimeAdapterRunByTeam.get(teamName)?.runId === runId ||
-        this.hasSecondaryRuntimeRuns(teamName)
-      );
+      return hasPrimaryRuntime || this.hasSecondaryRuntimeRuns(teamName);
     }
-    if (run && this.hasSecondaryRuntimeRuns(teamName)) {
+    if (hasPrimaryRuntime || this.hasSecondaryRuntimeRuns(teamName)) {
       return !run.processKilled && !run.cancelRequested;
     }
-    return run?.child != null && !run.processKilled && !run.cancelRequested;
+    return run.child != null && !run.processKilled && !run.cancelRequested;
   }
 
   /**
@@ -16371,6 +16842,40 @@ export class TeamProvisioningService {
     );
   }
 
+  private async clearPersistedOpenCodeLaunchStateIfOwned(
+    teamName: string,
+    expectedRunId: string
+  ): Promise<void> {
+    await this.enqueueLaunchStateStoreOperation(teamName, async () => {
+      const trackedRunId = this.getTrackedRunId(teamName);
+      if (trackedRunId && trackedRunId !== expectedRunId) {
+        return;
+      }
+      const lastWrittenRunId = this.launchStateWrittenRunIdByTeam.get(teamName);
+      if (lastWrittenRunId && lastWrittenRunId !== expectedRunId) {
+        return;
+      }
+      const ownedByExpectedRunWrite = lastWrittenRunId === expectedRunId;
+      const snapshot = await this.launchStateStore.read(teamName).catch(() => null);
+      const persistedPrimaryRunIds = new Set(
+        Object.values(snapshot?.members ?? {})
+          .filter((member) => member.laneId === 'primary' || member.laneKind === 'primary')
+          .map((member) => member.runtimeRunId?.trim())
+          .filter((runId): runId is string => Boolean(runId))
+      );
+      if (
+        !ownedByExpectedRunWrite &&
+        (persistedPrimaryRunIds.size !== 1 || !persistedPrimaryRunIds.has(expectedRunId))
+      ) {
+        return;
+      }
+      await this.launchStateStore.clear(teamName);
+      this.launchStateWrittenRunIdByTeam.delete(teamName);
+      await clearBootstrapState(teamName);
+      this.invalidateRuntimeSnapshotCaches(teamName);
+    });
+  }
+
   private canClearPersistedLaunchStateForRun(
     teamName: string,
     expectedRunId: string | undefined
@@ -16489,6 +16994,8 @@ export class TeamProvisioningService {
     await this.launchStateStore.write(teamName, normalizedSnapshot);
     if (typeof options?.runId === 'string') {
       this.launchStateWrittenRunIdByTeam.set(teamName, options.runId);
+    } else {
+      this.launchStateWrittenRunIdByTeam.delete(teamName);
     }
     return { snapshot: normalizedSnapshot, wrote: true };
   }
@@ -19697,7 +20204,13 @@ export class TeamProvisioningService {
    * Always uses SIGKILL via killTeamProcess() to prevent CLI cleanup.
    */
   async stopTeam(teamName: string): Promise<void> {
-    await stopTeamFlow(teamName, {
+    const teamKey = teamName.trim().toLowerCase();
+    const aggregateRestart = this.openCodeAggregatePrimaryRestartByTeam.get(teamKey);
+    if (aggregateRestart) {
+      aggregateRestart.cancelRequested = true;
+    }
+    const primaryStopInFlight = this.openCodeRuntimeAdapterStopInFlightByTeam.get(teamKey)?.promise;
+    const stopFlow = stopTeamFlow(teamName, {
       invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
       pauseActiveIntervalsForTeam: (teamName) =>
         this.taskActivityIntervalService.pauseActiveIntervalsForTeam(teamName),
@@ -19725,6 +20238,11 @@ export class TeamProvisioningService {
       cleanupRun: (run) => this.cleanupRun(run),
       logger,
     });
+    try {
+      await stopFlow;
+    } finally {
+      await primaryStopInFlight;
+    }
   }
 
   private getShutdownTrackedTeamNames(): string[] {
@@ -19734,6 +20252,12 @@ export class TeamProvisioningService {
     for (const teamName of this.runtimeAdapterRunByTeam.keys()) teamNames.add(teamName);
     for (const teamName of this.secondaryRuntimeRunByTeam.keys()) teamNames.add(teamName);
     for (const teamName of this.teamOpLocks.keys()) teamNames.add(teamName);
+    for (const restart of this.openCodeAggregatePrimaryRestartByTeam.values()) {
+      teamNames.add(restart.teamName);
+    }
+    for (const stop of this.openCodeRuntimeAdapterStopInFlightByTeam.values()) {
+      teamNames.add(stop.teamName);
+    }
     for (const progress of this.getPendingRuntimeAdapterLaunchesForShutdown()) {
       teamNames.add(progress.teamName);
     }
@@ -19835,7 +20359,12 @@ export class TeamProvisioningService {
     this.stoppingSecondaryRuntimeTeams.add(teamName);
     try {
       const adapter = this.getOpenCodeRuntimeAdapter();
-      const previousLaunchState = await this.launchStateStore.read(teamName);
+      const previousLaunchState = await this.launchStateStore.read(teamName).catch((error) => {
+        logger.warn(
+          `[${teamName}] Failed to read launch state before stopping OpenCode secondary lanes: ${getErrorMessage(error)}`
+        );
+        return null;
+      });
       if (!adapter) {
         await Promise.all(
           secondaryRuns.map((secondaryRun) =>
@@ -19905,9 +20434,45 @@ export class TeamProvisioningService {
     await Promise.all(stops);
   }
 
-  private async stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void> {
+  private stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void> {
+    const teamKey = teamName.trim().toLowerCase();
+    const existingStop = this.openCodeRuntimeAdapterStopInFlightByTeam.get(teamKey);
+    if (existingStop) {
+      if (existingStop.runId === runId) {
+        return existingStop.promise;
+      }
+      return existingStop.promise.then(() => this.stopOpenCodeRuntimeAdapterTeam(teamName, runId));
+    }
+
+    const promise = this.stopOpenCodeRuntimeAdapterTeamExclusive(teamName, runId).finally(() => {
+      if (this.openCodeRuntimeAdapterStopInFlightByTeam.get(teamKey)?.promise === promise) {
+        this.openCodeRuntimeAdapterStopInFlightByTeam.delete(teamKey);
+      }
+    });
+    this.openCodeRuntimeAdapterStopInFlightByTeam.set(teamKey, { teamName, runId, promise });
+    return promise;
+  }
+
+  private async stopOpenCodeRuntimeAdapterTeamExclusive(
+    teamName: string,
+    runId: string
+  ): Promise<void> {
     const adapter = this.getOpenCodeRuntimeAdapter();
+    const aggregateRestart = this.openCodeAggregatePrimaryRestartByTeam.get(
+      teamName.trim().toLowerCase()
+    );
     const previousLaunchState = await this.launchStateStore.read(teamName);
+    const shouldDiscardCancelledRestartSnapshot = (): boolean =>
+      aggregateRestart?.runId === runId && aggregateRestart.cancelRequested;
+    const clearCancelledRestartSnapshot = async (): Promise<void> => {
+      await this.clearPersistedOpenCodeLaunchStateIfOwned(teamName, runId).catch(
+        (error: unknown) => {
+          logger.warn(
+            `[${teamName}] Failed to clear stopped aggregate restart launch state: ${getErrorMessage(error)}`
+          );
+        }
+      );
+    };
     if (!adapter) {
       await clearOpenCodeRuntimeLaneStorage({
         teamsBasePath: getTeamsBasePath(),
@@ -19918,6 +20483,9 @@ export class TeamProvisioningService {
       this.deleteAliveRunId(teamName);
       this.provisioningRunByTeam.delete(teamName);
       this.invalidateRuntimeSnapshotCaches(teamName);
+      if (shouldDiscardCancelledRestartSnapshot()) {
+        await clearCancelledRestartSnapshot();
+      }
       return;
     }
     const startedAt = nowIso();
@@ -19958,16 +20526,18 @@ export class TeamProvisioningService {
         previousLaunchState,
         force: true,
       });
-      await this.writeLaunchStateSnapshot(
-        teamName,
-        createPersistedLaunchSnapshot({
+      if (!shouldDiscardCancelledRestartSnapshot()) {
+        await this.writeLaunchStateSnapshot(
           teamName,
-          expectedMembers: previousLaunchState?.expectedMembers ?? [],
-          leadSessionId: previousLaunchState?.leadSessionId,
-          launchPhase: 'reconciled',
-          members: previousLaunchState?.members ?? {},
-        })
-      );
+          createPersistedLaunchSnapshot({
+            teamName,
+            expectedMembers: previousLaunchState?.expectedMembers ?? [],
+            leadSessionId: previousLaunchState?.leadSessionId,
+            launchPhase: 'reconciled',
+            members: previousLaunchState?.members ?? {},
+          })
+        );
+      }
       this.setRuntimeAdapterProgress({
         runId,
         teamName,
@@ -20001,6 +20571,9 @@ export class TeamProvisioningService {
       this.runtimeAdapterRunByTeam.delete(teamName);
       this.deleteAliveRunId(teamName);
       this.provisioningRunByTeam.delete(teamName);
+      if (shouldDiscardCancelledRestartSnapshot()) {
+        await clearCancelledRestartSnapshot();
+      }
       this.teamChangeEmitter?.({
         type: 'process',
         teamName,
