@@ -38,8 +38,10 @@ const visibleElement = (expression) => `(() => {
   const rect = element.getBoundingClientRect();
   return rect.width > 0 && rect.height > 0 ? element : null;
 })()`;
-const historyPopover = `Array.from(document.querySelectorAll('[data-radix-popper-content-wrapper]'))
-  .find((wrapper) => wrapper.textContent?.includes('Review action history'))`;
+const historyPopoverLayer = `Array.from(
+  document.querySelectorAll('[data-radix-popper-content-wrapper]')
+).find((wrapper) => wrapper.textContent?.includes('Review action history'))`;
+const historyPopover = `(${historyPopoverLayer})?.querySelector('[data-state="open"]')`;
 const visibleHistoryPopover = visibleElement(historyPopover);
 const visibleRejectHunkButton = `Array.from(document.querySelectorAll('button[title^="Reject change"]'))
   .find((button) => {
@@ -193,7 +195,7 @@ async function startApp(port, fixture) {
   });
   appProcess.stdout.on('data', rememberAppLog);
   appProcess.stderr.on('data', rememberAppLog);
-  const webSocketUrl = await waitForCdp(port, devMcpMode ? 90_000 : 45_000);
+  const webSocketUrl = await waitForCdp(port, devMcpMode ? 90_000 : 60_000);
   client = await CdpClient.connect(webSocketUrl);
   await client.send('Runtime.enable');
   await client.send('Page.enable');
@@ -205,7 +207,7 @@ async function ensureSandboxNavigation() {
   await client.waitFor(
     `(${sandboxKanbanTaskCard}) || (${selectTeamButton})`,
     'sandbox team navigation',
-    devMcpMode ? 90_000 : 30_000
+    devMcpMode ? 90_000 : 60_000
   );
   const navigationDeadline = Date.now() + 60_000;
   while (!(await client.evaluate(`Boolean(${sandboxKanbanTaskCard})`))) {
@@ -786,8 +788,11 @@ async function main() {
     throw new Error(`Unable to open ${label}`);
   };
   const ensureHistoryClosed = async (label) => {
+    const waitForExitLayer = () =>
+      client.waitFor(`!(${historyPopoverLayer})`, `${label} exit layer`, 3_000);
     for (let attempt = 0; attempt < 3; attempt += 1) {
       if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) {
+        await waitForExitLayer();
         return;
       }
       const explicitCloseButton = `(${visibleHistoryPopover})?.querySelector(
@@ -797,16 +802,20 @@ async function main() {
         await client.domClick(explicitCloseButton);
         try {
           await client.waitFor(`!(${visibleHistoryPopover})`, label, 1_000);
+          await waitForExitLayer();
           return;
-        } catch {
-          // A concurrent history update can remount the popover once; continue fallbacks.
+        } catch (error) {
+          if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) throw error;
+          // A concurrent history update can keep the semantic popover open; continue fallbacks.
         }
       }
       await client.pressEscape();
       try {
         await client.waitFor(`!(${visibleHistoryPopover})`, label, 750);
+        await waitForExitLayer();
         return;
-      } catch {
+      } catch (error) {
+        if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) throw error;
         // An action can remount the Radix layer after Escape was delivered to the old content.
       }
       if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) {
@@ -816,8 +825,10 @@ async function main() {
         await client.click(historyDismissTarget);
         try {
           await client.waitFor(`!(${visibleHistoryPopover})`, label, 1_000);
+          await waitForExitLayer();
           return;
-        } catch {
+        } catch (error) {
+          if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) throw error;
           // Radix may replace the dismissable layer while an action is committing.
         }
       }
@@ -827,8 +838,10 @@ async function main() {
       await client.domClick(historyButton);
       try {
         await client.waitFor(`!(${visibleHistoryPopover})`, label, 1_000);
+        await waitForExitLayer();
         return;
-      } catch {
+      } catch (error) {
+        if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) throw error;
         // The toolbar can remount its trigger after a history action; retry the live trigger.
       }
       const navigationButton = `(${visibleHistoryPopover})?.querySelector(
@@ -838,8 +851,10 @@ async function main() {
         await client.domClick(navigationButton);
         try {
           await client.waitFor(`!(${visibleHistoryPopover})`, label, 1_000);
+          await waitForExitLayer();
           return;
-        } catch {
+        } catch (error) {
+          if (!(await client.evaluate(`Boolean(${visibleHistoryPopover})`))) throw error;
           // Navigating from a live history row explicitly closes the controlled popover.
         }
       }
@@ -1248,7 +1263,11 @@ async function main() {
   await assertDiskLines(fixture.changedFile, 'external-0', 'after-1');
   await client.screenshot(conflictScreenshot);
 
-  await client.domClick(buttonWithText('Reload from disk'));
+  await client.waitFor(
+    enabledButtonWithText('Reload from disk'),
+    'enabled Reload after durable history settles'
+  );
+  await client.domClick(enabledButtonWithText('Reload from disk'));
   await client.waitFor(
     `!document.body?.innerText.includes('Changed on disk') &&
       !(${buttonWithText('Redo')}) && !(${historyButton})`,
@@ -1295,6 +1314,10 @@ async function main() {
   await client.click(enabledButtonWithText('Undo'));
   await client.waitFor(`document.body?.innerText.includes('12 pending')`, 'accepted Undo result');
   await client.waitFor(enabledButtonWithText('Redo'), 'accepted Redo after forced restart Undo');
+  await client.waitFor(
+    `document.querySelector('button[aria-label^="Review history:"][aria-label$="; saved"]')`,
+    'saved accepted Undo before closing history'
+  );
   await assertDiskLines(fixture.changedFile, 'external-0', 'after-1');
   await ensureHistoryClosed('closed accepted history before the guarded-close action');
 
