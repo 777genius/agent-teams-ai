@@ -186,6 +186,9 @@ export function buildLaunchSyntheticRequest(input: {
     effort: input.request.effort,
     fastMode: input.request.fastMode,
     skipPermissions: input.request.skipPermissions,
+    worktree: input.request.worktree,
+    extraCliArgs: input.request.extraCliArgs,
+    limitContext: input.request.limitContext,
   };
 
   try {
@@ -441,8 +444,7 @@ export async function materializeDeterministicLaunchBootstrapFiles<
     'Writing launch hydration prompt file',
     `chars=${promptSize.chars} lines=${promptSize.lines}`
   );
-  const bootstrapUserPromptPath =
-    await ports.writeDeterministicBootstrapUserPromptFile(prompt);
+  const bootstrapUserPromptPath = await ports.writeDeterministicBootstrapUserPromptFile(prompt);
   run.bootstrapUserPromptPath = bootstrapUserPromptPath;
   run.requiresFirstRealTurnSuccess = true;
   emitProvisioningCheckpoint(run, 'Writing MCP config file');

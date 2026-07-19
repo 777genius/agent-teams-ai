@@ -187,6 +187,47 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
       displayName: 'Demo Team',
     });
     expect(synthetic.members.map((member) => member.name)).toEqual(['Builder']);
+    expect(synthetic.worktree).toBeUndefined();
+    expect(synthetic.extraCliArgs).toBeUndefined();
+    expect(synthetic.limitContext).toBeUndefined();
+  });
+
+  it('preserves relaunch metadata through the production synthetic request builder', () => {
+    const members: TeamCreateRequest['members'] = [{ name: 'Builder', role: 'Build' }];
+    const synthetic = buildLaunchSyntheticRequest({
+      request: {
+        teamName: 'demo',
+        cwd: '/repo',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5',
+        effort: 'high',
+        fastMode: 'inherit',
+        skipPermissions: false,
+        worktree: 'feature-a',
+        extraCliArgs: '--flag value',
+        limitContext: true,
+      },
+      members,
+      configRaw: JSON.stringify({ color: ' blue ', name: ' Demo Team ' }),
+    });
+
+    expect(synthetic).toEqual({
+      teamName: 'demo',
+      members,
+      cwd: '/repo',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5',
+      effort: 'high',
+      fastMode: 'inherit',
+      skipPermissions: false,
+      worktree: 'feature-a',
+      extraCliArgs: '--flag value',
+      limitContext: true,
+      color: 'blue',
+      displayName: 'Demo Team',
+    });
   });
 
   it('keeps launch validation messages tied to roster source', () => {

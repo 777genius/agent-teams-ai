@@ -180,9 +180,23 @@ describe('TeamProvisioningMixedSecondaryLaunchReconciliation', () => {
     expect(getBuildRuntimeSpawnStatusRecordCalls()).toBe(0);
   });
 
-  it('maps case-varied secondary lane runtime evidence through explicit snapshot ports', () => {
+  it('maps structured bootstrap evidence for the matching secondary member and runtime generation', () => {
     const { ports, getCapturedParams } = createPorts();
     const diagnostics = ['runtime diagnostic'];
+    const appManagedBootstrapCandidate = {
+      schemaVersion: 1,
+      source: 'app_managed_bootstrap',
+      teamName: 'team-a',
+      memberName: 'Bob',
+      runId: 'lane-run-1',
+      laneId: 'secondary:opencode:bob',
+      runtimeSessionId: 'session-1',
+      messageID: 'message-1',
+      contextHash: 'context-1',
+      briefingHash: 'briefing-1',
+      injectionVerifiedAt: '2026-07-02T00:00:30.000Z',
+      candidateAt: '2026-07-02T00:00:31.000Z',
+    } as const;
     const result: TeamRuntimeLaunchResult = {
       runId: 'lane-run-1',
       teamName: 'team-a',
@@ -199,6 +213,9 @@ describe('TeamProvisioningMixedSecondaryLaunchReconciliation', () => {
           hardFailure: false,
           runtimePid: 123,
           sessionId: 'session-1',
+          bootstrapEvidenceSource: 'app_managed_bootstrap',
+          bootstrapMode: 'app_managed_context',
+          appManagedBootstrapCandidate,
           livenessKind: 'runtime_process',
           pidSource: 'opencode_bridge',
           runtimeDiagnostic: 'waiting for check-in',
@@ -259,6 +276,9 @@ describe('TeamProvisioningMixedSecondaryLaunchReconciliation', () => {
         hardFailure: false,
         runtimePid: 123,
         runtimeSessionId: 'session-1',
+        bootstrapEvidenceSource: 'app_managed_bootstrap',
+        bootstrapMode: 'app_managed_context',
+        appManagedBootstrapCandidate,
         livenessKind: 'runtime_process',
         pidSource: 'opencode_bridge',
         runtimeDiagnostic: 'waiting for check-in',
@@ -375,6 +395,23 @@ describe('TeamProvisioningMixedSecondaryLaunchReconciliation', () => {
           runtimeAlive: true,
           bootstrapConfirmed: true,
           hardFailure: false,
+          sessionId: 'wrong-member-session',
+          bootstrapEvidenceSource: 'app_managed_bootstrap',
+          bootstrapMode: 'app_managed_context',
+          appManagedBootstrapCandidate: {
+            schemaVersion: 1,
+            source: 'app_managed_bootstrap',
+            teamName: 'team-a',
+            memberName: 'Bob-2',
+            runId: 'lane-run-1',
+            laneId: 'secondary:opencode:bob-2',
+            runtimeSessionId: 'wrong-member-session',
+            messageID: 'wrong-member-message',
+            contextHash: 'wrong-member-context',
+            briefingHash: 'wrong-member-briefing',
+            injectionVerifiedAt: '2026-07-02T00:00:30.000Z',
+            candidateAt: '2026-07-02T00:00:31.000Z',
+          },
           diagnostics: [],
         },
       },

@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { TeamConfigReader } from '../../TeamConfigReader';
+import { getTeamDataWorkerClient } from '../../TeamDataWorkerClient';
 import {
+  createNodeUpdateDirectTmuxRestartMemberConfigUseCasePorts,
   createUpdateDirectTmuxRestartMemberConfigUseCase,
   type DirectTmuxRestartMemberConfigInput,
 } from '../TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase';
@@ -35,6 +38,30 @@ function memberPrompts(raw: string): Record<string, string> {
 }
 
 describe('TeamProvisioningUpdateDirectTmuxRestartMemberConfigUseCase', () => {
+  it('invalidates main and worker-backed team config caches through the node adapter', () => {
+    const mainInvalidation = vi.spyOn(TeamConfigReader, 'invalidateTeam').mockImplementation(() => {
+      return undefined;
+    });
+    const workerInvalidation = vi
+      .spyOn(getTeamDataWorkerClient(), 'invalidateTeamConfig')
+      .mockImplementation(() => {
+        return undefined;
+      });
+
+    createNodeUpdateDirectTmuxRestartMemberConfigUseCasePorts().invalidateTeamConfig('team-a');
+
+    expect(mainInvalidation).toHaveBeenCalledOnce();
+    expect(mainInvalidation).toHaveBeenCalledWith('team-a');
+    expect(workerInvalidation).toHaveBeenCalledOnce();
+    expect(workerInvalidation).toHaveBeenCalledWith('team-a');
+    expect(mainInvalidation.mock.invocationCallOrder[0]).toBeLessThan(
+      workerInvalidation.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER
+    );
+
+    mainInvalidation.mockRestore();
+    workerInvalidation.mockRestore();
+  });
+
   it('updates an existing direct restart member config without host/service state', async () => {
     const writes: Array<{ teamName: string; contents: string }> = [];
     const invalidated: string[] = [];

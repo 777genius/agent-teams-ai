@@ -153,9 +153,10 @@ export async function launchMixedSecondaryLaneIfNeeded<TRun extends MixedSeconda
   const adapter = ports.getOpenCodeRuntimeAdapter();
   if (!adapter) {
     for (const lane of mixedSecondaryLanes) {
+      lane.runId = lane.runId ?? ports.randomUuid();
       lane.state = 'finished';
       lane.result = {
-        runId: lane.runId ?? ports.randomUuid(),
+        runId: lane.runId,
         teamName: run.teamName,
         launchPhase: 'finished',
         teamLaunchState: 'partial_failure',

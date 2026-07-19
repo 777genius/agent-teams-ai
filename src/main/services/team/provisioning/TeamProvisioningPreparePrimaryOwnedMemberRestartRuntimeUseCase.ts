@@ -144,11 +144,18 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
       );
     }
 
+    const tmuxRuntimeMembers = targetPersistedRuntimeMembers.flatMap((member) => {
+      const paneId = typeof member.tmuxPaneId === 'string' ? member.tmuxPaneId.trim() : '';
+      const concreteMemberName = typeof member.name === 'string' ? member.name.trim() : '';
+      return paneId &&
+        concreteMemberName &&
+        member.backendType?.trim().toLowerCase() === 'tmux' &&
+        matchesMemberNameOrBase(concreteMemberName, targetMemberName)
+        ? [{ member, paneId, concreteMemberName }]
+        : [];
+    });
     let directTmuxRestartPaneId: string | null = null;
-    const directTmuxRestartCandidatePaneId = getDirectTmuxRestartPaneId(
-      targetPersistedRuntimeMembers,
-      targetMemberName
-    );
+    const directTmuxRestartCandidatePaneId = tmuxRuntimeMembers[0]?.paneId ?? null;
     if (directTmuxRestartCandidatePaneId) {
       try {
         const paneInfo = (
@@ -167,19 +174,13 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
     }
     input.assertStillCurrent?.();
 
-    const hasExactRuntimeIdentity = (command: string | null): boolean =>
+    const hasExactRuntimeIdentity = (command: string | null, concreteMemberName: string): boolean =>
       commandArgEquals(command ?? '', '--team-name', input.teamName) &&
-      (commandArgEquals(command ?? '', '--agent-name', targetMemberName) ||
-        commandArgEquals(command ?? '', '--agent-id', `${targetMemberName}@${input.teamName}`));
+      (commandArgEquals(command ?? '', '--agent-name', concreteMemberName) ||
+        commandArgEquals(command ?? '', '--agent-id', `${concreteMemberName}@${input.teamName}`));
 
     const tmuxPaneIdsToVerify: string[] = [];
     if (!directTmuxRestartPaneId) {
-      const tmuxRuntimeMembers = targetPersistedRuntimeMembers.flatMap((member) => {
-        const paneId = typeof member.tmuxPaneId === 'string' ? member.tmuxPaneId.trim() : '';
-        return paneId && member.backendType?.trim().toLowerCase() === 'tmux'
-          ? [{ member, paneId }]
-          : [];
-      });
       const paneIds = [...new Set(tmuxRuntimeMembers.map(({ paneId }) => paneId))];
       const paneInfoById: ReadonlyMap<string, PrimaryOwnedMemberRestartTmuxPaneRuntimeInfo> =
         paneIds.length > 0 ? await ports.listTmuxPaneRuntimeInfo(paneIds) : new Map();
@@ -195,14 +196,21 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
       }
       input.assertStillCurrent?.();
 
-      for (const { member: persistedRuntimeMember, paneId } of tmuxRuntimeMembers) {
+      for (const {
+        member: persistedRuntimeMember,
+        paneId,
+        concreteMemberName,
+      } of tmuxRuntimeMembers) {
         const paneInfo = paneInfoById.get(paneId);
         if (!paneInfo) {
           continue;
         }
         const persistedRuntimePid = persistedRuntimeMember.runtimePid;
         let verifiedRuntimePid =
-          hasExactRuntimeIdentity(ports.readProcessCommandByPid(paneInfo.panePid)) &&
+          hasExactRuntimeIdentity(
+            ports.readProcessCommandByPid(paneInfo.panePid),
+            concreteMemberName
+          ) &&
           (typeof persistedRuntimePid !== 'number' || persistedRuntimePid === paneInfo.panePid)
             ? paneInfo.panePid
             : undefined;
@@ -214,7 +222,7 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
             if (!row || seen.has(row.pid)) continue;
             seen.add(row.pid);
             if (
-              hasExactRuntimeIdentity(row.command) &&
+              hasExactRuntimeIdentity(row.command, concreteMemberName) &&
               (typeof persistedRuntimePid !== 'number' || persistedRuntimePid === row.pid)
             ) {
               verifiedRuntimePid = row.pid;
@@ -225,7 +233,7 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
         }
         if (verifiedRuntimePid == null) {
           ports.logWarning(
-            `[${input.teamName}] Refusing to kill teammate pane ${input.memberName} (${paneId}) for manual restart: pane runtime identity does not match the exact team and member.`
+            `[${input.teamName}] Refusing to kill teammate pane ${concreteMemberName} (${paneId}) for manual restart: pane runtime identity does not match the exact team and member.`
           );
           continue;
         }
@@ -233,11 +241,11 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
         try {
           ports.killTmuxPane(paneId);
           ports.logInfo(
-            `[${input.teamName}] Killed teammate pane ${input.memberName} (${paneId}) for manual restart`
+            `[${input.teamName}] Killed teammate pane ${concreteMemberName} (${paneId}) for manual restart`
           );
         } catch (error) {
           ports.logDebug(
-            `[${input.teamName}] Failed to kill teammate pane ${input.memberName} (${paneId}) for manual restart: ${
+            `[${input.teamName}] Failed to kill teammate pane ${concreteMemberName} (${paneId}) for manual restart: ${
               error instanceof Error ? error.message : String(error)
             }`
           );
@@ -295,29 +303,6 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
       shouldDirectProcessRestart: backendTypes.has('process') || livePids.size > 0,
     };
   };
-}
-
-function getDirectTmuxRestartPaneId(
-  persistedRuntimeMembers: readonly PrimaryOwnedMemberRestartPersistedRuntimeMember[],
-  memberName: string
-): string | null {
-  for (const persistedRuntimeMember of persistedRuntimeMembers) {
-    const backendType = persistedRuntimeMember.backendType?.trim().toLowerCase();
-    const paneId =
-      typeof persistedRuntimeMember.tmuxPaneId === 'string'
-        ? persistedRuntimeMember.tmuxPaneId.trim()
-        : '';
-    const runtimeMemberName =
-      typeof persistedRuntimeMember.name === 'string' ? persistedRuntimeMember.name : '';
-    if (
-      backendType === 'tmux' &&
-      paneId &&
-      matchesMemberNameOrBase(runtimeMemberName, memberName)
-    ) {
-      return paneId;
-    }
-  }
-  return null;
 }
 
 async function waitForPidsToExit(

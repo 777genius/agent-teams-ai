@@ -6,6 +6,7 @@ import * as path from 'path';
 import { atomicWriteAsync } from '../atomicWrite';
 import { withFileLock } from '../fileLock';
 import { TeamConfigReader } from '../TeamConfigReader';
+import { getTeamDataWorkerClient } from '../TeamDataWorkerClient';
 
 import { matchesExactTeamMemberName } from './TeamProvisioningMemberIdentity';
 
@@ -205,8 +206,8 @@ export function createUpdateDirectTmuxRestartMemberConfigUseCase(
   };
 }
 
-export function createNodeUpdateDirectTmuxRestartMemberConfigUseCase(): UpdateDirectTmuxRestartMemberConfigUseCase {
-  return createUpdateDirectTmuxRestartMemberConfigUseCase({
+export function createNodeUpdateDirectTmuxRestartMemberConfigUseCasePorts(): UpdateDirectTmuxRestartMemberConfigUseCasePorts {
+  return {
     async readTeamConfigJson(teamName) {
       const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
       return tryReadRegularFileUtf8(configPath, {
@@ -224,6 +225,13 @@ export function createNodeUpdateDirectTmuxRestartMemberConfigUseCase(): UpdateDi
     },
     invalidateTeamConfig(teamName) {
       TeamConfigReader.invalidateTeam(teamName);
+      getTeamDataWorkerClient().invalidateTeamConfig(teamName);
     },
-  });
+  };
+}
+
+export function createNodeUpdateDirectTmuxRestartMemberConfigUseCase(): UpdateDirectTmuxRestartMemberConfigUseCase {
+  return createUpdateDirectTmuxRestartMemberConfigUseCase(
+    createNodeUpdateDirectTmuxRestartMemberConfigUseCasePorts()
+  );
 }

@@ -9,6 +9,7 @@ import {
   isDeterministicLaunchSpawnCancelled,
   registerDeterministicLaunchChildHandlers,
 } from '../TeamProvisioningLaunchDeterministicSpawnFlow';
+import { buildLaunchSyntheticRequest } from '../TeamProvisioningLaunchTeamFlow';
 
 import type {
   ProviderModelLaunchIdentity,
@@ -139,6 +140,42 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       model: 'gpt-5',
       effort: 'high',
       fastMode: 'off',
+      skipPermissions: false,
+      worktree: 'feature-a',
+      extraCliArgs: '--flag',
+      limitContext: true,
+      launchIdentity,
+      createdAt: 123,
+    });
+  });
+
+  it('persists normalized synthetic metadata when the relaunch request is sparse', () => {
+    const sparseRequest: TeamLaunchRequest = {
+      teamName: 'demo',
+      cwd: '/repo',
+      prompt: 'resume work',
+    };
+    const normalizedSyntheticRequest = buildLaunchSyntheticRequest({
+      request: { ...request, fastMode: 'inherit' },
+      members: syntheticRequest.members,
+      configRaw: '{}',
+    });
+
+    expect(
+      buildLaunchTeamMetaPayload({
+        request: sparseRequest,
+        syntheticRequest: normalizedSyntheticRequest,
+        launchIdentity,
+        nowMs: 123,
+      })
+    ).toMatchObject({
+      cwd: '/repo',
+      prompt: 'resume work',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5',
+      effort: 'high',
+      fastMode: 'inherit',
       skipPermissions: false,
       worktree: 'feature-a',
       extraCliArgs: '--flag',

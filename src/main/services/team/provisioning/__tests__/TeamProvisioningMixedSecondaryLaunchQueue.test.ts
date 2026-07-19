@@ -334,6 +334,9 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
     await launchMixedSecondaryLaneIfNeeded(run, ports);
 
     expect(lanes.map((lane) => lane.state)).toEqual(['finished', 'finished']);
+    expect(lanes.map((lane) => lane.runId)).toEqual(['generated-run-id', 'existing-run-id']);
+    expect(lanes.every((lane) => lane.result?.runId === lane.runId)).toBe(true);
+    expect(ports.randomUuid).toHaveBeenCalledTimes(1);
     expect(lanes[0].result).toMatchObject({
       runId: 'generated-run-id',
       teamLaunchState: 'partial_failure',

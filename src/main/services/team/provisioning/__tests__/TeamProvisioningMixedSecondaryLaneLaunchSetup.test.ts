@@ -87,9 +87,8 @@ function createPorts(
     clearOpenCodeRuntimeLaneStorage: vi.fn<
       MixedSecondaryLaneLaunchSetupPorts<TestRun>['clearOpenCodeRuntimeLaneStorage']
     >(async () => undefined),
-    deleteSecondaryRuntimeRun: vi.fn<
-      MixedSecondaryLaneLaunchSetupPorts<TestRun>['deleteSecondaryRuntimeRun']
-    >(),
+    deleteSecondaryRuntimeRun:
+      vi.fn<MixedSecondaryLaneLaunchSetupPorts<TestRun>['deleteSecondaryRuntimeRun']>(),
     getOpenCodeRuntimeAdapter: vi.fn<
       MixedSecondaryLaneLaunchSetupPorts<TestRun>['getOpenCodeRuntimeAdapter']
     >(() => createAdapter()),
@@ -108,9 +107,8 @@ function createPorts(
     readLaunchState: vi.fn<MixedSecondaryLaneLaunchSetupPorts<TestRun>['readLaunchState']>(
       async () => createSnapshot()
     ),
-    setSecondaryRuntimeRun: vi.fn<
-      MixedSecondaryLaneLaunchSetupPorts<TestRun>['setSecondaryRuntimeRun']
-    >(),
+    setSecondaryRuntimeRun:
+      vi.fn<MixedSecondaryLaneLaunchSetupPorts<TestRun>['setSecondaryRuntimeRun']>(),
     ...overrides,
   };
 }
@@ -149,10 +147,7 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchSetup', () => {
     const lane = createLane({ queuedAtMs: 900, diagnostics: ['requested diagnostic'] });
     const run = createRun();
     const ports = createPorts({
-      nowMs: vi
-        .fn<() => number>()
-        .mockReturnValueOnce(1000)
-        .mockReturnValueOnce(1075),
+      nowMs: vi.fn<() => number>().mockReturnValueOnce(1000).mockReturnValueOnce(1075),
       getOpenCodeRuntimeAdapter: vi.fn<
         MixedSecondaryLaneLaunchSetupPorts<TestRun>['getOpenCodeRuntimeAdapter']
       >(() => null),
@@ -163,6 +158,9 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchSetup', () => {
     const message = 'OpenCode runtime adapter is not registered for mixed team launch.';
     expect(result.outcome).toBe('handled');
     expect(lane.state).toBe('finished');
+    expect(lane.runId).toBe('generated-run-id');
+    expect(lane.result?.runId).toBe(lane.runId);
+    expect(ports.randomUuid).toHaveBeenCalledTimes(1);
     expect(lane.launchFinishedAtMs).toBe(1075);
     expect(lane.result).toMatchObject({
       runId: 'generated-run-id',

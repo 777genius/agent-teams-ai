@@ -16,9 +16,7 @@ export interface MixedSecondaryLaneLaunchSetupMigration {
   diagnostics: string[];
 }
 
-export interface MixedSecondaryLaneLaunchSetupPorts<
-  TRun extends MixedSecondaryLaneLaunchSetupRun,
-> {
+export interface MixedSecondaryLaneLaunchSetupPorts<TRun extends MixedSecondaryLaneLaunchSetupRun> {
   nowMs(): number;
   randomUuid(): string;
   teamsBasePath(): string;
@@ -43,7 +41,10 @@ export interface MixedSecondaryLaneLaunchSetupPorts<
     diagnostics: string[];
   }): Promise<unknown>;
   buildOpenCodeSecondaryLaneTimingDiagnostic(lane: MixedSecondaryRuntimeLaneState): string | null;
-  publishMixedSecondaryLaneStatusChange(run: TRun, lane: MixedSecondaryRuntimeLaneState): Promise<void>;
+  publishMixedSecondaryLaneStatusChange(
+    run: TRun,
+    lane: MixedSecondaryRuntimeLaneState
+  ): Promise<void>;
   readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
   setSecondaryRuntimeRun(input: {
     teamName: string;
@@ -82,9 +83,7 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
   lane.queuedAtMs = lane.queuedAtMs ?? lane.launchStartedAtMs;
   const requestedDiagnostics = [...lane.diagnostics];
   const shouldAbortLaunch = (): boolean =>
-    run.cancelRequested ||
-    run.processKilled ||
-    ports.isStoppingSecondaryRuntimeTeam(run.teamName);
+    run.cancelRequested || run.processKilled || ports.isStoppingSecondaryRuntimeTeam(run.teamName);
   const finishCancelledLane = async (): Promise<void> => {
     await ports
       .clearOpenCodeRuntimeLaneStorage({
@@ -108,11 +107,12 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
   const adapter = ports.getOpenCodeRuntimeAdapter();
   if (!adapter) {
     const message = 'OpenCode runtime adapter is not registered for mixed team launch.';
+    lane.runId = lane.runId ?? ports.randomUuid();
     lane.launchFinishedAtMs = ports.nowMs();
     const timingDiagnostic = ports.buildOpenCodeSecondaryLaneTimingDiagnostic(lane);
     lane.state = 'finished';
     lane.result = {
-      runId: lane.runId ?? ports.randomUuid(),
+      runId: lane.runId,
       teamName: run.teamName,
       launchPhase: 'finished',
       teamLaunchState: 'partial_failure',
