@@ -691,6 +691,22 @@ async function waitForStableReviewDecisions(scope, label, timeoutMs = 15_000) {
   throw new Error(`${label}: ${JSON.stringify(previous)}`);
 }
 
+async function waitForPersistedRevisionAfter(fixture, previousRevision, label, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  let lastRevision = null;
+  while (Date.now() < deadline) {
+    try {
+      const persisted = await readPersistedReviewScope(fixture);
+      lastRevision = persisted.revision;
+      if (persisted.revision > previousRevision) return persisted;
+    } catch (error) {
+      if (error?.code !== 'ENOENT') throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`${label}: expected revision > ${previousRevision}, found ${lastRevision}`);
+}
+
 async function assertViewportFits() {
   const metrics = await client.evaluate(`(() => {
     const root = document.documentElement;
@@ -824,6 +840,24 @@ async function main() {
       // the live toolbar cannot disappear between separate CDP round trips.
     }
     throw new Error(`Unable to perform ${label} for exact hunk 1`);
+  };
+  const performActionWithBlockedResponse = async (buttonExpression, label) => {
+    await client.waitFor(buttonExpression, `${label} trigger`);
+    const scheduled = await client.evaluate(`(() => {
+      const element = (${buttonExpression});
+      if (!(element instanceof HTMLElement)) return false;
+      setTimeout(() => {
+        element.click();
+        // Let the click handler's quiesce await continue and dispatch the real IPC call,
+        // then block the next renderer task before the main process can deliver its result.
+        setTimeout(() => {
+          const deadline = performance.now() + 15_000;
+          while (performance.now() < deadline) {}
+        }, 0);
+      }, 0);
+      return true;
+    })()`);
+    if (!scheduled) throw new Error(`Unable to schedule blocked-response ${label}`);
   };
   const restoreConfirm = `Array.from(document.querySelectorAll('[role="alertdialog"] button'))
     .find((button) => button.textContent?.trim() === 'Restore' && !button.disabled)`;
@@ -1092,11 +1126,38 @@ async function main() {
     assert.equal(remainingCandidates.length, 0, 'Resolved recovery copies must stay cleared');
     await assertDiskLines(fixture.changedFile, 'after-0', 'after-1');
     await assertViewportFits();
+
+    const beforeLostResponse = await readPersistedReviewScope(fixture);
+    await performActionWithBlockedResponse(
+      enabledButtonWithText('Reject'),
+      'lost-response file Reject'
+    );
+    await waitForPersistedRevisionAfter(
+      fixture,
+      beforeLostResponse.revision,
+      'Main process did not durably commit the blocked-response Reject'
+    );
+    await killAppImmediately();
+    await startApp(port, fixture);
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('12 rejected') &&
+        Boolean(${enabledButtonWithText('Undo')})`,
+      'lost-response file Reject recovered after SIGKILL'
+    );
+    await waitForDiskLines(fixture.changedFile, 'before-0', 'before-1');
+    await client.domClick(enabledButtonWithText('Undo'));
+    await client.waitFor(
+      `document.body?.innerText.includes('12 accepted')`,
+      'lost-response file Reject Undo'
+    );
+    await waitForDiskLines(fixture.changedFile, 'after-0', 'after-1');
+
     process.stdout.write(
       `Changes desktop E2E passed (dev:mcp${singleWindowMode ? ', single-window' : ''}): ` +
         'Accept All -> Reject file -> Restore back -> hydrate -> Restore forward -> ' +
         'Undo to start -> hydrate -> stale branch -> reload -> reversible recovery -> ' +
-        'Keep current -> reload -> exact disk/history\n'
+        'Keep current -> reload -> blocked response -> SIGKILL -> exact Undo\n'
     );
     return;
   }
