@@ -47,9 +47,25 @@ export async function readVerifiableProducerHandoff(input: {
   });
 }
 
+/**
+ * Reads the immutable workspace snapshot captured by the runtime when a
+ * broker-owned interrupt stopped an admitted worker. This is continuation
+ * evidence only; it is never completion or review approval.
+ */
+export async function readControlledRuntimeInterruptionHandoff(input: {
+  readonly producer: CodexGoalJobManifest;
+}): Promise<VerifiedProducerHandoff> {
+  return readProducerHandoff({
+    producer: input.producer,
+    allowProviderOutputInvalid: false,
+    allowControlledRuntimeInterruption: true,
+  });
+}
+
 async function readProducerHandoff(input: {
   readonly producer: CodexGoalJobManifest;
   readonly allowProviderOutputInvalid: boolean;
+  readonly allowControlledRuntimeInterruption?: boolean;
 }): Promise<VerifiedProducerHandoff> {
   const producerJobRoot = await canonicalDirectory(input.producer.jobRootDir);
   const producerWorkspace = await canonicalDirectory(
@@ -59,6 +75,8 @@ async function readProducerHandoff(input: {
     producer: input.producer,
     producerJobRoot,
     allowProviderOutputInvalid: input.allowProviderOutputInvalid,
+    allowControlledRuntimeInterruption:
+      input.allowControlledRuntimeInterruption === true,
   });
   const manifestPath = await realpath(
     resultHandoff?.manifestPath ??
@@ -122,6 +140,7 @@ async function currentResultHandoff(input: {
   readonly producer: CodexGoalJobManifest;
   readonly producerJobRoot: string;
   readonly allowProviderOutputInvalid: boolean;
+  readonly allowControlledRuntimeInterruption: boolean;
 }): Promise<
   | {
       readonly resultPath: string;
@@ -138,22 +157,37 @@ async function currentResultHandoff(input: {
   try {
     resultPath = await realpath(requestedResultPath);
   } catch (error) {
-    if (isNodeError(error, "ENOENT")) return undefined;
+    if (isNodeError(error, "ENOENT")) {
+      if (input.allowControlledRuntimeInterruption) {
+        throw new Error(
+          "project_control_runtime_interruption_handoff_result_required",
+        );
+      }
+      return undefined;
+    }
     throw error;
   }
   if (!pathInside(input.producerJobRoot, resultPath)) {
     throw new Error("project_control_verifier_handoff_result_unowned");
   }
   const result = await readRuntimeResultBrief(resultPath);
-  const completed = result.status === "done";
+  const completed =
+    !input.allowControlledRuntimeInterruption && result.status === "done";
   const verifiableProviderOutputFailure =
     input.allowProviderOutputInvalid &&
     (result.status === "failed" || result.status === "partial") &&
     result.lastFailureReason === "provider_output_invalid" &&
     result.handoffArtifactError === undefined;
+  const controlledRuntimeInterruption =
+    input.allowControlledRuntimeInterruption &&
+    result.status === "partial" &&
+    result.lastFailureReason === "runtime_interrupted" &&
+    result.handoffArtifactError === undefined;
   if (
     result.strict !== true ||
-    (!completed && !verifiableProviderOutputFailure) ||
+    (!completed &&
+      !verifiableProviderOutputFailure &&
+      !controlledRuntimeInterruption) ||
     !result.manifestPath ||
     !result.manifestSha256 ||
     !/^[0-9a-f]{64}$/i.test(result.manifestSha256)

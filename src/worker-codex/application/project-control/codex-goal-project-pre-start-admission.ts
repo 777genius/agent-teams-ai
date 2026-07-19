@@ -19,6 +19,8 @@ import {
   materializeBuiltinWorkerLaunchSpec,
   validateBuiltinWorkerLaunchSpec,
 } from "./codex-goal-project-builtin-pre-start-admission";
+import { readControlledRuntimeInterruptionHandoff } from "./codex-goal-project-verifier-handoff";
+import { parseWorkerLaunchSpec } from "./worker-launch-spec";
 import type { ProjectPreStartAdmissionLaunchWorkspaceMode } from "./codex-goal-project-pre-start-admission-types";
 export type {
   ProjectPreStartAdmissionDirtyContinuationMode,
@@ -284,6 +286,8 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
     input.workspaceMode === "terminal_handoff_dependency_recovery";
   const admittedInputPatchContinuation =
     input.workspaceMode === "admitted_input_patch_continuation";
+  const admittedInputPatchRuntimeContinuation =
+    input.workspaceMode === "admitted_input_patch_runtime_continuation";
   const cleanCapacityContinuation =
     input.workspaceMode === "clean_capacity_continuation";
   const cleanExplicitContinuation =
@@ -292,6 +296,7 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
     adoptionInput ||
     dirtyContinuation ||
     admittedInputPatchContinuation ||
+    admittedInputPatchRuntimeContinuation ||
     cleanCapacityContinuation ||
     cleanExplicitContinuation
       ? receipt.status === "launch_authorized" ||
@@ -301,19 +306,28 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
     adoptionInput ||
     input.workspaceMode === "admitted_input_patch" ||
     admittedInputPatchContinuation ||
+    admittedInputPatchRuntimeContinuation ||
     dirtyContinuation
       ? binding.workspaceStatus !== ""
       : verifiedInputPatch
         ? verifiedInputPatchBindingValid(binding, verifiedInputPatch)
         : binding.workspaceStatus === "";
-  const inputPatchBindingValid = dirtyContinuation
-    ? true
-    : verifiedInputPatch
-      ? verifiedInputPatchBindingValid(binding, verifiedInputPatch)
-      : adoptionInput
-        ? contract.inputPatchHash === binding.workspacePatchSha256 &&
-          receipt.workspacePatchSha256 === binding.workspacePatchSha256
-        : projectInputPatchBindingMatches(binding, contract);
+  const inputPatchBindingValid = admittedInputPatchRuntimeContinuation
+    ? await controlledRuntimeInputPatchBindingValid({
+        manifest: input.manifest,
+        descriptor,
+        contract,
+        binding,
+        verifiedInputPatch,
+      })
+    : dirtyContinuation
+      ? true
+      : verifiedInputPatch
+        ? verifiedInputPatchBindingValid(binding, verifiedInputPatch)
+        : adoptionInput
+          ? contract.inputPatchHash === binding.workspacePatchSha256 &&
+            receipt.workspacePatchSha256 === binding.workspacePatchSha256
+          : projectInputPatchBindingMatches(binding, contract);
   const mismatches = [
     binding.workspaceHead !== contract.phaseStartSha
       ? "workspace_head"
@@ -347,6 +361,37 @@ export async function assertProjectPreStartAdmissionLaunchBinding(input: {
       `project_control_pre_start_launch_binding_mismatch:${mismatches.join(",")}`,
     );
   }
+}
+
+async function controlledRuntimeInputPatchBindingValid(input: {
+  readonly manifest: CodexGoalJobManifest;
+  readonly descriptor: CodexGoalProjectPreStartAdmission;
+  readonly contract: JsonObject;
+  readonly binding: Awaited<ReturnType<typeof captureProjectPreStartBinding>>;
+  readonly verifiedInputPatch:
+    | ReturnType<typeof verifiedInputPatchFromReceipt>
+    | undefined;
+}): Promise<boolean> {
+  if (!isBuiltinDescriptor(input.descriptor) || !input.verifiedInputPatch) {
+    return false;
+  }
+  const launch = parseWorkerLaunchSpec(input.contract);
+  if (launch.reviewKind === "review") {
+    return verifiedInputPatchBindingValid(
+      input.binding,
+      input.verifiedInputPatch,
+    );
+  }
+  const handoff = await readControlledRuntimeInterruptionHandoff({
+    producer: input.manifest,
+  });
+  const ownedPaths = new Set(launch.ownedPaths);
+  return (
+    handoff.baseCommit === launch.phaseStartSha &&
+    handoff.patchSha256 === input.binding.workspacePatchSha256 &&
+    handoff.changedPaths.length > 0 &&
+    handoff.changedPaths.every((path) => ownedPaths.has(path))
+  );
 }
 
 export async function rebindProjectPreStartAdmissionManifest(input: {

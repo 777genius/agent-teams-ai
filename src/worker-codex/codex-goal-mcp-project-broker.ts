@@ -163,6 +163,8 @@ export function createCodexProjectControlBroker(
         ...((input.startAdmissionWorkspaceMode ===
               "admitted_input_patch_continuation" ||
             input.startAdmissionWorkspaceMode ===
+              "admitted_input_patch_runtime_continuation" ||
+            input.startAdmissionWorkspaceMode ===
               "clean_capacity_continuation") &&
             input.startManifest &&
             input.startWorkspaceLease

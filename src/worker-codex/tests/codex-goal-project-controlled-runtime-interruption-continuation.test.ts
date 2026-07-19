@@ -45,7 +45,7 @@ describe("controlled runtime interruption signal", () => {
     expect(
       isCapacityContinuationDecision({
         kind: "controlled_runtime_interruption",
-        workspaceMode: "admitted_input_patch_continuation",
+        workspaceMode: "admitted_input_patch_runtime_continuation",
         evidence,
       }),
     ).toBe(false);

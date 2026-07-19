@@ -7,4 +7,5 @@ export type ProjectPreStartAdmissionLaunchWorkspaceMode =
   | "clean_explicit_continuation"
   | "admitted_input_patch"
   | "admitted_input_patch_continuation"
+  | "admitted_input_patch_runtime_continuation"
   | ProjectPreStartAdmissionDirtyContinuationMode;

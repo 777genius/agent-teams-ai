@@ -17,7 +17,7 @@ export type ProjectPreStartContinuationDecision =
     }
   | {
       readonly kind: "controlled_runtime_interruption";
-      readonly workspaceMode: "admitted_input_patch_continuation";
+      readonly workspaceMode: "admitted_input_patch_runtime_continuation";
       readonly evidence: ControlledRuntimeInterruptionEvidence;
     };
 
@@ -54,7 +54,7 @@ export function projectPreStartContinuationDecision(input: {
   }
   return {
     kind: "controlled_runtime_interruption",
-    workspaceMode: "admitted_input_patch_continuation",
+    workspaceMode: "admitted_input_patch_runtime_continuation",
     evidence: controlledInterruption.evidence,
   };
 }

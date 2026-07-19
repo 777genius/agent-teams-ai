@@ -29,10 +29,12 @@ import {
   codexGoalWorkerControlTarget,
 } from "../application/codex-goal-worker-control";
 import {
+  assertProjectPreStartAdmissionLaunchBinding,
   planProjectPreStartAdmission,
   prepareProjectPreStartAdmission,
 } from "../application/project-control/codex-goal-project-pre-start-admission";
 import { authorizeProjectPreStartAdmissionLaunch } from "../application/project-control/codex-goal-project-pre-start-launch-authorization";
+import { materializeCodexGoalHandoffArtifacts } from "../codex-goal-handoff-artifacts";
 import { codexGoalProgressPath } from "../codex-goal-runner";
 import {
   cleanupProjectPreStartAdmissionFixtures,
@@ -144,6 +146,7 @@ describe("admitted input-patch capacity continuation", () => {
       tmuxSession: fixture.manifest.jobId,
       accessBoundary: AccessBoundary.IsolatedWorkspaceWrite,
       networkAccess: NetworkAccessMode.Restricted,
+      tags: ["worker-role-producer"],
     };
     const contract = withWorkKey({
       ...fixture.contract,
@@ -161,7 +164,7 @@ describe("admitted input-patch capacity continuation", () => {
         encoding: "utf8",
       }).trim(),
       inputPatchHash: patchSha256,
-      reviewKind: "review",
+      reviewKind: "remediation",
       ownedPaths: ["src/example.ts"],
       executionPolicy: {
         mode: "sandbox-only",
@@ -284,6 +287,7 @@ describe("admitted input-patch capacity continuation", () => {
     expect(bootstrapCalls).toBe(1);
 
     let reservedLaunch: CodexGoalLaunchInput | undefined;
+    const startAdmissionWorkspaceModes: Array<string | undefined> = [];
     const continuationDeps: CodexGoalMcpProjectControlActionsDeps = {
       ...deps,
       safeExecutionJournal: journal,
@@ -299,6 +303,7 @@ describe("admitted input-patch capacity continuation", () => {
       }),
       codexProjectControlBroker: (input) => {
         reservedLaunch = input.startLaunch;
+        startAdmissionWorkspaceModes.push(input.startAdmissionWorkspaceMode);
         return {
           startWorker: async () => ({ status: "started" }),
         } as unknown as ProjectControlBroker;
@@ -323,6 +328,10 @@ describe("admitted input-patch capacity continuation", () => {
     ).toBe(patchSha256);
 
     if (!reservedLaunch) throw new Error("expected reserved launch");
+    await writeFile(
+      join(workspacePath, "src", "example.ts"),
+      "export const value = 2;\n",
+    );
     const signal = await codexGoalWorkerControlService(
       reservedLaunch,
     ).enqueueSignal({
@@ -337,23 +346,37 @@ describe("admitted input-patch capacity continuation", () => {
       priority: "high",
       signalId: "runtime-interrupt-signal-1",
     });
+    const interruptedHandoff = await materializeCodexGoalHandoffArtifacts({
+      workerJobId: manifest.jobId,
+      taskId: manifest.taskId,
+      workspacePath,
+      jobRootDir: manifest.jobRootDir,
+    });
+    if (!interruptedHandoff) throw new Error("expected interrupted handoff");
+    const interruptedResultPath = join(
+      manifest.jobRootDir,
+      `${manifest.taskId}.latest-result.json`,
+    );
+    const interruptedResult = {
+      schemaVersion: 1,
+      taskId: manifest.taskId,
+      status: "partial",
+      reason: "runtime_interrupted",
+      updatedAt: new Date().toISOString(),
+      changedFiles: ["src/example.ts"],
+      evidence: ["safe_execution_status:partial"],
+      blockers: ["runtime_interrupted"],
+      nextAction: "preserve_patch",
+      details: {
+        runtimeControl: "interrupt_then_continue",
+        signalId: signal.signalId,
+        baseCommit: interruptedHandoff.baseCommit,
+      },
+      artifacts: interruptedHandoff.artifacts,
+    };
     await writeFile(
-      join(manifest.jobRootDir, `${manifest.taskId}.latest-result.json`),
-      `${JSON.stringify({
-        schemaVersion: 1,
-        taskId: manifest.taskId,
-        status: "partial",
-        reason: "runtime_interrupted",
-        updatedAt: new Date().toISOString(),
-        changedFiles: ["src/example.ts"],
-        evidence: ["safe_execution_status:partial"],
-        blockers: ["runtime_interrupted"],
-        nextAction: "preserve_patch",
-        details: {
-          runtimeControl: "interrupt_then_continue",
-          signalId: signal.signalId,
-        },
-      })}\n`,
+      interruptedResultPath,
+      `${JSON.stringify(interruptedResult)}\n`,
     );
     await expect(
       projectControlStartStoredJobView(args, continuationDeps),
@@ -368,8 +391,41 @@ describe("admitted input-patch capacity continuation", () => {
         continuationDeps,
       ),
     ).resolves.toMatchObject({ ok: true });
+    expect(startAdmissionWorkspaceModes.at(-1)).toBe(
+      "admitted_input_patch_runtime_continuation",
+    );
 
-    await writeFile(join(workspacePath, "UNTRACKED.txt"), "drift\n");
+    await writeFile(
+      interruptedResultPath,
+      `${JSON.stringify({ ...interruptedResult, status: "done" })}\n`,
+    );
+    await expect(
+      assertProjectPreStartAdmissionLaunchBinding({
+        manifest,
+        scope,
+        workspaceMode: "admitted_input_patch_runtime_continuation",
+      }),
+    ).rejects.toThrow("project_control_verifier_handoff_result_invalid");
+
+    await rm(interruptedResultPath);
+    await expect(
+      assertProjectPreStartAdmissionLaunchBinding({
+        manifest,
+        scope,
+        workspaceMode: "admitted_input_patch_runtime_continuation",
+      }),
+    ).rejects.toThrow(
+      "project_control_runtime_interruption_handoff_result_required",
+    );
+    await writeFile(
+      interruptedResultPath,
+      `${JSON.stringify(interruptedResult)}\n`,
+    );
+
+    await writeFile(
+      join(workspacePath, "src", "example.ts"),
+      "export const value = 3;\n",
+    );
     await expect(
       projectControlStartStoredJobView(
         { ...args, forceStart: true },
