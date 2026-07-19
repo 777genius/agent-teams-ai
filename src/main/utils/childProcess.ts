@@ -455,6 +455,29 @@ function windowsBatchLauncherReparsesArgs(binaryPath: string): boolean {
   }
 }
 
+/** `%1`/`%~1` substitution can reactivate shell syntax embedded in argv. */
+function windowsBatchLauncherUsesPositionalArgs(binaryPath: string): boolean {
+  if (!isWindowsBatchLauncher(binaryPath)) {
+    return false;
+  }
+  try {
+    return /%(?:[1-9]|~[^\s%]*[1-9])/.test(readFileSync(binaryPath, 'utf8'));
+  } catch {
+    return false;
+  }
+}
+
+function assertSafeWindowsBatchPositionalArgs(command: string, args: string[]): void {
+  if (!windowsBatchLauncherUsesPositionalArgs(command)) {
+    return;
+  }
+  if (args.some((arg) => /[()\][%!^"`<>&|;,]/.test(arg))) {
+    throw new Error(
+      'Unsafe Windows batch positional argument: launcher reparses %1..%9 shell syntax'
+    );
+  }
+}
+
 function containsWindowsShellUnsafeControlChar(part: string): boolean {
   for (let index = 0; index < part.length; index += 1) {
     const code = part.charCodeAt(index);
@@ -479,6 +502,7 @@ function buildWindowsShellFallbackCommand(parts: string[]): string {
   if (command === undefined) {
     return '';
   }
+  assertSafeWindowsBatchPositionalArgs(command, args);
   const doubleEscapeMetaCharacters = windowsBatchLauncherReparsesArgs(command);
   return [
     escapeWindowsCmdCommand(command),

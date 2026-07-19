@@ -106,9 +106,10 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
     }
   }, 30_000);
 
-  it('preserves adversarial argv through batch parameter modifiers', async () => {
+  it('preserves safe argv through batch parameter modifiers', async () => {
     const fixture = createWindowsArgvFixture();
     const launcherPath = path.join(fixture.root, 'parameter launcher.cmd');
+    const safeArgs = ['safe value', '', 'C:\\temp\\'];
     writeFileSync(
       launcherPath,
       '@echo off\r\n"%~dp0Node Runtime.exe" "%~dp0echo-args.cjs" "%~1" "%~2" "%~3"\r\n',
@@ -116,14 +117,36 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
     );
 
     try {
-      const { stdout, stderr } = await execCli(launcherPath, ADVERSARIAL_ARGS, {
+      const { stdout, stderr } = await execCli(launcherPath, safeArgs, {
         cwd: fixture.root,
         preferShellForWindowsBatch: true,
         timeout: 10_000,
       });
 
       expect(stderr).toBe('');
-      expect(JSON.parse(stdout)).toEqual(ADVERSARIAL_ARGS);
+      expect(JSON.parse(stdout)).toEqual(safeArgs);
+    } finally {
+      rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+    }
+  }, 30_000);
+
+  it('rejects shell syntax before a batch launcher can reparse positional arguments', async () => {
+    const fixture = createWindowsArgvFixture();
+    const launcherPath = path.join(fixture.root, 'parameter launcher.cmd');
+    writeFileSync(
+      launcherPath,
+      '@echo off\r\n"%~dp0Node Runtime.exe" "%~dp0echo-args.cjs" "%~1"\r\n',
+      'utf8'
+    );
+
+    try {
+      await expect(
+        execCli(launcherPath, [ADVERSARIAL_ARGS[0]], {
+          cwd: fixture.root,
+          preferShellForWindowsBatch: true,
+          timeout: 10_000,
+        })
+      ).rejects.toThrow('Unsafe Windows batch positional argument');
     } finally {
       rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
