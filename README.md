@@ -63,6 +63,14 @@
   <img width="1312" height="820" alt="image" src="https://github.com/user-attachments/assets/e78c2229-5d40-4615-bbee-79b0bc611d51" />
 </td>
 </tr>
+<tr>
+<td width="50%">
+  <img src="docs/screenshots/2.png" alt="Organization hierarchy with teams, agents, and active tasks" width="100%" />
+</td>
+<td width="50%">
+  <img src="docs/screenshots/12.jpg" alt="Organization structure map with team and task details" width="100%" />
+</td>
+</tr>
 </table>
 
 <!--
