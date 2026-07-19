@@ -387,7 +387,7 @@ export class LocalGitIntegrationAdapter implements GitPort {
       this.mergeRuntime(),
       workspacePath,
       input.attempt.merge?.expectedTargetCommit,
-      input.attempt.workerOutput.changedFiles,
+      input.attempt.expectedFiles,
     );
   }
 

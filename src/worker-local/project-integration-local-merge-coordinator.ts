@@ -85,10 +85,13 @@ export async function applyReviewedMerge(input: {
   }
   if (
     input.workerOutput.changedFiles.length > 0 &&
-    !sameFiles(input.workerOutput.changedFiles, input.attempt.expectedFiles)
+    !includesAllFiles(
+      input.attempt.expectedFiles,
+      input.workerOutput.changedFiles,
+    )
   ) {
     throw new Error(
-      "local_git_integration_merge_reviewed_conflict_set_mismatch",
+      "local_git_integration_merge_patch_outside_reviewed_scope",
     );
   }
   if (input.allowAlreadyApplied === true) {
@@ -115,6 +118,7 @@ export async function applyReviewedMerge(input: {
   const expectedFetchedHead = remoteHead.toLowerCase();
 
   let mergeStarted = false;
+  let mergeConflictFiles: readonly string[] = [];
   try {
     await runtime.git(
       [
@@ -184,6 +188,7 @@ export async function applyReviewedMerge(input: {
       ["diff", "--name-only", "--diff-filter=U", "-z"],
       workspacePath,
     );
+    mergeConflictFiles = conflictFiles;
     const mergeFootprint = (await runtime.getStatus(workspacePath)).dirtyFiles;
     if (!includesAllFiles(mergeFootprint, conflictFiles)) {
       throw new Error(
@@ -197,7 +202,8 @@ export async function applyReviewedMerge(input: {
       sourceCommit: merge.sourceCommit,
       conflictFiles,
       mergeFootprint,
-      reviewedFiles: input.workerOutput.changedFiles,
+      approvedFiles: input.attempt.expectedFiles,
+      patchFiles: input.workerOutput.changedFiles,
     });
     if (
       reviewedScope.semanticFiles.length > 0 &&
@@ -230,8 +236,11 @@ export async function applyReviewedMerge(input: {
     await restoreFilesToFirstParent(
       runtime,
       workspacePath,
-      input.workerOutput.changedFiles,
+      conflictFiles,
     );
+    const firstParentResolvedFiles = (
+      await runtime.getStatus(workspacePath)
+    ).dirtyFiles;
 
     const patchPath = await runtime.canonicalWorkerPatch(input.workerOutput);
     await runtime.assertPatchSha256(
@@ -247,7 +256,7 @@ export async function applyReviewedMerge(input: {
       );
     }
     const forwardCheck = await runtime.tryGit(
-      ["apply", "--check", "--whitespace=nowarn", patchPath],
+      ["apply", "--3way", "--check", "--whitespace=nowarn", patchPath],
       workspacePath,
     );
     if (forwardCheck.exitCode !== 0) {
@@ -258,7 +267,7 @@ export async function applyReviewedMerge(input: {
       input.workerOutput.patchSha256,
     );
     await runtime.git(
-      ["apply", "--whitespace=nowarn", patchPath],
+      ["apply", "--3way", "--whitespace=nowarn", patchPath],
       workspacePath,
     );
     const unmerged = await runtime.gitNullTerminatedPaths(
@@ -272,7 +281,7 @@ export async function applyReviewedMerge(input: {
     }
     const changedFiles = (await runtime.getStatus(workspacePath)).dirtyFiles;
     const expectedChangedFiles = uniqueSorted([
-      ...mergeFootprint,
+      ...firstParentResolvedFiles,
       ...input.workerOutput.changedFiles,
     ]);
     if (!sameFiles(changedFiles, expectedChangedFiles)) {
@@ -290,7 +299,7 @@ export async function applyReviewedMerge(input: {
           runtime,
           workspacePath,
           merge.expectedTargetCommit,
-          input.workerOutput.changedFiles,
+          mergeConflictFiles,
         );
       } catch (rollbackError) {
         throw new IntegrationError({

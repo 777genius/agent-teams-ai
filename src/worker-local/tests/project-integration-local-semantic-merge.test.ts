@@ -130,7 +130,7 @@ describe("local semantic merge integration", () => {
         },
       }),
     ).rejects.toThrow(
-      "local_git_integration_merge_reviewed_conflict_set_mismatch",
+      "local_git_integration_merge_patch_outside_reviewed_scope",
     );
     expect(
       (await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])).trim(),

@@ -23,20 +23,23 @@ export async function inspectReviewedMergeScope(input: {
   readonly sourceCommit: string;
   readonly conflictFiles: readonly string[];
   readonly mergeFootprint: readonly string[];
-  readonly reviewedFiles: readonly string[];
+  readonly approvedFiles: readonly string[];
+  readonly patchFiles: readonly string[];
 }): Promise<ReviewedMergeScope> {
   const conflicts = uniqueSorted(input.conflictFiles);
-  const reviewed = uniqueSorted(input.reviewedFiles);
-  const missingConflicts = conflicts.filter((file) => !reviewed.includes(file));
+  const approved = uniqueSorted(input.approvedFiles);
+  const missingConflicts = conflicts.filter((file) => !approved.includes(file));
   if (missingConflicts.length > 0) {
     throw new Error(
-      `local_git_integration_merge_conflicts_missing_from_reviewed_patch:${missingConflicts.join(
+      `local_git_integration_merge_conflicts_missing_from_reviewed_scope:${missingConflicts.join(
         ",",
       )}`,
     );
   }
 
-  const semanticFiles = reviewed.filter((file) => !conflicts.includes(file));
+  const semanticFiles = uniqueSorted(input.patchFiles).filter(
+    (file) => !conflicts.includes(file),
+  );
   if (semanticFiles.length === 0) {
     return {
       parentFootprint: uniqueSorted(input.mergeFootprint),

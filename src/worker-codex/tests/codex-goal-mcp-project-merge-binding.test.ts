@@ -25,6 +25,46 @@ afterEach(async () => {
 });
 
 describe("project merge-bound refill", () => {
+  it("documents runtime-owned source pinning for both atomic merge tools", async () => {
+    const server = createCodexGoalMcpServer();
+    const client = new Client({
+      name: "merge-binding-schema-test",
+      version: "0.0.0",
+    });
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    try {
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+      const tools = await client.listTools();
+      for (const toolName of [
+        "codex_goal_project_refill_worker",
+        "codex_goal_project_prepare_verifier",
+      ]) {
+        const tool = tools.tools.find((candidate) => candidate.name === toolName);
+        const mergeBinding = (
+          tool?.inputSchema as {
+            readonly properties?: Readonly<Record<
+              string,
+              { readonly description?: string }
+            >>;
+          } | undefined
+        )?.properties?.mergeBinding;
+        expect(mergeBinding?.description).toContain(
+          "omitted expectedSourceCommit",
+        );
+        expect(mergeBinding?.description).toContain(
+          "runtime resolves and pins both commits",
+        );
+      }
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
   it("materializes immutable divergent parents and reuses them on retry", async () => {
     const root = await mkdtemp(join(tmpdir(), "project-merge-refill-"));
     roots.push(root);

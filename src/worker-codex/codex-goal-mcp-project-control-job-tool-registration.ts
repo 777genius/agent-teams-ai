@@ -67,7 +67,7 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
           sourceRemote: z.string().min(1),
           sourceBranch: z.string().min(1),
         }).strict().optional().describe(
-          "Atomically bind this worker to the current canonical target and exact remote merge source. Requires requireCanonicalRemoteHead=true and omitted canonicalSha/phaseStartSha; runtime pins both commits into the immutable admission receipt.",
+          "Atomically bind this worker to the current canonical target and exact remote merge source. Requires requireCanonicalRemoteHead=true and omitted expectedSourceCommit/canonicalSha/phaseStartSha; runtime resolves and pins both commits into the immutable admission receipt.",
         ),
         requireCanonicalRemoteHead: z.boolean().optional(),
         producerJobId: z.string().optional(),
@@ -129,7 +129,7 @@ export function registerCodexGoalProjectControlJobTools(server: McpServer): void
           sourceRemote: z.string().min(1),
           sourceBranch: z.string().min(1),
         }).strict().optional().describe(
-          "Atomically bind this verifier to the current canonical target and exact remote merge source. Requires omitted canonicalSha/phaseStartSha; runtime pins both commits into the immutable admission receipt.",
+          "Atomically bind this verifier to the current canonical target and exact remote merge source. Requires requireCanonicalRemoteHead=true and omitted expectedSourceCommit/canonicalSha/phaseStartSha; runtime resolves and pins both commits into the immutable admission receipt.",
         ),
         newBranch: z.string().optional(),
         promptBody: z.string().optional(),

@@ -623,7 +623,7 @@ describe("local project integration adapters", () => {
         changedFiles: ["src/not-the-conflict.ts"],
       },
     })).rejects.toThrow(
-      "local_git_integration_merge_conflicts_missing_from_reviewed_patch:src/memory.ts",
+      "local_git_integration_merge_conflicts_missing_from_reviewed_scope:src/memory.ts",
     );
 
     expect((await gitOutput(fixture.workspacePath, ["rev-parse", "HEAD"])).trim())

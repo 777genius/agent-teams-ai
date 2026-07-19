@@ -113,6 +113,139 @@ export async function createMergeFixture(): Promise<{
   };
 }
 
+export async function createTargetOnlyConflictMergeFixture(): Promise<{
+  readonly rootDir: string;
+  readonly workspacePath: string;
+  readonly sourceCommit: string;
+  readonly targetCommit: string;
+  readonly patchPath: string;
+  readonly patchSha256: string;
+  readonly approvedFiles: readonly string[];
+  readonly patchFiles: readonly string[];
+  readonly expectedAppliedFiles: readonly string[];
+}> {
+  const rootDir = await mkdtemp(
+    join(tmpdir(), "project-integration-target-only-conflict-"),
+  );
+  tempRoots.push(rootDir);
+  const workspacePath = join(rootDir, "workspace");
+  const remotePath = join(rootDir, "remote.git");
+  const approvedFiles = [
+    "src/member-lifecycle.ts",
+    "src/safe-e2e.ts",
+    "src/service.ts",
+    "src/stop-flow.ts",
+  ];
+  const patchFiles = [
+    "src/member-lifecycle.ts",
+    "src/safe-e2e.ts",
+    "src/service.ts",
+  ];
+  const expectedAppliedFiles = [
+    "src/base-change.ts",
+    ...patchFiles,
+  ].sort();
+
+  await mkdir(join(workspacePath, "src"), { recursive: true });
+  await git(workspacePath, ["init", "-b", "main"]);
+  await git(workspacePath, ["config", "user.email", "test@example.com"]);
+  await git(workspacePath, ["config", "user.name", "Test User"]);
+  for (const file of approvedFiles) {
+    await writeFile(
+      join(workspacePath, file),
+      file === "src/member-lifecycle.ts"
+        ? memberLifecycleContent()
+        : `${file}: initial\n`,
+    );
+  }
+  await git(workspacePath, ["add", "."]);
+  await git(workspacePath, ["commit", "-m", "chore: initial"]);
+  await execFileAsync("git", ["init", "--bare", remotePath]);
+  await git(workspacePath, ["remote", "add", "origin", remotePath]);
+
+  await git(workspacePath, ["checkout", "-b", "base"]);
+  for (const file of approvedFiles) {
+    await writeFile(
+      join(workspacePath, file),
+      file === "src/member-lifecycle.ts"
+        ? memberLifecycleContent({ baseLine: "base-side lifecycle policy" })
+        : `${file}: base\n`,
+    );
+  }
+  await writeFile(
+    join(workspacePath, "src", "base-change.ts"),
+    "export const baseChange = true;\n",
+  );
+  await git(workspacePath, ["add", "."]);
+  await git(workspacePath, ["commit", "-m", "feat: update base"]);
+  const sourceCommit = (
+    await gitOutput(workspacePath, ["rev-parse", "HEAD"])
+  ).trim();
+  await git(workspacePath, ["push", "origin", "base"]);
+
+  await git(workspacePath, ["checkout", "main"]);
+  for (const file of approvedFiles.filter(
+    (file) => file !== "src/member-lifecycle.ts",
+  )) {
+    await writeFile(join(workspacePath, file), `${file}: target\n`);
+  }
+  await git(workspacePath, ["add", "."]);
+  await git(workspacePath, ["commit", "-m", "feat: update target"]);
+  const targetCommit = (
+    await gitOutput(workspacePath, ["rev-parse", "HEAD"])
+  ).trim();
+  await git(workspacePath, ["push", "origin", "main"]);
+
+  for (const file of patchFiles) {
+    await writeFile(
+      join(workspacePath, file),
+      file === "src/member-lifecycle.ts"
+        ? memberLifecycleContent({
+            workerLine: "worker-side lifecycle assertion",
+          })
+        : `${file}: reviewed merge\n`,
+    );
+  }
+  const patch = await gitOutput(
+    workspacePath,
+    ["diff", "--binary", "--", ...patchFiles],
+  );
+  const patchPath = join(rootDir, "reviewed-target-only-resolution.patch");
+  await writeFile(patchPath, patch);
+  const patchSha256 = createHash("sha256").update(patch).digest("hex");
+  await git(workspacePath, ["checkout", "--", ...patchFiles]);
+
+  return {
+    rootDir,
+    workspacePath,
+    sourceCommit,
+    targetCommit,
+    patchPath,
+    patchSha256,
+    approvedFiles,
+    patchFiles,
+    expectedAppliedFiles,
+  };
+}
+
+function memberLifecycleContent(input: {
+  readonly baseLine?: string;
+  readonly workerLine?: string;
+} = {}): string {
+  return [
+    "member lifecycle",
+    input.baseLine ?? "initial lifecycle policy",
+    "line 3",
+    "line 4",
+    "line 5",
+    "line 6",
+    "line 7",
+    "line 8",
+    input.workerLine ?? "initial lifecycle assertion",
+    "line 10",
+  ].join("\n") + "\n";
+}
+
 export async function createSemanticMergeFixture(input: {
   readonly includeUnrelatedPath?: boolean;
 } = {}): Promise<{

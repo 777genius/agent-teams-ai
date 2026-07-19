@@ -166,15 +166,7 @@ export function openIntegrationAttempt(
   const merge = input.merge
     ? normalizeMergeIntegrationPlan(input.merge, input.workerOutput)
     : undefined;
-  if (merge) {
-    if (input.workerOutput.changedFiles.length > 0) {
-      assertSameFiles(
-        input.workerOutput.changedFiles,
-        expectedFiles,
-        "reviewed_merge_conflict_set_mismatch",
-      );
-    }
-  } else {
+  if (!merge || input.workerOutput.changedFiles.length > 0) {
     assertFilesWithinExpected(input.workerOutput.changedFiles, expectedFiles);
   }
   return {
@@ -326,7 +318,13 @@ export function assertIntegrationAppliedFiles(
     assertFilesWithinExpected(files, attempt.expectedFiles);
     return;
   }
-  assertFilesInclude(files, attempt.expectedFiles, "reviewed_merge_conflicts_missing");
+  if (attempt.workerOutput.changedFiles.length > 0) {
+    assertFilesInclude(
+      files,
+      attempt.workerOutput.changedFiles,
+      "reviewed_merge_patch_files_missing",
+    );
+  }
 }
 
 export function assertIntegrationCommitFiles(

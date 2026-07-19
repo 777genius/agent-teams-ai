@@ -787,25 +787,7 @@ describe("project integration use cases", () => {
     });
   });
 
-  it("requires the reviewed merge files to equal the conflict patch set", async () => {
-    const fixture = createFixture();
-    const candidate = mergeInput();
-
-    await expect(openProjectIntegrationAttempt(fixture.deps(), {
-      ...candidate,
-      reviewDecision: {
-        ...candidate.reviewDecision,
-        approvedFiles: ["src/base-change.ts", "src/memory.ts"],
-      },
-    })).rejects.toMatchObject({
-      reason: IntegrationErrorReason.UnexpectedFiles,
-      evidence: [
-        "reviewed_merge_conflict_set_mismatch:expected=src/base-change.ts,src/memory.ts;actual=src/memory.ts",
-      ],
-    });
-  });
-
-  it("aborts a merge when the reviewed conflict is absent from the result", async () => {
+  it("aborts a merge when an immutable patch file is absent from the result", async () => {
     const fixture = createFixture();
     fixture.git.appliedFiles = ["src/base-change.ts"];
     const opened = await openProjectIntegrationAttempt(
@@ -817,7 +799,7 @@ describe("project integration use cases", () => {
       attemptId: opened.attemptId,
     })).rejects.toMatchObject({
       reason: IntegrationErrorReason.UnexpectedFiles,
-      evidence: ["reviewed_merge_conflicts_missing:src/memory.ts"],
+      evidence: ["reviewed_merge_patch_files_missing:src/memory.ts"],
     });
     expect(fixture.git.calls).toEqual(["status", "apply", "abortMerge"]);
     expect(fixture.store.get(opened.attemptId)?.status).toBe(
