@@ -214,7 +214,7 @@ export function buildMixedSecondaryLaunchSnapshotForRun<
               hardFailureReason: evidenceEntry.hardFailureReason,
               pendingPermissionRequestIds: evidenceEntry.pendingPermissionRequestIds,
               runtimePid: evidenceEntry.runtimePid,
-              sessionId: evidenceEntry.sessionId,
+              runtimeSessionId: evidenceEntry.sessionId,
               livenessKind: evidenceEntry.livenessKind,
               pidSource: evidenceEntry.pidSource,
               runtimeDiagnostic: evidenceEntry.runtimeDiagnostic,

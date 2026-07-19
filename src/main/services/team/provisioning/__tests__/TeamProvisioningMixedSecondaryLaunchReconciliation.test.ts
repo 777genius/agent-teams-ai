@@ -258,7 +258,7 @@ describe('TeamProvisioningMixedSecondaryLaunchReconciliation', () => {
         bootstrapConfirmed: false,
         hardFailure: false,
         runtimePid: 123,
-        sessionId: 'session-1',
+        runtimeSessionId: 'session-1',
         livenessKind: 'runtime_process',
         pidSource: 'opencode_bridge',
         runtimeDiagnostic: 'waiting for check-in',
@@ -270,6 +270,93 @@ describe('TeamProvisioningMixedSecondaryLaunchReconciliation', () => {
       pendingReason: undefined,
     });
     expect(params?.secondaryMembers?.[0]?.leadDefaults).toBe(params?.leadDefaults);
+  });
+
+  it('retains hard failure evidence only for the current secondary runtime generation', () => {
+    const currentHarness = createPorts();
+    const currentFailure: TeamRuntimeLaunchResult = {
+      runId: 'lane-run-1',
+      teamName: 'team-a',
+      launchPhase: 'finished',
+      teamLaunchState: 'partial_failure',
+      members: {
+        Bob: {
+          memberName: 'Bob',
+          providerId: 'opencode',
+          launchState: 'failed_to_start',
+          agentToolAccepted: false,
+          runtimeAlive: false,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          hardFailureReason: 'opencode_runtime_adapter_missing',
+          diagnostics: ['OpenCode runtime adapter is not registered for mixed team launch.'],
+        },
+      },
+      warnings: [],
+      diagnostics: ['OpenCode runtime adapter is not registered for mixed team launch.'],
+    };
+
+    buildMixedSecondaryLaunchSnapshotForRun(
+      createRun({ lanes: [createLane({ state: 'finished', result: currentFailure })] }),
+      'finished',
+      currentHarness.ports
+    );
+
+    expect(currentHarness.getCapturedParams()?.secondaryMembers?.[0]?.evidence).toMatchObject({
+      launchState: 'failed_to_start',
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      hardFailure: true,
+      hardFailureReason: 'opencode_runtime_adapter_missing',
+    });
+
+    const staleFailureHarness = createPorts();
+    buildMixedSecondaryLaunchSnapshotForRun(
+      createRun({
+        lanes: [
+          createLane({
+            runId: 'lane-run-2',
+            state: 'finished',
+            result: currentFailure,
+          }),
+        ],
+      }),
+      'finished',
+      staleFailureHarness.ports
+    );
+
+    expect(staleFailureHarness.getCapturedParams()?.secondaryMembers?.[0]?.evidence).toBeNull();
+
+    const stalePositiveHarness = createPorts();
+    buildMixedSecondaryLaunchSnapshotForRun(
+      createRun({
+        lanes: [
+          createLane({
+            runId: 'lane-run-2',
+            state: 'finished',
+            result: {
+              ...currentFailure,
+              teamLaunchState: 'clean_success',
+              members: {
+                Bob: {
+                  ...currentFailure.members.Bob,
+                  launchState: 'confirmed_alive',
+                  agentToolAccepted: true,
+                  runtimeAlive: true,
+                  bootstrapConfirmed: true,
+                  hardFailure: false,
+                  hardFailureReason: undefined,
+                },
+              },
+            },
+          }),
+        ],
+      }),
+      'finished',
+      stalePositiveHarness.ports
+    );
+
+    expect(stalePositiveHarness.getCapturedParams()?.secondaryMembers?.[0]?.evidence).toBeNull();
   });
 
   it('rejects case-normalized secondary evidence for a different member or runtime generation', () => {
