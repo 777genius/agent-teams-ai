@@ -60,6 +60,16 @@ export interface TokenUsageCostBreakdownDto {
   billingMode: TokenUsageBillingMode;
 }
 
+export interface TokenUsageKiroCreditUsageDto {
+  /** Exact credits consumed by one completed Kiro assistant turn. */
+  credits: number;
+  creditsUnit: string;
+}
+
+export interface TokenUsageProviderUsageDto {
+  kiro?: TokenUsageKiroCreditUsageDto;
+}
+
 export interface TokenUsageRunSourceDto {
   id: string;
   appRunId: string;
@@ -115,6 +125,8 @@ export interface TokenUsageEventDto {
   nativeLogPath?: string;
   tokens: TokenUsageTokenBreakdownDto;
   cost: TokenUsageCostBreakdownDto;
+  /** Provider-native metering that must not be converted to tokens or USD. */
+  providerUsage?: TokenUsageProviderUsageDto;
   usageSourceKind: TokenUsageSourceKind;
   rawUsageJson?: unknown;
   occurredAt: string;
@@ -146,6 +158,12 @@ export interface TokenUsageSummaryDto {
   unknownBillingTokens: number;
   exactEventCount: number;
   estimatedEventCount: number;
+  /** Exact Kiro credits observed in provider metadata for completed turns. */
+  kiroCredits?: number;
+  kiroCreditEventCount?: number;
+  lastKiroCredits?: number;
+  lastKiroCreditsAt?: string;
+  kiroCreditsUnit?: string;
 }
 
 export interface TokenUsageBreakdownItemDto {

@@ -135,8 +135,8 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
             launchModel: 'llama.cpp/qwen-test:0.5b',
             displayName: 'qwen-test:0.5b',
             hidden: false,
-            supportedReasoningEfforts: [],
-            defaultReasoningEffort: null,
+            supportedReasoningEfforts: ['high', 'ultra'],
+            defaultReasoningEffort: 'ultra',
             inputModalities: ['text'],
             supportsPersonality: true,
             isDefault: true,
@@ -179,6 +179,8 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
       reason: 'Execution proof required',
     });
     expect(provider.modelCatalog?.models[0]?.metadata?.releaseDate).toBe('2026-05-20');
+    expect(provider.modelCatalog?.models[0]?.supportedReasoningEfforts).toEqual(['high', 'ultra']);
+    expect(provider.modelCatalog?.models[0]?.defaultReasoningEffort).toBe('ultra');
   });
 
   test('ignores Anthropic subscription rate limits for API key auth', () => {

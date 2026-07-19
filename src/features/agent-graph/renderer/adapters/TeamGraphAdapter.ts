@@ -569,6 +569,7 @@ export class TeamGraphAdapter {
       const exception = TeamGraphAdapter.#buildMemberException(
         member.runtimeAdvisory,
         member.providerId,
+        member.model,
         spawn,
         runtimeEntry,
         pendingApprovalAgents?.has(member.name) ?? false
@@ -922,8 +923,8 @@ export class TeamGraphAdapter {
         sourceTaskIds: Array.from(edge.sourceTaskIds),
         targetTaskIds: Array.from(edge.targetTaskIds),
         label:
-            edge.aggregateCount > 1 &&
-            (edge.source.includes(':overflow:') || edge.target.includes(':overflow:'))
+          edge.aggregateCount > 1 &&
+          (edge.source.includes(':overflow:') || edge.target.includes(':overflow:'))
             ? (text?.hiddenBlockingLinks(edge.aggregateCount) ??
               `${edge.aggregateCount} hidden blocking links`)
             : undefined,
@@ -1331,6 +1332,7 @@ export class TeamGraphAdapter {
   static #buildMemberException(
     runtimeAdvisory: ResolvedTeamMember['runtimeAdvisory'],
     providerId: ResolvedTeamMember['providerId'],
+    model: ResolvedTeamMember['model'],
     spawn: MemberSpawnStatusEntry | undefined,
     runtimeEntry: TeamAgentRuntimeEntry | undefined,
     pendingApproval: boolean
@@ -1349,7 +1351,12 @@ export class TeamGraphAdapter {
     if (spawn?.status === 'waiting' || spawn?.status === 'spawning') {
       return { exceptionTone: 'warning', exceptionLabel: 'starting' };
     }
-    const runtimeAdvisoryLabel = getMemberRuntimeAdvisoryLabel(runtimeAdvisory, providerId);
+    const runtimeAdvisoryLabel = getMemberRuntimeAdvisoryLabel(
+      runtimeAdvisory,
+      providerId,
+      Date.now(),
+      model
+    );
     if (runtimeAdvisoryLabel) {
       return {
         exceptionTone: 'warning',

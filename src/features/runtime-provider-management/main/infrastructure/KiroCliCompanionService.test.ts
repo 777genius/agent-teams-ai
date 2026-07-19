@@ -2,7 +2,10 @@ import path from 'node:path';
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { KIRO_CLI_COMPANION_DEFINITION } from './cli-companion/definitions/KiroCliCompanionDefinition';
+import {
+  KIRO_CLI_COMPANION_DEFINITION,
+  parseKiroWhoamiAccount,
+} from './cli-companion/definitions/KiroCliCompanionDefinition';
 import { KiroCliCompanionService, resolveKiroLinuxArchiveSuffix } from './KiroCliCompanionService';
 
 const VALID_UNIX_INSTALLER = `#!/bin/bash
@@ -29,6 +32,42 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
 }
 
 describe('KiroCliCompanionService', () => {
+  it('parses the empirical whoami JSON and ignores the non-JSON profile trailer', () => {
+    const result = {
+      exitCode: 0,
+      stdout:
+        '{"accountType":"IamIdentityCenter","email":"dev@example.com","region":"eu-west-1","startUrl":"https://example.awsapps.com/start"}\n\nProfile:\nKiroProfile-eu-central-1',
+      stderr: '',
+    };
+
+    expect(parseKiroWhoamiAccount(result)).toEqual({
+      display: 'dev@example.com',
+      email: 'dev@example.com',
+      accountType: 'IamIdentityCenter',
+      region: 'eu-west-1',
+    });
+    expect(KIRO_CLI_COMPANION_DEFINITION.auth.isAuthenticated(result)).toBe(true);
+  });
+
+  it.each([
+    { exitCode: 0, stdout: '{"account":null}', stderr: '' },
+    { exitCode: 0, stdout: '{"accountType":"   "}', stderr: '' },
+    { exitCode: 0, stdout: 'not json', stderr: '' },
+    { exitCode: 1, stdout: '', stderr: 'Not logged in' },
+  ])('does not treat non-empty logged-out output as authenticated', (result) => {
+    expect(parseKiroWhoamiAccount(result)).toBeNull();
+    expect(KIRO_CLI_COMPANION_DEFINITION.auth.isAuthenticated(result)).toBe(false);
+  });
+
+  it('accepts a valid whoami auth object from stderr even when the command exits nonzero', () => {
+    const result = {
+      exitCode: 1,
+      stdout: '',
+      stderr: '{"accountType":"BuilderId","email":"dev@example.com"}',
+    };
+    expect(KIRO_CLI_COMPANION_DEFINITION.auth.isAuthenticated(result)).toBe(true);
+  });
+
   it('matches the official glibc and musl Linux archive thresholds', () => {
     expect(resolveKiroLinuxArchiveSuffix('x64', '2.34')).toBe('kirocli-x86_64-linux.zip');
     expect(resolveKiroLinuxArchiveSuffix('x64', '2.33')).toBe('kirocli-x86_64-linux-musl.zip');
@@ -67,7 +106,11 @@ describe('KiroCliCompanionService', () => {
       }
       if (args[0] === 'whoami') {
         return authenticated
-          ? { exitCode: 0, stdout: '{"account":"test"}', stderr: '' }
+          ? {
+              exitCode: 0,
+              stdout: '{"accountType":"BuilderId","email":"test@example.com"}',
+              stderr: '',
+            }
           : { exitCode: 1, stdout: '', stderr: 'Not logged in' };
       }
       return { exitCode: 0, stdout: 'kiro-cli 1.26.0', stderr: '' };
@@ -232,7 +275,11 @@ describe('KiroCliCompanionService', () => {
           whoamiAttempts += 1;
           return whoamiAttempts === 1
             ? { exitCode: 1, stdout: '{"account":null}', stderr: '' }
-            : { exitCode: 0, stdout: '{"account":"test"}', stderr: '' };
+            : {
+                exitCode: 0,
+                stdout: '{"accountType":"BuilderId","email":"test@example.com"}',
+                stderr: '',
+              };
         }
         return { exitCode: 0, stdout: 'kiro-cli 2.12.1', stderr: '' };
       },
@@ -243,6 +290,116 @@ describe('KiroCliCompanionService', () => {
     expect(whoamiAttempts).toBe(2);
     expect(sleep).toHaveBeenCalledWith(1_000);
     expect(status.phase).toBe('connected');
+  });
+
+  it('signs out the user-wide Kiro session and clears the account', async () => {
+    let authenticated = true;
+    const runCommand = vi.fn(async (_command: string, args: readonly string[]) => {
+      if (args[0] === 'whoami') {
+        return authenticated
+          ? {
+              exitCode: 0,
+              stdout: '{"accountType":"BuilderId","email":"test@example.com"}',
+              stderr: '',
+            }
+          : { exitCode: 0, stdout: '{"account":null}', stderr: '' };
+      }
+      if (args[0] === 'logout') {
+        authenticated = false;
+        return { exitCode: 0, stdout: 'Logged out', stderr: '' };
+      }
+      return { exitCode: 0, stdout: 'kiro-cli 2.12.1', stderr: '' };
+    });
+    const service = new KiroCliCompanionService({
+      platform: 'darwin',
+      resolveBinary: async () => '/Users/test/.local/bin/kiro-cli',
+      runCommand,
+      sleep: async () => {},
+    });
+
+    await expect(service.runAction('logout')).resolves.toMatchObject({
+      phase: 'sign-in-required',
+      authenticated: false,
+      account: null,
+      actionOutput: 'Logged out',
+    });
+    expect(runCommand).toHaveBeenCalledWith(
+      '/Users/test/.local/bin/kiro-cli',
+      ['logout'],
+      expect.objectContaining({ timeoutMs: 10_000 })
+    );
+  });
+
+  it('runs no-fix diagnostics and preserves the connected account', async () => {
+    const runCommand = vi.fn(async (_command: string, args: readonly string[]) => {
+      if (args[0] === 'whoami') {
+        return {
+          exitCode: 0,
+          stdout: '{"accountType":"BuilderId","email":"test@example.com"}',
+          stderr: '',
+        };
+      }
+      if (args[0] === 'doctor') {
+        return { exitCode: 0, stdout: '{"checks":"ok"}', stderr: '' };
+      }
+      return { exitCode: 0, stdout: 'kiro-cli 2.12.1', stderr: '' };
+    });
+    const service = new KiroCliCompanionService({
+      platform: 'darwin',
+      resolveBinary: async () => '/Users/test/.local/bin/kiro-cli',
+      runCommand,
+      sleep: async () => {},
+    });
+
+    await expect(service.runAction('doctor')).resolves.toMatchObject({
+      phase: 'connected',
+      authenticated: true,
+      actionOutput: '{"checks":"ok"}',
+    });
+    expect(runCommand).toHaveBeenCalledWith(
+      '/Users/test/.local/bin/kiro-cli',
+      ['doctor', '--all', '--format', 'json'],
+      expect.objectContaining({ timeoutMs: 120_000 })
+    );
+  });
+
+  it('switches accounts by signing out before starting a fresh browser login', async () => {
+    let authenticated = true;
+    let email = 'old@example.com';
+    const calls: string[] = [];
+    const service = new KiroCliCompanionService({
+      platform: 'darwin',
+      resolveBinary: async () => '/Users/test/.local/bin/kiro-cli',
+      sleep: async () => {},
+      runCommand: async (_command, args) => {
+        calls.push(args[0] ?? '');
+        if (args[0] === 'logout') {
+          authenticated = false;
+          return { exitCode: 0, stdout: 'Logged out', stderr: '' };
+        }
+        if (args[0] === 'login') {
+          authenticated = true;
+          email = 'new@example.com';
+          return { exitCode: 0, stdout: '', stderr: '' };
+        }
+        if (args[0] === 'whoami') {
+          return authenticated
+            ? {
+                exitCode: 0,
+                stdout: `{"accountType":"BuilderId","email":"${email}"}`,
+                stderr: '',
+              }
+            : { exitCode: 0, stdout: '{"account":null}', stderr: '' };
+        }
+        return { exitCode: 0, stdout: 'kiro-cli 2.12.1', stderr: '' };
+      },
+    });
+
+    await expect(service.runAction('switch-account')).resolves.toMatchObject({
+      phase: 'connected',
+      account: { email: 'new@example.com' },
+    });
+    expect(calls.indexOf('logout')).toBeLessThan(calls.indexOf('login'));
   });
 
   it('does not let a status refresh started before connect overwrite the connected result', async () => {
@@ -265,7 +422,11 @@ describe('KiroCliCompanionService', () => {
         }
         if (args[0] === 'whoami') {
           return authenticated
-            ? { exitCode: 0, stdout: '{"account":"test"}', stderr: '' }
+            ? {
+                exitCode: 0,
+                stdout: '{"accountType":"BuilderId","email":"test@example.com"}',
+                stderr: '',
+              }
             : { exitCode: 1, stdout: '', stderr: 'Not logged in' };
         }
         return { exitCode: 0, stdout: 'kiro-cli 2.12.1', stderr: '' };
@@ -325,7 +486,11 @@ describe('KiroCliCompanionService', () => {
       }
       if (args[0] === 'whoami') {
         return authenticated
-          ? { exitCode: 0, stdout: '{"account":"test"}', stderr: '' }
+          ? {
+              exitCode: 0,
+              stdout: '{"accountType":"BuilderId","email":"test@example.com"}',
+              stderr: '',
+            }
           : { exitCode: 1, stdout: '', stderr: 'Not logged in' };
       }
       return { exitCode: 0, stdout: 'kiro-cli 2.12.1', stderr: '' };

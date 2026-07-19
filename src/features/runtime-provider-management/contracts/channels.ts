@@ -21,4 +21,5 @@ export const RUNTIME_PROVIDER_MANAGEMENT_OAUTH_CANCEL = 'runtimeProviderManageme
 export const RUNTIME_PROVIDER_COMPANION_STATUS = 'runtimeProviderManagement:companionStatus';
 export const RUNTIME_PROVIDER_COMPANION_INSTALL = 'runtimeProviderManagement:companionInstall';
 export const RUNTIME_PROVIDER_COMPANION_CONNECT = 'runtimeProviderManagement:companionConnect';
+export const RUNTIME_PROVIDER_COMPANION_ACTION = 'runtimeProviderManagement:companionAction';
 export const RUNTIME_PROVIDER_COMPANION_PROGRESS = 'runtimeProviderManagement:companionProgress';

@@ -19,6 +19,7 @@ import type {
   RuntimeProviderCompanionService,
 } from './types';
 import type {
+  RuntimeProviderCompanionActionDto,
   RuntimeProviderCompanionPhaseDto,
   RuntimeProviderCompanionStatusDto,
 } from '@features/runtime-provider-management/contracts';
@@ -27,6 +28,7 @@ const MAX_INSTALLER_SCRIPT_BYTES = 512 * 1024;
 const INSTALL_TIMEOUT_MS = 45 * 60 * 1_000;
 const LOGIN_TIMEOUT_MS = 10 * 60 * 1_000;
 const PROBE_TIMEOUT_MS = 10_000;
+const ACTION_TIMEOUT_MS = 2 * 60 * 1_000;
 const MAX_CAPTURED_OUTPUT_CHARS = 32_000;
 const WINDOWS_ISOLATED_COMMAND_HELPER = String.raw`
 const { spawn } = require('node:child_process');
@@ -336,6 +338,16 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
     return operation;
   }
 
+  runAction(action: RuntimeProviderCompanionActionDto): Promise<RuntimeProviderCompanionStatusDto> {
+    if (this.#operation) return this.#operation;
+    this.#invalidateStatusProbes();
+    const operation = this.#runActionImpl(action).finally(() => {
+      if (this.#operation === operation) this.#operation = null;
+    });
+    this.#operation = operation;
+    return operation;
+  }
+
   setModelVerificationPending(): RuntimeProviderCompanionStatusDto {
     this.#invalidateStatusProbes();
     return this.#publish({
@@ -592,6 +604,114 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
     return this.#probeStatus(true);
   }
 
+  async #runActionImpl(
+    action: RuntimeProviderCompanionActionDto
+  ): Promise<RuntimeProviderCompanionStatusDto> {
+    const actions = this.#definition.actions;
+    if (!actions) {
+      return this.#publish({
+        phase: 'error',
+        percent: null,
+        message: `${this.#definition.displayName} does not support this action`,
+        detail: null,
+        error: `Unsupported ${this.#definition.companionId} action: ${action}`,
+      });
+    }
+    const before = await this.#probeStatus(false);
+    if (!before.binaryPath) return before;
+    const env = buildEnrichedEnv(before.binaryPath);
+
+    if (action === 'switch-account') {
+      const logout = await this.#runCommand(before.binaryPath, actions.logoutArgs, {
+        env,
+        timeoutMs: PROBE_TIMEOUT_MS,
+      });
+      if (logout.exitCode !== 0) {
+        return this.#actionFailure(before, action, logout);
+      }
+      return this.#connectImpl();
+    }
+
+    const args =
+      action === 'logout'
+        ? actions.logoutArgs
+        : action === 'doctor'
+          ? actions.doctorArgs
+          : actions.updateArgs;
+    const actionLabel =
+      action === 'logout'
+        ? 'Signing out'
+        : action === 'doctor'
+          ? 'Running diagnostics'
+          : 'Updating';
+    this.#publish({
+      phase: 'running-action',
+      percent: null,
+      message: `${actionLabel} ${this.#definition.displayName}...`,
+      detail: action === 'doctor' ? 'Running all diagnostic checks without applying fixes.' : null,
+      error: null,
+      actionOutput: null,
+    });
+    const result = await this.#runCommand(before.binaryPath, args, {
+      env,
+      timeoutMs:
+        action === 'update'
+          ? INSTALL_TIMEOUT_MS
+          : action === 'doctor'
+            ? ACTION_TIMEOUT_MS
+            : PROBE_TIMEOUT_MS,
+    });
+    if (result.exitCode !== 0) return this.#actionFailure(before, action, result);
+
+    if (action === 'logout') {
+      await this.#probeStatus(false);
+      return this.#publish({
+        phase: 'sign-in-required',
+        installed: true,
+        authenticated: false,
+        account: null,
+        percent: null,
+        message: `${this.#definition.displayName} signed out`,
+        detail: 'This user-wide CLI session is no longer available to OpenCode.',
+        error: null,
+        actionOutput: trimCommandOutput(result),
+      });
+    }
+
+    const refreshed = await this.#probeStatus(false);
+    return this.#publish({
+      ...refreshed,
+      message:
+        action === 'doctor'
+          ? `${this.#definition.displayName} diagnostics completed`
+          : `${this.#definition.displayName} update completed`,
+      detail:
+        action === 'doctor'
+          ? 'Review the diagnostic output below. No automatic fixes were applied.'
+          : refreshed.detail,
+      error: null,
+      actionOutput: `${result.stdout}\n${result.stderr}`.trim() || null,
+    });
+  }
+
+  #actionFailure(
+    before: RuntimeProviderCompanionStatusDto,
+    action: RuntimeProviderCompanionActionDto,
+    result: RuntimeProviderCliCompanionCommandResult
+  ): RuntimeProviderCompanionStatusDto {
+    const failure =
+      summarizeCommandFailure(result) ?? `${action} exited with code ${result.exitCode}`;
+    return this.#publish({
+      ...before,
+      phase: 'error',
+      percent: null,
+      message: `${this.#definition.displayName} ${action} failed`,
+      detail: 'Retry the action or use the official CLI fallback.',
+      error: failure,
+      actionOutput: `${result.stdout}\n${result.stderr}`.trim() || null,
+    });
+  }
+
   async #probeStatus(
     emit: boolean,
     generation = this.#statusGeneration
@@ -621,10 +741,14 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
       this.#probeAuthentication(binaryPath, env),
     ]);
     const authenticated = Boolean(authResult && this.#definition.auth.isAuthenticated(authResult));
+    const account = authenticated
+      ? (this.#definition.auth.parseAccount?.(authResult!) ?? null)
+      : null;
     const next = this.#createStatus({
       phase: authenticated ? 'connected' : 'sign-in-required',
       installed: true,
       authenticated,
+      account,
       binaryPath,
       version:
         versionResult && versionResult.exitCode === 0 ? trimCommandOutput(versionResult) : null,
@@ -695,6 +819,11 @@ export class RuntimeProviderCliCompanionService implements RuntimeProviderCompan
       phase: patch.phase,
       installed: patch.installed ?? false,
       authenticated: patch.authenticated ?? false,
+      account: patch.account ?? null,
+      supportedActions: this.#definition.actions
+        ? ['switch-account', 'logout', 'doctor', 'update']
+        : [],
+      actionOutput: patch.actionOutput ?? null,
       binaryPath: patch.binaryPath ?? null,
       version: patch.version ?? null,
       percent: patch.percent ?? null,

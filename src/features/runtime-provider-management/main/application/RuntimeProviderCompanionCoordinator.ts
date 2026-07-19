@@ -6,6 +6,7 @@ import type {
   RuntimeProviderCompanionRegistryEntry,
 } from '../infrastructure/cli-companion/types';
 import type {
+  RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionIdDto,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
@@ -52,9 +53,22 @@ export class RuntimeProviderCompanionCoordinator {
     );
   }
 
+  async runAction(
+    input: RuntimeProviderCompanionActionInput
+  ): Promise<RuntimeProviderCompanionStatusDto> {
+    const entry = this.#getEntry(input);
+    return this.#runCompanionOperation(input, `action:${input.action}`, async () => {
+      const status = await entry.service.runAction(input.action);
+      return (input.action === 'switch-account' || input.action === 'update') &&
+        status.authenticated
+        ? this.#verifyConnectedCompanion(input, entry, status)
+        : status;
+    });
+  }
+
   #runCompanionOperation(
     input: RuntimeProviderCompanionInput,
-    operation: 'connect' | 'install-and-connect',
+    operation: string,
     run: () => Promise<RuntimeProviderCompanionStatusDto>
   ): Promise<RuntimeProviderCompanionStatusDto> {
     const requestKey = `${operation}\0${input.projectPath?.trim() ?? ''}`;

@@ -5,6 +5,7 @@ import {
   RUNTIME_LOCAL_PROVIDER_LIST,
   RUNTIME_LOCAL_PROVIDER_PROBE,
   RUNTIME_LOCAL_PROVIDER_SCAN,
+  RUNTIME_PROVIDER_COMPANION_ACTION,
   RUNTIME_PROVIDER_COMPANION_CONNECT,
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_STATUS,
@@ -39,6 +40,7 @@ function createCompanionFeatureStubs(): Pick<
   | 'getCompanionStatus'
   | 'installAndConnectCompanion'
   | 'connectCompanion'
+  | 'runCompanionAction'
   | 'onCompanionProgress'
 > {
   return {
@@ -49,6 +51,7 @@ function createCompanionFeatureStubs(): Pick<
     getCompanionStatus: vi.fn(() => Promise.reject(new Error('Not used by this test'))),
     installAndConnectCompanion: vi.fn(() => Promise.reject(new Error('Not used by this test'))),
     connectCompanion: vi.fn(() => Promise.reject(new Error('Not used by this test'))),
+    runCompanionAction: vi.fn(() => Promise.reject(new Error('Not used by this test'))),
     onCompanionProgress: vi.fn(() => () => {}),
   };
 }
@@ -230,6 +233,7 @@ describe('registerRuntimeProviderManagementIpc', () => {
       getCompanionStatus: vi.fn(async () => status),
       installAndConnectCompanion: vi.fn(async () => status),
       connectCompanion: vi.fn(async () => status),
+      runCompanionAction: vi.fn(async () => status),
     } as unknown as RuntimeProviderManagementFeatureFacade;
 
     registerRuntimeProviderManagementIpc(ipcMain, feature);
@@ -254,6 +258,14 @@ describe('registerRuntimeProviderManagementIpc', () => {
         companionId: 'cursor-agent',
       }
     );
+    await handlers.get(RUNTIME_PROVIDER_COMPANION_ACTION)?.(
+      {},
+      {
+        companionId: 'kiro-cli',
+        projectPath: '/tmp/kiro-test',
+        action: 'doctor',
+      }
+    );
     expect(feature.getCompanionStatus).toHaveBeenCalledWith({
       companionId: 'cursor-agent',
       projectPath: '/tmp/cursor-test',
@@ -262,6 +274,17 @@ describe('registerRuntimeProviderManagementIpc', () => {
       companionId: 'kiro-cli',
       projectPath: null,
     });
+    expect(feature.runCompanionAction).toHaveBeenCalledWith({
+      companionId: 'kiro-cli',
+      projectPath: '/tmp/kiro-test',
+      action: 'doctor',
+    });
+    await expect(
+      handlers.get(RUNTIME_PROVIDER_COMPANION_ACTION)?.(
+        {},
+        { companionId: 'kiro-cli', action: 'delete-everything' }
+      )
+    ).rejects.toThrow('Unsupported runtime provider companion action');
     await expect(
       handlers.get(RUNTIME_PROVIDER_COMPANION_STATUS)?.({}, { companionId: 'unknown-cli' })
     ).rejects.toThrow('Unsupported runtime provider companion');

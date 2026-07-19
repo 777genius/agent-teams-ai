@@ -127,6 +127,15 @@ function normalizeEvent(value: unknown): TokenUsageEventDto | null {
   const occurredAt = readString(record?.occurredAt);
   const createdAt = readString(record?.createdAt);
   if (!id || !appRunId || !occurredAt || !createdAt) return null;
+  const rawProviderUsage = asRecord(record?.providerUsage);
+  const rawKiroUsage = asRecord(rawProviderUsage?.kiro);
+  const kiroCredits =
+    typeof rawKiroUsage?.credits === 'number' &&
+    Number.isFinite(rawKiroUsage.credits) &&
+    rawKiroUsage.credits >= 0
+      ? rawKiroUsage.credits
+      : null;
+  const kiroCreditsUnit = readString(rawKiroUsage?.creditsUnit);
 
   return {
     id,
@@ -157,6 +166,10 @@ function normalizeEvent(value: unknown): TokenUsageEventDto | null {
     nativeLogPath: readString(record?.nativeLogPath),
     tokens: normalizeTokenBreakdown(asRecord(record?.tokens) ?? {}),
     cost: normalizeCostBreakdown(asRecord(record?.cost) ?? {}),
+    providerUsage:
+      kiroCredits !== null && kiroCreditsUnit
+        ? { kiro: { credits: kiroCredits, creditsUnit: kiroCreditsUnit } }
+        : undefined,
     usageSourceKind: readSourceKind(record?.usageSourceKind),
     rawUsageJson: record?.rawUsageJson,
     occurredAt,

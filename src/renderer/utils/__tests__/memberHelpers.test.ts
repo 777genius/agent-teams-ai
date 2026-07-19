@@ -14,6 +14,8 @@ import {
   buildMemberAvatarMap,
   buildMemberColorMap,
   buildMemberLaunchPresentation,
+  getMemberRuntimeAdvisoryLabel,
+  getMemberRuntimeAdvisoryTitle,
   resolveMemberIdentityColor,
   shouldDisplayMemberCurrentTask,
 } from '../memberHelpers';
@@ -114,6 +116,21 @@ describe('member identity visuals', () => {
 });
 
 describe('member runtime presentation', () => {
+  it('labels Kiro quota failures as Kiro rather than the OpenCode transport', () => {
+    const advisory = {
+      kind: 'api_error' as const,
+      observedAt: '2026-07-19T10:00:00.000Z',
+      reasonCode: 'quota_exhausted' as const,
+    };
+
+    expect(getMemberRuntimeAdvisoryLabel(advisory, 'opencode', Date.now(), 'kiro/auto')).toBe(
+      'Kiro quota error'
+    );
+    expect(getMemberRuntimeAdvisoryTitle(advisory, 'opencode', 'kiro/auto')).toBe(
+      'Kiro quota exhausted.'
+    );
+  });
+
   it('hides Codex native task activity when no spawn or runtime snapshot has loaded', () => {
     expect(
       shouldDisplayMemberCurrentTask({

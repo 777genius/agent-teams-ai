@@ -1,4 +1,6 @@
 import type {
+  RuntimeProviderCompanionAccountDto,
+  RuntimeProviderCompanionActionDto,
   RuntimeProviderCompanionIdDto,
   RuntimeProviderCompanionStatusDto,
 } from '@features/runtime-provider-management/contracts';
@@ -66,6 +68,14 @@ export interface RuntimeProviderCliCompanionDefinition {
     loginArgs: readonly string[];
     statusArgs: readonly string[];
     isAuthenticated(result: RuntimeProviderCliCompanionCommandResult): boolean;
+    parseAccount?(
+      result: RuntimeProviderCliCompanionCommandResult
+    ): RuntimeProviderCompanionAccountDto | null;
+  };
+  actions?: {
+    logoutArgs: readonly string[];
+    doctorArgs: readonly string[];
+    updateArgs: readonly string[];
   };
 }
 
@@ -74,6 +84,7 @@ export interface RuntimeProviderCompanionService {
   getStatus(): Promise<RuntimeProviderCompanionStatusDto>;
   installAndConnect(): Promise<RuntimeProviderCompanionStatusDto>;
   connect(): Promise<RuntimeProviderCompanionStatusDto>;
+  runAction(action: RuntimeProviderCompanionActionDto): Promise<RuntimeProviderCompanionStatusDto>;
   setModelVerificationPending(): RuntimeProviderCompanionStatusDto;
   setModelVerificationResult(ok: boolean, detail: string): RuntimeProviderCompanionStatusDto;
 }

@@ -133,14 +133,22 @@ export function getTeamEffortOptions(params: {
     catalogEfforts.length > 0
       ? catalogEfforts
       : ((runtimeCapability?.values ?? []) as EffortLevel[]);
-  const efforts = normalizeEfforts(
-    providerId,
-    candidateEfforts,
-    runtimeCapability?.configPassthrough === true
-  );
+  const efforts = catalogModel
+    ? [...catalogEfforts]
+    : normalizeEfforts(providerId, candidateEfforts, runtimeCapability?.configPassthrough === true);
   const defaultLabel = catalogModel?.defaultReasoningEffort
     ? `Default (${TEAM_EFFORT_LABELS[catalogModel.defaultReasoningEffort]})`
     : 'Default';
+
+  if (catalogModel) {
+    return [
+      { value: '', label: defaultLabel },
+      ...efforts.map((effort) => ({
+        value: effort,
+        label: TEAM_EFFORT_LABELS[effort],
+      })),
+    ];
+  }
 
   if (providerId === 'codex') {
     const fallbackEfforts =
@@ -173,12 +181,25 @@ export function getTeamEffortSelectorPresentation(params: {
     "Controls how much reasoning the selected provider invests before responding. Higher levels can use more tokens. Default uses the provider's standard behavior for the selected model.";
 
   if (params.providerId !== 'anthropic') {
+    const catalogModel = params.providerId
+      ? getCatalogModel(params.providerId, params.providerStatus, params.model)
+      : null;
+    if (catalogModel && catalogModel.supportedReasoningEfforts.length === 0) {
+      const modelLabel = catalogModel.displayName || catalogModel.launchModel;
+      return {
+        options: [{ value: '', label: 'Not supported' }],
+        disabled: true,
+        helperText: `${modelLabel} does not support configurable reasoning effort. The app will omit --effort and use the provider default.`,
+        unavailableText: 'Effort is unavailable for this model.',
+        canValidateValue: true,
+      };
+    }
     return {
       options,
       disabled: false,
       helperText: defaultHelperText,
       unavailableText: null,
-      canValidateValue: false,
+      canValidateValue: catalogModel !== null,
     };
   }
 
@@ -228,5 +249,8 @@ export function getAvailableTeamEffortValue(params: {
   }
 
   const presentation = getTeamEffortSelectorPresentation(params);
-  return presentation.disabled && presentation.canValidateValue ? '' : value;
+  if (!presentation.canValidateValue) {
+    return value;
+  }
+  return presentation.options.some((option) => option.value === value) ? value : '';
 }

@@ -1,4 +1,5 @@
 import {
+  isRuntimeProviderCompanionAction,
   isRuntimeProviderCompanionId,
   RUNTIME_LOCAL_PROVIDER_CONFIGURE,
   RUNTIME_LOCAL_PROVIDER_LIST,
@@ -6,6 +7,7 @@ import {
   RUNTIME_LOCAL_PROVIDER_PROBE,
   RUNTIME_LOCAL_PROVIDER_SCAN,
   RUNTIME_LOCAL_PROVIDER_SCOPES,
+  RUNTIME_PROVIDER_COMPANION_ACTION,
   RUNTIME_PROVIDER_COMPANION_CONNECT,
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_STATUS,
@@ -36,6 +38,7 @@ import type {
   RuntimeLocalProviderProbeResponse,
   RuntimeLocalProviderScanInput,
   RuntimeLocalProviderScanResponse,
+  RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementCancelOAuthInput,
@@ -312,6 +315,19 @@ export function registerRuntimeProviderManagementIpc(
       feature.connectCompanion(readCompanionInput(input))
   );
   ipcMain.handle(
+    RUNTIME_PROVIDER_COMPANION_ACTION,
+    async (
+      _event,
+      input: RuntimeProviderCompanionActionInput
+    ): Promise<RuntimeProviderCompanionStatusDto> => {
+      const companionInput = readCompanionInput(input);
+      if (!isRuntimeProviderCompanionAction(input.action)) {
+        throw new Error('Unsupported runtime provider companion action');
+      }
+      return feature.runCompanionAction({ ...companionInput, action: input.action });
+    }
+  );
+  ipcMain.handle(
     RUNTIME_PROVIDER_MANAGEMENT_VIEW,
     async (
       _event,
@@ -579,6 +595,7 @@ export function removeRuntimeProviderManagementIpc(ipcMain: IpcMain): void {
   ipcMain.removeHandler(RUNTIME_PROVIDER_COMPANION_STATUS);
   ipcMain.removeHandler(RUNTIME_PROVIDER_COMPANION_INSTALL);
   ipcMain.removeHandler(RUNTIME_PROVIDER_COMPANION_CONNECT);
+  ipcMain.removeHandler(RUNTIME_PROVIDER_COMPANION_ACTION);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_VIEW);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_DIRECTORY);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_SETUP_FORM);

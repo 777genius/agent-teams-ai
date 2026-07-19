@@ -24,6 +24,7 @@ import type {
   RuntimeLocalProviderProbeResponse,
   RuntimeLocalProviderScanInput,
   RuntimeLocalProviderScanResponse,
+  RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementApi,
@@ -112,6 +113,9 @@ export function createRuntimeProviderManagementFeature(
     ): Promise<RuntimeProviderCompanionStatusDto> => {
       return companionCoordinator.connect(input);
     },
+    runCompanionAction: async (
+      input: RuntimeProviderCompanionActionInput
+    ): Promise<RuntimeProviderCompanionStatusDto> => companionCoordinator.runAction(input),
     onCompanionProgress: (): (() => void) => () => {},
     loadView: (
       input: RuntimeProviderManagementLoadViewInput

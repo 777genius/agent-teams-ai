@@ -5,6 +5,7 @@ export type RuntimeProviderManagementPort = Omit<
   | 'getCompanionStatus'
   | 'installAndConnectCompanion'
   | 'connectCompanion'
+  | 'runCompanionAction'
   | 'onCompanionProgress'
   | 'listLocalProviders'
   | 'scanLocalProviders'

@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { formatKiroCredits, useTokenUsageSnapshot } from '@features/token-usage/renderer';
 import { api } from '@renderer/api';
+import { Button } from '@renderer/components/ui/button';
 import { cn } from '@renderer/lib/utils';
 import { formatRelativeTime } from '@renderer/utils/formatters';
 import { getBasename } from '@shared/utils/platformPath';
@@ -11,6 +13,7 @@ import {
   BarChart3,
   ChevronDown,
   ChevronRight,
+  ExternalLink,
   FileCode,
   Info,
   Loader2,
@@ -43,6 +46,14 @@ export const MemberStatsTab = ({
   const [localStats, setLocalStats] = useState<MemberFullStats | null>(null);
   const [localLoading, setLocalLoading] = useState(!usePrefetched);
   const [localError, setLocalError] = useState<string | null>(null);
+  const tokenUsageRequest = useMemo(() => ({ teamName }), [teamName]);
+  const tokenUsage = useTokenUsageSnapshot({
+    request: tokenUsageRequest,
+    pollIntervalMs: 15_000,
+  });
+  const memberKiroSummary = tokenUsage.snapshot?.byAgent.find(
+    (item) => item.agentName?.trim().toLowerCase() === memberName.trim().toLowerCase()
+  )?.summary;
 
   useEffect(() => {
     if (usePrefetched) return;
@@ -103,6 +114,9 @@ export const MemberStatsTab = ({
 
   return (
     <div className="max-h-[400px] space-y-3 overflow-y-auto pr-1">
+      {memberKiroSummary && (memberKiroSummary.kiroCreditEventCount ?? 0) > 0 ? (
+        <KiroCreditsSummary summary={memberKiroSummary} />
+      ) : null}
       <SummaryCards stats={stats} totalTokens={totalTokens} totalToolCalls={totalToolCalls} />
       <ToolUsageBars toolUsage={stats.toolUsage} />
       <FilesTouchedSection
@@ -115,6 +129,51 @@ export const MemberStatsTab = ({
     </div>
   );
 };
+
+const KIRO_USAGE_URL = 'https://app.kiro.dev/account/usage';
+
+const KiroCreditsSummary = ({
+  summary,
+}: {
+  summary: {
+    kiroCredits?: number;
+    kiroCreditEventCount?: number;
+    lastKiroCredits?: number;
+  };
+}): React.JSX.Element => (
+  <div className="rounded-md border border-violet-400/25 bg-violet-500/[0.06] p-3">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <p className="text-[11px] font-medium text-violet-200">Kiro credits</p>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="text-lg font-semibold text-[var(--color-text)]">
+            {formatKiroCredits(summary.kiroCredits ?? 0)} total
+          </span>
+          {summary.lastKiroCredits !== undefined ? (
+            <span className="text-xs text-[var(--color-text-secondary)]">
+              {formatKiroCredits(summary.lastKiroCredits)} last turn
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">
+          {(summary.kiroCreditEventCount ?? 0).toLocaleString()} metered turns. Remaining monthly
+          quota is shown in Kiro.
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="shrink-0"
+        onClick={() => void api.openExternal(KIRO_USAGE_URL)}
+        aria-label="Open Kiro usage and plan"
+      >
+        <ExternalLink className="mr-1.5 size-3.5" />
+        Usage & plan
+      </Button>
+    </div>
+  </div>
+);
 
 const StatCard = ({
   label,

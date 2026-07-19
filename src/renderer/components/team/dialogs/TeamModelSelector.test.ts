@@ -6,12 +6,13 @@ import {
 } from './teamModelSelectorUi';
 
 describe('shouldShowOpenCodeNeedsTestBadge', () => {
-  it.each(['cursor-acp', 'kiro'])(
-    'hides the needs-test badge for the %s OpenCode source',
-    (sourceId) => {
-      expect(shouldShowOpenCodeNeedsTestBadge('needs_probe', sourceId)).toBe(false);
-    }
-  );
+  it('hides the needs-test badge for Cursor ACP, whose connection flow verifies the model', () => {
+    expect(shouldShowOpenCodeNeedsTestBadge('needs_probe', 'cursor-acp')).toBe(false);
+  });
+
+  it('keeps the needs-test badge for an unverified Kiro model', () => {
+    expect(shouldShowOpenCodeNeedsTestBadge('needs_probe', 'kiro')).toBe(true);
+  });
 
   it('keeps the needs-test badge for other OpenCode sources', () => {
     expect(shouldShowOpenCodeNeedsTestBadge('needs_probe', 'opencode-config')).toBe(true);

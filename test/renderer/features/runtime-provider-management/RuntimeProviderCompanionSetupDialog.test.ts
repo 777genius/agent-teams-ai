@@ -63,6 +63,7 @@ describe('RuntimeProviderCompanionSetupDialog', () => {
           onOpenChange,
           onInstallAndConnect: vi.fn(),
           onConnect: vi.fn(),
+          onAction: vi.fn(),
           onCopyManualCommand: vi.fn(),
           onOpenManualGuide: vi.fn(),
         })
@@ -101,6 +102,7 @@ describe('RuntimeProviderCompanionSetupDialog', () => {
           onOpenChange: vi.fn(),
           onInstallAndConnect: vi.fn(),
           onConnect: vi.fn(),
+          onAction: vi.fn(),
           onCopyManualCommand,
           onOpenManualGuide,
         })
@@ -133,6 +135,7 @@ describe('RuntimeProviderCompanionSetupDialog', () => {
           onOpenChange: vi.fn(),
           onInstallAndConnect: vi.fn(),
           onConnect: vi.fn(),
+          onAction: vi.fn(),
           onCopyManualCommand: vi.fn(),
           onOpenManualGuide: vi.fn(),
         })
@@ -164,6 +167,7 @@ describe('RuntimeProviderCompanionSetupDialog', () => {
           onOpenChange: vi.fn(),
           onInstallAndConnect,
           onConnect: vi.fn(),
+          onAction: vi.fn(),
           onCopyManualCommand: vi.fn(),
           onOpenManualGuide: vi.fn(),
         })
@@ -200,6 +204,7 @@ describe('RuntimeProviderCompanionSetupDialog', () => {
           onOpenChange,
           onInstallAndConnect: vi.fn(),
           onConnect: vi.fn(),
+          onAction: vi.fn(),
           onCopyManualCommand: vi.fn(),
           onOpenManualGuide: vi.fn(),
         })
