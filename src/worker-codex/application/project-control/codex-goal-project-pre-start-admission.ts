@@ -372,14 +372,14 @@ async function controlledRuntimeInputPatchBindingValid(input: {
     | ReturnType<typeof verifiedInputPatchFromReceipt>
     | undefined;
 }): Promise<boolean> {
-  if (!isBuiltinDescriptor(input.descriptor) || !input.verifiedInputPatch) {
+  if (!isBuiltinDescriptor(input.descriptor)) {
     return false;
   }
   const launch = parseWorkerLaunchSpec(input.contract);
   if (launch.reviewKind === "review") {
-    return verifiedInputPatchBindingValid(
-      input.binding,
-      input.verifiedInputPatch,
+    return (
+      input.verifiedInputPatch !== undefined &&
+      verifiedInputPatchBindingValid(input.binding, input.verifiedInputPatch)
     );
   }
   const handoff = await readControlledRuntimeInterruptionHandoff({

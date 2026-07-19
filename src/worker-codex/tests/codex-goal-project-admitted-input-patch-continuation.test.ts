@@ -439,6 +439,105 @@ describe("admitted input-patch capacity continuation", () => {
   });
 });
 
+describe("clean-first producer runtime interruption continuation", () => {
+  it("accepts the runtime-captured owned patch without an original verified input patch", async () => {
+    const fixture = await createBuiltinFixture();
+    const contract = withWorkKey({
+      ...fixture.contract,
+      reviewKind: "implementation",
+      inputPatchHash: null,
+      ownedPaths: ["src/example.ts"],
+    });
+    const state = {
+      ...fixture.state,
+      records: fixture.state.records.map((record) => ({
+        ...record,
+        ...Object.fromEntries(
+          (
+            [
+              "workKey",
+              "baseSha",
+              "phaseStartSha",
+              "inputPatchHash",
+              "reviewKind",
+            ] as const
+          ).map((field) => [field, contract[field]]),
+        ),
+      })),
+    };
+    const plan = planProjectPreStartAdmission({
+      value: { mode: "serial-builtin", contract, state },
+      confirmed: true,
+      scope: fixture.scope,
+      manifest: fixture.manifest,
+    });
+    if (!plan) throw new Error("expected admission plan");
+    const manifest: CodexGoalJobManifest = {
+      ...fixture.storedManifest,
+      projectPreStartAdmission: plan.descriptor,
+    };
+    await prepareProjectPreStartAdmission({
+      plan,
+      manifest,
+      scope: fixture.scope,
+    });
+    await authorizeProjectPreStartAdmissionLaunch({
+      manifest,
+      scope: fixture.scope,
+    });
+
+    await mkdir(join(manifest.workspacePath, "src"), { recursive: true });
+    await writeFile(
+      join(manifest.workspacePath, "src", "example.ts"),
+      "export const value = 1;\n",
+    );
+    const handoff = await materializeCodexGoalHandoffArtifacts({
+      workerJobId: manifest.jobId,
+      taskId: manifest.taskId,
+      workspacePath: manifest.workspacePath,
+      jobRootDir: manifest.jobRootDir,
+    });
+    if (!handoff) throw new Error("expected interrupted handoff");
+    await writeFile(
+      join(manifest.jobRootDir, `${manifest.taskId}.latest-result.json`),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        taskId: manifest.taskId,
+        status: "partial",
+        reason: "runtime_interrupted",
+        updatedAt: new Date().toISOString(),
+        changedFiles: ["src/example.ts"],
+        evidence: ["safe_execution_status:partial"],
+        blockers: ["runtime_interrupted"],
+        nextAction: "preserve_patch",
+        artifacts: handoff.artifacts,
+      })}\n`,
+    );
+
+    await expect(
+      assertProjectPreStartAdmissionLaunchBinding({
+        manifest,
+        scope: fixture.scope,
+        workspaceMode: "admitted_input_patch_runtime_continuation",
+      }),
+    ).resolves.toBeUndefined();
+
+    await writeFile(
+      join(manifest.workspacePath, "src", "example.ts"),
+      "export const value = 2;\n",
+    );
+    await expect(
+      assertProjectPreStartAdmissionLaunchBinding({
+        manifest,
+        scope: fixture.scope,
+        workspaceMode: "admitted_input_patch_runtime_continuation",
+      }),
+    ).rejects.toThrow(
+      "project_control_pre_start_launch_binding_mismatch:input_patch_binding",
+    );
+  });
+});
+
 describe("clean pre-start capacity continuation", () => {
   it("recognizes only an unchanged terminal account-capacity pause", () => {
     const status = {
