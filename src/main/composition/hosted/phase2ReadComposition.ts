@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
+import * as fs from 'node:fs';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 
 import {
+  parseLegacyTeamKey,
   parseTeamIdentityRecord,
   type TeamIdentityReadGateway,
   type TeamIdentityRecord,
@@ -40,21 +43,33 @@ import {
   type ActorId,
   type AuthorizedScope,
   type BootId,
+  createQueryContext,
   createSafeAppError,
   type DeploymentId,
   parseActorId,
   parseAuthorizedScope,
   parseCursor,
+  parseDeploymentId,
   parseRevision,
+  parseTeamId,
   type QueryContext,
   type Revision,
   type WorkspaceId,
 } from '@shared/contracts/hosted';
 
+import {
+  createMountBindingScopedRuntimeEvidencePort,
+  type Phase2AuthoritativeRuntimeEvidenceSource,
+  Phase2RuntimeEvidenceUnavailableError,
+} from './phase2RuntimeEvidenceSource';
+
 const DEFAULT_PAGE_SIZE = 100;
 const MAX_PAGE_SIZE = 1_000;
 const MAX_LEGACY_SUMMARIES = 2_000;
+const MAX_HOSTED_TEAM_CONFIG_BYTES = 2 * 1024 * 1024;
+const MAX_HOSTED_TEAM_IDENTITY_BYTES = 4 * 1024;
 const CURSOR_PATTERN = /^cursor_phase2_(\d+)_([0-9a-f]{64})$/;
+const NO_FOLLOW = fs.constants.O_NOFOLLOW;
 const phase2ReadAuthorities = new WeakSet<object>();
 
 export interface Phase2ReadAuthority {
@@ -89,8 +104,38 @@ export interface Phase2ReadComposition {
   readonly teamLifecycle: TeamLifecycleReadApi;
 }
 
+export interface MountBindingScopedPhase2ReadPorts {
+  readonly teamIdentities: TeamIdentityReadGateway;
+  readonly legacyData: LegacyTeamDataReadPort;
+  readonly legacyRuntime: LegacyTeamRuntimeReadPort;
+}
+
+export interface HostedReadOnlyTeamSummarySource {
+  readTeamSummary(input: {
+    readonly claudeRoot: string;
+    readonly identity: TeamIdentityRecord;
+    readonly context: QueryContext;
+    readonly assertActive: () => void;
+  }): Promise<Readonly<Record<PropertyKey, unknown>> | null>;
+}
+
+export interface MountBindingScopedPhase2ReadPortsInput {
+  readonly authority: Phase2ReadAuthority;
+  readonly mountBinding: WorkspaceMountBinding;
+  readonly runtimeInstance: RuntimeInstanceContext;
+  readonly teamIdentities: TeamIdentityReadGateway;
+  readonly nowMs: () => number;
+  /** Test seam for the narrow read-only adapter; production uses explicit-root filesystem reads. */
+  readonly teamSummarySource?: HostedReadOnlyTeamSummarySource;
+  /** Omit unless the host owns authoritative evidence already scoped to this exact mount. */
+  readonly runtimeEvidenceSource?: Phase2AuthoritativeRuntimeEvidenceSource;
+}
+
 export interface Phase2ReadHost {
-  listTeamLifecycle(request: unknown): Promise<CanonicalListTeamLifecycleResult>;
+  listTeamLifecycle(
+    request: unknown,
+    requestSignal?: AbortSignal
+  ): Promise<CanonicalListTeamLifecycleResult>;
 }
 
 interface FrozenLegacyLifecycleSummary extends Readonly<Record<PropertyKey, unknown>> {
@@ -107,6 +152,11 @@ interface Phase2ReadSnapshot {
 interface FrozenRuntimeState {
   readonly teamName: string;
   readonly isAlive: boolean;
+}
+
+interface DirectoryEntryIdentity {
+  readonly device: bigint;
+  readonly inode: bigint;
 }
 
 type IdentityProjectionPurpose = 'lifecycle' | 'runtime';
@@ -143,6 +193,16 @@ function dataUnavailable(): TeamLifecycleReadFailure {
 
 function forbiddenContext(): TeamLifecycleReadFailure {
   return failure('forbidden', 'scope_not_authorized');
+}
+
+function cancelledContext(
+  reason: 'request_cancelled' | 'deadline_exceeded'
+): TeamLifecycleReadFailure {
+  return failure('cancelled', reason);
+}
+
+function clockInvalid(): TeamLifecycleReadFailure {
+  return failure('internal', 'policy_failure', 'phase2-read.clock-invalid');
 }
 
 function snapshotChanged(): TeamLifecycleReadFailure {
@@ -243,6 +303,544 @@ function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function isCanonicalTimestamp(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    Number.isFinite(Date.parse(value)) &&
+    new Date(value).toISOString() === value
+  );
+}
+
+function assertCanonicalIdentityFile(
+  serialized: string,
+  expectedIdentity: TeamIdentityRecord
+): void {
+  let value: unknown;
+  try {
+    value = JSON.parse(serialized);
+  } catch {
+    throw new Error('phase2-read-canonical-identity-invalid');
+  }
+  if (!isRecord(value)) throw new Error('phase2-read-canonical-identity-invalid');
+
+  const expectedKeys =
+    value.originDeploymentId === undefined
+      ? ['createdAt', 'schemaVersion', 'teamId']
+      : ['createdAt', 'originDeploymentId', 'schemaVersion', 'teamId'];
+  const keys = Reflect.ownKeys(value).sort();
+  if (
+    keys.length !== expectedKeys.length ||
+    keys.some((key, index) => key !== expectedKeys[index]) ||
+    value.schemaVersion !== 1 ||
+    !isCanonicalTimestamp(value.createdAt)
+  ) {
+    throw new Error('phase2-read-canonical-identity-invalid');
+  }
+
+  const canonicalIdentity: Record<string, unknown> = {
+    schemaVersion: 1,
+    teamId: parseTeamId(value.teamId),
+    createdAt: value.createdAt,
+  };
+  if (value.originDeploymentId !== undefined) {
+    canonicalIdentity.originDeploymentId = parseDeploymentId(value.originDeploymentId);
+  }
+  const canonicalSerialized = `${JSON.stringify(canonicalIdentity, null, 2)}\n`;
+  if (
+    serialized !== canonicalSerialized ||
+    canonicalIdentity.teamId !== expectedIdentity.teamId ||
+    canonicalIdentity.createdAt !== expectedIdentity.createdAt ||
+    expectedIdentity.identityChecksum === null ||
+    createHash('sha256').update(serialized, 'utf8').digest('hex') !==
+      expectedIdentity.identityChecksum
+  ) {
+    throw new Error('phase2-read-canonical-identity-mismatch');
+  }
+}
+
+function isMissingPathError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { readonly code?: unknown }).code === 'ENOENT'
+  );
+}
+
+interface EntryIdentity {
+  readonly device: number;
+  readonly inode: number;
+}
+
+function entryIdentity(stat: fs.Stats): EntryIdentity {
+  return Object.freeze({ device: stat.dev, inode: stat.ino });
+}
+
+function sameEntry(stat: fs.Stats, expected: EntryIdentity): boolean {
+  return stat.dev === expected.device && stat.ino === expected.inode;
+}
+
+function directoryEntryIdentity(stat: fs.BigIntStats): DirectoryEntryIdentity {
+  return Object.freeze({ device: stat.dev, inode: stat.ino });
+}
+
+function sameDirectoryEntry(stat: fs.BigIntStats, expected: DirectoryEntryIdentity): boolean {
+  return stat.dev === expected.device && stat.ino === expected.inode;
+}
+
+function canonicalDirectoryInstanceFingerprint(
+  canonicalPath: string,
+  stat: fs.BigIntStats
+): string {
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        schemaVersion: 1,
+        canonicalPath,
+        device: stat.dev.toString(),
+        inode: stat.ino.toString(),
+      }),
+      'utf8'
+    )
+    .digest('hex');
+}
+
+function noFollowReadFlags(): number {
+  if (!Number.isSafeInteger(NO_FOLLOW) || NO_FOLLOW <= 0) {
+    throw new Error('phase2-read-no-follow-unavailable');
+  }
+  return fs.constants.O_RDONLY | NO_FOLLOW;
+}
+
+function stableFile(before: fs.Stats, after: fs.Stats): boolean {
+  return (
+    sameEntry(after, entryIdentity(before)) &&
+    before.size === after.size &&
+    before.mtimeMs === after.mtimeMs &&
+    before.ctimeMs === after.ctimeMs
+  );
+}
+
+function assertDirectChild(root: string, candidate: string, expectedRelativePath: string): void {
+  const actualRelativePath = relative(root, candidate);
+  if (
+    actualRelativePath !== expectedRelativePath ||
+    actualRelativePath.startsWith('..') ||
+    isAbsolute(actualRelativePath)
+  ) {
+    throw new Error('phase2-read-root-containment-invalid');
+  }
+}
+
+async function activeFileIo<TResult>(
+  assertActive: () => void,
+  operation: () => Promise<TResult>
+): Promise<TResult> {
+  assertActive();
+  try {
+    const value = await operation();
+    assertActive();
+    return value;
+  } catch (error) {
+    assertActive();
+    throw error;
+  }
+}
+
+async function closeActiveFileHandle(
+  handle: fs.promises.FileHandle,
+  assertActive: () => void
+): Promise<void> {
+  let firstError: unknown;
+  try {
+    assertActive();
+  } catch (error) {
+    firstError = error;
+  }
+  try {
+    await handle.close();
+  } catch (error) {
+    firstError ??= error;
+  }
+  try {
+    assertActive();
+  } catch (error) {
+    firstError ??= error;
+  }
+  if (firstError) throw firstError;
+}
+
+async function openActiveFileHandle(
+  filePath: string,
+  assertActive: () => void
+): Promise<fs.promises.FileHandle> {
+  assertActive();
+  let handle: fs.promises.FileHandle | null = null;
+  try {
+    handle = await fs.promises.open(filePath, noFollowReadFlags());
+    assertActive();
+    return handle;
+  } catch (error) {
+    if (handle) await closeActiveFileHandle(handle, assertActive);
+    else assertActive();
+    throw error;
+  }
+}
+
+async function readActiveAtMost(
+  handle: fs.promises.FileHandle,
+  maxBytes: number,
+  assertActive: () => void
+): Promise<Buffer> {
+  const buffer = Buffer.allocUnsafe(maxBytes + 1);
+  let offset = 0;
+  while (offset < buffer.length) {
+    const { bytesRead } = await activeFileIo(assertActive, () =>
+      handle.read(buffer, offset, buffer.length - offset, offset)
+    );
+    if (bytesRead === 0) break;
+    offset += bytesRead;
+  }
+  return buffer.subarray(0, offset);
+}
+
+async function readCanonicalDirectory(
+  directoryPath: string,
+  expectedParent: string | null,
+  expectedName: string | null,
+  assertActive: () => void
+): Promise<{ readonly canonicalPath: string; readonly stat: fs.BigIntStats }> {
+  const stat = await activeFileIo(assertActive, () =>
+    fs.promises.lstat(directoryPath, { bigint: true })
+  );
+  const canonicalPath = await activeFileIo(assertActive, () => fs.promises.realpath(directoryPath));
+  if (!stat.isDirectory() || stat.isSymbolicLink() || canonicalPath !== directoryPath) {
+    throw new Error('phase2-read-directory-binding-invalid');
+  }
+  if (expectedParent !== null && expectedName !== null) {
+    assertDirectChild(expectedParent, canonicalPath, expectedName);
+  }
+  return Object.freeze({ canonicalPath, stat });
+}
+
+class ExplicitRootReadOnlyTeamSummarySource implements HostedReadOnlyTeamSummarySource {
+  async readTeamSummary(input: {
+    readonly claudeRoot: string;
+    readonly identity: TeamIdentityRecord;
+    readonly context: QueryContext;
+    readonly assertActive: () => void;
+  }): Promise<Readonly<Record<PropertyKey, unknown>> | null> {
+    const identity = parseTeamIdentityRecord(input.identity);
+    if (identity.state !== 'active') {
+      throw new Error('phase2-read-canonical-identity-state-invalid');
+    }
+    const legacyTeamName = parseLegacyTeamKey(identity.legacyKey);
+
+    try {
+      const claudeRoot = await readCanonicalDirectory(
+        input.claudeRoot,
+        null,
+        null,
+        input.assertActive
+      );
+      const teamsRoot = await readCanonicalDirectory(
+        join(claudeRoot.canonicalPath, 'teams'),
+        claudeRoot.canonicalPath,
+        'teams',
+        input.assertActive
+      );
+      const teamRoot = await readCanonicalDirectory(
+        join(teamsRoot.canonicalPath, legacyTeamName),
+        teamsRoot.canonicalPath,
+        legacyTeamName,
+        input.assertActive
+      );
+      const identityName = 'team.identity.json';
+      const identityPath = join(teamRoot.canonicalPath, identityName);
+      const identityStat = await activeFileIo(input.assertActive, () =>
+        fs.promises.lstat(identityPath)
+      );
+      const canonicalIdentityPath = await activeFileIo(input.assertActive, () =>
+        fs.promises.realpath(identityPath)
+      );
+      assertDirectChild(teamRoot.canonicalPath, canonicalIdentityPath, identityName);
+      if (
+        !identityStat.isFile() ||
+        identityStat.isSymbolicLink() ||
+        canonicalIdentityPath !== identityPath ||
+        identityStat.size < 1 ||
+        identityStat.size > MAX_HOSTED_TEAM_IDENTITY_BYTES
+      ) {
+        throw new Error('phase2-read-canonical-identity-invalid');
+      }
+
+      const identityHandle = await openActiveFileHandle(identityPath, input.assertActive);
+      let serializedIdentityBuffer: Buffer;
+      try {
+        const openedIdentityStat = await activeFileIo(input.assertActive, () =>
+          identityHandle.stat()
+        );
+        if (!openedIdentityStat.isFile() || !stableFile(identityStat, openedIdentityStat)) {
+          throw new Error('phase2-read-canonical-identity-replaced');
+        }
+        serializedIdentityBuffer = await readActiveAtMost(
+          identityHandle,
+          MAX_HOSTED_TEAM_IDENTITY_BYTES,
+          input.assertActive
+        );
+        const afterIdentityReadStat = await activeFileIo(input.assertActive, () =>
+          identityHandle.stat()
+        );
+        if (
+          serializedIdentityBuffer.length > MAX_HOSTED_TEAM_IDENTITY_BYTES ||
+          !stableFile(openedIdentityStat, afterIdentityReadStat) ||
+          afterIdentityReadStat.size !== serializedIdentityBuffer.length
+        ) {
+          throw new Error('phase2-read-canonical-identity-changed');
+        }
+      } finally {
+        await closeActiveFileHandle(identityHandle, input.assertActive);
+      }
+      assertCanonicalIdentityFile(serializedIdentityBuffer.toString('utf8'), identity);
+
+      const fingerprintedTeamRoot = await readCanonicalDirectory(
+        teamRoot.canonicalPath,
+        teamsRoot.canonicalPath,
+        legacyTeamName,
+        input.assertActive
+      );
+      if (
+        !sameDirectoryEntry(fingerprintedTeamRoot.stat, directoryEntryIdentity(teamRoot.stat)) ||
+        canonicalDirectoryInstanceFingerprint(
+          fingerprintedTeamRoot.canonicalPath,
+          fingerprintedTeamRoot.stat
+        ) !== identity.directoryFingerprint
+      ) {
+        throw new Error('phase2-read-directory-fingerprint-mismatch');
+      }
+
+      const configName = 'config.json';
+      const configPath = join(teamRoot.canonicalPath, configName);
+      const configStat = await activeFileIo(input.assertActive, () =>
+        fs.promises.lstat(configPath)
+      );
+      const canonicalConfigPath = await activeFileIo(input.assertActive, () =>
+        fs.promises.realpath(configPath)
+      );
+      assertDirectChild(teamRoot.canonicalPath, canonicalConfigPath, configName);
+      if (
+        !configStat.isFile() ||
+        configStat.isSymbolicLink() ||
+        canonicalConfigPath !== configPath ||
+        configStat.size < 0 ||
+        configStat.size > MAX_HOSTED_TEAM_CONFIG_BYTES
+      ) {
+        input.assertActive();
+        return null;
+      }
+
+      const handle = await openActiveFileHandle(configPath, input.assertActive);
+      let serializedBuffer: Buffer;
+      try {
+        const openedStat = await activeFileIo(input.assertActive, () => handle.stat());
+        if (!openedStat.isFile() || !stableFile(configStat, openedStat)) {
+          throw new Error('phase2-read-config-replaced');
+        }
+        serializedBuffer = await readActiveAtMost(
+          handle,
+          MAX_HOSTED_TEAM_CONFIG_BYTES,
+          input.assertActive
+        );
+        const afterReadStat = await activeFileIo(input.assertActive, () => handle.stat());
+        if (
+          serializedBuffer.length > MAX_HOSTED_TEAM_CONFIG_BYTES ||
+          !stableFile(openedStat, afterReadStat) ||
+          afterReadStat.size !== serializedBuffer.length
+        ) {
+          throw new Error('phase2-read-config-changed');
+        }
+      } finally {
+        await closeActiveFileHandle(handle, input.assertActive);
+      }
+
+      const claudeRootAfter = await readCanonicalDirectory(
+        input.claudeRoot,
+        null,
+        null,
+        input.assertActive
+      );
+      const teamsRootAfter = await readCanonicalDirectory(
+        teamsRoot.canonicalPath,
+        claudeRoot.canonicalPath,
+        'teams',
+        input.assertActive
+      );
+      const teamRootAfter = await readCanonicalDirectory(
+        teamRoot.canonicalPath,
+        teamsRoot.canonicalPath,
+        legacyTeamName,
+        input.assertActive
+      );
+      const identityAfter = await activeFileIo(input.assertActive, () =>
+        fs.promises.lstat(identityPath)
+      );
+      const identityPathAfter = await activeFileIo(input.assertActive, () =>
+        fs.promises.realpath(identityPath)
+      );
+      assertDirectChild(teamRoot.canonicalPath, identityPathAfter, identityName);
+      const configAfter = await activeFileIo(input.assertActive, () =>
+        fs.promises.lstat(configPath)
+      );
+      const configPathAfter = await activeFileIo(input.assertActive, () =>
+        fs.promises.realpath(configPath)
+      );
+      assertDirectChild(teamRoot.canonicalPath, configPathAfter, configName);
+      if (
+        !sameDirectoryEntry(claudeRootAfter.stat, directoryEntryIdentity(claudeRoot.stat)) ||
+        !sameDirectoryEntry(teamsRootAfter.stat, directoryEntryIdentity(teamsRoot.stat)) ||
+        !sameDirectoryEntry(
+          teamRootAfter.stat,
+          directoryEntryIdentity(fingerprintedTeamRoot.stat)
+        ) ||
+        !stableFile(identityStat, identityAfter) ||
+        identityPathAfter !== canonicalIdentityPath ||
+        !stableFile(configStat, configAfter) ||
+        configPathAfter !== canonicalConfigPath
+      ) {
+        throw new Error('phase2-read-config-binding-changed');
+      }
+
+      input.assertActive();
+      const serialized = serializedBuffer.toString('utf8');
+      const config = JSON.parse(serialized) as unknown;
+      if (!isRecord(config) || config.name !== legacyTeamName) {
+        input.assertActive();
+        return null;
+      }
+
+      const summary: Record<string, unknown> = { teamName: legacyTeamName };
+      if (typeof config.deletedAt === 'string') summary.deletedAt = config.deletedAt;
+      if (config.pendingCreate === true) summary.pendingCreate = true;
+      if (config.partialLaunchFailure === true) summary.partialLaunchFailure = true;
+      input.assertActive();
+      return Object.freeze(summary);
+    } catch (error) {
+      input.assertActive();
+      if (isMissingPathError(error)) {
+        input.assertActive();
+        return null;
+      }
+      throw error;
+    }
+  }
+}
+
+class MountBindingScopedIdentityGateway implements TeamIdentityReadGateway {
+  private currentIdentities: readonly TeamIdentityRecord[] = Object.freeze([]);
+
+  constructor(
+    private readonly source: TeamIdentityReadGateway,
+    private readonly mountBinding: WorkspaceMountBinding
+  ) {}
+
+  async listTeamIdentities(): Promise<readonly TeamIdentityRecord[]> {
+    const values = await this.source.listTeamIdentities();
+    if (!Array.isArray(values)) throw new TypeError('phase2-read-identity-source-invalid');
+    const identities = values.flatMap((value) => {
+      const identity = parseTeamIdentityRecord(value);
+      const workspaceBinding = identity.workspaceBinding;
+      if (workspaceBinding === null) throw new TypeError('phase2-read-identity-binding-invalid');
+      if (workspaceBinding.workspaceId !== this.mountBinding.workspaceId) return [];
+      if (workspaceBinding.generation !== this.mountBinding.mountGeneration) {
+        throw new TypeError('phase2-read-identity-binding-generation-invalid');
+      }
+      return [identity];
+    });
+    this.currentIdentities = Object.freeze(identities);
+    return this.currentIdentities;
+  }
+
+  async getTeamIdentity(teamId: Parameters<TeamIdentityReadGateway['getTeamIdentity']>[0]) {
+    const value = await this.source.getTeamIdentity(teamId);
+    if (value === null) return null;
+    const identity = parseTeamIdentityRecord(value);
+    const workspaceBinding = identity.workspaceBinding;
+    if (workspaceBinding === null) throw new TypeError('phase2-read-identity-binding-invalid');
+    if (workspaceBinding.workspaceId !== this.mountBinding.workspaceId) return null;
+    if (workspaceBinding.generation !== this.mountBinding.mountGeneration) {
+      throw new TypeError('phase2-read-identity-binding-generation-invalid');
+    }
+    return identity;
+  }
+
+  identitiesForCurrentSnapshot(): readonly TeamIdentityRecord[] {
+    return this.currentIdentities;
+  }
+}
+
+class MountBindingScopedLegacyDataPort implements LegacyTeamDataReadPort {
+  constructor(
+    private readonly claudeRoot: string,
+    private readonly identities: MountBindingScopedIdentityGateway,
+    private readonly source: HostedReadOnlyTeamSummarySource,
+    private readonly nowMs: () => number
+  ) {}
+
+  private assertActive(context: QueryContext): void {
+    if (context.signal.aborted) throw new Error('phase2-read-request-cancelled');
+    const nowMs = this.nowMs();
+    if (!Number.isSafeInteger(nowMs) || nowMs < 0 || nowMs >= context.deadlineAtMs) {
+      throw new Error('phase2-read-request-expired');
+    }
+  }
+
+  private async readSummary(
+    identity: TeamIdentityRecord,
+    context: QueryContext
+  ): Promise<Readonly<Record<PropertyKey, unknown>> | null> {
+    this.assertActive(context);
+    try {
+      const summary = await this.source.readTeamSummary({
+        claudeRoot: this.claudeRoot,
+        identity,
+        context,
+        assertActive: () => this.assertActive(context),
+      });
+      this.assertActive(context);
+      return summary;
+    } catch (error) {
+      this.assertActive(context);
+      throw error;
+    }
+  }
+
+  async listTeams(context: QueryContext): Promise<unknown> {
+    const summaries: Readonly<Record<PropertyKey, unknown>>[] = [];
+    for (const identity of this.identities.identitiesForCurrentSnapshot()) {
+      if (identity.state !== 'active') continue;
+      const summary = await this.readSummary(identity, context);
+      if (summary) summaries.push(summary);
+    }
+    return Object.freeze(summaries);
+  }
+
+  async getTeamData(legacyTeamName: string, context: QueryContext): Promise<unknown> {
+    const identity = this.identities
+      .identitiesForCurrentSnapshot()
+      .find((candidate) => candidate.legacyKey === legacyTeamName);
+    if (!identity) throw new Error('phase2-read-team-outside-mount-binding');
+    const summary = await this.readSummary(identity, context);
+    if (!summary) throw new Error('phase2-read-team-data-unavailable');
+    const config =
+      typeof summary.deletedAt === 'string'
+        ? Object.freeze({ deletedAt: summary.deletedAt })
+        : Object.freeze({});
+    const warnings =
+      summary.partialLaunchFailure === true ? Object.freeze(['degraded']) : Object.freeze([]);
+    return Object.freeze({ teamName: legacyTeamName, config, warnings });
+  }
+}
+
 function projectSummary(
   legacyTeamName: string,
   value: Record<PropertyKey, unknown>
@@ -291,6 +889,66 @@ export function createPhase2ReadAuthority(value: Phase2ReadAuthorityInput): Phas
   }
 }
 
+/**
+ * Builds the hosted-only read ports from one admitted mount binding and explicit runtime roots.
+ * The adapters never enumerate the ambient teams root and expose no write, process, provider, or
+ * cleanup capability. Legacy config reads are limited to keys returned for this mount binding.
+ */
+export function createMountBindingScopedPhase2ReadPorts(
+  input: MountBindingScopedPhase2ReadPortsInput
+): MountBindingScopedPhase2ReadPorts {
+  if (!phase2ReadAuthorities.has(input.authority)) {
+    throw new TypeError('phase2-read-authority-invalid');
+  }
+  if (!(input.mountBinding instanceof WorkspaceMountBinding)) {
+    throw new TypeError('phase2-read-mount-binding-invalid');
+  }
+  const runtimeInstance = createRuntimeInstanceContext(input.runtimeInstance);
+  if (
+    input.mountBinding.health === 'unavailable' ||
+    input.mountBinding.bootId !== runtimeInstance.bootId ||
+    input.authority.workspaceId !== input.mountBinding.workspaceId ||
+    input.authority.workspaceGeneration !== input.mountBinding.mountGeneration ||
+    input.authority.deploymentId !== runtimeInstance.deploymentId ||
+    input.authority.bootId !== runtimeInstance.bootId
+  ) {
+    throw new TypeError('phase2-read-mount-binding-invalid');
+  }
+  if (typeof input.nowMs !== 'function') {
+    throw new TypeError('phase2-read-clock-invalid');
+  }
+
+  const claudeRoot = runtimeInstance.claudeRoot.reference as string;
+  if (
+    !isAbsolute(claudeRoot) ||
+    resolve(claudeRoot) !== claudeRoot ||
+    claudeRoot === resolve(claudeRoot, '/')
+  ) {
+    throw new TypeError('phase2-read-claude-root-invalid');
+  }
+
+  const identities = new MountBindingScopedIdentityGateway(
+    input.teamIdentities,
+    input.mountBinding
+  );
+  return Object.freeze({
+    teamIdentities: identities,
+    legacyData: new MountBindingScopedLegacyDataPort(
+      claudeRoot,
+      identities,
+      input.teamSummarySource ?? new ExplicitRootReadOnlyTeamSummarySource(),
+      input.nowMs
+    ),
+    legacyRuntime: createMountBindingScopedRuntimeEvidencePort({
+      mountBinding: input.mountBinding,
+      runtimeInstance,
+      identitiesForCurrentSnapshot: () => identities.identitiesForCurrentSnapshot(),
+      nowMs: input.nowMs,
+      source: input.runtimeEvidenceSource,
+    }),
+  });
+}
+
 /** Owns the one immutable identity/data snapshot used throughout a host request. */
 export class Phase2ReadSnapshotCoordinator {
   private readonly snapshots = new WeakMap<
@@ -310,7 +968,8 @@ export class Phase2ReadSnapshotCoordinator {
     readonly authority: Phase2ReadAuthority,
     private readonly identityGateway: TeamIdentityReadGateway | null,
     private readonly legacyData: LegacyTeamDataReadPort,
-    private readonly legacyRuntime: LegacyTeamRuntimeReadPort
+    private readonly legacyRuntime: LegacyTeamRuntimeReadPort,
+    private readonly nowMs: () => number
   ) {}
 
   admitContext(context: QueryContext): boolean {
@@ -322,16 +981,33 @@ export class Phase2ReadSnapshotCoordinator {
     );
   }
 
+  private preflight(context: QueryContext): TeamLifecycleReadFailure | null {
+    if (!this.admitContext(context)) return forbiddenContext();
+    if (context.signal.aborted) return cancelledContext('request_cancelled');
+    try {
+      const nowMs = this.nowMs();
+      if (!Number.isSafeInteger(nowMs) || nowMs < 0) return clockInvalid();
+      return nowMs >= context.deadlineAtMs ? cancelledContext('deadline_exceeded') : null;
+    } catch {
+      return clockInvalid();
+    }
+  }
+
   async readSnapshot(
     context: QueryContext
   ): Promise<Phase2ReadSnapshot | TeamLifecycleReadFailure> {
-    if (!this.admitContext(context)) return forbiddenContext();
+    const preflight = this.preflight(context);
+    if (preflight) return preflight;
     const existing = this.snapshots.get(context);
-    if (existing) return existing;
+    if (existing) {
+      const snapshot = await existing;
+      return this.preflight(context) ?? snapshot;
+    }
 
     const pending = this.loadSnapshot(context);
     this.snapshots.set(context, pending);
-    return pending;
+    const snapshot = await pending;
+    return this.preflight(context) ?? snapshot;
   }
 
   private async loadSnapshot(
@@ -341,11 +1017,14 @@ export class Phase2ReadSnapshotCoordinator {
 
     let identityValues: readonly TeamIdentityRecord[];
     try {
-      if (!this.admitContext(context)) return forbiddenContext();
+      const preflight = this.preflight(context);
+      if (preflight) return preflight;
       identityValues = await this.identityGateway.listTeamIdentities();
     } catch {
-      return identityUnavailable();
+      return this.preflight(context) ?? identityUnavailable();
     }
+    const afterIdentityRead = this.preflight(context);
+    if (afterIdentityRead) return afterIdentityRead;
 
     let identities: readonly TeamIdentityRecord[];
     try {
@@ -377,11 +1056,14 @@ export class Phase2ReadSnapshotCoordinator {
 
     let summaryValues: unknown;
     try {
-      if (!this.admitContext(context)) return forbiddenContext();
+      const preflight = this.preflight(context);
+      if (preflight) return preflight;
       summaryValues = await this.legacyData.listTeams(context);
     } catch {
-      return dataUnavailable();
+      return this.preflight(context) ?? dataUnavailable();
     }
+    const afterLegacyDataRead = this.preflight(context);
+    if (afterLegacyDataRead) return afterLegacyDataRead;
 
     let summaries: readonly FrozenLegacyLifecycleSummary[];
     try {
@@ -426,6 +1108,8 @@ export class Phase2ReadSnapshotCoordinator {
     legacyTeamName: string,
     context: QueryContext
   ): Promise<FrozenRuntimeState | TeamLifecycleReadFailure> {
+    const preflight = this.preflight(context);
+    if (preflight) return preflight;
     const snapshot = await this.readSnapshot(context);
     if (isSnapshotFailure(snapshot)) return snapshot;
     if (!snapshot.identities.some((identity) => identity.legacyKey === legacyTeamName)) {
@@ -438,24 +1122,34 @@ export class Phase2ReadSnapshotCoordinator {
       this.runtimeStates.set(context, byTeamName);
     }
     const existing = byTeamName.get(legacyTeamName);
-    if (existing) return existing;
+    if (existing) {
+      const runtime = await existing;
+      return this.preflight(context) ?? runtime;
+    }
 
     const pending = this.loadRuntimeState(legacyTeamName, context);
     byTeamName.set(legacyTeamName, pending);
-    return pending;
+    const runtime = await pending;
+    return this.preflight(context) ?? runtime;
   }
 
   async readAliveNames(
     context: QueryContext
   ): Promise<readonly string[] | TeamLifecycleReadFailure> {
+    const preflight = this.preflight(context);
+    if (preflight) return preflight;
     const snapshot = await this.readSnapshot(context);
     if (isSnapshotFailure(snapshot)) return snapshot;
     const existing = this.aliveNames.get(context);
-    if (existing) return existing;
+    if (existing) {
+      const names = await existing;
+      return this.preflight(context) ?? names;
+    }
 
     const pending = this.loadAliveNames(snapshot, context);
     this.aliveNames.set(context, pending);
-    return pending;
+    const names = await pending;
+    return this.preflight(context) ?? names;
   }
 
   private async loadRuntimeState(
@@ -464,11 +1158,14 @@ export class Phase2ReadSnapshotCoordinator {
   ): Promise<FrozenRuntimeState | TeamLifecycleReadFailure> {
     let value: unknown;
     try {
-      if (!this.admitContext(context)) return forbiddenContext();
+      const preflight = this.preflight(context);
+      if (preflight) return preflight;
       value = await this.legacyRuntime.getRuntimeState(legacyTeamName, context);
     } catch {
-      return dataUnavailable();
+      return this.preflight(context) ?? dataUnavailable();
     }
+    const afterRuntimeRead = this.preflight(context);
+    if (afterRuntimeRead) return afterRuntimeRead;
     if (
       !isRecord(value) ||
       value.teamName !== legacyTeamName ||
@@ -485,11 +1182,14 @@ export class Phase2ReadSnapshotCoordinator {
   ): Promise<readonly string[] | TeamLifecycleReadFailure> {
     let value: unknown;
     try {
-      if (!this.admitContext(context)) return forbiddenContext();
+      const preflight = this.preflight(context);
+      if (preflight) return preflight;
       value = await this.legacyRuntime.getAliveTeams(context);
     } catch {
-      return dataUnavailable();
+      return this.preflight(context) ?? dataUnavailable();
     }
+    const afterRuntimeRead = this.preflight(context);
+    if (afterRuntimeRead) return afterRuntimeRead;
     if (!Array.isArray(value) || value.length > MAX_PAGE_SIZE) return corruptData();
     const localNames = new Set(snapshot.identities.map((identity) => identity.legacyKey as string));
     const seen = new Set<string>();
@@ -567,10 +1267,8 @@ class CanonicalIdentityProjectionReadPort implements LegacyTeamIdentityReadPort 
     const summary = snapshot.summariesByName.get(identity.legacyKey) ?? null;
     let projection: unknown = summary;
     if (purpose === 'runtime') {
-      const runtime =
-        availability(identity, summary) === 'draft'
-          ? Object.freeze({ teamName: identity.legacyKey, isAlive: false })
-          : await this.coordinator.readRuntimeState(identity.legacyKey, context);
+      if (availability(identity, summary) === 'draft') return dataUnavailable();
+      const runtime = await this.coordinator.readRuntimeState(identity.legacyKey, context);
       if (isRuntimeFailure(runtime)) return runtime;
       projection = runtime;
     }
@@ -678,7 +1376,9 @@ class SnapshotLegacyDataPort implements LegacyTeamDataReadPort {
         : Object.freeze({});
     const warnings =
       summary.partialLaunchFailure === true ? Object.freeze(['degraded']) : Object.freeze([]);
-    return Object.freeze({ teamName: legacyTeamName, config, warnings, isAlive: false });
+    const runtime = await this.coordinator.readRuntimeState(legacyTeamName, context);
+    if (isRuntimeFailure(runtime)) throw new Error('phase2-read-runtime-unavailable');
+    return Object.freeze({ teamName: legacyTeamName, config, warnings, isAlive: runtime.isAlive });
   }
 }
 
@@ -694,7 +1394,7 @@ class SnapshotRuntimeReadPort implements LegacyTeamRuntimeReadPort {
 
   async getAliveTeams(context: QueryContext): Promise<unknown> {
     const names = await this.coordinator.readAliveNames(context);
-    if (isAliveNamesFailure(names)) throw new Error('phase2-read-runtime-unavailable');
+    if (isAliveNamesFailure(names)) throw new Phase2RuntimeEvidenceUnavailableError();
     return names;
   }
 }
@@ -718,7 +1418,8 @@ export function createPhase2ReadComposition(
     authority,
     dependencies.teamIdentities,
     dependencies.legacyData,
-    dependencies.legacyRuntime
+    dependencies.legacyRuntime,
+    dependencies.nowMs
   );
   const policy = {
     isAuthorized: (context: QueryContext) => coordinator.admitContext(context),
@@ -750,7 +1451,12 @@ export function createPhase2ReadComposition(
     },
     alive: {
       execute: (request: unknown, context: QueryContext) =>
-        purposes.run(context, 'runtime', () => alive.execute(request, context)),
+        purposes.run(context, 'runtime', async () => {
+          const result = await alive.execute(request, context);
+          if (result.kind !== 'failure' || result.error.code !== 'unavailable') return result;
+          const evidence = await coordinator.readAliveNames(context);
+          return isAliveNamesFailure(evidence) ? evidence : result;
+        }),
     },
   };
 
@@ -762,12 +1468,20 @@ export function createPhase2ReadComposition(
 
 export function createPhase2ReadHost(
   composition: Phase2ReadComposition,
-  createContext: (authority: Phase2ReadAuthority) => QueryContext
+  createContext: (authority: Phase2ReadAuthority, requestSignal: AbortSignal) => QueryContext
 ): Phase2ReadHost {
   return Object.freeze({
-    async listTeamLifecycle(request: unknown): Promise<CanonicalListTeamLifecycleResult> {
+    async listTeamLifecycle(
+      request: unknown,
+      requestSignal?: AbortSignal
+    ): Promise<CanonicalListTeamLifecycleResult> {
       try {
-        const context = createContext(composition.authority);
+        const signal = requestSignal ?? new AbortController().signal;
+        const createdContext = createContext(composition.authority, signal);
+        const context =
+          createdContext.signal === signal
+            ? createdContext
+            : createQueryContext({ ...createdContext, signal });
         return await composition.teamLifecycle.listTeamLifecycle(
           request as ListTeamLifecycleRequest,
           context

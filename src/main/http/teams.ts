@@ -244,10 +244,27 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
   const phase2ReadHost = services.phase2ReadHost;
   if (phase2ReadHost) {
     app.post<{ Body: unknown }>(TEAM_LIFECYCLE_LIST_ROUTE, async (request, reply) => {
+      const requestController = new AbortController();
+      const abortRequest = () => requestController.abort();
+      const rawRequest = request.raw;
+      const requestSocket = rawRequest.socket;
+      const rawResponse = reply.raw;
+      rawRequest.once('aborted', abortRequest);
+      requestSocket.once('close', abortRequest);
+      rawResponse.once('close', abortRequest);
+      if (rawRequest.aborted || requestSocket.destroyed || rawResponse.destroyed) {
+        abortRequest();
+      }
       try {
-        return reply.send(await phase2ReadHost.listTeamLifecycle(request.body));
+        return reply.send(
+          await phase2ReadHost.listTeamLifecycle(request.body, requestController.signal)
+        );
       } catch {
         return reply.send(phase2TransportUnavailable());
+      } finally {
+        rawRequest.removeListener('aborted', abortRequest);
+        requestSocket.removeListener('close', abortRequest);
+        rawResponse.removeListener('close', abortRequest);
       }
     });
   }

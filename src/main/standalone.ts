@@ -16,6 +16,8 @@
 // runtime which is unavailable in standalone (pure Node.js) mode. Standalone
 // error tracking can be added later with @sentry/node if needed.
 
+import { isAbsolute, resolve } from 'node:path';
+
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
 import { createQueryContext } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
@@ -25,15 +27,16 @@ import {
   Phase2ReadBootstrapSource,
 } from './composition/hosted/phase2ReadBootstrapSource';
 import {
+  createMountBindingScopedPhase2ReadPorts,
   createPhase2ReadComposition,
   createPhase2ReadHost,
   createUnavailablePhase2ReadHost,
   type Phase2ReadAuthority,
   type Phase2ReadHost,
 } from './composition/hosted/phase2ReadComposition';
+import { createPhase2ReadOnlyIdentitySource } from './composition/hosted/phase2ReadOnlyIdentitySource';
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
-  getAppDataPath,
   getProjectsBasePath,
   getTodosBasePath,
   setClaudeBasePathOverride,
@@ -45,7 +48,6 @@ import type { NotificationManager } from './services/infrastructure/Notification
 import type { ServiceContext } from './services/infrastructure/ServiceContext';
 import type { SshConnectionManager } from './services/infrastructure/SshConnectionManager';
 import type { UpdaterService } from './services/infrastructure/UpdaterService';
-import type { InternalStorageFeature } from '@features/internal-storage/main';
 
 const logger = createLogger('Standalone');
 
@@ -102,11 +104,21 @@ const sshConnectionManagerStub = {
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
-let internalStorageFeature: InternalStorageFeature | null = null;
+
+function admitHostedReadRoot(reference: string): string {
+  if (
+    !isAbsolute(reference) ||
+    resolve(reference) !== reference ||
+    reference === resolve(reference, '/')
+  ) {
+    throw new TypeError('phase2-read-runtime-root-invalid');
+  }
+  return reference;
+}
 
 const phase2ReadNowMs = (): number => Date.now();
 
-function createPhase2ReadQueryContext(authority: Phase2ReadAuthority) {
+function createPhase2ReadQueryContext(authority: Phase2ReadAuthority, requestSignal: AbortSignal) {
   return createQueryContext({
     actorId: authority.actorId,
     sessionId: 'session_phase2-standalone',
@@ -115,7 +127,7 @@ function createPhase2ReadQueryContext(authority: Phase2ReadAuthority) {
     requestId: `request_phase2-standalone-${++phase2ReadRequestSequence}`,
     authorizedScope: authority.authorizedScope,
     deadlineAtMs: phase2ReadNowMs() + 10_000,
-    signal: new AbortController().signal,
+    signal: requestSignal,
   });
 }
 
@@ -128,25 +140,59 @@ let phase2ReadRequestSequence = 0;
 async function start(): Promise<void> {
   logger.info('Starting standalone server...');
 
-  // Apply Claude root override if set
-  if (CLAUDE_ROOT) {
+  const serializedHostedBootstrap = process.env[PHASE2_READ_BOOTSTRAP_ENV];
+  const hostedMode = serializedHostedBootstrap !== undefined;
+  let phase2ReadHost: Phase2ReadHost = createUnavailablePhase2ReadHost();
+
+  if (hostedMode) {
+    // Hosted admission is complete before any ServiceContext/FileWatcher or HTTP service exists.
+    // An invalid launcher envelope aborts startup; unavailable identity storage leaves only the
+    // canonical read facet unavailable and never falls back to ambient discovery.
+    const bootstrap = await new Phase2ReadBootstrapSource({
+      input: {
+        readSerializedBootstrap: () => serializedHostedBootstrap,
+      },
+      nowMs: phase2ReadNowMs,
+    }).load();
+    const claudeRoot = admitHostedReadRoot(bootstrap.runtimeInstance.claudeRoot.reference);
+    const appDataRoot = admitHostedReadRoot(bootstrap.runtimeInstance.appDataRoot.reference);
+    setClaudeBasePathOverride(claudeRoot);
+
+    const teamIdentityGateway = await createPhase2ReadOnlyIdentitySource({ appDataRoot });
+    if (teamIdentityGateway) {
+      try {
+        const readPorts = createMountBindingScopedPhase2ReadPorts({
+          authority: bootstrap.authority,
+          mountBinding: bootstrap.mountBinding,
+          runtimeInstance: bootstrap.runtimeInstance,
+          teamIdentities: teamIdentityGateway,
+          nowMs: phase2ReadNowMs,
+        });
+        await readPorts.teamIdentities.listTeamIdentities();
+        const composition = createPhase2ReadComposition({
+          authority: bootstrap.authority,
+          ...readPorts,
+          nowMs: phase2ReadNowMs,
+        });
+        phase2ReadHost = createPhase2ReadHost(composition, createPhase2ReadQueryContext);
+      } catch {
+        logger.warn(
+          'Hosted Phase 2 identity admission unavailable; canonical reads remain disabled.'
+        );
+      }
+    } else {
+      logger.warn('Hosted Phase 2 identity storage unavailable; canonical reads remain disabled.');
+    }
+  } else if (CLAUDE_ROOT) {
     setClaudeBasePathOverride(CLAUDE_ROOT);
     logger.info(`Using CLAUDE_ROOT: ${CLAUDE_ROOT}`);
   }
 
   // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
-  const [
-    { HttpServer },
-    { NotificationManager },
-    { ServiceContext },
-    { createInternalStorageFeature },
-    { TeamDataService, TeamProvisioningService },
-  ] = await Promise.all([
+  const [{ HttpServer }, { NotificationManager }, { ServiceContext }] = await Promise.all([
     import('./services/infrastructure/HttpServer'),
     import('./services/infrastructure/NotificationManager'),
     import('./services/infrastructure/ServiceContext'),
-    import('@features/internal-storage/main'),
-    import('./services/team'),
   ]);
 
   const projectsDir = getProjectsBasePath();
@@ -163,7 +209,8 @@ async function start(): Promise<void> {
     projectsDir,
     todosDir,
   });
-  localContext.start();
+  if (hostedMode) localContext.startCacheOnly();
+  else localContext.start();
 
   // Initialize notification manager
   notificationManager = NotificationManager.getInstance();
@@ -176,41 +223,6 @@ async function start(): Promise<void> {
     getLocalContext: () => localContext,
     logger: createLogger('Feature:RecentProjects'),
   });
-  internalStorageFeature = createInternalStorageFeature({ userDataPath: getAppDataPath() });
-
-  let phase2ReadHost: Phase2ReadHost = createUnavailablePhase2ReadHost();
-  const teamIdentityGateway = internalStorageFeature.teamIdentityReadBackend?.gateway ?? null;
-  if (teamIdentityGateway) {
-    try {
-      const bootstrap = await new Phase2ReadBootstrapSource({
-        input: {
-          readSerializedBootstrap: () => process.env[PHASE2_READ_BOOTSTRAP_ENV],
-        },
-        nowMs: phase2ReadNowMs,
-      }).load();
-      const teamDataService = new TeamDataService();
-      const teamRuntimeService = new TeamProvisioningService();
-      const composition = createPhase2ReadComposition({
-        authority: bootstrap.authority,
-        teamIdentities: teamIdentityGateway,
-        legacyData: {
-          listTeams: () => teamDataService.listTeams(),
-          getTeamData: (teamName) => teamDataService.getTeamData(teamName),
-        },
-        legacyRuntime: {
-          getRuntimeState: (teamName) => teamRuntimeService.getRuntimeState(teamName),
-          getAliveTeams: () => teamRuntimeService.getAliveTeams(),
-        },
-        nowMs: phase2ReadNowMs,
-      });
-      phase2ReadHost = createPhase2ReadHost(composition, (authority) =>
-        createPhase2ReadQueryContext(authority)
-      );
-    } catch {
-      logger.warn('Hosted Phase 2 read bootstrap unavailable; canonical reads remain disabled.');
-    }
-  }
-
   // Wire file watcher events to SSE broadcast
   localContext.fileWatcher.on('file-change', (event: unknown) => {
     httpServer.broadcast('file-change', event);
@@ -261,11 +273,6 @@ async function shutdown(): Promise<void> {
 
   if (localContext) {
     localContext.dispose();
-  }
-
-  if (internalStorageFeature) {
-    await internalStorageFeature.dispose();
-    internalStorageFeature = null;
   }
 
   logger.info('Shutdown complete');

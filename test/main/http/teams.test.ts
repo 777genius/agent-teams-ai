@@ -1,3 +1,5 @@
+import { request as makeHttpRequest } from 'node:http';
+
 import {
   type CanonicalListTeamLifecycleResult,
   TEAM_LIFECYCLE_LIST_ROUTE,
@@ -203,6 +205,121 @@ describe('HTTP team runtime routes', () => {
     } finally {
       await app.close();
     }
+  });
+
+  it('aborts a disconnected Phase 2 read before subsequent filesystem or runtime work', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    const success = {
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      kind: 'success',
+      snapshotRevision: parseRevision(`revision_${'a'.repeat(64)}`),
+      items: [],
+      nextCursor: null,
+    } satisfies CanonicalListTeamLifecycleResult;
+    const filesystemWork = vi.fn();
+    const runtimeWork = vi.fn();
+    let receivedSignal: AbortSignal | undefined;
+    let resolveStarted!: () => void;
+    let resolveFinished!: () => void;
+    const started = new Promise<void>((resolve) => {
+      resolveStarted = resolve;
+    });
+    const finished = new Promise<void>((resolve) => {
+      resolveFinished = resolve;
+    });
+    const phase2ReadHost = {
+      listTeamLifecycle: vi.fn(async (_request: unknown, signal?: AbortSignal) => {
+        receivedSignal = signal;
+        resolveStarted();
+        try {
+          if (!signal) throw new Error('missing request signal');
+          await new Promise<void>((resolve) => {
+            if (signal.aborted) {
+              resolve();
+              return;
+            }
+            signal.addEventListener('abort', () => resolve(), { once: true });
+          });
+          if (!signal.aborted) {
+            filesystemWork();
+            runtimeWork();
+          }
+          return success;
+        } finally {
+          resolveFinished();
+        }
+      }),
+    } satisfies Phase2ReadHost;
+    registerTeamRoutes(app, { ...mocks.services, phase2ReadHost });
+    await app.listen({ host: '127.0.0.1', port: 0 });
+    const address = app.server.address();
+    if (!address || typeof address === 'string') {
+      await app.close();
+      throw new Error('test server address unavailable');
+    }
+    const payload = JSON.stringify({ schemaVersion: 1, cursor: null, expectedRevision: null });
+    const clientRequest = makeHttpRequest({
+      hostname: '127.0.0.1',
+      port: address.port,
+      path: TEAM_LIFECYCLE_LIST_ROUTE,
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'content-length': Buffer.byteLength(payload),
+      },
+    });
+    clientRequest.on('error', () => undefined);
+
+    try {
+      clientRequest.end(payload);
+      await started;
+      clientRequest.destroy();
+      await finished;
+
+      expect(receivedSignal?.aborted).toBe(true);
+      expect(filesystemWork).not.toHaveBeenCalled();
+      expect(runtimeWork).not.toHaveBeenCalled();
+    } finally {
+      clientRequest.destroy();
+      await app.close();
+    }
+  });
+
+  it('detaches Phase 2 request listeners without aborting a normally completed read', async () => {
+    const app = Fastify();
+    const mocks = createServicesMock();
+    const success = {
+      schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+      kind: 'success',
+      snapshotRevision: parseRevision(`revision_${'a'.repeat(64)}`),
+      items: [],
+      nextCursor: null,
+    } satisfies CanonicalListTeamLifecycleResult;
+    let receivedSignal: AbortSignal | undefined;
+    const phase2ReadHost = {
+      listTeamLifecycle: vi.fn((_request: unknown, signal?: AbortSignal) => {
+        receivedSignal = signal;
+        return Promise.resolve(success);
+      }),
+    } satisfies Phase2ReadHost;
+    registerTeamRoutes(app, { ...mocks.services, phase2ReadHost });
+    await app.ready();
+
+    try {
+      const payload = { schemaVersion: 1, cursor: null, expectedRevision: null };
+      const response = await app.inject({
+        method: 'POST',
+        url: TEAM_LIFECYCLE_LIST_ROUTE,
+        payload,
+      });
+      expect(response.statusCode).toBe(200);
+      expect(phase2ReadHost.listTeamLifecycle).toHaveBeenCalledWith(payload, receivedSignal);
+      expect(receivedSignal?.aborted).toBe(false);
+    } finally {
+      await app.close();
+    }
+    expect(receivedSignal?.aborted).toBe(false);
   });
 
   it('lists, gets, and creates draft teams through team data service', async () => {

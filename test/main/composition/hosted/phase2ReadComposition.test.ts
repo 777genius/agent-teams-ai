@@ -1,3 +1,8 @@
+import { createHash } from 'node:crypto';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+
 import {
   parseTeamIdentityRecord,
   type TeamIdentityReadGateway,
@@ -10,11 +15,13 @@ import {
 } from '@features/team-lifecycle/contracts';
 import { WorkspaceMountBinding, WorkspaceRegistration } from '@features/workspace-registry';
 import {
+  createMountBindingScopedPhase2ReadPorts,
   createPhase2ReadAuthority,
   createPhase2ReadComposition,
   createPhase2ReadHost,
   createUnavailablePhase2ReadHost,
   type Phase2ReadAuthority,
+  Phase2ReadSnapshotCoordinator,
 } from '@main/composition/hosted/phase2ReadComposition';
 import {
   createQueryContext,
@@ -23,11 +30,20 @@ import {
   parseWorkspaceId,
   type QueryContext,
 } from '@shared/contracts/hosted';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const NOW_MS = Date.parse('2026-07-18T10:00:00.000Z');
 const WORKSPACE_ID = parseWorkspaceId(`workspace_${'1'.repeat(32)}`);
 const FOREIGN_WORKSPACE_ID = parseWorkspaceId(`workspace_${'2'.repeat(32)}`);
+let boundaryRequestSequence = 0;
+const filesystemRoots: string[] = [];
+
+afterEach(async () => {
+  vi.restoreAllMocks();
+  await Promise.all(
+    filesystemRoots.splice(0).map((root) => fs.promises.rm(root, { recursive: true, force: true }))
+  );
+});
 
 interface AuthorityOverrides {
   readonly actorId?: string;
@@ -112,12 +128,33 @@ function listRequest(overrides: Partial<ListTeamLifecycleRequest> = {}): ListTea
   };
 }
 
+function boundaryContext(
+  readAuthority: Phase2ReadAuthority,
+  signal: AbortSignal,
+  deadlineAtMs = NOW_MS + 10_000
+): QueryContext {
+  return createQueryContext({
+    actorId: readAuthority.actorId,
+    sessionId: 'session_phase2-boundary',
+    deploymentId: readAuthority.deploymentId,
+    bootId: readAuthority.bootId,
+    requestId: `request_phase2-boundary-${++boundaryRequestSequence}`,
+    authorizedScope: readAuthority.authorizedScope,
+    deadlineAtMs,
+    signal,
+  });
+}
+
 interface HarnessOptions {
   readonly authority?: Phase2ReadAuthority;
   readonly identities: readonly TeamIdentityRecord[] | null;
   readonly summaries?: readonly Record<string, unknown>[];
   readonly pageSize?: number;
+  readonly beforeIdentityRead?: () => void;
   readonly beforeSummaryRead?: () => void;
+  readonly beforeRuntimeRead?: () => void;
+  readonly beforeAliveRead?: () => void;
+  readonly nowMs?: () => number;
 }
 
 function createHarness(options: HarnessOptions) {
@@ -127,7 +164,10 @@ function createHarness(options: HarnessOptions) {
   let runtimeAlive = false;
   let contextSequence = 0;
   const readAuthority = options.authority ?? authority();
-  const listTeamIdentities = vi.fn(() => Promise.resolve(identities ?? []));
+  const listTeamIdentities = vi.fn(() => {
+    options.beforeIdentityRead?.();
+    return Promise.resolve(identities ?? []);
+  });
   const gateway: TeamIdentityReadGateway | null = identities
     ? {
         listTeamIdentities,
@@ -137,27 +177,36 @@ function createHarness(options: HarnessOptions) {
   const getTeamData = vi.fn((teamName: string) =>
     Promise.resolve({ teamName, config: {}, warnings: [], isAlive: false })
   );
-  const getRuntimeState = vi.fn((teamName: string) =>
-    Promise.resolve({ teamName, isAlive: runtimeAlive })
-  );
+  const getRuntimeState = vi.fn((teamName: string) => {
+    options.beforeRuntimeRead?.();
+    return Promise.resolve({ teamName, isAlive: runtimeAlive });
+  });
+  const listTeams = vi.fn(() => {
+    options.beforeSummaryRead?.();
+    return Promise.resolve(summaries);
+  });
+  const getAliveTeams = vi.fn(() => {
+    options.beforeAliveRead?.();
+    return Promise.resolve(runtimeAlive ? ['team-a'] : []);
+  });
   const composition = createPhase2ReadComposition({
     authority: readAuthority,
     teamIdentities: gateway,
     legacyData: {
-      listTeams: vi.fn(() => {
-        options.beforeSummaryRead?.();
-        return Promise.resolve(summaries);
-      }),
+      listTeams,
       getTeamData,
     },
     legacyRuntime: {
       getRuntimeState,
-      getAliveTeams: () => Promise.resolve(runtimeAlive ? ['team-a'] : []),
+      getAliveTeams,
     },
-    nowMs: () => NOW_MS,
+    nowMs: options.nowMs ?? (() => NOW_MS),
     pageSize: options.pageSize,
   });
-  const createContext = (): QueryContext =>
+  const createContext = (
+    _authority: Phase2ReadAuthority = readAuthority,
+    requestSignal: AbortSignal = new AbortController().signal
+  ): QueryContext =>
     createQueryContext({
       actorId: readAuthority.actorId,
       sessionId: 'session_phase2-composition',
@@ -166,17 +215,19 @@ function createHarness(options: HarnessOptions) {
       requestId: `request_phase2-composition-${++contextSequence}`,
       authorizedScope: readAuthority.authorizedScope,
       deadlineAtMs: NOW_MS + 10_000,
-      signal: new AbortController().signal,
+      signal: requestSignal,
     });
   const host = createPhase2ReadHost(composition, createContext);
   return {
     authority: readAuthority,
     composition,
     createContext,
+    getAliveTeams,
     getRuntimeState,
     getTeamData,
     host,
     listTeamIdentities,
+    listTeams,
     replaceIdentities(next: readonly TeamIdentityRecord[]) {
       identities = next;
     },
@@ -203,6 +254,24 @@ describe('phase2ReadComposition semantic isolation', () => {
       kind: 'failure',
       error: { code: 'unavailable', reason: 'identity_storage_unavailable' },
     });
+  });
+
+  it('threads the host-owned request signal into the use-case QueryContext', async () => {
+    const controller = new AbortController();
+    const harness = createHarness({
+      identities: [identity('a')],
+      beforeSummaryRead: () => controller.abort(),
+    });
+
+    await expect(
+      harness.host.listTeamLifecycle(listRequest(), controller.signal)
+    ).resolves.toMatchObject({
+      kind: 'failure',
+      error: { code: 'cancelled', reason: 'request_cancelled' },
+    });
+    expect(harness.listTeams).toHaveBeenCalledWith(
+      expect.objectContaining({ signal: controller.signal })
+    );
   });
 
   it.each([
@@ -432,5 +501,647 @@ describe('phase2ReadComposition semantic isolation', () => {
     expect(runtimeAfterLifecycleChange.projection.revision).toBe(
       runtimeRunning.projection.revision
     );
+  });
+});
+
+describe('phase2ReadComposition coordinator cancellation boundaries', () => {
+  it('rechecks cancellation immediately after failed identity port I/O', async () => {
+    const controller = new AbortController();
+    const readAuthority = authority();
+    const coordinator = new Phase2ReadSnapshotCoordinator(
+      readAuthority,
+      {
+        listTeamIdentities: async () => {
+          controller.abort();
+          throw new Error('identity-failed');
+        },
+        getTeamIdentity: () => Promise.resolve(null),
+      },
+      {
+        listTeams: () => Promise.resolve([]),
+        getTeamData: () => Promise.resolve(null),
+      },
+      {
+        getRuntimeState: () => Promise.resolve(null),
+        getAliveTeams: () => Promise.resolve([]),
+      },
+      () => NOW_MS
+    );
+
+    await expect(
+      coordinator.readSnapshot(boundaryContext(readAuthority, controller.signal))
+    ).resolves.toMatchObject({ kind: 'failure', error: { code: 'cancelled' } });
+  });
+
+  it.each(['abort', 'deadline'] as const)(
+    'blocks identity I/O when the request has already reached its %s boundary',
+    async (mode) => {
+      const controller = new AbortController();
+      let nowMs = NOW_MS;
+      const harness = createHarness({ identities: [identity('a')], nowMs: () => nowMs });
+      if (mode === 'abort') controller.abort();
+      else nowMs = NOW_MS + 1;
+
+      await expect(
+        harness.composition.teamLifecycle.listTeamLifecycle(
+          listRequest(),
+          boundaryContext(harness.authority, controller.signal, NOW_MS + 1)
+        )
+      ).resolves.toMatchObject({
+        kind: 'failure',
+        error: {
+          code: 'cancelled',
+          reason: mode === 'abort' ? 'request_cancelled' : 'deadline_exceeded',
+        },
+      });
+      expect(harness.listTeamIdentities).not.toHaveBeenCalled();
+      expect(harness.listTeams).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['abort', 'deadline'] as const)(
+    'rechecks %s after identity I/O and performs no legacy-data I/O',
+    async (mode) => {
+      const controller = new AbortController();
+      let nowMs = NOW_MS;
+      const cancel = () => {
+        if (mode === 'abort') controller.abort();
+        else nowMs = NOW_MS + 1;
+      };
+      const harness = createHarness({
+        identities: [identity('a')],
+        beforeIdentityRead: cancel,
+        nowMs: () => nowMs,
+      });
+
+      await expect(
+        harness.composition.teamLifecycle.listTeamLifecycle(
+          listRequest(),
+          boundaryContext(harness.authority, controller.signal, NOW_MS + 1)
+        )
+      ).resolves.toMatchObject({
+        kind: 'failure',
+        error: { code: 'cancelled' },
+      });
+      expect(harness.listTeamIdentities).toHaveBeenCalledTimes(1);
+      expect(harness.listTeams).not.toHaveBeenCalled();
+      expect(harness.getRuntimeState).not.toHaveBeenCalled();
+      expect(harness.getAliveTeams).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    ['runtime state', 'abort'],
+    ['runtime state', 'deadline'],
+    ['alive runtime', 'abort'],
+    ['alive runtime', 'deadline'],
+  ] as const)(
+    'rechecks %s %s after legacy-data I/O and performs no runtime I/O',
+    async (operation, mode) => {
+      const controller = new AbortController();
+      let nowMs = NOW_MS;
+      const cancel = () => {
+        if (mode === 'abort') controller.abort();
+        else nowMs = NOW_MS + 1;
+      };
+      const team = identity('a');
+      const harness = createHarness({
+        identities: [team],
+        beforeSummaryRead: cancel,
+        nowMs: () => nowMs,
+      });
+      const context = boundaryContext(harness.authority, controller.signal, NOW_MS + 1);
+      const result =
+        operation === 'runtime state'
+          ? harness.composition.teamLifecycle.getRuntimeStateProjection(
+              {
+                schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+                workspaceId: WORKSPACE_ID,
+                teamId: team.teamId,
+                expectedRevision: null,
+              },
+              context
+            )
+          : harness.composition.teamLifecycle.listAliveTeamProjections(
+              {
+                schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+                cursor: null,
+                expectedRevision: null,
+              },
+              context
+            );
+
+      await expect(result).resolves.toMatchObject({
+        kind: 'failure',
+        error: { code: 'cancelled' },
+      });
+      expect(harness.listTeamIdentities).toHaveBeenCalledTimes(1);
+      expect(harness.listTeams).toHaveBeenCalledTimes(1);
+      expect(harness.getRuntimeState).not.toHaveBeenCalled();
+      expect(harness.getAliveTeams).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    ['runtime state', 'abort'],
+    ['runtime state', 'deadline'],
+    ['alive runtime', 'abort'],
+    ['alive runtime', 'deadline'],
+  ] as const)('blocks %s I/O when %s is reached after snapshot I/O', async (operation, mode) => {
+    const controller = new AbortController();
+    let nowMs = NOW_MS;
+    const readAuthority = authority();
+    const team = identity('a');
+    const listTeamIdentities = vi.fn(() => Promise.resolve([team]));
+    const listTeams = vi.fn(() => Promise.resolve([{ teamName: team.legacyKey }]));
+    const getRuntimeState = vi.fn(() =>
+      Promise.resolve({ teamName: team.legacyKey, isAlive: false })
+    );
+    const getAliveTeams = vi.fn(() => Promise.resolve([]));
+    const coordinator = new Phase2ReadSnapshotCoordinator(
+      readAuthority,
+      { listTeamIdentities, getTeamIdentity: vi.fn(() => Promise.resolve(null)) },
+      { listTeams, getTeamData: vi.fn(() => Promise.resolve(null)) },
+      { getRuntimeState, getAliveTeams },
+      () => nowMs
+    );
+    const context = boundaryContext(readAuthority, controller.signal, NOW_MS + 1);
+
+    await expect(coordinator.readSnapshot(context)).resolves.not.toHaveProperty('kind');
+    if (mode === 'abort') controller.abort();
+    else nowMs = NOW_MS + 1;
+
+    const result =
+      operation === 'runtime state'
+        ? coordinator.readRuntimeState(team.legacyKey, context)
+        : coordinator.readAliveNames(context);
+    await expect(result).resolves.toMatchObject({
+      kind: 'failure',
+      error: { code: 'cancelled' },
+    });
+    expect(listTeamIdentities).toHaveBeenCalledTimes(1);
+    expect(listTeams).toHaveBeenCalledTimes(1);
+    expect(getRuntimeState).not.toHaveBeenCalled();
+    expect(getAliveTeams).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['runtime state', 'abort'],
+    ['runtime state', 'deadline'],
+    ['alive runtime', 'abort'],
+    ['alive runtime', 'deadline'],
+  ] as const)('returns cancellation reached during %s %s I/O', async (operation, mode) => {
+    const controller = new AbortController();
+    let nowMs = NOW_MS;
+    const cancel = () => {
+      if (mode === 'abort') controller.abort();
+      else nowMs = NOW_MS + 1;
+    };
+    const team = identity('a');
+    const harness = createHarness({
+      identities: [team],
+      beforeRuntimeRead: operation === 'runtime state' ? cancel : undefined,
+      beforeAliveRead: operation === 'alive runtime' ? cancel : undefined,
+      nowMs: () => nowMs,
+    });
+    const context = boundaryContext(harness.authority, controller.signal, NOW_MS + 1);
+    const result =
+      operation === 'runtime state'
+        ? harness.composition.teamLifecycle.getRuntimeStateProjection(
+            {
+              schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+              workspaceId: WORKSPACE_ID,
+              teamId: team.teamId,
+              expectedRevision: null,
+            },
+            context
+          )
+        : harness.composition.teamLifecycle.listAliveTeamProjections(
+            {
+              schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+              cursor: null,
+              expectedRevision: null,
+            },
+            context
+          );
+
+    await expect(result).resolves.toMatchObject({
+      kind: 'failure',
+      error: { code: 'cancelled' },
+    });
+    expect(harness.getRuntimeState).toHaveBeenCalledTimes(operation === 'runtime state' ? 1 : 0);
+    expect(harness.getAliveTeams).toHaveBeenCalledTimes(operation === 'alive runtime' ? 1 : 0);
+  });
+});
+
+describe('mount-binding-scoped hosted read ports', () => {
+  it('reads only identity-admitted legacy keys through the narrow read-only source', async () => {
+    const readAuthority = authority();
+    const registration = new WorkspaceRegistration({
+      schemaVersion: 1,
+      registrationKey: 'registration-scoped-read',
+      workspaceId: WORKSPACE_ID,
+      displayName: 'Scoped read',
+      registrationRevision: 1,
+      declaredRootHash: '4'.repeat(64),
+      enabled: true,
+    });
+    const mountBinding = new WorkspaceMountBinding({
+      registration,
+      bootId: readAuthority.bootId,
+      mountGeneration: 1,
+      declaredRootHash: registration.declaredRootHash,
+      observedAt: NOW_MS,
+      health: 'read-only',
+      allowedOperations: [],
+    });
+    const runtimeInstance = createRuntimeInstanceContext({
+      deploymentId: readAuthority.deploymentId,
+      bootId: readAuthority.bootId,
+      claudeRoot: { kind: 'claude', reference: '/runtime/phase2/claude' },
+      appDataRoot: { kind: 'app-data', reference: '/runtime/phase2/app-data' },
+      workspaceRoots: [{ kind: 'workspace', reference: '/runtime/phase2/workspace' }],
+      tempRoot: { kind: 'temp', reference: '/runtime/phase2/temp' },
+      logsRoot: { kind: 'logs', reference: '/runtime/phase2/logs' },
+    });
+    const local = identity('a');
+    const foreign = identity('b', 'active', {
+      workspaceId: FOREIGN_WORKSPACE_ID,
+      generation: 1,
+    });
+    let identityValues = [local, foreign];
+    const listTeamIdentities = vi.fn(() => Promise.resolve(identityValues));
+    const readTeamSummary = vi.fn(
+      async (input: { readonly claudeRoot: string; readonly identity: TeamIdentityRecord }) =>
+        Object.freeze({ teamName: input.identity.legacyKey })
+    );
+    const readPorts = createMountBindingScopedPhase2ReadPorts({
+      authority: readAuthority,
+      mountBinding,
+      runtimeInstance,
+      teamIdentities: {
+        listTeamIdentities,
+        getTeamIdentity: vi.fn(() => Promise.resolve(null)),
+      },
+      nowMs: () => NOW_MS,
+      teamSummarySource: { readTeamSummary },
+    });
+    const composition = createPhase2ReadComposition({
+      authority: readAuthority,
+      ...readPorts,
+      nowMs: () => NOW_MS,
+    });
+
+    await expect(
+      composition.teamLifecycle.listTeamLifecycle(
+        listRequest(),
+        boundaryContext(readAuthority, new AbortController().signal)
+      )
+    ).resolves.toMatchObject({
+      kind: 'success',
+      items: [{ workspaceId: WORKSPACE_ID, teamId: local.teamId }],
+    });
+    expect(listTeamIdentities).toHaveBeenCalledTimes(1);
+    expect(readTeamSummary).toHaveBeenCalledTimes(1);
+    expect(readTeamSummary).toHaveBeenCalledWith(
+      expect.objectContaining({
+        claudeRoot: '/runtime/phase2/claude',
+        identity: local,
+      })
+    );
+    expect(readTeamSummary).not.toHaveBeenCalledWith(
+      expect.objectContaining({ identity: foreign })
+    );
+
+    identityValues = [identity('c', 'active', { workspaceId: WORKSPACE_ID, generation: 2 })];
+    await expect(readPorts.teamIdentities.listTeamIdentities()).rejects.toThrow(
+      'phase2-read-identity-binding-generation-invalid'
+    );
+    expect(readTeamSummary).toHaveBeenCalledTimes(1);
+  });
+
+  async function createFilesystemHarness(
+    options: {
+      readonly configBytes?: Buffer;
+      readonly configSymlinkTarget?: string;
+      readonly identityFileTeamId?: TeamIdentityRecord['teamId'];
+      readonly nowMs?: () => number;
+    } = {}
+  ) {
+    const claudeRoot = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'phase2-read-config-'));
+    filesystemRoots.push(claudeRoot);
+    const teamRoot = path.join(claudeRoot, 'teams', 'team-a');
+    await fs.promises.mkdir(teamRoot, { recursive: true });
+    const storedTeam = identity('a');
+    const canonicalTeamRoot = await fs.promises.realpath(teamRoot);
+    const teamRootStat = await fs.promises.lstat(canonicalTeamRoot, { bigint: true });
+    const directoryFingerprint = createHash('sha256')
+      .update(
+        JSON.stringify({
+          schemaVersion: 1,
+          canonicalPath: canonicalTeamRoot,
+          device: teamRootStat.dev.toString(),
+          inode: teamRootStat.ino.toString(),
+        }),
+        'utf8'
+      )
+      .digest('hex');
+    const serializedIdentity = `${JSON.stringify(
+      {
+        schemaVersion: 1,
+        teamId: options.identityFileTeamId ?? storedTeam.teamId,
+        createdAt: storedTeam.createdAt,
+      },
+      null,
+      2
+    )}\n`;
+    const team = parseTeamIdentityRecord({
+      ...storedTeam,
+      directoryFingerprint,
+      identityChecksum: createHash('sha256').update(serializedIdentity, 'utf8').digest('hex'),
+    });
+    await fs.promises.writeFile(path.join(teamRoot, 'team.identity.json'), serializedIdentity);
+    const configPath = path.join(teamRoot, 'config.json');
+    if (options.configSymlinkTarget) {
+      await fs.promises.symlink(options.configSymlinkTarget, configPath);
+    } else {
+      await fs.promises.writeFile(
+        configPath,
+        options.configBytes ?? Buffer.from(JSON.stringify({ name: 'team-a' }))
+      );
+    }
+
+    const registration = new WorkspaceRegistration({
+      schemaVersion: 1,
+      registrationKey: `registration-config-${filesystemRoots.length}`,
+      workspaceId: WORKSPACE_ID,
+      displayName: 'Config descriptor read',
+      registrationRevision: 1,
+      declaredRootHash: '5'.repeat(64),
+      enabled: true,
+    });
+    const bootId = parseBootId(`boot_phase2-config-${filesystemRoots.length}`);
+    const mountBinding = new WorkspaceMountBinding({
+      registration,
+      bootId,
+      mountGeneration: 1,
+      declaredRootHash: registration.declaredRootHash,
+      observedAt: NOW_MS,
+      health: 'read-only',
+      allowedOperations: [],
+    });
+    const runtimeInstance = createRuntimeInstanceContext({
+      deploymentId: 'deployment_phase2-config',
+      bootId,
+      claudeRoot: { kind: 'claude', reference: claudeRoot },
+      appDataRoot: { kind: 'app-data', reference: path.join(claudeRoot, 'app-data') },
+      workspaceRoots: [{ kind: 'workspace', reference: path.join(claudeRoot, 'workspace') }],
+      tempRoot: { kind: 'temp', reference: path.join(claudeRoot, 'temp') },
+      logsRoot: { kind: 'logs', reference: path.join(claudeRoot, 'logs') },
+    });
+    const readAuthority = createPhase2ReadAuthority({
+      actorId: 'actor_phase2-config',
+      authorizedScope: 'scope_team-lifecycle.read',
+      mountBinding,
+      runtimeInstance,
+    });
+    const readPorts = createMountBindingScopedPhase2ReadPorts({
+      authority: readAuthority,
+      mountBinding,
+      runtimeInstance,
+      teamIdentities: {
+        listTeamIdentities: () => Promise.resolve([team]),
+        getTeamIdentity: () => Promise.resolve(team),
+      },
+      nowMs: options.nowMs ?? (() => NOW_MS),
+    });
+    const composition = createPhase2ReadComposition({
+      authority: readAuthority,
+      ...readPorts,
+      nowMs: options.nowMs ?? (() => NOW_MS),
+    });
+    return {
+      claudeRoot,
+      teamRoot,
+      configPath,
+      composition,
+      context: (signal = new AbortController().signal) => boundaryContext(readAuthority, signal),
+    };
+  }
+
+  it('accepts the matching canonical identity and directory fingerprint', async () => {
+    const harness = await createFilesystemHarness();
+    const readFileSpy = vi.spyOn(fs.promises, 'readFile');
+    const openSpy = vi.spyOn(fs.promises, 'open');
+
+    await expect(
+      harness.composition.teamLifecycle.listTeamLifecycle(listRequest(), harness.context())
+    ).resolves.toMatchObject({
+      kind: 'success',
+      items: [{ workspaceId: WORKSPACE_ID, teamId: identity('a').teamId }],
+    });
+    expect(readFileSpy).not.toHaveBeenCalled();
+    expect(openSpy).toHaveBeenCalledWith(harness.configPath, expect.anything());
+  });
+
+  it('rejects a copied replacement directory before configuration access', async () => {
+    const harness = await createFilesystemHarness();
+    const originalTeamRoot = `${harness.teamRoot}.original`;
+    const copiedTeamRoot = `${harness.teamRoot}.copied`;
+    await fs.promises.cp(harness.teamRoot, copiedTeamRoot, { recursive: true });
+    await fs.promises.rename(harness.teamRoot, originalTeamRoot);
+    await fs.promises.rename(copiedTeamRoot, harness.teamRoot);
+    const lstatSpy = vi.spyOn(fs.promises, 'lstat');
+    const openSpy = vi.spyOn(fs.promises, 'open');
+
+    await expect(
+      harness.composition.teamLifecycle.listTeamLifecycle(listRequest(), harness.context())
+    ).resolves.toMatchObject({ kind: 'failure', error: { code: 'unavailable' } });
+    expect(lstatSpy).not.toHaveBeenCalledWith(harness.configPath);
+    expect(openSpy).not.toHaveBeenCalledWith(harness.configPath, expect.anything());
+  });
+
+  it('rejects a canonical identity TeamId mismatch before reading configuration', async () => {
+    const harness = await createFilesystemHarness({
+      identityFileTeamId: identity('b').teamId,
+    });
+    const openSpy = vi.spyOn(fs.promises, 'open');
+
+    await expect(
+      harness.composition.teamLifecycle.listTeamLifecycle(listRequest(), harness.context())
+    ).resolves.toMatchObject({ kind: 'failure', error: { code: 'unavailable' } });
+    expect(openSpy).not.toHaveBeenCalledWith(harness.configPath, expect.anything());
+  });
+
+  it('surfaces typed unavailability instead of inventing inactive runtime evidence', async () => {
+    const harness = await createFilesystemHarness();
+    const team = identity('a');
+
+    await expect(
+      harness.composition.teamLifecycle.getRuntimeStateProjection(
+        {
+          schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+          workspaceId: WORKSPACE_ID,
+          teamId: team.teamId,
+          expectedRevision: null,
+        },
+        harness.context()
+      )
+    ).resolves.toMatchObject({ kind: 'failure', error: { code: 'unavailable' } });
+    await expect(
+      harness.composition.teamLifecycle.listAliveTeamProjections(
+        {
+          schemaVersion: TEAM_LIFECYCLE_READ_SCHEMA_VERSION,
+          cursor: null,
+          expectedRevision: null,
+        },
+        harness.context()
+      )
+    ).resolves.toMatchObject({ kind: 'failure', error: { code: 'unavailable' } });
+  });
+
+  it.runIf(process.platform !== 'win32')(
+    'rejects a symlinked config before descriptor I/O',
+    async () => {
+      const outsideRoot = await fs.promises.mkdtemp(
+        path.join(os.tmpdir(), 'phase2-read-config-outside-')
+      );
+      filesystemRoots.push(outsideRoot);
+      const target = path.join(outsideRoot, 'config.json');
+      await fs.promises.writeFile(target, JSON.stringify({ name: 'team-a' }));
+      const harness = await createFilesystemHarness({ configSymlinkTarget: target });
+      const openSpy = vi.spyOn(fs.promises, 'open');
+
+      await expect(
+        harness.composition.teamLifecycle.listTeamLifecycle(listRequest(), harness.context())
+      ).resolves.toMatchObject({ kind: 'failure', error: { code: 'unavailable' } });
+      expect(openSpy).not.toHaveBeenCalledWith(
+        harness.configPath,
+        expect.anything(),
+        expect.anything()
+      );
+    }
+  );
+
+  it('rejects a config larger than the 2 MiB descriptor bound', async () => {
+    const harness = await createFilesystemHarness({
+      configBytes: Buffer.alloc(2 * 1024 * 1024 + 1, 0x20),
+    });
+    const openSpy = vi.spyOn(fs.promises, 'open');
+
+    await expect(
+      harness.composition.teamLifecycle.listTeamLifecycle(listRequest(), harness.context())
+    ).resolves.toMatchObject({ kind: 'failure', error: { code: 'unavailable' } });
+    expect(openSpy).not.toHaveBeenCalledWith(
+      harness.configPath,
+      expect.anything(),
+      expect.anything()
+    );
+  });
+
+  it('checks the deadline at the oversized-config early return', async () => {
+    let nowMs = NOW_MS;
+    const harness = await createFilesystemHarness({
+      configBytes: Buffer.alloc(2 * 1024 * 1024 + 1, 0x20),
+      nowMs: () => nowMs,
+    });
+    const originalLstat = fs.promises.lstat.bind(fs.promises);
+    vi.spyOn(fs.promises, 'lstat').mockImplementation(async (target, options) => {
+      const stat = await originalLstat(target, options);
+      if (target !== harness.configPath) return stat;
+      return new Proxy(stat, {
+        get(value, property, receiver) {
+          if (property === 'size') nowMs = NOW_MS + 10_000;
+          return Reflect.get(value, property, receiver);
+        },
+      });
+    });
+    const openSpy = vi.spyOn(fs.promises, 'open');
+
+    await expect(
+      harness.composition.teamLifecycle.listTeamLifecycle(listRequest(), harness.context())
+    ).resolves.toMatchObject({
+      kind: 'failure',
+      error: { code: 'cancelled', reason: 'deadline_exceeded' },
+    });
+    expect(openSpy).not.toHaveBeenCalledWith(harness.configPath, expect.anything());
+  });
+
+  it('rejects pathname replacement after the descriptor is opened', async () => {
+    const harness = await createFilesystemHarness();
+    const originalOpen = fs.promises.open.bind(fs.promises);
+    vi.spyOn(fs.promises, 'open').mockImplementation(async (target, flags, mode) => {
+      const handle = await originalOpen(target, flags, mode);
+      if (target === harness.configPath) {
+        await fs.promises.rename(harness.configPath, `${harness.configPath}.replaced`);
+        await fs.promises.writeFile(harness.configPath, JSON.stringify({ name: 'team-a' }));
+      }
+      return handle;
+    });
+
+    await expect(
+      harness.composition.teamLifecycle.listTeamLifecycle(listRequest(), harness.context())
+    ).resolves.toMatchObject({ kind: 'failure', error: { code: 'unavailable' } });
+  });
+
+  it('rejects config growth after pathname validation', async () => {
+    const harness = await createFilesystemHarness();
+    const originalOpen = fs.promises.open.bind(fs.promises);
+    vi.spyOn(fs.promises, 'open').mockImplementation(async (target, flags, mode) => {
+      const handle = await originalOpen(target, flags, mode);
+      if (target === harness.configPath) {
+        const writer = await originalOpen(harness.configPath, 'a');
+        try {
+          await writer.write(' ');
+        } finally {
+          await writer.close();
+        }
+      }
+      return handle;
+    });
+
+    await expect(
+      harness.composition.teamLifecycle.listTeamLifecycle(listRequest(), harness.context())
+    ).resolves.toMatchObject({ kind: 'failure', error: { code: 'unavailable' } });
+  });
+
+  it('checks cancellation immediately after successful config filesystem I/O', async () => {
+    const harness = await createFilesystemHarness();
+    const controller = new AbortController();
+    const originalRealpath = fs.promises.realpath.bind(fs.promises);
+    vi.spyOn(fs.promises, 'realpath').mockImplementation(async (target, options) => {
+      const value = await originalRealpath(target, options as BufferEncoding | undefined);
+      if (target === harness.configPath) controller.abort();
+      return value;
+    });
+    const openSpy = vi.spyOn(fs.promises, 'open');
+
+    await expect(
+      harness.composition.teamLifecycle.listTeamLifecycle(
+        listRequest(),
+        harness.context(controller.signal)
+      )
+    ).resolves.toMatchObject({ kind: 'failure', error: { code: 'cancelled' } });
+    expect(openSpy).not.toHaveBeenCalledWith(harness.configPath, expect.anything());
+  });
+
+  it('checks cancellation immediately after failed config filesystem I/O', async () => {
+    const harness = await createFilesystemHarness();
+    const controller = new AbortController();
+    const originalLstat = fs.promises.lstat.bind(fs.promises);
+    vi.spyOn(fs.promises, 'lstat').mockImplementation(async (target, options) => {
+      if (target === harness.configPath) {
+        controller.abort();
+        throw Object.assign(new Error('missing'), { code: 'ENOENT' });
+      }
+      return originalLstat(target, options);
+    });
+
+    await expect(
+      harness.composition.teamLifecycle.listTeamLifecycle(
+        listRequest(),
+        harness.context(controller.signal)
+      )
+    ).resolves.toMatchObject({ kind: 'failure', error: { code: 'cancelled' } });
   });
 });
