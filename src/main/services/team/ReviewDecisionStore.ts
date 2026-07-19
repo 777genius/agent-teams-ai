@@ -528,13 +528,20 @@ export class ReviewDecisionStore {
   private parseConflictCandidate(
     value: unknown,
     scopeKey: string,
-    scopeToken: string
+    sourceScopeHash: string,
+    currentScopeHash: string
   ): ReviewDecisionConflictCandidate {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       throw new InvalidReviewDecisionDataError('Invalid review decision conflict candidate');
     }
     const candidate = value as Partial<StoredReviewDecisionConflictCandidateV1>;
-    const expectedScopeTokenHash = createHash('sha256').update(scopeToken).digest('hex');
+    if (
+      !EXACT_SCOPE_HASH_PATTERN.test(sourceScopeHash) ||
+      !EXACT_SCOPE_HASH_PATTERN.test(currentScopeHash)
+    ) {
+      throw new InvalidReviewDecisionDataError('Invalid review decision conflict scope hash');
+    }
+    const expectedScopeTokenHash = sourceScopeHash;
     if (
       candidate.version !== 1 ||
       candidate.scopeKey !== scopeKey ||
@@ -593,6 +600,8 @@ export class ReviewDecisionStore {
     return {
       id: candidate.id,
       capturedAt: candidate.capturedAt,
+      origin:
+        sourceScopeHash === currentScopeHash ? 'current-snapshot' : 'prior-snapshot',
       expectedRevision: candidate.expectedRevision as number,
       observedCurrentRevision: candidate.observedCurrentRevision as number,
       state,
@@ -602,7 +611,8 @@ export class ReviewDecisionStore {
   private async loadConflictCandidateFromPath(
     filePath: string,
     scopeKey: string,
-    scopeToken: string
+    sourceScopeHash: string,
+    currentScopeHash: string
   ): Promise<ReviewDecisionConflictCandidate> {
     let handle: fs.promises.FileHandle | null = null;
     try {
@@ -639,7 +649,12 @@ export class ReviewDecisionStore {
           { cause: error }
         );
       }
-      const candidate = this.parseConflictCandidate(parsed, scopeKey, scopeToken);
+      const candidate = this.parseConflictCandidate(
+        parsed,
+        scopeKey,
+        sourceScopeHash,
+        currentScopeHash
+      );
       if (path.basename(filePath) !== `${candidate.id}.json`) {
         throw new InvalidReviewDecisionDataError(
           'Mismatched review decision conflict candidate filename'
@@ -1473,51 +1488,44 @@ export class ReviewDecisionStore {
     mapCandidate: (candidate: ReviewDecisionConflictCandidate) => T
   ): Promise<T[]> {
     this.assertSafeScope(teamName, scopeKey, scopeToken);
-    const dirPath = this.getConflictCandidateDir(teamName, scopeKey, scopeToken);
-    try {
-      const stats = await fs.promises.lstat(dirPath);
-      if (!stats.isDirectory() || stats.isSymbolicLink()) {
-        throw new Error(`Unsafe persistence directory: ${dirPath}`);
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
-      throw error;
-    }
-    await this.ensureConflictCandidateDir(teamName, scopeKey, scopeToken);
-    let entries: string[];
-    try {
-      entries = await fs.promises.readdir(dirPath);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
-      throw error;
-    }
+    const currentScopeHash = createHash('sha256').update(scopeToken).digest('hex');
+    const conflictScopes = await this.inspectConflictScopes(teamName, scopeKey);
     const currentRevision = (await this.loadInternal(teamName, scopeKey, scopeToken))?.revision ?? 0;
     const candidates: T[] = [];
     let quarantinedCount = 0;
-    for (const entry of entries.filter((name) => EXACT_SCOPE_FILE_PATTERN.test(name))) {
-      const candidatePath = path.join(dirPath, entry);
-      try {
-        const candidate = await this.loadConflictCandidateFromPath(
-          candidatePath,
-          scopeKey,
-          scopeToken
-        );
-        candidates.push(mapCandidate({ ...candidate, observedCurrentRevision: currentRevision }));
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
-        if (!shouldQuarantineDecisionConflictCandidate(error)) throw error;
+    for (const sourceScopeHash of [...conflictScopes.scopeHashes].sort()) {
+      const dirPath = this.getConflictCandidateDirByScopeHash(
+        teamName,
+        scopeKey,
+        sourceScopeHash
+      );
+      const entries = await fs.promises.readdir(dirPath);
+      for (const entry of entries.filter((name) => EXACT_SCOPE_FILE_PATTERN.test(name))) {
+        const candidatePath = path.join(dirPath, entry);
         try {
-          await quarantineConstrainedPersistenceFile(
-            getTeamsBasePath(),
+          const candidate = await this.loadConflictCandidateFromPath(
             candidatePath,
-            path.join(dirPath, 'quarantine')
+            scopeKey,
+            sourceScopeHash,
+            currentScopeHash
           );
-        } catch (quarantineError) {
-          if ((quarantineError as NodeJS.ErrnoException).code === 'ENOENT') continue;
-          throw quarantineError;
+          candidates.push(mapCandidate({ ...candidate, observedCurrentRevision: currentRevision }));
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+          if (!shouldQuarantineDecisionConflictCandidate(error)) throw error;
+          try {
+            await quarantineConstrainedPersistenceFile(
+              getTeamsBasePath(),
+              candidatePath,
+              path.join(dirPath, 'quarantine')
+            );
+          } catch (quarantineError) {
+            if ((quarantineError as NodeJS.ErrnoException).code === 'ENOENT') continue;
+            throw quarantineError;
+          }
+          quarantinedCount += 1;
+          logger.warn(`Quarantined unreadable review recovery copy: ${String(error)}`);
         }
-        quarantinedCount += 1;
-        logger.warn(`Quarantined unreadable review recovery copy: ${String(error)}`);
       }
     }
     if (quarantinedCount > 0) {
@@ -1548,6 +1556,11 @@ export class ReviewDecisionStore {
     return this.mapConflictCandidates(teamName, scopeKey, scopeToken, (candidate) => ({
         id: candidate.id,
         capturedAt: candidate.capturedAt,
+        origin: candidate.origin,
+        recoverability:
+          candidate.origin === 'current-snapshot'
+            ? 'recoverable'
+            : 'different-review-snapshot',
         expectedRevision: candidate.expectedRevision,
         observedCurrentRevision: candidate.observedCurrentRevision,
         hunkDecisionCount: Object.keys(candidate.state.hunkDecisions).length,
@@ -1557,6 +1570,42 @@ export class ReviewDecisionStore {
       }));
   }
 
+  private async locateConflictCandidate(
+    teamName: string,
+    scopeKey: string,
+    scopeToken: string,
+    candidateId: string
+  ): Promise<{ candidatePath: string; candidate: ReviewDecisionConflictCandidate }> {
+    if (!EXACT_SCOPE_HASH_PATTERN.test(candidateId)) {
+      throw new Error('Invalid review decision conflict candidate id');
+    }
+    const currentScopeHash = createHash('sha256').update(scopeToken).digest('hex');
+    const conflictScopes = await this.inspectConflictScopes(teamName, scopeKey);
+    let located: { candidatePath: string; candidate: ReviewDecisionConflictCandidate } | null =
+      null;
+    for (const sourceScopeHash of conflictScopes.scopeHashes) {
+      const candidatePath = path.join(
+        this.getConflictCandidateDirByScopeHash(teamName, scopeKey, sourceScopeHash),
+        `${candidateId}.json`
+      );
+      try {
+        const candidate = await this.loadConflictCandidateFromPath(
+          candidatePath,
+          scopeKey,
+          sourceScopeHash,
+          currentScopeHash
+        );
+        if (located) throw new Error('Ambiguous review decision conflict candidate');
+        located = { candidatePath, candidate };
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+        throw error;
+      }
+    }
+    if (!located) throw new Error('Review decision recovery copy is unavailable');
+    return located;
+  }
+
   async loadConflictCandidate(
     teamName: string,
     scopeKey: string,
@@ -1564,17 +1613,11 @@ export class ReviewDecisionStore {
     candidateId: string
   ): Promise<ReviewDecisionConflictCandidate> {
     this.assertSafeScope(teamName, scopeKey, scopeToken);
-    const candidatePath = this.getConflictCandidatePath(
+    const { candidate } = await this.locateConflictCandidate(
       teamName,
       scopeKey,
       scopeToken,
       candidateId
-    );
-    await this.ensureConflictCandidateDir(teamName, scopeKey, scopeToken);
-    const candidate = await this.loadConflictCandidateFromPath(
-      candidatePath,
-      scopeKey,
-      scopeToken
     );
     const observedCurrentRevision =
       (await this.loadInternal(teamName, scopeKey, scopeToken))?.revision ?? 0;
@@ -1597,17 +1640,11 @@ export class ReviewDecisionStore {
     ) {
       throw new Error('Invalid review decision conflict resolution');
     }
-    const candidatePath = this.getConflictCandidatePath(
+    const { candidatePath, candidate } = await this.locateConflictCandidate(
       teamName,
       scopeKey,
       scopeToken,
       candidateId
-    );
-    await this.ensureConflictCandidateDir(teamName, scopeKey, scopeToken);
-    const candidate = await this.loadConflictCandidateFromPath(
-      candidatePath,
-      scopeKey,
-      scopeToken
     );
     const current = await this.loadInternal(teamName, scopeKey, scopeToken);
     const currentRevision = current?.revision ?? 0;
@@ -1617,6 +1654,11 @@ export class ReviewDecisionStore {
     if (resolution === 'keep-current') {
       await unlinkPathDurably(candidatePath);
       return currentRevision;
+    }
+    if (candidate.origin !== 'current-snapshot') {
+      throw new Error(
+        'Recovery copy belongs to a different review snapshot; refusing unsafe replacement'
+      );
     }
     const currentSnapshot: ReviewPersistedStateSnapshot = current
       ? {

@@ -40,6 +40,7 @@ export interface ReviewDraftHistorySnapshot {
 export interface ReviewDraftHistoryConflictCandidate {
   id: string;
   capturedAt: string;
+  origin: 'current-snapshot' | 'prior-snapshot';
   filePath: string;
   expectedRevision: number;
   expectedGeneration: string | null;
@@ -53,6 +54,8 @@ export interface ReviewDraftHistoryConflictCandidate {
 export interface ReviewDraftHistoryConflictCandidateSummary {
   id: string;
   capturedAt: string;
+  origin: 'current-snapshot' | 'prior-snapshot';
+  recoverability: 'recoverable' | 'file-not-in-current-review';
   filePath: string;
   expectedRevision: number;
   expectedGeneration: string | null;

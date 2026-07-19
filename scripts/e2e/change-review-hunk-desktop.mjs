@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import net from 'node:net';
@@ -546,6 +547,15 @@ const enabledButtonWithText = (text) => `(() => {
   return button && !button.disabled ? button : null;
 })()`;
 
+async function discardActiveRecoveryBranch(label) {
+  await client.domClick(enabledButtonWithText('Discard recovery branch'));
+  const confirmDiscard = `Array.from(
+    document.querySelectorAll('[role="alertdialog"] button')
+  ).find((button) => button.textContent?.trim() === 'Discard recovery branch' && !button.disabled)`;
+  await client.waitFor(confirmDiscard, `${label} discard confirmation`);
+  await client.domClick(confirmDiscard);
+}
+
 async function openReview() {
   await client.domClick(sandboxKanbanTaskCard);
   const taskDialog = `Array.from(document.querySelectorAll('[role="dialog"]'))
@@ -660,6 +670,45 @@ async function invokeReviewApi(method, args) {
   return client.evaluate(
     `window.electronAPI.review[${JSON.stringify(method)}](...${JSON.stringify(args)})`
   );
+}
+
+async function moveDecisionCandidateToPriorSnapshot(fixture, scope, candidateId) {
+  const hash = (value) => createHash('sha256').update(value).digest('hex');
+  const currentScopeHash = hash(scope.scopeToken);
+  const priorScopeHash = hash(`${scope.scopeToken}:prior-e2e-snapshot`);
+  const conflictRoot = path.join(
+    fixture.claudeRoot,
+    'teams',
+    fixture.teamName,
+    'review-decisions',
+    'conflicts',
+    'v1',
+    scope.scopeKey
+  );
+  const currentPath = path.join(conflictRoot, currentScopeHash, `${candidateId}.json`);
+  const candidate = JSON.parse(await readFile(currentPath, 'utf8'));
+  candidate.scopeTokenHash = priorScopeHash;
+  const identity = {
+    scopeKey: candidate.scopeKey,
+    scopeTokenHash: candidate.scopeTokenHash,
+    expectedRevision: candidate.expectedRevision,
+    hunkDecisions: candidate.hunkDecisions,
+    fileDecisions: candidate.fileDecisions,
+    hunkContextHashesByFile: candidate.hunkContextHashesByFile,
+    reviewActionHistory: candidate.reviewActionHistory,
+    reviewRedoHistory: candidate.reviewRedoHistory,
+    textBlobs: candidate.textBlobs,
+    fileSummaryBlobs: candidate.fileSummaryBlobs,
+  };
+  candidate.id = hash(JSON.stringify(identity));
+  const priorDir = path.join(conflictRoot, priorScopeHash);
+  await mkdir(priorDir, { recursive: true });
+  await writeFile(path.join(priorDir, `${candidate.id}.json`), JSON.stringify(candidate), {
+    encoding: 'utf8',
+    mode: 0o600,
+  });
+  await rm(currentPath);
+  return candidate.id;
 }
 
 async function waitForReviewDecisions(scope, predicate, label, timeoutMs = 15_000) {
@@ -1141,10 +1190,10 @@ async function main() {
     await client.domClick(enabledButtonWithText('Switch to recovery'));
     await client.waitFor(
       `document.body?.innerText.includes('12 accepted') &&
-        Boolean(${enabledButtonWithText('Keep current branch')})`,
+        Boolean(${enabledButtonWithText('Discard recovery branch')})`,
       'reversible switch back to current branch'
     );
-    await client.domClick(enabledButtonWithText('Keep current branch'));
+    await discardActiveRecoveryBranch('current-branch backup');
     await client.waitFor(
       `!document.body?.innerText.includes('A conflicting recovery branch is safe on disk') &&
         document.body?.innerText.includes('12 accepted') &&
@@ -1167,6 +1216,74 @@ async function main() {
     assert.equal(remainingCandidates.length, 0, 'Resolved recovery copies must stay cleared');
     await assertDiskLines(fixture.changedFile, 'after-0', 'after-1');
     await assertViewportFits();
+
+    const priorSnapshotSave = await client.evaluate(`(async () => {
+      try {
+        const value = await window.electronAPI.review.saveDecisions(...${JSON.stringify([
+          fixture.teamName,
+          persistenceScope.scopeKey,
+          persistenceScope.scopeToken,
+          recoveryBranch.hunkDecisions,
+          recoveryBranch.fileDecisions,
+          recoveryBranch.hunkContextHashesByFile,
+          recoveryBranch.reviewActionHistory,
+          cleared.revision,
+          recoveryBranch.reviewRedoHistory,
+        ])});
+        return { ok: true, value };
+      } catch (error) {
+        return { ok: false, error: String(error) };
+      }
+    })()`);
+    assert.equal(priorSnapshotSave.ok, false, 'Prior-snapshot fixture must begin as a CAS conflict');
+    const [currentSnapshotCandidate] = await invokeReviewApi(
+      'loadDecisionConflictCandidates',
+      [fixture.teamName, persistenceScope.scopeKey, persistenceScope.scopeToken]
+    );
+    assert.equal(
+      currentSnapshotCandidate.origin,
+      'current-snapshot',
+      'New CAS conflict must first belong to the active snapshot'
+    );
+    const priorCandidateId = await moveDecisionCandidateToPriorSnapshot(
+      fixture,
+      persistenceScope,
+      currentSnapshotCandidate.id
+    );
+    const [priorSnapshotCandidate] = await invokeReviewApi(
+      'loadDecisionConflictCandidates',
+      [fixture.teamName, persistenceScope.scopeKey, persistenceScope.scopeToken]
+    );
+    assert.equal(priorSnapshotCandidate.id, priorCandidateId);
+    assert.equal(priorSnapshotCandidate.origin, 'prior-snapshot');
+    assert.equal(priorSnapshotCandidate.recoverability, 'different-review-snapshot');
+
+    await restartApp(port, fixture);
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('An earlier review snapshot has a saved branch') &&
+        (${buttonWithText('Switch to recovery')})?.disabled === true &&
+        Boolean(${enabledButtonWithText('Discard recovery branch')})`,
+      'prior-snapshot recovery inbox after restart'
+    );
+    await client.waitFor(
+      `(${buttonWithText('Undo')})?.disabled === true &&
+        (${buttonWithText('Reject')})?.disabled === true`,
+      'prior-snapshot recovery locks review actions'
+    );
+    await discardActiveRecoveryBranch('prior-snapshot');
+    await client.waitFor(
+      `!document.body?.innerText.includes('A conflicting recovery branch is safe on disk') &&
+        Boolean(${enabledButtonWithText('Reject')})`,
+      'prior-snapshot recovery dismissed explicitly'
+    );
+    await restartApp(port, fixture);
+    await openReview();
+    await client.waitFor(
+      `document.body?.innerText.includes('12 accepted') &&
+        !document.body?.innerText.includes('A conflicting recovery branch is safe on disk')`,
+      'prior-snapshot discard persisted after restart'
+    );
 
     const beforeLostResponse = await readPersistedReviewScope(fixture);
     await performActionWithBlockedResponse(
@@ -1198,7 +1315,8 @@ async function main() {
       `Changes desktop E2E passed (dev:mcp${singleWindowMode ? ', single-window' : ''}): ` +
         'Accept All -> Reject file -> Restore back -> hydrate -> Restore forward -> ' +
         'Undo to start -> hydrate -> stale branch -> reload -> reversible recovery -> ' +
-        'Keep current -> reload -> blocked response -> SIGKILL -> exact Undo\n'
+        'Discard backup -> reload -> prior snapshot -> discard -> reload -> ' +
+        'blocked response -> SIGKILL -> exact Undo\n'
     );
     return;
   }

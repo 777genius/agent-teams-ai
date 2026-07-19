@@ -256,6 +256,7 @@ export interface SaveReviewDecisionsResult {
 export interface ReviewDecisionConflictCandidate {
   id: string;
   capturedAt: string;
+  origin: 'current-snapshot' | 'prior-snapshot';
   expectedRevision: number;
   observedCurrentRevision: number;
   state: ReviewPersistedStateSnapshot;
@@ -265,6 +266,8 @@ export interface ReviewDecisionConflictCandidate {
 export interface ReviewDecisionConflictCandidateSummary {
   id: string;
   capturedAt: string;
+  origin: 'current-snapshot' | 'prior-snapshot';
+  recoverability: 'recoverable' | 'different-review-snapshot';
   expectedRevision: number;
   observedCurrentRevision: number;
   hunkDecisionCount: number;

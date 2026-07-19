@@ -427,6 +427,98 @@ describe('ReviewDraftHistoryStore', () => {
     });
   });
 
+  it('recovers a prior-snapshot manual edit and preserves the current target branch', async () => {
+    const { ReviewDraftHistoryStore } = await import(
+      '@features/change-review-history/main'
+    );
+    const store = new ReviewDraftHistoryStore();
+    const scopeTokenA = 'scope-prior-draft-a';
+    const scopeTokenB = 'scope-prior-draft-b';
+    await store.saveEntry('demo', 'task-123', scopeTokenA, {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'A',
+      editorState: editorState('AB', ['B']),
+    });
+    await expect(
+      store.saveEntry('demo', 'task-123', scopeTokenA, {
+        filePath: '/repo/a.ts',
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'A',
+        editorState: editorState('AC', ['C']),
+      })
+    ).rejects.toThrow('Review draft history changed');
+    const currentB = await store.saveEntry('demo', 'task-123', scopeTokenB, {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'A',
+      editorState: editorState('AD', ['D']),
+    });
+
+    const [candidate] = await new ReviewDraftHistoryStore().loadConflictCandidates(
+      'demo',
+      'task-123',
+      scopeTokenB
+    );
+    expect(candidate).toMatchObject({
+      origin: 'prior-snapshot',
+      observedCurrentRevision: 1,
+      observedCurrentGeneration: currentB.generation,
+      entry: { editorState: { doc: 'AC' } },
+    });
+    const newerB = await store.saveEntry('demo', 'task-123', scopeTokenB, {
+      filePath: '/repo/a.ts',
+      codec: 'codemirror-history-v1',
+      expectedRevision: 1,
+      expectedGeneration: currentB.generation,
+      revision: 2,
+      diskBaseline: 'A',
+      editorState: editorState('ADE', ['D', 'E']),
+    });
+    await expect(
+      store.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        scopeTokenB,
+        candidate!.id,
+        'recover-candidate',
+        1,
+        currentB.generation
+      )
+    ).rejects.toThrow('changed again');
+    const recovered = await store.resolveConflictCandidate(
+      'demo',
+      'task-123',
+      scopeTokenB,
+      candidate!.id,
+      'recover-candidate',
+      2,
+      newerB.generation
+    );
+    expect(recovered).toMatchObject({ revision: 3, editorState: { doc: 'AC' } });
+    await expect(store.load('demo', 'task-123', scopeTokenB)).resolves.toMatchObject({
+      entries: { '/repo/a.ts': { revision: 3, editorState: { doc: 'AC' } } },
+    });
+    await expect(
+      store.loadConflictCandidates('demo', 'task-123', scopeTokenB)
+    ).resolves.toEqual([
+      expect.objectContaining({
+        origin: 'current-snapshot',
+        observedCurrentRevision: 3,
+        entry: expect.objectContaining({ editorState: expect.objectContaining({ doc: 'ADE' }) }),
+      }),
+    ]);
+  });
+
   it('preserves an empty manual-edit branch and switches back to it', async () => {
     const { ReviewDraftHistoryStore } = await import(
       '@features/change-review-history/main'

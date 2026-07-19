@@ -1,3 +1,4 @@
+import { ReviewDraftHistoryStore } from '@features/change-review-history/main';
 import {
   initializeReviewHandlers,
   registerReviewHandlers,
@@ -513,6 +514,208 @@ describe('review IPC path confinement', () => {
         revision: 2,
       },
     });
+  });
+
+  it('shows prior decision recovery branches but rejects cross-snapshot recovery', async () => {
+    const scopeTokenA = 'agent:worker:content:prior-decision-a';
+    const scopeTokenB = 'agent:worker:content:prior-decision-b';
+    const acceptedAction = {
+      id: 'prior-accepted-hunk',
+      createdAt: '2026-07-17T12:20:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    const rejectedAction = {
+      id: 'prior-rejected-hunk',
+      createdAt: '2026-07-17T12:21:00.000Z',
+      kind: 'hunk' as const,
+      action: { filePath: projectFile, originalIndex: 0 },
+    };
+    await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      scopeTokenA,
+      { [`${projectFile}:0`]: 'accepted' },
+      {},
+      null,
+      [acceptedAction],
+      0
+    );
+    await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      scopeTokenA,
+      { [`${projectFile}:0`]: 'rejected' },
+      {},
+      null,
+      [rejectedAction],
+      0
+    );
+    await ipcMain.invoke(
+      REVIEW_SAVE_DECISIONS,
+      'safe-team',
+      'agent-worker',
+      scopeTokenB,
+      {},
+      {},
+      null,
+      [],
+      0
+    );
+
+    const conflicts = await ipcMain.invoke(
+      REVIEW_LOAD_DECISION_CONFLICT_CANDIDATES,
+      'safe-team',
+      'agent-worker',
+      scopeTokenB
+    );
+    expect(conflicts).toMatchObject({
+      success: true,
+      data: [
+        {
+          origin: 'prior-snapshot',
+          recoverability: 'different-review-snapshot',
+          observedCurrentRevision: 1,
+        },
+      ],
+    });
+    const candidateId = (conflicts as { data: { id: string }[] }).data[0]!.id;
+    await expect(
+      ipcMain.invoke(
+        REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+        'safe-team',
+        'agent-worker',
+        scopeTokenB,
+        candidateId,
+        'recover-candidate',
+        1
+      )
+    ).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('different review snapshot'),
+    });
+    await expect(
+      ipcMain.invoke(
+        REVIEW_RESOLVE_DECISION_CONFLICT_CANDIDATE,
+        'safe-team',
+        'agent-worker',
+        scopeTokenB,
+        candidateId,
+        'keep-current',
+        1
+      )
+    ).resolves.toEqual({ success: true, data: { revision: 1 } });
+  });
+
+  it('recovers authorized prior manual edits and lets incompatible paths be discarded', async () => {
+    const store = new ReviewDraftHistoryStore();
+    const scopeTokenA = 'agent:worker:content:prior-draft-a';
+    const scopeTokenB = 'agent:worker:content:prior-draft-b';
+    await store.saveEntry('safe-team', 'agent-worker', scopeTokenA, {
+      filePath: projectFile,
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'project\n',
+      editorState: { doc: 'canonical A', history: { done: [], undone: [] } },
+    });
+    await expect(
+      store.saveEntry('safe-team', 'agent-worker', scopeTokenA, {
+        filePath: projectFile,
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'project\n',
+        editorState: { doc: 'recovery A', history: { done: [], undone: [] } },
+      })
+    ).rejects.toThrow('Review draft history changed');
+    const currentB = await store.saveEntry('safe-team', 'agent-worker', scopeTokenB, {
+      filePath: projectFile,
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'project\n',
+      editorState: { doc: 'canonical B', history: { done: [], undone: [] } },
+    });
+
+    const conflicts = await ipcMain.invoke(
+      REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+      'safe-team',
+      'agent-worker',
+      scopeTokenB
+    );
+    expect(conflicts).toMatchObject({
+      success: true,
+      data: [
+        {
+          origin: 'prior-snapshot',
+          recoverability: 'recoverable',
+          observedCurrentGeneration: currentB.generation,
+        },
+      ],
+    });
+    const candidateId = (conflicts as { data: { id: string }[] }).data[0]!.id;
+    await expect(
+      ipcMain.invoke(
+        REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+        'safe-team',
+        'agent-worker',
+        scopeTokenB,
+        candidateId,
+        'recover-candidate',
+        1,
+        currentB.generation
+      )
+    ).resolves.toMatchObject({ success: true, data: { editorState: { doc: 'recovery A' } } });
+
+    const outsideScopeToken = 'agent:worker:content:outside-prior-draft';
+    await store.saveEntry('safe-team', 'agent-worker', outsideScopeToken, {
+      filePath: outsideFile,
+      codec: 'codemirror-history-v1',
+      expectedRevision: 0,
+      expectedGeneration: null,
+      revision: 1,
+      diskBaseline: 'outside\n',
+      editorState: { doc: 'outside canonical', history: { done: [], undone: [] } },
+    });
+    await expect(
+      store.saveEntry('safe-team', 'agent-worker', outsideScopeToken, {
+        filePath: outsideFile,
+        codec: 'codemirror-history-v1',
+        expectedRevision: 0,
+        expectedGeneration: null,
+        revision: 1,
+        diskBaseline: 'outside\n',
+        editorState: { doc: 'outside recovery', history: { done: [], undone: [] } },
+      })
+    ).rejects.toThrow('Review draft history changed');
+    const outsideConflicts = await ipcMain.invoke(
+      REVIEW_LOAD_DRAFT_HISTORY_CONFLICT_CANDIDATES,
+      'safe-team',
+      'agent-worker',
+      scopeTokenB
+    );
+    const outsideCandidate = (
+      outsideConflicts as { data: Array<{ id: string; filePath: string; recoverability: string }> }
+    ).data.find((candidate) => candidate.filePath === outsideFile)!;
+    expect(outsideCandidate.recoverability).toBe('file-not-in-current-review');
+    await expect(
+      ipcMain.invoke(
+        REVIEW_RESOLVE_DRAFT_HISTORY_CONFLICT_CANDIDATE,
+        'safe-team',
+        'agent-worker',
+        scopeTokenB,
+        outsideCandidate.id,
+        'keep-current',
+        0,
+        null
+      )
+    ).resolves.toEqual({ success: true, data: null });
   });
 
   it('does not preserve a stale branch whose Undo metadata contradicts its decisions', async () => {

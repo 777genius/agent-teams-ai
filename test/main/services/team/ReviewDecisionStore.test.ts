@@ -510,6 +510,73 @@ describe('ReviewDecisionStore', () => {
     });
   });
 
+  it('discovers prior-snapshot decision branches without allowing unsafe recovery', async () => {
+    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+    const store = new ReviewDecisionStore();
+    const scopeTokenA = 'task:123:req:prior-decisions:a';
+    const scopeTokenB = 'task:123:req:prior-decisions:b';
+    await store.save('demo', 'task-123', {
+      scopeToken: scopeTokenA,
+      hunkDecisions: { 'file:0': 'accepted' },
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+    await expect(
+      store.save('demo', 'task-123', {
+        scopeToken: scopeTokenA,
+        hunkDecisions: { 'file:0': 'rejected' },
+        fileDecisions: {},
+        expectedRevision: 0,
+      })
+    ).rejects.toThrow('Review decisions changed');
+    await store.save('demo', 'task-123', {
+      scopeToken: scopeTokenB,
+      hunkDecisions: {},
+      fileDecisions: {},
+      expectedRevision: 0,
+    });
+
+    const [candidate] = await new ReviewDecisionStore().loadConflictCandidates(
+      'demo',
+      'task-123',
+      scopeTokenB
+    );
+    expect(candidate).toMatchObject({
+      origin: 'prior-snapshot',
+      observedCurrentRevision: 1,
+      state: { hunkDecisions: { 'file:0': 'rejected' } },
+    });
+    await expect(
+      store.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        scopeTokenB,
+        candidate!.id,
+        'recover-candidate',
+        1
+      )
+    ).rejects.toThrow('different review snapshot');
+    await expect(
+      store.loadConflictCandidates('demo', 'task-123', scopeTokenB)
+    ).resolves.toMatchObject([{ id: candidate!.id }]);
+    await expect(
+      store.resolveConflictCandidate(
+        'demo',
+        'task-123',
+        scopeTokenB,
+        candidate!.id,
+        'keep-current',
+        1
+      )
+    ).resolves.toBe(1);
+    await expect(
+      store.loadConflictCandidates('demo', 'task-123', scopeTokenB)
+    ).resolves.toEqual([]);
+    await expect(store.load('demo', 'task-123', scopeTokenA)).resolves.toMatchObject({
+      hunkDecisions: { 'file:0': 'accepted' },
+    });
+  });
+
   it('keeps authoritative decisions when a conflict candidate is dismissed', async () => {
     const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
     const store = new ReviewDecisionStore();

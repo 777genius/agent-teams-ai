@@ -4102,6 +4102,11 @@ async function handleResolveDecisionConflictCandidate(
           scopeToken,
           candidateId
         );
+        if (candidate.origin !== 'current-snapshot') {
+          throw new Error(
+            'Recovery copy belongs to a different review snapshot; only discard is safe'
+          );
+        }
         assertReviewCandidateWithinAuthorization(candidate.state, authorization);
       }
       const revision = await reviewDecisionStore.resolveConflictCandidate(
@@ -4335,12 +4340,22 @@ async function handleLoadDraftHistoryConflictCandidates(
         scopeKey,
         scopeToken
       );
-      for (const candidate of candidates) {
-        await validateAuthorizedReviewFilePath(authorization, candidate.filePath, {
-          requireReviewedFile: true,
-        });
-      }
-      return candidates;
+      return Promise.all(
+        candidates.map(async (candidate) => {
+          const isCurrentReviewedFile =
+            path.isAbsolute(path.normalize(candidate.filePath)) &&
+            authorization.reviewedFiles?.has(
+              normalizeReviewPathForIdentity(candidate.filePath)
+            );
+          if (candidate.origin === 'prior-snapshot' && !isCurrentReviewedFile) {
+            return { ...candidate, recoverability: 'file-not-in-current-review' as const };
+          }
+          await validateAuthorizedReviewFilePath(authorization, candidate.filePath, {
+            requireReviewedFile: true,
+          });
+          return candidate;
+        })
+      );
     });
   });
 }
@@ -4368,9 +4383,11 @@ async function handleResolveDraftHistoryConflictCandidate(
         scopeToken,
         candidateId
       );
-      await validateAuthorizedReviewFilePath(authorization, candidate.filePath, {
-        requireReviewedFile: true,
-      });
+      if (resolution === 'recover-candidate') {
+        await validateAuthorizedReviewFilePath(authorization, candidate.filePath, {
+          requireReviewedFile: true,
+        });
+      }
       return reviewDraftHistoryStore.resolveConflictCandidate(
         teamName,
         scopeKey,
@@ -4419,6 +4436,8 @@ async function handleReplaceDraftHistoryConflictCandidate(
       return {
         id: replacement.id,
         capturedAt: replacement.capturedAt,
+        origin: replacement.origin,
+        recoverability: 'recoverable',
         filePath: replacement.filePath,
         expectedRevision: replacement.expectedRevision,
         expectedGeneration: replacement.expectedGeneration,

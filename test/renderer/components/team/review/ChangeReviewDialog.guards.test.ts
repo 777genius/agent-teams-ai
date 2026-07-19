@@ -144,6 +144,8 @@ describe('ChangeReviewDialog interaction guards', () => {
     const decision = {
       id: 'decision',
       capturedAt: '2026-07-19T10:00:00.000Z',
+      origin: 'current-snapshot' as const,
+      recoverability: 'recoverable' as const,
       expectedRevision: 0,
       observedCurrentRevision: 1,
       hunkDecisionCount: 0,
@@ -154,6 +156,8 @@ describe('ChangeReviewDialog interaction guards', () => {
     const draft = {
       id: 'draft',
       capturedAt: '2026-07-19T10:01:00.000Z',
+      origin: 'current-snapshot' as const,
+      recoverability: 'recoverable' as const,
       filePath: '/repo/a.ts',
       expectedRevision: 0,
       expectedGeneration: null,

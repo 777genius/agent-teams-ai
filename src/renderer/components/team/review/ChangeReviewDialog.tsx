@@ -1552,6 +1552,8 @@ export const ChangeReviewDialog = ({
       ),
     [decisionConflictCandidates, draftHistoryConflictCandidates]
   );
+  const activeReviewConflictRecoverable =
+    activeReviewConflictCandidate?.value.recoverability === 'recoverable';
   const [pendingRecoveryDiscard, setPendingRecoveryDiscard] =
     useState<ReviewConflictCandidateSelection | null>(null);
 
@@ -1566,6 +1568,7 @@ export const ChangeReviewDialog = ({
     ): Promise<void> => {
       if (
         !activeReviewConflictCandidate ||
+        (resolution === 'recover-candidate' && !activeReviewConflictRecoverable) ||
         (expectedCandidateId !== undefined &&
           activeReviewConflictCandidate.value.id !== expectedCandidateId) ||
         !decisionHydrationKey ||
@@ -1709,6 +1712,7 @@ export const ChangeReviewDialog = ({
     },
     [
       activeReviewConflictCandidate,
+      activeReviewConflictRecoverable,
       captureReviewOperationScope,
       decisionHydrationKey,
       decisionScopeKey,
@@ -5256,14 +5260,21 @@ export const ChangeReviewDialog = ({
             <div className="font-medium">A conflicting recovery branch is safe on disk</div>
             <div className="mt-0.5 text-amber-100/70">
               {activeReviewConflictCandidate.kind === 'decision'
-                ? `Another window saved a different review branch. Local copy: ${activeReviewConflictCandidate.value.undoDepth} Undo and ${activeReviewConflictCandidate.value.redoDepth} Redo actions.`
-                : activeReviewConflictCandidate.value.entryRevision === null
+                ? activeReviewConflictCandidate.value.origin === 'prior-snapshot'
+                  ? `An earlier review snapshot has a saved branch with ${activeReviewConflictCandidate.value.undoDepth} Undo and ${activeReviewConflictCandidate.value.redoDepth} Redo actions. It cannot be applied to this changed diff.`
+                  : `Another window saved a different review branch. Local copy: ${activeReviewConflictCandidate.value.undoDepth} Undo and ${activeReviewConflictCandidate.value.redoDepth} Redo actions.`
+                : activeReviewConflictCandidate.value.recoverability ===
+                    'file-not-in-current-review'
+                  ? `An earlier manual-edit branch targets ${activeReviewConflictCandidate.value.filePath}, which is not part of the current review.`
+                  : activeReviewConflictCandidate.value.entryRevision === null
                   ? `The recovery branch has no saved manual edits for ${activeReviewConflictCandidate.value.filePath}.`
                   : `Another window saved different manual edit history for ${activeReviewConflictCandidate.value.filePath}.`}
               {reviewConflictCandidateCount > 1
                 ? ` ${reviewConflictCandidateCount - 1} more recovery ${reviewConflictCandidateCount === 2 ? 'copy is' : 'copies are'} queued.`
                 : ''}
-              {' Switching branches first preserves the current branch as another recovery copy.'}
+              {activeReviewConflictRecoverable
+                ? ' Switching branches first preserves the current branch as another recovery copy.'
+                : ' Review actions remain locked until this incompatible copy is explicitly discarded.'}
             </div>
           </div>
           <button
@@ -5282,6 +5293,7 @@ export const ChangeReviewDialog = ({
             type="button"
             onClick={() => void handleResolveReviewConflictCandidate('recover-candidate')}
             disabled={
+              !activeReviewConflictRecoverable ||
               resolvingConflictCandidateId !== null ||
               reviewConflictRefreshPending ||
               reviewConflictLoadError !== null
