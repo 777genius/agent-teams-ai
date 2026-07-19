@@ -4015,15 +4015,20 @@ export function normalizeTerminalCommandRunEventDetail(
 }
 
 export function upsertTerminalCommandRun(
-  runs: readonly TerminalCommandRunPresentation[],
+  runs: TerminalCommandRunPresentation[],
   nextRun: TerminalCommandRunPresentation,
   status: TerminalCommandRunPresentation['status']
 ): TerminalCommandRunPresentation[] {
+  const existingIndex = runs.findIndex((run) => run.clientEventId === nextRun.clientEventId);
+  const existingRun = existingIndex >= 0 ? runs[existingIndex] : undefined;
+  if (status === 'running' && existingRun && existingRun.status !== 'running') {
+    return runs;
+  }
+
   const next = {
     ...nextRun,
     status,
   };
-  const existingIndex = runs.findIndex((run) => run.clientEventId === nextRun.clientEventId);
   const merged =
     existingIndex >= 0
       ? runs.map((run, index) => (index === existingIndex ? { ...run, ...next } : run))
