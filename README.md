@@ -22,7 +22,8 @@
   <img src="docs/screenshots/task-detail-animated.gif" alt="Agent Teams AI product demo" width="100%" />
 </td>
 <td width="50%">
-  <img width="2560" height="1552" alt="telegram-cloud-photo-size-2-5384488731521259756-w" src="https://github.com/user-attachments/assets/276fb24c-478c-4900-826c-476a5aa9e572" />
+  <!-- <img width="2560" height="1552" alt="telegram-cloud-photo-size-2-5384488731521259756-w" src="https://github.com/user-attachments/assets/276fb24c-478c-4900-826c-476a5aa9e572" /> -->
+  <img width="1311" height="828" alt="Select models/providers" src="https://github.com/user-attachments/assets/2037cc88-64b2-4b4e-a648-e000e7bbb7af" />
 </td>
 </tr>
 <tr>
@@ -51,7 +52,7 @@
   <!--
   <img src="docs/screenshots/4.jpg" alt="Create an AI team with roles and models" width="100%" />
   -->
-  <img width="1311" height="828" alt="Select models/providers" src="https://github.com/user-attachments/assets/2037cc88-64b2-4b4e-a648-e000e7bbb7af" />
+  <img width="1312" height="824" alt="image" src="https://github.com/user-attachments/assets/e090c576-0ee7-4f3c-996e-95ee7e97b070" />
 </td>
 </tr>
 <tr>
