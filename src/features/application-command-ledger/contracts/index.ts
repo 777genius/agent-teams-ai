@@ -151,3 +151,5 @@ export interface ApplicationCommandErrorClassification {
   failureKind: ApplicationCommandFailureKind;
   message?: string;
 }
+
+export * from './durableCommandProtocol';
