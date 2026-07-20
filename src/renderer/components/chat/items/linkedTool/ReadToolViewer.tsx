@@ -17,7 +17,6 @@ interface ReadToolViewerProps {
 
 export const ReadToolViewer = memo(function ReadToolViewer({ linkedTool }: ReadToolViewerProps) {
   const { t } = useAppTranslation('common');
-  const filePath = linkedTool.input.file_path as string;
 
   // Prefer enriched toolUseResult data
   const toolUseResult = linkedTool.result?.toolUseResult as Record<string, unknown> | undefined;
@@ -29,10 +28,21 @@ export const ReadToolViewer = memo(function ReadToolViewer({ linkedTool }: ReadT
         numLines?: number;
       }
     | undefined;
+  const filePathCandidates = [
+    toolUseResult?.filePath,
+    linkedTool.input.file_path,
+    linkedTool.input.filePath,
+    linkedTool.input.path,
+  ];
+  const filePath =
+    filePathCandidates.find(
+      (candidate): candidate is string =>
+        typeof candidate === 'string' && candidate.trim().length > 0
+    ) ?? 'read-output';
 
   // Get content: prefer enriched file data, fall back to raw result content
   let content: string;
-  if (fileData?.content) {
+  if (typeof fileData?.content === 'string') {
     content = fileData.content;
   } else {
     const resultContent = linkedTool.result?.content;
@@ -41,9 +51,11 @@ export const ReadToolViewer = memo(function ReadToolViewer({ linkedTool }: ReadT
         ? resultContent
         : Array.isArray(resultContent)
           ? resultContent
-              .map((item: unknown) => (typeof item === 'string' ? item : JSON.stringify(item)))
+              .map((item: unknown) =>
+                typeof item === 'string' ? item : (JSON.stringify(item) ?? '')
+              )
               .join('\n')
-          : JSON.stringify(resultContent, null, 2);
+          : (JSON.stringify(resultContent, null, 2) ?? '');
   }
 
   // Get line range

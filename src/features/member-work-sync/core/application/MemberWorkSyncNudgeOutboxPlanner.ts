@@ -4,7 +4,10 @@ import {
   buildMemberWorkSyncOutboxEnsureInput,
 } from '../domain';
 
-import { appendMemberWorkSyncAudit } from './MemberWorkSyncAudit';
+import {
+  appendMemberWorkSyncAudit,
+  buildMemberWorkSyncPhase2ReadinessAuditFields,
+} from './MemberWorkSyncAudit';
 import {
   decideMemberWorkSyncNudgeActivation,
   type MemberWorkSyncNudgeActivationReason,
@@ -13,6 +16,7 @@ import {
 import type {
   MemberWorkSyncOutboxEnsureInput,
   MemberWorkSyncOutboxItem,
+  MemberWorkSyncPhase2ReadinessAssessment,
   MemberWorkSyncStatus,
 } from '../../contracts';
 import type { MemberWorkSyncUseCaseDeps } from './ports';
@@ -523,7 +527,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
           : activation.reason === 'status_not_nudgeable'
             ? 'status_not_nudgeable'
             : 'phase2_not_ready';
-      await this.appendPlanAudit(status, { planned: false, code });
+      await this.appendPlanAudit(status, { planned: false, code }, metrics.phase2Readiness);
       return { planned: false, code };
     }
 
@@ -820,7 +824,8 @@ export class MemberWorkSyncNudgeOutboxPlanner {
 
   private async appendPlanAudit(
     status: MemberWorkSyncStatus,
-    result: MemberWorkSyncNudgeOutboxPlanResult
+    result: MemberWorkSyncNudgeOutboxPlanResult,
+    phase2Readiness?: MemberWorkSyncPhase2ReadinessAssessment
   ): Promise<void> {
     await appendMemberWorkSyncAudit(this.deps, {
       teamName: status.teamName,
@@ -832,6 +837,7 @@ export class MemberWorkSyncNudgeOutboxPlanner {
       actionableCount: status.agenda.items.length,
       reason: result.code,
       ...(status.providerId ? { providerId: status.providerId } : {}),
+      ...buildMemberWorkSyncPhase2ReadinessAuditFields(phase2Readiness),
       taskRefs: status.agenda.items.map((item) => ({
         taskId: item.taskId,
         displayId: item.displayId,

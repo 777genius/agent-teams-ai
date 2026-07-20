@@ -7,6 +7,46 @@ import type {
 const DEFAULT_IMAGE_BYTES_PER_PROVIDER = 4 * 1024 * 1024;
 const DEFAULT_IMAGE_BYTES_TOTAL = 8 * 1024 * 1024;
 const DEFAULT_FILE_BYTES_PER_PROVIDER = 4 * 1024 * 1024;
+const VERIFIED_OPENCODE_IMAGE_MODELS = new Set([
+  'gpt-5.4-mini',
+  'moonshotai/kimi-k2.6',
+  'z-ai/glm-4.5v',
+  'zai-coding-plan/glm-5v-turbo',
+  'minimax-coding-plan/minimax-m3',
+  'xai/grok-4.5',
+  'xai/grok-4.3',
+  'xai/grok-4.20-0309-reasoning',
+  'xai/grok-4.20-0309-non-reasoning',
+  'xai/grok-build-0.1',
+  'github-copilot/gpt-5-mini',
+  'github-copilot/gpt-5.3-codex',
+  'github-copilot/gpt-5.4',
+  'github-copilot/gpt-5.4-mini',
+  'github-copilot/gpt-5.5',
+  'github-copilot/gpt-5.6-luna',
+  'github-copilot/gpt-5.6-sol',
+  'github-copilot/gpt-5.6-terra',
+  'github-copilot/claude-fable-5',
+  'github-copilot/claude-haiku-4.5',
+  'github-copilot/claude-opus-4.5',
+  'github-copilot/claude-opus-4.6',
+  'github-copilot/claude-opus-4.7',
+  'github-copilot/claude-opus-4.8',
+  'github-copilot/claude-sonnet-4.5',
+  'github-copilot/claude-sonnet-4.6',
+  'github-copilot/claude-sonnet-5',
+  'github-copilot/gemini-2.5-pro',
+  'github-copilot/gemini-3-flash-preview',
+  'github-copilot/gemini-3.1-pro-preview',
+  'github-copilot/gemini-3.5-flash',
+  'github-copilot/kimi-k2.7-code',
+  'xiaomi-token-plan-ams/mimo-v2.5',
+  'xiaomi-token-plan-sgp/mimo-v2.5',
+  'xiaomi-token-plan-cn/mimo-v2.5',
+  'kimi-for-coding/k3',
+  'kimi-for-coding/kimi-for-coding',
+  'kimi-for-coding/kimi-for-coding-highspeed',
+]);
 
 export const NATIVE_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 export const CLAUDE_IMAGE_MIME_TYPES = [
@@ -99,15 +139,7 @@ export function resolveAgentAttachmentCapability(
 
   if (providerId === 'opencode') {
     const { model } = canonicalizeOpenCodeModel(target);
-    if (model === 'gpt-5.4-mini') {
-      return {
-        ...supportedImagesOnly(
-          'OpenCode model openai/gpt-5.4-mini is verified for image attachments.'
-        ),
-        reason: 'known_vision_model',
-      };
-    }
-    if (model === 'moonshotai/kimi-k2.6' || model === 'z-ai/glm-4.5v') {
+    if (VERIFIED_OPENCODE_IMAGE_MODELS.has(model)) {
       return {
         ...supportedImagesOnly(`OpenCode model ${model} is verified for image attachments.`),
         reason: 'known_vision_model',

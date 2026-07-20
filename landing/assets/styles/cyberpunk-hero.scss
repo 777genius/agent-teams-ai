@@ -455,14 +455,22 @@
 
 .cyber-hero__providers {
   width: min(570px, 100%);
-  margin: 0 0 20px;
+  margin: 0 0 16px;
+}
+
+.cyber-hero__providers-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
 .cyber-hero__providers-label {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 8px;
+  margin: 0;
   color: color-mix(in srgb, var(--cyber-text) 74%, transparent);
   font-family: var(--at-font-mono);
   font-size: 0.67rem;
@@ -482,10 +490,48 @@
   content: "";
 }
 
+.cyber-hero__provider-coverage {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 10px;
+  margin: 0;
+}
+
+.cyber-hero__provider-coverage-item {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(0, 234, 255, 0.2);
+  font-family: var(--at-font-mono);
+  line-height: 1;
+}
+
+.cyber-hero__provider-coverage-item dt {
+  color: var(--cyber-cyan);
+  font-size: 0.92rem;
+  font-weight: 900;
+  text-shadow: 0 0 12px rgba(0, 234, 255, 0.34);
+}
+
+.cyber-hero__provider-coverage-item dd {
+  margin: 0;
+  color: color-mix(in srgb, var(--cyber-text) 64%, transparent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .cyber-hero__provider-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 7px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .cyber-hero__provider {
@@ -495,12 +541,13 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  min-height: 36px;
-  gap: 7px;
-  padding: 5px 8px;
+  min-height: 28px;
+  flex: 0 0 auto;
+  gap: 5px;
+  padding: 3px 8px 3px 7px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--provider-accent) 27%, rgba(255, 255, 255, 0.1));
-  border-radius: 9px;
+  border-radius: 999px;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--provider-accent) 11%, transparent), transparent 62%),
     rgba(4, 10, 25, 0.5);
@@ -515,8 +562,8 @@
 
 .cyber-hero__provider::after {
   position: absolute;
-  inset: 0 auto 0 0;
-  width: 2px;
+  inset: 6px auto 6px 0;
+  width: 1px;
   background: var(--provider-accent);
   box-shadow: 0 0 9px var(--provider-accent);
   content: "";
@@ -526,22 +573,22 @@
 .cyber-hero__provider-icon {
   display: grid;
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   place-items: center;
   color: var(--provider-accent);
   filter: drop-shadow(0 0 7px color-mix(in srgb, var(--provider-accent) 42%, transparent));
 }
 
 .cyber-hero__provider-icon svg {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
 }
 
 .cyber-hero__provider-name {
   min-width: 0;
   color: var(--cyber-text);
-  font-size: 0.75rem;
+  font-size: 0.67rem;
   font-weight: 800;
   line-height: 1.1;
   white-space: nowrap;
@@ -2057,39 +2104,63 @@
   }
 
   .cyber-hero__providers {
-    margin-bottom: 18px;
+    margin-bottom: 16px;
+  }
+
+  .cyber-hero__providers-heading {
+    gap: 8px;
+    margin-bottom: 7px;
   }
 
   .cyber-hero__providers-label {
-    margin-bottom: 7px;
     font-size: 0.61rem;
   }
 
+  .cyber-hero__provider-coverage {
+    gap: 7px;
+  }
+
+  .cyber-hero__provider-coverage-item {
+    gap: 3px;
+    padding-left: 7px;
+  }
+
+  .cyber-hero__provider-coverage-item dt {
+    font-size: 0.78rem;
+  }
+
+  .cyber-hero__provider-coverage-item dd {
+    font-size: 0.48rem;
+    letter-spacing: 0.04em;
+  }
+
   .cyber-hero__provider-list {
-    gap: 6px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
   }
 
   .cyber-hero__provider {
-    min-height: 34px;
-    gap: 5px;
-    padding: 4px 6px;
-    border-radius: 8px;
+    min-height: 27px;
+    width: 100%;
+    gap: 4px;
+    padding: 3px 7px 3px 6px;
   }
 
   .cyber-hero__provider-icon {
-    width: 19px;
-    height: 19px;
+    width: 17px;
+    height: 17px;
   }
 
   .cyber-hero__provider-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
   }
 
   .cyber-hero__provider-name {
-    font-size: clamp(0.61rem, 2.7vw, 0.72rem);
-    line-height: 1.04;
-    white-space: normal;
+    font-size: clamp(0.58rem, 2.5vw, 0.66rem);
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .cyber-hero__actions {
@@ -2238,17 +2309,18 @@
     font-size: 2.1rem;
   }
 
-  .cyber-hero__provider-list {
-    gap: 5px;
+  .cyber-hero__providers-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .cyber-hero__provider {
-    min-height: 32px;
-    padding-inline: 5px;
+  .cyber-hero__provider-coverage-item:first-child {
+    padding-left: 0;
+    border-left: 0;
   }
 
   .cyber-hero__provider-name {
-    font-size: 0.59rem;
+    font-size: 0.58rem;
   }
 }
 

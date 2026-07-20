@@ -833,6 +833,139 @@ describe('RuntimeProviderManagementPanelView', () => {
     );
   });
 
+  it('pretty-prints structured model probe errors without escaped JSON', async () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const modelId = 'lmstudio/meta/llama-3.3-70b';
+    const nestedError = {
+      code: 500,
+      message: 'Compute error.',
+      type: 'server_error',
+    };
+    const payload = {
+      error: JSON.stringify(nestedError),
+      attempts: [{ route: 'predict', status: 500 }],
+    };
+    const configuredModel = {
+      providerId: 'lmstudio',
+      modelId,
+      displayName: 'meta/llama-3.3-70b',
+      sourceLabel: 'LMStudio',
+      free: false,
+      default: false,
+      availability: 'unavailable' as const,
+      accessKind: 'execution_failed' as const,
+      routeKind: 'configured_local' as const,
+      proofState: 'failed' as const,
+      requiresExecutionProof: true,
+      accessReason: 'Compute error',
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [configuredModel],
+            },
+            modelResults: {
+              [modelId]: {
+                providerId: 'lmstudio',
+                modelId,
+                ok: false,
+                availability: 'unavailable',
+                message: JSON.stringify(
+                  `Engine protocol {model=llama} returned an error: ${JSON.stringify(payload)}`
+                ),
+                diagnostics: [],
+              },
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+          projectPath: '/tmp/project',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    await selectOpenCodeTab(host, 'Models');
+
+    const result = host.querySelector<HTMLElement>(
+      `[data-testid="runtime-provider-model-result-${modelId}"]`
+    );
+    const details = result?.querySelector('pre');
+    expect(result?.textContent).toContain('Engine protocol {model=llama} returned an error');
+    expect(result?.textContent).not.toContain('\\"');
+    expect(details?.textContent).toBe(
+      JSON.stringify({ error: nestedError, attempts: payload.attempts }, null, 2)
+    );
+
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [configuredModel],
+            },
+            modelResults: {
+              [modelId]: {
+                providerId: 'lmstudio',
+                modelId,
+                ok: false,
+                availability: 'unavailable',
+                message: 'Engine [predict] failed: {not valid JSON}',
+                diagnostics: [],
+              },
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+          projectPath: '/tmp/project',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(result?.textContent).toContain('Engine [predict] failed: {not valid JSON}');
+    expect(result?.querySelector('pre')).toBeNull();
+
+    const longMalformedPrefix = `Engine "predict failed ${'{'.repeat(5_000)}`;
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderManagementPanelView, {
+          state: createState({
+            view: {
+              ...createState().view!,
+              configuredModels: [configuredModel],
+            },
+            modelResults: {
+              [modelId]: {
+                providerId: 'lmstudio',
+                modelId,
+                ok: false,
+                availability: 'unavailable',
+                message: `${longMalformedPrefix}: ${JSON.stringify(payload)}`,
+                diagnostics: [],
+              },
+            },
+          }),
+          actions: createActions(),
+          disabled: false,
+          projectPath: '/tmp/project',
+        })
+      );
+      await Promise.resolve();
+    });
+
+    expect(result?.querySelector('pre')?.textContent).toBe(
+      JSON.stringify({ error: nestedError, attempts: payload.attempts }, null, 2)
+    );
+  });
+
   it('renders Kiro as configured instead of local or free across route badges and search', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

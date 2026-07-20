@@ -26,7 +26,10 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
     release();
     await Promise.all([first, second]);
 
-    expect(dispatchDue).toHaveBeenCalledWith(['team-a', 'team-b']);
+    expect(dispatchDue).toHaveBeenCalledWith(
+      ['team-a', 'team-b'],
+      expect.objectContaining({ aborted: false })
+    );
   });
 
   it('skips dispatch when there are no active teams', async () => {
@@ -118,6 +121,41 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
     }
   });
 
+  it('aborts a timed-out dispatch before allowing it to settle late', async () => {
+    vi.useFakeTimers();
+    try {
+      let releaseDispatch!: () => void;
+      let receivedSignal: AbortSignal | undefined;
+      const dispatchDue = vi.fn(async (_teamNames: string[], signal?: AbortSignal) => {
+        receivedSignal = signal;
+        await new Promise<void>((resolve) => {
+          releaseDispatch = resolve;
+        });
+        return { claimed: 0, delivered: 0, superseded: 0, retryable: 0, terminal: 0 };
+      });
+      const scheduler = new MemberWorkSyncNudgeDispatchScheduler({
+        listLifecycleActiveTeamNames: async () => ['team-a'],
+        dispatchDue,
+        dispatchTimeoutMs: 20,
+      });
+
+      const run = scheduler.runOnce();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(receivedSignal?.aborted).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(20);
+      await run;
+
+      expect(receivedSignal?.aborted).toBe(true);
+
+      releaseDispatch();
+      await vi.advanceTimersByTimeAsync(0);
+      await scheduler.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('does not overlap later scheduled runs while timed-out active team listing is still settling', async () => {
     vi.useFakeTimers();
     try {
@@ -170,7 +208,10 @@ describe('MemberWorkSyncNudgeDispatchScheduler', () => {
 
       await scheduler.runOnce();
 
-      expect(dispatchDue).toHaveBeenCalledWith(['team-a']);
+      expect(dispatchDue).toHaveBeenCalledWith(
+        ['team-a'],
+        expect.objectContaining({ aborted: false })
+      );
     } finally {
       vi.useRealTimers();
     }

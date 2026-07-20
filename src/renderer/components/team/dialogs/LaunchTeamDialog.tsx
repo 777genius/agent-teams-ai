@@ -2299,6 +2299,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       }),
     [prepareChecks, prepareMessage, prepareState, prepareWarnings, t]
   );
+  const prepareBlocksLaunch = isLaunchMode && effectivePrepare.state === 'failed';
   const showCodexReconnectPrompt = shouldShowCodexReconnectPrompt({
     effectiveCliStatus,
     selectedProviderIds: selectedMemberProviders,
@@ -2338,6 +2339,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     }
     if (modelValidationError) {
       setLocalError(modelValidationError);
+      return;
+    }
+    if (prepareBlocksLaunch) {
+      setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
       return;
     }
     if (isLaunchMode && teammateRuntimeCompatibility.blocksSubmission) {
@@ -2517,6 +2522,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       !!modelValidationError ||
       hasInvalidLaunchMemberNames ||
       hasDuplicateLaunchMemberNames ||
+      prepareBlocksLaunch ||
       teammateRuntimeCompatibility.blocksSubmission
     : isSubmitting || validationErrors.length > 0 || !!modelValidationError;
 

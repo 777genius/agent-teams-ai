@@ -407,19 +407,35 @@ export function createMemberWorkSyncFeature(deps: {
     retryable: left.retryable + right.retryable,
     terminal: left.terminal + right.terminal,
   });
-  const filterNudgeDispatchReadyTeamNames = async (teamNames: string[]): Promise<string[]> => {
+  const filterNudgeDispatchReadyTeamNames = async (
+    teamNames: string[],
+    signal?: AbortSignal
+  ): Promise<string[]> => {
     const uniqueTeamNames = [...new Set(teamNames.map((name) => name.trim()).filter(Boolean))];
+    if (signal?.aborted) {
+      return [];
+    }
     if (!deps.canDispatchNudges) {
       return uniqueTeamNames;
     }
 
     const readyTeamNames: string[] = [];
     for (const teamName of uniqueTeamNames) {
+      if (signal?.aborted) {
+        break;
+      }
       try {
-        if (await deps.canDispatchNudges(teamName)) {
+        const ready = await deps.canDispatchNudges(teamName);
+        if (signal?.aborted) {
+          break;
+        }
+        if (ready) {
           readyTeamNames.push(teamName);
         }
       } catch (error) {
+        if (signal?.aborted) {
+          break;
+        }
         deps.logger?.warn('member work sync nudge dispatch readiness check failed', {
           teamName,
           error: String(error),
@@ -428,13 +444,22 @@ export function createMemberWorkSyncFeature(deps: {
     }
     return readyTeamNames;
   };
-  const refreshBackgroundStaleStatuses = async (teamNames: string[]): Promise<void> => {
+  const refreshBackgroundStaleStatuses = async (
+    teamNames: string[],
+    signal?: AbortSignal
+  ): Promise<void> => {
     const nowMs = clock.now().getTime();
     let refreshed = 0;
     for (const teamName of teamNames) {
+      if (signal?.aborted) {
+        break;
+      }
       let memberNames: string[];
       try {
         memberNames = await agendaSource.loadActiveMemberNames(teamName);
+        if (signal?.aborted) {
+          break;
+        }
       } catch (error) {
         deps.logger?.warn('member work sync background refresh member scan failed', {
           teamName,
@@ -444,8 +469,14 @@ export function createMemberWorkSyncFeature(deps: {
       }
 
       for (const memberName of memberNames) {
+        if (signal?.aborted) {
+          break;
+        }
         try {
           const status = await store.read({ teamName, memberName });
+          if (signal?.aborted) {
+            break;
+          }
           if (status && !statusNeedsBackgroundRefresh(status, nowMs)) {
             continue;
           }
@@ -454,8 +485,12 @@ export function createMemberWorkSyncFeature(deps: {
             {
               reconciledBy: 'queue',
               triggerReasons: [status ? 'manual_refresh' : 'startup_scan'],
+              ...(signal ? { isCancelled: () => signal.aborted } : {}),
             }
           );
+          if (signal?.aborted) {
+            break;
+          }
           refreshed += 1;
         } catch (error) {
           deps.logger?.warn('member work sync background refresh failed', {
@@ -474,20 +509,27 @@ export function createMemberWorkSyncFeature(deps: {
   const dispatchNudgesForReadyTeams = async (
     teamNames: string[],
     claimedBy: string,
-    options: { refreshBackgroundStaleStatuses?: boolean } = {}
+    options: { refreshBackgroundStaleStatuses?: boolean; signal?: AbortSignal } = {}
   ): Promise<MemberWorkSyncNudgeDispatchSummary> => {
-    const readyTeamNames = await filterNudgeDispatchReadyTeamNames(teamNames);
-    if (readyTeamNames.length === 0) {
+    const readyTeamNames = await filterNudgeDispatchReadyTeamNames(teamNames, options.signal);
+    if (readyTeamNames.length === 0 || options.signal?.aborted) {
       return emptyNudgeDispatchSummary();
     }
     const dispatchReadyNudges = () =>
       nudgeDispatcher.dispatchDue({
         teamNames: readyTeamNames,
         claimedBy,
+        ...(options.signal ? { signal: options.signal } : {}),
       });
     const initialSummary = await dispatchReadyNudges();
+    if (options.signal?.aborted) {
+      return initialSummary;
+    }
     if (options.refreshBackgroundStaleStatuses !== false) {
-      await refreshBackgroundStaleStatuses(readyTeamNames);
+      await refreshBackgroundStaleStatuses(readyTeamNames, options.signal);
+      if (options.signal?.aborted) {
+        return initialSummary;
+      }
       return addNudgeDispatchSummaries(initialSummary, await dispatchReadyNudges());
     }
     return initialSummary;
@@ -550,8 +592,10 @@ export function createMemberWorkSyncFeature(deps: {
   const nudgeDispatchScheduler = deps.listLifecycleActiveTeamNames
     ? new MemberWorkSyncNudgeDispatchScheduler({
         listLifecycleActiveTeamNames: deps.listLifecycleActiveTeamNames,
-        dispatchDue: (teamNames) =>
-          dispatchNudgesForReadyTeams(teamNames, `member-work-sync:${process.pid}:scheduled`),
+        dispatchDue: (teamNames, signal) =>
+          dispatchNudgesForReadyTeams(teamNames, `member-work-sync:${process.pid}:scheduled`, {
+            signal,
+          }),
         logger: deps.logger,
       })
     : null;

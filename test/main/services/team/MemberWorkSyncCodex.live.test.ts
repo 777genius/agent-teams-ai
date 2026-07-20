@@ -410,6 +410,57 @@ liveDescribe('Member work sync Codex live e2e', () => {
             teamName
       );
     }, 60_000);
+
+    const leaseNudgeIdsBefore = (await readInboxMessages(teamName, memberName))
+      .filter((message) => message.messageKind === 'member_work_sync_nudge')
+      .map((message) => message.messageId);
+    const leaseOutboxBefore = await readMemberOutboxItems(teamName, memberName);
+    await seedTeamWideSelfNoisyMetrics({
+      teamName,
+      targetMemberName: memberName,
+      noisyMemberName: memberName,
+    });
+    await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+      phase2Readiness: {
+        state: 'blocked',
+        reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+      },
+    });
+    const leaseReconcileBaseline = feature.getQueueDiagnostics().reconciled;
+    feature.noteTeamChange({ type: 'config', teamName });
+    await waitUntil(
+      async () => {
+        const diagnostics = feature!.getQueueDiagnostics();
+        return (
+          diagnostics.queued === 0 &&
+          diagnostics.running === 0 &&
+          diagnostics.reconciled >= leaseReconcileBaseline + 1
+        );
+      },
+      60_000,
+      500,
+      async () =>
+        formatMemberWorkSyncDiagnostics({
+          feature: feature!,
+          teamName: teamName!,
+          memberName,
+          taskId: task.id,
+        })
+    );
+    await expect(feature.getStatus({ teamName, memberName })).resolves.toMatchObject({
+      state: 'still_working',
+      report: {
+        accepted: true,
+        state: 'still_working',
+      },
+    });
+    expect(
+      (await readInboxMessages(teamName, memberName))
+        .filter((message) => message.messageKind === 'member_work_sync_nudge')
+        .map((message) => message.messageId)
+    ).toEqual(leaseNudgeIdsBefore);
+    await expect(readMemberOutboxItems(teamName, memberName)).resolves.toEqual(leaseOutboxBefore);
+
     const postReportDispatch = await feature.dispatchDueNudges([teamName]);
     expect(postReportDispatch.delivered).toBe(0);
     expect(postReportDispatch.retryable).toBe(0);
@@ -627,7 +678,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     });
   }, 420_000);
 
-  it('wakes a real Codex teammate when runtime member meta omits provider metadata under noisy metrics', async () => {
+  it('wakes a real Codex teammate when another member makes team metrics self-noisy', async () => {
     const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
     expect(orchestratorCli).toBeTruthy();
     await assertExecutable(orchestratorCli!);
@@ -639,6 +690,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
       | 'high'
       | 'xhigh';
     const requestedMemberName = 'NickName';
+    const requestedNoisyMemberName = 'NoisyPeer';
     const marker = `member-work-sync-codex-runtime-meta-${Date.now()}`;
     teamName = `member-work-sync-codex-runtime-meta-${Date.now()}`;
     const projectPath = path.join(tempDir, 'project');
@@ -753,6 +805,14 @@ liveDescribe('Member work sync Codex live e2e', () => {
             model,
             effort,
           },
+          {
+            name: requestedNoisyMemberName,
+            role: 'developer',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model,
+            effort,
+          },
         ],
       },
       (progress) => {
@@ -760,21 +820,35 @@ liveDescribe('Member work sync Codex live e2e', () => {
       }
     );
 
-    await waitUntil(async () => {
-      const last = progressEvents.at(-1);
-      if (last?.state === 'failed') {
-        throw new Error(formatProgressDump(progressEvents));
-      }
-      return last?.state === 'ready';
-    }, 240_000);
+    await waitUntil(
+      async () => {
+        const last = progressEvents.at(-1);
+        if (last?.state === 'failed') {
+          throw new Error(formatProgressDump(progressEvents));
+        }
+        return last?.state === 'ready';
+      },
+      360_000,
+      1_000,
+      async () => formatProgressDump(progressEvents)
+    );
 
     const config = await new TeamConfigReader().getConfig(teamName);
     const memberName = config?.members
       ?.find((member) => sameMemberName(member.name, requestedMemberName))
       ?.name?.trim();
+    const noisyMemberName = config?.members
+      ?.find((member) => sameMemberName(member.name, requestedNoisyMemberName))
+      ?.name?.trim();
     expect(memberName).toBeTruthy();
+    expect(noisyMemberName).toBeTruthy();
     expect(
       config?.members?.find((member) => sameMemberName(member.name, memberName!))
+    ).toMatchObject({
+      providerId: 'codex',
+    });
+    expect(
+      config?.members?.find((member) => sameMemberName(member.name, noisyMemberName!))
     ).toMatchObject({
       providerId: 'codex',
     });
@@ -810,6 +884,63 @@ liveDescribe('Member work sync Codex live e2e', () => {
           memberName: memberName!,
         })
     );
+
+    await seedTeamWideSelfNoisyMetrics({
+      teamName,
+      targetMemberName: memberName!,
+      noisyMemberName: noisyMemberName!,
+    });
+    await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+      phase2Readiness: {
+        state: 'blocked',
+        reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+      },
+    });
+
+    const idleReconcileBaseline = feature.getQueueDiagnostics().reconciled;
+    feature.noteTeamChange({ type: 'config', teamName });
+    await waitUntil(
+      async () => {
+        const diagnostics = feature!.getQueueDiagnostics();
+        return (
+          diagnostics.queued === 0 &&
+          diagnostics.running === 0 &&
+          diagnostics.reconciled >= idleReconcileBaseline + 2
+        );
+      },
+      60_000,
+      500,
+      async () =>
+        formatMemberWorkSyncDiagnostics({
+          feature: feature!,
+          teamName: teamName!,
+          memberName: memberName!,
+        })
+    );
+    expect(
+      (await readInboxMessages(teamName, memberName!)).filter(
+        (message) => message.messageKind === 'member_work_sync_nudge'
+      )
+    ).toHaveLength(0);
+    expect(
+      (await readInboxMessages(teamName, noisyMemberName!)).filter(
+        (message) => message.messageKind === 'member_work_sync_nudge'
+      )
+    ).toHaveLength(0);
+    await expect(readMemberOutboxItems(teamName, memberName!)).resolves.toEqual({});
+    await expect(readMemberOutboxItems(teamName, noisyMemberName!)).resolves.toEqual({});
+
+    await seedTeamWideSelfNoisyMetrics({
+      teamName,
+      targetMemberName: memberName!,
+      noisyMemberName: noisyMemberName!,
+    });
+    await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+      phase2Readiness: {
+        state: 'blocked',
+        reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+      },
+    });
 
     const createdAt = new Date().toISOString();
     const taskId = `runtime-meta-${Date.now()}`;
@@ -886,34 +1017,6 @@ liveDescribe('Member work sync Codex live e2e', () => {
     });
     expect(stableStatus.providerId).toBe('codex');
     expect(stableStatus.agenda.fingerprint).toBe(agendaFingerprint);
-    expect(
-      (await readInboxMessages(teamName, memberName!)).filter(
-        (message) => message.messageKind === 'member_work_sync_nudge'
-      )
-    ).toHaveLength(0);
-
-    await seedNativeStaleBlockingMetrics({
-      teamName,
-      memberName: memberName!,
-      agendaFingerprint,
-    });
-    feature.noteTeamChange({ type: 'task', teamName, taskId });
-
-    await waitUntil(
-      async () => {
-        const diagnostics = feature!.getQueueDiagnostics();
-        return diagnostics.queued === 0 && diagnostics.running === 0;
-      },
-      30_000,
-      500,
-      async () =>
-        formatMemberWorkSyncDiagnostics({
-          feature: feature!,
-          teamName: teamName!,
-          memberName: memberName!,
-          taskId,
-        })
-    );
     expect((await feature.getStatus({ teamName, memberName: memberName! })).providerId).toBe(
       'codex'
     );
@@ -937,7 +1040,32 @@ liveDescribe('Member work sync Codex live e2e', () => {
     );
 
     const metrics = await feature.getMetrics({ teamName });
+    expect(metrics.phase2Readiness.state).toBe('blocked');
     expect(metrics.phase2Readiness.reasons).toContain('would_nudge_rate_high');
+    expect(metrics.phase2Readiness.reasons).toContain('fingerprint_churn_high');
+    expect(metrics.phase2Readiness.rates.wouldNudgesPerMemberHour).toBeGreaterThan(
+      metrics.phase2Readiness.thresholds.maxWouldNudgesPerMemberHour
+    );
+    expect(metrics.phase2Readiness.rates.fingerprintChangesPerMemberHour).toBeGreaterThan(
+      metrics.phase2Readiness.thresholds.maxFingerprintChangesPerMemberHour
+    );
+    expect(metrics.recentEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          memberName: noisyMemberName,
+          kind: 'would_nudge',
+        }),
+        expect.objectContaining({
+          memberName: noisyMemberName,
+          kind: 'fingerprint_changed',
+        }),
+      ])
+    );
+    expect(
+      (await readInboxMessages(teamName, noisyMemberName!)).filter(
+        (message) => message.messageKind === 'member_work_sync_nudge'
+      )
+    ).toHaveLength(0);
     const journalPath = path.join(
       getTeamsBasePath(),
       teamName,
@@ -953,7 +1081,9 @@ liveDescribe('Member work sync Codex live e2e', () => {
       .map((line) => JSON.parse(line) as { event?: string; reason?: string })
       .filter((event) => event.event === 'nudge_skipped' || event.event === 'nudge_delivered');
     expect(nudgeOutcomes).toContainEqual(expect.objectContaining({ event: 'nudge_delivered' }));
-    expect(nudgeOutcomes.at(-1)).toMatchObject({ event: 'nudge_delivered' });
+    expect(nudgeOutcomes).not.toContainEqual(
+      expect.objectContaining({ reason: 'blocking_metrics' })
+    );
 
     await relayInboxIfNotAlreadyConsumed(activeService, memberName!);
 
@@ -998,7 +1128,7 @@ liveDescribe('Member work sync Codex live e2e', () => {
     await expect(feature.dispatchDueNudges([teamName])).resolves.toMatchObject({
       delivered: 0,
     });
-  }, 480_000);
+  }, 720_000);
 
   it('lets a real Codex teammate complete the task and report caught-up after the board clears', async () => {
     const orchestratorCli = process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH?.trim();
@@ -1477,10 +1607,10 @@ async function seedShadowReadyMetrics(input: {
   );
 }
 
-async function seedNativeStaleBlockingMetrics(input: {
+async function seedTeamWideSelfNoisyMetrics(input: {
   teamName: string;
-  memberName: string;
-  agendaFingerprint: string;
+  targetMemberName: string;
+  noisyMemberName: string;
 }): Promise<void> {
   const metricsPath = path.join(
     getTeamsBasePath(),
@@ -1490,43 +1620,66 @@ async function seedNativeStaleBlockingMetrics(input: {
     'metrics.json'
   );
   const nowMs = Date.now();
-  const staleObservedAt = new Date(nowMs - 6 * 60_000 - 1_000).toISOString();
+  const observationWindowMs = 2 * 60 * 60_000;
+  const startMs = nowMs - observationWindowMs;
+  const firstObservedAt = new Date(startMs).toISOString();
+  const members = Object.fromEntries(
+    [input.targetMemberName, input.noisyMemberName].map((memberName) => [
+      memberName,
+      {
+        memberName,
+        state: 'caught_up',
+        agendaFingerprint: `agenda:v1:seed:${memberName}`,
+        actionableCount: 0,
+        evaluatedAt: firstObservedAt,
+        providerId: 'codex',
+      },
+    ])
+  );
   await fs.mkdir(path.dirname(metricsPath), { recursive: true });
   await fs.writeFile(
     metricsPath,
     `${JSON.stringify(
       {
         schemaVersion: 2,
-        members: {
-          [input.memberName]: {
-            memberName: input.memberName,
-            state: 'needs_sync',
-            agendaFingerprint: input.agendaFingerprint,
-            actionableCount: 1,
-            evaluatedAt: staleObservedAt,
-            providerId: 'codex',
-          },
-        },
+        members,
         recentEvents: [
-          {
-            id: 'native-stale-status',
-            teamName: input.teamName,
-            memberName: input.memberName,
-            kind: 'status_evaluated',
-            state: 'needs_sync',
-            agendaFingerprint: input.agendaFingerprint,
-            recordedAt: staleObservedAt,
-            actionableCount: 1,
-            providerId: 'codex',
-          },
+          ...Array.from({ length: 24 }, (_, index) => {
+            const memberName = index % 2 === 0 ? input.targetMemberName : input.noisyMemberName;
+            return {
+              id: `cross-member-status-${index}`,
+              teamName: input.teamName,
+              memberName,
+              kind: 'status_evaluated',
+              state: 'caught_up',
+              agendaFingerprint: `agenda:v1:seed:${memberName}:${index}`,
+              recordedAt: new Date(
+                startMs + Math.round((observationWindowMs * index) / 23)
+              ).toISOString(),
+              actionableCount: 0,
+              providerId: 'codex',
+            };
+          }),
           ...Array.from({ length: 12 }, (_, index) => ({
-            id: `native-stale-would-nudge-${index}`,
+            id: `cross-member-would-nudge-${index}`,
             teamName: input.teamName,
-            memberName: input.memberName,
+            memberName: input.noisyMemberName,
             kind: 'would_nudge',
             state: 'needs_sync',
-            agendaFingerprint: input.agendaFingerprint,
-            recordedAt: new Date(nowMs - 5 * 60_000 + index * 5_000).toISOString(),
+            agendaFingerprint: 'agenda:v1:noisy-peer',
+            recordedAt: new Date(nowMs - index * 1_000).toISOString(),
+            actionableCount: 1,
+            providerId: 'codex',
+          })),
+          ...Array.from({ length: 6 }, (_, index) => ({
+            id: `cross-member-fingerprint-changed-${index}`,
+            teamName: input.teamName,
+            memberName: input.noisyMemberName,
+            kind: 'fingerprint_changed',
+            state: 'needs_sync',
+            agendaFingerprint: 'agenda:v1:noisy-peer',
+            previousFingerprint: 'agenda:v1:noisy-peer:previous',
+            recordedAt: new Date(nowMs - index * 1_000).toISOString(),
             actionableCount: 1,
             providerId: 'codex',
           })),
@@ -1575,4 +1728,21 @@ async function readInboxMessages(
         },
       ];
     });
+}
+
+async function readMemberOutboxItems(
+  teamName: string,
+  memberName: string
+): Promise<Record<string, { status?: string }>> {
+  const outboxPath = path.join(
+    getTeamsBasePath(),
+    teamName,
+    'members',
+    memberName,
+    '.member-work-sync',
+    'outbox.json'
+  );
+  const raw = await fs.readFile(outboxPath, 'utf8').catch(() => '{"items":{}}');
+  const parsed = JSON.parse(raw) as { items?: Record<string, { status?: string }> };
+  return parsed.items ?? {};
 }

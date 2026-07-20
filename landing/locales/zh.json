@@ -33,6 +33,8 @@
     "watchDemo": "观看演示",
     "videoUnavailable": "视频不可用",
     "supportedProviders": "支持的 AI 提供商",
+    "providers": "提供商",
+    "models": "模型",
     "slogan": "用很少操作完成大量工作",
     "platformDefault": "适用于你的平台",
     "guidesSetup": "指南和设置",

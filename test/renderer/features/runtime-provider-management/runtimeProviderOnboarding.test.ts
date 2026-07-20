@@ -228,7 +228,14 @@ describe('runtime provider onboarding domain', () => {
     ).toBe('xai/grok-4.3');
   });
 
-  it('prefers the Copilot Free compatible model before paid and premium routes', () => {
+  it('prefers the current SuperGrok flagship when the live catalog exposes it', () => {
+    const plan = getRuntimeProviderOnboardingPlan('supergrok');
+    const models = [model('xai/grok-4.3'), model('xai/grok-4.5')];
+
+    expect(selectRecommendedRuntimeProviderModel(plan, models)?.modelId).toBe('xai/grok-4.5');
+  });
+
+  it('prefers the current Copilot Free compatible model over retired and premium routes', () => {
     const plan = getRuntimeProviderOnboardingPlan('github-copilot');
     const models = [
       model('github-copilot/claude-sonnet-4.5'),
@@ -237,7 +244,7 @@ describe('runtime provider onboarding domain', () => {
     ];
 
     expect(selectRecommendedRuntimeProviderModel(plan, models)?.modelId).toBe(
-      'github-copilot/gpt-4.1'
+      'github-copilot/gpt-5-mini'
     );
   });
 
@@ -246,6 +253,7 @@ describe('runtime provider onboarding domain', () => {
     const models = [
       model('kimi-for-coding/k2p7', { default: true }),
       model('kimi-for-coding/kimi-for-coding-highspeed'),
+      model('kimi-for-coding/k3'),
       model('kimi-for-coding/kimi-for-coding'),
     ];
 

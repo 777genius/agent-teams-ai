@@ -219,11 +219,23 @@ onUnmounted(() => {
             class="cyber-hero__providers"
             :aria-label="supportedProvidersLabel"
           >
-            <p class="cyber-hero__providers-label">
-              {{ supportedProvidersLabel }}
-            </p>
-            <div class="cyber-hero__provider-list">
-              <div
+            <div class="cyber-hero__providers-heading">
+              <p class="cyber-hero__providers-label">
+                {{ supportedProvidersLabel }}
+              </p>
+              <dl class="cyber-hero__provider-coverage">
+                <div class="cyber-hero__provider-coverage-item">
+                  <dt>75+</dt>
+                  <dd>{{ t("hero.providers") }}</dd>
+                </div>
+                <div class="cyber-hero__provider-coverage-item">
+                  <dt>200+</dt>
+                  <dd>{{ t("hero.models") }}</dd>
+                </div>
+              </dl>
+            </div>
+            <ul class="cyber-hero__provider-list">
+              <li
                 v-for="provider in supportedProviders"
                 :key="provider.id"
                 class="cyber-hero__provider"
@@ -235,8 +247,8 @@ onUnmounted(() => {
                 <span class="cyber-hero__provider-name">
                   {{ provider.name }}
                 </span>
-              </div>
-            </div>
+              </li>
+            </ul>
           </div>
 
           <div class="cyber-hero__actions">

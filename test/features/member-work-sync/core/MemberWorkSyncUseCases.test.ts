@@ -115,6 +115,9 @@ class InMemoryStatusStore implements MemberWorkSyncStatusStorePort {
   readonly pendingIntents = new Map<string, MemberWorkSyncReportIntent>();
   phase2ReadinessState: MemberWorkSyncPhase2ReadinessState = 'collecting_shadow_data';
   phase2ReadinessReasons: MemberWorkSyncPhase2ReadinessReason[] = [];
+  phase2WouldNudgesPerMemberHour = 0.5;
+  phase2FingerprintChangesPerMemberHour = 0;
+  phase2ReportRejectionRate = 0;
   metricsGeneratedAt = '2026-04-29T00:00:00.000Z';
   recentEvents: MemberWorkSyncMetricEvent[] = [];
 
@@ -182,9 +185,9 @@ class InMemoryStatusStore implements MemberWorkSyncStatusStorePort {
         rates: {
           observationHours: 2,
           statusEventCount: 30,
-          wouldNudgesPerMemberHour: 0.5,
-          fingerprintChangesPerMemberHour: 0,
-          reportRejectionRate: 0,
+          wouldNudgesPerMemberHour: this.phase2WouldNudgesPerMemberHour,
+          fingerprintChangesPerMemberHour: this.phase2FingerprintChangesPerMemberHour,
+          reportRejectionRate: this.phase2ReportRejectionRate,
         },
         diagnostics: [],
       },
@@ -800,7 +803,7 @@ describe('MemberWorkSync use cases', () => {
     expect(outbox.ensures).toEqual([]);
   });
 
-  it('does not plan Codex task protocol repair before a worker turn settles', async () => {
+  it('plans regular Codex recovery before turn-settled repair when only would-nudge telemetry is noisy', async () => {
     const outbox = new InMemoryOutboxStore();
     const { deps, store } = createDeps({
       providerId: 'codex',
@@ -818,7 +821,46 @@ describe('MemberWorkSync use cases', () => {
       { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
     );
 
+    expect(outbox.ensures).toHaveLength(1);
+    expect(outbox.ensures[0]?.payload).toMatchObject({
+      workSyncIntent: 'agenda_sync',
+    });
+    expect(outbox.ensures[0]?.payload.workSyncIntentKey).toBeUndefined();
+  });
+
+  it('records exact readiness metrics when report rejection blocks planning', async () => {
+    const outbox = new InMemoryOutboxStore();
+    const { auditEvents, deps, store } = createDeps({
+      providerId: 'codex',
+      items: [inProgressWorkItem],
+      outboxStore: outbox,
+    });
+    store.phase2ReadinessState = 'blocked';
+    store.phase2ReadinessReasons = ['report_rejection_rate_high'];
+    store.phase2ReportRejectionRate = 0.75;
+
+    await new MemberWorkSyncReconciler(deps).execute(
+      {
+        teamName: 'team-a',
+        memberName: 'bob',
+      },
+      { reconciledBy: 'queue', triggerReasons: ['task_changed'] }
+    );
+
     expect(outbox.ensures).toEqual([]);
+    expect(auditEvents).toContainEqual(
+      expect.objectContaining({
+        event: 'nudge_skipped',
+        reason: 'blocking_metrics',
+        diagnostics: [],
+        metadata: expect.objectContaining({
+          phase2ReadinessState: 'blocked',
+          phase2ReadinessReasons: 'report_rejection_rate_high',
+          reportRejectionRate: 0.75,
+          maxReportRejectionRate: 0.2,
+        }),
+      })
+    );
   });
 
   it('delivers Codex task protocol repair after a settled worker turn despite noisy metrics', async () => {
@@ -831,7 +873,7 @@ describe('MemberWorkSync use cases', () => {
       inboxNudge: inbox,
     });
     store.phase2ReadinessState = 'blocked';
-    store.phase2ReadinessReasons = ['would_nudge_rate_high'];
+    store.phase2ReadinessReasons = ['report_rejection_rate_high'];
     const reconciler = new MemberWorkSyncReconciler(deps);
 
     await reconciler.execute(
@@ -894,7 +936,7 @@ describe('MemberWorkSync use cases', () => {
       outboxStore: outbox,
     });
     store.phase2ReadinessState = 'blocked';
-    store.phase2ReadinessReasons = ['would_nudge_rate_high'];
+    store.phase2ReadinessReasons = ['report_rejection_rate_high'];
     const deliveredPayload = {
       from: 'system' as const,
       to: 'bob',

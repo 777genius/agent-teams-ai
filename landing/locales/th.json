@@ -33,6 +33,8 @@
     "watchDemo": "ดูเดโม",
     "videoUnavailable": "ไม่มีวิดีโอ",
     "supportedProviders": "ผู้ให้บริการ AI ที่รองรับ",
+    "providers": "ผู้ให้บริการ",
+    "models": "โมเดล",
     "slogan": "ทำสำเร็จได้มากมายด้วยการลงมือเพียงเล็กน้อย",
     "platformDefault": "สำหรับแพลตฟอร์มของคุณ",
     "guidesSetup": "คู่มือและการตั้งค่า",

@@ -35,14 +35,18 @@ export interface MemberWorkSyncNudgeActivationDecision {
   reason: MemberWorkSyncNudgeActivationReason;
 }
 
-const BLOCKING_PHASE2_REASONS = new Set([
-  'would_nudge_rate_high',
-  'fingerprint_churn_high',
-  'report_rejection_rate_high',
-]);
+// Would-nudge and fingerprint churn are intentionally diagnostic-only here.
+// A stalled member emits another would-nudge sample on each reconcile, while
+// legitimate board changes create fingerprint samples. Using either team-wide
+// rate to suppress recovery locks out the members that currently need syncing.
+// Actual deliveries remain bounded by per-fingerprint outbox idempotency,
+// dispatcher rate limits, busy checks, and cooldowns.
+const DELIVERY_BLOCKING_PHASE2_REASONS = new Set(['report_rejection_rate_high']);
 
 function hasBlockingMetrics(metrics: MemberWorkSyncTeamMetrics): boolean {
-  return metrics.phase2Readiness.reasons.some((reason) => BLOCKING_PHASE2_REASONS.has(reason));
+  return metrics.phase2Readiness.reasons.some((reason) =>
+    DELIVERY_BLOCKING_PHASE2_REASONS.has(reason)
+  );
 }
 
 function normalizeMemberName(value: string): string {

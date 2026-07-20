@@ -16,7 +16,10 @@ function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
 
 export interface MemberWorkSyncNudgeDispatchSchedulerDeps {
   listLifecycleActiveTeamNames(): Promise<string[]>;
-  dispatchDue(teamNames: string[]): Promise<MemberWorkSyncNudgeDispatchSummary>;
+  dispatchDue(
+    teamNames: string[],
+    signal?: AbortSignal
+  ): Promise<MemberWorkSyncNudgeDispatchSummary>;
   intervalMs?: number;
   dispatchTimeoutMs?: number;
   logger?: MemberWorkSyncLoggerPort;
@@ -127,13 +130,15 @@ export class MemberWorkSyncNudgeDispatchScheduler {
     teamNames: string[]
   ): Promise<MemberWorkSyncNudgeDispatchSummary> {
     let timeout: ReturnType<typeof setTimeout> | null = null;
-    const work = this.deps.dispatchDue(teamNames);
+    const abortController = new AbortController();
+    const work = this.deps.dispatchDue(teamNames, abortController.signal);
     void work.catch(() => undefined);
     try {
       return await Promise.race([
         work,
         new Promise<never>((_, reject) => {
           timeout = setTimeout(() => {
+            abortController.abort();
             this.trackTimedOutWork(work);
             reject(
               new Error(

@@ -258,7 +258,7 @@ describe('useRuntimeProviderOnboarding', () => {
     expect(currentState?.stage).toBe('ready');
   });
 
-  it('tries one Copilot fallback without probing the full provider catalog', async () => {
+  it('uses the current Copilot recommendation without probing the full provider catalog', async () => {
     loadProviderDirectory.mockResolvedValue(
       directoryResponse([directoryEntry('github-copilot', 'connected', 'oauth')])
     );
@@ -333,7 +333,6 @@ describe('useRuntimeProviderOnboarding', () => {
     });
 
     expect(testModel.mock.calls.map(([input]) => input.modelId)).toEqual([
-      'github-copilot/gpt-4.1',
       'github-copilot/gpt-5-mini',
     ]);
     expect(currentState?.verifiedModelId).toBe('github-copilot/gpt-5-mini');

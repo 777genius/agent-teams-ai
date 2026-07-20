@@ -888,6 +888,57 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
   });
 
+  it('preserves Kimi K3 effort as the OpenCode launch variant', async () => {
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >(() =>
+      Promise.resolve(
+        successfulOpenCodeLaunchData({ model: 'kimi-for-coding/k3' })
+      )
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
+        readiness({
+          state: 'ready',
+          launchAllowed: true,
+          modelId: 'kimi-for-coding/k3',
+          availableModels: ['kimi-for-coding/k3'],
+        })
+      ),
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-kimi-k3')),
+      launchOpenCodeTeam,
+    });
+
+    await adapter.launch(
+      launchInput({
+        model: 'kimi-for-coding/k3',
+        effort: 'high',
+        expectedMembers: [
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'kimi-for-coding/k3',
+            effort: 'max',
+            cwd: '/repo',
+          },
+        ],
+      })
+    );
+
+    expect(launchOpenCodeTeam).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectedModel: 'kimi-for-coding/k3',
+        effort: 'high',
+        members: [
+          expect.objectContaining({
+            name: 'alice',
+            effort: 'max',
+          }),
+        ],
+      })
+    );
+  });
+
   it('launches model-less Default selections with the readiness-resolved model', async () => {
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>

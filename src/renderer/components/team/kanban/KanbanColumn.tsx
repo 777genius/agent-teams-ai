@@ -53,10 +53,7 @@ export const KanbanColumn = memo(function KanbanColumn({
         </div>
       </header>
       <div
-        className={cn(
-          'flex max-h-[480px] flex-col gap-1.5 overflow-auto pb-2 pr-2 pt-3',
-          bodyClassName
-        )}
+        className={cn('flex max-h-[480px] flex-col gap-1.5 overflow-auto pb-2 pt-3', bodyClassName)}
       >
         {children}
       </div>

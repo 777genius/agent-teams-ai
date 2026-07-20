@@ -33,6 +33,8 @@
     "watchDemo": "নমুনা",
     "videoUnavailable": "ভিডিও উপলব্ধ নয়",
     "supportedProviders": "সমর্থিত AI providers",
+    "providers": "প্রদানকারী",
+    "models": "মডেল",
     "slogan": "খুব কম কাজ করে অনেক কিছু করুন",
     "platformDefault": "আপনার platform-এর জন্য",
     "guidesSetup": "Guides এবং setup",

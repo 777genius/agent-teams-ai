@@ -21,6 +21,22 @@ export function shouldElevateOpenCodeVirtualRow(
   return rowKind === 'heading' && rowIndex !== activeStickyHeadingIndex;
 }
 
+export function getActiveOpenCodeStickyHeadingIndex(
+  headingIndexes: readonly number[],
+  startIndex: number
+): number | null {
+  for (let index = headingIndexes.length - 1; index >= 0; index -= 1) {
+    const headingIndex = headingIndexes[index];
+    // When the heading itself is still the first visible row, rendering a
+    // sticky clone would paint the same label twice in exactly the same place.
+    // Promote it only after the original row has scrolled above the viewport.
+    if (headingIndex !== undefined && headingIndex < startIndex) {
+      return headingIndex;
+    }
+  }
+  return null;
+}
+
 export function shouldShowOpenCodeOverviewStatus(
   providerId: string,
   selectedSourceCount: number,

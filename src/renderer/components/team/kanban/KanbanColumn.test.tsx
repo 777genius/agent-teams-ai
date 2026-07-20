@@ -40,7 +40,7 @@ describe('KanbanColumn flat appearance', () => {
     expect(header?.className).toContain('kanban-column-header-glow');
     expect(header?.className).not.toContain('border-b-2');
     expect(header?.style.borderBottomColor).toBe('');
-    expect(body?.className).toContain('pr-2');
+    expect(body?.className).not.toContain('pr-2');
     expect(body?.className).not.toContain('px-2');
     expect(host.textContent).toContain('TODO');
     expect(host.textContent).toContain('2');

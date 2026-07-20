@@ -577,12 +577,17 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       teamName: input.teamName,
       projectPath: input.cwd,
       selectedModel: model,
+      ...(input.effort ? { effort: input.effort } : {}),
       skipPermissions: input.skipPermissions,
-      members: input.expectedMembers.map((member) => ({
-        name: member.name,
-        role: member.role?.trim() || member.workflow?.trim() || 'teammate',
-        prompt: buildMemberBootstrapPrompt(input, member),
-      })),
+      members: input.expectedMembers.map((member) => {
+        const effort = member.effort ?? input.effort;
+        return {
+          name: member.name,
+          role: member.role?.trim() || member.workflow?.trim() || 'teammate',
+          prompt: buildMemberBootstrapPrompt(input, member),
+          ...(effort ? { effort } : {}),
+        };
+      }),
       leadPrompt: input.prompt?.trim() ?? '',
       expectedCapabilitySnapshotId: snapshot?.capabilitySnapshotId ?? null,
       manifestHighWatermark: null,

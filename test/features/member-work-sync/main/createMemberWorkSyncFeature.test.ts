@@ -3,6 +3,7 @@ import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   createMemberWorkSyncFeature,
 } from '@features/member-work-sync/main';
+import { TeamInboxMemberWorkSyncNudgeSink } from '@features/member-work-sync/main/adapters/output/TeamInboxMemberWorkSyncNudgeSink';
 import { HmacMemberWorkSyncReportTokenAdapter } from '@features/member-work-sync/main/infrastructure/HmacMemberWorkSyncReportTokenAdapter';
 import { JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 import { MemberWorkSyncEventQueue } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncEventQueue';
@@ -134,7 +135,10 @@ async function seedBlockingShadowCollectingMetrics(input: {
   teamsBasePath: string;
   teamName: string;
   memberName: string;
+  metricKind?: 'would_nudge' | 'fingerprint_changed' | 'report_rejected';
+  metricKinds?: Array<'would_nudge' | 'fingerprint_changed' | 'report_rejected'>;
 }): Promise<void> {
+  const metricKinds = input.metricKinds ?? [input.metricKind ?? 'would_nudge'];
   const nowMs = Date.now();
   const firstObservedAt = new Date(nowMs - 1_000).toISOString();
   const secondObservedAt = new Date(nowMs).toISOString();
@@ -171,17 +175,97 @@ async function seedBlockingShadowCollectingMetrics(input: {
             recordedAt: firstObservedAt,
             actionableCount: 1,
           },
-          {
-            id: 'seed-would-nudge-0',
+          ...metricKinds.map((metricKind, index) => ({
+            id: `seed-${metricKind}-${index}`,
             teamName: input.teamName,
             memberName: input.memberName,
-            kind: 'would_nudge',
+            kind: metricKind,
             state: 'needs_sync',
             agendaFingerprint: 'agenda:v1:seed',
             recordedAt: secondObservedAt,
             actionableCount: 1,
-          },
+          })),
         ],
+      },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+}
+
+async function seedMatureBlockingMetrics(input: {
+  teamsBasePath: string;
+  teamName: string;
+  memberName: string;
+  memberNames?: string[];
+  metricKinds: Array<'would_nudge' | 'fingerprint_changed' | 'report_rejected'>;
+}): Promise<void> {
+  const memberNames = [...new Set(input.memberNames ?? [input.memberName])];
+  const nowMs = Date.now();
+  const observationWindowMs = 2 * 60 * 60_000;
+  const startMs = nowMs - observationWindowMs;
+  const metricEventCounts = {
+    would_nudge: 12,
+    fingerprint_changed: 6,
+    report_rejected: 6,
+  } as const;
+  const metricsPath = path.join(
+    input.teamsBasePath,
+    input.teamName,
+    '.member-work-sync',
+    'indexes',
+    'metrics.json'
+  );
+  const members = Object.fromEntries(
+    memberNames.map((memberName) => [
+      memberName,
+      {
+        memberName,
+        state: 'caught_up',
+        agendaFingerprint: `agenda:v1:seed:${memberName}`,
+        actionableCount: 0,
+        evaluatedAt: new Date(startMs).toISOString(),
+        providerId: 'codex',
+      },
+    ])
+  );
+  const statusEvents = Array.from({ length: 24 }, (_, index) => {
+    const memberName = memberNames[index % memberNames.length]!;
+    return {
+      id: `mature-status-${index}`,
+      teamName: input.teamName,
+      memberName,
+      kind: 'status_evaluated',
+      state: 'caught_up',
+      agendaFingerprint: `agenda:v1:seed:${memberName}:${index}`,
+      recordedAt: new Date(startMs + Math.round((observationWindowMs * index) / 23)).toISOString(),
+      actionableCount: 0,
+      providerId: 'codex',
+    };
+  });
+  const metricEvents = input.metricKinds.flatMap((metricKind) =>
+    Array.from({ length: metricEventCounts[metricKind] }, (_, index) => ({
+      id: `mature-${metricKind}-${index}`,
+      teamName: input.teamName,
+      memberName: input.memberName,
+      kind: metricKind,
+      state: 'needs_sync',
+      agendaFingerprint: 'agenda:v1:noisy-member',
+      recordedAt: new Date(nowMs - index * 1_000).toISOString(),
+      actionableCount: 1,
+      providerId: 'codex',
+    }))
+  );
+
+  await fs.promises.mkdir(path.dirname(metricsPath), { recursive: true });
+  await fs.promises.writeFile(
+    metricsPath,
+    `${JSON.stringify(
+      {
+        schemaVersion: 2,
+        members,
+        recentEvents: [...statusEvents, ...metricEvents],
       },
       null,
       2
@@ -324,6 +408,9 @@ async function readMemberOutboxItems(input: {
       lastError?: string;
       nextAttemptAt?: string;
       deliveredMessageId?: string;
+      attemptGeneration?: number;
+      claimedBy?: string;
+      claimedAt?: string;
       payload?: { workSyncIntentKey?: string; text?: string };
     }
   >
@@ -1870,7 +1957,12 @@ describe('createMemberWorkSyncFeature composition', () => {
     });
 
     try {
-      await seedBlockingShadowCollectingMetrics({ teamsBasePath, teamName, memberName });
+      await seedBlockingShadowCollectingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKind: 'report_rejected',
+      });
       feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
 
       await waitForAssertion(async () => {
@@ -2444,7 +2536,12 @@ describe('createMemberWorkSyncFeature composition', () => {
     });
 
     try {
-      await seedBlockingShadowCollectingMetrics({ teamsBasePath, teamName, memberName });
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
       feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
 
       await waitForAssertion(async () => {
@@ -2465,7 +2562,8 @@ describe('createMemberWorkSyncFeature composition', () => {
         });
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
           phase2Readiness: {
-            reasons: expect.arrayContaining(['would_nudge_rate_high']),
+            state: 'blocked',
+            reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
           },
         });
       });
@@ -2532,7 +2630,12 @@ describe('createMemberWorkSyncFeature composition', () => {
     });
 
     try {
-      await seedBlockingShadowCollectingMetrics({ teamsBasePath, teamName, memberName });
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
       feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
 
       await waitForAssertion(async () => {
@@ -2553,7 +2656,8 @@ describe('createMemberWorkSyncFeature composition', () => {
         });
         await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
           phase2Readiness: {
-            reasons: expect.arrayContaining(['would_nudge_rate_high']),
+            state: 'blocked',
+            reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
           },
         });
       });
@@ -2620,7 +2724,12 @@ describe('createMemberWorkSyncFeature composition', () => {
     });
 
     try {
-      await seedBlockingShadowCollectingMetrics({ teamsBasePath, teamName, memberName });
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
       feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
 
       await waitForAssertion(async () => {
@@ -2630,6 +2739,12 @@ describe('createMemberWorkSyncFeature composition', () => {
         );
         expect(nudges).toHaveLength(1);
         expect(nudgeDeliveryWake.schedule).toHaveBeenCalledTimes(1);
+        await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+          phase2Readiness: {
+            state: 'blocked',
+            reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+          },
+        });
       });
 
       await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
@@ -2811,7 +2926,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
-  it('keeps nudges gated until shadow readiness is reached, then delivers on the next reconcile', async () => {
+  it('delivers native targeted recovery when agenda telemetry makes readiness noisy', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
@@ -2830,7 +2945,7 @@ describe('createMemberWorkSyncFeature composition', () => {
           {
             id: 'task-1',
             displayId: '11111111',
-            subject: 'Ship sync after readiness',
+            subject: 'Ship sync despite self-noisy readiness',
             status: 'pending',
             owner: memberName,
           },
@@ -2851,37 +2966,27 @@ describe('createMemberWorkSyncFeature composition', () => {
     });
 
     try {
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'blocked',
+          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+        },
+      });
       feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
 
       await waitForAssertion(async () => {
         expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
-        expect(await readInboxMessages({ teamsBasePath, teamName, memberName })).toEqual([]);
-        expect(await readMemberOutboxItems({ teamsBasePath, teamName, memberName })).toEqual({});
-        await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
-          phase2Readiness: { state: 'collecting_shadow_data' },
+        const metrics = await feature.getMetrics({ teamName });
+        expect(metrics.phase2Readiness).toMatchObject({
+          state: 'blocked',
+          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
         });
-      });
-
-      await waitForAssertion(async () => {
-        const journal = await fs.promises.readFile(
-          path.join(
-            teamsBasePath,
-            teamName,
-            'members',
-            memberName,
-            '.member-work-sync',
-            'journal.jsonl'
-          ),
-          'utf8'
-        );
-        expect(journal).toContain('"event":"nudge_skipped"');
-        expect(journal).toContain('"reason":"blocking_metrics"');
-      });
-
-      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
-      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
-
-      await waitForAssertion(async () => {
         const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
           (message) => message.messageKind === 'member_work_sync_nudge'
         );
@@ -2896,6 +3001,2215 @@ describe('createMemberWorkSyncFeature composition', () => {
           }),
         ]);
       });
+
+      const wouldNudgeCountBeforeStorm = (await feature.getMetrics({ teamName })).wouldNudgeCount;
+      for (let index = 0; index < 12; index += 1) {
+        const reconciledBefore = feature.getQueueDiagnostics().reconciled;
+        feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+        await waitForAssertion(() => {
+          expect(feature.getQueueDiagnostics()).toMatchObject({
+            queued: 0,
+            running: 0,
+          });
+          expect(feature.getQueueDiagnostics().reconciled).toBeGreaterThanOrEqual(
+            reconciledBefore + 1
+          );
+        });
+      }
+      const stormMetrics = await feature.getMetrics({ teamName });
+      expect(stormMetrics.wouldNudgeCount).toBeGreaterThan(wouldNudgeCountBeforeStorm);
+      expect(stormMetrics.phase2Readiness).toMatchObject({
+        state: 'blocked',
+        reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+      });
+      expect(
+        (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        )
+      ).toHaveLength(1);
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([expect.objectContaining({ status: 'delivered' })]);
+
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(journal).toContain('"event":"nudge_delivered"');
+      expect(journal).not.toContain('"reason":"blocking_metrics"');
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('keeps the planner silent for a peer safety blocker and recovers after metrics clear', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-report-rejection-planner';
+    const safetyMemberName = 'alice';
+    const memberName = 'bob';
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [
+            { name: safetyMemberName, providerId: 'codex' },
+            { name: memberName, providerId: 'codex' },
+          ],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Wait until safety metrics recover',
+            status: 'pending',
+            owner: memberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => true),
+      queueQuietWindowMs: 1,
+    });
+
+    try {
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName: safetyMemberName,
+        memberNames: [safetyMemberName, memberName],
+        metricKinds: ['would_nudge', 'fingerprint_changed', 'report_rejected'],
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
+        await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+          phase2Readiness: {
+            state: 'blocked',
+            reasons: expect.arrayContaining([
+              'would_nudge_rate_high',
+              'fingerprint_churn_high',
+              'report_rejection_rate_high',
+            ]),
+          },
+          recentEvents: expect.arrayContaining([
+            expect.objectContaining({
+              memberName: safetyMemberName,
+              kind: 'report_rejected',
+            }),
+          ]),
+        });
+        await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual(
+          []
+        );
+        await expect(
+          readMemberOutboxItems({ teamsBasePath, teamName, memberName })
+        ).resolves.toEqual({});
+      });
+
+      const blockedJournal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      const plannerBlock = blockedJournal
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line) as Record<string, unknown>)
+        .find((event) => event.source === 'nudge_planner' && event.reason === 'blocking_metrics');
+      expect(plannerBlock).toMatchObject({
+        event: 'nudge_skipped',
+        diagnostics: expect.arrayContaining([
+          'phase2_readiness:would_nudge_rate_high',
+          'phase2_readiness:fingerprint_churn_high',
+          'phase2_readiness:report_rejection_rate_high',
+        ]),
+        metadata: expect.objectContaining({
+          phase2ReadinessState: 'blocked',
+          phase2ReadinessReasons: expect.stringContaining('report_rejection_rate_high'),
+          reportRejectionRate: 1,
+          maxReportRejectionRate: 0.2,
+        }),
+      });
+
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics().reconciled).toBeGreaterThanOrEqual(2);
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
+        expect(nudges[0]?.text).toContain('11111111');
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([expect.objectContaining({ status: 'delivered' })]);
+      });
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('recovers a safety-blocked queued nudge after metrics clear and the feature restarts', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-report-rejection-dispatch';
+    const memberName = 'bob';
+    let canDispatchNudges = false;
+    const createFeature = () =>
+      createMemberWorkSyncFeature({
+        teamsBasePath,
+        configReader: {
+          getConfig: vi.fn(async () => ({
+            name: teamName,
+            members: [{ name: memberName, providerId: 'codex' }],
+          })),
+        } as never,
+        taskReader: {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: '11111111',
+              subject: 'Keep unsafe report recovery queued',
+              status: 'pending',
+              owner: memberName,
+            },
+          ]),
+        } as never,
+        kanbanManager: {
+          getState: vi.fn(async () => ({
+            teamName,
+            reviewers: [],
+            tasks: {},
+          })),
+        } as never,
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        } as never,
+        isTeamActive: vi.fn(async () => true),
+        canDispatchNudges: vi.fn(async () => canDispatchNudges),
+        queueQuietWindowMs: 1,
+      });
+    let feature = createFeature();
+
+    try {
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([expect.objectContaining({ status: 'pending' })]);
+      });
+
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed', 'report_rejected'],
+      });
+      canDispatchNudges = true;
+
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
+        claimed: 1,
+        delivered: 0,
+        superseded: 0,
+        retryable: 1,
+        terminal: 0,
+      });
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'blocked',
+          reasons: expect.arrayContaining([
+            'would_nudge_rate_high',
+            'fingerprint_churn_high',
+            'report_rejection_rate_high',
+          ]),
+        },
+      });
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([
+        expect.objectContaining({
+          status: 'failed_retryable',
+          lastError: 'blocking_metrics',
+        }),
+      ]);
+
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      const dispatcherBlock = journal
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line) as Record<string, unknown>)
+        .find(
+          (event) => event.source === 'nudge_dispatcher' && event.reason === 'blocking_metrics'
+        );
+      expect(dispatcherBlock).toMatchObject({
+        event: 'nudge_skipped',
+        diagnostics: expect.arrayContaining([
+          'phase2_readiness:would_nudge_rate_high',
+          'phase2_readiness:fingerprint_churn_high',
+          'phase2_readiness:report_rejection_rate_high',
+        ]),
+        metadata: expect.objectContaining({
+          phase2ReadinessReasons: expect.stringContaining('report_rejection_rate_high'),
+          reportRejectionRate: 1,
+          maxReportRejectionRate: 0.2,
+        }),
+      });
+      expect(journal).not.toContain('"event":"nudge_delivered"');
+
+      await feature.dispose();
+      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      await forceRetryableOutboxDue({
+        teamsBasePath,
+        teamName,
+        memberName,
+        nextAttemptAt: new Date(Date.now() - 1_000).toISOString(),
+      });
+      feature = createFeature();
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
+        claimed: 1,
+        delivered: 1,
+        superseded: 0,
+        retryable: 0,
+        terminal: 0,
+      });
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'shadow_ready',
+          reasons: [],
+        },
+      });
+      expect(
+        (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        )
+      ).toHaveLength(1);
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([expect.objectContaining({ status: 'delivered' })]);
+      const recoveredJournal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(recoveredJournal).toContain('"event":"nudge_delivered"');
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('repairs a missing outbox index and recovers persisted noisy delivery after restart', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-scheduled-noisy-recovery';
+    const memberName = 'bob';
+    let canDispatchNudges = false;
+    const listLifecycleActiveTeamNames = vi.fn(async () => [' ', teamName, teamName]);
+    const createFeature = (withScheduler = false) =>
+      createMemberWorkSyncFeature({
+        teamsBasePath,
+        configReader: {
+          getConfig: vi.fn(async () => ({
+            name: teamName,
+            members: [{ name: memberName, providerId: 'codex' }],
+          })),
+        } as never,
+        taskReader: {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: '11111111',
+              subject: 'Recover through the persisted scheduled path',
+              status: 'pending',
+              owner: memberName,
+            },
+          ]),
+        } as never,
+        kanbanManager: {
+          getState: vi.fn(async () => ({
+            teamName,
+            reviewers: [],
+            tasks: {},
+          })),
+        } as never,
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        } as never,
+        isTeamActive: vi.fn(async () => true),
+        canDispatchNudges: vi.fn(async () => canDispatchNudges),
+        ...(withScheduler ? { listLifecycleActiveTeamNames } : {}),
+        queueQuietWindowMs: 1,
+      });
+    let feature = createFeature();
+    let usesFakeTimers = false;
+
+    try {
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([expect.objectContaining({ status: 'pending' })]);
+      });
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed', 'report_rejected'],
+      });
+      await feature.dispose();
+
+      const outboxIndexPath = path.join(
+        teamsBasePath,
+        teamName,
+        '.member-work-sync',
+        'indexes',
+        'outbox-index.json'
+      );
+      await fs.promises.rm(outboxIndexPath, { force: true });
+      await expect(fs.promises.readFile(outboxIndexPath, 'utf8')).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+
+      canDispatchNudges = true;
+      vi.useFakeTimers();
+      usesFakeTimers = true;
+      feature = createFeature(true);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await feature.dispose();
+
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'blocked',
+          reasons: expect.arrayContaining([
+            'would_nudge_rate_high',
+            'fingerprint_churn_high',
+            'report_rejection_rate_high',
+          ]),
+        },
+      });
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+      const [blockedOutboxItem] = Object.values(
+        await readMemberOutboxItems({ teamsBasePath, teamName, memberName })
+      );
+      expect(blockedOutboxItem).toMatchObject({
+        status: 'failed_retryable',
+        lastError: 'blocking_metrics',
+        nextAttemptAt: expect.any(String),
+      });
+      const repairedBlockedIndex = JSON.parse(
+        await fs.promises.readFile(outboxIndexPath, 'utf8')
+      ) as {
+        items?: Record<string, { memberName?: string; status?: string; nextAttemptAt?: string }>;
+      };
+      expect(Object.values(repairedBlockedIndex.items ?? {})).toEqual([
+        expect.objectContaining({
+          memberName,
+          status: 'failed_retryable',
+          nextAttemptAt: blockedOutboxItem!.nextAttemptAt,
+        }),
+      ]);
+
+      vi.setSystemTime(new Date(Date.parse(blockedOutboxItem!.nextAttemptAt!) + 1_000));
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      feature = createFeature(true);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await feature.dispose();
+
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'blocked',
+          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+        },
+      });
+      expect(
+        (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        )
+      ).toHaveLength(1);
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([
+        expect.objectContaining({
+          status: 'delivered',
+          deliveredMessageId: expect.any(String),
+        }),
+      ]);
+      const repairedDeliveredIndex = JSON.parse(
+        await fs.promises.readFile(outboxIndexPath, 'utf8')
+      ) as {
+        items?: Record<string, { memberName?: string; status?: string }>;
+      };
+      expect(Object.values(repairedDeliveredIndex.items ?? {})).toEqual([
+        expect.objectContaining({
+          memberName,
+          status: 'delivered',
+        }),
+      ]);
+      expect(listLifecycleActiveTeamNames).toHaveBeenCalledTimes(2);
+
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(journal).toContain('"reason":"blocking_metrics"');
+      expect(
+        journal
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line) as { event?: string })
+          .filter((event) => event.event === 'nudge_delivered')
+      ).toHaveLength(1);
+    } finally {
+      await feature.dispose();
+      if (usesFakeTimers) {
+        vi.useRealTimers();
+      }
+    }
+  });
+
+  it('quarantines corrupt metrics and still delivers a persisted OpenCode nudge after restart', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-corrupt-metrics-recovery';
+    const memberName = 'bob';
+    let canDispatchNudges = false;
+    const listLifecycleActiveTeamNames = vi.fn(async () => [teamName]);
+    const nudgeDeliveryWake = {
+      schedule: vi.fn(async () => undefined),
+    };
+    const createFeature = (withScheduler = false) =>
+      createMemberWorkSyncFeature({
+        teamsBasePath,
+        configReader: {
+          getConfig: vi.fn(async () => ({
+            name: teamName,
+            members: [{ name: memberName, providerId: 'opencode' }],
+          })),
+        } as never,
+        taskReader: {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: '11111111',
+              subject: 'Recover after telemetry corruption',
+              status: 'pending',
+              owner: memberName,
+            },
+          ]),
+        } as never,
+        kanbanManager: {
+          getState: vi.fn(async () => ({
+            teamName,
+            reviewers: [],
+            tasks: {},
+          })),
+        } as never,
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        } as never,
+        isTeamActive: vi.fn(async () => true),
+        canDispatchNudges: vi.fn(async () => canDispatchNudges),
+        nudgeDeliveryWake,
+        ...(withScheduler ? { listLifecycleActiveTeamNames } : {}),
+        queueQuietWindowMs: 1,
+      });
+    let feature = createFeature();
+    let usesFakeTimers = false;
+
+    try {
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([expect.objectContaining({ status: 'pending' })]);
+      });
+      await feature.dispose();
+
+      const metricsPath = path.join(
+        teamsBasePath,
+        teamName,
+        '.member-work-sync',
+        'indexes',
+        'metrics.json'
+      );
+      await fs.promises.writeFile(metricsPath, '{corrupt telemetry', 'utf8');
+
+      canDispatchNudges = true;
+      vi.useFakeTimers();
+      usesFakeTimers = true;
+      feature = createFeature(true);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await feature.dispose();
+
+      const metricsDirectoryEntries = await fs.promises.readdir(path.dirname(metricsPath));
+      expect(
+        metricsDirectoryEntries.some((entry) => entry.startsWith('metrics.json.invalid.'))
+      ).toBe(true);
+      const repairedMetricsFile = JSON.parse(await fs.promises.readFile(metricsPath, 'utf8')) as {
+        schemaVersion?: number;
+        members?: Record<string, { memberName?: string; providerId?: string }>;
+        recentEvents?: unknown[];
+      };
+      expect(repairedMetricsFile).toMatchObject({
+        schemaVersion: 2,
+        members: {
+          [memberName]: {
+            memberName,
+            providerId: 'opencode',
+          },
+        },
+      });
+      expect(repairedMetricsFile.recentEvents?.length).toBeGreaterThan(0);
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'collecting_shadow_data',
+          reasons: expect.arrayContaining([
+            'insufficient_status_events',
+            'insufficient_observation_window',
+          ]),
+        },
+      });
+      expect(
+        (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        )
+      ).toHaveLength(1);
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([
+        expect.objectContaining({
+          status: 'delivered',
+          deliveredMessageId: expect.any(String),
+        }),
+      ]);
+      expect(nudgeDeliveryWake.schedule).toHaveBeenCalledTimes(1);
+      expect(nudgeDeliveryWake.schedule).toHaveBeenCalledWith(
+        expect.objectContaining({
+          teamName,
+          memberName,
+          providerId: 'opencode',
+          reason: 'member_work_sync_nudge_inserted',
+        })
+      );
+      expect(listLifecycleActiveTeamNames).toHaveBeenCalledTimes(1);
+
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(journal).toContain('"event":"nudge_delivered"');
+      expect(journal).not.toContain('"reason":"blocking_metrics"');
+    } finally {
+      await feature.dispose();
+      if (usesFakeTimers) {
+        vi.useRealTimers();
+      }
+    }
+  });
+
+  it('isolates a scheduled readiness failure to one team and recovers it on restart', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const failingTeamName = 'team-readiness-failure';
+    const healthyTeamName = 'team-readiness-healthy';
+    const memberName = 'bob';
+    const tasksByTeam = {
+      [failingTeamName]: {
+        id: 'task-failing',
+        displayId: '11111111',
+        subject: 'Recover after readiness failure',
+        status: 'pending',
+        owner: memberName,
+      },
+      [healthyTeamName]: {
+        id: 'task-healthy',
+        displayId: '22222222',
+        subject: 'Deliver despite peer readiness failure',
+        status: 'pending',
+        owner: memberName,
+      },
+    };
+    let readinessMode: 'hold' | 'fail-first' | 'ready' = 'hold';
+    const canDispatchNudges = vi.fn(async (teamName: string) => {
+      if (readinessMode === 'hold') {
+        return false;
+      }
+      if (readinessMode === 'fail-first' && teamName === failingTeamName) {
+        throw new Error('readiness unavailable');
+      }
+      return true;
+    });
+    const listLifecycleActiveTeamNames = vi.fn(async () => [failingTeamName, healthyTeamName]);
+    const logger = {
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const createFeature = (withScheduler = false) =>
+      createMemberWorkSyncFeature({
+        teamsBasePath,
+        configReader: {
+          getConfig: vi.fn(async (teamName: string) => ({
+            name: teamName,
+            members: [{ name: memberName, providerId: 'codex' }],
+          })),
+        } as never,
+        taskReader: {
+          getTasks: vi.fn(async (teamName: string) => {
+            const task = tasksByTeam[teamName as keyof typeof tasksByTeam];
+            return task ? [task] : [];
+          }),
+        } as never,
+        kanbanManager: {
+          getState: vi.fn(async (teamName: string) => ({
+            teamName,
+            reviewers: [],
+            tasks: {},
+          })),
+        } as never,
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        } as never,
+        isTeamActive: vi.fn(async () => true),
+        canDispatchNudges,
+        logger,
+        ...(withScheduler ? { listLifecycleActiveTeamNames } : {}),
+        queueQuietWindowMs: 1,
+      });
+    let feature = createFeature();
+    let usesFakeTimers = false;
+
+    try {
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName: failingTeamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName: healthyTeamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      feature.noteTeamChange({
+        type: 'task',
+        teamName: failingTeamName,
+        taskId: tasksByTeam[failingTeamName].id,
+      } as never);
+      feature.noteTeamChange({
+        type: 'task',
+        teamName: healthyTeamName,
+        taskId: tasksByTeam[healthyTeamName].id,
+      } as never);
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics().reconciled).toBeGreaterThanOrEqual(2);
+        for (const teamName of [failingTeamName, healthyTeamName]) {
+          expect(
+            Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+          ).toEqual([expect.objectContaining({ status: 'pending' })]);
+        }
+      });
+      await feature.dispose();
+
+      canDispatchNudges.mockClear();
+      readinessMode = 'fail-first';
+      vi.useFakeTimers();
+      usesFakeTimers = true;
+      feature = createFeature(true);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await feature.dispose();
+
+      await expect(
+        readInboxMessages({ teamsBasePath, teamName: failingTeamName, memberName })
+      ).resolves.toEqual([]);
+      expect(
+        Object.values(
+          await readMemberOutboxItems({
+            teamsBasePath,
+            teamName: failingTeamName,
+            memberName,
+          })
+        )
+      ).toEqual([expect.objectContaining({ status: 'pending' })]);
+      expect(
+        (
+          await readInboxMessages({
+            teamsBasePath,
+            teamName: healthyTeamName,
+            memberName,
+          })
+        ).filter((message) => message.messageKind === 'member_work_sync_nudge')
+      ).toHaveLength(1);
+      expect(
+        Object.values(
+          await readMemberOutboxItems({
+            teamsBasePath,
+            teamName: healthyTeamName,
+            memberName,
+          })
+        )
+      ).toEqual([expect.objectContaining({ status: 'delivered' })]);
+      expect(logger.warn).toHaveBeenCalledWith(
+        'member work sync nudge dispatch readiness check failed',
+        {
+          teamName: failingTeamName,
+          error: 'Error: readiness unavailable',
+        }
+      );
+
+      readinessMode = 'ready';
+      feature = createFeature(true);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await feature.dispose();
+
+      for (const teamName of [failingTeamName, healthyTeamName]) {
+        expect(
+          (
+            await readInboxMessages({
+              teamsBasePath,
+              teamName,
+              memberName,
+            })
+          ).filter((message) => message.messageKind === 'member_work_sync_nudge')
+        ).toHaveLength(1);
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([expect.objectContaining({ status: 'delivered' })]);
+        const journal = await fs.promises.readFile(
+          path.join(
+            teamsBasePath,
+            teamName,
+            'members',
+            memberName,
+            '.member-work-sync',
+            'journal.jsonl'
+          ),
+          'utf8'
+        );
+        expect(journal).not.toContain('"reason":"blocking_metrics"');
+        expect(
+          journal
+            .trim()
+            .split('\n')
+            .map((line) => JSON.parse(line) as { event?: string })
+            .filter((event) => event.event === 'nudge_delivered')
+        ).toHaveLength(1);
+      }
+      expect(canDispatchNudges.mock.calls).toEqual([
+        [failingTeamName],
+        [healthyTeamName],
+        [failingTeamName],
+        [healthyTeamName],
+      ]);
+      expect(listLifecycleActiveTeamNames).toHaveBeenCalledTimes(2);
+    } finally {
+      await feature.dispose();
+      if (usesFakeTimers) {
+        vi.useRealTimers();
+      }
+    }
+  });
+
+  it('drains an in-flight scheduled dispatch during dispose without orphaning the claim', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-dispose-in-flight';
+    const memberName = 'bob';
+    let canDispatchNudges = false;
+    let activeBusyGate: Promise<void> | null = null;
+    const busyGateControl: { release: (() => void) | null } = { release: null };
+    let notifyBusySignalStarted: (() => void) | null = null;
+    const slowBusySignal = {
+      isBusy: vi.fn(async () => {
+        const gate = activeBusyGate;
+        if (gate) {
+          notifyBusySignalStarted?.();
+          await gate;
+          if (activeBusyGate === gate) {
+            activeBusyGate = null;
+          }
+        }
+        return { busy: false };
+      }),
+    };
+    const listLifecycleActiveTeamNames = vi.fn(async () => [teamName]);
+    const createFeature = (withScheduler = false) =>
+      createMemberWorkSyncFeature({
+        teamsBasePath,
+        configReader: {
+          getConfig: vi.fn(async () => ({
+            name: teamName,
+            members: [{ name: memberName, providerId: 'codex' }],
+          })),
+        } as never,
+        taskReader: {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: '11111111',
+              subject: 'Finish delivery during graceful shutdown',
+              status: 'pending',
+              owner: memberName,
+            },
+          ]),
+        } as never,
+        kanbanManager: {
+          getState: vi.fn(async () => ({
+            teamName,
+            reviewers: [],
+            tasks: {},
+          })),
+        } as never,
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        } as never,
+        isTeamActive: vi.fn(async () => true),
+        canDispatchNudges: vi.fn(async () => canDispatchNudges),
+        extraBusySignals: [slowBusySignal],
+        ...(withScheduler ? { listLifecycleActiveTeamNames } : {}),
+        queueQuietWindowMs: 1,
+      });
+    let feature = createFeature();
+    let usesFakeTimers = false;
+
+    try {
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([expect.objectContaining({ status: 'pending', attemptGeneration: 0 })]);
+      });
+      await feature.dispose();
+
+      activeBusyGate = new Promise<void>((resolve) => {
+        busyGateControl.release = resolve;
+      });
+      let signalBusyCheckStarted!: () => void;
+      const busyCheckStarted = new Promise<void>((resolve) => {
+        signalBusyCheckStarted = resolve;
+      });
+      notifyBusySignalStarted = signalBusyCheckStarted;
+      canDispatchNudges = true;
+      vi.useFakeTimers();
+      usesFakeTimers = true;
+      feature = createFeature(true);
+
+      const scheduledTick = vi.advanceTimersByTimeAsync(60_000);
+      await busyCheckStarted;
+
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([
+        expect.objectContaining({
+          status: 'claimed',
+          attemptGeneration: 1,
+          claimedBy: expect.stringContaining(':scheduled'),
+        }),
+      ]);
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+
+      let disposeSettled = false;
+      const dispose = feature.dispose().then(() => {
+        disposeSettled = true;
+      });
+      await Promise.resolve();
+      expect(disposeSettled).toBe(false);
+
+      busyGateControl.release?.();
+      busyGateControl.release = null;
+      await Promise.all([scheduledTick, dispose]);
+      expect(disposeSettled).toBe(true);
+
+      expect(
+        (
+          await readInboxMessages({
+            teamsBasePath,
+            teamName,
+            memberName,
+          })
+        ).filter((message) => message.messageKind === 'member_work_sync_nudge')
+      ).toHaveLength(1);
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([
+        expect.objectContaining({
+          status: 'delivered',
+          attemptGeneration: 1,
+          deliveredMessageId: expect.any(String),
+        }),
+      ]);
+
+      notifyBusySignalStarted = null;
+      feature = createFeature(true);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await feature.dispose();
+
+      expect(
+        (
+          await readInboxMessages({
+            teamsBasePath,
+            teamName,
+            memberName,
+          })
+        ).filter((message) => message.messageKind === 'member_work_sync_nudge')
+      ).toHaveLength(1);
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([
+        expect.objectContaining({
+          status: 'delivered',
+          attemptGeneration: 1,
+        }),
+      ]);
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(
+        journal
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line) as { event?: string })
+          .filter((event) => event.event === 'nudge_delivered')
+      ).toHaveLength(1);
+      expect(journal).not.toContain('"reason":"blocking_metrics"');
+      expect(listLifecycleActiveTeamNames).toHaveBeenCalledTimes(2);
+    } finally {
+      busyGateControl.release?.();
+      await feature.dispose();
+      if (usesFakeTimers) {
+        vi.useRealTimers();
+      }
+    }
+  });
+
+  it('cancels timed-out scheduled readiness before it can late-dispatch after dispose', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-readiness-timeout-cancel';
+    const memberName = 'bob';
+    let readinessMode: 'blocked' | 'hold' | 'ready' = 'blocked';
+    const readinessGateControl: { release: (() => void) | null } = { release: null };
+    let notifyReadinessStarted: (() => void) | null = null;
+    let notifyReadinessFinished: (() => void) | null = null;
+    const canDispatchNudges = vi.fn(async () => {
+      if (readinessMode === 'blocked') {
+        return false;
+      }
+      if (readinessMode === 'ready') {
+        return true;
+      }
+
+      notifyReadinessStarted?.();
+      try {
+        return await new Promise<boolean>((resolve) => {
+          readinessGateControl.release = () => resolve(true);
+        });
+      } finally {
+        notifyReadinessFinished?.();
+      }
+    });
+    const listLifecycleActiveTeamNames = vi.fn(async () => [teamName]);
+    const logger = {
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const createFeature = (withScheduler = false) =>
+      createMemberWorkSyncFeature({
+        teamsBasePath,
+        configReader: {
+          getConfig: vi.fn(async () => ({
+            name: teamName,
+            members: [{ name: memberName, providerId: 'codex' }],
+          })),
+        } as never,
+        taskReader: {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: '11111111',
+              subject: 'Do not dispatch after a timed-out readiness check',
+              status: 'pending',
+              owner: memberName,
+            },
+          ]),
+        } as never,
+        kanbanManager: {
+          getState: vi.fn(async () => ({
+            teamName,
+            reviewers: [],
+            tasks: {},
+          })),
+        } as never,
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        } as never,
+        isTeamActive: vi.fn(async () => true),
+        canDispatchNudges,
+        logger,
+        ...(withScheduler ? { listLifecycleActiveTeamNames } : {}),
+        queueQuietWindowMs: 1,
+      });
+    let feature = createFeature();
+    let usesFakeTimers = false;
+
+    try {
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([expect.objectContaining({ status: 'pending', attemptGeneration: 0 })]);
+      });
+      await feature.dispose();
+
+      let signalReadinessStarted!: () => void;
+      const readinessStarted = new Promise<void>((resolve) => {
+        signalReadinessStarted = resolve;
+      });
+      let signalReadinessFinished!: () => void;
+      const readinessFinished = new Promise<void>((resolve) => {
+        signalReadinessFinished = resolve;
+      });
+      notifyReadinessStarted = signalReadinessStarted;
+      notifyReadinessFinished = signalReadinessFinished;
+      readinessMode = 'hold';
+      canDispatchNudges.mockClear();
+      vi.useFakeTimers();
+      usesFakeTimers = true;
+      feature = createFeature(true);
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      await readinessStarted;
+      await vi.advanceTimersByTimeAsync(120_000);
+      await feature.dispose();
+
+      expect(logger.warn).toHaveBeenCalledWith('member work sync scheduled nudge dispatch failed', {
+        error: 'Error: member work sync scheduled nudge dispatch timed out after 120000ms',
+      });
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([expect.objectContaining({ status: 'pending', attemptGeneration: 0 })]);
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+
+      readinessGateControl.release?.();
+      readinessGateControl.release = null;
+      await readinessFinished;
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([expect.objectContaining({ status: 'pending', attemptGeneration: 0 })]);
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+
+      readinessMode = 'ready';
+      notifyReadinessStarted = null;
+      notifyReadinessFinished = null;
+      feature = createFeature();
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toMatchObject({
+        claimed: 1,
+        delivered: 1,
+        retryable: 0,
+      });
+
+      expect(
+        (
+          await readInboxMessages({
+            teamsBasePath,
+            teamName,
+            memberName,
+          })
+        ).filter((message) => message.messageKind === 'member_work_sync_nudge')
+      ).toHaveLength(1);
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([
+        expect.objectContaining({
+          status: 'delivered',
+          attemptGeneration: 1,
+          deliveredMessageId: expect.any(String),
+        }),
+      ]);
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(
+        journal
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line) as { event?: string })
+          .filter((event) => event.event === 'nudge_delivered')
+      ).toHaveLength(1);
+      expect(listLifecycleActiveTeamNames).toHaveBeenCalledTimes(1);
+    } finally {
+      readinessGateControl.release?.();
+      await feature.dispose();
+      if (usesFakeTimers) {
+        vi.useRealTimers();
+      }
+    }
+  });
+
+  it('cancels a timed-out claimed dispatch and recovers it once after lease expiry', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-claimed-timeout-cancel';
+    const memberName = 'bob';
+    let canDispatchNudges = false;
+    let activeBusyGate: Promise<void> | null = null;
+    const busyGateControl: { release: (() => void) | null } = { release: null };
+    let notifyBusySignalStarted: (() => void) | null = null;
+    let notifyBusySignalFinished: (() => void) | null = null;
+    const slowBusySignal = {
+      isBusy: vi.fn(async () => {
+        const gate = activeBusyGate;
+        if (gate) {
+          notifyBusySignalStarted?.();
+          try {
+            await gate;
+          } finally {
+            notifyBusySignalFinished?.();
+          }
+          if (activeBusyGate === gate) {
+            activeBusyGate = null;
+          }
+        }
+        return { busy: false };
+      }),
+    };
+    const listLifecycleActiveTeamNames = vi.fn(async () => [teamName]);
+    const logger = {
+      debug: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const createFeature = (withScheduler = false) =>
+      createMemberWorkSyncFeature({
+        teamsBasePath,
+        configReader: {
+          getConfig: vi.fn(async () => ({
+            name: teamName,
+            members: [{ name: memberName, providerId: 'codex' }],
+          })),
+        } as never,
+        taskReader: {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: '11111111',
+              subject: 'Recover a claimed item after scheduled timeout',
+              status: 'pending',
+              owner: memberName,
+            },
+          ]),
+        } as never,
+        kanbanManager: {
+          getState: vi.fn(async () => ({
+            teamName,
+            reviewers: [],
+            tasks: {},
+          })),
+        } as never,
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        } as never,
+        isTeamActive: vi.fn(async () => true),
+        canDispatchNudges: vi.fn(async () => canDispatchNudges),
+        extraBusySignals: [slowBusySignal],
+        logger,
+        ...(withScheduler ? { listLifecycleActiveTeamNames } : {}),
+        queueQuietWindowMs: 1,
+      });
+    let feature = createFeature();
+    let usesFakeTimers = false;
+
+    try {
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([expect.objectContaining({ status: 'pending', attemptGeneration: 0 })]);
+      });
+      await feature.dispose();
+
+      activeBusyGate = new Promise<void>((resolve) => {
+        busyGateControl.release = resolve;
+      });
+      let signalBusyCheckStarted!: () => void;
+      const busyCheckStarted = new Promise<void>((resolve) => {
+        signalBusyCheckStarted = resolve;
+      });
+      let signalBusyCheckFinished!: () => void;
+      const busyCheckFinished = new Promise<void>((resolve) => {
+        signalBusyCheckFinished = resolve;
+      });
+      notifyBusySignalStarted = signalBusyCheckStarted;
+      notifyBusySignalFinished = signalBusyCheckFinished;
+      canDispatchNudges = true;
+      vi.useFakeTimers();
+      usesFakeTimers = true;
+      feature = createFeature(true);
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      await busyCheckStarted;
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([
+        expect.objectContaining({
+          status: 'claimed',
+          attemptGeneration: 1,
+          claimedBy: expect.stringContaining(':scheduled'),
+          claimedAt: expect.any(String),
+        }),
+      ]);
+
+      await vi.advanceTimersByTimeAsync(120_000);
+      await feature.dispose();
+      expect(logger.warn).toHaveBeenCalledWith('member work sync scheduled nudge dispatch failed', {
+        error: 'Error: member work sync scheduled nudge dispatch timed out after 120000ms',
+      });
+
+      busyGateControl.release?.();
+      busyGateControl.release = null;
+      await busyCheckFinished;
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([
+        expect.objectContaining({
+          status: 'claimed',
+          attemptGeneration: 1,
+          claimedBy: expect.stringContaining(':scheduled'),
+        }),
+      ]);
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+
+      notifyBusySignalStarted = null;
+      notifyBusySignalFinished = null;
+      vi.setSystemTime(new Date(Date.now() + 5 * 60_000));
+      feature = createFeature();
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toMatchObject({
+        claimed: 1,
+        delivered: 1,
+        retryable: 0,
+      });
+
+      expect(
+        (
+          await readInboxMessages({
+            teamsBasePath,
+            teamName,
+            memberName,
+          })
+        ).filter((message) => message.messageKind === 'member_work_sync_nudge')
+      ).toHaveLength(1);
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([
+        expect.objectContaining({
+          status: 'delivered',
+          attemptGeneration: 2,
+          deliveredMessageId: expect.any(String),
+        }),
+      ]);
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(
+        journal
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line) as { event?: string })
+          .filter((event) => event.event === 'nudge_delivered')
+      ).toHaveLength(1);
+      expect(listLifecycleActiveTeamNames).toHaveBeenCalledTimes(1);
+    } finally {
+      busyGateControl.release?.();
+      await feature.dispose();
+      if (usesFakeTimers) {
+        vi.useRealTimers();
+      }
+    }
+  });
+
+  it('recovers a stale crash claim without stealing its active lease or duplicating delivery', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-stale-crash-claim';
+    const memberName = 'bob';
+    let canDispatchNudges = false;
+    const listLifecycleActiveTeamNames = vi.fn(async () => [teamName]);
+    const createFeature = (withScheduler = false) =>
+      createMemberWorkSyncFeature({
+        teamsBasePath,
+        configReader: {
+          getConfig: vi.fn(async () => ({
+            name: teamName,
+            members: [{ name: memberName, providerId: 'codex' }],
+          })),
+        } as never,
+        taskReader: {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: '11111111',
+              subject: 'Recover a nudge claimed by a crashed process',
+              status: 'pending',
+              owner: memberName,
+            },
+          ]),
+        } as never,
+        kanbanManager: {
+          getState: vi.fn(async () => ({
+            teamName,
+            reviewers: [],
+            tasks: {},
+          })),
+        } as never,
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        } as never,
+        isTeamActive: vi.fn(async () => true),
+        canDispatchNudges: vi.fn(async () => canDispatchNudges),
+        ...(withScheduler ? { listLifecycleActiveTeamNames } : {}),
+        queueQuietWindowMs: 1,
+      });
+    let feature = createFeature();
+    let usesFakeTimers = false;
+
+    try {
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([expect.objectContaining({ status: 'pending', attemptGeneration: 0 })]);
+      });
+
+      const crashedClaimedAt = new Date().toISOString();
+      const crashStore = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      const [crashClaim] = await crashStore.claimDue({
+        teamName,
+        claimedBy: 'crashed-process',
+        nowIso: crashedClaimedAt,
+        limit: 1,
+      });
+      expect(crashClaim).toMatchObject({
+        status: 'claimed',
+        attemptGeneration: 1,
+        claimedBy: 'crashed-process',
+        claimedAt: crashedClaimedAt,
+      });
+      await feature.dispose();
+
+      canDispatchNudges = true;
+      vi.useFakeTimers();
+      usesFakeTimers = true;
+      vi.setSystemTime(new Date(crashedClaimedAt));
+      feature = createFeature(true);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await feature.dispose();
+
+      await expect(readInboxMessages({ teamsBasePath, teamName, memberName })).resolves.toEqual([]);
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([
+        expect.objectContaining({
+          status: 'claimed',
+          attemptGeneration: 1,
+          claimedBy: 'crashed-process',
+          claimedAt: crashedClaimedAt,
+        }),
+      ]);
+
+      vi.setSystemTime(new Date(Date.parse(crashedClaimedAt) + 5 * 60_000));
+      feature = createFeature(true);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await feature.dispose();
+
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'blocked',
+          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+        },
+      });
+      expect(
+        (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        )
+      ).toHaveLength(1);
+      const [recoveredOutboxItem] = Object.values(
+        await readMemberOutboxItems({ teamsBasePath, teamName, memberName })
+      );
+      expect(recoveredOutboxItem).toEqual(
+        expect.objectContaining({
+          status: 'delivered',
+          attemptGeneration: 2,
+          claimedBy: expect.stringContaining(':scheduled'),
+          deliveredMessageId: expect.any(String),
+        })
+      );
+      expect(listLifecycleActiveTeamNames).toHaveBeenCalledTimes(2);
+
+      const lateWriteAt = new Date(Date.now() + 1_000).toISOString();
+      await crashStore.markFailed({
+        teamName,
+        id: crashClaim!.id,
+        attemptGeneration: crashClaim!.attemptGeneration,
+        retryable: true,
+        error: 'late_crashed_attempt_failure',
+        nextAttemptAt: new Date(Date.now() + 10 * 60_000).toISOString(),
+        nowIso: lateWriteAt,
+      });
+      await crashStore.markDelivered({
+        teamName,
+        id: crashClaim!.id,
+        attemptGeneration: crashClaim!.attemptGeneration,
+        deliveredMessageId: 'late-stale-delivery',
+        nowIso: lateWriteAt,
+      });
+      await crashStore.markSuperseded({
+        teamName,
+        id: crashClaim!.id,
+        reason: 'late_crashed_attempt_superseded',
+        nowIso: lateWriteAt,
+      });
+
+      const [outboxAfterLateWrites] = Object.values(
+        await readMemberOutboxItems({ teamsBasePath, teamName, memberName })
+      );
+      expect(outboxAfterLateWrites).toMatchObject({
+        status: 'delivered',
+        attemptGeneration: 2,
+        claimedBy: recoveredOutboxItem!.claimedBy,
+        deliveredMessageId: recoveredOutboxItem!.deliveredMessageId,
+      });
+      expect(outboxAfterLateWrites).not.toHaveProperty('lastError');
+      expect(outboxAfterLateWrites).not.toHaveProperty('nextAttemptAt');
+      expect(
+        (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        )
+      ).toHaveLength(1);
+
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(journal).not.toContain('"reason":"blocking_metrics"');
+      expect(
+        journal
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line) as { event?: string })
+          .filter((event) => event.event === 'nudge_delivered')
+      ).toHaveLength(1);
+    } finally {
+      await feature.dispose();
+      if (usesFakeTimers) {
+        vi.useRealTimers();
+      }
+    }
+  });
+
+  it('finalizes a preinserted OpenCode inbox nudge exactly once after a crash', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-preinserted-crash-recovery';
+    const memberName = 'bob';
+    let canDispatchNudges = false;
+    const listLifecycleActiveTeamNames = vi.fn(async () => [teamName]);
+    const nudgeDeliveryWake = {
+      schedule: vi.fn(async () => undefined),
+    };
+    const createFeature = (withScheduler = false) =>
+      createMemberWorkSyncFeature({
+        teamsBasePath,
+        configReader: {
+          getConfig: vi.fn(async () => ({
+            name: teamName,
+            members: [{ name: memberName, providerId: 'opencode' }],
+          })),
+        } as never,
+        taskReader: {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: '11111111',
+              subject: 'Finalize delivery after inbox persistence',
+              status: 'pending',
+              owner: memberName,
+            },
+          ]),
+        } as never,
+        kanbanManager: {
+          getState: vi.fn(async () => ({
+            teamName,
+            reviewers: [],
+            tasks: {},
+          })),
+        } as never,
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        } as never,
+        isTeamActive: vi.fn(async () => true),
+        canDispatchNudges: vi.fn(async () => canDispatchNudges),
+        nudgeDeliveryWake,
+        ...(withScheduler ? { listLifecycleActiveTeamNames } : {}),
+        queueQuietWindowMs: 1,
+      });
+    let feature = createFeature();
+    let usesFakeTimers = false;
+
+    try {
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([expect.objectContaining({ status: 'pending', attemptGeneration: 0 })]);
+      });
+
+      const crashedClaimedAt = new Date().toISOString();
+      const crashStore = new JsonMemberWorkSyncStore(new MemberWorkSyncStorePaths(teamsBasePath));
+      const [crashClaim] = await crashStore.claimDue({
+        teamName,
+        claimedBy: 'crashed-after-inbox-insert',
+        nowIso: crashedClaimedAt,
+        limit: 1,
+      });
+      expect(crashClaim).toMatchObject({
+        status: 'claimed',
+        attemptGeneration: 1,
+        claimedBy: 'crashed-after-inbox-insert',
+      });
+      await expect(
+        new TeamInboxMemberWorkSyncNudgeSink().insertIfAbsent({
+          teamName,
+          memberName,
+          messageId: crashClaim!.id,
+          payloadHash: crashClaim!.payloadHash,
+          payload: crashClaim!.payload,
+          timestamp: crashedClaimedAt,
+        })
+      ).resolves.toEqual({
+        inserted: true,
+        messageId: crashClaim!.id,
+      });
+      await expect(
+        readInboxMessages({ teamsBasePath, teamName, memberName })
+      ).resolves.toHaveLength(1);
+      expect(nudgeDeliveryWake.schedule).not.toHaveBeenCalled();
+      await feature.dispose();
+
+      canDispatchNudges = true;
+      vi.useFakeTimers();
+      usesFakeTimers = true;
+      vi.setSystemTime(new Date(Date.parse(crashedClaimedAt) + 5 * 60_000));
+      feature = createFeature(true);
+      await vi.advanceTimersByTimeAsync(60_000);
+      await feature.dispose();
+
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'blocked',
+          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+        },
+      });
+      expect(
+        (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        )
+      ).toHaveLength(1);
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([
+        expect.objectContaining({
+          status: 'delivered',
+          attemptGeneration: 2,
+          deliveredMessageId: crashClaim!.id,
+        }),
+      ]);
+      expect(nudgeDeliveryWake.schedule).toHaveBeenCalledTimes(1);
+      expect(nudgeDeliveryWake.schedule).toHaveBeenCalledWith({
+        teamName,
+        memberName,
+        messageId: crashClaim!.id,
+        providerId: 'opencode',
+        reason: 'member_work_sync_nudge_existing',
+        delayMs: 500,
+      });
+      expect(listLifecycleActiveTeamNames).toHaveBeenCalledTimes(1);
+
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(journal).not.toContain('"reason":"blocking_metrics"');
+      expect(
+        journal
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line) as { event?: string })
+          .filter((event) => event.event === 'nudge_delivered')
+      ).toHaveLength(1);
+    } finally {
+      await feature.dispose();
+      if (usesFakeTimers) {
+        vi.useRealTimers();
+      }
+    }
+  });
+
+  it('delivers a queued native nudge when another member makes team metrics self-noisy before dispatch', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-cross-member-noise';
+    const noisyMemberName = 'alice';
+    const targetMemberName = 'bob';
+    let canDispatchNudges = false;
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async () => ({
+          name: teamName,
+          members: [
+            { name: noisyMemberName, providerId: 'codex' },
+            { name: targetMemberName, providerId: 'codex' },
+          ],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async () => [
+          {
+            id: 'task-1',
+            displayId: '11111111',
+            subject: 'Recover despite noisy peer telemetry',
+            status: 'pending',
+            owner: targetMemberName,
+          },
+        ]),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async () => ({
+          teamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => true),
+      canDispatchNudges: vi.fn(async () => canDispatchNudges),
+      queueQuietWindowMs: 1,
+    });
+
+    try {
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({ reconciled: 1 });
+        expect(
+          Object.values(
+            await readMemberOutboxItems({
+              teamsBasePath,
+              teamName,
+              memberName: targetMemberName,
+            })
+          )
+        ).toEqual([expect.objectContaining({ status: 'pending' })]);
+      });
+
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName: noisyMemberName,
+        memberNames: [noisyMemberName, targetMemberName],
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'blocked',
+          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+        },
+        recentEvents: expect.arrayContaining([
+          expect.objectContaining({
+            memberName: noisyMemberName,
+            kind: 'would_nudge',
+          }),
+          expect.objectContaining({
+            memberName: noisyMemberName,
+            kind: 'fingerprint_changed',
+          }),
+        ]),
+      });
+
+      const reconciledBeforeTeamWideRefresh = feature.getQueueDiagnostics().reconciled;
+      feature.noteTeamChange({ type: 'config', teamName } as never);
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({
+          queued: 0,
+          running: 0,
+        });
+        expect(feature.getQueueDiagnostics().reconciled).toBeGreaterThanOrEqual(
+          reconciledBeforeTeamWideRefresh + 2
+        );
+        await expect(
+          readMemberOutboxItems({
+            teamsBasePath,
+            teamName,
+            memberName: noisyMemberName,
+          })
+        ).resolves.toEqual({});
+        await expect(
+          readInboxMessages({
+            teamsBasePath,
+            teamName,
+            memberName: noisyMemberName,
+          })
+        ).resolves.toEqual([]);
+      });
+
+      canDispatchNudges = true;
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
+        claimed: 1,
+        delivered: 1,
+        superseded: 0,
+        retryable: 0,
+        terminal: 0,
+      });
+      const targetNudges = (
+        await readInboxMessages({
+          teamsBasePath,
+          teamName,
+          memberName: targetMemberName,
+        })
+      ).filter((message) => message.messageKind === 'member_work_sync_nudge');
+      expect(targetNudges).toHaveLength(1);
+      expect(targetNudges[0]?.text).toContain('11111111');
+      await expect(
+        readInboxMessages({
+          teamsBasePath,
+          teamName,
+          memberName: noisyMemberName,
+        })
+      ).resolves.toEqual([]);
+
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          targetMemberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(journal).toContain('"event":"nudge_delivered"');
+      expect(journal).not.toContain('"reason":"blocking_metrics"');
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('keeps readiness blockers isolated between teams with the same member name', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const safetyTeamName = 'team-safety-blocked';
+    const diagnosticTeamName = 'team-diagnostic-noisy';
+    const memberName = 'bob';
+    const tasksByTeam = {
+      [safetyTeamName]: {
+        id: 'task-safety',
+        displayId: '11111111',
+        subject: 'Wait for safety metrics',
+        status: 'pending',
+        owner: memberName,
+      },
+      [diagnosticTeamName]: {
+        id: 'task-diagnostic',
+        displayId: '22222222',
+        subject: 'Recover through diagnostic noise',
+        status: 'pending',
+        owner: memberName,
+      },
+    };
+    const feature = createMemberWorkSyncFeature({
+      teamsBasePath,
+      configReader: {
+        getConfig: vi.fn(async (requestedTeamName: string) => ({
+          name: requestedTeamName,
+          members: [{ name: memberName, providerId: 'codex' }],
+        })),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(async (requestedTeamName: string) => {
+          const task = tasksByTeam[requestedTeamName as keyof typeof tasksByTeam];
+          return task ? [task] : [];
+        }),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(async (requestedTeamName: string) => ({
+          teamName: requestedTeamName,
+          reviewers: [],
+          tasks: {},
+        })),
+      } as never,
+      membersMetaStore: {
+        getMembers: vi.fn(async () => []),
+      } as never,
+      isTeamActive: vi.fn(async () => true),
+      queueQuietWindowMs: 1,
+    });
+
+    try {
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName: safetyTeamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed', 'report_rejected'],
+      });
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName: diagnosticTeamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+
+      feature.noteTeamChange({
+        type: 'task',
+        teamName: safetyTeamName,
+        taskId: tasksByTeam[safetyTeamName].id,
+      } as never);
+      feature.noteTeamChange({
+        type: 'task',
+        teamName: diagnosticTeamName,
+        taskId: tasksByTeam[diagnosticTeamName].id,
+      } as never);
+
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics().reconciled).toBeGreaterThanOrEqual(2);
+        await expect(feature.getMetrics({ teamName: safetyTeamName })).resolves.toMatchObject({
+          phase2Readiness: {
+            state: 'blocked',
+            reasons: expect.arrayContaining([
+              'would_nudge_rate_high',
+              'fingerprint_churn_high',
+              'report_rejection_rate_high',
+            ]),
+          },
+        });
+        await expect(feature.getMetrics({ teamName: diagnosticTeamName })).resolves.toMatchObject({
+          phase2Readiness: {
+            state: 'blocked',
+            reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+          },
+        });
+        await expect(
+          readInboxMessages({
+            teamsBasePath,
+            teamName: safetyTeamName,
+            memberName,
+          })
+        ).resolves.toEqual([]);
+        await expect(
+          readMemberOutboxItems({
+            teamsBasePath,
+            teamName: safetyTeamName,
+            memberName,
+          })
+        ).resolves.toEqual({});
+
+        const diagnosticNudges = (
+          await readInboxMessages({
+            teamsBasePath,
+            teamName: diagnosticTeamName,
+            memberName,
+          })
+        ).filter((message) => message.messageKind === 'member_work_sync_nudge');
+        expect(diagnosticNudges).toHaveLength(1);
+        expect(diagnosticNudges[0]?.text).toContain('22222222');
+        expect(
+          Object.values(
+            await readMemberOutboxItems({
+              teamsBasePath,
+              teamName: diagnosticTeamName,
+              memberName,
+            })
+          )
+        ).toEqual([expect.objectContaining({ status: 'delivered' })]);
+      });
+    } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('keeps noisy native recovery idempotent after the feature restarts', async () => {
+    const claudeRoot = makeTempRoot();
+    setClaudeBasePathOverride(claudeRoot);
+    const teamsBasePath = getTeamsBasePath();
+    const teamName = 'team-noisy-restart-idempotency';
+    const memberName = 'bob';
+    const createFeature = () =>
+      createMemberWorkSyncFeature({
+        teamsBasePath,
+        configReader: {
+          getConfig: vi.fn(async () => ({
+            name: teamName,
+            members: [{ name: memberName, providerId: 'codex' }],
+          })),
+        } as never,
+        taskReader: {
+          getTasks: vi.fn(async () => [
+            {
+              id: 'task-1',
+              displayId: '11111111',
+              subject: 'Do not redeliver after restart',
+              status: 'pending',
+              owner: memberName,
+            },
+          ]),
+        } as never,
+        kanbanManager: {
+          getState: vi.fn(async () => ({
+            teamName,
+            reviewers: [],
+            tasks: {},
+          })),
+        } as never,
+        membersMetaStore: {
+          getMembers: vi.fn(async () => []),
+        } as never,
+        isTeamActive: vi.fn(async () => true),
+        queueQuietWindowMs: 1,
+      });
+    let feature = createFeature();
+
+    try {
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'blocked',
+          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+        },
+      });
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([expect.objectContaining({ status: 'delivered' })]);
+      });
+
+      await feature.dispose();
+      feature = createFeature();
+      feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics().reconciled).toBeGreaterThanOrEqual(1);
+      });
+      await expect(feature.dispatchDueNudges([teamName])).resolves.toMatchObject({
+        delivered: 0,
+      });
+
+      const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+        (message) => message.messageKind === 'member_work_sync_nudge'
+      );
+      expect(nudges).toHaveLength(1);
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([expect.objectContaining({ status: 'delivered' })]);
+      const journal = await fs.promises.readFile(
+        path.join(
+          teamsBasePath,
+          teamName,
+          'members',
+          memberName,
+          '.member-work-sync',
+          'journal.jsonl'
+        ),
+        'utf8'
+      );
+      expect(
+        journal
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line) as { event?: string })
+          .filter((event) => event.event === 'nudge_delivered')
+      ).toHaveLength(1);
     } finally {
       await feature.dispose();
     }
@@ -2978,6 +5292,41 @@ describe('createMemberWorkSyncFeature composition', () => {
           report: { accepted: true, state: 'still_working' },
         },
       });
+
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'blocked',
+          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+        },
+      });
+      const reconciledBeforeLeaseRefresh = feature.getQueueDiagnostics().reconciled;
+      feature.noteTeamChange({ type: 'config', teamName } as never);
+      await waitForAssertion(async () => {
+        expect(feature.getQueueDiagnostics()).toMatchObject({
+          queued: 0,
+          running: 0,
+        });
+        expect(feature.getQueueDiagnostics().reconciled).toBeGreaterThanOrEqual(
+          reconciledBeforeLeaseRefresh + 1
+        );
+        await expect(feature.getStatus({ teamName, memberName })).resolves.toMatchObject({
+          state: 'still_working',
+          report: { accepted: true, state: 'still_working' },
+        });
+        const nudges = (await readInboxMessages({ teamsBasePath, teamName, memberName })).filter(
+          (message) => message.messageKind === 'member_work_sync_nudge'
+        );
+        expect(nudges).toHaveLength(1);
+        expect(
+          Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+        ).toEqual([expect.objectContaining({ status: 'delivered' })]);
+      });
       await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
         claimed: 0,
         delivered: 0,
@@ -3018,6 +5367,12 @@ describe('createMemberWorkSyncFeature composition', () => {
           wouldNudge: true,
           fingerprintChanged: true,
           previousFingerprint: firstFingerprint,
+        });
+        await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+          phase2Readiness: {
+            state: 'blocked',
+            reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+          },
         });
       });
 
@@ -3309,6 +5664,18 @@ describe('createMemberWorkSyncFeature composition', () => {
         outcome: 'existing',
       });
 
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'blocked',
+          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+        },
+      });
       teamActive = false;
       await expect(feature.dispatchDueNudges([teamName])).resolves.toEqual({
         claimed: 1,
@@ -3483,7 +5850,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
-  it('defers nudges while a member is busy and recovers on the next agenda change', async () => {
+  it('defers noisy fail-open nudges while a member is busy and recovers on the next agenda change', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
@@ -3524,7 +5891,18 @@ describe('createMemberWorkSyncFeature composition', () => {
     });
 
     try {
-      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'blocked',
+          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+        },
+      });
       feature.noteTeamChange({
         type: 'tool-activity',
         teamName,
@@ -3721,7 +6099,7 @@ describe('createMemberWorkSyncFeature composition', () => {
     }
   });
 
-  it('rate-limits the active loop after two delivered nudges per member per hour', async () => {
+  it('rate-limits the noisy fail-open loop after two delivered nudges per member per hour', async () => {
     const claudeRoot = makeTempRoot();
     setClaudeBasePathOverride(claudeRoot);
     const teamsBasePath = getTeamsBasePath();
@@ -3762,7 +6140,18 @@ describe('createMemberWorkSyncFeature composition', () => {
     });
 
     try {
-      await seedShadowReadyMetrics({ teamsBasePath, teamName, memberName });
+      await seedMatureBlockingMetrics({
+        teamsBasePath,
+        teamName,
+        memberName,
+        metricKinds: ['would_nudge', 'fingerprint_changed'],
+      });
+      await expect(feature.getMetrics({ teamName })).resolves.toMatchObject({
+        phase2Readiness: {
+          state: 'blocked',
+          reasons: expect.arrayContaining(['would_nudge_rate_high', 'fingerprint_churn_high']),
+        },
+      });
       feature.noteTeamChange({ type: 'task', teamName, taskId: 'task-1' } as never);
 
       await waitForAssertion(async () => {
@@ -4372,7 +6761,9 @@ describe('createMemberWorkSyncFeature composition', () => {
     try {
       await seedBlockingShadowCollectingMetrics({ teamsBasePath, teamName, memberName });
       const current = await feature.refreshStatus({ teamName, memberName });
-      expect(await readMemberOutboxItems({ teamsBasePath, teamName, memberName })).toEqual({});
+      expect(
+        Object.values(await readMemberOutboxItems({ teamsBasePath, teamName, memberName }))
+      ).toEqual([expect.objectContaining({ status: 'pending' })]);
 
       await expect(
         feature.report({

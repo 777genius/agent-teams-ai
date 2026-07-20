@@ -122,7 +122,7 @@ function staleMetrics(
     phase2Readiness: {
       ...metrics().phase2Readiness,
       state: 'blocked',
-      reasons: ['would_nudge_rate_high', 'fingerprint_churn_high'],
+      reasons: ['would_nudge_rate_high', 'fingerprint_churn_high', 'report_rejection_rate_high'],
     },
     recentEvents: [
       {
@@ -400,14 +400,37 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
     ).toEqual({ active: true, reason: 'lead_targeted_shadow_collecting' });
   });
 
-  it('does not activate non-OpenCode nudges when blocking safety metrics are present', () => {
+  it('keeps native targeted recovery active when agenda telemetry is self-noisy', () => {
     expect(
       decideMemberWorkSyncNudgeActivation({
         status: status({ providerId: 'codex' }),
         metrics: metrics({
           phase2Readiness: {
             ...metrics().phase2Readiness,
-            reasons: ['insufficient_status_events', 'would_nudge_rate_high'],
+            reasons: [
+              'insufficient_status_events',
+              'would_nudge_rate_high',
+              'fingerprint_churn_high',
+            ],
+          },
+        }),
+      })
+    ).toEqual({ active: true, reason: 'native_targeted_shadow_collecting' });
+  });
+
+  it('keeps native targeted recovery blocked for a high report rejection rate', () => {
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: status({ providerId: 'codex' }),
+        metrics: metrics({
+          phase2Readiness: {
+            ...metrics().phase2Readiness,
+            state: 'blocked',
+            reasons: [
+              'would_nudge_rate_high',
+              'fingerprint_churn_high',
+              'report_rejection_rate_high',
+            ],
           },
         }),
       })

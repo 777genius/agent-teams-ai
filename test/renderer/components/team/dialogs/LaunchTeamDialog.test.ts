@@ -584,6 +584,13 @@ async function flush(): Promise<void> {
 
 describe('LaunchTeamDialog', () => {
   beforeEach(() => {
+    vi.mocked(runProviderPrepareDiagnostics).mockReset();
+    vi.mocked(runProviderPrepareDiagnostics).mockResolvedValue({
+      status: 'ready',
+      warnings: [],
+      details: [],
+      modelResultsById: {},
+    });
     fetchCliProviderStatus.mockReset();
     fetchCliProviderStatus.mockImplementation(async (providerId, options) => {
       if (providerId !== 'opencode' || !options?.projectPath) {
@@ -1728,6 +1735,12 @@ describe('LaunchTeamDialog', () => {
       await flush();
       await flush();
     });
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await flush();
+      });
+    }
 
     expect(host.textContent).not.toContain('OpenCode lead requires a selected model.');
     const submitButton = Array.from(host.querySelectorAll('button')).find(
@@ -1792,6 +1805,12 @@ describe('LaunchTeamDialog', () => {
       await flush();
       await flush();
     });
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await flush();
+      });
+    }
 
     expect(host.textContent).not.toContain(
       'OpenCode lead requires at least one OpenCode teammate.'
@@ -2403,6 +2422,11 @@ describe('LaunchTeamDialog', () => {
       await renderDialog();
     });
 
+    const launchButtonWhileChecking = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+    expect(launchButtonWhileChecking?.hasAttribute('disabled')).toBe(false);
+
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
       providers: [
@@ -2457,6 +2481,163 @@ describe('LaunchTeamDialog', () => {
       .mock.calls.filter((call) => call[0]?.providerId === 'opencode');
     expect(inFlightOpencodePrepareCalls).toHaveLength(1);
     expect(host.textContent).toContain('All selected providers are ready.');
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('keeps launch disabled when selected model preflight fails', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          modelVerificationState: 'verified',
+          statusMessage: null,
+          detailMessage: null,
+          models: ['ollama/llama3.2:latest', 'ollama/qwen2.5:latest'],
+          modelCatalog: {
+            source: 'app-server',
+            status: 'ready',
+            models: [{ id: 'ollama/llama3.2:latest' }, { id: 'ollama/qwen2.5:latest' }],
+          },
+          capabilities: {
+            teamLaunch: true,
+            oneShot: false,
+          },
+        },
+      ],
+    } as any;
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      providerId: 'anthropic',
+      model: 'sonnet',
+      members: [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'opencode',
+          model: 'ollama/llama3.2:latest',
+        },
+      ],
+    } as any);
+    vi.mocked(runProviderPrepareDiagnostics).mockImplementation(async (input) =>
+      input.providerId === 'opencode'
+        ? ({
+            status: 'failed',
+            warnings: [],
+            details: [
+              'llama3.2:latest returned plain text instead of the required Agent Teams response.',
+            ],
+            modelResultsById: {},
+          } as any)
+        : ({
+            status: 'ready',
+            warnings: [],
+            details: [],
+            modelResultsById: {},
+          } as any)
+    );
+    const onLaunch = vi.fn(async () => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch,
+        })
+      );
+      await flush();
+      await flush();
+      await flush();
+    });
+    for (
+      let attempt = 0;
+      attempt < 10 && !host.textContent?.includes('Runtime environment is not available');
+      attempt += 1
+    ) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await flush();
+      });
+    }
+
+    const submitButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+    expect(host.textContent).toContain('Runtime environment is not available');
+    expect(submitButton?.hasAttribute('disabled')).toBe(true);
+
+    submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await act(async () => {
+      await flush();
+    });
+    expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+    expect(onLaunch).not.toHaveBeenCalled();
+
+    vi.mocked(runProviderPrepareDiagnostics).mockResolvedValue({
+      status: 'ready',
+      warnings: [],
+      details: [],
+      modelResultsById: {},
+    } as any);
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onMembersChange(
+        teamRosterEditorSectionMock.lastProps.members.map((member: any) => ({
+          ...member,
+          model: 'ollama/qwen2.5:latest',
+        }))
+      );
+      await flush();
+      await flush();
+    });
+    expect(teamRosterEditorSectionMock.lastProps.members).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          model: 'ollama/qwen2.5:latest',
+        }),
+      ])
+    );
+    expect(
+      vi
+        .mocked(runProviderPrepareDiagnostics)
+        .mock.calls.some(
+          ([input]) =>
+            input.providerId === 'opencode' &&
+            input.selectedModelIds.includes('ollama/qwen2.5:latest')
+        )
+    ).toBe(true);
+    for (
+      let attempt = 0;
+      attempt < 10 && !host.textContent?.includes('All selected providers are ready.');
+      attempt += 1
+    ) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await flush();
+      });
+    }
+
+    expect(host.textContent).toContain('All selected providers are ready.');
+    expect(submitButton?.hasAttribute('disabled')).toBe(false);
 
     await act(async () => {
       root.unmount();

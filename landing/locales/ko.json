@@ -33,6 +33,8 @@
     "watchDemo": "데모 보기",
     "videoUnavailable": "동영상을 사용할 수 없습니다",
     "supportedProviders": "지원되는 AI 제공자",
+    "providers": "제공자",
+    "models": "모델",
     "slogan": "아주 적은 조작으로 많은 일을 처리하세요",
     "platformDefault": "현재 플랫폼용",
     "guidesSetup": "가이드 및 설정",

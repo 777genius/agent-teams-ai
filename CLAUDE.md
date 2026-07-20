@@ -33,7 +33,7 @@ When running build/typecheck/test commands, pipe through `tail -20` to avoid flo
 - `pnpm install` - Install dependencies
 - `pnpm dev` - Desktop Electron app with hot reload
 - `pnpm build` - Production build
-- `pnpm typecheck` - Type checking
+- `pnpm typecheck` - Canonical type check using the project's pinned native TypeScript 7 compiler (do not additionally run global `tsc7`)
 - `pnpm lint:fix` - Lint and auto-fix
 - `pnpm format` - Format code
 - `pnpm test` - Run all vitest tests

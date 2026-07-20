@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 
 import type { OpenCodeExecutionProof } from '../readiness/OpenCodeExecutionProof';
 import type {
+  EffortLevel,
   OpenCodeAppManagedBootstrapCandidate,
   OpenCodeBootstrapEvidenceSource,
   OpenCodeBootstrapMode,
@@ -57,6 +58,7 @@ export interface OpenCodeTeamLaunchMemberCommandSpec {
   name: string;
   role: string;
   prompt: string;
+  effort?: EffortLevel;
 }
 
 export interface OpenCodeLaunchTeamCommandBody {
@@ -66,6 +68,7 @@ export interface OpenCodeLaunchTeamCommandBody {
   teamName: string;
   projectPath: string;
   selectedModel: string;
+  effort?: EffortLevel;
   skipPermissions?: boolean;
   members: OpenCodeTeamLaunchMemberCommandSpec[];
   leadPrompt: string;

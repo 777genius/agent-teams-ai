@@ -101,6 +101,38 @@ describe('team effort options', () => {
     ]);
   });
 
+  it('uses the exact Kimi K3 effort contract from the OpenCode catalog', () => {
+    const providerStatus = createProviderStatus('opencode', {
+      id: 'kimi-for-coding/k3',
+      launchModel: 'kimi-for-coding/k3',
+      displayName: 'Kimi K3',
+      hidden: false,
+      supportedReasoningEfforts: ['low', 'high', 'max'],
+      defaultReasoningEffort: 'high',
+      inputModalities: ['text', 'image', 'video'],
+      supportsPersonality: true,
+      isDefault: true,
+      upgrade: false,
+      source: 'app-server',
+    });
+
+    const params = {
+      providerId: 'opencode' as const,
+      model: 'kimi-for-coding/k3',
+      providerStatus,
+    };
+    expect(getTeamEffortSelectorPresentation(params)).toMatchObject({
+      disabled: false,
+      canValidateValue: true,
+    });
+    expect(getTeamEffortOptions(params)).toEqual([
+      { value: '', label: 'Default (High)' },
+      { value: 'low', label: 'Low' },
+      { value: 'high', label: 'High' },
+      { value: 'max', label: 'Max' },
+    ]);
+  });
+
   it('disables effort when the exact OpenCode catalog model exposes none', () => {
     const providerStatus = createProviderStatus('opencode', {
       id: 'kiro/no-effort',
