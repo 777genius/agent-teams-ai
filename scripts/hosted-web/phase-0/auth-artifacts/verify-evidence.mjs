@@ -43,7 +43,7 @@ const evidenceDir = resolve(repoRoot, 'docs/research/hosted-web/phase-0/auth-art
 const readJson = (path) => JSON.parse(readFileSync(resolve(repoRoot, path), 'utf8'));
 
 const schema = readJson('docs/research/hosted-web/phase-0/auth-artifacts/evidence.schema.json');
-const validateEvidence = new Ajv({ allErrors: true, jsonPointers: true }).compile(schema);
+const validateEvidence = new Ajv({ allErrors: true }).compile(schema);
 for (const file of [
   'evidence.json',
   'estimate-input.json',

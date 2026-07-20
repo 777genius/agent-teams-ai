@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   ARTIFACT_EVOLUTION_ASSUMPTION,
@@ -34,6 +34,11 @@ import {
 const localRequire = createRequire(import.meta.url);
 const requireFromFastify = createRequire(localRequire.resolve('fastify/package.json'));
 const Ajv = requireFromFastify('ajv');
+const requireFromFastifyAjvCompiler = createRequire(
+  requireFromFastify.resolve('@fastify/ajv-compiler/package.json')
+);
+const FastifyAjv = requireFromFastifyAjvCompiler('ajv');
+const fastifyAjvVersion = requireFromFastifyAjvCompiler('ajv/package.json').version;
 const evidenceSchema = JSON.parse(
   readFileSync('docs/research/hosted-web/phase-0/auth-artifacts/evidence.schema.json', 'utf8')
 );
@@ -503,6 +508,31 @@ describe('ADR-7/14 proxy and origin ordering', () => {
 });
 
 describe('ADR-17 artifact and terminal scanner', () => {
+  it('constructs the evidence validator with Fastify Ajv 8 supported options', () => {
+    expect(fastifyAjvVersion).toMatch(/^8\./);
+    expect(
+      readFileSync('scripts/hosted-web/phase-0/auth-artifacts/verify-evidence.mjs', 'utf8')
+    ).toContain('const validateEvidence = new Ajv({ allErrors: true }).compile(schema);');
+    const validate = new FastifyAjv({ allErrors: true }).compile(evidenceSchema);
+    expect(vi.mocked(console.warn).mock.calls.flat().join('\n')).not.toContain(
+      'NOT SUPPORTED: option jsonPointers'
+    );
+    vi.mocked(console.warn).mockClear();
+    const evidence = readJson('docs/research/hosted-web/phase-0/auth-artifacts/evidence.json');
+
+    expect(validate(evidence)).toBe(true);
+
+    const invalidEvidence = structuredClone(evidence);
+    delete invalidEvidence.phaseId;
+    delete invalidEvidence.laneId;
+    expect(validate(invalidEvidence)).toBe(false);
+    expect(
+      validate.errors
+        ?.filter((error: { keyword: string }) => error.keyword === 'required')
+        .map((error: { params: { missingProperty: string } }) => error.params.missingProperty)
+    ).toEqual(expect.arrayContaining(['phaseId', 'laneId']));
+  });
+
   it('rejects every artifact-authority projection drift in schema and verifier logic', () => {
     const evidence = readJson('docs/research/hosted-web/phase-0/auth-artifacts/evidence.json');
     const estimate = readJson(
