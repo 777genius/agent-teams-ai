@@ -762,7 +762,7 @@ describe("codex goal MCP server", () => {
     }
   });
 
-  it("rejects unsupported edit modes in codex goal job tools", async () => {
+  it("rejects unsupported edit modes at the MCP schema boundary", async () => {
     const root = await mkdtemp(
       join(tmpdir(), "subscription-runtime-mcp-permission-"),
     );
@@ -779,22 +779,24 @@ describe("codex goal MCP server", () => {
         client.connect(clientTransport),
       ]);
 
-      const result = await callToolJson(client, "codex_goal_create_job", {
-        registryRootDir: join(root, "registry"),
-        jobId: "job-permission",
-        jobRootDir: join(root, "job"),
-        authRootDir: join(root, "auth"),
-        workspacePath: join(root, "workspace"),
-        promptPath: join(root, "job", "prompt.md"),
-        taskId: "task-permission",
-        accounts: ["account-a"],
-        editMode: "danger-full-access",
+      const result = await client.callTool({
+        name: "codex_goal_create_job",
+        arguments: {
+          registryRootDir: join(root, "registry"),
+          jobId: "job-permission",
+          jobRootDir: join(root, "job"),
+          authRootDir: join(root, "auth"),
+          workspacePath: join(root, "workspace"),
+          promptPath: join(root, "job", "prompt.md"),
+          taskId: "task-permission",
+          accounts: ["account-a"],
+          editMode: "danger-full-access",
+        },
       });
 
-      expect(result).toMatchObject({ ok: false });
-      expect(String(result.error)).toContain(
-        "Use providerSandboxMode",
-      );
+      expect(result.isError).toBe(true);
+      expect(JSON.stringify(result.content)).toContain("editMode");
+      expect(JSON.stringify(result.content)).toContain("allow-edits");
     } finally {
       await client.close();
       await server.close();

@@ -566,12 +566,28 @@ await writeFile(operationFilePath, JSON.stringify(operation, null, 2) + "\\n");
         newBranch: expect.any(Object),
         producerJobId: expect.any(Object),
         mergeBinding: expect.any(Object),
+        editMode: {
+          type: "string",
+          enum: ["read-only", "allow-edits"],
+        },
+        providerSandboxMode: {
+          type: "string",
+          enum: ["workspace-write", "danger-full-access"],
+        },
       });
       expect(verifierTool?.inputSchema.properties).toMatchObject({
         mergeBinding: {
           type: "object",
           required: ["sourceRemote", "sourceBranch"],
           additionalProperties: false,
+        },
+        editMode: {
+          type: "string",
+          enum: ["read-only", "allow-edits"],
+        },
+        providerSandboxMode: {
+          type: "string",
+          enum: ["workspace-write", "danger-full-access"],
         },
       });
       const refillSchema = refillTool?.inputSchema.properties

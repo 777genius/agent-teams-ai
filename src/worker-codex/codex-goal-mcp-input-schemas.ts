@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { codexGoalObjectiveMaxChars } from "./codex-goal-jobs";
 import { CODEX_GOAL_EXECUTION_ENGINE_SCHEMA } from "./codex-goal-mcp-decision-contracts";
+import {
+  codexGoalEditModes,
+  codexGoalProviderSandboxModes,
+} from "./codex-goal-control-modes";
 
 export function goalInputSchema(): Record<string, z.ZodTypeAny> {
   return {
@@ -28,8 +32,8 @@ export function goalInputSchema(): Record<string, z.ZodTypeAny> {
     appServerStartupTimeoutMs: z.number().int().positive().optional(),
     staleLockMs: z.number().int().positive().optional(),
     maxAccountCycles: z.number().int().positive().optional(),
-    editMode: z.string().optional(),
-    providerSandboxMode: z.string().optional(),
+    editMode: z.enum(codexGoalEditModes).optional(),
+    providerSandboxMode: z.enum(codexGoalProviderSandboxModes).optional(),
     accessBoundary: z.string().optional(),
     projectAccessScope: z.record(z.string(), z.unknown()).optional(),
     allowDangerFullAccess: z.boolean().optional(),
