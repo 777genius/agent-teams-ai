@@ -45,6 +45,7 @@ Live team smoke runtime:
 - Use `pnpm lint:fast` for a faster source-tree lint pass when full type-aware lint is too slow.
 - `lint:fast` intentionally uses `eslint.fast.config.js` without TypeScript project-service rules. It is not a replacement for `pnpm typecheck` or the full `pnpm lint` gate.
 - Keep using `pnpm typecheck` after TypeScript changes, and use full `pnpm lint` when validating a broad PR or changing lint-sensitive architecture boundaries.
+- `pnpm typecheck` already runs the project's pinned native TypeScript 7 compiler. It is the only typecheck command needed for normal verification; do not also run global `tsc7 --noEmit`.
 
 For new features:
 
